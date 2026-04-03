@@ -1,0 +1,43 @@
+version: '3'
+
+vars:
+  BINARY: orq
+  MAIN: ./cmd/orq
+
+tasks:
+  build:
+    desc: Build the CLI binary
+    cmds:
+      - go build -o {{.BINARY}} {{.MAIN}}
+
+  test:
+    desc: Run all tests
+    cmds:
+      - go test -race -cover ./...
+
+  lint:
+    desc: Run linter
+    cmds:
+      - golangci-lint run ./...
+
+  fmt:
+    desc: Format code
+    cmds:
+      - gofumpt -w .
+
+  generate:
+    desc: Run go generate
+    cmds:
+      - go generate ./...
+
+  release:snapshot:
+    desc: Local snapshot release (GoReleaser)
+    cmds:
+      - goreleaser release --snapshot --clean
+
+  default:
+    desc: Lint, test, and build
+    cmds:
+      - task: lint
+      - task: test
+      - task: build

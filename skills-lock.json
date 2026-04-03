@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "skills": {
+    "bugfix": {
+      "source": "JailtonJunior94/skills",
+      "sourceType": "github",
+      "computedHash": "eed99548a39ec7f52d7fc2165a5a832da3193886f97233ab388eaefec370c324"
+    },
+    "crafting-effective-readmes": {
+      "source": "pedronauck/skills",
+      "sourceType": "github",
+      "computedHash": "c931a8c22160e8925400778fcb2266b5d1df762f3052edba65f72479f79f2d6c"
+    },
+    "jira-tasks": {
+      "source": "JailtonJunior94/skills",
+      "sourceType": "github",
+      "computedHash": "8e563b94cb49498d383ceec9545a41853160cdbb26ea7343e2a2a93b84278924"
+    },
+    "pull-request": {
+      "source": "JailtonJunior94/skills",
+      "sourceType": "github",
+      "computedHash": "ad8137e9a9d2c442db5fd8894e4f0aa417c07ac4adcbafec77888496eda74d58"
+    },
+    "refactor": {
+      "source": "JailtonJunior94/skills",
+      "sourceType": "github",
+      "computedHash": "f9afaeb01bfd8d252abb9e99374e621cbca4e6de190c455093aec74467f4900a"
+    },
+    "reviewer": {
+      "source": "JailtonJunior94/skills",
+      "sourceType": "github",
+      "computedHash": "eb3bf385d10f34e1b1ced297e528063090cbfc2f1da4f6bdcf8874aace7d2676"
+    },
+    "semantic-commit": {
+      "source": "JailtonJunior94/skills",
+      "sourceType": "github",
+      "computedHash": "0396126c34127a008d7e5252cca40c9f1562117b9c9fb33c9aaa356875ff557a"
+    },
+    "skill-best-practices": {
+      "source": "pedronauck/skills",
+      "sourceType": "github",
+      "computedHash": "d53ae5bec0895e4fe802acc4a92441cfeb1cfda5ab18a10f6e96f153cb682c61"
+    },
+    "us-to-prd": {
+      "source": "JailtonJunior94/skills",
+      "sourceType": "github",
+      "computedHash": "3703b8a88accd210026da6f651b93703d49613533ec38992f0ff87cd7f101776"
+    }
+  }
+}

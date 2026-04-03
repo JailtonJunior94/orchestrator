@@ -1,0 +1,22 @@
+name: dev-workflow
+steps:
+  - name: prd
+    provider: claude
+    input: |
+      Gere um PRD detalhado para: {{input}}
+  - name: techspec
+    provider: claude
+    input: |
+      Com base no PRD abaixo, gere uma Tech Spec:
+      {{steps.prd.output}}
+  - name: tasks
+    provider: claude
+    input: |
+      Decomponha em tasks implementáveis:
+      PRD: {{steps.prd.output}}
+      TechSpec: {{steps.techspec.output}}
+  - name: execute
+    provider: copilot
+    input: |
+      Execute as tasks abaixo:
+      {{steps.tasks.output}}

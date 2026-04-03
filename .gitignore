@@ -1,0 +1,6 @@
+orq
+dist/
+.orq/
+tasks/
+.ai
+.agents
