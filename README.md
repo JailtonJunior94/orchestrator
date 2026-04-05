@@ -50,6 +50,18 @@ O fluxo principal é:
   - `copilot`
 - `task` é opcional, mas é a interface preferida para desenvolvimento local
 
+### Homebrew (macOS / Linux)
+
+```bash
+brew install jailtonjunior/tap/orq
+```
+
+Para atualizar uma instalação existente:
+
+```bash
+brew upgrade orq
+```
+
 ### Via `go install`
 
 ```bash

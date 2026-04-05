@@ -10,6 +10,11 @@ tasks:
     cmds:
       - go build -o {{.BINARY}} {{.MAIN}}
 
+  check-release:
+    desc: Validate GoReleaser configuration
+    cmds:
+      - goreleaser check
+
   test:
     desc: Run all tests
     cmds:
