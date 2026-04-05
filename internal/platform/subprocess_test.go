@@ -125,3 +125,101 @@ func TestHelperProcess(t *testing.T) {
 		panic(errors.New("unknown helper mode"))
 	}
 }
+
+// --- Task 3.0 tests: RunStreaming ---
+
+func TestRunStreamingReadsOutputIncrementally(t *testing.T) {
+	t.Setenv("GO_WANT_HELPER_PROCESS", "1")
+
+	runner := NewCommandRunner()
+	result, err := runner.RunStreaming(context.Background(), os.Args[0], []string{"-test.run=TestHelperProcess", "--", "success"}, "world")
+	if err != nil {
+		t.Fatalf("RunStreaming error: %v", err)
+	}
+
+	data, err := io.ReadAll(result.Stdout)
+	if err != nil {
+		t.Fatalf("reading stdout: %v", err)
+	}
+
+	if err := result.Wait(); err != nil {
+		t.Fatalf("Wait error: %v", err)
+	}
+
+	if string(data) != "stdout:world" {
+		t.Fatalf("stdout = %q; want %q", string(data), "stdout:world")
+	}
+	if result.ExitCode() != 0 {
+		t.Fatalf("exit code = %d; want 0", result.ExitCode())
+	}
+}
+
+func TestRunStreamingWaitReturnsExitCode(t *testing.T) {
+	t.Setenv("GO_WANT_HELPER_PROCESS", "1")
+
+	runner := NewCommandRunner()
+	result, err := runner.RunStreaming(context.Background(), os.Args[0], []string{"-test.run=TestHelperProcess", "--", "failure"}, "")
+	if err != nil {
+		t.Fatalf("RunStreaming error: %v", err)
+	}
+
+	// Drain readers before Wait to avoid broken pipe.
+	_, _ = io.ReadAll(result.Stdout)
+	stderrData, _ := io.ReadAll(result.Stderr)
+
+	waitErr := result.Wait()
+	if waitErr == nil {
+		t.Fatal("expected non-nil error from Wait for failing process")
+	}
+
+	if string(stderrData) != "stderr:boom" {
+		t.Fatalf("stderr = %q; want %q", string(stderrData), "stderr:boom")
+	}
+}
+
+func TestRunStreamingContextCancellation(t *testing.T) {
+	t.Setenv("GO_WANT_HELPER_PROCESS", "1")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	runner := NewCommandRunner()
+	result, err := runner.RunStreaming(ctx, os.Args[0], []string{"-test.run=TestHelperProcess", "--", "sleep"}, "")
+	if err != nil {
+		t.Fatalf("RunStreaming error: %v", err)
+	}
+
+	_, _ = io.ReadAll(result.Stdout)
+	waitErr := result.Wait()
+	if waitErr == nil {
+		t.Fatal("expected error after context cancellation")
+	}
+}
+
+func TestFakeRunStreamingReturnsControlledData(t *testing.T) {
+	t.Parallel()
+
+	fake := FakeCommandRunner{
+		RunStreamingFunc: func(_ context.Context, _ string, _ []string, _ string) (*StreamResult, error) {
+			return NewFakeStreamResult("hello streaming", ""), nil
+		},
+	}
+
+	result, err := fake.RunStreaming(context.Background(), "echo", []string{"hello"}, "")
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+
+	data, err := io.ReadAll(result.Stdout)
+	if err != nil {
+		t.Fatalf("read error: %v", err)
+	}
+
+	if string(data) != "hello streaming" {
+		t.Fatalf("stdout = %q; want %q", string(data), "hello streaming")
+	}
+
+	if err := result.Wait(); err != nil {
+		t.Fatalf("wait error: %v", err)
+	}
+}

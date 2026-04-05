@@ -16,6 +16,8 @@ func NewFactory(runner platform.CommandRunner) Factory {
 		providers: map[string]Provider{
 			ClaudeProviderName:  NewClaudeProvider(runner),
 			CopilotProviderName: NewCopilotProvider(runner),
+			GeminiProviderName:  NewGeminiProvider(runner),
+			CodexProviderName:   NewCodexProvider(runner),
 		},
 	}
 }

@@ -3,6 +3,8 @@ package output
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -100,4 +102,131 @@ func TestProcessor(t *testing.T) {
 	if err == nil || !IsRecoverable(err) {
 		t.Fatalf("expected recoverable error, got %v", err)
 	}
+}
+
+func TestProcessorJSONL(t *testing.T) {
+	t.Parallel()
+
+	processor := NewProcessor()
+
+	t.Run("valid jsonl returns content", func(t *testing.T) {
+		t.Parallel()
+		raw := `{"type":"message","content":"the answer"}` + "\n"
+		result, err := processor.Process(context.Background(), raw, nil, ProcessOptions{
+			OutputFormat: "jsonl",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if result.Markdown != "the answer" {
+			t.Fatalf("markdown = %q, want %q", result.Markdown, "the answer")
+		}
+	})
+
+	t.Run("invalid jsonl returns recoverable error", func(t *testing.T) {
+		t.Parallel()
+		_, err := processor.Process(context.Background(), "not-json", nil, ProcessOptions{
+			OutputFormat: "jsonl",
+		})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if !IsRecoverable(err) {
+			t.Fatalf("expected recoverable error, got %v", err)
+		}
+	})
+
+	t.Run("structured jsonl extracts markdown and validates embedded json", func(t *testing.T) {
+		t.Parallel()
+		raw := "{\"type\":\"message\",\"content\":\"Summary\\n```json\\n{\\\"doc\\\":\\\"ok\\\"}\\n```\"}\n"
+		result, err := processor.Process(context.Background(), raw, []byte(`{"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}`), ProcessOptions{
+			RequireStructured: true,
+			OutputFormat:      "jsonl",
+			SchemaName:        "prd/v1",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if result.Markdown != "Summary\n```json\n{\"doc\":\"ok\"}\n```" {
+			t.Fatalf("markdown = %q", result.Markdown)
+		}
+		if string(result.JSON) != `{"doc":"ok"}` {
+			t.Fatalf("json = %s", string(result.JSON))
+		}
+	})
+
+	t.Run("structured jsonl fixture matches documented codex stream", func(t *testing.T) {
+		t.Parallel()
+
+		raw, err := os.ReadFile(filepath.Join("testdata", "codex_completion.jsonl"))
+		if err != nil {
+			t.Fatalf("ReadFile() error = %v", err)
+		}
+
+		result, err := processor.Process(context.Background(), string(raw), []byte(`{"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}`), ProcessOptions{
+			RequireStructured: true,
+			OutputFormat:      "jsonl",
+			SchemaName:        "tasks/v1",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if string(result.JSON) != `{"doc":"fixture"}` {
+			t.Fatalf("json = %s", string(result.JSON))
+		}
+		if result.ValidationStatus != "passed" {
+			t.Fatalf("status = %q", result.ValidationStatus)
+		}
+	})
+
+	t.Run("default flow unaffected when OutputFormat empty", func(t *testing.T) {
+		t.Parallel()
+		result, err := processor.Process(context.Background(), "plain text", nil, ProcessOptions{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if result.ValidationStatus != "not_applicable" {
+			t.Fatalf("status = %q", result.ValidationStatus)
+		}
+	})
+}
+
+func TestProcessorProviderJSON(t *testing.T) {
+	t.Parallel()
+
+	processor := NewProcessor()
+
+	t.Run("structured provider json extracts response markdown and schema payload", func(t *testing.T) {
+		t.Parallel()
+
+		raw := "{\"response\":\"Summary\\n\\n```json\\n{\\\"doc\\\":\\\"ok\\\"}\\n```\",\"stats\":{\"session\":{\"duration\":12}},\"error\":null}"
+		result, err := processor.Process(context.Background(), raw, []byte(`{"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}`), ProcessOptions{
+			RequireStructured: true,
+			OutputFormat:      "json",
+			SchemaName:        "prd/v1",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if result.Markdown != "Summary\n\n```json\n{\"doc\":\"ok\"}\n```" {
+			t.Fatalf("markdown = %q", result.Markdown)
+		}
+		if string(result.JSON) != `{"doc":"ok"}` {
+			t.Fatalf("json = %s", string(result.JSON))
+		}
+	})
+
+	t.Run("invalid provider json envelope is recoverable", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := processor.Process(context.Background(), `{"stats":{},"error":null}`, nil, ProcessOptions{
+			OutputFormat: "json",
+		})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if !IsRecoverable(err) {
+			t.Fatalf("expected recoverable error, got %v", err)
+		}
+	})
 }

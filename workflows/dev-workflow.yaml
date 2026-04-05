@@ -1,22 +1,91 @@
 name: dev-workflow
+summary: Draft PRD, tech spec, task breakdown and execution plan
+description: |
+  End-to-end workflow that drafts a PRD, derives a technical specification,
+  decomposes the work into implementable tasks and proposes a safe execution plan.
+inputs:
+  - name: input
+    label: Feature Request
+    description: Product or engineering request that should drive the generated artefacts.
+    type: multiline
+    placeholder: Describe the feature, problem or initiative to plan...
+    required: true
 steps:
   - name: prd
-    provider: claude
+    provider: gemini
     input: |
       Gere um PRD detalhado para: {{input}}
+      Responda com Markdown e inclua um bloco ```json``` válido contendo um resumo estruturado do documento.
+    output:
+      markdown: required
+      json_schema: prd/v1
+    schema: |
+      {"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}
   - name: techspec
     provider: claude
     input: |
       Com base no PRD abaixo, gere uma Tech Spec:
       {{steps.prd.output}}
+      Responda com Markdown e inclua um bloco ```json``` válido contendo um resumo estruturado da Tech Spec.
+    output:
+      markdown: required
+      json_schema: techspec/v1
+    schema: |
+      {"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}
   - name: tasks
-    provider: claude
+    provider: codex
     input: |
       Decomponha em tasks implementáveis:
       PRD: {{steps.prd.output}}
       TechSpec: {{steps.techspec.output}}
+      Responda com Markdown e inclua um bloco ```json``` válido contendo as tasks estruturadas.
+    output:
+      markdown: required
+      json_schema: tasks/v1
+    schema: |
+      {"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}
   - name: execute
     provider: copilot
     input: |
-      Execute as tasks abaixo:
+      A partir das tasks abaixo, proponha um plano de execução mediado pelo runtime.
       {{steps.tasks.output}}
+      Responda com Markdown e inclua um bloco ```json``` válido com o schema abaixo:
+      - summary: string
+      - commands: lista de objetos com executable (string) e args (array de strings)
+      - files: lista opcional de objetos com path (relativo ao projeto) e content (string)
+      Nunca inclua comandos de git commit, git push ou gh pr create.
+    output:
+      markdown: required
+      json_schema: execute/v1
+    capabilities:
+      filesystem_execution: optional
+    schema: |
+      {
+        "type":"object",
+        "required":["summary","commands"],
+        "properties":{
+          "summary":{"type":"string"},
+          "commands":{
+            "type":"array",
+            "items":{
+              "type":"object",
+              "required":["executable","args"],
+              "properties":{
+                "executable":{"type":"string"},
+                "args":{"type":"array","items":{"type":"string"}}
+              }
+            }
+          },
+          "files":{
+            "type":"array",
+            "items":{
+              "type":"object",
+              "required":["path","content"],
+              "properties":{
+                "path":{"type":"string"},
+                "content":{"type":"string"}
+              }
+            }
+          }
+        }
+      }

@@ -3,6 +3,9 @@ package workflows
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -22,6 +25,12 @@ func TestCatalogLoad(t *testing.T) {
 		}
 		if len(wf.Steps) != 4 {
 			t.Errorf("steps = %d, want 4", len(wf.Steps))
+		}
+		wantProviders := []string{"gemini", "claude", "codex", "copilot"}
+		for i, want := range wantProviders {
+			if wf.Steps[i].Provider != want {
+				t.Fatalf("step %d provider = %q, want %q", i, wf.Steps[i].Provider, want)
+			}
 		}
 	})
 
@@ -55,5 +64,33 @@ func TestCatalogList(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("dev-workflow not found in %v", names)
+	}
+}
+
+func TestExternalDevWorkflowMatchesEmbeddedDefinition(t *testing.T) {
+	t.Parallel()
+
+	parser := NewParser()
+
+	embeddedData, err := os.ReadFile(filepath.Join("embedded", "dev-workflow.yaml"))
+	if err != nil {
+		t.Fatalf("ReadFile(embedded) error = %v", err)
+	}
+	externalData, err := os.ReadFile(filepath.Join("..", "..", "workflows", "dev-workflow.yaml"))
+	if err != nil {
+		t.Fatalf("ReadFile(external) error = %v", err)
+	}
+
+	embeddedWorkflow, err := parser.Parse(context.Background(), embeddedData)
+	if err != nil {
+		t.Fatalf("Parse(embedded) error = %v", err)
+	}
+	externalWorkflow, err := parser.Parse(context.Background(), externalData)
+	if err != nil {
+		t.Fatalf("Parse(external) error = %v", err)
+	}
+
+	if !reflect.DeepEqual(embeddedWorkflow, externalWorkflow) {
+		t.Fatal("external workflow diverged from embedded definition")
 	}
 }

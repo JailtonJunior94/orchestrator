@@ -2,8 +2,22 @@ package workflows
 
 // WorkflowDefinition represents a workflow loaded from YAML.
 type WorkflowDefinition struct {
-	Name  string           `yaml:"name"`
-	Steps []StepDefinition `yaml:"steps"`
+	Name        string                    `yaml:"name"`
+	Summary     string                    `yaml:"summary,omitempty"`
+	Description string                    `yaml:"description,omitempty"`
+	Inputs      []WorkflowInputDefinition `yaml:"inputs,omitempty"`
+	Steps       []StepDefinition          `yaml:"steps"`
+}
+
+// WorkflowInputDefinition describes an interactive workflow input field.
+type WorkflowInputDefinition struct {
+	Name        string   `yaml:"name"`
+	Label       string   `yaml:"label,omitempty"`
+	Description string   `yaml:"description,omitempty"`
+	Type        string   `yaml:"type,omitempty"`
+	Placeholder string   `yaml:"placeholder,omitempty"`
+	Required    bool     `yaml:"required,omitempty"`
+	Options     []string `yaml:"options,omitempty"`
 }
 
 // StepDefinition represents a single step in a workflow.

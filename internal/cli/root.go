@@ -16,6 +16,9 @@ func NewRootCommand(app *bootstrap.App, version string) *cobra.Command {
 		Version: version,
 	}
 
+	rootCmd.PersistentFlags().Bool("no-tui", false, "Disable interactive TUI and use plain text output")
+	rootCmd.PersistentFlags().Bool("no-animation", false, "Disable TUI animations (also via ORQ_NO_ANIMATION env var)")
+
 	rootCmd.AddCommand(NewRunCommand(app))
 	rootCmd.AddCommand(NewContinueCommand(app))
 	rootCmd.AddCommand(NewListCommand(app))

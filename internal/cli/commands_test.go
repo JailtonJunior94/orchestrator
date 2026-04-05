@@ -13,9 +13,11 @@ import (
 	installapp "github.com/jailtonjunior/orchestrator/internal/install/application"
 	install "github.com/jailtonjunior/orchestrator/internal/install/domain"
 	"github.com/jailtonjunior/orchestrator/internal/runtime"
+	runtimeapp "github.com/jailtonjunior/orchestrator/internal/runtime/application"
 	"github.com/jailtonjunior/orchestrator/internal/runtime/domain"
 	"github.com/jailtonjunior/orchestrator/internal/state"
 	"github.com/jailtonjunior/orchestrator/internal/workflows"
+	"github.com/spf13/cobra"
 )
 
 func TestListCommand(t *testing.T) {
@@ -23,7 +25,7 @@ func TestListCommand(t *testing.T) {
 
 	out := &bytes.Buffer{}
 	cmd := NewListCommand(&bootstrap.App{
-		Runtime: fakeRuntimeService{workflows: []string{"dev-workflow"}},
+		Runtime: &fakeRuntimeService{workflows: []string{"dev-workflow"}},
 	})
 	cmd.SetOut(out)
 	cmd.SetArgs(nil)
@@ -38,13 +40,13 @@ func TestListCommand(t *testing.T) {
 func TestRunCommandFlags(t *testing.T) {
 	t.Parallel()
 
-	cmd := NewRunCommand(&bootstrap.App{Runtime: fakeRuntimeService{}})
+	cmd := NewRunCommand(&bootstrap.App{Runtime: &fakeRuntimeService{}})
 	cmd.SetArgs([]string{"dev-workflow"})
 	if err := cmd.Execute(); err == nil {
 		t.Fatal("expected missing input error")
 	}
 
-	cmd = NewRunCommand(&bootstrap.App{Runtime: fakeRuntimeService{}})
+	cmd = NewRunCommand(&bootstrap.App{Runtime: &fakeRuntimeService{}})
 	cmd.SetArgs([]string{"dev-workflow", "--input", "a", "--file", "b"})
 	if err := cmd.Execute(); err == nil {
 		t.Fatal("expected mutual exclusion error")
@@ -54,7 +56,7 @@ func TestRunCommandFlags(t *testing.T) {
 func TestRunCommandTranslatesWorkflowNotFound(t *testing.T) {
 	t.Parallel()
 
-	cmd := NewRunCommand(&bootstrap.App{Runtime: fakeRuntimeService{runErr: workflows.ErrWorkflowNotFound}})
+	cmd := NewRunCommand(&bootstrap.App{Runtime: &fakeRuntimeService{runErr: workflows.ErrWorkflowNotFound}})
 	cmd.SetArgs([]string{"missing", "--input", "test"})
 
 	err := cmd.Execute()
@@ -69,7 +71,7 @@ func TestRunCommandTranslatesWorkflowNotFound(t *testing.T) {
 func TestContinueCommandTranslatesNoPendingRuns(t *testing.T) {
 	t.Parallel()
 
-	cmd := NewContinueCommand(&bootstrap.App{Runtime: fakeRuntimeService{continueErr: state.ErrNoPendingRuns}})
+	cmd := NewContinueCommand(&bootstrap.App{Runtime: &fakeRuntimeService{continueErr: state.ErrNoPendingRuns}})
 	cmd.SetArgs(nil)
 
 	err := cmd.Execute()
@@ -304,12 +306,17 @@ func TestTranslateErrorProviderPath(t *testing.T) {
 }
 
 type fakeRuntimeService struct {
-	runErr      error
-	continueErr error
-	workflows   []string
+	runErr          error
+	continueErr     error
+	workflows       []string
+	workflowDetails []runtimeapp.WorkflowSummary
+	runCalls        []string
+	runInputs       []string
 }
 
-func (f fakeRuntimeService) Run(context.Context, string, string) (*runtime.RunResult, error) {
+func (f *fakeRuntimeService) Run(_ context.Context, workflowName string, input string) (*runtime.RunResult, error) {
+	f.runCalls = append(f.runCalls, workflowName)
+	f.runInputs = append(f.runInputs, input)
 	if f.runErr != nil {
 		return nil, f.runErr
 	}
@@ -324,15 +331,82 @@ func (f fakeRuntimeService) Run(context.Context, string, string) (*runtime.RunRe
 	return &runtime.RunResult{Run: run}, nil
 }
 
-func (f fakeRuntimeService) Continue(context.Context, string) (*runtime.RunResult, error) {
+func (f *fakeRuntimeService) Continue(context.Context, string) (*runtime.RunResult, error) {
 	return nil, f.continueErr
 }
 
-func (f fakeRuntimeService) ListWorkflows(context.Context) ([]string, error) {
+func (f *fakeRuntimeService) ListWorkflows(context.Context) ([]string, error) {
 	if len(f.workflows) == 0 {
 		return []string{"dev-workflow"}, nil
 	}
 	return f.workflows, nil
+}
+
+func (f *fakeRuntimeService) ListWorkflowDetails(context.Context) ([]runtimeapp.WorkflowSummary, error) {
+	if len(f.workflowDetails) > 0 {
+		return f.workflowDetails, nil
+	}
+	return []runtimeapp.WorkflowSummary{{
+		Name:          "dev-workflow",
+		RequiresInput: true,
+		Inputs: []runtimeapp.WorkflowInput{{
+			Name:     "input",
+			Required: true,
+		}},
+	}}, nil
+}
+
+func TestListCommandRunsSelectedWorkflowInTUI(t *testing.T) {
+	originalShouldUseTUI := shouldUseTUI
+	originalRunListTUI := runWorkflowListTUI
+	t.Cleanup(func() {
+		shouldUseTUI = originalShouldUseTUI
+		runWorkflowListTUI = originalRunListTUI
+	})
+
+	shouldUseTUI = func(bool) bool { return true }
+	runWorkflowListTUI = func(_ []runtimeapp.WorkflowSummary) (string, error) {
+		return "dev-workflow", nil
+	}
+
+	service := &fakeRuntimeService{
+		workflowDetails: []runtimeapp.WorkflowSummary{{
+			Name: "dev-workflow",
+		}},
+	}
+
+	cmd := NewListCommand(&bootstrap.App{Runtime: service})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if len(service.runCalls) != 1 || service.runCalls[0] != "dev-workflow" {
+		t.Fatalf("run calls = %v", service.runCalls)
+	}
+}
+
+func TestResolveWorkflowInputUsesMetadataInNonInteractiveMode(t *testing.T) {
+	originalShouldUseTUI := shouldUseTUI
+	t.Cleanup(func() { shouldUseTUI = originalShouldUseTUI })
+	shouldUseTUI = func(bool) bool { return false }
+
+	root := &cobra.Command{Use: "orq"}
+	root.PersistentFlags().Bool("no-tui", true, "")
+	cmd := &cobra.Command{Use: "run"}
+	root.AddCommand(cmd)
+
+	summary := &runtimeapp.WorkflowSummary{
+		Name: "dev-workflow",
+		Inputs: []runtimeapp.WorkflowInput{{
+			Name:     "feature_request",
+			Required: true,
+		}},
+		RequiresInput: true,
+	}
+
+	_, err := resolveWorkflowInput(cmd, "dev-workflow", summary, "")
+	if err == nil || !strings.Contains(err.Error(), "feature_request") {
+		t.Fatalf("error = %v", err)
+	}
 }
 
 type fakeInstallService struct {

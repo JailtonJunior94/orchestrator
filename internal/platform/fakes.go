@@ -1,17 +1,20 @@
 package platform
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
 // FakeCommandRunner is a programmable CommandRunner for tests.
 type FakeCommandRunner struct {
-	RunFunc func(ctx context.Context, name string, args []string, stdin string) (CommandResult, error)
+	RunFunc          func(ctx context.Context, name string, args []string, stdin string) (CommandResult, error)
+	RunStreamingFunc func(ctx context.Context, name string, args []string, stdin string) (*StreamResult, error)
 }
 
 // Run executes the programmed fake callback.
@@ -20,6 +23,40 @@ func (f FakeCommandRunner) Run(ctx context.Context, name string, args []string, 
 		return CommandResult{}, nil
 	}
 	return f.RunFunc(ctx, name, args, stdin)
+}
+
+// RunStreaming executes the programmed streaming fake callback. If no callback
+// is set, it returns an empty reader and a Wait that succeeds immediately.
+func (f FakeCommandRunner) RunStreaming(ctx context.Context, name string, args []string, stdin string) (*StreamResult, error) {
+	if f.RunStreamingFunc != nil {
+		return f.RunStreamingFunc(ctx, name, args, stdin)
+	}
+	// Default: return empty stdout/stderr with no-op wait.
+	_ = strings.NewReader(stdin) // suppress unused warning
+	exitCode := 0
+	return &StreamResult{
+		Stdout:    bytes.NewReader(nil),
+		Stderr:    bytes.NewReader(nil),
+		StartedAt: time.Now(),
+		Wait:      func() error { return nil },
+		ExitCode:  func() int { return exitCode },
+	}, nil
+}
+
+// Verify FakeCommandRunner implements CommandRunner at compile time.
+var _ CommandRunner = FakeCommandRunner{}
+
+// NewFakeStreamResult builds a StreamResult from fixed stdout/stderr strings,
+// useful in tests that need controlled streaming output.
+func NewFakeStreamResult(stdout, stderr string) *StreamResult {
+	exitCode := 0
+	return &StreamResult{
+		Stdout:    strings.NewReader(stdout),
+		Stderr:    strings.NewReader(stderr),
+		StartedAt: time.Now(),
+		Wait:      func() error { return nil },
+		ExitCode:  func() int { return exitCode },
+	}
 }
 
 // FakeEditor is a programmable Editor for tests.

@@ -28,6 +28,23 @@ func (c *Catalog) Load(ctx context.Context, name string) (*WorkflowDefinition, e
 	return c.parser.Parse(ctx, data)
 }
 
+// LoadSteps returns the step names and providers for a workflow by name.
+// This satisfies the runtimeapp.WorkflowCatalog interface extension without
+// requiring workflows to import runtimeapp.
+func (c *Catalog) LoadSteps(ctx context.Context, name string) (stepNames []string, providers []string, err error) {
+	def, err := c.Load(ctx, name)
+	if err != nil {
+		return nil, nil, err
+	}
+	stepNames = make([]string, 0, len(def.Steps))
+	providers = make([]string, 0, len(def.Steps))
+	for _, s := range def.Steps {
+		stepNames = append(stepNames, s.Name)
+		providers = append(providers, s.Provider)
+	}
+	return stepNames, providers, nil
+}
+
 // List returns the names of all available built-in workflows.
 func (c *Catalog) List() ([]string, error) {
 	entries, err := embeddedFS.ReadDir("embedded")

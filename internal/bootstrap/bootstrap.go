@@ -18,6 +18,7 @@ import (
 	"github.com/jailtonjunior/orchestrator/internal/runtime"
 	runtimeapp "github.com/jailtonjunior/orchestrator/internal/runtime/application"
 	"github.com/jailtonjunior/orchestrator/internal/state"
+	"github.com/jailtonjunior/orchestrator/internal/tui"
 	"github.com/jailtonjunior/orchestrator/internal/workflows"
 )
 
@@ -25,10 +26,14 @@ import (
 type App struct {
 	Runtime runtimeapp.Service
 	Install installapp.Service
+	// TUIWiring is non-nil when the App was bootstrapped in TUI mode.
+	// run.go uses this to determine whether to start the Bubbletea program.
+	TUIWiring *tui.Wiring
 }
 
 // New wires the production dependencies.
-func New(stdin io.Reader, stdout io.Writer, progress runtime.ProgressReporter) (*App, error) {
+// If prompter is nil, a terminal prompter backed by stdin/stdout is created.
+func New(stdin io.Reader, stdout io.Writer, progress runtime.ProgressReporter, prompter hitl.Prompter) (*App, error) {
 	commandRunner := platform.NewCommandRunner()
 	editor := platform.NewEditor()
 	clock := platform.NewClock()
@@ -36,12 +41,19 @@ func New(stdin io.Reader, stdout io.Writer, progress runtime.ProgressReporter) (
 	dirResolver := platform.NewDirResolver()
 	parser := workflows.NewParser()
 	catalog := workflows.NewCatalog(parser)
-	validator := workflows.NewValidator([]string{providers.ClaudeProviderName, providers.CopilotProviderName})
+	validator := workflows.NewValidator([]string{
+		providers.ClaudeProviderName,
+		providers.CopilotProviderName,
+		providers.GeminiProviderName,
+		providers.CodexProviderName,
+	})
 	resolver := workflows.NewTemplateResolver()
 	providerFactory := providers.NewFactory(commandRunner)
 	processor := output.NewProcessor()
 	store := state.NewFileStore(".", fileSystem)
-	prompter := hitl.NewTerminalPrompter(stdin, stdout, editor)
+	if prompter == nil {
+		prompter = hitl.NewTerminalPrompter(stdin, stdout, editor)
+	}
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 
 	engine := runtime.NewEngine(runtime.Dependencies{

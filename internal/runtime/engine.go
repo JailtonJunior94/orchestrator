@@ -35,10 +35,14 @@ type RunResult struct {
 	Run *domain.Run
 }
 
-// ProgressReporter receives step progress notifications.
+// ProgressReporter receives step and output progress notifications.
 type ProgressReporter interface {
 	StepStarted(step ProgressStep)
 	StepFinished(step ProgressStep)
+	OutputChunk(stepName string, chunk []byte)
+	WaitingApproval(stepName string, output string)
+	RunCompleted(runID string, status string)
+	RunFailed(runID string, err error)
 }
 
 // ProgressStep is emitted when a step starts or finishes.
@@ -54,8 +58,15 @@ type ProgressStep struct {
 // NoopProgressReporter ignores progress updates.
 type NoopProgressReporter struct{}
 
-func (NoopProgressReporter) StepStarted(ProgressStep)  {}
-func (NoopProgressReporter) StepFinished(ProgressStep) {}
+func (NoopProgressReporter) StepStarted(ProgressStep)           {}
+func (NoopProgressReporter) StepFinished(ProgressStep)          {}
+func (NoopProgressReporter) OutputChunk(_ string, _ []byte)     {}
+func (NoopProgressReporter) WaitingApproval(_ string, _ string) {}
+func (NoopProgressReporter) RunCompleted(_ string, _ string)    {}
+func (NoopProgressReporter) RunFailed(_ string, _ error)        {}
+
+// Verify NoopProgressReporter implements ProgressReporter at compile time.
+var _ ProgressReporter = NoopProgressReporter{}
 
 // Catalog exposes workflow loading and listing.
 type Catalog interface {
@@ -142,6 +153,9 @@ func (e *DefaultEngine) Run(ctx context.Context, workflowName string, input stri
 	if err := e.validator.Validate(ctx, workflow); err != nil {
 		return nil, err
 	}
+	if err := e.validateWorkflowProvidersAvailable(ctx, workflow); err != nil {
+		return nil, err
+	}
 
 	stepDefs, err := workflowToDomainSteps(workflow)
 	if err != nil {
@@ -163,9 +177,11 @@ func (e *DefaultEngine) Run(ctx context.Context, workflowName string, input stri
 	}
 
 	if err := e.execute(ctx, workflow, run); err != nil {
+		e.progress.RunFailed(run.ID(), err)
 		return &RunResult{Run: run}, err
 	}
 
+	e.progress.RunCompleted(run.ID(), string(run.Status()))
 	return &RunResult{Run: run}, nil
 }
 
@@ -192,6 +208,9 @@ func (e *DefaultEngine) Continue(ctx context.Context, runID string) (*RunResult,
 	if err := e.validator.Validate(ctx, workflow); err != nil {
 		return nil, err
 	}
+	if err := e.validateCurrentRunProviderAvailable(ctx, run); err != nil {
+		return nil, err
+	}
 
 	switch run.Status() {
 	case domain.RunPaused:
@@ -209,9 +228,11 @@ func (e *DefaultEngine) Continue(ctx context.Context, runID string) (*RunResult,
 	}
 
 	if err := e.execute(ctx, workflow, run); err != nil {
+		e.progress.RunFailed(run.ID(), err)
 		return &RunResult{Run: run}, err
 	}
 
+	e.progress.RunCompleted(run.ID(), string(run.Status()))
 	return &RunResult{Run: run}, nil
 }
 
@@ -236,6 +257,7 @@ func (e *DefaultEngine) execute(ctx context.Context, workflow *workflows.Workflo
 
 		if step.Status() == domain.StepWaitingApproval {
 			e.logStepEvent(ctx, run, step, "waiting_approval", 0, nil, nil)
+			e.progress.WaitingApproval(step.Name().String(), step.Output())
 			if err := e.handlePrompt(ctx, run, step); err != nil {
 				if errors.Is(err, errExecutionPaused) {
 					return nil
@@ -272,40 +294,45 @@ func (e *DefaultEngine) execute(ctx context.Context, workflow *workflows.Workflo
 		if err := provider.Available(); err != nil {
 			return err
 		}
+		providerProfile, err := resolveProviderProfile(ctx, provider)
+		if err != nil {
+			return err
+		}
+		e.logStepEvent(ctx, run, step, "provider_execute_started", 0, nil, profileFields(providerProfile))
 
 		stepTimeout, err := parseStepTimeout(stepDef)
 		if err != nil {
 			return err
 		}
 
-		e.logStepEvent(ctx, run, step, "provider_execute_started", 0, nil, nil)
+		providerOpts, processOpts := buildProviderOptions(step.Provider().String(), stepDef.RequiresStructuredOutput(), stepDef.Output.JSONSchema)
 
-		outputValue, rawOutput, providerDuration, err := e.runProviderWithRetries(
+		outputValue, rawOutput, providerDuration, executionProfile, err := e.runProviderWithRetries(
 			ctx,
 			provider,
+			step.Name().String(),
 			resolvedInput,
 			stepTimeout,
+			providerOpts,
 			[]byte(stepDef.Schema),
-			output.ProcessOptions{
-				RequireStructured: stepDef.RequiresStructuredOutput(),
-				SchemaName:        stepDef.Output.JSONSchema,
-			},
+			processOpts,
 		)
 		progressStep.Duration = providerDuration
 		artifactRefs := artifactRefsForStep(step.Name().String())
 		if err != nil {
 			if output.IsRecoverable(err) && rawOutput != "" {
+				displayOutput := normalizeRecoverableOutput(rawOutput, processOpts.OutputFormat)
 				report := []byte(`{"validation_status":"failed","structured":true}`)
 				if saveErr := e.store.SaveArtifact(ctx, run.ID(), step.Name().String(), state.Artifact{
 					RawOutput:        []byte(rawOutput),
-					ApprovedMarkdown: []byte(rawOutput),
+					ApprovedMarkdown: []byte(displayOutput),
 					ValidationReport: report,
 				}); saveErr != nil {
 					return saveErr
 				}
 
 				if markErr := run.MarkStepCompleted(step.Name(), domain.StepResult{
-					Output:              rawOutput,
+					Output:              displayOutput,
 					RawOutputRef:        artifactRefs.rawOutput,
 					ApprovedMarkdownRef: artifactRefs.approvedMarkdown,
 					ValidationReportRef: artifactRefs.validationReport,
@@ -318,7 +345,9 @@ func (e *DefaultEngine) execute(ctx context.Context, workflow *workflows.Workflo
 				if saveErr := e.store.SaveRun(ctx, run); saveErr != nil {
 					return saveErr
 				}
-				e.logStepEvent(ctx, run, step, "provider_output_requires_hitl", providerDuration, err, nil)
+				e.logStepEvent(ctx, run, step, "provider_output_requires_hitl", providerDuration, err, map[string]any{
+					"profile": firstNonEmptyProfile(executionProfile, providerProfile),
+				})
 				e.progress.StepFinished(ProgressStep{
 					Index:    index,
 					Total:    total,
@@ -327,6 +356,7 @@ func (e *DefaultEngine) execute(ctx context.Context, workflow *workflows.Workflo
 					Status:   string(domain.StepWaitingApproval),
 					Duration: providerDuration,
 				})
+				e.progress.WaitingApproval(step.Name().String(), step.Output())
 				if promptErr := e.handlePrompt(ctx, run, step); promptErr != nil {
 					if errors.Is(promptErr, errExecutionPaused) {
 						return nil
@@ -338,7 +368,9 @@ func (e *DefaultEngine) execute(ctx context.Context, workflow *workflows.Workflo
 
 			_ = run.MarkStepFailed(step.Name(), err.Error(), e.clock.Now())
 			_ = e.store.SaveRun(ctx, run)
-			e.logStepEvent(ctx, run, step, "failed", providerDuration, err, nil)
+			e.logStepEvent(ctx, run, step, "failed", providerDuration, err, map[string]any{
+				"profile": firstNonEmptyProfile(executionProfile, providerProfile),
+			})
 			e.progress.StepFinished(ProgressStep{
 				Index:    index,
 				Total:    total,
@@ -377,6 +409,7 @@ func (e *DefaultEngine) execute(ctx context.Context, workflow *workflows.Workflo
 		}
 		e.logStepEvent(ctx, run, step, "provider_execute_finished", providerDuration, nil, map[string]any{
 			"validation_status": outputValue.ValidationStatus,
+			"profile":           firstNonEmptyProfile(executionProfile, providerProfile),
 		})
 
 		e.progress.StepFinished(ProgressStep{
@@ -387,6 +420,7 @@ func (e *DefaultEngine) execute(ctx context.Context, workflow *workflows.Workflo
 			Status:   string(domain.StepWaitingApproval),
 			Duration: providerDuration,
 		})
+		e.progress.WaitingApproval(step.Name().String(), step.Output())
 
 		if err := e.handlePrompt(ctx, run, step); err != nil {
 			if errors.Is(err, errExecutionPaused) {
@@ -397,33 +431,154 @@ func (e *DefaultEngine) execute(ctx context.Context, workflow *workflows.Workflo
 	}
 }
 
-func (e *DefaultEngine) runProviderWithRetries(ctx context.Context, provider providers.Provider, prompt string, timeout time.Duration, schema []byte, options output.ProcessOptions) (*output.Result, string, time.Duration, error) {
+func buildProviderOptions(providerName string, requiresStructured bool, schemaName string) (map[string]string, output.ProcessOptions) {
+	processOpts := output.ProcessOptions{
+		RequireStructured: requiresStructured,
+		SchemaName:        schemaName,
+	}
+
+	switch providerName {
+	case providers.GeminiProviderName:
+		opts := map[string]string{}
+		if requiresStructured {
+			opts["output_format"] = "json"
+			processOpts.OutputFormat = "json"
+		}
+		return opts, processOpts
+	case providers.CodexProviderName:
+		opts := map[string]string{"sandbox": "read-only"}
+		if requiresStructured {
+			opts["output_format"] = "jsonl"
+			processOpts.OutputFormat = "jsonl"
+		}
+		return opts, processOpts
+	default:
+		return nil, processOpts
+	}
+}
+
+func (e *DefaultEngine) validateWorkflowProvidersAvailable(ctx context.Context, workflow *workflows.WorkflowDefinition) error {
+	seen := make(map[string]struct{}, len(workflow.Steps))
+	for _, step := range workflow.Steps {
+		if _, ok := seen[step.Provider]; ok {
+			continue
+		}
+		if err := e.validateProviderAvailable(ctx, step.Provider); err != nil {
+			return err
+		}
+		seen[step.Provider] = struct{}{}
+	}
+
+	return nil
+}
+
+func (e *DefaultEngine) validateCurrentRunProviderAvailable(ctx context.Context, run *domain.Run) error {
+	step, err := run.CurrentStep()
+	if err != nil {
+		if errors.Is(err, domain.ErrNoCurrentStep) {
+			return nil
+		}
+		return err
+	}
+
+	if step.Status() == domain.StepWaitingApproval {
+		return nil
+	}
+
+	return e.validateProviderAvailable(ctx, step.Provider().String())
+}
+
+func (e *DefaultEngine) validateProviderAvailable(ctx context.Context, providerName string) error {
+	provider, err := e.providers.Get(providerName)
+	if err != nil {
+		return err
+	}
+
+	if err := provider.Available(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func resolveProviderProfile(ctx context.Context, provider providers.Provider) (string, error) {
+	resolver, ok := provider.(interface {
+		ResolveProfile(context.Context) (string, error)
+	})
+	if !ok {
+		return "", nil
+	}
+
+	return resolver.ResolveProfile(ctx)
+}
+
+func profileFields(profile string) map[string]any {
+	if profile == "" {
+		return nil
+	}
+
+	return map[string]any{"profile": profile}
+}
+
+func firstNonEmptyProfile(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+
+	return ""
+}
+
+func normalizeRecoverableOutput(raw string, outputFormat string) string {
+	switch outputFormat {
+	case "json":
+		extracted, err := output.ExtractProviderJSONResponse(raw)
+		if err == nil {
+			return strings.TrimSpace(extracted)
+		}
+	case "jsonl":
+		extracted, err := output.ExtractJSONL(raw)
+		if err == nil {
+			return strings.TrimSpace(extracted)
+		}
+	}
+
+	return strings.TrimSpace(raw)
+}
+
+func (e *DefaultEngine) runProviderWithRetries(ctx context.Context, provider providers.Provider, stepName string, prompt string, timeout time.Duration, providerOpts map[string]string, schema []byte, options output.ProcessOptions) (*output.Result, string, time.Duration, string, error) {
 	var (
 		lastErr    error
 		lastOutput string
 		duration   time.Duration
+		profile    string
 	)
 
 	for attempt := 0; attempt <= maxProviderRetries; attempt++ {
-		result, err := provider.Execute(ctx, providers.ProviderInput{Prompt: prompt, Timeout: timeout})
+		onChunk := func(chunk []byte) {
+			e.progress.OutputChunk(stepName, chunk)
+		}
+		result, err := provider.ExecuteStream(ctx, providers.ProviderInput{Prompt: prompt, Timeout: timeout, Options: providerOpts}, onChunk)
 		duration = result.Duration
 		lastOutput = result.Stdout
+		profile = result.Profile
 		if err != nil {
-			return nil, lastOutput, duration, err
+			return nil, lastOutput, duration, profile, err
 		}
 
 		processed, err := e.processor.Process(ctx, result.Stdout, schema, options)
 		if err == nil {
-			return processed, lastOutput, duration, nil
+			return processed, lastOutput, duration, profile, nil
 		}
 
 		lastErr = err
 		if !output.IsRecoverable(err) || attempt == maxProviderRetries {
-			return nil, lastOutput, duration, lastErr
+			return nil, lastOutput, duration, profile, lastErr
 		}
 	}
 
-	return nil, lastOutput, duration, lastErr
+	return nil, lastOutput, duration, profile, lastErr
 }
 
 func (e *DefaultEngine) handlePrompt(ctx context.Context, run *domain.Run, step *domain.StepExecution) error {
@@ -469,6 +624,9 @@ func (e *DefaultEngine) handlePrompt(ctx context.Context, run *domain.Run, step 
 			}
 		}
 	case hitl.ActionRedo:
+		if err := e.validateProviderAvailable(ctx, step.Provider().String()); err != nil {
+			return err
+		}
 		if err := run.RetryStep(step.Name(), e.clock.Now()); err != nil {
 			return err
 		}
@@ -497,6 +655,9 @@ func (e *DefaultEngine) logStepEvent(ctx context.Context, run *domain.Run, step 
 		"provider", step.Provider().String(),
 		"duration_ms", duration.Milliseconds(),
 		"event", event,
+	}
+	for key, value := range extra {
+		attrs = append(attrs, key, value)
 	}
 	if err != nil {
 		attrs = append(attrs, "error", err.Error())

@@ -1,7 +1,18 @@
 name: dev-workflow
+summary: Draft PRD, tech spec, task breakdown and execution plan
+description: |
+  End-to-end workflow that drafts a PRD, derives a technical specification,
+  decomposes the work into implementable tasks and proposes a safe execution plan.
+inputs:
+  - name: input
+    label: Feature Request
+    description: Product or engineering request that should drive the generated artefacts.
+    type: multiline
+    placeholder: Describe the feature, problem or initiative to plan...
+    required: true
 steps:
   - name: prd
-    provider: claude
+    provider: gemini
     input: |
       Gere um PRD detalhado para: {{input}}
       Responda com Markdown e inclua um bloco ```json``` válido contendo um resumo estruturado do documento.
@@ -22,7 +33,7 @@ steps:
     schema: |
       {"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}
   - name: tasks
-    provider: claude
+    provider: codex
     input: |
       Decomponha em tasks implementáveis:
       PRD: {{steps.prd.output}}
