@@ -128,7 +128,7 @@ func (g geminiProvider) executeWithFormat(ctx context.Context, input ProviderInp
 // Available verifies the binary is in PATH and supports at least one
 // non-interactive prompt profile with configurable output formatting.
 func (g geminiProvider) Available() error {
-	if _, err := lookPath(g.binary); err != nil {
+	if _, err := g.lookupBinaryPath(g.binary); err != nil {
 		return fmt.Errorf("provider %q binary %q not found in PATH — %s: %w",
 			g.name, g.binary, geminiInstallHint, err)
 	}

@@ -12,7 +12,7 @@ inputs:
     required: true
 steps:
   - name: prd
-    provider: gemini
+    provider: claude
     input: |
       Gere um PRD detalhado para: {{input}}
       Responda com Markdown e inclua um bloco ```json``` válido contendo um resumo estruturado do documento.
@@ -33,7 +33,7 @@ steps:
     schema: |
       {"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}
   - name: tasks
-    provider: codex
+    provider: claude
     input: |
       Decomponha em tasks implementáveis:
       PRD: {{steps.prd.output}}

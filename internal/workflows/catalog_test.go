@@ -26,7 +26,7 @@ func TestCatalogLoad(t *testing.T) {
 		if len(wf.Steps) != 4 {
 			t.Errorf("steps = %d, want 4", len(wf.Steps))
 		}
-		wantProviders := []string{"gemini", "claude", "codex", "copilot"}
+		wantProviders := []string{"claude", "claude", "claude", "copilot"}
 		for i, want := range wantProviders {
 			if wf.Steps[i].Provider != want {
 				t.Fatalf("step %d provider = %q, want %q", i, wf.Steps[i].Provider, want)

@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jailtonjunior/orchestrator/internal/platform"
@@ -131,12 +132,12 @@ func buildCodexInvocation(profile invocationProfile, prompt, sandbox string) inv
 // Available verifies the binary is in PATH and supports at least one
 // non-interactive execution profile with sandboxing and JSON output.
 func (c codexProvider) Available() error {
-	if _, err := lookPath(c.binary); err != nil {
+	if _, err := c.lookupBinaryPath(c.binary); err != nil {
 		return fmt.Errorf("provider %q binary %q not found in PATH — %s: %w",
 			c.name, c.binary, codexInstallHint, err)
 	}
 
-	helpText, err := probeHelpText(context.Background(), c.runner, c.binary)
+	helpText, err := probeCodexHelpText(context.Background(), c.runner, c.binary)
 	if err != nil {
 		return fmt.Errorf("provider %q: cannot probe binary: %w", c.name, err)
 	}
@@ -149,4 +150,21 @@ func (c codexProvider) Available() error {
 		)
 	}
 	return nil
+}
+
+func probeCodexHelpText(ctx context.Context, runner platform.CommandRunner, binary string) (string, error) {
+	helpText, err := probeHelpText(ctx, runner, binary)
+	if err != nil {
+		return "", err
+	}
+
+	execHelp, err := runner.Run(ctx, binary, []string{"exec", "--help"}, "")
+	if err != nil {
+		return helpText, nil
+	}
+
+	return strings.Join([]string{
+		helpText,
+		strings.ToLower(execHelp.Stdout + "\n" + execHelp.Stderr),
+	}, "\n"), nil
 }

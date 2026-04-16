@@ -8,6 +8,7 @@ import (
 
 type providerJSONEnvelope struct {
 	Response *string `json:"response"`
+	Result   *string `json:"result"`
 	Error    any     `json:"error"`
 }
 
@@ -21,6 +22,10 @@ func ExtractProviderJSONResponse(raw string) (string, error) {
 
 	if envelope.Response != nil && strings.TrimSpace(*envelope.Response) != "" {
 		return *envelope.Response, nil
+	}
+
+	if envelope.Result != nil && strings.TrimSpace(*envelope.Result) != "" {
+		return *envelope.Result, nil
 	}
 
 	if envelope.Error != nil {

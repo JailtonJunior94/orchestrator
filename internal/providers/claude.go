@@ -1,16 +1,20 @@
 package providers
 
 import (
+	"os"
 	"time"
 
 	"github.com/jailtonjunior/orchestrator/internal/platform"
 )
 
+const claudeBinaryEnvVar = "ORQ_CLAUDE_BINARY"
+const defaultClaudeBinary = ClaudeProviderName
+
 // NewClaudeProvider creates the Claude CLI adapter.
 func NewClaudeProvider(runner platform.CommandRunner) Provider {
 	return cliProvider{
 		name:           ClaudeProviderName,
-		binary:         ClaudeProviderName,
+		binary:         resolveClaudeBinary(),
 		defaultTimeout: 5 * time.Minute,
 		runner:         runner,
 		profiles: []invocationProfile{
@@ -35,4 +39,12 @@ func NewClaudeProvider(runner platform.CommandRunner) Provider {
 			},
 		},
 	}
+}
+
+func resolveClaudeBinary() string {
+	if binary := os.Getenv(claudeBinaryEnvVar); binary != "" {
+		return binary
+	}
+
+	return defaultClaudeBinary
 }

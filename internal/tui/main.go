@@ -86,7 +86,12 @@ func RunTUI(ctx context.Context, svc runtimeapp.Service, wiring *Wiring, workflo
 		m.setWorkflowSummaries(summaries)
 		m.syncStatusBar()
 
-		p := tea.NewProgram(m)
+		opts := []tea.ProgramOption{}
+		if width, height, sizeErr := term.GetSize(int(os.Stdout.Fd())); sizeErr == nil && width > 0 && height > 0 {
+			opts = append(opts, tea.WithWindowSize(width, height))
+		}
+
+		p := tea.NewProgram(m, opts...)
 		final, tuiErr := p.Run()
 
 		cancelEngine()

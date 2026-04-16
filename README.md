@@ -1,62 +1,48 @@
 # ORQ
 
-CLI para orquestrar workflows de agentes de IA no terminal com execução step-by-step, Human-in-the-Loop e persistência local.
+CLI para orquestrar workflows de agentes de IA no terminal, com execução step-by-step, Human-in-the-Loop e persistência local para auditoria e retomada.
 
-[![Go Version](https://img.shields.io/badge/go-1.26.1-blue.svg)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/go-1.26.2-blue.svg)](https://go.dev/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## O que é
+## Sobre
 
-O ORQ resolve o problema de operar múltiplos agentes de IA de forma isolada e sem controle de fluxo. Em vez de alternar manualmente entre CLIs diferentes, a ferramenta executa um workflow declarativo, conecta a saída aprovada de um step ao próximo e mantém estado e artefatos locais para auditoria e retomada.
+O ORQ resolve o problema de operar múltiplos agentes de IA sem controle explícito de fluxo. Em vez de alternar manualmente entre CLIs, copiar saídas entre ferramentas e perder contexto da execução, você descreve um workflow e o runtime coordena os steps, encadeia o output aprovado e persiste tudo em `.orq/`.
 
-Hoje o projeto suporta na V1 execução via `claude` e `copilot`, além de gerenciamento de assets instaláveis para os ecossistemas Claude, Gemini, Codex e Copilot. A arquitetura de providers permanece extensível para evoluções futuras.
+O projeto já suporta runtime com `claude`, `copilot`, `gemini` e `codex`, além de um subsistema de instalação de assets para ecossistemas compatíveis. O foco continua sendo uma experiência `CLI-first`, auditável e extensível.
 
 ## Funcionalidades
 
-- Workflows declarativos em YAML com steps, providers, templates e validação estrutural.
-- Workflow built-in `dev-workflow` para fluxo de desenvolvimento assistido por IA.
-- Providers plugáveis com suporte V1 para `claude` e `copilot`.
-- Human-in-the-Loop em cada step com ações canônicas: `approve`, `edit`, `redo` e `exit`.
-- Persistência local em `.orq/runs/<run-id>` com retomada por `orq continue`.
+- Workflows declarativos em YAML com validação estrutural.
+- Execução step-by-step com aprovação humana obrigatória entre etapas.
+- Persistência local de estado, artefatos e logs por run.
+- Retomada de execução com `orq continue`.
 - Extração de Markdown e JSON estruturado do output dos providers.
-- Validação de JSON com schema por step quando configurado.
-- Retry automático para falhas de provider antes de pausar a execução.
-- Logs por run e armazenamento de artefatos brutos, aprovados e validados.
-- Catálogo embutido de workflows e comando para listagem de workflows disponíveis.
-- Subsistema de instalação para assets de providers com preview, apply, list, verify, update e remove.
-- Inventário de instalação por escopo `project` e `global`.
-- Verificação estrutural e, em alguns casos, funcional dos assets instalados.
-
-## Como funciona
-
-O fluxo principal é:
-
-1. O usuário executa `orq run <workflow>` com `--input` ou `--file`.
-2. O ORQ carrega o workflow embutido, valida a definição e verifica se os providers necessários estão disponíveis no `PATH`.
-3. Para cada step, resolve templates como `{{input}}` e `{{steps.<name>.output}}`.
-4. Executa o provider correspondente via subprocesso com timeout e perfil de invocação compatível com a CLI instalada.
-5. Processa o output, extraindo Markdown e, quando houver, JSON estruturado.
-6. Exibe o resultado para decisão humana: aprovar, editar, refazer ou sair.
-7. Persiste estado, artefatos e logs em `.orq/`.
-8. Continua para o próximo step ou pausa a run para retomada posterior.
+- Validação de JSON Schema por step quando configurado.
+- Retry automático antes de pausar a run por falha.
+- Catálogo embutido de workflows.
+- Comando `orq install` para instalar, atualizar, remover e verificar assets.
 
 ## Instalação
 
 ### Requisitos
 
-- Go `1.26.1+` para build local ou `go install`
-- Os providers do workflow padrão instalados no `PATH`:
-  - `claude`
-  - `copilot`
+- Go `1.26.2+` para build local ou `go install`
+- Pelo menos os providers usados no workflow instalado no `PATH`
 - `task` é opcional, mas é a interface preferida para desenvolvimento local
 
-### Homebrew (macOS / Linux)
+Para o workflow embutido `dev-workflow`, o caminho padrão usa:
+
+- `claude` nos steps `prd`, `techspec` e `tasks`
+- `copilot` no step `execute`
+
+### Homebrew
 
 ```bash
 brew install jailtonjunior/tap/orq
 ```
 
-Para atualizar uma instalação existente:
+Para atualizar:
 
 ```bash
 brew upgrade orq
@@ -76,41 +62,52 @@ cd orchestrator
 task build
 ```
 
-O binário gerado é `./orq`.
+O binário gerado será `./orq`.
 
-### Release local
+## Primeiros 5 Minutos
 
-```bash
-task release:snapshot
-```
+Se você quer apenas validar que o ORQ está funcionando, siga este fluxo:
 
-## Uso rápido
-
-### Ver ajuda
+### 1. Verifique a CLI
 
 ```bash
 orq --help
 ```
 
-### Listar workflows embutidos
+### 2. Liste os workflows disponíveis
 
 ```bash
 orq list
 ```
 
-### Executar um workflow
+Se quiser evitar a interface interativa:
 
 ```bash
-orq run dev-workflow --input "Sistema de notificações push para mobile"
+orq --no-tui list
 ```
 
-Ou:
+### 3. Execute o workflow padrão
+
+```bash
+orq run dev-workflow --input "Criar sistema de notificações push para mobile"
+```
+
+Ou usando arquivo:
 
 ```bash
 orq run dev-workflow --file requisitos.md
 ```
 
-### Retomar uma execução pausada
+### 4. Revise cada step
+
+Após cada execução, o ORQ entra em Human-in-the-Loop. Você decide como seguir:
+
+- `approve`: aceita a saída e avança
+- `edit`: abre o editor para ajustar o conteúdo aprovado
+- `redo`: executa o step novamente
+- `exit`: pausa a run para retomar depois
+
+### 5. Retome se necessário
 
 ```bash
 orq continue
@@ -122,18 +119,160 @@ Para uma run específica:
 orq continue --run-id <run-id>
 ```
 
+## Passo a Passo de Uso
+
+### Fluxo 1: executar um workflow do zero
+
+1. Confira os workflows disponíveis com `orq list`.
+2. Escolha um workflow, por exemplo `dev-workflow`.
+3. Passe o input inline com `--input` ou via arquivo com `--file`.
+4. Revise o output de cada step no momento da aprovação.
+5. Ao concluir, consulte os artefatos persistidos em `.orq/runs/<run-id>/`.
+
+Exemplo:
+
+```bash
+orq run dev-workflow --input "Adicionar autenticação por magic link"
+```
+
+### Fluxo 2: executar em ambiente não interativo ou mais simples
+
+Se você quiser reduzir dependência de TUI:
+
+```bash
+orq --no-tui run dev-workflow --input "Adicionar exportação CSV"
+```
+
+Para desabilitar animações:
+
+```bash
+orq --no-animation run dev-workflow --input "Adicionar exportação CSV"
+```
+
+Também é possível desabilitar animações via variável de ambiente:
+
+```bash
+ORQ_NO_ANIMATION=1 orq run dev-workflow --input "Adicionar exportação CSV"
+
+# usar um binário alternativo para o provider logical `claude`
+ORQ_CLAUDE_BINARY=claude orq run dev-workflow --input "Adicionar exportação CSV"
+```
+
+### Fluxo 3: retomar uma run pausada
+
+1. Saia de uma execução usando `exit` no Human-in-the-Loop.
+2. Retome a última run pausada com `orq continue`.
+3. Se houver mais de uma run, informe `--run-id`.
+
+### Fluxo 4: inspecionar a execução
+
+Cada run é armazenada em:
+
+```text
+.orq/
+└── runs/
+    └── <run-id>/
+        ├── state.json
+        ├── artifacts/
+        │   └── <step>/
+        │       ├── raw.md
+        │       ├── approved.md
+        │       ├── structured.json
+        │       └── validation.json
+        └── logs/
+            └── run.log
+```
+
+Arquivos principais:
+
+- `state.json`: snapshot da run e status atual
+- `raw.md`: saída original do provider
+- `approved.md`: conteúdo aprovado ou editado pelo usuário
+- `structured.json`: JSON extraído do output, quando existir
+- `validation.json`: resultado da validação de schema
+- `run.log`: log append-only da execução
+
 ## Comandos da CLI
 
-Os comandos expostos hoje são:
+### `orq run <workflow>`
 
-- `orq run <workflow>`: executa um workflow built-in.
-- `orq continue`: retoma a última run pausada ou pendente.
-- `orq list`: lista workflows embutidos.
-- `orq install`: instala e gerencia assets suportados pelo ORQ.
+Executa um workflow embutido.
 
-## Workflow padrão: `dev-workflow`
+Flags principais:
 
-O catálogo embutido contém hoje o workflow `dev-workflow`, com quatro steps:
+- `--input`: input inline
+- `--file`, `-f`: input vindo de arquivo
+
+Exemplos:
+
+```bash
+orq run dev-workflow --input "Criar módulo de cobrança recorrente"
+orq run dev-workflow --file prompt.md
+```
+
+### `orq continue`
+
+Retoma a última run pausada.
+
+Flag principal:
+
+- `--run-id`: retoma uma run específica
+
+Exemplo:
+
+```bash
+orq continue --run-id <run-id>
+```
+
+### `orq list`
+
+Lista os workflows disponíveis. Em TTY, pode abrir a interface interativa; com `--no-tui`, imprime em texto puro.
+
+Exemplo:
+
+```bash
+orq --no-tui list
+```
+
+### `orq install`
+
+Gerencia assets compatíveis com os ecossistemas suportados pelo projeto.
+
+Operações disponíveis:
+
+```bash
+orq install
+orq install update
+orq install remove
+orq install list
+orq install verify
+```
+
+Filtros suportados:
+
+- `--provider`
+- `--asset`
+- `--kind`
+- `--project`
+- `--global`
+
+Flags adicionais para operações mutáveis:
+
+- `--conflict abort|skip|overwrite`
+- `--yes`
+
+Exemplos:
+
+```bash
+orq install list --provider claude
+orq install --provider codex --kind skill --yes
+orq install verify --global --provider copilot
+orq install remove --provider gemini --asset reviewer
+```
+
+## Workflow Padrão
+
+O catálogo embutido inclui hoje o workflow `dev-workflow`, com quatro steps:
 
 | Step | Provider | Objetivo |
 | --- | --- | --- |
@@ -150,22 +289,35 @@ O último step exige um JSON estruturado com:
 
 O prompt do step `execute` proíbe explicitamente `git commit`, `git push` e `gh pr create`.
 
+## Como Funciona
+
+O fluxo principal de execução é:
+
+1. Você executa `orq run <workflow>` com `--input` ou `--file`.
+2. O ORQ carrega o workflow, valida a definição e checa os providers necessários.
+3. O runtime resolve templates como `{{input}}` e `{{steps.<name>.output}}`.
+4. Cada provider é executado via subprocesso com timeout e perfil compatível.
+5. O output é processado em Markdown e, quando existir, JSON estruturado.
+6. O Human-in-the-Loop decide se aprova, edita, refaz ou pausa.
+7. O estado e os artefatos são persistidos em `.orq/`.
+8. A run segue para o próximo step ou fica pronta para retomada posterior.
+
 ## Human-in-the-Loop
 
-Após cada execução de step, o ORQ entra em modo de decisão humana. As ações canônicas do runtime são:
+Após cada step, o runtime entra em modo de decisão humana com ações canônicas:
 
-- `approve`: aceita o output e avança.
-- `edit`: abre o editor externo para ajustar o conteúdo aprovado.
-- `redo`: refaz o step com o mesmo input.
-- `exit`: pausa a execução.
+- `approve`
+- `edit`
+- `redo`
+- `exit`
 
-Esse modelo permite revisão obrigatória entre steps sem perder o estado da run.
+Esse modelo permite revisão obrigatória entre etapas sem perder o histórico da execução.
 
-## Formato de workflow
+## Formato de Workflow
 
 Os workflows são definidos em YAML. Exemplo compatível com o runtime:
 
-```yaml
+````yaml
 name: meu-workflow
 steps:
   - name: analise
@@ -193,14 +345,14 @@ steps:
       Proponha a implementacao.
     output:
       markdown: required
-```
+````
 
-### Campos relevantes
+Campos relevantes:
 
 | Campo | Obrigatório | Descrição |
 | --- | --- | --- |
 | `name` | Sim | Identificador único do step |
-| `provider` | Sim | `claude` ou `copilot` na V1; a arquitetura permanece extensível |
+| `provider` | Sim | Provider do step, como `claude`, `copilot`, `gemini` ou `codex` |
 | `input` | Sim | Template resolvido antes da execução |
 | `output.markdown` | Sim | Define que o output em Markdown é obrigatório |
 | `output.json_schema` | Não | Nome lógico do schema |
@@ -208,42 +360,14 @@ steps:
 | `capabilities` | Não | Capacidades opcionais do provider |
 | `timeout` | Não | Timeout do step |
 
-### Variáveis de template
+Variáveis de template:
 
 | Variável | Descrição |
 | --- | --- |
 | `{{input}}` | Input informado pelo usuário |
 | `{{steps.<name>.output}}` | Markdown aprovado de um step anterior |
 
-## Persistência e artefatos
-
-Cada run é armazenada em `.orq/runs/<run-id>/`.
-
-```text
-.orq/
-└── runs/
-    └── <run-id>/
-        ├── state.json
-        ├── artifacts/
-        │   └── <step>/
-        │       ├── raw.md
-        │       ├── approved.md
-        │       ├── structured.json
-        │       └── validation.json
-        └── logs/
-            └── run.log
-```
-
-Arquivos principais:
-
-- `state.json`: snapshot da run, status e ponteiros para artefatos.
-- `raw.md`: saída bruta do provider.
-- `approved.md`: versão aprovada ou editada pelo usuário.
-- `structured.json`: JSON extraído do output.
-- `validation.json`: relatório de validação do schema.
-- `run.log`: log append-only da execução.
-
-## Providers suportados
+## Providers Suportados
 
 ### Runtime
 
@@ -258,44 +382,20 @@ Todos os providers são validados antes da run. Se um binário não estiver disp
 
 ### Instalação de assets
 
-O comando `orq install` gerencia assets de providers por escopo:
+O comando `orq install` gerencia assets por escopo:
 
 - `project`: inventário em `.orq/install/inventory.json`
 - `global`: inventário em `~/.local/state/orq/install/inventory.json` ou diretório equivalente do sistema
 
-Operações disponíveis:
-
-```bash
-orq install
-orq install update
-orq install remove
-orq install list
-orq install verify
-```
-
-Filtros suportados:
-
-- `--provider`
-- `--asset`
-- `--kind`
-- `--project`
-- `--global`
-
-Flags adicionais para operações mutáveis:
-
-- `--conflict abort|skip|overwrite`
-- `--yes`
-
-### O que o subsistema de install gerencia
-
-O catálogo atual descobre assets instaláveis a partir do repositório, principalmente em:
+O catálogo atual descobre assets principalmente em:
 
 - `.claude/commands/`
-- `.claude/skills/`, quando existir
-- `.gemini/commands/` e `.gemini/skills/`, quando existirem
-- `.codex/skills/`, quando existir
+- `.claude/skills/`
+- `.gemini/commands/`
+- `.gemini/skills/`
+- `.codex/skills/`
 - `AGENTS.md`
-- `.github/copilot-instructions.md`, quando existir
+- `.github/copilot-instructions.md`
 
 Mapeamentos importantes:
 
@@ -305,15 +405,6 @@ Mapeamentos importantes:
 - Copilot:
   - no projeto, usa `.claude/commands`, `.claude/skills` e `AGENTS.md`
   - no escopo global, usa `.copilot/skills` e `.copilot/copilot-instructions.md`
-
-Exemplos:
-
-```bash
-orq install list --provider claude
-orq install --provider codex --kind skill --yes
-orq install verify --global --provider copilot
-orq install remove --provider gemini --asset reviewer
-```
 
 ## Arquitetura
 
@@ -335,11 +426,11 @@ internal/hitl/        interação humana no terminal
 
 Princípios adotados:
 
-- CLI-first, sem backend HTTP.
-- Clean Architecture e Ports and Adapters.
-- Providers executam o step, mas não controlam o fluxo do workflow.
-- `Run` é o aggregate root natural da execução.
-- Persistência local simples com filesystem + JSON.
+- CLI-first, sem backend HTTP
+- Clean Architecture e Ports and Adapters
+- Providers executam o step, mas não controlam o fluxo do workflow
+- `Run` é o aggregate root natural da execução
+- Persistência local simples com filesystem + JSON
 
 ## Desenvolvimento
 
@@ -350,7 +441,7 @@ Princípios adotados:
 - `golangci-lint`
 - `goreleaser`
 
-### Comandos
+### Comandos úteis
 
 ```bash
 task build
@@ -367,15 +458,26 @@ O `task test` executa:
 go test -race -cover ./...
 ```
 
-## Estado atual do projeto
+## Contribuição
 
-Pontos importantes para quem estiver usando ou contribuindo:
+Para contribuir localmente:
 
-- O nome da CLI é `orq`.
-- O entrypoint atual é `cmd/orq`.
-- O workflow embutido disponível hoje é `dev-workflow`.
-- O repositório já suporta `gemini` e `codex` no runtime; o README antigo citava apenas Claude e Copilot.
-- O subsistema de `install` já faz parte da interface pública da CLI.
+```bash
+git clone https://github.com/jailtonjunior/orchestrator.git
+cd orchestrator
+task fmt
+task lint
+task test
+task build
+```
+
+Pontos úteis para quem está chegando:
+
+- O nome da CLI é `orq`
+- O entrypoint é `cmd/orq`
+- O workflow embutido principal é `dev-workflow`
+- O runtime já suporta `claude`, `copilot`, `gemini` e `codex`
+- O subsistema `install` faz parte da interface pública da CLI
 
 ## Licença
 

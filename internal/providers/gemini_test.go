@@ -121,16 +121,12 @@ func TestGeminiProviderExecuteStream_withOutputFormatJSON(t *testing.T) {
 func TestGeminiProviderAvailable_outputFormatMissing(t *testing.T) {
 	t.Parallel()
 
-	original := lookPath
-	t.Cleanup(func() { lookPath = original })
-	lookPath = func(file string) (string, error) {
-		return filepath.Join("/usr/bin", file), nil
-	}
-
-	provider := NewGeminiProvider(platform.FakeCommandRunner{
+	provider := withLookup(NewGeminiProvider(platform.FakeCommandRunner{
 		RunFunc: func(_ context.Context, _ string, _ []string, _ string) (platform.CommandResult, error) {
 			return helpWithoutOutputFormat(), nil
 		},
+	}), func(file string) (string, error) {
+		return filepath.Join("/usr/bin", file), nil
 	})
 
 	err := provider.Available()
@@ -145,16 +141,12 @@ func TestGeminiProviderAvailable_outputFormatMissing(t *testing.T) {
 func TestGeminiProviderAvailable_shortOutputFlagSupported(t *testing.T) {
 	t.Parallel()
 
-	original := lookPath
-	t.Cleanup(func() { lookPath = original })
-	lookPath = func(file string) (string, error) {
-		return filepath.Join("/usr/bin", file), nil
-	}
-
-	provider := NewGeminiProvider(platform.FakeCommandRunner{
+	provider := withLookup(NewGeminiProvider(platform.FakeCommandRunner{
 		RunFunc: func(_ context.Context, _ string, _ []string, _ string) (platform.CommandResult, error) {
 			return helpWithShortOutputFlag(), nil
 		},
+	}), func(file string) (string, error) {
+		return filepath.Join("/usr/bin", file), nil
 	})
 
 	if err := provider.Available(); err != nil {
@@ -165,16 +157,12 @@ func TestGeminiProviderAvailable_shortOutputFlagSupported(t *testing.T) {
 func TestGeminiProviderAvailable_promptFlagMissing(t *testing.T) {
 	t.Parallel()
 
-	original := lookPath
-	t.Cleanup(func() { lookPath = original })
-	lookPath = func(file string) (string, error) {
-		return filepath.Join("/usr/bin", file), nil
-	}
-
-	provider := NewGeminiProvider(platform.FakeCommandRunner{
+	provider := withLookup(NewGeminiProvider(platform.FakeCommandRunner{
 		RunFunc: func(_ context.Context, _ string, _ []string, _ string) (platform.CommandResult, error) {
 			return helpWithoutPromptFlag(), nil
 		},
+	}), func(file string) (string, error) {
+		return filepath.Join("/usr/bin", file), nil
 	})
 
 	err := provider.Available()
@@ -189,13 +177,9 @@ func TestGeminiProviderAvailable_promptFlagMissing(t *testing.T) {
 func TestGeminiProviderAvailable_binaryNotFound(t *testing.T) {
 	t.Parallel()
 
-	original := lookPath
-	t.Cleanup(func() { lookPath = original })
-	lookPath = func(_ string) (string, error) {
+	provider := withLookup(NewGeminiProvider(platform.FakeCommandRunner{}), func(_ string) (string, error) {
 		return "", errors.New("not found")
-	}
-
-	provider := NewGeminiProvider(platform.FakeCommandRunner{})
+	})
 	err := provider.Available()
 	if err == nil {
 		t.Fatal("expected error when binary missing")
@@ -205,16 +189,12 @@ func TestGeminiProviderAvailable_binaryNotFound(t *testing.T) {
 func TestGeminiProviderAvailable_success(t *testing.T) {
 	t.Parallel()
 
-	original := lookPath
-	t.Cleanup(func() { lookPath = original })
-	lookPath = func(file string) (string, error) {
-		return filepath.Join("/usr/bin", file), nil
-	}
-
-	provider := NewGeminiProvider(platform.FakeCommandRunner{
+	provider := withLookup(NewGeminiProvider(platform.FakeCommandRunner{
 		RunFunc: func(_ context.Context, _ string, _ []string, _ string) (platform.CommandResult, error) {
 			return helpWithOutputFormat(), nil
 		},
+	}), func(file string) (string, error) {
+		return filepath.Join("/usr/bin", file), nil
 	})
 
 	if err := provider.Available(); err != nil {

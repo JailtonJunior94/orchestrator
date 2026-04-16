@@ -1,7 +1,9 @@
 package bootstrap
 
 import (
+	"bytes"
 	"context"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -60,4 +62,28 @@ func TestBootstrapValidatorRejectsUnknownProvider(t *testing.T) {
 	if !strings.Contains(err.Error(), "openrouter") {
 		t.Fatalf("error should mention unknown provider name, got: %v", err)
 	}
+}
+
+func TestNewLoggerWritesToConfiguredOutput(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	logger := newLogger(&buf)
+
+	logger.Info("workflow step", slog.String("step", "prd"))
+
+	if got := buf.String(); !strings.Contains(got, "workflow step") {
+		t.Fatalf("expected log output to contain message, got %q", got)
+	}
+	if !strings.Contains(buf.String(), "step=prd") {
+		t.Fatalf("expected log output to contain structured field, got %q", buf.String())
+	}
+}
+
+func TestNewLoggerUsesDiscardWhenOutputIsNil(t *testing.T) {
+	t.Parallel()
+
+	logger := newLogger(nil)
+
+	logger.Info("workflow step", slog.String("step", "prd"))
 }

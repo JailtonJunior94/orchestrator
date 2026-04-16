@@ -61,3 +61,43 @@ func TestOutputView_SetSizeDoesNotPanic(t *testing.T) {
 	ov.SetSize(60, 20)
 	_ = ov.View()
 }
+
+func TestOutputView_ReformatsMarkdownTablesForReadableViewport(t *testing.T) {
+	t.Parallel()
+
+	ov := components.NewOutputView(48, 24)
+	ov.SetContent(strings.Join([]string{
+		"# Tasks",
+		"",
+		"| Task | Owner | Status |",
+		"| --- | --- | --- |",
+		"| Magic link | auth-team | In progress |",
+		"| Email template | platform | Pending review |",
+	}, "\n"))
+
+	view := ov.View()
+	if strings.Contains(view, "| Task | Owner | Status |") {
+		t.Fatalf("expected markdown table to be reformatted, got: %s", view)
+	}
+	if !strings.Contains(view, "Table view:") {
+		t.Fatalf("expected reformatted table heading, got: %s", view)
+	}
+	if !strings.Contains(view, "[1]") || !strings.Contains(view, "Task: Magic link") {
+		t.Fatalf("expected first row to be rendered as stacked fields, got: %s", view)
+	}
+	if !strings.Contains(view, "Owner: auth-team") || !strings.Contains(view, "Status: In progress") {
+		t.Fatalf("expected row fields to remain visible, got: %s", view)
+	}
+}
+
+func TestOutputView_PreservesPlainTextOutput(t *testing.T) {
+	t.Parallel()
+
+	ov := components.NewOutputView(48, 24)
+	ov.SetContent("plain text\nsecond line")
+
+	view := ov.View()
+	if !strings.Contains(view, "plain text") || !strings.Contains(view, "second line") {
+		t.Fatalf("expected plain text output to remain unchanged, got: %s", view)
+	}
+}

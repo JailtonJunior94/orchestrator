@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"slices"
 
@@ -43,7 +44,7 @@ func main() {
 func buildApp(noTUI bool) (*bootstrap.App, error) {
 	if tui.ShouldUseTUI(noTUI) {
 		wiring := tui.NewWiring()
-		app, err := bootstrap.New(os.Stdin, os.Stdout, wiring.Reporter, wiring.Prompter)
+		app, err := bootstrap.NewWithLoggerOutput(os.Stdin, os.Stdout, wiring.Reporter, wiring.Prompter, io.Discard)
 		if err != nil {
 			return nil, err
 		}

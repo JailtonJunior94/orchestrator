@@ -176,6 +176,14 @@ func TestEnginePassesStepTimeoutAndSchema(t *testing.T) {
 func TestEnginePassesStructuredProviderOptions(t *testing.T) {
 	t.Parallel()
 
+	claudeOpts, claudeProcess := buildProviderOptions(providers.ClaudeProviderName, true, "prd/v1")
+	if claudeOpts != nil {
+		t.Fatalf("claude options = %v, want nil", claudeOpts)
+	}
+	if claudeProcess.OutputFormat != "json" {
+		t.Fatalf("claude process output format = %q", claudeProcess.OutputFormat)
+	}
+
 	geminiOpts, geminiProcess := buildProviderOptions(providers.GeminiProviderName, true, "prd/v1")
 	if got := geminiOpts["output_format"]; got != "json" {
 		t.Fatalf("gemini output_format = %q", got)
@@ -193,6 +201,61 @@ func TestEnginePassesStructuredProviderOptions(t *testing.T) {
 	}
 	if codexProcess.OutputFormat != "jsonl" {
 		t.Fatalf("codex process output format = %q", codexProcess.OutputFormat)
+	}
+}
+
+func TestEngineRunProcessesClaudeJSONEnvelope(t *testing.T) {
+	t.Parallel()
+
+	claudeProvider := &fakeProvider{
+		responses: []providerResponse{
+			{
+				stdout: "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"result\":\"PRD\\n\\n```json\\n{\\\"doc\\\":\\\"prd\\\"}\\n```\"}",
+			},
+		},
+	}
+	engine := newTestEngineWithOptions(t, nil, hitl.NewFakePrompter(
+		hitl.PromptResult{Action: hitl.ActionApprove},
+	), nil, platform.FakeCommandRunner{}, t.TempDir(), false)
+	engine.catalog = fakeCatalog{workflow: &workflows.WorkflowDefinition{
+		Name: "dev-workflow",
+		Steps: []workflows.StepDefinition{
+			{
+				Name:     "prd",
+				Provider: providers.ClaudeProviderName,
+				Input:    "generate {{input}}",
+				Output: workflows.StepOutputDefinition{
+					Markdown:   "required",
+					JSONSchema: "prd/v1",
+				},
+				Schema: `{"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}`,
+			},
+		},
+	}}
+	engine.providers = &fakeFactory{
+		providerByName: map[string]providers.Provider{
+			providers.ClaudeProviderName: claudeProvider,
+		},
+	}
+
+	result, err := engine.Run(context.Background(), "dev-workflow", "input")
+	if err != nil {
+		t.Fatalf("run error = %v", err)
+	}
+	if result.Run.Status() != domain.RunCompleted {
+		t.Fatalf("status = %s", result.Run.Status())
+	}
+
+	steps := result.Run.Steps()
+	if len(steps) != 1 {
+		t.Fatalf("steps = %d", len(steps))
+	}
+	step := steps[0]
+	if got := step.Output(); got != "PRD\n\n```json\n{\"doc\":\"prd\"}\n```" {
+		t.Fatalf("output = %q", got)
+	}
+	if got := step.Result().ValidationStatus; got != domain.ValidationPassed {
+		t.Fatalf("validation status = %q", got)
 	}
 }
 
@@ -298,25 +361,25 @@ func TestEngineRunUsesWorkflowProviders(t *testing.T) {
 		provider := factory.provider.(*fakeProvider)
 		t.Fatalf("run error = %v, requested=%v, calls=%d", err, factory.requested, len(provider.inputs))
 	}
-	if result.Run.Steps()[0].Provider().String() != providers.GeminiProviderName {
+	if result.Run.Steps()[0].Provider().String() != providers.ClaudeProviderName {
 		t.Fatalf("step prd provider = %q", result.Run.Steps()[0].Provider().String())
 	}
 	if result.Run.Steps()[1].Provider().String() != providers.ClaudeProviderName {
 		t.Fatalf("step techspec provider = %q", result.Run.Steps()[1].Provider().String())
 	}
-	if result.Run.Steps()[2].Provider().String() != providers.CodexProviderName {
+	if result.Run.Steps()[2].Provider().String() != providers.ClaudeProviderName {
 		t.Fatalf("step tasks provider = %q", result.Run.Steps()[2].Provider().String())
+	}
+	if result.Run.Steps()[3].Provider().String() != providers.CopilotProviderName {
+		t.Fatalf("step execute provider = %q", result.Run.Steps()[3].Provider().String())
 	}
 
 	factory := engine.providers.(*fakeFactory)
-	if !containsProviderRequest(factory.requested, providers.GeminiProviderName) {
-		t.Fatalf("missing gemini lookup in %v", factory.requested)
-	}
 	if !containsProviderRequest(factory.requested, providers.ClaudeProviderName) {
 		t.Fatalf("missing claude lookup in %v", factory.requested)
 	}
-	if !containsProviderRequest(factory.requested, providers.CodexProviderName) {
-		t.Fatalf("missing codex lookup in %v", factory.requested)
+	if !containsProviderRequest(factory.requested, providers.CopilotProviderName) {
+		t.Fatalf("missing copilot lookup in %v", factory.requested)
 	}
 }
 
@@ -445,11 +508,6 @@ func TestEngineContinueIgnoresWaitingApprovalProviderAvailability(t *testing.T) 
 func TestEngineContinueDoesNotPreflightFutureProvidersBeforePendingPrompt(t *testing.T) {
 	t.Parallel()
 
-	geminiProvider := &fakeProvider{
-		responses: []providerResponse{
-			{stdout: "{\"response\":\"PRD\\n```json\\n{\\\"doc\\\":\\\"prd\\\"}\\n```\",\"stats\":{\"session\":{\"duration\":1}},\"error\":null}"},
-		},
-	}
 	codexProvider := &fakeProvider{
 		responses: []providerResponse{
 			{stdout: "```json\n{\"doc\":\"tasks\"}\n```"},
@@ -457,20 +515,53 @@ func TestEngineContinueDoesNotPreflightFutureProvidersBeforePendingPrompt(t *tes
 	}
 	sharedProvider := &fakeProvider{
 		responses: []providerResponse{
+			{stdout: "```json\n{\"doc\":\"prd\"}\n```"},
 			{stdout: "```json\n{\"doc\":\"techspec\"}\n```"},
-			{stdout: "```json\n{\"summary\":\"apply\",\"commands\":[]}\n```"},
 		},
 	}
 
 	engine := newTestEngineWithOptions(t, nil, hitl.NewFakePrompter(
 		hitl.PromptResult{Action: hitl.ActionExit},
 	), nil, platform.FakeCommandRunner{}, t.TempDir(), false)
+	engine.catalog = fakeCatalog{workflow: &workflows.WorkflowDefinition{
+		Name: "dev-workflow",
+		Steps: []workflows.StepDefinition{
+			{
+				Name:     "prd",
+				Provider: providers.ClaudeProviderName,
+				Input:    "generate {{input}}",
+				Output: workflows.StepOutputDefinition{
+					Markdown:   "required",
+					JSONSchema: "prd/v1",
+				},
+				Schema: `{"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}`,
+			},
+			{
+				Name:     "techspec",
+				Provider: providers.ClaudeProviderName,
+				Input:    "{{steps.prd.output}}",
+				Output: workflows.StepOutputDefinition{
+					Markdown:   "required",
+					JSONSchema: "techspec/v1",
+				},
+				Schema: `{"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}`,
+			},
+			{
+				Name:     "tasks",
+				Provider: providers.CodexProviderName,
+				Input:    "{{steps.techspec.output}}",
+				Output: workflows.StepOutputDefinition{
+					Markdown:   "required",
+					JSONSchema: "tasks/v1",
+				},
+				Schema: `{"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}`,
+			},
+		},
+	}}
 	engine.providers = &fakeFactory{
 		providerByName: map[string]providers.Provider{
-			providers.GeminiProviderName:  geminiProvider,
-			providers.CodexProviderName:   codexProvider,
-			providers.ClaudeProviderName:  sharedProvider,
-			providers.CopilotProviderName: sharedProvider,
+			providers.CodexProviderName:  codexProvider,
+			providers.ClaudeProviderName: sharedProvider,
 		},
 	}
 
@@ -585,6 +676,21 @@ func TestEngineRecoverableStructuredErrorUsesExtractedGeminiMarkdown(t *testing.
 	}, hitl.NewFakePrompter(
 		hitl.PromptResult{Action: hitl.ActionExit},
 	))
+	engine.catalog = fakeCatalog{workflow: &workflows.WorkflowDefinition{
+		Name: "dev-workflow",
+		Steps: []workflows.StepDefinition{
+			{
+				Name:     "prd",
+				Provider: providers.GeminiProviderName,
+				Input:    "generate {{input}}",
+				Output: workflows.StepOutputDefinition{
+					Markdown:   "required",
+					JSONSchema: "prd/v1",
+				},
+				Schema: `{"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}`,
+			},
+		},
+	}}
 
 	result, err := engine.Run(context.Background(), "dev-workflow", "input")
 	if err != nil {
@@ -619,6 +725,41 @@ func TestEngineRecoverableStructuredErrorUsesExtractedCodexMarkdown(t *testing.T
 		hitl.PromptResult{Action: hitl.ActionApprove},
 		hitl.PromptResult{Action: hitl.ActionExit},
 	), nil, platform.FakeCommandRunner{}, t.TempDir(), false)
+	engine.catalog = fakeCatalog{workflow: &workflows.WorkflowDefinition{
+		Name: "dev-workflow",
+		Steps: []workflows.StepDefinition{
+			{
+				Name:     "prd",
+				Provider: providers.GeminiProviderName,
+				Input:    "generate {{input}}",
+				Output: workflows.StepOutputDefinition{
+					Markdown:   "required",
+					JSONSchema: "prd/v1",
+				},
+				Schema: `{"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}`,
+			},
+			{
+				Name:     "techspec",
+				Provider: providers.ClaudeProviderName,
+				Input:    "{{steps.prd.output}}",
+				Output: workflows.StepOutputDefinition{
+					Markdown:   "required",
+					JSONSchema: "techspec/v1",
+				},
+				Schema: `{"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}`,
+			},
+			{
+				Name:     "tasks",
+				Provider: providers.CodexProviderName,
+				Input:    "{{steps.techspec.output}}",
+				Output: workflows.StepOutputDefinition{
+					Markdown:   "required",
+					JSONSchema: "tasks/v1",
+				},
+				Schema: `{"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}`,
+			},
+		},
+	}}
 
 	result, err := engine.Run(context.Background(), "dev-workflow", "input")
 	if err != nil {

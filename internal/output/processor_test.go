@@ -216,6 +216,26 @@ func TestProcessorProviderJSON(t *testing.T) {
 		}
 	})
 
+	t.Run("structured claude json envelope extracts result markdown and schema payload", func(t *testing.T) {
+		t.Parallel()
+
+		raw := "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"result\":\"Summary\\n\\n```json\\n{\\\"doc\\\":\\\"ok\\\"}\\n```\"}"
+		result, err := processor.Process(context.Background(), raw, []byte(`{"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}`), ProcessOptions{
+			RequireStructured: true,
+			OutputFormat:      "json",
+			SchemaName:        "prd/v1",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if result.Markdown != "Summary\n\n```json\n{\"doc\":\"ok\"}\n```" {
+			t.Fatalf("markdown = %q", result.Markdown)
+		}
+		if string(result.JSON) != `{"doc":"ok"}` {
+			t.Fatalf("json = %s", string(result.JSON))
+		}
+	})
+
 	t.Run("invalid provider json envelope is recoverable", func(t *testing.T) {
 		t.Parallel()
 

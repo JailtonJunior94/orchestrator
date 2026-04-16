@@ -270,7 +270,7 @@ func (m model) handleHITLAction(msg components.HITLActionMsg) (tea.Model, tea.Cm
 	m.syncStatusBar()
 
 	if m.prompter != nil {
-		result := hitl.PromptResult{Action: msg.Action}
+		result := hitl.PromptResult{Action: msg.Action, Output: msg.Output}
 		m.prompter.Respond(result)
 	}
 

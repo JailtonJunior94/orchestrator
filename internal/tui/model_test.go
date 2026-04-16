@@ -7,7 +7,9 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/jailtonjunior/orchestrator/internal/hitl"
 	runtimeapp "github.com/jailtonjunior/orchestrator/internal/runtime/application"
+	"github.com/jailtonjunior/orchestrator/internal/tui/components"
 )
 
 // buildModel returns an initialised model with the given terminal dimensions
@@ -124,6 +126,95 @@ func TestView_HorizontalVsVertical(t *testing.T) {
 	})
 }
 
+func TestInitialModel_PopulatesStepListBeforeProgress(t *testing.T) {
+	t.Parallel()
+
+	m := buildModel(120, 40, []stepItem{
+		{name: "plan", provider: "claude", status: "pending"},
+		{name: "implement", provider: "codex", status: "pending"},
+	})
+
+	view := m.View().Content
+	if !strings.Contains(view, "plan") {
+		t.Fatalf("expected initial view to include first workflow step, got: %q", view)
+	}
+	if !strings.Contains(view, "implement") {
+		t.Fatalf("expected initial view to include second workflow step, got: %q", view)
+	}
+	if !strings.Contains(view, `Starting step "plan" with claude`) {
+		t.Fatalf("expected initial view to include contextual output placeholder, got: %q", view)
+	}
+	if !strings.Contains(view, "Waiting for provider output") {
+		t.Fatalf("expected initial view to include output placeholder, got: %q", view)
+	}
+}
+
+func TestInitialModel_RendersUsefulContentBeforeWindowResize(t *testing.T) {
+	t.Parallel()
+
+	m := initialModel([]stepItem{
+		{name: "plan", provider: "claude", status: "pending"},
+		{name: "implement", provider: "codex", status: "pending"},
+	}, nil, nil, true)
+
+	view := m.View().Content
+	if strings.TrimSpace(view) == "" {
+		t.Fatal("expected initial view to render before first WindowSizeMsg")
+	}
+	if !strings.Contains(view, "plan") {
+		t.Fatalf("expected initial view to include workflow step before resize, got: %q", view)
+	}
+	if !strings.Contains(view, "Waiting for provider output") {
+		t.Fatalf("expected initial view to include placeholder output before resize, got: %q", view)
+	}
+}
+
+func TestInitialModel_MarksFirstStepRunningBeforeProgress(t *testing.T) {
+	t.Parallel()
+
+	m := buildModel(120, 40, []stepItem{
+		{name: "plan", provider: "claude", status: "pending"},
+		{name: "implement", provider: "codex", status: "pending"},
+	})
+
+	if got := m.steps[0].status; got != "running" {
+		t.Fatalf("first step status = %q, want running", got)
+	}
+	if got := m.activeStep; got != 0 {
+		t.Fatalf("activeStep = %d, want 0", got)
+	}
+	if got := m.statusBar.CurrentStep; got != 0 {
+		t.Fatalf("statusBar.CurrentStep = %d, want 0 before sync", got)
+	}
+
+	m.syncStatusBar()
+	if got := m.statusBar.CurrentStep; got != 1 {
+		t.Fatalf("statusBar.CurrentStep after sync = %d, want 1", got)
+	}
+	if got := m.statusBar.Provider; got != "claude" {
+		t.Fatalf("statusBar.Provider after sync = %q, want claude", got)
+	}
+}
+
+func TestInitialModel_PreservesExistingActiveStepStatus(t *testing.T) {
+	t.Parallel()
+
+	m := buildModel(120, 40, []stepItem{
+		{name: "plan", provider: "claude", status: "approved"},
+		{name: "implement", provider: "codex", status: "running"},
+	})
+
+	if got := m.steps[0].status; got != "approved" {
+		t.Fatalf("first step status = %q, want approved", got)
+	}
+	if got := m.steps[1].status; got != "running" {
+		t.Fatalf("second step status = %q, want running", got)
+	}
+	if got := m.activeStep; got != 1 {
+		t.Fatalf("activeStep = %d, want 1", got)
+	}
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // Message handling tests
 // ───────────────────────────────────────────────────────────────────────────
@@ -180,6 +271,35 @@ func TestUpdate_WaitApprovalMsg(t *testing.T) {
 	}
 	if !um.hitlBar.Visible() {
 		t.Error("hitlBar should be visible after waitApprovalMsg")
+	}
+}
+
+func TestHandleHITLAction_RespondsWithSelectedOutput(t *testing.T) {
+	t.Parallel()
+
+	prompter := NewTUIPrompter()
+	m := initialModel(nil, prompter, nil, true)
+	m.mode = modeWaitingApproval
+	m.hitlBar.Show("clarify", "Which authentication flow should be used?\n- Magic link\n- OTP via email")
+
+	go func() {
+		updated, _ := m.Update(components.HITLActionMsg{
+			Action: hitl.ActionEdit,
+			Output: "Magic link",
+		})
+		_ = updated
+	}()
+
+	select {
+	case result := <-prompter.responseCh:
+		if result.Action != hitl.ActionEdit {
+			t.Fatalf("expected ActionEdit, got %v", result.Action)
+		}
+		if result.Output != "Magic link" {
+			t.Fatalf("expected output %q, got %q", "Magic link", result.Output)
+		}
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("expected response to be sent to TUIPrompter")
 	}
 }
 

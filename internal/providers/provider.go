@@ -57,7 +57,7 @@ type Factory interface {
 	Get(name string) (Provider, error)
 }
 
-var lookPath = exec.LookPath
+type binaryLookupFunc func(string) (string, error)
 
 type cliProvider struct {
 	name           string
@@ -65,6 +65,7 @@ type cliProvider struct {
 	defaultTimeout time.Duration
 	profiles       []invocationProfile
 	runner         platform.CommandRunner
+	lookPathFn     binaryLookupFunc
 }
 
 type invocationProfile struct {
@@ -80,6 +81,14 @@ type invocation struct {
 
 func (p cliProvider) Name() string {
 	return p.name
+}
+
+func (p cliProvider) lookupBinaryPath(binary string) (string, error) {
+	if p.lookPathFn != nil {
+		return p.lookPathFn(binary)
+	}
+
+	return exec.LookPath(binary)
 }
 
 func (p cliProvider) Execute(ctx context.Context, input ProviderInput) (ProviderOutput, error) {
@@ -106,7 +115,7 @@ func (p cliProvider) Execute(ctx context.Context, input ProviderInput) (Provider
 		Profile:  profile.name,
 	}
 	if err != nil {
-		return output, fmt.Errorf("executing provider %q: %w", p.name, err)
+		return output, formatExecutionError(p.name, output, err)
 	}
 
 	return output, nil
@@ -154,7 +163,21 @@ func (p cliProvider) executeStreamWithInvocation(
 		return ProviderOutput{}, fmt.Errorf("executing provider %q: %w", p.name, err)
 	}
 
-	var stdout bytes.Buffer
+	var (
+		stdout bytes.Buffer
+		stderr bytes.Buffer
+	)
+
+	stderrErrCh := make(chan error, 1)
+	go func() {
+		_, copyErr := io.Copy(&stderr, stream.Stderr)
+		if copyErr != nil && copyErr != io.EOF {
+			stderrErrCh <- copyErr
+			return
+		}
+		stderrErrCh <- nil
+	}()
+
 	buf := make([]byte, 4096)
 	for {
 		n, readErr := stream.Stdout.Read(buf)
@@ -171,8 +194,7 @@ func (p cliProvider) executeStreamWithInvocation(
 		}
 	}
 
-	var stderr bytes.Buffer
-	_, _ = io.Copy(&stderr, stream.Stderr)
+	stderrReadErr := <-stderrErrCh
 
 	waitErr := stream.Wait()
 	output := ProviderOutput{
@@ -184,17 +206,20 @@ func (p cliProvider) executeStreamWithInvocation(
 	}
 
 	if err != nil {
-		return output, fmt.Errorf("executing provider %q: %w", p.name, err)
+		return output, formatExecutionError(p.name, output, err)
+	}
+	if stderrReadErr != nil {
+		return output, fmt.Errorf("executing provider %q: %w", p.name, stderrReadErr)
 	}
 	if waitErr != nil {
-		return output, fmt.Errorf("executing provider %q: %w", p.name, waitErr)
+		return output, formatExecutionError(p.name, output, waitErr)
 	}
 
 	return output, nil
 }
 
 func (p cliProvider) Available() error {
-	if _, err := lookPath(p.binary); err != nil {
+	if _, err := p.lookupBinaryPath(p.binary); err != nil {
 		return fmt.Errorf("provider %q binary %q not found in PATH: %w", p.name, p.binary, err)
 	}
 	if _, err := p.selectedProfile(context.Background()); err != nil {
@@ -247,6 +272,68 @@ func firstMatchingProfile(helpText string, profiles []invocationProfile) (invoca
 	}
 
 	return invocationProfile{}, false
+}
+
+func formatExecutionError(providerName string, output ProviderOutput, err error) error {
+	message := fmt.Sprintf("executing provider %q: %v", providerName, err)
+
+	detail := summarizeProviderFailure(output)
+	if detail == "" {
+		return fmt.Errorf("%s", message)
+	}
+
+	return fmt.Errorf("%s: %s", message, detail)
+}
+
+func summarizeProviderFailure(output ProviderOutput) string {
+	candidates := []string{output.Stderr, output.Stdout}
+	for _, candidate := range candidates {
+		text := strings.TrimSpace(stripANSI(candidate))
+		if text == "" {
+			continue
+		}
+		text = strings.Join(strings.Fields(text), " ")
+		if len(text) > 280 {
+			text = text[:280] + "..."
+		}
+		return text
+	}
+
+	return ""
+}
+
+func stripANSI(text string) string {
+	var out strings.Builder
+	out.Grow(len(text))
+
+	for i := 0; i < len(text); i++ {
+		if text[i] != 0x1b {
+			out.WriteByte(text[i])
+			continue
+		}
+
+		i++
+		if i >= len(text) {
+			break
+		}
+
+		if text[i] == ']' {
+			for i < len(text) && text[i] != 0x07 {
+				i++
+			}
+			continue
+		}
+
+		for i < len(text) {
+			b := text[i]
+			if b >= 0x40 && b <= 0x7e {
+				break
+			}
+			i++
+		}
+	}
+
+	return out.String()
 }
 
 func supportedTokenSets(profiles []invocationProfile) []string {

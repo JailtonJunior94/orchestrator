@@ -118,12 +118,14 @@ func (outputProcessor) Process(ctx context.Context, raw string, schema []byte, o
 }
 
 func processProviderJSON(ctx context.Context, raw string, schema []byte, options ProcessOptions) (*Result, error) {
-	extracted, err := ExtractProviderJSONResponse(raw)
-	if err != nil {
-		return nil, &ProcessError{Err: err, Recoverable: true}
+	markdown := strings.TrimSpace(raw)
+	if json.Valid([]byte(markdown)) {
+		extracted, err := ExtractProviderJSONResponse(raw)
+		if err != nil {
+			return nil, &ProcessError{Err: err, Recoverable: true}
+		}
+		markdown = strings.TrimSpace(extracted)
 	}
-
-	markdown := strings.TrimSpace(extracted)
 	if !options.RequireStructured {
 		report := buildValidationReport("not_applicable", false, options.SchemaName, false)
 		return &Result{

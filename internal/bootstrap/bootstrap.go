@@ -34,6 +34,12 @@ type App struct {
 // New wires the production dependencies.
 // If prompter is nil, a terminal prompter backed by stdin/stdout is created.
 func New(stdin io.Reader, stdout io.Writer, progress runtime.ProgressReporter, prompter hitl.Prompter) (*App, error) {
+	return NewWithLoggerOutput(stdin, stdout, progress, prompter, os.Stderr)
+}
+
+// NewWithLoggerOutput wires the production dependencies and allows the caller
+// to redirect operational logs away from the interactive terminal when needed.
+func NewWithLoggerOutput(stdin io.Reader, stdout io.Writer, progress runtime.ProgressReporter, prompter hitl.Prompter, logOutput io.Writer) (*App, error) {
 	commandRunner := platform.NewCommandRunner()
 	editor := platform.NewEditor()
 	clock := platform.NewClock()
@@ -54,7 +60,7 @@ func New(stdin io.Reader, stdout io.Writer, progress runtime.ProgressReporter, p
 	if prompter == nil {
 		prompter = hitl.NewTerminalPrompter(stdin, stdout, editor)
 	}
-	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	logger := newLogger(logOutput)
 
 	engine := runtime.NewEngine(runtime.Dependencies{
 		Catalog:    catalog,
@@ -113,4 +119,12 @@ func New(stdin io.Reader, stdout io.Writer, progress runtime.ProgressReporter, p
 			logger,
 		),
 	}, nil
+}
+
+func newLogger(output io.Writer) *slog.Logger {
+	if output == nil {
+		output = io.Discard
+	}
+
+	return slog.New(slog.NewTextHandler(output, nil))
 }

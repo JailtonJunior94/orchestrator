@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -9,6 +10,11 @@ import (
 	runtimeapp "github.com/jailtonjunior/orchestrator/internal/runtime/application"
 	"github.com/jailtonjunior/orchestrator/internal/tui/components"
 	"github.com/jailtonjunior/orchestrator/internal/tui/theme"
+)
+
+const (
+	defaultInitialWidth  = 120
+	defaultInitialHeight = 30
 )
 
 // progressEvent is the interface that all progress channel events implement.
@@ -123,9 +129,13 @@ func initialModel(
 	t := theme.New()
 	sl := components.NewStepList(t)
 	sl.SetNoAnimation(noAnimation)
-	return model{
+	initialSteps, activeStep := prepareInitialSteps(steps)
+	m := model{
 		mode:        modeRunning,
-		steps:       steps,
+		width:       defaultInitialWidth,
+		height:      defaultInitialHeight,
+		steps:       initialSteps,
+		activeStep:  activeStep,
 		stepList:    sl,
 		outputView:  components.NewOutputView(80, 20),
 		hitlBar:     components.NewHITLBar(t),
@@ -136,6 +146,47 @@ func initialModel(
 		noAnimation: noAnimation,
 		theme:       t,
 	}
+
+	m.syncStepList()
+	m.outputView.SetContent(m.initialOutputPlaceholder())
+	return m
+}
+
+func prepareInitialSteps(steps []stepItem) ([]stepItem, int) {
+	if len(steps) == 0 {
+		return nil, 0
+	}
+
+	cloned := append([]stepItem(nil), steps...)
+	activeStep := 0
+	hasActive := false
+
+	for i := range cloned {
+		if cloned[i].status == "running" || cloned[i].status == "retrying" || cloned[i].status == "waiting_approval" {
+			activeStep = i
+			hasActive = true
+			break
+		}
+	}
+
+	if !hasActive && cloned[0].status == "pending" {
+		cloned[0].status = "running"
+	}
+
+	return cloned, activeStep
+}
+
+func (m model) initialOutputPlaceholder() string {
+	if len(m.steps) == 0 || m.activeStep < 0 || m.activeStep >= len(m.steps) {
+		return "Waiting for provider output..."
+	}
+
+	step := m.steps[m.activeStep]
+	if step.provider != "" {
+		return fmt.Sprintf("Starting step %q with %s...\nWaiting for provider output...", step.name, step.provider)
+	}
+
+	return fmt.Sprintf("Starting step %q...\nWaiting for provider output...", step.name)
 }
 
 func (m *model) setWorkflowSummaries(summaries []runtimeapp.WorkflowSummary) {

@@ -26,6 +26,14 @@ func codexHelpWithoutExec() platform.CommandResult {
 	return platform.CommandResult{Stdout: "--sandbox mode\n--json output events\n"}
 }
 
+func codexTopLevelHelpWithoutJSONButExecHelpHasIt(args []string) platform.CommandResult {
+	if len(args) == 2 && args[0] == "exec" && args[1] == "--help" {
+		return platform.CommandResult{Stdout: "Run Codex non-interactively\n-s mode\n--json output events\n"}
+	}
+
+	return platform.CommandResult{Stdout: "Codex CLI\nexec Run Codex non-interactively\n-s mode\n"}
+}
+
 func TestCodexProviderExecute_execSandbox(t *testing.T) {
 	t.Parallel()
 
@@ -178,16 +186,12 @@ func TestCodexProviderExecute_sandboxAlwaysReadOnly(t *testing.T) {
 func TestCodexProviderAvailable_jsonMissing(t *testing.T) {
 	t.Parallel()
 
-	original := lookPath
-	t.Cleanup(func() { lookPath = original })
-	lookPath = func(file string) (string, error) {
-		return filepath.Join("/usr/bin", file), nil
-	}
-
-	provider := NewCodexProvider(platform.FakeCommandRunner{
+	provider := withLookup(NewCodexProvider(platform.FakeCommandRunner{
 		RunFunc: func(_ context.Context, _ string, _ []string, _ string) (platform.CommandResult, error) {
 			return codexHelpWithoutJSON(), nil
 		},
+	}), func(file string) (string, error) {
+		return filepath.Join("/usr/bin", file), nil
 	})
 
 	err := provider.Available()
@@ -202,16 +206,12 @@ func TestCodexProviderAvailable_jsonMissing(t *testing.T) {
 func TestCodexProviderAvailable_shortSandboxFlagSupported(t *testing.T) {
 	t.Parallel()
 
-	original := lookPath
-	t.Cleanup(func() { lookPath = original })
-	lookPath = func(file string) (string, error) {
-		return filepath.Join("/usr/bin", file), nil
-	}
-
-	provider := NewCodexProvider(platform.FakeCommandRunner{
+	provider := withLookup(NewCodexProvider(platform.FakeCommandRunner{
 		RunFunc: func(_ context.Context, _ string, _ []string, _ string) (platform.CommandResult, error) {
 			return codexHelpWithShortSandboxAndJSON(), nil
 		},
+	}), func(file string) (string, error) {
+		return filepath.Join("/usr/bin", file), nil
 	})
 
 	if err := provider.Available(); err != nil {
@@ -220,17 +220,14 @@ func TestCodexProviderAvailable_shortSandboxFlagSupported(t *testing.T) {
 }
 
 func TestCodexProviderAvailable_execMissing(t *testing.T) {
-	// Not parallel: modifies the package-level lookPath variable.
-	original := lookPath
-	t.Cleanup(func() { lookPath = original })
-	lookPath = func(file string) (string, error) {
-		return filepath.Join("/usr/bin", file), nil
-	}
+	t.Parallel()
 
-	provider := NewCodexProvider(platform.FakeCommandRunner{
+	provider := withLookup(NewCodexProvider(platform.FakeCommandRunner{
 		RunFunc: func(_ context.Context, _ string, _ []string, _ string) (platform.CommandResult, error) {
 			return codexHelpWithoutExec(), nil
 		},
+	}), func(file string) (string, error) {
+		return filepath.Join("/usr/bin", file), nil
 	})
 
 	err := provider.Available()
@@ -245,13 +242,11 @@ func TestCodexProviderAvailable_execMissing(t *testing.T) {
 func TestCodexProviderAvailable_binaryNotFound(t *testing.T) {
 	t.Parallel()
 
-	original := lookPath
-	t.Cleanup(func() { lookPath = original })
-	lookPath = func(_ string) (string, error) {
+	provider := withLookup(NewCodexProvider(platform.FakeCommandRunner{}), func(_ string) (string, error) {
 		return "", errors.New("not found")
-	}
+	})
 
-	if err := NewCodexProvider(platform.FakeCommandRunner{}).Available(); err == nil {
+	if err := provider.Available(); err == nil {
 		t.Fatal("expected error when binary missing")
 	}
 }
@@ -259,20 +254,32 @@ func TestCodexProviderAvailable_binaryNotFound(t *testing.T) {
 func TestCodexProviderAvailable_success(t *testing.T) {
 	t.Parallel()
 
-	original := lookPath
-	t.Cleanup(func() { lookPath = original })
-	lookPath = func(file string) (string, error) {
-		return filepath.Join("/usr/bin", file), nil
-	}
-
-	provider := NewCodexProvider(platform.FakeCommandRunner{
+	provider := withLookup(NewCodexProvider(platform.FakeCommandRunner{
 		RunFunc: func(_ context.Context, _ string, _ []string, _ string) (platform.CommandResult, error) {
 			return codexHelpWithSandboxAndJSON(), nil
 		},
+	}), func(file string) (string, error) {
+		return filepath.Join("/usr/bin", file), nil
 	})
 
 	if err := provider.Available(); err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCodexProviderAvailable_execHelpProvidesJSONSupport(t *testing.T) {
+	t.Parallel()
+
+	provider := withLookup(NewCodexProvider(platform.FakeCommandRunner{
+		RunFunc: func(_ context.Context, _ string, args []string, _ string) (platform.CommandResult, error) {
+			return codexTopLevelHelpWithoutJSONButExecHelpHasIt(args), nil
+		},
+	}), func(file string) (string, error) {
+		return filepath.Join("/usr/bin", file), nil
+	})
+
+	if err := provider.Available(); err != nil {
+		t.Fatalf("unexpected error when exec help exposes --json: %v", err)
 	}
 }
 

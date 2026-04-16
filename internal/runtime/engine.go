@@ -438,6 +438,9 @@ func buildProviderOptions(providerName string, requiresStructured bool, schemaNa
 	}
 
 	switch providerName {
+	case providers.ClaudeProviderName:
+		processOpts.OutputFormat = "json"
+		return nil, processOpts
 	case providers.GeminiProviderName:
 		opts := map[string]string{}
 		if requiresStructured {
