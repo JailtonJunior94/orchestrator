@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/jailtonjunior/orchestrator/internal/acp"
 	runtimeapp "github.com/jailtonjunior/orchestrator/internal/runtime/application"
 	"github.com/jailtonjunior/orchestrator/internal/tui/components"
 	"github.com/jailtonjunior/orchestrator/internal/tui/theme"
@@ -33,13 +34,15 @@ type stepFinishedMsg struct{ step stepItem }
 
 func (stepFinishedMsg) progressEventTag() {}
 
-// outputChunkMsg carries an incremental chunk of provider stdout.
-type outputChunkMsg struct {
+// typedUpdateMsg carries a typed streaming update from the ACP agent.
+type typedUpdateMsg struct {
 	stepName string
-	chunk    []byte
+	kind     string
+	text     string
+	toolCall *acp.ToolCallInfo
 }
 
-func (outputChunkMsg) progressEventTag() {}
+func (typedUpdateMsg) progressEventTag() {}
 
 // waitApprovalMsg signals that a step is waiting for HITL approval.
 type waitApprovalMsg struct {

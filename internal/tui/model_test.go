@@ -7,6 +7,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/jailtonjunior/orchestrator/internal/acp"
 	"github.com/jailtonjunior/orchestrator/internal/hitl"
 	runtimeapp "github.com/jailtonjunior/orchestrator/internal/runtime/application"
 	"github.com/jailtonjunior/orchestrator/internal/tui/components"
@@ -240,11 +241,11 @@ func TestUpdate_StepStartedMsg(t *testing.T) {
 	}
 }
 
-func TestUpdate_OutputChunkMsg(t *testing.T) {
+func TestUpdate_TypedUpdateMsg(t *testing.T) {
 	t.Parallel()
 
 	m := buildModel(120, 40, nil)
-	msg := outputChunkMsg{stepName: "build", chunk: []byte("hello world")}
+	msg := typedUpdateMsg{stepName: "build", kind: "message", text: "hello world"}
 	updated, _ := m.Update(msg)
 	um := updated.(model)
 
@@ -394,5 +395,98 @@ func TestLayoutDimensions_HeightAccountsForDeductions(t *testing.T) {
 	// With HITL: subtract 2 more = 45
 	if withHITL != termH-5 {
 		t.Errorf("withHITL contentH = %d, want %d", withHITL, termH-5)
+	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Typed update rendering — task 7.0
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestUpdate_TypedUpdate_Thought(t *testing.T) {
+	t.Parallel()
+
+	m := buildModel(120, 40, nil)
+	msg := typedUpdateMsg{stepName: "plan", kind: "thought", text: "analyzing the problem"}
+	updated, _ := m.Update(msg)
+	um := updated.(model)
+
+	view := um.outputView.View()
+	if !strings.Contains(view, "[thinking]") {
+		t.Errorf("expected '[thinking]' prefix for thought update, got: %q", view)
+	}
+	if !strings.Contains(view, "analyzing the problem") {
+		t.Errorf("expected thought text in view, got: %q", view)
+	}
+}
+
+func TestUpdate_TypedUpdate_ToolCall(t *testing.T) {
+	t.Parallel()
+
+	m := buildModel(120, 40, nil)
+	msg := typedUpdateMsg{
+		stepName: "plan",
+		kind:     "tool_call",
+		toolCall: &acp.ToolCallInfo{ID: "tc-1", Title: "Edit main.go", Status: "running", Input: `{"path":"main.go"}`},
+	}
+	updated, _ := m.Update(msg)
+	um := updated.(model)
+
+	view := um.outputView.View()
+	if !strings.Contains(view, "Edit main.go") {
+		t.Errorf("expected tool call title in view, got: %q", view)
+	}
+	if !strings.Contains(view, "running") {
+		t.Errorf("expected tool call status in view, got: %q", view)
+	}
+	if !strings.Contains(view, `{"path":"main.go"}`) {
+		t.Errorf("expected tool call input in view, got: %q", view)
+	}
+}
+
+func TestUpdate_TypedUpdate_ToolUpdate_UpdatesInPlace(t *testing.T) {
+	t.Parallel()
+
+	m := buildModel(120, 40, nil)
+
+	// Initial tool_call.
+	m2, _ := m.Update(typedUpdateMsg{
+		stepName: "plan",
+		kind:     "tool_call",
+		toolCall: &acp.ToolCallInfo{ID: "tc-2", Title: "Run tests", Status: "running"},
+	})
+	m3, _ := m2.Update(typedUpdateMsg{
+		stepName: "plan",
+		kind:     "tool_update",
+		toolCall: &acp.ToolCallInfo{ID: "tc-2", Title: "Run tests", Status: "completed"},
+	})
+	um := m3.(model)
+
+	view := um.outputView.View()
+	if !strings.Contains(view, "Run tests") {
+		t.Errorf("expected tool name in view, got: %q", view)
+	}
+	if !strings.Contains(view, "completed") {
+		t.Errorf("expected updated status 'completed', got: %q", view)
+	}
+	// Exactly one occurrence of the tool — not duplicated.
+	if count := strings.Count(view, "Run tests"); count != 1 {
+		t.Errorf("expected tool line once, found %d times in: %q", count, view)
+	}
+}
+
+func TestUpdate_TypedUpdate_Permission(t *testing.T) {
+	t.Parallel()
+
+	m := buildModel(120, 40, nil)
+	msg := typedUpdateMsg{stepName: "plan", kind: "permission", text: "write to /tmp/output.txt"}
+	updated, _ := m.Update(msg)
+	um := updated.(model)
+
+	view := um.outputView.View()
+	if !strings.Contains(view, "[permission]") {
+		t.Errorf("expected '[permission]' prefix for permission update, got: %q", view)
+	}
+	if !strings.Contains(view, "write to /tmp/output.txt") {
+		t.Errorf("expected permission description in view, got: %q", view)
 	}
 }

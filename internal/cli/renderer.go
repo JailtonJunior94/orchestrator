@@ -5,6 +5,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/jailtonjunior/orchestrator/internal/acp"
 	"github.com/jailtonjunior/orchestrator/internal/runtime"
 )
 
@@ -28,8 +29,8 @@ func (r *Renderer) StepFinished(step runtime.ProgressStep) {
 	_, _ = fmt.Fprintf(r.writer, "  ✅ %s (%s)\n", step.Status, step.Duration.Round(10*time.Millisecond))
 }
 
-// OutputChunk is a no-op in plain text mode; output is streamed directly by the provider.
-func (r *Renderer) OutputChunk(_ string, _ []byte) {}
+// TypedUpdate is a no-op in plain text mode; streaming updates are not rendered.
+func (r *Renderer) TypedUpdate(_ string, _ acp.TypedUpdate) {}
 
 // WaitingApproval notifies the renderer that a step is awaiting HITL approval.
 func (r *Renderer) WaitingApproval(stepName string, _ string) {

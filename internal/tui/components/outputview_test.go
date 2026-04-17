@@ -101,3 +101,96 @@ func TestOutputView_PreservesPlainTextOutput(t *testing.T) {
 		t.Fatalf("expected plain text output to remain unchanged, got: %s", view)
 	}
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Named-line (tool call) rendering tests
+// ─────────────────────────────────────────────────────────────────────────────
+
+func TestOutputView_AppendNamedLine_AppearsInView(t *testing.T) {
+	t.Parallel()
+
+	ov := components.NewOutputView(80, 24)
+	ov.AppendContent([]byte("before\n"))
+	ov.AppendNamedLine("tool-1", "→ edit file (running)")
+
+	view := ov.View()
+	if !strings.Contains(view, "before") {
+		t.Errorf("expected 'before' in view, got: %s", view)
+	}
+	if !strings.Contains(view, "→ edit file (running)") {
+		t.Errorf("expected tool call line in view, got: %s", view)
+	}
+}
+
+func TestOutputView_UpdateNamedLine_UpdatesInPlace(t *testing.T) {
+	t.Parallel()
+
+	ov := components.NewOutputView(80, 24)
+	ov.AppendNamedLine("tool-1", "→ edit file (running)")
+	updated := ov.UpdateNamedLine("tool-1", "→ edit file (done)")
+
+	if !updated {
+		t.Fatal("expected UpdateNamedLine to return true")
+	}
+
+	view := ov.View()
+	if strings.Contains(view, "running") {
+		t.Errorf("old status 'running' should be replaced, got: %s", view)
+	}
+	if !strings.Contains(view, "→ edit file (done)") {
+		t.Errorf("expected updated tool call line, got: %s", view)
+	}
+}
+
+func TestOutputView_UpdateNamedLine_ReturnsFalseForUnknownID(t *testing.T) {
+	t.Parallel()
+
+	ov := components.NewOutputView(80, 24)
+	if ov.UpdateNamedLine("nonexistent", "content") {
+		t.Error("expected UpdateNamedLine to return false for unknown id")
+	}
+}
+
+func TestOutputView_AppendNamedLine_UpsertsBehavior(t *testing.T) {
+	t.Parallel()
+
+	ov := components.NewOutputView(80, 24)
+	// AppendNamedLine with same ID acts as upsert.
+	ov.AppendNamedLine("tool-1", "→ foo (running)")
+	ov.AppendNamedLine("tool-1", "→ foo (done)")
+
+	view := ov.View()
+	// Should have only one occurrence of the tool line, not two.
+	count := strings.Count(view, "→ foo")
+	if count != 1 {
+		t.Errorf("expected exactly 1 tool line, found %d in: %s", count, view)
+	}
+	if !strings.Contains(view, "done") {
+		t.Errorf("expected updated status 'done', got: %s", view)
+	}
+}
+
+func TestOutputView_NamedLineInterleavedWithText(t *testing.T) {
+	t.Parallel()
+
+	ov := components.NewOutputView(80, 24)
+	ov.AppendContent([]byte("first line\n"))
+	ov.AppendNamedLine("t1", "→ tool (running)")
+	ov.AppendContent([]byte("last line\n"))
+	ov.UpdateNamedLine("t1", "→ tool (done)")
+
+	view := ov.View()
+	if !strings.Contains(view, "first line") {
+		t.Errorf("missing 'first line': %s", view)
+	}
+	if !strings.Contains(view, "→ tool (done)") {
+		t.Errorf("missing updated tool line: %s", view)
+	}
+	if !strings.Contains(view, "last line") {
+		t.Errorf("missing 'last line': %s", view)
+	}
+	// Old status should be gone.
+	if strings.Contains(view, "running") {
+		t.Errorf("old status 'running' should not appear: %s", view)
+	}
+}

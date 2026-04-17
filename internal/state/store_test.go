@@ -164,6 +164,53 @@ func mustRun(t *testing.T, runID string, workflow string) *domain.Run {
 	return run
 }
 
+// TestFileStoreSessionIDRoundTrip verifies that sessionID is persisted to
+// state.json and restored correctly on LoadRun.
+func TestFileStoreSessionIDRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	store := NewFileStore(t.TempDir(), platform.NewFileSystem())
+	run := mustRun(t, "run-sess", "wf")
+	now := time.Date(2026, 4, 3, 12, 0, 0, 0, time.UTC)
+	if err := run.Start(now); err != nil {
+		t.Fatal(err)
+	}
+
+	// Set sessionID on the step before completing it.
+	prdName := mustStepName(t, "prd")
+	if err := run.StartStep(prdName, now); err != nil {
+		t.Fatal(err)
+	}
+	// Access the current step directly to set sessionID, as the engine does.
+	currentStep, stepErr := run.CurrentStep()
+	if stepErr != nil {
+		t.Fatal(stepErr)
+	}
+	currentStep.SetSessionID("acp-session-test-42")
+
+	if err := run.MarkStepCompleted(prdName, domain.StepResult{
+		Output: "result",
+	}, now); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := store.SaveRun(context.Background(), run); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded, err := store.LoadRun(context.Background(), "run-sess")
+	if err != nil {
+		t.Fatal(err)
+	}
+	steps := loaded.Steps()
+	if len(steps) == 0 {
+		t.Fatal("expected at least one step")
+	}
+	if got := steps[0].SessionID(); got != "acp-session-test-42" {
+		t.Errorf("sessionID = %q, want %q", got, "acp-session-test-42")
+	}
+}
+
 func mustStepName(t *testing.T, name string) domain.StepName {
 	t.Helper()
 	stepName, err := domain.NewStepName(name)

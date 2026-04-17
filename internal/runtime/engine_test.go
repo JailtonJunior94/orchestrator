@@ -3,7 +3,6 @@ package runtime
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -12,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jailtonjunior/orchestrator/internal/acp"
 	"github.com/jailtonjunior/orchestrator/internal/hitl"
 	"github.com/jailtonjunior/orchestrator/internal/output"
 	"github.com/jailtonjunior/orchestrator/internal/platform"
@@ -173,45 +173,13 @@ func TestEnginePassesStepTimeoutAndSchema(t *testing.T) {
 	}
 }
 
-func TestEnginePassesStructuredProviderOptions(t *testing.T) {
-	t.Parallel()
-
-	claudeOpts, claudeProcess := buildProviderOptions(providers.ClaudeProviderName, true, "prd/v1")
-	if claudeOpts != nil {
-		t.Fatalf("claude options = %v, want nil", claudeOpts)
-	}
-	if claudeProcess.OutputFormat != "json" {
-		t.Fatalf("claude process output format = %q", claudeProcess.OutputFormat)
-	}
-
-	geminiOpts, geminiProcess := buildProviderOptions(providers.GeminiProviderName, true, "prd/v1")
-	if got := geminiOpts["output_format"]; got != "json" {
-		t.Fatalf("gemini output_format = %q", got)
-	}
-	if geminiProcess.OutputFormat != "json" {
-		t.Fatalf("gemini process output format = %q", geminiProcess.OutputFormat)
-	}
-
-	codexOpts, codexProcess := buildProviderOptions(providers.CodexProviderName, true, "tasks/v1")
-	if got := codexOpts["output_format"]; got != "jsonl" {
-		t.Fatalf("codex output_format = %q", got)
-	}
-	if got := codexOpts["sandbox"]; got != "read-only" {
-		t.Fatalf("codex sandbox = %q", got)
-	}
-	if codexProcess.OutputFormat != "jsonl" {
-		t.Fatalf("codex process output format = %q", codexProcess.OutputFormat)
-	}
-}
-
 func TestEngineRunProcessesClaudeJSONEnvelope(t *testing.T) {
 	t.Parallel()
 
 	claudeProvider := &fakeProvider{
 		responses: []providerResponse{
-			{
-				stdout: "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"result\":\"PRD\\n\\n```json\\n{\\\"doc\\\":\\\"prd\\\"}\\n```\"}",
-			},
+			// ACP returns plain content — no JSON envelope wrapping.
+			{stdout: "PRD\n\n```json\n{\"doc\":\"prd\"}\n```"},
 		},
 	}
 	engine := newTestEngineWithOptions(t, nil, hitl.NewFakePrompter(
@@ -233,7 +201,7 @@ func TestEngineRunProcessesClaudeJSONEnvelope(t *testing.T) {
 		},
 	}}
 	engine.providers = &fakeFactory{
-		providerByName: map[string]providers.Provider{
+		providerByName: map[string]providers.ACPProvider{
 			providers.ClaudeProviderName: claudeProvider,
 		},
 	}
@@ -458,7 +426,7 @@ func TestEngineContinueIgnoresWaitingApprovalProviderAvailability(t *testing.T) 
 		},
 	}}
 	engine.providers = &fakeFactory{
-		providerByName: map[string]providers.Provider{
+		providerByName: map[string]providers.ACPProvider{
 			providers.ClaudeProviderName:  claudeProvider,
 			providers.CopilotProviderName: claudeProvider,
 			providers.GeminiProviderName:  claudeProvider,
@@ -481,7 +449,7 @@ func TestEngineContinueIgnoresWaitingApprovalProviderAvailability(t *testing.T) 
 		},
 	}
 	engine.providers = &fakeFactory{
-		providerByName: map[string]providers.Provider{
+		providerByName: map[string]providers.ACPProvider{
 			providers.ClaudeProviderName:  claudeProvider,
 			providers.CopilotProviderName: copilotProvider,
 			providers.GeminiProviderName:  copilotProvider,
@@ -559,7 +527,7 @@ func TestEngineContinueDoesNotPreflightFutureProvidersBeforePendingPrompt(t *tes
 		},
 	}}
 	engine.providers = &fakeFactory{
-		providerByName: map[string]providers.Provider{
+		providerByName: map[string]providers.ACPProvider{
 			providers.CodexProviderName:  codexProvider,
 			providers.ClaudeProviderName: sharedProvider,
 		},
@@ -636,7 +604,7 @@ func TestEngineContinueRedoValidatesWaitingApprovalProviderAvailability(t *testi
 		},
 	}}
 	engine.providers = &fakeFactory{
-		providerByName: map[string]providers.Provider{
+		providerByName: map[string]providers.ACPProvider{
 			providers.ClaudeProviderName:  claudeProvider,
 			providers.CopilotProviderName: copilotProvider,
 			providers.GeminiProviderName:  copilotProvider,
@@ -666,13 +634,17 @@ func TestEngineContinueRedoValidatesWaitingApprovalProviderAvailability(t *testi
 	}
 }
 
-func TestEngineRecoverableStructuredErrorUsesExtractedGeminiMarkdown(t *testing.T) {
+// TestEngineRecoverableStructuredErrorFallsBackToHITL verifies that when a provider
+// returns content with invalid JSON (unrecoverable after retries), the engine falls
+// back to HITL with the raw content as-is.
+func TestEngineRecoverableStructuredErrorFallsBackToHITL(t *testing.T) {
 	t.Parallel()
 
+	// All three attempts return invalid JSON — exhausts maxProviderRetries.
 	engine := newTestEngine(t, []providerResponse{
-		{stdout: "{\"response\":\"Summary\\n```json\\n{\\\"doc\\\":}\\n```\",\"stats\":{\"session\":{\"duration\":1}},\"error\":null}"},
-		{stdout: "{\"response\":\"Summary\\n```json\\n{\\\"doc\\\":}\\n```\",\"stats\":{\"session\":{\"duration\":1}},\"error\":null}"},
-		{stdout: "{\"response\":\"Summary\\n```json\\n{\\\"doc\\\":}\\n```\",\"stats\":{\"session\":{\"duration\":1}},\"error\":null}"},
+		{stdout: "Summary\n```json\n{\"doc\":}\n```"},
+		{stdout: "Summary\n```json\n{\"doc\":}\n```"},
+		{stdout: "Summary\n```json\n{\"doc\":}\n```"},
 	}, hitl.NewFakePrompter(
 		hitl.PromptResult{Action: hitl.ActionExit},
 	))
@@ -681,7 +653,7 @@ func TestEngineRecoverableStructuredErrorUsesExtractedGeminiMarkdown(t *testing.
 		Steps: []workflows.StepDefinition{
 			{
 				Name:     "prd",
-				Provider: providers.GeminiProviderName,
+				Provider: providers.ClaudeProviderName,
 				Input:    "generate {{input}}",
 				Output: workflows.StepOutputDefinition{
 					Markdown:   "required",
@@ -698,7 +670,8 @@ func TestEngineRecoverableStructuredErrorUsesExtractedGeminiMarkdown(t *testing.
 	}
 
 	step := result.Run.Steps()[0]
-	if got, want := step.Output(), "Summary\n```json\n{\"doc\":}\n```"; got != want {
+	want := "Summary\n```json\n{\"doc\":}\n```"
+	if got := step.Output(); got != want {
 		t.Fatalf("output = %q, want %q", got, want)
 	}
 
@@ -706,98 +679,8 @@ func TestEngineRecoverableStructuredErrorUsesExtractedGeminiMarkdown(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := string(artifact.ApprovedMarkdown), "Summary\n```json\n{\"doc\":}\n```"; got != want {
+	if got := string(artifact.ApprovedMarkdown); got != want {
 		t.Fatalf("approved markdown = %q, want %q", got, want)
-	}
-}
-
-func TestEngineRecoverableStructuredErrorUsesExtractedCodexMarkdown(t *testing.T) {
-	t.Parallel()
-
-	engine := newTestEngineWithOptions(t, []providerResponse{
-		{stdout: "{\"response\":\"PRD\\n```json\\n{\\\"doc\\\":\\\"prd\\\"}\\n```\",\"stats\":{\"session\":{\"duration\":1}},\"error\":null}"},
-		{stdout: "```json\n{\"doc\":\"techspec\"}\n```"},
-		{stdout: "{\"type\":\"message\",\"content\":\"Tasks\\n```json\\n{\\\"doc\\\":}\\n```\"}\n"},
-		{stdout: "{\"type\":\"message\",\"content\":\"Tasks\\n```json\\n{\\\"doc\\\":}\\n```\"}\n"},
-		{stdout: "{\"type\":\"message\",\"content\":\"Tasks\\n```json\\n{\\\"doc\\\":}\\n```\"}\n"},
-	}, hitl.NewFakePrompter(
-		hitl.PromptResult{Action: hitl.ActionApprove},
-		hitl.PromptResult{Action: hitl.ActionApprove},
-		hitl.PromptResult{Action: hitl.ActionExit},
-	), nil, platform.FakeCommandRunner{}, t.TempDir(), false)
-	engine.catalog = fakeCatalog{workflow: &workflows.WorkflowDefinition{
-		Name: "dev-workflow",
-		Steps: []workflows.StepDefinition{
-			{
-				Name:     "prd",
-				Provider: providers.GeminiProviderName,
-				Input:    "generate {{input}}",
-				Output: workflows.StepOutputDefinition{
-					Markdown:   "required",
-					JSONSchema: "prd/v1",
-				},
-				Schema: `{"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}`,
-			},
-			{
-				Name:     "techspec",
-				Provider: providers.ClaudeProviderName,
-				Input:    "{{steps.prd.output}}",
-				Output: workflows.StepOutputDefinition{
-					Markdown:   "required",
-					JSONSchema: "techspec/v1",
-				},
-				Schema: `{"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}`,
-			},
-			{
-				Name:     "tasks",
-				Provider: providers.CodexProviderName,
-				Input:    "{{steps.techspec.output}}",
-				Output: workflows.StepOutputDefinition{
-					Markdown:   "required",
-					JSONSchema: "tasks/v1",
-				},
-				Schema: `{"type":"object","required":["doc"],"properties":{"doc":{"type":"string"}}}`,
-			},
-		},
-	}}
-
-	result, err := engine.Run(context.Background(), "dev-workflow", "input")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	step := result.Run.Steps()[2]
-	if got, want := step.Output(), "Tasks\n```json\n{\"doc\":}\n```"; got != want {
-		t.Fatalf("output = %q, want %q", got, want)
-	}
-
-	artifact, err := engine.store.LoadArtifact(context.Background(), result.Run.ID(), step.Name().String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got, want := string(artifact.ApprovedMarkdown), "Tasks\n```json\n{\"doc\":}\n```"; got != want {
-		t.Fatalf("approved markdown = %q, want %q", got, want)
-	}
-}
-
-func TestEngineLogsProviderProfile(t *testing.T) {
-	t.Parallel()
-
-	var logBuf bytes.Buffer
-	engine := newTestEngine(t, []providerResponse{
-		{stdout: "PRD\n```json\n{\"doc\":\"prd\"}\n```", profile: "exec-yolo-stdin"},
-		{stdout: "TechSpec\n```json\n{\"doc\":\"techspec\"}\n```", profile: "exec-yolo-stdin"},
-	}, hitl.NewFakePrompter(
-		hitl.PromptResult{Action: hitl.ActionApprove},
-		hitl.PromptResult{Action: hitl.ActionApprove},
-	))
-	engine.logger = slog.New(slog.NewTextHandler(&logBuf, nil))
-
-	if _, err := engine.Run(context.Background(), "dev-workflow", "input"); err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(logBuf.String(), "profile=exec-yolo-stdin") {
-		t.Fatalf("log output = %s", logBuf.String())
 	}
 }
 
@@ -810,7 +693,6 @@ func TestEngineLogsProviderStartedBeforeExecute(t *testing.T) {
 			{stdout: "PRD\n```json\n{\"doc\":\"prd\"}\n```"},
 			{stdout: "TechSpec\n```json\n{\"doc\":\"techspec\"}\n```"},
 		},
-		profile: "exec-yolo-stdin",
 	}
 
 	engine := newTestEngine(t, nil, hitl.NewFakePrompter(
@@ -823,9 +705,6 @@ func TestEngineLogsProviderStartedBeforeExecute(t *testing.T) {
 		if !strings.Contains(logBuf.String(), "event=provider_execute_started") {
 			t.Fatalf("provider_execute_started must be logged before Execute, logs=%s", logBuf.String())
 		}
-		if !strings.Contains(logBuf.String(), "profile=exec-yolo-stdin") {
-			t.Fatalf("provider_execute_started must log profile, logs=%s", logBuf.String())
-		}
 	}
 
 	if _, err := engine.Run(context.Background(), "dev-workflow", "input"); err != nil {
@@ -834,9 +713,8 @@ func TestEngineLogsProviderStartedBeforeExecute(t *testing.T) {
 }
 
 type providerResponse struct {
-	stdout  string
-	err     error
-	profile string
+	stdout string
+	err    error
 }
 
 type fakeCatalog struct {
@@ -855,12 +733,12 @@ func (f fakeCatalog) List() ([]string, error) {
 }
 
 type fakeFactory struct {
-	provider       providers.Provider
-	providerByName map[string]providers.Provider
+	provider       providers.ACPProvider
+	providerByName map[string]providers.ACPProvider
 	requested      []string
 }
 
-func (f *fakeFactory) Get(name string) (providers.Provider, error) {
+func (f *fakeFactory) Get(name string) (providers.ACPProvider, error) {
 	f.requested = append(f.requested, name)
 	if f.providerByName != nil {
 		provider, ok := f.providerByName[name]
@@ -875,93 +753,62 @@ func (f *fakeFactory) Get(name string) (providers.Provider, error) {
 type fakeProvider struct {
 	responses      []providerResponse
 	index          int
-	inputs         []providers.ProviderInput
-	profile        string
+	inputs         []acp.ACPInput
+	resumeInputs   []acp.ACPInput
+	resumeResult   string
+	resumeErr      error
 	availableErr   error
 	availableCalls int
 	onExecute      func()
 }
 
 func (p *fakeProvider) Name() string { return providers.ClaudeProviderName }
+func (p *fakeProvider) Close() error { return nil }
 func (p *fakeProvider) Available() error {
 	p.availableCalls++
 	return p.availableErr
 }
 
-func (p *fakeProvider) ResolveProfile(context.Context) (string, error) {
-	return firstNonEmpty(p.profile, "prompt-arg-json"), nil
+func (p *fakeProvider) Execute(_ context.Context, input acp.ACPInput) (acp.ACPOutput, error) {
+	return p.ExecuteStream(context.Background(), input, nil)
 }
 
-func (p *fakeProvider) Execute(_ context.Context, input providers.ProviderInput) (providers.ProviderOutput, error) {
+func (p *fakeProvider) ResumeSession(_ context.Context, input acp.ACPInput) (string, error) {
+	p.resumeInputs = append(p.resumeInputs, input)
+	if p.resumeErr != nil {
+		return "", p.resumeErr
+	}
+	if p.resumeResult != "" {
+		return p.resumeResult, nil
+	}
+	return input.SessionID, nil
+}
+
+func (p *fakeProvider) ExecuteStream(_ context.Context, input acp.ACPInput, onUpdate func(acp.TypedUpdate)) (acp.ACPOutput, error) {
 	if p.onExecute != nil {
 		p.onExecute()
 	}
 	p.inputs = append(p.inputs, input)
 	if p.index >= len(p.responses) {
-		return providers.ProviderOutput{}, io.EOF
+		return acp.ACPOutput{}, io.EOF
 	}
 	response := p.responses[p.index]
 	p.index++
-	stdout := normalizeProviderStdout(response.stdout, input.Options)
-	return providers.ProviderOutput{
-		Stdout:   stdout,
-		ExitCode: 0,
-		Duration: 10 * time.Millisecond,
-		Profile:  firstNonEmpty(response.profile, p.profile, "prompt-arg-json"),
+	if onUpdate != nil && response.stdout != "" {
+		onUpdate(acp.TypedUpdate{Kind: acp.UpdateMessage, Text: response.stdout})
+	}
+	return acp.ACPOutput{
+		Content:   response.stdout,
+		SessionID: "test-session-" + response.stdout[:min(8, len(response.stdout))],
+		Duration:  10 * time.Millisecond,
 	}, response.err
 }
 
-func (p *fakeProvider) ExecuteStream(ctx context.Context, input providers.ProviderInput, onChunk func([]byte)) (providers.ProviderOutput, error) {
-	out, err := p.Execute(ctx, input)
-	if onChunk != nil && out.Stdout != "" {
-		onChunk([]byte(out.Stdout))
+func min(a, b int) int {
+	if a < b {
+		return a
 	}
-	return out, err
-}
-
-func normalizeProviderStdout(stdout string, options map[string]string) string {
-	switch options["output_format"] {
-	case "json":
-		if looksLikeProviderJSON(stdout) {
-			return stdout
-		}
-		payload, _ := json.Marshal(map[string]any{
-			"response": stdout,
-			"error":    nil,
-		})
-		return string(payload)
-	case "jsonl":
-		if looksLikeJSONL(stdout) {
-			return stdout
-		}
-		payload, _ := json.Marshal(map[string]any{
-			"type":    "message",
-			"content": stdout,
-		})
-		return string(payload) + "\n"
-	default:
-		return stdout
-	}
-}
-
-func looksLikeProviderJSON(stdout string) bool {
-	trimmed := strings.TrimSpace(stdout)
-	return strings.HasPrefix(trimmed, "{") && strings.Contains(trimmed, `"response"`)
-}
-
-func looksLikeJSONL(stdout string) bool {
-	trimmed := strings.TrimSpace(stdout)
-	return strings.HasPrefix(trimmed, "{") && strings.Contains(trimmed, `"type"`)
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if value != "" {
-			return value
-		}
-	}
-
-	return ""
+	return b
 }
 
 func containsProviderRequest(requested []string, providerName string) bool {
@@ -1046,13 +893,13 @@ type recordingProgressReporter struct {
 	completed        []string
 	failed           []string
 	waitingApprovals []string
-	outputChunks     []string
+	typedUpdates     []string
 }
 
 func (r *recordingProgressReporter) StepStarted(ProgressStep)  {}
 func (r *recordingProgressReporter) StepFinished(ProgressStep) {}
-func (r *recordingProgressReporter) OutputChunk(stepName string, _ []byte) {
-	r.outputChunks = append(r.outputChunks, stepName)
+func (r *recordingProgressReporter) TypedUpdate(stepName string, _ acp.TypedUpdate) {
+	r.typedUpdates = append(r.typedUpdates, stepName)
 }
 func (r *recordingProgressReporter) WaitingApproval(stepName string, _ string) {
 	r.waitingApprovals = append(r.waitingApprovals, stepName)
@@ -1137,9 +984,9 @@ func TestEngineCallsWaitingApprovalBeforeHITLPrompt(t *testing.T) {
 	}
 }
 
-// --- Task 4.0 tests: ExecuteStream integration ---
+// --- Task 6.0 tests: TypedUpdate integration ---
 
-func TestEngineEmitsOutputChunkViaExecuteStream(t *testing.T) {
+func TestEngineEmitsTypedUpdateViaExecuteStream(t *testing.T) {
 	t.Parallel()
 
 	rec := &recordingProgressReporter{}
@@ -1156,8 +1003,8 @@ func TestEngineEmitsOutputChunkViaExecuteStream(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(rec.outputChunks) == 0 {
-		t.Error("expected OutputChunk to be called via ExecuteStream")
+	if len(rec.typedUpdates) == 0 {
+		t.Error("expected TypedUpdate to be called via ExecuteStream")
 	}
 }
 
@@ -1167,9 +1014,190 @@ func TestNoopProgressReporterImplementsFullInterface(t *testing.T) {
 	var reporter ProgressReporter = NoopProgressReporter{}
 	reporter.StepStarted(ProgressStep{})
 	reporter.StepFinished(ProgressStep{})
-	reporter.OutputChunk("step", []byte("data"))
+	reporter.TypedUpdate("step", acp.TypedUpdate{Kind: acp.UpdateMessage, Text: "data"})
 	reporter.WaitingApproval("step", "output")
 	reporter.RunCompleted("run-id", "completed")
 	reporter.RunFailed("run-id", errors.New("err"))
 	// All methods must complete without panic.
+}
+
+// TestEngineSessionIDPersistedAfterStep verifies that the engine saves the
+// sessionID returned by the provider into the step and persists it to state.json.
+func TestEngineSessionIDPersistedAfterStep(t *testing.T) {
+	t.Parallel()
+
+	storeDir := t.TempDir()
+	engine := newTestEngineWithOptions(t, []providerResponse{
+		{stdout: "```json\n{\"doc\":\"prd\"}\n```"},
+		{stdout: "```json\n{\"doc\":\"techspec\"}\n```"},
+	}, hitl.NewFakePrompter(
+		hitl.PromptResult{Action: hitl.ActionApprove},
+		hitl.PromptResult{Action: hitl.ActionApprove},
+	), nil, platform.FakeCommandRunner{}, storeDir, true)
+
+	result, err := engine.Run(context.Background(), "dev-workflow", "input")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, step := range result.Run.Steps() {
+		if step.SessionID() == "" {
+			t.Errorf("step %q: sessionID not persisted", step.Name())
+		}
+	}
+}
+
+// TestEngineRetryResetsSessionID verifies that a retry operation clears the
+// sessionID before re-executing the step, forcing a new ACP session.
+func TestEngineRetryResetsSessionID(t *testing.T) {
+	t.Parallel()
+
+	provider := &fakeProvider{
+		responses: []providerResponse{
+			{stdout: "```json\n{\"doc\":\"prd\"}\n```"},
+			{stdout: "```json\n{\"doc\":\"prd-retry\"}\n```"},
+			{stdout: "```json\n{\"doc\":\"techspec\"}\n```"},
+		},
+	}
+	engine := newTestEngine(t, nil, hitl.NewFakePrompter(
+		hitl.PromptResult{Action: hitl.ActionRedo},
+		hitl.PromptResult{Action: hitl.ActionApprove},
+		hitl.PromptResult{Action: hitl.ActionApprove},
+	))
+	engine.providers = &fakeFactory{provider: provider}
+
+	result, err := engine.Run(context.Background(), "dev-workflow", "input")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Run.Status() != domain.RunCompleted {
+		t.Fatalf("status = %s", result.Run.Status())
+	}
+
+	// The first step was retried; verify the second call had an empty sessionID
+	// (cleared by retry logic) before the provider assigned a new one.
+	if len(provider.inputs) < 2 {
+		t.Fatalf("expected at least 2 provider calls, got %d", len(provider.inputs))
+	}
+	if provider.inputs[1].SessionID != "" {
+		t.Errorf("retry call should have empty sessionID, got %q", provider.inputs[1].SessionID)
+	}
+}
+
+// TestEngineContinueUsesExistingSessionID verifies that when continuing a paused
+// run, the engine passes the stored sessionID to the provider via ACPInput.
+func TestEngineContinueUsesExistingSessionID(t *testing.T) {
+	t.Parallel()
+
+	storeDir := t.TempDir()
+	provider := &fakeProvider{
+		responses: []providerResponse{
+			{stdout: "```json\n{\"doc\":\"prd\"}\n```"},
+			{stdout: "```json\n{\"doc\":\"techspec\"}\n```"},
+		},
+	}
+	engine := newTestEngineWithOptions(t, nil, hitl.NewFakePrompter(
+		hitl.PromptResult{Action: hitl.ActionExit},
+	), nil, platform.FakeCommandRunner{}, storeDir, true)
+	engine.providers = &fakeFactory{provider: provider}
+
+	first, err := engine.Run(context.Background(), "dev-workflow", "input")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.Run.Status() != domain.RunPaused {
+		t.Fatalf("expected paused, got %s", first.Run.Status())
+	}
+
+	// sessionID must be set on the completed step after first run.
+	prdStep := first.Run.Steps()[0]
+	if prdStep.SessionID() == "" {
+		t.Fatal("expected sessionID on completed prd step")
+	}
+	savedSessionID := prdStep.SessionID()
+
+	// Continue: second step should be executed; reload from store verifies sessionID
+	// was persisted. The first step is already approved so only step 2 executes.
+	engine.prompter = hitl.NewFakePrompter(
+		hitl.PromptResult{Action: hitl.ActionApprove}, // approve step1 pending prompt
+		hitl.PromptResult{Action: hitl.ActionApprove}, // approve step2 after execution
+	)
+	second, err := engine.Continue(context.Background(), first.Run.ID())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if second.Run.Status() != domain.RunCompleted {
+		t.Fatalf("expected completed, got %s", second.Run.Status())
+	}
+
+	// Verify the persisted sessionID on step 1 survived the reload.
+	if got := second.Run.Steps()[0].SessionID(); got != savedSessionID {
+		t.Errorf("sessionID after continue = %q, want %q", got, savedSessionID)
+	}
+	if len(provider.inputs) == 0 {
+		t.Fatal("expected provider inputs to be recorded")
+	}
+	for i, input := range provider.inputs {
+		if input.WorkDir == "" {
+			t.Fatalf("provider input %d has empty WorkDir", i)
+		}
+	}
+	if len(provider.resumeInputs) != 1 {
+		t.Fatalf("resume calls = %d, want 1", len(provider.resumeInputs))
+	}
+	if got := provider.resumeInputs[0].SessionID; got != savedSessionID {
+		t.Fatalf("resume sessionID = %q, want %q", got, savedSessionID)
+	}
+}
+
+func TestEngineContinueUpdatesSessionIDWhenResumeFallsBackToNewSession(t *testing.T) {
+	t.Parallel()
+
+	storeDir := t.TempDir()
+	provider := &fakeProvider{
+		responses: []providerResponse{
+			{stdout: "```json\n{\"doc\":\"prd\"}\n```"},
+			{stdout: "```json\n{\"doc\":\"techspec\"}\n```"},
+		},
+		resumeResult: "replacement-session",
+	}
+	engine := newTestEngineWithOptions(t, nil, hitl.NewFakePrompter(
+		hitl.PromptResult{Action: hitl.ActionExit},
+	), nil, platform.FakeCommandRunner{}, storeDir, true)
+	engine.providers = &fakeFactory{provider: provider}
+
+	first, err := engine.Run(context.Background(), "dev-workflow", "input")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	engine.prompter = hitl.NewFakePrompter(
+		hitl.PromptResult{Action: hitl.ActionApprove},
+		hitl.PromptResult{Action: hitl.ActionApprove},
+	)
+	second, err := engine.Continue(context.Background(), first.Run.ID())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if got := second.Run.Steps()[0].SessionID(); got != "replacement-session" {
+		t.Fatalf("sessionID after resume fallback = %q, want %q", got, "replacement-session")
+	}
+}
+
+func TestPermissionPolicyForStep_UsesWorkflowCapability(t *testing.T) {
+	t.Parallel()
+
+	policy := permissionPolicyForStep("security-review", &workflows.StepDefinition{
+		Name:     "implement",
+		Provider: providers.ClaudeProviderName,
+		Input:    "do it",
+		Capabilities: map[string]string{
+			"permission_policy": "deny",
+		},
+	})
+
+	if got := policy.WorkflowDecisions["security-review"]; got != hitl.PermissionDeny {
+		t.Fatalf("workflow decision = %q, want %q", got, hitl.PermissionDeny)
+	}
 }

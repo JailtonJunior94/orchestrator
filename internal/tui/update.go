@@ -1,10 +1,12 @@
 package tui
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/jailtonjunior/orchestrator/internal/acp"
 	"github.com/jailtonjunior/orchestrator/internal/hitl"
 	"github.com/jailtonjunior/orchestrator/internal/tui/components"
 )
@@ -40,8 +42,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case stepFinishedMsg:
 		return m.handleStepFinished(msg)
 
-	case outputChunkMsg:
-		return m.handleOutputChunk(msg)
+	case typedUpdateMsg:
+		return m.handleTypedUpdate(msg)
 
 	case waitApprovalMsg:
 		return m.handleWaitApproval(msg)
@@ -247,11 +249,71 @@ func (m model) handleStepFinished(msg stepFinishedMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-// handleOutputChunk appends a provider output chunk to the OutputView.
-func (m model) handleOutputChunk(msg outputChunkMsg) (tea.Model, tea.Cmd) {
-	m.outputView.AppendContent(msg.chunk)
+// handleTypedUpdate renders a typed streaming update from the ACP agent.
+// Each update kind has a distinct visual treatment in the OutputView.
+func (m model) handleTypedUpdate(msg typedUpdateMsg) (tea.Model, tea.Cmd) {
+	switch acp.UpdateKind(msg.kind) {
+	case acp.UpdateMessage:
+		if msg.text != "" {
+			m.outputView.AppendContent([]byte(msg.text))
+		}
+	case acp.UpdateThought:
+		if msg.text != "" {
+			styled := ThoughtStyle(m.theme).Render("[thinking] " + msg.text)
+			m.outputView.AppendContent([]byte(styled + "\n"))
+		}
+	case acp.UpdateToolCall:
+		if msg.toolCall != nil {
+			line := ToolCallStyle(m.theme).Render(formatToolCallLine(msg.toolCall))
+			m.outputView.AppendNamedLine(msg.toolCall.ID, line)
+		}
+	case acp.UpdateToolUpdate:
+		if msg.toolCall != nil {
+			line := ToolCallStyle(m.theme).Render(formatToolCallLine(msg.toolCall))
+			if !m.outputView.UpdateNamedLine(msg.toolCall.ID, line) {
+				m.outputView.AppendNamedLine(msg.toolCall.ID, line)
+			}
+		}
+	case acp.UpdatePermission:
+		if msg.text != "" {
+			styled := PermissionStyle(m.theme).Render("[permission] " + msg.text)
+			m.outputView.AppendContent([]byte(styled + "\n"))
+		}
+	}
 	m.syncStatusBar()
 	return m, listenForProgress(m.progressCh)
+}
+
+// formatToolCallLine formats a ToolCallInfo into a single human-readable line.
+func formatToolCallLine(tc *acp.ToolCallInfo) string {
+	title := tc.Title
+	if title == "" {
+		title = tc.Kind
+	}
+	if title == "" {
+		title = tc.ID
+	}
+	status := tc.Status
+	if status == "" {
+		status = "running"
+	}
+
+	line := fmt.Sprintf("→ %s (%s)", title, status)
+	switch {
+	case tc.Input != "":
+		line += " :: " + truncateToolCallField(tc.Input)
+	case len(tc.Locations) > 0:
+		line += " @ " + tc.Locations[0]
+	}
+	return line
+}
+
+func truncateToolCallField(value string) string {
+	const limit = 80
+	if len(value) <= limit {
+		return value
+	}
+	return value[:limit-3] + "..."
 }
 
 // handleWaitApproval transitions to waiting-approval mode.

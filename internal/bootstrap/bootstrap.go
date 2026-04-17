@@ -5,7 +5,10 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"slices"
+	"strings"
 
+	"github.com/jailtonjunior/orchestrator/internal/acp"
 	"github.com/jailtonjunior/orchestrator/internal/hitl"
 	installapp "github.com/jailtonjunior/orchestrator/internal/install/application"
 	installcatalog "github.com/jailtonjunior/orchestrator/internal/install/catalog"
@@ -47,20 +50,21 @@ func NewWithLoggerOutput(stdin io.Reader, stdout io.Writer, progress runtime.Pro
 	dirResolver := platform.NewDirResolver()
 	parser := workflows.NewParser()
 	catalog := workflows.NewCatalog(parser)
-	validator := workflows.NewValidator([]string{
-		providers.ClaudeProviderName,
-		providers.CopilotProviderName,
-		providers.GeminiProviderName,
-		providers.CodexProviderName,
-	})
+	acpRegistry := acp.NewRegistry(nil)
+	validator := workflows.NewValidator(agentSpecNames(acpRegistry.List()))
 	resolver := workflows.NewTemplateResolver()
-	providerFactory := providers.NewFactory(commandRunner)
 	processor := output.NewProcessor()
 	store := state.NewFileStore(".", fileSystem)
 	if prompter == nil {
 		prompter = hitl.NewTerminalPrompter(stdin, stdout, editor)
 	}
 	logger := newLogger(logOutput)
+
+	providerFactory := providers.NewACPFactory(
+		acpRegistry,
+		logger,
+		acp.WithPermissionHandler(acp.NewPermissionHandler(prompter, true, permissionPolicyFromEnv(acpRegistry.List()), logger)),
+	)
 
 	engine := runtime.NewEngine(runtime.Dependencies{
 		Catalog:    catalog,
@@ -127,4 +131,35 @@ func newLogger(output io.Writer) *slog.Logger {
 	}
 
 	return slog.New(slog.NewTextHandler(output, nil))
+}
+
+func agentSpecNames(specs []acp.AgentSpec) []string {
+	names := make([]string, 0, len(specs))
+	for _, spec := range specs {
+		names = append(names, spec.Name)
+	}
+	slices.Sort(names)
+	return names
+}
+
+func permissionPolicyFromEnv(specs []acp.AgentSpec) acp.PermissionPolicy {
+	policy := acp.PermissionPolicy{
+		DefaultDecision:   hitl.PermissionAllow,
+		ProviderDecisions: map[string]hitl.PermissionDecision{},
+	}
+	for _, spec := range specs {
+		envName := "ORQ_ACP_PERMISSION_POLICY_" + strings.ToUpper(spec.Name)
+		switch strings.ToLower(strings.TrimSpace(os.Getenv(envName))) {
+		case "allow":
+			policy.ProviderDecisions[spec.Name] = hitl.PermissionAllow
+		case "deny":
+			policy.ProviderDecisions[spec.Name] = hitl.PermissionDeny
+		case "cancel":
+			policy.ProviderDecisions[spec.Name] = hitl.PermissionCancel
+		}
+	}
+	if len(policy.ProviderDecisions) == 0 {
+		policy.ProviderDecisions = nil
+	}
+	return policy
 }

@@ -2,31 +2,43 @@ package providers
 
 import (
 	"fmt"
+	"log/slog"
 
-	"github.com/jailtonjunior/orchestrator/internal/platform"
+	"github.com/jailtonjunior/orchestrator/internal/acp"
 )
 
-type providerFactory struct {
-	providers map[string]Provider
+// ACPProviderFactory resolves ACPProvider instances by workflow name.
+// It is the contract the engine uses to obtain ACP-backed providers.
+type ACPProviderFactory interface {
+	Get(name string) (ACPProvider, error)
 }
 
-// NewFactory creates a provider factory with the built-in V1 providers.
-func NewFactory(runner platform.CommandRunner) Factory {
-	return providerFactory{
-		providers: map[string]Provider{
-			ClaudeProviderName:  NewClaudeProvider(runner),
-			CopilotProviderName: NewCopilotProvider(runner),
-			GeminiProviderName:  NewGeminiProvider(runner),
-			CodexProviderName:   NewCodexProvider(runner),
-		},
+// ACPFactory is a provider factory backed by the ACP registry.
+type ACPFactory struct {
+	registry *acp.Registry
+	logger   *slog.Logger
+	connOpts []acp.ConnectionOption
+}
+
+// NewACPFactory creates an ACPFactory using the given registry.
+func NewACPFactory(registry *acp.Registry, logger *slog.Logger, connOpts ...acp.ConnectionOption) *ACPFactory {
+	return &ACPFactory{
+		registry: registry,
+		logger:   logger,
+		connOpts: append([]acp.ConnectionOption{}, connOpts...),
 	}
 }
 
-// Get resolves a provider by name.
-func (f providerFactory) Get(name string) (Provider, error) {
-	provider, ok := f.providers[name]
-	if !ok {
-		return nil, fmt.Errorf("unknown provider: %q", name)
+// Get resolves an ACPProvider by provider name.
+func (f *ACPFactory) Get(name string) (ACPProvider, error) {
+	spec, err := f.registry.Get(name)
+	if err != nil {
+		return nil, fmt.Errorf("acp factory: %w", err)
 	}
-	return provider, nil
+	return NewACPProvider(spec, f.registry, f.logger, f.connOpts...), nil
+}
+
+// NewACPProviderFromSpec creates an ACPProvider directly from a spec and registry.
+func NewACPProviderFromSpec(spec acp.AgentSpec, registry *acp.Registry, logger *slog.Logger, connOpts ...acp.ConnectionOption) ACPProvider {
+	return NewACPProvider(spec, registry, logger, connOpts...)
 }

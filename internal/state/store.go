@@ -68,13 +68,14 @@ type runDTO struct {
 }
 
 type stepDTO struct {
-	Name     string        `json:"name"`
-	Provider string        `json:"provider"`
-	Status   string        `json:"status"`
-	Input    string        `json:"input,omitempty"`
-	Attempts int           `json:"attempts"`
-	Result   stepResultDTO `json:"result,omitempty"`
-	Error    string        `json:"error,omitempty"`
+	Name      string        `json:"name"`
+	Provider  string        `json:"provider"`
+	Status    string        `json:"status"`
+	Input     string        `json:"input,omitempty"`
+	Attempts  int           `json:"attempts"`
+	Result    stepResultDTO `json:"result,omitempty"`
+	Error     string        `json:"error,omitempty"`
+	SessionID string        `json:"session_id,omitempty"`
 }
 
 type stepResultDTO struct {
@@ -302,13 +303,14 @@ func toRunDTO(snapshot domain.RunSnapshot) (runDTO, error) {
 			EditedByHuman:       step.Result.EditedByHuman,
 		}
 		dto := stepDTO{
-			Name:     step.Name,
-			Provider: step.Provider,
-			Status:   string(step.Status),
-			Input:    step.Input,
-			Attempts: step.Attempts,
-			Result:   result,
-			Error:    step.Error,
+			Name:      step.Name,
+			Provider:  step.Provider,
+			Status:    string(step.Status),
+			Input:     step.Input,
+			Attempts:  step.Attempts,
+			Result:    result,
+			Error:     step.Error,
+			SessionID: step.SessionID,
 		}
 		steps = append(steps, dto)
 	}
@@ -379,8 +381,9 @@ func (dto runDTO) toSnapshot(loadOutput func(ref string) (string, error)) (domai
 				ValidationStatus:    domain.ValidationStatus(step.Result.ValidationStatus),
 				EditedByHuman:       step.Result.EditedByHuman,
 			},
-			Attempts: step.Attempts,
-			Error:    step.Error,
+			Attempts:  step.Attempts,
+			Error:     step.Error,
+			SessionID: step.SessionID,
 		})
 	}
 

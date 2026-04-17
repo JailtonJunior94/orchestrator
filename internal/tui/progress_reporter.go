@@ -1,6 +1,9 @@
 package tui
 
-import "github.com/jailtonjunior/orchestrator/internal/runtime"
+import (
+	"github.com/jailtonjunior/orchestrator/internal/acp"
+	"github.com/jailtonjunior/orchestrator/internal/runtime"
+)
 
 // tuiProgressReporter converts ProgressReporter calls into channel sends so
 // the engine goroutine can communicate with the Bubbletea event loop.
@@ -38,9 +41,14 @@ func (r *tuiProgressReporter) StepFinished(step runtime.ProgressStep) {
 	}})
 }
 
-// OutputChunk emits an outputChunkMsg with the incremental provider output.
-func (r *tuiProgressReporter) OutputChunk(stepName string, chunk []byte) {
-	r.trySend(outputChunkMsg{stepName: stepName, chunk: chunk})
+// TypedUpdate emits a typedUpdateMsg with the ACP agent streaming update.
+func (r *tuiProgressReporter) TypedUpdate(stepName string, update acp.TypedUpdate) {
+	r.trySend(typedUpdateMsg{
+		stepName: stepName,
+		kind:     string(update.Kind),
+		text:     update.Text,
+		toolCall: update.ToolCall,
+	})
 }
 
 // WaitingApproval emits a waitApprovalMsg requesting HITL action.

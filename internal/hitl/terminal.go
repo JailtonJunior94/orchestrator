@@ -66,3 +66,46 @@ func (p *TerminalPrompter) Prompt(ctx context.Context, output string) (PromptRes
 
 	return PromptResult{}, io.EOF
 }
+
+// PromptPermission renders an ACP permission request and waits for an allow,
+// deny or cancel decision.
+func (p *TerminalPrompter) PromptPermission(ctx context.Context, request PermissionRequest) (PermissionResult, error) {
+	if _, err := fmt.Fprintf(
+		p.writer,
+		"\n--- Permission Request ---\nProvider: %s\nWorkflow: %s\nTool: %s\nDetails: %s\n--------------------------\n\n[A] Allow  [D] Deny  [C] Cancel\n> ",
+		request.Provider,
+		request.Workflow,
+		request.Title,
+		request.Details,
+	); err != nil {
+		return PermissionResult{}, err
+	}
+
+	scanner := bufio.NewScanner(p.reader)
+	for scanner.Scan() {
+		select {
+		case <-ctx.Done():
+			return PermissionResult{}, ctx.Err()
+		default:
+		}
+
+		switch strings.ToUpper(strings.TrimSpace(scanner.Text())) {
+		case "A":
+			return PermissionResult{Decision: PermissionAllow}, nil
+		case "D":
+			return PermissionResult{Decision: PermissionDeny}, nil
+		case "C":
+			return PermissionResult{Decision: PermissionCancel}, nil
+		default:
+			if _, err := fmt.Fprint(p.writer, "Ação inválida. Use A, D ou C.\n> "); err != nil {
+				return PermissionResult{}, err
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return PermissionResult{}, err
+	}
+
+	return PermissionResult{}, io.EOF
+}

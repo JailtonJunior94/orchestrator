@@ -11,13 +11,14 @@ type StepDefinition struct {
 
 // StepExecution represents the runtime state of a step.
 type StepExecution struct {
-	name     StepName
-	provider ProviderName
-	status   StepStatus
-	input    string
-	result   StepResult
-	attempts int
-	errMsg   string
+	name      StepName
+	provider  ProviderName
+	status    StepStatus
+	input     string
+	result    StepResult
+	attempts  int
+	errMsg    string
+	sessionID string // ACP session identifier for resume
 }
 
 // StepResult captures the persisted and in-memory outputs of a step.
@@ -131,6 +132,12 @@ func (s *StepExecution) Skip() error {
 	return nil
 }
 
+// SessionID returns the ACP session identifier for resume.
+func (s *StepExecution) SessionID() string { return s.sessionID }
+
+// SetSessionID updates the ACP session identifier.
+func (s *StepExecution) SetSessionID(id string) { s.sessionID = id }
+
 // SetInput updates the step input (used for edit/redo).
 func (s *StepExecution) SetInput(input string) {
 	s.input = input
@@ -149,24 +156,26 @@ func (s *StepExecution) UpdateResultMetadata(result StepResult) {
 
 // StepSnapshot is the serializable representation of a step execution.
 type StepSnapshot struct {
-	Name     string
-	Provider string
-	Status   StepStatus
-	Input    string
-	Result   StepResult
-	Attempts int
-	Error    string
+	Name      string
+	Provider  string
+	Status    StepStatus
+	Input     string
+	Result    StepResult
+	Attempts  int
+	Error     string
+	SessionID string
 }
 
 func (s *StepExecution) snapshot() StepSnapshot {
 	return StepSnapshot{
-		Name:     s.name.String(),
-		Provider: s.provider.String(),
-		Status:   s.status,
-		Input:    s.input,
-		Result:   s.result,
-		Attempts: s.attempts,
-		Error:    s.errMsg,
+		Name:      s.name.String(),
+		Provider:  s.provider.String(),
+		Status:    s.status,
+		Input:     s.input,
+		Result:    s.result,
+		Attempts:  s.attempts,
+		Error:     s.errMsg,
+		SessionID: s.sessionID,
 	}
 }
 
@@ -191,12 +200,13 @@ func newStepExecutionFromSnapshot(snapshot StepSnapshot) (*StepExecution, error)
 	}
 
 	return &StepExecution{
-		name:     name,
-		provider: provider,
-		status:   snapshot.Status,
-		input:    snapshot.Input,
-		result:   snapshot.Result,
-		attempts: snapshot.Attempts,
-		errMsg:   snapshot.Error,
+		name:      name,
+		provider:  provider,
+		status:    snapshot.Status,
+		input:     snapshot.Input,
+		result:    snapshot.Result,
+		attempts:  snapshot.Attempts,
+		errMsg:    snapshot.Error,
+		sessionID: snapshot.SessionID,
 	}, nil
 }

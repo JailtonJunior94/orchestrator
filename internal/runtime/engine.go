@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jailtonjunior/orchestrator/internal/acp"
 	"github.com/jailtonjunior/orchestrator/internal/hitl"
 	"github.com/jailtonjunior/orchestrator/internal/output"
 	"github.com/jailtonjunior/orchestrator/internal/platform"
@@ -39,7 +40,8 @@ type RunResult struct {
 type ProgressReporter interface {
 	StepStarted(step ProgressStep)
 	StepFinished(step ProgressStep)
-	OutputChunk(stepName string, chunk []byte)
+	// TypedUpdate delivers a streaming update from the ACP agent to the UI.
+	TypedUpdate(stepName string, update acp.TypedUpdate)
 	WaitingApproval(stepName string, output string)
 	RunCompleted(runID string, status string)
 	RunFailed(runID string, err error)
@@ -58,12 +60,12 @@ type ProgressStep struct {
 // NoopProgressReporter ignores progress updates.
 type NoopProgressReporter struct{}
 
-func (NoopProgressReporter) StepStarted(ProgressStep)           {}
-func (NoopProgressReporter) StepFinished(ProgressStep)          {}
-func (NoopProgressReporter) OutputChunk(_ string, _ []byte)     {}
-func (NoopProgressReporter) WaitingApproval(_ string, _ string) {}
-func (NoopProgressReporter) RunCompleted(_ string, _ string)    {}
-func (NoopProgressReporter) RunFailed(_ string, _ error)        {}
+func (NoopProgressReporter) StepStarted(ProgressStep)                {}
+func (NoopProgressReporter) StepFinished(ProgressStep)               {}
+func (NoopProgressReporter) TypedUpdate(_ string, _ acp.TypedUpdate) {}
+func (NoopProgressReporter) WaitingApproval(_ string, _ string)      {}
+func (NoopProgressReporter) RunCompleted(_ string, _ string)         {}
+func (NoopProgressReporter) RunFailed(_ string, _ error)             {}
 
 // Verify NoopProgressReporter implements ProgressReporter at compile time.
 var _ ProgressReporter = NoopProgressReporter{}
@@ -79,7 +81,7 @@ type DefaultEngine struct {
 	catalog   Catalog
 	validator workflows.Validator
 	resolver  workflows.TemplateResolver
-	providers providers.Factory
+	providers providers.ACPProviderFactory
 	processor output.Processor
 	store     state.Store
 	prompter  hitl.Prompter
@@ -95,7 +97,7 @@ type Dependencies struct {
 	Catalog    Catalog
 	Validator  workflows.Validator
 	Resolver   workflows.TemplateResolver
-	Providers  providers.Factory
+	Providers  providers.ACPProviderFactory
 	Processor  output.Processor
 	Store      state.Store
 	Prompter   hitl.Prompter
@@ -256,6 +258,9 @@ func (e *DefaultEngine) execute(ctx context.Context, workflow *workflows.Workflo
 		}
 
 		if step.Status() == domain.StepWaitingApproval {
+			if err := e.resumeStepSession(ctx, run, step); err != nil {
+				return err
+			}
 			e.logStepEvent(ctx, run, step, "waiting_approval", 0, nil, nil)
 			e.progress.WaitingApproval(step.Name().String(), step.Output())
 			if err := e.handlePrompt(ctx, run, step); err != nil {
@@ -294,26 +299,27 @@ func (e *DefaultEngine) execute(ctx context.Context, workflow *workflows.Workflo
 		if err := provider.Available(); err != nil {
 			return err
 		}
-		providerProfile, err := resolveProviderProfile(ctx, provider)
-		if err != nil {
-			return err
-		}
-		e.logStepEvent(ctx, run, step, "provider_execute_started", 0, nil, profileFields(providerProfile))
+		e.logStepEvent(ctx, run, step, "provider_execute_started", 0, nil, nil)
 
 		stepTimeout, err := parseStepTimeout(stepDef)
 		if err != nil {
 			return err
 		}
 
-		providerOpts, processOpts := buildProviderOptions(step.Provider().String(), stepDef.RequiresStructuredOutput(), stepDef.Output.JSONSchema)
+		processOpts := output.ProcessOptions{
+			RequireStructured: stepDef.RequiresStructuredOutput(),
+			SchemaName:        stepDef.Output.JSONSchema,
+		}
+		permissionPolicy := permissionPolicyForStep(run.Workflow().String(), stepDef)
 
-		outputValue, rawOutput, providerDuration, executionProfile, err := e.runProviderWithRetries(
+		outputValue, rawOutput, providerDuration, err := e.runProviderWithRetries(
 			ctx,
+			run,
 			provider,
-			step.Name().String(),
+			step,
 			resolvedInput,
 			stepTimeout,
-			providerOpts,
+			permissionPolicy,
 			[]byte(stepDef.Schema),
 			processOpts,
 		)
@@ -321,7 +327,7 @@ func (e *DefaultEngine) execute(ctx context.Context, workflow *workflows.Workflo
 		artifactRefs := artifactRefsForStep(step.Name().String())
 		if err != nil {
 			if output.IsRecoverable(err) && rawOutput != "" {
-				displayOutput := normalizeRecoverableOutput(rawOutput, processOpts.OutputFormat)
+				displayOutput := normalizeRecoverableOutput(rawOutput)
 				report := []byte(`{"validation_status":"failed","structured":true}`)
 				if saveErr := e.store.SaveArtifact(ctx, run.ID(), step.Name().String(), state.Artifact{
 					RawOutput:        []byte(rawOutput),
@@ -345,9 +351,7 @@ func (e *DefaultEngine) execute(ctx context.Context, workflow *workflows.Workflo
 				if saveErr := e.store.SaveRun(ctx, run); saveErr != nil {
 					return saveErr
 				}
-				e.logStepEvent(ctx, run, step, "provider_output_requires_hitl", providerDuration, err, map[string]any{
-					"profile": firstNonEmptyProfile(executionProfile, providerProfile),
-				})
+				e.logStepEvent(ctx, run, step, "provider_output_requires_hitl", providerDuration, err, nil)
 				e.progress.StepFinished(ProgressStep{
 					Index:    index,
 					Total:    total,
@@ -368,9 +372,7 @@ func (e *DefaultEngine) execute(ctx context.Context, workflow *workflows.Workflo
 
 			_ = run.MarkStepFailed(step.Name(), err.Error(), e.clock.Now())
 			_ = e.store.SaveRun(ctx, run)
-			e.logStepEvent(ctx, run, step, "failed", providerDuration, err, map[string]any{
-				"profile": firstNonEmptyProfile(executionProfile, providerProfile),
-			})
+			e.logStepEvent(ctx, run, step, "failed", providerDuration, err, nil)
 			e.progress.StepFinished(ProgressStep{
 				Index:    index,
 				Total:    total,
@@ -409,7 +411,6 @@ func (e *DefaultEngine) execute(ctx context.Context, workflow *workflows.Workflo
 		}
 		e.logStepEvent(ctx, run, step, "provider_execute_finished", providerDuration, nil, map[string]any{
 			"validation_status": outputValue.ValidationStatus,
-			"profile":           firstNonEmptyProfile(executionProfile, providerProfile),
 		})
 
 		e.progress.StepFinished(ProgressStep{
@@ -428,35 +429,6 @@ func (e *DefaultEngine) execute(ctx context.Context, workflow *workflows.Workflo
 			}
 			return err
 		}
-	}
-}
-
-func buildProviderOptions(providerName string, requiresStructured bool, schemaName string) (map[string]string, output.ProcessOptions) {
-	processOpts := output.ProcessOptions{
-		RequireStructured: requiresStructured,
-		SchemaName:        schemaName,
-	}
-
-	switch providerName {
-	case providers.ClaudeProviderName:
-		processOpts.OutputFormat = "json"
-		return nil, processOpts
-	case providers.GeminiProviderName:
-		opts := map[string]string{}
-		if requiresStructured {
-			opts["output_format"] = "json"
-			processOpts.OutputFormat = "json"
-		}
-		return opts, processOpts
-	case providers.CodexProviderName:
-		opts := map[string]string{"sandbox": "read-only"}
-		if requiresStructured {
-			opts["output_format"] = "jsonl"
-			processOpts.OutputFormat = "jsonl"
-		}
-		return opts, processOpts
-	default:
-		return nil, processOpts
 	}
 }
 
@@ -491,97 +463,133 @@ func (e *DefaultEngine) validateCurrentRunProviderAvailable(ctx context.Context,
 	return e.validateProviderAvailable(ctx, step.Provider().String())
 }
 
-func (e *DefaultEngine) validateProviderAvailable(ctx context.Context, providerName string) error {
+func (e *DefaultEngine) validateProviderAvailable(_ context.Context, providerName string) error {
 	provider, err := e.providers.Get(providerName)
 	if err != nil {
 		return err
 	}
 
-	if err := provider.Available(); err != nil {
+	return provider.Available()
+}
+
+func normalizeRecoverableOutput(raw string) string {
+	return strings.TrimSpace(raw)
+}
+
+func permissionPolicyForStep(workflowName string, step *workflows.StepDefinition) acp.PermissionPolicy {
+	if step == nil || len(step.Capabilities) == 0 {
+		return acp.PermissionPolicy{}
+	}
+
+	decision, ok := parsePermissionDecision(step.Capabilities["permission_policy"])
+	if !ok {
+		return acp.PermissionPolicy{}
+	}
+
+	return acp.PermissionPolicy{
+		WorkflowDecisions: map[string]hitl.PermissionDecision{
+			workflowName: decision,
+		},
+	}
+}
+
+func parsePermissionDecision(raw string) (hitl.PermissionDecision, bool) {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "allow":
+		return hitl.PermissionAllow, true
+	case "deny":
+		return hitl.PermissionDeny, true
+	case "cancel":
+		return hitl.PermissionCancel, true
+	default:
+		return "", false
+	}
+}
+
+func (e *DefaultEngine) resumeStepSession(ctx context.Context, run *domain.Run, step *domain.StepExecution) error {
+	if step.SessionID() == "" {
+		return nil
+	}
+
+	provider, err := e.providers.Get(step.Provider().String())
+	if err != nil {
 		return err
+	}
+
+	resolvedSessionID, err := provider.ResumeSession(ctx, acp.ACPInput{
+		SessionID:    step.SessionID(),
+		Timeout:      10 * time.Second,
+		WorkDir:      filepath.Clean("."),
+		RunID:        run.ID(),
+		WorkflowName: run.Workflow().String(),
+		StepName:     step.Name().String(),
+		ProviderName: step.Provider().String(),
+	})
+	if err != nil {
+		return err
+	}
+	if resolvedSessionID != "" && resolvedSessionID != step.SessionID() {
+		step.SetSessionID(resolvedSessionID)
+		if err := e.store.SaveRun(ctx, run); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func resolveProviderProfile(ctx context.Context, provider providers.Provider) (string, error) {
-	resolver, ok := provider.(interface {
-		ResolveProfile(context.Context) (string, error)
-	})
-	if !ok {
-		return "", nil
-	}
-
-	return resolver.ResolveProfile(ctx)
-}
-
-func profileFields(profile string) map[string]any {
-	if profile == "" {
-		return nil
-	}
-
-	return map[string]any{"profile": profile}
-}
-
-func firstNonEmptyProfile(values ...string) string {
-	for _, value := range values {
-		if value != "" {
-			return value
-		}
-	}
-
-	return ""
-}
-
-func normalizeRecoverableOutput(raw string, outputFormat string) string {
-	switch outputFormat {
-	case "json":
-		extracted, err := output.ExtractProviderJSONResponse(raw)
-		if err == nil {
-			return strings.TrimSpace(extracted)
-		}
-	case "jsonl":
-		extracted, err := output.ExtractJSONL(raw)
-		if err == nil {
-			return strings.TrimSpace(extracted)
-		}
-	}
-
-	return strings.TrimSpace(raw)
-}
-
-func (e *DefaultEngine) runProviderWithRetries(ctx context.Context, provider providers.Provider, stepName string, prompt string, timeout time.Duration, providerOpts map[string]string, schema []byte, options output.ProcessOptions) (*output.Result, string, time.Duration, string, error) {
+func (e *DefaultEngine) runProviderWithRetries(ctx context.Context, run *domain.Run, provider providers.ACPProvider, step *domain.StepExecution, prompt string, timeout time.Duration, permissionPolicy acp.PermissionPolicy, schema []byte, options output.ProcessOptions) (*output.Result, string, time.Duration, error) {
 	var (
 		lastErr    error
 		lastOutput string
 		duration   time.Duration
-		profile    string
 	)
 
 	for attempt := 0; attempt <= maxProviderRetries; attempt++ {
-		onChunk := func(chunk []byte) {
-			e.progress.OutputChunk(stepName, chunk)
-		}
-		result, err := provider.ExecuteStream(ctx, providers.ProviderInput{Prompt: prompt, Timeout: timeout, Options: providerOpts}, onChunk)
-		duration = result.Duration
-		lastOutput = result.Stdout
-		profile = result.Profile
-		if err != nil {
-			return nil, lastOutput, duration, profile, err
+		// Retry always starts a new session; clear any previous sessionID.
+		if attempt > 0 {
+			step.SetSessionID("")
 		}
 
-		processed, err := e.processor.Process(ctx, result.Stdout, schema, options)
+		acpInput := acp.ACPInput{
+			Prompt:           prompt,
+			SessionID:        step.SessionID(),
+			Timeout:          timeout,
+			WorkDir:          filepath.Clean("."),
+			RunID:            run.ID(),
+			WorkflowName:     run.Workflow().String(),
+			StepName:         step.Name().String(),
+			ProviderName:     provider.Name(),
+			PermissionPolicy: permissionPolicy,
+		}
+		onUpdate := func(update acp.TypedUpdate) {
+			e.progress.TypedUpdate(step.Name().String(), update)
+		}
+		result, err := provider.ExecuteStream(ctx, acpInput, onUpdate)
+		duration = result.Duration
+
+		// Persist sessionID for resume after execution.
+		if result.SessionID != "" {
+			step.SetSessionID(result.SessionID)
+		}
+
+		lastOutput = result.Content
+		if err != nil {
+			return nil, lastOutput, duration, err
+		}
+
+		processed, err := e.processor.Process(ctx, result.Content, schema, options)
 		if err == nil {
-			return processed, lastOutput, duration, profile, nil
+			return processed, lastOutput, duration, nil
 		}
 
 		lastErr = err
 		if !output.IsRecoverable(err) || attempt == maxProviderRetries {
-			return nil, lastOutput, duration, profile, lastErr
+			return nil, lastOutput, duration, lastErr
 		}
 	}
 
-	return nil, lastOutput, duration, profile, lastErr
+	return nil, lastOutput, duration, lastErr
 }
 
 func (e *DefaultEngine) handlePrompt(ctx context.Context, run *domain.Run, step *domain.StepExecution) error {
@@ -630,6 +638,8 @@ func (e *DefaultEngine) handlePrompt(ctx context.Context, run *domain.Run, step 
 		if err := e.validateProviderAvailable(ctx, step.Provider().String()); err != nil {
 			return err
 		}
+		// Clear sessionID so the redo creates a new ACP session (ADR-004).
+		step.SetSessionID("")
 		if err := run.RetryStep(step.Name(), e.clock.Now()); err != nil {
 			return err
 		}

@@ -41,6 +41,21 @@ func StepStyle(t theme.Maestro, status string) lipgloss.Style {
 	}
 }
 
+// ThoughtStyle returns a faint style for agent chain-of-thought output.
+func ThoughtStyle(_ theme.Maestro) lipgloss.Style {
+	return lipgloss.NewStyle().Faint(true)
+}
+
+// ToolCallStyle returns a style for tool call progress indicators.
+func ToolCallStyle(t theme.Maestro) lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(t.Warning)
+}
+
+// PermissionStyle returns a style for ACP permission request notifications.
+func PermissionStyle(t theme.Maestro) lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(t.Warning).Bold(true)
+}
+
 // StepIcon returns the icon character for a step status.
 func StepIcon(status string) string {
 	switch status {

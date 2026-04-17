@@ -8,10 +8,25 @@ import (
 	tea "charm.land/bubbletea/v2"
 )
 
+// outputKind classifies the type of a content segment in the OutputView.
+type outputKind int
+
+const (
+	outputText      outputKind = iota // plain accumulated text
+	outputNamedLine                   // in-place updatable line (tool calls)
+)
+
+// outputItem represents one content segment in the OutputView.
+type outputItem struct {
+	kind   outputKind
+	text   string // pre-styled content
+	lineID string // non-empty for outputNamedLine; used for in-place updates
+}
+
 // OutputView wraps a bubbles viewport for displaying incremental provider output.
 type OutputView struct {
 	vp         viewport.Model
-	rawContent string
+	items      []outputItem
 	width      int
 	autoScroll bool
 }
@@ -24,6 +39,43 @@ func NewOutputView(width, height int) OutputView {
 	)
 	vp.SoftWrap = true
 	return OutputView{vp: vp, width: width, autoScroll: true}
+}
+
+// AppendNamedLine appends a new in-place-updatable line identified by id.
+// If a line with the same id already exists, it is updated instead (same
+// semantics as UpdateNamedLine).
+func (o *OutputView) AppendNamedLine(id, content string) {
+	for i, item := range o.items {
+		if item.kind == outputNamedLine && item.lineID == id {
+			o.items[i].text = content
+			o.refresh()
+			if o.autoScroll {
+				o.scrollToBottom()
+			}
+			return
+		}
+	}
+	o.items = append(o.items, outputItem{kind: outputNamedLine, lineID: id, text: content})
+	o.refresh()
+	if o.autoScroll {
+		o.scrollToBottom()
+	}
+}
+
+// UpdateNamedLine updates the content of an existing named line by id.
+// Returns true if the line was found and updated, false otherwise.
+func (o *OutputView) UpdateNamedLine(id, content string) bool {
+	for i, item := range o.items {
+		if item.kind == outputNamedLine && item.lineID == id {
+			o.items[i].text = content
+			o.refresh()
+			if o.autoScroll {
+				o.scrollToBottom()
+			}
+			return true
+		}
+	}
+	return false
 }
 
 // SetSize updates the viewport dimensions.
@@ -40,16 +92,21 @@ func (o *OutputView) AppendContent(chunk []byte) {
 	if len(chunk) == 0 {
 		return
 	}
-	o.rawContent += string(chunk)
+	// Extend the last text item, or add a new one.
+	if len(o.items) > 0 && o.items[len(o.items)-1].kind == outputText {
+		o.items[len(o.items)-1].text += string(chunk)
+	} else {
+		o.items = append(o.items, outputItem{kind: outputText, text: string(chunk)})
+	}
 	o.refresh()
 	if o.autoScroll {
 		o.scrollToBottom()
 	}
 }
 
-// SetContent replaces all content.
+// SetContent replaces all content with a single plain-text segment.
 func (o *OutputView) SetContent(content string) {
-	o.rawContent = content
+	o.items = []outputItem{{kind: outputText, text: content}}
 	o.refresh()
 	if o.autoScroll {
 		o.scrollToBottom()
@@ -70,9 +127,42 @@ func (o OutputView) View() string {
 	return o.vp.View()
 }
 
-// refresh re-sets viewport content from the accumulated lines.
+// refresh re-sets viewport content from all accumulated items. Plain-text
+// segments are passed through formatOutputForViewport for markdown-table
+// detection; named lines (tool calls) are included as-is.
 func (o *OutputView) refresh() {
-	o.vp.SetContent(formatOutputForViewport(o.rawContent, o.width))
+	if len(o.items) == 0 {
+		o.vp.SetContent("")
+		return
+	}
+
+	// Fast path: single text item — preserve existing behaviour.
+	if len(o.items) == 1 && o.items[0].kind == outputText {
+		o.vp.SetContent(formatOutputForViewport(o.items[0].text, o.width))
+		return
+	}
+
+	// Mixed items: apply markdown formatting to plain-text runs, preserve
+	// named lines verbatim.
+	var sb strings.Builder
+	var textRun strings.Builder
+	flushTextRun := func() {
+		if textRun.Len() > 0 {
+			sb.WriteString(formatOutputForViewport(textRun.String(), o.width))
+			textRun.Reset()
+		}
+	}
+	for _, item := range o.items {
+		if item.kind == outputText {
+			textRun.WriteString(item.text)
+		} else {
+			flushTextRun()
+			sb.WriteString(item.text)
+			sb.WriteByte('\n')
+		}
+	}
+	flushTextRun()
+	o.vp.SetContent(sb.String())
 }
 
 // scrollToBottom moves the viewport to the last line.

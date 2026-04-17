@@ -3,6 +3,7 @@ package tui
 import (
 	"testing"
 
+	"github.com/jailtonjunior/orchestrator/internal/acp"
 	"github.com/jailtonjunior/orchestrator/internal/runtime"
 )
 
@@ -69,25 +70,28 @@ func TestProgressReporter_StepFinished(t *testing.T) {
 	}
 }
 
-// TestProgressReporter_OutputChunk verifies that OutputChunk publishes an
-// outputChunkMsg with the correct payload.
-func TestProgressReporter_OutputChunk(t *testing.T) {
+// TestProgressReporter_TypedUpdate verifies that TypedUpdate publishes a
+// typedUpdateMsg with the correct payload.
+func TestProgressReporter_TypedUpdate(t *testing.T) {
 	t.Parallel()
 	ch := make(chan progressEvent, 1)
 	r := newProgressReporter(ch)
 
-	r.OutputChunk("plan", []byte("hello"))
+	r.TypedUpdate("plan", acp.TypedUpdate{Kind: acp.UpdateMessage, Text: "hello"})
 
 	event := <-ch
-	msg, ok := event.(outputChunkMsg)
+	msg, ok := event.(typedUpdateMsg)
 	if !ok {
-		t.Fatalf("expected outputChunkMsg, got %T", event)
+		t.Fatalf("expected typedUpdateMsg, got %T", event)
 	}
 	if msg.stepName != "plan" {
 		t.Errorf("expected stepName %q, got %q", "plan", msg.stepName)
 	}
-	if string(msg.chunk) != "hello" {
-		t.Errorf("expected chunk %q, got %q", "hello", string(msg.chunk))
+	if msg.text != "hello" {
+		t.Errorf("expected text %q, got %q", "hello", msg.text)
+	}
+	if msg.kind != "message" {
+		t.Errorf("expected kind %q, got %q", "message", msg.kind)
 	}
 }
 

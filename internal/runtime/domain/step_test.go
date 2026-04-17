@@ -148,3 +148,61 @@ func TestStepExecutionGetters(t *testing.T) {
 		t.Errorf("provider = %q", s.Provider().String())
 	}
 }
+
+// TestStepExecutionSessionID verifies the sessionID getter and setter.
+func TestStepExecutionSessionID(t *testing.T) {
+	t.Parallel()
+
+	def := StepDefinition{
+		Name:     StepName{value: "exec"},
+		Provider: ProviderName{value: "claude"},
+	}
+	s := NewStepExecution(def)
+
+	if s.SessionID() != "" {
+		t.Fatalf("initial sessionID = %q, want empty", s.SessionID())
+	}
+
+	s.SetSessionID("acp-session-abc123")
+	if s.SessionID() != "acp-session-abc123" {
+		t.Fatalf("sessionID = %q, want %q", s.SessionID(), "acp-session-abc123")
+	}
+
+	// SetSessionID should be idempotent.
+	s.SetSessionID("acp-session-abc123")
+	if s.SessionID() != "acp-session-abc123" {
+		t.Fatalf("sessionID after repeat set = %q", s.SessionID())
+	}
+
+	// Clear sessionID.
+	s.SetSessionID("")
+	if s.SessionID() != "" {
+		t.Fatalf("sessionID after clear = %q, want empty", s.SessionID())
+	}
+}
+
+// TestStepSnapshotIncludesSessionID verifies that the snapshot round-trip
+// preserves the sessionID field.
+func TestStepSnapshotIncludesSessionID(t *testing.T) {
+	t.Parallel()
+
+	def := StepDefinition{
+		Name:     StepName{value: "prd"},
+		Provider: ProviderName{value: "claude"},
+	}
+	s := NewStepExecution(def)
+	s.SetSessionID("session-xyz")
+
+	snap := s.snapshot()
+	if snap.SessionID != "session-xyz" {
+		t.Fatalf("snapshot SessionID = %q, want %q", snap.SessionID, "session-xyz")
+	}
+
+	restored, err := newStepExecutionFromSnapshot(snap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restored.SessionID() != "session-xyz" {
+		t.Fatalf("restored sessionID = %q, want %q", restored.SessionID(), "session-xyz")
+	}
+}
