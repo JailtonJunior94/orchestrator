@@ -1,0 +1,78 @@
+{
+  "info": {
+    "name": "{{collection_name}}",
+    "description": "Auto-generated Postman collection from project handlers",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:{{port}}",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "_comment": "Each folder represents a resource/controller group",
+      "name": "{{resource_name}}",
+      "item": [
+        {
+          "name": "{{scenario_name}}",
+          "request": {
+            "method": "{{method}}",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/{{path}}",
+              "host": ["{{base_url}}"],
+              "path": ["{{path_segments}}"],
+              "query": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{{request_json}}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "{{scenario_name}}",
+              "status": "{{status_text}}",
+              "code": "{{status_code}}",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{{response_json}}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
