@@ -1,0 +1,72 @@
+version: 2
+
+project_name: aigov
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: aigov
+    main: ./main.go
+    binary: aigov
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/JailtonJunior94/aigov/internal/version.Version={{.Version}}
+      - -X github.com/JailtonJunior94/aigov/internal/version.Commit={{.Commit}}
+      - -X github.com/JailtonJunior94/aigov/internal/version.Date={{.Date}}
+
+archives:
+  - id: aigov-archive
+    builds:
+      - aigov
+    format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+brews:
+  - name: aigov
+    repository:
+      owner: JailtonJunior94
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/JailtonJunior94/aigov"
+    description: "CLI para governanca de IA em projetos de software"
+    license: "MIT"
+    install: |
+      bin.install "aigov"
+    test: |
+      system "#{bin}/aigov", "version"
+
+release:
+  github:
+    owner: JailtonJunior94
+    name: aigov
+  draft: false
+  prerelease: auto
+  name_template: "v{{.Version}}"
