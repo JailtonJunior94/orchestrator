@@ -27,12 +27,13 @@ type Report struct {
 	RefCount   int                      `json:"reference_count"`
 }
 
-// BaselineEntry descreve o baseline de uma stack.
+// BaselineEntry descreve o baseline de uma skill.
 type BaselineEntry struct {
-	Files     []string `json:"files"`
-	Words     int      `json:"words"`
-	Chars     int      `json:"chars"`
-	TokensEst int      `json:"tokens_est"`
+	Files     []string     `json:"files"`
+	Words     int          `json:"words"`
+	Chars     int          `json:"chars"`
+	TokensEst int          `json:"tokens_est"`
+	Cost      CostBreakdown `json:"cost"`
 }
 
 // FlowEntry descreve o custo de um fluxo operacional.
@@ -51,9 +52,12 @@ func NewService(fsys fs.FileSystem, printer *output.Printer) *Service {
 	return &Service{fs: fsys, printer: printer}
 }
 
-// Execute calcula e imprime metricas.
+// Execute calcula e imprime metricas. Retorna erro se o inventario obrigatorio estiver ausente.
 func (s *Service) Execute(rootDir, format string) error {
-	report := s.gather(rootDir)
+	report, err := s.gather(rootDir)
+	if err != nil {
+		return err
+	}
 
 	if format == "json" {
 		data, _ := json.MarshalIndent(report, "", "  ")
@@ -78,93 +82,79 @@ func (s *Service) Execute(rootDir, format string) error {
 	return nil
 }
 
-func (s *Service) gather(rootDir string) Report {
+// gather descobre o inventario real do checkout e retorna erro se baseline obrigatoria estiver ausente.
+// Baseline obrigatoria: cada diretorio em .agents/skills/ deve conter um SKILL.md.
+func (s *Service) gather(rootDir string) (Report, error) {
 	report := Report{
 		Baselines: make(map[string]BaselineEntry),
 		Flows:     make(map[string]FlowEntry),
 	}
 
-	// Shared files for baselines
-	shared := []string{
-		"AGENTS.md",
-		".agents/skills/agent-governance/SKILL.md",
-	}
-
-	// Per-stack baselines
-	stacks := map[string][]string{
-		"go": append(shared,
-			".agents/skills/go-implementation/SKILL.md",
-			".agents/skills/go-implementation/references/architecture.md",
-		),
-		"node": append(shared,
-			".agents/skills/node-implementation/SKILL.md",
-			".agents/skills/node-implementation/references/architecture.md",
-		),
-		"python": append(shared,
-			".agents/skills/python-implementation/SKILL.md",
-			".agents/skills/python-implementation/references/architecture.md",
-		),
-	}
-
-	for name, files := range stacks {
-		entry := BaselineEntry{Files: files}
-		for _, f := range files {
-			m := s.fileMetric(filepath.Join(rootDir, f))
-			entry.Words += m.Words
-			entry.Chars += m.Chars
-			entry.TokensEst += m.TokensEst
-		}
-		report.Baselines[name] = entry
-	}
-
-	// Flows
-	flows := map[string][]string{
-		"execute-task (Go)": {
-			"AGENTS.md",
-			".agents/skills/agent-governance/SKILL.md",
-			".agents/skills/go-implementation/SKILL.md",
-			".agents/skills/go-implementation/references/architecture.md",
-			".agents/skills/execute-task/SKILL.md",
-			".agents/skills/review/SKILL.md",
-		},
-		"review": {
-			"AGENTS.md",
-			".agents/skills/agent-governance/SKILL.md",
-			".agents/skills/review/SKILL.md",
-		},
-		"bugfix (Go)": {
-			"AGENTS.md",
-			".agents/skills/agent-governance/SKILL.md",
-			".agents/skills/go-implementation/SKILL.md",
-			".agents/skills/go-implementation/references/architecture.md",
-			".agents/skills/bugfix/SKILL.md",
-		},
-	}
-
-	for name, files := range flows {
-		entry := FlowEntry{Files: files}
-		for _, f := range files {
-			m := s.fileMetric(filepath.Join(rootDir, f))
-			entry.TokensEst += m.TokensEst
-		}
-		report.Flows[name] = entry
-	}
-
-	// Counts
 	skillsDir := filepath.Join(rootDir, ".agents", "skills")
-	if entries, err := s.fs.ReadDir(skillsDir); err == nil {
-		for _, e := range entries {
-			if e.IsDir() {
-				report.SkillCount++
-				refsDir := filepath.Join(skillsDir, e.Name(), "references")
-				if refEntries, err := s.fs.ReadDir(refsDir); err == nil {
-					report.RefCount += len(refEntries)
+	if !s.fs.Exists(skillsDir) {
+		return report, fmt.Errorf("diretorio de skills nao encontrado: %s", skillsDir)
+	}
+
+	entries, err := s.fs.ReadDir(skillsDir)
+	if err != nil {
+		return report, fmt.Errorf("erro ao ler diretorio de skills %s: %w", skillsDir, err)
+	}
+
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		skillFile := filepath.Join(skillsDir, name, "SKILL.md")
+		if !s.fs.Exists(skillFile) {
+			return report, fmt.Errorf("skill %q: SKILL.md ausente em %s (baseline obrigatoria)", name, skillFile)
+		}
+
+		entry := BaselineEntry{}
+
+		m := s.fileMetric(skillFile)
+		entry.Files = append(entry.Files, skillFile)
+		entry.Words += m.Words
+		entry.Chars += m.Chars
+		entry.TokensEst += m.TokensEst
+		skillOnlyTokens := m.TokensEst
+
+		refTokensTotal := 0
+		refFileCount := 0
+		refsDir := filepath.Join(skillsDir, name, "references")
+		if refEntries, rerr := s.fs.ReadDir(refsDir); rerr == nil {
+			for _, ref := range refEntries {
+				if ref.IsDir() {
+					continue
 				}
+				refPath := filepath.Join(refsDir, ref.Name())
+				rm := s.fileMetric(refPath)
+				entry.Files = append(entry.Files, refPath)
+				entry.Words += rm.Words
+				entry.Chars += rm.Chars
+				entry.TokensEst += rm.TokensEst
+				refTokensTotal += rm.TokensEst
+				refFileCount++
+				report.RefCount++
 			}
 		}
+
+		incrementalRef := 0
+		if refFileCount > 0 {
+			incrementalRef = refTokensTotal / refFileCount
+		}
+		entry.Cost = CostBreakdown{
+			OnDisk:         entry.TokensEst,
+			Loaded:         skillOnlyTokens,
+			IncrementalRef: incrementalRef,
+			RefCount:       refFileCount,
+		}
+
+		report.Baselines[name] = entry
+		report.SkillCount++
 	}
 
-	return report
+	return report, nil
 }
 
 func (s *Service) fileMetric(path string) FileMetric {

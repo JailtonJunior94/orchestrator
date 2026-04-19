@@ -171,3 +171,33 @@ func TestDetectArchitecture_Fixture_PolyglotMonorepo(t *testing.T) {
 		t.Errorf("expected %s, got %s", ArchMonorepo, result.Type)
 	}
 }
+
+func TestDetectArchitecture_Fixture_PythonAPI(t *testing.T) {
+	osfs := fs.NewOSFileSystem()
+	det := NewArchitectureDetector(osfs)
+	result := det.Detect(fixtureDir("python-api"))
+
+	if result.Type != ArchMicroservice {
+		t.Errorf("expected %s, got %s", ArchMicroservice, result.Type)
+	}
+}
+
+func TestDetectArchitecture_Fixture_GoMonolith(t *testing.T) {
+	osfs := fs.NewOSFileSystem()
+	det := NewArchitectureDetector(osfs)
+	result := det.Detect(fixtureDir("go-monolith"))
+
+	if result.Type != ArchMonolith {
+		t.Errorf("expected %s, got %s", ArchMonolith, result.Type)
+	}
+}
+
+func TestDetectArchitecture_Fixture_NodeAPI(t *testing.T) {
+	osfs := fs.NewOSFileSystem()
+	det := NewArchitectureDetector(osfs)
+	result := det.Detect(fixtureDir("node-api"))
+
+	if result.Type != ArchMonolith {
+		t.Errorf("expected %s, got %s", ArchMonolith, result.Type)
+	}
+}

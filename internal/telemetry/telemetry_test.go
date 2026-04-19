@@ -90,7 +90,13 @@ func TestSummary_AggregatesCorrectly(t *testing.T) {
 	if !strings.Contains(result, "review: 1") {
 		t.Errorf("expected review: 1 in summary, got:\n%s", result)
 	}
-	if !strings.Contains(result, "Tokens estimados adicionais:") {
-		t.Errorf("expected token estimate in summary, got:\n%s", result)
+	if !strings.Contains(result, "Custo Estimado") {
+		t.Errorf("expected cost breakdown in summary, got:\n%s", result)
+	}
+	if !strings.Contains(result, "loaded") {
+		t.Errorf("expected loaded axis in summary, got:\n%s", result)
+	}
+	if !strings.Contains(result, "incremental-ref") {
+		t.Errorf("expected incremental-ref axis in summary, got:\n%s", result)
 	}
 }

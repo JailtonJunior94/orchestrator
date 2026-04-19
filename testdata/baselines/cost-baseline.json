@@ -1,0 +1,14 @@
+{
+  "version": "0.1.0",
+  "generated_at": "2026-04-19",
+  "note": "Estimativa operacional (chars/3.5). Nao representa tokens reais do provedor. Atualizar a cada release com medicao sobre os artefatos canonicos.",
+  "tolerance_pct": 25,
+  "skills": {
+    "canonical-skill": {
+      "on_disk": 1309,
+      "loaded": 796,
+      "incremental_ref": 513,
+      "ref_count": 1
+    }
+  }
+}

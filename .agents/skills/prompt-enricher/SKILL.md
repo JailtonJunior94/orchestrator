@@ -61,7 +61,7 @@ description: Transforma um input bruto em um prompt pronto para LLM, otimizado p
 
 **Etapa 5: Validar o Resultado**
 1. Salve o prompt enriquecido em um arquivo temporário quando a validação local for útil.
-2. Execute `python3 scripts/validate-prompt.py [prompt-file]` para validar a qualidade estrutural.
+2. Execute `python3 .agents/skills/prompt-enricher/scripts/validate-prompt.py [prompt-file]` a partir da raiz do repositório para validar a qualidade estrutural.
 3. Se o script reportar seções ausentes, risco de contradição, diretivas vagas ou pressão de verbosidade, revise o prompt e valide novamente.
 4. Retorne:
    - o prompt enriquecido
@@ -72,4 +72,4 @@ description: Transforma um input bruto em um prompt pronto para LLM, otimizado p
 * Se o input de origem for apenas um tema ou um pedido em uma linha, produza um prompt mínimo com um bloco curto de premissas em vez de inventar fatos detalhados.
 * Se o input de origem contiver instruções conflitantes, preserve a restrição de maior prioridade e exponha o conflito explicitamente no prompt enriquecido.
 * Se o prompt enriquecido ficar maior que o texto de origem sem ganho de clareza, remova orientações de processo não essenciais e valide de novo.
-* Se `scripts/validate-prompt.py` falhar por arquivo inválido ou problema de codificação, execute novamente com um arquivo texto UTF-8 e preserve apenas ASCII quando fizer sentido.
+* Se `.agents/skills/prompt-enricher/scripts/validate-prompt.py` falhar por arquivo inválido ou problema de codificação, execute novamente com um arquivo texto UTF-8 e preserve apenas ASCII quando fizer sentido.
