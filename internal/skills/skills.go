@@ -68,6 +68,21 @@ var BaseSkills = []string{
 	"bugfix",
 }
 
+// ComplementarySkills sao skills de integracao embarcadas no binario e instaladas junto com as base.
+var ComplementarySkills = []string{
+	"confluence-changelog-publisher",
+	"github-diff-changelog-publisher",
+	"github-pr-comment-triage",
+	"github-release-publication-flow",
+	"jira-tasks",
+	"otel-grafana-dashboards",
+	"postman-collection-generator",
+	"prompt-enricher",
+	"pull-request",
+	"semantic-commit",
+	"us-to-prd",
+}
+
 // LangSkills retorna as skills de implementacao para as linguagens selecionadas.
 func LangSkills(langs []Lang) []string {
 	var out []string
@@ -86,5 +101,6 @@ func LangSkills(langs []Lang) []string {
 
 // AllSkills retorna a lista completa de skills a instalar.
 func AllSkills(langs []Lang) []string {
-	return append(BaseSkills, LangSkills(langs)...)
+	base := append(BaseSkills, ComplementarySkills...)
+	return append(base, LangSkills(langs)...)
 }

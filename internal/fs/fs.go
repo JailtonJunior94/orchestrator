@@ -101,7 +101,7 @@ func (f *OSFileSystem) RemoveAll(path string) error {
 }
 
 func (f *OSFileSystem) Exists(path string) bool {
-	_, err := os.Lstat(path)
+	_, err := os.Stat(path)
 	return err == nil
 }
 

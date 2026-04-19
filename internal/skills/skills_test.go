@@ -48,7 +48,14 @@ func TestLangSkills(t *testing.T) {
 
 func TestAllSkills(t *testing.T) {
 	all := AllSkills([]Lang{LangGo})
-	if len(all) != len(BaseSkills)+2 {
-		t.Errorf("AllSkills(go) = %d skills, want %d", len(all), len(BaseSkills)+2)
+	want := len(BaseSkills) + len(ComplementarySkills) + 2
+	if len(all) != want {
+		t.Errorf("AllSkills(go) = %d skills, want %d", len(all), want)
+	}
+}
+
+func TestComplementarySkills(t *testing.T) {
+	if len(ComplementarySkills) != 11 {
+		t.Errorf("ComplementarySkills count = %d, want 11", len(ComplementarySkills))
 	}
 }

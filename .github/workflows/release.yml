@@ -63,6 +63,10 @@ jobs:
             echo "skip_reason=" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Update VERSION file
+        if: github.ref == 'refs/heads/main' && steps.check.outputs.should_release == 'true'
+        run: ./ai-spec update-version --version "${{ steps.semver.outputs.target_version }}"
+
       - name: Generate CHANGELOG.md
         if: github.ref == 'refs/heads/main' && steps.check.outputs.should_release == 'true'
         run: ./ai-spec changelog . --version "${{ steps.semver.outputs.target_version }}"
@@ -72,11 +76,14 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet CHANGELOG.md 2>/dev/null; then
-            echo "CHANGELOG.md unchanged, skipping commit"
+          changed=false
+          git diff --quiet CHANGELOG.md 2>/dev/null || changed=true
+          git diff --quiet VERSION 2>/dev/null || changed=true
+          if [[ "$changed" == "false" ]]; then
+            echo "CHANGELOG.md and VERSION unchanged, skipping commit"
           else
-            git add CHANGELOG.md
-            git commit -m "chore(release): update CHANGELOG.md for v${{ steps.semver.outputs.target_version }} [skip ci]"
+            git add CHANGELOG.md VERSION
+            git commit -m "chore(release): update CHANGELOG.md and VERSION for v${{ steps.semver.outputs.target_version }} [skip ci]"
           fi
 
       - name: Create annotated tag
