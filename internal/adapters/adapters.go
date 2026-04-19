@@ -163,6 +163,12 @@ Mantenha este agente estreito: %s.
 	g.printer.Debug("Adaptadores GitHub gerados: %d", count)
 }
 
+// reviewLoopSkills are skills that include a validation loop and need an explicit reminder in the prompt.
+var reviewLoopSkills = map[string]bool{
+	"execute-task": true,
+	"refactor":     true,
+}
+
 func (g *Generator) GenerateGemini(sourceDir, projectDir string) {
 	cmdDir := filepath.Join(projectDir, ".gemini", "commands")
 	_ = g.fs.MkdirAll(cmdDir)
@@ -199,18 +205,46 @@ func (g *Generator) GenerateGemini(sourceDir, projectDir string) {
 		}
 
 		shortDesc := truncateAtSentence(fm.Description, 120)
-		prompt := fmt.Sprintf(`Use `+"`.agents/skills/%s/SKILL.md`"+` como fluxo canonico desta tarefa.
-Leia os assets e references sob demanda conforme descrito no SKILL.md.
-Nao invente um processo paralelo neste comando.
-
-Aplicar a habilidade a esta solicitacao:
-{{args}}`, skillName)
-
+		prompt := g.buildGeminiPrompt(skillsDir, skillName)
 		content := fmt.Sprintf("description = %q\nprompt = \"\"\"\n%s\n\"\"\"\n", shortDesc, prompt)
 		_ = g.fs.WriteFile(filepath.Join(cmdDir, skillName+".toml"), []byte(content))
 		count++
 	}
 	g.printer.Debug("Gemini commands gerados: %d", count)
+}
+
+func (g *Generator) buildGeminiPrompt(skillsDir, skillName string) string {
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "Use `.agents/skills/%s/SKILL.md` como fluxo canonico desta tarefa.\n", skillName)
+
+	for _, a := range g.collectSkillAssets(skillsDir, skillName) {
+		fmt.Fprintf(&sb, "Carregue `%s` antes de iniciar.\n", a)
+	}
+
+	sb.WriteString("Leia os assets e references sob demanda conforme descrito no SKILL.md.\n")
+	sb.WriteString("Nao invente um processo paralelo neste comando.")
+
+	if reviewLoopSkills[skillName] {
+		sb.WriteString("\n\nAo concluir, rode validacao proporcional e retorne o relatorio com estado final.")
+	}
+
+	sb.WriteString("\n\nAplicar a habilidade a esta solicitacao:\n{{args}}")
+	return sb.String()
+}
+
+func (g *Generator) collectSkillAssets(skillsDir, skillName string) []string {
+	assetsDir := filepath.Join(skillsDir, skillName, "assets")
+	entries, err := g.fs.ReadDir(assetsDir)
+	if err != nil {
+		return nil
+	}
+	var files []string
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") {
+			files = append(files, fmt.Sprintf(".agents/skills/%s/assets/%s", skillName, e.Name()))
+		}
+	}
+	return files
 }
 
 // BuildCodexConfig gera o conteudo do config.toml para Codex.

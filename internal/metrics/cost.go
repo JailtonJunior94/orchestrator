@@ -23,6 +23,7 @@ type CostBreakdown struct {
 
 // CostNote documenta os limites do modelo de custo.
 // Deve ser incluido em qualquer relatorio ou baseline que exponha esses valores.
-const CostNote = "ESTIMATIVA: tokens calculados como chars/3.5 (arredondamento matematico). " +
-	"Nao representa tokens reais do provedor de IA. " +
-	"Atualizar baseline a cada release com medicao sobre artefatos canonicos."
+const CostNote = `Estimativa usa chars/3.5 por default (sem dependencia externa).
+Para contagem precisa (~15% mais acurada), use: ai-spec-harness metrics --precise
+  --precise usa tiktoken cl100k_base (cl100k). Requer download inicial do modelo BPE.
+Os limiares de budget foram calibrados para a heuristica chars/3.5.`

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/JailtonJunior94/ai-spec-harness/internal/invocation"
 	"github.com/spf13/cobra"
 )
 
@@ -22,6 +23,13 @@ Exemplos:
   ai-spec-harness doctor ./meu-projeto`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if err := invocation.CheckDepth(); err != nil {
+			return err
+		}
+		invocation.IncrementDepth()
+		return nil
+	},
 }
 
 func init() {

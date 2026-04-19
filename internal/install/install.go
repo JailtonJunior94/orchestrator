@@ -9,6 +9,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/config"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/contextgen"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/embedded"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
@@ -45,6 +46,20 @@ func NewService(
 func (s *Service) Execute(opts config.InstallOptions) error {
 	if err := s.validate(opts); err != nil {
 		return err
+	}
+
+	// Se --source nao fornecido, extrair assets embutidos para temp dir.
+	if opts.SourceDir == "" {
+		tmpDir, cleanup, err := embedded.ExtractToTempDir()
+		if err != nil {
+			return fmt.Errorf("extrair assets embutidos: %w", err)
+		}
+		defer cleanup()
+		opts.SourceDir = tmpDir
+		// Modo embutido sempre usa copy (sem symlinks para temp dir)
+		if opts.LinkMode == skills.LinkSymlink {
+			opts.LinkMode = skills.LinkCopy
+		}
 	}
 
 	sourceDir, err := filepath.Abs(opts.SourceDir)
@@ -128,16 +143,13 @@ func (s *Service) validate(opts config.InstallOptions) error {
 	if opts.ProjectDir == "" {
 		return fmt.Errorf("diretorio alvo e obrigatorio")
 	}
-	if opts.SourceDir == "" {
-		return fmt.Errorf("diretorio fonte e obrigatorio")
-	}
 	if !s.fs.IsDir(opts.ProjectDir) {
 		return fmt.Errorf("diretorio alvo nao encontrado: %s", opts.ProjectDir)
 	}
 	if !s.fs.Writable(opts.ProjectDir) {
 		return fmt.Errorf("sem permissao de escrita em: %s", opts.ProjectDir)
 	}
-	if !s.fs.IsDir(opts.SourceDir) {
+	if opts.SourceDir != "" && !s.fs.IsDir(opts.SourceDir) {
 		return fmt.Errorf("diretorio fonte nao encontrado: %s", opts.SourceDir)
 	}
 	if len(opts.Tools) == 0 {
@@ -246,9 +258,12 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 	if dryRun {
 		s.printer.DryRun("copiar .claude/rules/governance.md")
 		s.printer.DryRun("copiar .claude/scripts/validate-task-evidence.sh")
+		s.printer.DryRun("copiar .claude/scripts/validate-bugfix-evidence.sh")
+		s.printer.DryRun("copiar .claude/scripts/validate-refactor-evidence.sh")
 		s.printer.DryRun("copiar .claude/hooks/validate-governance.sh")
 		s.printer.DryRun("copiar .claude/hooks/validate-preload.sh")
 		s.printer.DryRun("copiar scripts/lib/parse-hook-input.sh")
+		s.printer.DryRun("copiar scripts/lib/check-invocation-depth.sh")
 		s.printer.DryRun("configurar hooks PreToolUse e PostToolUse em .claude/settings.local.json")
 		s.printer.DryRun("gerar .claude/agents/*.md via adaptadores")
 		return nil
@@ -264,6 +279,20 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 	validateScript := filepath.Join(sourceDir, ".claude", "scripts", "validate-task-evidence.sh")
 	if s.fs.Exists(validateScript) {
 		if err := s.fs.CopyFile(validateScript, filepath.Join(projectDir, ".claude", "scripts", "validate-task-evidence.sh")); err != nil {
+			return err
+		}
+	}
+
+	bugfixScript := filepath.Join(sourceDir, ".claude", "scripts", "validate-bugfix-evidence.sh")
+	if s.fs.Exists(bugfixScript) {
+		if err := s.fs.CopyFile(bugfixScript, filepath.Join(projectDir, ".claude", "scripts", "validate-bugfix-evidence.sh")); err != nil {
+			return err
+		}
+	}
+
+	refactorScript := filepath.Join(sourceDir, ".claude", "scripts", "validate-refactor-evidence.sh")
+	if s.fs.Exists(refactorScript) {
+		if err := s.fs.CopyFile(refactorScript, filepath.Join(projectDir, ".claude", "scripts", "validate-refactor-evidence.sh")); err != nil {
 			return err
 		}
 	}
@@ -286,6 +315,13 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 	parseHookInput := filepath.Join(sourceDir, "scripts", "lib", "parse-hook-input.sh")
 	if s.fs.Exists(parseHookInput) {
 		if err := s.fs.CopyFile(parseHookInput, filepath.Join(projectDir, "scripts", "lib", "parse-hook-input.sh")); err != nil {
+			return err
+		}
+	}
+
+	depthGuard := filepath.Join(sourceDir, "scripts", "lib", "check-invocation-depth.sh")
+	if s.fs.Exists(depthGuard) {
+		if err := s.fs.CopyFile(depthGuard, filepath.Join(projectDir, "scripts", "lib", "check-invocation-depth.sh")); err != nil {
 			return err
 		}
 	}
@@ -318,6 +354,7 @@ func (s *Service) installGemini(sourceDir, projectDir string, dryRun bool) error
 	if dryRun {
 		s.printer.DryRun("mkdir -p %s", cmdDir)
 		s.printer.DryRun("gerar .gemini/commands/*.toml via adaptadores")
+		s.printer.DryRun("copiar .gemini/hooks/validate-preload.sh")
 		return nil
 	}
 
@@ -325,6 +362,17 @@ func (s *Service) installGemini(sourceDir, projectDir string, dryRun bool) error
 		return err
 	}
 	s.adapters.GenerateGemini(sourceDir, projectDir)
+
+	geminiPreload := filepath.Join(sourceDir, ".gemini", "hooks", "validate-preload.sh")
+	if s.fs.Exists(geminiPreload) {
+		hookDir := filepath.Join(projectDir, ".gemini", "hooks")
+		if err := s.fs.MkdirAll(hookDir); err != nil {
+			return err
+		}
+		if err := s.fs.CopyFile(geminiPreload, filepath.Join(hookDir, "validate-preload.sh")); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

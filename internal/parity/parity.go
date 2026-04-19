@@ -140,6 +140,8 @@ func Run(snap Snapshot, invariants []*Invariant) []CheckResult {
 
 // Generate produz artefatos via contextgen e retorna um Snapshot.
 // Utiliza um FakeFileSystem em memoria — nao escreve em disco.
+// Alem dos artefatos do contextgen, popula stubs para hooks, scripts e rules
+// que sao instalados pelo install.Service (mas nao gerados pelo contextgen).
 func Generate(projectDir string, tools []skills.Tool, langs []skills.Lang, codexProfile string) (Snapshot, error) {
 	ffs := fs.NewFakeFileSystem()
 	sourceDir := projectDir + "-src"
@@ -150,6 +152,35 @@ func Generate(projectDir string, tools []skills.Tool, langs []skills.Lang, codex
 	if err := g.Generate(sourceDir, projectDir, tools, langs, codexProfile, false); err != nil {
 		return Snapshot{}, fmt.Errorf("gerar artefatos: %w", err)
 	}
+
+	toolSet := make(map[skills.Tool]bool, len(tools))
+	for _, t := range tools {
+		toolSet[t] = true
+	}
+
+	// Stubs para artefatos Claude instalados pelo install.Service
+	if toolSet[skills.ToolClaude] {
+		claudeStubs := []string{
+			".claude/hooks/validate-governance.sh",
+			".claude/hooks/validate-preload.sh",
+			".claude/rules/governance.md",
+			".claude/scripts/validate-task-evidence.sh",
+			".claude/scripts/validate-bugfix-evidence.sh",
+			".claude/scripts/validate-refactor-evidence.sh",
+		}
+		for _, p := range claudeStubs {
+			_ = ffs.WriteFile(filepath.Join(projectDir, p), []byte("#!/bin/sh\n# stub"))
+		}
+	}
+
+	// Stub para hook Gemini instalado pelo install.Service
+	if toolSet[skills.ToolGemini] {
+		_ = ffs.WriteFile(filepath.Join(projectDir, ".gemini/hooks/validate-preload.sh"), []byte("#!/bin/sh\n# stub"))
+	}
+
+	// Stub para guard de profundidade (cross-tool, sempre instalado com Claude)
+	_ = ffs.WriteFile(filepath.Join(projectDir, "scripts/lib/check-invocation-depth.sh"), []byte("#!/bin/sh\n# stub"))
+
 	return Snapshot{
 		Tools:      tools,
 		ProjectDir: projectDir,
@@ -176,6 +207,17 @@ func Invariants() []*Invariant {
 		invCD01CodexConfigPresent,
 		invCD02CodexConfigCanonicalPath,
 
+		// Claude — hooks, rules e scripts instalados
+		invCL03ClaudeHookGovernancePresent,
+		invCL04ClaudeHookPreloadPresent,
+		invCL05ClaudeRulesGovernancePresent,
+		invCL06ClaudeScriptTaskEvidencePresent,
+		invCL07ClaudeScriptBugfixEvidencePresent,
+		invCL08ClaudeScriptRefactorEvidencePresent,
+
+		// Gemini — hook de preload instalado
+		invGM03GeminiHookPreloadPresent,
+
 		// Best-effort — documenta limites de enforcement
 		invGM02GeminiMDBestEffortDoc,
 		invCP02CopilotMDBestEffortDoc,
@@ -183,6 +225,7 @@ func Invariants() []*Invariant {
 		// Cross-tool — detecta drift entre destinos
 		invX01CrossToolCanonicalPath,
 		invX02CompactProfileCodexOnly,
+		invX03DepthGuardPresent,
 	}
 }
 
@@ -407,6 +450,118 @@ var invX01CrossToolCanonicalPath = &Invariant{
 			if !strings.Contains(content, ".agents/skills/") {
 				return failf("artefato de %s nao referencia '.agents/skills/': %s", tool, relPath)
 			}
+		}
+		return pass()
+	},
+}
+
+// ── Claude — hooks, rules e scripts (T12) ───────────────────────────────────
+
+var invCL03ClaudeHookGovernancePresent = &Invariant{
+	ID:          "CL03",
+	Description: ".claude/hooks/validate-governance.sh deve existir",
+	Level:       ToolSpecific,
+	AppliesTo:   []skills.Tool{skills.ToolClaude},
+	Check: func(s Snapshot) Result {
+		if s.File(".claude/hooks/validate-governance.sh") == "" {
+			return fail("hook validate-governance.sh ausente")
+		}
+		return pass()
+	},
+}
+
+var invCL04ClaudeHookPreloadPresent = &Invariant{
+	ID:          "CL04",
+	Description: ".claude/hooks/validate-preload.sh deve existir",
+	Level:       ToolSpecific,
+	AppliesTo:   []skills.Tool{skills.ToolClaude},
+	Check: func(s Snapshot) Result {
+		if s.File(".claude/hooks/validate-preload.sh") == "" {
+			return fail("hook validate-preload.sh ausente")
+		}
+		return pass()
+	},
+}
+
+var invCL05ClaudeRulesGovernancePresent = &Invariant{
+	ID:          "CL05",
+	Description: ".claude/rules/governance.md deve existir",
+	Level:       ToolSpecific,
+	AppliesTo:   []skills.Tool{skills.ToolClaude},
+	Check: func(s Snapshot) Result {
+		if s.File(".claude/rules/governance.md") == "" {
+			return fail("rules governance.md ausente")
+		}
+		return pass()
+	},
+}
+
+var invCL06ClaudeScriptTaskEvidencePresent = &Invariant{
+	ID:          "CL06",
+	Description: ".claude/scripts/validate-task-evidence.sh deve existir",
+	Level:       ToolSpecific,
+	AppliesTo:   []skills.Tool{skills.ToolClaude},
+	Check: func(s Snapshot) Result {
+		if s.File(".claude/scripts/validate-task-evidence.sh") == "" {
+			return fail("script validate-task-evidence.sh ausente")
+		}
+		return pass()
+	},
+}
+
+var invCL07ClaudeScriptBugfixEvidencePresent = &Invariant{
+	ID:          "CL07",
+	Description: ".claude/scripts/validate-bugfix-evidence.sh deve existir",
+	Level:       ToolSpecific,
+	AppliesTo:   []skills.Tool{skills.ToolClaude},
+	Check: func(s Snapshot) Result {
+		if s.File(".claude/scripts/validate-bugfix-evidence.sh") == "" {
+			return fail("script validate-bugfix-evidence.sh ausente")
+		}
+		return pass()
+	},
+}
+
+var invCL08ClaudeScriptRefactorEvidencePresent = &Invariant{
+	ID:          "CL08",
+	Description: ".claude/scripts/validate-refactor-evidence.sh deve existir",
+	Level:       ToolSpecific,
+	AppliesTo:   []skills.Tool{skills.ToolClaude},
+	Check: func(s Snapshot) Result {
+		if s.File(".claude/scripts/validate-refactor-evidence.sh") == "" {
+			return fail("script validate-refactor-evidence.sh ausente")
+		}
+		return pass()
+	},
+}
+
+// ── Gemini — hook de preload (T12) ───────────────────────────────────────────
+
+var invGM03GeminiHookPreloadPresent = &Invariant{
+	ID:          "GM03",
+	Description: ".gemini/hooks/validate-preload.sh deve existir",
+	Level:       BestEffort,
+	AppliesTo:   []skills.Tool{skills.ToolGemini},
+	Check: func(s Snapshot) Result {
+		if s.File(".gemini/hooks/validate-preload.sh") == "" {
+			return fail("hook Gemini validate-preload.sh ausente")
+		}
+		return pass()
+	},
+}
+
+// ── Cross-tool — guard de profundidade (T12) ─────────────────────────────────
+
+// invX03DepthGuardPresent verifica que o script de controle de profundidade de
+// invocacao esta presente. Referenciado no AGENTS.md para todas as ferramentas.
+var invX03DepthGuardPresent = &Invariant{
+	ID:          "X03",
+	Description: "scripts/lib/check-invocation-depth.sh deve existir",
+	Level:       Common,
+	AppliesTo:   nil, // aplica a todos
+	Check: func(s Snapshot) Result {
+		if s.File("scripts/lib/check-invocation-depth.sh") == "" {
+			return fail("guard de profundidade ausente")
 		}
 		return pass()
 	},

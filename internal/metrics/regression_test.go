@@ -43,7 +43,7 @@ func TestCostRegression_CanonicalSkill(t *testing.T) {
 		t.Fatal("tolerance_pct deve ser positivo no baseline")
 	}
 
-	svc := NewService(fs.NewOSFileSystem(), silentPrinter())
+	svc := NewService(fs.NewOSFileSystem(), silentPrinter(), nil)
 	report, err := svc.gather("../../testdata/baselines")
 	if err != nil {
 		t.Fatalf("gather falhou sobre testdata/baselines: %v", err)

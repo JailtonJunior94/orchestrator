@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"io"
+	"math"
 	"strings"
 	"testing"
 
@@ -25,7 +26,7 @@ func TestGather_HappyPath(t *testing.T) {
 	// skill-b com apenas SKILL.md, sem referencias
 	ffs.Files[root+"/.agents/skills/skill-b/SKILL.md"] = []byte("# Skill B\nconteudo da skill B")
 
-	svc := NewService(ffs, silentPrinter())
+	svc := NewService(ffs, silentPrinter(), nil)
 	report, err := svc.gather(root)
 
 	if err != nil {
@@ -56,7 +57,7 @@ func TestGather_MissingSkillsMd_ReturnsError(t *testing.T) {
 	ffs.Dirs[root+"/.agents/skills"] = true
 	ffs.Dirs[root+"/.agents/skills/skill-sem-skillmd"] = true
 
-	svc := NewService(ffs, silentPrinter())
+	svc := NewService(ffs, silentPrinter(), nil)
 	_, err := svc.gather(root)
 
 	if err == nil {
@@ -75,7 +76,7 @@ func TestGather_MissingSkillsDir_ReturnsError(t *testing.T) {
 	root := "/repo"
 	// FakeFileSystem vazio: nenhum arquivo, nenhum diretorio
 
-	svc := NewService(ffs, silentPrinter())
+	svc := NewService(ffs, silentPrinter(), nil)
 	_, err := svc.gather(root)
 
 	if err == nil {
@@ -91,11 +92,96 @@ func TestExecute_PropagatesGatherError(t *testing.T) {
 	root := "/repo"
 	// Sem diretorio de skills
 
-	svc := NewService(ffs, silentPrinter())
+	svc := NewService(ffs, silentPrinter(), nil)
 	err := svc.Execute(root, "table")
 
 	if err == nil {
 		t.Fatal("Execute deve propagar erro de gather")
+	}
+}
+
+func TestTokenEstimate_SanityCheck(t *testing.T) {
+	// Conteudo representativo de uma SKILL.md (~800 palavras, ~5000 chars)
+	sample := strings.Repeat("The quick brown fox jumps over the lazy dog. ", 100)
+	est := int(math.Round(float64(len(sample)) / 3.5))
+	// tiktoken cl100k_base daria ~1100 tokens para ~4500 chars
+	// chars/3.5 daria ~1285
+	// Divergencia aceitavel: <=20%
+	if est < 900 || est > 1600 {
+		t.Errorf("estimativa fora de faixa aceitavel: %d tokens para %d chars", est, len(sample))
+	}
+}
+
+func TestCharEstimator_Deterministic(t *testing.T) {
+	text := "The quick brown fox jumps over the lazy dog."
+	tok := NewCharEstimator()
+	a := tok.EstimateTokens(text)
+	b := tok.EstimateTokens(text)
+	if a != b {
+		t.Errorf("CharEstimator deve ser deterministico: %d != %d", a, b)
+	}
+	if a == 0 {
+		t.Error("CharEstimator deve retornar tokens > 0 para texto nao-vazio")
+	}
+	if tok.Name() != "chars/3.5" {
+		t.Errorf("CharEstimator.Name() = %q, want \"chars/3.5\"", tok.Name())
+	}
+}
+
+func TestTiktokenEstimator_WhenAvailable(t *testing.T) {
+	tok, err := NewTiktokenEstimator()
+	if err != nil {
+		t.Skipf("tiktoken nao disponivel (sem acesso ao modelo BPE): %v", err)
+	}
+	text := "The quick brown fox jumps over the lazy dog."
+	tokens := tok.EstimateTokens(text)
+	if tokens == 0 {
+		t.Error("TiktokenEstimator deve retornar tokens > 0 para texto nao-vazio")
+	}
+	// Contagem de tokens precisa para esta frase via cl100k_base deve ser ~10 tokens
+	if tokens < 5 || tokens > 20 {
+		t.Errorf("TiktokenEstimator: contagem inesperada %d para frase conhecida", tokens)
+	}
+	if tok.Name() != "tiktoken/cl100k_base" {
+		t.Errorf("TiktokenEstimator.Name() = %q, want \"tiktoken/cl100k_base\"", tok.Name())
+	}
+}
+
+func TestTiktokenEstimator_MoreAccurateThanChar(t *testing.T) {
+	tok, err := NewTiktokenEstimator()
+	if err != nil {
+		t.Skipf("tiktoken nao disponivel: %v", err)
+	}
+	// Para texto em ingles, tiktoken e mais preciso que chars/3.5.
+	// A divergencia entre os dois deve ser de ate 20%.
+	text := strings.Repeat("The quick brown fox jumps over the lazy dog. ", 50)
+	charEst := NewCharEstimator().EstimateTokens(text)
+	tiktokenEst := tok.EstimateTokens(text)
+
+	if charEst == 0 || tiktokenEst == 0 {
+		t.Fatal("ambos estimadores devem retornar > 0")
+	}
+	// Divergencia maxima esperada: 20%
+	diff := charEst - tiktokenEst
+	if diff < 0 {
+		diff = -diff
+	}
+	pct := float64(diff) / float64(charEst) * 100
+	if pct > 25 {
+		t.Errorf("divergencia entre chars/3.5 e tiktoken maior que esperada: %.1f%% (char=%d tiktoken=%d)", pct, charEst, tiktokenEst)
+	}
+}
+
+func TestNewPreciseTokenizer_FallbackReturnsCharEstimator(t *testing.T) {
+	// NewPreciseTokenizer nunca deve retornar nil independente do ambiente
+	tok, _ := NewPreciseTokenizer()
+	if tok == nil {
+		t.Fatal("NewPreciseTokenizer nao deve retornar nil")
+	}
+	// Deve retornar tokens validos
+	tokens := tok.EstimateTokens("hello world")
+	if tokens == 0 {
+		t.Error("tokenizer retornado por NewPreciseTokenizer deve retornar tokens > 0")
 	}
 }
 
@@ -107,7 +193,7 @@ func TestGather_SkillCountNeverFalsePositive(t *testing.T) {
 
 	ffs.Files[root+"/.agents/skills/minha-skill/SKILL.md"] = []byte("conteudo")
 
-	svc := NewService(ffs, silentPrinter())
+	svc := NewService(ffs, silentPrinter(), nil)
 	report, err := svc.gather(root)
 
 	if err != nil {

@@ -16,10 +16,13 @@ var upgradeCmd = &cobra.Command{
 	Short: "Atualiza skills de governanca em um projeto",
 	Long: `Verifica ou atualiza skills de governanca comparando versoes e checksums.
 
+Sem --source, compara com as skills canonicas embutidas no binario.
+
 Exemplos:
-  ai-spec-harness upgrade ./meu-projeto --source ~/ai-spec
-  ai-spec-harness upgrade ./meu-projeto --source ~/ai-spec --check
-  ai-spec-harness upgrade ./meu-projeto --source ~/ai-spec --langs go,node`,
+  ai-spec-harness upgrade ./meu-projeto
+  ai-spec-harness upgrade ./meu-projeto --check
+  ai-spec-harness upgrade ./meu-projeto --source ~/ai-governance
+  ai-spec-harness upgrade ./meu-projeto --source ~/ai-governance --langs go,node`,
 	Args: cobra.ExactArgs(1),
 	RunE: runUpgrade,
 }
@@ -33,9 +36,7 @@ var (
 func init() {
 	upgradeCmd.Flags().BoolVar(&upgradeCheckOnly, "check", false, "Apenas verifica sem alterar arquivos")
 	upgradeCmd.Flags().StringVar(&upgradeLangs, "langs", "", "Filtrar por linguagens: go,node,python")
-	upgradeCmd.Flags().StringVar(&upgradeSource, "source", "", "Diretorio fonte do repositorio de governanca (obrigatorio)")
-
-	_ = upgradeCmd.MarkFlagRequired("source")
+	upgradeCmd.Flags().StringVar(&upgradeSource, "source", "", "Diretorio fonte do repositorio de governanca (opcional; usa embutido se omitido)")
 
 	rootCmd.AddCommand(upgradeCmd)
 }

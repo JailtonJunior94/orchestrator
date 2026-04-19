@@ -477,6 +477,12 @@ Antes de concluir uma alteracao:
 3. Nao alterar comportamento publico sem deixar isso explicito.
 4. Nao usar exemplos como copia cega; adaptar ao contexto real.
 %s
+
+### Controle de profundidade de invocacao
+
+- Skills que invocam outros skills (execute-task, refactor) devem verificar profundidade via `+"`"+`scripts/lib/check-invocation-depth.sh`+"`"+`.
+- Limite padrao: 2 niveis. Configuravel via `+"`"+`AI_INVOCATION_MAX`+"`"+`.
+- Variaveis de ambiente: `+"`"+`AI_INVOCATION_DEPTH`+"`"+` (corrente), `+"`"+`AI_INVOCATION_MAX`+"`"+` (limite).
 `,
 		GovernanceSchemaVersion,
 		string(archType),

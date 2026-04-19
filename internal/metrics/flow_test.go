@@ -26,7 +26,7 @@ func TestMeasureFlow_CompactVsStandard(t *testing.T) {
 	ffs.Files["/repo/.agents/skills/agent-governance/SKILL.md"] = repeatedBytes(3000)
 	ffs.Files["/repo/.agents/skills/execute-task/SKILL.md"] = repeatedBytes(3000)
 
-	svc := NewService(ffs, silentPrinter())
+	svc := NewService(ffs, silentPrinter(), nil)
 
 	compactArtifacts := []string{
 		"/repo/AGENTS.compact.md",
@@ -94,7 +94,7 @@ func TestMeasureFlow_WithinBudget(t *testing.T) {
 	ffs.Files["/repo/AGENTS.md"] = repeatedBytes(3000)
 	ffs.Files["/repo/.agents/skills/agent-governance/SKILL.md"] = repeatedBytes(3000)
 
-	svc := NewService(ffs, silentPrinter())
+	svc := NewService(ffs, silentPrinter(), nil)
 	m := svc.MeasureFlow("claude", GovernanceProfileStandard, SkillProfileFull, FlowExecution, []string{
 		"/repo/AGENTS.md",
 		"/repo/.agents/skills/agent-governance/SKILL.md",
@@ -113,7 +113,7 @@ func TestMeasureFlow_ExceedsBudget(t *testing.T) {
 	// 20000 chars => ~5714 tokens est. > limite codex compact lean (5000)
 	ffs.Files["/repo/AGENTS.md"] = repeatedBytes(20000)
 
-	svc := NewService(ffs, silentPrinter())
+	svc := NewService(ffs, silentPrinter(), nil)
 	m := svc.MeasureFlow("codex", GovernanceProfileCompact, SkillProfileLean, FlowExecution, []string{
 		"/repo/AGENTS.md",
 	})
@@ -129,7 +129,7 @@ func TestMeasureFlow_UnknownBudget(t *testing.T) {
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/repo/AGENTS.md"] = repeatedBytes(100000) // qualquer tamanho
 
-	svc := NewService(ffs, silentPrinter())
+	svc := NewService(ffs, silentPrinter(), nil)
 	m := svc.MeasureFlow("ferramenta-desconhecida", GovernanceProfileStandard, SkillProfileFull, FlowExecution, []string{
 		"/repo/AGENTS.md",
 	})

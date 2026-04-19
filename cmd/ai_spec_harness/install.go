@@ -20,10 +20,13 @@ var installCmd = &cobra.Command{
 	Short: "Instala governanca de IA em um projeto",
 	Long: `Instala o pacote de governanca para ferramentas de IA em um projeto alvo.
 
+Sem --source, usa as skills canonicas embutidas no binario.
+
 Exemplos:
   ai-spec-harness install ./meu-projeto --tools claude,gemini --langs go,python
   ai-spec-harness install ./meu-projeto --tools all --langs all --mode copy
-  ai-spec-harness install ./meu-projeto --tools claude --dry-run`,
+  ai-spec-harness install ./meu-projeto --tools claude --dry-run
+  ai-spec-harness install ./meu-projeto --tools all --langs all --source ~/ai-governance`,
 	Args: cobra.ExactArgs(1),
 	RunE: runInstall,
 }
@@ -43,12 +46,11 @@ func init() {
 	installCmd.Flags().StringVar(&installLangs, "langs", "", "Linguagens: go,node,python ou all")
 	installCmd.Flags().StringVar(&installMode, "mode", "symlink", "Modo de instalacao: symlink ou copy")
 	installCmd.Flags().BoolVar(&installDryRun, "dry-run", false, "Mostra o que seria criado sem executar")
-	installCmd.Flags().StringVar(&installSource, "source", "", "Diretorio fonte do repositorio de governanca (obrigatorio)")
+	installCmd.Flags().StringVar(&installSource, "source", "", "Diretorio fonte do repositorio de governanca (opcional; usa embutido se omitido)")
 	installCmd.Flags().BoolVar(&installNoCtx, "no-context", false, "Desabilita geracao de governanca contextual")
 	installCmd.Flags().StringVar(&installCodexProfile, "codex-profile", "full", "Perfil de skills para Codex: full ou lean")
 
 	_ = installCmd.MarkFlagRequired("tools")
-	_ = installCmd.MarkFlagRequired("source")
 
 	rootCmd.AddCommand(installCmd)
 }

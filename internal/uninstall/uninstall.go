@@ -98,6 +98,8 @@ func (s *Service) Execute(projectDir string, dryRun bool) error {
 	safeRmdirIfEmpty(filepath.Join(absDir, ".claude", "rules"))
 
 	safeRm(filepath.Join(absDir, ".claude", "scripts", "validate-task-evidence.sh"))
+	safeRm(filepath.Join(absDir, ".claude", "scripts", "validate-bugfix-evidence.sh"))
+	safeRm(filepath.Join(absDir, ".claude", "scripts", "validate-refactor-evidence.sh"))
 	safeRmdirIfEmpty(filepath.Join(absDir, ".claude", "scripts"))
 
 	safeRm(filepath.Join(absDir, ".claude", "hooks", "validate-governance.sh"))
@@ -130,6 +132,8 @@ func (s *Service) Execute(projectDir string, dryRun bool) error {
 		}
 	}
 	safeRmdirIfEmpty(geminiCmds)
+	safeRm(filepath.Join(absDir, ".gemini", "hooks", "validate-preload.sh"))
+	safeRmdirIfEmpty(filepath.Join(absDir, ".gemini", "hooks"))
 	safeRmdirIfEmpty(filepath.Join(absDir, ".gemini"))
 
 	// Codex
@@ -138,6 +142,7 @@ func (s *Service) Execute(projectDir string, dryRun bool) error {
 
 	// Shared helper scripts
 	safeRm(filepath.Join(absDir, "scripts", "lib", "parse-hook-input.sh"))
+	safeRm(filepath.Join(absDir, "scripts", "lib", "check-invocation-depth.sh"))
 	safeRmdirIfEmpty(filepath.Join(absDir, "scripts", "lib"))
 	safeRmdirIfEmpty(filepath.Join(absDir, "scripts"))
 

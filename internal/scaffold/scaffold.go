@@ -25,10 +25,6 @@ func (s *Service) Execute(langName, rootDir string) error {
 	langUpper := strings.ToUpper(langName)
 	skillDir := rootDir + "/.agents/skills/" + skillName
 
-	if s.fs.IsDir(skillDir) {
-		return fmt.Errorf("skill '%s' ja existe em %s", skillName, skillDir)
-	}
-
 	s.printer.Info("Criando scaffold para skill: %s", skillName)
 
 	// SKILL.md

@@ -4,6 +4,8 @@ package integration
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,11 +15,13 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/config"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/contextgen"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/evidence"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/install"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/specdrift"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/uninstall"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/upgrade"
 )
@@ -510,5 +514,374 @@ func TestE2E_PreloadHook_NonCodeFile(t *testing.T) {
 	}
 	if strings.Contains(stderr, "LEMBRETE") {
 		t.Errorf("arquivo nao-codigo nao deve disparar lembrete de preload, got: %q", stderr)
+	}
+}
+
+// T13 — Testes E2E para novos fluxos
+
+// setupSourceDirWithEvidenceArtifacts estende setupSourceDir com scripts de evidencia,
+// check-invocation-depth.sh e hook Gemini para os cenarios T13.
+func setupSourceDirWithEvidenceArtifacts(t *testing.T, dir string) {
+	t.Helper()
+	setupSourceDir(t, dir)
+	mustWriteFile(t, filepath.Join(dir, ".claude/scripts/validate-task-evidence.sh"), "#!/usr/bin/env bash\n")
+	mustWriteFile(t, filepath.Join(dir, ".claude/scripts/validate-bugfix-evidence.sh"), "#!/usr/bin/env bash\n")
+	mustWriteFile(t, filepath.Join(dir, ".claude/scripts/validate-refactor-evidence.sh"), "#!/usr/bin/env bash\n")
+	mustWriteFile(t, filepath.Join(dir, "scripts/lib/check-invocation-depth.sh"), "#!/usr/bin/env bash\n")
+	mustWriteExecFile(t, filepath.Join(dir, ".gemini/hooks/validate-preload.sh"), "#!/usr/bin/env bash\nexit 0\n")
+}
+
+func TestInstallCopiesAllEvidenceScripts(t *testing.T) {
+	sourceDir := t.TempDir()
+	projectDir := t.TempDir()
+	setupSourceDirWithEvidenceArtifacts(t, sourceDir)
+
+	fsys := fs.NewOSFileSystem()
+	if err := newInstallSvc(fsys).Execute(config.InstallOptions{
+		ProjectDir: projectDir,
+		SourceDir:  sourceDir,
+		Tools:      []skills.Tool{skills.ToolClaude},
+		LinkMode:   skills.LinkCopy,
+	}); err != nil {
+		t.Fatalf("install: %v", err)
+	}
+
+	scripts := []string{
+		filepath.Join(projectDir, ".claude/scripts/validate-task-evidence.sh"),
+		filepath.Join(projectDir, ".claude/scripts/validate-bugfix-evidence.sh"),
+		filepath.Join(projectDir, ".claude/scripts/validate-refactor-evidence.sh"),
+	}
+	for _, p := range scripts {
+		if _, err := os.Stat(p); err != nil {
+			t.Errorf("expected %s to exist after install: %v", p, err)
+		}
+	}
+
+	if err := newUninstallSvc(fsys).Execute(projectDir, false); err != nil {
+		t.Fatalf("uninstall: %v", err)
+	}
+
+	for _, p := range scripts {
+		if _, err := os.Stat(p); err == nil {
+			t.Errorf("expected %s to be removed after uninstall", p)
+		}
+	}
+}
+
+func TestInstallCopiesInvocationDepthGuard(t *testing.T) {
+	sourceDir := t.TempDir()
+	projectDir := t.TempDir()
+	setupSourceDir(t, sourceDir)
+	mustWriteFile(t, filepath.Join(sourceDir, "scripts/lib/check-invocation-depth.sh"), "#!/usr/bin/env bash\n")
+
+	fsys := fs.NewOSFileSystem()
+	if err := newInstallSvc(fsys).Execute(config.InstallOptions{
+		ProjectDir: projectDir,
+		SourceDir:  sourceDir,
+		Tools:      []skills.Tool{skills.ToolClaude},
+		LinkMode:   skills.LinkCopy,
+	}); err != nil {
+		t.Fatalf("install: %v", err)
+	}
+
+	depthGuardPath := filepath.Join(projectDir, "scripts/lib/check-invocation-depth.sh")
+	if _, err := os.Stat(depthGuardPath); err != nil {
+		t.Errorf("expected check-invocation-depth.sh to exist after install: %v", err)
+	}
+
+	if err := newUninstallSvc(fsys).Execute(projectDir, false); err != nil {
+		t.Fatalf("uninstall: %v", err)
+	}
+
+	if _, err := os.Stat(depthGuardPath); err == nil {
+		t.Error("expected check-invocation-depth.sh to be removed after uninstall")
+	}
+}
+
+func TestGeminiHookInstalled(t *testing.T) {
+	sourceDir := t.TempDir()
+	projectDir := t.TempDir()
+	setupSourceDir(t, sourceDir)
+	mustWriteExecFile(t, filepath.Join(sourceDir, ".gemini/hooks/validate-preload.sh"), "#!/usr/bin/env bash\nexit 0\n")
+
+	fsys := fs.NewOSFileSystem()
+	if err := newInstallSvc(fsys).Execute(config.InstallOptions{
+		ProjectDir: projectDir,
+		SourceDir:  sourceDir,
+		Tools:      []skills.Tool{skills.ToolGemini},
+		LinkMode:   skills.LinkCopy,
+	}); err != nil {
+		t.Fatalf("install: %v", err)
+	}
+
+	hookPath := filepath.Join(projectDir, ".gemini/hooks/validate-preload.sh")
+	info, err := os.Stat(hookPath)
+	if err != nil {
+		t.Fatalf("expected .gemini/hooks/validate-preload.sh to exist after install: %v", err)
+	}
+	if info.Mode()&0o111 == 0 {
+		t.Errorf("validate-preload.sh deve ser executavel, modo=%v", info.Mode())
+	}
+
+	if err := newUninstallSvc(fsys).Execute(projectDir, false); err != nil {
+		t.Fatalf("uninstall: %v", err)
+	}
+
+	if _, err := os.Stat(hookPath); err == nil {
+		t.Error("expected .gemini/hooks/validate-preload.sh to be removed after uninstall")
+	}
+}
+
+// completeTaskReport e um relatorio de tarefa com todas as secoes e padroes obrigatorios.
+const completeTaskReport = `# Relatorio de Execucao
+
+PRD: docs/prd.md
+TechSpec: docs/techspec.md
+RF-01: requisito implementado
+
+## Contexto Carregado
+
+Contexto carregado do projeto.
+
+## Comandos Executados
+
+- go test ./...
+
+## Arquivos Alterados
+
+- internal/service.go
+
+## Resultados de Validacao
+
+estado: done
+testes: pass
+lint: pass
+veredito do revisor: APPROVED
+
+## Suposicoes
+
+Nenhuma.
+
+## Riscos Residuais
+
+Nenhum.
+`
+
+// TestValidateEvidenceCommand verifica a logica do subcomando validate-evidence:
+// relatorio completo → Pass=true (exit 0); relatorio incompleto → Pass=false (exit 1).
+func TestValidateEvidenceCommand(t *testing.T) {
+	result := evidence.Validate([]byte(completeTaskReport), evidence.KindTask, nil)
+	if !result.Pass {
+		var labels []string
+		for _, f := range result.Findings {
+			labels = append(labels, f.Label)
+		}
+		t.Errorf("relatorio completo deveria ser aprovado, findings: %v", labels)
+	}
+
+	incomplete := strings.ReplaceAll(completeTaskReport, "## Riscos Residuais\n\nNenhum.\n", "")
+	result = evidence.Validate([]byte(incomplete), evidence.KindTask, nil)
+	if result.Pass {
+		t.Error("relatorio incompleto deveria ser reprovado")
+	}
+	foundFinding := false
+	for _, f := range result.Findings {
+		if strings.Contains(f.Label, "Riscos Residuais") {
+			foundFinding = true
+			break
+		}
+	}
+	if !foundFinding {
+		t.Errorf("finding 'Riscos Residuais' esperado, got: %v", result.Findings)
+	}
+}
+
+// TestCheckSpecDriftCommand verifica a logica do subcomando check-spec-drift:
+// todos os IDs cobertos → Pass=true (exit 0); ID faltante → Pass=false + DRIFT (exit 1).
+func TestCheckSpecDriftCommand(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	prdContent := "# PRD\n\nRF-01: Feature A\nRF-02: Feature B\n"
+	sum := sha256.Sum256([]byte(prdContent))
+	prdHash := fmt.Sprintf("%x", sum)
+
+	mustWriteFile(t, filepath.Join(tmpDir, "prd.md"), prdContent)
+	tasksOK := fmt.Sprintf("## Tasks\n\nRF-01: implementado\nRF-02: implementado\n<!-- spec-hash-prd: %s -->\n", prdHash)
+	mustWriteFile(t, filepath.Join(tmpDir, "tasks.md"), tasksOK)
+
+	report, err := specdrift.CheckDrift(tmpDir)
+	if err != nil {
+		t.Fatalf("CheckDrift: %v", err)
+	}
+	if !report.Pass {
+		t.Errorf("esperado sem drift quando todos os IDs estao cobertos: coverage=%v hashes=%v", report.Coverage, report.Hashes)
+	}
+
+	// Remover RF-02 das tasks: drift esperado
+	tasksWithDrift := fmt.Sprintf("## Tasks\n\nRF-01: implementado\n<!-- spec-hash-prd: %s -->\n", prdHash)
+	mustWriteFile(t, filepath.Join(tmpDir, "tasks.md"), tasksWithDrift)
+
+	report, err = specdrift.CheckDrift(tmpDir)
+	if err != nil {
+		t.Fatalf("CheckDrift com drift: %v", err)
+	}
+	if report.Pass {
+		t.Error("esperado drift detectado quando RF-02 esta ausente das tasks")
+	}
+	foundDrift := false
+	for _, cov := range report.Coverage {
+		for _, missing := range cov.MissingIDs {
+			if missing == "RF-02" {
+				foundDrift = true
+			}
+		}
+	}
+	if !foundDrift {
+		t.Errorf("esperado RF-02 como ID faltante, got: %v", report.Coverage)
+	}
+}
+
+func TestE2E_CopilotInstall_GeneratesEightAgents(t *testing.T) {
+	sourceDir := t.TempDir()
+	projectDir := t.TempDir()
+	setupSourceDir(t, sourceDir)
+
+	// Seed all 8 processual skills in source
+	processualSkills := []struct {
+		name string
+		desc string
+	}{
+		{"bugfix", "Corrects bugs automatically."},
+		{"create-prd", "Creates product requirements documents."},
+		{"analyze-project", "Analyzes project architecture and stack."},
+		{"refactor", "Refactors code preserving behavior."},
+		{"review", "Reviews code and pull requests."},
+		{"execute-task", "Executes eligible tasks with validation."},
+		{"create-tasks", "Plans and creates task breakdowns."},
+		{"create-technical-specification", "Writes technical specifications and ADRs."},
+	}
+	for _, s := range processualSkills {
+		mustWriteFile(t, filepath.Join(sourceDir, ".agents/skills/"+s.name+"/SKILL.md"),
+			"---\nname: "+s.name+"\nversion: 1.0.0\ndescription: "+s.desc+"\n---\n")
+	}
+
+	fsys := fs.NewOSFileSystem()
+	err := newInstallSvc(fsys).Execute(config.InstallOptions{
+		ProjectDir: projectDir,
+		SourceDir:  sourceDir,
+		Tools:      []skills.Tool{skills.ToolCopilot},
+		LinkMode:   skills.LinkCopy,
+	})
+	if err != nil {
+		t.Fatalf("install copilot: %v", err)
+	}
+
+	agentsDir := filepath.Join(projectDir, ".github", "agents")
+	info, err := os.Stat(agentsDir)
+	if err != nil || !info.IsDir() {
+		t.Fatalf(".github/agents/ should exist after copilot install: %v", err)
+	}
+
+	entries, err := os.ReadDir(agentsDir)
+	if err != nil {
+		t.Fatalf("failed to read .github/agents/: %v", err)
+	}
+
+	agentMDFiles := 0
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".agent.md") {
+			agentMDFiles++
+		}
+	}
+	if agentMDFiles != 8 {
+		t.Errorf("expected 8 .agent.md files in .github/agents/, got %d", agentMDFiles)
+		for _, e := range entries {
+			t.Logf("  found: %s", e.Name())
+		}
+	}
+}
+
+func TestE2E_GeminiInstall_TomlContent(t *testing.T) {
+	sourceDir := t.TempDir()
+	projectDir := t.TempDir()
+	setupSourceDir(t, sourceDir)
+
+	fsys := fs.NewOSFileSystem()
+
+	err := newInstallSvc(fsys).Execute(config.InstallOptions{
+		ProjectDir: projectDir,
+		SourceDir:  sourceDir,
+		Tools:      []skills.Tool{skills.ToolGemini},
+		LinkMode:   skills.LinkCopy,
+	})
+	if err != nil {
+		t.Fatalf("install: %v", err)
+	}
+
+	// setupSourceDir seeds a "review" skill; verify its TOML was generated
+	tomlPath := filepath.Join(projectDir, ".gemini", "commands", "review.toml")
+	data, err := os.ReadFile(tomlPath)
+	if err != nil {
+		t.Fatalf("expected .gemini/commands/review.toml to exist after install: %v", err)
+	}
+
+	content := string(data)
+	if !strings.Contains(content, `description =`) {
+		t.Errorf("review.toml should have 'description =' field, got: %q", content)
+	}
+	if !strings.Contains(content, `prompt =`) {
+		t.Errorf("review.toml should have 'prompt =' field, got: %q", content)
+	}
+	if !strings.Contains(content, "SKILL.md") {
+		t.Errorf("review.toml prompt should reference SKILL.md, got: %q", content)
+	}
+	if !strings.Contains(content, "{{args}}") {
+		t.Errorf("review.toml prompt should contain {{args}} placeholder, got: %q", content)
+	}
+}
+
+func TestUpgradeRecopiesNewArtifacts(t *testing.T) {
+	sourceDir := t.TempDir()
+	projectDir := t.TempDir()
+	setupSourceDirWithEvidenceArtifacts(t, sourceDir)
+
+	fsys := fs.NewOSFileSystem()
+	if err := newInstallSvc(fsys).Execute(config.InstallOptions{
+		ProjectDir: projectDir,
+		SourceDir:  sourceDir,
+		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolGemini},
+		LinkMode:   skills.LinkCopy,
+	}); err != nil {
+		t.Fatalf("install: %v", err)
+	}
+
+	// Simular divergencia: corromper validate-bugfix-evidence.sh no target
+	bugfixScript := filepath.Join(projectDir, ".claude/scripts/validate-bugfix-evidence.sh")
+	mustWriteFile(t, bugfixScript, "#!/usr/bin/env bash\n# CORROMPIDO\n")
+
+	// Bump skill version para que o upgrade detecte skill desatualizada e regenere adaptadores
+	mustWriteFile(t, filepath.Join(sourceDir, ".agents/skills/review/SKILL.md"),
+		"---\nname: review\nversion: 2.0.0\ndescription: Revisa codigo.\n---\n")
+
+	if err := newUpgradeSvc(fsys).Execute(config.UpgradeOptions{
+		ProjectDir: projectDir,
+		SourceDir:  sourceDir,
+	}); err != nil {
+		t.Fatalf("upgrade: %v", err)
+	}
+
+	// validate-bugfix-evidence.sh deve ser restaurado pela re-sincronizacao de adaptadores
+	data, err := os.ReadFile(bugfixScript)
+	if err != nil {
+		t.Fatalf("validate-bugfix-evidence.sh nao encontrado apos upgrade: %v", err)
+	}
+	if strings.Contains(string(data), "CORROMPIDO") {
+		t.Error("validate-bugfix-evidence.sh deveria ser restaurado pelo upgrade")
+	}
+
+	// .gemini/hooks/validate-preload.sh deve ser re-copiado pelo upgrade
+	geminiHook := filepath.Join(projectDir, ".gemini/hooks/validate-preload.sh")
+	if _, err := os.Stat(geminiHook); err != nil {
+		t.Errorf(".gemini/hooks/validate-preload.sh deve existir apos upgrade: %v", err)
 	}
 }

@@ -44,12 +44,16 @@ type FlowEntry struct {
 
 // Service calcula metricas de contexto para governanca.
 type Service struct {
-	fs      fs.FileSystem
-	printer *output.Printer
+	fs        fs.FileSystem
+	printer   *output.Printer
+	tokenizer Tokenizer
 }
 
-func NewService(fsys fs.FileSystem, printer *output.Printer) *Service {
-	return &Service{fs: fsys, printer: printer}
+func NewService(fsys fs.FileSystem, printer *output.Printer, tok Tokenizer) *Service {
+	if tok == nil {
+		tok = NewCharEstimator()
+	}
+	return &Service{fs: fsys, printer: printer, tokenizer: tok}
 }
 
 // Execute calcula e imprime metricas. Retorna erro se o inventario obrigatorio estiver ausente.
@@ -167,7 +171,7 @@ func (s *Service) fileMetric(path string) FileMetric {
 		Path:      path,
 		Words:     len(strings.Fields(text)),
 		Chars:     len(text),
-		TokensEst: estimateTokens(text),
+		TokensEst: s.tokenizer.EstimateTokens(text),
 	}
 }
 

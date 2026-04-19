@@ -9,6 +9,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/config"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/contextgen"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/embedded"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
@@ -63,6 +64,16 @@ func NewService(
 }
 
 func (s *Service) Execute(opts config.UpgradeOptions) error {
+	// Se --source nao fornecido, extrair assets embutidos para temp dir.
+	if opts.SourceDir == "" {
+		tmpDir, cleanup, err := embedded.ExtractToTempDir()
+		if err != nil {
+			return fmt.Errorf("extrair assets embutidos: %w", err)
+		}
+		defer cleanup()
+		opts.SourceDir = tmpDir
+	}
+
 	sourceDir, err := filepath.Abs(opts.SourceDir)
 	if err != nil {
 		return fmt.Errorf("resolver caminho fonte: %w", err)
@@ -314,12 +325,28 @@ func (s *Service) regenerateAdapters(sourceDir, projectDir, codexProfile string)
 			filepath.Join(sourceDir, ".claude", "scripts", "validate-task-evidence.sh"),
 			filepath.Join(projectDir, ".claude", "scripts", "validate-task-evidence.sh"),
 		)
+		s.syncFileIfPresent(
+			filepath.Join(sourceDir, ".claude", "scripts", "validate-bugfix-evidence.sh"),
+			filepath.Join(projectDir, ".claude", "scripts", "validate-bugfix-evidence.sh"),
+		)
+		s.syncFileIfPresent(
+			filepath.Join(sourceDir, ".claude", "scripts", "validate-refactor-evidence.sh"),
+			filepath.Join(projectDir, ".claude", "scripts", "validate-refactor-evidence.sh"),
+		)
+		s.syncFileIfPresent(
+			filepath.Join(sourceDir, "scripts", "lib", "check-invocation-depth.sh"),
+			filepath.Join(projectDir, "scripts", "lib", "check-invocation-depth.sh"),
+		)
 	}
 	if s.fs.IsDir(filepath.Join(projectDir, ".github")) {
 		s.adapters.GenerateGitHub(sourceDir, projectDir)
 	}
 	if s.fs.IsDir(filepath.Join(projectDir, ".gemini")) {
 		s.adapters.GenerateGemini(sourceDir, projectDir)
+		geminiPreload := filepath.Join(sourceDir, ".gemini", "hooks", "validate-preload.sh")
+		if s.fs.Exists(geminiPreload) {
+			_ = s.fs.CopyFile(geminiPreload, filepath.Join(projectDir, ".gemini", "hooks", "validate-preload.sh"))
+		}
 	}
 	if s.fs.Exists(filepath.Join(projectDir, ".codex", "config.toml")) {
 		content := s.adapters.BuildCodexConfig(s.installedCodexSkills(projectDir, codexProfile))
