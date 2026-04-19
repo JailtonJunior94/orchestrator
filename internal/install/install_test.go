@@ -530,6 +530,40 @@ func TestInstall_EmbeddedSource_AllToolsAllLangs(t *testing.T) {
 	}
 }
 
+// TestInstall_RefResolved_UsesCopyMode validates that install works correctly when
+// invoked with the parameters produced by --ref: a resolved temp dir as SourceDir
+// and LinkMode=copy (symlinks are not allowed since the tempdir will be removed).
+func TestInstall_RefResolved_UsesCopyMode(t *testing.T) {
+	sourceDir := t.TempDir()
+	projectDir := t.TempDir()
+
+	// Simulate a source directory as gitref.Resolve would produce
+	skillDir := sourceDir + "/.agents/skills/review"
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(skillDir+"/SKILL.md", []byte("---\nversion: 1.0.0\ndescription: Review.\n---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	svc := setupOSTestService()
+
+	err := svc.Execute(config.InstallOptions{
+		ProjectDir: projectDir,
+		SourceDir:  sourceDir,
+		Tools:      []skills.Tool{skills.ToolClaude},
+		LinkMode:   skills.LinkCopy, // --ref always forces copy
+	})
+	if err != nil {
+		t.Fatalf("install with ref-resolved source failed: %v", err)
+	}
+
+	path := projectDir + "/.agents/skills/review/SKILL.md"
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		t.Error("skill from ref-resolved source was not installed")
+	}
+}
+
 func TestInstall_ExternalSource_Override(t *testing.T) {
 	projectDir := t.TempDir()
 	sourceDir := t.TempDir()

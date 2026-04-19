@@ -2,12 +2,14 @@ package aispecharness
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/config"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/contextgen"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/gitref"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/install"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
@@ -26,7 +28,8 @@ Exemplos:
   ai-spec-harness install ./meu-projeto --tools claude,gemini --langs go,python
   ai-spec-harness install ./meu-projeto --tools all --langs all --mode copy
   ai-spec-harness install ./meu-projeto --tools claude --dry-run
-  ai-spec-harness install ./meu-projeto --tools all --langs all --source ~/ai-governance`,
+  ai-spec-harness install ./meu-projeto --tools all --langs all --source ~/ai-governance
+  ai-spec-harness install ./meu-projeto --tools all --ref v1.0.0`,
 	Args: cobra.ExactArgs(1),
 	RunE: runInstall,
 }
@@ -37,8 +40,10 @@ var (
 	installMode         string
 	installDryRun       bool
 	installSource       string
+	installRef          string
 	installNoCtx        bool
 	installCodexProfile string
+	installFocusPaths   string
 )
 
 func init() {
@@ -47,8 +52,10 @@ func init() {
 	installCmd.Flags().StringVar(&installMode, "mode", "symlink", "Modo de instalacao: symlink ou copy")
 	installCmd.Flags().BoolVar(&installDryRun, "dry-run", false, "Mostra o que seria criado sem executar")
 	installCmd.Flags().StringVar(&installSource, "source", "", "Diretorio fonte do repositorio de governanca (opcional; usa embutido se omitido)")
+	installCmd.Flags().StringVar(&installRef, "ref", "", "Referencia git (tag, branch, SHA) para usar como fonte; forca --mode copy (mutualmente exclusivo com --source)")
 	installCmd.Flags().BoolVar(&installNoCtx, "no-context", false, "Desabilita geracao de governanca contextual")
 	installCmd.Flags().StringVar(&installCodexProfile, "codex-profile", "full", "Perfil de skills para Codex: full ou lean")
+	installCmd.Flags().StringVar(&installFocusPaths, "focus-paths", "", "Prioriza deteccao de toolchain proximo desses arquivos, separados por virgula (util em monorepos). Alternativa: env FOCUS_PATHS")
 
 	_ = installCmd.MarkFlagRequired("tools")
 
@@ -57,6 +64,10 @@ func init() {
 
 func runInstall(cmd *cobra.Command, args []string) error {
 	projectDir := args[0]
+
+	if installRef != "" && installSource != "" {
+		return fmt.Errorf("--ref e --source sao mutuamente exclusivos")
+	}
 
 	tools, err := parseToolsFlag(installTools)
 	if err != nil {
@@ -74,6 +85,25 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	}
 
 	printer := output.New(verbose)
+
+	sourceDir := installSource
+	if installRef != "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("obtendo diretorio atual: %w", err)
+		}
+		resolved, err := gitref.Resolve(cwd, installRef)
+		if err != nil {
+			return err
+		}
+		defer resolved.Cleanup()
+		sourceDir = resolved.Dir
+		if linkMode != skills.LinkCopy && cmd.Flags().Changed("mode") {
+			printer.Warn("--ref ignora --mode %s: forcando copy", installMode)
+		}
+		linkMode = skills.LinkCopy
+	}
+
 	fsys := fs.NewOSFileSystem()
 	mfst := manifest.NewStore(fsys)
 	adpt := adapters.NewGenerator(fsys, printer)
@@ -83,13 +113,14 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	return svc.Execute(config.InstallOptions{
 		ProjectDir:   projectDir,
-		SourceDir:    installSource,
+		SourceDir:    sourceDir,
 		Tools:        tools,
 		Langs:        langs,
 		LinkMode:     linkMode,
 		DryRun:       installDryRun,
 		GenerateCtx:  !installNoCtx,
 		CodexProfile: installCodexProfile,
+		FocusPaths:   parseFocusPaths(installFocusPaths),
 	})
 }
 
@@ -110,6 +141,25 @@ func parseToolsFlag(raw string) ([]skills.Tool, error) {
 		tools = append(tools, t)
 	}
 	return tools, nil
+}
+
+// parseFocusPaths converte a flag --focus-paths (comma-separated) ou a env var
+// FOCUS_PATHS (newline ou comma-separated) em uma slice de caminhos.
+func parseFocusPaths(raw string) []string {
+	if raw == "" {
+		raw = os.Getenv("FOCUS_PATHS")
+	}
+	if raw == "" {
+		return nil
+	}
+	var paths []string
+	for _, p := range strings.FieldsFunc(raw, func(r rune) bool { return r == ',' || r == '\n' }) {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			paths = append(paths, p)
+		}
+	}
+	return paths
 }
 
 func parseLangsFlag(raw string) ([]skills.Lang, error) {

@@ -102,7 +102,7 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 	// 3. Gerar governanca contextual
 	if opts.GenerateCtx {
 		s.printer.Step("Gerando governanca contextual...")
-		if err := s.ctxgen.Generate(sourceDir, projectDir, opts.Tools, opts.Langs, opts.CodexProfile, opts.DryRun); err != nil {
+		if err := s.ctxgen.Generate(sourceDir, projectDir, opts.Tools, opts.Langs, opts.CodexProfile, opts.DryRun, opts.FocusPaths...); err != nil {
 			s.printer.Warn("Falha ao gerar governanca contextual: %v", err)
 		}
 	}
