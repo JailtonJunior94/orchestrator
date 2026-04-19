@@ -840,6 +840,113 @@ func TestE2E_GeminiInstall_TomlContent(t *testing.T) {
 	}
 }
 
+func TestPythonMonorepoSnapshot(t *testing.T) {
+	projectDir := t.TempDir()
+	fixtureDir := filepath.Join("..", "..", "testdata", "python-monorepo")
+
+	fsys := fs.NewOSFileSystem()
+	g := contextgen.NewGenerator(fsys, output.New(false))
+
+	if err := g.Generate(fixtureDir, projectDir, []skills.Tool{skills.ToolClaude}, nil, "full", false); err != nil {
+		t.Fatalf("Generate python-monorepo: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(projectDir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("AGENTS.md nao gerado: %v", err)
+	}
+
+	snapshotPath := filepath.Join("..", "..", "testdata", "snapshots", "python-monorepo.agents.md")
+	expected, err := os.ReadFile(snapshotPath)
+	if err != nil {
+		t.Fatalf("snapshot nao encontrado: %s", snapshotPath)
+	}
+
+	if string(expected) != string(data) {
+		t.Errorf("output diverge do snapshot: %s\nExecte UPDATE_SNAPSHOTS=1 no contextgen_test para atualizar.", snapshotPath)
+	}
+
+	// Verificacoes de sanidade para python-monorepo
+	content := string(data)
+	if !strings.Contains(content, "governance-schema:") {
+		t.Error("AGENTS.md deve conter governance-schema")
+	}
+	if !strings.Contains(content, "agent-governance") {
+		t.Error("AGENTS.md deve mencionar agent-governance skill")
+	}
+}
+
+func TestCodexOnlySnapshot(t *testing.T) {
+	projectDir := t.TempDir()
+	fixtureDir := filepath.Join("..", "..", "testdata", "fixtures", "codex-only")
+
+	// Copy fixture files to projectDir so architecture detection works correctly
+	goModData, err := os.ReadFile(filepath.Join(fixtureDir, "go.mod"))
+	if err != nil {
+		t.Fatalf("fixture go.mod nao encontrado: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(projectDir, "go.mod"), goModData, 0o644); err != nil {
+		t.Fatalf("escrever go.mod: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(projectDir, ".codex"), 0o755); err != nil {
+		t.Fatalf("mkdir .codex: %v", err)
+	}
+	codexCfgData, err := os.ReadFile(filepath.Join(fixtureDir, ".codex", "config.toml"))
+	if err != nil {
+		t.Fatalf("fixture .codex/config.toml nao encontrado: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(projectDir, ".codex", "config.toml"), codexCfgData, 0o644); err != nil {
+		t.Fatalf("escrever .codex/config.toml: %v", err)
+	}
+
+	fsys := fs.NewOSFileSystem()
+	g := contextgen.NewGenerator(fsys, output.New(false))
+
+	// tools=[Codex] only → compact profile auto-detected
+	if err := g.Generate(projectDir, projectDir, []skills.Tool{skills.ToolCodex}, nil, "full", false); err != nil {
+		t.Fatalf("Generate codex-only: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(projectDir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("AGENTS.md nao gerado: %v", err)
+	}
+
+	snapshotPath := filepath.Join("..", "..", "testdata", "snapshots", "codex-only.agents.md")
+
+	if os.Getenv("UPDATE_SNAPSHOTS") == "1" {
+		if err := os.MkdirAll(filepath.Dir(snapshotPath), 0o755); err != nil {
+			t.Fatalf("criar diretorio de snapshots: %v", err)
+		}
+		if err := os.WriteFile(snapshotPath, data, 0o644); err != nil {
+			t.Fatalf("escrever snapshot: %v", err)
+		}
+		t.Logf("snapshot atualizado: %s", snapshotPath)
+		return
+	}
+
+	expected, err := os.ReadFile(snapshotPath)
+	if err != nil {
+		t.Fatalf("snapshot nao encontrado: %s (execute com UPDATE_SNAPSHOTS=1 para criar)", snapshotPath)
+	}
+
+	if string(expected) != string(data) {
+		t.Errorf("output diverge do snapshot: %s\nExecte UPDATE_SNAPSHOTS=1 para atualizar.", snapshotPath)
+	}
+
+	// Sanity checks: compact profile must NOT contain verbose sections
+	content := string(data)
+	if strings.Contains(content, "## Diretrizes de Estrutura") {
+		t.Error("snapshot codex-only nao deve conter '## Diretrizes de Estrutura' (compact profile)")
+	}
+	if strings.Contains(content, "### Composicao Multi-Linguagem") {
+		t.Error("snapshot codex-only nao deve conter '### Composicao Multi-Linguagem' (compact profile)")
+	}
+	if !strings.Contains(content, "governance-schema:") {
+		t.Error("AGENTS.md deve conter governance-schema")
+	}
+}
+
 func TestUpgradeRecopiesNewArtifacts(t *testing.T) {
 	sourceDir := t.TempDir()
 	projectDir := t.TempDir()

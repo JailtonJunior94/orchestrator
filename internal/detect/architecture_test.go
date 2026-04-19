@@ -201,3 +201,13 @@ func TestDetectArchitecture_Fixture_NodeAPI(t *testing.T) {
 		t.Errorf("expected %s, got %s", ArchMonolith, result.Type)
 	}
 }
+
+func TestDetectArchitecture_Fixture_PythonMonorepo(t *testing.T) {
+	osfs := fs.NewOSFileSystem()
+	det := NewArchitectureDetector(osfs)
+	result := det.Detect(fixtureDir("python-monorepo"))
+
+	if result.Type != ArchMonorepo {
+		t.Errorf("expected %s, got %s", ArchMonorepo, result.Type)
+	}
+}

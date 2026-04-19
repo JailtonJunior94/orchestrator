@@ -237,16 +237,99 @@ func TestStrictMode_NonStrict_NoWarning(t *testing.T) {
 	}
 }
 
-func TestToolchainDetect_FocusPaths(t *testing.T) {
-	// focus paths not yet implemented: DETECT_TOOLCHAIN_FOCUS_PATHS para monorepo
-	t.Skip("focus paths not yet implemented")
-
+func TestToolchainDetect_FocusPaths_GoWinsOverNodeAtRoot(t *testing.T) {
 	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/services/api/package.json"] = []byte(`{"scripts":{"test":"jest"}}`)
-	ffs.Files["/project/services/web/package.json"] = []byte(`{"scripts":{"test":"vitest"}}`)
+	ffs.Files["/project/package.json"] = []byte(`{"scripts":{"test":"jest","lint":"eslint ."}}`)
+	ffs.Files["/project/services/api/go.mod"] = []byte("module example")
+	ffs.Dirs["/project/services"] = true
+	ffs.Dirs["/project/services/api"] = true
 
 	det := NewToolchainDetector(ffs)
-	_ = det.Detect("/project")
+	det.FocusPaths = []string{"services/api/handler.go"}
+	result := det.Detect("/project")
+
+	if _, ok := result["go"]; !ok {
+		t.Fatal("expected go toolchain entry")
+	}
+	if _, ok := result["node"]; ok {
+		t.Error("expected no node toolchain entry when focus is on Go subproject")
+	}
+	if result["go"].Test != "go test ./..." {
+		t.Errorf("test: got %q", result["go"].Test)
+	}
+}
+
+func TestToolchainDetect_FocusPaths_Empty_FallsBackToDefault(t *testing.T) {
+	ffs := fs.NewFakeFileSystem()
+	ffs.Files["/project/go.mod"] = []byte("module example")
+	ffs.Files["/project/package.json"] = []byte(`{"scripts":{"test":"jest"}}`)
+
+	det := NewToolchainDetector(ffs)
+	// no FocusPaths set
+	result := det.Detect("/project")
+
+	if _, ok := result["go"]; !ok {
+		t.Error("expected go entry with no focus paths")
+	}
+	if _, ok := result["node"]; !ok {
+		t.Error("expected node entry with no focus paths")
+	}
+}
+
+func TestToolchainDetect_FocusPaths_MultipleManifests_HighestOverlapWins(t *testing.T) {
+	ffs := fs.NewFakeFileSystem()
+	ffs.Files["/project/services/api/package.json"] = []byte(`{"name":"api","scripts":{"test":"jest"}}`)
+	ffs.Files["/project/services/web/package.json"] = []byte(`{"name":"web","scripts":{"test":"vitest"}}`)
+	ffs.Dirs["/project/services"] = true
+	ffs.Dirs["/project/services/api"] = true
+	ffs.Dirs["/project/services/web"] = true
+
+	det := NewToolchainDetector(ffs)
+	det.FocusPaths = []string{"services/api/handler.go"}
+	result := det.Detect("/project")
+
+	entry, ok := result["node"]
+	if !ok {
+		t.Fatal("expected node toolchain entry")
+	}
+	// services/api/package.json is closer to focus path than services/web/package.json
+	if !strings.Contains(entry.Test, "api") && !strings.Contains(entry.Test, "jest") {
+		t.Errorf("expected jest (api package) to win, got: %q", entry.Test)
+	}
+}
+
+func TestToolchainDetect_FocusPaths_NoMatch_FallsBackToDefault(t *testing.T) {
+	ffs := fs.NewFakeFileSystem()
+	ffs.Files["/project/go.mod"] = []byte("module example")
+
+	det := NewToolchainDetector(ffs)
+	det.FocusPaths = []string{"some/unrelated/path/file.rs"}
+	result := det.Detect("/project")
+
+	// No manifest matches the focus path (all scores 0): fall back to default detection
+	if _, ok := result["go"]; !ok {
+		t.Error("expected go entry when no focus path matches any manifest")
+	}
+}
+
+func TestToolchainDetect_Fixture_PythonMonorepo(t *testing.T) {
+	osfs := fs.NewOSFileSystem()
+	det := NewToolchainDetector(osfs)
+	result := det.Detect(fixtureDir("python-monorepo"))
+
+	entry, ok := result["python"]
+	if !ok {
+		t.Fatal("expected python toolchain entry")
+	}
+	if entry.Fmt != "ruff format ." {
+		t.Errorf("fmt: got %q", entry.Fmt)
+	}
+	if entry.Test != "pytest" {
+		t.Errorf("test: got %q", entry.Test)
+	}
+	if entry.Lint != "ruff check ." {
+		t.Errorf("lint: got %q", entry.Lint)
+	}
 }
 
 func TestToolchainDetect_PnpmWorkspace(t *testing.T) {

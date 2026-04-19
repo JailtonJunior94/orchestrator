@@ -23,6 +23,9 @@ type ToolchainResult map[string]ToolchainEntry
 
 // ToolchainDetector detecta comandos de fmt, test e lint de um projeto.
 type ToolchainDetector struct {
+	// FocusPaths lista caminhos relativos dos arquivos em foco (e.g. arquivos sendo editados).
+	// Quando preenchido, manifests mais proximos dos focus paths recebem prioridade.
+	FocusPaths []string
 	fs         fs.FileSystem
 	maxDepth   int
 	strict     bool
@@ -40,6 +43,13 @@ func NewToolchainDetectorStrict(fsys fs.FileSystem, w io.Writer) *ToolchainDetec
 }
 
 func (d *ToolchainDetector) Detect(projectDir string) ToolchainResult {
+	if len(d.FocusPaths) > 0 {
+		return d.detectWithFocusPaths(projectDir)
+	}
+	return d.detectDefault(projectDir)
+}
+
+func (d *ToolchainDetector) detectDefault(projectDir string) ToolchainResult {
 	result := make(ToolchainResult)
 
 	if d.detectGo(projectDir) {
@@ -62,6 +72,93 @@ func (d *ToolchainDetector) Detect(projectDir string) ToolchainResult {
 	if len(result) == 0 {
 		if entry, ok := d.detectMakefileFallback(projectDir); ok {
 			result["unknown"] = entry
+		}
+	}
+
+	if d.strict {
+		for lang, entry := range result {
+			d.warnMissingBinary(entry.Fmt, lang+"/fmt")
+			d.warnMissingBinary(entry.Lint, lang+"/lint")
+			d.warnMissingBinary(entry.Test, lang+"/test")
+		}
+	}
+
+	return result
+}
+
+// detectWithFocusPaths coleta todos os manifests, pontua por proximidade aos FocusPaths
+// e retorna apenas o toolchain do manifest com maior score.
+// Quando nenhum manifest tem score > 0, cai no comportamento padrao.
+func (d *ToolchainDetector) detectWithFocusPaths(projectDir string) ToolchainResult {
+	type candidate struct {
+		path  string
+		lang  string
+		score int
+	}
+
+	manifestTypes := []struct {
+		name string
+		lang string
+	}{
+		{"go.mod", "go"},
+		{"go.work", "go"},
+		{"package.json", "node"},
+		{"pyproject.toml", "python"},
+		{"requirements.txt", "python"},
+	}
+
+	var candidates []candidate
+	for _, mt := range manifestTypes {
+		for _, p := range d.findManifests(projectDir, mt.name) {
+			rel, err := filepath.Rel(projectDir, p)
+			if err != nil {
+				rel = p
+			}
+			score := scoreManifest(rel, d.FocusPaths)
+			candidates = append(candidates, candidate{path: p, lang: mt.lang, score: score})
+		}
+	}
+
+	if len(candidates) == 0 {
+		return make(ToolchainResult)
+	}
+
+	bestScore := 0
+	for _, c := range candidates {
+		if c.score > bestScore {
+			bestScore = c.score
+		}
+	}
+
+	// Nenhum manifest proximo dos focus paths: fallback para comportamento padrao
+	if bestScore == 0 {
+		return d.detectDefault(projectDir)
+	}
+
+	// Primeiro manifest com melhor score vence (empate: primeiro encontrado)
+	var winner candidate
+	for _, c := range candidates {
+		if c.score == bestScore {
+			winner = c
+			break
+		}
+	}
+
+	result := make(ToolchainResult)
+	switch winner.lang {
+	case "go":
+		result["go"] = ToolchainEntry{
+			Fmt:  "gofmt -w .",
+			Test: "go test ./...",
+			Lint: "golangci-lint run",
+		}
+	case "node":
+		if entry, ok := d.detectNodeFromManifest(projectDir, winner.path); ok {
+			result["node"] = entry
+		}
+	case "python":
+		if entry, ok := d.detectPython(projectDir); ok {
+			result["python"] = entry
 		}
 	}
 
@@ -137,6 +234,41 @@ func (d *ToolchainDetector) detectNode(projectDir string) (ToolchainEntry, bool)
 		}
 	}
 
+	return entry, true
+}
+
+// detectNodeFromManifest detecta toolchain Node a partir de um package.json especifico.
+func (d *ToolchainDetector) detectNodeFromManifest(projectDir, pkgPath string) (ToolchainEntry, bool) {
+	pm := d.detectPackageManager(projectDir)
+	scripts := d.parsePackageScripts(pkgPath)
+	pkgName := d.parsePackageName(pkgPath)
+	pkgDir := d.relativeDir(projectDir, pkgPath)
+
+	cmdPrefix := pm + " run"
+	if pkgDir != "" {
+		if pkgName != "" && pm == "pnpm" {
+			cmdPrefix = "pnpm --filter " + pkgName + " run"
+		} else if pkgName != "" && pm == "yarn" {
+			cmdPrefix = "yarn workspace " + pkgName + " run"
+		} else {
+			cmdPrefix = "cd " + pkgDir + " && " + pm + " run"
+		}
+	}
+
+	var entry ToolchainEntry
+	if scripts["fmt"] {
+		entry.Fmt = cmdPrefix + " fmt"
+	} else if scripts["format"] {
+		entry.Fmt = cmdPrefix + " format"
+	}
+	if scripts["test"] {
+		entry.Test = cmdPrefix + " test"
+	} else if scripts["test:unit"] {
+		entry.Test = cmdPrefix + " test:unit"
+	}
+	if scripts["lint"] {
+		entry.Lint = cmdPrefix + " lint"
+	}
 	return entry, true
 }
 

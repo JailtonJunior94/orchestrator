@@ -25,7 +25,9 @@ func NewGenerator(fsys fs.FileSystem, printer *output.Printer) *Generator {
 }
 
 // Generate cria governanca contextual para o projeto alvo.
-func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, langs []skills.Lang, codexProfile string, dryRun bool) error {
+// focusPaths e opcional: quando fornecido, o ToolchainDetector prioriza manifests
+// mais proximos dos arquivos listados (util em monorepos).
+func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, langs []skills.Lang, codexProfile string, dryRun bool, focusPaths ...string) error {
 	toolSet := make(map[skills.Tool]bool)
 	for _, t := range tools {
 		toolSet[t] = true
@@ -65,6 +67,9 @@ func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, 
 	stackStr := strings.Join(stacks, ",")
 
 	tcDetector := detect.NewToolchainDetector(g.fs)
+	if len(focusPaths) > 0 {
+		tcDetector.FocusPaths = focusPaths
+	}
 	toolchain := tcDetector.Detect(projectDir)
 
 	dirTree := g.buildDirectoryTree(projectDir)

@@ -16,7 +16,8 @@ var inspectCmd = &cobra.Command{
 
 Exemplos:
   ai-spec-harness inspect ./meu-projeto
-  ai-spec-harness inspect . -v`,
+  ai-spec-harness inspect . -v
+  ai-spec-harness inspect ./monorepo --focus-paths services/go-api/handler.go`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		printer := output.New(verbose)
@@ -25,10 +26,49 @@ Exemplos:
 		det := detect.NewFileDetector(fsys)
 
 		svc := inspect.NewService(fsys, printer, mfst, det)
-		return svc.Execute(args[0])
+		if err := svc.Execute(args[0]); err != nil {
+			return err
+		}
+
+		// Deteccao de toolchain com suporte a focus-paths
+		focusPaths := parseFocusPaths(inspectFocusPaths)
+		tcDetector := detect.NewToolchainDetector(fsys)
+		if len(focusPaths) > 0 {
+			tcDetector.FocusPaths = focusPaths
+		}
+
+		toolchain := tcDetector.Detect(args[0])
+		if len(toolchain) > 0 {
+			if len(focusPaths) > 0 {
+				printer.Info("Toolchain detectado (priorizado por --focus-paths %v):", focusPaths)
+			} else {
+				printer.Info("Toolchain detectado:")
+			}
+			for _, lang := range []string{"go", "node", "python", "unknown"} {
+				entry, ok := toolchain[lang]
+				if !ok {
+					continue
+				}
+				printer.Info("  %s:", lang)
+				if entry.Fmt != "" {
+					printer.Info("    fmt:  %s", entry.Fmt)
+				}
+				if entry.Test != "" {
+					printer.Info("    test: %s", entry.Test)
+				}
+				if entry.Lint != "" {
+					printer.Info("    lint: %s", entry.Lint)
+				}
+			}
+		}
+
+		return nil
 	},
 }
 
+var inspectFocusPaths string
+
 func init() {
+	inspectCmd.Flags().StringVar(&inspectFocusPaths, "focus-paths", "", "Prioriza deteccao de toolchain proximo desses arquivos, separados por virgula (util em monorepos). Alternativa: env FOCUS_PATHS")
 	rootCmd.AddCommand(inspectCmd)
 }

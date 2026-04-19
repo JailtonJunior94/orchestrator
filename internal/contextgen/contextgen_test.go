@@ -248,6 +248,7 @@ func TestContextgen_Snapshots(t *testing.T) {
 		{"node-monorepo", filepath.Join("..", "..", "testdata", "node-monorepo"), []skills.Tool{skills.ToolGemini}},
 		{"node-api", filepath.Join("..", "..", "testdata", "node-api"), []skills.Tool{skills.ToolClaude}},
 		{"python-api", filepath.Join("..", "..", "testdata", "python-api"), []skills.Tool{skills.ToolClaude}},
+		{"python-monorepo", filepath.Join("..", "..", "testdata", "python-monorepo"), []skills.Tool{skills.ToolClaude}},
 		{"polyglot-monorepo", filepath.Join("..", "..", "testdata", "polyglot-monorepo"), []skills.Tool{skills.ToolClaude, skills.ToolGemini}},
 	}
 

@@ -24,6 +24,7 @@ type InstallOptions struct {
 	DryRun       bool
 	GenerateCtx  bool
 	CodexProfile string
+	FocusPaths   []string
 }
 
 // UpgradeOptions agrupa opcoes para o comando upgrade.
