@@ -27,11 +27,11 @@ jobs:
       - name: Compute next version (semver-next)
         id: semver
         run: |
-          ./ai-spec semver-next . | tee semver_output.txt
+          ./ai-spec semver-next . | tee /tmp/semver_output.txt
           while IFS='=' read -r key value; do
             [[ -z "$key" ]] && continue
             echo "${key}=${value}" >> "$GITHUB_OUTPUT"
-          done < semver_output.txt
+          done < /tmp/semver_output.txt
 
       - name: Generate changelog preview (dry-run)
         id: changelog
@@ -51,13 +51,14 @@ jobs:
 
       - name: Validate working tree is clean
         run: |
-          STATUS=$(git status --porcelain)
+          # Only check tracked files — build artifacts (ai-spec binary) are intentionally untracked
+          STATUS=$(git status --porcelain -- ':!ai-spec')
           if [[ -n "$STATUS" ]]; then
-            echo "ERROR: working tree is dirty after dry-run:"
+            echo "ERROR: tracked files modified after dry-run:"
             echo "$STATUS"
             exit 1
           fi
-          echo "OK: working tree is clean"
+          echo "OK: no tracked files were modified (dry-run had no side effects)"
 
       - name: GoReleaser snapshot (no publish)
         uses: goreleaser/goreleaser-action@v7
