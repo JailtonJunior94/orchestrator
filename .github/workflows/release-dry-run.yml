@@ -1,0 +1,85 @@
+name: release-dry-run
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    name: Release Dry Run
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Build ai-spec binary
+        run: go build -o ai-spec ./main.go
+
+      - name: Compute next version (semver-next)
+        id: semver
+        run: |
+          ./ai-spec semver-next . | tee semver_output.txt
+          while IFS='=' read -r key value; do
+            [[ -z "$key" ]] && continue
+            echo "${key}=${value}" >> "$GITHUB_OUTPUT"
+          done < semver_output.txt
+
+      - name: Generate changelog preview (dry-run)
+        id: changelog
+        run: |
+          TARGET="${{ steps.semver.outputs.target_version }}"
+          echo "=== Changelog preview for v${TARGET} ==="
+          ./ai-spec changelog . --version "${TARGET}" --dry-run
+
+      - name: Validate no tag was created
+        run: |
+          TARGET="${{ steps.semver.outputs.target_version }}"
+          if git tag -l "v${TARGET}" | grep -q .; then
+            echo "ERROR: tag v${TARGET} exists — dry-run must not create tags"
+            exit 1
+          fi
+          echo "OK: tag v${TARGET} does not exist (expected)"
+
+      - name: Validate working tree is clean
+        run: |
+          STATUS=$(git status --porcelain)
+          if [[ -n "$STATUS" ]]; then
+            echo "ERROR: working tree is dirty after dry-run:"
+            echo "$STATUS"
+            exit 1
+          fi
+          echo "OK: working tree is clean"
+
+      - name: GoReleaser snapshot (no publish)
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --snapshot --skip=publish --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GORELEASER_CURRENT_TAG: v${{ steps.semver.outputs.target_version }}
+
+      - name: Publish workflow summary
+        run: |
+          echo "## Release Dry Run" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Action          | \`${{ steps.semver.outputs.action }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Bump            | \`${{ steps.semver.outputs.bump }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Target version  | \`v${{ steps.semver.outputs.target_version }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Last tag        | \`${{ steps.semver.outputs.last_tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Commit range    | \`${{ steps.semver.outputs.commit_range }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Commit count    | ${{ steps.semver.outputs.commit_count }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "> Dry run complete — no tags created, no artifacts published." >> "$GITHUB_STEP_SUMMARY"

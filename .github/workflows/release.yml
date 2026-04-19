@@ -2,6 +2,8 @@ name: release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
 
@@ -10,7 +12,7 @@ permissions:
 
 jobs:
   release:
-    name: GoReleaser
+    name: Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -23,7 +25,109 @@ jobs:
         with:
           go-version: stable
 
-      - name: Run GoReleaser
+      # ─── Auto-release pipeline (push to main) ────────────────────────────────
+
+      - name: Build ai-spec binary
+        if: github.ref == 'refs/heads/main'
+        run: go build -o ai-spec ./main.go
+
+      - name: Compute next version (semver-next)
+        if: github.ref == 'refs/heads/main'
+        id: semver
+        run: |
+          ./ai-spec semver-next . | tee semver_output.txt
+          while IFS='=' read -r key value; do
+            [[ -z "$key" ]] && continue
+            echo "${key}=${value}" >> "$GITHUB_OUTPUT"
+          done < semver_output.txt
+
+      - name: Evaluate release conditions
+        if: github.ref == 'refs/heads/main'
+        id: check
+        run: |
+          TARGET="${{ steps.semver.outputs.target_version }}"
+          ACTION="${{ steps.semver.outputs.action }}"
+          MSG="${{ github.event.head_commit.message }}"
+
+          if [[ "$MSG" == *"[skip ci]"* ]]; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "skip_reason=commit message contains [skip ci]" >> "$GITHUB_OUTPUT"
+          elif [[ "$ACTION" == "no_release" ]]; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "skip_reason=no releasable commits (action=no_release)" >> "$GITHUB_OUTPUT"
+          elif git tag -l "v${TARGET}" | grep -q .; then
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "skip_reason=tag v${TARGET} already exists (idempotency guard)" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "skip_reason=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate CHANGELOG.md
+        if: github.ref == 'refs/heads/main' && steps.check.outputs.should_release == 'true'
+        run: ./ai-spec changelog . --version "${{ steps.semver.outputs.target_version }}"
+
+      - name: Commit CHANGELOG.md
+        if: github.ref == 'refs/heads/main' && steps.check.outputs.should_release == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet CHANGELOG.md 2>/dev/null; then
+            echo "CHANGELOG.md unchanged, skipping commit"
+          else
+            git add CHANGELOG.md
+            git commit -m "chore(release): update CHANGELOG.md for v${{ steps.semver.outputs.target_version }} [skip ci]"
+          fi
+
+      - name: Create annotated tag
+        if: github.ref == 'refs/heads/main' && steps.check.outputs.should_release == 'true'
+        run: |
+          git tag -a "v${{ steps.semver.outputs.target_version }}" \
+            -m "Release v${{ steps.semver.outputs.target_version }}"
+
+      - name: Push commit and tag
+        if: github.ref == 'refs/heads/main' && steps.check.outputs.should_release == 'true'
+        run: |
+          git push origin HEAD:main
+          git push origin "v${{ steps.semver.outputs.target_version }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run GoReleaser (auto-release)
+        if: github.ref == 'refs/heads/main' && steps.check.outputs.should_release == 'true'
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          GORELEASER_CURRENT_TAG: v${{ steps.semver.outputs.target_version }}
+
+      - name: Publish workflow summary
+        if: github.ref == 'refs/heads/main'
+        run: |
+          if [[ "${{ steps.check.outputs.should_release }}" == "true" ]]; then
+            echo "## Release published" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+            echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Version   | \`v${{ steps.semver.outputs.target_version }}\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Bump      | \`${{ steps.semver.outputs.bump }}\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Action    | \`${{ steps.semver.outputs.action }}\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Range     | \`${{ steps.semver.outputs.commit_range }}\` |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Commits   | ${{ steps.semver.outputs.commit_count }} |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "## Release skipped" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Reason:** ${{ steps.check.outputs.skip_reason }}" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # ─── Manual tag fallback (push of v* tag) ────────────────────────────────
+
+      - name: Run GoReleaser (manual tag)
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
