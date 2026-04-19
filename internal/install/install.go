@@ -3,6 +3,7 @@ package install
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
@@ -78,34 +79,33 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 
 	// 2. Instalar adaptadores por ferramenta
 	for _, tool := range opts.Tools {
-		if err := s.installTool(sourceDir, projectDir, tool, allSkills, linkMode, opts.DryRun); err != nil {
+		if err := s.installTool(sourceDir, projectDir, tool, allSkills, linkMode, opts.DryRun, opts.CodexProfile); err != nil {
 			return fmt.Errorf("instalar %s: %w", tool, err)
 		}
 	}
 
 	// 3. Gerar governanca contextual
-	if opts.GenerateCtx && !opts.DryRun {
+	if opts.GenerateCtx {
 		s.printer.Step("Gerando governanca contextual...")
-		if err := s.ctxgen.Generate(sourceDir, projectDir, opts.Tools, opts.Langs); err != nil {
+		if err := s.ctxgen.Generate(sourceDir, projectDir, opts.Tools, opts.Langs, opts.CodexProfile, opts.DryRun); err != nil {
 			s.printer.Warn("Falha ao gerar governanca contextual: %v", err)
 		}
-	} else if opts.DryRun {
-		s.printer.DryRun("Geracao de governanca contextual seria executada aqui")
 	}
 
 	// 4. Persistir manifesto
 	if !opts.DryRun {
 		checksums := s.computeChecksums(sourceDir, allSkills)
 		mf := &manifest.Manifest{
-			Version:   version.Version,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-			SourceDir: sourceDir,
-			LinkMode:  linkMode,
-			Tools:     opts.Tools,
-			Langs:     opts.Langs,
-			Skills:    allSkills,
-			Checksums: checksums,
+			Version:      version.Version,
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
+			SourceDir:    sourceDir,
+			LinkMode:     linkMode,
+			Tools:        opts.Tools,
+			Langs:        opts.Langs,
+			Skills:       allSkills,
+			Checksums:    checksums,
+			CodexProfile: opts.CodexProfile,
 		}
 		if err := s.manifest.Save(projectDir, mf); err != nil {
 			return fmt.Errorf("salvar manifesto: %w", err)
@@ -180,7 +180,7 @@ func (s *Service) installBaseSkills(sourceDir, projectDir string, skillList []st
 	return nil
 }
 
-func (s *Service) installTool(sourceDir, projectDir string, tool skills.Tool, skillList []string, mode skills.LinkMode, dryRun bool) error {
+func (s *Service) installTool(sourceDir, projectDir string, tool skills.Tool, skillList []string, mode skills.LinkMode, dryRun bool, codexProfile string) error {
 	s.printer.Step("Instalando %s...", tool)
 
 	switch tool {
@@ -189,7 +189,7 @@ func (s *Service) installTool(sourceDir, projectDir string, tool skills.Tool, sk
 	case skills.ToolGemini:
 		return s.installGemini(sourceDir, projectDir, dryRun)
 	case skills.ToolCodex:
-		return s.installCodex(projectDir, skillList, dryRun)
+		return s.installCodex(projectDir, skillList, codexProfile, dryRun)
 	case skills.ToolCopilot:
 		return s.installCopilot(sourceDir, projectDir, skillList, mode, dryRun)
 	}
@@ -202,6 +202,8 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 		filepath.Join(projectDir, ".claude", "agents"),
 		filepath.Join(projectDir, ".claude", "rules"),
 		filepath.Join(projectDir, ".claude", "scripts"),
+		filepath.Join(projectDir, ".claude", "hooks"),
+		filepath.Join(projectDir, "scripts", "lib"),
 	}
 
 	for _, d := range dirs {
@@ -241,30 +243,73 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 		}
 	}
 
-	// Rules e scripts
-	if !dryRun {
-		rulesGov := filepath.Join(sourceDir, ".claude", "rules", "governance.md")
-		if s.fs.Exists(rulesGov) {
-			if err := s.fs.CopyFile(rulesGov, filepath.Join(projectDir, ".claude", "rules", "governance.md")); err != nil {
-				return err
-			}
-		}
-
-		validateScript := filepath.Join(sourceDir, ".claude", "scripts", "validate-task-evidence.sh")
-		if s.fs.Exists(validateScript) {
-			if err := s.fs.CopyFile(validateScript, filepath.Join(projectDir, ".claude", "scripts", "validate-task-evidence.sh")); err != nil {
-				return err
-			}
-		}
-	}
-
-	// Gerar agents
-	if !dryRun {
-		s.adapters.GenerateClaude(sourceDir, projectDir)
-	} else {
+	if dryRun {
+		s.printer.DryRun("copiar .claude/rules/governance.md")
+		s.printer.DryRun("copiar .claude/scripts/validate-task-evidence.sh")
+		s.printer.DryRun("copiar .claude/hooks/validate-governance.sh")
+		s.printer.DryRun("copiar .claude/hooks/validate-preload.sh")
+		s.printer.DryRun("copiar scripts/lib/parse-hook-input.sh")
+		s.printer.DryRun("configurar hooks PreToolUse e PostToolUse em .claude/settings.local.json")
 		s.printer.DryRun("gerar .claude/agents/*.md via adaptadores")
+		return nil
 	}
 
+	rulesGov := filepath.Join(sourceDir, ".claude", "rules", "governance.md")
+	if s.fs.Exists(rulesGov) {
+		if err := s.fs.CopyFile(rulesGov, filepath.Join(projectDir, ".claude", "rules", "governance.md")); err != nil {
+			return err
+		}
+	}
+
+	validateScript := filepath.Join(sourceDir, ".claude", "scripts", "validate-task-evidence.sh")
+	if s.fs.Exists(validateScript) {
+		if err := s.fs.CopyFile(validateScript, filepath.Join(projectDir, ".claude", "scripts", "validate-task-evidence.sh")); err != nil {
+			return err
+		}
+	}
+
+	hookDir := filepath.Join(projectDir, ".claude", "hooks")
+	govHook := filepath.Join(sourceDir, ".claude", "hooks", "validate-governance.sh")
+	if s.fs.Exists(govHook) {
+		if err := s.fs.CopyFile(govHook, filepath.Join(hookDir, "validate-governance.sh")); err != nil {
+			return err
+		}
+	}
+
+	preloadHook := filepath.Join(sourceDir, ".claude", "hooks", "validate-preload.sh")
+	if s.fs.Exists(preloadHook) {
+		if err := s.fs.CopyFile(preloadHook, filepath.Join(hookDir, "validate-preload.sh")); err != nil {
+			return err
+		}
+	}
+
+	parseHookInput := filepath.Join(sourceDir, "scripts", "lib", "parse-hook-input.sh")
+	if s.fs.Exists(parseHookInput) {
+		if err := s.fs.CopyFile(parseHookInput, filepath.Join(projectDir, "scripts", "lib", "parse-hook-input.sh")); err != nil {
+			return err
+		}
+	}
+
+	agentsMD := filepath.Join(sourceDir, "AGENTS.md")
+	if s.fs.Exists(agentsMD) {
+		if err := s.fs.CopyFile(agentsMD, filepath.Join(projectDir, "AGENTS.md")); err != nil {
+			return err
+		}
+	}
+
+	settingsFile := filepath.Join(projectDir, ".claude", "settings.local.json")
+	if !s.fs.Exists(settingsFile) {
+		if err := s.fs.WriteFile(settingsFile, []byte(defaultClaudeSettings())); err != nil {
+			return err
+		}
+	} else if data, err := s.fs.ReadFile(settingsFile); err == nil {
+		content := string(data)
+		if !strings.Contains(content, "validate-governance.sh") || !strings.Contains(content, "validate-preload.sh") {
+			s.printer.Warn(".claude/settings.local.json ja existe. Adicione os hooks manualmente para validate-preload e validate-governance.")
+		}
+	}
+
+	s.adapters.GenerateClaude(sourceDir, projectDir)
 	return nil
 }
 
@@ -283,7 +328,24 @@ func (s *Service) installGemini(sourceDir, projectDir string, dryRun bool) error
 	return nil
 }
 
-func (s *Service) installCodex(projectDir string, skillList []string, dryRun bool) error {
+var codexPlanningSkills = map[string]bool{
+	"analyze-project":               true,
+	"create-prd":                    true,
+	"create-technical-specification": true,
+	"create-tasks":                  true,
+}
+
+func filterCodexSkills(skillList []string) []string {
+	out := make([]string, 0, len(skillList))
+	for _, s := range skillList {
+		if !codexPlanningSkills[s] {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+func (s *Service) installCodex(projectDir string, skillList []string, codexProfile string, dryRun bool) error {
 	codexDir := filepath.Join(projectDir, ".codex")
 	if dryRun {
 		s.printer.DryRun("mkdir -p %s", codexDir)
@@ -295,7 +357,12 @@ func (s *Service) installCodex(projectDir string, skillList []string, dryRun boo
 		return err
 	}
 
-	content := s.adapters.BuildCodexConfig(skillList)
+	list := skillList
+	if codexProfile == "lean" {
+		list = filterCodexSkills(skillList)
+	}
+
+	content := s.adapters.BuildCodexConfig(list)
 	return s.fs.WriteFile(filepath.Join(codexDir, "config.toml"), []byte(content))
 }
 
@@ -348,6 +415,36 @@ func (s *Service) installCopilot(sourceDir, projectDir string, skillList []strin
 	}
 
 	return nil
+}
+
+func defaultClaudeSettings() string {
+	return `{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/validate-preload.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/validate-governance.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
 }
 
 func (s *Service) linkOrCopy(src, dst string, mode skills.LinkMode) error {

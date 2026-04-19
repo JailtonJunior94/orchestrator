@@ -17,9 +17,9 @@ var upgradeCmd = &cobra.Command{
 	Long: `Verifica ou atualiza skills de governanca comparando versoes e checksums.
 
 Exemplos:
-  ai-spec-harness upgrade ./meu-projeto --source ~/ai-governance
-  ai-spec-harness upgrade ./meu-projeto --source ~/ai-governance --check
-  ai-spec-harness upgrade ./meu-projeto --source ~/ai-governance --langs go,node`,
+  ai-spec-harness upgrade ./meu-projeto --source ~/ai-spec
+  ai-spec-harness upgrade ./meu-projeto --source ~/ai-spec --check
+  ai-spec-harness upgrade ./meu-projeto --source ~/ai-spec --langs go,node`,
 	Args: cobra.ExactArgs(1),
 	RunE: runUpgrade,
 }

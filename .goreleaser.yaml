@@ -1,6 +1,6 @@
 version: 2
 
-project_name: aigov
+project_name: ai-spec
 
 before:
   hooks:
@@ -8,9 +8,9 @@ before:
     - go generate ./...
 
 builds:
-  - id: aigov
+  - id: ai-spec
     main: ./main.go
-    binary: aigov
+    binary: ai-spec
     env:
       - CGO_ENABLED=0
     goos:
@@ -22,19 +22,21 @@ builds:
       - arm64
     ldflags:
       - -s -w
-      - -X github.com/JailtonJunior94/aigov/internal/version.Version={{.Version}}
-      - -X github.com/JailtonJunior94/aigov/internal/version.Commit={{.Commit}}
-      - -X github.com/JailtonJunior94/aigov/internal/version.Date={{.Date}}
+      - -X github.com/JailtonJunior94/ai-spec-harness/internal/version.Version={{.Version}}
+      - -X github.com/JailtonJunior94/ai-spec-harness/internal/version.Commit={{.Commit}}
+      - -X github.com/JailtonJunior94/ai-spec-harness/internal/version.Date={{.Date}}
 
 archives:
-  - id: aigov-archive
-    builds:
-      - aigov
-    format: tar.gz
+  - id: ai-spec-archive
+    ids:
+      - ai-spec
+    formats:
+      - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
-        format: zip
+        formats:
+          - zip
 
 checksum:
   name_template: "checksums.txt"
@@ -42,31 +44,29 @@ checksum:
 
 changelog:
   sort: asc
+  use: github
   filters:
     exclude:
       - "^docs:"
       - "^test:"
       - "^chore:"
 
-brews:
-  - name: aigov
+homebrew_casks:
+  - name: ai-spec
+    ids:
+      - ai-spec-archive
     repository:
       owner: JailtonJunior94
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Formula
-    homepage: "https://github.com/JailtonJunior94/aigov"
+    directory: Casks
+    homepage: "https://github.com/JailtonJunior94/orchestrator"
     description: "CLI para governanca de IA em projetos de software"
-    license: "MIT"
-    install: |
-      bin.install "aigov"
-    test: |
-      system "#{bin}/aigov", "version"
 
 release:
   github:
     owner: JailtonJunior94
-    name: aigov
+    name: orchestrator
   draft: false
   prerelease: auto
   name_template: "v{{.Version}}"

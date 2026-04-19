@@ -29,12 +29,13 @@ Exemplos:
 }
 
 var (
-	installTools  string
-	installLangs  string
-	installMode   string
-	installDryRun bool
-	installSource string
-	installNoCtx  bool
+	installTools        string
+	installLangs        string
+	installMode         string
+	installDryRun       bool
+	installSource       string
+	installNoCtx        bool
+	installCodexProfile string
 )
 
 func init() {
@@ -44,6 +45,7 @@ func init() {
 	installCmd.Flags().BoolVar(&installDryRun, "dry-run", false, "Mostra o que seria criado sem executar")
 	installCmd.Flags().StringVar(&installSource, "source", "", "Diretorio fonte do repositorio de governanca (obrigatorio)")
 	installCmd.Flags().BoolVar(&installNoCtx, "no-context", false, "Desabilita geracao de governanca contextual")
+	installCmd.Flags().StringVar(&installCodexProfile, "codex-profile", "full", "Perfil de skills para Codex: full ou lean")
 
 	_ = installCmd.MarkFlagRequired("tools")
 	_ = installCmd.MarkFlagRequired("source")
@@ -78,13 +80,14 @@ func runInstall(cmd *cobra.Command, args []string) error {
 	svc := install.NewService(fsys, printer, mfst, adpt, ctxg)
 
 	return svc.Execute(config.InstallOptions{
-		ProjectDir:  projectDir,
-		SourceDir:   installSource,
-		Tools:       tools,
-		Langs:       langs,
-		LinkMode:    linkMode,
-		DryRun:      installDryRun,
-		GenerateCtx: !installNoCtx,
+		ProjectDir:   projectDir,
+		SourceDir:    installSource,
+		Tools:        tools,
+		Langs:        langs,
+		LinkMode:     linkMode,
+		DryRun:       installDryRun,
+		GenerateCtx:  !installNoCtx,
+		CodexProfile: installCodexProfile,
 	})
 }
 

@@ -1,0 +1,6 @@
+{
+  "name": "@poly/web",
+  "scripts": {
+    "test": "vitest run"
+  }
+}

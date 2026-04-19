@@ -1,0 +1,4 @@
+# Codex minimal config for codex-only fixture
+[[skills.config]]
+path = ".agents/skills/agent-governance"
+enabled = true

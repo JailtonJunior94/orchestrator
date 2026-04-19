@@ -3,6 +3,7 @@ package upgrade
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
@@ -12,6 +13,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/version"
 )
 
 // SkillStatus representa o resultado da verificacao de uma skill.
@@ -32,6 +34,7 @@ type SkillCheck struct {
 	Status        SkillStatus
 	SourceVersion string
 	TargetVersion string
+	ChangedRefs   []string
 }
 
 // Service orquestra o fluxo de upgrade de governanca.
@@ -79,6 +82,8 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 
 	s.printer.Info("Verificando skills em: %s", projectDir)
 	s.printer.Info("Fonte: %s", sourceDir)
+	sourceVersion := version.ReadVersionFile(sourceDir)
+	s.printer.Info("ai-spec %s", sourceVersion)
 	s.printer.Info("")
 
 	// Verificar cada skill
@@ -111,11 +116,20 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 			s.printer.Status("CONTEUDO DIVERGENTE", c.Name, fmt.Sprintf("%s, checksum diferente", c.TargetVersion))
 		case StatusRefsDivergent:
 			s.printer.Status("REFS DIVERGENTES", c.Name, fmt.Sprintf("%s, references/ checksum diferente", c.TargetVersion))
+			for _, changed := range c.ChangedRefs {
+				s.printer.Info("    %s", changed)
+			}
 		case StatusMissing:
 			s.printer.Status("AUSENTE", c.Name, fmt.Sprintf("fonte: %s", c.SourceVersion))
 		case StatusNoVersion:
 			s.printer.Status("SEM VERSAO", c.Name, fmt.Sprintf("fonte: %s, alvo: sem campo version", c.SourceVersion))
 		}
+	}
+
+	// Verificar divergencia de schema de governanca
+	schemaDivergent := s.checkSchemaDivergence(sourceDir, projectDir)
+	if schemaDivergent {
+		outdatedCount++
 	}
 
 	s.printer.Info("")
@@ -157,10 +171,20 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 		updated++
 	}
 
+	// Determinar perfil codex a partir do manifesto
+	codexProfile := "full"
+	if s.manifest.Exists(projectDir) {
+		if mf, err := s.manifest.Load(projectDir); err == nil && mf.CodexProfile != "" {
+			codexProfile = mf.CodexProfile
+		}
+	}
+
 	// Re-gerar adaptadores se houve atualizacoes
 	if updated > 0 {
-		s.regenerateAdapters(sourceDir, projectDir)
-		s.regenerateGovernance(sourceDir, projectDir)
+		s.regenerateAdapters(sourceDir, projectDir, codexProfile)
+	}
+	if updated > 0 || schemaDivergent {
+		s.regenerateGovernance(sourceDir, projectDir, codexProfile)
 	}
 
 	// Atualizar manifesto
@@ -261,6 +285,7 @@ func (s *Service) checkSkills(sourceDir, projectDir string, langFilter []skills.
 				Status:        StatusRefsDivergent,
 				SourceVersion: sourceFM.Version,
 				TargetVersion: targetFM.Version,
+				ChangedRefs:   s.refsChangedFiles(filepath.Join(sourceDir, ".agents", "skills", skillName, "references"), filepath.Join(projectDir, ".agents", "skills", skillName, "references")),
 			})
 			continue
 		}
@@ -276,11 +301,19 @@ func (s *Service) checkSkills(sourceDir, projectDir string, langFilter []skills.
 	return checks
 }
 
-func (s *Service) regenerateAdapters(sourceDir, projectDir string) {
+func (s *Service) regenerateAdapters(sourceDir, projectDir, codexProfile string) {
 	s.printer.Step("Re-gerando adaptadores...")
 
 	if s.fs.IsDir(filepath.Join(projectDir, ".claude")) {
 		s.adapters.GenerateClaude(sourceDir, projectDir)
+		s.syncFileIfPresent(
+			filepath.Join(sourceDir, ".claude", "rules", "governance.md"),
+			filepath.Join(projectDir, ".claude", "rules", "governance.md"),
+		)
+		s.syncFileIfPresent(
+			filepath.Join(sourceDir, ".claude", "scripts", "validate-task-evidence.sh"),
+			filepath.Join(projectDir, ".claude", "scripts", "validate-task-evidence.sh"),
+		)
 	}
 	if s.fs.IsDir(filepath.Join(projectDir, ".github")) {
 		s.adapters.GenerateGitHub(sourceDir, projectDir)
@@ -288,9 +321,13 @@ func (s *Service) regenerateAdapters(sourceDir, projectDir string) {
 	if s.fs.IsDir(filepath.Join(projectDir, ".gemini")) {
 		s.adapters.GenerateGemini(sourceDir, projectDir)
 	}
+	if s.fs.Exists(filepath.Join(projectDir, ".codex", "config.toml")) {
+		content := s.adapters.BuildCodexConfig(s.installedCodexSkills(projectDir, codexProfile))
+		_ = s.fs.WriteFile(filepath.Join(projectDir, ".codex", "config.toml"), []byte(content))
+	}
 }
 
-func (s *Service) regenerateGovernance(sourceDir, projectDir string) {
+func (s *Service) regenerateGovernance(sourceDir, projectDir, codexProfile string) {
 	if !s.fs.Exists(filepath.Join(projectDir, "AGENTS.md")) {
 		return
 	}
@@ -312,9 +349,166 @@ func (s *Service) regenerateGovernance(sourceDir, projectDir string) {
 		tools = append(tools, skills.ToolCopilot)
 	}
 
-	if err := s.ctxgen.Generate(sourceDir, projectDir, tools, nil); err != nil {
+	if err := s.ctxgen.Generate(sourceDir, projectDir, tools, nil, codexProfile, false); err != nil {
 		s.printer.Warn("Falha ao re-gerar governanca contextual: %v", err)
 	}
+}
+
+// checkSchemaDivergence compara governance-schema no AGENTS.md do projeto
+// com a versao esperada pela fonte, avisando se houve edicao manual.
+func (s *Service) checkSchemaDivergence(sourceDir, projectDir string) bool {
+	projectAgents := filepath.Join(projectDir, "AGENTS.md")
+	if !s.fs.Exists(projectAgents) {
+		return false
+	}
+
+	data, err := s.fs.ReadFile(projectAgents)
+	if err != nil {
+		return false
+	}
+
+	projectSchema := extractSchemaVersion(string(data))
+	if projectSchema == "" {
+		return false
+	}
+
+	sourceTemplate := filepath.Join(sourceDir, ".agents", "skills", "analyze-project", "assets", "agents-template.md")
+	sourceSchema := ""
+	if s.fs.Exists(sourceTemplate) {
+		sourceData, err := s.fs.ReadFile(sourceTemplate)
+		if err == nil {
+			sourceSchema = extractSchemaVersion(string(sourceData))
+		}
+	}
+
+	if sourceSchema != "" && sourceSchema != projectSchema {
+		s.printer.Status("SCHEMA DIVERGENTE", "AGENTS.md",
+			fmt.Sprintf("projeto: %s, fonte: %s", projectSchema, sourceSchema))
+		return true
+	}
+
+	return false
+}
+
+// extractSchemaVersion extrai o valor de governance-schema do comentario HTML no topo de AGENTS.md.
+func extractSchemaVersion(content string) string {
+	for _, line := range strings.SplitN(content, "\n", 5) {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "<!-- governance-schema:") {
+			v := strings.TrimPrefix(line, "<!-- governance-schema:")
+			v = strings.TrimSuffix(v, "-->")
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
+}
+
+func (s *Service) refsChangedFiles(sourceRefs, targetRefs string) []string {
+	if !s.fs.IsDir(sourceRefs) || !s.fs.IsDir(targetRefs) {
+		return nil
+	}
+
+	sourceFiles := s.collectRelativeFiles(sourceRefs)
+	targetFiles := s.collectRelativeFiles(targetRefs)
+
+	targetSet := make(map[string]bool, len(targetFiles))
+	for _, rel := range targetFiles {
+		targetSet[rel] = true
+	}
+
+	var changed []string
+	for _, rel := range sourceFiles {
+		sourcePath := filepath.Join(sourceRefs, rel)
+		targetPath := filepath.Join(targetRefs, rel)
+
+		if !targetSet[rel] {
+			changed = append(changed, "+ "+rel+" (novo)")
+			continue
+		}
+
+		sourceHash, err1 := s.fs.FileHash(sourcePath)
+		targetHash, err2 := s.fs.FileHash(targetPath)
+		if err1 == nil && err2 == nil && sourceHash != targetHash {
+			changed = append(changed, "~ "+rel+" (modificado)")
+		}
+	}
+
+	sourceSet := make(map[string]bool, len(sourceFiles))
+	for _, rel := range sourceFiles {
+		sourceSet[rel] = true
+	}
+	for _, rel := range targetFiles {
+		if !sourceSet[rel] {
+			changed = append(changed, "- "+rel+" (removido)")
+		}
+	}
+
+	return changed
+}
+
+func (s *Service) collectRelativeFiles(root string) []string {
+	if !s.fs.IsDir(root) {
+		return nil
+	}
+
+	var files []string
+	var walk func(dir, prefix string)
+	walk = func(dir, prefix string) {
+		entries, err := s.fs.ReadDir(dir)
+		if err != nil {
+			return
+		}
+		for _, entry := range entries {
+			name := entry.Name()
+			fullPath := filepath.Join(dir, name)
+			relPath := name
+			if prefix != "" {
+				relPath = filepath.Join(prefix, name)
+			}
+			if entry.IsDir() {
+				walk(fullPath, relPath)
+				continue
+			}
+			files = append(files, relPath)
+		}
+	}
+
+	walk(root, "")
+	return files
+}
+
+func (s *Service) syncFileIfPresent(src, dst string) {
+	if !s.fs.Exists(src) {
+		return
+	}
+	_ = s.fs.CopyFile(src, dst)
+}
+
+var upgradePlanningSkills = []string{
+	"analyze-project",
+	"create-prd",
+	"create-technical-specification",
+	"create-tasks",
+}
+
+func (s *Service) installedCodexSkills(projectDir, codexProfile string) []string {
+	baseSkills := []string{"agent-governance", "bugfix", "review", "refactor", "execute-task"}
+
+	if codexProfile != "lean" {
+		baseSkills = append(baseSkills, upgradePlanningSkills...)
+	}
+
+	if s.fs.Exists(filepath.Join(projectDir, ".agents", "skills", "go-implementation", "SKILL.md")) {
+		baseSkills = append(baseSkills, "go-implementation", "object-calisthenics-go")
+	}
+	if s.fs.Exists(filepath.Join(projectDir, ".agents", "skills", "node-implementation", "SKILL.md")) {
+		baseSkills = append(baseSkills, "node-implementation")
+	}
+	if s.fs.Exists(filepath.Join(projectDir, ".agents", "skills", "python-implementation", "SKILL.md")) {
+		baseSkills = append(baseSkills, "python-implementation")
+	}
+
+	return baseSkills
 }
 
 func (s *Service) computeChecksums(sourceDir string, skillList []string) map[string]string {

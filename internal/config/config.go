@@ -16,19 +16,21 @@ func (s *LocalSource) SourceDir() string { return s.Dir }
 
 // InstallOptions agrupa opcoes para o comando install.
 type InstallOptions struct {
-	ProjectDir  string
-	SourceDir   string
-	Tools       []skills.Tool
-	Langs       []skills.Lang
-	LinkMode    skills.LinkMode
-	DryRun      bool
-	GenerateCtx bool
+	ProjectDir   string
+	SourceDir    string
+	Tools        []skills.Tool
+	Langs        []skills.Lang
+	LinkMode     skills.LinkMode
+	DryRun       bool
+	GenerateCtx  bool
+	CodexProfile string
 }
 
 // UpgradeOptions agrupa opcoes para o comando upgrade.
 type UpgradeOptions struct {
-	ProjectDir string
-	SourceDir  string
-	CheckOnly  bool
-	Langs      []skills.Lang
+	ProjectDir   string
+	SourceDir    string
+	CheckOnly    bool
+	Langs        []skills.Lang
+	CodexProfile string
 }
