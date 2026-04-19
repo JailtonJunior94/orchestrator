@@ -23,16 +23,6 @@ jobs:
         with:
           go-version: stable
 
-      - name: Debug secrets
-        run: |
-          if [ -z "$HOMEBREW_TAP_GITHUB_TOKEN" ]; then
-            echo "HOMEBREW_TAP_GITHUB_TOKEN is EMPTY or not set"
-          else
-            echo "HOMEBREW_TAP_GITHUB_TOKEN is SET (length: ${#HOMEBREW_TAP_GITHUB_TOKEN})"
-          fi
-        env:
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7
         with:
@@ -40,5 +30,5 @@ jobs:
           version: "~> v2"
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
