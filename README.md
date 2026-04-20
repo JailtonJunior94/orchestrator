@@ -707,6 +707,89 @@ ai-spec task-loop \
 - use `task-loop` quando o pacote de tasks ja estiver maduro; para task isolada ou ainda instavel, prefira `execute-task`
 - se a feature for Go e envolver DDD, concorrencia ou risco arquitetural, refine antes em `techspec.md` em vez de delegar ambiguidade ao loop
 
+## Executar uma task ou varias tasks
+
+Existem dois modos principais de executar tasks de um PRD folder: executar uma unica task diretamente ou deixar o `task-loop` iterar pelo pacote inteiro. A escolha depende de quao maduro e o pacote de tasks e do quanto de controle voce quer manter por iteracao.
+
+### Sem task-loop: executar uma task especifica
+
+Use esse modo quando quiser revisar ou executar uma task isolada sem passar pelo orchestrador. Funciona bem para tasks experimentais, ajustes pontuais ou quando o pacote ainda nao esta maduro o suficiente para execucao em lote.
+
+Inspecione o pacote e escolha a task manualmente:
+
+```bash
+ai-spec inspect ../api-pagamentos
+```
+
+Emita a instrucao pronta para o agente:
+
+```bash
+ai-spec wrapper codex execute-task .
+```
+
+Prompt direto para o agente executar uma unica task:
+
+```text
+Use a skill execute-task para implementar a task 01_task.md localizada em tasks/prd-payments-list.
+
+Criterios obrigatorios:
+- ler o arquivo de task antes de iniciar qualquer alteracao
+- preservar a arquitetura e os contratos publicos existentes
+- executar os testes e validacoes definidos na propria task
+- registrar evidencias de conclusao no arquivo de task
+```
+
+Para uma task mais complexa, com contexto arquitetural explicito:
+
+```text
+Use a skill execute-task para implementar a task 02_task.md em tasks/prd-payments-list.
+Carregue tambem as referencias de DDD e arquitetura Go.
+
+Contexto:
+- servico Go existente com arquitetura handler -> service -> repository
+- preservar fronteiras de camada
+- usar context.Context nas operacoes de IO
+- adicionar testes table-driven para os cenarios principais
+```
+
+### Com task-loop: executar todas as tasks elegiveis
+
+Use esse modo quando o pacote de tasks ja estiver maduro, ordenado e com dependencias claras. O `task-loop` percorre `tasks.md`, identifica a proxima task elegivel e invoca o agente com `execute-task` ate concluir todas as tasks possiveis.
+
+Validar ordem e elegibilidade antes de gastar ciclo de agente:
+
+```bash
+ai-spec task-loop --tool codex --dry-run tasks/prd-payments-list
+```
+
+Executar as primeiras tasks com lote pequeno para observar qualidade:
+
+```bash
+ai-spec task-loop --tool codex --max-iterations 2 tasks/prd-payments-list
+```
+
+Execucao completa do pacote com relatorio salvo:
+
+```bash
+ai-spec task-loop \
+  --tool codex \
+  --max-iterations 8 \
+  --timeout 1h \
+  --report-path ./task-loop-report-payments.md \
+  tasks/prd-payments-list
+```
+
+### Quando usar cada abordagem
+
+| Situacao | Abordagem recomendada |
+| --- | --- |
+| task isolada, experimental ou instavel | `execute-task` direto (sem task-loop) |
+| revisar uma unica task antes de continuar o lote | `execute-task` direto |
+| pacote maduro, ordenado e com dependencias claras | `task-loop` |
+| primeiro lote de uma feature nova — ainda incerto | `task-loop` com `--max-iterations 2` |
+| execucao longa com rastreabilidade necessaria | `task-loop` com `--report-path` |
+| feature com concorrencia ou risco arquitetural alto | refinar `techspec.md` antes de qualquer execucao |
+
 ## Referencia rapida de comandos
 
 | Comando | Finalidade |
