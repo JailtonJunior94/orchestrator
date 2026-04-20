@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.1 (2026-04-20)
+
+### Bug Fixes
+- **ci:** corrigir smoke test com comando inexistente detect (2c9aeb6)
+
 ## 0.10.0 (2026-04-20)
 
 ### Features
