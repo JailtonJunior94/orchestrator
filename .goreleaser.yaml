@@ -66,6 +66,8 @@ brews:
     license: "MIT"
     install: |
       bin.install "ai-spec"
+    post_install: |
+      system "xattr", "-dr", "com.apple.quarantine", "#{bin}/ai-spec"
 
 release:
   github:
