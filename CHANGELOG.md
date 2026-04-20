@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.1 (2026-04-20)
+
+### Bug Fixes
+- **ci:** corrigir dirty state do GoReleaser por semver_output.txt no workspace (7540c7f)
+
+### Documentation
+- **readme:** atualizar instalacao para Formula (brew install) (32206f2)
+
 ## [Unreleased]
 
 ### Fixed
