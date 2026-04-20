@@ -22,6 +22,7 @@ func setupTestService(ffs *fs.FakeFileSystem) *Service {
 }
 
 func TestUpgrade_NoSkillsDir(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -38,6 +39,7 @@ func TestUpgrade_NoSkillsDir(t *testing.T) {
 }
 
 func TestUpgrade_CheckOnly_Outdated(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 
 	// Source com versao mais nova
@@ -60,6 +62,7 @@ func TestUpgrade_CheckOnly_Outdated(t *testing.T) {
 }
 
 func TestUpgrade_CheckOnly_UpToDate(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 
 	content := []byte("---\nversion: 1.0.0\ndescription: Review.\n---\n")
@@ -80,6 +83,7 @@ func TestUpgrade_CheckOnly_UpToDate(t *testing.T) {
 }
 
 func TestUpgrade_RefsChangedFiles(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	printer := output.New(false)
 	svc := NewService(ffs, printer, manifest.NewStore(ffs), adapters.NewGenerator(ffs, printer), contextgen.NewGenerator(ffs, printer))
@@ -100,6 +104,7 @@ func TestUpgrade_RefsChangedFiles(t *testing.T) {
 }
 
 func TestUpgrade_RegeneratesGovernanceOnSchemaDivergence(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
@@ -125,6 +130,7 @@ func TestUpgrade_RegeneratesGovernanceOnSchemaDivergence(t *testing.T) {
 }
 
 func TestUpgrade_AdaptersRegeneratedAfterSkillChange(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 2.0.0\ndescription: Revisa codigo.\n---\n")
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Revisa codigo.\n---\n")
@@ -145,6 +151,7 @@ func TestUpgrade_AdaptersRegeneratedAfterSkillChange(t *testing.T) {
 }
 
 func TestUpgrade_CodexRegeneratedAfterSkillChange(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 2.0.0\ndescription: Review.\n---\n")
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
@@ -172,6 +179,7 @@ func TestUpgrade_CodexRegeneratedAfterSkillChange(t *testing.T) {
 }
 
 func TestUpgrade_PreservesCustomClaudeSettings(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 2.0.0\ndescription: Review.\n---\n")
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
@@ -199,6 +207,7 @@ func TestUpgrade_PreservesCustomClaudeSettings(t *testing.T) {
 }
 
 func TestUpgrade_CrossVersionSchemaChange(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
@@ -227,6 +236,7 @@ func TestUpgrade_CrossVersionSchemaChange(t *testing.T) {
 }
 
 func TestUpgrade_PreservesAgentsLocal(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
@@ -263,6 +273,7 @@ func TestUpgrade_PreservesAgentsLocal(t *testing.T) {
 }
 
 func TestUpgrade_RecopiesT02Artifacts(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 2.0.0\ndescription: Review.\n---\n")
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
@@ -300,6 +311,7 @@ func TestUpgrade_RecopiesT02Artifacts(t *testing.T) {
 }
 
 func TestUpgrade_RecopiesGeminiHook(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 2.0.0\ndescription: Review.\n---\n")
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
@@ -326,6 +338,7 @@ func TestUpgrade_RecopiesGeminiHook(t *testing.T) {
 }
 
 func TestUpgrade_RegeneratesAdaptersAndSupportFiles(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 2.0.0\ndescription: Review.\n---\n")
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
@@ -374,6 +387,7 @@ func setupOSTestService() *Service {
 }
 
 func TestUpgrade_EmbeddedSource_NoSourceFlag(t *testing.T) {
+	t.Parallel()
 	projectDir := t.TempDir()
 
 	// Simular projeto com skills em versao antiga instaladas
@@ -406,6 +420,7 @@ func TestUpgrade_EmbeddedSource_NoSourceFlag(t *testing.T) {
 }
 
 func TestUpgrade_EmbeddedSource_UpdatesSkills(t *testing.T) {
+	t.Parallel()
 	projectDir := t.TempDir()
 
 	// Criar estrutura de projeto com skills em versao muito antiga

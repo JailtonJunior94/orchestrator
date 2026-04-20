@@ -1,5 +1,33 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **ci:** corrigir dirty state do GoReleaser causado por `semver_output.txt` não rastreado no workspace git
+
+### Tests
+
+- Expandir cobertura de testes unitários em `detect`, `install`, `metrics`, `scaffold`, `uninstall`, `upgrade` e `wrapper`
+- Adicionar testes de integração para skills externas e orçamento de tokens
+- Adicionar benchmarks para `metrics`, `parity` e `skills/schema`
+- Adicionar contrato CLI em `cmd/ai_spec_harness/cli_contract_test.go`
+
+### CI
+
+- Atualizar `test.yml` com melhorias no pipeline de testes
+- Adicionar script `scripts/check-package-coverage.sh` para verificação de cobertura por pacote
+
+### Docs
+
+- Adicionar ADR-006: telemetria opt-in com append-only log
+- Adicionar ADR-007: workaround stateless para Copilot CLI
+- Adicionar ADR-008: paridade multi-tool com 29 invariantes semânticas em 3 níveis
+- Adicionar `.aiignore` e `.claudeignore` para controle de contexto dos agentes
+- Atualizar governança operacional em `AGENTS.md`, `CLAUDE.md`, `CODEX.md`, `COPILOT.md` e `GEMINI.md`
+- Expandir `docs/cli-schema.json` com novos comandos
+- Atualizar `Makefile` com novos targets
+
 ## 0.9.0 (2026-04-20)
 
 ### Features

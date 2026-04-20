@@ -57,7 +57,7 @@ internal/embedded/     # assets embarcados (go:embed) - baseline de governanca
 - **test.yml:** unit + integration + golangci-lint em ubuntu-24.04 e macos-15
 - **release.yml:** semver-next automatico, GoReleaser multi-plataforma
 - **release-dry-run.yml:** validacao de release sem side-effects
-- **Cobertura:** threshold minimo de 70% enforced no CI (cobertura atual: ~75.5%)
+- **Cobertura:** threshold minimo de 75% enforced no CI (cobertura atual: ~76.7%)
   - Gerar relatorio local: `make coverage`
 
 ## Padroes importantes
@@ -79,5 +79,8 @@ ADRs documentam decisoes significativas que nao sao obvias no codigo. Consultar 
 - [`tasks/adr/003-paridade-semantica.md`](tasks/adr/003-paridade-semantica.md) — Por que verificar paridade por invariantes semanticas e nao por diff textual
 - [`tasks/adr/004-lazy-loading-referencias.md`](tasks/adr/004-lazy-loading-referencias.md) — Por que referencias de skills sao carregadas sob demanda
 - [`tasks/adr/005-skills-lock-sha256.md`](tasks/adr/005-skills-lock-sha256.md) — Por que skills externas usam lock file com SHA-256
+- [`docs/adr/006-telemetria-feedback-cycle.md`](docs/adr/006-telemetria-feedback-cycle.md) — Por que telemetria e opt-in com append-only log
+- [`docs/adr/007-copilot-cli-stateless-workaround.md`](docs/adr/007-copilot-cli-stateless-workaround.md) — Por que Copilot CLI usa workaround de injecao manual
+- [`docs/adr/008-parity-multi-tool-invariants.md`](docs/adr/008-parity-multi-tool-invariants.md) — Por que paridade usa 29 invariantes semanticas com 3 niveis
 
 Template para novas ADRs: [`tasks/adr/000-template.md`](tasks/adr/000-template.md)

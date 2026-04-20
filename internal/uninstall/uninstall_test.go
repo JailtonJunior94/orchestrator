@@ -8,6 +8,7 @@ import (
 )
 
 func TestUninstall_RemovesSkills(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.0.0\n---\n")
 	ffs.Files["/project/.agents/skills/bugfix/SKILL.md"] = []byte("---\nversion: 1.0.0\n---\n")
@@ -63,6 +64,7 @@ func TestUninstall_RemovesSkills(t *testing.T) {
 }
 
 func TestUninstall_RemovesGeminiHook(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.0.0\n---\n")
 	ffs.Files["/project/.gemini/commands/review.toml"] = []byte("[command]")
@@ -82,6 +84,7 @@ func TestUninstall_RemovesGeminiHook(t *testing.T) {
 }
 
 func TestUninstall_DryRunDoesNotRemove(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.0.0\n---\n")
 	ffs.Files["/project/AGENTS.md"] = []byte("# AGENTS")
@@ -104,6 +107,7 @@ func TestUninstall_DryRunDoesNotRemove(t *testing.T) {
 }
 
 func TestUninstall_NoSkillsDir(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 
@@ -117,6 +121,7 @@ func TestUninstall_NoSkillsDir(t *testing.T) {
 }
 
 func TestUninstall_PreservesAgentsLocal(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.0.0\n---\n")
 	ffs.Files["/project/AGENTS.local.md"] = []byte("# Local extensions")

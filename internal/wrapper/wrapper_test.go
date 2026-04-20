@@ -39,6 +39,7 @@ func fullFS() *fs.FakeFileSystem {
 // --- Cenário feliz ---
 
 func TestExecute_HappyPath_Codex(t *testing.T) {
+	t.Parallel()
 	fsys := fullFS()
 	instruction, err := wrapper.Execute("codex", "go-implementation", projectDir, nil, fsys)
 	if err != nil {
@@ -53,6 +54,7 @@ func TestExecute_HappyPath_Codex(t *testing.T) {
 }
 
 func TestExecute_HappyPath_Gemini(t *testing.T) {
+	t.Parallel()
 	fsys := fullFS()
 	instruction, err := wrapper.Execute("gemini", "go-implementation", projectDir, nil, fsys)
 	if err != nil {
@@ -64,6 +66,7 @@ func TestExecute_HappyPath_Gemini(t *testing.T) {
 }
 
 func TestExecute_HappyPath_Copilot(t *testing.T) {
+	t.Parallel()
 	fsys := fullFS()
 	instruction, err := wrapper.Execute("copilot", "go-implementation", projectDir, nil, fsys)
 	if err != nil {
@@ -75,6 +78,7 @@ func TestExecute_HappyPath_Copilot(t *testing.T) {
 }
 
 func TestExecute_HappyPath_WithArgs(t *testing.T) {
+	t.Parallel()
 	fsys := fullFS()
 	instruction, err := wrapper.Execute("codex", "go-implementation", projectDir, []string{"--verbose", "--timeout=30"}, fsys)
 	if err != nil {
@@ -88,6 +92,7 @@ func TestExecute_HappyPath_WithArgs(t *testing.T) {
 // --- Ferramenta inválida ---
 
 func TestExecute_InvalidTool(t *testing.T) {
+	t.Parallel()
 	fsys := fullFS()
 	_, err := wrapper.Execute("claude", "go-implementation", projectDir, nil, fsys)
 	if err == nil {
@@ -99,6 +104,7 @@ func TestExecute_InvalidTool(t *testing.T) {
 }
 
 func TestExecute_UnknownTool(t *testing.T) {
+	t.Parallel()
 	fsys := fullFS()
 	_, err := wrapper.Execute("unknown-tool", "go-implementation", projectDir, nil, fsys)
 	if err == nil {
@@ -109,6 +115,7 @@ func TestExecute_UnknownTool(t *testing.T) {
 // --- AGENTS.md ausente ---
 
 func TestExecute_MissingAgentsMD(t *testing.T) {
+	t.Parallel()
 	fsys := setupFS(
 		[]string{projectDir + "/go.mod"},
 		[]string{projectDir + "/.agents/skills/agent-governance"},
@@ -125,6 +132,7 @@ func TestExecute_MissingAgentsMD(t *testing.T) {
 // --- agent-governance ausente ---
 
 func TestExecute_MissingAgentGovernance(t *testing.T) {
+	t.Parallel()
 	fsys := setupFS(
 		[]string{
 			projectDir + "/AGENTS.md",
@@ -144,6 +152,7 @@ func TestExecute_MissingAgentGovernance(t *testing.T) {
 // --- Prerequisites falham ---
 
 func TestExecute_PrerequisitesFail(t *testing.T) {
+	t.Parallel()
 	// go-implementation requer go.mod — não fornecemos
 	fsys := setupFS(
 		[]string{projectDir + "/AGENTS.md"},
@@ -159,6 +168,7 @@ func TestExecute_PrerequisitesFail(t *testing.T) {
 }
 
 func TestExecute_UnknownSkill(t *testing.T) {
+	t.Parallel()
 	fsys := setupFS(
 		[]string{projectDir + "/AGENTS.md"},
 		[]string{projectDir + "/.agents/skills/agent-governance"},
@@ -172,6 +182,7 @@ func TestExecute_UnknownSkill(t *testing.T) {
 // --- Budget excedido ---
 
 func TestExecute_BudgetExceeded_Copilot(t *testing.T) {
+	t.Parallel()
 	// copilot tem limite de 2000 tokens — populamos AGENTS.md com conteúdo grande
 	bigContent := strings.Repeat("palavra ", 3000) // ~3000 palavras × ~5 chars = 15000 chars → ~4285 tokens > 2000
 	fsys := setupFS(
@@ -192,6 +203,7 @@ func TestExecute_BudgetExceeded_Copilot(t *testing.T) {
 // --- ValidTools ---
 
 func TestValidTools_ContainsExpected(t *testing.T) {
+	t.Parallel()
 	expected := []string{"codex", "gemini", "copilot"}
 	for _, tool := range expected {
 		if !wrapper.ValidTools[tool] {

@@ -1,0 +1,23 @@
+# Fixtures e snapshots de teste
+testdata/
+testdata/snapshots/
+
+# Build artifacts
+dist/
+coverage.out
+
+# Relatorios de auditoria (historico, nao operacional)
+audit/
+
+# Prompts de analise (nao sao codigo)
+docs/prompts/
+
+# GoReleaser temporarios
+/ai-spec
+
+# OS files
+.DS_Store
+
+# Nota: Gemini CLI nao suporta nativamente arquivo de ignore (.geminiignore).
+# Exclusoes para Gemini devem ser configuradas via instrucoes no GEMINI.md
+# ou por meio de context window management manual.

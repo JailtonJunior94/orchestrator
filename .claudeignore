@@ -1,0 +1,19 @@
+# Fixtures e snapshots de teste
+testdata/
+testdata/snapshots/
+
+# Build artifacts
+dist/
+coverage.out
+
+# Relatorios de auditoria (historico, nao operacional)
+audit/
+
+# Prompts de analise (nao sao codigo)
+docs/prompts/
+
+# GoReleaser temporarios
+/ai-spec
+
+# OS files
+.DS_Store

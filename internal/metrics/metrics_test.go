@@ -16,6 +16,7 @@ func silentPrinter() *output.Printer {
 }
 
 func TestGather_HappyPath(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	root := "/repo"
 
@@ -50,6 +51,7 @@ func TestGather_HappyPath(t *testing.T) {
 }
 
 func TestGather_MissingSkillsMd_ReturnsError(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	root := "/repo"
 
@@ -72,6 +74,7 @@ func TestGather_MissingSkillsMd_ReturnsError(t *testing.T) {
 }
 
 func TestGather_MissingSkillsDir_ReturnsError(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	root := "/repo"
 	// FakeFileSystem vazio: nenhum arquivo, nenhum diretorio
@@ -88,6 +91,7 @@ func TestGather_MissingSkillsDir_ReturnsError(t *testing.T) {
 }
 
 func TestExecute_PropagatesGatherError(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	root := "/repo"
 	// Sem diretorio de skills
@@ -101,6 +105,7 @@ func TestExecute_PropagatesGatherError(t *testing.T) {
 }
 
 func TestTokenEstimate_SanityCheck(t *testing.T) {
+	t.Parallel()
 	// Conteudo representativo de uma SKILL.md (~800 palavras, ~5000 chars)
 	sample := strings.Repeat("The quick brown fox jumps over the lazy dog. ", 100)
 	est := int(math.Round(float64(len(sample)) / 3.5))
@@ -113,6 +118,7 @@ func TestTokenEstimate_SanityCheck(t *testing.T) {
 }
 
 func TestCharEstimator_Deterministic(t *testing.T) {
+	t.Parallel()
 	text := "The quick brown fox jumps over the lazy dog."
 	tok := NewCharEstimator()
 	a := tok.EstimateTokens(text)
@@ -129,6 +135,7 @@ func TestCharEstimator_Deterministic(t *testing.T) {
 }
 
 func TestTiktokenEstimator_WhenAvailable(t *testing.T) {
+	t.Parallel()
 	tok, err := NewTiktokenEstimator()
 	if err != nil {
 		t.Skipf("tiktoken nao disponivel (sem acesso ao modelo BPE): %v", err)
@@ -148,6 +155,7 @@ func TestTiktokenEstimator_WhenAvailable(t *testing.T) {
 }
 
 func TestTiktokenEstimator_MoreAccurateThanChar(t *testing.T) {
+	t.Parallel()
 	tok, err := NewTiktokenEstimator()
 	if err != nil {
 		t.Skipf("tiktoken nao disponivel: %v", err)
@@ -173,6 +181,7 @@ func TestTiktokenEstimator_MoreAccurateThanChar(t *testing.T) {
 }
 
 func TestNewPreciseTokenizer_FallbackReturnsCharEstimator(t *testing.T) {
+	t.Parallel()
 	// NewPreciseTokenizer nunca deve retornar nil independente do ambiente
 	tok, _ := NewPreciseTokenizer()
 	if tok == nil {
@@ -186,6 +195,7 @@ func TestNewPreciseTokenizer_FallbackReturnsCharEstimator(t *testing.T) {
 }
 
 func TestGather_SkillCountNeverFalsePositive(t *testing.T) {
+	t.Parallel()
 	// Garante que repositorio parcial nao retorna zero enganoso para SkillCount
 	// quando ha skills reais presentes
 	ffs := fs.NewFakeFileSystem()

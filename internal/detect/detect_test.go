@@ -8,6 +8,7 @@ import (
 )
 
 func TestDetectLangs(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/go.mod"] = []byte("module example")
 	ffs.Files["/project/package.json"] = []byte("{}")
@@ -24,6 +25,7 @@ func TestDetectLangs(t *testing.T) {
 }
 
 func TestDetectTools(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/CLAUDE.md"] = []byte("# Claude")
 	ffs.Files["/project/GEMINI.md"] = []byte("# Gemini")
@@ -37,6 +39,7 @@ func TestDetectTools(t *testing.T) {
 }
 
 func TestDetectLangs_Empty(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 

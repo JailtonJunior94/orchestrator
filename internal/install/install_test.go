@@ -24,6 +24,7 @@ func setupTestService(ffs *fs.FakeFileSystem) *Service {
 }
 
 func TestInstall_Validate_MissingProjectDir(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	svc := setupTestService(ffs)
 
@@ -39,6 +40,7 @@ func TestInstall_Validate_MissingProjectDir(t *testing.T) {
 }
 
 func TestInstall_Validate_NoTools(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -56,6 +58,7 @@ func TestInstall_Validate_NoTools(t *testing.T) {
 }
 
 func TestInstall_Validate_SameDir(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	svc := setupTestService(ffs)
@@ -73,6 +76,7 @@ func TestInstall_Validate_SameDir(t *testing.T) {
 }
 
 func TestInstall_CopyMode(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -157,6 +161,7 @@ description: Revisa codigo.
 }
 
 func TestInstall_Codex_LeanProfile(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -189,6 +194,7 @@ func TestInstall_Codex_LeanProfile(t *testing.T) {
 }
 
 func TestInstall_Codex_FullProfile(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -218,6 +224,7 @@ func TestInstall_Codex_FullProfile(t *testing.T) {
 }
 
 func TestInstall_Idempotent(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -274,6 +281,7 @@ func TestInstall_Idempotent(t *testing.T) {
 }
 
 func TestInstall_NoCtx_CopiesAGENTSMD(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -306,6 +314,7 @@ func TestInstall_NoCtx_CopiesAGENTSMD(t *testing.T) {
 }
 
 func TestInstall_Gemini_CopiesHook(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -333,6 +342,7 @@ func TestInstall_Gemini_CopiesHook(t *testing.T) {
 }
 
 func TestInstall_Gemini_GovernanceHookAbsent_NoError(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -357,6 +367,7 @@ func TestInstall_Gemini_GovernanceHookAbsent_NoError(t *testing.T) {
 }
 
 func TestInstall_Gemini_CopiesGEMINIMD(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -387,6 +398,7 @@ func TestInstall_Gemini_CopiesGEMINIMD(t *testing.T) {
 }
 
 func TestInstall_Gemini_NoGEMINIMDInSource_NoError(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -409,6 +421,7 @@ func TestInstall_Gemini_NoGEMINIMDInSource_NoError(t *testing.T) {
 }
 
 func TestInstall_Gemini_NoHookInSource_NoError(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -431,6 +444,7 @@ func TestInstall_Gemini_NoHookInSource_NoError(t *testing.T) {
 }
 
 func TestInstall_Gemini_DryRun_NoTomlCreated(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -456,6 +470,7 @@ func TestInstall_Gemini_DryRun_NoTomlCreated(t *testing.T) {
 }
 
 func TestInstall_Copilot_GeneratesAgents(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -491,6 +506,7 @@ func TestInstall_Copilot_GeneratesAgents(t *testing.T) {
 }
 
 func TestInstall_Copilot_DryRun_NoAgentsCreated(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -516,6 +532,7 @@ func TestInstall_Copilot_DryRun_NoAgentsCreated(t *testing.T) {
 }
 
 func TestInstall_DryRun(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
@@ -553,6 +570,7 @@ func setupOSTestService() *Service {
 }
 
 func TestInstall_EmbeddedSource_NoSourceFlag(t *testing.T) {
+	t.Parallel()
 	projectDir := t.TempDir()
 	svc := setupOSTestService()
 
@@ -582,6 +600,7 @@ func TestInstall_EmbeddedSource_NoSourceFlag(t *testing.T) {
 }
 
 func TestInstall_EmbeddedSource_AllToolsAllLangs(t *testing.T) {
+	t.Parallel()
 	projectDir := t.TempDir()
 	svc := setupOSTestService()
 
@@ -614,6 +633,7 @@ func TestInstall_EmbeddedSource_AllToolsAllLangs(t *testing.T) {
 // invoked with the parameters produced by --ref: a resolved temp dir as SourceDir
 // and LinkMode=copy (symlinks are not allowed since the tempdir will be removed).
 func TestInstall_RefResolved_UsesCopyMode(t *testing.T) {
+	t.Parallel()
 	sourceDir := t.TempDir()
 	projectDir := t.TempDir()
 
@@ -645,6 +665,7 @@ func TestInstall_RefResolved_UsesCopyMode(t *testing.T) {
 }
 
 func TestInstall_ExternalSource_Override(t *testing.T) {
+	t.Parallel()
 	projectDir := t.TempDir()
 	sourceDir := t.TempDir()
 

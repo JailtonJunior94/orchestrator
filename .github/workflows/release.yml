@@ -38,11 +38,11 @@ jobs:
         if: github.ref == 'refs/heads/main'
         id: semver
         run: |
-          ./ai-spec semver-next . | tee semver_output.txt
+          ./ai-spec semver-next . | tee /tmp/semver_output.txt
           while IFS='=' read -r key value; do
             [[ -z "$key" ]] && continue
             echo "${key}=${value}" >> "$GITHUB_OUTPUT"
-          done < semver_output.txt
+          done < /tmp/semver_output.txt
 
       - name: Evaluate release conditions
         if: github.ref == 'refs/heads/main'

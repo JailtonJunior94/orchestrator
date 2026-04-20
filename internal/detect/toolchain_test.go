@@ -9,6 +9,7 @@ import (
 )
 
 func TestToolchainDetect_Go(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/go.mod"] = []byte("module example")
 
@@ -31,6 +32,7 @@ func TestToolchainDetect_Go(t *testing.T) {
 }
 
 func TestToolchainDetect_Node(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/package.json"] = []byte(`{
 		"name": "test",
@@ -60,6 +62,7 @@ func TestToolchainDetect_Node(t *testing.T) {
 }
 
 func TestToolchainDetect_Python_Ruff(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/pyproject.toml"] = []byte(`[project]
 name = "test"
@@ -90,6 +93,7 @@ testpaths = ["tests"]
 }
 
 func TestToolchainDetect_Empty(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 
@@ -102,6 +106,7 @@ func TestToolchainDetect_Empty(t *testing.T) {
 }
 
 func TestToolchainDetect_Polyglot(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/go.mod"] = []byte("module example")
 	ffs.Files["/project/package.json"] = []byte(`{"scripts":{"test":"jest"}}`)
@@ -118,6 +123,7 @@ func TestToolchainDetect_Polyglot(t *testing.T) {
 }
 
 func TestToolchainDetect_MakefileFallback(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/Makefile"] = []byte("fmt:\n\tgofmt -w .\ntest:\n\tgo test ./...\nlint:\n\tgolangci-lint run\n")
 
@@ -140,6 +146,7 @@ func TestToolchainDetect_MakefileFallback(t *testing.T) {
 }
 
 func TestToolchainDetect_Bun(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/package.json"] = []byte(`{"scripts":{"test":"jest","lint":"eslint ."}}`)
 	ffs.Files["/project/bun.lockb"] = []byte("")
@@ -157,6 +164,7 @@ func TestToolchainDetect_Bun(t *testing.T) {
 }
 
 func TestToolchainDetect_PythonOptionalDeps(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/pyproject.toml"] = []byte(`[project]
 name = "test"
@@ -184,6 +192,7 @@ dev = ["ruff>=0.1", "pytest>=7.0"]
 }
 
 func TestStrictMode_BinaryPresent(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/go.mod"] = []byte("module example")
 
@@ -202,6 +211,7 @@ func TestStrictMode_BinaryPresent(t *testing.T) {
 }
 
 func TestStrictMode_BinaryAbsent(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/go.mod"] = []byte("module example")
 
@@ -224,6 +234,7 @@ func TestStrictMode_BinaryAbsent(t *testing.T) {
 }
 
 func TestStrictMode_NonStrict_NoWarning(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/go.mod"] = []byte("module example")
 
@@ -238,6 +249,7 @@ func TestStrictMode_NonStrict_NoWarning(t *testing.T) {
 }
 
 func TestToolchainDetect_FocusPaths_GoWinsOverNodeAtRoot(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/package.json"] = []byte(`{"scripts":{"test":"jest","lint":"eslint ."}}`)
 	ffs.Files["/project/services/api/go.mod"] = []byte("module example")
@@ -260,6 +272,7 @@ func TestToolchainDetect_FocusPaths_GoWinsOverNodeAtRoot(t *testing.T) {
 }
 
 func TestToolchainDetect_FocusPaths_Empty_FallsBackToDefault(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/go.mod"] = []byte("module example")
 	ffs.Files["/project/package.json"] = []byte(`{"scripts":{"test":"jest"}}`)
@@ -277,6 +290,7 @@ func TestToolchainDetect_FocusPaths_Empty_FallsBackToDefault(t *testing.T) {
 }
 
 func TestToolchainDetect_FocusPaths_MultipleManifests_HighestOverlapWins(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/services/api/package.json"] = []byte(`{"name":"api","scripts":{"test":"jest"}}`)
 	ffs.Files["/project/services/web/package.json"] = []byte(`{"name":"web","scripts":{"test":"vitest"}}`)
@@ -299,6 +313,7 @@ func TestToolchainDetect_FocusPaths_MultipleManifests_HighestOverlapWins(t *test
 }
 
 func TestToolchainDetect_FocusPaths_NoMatch_FallsBackToDefault(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/go.mod"] = []byte("module example")
 
@@ -313,6 +328,7 @@ func TestToolchainDetect_FocusPaths_NoMatch_FallsBackToDefault(t *testing.T) {
 }
 
 func TestToolchainDetect_Fixture_PythonMonorepo(t *testing.T) {
+	t.Parallel()
 	osfs := fs.NewOSFileSystem()
 	det := NewToolchainDetector(osfs)
 	result := det.Detect(fixtureDir("python-monorepo"))
@@ -333,6 +349,7 @@ func TestToolchainDetect_Fixture_PythonMonorepo(t *testing.T) {
 }
 
 func TestToolchainDetect_PnpmWorkspace(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/pnpm-workspace.yaml"] = []byte("packages: ['apps/*']")
 	ffs.Files["/project/package.json"] = []byte(`{"name":"root"}`)

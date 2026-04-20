@@ -10,6 +10,7 @@ import (
 )
 
 func TestScaffold_References(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	printer := &output.Printer{Out: io.Discard, Err: io.Discard}
 	svc := NewService(ffs, printer)
@@ -29,6 +30,7 @@ func TestScaffold_References(t *testing.T) {
 }
 
 func TestScaffold_AllRefs(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	printer := &output.Printer{Out: io.Discard, Err: io.Discard}
 	svc := NewService(ffs, printer)
@@ -53,6 +55,7 @@ func TestScaffold_AllRefs(t *testing.T) {
 }
 
 func TestScaffold_ThreeArtifacts(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	printer := &output.Printer{Out: io.Discard, Err: io.Discard}
 	svc := NewService(ffs, printer)
@@ -90,6 +93,7 @@ func TestScaffold_ThreeArtifacts(t *testing.T) {
 }
 
 func TestScaffold_Idempotent(t *testing.T) {
+	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	printer := &output.Printer{Out: io.Discard, Err: io.Discard}
 	svc := NewService(ffs, printer)

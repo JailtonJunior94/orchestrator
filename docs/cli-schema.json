@@ -415,6 +415,24 @@
                 "description": "Filtra registros a partir de uma data (formato ISO 8601)"
               }
             }
+          },
+          {
+            "name": "report",
+            "description": "Exibe relatório acionável de telemetria com métricas e alertas",
+            "args": [],
+            "flags": {
+              "since": {
+                "type": "string",
+                "required": false,
+                "description": "Filtrar por período (ex: 24h, 168h)"
+              },
+              "format": {
+                "type": "string",
+                "default": "text",
+                "required": false,
+                "description": "Formato de saída: text ou json"
+              }
+            }
           }
         ]
       },
