@@ -111,7 +111,7 @@ type claudeInvoker struct{}
 func (c *claudeInvoker) BinaryName() string { return "claude" }
 
 func (c *claudeInvoker) Invoke(ctx context.Context, prompt, workDir string) (string, string, int, error) {
-	return runCmd(ctx, workDir, "claude", "--print", "-p", prompt)
+	return runCmd(ctx, workDir, "claude", "--dangerously-skip-permissions", "--print", "-p", prompt)
 }
 
 // --- Codex ---
@@ -121,7 +121,7 @@ type codexInvoker struct{}
 func (c *codexInvoker) BinaryName() string { return "codex" }
 
 func (c *codexInvoker) Invoke(ctx context.Context, prompt, workDir string) (string, string, int, error) {
-	return runCmd(ctx, workDir, "codex", "--prompt", prompt)
+	return runCmd(ctx, workDir, "codex", "exec", "--dangerously-bypass-approvals-and-sandbox", prompt)
 }
 
 // --- Gemini ---
@@ -131,34 +131,15 @@ type geminiInvoker struct{}
 func (g *geminiInvoker) BinaryName() string { return "gemini" }
 
 func (g *geminiInvoker) Invoke(ctx context.Context, prompt, workDir string) (string, string, int, error) {
-	return runCmd(ctx, workDir, "gemini", "-p", prompt)
+	return runCmd(ctx, workDir, "gemini", "--yolo", "-p", prompt)
 }
 
 // --- Copilot ---
 
 type copilotInvoker struct{}
 
-func (c *copilotInvoker) BinaryName() string { return "gh" }
+func (c *copilotInvoker) BinaryName() string { return "copilot" }
 
 func (c *copilotInvoker) Invoke(ctx context.Context, prompt, workDir string) (string, string, int, error) {
-	cmd := exec.CommandContext(ctx, "gh", "copilot", "suggest", "-t", "shell")
-	cmd.Dir = workDir
-	cmd.Env = cleanEnv()
-
-	cmd.Stdin = strings.NewReader(prompt)
-
-	var stdoutBuf, stderrBuf bytes.Buffer
-	cmd.Stdout = &stdoutBuf
-	cmd.Stderr = &stderrBuf
-
-	err := cmd.Run()
-	exitCode := 0
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			exitCode = exitErr.ExitCode()
-		} else {
-			return stdoutBuf.String(), stderrBuf.String(), -1, err
-		}
-	}
-	return stdoutBuf.String(), stderrBuf.String(), exitCode, nil
+	return runCmd(ctx, workDir, "copilot", "-p", prompt, "--yolo")
 }
