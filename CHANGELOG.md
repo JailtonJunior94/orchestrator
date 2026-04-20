@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.2 (2026-04-20)
+
+### Bug Fixes
+- **brew:** add chmod around xattr to fix post_install permission denied (a52e58a)
+
 ## 0.10.1 (2026-04-20)
 
 ### Bug Fixes
