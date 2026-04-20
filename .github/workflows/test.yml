@@ -40,10 +40,15 @@ jobs:
       - name: Vet
         run: go vet ./...
 
-      - name: Lint
+      - name: Instalar golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
+          version: v1.64.8
+          install-mode: binary
+          skip-cache: false
+
+      - name: Lint
+        run: make lint
 
       - name: Fuzz (opcional)
         continue-on-error: true

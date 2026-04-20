@@ -40,13 +40,13 @@ func (r *Report) Render() []byte {
 
 	// Summary
 	b.WriteString("## Summary\n")
-	b.WriteString(fmt.Sprintf("- **PRD Folder:** `%s`\n", r.PRDFolder))
-	b.WriteString(fmt.Sprintf("- **Tool:** %s\n", r.Tool))
-	b.WriteString(fmt.Sprintf("- **Start Time:** %s\n", r.StartTime.Format(time.RFC3339)))
-	b.WriteString(fmt.Sprintf("- **End Time:** %s\n", r.EndTime.Format(time.RFC3339)))
-	b.WriteString(fmt.Sprintf("- **Total Duration:** %s\n", r.EndTime.Sub(r.StartTime).Truncate(time.Second)))
-	b.WriteString(fmt.Sprintf("- **Iterations:** %d\n", len(r.Iterations)))
-	b.WriteString(fmt.Sprintf("- **Stop Reason:** %s\n\n", r.StopReason))
+	fmt.Fprintf(&b, "- **PRD Folder:** `%s`\n", r.PRDFolder)
+	fmt.Fprintf(&b, "- **Tool:** %s\n", r.Tool)
+	fmt.Fprintf(&b, "- **Start Time:** %s\n", r.StartTime.Format(time.RFC3339))
+	fmt.Fprintf(&b, "- **End Time:** %s\n", r.EndTime.Format(time.RFC3339))
+	fmt.Fprintf(&b, "- **Total Duration:** %s\n", r.EndTime.Sub(r.StartTime).Truncate(time.Second))
+	fmt.Fprintf(&b, "- **Iterations:** %d\n", len(r.Iterations))
+	fmt.Fprintf(&b, "- **Stop Reason:** %s\n\n", r.StopReason)
 
 	// Results table
 	if len(r.Iterations) > 0 {
@@ -54,9 +54,9 @@ func (r *Report) Render() []byte {
 		b.WriteString("| # | Task ID | Title | Pre-Status | Post-Status | Duration | Exit Code |\n")
 		b.WriteString("|---|---------|-------|------------|-------------|----------|-----------|\n")
 		for _, it := range r.Iterations {
-			b.WriteString(fmt.Sprintf("| %d | %s | %s | %s | %s | %s | %d |\n",
+			fmt.Fprintf(&b, "| %d | %s | %s | %s | %s | %s | %d |\n",
 				it.Sequence, it.TaskID, it.Title, it.PreStatus, it.PostStatus,
-				it.Duration.Truncate(time.Second), it.ExitCode))
+				it.Duration.Truncate(time.Second), it.ExitCode)
 		}
 		b.WriteString("\n")
 	}
@@ -67,7 +67,7 @@ func (r *Report) Render() []byte {
 		b.WriteString("| Task ID | Title | Final Status |\n")
 		b.WriteString("|---------|-------|--------------|\n")
 		for _, t := range r.FinalTasks {
-			b.WriteString(fmt.Sprintf("| %s | %s | %s |\n", t.ID, t.Title, t.Status))
+			fmt.Fprintf(&b, "| %s | %s | %s |\n", t.ID, t.Title, t.Status)
 		}
 		b.WriteString("\n")
 	}
@@ -82,7 +82,7 @@ func (r *Report) Render() []byte {
 	if len(skipped) > 0 {
 		b.WriteString("## Skipped Tasks\n\n")
 		for _, it := range skipped {
-			b.WriteString(fmt.Sprintf("- **%s** (%s): %s\n", it.TaskID, it.Title, it.Note))
+			fmt.Fprintf(&b, "- **%s** (%s): %s\n", it.TaskID, it.Title, it.Note)
 		}
 		b.WriteString("\n")
 	}
@@ -91,12 +91,12 @@ func (r *Report) Render() []byte {
 	if len(r.Iterations) > 0 {
 		b.WriteString("## Iteration Details\n\n")
 		for _, it := range r.Iterations {
-			b.WriteString(fmt.Sprintf("### Iteration %d: Task %s — %s\n", it.Sequence, it.TaskID, it.Title))
-			b.WriteString(fmt.Sprintf("- **Duration:** %s\n", it.Duration.Truncate(time.Second)))
-			b.WriteString(fmt.Sprintf("- **Exit Code:** %d\n", it.ExitCode))
-			b.WriteString(fmt.Sprintf("- **Status Change:** %s -> %s\n", it.PreStatus, it.PostStatus))
+			fmt.Fprintf(&b, "### Iteration %d: Task %s — %s\n", it.Sequence, it.TaskID, it.Title)
+			fmt.Fprintf(&b, "- **Duration:** %s\n", it.Duration.Truncate(time.Second))
+			fmt.Fprintf(&b, "- **Exit Code:** %d\n", it.ExitCode)
+			fmt.Fprintf(&b, "- **Status Change:** %s -> %s\n", it.PreStatus, it.PostStatus)
 			if it.Note != "" {
-				b.WriteString(fmt.Sprintf("- **Note:** %s\n", it.Note))
+				fmt.Fprintf(&b, "- **Note:** %s\n", it.Note)
 			}
 			if it.AgentOutput != "" {
 				output := it.AgentOutput

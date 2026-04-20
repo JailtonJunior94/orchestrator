@@ -138,11 +138,6 @@ func estimateTokens(text string) int {
 	return int(math.Round(float64(len(text)) / 3.5))
 }
 
-// simulatedRefContent simula o conteudo de uma referencia com tamanho medio de 2000 chars.
-func simulatedRefContent(name string) string {
-	return strings.Repeat("a", 2000)
-}
-
 // TestReferencesForComplexity_TokenEconomy verifica que o nivel trivial carrega
 // menos tokens do que standard, e standard menos que complex.
 // Usa heuristica chars/3.5 (equivalente ao CharEstimator de internal/metrics).

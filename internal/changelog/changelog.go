@@ -77,7 +77,7 @@ func shortHash(hash string) string {
 func RenderSection(version, date string, groups map[string][]ChangelogEntry) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("## %s (%s)\n", version, date))
+	fmt.Fprintf(&sb, "## %s (%s)\n", version, date)
 
 	// Collect breaking changes across all types.
 	var breaking []ChangelogEntry
@@ -97,9 +97,9 @@ func RenderSection(version, date string, groups map[string][]ChangelogEntry) str
 		}
 		label, ok := typeLabels[t]
 		if !ok {
-			label = strings.Title(t)
+			label = strings.ToUpper(t[:1]) + t[1:]
 		}
-		sb.WriteString(fmt.Sprintf("\n### %s\n", label))
+		fmt.Fprintf(&sb, "\n### %s\n", label)
 		for _, e := range entries {
 			if e.Breaking {
 				continue // printed separately

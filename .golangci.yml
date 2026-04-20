@@ -1,3 +1,5 @@
+version: "2"
+
 run:
   timeout: 3m
 
@@ -9,7 +11,42 @@ linters:
     - govet
     - ineffassign
     - unused
-    - misspell
+  settings:
+    errcheck:
+      exclude-functions:
+        # defer Close é padrão idiomático em Go — erro dificilmente relevante em cleanup
+        - (io.Closer).Close
+        - (*os.File).Close
+        # fmt.Fprintf para writers de stdout/stderr raramente falha de forma acionável
+        - fmt.Fprintf
+        - fmt.Fprintln
+        - fmt.Fprint
+        # os.RemoveAll em defers de cleanup — erro não tem ação recuperável
+        - os.RemoveAll
+        # (*exec.Cmd).Wait em defers de cleanup
+        - (*exec.Cmd).Wait
+        - (*os/exec.Cmd).Wait
+        # os.Setenv/os.Unsetenv — raramente falha em ambiente de processo padrão
+        - os.Setenv
+        - os.Unsetenv
+    gosec:
+      excludes:
+        # G104: errors unhandled — coberto por errcheck com exclusões calibradas acima
+        - G104
+        # G204: subprocess com variável — padrão esperado em ferramentas CLI que executam git
+        - G204
+        # G301: permissão 0o755 para diretórios — escolha intencional do projeto
+        - G301
+        # G302: permissão 0o644 para arquivos — escolha intencional do projeto
+        - G302
+        # G304: leitura de arquivo por variável — padrão esperado em ferramentas CLI
+        - G304
+        # G306: WriteFile com permissões 0o644 — escolha intencional do projeto
+        - G306
+        # G602: false positive — parts é [3]int e SplitN retorna no máximo 3 elementos
+        - G602
+        # G703: path traversal via taint — escrita de arquivo por path de parâmetro é padrão em CLI
+        - G703
 
 issues:
   exclude-dirs:

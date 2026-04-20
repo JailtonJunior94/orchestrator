@@ -433,14 +433,13 @@ func TestParity_SkippedInvariants_ClaudeOnly(t *testing.T) {
 		}
 	}
 
-	// Invariantes de Claude e comuns nao devem ser skipped
+	// Invariantes de Claude (CL*) e comuns (C0x) nao devem ser skipped
 	for _, cr := range results {
-		if !cr.Skipped && cr.Invariant.ID[0] == 'C' {
-			// C-prefixed common invariants should not be skipped
-			continue
-		}
-		if !cr.Skipped && strings.HasPrefix(cr.Invariant.ID, "CL") {
-			continue
+		id := cr.Invariant.ID
+		isClaudeOrCommon := strings.HasPrefix(id, "CL") ||
+			(len(id) >= 2 && id[0] == 'C' && id[1] >= '0' && id[1] <= '9')
+		if isClaudeOrCommon && cr.Skipped {
+			t.Errorf("invariante %s nao deveria ser skipped para instalacao Claude-only", id)
 		}
 	}
 }

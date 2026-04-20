@@ -27,7 +27,7 @@ func CheckDepth() error {
 // IncrementDepth incrementa AI_INVOCATION_DEPTH no ambiente do processo atual.
 func IncrementDepth() {
 	depth := readInt(envDepth, 0)
-	os.Setenv(envDepth, strconv.Itoa(depth+1))
+	_ = os.Setenv(envDepth, strconv.Itoa(depth+1))
 }
 
 func readInt(key string, defaultValue int) int {
