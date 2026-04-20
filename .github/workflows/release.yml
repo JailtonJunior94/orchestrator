@@ -117,6 +117,26 @@ jobs:
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
           GORELEASER_CURRENT_TAG: v${{ steps.semver.outputs.target_version }}
 
+      - name: Fix Homebrew Cask stanza order (auto-release)
+        if: github.ref == 'refs/heads/main' && steps.check.outputs.should_release == 'true'
+        env:
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        run: |
+          git clone "https://x-access-token:${HOMEBREW_TAP_GITHUB_TOKEN}@github.com/JailtonJunior94/homebrew-tap.git" /tmp/homebrew-tap
+          cd /tmp/homebrew-tap
+          CASK_FILE="Casks/ai-spec.rb"
+          if [[ -f "$CASK_FILE" ]]; then
+            # Swap url/sha256 → sha256/url inside on_intel/on_arm blocks
+            sed -i -E '/on_(intel|arm) do/{n;N;s/(      url [^\n]+)\n(      sha256 [^\n]+)/\2\n\1/}' "$CASK_FILE"
+            if ! git diff --quiet "$CASK_FILE"; then
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git add "$CASK_FILE"
+              git commit -m "fix(cask): corrigir ordem de stanzas sha256/url [skip ci]"
+              git push origin main
+            fi
+          fi
+
       - name: Publish workflow summary
         if: github.ref == 'refs/heads/main'
         run: |
@@ -161,3 +181,22 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+      - name: Fix Homebrew Cask stanza order (manual tag)
+        if: startsWith(github.ref, 'refs/tags/v') && steps.release_check.outputs.release_exists != 'true'
+        env:
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+        run: |
+          git clone "https://x-access-token:${HOMEBREW_TAP_GITHUB_TOKEN}@github.com/JailtonJunior94/homebrew-tap.git" /tmp/homebrew-tap
+          cd /tmp/homebrew-tap
+          CASK_FILE="Casks/ai-spec.rb"
+          if [[ -f "$CASK_FILE" ]]; then
+            sed -i -E '/on_(intel|arm) do/{n;N;s/(      url [^\n]+)\n(      sha256 [^\n]+)/\2\n\1/}' "$CASK_FILE"
+            if ! git diff --quiet "$CASK_FILE"; then
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              git add "$CASK_FILE"
+              git commit -m "fix(cask): corrigir ordem de stanzas sha256/url [skip ci]"
+              git push origin main
+            fi
+          fi
