@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.3 (2026-04-20)
+
+### Bug Fixes
+- **brew:** use Ruby chmod method to satisfy Homebrew FormulaAudit (d500dfe)
+
 ## 0.10.2 (2026-04-20)
 
 ### Bug Fixes
