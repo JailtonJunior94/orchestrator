@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.2 (2026-04-20)
+
+### Bug Fixes
+- **brew:** remover quarentena do Gatekeeper via post_install na Formula (3e21aab)
+
 ## 0.9.1 (2026-04-20)
 
 ### Bug Fixes
