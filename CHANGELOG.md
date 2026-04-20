@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.0 (2026-04-20)
+
+### Features
+- **release:** migrar Homebrew de Cask para Formula (c77f61a)
+
+### CI
+- **release:** adicionar step para corrigir ordem de stanzas no Homebrew Cask após GoReleaser (9143e49)
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
