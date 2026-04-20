@@ -47,10 +47,12 @@ jobs:
       - name: Evaluate release conditions
         if: github.ref == 'refs/heads/main'
         id: check
+        env:
+          HEAD_COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           TARGET="${{ steps.semver.outputs.target_version }}"
           ACTION="${{ steps.semver.outputs.action }}"
-          MSG="${{ github.event.head_commit.message }}"
+          MSG="$HEAD_COMMIT_MSG"
 
           if [[ "$MSG" == *"[skip ci]"* ]]; then
             echo "should_release=false" >> "$GITHUB_OUTPUT"
