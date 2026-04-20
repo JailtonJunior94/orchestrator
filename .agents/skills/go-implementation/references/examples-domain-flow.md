@@ -1,5 +1,11 @@
 # Exemplos: Fluxo End-to-End
 
+<!-- TL;DR
+Exemplos completos de fluxo Go: sentinel errors, entidades de domínio, use cases, handlers e repository do domínio até a infraestrutura.
+Keywords: exemplo, domínio, use-case, handler, repository, sentinel-error, fluxo
+Load complete when: tarefa requer exemplos concretos de fluxo end-to-end entre domínio, aplicação e infraestrutura.
+-->
+
 ## Sentinel errors e entidade de dominio
 ```go
 // domain/order/errors.go

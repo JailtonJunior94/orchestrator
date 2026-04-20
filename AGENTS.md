@@ -10,21 +10,12 @@ Use estas instruções para manter consistência, segurança e qualidade ao trab
 
 1. Entender o contexto antes de editar qualquer arquivo.
 2. Preferir a menor mudança segura que resolva a causa raiz.
-3. Preservar arquitetura, convenções e fronteiras já existentes no contexto analisado.
-4. Não introduzir abstrações, camadas ou dependências sem demanda concreta.
-5. Atualizar ou adicionar testes quando houver mudança de comportamento.
+3. Preservar arquitetura, convenções e fronteiras existentes.
+4. Não introduzir abstrações ou dependências sem demanda concreta.
+5. Atualizar testes quando houver mudança de comportamento.
 6. Rodar validações proporcionais à mudança.
-7. Registrar bloqueios e suposições explicitamente quando o contexto estiver incompleto.
-
-## Diretrizes de Estrutura
-
-1. Priorize entendimento do código e do contexto atual antes de propor refatorações.
-2. Respeite padrões existentes de nomenclatura, organização e tratamento de erro.
-3. Defina estrutura simples, evolutiva e com defaults explícitos.
-4. Evite reescritas amplas quando uma alteração localizada resolver o problema.
-5. Estabeleça contratos, testes e comandos de validação cedo quando eles ainda não existirem.
-6. Considere risco de regressão como restrição principal.
-7. Evite overengineering disfarçado de arquitetura futura.
+7. Registrar bloqueios e suposições quando o contexto estiver incompleto.
+8. Evitar reescritas amplas e overengineering; risco de regressão é restrição principal.
 
 ## Contrato de carga base
 
@@ -39,36 +30,24 @@ Skills individuais devem declarar apenas cargas adicionais específicas ao seu c
 
 ## Regras por Linguagem
 
-Para tarefas que alteram código Go, carregar também:
-
-- `.agents/skills/go-implementation/SKILL.md`
-
-Para tarefas que alteram código Node/TypeScript, carregar também:
-
-- `.agents/skills/node-implementation/SKILL.md`
-
-Para tarefas que alteram código Python, carregar também:
-
-- `.agents/skills/python-implementation/SKILL.md`
-
-Para tarefas de revisão ou refatoração incremental de design em Go guiadas por heurísticas de object calisthenics, carregar também:
-
-- `.agents/skills/object-calisthenics-go/SKILL.md`
-
-Para tarefas de correção de bugs com remediação e teste de regressão, carregar também:
-
-- `.agents/skills/bugfix/SKILL.md`
+| Linguagem | Skill a carregar |
+|-----------|-----------------|
+| Go | `.agents/skills/go-implementation/SKILL.md` |
+| Node/TypeScript | `.agents/skills/node-implementation/SKILL.md` |
+| Python | `.agents/skills/python-implementation/SKILL.md` |
+| Revisão/refatoração Go (OC) | `.agents/skills/object-calisthenics-go/SKILL.md` |
+| Correção de bugs | `.agents/skills/bugfix/SKILL.md` |
 
 ## Governança por Ferramenta
 
-Cada ferramenta suportada tem um arquivo de governança dedicado na raiz do repositório:
+| Arquivo | Ferramenta |
+|---------|-----------|
+| `CLAUDE.md` | Claude Code (hooks, rules, agents) |
+| `GEMINI.md` | Gemini CLI (commands, orientações procedurais) |
+| `CODEX.md` | Codex (config.toml, instrução de sessão) |
+| `COPILOT.md` | GitHub Copilot (Chat e gh copilot CLI); contexto via `.github/copilot-instructions.md` |
 
-- `CLAUDE.md` — instruções específicas para Claude Code (hooks, rules, agents)
-- `GEMINI.md` — instruções específicas para Gemini CLI (commands, orientações procedurais)
-- `CODEX.md` — instruções específicas para Codex (config.toml, instrução de sessão)
-- `COPILOT.md` — instruções específicas para GitHub Copilot (Chat e gh copilot CLI); contexto automático via `.github/copilot-instructions.md`
-
-Esses arquivos são suplementares a este `AGENTS.md` e fornecem contexto de stack, comandos e orientações por ferramenta. A fonte de verdade dos fluxos procedurais permanece em `.agents/skills/`.
+Esses arquivos são suplementares a este `AGENTS.md`. A fonte de verdade dos fluxos procedurais permanece em `.agents/skills/`.
 
 ## Referências
 
@@ -109,34 +88,36 @@ make bench           # benchmarks
 
 ## Convencoes
 
-- **Idioma do codigo:** comentarios, erros e mensagens em portugues (PT-BR)
-- **Commits:** Conventional Commits com tipo em ingles e corpo em portugues
-- **Testes:** table-driven, FakeFileSystem para unit, t.TempDir() para integration
-- **DI:** toda dependencia injetada via construtor, zero estado global
-- **Erros:** sempre envolver com `fmt.Errorf("contexto: %w", err)`
-- **Pacotes internos:** cada pacote em `internal/` com responsabilidade unica
-- **Interfaces:** definir no pacote consumidor quando possivel
+| Aspecto | Regra |
+|---------|-------|
+| Idioma | PT-BR (comentarios, erros, mensagens) |
+| Commits | Conventional Commits: tipo em ingles, corpo em portugues |
+| Testes | table-driven; FakeFileSystem (unit); t.TempDir() (integration) |
+| DI | injetar via construtor; zero estado global |
+| Erros | `fmt.Errorf("contexto: %w", err)` |
+| Pacotes | um por responsabilidade em `internal/` |
+| Interfaces | definir no pacote consumidor quando possivel |
 
 ## Estrutura
 
 ```
-cmd/ai_spec_harness/   # comandos cobra (CLI)
-internal/              # logica de negocio (34 pacotes)
-  fs/                  # abstracao de filesystem (OSFileSystem + FakeFileSystem)
-  output/              # printer estruturado (Info, Step, Warn, Error, Debug)
-  config/              # DTOs de configuracao
-  skills/              # tipos de dominio (Tool, Lang, LinkMode)
-  install/             # servico de instalacao
-  upgrade/             # servico de upgrade
-  detect/              # deteccao de linguagens e ferramentas
-  metrics/             # estimativa de tokens e custo
-  parity/              # paridade semantica multi-agente
-  specdrift/           # deteccao de drift entre specs
-  evidence/            # validacao de relatorios
-  taskloop/            # orquestracao de execucao de tasks
-testdata/              # fixtures, snapshots, projetos-exemplo
-.agents/skills/        # skills externas (gerenciadas via skills-lock.json)
-internal/embedded/     # assets embarcados (go:embed) - baseline de governanca
+cmd/ai_spec_harness/
+internal/
+  fs/
+  output/
+  config/
+  skills/
+  install/
+  upgrade/
+  detect/
+  metrics/
+  parity/
+  specdrift/
+  evidence/
+  taskloop/
+testdata/
+.agents/skills/
+internal/embedded/
 ```
 
 ## CI
@@ -144,20 +125,21 @@ internal/embedded/     # assets embarcados (go:embed) - baseline de governanca
 - **test.yml:** unit + integration + golangci-lint em ubuntu-24.04 e macos-15
 - **release.yml:** semver-next automatico, GoReleaser multi-plataforma
 - **release-dry-run.yml:** validacao de release sem side-effects
-- **Cobertura:** threshold minimo de 75% enforced no CI (cobertura atual: ~76.7%)
-  - Gerar relatorio local: `make coverage`
+- **Cobertura:** threshold minimo de 75%; gerar local: `make coverage`
 
 ## Padroes Importantes
 
-- `internal/fs/fake.go` — usar FakeFileSystem em testes unitarios, nunca OS real
-- `internal/output.Printer` — injetar em todo Service, usar `io.Discard` em testes
+- `internal/fs/fake.go` — FakeFileSystem em testes unitarios, nunca OS real
+- `internal/output.Printer` — injetar em todo Service; `io.Discard` em testes
 - Build tag `integration` para testes que tocam o filesystem real
 - Skills externas rastreadas em `skills-lock.json` com hash SHA-256
 - Harness auto-instalado neste repo (self-dogfooding)
 
 ## Restrições
 
-1. Não inventar contexto ausente.
-2. Não assumir versão de linguagem, framework ou runtime sem verificar.
-3. Não alterar comportamento público sem deixar isso explícito.
-4. Não usar exemplos como cópia cega; adaptar ao contexto real.
+Nao inventar contexto ausente. Nao assumir versao sem verificar. Nao alterar comportamento publico sem registrar. Adaptar exemplos ao contexto real.
+
+## Documentacao
+
+- [Guia de troubleshooting](docs/troubleshooting.md) — problemas comuns com sintoma, causa, solucao e verificacao
+- [Ciclo de telemetria](docs/telemetry-feedback-cycle.md) — feedback loop com GOVERNANCE_TELEMETRY

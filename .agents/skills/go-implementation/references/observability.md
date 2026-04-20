@@ -1,5 +1,11 @@
 # Observabilidade
 
+<!-- TL;DR
+Diretrizes de observabilidade em Go: logging estruturado com slog, tracing OpenTelemetry, métricas e correlação de trace_id em logs.
+Keywords: observabilidade, logging, tracing, métricas, slog, opentelemetry, trace_id
+Load complete when: tarefa envolve logging estruturado, tracing, métricas ou instrumentação OpenTelemetry em Go.
+-->
+
 ## Objetivo
 Garantir rastreabilidade, diagnóstico e visibilidade operacional em produção.
 

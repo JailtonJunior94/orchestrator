@@ -25,16 +25,20 @@ Exemplos:
   ai-spec update-version --version 1.2.3
   ai-spec update-version --version 1.2.3 --version-file path/to/VERSION`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		version := strings.TrimSpace(updateVersionVersion)
-		if !semverPattern.MatchString(version) {
-			return fmt.Errorf("invalid semver format %q: expected MAJOR.MINOR.PATCH (no 'v' prefix)", version)
+		if err := requireFlag(cmd, "version", "ai-spec update-version --version 1.2.3"); err != nil {
+			return err
 		}
 
-		if err := os.WriteFile(updateVersionVersionFile, []byte(version+"\n"), 0644); err != nil {
-			return fmt.Errorf("writing version file: %w", err)
+		v := strings.TrimSpace(updateVersionVersion)
+		if !semverPattern.MatchString(v) {
+			return fmt.Errorf("formato de versao invalido %q: esperado MAJOR.MINOR.PATCH sem prefixo 'v'", v)
 		}
 
-		fmt.Printf("VERSION updated to %s\n", version)
+		if err := os.WriteFile(updateVersionVersionFile, []byte(v+"\n"), 0644); err != nil {
+			return fmt.Errorf("escrevendo arquivo de versao: %w", err)
+		}
+
+		fmt.Printf("VERSION atualizado para %s\n", v)
 		return nil
 	},
 }
@@ -42,6 +46,5 @@ Exemplos:
 func init() {
 	updateVersionCmd.Flags().StringVar(&updateVersionVersion, "version", "", "Versao SemVer sem prefixo v (obrigatorio, ex: 1.2.3)")
 	updateVersionCmd.Flags().StringVar(&updateVersionVersionFile, "version-file", "VERSION", "Caminho para o arquivo de versao")
-	_ = updateVersionCmd.MarkFlagRequired("version")
 	rootCmd.AddCommand(updateVersionCmd)
 }

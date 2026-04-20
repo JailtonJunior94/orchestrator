@@ -1,6 +1,7 @@
 package aispecharness
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -52,8 +53,11 @@ var telemetrySummaryCmd = &cobra.Command{
 }
 
 var (
-	reportSince  string
-	reportFormat string
+	reportSince      string
+	reportFormat     string
+	reportTrend      bool
+	reportTopSkills  bool
+	reportBudget     bool
 )
 
 var telemetryReportCmd = &cobra.Command{
@@ -69,9 +73,59 @@ var telemetryReportCmd = &cobra.Command{
 			since = d
 		}
 
+		// Modo --trend: exibe evolucao semanal de invocacoes
+		if reportTrend {
+			trend, err := telemetry.Trend(".")
+			if err != nil {
+				return err
+			}
+			if reportFormat == "json" {
+				b, err := json.MarshalIndent(trend, "", "  ")
+				if err != nil {
+					return fmt.Errorf("serializar trend: %w", err)
+				}
+				_, err = fmt.Fprintf(os.Stdout, "%s\n", b)
+				return err
+			}
+			fmt.Print(telemetry.FormatTrend(trend))
+			return nil
+		}
+
+		// Modo --budget-check: verifica budget de invocacoes por skill
+		if reportBudget {
+			budgetData, err := telemetry.BudgetCheck(".", since)
+			if err != nil {
+				return err
+			}
+			if reportFormat == "json" {
+				b, err := json.MarshalIndent(budgetData, "", "  ")
+				if err != nil {
+					return fmt.Errorf("serializar budget-check: %w", err)
+				}
+				_, err = fmt.Fprintf(os.Stdout, "%s\n", b)
+				return err
+			}
+			fmt.Print(telemetry.FormatBudgetCheck(budgetData))
+			return nil
+		}
+
 		data, err := telemetry.Report(".", since)
 		if err != nil {
 			return err
+		}
+
+		// Modo --top-skills: exibe apenas ranking de skills
+		if reportTopSkills {
+			if reportFormat == "json" {
+				b, err := json.MarshalIndent(data.Skills, "", "  ")
+				if err != nil {
+					return fmt.Errorf("serializar top-skills: %w", err)
+				}
+				_, err = fmt.Fprintf(os.Stdout, "%s\n", b)
+				return err
+			}
+			fmt.Print(telemetry.FormatTopSkills(data.Skills))
+			return nil
 		}
 
 		switch reportFormat {
@@ -94,6 +148,9 @@ func init() {
 
 	telemetryReportCmd.Flags().StringVar(&reportSince, "since", "", "Filtrar por período (ex: 24h, 168h)")
 	telemetryReportCmd.Flags().StringVar(&reportFormat, "format", "text", "Formato de saída: text ou json")
+	telemetryReportCmd.Flags().BoolVar(&reportTrend, "trend", false, "Exibe evolucao de invocacoes por semana (ultimas 4 semanas)")
+	telemetryReportCmd.Flags().BoolVar(&reportTopSkills, "top-skills", false, "Exibe ranking de skills por frequencia de uso")
+	telemetryReportCmd.Flags().BoolVar(&reportBudget, "budget-check", false, "Alerta se alguma skill excedeu o budget de invocacoes esperado")
 
 	telemetryCmd.AddCommand(telemetryLogCmd)
 	telemetryCmd.AddCommand(telemetrySummaryCmd)

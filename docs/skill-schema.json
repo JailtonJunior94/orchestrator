@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/JailtonJunior94/orchestrator/docs/skill-schema.json",
+  "title": "SKILL.md Schema",
+  "description": "Schema de validacao formal para arquivos SKILL.md — frontmatter YAML, secoes obrigatorias e referencias.",
+  "type": "object",
+  "required": ["frontmatter"],
+  "properties": {
+    "frontmatter": {
+      "description": "Bloco de metadados YAML delimitado por --- no inicio do arquivo SKILL.md.",
+      "type": "object",
+      "required": ["name", "version", "description"],
+      "properties": {
+        "name": {
+          "description": "Nome da skill. Deve coincidir com o nome do diretorio pai.",
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "description": "Versao semantica da skill no formato X.Y.Z ou vX.Y.Z (pre-release permitido).",
+          "type": "string",
+          "pattern": "^v?\\d+\\.\\d+\\.\\d+(-[\\w.]+)?$"
+        },
+        "description": {
+          "description": "Descricao funcional da skill legivel por humanos e agentes de IA. Deve incluir quando usar e quando nao usar.",
+          "type": "string",
+          "minLength": 1
+        },
+        "triggers": {
+          "description": "Palavras-chave ou padroes que acionam esta skill automaticamente em agentes compatıveis.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1
+        },
+        "lang": {
+          "description": "Linguagem de programacao alvo da skill. Restringe a skill a projetos dessa linguagem.",
+          "type": "string",
+          "enum": ["go", "node", "python"]
+        },
+        "link_mode": {
+          "description": "Modo de instalacao da skill no projeto alvo.",
+          "type": "string",
+          "enum": ["symlink", "copy"]
+        },
+        "depends_on": {
+          "description": "Lista de nomes de skills que devem estar instaladas antes desta.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "max_depth": {
+          "description": "Profundidade maxima de invocacao recursiva permitida para esta skill.",
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "sections": {
+      "description": "Secoes de nivel ## presentes no corpo do arquivo SKILL.md.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "references": {
+      "description": "Lista de arquivos de referencia mencionados na skill. Cada entrada deve seguir o padrao references/*.md.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^references/[^/]+\\.md$"
+      }
+    }
+  },
+  "definitions": {
+    "skillFile": {
+      "description": "Representacao estrutural de um arquivo SKILL.md completo.",
+      "type": "object",
+      "required": ["frontmatter", "sections"],
+      "properties": {
+        "frontmatter": { "$ref": "#/properties/frontmatter" },
+        "sections": { "$ref": "#/properties/sections" },
+        "references": { "$ref": "#/properties/references" }
+      }
+    }
+  }
+}

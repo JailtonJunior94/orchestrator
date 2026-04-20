@@ -26,6 +26,10 @@ Exemplos:
   ai-spec-harness changelog ./meu-repo --version 1.3.0 --dry-run`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := requireFlag(cmd, "version", "ai-spec-harness changelog . --version 1.3.0"); err != nil {
+			return err
+		}
+
 		repoPath := "."
 		if len(args) > 0 {
 			repoPath = args[0]
@@ -54,6 +58,5 @@ Exemplos:
 func init() {
 	changelogCmd.Flags().StringVar(&changelogVersion, "version", "", "Versao SemVer sem prefixo v (obrigatorio)")
 	changelogCmd.Flags().BoolVar(&changelogDryRun, "dry-run", false, "Imprime no stdout sem modificar o arquivo")
-	_ = changelogCmd.MarkFlagRequired("version")
 	rootCmd.AddCommand(changelogCmd)
 }

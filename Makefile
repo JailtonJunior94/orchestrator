@@ -1,4 +1,4 @@
-.PHONY: build test integration lint vet clean coverage coverage-packages fuzz bench
+.PHONY: build test integration lint vet clean coverage coverage-packages fuzz bench budget
 
 BINARY := ai-spec
 GOFLAGS := -trimpath
@@ -13,7 +13,10 @@ integration:
 	go test -tags=integration ./internal/integration/... ./internal/skills/...
 
 lint:
-	golangci-lint run ./...
+	@echo "Running linter..."
+	@echo "Installing golangci-lint..."
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.1
+	GOGC=20 golangci-lint run --config .golangci.yml --timeout 10m --verbose
 
 vet:
 	go vet ./...
@@ -35,6 +38,13 @@ fuzz:
 	go test -fuzz=FuzzParseTaskFile -fuzztime=30s ./internal/taskloop/
 	go test -fuzz=FuzzReadTaskFileStatus -fuzztime=30s ./internal/taskloop/
 	go test -fuzz=FuzzValidateBugReport -fuzztime=30s ./internal/bugschema/
+	go test -fuzz=FuzzParseConfig -fuzztime=30s ./internal/config/
+	go test -fuzz=FuzzParseManifest -fuzztime=30s ./internal/manifest/
+	go test -fuzz=FuzzDetectLanguages -fuzztime=30s ./internal/detect/
+	go test -fuzz=FuzzDetectToolchain -fuzztime=30s ./internal/detect/
 
 bench:
 	go test -bench=. -benchmem ./internal/metrics/ ./internal/skills/ ./internal/parity/
+
+budget:
+	go test -tags=integration -run TestTokenBudget ./internal/integration/...

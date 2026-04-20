@@ -1,5 +1,11 @@
 # Arquitetura Go
 
+<!-- TL;DR
+Especificidades de arquitetura Go: DI manual via construtores, estrutura de diretórios, layouts recomendados e organização de pacotes internos.
+Keywords: arquitetura, di, construtor, diretórios, pacotes, internal, layout
+Load complete when: tarefa envolve estrutura de projeto, injeção de dependências ou organização de pacotes Go.
+-->
+
 Principios gerais de arquitetura, DI e sinais de excesso estao em `shared-architecture.md` (agent-governance). Este arquivo cobre apenas especificidades Go.
 
 ## DI em Go

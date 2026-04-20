@@ -2,15 +2,16 @@ name: Tests
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
 
 jobs:
-  test:
+  unit:
+    name: Unit tests
     strategy:
       matrix:
-        os: [ubuntu-24.04, macos-15]
+        os: [ ubuntu-24.04, macos-15 ]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -38,22 +39,6 @@ jobs:
         continue-on-error: true
         run: bash scripts/check-package-coverage.sh 70
 
-      - name: Integration tests
-        run: go test -tags=integration ./internal/integration/... ./internal/skills/...
-
-      - name: Vet
-        run: go vet ./...
-
-      - name: Instalar golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.64.8
-          install-mode: binary
-          skip-cache: false
-
-      - name: Lint
-        run: make lint
-
       - name: Verificar snapshots atualizados
         run: |
           go test ./internal/contextgen/... -run TestSnapshot 2>&1 || {
@@ -67,3 +52,46 @@ jobs:
           go test -fuzz=FuzzParseFrontmatter -fuzztime=10s ./internal/skills/
           go test -fuzz=FuzzParseTaskFile -fuzztime=10s ./internal/taskloop/
           go test -fuzz=FuzzValidateBugReport -fuzztime=10s ./internal/bugschema/
+          go test -fuzz=FuzzParseConfig -fuzztime=10s ./internal/config/
+          go test -fuzz=FuzzParseManifest -fuzztime=10s ./internal/manifest/
+          go test -fuzz=FuzzDetectLanguages -fuzztime=10s ./internal/detect/
+          go test -fuzz=FuzzDetectToolchain -fuzztime=10s ./internal/detect/
+
+  lint:
+    name: Lint
+    strategy:
+      matrix:
+        os: [ ubuntu-24.04, macos-15 ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Lint
+        run: make lint
+
+  integration:
+    name: Integration tests
+    needs: unit
+    strategy:
+      matrix:
+        os: [ ubuntu-24.04, macos-15 ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Integration tests
+        run: go test -tags=integration ./internal/integration/... ./internal/skills/...
+
+      - name: Budget
+        run: make budget

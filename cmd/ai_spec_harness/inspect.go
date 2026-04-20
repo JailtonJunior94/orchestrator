@@ -1,6 +1,7 @@
 package aispecharness
 
 import (
+	"github.com/JailtonJunior94/ai-spec-harness/internal/contextgen"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/inspect"
@@ -17,7 +18,9 @@ var inspectCmd = &cobra.Command{
 Exemplos:
   ai-spec-harness inspect ./meu-projeto
   ai-spec-harness inspect . -v
-  ai-spec-harness inspect ./monorepo --focus-paths services/go-api/handler.go`,
+  ai-spec-harness inspect ./monorepo --focus-paths services/go-api/handler.go
+  ai-spec-harness inspect . --brief
+  ai-spec-harness inspect . --complexity=standard`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		printer := output.New(verbose)
@@ -62,13 +65,42 @@ Exemplos:
 			}
 		}
 
+		// Modo contexto: exibe referencias carregadas por nivel de complexidade
+		if inspectComplexity != "" || inspectBrief {
+			level := contextgen.ComplexityLevel(inspectComplexity)
+			if level == "" {
+				level = contextgen.ComplexityComplex
+			}
+			opts := contextgen.LoadOptions{Brief: inspectBrief, Complexity: level}
+			loader := contextgen.NewLoader(fsys)
+			skillsDir := args[0] + "/.agents/skills"
+			if entries, err := fsys.ReadDir(skillsDir); err == nil {
+				printer.Info("")
+				printer.Info("Referencias por skill (complexity=%s, brief=%v):", level, inspectBrief)
+				for _, e := range entries {
+					if !e.IsDir() {
+						continue
+					}
+					refs, err := loader.LoadSkillReferences(skillsDir+"/"+e.Name(), opts)
+					if err != nil {
+						continue
+					}
+					printer.Info("  %s: %d referencias carregadas", e.Name(), len(refs))
+				}
+			}
+		}
+
 		return nil
 	},
 }
 
 var inspectFocusPaths string
+var inspectBrief bool
+var inspectComplexity string
 
 func init() {
 	inspectCmd.Flags().StringVar(&inspectFocusPaths, "focus-paths", "", "Prioriza deteccao de toolchain proximo desses arquivos, separados por virgula (util em monorepos). Alternativa: env FOCUS_PATHS")
+	inspectCmd.Flags().BoolVar(&inspectBrief, "brief", false, "Carrega apenas blocos TL;DR das referencias (economiza tokens)")
+	inspectCmd.Flags().StringVar(&inspectComplexity, "complexity", "", "Filtra referencias por nivel de complexidade: trivial, standard, complex (default: complex)")
 	rootCmd.AddCommand(inspectCmd)
 }

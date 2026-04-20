@@ -288,9 +288,10 @@ ai-spec lint ../api-pagamentos
 | `upgrade` | Atualiza skills, adaptadores e manifesto em uma instalacao existente |
 | `inspect` | Exibe skills instaladas, ferramentas detectadas e estado do manifesto |
 | `doctor` | Executa checks de saude sobre git, manifesto, symlinks e permissoes |
-| `lint` | Detecta placeholders nao renderizados, schema divergente e `SKILL.md` invalidos |
+| `lint` | Detecta placeholders nao renderizados, schema divergente e `SKILL.md` invalidos; `--strict` trata avisos de paridade como erros |
 | `metrics` | Calcula metricas de contexto e custo estimado de tokens |
-| `telemetry` | Registra e resume uso de skills e referencias |
+| `telemetry` | Registra e resume uso de skills e referencias; suporta `--trend`, `--budget-check` e `--top-skills` |
+| `skills check` | Verifica versoes de skills externas contra `skills-lock.json` e detecta mudancas de interface |
 | `validate` | Valida frontmatter YAML de `SKILL.md` |
 | `validate-bugs` | Valida um array JSON de bugs contra o schema canonico |
 | `prerequisites` | Verifica se uma skill pode ser executada em um projeto |
@@ -344,6 +345,21 @@ ai-spec scaffold rust --root .
 
 # executar todas as tasks elegiveis de um PRD folder
 ai-spec task-loop --tool codex tasks/prd-payments-list
+
+# verificar versoes de skills externas contra o lock file
+ai-spec skills check .
+ai-spec skills check . --force
+
+# ver tendencia semanal de invocacoes de telemetria
+ai-spec telemetry report --trend
+ai-spec telemetry report --trend --format json
+
+# inspecionar referencias carregadas por nivel de complexidade
+ai-spec inspect . --brief
+ai-spec inspect . --complexity=standard
+
+# lint com verificacao estrita de invariantes de paridade
+ai-spec lint . --strict
 
 # remover a instalacao
 ai-spec uninstall ../api-pagamentos --dry-run
@@ -609,6 +625,14 @@ go run . lint .
 
 - Releases: <https://github.com/JailtonJunior94/orchestrator/releases>
 - Homebrew Tap: <https://github.com/JailtonJunior94/homebrew-tap>
+
+## Documentacao
+
+- [Guia de resolucao de problemas](docs/troubleshooting.md) — 12 problemas comuns com sintoma, causa, solucao e verificacao
+- [Telemetria e ciclo de feedback](docs/telemetry-feedback-cycle.md)
+- [ADR 006 — Telemetria opt-in](docs/adr/006-telemetria-feedback-cycle.md)
+- [ADR 007 — Copilot CLI stateless workaround](docs/adr/007-copilot-cli-stateless-workaround.md)
+- [ADR 008 — Paridade multi-tool com invariantes](docs/adr/008-parity-multi-tool-invariants.md)
 
 ## Licenca
 

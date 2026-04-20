@@ -2,7 +2,6 @@ package aispecharness
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
@@ -38,10 +37,13 @@ Exemplos:
 	RunE: func(cmd *cobra.Command, args []string) error {
 		prdFolder := args[0]
 
+		if err := requireFlag(cmd, "tool", "ai-spec-harness task-loop ./tasks --tool codex"); err != nil {
+			return err
+		}
+
 		tool, _ := cmd.Flags().GetString("tool")
 		if !taskloop.ValidTools[tool] {
-			fmt.Fprintf(os.Stderr, "Erro: ferramenta invalida %q — opcoes: claude, codex, gemini, copilot\n", tool)
-			os.Exit(2)
+			return fmt.Errorf("ferramenta invalida %q — opcoes: claude, codex, gemini, copilot", tool)
 		}
 
 		dryRun, _ := cmd.Flags().GetBool("dry-run")
@@ -75,7 +77,6 @@ func init() {
 	taskLoopCmd.Flags().Int("max-iterations", 20, "Limite maximo de iteracoes do loop")
 	taskLoopCmd.Flags().Duration("timeout", 30*time.Minute, "Timeout por task")
 	taskLoopCmd.Flags().String("report-path", "", "Caminho do relatorio final (default: task-loop-report-<timestamp>.md)")
-	_ = taskLoopCmd.MarkFlagRequired("tool")
 
 	rootCmd.AddCommand(taskLoopCmd)
 }

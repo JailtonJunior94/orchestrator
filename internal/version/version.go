@@ -22,3 +22,17 @@ func ReadVersionFile(dir string) string {
 	}
 	return strings.TrimSpace(string(data))
 }
+
+// Resolve retorna a versao do binario. Prioridade:
+//  1. Versao injetada via ldflags (releases via GoReleaser)
+//  2. Arquivo VERSION no diretorio informado com sufixo "-dev" (builds locais)
+//  3. "dev" como fallback final
+func Resolve(dir string) string {
+	if Version != "dev" {
+		return Version
+	}
+	if v := ReadVersionFile(dir); v != "unknown" {
+		return v + "-dev"
+	}
+	return "dev"
+}

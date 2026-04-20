@@ -1,5 +1,11 @@
 # Messaging e Eventos
 
+<!-- TL;DR
+Diretrizes Go para comunicação assíncrona: produção de eventos pós-transação, outbox pattern, consumidores idempotentes e rastreabilidade.
+Keywords: messaging, evento, outbox, kafka, idempotente, at-least-once, assíncrono
+Load complete when: tarefa envolve produção ou consumo de mensagens, eventos de domínio ou integração via broker em Go.
+-->
+
 ## Objetivo
 Manter comunicação assíncrona confiável, rastreável e desacoplada do domínio.
 

@@ -287,7 +287,20 @@
         "args": [
           { "name": "path", "required": false, "description": "Caminho do projeto (default: diretorio atual)" }
         ],
-        "flags": {}
+        "flags": {
+          "strict": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Promove avisos de paridade BestEffort a erros (exit code 1)"
+          },
+          "schema": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Valida skills contra docs/skill-schema.json"
+          }
+        }
       },
       {
         "name": "inspect",
@@ -301,6 +314,18 @@
             "type": "string",
             "required": false,
             "description": "Caminhos de foco para contexto de monorepo"
+          },
+          "brief": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Carrega apenas blocos TL;DR das referencias (economiza tokens)"
+          },
+          "complexity": {
+            "type": "string",
+            "default": "complex",
+            "required": false,
+            "description": "Filtra referencias por nivel de complexidade: trivial, standard, complex"
           }
         }
       },
@@ -431,6 +456,24 @@
                 "default": "text",
                 "required": false,
                 "description": "Formato de saída: text ou json"
+              },
+              "trend": {
+                "type": "bool",
+                "default": false,
+                "required": false,
+                "description": "Exibe evolucao de invocacoes por semana (ultimas 4 semanas)"
+              },
+              "top-skills": {
+                "type": "bool",
+                "default": false,
+                "required": false,
+                "description": "Exibe ranking de skills por frequencia de uso"
+              },
+              "budget-check": {
+                "type": "bool",
+                "default": false,
+                "required": false,
+                "description": "Alerta se alguma skill excedeu o budget de invocacoes esperado"
               }
             }
           }
@@ -519,6 +562,30 @@
           { "name": "args", "required": false, "description": "Argumentos adicionais para a skill", "variadic": true }
         ],
         "flags": {}
+      },
+      {
+        "name": "skills",
+        "description": "Gerencia skills externas e detecta mudancas de versao",
+        "longDescription": "Verifica versoes de skills externas contra skills-lock.json.",
+        "args": [],
+        "flags": {},
+        "subcommands": [
+          {
+            "name": "check",
+            "description": "Verifica versoes de skills externas contra skills-lock.json",
+            "args": [
+              { "name": "path", "required": false, "description": "Caminho do projeto (default: diretorio atual)" }
+            ],
+            "flags": {
+              "force": {
+                "type": "bool",
+                "default": false,
+                "required": false,
+                "description": "Aceita breaking changes sem bloquear (exit code 0)"
+              }
+            }
+          }
+        ]
       },
       {
         "name": "prerequisites",

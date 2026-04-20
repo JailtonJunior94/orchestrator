@@ -4,56 +4,67 @@
     "confluence-changelog-publisher": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
+      "version": "1.0.0",
       "computedHash": "4d206f23b9ff58786fde3fab55a78ee9499bc04f32f9ad361ddb53e1a954101c"
     },
     "github-diff-changelog-publisher": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
+      "version": "1.0.0",
       "computedHash": "78bc755a1954a265eab9c2af75ed98584dce745b63b25c7f269b05b68c3da723"
     },
     "github-pr-comment-triage": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
+      "version": "1.0.0",
       "computedHash": "82a8247501a32b38bfa13f056ea239d74f75402a1dc7e41503a6df0c98c57191"
     },
     "github-release-publication-flow": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
+      "version": "1.0.0",
       "computedHash": "57a969145a84f64f29b761a31de24b1fb79dfdba9c9a288b69adcb464dcc1201"
     },
     "jira-tasks": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
+      "version": "1.0.0",
       "computedHash": "6ff7e5a1dc22a1bcc17b4a842274aa23f9b0402d04eca3a99c32bb4013f52866"
     },
     "otel-grafana-dashboards": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
+      "version": "1.0.0",
       "computedHash": "86ecf580d7b6ee0dfdbc384b9a5c2e7d17edfb5110d6532c958617abaaa9fe6d"
     },
     "postman-collection-generator": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
+      "version": "1.0.0",
       "computedHash": "560e6c2de5ba35e12f44de07da7299d4c92474278a9f58e0b0f1e3899e9e748e"
     },
     "prompt-enricher": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
+      "version": "1.0.0",
       "computedHash": "82b5b202db856a08c6a84cfde534a639648fb37aa910ea84c14fbcb5cc929bd7"
     },
     "pull-request": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
+      "version": "1.0.0",
       "computedHash": "445c3b29493a11f63b2b00d53c7e37e49ca8959637f57bb9315dfa3f9bd91805"
     },
     "semantic-commit": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
+      "version": "1.0.0",
       "computedHash": "46cdb55ffb86c63416558aa96ebf98c1fe16f34caeaddf7a0d405ad69f98b8bf"
     },
     "us-to-prd": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
+      "version": "1.0.0",
       "computedHash": "80c290a148776da5956db0886b6962454ea336f3e7eddda0d9524b0157c07e84"
     }
   }

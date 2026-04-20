@@ -1,5 +1,11 @@
 # Mapeamento das Heuristicas para Elementos Go
 
+<!-- TL;DR
+Mapeamento de heurísticas de object calisthenics para elementos Go: packages, structs, interfaces, métodos e tratamento de erro com exemplos de aplicação.
+Keywords: mapeamento, heurística, package, struct, interface, método, calisthenics
+Load complete when: tarefa exige aplicar regras de object calisthenics a elementos específicos de código Go como packages, structs ou métodos.
+-->
+
 ## Packages
 
 Usar packages para delimitar fronteiras de colaboracao e semantica. Evitar criar packages so para obedecer contagem de linhas ou simular camadas sem necessidade.

@@ -5,9 +5,11 @@ import (
 )
 
 func TestInstallRef_MutuallyExclusiveWithSource(t *testing.T) {
+	installTools = "claude"
 	installRef = "v1.0.0"
 	installSource = "/tmp/some-source"
 	t.Cleanup(func() {
+		installTools = ""
 		installRef = ""
 		installSource = ""
 	})

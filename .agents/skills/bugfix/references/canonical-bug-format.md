@@ -1,3 +1,9 @@
+<!-- TL;DR
+Schema canonico de bug: campos id, severity, title, description, component, steps, expected, actual, impact, root_cause.
+Palavras-chave: bug, schema, severity, critical, high, medium, low, json, campos
+Carregar completo quando: implementando bugfix skill, revisando schema de bugs, criando novos campos obrigatorios
+-->
+
 # Formato Canonico de Bug
 
 Schema formal: `.agents/skills/agent-governance/references/bug-schema.json`

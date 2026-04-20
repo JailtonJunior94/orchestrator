@@ -14,7 +14,7 @@ Override explicito via `--complexity=<nivel>` prevalece sobre a classificacao au
 | Nivel      | Criterio                                                                 | Referencias carregadas                                 |
 |------------|--------------------------------------------------------------------------|--------------------------------------------------------|
 | `trivial`  | Sem mudanca de comportamento: rename, typo, import, formatacao            | Nenhuma — apenas AGENTS.md                             |
-| `standard` | Mudanca localizada com testes: novo metodo, fix de bug, refactor local    | `error-handling.md`, `testing.md`                      |
+| `standard` | Mudanca localizada com testes: novo metodo, fix de bug, refactor local    | TL;DR de `error-handling.md` e `testing.md` (bloco `<!-- TL;DR -->`) |
 | `complex`  | Mudanca transversal: nova feature, interface publica, migracao            | Todas as referencias (comportamento atual)             |
 
 **Economia estimada:** ~2.500 tokens por ciclo trivial vs complex (reducao de 15-25%).
@@ -30,9 +30,9 @@ Override explicito via `--complexity=<nivel>` prevalece sobre a classificacao au
 **Etapa 2: Carregar referencias sob demanda (respeitando o nivel de complexidade)**
 
 - **`trivial`**: nao carregar nenhuma referencia — AGENTS.md e suficiente.
-- **`standard`**: carregar apenas as referencias diretamente ligadas a superficie alterada:
-  - `references/error-handling.md` quando a tarefa criar, propagar ou tratar erros.
-  - `references/testing.md` quando a tarefa alterar comportamento testavel.
+- **`standard`**: em tarefas triviais, carregar apenas TL;DR de references. Para standard, carregar TL;DR das referencias diretamente ligadas a superficie alterada:
+  - `references/error-handling.md` (preferir bloco `<!-- TL;DR -->`) quando a tarefa criar, propagar ou tratar erros.
+  - `references/testing.md` (preferir bloco `<!-- TL;DR -->`) quando a tarefa alterar comportamento testavel.
 - **`complex`**: carregar todas as referencias aplicaveis:
   1. Ler `references/ddd.md` quando a tarefa alterar entidades, value objects, aggregate roots, transicoes de estado ou regras de aplicacao.
   2. Ler `references/error-handling.md` quando a tarefa criar, propagar, encapsular, comparar ou apresentar erros.

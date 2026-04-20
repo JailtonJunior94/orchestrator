@@ -1,5 +1,11 @@
 # Seguranca de Aplicacao
 
+<!-- TL;DR
+Diretrizes de segurança de aplicação cross-linguagem: validação de input com schema, autenticação JWT, autorização por use case e prevenção de injeção.
+Keywords: segurança, input-validation, jwt, autenticação, autorização, sql-injection, schema
+Load complete when: tarefa envolve validação de input, autenticação, autorização ou prevenção de vulnerabilidades em qualquer linguagem.
+-->
+
 ## Input Validation
 - Usar schema validation (Node: zod, joi, class-validator; Python: pydantic, marshmallow, attrs) em vez de validacao manual.
 - Usar allowlist em vez de denylist quando possivel.

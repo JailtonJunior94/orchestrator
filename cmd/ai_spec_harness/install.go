@@ -57,13 +57,15 @@ func init() {
 	installCmd.Flags().StringVar(&installCodexProfile, "codex-profile", "full", "Perfil de skills para Codex: full ou lean")
 	installCmd.Flags().StringVar(&installFocusPaths, "focus-paths", "", "Prioriza deteccao de toolchain proximo desses arquivos, separados por virgula (util em monorepos). Alternativa: env FOCUS_PATHS")
 
-	_ = installCmd.MarkFlagRequired("tools")
-
 	rootCmd.AddCommand(installCmd)
 }
 
 func runInstall(cmd *cobra.Command, args []string) error {
 	projectDir := args[0]
+
+	if err := requireFlag(cmd, "tools", "ai-spec-harness install ./meu-projeto --tools claude,gemini --langs go,python"); err != nil {
+		return err
+	}
 
 	if installRef != "" && installSource != "" {
 		return fmt.Errorf("--ref e --source sao mutuamente exclusivos")

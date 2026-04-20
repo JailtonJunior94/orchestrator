@@ -1,5 +1,11 @@
 # Messaging e Eventos
 
+<!-- TL;DR
+Diretrizes cross-linguagem para comunicação assíncrona: produção pós-transação, outbox pattern, consumidores idempotentes e rastreabilidade de mensagens.
+Keywords: messaging, evento, outbox, idempotente, broker, assíncrono, rastreabilidade
+Load complete when: tarefa envolve produção ou consumo de mensagens/eventos assíncronos em qualquer linguagem.
+-->
+
 ## Objetivo
 Manter comunicacao assincrona confiavel, rastreavel e desacoplada do dominio.
 

@@ -1,5 +1,11 @@
 # Roteiro de Avaliacao
 
+<!-- TL;DR
+Roteiro para avaliação e refatoração incremental com object calisthenics em Go: delimitar superfície, avaliar heurísticas e produzir plano de melhoria priorizado.
+Keywords: avaliação, roteiro, refatoração, heurística, calisthenics, revisão, incremento
+Load complete when: tarefa envolve revisar ou refatorar código Go aplicando heurísticas de object calisthenics com passos estruturados.
+-->
+
 Usar este roteiro para produzir review ou plano de refatoracao incremental.
 
 ## 1. Delimitar a superficie

@@ -107,10 +107,15 @@ type CheckResult struct {
 	Result    Result
 	// Skipped indica que o invariante nao se aplica as ferramentas selecionadas.
 	Skipped bool
+	// Warning indica que e uma violacao de invariante BestEffort.
+	// Warnings nao alteram o exit code — sao visibilidade sem bloqueio.
+	// Use --strict no lint para promover warnings a erros.
+	Warning bool
 }
 
 // Run executa todos os invariantes contra um Snapshot.
 // Invariantes cujas AppliesTo nao incluam nenhuma ferramenta selecionada sao marcados Skipped.
+// Invariantes BestEffort que falharam sao marcados Warning=true (nao bloqueantes).
 func Run(snap Snapshot, invariants []*Invariant) []CheckResult {
 	active := make(map[skills.Tool]bool, len(snap.Tools))
 	for _, t := range snap.Tools {
@@ -133,9 +138,32 @@ func Run(snap Snapshot, invariants []*Invariant) []CheckResult {
 			}
 		}
 		r := inv.Check(snap)
-		results = append(results, CheckResult{Invariant: inv, Result: r})
+		isWarning := inv.Level == BestEffort && !r.OK
+		results = append(results, CheckResult{Invariant: inv, Result: r, Warning: isWarning})
 	}
 	return results
+}
+
+// Warnings filtra apenas os CheckResults que sao avisos (BestEffort violados).
+func Warnings(results []CheckResult) []CheckResult {
+	var out []CheckResult
+	for _, cr := range results {
+		if cr.Warning {
+			out = append(out, cr)
+		}
+	}
+	return out
+}
+
+// Failures filtra apenas os CheckResults que sao falhas nao-warning (bloqueantes).
+func Failures(results []CheckResult) []CheckResult {
+	var out []CheckResult
+	for _, cr := range results {
+		if !cr.Skipped && !cr.Result.OK && !cr.Warning {
+			out = append(out, cr)
+		}
+	}
+	return out
 }
 
 // Generate produz artefatos via contextgen e retorna um Snapshot.

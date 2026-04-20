@@ -1,5 +1,11 @@
 # Testes
 
+<!-- TL;DR
+Regras de testes (R-TEST-001): comportamento de domínio e use cases obrigatoriamente testados, testes determinísticos sem estado global e cobertura mínima enforced.
+Keywords: teste, R-TEST-001, cobertura, determinístico, domínio, use-case, regressão
+Load complete when: tarefa envolve garantir confiabilidade, cobertura de testes ou validação de adapters e integrações.
+-->
+
 - Rule ID: R-TEST-001
 - Severidade: hard para correção e determinismo, guideline para estilo
 

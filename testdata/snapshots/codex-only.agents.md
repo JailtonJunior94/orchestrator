@@ -88,6 +88,20 @@ Cada skill lista suas proprias referencias em `references/` com gatilhos de carr
 
 Ferramentas sem enforcement programatico dependem do modelo seguir instrucoes procedurais. A compliance nessas ferramentas e best-effort.
 
+## Economia de Contexto
+
+Carregar o minimo necessario para a tarefa reduz custo de tokens em 35-50%:
+
+| Complexidade | Criterio | O que carregar |
+|---|---|---|
+| `trivial` | Rename, typo, import, formatacao | Apenas AGENTS.md |
+| `standard` | Bug fix, novo metodo, refactor local | AGENTS.md + TL;DR das references afetadas |
+| `complex` | Nova feature, interface publica, migracao | AGENTS.md + referencias completas |
+
+- Classificar a complexidade **antes** de carregar qualquer referencia.
+- Quando a reference tiver bloco `<!-- TL;DR ... -->`, preferir o TL;DR ao documento completo em tarefas standard.
+- Override explicito via `--complexity=<nivel>` prevalece sobre classificacao automatica.
+
 ## Validacao
 
 Antes de concluir uma alteracao:

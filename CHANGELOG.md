@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.10.0 (2026-04-20)
+
+### Added
+
+- **skills check:** novo comando para verificar versões de skills externas contra `skills-lock.json`; detecta upgrades compatíveis (minor/patch) e potenciais quebras de interface (major bump) (`cmd/ai_spec_harness/skills.go`, `internal/skillscheck/`)
+- **inspect --brief / --complexity:** exibe referências carregadas por skill por nível de complexidade via `contextgen.Loader` (`cmd/ai_spec_harness/inspect.go`)
+- **telemetry report --trend:** evolução semanal de invocações nas últimas 4 semanas em formato texto ou JSON (`internal/telemetry/trend.go`)
+- **telemetry report --budget-check:** verifica budget de invocações por skill com saída em texto ou JSON
+- **telemetry report --top-skills:** ranking de skills por volume de uso
+- **lint --strict:** trata invariantes `BestEffort` de paridade como erros; sem a flag, exibe apenas avisos (`cmd/ai_spec_harness/lint.go`)
+- **contextgen.Loader:** carrega referências por skill com suporte a `brief` e `complexity` (`internal/contextgen/loader.go`)
+- **requireFlag:** validação de flags obrigatórias com mensagem amigável em PT-BR e exemplo de uso real (`cmd/ai_spec_harness/flags.go`)
+- **CodeQL:** workflow de análise de segurança estática adicionado ao CI (`.github/workflows/codeql.yml`)
+- **hook validate-token-budget:** verificação de budget de tokens integrada ao Claude Code (`.claude/hooks/validate-token-budget.sh`)
+- **docs/troubleshooting.md:** guia de 12 problemas comuns com sintoma, causa, solução e verificação
+- **docs/skill-schema.json:** schema JSON para validação de `SKILL.md`
+
+### Changed
+
+- **lint:** detecta tools e langs automaticamente e verifica invariantes `BestEffort` de paridade em toda execução
+- **inspect:** integra `contextgen.Loader` para exibir referências por skill nos modos `--brief` e `--complexity`
+- **telemetry report:** expandido com três novos modos de saída (`--trend`, `--budget-check`, `--top-skills`)
+- **test.yml:** pipeline de CI expandido com novos targets, cobertura por pacote e testes de integração
+- **Makefile:** novos targets para fuzz, cobertura e validação de schema
+- **skills references:** atualizações em `agent-governance`, `go-implementation` e `object-calisthenics-go`
+
+### Tests
+
+- Fuzz tests adicionados em `internal/config`, `internal/detect` e `internal/manifest`
+- Testes de integração para budget de tokens e skills externas (`internal/integration/token_budget_skill_test.go`)
+- Contrato CLI expandido com novos subcomandos (`cmd/ai_spec_harness/cli_contract_test.go`)
+- Novos testes: `flags_test.go`, `validation_test.go`, `skillscheck_test.go`, `trend_test.go`, `loader_test.go`
+
+---
+
 ## 0.9.2 (2026-04-20)
 
 ### Bug Fixes
