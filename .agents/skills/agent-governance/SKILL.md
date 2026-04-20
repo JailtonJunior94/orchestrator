@@ -6,22 +6,42 @@ description: Orquestra regras de governanca, DDD, tratamento de erros, seguranca
 
 # Governanca para Agentes
 
+## Niveis de Complexidade
+
+Antes de carregar referencias, classificar a complexidade da tarefa para evitar carregamento desnecessario.
+Override explicito via `--complexity=<nivel>` prevalece sobre a classificacao automatica.
+
+| Nivel      | Criterio                                                                 | Referencias carregadas                                 |
+|------------|--------------------------------------------------------------------------|--------------------------------------------------------|
+| `trivial`  | Sem mudanca de comportamento: rename, typo, import, formatacao            | Nenhuma — apenas AGENTS.md                             |
+| `standard` | Mudanca localizada com testes: novo metodo, fix de bug, refactor local    | `error-handling.md`, `testing.md`                      |
+| `complex`  | Mudanca transversal: nova feature, interface publica, migracao            | Todas as referencias (comportamento atual)             |
+
+**Economia estimada:** ~2.500 tokens por ciclo trivial vs complex (reducao de 15-25%).
+
 ## Procedimentos
 
 **Etapa 1: Carregar contexto base**
 1. Confirmar que o contrato de carga base definido em `AGENTS.md` foi cumprido.
 2. Identificar se a tarefa afeta modelagem de dominio, fluxo de erro, seguranca, validacao ou testes.
-3. Aplicar a menor mudanca segura que preserve arquitetura, convencoes e fronteiras existentes.
+3. Classificar o nivel de complexidade da tarefa (trivial / standard / complex) antes de carregar referencias.
+4. Aplicar a menor mudanca segura que preserve arquitetura, convencoes e fronteiras existentes.
 
-**Etapa 2: Carregar referencias sob demanda**
-1. Ler `references/ddd.md` quando a tarefa alterar entidades, value objects, aggregate roots, transicoes de estado ou regras de aplicacao.
-2. Ler `references/error-handling.md` quando a tarefa criar, propagar, encapsular, comparar ou apresentar erros.
-3. Ler `references/security.md` quando a tarefa envolver filesystem, subprocessos, segredos, configuracao, runtime, input externo ou dependencias.
-4. Ler `references/testing.md` quando a tarefa alterar comportamento, validadores, runtime, adapters, persistencia ou gates de validacao.
-5. Ler `references/shared-lifecycle.md` quando a tarefa envolver inicializacao, shutdown, signal handling ou drain de conexoes — principios universais aplicaveis a qualquer linguagem.
-6. Ler `references/shared-testing.md` quando a tarefa envolver estrategia de testes cross-linguagem — principios de unit/integration test aplicaveis a qualquer stack.
-7. Ler `references/shared-architecture.md` quando a tarefa envolver decisoes arquiteturais cross-linguagem — DI, organizacao de modulos, sinais de excesso.
-8. Ler `references/shared-patterns.md` quando a tarefa envolver patterns recorrentes cross-linguagem — Repository, Factory, DI, Value Objects, Error Handling.
+**Etapa 2: Carregar referencias sob demanda (respeitando o nivel de complexidade)**
+
+- **`trivial`**: nao carregar nenhuma referencia — AGENTS.md e suficiente.
+- **`standard`**: carregar apenas as referencias diretamente ligadas a superficie alterada:
+  - `references/error-handling.md` quando a tarefa criar, propagar ou tratar erros.
+  - `references/testing.md` quando a tarefa alterar comportamento testavel.
+- **`complex`**: carregar todas as referencias aplicaveis:
+  1. Ler `references/ddd.md` quando a tarefa alterar entidades, value objects, aggregate roots, transicoes de estado ou regras de aplicacao.
+  2. Ler `references/error-handling.md` quando a tarefa criar, propagar, encapsular, comparar ou apresentar erros.
+  3. Ler `references/security.md` quando a tarefa envolver filesystem, subprocessos, segredos, configuracao, runtime, input externo ou dependencias.
+  4. Ler `references/testing.md` quando a tarefa alterar comportamento, validadores, runtime, adapters, persistencia ou gates de validacao.
+  5. Ler `references/shared-lifecycle.md` quando a tarefa envolver inicializacao, shutdown, signal handling ou drain de conexoes.
+  6. Ler `references/shared-testing.md` quando a tarefa envolver estrategia de testes cross-linguagem.
+  7. Ler `references/shared-architecture.md` quando a tarefa envolver decisoes arquiteturais cross-linguagem.
+  8. Ler `references/shared-patterns.md` quando a tarefa envolver patterns recorrentes cross-linguagem.
 
 **Etapa 3: Executar com controle**
 1. Preservar comportamento publico existente, salvo quando a mudanca explicitar a alteracao.

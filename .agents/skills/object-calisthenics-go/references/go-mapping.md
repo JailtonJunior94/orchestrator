@@ -10,7 +10,7 @@ Tratar structs como agregadores de estado e comportamento relacionado. Quando um
 
 ## Interfaces
 
-Introduzir interface apenas quando existir consumidor real, fronteira de dependencia ou necessidade clara de substituicao em teste. Nao usar interface para maquiar violacao de regra.
+Principio base definido em `go-implementation/SKILL.md` (Etapa 3, item 4) e expandido em `references/interfaces.md`. Enfase OC: nao usar interface para maquiar violacao de regra de design nem criar indirecao sem consumidor real.
 
 ## Funcoes e Metodos
 
@@ -18,7 +18,7 @@ Aplicar early return, extracao de funcao e reducao de branching primeiro. So mov
 
 ## Errors
 
-Usar tratamento de erro explicito como parte do fluxo principal. A regra de evitar `else` costuma combinar com verificacao de erro cedo em Go.
+Usar tratamento de erro explicito como parte do fluxo principal. A regra de evitar `else` costuma combinar com verificacao de erro cedo em Go. Ver `agent-governance/references/error-handling.md` para modelo completo.
 
 ## Slices e Maps
 
@@ -26,7 +26,7 @@ Promover para tipo dedicado apenas quando houver comportamento recorrente, invar
 
 ## Construtores e Fabrica
 
-Criar construtores quando precisarem validar estado inicial, montar dependencias obrigatorias ou proteger invariantes. Evitar `NewX` vazios apenas por estilo.
+Pattern Factory Function definido em `go-implementation/SKILL.md` (secao "Patterns frequentes"). Enfase OC: evitar `NewX` vazios que nao validam invariantes nem montam dependencias obrigatorias.
 
 ## Testes
 

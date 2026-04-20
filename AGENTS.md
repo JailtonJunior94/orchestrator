@@ -59,6 +59,16 @@ Para tarefas de correção de bugs com remediação e teste de regressão, carre
 
 - `.agents/skills/bugfix/SKILL.md`
 
+## Governança por Ferramenta
+
+Cada ferramenta suportada tem um arquivo de governança dedicado na raiz do repositório:
+
+- `CLAUDE.md` — instruções específicas para Claude Code (hooks, rules, agents)
+- `GEMINI.md` — instruções específicas para Gemini CLI (commands, orientações procedurais)
+- `CODEX.md` — instruções específicas para Codex (config.toml, instrução de sessão)
+
+Esses arquivos são suplementares a este `AGENTS.md` e fornecem contexto de stack, comandos e orientações por ferramenta. A fonte de verdade dos fluxos procedurais permanece em `.agents/skills/`.
+
 ## Referências
 
 Cada skill lista suas próprias referências em `references/` com gatilhos de carregamento no respectivo `SKILL.md`. Não duplicar a listagem aqui — consultar o SKILL.md da skill ativa para saber quais referências carregar e em que condição.

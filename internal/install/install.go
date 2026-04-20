@@ -355,6 +355,8 @@ func (s *Service) installGemini(sourceDir, projectDir string, dryRun bool) error
 		s.printer.DryRun("mkdir -p %s", cmdDir)
 		s.printer.DryRun("gerar .gemini/commands/*.toml via adaptadores")
 		s.printer.DryRun("copiar .gemini/hooks/validate-preload.sh")
+		s.printer.DryRun("copiar .gemini/hooks/validate-governance.sh")
+		s.printer.DryRun("copiar GEMINI.md")
 		return nil
 	}
 
@@ -363,9 +365,9 @@ func (s *Service) installGemini(sourceDir, projectDir string, dryRun bool) error
 	}
 	s.adapters.GenerateGemini(sourceDir, projectDir)
 
+	hookDir := filepath.Join(projectDir, ".gemini", "hooks")
 	geminiPreload := filepath.Join(sourceDir, ".gemini", "hooks", "validate-preload.sh")
 	if s.fs.Exists(geminiPreload) {
-		hookDir := filepath.Join(projectDir, ".gemini", "hooks")
 		if err := s.fs.MkdirAll(hookDir); err != nil {
 			return err
 		}
@@ -373,6 +375,24 @@ func (s *Service) installGemini(sourceDir, projectDir string, dryRun bool) error
 			return err
 		}
 	}
+
+	geminiGovernance := filepath.Join(sourceDir, ".gemini", "hooks", "validate-governance.sh")
+	if s.fs.Exists(geminiGovernance) {
+		if err := s.fs.MkdirAll(hookDir); err != nil {
+			return err
+		}
+		if err := s.fs.CopyFile(geminiGovernance, filepath.Join(hookDir, "validate-governance.sh")); err != nil {
+			return err
+		}
+	}
+
+	geminiMD := filepath.Join(sourceDir, "GEMINI.md")
+	if s.fs.Exists(geminiMD) {
+		if err := s.fs.CopyFile(geminiMD, filepath.Join(projectDir, "GEMINI.md")); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

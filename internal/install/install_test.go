@@ -310,6 +310,7 @@ func TestInstall_Gemini_CopiesHook(t *testing.T) {
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
 	ffs.Files["/source/.gemini/hooks/validate-preload.sh"] = []byte("#!/usr/bin/env bash\n# gemini hook")
+	ffs.Files["/source/.gemini/hooks/validate-governance.sh"] = []byte("#!/usr/bin/env bash\n# gemini governance hook")
 
 	svc := setupTestService(ffs)
 
@@ -325,6 +326,85 @@ func TestInstall_Gemini_CopiesHook(t *testing.T) {
 
 	if !ffs.Exists("/project/.gemini/hooks/validate-preload.sh") {
 		t.Error("gemini hook validate-preload.sh nao copiado")
+	}
+	if !ffs.Exists("/project/.gemini/hooks/validate-governance.sh") {
+		t.Error("gemini hook validate-governance.sh nao copiado")
+	}
+}
+
+func TestInstall_Gemini_GovernanceHookAbsent_NoError(t *testing.T) {
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	ffs.Files["/source/.gemini/hooks/validate-preload.sh"] = []byte("#!/usr/bin/env bash\n# gemini hook")
+	// validate-governance.sh ausente na fonte
+
+	svc := setupTestService(ffs)
+
+	err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolGemini},
+		LinkMode:   skills.LinkCopy,
+	})
+	if err != nil {
+		t.Fatalf("erro inesperado quando validate-governance.sh ausente da fonte: %v", err)
+	}
+
+	if ffs.Exists("/project/.gemini/hooks/validate-governance.sh") {
+		t.Error("validate-governance.sh nao deveria ser criado quando ausente da fonte")
+	}
+}
+
+func TestInstall_Gemini_CopiesGEMINIMD(t *testing.T) {
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	ffs.Files["/source/GEMINI.md"] = []byte("# Gemini CLI\nUse `AGENTS.md` como fonte canonica.")
+
+	svc := setupTestService(ffs)
+
+	err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolGemini},
+		LinkMode:   skills.LinkCopy,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !ffs.Exists("/project/GEMINI.md") {
+		t.Error("GEMINI.md nao copiado para o projeto")
+	}
+	data, err := ffs.ReadFile("/project/GEMINI.md")
+	if err != nil {
+		t.Fatalf("nao foi possivel ler GEMINI.md: %v", err)
+	}
+	if string(data) != "# Gemini CLI\nUse `AGENTS.md` como fonte canonica." {
+		t.Errorf("conteudo de GEMINI.md incorreto: %q", string(data))
+	}
+}
+
+func TestInstall_Gemini_NoGEMINIMDInSource_NoError(t *testing.T) {
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+
+	svc := setupTestService(ffs)
+
+	err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolGemini},
+		LinkMode:   skills.LinkCopy,
+	})
+	if err != nil {
+		t.Fatalf("erro inesperado quando GEMINI.md ausente da fonte: %v", err)
+	}
+
+	if ffs.Exists("/project/GEMINI.md") {
+		t.Error("GEMINI.md nao deveria ser criado quando ausente da fonte")
 	}
 }
 

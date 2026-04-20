@@ -23,8 +23,8 @@ description: Cria tarefas incrementais de implementação a partir de um PRD e d
 1. Ler `assets/tasks-template.md` e `assets/task-template.md` antes de redigir.
 2. Produzir uma lista de alto nível com no máximo 10 tarefas.
 3. Para cada tarefa, incluir objetivo, entregável e dependências.
-4. Parar e aguardar aprovação antes de gerar os arquivos finais.
-5. Se a aprovação não estiver disponível na sessão atual, retornar `needs_input` e não escrever os arquivos de tarefa.
+4. Parar e aguardar aprovação antes de gerar os arquivos finais — **exceto** quando o usuário incluir aprovação explícita no próprio pedido (ex: "pode prosseguir", "aprovado", "gere as tasks") ou quando o contexto for dogfooding/pipeline automatizado. Nesses casos, prosseguir diretamente para a Etapa 4.
+5. Se a aprovação não estiver disponível na sessão atual e não houver aprovação implícita no contexto, retornar `needs_input` e não escrever os arquivos de tarefa.
 
 **Etapa 4: Gerar os artefatos detalhados de tarefa**
 1. Após a aprovação, criar `tasks/prd-<feature-slug>/tasks.md` a partir de `assets/tasks-template.md`.

@@ -12,6 +12,9 @@ type Frontmatter struct {
 	Name        string
 	Version     string
 	Description string
+	Triggers    []string
+	Lang        string
+	LinkMode    string
 	DependsOn   []string
 	MaxDepth    int
 }
@@ -42,6 +45,15 @@ func ParseFrontmatter(content []byte) Frontmatter {
 		}
 		if strings.HasPrefix(line, "description:") {
 			fm.Description = strings.TrimSpace(strings.TrimPrefix(line, "description:"))
+		}
+		if strings.HasPrefix(line, "triggers:") {
+			fm.Triggers = parseDependsOn(strings.TrimSpace(strings.TrimPrefix(line, "triggers:")))
+		}
+		if strings.HasPrefix(line, "lang:") {
+			fm.Lang = strings.TrimSpace(strings.TrimPrefix(line, "lang:"))
+		}
+		if strings.HasPrefix(line, "link_mode:") {
+			fm.LinkMode = strings.TrimSpace(strings.TrimPrefix(line, "link_mode:"))
 		}
 		if strings.HasPrefix(line, "depends_on:") {
 			fm.DependsOn = parseDependsOn(strings.TrimSpace(strings.TrimPrefix(line, "depends_on:")))

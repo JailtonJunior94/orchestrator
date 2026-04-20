@@ -2,6 +2,7 @@ package aispecharness
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/telemetry"
@@ -50,10 +51,52 @@ var telemetrySummaryCmd = &cobra.Command{
 	},
 }
 
+var (
+	reportSince  string
+	reportFormat string
+)
+
+var telemetryReportCmd = &cobra.Command{
+	Use:   "report",
+	Short: "Exibe relatório acionável de telemetria com métricas e alertas",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		var since time.Duration
+		if reportSince != "" {
+			d, err := time.ParseDuration(reportSince)
+			if err != nil {
+				return fmt.Errorf("duração inválida %q: %w", reportSince, err)
+			}
+			since = d
+		}
+
+		data, err := telemetry.Report(".", since)
+		if err != nil {
+			return err
+		}
+
+		switch reportFormat {
+		case "json":
+			b, err := telemetry.FormatJSON(data)
+			if err != nil {
+				return err
+			}
+			_, err = fmt.Fprintf(os.Stdout, "%s\n", b)
+			return err
+		default:
+			fmt.Print(telemetry.FormatText(data))
+			return nil
+		}
+	},
+}
+
 func init() {
 	telemetrySummaryCmd.Flags().StringVar(&telemetrySince, "since", "", "Filtrar por periodo (ex: 1h, 24h, 168h)")
 
+	telemetryReportCmd.Flags().StringVar(&reportSince, "since", "", "Filtrar por período (ex: 24h, 168h)")
+	telemetryReportCmd.Flags().StringVar(&reportFormat, "format", "text", "Formato de saída: text ou json")
+
 	telemetryCmd.AddCommand(telemetryLogCmd)
 	telemetryCmd.AddCommand(telemetrySummaryCmd)
+	telemetryCmd.AddCommand(telemetryReportCmd)
 	rootCmd.AddCommand(telemetryCmd)
 }

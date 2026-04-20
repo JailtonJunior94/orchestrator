@@ -198,6 +198,13 @@ func checkSkillFrontmatters(projectDir string) []LintError {
 				File:    skillFile,
 				Message: fmt.Sprintf("frontmatter invalido: %s", err),
 			})
+			continue
+		}
+		if err := skills.ValidateFrontmatterSchema(data, e.Name()); err != nil {
+			errs = append(errs, LintError{
+				File:    skillFile,
+				Message: fmt.Sprintf("schema invalido: %s", err),
+			})
 		}
 	}
 	return errs

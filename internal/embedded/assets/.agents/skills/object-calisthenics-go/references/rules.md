@@ -41,6 +41,8 @@ Evitar:
 - wrappers vazios sem comportamento
 - tipos so para satisfazer a regra sem ganho semantico
 
+Definicao canonica de Value Objects e criterios cross-linguagem: `agent-governance/references/shared-patterns.md` secao "Value Objects". Criterios de dominio (invariantes, transicoes de estado): `agent-governance/references/ddd.md` secao "Value Objects".
+
 ## 4. Colecoes de primeira classe
 
 Aplicar quando slices ou maps carregarem regras, filtros, ordenacao, agregacao ou validacao recorrente.

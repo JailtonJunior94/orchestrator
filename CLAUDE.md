@@ -57,6 +57,8 @@ internal/embedded/     # assets embarcados (go:embed) - baseline de governanca
 - **test.yml:** unit + integration + golangci-lint em ubuntu-24.04 e macos-15
 - **release.yml:** semver-next automatico, GoReleaser multi-plataforma
 - **release-dry-run.yml:** validacao de release sem side-effects
+- **Cobertura:** threshold minimo de 70% enforced no CI (cobertura atual: ~75.5%)
+  - Gerar relatorio local: `make coverage`
 
 ## Padroes importantes
 
@@ -65,3 +67,16 @@ internal/embedded/     # assets embarcados (go:embed) - baseline de governanca
 - Build tag `integration` para testes que tocam o filesystem real
 - Skills externas rastreadas em `skills-lock.json` com hash SHA-256
 - Harness auto-instalado neste repo (self-dogfooding)
+- Telemetria: ativar com `GOVERNANCE_TELEMETRY=1`; consultar ciclo completo em [`docs/telemetry-feedback-cycle.md`](docs/telemetry-feedback-cycle.md); gerar relatorio com `ai-spec-harness telemetry report`
+
+## Decisoes Arquiteturais
+
+ADRs documentam decisoes significativas que nao sao obvias no codigo. Consultar antes de propor mudancas estruturais.
+
+- [`tasks/adr/001-go-embed-baseline.md`](tasks/adr/001-go-embed-baseline.md) — Por que assets de governanca sao embarcados no binario via `go:embed`
+- [`tasks/adr/002-fake-filesystem-testes.md`](tasks/adr/002-fake-filesystem-testes.md) — Por que usar FakeFileSystem customizado em vez de afero ou mocks gerados
+- [`tasks/adr/003-paridade-semantica.md`](tasks/adr/003-paridade-semantica.md) — Por que verificar paridade por invariantes semanticas e nao por diff textual
+- [`tasks/adr/004-lazy-loading-referencias.md`](tasks/adr/004-lazy-loading-referencias.md) — Por que referencias de skills sao carregadas sob demanda
+- [`tasks/adr/005-skills-lock-sha256.md`](tasks/adr/005-skills-lock-sha256.md) — Por que skills externas usam lock file com SHA-256
+
+Template para novas ADRs: [`tasks/adr/000-template.md`](tasks/adr/000-template.md)

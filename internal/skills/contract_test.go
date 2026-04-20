@@ -106,3 +106,30 @@ func TestInstalledSkills_ValidFrontmatter(t *testing.T) {
 		})
 	}
 }
+
+func TestEmbeddedSkills_ValidSchema(t *testing.T) {
+	root := repoRoot(t)
+	embeddedDir := filepath.Join(root, "internal", "embedded", "assets", ".agents", "skills")
+
+	entries, err := os.ReadDir(embeddedDir)
+	if err != nil {
+		t.Fatalf("ler diretorio de skills embarcadas: %v", err)
+	}
+
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		skillName := e.Name()
+		t.Run(skillName, func(t *testing.T) {
+			skillMD := filepath.Join(embeddedDir, skillName, "SKILL.md")
+			data, err := os.ReadFile(skillMD)
+			if err != nil {
+				t.Fatalf("SKILL.md nao encontrado: %v", err)
+			}
+			if err := ValidateFrontmatterSchema(data, skillName); err != nil {
+				t.Errorf("skill embarcada %q falhou no JSON Schema: %v", skillName, err)
+			}
+		})
+	}
+}

@@ -13,6 +13,7 @@ Thumbs.db
 
 # Test
 coverage.out
+coverage.html
 
 # Tasks
 tasks/

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "skill-frontmatter.schema.json",
+  "title": "SKILL.md Frontmatter",
+  "description": "Schema de validacao para o bloco frontmatter de arquivos SKILL.md.",
+  "type": "object",
+  "required": ["name", "version", "description"],
+  "properties": {
+    "name": {
+      "$comment": "Nome da skill, deve coincidir com o nome do diretorio da skill.",
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "$comment": "Versao semantica da skill no formato X.Y.Z ou vX.Y.Z (pre-release permitido).",
+      "type": "string",
+      "pattern": "^v?\\d+\\.\\d+\\.\\d+(-[\\w.]+)?$"
+    },
+    "description": {
+      "$comment": "Descricao funcional da skill e seus gatilhos de uso. Deve ser legivel por humanos e por agentes de IA.",
+      "type": "string",
+      "minLength": 1
+    },
+    "triggers": {
+      "$comment": "Palavras-chave ou padroes que acionam esta skill automaticamente em agentes compatıveis.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "minItems": 1
+    },
+    "lang": {
+      "$comment": "Linguagem de programacao alvo da skill. Restringe a skill a projetos dessa linguagem.",
+      "type": "string",
+      "enum": ["go", "node", "python"]
+    },
+    "link_mode": {
+      "$comment": "Modo de instalacao da skill no projeto alvo. 'symlink' cria link simbolico; 'copy' copia o diretorio.",
+      "type": "string",
+      "enum": ["symlink", "copy"]
+    },
+    "depends_on": {
+      "$comment": "Lista de nomes de skills que devem estar instaladas antes desta para garantir execucao correta.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "max_depth": {
+      "$comment": "Profundidade maxima de invocacao recursiva permitida para esta skill. Zero significa sem limite explicito.",
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

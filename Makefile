@@ -1,4 +1,4 @@
-.PHONY: build test integration lint vet clean
+.PHONY: build test integration lint vet clean coverage fuzz
 
 BINARY := ai-spec
 GOFLAGS := -trimpath
@@ -10,7 +10,7 @@ test:
 	go test ./...
 
 integration:
-	go test -tags=integration ./internal/integration/...
+	go test -tags=integration ./internal/integration/... ./internal/skills/...
 
 lint:
 	golangci-lint run ./...
@@ -25,3 +25,10 @@ clean:
 coverage:
 	go test -coverprofile=coverage.out ./...
 	go tool cover -func=coverage.out
+
+fuzz:
+	go test -fuzz=FuzzParseFrontmatter -fuzztime=30s ./internal/skills/
+	go test -fuzz=FuzzValidateFrontmatter -fuzztime=30s ./internal/skills/
+	go test -fuzz=FuzzParseTaskFile -fuzztime=30s ./internal/taskloop/
+	go test -fuzz=FuzzReadTaskFileStatus -fuzztime=30s ./internal/taskloop/
+	go test -fuzz=FuzzValidateBugReport -fuzztime=30s ./internal/bugschema/

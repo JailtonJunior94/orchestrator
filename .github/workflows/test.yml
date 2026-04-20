@@ -20,10 +20,22 @@ jobs:
           go-version-file: go.mod
 
       - name: Unit tests
-        run: go test ./...
+        run: go test -coverprofile=coverage.out ./...
+
+      - name: Coverage report
+        run: go tool cover -func=coverage.out
+
+      - name: Coverage threshold
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep '^total:' | awk '{print $3}' | tr -d '%')
+          echo "Cobertura total: ${COVERAGE}%"
+          if [ "$(echo "$COVERAGE < 70" | bc -l)" = "1" ]; then
+            echo "Cobertura ${COVERAGE}% abaixo do threshold minimo de 70%"
+            exit 1
+          fi
 
       - name: Integration tests
-        run: go test -tags=integration ./internal/integration/...
+        run: go test -tags=integration ./internal/integration/... ./internal/skills/...
 
       - name: Vet
         run: go vet ./...
@@ -32,3 +44,10 @@ jobs:
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
+
+      - name: Fuzz (opcional)
+        continue-on-error: true
+        run: |
+          go test -fuzz=FuzzParseFrontmatter -fuzztime=10s ./internal/skills/
+          go test -fuzz=FuzzParseTaskFile -fuzztime=10s ./internal/taskloop/
+          go test -fuzz=FuzzValidateBugReport -fuzztime=10s ./internal/bugschema/

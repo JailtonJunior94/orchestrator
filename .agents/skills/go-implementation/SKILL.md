@@ -24,7 +24,7 @@ description: Implementa alteracoes em codigo Go usando governanca base, arquitet
 - Usar tipos customizados (`type ValidationError struct{...}`) quando o chamador precisar extrair dados com `errors.As`.
 - Formatar com `gofmt`. Usar `go test ./...` como gate minimo.
 
-**Patterns frequentes (inline — evitar carregar patterns.md para estes)**
+**Patterns frequentes (inline — evitar carregar patterns.md para estes; principios cross-linguagem em `agent-governance/references/shared-patterns.md`)**
 - **Factory Function:** Usar `New*(deps...) (*T, error)` quando construcao exigir validacao de invariantes ou dependencias obrigatorias. Retornar `(T, error)` ou `*T`. Nao usar factory abstrata para um unico tipo concreto.
 - **Functional Options:** Usar `func With*(v) Option` quando o objeto tiver muitos campos opcionais. Preferir sobre builder fluente: `func NewServer(addr string, opts ...ServerOption) *Server`. Cada option e uma `func(*T)` que modifica o alvo.
 - **Adapter:** Usar struct que implementa interface do consumidor e delega para tipo externo quando integrar dependencia incompativel. Repository concreto e o exemplo mais comum.
