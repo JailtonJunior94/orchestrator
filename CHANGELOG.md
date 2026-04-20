@@ -2,6 +2,15 @@
 
 ## 0.10.0 (2026-04-20)
 
+### Features
+- **cli:** adicionar skills check, telemetria trend e lint strict — v0.10.0 (3ef9792)
+
+### Documentation
+- **readme:** documentar todas as opcoes de correcao do Gatekeeper do macOS (30a3785)
+- **readme:** documentar workaround do Gatekeeper do macOS para binario nao assinado (b9d1823)
+
+## 0.10.0 (2026-04-20)
+
 ### Added
 
 - **skills check:** novo comando para verificar versões de skills externas contra `skills-lock.json`; detecta upgrades compatíveis (minor/patch) e potenciais quebras de interface (major bump) (`cmd/ai_spec_harness/skills.go`, `internal/skillscheck/`)
