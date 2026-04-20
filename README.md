@@ -56,8 +56,7 @@ O caminho principal para uso local e instalar o binario de release via Homebrew.
 ### macOS com Homebrew
 
 ```bash
-brew tap JailtonJunior94/homebrew-tap
-brew install --cask ai-spec
+brew install jailtonjunior94/tap/ai-spec
 ai-spec version
 ```
 
