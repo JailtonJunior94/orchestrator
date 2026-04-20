@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
+	"time"
 )
 
 // AgentInvoker abstrai a invocacao de um agente de IA via CLI.
@@ -88,6 +90,18 @@ func runCmd(ctx context.Context, workDir string, name string, args ...string) (s
 	cmd.Dir = workDir
 	cmd.Env = cleanEnv()
 
+	// Cria novo grupo de processos para que filhos do agente sejam incluidos no kill.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+	// Ao cancelar o contexto, mata o grupo inteiro em vez de apenas o processo pai.
+	// Isso fecha os pipes e desbloqueia cmd.Wait() mesmo com filhos orfaos.
+	cmd.Cancel = func() error {
+		return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}
+
+	// Fallback: forca drenagem dos pipes se ainda abertos 10s apos o SIGKILL.
+	cmd.WaitDelay = 10 * time.Second
+
 	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stdout = &stdoutBuf
 	cmd.Stderr = &stderrBuf
@@ -121,7 +135,7 @@ type codexInvoker struct{}
 func (c *codexInvoker) BinaryName() string { return "codex" }
 
 func (c *codexInvoker) Invoke(ctx context.Context, prompt, workDir string) (string, string, int, error) {
-	return runCmd(ctx, workDir, "codex", "exec", "--dangerously-bypass-approvals-and-sandbox", prompt)
+	return runCmd(ctx, workDir, "codex", "--yolo", "-p", prompt)
 }
 
 // --- Gemini ---
