@@ -52,7 +52,7 @@ changelog:
       - "^test:"
       - "^chore:"
 
-homebrew_casks:
+brews:
   - name: ai-spec
     ids:
       - ai-spec-archive
@@ -60,9 +60,12 @@ homebrew_casks:
       owner: JailtonJunior94
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-    directory: Casks
+    directory: Formula
     homepage: "https://github.com/JailtonJunior94/orchestrator"
     description: "CLI para governanca de IA em projetos de software"
+    license: "MIT"
+    install: |
+      bin.install "ai-spec"
 
 release:
   github:
