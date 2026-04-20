@@ -66,6 +66,7 @@ Cada ferramenta suportada tem um arquivo de governança dedicado na raiz do repo
 - `CLAUDE.md` — instruções específicas para Claude Code (hooks, rules, agents)
 - `GEMINI.md` — instruções específicas para Gemini CLI (commands, orientações procedurais)
 - `CODEX.md` — instruções específicas para Codex (config.toml, instrução de sessão)
+- `COPILOT.md` — instruções específicas para GitHub Copilot (Chat e gh copilot CLI); contexto automático via `.github/copilot-instructions.md`
 
 Esses arquivos são suplementares a este `AGENTS.md` e fornecem contexto de stack, comandos e orientações por ferramenta. A fonte de verdade dos fluxos procedurais permanece em `.agents/skills/`.
 
@@ -76,6 +77,15 @@ Cada skill lista suas próprias referências em `references/` com gatilhos de ca
 ## Validação
 
 Antes de concluir uma alteração, seguir Etapa 4 de `.agents/skills/agent-governance/SKILL.md`.
+
+## Upgrades de Skills Externas
+
+Toda atualização de hash em `skills-lock.json` deve ser acompanhada de um registro
+de decisão salvo em `audit/`. Use o template em `tasks/templates/skill-upgrade-decision.md`.
+
+Campos obrigatórios: skill, versão anterior, versão nova, motivador, critério de aceitação, data.
+
+Sem registro de motivador: upgrade não aprovado para merge.
 
 ## Restrições
 

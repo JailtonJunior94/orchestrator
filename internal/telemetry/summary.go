@@ -1,7 +1,6 @@
 package telemetry
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,55 +18,28 @@ const tokensPerRefLoad = 570
 // conta por skill e por ref, exibe custo estimado em tres eixos e retorna string formatada.
 func Summary(rootDir string, since time.Duration) (string, error) {
 	logPath := filepath.Join(rootDir, ".agents", "telemetry.log")
-	f, err := os.Open(logPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return "Sem dados de telemetria.", nil
-		}
-		return "", fmt.Errorf("abrir log de telemetria: %w", err)
+	if _, statErr := os.Stat(logPath); os.IsNotExist(statErr) {
+		return "Sem dados de telemetria.", nil
 	}
-	defer f.Close()
 
-	var cutoff time.Time
-	if since > 0 {
-		cutoff = time.Now().UTC().Add(-since)
+	entries, err := parseLogEntries(logPath, since)
+	if err != nil {
+		return "", err
 	}
 
 	skillCounts := make(map[string]int)
 	refCounts := make(map[string]int)
-	totalLines := 0
 
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.Fields(line)
-		if len(parts) < 2 {
-			continue
+	for _, e := range entries {
+		if e.Skill != "" {
+			skillCounts[e.Skill]++
 		}
-
-		ts, err := time.Parse(time.RFC3339, parts[0])
-		if err != nil {
-			continue
-		}
-		if !cutoff.IsZero() && ts.Before(cutoff) {
-			continue
-		}
-
-		totalLines++
-		for _, part := range parts[1:] {
-			if strings.HasPrefix(part, "skill=") {
-				skill := strings.TrimPrefix(part, "skill=")
-				skillCounts[skill]++
-			} else if strings.HasPrefix(part, "ref=") {
-				ref := strings.TrimPrefix(part, "ref=")
-				refCounts[ref]++
-			}
+		if e.Ref != "" {
+			refCounts[e.Ref]++
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("ler log de telemetria: %w", err)
-	}
+	totalLines := len(entries)
 
 	if totalLines == 0 {
 		return "Sem dados de telemetria no periodo especificado.", nil

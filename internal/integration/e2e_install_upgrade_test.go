@@ -5,6 +5,7 @@ package integration
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -15,13 +16,14 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
 
-// setupSourceDirMultiTool estende setupSourceDir com artefatos Gemini
+// setupSourceDirMultiTool estende setupSourceDir com artefatos Gemini e Codex
 // para testes que exigem instalacao de multiplas ferramentas.
 func setupSourceDirMultiTool(t *testing.T, dir string) {
 	t.Helper()
 	setupSourceDir(t, dir)
 	mustWriteFile(t, filepath.Join(dir, "GEMINI.md"), "# Gemini CLI\n")
-	mustWriteExecFile(t, filepath.Join(dir, ".gemini/hooks/validate-preload.sh"), "#!/usr/bin/env bash\nexit 0\n")
+	mustWriteExecFile(t, filepath.Join(dir, ".gemini/hooks/validate-preload.sh"), "#!/usr/bin/env bash\nif [[ \"${GOVERNANCE_PRELOAD_CONFIRMED:-}\" != \"1\" ]]; then exit 1; fi\n")
+	mustWriteExecFile(t, filepath.Join(dir, ".codex/hooks/validate-preload.sh"), "#!/usr/bin/env bash\nif [[ \"${GOVERNANCE_PRELOAD_CONFIRMED:-}\" != \"1\" ]]; then exit 1; fi\n")
 }
 
 // readManifest e um helper que le e desserializa o manifesto do projeto.
@@ -79,6 +81,67 @@ func TestE2E14_Install_AllTools_AllArtifactsPresent(t *testing.T) {
 		if _, err := os.Stat(f); err != nil {
 			t.Errorf("esperado arquivo %s existir apos install: %v", f, err)
 		}
+	}
+}
+
+// TestE2E_InstallHooks_GeminiAndCodexHooksInstalledAndBlocking verifica que os hooks
+// de preload do Gemini e do Codex sao instalados e bloqueiam execucao sem a variavel.
+func TestE2E_InstallHooks_GeminiAndCodexHooksInstalledAndBlocking(t *testing.T) {
+	sourceDir := t.TempDir()
+	projectDir := t.TempDir()
+	setupSourceDirMultiTool(t, sourceDir)
+
+	fsys := fs.NewOSFileSystem()
+	err := newInstallSvc(fsys).Execute(config.InstallOptions{
+		ProjectDir: projectDir,
+		SourceDir:  sourceDir,
+		Tools:      []skills.Tool{skills.ToolGemini, skills.ToolCodex},
+		LinkMode:   skills.LinkCopy,
+	})
+	if err != nil {
+		t.Fatalf("install com Gemini e Codex: %v", err)
+	}
+
+	geminiHook := filepath.Join(projectDir, ".gemini", "hooks", "validate-preload.sh")
+	codexHook := filepath.Join(projectDir, ".codex", "hooks", "validate-preload.sh")
+
+	for _, hookPath := range []string{geminiHook, codexHook} {
+		info, err := os.Stat(hookPath)
+		if err != nil {
+			t.Errorf("hook nao instalado: %s: %v", hookPath, err)
+			continue
+		}
+		if info.Mode()&0o100 == 0 {
+			t.Errorf("hook deve ser executavel: %s (mode: %o)", hookPath, info.Mode())
+		}
+	}
+
+	// Verificar que o hook Gemini retorna exit 1 sem GOVERNANCE_PRELOAD_CONFIRMED
+	cmd := exec.Command("bash", geminiHook)
+	cmd.Env = []string{}
+	if err := cmd.Run(); err == nil {
+		t.Error("hook Gemini deveria retornar exit 1 sem GOVERNANCE_PRELOAD_CONFIRMED")
+	}
+
+	// Verificar que o hook Gemini retorna exit 0 com GOVERNANCE_PRELOAD_CONFIRMED=1
+	cmd = exec.Command("bash", geminiHook)
+	cmd.Env = []string{"GOVERNANCE_PRELOAD_CONFIRMED=1"}
+	if err := cmd.Run(); err != nil {
+		t.Errorf("hook Gemini deveria retornar exit 0 com GOVERNANCE_PRELOAD_CONFIRMED=1: %v", err)
+	}
+
+	// Verificar que o hook Codex retorna exit 1 sem GOVERNANCE_PRELOAD_CONFIRMED
+	cmd = exec.Command("bash", codexHook)
+	cmd.Env = []string{}
+	if err := cmd.Run(); err == nil {
+		t.Error("hook Codex deveria retornar exit 1 sem GOVERNANCE_PRELOAD_CONFIRMED")
+	}
+
+	// Verificar que o hook Codex retorna exit 0 com GOVERNANCE_PRELOAD_CONFIRMED=1
+	cmd = exec.Command("bash", codexHook)
+	cmd.Env = []string{"GOVERNANCE_PRELOAD_CONFIRMED=1"}
+	if err := cmd.Run(); err != nil {
+		t.Errorf("hook Codex deveria retornar exit 0 com GOVERNANCE_PRELOAD_CONFIRMED=1: %v", err)
 	}
 }
 

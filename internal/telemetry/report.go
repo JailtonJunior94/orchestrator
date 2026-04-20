@@ -1,10 +1,8 @@
 package telemetry
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -41,18 +39,9 @@ type RefMetric struct {
 // Linhas malformadas são ignoradas sem erro. Log ausente retorna ReportData zero-value com err=nil.
 func Report(rootDir string, since time.Duration) (ReportData, error) {
 	logPath := filepath.Join(rootDir, ".agents", "telemetry.log")
-	f, err := os.Open(logPath)
+	entries, err := parseLogEntries(logPath, since)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return ReportData{}, nil
-		}
-		return ReportData{}, fmt.Errorf("abrir log de telemetria: %w", err)
-	}
-	defer f.Close()
-
-	var cutoff time.Time
-	if since > 0 {
-		cutoff = time.Now().UTC().Add(-since)
+		return ReportData{}, err
 	}
 
 	skillCounts := make(map[string]int)
@@ -61,45 +50,18 @@ func Report(rootDir string, since time.Duration) (ReportData, error) {
 	skillRefs := make(map[string]bool)
 	totalRefLoads := 0
 
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.Fields(line)
-		if len(parts) < 2 {
+	for _, e := range entries {
+		if e.Skill == "" {
 			continue
 		}
-		ts, err := time.Parse(time.RFC3339, parts[0])
-		if err != nil {
-			continue
-		}
-		if !cutoff.IsZero() && ts.Before(cutoff) {
-			continue
-		}
-
-		var skill, ref string
-		for _, part := range parts[1:] {
-			switch {
-			case strings.HasPrefix(part, "skill="):
-				skill = strings.TrimPrefix(part, "skill=")
-			case strings.HasPrefix(part, "ref="):
-				ref = strings.TrimPrefix(part, "ref=")
-			}
-		}
-		if skill == "" {
-			continue
-		}
-
-		skillCounts[skill]++
-		if ref != "" {
-			refCounts[ref]++
+		skillCounts[e.Skill]++
+		if e.Ref != "" {
+			refCounts[e.Ref]++
 			totalRefLoads++
-			skillRefs[skill] = true
-		} else if _, seen := skillRefs[skill]; !seen {
-			skillRefs[skill] = false
+			skillRefs[e.Skill] = true
+		} else if _, seen := skillRefs[e.Skill]; !seen {
+			skillRefs[e.Skill] = false
 		}
-	}
-	if err := scanner.Err(); err != nil {
-		return ReportData{}, fmt.Errorf("ler log de telemetria: %w", err)
 	}
 
 	total := 0

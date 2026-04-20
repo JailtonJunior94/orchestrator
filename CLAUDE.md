@@ -65,9 +65,10 @@ internal/embedded/     # assets embarcados (go:embed) - baseline de governanca
 - `internal/fs/fake.go` — usar FakeFileSystem em testes unitarios, nunca OS real
 - `internal/output.Printer` — injetar em todo Service, usar `io.Discard` em testes
 - Build tag `integration` para testes que tocam o filesystem real
-- Skills externas rastreadas em `skills-lock.json` com hash SHA-256
+- Skills externas rastreadas em `skills-lock.json` com hash SHA-256; regras de upgrade em `AGENTS.md` seção "Upgrades de Skills Externas"
 - Harness auto-instalado neste repo (self-dogfooding)
 - Telemetria: ativar com `GOVERNANCE_TELEMETRY=1`; consultar ciclo completo em [`docs/telemetry-feedback-cycle.md`](docs/telemetry-feedback-cycle.md); gerar relatorio com `ai-spec-harness telemetry report`
+- Relatorios de auditoria e execution_reports de ciclos completos devem ser salvos em `audit/` e indexados em [`audit/README.md`](audit/README.md)
 
 ## Decisoes Arquiteturais
 

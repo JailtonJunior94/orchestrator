@@ -201,7 +201,7 @@ func (s *Service) installTool(sourceDir, projectDir string, tool skills.Tool, sk
 	case skills.ToolGemini:
 		return s.installGemini(sourceDir, projectDir, dryRun)
 	case skills.ToolCodex:
-		return s.installCodex(projectDir, skillList, codexProfile, dryRun)
+		return s.installCodex(sourceDir, projectDir, skillList, codexProfile, dryRun)
 	case skills.ToolCopilot:
 		return s.installCopilot(sourceDir, projectDir, skillList, mode, dryRun)
 	}
@@ -413,11 +413,12 @@ func filterCodexSkills(skillList []string) []string {
 	return out
 }
 
-func (s *Service) installCodex(projectDir string, skillList []string, codexProfile string, dryRun bool) error {
+func (s *Service) installCodex(sourceDir, projectDir string, skillList []string, codexProfile string, dryRun bool) error {
 	codexDir := filepath.Join(projectDir, ".codex")
 	if dryRun {
 		s.printer.DryRun("mkdir -p %s", codexDir)
 		s.printer.DryRun("gerar .codex/config.toml")
+		s.printer.DryRun("copiar .codex/hooks/validate-preload.sh")
 		return nil
 	}
 
@@ -431,7 +432,22 @@ func (s *Service) installCodex(projectDir string, skillList []string, codexProfi
 	}
 
 	content := s.adapters.BuildCodexConfig(list)
-	return s.fs.WriteFile(filepath.Join(codexDir, "config.toml"), []byte(content))
+	if err := s.fs.WriteFile(filepath.Join(codexDir, "config.toml"), []byte(content)); err != nil {
+		return err
+	}
+
+	hookDir := filepath.Join(projectDir, ".codex", "hooks")
+	codexPreload := filepath.Join(sourceDir, ".codex", "hooks", "validate-preload.sh")
+	if s.fs.Exists(codexPreload) {
+		if err := s.fs.MkdirAll(hookDir); err != nil {
+			return err
+		}
+		if err := s.fs.CopyFile(codexPreload, filepath.Join(hookDir, "validate-preload.sh")); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *Service) installCopilot(sourceDir, projectDir string, skillList []string, mode skills.LinkMode, dryRun bool) error {

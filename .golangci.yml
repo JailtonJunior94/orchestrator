@@ -43,9 +43,11 @@ linters:
         - G304
         # G306: WriteFile com permissões 0o644 — escolha intencional do projeto
         - G306
-        # G602: false positive — parts é [3]int e SplitN retorna no máximo 3 elementos
+        # G602: falso positivo — parts é [3]int e SplitN retorna no máximo 3 elementos;
+        # gosec não rastreia o limite do SplitN combinado com guard explícito i >= 3
         - G602
-        # G703: path traversal via taint — escrita de arquivo por path de parâmetro é padrão em CLI
+        # G703: path traversal via taint — padrão esperado em CLI (changelog.go escreve em path
+        # fornecido pelo usuário) e em testes que escrevem em t.TempDir() via filepath.Join
         - G703
 
 issues:
