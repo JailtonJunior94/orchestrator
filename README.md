@@ -60,6 +60,18 @@ brew install jailtonjunior94/tap/ai-spec
 ai-spec version
 ```
 
+> **Aviso de seguranca do macOS (Gatekeeper)**
+>
+> O macOS pode exibir o alerta _"Apple could not verify 'ai-spec' is free of malware"_ ao executar o binario pela primeira vez. Isso ocorre porque o binario nao esta assinado com um Apple Developer ID.
+>
+> Para liberar o binario manualmente:
+>
+> ```bash
+> xattr -dr com.apple.quarantine $(which ai-spec)
+> ```
+>
+> Versoes futuras instaladas via `brew upgrade ai-spec` executam esse comando automaticamente no `post_install` da Formula, eliminando o alerta.
+
 Se o seu shell nao estiver herdando o `PATH` do Homebrew corretamente, adicione o prefixo do Homebrew ao arquivo de inicializacao e mantenha um alias compativel com o nome do modulo Go:
 
 `~/.zshrc`
