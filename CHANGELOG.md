@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.4 (2026-04-20)
+
+### Bug Fixes
+- **taskloop:** kill process group on cancel and update codex flags (39505f4)
+
+### Documentation
+- **readme:** add execute-task and task-loop usage examples (0bb6688)
+- **readme:** reorganize sections and expand usage guides (9b4016b)
+
 ## 0.10.3 (2026-04-20)
 
 ### Bug Fixes
