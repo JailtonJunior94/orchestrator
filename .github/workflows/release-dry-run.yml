@@ -60,15 +60,23 @@ jobs:
           fi
           echo "OK: no tracked files were modified (dry-run had no side effects)"
 
-      - name: GoReleaser snapshot (no publish)
+      - name: Create temporary local tag for release rehearsal
+        run: |
+          TARGET="${{ steps.semver.outputs.target_version }}"
+          DRY_TAG="v${TARGET}-dryrun.1"
+          git tag -a "${DRY_TAG}" -m "Dry run release ${DRY_TAG}"
+          echo "dry_tag=${DRY_TAG}" >> "$GITHUB_OUTPUT"
+        id: dry_tag
+
+      - name: GoReleaser release rehearsal (no publish)
         uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --snapshot --skip=publish --clean
+          args: release --clean --skip=announce,publish,validate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GORELEASER_CURRENT_TAG: v${{ steps.semver.outputs.target_version }}
+          GORELEASER_CURRENT_TAG: ${{ steps.dry_tag.outputs.dry_tag }}
 
       - name: Publish workflow summary
         run: |
@@ -79,6 +87,7 @@ jobs:
           echo "| Action          | \`${{ steps.semver.outputs.action }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Bump            | \`${{ steps.semver.outputs.bump }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Target version  | \`v${{ steps.semver.outputs.target_version }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Dry-run tag     | \`${{ steps.dry_tag.outputs.dry_tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Last tag        | \`${{ steps.semver.outputs.last_tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Commit range    | \`${{ steps.semver.outputs.commit_range }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| Commit count    | ${{ steps.semver.outputs.commit_count }} |" >> "$GITHUB_STEP_SUMMARY"

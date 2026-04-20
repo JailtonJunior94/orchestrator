@@ -44,7 +44,8 @@ checksum:
 
 changelog:
   sort: asc
-  use: github
+  # Avoid depending on GitHub compare API immediately after pushing a fresh tag.
+  use: git
   filters:
     exclude:
       - "^docs:"
