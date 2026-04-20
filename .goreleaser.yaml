@@ -67,7 +67,9 @@ brews:
     install: |
       bin.install "ai-spec"
     post_install: |
+      system "chmod", "u+w", "#{bin}/ai-spec"
       system "xattr", "-dr", "com.apple.quarantine", "#{bin}/ai-spec"
+      system "chmod", "u-w", "#{bin}/ai-spec"
 
 release:
   github:
