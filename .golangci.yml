@@ -1,0 +1,17 @@
+run:
+  timeout: 3m
+
+linters:
+  enable:
+    - errcheck
+    - staticcheck
+    - gosec
+    - govet
+    - ineffassign
+    - unused
+    - misspell
+
+issues:
+  exclude-dirs:
+    - dist
+    - testdata

@@ -1,0 +1,9 @@
+description = "Gera e atualiza dashboards Grafana para servicos instrumentados com OpenTelemetry."
+prompt = """
+Use `.agents/skills/otel-grafana-dashboards/SKILL.md` como fluxo canonico desta tarefa.
+Leia os assets e references sob demanda conforme descrito no SKILL.md.
+Nao invente um processo paralelo neste comando.
+
+Aplicar a habilidade a esta solicitacao:
+{{args}}
+"""

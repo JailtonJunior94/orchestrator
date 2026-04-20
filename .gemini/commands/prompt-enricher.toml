@@ -1,0 +1,9 @@
+description = "Enriquece e melhora prompts de usuario com contexto, restricoes e criterios de saida para uso com agentes de IA."
+prompt = """
+Use `.agents/skills/prompt-enricher/SKILL.md` como fluxo canonico desta tarefa.
+Leia os assets e references sob demanda conforme descrito no SKILL.md.
+Nao invente um processo paralelo neste comando.
+
+Aplicar a habilidade a esta solicitacao:
+{{args}}
+"""

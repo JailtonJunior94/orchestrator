@@ -1,0 +1,9 @@
+description = "Gera e publica CHANGELOG.md a partir de git log entre dois refs (tags, branches, commits)."
+prompt = """
+Use `.agents/skills/github-diff-changelog-publisher/SKILL.md` como fluxo canonico desta tarefa.
+Leia os assets e references sob demanda conforme descrito no SKILL.md.
+Nao invente um processo paralelo neste comando.
+
+Aplicar a habilidade a esta solicitacao:
+{{args}}
+"""

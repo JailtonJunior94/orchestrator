@@ -1,0 +1,9 @@
+description = "Revisa um diff de código quanto a correção, segurança, regressões e testes faltantes usando regras específicas do "
+prompt = """
+Use `.agents/skills/review/SKILL.md` como fluxo canonico desta tarefa.
+Leia os assets e references sob demanda conforme descrito no SKILL.md.
+Nao invente um processo paralelo neste comando.
+
+Aplicar a habilidade a esta solicitacao:
+{{args}}
+"""

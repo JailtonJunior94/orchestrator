@@ -1,0 +1,9 @@
+description = "Gera colecoes Postman a partir de specs OpenAPI/Swagger, codigo de handler ou documentacao de API."
+prompt = """
+Use `.agents/skills/postman-collection-generator/SKILL.md` como fluxo canonico desta tarefa.
+Leia os assets e references sob demanda conforme descrito no SKILL.md.
+Nao invente um processo paralelo neste comando.
+
+Aplicar a habilidade a esta solicitacao:
+{{args}}
+"""

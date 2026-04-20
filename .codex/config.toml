@@ -1,0 +1,88 @@
+[[skills.config]]
+path = ".agents/skills/create-prd"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/create-technical-specification"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/create-tasks"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/execute-task"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/refactor"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/review"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/analyze-project"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/agent-governance"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/bugfix"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/confluence-changelog-publisher"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/github-diff-changelog-publisher"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/github-pr-comment-triage"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/github-release-publication-flow"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/jira-tasks"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/otel-grafana-dashboards"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/postman-collection-generator"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/prompt-enricher"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/pull-request"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/semantic-commit"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/us-to-prd"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/go-implementation"
+enabled = true
+
+[[skills.config]]
+path = ".agents/skills/object-calisthenics-go"
+enabled = true
+

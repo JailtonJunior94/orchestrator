@@ -1,0 +1,10 @@
+description = "Corrige bugs pela causa raiz com testes de regressao obrigatorios e evidencia de validacao."
+prompt = """
+Use `.agents/skills/bugfix/SKILL.md` como fluxo canonico desta tarefa.
+Carregue `.agents/skills/bugfix/assets/bugfix-report-template.md` antes de iniciar.
+Leia os assets e references sob demanda conforme descrito no SKILL.md.
+Nao invente um processo paralelo neste comando.
+
+Aplicar a habilidade a esta solicitacao:
+{{args}}
+"""

@@ -16,3 +16,6 @@ coverage.out
 
 # Tasks
 tasks/
+
+# Temporary prompt files
+.tmp-*

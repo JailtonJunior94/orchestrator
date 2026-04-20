@@ -49,27 +49,45 @@ Depois da instalacao, o repositorio alvo passa a expor skills e agentes processu
 
 ## Instalacao
 
-Existem dois caminhos praticos:
-
-1. usar um binario de release publicado
-2. instalar via `go install`
-
-Observacao importante:
-
-- os binarios gerados por release se chamam `ai-spec`
-- a instalacao via `go install github.com/JailtonJunior94/ai-spec-harness@latest` gera o executavel `ai-spec-harness`
-
-Se quiser padronizar o nome no seu ambiente, crie um alias ou renomeie o binario localmente.
+O caminho principal para uso local e instalar o binario de release via Homebrew. O executavel publicado por release se chama `ai-spec`.
 
 ### macOS com Homebrew
-
-O release esta configurado para publicacao via Homebrew Cask.
 
 ```bash
 brew tap JailtonJunior94/homebrew-tap
 brew install --cask ai-spec
 ai-spec version
 ```
+
+Se o seu shell nao estiver herdando o `PATH` do Homebrew corretamente, adicione o prefixo do Homebrew ao arquivo de inicializacao e mantenha um alias compativel com o nome do modulo Go:
+
+`~/.zshrc`
+
+```bash
+export PATH="$(brew --prefix)/bin:$PATH"
+alias ai-spec-harness="ai-spec"
+```
+
+`~/.bashrc`
+
+```bash
+export PATH="$(brew --prefix)/bin:$PATH"
+alias ai-spec-harness="ai-spec"
+```
+
+Depois recarregue o shell:
+
+```bash
+source ~/.zshrc
+# ou
+source ~/.bashrc
+```
+
+Observacao importante:
+
+- exemplos de release e do README usam `ai-spec`
+- a instalacao via `go install github.com/JailtonJunior94/ai-spec-harness@latest` gera o executavel `ai-spec-harness`
+- o alias acima evita alternar mentalmente entre os dois nomes
 
 ### macOS com download direto
 
@@ -145,6 +163,20 @@ go install .
 ai-spec-harness version
 ```
 
+Se quiser padronizar a experiencia local com o mesmo nome do binario publicado via release, adicione um alias ao shell:
+
+`~/.zshrc`
+
+```bash
+alias ai-spec="ai-spec-harness"
+```
+
+`~/.bashrc`
+
+```bash
+alias ai-spec="ai-spec-harness"
+```
+
 ### Executar sem instalar
 
 ```bash
@@ -156,7 +188,7 @@ go run . --help
 Exemplo usando este repositorio como fonte de governanca e um servico Go como destino:
 
 ```bash
-ai-spec-harness install ../api-pagamentos \
+ai-spec install ../api-pagamentos \
   --source . \
   --tools claude,gemini,codex,copilot \
   --langs go
@@ -165,9 +197,9 @@ ai-spec-harness install ../api-pagamentos \
 Depois valide o estado da instalacao:
 
 ```bash
-ai-spec-harness inspect ../api-pagamentos
-ai-spec-harness doctor ../api-pagamentos
-ai-spec-harness lint ../api-pagamentos
+ai-spec inspect ../api-pagamentos
+ai-spec doctor ../api-pagamentos
+ai-spec lint ../api-pagamentos
 ```
 
 ## Comandos disponiveis
@@ -183,6 +215,7 @@ ai-spec-harness lint ../api-pagamentos
 | `telemetry` | Registra e resume uso de skills e referencias |
 | `validate` | Valida frontmatter YAML de `SKILL.md` |
 | `validate-bugs` | Valida um array JSON de bugs contra o schema canonico |
+| `task-loop` | Executa todas as tasks elegiveis de um PRD folder via agente de IA |
 | `scaffold` | Cria a estrutura inicial de uma nova skill de linguagem |
 | `uninstall` | Remove artefatos instalados pelo CLI |
 | `completion` | Gera scripts de autocompletion para shell |
@@ -192,425 +225,173 @@ ai-spec-harness lint ../api-pagamentos
 
 ```bash
 # instalar governanca em um projeto
-ai-spec-harness install ../api-pagamentos --source . --tools codex,claude --langs go
+ai-spec install ../api-pagamentos --source . --tools codex,claude --langs go
 
 # inspecionar e diagnosticar
-ai-spec-harness inspect ../api-pagamentos
-ai-spec-harness doctor ../api-pagamentos
+ai-spec inspect ../api-pagamentos
+ai-spec doctor ../api-pagamentos
 
 # verificar governanca gerada
-ai-spec-harness lint ../api-pagamentos
+ai-spec lint ../api-pagamentos
 
 # atualizar instalacao
-ai-spec-harness upgrade ../api-pagamentos --source . --langs go
+ai-spec upgrade ../api-pagamentos --source . --langs go
 
 # apenas checar se existe upgrade pendente
-ai-spec-harness upgrade ../api-pagamentos --source . --check
+ai-spec upgrade ../api-pagamentos --source . --check
 
 # validar todas as skills do repositorio fonte
-ai-spec-harness validate .agents/skills
+ai-spec validate .agents/skills
 
 # validar bugs.json contra bug-schema.json
-ai-spec-harness validate-bugs ./bugs.json
+ai-spec validate-bugs ./bugs.json
 
 # medir custo de contexto em JSON
-ai-spec-harness metrics . --format json
+ai-spec metrics . --format json
 
 # registrar telemetria de skill
-GOVERNANCE_TELEMETRY=1 ai-spec-harness telemetry log create-prd
-ai-spec-harness telemetry summary
+GOVERNANCE_TELEMETRY=1 ai-spec telemetry log create-prd
+ai-spec telemetry summary
 
 # criar scaffold para uma nova linguagem
-ai-spec-harness scaffold rust --root .
+ai-spec scaffold rust --root .
+
+# executar todas as tasks elegiveis de um PRD folder
+ai-spec task-loop --tool codex tasks/prd-payments-list
 
 # remover a instalacao
-ai-spec-harness uninstall ../api-pagamentos --dry-run
+ai-spec uninstall ../api-pagamentos --dry-run
 ```
 
-## Fluxo completo: PRD -> Tech Spec -> Tasks -> Execucao
+## Sessao de uso completa
 
-O `ai-spec-harness` nao gera PRD ou implementa endpoint sozinho. Ele prepara o repositorio alvo para que a ferramenta de IA escolhida execute esses fluxos com skills e adaptadores canonicos.
+O `ai-spec-harness` nao escreve PRD, tech spec ou codigo por conta propria. Ele instala a governanca e os adaptadores para que o agente escolhido execute cada etapa com as skills corretas dentro do repositorio alvo.
 
-### 1. Instale a governanca no projeto alvo
+### 1. Instalar a governanca no projeto alvo
 
 ```bash
-ai-spec-harness install ../api-pagamentos \
+ai-spec install ../api-pagamentos \
   --source . \
   --tools codex,claude,gemini,copilot \
   --langs go
 ```
 
-### 2. Entre no repositorio instrumentado
+### 2. Validar a instalacao
+
+```bash
+ai-spec inspect ../api-pagamentos
+ai-spec doctor ../api-pagamentos
+ai-spec lint ../api-pagamentos
+```
+
+### 3. Fazer upgrade quando houver nova versao de governanca
+
+```bash
+ai-spec upgrade ../api-pagamentos --source . --check
+ai-spec upgrade ../api-pagamentos --source . --langs go
+```
+
+### 4. Entrar no repositorio instrumentado
 
 ```bash
 cd ../api-pagamentos
 ```
 
-### 3. Gere o PRD
+### 5. Criar o PRD
 
-No agente de sua escolha, peca explicitamente o fluxo `create-prd`.
-
-Exemplo de prompt:
+Exemplo de prompt para o agente:
 
 ```text
-Use a skill create-prd para propor um PRD de listagem de pagamentos.
-Objetivo: expor GET /payments com filtros por status, pagina e periodo.
-O resultado deve cobrir problema, objetivos, nao objetivos, regras de negocio,
-contrato de API, criterios de aceite e riscos.
+Use a skill create-prd para criar um PRD de listagem de pagamentos.
+
+Contexto:
+- precisamos expor GET /payments
+- filtros: status, pagina, periodo inicial e final
+- o endpoint deve atender operacao e backoffice
+
+Quero no resultado:
+- problema
+- objetivos e nao objetivos
+- requisitos funcionais e nao funcionais
+- criterios de aceite
+- riscos
 ```
 
-### 4. Gere a especificacao tecnica
+### 6. Criar a tech spec com foco em DDD e arquitetura
+
+Exemplo de prompt para o agente:
 
 ```text
 Use a skill create-technical-specification com base no PRD aprovado.
-Considere um servico Go com arquitetura HTTP -> service -> repository.
-Defina contrato, validacoes, estrategia de paginacao, observabilidade, testes,
-migracoes necessarias e riscos de compatibilidade.
+Carregue tambem as referencias necessarias de DDD e arquitetura.
+
+Contexto tecnico:
+- servico Go existente
+- arquitetura atual: handler -> service -> repository
+- preservar contratos publicos existentes
+
+Quero no resultado:
+- modelagem de dominio
+- agregados, entidades e value objects se fizer sentido
+- fronteiras entre aplicacao, dominio e infraestrutura
+- estrategia de erros
+- estrategia de testes
+- riscos e plano de rollout
 ```
 
-### 5. Gere o bundle de tasks
+### 7. Gerar o bundle de tasks
+
+Exemplo de prompt para o agente:
 
 ```text
-Use a skill create-tasks para decompor a tech spec em tarefas implementaveis.
-Quero tasks pequenas, com evidencias de validacao e ordem de execucao.
+Use a skill create-tasks para decompor a tech spec em tasks pequenas,
+executaveis e com evidencias de validacao.
+
+Quero:
+- ordem de execucao
+- dependencias entre tasks
+- criterio de pronto por task
+- arquivos esperados: tasks.md e uma task por arquivo
 ```
-
-## Exemplo ponta a ponta: feature de listagem de pagamentos em Go
-
-Um caso realista para exercitar o fluxo acima e criar `GET /payments` em um servico Go e mostrar o que cada etapa produz.
-
-### 1. Exemplo de PRD
-
-Saida esperada do fluxo `create-prd`:
-
-```md
-# PRD: Listagem de pagamentos
-
-## Problema
-Times operacionais nao conseguem consultar pagamentos por status e intervalo de datas
-sem acessar diretamente o banco ou usar relatorios manuais.
-
-## Objetivo
-Expor `GET /payments` para listar pagamentos com filtros e paginacao.
-
-## Nao objetivos
-- criar pagamento
-- atualizar pagamento
-- exportar CSV
-
-## Regras de negocio
-- aceitar filtros opcionais por `status`, `from` e `to`
-- pagina padrao `1`
-- `page_size` padrao `20`, maximo `100`
-- retornar itens ordenados do mais recente para o mais antigo
-- responder erro `400` para query params invalidos
-
-## Contrato HTTP
-`GET /payments?status=paid&page=1&page_size=20&from=2026-04-01&to=2026-04-30`
-
-## Criterios de aceite
-- listar pagamentos paginados
-- aplicar filtros informados
-- retornar payload JSON consistente
-- cobrir cenarios invalidos com testes
-```
-
-### 2. Exemplo de tech spec
-
-Saida esperada do fluxo `create-technical-specification`:
-
-```md
-# Tech Spec: GET /payments
-
-## Arquitetura
-Fluxo `handler -> service -> repository`.
-
-## Handler
-- parsear query params
-- validar `page`, `page_size`, `from`, `to`
-- responder `400` em caso de entrada invalida
-
-## Service
-- montar `ListPaymentsInput`
-- delegar busca ao repository
-- garantir ordenacao por `created_at DESC`
-
-## Repository
-- executar consulta paginada
-- aplicar filtros opcionais por status e intervalo de datas
-- retornar lista e total
-
-## Testes
-- teste de handler para request valida
-- teste de handler para `page` invalida
-- teste de handler para `page_size > 100`
-- teste de service para propagacao correta de filtros
-- teste de repository para paginacao e ordenacao
-```
-
-### 3. Exemplo de bundle gerado por `create-tasks`
 
 Estrutura esperada:
 
 ```text
 tasks/
   prd-payments-list/
+    prd.md
+    techspec.md
     tasks.md
     01_task.md
     02_task.md
     03_task.md
-    04_task.md
 ```
 
-Exemplo de `tasks.md`:
+### 8. Executar todas as tasks com o looper do CLI
 
-```md
-# Tasks - payments list
-
-1. Criar contrato HTTP e validacao de query params para `GET /payments`
-2. Implementar service de listagem paginada
-3. Implementar repository com filtros por status e periodo
-4. Adicionar testes de handler e service
-```
-
-Exemplo de `01_task.md`:
-
-```md
-# Task 01 - Handler de listagem de pagamentos
-
-## Objetivo
-Implementar o endpoint `GET /payments` com parse e validacao de query params.
-
-## Escopo
-- criar handler HTTP
-- validar `page`, `page_size`, `from`, `to`
-- retornar `400` para entradas invalidas
-- serializar resposta JSON
-
-## Evidencias
-- teste automatizado para request valida
-- teste automatizado para query param invalido
-```
-
-Exemplo de `02_task.md`:
-
-```md
-# Task 02 - Service de listagem
-
-## Objetivo
-Implementar a camada de service responsavel por orquestrar a consulta paginada.
-
-## Escopo
-- definir `ListPaymentsInput`
-- delegar ao repository
-- manter regras de paginacao e ordenacao
-```
-
-Exemplo de `03_task.md`:
-
-```md
-# Task 03 - Repository de pagamentos
-
-## Objetivo
-Consultar pagamentos com filtros opcionais e totalizacao.
-
-## Escopo
-- aplicar filtro por `status`
-- aplicar intervalo `from` e `to`
-- suportar `limit` e `offset`
-- retornar `items` e `total`
-```
-
-### 4. Exemplo de execucao com `execute-task`
-
-Pedidos tipicos ao agente:
-
-```text
-Use a skill execute-task para implementar a task 01 do bundle tasks/prd-payments-list.
-Rode validacao proporcional e gere um resumo objetivo da alteracao.
-```
-
-```text
-Use a skill execute-task para implementar a task 02 do bundle tasks/prd-payments-list.
-Mantenha a arquitetura handler -> service -> repository e nao quebre endpoints existentes.
-```
-
-```text
-Use a skill execute-task para implementar a task 03 do bundle tasks/prd-payments-list.
-Inclua testes proporcionais para repository e service.
-```
-
-### 5. Resultado esperado apos executar as tasks
-
-#### Contrato HTTP
-
-```http
-GET /payments?status=paid&page=1&page_size=20&from=2026-04-01&to=2026-04-30
-```
-
-#### Exemplo de response
-
-```json
-{
-  "items": [
-    {
-      "id": "pay_123",
-      "amount": 12500,
-      "currency": "BRL",
-      "status": "paid",
-      "created_at": "2026-04-18T15:04:05Z"
-    }
-  ],
-  "page": 1,
-  "page_size": 20,
-  "total": 1
-}
-```
-
-#### Exemplo de implementacao em Go
-
-```go
-package payments
-
-import (
-	"context"
-	"encoding/json"
-	"net/http"
-	"strconv"
-	"time"
-)
-
-type Payment struct {
-	ID        string    `json:"id"`
-	Amount    int64     `json:"amount"`
-	Currency  string    `json:"currency"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-}
-
-type ListPaymentsInput struct {
-	Status   string
-	Page     int
-	PageSize int
-	From     *time.Time
-	To       *time.Time
-}
-
-type ListPaymentsOutput struct {
-	Items    []Payment `json:"items"`
-	Page     int       `json:"page"`
-	PageSize int       `json:"page_size"`
-	Total    int       `json:"total"`
-}
-
-type Repository interface {
-	ListPayments(ctx context.Context, input ListPaymentsInput) ([]Payment, int, error)
-}
-
-type Service struct {
-	Repo Repository
-}
-
-func (s Service) ListPayments(ctx context.Context, input ListPaymentsInput) (ListPaymentsOutput, error) {
-	items, total, err := s.Repo.ListPayments(ctx, input)
-	if err != nil {
-		return ListPaymentsOutput{}, err
-	}
-
-	return ListPaymentsOutput{
-		Items:    items,
-		Page:     input.Page,
-		PageSize: input.PageSize,
-		Total:    total,
-	}, nil
-}
-
-type Handler struct {
-	Service Service
-}
-
-func (h Handler) ListPayments(w http.ResponseWriter, r *http.Request) {
-	input, err := parseListPaymentsInput(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	out, err := h.Service.ListPayments(r.Context(), input)
-	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(out)
-}
-
-func parseListPaymentsInput(r *http.Request) (ListPaymentsInput, error) {
-	q := r.URL.Query()
-
-	page := 1
-	if raw := q.Get("page"); raw != "" {
-		v, err := strconv.Atoi(raw)
-		if err != nil || v < 1 {
-			return ListPaymentsInput{}, errInvalidQuery("page")
-		}
-		page = v
-	}
-
-	pageSize := 20
-	if raw := q.Get("page_size"); raw != "" {
-		v, err := strconv.Atoi(raw)
-		if err != nil || v < 1 || v > 100 {
-			return ListPaymentsInput{}, errInvalidQuery("page_size")
-		}
-		pageSize = v
-	}
-
-	var from *time.Time
-	if raw := q.Get("from"); raw != "" {
-		v, err := time.Parse("2006-01-02", raw)
-		if err != nil {
-			return ListPaymentsInput{}, errInvalidQuery("from")
-		}
-		from = &v
-	}
-
-	var to *time.Time
-	if raw := q.Get("to"); raw != "" {
-		v, err := time.Parse("2006-01-02", raw)
-		if err != nil {
-			return ListPaymentsInput{}, errInvalidQuery("to")
-		}
-		to = &v
-	}
-
-	return ListPaymentsInput{
-		Status:   q.Get("status"),
-		Page:     page,
-		PageSize: pageSize,
-		From:     from,
-		To:       to,
-	}, nil
-}
-
-type queryError struct {
-	Field string
-}
-
-func (e queryError) Error() string {
-	return "invalid query parameter: " + e.Field
-}
-
-func errInvalidQuery(field string) error {
-	return queryError{Field: field}
-}
-```
-
-### 6. Verifique o estado final
+O looper do projeto e o comando `task-loop`. Ele percorre `tasks.md`, identifica a proxima task elegivel e invoca o agente com a skill `execute-task` ate concluir todas as tasks possiveis.
 
 ```bash
-ai-spec-harness lint .
+ai-spec task-loop --tool codex tasks/prd-payments-list
+```
+
+Exemplos uteis:
+
+```bash
+# simular sem invocar o agente
+ai-spec task-loop --tool codex --dry-run tasks/prd-payments-list
+
+# limitar iteracoes para um lote inicial
+ai-spec task-loop --tool codex --max-iterations 3 tasks/prd-payments-list
+
+# aumentar timeout por task e salvar relatorio final em caminho explicito
+ai-spec task-loop --tool codex --timeout 1h --report-path ./task-loop-report.md tasks/prd-payments-list
+```
+
+### 9. Validar o estado final
+
+```bash
+ai-spec lint .
 go test ./...
 ```
 
@@ -621,7 +402,7 @@ go test ./...
 Melhor para desenvolvimento da governanca, porque o projeto alvo passa a refletir alteracoes feitas na fonte.
 
 ```bash
-ai-spec-harness install ../api-pagamentos \
+ai-spec install ../api-pagamentos \
   --source . \
   --tools all \
   --langs all \
@@ -633,7 +414,7 @@ ai-spec-harness install ../api-pagamentos \
 Melhor quando o ambiente nao lida bem com links simbolicos ou quando voce quer snapshot fisico do baseline.
 
 ```bash
-ai-spec-harness install ../api-pagamentos \
+ai-spec install ../api-pagamentos \
   --source . \
   --tools all \
   --langs all \

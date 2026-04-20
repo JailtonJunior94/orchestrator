@@ -1,0 +1,12 @@
+description = "Planeja ou executa refatorações incrementais seguras preservando comportamento e coletando evidências de não regress"
+prompt = """
+Use `.agents/skills/refactor/SKILL.md` como fluxo canonico desta tarefa.
+Carregue `.agents/skills/refactor/assets/refactor-report-template.md` antes de iniciar.
+Leia os assets e references sob demanda conforme descrito no SKILL.md.
+Nao invente um processo paralelo neste comando.
+
+Ao concluir, rode validacao proporcional e retorne o relatorio com estado final.
+
+Aplicar a habilidade a esta solicitacao:
+{{args}}
+"""

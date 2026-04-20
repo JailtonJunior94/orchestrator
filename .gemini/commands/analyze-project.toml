@@ -1,0 +1,11 @@
+description = "Analisa a arquitetura de um projeto (monolito, monolito modular, monorepo, microservico), detecta stack e ferramentas de"
+prompt = """
+Use `.agents/skills/analyze-project/SKILL.md` como fluxo canonico desta tarefa.
+Carregue `.agents/skills/analyze-project/assets/agents-template.md` antes de iniciar.
+Carregue `.agents/skills/analyze-project/assets/ai-tool-template.md` antes de iniciar.
+Leia os assets e references sob demanda conforme descrito no SKILL.md.
+Nao invente um processo paralelo neste comando.
+
+Aplicar a habilidade a esta solicitacao:
+{{args}}
+"""

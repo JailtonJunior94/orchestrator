@@ -1,0 +1,243 @@
+package taskloop
+
+import (
+	"testing"
+)
+
+func TestParseTasksFile(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    int
+		wantErr bool
+	}{
+		{
+			name: "tabela valida com 3 tasks",
+			content: `# Resumo
+
+## Tarefas
+
+| # | Titulo | Status | Dependencias | Paralelizavel |
+|---|--------|--------|-------------|---------------|
+| 1.0 | Setup domain | pending | — | — |
+| 2.0 | Implement ports | pending | 1.0 | Nao |
+| 3.0 | Add adapters | done | 1.0, 2.0 | Nao |
+`,
+			want:    3,
+			wantErr: false,
+		},
+		{
+			name: "tabela com status em portugues",
+			content: `| # | Titulo | Status | Dependencias | Paralelizavel |
+|---|--------|--------|-------------|---------------|
+| 1.0 | Task A | Concluido | — | — |
+| 2.0 | Task B | pendente | 1.0 | — |
+`,
+			want:    2,
+			wantErr: false,
+		},
+		{
+			name:    "sem tabela",
+			content: "# Apenas um titulo\n\nSem tabela aqui.\n",
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "conteudo vazio",
+			content: "",
+			want:    0,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			entries, err := ParseTasksFile([]byte(tt.content))
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("esperava erro, mas nao recebeu")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("erro inesperado: %v", err)
+			}
+			if len(entries) != tt.want {
+				t.Fatalf("esperava %d entries, recebeu %d", tt.want, len(entries))
+			}
+		})
+	}
+}
+
+func TestParseTasksFile_Fields(t *testing.T) {
+	content := `| # | Titulo | Status | Dependencias | Paralelizavel |
+|---|--------|--------|-------------|---------------|
+| 1.0 | Setup domain | pending | — | — |
+| 2.0 | Implement ports | in_progress | 1.0 | Nao |
+| 3.0 | Add adapters | done | 1.0, 2.0 | Com 2.0 |
+`
+	entries, err := ParseTasksFile([]byte(content))
+	if err != nil {
+		t.Fatalf("erro: %v", err)
+	}
+
+	// Task 1
+	if entries[0].ID != "1.0" {
+		t.Errorf("task 1 ID = %q, want 1.0", entries[0].ID)
+	}
+	if entries[0].Status != "pending" {
+		t.Errorf("task 1 Status = %q, want pending", entries[0].Status)
+	}
+	if len(entries[0].Dependencies) != 0 {
+		t.Errorf("task 1 Deps = %v, want empty", entries[0].Dependencies)
+	}
+
+	// Task 2
+	if entries[1].Status != "in_progress" {
+		t.Errorf("task 2 Status = %q, want in_progress", entries[1].Status)
+	}
+	if len(entries[1].Dependencies) != 1 || entries[1].Dependencies[0] != "1.0" {
+		t.Errorf("task 2 Deps = %v, want [1.0]", entries[1].Dependencies)
+	}
+
+	// Task 3
+	if len(entries[2].Dependencies) != 2 {
+		t.Errorf("task 3 Deps = %v, want [1.0, 2.0]", entries[2].Dependencies)
+	}
+}
+
+func TestReadTaskFileStatus(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{
+			name:    "status pending",
+			content: "# Task\n**Status:** pending\n**Prioridade:** Alta\n",
+			want:    "pending",
+		},
+		{
+			name:    "status done em portugues",
+			content: "# Task\n**Status:** Concluído (done)\n",
+			want:    "done",
+		},
+		{
+			name:    "status simples",
+			content: "**Status:** in_progress\n",
+			want:    "in_progress",
+		},
+		{
+			name:    "sem status",
+			content: "# Apenas titulo\nSem campo de status.\n",
+			want:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ReadTaskFileStatus([]byte(tt.content))
+			if got != tt.want {
+				t.Errorf("ReadTaskFileStatus() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestFindEligible(t *testing.T) {
+	tasks := []TaskEntry{
+		{ID: "1.0", Title: "A", Status: "done", Dependencies: nil},
+		{ID: "2.0", Title: "B", Status: "pending", Dependencies: []string{"1.0"}},
+		{ID: "3.0", Title: "C", Status: "pending", Dependencies: []string{"2.0"}},
+		{ID: "4.0", Title: "D", Status: "pending", Dependencies: nil},
+		{ID: "5.0", Title: "E", Status: "failed", Dependencies: nil},
+	}
+
+	t.Run("sem skipped", func(t *testing.T) {
+		eligible := FindEligible(tasks, nil)
+		// 2.0 (dep 1.0 done) e 4.0 (sem deps) sao elegiveis
+		if len(eligible) != 2 {
+			t.Fatalf("esperava 2 elegiveis, recebeu %d", len(eligible))
+		}
+		if eligible[0].ID != "2.0" {
+			t.Errorf("primeiro elegivel = %q, want 2.0", eligible[0].ID)
+		}
+		if eligible[1].ID != "4.0" {
+			t.Errorf("segundo elegivel = %q, want 4.0", eligible[1].ID)
+		}
+	})
+
+	t.Run("com skipped", func(t *testing.T) {
+		skipped := map[string]bool{"2.0": true}
+		eligible := FindEligible(tasks, skipped)
+		if len(eligible) != 1 {
+			t.Fatalf("esperava 1 elegivel, recebeu %d", len(eligible))
+		}
+		if eligible[0].ID != "4.0" {
+			t.Errorf("elegivel = %q, want 4.0", eligible[0].ID)
+		}
+	})
+
+	t.Run("deps nao satisfeitas", func(t *testing.T) {
+		blocked := []TaskEntry{
+			{ID: "1.0", Title: "A", Status: "pending", Dependencies: nil},
+			{ID: "2.0", Title: "B", Status: "pending", Dependencies: []string{"1.0"}},
+		}
+		eligible := FindEligible(blocked, nil)
+		// Apenas 1.0 eh elegivel (sem deps)
+		if len(eligible) != 1 {
+			t.Fatalf("esperava 1 elegivel, recebeu %d", len(eligible))
+		}
+		if eligible[0].ID != "1.0" {
+			t.Errorf("elegivel = %q, want 1.0", eligible[0].ID)
+		}
+	})
+}
+
+func TestAllTerminal(t *testing.T) {
+	t.Run("todas terminal", func(t *testing.T) {
+		tasks := []TaskEntry{
+			{Status: "done"},
+			{Status: "failed"},
+			{Status: "blocked"},
+		}
+		if !AllTerminal(tasks) {
+			t.Error("esperava true")
+		}
+	})
+
+	t.Run("nem todas terminal", func(t *testing.T) {
+		tasks := []TaskEntry{
+			{Status: "done"},
+			{Status: "pending"},
+		}
+		if AllTerminal(tasks) {
+			t.Error("esperava false")
+		}
+	})
+}
+
+func TestNormalizeStatus(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"Concluido", "done"},
+		{"Concluído", "done"},
+		{"pendente", "pending"},
+		{"bloqueado", "blocked"},
+		{"em execução", "in_progress"},
+		{"falhou", "failed"},
+		{"done", "done"},
+		{"PENDING", "pending"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := normalizeStatus(tt.input)
+			if got != tt.want {
+				t.Errorf("normalizeStatus(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}

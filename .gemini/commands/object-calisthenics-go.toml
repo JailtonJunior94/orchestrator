@@ -1,0 +1,10 @@
+description = "Aplica heuristicas de object calisthenics em codigo Go por meio de refatoracoes pequenas com preservacao de comportament"
+prompt = """
+Use `.agents/skills/object-calisthenics-go/SKILL.md` como fluxo canonico desta tarefa.
+Carregue `.agents/skills/object-calisthenics-go/assets/result-template.md` antes de iniciar.
+Leia os assets e references sob demanda conforme descrito no SKILL.md.
+Nao invente um processo paralelo neste comando.
+
+Aplicar a habilidade a esta solicitacao:
+{{args}}
+"""

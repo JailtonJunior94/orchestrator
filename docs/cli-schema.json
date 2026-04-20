@@ -1,0 +1,517 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/JailtonJunior94/orchestrator/docs/cli-schema.json",
+  "title": "ai-spec-harness CLI Schema",
+  "description": "Formal specification of the ai-spec-harness command-line interface surface",
+  "type": "object",
+  "properties": {
+    "tool": {
+      "type": "string",
+      "const": "ai-spec-harness"
+    },
+    "version": {
+      "type": "string",
+      "description": "SemVer version of the CLI (placeholder)",
+      "default": "0.0.0-dev"
+    },
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "globalFlags": {
+      "type": "object",
+      "description": "Flags available to all commands",
+      "properties": {
+        "verbose": {
+          "type": "object",
+          "properties": {
+            "type": { "type": "string", "const": "bool" },
+            "short": { "type": "string", "const": "-v" },
+            "default": { "type": "boolean", "const": false },
+            "required": { "type": "boolean", "const": false },
+            "description": { "type": "string", "const": "Ativa saida detalhada" }
+          },
+          "required": ["type", "default", "required", "description"]
+        }
+      },
+      "required": ["verbose"]
+    },
+    "commands": {
+      "type": "array",
+      "description": "All top-level commands exposed by ai-spec-harness",
+      "items": {
+        "$ref": "#/definitions/command"
+      },
+      "minItems": 20
+    }
+  },
+  "required": ["tool", "version", "schemaVersion", "globalFlags", "commands"],
+  "definitions": {
+    "flag": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["string", "bool", "int", "duration", "string[]"]
+        },
+        "default": {},
+        "required": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "short": {
+          "type": "string"
+        }
+      },
+      "required": ["type", "required"]
+    },
+    "argument": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "description": {
+          "type": "string"
+        },
+        "variadic": {
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": ["name", "required"]
+    },
+    "command": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "longDescription": {
+          "type": "string"
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/argument"
+          }
+        },
+        "flags": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/flag"
+          }
+        },
+        "subcommands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/command"
+          }
+        }
+      },
+      "required": ["name", "description", "args", "flags"]
+    }
+  },
+  "default": {
+    "tool": "ai-spec-harness",
+    "version": "0.0.0-dev",
+    "schemaVersion": "1.0.0",
+    "globalFlags": {
+      "verbose": {
+        "type": "bool",
+        "short": "-v",
+        "default": false,
+        "required": false,
+        "description": "Ativa saida detalhada"
+      }
+    },
+    "commands": [
+      {
+        "name": "install",
+        "description": "Instala governanca de IA em um projeto",
+        "longDescription": "Instala o pacote de governanca para ferramentas de IA em um projeto alvo.",
+        "args": [
+          { "name": "path", "required": true, "description": "Caminho do projeto alvo" }
+        ],
+        "flags": {
+          "tools": {
+            "type": "string",
+            "required": true,
+            "description": "Ferramentas de IA a instalar (ex: claude,copilot,codex)"
+          },
+          "langs": {
+            "type": "string",
+            "required": false,
+            "description": "Linguagens do projeto (ex: go,python)"
+          },
+          "mode": {
+            "type": "string",
+            "default": "symlink",
+            "required": false,
+            "description": "Modo de instalacao (symlink ou copy)"
+          },
+          "dry-run": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Simula a instalacao sem alterar o filesystem"
+          },
+          "source": {
+            "type": "string",
+            "required": false,
+            "description": "Caminho alternativo para o pacote de governanca"
+          },
+          "ref": {
+            "type": "string",
+            "required": false,
+            "description": "Git ref (branch, tag ou commit) para resolver pacote remoto"
+          },
+          "no-context": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Nao gera arquivo de contexto automatico"
+          },
+          "codex-profile": {
+            "type": "string",
+            "default": "full",
+            "required": false,
+            "description": "Perfil de instrucao do Codex (full ou minimal)"
+          },
+          "focus-paths": {
+            "type": "string",
+            "required": false,
+            "description": "Caminhos de foco para contexto de monorepo"
+          }
+        }
+      },
+      {
+        "name": "upgrade",
+        "description": "Atualiza skills de governanca em um projeto",
+        "longDescription": "Verifica ou atualiza skills de governanca comparando versoes e checksums.",
+        "args": [
+          { "name": "path", "required": true, "description": "Caminho do projeto alvo" }
+        ],
+        "flags": {
+          "check": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Apenas verifica se ha atualizacoes disponiveis"
+          },
+          "langs": {
+            "type": "string",
+            "required": false,
+            "description": "Linguagens do projeto"
+          },
+          "source": {
+            "type": "string",
+            "required": false,
+            "description": "Caminho alternativo para o pacote de governanca"
+          },
+          "ref": {
+            "type": "string",
+            "required": false,
+            "description": "Git ref (branch, tag ou commit) para resolver pacote remoto"
+          }
+        }
+      },
+      {
+        "name": "uninstall",
+        "description": "Remove governanca de IA de um projeto",
+        "longDescription": "Remove artefatos de governanca instalados pelo comando install.",
+        "args": [
+          { "name": "path", "required": true, "description": "Caminho do projeto alvo" }
+        ],
+        "flags": {
+          "dry-run": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Simula a remocao sem alterar o filesystem"
+          }
+        }
+      },
+      {
+        "name": "validate",
+        "description": "Valida frontmatter de skills de governanca",
+        "longDescription": "Valida que todos os SKILL.md possuem frontmatter YAML valido.",
+        "args": [
+          { "name": "path", "required": false, "description": "Caminho do projeto (default: diretorio atual)" }
+        ],
+        "flags": {}
+      },
+      {
+        "name": "validate-bugs",
+        "description": "Valida um array de bugs contra bug-schema.json",
+        "longDescription": "Valida o array JSON de bugs contra o schema canonico de bugs.",
+        "args": [
+          { "name": "bugs.json", "required": true, "description": "Caminho para o arquivo JSON de bugs" }
+        ],
+        "flags": {
+          "schema": {
+            "type": "string",
+            "required": false,
+            "description": "Caminho para schema JSON customizado"
+          }
+        }
+      },
+      {
+        "name": "validate-evidence",
+        "description": "Valida um relatorio de evidencia Markdown",
+        "longDescription": "Valida um relatorio de evidencia Markdown conforme o tipo informado (task, bugfix, refactor).",
+        "args": [
+          { "name": "tipo", "required": true, "description": "Tipo de evidencia (task, bugfix, refactor)" },
+          { "name": "arquivo.md", "required": true, "description": "Caminho para o arquivo Markdown de evidencia" }
+        ],
+        "flags": {
+          "rf": {
+            "type": "string[]",
+            "required": false,
+            "description": "IDs de requisitos funcionais esperados (repetivel)"
+          }
+        }
+      },
+      {
+        "name": "lint",
+        "description": "Verifica governanca em arquivos gerados",
+        "longDescription": "Detecta problemas de governanca no projeto.",
+        "args": [
+          { "name": "path", "required": false, "description": "Caminho do projeto (default: diretorio atual)" }
+        ],
+        "flags": {}
+      },
+      {
+        "name": "inspect",
+        "description": "Inspeciona o estado da instalacao de governanca",
+        "longDescription": "Exibe detalhes sobre skills instaladas, ferramentas detectadas, e estado do manifesto.",
+        "args": [
+          { "name": "path", "required": true, "description": "Caminho do projeto alvo" }
+        ],
+        "flags": {
+          "focus-paths": {
+            "type": "string",
+            "required": false,
+            "description": "Caminhos de foco para contexto de monorepo"
+          }
+        }
+      },
+      {
+        "name": "doctor",
+        "description": "Diagnostica problemas na instalacao de governanca",
+        "longDescription": "Executa verificacoes de saude: repositorio git, symlinks, permissoes, manifesto.",
+        "args": [
+          { "name": "path", "required": true, "description": "Caminho do projeto alvo" }
+        ],
+        "flags": {}
+      },
+      {
+        "name": "metrics",
+        "description": "Reporta metricas de contexto para governanca",
+        "longDescription": "Calcula e exibe metricas de tokens estimados por baseline, fluxo e skill.",
+        "args": [
+          { "name": "path", "required": false, "description": "Caminho do projeto (default: diretorio atual)" }
+        ],
+        "flags": {
+          "format": {
+            "type": "string",
+            "default": "table",
+            "required": false,
+            "description": "Formato de saida (table ou json)"
+          },
+          "precise": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Usa contagem precisa de tokens"
+          }
+        }
+      },
+      {
+        "name": "scaffold",
+        "description": "Gera scaffold de uma nova skill de linguagem",
+        "longDescription": "Cria a estrutura de uma nova skill de linguagem com SKILL.md.",
+        "args": [
+          { "name": "language", "required": true, "description": "Linguagem alvo do scaffold" }
+        ],
+        "flags": {
+          "root": {
+            "type": "string",
+            "default": ".",
+            "required": false,
+            "description": "Diretorio raiz para gerar o scaffold"
+          }
+        }
+      },
+      {
+        "name": "semver-next",
+        "description": "Calcula a proxima versao SemVer a partir de conventional commits",
+        "longDescription": "Calcula a proxima versao SemVer analisando conventional commits desde o ultimo tag v*.",
+        "args": [
+          { "name": "path", "required": false, "description": "Caminho do repositorio (default: diretorio atual)" }
+        ],
+        "flags": {
+          "format": {
+            "type": "string",
+            "default": "text",
+            "required": false,
+            "description": "Formato de saida (text ou json)"
+          }
+        }
+      },
+      {
+        "name": "changelog",
+        "description": "Gera ou atualiza o CHANGELOG.md a partir de conventional commits",
+        "longDescription": "Analisa os conventional commits desde o ultimo tag e gera uma secao de changelog.",
+        "args": [
+          { "name": "path", "required": false, "description": "Caminho do repositorio (default: diretorio atual)" }
+        ],
+        "flags": {
+          "version": {
+            "type": "string",
+            "required": true,
+            "description": "Versao para a entrada no changelog"
+          },
+          "dry-run": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Exibe o changelog sem gravar o arquivo"
+          }
+        }
+      },
+      {
+        "name": "telemetry",
+        "description": "Gerencia telemetria de uso de skills",
+        "longDescription": "Comando pai para subcomandos de telemetria.",
+        "args": [],
+        "flags": {},
+        "subcommands": [
+          {
+            "name": "log",
+            "description": "Registra uso de skill em telemetria (requer GOVERNANCE_TELEMETRY=1)",
+            "args": [
+              { "name": "skill", "required": true, "description": "Nome da skill utilizada" },
+              { "name": "ref", "required": false, "description": "Referencia opcional (branch, PR, etc)" }
+            ],
+            "flags": {}
+          },
+          {
+            "name": "summary",
+            "description": "Exibe resumo de telemetria agrupado por skill e referencia",
+            "args": [],
+            "flags": {
+              "since": {
+                "type": "string",
+                "required": false,
+                "description": "Filtra registros a partir de uma data (formato ISO 8601)"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "check-spec-drift",
+        "description": "Verifica cobertura de requisitos e drift de spec em relacao a tasks.md",
+        "longDescription": "Verifica se os IDs de requisitos (RF-nn, REQ-nn) definidos em prd.md e/ou tasks.md estao cobertos.",
+        "args": [
+          { "name": "tasks.md", "required": true, "description": "Caminho para o arquivo tasks.md" }
+        ],
+        "flags": {}
+      },
+      {
+        "name": "task-loop",
+        "description": "Executa tasks de um PRD folder sequencialmente via agente de IA",
+        "longDescription": "Executa em loop todas as tasks elegiveis de uma pasta PRD, invocando o agente de IA configurado.",
+        "args": [
+          { "name": "prd-folder", "required": true, "description": "Caminho para a pasta PRD contendo tasks" }
+        ],
+        "flags": {
+          "tool": {
+            "type": "string",
+            "required": true,
+            "description": "Ferramenta de IA a utilizar (ex: claude, codex)"
+          },
+          "dry-run": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Simula a execucao sem invocar o agente"
+          },
+          "max-iterations": {
+            "type": "int",
+            "default": 20,
+            "required": false,
+            "description": "Numero maximo de iteracoes do loop"
+          },
+          "timeout": {
+            "type": "duration",
+            "default": "30m",
+            "required": false,
+            "description": "Timeout global para o loop de tasks"
+          },
+          "report-path": {
+            "type": "string",
+            "required": false,
+            "description": "Caminho para salvar o relatorio de execucao"
+          }
+        }
+      },
+      {
+        "name": "update-version",
+        "description": "Atualiza o arquivo VERSION com validacao semver",
+        "longDescription": "Atualiza o arquivo VERSION com a versao especificada, validando o formato semver.",
+        "args": [],
+        "flags": {
+          "version": {
+            "type": "string",
+            "required": true,
+            "description": "Nova versao semver a gravar"
+          },
+          "version-file": {
+            "type": "string",
+            "default": "VERSION",
+            "required": false,
+            "description": "Caminho do arquivo de versao"
+          }
+        }
+      },
+      {
+        "name": "version",
+        "description": "Exibe a versao do ai-spec-harness",
+        "args": [],
+        "flags": {}
+      },
+      {
+        "name": "wrapper",
+        "description": "Valida governanca e emite instrucao de invocacao para Codex/Gemini/Copilot",
+        "longDescription": "Verifica as condicoes de governanca antes de emitir instrucoes de invocacao.",
+        "args": [
+          { "name": "tool", "required": true, "description": "Ferramenta de IA alvo (codex, gemini, copilot)" },
+          { "name": "skill", "required": true, "description": "Nome da skill a invocar" },
+          { "name": "path", "required": false, "description": "Caminho do projeto" },
+          { "name": "args", "required": false, "description": "Argumentos adicionais para a skill", "variadic": true }
+        ],
+        "flags": {}
+      },
+      {
+        "name": "prerequisites",
+        "description": "Verifica pre-condicoes de uma skill antes de executa-la",
+        "longDescription": "Verifica se os arquivos necessarios para uma skill estao presentes no projeto.",
+        "args": [
+          { "name": "skill-name", "required": true, "description": "Nome da skill a verificar" },
+          { "name": "path", "required": false, "description": "Caminho do projeto (default: diretorio atual)" }
+        ],
+        "flags": {}
+      }
+    ]
+  }
+}

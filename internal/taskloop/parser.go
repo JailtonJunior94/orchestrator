@@ -1,0 +1,206 @@
+package taskloop
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+)
+
+// TaskEntry representa uma linha da tabela de tasks em tasks.md.
+type TaskEntry struct {
+	ID           string
+	Title        string
+	Status       string
+	Dependencies []string
+}
+
+var (
+	tableRowRe    = regexp.MustCompile(`^\|\s*(\d+\.\d+)\s*\|`)
+	statusFieldRe = regexp.MustCompile(`(?i)\*\*Status:\*\*\s*(.+)`)
+)
+
+// ParseTasksFile extrai entradas da tabela markdown em tasks.md.
+func ParseTasksFile(content []byte) ([]TaskEntry, error) {
+	lines := strings.Split(string(content), "\n")
+	var entries []TaskEntry
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if !tableRowRe.MatchString(line) {
+			continue
+		}
+
+		cols := strings.Split(line, "|")
+		// Esperado: vazio, ID, Title, Status, Deps, Paralelizavel, vazio
+		if len(cols) < 5 {
+			continue
+		}
+
+		id := strings.TrimSpace(cols[1])
+		title := strings.TrimSpace(cols[2])
+		status := normalizeStatus(strings.TrimSpace(cols[3]))
+		deps := parseDependencies(strings.TrimSpace(cols[4]))
+
+		entries = append(entries, TaskEntry{
+			ID:           id,
+			Title:        title,
+			Status:       status,
+			Dependencies: deps,
+		})
+	}
+
+	if len(entries) == 0 {
+		return nil, fmt.Errorf("nenhuma task encontrada na tabela de tasks.md")
+	}
+	return entries, nil
+}
+
+// ReadTaskFileStatus extrai o campo **Status:** de um arquivo de task individual.
+func ReadTaskFileStatus(content []byte) string {
+	matches := statusFieldRe.FindSubmatch(content)
+	if len(matches) < 2 {
+		return ""
+	}
+	raw := strings.TrimSpace(string(matches[1]))
+	// Extrair apenas a primeira palavra ou conteudo entre parenteses
+	if idx := strings.Index(raw, "("); idx > 0 {
+		inner := raw[idx+1:]
+		if end := strings.Index(inner, ")"); end > 0 {
+			return normalizeStatus(inner[:end])
+		}
+	}
+	return normalizeStatus(strings.Fields(raw)[0])
+}
+
+// FindEligible retorna tasks elegiveis: status pending, todas deps done, nao no skipped set.
+func FindEligible(tasks []TaskEntry, skipped map[string]bool) []TaskEntry {
+	statusMap := make(map[string]string, len(tasks))
+	for _, t := range tasks {
+		statusMap[t.ID] = t.Status
+	}
+
+	var eligible []TaskEntry
+	for _, t := range tasks {
+		if skipped[t.ID] || t.Status != "pending" {
+			continue
+		}
+		allDepsDone := true
+		for _, dep := range t.Dependencies {
+			if statusMap[dep] != "done" {
+				allDepsDone = false
+				break
+			}
+		}
+		if allDepsDone {
+			eligible = append(eligible, t)
+		}
+	}
+	return eligible
+}
+
+// ResolveTaskFile encontra o arquivo de task individual pelo prefixo numerico do ID.
+func ResolveTaskFile(prdFolder string, task TaskEntry, fsys fs.FileSystem) (string, error) {
+	// ID eh algo como "1.0" — o prefixo numerico eh "1"
+	prefix := strings.Split(task.ID, ".")[0]
+
+	entries, err := fsys.ReadDir(prdFolder)
+	if err != nil {
+		return "", fmt.Errorf("erro ao ler diretorio %s: %w", prdFolder, err)
+	}
+
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		if !strings.HasSuffix(name, ".md") {
+			continue
+		}
+		// Ignorar tasks.md, prd.md, techspec.md e relatorios
+		if name == "tasks.md" || name == "prd.md" || name == "techspec.md" {
+			continue
+		}
+		if strings.Contains(name, "execution_report") || strings.Contains(name, "bugfix_report") {
+			continue
+		}
+		// Verificar se comeca com o prefixo numerico seguido de separador
+		if matchesTaskPrefix(name, prefix) {
+			return filepath.Join(prdFolder, name), nil
+		}
+	}
+
+	return "", fmt.Errorf("arquivo de task nao encontrado para ID %s em %s", task.ID, prdFolder)
+}
+
+func matchesTaskPrefix(filename, prefix string) bool {
+	if !strings.HasPrefix(filename, prefix) {
+		return false
+	}
+	rest := filename[len(prefix):]
+	if len(rest) == 0 {
+		return false
+	}
+	// Separadores validos: _, -, .
+	return rest[0] == '_' || rest[0] == '-' || rest[0] == '.'
+}
+
+func parseDependencies(raw string) []string {
+	if raw == "" || raw == "\u2014" || raw == "-" || strings.ToLower(raw) == "nenhuma" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	var deps []string
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		deps = append(deps, p)
+	}
+	return deps
+}
+
+func normalizeStatus(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	switch s {
+	case "concluido", "concluída", "concluído":
+		return "done"
+	case "em execucao", "em execução", "em andamento":
+		return "in_progress"
+	case "pendente":
+		return "pending"
+	case "bloqueado", "bloqueada":
+		return "blocked"
+	case "falhou", "falha":
+		return "failed"
+	case "aguardando input", "aguardando informacao":
+		return "needs_input"
+	}
+	return s
+}
+
+// AllTerminal verifica se todas as tasks estao em estado terminal (done, failed, blocked).
+func AllTerminal(tasks []TaskEntry) bool {
+	for _, t := range tasks {
+		switch t.Status {
+		case "done", "failed", "blocked":
+			continue
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+// TaskFileStatusFromDisk le o arquivo de task e retorna o status atual.
+func TaskFileStatusFromDisk(path string) string {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	return ReadTaskFileStatus(data)
+}

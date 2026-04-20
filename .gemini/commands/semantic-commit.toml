@@ -1,0 +1,9 @@
+description = "Cria commits semanticos no padrao Conventional Commits (feat, fix, chore, docs, refactor, test, ci)."
+prompt = """
+Use `.agents/skills/semantic-commit/SKILL.md` como fluxo canonico desta tarefa.
+Leia os assets e references sob demanda conforme descrito no SKILL.md.
+Nao invente um processo paralelo neste comando.
+
+Aplicar a habilidade a esta solicitacao:
+{{args}}
+"""
