@@ -135,6 +135,30 @@ func TestCLI_ContractMatchesSchema(t *testing.T) {
 	}
 }
 
+// smokeTestCommands lista os comandos invocados no step "Smoke test do binario" do
+// workflow release.yml. Se um comando for removido ou renomeado, este teste falha em CI
+// (test.yml) antes de chegar ao step de release, evitando regressoes como a que causou
+// o run 24680287428 (detect -> inexistente).
+//
+// Para atualizar: edite esta lista junto com o workflow .github/workflows/release.yml.
+var smokeTestCommands = []string{
+	"version",
+	"inspect",
+}
+
+// TestCLI_SmokeCommandsExistInCobra garante que todos os comandos do smoke test existem
+// na arvore Cobra do binario. Falha se um comando for removido sem atualizar o workflow.
+func TestCLI_SmokeCommandsExistInCobra(t *testing.T) {
+	excluded := map[string]bool{"help": true, "completion": true}
+	cobraMap := cobraCommandMap(rootCmd.Commands(), "", excluded)
+
+	for _, name := range smokeTestCommands {
+		if _, ok := cobraMap[name]; !ok {
+			t.Errorf("comando %q usado no smoke test do workflow nao existe no Cobra — atualize release.yml e esta lista juntos", name)
+		}
+	}
+}
+
 // TestCLI_ContractFlagsMatchSchema valida que flags definidas no cli-schema.json
 // existem na implementacao Cobra, e vice-versa (sem drift de flags).
 func TestCLI_ContractFlagsMatchSchema(t *testing.T) {
