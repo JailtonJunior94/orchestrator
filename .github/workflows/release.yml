@@ -14,6 +14,9 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-${{ github.ref_name }}
+      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -133,8 +136,21 @@ jobs:
 
       # ─── Manual tag fallback (push of v* tag) ────────────────────────────────
 
-      - name: Run GoReleaser (manual tag)
+      - name: Check if GitHub release already exists
         if: startsWith(github.ref, 'refs/tags/v')
+        id: release_check
+        run: |
+          if gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" > /dev/null 2>&1; then
+            echo "release_exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release ${{ github.ref_name }} already exists — skipping GoReleaser"
+          else
+            echo "release_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run GoReleaser (manual tag)
+        if: startsWith(github.ref, 'refs/tags/v') && steps.release_check.outputs.release_exists != 'true'
         uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
