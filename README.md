@@ -62,15 +62,25 @@ ai-spec version
 
 > **Aviso de seguranca do macOS (Gatekeeper)**
 >
-> O macOS pode exibir o alerta _"Apple could not verify 'ai-spec' is free of malware"_ ao executar o binario pela primeira vez. Isso ocorre porque o binario nao esta assinado com um Apple Developer ID.
+> O macOS pode exibir o alerta _"Apple could not verify 'ai-spec' is free of malware"_ ao executar o binario pela primeira vez. Isso ocorre porque o binario nao esta assinado com um Apple Developer ID. Ha quatro formas de resolver:
 >
-> Para liberar o binario manualmente:
+> **Opcao 1 — Terminal (recomendada):** remove o atributo de quarentena do binario.
 >
 > ```bash
 > xattr -dr com.apple.quarantine $(which ai-spec)
 > ```
 >
-> Versoes futuras instaladas via `brew upgrade ai-spec` executam esse comando automaticamente no `post_install` da Formula, eliminando o alerta.
+> **Opcao 2 — Interface grafica:** abra o Finder, navegue ate o binario, clique com o botao direito e selecione **Abrir**. Na janela de aviso, clique em **Abrir assim mesmo**. Isso registra uma excecao permanente no Gatekeeper para este binario.
+>
+> **Opcao 3 — Configuracoes do sistema:** va em **Ajustes do Sistema → Privacidade e Seguranca**, role ate a secao **Seguranca** e clique em **Abrir assim mesmo** ao lado da mensagem sobre `ai-spec`. Disponivel ate 1 hora apos a primeira tentativa bloqueada.
+>
+> **Opcao 4 — spctl (linha de comando alternativa):** adiciona o binario a lista de excecoes do Gatekeeper via ferramenta de politica de seguranca.
+>
+> ```bash
+> sudo spctl --add --label "ai-spec" $(which ai-spec)
+> ```
+>
+> Versoes futuras instaladas via `brew upgrade ai-spec` executam o `xattr` automaticamente no `post_install` da Formula, eliminando o alerta para novos usuarios.
 
 Se o seu shell nao estiver herdando o `PATH` do Homebrew corretamente, adicione o prefixo do Homebrew ao arquivo de inicializacao e mantenha um alias compativel com o nome do modulo Go:
 
