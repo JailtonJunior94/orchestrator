@@ -558,10 +558,12 @@ tasks/
     prd.md
     techspec.md
     tasks.md
-    01_task.md
-    02_task.md
-    03_task.md
+    task-1.0-descricao.md
+    task-2.0-descricao.md
+    task-3.0-descricao.md
 ```
+
+> **Convencoes de nome suportadas pelo task-loop:** `1-desc.md`, `1.0-desc.md` e `task-1.0-desc.md`. O separador pode ser `-` ou `_`.
 
 ### 8. Executar todas as tasks com o looper do CLI
 
@@ -731,7 +733,7 @@ Regras de decomposicao obrigatorias:
 
 Saidas esperadas obrigatorias:
 - tasks.md com lista ordenada e dependencias
-- um arquivo por task (01_task.md, 02_task.md...) com: objetivo, arquivos afetados, criterio de pronto, validacoes
+- um arquivo por task (`task-1.0-desc.md`, `1.0-desc.md` ou `1-desc.md`) com: objetivo, arquivos afetados, criterio de pronto, validacoes
 ```
 
 **Criterios de aceite do artefato — nao avance sem estes:**
@@ -856,9 +858,9 @@ tasks/prd-payments-list/
   prd.md
   techspec.md
   tasks.md
-  01_repository.md   <- acesso ao banco, query com filtros
-  02_service.md      <- regras de aplicacao, orquestracao
-  03_handler.md      <- parse HTTP, validacao de input, resposta
+  task-1.0-repository.md   <- acesso ao banco, query com filtros
+  task-2.0-service.md      <- regras de aplicacao, orquestracao
+  task-3.0-handler.md      <- parse HTTP, validacao de input, resposta
 ```
 
 **Sessao 1 — task 01 (repository):**
@@ -866,7 +868,7 @@ tasks/prd-payments-list/
 ```text
 Nova sessao. Sem contexto anterior.
 
-Tarefa: implementar tasks/prd-payments-list/01_repository.md
+Tarefa: implementar tasks/prd-payments-list/task-1.0-repository.md
 
 Leia o arquivo de task antes de qualquer acao.
 
@@ -889,7 +891,7 @@ Regras: siga o criterio de pronto da task. Testes table-driven para filtros. Reg
 ```text
 Nova sessao. Sem contexto anterior.
 
-Tarefa: implementar tasks/prd-payments-list/02_service.md
+Tarefa: implementar tasks/prd-payments-list/task-2.0-service.md
 
 Leia o arquivo de task antes de qualquer acao.
 
@@ -912,7 +914,7 @@ Regras: siga o criterio de pronto da task. Testes com mock do repository. Regist
 ```text
 Nova sessao. Sem contexto anterior.
 
-Tarefa: implementar tasks/prd-payments-list/03_handler.md
+Tarefa: implementar tasks/prd-payments-list/task-3.0-handler.md
 
 Leia o arquivo de task antes de qualquer acao.
 

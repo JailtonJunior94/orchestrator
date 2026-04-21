@@ -259,6 +259,76 @@ func TestNormalizeStatus(t *testing.T) {
 	}
 }
 
+func TestResolveTaskFile(t *testing.T) {
+	tests := []struct {
+		name     string
+		taskID   string
+		files    []string
+		wantFile string
+		wantErr  bool
+	}{
+		{
+			name:     "convencao prefixo simples: 1-desc.md",
+			taskID:   "1.0",
+			files:    []string{"tasks.md", "prd.md", "techspec.md", "1-baseline.md"},
+			wantFile: "/prd/1-baseline.md",
+		},
+		{
+			name:     "convencao ID completo: 1.0-desc.md",
+			taskID:   "1.0",
+			files:    []string{"tasks.md", "prd.md", "techspec.md", "1.0-baseline.md"},
+			wantFile: "/prd/1.0-baseline.md",
+		},
+		{
+			name:     "convencao task-ID: task-1.0-desc.md",
+			taskID:   "1.0",
+			files:    []string{"tasks.md", "prd.md", "techspec.md", "task-1.0-baseline.md"},
+			wantFile: "/prd/task-1.0-baseline.md",
+		},
+		{
+			name:     "convencao task-ID com underscore: task-1.0_desc.md",
+			taskID:   "1.0",
+			files:    []string{"tasks.md", "prd.md", "techspec.md", "task-1.0_baseline.md"},
+			wantFile: "/prd/task-1.0_baseline.md",
+		},
+		{
+			name:    "nenhum arquivo corresponde",
+			taskID:  "1.0",
+			files:   []string{"tasks.md", "prd.md", "techspec.md", "task-2.0-outro.md"},
+			wantErr: true,
+		},
+		{
+			name:    "relatorio de execucao e ignorado",
+			taskID:  "1.0",
+			files:   []string{"tasks.md", "prd.md", "techspec.md", "1.0_execution_report.md"},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fsys := fs.NewFakeFileSystem()
+			for _, f := range tt.files {
+				fsys.Files["/prd/"+f] = []byte("content")
+			}
+			entry := TaskEntry{ID: tt.taskID}
+			got, err := ResolveTaskFile("/prd", entry, fsys)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("esperava erro, recebeu %q", got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("erro inesperado: %v", err)
+			}
+			if got != tt.wantFile {
+				t.Errorf("ResolveTaskFile() = %q, want %q", got, tt.wantFile)
+			}
+		})
+	}
+}
+
 func TestReadTaskStatus(t *testing.T) {
 	tests := []struct {
 		name    string

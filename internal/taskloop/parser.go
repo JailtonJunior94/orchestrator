@@ -130,8 +130,8 @@ func ResolveTaskFile(prdFolder string, task TaskEntry, fsys fs.FileSystem) (stri
 		if strings.Contains(name, "execution_report") || strings.Contains(name, "bugfix_report") {
 			continue
 		}
-		// Verificar se comeca com o prefixo numerico seguido de separador
-		if matchesTaskPrefix(name, prefix) {
+		// Verificar convencoes de nome: "1-", "1.0-" ou "task-1.0-"
+		if matchesTaskPrefix(name, prefix, task.ID) {
 			return filepath.Join(prdFolder, name), nil
 		}
 	}
@@ -139,16 +139,29 @@ func ResolveTaskFile(prdFolder string, task TaskEntry, fsys fs.FileSystem) (stri
 	return "", fmt.Errorf("arquivo de task nao encontrado para ID %s em %s", task.ID, prdFolder)
 }
 
-func matchesTaskPrefix(filename, prefix string) bool {
-	if !strings.HasPrefix(filename, prefix) {
-		return false
-	}
-	rest := filename[len(prefix):]
-	if len(rest) == 0 {
-		return false
-	}
+func matchesTaskPrefix(filename, prefix, fullID string) bool {
 	// Separadores validos: _, -, .
-	return rest[0] == '_' || rest[0] == '-' || rest[0] == '.'
+	hasSep := func(s string) bool {
+		return len(s) > 0 && (s[0] == '_' || s[0] == '-' || s[0] == '.')
+	}
+
+	// Convencao 1: "1-desc.md" ou "1_desc.md" (prefixo so com o primeiro segmento)
+	if strings.HasPrefix(filename, prefix) && hasSep(filename[len(prefix):]) {
+		return true
+	}
+
+	// Convencao 2: "1.0-desc.md" ou "1.0_desc.md" (ID completo)
+	if strings.HasPrefix(filename, fullID) && hasSep(filename[len(fullID):]) {
+		return true
+	}
+
+	// Convencao 3: "task-1.0-desc.md" ou "task-1.0_desc.md"
+	taskFull := "task-" + fullID
+	if strings.HasPrefix(filename, taskFull) && hasSep(filename[len(taskFull):]) {
+		return true
+	}
+
+	return false
 }
 
 func parseDependencies(raw string) []string {
