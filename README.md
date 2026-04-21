@@ -520,6 +520,300 @@ ai-spec lint .
 go test ./...
 ```
 
+## Como obter o melhor das skills — uso mandatorio e rigoroso
+
+Esta secao define o contrato de uso de cada skill. Seguir estas regras nao e opcional: desvios introduzem ambiguidade, retrabalho e artefatos incompativeis entre etapas.
+
+### Principio central
+
+Cada skill e uma etapa com entradas obrigatorias, saidas esperadas e criterios de aceite. Nao avance para a proxima etapa sem validar a saida da etapa anterior. O agente nao deve inferir o que falta — voce deve fornecer.
+
+### Pipeline mandatorio
+
+```text
+analyze-project (se projeto existente)
+        |
+        v
+   create-prd
+        |
+        v
+create-technical-specification
+        |
+        v
+   create-tasks
+        |
+        v
+   execute-task  <-- repete por task
+        |
+        v
+     review
+        |
+        v
+    refactor (se necessario)
+```
+
+Regra absoluta: nunca execute `execute-task` sem `tasks.md` aprovado. Nunca execute `create-tasks` sem tech spec aprovada. Nunca execute `create-technical-specification` sem PRD aprovado.
+
+---
+
+### `create-prd` — escopo e requisitos
+
+**Quando usar:** toda feature nova ou qualquer mudanca que altere comportamento observavel do sistema.
+
+**Entradas obrigatorias no prompt:**
+- problema que a feature resolve (nao a solucao)
+- persona ou sistema afetado
+- restricoes de escopo (o que esta fora)
+- restricoes tecnicas conhecidas (performance, integracao, compliance)
+
+**Prompt mandatorio:**
+
+```text
+Use a skill create-prd para definir [nome da feature].
+
+Entradas:
+- Problema: [descricao objetiva do problema]
+- Persona afetada: [quem sofre o problema]
+- Restricoes de escopo: [o que nao esta incluido]
+- Restricoes tecnicas: [limites conhecidos]
+
+Saidas esperadas obrigatorias:
+- problema claro e verificavel
+- objetivos mensuráveis
+- nao objetivos explicitos
+- requisitos funcionais numerados (RF-01, RF-02...)
+- requisitos nao funcionais (RNF-01, RNF-02...)
+- criterios de aceite por requisito funcional
+- riscos com probabilidade e impacto
+```
+
+**Criterios de aceite do artefato — nao avance sem estes:**
+- [ ] cada RF tem criterio de aceite testavel
+- [ ] nao objetivos estao listados (previnem escopo rastejante)
+- [ ] riscos tem mitigacao ou decisao explicita
+- [ ] artefato salvo em `tasks/<prd-folder>/prd.md`
+
+---
+
+### `create-technical-specification` — arquitetura e contratos
+
+**Quando usar:** apos PRD aprovado, antes de qualquer linha de codigo.
+
+**Entradas obrigatorias no prompt:**
+- caminho do `prd.md` aprovado
+- contexto tecnico do repositorio (stack, arquitetura atual, fronteiras existentes)
+- restricoes que o PRD impos
+- referencias a carregar (DDD, arquitetura, concorrencia — conforme a feature)
+
+**Prompt mandatorio:**
+
+```text
+Use a skill create-technical-specification com base no PRD aprovado em tasks/<prd-folder>/prd.md.
+
+Contexto tecnico:
+- Stack: [linguagem, frameworks, banco de dados]
+- Arquitetura atual: [ex: handler -> service -> repository]
+- Fronteiras existentes: [o que nao pode mudar]
+- Referencias necessarias: [ddd, arquitetura, concorrencia, testes]
+
+Saidas esperadas obrigatorias:
+- modelagem de dominio (agregados, entidades, value objects se houver invariantes)
+- contratos de interface (assinaturas, DTOs, erros tipados)
+- responsabilidade de cada camada
+- estrategia de erros com tipos e mensagens
+- estrategia de testes (unitarios, integracao, table-driven)
+- ADRs para decisoes nao obvias
+- riscos tecnicos e plano de rollout
+```
+
+**Criterios de aceite do artefato — nao avance sem estes:**
+- [ ] contratos de interface definidos (nao implicitos)
+- [ ] estrategia de erros explicita (sem "retornar erro generico")
+- [ ] estrategia de testes inclui cenarios de falha
+- [ ] decisoes arquiteturais justificadas (ADR ou nota inline)
+- [ ] artefato salvo em `tasks/<prd-folder>/techspec.md`
+
+---
+
+### `create-tasks` — decomposicao em unidades executaveis
+
+**Quando usar:** apos tech spec aprovada, para gerar o bundle de tasks que o `execute-task` ou `task-loop` vai consumir.
+
+**Entradas obrigatorias no prompt:**
+- caminho do `prd.md` e `techspec.md` aprovados
+- criterio de granularidade desejado (uma responsabilidade por task)
+
+**Prompt mandatorio:**
+
+```text
+Use a skill create-tasks para decompor a tech spec aprovada em tasks.
+
+Arquivos de entrada:
+- PRD: tasks/<prd-folder>/prd.md
+- Tech spec: tasks/<prd-folder>/techspec.md
+
+Regras de decomposicao obrigatorias:
+- uma responsabilidade por task (ex: nao misturar handler com repository na mesma task)
+- ordem de execucao explicita (dependencias declaradas)
+- criterio de pronto por task com validacoes executaveis
+- nenhuma task com escopo ambiguo ou aberto
+
+Saidas esperadas obrigatorias:
+- tasks.md com lista ordenada e dependencias
+- um arquivo por task (01_task.md, 02_task.md...) com: objetivo, arquivos afetados, criterio de pronto, validacoes
+```
+
+**Criterios de aceite do artefato — nao avance sem estes:**
+- [ ] nenhuma task tem dependencia circular
+- [ ] cada task tem criterio de pronto com comandos de validacao (ex: `go test ./...`)
+- [ ] tamanho de cada task: implementavel em uma unica sessao de agente
+- [ ] artefatos salvos em `tasks/<prd-folder>/`
+
+---
+
+### `execute-task` — implementacao com evidencia
+
+**Quando usar:** para cada task do bundle, uma de cada vez. Nao execute tasks em paralelo sem garantir que nao ha dependencia entre elas.
+
+**Entradas obrigatorias no prompt:**
+- caminho exato da task a executar
+- contexto arquitetural (nao confie que o agente inferira)
+- referencias obrigatorias da linguagem e do dominio
+
+**Prompt mandatorio:**
+
+```text
+Use a skill execute-task para implementar a task tasks/<prd-folder>/<N>_task.md.
+
+Contexto obrigatorio:
+- Leia o arquivo de task antes de iniciar qualquer alteracao
+- Arquitetura: [descreva a camada e os contratos relevantes]
+- Referencias a carregar: [go-implementation, ddd, tests — conforme a task]
+
+Criterios de execucao nao negociaveis:
+- preservar contratos publicos existentes (nenhuma assinatura publica muda sem ADR)
+- nenhuma interface nova sem fronteira real justificada
+- context.Context em todas as operacoes de IO
+- testes table-driven para todos os cenarios do criterio de pronto
+- registrar evidencia de conclusao no arquivo de task (output do teste, lint)
+- nao fechar a task sem evidencia de validacao
+```
+
+**Criterios de aceite da execucao — nao marque a task como concluida sem estes:**
+- [ ] todos os testes do criterio de pronto passam (`go test ./...`)
+- [ ] lint sem erro (`go vet ./...` ou equivalente)
+- [ ] nenhum contrato publico foi alterado sem justificativa registrada
+- [ ] evidencia registrada no arquivo de task
+
+---
+
+### `review` — revisao antes de merge
+
+**Quando usar:** obrigatoriamente antes de qualquer merge ou fechamento de ciclo de tasks. Nao e opcional.
+
+**Entradas obrigatorias no prompt:**
+- diff ou branch a revisar
+- contexto do que foi implementado (skill usada, task referenciada)
+- areas de risco conhecidas (performance, seguranca, contratos)
+
+**Prompt mandatorio:**
+
+```text
+Use a skill review para revisar o diff atual.
+
+Contexto da implementacao:
+- Tasks executadas: [lista de tasks do bundle]
+- Skill usada na implementacao: execute-task
+- Areas de risco: [performance, seguranca, contratos, concorrencia]
+
+Focos obrigatorios da revisao:
+- corretude: a implementacao atende todos os RFs e criterios de aceite do PRD?
+- regressao: alguma mudanca quebra contrato publico ou comportamento existente?
+- seguranca: ha injecao de dependencia insegura, dado sensivel exposto ou validacao faltando?
+- testes: todos os cenarios do criterio de pronto estao cobertos?
+- dívida tecnica introduzida: o que precisara de refactor futuro?
+
+Saidas esperadas:
+- lista de achados por categoria (critico, importante, sugestao)
+- para cada achado critico: arquivo, linha, descricao e correcao sugerida
+- veredicto final: aprovado / aprovado com ressalvas / reprovado
+```
+
+**Criterios de aceite da revisao — nao avance sem estes:**
+- [ ] nenhum achado critico em aberto
+- [ ] achados importantes tem plano de correcao ou decisao explicita de aceitar o risco
+- [ ] veredicto registrado
+
+---
+
+### `refactor` — melhoria sem mudanca de comportamento
+
+**Quando usar:** quando a `review` apontar divida tecnica relevante ou quando uma area do codigo estiver impedindo evolucao segura. Nao use como substituto para implementacao correta na primeira vez.
+
+**Entradas obrigatorias no prompt:**
+- achados da `review` que motivam o refactor
+- escopo delimitado (nao refatore fora do escopo dos achados)
+- invariantes que nao podem mudar (contratos publicos, comportamento observavel)
+
+**Prompt mandatorio:**
+
+```text
+Use a skill refactor para corrigir os achados de refatoracao da revisao.
+
+Achados que motivam este refactor:
+- [lista dos achados da review com arquivo e linha]
+
+Escopo obrigatorio:
+- apenas os arquivos e funcoes apontados pelos achados
+- nenhuma mudanca de comportamento observavel
+
+Invariantes que nao podem mudar:
+- contratos publicos: [lista de assinaturas e endpoints]
+- comportamento de erro: [tipos de erro e mensagens esperados pelos testes]
+
+Criterios de conclusao:
+- todos os testes existentes continuam passando
+- lint sem erro
+- diff gerado e revisado antes de commitar
+```
+
+**Criterios de aceite do refactor — nao commite sem estes:**
+- [ ] nenhum teste regressou
+- [ ] nenhum contrato publico alterado
+- [ ] diff menor que o esperado (sem escopo rastejante)
+- [ ] segunda passagem de `review` no diff do refactor se o escopo foi grande
+
+---
+
+### Checklist de entrada por skill
+
+Use esta tabela antes de invocar qualquer skill. Se um item obrigatorio estiver faltando, providencie antes de invocar.
+
+| Skill | Obrigatorio antes de invocar | Artefato de saida esperado |
+| --- | --- | --- |
+| `create-prd` | problema definido, persona, restricoes de escopo | `tasks/<folder>/prd.md` |
+| `create-technical-specification` | `prd.md` aprovado, contexto tecnico, referencias | `tasks/<folder>/techspec.md` |
+| `create-tasks` | `prd.md` + `techspec.md` aprovados | `tasks/<folder>/tasks.md` + `<N>_task.md` |
+| `execute-task` | task file com criterio de pronto, contexto arquitetural | evidencia no task file, testes passando |
+| `review` | diff ou branch, contexto da implementacao, areas de risco | lista de achados com veredicto |
+| `refactor` | achados de `review`, escopo delimitado, invariantes | diff revisado, testes passando |
+
+### Sinais de desvio — quando parar e corrigir
+
+Se qualquer um dos seguintes acontecer, pare e corrija antes de continuar:
+
+- agente gerou codigo sem ler o arquivo de task
+- tech spec nao tem estrategia de erros explicita
+- task executada sem evidencia registrada
+- review pulada por "a implementacao parece correta"
+- refactor alterou comportamento observavel
+- PRD sem criterios de aceite testáveis
+- tasks.md com tasks que misturam responsabilidades
+
+Esses sao os desvios mais comuns e os que mais causam retrabalho.
+
+---
+
 ## SDD + harness para features Go
 
 Se voce quiser tirar o melhor do repositorio em features Go, o fluxo mais forte costuma ser usar o harness de forma guiada por especificacao:
