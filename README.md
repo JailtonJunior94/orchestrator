@@ -955,6 +955,80 @@ Correcao especifica: [o que nao deve ser feito desta vez]
 
 ---
 
+#### Execucao automatica do mesmo comportamento com task-loop
+
+O `task-loop` ja implementa automaticamente todo o ciclo descrito acima. Nao e necessario abrir e fechar sessoes manualmente.
+
+**Por que o task-loop garante isolamento de contexto:**
+
+Cada iteracao do `task-loop` invoca o agente como um processo completamente novo via `exec.CommandContext` com a flag `--print -p <prompt>`. Isso significa:
+
+- nenhum estado da sessao anterior e carregado — o processo inicia do zero
+- o contexto injetado e exatamente o minimo obrigatorio: arquivo da task + pasta do PRD (que contem `prd.md` e `techspec.md`)
+- a variavel `AI_INVOCATION_DEPTH` e resetada para `0` a cada invocacao, prevenindo aninhamento
+- ao terminar ou falhar, o processo e encerrado com `SIGKILL` no grupo inteiro — sem estado residual
+
+**Equivalencia entre o ciclo manual e o task-loop:**
+
+| Ciclo manual | O que task-loop faz automaticamente |
+| --- | --- |
+| abrir nova sessao | spawn de novo processo por task |
+| fornecer task file + trecho da techspec | passa `task file` + `prd folder` no prompt; agente instrui a carregar `prd.md` e `techspec.md` |
+| executar execute-task com prompt mandatorio | prompt gerado por `BuildPrompt` com instrucao de seguir `SKILL.md` |
+| fechar sessao apos evidencia registrada | processo encerrado; status relido de `tasks.md` e do arquivo da task |
+| abrir nova sessao para proxima task | proxima iteracao spawn novo processo |
+
+**Comando para executar o ciclo automatico com fidelidade maxima:**
+
+Primeiro valide sem gastar ciclo de agente:
+
+```bash
+ai-spec task-loop --tool claude --dry-run tasks/prd-payments-list
+```
+
+Execute uma task de cada vez, observando qualidade antes de ampliar o lote:
+
+```bash
+ai-spec task-loop --tool claude --max-iterations 1 tasks/prd-payments-list
+```
+
+Quando a qualidade do primeiro lote estiver boa, aumente gradualmente:
+
+```bash
+ai-spec task-loop --tool claude --max-iterations 3 --timeout 30m tasks/prd-payments-list
+```
+
+Execucao completa com rastreabilidade:
+
+```bash
+ai-spec task-loop \
+  --tool claude \
+  --max-iterations 10 \
+  --timeout 1h \
+  --report-path ./task-loop-report-payments.md \
+  tasks/prd-payments-list
+```
+
+**Quando preferir o ciclo manual em vez do task-loop:**
+
+| Situacao | Abordagem |
+| --- | --- |
+| task com ambiguidade na spec — precisa de input antes de implementar | ciclo manual: leia a task, resolva a ambiguidade, depois execute |
+| task que toca fronteira arquitetural nao documentada na techspec | ciclo manual: adicione o contexto faltante no prompt antes de invocar |
+| bundle ainda instavel — tasks sem criterio de pronto claro | ciclo manual com `--max-iterations 1` ate estabilizar |
+| bundle maduro, criterios de pronto claros, techspec completa | `task-loop` automatico |
+
+**Sinal de que o task-loop pode ser usado com seguranca:**
+
+- `tasks.md` tem dependencias explicitas e nenhuma task com escopo aberto
+- cada task file tem secao `Criterio de pronto` com comandos de validacao concretos
+- `techspec.md` define contratos, tipos de erro e responsabilidade de cada camada
+- `dry-run` nao aponta task com status invalido ou dependencia circular
+
+Se qualquer um desses itens estiver faltando, resolva antes de rodar o loop automatico. O task-loop e tao bom quanto os artefatos que consome.
+
+---
+
 ### `review` — revisao antes de merge
 
 **Quando usar:** obrigatoriamente antes de qualquer merge ou fechamento de ciclo de tasks. Nao e opcional.
