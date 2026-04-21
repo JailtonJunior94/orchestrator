@@ -1029,6 +1029,195 @@ Se qualquer um desses itens estiver faltando, resolva antes de rodar o loop auto
 
 ---
 
+#### Execucao sem task-loop — alternativas com isolamento de sessao
+
+Sim, e possivel executar com isolamento sem o `task-loop`. Ha tres abordagens, cada uma com tradeoffs diferentes.
+
+**O que o task-loop faz sob o hood (base para as alternativas):**
+
+Cada iteracao do `task-loop` executa exatamente este comando por tool:
+
+```bash
+# Claude
+claude --dangerously-skip-permissions --print -p "<prompt>"
+
+# Codex
+codex --yolo -p "<prompt>"
+
+# Gemini
+gemini --yolo -p "<prompt>"
+
+# Copilot
+copilot --yolo -p "<prompt>"
+```
+
+O prompt e gerado por `BuildPrompt(taskFilePath, prdFolder)` e contem:
+
+```text
+You are executing the "execute-task" skill.
+
+Read and follow the instructions in: .agents/skills/execute-task/SKILL.md
+
+Target task file: <task-file>
+PRD folder: <prd-folder>
+
+Execute ONLY this task. Follow all skill steps:
+1. Validate eligibility
+2. Load context (prd.md, techspec.md)
+3. Implement
+4. Validate (tests, lint)
+5. Review
+6. Update task status in task file and tasks.md
+7. Generate execution report
+```
+
+Qualquer alternativa que replique esse comportamento tem isolamento garantido.
+
+---
+
+**Alternativa 1 — invocar o agente diretamente por task (mais simples)**
+
+Use quando quiser controle total sobre qual task executar e quando, sem depender do parser de `tasks.md`.
+
+Construa o prompt manualmente seguindo o mesmo padrao do `BuildPrompt` e invoque o binario do agente diretamente:
+
+```bash
+# Claude — uma task
+claude --dangerously-skip-permissions --print -p \
+  "You are executing the \"execute-task\" skill.
+
+Read and follow the instructions in: .agents/skills/execute-task/SKILL.md
+
+Target task file: tasks/prd-payments-list/01_repository.md
+PRD folder: tasks/prd-payments-list
+
+Execute ONLY this task. Follow all skill steps:
+1. Validate eligibility
+2. Load context (prd.md, techspec.md)
+3. Implement
+4. Validate (tests, lint)
+5. Review
+6. Update task status in task file and tasks.md
+7. Generate execution report
+
+Update **Status:** in tasks/prd-payments-list/01_repository.md and the corresponding row in tasks/prd-payments-list/tasks.md to reflect the final state."
+```
+
+Troque o `Target task file` para cada task e execute um comando por vez. Cada invocacao e um processo novo — isolamento identico ao `task-loop`.
+
+Para Codex ou Gemini, substitua o binario e as flags:
+
+```bash
+# Codex
+codex --yolo -p "<mesmo prompt>"
+
+# Gemini
+gemini --yolo -p "<mesmo prompt>"
+```
+
+---
+
+**Alternativa 2 — script shell iterando tasks.md**
+
+Use quando quiser automatizar o ciclo sem o `task-loop` mas com controle do shell (logs customizados, notificacoes, condicoes de parada proprias).
+
+O `tasks.md` usa formato de tabela markdown com as colunas `ID`, `Title`, `Status` e `Dependencies`. Uma task e elegivel quando `Status == pending` e todas as dependencias estao com `Status == done`.
+
+Script minimo para iterar e invocar uma task por vez com Claude:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+PRD_FOLDER="${1:?informe o prd folder}"
+TOOL="${2:-claude}"
+MAX="${3:-99}"
+count=0
+
+while [ "$count" -lt "$MAX" ]; do
+  # encontrar proxima task pendente (sem dependencia bloqueando)
+  TASK_FILE=$(ls "${PRD_FOLDER}"/[0-9]*_*.md 2>/dev/null \
+    | while read -r f; do
+        status=$(grep -m1 "^\*\*Status:\*\*" "$f" | awk '{print $2}' | tr -d '[:space:]')
+        [ "$status" = "pending" ] && echo "$f" && break
+      done)
+
+  [ -z "$TASK_FILE" ] && echo "nenhuma task pendente" && break
+
+  PROMPT="You are executing the \"execute-task\" skill.
+
+Read and follow the instructions in: .agents/skills/execute-task/SKILL.md
+
+Target task file: ${TASK_FILE}
+PRD folder: ${PRD_FOLDER}
+
+Execute ONLY this task. Follow all skill steps:
+1. Validate eligibility
+2. Load context (prd.md, techspec.md)
+3. Implement
+4. Validate (tests, lint)
+5. Review
+6. Update task status in task file and tasks.md
+7. Generate execution report
+
+Update **Status:** in ${TASK_FILE} and the corresponding row in ${PRD_FOLDER}/tasks.md to reflect the final state."
+
+  echo "executando: ${TASK_FILE}"
+  case "$TOOL" in
+    claude)  claude --dangerously-skip-permissions --print -p "$PROMPT" ;;
+    codex)   codex --yolo -p "$PROMPT" ;;
+    gemini)  gemini --yolo -p "$PROMPT" ;;
+    copilot) copilot --yolo -p "$PROMPT" ;;
+  esac
+
+  count=$((count + 1))
+done
+```
+
+Uso:
+
+```bash
+chmod +x run-tasks.sh
+./run-tasks.sh tasks/prd-payments-list claude 3
+```
+
+Limitacoes deste script em relacao ao `task-loop`:
+- nao valida dependencias entre tasks (so verifica `pending`)
+- nao gera relatorio estruturado
+- nao lida com `blocked`, `failed` ou `needs_input`
+- nao tem timeout por task
+
+Para essas garantias, use o `task-loop`. O script e util para casos simples ou para entender o mecanismo.
+
+---
+
+**Alternativa 3 — `--max-iterations 1` como substituto do ciclo manual**
+
+Se o objetivo e executar uma task de cada vez com pausa para revisao entre elas, `--max-iterations 1` e a opcao mais segura. Ela usa exatamente o mesmo isolamento do loop completo, mas para apos a primeira task elegivel.
+
+```bash
+# executar uma task, revisar, depois rodar novamente
+ai-spec task-loop --tool claude --max-iterations 1 tasks/prd-payments-list
+# revisar o resultado
+ai-spec task-loop --tool claude --max-iterations 1 tasks/prd-payments-list
+# continuar ate concluir
+```
+
+---
+
+**Comparativo das abordagens**
+
+| Abordagem | Isolamento de sessao | Dependencias entre tasks | Timeout | Relatorio | Quando usar |
+| --- | --- | --- | --- | --- | --- |
+| `task-loop` completo | automatico | sim | sim | sim | bundle maduro, execucao sem supervisao |
+| `task-loop --max-iterations 1` | automatico | sim | sim | sim | execucao task a task com pausa para revisao |
+| invocacao direta por task | manual (um processo por chamada) | nao (voce controla a ordem) | nao | nao | task isolada, ambiguidade na spec, fronteira nao documentada |
+| script shell | manual (um processo por iteracao) | parcial (so status pending) | nao nativo | nao | automacao leve sem dependencias complexas |
+
+**Conclusao:** o `task-loop` e a implementacao de referencia e a mais robusta. As alternativas existem e funcionam para casos especificos, mas replicam apenas parte do comportamento. Para isolamento garantido com gestao de dependencias, timeout e rastreabilidade, use o `task-loop`.
+
+---
+
 ### `review` — revisao antes de merge
 
 **Quando usar:** obrigatoriamente antes de qualquer merge ou fechamento de ciclo de tasks. Nao e opcional.
