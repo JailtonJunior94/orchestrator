@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.11.0 (2026-04-21)
+
+### Features
+- **taskloop:** add report summary, update agent flags and inject AGENTS.md in prompt (43d50d0)
+
+### Documentation
+- **readme:** add task execution alternatives without task-loop (1ff3f75)
+- **readme:** explain task-loop as automatic equivalent of per-session discipline (005c373)
+- **readme:** add table of contents with anchor links for all sections (ff32669)
+- **readme:** add execute-task per-session discipline with context reset and fidelity rules (adcacaa)
+- **readme:** add mandatory skills usage guide with contracts and checklists (e104cab)
+
 ## [0.11.0] - 2026-04-21
 
 ### Added
