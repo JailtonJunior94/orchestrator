@@ -52,10 +52,14 @@ func CheckAgentBinary(invoker AgentInvoker) error {
 }
 
 // BuildPrompt constroi o prompt para o agente executar uma task especifica.
+// Inclui instrucao explicita de leitura de AGENTS.md porque --bare pula o
+// carregamento automatico de CLAUDE.md (RF-04, contrato de carga base).
 func BuildPrompt(taskFilePath, prdFolder string) string {
 	return fmt.Sprintf(`You are executing the "execute-task" skill.
 
-Read and follow the instructions in: .agents/skills/execute-task/SKILL.md
+First, read AGENTS.md at the repository root to load governance rules and conventions.
+
+Then read and follow the instructions in: .agents/skills/execute-task/SKILL.md
 
 Target task file: %s
 PRD folder: %s
@@ -125,7 +129,7 @@ type claudeInvoker struct{}
 func (c *claudeInvoker) BinaryName() string { return "claude" }
 
 func (c *claudeInvoker) Invoke(ctx context.Context, prompt, workDir string) (string, string, int, error) {
-	return runCmd(ctx, workDir, "claude", "--dangerously-skip-permissions", "--print", "-p", prompt)
+	return runCmd(ctx, workDir, "claude", "--dangerously-skip-permissions", "--print", "--bare", "-p", prompt)
 }
 
 // --- Codex ---
@@ -135,7 +139,7 @@ type codexInvoker struct{}
 func (c *codexInvoker) BinaryName() string { return "codex" }
 
 func (c *codexInvoker) Invoke(ctx context.Context, prompt, workDir string) (string, string, int, error) {
-	return runCmd(ctx, workDir, "codex", "--yolo", "-p", prompt)
+	return runCmd(ctx, workDir, "codex", "exec", "--dangerously-bypass-approvals-and-sandbox", "-p", prompt)
 }
 
 // --- Gemini ---
@@ -155,5 +159,5 @@ type copilotInvoker struct{}
 func (c *copilotInvoker) BinaryName() string { return "copilot" }
 
 func (c *copilotInvoker) Invoke(ctx context.Context, prompt, workDir string) (string, string, int, error) {
-	return runCmd(ctx, workDir, "copilot", "-p", prompt, "--yolo")
+	return runCmd(ctx, workDir, "copilot", "--autopilot", "--yolo", "-p", prompt)
 }

@@ -2,7 +2,6 @@ package taskloop
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -73,7 +72,11 @@ func ReadTaskFileStatus(content []byte) string {
 			return normalizeStatus(inner[:end])
 		}
 	}
-	return normalizeStatus(strings.Fields(raw)[0])
+	fields := strings.Fields(raw)
+	if len(fields) == 0 {
+		return ""
+	}
+	return normalizeStatus(fields[0])
 }
 
 // FindEligible retorna tasks elegiveis: status pending, todas deps done, nao no skipped set.
@@ -196,9 +199,9 @@ func AllTerminal(tasks []TaskEntry) bool {
 	return true
 }
 
-// TaskFileStatusFromDisk le o arquivo de task e retorna o status atual.
-func TaskFileStatusFromDisk(path string) string {
-	data, err := os.ReadFile(path)
+// readTaskStatus le o status de um arquivo de task via fs.FileSystem.
+func readTaskStatus(path string, fsys fs.FileSystem) string {
+	data, err := fsys.ReadFile(path)
 	if err != nil {
 		return ""
 	}

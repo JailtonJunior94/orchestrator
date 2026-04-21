@@ -1039,16 +1039,16 @@ Cada iteracao do `task-loop` executa exatamente este comando por tool:
 
 ```bash
 # Claude
-claude --dangerously-skip-permissions --print -p "<prompt>"
+claude --dangerously-skip-permissions --print --bare -p "<prompt>"
 
 # Codex
-codex --yolo -p "<prompt>"
+codex exec --dangerously-bypass-approvals-and-sandbox -p "<prompt>"
 
 # Gemini
 gemini --yolo -p "<prompt>"
 
 # Copilot
-copilot --yolo -p "<prompt>"
+copilot --autopilot --yolo -p "<prompt>"
 ```
 
 O prompt e gerado por `BuildPrompt(taskFilePath, prdFolder)` e contem:
@@ -1056,7 +1056,9 @@ O prompt e gerado por `BuildPrompt(taskFilePath, prdFolder)` e contem:
 ```text
 You are executing the "execute-task" skill.
 
-Read and follow the instructions in: .agents/skills/execute-task/SKILL.md
+First, read AGENTS.md at the repository root to load governance rules and conventions.
+
+Then read and follow the instructions in: .agents/skills/execute-task/SKILL.md
 
 Target task file: <task-file>
 PRD folder: <prd-folder>
@@ -1083,10 +1085,12 @@ Construa o prompt manualmente seguindo o mesmo padrao do `BuildPrompt` e invoque
 
 ```bash
 # Claude — uma task
-claude --dangerously-skip-permissions --print -p \
+claude --dangerously-skip-permissions --print --bare -p \
   "You are executing the \"execute-task\" skill.
 
-Read and follow the instructions in: .agents/skills/execute-task/SKILL.md
+First, read AGENTS.md at the repository root to load governance rules and conventions.
+
+Then read and follow the instructions in: .agents/skills/execute-task/SKILL.md
 
 Target task file: tasks/prd-payments-list/01_repository.md
 PRD folder: tasks/prd-payments-list
@@ -1109,7 +1113,7 @@ Para Codex ou Gemini, substitua o binario e as flags:
 
 ```bash
 # Codex
-codex --yolo -p "<mesmo prompt>"
+codex exec --dangerously-bypass-approvals-and-sandbox -p "<mesmo prompt>"
 
 # Gemini
 gemini --yolo -p "<mesmo prompt>"
@@ -1146,7 +1150,9 @@ while [ "$count" -lt "$MAX" ]; do
 
   PROMPT="You are executing the \"execute-task\" skill.
 
-Read and follow the instructions in: .agents/skills/execute-task/SKILL.md
+First, read AGENTS.md at the repository root to load governance rules and conventions.
+
+Then read and follow the instructions in: .agents/skills/execute-task/SKILL.md
 
 Target task file: ${TASK_FILE}
 PRD folder: ${PRD_FOLDER}
@@ -1164,10 +1170,10 @@ Update **Status:** in ${TASK_FILE} and the corresponding row in ${PRD_FOLDER}/ta
 
   echo "executando: ${TASK_FILE}"
   case "$TOOL" in
-    claude)  claude --dangerously-skip-permissions --print -p "$PROMPT" ;;
-    codex)   codex --yolo -p "$PROMPT" ;;
+    claude)  claude --dangerously-skip-permissions --print --bare -p "$PROMPT" ;;
+    codex)   codex exec --dangerously-bypass-approvals-and-sandbox -p "$PROMPT" ;;
     gemini)  gemini --yolo -p "$PROMPT" ;;
-    copilot) copilot --yolo -p "$PROMPT" ;;
+    copilot) copilot --autopilot --yolo -p "$PROMPT" ;;
   esac
 
   count=$((count + 1))

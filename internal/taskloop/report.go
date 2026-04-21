@@ -61,6 +61,25 @@ func (r *Report) Render() []byte {
 		b.WriteString("\n")
 	}
 
+	// Resumo por status
+	if len(r.Iterations) > 0 {
+		var success, skippedCount, failedCount int
+		for _, it := range r.Iterations {
+			switch {
+			case it.ExitCode == 0 && it.PostStatus == "done":
+				success++
+			case it.ExitCode != 0 || it.PostStatus == "failed":
+				failedCount++
+			default:
+				skippedCount++
+			}
+		}
+		b.WriteString("## Resumo\n\n")
+		fmt.Fprintf(&b, "- **Executadas com sucesso:** %d\n", success)
+		fmt.Fprintf(&b, "- **Puladas:** %d\n", skippedCount)
+		fmt.Fprintf(&b, "- **Falhadas:** %d\n\n", failedCount)
+	}
+
 	// Final task status
 	if len(r.FinalTasks) > 0 {
 		b.WriteString("## Final Task Status\n\n")

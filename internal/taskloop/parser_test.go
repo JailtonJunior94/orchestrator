@@ -2,6 +2,8 @@ package taskloop
 
 import (
 	"testing"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 )
 
 func TestParseTasksFile(t *testing.T) {
@@ -132,6 +134,21 @@ func TestReadTaskFileStatus(t *testing.T) {
 			content: "# Apenas titulo\nSem campo de status.\n",
 			want:    "",
 		},
+		{
+			name:    "status com whitespace apos dois-pontos retorna vazio",
+			content: "# Task\n**Status:**   \n",
+			want:    "",
+		},
+		{
+			name:    "status vazio apos dois-pontos retorna vazio",
+			content: "# Task\n**Status:**\n",
+			want:    "",
+		},
+		{
+			name:    "status com CRLF aciona guard clause fields vazio",
+			content: "# Task\n**Status:** \r\n",
+			want:    "",
+		},
 	}
 
 	for _, tt := range tests {
@@ -237,6 +254,59 @@ func TestNormalizeStatus(t *testing.T) {
 			got := normalizeStatus(tt.input)
 			if got != tt.want {
 				t.Errorf("normalizeStatus(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestReadTaskStatus(t *testing.T) {
+	tests := []struct {
+		name    string
+		path    string
+		files   map[string][]byte
+		want    string
+	}{
+		{
+			name: "arquivo existente com status valido",
+			path: "/prd/task.md",
+			files: map[string][]byte{
+				"/prd/task.md": []byte("# Task\n**Status:** pending\n"),
+			},
+			want: "pending",
+		},
+		{
+			name: "arquivo existente com status done em portugues",
+			path: "/prd/task.md",
+			files: map[string][]byte{
+				"/prd/task.md": []byte("# Task\n**Status:** Concluído (done)\n"),
+			},
+			want: "done",
+		},
+		{
+			name:  "arquivo inexistente retorna string vazia",
+			path:  "/prd/nao_existe.md",
+			files: map[string][]byte{},
+			want:  "",
+		},
+		{
+			name: "arquivo sem campo Status retorna string vazia",
+			path: "/prd/task.md",
+			files: map[string][]byte{
+				"/prd/task.md": []byte("# Task\nSem campo de status aqui.\n"),
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fsys := fs.NewFakeFileSystem()
+			for path, content := range tt.files {
+				fsys.Files[path] = content
+			}
+			got := readTaskStatus(tt.path, fsys)
+			if got != tt.want {
+				t.Errorf("readTaskStatus() = %q, want %q", got, tt.want)
 			}
 		})
 	}

@@ -41,6 +41,10 @@ func FuzzReadTaskFileStatus(f *testing.F) {
 	f.Add([]byte("# Apenas titulo\nSem campo de status.\n"))
 	f.Add([]byte(""))
 	f.Add([]byte("**Status:**\n"))
+	f.Add([]byte("**Status:**   \n"))
+	f.Add([]byte("**Status:** \t \n"))
+	f.Add([]byte("**Status:** \r\n"))
+	f.Add([]byte("**Status:**\r\n"))
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		_ = ReadTaskFileStatus(data)

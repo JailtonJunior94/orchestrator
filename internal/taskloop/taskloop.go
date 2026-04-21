@@ -3,7 +3,6 @@ package taskloop
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -60,7 +59,7 @@ func (s *Service) Execute(opts Options) error {
 	}
 
 	// Resolver diretorio de trabalho (raiz do projeto — pai do prd folder ou cwd)
-	workDir, err := resolveWorkDir(absFolder)
+	workDir, err := resolveWorkDir(absFolder, s.fsys)
 	if err != nil {
 		return fmt.Errorf("erro ao resolver diretorio de trabalho: %w", err)
 	}
@@ -121,7 +120,7 @@ func (s *Service) Execute(opts Options) error {
 
 		// Ler status pre-execucao do arquivo individual
 		preStatus := task.Status
-		if fileStatus := TaskFileStatusFromDisk(taskFile); fileStatus != "" {
+		if fileStatus := readTaskStatus(taskFile, s.fsys); fileStatus != "" {
 			preStatus = fileStatus
 		}
 
@@ -163,7 +162,7 @@ func (s *Service) Execute(opts Options) error {
 
 		// Ler status pos-execucao
 		postStatus := preStatus
-		if fileStatus := TaskFileStatusFromDisk(taskFile); fileStatus != "" {
+		if fileStatus := readTaskStatus(taskFile, s.fsys); fileStatus != "" {
 			postStatus = fileStatus
 		}
 
@@ -243,7 +242,8 @@ func (s *Service) Execute(opts Options) error {
 }
 
 // resolveWorkDir tenta encontrar a raiz do projeto (diretorio que contem go.mod, .git, ou AGENTS.md).
-func resolveWorkDir(prdFolder string) (string, error) {
+// Recebe fsys para manter testabilidade com FakeFileSystem.
+func resolveWorkDir(prdFolder string, fsys fs.FileSystem) (string, error) {
 	dir, err := filepath.Abs(prdFolder)
 	if err != nil {
 		return "", err
@@ -251,7 +251,7 @@ func resolveWorkDir(prdFolder string) (string, error) {
 	for {
 		for _, marker := range []string{".git", "go.mod", "AGENTS.md"} {
 			markerPath := filepath.Join(dir, marker)
-			if _, statErr := os.Stat(markerPath); statErr == nil {
+			if fsys.Exists(markerPath) {
 				return dir, nil
 			}
 		}

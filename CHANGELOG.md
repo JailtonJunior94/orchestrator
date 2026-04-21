@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.11.0] - 2026-04-21
+
+### Added
+- **taskloop:** seção "Resumo" no relatório com contagem de tasks por status (sucesso, puladas, falhadas)
+- **taskloop:** instrução explícita de leitura de AGENTS.md no prompt do agente (RF-04, contrato de carga base)
+- **taskloop:** flag `--bare` no Claude para pular carregamento automático de CLAUDE.md
+- **taskloop:** atualizar flags do Codex para `exec --dangerously-bypass-approvals-and-sandbox`
+- **taskloop:** atualizar flags do Copilot para `--autopilot --yolo`
+
+### Fixed
+- **taskloop:** guard clause em `ReadTaskFileStatus` para campos de status vazios ou com whitespace
+
+### Changed
+- **taskloop:** substituir `os.ReadFile` e `os.Stat` por `fs.FileSystem` em parser e taskloop para testabilidade com FakeFileSystem
+
+### Documentation
+- **readme:** adicionar sumário, guia mandatório de skills, disciplina execute-task por sessão e alternativas de execução sem task-loop
+- **prompts:** adicionar prompt de execução sequencial automatizada de tasks
+
 ## 0.10.4 (2026-04-20)
 
 ### Bug Fixes
