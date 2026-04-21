@@ -287,6 +287,8 @@ ai-spec version
 
 #### Windows
 
+Binarios para `windows_amd64` e `windows_arm64` sao gerados a partir da v0.11.1.
+
 PowerShell:
 
 ```powershell

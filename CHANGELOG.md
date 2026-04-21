@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.11.1] - 2026-04-21
+
+### Fixed
+- **taskloop:** isolate Unix-only syscall fields (`Setpgid`, `syscall.Kill`) behind `//go:build !windows` to fix cross-compilation failure for `windows_amd64` and `windows_arm64` targets
+
 ## 0.11.0 (2026-04-21)
 
 ### Features
