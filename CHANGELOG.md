@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.2 (2026-04-21)
+
+### Bug Fixes
+- **taskloop:** support task-X.Y- filename convention in matchesTaskPrefix (39d1f2d)
+
 ## [0.11.2] - 2026-04-21
 
 ### Fixed
