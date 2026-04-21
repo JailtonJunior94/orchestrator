@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.1 (2026-04-21)
+
+### Bug Fixes
+- **taskloop:** isolate Unix syscalls behind build tags for Windows cross-compilation (1a4cfec)
+
 ## [0.11.1] - 2026-04-21
 
 ### Fixed
