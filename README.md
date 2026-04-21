@@ -707,6 +707,185 @@ Criterios de execucao nao negociaveis:
 
 ---
 
+### Como executar tasks com fidelidade maxima — ciclo por task com limpeza de contexto
+
+Este e o padrao de execucao que produz o melhor resultado: uma task por sessao de agente, contexto limpo a cada inicio, fidelidade total ao artefato especificado.
+
+#### Por que limpar o contexto entre tasks
+
+O agente acumula "pressao de continuidade" ao longo de uma sessao: tende a manter decisoes anteriores, introduzir abstraocoes que emergiram na task passada e desviar do artefato atual. Limpar o contexto elimina esse risco. Cada task recebe um agente que so conhece o que voce forneceu naquela invocacao.
+
+Regra: **uma sessao de agente por task. Ao terminar uma task, feche a sessao e abra uma nova.**
+
+#### Fluxo de execucao por task
+
+```text
+[abrir nova sessao]
+        |
+        v
+[fornecer contexto minimo obrigatorio: techspec + task file]
+        |
+        v
+[executar execute-task com prompt mandatorio]
+        |
+        v
+[validar criterio de pronto: testes + lint + evidencia]
+        |
+        v
+[registrar evidencia no arquivo de task]
+        |
+        v
+[fechar sessao]
+        |
+        v
+[abrir nova sessao para a proxima task]
+```
+
+#### Contexto minimo obrigatorio por sessao
+
+Cada nova sessao deve receber exatamente estes tres elementos — nem menos (risco de desvio), nem mais (risco de contaminacao):
+
+1. o arquivo da task atual (`<N>_task.md`)
+2. o trecho relevante da tech spec (`techspec.md`) — apenas as secoes que a task toca
+3. a regra arquitetural da camada sendo implementada
+
+Nao forneca tasks anteriores, outputs de sessoes passadas ou contexto de features paralelas. Isso contamina o contexto e aumenta a chance de o agente "lembrar" uma decisao que nao deve ser replicada.
+
+#### Prompt mandatorio por task (template copiavel)
+
+```text
+Nova sessao. Sem contexto anterior.
+
+Tarefa: implementar tasks/<prd-folder>/<N>_task.md
+
+Leia o arquivo de task antes de qualquer acao.
+
+Contexto obrigatorio para esta task:
+- Arquitetura: [camada e responsabilidade, ex: "repository — acesso a banco, sem regra de negocio"]
+- Contratos relevantes da tech spec: [cole apenas as assinaturas e tipos que esta task usa]
+- Invariantes que nao podem mudar: [contratos publicos, tipos de erro, comportamento esperado pelos testes]
+
+Regras de execucao nao negociaveis:
+- siga o criterio de pronto definido no arquivo de task — nao adicione nem remova escopo
+- nenhuma interface nova sem fronteira real justificada na tech spec
+- context.Context em todas as operacoes de IO
+- testes table-driven cobrindo todos os cenarios do criterio de pronto
+- ao finalizar: rode os testes, rode o lint, registre o output como evidencia no arquivo de task
+- nao declare a task concluida sem evidencia registrada
+
+Nao inferir. Se o arquivo de task tiver ambiguidade, pare e aponte antes de implementar.
+```
+
+#### Exemplo concreto: bundle de 3 tasks em sessoes separadas
+
+Estrutura do bundle:
+
+```text
+tasks/prd-payments-list/
+  prd.md
+  techspec.md
+  tasks.md
+  01_repository.md   <- acesso ao banco, query com filtros
+  02_service.md      <- regras de aplicacao, orquestracao
+  03_handler.md      <- parse HTTP, validacao de input, resposta
+```
+
+**Sessao 1 — task 01 (repository):**
+
+```text
+Nova sessao. Sem contexto anterior.
+
+Tarefa: implementar tasks/prd-payments-list/01_repository.md
+
+Leia o arquivo de task antes de qualquer acao.
+
+Contexto obrigatorio:
+- Arquitetura: camada repository — acesso a banco, sem regra de negocio, sem HTTP
+- Contratos da tech spec:
+    type PaymentRepository interface {
+        List(ctx context.Context, filter PaymentFilter) ([]Payment, error)
+    }
+    type PaymentFilter struct { Status string; Page int; From, To time.Time }
+- Invariantes: nenhuma logica de negocio nesta camada; erros devem usar os tipos definidos em techspec.md
+
+Regras: siga o criterio de pronto da task. Testes table-driven para filtros. Registre evidencia ao finalizar.
+```
+
+[fechar sessao 1]
+
+**Sessao 2 — task 02 (service):**
+
+```text
+Nova sessao. Sem contexto anterior.
+
+Tarefa: implementar tasks/prd-payments-list/02_service.md
+
+Leia o arquivo de task antes de qualquer acao.
+
+Contexto obrigatorio:
+- Arquitetura: camada service — orquestracao e regras de aplicacao, sem acesso direto ao banco
+- Contratos da tech spec:
+    type PaymentService interface {
+        List(ctx context.Context, filter PaymentFilter) ([]PaymentDTO, error)
+    }
+    O service recebe PaymentRepository por injecao; nao instancia dependencias.
+- Invariantes: nao duplicar validacoes do handler; erros do repository devem ser propagados com contexto
+
+Regras: siga o criterio de pronto da task. Testes com mock do repository. Registre evidencia ao finalizar.
+```
+
+[fechar sessao 2]
+
+**Sessao 3 — task 03 (handler):**
+
+```text
+Nova sessao. Sem contexto anterior.
+
+Tarefa: implementar tasks/prd-payments-list/03_handler.md
+
+Leia o arquivo de task antes de qualquer acao.
+
+Contexto obrigatorio:
+- Arquitetura: camada handler — parse HTTP, validacao de input, mapeamento para DTO de resposta
+- Contratos da tech spec:
+    GET /payments?status=&page=&from=&to=
+    200: { data: PaymentDTO[], total: int, page: int }
+    400: { error: string } para input invalido
+    500: { error: string } para erro interno
+    O handler recebe PaymentService por injecao.
+- Invariantes: nenhuma logica de negocio no handler; status HTTP mapeados conforme techspec.md
+
+Regras: siga o criterio de pronto da task. Testes table-driven para cenarios de input valido, invalido e erro do service. Registre evidencia ao finalizar.
+```
+
+[fechar sessao 3]
+
+#### O que fazer se o agente desviar durante a execucao
+
+Se o agente iniciar uma task sem ler o arquivo, introduzir escopo nao previsto, criar abstraocao nao especificada ou pular a evidencia de validacao, interrompa imediatamente. Nao corrija na mesma sessao — feche, abra uma nova e reenvie o prompt mandatorio com a correcao explicita do desvio:
+
+```text
+Na sessao anterior houve um desvio: [descreva o desvio].
+Nova sessao. Sem contexto anterior.
+
+Tarefa: reimplementar tasks/<prd-folder>/<N>_task.md do zero.
+[prompt mandatorio completo]
+
+Correcao especifica: [o que nao deve ser feito desta vez]
+```
+
+#### Resumo das regras de ouro
+
+| Regra | Motivo |
+| --- | --- |
+| uma sessao por task | elimina pressao de continuidade e desvio acumulado |
+| contexto minimo — apenas o que a task precisa | contaminacao de contexto e a causa mais comum de desvio |
+| leia o arquivo de task antes de qualquer acao | o agente deve seguir o artefato, nao inferir |
+| nao declare concluida sem evidencia | evidencia e o unico sinal objetivo de que a task foi feita corretamente |
+| desvio detectado: feche e recomece | correcao dentro da sessao desviada tende a gerar mais desvio |
+
+---
+
 ### `review` — revisao antes de merge
 
 **Quando usar:** obrigatoriamente antes de qualquer merge ou fechamento de ciclo de tasks. Nao e opcional.
