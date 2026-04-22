@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.0 (2026-04-22)
+
+### Features
+- **cli:** add skill-bump command, version --skills flag and skill_versions manifest field (ac90988)
+
 ## [Unreleased]
 
 ### Features
