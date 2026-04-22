@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.0 (2026-04-22)
+
+### Features
+- **taskloop:** add advanced mode with independent executor and reviewer profiles (fdbfee0)
+
 ## 0.11.2 (2026-04-21)
 
 ### Bug Fixes
