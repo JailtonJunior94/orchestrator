@@ -28,7 +28,7 @@ func TestGather_HappyPath(t *testing.T) {
 	ffs.Files[root+"/.agents/skills/skill-b/SKILL.md"] = []byte("# Skill B\nconteudo da skill B")
 
 	svc := NewService(ffs, silentPrinter(), nil)
-	report, err := svc.gather(root)
+	report, err := svc.gather(root, false)
 
 	if err != nil {
 		t.Fatalf("gather nao deve retornar erro: %v", err)
@@ -60,7 +60,7 @@ func TestGather_MissingSkillsMd_ReturnsError(t *testing.T) {
 	ffs.Dirs[root+"/.agents/skills/skill-sem-skillmd"] = true
 
 	svc := NewService(ffs, silentPrinter(), nil)
-	_, err := svc.gather(root)
+	_, err := svc.gather(root, false)
 
 	if err == nil {
 		t.Fatal("gather deve retornar erro quando SKILL.md esta ausente")
@@ -80,7 +80,7 @@ func TestGather_MissingSkillsDir_ReturnsError(t *testing.T) {
 	// FakeFileSystem vazio: nenhum arquivo, nenhum diretorio
 
 	svc := NewService(ffs, silentPrinter(), nil)
-	_, err := svc.gather(root)
+	_, err := svc.gather(root, false)
 
 	if err == nil {
 		t.Fatal("gather deve retornar erro quando diretorio de skills nao existe")
@@ -97,7 +97,7 @@ func TestExecute_PropagatesGatherError(t *testing.T) {
 	// Sem diretorio de skills
 
 	svc := NewService(ffs, silentPrinter(), nil)
-	err := svc.Execute(root, "table")
+	err := svc.Execute(root, "table", false)
 
 	if err == nil {
 		t.Fatal("Execute deve propagar erro de gather")
@@ -204,7 +204,7 @@ func TestGather_SkillCountNeverFalsePositive(t *testing.T) {
 	ffs.Files[root+"/.agents/skills/minha-skill/SKILL.md"] = []byte("conteudo")
 
 	svc := NewService(ffs, silentPrinter(), nil)
-	report, err := svc.gather(root)
+	report, err := svc.gather(root, false)
 
 	if err != nil {
 		t.Fatalf("gather nao deve retornar erro: %v", err)

@@ -5,12 +5,13 @@ package taskloop
 import (
 	"bytes"
 	"context"
+	"io"
 	"os/exec"
 	"syscall"
 	"time"
 )
 
-func runCmd(ctx context.Context, workDir string, name string, args ...string) (string, string, int, error) {
+func runCmd(ctx context.Context, workDir string, liveOut io.Writer, name string, args ...string) (string, string, int, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = workDir
 	cmd.Env = cleanEnv()
@@ -28,8 +29,16 @@ func runCmd(ctx context.Context, workDir string, name string, args ...string) (s
 	cmd.WaitDelay = 10 * time.Second
 
 	var stdoutBuf, stderrBuf bytes.Buffer
-	cmd.Stdout = &stdoutBuf
-	cmd.Stderr = &stderrBuf
+	if liveOut != nil {
+		// Transmite stdout E stderr ao vivo para liveOut (ex: os.Stderr do processo pai).
+		// Permite ver progresso de ferramentas que escrevem em stderr (ex: avisos, status).
+		// O buffer captura independentemente para inclusao no relatorio final.
+		cmd.Stdout = io.MultiWriter(&stdoutBuf, liveOut)
+		cmd.Stderr = io.MultiWriter(&stderrBuf, liveOut)
+	} else {
+		cmd.Stdout = &stdoutBuf
+		cmd.Stderr = &stderrBuf
+	}
 
 	err := cmd.Run()
 	exitCode := 0

@@ -12,10 +12,10 @@ import (
 // costBaseline e o formato de testdata/baselines/cost-baseline.json.
 // Versionado por release para detectar crescimento silencioso de custo contextual.
 type costBaseline struct {
-	Version      string                  `json:"version"`
-	GeneratedAt  string                  `json:"generated_at"`
-	Note         string                  `json:"note"`
-	TolerancePct int                     `json:"tolerance_pct"`
+	Version      string                   `json:"version"`
+	GeneratedAt  string                   `json:"generated_at"`
+	Note         string                   `json:"note"`
+	TolerancePct int                      `json:"tolerance_pct"`
 	Skills       map[string]CostBreakdown `json:"skills"`
 }
 
@@ -44,7 +44,7 @@ func TestCostRegression_CanonicalSkill(t *testing.T) {
 	}
 
 	svc := NewService(fs.NewOSFileSystem(), silentPrinter(), nil)
-	report, err := svc.gather("../../testdata/baselines")
+	report, err := svc.gather("../../testdata/baselines", false)
 	if err != nil {
 		t.Fatalf("gather falhou sobre testdata/baselines: %v", err)
 	}

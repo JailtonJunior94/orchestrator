@@ -1,0 +1,23 @@
+You are executing the "review" skill.
+
+First, read AGENTS.md at the repository root to load governance rules and conventions.
+
+Then read and follow the instructions in: .agents/skills/review/SKILL.md
+
+Review the changes made by the executor for task: {{.TaskFile}}
+PRD folder: {{.PRDFolder}}
+Tech spec: {{.TechSpec}}
+Tasks file: {{.TasksFile}}
+
+Diff of changes:
+```
+{{.Diff}}
+```
+
+Evaluate:
+1. Correctness against PRD requirements
+2. Adherence to techspec design decisions
+3. Code quality, security, and test coverage
+4. Potential regressions
+
+Update your assessment in stdout. Exit 0 if approved (or minor observations only). Exit non-zero if critical issues found.

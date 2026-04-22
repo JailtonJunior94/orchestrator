@@ -43,15 +43,17 @@ Exemplos:
 		}
 
 		svc := metrics.NewService(fsys, printer, tok)
-		return svc.Execute(rootDir, metricsFormat)
+		return svc.Execute(rootDir, metricsFormat, metricsBrief)
 	},
 }
 
 var metricsFormat string
 var metricsPrecise bool
+var metricsBrief bool
 
 func init() {
 	metricsCmd.Flags().StringVar(&metricsFormat, "format", "table", "Formato de saida: table ou json")
 	metricsCmd.Flags().BoolVar(&metricsPrecise, "precise", false, "Usa tiktoken cl100k_base para contagem precisa de tokens (~15% mais preciso)")
+	metricsCmd.Flags().BoolVar(&metricsBrief, "brief", false, "Estima economia com modo brief (apenas TL;DR de referencias)")
 	rootCmd.AddCommand(metricsCmd)
 }

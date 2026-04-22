@@ -134,6 +134,24 @@
 
 ## [Unreleased]
 
+### Added
+
+- **taskloop — modo avancado (executor + reviewer independentes):** flags `--executor-tool`, `--executor-model`, `--reviewer-tool` e `--reviewer-model` permitem configurar agentes distintos para execucao e revisao; modo simples via `--tool` permanece inalterado e retro-compativel
+- **taskloop — `ExecutionProfile` (Value Object):** representa a configuracao de um papel (executor ou reviewer) com validacao fail-fast no construtor; campos `role`, `tool`, `provider` e `model`
+- **taskloop — `CompatibilityTable`:** cataloga combinacoes ferramenta+modelo reconhecidas (Claude, Codex, Gemini, Copilot); flag `--allow-unknown-model` para aceitar combinacoes fora do catalogo sem erro
+- **taskloop — `BuildReviewPrompt` com `go:embed`:** gera prompt de revisao a partir de template embutido (`review_template.tmpl`) ou de template customizado via `--reviewer-prompt-template`
+- **taskloop — deteccao de auth error e guidance por ferramenta:** `isAuthError` detecta padroes de falha de autenticacao no output do agente; `authGuidance` retorna instrucao especifica por ferramenta; `warnClaudeAuth` alerta antes do loop quando ANTHROPIC_API_KEY esta ausente
+- **taskloop — `LiveOutputSetter` interface:** permite injetar um `io.Writer` para streaming de output do agente em tempo real; usado internamente por `runCmd` para tee do stdout
+- **taskloop — fallback model nativo por papel:** flags `--executor-fallback-model` e `--reviewer-fallback-model` passam `--fallback-model` ao claudeInvoker; outros invokers ignoram silenciosamente
+- **taskloop — fallback tool pre-loop:** flag `--fallback-tool` para validacao de disponibilidade antes do inicio do loop principal
+- **taskloop — relatorio modo avancado:** `ReviewResult` armazena resultado da revisao; `Report` ganha campos `Mode`, `ExecutorProfile` e `ReviewerProfile`; renderizacao separada para modo simples e avancado com coluna Papel
+- **taskloop — dry-run avancado:** exibe modo, perfis resolvidos com status de compatibilidade, template de revisao e preview do prompt para a primeira task elegivel
+- **metrics — modo `brief` no gather:** estimativa de tokens por referencia de skill em modo resumido (150 tokens fixos por entrada) em vez de contagem real do arquivo completo
+- **docs — `docs/task-loop-reference.md`:** guia consolidado de flags, heuristicas e alternativas do task-loop (referenciado no README)
+- **docs — `docs/skills-usage-guide.md`:** guia de uso das skills com contratos de entrada, prompts mandatorios e criterios de aceite
+- **docs — prompts de execucao sequencial:** prompts em `docs/prompts/` para execucao automatizada de tasks com modelos por papel
+- Nova skill `finalize-changelog-readme-push` para consolidar atualizacao de `CHANGELOG.md`, revisao de `README.md`, `git add .`, commit semantico e `git push` com guardrails de confirmacao
+
 ### Fixed
 
 - **ci:** corrigir dirty state do GoReleaser causado por `semver_output.txt` não rastreado no workspace git

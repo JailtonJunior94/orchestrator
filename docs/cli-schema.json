@@ -357,6 +357,12 @@
             "default": false,
             "required": false,
             "description": "Usa contagem precisa de tokens"
+          },
+          "brief": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Estima economia com modo brief (apenas TL;DR de referencias)"
           }
         }
       },
@@ -498,8 +504,8 @@
         "flags": {
           "tool": {
             "type": "string",
-            "required": true,
-            "description": "Ferramenta de IA a utilizar (ex: claude, codex)"
+            "required": false,
+            "description": "Agente de IA: claude, codex, gemini, copilot (modo simples — mutuamente exclusivo com --executor-tool)"
           },
           "dry-run": {
             "type": "bool",
@@ -523,6 +529,52 @@
             "type": "string",
             "required": false,
             "description": "Caminho para salvar o relatorio de execucao"
+          },
+          "executor-tool": {
+            "type": "string",
+            "required": false,
+            "description": "Ferramenta do executor (modo avancado): claude, codex, gemini, copilot"
+          },
+          "executor-model": {
+            "type": "string",
+            "required": false,
+            "description": "Modelo do executor (ex: claude-sonnet-4-6)"
+          },
+          "reviewer-tool": {
+            "type": "string",
+            "required": false,
+            "description": "Ferramenta do reviewer (modo avancado): claude, codex, gemini, copilot"
+          },
+          "reviewer-model": {
+            "type": "string",
+            "required": false,
+            "description": "Modelo do reviewer (ex: claude-opus-4-6)"
+          },
+          "fallback-tool": {
+            "type": "string",
+            "required": false,
+            "description": "Ferramenta de fallback para validacao pre-loop"
+          },
+          "allow-unknown-model": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Aceitar combinacoes ferramenta-modelo nao catalogadas"
+          },
+          "reviewer-prompt-template": {
+            "type": "string",
+            "required": false,
+            "description": "Caminho do template de prompt de revisao customizado"
+          },
+          "executor-fallback-model": {
+            "type": "string",
+            "required": false,
+            "description": "Modelo de fallback nativo do executor (Claude only)"
+          },
+          "reviewer-fallback-model": {
+            "type": "string",
+            "required": false,
+            "description": "Modelo de fallback nativo do reviewer (Claude only)"
           }
         }
       },

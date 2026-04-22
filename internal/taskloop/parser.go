@@ -161,6 +161,26 @@ func matchesTaskPrefix(filename, prefix, fullID string) bool {
 		return true
 	}
 
+	// Convencao 4: "TASK-NNN-desc.md" (zero-padded, case-insensitive)
+	upper := strings.ToUpper(filename)
+	const taskDash = "TASK-"
+	if strings.HasPrefix(upper, taskDash) {
+		rest := filename[len(taskDash):]
+		numEnd := 0
+		for numEnd < len(rest) && rest[numEnd] >= '0' && rest[numEnd] <= '9' {
+			numEnd++
+		}
+		if numEnd > 0 && hasSep(rest[numEnd:]) {
+			numStr := strings.TrimLeft(rest[:numEnd], "0")
+			if numStr == "" {
+				numStr = "0"
+			}
+			if numStr == prefix {
+				return true
+			}
+		}
+	}
+
 	return false
 }
 

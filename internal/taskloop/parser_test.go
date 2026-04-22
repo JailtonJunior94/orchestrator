@@ -381,3 +381,52 @@ func TestReadTaskStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestMatchesTaskPrefix(t *testing.T) {
+	tests := []struct {
+		filename string
+		prefix   string
+		fullID   string
+		want     bool
+	}{
+		// Convencao 1: prefixo simples
+		{"1-setup.md", "1", "1.0", true},
+		{"1_setup.md", "1", "1.0", true},
+		{"2-impl.md", "1", "1.0", false},
+
+		// Convencao 2: ID completo
+		{"1.0-setup.md", "1", "1.0", true},
+		{"1.0_setup.md", "1", "1.0", true},
+		{"2.0-impl.md", "1", "1.0", false},
+
+		// Convencao 3: task-N.N
+		{"task-1.0-setup.md", "1", "1.0", true},
+		{"task-1.0_setup.md", "1", "1.0", true},
+		{"task-2.0-impl.md", "1", "1.0", false},
+
+		// Convencao 4: TASK-NNN (zero-padded)
+		{"TASK-001-quick-reference.md", "1", "1.0", true},
+		{"TASK-013-dedup.md", "13", "13.0", true},
+		{"TASK-020-propagacao.md", "20", "20.0", true},
+		{"TASK-001-foo.md", "2", "2.0", false},
+		{"TASK-010-bar.md", "1", "1.0", false},
+
+		// Convencao 4: case-insensitive
+		{"Task-003-test.md", "3", "3.0", true},
+		{"task-005-schema.md", "5", "5.0", true},
+
+		// Sem match
+		{"README.md", "1", "1.0", false},
+		{"prd.md", "1", "1.0", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.filename, func(t *testing.T) {
+			got := matchesTaskPrefix(tt.filename, tt.prefix, tt.fullID)
+			if got != tt.want {
+				t.Errorf("matchesTaskPrefix(%q, %q, %q) = %v, want %v",
+					tt.filename, tt.prefix, tt.fullID, got, tt.want)
+			}
+		})
+	}
+}

@@ -3,14 +3,18 @@ package taskloop
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
 // AgentInvoker abstrai a invocacao de um agente de IA via CLI.
+// Quando model == "", o invoker nao passa --model ao subprocesso (usa default da ferramenta).
+// Quando model != "", o invoker insere --model <model> na posicao correta conforme cada ferramenta.
 type AgentInvoker interface {
-	Invoke(ctx context.Context, prompt, workDir string) (stdout, stderr string, exitCode int, err error)
+	Invoke(ctx context.Context, prompt, workDir, model string) (stdout, stderr string, exitCode int, err error)
 	BinaryName() string
 }
 
@@ -73,6 +77,73 @@ Execute ONLY this task. Follow all skill steps:
 Update **Status:** in %s and the corresponding row in %s/tasks.md to reflect the final state.`, taskFilePath, prdFolder, taskFilePath, prdFolder)
 }
 
+// LiveOutputSetter permite configurar um writer para streaming de output do agente.
+// Invokers que implementam esta interface recebem live output via SetLiveOutput
+// antes do loop principal. O writer e passado internamente a runCmd para tee do stdout.
+type LiveOutputSetter interface {
+	SetLiveOutput(w io.Writer)
+}
+
+// isAuthError detecta erros de autenticacao conhecidos no output do agente.
+// Retorna true quando o output contem padroes que indicam falha de login/token.
+func isAuthError(output string) bool {
+	patterns := []string{
+		"not logged in",
+		"please run /login",
+		"not authenticated",
+		"authentication required",
+		"unauthorized",
+		"login required",
+		"auth token",
+		"api key",
+	}
+	lower := strings.ToLower(output)
+	for _, p := range patterns {
+		if strings.Contains(lower, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// authGuidance retorna instrucoes de autenticacao especificas por ferramenta.
+func authGuidance(tool string) string {
+	switch tool {
+	case "claude":
+		return "execute 'claude' em um terminal separado e faca login com '/login', ou defina ANTHROPIC_API_KEY no ambiente para uso nao-interativo"
+	case "copilot":
+		return "execute 'gh auth login' para autenticar o GitHub Copilot"
+	case "gemini":
+		return "execute 'gemini' em um terminal separado e siga o fluxo de autenticacao"
+	case "codex":
+		return "configure OPENAI_API_KEY ou execute 'codex auth' para autenticar"
+	default:
+		return "verifique a autenticacao da ferramenta antes de executar task-loop"
+	}
+}
+
+// warnClaudeAuth retorna aviso quando autenticacao do claude parece indisponivel.
+// Verificacao heuristica: ANTHROPIC_API_KEY ausente E ~/.claude/ ausente ou vazio.
+// Nunca bloqueia a execucao — e um aviso antecipado, nao uma prova de autenticacao valida.
+// Util para detectar falha de auth ANTES de iniciar o loop, evitando que a primeira
+// iteracao falhe silenciosamente so na hora de invocar o agente.
+func warnClaudeAuth() string {
+	if os.Getenv("ANTHROPIC_API_KEY") != "" {
+		return "" // API key presente — autenticacao nao-interativa disponivel
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "" // nao conseguiu verificar; assume ok
+	}
+	entries, err := os.ReadDir(filepath.Join(home, ".claude"))
+	if err != nil || len(entries) == 0 {
+		return "ANTHROPIC_API_KEY nao definido e ~/.claude/ vazio ou ausente — " +
+			"autenticacao de subprocesso pode falhar; " +
+			authGuidance("claude")
+	}
+	return "" // diretorio existe com arquivos; sessao provavelmente disponivel
+}
+
 func cleanEnv() []string {
 	env := os.Environ()
 	var cleaned []string
@@ -88,40 +159,85 @@ func cleanEnv() []string {
 
 // --- Claude ---
 
-type claudeInvoker struct{}
+// claudeInvoker invoca o CLI do Claude Code.
+// fallbackModel, quando nao vazio, propaga --fallback-model ao subprocesso (camada 1 de fallback).
+type claudeInvoker struct {
+	fallbackModel string
+	liveOut       io.Writer
+}
 
 func (c *claudeInvoker) BinaryName() string { return "claude" }
 
-func (c *claudeInvoker) Invoke(ctx context.Context, prompt, workDir string) (string, string, int, error) {
-	return runCmd(ctx, workDir, "claude", "--dangerously-skip-permissions", "--print", "--bare", "-p", prompt)
+func (c *claudeInvoker) SetLiveOutput(w io.Writer) { c.liveOut = w }
+
+func (c *claudeInvoker) Invoke(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+	args := make([]string, 0, 9)
+	if model != "" {
+		args = append(args, "--model", model)
+	}
+	if c.fallbackModel != "" {
+		args = append(args, "--fallback-model", c.fallbackModel)
+	}
+	args = append(args, "--dangerously-skip-permissions", "--print", "--bare", "-p", prompt)
+	return runCmd(ctx, workDir, c.liveOut, "claude", args...)
 }
 
 // --- Codex ---
 
-type codexInvoker struct{}
+type codexInvoker struct {
+	liveOut io.Writer
+}
 
 func (c *codexInvoker) BinaryName() string { return "codex" }
 
-func (c *codexInvoker) Invoke(ctx context.Context, prompt, workDir string) (string, string, int, error) {
-	return runCmd(ctx, workDir, "codex", "exec", "--dangerously-bypass-approvals-and-sandbox", "-p", prompt)
+func (c *codexInvoker) SetLiveOutput(w io.Writer) { c.liveOut = w }
+
+func (c *codexInvoker) Invoke(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+	args := make([]string, 0, 5)
+	args = append(args, "exec")
+	if model != "" {
+		args = append(args, "--model", model)
+	}
+	// O prompt e passado como argumento posicional — a flag -p do codex exec
+	// significa --profile (perfil de config), nao --prompt.
+	args = append(args, "--dangerously-bypass-approvals-and-sandbox", prompt)
+	return runCmd(ctx, workDir, c.liveOut, "codex", args...)
 }
 
 // --- Gemini ---
 
-type geminiInvoker struct{}
+type geminiInvoker struct {
+	liveOut io.Writer
+}
 
 func (g *geminiInvoker) BinaryName() string { return "gemini" }
 
-func (g *geminiInvoker) Invoke(ctx context.Context, prompt, workDir string) (string, string, int, error) {
-	return runCmd(ctx, workDir, "gemini", "--yolo", "-p", prompt)
+func (g *geminiInvoker) SetLiveOutput(w io.Writer) { g.liveOut = w }
+
+func (g *geminiInvoker) Invoke(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+	args := make([]string, 0, 5)
+	if model != "" {
+		args = append(args, "--model", model)
+	}
+	args = append(args, "--approval-mode=yolo", "-p", prompt)
+	return runCmd(ctx, workDir, g.liveOut, "gemini", args...)
 }
 
 // --- Copilot ---
 
-type copilotInvoker struct{}
+type copilotInvoker struct {
+	liveOut io.Writer
+}
 
 func (c *copilotInvoker) BinaryName() string { return "copilot" }
 
-func (c *copilotInvoker) Invoke(ctx context.Context, prompt, workDir string) (string, string, int, error) {
-	return runCmd(ctx, workDir, "copilot", "--autopilot", "--yolo", "-p", prompt)
+func (c *copilotInvoker) SetLiveOutput(w io.Writer) { c.liveOut = w }
+
+func (c *copilotInvoker) Invoke(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+	args := make([]string, 0, 6)
+	if model != "" {
+		args = append(args, "--model", model)
+	}
+	args = append(args, "--autopilot", "--yolo", "-p", prompt)
+	return runCmd(ctx, workDir, c.liveOut, "copilot", args...)
 }

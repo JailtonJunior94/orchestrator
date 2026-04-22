@@ -29,10 +29,10 @@ type Report struct {
 
 // BaselineEntry descreve o baseline de uma skill.
 type BaselineEntry struct {
-	Files     []string     `json:"files"`
-	Words     int          `json:"words"`
-	Chars     int          `json:"chars"`
-	TokensEst int          `json:"tokens_est"`
+	Files     []string      `json:"files"`
+	Words     int           `json:"words"`
+	Chars     int           `json:"chars"`
+	TokensEst int           `json:"tokens_est"`
 	Cost      CostBreakdown `json:"cost"`
 }
 
@@ -57,8 +57,8 @@ func NewService(fsys fs.FileSystem, printer *output.Printer, tok Tokenizer) *Ser
 }
 
 // Execute calcula e imprime metricas. Retorna erro se o inventario obrigatorio estiver ausente.
-func (s *Service) Execute(rootDir, format string) error {
-	report, err := s.gather(rootDir)
+func (s *Service) Execute(rootDir, format string, brief bool) error {
+	report, err := s.gather(rootDir, brief)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (s *Service) Execute(rootDir, format string) error {
 	}
 
 	// Tabela
-	s.printer.Info("Baselines:")
+	s.printer.Info("Baselines (brief=%v):", brief)
 	for stack, entry := range report.Baselines {
 		s.printer.Info("- %s: words=%d chars=%d est_tokens=%d", stack, entry.Words, entry.Chars, entry.TokensEst)
 	}
@@ -88,7 +88,7 @@ func (s *Service) Execute(rootDir, format string) error {
 
 // gather descobre o inventario real do checkout e retorna erro se baseline obrigatoria estiver ausente.
 // Baseline obrigatoria: cada diretorio em .agents/skills/ deve conter um SKILL.md.
-func (s *Service) gather(rootDir string) (Report, error) {
+func (s *Service) gather(rootDir string, brief bool) (Report, error) {
 	report := Report{
 		Baselines: make(map[string]BaselineEntry),
 		Flows:     make(map[string]FlowEntry),
@@ -111,7 +111,7 @@ func (s *Service) gather(rootDir string) (Report, error) {
 		name := e.Name()
 		skillFile := filepath.Join(skillsDir, name, "SKILL.md")
 		if !s.fs.Exists(skillFile) {
-			return report, fmt.Errorf("skill %q: SKILL.md ausente em %s (baseline obrigatoria)", name, skillFile)
+			return report, fmt.Errorf("SKILL.md ausente em skill %s", name)
 		}
 
 		entry := BaselineEntry{}
@@ -134,10 +134,19 @@ func (s *Service) gather(rootDir string) (Report, error) {
 				refPath := filepath.Join(refsDir, ref.Name())
 				rm := s.fileMetric(refPath)
 				entry.Files = append(entry.Files, refPath)
-				entry.Words += rm.Words
-				entry.Chars += rm.Chars
-				entry.TokensEst += rm.TokensEst
-				refTokensTotal += rm.TokensEst
+
+				if brief {
+					// Em modo brief, simulamos 150 tokens por TL;DR em vez do arquivo completo
+					entry.Words += 30      // estimativa
+					entry.Chars += 150 * 3 // estimativa
+					entry.TokensEst += 150
+					refTokensTotal += 150
+				} else {
+					entry.Words += rm.Words
+					entry.Chars += rm.Chars
+					entry.TokensEst += rm.TokensEst
+					refTokensTotal += rm.TokensEst
+				}
 				refFileCount++
 				report.RefCount++
 			}
