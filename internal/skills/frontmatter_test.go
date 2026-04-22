@@ -136,3 +136,29 @@ func TestSemverGreater(t *testing.T) {
 		}
 	}
 }
+
+func TestIsValidSemver(t *testing.T) {
+	tests := []struct {
+		name    string
+		version string
+		want    bool
+	}{
+		{name: "major minor patch", version: "1.2.3", want: true},
+		{name: "prefixed prerelease", version: "v1.2.3-beta.1", want: true},
+		{name: "major only", version: "1", want: false},
+		{name: "major minor", version: "1.2", want: false},
+		{name: "empty prerelease", version: "1.2.3-", want: false},
+		{name: "empty prerelease identifier", version: "1.2.3-alpha..1", want: false},
+		{name: "dev", version: "dev", want: false},
+		{name: "missing segment", version: "1..3", want: false},
+		{name: "non numeric", version: "1.2.x", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := IsValidSemver(tt.version); got != tt.want {
+				t.Fatalf("IsValidSemver(%q) = %v, want %v", tt.version, got, tt.want)
+			}
+		})
+	}
+}

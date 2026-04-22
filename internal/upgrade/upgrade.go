@@ -93,7 +93,7 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 
 	s.printer.Info("Verificando skills em: %s", projectDir)
 	s.printer.Info("Fonte: %s", sourceDir)
-	sourceVersion := version.ReadVersionFile(sourceDir)
+	sourceVersion := version.ResolveFromExecutable()
 	s.printer.Info("ai-spec %s", sourceVersion)
 	s.printer.Info("")
 
@@ -148,6 +148,7 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 		okCount, outdatedCount, refsDivCount, missingCount)
 
 	if opts.CheckOnly {
+		s.printCheckVersionInfo(projectDir)
 		if outdatedCount+missingCount > 0 {
 			s.printer.Info("")
 			s.printer.Info("Execute sem --check para atualizar: ai-spec-harness upgrade %s --source %s", opts.ProjectDir, opts.SourceDir)
@@ -199,17 +200,45 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 	}
 
 	// Atualizar manifesto
-	if updated > 0 && s.manifest.Exists(projectDir) {
+	if s.manifest.Exists(projectDir) {
 		mf, err := s.manifest.Load(projectDir)
 		if err == nil {
+			currentVersion := version.ResolveFromExecutable()
+			versionChanged := mf.Version != currentVersion
+			if updated == 0 && !versionChanged {
+				return nil
+			}
+
 			mf.UpdatedAt = time.Now()
+			mf.Version = currentVersion
 			allSkills := skills.AllSkills(mf.Langs)
 			mf.Checksums = s.computeChecksums(sourceDir, allSkills)
+			mf.SkillVersions = s.collectSkillVersions(sourceDir, allSkills)
 			_ = s.manifest.Save(projectDir, mf)
 		}
 	}
 
 	return nil
+}
+
+func (s *Service) printCheckVersionInfo(projectDir string) {
+	if !s.manifest.Exists(projectDir) {
+		return
+	}
+
+	mf, err := s.manifest.Load(projectDir)
+	if err != nil || mf == nil {
+		return
+	}
+
+	binaryVersion := version.ResolveFromExecutable()
+	if !skills.IsValidSemver(mf.Version) || !skills.IsValidSemver(binaryVersion) {
+		return
+	}
+
+	if mf.Version != binaryVersion {
+		s.printer.Info("CLI: %s (manifesto: %s)", binaryVersion, mf.Version)
+	}
 }
 
 func (s *Service) checkSkills(sourceDir, projectDir string, langFilter []skills.Lang) []SkillCheck {
@@ -310,6 +339,24 @@ func (s *Service) checkSkills(sourceDir, projectDir string, langFilter []skills.
 	}
 
 	return checks
+}
+
+func (s *Service) collectSkillVersions(sourceDir string, skillNames []string) map[string]string {
+	versions := make(map[string]string, len(skillNames))
+	for _, name := range skillNames {
+		path := filepath.Join(sourceDir, ".agents", "skills", name, "SKILL.md")
+		data, err := s.fs.ReadFile(path)
+		if err != nil {
+			continue
+		}
+
+		fm := skills.ParseFrontmatter(data)
+		if fm.Version != "" {
+			versions[name] = fm.Version
+		}
+	}
+
+	return versions
 }
 
 func (s *Service) regenerateAdapters(sourceDir, projectDir, codexProfile string) {

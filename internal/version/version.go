@@ -36,3 +36,25 @@ func Resolve(dir string) string {
 	}
 	return "dev"
 }
+
+// ResolveFromExecutable localiza o VERSION file adjacente ao binario,
+// resolvendo symlinks antes de extrair o diretorio.
+// Fallback chain: ldflags > VERSION adjacente ao executavel resolvido > "dev"
+func ResolveFromExecutable() string {
+	if Version != "dev" {
+		return Version // ldflags injetado pelo GoReleaser tem prioridade maxima
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return "dev"
+	}
+	resolved, err := filepath.EvalSymlinks(exe)
+	if err != nil {
+		return "dev"
+	}
+	dir := filepath.Dir(resolved)
+	if v := ReadVersionFile(dir); v != "unknown" {
+		return v + "-dev"
+	}
+	return "dev"
+}

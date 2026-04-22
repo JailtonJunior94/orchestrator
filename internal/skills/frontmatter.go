@@ -128,7 +128,7 @@ func ValidateFrontmatter(content []byte, dirName string, availableSkills []strin
 		return fmt.Errorf("campo description e obrigatorio no frontmatter")
 	}
 
-	if fm.Version != "" && !isValidSemver(fm.Version) {
+	if fm.Version != "" && !IsValidSemver(fm.Version) {
 		return fmt.Errorf("version %q nao e um semver valido (esperado: X.Y.Z)", fm.Version)
 	}
 
@@ -165,13 +165,19 @@ func hasFrontmatterBlock(content []byte) bool {
 	return false
 }
 
-// isValidSemver verifica se a string e um semver valido (X, X.Y ou X.Y.Z com prefixo v opcional).
-func isValidSemver(v string) bool {
+// IsValidSemver verifica se a string e um semver valido no formato X.Y.Z com prefixo v opcional.
+func IsValidSemver(v string) bool {
 	v = strings.TrimPrefix(v, "v")
-	if idx := strings.IndexByte(v, '-'); idx >= 0 {
-		v = v[:idx]
+	if core, prerelease, hasPrerelease := strings.Cut(v, "-"); hasPrerelease {
+		if !isValidPrerelease(prerelease) {
+			return false
+		}
+		v = core
 	}
-	parts := strings.SplitN(v, ".", 3)
+	parts := strings.Split(v, ".")
+	if len(parts) != 3 {
+		return false
+	}
 	for _, p := range parts {
 		if p == "" {
 			return false
@@ -182,7 +188,31 @@ func isValidSemver(v string) bool {
 			}
 		}
 	}
-	return len(parts) >= 1
+	return true
+}
+
+func isValidPrerelease(v string) bool {
+	if v == "" {
+		return false
+	}
+
+	for _, part := range strings.Split(v, ".") {
+		if part == "" {
+			return false
+		}
+		for _, c := range part {
+			switch {
+			case c >= '0' && c <= '9':
+			case c >= 'A' && c <= 'Z':
+			case c >= 'a' && c <= 'z':
+			case c == '-':
+			default:
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func parseDependsOn(raw string) []string {

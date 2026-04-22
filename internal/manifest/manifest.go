@@ -20,8 +20,9 @@ type Manifest struct {
 	Tools        []skills.Tool     `json:"tools"`
 	Langs        []skills.Lang     `json:"langs"`
 	Skills       []string          `json:"skills"`
-	Checksums    map[string]string `json:"checksums"`
-	CodexProfile string            `json:"codex_profile,omitempty"`
+	Checksums     map[string]string `json:"checksums"`
+	CodexProfile  string            `json:"codex_profile,omitempty"`
+	SkillVersions map[string]string `json:"skill_versions,omitempty"`
 }
 
 // Store gerencia leitura e escrita do manifesto.

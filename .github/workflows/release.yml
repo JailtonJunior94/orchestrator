@@ -34,6 +34,16 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: go build -o ai-spec ./main.go
 
+      - name: Auto-bump skill versions
+        if: github.ref == 'refs/heads/main'
+        run: ./ai-spec skill-bump .
+
+      - name: Stage skill bumps
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git diff --quiet .agents/skills/ 2>/dev/null || git add .agents/skills/
+          git diff --quiet internal/embedded/assets/.agents/skills/ 2>/dev/null || git add internal/embedded/assets/.agents/skills/
+
       - name: Compute next version (semver-next)
         if: github.ref == 'refs/heads/main'
         id: semver
@@ -87,7 +97,7 @@ jobs:
           if [[ "$changed" == "false" ]]; then
             echo "CHANGELOG.md and VERSION unchanged, skipping commit"
           else
-            git add CHANGELOG.md VERSION
+            git add CHANGELOG.md VERSION .agents/skills/ internal/embedded/assets/.agents/skills/
             git commit -m "chore(release): update CHANGELOG.md and VERSION for v${{ steps.semver.outputs.target_version }} [skip ci]"
           fi
 

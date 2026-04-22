@@ -601,7 +601,12 @@
         "name": "version",
         "description": "Exibe a versao do ai-spec-harness",
         "args": [],
-        "flags": {}
+        "flags": {
+          "skills": {
+            "type": "string",
+            "required": false
+          }
+        }
       },
       {
         "name": "wrapper",
@@ -648,6 +653,21 @@
           { "name": "path", "required": false, "description": "Caminho do projeto (default: diretorio atual)" }
         ],
         "flags": {}
+      },
+      {
+        "name": "skill-bump",
+        "description": "Atualiza versao de skills cujo conteudo mudou desde a ultima tag",
+        "longDescription": "Compara skills entre a ultima tag e HEAD e atualiza os campos version no frontmatter.",
+        "args": [
+          { "name": "path", "required": true, "description": "Caminho do repositorio alvo" }
+        ],
+        "flags": {
+          "dry-run": {
+            "type": "boolean",
+            "required": false,
+            "description": "Exibe as mudancas sem alterar arquivos"
+          }
+        }
       }
     ]
   }

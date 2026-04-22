@@ -530,7 +530,8 @@ Apos a instalacao, o repositorio alvo contem os seguintes artefatos que os agent
 | `scaffold` | Cria a estrutura inicial de uma nova skill de linguagem |
 | `uninstall` | Remove artefatos instalados pelo CLI |
 | `completion` | Gera scripts de autocompletion para shell |
-| `version` | Exibe versao, commit e data de build |
+| `version` | Exibe versao, commit e data de build; `--skills` lista versoes das skills embutidas e instaladas |
+| `skill-bump` | Detecta skills alteradas desde a ultima tag e atualiza o campo `version` no frontmatter `SKILL.md` |
 
 ### Exemplos uteis por comando
 
@@ -593,6 +594,17 @@ ai-spec lint . --strict
 
 # remover a instalacao
 ai-spec uninstall ../api-pagamentos --dry-run
+
+# listar versoes de todas as skills (embutidas e instaladas)
+ai-spec version --skills
+
+# listar apenas skills embutidas ou apenas instaladas
+ai-spec version --skills=embedded
+ai-spec version --skills=installed
+
+# detectar skills alteradas desde a ultima tag e propor bump de versao
+ai-spec skill-bump .
+ai-spec skill-bump . --dry-run
 ```
 
 ## Exemplos por ferramenta

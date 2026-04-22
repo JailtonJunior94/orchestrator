@@ -7,6 +7,12 @@
       "version": "1.0.0",
       "computedHash": "4d206f23b9ff58786fde3fab55a78ee9499bc04f32f9ad361ddb53e1a954101c"
     },
+    "finalize-changelog-readme-push": {
+      "source": "JailtonJunior94/skills",
+      "sourceType": "github",
+      "version": "1.0.0",
+      "computedHash": "b85e266f7e6e671c44e40f56680fbf705bc0b4f5d67792bd6d4d204cb6c48980"
+    },
     "github-diff-changelog-publisher": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",

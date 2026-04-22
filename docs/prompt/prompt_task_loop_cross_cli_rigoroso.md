@@ -27,11 +27,7 @@ Modo de execucao:
 9. Se a falha for do prompt ou da compatibilidade da CLI com o harness, nao mascarar o problema com workarounds silenciosos.
 
 Bundles obrigatorios de validacao:
-- `tasks/maturidade`
-- `tasks/prd-interactive-task-loop`
-- `tasks/prd-task-loop-modelos-por-papel`
-- `tasks/prd-task-loop-sequential-execution`
-- `tasks/prd-telemetry-feedback`
+- `tasks/prd-unified-version-resolution`
 
 Matriz obrigatoria:
 - ferramenta: `claude`

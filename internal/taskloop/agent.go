@@ -166,11 +166,17 @@ type claudeInvoker struct {
 	liveOut       io.Writer
 }
 
-func (c *claudeInvoker) BinaryName() string { return "claude" }
+func (c *claudeInvoker) BinaryName() string {
+	if _, err := exec.LookPath("claudiney"); err == nil {
+		return "claudiney"
+	}
+	return "claude"
+}
 
 func (c *claudeInvoker) SetLiveOutput(w io.Writer) { c.liveOut = w }
 
 func (c *claudeInvoker) Invoke(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+	bin := c.BinaryName()
 	args := make([]string, 0, 9)
 	if model != "" {
 		args = append(args, "--model", model)
@@ -178,8 +184,14 @@ func (c *claudeInvoker) Invoke(ctx context.Context, prompt, workDir, model strin
 	if c.fallbackModel != "" {
 		args = append(args, "--fallback-model", c.fallbackModel)
 	}
-	args = append(args, "--dangerously-skip-permissions", "--print", "--bare", "-p", prompt)
-	return runCmd(ctx, workDir, c.liveOut, "claude", args...)
+	if bin == "claudiney" {
+		// claudiney ja inclui --dangerously-skip-permissions e usa CLAUDE_CONFIG_DIR
+		// sem --bare para permitir autenticacao via keychain/config local
+		args = append(args, "--print", "-p", prompt)
+	} else {
+		args = append(args, "--dangerously-skip-permissions", "--print", "--bare", "-p", prompt)
+	}
+	return runCmd(ctx, workDir, c.liveOut, bin, args...)
 }
 
 // --- Codex ---
@@ -198,9 +210,7 @@ func (c *codexInvoker) Invoke(ctx context.Context, prompt, workDir, model string
 	if model != "" {
 		args = append(args, "--model", model)
 	}
-	// O prompt e passado como argumento posicional — a flag -p do codex exec
-	// significa --profile (perfil de config), nao --prompt.
-	args = append(args, "--dangerously-bypass-approvals-and-sandbox", prompt)
+	args = append(args, "--yolo", prompt)
 	return runCmd(ctx, workDir, c.liveOut, "codex", args...)
 }
 

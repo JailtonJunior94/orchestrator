@@ -1,9 +1,13 @@
 package upgrade
 
 import (
+	"bytes"
+	"encoding/json"
 	"os"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/config"
@@ -11,7 +15,11 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/version"
 )
+
+var versionMu sync.Mutex
 
 func setupTestService(ffs *fs.FakeFileSystem) *Service {
 	printer := output.New(false)
@@ -19,6 +27,44 @@ func setupTestService(ffs *fs.FakeFileSystem) *Service {
 	adpt := adapters.NewGenerator(ffs, printer)
 	ctxg := contextgen.NewGenerator(ffs, printer)
 	return NewService(ffs, printer, mfst, adpt, ctxg)
+}
+
+func setupTestServiceWithOutput(ffs *fs.FakeFileSystem, out, errOut *bytes.Buffer) *Service {
+	printer := output.New(false)
+	printer.Out = out
+	printer.Err = errOut
+	mfst := manifest.NewStore(ffs)
+	adpt := adapters.NewGenerator(ffs, printer)
+	ctxg := contextgen.NewGenerator(ffs, printer)
+	return NewService(ffs, printer, mfst, adpt, ctxg)
+}
+
+func readManifestFromFakeFS(t *testing.T, ffs *fs.FakeFileSystem, path string) manifest.Manifest {
+	t.Helper()
+
+	data, err := ffs.ReadFile(path)
+	if err != nil {
+		t.Fatalf("falha ao ler manifesto %s: %v", path, err)
+	}
+
+	var mf manifest.Manifest
+	if err := json.Unmarshal(data, &mf); err != nil {
+		t.Fatalf("falha ao decodificar manifesto %s: %v", path, err)
+	}
+
+	return mf
+}
+
+func setVersionForTest(t *testing.T, resolvedVersion string) {
+	t.Helper()
+
+	versionMu.Lock()
+	originalVersion := version.Version
+	version.Version = resolvedVersion
+	t.Cleanup(func() {
+		version.Version = originalVersion
+		versionMu.Unlock()
+	})
 }
 
 func TestUpgrade_NoSkillsDir(t *testing.T) {
@@ -79,6 +125,411 @@ func TestUpgrade_CheckOnly_UpToDate(t *testing.T) {
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestUpgradeCheck_PrintsInformativeVersionLineWhenManifestDiffers(t *testing.T) {
+	t.Parallel()
+
+	ffs := fs.NewFakeFileSystem()
+	content := []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = content
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = content
+
+	setVersionForTest(t, "0.12.0")
+
+	store := manifest.NewStore(ffs)
+	if err := store.Save("/project", &manifest.Manifest{
+		Version:   "0.11.2",
+		CreatedAt: time.Unix(1700000000, 0),
+		UpdatedAt: time.Unix(1700000000, 0),
+		Langs:     []skills.Lang{},
+	}); err != nil {
+		t.Fatalf("falha ao salvar manifesto inicial: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	svc := setupTestServiceWithOutput(ffs, &stdout, &stderr)
+
+	err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		CheckOnly:  true,
+	})
+	if err != nil {
+		t.Fatalf("upgrade --check falhou: %v", err)
+	}
+
+	if !strings.Contains(stdout.String(), "CLI: 0.12.0 (manifesto: 0.11.2)") {
+		t.Fatalf("saida nao exibiu linha informativa esperada: %q", stdout.String())
+	}
+}
+
+func TestUpgradeCheck_OmitsInformativeVersionLineWhenVersionsMatch(t *testing.T) {
+	t.Parallel()
+
+	ffs := fs.NewFakeFileSystem()
+	content := []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = content
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = content
+
+	setVersionForTest(t, "0.12.0")
+
+	store := manifest.NewStore(ffs)
+	if err := store.Save("/project", &manifest.Manifest{
+		Version:   "0.12.0",
+		CreatedAt: time.Unix(1700000000, 0),
+		UpdatedAt: time.Unix(1700000000, 0),
+		Langs:     []skills.Lang{},
+	}); err != nil {
+		t.Fatalf("falha ao salvar manifesto inicial: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	svc := setupTestServiceWithOutput(ffs, &stdout, &stderr)
+
+	err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		CheckOnly:  true,
+	})
+	if err != nil {
+		t.Fatalf("upgrade --check falhou: %v", err)
+	}
+
+	if strings.Contains(stdout.String(), "CLI: ") {
+		t.Fatalf("saida nao deveria exibir linha informativa: %q", stdout.String())
+	}
+}
+
+func TestUpgradeCheck_OmitsInformativeVersionLineForNonSemverManifest(t *testing.T) {
+	t.Parallel()
+
+	ffs := fs.NewFakeFileSystem()
+	content := []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = content
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = content
+
+	setVersionForTest(t, "0.12.0")
+
+	store := manifest.NewStore(ffs)
+	if err := store.Save("/project", &manifest.Manifest{
+		Version:   "dev",
+		CreatedAt: time.Unix(1700000000, 0),
+		UpdatedAt: time.Unix(1700000000, 0),
+		Langs:     []skills.Lang{},
+	}); err != nil {
+		t.Fatalf("falha ao salvar manifesto inicial: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	svc := setupTestServiceWithOutput(ffs, &stdout, &stderr)
+
+	err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		CheckOnly:  true,
+	})
+	if err != nil {
+		t.Fatalf("upgrade --check falhou: %v", err)
+	}
+
+	if strings.Contains(stdout.String(), "CLI: ") {
+		t.Fatalf("saida nao deveria exibir linha informativa para manifesto nao-semver: %q", stdout.String())
+	}
+}
+
+func TestUpgradeCheck_OmitsInformativeVersionLineForIncompleteSemverManifest(t *testing.T) {
+	t.Parallel()
+
+	ffs := fs.NewFakeFileSystem()
+	content := []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = content
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = content
+
+	setVersionForTest(t, "0.12.0")
+
+	store := manifest.NewStore(ffs)
+	if err := store.Save("/project", &manifest.Manifest{
+		Version:   "1.2",
+		CreatedAt: time.Unix(1700000000, 0),
+		UpdatedAt: time.Unix(1700000000, 0),
+		Langs:     []skills.Lang{},
+	}); err != nil {
+		t.Fatalf("falha ao salvar manifesto inicial: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	svc := setupTestServiceWithOutput(ffs, &stdout, &stderr)
+
+	err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		CheckOnly:  true,
+	})
+	if err != nil {
+		t.Fatalf("upgrade --check falhou: %v", err)
+	}
+
+	if strings.Contains(stdout.String(), "CLI: ") {
+		t.Fatalf("saida nao deveria exibir linha informativa para manifesto com semver incompleto: %q", stdout.String())
+	}
+}
+
+func TestUpgradeCheck_OmitsInformativeVersionLineForMalformedPrereleaseManifest(t *testing.T) {
+	t.Parallel()
+
+	ffs := fs.NewFakeFileSystem()
+	content := []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = content
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = content
+
+	setVersionForTest(t, "0.12.0")
+
+	store := manifest.NewStore(ffs)
+	if err := store.Save("/project", &manifest.Manifest{
+		Version:   "1.2.3-",
+		CreatedAt: time.Unix(1700000000, 0),
+		UpdatedAt: time.Unix(1700000000, 0),
+		Langs:     []skills.Lang{},
+	}); err != nil {
+		t.Fatalf("falha ao salvar manifesto inicial: %v", err)
+	}
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	svc := setupTestServiceWithOutput(ffs, &stdout, &stderr)
+
+	err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		CheckOnly:  true,
+	})
+	if err != nil {
+		t.Fatalf("upgrade --check falhou: %v", err)
+	}
+
+	if strings.Contains(stdout.String(), "CLI: ") {
+		t.Fatalf("saida nao deveria exibir linha informativa para prerelease malformado: %q", stdout.String())
+	}
+}
+
+func TestUpgrade_UsesResolvedExecutableVersionInOutput(t *testing.T) {
+	t.Parallel()
+
+	ffs := fs.NewFakeFileSystem()
+	ffs.Files["/source/VERSION"] = []byte("0.11.2")
+	content := []byte("---\nversion: 1.0.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = content
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = content
+
+	setVersionForTest(t, "1.2.3")
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	svc := setupTestServiceWithOutput(ffs, &stdout, &stderr)
+
+	err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+	})
+	if err != nil {
+		t.Fatalf("upgrade falhou: %v", err)
+	}
+
+	got := stdout.String()
+	if !strings.Contains(got, "ai-spec 1.2.3") {
+		t.Fatalf("saida nao exibiu versao resolvida do executavel: %q", got)
+	}
+	if strings.Contains(got, "ai-spec 0.11.2") {
+		t.Fatalf("saida nao deveria exibir VERSION da fonte: %q", got)
+	}
+}
+
+func TestUpgrade_UpdatesManifestVersionAfterSuccessfulUpgrade(t *testing.T) {
+	t.Parallel()
+
+	ffs := fs.NewFakeFileSystem()
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 2.0.0\ndescription: Review.\n---\n")
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
+
+	setVersionForTest(t, "0.12.0")
+
+	store := manifest.NewStore(ffs)
+	if err := store.Save("/project", &manifest.Manifest{
+		Version:   "0.11.2",
+		CreatedAt: time.Unix(1700000000, 0),
+		UpdatedAt: time.Unix(1700000000, 0),
+		Langs:     []skills.Lang{},
+	}); err != nil {
+		t.Fatalf("falha ao salvar manifesto inicial: %v", err)
+	}
+
+	svc := setupTestService(ffs)
+	if err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+	}); err != nil {
+		t.Fatalf("upgrade falhou: %v", err)
+	}
+
+	mf := readManifestFromFakeFS(t, ffs, "/project/.ai_spec_harness.json")
+	if mf.Version != "0.12.0" {
+		t.Fatalf("version do manifesto nao atualizada: got %q want %q", mf.Version, "0.12.0")
+	}
+}
+
+func TestUpgrade_RewritesManifestWhenVersionChangesWithoutSkillChanges(t *testing.T) {
+	t.Parallel()
+
+	ffs := fs.NewFakeFileSystem()
+	content := []byte("---\nname: review\nversion: 1.4.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = content
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = content
+
+	setVersionForTest(t, "0.12.0")
+
+	initialUpdatedAt := time.Unix(1700000000, 0)
+	store := manifest.NewStore(ffs)
+	if err := store.Save("/project", &manifest.Manifest{
+		Version:   "0.11.2",
+		CreatedAt: time.Unix(1690000000, 0),
+		UpdatedAt: initialUpdatedAt,
+		Langs:     []skills.Lang{},
+	}); err != nil {
+		t.Fatalf("falha ao salvar manifesto inicial: %v", err)
+	}
+
+	svc := setupTestService(ffs)
+	if err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+	}); err != nil {
+		t.Fatalf("upgrade falhou: %v", err)
+	}
+
+	mf := readManifestFromFakeFS(t, ffs, "/project/.ai_spec_harness.json")
+	if mf.Version != "0.12.0" {
+		t.Fatalf("version do manifesto nao atualizada: got %q want %q", mf.Version, "0.12.0")
+	}
+	if !mf.UpdatedAt.After(initialUpdatedAt) {
+		t.Fatalf("updated_at deveria ter sido regravado: got %s want > %s", mf.UpdatedAt, initialUpdatedAt)
+	}
+	if got := mf.SkillVersions["review"]; got != "1.4.0" {
+		t.Fatalf("skill_versions[review] incorreto: got %q want %q", got, "1.4.0")
+	}
+}
+
+func TestUpgrade_DoesNotRewriteManifestWhenVersionAndSkillsAreUnchanged(t *testing.T) {
+	t.Parallel()
+
+	ffs := fs.NewFakeFileSystem()
+	content := []byte("---\nname: review\nversion: 1.4.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = content
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = content
+
+	setVersionForTest(t, "0.12.0")
+
+	store := manifest.NewStore(ffs)
+	if err := store.Save("/project", &manifest.Manifest{
+		Version:       "0.12.0",
+		CreatedAt:     time.Unix(1690000000, 0),
+		UpdatedAt:     time.Unix(1700000000, 0),
+		Langs:         []skills.Lang{},
+		SkillVersions: map[string]string{"review": "1.4.0"},
+	}); err != nil {
+		t.Fatalf("falha ao salvar manifesto inicial: %v", err)
+	}
+
+	before, err := ffs.ReadFile("/project/.ai_spec_harness.json")
+	if err != nil {
+		t.Fatalf("falha ao ler manifesto antes do upgrade: %v", err)
+	}
+
+	svc := setupTestService(ffs)
+	if err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+	}); err != nil {
+		t.Fatalf("upgrade falhou: %v", err)
+	}
+
+	after, err := ffs.ReadFile("/project/.ai_spec_harness.json")
+	if err != nil {
+		t.Fatalf("falha ao ler manifesto apos upgrade: %v", err)
+	}
+	if string(after) != string(before) {
+		t.Fatalf("manifesto nao deveria ter sido regravado\nantes: %s\ndepois: %s", string(before), string(after))
+	}
+}
+
+func TestUpgrade_ReconcilesSkillVersionsAfterSkillUpdate(t *testing.T) {
+	t.Parallel()
+
+	ffs := fs.NewFakeFileSystem()
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 2.1.0\ndescription: Review.\n---\n")
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
+
+	setVersionForTest(t, "0.12.0")
+
+	store := manifest.NewStore(ffs)
+	if err := store.Save("/project", &manifest.Manifest{
+		Version:       "0.11.2",
+		CreatedAt:     time.Unix(1690000000, 0),
+		UpdatedAt:     time.Unix(1700000000, 0),
+		Langs:         []skills.Lang{},
+		SkillVersions: map[string]string{"review": "1.0.0"},
+	}); err != nil {
+		t.Fatalf("falha ao salvar manifesto inicial: %v", err)
+	}
+
+	svc := setupTestService(ffs)
+	if err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+	}); err != nil {
+		t.Fatalf("upgrade falhou: %v", err)
+	}
+
+	mf := readManifestFromFakeFS(t, ffs, "/project/.ai_spec_harness.json")
+	if got := mf.SkillVersions["review"]; got != "2.1.0" {
+		t.Fatalf("skill_versions[review] nao reconciliado: got %q want %q", got, "2.1.0")
+	}
+}
+
+func TestUpgrade_PopulatesSkillVersionsForLegacyManifest(t *testing.T) {
+	t.Parallel()
+
+	ffs := fs.NewFakeFileSystem()
+	content := []byte("---\nname: review\nversion: 1.4.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = content
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = content
+
+	legacyManifest := []byte(`{
+  "version": "0.11.2",
+  "created_at": "2024-01-01T00:00:00Z",
+  "updated_at": "2024-01-01T00:00:00Z",
+  "langs": []
+}`)
+	ffs.Files["/project/.ai_spec_harness.json"] = legacyManifest
+
+	setVersionForTest(t, "0.12.0")
+
+	svc := setupTestService(ffs)
+	if err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+	}); err != nil {
+		t.Fatalf("upgrade falhou: %v", err)
+	}
+
+	mf := readManifestFromFakeFS(t, ffs, "/project/.ai_spec_harness.json")
+	if got := mf.SkillVersions["review"]; got != "1.4.0" {
+		t.Fatalf("manifesto legado nao recebeu skill_versions[review]: got %q want %q", got, "1.4.0")
 	}
 }
 

@@ -3,10 +3,19 @@ package taskloop
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+// claudeBinary retorna o binario efetivo para claude: "claudiney" se disponivel, senao "claude".
+func claudeBinary() string {
+	if _, err := exec.LookPath("claudiney"); err == nil {
+		return "claudiney"
+	}
+	return "claude"
+}
 
 // TestNewAgentInvoker valida que a factory retorna o invoker correto para cada ferramenta
 // e erro tipado para ferramenta invalida.
@@ -17,7 +26,7 @@ func TestNewAgentInvoker(t *testing.T) {
 		wantBinary string
 		wantErr    bool
 	}{
-		{name: "claude", tool: "claude", wantBinary: "claude", wantErr: false},
+		{name: "claude", tool: "claude", wantBinary: claudeBinary(), wantErr: false},
 		{name: "codex", tool: "codex", wantBinary: "codex", wantErr: false},
 		{name: "gemini", tool: "gemini", wantBinary: "gemini", wantErr: false},
 		{name: "copilot", tool: "copilot", wantBinary: "copilot", wantErr: false},
@@ -94,13 +103,13 @@ func TestInvokerArgs(t *testing.T) {
 	}{
 		// --- model vazio (regressao — comportamento anterior preservado, exceto gemini) ---
 		{
-			name:   "claudeInvoker sem model — flags identicas ao anterior",
+			name:   "claudeInvoker sem model — flags sem --bare quando claudiney disponivel",
 			tool:   "claude",
 			prompt: "execute task",
 			model:  "",
-			wantArgs: []string{
-				"--dangerously-skip-permissions", "--print", "--bare", "-p", "execute task",
-			},
+			// claudiney fake criado no TempDir: o wrapper ja inclui --dangerously-skip-permissions
+			// internamente, entao o invoker passa apenas --print -p <prompt>
+			wantArgs: []string{"--print", "-p", "execute task"},
 		},
 		{
 			name:   "codexInvoker sem model — prompt como argumento posicional",
@@ -108,7 +117,7 @@ func TestInvokerArgs(t *testing.T) {
 			prompt: "execute task",
 			model:  "",
 			wantArgs: []string{
-				"exec", "--dangerously-bypass-approvals-and-sandbox", "execute task",
+				"exec", "--yolo", "execute task",
 			},
 		},
 		{
@@ -135,19 +144,18 @@ func TestInvokerArgs(t *testing.T) {
 			tool:   "claude",
 			prompt: "execute task",
 			model:  "claude-sonnet-4-6",
+			// claudiney fake no TempDir: invoker passa --model antes de --print
 			wantArgs: []string{
-				"--model", "claude-sonnet-4-6",
-				"--dangerously-skip-permissions", "--print", "--bare", "-p", "execute task",
+				"--model", "claude-sonnet-4-6", "--print", "-p", "execute task",
 			},
 		},
 		{
-			name:   "codexInvoker com model — --model antes de --dangerously-bypass-approvals-and-sandbox",
+			name:   "codexInvoker com model — exec + --model antes de --yolo",
 			tool:   "codex",
 			prompt: "execute task",
 			model:  "gpt-5.4",
 			wantArgs: []string{
-				"exec", "--model", "gpt-5.4",
-				"--dangerously-bypass-approvals-and-sandbox", "execute task",
+				"exec", "--model", "gpt-5.4", "--yolo", "execute task",
 			},
 		},
 		{
@@ -177,6 +185,11 @@ func TestInvokerArgs(t *testing.T) {
 			// Cria diretorio temporario com fake binary para a ferramenta.
 			dir := t.TempDir()
 			writeFakeBinary(t, dir, tt.tool)
+			// Para claude, cria tambem fake claudiney no mesmo dir para que
+			// exec.LookPath("claudiney") o encontre antes do real.
+			if tt.tool == "claude" {
+				writeFakeBinary(t, dir, "claudiney")
+			}
 
 			// Coloca o fake binary na frente do PATH original.
 			origPath := os.Getenv("PATH")
@@ -359,11 +372,11 @@ func TestClaudeInvokerFallbackModel(t *testing.T) {
 		wantArgs      []string
 	}{
 		{
-			name:          "sem model sem fallback — comportamento identico ao anterior",
+			name:          "sem model sem fallback — sem --bare quando claudiney disponivel",
 			model:         "",
 			fallbackModel: "",
 			wantArgs: []string{
-				"--dangerously-skip-permissions", "--print", "--bare", "-p", "execute task",
+				"--print", "-p", "execute task",
 			},
 		},
 		{
@@ -373,7 +386,7 @@ func TestClaudeInvokerFallbackModel(t *testing.T) {
 			wantArgs: []string{
 				"--model", "claude-sonnet-4-6",
 				"--fallback-model", "claude-haiku-4-5",
-				"--dangerously-skip-permissions", "--print", "--bare", "-p", "execute task",
+				"--print", "-p", "execute task",
 			},
 		},
 		{
@@ -382,7 +395,7 @@ func TestClaudeInvokerFallbackModel(t *testing.T) {
 			fallbackModel: "claude-haiku-4-5",
 			wantArgs: []string{
 				"--fallback-model", "claude-haiku-4-5",
-				"--dangerously-skip-permissions", "--print", "--bare", "-p", "execute task",
+				"--print", "-p", "execute task",
 			},
 		},
 	}
@@ -391,6 +404,7 @@ func TestClaudeInvokerFallbackModel(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
 			writeFakeBinary(t, dir, "claude")
+			writeFakeBinary(t, dir, "claudiney")
 
 			origPath := os.Getenv("PATH")
 			t.Setenv("PATH", dir+string(os.PathListSeparator)+origPath)

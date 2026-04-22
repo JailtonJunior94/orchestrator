@@ -111,16 +111,17 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 	if !opts.DryRun {
 		checksums := s.computeChecksums(sourceDir, allSkills)
 		mf := &manifest.Manifest{
-			Version:      version.Version,
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
-			SourceDir:    sourceDir,
-			LinkMode:     linkMode,
-			Tools:        opts.Tools,
-			Langs:        opts.Langs,
-			Skills:       allSkills,
-			Checksums:    checksums,
-			CodexProfile: opts.CodexProfile,
+			Version:       version.ResolveFromExecutable(),
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
+			SourceDir:     sourceDir,
+			LinkMode:      linkMode,
+			Tools:         opts.Tools,
+			Langs:         opts.Langs,
+			Skills:        allSkills,
+			Checksums:     checksums,
+			CodexProfile:  opts.CodexProfile,
+			SkillVersions: s.collectSkillVersions(sourceDir, allSkills),
 		}
 		if err := s.manifest.Save(projectDir, mf); err != nil {
 			return fmt.Errorf("salvar manifesto: %w", err)
@@ -397,10 +398,10 @@ func (s *Service) installGemini(sourceDir, projectDir string, dryRun bool) error
 }
 
 var codexPlanningSkills = map[string]bool{
-	"analyze-project":               true,
-	"create-prd":                    true,
+	"analyze-project":                true,
+	"create-prd":                     true,
 	"create-technical-specification": true,
-	"create-tasks":                  true,
+	"create-tasks":                   true,
 }
 
 func filterCodexSkills(skillList []string) []string {
@@ -550,6 +551,24 @@ func (s *Service) computeChecksums(sourceDir string, skillList []string) map[str
 		checksums[skill] = hash
 	}
 	return checksums
+}
+
+func (s *Service) collectSkillVersions(sourceDir string, skillNames []string) map[string]string {
+	versions := make(map[string]string, len(skillNames))
+	for _, name := range skillNames {
+		path := filepath.Join(sourceDir, ".agents", "skills", name, "SKILL.md")
+		data, err := s.fs.ReadFile(path)
+		if err != nil {
+			continue
+		}
+
+		fm := skills.ParseFrontmatter(data)
+		if fm.Version != "" {
+			versions[name] = fm.Version
+		}
+	}
+
+	return versions
 }
 
 func toolNames(tools []skills.Tool) []string {

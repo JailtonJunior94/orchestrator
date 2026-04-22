@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Features
+- **skill-bump:** novo comando `skill-bump <path>` que detecta skills alteradas desde a última tag via `git diff` e atualiza automaticamente o campo `version` no frontmatter `SKILL.md`; suporta `--dry-run` para inspecionar sem alterar arquivos
+- **version:** flag `--skills` exibe versões das skills; aceita `embedded`, `installed` ou sem valor (ambos) — ex.: `ai-spec-harness version --skills`
+- **manifest:** campo `skill_versions` registra o mapa `skill → version` no manifesto durante `install` e `upgrade`
+- **upgrade:** modo `--check` exibe divergência entre a versão do CLI e a versão registrada no manifesto quando diferem
+
+### Refactor
+- **version:** `ResolveFromExecutable()` resolve o arquivo `VERSION` adjacente ao binário seguindo symlinks, substituindo a leitura via `ReadVersionFile(sourceDir)` no `install` e `upgrade`
+- **skills:** `isValidSemver` renomeado para `IsValidSemver` (exportado) para reutilização no pacote `upgrade`
+
 ## 0.12.0 (2026-04-22)
 
 ### Features

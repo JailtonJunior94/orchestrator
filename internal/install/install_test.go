@@ -3,6 +3,7 @@ package install
 import (
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/version"
 )
 
 func setupTestService(ffs *fs.FakeFileSystem) *Service {
@@ -21,6 +23,22 @@ func setupTestService(ffs *fs.FakeFileSystem) *Service {
 	adpt := adapters.NewGenerator(ffs, printer)
 	ctxg := contextgen.NewGenerator(ffs, printer)
 	return NewService(ffs, printer, mfst, adpt, ctxg)
+}
+
+func readManifestFromFakeFS(t *testing.T, ffs *fs.FakeFileSystem, path string) manifest.Manifest {
+	t.Helper()
+
+	data, err := ffs.ReadFile(path)
+	if err != nil {
+		t.Fatalf("manifesto nao encontrado em %s: %v", path, err)
+	}
+
+	var mf manifest.Manifest
+	if err := json.Unmarshal(data, &mf); err != nil {
+		t.Fatalf("falha ao decodificar manifesto: %v", err)
+	}
+
+	return mf
 }
 
 func TestInstall_Validate_MissingProjectDir(t *testing.T) {
@@ -76,10 +94,13 @@ func TestInstall_Validate_SameDir(t *testing.T) {
 }
 
 func TestInstall_CopyMode(t *testing.T) {
-	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
+
+	originalVersion := version.Version
+	t.Cleanup(func() { version.Version = originalVersion })
+	version.Version = "1.0.0-test"
 
 	// Criar uma skill de teste na fonte
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte(`---
@@ -158,6 +179,14 @@ description: Revisa codigo.
 	if !strings.Contains(content, "validate-preload.sh") {
 		t.Error("settings.local.json sem PreToolUse")
 	}
+
+	mf := readManifestFromFakeFS(t, ffs, "/project/.ai_spec_harness.json")
+	if mf.Version != "1.0.0-test" {
+		t.Errorf("versao do manifesto incorreta: got %q want %q", mf.Version, "1.0.0-test")
+	}
+	if got := mf.SkillVersions["review"]; got != "1.0.0" {
+		t.Errorf("skill_versions[review] incorreto: got %q want %q", got, "1.0.0")
+	}
 }
 
 func TestInstall_Codex_LeanProfile(t *testing.T) {
@@ -224,10 +253,14 @@ func TestInstall_Codex_FullProfile(t *testing.T) {
 }
 
 func TestInstall_Idempotent(t *testing.T) {
-	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
+
+	originalVersion := version.Version
+	t.Cleanup(func() { version.Version = originalVersion })
+	version.Version = "1.0.0-test"
+
 	ffs.Files["/source/AGENTS.md"] = []byte("# AGENTS")
 	ffs.Files["/source/.claude/rules/governance.md"] = []byte("# governance")
 	ffs.Files["/source/.claude/scripts/validate-task-evidence.sh"] = []byte("#!/usr/bin/env bash")
@@ -626,6 +659,102 @@ func TestInstall_EmbeddedSource_AllToolsAllLangs(t *testing.T) {
 	// Manifesto deve ter sido criado
 	if _, err := os.Stat(projectDir + "/.ai_spec_harness.json"); os.IsNotExist(err) {
 		t.Error("manifesto nao criado apos install com embutido")
+	}
+}
+
+func TestInstall_ManifestUsesResolvedExecutableVersion(t *testing.T) {
+	projectDir := t.TempDir()
+	sourceDir := t.TempDir()
+
+	originalVersion := version.Version
+	t.Cleanup(func() { version.Version = originalVersion })
+	version.Version = "dev"
+
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatalf("os.Executable falhou: %v", err)
+	}
+
+	versionFile := filepath.Join(filepath.Dir(exe), "VERSION")
+	previousData, readErr := os.ReadFile(versionFile)
+	hadPrevious := readErr == nil
+	if readErr != nil && !os.IsNotExist(readErr) {
+		t.Fatalf("falha ao ler VERSION adjacente ao executavel: %v", readErr)
+	}
+	t.Cleanup(func() {
+		if hadPrevious {
+			_ = os.WriteFile(versionFile, previousData, 0o644)
+			return
+		}
+		_ = os.Remove(versionFile)
+	})
+
+	if err := os.WriteFile(versionFile, []byte("0.11.2\n"), 0o644); err != nil {
+		t.Fatalf("falha ao preparar VERSION adjacente ao executavel: %v", err)
+	}
+
+	skillDir := filepath.Join(sourceDir, ".agents", "skills", "review")
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("---\nversion: 1.0.0\ndescription: Review.\n---\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	svc := setupOSTestService()
+	err = svc.Execute(config.InstallOptions{
+		ProjectDir: projectDir,
+		SourceDir:  sourceDir,
+		Tools:      []skills.Tool{skills.ToolClaude},
+		LinkMode:   skills.LinkCopy,
+	})
+	if err != nil {
+		t.Fatalf("install falhou: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(projectDir, manifest.ManifestFile))
+	if err != nil {
+		t.Fatalf("falha ao ler manifesto: %v", err)
+	}
+
+	var mf manifest.Manifest
+	if err := json.Unmarshal(data, &mf); err != nil {
+		t.Fatalf("falha ao decodificar manifesto: %v", err)
+	}
+	if mf.Version != "0.11.2-dev" {
+		t.Errorf("versao resolvida incorreta: got %q want %q", mf.Version, "0.11.2-dev")
+	}
+}
+
+func TestInstall_ManifestIncludesSkillVersions(t *testing.T) {
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+
+	originalVersion := version.Version
+	t.Cleanup(func() { version.Version = originalVersion })
+	version.Version = "1.0.0-test"
+
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.1.0\ndescription: Revisa codigo.\n---\n")
+	ffs.Files["/source/.agents/skills/bugfix/SKILL.md"] = []byte("---\ndescription: Corrige bugs.\n---\n")
+
+	svc := setupTestService(ffs)
+	err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolClaude},
+		LinkMode:   skills.LinkCopy,
+	})
+	if err != nil {
+		t.Fatalf("install falhou: %v", err)
+	}
+
+	mf := readManifestFromFakeFS(t, ffs, "/project/.ai_spec_harness.json")
+	if got := mf.SkillVersions["review"]; got != "1.1.0" {
+		t.Errorf("skill_versions[review] incorreto: got %q want %q", got, "1.1.0")
+	}
+	if _, exists := mf.SkillVersions["bugfix"]; exists {
+		t.Errorf("skill sem version no frontmatter nao deveria entrar em skill_versions: %v", mf.SkillVersions)
 	}
 }
 
