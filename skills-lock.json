@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "bubbletea": {
+      "source": "pedronauck/skills",
+      "sourceType": "github",
+      "computedHash": "4cf3387527d25a0ef4d07d0a6b01d041f18b91151f0528c5859040dbdb1f1a55"
+    },
     "confluence-changelog-publisher": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",

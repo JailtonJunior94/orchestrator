@@ -168,30 +168,37 @@ func TestFindEligible(t *testing.T) {
 		{ID: "3.0", Title: "C", Status: "pending", Dependencies: []string{"2.0"}},
 		{ID: "4.0", Title: "D", Status: "pending", Dependencies: nil},
 		{ID: "5.0", Title: "E", Status: "failed", Dependencies: nil},
+		{ID: "6.0", Title: "F", Status: "in_progress", Dependencies: []string{"1.0"}},
 	}
 
 	t.Run("sem skipped", func(t *testing.T) {
 		eligible := FindEligible(tasks, nil)
-		// 2.0 (dep 1.0 done) e 4.0 (sem deps) sao elegiveis
-		if len(eligible) != 2 {
-			t.Fatalf("esperava 2 elegiveis, recebeu %d", len(eligible))
+		// 6.0 retomavel em in_progress deve vir antes das pendentes elegiveis.
+		if len(eligible) != 3 {
+			t.Fatalf("esperava 3 elegiveis, recebeu %d", len(eligible))
 		}
-		if eligible[0].ID != "2.0" {
-			t.Errorf("primeiro elegivel = %q, want 2.0", eligible[0].ID)
+		if eligible[0].ID != "6.0" {
+			t.Errorf("primeiro elegivel = %q, want 6.0", eligible[0].ID)
 		}
-		if eligible[1].ID != "4.0" {
-			t.Errorf("segundo elegivel = %q, want 4.0", eligible[1].ID)
+		if eligible[1].ID != "2.0" {
+			t.Errorf("segundo elegivel = %q, want 2.0", eligible[1].ID)
+		}
+		if eligible[2].ID != "4.0" {
+			t.Errorf("terceiro elegivel = %q, want 4.0", eligible[2].ID)
 		}
 	})
 
 	t.Run("com skipped", func(t *testing.T) {
 		skipped := map[string]bool{"2.0": true}
 		eligible := FindEligible(tasks, skipped)
-		if len(eligible) != 1 {
-			t.Fatalf("esperava 1 elegivel, recebeu %d", len(eligible))
+		if len(eligible) != 2 {
+			t.Fatalf("esperava 2 elegiveis, recebeu %d", len(eligible))
 		}
-		if eligible[0].ID != "4.0" {
-			t.Errorf("elegivel = %q, want 4.0", eligible[0].ID)
+		if eligible[0].ID != "6.0" {
+			t.Errorf("primeiro elegivel = %q, want 6.0", eligible[0].ID)
+		}
+		if eligible[1].ID != "4.0" {
+			t.Errorf("segundo elegivel = %q, want 4.0", eligible[1].ID)
 		}
 	})
 
@@ -209,6 +216,58 @@ func TestFindEligible(t *testing.T) {
 			t.Errorf("elegivel = %q, want 1.0", eligible[0].ID)
 		}
 	})
+}
+
+func TestFindEligible_InProgressRetomavel(t *testing.T) {
+	tasks := []TaskEntry{
+		{ID: "1.0", Title: "A", Status: "done", Dependencies: nil},
+		{ID: "2.0", Title: "B", Status: "in_progress", Dependencies: []string{"1.0"}},
+		{ID: "3.0", Title: "C", Status: "in_progress", Dependencies: []string{"9.0"}},
+	}
+
+	eligible := FindEligible(tasks, nil)
+	if len(eligible) != 1 {
+		t.Fatalf("esperava 1 elegivel retomavel, recebeu %d", len(eligible))
+	}
+	if eligible[0].ID != "2.0" {
+		t.Errorf("elegivel = %q, want 2.0", eligible[0].ID)
+	}
+}
+
+func TestFindEligible_PrioritizesInProgressOverPending(t *testing.T) {
+	tasks := []TaskEntry{
+		{ID: "1.0", Title: "Pending first", Status: "pending", Dependencies: nil},
+		{ID: "2.0", Title: "Retomada", Status: "in_progress", Dependencies: nil},
+		{ID: "3.0", Title: "Pending second", Status: "pending", Dependencies: nil},
+	}
+
+	eligible := FindEligible(tasks, nil)
+	if len(eligible) != 3 {
+		t.Fatalf("esperava 3 elegiveis, recebeu %d", len(eligible))
+	}
+	if eligible[0].ID != "2.0" {
+		t.Fatalf("primeiro elegivel = %q, want 2.0", eligible[0].ID)
+	}
+}
+
+func TestReconcileTaskStatusesUsesTaskFileStatus(t *testing.T) {
+	fsys := fs.NewFakeFileSystem()
+	fsys.Files["/prd/tasks.md"] = []byte("| 1.0 | Task One | in_progress | — | Nao |\n")
+	fsys.Files["/prd/prd.md"] = []byte("# PRD\n")
+	fsys.Files["/prd/techspec.md"] = []byte("# TechSpec\n")
+	fsys.Files["/prd/task-1.0-task.md"] = []byte("**Status:** blocked\n")
+
+	tasks := []TaskEntry{
+		{ID: "1.0", Title: "Task One", Status: "in_progress"},
+	}
+
+	got := reconcileTaskStatuses(tasks, "/prd", fsys)
+	if got[0].Status != "blocked" {
+		t.Fatalf("status reconciliado = %q, want blocked", got[0].Status)
+	}
+	if tasks[0].Status != "in_progress" {
+		t.Fatalf("slice original nao deveria ser mutado, obteve %q", tasks[0].Status)
+	}
 }
 
 func TestAllTerminal(t *testing.T) {
@@ -331,10 +390,10 @@ func TestResolveTaskFile(t *testing.T) {
 
 func TestReadTaskStatus(t *testing.T) {
 	tests := []struct {
-		name    string
-		path    string
-		files   map[string][]byte
-		want    string
+		name  string
+		path  string
+		files map[string][]byte
+		want  string
 	}{
 		{
 			name: "arquivo existente com status valido",

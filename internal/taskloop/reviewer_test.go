@@ -53,6 +53,7 @@ Diff: {{.Diff}}`
 				"diff --git a/main.go b/main.go",
 				".agents/skills/review/SKILL.md",
 				"AGENTS.md",
+				"Do NOT modify any task file or any row in tasks.md.",
 			},
 		},
 		{

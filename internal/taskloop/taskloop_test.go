@@ -1138,11 +1138,11 @@ func TestDryRunAdvancedMultipleEligibleTasks(t *testing.T) {
 	revProfile, _ := NewExecutionProfile("reviewer", "codex", "gpt-5.4")
 
 	opts := Options{
-		PRDFolder:  prd,
-		DryRun:     true,
+		PRDFolder:     prd,
+		DryRun:        true,
 		MaxIterations: 5,
-		Timeout:    5 * time.Second,
-		ReportPath: prd + "/report.md",
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
 		Profiles: &ProfileConfig{
 			Mode:     "avancado",
 			Executor: execProfile,
@@ -1332,6 +1332,869 @@ func TestExecuteNonAuthErrorContinuesLoop(t *testing.T) {
 	}
 }
 
+// TestExecuteResumesInProgressTask verifica a regressao do impasse em que uma task
+// ja marcada como in_progress por sessao anterior deve ser retomada pelo loop.
+func TestExecuteResumesInProgressTask(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-test"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** in_progress\n")
+	fsys.Files[prd+"/tasks.md"] = []byte(
+		"| 1.0 | Task One | done | — | Nao |\n" +
+			"| 2.0 | Task Two | in_progress | 1.0 | Nao |\n",
+	)
+
+	invokeCount := 0
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				invokeCount++
+				fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** done\n")
+				fsys.Files[prd+"/tasks.md"] = []byte(
+					"| 1.0 | Task One | done | — | Nao |\n" +
+						"| 2.0 | Task Two | done | 1.0 | Nao |\n",
+				)
+				return "resumed and completed", "", 0, nil
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "claude",
+		MaxIterations: 3,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	if invokeCount != 1 {
+		t.Fatalf("invoker chamado %d vezes, esperado 1 para retomar task in_progress", invokeCount)
+	}
+
+	reportData, _ := fsys.ReadFile(prd + "/report.md")
+	reportStr := string(reportData)
+	if !strings.Contains(reportStr, "| 2.0 | Task Two | done |") {
+		t.Errorf("relatorio nao registra task retomada como done\noutput:\n%s", reportStr)
+	}
+	if !strings.Contains(reportStr, "todas as tasks completadas ou em estado terminal") {
+		t.Errorf("stop reason inesperado para task retomada\noutput:\n%s", reportStr)
+	}
+}
+
+func TestExecutePrioritizesInProgressBeforePending(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-test"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** in_progress\n")
+	fsys.Files[prd+"/tasks.md"] = []byte(
+		"| 1.0 | Pending Task | pending | — | Nao |\n" +
+			"| 2.0 | In Progress Task | in_progress | — | Nao |\n",
+	)
+
+	var invokedTask string
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				switch {
+				case strings.Contains(prompt, "task-2.0-test.md"):
+					invokedTask = "2.0"
+					fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/tasks.md"] = []byte(
+						"| 1.0 | Pending Task | pending | — | Nao |\n" +
+							"| 2.0 | In Progress Task | done | — | Nao |\n",
+					)
+				case strings.Contains(prompt, "task-1.0-test.md"):
+					invokedTask = "1.0"
+				default:
+					t.Fatalf("prompt nao contem task esperada:\n%s", prompt)
+				}
+				return "completed", "", 0, nil
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "claude",
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	if invokedTask != "2.0" {
+		t.Fatalf("task executada = %q, want 2.0", invokedTask)
+	}
+}
+
+func TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders(t *testing.T) {
+	tools := []string{"claude", "codex", "gemini", "copilot"}
+
+	for _, tool := range tools {
+		t.Run(tool, func(t *testing.T) {
+			const base = "/fake/project"
+			const prd = base + "/tasks/prd-test"
+
+			fsys := taskfs.NewFakeFileSystem()
+			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+			fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n")
+
+			originalTasks := []byte(
+				"| 1.0 | Task One | pending | — | Nao |\n" +
+					"| 2.0 | Task Two | pending | 1.0 | Nao |\n",
+			)
+			fsys.Files[prd+"/tasks.md"] = append([]byte(nil), originalTasks...)
+
+			svc := NewService(fsys, newTestPrinter())
+			svc.binaryChecker = noBinaryCheck
+			svc.invokerFactory = func(invokerTool string) (AgentInvoker, error) {
+				if invokerTool != tool {
+					t.Fatalf("tool inesperada: got %q want %q", invokerTool, tool)
+				}
+				return &callbackInvoker{
+					binary: tool,
+					fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Task One | done | — | Nao |\n" +
+								"| 2.0 | Task Two | done | 1.0 | Nao |\n",
+						)
+						return "mutated another task row", "", 0, nil
+					},
+				}, nil
+			}
+
+			opts := Options{
+				PRDFolder:     prd,
+				Tool:          tool,
+				MaxIterations: 2,
+				Timeout:       5 * time.Second,
+				ReportPath:    prd + "/report.md",
+			}
+
+			if err := svc.Execute(opts); err != nil {
+				t.Fatalf("Execute retornou erro inesperado: %v", err)
+			}
+
+			gotTasks, err := fsys.ReadFile(prd + "/tasks.md")
+			if err != nil {
+				t.Fatalf("tasks.md nao encontrado: %v", err)
+			}
+			if string(gotTasks) != string(originalTasks) {
+				t.Fatalf("tasks.md deveria ter sido restaurado apos violacao\nwant:\n%s\ngot:\n%s", originalTasks, gotTasks)
+			}
+
+			taskFile, _ := fsys.ReadFile(prd + "/task-1.0-test.md")
+			if string(taskFile) != "**Status:** pending\n" {
+				t.Fatalf("arquivo da task atual deveria ser restaurado, obteve: %q", string(taskFile))
+			}
+
+			reportData, err := fsys.ReadFile(prd + "/report.md")
+			if err != nil {
+				t.Fatalf("relatorio nao encontrado: %v", err)
+			}
+			reportStr := string(reportData)
+			if !strings.Contains(reportStr, "abortado: agente violou isolamento da task 1.0") {
+				t.Fatalf("relatorio nao contem stop reason de violacao de isolamento\noutput:\n%s", reportStr)
+			}
+			if !strings.Contains(reportStr, "row da task 2.0 foi alterada indevidamente em tasks.md") {
+				t.Fatalf("relatorio nao contem diagnostico da row indevida\noutput:\n%s", reportStr)
+			}
+		})
+	}
+}
+
+func TestExecuteRejectsUnauthorizedTaskFileMutation(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-test"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\nDetalhes originais\n")
+	fsys.Files[prd+"/tasks.md"] = []byte(
+		"| 1.0 | Task One | pending | — | Nao |\n" +
+			"| 2.0 | Task Two | pending | 1.0 | Nao |\n",
+	)
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+				fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\nALTERADO INDEVIDAMENTE\n")
+				fsys.Files[prd+"/tasks.md"] = []byte(
+					"| 1.0 | Task One | done | — | Nao |\n" +
+						"| 2.0 | Task Two | pending | 1.0 | Nao |\n",
+				)
+				return "mutated another task file", "", 0, nil
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "claude",
+		MaxIterations: 2,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	taskTwo, err := fsys.ReadFile(prd + "/task-2.0-test.md")
+	if err != nil {
+		t.Fatalf("task-2.0-test.md nao encontrado: %v", err)
+	}
+	if string(taskTwo) != "**Status:** pending\nDetalhes originais\n" {
+		t.Fatalf("arquivo de task nao deveria permanecer alterado\noutput:\n%s", taskTwo)
+	}
+
+	reportData, err := fsys.ReadFile(prd + "/report.md")
+	if err != nil {
+		t.Fatalf("relatorio nao encontrado: %v", err)
+	}
+	reportStr := string(reportData)
+	if !strings.Contains(reportStr, "arquivo de task task-2.0-test.md foi alterado indevidamente") {
+		t.Fatalf("relatorio nao contem diagnostico do arquivo alterado\noutput:\n%s", reportStr)
+	}
+}
+
+func TestExecuteRejectsUnexpectedTrackedTaskFileCreation(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-test"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
+				fsys.Files[prd+"/task-2.0-intrusa.md"] = []byte("**Status:** pending\n")
+				return "created extra task file", "", 0, nil
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "claude",
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	if _, err := fsys.ReadFile(prd + "/task-2.0-intrusa.md"); err == nil {
+		t.Fatal("arquivo de task criado indevidamente deveria ter sido removido")
+	}
+
+	taskOne, err := fsys.ReadFile(prd + "/task-1.0-test.md")
+	if err != nil {
+		t.Fatalf("task-1.0-test.md nao encontrado: %v", err)
+	}
+	if string(taskOne) != "**Status:** pending\n" {
+		t.Fatalf("arquivo da task atual deveria ter sido restaurado, obteve: %q", string(taskOne))
+	}
+
+	reportData, err := fsys.ReadFile(prd + "/report.md")
+	if err != nil {
+		t.Fatalf("relatorio nao encontrado: %v", err)
+	}
+	reportStr := string(reportData)
+	if !strings.Contains(reportStr, "novo arquivo de task task-2.0-intrusa.md foi adicionado indevidamente") {
+		t.Fatalf("relatorio nao contem diagnostico do arquivo novo\noutput:\n%s", reportStr)
+	}
+}
+
+func TestExecuteRejectsProtectedPRDFileMutationForAllProviders(t *testing.T) {
+	tools := []string{"claude", "codex", "gemini", "copilot"}
+
+	for _, tool := range tools {
+		t.Run(tool, func(t *testing.T) {
+			const base = "/fake/project"
+			const prd = base + "/tasks/prd-test"
+
+			fsys := taskfs.NewFakeFileSystem()
+			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+			fsys.Files[prd+"/prd.md"] = []byte("# PRD original\n")
+			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec original\n")
+			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
+
+			svc := NewService(fsys, newTestPrinter())
+			svc.binaryChecker = noBinaryCheck
+			svc.invokerFactory = func(invokerTool string) (AgentInvoker, error) {
+				if invokerTool != tool {
+					t.Fatalf("tool inesperada: got %q want %q", invokerTool, tool)
+				}
+				return &callbackInvoker{
+					binary: tool,
+					fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
+						fsys.Files[prd+"/prd.md"] = []byte("# PRD alterado indevidamente\n")
+						return "mutated prd.md", "", 0, nil
+					},
+				}, nil
+			}
+
+			opts := Options{
+				PRDFolder:     prd,
+				Tool:          tool,
+				MaxIterations: 1,
+				Timeout:       5 * time.Second,
+				ReportPath:    prd + "/report.md",
+			}
+
+			if err := svc.Execute(opts); err != nil {
+				t.Fatalf("Execute retornou erro inesperado: %v", err)
+			}
+
+			if got := string(fsys.Files[prd+"/prd.md"]); got != "# PRD original\n" {
+				t.Fatalf("prd.md deveria ter sido restaurado, obteve: %q", got)
+			}
+
+			reportData, err := fsys.ReadFile(prd + "/report.md")
+			if err != nil {
+				t.Fatalf("relatorio nao encontrado: %v", err)
+			}
+			reportStr := string(reportData)
+			if !strings.Contains(reportStr, "arquivo protegido do PRD prd.md foi alterado indevidamente") {
+				t.Fatalf("relatorio nao contem diagnostico de prd.md alterado\noutput:\n%s", reportStr)
+			}
+		})
+	}
+}
+
+func TestExecuteRejectsArbitraryPRDFileMutationForAllProviders(t *testing.T) {
+	tools := []string{"claude", "codex", "gemini", "copilot"}
+
+	for _, tool := range tools {
+		t.Run(tool, func(t *testing.T) {
+			const base = "/fake/project"
+			const prd = base + "/tasks/prd-test"
+
+			fsys := taskfs.NewFakeFileSystem()
+			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+			fsys.Files[prd+"/prd.md"] = []byte("# PRD original\n")
+			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec original\n")
+			fsys.Files[prd+"/notes.md"] = []byte("conteudo original\n")
+			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
+
+			svc := NewService(fsys, newTestPrinter())
+			svc.binaryChecker = noBinaryCheck
+			svc.invokerFactory = func(invokerTool string) (AgentInvoker, error) {
+				if invokerTool != tool {
+					t.Fatalf("tool inesperada: got %q want %q", invokerTool, tool)
+				}
+				return &callbackInvoker{
+					binary: tool,
+					fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
+						fsys.Files[prd+"/notes.md"] = []byte("alterado indevidamente\n")
+						return "mutated notes.md", "", 0, nil
+					},
+				}, nil
+			}
+
+			opts := Options{
+				PRDFolder:     prd,
+				Tool:          tool,
+				MaxIterations: 1,
+				Timeout:       5 * time.Second,
+				ReportPath:    prd + "/report.md",
+			}
+
+			if err := svc.Execute(opts); err != nil {
+				t.Fatalf("Execute retornou erro inesperado: %v", err)
+			}
+
+			if got := string(fsys.Files[prd+"/notes.md"]); got != "conteudo original\n" {
+				t.Fatalf("notes.md deveria ter sido restaurado, obteve: %q", got)
+			}
+
+			reportData, err := fsys.ReadFile(prd + "/report.md")
+			if err != nil {
+				t.Fatalf("relatorio nao encontrado: %v", err)
+			}
+			reportStr := string(reportData)
+			if !strings.Contains(reportStr, "arquivo protegido do PRD notes.md foi alterado indevidamente") {
+				t.Fatalf("relatorio nao contem diagnostico de notes.md alterado\noutput:\n%s", reportStr)
+			}
+		})
+	}
+}
+
+func TestExecuteRejectsReviewerIsolationViolation(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-test"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/tasks.md"] = []byte(
+		"| 1.0 | Task One | pending | — | Nao |\n" +
+			"| 2.0 | Task Two | pending | 1.0 | Nao |\n",
+	)
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				switch tool {
+				case "claude":
+					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/tasks.md"] = []byte(
+						"| 1.0 | Task One | done | — | Nao |\n" +
+							"| 2.0 | Task Two | pending | 1.0 | Nao |\n",
+					)
+					return "executor completed", "", 0, nil
+				case "codex":
+					fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** done\nALTERADO INDEVIDAMENTE\n")
+					return "reviewer mutated another task file", "", 0, nil
+				default:
+					t.Fatalf("tool inesperada: %q", tool)
+					return "", "", 0, nil
+				}
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		Profiles: &ProfileConfig{
+			Mode:     "avancado",
+			Executor: execProfile,
+			Reviewer: &revProfile,
+		},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	taskTwo, err := fsys.ReadFile(prd + "/task-2.0-test.md")
+	if err != nil {
+		t.Fatalf("task-2.0-test.md nao encontrado: %v", err)
+	}
+	if string(taskTwo) != "**Status:** pending\n" {
+		t.Fatalf("arquivo da task nao deveria permanecer alterado pelo reviewer, obteve: %q", string(taskTwo))
+	}
+
+	reportData, err := fsys.ReadFile(prd + "/report.md")
+	if err != nil {
+		t.Fatalf("relatorio nao encontrado: %v", err)
+	}
+	reportStr := string(reportData)
+	if !strings.Contains(reportStr, "abortado: reviewer violou isolamento da task 1.0") {
+		t.Fatalf("relatorio nao contem stop reason do reviewer\noutput:\n%s", reportStr)
+	}
+	if !strings.Contains(reportStr, "violacao de isolamento detectada: arquivo de task task-2.0-test.md foi alterado indevidamente") {
+		t.Fatalf("relatorio nao contem diagnostico do reviewer\noutput:\n%s", reportStr)
+	}
+}
+
+func TestExecuteRejectsReviewerProtectedPRDMutation(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-test"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD original\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec original\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				switch tool {
+				case "claude":
+					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
+					return "executor completed", "", 0, nil
+				case "codex":
+					fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec alterado indevidamente\n")
+					return "reviewer mutated techspec", "", 0, nil
+				default:
+					t.Fatalf("tool inesperada: %q", tool)
+					return "", "", 0, nil
+				}
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		Profiles: &ProfileConfig{
+			Mode:     "avancado",
+			Executor: execProfile,
+			Reviewer: &revProfile,
+		},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	if got := string(fsys.Files[prd+"/techspec.md"]); got != "# TechSpec original\n" {
+		t.Fatalf("techspec.md deveria ter sido restaurado, obteve: %q", got)
+	}
+
+	reportData, err := fsys.ReadFile(prd + "/report.md")
+	if err != nil {
+		t.Fatalf("relatorio nao encontrado: %v", err)
+	}
+	reportStr := string(reportData)
+	if !strings.Contains(reportStr, "abortado: reviewer violou isolamento da task 1.0") {
+		t.Fatalf("relatorio nao contem stop reason do reviewer\noutput:\n%s", reportStr)
+	}
+	if !strings.Contains(reportStr, "violacao de isolamento detectada: arquivo protegido do PRD techspec.md foi alterado indevidamente") {
+		t.Fatalf("relatorio nao contem diagnostico de techspec.md alterado\noutput:\n%s", reportStr)
+	}
+}
+
+func TestExecuteRejectsReviewerArbitraryPRDMutation(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-test"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD original\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec original\n")
+	fsys.Files[prd+"/notes.md"] = []byte("conteudo original\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				switch tool {
+				case "claude":
+					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
+					return "executor completed", "", 0, nil
+				case "codex":
+					fsys.Files[prd+"/notes.md"] = []byte("alterado indevidamente pelo reviewer\n")
+					return "reviewer mutated notes", "", 0, nil
+				default:
+					t.Fatalf("tool inesperada: %q", tool)
+					return "", "", 0, nil
+				}
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		Profiles: &ProfileConfig{
+			Mode:     "avancado",
+			Executor: execProfile,
+			Reviewer: &revProfile,
+		},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	if got := string(fsys.Files[prd+"/notes.md"]); got != "conteudo original\n" {
+		t.Fatalf("notes.md deveria ter sido restaurado, obteve: %q", got)
+	}
+
+	reportData, err := fsys.ReadFile(prd + "/report.md")
+	if err != nil {
+		t.Fatalf("relatorio nao encontrado: %v", err)
+	}
+	reportStr := string(reportData)
+	if !strings.Contains(reportStr, "abortado: reviewer violou isolamento da task 1.0") {
+		t.Fatalf("relatorio nao contem stop reason do reviewer\noutput:\n%s", reportStr)
+	}
+	if !strings.Contains(reportStr, "violacao de isolamento detectada: arquivo protegido do PRD notes.md foi alterado indevidamente") {
+		t.Fatalf("relatorio nao contem diagnostico de notes.md alterado\noutput:\n%s", reportStr)
+	}
+}
+
+func TestExecuteRejectsReviewerCurrentTaskMutation(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-test"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				switch tool {
+				case "claude":
+					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
+					return "executor completed", "", 0, nil
+				case "codex":
+					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** blocked\n")
+					return "reviewer mutated current task", "", 0, nil
+				default:
+					t.Fatalf("tool inesperada: %q", tool)
+					return "", "", 0, nil
+				}
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		Profiles: &ProfileConfig{
+			Mode:     "avancado",
+			Executor: execProfile,
+			Reviewer: &revProfile,
+		},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	taskOne, err := fsys.ReadFile(prd + "/task-1.0-test.md")
+	if err != nil {
+		t.Fatalf("task-1.0-test.md nao encontrado: %v", err)
+	}
+	if string(taskOne) != "**Status:** done\n" {
+		t.Fatalf("arquivo da task atual deveria ter sido restaurado para done, obteve: %q", string(taskOne))
+	}
+
+	reportData, err := fsys.ReadFile(prd + "/report.md")
+	if err != nil {
+		t.Fatalf("relatorio nao encontrado: %v", err)
+	}
+	reportStr := string(reportData)
+	if !strings.Contains(reportStr, "abortado: reviewer violou isolamento da task 1.0") {
+		t.Fatalf("relatorio nao contem stop reason do reviewer\noutput:\n%s", reportStr)
+	}
+	if !strings.Contains(reportStr, "violacao de isolamento detectada: arquivo de task task-1.0-test.md foi alterado indevidamente") {
+		t.Fatalf("relatorio nao contem diagnostico da task atual alterada\noutput:\n%s", reportStr)
+	}
+}
+
+func TestExecuteRejectsReviewerCurrentTaskRowMutation(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-test"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				switch tool {
+				case "claude":
+					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
+					return "executor completed", "", 0, nil
+				case "codex":
+					fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | blocked | — | Nao |\n")
+					return "reviewer mutated current task row", "", 0, nil
+				default:
+					t.Fatalf("tool inesperada: %q", tool)
+					return "", "", 0, nil
+				}
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		Profiles: &ProfileConfig{
+			Mode:     "avancado",
+			Executor: execProfile,
+			Reviewer: &revProfile,
+		},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	tasksData, err := fsys.ReadFile(prd + "/tasks.md")
+	if err != nil {
+		t.Fatalf("tasks.md nao encontrado: %v", err)
+	}
+	if string(tasksData) != "| 1.0 | Task One | done | — | Nao |\n" {
+		t.Fatalf("row da task atual deveria ter sido restaurada para done, obteve:\n%s", string(tasksData))
+	}
+
+	reportData, err := fsys.ReadFile(prd + "/report.md")
+	if err != nil {
+		t.Fatalf("relatorio nao encontrado: %v", err)
+	}
+	reportStr := string(reportData)
+	if !strings.Contains(reportStr, "abortado: reviewer violou isolamento da task 1.0") {
+		t.Fatalf("relatorio nao contem stop reason do reviewer\noutput:\n%s", reportStr)
+	}
+	if !strings.Contains(reportStr, "violacao de isolamento detectada: row da task 1.0 foi alterada indevidamente em tasks.md") {
+		t.Fatalf("relatorio nao contem diagnostico da row atual alterada\noutput:\n%s", reportStr)
+	}
+}
+
+func TestExecuteDoesNotResumeTaskWhenTaskFileStatusIsTerminal(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-test"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** blocked\n")
+	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | in_progress | — | Nao |\n")
+
+	invoked := false
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				invoked = true
+				return "should not run", "", 0, nil
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "claude",
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	if invoked {
+		t.Fatal("task com status efetivo blocked nao deveria ser retomada")
+	}
+
+	reportData, err := fsys.ReadFile(prd + "/report.md")
+	if err != nil {
+		t.Fatalf("relatorio nao encontrado: %v", err)
+	}
+	reportStr := string(reportData)
+	if !strings.Contains(reportStr, "todas as tasks completadas ou em estado terminal") {
+		t.Fatalf("stop reason inesperado\noutput:\n%s", reportStr)
+	}
+}
+
 // TestDryRunAdvancedTemplatePreview verifica que o dry-run modo avancado exibe
 // o preview do template resolvido para a primeira task elegivel (RF-12).
 func TestDryRunAdvancedTemplatePreview(t *testing.T) {
@@ -1381,4 +2244,3 @@ func TestDryRunAdvancedTemplatePreview(t *testing.T) {
 		t.Errorf("dry-run nao contem conteudo do template\noutput:\n%s", out)
 	}
 }
-

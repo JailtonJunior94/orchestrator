@@ -79,16 +79,19 @@ func ReadTaskFileStatus(content []byte) string {
 	return normalizeStatus(fields[0])
 }
 
-// FindEligible retorna tasks elegiveis: status pending, todas deps done, nao no skipped set.
+// FindEligible retorna tasks elegiveis: status pending ou in_progress, todas deps done,
+// nao no skipped set. Tasks em "in_progress" tem prioridade sobre "pending" para
+// garantir retomada objetiva da sessao anterior antes de abrir uma nova task.
 func FindEligible(tasks []TaskEntry, skipped map[string]bool) []TaskEntry {
 	statusMap := make(map[string]string, len(tasks))
 	for _, t := range tasks {
 		statusMap[t.ID] = t.Status
 	}
 
-	var eligible []TaskEntry
+	var inProgress []TaskEntry
+	var pending []TaskEntry
 	for _, t := range tasks {
-		if skipped[t.ID] || t.Status != "pending" {
+		if skipped[t.ID] || !isResumableStatus(t.Status) {
 			continue
 		}
 		allDepsDone := true
@@ -99,10 +102,35 @@ func FindEligible(tasks []TaskEntry, skipped map[string]bool) []TaskEntry {
 			}
 		}
 		if allDepsDone {
-			eligible = append(eligible, t)
+			if t.Status == "in_progress" {
+				inProgress = append(inProgress, t)
+				continue
+			}
+			pending = append(pending, t)
 		}
 	}
-	return eligible
+	return append(inProgress, pending...)
+}
+
+func isResumableStatus(status string) bool {
+	return status == "pending" || status == "in_progress"
+}
+
+func reconcileTaskStatuses(tasks []TaskEntry, prdFolder string, fsys fs.FileSystem) []TaskEntry {
+	reconciled := append([]TaskEntry(nil), tasks...)
+	for i := range reconciled {
+		if !isResumableStatus(reconciled[i].Status) {
+			continue
+		}
+		taskFile, err := ResolveTaskFile(prdFolder, reconciled[i], fsys)
+		if err != nil {
+			continue
+		}
+		if fileStatus := readTaskStatus(taskFile, fsys); fileStatus != "" {
+			reconciled[i].Status = fileStatus
+		}
+	}
+	return reconciled
 }
 
 // ResolveTaskFile encontra o arquivo de task individual pelo prefixo numerico do ID.

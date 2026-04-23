@@ -8,6 +8,9 @@
 ## [Unreleased]
 
 ### Features
+- **taskloop:** retoma tasks com status efetivo `in_progress` antes de abrir novas pendentes, reconciliando `tasks.md` com o status real do arquivo individual da task
+- **taskloop:** adiciona guardrails de isolamento para executor e reviewer; o loop aborta e restaura snapshot quando o agente altera outras rows de `tasks.md`, outros arquivos de task ou arquivos protegidos do PRD
+- **skills:** adiciona a skill externa `bubbletea` ao `skills-lock.json`
 - **skill-bump:** novo comando `skill-bump <path>` que detecta skills alteradas desde a última tag via `git diff` e atualiza automaticamente o campo `version` no frontmatter `SKILL.md`; suporta `--dry-run` para inspecionar sem alterar arquivos
 - **version:** flag `--skills` exibe versões das skills; aceita `embedded`, `installed` ou sem valor (ambos) — ex.: `ai-spec-harness version --skills`
 - **manifest:** campo `skill_versions` registra o mapa `skill → version` no manifesto durante `install` e `upgrade`

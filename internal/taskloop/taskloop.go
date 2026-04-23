@@ -119,6 +119,7 @@ func (s *Service) printDryRunAdvancedHeader(opts Options, absFolder, workDir str
 	if err != nil {
 		return
 	}
+	tasks = reconcileTaskStatuses(tasks, absFolder, s.fsys)
 	eligible := FindEligible(tasks, nil)
 
 	if len(eligible) == 0 {
@@ -310,6 +311,7 @@ func (s *Service) Execute(opts Options) error {
 		if err != nil {
 			return fmt.Errorf("erro ao parsear tasks.md: %w", err)
 		}
+		tasks = reconcileTaskStatuses(tasks, absFolder, s.fsys)
 
 		eligible := FindEligible(tasks, skipped)
 		if len(eligible) == 0 {
@@ -395,12 +397,24 @@ func (s *Service) Execute(opts Options) error {
 			executorModel = opts.Profiles.Executor.Model()
 		}
 
+		snapshot, err := captureTaskIsolationSnapshotWithMode(absFolder, taskIsolationModeExecutor, s.fsys)
+		if err != nil {
+			return fmt.Errorf("erro ao capturar snapshot de isolamento da task %s: %w", task.ID, err)
+		}
+
 		// Invocar agente com timeout
 		ctx, cancel := context.WithTimeout(context.Background(), opts.Timeout)
 		startTime := time.Now()
 		stdout, stderr, exitCode, invokeErr := invoker.Invoke(ctx, prompt, workDir, executorModel)
 		elapsed := time.Since(startTime)
 		cancel()
+
+		isolationErr := validateTaskIsolation(snapshot, absFolder, task.ID, taskFile, s.fsys)
+		if isolationErr != nil {
+			if restoreErr := restoreTaskIsolationSnapshotAt(snapshot, absFolder, s.fsys); restoreErr != nil {
+				return fmt.Errorf("violacao de isolamento na task %s: %v; falha ao restaurar snapshot: %w", task.ID, isolationErr, restoreErr)
+			}
+		}
 
 		// Ler status pos-execucao
 		postStatus := preStatus
@@ -430,6 +444,19 @@ func (s *Service) Execute(opts Options) error {
 			ExitCode:    exitCode,
 			AgentOutput: stdout,
 			Role:        "executor",
+		}
+
+		if isolationErr != nil {
+			iterResult.Note = fmt.Sprintf("violacao de isolamento detectada: %v", isolationErr)
+			s.printer.Error("iteracao %d: %s", iteration, iterResult.Note)
+			report.Iterations = append(report.Iterations, iterResult)
+			report.StopReason = fmt.Sprintf("abortado: agente violou isolamento da task %s", task.ID)
+			if content, err := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md")); err == nil {
+				if finalTasks, err := ParseTasksFile(content); err == nil {
+					report.FinalTasks = finalTasks
+				}
+			}
+			break
 		}
 
 		if invokeErr != nil {
@@ -467,7 +494,31 @@ func (s *Service) Execute(opts Options) error {
 		// RF-13: reviewer e sub-etapa e nao incrementa o contador de iteracoes.
 		if opts.Profiles != nil && opts.Profiles.Reviewer != nil &&
 			invokeErr == nil && postStatus == "done" {
+			reviewSnapshot, err := captureTaskIsolationSnapshotWithMode(absFolder, taskIsolationModeReviewer, s.fsys)
+			if err != nil {
+				return fmt.Errorf("erro ao capturar snapshot de isolamento do reviewer na task %s: %w", task.ID, err)
+			}
 			iterResult.ReviewResult = s.invokeReviewer(opts, relTaskFile, relPRD, workDir)
+			reviewIsolationErr := validateReviewerIsolation(reviewSnapshot, absFolder, task.ID, taskFile, s.fsys)
+			if reviewIsolationErr != nil {
+				if restoreErr := restoreTaskIsolationSnapshotAt(reviewSnapshot, absFolder, s.fsys); restoreErr != nil {
+					return fmt.Errorf("violacao de isolamento do reviewer na task %s: %v; falha ao restaurar snapshot: %w", task.ID, reviewIsolationErr, restoreErr)
+				}
+				if iterResult.ReviewResult == nil {
+					iterResult.ReviewResult = &ReviewResult{}
+				}
+				iterResult.ReviewResult.Note = appendNote(iterResult.ReviewResult.Note,
+					fmt.Sprintf("violacao de isolamento detectada: %v", reviewIsolationErr))
+				s.printer.Error("iteracao %d: reviewer violou isolamento da task %s: %v", iteration, task.ID, reviewIsolationErr)
+				report.Iterations = append(report.Iterations, iterResult)
+				report.StopReason = fmt.Sprintf("abortado: reviewer violou isolamento da task %s", task.ID)
+				if content, err := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md")); err == nil {
+					if finalTasks, err := ParseTasksFile(content); err == nil {
+						report.FinalTasks = finalTasks
+					}
+				}
+				break
+			}
 		}
 
 		// Se status nao mudou, skip para evitar loop infinito
@@ -487,7 +538,7 @@ func (s *Service) Execute(opts Options) error {
 		report.Iterations = append(report.Iterations, iterResult)
 	}
 
-	if iteration >= opts.MaxIterations {
+	if iteration >= opts.MaxIterations && report.StopReason == "" {
 		report.StopReason = fmt.Sprintf("limite de iteracoes atingido (%d)", opts.MaxIterations)
 		// Ler estado final das tasks
 		if content, err := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md")); err == nil {

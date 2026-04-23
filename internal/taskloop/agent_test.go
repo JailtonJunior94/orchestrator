@@ -75,6 +75,10 @@ func TestBuildPromptContainsAgentsMd(t *testing.T) {
 		".agents/skills/execute-task/SKILL.md",
 		"tasks/prd-feat/01_task.md",
 		"tasks/prd-feat",
+		"Do NOT modify any other task file.",
+		"Do NOT modify any row in tasks.md except the current task row.",
+		"Do NOT start the next task or mark any other row in tasks.md as in_progress.",
+		"Leave follow-up tasks unchanged for a future isolated session.",
 	}
 	for _, r := range required {
 		if !strings.Contains(prompt, r) {

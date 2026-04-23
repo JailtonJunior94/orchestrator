@@ -74,6 +74,11 @@ Execute ONLY this task. Follow all skill steps:
 6. Update task status in task file and tasks.md
 7. Generate execution report
 
+Do NOT modify any other task file.
+Do NOT modify any row in tasks.md except the current task row.
+Do NOT start the next task or mark any other row in tasks.md as in_progress.
+Leave follow-up tasks unchanged for a future isolated session.
+
 Update **Status:** in %s and the corresponding row in %s/tasks.md to reflect the final state.`, taskFilePath, prdFolder, taskFilePath, prdFolder)
 }
 
