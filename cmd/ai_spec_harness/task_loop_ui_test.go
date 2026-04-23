@@ -1,0 +1,158 @@
+package aispecharness
+
+import (
+	"bytes"
+	"errors"
+	"io"
+	"testing"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/taskloop"
+	"github.com/spf13/cobra"
+)
+
+type stubTerminalDetector struct {
+	capabilities taskloop.TerminalCapabilities
+}
+
+func (d stubTerminalDetector) Detect(stdout, stderr io.Writer) taskloop.TerminalCapabilities {
+	return d.capabilities
+}
+
+func newTaskLoopUITestCommand(t *testing.T) *cobra.Command {
+	t.Helper()
+
+	cmd := &cobra.Command{Use: "task-loop"}
+	addTaskLoopUIFlags(cmd)
+	return cmd
+}
+
+func TestTaskLoopUIFlags(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		args    []string
+		want    taskloop.UIMode
+		wantErr string
+	}{
+		{
+			name: "default usa auto",
+			want: taskloop.UIModeAuto,
+		},
+		{
+			name: "aceita ui plain",
+			args: []string{"--ui=plain"},
+			want: taskloop.UIModePlain,
+		},
+		{
+			name: "no-ui vira plain",
+			args: []string{"--no-ui"},
+			want: taskloop.UIModePlain,
+		},
+		{
+			name:    "no-ui conflita com ui diferente de plain",
+			args:    []string{"--ui=tui", "--no-ui"},
+			wantErr: "--no-ui nao pode ser combinado com --ui=tui",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			cmd := newTaskLoopUITestCommand(t)
+			if err := cmd.ParseFlags(tt.args); err != nil {
+				t.Fatalf("ParseFlags() erro inesperado: %v", err)
+			}
+
+			got, err := requestedTaskLoopUIMode(cmd)
+			if tt.wantErr != "" {
+				if err == nil || err.Error() != tt.wantErr {
+					t.Fatalf("erro = %v, esperado %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("erro inesperado: %v", err)
+			}
+			if got != tt.want {
+				t.Fatalf("requestedTaskLoopUIMode() = %q, esperado %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTaskLoopUIResolution(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		args          []string
+		capabilities  taskloop.TerminalCapabilities
+		wantRequest   taskloop.UIMode
+		wantEffective taskloop.UIMode
+		wantErr       error
+	}{
+		{
+			name:          "auto vira tui em terminal interativo",
+			capabilities:  taskloop.TerminalCapabilities{Interactive: true},
+			wantRequest:   taskloop.UIModeAuto,
+			wantEffective: taskloop.UIModeTUI,
+		},
+		{
+			name:          "auto degrada para plain fora de tty",
+			capabilities:  taskloop.TerminalCapabilities{},
+			wantRequest:   taskloop.UIModeAuto,
+			wantEffective: taskloop.UIModePlain,
+		},
+		{
+			name:          "ui plain preserva fallback textual",
+			args:          []string{"--ui=plain"},
+			capabilities:  taskloop.TerminalCapabilities{Interactive: true},
+			wantRequest:   taskloop.UIModePlain,
+			wantEffective: taskloop.UIModePlain,
+		},
+		{
+			name:         "tui falha sem terminal interativo",
+			args:         []string{"--ui=tui"},
+			capabilities: taskloop.TerminalCapabilities{},
+			wantErr:      taskloop.ErrInteractiveUnavailable,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			cmd := newTaskLoopUITestCommand(t)
+			if err := cmd.ParseFlags(tt.args); err != nil {
+				t.Fatalf("ParseFlags() erro inesperado: %v", err)
+			}
+
+			requested, effective, capabilities, err := resolveTaskLoopUIMode(
+				cmd,
+				stubTerminalDetector{capabilities: tt.capabilities},
+				bytes.NewBuffer(nil),
+				bytes.NewBuffer(nil),
+			)
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("erro = %v, esperado errors.Is(..., %v)", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("erro inesperado: %v", err)
+			}
+			if requested != tt.wantRequest {
+				t.Fatalf("requested = %q, esperado %q", requested, tt.wantRequest)
+			}
+			if effective != tt.wantEffective {
+				t.Fatalf("effective = %q, esperado %q", effective, tt.wantEffective)
+			}
+			if capabilities != tt.capabilities {
+				t.Fatalf("capabilities = %+v, esperado %+v", capabilities, tt.capabilities)
+			}
+		})
+	}
+}

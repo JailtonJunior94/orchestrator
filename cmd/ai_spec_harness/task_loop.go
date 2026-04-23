@@ -2,6 +2,8 @@ package aispecharness
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
@@ -56,6 +58,10 @@ Exemplos:
 		maxIter, _ := cmd.Flags().GetInt("max-iterations")
 		timeout, _ := cmd.Flags().GetDuration("timeout")
 		reportPath, _ := cmd.Flags().GetString("report-path")
+		requestedUIMode, effectiveUIMode, capabilities, err := resolveTaskLoopUIMode(cmd, taskloop.NewTerminalDetector(), os.Stdout, os.Stderr)
+		if err != nil {
+			return err
+		}
 
 		// Validacao mutua exclusiva entre modo simples e avancado
 		if tool != "" && (execTool != "" || revTool != "") {
@@ -98,6 +104,9 @@ Exemplos:
 			MaxIterations:          maxIter,
 			Timeout:                timeout,
 			ReportPath:             reportPath,
+			RequestedUIMode:        requestedUIMode,
+			EffectiveUIMode:        effectiveUIMode,
+			TerminalCapabilities:   capabilities,
 			Profiles:               profiles,
 			FallbackTool:           fallbackTool,
 			AllowUnknownModel:      allowUnknown,
@@ -108,6 +117,41 @@ Exemplos:
 	},
 }
 
+func resolveTaskLoopUIMode(cmd *cobra.Command, detector taskloop.TerminalDetector, stdout io.Writer, stderr io.Writer) (taskloop.UIMode, taskloop.UIMode, taskloop.TerminalCapabilities, error) {
+	requested, err := requestedTaskLoopUIMode(cmd)
+	if err != nil {
+		return "", "", taskloop.TerminalCapabilities{}, err
+	}
+	capabilities := detector.Detect(stdout, stderr)
+	effective, err := taskloop.ResolveUIMode(requested, capabilities)
+	if err != nil {
+		return "", "", taskloop.TerminalCapabilities{}, err
+	}
+	return requested, effective, capabilities, nil
+}
+
+func requestedTaskLoopUIMode(cmd *cobra.Command) (taskloop.UIMode, error) {
+	rawMode, _ := cmd.Flags().GetString("ui")
+	noUI, _ := cmd.Flags().GetBool("no-ui")
+
+	mode, err := taskloop.ParseUIMode(rawMode)
+	if err != nil {
+		return "", err
+	}
+	if !noUI {
+		return mode, nil
+	}
+	if cmd.Flags().Changed("ui") && mode != taskloop.UIModePlain {
+		return "", fmt.Errorf("--no-ui nao pode ser combinado com --ui=%s", mode)
+	}
+	return taskloop.UIModePlain, nil
+}
+
+func addTaskLoopUIFlags(cmd *cobra.Command) {
+	cmd.Flags().String("ui", string(taskloop.UIModeAuto), "Modo de interface: auto, tui, plain")
+	cmd.Flags().Bool("no-ui", false, "Alias ergonomico de --ui=plain")
+}
+
 func init() {
 	// Flags existentes (preservadas)
 	taskLoopCmd.Flags().String("tool", "", "Agente de IA: claude, codex, gemini, copilot (modo simples)")
@@ -115,6 +159,7 @@ func init() {
 	taskLoopCmd.Flags().Int("max-iterations", 20, "Limite maximo de iteracoes do loop")
 	taskLoopCmd.Flags().Duration("timeout", 30*time.Minute, "Timeout por task")
 	taskLoopCmd.Flags().String("report-path", "", "Caminho do relatorio final (default: task-loop-report-<timestamp>.md)")
+	addTaskLoopUIFlags(taskLoopCmd)
 
 	// Flags novas — modo avancado por papel
 	taskLoopCmd.Flags().String("executor-tool", "", "Ferramenta do executor (modo avancado): claude, codex, gemini, copilot")

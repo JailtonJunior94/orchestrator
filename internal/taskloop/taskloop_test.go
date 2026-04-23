@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -73,9 +75,11 @@ func TestResolveWorkDir(t *testing.T) {
 // callbackInvoker implementa AgentInvoker com comportamento configuravel por callback.
 // Usado para testes de orquestracao sem subprocessos reais.
 type callbackInvoker struct {
-	binary string
-	fn     func(ctx context.Context, prompt, workDir, model string) (string, string, int, error)
-	calls  []callbackInvokerCall
+	binary    string
+	fn        func(ctx context.Context, prompt, workDir, model string) (string, string, int, error)
+	calls     []callbackInvokerCall
+	liveOut   io.Writer
+	startHook func()
 }
 
 type callbackInvokerCall struct {
@@ -84,12 +88,77 @@ type callbackInvokerCall struct {
 	model   string
 }
 
+type recordingObserver struct {
+	mu             sync.Mutex
+	startSnapshots []SessionSnapshot
+	events         []LoopEvent
+	summaries      []FinalSummary
+	failStart      bool
+	failConsume    bool
+	failFinish     bool
+}
+
+type manualHeartbeatTicker struct {
+	ch      chan time.Time
+	stopped atomic.Bool
+}
+
+func newManualHeartbeatTicker() *manualHeartbeatTicker {
+	return &manualHeartbeatTicker{ch: make(chan time.Time, 4)}
+}
+
+func (t *manualHeartbeatTicker) Chan() <-chan time.Time { return t.ch }
+
+func (t *manualHeartbeatTicker) Stop() { t.stopped.Store(true) }
+
+func (o *recordingObserver) Start(snapshot SessionSnapshot) error {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.startSnapshots = append(o.startSnapshots, snapshot)
+	if o.failStart {
+		return fmt.Errorf("observer start failure")
+	}
+	return nil
+}
+
+func (o *recordingObserver) Consume(event LoopEvent) error {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.events = append(o.events, event)
+	if o.failConsume {
+		return fmt.Errorf("observer consume failure")
+	}
+	return nil
+}
+
+func (o *recordingObserver) Finish(summary FinalSummary) error {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.summaries = append(o.summaries, summary)
+	if o.failFinish {
+		return fmt.Errorf("observer finish failure")
+	}
+	return nil
+}
+
 func (c *callbackInvoker) Invoke(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 	c.calls = append(c.calls, callbackInvokerCall{prompt, workDir, model})
-	return c.fn(ctx, prompt, workDir, model)
+	if c.startHook != nil {
+		c.startHook()
+	}
+	stdout, stderr, exitCode, err := c.fn(ctx, prompt, workDir, model)
+	if c.liveOut != nil {
+		_, _ = io.WriteString(c.liveOut, stdout)
+		_, _ = io.WriteString(c.liveOut, stderr)
+	}
+	return stdout, stderr, exitCode, err
 }
 
 func (c *callbackInvoker) BinaryName() string { return c.binary }
+
+func (c *callbackInvoker) SetLiveOutput(w io.Writer) { c.liveOut = w }
+
+func (c *callbackInvoker) SetProcessStartHook(fn func()) { c.startHook = fn }
 
 // newTestPrinter cria um Printer que descarta toda saida (adequado para testes).
 func newTestPrinter() *output.Printer {
@@ -120,6 +189,81 @@ func setupBaseFS(taskStatus string) (*taskfs.FakeFileSystem, string) {
 // tasksContent gera o conteudo de tasks.md com uma unica task.
 func tasksContent(id, title, status string) []byte {
 	return []byte(fmt.Sprintf("| %s | %s | %s | — | Nao |\n", id, title, status))
+}
+
+func eventKinds(events []LoopEvent) []EventKind {
+	kinds := make([]EventKind, 0, len(events))
+	for _, event := range events {
+		kinds = append(kinds, event.Kind)
+	}
+	return kinds
+}
+
+func (o *recordingObserver) snapshotEvents() []LoopEvent {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	events := make([]LoopEvent, len(o.events))
+	copy(events, o.events)
+	return events
+}
+
+func (o *recordingObserver) snapshotSummaries() []FinalSummary {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	summaries := make([]FinalSummary, len(o.summaries))
+	copy(summaries, o.summaries)
+	return summaries
+}
+
+func (o *recordingObserver) snapshotStarts() []SessionSnapshot {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	starts := make([]SessionSnapshot, len(o.startSnapshots))
+	copy(starts, o.startSnapshots)
+	return starts
+}
+
+func containsEventKind(events []LoopEvent, kind EventKind) bool {
+	for _, event := range events {
+		if event.Kind == kind {
+			return true
+		}
+	}
+	return false
+}
+
+func containsRolePhase(events []LoopEvent, role AgentRole, phase AgentPhase) bool {
+	for _, event := range events {
+		if event.Role == role && event.Phase == phase {
+			return true
+		}
+	}
+	return false
+}
+
+func findFailureEvent(events []LoopEvent, role AgentRole) *LoopEvent {
+	for i := range events {
+		if events[i].Kind == EventFailureObserved && events[i].Role == role {
+			return &events[i]
+		}
+	}
+	return nil
+}
+
+func containsOrderedEventKinds(events []LoopEvent, expected []EventKind) bool {
+	if len(expected) == 0 {
+		return true
+	}
+	index := 0
+	for _, event := range events {
+		if event.Kind == expected[index] {
+			index++
+			if index == len(expected) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // TestExecuteSimpleMode verifica regressao: modo simples (Profiles=nil) executa
@@ -170,6 +314,556 @@ func TestExecuteSimpleMode(t *testing.T) {
 	reportStr := string(reportData)
 	if len(reportStr) == 0 {
 		t.Error("relatorio vazio")
+	}
+}
+
+func TestServiceExecute(t *testing.T) {
+	tests := []struct {
+		name         string
+		withReviewer bool
+		failObserver bool
+	}{
+		{
+			name:         "preserva fluxo simples com observer noop",
+			withReviewer: false,
+			failObserver: false,
+		},
+		{
+			name:         "preserva fluxo avancado com reviewer",
+			withReviewer: true,
+			failObserver: false,
+		},
+		{
+			name:         "nao quebra execucao quando observer falha",
+			withReviewer: false,
+			failObserver: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fsys, prd := setupBaseFS("pending")
+			observer := &recordingObserver{
+				failStart:   tt.failObserver,
+				failConsume: tt.failObserver,
+				failFinish:  tt.failObserver,
+			}
+
+			executorCalls := 0
+			reviewerCalls := 0
+			svc := NewServiceWithObserver(fsys, newTestPrinter(), observer)
+			svc.binaryChecker = noBinaryCheck
+			svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+				switch tool {
+				case "claude":
+					return &callbackInvoker{
+						binary: "claude",
+						fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+							executorCalls++
+							fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+							return "executor output", "", 0, nil
+						},
+					}, nil
+				case "codex":
+					return &callbackInvoker{
+						binary: "codex",
+						fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+							reviewerCalls++
+							return "reviewer output", "", 0, nil
+						},
+					}, nil
+				default:
+					return nil, fmt.Errorf("ferramenta nao configurada: %s", tool)
+				}
+			}
+
+			opts := Options{
+				PRDFolder:     prd,
+				Tool:          "claude",
+				MaxIterations: 1,
+				Timeout:       5 * time.Second,
+				ReportPath:    prd + "/report.md",
+			}
+			if tt.withReviewer {
+				execProfile, _ := NewExecutionProfile("executor", "claude", "")
+				revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+				opts.Profiles = &ProfileConfig{
+					Mode:     "avancado",
+					Executor: execProfile,
+					Reviewer: &revProfile,
+				}
+				opts.AllowUnknownModel = true
+			}
+
+			if err := svc.Execute(opts); err != nil {
+				t.Fatalf("Execute() erro inesperado: %v", err)
+			}
+
+			if executorCalls != 1 {
+				t.Fatalf("executor chamado %d vezes, esperado 1", executorCalls)
+			}
+			if tt.withReviewer && reviewerCalls != 1 {
+				t.Fatalf("reviewer chamado %d vezes, esperado 1", reviewerCalls)
+			}
+			if !tt.withReviewer && reviewerCalls != 0 {
+				t.Fatalf("reviewer chamado %d vezes, esperado 0", reviewerCalls)
+			}
+
+			reportData, err := fsys.ReadFile(prd + "/report.md")
+			if err != nil {
+				t.Fatalf("erro ao ler relatorio: %v", err)
+			}
+			if len(reportData) == 0 {
+				t.Fatal("relatorio nao deveria estar vazio")
+			}
+		})
+	}
+}
+
+func TestServicePublishesEvents(t *testing.T) {
+	tests := []struct {
+		name              string
+		withReviewer      bool
+		wantOrderedKinds  []EventKind
+		wantReviewerPhase bool
+	}{
+		{
+			name:             "publica eventos do fluxo simples",
+			withReviewer:     false,
+			wantOrderedKinds: []EventKind{EventSessionStarted, EventIterationSelected, EventPhaseChanged, EventSessionFinished},
+		},
+		{
+			name:              "publica eventos do fluxo com reviewer",
+			withReviewer:      true,
+			wantOrderedKinds:  []EventKind{EventSessionStarted, EventIterationSelected, EventPhaseChanged, EventSessionFinished},
+			wantReviewerPhase: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fsys, prd := setupBaseFS("pending")
+			observer := &recordingObserver{}
+
+			svc := NewServiceWithObserver(fsys, newTestPrinter(), observer)
+			svc.binaryChecker = noBinaryCheck
+			svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+				switch tool {
+				case "claude":
+					return &callbackInvoker{
+						binary: "claude",
+						fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+							fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+							return "executor output", "", 0, nil
+						},
+					}, nil
+				case "codex":
+					return &callbackInvoker{
+						binary: "codex",
+						fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+							return "reviewer output", "", 0, nil
+						},
+					}, nil
+				default:
+					return nil, fmt.Errorf("ferramenta nao configurada: %s", tool)
+				}
+			}
+
+			opts := Options{
+				PRDFolder:     prd,
+				Tool:          "claude",
+				MaxIterations: 1,
+				Timeout:       5 * time.Second,
+				ReportPath:    prd + "/report.md",
+			}
+			if tt.withReviewer {
+				execProfile, _ := NewExecutionProfile("executor", "claude", "")
+				revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+				opts.Profiles = &ProfileConfig{
+					Mode:     "avancado",
+					Executor: execProfile,
+					Reviewer: &revProfile,
+				}
+				opts.AllowUnknownModel = true
+			}
+
+			if err := svc.Execute(opts); err != nil {
+				t.Fatalf("Execute() erro inesperado: %v", err)
+			}
+
+			starts := observer.snapshotStarts()
+			if len(starts) != 1 {
+				t.Fatalf("Start() chamado %d vezes, esperado 1", len(starts))
+			}
+			summaries := observer.snapshotSummaries()
+			if len(summaries) != 1 {
+				t.Fatalf("Finish() chamado %d vezes, esperado 1", len(summaries))
+			}
+			events := observer.snapshotEvents()
+			if !containsOrderedEventKinds(events, tt.wantOrderedKinds) {
+				t.Fatalf("sequencia de eventos nao encontrada: got=%v want=%v", eventKinds(events), tt.wantOrderedKinds)
+			}
+			if !containsEventKind(events, EventProgressUpdated) {
+				t.Fatalf("esperado ao menos um evento %s; got=%v", EventProgressUpdated, eventKinds(events))
+			}
+			if !containsRolePhase(events, RoleExecutor, PhaseRunning) {
+				t.Fatalf("esperado evento do executor em %s", PhaseRunning)
+			}
+			if tt.wantReviewerPhase && !containsRolePhase(events, RoleReviewer, PhaseReviewing) {
+				t.Fatalf("esperado evento do reviewer em %s", PhaseReviewing)
+			}
+
+			summary := summaries[0]
+			if summary.IterationsRun != 1 {
+				t.Fatalf("IterationsRun=%d, esperado 1", summary.IterationsRun)
+			}
+			if summary.ReportPath != prd+"/report.md" {
+				t.Fatalf("ReportPath=%q, esperado %q", summary.ReportPath, prd+"/report.md")
+			}
+		})
+	}
+}
+
+func TestServicePublishesStreamingHeartbeatAndTypedFailure(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+	observer := &recordingObserver{}
+	ticker := newManualHeartbeatTicker()
+	heartbeatReady := make(chan struct{}, 1)
+
+	svc := NewServiceWithObserver(fsys, newTestPrinter(), observer)
+	svc.binaryChecker = noBinaryCheck
+	svc.heartbeatTicker = func(time.Duration) heartbeatTicker {
+		heartbeatReady <- struct{}{}
+		return ticker
+	}
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				<-heartbeatReady
+				ticker.ch <- time.Date(2026, 4, 23, 12, 0, 0, 0, time.UTC)
+				return "", "Not logged in. Please run /login", 1, nil
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "claude",
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute() erro inesperado: %v", err)
+	}
+
+	events := observer.snapshotEvents()
+	if !containsEventKind(events, EventOutputObserved) {
+		t.Fatalf("esperado evento %s; got=%v", EventOutputObserved, eventKinds(events))
+	}
+	if !containsEventKind(events, EventHeartbeatObserved) {
+		t.Fatalf("esperado evento %s; got=%v", EventHeartbeatObserved, eventKinds(events))
+	}
+	if !containsRolePhase(events, RoleExecutor, PhaseAuthRequired) {
+		t.Fatalf("esperado evento do executor em %s", PhaseAuthRequired)
+	}
+	if !ticker.stopped.Load() {
+		t.Fatal("heartbeat ticker deveria ser parado ao final da invocacao")
+	}
+}
+
+func TestEventPublisherSerializesConcurrentEvents(t *testing.T) {
+	startedAt := time.Date(2026, 4, 23, 12, 0, 0, 0, time.UTC)
+	task, err := NewTaskRef("1.0", "Test Task")
+	if err != nil {
+		t.Fatalf("NewTaskRef() erro inesperado: %v", err)
+	}
+
+	session, err := NewLoopSession("simples", 1, false, 8, startedAt)
+	if err != nil {
+		t.Fatalf("NewLoopSession() erro inesperado: %v", err)
+	}
+	observer := &recordingObserver{}
+	publisher := newEventPublisher(session, observer, newTestPrinter())
+	if err := publisher.start(); err != nil {
+		t.Fatalf("start() erro inesperado: %v", err)
+	}
+
+	baseEvents := []LoopEvent{
+		{Time: startedAt, Kind: EventSessionStarted, Message: "sessao iniciada"},
+		{Time: startedAt.Add(time.Second), Kind: EventIterationSelected, Iteration: 1, Task: task, Tool: ToolClaude, Role: RoleExecutor, Phase: PhasePreparing},
+		{Time: startedAt.Add(2 * time.Second), Kind: EventPhaseChanged, Iteration: 1, Task: task, Tool: ToolClaude, Role: RoleExecutor, Phase: PhaseRunning, Message: "subprocesso iniciado"},
+	}
+	for _, event := range baseEvents {
+		if err := publisher.consume(event); err != nil {
+			t.Fatalf("consume(%s) erro inesperado: %v", event.Kind, err)
+		}
+	}
+
+	var wg sync.WaitGroup
+	concurrentEvents := []LoopEvent{
+		{Time: startedAt.Add(3 * time.Second), Kind: EventOutputObserved, Iteration: 1, Task: task, Tool: ToolClaude, Role: RoleExecutor, Message: "saida observada"},
+		{Time: startedAt.Add(4 * time.Second), Kind: EventHeartbeatObserved, Iteration: 1, Task: task, Tool: ToolClaude, Role: RoleExecutor, Phase: PhaseRunning, Message: "heartbeat"},
+		{Time: startedAt.Add(5 * time.Second), Kind: EventOutputObserved, Iteration: 1, Task: task, Tool: ToolClaude, Role: RoleExecutor, Message: "saida observada novamente"},
+	}
+	for _, event := range concurrentEvents {
+		wg.Add(1)
+		go func(event LoopEvent) {
+			defer wg.Done()
+			if err := publisher.consume(event); err != nil {
+				t.Errorf("consume(%s) erro inesperado: %v", event.Kind, err)
+			}
+		}(event)
+	}
+	wg.Wait()
+
+	snapshot := session.SnapshotAt(startedAt.Add(5 * time.Second))
+	if snapshot.ActiveIteration == nil {
+		t.Fatal("snapshot deveria preservar iteracao ativa")
+	}
+	if snapshot.CurrentPhase != PhaseStreaming {
+		t.Fatalf("CurrentPhase=%q, esperado %q", snapshot.CurrentPhase, PhaseStreaming)
+	}
+	if len(observer.snapshotEvents()) != len(baseEvents)+len(concurrentEvents) {
+		t.Fatalf("observer recebeu %d eventos, esperado %d", len(observer.snapshotEvents()), len(baseEvents)+len(concurrentEvents))
+	}
+}
+
+func TestPlainModeUsesTextPresenterByDefault(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+	printer, buf := newCapturePrinter()
+
+	svc := NewService(fsys, printer)
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+				return "executor output", "", 0, nil
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "claude",
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute() erro inesperado: %v", err)
+	}
+
+	out := buf.String()
+	wants := []string{
+		"iteracao 1/1 task 1.0 (Test Task) tool=claude role=executor phase=preparando",
+		"task 1.0 tool=claude role=executor phase=recebendo saida",
+		"resumo final: stop=limite de iteracoes atingido (1) iteracoes=1 lote=done=1 failed=0 blocked=0 needs_input=0 pending=0 in_progress=0 total=1",
+		"report=" + prd + "/report.md",
+	}
+	for _, want := range wants {
+		if !strings.Contains(out, want) {
+			t.Fatalf("saida plain nao contem %q\nsaida:\n%s", want, out)
+		}
+	}
+}
+
+func TestTUIModeKeepsAgentStreamingHiddenButPrintsFinalSummary(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+	printer, buf := newCapturePrinter()
+	observer := &recordingObserver{}
+
+	svc := NewServiceWithObserver(fsys, printer, observer)
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+				return "stdout visivel indevidamente", "stderr visivel indevidamente", 0, nil
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:       prd,
+		Tool:            "claude",
+		MaxIterations:   1,
+		Timeout:         5 * time.Second,
+		ReportPath:      prd + "/report.md",
+		RequestedUIMode: UIModeTUI,
+		EffectiveUIMode: UIModeTUI,
+		TerminalCapabilities: TerminalCapabilities{
+			Interactive:       true,
+			Width:             96,
+			Height:            24,
+			SupportsAltScreen: true,
+		},
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute() erro inesperado: %v", err)
+	}
+
+	out := buf.String()
+	if strings.Contains(out, "stdout visivel indevidamente") || strings.Contains(out, "stderr visivel indevidamente") {
+		t.Fatalf("modo tui nao deveria vazar streaming bruto do agente\nsaida:\n%s", out)
+	}
+	expected := []string{
+		"resumo final: stop=limite de iteracoes atingido (1) iteracoes=1 lote=done=1 failed=0 blocked=0 needs_input=0 pending=0 in_progress=0 total=1",
+		"report=" + prd + "/report.md",
+		"task-loop finalizado: limite de iteracoes atingido (1)",
+		"relatorio salvo em: " + prd + "/report.md",
+	}
+	for _, want := range expected {
+		if !strings.Contains(out, want) {
+			t.Fatalf("saida tui nao contem %q\nsaida:\n%s", want, out)
+		}
+	}
+
+	events := observer.snapshotEvents()
+	if !containsEventKind(events, EventOutputObserved) {
+		t.Fatalf("esperado evento %s; got=%v", EventOutputObserved, eventKinds(events))
+	}
+	if summary := observer.snapshotSummaries(); len(summary) != 1 || summary[0].IterationsRun != 1 {
+		t.Fatalf("summary final inesperado: %+v", summary)
+	}
+}
+
+func TestReviewerPreparationFailurePublishesTypedFailure(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+	observer := &recordingObserver{}
+
+	svc := NewServiceWithObserver(fsys, newTestPrinter(), observer)
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		switch tool {
+		case "claude":
+			return &callbackInvoker{
+				binary: "claude",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+					return "executor output", "", 0, nil
+				},
+			}, nil
+		case "codex":
+			return &callbackInvoker{
+				binary: "codex",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					t.Fatal("reviewer nao deveria ser invocado quando o prompt falha")
+					return "", "", 0, nil
+				},
+			}, nil
+		default:
+			return nil, fmt.Errorf("ferramenta nao configurada: %s", tool)
+		}
+	}
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+	opts := Options{
+		PRDFolder:              prd,
+		Tool:                   "claude",
+		MaxIterations:          1,
+		Timeout:                5 * time.Second,
+		ReportPath:             prd + "/report.md",
+		ReviewerPromptTemplate: prd + "/missing-review.tmpl",
+		Profiles:               &ProfileConfig{Mode: "avancado", Executor: execProfile, Reviewer: &revProfile},
+		AllowUnknownModel:      true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute() erro inesperado: %v", err)
+	}
+
+	failureEvent := findFailureEvent(observer.snapshotEvents(), RoleReviewer)
+	if failureEvent == nil {
+		t.Fatal("esperado evento de falha do reviewer")
+	}
+	if failureEvent.ErrorCode != ErrorToolExecutionFailed {
+		t.Fatalf("ErrorCode=%q, esperado %q", failureEvent.ErrorCode, ErrorToolExecutionFailed)
+	}
+	if failureEvent.Tool != ToolCodex {
+		t.Fatalf("Tool=%q, esperado %q", failureEvent.Tool, ToolCodex)
+	}
+	summaries := observer.snapshotSummaries()
+	if summaries[0].LastFailure == nil {
+		t.Fatal("summary final deveria registrar a ultima falha do reviewer")
+	}
+	if summaries[0].LastFailure.Code != ErrorToolExecutionFailed {
+		t.Fatalf("LastFailure.Code=%q, esperado %q", summaries[0].LastFailure.Code, ErrorToolExecutionFailed)
+	}
+}
+
+func TestReviewerIsolationFailureUsesReviewerTool(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+	observer := &recordingObserver{}
+
+	fsys.Files[prd+"/task-2.0-other.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/tasks.md"] = []byte(
+		"| 1.0 | Test Task | pending | — | Nao |\n" +
+			"| 2.0 | Other Task | pending | — | Nao |\n",
+	)
+
+	svc := NewServiceWithObserver(fsys, newTestPrinter(), observer)
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		switch tool {
+		case "claude":
+			return &callbackInvoker{
+				binary: "claude",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/tasks.md"] = []byte(
+						"| 1.0 | Test Task | done | — | Nao |\n" +
+							"| 2.0 | Other Task | pending | — | Nao |\n",
+					)
+					return "executor output", "", 0, nil
+				},
+			}, nil
+		case "codex":
+			return &callbackInvoker{
+				binary: "codex",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					fsys.Files[prd+"/task-2.0-other.md"] = []byte("**Status:** done\n")
+					return "reviewer output", "", 0, nil
+				},
+			}, nil
+		default:
+			return nil, fmt.Errorf("ferramenta nao configurada: %s", tool)
+		}
+	}
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+	opts := Options{
+		PRDFolder:         prd,
+		Tool:              "claude",
+		MaxIterations:     1,
+		Timeout:           5 * time.Second,
+		ReportPath:        prd + "/report.md",
+		Profiles:          &ProfileConfig{Mode: "avancado", Executor: execProfile, Reviewer: &revProfile},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute() erro inesperado: %v", err)
+	}
+
+	failureEvent := findFailureEvent(observer.snapshotEvents(), RoleReviewer)
+	if failureEvent == nil {
+		t.Fatal("esperado evento de falha de isolamento do reviewer")
+	}
+	if failureEvent.ErrorCode != ErrorTaskIsolationViolation {
+		t.Fatalf("ErrorCode=%q, esperado %q", failureEvent.ErrorCode, ErrorTaskIsolationViolation)
+	}
+	if failureEvent.Tool != ToolCodex {
+		t.Fatalf("Tool=%q, esperado %q", failureEvent.Tool, ToolCodex)
 	}
 }
 

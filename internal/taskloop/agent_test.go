@@ -2,6 +2,7 @@ package taskloop
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -305,6 +306,19 @@ func TestLiveOutputSetterInterface(t *testing.T) {
 	}
 }
 
+func TestProcessStartHookSetterInterface(t *testing.T) {
+	tools := []string{"claude", "codex", "gemini", "copilot"}
+	for _, tool := range tools {
+		invoker, err := NewAgentInvoker(tool)
+		if err != nil {
+			t.Fatalf("NewAgentInvoker(%q): %v", tool, err)
+		}
+		if _, ok := invoker.(processStartHookSetter); !ok {
+			t.Errorf("invoker %q nao implementa processStartHookSetter", tool)
+		}
+	}
+}
+
 // TestCleanEnvResetsAIInvocationDepth verifica que cleanEnv() remove qualquer valor de
 // AI_INVOCATION_DEPTH herdado do processo pai e sempre define como 0 (RF-04.4 do PRD sequencial).
 func TestCleanEnvResetsAIInvocationDepth(t *testing.T) {
@@ -433,5 +447,168 @@ func TestClaudeInvokerFallbackModel(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestAgentLifecycleAcrossTools(t *testing.T) {
+	tests := []struct {
+		name string
+		tool string
+	}{
+		{name: "claude", tool: "claude"},
+		{name: "codex", tool: "codex"},
+		{name: "gemini", tool: "gemini"},
+		{name: "copilot", tool: "copilot"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			script := "#!/bin/sh\nprintf 'streaming-output\\n'\n"
+			writeExecutable(t, dir, tt.tool, script)
+			if tt.tool == "claude" {
+				writeExecutable(t, dir, "claudiney", script)
+			}
+
+			origPath := os.Getenv("PATH")
+			t.Setenv("PATH", dir+string(os.PathListSeparator)+origPath)
+
+			invoker, err := NewAgentInvoker(tt.tool)
+			if err != nil {
+				t.Fatalf("NewAgentInvoker(%q): %v", tt.tool, err)
+			}
+
+			var liveOut strings.Builder
+			setter, ok := invoker.(LiveOutputSetter)
+			if !ok {
+				t.Fatalf("invoker %q nao implementa LiveOutputSetter", tt.tool)
+			}
+			setter.SetLiveOutput(&liveOut)
+
+			startCalls := 0
+			hookSetter, ok := invoker.(processStartHookSetter)
+			if !ok {
+				t.Fatalf("invoker %q nao implementa processStartHookSetter", tt.tool)
+			}
+			hookSetter.SetProcessStartHook(func() { startCalls++ })
+
+			stdout, _, exitCode, err := invoker.Invoke(context.Background(), "executar task", dir, "")
+			if err != nil {
+				t.Fatalf("Invoke() erro inesperado: %v", err)
+			}
+			if exitCode != 0 {
+				t.Fatalf("exit code = %d, want 0", exitCode)
+			}
+			if startCalls != 1 {
+				t.Fatalf("hook de start chamado %d vezes, want 1", startCalls)
+			}
+			if !strings.Contains(stdout, "streaming-output") {
+				t.Fatalf("stdout = %q, want conter streaming-output", stdout)
+			}
+			if !strings.Contains(liveOut.String(), "streaming-output") {
+				t.Fatalf("liveOut = %q, want conter streaming-output", liveOut.String())
+			}
+		})
+	}
+}
+
+func TestLoopFailureMapping(t *testing.T) {
+	tests := []struct {
+		name       string
+		tool       ToolName
+		exitCode   int
+		stdout     string
+		stderr     string
+		invokeErr  error
+		postStatus string
+		wantCode   ErrorCode
+		wantMsg    string
+	}{
+		{
+			name:       "timeout por deadline",
+			tool:       ToolCodex,
+			invokeErr:  context.DeadlineExceeded,
+			postStatus: "pending",
+			wantCode:   ErrorToolTimeout,
+			wantMsg:    "tempo limite",
+		},
+		{
+			name:       "autenticacao ausente",
+			tool:       ToolClaude,
+			stderr:     "Not logged in. Please run /login",
+			postStatus: "pending",
+			wantCode:   ErrorToolAuthRequired,
+			wantMsg:    "requer autenticacao",
+		},
+		{
+			name:       "binario ausente",
+			tool:       ToolGemini,
+			invokeErr:  exec.ErrNotFound,
+			postStatus: "pending",
+			wantCode:   ErrorToolBinaryMissing,
+			wantMsg:    "nao encontrado no PATH",
+		},
+		{
+			name:       "start falha com exit menos um continua binario ausente",
+			tool:       ToolCodex,
+			exitCode:   -1,
+			invokeErr:  exec.ErrNotFound,
+			postStatus: "pending",
+			wantCode:   ErrorToolBinaryMissing,
+			wantMsg:    "nao encontrado no PATH",
+		},
+		{
+			name:       "falha de execucao",
+			tool:       ToolCopilot,
+			exitCode:   2,
+			postStatus: "pending",
+			wantCode:   ErrorToolExecutionFailed,
+			wantMsg:    "encerrou com falha",
+		},
+		{
+			name:       "status nao concluido com exit zero",
+			tool:       ToolCodex,
+			postStatus: "in_progress",
+			wantCode:   ErrorToolExecutionFailed,
+			wantMsg:    "sem concluir a task",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			failure := mapLoopFailure(tt.tool, tt.exitCode, tt.stdout, tt.stderr, tt.invokeErr, tt.postStatus)
+			if failure == nil {
+				t.Fatal("esperado LoopFailure, obteve nil")
+			}
+			if failure.Code != tt.wantCode {
+				t.Fatalf("Code = %q, want %q", failure.Code, tt.wantCode)
+			}
+			if !strings.Contains(failure.Message, tt.wantMsg) {
+				t.Fatalf("Message = %q, want conter %q", failure.Message, tt.wantMsg)
+			}
+		})
+	}
+
+	if failure := mapLoopFailure(ToolClaude, 0, "ok", "", nil, "done"); failure != nil {
+		t.Fatalf("mapeamento de sucesso deveria retornar nil, obteve %+v", failure)
+	}
+}
+
+func TestLoopFailureMappingPreservesCause(t *testing.T) {
+	cause := errors.New("processo terminou com erro")
+	failure := mapLoopFailure(ToolCodex, 0, "", "", cause, "pending")
+	if failure == nil {
+		t.Fatal("esperado LoopFailure, obteve nil")
+	}
+	if !errors.Is(failure, cause) {
+		t.Fatalf("errors.Is deveria reconhecer a causa original")
+	}
+}
+
+func writeExecutable(t *testing.T, dir, name, content string) {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte(content), 0o755); err != nil {
+		t.Fatalf("nao foi possivel criar executavel %q: %v", path, err)
 	}
 }

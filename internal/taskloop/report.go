@@ -8,22 +8,24 @@ import (
 
 // ReviewResult armazena o resultado da revisao de uma task.
 type ReviewResult struct {
-	Duration time.Duration
-	ExitCode int
-	Output   string
-	Note     string
+	Duration  time.Duration
+	ExitCode  int
+	Output    string
+	Note      string
+	Succeeded bool
 }
 
 // Report armazena os resultados consolidados da execucao do task-loop.
 type Report struct {
 	PRDFolder       string
-	Tool            string             // preservado para modo simples
-	Mode            string             // "simples" ou "avancado"
-	ExecutorProfile *ExecutionProfile  // nil em modo simples
-	ReviewerProfile *ExecutionProfile  // nil quando reviewer nao configurado
+	Tool            string            // preservado para modo simples
+	Mode            string            // "simples" ou "avancado"
+	ExecutorProfile *ExecutionProfile // nil em modo simples
+	ReviewerProfile *ExecutionProfile // nil quando reviewer nao configurado
 	StartTime       time.Time
 	EndTime         time.Time
 	StopReason      string
+	Summary         FinalSummary
 	Iterations      []IterationResult
 	FinalTasks      []TaskEntry
 }
@@ -57,6 +59,7 @@ func (r *Report) Render() []byte {
 
 func (r *Report) renderSimples() []byte {
 	var b strings.Builder
+	summary := r.effectiveSummary()
 
 	b.WriteString("# Task Loop Execution Report\n\n")
 
@@ -70,8 +73,16 @@ func (r *Report) renderSimples() []byte {
 	fmt.Fprintf(&b, "- **Start Time:** %s\n", r.StartTime.Format(time.RFC3339))
 	fmt.Fprintf(&b, "- **End Time:** %s\n", r.EndTime.Format(time.RFC3339))
 	fmt.Fprintf(&b, "- **Total Duration:** %s\n", r.EndTime.Sub(r.StartTime).Truncate(time.Second))
-	fmt.Fprintf(&b, "- **Iterations:** %d\n", len(r.Iterations))
-	fmt.Fprintf(&b, "- **Stop Reason:** %s\n\n", r.StopReason)
+	fmt.Fprintf(&b, "- **Iterations:** %d\n", summary.IterationsRun)
+	fmt.Fprintf(&b, "- **Stop Reason:** %s\n", firstNonEmpty(summary.StopReason, "execucao encerrada"))
+	fmt.Fprintf(&b, "- **Batch Progress:** %s\n", formatBatchProgress(summary.Progress))
+	if summary.ReportPath != "" {
+		fmt.Fprintf(&b, "- **Report Path:** `%s`\n", summary.ReportPath)
+	}
+	if summary.LastFailure != nil {
+		fmt.Fprintf(&b, "- **Last Failure:** %s\n", renderFailureMessage(summary.LastFailure))
+	}
+	b.WriteString("\n")
 
 	// Results table — sem coluna Papel
 	if len(r.Iterations) > 0 {
@@ -167,6 +178,7 @@ func (r *Report) renderSimples() []byte {
 
 func (r *Report) renderAvancado() []byte {
 	var b strings.Builder
+	summary := r.effectiveSummary()
 
 	b.WriteString("# Task Loop Execution Report\n\n")
 
@@ -187,9 +199,16 @@ func (r *Report) renderAvancado() []byte {
 	fmt.Fprintf(&b, "- **Start Time:** %s\n", r.StartTime.Format(time.RFC3339))
 	fmt.Fprintf(&b, "- **End Time:** %s\n", r.EndTime.Format(time.RFC3339))
 	fmt.Fprintf(&b, "- **Total Duration:** %s\n", r.EndTime.Sub(r.StartTime).Truncate(time.Second))
-	// RF-13: contagem reflete apenas executor
-	fmt.Fprintf(&b, "- **Iterations:** %d\n", len(r.Iterations))
-	fmt.Fprintf(&b, "- **Stop Reason:** %s\n\n", r.StopReason)
+	fmt.Fprintf(&b, "- **Iterations:** %d\n", summary.IterationsRun)
+	fmt.Fprintf(&b, "- **Stop Reason:** %s\n", firstNonEmpty(summary.StopReason, "execucao encerrada"))
+	fmt.Fprintf(&b, "- **Batch Progress:** %s\n", formatBatchProgress(summary.Progress))
+	if summary.ReportPath != "" {
+		fmt.Fprintf(&b, "- **Report Path:** `%s`\n", summary.ReportPath)
+	}
+	if summary.LastFailure != nil {
+		fmt.Fprintf(&b, "- **Last Failure:** %s\n", renderFailureMessage(summary.LastFailure))
+	}
+	b.WriteString("\n")
 
 	// Results table — com coluna Papel e sub-linhas de reviewer
 	if len(r.Iterations) > 0 {
@@ -326,4 +345,20 @@ func modelOrDefault(model string) string {
 		return "default"
 	}
 	return model
+}
+
+func (r *Report) effectiveSummary() FinalSummary {
+	summary := r.Summary
+	if summary.StopReason == "" {
+		summary.StopReason = strings.TrimSpace(r.StopReason)
+	}
+	if summary.IterationsRun == 0 {
+		summary.IterationsRun = len(r.Iterations)
+	}
+	if summary.Progress.Total == 0 {
+		if progress, err := computeBatchProgress(r.FinalTasks); err == nil && progress.Total > 0 {
+			summary.Progress = progress
+		}
+	}
+	return summary
 }
