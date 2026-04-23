@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.0 (2026-04-23)
+
+### Features
+- **taskloop:** enforce isolation and resume in-progress tasks (ccb8639)
+
 ## 0.13.0 (2026-04-22)
 
 ### Features
