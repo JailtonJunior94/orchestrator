@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.1 (2026-04-24)
+
+### Bug Fixes
+- **taskloop:** corrige overwrite de postStatus e extrai classifyIterationOutcome (db28c51)
+
 ## 0.14.0 (2026-04-23)
 
 ### Features
