@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.3 (2026-04-24)
+
+### Bug Fixes
+- **taskloop/parser:** deduplica IDs em ParseTasksFile para evitar bloqueio de tasks elegiveis (6f92a95)
+
 ## 0.14.2 (2026-04-24)
 
 ### Bug Fixes
