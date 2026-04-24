@@ -12,18 +12,28 @@
 
 ## [Unreleased]
 
+### Bug Fixes
+- **taskloop:** corrige sobrescrita incondicional de `postStatus` pelo `tasks.md` — o fallback para `tasks.md` agora so ocorre quando o task file nao atualizou o status (`postStatus == preStatus`), evitando que tarefas concluidas corretamente sejam marcadas como "status inalterado" e puladas
+
+### Refactor
+- **taskloop:** extrai `classifyIterationOutcome` — funcao pura sem parametro de ferramenta que centraliza a logica de decisao de resultado de iteracao (skip, abort, note, runReviewer), tornando-a isoladamente testavel
+- **version:** `ResolveFromExecutable()` resolve o arquivo `VERSION` adjacente ao binario seguindo symlinks, substituindo a leitura via `ReadVersionFile(sourceDir)` no `install` e `upgrade`
+- **skills:** `isValidSemver` renomeado para `IsValidSemver` (exportado) para reutilizacao no pacote `upgrade`
+
+### Tests
+- **taskloop:** adiciona matriz de paridade semantica (10 cenarios x 4 ferramentas = 40 sub-testes), testes de isolamento de sessao entre tasks, testes de determinismo de prompt, testes de integracao com mock binaries e testes de reproducao do bug de status
+
 ### Features
 - **taskloop:** retoma tasks com status efetivo `in_progress` antes de abrir novas pendentes, reconciliando `tasks.md` com o status real do arquivo individual da task
 - **taskloop:** adiciona guardrails de isolamento para executor e reviewer; o loop aborta e restaura snapshot quando o agente altera outras rows de `tasks.md`, outros arquivos de task ou arquivos protegidos do PRD
 - **skills:** adiciona a skill externa `bubbletea` ao `skills-lock.json`
-- **skill-bump:** novo comando `skill-bump <path>` que detecta skills alteradas desde a última tag via `git diff` e atualiza automaticamente o campo `version` no frontmatter `SKILL.md`; suporta `--dry-run` para inspecionar sem alterar arquivos
-- **version:** flag `--skills` exibe versões das skills; aceita `embedded`, `installed` ou sem valor (ambos) — ex.: `ai-spec-harness version --skills`
+- **skill-bump:** novo comando `skill-bump <path>` que detecta skills alteradas desde a ultima tag via `git diff` e atualiza automaticamente o campo `version` no frontmatter `SKILL.md`; suporta `--dry-run` para inspecionar sem alterar arquivos
+- **version:** flag `--skills` exibe versoes das skills; aceita `embedded`, `installed` ou sem valor (ambos) — ex.: `ai-spec-harness version --skills`
 - **manifest:** campo `skill_versions` registra o mapa `skill → version` no manifesto durante `install` e `upgrade`
-- **upgrade:** modo `--check` exibe divergência entre a versão do CLI e a versão registrada no manifesto quando diferem
+- **upgrade:** modo `--check` exibe divergencia entre a versao do CLI e a versao registrada no manifesto quando diferem
 
-### Refactor
-- **version:** `ResolveFromExecutable()` resolve o arquivo `VERSION` adjacente ao binário seguindo symlinks, substituindo a leitura via `ReadVersionFile(sourceDir)` no `install` e `upgrade`
-- **skills:** `isValidSemver` renomeado para `IsValidSemver` (exportado) para reutilização no pacote `upgrade`
+### Documentation
+- remove arquivos de prompt obsoletos de `docs/prompt/` e `docs/prompts/`; adiciona `docs/prompts/taskloop-paridade-multiagente.md`
 
 ## 0.12.0 (2026-04-22)
 

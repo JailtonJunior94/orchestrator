@@ -422,13 +422,18 @@ func (s *Service) Execute(opts Options) error {
 			postStatus = fileStatus
 		}
 
-		// Tambem verificar no tasks.md atualizado
-		if updatedContent, readErr := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md")); readErr == nil {
-			if updatedTasks, parseErr := ParseTasksFile(updatedContent); parseErr == nil {
-				for _, ut := range updatedTasks {
-					if ut.ID == task.ID && ut.Status != "" {
-						postStatus = ut.Status
-						break
+		// Verificar no tasks.md atualizado apenas como fallback: quando o task file
+		// nao atualizou o status (postStatus == preStatus), o agente pode ter escrito
+		// diretamente em tasks.md. Quando o task file ja tem status diferente de
+		// preStatus, ele e a fonte prioritaria — tasks.md nao deve sobrescreve-lo.
+		if postStatus == preStatus {
+			if updatedContent, readErr := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md")); readErr == nil {
+				if updatedTasks, parseErr := ParseTasksFile(updatedContent); parseErr == nil {
+					for _, ut := range updatedTasks {
+						if ut.ID == task.ID && ut.Status != "" {
+							postStatus = ut.Status
+							break
+						}
 					}
 				}
 			}
@@ -459,24 +464,27 @@ func (s *Service) Execute(opts Options) error {
 			break
 		}
 
+		outcome := classifyIterationOutcome(preStatus, postStatus, exitCode, invokeErr, stdout, stderr)
+
+		if outcome.Abort {
+			guidance := authGuidance(executorTool)
+			iterResult.Note = fmt.Sprintf("erro de autenticacao: %s nao esta autenticado — %s", executorTool, guidance)
+			s.printer.Error("  erro de autenticacao detectado para %s — %s", executorTool, guidance)
+			report.Iterations = append(report.Iterations, iterResult)
+			report.StopReason = fmt.Sprintf("abortado: %s nao esta autenticado", executorTool)
+			report.FinalTasks = tasks
+			break
+		}
+
+		if outcome.Note != "" {
+			iterResult.Note = appendNote(iterResult.Note, outcome.Note)
+		}
+
 		if invokeErr != nil {
-			iterResult.Note = fmt.Sprintf("erro de invocacao: %v", invokeErr)
 			s.printer.Error("iteracao %d: %v", iteration, invokeErr)
-			skipped[task.ID] = true
 		} else if exitCode != 0 {
-			combined := stdout + stderr
-			if isAuthError(combined) {
-				guidance := authGuidance(executorTool)
-				iterResult.Note = fmt.Sprintf("erro de autenticacao: %s nao esta autenticado — %s", executorTool, guidance)
-				s.printer.Error("  erro de autenticacao detectado para %s — %s", executorTool, guidance)
-				report.Iterations = append(report.Iterations, iterResult)
-				report.StopReason = fmt.Sprintf("abortado: %s nao esta autenticado", executorTool)
-				report.FinalTasks = tasks
-				break
-			}
-			iterResult.Note = fmt.Sprintf("agente saiu com codigo %d", exitCode)
-			// Detectar output vazio em execucao terminada forcadamente (exit -1 = SIGKILL por timeout).
-			// Indica que a CLI pode nao suportar escrita em pipe sem TTY (ex: codex).
+			// Nota especifica por ferramenta para output vazio em SIGKILL (exit -1).
+			// Nao entra em classifyIterationOutcome porque requer o nome da ferramenta.
 			if exitCode == -1 && stdout == "" && stderr == "" {
 				iterResult.Note = appendNote(iterResult.Note,
 					fmt.Sprintf("saida vazia — %s pode requerer TTY ou nao suportar output em pipe", executorTool))
@@ -486,14 +494,17 @@ func (s *Service) Execute(opts Options) error {
 			}
 		}
 
+		if outcome.Skip {
+			skipped[task.ID] = true
+		}
+
 		// === REVIEWER (RF-05, RF-06, RF-07) ===
 		// Invocado quando: modo avancado com reviewer configurado, sem erro de invocacao
 		// e status da task e "done". O exit code do executor nao e verificado: o agente
 		// pode ter sido morto por timeout (exit -1) depois de marcar a task como done,
 		// e o reviewer deve operar sobre o estado observavel da task.
 		// RF-13: reviewer e sub-etapa e nao incrementa o contador de iteracoes.
-		if opts.Profiles != nil && opts.Profiles.Reviewer != nil &&
-			invokeErr == nil && postStatus == "done" {
+		if opts.Profiles != nil && opts.Profiles.Reviewer != nil && outcome.RunReviewer {
 			reviewSnapshot, err := captureTaskIsolationSnapshotWithMode(absFolder, taskIsolationModeReviewer, s.fsys)
 			if err != nil {
 				return fmt.Errorf("erro ao capturar snapshot de isolamento do reviewer na task %s: %w", task.ID, err)
@@ -519,17 +530,6 @@ func (s *Service) Execute(opts Options) error {
 				}
 				break
 			}
-		}
-
-		// Se status nao mudou, skip para evitar loop infinito
-		if postStatus == preStatus {
-			iterResult.Note = appendNote(iterResult.Note, "status inalterado apos execucao; pulando")
-			skipped[task.ID] = true
-		}
-
-		// Se status terminal nao-done, skip
-		if postStatus == "failed" || postStatus == "blocked" || postStatus == "needs_input" {
-			skipped[task.ID] = true
 		}
 
 		s.printer.Info("  resultado: %s -> %s (exit=%d, duracao=%s)",
@@ -617,6 +617,63 @@ func (s *Service) invokeReviewer(opts Options, relTaskFile, relPRD, workDir stri
 	}
 
 	return reviewResult
+}
+
+// iterationOutcome representa a decisao tomada apos uma invocacao do agente.
+// Produzida por classifyIterationOutcome — sem side effects.
+type iterationOutcome struct {
+	Skip        bool   // task deve ser ignorada nesta execucao
+	Abort       bool   // loop deve ser abortado (ex: erro de autenticacao)
+	Note        string // descricao do motivo (acumulavel via appendNote)
+	RunReviewer bool   // reviewer deve ser invocado
+}
+
+// classifyIterationOutcome determina o estado final de uma iteracao a partir
+// de dados observaveis, sem depender da ferramenta nem produzir side effects.
+//
+// Regras (em ordem de precedencia):
+//   - invokeErr != nil                       → Skip=true, Note="erro de invocacao: ..."
+//   - exitCode != 0 && isAuthError(combined) → Abort=true (retorno antecipado)
+//   - exitCode != 0 (sem auth error)         → Note="agente saiu com codigo N"
+//   - invokeErr == nil && postStatus=="done" → RunReviewer=true
+//   - postStatus == preStatus                → Skip=true, Note=appended "status inalterado..."
+//   - postStatus em {failed,blocked,needs_input} → Skip=true
+func classifyIterationOutcome(
+	preStatus, postStatus string,
+	exitCode int,
+	invokeErr error,
+	stdout, stderr string,
+) iterationOutcome {
+	outcome := iterationOutcome{}
+
+	if invokeErr != nil {
+		outcome.Skip = true
+		outcome.Note = fmt.Sprintf("erro de invocacao: %v", invokeErr)
+	} else if exitCode != 0 {
+		combined := stdout + stderr
+		if isAuthError(combined) {
+			return iterationOutcome{Abort: true, Note: "erro de autenticacao"}
+		}
+		outcome.Note = fmt.Sprintf("agente saiu com codigo %d", exitCode)
+	}
+
+	// RunReviewer: apenas quando invokeErr == nil e task concluida
+	if invokeErr == nil && postStatus == "done" {
+		outcome.RunReviewer = true
+	}
+
+	// Status inalterado → skip para prevenir loop infinito
+	if postStatus == preStatus {
+		outcome.Note = appendNote(outcome.Note, "status inalterado apos execucao; pulando")
+		outcome.Skip = true
+	}
+
+	// Status terminal nao-done → skip
+	if postStatus == "failed" || postStatus == "blocked" || postStatus == "needs_input" {
+		outcome.Skip = true
+	}
+
+	return outcome
 }
 
 // resolveWorkDir tenta encontrar a raiz do projeto (diretorio que contem go.mod, .git, ou AGENTS.md).

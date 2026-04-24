@@ -2244,3 +2244,914 @@ func TestDryRunAdvancedTemplatePreview(t *testing.T) {
 		t.Errorf("dry-run nao contem conteudo do template\noutput:\n%s", out)
 	}
 }
+
+// TestParidadeSemanticaCicloDeVida verifica paridade semantica para as 4 ferramentas.
+// Implementa ADR-001: matriz table-driven com 10 cenarios × 4 ferramentas = 40 sub-testes.
+// Cada cenario usa o mesmo invokerBehavior para todas as ferramentas — se alguma divergir,
+// o sub-teste correspondente falha.
+func TestParidadeSemanticaCicloDeVida(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-parity"
+
+	tools := []string{"claude", "codex", "gemini", "copilot"}
+
+	// baseSetup inicializa arquivos obrigatorios (AGENTS.md, prd.md, techspec.md).
+	baseSetup := func(fsys *taskfs.FakeFileSystem) {
+		fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+		fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+		fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+	}
+
+	type parityCase struct {
+		name          string
+		setupFS       func(fsys *taskfs.FakeFileSystem)
+		makeInvokerFn func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error)
+		maxIterations int
+		verifyReport  func(t *testing.T, report string, tool string)
+	}
+
+	tests := []parityCase{
+		// P1: Execucao com sucesso — exit 0, task file atualizado para "done".
+		// RF-01, RF-09: selecao elegivel e paridade para as 4 ferramentas.
+		{
+			name: "P1/sucesso_exit_0",
+			setupFS: func(fsys *taskfs.FakeFileSystem) {
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Alpha | pending | — | Nao |\n")
+			},
+			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				return func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Alpha | done | — | Nao |\n")
+					return "task completed successfully", "", 0, nil
+				}
+			},
+			maxIterations: 3,
+			verifyReport: func(t *testing.T, report, tool string) {
+				t.Helper()
+				if !strings.Contains(report, "pending -> done") {
+					t.Errorf("[%s] P1: relatorio deveria conter 'pending -> done'\n%s", tool, report)
+				}
+				if strings.Contains(report, "status inalterado") {
+					t.Errorf("[%s] P1: relatorio nao deveria conter 'status inalterado'", tool)
+				}
+				if !strings.Contains(report, "todas as tasks completadas") {
+					t.Errorf("[%s] P1: stop reason deveria conter 'todas as tasks completadas'\n%s", tool, report)
+				}
+			},
+		},
+		// P2: Execucao com timeout — exit -1, task file atualizado para "done" antes do SIGKILL.
+		// RF-09: exit -1 com postStatus=="done" nao deve causar skip (regressao BUG-2).
+		{
+			name: "P2/timeout_exit_minus1_status_done",
+			setupFS: func(fsys *taskfs.FakeFileSystem) {
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Alpha | pending | — | Nao |\n")
+			},
+			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				return func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					// Agente marca done antes de ser morto por timeout (SIGKILL → exit -1)
+					fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** done\n")
+					return "output before sigkill", "", -1, nil
+				}
+			},
+			maxIterations: 3,
+			verifyReport: func(t *testing.T, report, tool string) {
+				t.Helper()
+				if !strings.Contains(report, "pending -> done") {
+					t.Errorf("[%s] P2: exit -1 com task file done deve resultar em 'pending -> done'\n%s", tool, report)
+				}
+				if strings.Contains(report, "status inalterado") {
+					t.Errorf("[%s] P2: relatorio nao deveria conter 'status inalterado' quando task file esta done", tool)
+				}
+			},
+		},
+		// P3: Execucao com falha — exit 1, task file inalterado.
+		// RF-09, RF-15: falha registrada com nota consistente; status preservado.
+		{
+			name: "P3/falha_exit_1_status_inalterado",
+			setupFS: func(fsys *taskfs.FakeFileSystem) {
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Alpha | pending | — | Nao |\n")
+			},
+			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				return func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					// Agente falha; nao atualiza task file
+					return "", "compilation error: undefined variable foo", 1, nil
+				}
+			},
+			maxIterations: 1,
+			verifyReport: func(t *testing.T, report, tool string) {
+				t.Helper()
+				if strings.Contains(report, "pending -> done") {
+					t.Errorf("[%s] P3: relatorio nao deveria conter 'pending -> done' com exit 1", tool)
+				}
+				if !strings.Contains(report, "agente saiu com codigo 1") {
+					t.Errorf("[%s] P3: relatorio deveria conter 'agente saiu com codigo 1'\n%s", tool, report)
+				}
+			},
+		},
+		// P4: Erro de autenticacao — exit 1, output contem "not authenticated".
+		// RF-16: erro de autenticacao detectado e loop abortado consistentemente.
+		{
+			name: "P4/erro_autenticacao",
+			setupFS: func(fsys *taskfs.FakeFileSystem) {
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Alpha | pending | — | Nao |\n")
+			},
+			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				return func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					return "Error: not authenticated. Please run /login to continue", "", 1, nil
+				}
+			},
+			maxIterations: 3,
+			verifyReport: func(t *testing.T, report, tool string) {
+				t.Helper()
+				if !strings.Contains(report, "abortado") {
+					t.Errorf("[%s] P4: stop reason deveria conter 'abortado'\n%s", tool, report)
+				}
+				if !strings.Contains(report, "autenticad") {
+					t.Errorf("[%s] P4: relatorio deveria mencionar autenticacao\n%s", tool, report)
+				}
+			},
+		},
+		// P5: Status inalterado — exit 0, task file nao atualizado.
+		// RF-09: prevencao de loop infinito por skip de task sem progresso.
+		{
+			name: "P5/status_inalterado_exit_0",
+			setupFS: func(fsys *taskfs.FakeFileSystem) {
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Alpha | pending | — | Nao |\n")
+			},
+			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				return func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					// Agente sai com exit 0 mas NAO atualiza task file
+					return "partial work done, more to follow", "", 0, nil
+				}
+			},
+			maxIterations: 1,
+			verifyReport: func(t *testing.T, report, tool string) {
+				t.Helper()
+				if !strings.Contains(report, "status inalterado apos execucao") {
+					t.Errorf("[%s] P5: relatorio deveria conter 'status inalterado apos execucao'\n%s", tool, report)
+				}
+			},
+		},
+		// P6: Violacao de isolamento — invoker modifica task file de outra task.
+		// RF-17: violacao aborta independentemente da ferramenta, snapshot restaurado.
+		{
+			name: "P6/violacao_isolamento",
+			setupFS: func(fsys *taskfs.FakeFileSystem) {
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/tasks.md"] = []byte(
+					"| 1.0 | Alpha | pending | — | Nao |\n" +
+						"| 2.0 | Beta | pending | — | Nao |\n",
+				)
+			},
+			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				return func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					// Agente modifica task file de OUTRA task (task-2.0-beta.md, nao a atual task-1.0-alpha.md).
+					// validateTaskFileIsolation (isolation.go) detecta a mutacao porque o snapshot capturado
+					// antes da invocacao inclui todos os task files da pasta PRD e compara byte a byte apos a
+					// execucao, permitindo apenas a mutacao do currentTaskFile.
+					fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** done\n")
+					return "completed", "", 0, nil
+				}
+			},
+			maxIterations: 3,
+			verifyReport: func(t *testing.T, report, tool string) {
+				t.Helper()
+				// Contrato: validateTaskIsolation detecta mutacao de qualquer task file que nao seja
+				// o currentTaskFile e aborta o loop com StopReason "abortado: agente violou isolamento".
+				if !strings.Contains(report, "abortado") {
+					t.Errorf("[%s] P6: stop reason deveria conter 'abortado'\n%s", tool, report)
+				}
+				if !strings.Contains(report, "isolamento") {
+					t.Errorf("[%s] P6: relatorio deveria mencionar 'isolamento'\n%s", tool, report)
+				}
+			},
+		},
+		// P7: Erro de invocacao — invoker retorna err != nil.
+		// RF-15: falhas de invocacao produzem nota consistente para qualquer ferramenta.
+		{
+			name: "P7/erro_invocacao",
+			setupFS: func(fsys *taskfs.FakeFileSystem) {
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Alpha | pending | — | Nao |\n")
+			},
+			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				return func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					return "", "", 0, fmt.Errorf("conexao recusada: agente nao disponivel")
+				}
+			},
+			maxIterations: 1,
+			verifyReport: func(t *testing.T, report, tool string) {
+				t.Helper()
+				if !strings.Contains(report, "erro de invocacao") {
+					t.Errorf("[%s] P7: relatorio deveria conter 'erro de invocacao'\n%s", tool, report)
+				}
+			},
+		},
+		// P8: Multiplas tasks — 3 tasks pendentes, invoker marca cada como done sequencialmente.
+		// RF-09: paridade em ciclo completo de multiplas iteracoes.
+		{
+			name: "P8/multiplas_tasks_todas_done",
+			setupFS: func(fsys *taskfs.FakeFileSystem) {
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/task-3.0-gamma.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/tasks.md"] = []byte(
+					"| 1.0 | Alpha | pending | — | Nao |\n" +
+						"| 2.0 | Beta | pending | — | Nao |\n" +
+						"| 3.0 | Gamma | pending | — | Nao |\n",
+				)
+			},
+			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				return func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					switch {
+					case strings.Contains(prompt, "task-1.0"):
+						fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Alpha | done | — | Nao |\n" +
+								"| 2.0 | Beta | pending | — | Nao |\n" +
+								"| 3.0 | Gamma | pending | — | Nao |\n",
+						)
+					case strings.Contains(prompt, "task-2.0"):
+						fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Alpha | done | — | Nao |\n" +
+								"| 2.0 | Beta | done | — | Nao |\n" +
+								"| 3.0 | Gamma | pending | — | Nao |\n",
+						)
+					case strings.Contains(prompt, "task-3.0"):
+						fsys.Files[prd+"/task-3.0-gamma.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Alpha | done | — | Nao |\n" +
+								"| 2.0 | Beta | done | — | Nao |\n" +
+								"| 3.0 | Gamma | done | — | Nao |\n",
+						)
+					}
+					return "completed", "", 0, nil
+				}
+			},
+			maxIterations: 5,
+			verifyReport: func(t *testing.T, report, tool string) {
+				t.Helper()
+				if !strings.Contains(report, "**Iterations:** 3") {
+					t.Errorf("[%s] P8: deveria ter 3 iteracoes\n%s", tool, report)
+				}
+				if !strings.Contains(report, "todas as tasks completadas") {
+					t.Errorf("[%s] P8: stop reason deveria conter 'todas'\n%s", tool, report)
+				}
+			},
+		},
+		// P9: Task com dependencias — 2.0 depende de 1.0 (done), 3.0 depende de 2.0 (pending).
+		// RF-01: selecao elegivel respeita grafo de dependencias.
+		{
+			name: "P9/dependencias_bloqueiam_task",
+			setupFS: func(fsys *taskfs.FakeFileSystem) {
+				// 1.0 ja done (sem deps)
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** done\n")
+				// 2.0 pending, dep 1.0 (done) → elegivel
+				fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** pending\n")
+				// 3.0 pending, dep 2.0 (pending) → bloqueada
+				fsys.Files[prd+"/task-3.0-gamma.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/tasks.md"] = []byte(
+					"| 1.0 | Alpha | done | — | Nao |\n" +
+						"| 2.0 | Beta | pending | 1.0 | Nao |\n" +
+						"| 3.0 | Gamma | pending | 2.0 | Nao |\n",
+				)
+			},
+			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				return func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					switch {
+					case strings.Contains(prompt, "task-2.0"):
+						fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Alpha | done | — | Nao |\n" +
+								"| 2.0 | Beta | done | 1.0 | Nao |\n" +
+								"| 3.0 | Gamma | pending | 2.0 | Nao |\n",
+						)
+					case strings.Contains(prompt, "task-3.0"):
+						fsys.Files[prd+"/task-3.0-gamma.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Alpha | done | — | Nao |\n" +
+								"| 2.0 | Beta | done | 1.0 | Nao |\n" +
+								"| 3.0 | Gamma | done | 2.0 | Nao |\n",
+						)
+					}
+					return "completed", "", 0, nil
+				}
+			},
+			maxIterations: 5,
+			verifyReport: func(t *testing.T, report, tool string) {
+				t.Helper()
+				// Apenas 2 iteracoes: 2.0 (1.0 ja done) e 3.0 (apos 2.0 done)
+				if !strings.Contains(report, "**Iterations:** 2") {
+					t.Errorf("[%s] P9: deveria ter 2 iteracoes (2.0 e 3.0)\n%s", tool, report)
+				}
+				if !strings.Contains(report, "todas as tasks completadas") {
+					t.Errorf("[%s] P9: stop reason deveria conter 'todas'\n%s", tool, report)
+				}
+			},
+		},
+		// P10: Retomada de task in_progress — in_progress tem prioridade sobre pending.
+		// RF-04: estado persistido independente de ferramenta; retomada objetiva.
+		{
+			name: "P10/retomada_in_progress_prioridade",
+			setupFS: func(fsys *taskfs.FakeFileSystem) {
+				// 1.0 em progresso (sessao anterior interrompida)
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** in_progress\n")
+				// 2.0 pendente, sem deps
+				fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/tasks.md"] = []byte(
+					"| 1.0 | Alpha | in_progress | — | Nao |\n" +
+						"| 2.0 | Beta | pending | — | Nao |\n",
+				)
+			},
+			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				return func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					switch {
+					case strings.Contains(prompt, "task-1.0"):
+						// Sessao anterior retomada e finalizada
+						fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Alpha | done | — | Nao |\n" +
+								"| 2.0 | Beta | pending | — | Nao |\n",
+						)
+					case strings.Contains(prompt, "task-2.0"):
+						fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Alpha | done | — | Nao |\n" +
+								"| 2.0 | Beta | done | — | Nao |\n",
+						)
+					}
+					return "completed", "", 0, nil
+				}
+			},
+			maxIterations: 5,
+			verifyReport: func(t *testing.T, report, tool string) {
+				t.Helper()
+				// Task 1.0 (in_progress) deve ser executada primeiro
+				if !strings.Contains(report, "in_progress -> done") {
+					t.Errorf("[%s] P10: relatorio deveria conter 'in_progress -> done'\n%s", tool, report)
+				}
+				if !strings.Contains(report, "**Iterations:** 2") {
+					t.Errorf("[%s] P10: deveria ter 2 iteracoes\n%s", tool, report)
+				}
+				// 1.0 (in_progress→done) deve aparecer antes de 2.0 (pending→done) no relatorio
+				idx10 := strings.Index(report, "in_progress -> done")
+				idx20 := strings.Index(report, "pending -> done")
+				if idx10 < 0 || idx20 < 0 {
+					t.Errorf("[%s] P10: relatorio deveria ter ambas as transicoes de status", tool)
+				} else if idx10 > idx20 {
+					t.Errorf("[%s] P10: task 1.0 (in_progress) deve aparecer antes de 2.0 no relatorio", tool)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		for _, tool := range tools {
+			t.Run(fmt.Sprintf("%s/%s", tt.name, tool), func(t *testing.T) {
+				fsys := taskfs.NewFakeFileSystem()
+				baseSetup(fsys)
+				tt.setupFS(fsys)
+
+				fn := tt.makeInvokerFn(fsys)
+
+				svc := NewService(fsys, newTestPrinter())
+				svc.binaryChecker = noBinaryCheck
+				svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
+					return &callbackInvoker{
+						binary: invTool,
+						fn:     fn,
+					}, nil
+				}
+
+				opts := Options{
+					PRDFolder:     prd,
+					Tool:          tool,
+					MaxIterations: tt.maxIterations,
+					Timeout:       5 * time.Second,
+					ReportPath:    prd + "/report.md",
+				}
+
+				if err := svc.Execute(opts); err != nil {
+					t.Fatalf("Execute: %v", err)
+				}
+
+				reportData, err := fsys.ReadFile(prd + "/report.md")
+				if err != nil {
+					t.Fatalf("relatorio nao encontrado: %v", err)
+				}
+
+				if tt.verifyReport != nil {
+					tt.verifyReport(t, string(reportData), tool)
+				}
+			})
+		}
+	}
+}
+
+// --- Task 4.0: Testes de isolamento de sessao entre tasks ---
+
+// TestSessionIsolationBetweenIterationsForAllTools verifica que duas tasks executam em
+// sequencia para todas as 4 ferramentas e que o estado entre iteracoes e limitado ao
+// definido em RF-12: skipped map, contador de iteracoes, acumulador de report e releitura
+// de tasks.md. Subtarefas 4.1 e 4.4.
+func TestSessionIsolationBetweenIterationsForAllTools(t *testing.T) {
+	tools := []string{"claude", "codex", "gemini", "copilot"}
+
+	for _, tool := range tools {
+		t.Run(tool, func(t *testing.T) {
+			const base = "/fake/project"
+			const prd = base + "/tasks/prd-test"
+
+			fsys := taskfs.NewFakeFileSystem()
+			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+			fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+			fsys.Files[prd+"/task-1.0-a.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/task-2.0-b.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/tasks.md"] = []byte(
+				"| 1.0 | Task One | pending | — | Nao |\n" +
+					"| 2.0 | Task Two | pending | — | Nao |\n",
+			)
+
+			var executionOrder []string
+			var invokePrompts []string
+
+			svc := NewService(fsys, newTestPrinter())
+			svc.binaryChecker = noBinaryCheck
+			svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
+				return &callbackInvoker{
+					binary: invTool,
+					fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+						invokePrompts = append(invokePrompts, prompt)
+						switch {
+						case strings.Contains(prompt, "task-1.0"):
+							executionOrder = append(executionOrder, "1.0")
+							fsys.Files[prd+"/task-1.0-a.md"] = []byte("**Status:** done\n")
+							fsys.Files[prd+"/tasks.md"] = []byte(
+								"| 1.0 | Task One | done | — | Nao |\n" +
+									"| 2.0 | Task Two | pending | — | Nao |\n",
+							)
+						case strings.Contains(prompt, "task-2.0"):
+							executionOrder = append(executionOrder, "2.0")
+							fsys.Files[prd+"/task-2.0-b.md"] = []byte("**Status:** done\n")
+							fsys.Files[prd+"/tasks.md"] = []byte(
+								"| 1.0 | Task One | done | — | Nao |\n" +
+									"| 2.0 | Task Two | done | — | Nao |\n",
+							)
+						}
+						return "completed", "", 0, nil
+					},
+				}, nil
+			}
+
+			opts := Options{
+				PRDFolder:     prd,
+				Tool:          tool,
+				MaxIterations: 5,
+				Timeout:       5 * time.Second,
+				ReportPath:    prd + "/report.md",
+			}
+
+			if err := svc.Execute(opts); err != nil {
+				t.Fatalf("[%s] Execute: %v", tool, err)
+			}
+
+			// 4.1: Verificar que as 2 tasks foram executadas na ordem correta
+			if len(executionOrder) != 2 {
+				t.Fatalf("[%s] esperado 2 tasks executadas, obteve %d: %v", tool, len(executionOrder), executionOrder)
+			}
+			if executionOrder[0] != "1.0" || executionOrder[1] != "2.0" {
+				t.Errorf("[%s] ordem de execucao incorreta: %v", tool, executionOrder)
+			}
+
+			// 4.1: Prompt da 2a iteracao deve referenciar task-2.0 (sem contaminacao de task-1.0)
+			if len(invokePrompts) == 2 && !strings.Contains(invokePrompts[1], "task-2.0") {
+				t.Errorf("[%s] prompt da 2a iteracao deveria conter 'task-2.0'\n%q", tool, invokePrompts[1])
+			}
+
+			reportData, err := fsys.ReadFile(prd + "/report.md")
+			if err != nil {
+				t.Fatalf("[%s] relatorio nao encontrado: %v", tool, err)
+			}
+			reportStr := string(reportData)
+
+			// RF-12 acumulador de report: ambas as iteracoes devem aparecer
+			if !strings.Contains(reportStr, "1.0") || !strings.Contains(reportStr, "2.0") {
+				t.Errorf("[%s] relatorio nao acumula ambas as iteracoes\n%s", tool, reportStr)
+			}
+
+			// RF-12 contador de iteracoes: exatamente 2 execucoes do executor
+			if !strings.Contains(reportStr, "**Iterations:** 2") {
+				t.Errorf("[%s] relatorio deveria registrar 2 iteracoes\n%s", tool, reportStr)
+			}
+
+			// RF-12 releitura de tasks.md: stop reason indica conclusao (tasks.md re-lido corretamente)
+			if !strings.Contains(reportStr, "todas as tasks completadas") {
+				t.Errorf("[%s] stop reason nao indica conclusao (tasks.md deve ser re-lido a cada iteracao)\n%s", tool, reportStr)
+			}
+		})
+	}
+}
+
+// TestCaptureValidateIsolationExecutorModeForAllTools verifica que
+// captureTaskIsolationSnapshotWithMode(executor) + validateTaskIsolation aceita
+// mutacoes legitimas do executor (propria task file e sua row em tasks.md)
+// para cada uma das 4 ferramentas. Subtarefa 4.2, modo executor.
+func TestCaptureValidateIsolationExecutorModeForAllTools(t *testing.T) {
+	tools := []string{"claude", "codex", "gemini", "copilot"}
+
+	for _, tool := range tools {
+		t.Run(tool, func(t *testing.T) {
+			const base = "/fake/project"
+			const prd = base + "/tasks/prd-test"
+
+			fsys := taskfs.NewFakeFileSystem()
+			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+			fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
+
+			svc := NewService(fsys, newTestPrinter())
+			svc.binaryChecker = noBinaryCheck
+			svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
+				return &callbackInvoker{
+					binary: invTool,
+					fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+						// Mutacao legitima: atualizar apenas propria task file e sua row em tasks.md
+						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
+						return "completed", "", 0, nil
+					},
+				}, nil
+			}
+
+			opts := Options{
+				PRDFolder:     prd,
+				Tool:          tool,
+				MaxIterations: 3,
+				Timeout:       5 * time.Second,
+				ReportPath:    prd + "/report.md",
+			}
+
+			if err := svc.Execute(opts); err != nil {
+				t.Fatalf("[%s] Execute: %v", tool, err)
+			}
+
+			reportData, err := fsys.ReadFile(prd + "/report.md")
+			if err != nil {
+				t.Fatalf("[%s] relatorio nao encontrado: %v", tool, err)
+			}
+			reportStr := string(reportData)
+
+			// captureTaskIsolationSnapshotWithMode(executor) + validateTaskIsolation deve passar:
+			// nenhuma violacao de isolamento para mutacao legitima
+			if strings.Contains(reportStr, "violacao de isolamento") {
+				t.Errorf("[%s] isolamento nao deveria ser violado em mutacao legitima do executor\n%s", tool, reportStr)
+			}
+			if !strings.Contains(reportStr, "pending -> done") {
+				t.Errorf("[%s] task deveria ter transicao pending -> done\n%s", tool, reportStr)
+			}
+			if !strings.Contains(reportStr, "todas as tasks completadas") {
+				t.Errorf("[%s] stop reason incorreto para execucao limpa\n%s", tool, reportStr)
+			}
+		})
+	}
+}
+
+// TestSnapshotRestorationAfterTaskFileMutationForAllTools verifica que, quando o executor
+// modifica o arquivo de task de outra task (nao a atual), o snapshot e restaurado e
+// o loop e abortado para todas as 4 ferramentas. Subtarefa 4.3.
+func TestSnapshotRestorationAfterTaskFileMutationForAllTools(t *testing.T) {
+	tools := []string{"claude", "codex", "gemini", "copilot"}
+
+	for _, tool := range tools {
+		t.Run(tool, func(t *testing.T) {
+			const base = "/fake/project"
+			const prd = base + "/tasks/prd-test"
+
+			fsys := taskfs.NewFakeFileSystem()
+			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+			fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\nconteudo original\n")
+			fsys.Files[prd+"/tasks.md"] = []byte(
+				"| 1.0 | Task One | pending | — | Nao |\n" +
+					"| 2.0 | Task Two | pending | 1.0 | Nao |\n",
+			)
+
+			svc := NewService(fsys, newTestPrinter())
+			svc.binaryChecker = noBinaryCheck
+			svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
+				return &callbackInvoker{
+					binary: invTool,
+					fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+						// Executor atualiza sua propria task, mas tambem modifica task file de outra (violacao)
+						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** done\nALTERADO INDEVIDAMENTE\n")
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Task One | done | — | Nao |\n" +
+								"| 2.0 | Task Two | pending | 1.0 | Nao |\n",
+						)
+						return "mutated another task file", "", 0, nil
+					},
+				}, nil
+			}
+
+			opts := Options{
+				PRDFolder:     prd,
+				Tool:          tool,
+				MaxIterations: 2,
+				Timeout:       5 * time.Second,
+				ReportPath:    prd + "/report.md",
+			}
+
+			if err := svc.Execute(opts); err != nil {
+				t.Fatalf("[%s] Execute: %v", tool, err)
+			}
+
+			// Arquivo da task nao-atual deve ter sido restaurado
+			taskTwo, err := fsys.ReadFile(prd + "/task-2.0-test.md")
+			if err != nil {
+				t.Fatalf("[%s] task-2.0-test.md nao encontrado: %v", tool, err)
+			}
+			if string(taskTwo) != "**Status:** pending\nconteudo original\n" {
+				t.Fatalf("[%s] task-2.0-test.md deveria ter sido restaurado, obteve: %q", tool, string(taskTwo))
+			}
+
+			reportData, err := fsys.ReadFile(prd + "/report.md")
+			if err != nil {
+				t.Fatalf("[%s] relatorio nao encontrado: %v", tool, err)
+			}
+			reportStr := string(reportData)
+			if !strings.Contains(reportStr, "arquivo de task task-2.0-test.md foi alterado indevidamente") {
+				t.Fatalf("[%s] relatorio nao contem diagnostico da violacao\n%s", tool, reportStr)
+			}
+			if !strings.Contains(reportStr, "abortado") {
+				t.Fatalf("[%s] relatorio nao contem stop reason de aborto\n%s", tool, reportStr)
+			}
+		})
+	}
+}
+
+// TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools verifica que, quando o
+// executor cria um arquivo de task nao listado no snapshot, o arquivo e removido e o
+// loop e abortado para todas as 4 ferramentas. Subtarefa 4.3.
+func TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools(t *testing.T) {
+	tools := []string{"claude", "codex", "gemini", "copilot"}
+
+	for _, tool := range tools {
+		t.Run(tool, func(t *testing.T) {
+			const base = "/fake/project"
+			const prd = base + "/tasks/prd-test"
+
+			fsys := taskfs.NewFakeFileSystem()
+			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+			fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
+
+			svc := NewService(fsys, newTestPrinter())
+			svc.binaryChecker = noBinaryCheck
+			svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
+				return &callbackInvoker{
+					binary: invTool,
+					fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
+						// Cria arquivo de task nao registrado no snapshot (violacao)
+						fsys.Files[prd+"/task-99.0-intrusa.md"] = []byte("**Status:** pending\n")
+						return "created unexpected task file", "", 0, nil
+					},
+				}, nil
+			}
+
+			opts := Options{
+				PRDFolder:     prd,
+				Tool:          tool,
+				MaxIterations: 1,
+				Timeout:       5 * time.Second,
+				ReportPath:    prd + "/report.md",
+			}
+
+			if err := svc.Execute(opts); err != nil {
+				t.Fatalf("[%s] Execute: %v", tool, err)
+			}
+
+			// Arquivo intruso deve ter sido removido pelo restore do snapshot
+			if _, err := fsys.ReadFile(prd + "/task-99.0-intrusa.md"); err == nil {
+				t.Fatalf("[%s] arquivo intruso deveria ter sido removido apos restauracao", tool)
+			}
+
+			// Task atual deveria ter sido restaurada para o estado pre-execucao
+			taskOne, err := fsys.ReadFile(prd + "/task-1.0-test.md")
+			if err != nil {
+				t.Fatalf("[%s] task-1.0-test.md nao encontrado: %v", tool, err)
+			}
+			if string(taskOne) != "**Status:** pending\n" {
+				t.Fatalf("[%s] task-1.0-test.md deveria ter sido restaurado para pending, obteve: %q", tool, string(taskOne))
+			}
+
+			reportData, err := fsys.ReadFile(prd + "/report.md")
+			if err != nil {
+				t.Fatalf("[%s] relatorio nao encontrado: %v", tool, err)
+			}
+			reportStr := string(reportData)
+			if !strings.Contains(reportStr, "novo arquivo de task task-99.0-intrusa.md foi adicionado indevidamente") {
+				t.Fatalf("[%s] relatorio nao contem diagnostico do arquivo criado\n%s", tool, reportStr)
+			}
+		})
+	}
+}
+
+// TestReviewerModeIsolationForAllReviewerTools verifica que validateReviewerIsolation
+// rejeita mutacao do arquivo da task atual pelo reviewer e restaura o snapshot
+// para cada ferramenta usada como reviewer. Subtarefas 4.2 (modo reviewer) e 4.3.
+func TestReviewerModeIsolationForAllReviewerTools(t *testing.T) {
+	reviewerTools := []string{"claude", "codex", "gemini", "copilot"}
+
+	for _, reviewerTool := range reviewerTools {
+		t.Run(reviewerTool, func(t *testing.T) {
+			const base = "/fake/project"
+			const prd = base + "/tasks/prd-test"
+
+			fsys := taskfs.NewFakeFileSystem()
+			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+			fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
+
+			execProfile, _ := NewExecutionProfile("executor", "claude", "")
+			revProfile, _ := NewExecutionProfile("reviewer", reviewerTool, "")
+
+			// factoryCallCount distingue executor (1a chamada) do reviewer (2a chamada).
+			// O executor e criado uma vez antes do loop; o reviewer e criado dentro de invokeReviewer.
+			factoryCallCount := 0
+			svc := NewService(fsys, newTestPrinter())
+			svc.binaryChecker = noBinaryCheck
+			svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+				factoryCallCount++
+				isExecutor := factoryCallCount == 1
+				return &callbackInvoker{
+					binary: tool,
+					fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+						if isExecutor {
+							// Executor: mutacao legitima — marca task como done
+							fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+							fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
+							return "executor completed", "", 0, nil
+						}
+						// Reviewer: mutacao indevida do arquivo da task atual
+						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** blocked\n")
+						return "reviewer mutated current task", "", 0, nil
+					},
+				}, nil
+			}
+
+			opts := Options{
+				PRDFolder:     prd,
+				MaxIterations: 1,
+				Timeout:       5 * time.Second,
+				ReportPath:    prd + "/report.md",
+				Profiles: &ProfileConfig{
+					Mode:     "avancado",
+					Executor: execProfile,
+					Reviewer: &revProfile,
+				},
+				AllowUnknownModel: true,
+			}
+
+			if err := svc.Execute(opts); err != nil {
+				t.Fatalf("[reviewer=%s] Execute: %v", reviewerTool, err)
+			}
+
+			// Task atual deveria ter sido restaurada para o estado pos-executor (done),
+			// desfazendo a mutacao do reviewer (blocked)
+			taskOne, err := fsys.ReadFile(prd + "/task-1.0-test.md")
+			if err != nil {
+				t.Fatalf("[reviewer=%s] task-1.0-test.md nao encontrado: %v", reviewerTool, err)
+			}
+			if string(taskOne) != "**Status:** done\n" {
+				t.Fatalf("[reviewer=%s] task-1.0-test.md deveria ter sido restaurado para done, obteve: %q",
+					reviewerTool, string(taskOne))
+			}
+
+			reportData, err := fsys.ReadFile(prd + "/report.md")
+			if err != nil {
+				t.Fatalf("[reviewer=%s] relatorio nao encontrado: %v", reviewerTool, err)
+			}
+			reportStr := string(reportData)
+			if !strings.Contains(reportStr, "abortado: reviewer violou isolamento da task 1.0") {
+				t.Fatalf("[reviewer=%s] relatorio nao contem stop reason do reviewer\n%s", reviewerTool, reportStr)
+			}
+			if !strings.Contains(reportStr, "violacao de isolamento detectada: arquivo de task task-1.0-test.md foi alterado indevidamente") {
+				t.Fatalf("[reviewer=%s] relatorio nao contem diagnostico da violacao\n%s", reviewerTool, reportStr)
+			}
+		})
+	}
+}
+
+// TestSharedStateBetweenIterationsMatchesRF12 verifica que o estado compartilhado entre
+// iteracoes e exatamente o definido em RF-12:
+// - skipped map: task pulada por status inalterado nao e retentada em iteracoes futuras
+// - contador de iteracoes: incrementa apenas para execucoes do executor
+// - acumulador de report: acumula resultados de todas as iteracoes
+// - releitura de tasks.md: a iteracao seguinte ve o estado atualizado de tasks.md
+// Subtarefa 4.4.
+func TestSharedStateBetweenIterationsMatchesRF12(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-test"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+	fsys.Files[prd+"/task-1.0-a.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-2.0-b.md"] = []byte("**Status:** pending\n")
+	// tasks.md lista ambas sem dependencias — 1.0 e selecionada primeiro (ordem de declaracao)
+	fsys.Files[prd+"/tasks.md"] = []byte(
+		"| 1.0 | Task A | pending | — | Nao |\n" +
+			"| 2.0 | Task B | pending | — | Nao |\n",
+	)
+
+	task1InvokeCount := 0
+	task2InvokeCount := 0
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				switch {
+				case strings.Contains(prompt, "task-1.0"):
+					task1InvokeCount++
+					// Task 1 nao atualiza status (status inalterado) → entra no skipped map
+					// Nao deve ser retentada em iteracoes futuras
+					return "partial work, no status update", "", 0, nil
+				case strings.Contains(prompt, "task-2.0"):
+					task2InvokeCount++
+					// RF-12 releitura de tasks.md: a iteracao viu tasks.md re-lido e elegeu task-2.0
+					fsys.Files[prd+"/task-2.0-b.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/tasks.md"] = []byte(
+						"| 1.0 | Task A | pending | — | Nao |\n" +
+							"| 2.0 | Task B | done | — | Nao |\n",
+					)
+					return "task 2 completed", "", 0, nil
+				}
+				return "", "", 0, nil
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "claude",
+		MaxIterations: 10,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute: %v", err)
+	}
+
+	// RF-12 skipped map: task-1.0 com status inalterado entra no skipped map e NAO e retentada
+	if task1InvokeCount != 1 {
+		t.Errorf("RF-12 skipped map: task-1.0 deveria ser invocada exatamente 1 vez, obteve %d", task1InvokeCount)
+	}
+
+	// RF-12 releitura de tasks.md: task-2.0 elegivel na segunda iteracao (tasks.md re-lido)
+	if task2InvokeCount != 1 {
+		t.Errorf("RF-12 releitura: task-2.0 deveria ser invocada exatamente 1 vez, obteve %d", task2InvokeCount)
+	}
+
+	reportData, err := fsys.ReadFile(prd + "/report.md")
+	if err != nil {
+		t.Fatalf("relatorio nao encontrado: %v", err)
+	}
+	reportStr := string(reportData)
+
+	// RF-12 contador de iteracoes: exatamente 2 iteracoes do executor (1.0 e 2.0)
+	if !strings.Contains(reportStr, "**Iterations:** 2") {
+		t.Errorf("RF-12 contador: relatorio deveria registrar 2 iteracoes\n%s", reportStr)
+	}
+
+	// RF-12 acumulador de report: task-1.0 como status inalterado, task-2.0 como done
+	if !strings.Contains(reportStr, "status inalterado apos execucao") {
+		t.Errorf("RF-12 report: task-1.0 deveria aparecer com nota 'status inalterado'\n%s", reportStr)
+	}
+	if !strings.Contains(reportStr, "pending -> done") {
+		t.Errorf("RF-12 report: task-2.0 deveria aparecer como 'pending -> done'\n%s", reportStr)
+	}
+}
