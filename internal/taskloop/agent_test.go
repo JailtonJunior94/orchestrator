@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 )
 
 // claudeBinary retorna o binario efetivo para claude: "claudiney" se disponivel, senao "claude".
@@ -68,7 +70,11 @@ func writeFakeBinary(t *testing.T, dir, name string) {
 // TestBuildPromptContainsAgentsMd verifica que o prompt gerado instrui leitura de AGENTS.md
 // (contrato de carga base exigido por RF-04 quando --bare esta ativo).
 func TestBuildPromptContainsAgentsMd(t *testing.T) {
-	prompt := BuildPrompt("tasks/prd-feat/01_task.md", "tasks/prd-feat")
+	ctx := PromptContext{
+		Architecture: "pacote internal/taskloop — orquestracao do loop",
+		References:   "go-implementation, tests",
+	}
+	prompt := BuildPrompt("tasks/prd-feat/01_task.md", "tasks/prd-feat", ctx)
 
 	required := []string{
 		"AGENTS.md",
@@ -79,6 +85,11 @@ func TestBuildPromptContainsAgentsMd(t *testing.T) {
 		"Do NOT modify any row in tasks.md except the current task row.",
 		"Do NOT start the next task or mark any other row in tasks.md as in_progress.",
 		"Leave follow-up tasks unchanged for a future isolated session.",
+		"Arquitetura: pacote internal/taskloop",
+		"Referencias a carregar: go-implementation, tests",
+		"preservar contratos publicos existentes",
+		"testes table-driven",
+		"nao fechar a task sem evidencia de validacao",
 	}
 	for _, r := range required {
 		if !strings.Contains(prompt, r) {
@@ -433,5 +444,234 @@ func TestClaudeInvokerFallbackModel(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestExtractArchitecture valida extracao de secao de arquitetura da techspec.
+func TestExtractArchitecture(t *testing.T) {
+	tests := []struct {
+		name     string
+		techspec string
+		want     string
+	}{
+		{
+			name: "extrai secao Arquitetura do Sistema",
+			techspec: `# Techspec
+
+## Resumo
+Algo aqui.
+
+## Arquitetura do Sistema
+
+O pacote internal/taskloop orquestra o loop.
+
+| Componente | Arquivo |
+|-----------|---------|
+| Service | taskloop.go |
+
+## Design de Implementacao
+
+Detalhes aqui.`,
+			want: `O pacote internal/taskloop orquestra o loop.
+
+| Componente | Arquivo |
+|-----------|---------|
+| Service | taskloop.go |`,
+		},
+		{
+			name: "extrai secao Arquitetura generica",
+			techspec: `# Techspec
+
+## Arquitetura
+
+Camada de dominio com agregados.
+
+## Implementacao`,
+			want: "Camada de dominio com agregados.",
+		},
+		{
+			name:     "fallback quando nao ha secao de arquitetura",
+			techspec: "# Techspec\n\n## Implementacao\n\nCodigo aqui.",
+			want:     "ler techspec.md para contexto de arquitetura",
+		},
+		{
+			name: "fallback para Resumo Executivo",
+			techspec: `# Techspec
+
+## Resumo Executivo
+
+A paridade semantica exige equivalencia entre ferramentas.
+
+## Design`,
+			want: "A paridade semantica exige equivalencia entre ferramentas.",
+		},
+		{
+			name:     "techspec vazia",
+			techspec: "",
+			want:     "ler techspec.md para contexto de arquitetura",
+		},
+		{
+			name:     "secao arquitetura sem conteudo",
+			techspec: "## Arquitetura do Sistema\n\n## Proximo",
+			want:     "ler techspec.md para contexto de arquitetura",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractArchitecture(tt.techspec)
+			if got != tt.want {
+				t.Errorf("extractArchitecture()\ngot:  %q\nwant: %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// TestExtractArchitectureTruncation valida que secoes longas sao truncadas a 1500 chars.
+func TestExtractArchitectureTruncation(t *testing.T) {
+	longContent := strings.Repeat("x", 2000)
+	techspec := "## Arquitetura do Sistema\n\n" + longContent + "\n\n## Proximo"
+
+	got := extractArchitecture(techspec)
+	if len(got) > 1510 {
+		t.Errorf("extractArchitecture deveria truncar a ~1500 chars, obteve %d chars", len(got))
+	}
+	if !strings.HasSuffix(got, "\n(...)") {
+		t.Errorf("extractArchitecture deveria terminar com '\\n(...)' quando truncado, obteve sufixo: %q", got[len(got)-10:])
+	}
+}
+
+// TestDetectReferences valida deteccao de referencias a partir do conteudo combinado.
+func TestDetectReferences(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		want    []string
+		notWant []string
+	}{
+		{
+			name:    "projeto Go puro",
+			content: "O pacote internal/taskloop usa go.mod e func main().",
+			want:    []string{"go-implementation", "tests"},
+			notWant: []string{"node-implementation", "python-implementation"},
+		},
+		{
+			name:    "projeto Node",
+			content: "Configurar npm install e criar arquivo .tsx para o componente.",
+			want:    []string{"node-implementation", "tests"},
+			notWant: []string{"go-implementation"},
+		},
+		{
+			name:    "projeto Python",
+			content: "Usar pip install e configurar django settings.",
+			want:    []string{"python-implementation", "tests"},
+			notWant: []string{"go-implementation"},
+		},
+		{
+			name:    "Go com DDD e security",
+			content: "O aggregate Order no internal/ deve validar auth credential com seguranca.",
+			want:    []string{"go-implementation", "ddd", "security", "tests"},
+		},
+		{
+			name:    "conteudo generico sem linguagem",
+			content: "Documentacao geral do projeto sem codigo.",
+			want:    []string{"tests"},
+			notWant: []string{"go-implementation", "node-implementation", "python-implementation"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := detectReferences(tt.content)
+			for _, w := range tt.want {
+				if !strings.Contains(got, w) {
+					t.Errorf("detectReferences() deveria conter %q, obteve: %q", w, got)
+				}
+			}
+			for _, nw := range tt.notWant {
+				if strings.Contains(got, nw) {
+					t.Errorf("detectReferences() nao deveria conter %q, obteve: %q", nw, got)
+				}
+			}
+		})
+	}
+}
+
+// TestContainsAnyPattern valida a funcao auxiliar containsAnyPattern.
+func TestContainsAnyPattern(t *testing.T) {
+	tests := []struct {
+		name     string
+		s        string
+		patterns []string
+		want     bool
+	}{
+		{name: "match primeiro", s: "arquivo.go principal", patterns: []string{".go", ".ts"}, want: true},
+		{name: "match segundo", s: "componente.tsx", patterns: []string{".go", ".tsx"}, want: true},
+		{name: "nenhum match", s: "documento.md", patterns: []string{".go", ".ts", ".py"}, want: false},
+		{name: "string vazia", s: "", patterns: []string{".go"}, want: false},
+		{name: "patterns vazios", s: "qualquer coisa", patterns: []string{}, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := containsAnyPattern(tt.s, tt.patterns...)
+			if got != tt.want {
+				t.Errorf("containsAnyPattern(%q, %v) = %v, want %v", tt.s, tt.patterns, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestBuildPromptContext valida a construcao do contexto dinamico a partir de prd e techspec.
+func TestBuildPromptContext(t *testing.T) {
+	fsys := fs.NewFakeFileSystem()
+
+	techspec := `# Techspec
+
+## Arquitetura do Sistema
+
+O pacote internal/version resolve versao do binario.
+
+| Componente | Arquivo |
+|-----------|---------|
+| ResolveFromExecutable | version.go |
+
+## Design`
+
+	prd := `# PRD — Versao Unificada
+
+O internal/version deve usar go.mod e func ResolveFromExecutable.
+O aggregate Version valida o formato semantico.`
+
+	_ = fsys.WriteFile("/work/tasks/prd-feat/techspec.md", []byte(techspec))
+	_ = fsys.WriteFile("/work/tasks/prd-feat/prd.md", []byte(prd))
+
+	ctx := BuildPromptContext("tasks/prd-feat", "/work", fsys)
+
+	if !strings.Contains(ctx.Architecture, "internal/version") {
+		t.Errorf("Architecture deveria conter 'internal/version', obteve: %q", ctx.Architecture)
+	}
+	if !strings.Contains(ctx.References, "go-implementation") {
+		t.Errorf("References deveria conter 'go-implementation', obteve: %q", ctx.References)
+	}
+	if !strings.Contains(ctx.References, "ddd") {
+		t.Errorf("References deveria conter 'ddd' (aggregate detectado), obteve: %q", ctx.References)
+	}
+	if !strings.Contains(ctx.References, "tests") {
+		t.Errorf("References deveria conter 'tests', obteve: %q", ctx.References)
+	}
+}
+
+// TestBuildPromptContextArquivosAusentes valida fallback quando prd ou techspec nao existem.
+func TestBuildPromptContextArquivosAusentes(t *testing.T) {
+	fsys := fs.NewFakeFileSystem()
+
+	ctx := BuildPromptContext("tasks/prd-inexistente", "/work", fsys)
+
+	if ctx.Architecture != "ler techspec.md para contexto de arquitetura" {
+		t.Errorf("Architecture com techspec ausente deveria ser fallback, obteve: %q", ctx.Architecture)
+	}
+	if ctx.References != "tests" {
+		t.Errorf("References sem conteudo deveria ser 'tests', obteve: %q", ctx.References)
 	}
 }

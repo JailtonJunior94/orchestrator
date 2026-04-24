@@ -33,6 +33,9 @@
 
 ### Refactor
 - **taskloop:** extrai `classifyIterationOutcome` — funcao pura sem parametro de ferramenta que centraliza a logica de decisao de resultado de iteracao (skip, abort, note, runReviewer), tornando-a isoladamente testavel
+- **taskloop/agent:** `BuildPrompt` migrado para template `go:embed` (`executor_template.tmpl`) com criterios de execucao nao-negociaveis embutidos; `BuildPromptContext` extrai o sumario de arquitetura da `techspec.md` e detecta automaticamente as referencias relevantes a carregar (`go-implementation`, `ddd`, `security`, `tests`)
+- **taskloop/reviewer:** `review_template.tmpl` ampliado com campos `CompletedTasks` e `RiskAreas`, focos de revisao estruturados (corretude, regressao, seguranca, testes, divida tecnica) e formato de saida esperada com veredicto final; `detectRiskAreas` detecta automaticamente areas de risco (performance, seguranca, contratos, concorrencia, persistencia) a partir da techspec e do diff
+- **taskloop/reviewer:** `BuildBugfixPrompt` construido a partir do template `go:embed` (`bugfix_template.tmpl`) com placeholders para achados da revisao, diff original e contexto da task
 - **version:** `ResolveFromExecutable()` resolve o arquivo `VERSION` adjacente ao binario seguindo symlinks, substituindo a leitura via `ReadVersionFile(sourceDir)` no `install` e `upgrade`
 - **skills:** `isValidSemver` renomeado para `IsValidSemver` (exportado) para reutilizacao no pacote `upgrade`
 
@@ -42,6 +45,9 @@
 ### Features
 - **taskloop:** retoma tasks com status efetivo `in_progress` antes de abrir novas pendentes, reconciliando `tasks.md` com o status real do arquivo individual da task
 - **taskloop:** adiciona guardrails de isolamento para executor e reviewer; o loop aborta e restaura snapshot quando o agente altera outras rows de `tasks.md`, outros arquivos de task ou arquivos protegidos do PRD
+- **taskloop:** suporta `MaxIterations == 0` como modo de iteracoes ilimitadas; o log de inicio exibe "ilimitado" no lugar do numero e o loop continua ate nao haver tasks pendentes
+- **taskloop:** fase de bugfix automatica pos-revisao — quando o reviewer retorna exit code != 0, o executor e reinvocado via `invokeBugfix` com prompt de bugfix estruturado; a fase tem guardrails de isolamento proprios e o resultado e registrado em `BugfixResult` na iteracao
+- **taskloop/report:** `BugfixResult` adicionado a `IterationResult`; o report avancado exibe sub-linha de duracao/exit-code do bugfix e secao detalhada com output e nota de isolamento
 - **skills:** adiciona a skill externa `bubbletea` ao `skills-lock.json`
 - **skill-bump:** novo comando `skill-bump <path>` que detecta skills alteradas desde a ultima tag via `git diff` e atualiza automaticamente o campo `version` no frontmatter `SKILL.md`; suporta `--dry-run` para inspecionar sem alterar arquivos
 - **version:** flag `--skills` exibe versoes das skills; aceita `embedded`, `installed` ou sem valor (ambos) — ex.: `ai-spec-harness version --skills`

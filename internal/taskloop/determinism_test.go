@@ -7,9 +7,14 @@ import (
 )
 
 // TestBuildPromptDeterminismo verifica que BuildPrompt e deterministica:
-// dado o mesmo taskFilePath e prdFolder, produz o mesmo output em chamadas distintas.
+// dado o mesmo taskFilePath, prdFolder e PromptContext, produz o mesmo output em chamadas distintas.
 // Tambem verifica que inputs diferentes produzem outputs diferentes (RF-13, RF-14).
 func TestBuildPromptDeterminismo(t *testing.T) {
+	ctx := PromptContext{
+		Architecture: "pacote internal/taskloop — orquestracao do loop",
+		References:   "go-implementation, tests",
+	}
+
 	tests := []struct {
 		name         string
 		taskFilePath string
@@ -39,8 +44,8 @@ func TestBuildPromptDeterminismo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			primeiro := BuildPrompt(tt.taskFilePath, tt.prdFolder)
-			segundo := BuildPrompt(tt.taskFilePath, tt.prdFolder)
+			primeiro := BuildPrompt(tt.taskFilePath, tt.prdFolder, ctx)
+			segundo := BuildPrompt(tt.taskFilePath, tt.prdFolder, ctx)
 
 			if primeiro != segundo {
 				t.Errorf("BuildPrompt nao e deterministica: chamadas com mesmos inputs produziram outputs diferentes\nprimeiro:\n%s\nsegundo:\n%s",
@@ -53,7 +58,11 @@ func TestBuildPromptDeterminismo(t *testing.T) {
 // TestBuildPromptInputsDiferentesProduzemOutputsDiferentes verifica que inputs distintos
 // produzem outputs distintos (propriedade complementar ao determinismo — RF-13).
 func TestBuildPromptInputsDiferentesProduzemOutputsDiferentes(t *testing.T) {
-	base := BuildPrompt("tasks/prd-a/task-1.0.md", "tasks/prd-a")
+	ctx := PromptContext{
+		Architecture: "pacote base",
+		References:   "go-implementation, tests",
+	}
+	base := BuildPrompt("tasks/prd-a/task-1.0.md", "tasks/prd-a", ctx)
 
 	variantes := []struct {
 		name         string
@@ -79,7 +88,7 @@ func TestBuildPromptInputsDiferentesProduzemOutputsDiferentes(t *testing.T) {
 
 	for _, v := range variantes {
 		t.Run(v.name, func(t *testing.T) {
-			variante := BuildPrompt(v.taskFilePath, v.prdFolder)
+			variante := BuildPrompt(v.taskFilePath, v.prdFolder, ctx)
 			if variante == base {
 				t.Errorf("BuildPrompt com inputs diferentes produziu o mesmo output que o caso base\ninputs: taskFilePath=%q, prdFolder=%q",
 					v.taskFilePath, v.prdFolder)
@@ -97,6 +106,8 @@ func TestBuildReviewPromptDeterminismo(t *testing.T) {
 PRD: {{.PRDFolder}}
 Spec: {{.TechSpec}}
 Tasks: {{.TasksFile}}
+Completed: {{.CompletedTasks}}
+Risk: {{.RiskAreas}}
 Diff: {{.Diff}}`
 	_ = fsys.WriteFile("/custom/review.tmpl", []byte(customTemplate))
 
@@ -109,33 +120,39 @@ Diff: {{.Diff}}`
 			name:         "template default com dados completos",
 			templatePath: "",
 			data: ReviewTemplateData{
-				TaskFile:  "tasks/prd-feat/task-1.0.md",
-				PRDFolder: "tasks/prd-feat",
-				TechSpec:  "tasks/prd-feat/techspec.md",
-				TasksFile: "tasks/prd-feat/tasks.md",
-				Diff:      "diff --git a/main.go b/main.go\n+// change",
+				TaskFile:       "tasks/prd-feat/task-1.0.md",
+				PRDFolder:      "tasks/prd-feat",
+				TechSpec:       "tasks/prd-feat/techspec.md",
+				TasksFile:      "tasks/prd-feat/tasks.md",
+				Diff:           "diff --git a/main.go b/main.go\n+// change",
+				CompletedTasks: "1.0 (setup)",
+				RiskAreas:      "contratos, seguranca",
 			},
 		},
 		{
 			name:         "template default com diff indisponivel",
 			templatePath: "",
 			data: ReviewTemplateData{
-				TaskFile:  "tasks/prd-outro/task-2.0.md",
-				PRDFolder: "tasks/prd-outro",
-				TechSpec:  "tasks/prd-outro/techspec.md",
-				TasksFile: "tasks/prd-outro/tasks.md",
-				Diff:      "(diff indisponivel)",
+				TaskFile:       "tasks/prd-outro/task-2.0.md",
+				PRDFolder:      "tasks/prd-outro",
+				TechSpec:       "tasks/prd-outro/techspec.md",
+				TasksFile:      "tasks/prd-outro/tasks.md",
+				Diff:           "(diff indisponivel)",
+				CompletedTasks: "(nenhuma)",
+				RiskAreas:      "contratos",
 			},
 		},
 		{
 			name:         "template custom com dados completos",
 			templatePath: "/custom/review.tmpl",
 			data: ReviewTemplateData{
-				TaskFile:  "tasks/prd-feat/task-1.0.md",
-				PRDFolder: "tasks/prd-feat",
-				TechSpec:  "tasks/prd-feat/techspec.md",
-				TasksFile: "tasks/prd-feat/tasks.md",
-				Diff:      "diff content here",
+				TaskFile:       "tasks/prd-feat/task-1.0.md",
+				PRDFolder:      "tasks/prd-feat",
+				TechSpec:       "tasks/prd-feat/techspec.md",
+				TasksFile:      "tasks/prd-feat/tasks.md",
+				Diff:           "diff content here",
+				CompletedTasks: "1.0 (setup), 2.0 (impl)",
+				RiskAreas:      "performance, concorrencia",
 			},
 		},
 		{
@@ -165,17 +182,143 @@ Diff: {{.Diff}}`
 	}
 }
 
+// TestBuildBugfixPromptDeterminismo verifica que BuildBugfixPrompt e deterministica:
+// dado o mesmo BugfixTemplateData, produz o mesmo output em chamadas distintas.
+func TestBuildBugfixPromptDeterminismo(t *testing.T) {
+	tests := []struct {
+		name string
+		data BugfixTemplateData
+	}{
+		{
+			name: "dados completos",
+			data: BugfixTemplateData{
+				TaskFile:       "tasks/prd-feat/task-1.0.md",
+				PRDFolder:      "tasks/prd-feat",
+				TechSpec:       "tasks/prd-feat/techspec.md",
+				TasksFile:      "tasks/prd-feat/tasks.md",
+				ReviewFindings: "- [main.go:42] variavel nao inicializada",
+				Diff:           "diff --git a/main.go b/main.go\n+// change",
+			},
+		},
+		{
+			name: "review findings vazio",
+			data: BugfixTemplateData{
+				TaskFile:       "tasks/prd-outro/task-2.0.md",
+				PRDFolder:      "tasks/prd-outro",
+				TechSpec:       "tasks/prd-outro/techspec.md",
+				TasksFile:      "tasks/prd-outro/tasks.md",
+				ReviewFindings: "",
+				Diff:           "(diff indisponivel)",
+			},
+		},
+		{
+			name: "dados vazios",
+			data: BugfixTemplateData{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			primeiro, err := BuildBugfixPrompt(tt.data)
+			if err != nil {
+				t.Fatalf("BuildBugfixPrompt (1a chamada) retornou erro inesperado: %v", err)
+			}
+
+			segundo, err := BuildBugfixPrompt(tt.data)
+			if err != nil {
+				t.Fatalf("BuildBugfixPrompt (2a chamada) retornou erro inesperado: %v", err)
+			}
+
+			if primeiro != segundo {
+				t.Errorf("BuildBugfixPrompt nao e deterministica: chamadas com mesmos inputs produziram outputs diferentes\nprimeiro:\n%s\nsegundo:\n%s",
+					primeiro, segundo)
+			}
+		})
+	}
+}
+
+// TestBuildBugfixPromptInputsDiferentesProduzemOutputsDiferentes verifica que inputs distintos
+// produzem outputs distintos para BuildBugfixPrompt (propriedade complementar ao determinismo).
+func TestBuildBugfixPromptInputsDiferentesProduzemOutputsDiferentes(t *testing.T) {
+	baseData := BugfixTemplateData{
+		TaskFile:       "tasks/prd-a/task-1.0.md",
+		PRDFolder:      "tasks/prd-a",
+		TechSpec:       "tasks/prd-a/techspec.md",
+		TasksFile:      "tasks/prd-a/tasks.md",
+		ReviewFindings: "achado base",
+		Diff:           "diff base",
+	}
+
+	base, err := BuildBugfixPrompt(baseData)
+	if err != nil {
+		t.Fatalf("BuildBugfixPrompt base retornou erro: %v", err)
+	}
+
+	variantes := []struct {
+		name string
+		data BugfixTemplateData
+	}{
+		{
+			name: "task file diferente",
+			data: BugfixTemplateData{
+				TaskFile:       "tasks/prd-a/task-2.0.md",
+				PRDFolder:      "tasks/prd-a",
+				TechSpec:       "tasks/prd-a/techspec.md",
+				TasksFile:      "tasks/prd-a/tasks.md",
+				ReviewFindings: "achado base",
+				Diff:           "diff base",
+			},
+		},
+		{
+			name: "review findings diferente",
+			data: BugfixTemplateData{
+				TaskFile:       "tasks/prd-a/task-1.0.md",
+				PRDFolder:      "tasks/prd-a",
+				TechSpec:       "tasks/prd-a/techspec.md",
+				TasksFile:      "tasks/prd-a/tasks.md",
+				ReviewFindings: "achado diferente",
+				Diff:           "diff base",
+			},
+		},
+		{
+			name: "diff diferente",
+			data: BugfixTemplateData{
+				TaskFile:       "tasks/prd-a/task-1.0.md",
+				PRDFolder:      "tasks/prd-a",
+				TechSpec:       "tasks/prd-a/techspec.md",
+				TasksFile:      "tasks/prd-a/tasks.md",
+				ReviewFindings: "achado base",
+				Diff:           "diff alterado",
+			},
+		},
+	}
+
+	for _, v := range variantes {
+		t.Run(v.name, func(t *testing.T) {
+			variante, err := BuildBugfixPrompt(v.data)
+			if err != nil {
+				t.Fatalf("BuildBugfixPrompt variante retornou erro: %v", err)
+			}
+			if variante == base {
+				t.Errorf("BuildBugfixPrompt com dados diferentes produziu o mesmo output que o caso base\ndados: %+v", v.data)
+			}
+		})
+	}
+}
+
 // TestBuildReviewPromptInputsDiferentesProduzemOutputsDiferentes verifica que inputs distintos
 // produzem outputs distintos para BuildReviewPrompt (propriedade complementar ao determinismo — RF-13).
 func TestBuildReviewPromptInputsDiferentesProduzemOutputsDiferentes(t *testing.T) {
 	fsys := fs.NewFakeFileSystem()
 
 	baseData := ReviewTemplateData{
-		TaskFile:  "tasks/prd-a/task-1.0.md",
-		PRDFolder: "tasks/prd-a",
-		TechSpec:  "tasks/prd-a/techspec.md",
-		TasksFile: "tasks/prd-a/tasks.md",
-		Diff:      "diff base",
+		TaskFile:       "tasks/prd-a/task-1.0.md",
+		PRDFolder:      "tasks/prd-a",
+		TechSpec:       "tasks/prd-a/techspec.md",
+		TasksFile:      "tasks/prd-a/tasks.md",
+		Diff:           "diff base",
+		CompletedTasks: "1.0 (base)",
+		RiskAreas:      "contratos",
 	}
 
 	base, err := BuildReviewPrompt("", baseData, fsys)
@@ -190,31 +333,37 @@ func TestBuildReviewPromptInputsDiferentesProduzemOutputsDiferentes(t *testing.T
 		{
 			name: "task file diferente",
 			data: ReviewTemplateData{
-				TaskFile:  "tasks/prd-a/task-2.0.md",
-				PRDFolder: "tasks/prd-a",
-				TechSpec:  "tasks/prd-a/techspec.md",
-				TasksFile: "tasks/prd-a/tasks.md",
-				Diff:      "diff base",
+				TaskFile:       "tasks/prd-a/task-2.0.md",
+				PRDFolder:      "tasks/prd-a",
+				TechSpec:       "tasks/prd-a/techspec.md",
+				TasksFile:      "tasks/prd-a/tasks.md",
+				Diff:           "diff base",
+				CompletedTasks: "1.0 (base)",
+				RiskAreas:      "contratos",
 			},
 		},
 		{
 			name: "prd folder diferente",
 			data: ReviewTemplateData{
-				TaskFile:  "tasks/prd-b/task-1.0.md",
-				PRDFolder: "tasks/prd-b",
-				TechSpec:  "tasks/prd-b/techspec.md",
-				TasksFile: "tasks/prd-b/tasks.md",
-				Diff:      "diff base",
+				TaskFile:       "tasks/prd-b/task-1.0.md",
+				PRDFolder:      "tasks/prd-b",
+				TechSpec:       "tasks/prd-b/techspec.md",
+				TasksFile:      "tasks/prd-b/tasks.md",
+				Diff:           "diff base",
+				CompletedTasks: "1.0 (base)",
+				RiskAreas:      "contratos",
 			},
 		},
 		{
 			name: "diff diferente",
 			data: ReviewTemplateData{
-				TaskFile:  "tasks/prd-a/task-1.0.md",
-				PRDFolder: "tasks/prd-a",
-				TechSpec:  "tasks/prd-a/techspec.md",
-				TasksFile: "tasks/prd-a/tasks.md",
-				Diff:      "diff alterado",
+				TaskFile:       "tasks/prd-a/task-1.0.md",
+				PRDFolder:      "tasks/prd-a",
+				TechSpec:       "tasks/prd-a/techspec.md",
+				TasksFile:      "tasks/prd-a/tasks.md",
+				Diff:           "diff alterado",
+				CompletedTasks: "1.0 (base)",
+				RiskAreas:      "contratos",
 			},
 		},
 	}

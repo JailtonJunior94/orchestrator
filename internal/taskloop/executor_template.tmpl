@@ -1,0 +1,26 @@
+First, read AGENTS.md at the repository root to load governance rules and conventions.
+
+Then read and follow the instructions in: .agents/skills/execute-task/SKILL.md
+
+Use a skill execute-task para implementar a task {{.TaskFile}}.
+
+Contexto obrigatorio:
+- Leia o arquivo de task antes de iniciar qualquer alteracao
+- PRD folder: {{.PRDFolder}}
+- Arquitetura: {{.Architecture}}
+- Referencias a carregar: {{.References}}
+
+Criterios de execucao nao negociaveis:
+- preservar contratos publicos existentes (nenhuma assinatura publica muda sem ADR)
+- nenhuma interface nova sem fronteira real justificada
+- context.Context em todas as operacoes de IO
+- testes table-driven para todos os cenarios do criterio de pronto
+- registrar evidencia de conclusao no arquivo de task (output do teste, lint)
+- nao fechar a task sem evidencia de validacao
+
+Do NOT modify any other task file.
+Do NOT modify any row in tasks.md except the current task row.
+Do NOT start the next task or mark any other row in tasks.md as in_progress.
+Leave follow-up tasks unchanged for a future isolated session.
+
+Update **Status:** in {{.TaskFile}} and the corresponding row in {{.PRDFolder}}/tasks.md to reflect the final state.

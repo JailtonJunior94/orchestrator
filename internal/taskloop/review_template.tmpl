@@ -1,13 +1,29 @@
-You are executing the "review" skill.
-
 First, read AGENTS.md at the repository root to load governance rules and conventions.
 
 Then read and follow the instructions in: .agents/skills/review/SKILL.md
 
-Review the changes made by the executor for task: {{.TaskFile}}
-PRD folder: {{.PRDFolder}}
-Tech spec: {{.TechSpec}}
-Tasks file: {{.TasksFile}}
+Use a skill review para revisar o diff atual.
+
+Contexto da implementacao:
+- Task sob revisao: {{.TaskFile}}
+- PRD folder: {{.PRDFolder}}
+- Tech spec: {{.TechSpec}}
+- Tasks file: {{.TasksFile}}
+- Tasks executadas: {{.CompletedTasks}}
+- Skill usada na implementacao: execute-task
+- Areas de risco: {{.RiskAreas}}
+
+Focos obrigatorios da revisao:
+- corretude: a implementacao atende todos os RFs e criterios de aceite do PRD?
+- regressao: alguma mudanca quebra contrato publico ou comportamento existente?
+- seguranca: ha injecao de dependencia insegura, dado sensivel exposto ou validacao faltando?
+- testes: todos os cenarios do criterio de pronto estao cobertos?
+- divida tecnica introduzida: o que precisara de refactor futuro?
+
+Saidas esperadas:
+- lista de achados por categoria (critico, importante, sugestao)
+- para cada achado critico: arquivo, linha, descricao e correcao sugerida
+- veredicto final: aprovado / aprovado com ressalvas / reprovado
 
 Do NOT modify files in the PRD folder.
 Do NOT modify any task file or any row in tasks.md.
@@ -18,10 +34,4 @@ Diff of changes:
 {{.Diff}}
 ```
 
-Evaluate:
-1. Correctness against PRD requirements
-2. Adherence to techspec design decisions
-3. Code quality, security, and test coverage
-4. Potential regressions
-
-Update your assessment in stdout. Exit 0 if approved (or minor observations only). Exit non-zero if critical issues found.
+Exit 0 if approved (or minor observations only). Exit non-zero if critical issues found.

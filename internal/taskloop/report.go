@@ -14,6 +14,14 @@ type ReviewResult struct {
 	Note     string
 }
 
+// BugfixResult armazena o resultado do bugfix invocado apos revisao com achados criticos.
+type BugfixResult struct {
+	Duration time.Duration
+	ExitCode int
+	Output   string
+	Note     string
+}
+
 // Report armazena os resultados consolidados da execucao do task-loop.
 type Report struct {
 	PRDFolder       string
@@ -41,6 +49,7 @@ type IterationResult struct {
 	Note         string
 	Role         string        // "executor" (default) — para compatibilidade
 	ReviewResult *ReviewResult // nil quando review nao executado
+	BugfixResult *BugfixResult // nil quando bugfix nao executado
 }
 
 const maxOutputLen = 2000
@@ -211,6 +220,12 @@ func (r *Report) renderAvancado() []byte {
 				fmt.Fprintf(&b, "|  | %s |  | reviewer |  |  | %s | %d |\n",
 					it.TaskID, rr.Duration.Truncate(time.Second), rr.ExitCode)
 			}
+			// Sub-linha do bugfix logo apos o reviewer correspondente
+			if it.BugfixResult != nil {
+				bf := it.BugfixResult
+				fmt.Fprintf(&b, "|  | %s |  | bugfix |  |  | %s | %d |\n",
+					it.TaskID, bf.Duration.Truncate(time.Second), bf.ExitCode)
+			}
 		}
 		b.WriteString("\n")
 	}
@@ -306,6 +321,27 @@ func (r *Report) renderAvancado() []byte {
 						output = output[:maxOutputLen] + "\n... (truncated)"
 					}
 					b.WriteString("- **Review Output:**\n")
+					b.WriteString("  ```\n")
+					for _, line := range strings.Split(output, "\n") {
+						b.WriteString("  " + line + "\n")
+					}
+					b.WriteString("  ```\n")
+				}
+			}
+			if it.BugfixResult != nil {
+				bf := it.BugfixResult
+				b.WriteString("#### Bugfix Result\n")
+				fmt.Fprintf(&b, "- **Duration:** %s\n", bf.Duration.Truncate(time.Second))
+				fmt.Fprintf(&b, "- **Exit Code:** %d\n", bf.ExitCode)
+				if bf.Note != "" {
+					fmt.Fprintf(&b, "- **Note:** %s\n", bf.Note)
+				}
+				if bf.Output != "" {
+					output := bf.Output
+					if len(output) > maxOutputLen {
+						output = output[:maxOutputLen] + "\n... (truncated)"
+					}
+					b.WriteString("- **Bugfix Output:**\n")
 					b.WriteString("  ```\n")
 					for _, line := range strings.Split(output, "\n") {
 						b.WriteString("  " + line + "\n")

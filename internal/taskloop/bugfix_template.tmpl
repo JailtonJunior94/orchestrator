@@ -1,0 +1,44 @@
+First, read AGENTS.md at the repository root to load governance rules and conventions.
+
+Then read and follow the instructions in: .agents/skills/bugfix/SKILL.md
+
+Use a skill bugfix para corrigir os achados criticos da revisao.
+
+Contexto da implementacao:
+- Task sob correcao: {{.TaskFile}}
+- PRD folder: {{.PRDFolder}}
+- Tech spec: {{.TechSpec}}
+- Tasks file: {{.TasksFile}}
+
+Achados a corrigir (da saida da skill review):
+{{.ReviewFindings}}
+
+Comportamento esperado apos a correcao:
+- corrija cada achado critico identificado pela revisao
+- preserve o comportamento correto ja implementado
+
+Invariantes que nao podem mudar:
+- contratos publicos: assinaturas, endpoints ou tipos exportados existentes
+- tipos de erro: erros que o restante do sistema depende
+- comportamento de outros fluxos nao afetados por estes achados
+
+Regras de execucao nao negociaveis:
+- identifique a causa raiz de cada achado antes de escrever qualquer linha de codigo
+- adicione ou corrija testes de regressao que provem que o bug nao pode regredir
+- nao altere comportamento fora do escopo dos achados listados
+- ao finalizar: rode os testes, rode o lint e registre o output como evidencia
+- nao declare o bugfix concluido sem evidencia de que a causa raiz foi eliminada
+
+Saidas esperadas:
+- diff com a correcao minima necessaria
+- testes de regressao adicionados ou corrigidos
+- evidencia de validacao (output de go test ./... e go vet ./...)
+- descricao da causa raiz de cada achado corrigido
+
+Do NOT modify any other task file.
+Do NOT modify any row in tasks.md except the current task row.
+
+Diff original da implementacao:
+```
+{{.Diff}}
+```

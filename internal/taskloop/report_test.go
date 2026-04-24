@@ -677,3 +677,243 @@ func TestReportRenderAvancado(t *testing.T) {
 		})
 	}
 }
+
+// TestReportRenderBugfixOutputTruncation verifica que o output do bugfix
+// e truncado quando excede maxOutputLen (2000 chars).
+func TestReportRenderBugfixOutputTruncation(t *testing.T) {
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+	longOutput := strings.Repeat("x", 3000)
+
+	report := &Report{
+		Mode:            "avancado",
+		PRDFolder:       "tasks/prd-test",
+		ExecutorProfile: &execProfile,
+		ReviewerProfile: &revProfile,
+		StartTime:       time.Now(),
+		EndTime:         time.Now(),
+		StopReason:      "done",
+		Iterations: []IterationResult{
+			{
+				Sequence:   1,
+				TaskID:     "1.0",
+				Title:      "A",
+				PreStatus:  "pending",
+				PostStatus: "done",
+				Duration:   5 * time.Second,
+				ExitCode:   0,
+				ReviewResult: &ReviewResult{
+					Duration: 3 * time.Second,
+					ExitCode: 1,
+					Output:   "issues",
+				},
+				BugfixResult: &BugfixResult{
+					Duration: 8 * time.Second,
+					ExitCode: 0,
+					Output:   longOutput,
+				},
+			},
+		},
+	}
+
+	rendered := string(report.Render())
+	if strings.Contains(rendered, longOutput) {
+		t.Error("bugfix output nao foi truncado")
+	}
+	if !strings.Contains(rendered, "... (truncated)") {
+		t.Error("marca de truncamento nao encontrada no bugfix output")
+	}
+}
+
+// TestReportRenderSimplesModeIgnoresBugfixResult verifica que o modo simples
+// nao gera sub-linhas ou secoes de bugfix mesmo quando BugfixResult esta presente.
+func TestReportRenderSimplesModeIgnoresBugfixResult(t *testing.T) {
+	report := &Report{
+		Mode:       "simples",
+		PRDFolder:  "tasks/prd-test",
+		Tool:       "claude",
+		StartTime:  time.Now(),
+		EndTime:    time.Now(),
+		StopReason: "done",
+		Iterations: []IterationResult{
+			{
+				Sequence:   1,
+				TaskID:     "1.0",
+				Title:      "A",
+				PreStatus:  "pending",
+				PostStatus: "done",
+				ExitCode:   0,
+				ReviewResult: &ReviewResult{
+					Duration: 3 * time.Second,
+					ExitCode: 1,
+					Output:   "issues",
+				},
+				BugfixResult: &BugfixResult{
+					Duration: 5 * time.Second,
+					ExitCode: 0,
+					Output:   "fixed",
+				},
+			},
+		},
+	}
+
+	rendered := string(report.Render())
+	if strings.Contains(rendered, "#### Bugfix Result") {
+		t.Error("modo simples nao deveria conter secao Bugfix Result")
+	}
+	if strings.Contains(rendered, "| bugfix |") {
+		t.Error("modo simples nao deveria conter sub-linha bugfix na tabela")
+	}
+	if strings.Contains(rendered, "#### Review Result") {
+		t.Error("modo simples nao deveria conter secao Review Result")
+	}
+}
+
+// TestReportRenderAvancadoBugfix verifica que o modo avancado inclui sub-linhas
+// e detalhes de bugfix quando BugfixResult != nil.
+func TestReportRenderAvancadoBugfix(t *testing.T) {
+	execProfile, _ := NewExecutionProfile("executor", "claude", "claude-sonnet-4-6")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "gpt-5.4")
+
+	tests := []struct {
+		name      string
+		report    *Report
+		wantIn    []string
+		wantNotIn []string
+	}{
+		{
+			name: "bugfix presente apos reviewer com exit != 0",
+			report: &Report{
+				Mode:            "avancado",
+				PRDFolder:       "tasks/prd-test",
+				ExecutorProfile: &execProfile,
+				ReviewerProfile: &revProfile,
+				StartTime:       time.Now(),
+				EndTime:         time.Now(),
+				StopReason:      "done",
+				Iterations: []IterationResult{
+					{
+						Sequence:   1,
+						TaskID:     "1.0",
+						Title:      "A",
+						PreStatus:  "pending",
+						PostStatus: "done",
+						Duration:   5 * time.Second,
+						ExitCode:   0,
+						Role:       "executor",
+						ReviewResult: &ReviewResult{
+							Duration: 3 * time.Second,
+							ExitCode: 1,
+							Output:   "critical issues found",
+							Note:     "reviewer reportou problemas criticos",
+						},
+						BugfixResult: &BugfixResult{
+							Duration: 8 * time.Second,
+							ExitCode: 0,
+							Output:   "bugfix applied successfully",
+						},
+					},
+				},
+			},
+			wantIn: []string{
+				"| bugfix |",
+				"8s",
+				"#### Bugfix Result",
+				"bugfix applied successfully",
+				"#### Review Result",
+				"reviewer reportou problemas criticos",
+			},
+		},
+		{
+			name: "bugfix com exit != 0 captura note",
+			report: &Report{
+				Mode:            "avancado",
+				PRDFolder:       "tasks/prd-test",
+				ExecutorProfile: &execProfile,
+				ReviewerProfile: &revProfile,
+				StartTime:       time.Now(),
+				EndTime:         time.Now(),
+				StopReason:      "done",
+				Iterations: []IterationResult{
+					{
+						Sequence:   1,
+						TaskID:     "1.0",
+						Title:      "A",
+						PreStatus:  "pending",
+						PostStatus: "done",
+						Duration:   5 * time.Second,
+						ExitCode:   0,
+						ReviewResult: &ReviewResult{
+							Duration: 3 * time.Second,
+							ExitCode: 1,
+							Output:   "issues",
+							Note:     "reviewer reportou problemas criticos",
+						},
+						BugfixResult: &BugfixResult{
+							Duration: 4 * time.Second,
+							ExitCode: 1,
+							Output:   "could not fix",
+							Note:     "bugfix nao conseguiu corrigir todos os achados",
+						},
+					},
+				},
+			},
+			wantIn: []string{
+				"#### Bugfix Result",
+				"bugfix nao conseguiu corrigir todos os achados",
+				"could not fix",
+			},
+		},
+		{
+			name: "sem bugfix — secao Bugfix Result ausente",
+			report: &Report{
+				Mode:            "avancado",
+				PRDFolder:       "tasks/prd-test",
+				ExecutorProfile: &execProfile,
+				ReviewerProfile: &revProfile,
+				StartTime:       time.Now(),
+				EndTime:         time.Now(),
+				StopReason:      "done",
+				Iterations: []IterationResult{
+					{
+						Sequence:   1,
+						TaskID:     "1.0",
+						Title:      "A",
+						PreStatus:  "pending",
+						PostStatus: "done",
+						Duration:   5 * time.Second,
+						ExitCode:   0,
+						ReviewResult: &ReviewResult{
+							Duration: 2 * time.Second,
+							ExitCode: 0,
+							Output:   "approved",
+						},
+					},
+				},
+			},
+			wantIn: []string{
+				"#### Review Result",
+			},
+			wantNotIn: []string{
+				"#### Bugfix Result",
+				"| bugfix |",
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rendered := string(tc.report.Render())
+			for _, want := range tc.wantIn {
+				if !strings.Contains(rendered, want) {
+					t.Errorf("esperado %q no relatorio, nao encontrado\noutput:\n%s", want, rendered)
+				}
+			}
+			for _, notWant := range tc.wantNotIn {
+				if strings.Contains(rendered, notWant) {
+					t.Errorf("nao esperado %q no relatorio, mas foi encontrado\noutput:\n%s", notWant, rendered)
+				}
+			}
+		})
+	}
+}

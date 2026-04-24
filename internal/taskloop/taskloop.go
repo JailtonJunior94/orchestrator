@@ -149,11 +149,13 @@ func (s *Service) printDryRunAdvancedHeader(opts Options, absFolder, workDir str
 	}
 
 	preview, err := BuildReviewPrompt(opts.ReviewerPromptTemplate, ReviewTemplateData{
-		TaskFile:  relTaskFile,
-		PRDFolder: relPRD,
-		TechSpec:  filepath.Join(relPRD, "techspec.md"),
-		TasksFile: filepath.Join(relPRD, "tasks.md"),
-		Diff:      "(dry-run: diff nao disponivel)",
+		TaskFile:       relTaskFile,
+		PRDFolder:      relPRD,
+		TechSpec:       filepath.Join(relPRD, "techspec.md"),
+		TasksFile:      filepath.Join(relPRD, "tasks.md"),
+		Diff:           "(dry-run: diff nao disponivel)",
+		CompletedTasks: "(dry-run: nenhuma task executada)",
+		RiskAreas:      detectRiskAreas(relPRD, workDir, "", s.fsys),
 	}, s.fsys)
 	if err != nil {
 		return
@@ -292,15 +294,19 @@ func (s *Service) Execute(opts Options) error {
 	skipped := make(map[string]bool)
 	iteration := 0
 
-	s.printer.Info("task-loop iniciado: folder=%s tool=%s max=%d timeout=%s",
-		opts.PRDFolder, opts.Tool, opts.MaxIterations, opts.Timeout)
+	maxLabel := fmt.Sprintf("%d", opts.MaxIterations)
+	if opts.MaxIterations == 0 {
+		maxLabel = "ilimitado"
+	}
+	s.printer.Info("task-loop iniciado: folder=%s tool=%s max=%s timeout=%s",
+		opts.PRDFolder, opts.Tool, maxLabel, opts.Timeout)
 
 	// Dry-run modo avancado: imprimir cabecalho com perfis, compatibilidade e preview (RF-09, RF-12)
 	if opts.DryRun && opts.Profiles != nil {
 		s.printDryRunAdvancedHeader(opts, absFolder, workDir)
 	}
 
-	for iteration < opts.MaxIterations {
+	for opts.MaxIterations == 0 || iteration < opts.MaxIterations {
 		// Re-ler tasks.md a cada iteracao (agente pode ter atualizado)
 		tasksContent, err := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md"))
 		if err != nil {
@@ -360,7 +366,8 @@ func (s *Service) Execute(opts Options) error {
 			relPRD = absFolder
 		}
 
-		prompt := BuildPrompt(relTaskFile, relPRD)
+		promptCtx := BuildPromptContext(relPRD, workDir, s.fsys)
+		prompt := BuildPrompt(relTaskFile, relPRD, promptCtx)
 
 		s.printer.Step("iteracao %d: executando task %s (%s)", iteration, task.ID, task.Title)
 
@@ -509,7 +516,7 @@ func (s *Service) Execute(opts Options) error {
 			if err != nil {
 				return fmt.Errorf("erro ao capturar snapshot de isolamento do reviewer na task %s: %w", task.ID, err)
 			}
-			iterResult.ReviewResult = s.invokeReviewer(opts, relTaskFile, relPRD, workDir)
+			iterResult.ReviewResult = s.invokeReviewer(opts, relTaskFile, relPRD, workDir, task.ID, report.Iterations)
 			reviewIsolationErr := validateReviewerIsolation(reviewSnapshot, absFolder, task.ID, taskFile, s.fsys)
 			if reviewIsolationErr != nil {
 				if restoreErr := restoreTaskIsolationSnapshotAt(reviewSnapshot, absFolder, s.fsys); restoreErr != nil {
@@ -532,13 +539,48 @@ func (s *Service) Execute(opts Options) error {
 			}
 		}
 
+		// === BUGFIX (apos reviewer com achados criticos) ===
+		// Invocado quando: reviewer executou e retornou exit != 0 (achados criticos).
+		// Reutiliza o executor para aplicar correcoes com prompt de bugfix.
+		// Nao incrementa o contador de iteracoes (sub-etapa como o reviewer).
+		if iterResult.ReviewResult != nil && iterResult.ReviewResult.ExitCode != 0 {
+			bugfixSnapshot, bfSnapErr := captureTaskIsolationSnapshotWithMode(absFolder, taskIsolationModeExecutor, s.fsys)
+			if bfSnapErr != nil {
+				return fmt.Errorf("erro ao capturar snapshot de isolamento do bugfix na task %s: %w", task.ID, bfSnapErr)
+			}
+
+			diff := captureGitDiff(context.Background(), workDir)
+			iterResult.BugfixResult = s.invokeBugfix(opts, relTaskFile, relPRD, workDir, iterResult.ReviewResult.Output, diff)
+
+			bugfixIsolationErr := validateTaskIsolation(bugfixSnapshot, absFolder, task.ID, taskFile, s.fsys)
+			if bugfixIsolationErr != nil {
+				if restoreErr := restoreTaskIsolationSnapshotAt(bugfixSnapshot, absFolder, s.fsys); restoreErr != nil {
+					return fmt.Errorf("violacao de isolamento do bugfix na task %s: %v; falha ao restaurar snapshot: %w", task.ID, bugfixIsolationErr, restoreErr)
+				}
+				if iterResult.BugfixResult == nil {
+					iterResult.BugfixResult = &BugfixResult{}
+				}
+				iterResult.BugfixResult.Note = appendNote(iterResult.BugfixResult.Note,
+					fmt.Sprintf("violacao de isolamento detectada: %v", bugfixIsolationErr))
+				s.printer.Error("iteracao %d: bugfix violou isolamento da task %s: %v", iteration, task.ID, bugfixIsolationErr)
+				report.Iterations = append(report.Iterations, iterResult)
+				report.StopReason = fmt.Sprintf("abortado: bugfix violou isolamento da task %s", task.ID)
+				if content, err := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md")); err == nil {
+					if finalTasks, err := ParseTasksFile(content); err == nil {
+						report.FinalTasks = finalTasks
+					}
+				}
+				break
+			}
+		}
+
 		s.printer.Info("  resultado: %s -> %s (exit=%d, duracao=%s)",
 			preStatus, postStatus, exitCode, elapsed.Truncate(time.Second))
 
 		report.Iterations = append(report.Iterations, iterResult)
 	}
 
-	if iteration >= opts.MaxIterations && report.StopReason == "" {
+	if opts.MaxIterations > 0 && iteration >= opts.MaxIterations && report.StopReason == "" {
 		report.StopReason = fmt.Sprintf("limite de iteracoes atingido (%d)", opts.MaxIterations)
 		// Ler estado final das tasks
 		if content, err := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md")); err == nil {
@@ -564,8 +606,9 @@ func (s *Service) Execute(opts Options) error {
 
 // invokeReviewer invoca o reviewer apos execucao bem-sucedida do executor.
 // Cria contexto proprio com o mesmo timeout do executor.
+// iterations contem as iteracoes anteriores do report para popular tasks executadas.
 // Retorna ReviewResult com o resultado da revisao ou nota de erro.
-func (s *Service) invokeReviewer(opts Options, relTaskFile, relPRD, workDir string) *ReviewResult {
+func (s *Service) invokeReviewer(opts Options, relTaskFile, relPRD, workDir, taskID string, iterations []IterationResult) *ReviewResult {
 	reviewerInvoker, err := s.createInvokerWithFallback(
 		opts.Profiles.Reviewer.Tool(),
 		opts.ReviewerFallbackModel,
@@ -580,11 +623,13 @@ func (s *Service) invokeReviewer(opts Options, relTaskFile, relPRD, workDir stri
 	reviewPrompt, promptErr := BuildReviewPrompt(
 		opts.ReviewerPromptTemplate,
 		ReviewTemplateData{
-			TaskFile:  relTaskFile,
-			PRDFolder: relPRD,
-			TechSpec:  filepath.Join(relPRD, "techspec.md"),
-			TasksFile: filepath.Join(relPRD, "tasks.md"),
-			Diff:      diff,
+			TaskFile:       relTaskFile,
+			PRDFolder:      relPRD,
+			TechSpec:       filepath.Join(relPRD, "techspec.md"),
+			TasksFile:      filepath.Join(relPRD, "tasks.md"),
+			Diff:           diff,
+			CompletedTasks: formatCompletedTasks(iterations, taskID),
+			RiskAreas:      detectRiskAreas(relPRD, workDir, diff, s.fsys),
 		},
 		s.fsys,
 	)
@@ -617,6 +662,63 @@ func (s *Service) invokeReviewer(opts Options, relTaskFile, relPRD, workDir stri
 	}
 
 	return reviewResult
+}
+
+// invokeBugfix invoca o executor com prompt de bugfix apos revisao com achados criticos.
+// Reutiliza o invoker do executor com o template de bugfix preenchido com os achados do reviewer.
+// Retorna BugfixResult com o resultado da correcao ou nota de erro.
+func (s *Service) invokeBugfix(opts Options, relTaskFile, relPRD, workDir, reviewFindings, diff string) *BugfixResult {
+	executorTool := opts.Tool
+	if opts.Profiles != nil {
+		executorTool = opts.Profiles.Executor.Tool()
+	}
+
+	bugfixInvoker, err := s.createInvokerWithFallback(executorTool, opts.ExecutorFallbackModel)
+	if err != nil {
+		return &BugfixResult{
+			Note: fmt.Sprintf("erro ao criar invoker do bugfix: %v", err),
+		}
+	}
+
+	bugfixPrompt, promptErr := BuildBugfixPrompt(BugfixTemplateData{
+		TaskFile:       relTaskFile,
+		PRDFolder:      relPRD,
+		TechSpec:       filepath.Join(relPRD, "techspec.md"),
+		TasksFile:      filepath.Join(relPRD, "tasks.md"),
+		ReviewFindings: reviewFindings,
+		Diff:           diff,
+	})
+	if promptErr != nil {
+		return &BugfixResult{
+			Note: fmt.Sprintf("erro ao construir prompt de bugfix: %v", promptErr),
+		}
+	}
+
+	executorModel := ""
+	if opts.Profiles != nil {
+		executorModel = opts.Profiles.Executor.Model()
+	}
+
+	s.printer.Step("  bugfix: corrigindo achados criticos da revisao")
+
+	bctx, bcancel := context.WithTimeout(context.Background(), opts.Timeout)
+	bStart := time.Now()
+	bStdout, _, bExitCode, bErr := bugfixInvoker.Invoke(bctx, bugfixPrompt, workDir, executorModel)
+	bElapsed := time.Since(bStart)
+	bcancel()
+
+	bugfixResult := &BugfixResult{
+		Duration: bElapsed,
+		ExitCode: bExitCode,
+		Output:   bStdout,
+	}
+	if bErr != nil {
+		bugfixResult.Note = fmt.Sprintf("erro de invocacao do bugfix: %v", bErr)
+	} else if bExitCode != 0 {
+		bugfixResult.Note = "bugfix nao conseguiu corrigir todos os achados"
+	}
+
+	return bugfixResult
 }
 
 // iterationOutcome representa a decisao tomada apos uma invocacao do agente.

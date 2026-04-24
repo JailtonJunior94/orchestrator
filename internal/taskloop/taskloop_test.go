@@ -173,6 +173,88 @@ func TestExecuteSimpleMode(t *testing.T) {
 	}
 }
 
+// TestExecuteMaxIterationsZeroRunsUntilAllDone verifica que MaxIterations=0
+// faz o loop executar ilimitadamente ate todas as tasks estarem concluidas.
+func TestExecuteMaxIterationsZeroRunsUntilAllDone(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-test"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-3.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/tasks.md"] = []byte(
+		"| 1.0 | Task One | pending | — | Nao |\n" +
+			"| 2.0 | Task Two | pending | — | Nao |\n" +
+			"| 3.0 | Task Three | pending | — | Nao |\n",
+	)
+
+	executorCallCount := 0
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: "claude",
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				executorCallCount++
+				switch executorCallCount {
+				case 1:
+					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/tasks.md"] = []byte(
+						"| 1.0 | Task One | done | — | Nao |\n" +
+							"| 2.0 | Task Two | pending | — | Nao |\n" +
+							"| 3.0 | Task Three | pending | — | Nao |\n",
+					)
+				case 2:
+					fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/tasks.md"] = []byte(
+						"| 1.0 | Task One | done | — | Nao |\n" +
+							"| 2.0 | Task Two | done | — | Nao |\n" +
+							"| 3.0 | Task Three | pending | — | Nao |\n",
+					)
+				case 3:
+					fsys.Files[prd+"/task-3.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/tasks.md"] = []byte(
+						"| 1.0 | Task One | done | — | Nao |\n" +
+							"| 2.0 | Task Two | done | — | Nao |\n" +
+							"| 3.0 | Task Three | done | — | Nao |\n",
+					)
+				}
+				return "done", "", 0, nil
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "claude",
+		MaxIterations: 0, // ilimitado — deve executar ate todas as tasks estarem done
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	if executorCallCount != 3 {
+		t.Errorf("MaxIterations=0 deveria executar todas as 3 tasks, executou %d", executorCallCount)
+	}
+
+	reportData, err := fsys.ReadFile(prd + "/report.md")
+	if err != nil {
+		t.Fatalf("relatorio nao encontrado: %v", err)
+	}
+	reportStr := string(reportData)
+	if !strings.Contains(reportStr, "todas as tasks completadas") {
+		t.Errorf("StopReason deveria ser 'todas as tasks completadas', relatorio:\n%s", reportStr)
+	}
+}
+
 // TestExecuteAdvancedModeReviewerInvoked verifica que o reviewer e invocado
 // apos executor com exit 0 e status "done" no modo avancado.
 func TestExecuteAdvancedModeReviewerInvoked(t *testing.T) {
@@ -497,6 +579,664 @@ func TestExecuteAdvancedModeReviewerFailureCapturesNote(t *testing.T) {
 	// Status da task nao deve ser alterado pelo reviewer
 	if !strings.Contains(reportStr, "done") {
 		t.Error("post-status da task nao deve ter sido alterado pelo reviewer")
+	}
+}
+
+// TestExecuteAdvancedModeBugfixInvokedOnReviewerFailure verifica que quando o reviewer
+// retorna exit != 0 (achados criticos), o bugfix e invocado com o executor e o prompt
+// de bugfix contendo os achados do reviewer.
+func TestExecuteAdvancedModeBugfixInvokedOnReviewerFailure(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	var bugfixCalled bool
+	var bugfixPrompt string
+	claudeCallCount := 0
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		switch tool {
+		case "claude":
+			return &callbackInvoker{
+				binary: "claude",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					claudeCallCount++
+					if claudeCallCount == 1 {
+						// Executor: marca task como done
+						fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+						return "executor output", "", 0, nil
+					}
+					// Bugfix: segunda chamada ao executor
+					bugfixCalled = true
+					bugfixPrompt = prompt
+					return "bugfix applied", "", 0, nil
+				},
+			}, nil
+		case "codex":
+			return &callbackInvoker{
+				binary: "codex",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					return "critical issues found\n- [main.go:42] variavel nao inicializada", "", 1, nil
+				},
+			}, nil
+		default:
+			return nil, fmt.Errorf("ferramenta nao configurada: %s", tool)
+		}
+	}
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 5,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		Profiles: &ProfileConfig{
+			Mode:     "avancado",
+			Executor: execProfile,
+			Reviewer: &revProfile,
+		},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	if !bugfixCalled {
+		t.Fatal("bugfix nao foi invocado apos reviewer com exit != 0")
+	}
+
+	// Verificar que o prompt de bugfix contem os achados do reviewer
+	if !strings.Contains(bugfixPrompt, "variavel nao inicializada") {
+		t.Errorf("prompt de bugfix nao contem achados do reviewer\nprompt:\n%s", bugfixPrompt)
+	}
+	if !strings.Contains(bugfixPrompt, "skill bugfix") {
+		t.Errorf("prompt de bugfix nao referencia a skill bugfix\nprompt:\n%s", bugfixPrompt)
+	}
+	if !strings.Contains(bugfixPrompt, "causa raiz") {
+		t.Errorf("prompt de bugfix nao contem instrucao de causa raiz\nprompt:\n%s", bugfixPrompt)
+	}
+
+	// Verificar BugfixResult no relatorio
+	reportData, _ := fsys.ReadFile(prd + "/report.md")
+	reportStr := string(reportData)
+	if !strings.Contains(reportStr, "#### Bugfix Result") {
+		t.Errorf("relatorio nao contem secao Bugfix Result\noutput:\n%s", reportStr)
+	}
+	if !strings.Contains(reportStr, "bugfix") {
+		t.Errorf("relatorio nao contem 'bugfix'\noutput:\n%s", reportStr)
+	}
+}
+
+// TestExecuteAdvancedModeBugfixNotInvokedOnReviewerSuccess verifica que o bugfix
+// NAO e invocado quando o reviewer retorna exit 0 (revisao aprovada).
+func TestExecuteAdvancedModeBugfixNotInvokedOnReviewerSuccess(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	bugfixCalled := false
+	claudeCallCount2 := 0
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		switch tool {
+		case "claude":
+			return &callbackInvoker{
+				binary: "claude",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					claudeCallCount2++
+					if claudeCallCount2 == 1 {
+						fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+						return "executor output", "", 0, nil
+					}
+					bugfixCalled = true
+					return "bugfix output", "", 0, nil
+				},
+			}, nil
+		case "codex":
+			return &callbackInvoker{
+				binary: "codex",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					return "all good, approved", "", 0, nil
+				},
+			}, nil
+		default:
+			return nil, fmt.Errorf("ferramenta nao configurada: %s", tool)
+		}
+	}
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 5,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		Profiles: &ProfileConfig{
+			Mode:     "avancado",
+			Executor: execProfile,
+			Reviewer: &revProfile,
+		},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	if bugfixCalled {
+		t.Error("bugfix foi invocado mesmo com reviewer exit 0 (revisao aprovada)")
+	}
+
+	// Verificar que BugfixResult e nil no relatorio
+	reportData, _ := fsys.ReadFile(prd + "/report.md")
+	reportStr := string(reportData)
+	if strings.Contains(reportStr, "#### Bugfix Result") {
+		t.Error("relatorio contem secao Bugfix Result mesmo sem bugfix executado")
+	}
+}
+
+// TestExecuteAdvancedModeBugfixFailureCapturesNote verifica que quando o bugfix
+// falha (exit != 0), a note e capturada no BugfixResult.
+func TestExecuteAdvancedModeBugfixFailureCapturesNote(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	claudeCallCount3 := 0
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		switch tool {
+		case "claude":
+			return &callbackInvoker{
+				binary: "claude",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					claudeCallCount3++
+					if claudeCallCount3 == 1 {
+						fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+						return "executor output", "", 0, nil
+					}
+					// Bugfix falha
+					return "could not fix", "errors", 1, nil
+				},
+			}, nil
+		case "codex":
+			return &callbackInvoker{
+				binary: "codex",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					return "critical issues found", "", 1, nil
+				},
+			}, nil
+		default:
+			return nil, fmt.Errorf("ferramenta nao configurada: %s", tool)
+		}
+	}
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 5,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		Profiles: &ProfileConfig{
+			Mode:     "avancado",
+			Executor: execProfile,
+			Reviewer: &revProfile,
+		},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	reportData, _ := fsys.ReadFile(prd + "/report.md")
+	reportStr := string(reportData)
+	if !strings.Contains(reportStr, "bugfix nao conseguiu corrigir todos os achados") {
+		t.Errorf("relatorio nao contem nota de falha do bugfix\noutput:\n%s", reportStr)
+	}
+}
+
+// TestExecuteAdvancedModeBugfixUsesExecutorModel verifica que o bugfix usa o model
+// do executor (nao do reviewer) ao invocar o agente de correcao.
+func TestExecuteAdvancedModeBugfixUsesExecutorModel(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	var bugfixModel string
+	claudeCalls := 0
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		switch tool {
+		case "claude":
+			return &callbackInvoker{
+				binary: "claude",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					claudeCalls++
+					if claudeCalls == 1 {
+						fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+						return "executor output", "", 0, nil
+					}
+					// Bugfix call — captura o model usado
+					bugfixModel = model
+					return "bugfix applied", "", 0, nil
+				},
+			}, nil
+		case "codex":
+			return &callbackInvoker{
+				binary: "codex",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					return "critical issues", "", 1, nil
+				},
+			}, nil
+		default:
+			return nil, fmt.Errorf("ferramenta nao configurada: %s", tool)
+		}
+	}
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "claude-sonnet-4-6")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "gpt-5.4")
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 5,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		Profiles: &ProfileConfig{
+			Mode:     "avancado",
+			Executor: execProfile,
+			Reviewer: &revProfile,
+		},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	if bugfixModel != "claude-sonnet-4-6" {
+		t.Errorf("bugfix model: got %q, want %q (deve usar executor model, nao reviewer)", bugfixModel, "claude-sonnet-4-6")
+	}
+}
+
+// TestExecuteAdvancedModeBugfixNotInvokedWithoutReviewer verifica que o bugfix
+// nao e invocado quando o reviewer nao esta configurado (Profiles.Reviewer == nil).
+func TestExecuteAdvancedModeBugfixNotInvokedWithoutReviewer(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	claudeCalls := 0
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				claudeCalls++
+				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+				return "executor output", "", 0, nil
+			},
+		}, nil
+	}
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 5,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		Profiles: &ProfileConfig{
+			Mode:     "avancado",
+			Executor: execProfile,
+			Reviewer: nil, // sem reviewer
+		},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	// Apenas 1 chamada: executor. Sem reviewer, sem bugfix.
+	if claudeCalls != 1 {
+		t.Errorf("executor chamado %d vezes, esperado 1 (sem reviewer/bugfix)", claudeCalls)
+	}
+
+	reportData, _ := fsys.ReadFile(prd + "/report.md")
+	reportStr := string(reportData)
+	if strings.Contains(reportStr, "#### Bugfix Result") {
+		t.Error("relatorio contem Bugfix Result sem reviewer configurado")
+	}
+}
+
+// TestExecuteAdvancedModeBugfixDoesNotIncrementIteration verifica RF-13:
+// o bugfix e sub-etapa e nao incrementa o contador de iteracoes.
+// Com MaxIterations=2 e 2 tasks, o loop deve completar ambas mesmo com bugfix rodando.
+func TestExecuteAdvancedModeBugfixDoesNotIncrementIteration(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-test"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/tasks.md"] = []byte(
+		"| 1.0 | Task One | pending | — | Nao |\n" +
+			"| 2.0 | Task Two | pending | — | Nao |\n",
+	)
+
+	executorCallCount := 0
+	bugfixCallCount := 0
+	reviewerCallCount := 0
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		switch tool {
+		case "claude":
+			return &callbackInvoker{
+				binary: "claude",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					// Distinguir executor vs bugfix pelo conteudo do prompt
+					if strings.Contains(prompt, "skill bugfix") {
+						bugfixCallCount++
+						return "bugfix applied", "", 0, nil
+					}
+					executorCallCount++
+					if executorCallCount == 1 {
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Task One | done | — | Nao |\n" +
+								"| 2.0 | Task Two | pending | — | Nao |\n",
+						)
+					} else {
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Task One | done | — | Nao |\n" +
+								"| 2.0 | Task Two | done | — | Nao |\n",
+						)
+					}
+					return "done", "", 0, nil
+				},
+			}, nil
+		case "codex":
+			return &callbackInvoker{
+				binary: "codex",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					reviewerCallCount++
+					return "critical issues", "", 1, nil // reviewer sempre reprova
+				},
+			}, nil
+		default:
+			return nil, fmt.Errorf("ferramenta nao configurada: %s", tool)
+		}
+	}
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 2,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		Profiles: &ProfileConfig{
+			Mode:     "avancado",
+			Executor: execProfile,
+			Reviewer: &revProfile,
+		},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	// RF-13: com MaxIterations=2, deve ter executado 2 iteracoes do executor
+	if executorCallCount != 2 {
+		t.Errorf("executor chamado %d vezes, esperado 2", executorCallCount)
+	}
+	// 2 reviews (um por task)
+	if reviewerCallCount != 2 {
+		t.Errorf("reviewer chamado %d vezes, esperado 2", reviewerCallCount)
+	}
+	// 2 bugfixes (um por task, pois reviewer sempre reprova)
+	if bugfixCallCount != 2 {
+		t.Errorf("bugfix chamado %d vezes, esperado 2", bugfixCallCount)
+	}
+}
+
+// TestExecuteAdvancedModeBugfixInvocationError verifica que quando o agente de bugfix
+// retorna um erro de invocacao (ex: timeout), a note e capturada sem abortar o loop.
+func TestExecuteAdvancedModeBugfixInvocationError(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	claudeCallsBf := 0
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		switch tool {
+		case "claude":
+			return &callbackInvoker{
+				binary: "claude",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					claudeCallsBf++
+					if claudeCallsBf == 1 {
+						fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+						return "executor output", "", 0, nil
+					}
+					// Bugfix retorna erro de invocacao
+					return "", "timeout", -1, fmt.Errorf("context deadline exceeded")
+				},
+			}, nil
+		case "codex":
+			return &callbackInvoker{
+				binary: "codex",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					return "critical issues", "", 1, nil
+				},
+			}, nil
+		default:
+			return nil, fmt.Errorf("ferramenta nao configurada: %s", tool)
+		}
+	}
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 5,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		Profiles: &ProfileConfig{
+			Mode:     "avancado",
+			Executor: execProfile,
+			Reviewer: &revProfile,
+		},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	reportData, _ := fsys.ReadFile(prd + "/report.md")
+	reportStr := string(reportData)
+	if !strings.Contains(reportStr, "erro de invocacao do bugfix") {
+		t.Errorf("relatorio nao contem nota de erro de invocacao do bugfix\noutput:\n%s", reportStr)
+	}
+}
+
+// TestExecuteAdvancedModeBugfixReviewFindingsPassedVerbatim verifica que a saida
+// do reviewer e passada integralmente como ReviewFindings no prompt de bugfix.
+func TestExecuteAdvancedModeBugfixReviewFindingsPassedVerbatim(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	reviewOutput := "Achados criticos:\n- [main.go:42] null pointer\n- [handler.go:10] missing error check\nVeredicto: reprovado"
+	var capturedBugfixPrompt string
+	claudeCallsVb := 0
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		switch tool {
+		case "claude":
+			return &callbackInvoker{
+				binary: "claude",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					claudeCallsVb++
+					if claudeCallsVb == 1 {
+						fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+						return "executor output", "", 0, nil
+					}
+					capturedBugfixPrompt = prompt
+					return "bugfix applied", "", 0, nil
+				},
+			}, nil
+		case "codex":
+			return &callbackInvoker{
+				binary: "codex",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					return reviewOutput, "", 1, nil
+				},
+			}, nil
+		default:
+			return nil, fmt.Errorf("ferramenta nao configurada: %s", tool)
+		}
+	}
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 5,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		Profiles: &ProfileConfig{
+			Mode:     "avancado",
+			Executor: execProfile,
+			Reviewer: &revProfile,
+		},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	// Cada linha do output do reviewer deve estar presente no prompt de bugfix
+	for _, line := range strings.Split(reviewOutput, "\n") {
+		if !strings.Contains(capturedBugfixPrompt, line) {
+			t.Errorf("prompt de bugfix nao contem linha do reviewer: %q", line)
+		}
+	}
+}
+
+// TestExecuteAdvancedModeBugfixOnlyForFailedReview verifica que em um bundle
+// com multiplas tasks, o bugfix roda apenas para a task cujo reviewer reprovou,
+// nao para a task cujo reviewer aprovou.
+func TestExecuteAdvancedModeBugfixOnlyForFailedReview(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-test"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/tasks.md"] = []byte(
+		"| 1.0 | Task One | pending | — | Nao |\n" +
+			"| 2.0 | Task Two | pending | — | Nao |\n",
+	)
+
+	executorCalls := 0
+	bugfixCalls := 0
+	reviewerCalls := 0
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		switch tool {
+		case "claude":
+			return &callbackInvoker{
+				binary: "claude",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					if strings.Contains(prompt, "skill bugfix") {
+						bugfixCalls++
+						return "bugfix applied", "", 0, nil
+					}
+					executorCalls++
+					if executorCalls == 1 {
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Task One | done | — | Nao |\n" +
+								"| 2.0 | Task Two | pending | — | Nao |\n",
+						)
+					} else {
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Task One | done | — | Nao |\n" +
+								"| 2.0 | Task Two | done | — | Nao |\n",
+						)
+					}
+					return "done", "", 0, nil
+				},
+			}, nil
+		case "codex":
+			return &callbackInvoker{
+				binary: "codex",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					reviewerCalls++
+					// Reviewer reprova task 1, aprova task 2
+					if reviewerCalls == 1 {
+						return "critical issues in task 1", "", 1, nil
+					}
+					return "approved", "", 0, nil
+				},
+			}, nil
+		default:
+			return nil, fmt.Errorf("ferramenta nao configurada: %s", tool)
+		}
+	}
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 5,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		Profiles: &ProfileConfig{
+			Mode:     "avancado",
+			Executor: execProfile,
+			Reviewer: &revProfile,
+		},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	if executorCalls != 2 {
+		t.Errorf("executor chamado %d vezes, esperado 2", executorCalls)
+	}
+	if reviewerCalls != 2 {
+		t.Errorf("reviewer chamado %d vezes, esperado 2", reviewerCalls)
+	}
+	// Bugfix so para task 1 (reviewer reprovou), nao para task 2 (reviewer aprovou)
+	if bugfixCalls != 1 {
+		t.Errorf("bugfix chamado %d vezes, esperado 1 (somente para task reprovada)", bugfixCalls)
 	}
 }
 
@@ -3153,5 +3893,301 @@ func TestSharedStateBetweenIterationsMatchesRF12(t *testing.T) {
 	}
 	if !strings.Contains(reportStr, "pending -> done") {
 		t.Errorf("RF-12 report: task-2.0 deveria aparecer como 'pending -> done'\n%s", reportStr)
+	}
+}
+
+// TestEnrichedPromptsAndUnlimitedFlow valida de ponta a ponta as 3 alteracoes desta sessao:
+//
+//  1. Prompt do executor enriquecido: arquitetura extraida de techspec.md + referencias detectadas dinamicamente
+//  2. Prompt do reviewer enriquecido: tasks executadas, areas de risco, focos obrigatorios e saidas esperadas
+//  3. MaxIterations=0 (ilimitado): loop roda ate TODAS as tasks estarem done
+//
+// O teste captura os prompts passados ao executor e ao reviewer, validando que o conteudo
+// dinamico foi injetado corretamente. Usa 3 tasks para garantir que MaxIterations=0
+// executa todas sem limite artificial.
+func TestEnrichedPromptsAndUnlimitedFlow(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-enriched"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte(`# PRD — Autenticacao Segura
+
+O pacote internal/auth implementa autenticacao com token JWT.
+A interface AuthService define o contrato publico do domain aggregate.
+Testes devem cobrir todos os cenarios de seguranca e credential.
+`)
+	fsys.Files[prd+"/techspec.md"] = []byte(`# Especificacao Tecnica
+
+## Resumo Executivo
+
+Modulo de autenticacao com JWT tokens para API REST.
+
+## Arquitetura do Sistema
+
+O pacote internal/auth e composto por:
+
+| Componente | Arquivo | Responsabilidade |
+|-----------|---------|-----------------|
+| AuthService | auth.go | Orquestracao de login/logout |
+| TokenManager | token.go | Geracao e validacao JWT |
+| UserRepository | repository.go | Persistencia de usuarios |
+
+### Fluxo de Dados
+
+AuthService -> TokenManager -> UserRepository
+
+## Design de Implementacao
+
+Detalhes aqui.
+`)
+	fsys.Files[prd+"/task-1.0-auth-service.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-2.0-token-manager.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-3.0-user-repository.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/tasks.md"] = []byte(
+		"| 1.0 | Auth Service | pending | — | Nao |\n" +
+			"| 2.0 | Token Manager | pending | — | Nao |\n" +
+			"| 3.0 | User Repository | pending | — | Nao |\n",
+	)
+
+	var executorPrompts []string
+	var reviewerPrompts []string
+	executorCallCount := 0
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		switch tool {
+		case "claude":
+			return &callbackInvoker{
+				binary: "claude",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					executorPrompts = append(executorPrompts, prompt)
+					executorCallCount++
+					switch executorCallCount {
+					case 1:
+						fsys.Files[prd+"/task-1.0-auth-service.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Auth Service | done | — | Nao |\n" +
+								"| 2.0 | Token Manager | pending | — | Nao |\n" +
+								"| 3.0 | User Repository | pending | — | Nao |\n",
+						)
+					case 2:
+						fsys.Files[prd+"/task-2.0-token-manager.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Auth Service | done | — | Nao |\n" +
+								"| 2.0 | Token Manager | done | — | Nao |\n" +
+								"| 3.0 | User Repository | pending | — | Nao |\n",
+						)
+					case 3:
+						fsys.Files[prd+"/task-3.0-user-repository.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/tasks.md"] = []byte(
+							"| 1.0 | Auth Service | done | — | Nao |\n" +
+								"| 2.0 | Token Manager | done | — | Nao |\n" +
+								"| 3.0 | User Repository | done | — | Nao |\n",
+						)
+					}
+					return "done", "", 0, nil
+				},
+			}, nil
+		case "codex":
+			return &callbackInvoker{
+				binary: "codex",
+				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+					reviewerPrompts = append(reviewerPrompts, prompt)
+					return "approved", "", 0, nil
+				},
+			}, nil
+		default:
+			return nil, fmt.Errorf("ferramenta nao configurada: %s", tool)
+		}
+	}
+
+	execProfile, _ := NewExecutionProfile("executor", "claude", "")
+	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 0, // ilimitado
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		Profiles: &ProfileConfig{
+			Mode:     "avancado",
+			Executor: execProfile,
+			Reviewer: &revProfile,
+		},
+		AllowUnknownModel: true,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	// --- Validacao 1: MaxIterations=0 executou todas as 3 tasks ---
+
+	if executorCallCount != 3 {
+		t.Fatalf("MaxIterations=0 deveria executar todas as 3 tasks, executou %d", executorCallCount)
+	}
+
+	reportData, err := fsys.ReadFile(prd + "/report.md")
+	if err != nil {
+		t.Fatalf("relatorio nao encontrado: %v", err)
+	}
+	reportStr := string(reportData)
+	if !strings.Contains(reportStr, "todas as tasks completadas") {
+		t.Errorf("StopReason deveria ser 'todas as tasks completadas', relatorio:\n%s", reportStr)
+	}
+
+	// --- Validacao 2: Prompts do executor enriquecidos com arquitetura e referencias ---
+
+	if len(executorPrompts) < 3 {
+		t.Fatalf("esperado 3 prompts de executor, obteve %d", len(executorPrompts))
+	}
+
+	firstExecutorPrompt := executorPrompts[0]
+
+	// 2a. Arquitetura extraida da techspec (secao "## Arquitetura do Sistema")
+	architectureChecks := []string{
+		"internal/auth",
+		"AuthService",
+		"TokenManager",
+		"UserRepository",
+	}
+	for _, check := range architectureChecks {
+		if !strings.Contains(firstExecutorPrompt, check) {
+			t.Errorf("prompt do executor deveria conter arquitetura %q extraida da techspec\nprompt:\n%s",
+				check, firstExecutorPrompt)
+		}
+	}
+
+	// 2b. Referencias detectadas dinamicamente do conteudo prd+techspec
+	referenceChecks := []string{
+		"go-implementation", // detectado por "internal/", "func ", ".go"
+		"ddd",              // detectado por "aggregate", "domain"
+		"security",         // detectado por "seguranca", "credential", "auth"
+		"tests",            // sempre incluido
+	}
+	for _, ref := range referenceChecks {
+		if !strings.Contains(firstExecutorPrompt, ref) {
+			t.Errorf("prompt do executor deveria conter referencia %q detectada do conteudo\nprompt:\n%s",
+				ref, firstExecutorPrompt)
+		}
+	}
+
+	// 2c. Criterios de execucao nao negociaveis presentes no prompt
+	criteriaChecks := []string{
+		"preservar contratos publicos existentes",
+		"nenhuma interface nova sem fronteira real justificada",
+		"context.Context em todas as operacoes de IO",
+		"testes table-driven",
+		"nao fechar a task sem evidencia de validacao",
+	}
+	for _, criteria := range criteriaChecks {
+		if !strings.Contains(firstExecutorPrompt, criteria) {
+			t.Errorf("prompt do executor deveria conter criterio %q\nprompt:\n%s",
+				criteria, firstExecutorPrompt)
+		}
+	}
+
+	// 2d. Estrutura base do prompt (AGENTS.md, SKILL.md, isolamento)
+	structureChecks := []string{
+		"AGENTS.md",
+		".agents/skills/execute-task/SKILL.md",
+		"Do NOT modify any other task file.",
+	}
+	for _, s := range structureChecks {
+		if !strings.Contains(firstExecutorPrompt, s) {
+			t.Errorf("prompt do executor deveria conter %q\nprompt:\n%s", s, firstExecutorPrompt)
+		}
+	}
+
+	// --- Validacao 3: Prompts do reviewer enriquecidos com contexto dinamico ---
+
+	if len(reviewerPrompts) < 3 {
+		t.Fatalf("esperado 3 prompts de reviewer, obteve %d", len(reviewerPrompts))
+	}
+
+	// 3a. Primeiro reviewer: apenas task 1.0 como atual (nenhuma concluida antes)
+	firstReviewerPrompt := reviewerPrompts[0]
+	if !strings.Contains(firstReviewerPrompt, "1.0") {
+		t.Errorf("primeiro prompt do reviewer deveria mencionar task 1.0\nprompt:\n%s", firstReviewerPrompt)
+	}
+
+	// 3b. Terceiro reviewer: tasks 1.0 e 2.0 ja concluidas
+	thirdReviewerPrompt := reviewerPrompts[2]
+	if !strings.Contains(thirdReviewerPrompt, "Auth Service") || !strings.Contains(thirdReviewerPrompt, "Token Manager") {
+		t.Errorf("terceiro reviewer deveria listar tasks concluidas (Auth Service, Token Manager)\nprompt:\n%s",
+			thirdReviewerPrompt)
+	}
+
+	// 3c. Areas de risco detectadas da techspec (JWT, auth = seguranca; interface = contratos)
+	riskChecks := []string{
+		"seguranca",
+	}
+	for _, risk := range riskChecks {
+		if !strings.Contains(firstReviewerPrompt, risk) {
+			t.Errorf("prompt do reviewer deveria conter area de risco %q\nprompt:\n%s",
+				risk, firstReviewerPrompt)
+		}
+	}
+
+	// 3d. Focos obrigatorios da revisao presentes no prompt
+	reviewFocusChecks := []string{
+		"corretude:",
+		"regressao:",
+		"seguranca:",
+		"testes:",
+		"divida tecnica introduzida:",
+	}
+	for _, focus := range reviewFocusChecks {
+		if !strings.Contains(firstReviewerPrompt, focus) {
+			t.Errorf("prompt do reviewer deveria conter foco obrigatorio %q\nprompt:\n%s",
+				focus, firstReviewerPrompt)
+		}
+	}
+
+	// 3e. Saidas esperadas presentes no prompt
+	outputChecks := []string{
+		"critico, importante, sugestao",
+		"aprovado / aprovado com ressalvas / reprovado",
+	}
+	for _, out := range outputChecks {
+		if !strings.Contains(firstReviewerPrompt, out) {
+			t.Errorf("prompt do reviewer deveria conter saida esperada %q\nprompt:\n%s",
+				out, firstReviewerPrompt)
+		}
+	}
+
+	// 3f. Estrutura base do reviewer (AGENTS.md, SKILL.md, isolamento)
+	reviewStructureChecks := []string{
+		"AGENTS.md",
+		".agents/skills/review/SKILL.md",
+		"Do NOT modify any task file or any row in tasks.md.",
+	}
+	for _, s := range reviewStructureChecks {
+		if !strings.Contains(firstReviewerPrompt, s) {
+			t.Errorf("prompt do reviewer deveria conter %q\nprompt:\n%s", s, firstReviewerPrompt)
+		}
+	}
+
+	// --- Validacao 4: Prompts do executor sao especificos por task ---
+
+	if !strings.Contains(executorPrompts[0], "task-1.0") {
+		t.Errorf("primeiro prompt deveria referenciar task-1.0\n%s", executorPrompts[0])
+	}
+	if !strings.Contains(executorPrompts[1], "task-2.0") {
+		t.Errorf("segundo prompt deveria referenciar task-2.0\n%s", executorPrompts[1])
+	}
+	if !strings.Contains(executorPrompts[2], "task-3.0") {
+		t.Errorf("terceiro prompt deveria referenciar task-3.0\n%s", executorPrompts[2])
+	}
+
+	// --- Validacao 5: Arquitetura e consistente entre iteracoes (mesma techspec) ---
+
+	for i := 1; i < len(executorPrompts); i++ {
+		if !strings.Contains(executorPrompts[i], "AuthService") {
+			t.Errorf("prompt %d deveria conter mesma arquitetura que prompt 0 (AuthService)\n%s",
+				i, executorPrompts[i])
+		}
 	}
 }

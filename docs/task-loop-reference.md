@@ -45,13 +45,15 @@ ai-spec task-loop \
 | --- | --- |
 | `--tool` | escolher o agente unico (claude, codex, gemini, copilot) — modo simples |
 | `--dry-run` | validar ordem e elegibilidade das tasks antes de gastar ciclo de agente |
-| `--max-iterations` | controlar lote inicial, reduzir risco e evitar rodar tasks demais de uma vez |
+| `--max-iterations` | controlar lote inicial, reduzir risco e evitar rodar tasks demais de uma vez; `0` executa sem limite de iteracoes ate nao restar tasks pendentes |
 | `--timeout` | dar mais tempo para tasks grandes ou com validacoes demoradas |
 | `--report-path` | manter rastreabilidade e facilitar revisao posterior |
 
-### Modo avancado: executor e reviewer independentes
+### Modo avancado: executor, reviewer e bugfix automatico
 
 O modo avancado permite configurar executor e reviewer com ferramentas e modelos distintos. `--tool` e `--executor-tool` sao mutuamente exclusivos.
+
+Quando o reviewer retorna exit code != 0 (achados criticos), o loop invoca automaticamente uma fase de bugfix usando o mesmo executor, com prompt estruturado a partir dos achados. A fase de bugfix tem guardrails de isolamento proprios e o resultado e registrado separadamente no report avancado. O fluxo por iteracao e: **executor → reviewer → bugfix (se necessario)**.
 
 ```bash
 # Executor: Codex; Reviewer: Claude Opus (template padrao embutido)

@@ -1,13 +1,18 @@
 package taskloop
 
 import (
+	"bytes"
 	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"text/template"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 )
 
 // AgentInvoker abstrai a invocacao de um agente de IA via CLI.
@@ -52,34 +57,142 @@ func CheckAgentBinary(invoker AgentInvoker) error {
 	return nil
 }
 
+// defaultExecutorTemplate e o template embutido via go:embed para o prompt do executor.
+//
+//go:embed executor_template.tmpl
+var defaultExecutorTemplate string
+
+// PromptContext agrupa o contexto dinamico extraido de prd.md e techspec.md
+// para enriquecer o prompt do executor com arquitetura e referencias relevantes.
+type PromptContext struct {
+	Architecture string
+	References   string
+}
+
+// ExecutorTemplateData agrupa os placeholders do template do executor.
+type ExecutorTemplateData struct {
+	TaskFile     string
+	PRDFolder    string
+	Architecture string
+	References   string
+}
+
+// BuildPromptContext le prd.md e techspec.md do prdFolder e extrai
+// contexto de arquitetura e referencias relevantes para o prompt.
+func BuildPromptContext(prdFolder, workDir string, fsys fs.FileSystem) PromptContext {
+	ctx := PromptContext{}
+
+	techspecPath := filepath.Join(workDir, prdFolder, "techspec.md")
+	prdPath := filepath.Join(workDir, prdFolder, "prd.md")
+
+	techspec, _ := fsys.ReadFile(techspecPath)
+	prd, _ := fsys.ReadFile(prdPath)
+
+	combined := string(techspec) + "\n" + string(prd)
+
+	ctx.Architecture = extractArchitecture(string(techspec))
+	ctx.References = detectReferences(combined)
+
+	return ctx
+}
+
+// extractArchitecture extrai o resumo de arquitetura da techspec.
+// Procura secoes "Arquitetura" ou "Resumo Executivo" e retorna
+// um trecho conciso (max 1500 chars) para compor o prompt.
+func extractArchitecture(techspec string) string {
+	for _, heading := range []string{
+		"## Arquitetura do Sistema",
+		"## Arquitetura",
+		"## Architecture",
+		"## Resumo Executivo",
+	} {
+		idx := strings.Index(techspec, heading)
+		if idx < 0 {
+			continue
+		}
+		rest := techspec[idx:]
+		nlIdx := strings.Index(rest, "\n")
+		if nlIdx < 0 {
+			continue
+		}
+		afterHeading := rest[nlIdx+1:]
+		nextSection := strings.Index(afterHeading, "\n## ")
+		var section string
+		if nextSection >= 0 {
+			section = strings.TrimSpace(afterHeading[:nextSection])
+		} else {
+			section = strings.TrimSpace(afterHeading)
+		}
+		if len(section) > 1500 {
+			section = section[:1500] + "\n(...)"
+		}
+		if section != "" {
+			return section
+		}
+	}
+	return "ler techspec.md para contexto de arquitetura"
+}
+
+// detectReferences analisa o conteudo combinado de prd+techspec e retorna
+// a lista de referencias relevantes para carregar no prompt.
+func detectReferences(content string) string {
+	lower := strings.ToLower(content)
+	var refs []string
+
+	if containsAnyPattern(lower, ".go", "go.mod", "golang", "internal/", "func ", "package ") {
+		refs = append(refs, "go-implementation")
+	}
+	if containsAnyPattern(lower, ".ts", ".tsx", "node", "npm", "typescript") {
+		refs = append(refs, "node-implementation")
+	}
+	if containsAnyPattern(lower, ".py", "python", "pip", "django", "flask") {
+		refs = append(refs, "python-implementation")
+	}
+
+	if containsAnyPattern(lower, "domain", "aggregate", "entity", "value object", "bounded context", "ddd") {
+		refs = append(refs, "ddd")
+	}
+	if containsAnyPattern(lower, "seguranca", "security", "auth", "credential", "vulnerab") {
+		refs = append(refs, "security")
+	}
+
+	refs = append(refs, "tests")
+	return strings.Join(refs, ", ")
+}
+
+// containsAnyPattern retorna true se s contem qualquer um dos patterns.
+func containsAnyPattern(s string, patterns ...string) bool {
+	for _, p := range patterns {
+		if strings.Contains(s, p) {
+			return true
+		}
+	}
+	return false
+}
+
 // BuildPrompt constroi o prompt para o agente executar uma task especifica.
 // Inclui instrucao explicita de leitura de AGENTS.md porque --bare pula o
 // carregamento automatico de CLAUDE.md (RF-04, contrato de carga base).
-func BuildPrompt(taskFilePath, prdFolder string) string {
-	return fmt.Sprintf(`You are executing the "execute-task" skill.
+// Arquitetura e referencias sao preenchidos dinamicamente a partir do PromptContext.
+func BuildPrompt(taskFilePath, prdFolder string, ctx PromptContext) string {
+	data := ExecutorTemplateData{
+		TaskFile:     taskFilePath,
+		PRDFolder:    prdFolder,
+		Architecture: ctx.Architecture,
+		References:   ctx.References,
+	}
 
-First, read AGENTS.md at the repository root to load governance rules and conventions.
+	tmpl, err := template.New("executor").Parse(defaultExecutorTemplate)
+	if err != nil {
+		return fmt.Sprintf("Use a skill execute-task para implementar a task %s. PRD folder: %s", taskFilePath, prdFolder)
+	}
 
-Then read and follow the instructions in: .agents/skills/execute-task/SKILL.md
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return fmt.Sprintf("Use a skill execute-task para implementar a task %s. PRD folder: %s", taskFilePath, prdFolder)
+	}
 
-Target task file: %s
-PRD folder: %s
-
-Execute ONLY this task. Follow all skill steps:
-1. Validate eligibility
-2. Load context (prd.md, techspec.md)
-3. Implement
-4. Validate (tests, lint)
-5. Review
-6. Update task status in task file and tasks.md
-7. Generate execution report
-
-Do NOT modify any other task file.
-Do NOT modify any row in tasks.md except the current task row.
-Do NOT start the next task or mark any other row in tasks.md as in_progress.
-Leave follow-up tasks unchanged for a future isolated session.
-
-Update **Status:** in %s and the corresponding row in %s/tasks.md to reflect the final state.`, taskFilePath, prdFolder, taskFilePath, prdFolder)
+	return buf.String()
 }
 
 // LiveOutputSetter permite configurar um writer para streaming de output do agente.
