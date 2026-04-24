@@ -813,6 +813,275 @@ func TestRenderIterationCounterActiveTask(t *testing.T) {
 	}
 }
 
+func TestRenderQueueSummary(t *testing.T) {
+	t.Parallel()
+
+	renderer := newBubbleTeaRenderer()
+	progress := BatchProgress{
+		Total:      10,
+		Pending:    3,
+		InProgress: 1,
+		Done:       4,
+		Failed:     1,
+		Blocked:    1,
+	}
+
+	tests := []struct {
+		name     string
+		width    int
+		progress BatchProgress
+		tier     layoutTier
+		wantAll  []string
+		wantNone []string
+	}{
+		{
+			name:     "wide (120) renderiza painel com 6 contadores",
+			width:    120,
+			progress: progress,
+			tier:     layoutWide,
+			wantAll: []string{
+				"Fila",
+				"Total: 10",
+				"Pendentes: 3",
+				"Em execucao: 1",
+				"Concluidas: 4",
+				"Falhadas: 1",
+				"Bloqueadas: 1",
+			},
+		},
+		{
+			name:     "medium (100) renderiza painel com 6 contadores",
+			width:    100,
+			progress: progress,
+			tier:     layoutMedium,
+			wantAll: []string{
+				"Fila",
+				"Total: 10",
+				"Pendentes: 3",
+				"Em execucao: 1",
+				"Concluidas: 4",
+				"Falhadas: 1",
+				"Bloqueadas: 1",
+			},
+		},
+		{
+			name:     "compact retorna string vazia",
+			width:    60,
+			progress: progress,
+			tier:     layoutCompact,
+			wantAll:  []string{},
+			wantNone: []string{"Fila", "Total"},
+		},
+		{
+			name:  "contadores zerados exibidos corretamente",
+			width: 120,
+			progress: BatchProgress{
+				Total: 0,
+			},
+			tier:    layoutWide,
+			wantAll: []string{"Total: 0", "Pendentes: 0"},
+		},
+		{
+			name: "apenas done e pending",
+			width: 100,
+			progress: BatchProgress{
+				Total:   5,
+				Done:    4,
+				Pending: 1,
+			},
+			tier:    layoutMedium,
+			wantAll: []string{"Total: 5", "Concluidas: 4", "Pendentes: 1", "Falhadas: 0", "Bloqueadas: 0"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := renderer.renderQueueSummary(tt.width, tt.progress, tt.tier)
+
+			if tt.tier == layoutCompact && got != "" {
+				t.Errorf("renderQueueSummary compact deve retornar string vazia, got: %q", got)
+			}
+
+			for _, want := range tt.wantAll {
+				if !strings.Contains(got, want) {
+					t.Errorf("renderQueueSummary nao contem %q\nsaida:\n%s", want, got)
+				}
+			}
+			for _, notWant := range tt.wantNone {
+				if strings.Contains(got, notWant) {
+					t.Errorf("renderQueueSummary nao deveria conter %q\nsaida:\n%s", notWant, got)
+				}
+			}
+		})
+	}
+}
+
+func TestRenderQueueSummaryCompactEmpty(t *testing.T) {
+	t.Parallel()
+
+	renderer := newBubbleTeaRenderer()
+	for _, width := range []int{40, 60, 79} {
+		got := renderer.renderQueueSummary(width, BatchProgress{Total: 10, Done: 5}, layoutCompact)
+		if got != "" {
+			t.Errorf("renderQueueSummary compact width=%d: esperado string vazia, got=%q", width, got)
+		}
+	}
+}
+
+func TestRenderQueueSummaryCounters(t *testing.T) {
+	t.Parallel()
+
+	renderer := newBubbleTeaRenderer()
+	progress := BatchProgress{
+		Total:      10,
+		Pending:    3,
+		InProgress: 1,
+		Done:       4,
+		Failed:     1,
+		Blocked:    1,
+	}
+
+	for _, tier := range []layoutTier{layoutWide, layoutMedium} {
+		got := renderer.renderQueueSummary(120, progress, tier)
+		for _, want := range []string{"10", "3", "4", "1"} {
+			if !strings.Contains(got, want) {
+				t.Errorf("renderQueueSummary tier=%d nao contem %q\nsaida:\n%s", tier, want, got)
+			}
+		}
+	}
+}
+
+func TestRenderFooter(t *testing.T) {
+	t.Parallel()
+
+	renderer := newBubbleTeaRenderer()
+
+	tests := []struct {
+		name     string
+		width    int
+		paused   bool
+		focus    panelFocus
+		mode     string
+		wantAll  []string
+		wantNone []string
+	}{
+		{
+			name:   "paused=false mostra 'p pausar'",
+			width:  120,
+			paused: false,
+			focus:  focusActiveTask,
+			mode:   "simples",
+			wantAll: []string{
+				"q sair",
+				"p pausar",
+				"s skip",
+				"tab foco",
+				"UI: tui",
+				"Modo: simples",
+			},
+			wantNone: []string{"p retomar"},
+		},
+		{
+			name:   "paused=true mostra 'p retomar'",
+			width:  120,
+			paused: true,
+			focus:  focusActiveTask,
+			mode:   "simples",
+			wantAll: []string{
+				"q sair",
+				"p retomar",
+				"s skip",
+				"tab foco",
+			},
+			wantNone: []string{"p pausar"},
+		},
+		{
+			name:    "foco em task ativa exibe rodape normalmente",
+			width:   120,
+			paused:  false,
+			focus:   focusActiveTask,
+			mode:    "avancado",
+			wantAll: []string{"q sair", "Modo: avancado"},
+		},
+		{
+			name:    "foco em fila exibe rodape normalmente",
+			width:   120,
+			paused:  false,
+			focus:   focusQueueSummary,
+			mode:    "simples",
+			wantAll: []string{"q sair", "tab foco"},
+		},
+		{
+			name:    "foco em eventos exibe rodape normalmente",
+			width:   120,
+			paused:  false,
+			focus:   focusRecentEvents,
+			mode:    "simples",
+			wantAll: []string{"q sair", "UI: tui"},
+		},
+		{
+			name:    "modo vazio exibe n/a",
+			width:   120,
+			paused:  false,
+			focus:   focusActiveTask,
+			mode:    "",
+			wantAll: []string{"Modo: n/a"},
+		},
+		{
+			name:    "largura estreita (<80) trunca rodape com '...'",
+			width:   60,
+			paused:  false,
+			focus:   focusActiveTask,
+			mode:    "simples",
+			wantAll: []string{"q sair"},
+		},
+		{
+			name:    "atalhos marcados como visual",
+			width:   160,
+			paused:  false,
+			focus:   focusActiveTask,
+			mode:    "simples",
+			wantAll: []string{"(visual)"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := renderer.renderFooter(tt.width, tt.paused, tt.focus, tt.mode)
+
+			for _, want := range tt.wantAll {
+				if !strings.Contains(got, want) {
+					t.Errorf("renderFooter nao contem %q\nsaida:\n%s", want, got)
+				}
+			}
+			for _, notWant := range tt.wantNone {
+				if strings.Contains(got, notWant) {
+					t.Errorf("renderFooter nao deveria conter %q\nsaida:\n%s", notWant, got)
+				}
+			}
+		})
+	}
+}
+
+func TestRenderFooterTruncation(t *testing.T) {
+	t.Parallel()
+
+	renderer := newBubbleTeaRenderer()
+	// Largura muito pequena deve truncar o rodape
+	got := renderer.renderFooter(36, false, focusActiveTask, "simples")
+	// Deve conter pelo menos o inicio dos atalhos e terminar com "..."
+	if !strings.Contains(got, "q sair") {
+		t.Errorf("renderFooter largura estreita deveria conter 'q sair'\nsaida:\n%s", got)
+	}
+	if !strings.Contains(got, "...") {
+		t.Errorf("renderFooter largura estreita deveria truncar com '...'\nsaida:\n%s", got)
+	}
+}
+
 func TestRenderActiveTaskPhaseLabel(t *testing.T) {
 	t.Parallel()
 

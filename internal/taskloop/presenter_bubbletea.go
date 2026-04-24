@@ -585,6 +585,42 @@ func (r bubbleTeaRenderer) renderDashboard(width int, snapshot SessionSnapshot, 
 	}, r.dashboardBorderStyle)
 }
 
+// renderQueueSummary renderiza o painel de fila com 6 contadores do lote por estado.
+// Em compact: retorna string vazia (dados visiveis na barra de progresso).
+// Em wide/medium: painel com borda, label "Fila" e 2 linhas de contadores.
+func (r bubbleTeaRenderer) renderQueueSummary(width int, progress BatchProgress, tier layoutTier) string {
+	if tier == layoutCompact {
+		return "" // omitido em compacto; dados visiveis na barra de progresso
+	}
+
+	contentWidth := max(1, width-4)
+	lines := []string{
+		r.sectionLabelStyle.Render("Fila"),
+		truncateBubbleTeaLine(fmt.Sprintf("Total: %d   Pendentes: %d   Em execucao: %d",
+			progress.Total, progress.Pending, progress.InProgress), contentWidth),
+		truncateBubbleTeaLine(fmt.Sprintf("Concluidas: %d   Falhadas: %d   Bloqueadas: %d",
+			progress.Done, progress.Failed, progress.Blocked), contentWidth),
+	}
+	return r.renderStyledPanel(width, 3, lines, r.normalPanelStyle)
+}
+
+// renderFooter renderiza o rodape com atalhos de teclado, modo efetivo e status da UI.
+// O label de pause alterna entre "p pausar" e "p retomar" conforme o estado paused.
+// Trunca explicitamente quando a largura for insuficiente.
+func (r bubbleTeaRenderer) renderFooter(width int, paused bool, focus panelFocus, mode string) string {
+	pauseLabel := "p pausar"
+	if paused {
+		pauseLabel = "p retomar"
+	}
+
+	_ = focus // foco sera usado na composicao final (task 14.0)
+	shortcuts := fmt.Sprintf(" q sair | %s (visual) | s skip (visual) | tab foco | UI: tui | Modo: %s",
+		pauseLabel, firstNonEmpty(mode, "n/a"))
+
+	return r.footerStyle.Width(max(1, width)).Render(
+		truncateBubbleTeaLine(shortcuts, max(1, width-2)))
+}
+
 // renderProgressBar renderiza a barra de progresso horizontal com caracteres Unicode.
 // Exibe percentual e contadores "N/M tasks". Quando Total == 0, exibe mensagem vazia.
 func (r bubbleTeaRenderer) renderProgressBar(width int, progress BatchProgress) string {
