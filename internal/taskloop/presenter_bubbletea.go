@@ -57,15 +57,31 @@ type bubbleTeaModel struct {
 	width     int
 	height    int
 	altScreen bool
+
+	// Campos de controle operacional (Fase 2 — usados a partir da task 13.0)
+	focus  panelFocus //nolint:unused
+	paused bool       //nolint:unused
 }
 
 type bubbleTeaRenderer struct {
+	// Estilos legados do layout de 2 paineis (preservados para compatibilidade)
 	panelStyle        lipgloss.Style
 	statusStyle       lipgloss.Style
 	sectionLabelStyle lipgloss.Style
 	criticalStyle     lipgloss.Style
 	warnStyle         lipgloss.Style
 	infoStyle         lipgloss.Style
+
+	// Estilos do layout de 6 blocos (Fase 2)
+	dashboardStyle       lipgloss.Style
+	dashboardBorderStyle lipgloss.Style
+	progressStyle        lipgloss.Style
+	progressEmptyStyle   lipgloss.Style
+	normalPanelStyle     lipgloss.Style
+	activePanelStyle     lipgloss.Style
+	footerStyle          lipgloss.Style
+	// criticalStyle, warnStyle e infoStyle sao consumidos pelo render de task ativa (task 10.0)
+	// e por formatacao de eventos criticos (tasks 12.0/14.0) — mantidos no renderer legado por ora
 }
 
 // NewBubbleTeaPresenter cria o presenter TUI canônico do modo iterativo.
@@ -83,14 +99,23 @@ func defaultBubbleTeaProgramFactory(model tea.Model, options ...tea.ProgramOptio
 }
 
 func newBubbleTeaRenderer() bubbleTeaRenderer {
+	theme := defaultTheme()
+	dash, dashBorder, prog, progEmpty, normal, active, footer, sectionLabel := newBubbleTeaRendererWithTheme(theme)
 	return bubbleTeaRenderer{
-		panelStyle: lipgloss.NewStyle(),
-		statusStyle: lipgloss.NewStyle().
-			Reverse(true),
-		sectionLabelStyle: lipgloss.NewStyle().Bold(true),
-		criticalStyle:     lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("9")),
-		warnStyle:         lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("11")),
-		infoStyle:         lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("10")),
+		panelStyle:        lipgloss.NewStyle(),
+		statusStyle:       lipgloss.NewStyle().Reverse(true),
+		sectionLabelStyle: sectionLabel,
+		criticalStyle:     lipgloss.NewStyle().Bold(true).Foreground(theme.danger),
+		warnStyle:         lipgloss.NewStyle().Bold(true).Foreground(theme.warning),
+		infoStyle:         lipgloss.NewStyle().Bold(true).Foreground(theme.success),
+
+		dashboardStyle:       dash,
+		dashboardBorderStyle: dashBorder,
+		progressStyle:        prog,
+		progressEmptyStyle:   progEmpty,
+		normalPanelStyle:     normal,
+		activePanelStyle:     active,
+		footerStyle:          footer,
 	}
 }
 
@@ -478,4 +503,102 @@ func maxInt(values ...int) int {
 		}
 	}
 	return max
+}
+
+// renderActiveTask renderiza o painel principal com informacoes completas da task em execucao.
+// Em wide/medium: 6 linhas (label, ID+titulo, iteracao, ferramenta+papel, fase, tempo) com borda.
+// Em compact: 2 linhas densas com informacao essencial.
+// Quando ActiveIteration == nil, exibe mensagem de espera com altura preservada.
+func (r bubbleTeaRenderer) renderActiveTask(width int, snapshot SessionSnapshot, tier layoutTier) string {
+	active := snapshot.ActiveIteration
+	contentWidth := max(1, width-4)
+
+	if active == nil {
+		innerH := 6
+		if tier == layoutCompact {
+			innerH = 2
+		}
+		return r.renderStyledPanel(width, innerH, []string{
+			r.sectionLabelStyle.Render("Task Ativa"),
+			"Aguardando selecao de task...",
+		}, r.normalPanelStyle)
+	}
+
+	phaseDisplay := phaseStatusLabel(active.Phase)
+	elapsed := time.Since(active.StartedAt).Truncate(time.Second).String()
+
+	if tier == layoutCompact {
+		lines := []string{
+			truncateBubbleTeaLine(fmt.Sprintf("%s %s", active.TaskID, active.Title), contentWidth),
+			truncateBubbleTeaLine(fmt.Sprintf("%s | %s | %s | %s",
+				renderIterationCounter(active.Sequence, snapshot.MaxIterations),
+				string(active.Tool), string(active.Role), phaseDisplay), contentWidth),
+		}
+		return r.renderStyledPanel(width, 2, lines, r.normalPanelStyle)
+	}
+
+	lines := []string{
+		r.sectionLabelStyle.Render("Task Ativa"),
+		truncateBubbleTeaLine(fmt.Sprintf("ID: %s — %s", active.TaskID,
+			firstNonEmpty(active.Title, "sem titulo")), contentWidth),
+		truncateBubbleTeaLine(fmt.Sprintf("Iteracao: %s",
+			renderIterationCounter(active.Sequence, snapshot.MaxIterations)), contentWidth),
+		truncateBubbleTeaLine(fmt.Sprintf("Ferramenta: %s   Papel: %s",
+			firstNonEmpty(string(active.Tool), "n/a"),
+			firstNonEmpty(string(active.Role), "n/a")), contentWidth),
+		truncateBubbleTeaLine(fmt.Sprintf("Fase: %s", phaseDisplay), contentWidth),
+		truncateBubbleTeaLine(fmt.Sprintf("Tempo: %s", elapsed), contentWidth),
+	}
+	return r.renderStyledPanel(width, 6, lines, r.normalPanelStyle)
+}
+
+// renderStyledPanel renderiza um painel com borda e altura fixa usando o estilo Lip Gloss fornecido.
+// As linhas sao normalizadas para innerHeight e truncadas a contentWidth = width - 4.
+// O estilo deve ter borda configurada; a largura total do painel sera width.
+func (r bubbleTeaRenderer) renderStyledPanel(width, innerHeight int, lines []string, style lipgloss.Style) string {
+	contentWidth := max(1, width-4)
+	normalized := normalizePanelLines(lines, innerHeight, contentWidth)
+	content := strings.Join(normalized, "\n")
+	return style.Width(max(1, width-2)).Render(content)
+}
+
+// renderDashboard renderiza o bloco de cabecalho com identidade visual e contexto operacional.
+// Em wide/medium: painel com borda exibindo titulo, modo, ferramenta ativa e limite de iteracoes.
+// Em compact: linha unica truncada com separadores "|".
+func (r bubbleTeaRenderer) renderDashboard(width int, snapshot SessionSnapshot, tier layoutTier) string {
+	contentWidth := max(1, width-4)
+
+	title := "ai-spec task-loop"
+	mode := "Modo: " + firstNonEmpty(snapshot.Mode, "simples")
+	tool := "Tool: " + firstNonEmpty(string(snapshot.CurrentTool), "n/a")
+	maxIter := fmt.Sprintf("Max: %d", snapshot.MaxIterations)
+
+	if tier == layoutCompact {
+		line := truncateBubbleTeaLine(
+			fmt.Sprintf("%s | %s | %s | %s", title, mode, tool, maxIter), contentWidth)
+		return r.dashboardStyle.Width(max(1, width)).Render(line)
+	}
+
+	line := fmt.Sprintf("%s   %s   %s   %s", title, mode, tool, maxIter)
+	return r.renderStyledPanel(width, 1, []string{
+		truncateBubbleTeaLine(line, contentWidth),
+	}, r.dashboardBorderStyle)
+}
+
+// renderProgressBar renderiza a barra de progresso horizontal com caracteres Unicode.
+// Exibe percentual e contadores "N/M tasks". Quando Total == 0, exibe mensagem vazia.
+func (r bubbleTeaRenderer) renderProgressBar(width int, progress BatchProgress) string {
+	if progress.Total == 0 {
+		return r.progressEmptyStyle.Width(max(1, width)).Render("sem tarefas conhecidas")
+	}
+
+	pct := float64(progress.Done) / float64(progress.Total)
+	label := fmt.Sprintf(" %d/%d tasks (%d%%)", progress.Done, progress.Total, int(pct*100))
+
+	barWidth := max(1, width-len(label)-2)
+	filled := min(barWidth, int(float64(barWidth)*pct))
+	empty := barWidth - filled
+
+	bar := strings.Repeat("█", filled) + strings.Repeat("░", empty)
+	return r.progressStyle.Width(max(1, width)).Render(bar + label)
 }
