@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.1 (2026-04-24)
+
+### Bug Fixes
+- **taskloop/parser:** detectar colunas Status e Dependências dinamicamente no header da tabela (3e1ec70)
+
 ## 0.15.0 (2026-04-24)
 
 ### Features
