@@ -156,3 +156,88 @@ func TestTaskLoopUIResolution(t *testing.T) {
 		})
 	}
 }
+
+// TestTaskLoopUIResolutionTUIExplicit valida que --ui=tui com terminal interativo
+// resolve para TUI com sucesso e preserva as capacidades detectadas.
+func TestTaskLoopUIResolutionTUIExplicit(t *testing.T) {
+	t.Parallel()
+
+	cmd := newTaskLoopUITestCommand(t)
+	if err := cmd.ParseFlags([]string{"--ui=tui"}); err != nil {
+		t.Fatalf("ParseFlags() erro inesperado: %v", err)
+	}
+
+	caps := taskloop.TerminalCapabilities{Interactive: true, Width: 120, Height: 40, SupportsAltScreen: true}
+	requested, effective, capabilities, err := resolveTaskLoopUIMode(
+		cmd,
+		stubTerminalDetector{capabilities: caps},
+		nil,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("resolveTaskLoopUIMode() erro inesperado: %v", err)
+	}
+	if requested != taskloop.UIModeTUI {
+		t.Errorf("requested = %q, esperado UIModeTUI", requested)
+	}
+	if effective != taskloop.UIModeTUI {
+		t.Errorf("effective = %q, esperado UIModeTUI", effective)
+	}
+	if !capabilities.Interactive {
+		t.Error("capabilities.Interactive deveria ser true para terminal interativo")
+	}
+}
+
+// TestTaskLoopUIResolutionAutoNonInteractiveDegradesFully valida que auto degrada
+// para plain quando nao ha TTY, mesmo com Width/Height preenchidos (terminal parcial).
+func TestTaskLoopUIResolutionAutoNonInteractiveDegradesFully(t *testing.T) {
+	t.Parallel()
+
+	cmd := newTaskLoopUITestCommand(t)
+	if err := cmd.ParseFlags(nil); err != nil {
+		t.Fatalf("ParseFlags() erro inesperado: %v", err)
+	}
+
+	// Terminal com Width/Height mas sem Interactive (ex: CI com pseudo-tty parcial)
+	caps := taskloop.TerminalCapabilities{Interactive: false, Width: 80, Height: 24}
+	_, effective, _, err := resolveTaskLoopUIMode(
+		cmd,
+		stubTerminalDetector{capabilities: caps},
+		nil,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("resolveTaskLoopUIMode() erro inesperado: %v", err)
+	}
+	if effective != taskloop.UIModePlain {
+		t.Errorf("effective = %q, esperado UIModePlain para terminal nao interativo", effective)
+	}
+}
+
+// TestTaskLoopUIResolutionNoUIFlagPreservesPlain valida que --no-ui forca plain
+// mesmo quando o terminal e interativo.
+func TestTaskLoopUIResolutionNoUIFlagPreservesPlain(t *testing.T) {
+	t.Parallel()
+
+	cmd := newTaskLoopUITestCommand(t)
+	if err := cmd.ParseFlags([]string{"--no-ui"}); err != nil {
+		t.Fatalf("ParseFlags() erro inesperado: %v", err)
+	}
+
+	caps := taskloop.TerminalCapabilities{Interactive: true, Width: 120, Height: 40}
+	requested, effective, _, err := resolveTaskLoopUIMode(
+		cmd,
+		stubTerminalDetector{capabilities: caps},
+		nil,
+		nil,
+	)
+	if err != nil {
+		t.Fatalf("resolveTaskLoopUIMode() erro inesperado: %v", err)
+	}
+	if requested != taskloop.UIModePlain {
+		t.Errorf("requested = %q, esperado UIModePlain apos --no-ui", requested)
+	}
+	if effective != taskloop.UIModePlain {
+		t.Errorf("effective = %q, esperado UIModePlain apos --no-ui", effective)
+	}
+}

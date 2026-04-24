@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	taskfs "github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 )
 
 // claudeBinary retorna o binario efetivo para claude: "claudiney" se disponivel, senao "claude".
@@ -66,32 +68,157 @@ func writeFakeBinary(t *testing.T, dir, name string) {
 	}
 }
 
-// TestBuildPromptContainsAgentsMd verifica que o prompt gerado instrui leitura de AGENTS.md
-// (contrato de carga base exigido por RF-04 quando --bare esta ativo).
-func TestBuildPromptContainsAgentsMd(t *testing.T) {
-	prompt := BuildPrompt("tasks/prd-feat/01_task.md", "tasks/prd-feat")
+// TestBuildPromptContainsRequiredElements verifica que o prompt gerado contem os elementos
+// obrigatorios: path da task, prd folder, skill execute-task e criterios de execucao.
+func TestBuildPromptContainsRequiredElements(t *testing.T) {
+	const workDir = "/fake/project"
+	const prdFolder = "tasks/prd-feat"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[workDir+"/go.mod"] = []byte("module example.com/app\n")
+	fsys.Files[workDir+"/"+prdFolder+"/prd.md"] = []byte("# PRD\nImplementar feature de dominio.\n")
+	fsys.Files[workDir+"/"+prdFolder+"/techspec.md"] = []byte("# TechSpec\nArquitetura em camadas.\n")
+
+	prompt := BuildPrompt("tasks/prd-feat/01_task.md", prdFolder, workDir, fsys)
 
 	required := []string{
-		"AGENTS.md",
-		".agents/skills/execute-task/SKILL.md",
+		"execute-task",
 		"tasks/prd-feat/01_task.md",
-		"tasks/prd-feat",
-		"Do NOT modify any other task file.",
-		"Do NOT modify any row in tasks.md except the current task row.",
-		"Do NOT start the next task or mark any other row in tasks.md as in_progress.",
-		"Leave follow-up tasks unchanged for a future isolated session.",
+		prdFolder,
+		"Leia o arquivo de task antes de iniciar qualquer alteracao",
+		"go-implementation",
+		"tests",
+		"preservar contratos publicos existentes",
+		"context.Context em todas as operacoes de IO",
+		"testes table-driven",
+		"registrar evidencia de conclusao",
+		"nao fechar a task sem evidencia de validacao",
 	}
 	for _, r := range required {
 		if !strings.Contains(prompt, r) {
 			t.Errorf("BuildPrompt() nao contem %q\nprompt:\n%s", r, prompt)
 		}
 	}
+}
 
-	// AGENTS.md deve aparecer ANTES da referencia a SKILL.md
-	agentsIdx := strings.Index(prompt, "AGENTS.md")
-	skillIdx := strings.Index(prompt, ".agents/skills/execute-task/SKILL.md")
-	if agentsIdx >= skillIdx {
-		t.Errorf("AGENTS.md (pos=%d) deve aparecer antes de SKILL.md (pos=%d) no prompt", agentsIdx, skillIdx)
+// TestResolveReferences verifica a deteccao dinamica de referencias por stack e conteudo.
+func TestResolveReferences(t *testing.T) {
+	tests := []struct {
+		name      string
+		setupFsys func(*taskfs.FakeFileSystem, string, string)
+		wantRefs  []string
+		noRefs    []string
+	}{
+		{
+			name: "projeto Go sem keywords adicionais inclui go-implementation e tests",
+			setupFsys: func(fsys *taskfs.FakeFileSystem, workDir, prd string) {
+				fsys.Files[workDir+"/go.mod"] = []byte("module example.com\n")
+				fsys.Files[prd+"/prd.md"] = []byte("# PRD simples\n")
+				fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec simples\n")
+			},
+			wantRefs: []string{"go-implementation", "tests"},
+			noRefs:   []string{"ddd", "security", "persistence", "concurrency", "api", "observability"},
+		},
+		{
+			name: "projeto Node inclui node-implementation",
+			setupFsys: func(fsys *taskfs.FakeFileSystem, workDir, prd string) {
+				fsys.Files[workDir+"/package.json"] = []byte(`{"name":"app"}`+"\n")
+				fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+				fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+			},
+			wantRefs: []string{"node-implementation", "tests"},
+			noRefs:   []string{"go-implementation"},
+		},
+		{
+			name: "techspec menciona DDD adiciona ddd",
+			setupFsys: func(fsys *taskfs.FakeFileSystem, workDir, prd string) {
+				fsys.Files[workDir+"/go.mod"] = []byte("module example.com\n")
+				fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+				fsys.Files[prd+"/techspec.md"] = []byte("Usar aggregate root e value object para modelar o dominio.\n")
+			},
+			wantRefs: []string{"go-implementation", "tests", "ddd"},
+		},
+		{
+			name: "prd menciona observabilidade OpenTelemetry adiciona observability",
+			setupFsys: func(fsys *taskfs.FakeFileSystem, workDir, prd string) {
+				fsys.Files[workDir+"/go.mod"] = []byte("module example.com\n")
+				fsys.Files[prd+"/prd.md"] = []byte("Instrumentar com OpenTelemetry e exportar traces.\n")
+				fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+			},
+			wantRefs: []string{"go-implementation", "tests", "observability"},
+		},
+		{
+			name: "prd menciona HTTP REST adiciona api",
+			setupFsys: func(fsys *taskfs.FakeFileSystem, workDir, prd string) {
+				fsys.Files[workDir+"/go.mod"] = []byte("module example.com\n")
+				fsys.Files[prd+"/prd.md"] = []byte("Expor endpoint REST via HTTP handler.\n")
+				fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+			},
+			wantRefs: []string{"go-implementation", "tests", "api"},
+		},
+		{
+			name: "techspec menciona goroutine adiciona concurrency",
+			setupFsys: func(fsys *taskfs.FakeFileSystem, workDir, prd string) {
+				fsys.Files[workDir+"/go.mod"] = []byte("module example.com\n")
+				fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+				fsys.Files[prd+"/techspec.md"] = []byte("Usar goroutine e channel para processar eventos concorrentemente.\n")
+			},
+			wantRefs: []string{"go-implementation", "tests", "concurrency"},
+		},
+		{
+			name: "prd menciona database SQL adiciona persistence",
+			setupFsys: func(fsys *taskfs.FakeFileSystem, workDir, prd string) {
+				fsys.Files[workDir+"/go.mod"] = []byte("module example.com\n")
+				fsys.Files[prd+"/prd.md"] = []byte("Persistir dados em database postgres via SQL.\n")
+				fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+			},
+			wantRefs: []string{"go-implementation", "tests", "persistence"},
+		},
+		{
+			name: "prd menciona autenticacao JWT adiciona security",
+			setupFsys: func(fsys *taskfs.FakeFileSystem, workDir, prd string) {
+				fsys.Files[workDir+"/go.mod"] = []byte("module example.com\n")
+				fsys.Files[prd+"/prd.md"] = []byte("Autenticacao via JWT e autorizacao RBAC.\n")
+				fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+			},
+			wantRefs: []string{"go-implementation", "tests", "security"},
+		},
+		{
+			name: "sem go.mod nem package.json nao adiciona skill de implementacao",
+			setupFsys: func(fsys *taskfs.FakeFileSystem, workDir, prd string) {
+				fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+				fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+			},
+			wantRefs: []string{"tests"},
+			noRefs:   []string{"go-implementation", "node-implementation", "python-implementation"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			const workDir = "/fake/project"
+			const prd = workDir + "/tasks/prd-test"
+
+			fsys := taskfs.NewFakeFileSystem()
+			tt.setupFsys(fsys, workDir, prd)
+
+			refs := resolveReferences(prd, workDir, fsys)
+			refSet := make(map[string]bool, len(refs))
+			for _, r := range refs {
+				refSet[r] = true
+			}
+
+			for _, want := range tt.wantRefs {
+				if !refSet[want] {
+					t.Errorf("esperado %q nas referencias, obtido: %v", want, refs)
+				}
+			}
+			for _, no := range tt.noRefs {
+				if refSet[no] {
+					t.Errorf("nao esperado %q nas referencias, obtido: %v", no, refs)
+				}
+			}
+		})
 	}
 }
 

@@ -12,13 +12,10 @@ import (
 )
 
 const (
-	defaultBubbleTeaWidth      = 100
-	defaultBubbleTeaHeight     = 24
-	minBubbleTeaWidth          = 36
-	minBubbleTeaHeight         = 8
-	compactBubbleTeaWidth      = 64
-	bubbleTeaPanelBorderHeight = 2
-	bubbleTeaStatusHeight      = 1
+	defaultBubbleTeaWidth  = 100
+	defaultBubbleTeaHeight = 24
+	minBubbleTeaWidth      = 36
+	minBubbleTeaHeight     = 8
 )
 
 // BubbleTeaPresenter renderiza o task-loop em modo TUI sem acoplar execucao ao dominio.
@@ -58,9 +55,9 @@ type bubbleTeaModel struct {
 	height    int
 	altScreen bool
 
-	// Campos de controle operacional (Fase 2 — usados a partir da task 13.0)
-	focus  panelFocus //nolint:unused
-	paused bool       //nolint:unused
+	// Campos de controle operacional adicionados na task 13.0
+	focus  panelFocus
+	paused bool
 }
 
 type bubbleTeaRenderer struct {
@@ -236,135 +233,70 @@ func (m bubbleTeaModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.summary = &summary
 		return m, tea.Quit
 	case tea.KeyMsg:
-		switch typed.String() {
-		case "ctrl+c", "q":
+		switch resolveKeyAction(typed.String()) {
+		case keyQuit:
 			return m, tea.Quit
+		case keyPause:
+			m.paused = !m.paused
+		case keySkip:
+			// visual apenas nesta fase — sem sinal ao Service (ADR-005)
+		case keyTabFocus:
+			m.focus = (m.focus + 1) % 3
 		}
 	}
 	return m, nil
 }
 
 func (m bubbleTeaModel) View() tea.View {
-	view := tea.NewView(m.renderer.Render(m.width, m.height, m.snapshot, m.summary))
+	view := tea.NewView(m.renderer.Render(m.width, m.height, m.snapshot, m.summary, m.focus, m.paused))
 	view.AltScreen = m.altScreen
 	return view
 }
 
-func (r bubbleTeaRenderer) Render(width, height int, snapshot SessionSnapshot, summary *FinalSummary) string {
+// Render compoe o layout de 6 blocos verticais usando lipgloss.JoinVertical.
+// Quando summary != nil, renderiza a tela de encerramento em vez do layout de 6 blocos.
+// O primeiro frame com snapshot vazio renderiza todos os paineis com estados iniciais.
+func (r bubbleTeaRenderer) Render(width, height int, snapshot SessionSnapshot, summary *FinalSummary, focus panelFocus, paused bool) string {
 	width, height = normalizeBubbleTeaDimensions(width, height)
 
-	status := r.renderStatusLine(width, snapshot, summary)
-	if height <= minBubbleTeaHeight {
-		return lipgloss.JoinVertical(lipgloss.Left,
-			r.renderPanel(width, 2, r.mainLines(snapshot, width, summary)),
-			status,
-		)
-	}
-
-	mainInner, eventsInner := splitBubbleTeaHeights(height, width)
-	main := r.renderPanel(width, mainInner, r.mainLines(snapshot, width, summary))
-	events := r.renderPanel(width, eventsInner, r.eventLines(snapshot, width, eventsInner))
-
-	return lipgloss.JoinVertical(lipgloss.Left, main, events, status)
-}
-
-func (r bubbleTeaRenderer) renderPanel(width, innerHeight int, lines []string) string {
-	contentWidth := maxInt(1, width-4)
-	border := lipgloss.NormalBorder()
-	normalized := normalizePanelLines(lines, innerHeight, contentWidth)
-	rendered := make([]string, 0, len(normalized)+2)
-	rendered = append(rendered, border.TopLeft+strings.Repeat(border.Top, contentWidth)+border.TopRight)
-	for _, line := range normalized {
-		rendered = append(rendered, border.Left+padBubbleTeaLine(line, contentWidth)+border.Right)
-	}
-	rendered = append(rendered, border.BottomLeft+strings.Repeat(border.Bottom, contentWidth)+border.BottomRight)
-	return r.panelStyle.Render(strings.Join(rendered, "\n"))
-}
-
-func (r bubbleTeaRenderer) mainLines(snapshot SessionSnapshot, width int, summary *FinalSummary) []string {
-	lines := []string{r.sectionLabelStyle.Render("Execucao")}
 	if summary != nil {
-		lines = append(lines,
-			fmt.Sprintf("Stop: %s", firstNonEmpty(summary.StopReason, "execucao encerrada")),
-			fmt.Sprintf("Iteracoes: %d", summary.IterationsRun),
-			fmt.Sprintf("Report: %s", firstNonEmpty(summary.ReportPath, "n/a")),
-			fmt.Sprintf("Lote: %s", formatBatchProgress(summary.Progress)),
-		)
-		if summary.LastFailure != nil {
-			lines = append(lines, "Falha final: "+renderFailureMessage(summary.LastFailure))
-		}
-		return lines
+		return r.renderFinalSummary(width, height, *summary)
 	}
 
-	active := snapshot.ActiveIteration
-	if active == nil {
-		lines = append(lines, "Task: aguardando selecao", "Fase: "+phaseLabel(snapshot.CurrentPhase))
-		lines = append(lines, "Lote: "+formatBatchProgress(snapshot.Progress))
-		return lines
-	}
+	tier := resolveLayoutTier(width)
+	heights := computeBlockHeights(height, tier)
 
-	lines = append(lines,
-		fmt.Sprintf("Task: %s %s", active.TaskID, firstNonEmpty(active.Title, "sem titulo")),
-	)
-
-	if width < compactBubbleTeaWidth {
-		lines = append(lines,
-			fmt.Sprintf("Iteracao/Execucao: %s | %s / %s", renderIterationCounter(active.Sequence, snapshot.MaxIterations), firstNonEmpty(string(active.Role), "n/a"), firstNonEmpty(string(active.Tool), "n/a")),
-			"Fase: "+phaseStatusLabel(active.Phase),
-		)
-		if snapshot.LastError != nil {
-			lines = append(lines, "Falha: "+renderFailureMessage(snapshot.LastError))
-		} else {
-			lines = append(lines, "Lote: "+formatBatchProgress(snapshot.Progress))
-		}
-	} else {
-		lines = append(lines,
-			fmt.Sprintf("Iteracao: %s", renderIterationCounter(active.Sequence, snapshot.MaxIterations)),
-			fmt.Sprintf("Papel: %s | Tool: %s", firstNonEmpty(string(active.Role), "n/a"), firstNonEmpty(string(active.Tool), "n/a")),
-			"Fase: "+phaseStatusLabel(active.Phase),
-			"Lote: "+formatBatchProgress(snapshot.Progress),
-		)
-		if snapshot.LastError != nil {
-			lines = append(lines, "Falha: "+renderFailureMessage(snapshot.LastError))
-		}
+	blocks := make([]string, 0, 6)
+	blocks = append(blocks, r.renderDashboard(width, snapshot, tier))
+	blocks = append(blocks, r.renderProgressBar(width, snapshot.Progress))
+	blocks = append(blocks, r.renderActiveTask(width, snapshot, tier))
+	if heights.queueSummary > 0 {
+		blocks = append(blocks, r.renderQueueSummary(width, snapshot.Progress, tier))
 	}
-	return lines
+	blocks = append(blocks, r.renderRecentEvents(width, heights.events, snapshot.RecentEvents,
+		focus == focusRecentEvents, tier))
+	blocks = append(blocks, r.renderFooter(width, paused, focus, snapshot.Mode))
+
+	return lipgloss.JoinVertical(lipgloss.Left, blocks...)
 }
 
-func (r bubbleTeaRenderer) eventLines(snapshot SessionSnapshot, width, innerHeight int) []string {
-	lines := []string{r.sectionLabelStyle.Render("Eventos recentes")}
-	if len(snapshot.RecentEvents) == 0 {
-		return append(lines, "INFO nenhum evento observado")
+// renderFinalSummary renderiza a tela de encerramento quando summary != nil.
+// Exibe: motivo de encerramento, iteracoes executadas, caminho do relatorio,
+// progresso do lote e ultima falha (se existir).
+func (r bubbleTeaRenderer) renderFinalSummary(width, height int, summary FinalSummary) string {
+	lines := []string{
+		r.sectionLabelStyle.Render("Execucao Finalizada"),
+		"",
+		fmt.Sprintf("Motivo: %s", firstNonEmpty(summary.StopReason, "execucao encerrada")),
+		fmt.Sprintf("Iteracoes: %d", summary.IterationsRun),
+		fmt.Sprintf("Relatorio: %s", firstNonEmpty(summary.ReportPath, "n/a")),
+		fmt.Sprintf("Lote: %s", formatBatchProgress(summary.Progress)),
 	}
-
-	available := maxInt(1, innerHeight-1)
-	start := len(snapshot.RecentEvents) - available
-	if start < 0 {
-		start = 0
+	if summary.LastFailure != nil {
+		lines = append(lines, fmt.Sprintf("Falha final: %s", renderFailureMessage(summary.LastFailure)))
 	}
-
-	for i := len(snapshot.RecentEvents) - 1; i >= start; i-- {
-		lines = append(lines, formatRecentEvent(snapshot.RecentEvents[i], width))
-	}
-	return lines
-}
-
-func (r bubbleTeaRenderer) renderStatusLine(width int, snapshot SessionSnapshot, summary *FinalSummary) string {
-	segments := []string{
-		"UI: tui",
-		"Modo: " + firstNonEmpty(snapshot.Mode, "n/a"),
-		"Tempo: " + snapshot.Elapsed.Truncate(time.Second).String(),
-		fmt.Sprintf("Lote: %d/%d done", snapshot.Progress.Done, snapshot.Progress.Total),
-	}
-
-	if summary != nil {
-		segments = append(segments, "Final: "+firstNonEmpty(summary.StopReason, "encerrado"))
-	} else {
-		segments = append(segments, "Fase: "+phaseStatusLabel(snapshot.CurrentPhase))
-	}
-
-	line := truncateBubbleTeaLine(strings.Join(segments, " | "), width)
-	return r.statusStyle.Width(maxInt(1, width)).Render(line)
+	innerHeight := max(len(lines), height-2)
+	return r.renderStyledPanel(width, innerHeight, lines, r.normalPanelStyle)
 }
 
 func phaseStatusLabel(phase AgentPhase) string {
@@ -430,23 +362,6 @@ func formatBatchProgress(progress BatchProgress) string {
 	)
 }
 
-func splitBubbleTeaHeights(totalHeight, width int) (int, int) {
-	availableInner := totalHeight - bubbleTeaStatusHeight - (2 * bubbleTeaPanelBorderHeight)
-	if availableInner < 2 {
-		return 1, 1
-	}
-
-	mainInner := 6
-	if width < compactBubbleTeaWidth {
-		mainInner = 5
-	}
-	if availableInner <= mainInner {
-		mainInner = maxInt(1, availableInner/2)
-	}
-	eventsInner := maxInt(1, availableInner-mainInner)
-	return mainInner, eventsInner
-}
-
 func normalizeBubbleTeaDimensions(width, height int) (int, int) {
 	if width <= 0 {
 		width = defaultBubbleTeaWidth
@@ -486,13 +401,6 @@ func truncateBubbleTeaLine(value string, limit int) string {
 		return value[:limit]
 	}
 	return value[:limit-3] + "..."
-}
-
-func padBubbleTeaLine(value string, limit int) string {
-	if len(value) >= limit {
-		return value
-	}
-	return value + strings.Repeat(" ", limit-len(value))
 }
 
 func maxInt(values ...int) int {
@@ -619,6 +527,42 @@ func (r bubbleTeaRenderer) renderFooter(width int, paused bool, focus panelFocus
 
 	return r.footerStyle.Width(max(1, width)).Render(
 		truncateBubbleTeaLine(shortcuts, max(1, width-2)))
+}
+
+// renderRecentEvents renderiza o painel de eventos recentes com altura dinamica.
+// A borda usa activePanelStyle quando focus=true e normalPanelStyle caso contrario.
+// Exibe os N eventos mais recentes em ordem reversa (mais recente primeiro).
+// Capacidade visual: height - 2 (bordas) - 1 (label) linhas de eventos.
+// Estado vazio: "Nenhum evento registrado".
+func (r bubbleTeaRenderer) renderRecentEvents(width, height int, events []RecentEvent, focus bool, tier layoutTier) string {
+	innerHeight := max(1, height-2)
+	capacity := max(0, innerHeight-1) // reserva 1 linha para o label
+
+	style := r.normalPanelStyle
+	if focus {
+		style = r.activePanelStyle
+	}
+
+	lines := []string{r.sectionLabelStyle.Render("Eventos recentes")}
+
+	if len(events) == 0 {
+		lines = append(lines, "Nenhum evento registrado")
+		return r.renderStyledPanel(width, innerHeight, lines, style)
+	}
+
+	// Janela deslizante: exibe apenas os N ultimos eventos
+	start := 0
+	if capacity > 0 && len(events) > capacity {
+		start = len(events) - capacity
+	}
+	window := events[start:]
+
+	// Ordem reversa: mais recente primeiro
+	for i := len(window) - 1; i >= 0; i-- {
+		lines = append(lines, formatRecentEvent(window[i], width))
+	}
+
+	return r.renderStyledPanel(width, innerHeight, lines, style)
 }
 
 // renderProgressBar renderiza a barra de progresso horizontal com caracteres Unicode.

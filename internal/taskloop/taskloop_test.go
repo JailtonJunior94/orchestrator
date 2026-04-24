@@ -1420,6 +1420,81 @@ func TestExecuteMaxIterationsCountsOnlyExecutor(t *testing.T) {
 	}
 }
 
+// TestExecuteMaxIterationsZeroUnlimited verifica que MaxIterations=0 executa todas as tasks
+// elegiveis sem parar por limite de iteracoes.
+func TestExecuteMaxIterationsZeroUnlimited(t *testing.T) {
+	const base = "/fake/project"
+	const prd = base + "/tasks/prd-test"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-3.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/tasks.md"] = []byte(
+		"| 1.0 | Task One | pending | — | Nao |\n" +
+			"| 2.0 | Task Two | pending | — | Nao |\n" +
+			"| 3.0 | Task Three | pending | — | Nao |\n",
+	)
+
+	callCount := 0
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		return &callbackInvoker{
+			binary: "claude",
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				callCount++
+				switch callCount {
+				case 1:
+					fsys.Files[prd+"/tasks.md"] = []byte(
+						"| 1.0 | Task One | done | — | Nao |\n" +
+							"| 2.0 | Task Two | pending | — | Nao |\n" +
+							"| 3.0 | Task Three | pending | — | Nao |\n",
+					)
+				case 2:
+					fsys.Files[prd+"/tasks.md"] = []byte(
+						"| 1.0 | Task One | done | — | Nao |\n" +
+							"| 2.0 | Task Two | done | — | Nao |\n" +
+							"| 3.0 | Task Three | pending | — | Nao |\n",
+					)
+				default:
+					fsys.Files[prd+"/tasks.md"] = []byte(
+						"| 1.0 | Task One | done | — | Nao |\n" +
+							"| 2.0 | Task Two | done | — | Nao |\n" +
+							"| 3.0 | Task Three | done | — | Nao |\n",
+					)
+				}
+				return "done", "", 0, nil
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "claude",
+		MaxIterations: 0, // ilimitado
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	if callCount != 3 {
+		t.Errorf("executor chamado %d vezes, esperado 3 (uma por task)", callCount)
+	}
+
+	content, _ := fsys.ReadFile(prd + "/report.md")
+	report := string(content)
+	if strings.Contains(report, "limite de iteracoes") {
+		t.Errorf("relatorio nao deveria conter 'limite de iteracoes' com MaxIterations=0:\n%s", report)
+	}
+}
+
 // TestExecuteAdvancedModeReportContainsProfiles verifica que o relatorio em modo avancado
 // contem os perfis do executor e reviewer no cabecalho.
 func TestExecuteAdvancedModeReportContainsProfiles(t *testing.T) {

@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 )
 
 // AgentInvoker abstrai a invocacao de um agente de IA via CLI.
@@ -55,33 +57,110 @@ func CheckAgentBinary(invoker AgentInvoker) error {
 }
 
 // BuildPrompt constroi o prompt para o agente executar uma task especifica.
-// Inclui instrucao explicita de leitura de AGENTS.md porque --bare pula o
-// carregamento automatico de CLAUDE.md (RF-04, contrato de carga base).
-func BuildPrompt(taskFilePath, prdFolder string) string {
-	return fmt.Sprintf(`You are executing the "execute-task" skill.
+// Resolve referencias dinamicamente a partir da stack do projeto e do conteudo
+// de prd.md e techspec.md (RF-04, contrato de carga base).
+func BuildPrompt(taskFilePath, prdFolder, workDir string, fsys fs.FileSystem) string {
+	refs := resolveReferences(prdFolder, workDir, fsys)
+	return fmt.Sprintf(`Use a skill execute-task para implementar a task %s.
 
-First, read AGENTS.md at the repository root to load governance rules and conventions.
+Contexto obrigatorio:
+- Leia o arquivo de task antes de iniciar qualquer alteracao
+- Arquitetura: descreva a camada e os contratos relevantes apos ler o arquivo de task
+- Referencias a carregar: %s
 
-Then read and follow the instructions in: .agents/skills/execute-task/SKILL.md
+Criterios de execucao nao negociaveis:
+- preservar contratos publicos existentes (nenhuma assinatura publica muda sem ADR)
+- nenhuma interface nova sem fronteira real justificada
+- context.Context em todas as operacoes de IO
+- testes table-driven para todos os cenarios do criterio de pronto
+- registrar evidencia de conclusao no arquivo de task (output do teste, lint)
+- nao fechar a task sem evidencia de validacao e verificar se continua o mesmo comportamento
 
-Target task file: %s
-PRD folder: %s
+PRD folder: %s`, taskFilePath, strings.Join(refs, ", "), prdFolder)
+}
 
-Execute ONLY this task. Follow all skill steps:
-1. Validate eligibility
-2. Load context (prd.md, techspec.md)
-3. Implement
-4. Validate (tests, lint)
-5. Review
-6. Update task status in task file and tasks.md
-7. Generate execution report
+// resolveReferences determina as referencias a carregar com base na stack do projeto
+// (go.mod, package.json, pyproject.toml) e no conteudo de prd.md + techspec.md.
+func resolveReferences(prdFolder, workDir string, fsys fs.FileSystem) []string {
+	var refs []string
 
-Do NOT modify any other task file.
-Do NOT modify any row in tasks.md except the current task row.
-Do NOT start the next task or mark any other row in tasks.md as in_progress.
-Leave follow-up tasks unchanged for a future isolated session.
+	// Stack detection: linguagem principal determina a skill de implementacao
+	switch {
+	case fsys.Exists(filepath.Join(workDir, "go.mod")):
+		refs = append(refs, "go-implementation")
+	case fsys.Exists(filepath.Join(workDir, "package.json")):
+		refs = append(refs, "node-implementation")
+	case fsys.Exists(filepath.Join(workDir, "pyproject.toml")),
+		fsys.Exists(filepath.Join(workDir, "requirements.txt")):
+		refs = append(refs, "python-implementation")
+	}
 
-Update **Status:** in %s and the corresponding row in %s/tasks.md to reflect the final state.`, taskFilePath, prdFolder, taskFilePath, prdFolder)
+	// Carregar conteudo de prd.md e techspec.md para deteccao semantica
+	content := readProjectContext(prdFolder, fsys)
+
+	// DDD: padroes de dominio mencionados
+	if containsAny(content, "aggregate", "entity", "value object", "bounded context",
+		"domain event", "repository pattern", "ubiquitous language", "ddd") {
+		refs = append(refs, "ddd")
+	}
+
+	// tests e sempre necessario (criterio de pronto exige testes table-driven)
+	refs = append(refs, "tests")
+
+	// Observabilidade: traces, metrics, logs, OpenTelemetry
+	if containsAny(content, "telemetry", "opentelemetry", "otel", "tracing", "metrics",
+		"prometheus", "grafana", "observabilidade", "instrumentacao") {
+		refs = append(refs, "observability")
+	}
+
+	// Seguranca: autenticacao, autorizacao, criptografia
+	if containsAny(content, "security", "authentication", "authorization", "jwt",
+		"oauth", "rbac", "encryption", "seguranca", "autenticacao", "autorizacao") {
+		refs = append(refs, "security")
+	}
+
+	// Persistencia: banco de dados, migrations, queries
+	if containsAny(content, "database", "sql", "migration", "persistence", "repository",
+		"postgres", "mysql", "sqlite", "mongodb", "banco de dados", "persistencia") {
+		refs = append(refs, "persistence")
+	}
+
+	// Concorrencia: goroutines, channels, workers
+	if containsAny(content, "goroutine", "channel", "mutex", "concurrent", "worker pool",
+		"concorrencia", "paralelismo", "async") {
+		refs = append(refs, "concurrency")
+	}
+
+	// API: endpoints HTTP, gRPC, REST
+	if containsAny(content, "http", "rest", "grpc", "endpoint", "handler", "middleware",
+		"api gateway", "rota", "router") {
+		refs = append(refs, "api")
+	}
+
+	return refs
+}
+
+// readProjectContext le prd.md e techspec.md e retorna o conteudo combinado em lowercase.
+func readProjectContext(prdFolder string, fsys fs.FileSystem) string {
+	var sb strings.Builder
+	for _, name := range []string{"prd.md", "techspec.md"} {
+		if data, err := fsys.ReadFile(filepath.Join(prdFolder, name)); err == nil {
+			sb.Write(data)
+			sb.WriteByte('\n')
+		}
+	}
+	return strings.ToLower(sb.String())
+}
+
+// containsAny retorna true se content contiver ao menos um dos termos (case-insensitive).
+// Espera content ja em lowercase para evitar conversao repetida.
+func containsAny(content string, terms ...string) bool {
+	for _, term := range terms {
+		if strings.Contains(content, strings.ToLower(term)) {
+			return true
+		}
+	}
+	return false
 }
 
 // LiveOutputSetter permite configurar um writer para streaming de output do agente.

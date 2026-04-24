@@ -156,7 +156,7 @@ func init() {
 	// Flags existentes (preservadas)
 	taskLoopCmd.Flags().String("tool", "", "Agente de IA: claude, codex, gemini, copilot (modo simples)")
 	taskLoopCmd.Flags().Bool("dry-run", false, "Mostra o que seria executado sem invocar o agente")
-	taskLoopCmd.Flags().Int("max-iterations", 20, "Limite maximo de iteracoes do loop")
+	taskLoopCmd.Flags().Int("max-iterations", 0, "Limite maximo de iteracoes do loop (0 = ilimitado)")
 	taskLoopCmd.Flags().Duration("timeout", 30*time.Minute, "Timeout por task")
 	taskLoopCmd.Flags().String("report-path", "", "Caminho do relatorio final (default: task-loop-report-<timestamp>.md)")
 	addTaskLoopUIFlags(taskLoopCmd)

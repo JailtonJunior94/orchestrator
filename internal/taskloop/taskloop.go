@@ -337,15 +337,19 @@ func (s *Service) Execute(opts Options) error {
 	skipped := make(map[string]bool)
 	iteration := 0
 
-	directPrinter.Info("task-loop iniciado: folder=%s tool=%s max=%d timeout=%s ui=%s",
-		opts.PRDFolder, opts.Tool, opts.MaxIterations, opts.Timeout, effectiveUIMode)
+	maxLabel := fmt.Sprintf("%d", opts.MaxIterations)
+	if opts.MaxIterations == 0 {
+		maxLabel = "ilimitado"
+	}
+	directPrinter.Info("task-loop iniciado: folder=%s tool=%s max=%s timeout=%s ui=%s",
+		opts.PRDFolder, opts.Tool, maxLabel, opts.Timeout, effectiveUIMode)
 
 	// Dry-run modo avancado: imprimir cabecalho com perfis, compatibilidade e preview (RF-09, RF-12)
 	if opts.DryRun && opts.Profiles != nil {
 		s.printDryRunAdvancedHeaderWithPrinter(directPrinter, opts, absFolder, workDir)
 	}
 
-	for iteration < opts.MaxIterations {
+	for opts.MaxIterations == 0 || iteration < opts.MaxIterations {
 		// Re-ler tasks.md a cada iteracao (agente pode ter atualizado)
 		tasksContent, err := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md"))
 		if err != nil {
@@ -412,7 +416,7 @@ func (s *Service) Execute(opts Options) error {
 			relPRD = absFolder
 		}
 
-		prompt := BuildPrompt(relTaskFile, relPRD)
+		prompt := BuildPrompt(relTaskFile, relPRD, workDir, s.fsys)
 		taskRef, err := NewTaskRef(task.ID, task.Title)
 		if err != nil {
 			return fmt.Errorf("criar referencia da task %s: %w", task.ID, err)
@@ -786,7 +790,7 @@ func (s *Service) Execute(opts Options) error {
 		}
 	}
 
-	if iteration >= opts.MaxIterations && report.StopReason == "" {
+	if opts.MaxIterations > 0 && iteration >= opts.MaxIterations && report.StopReason == "" {
 		report.StopReason = fmt.Sprintf("limite de iteracoes atingido (%d)", opts.MaxIterations)
 		// Ler estado final das tasks
 		if content, err := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md")); err == nil {

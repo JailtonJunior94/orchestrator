@@ -58,15 +58,12 @@ func resolveLayoutTier(width int) layoutTier {
 }
 
 // panelFocus identifica qual painel possui foco visual no momento.
-// Utilizado a partir da task 13.0 (atalhos de teclado e expansao do model).
-//
-//nolint:unused
 type panelFocus int
 
 const (
-	focusActiveTask    panelFocus = iota //nolint:unused
-	focusQueueSummary                    //nolint:unused
-	focusRecentEvents                    //nolint:unused
+	focusActiveTask    panelFocus = iota
+	focusQueueSummary
+	focusRecentEvents
 )
 
 // blockHeights armazena as alturas calculadas de cada bloco do layout de seis paineis.
