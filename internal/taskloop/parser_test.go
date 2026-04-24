@@ -489,3 +489,63 @@ func TestMatchesTaskPrefix(t *testing.T) {
 		})
 	}
 }
+
+// TestParseTasksFile_DuplicateIDsFromAuxTable garante que tabelas auxiliares
+// (ex: "Cobertura de Requisitos") com os mesmos IDs numericos nao sobrescrevam
+// as entradas da tabela principal de tasks. Sem deduplicacao, o statusMap ficava
+// corrompido e tasks elegiveis (pending com deps satisfeitas) nao eram encontradas.
+func TestParseTasksFile_DuplicateIDsFromAuxTable(t *testing.T) {
+	// Simula tasks.md com tabela principal + tabela de cobertura (mesmos IDs).
+	content := `## Tarefas
+
+| # | Titulo | Status | Dependencias | Paralelizavel |
+|---|--------|--------|-------------|---------------|
+| 8.0 | Estilos Lip Gloss | done | — | Nao |
+| 9.0 | Dashboard superior | done | 8.0 | Nao |
+| 10.0 | Painel task ativa | done | 8.0 | Nao |
+| 11.0 | Fila resumo rodape | pending | 8.0 | Nao |
+
+## Cobertura de Requisitos
+
+| # | Responsabilidade unica | Entregavel verificavel | RF cobertos |
+|---|------------------------|------------------------|-------------|
+| 8.0 | Definir estilos | ` + "`" + `presenter_styles.go` + "`" + ` com tema | RNF-10 |
+| 9.0 | Renderizar dashboard | ` + "`" + `renderDashboard()` + "`" + ` com testes | RF-13 |
+| 10.0 | Renderizar task ativa | ` + "`" + `renderActiveTask()` + "`" + ` completo | RF-02 |
+| 11.0 | Renderizar fila | ` + "`" + `renderQueueSummary()` + "`" + ` 6 contadores | RF-08 |
+`
+	entries, err := ParseTasksFile([]byte(content))
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+	if len(entries) != 4 {
+		t.Fatalf("esperava 4 entries (sem duplicatas), recebeu %d", len(entries))
+	}
+
+	byID := make(map[string]TaskEntry, len(entries))
+	for _, e := range entries {
+		byID[e.ID] = e
+	}
+
+	if byID["8.0"].Status != "done" {
+		t.Errorf("8.0 status = %q, want done (tabela auxiliar nao deve sobrescrever)", byID["8.0"].Status)
+	}
+	if byID["11.0"].Status != "pending" {
+		t.Errorf("11.0 status = %q, want pending", byID["11.0"].Status)
+	}
+	if len(byID["11.0"].Dependencies) != 1 || byID["11.0"].Dependencies[0] != "8.0" {
+		t.Errorf("11.0 deps = %v, want [8.0]", byID["11.0"].Dependencies)
+	}
+
+	// Apos deduplicacao, FindEligible deve encontrar 11.0 (deps de 8.0 satisfeitas).
+	eligible := FindEligible(entries, nil)
+	found := false
+	for _, e := range eligible {
+		if e.ID == "11.0" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("11.0 deveria ser elegivel apos deduplicacao, mas nao foi encontrada em %v", eligible)
+	}
+}

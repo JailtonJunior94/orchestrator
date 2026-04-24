@@ -23,9 +23,14 @@ var (
 )
 
 // ParseTasksFile extrai entradas da tabela markdown em tasks.md.
+// Apenas a primeira ocorrencia de cada ID e mantida: tabelas auxiliares
+// (ex: cobertura de requisitos) compartilham os mesmos IDs mas possuem
+// colunas distintas — duplicatas corrompem o statusMap e bloqueiam tasks
+// elegiveis.
 func ParseTasksFile(content []byte) ([]TaskEntry, error) {
 	lines := strings.Split(string(content), "\n")
 	var entries []TaskEntry
+	seen := make(map[string]bool)
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -40,6 +45,11 @@ func ParseTasksFile(content []byte) ([]TaskEntry, error) {
 		}
 
 		id := strings.TrimSpace(cols[1])
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+
 		title := strings.TrimSpace(cols[2])
 		status := normalizeStatus(strings.TrimSpace(cols[3]))
 		deps := parseDependencies(strings.TrimSpace(cols[4]))
