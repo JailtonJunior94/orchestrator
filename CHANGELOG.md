@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.2 (2026-04-24)
+
+### Bug Fixes
+- **skills:** add missing version and effects.md to bubbletea skill (524df10)
+
 ## 0.14.1 (2026-04-24)
 
 ### Bug Fixes
