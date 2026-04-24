@@ -108,6 +108,84 @@ func TestParseTasksFile_Fields(t *testing.T) {
 	}
 }
 
+func TestParseTasksFile_WithArquivoColumn(t *testing.T) {
+	content := `# Resumo das Tarefas
+
+## Tarefas
+
+| # | Título | Arquivo | Status | Dependências | Paralelizável |
+|---|--------|---------|--------|-------------|---------------|
+| 1.0 | Representar Travel Rule | task-1.0-shared.md | pending | — | Sim, com 2.0 |
+| 2.0 | Declarar contrato | task-2.0-contract.md | pending | — | Sim, com 1.0 |
+| 3.0 | Preservar filtros | task-3.0-service.md | pending | 2.0 | Não |
+| 4.0 | Registrar templates | task-4.0-tapi.md | done | — | Sim |
+| 5.0 | Implementar adapter | task-5.0-adapter.md | pending | 1.0, 2.0, 4.0 | Não |
+`
+	entries, err := ParseTasksFile([]byte(content))
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+	if len(entries) != 5 {
+		t.Fatalf("esperava 5 entries, recebeu %d", len(entries))
+	}
+
+	// Verificar que Status e Dependencies foram mapeados corretamente
+	if entries[0].Status != "pending" {
+		t.Errorf("task 1.0 Status = %q, want pending", entries[0].Status)
+	}
+	if len(entries[0].Dependencies) != 0 {
+		t.Errorf("task 1.0 Deps = %v, want empty", entries[0].Dependencies)
+	}
+	if entries[3].Status != "done" {
+		t.Errorf("task 4.0 Status = %q, want done", entries[3].Status)
+	}
+	if len(entries[4].Dependencies) != 3 {
+		t.Errorf("task 5.0 Deps = %v, want [1.0, 2.0, 4.0]", entries[4].Dependencies)
+	}
+
+	// FindEligible deve retornar 1.0 e 2.0 (sem deps) mas nao 5.0 (deps nao satisfeitas)
+	eligible := FindEligible(entries, nil)
+	ids := make(map[string]bool, len(eligible))
+	for _, e := range eligible {
+		ids[e.ID] = true
+	}
+	if !ids["1.0"] || !ids["2.0"] {
+		t.Errorf("1.0 e 2.0 deveriam ser elegiveis, recebeu %v", eligible)
+	}
+	if ids["5.0"] {
+		t.Error("5.0 nao deveria ser elegivel (deps nao satisfeitas)")
+	}
+}
+
+func TestParseTasksFile_WithoutArquivoColumn(t *testing.T) {
+	content := `# Resumo das Tarefas
+
+## Tarefas
+
+| # | Título | Status | Dependências | Paralelizável |
+|---|--------|--------|-------------|---------------|
+| 1.0 | Pacote de taxonomia | done | — | Com 2.0 |
+| 2.0 | Modelos de domínio | done | — | Com 1.0 |
+| 3.0 | Validação de domínio | pending | 1.0, 2.0 | Não |
+`
+	entries, err := ParseTasksFile([]byte(content))
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+	if len(entries) != 3 {
+		t.Fatalf("esperava 3 entries, recebeu %d", len(entries))
+	}
+	if entries[0].Status != "done" {
+		t.Errorf("task 1.0 Status = %q, want done", entries[0].Status)
+	}
+	if entries[2].Status != "pending" {
+		t.Errorf("task 3.0 Status = %q, want pending", entries[2].Status)
+	}
+	if len(entries[2].Dependencies) != 2 {
+		t.Errorf("task 3.0 Deps = %v, want [1.0, 2.0]", entries[2].Dependencies)
+	}
+}
+
 func TestReadTaskFileStatus(t *testing.T) {
 	tests := []struct {
 		name    string

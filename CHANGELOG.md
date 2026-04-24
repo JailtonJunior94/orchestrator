@@ -35,6 +35,7 @@
 ### Bug Fixes
 - **taskloop:** corrige sobrescrita incondicional de `postStatus` pelo `tasks.md` — o fallback para `tasks.md` agora so ocorre quando o task file nao atualizou o status (`postStatus == preStatus`), evitando que tarefas concluidas corretamente sejam marcadas como "status inalterado" e puladas
 - **taskloop/parser:** `ParseTasksFile` agora deduplica entradas por ID, mantendo apenas a primeira ocorrencia — tabelas auxiliares (ex: "Cobertura de Requisitos") com os mesmos IDs numericos corrompiam o `statusMap` e bloqueavam tasks elegiveis (`pending` com deps satisfeitas) impedindo o `task-loop` de encontrar trabalho executavel
+- **taskloop/parser:** `ParseTasksFile` detecta dinamicamente os indices das colunas Status e Dependencias a partir do header da tabela markdown — tabelas com coluna Arquivo entre Titulo e Status deslocavam os indices fixos, fazendo o parser ler o nome do arquivo como status e classificar todas as tasks como inelegiveis
 
 ### Refactor
 - **taskloop:** extrai `classifyIterationOutcome` — funcao pura sem parametro de ferramenta que centraliza a logica de decisao de resultado de iteracao (skip, abort, note, runReviewer), tornando-a isoladamente testavel

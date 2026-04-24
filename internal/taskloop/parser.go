@@ -27,10 +27,30 @@ var (
 // (ex: cobertura de requisitos) compartilham os mesmos IDs mas possuem
 // colunas distintas — duplicatas corrompem o statusMap e bloqueiam tasks
 // elegiveis.
+//
+// A funcao detecta dinamicamente os indices das colunas Status e
+// Dependencias a partir do header da tabela, suportando layouts com ou
+// sem a coluna Arquivo.
 func ParseTasksFile(content []byte) ([]TaskEntry, error) {
 	lines := strings.Split(string(content), "\n")
 	var entries []TaskEntry
 	seen := make(map[string]bool)
+
+	// Indices default (layout sem coluna Arquivo):
+	// vazio | ID | Title | Status | Deps | Paralelizavel | vazio
+	statusIdx, depsIdx := 3, 4
+
+	// Detectar header e mapear colunas dinamicamente.
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "|") {
+			continue
+		}
+		cols := strings.Split(line, "|")
+		if detectColumnIndices(cols, &statusIdx, &depsIdx) {
+			break
+		}
+	}
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -39,8 +59,7 @@ func ParseTasksFile(content []byte) ([]TaskEntry, error) {
 		}
 
 		cols := strings.Split(line, "|")
-		// Esperado: vazio, ID, Title, Status, Deps, Paralelizavel, vazio
-		if len(cols) < 5 {
+		if len(cols) <= depsIdx {
 			continue
 		}
 
@@ -51,8 +70,8 @@ func ParseTasksFile(content []byte) ([]TaskEntry, error) {
 		seen[id] = true
 
 		title := strings.TrimSpace(cols[2])
-		status := normalizeStatus(strings.TrimSpace(cols[3]))
-		deps := parseDependencies(strings.TrimSpace(cols[4]))
+		status := normalizeStatus(strings.TrimSpace(cols[statusIdx]))
+		deps := parseDependencies(strings.TrimSpace(cols[depsIdx]))
 
 		entries = append(entries, TaskEntry{
 			ID:           id,
@@ -220,6 +239,24 @@ func matchesTaskPrefix(filename, prefix, fullID string) bool {
 	}
 
 	return false
+}
+
+// detectColumnIndices analisa uma linha de header de tabela markdown e
+// atribui os indices das colunas Status e Dependencias. Retorna true se
+// a linha for um header reconhecido.
+func detectColumnIndices(cols []string, statusIdx, depsIdx *int) bool {
+	foundStatus := false
+	for i, col := range cols {
+		h := strings.ToLower(strings.TrimSpace(col))
+		switch h {
+		case "status":
+			*statusIdx = i
+			foundStatus = true
+		case "dependências", "dependencias", "dependência", "dependencia", "deps":
+			*depsIdx = i
+		}
+	}
+	return foundStatus
 }
 
 func parseDependencies(raw string) []string {
