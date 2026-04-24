@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.0 (2026-04-24)
+
+### Features
+- **taskloop:** add bugfix phase, unlimited iterations and context-enriched prompts (75601c6)
+
 ## 0.14.3 (2026-04-24)
 
 ### Bug Fixes
