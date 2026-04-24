@@ -530,6 +530,17 @@
             "required": false,
             "description": "Caminho para salvar o relatorio de execucao"
           },
+          "ui": {
+            "type": "string",
+            "required": false,
+            "description": "Modo de interface: auto, tui, plain"
+          },
+          "no-ui": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Alias ergonomico de --ui=plain"
+          },
           "executor-tool": {
             "type": "string",
             "required": false,

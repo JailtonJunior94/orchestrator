@@ -74,3 +74,30 @@ func TestRunCmdNoLiveOutDoesNotPanic(t *testing.T) {
 		t.Errorf("stdout deveria conter 'hello', obteve: %q", stdout)
 	}
 }
+
+func TestRunCmdMonitoredCallsStartHook(t *testing.T) {
+	dir := t.TempDir()
+
+	script := "#!/bin/sh\nprintf 'hello\n'\n"
+	path := filepath.Join(dir, "hello")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		t.Fatalf("nao foi possivel criar script: %v", err)
+	}
+
+	startCalls := 0
+	stdout, _, exitCode, err := runCmdMonitored(context.Background(), dir, nil, func() {
+		startCalls++
+	}, path)
+	if err != nil {
+		t.Fatalf("runCmdMonitored retornou erro: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("exit code inesperado: %d", exitCode)
+	}
+	if startCalls != 1 {
+		t.Fatalf("hook de start chamado %d vezes, want 1", startCalls)
+	}
+	if !strings.Contains(stdout, "hello") {
+		t.Errorf("stdout deveria conter 'hello', obteve: %q", stdout)
+	}
+}

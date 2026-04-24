@@ -2,12 +2,14 @@ package taskloop
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 // AgentInvoker abstrai a invocacao de um agente de IA via CLI.
@@ -89,6 +91,84 @@ type LiveOutputSetter interface {
 	SetLiveOutput(w io.Writer)
 }
 
+type processStartHookSetter interface {
+	SetProcessStartHook(fn func())
+}
+
+type invocationErrorRecorder struct {
+	mu  sync.Mutex
+	err error
+}
+
+func (r *invocationErrorRecorder) Record(err error) {
+	if err == nil {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.err == nil {
+		r.err = err
+	}
+}
+
+func (r *invocationErrorRecorder) Err() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.err
+}
+
+type lifecycleOutputWriter struct {
+	target   io.Writer
+	onOutput func(string)
+	mu       sync.Mutex
+}
+
+type synchronizedWriter struct {
+	target io.Writer
+	mu     sync.Mutex
+}
+
+func newSynchronizedWriter(target io.Writer) io.Writer {
+	if target == nil {
+		return nil
+	}
+	return &synchronizedWriter{target: target}
+}
+
+func (w *synchronizedWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.target.Write(p)
+}
+
+func newLifecycleOutputWriter(target io.Writer, onOutput func(string)) *lifecycleOutputWriter {
+	return &lifecycleOutputWriter{
+		target:   target,
+		onOutput: onOutput,
+	}
+}
+
+func (w *lifecycleOutputWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if len(strings.TrimSpace(string(p))) > 0 && w.onOutput != nil {
+		w.onOutput(observedOutputMessage(p))
+	}
+	if w.target == nil {
+		return len(p), nil
+	}
+	return w.target.Write(p)
+}
+
+func observedOutputMessage(chunk []byte) string {
+	normalized := strings.Join(strings.Fields(strings.TrimSpace(string(chunk))), " ")
+	if normalized == "" {
+		return "saida observada do agente"
+	}
+	return fmt.Sprintf("saida observada: %s", truncate(normalized, 120))
+}
+
 // isAuthError detecta erros de autenticacao conhecidos no output do agente.
 // Retorna true quando o output contem padroes que indicam falha de login/token.
 func isAuthError(output string) bool {
@@ -125,6 +205,60 @@ func authGuidance(tool string) string {
 	default:
 		return "verifique a autenticacao da ferramenta antes de executar task-loop"
 	}
+}
+
+func mapLoopFailure(tool ToolName, exitCode int, stdout, stderr string, invokeErr error, postStatus string) *LoopFailure {
+	combined := strings.TrimSpace(stdout + "\n" + stderr)
+	switch {
+	case isAuthError(combined):
+		return NewLoopFailure(
+			ErrorToolAuthRequired,
+			fmt.Sprintf("%s requer autenticacao: %s", tool, authGuidance(string(tool))),
+			invokeErr,
+		)
+	case errors.Is(invokeErr, exec.ErrNotFound), isMissingBinaryError(invokeErr):
+		return NewLoopFailure(
+			ErrorToolBinaryMissing,
+			fmt.Sprintf("binario de %s nao encontrado no PATH", tool),
+			invokeErr,
+		)
+	case errors.Is(invokeErr, context.DeadlineExceeded), errors.Is(invokeErr, context.Canceled), exitCode == -1:
+		return NewLoopFailure(
+			ErrorToolTimeout,
+			fmt.Sprintf("tempo limite da iteracao excedido para %s", tool),
+			invokeErr,
+		)
+	case invokeErr != nil:
+		return NewLoopFailure(
+			ErrorToolExecutionFailed,
+			fmt.Sprintf("falha ao executar %s", tool),
+			invokeErr,
+		)
+	case exitCode != 0:
+		return NewLoopFailure(
+			ErrorToolExecutionFailed,
+			fmt.Sprintf("%s encerrou com falha (exit=%d)", tool, exitCode),
+			nil,
+		)
+	case normalizeStatus(postStatus) != "done":
+		return NewLoopFailure(
+			ErrorToolExecutionFailed,
+			fmt.Sprintf("%s encerrou sem concluir a task", tool),
+			nil,
+		)
+	default:
+		return nil
+	}
+}
+
+func isMissingBinaryError(err error) bool {
+	if err == nil {
+		return false
+	}
+	lower := strings.ToLower(err.Error())
+	return strings.Contains(lower, "executable file not found") ||
+		strings.Contains(lower, "file not found") ||
+		strings.Contains(lower, "no such file or directory")
 }
 
 // warnClaudeAuth retorna aviso quando autenticacao do claude parece indisponivel.
@@ -169,6 +303,7 @@ func cleanEnv() []string {
 type claudeInvoker struct {
 	fallbackModel string
 	liveOut       io.Writer
+	startHook     func()
 }
 
 func (c *claudeInvoker) BinaryName() string {
@@ -179,6 +314,8 @@ func (c *claudeInvoker) BinaryName() string {
 }
 
 func (c *claudeInvoker) SetLiveOutput(w io.Writer) { c.liveOut = w }
+
+func (c *claudeInvoker) SetProcessStartHook(fn func()) { c.startHook = fn }
 
 func (c *claudeInvoker) Invoke(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 	bin := c.BinaryName()
@@ -196,18 +333,21 @@ func (c *claudeInvoker) Invoke(ctx context.Context, prompt, workDir, model strin
 	} else {
 		args = append(args, "--dangerously-skip-permissions", "--print", "--bare", "-p", prompt)
 	}
-	return runCmd(ctx, workDir, c.liveOut, bin, args...)
+	return runCmdMonitored(ctx, workDir, c.liveOut, c.startHook, bin, args...)
 }
 
 // --- Codex ---
 
 type codexInvoker struct {
-	liveOut io.Writer
+	liveOut   io.Writer
+	startHook func()
 }
 
 func (c *codexInvoker) BinaryName() string { return "codex" }
 
 func (c *codexInvoker) SetLiveOutput(w io.Writer) { c.liveOut = w }
+
+func (c *codexInvoker) SetProcessStartHook(fn func()) { c.startHook = fn }
 
 func (c *codexInvoker) Invoke(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 	args := make([]string, 0, 5)
@@ -216,18 +356,21 @@ func (c *codexInvoker) Invoke(ctx context.Context, prompt, workDir, model string
 		args = append(args, "--model", model)
 	}
 	args = append(args, "--yolo", prompt)
-	return runCmd(ctx, workDir, c.liveOut, "codex", args...)
+	return runCmdMonitored(ctx, workDir, c.liveOut, c.startHook, "codex", args...)
 }
 
 // --- Gemini ---
 
 type geminiInvoker struct {
-	liveOut io.Writer
+	liveOut   io.Writer
+	startHook func()
 }
 
 func (g *geminiInvoker) BinaryName() string { return "gemini" }
 
 func (g *geminiInvoker) SetLiveOutput(w io.Writer) { g.liveOut = w }
+
+func (g *geminiInvoker) SetProcessStartHook(fn func()) { g.startHook = fn }
 
 func (g *geminiInvoker) Invoke(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 	args := make([]string, 0, 5)
@@ -235,18 +378,21 @@ func (g *geminiInvoker) Invoke(ctx context.Context, prompt, workDir, model strin
 		args = append(args, "--model", model)
 	}
 	args = append(args, "--approval-mode=yolo", "-p", prompt)
-	return runCmd(ctx, workDir, g.liveOut, "gemini", args...)
+	return runCmdMonitored(ctx, workDir, g.liveOut, g.startHook, "gemini", args...)
 }
 
 // --- Copilot ---
 
 type copilotInvoker struct {
-	liveOut io.Writer
+	liveOut   io.Writer
+	startHook func()
 }
 
 func (c *copilotInvoker) BinaryName() string { return "copilot" }
 
 func (c *copilotInvoker) SetLiveOutput(w io.Writer) { c.liveOut = w }
+
+func (c *copilotInvoker) SetProcessStartHook(fn func()) { c.startHook = fn }
 
 func (c *copilotInvoker) Invoke(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 	args := make([]string, 0, 6)
@@ -254,5 +400,5 @@ func (c *copilotInvoker) Invoke(ctx context.Context, prompt, workDir, model stri
 		args = append(args, "--model", model)
 	}
 	args = append(args, "--autopilot", "--yolo", "-p", prompt)
-	return runCmd(ctx, workDir, c.liveOut, "copilot", args...)
+	return runCmdMonitored(ctx, workDir, c.liveOut, c.startHook, "copilot", args...)
 }

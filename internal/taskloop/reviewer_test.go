@@ -151,110 +151,151 @@ func TestReviewErrTemplateInvalidoSentinel(t *testing.T) {
 	}
 }
 
-// TestReviewCaptureGitDiff cobre o cenario sem git (dir nao-git) e o cenario com repo git real.
+// TestReviewCaptureGitDiff cobre o cenario sem git e o escopo seguro derivado da iteracao atual.
 func TestReviewCaptureGitDiff(t *testing.T) {
 	t.Run("dir sem git retorna fallback", func(t *testing.T) {
 		dir := t.TempDir()
-		got := captureGitDiff(context.Background(), dir)
-		if got != "(diff indisponivel)" {
+		got := captureGitDiff(context.Background(), dir, []string{"main.go"})
+		if got != gitDiffUnavailable {
 			t.Errorf("esperado fallback, got %q", got)
 		}
 	})
 
-	t.Run("repo git com dois commits retorna diff ou fallback sem panic", func(t *testing.T) {
-		// Verificar se git esta disponivel
+	t.Run("repo git retorna apenas alteracoes novas da iteracao atual", func(t *testing.T) {
 		if _, err := exec.LookPath("git"); err != nil {
 			t.Skip("git nao disponivel no PATH")
 		}
 
 		dir := t.TempDir()
+		initGitRepo(t, dir)
 
-		// Inicializar repo e criar dois commits com arquivo real para gerar diff
-		setupCmds := [][]string{
-			{"git", "init"},
-			{"git", "config", "user.email", "test@test.com"},
-			{"git", "config", "user.name", "Tester"},
-			{"git", "config", "commit.gpgsign", "false"},
-		}
-		for _, args := range setupCmds {
-			cmd := exec.Command(args[0], args[1:]...)
-			cmd.Dir = dir
-			if out, err := cmd.CombinedOutput(); err != nil {
-				t.Skipf("falha ao configurar repo git: %v — %s", err, out)
-			}
+		unrelated := filepath.Join(dir, "unrelated.go")
+		if err := os.WriteFile(unrelated, []byte("package main\n\n// preexistente\n"), 0o644); err != nil {
+			t.Fatalf("nao foi possivel criar arquivo preexistente: %v", err)
 		}
 
-		// Primeiro commit: criar arquivo
-		file := filepath.Join(dir, "main.go")
-		if err := os.WriteFile(file, []byte("package main\n"), 0o644); err != nil {
-			t.Fatalf("nao foi possivel criar arquivo: %v", err)
-		}
-		addCmd := exec.Command("git", "add", ".")
-		addCmd.Dir = dir
-		if out, err := addCmd.CombinedOutput(); err != nil {
-			t.Skipf("git add falhou: %v — %s", err, out)
-		}
-		commitCmd := exec.Command("git", "commit", "-m", "initial")
-		commitCmd.Dir = dir
-		if out, err := commitCmd.CombinedOutput(); err != nil {
-			t.Skipf("primeiro commit falhou: %v — %s", err, out)
+		before, err := captureGitStatusSnapshot(context.Background(), dir)
+		if err != nil {
+			t.Fatalf("captureGitStatusSnapshot() retornou erro inesperado: %v", err)
 		}
 
-		// Segundo commit: modificar arquivo
-		if err := os.WriteFile(file, []byte("package main\n\n// changed\n"), 0o644); err != nil {
-			t.Fatalf("nao foi possivel modificar arquivo: %v", err)
-		}
-		addCmd2 := exec.Command("git", "add", ".")
-		addCmd2.Dir = dir
-		if out, err := addCmd2.CombinedOutput(); err != nil {
-			t.Skipf("git add (2) falhou: %v — %s", err, out)
-		}
-		commitCmd2 := exec.Command("git", "commit", "-m", "second")
-		commitCmd2.Dir = dir
-		if out, err := commitCmd2.CombinedOutput(); err != nil {
-			t.Skipf("segundo commit falhou: %v — %s", err, out)
+		safe := filepath.Join(dir, "safe.go")
+		if err := os.WriteFile(safe, []byte("package main\n\n// iteracao atual\n"), 0o644); err != nil {
+			t.Fatalf("nao foi possivel criar arquivo seguro: %v", err)
 		}
 
-		got := captureGitDiff(context.Background(), dir)
-		// Com dois commits e arquivo alterado, diff deve conter conteudo real
-		if got == "(diff indisponivel)" {
-			t.Errorf("esperado diff real mas obteve fallback")
+		after, err := captureGitStatusSnapshot(context.Background(), dir)
+		if err != nil {
+			t.Fatalf("captureGitStatusSnapshot() retornou erro inesperado: %v", err)
 		}
-		if !strings.Contains(got, "main.go") {
-			t.Errorf("diff nao contem main.go:\n%s", got)
+
+		paths := changedGitPathsSince(before, after)
+		if len(paths) != 1 || paths[0] != "safe.go" {
+			t.Fatalf("changedGitPathsSince() = %v, esperado [safe.go]", paths)
+		}
+
+		got := captureGitDiff(context.Background(), dir, paths)
+		if !strings.Contains(got, "safe.go") {
+			t.Fatalf("diff nao contem safe.go:\n%s", got)
+		}
+		if strings.Contains(got, "unrelated.go") {
+			t.Fatalf("diff nao deveria expor unrelated.go:\n%s", got)
 		}
 	})
 
-	t.Run("repo git com apenas um commit retorna fallback", func(t *testing.T) {
+	t.Run("arquivo ja sujo entra no diff quando recebe alteracao nova", func(t *testing.T) {
 		if _, err := exec.LookPath("git"); err != nil {
 			t.Skip("git nao disponivel no PATH")
 		}
 
 		dir := t.TempDir()
-		setupCmds := [][]string{
-			{"git", "init"},
-			{"git", "config", "user.email", "test@test.com"},
-			{"git", "config", "user.name", "Tester"},
-			{"git", "config", "commit.gpgsign", "false"},
-		}
-		for _, args := range setupCmds {
-			cmd := exec.Command(args[0], args[1:]...)
-			cmd.Dir = dir
-			if out, err := cmd.CombinedOutput(); err != nil {
-				t.Skipf("falha ao configurar repo git: %v — %s", err, out)
-			}
+		initGitRepo(t, dir)
+
+		mainFile := filepath.Join(dir, "main.go")
+		if err := os.WriteFile(mainFile, []byte("package main\n\n// alteracao preexistente\n"), 0o644); err != nil {
+			t.Fatalf("nao foi possivel criar alteracao preexistente: %v", err)
 		}
 
-		// Apenas um commit — HEAD~1 nao existe
-		commitCmd := exec.Command("git", "commit", "--allow-empty", "-m", "initial")
-		commitCmd.Dir = dir
-		if out, err := commitCmd.CombinedOutput(); err != nil {
-			t.Skipf("commit falhou: %v — %s", err, out)
+		before, err := captureGitStatusSnapshot(context.Background(), dir)
+		if err != nil {
+			t.Fatalf("captureGitStatusSnapshot() retornou erro inesperado: %v", err)
 		}
 
-		got := captureGitDiff(context.Background(), dir)
-		if got != "(diff indisponivel)" {
-			t.Errorf("esperado fallback com apenas um commit, got %q", got)
+		if err := os.WriteFile(mainFile, []byte("package main\n\n// alteracao preexistente\n// alteracao da iteracao atual\n"), 0o644); err != nil {
+			t.Fatalf("nao foi possivel aplicar alteracao da iteracao: %v", err)
+		}
+
+		after, err := captureGitStatusSnapshot(context.Background(), dir)
+		if err != nil {
+			t.Fatalf("captureGitStatusSnapshot() retornou erro inesperado: %v", err)
+		}
+
+		paths := changedGitPathsSince(before, after)
+		if len(paths) != 1 || paths[0] != "main.go" {
+			t.Fatalf("changedGitPathsSince() = %v, esperado [main.go]", paths)
+		}
+
+		got := captureGitDiff(context.Background(), dir, paths)
+		if !strings.Contains(got, "alteracao da iteracao atual") {
+			t.Fatalf("diff deveria refletir alteracao nova em arquivo ja sujo:\n%s", got)
 		}
 	})
+
+	t.Run("sem alteracao segura nova retorna fallback seguro", func(t *testing.T) {
+		if _, err := exec.LookPath("git"); err != nil {
+			t.Skip("git nao disponivel no PATH")
+		}
+
+		dir := t.TempDir()
+		initGitRepo(t, dir)
+
+		before, err := captureGitStatusSnapshot(context.Background(), dir)
+		if err != nil {
+			t.Fatalf("captureGitStatusSnapshot() retornou erro inesperado: %v", err)
+		}
+		after, err := captureGitStatusSnapshot(context.Background(), dir)
+		if err != nil {
+			t.Fatalf("captureGitStatusSnapshot() retornou erro inesperado: %v", err)
+		}
+
+		got := captureGitDiff(context.Background(), dir, changedGitPathsSince(before, after))
+		if got != gitDiffUnavailableSafe {
+			t.Errorf("esperado fallback seguro, got %q", got)
+		}
+	})
+}
+
+func initGitRepo(t *testing.T, dir string) {
+	t.Helper()
+
+	setupCmds := [][]string{
+		{"git", "init"},
+		{"git", "config", "user.email", "test@test.com"},
+		{"git", "config", "user.name", "Tester"},
+		{"git", "config", "commit.gpgsign", "false"},
+	}
+	for _, args := range setupCmds {
+		cmd := exec.Command(args[0], args[1:]...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Skipf("falha ao configurar repo git: %v — %s", err, out)
+		}
+	}
+
+	mainFile := filepath.Join(dir, "main.go")
+	if err := os.WriteFile(mainFile, []byte("package main\n"), 0o644); err != nil {
+		t.Fatalf("nao foi possivel criar arquivo inicial: %v", err)
+	}
+
+	addCmd := exec.Command("git", "add", ".")
+	addCmd.Dir = dir
+	if out, err := addCmd.CombinedOutput(); err != nil {
+		t.Skipf("git add falhou: %v — %s", err, out)
+	}
+
+	commitCmd := exec.Command("git", "commit", "-m", "initial")
+	commitCmd.Dir = dir
+	if out, err := commitCmd.CombinedOutput(); err != nil {
+		t.Skipf("commit inicial falhou: %v — %s", err, out)
+	}
 }

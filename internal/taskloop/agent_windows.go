@@ -11,6 +11,17 @@ import (
 )
 
 func runCmd(ctx context.Context, workDir string, liveOut io.Writer, name string, args ...string) (string, string, int, error) {
+	return runCmdMonitored(ctx, workDir, liveOut, nil, name, args...)
+}
+
+func runCmdMonitored(
+	ctx context.Context,
+	workDir string,
+	liveOut io.Writer,
+	onStart func(),
+	name string,
+	args ...string,
+) (string, string, int, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = workDir
 	cmd.Env = cleanEnv()
@@ -25,6 +36,7 @@ func runCmd(ctx context.Context, workDir string, liveOut io.Writer, name string,
 
 	var stdoutBuf, stderrBuf bytes.Buffer
 	if liveOut != nil {
+		liveOut = newSynchronizedWriter(liveOut)
 		cmd.Stdout = io.MultiWriter(&stdoutBuf, liveOut)
 		cmd.Stderr = io.MultiWriter(&stderrBuf, liveOut)
 	} else {
@@ -32,7 +44,14 @@ func runCmd(ctx context.Context, workDir string, liveOut io.Writer, name string,
 		cmd.Stderr = &stderrBuf
 	}
 
-	err := cmd.Run()
+	if err := cmd.Start(); err != nil {
+		return stdoutBuf.String(), stderrBuf.String(), -1, err
+	}
+	if onStart != nil {
+		onStart()
+	}
+
+	err := cmd.Wait()
 	exitCode := 0
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
