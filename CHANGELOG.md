@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.0 (2026-04-25)
+
+### Features
+- **specdrift:** add sync-spec-hash command and fix taskloop pipeline blockers (b0f005f)
+
 ## 0.15.1 (2026-04-24)
 
 ### Bug Fixes
