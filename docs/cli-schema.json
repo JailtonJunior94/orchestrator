@@ -495,6 +495,15 @@
         "flags": {}
       },
       {
+        "name": "sync-spec-hash",
+        "description": "Sincroniza os hashes de spec em tasks.md com os arquivos atuais de prd.md e techspec.md",
+        "longDescription": "Recalcula os SHA-256 de prd.md e techspec.md e atualiza ou insere os comentarios spec-hash em tasks.md.",
+        "args": [
+          { "name": "tasks.md", "required": true, "description": "Caminho para o arquivo tasks.md" }
+        ],
+        "flags": {}
+      },
+      {
         "name": "task-loop",
         "description": "Executa tasks de um PRD folder sequencialmente via agente de IA",
         "longDescription": "Executa em loop todas as tasks elegiveis de uma pasta PRD, invocando o agente de IA configurado.",

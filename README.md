@@ -482,7 +482,33 @@ ai-spec task-loop \
   tasks/prd-payments-list
 ```
 
-> Consulte o [Guia do task-loop](docs/task-loop-reference.md) para flags detalhadas, modo avancado com executor e reviewer independentes, heuristicas e alternativas sem o loop automatico.
+#### Flags disponiveis
+
+**Modo Simples (Agente Unico)**
+- `--tool`: agente unico (claude, codex, gemini, copilot)
+- `--dry-run`: valida ordem e elegibilidade sem executar
+- `--max-iterations`: limite de tasks por execucao (0 = sem limite)
+- `--timeout`: tempo limite por task
+- `--report-path`: caminho para o relatorio final em markdown
+
+**Modo Avancado (Executor + Reviewer)**
+- `--executor-tool`: ferramenta para implementacao (ex: codex)
+- `--reviewer-tool`: ferramenta para revisao (ex: claude). Ativa fase de bugfix automatica se o reviewer falhar
+- `--executor-model` / `--reviewer-model`: modelos especificos para cada papel
+- `--reviewer-prompt-template`: path de template `.tmpl` customizado para o prompt de revisao
+- `--executor-fallback-model` / `--reviewer-fallback-model`: modelos de fallback (suporte nativo Claude only)
+- `--allow-unknown-model`: aceita combinacoes ferramenta+modelo fora do catalogo interno
+
+#### Melhores praticas para o task-loop
+
+1. **Validacao previa:** garanta que as tasks em `tasks.md` estejam pequenas, ordenadas e com dependencias claras antes de iniciar o loop.
+2. **Ciclo de confianca:** comece sempre com `--dry-run`, seguido de um lote pequeno (`--max-iterations 2`). Aumente o lote apenas quando a qualidade estiver satisfatoria.
+3. **Relatorios:** sempre use `--report-path` em features criticas para manter a rastreabilidade e facilitar o debug de falhas.
+4. **Refinamento de spec:** se a task envolver riscos arquiteturais ou alta complexidade (ex: concorrencia), refine a `techspec.md` exaustivamente. O loop e mais eficiente quando a especificacao e inequivoca.
+5. **Review automatico:** em tarefas sensiveis, utilize o Modo Avancado com um `reviewer-tool` diferente do `executor-tool` para aumentar a taxa de sucesso e detectar regressoes precocemente.
+6. **Isolamento:** o `task-loop` garante isolamento total entre tarefas (novo processo por task). Nao tente carregar estado entre iteracoes; cada task deve ser auto-contida.
+
+> Consulte o [Guia do task-loop](docs/task-loop-reference.md) para detalhes sobre heuristicas, alternativas e comparativos entre execucao manual e automatica.
 
 ### 9. Validar o estado final
 
@@ -525,6 +551,8 @@ Apos a instalacao, o repositorio alvo contem os seguintes artefatos que os agent
 | `validate` | Valida frontmatter YAML de `SKILL.md` |
 | `validate-bugs` | Valida um array JSON de bugs contra o schema canonico |
 | `prerequisites` | Verifica se uma skill pode ser executada em um projeto |
+| `check-spec-drift` | Verifica cobertura de IDs `RF-nn`/`REQ-nn` do PRD em `tasks.md` e detecta divergencia de hash entre `prd.md`/`techspec.md` e os hashes registrados |
+| `sync-spec-hash` | Recalcula SHA-256 de `prd.md` e `techspec.md` e atualiza os comentarios `spec-hash` em `tasks.md`; usar apos editar o PRD para evitar bloqueio do `task-loop` |
 | `task-loop` | Executa todas as tasks elegiveis de um PRD folder via agente de IA |
 | `wrapper` | Emite instrucoes de invocacao para Codex, Gemini e Copilot |
 | `scaffold` | Cria a estrutura inicial de uma nova skill de linguagem |
@@ -573,6 +601,12 @@ ai-spec wrapper codex create-tasks .
 
 # criar scaffold para uma nova linguagem
 ai-spec scaffold rust --root .
+
+# verificar cobertura de requisitos e drift de spec
+ai-spec check-spec-drift tasks/prd-payments-list/tasks.md
+
+# sincronizar hashes apos editar prd.md ou techspec.md
+ai-spec sync-spec-hash tasks/prd-payments-list/tasks.md
 
 # executar todas as tasks elegiveis de um PRD folder
 ai-spec task-loop --tool codex tasks/prd-payments-list

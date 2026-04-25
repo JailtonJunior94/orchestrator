@@ -41,6 +41,8 @@
 - **taskloop:** corrige sobrescrita incondicional de `postStatus` pelo `tasks.md` — o fallback para `tasks.md` agora so ocorre quando o task file nao atualizou o status (`postStatus == preStatus`), evitando que tarefas concluidas corretamente sejam marcadas como "status inalterado" e puladas
 - **taskloop/parser:** `ParseTasksFile` agora deduplica entradas por ID, mantendo apenas a primeira ocorrencia — tabelas auxiliares (ex: "Cobertura de Requisitos") com os mesmos IDs numericos corrompiam o `statusMap` e bloqueavam tasks elegiveis (`pending` com deps satisfeitas) impedindo o `task-loop` de encontrar trabalho executavel
 - **taskloop/parser:** `ParseTasksFile` detecta dinamicamente os indices das colunas Status e Dependencias a partir do header da tabela markdown — tabelas com coluna Arquivo entre Titulo e Status deslocavam os indices fixos, fazendo o parser ler o nome do arquivo como status e classificar todas as tasks como inelegiveis
+- **taskloop/isolation:** `extractTaskRows` ignora silenciosamente linhas com menos de 5 colunas em vez de retornar erro — tabelas auxiliares como "Cobertura de Requisitos" que compartilham IDs numericos bloqueavam o snapshot de isolamento antes de cada iteracao do task-loop
+- **taskloop/agent:** `detectReferences` nao identifica mais projetos Go como Python — o padrao `"pip"` foi substituido por `"pip install"`, `"pip3"` e outros sufixos especificos para evitar falso positivo com a palavra `"pipeline"`
 
 ### Refactor
 - **taskloop:** extrai `classifyIterationOutcome` — funcao pura sem parametro de ferramenta que centraliza a logica de decisao de resultado de iteracao (skip, abort, note, runReviewer), tornando-a isoladamente testavel
@@ -54,6 +56,8 @@
 - **taskloop:** adiciona matriz de paridade semantica (10 cenarios x 4 ferramentas = 40 sub-testes), testes de isolamento de sessao entre tasks, testes de determinismo de prompt, testes de integracao com mock binaries e testes de reproducao do bug de status
 
 ### Features
+- **specdrift:** novo comando `sync-spec-hash <tasks.md>` que recalcula os SHA-256 de `prd.md` e `techspec.md` e atualiza ou insere os comentarios `<!-- spec-hash-{label}: ... -->` em `tasks.md`; idempotente — nao reescreve o arquivo quando os hashes ja estao corretos
+- **templates:** `prd-template.md` passa a incluir secao `## Requisitos Funcionais` com formato `RF-nn` obrigatorio; `tasks-template.md` passa a incluir comentarios `spec-hash` e secao `## Cobertura de Requisitos` — ambos atualizados nos quatro locais de copia (`.agents/`, `.claude/`, `.github/`, `internal/embedded/`)
 - **taskloop:** retoma tasks com status efetivo `in_progress` antes de abrir novas pendentes, reconciliando `tasks.md` com o status real do arquivo individual da task
 - **taskloop:** adiciona guardrails de isolamento para executor e reviewer; o loop aborta e restaura snapshot quando o agente altera outras rows de `tasks.md`, outros arquivos de task ou arquivos protegidos do PRD
 - **taskloop:** suporta `MaxIterations == 0` como modo de iteracoes ilimitadas; o log de inicio exibe "ilimitado" no lugar do numero e o loop continua ate nao haver tasks pendentes

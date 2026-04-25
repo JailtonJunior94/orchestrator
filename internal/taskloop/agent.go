@@ -145,7 +145,7 @@ func detectReferences(content string) string {
 	if containsAnyPattern(lower, ".ts", ".tsx", "node", "npm", "typescript") {
 		refs = append(refs, "node-implementation")
 	}
-	if containsAnyPattern(lower, ".py", "python", "pip", "django", "flask") {
+	if containsAnyPattern(lower, ".py", "python", "pip install", "pip3", "django", "flask", "pyproject.toml", "requirements.txt") {
 		refs = append(refs, "python-implementation")
 	}
 

@@ -578,6 +578,12 @@ func TestDetectReferences(t *testing.T) {
 			want:    []string{"tests"},
 			notWant: []string{"go-implementation", "node-implementation", "python-implementation"},
 		},
+		{
+			name:    "pipeline em projeto Go nao detecta Python",
+			content: "Implementar pipeline de CI em Go com go.mod. O produto nao deve atender meta de tempo de pipeline nesta versao.",
+			want:    []string{"go-implementation", "tests"},
+			notWant: []string{"python-implementation"},
+		},
 	}
 
 	for _, tt := range tests {

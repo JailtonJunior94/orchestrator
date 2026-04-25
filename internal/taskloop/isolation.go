@@ -339,7 +339,8 @@ func extractTaskRows(content []byte) (map[string]string, error) {
 
 		cols := strings.Split(trimmed, "|")
 		if len(cols) < 5 {
-			return nil, fmt.Errorf("row invalida: %q", trimmed)
+			// tabelas auxiliares (ex: cobertura de requisitos) tem menos colunas — ignorar
+			continue
 		}
 
 		id := strings.TrimSpace(cols[1])

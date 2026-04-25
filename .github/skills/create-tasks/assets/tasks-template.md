@@ -1,3 +1,6 @@
+<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->
+<!-- spec-hash-techspec: 0000000000000000000000000000000000000000000000000000000000000000 -->
+
 # Resumo das Tarefas de Implementação para [Funcionalidade]
 
 ## Metadados
@@ -19,6 +22,13 @@
 
 ## Riscos de Integração
 - [Pontos de integração que podem causar retrabalho]
+
+## Cobertura de Requisitos
+
+| Tarefa | Requisitos cobertos |
+|--------|-------------------|
+| 1.0 | RF-01, RF-02, ... |
+| 2.0 | RF-03, RF-04, ... |
 
 ## Grafo de Dependencias
 

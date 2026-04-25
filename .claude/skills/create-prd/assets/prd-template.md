@@ -28,8 +28,17 @@
 
 - O que faz
 - Por que é importante
-- Como funciona em alto nível
-- Requisitos funcionais (numerados para clareza)]
+- Como funciona em alto nível]
+
+## Requisitos Funcionais
+
+[Liste todos os requisitos funcionais usando o formato `RF-nn`. Estes IDs são usados
+pelo `check-spec-drift` para verificar cobertura nas tarefas de implementação.
+Exemplo:
+
+- RF-01: descrição do primeiro requisito
+- RF-02: descrição do segundo requisito
+- RF-03: descrição do terceiro requisito]
 
 ## Experiência do Usuário _(omitir para features apenas backend)_
 
