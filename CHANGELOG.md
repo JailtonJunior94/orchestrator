@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.17.0 (2026-05-05)
+
+### Features
+- **taskloop:** adiciona Service.RunLoop com selector, acceptance, evidence, final reviewer, bugfix loop e reservation planner (5467f6b)
+
 ## [Unreleased]
 
 ### Features
