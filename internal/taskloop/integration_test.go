@@ -37,10 +37,14 @@ package taskloop
 //    do mock e identico, mas o real claudiney tem semantica propria de wrapper.
 
 import (
+	"bytes"
+	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -58,7 +62,7 @@ const successMockScript = `#!/usr/bin/env python3
 import sys, re, os
 
 text = ' '.join(sys.argv[1:])
-m = re.search(r'Target task file: (\S+)', text)
+m = re.search(r'implementar a task (\S+\.md)', text)
 if m:
     path = m.group(1)
     if os.path.exists(path):
@@ -363,9 +367,9 @@ func TestParidadeIntegration(t *testing.T) {
 // Nota: este cenario usa timeout curto (2s) para nao atrasar o suite de testes.
 func TestParidadeIntegrationTimeout(t *testing.T) {
 	tools := []struct {
-		tool    string
-		binary  string
-		label   string
+		tool   string
+		binary string
+		label  string
 	}{
 		{"claude", "claude", "claude"},
 		{"codex", "codex", "codex"},
@@ -414,5 +418,187 @@ func TestParidadeIntegrationTimeout(t *testing.T) {
 			}
 
 		})
+	}
+}
+
+// captureStderr redireciona os.Stderr durante f e retorna tudo que foi escrito.
+// Usado para validar emissao de eventos de telemetria por emitTelemetry.
+func captureStderr(t *testing.T, f func()) string {
+	t.Helper()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	original := os.Stderr
+	os.Stderr = w
+
+	var buf bytes.Buffer
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, _ = io.Copy(&buf, r)
+	}()
+
+	f()
+
+	_ = w.Close()
+	os.Stderr = original
+	wg.Wait()
+	_ = r.Close()
+	return buf.String()
+}
+
+// TestRunLoopIntegrationCaminhoFeliz — RunLoop end-to-end com FakeFileSystem,
+// stubs deterministicos e telemetria opt-in. Cobre RNF-01 (contrato),
+// RNF-02 (rastreabilidade via LoopReport) e RNF-03 (telemetria opt-in).
+func TestRunLoopIntegrationCaminhoFeliz(t *testing.T) {
+	t.Setenv("GOVERNANCE_TELEMETRY", "1")
+
+	fsys, prd := setupRunLoopFS([]string{"1.0", "2.0"})
+	svc := NewService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
+
+	deps := RunLoopDeps{
+		Selector: &stubSelector{queue: []TaskEntry{
+			{ID: "1.0", Title: "T 1.0", Status: "pending"},
+			{ID: "2.0", Title: "T 2.0", Status: "pending"},
+		}},
+		Executor:      &stubExecutor{},
+		Gate:          &stubGate{},
+		Recorder:      &stubRecorder{},
+		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved}}},
+	}
+
+	var report *LoopReport
+	var execErr error
+	stderr := captureStderr(t, func() {
+		report, execErr = svc.RunLoop(context.Background(), Options{
+			PRDFolder:  prd,
+			ReportPath: prd + "/loop-report.json",
+			Timeout:    5 * time.Second,
+		}, deps)
+	})
+
+	if execErr != nil {
+		t.Fatalf("RunLoop: %v", execErr)
+	}
+	if len(report.TasksCompleted) != 2 {
+		t.Fatalf("TasksCompleted=%d, want 2", len(report.TasksCompleted))
+	}
+	if report.FinalReview == nil || report.FinalReview.Verdict != VerdictApproved {
+		t.Fatalf("verdict=%+v, want Approved", report.FinalReview)
+	}
+
+	wantedEvents := []string{
+		"event=task_completed value=1.0",
+		"event=task_completed value=2.0",
+		"event=final_review_verdict value=APPROVED",
+	}
+	for _, ev := range wantedEvents {
+		if !strings.Contains(stderr, ev) {
+			t.Errorf("telemetria ausente: %q\nstderr:\n%s", ev, stderr)
+		}
+	}
+}
+
+// TestRunLoopIntegrationEscalonamento — bugfix exausto apos MaxBugfixIterations
+// emite escalated=bugfix_exhausted e LoopReport.Escalated=true.
+func TestRunLoopIntegrationEscalonamento(t *testing.T) {
+	t.Setenv("GOVERNANCE_TELEMETRY", "1")
+
+	fsys, prd := setupRunLoopFS([]string{"1.0"})
+	svc := NewService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
+
+	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
+	reviewer := &stubReviewer{results: []FinalReviewResult{
+		{Verdict: VerdictRejected, Findings: critical},
+		{Verdict: VerdictRejected, Findings: critical},
+		{Verdict: VerdictRejected, Findings: critical},
+		{Verdict: VerdictRejected, Findings: critical},
+	}}
+
+	deps := RunLoopDeps{
+		Selector:      &stubSelector{queue: []TaskEntry{{ID: "1.0", Title: "T 1.0"}}},
+		Executor:      &stubExecutor{},
+		Gate:          &stubGate{},
+		Recorder:      &stubRecorder{},
+		FinalReviewer: reviewer,
+		BugfixInvoker: &runloopBugfixInvoker{},
+		DiffCapturer:  &runloopDiffCapturer{},
+	}
+
+	var report *LoopReport
+	var execErr error
+	stderr := captureStderr(t, func() {
+		report, execErr = svc.RunLoop(context.Background(), Options{
+			PRDFolder:           prd,
+			MaxBugfixIterations: 3,
+			ReportPath:          prd + "/loop-report.json",
+		}, deps)
+	})
+
+	if !errors.Is(execErr, ErrBugfixExhausted) {
+		t.Fatalf("err=%v, want ErrBugfixExhausted", execErr)
+	}
+	if !report.Escalated || report.BugfixCycles != 3 {
+		t.Fatalf("Escalated=%v BugfixCycles=%d", report.Escalated, report.BugfixCycles)
+	}
+	if !strings.Contains(stderr, "event=escalated value=bugfix_exhausted") {
+		t.Errorf("telemetria de escalonamento ausente:\n%s", stderr)
+	}
+}
+
+// TestRunLoopIntegrationApprovedWithRemarksNonInteractive — em modo nao-interativo,
+// findings sob APPROVED_WITH_REMARKS recebem decisao automatica (DefaultAction)
+// sem precisar de prompter humano.
+func TestRunLoopIntegrationApprovedWithRemarksNonInteractive(t *testing.T) {
+	fsys, prd := setupRunLoopFS([]string{"1.0"})
+	svc := NewService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
+
+	findings := []Finding{
+		{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "x"},
+		{Severity: SeveritySuggestion, File: "b.go", Line: 2, Message: "y"},
+	}
+
+	deps := RunLoopDeps{
+		Selector:      &stubSelector{queue: []TaskEntry{{ID: "1.0", Title: "T 1.0"}}},
+		Executor:      &stubExecutor{},
+		Gate:          &stubGate{},
+		Recorder:      &stubRecorder{},
+		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApprovedWithRemarks, Findings: findings}}},
+	}
+
+	report, err := svc.RunLoop(context.Background(), Options{
+		PRDFolder:      prd,
+		NonInteractive: true,
+		ReportPath:     prd + "/loop-report.json",
+	}, deps)
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+	if report.ActionPlan == nil {
+		t.Fatalf("ActionPlan ausente em modo nao-interativo")
+	}
+	if got := len(report.ActionPlan.Decisions); got != len(findings) {
+		t.Fatalf("decisoes=%d, want %d", got, len(findings))
+	}
+	for _, d := range report.ActionPlan.Decisions {
+		if d.Action == "" {
+			t.Errorf("decisao sem acao em modo nao-interativo: %+v", d)
+		}
+	}
+	taskContent, err := fsys.ReadFile(prd + "/task-1.0-t.md")
+	if err != nil {
+		t.Fatalf("task file: %v", err)
+	}
+	if !strings.Contains(string(taskContent), "## Plano de Ação") {
+		t.Fatalf("plano de acao nao persistido no arquivo da task:\n%s", taskContent)
+	}
+	tasksContent, err := fsys.ReadFile(prd + "/tasks.md")
+	if err != nil {
+		t.Fatalf("tasks.md: %v", err)
+	}
+	if !strings.Contains(string(tasksContent), "Follow-up:") {
+		t.Fatalf("follow-up nao anexado ao tasks.md:\n%s", tasksContent)
 	}
 }

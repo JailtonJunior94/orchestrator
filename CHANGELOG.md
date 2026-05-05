@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Features
+- **taskloop:** orquestrador `Service.RunLoop` com `TaskSelector`, `AcceptanceGate`, `EvidenceRecorder`, `FinalReviewer`, `BugfixLoop` e `ReservationPlanner` (RF-01 a RF-08).
+- **taskloop:** RF-08(a) — decisão `ActionImplement` em `APPROVED_WITH_REMARKS` reentra o `BugfixLoop` com limite rígido de 3 iterações e escalonamento humano.
+- **taskloop:** telemetria `implement_promoted` por finding promovido a `Critical` via decisão `Implement`.
+
+### Bug Fixes
+- **taskloop/reviewer:** `parseVerdict` ancorado em linha dedicada (`Verdict:`/`Veredito:`) para evitar falso positivo de `BLOCKED`/`REJECTED` por palavras-chave em texto livre.
+- **taskloop/reviewer:** `partitionDiff` subdivide seção única oversize em hunks `@@` repetindo o cabeçalho do arquivo; truncamento explícito quando hunk único excede `maxDiffPartitionSize`.
+- **taskloop/runloop:** ramo `bfErr` não-exhausted agora emite `final_review_verdict` preservando paridade com `VerdictRejected`.
+
 ## 0.16.0 (2026-04-25)
 
 ### Features

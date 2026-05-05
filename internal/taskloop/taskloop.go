@@ -28,6 +28,8 @@ type Options struct {
 	ReviewerPromptTemplate string // path do template de prompt de revisao customizado
 	ExecutorFallbackModel  string // --fallback-model nativo do executor (Claude only, camada 1)
 	ReviewerFallbackModel  string // --fallback-model nativo do reviewer (Claude only, camada 1)
+	MaxBugfixIterations    int    // limite rigido de iteracoes do BugfixLoop (RF-06, ADR-003); 0 => default 3
+	NonInteractive         bool   // ReservationPlanner: assume Document como default sem prompts (RF-08, ADR-003)
 }
 
 // Service orquestra a execucao sequencial de tasks de um PRD folder.
