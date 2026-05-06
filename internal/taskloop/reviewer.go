@@ -137,6 +137,7 @@ func buildConsolidatedReviewPrompt(diff string) string {
 Then read and follow the instructions in: .agents/skills/review/SKILL.md
 
 Use a skill review para revisar o diff consolidado abaixo. Esta e uma revisao final sobre todas as tasks implementadas.
+Se a secao "Contexto da revisao consolidada" listar caminhos de arquivos, leia esses arquivos antes de concluir o veredito.
 
 Focos obrigatorios:
 - corretude: a implementacao atende todos os RFs e criterios de aceite?
@@ -148,7 +149,7 @@ Focos obrigatorios:
 Saidas esperadas:
 - lista de achados por categoria: [Critical], [Important], [Suggestion]
 - para cada achado: [arquivo:linha] descricao e correcao sugerida
-- veredicto final em linha propria: APPROVED / APPROVED_WITH_REMARKS / REJECTED
+- veredicto final em linha propria: APPROVED / APPROVED_WITH_REMARKS / REJECTED / BLOCKED
 
 Do NOT modify any files. Review in read-only mode and report findings only via stdout.
 

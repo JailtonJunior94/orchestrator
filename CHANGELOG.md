@@ -11,11 +11,15 @@
 - **taskloop:** orquestrador `Service.RunLoop` com `TaskSelector`, `AcceptanceGate`, `EvidenceRecorder`, `FinalReviewer`, `BugfixLoop` e `ReservationPlanner` (RF-01 a RF-08).
 - **taskloop:** RF-08(a) — decisão `ActionImplement` em `APPROVED_WITH_REMARKS` reentra o `BugfixLoop` com limite rígido de 3 iterações e escalonamento humano.
 - **taskloop:** telemetria `implement_promoted` por finding promovido a `Critical` via decisão `Implement`.
+- **taskloop:** `buildFinalReviewInput` injeta contexto estruturado (PRD, TechSpec, Tasks, task executada, lote concluído) no payload do reviewer consolidado — reviewer passa a ter acesso aos artefatos de especificação sem precisar inferir caminhos.
+- **taskloop/bugfix:** `splitReviewContext` / `attachReviewContext` preservam o cabeçalho de contexto entre iterações do `BugfixLoop`: o contexto segue para o reviewer mas não polui o prompt do `BugfixInvoker`.
 
 ### Bug Fixes
 - **taskloop/reviewer:** `parseVerdict` ancorado em linha dedicada (`Verdict:`/`Veredito:`) para evitar falso positivo de `BLOCKED`/`REJECTED` por palavras-chave em texto livre.
 - **taskloop/reviewer:** `partitionDiff` subdivide seção única oversize em hunks `@@` repetindo o cabeçalho do arquivo; truncamento explícito quando hunk único excede `maxDiffPartitionSize`.
 - **taskloop/runloop:** ramo `bfErr` não-exhausted agora emite `final_review_verdict` preservando paridade com `VerdictRejected`.
+- **taskloop/reviewer:** prompt do reviewer consolidado inclui `BLOCKED` como veredito válido — impedia que o agente retornasse veredito de bloqueio em contextos sem condições de aprovar.
+- **taskloop/bugfix:** `BugfixLoop.Run` passava o `reviewInput` completo (com cabeçalho de contexto) ao `BugfixInvoker`; agora extrai e entrega apenas o diff puro, evitando contaminação do prompt de correção.
 
 ## 0.16.0 (2026-04-25)
 

@@ -82,13 +82,13 @@ func (b *BugfixLoop) Run(ctx context.Context, initialFindings []Finding, initial
 		return report, nil
 	}
 
-	diff := initialDiff
+	reviewContext, pureDiff := splitReviewContext(initialDiff)
 	for i := 1; i <= b.maxIters; i++ {
 		if err := ctx.Err(); err != nil {
 			return report, fmt.Errorf("taskloop: bugfix iteracao %d cancelada: %w", i, err)
 		}
 
-		out, err := b.invoker.InvokeBugfix(ctx, critical, diff)
+		out, err := b.invoker.InvokeBugfix(ctx, critical, pureDiff)
 		if err != nil {
 			return report, fmt.Errorf("taskloop: bugfix iteracao %d: %w", i, err)
 		}
@@ -97,8 +97,9 @@ func (b *BugfixLoop) Run(ctx context.Context, initialFindings []Finding, initial
 		if err != nil {
 			return report, fmt.Errorf("taskloop: capturar diff apos bugfix %d: %w", i, err)
 		}
+		reviewerInput := attachReviewContext(reviewContext, newDiff)
 
-		rev, err := b.reviewer.ReviewConsolidated(ctx, newDiff)
+		rev, err := b.reviewer.ReviewConsolidated(ctx, reviewerInput)
 		if err != nil {
 			return report, fmt.Errorf("taskloop: review apos bugfix %d: %w", i, err)
 		}
@@ -119,7 +120,7 @@ func (b *BugfixLoop) Run(ctx context.Context, initialFindings []Finding, initial
 		}
 
 		critical = nextCritical
-		diff = newDiff
+		pureDiff = newDiff
 	}
 
 	last := report.Iterations[len(report.Iterations)-1]
@@ -130,6 +131,27 @@ func (b *BugfixLoop) Run(ctx context.Context, initialFindings []Finding, initial
 	}
 	report.Escalated = true
 	return report, ErrBugfixExhausted
+}
+
+// splitReviewContext separa o cabecalho de contexto (entregue ao reviewer) do
+// diff puro (entregue ao BugfixInvoker). Se o input nao tiver o separador,
+// reviewContext vem vazio e o input inteiro e tratado como diff puro.
+func splitReviewContext(input string) (reviewContext, diff string) {
+	header, rest, ok := strings.Cut(input, reviewContextSeparator)
+	if !ok {
+		return "", input
+	}
+	return header, rest
+}
+
+func attachReviewContext(reviewContext, diff string) string {
+	if reviewContext == "" {
+		return diff
+	}
+	if strings.HasPrefix(diff, "Contexto da revisao consolidada:\n") {
+		return diff
+	}
+	return reviewContext + reviewContextSeparator + diff
 }
 
 func filterCritical(findings []Finding) []Finding {

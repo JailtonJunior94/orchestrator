@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -68,10 +66,12 @@ type stubReviewer struct {
 	results []FinalReviewResult
 	err     error
 	calls   int
+	diffs   []string
 }
 
 func (r *stubReviewer) ReviewConsolidated(ctx context.Context, diff string) (FinalReviewResult, error) {
 	r.calls++
+	r.diffs = append(r.diffs, diff)
 	if r.err != nil {
 		return FinalReviewResult{}, r.err
 	}
@@ -87,10 +87,12 @@ func (r *stubReviewer) ReviewConsolidated(ctx context.Context, diff string) (Fin
 
 type runloopBugfixInvoker struct {
 	calls int
+	diffs []string
 }
 
 func (b *runloopBugfixInvoker) InvokeBugfix(ctx context.Context, findings []Finding, diff string) (string, error) {
 	b.calls++
+	b.diffs = append(b.diffs, diff)
 	return "applied bugfix", nil
 }
 
@@ -180,6 +182,21 @@ func TestRunLoopApprovedDirect(t *testing.T) {
 	rev := deps.FinalReviewer.(*stubReviewer)
 	if rev.calls != 1 {
 		t.Errorf("FinalReviewer chamado %d vezes, want 1", rev.calls)
+	}
+	if len(rev.diffs) != 1 {
+		t.Fatalf("payloads da review = %d, want 1", len(rev.diffs))
+	}
+	for _, want := range []string{
+		"Contexto da revisao consolidada:",
+		prd + "/prd.md",
+		prd + "/techspec.md",
+		prd + "/tasks.md",
+		prd + "/task-2.0-t.md",
+		"Tasks executadas neste lote: 1.0, 2.0",
+	} {
+		if !strings.Contains(rev.diffs[0], want) {
+			t.Fatalf("payload da review nao contem %q:\n%s", want, rev.diffs[0])
+		}
 	}
 	if report.FinalReview == nil || report.FinalReview.Verdict != VerdictApproved {
 		t.Errorf("verdict final inesperado: %+v", report.FinalReview)
@@ -571,6 +588,70 @@ func TestRunLoopApprovedWithRemarksImplementThenRemarksNeedsNewPlan(t *testing.T
 	}
 }
 
+// TestRunLoopRemarksImplementRecursionPreservesContext — regressao: na recursao
+// de applyImplementDecisions disparada por APPROVED_WITH_REMARKS+Implement, o
+// diff recapturado deve ser reembrulhado por buildFinalReviewInput, mantendo
+// PRD/TechSpec/Tasks no payload entregue ao reviewer em todas as iteracoes.
+// Adicionalmente, o BugfixInvoker deve receber apenas o diff puro.
+func TestRunLoopRemarksImplementRecursionPreservesContext(t *testing.T) {
+	fsys, prd := setupRunLoopFS([]string{"1.0"})
+	svc := NewService(fsys, newTestPrinter())
+
+	first := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "ajuste 1"}}
+	second := []Finding{{Severity: SeverityImportant, File: "b.go", Line: 2, Message: "ajuste 2"}}
+	reviewer := &stubReviewer{results: []FinalReviewResult{
+		{Verdict: VerdictApprovedWithRemarks, Findings: first},
+		{Verdict: VerdictApprovedWithRemarks, Findings: second},
+		{Verdict: VerdictApproved},
+	}}
+	invoker := &runloopBugfixInvoker{}
+	deps := RunLoopDeps{
+		Selector:      &stubSelector{queue: []TaskEntry{{ID: "1.0", Title: "T 1.0"}}},
+		Executor:      &stubExecutor{},
+		Gate:          &stubGate{},
+		Recorder:      &stubRecorder{},
+		FinalReviewer: reviewer,
+		BugfixInvoker: invoker,
+		DiffCapturer:  &runloopDiffCapturer{},
+		Prompter: &sequenceRunloopPrompter{responses: []runloopPromptResponse{
+			{action: ActionImplement},
+			{action: ActionImplement},
+		}},
+	}
+
+	report, err := svc.RunLoop(context.Background(), Options{PRDFolder: prd, MaxBugfixIterations: 3}, deps)
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+	if report.FinalReview == nil || report.FinalReview.Verdict != VerdictApproved {
+		t.Fatalf("FinalReview=%+v, want APPROVED", report.FinalReview)
+	}
+
+	// Reviewer foi chamado 3x: inicial + 2 iteracoes Implement; todas devem
+	// preservar o cabecalho de contexto consolidado.
+	if len(reviewer.diffs) != 3 {
+		t.Fatalf("reviewer.diffs len = %d, want 3", len(reviewer.diffs))
+	}
+	for i, got := range reviewer.diffs {
+		if !strings.HasPrefix(got, "Contexto da revisao consolidada:") {
+			t.Fatalf("reviewer chamada %d perdeu o contexto:\n%s", i+1, got)
+		}
+		if !strings.Contains(got, prd+"/prd.md") {
+			t.Fatalf("reviewer chamada %d sem PRD path:\n%s", i+1, got)
+		}
+	}
+
+	// Invoker deve receber diff puro em todas as chamadas (Bug 2).
+	if len(invoker.diffs) == 0 {
+		t.Fatalf("invoker nao foi chamado")
+	}
+	for i, got := range invoker.diffs {
+		if strings.Contains(got, "Contexto da revisao consolidada:") {
+			t.Fatalf("invoker chamada %d recebeu cabecalho de contexto indevido:\n%s", i+1, got)
+		}
+	}
+}
+
 func TestRunLoopApprovedWithRemarksImplementThenBlocked(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
 	svc := NewService(fsys, newTestPrinter())
@@ -608,27 +689,6 @@ type errorBugfixInvoker struct{ calls int }
 func (b *errorBugfixInvoker) InvokeBugfix(ctx context.Context, findings []Finding, diff string) (string, error) {
 	b.calls++
 	return "", errors.New("invoker explodiu")
-}
-
-// captureStderr redireciona os.Stderr durante a execucao de fn e devolve o
-// conteudo escrito.
-func captureStderr(t *testing.T, fn func()) string {
-	t.Helper()
-	old := os.Stderr
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("os.Pipe: %v", err)
-	}
-	os.Stderr = w
-	done := make(chan string, 1)
-	go func() {
-		b, _ := io.ReadAll(r)
-		done <- string(b)
-	}()
-	fn()
-	w.Close()
-	os.Stderr = old
-	return <-done
 }
 
 // TestRunLoopImplementEmitsTelemetry — regressao Suggestion 1 e 4 da review:

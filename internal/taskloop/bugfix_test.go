@@ -12,6 +12,7 @@ type stubBugfixInvoker struct {
 	outputs []string
 	calls   int
 	err     error
+	diffs   []string
 }
 
 func (s *stubBugfixInvoker) InvokeBugfix(ctx context.Context, findings []Finding, diff string) (string, error) {
@@ -20,6 +21,7 @@ func (s *stubBugfixInvoker) InvokeBugfix(ctx context.Context, findings []Finding
 	}
 	idx := s.calls
 	s.calls++
+	s.diffs = append(s.diffs, diff)
 	if idx >= len(s.outputs) {
 		return "", nil
 	}
@@ -31,6 +33,7 @@ type stubFinalReviewer struct {
 	results []FinalReviewResult
 	calls   int
 	err     error
+	diffs   []string
 }
 
 func (s *stubFinalReviewer) ReviewConsolidated(ctx context.Context, diff string) (FinalReviewResult, error) {
@@ -39,6 +42,7 @@ func (s *stubFinalReviewer) ReviewConsolidated(ctx context.Context, diff string)
 	}
 	idx := s.calls
 	s.calls++
+	s.diffs = append(s.diffs, diff)
 	if idx >= len(s.results) {
 		return FinalReviewResult{Verdict: VerdictApproved}, nil
 	}
@@ -188,6 +192,87 @@ func TestBugfixLoop_DefaultMaxIterations(t *testing.T) {
 	loop = NewBugfixLoop(nil, nil, nil, -5)
 	if loop.maxIters != DefaultMaxBugfixIterations {
 		t.Fatalf("maxIters default (negativo) esperado %d, obtido %d", DefaultMaxBugfixIterations, loop.maxIters)
+	}
+}
+
+func TestBugfixLoop_PreserveReviewContextAcrossIterations(t *testing.T) {
+	criticals := []Finding{criticalFinding("[Critical] x")}
+	reviewer := &stubFinalReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved}}}
+	invoker := &stubBugfixInvoker{outputs: []string{"causa raiz: ajuste no prompt"}}
+	loop := NewBugfixLoop(
+		invoker,
+		reviewer,
+		&stubDiffCapturer{diffs: []string{"diff-after-bugfix"}},
+		1,
+	)
+
+	rawDiff := "diff --git a/a.go b/a.go\n"
+	initial := "Contexto da revisao consolidada:\n- PRD: /tmp/prd.md\n- TechSpec: /tmp/techspec.md\n" + reviewContextSeparator + rawDiff
+	_, err := loop.Run(context.Background(), criticals, initial)
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+
+	// Bug 1 (regressao): reviewer recebe payload com contexto + diff atualizado.
+	if len(reviewer.diffs) != 1 {
+		t.Fatalf("reviewer recebeu %d diffs, want 1", len(reviewer.diffs))
+	}
+	got := reviewer.diffs[0]
+	for _, want := range []string{
+		"Contexto da revisao consolidada:",
+		"- PRD: /tmp/prd.md",
+		"- TechSpec: /tmp/techspec.md",
+		reviewContextSeparator + "diff-after-bugfix",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("payload do reviewer nao contem %q:\n%s", want, got)
+		}
+	}
+
+	// Bug 2 (regressao): BugfixInvoker recebe diff puro, sem o cabecalho de contexto.
+	if len(invoker.diffs) != 1 {
+		t.Fatalf("invoker recebeu %d diffs, want 1", len(invoker.diffs))
+	}
+	if invoker.diffs[0] != rawDiff {
+		t.Fatalf("invoker deveria receber diff puro %q, recebeu %q", rawDiff, invoker.diffs[0])
+	}
+	if strings.Contains(invoker.diffs[0], "Contexto da revisao consolidada:") {
+		t.Fatalf("invoker recebeu cabecalho de contexto indevido:\n%s", invoker.diffs[0])
+	}
+}
+
+// TestBugfixLoop_InvokerReceivesPureDiffAcrossIterations trava Bug 2 em iteracoes
+// subsequentes: o BugfixInvoker deve continuar recebendo apenas o diff bruto
+// retornado pelo DiffCapturer, sem o cabecalho de contexto consolidado.
+func TestBugfixLoop_InvokerReceivesPureDiffAcrossIterations(t *testing.T) {
+	criticals := []Finding{criticalFinding("[Critical] x")}
+	reviewer := &stubFinalReviewer{results: []FinalReviewResult{
+		{Verdict: VerdictRejected, Findings: []Finding{criticalFinding("[Critical] x")}},
+		{Verdict: VerdictApproved},
+	}}
+	invoker := &stubBugfixInvoker{outputs: []string{"causa raiz: a", "causa raiz: b"}}
+	capturer := &stubDiffCapturer{diffs: []string{"diff-iter-1", "diff-iter-2"}}
+	loop := NewBugfixLoop(invoker, reviewer, capturer, 2)
+
+	initial := "Contexto da revisao consolidada:\n- PRD: /tmp/prd.md\n" + reviewContextSeparator + "diff-inicial"
+	_, err := loop.Run(context.Background(), criticals, initial)
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+
+	wantInvokerDiffs := []string{"diff-inicial", "diff-iter-1"}
+	if len(invoker.diffs) != len(wantInvokerDiffs) {
+		t.Fatalf("invoker.diffs len = %d, want %d", len(invoker.diffs), len(wantInvokerDiffs))
+	}
+	for i, want := range wantInvokerDiffs {
+		if invoker.diffs[i] != want {
+			t.Fatalf("iteracao %d: invoker recebeu %q, want %q", i+1, invoker.diffs[i], want)
+		}
+	}
+	for i, got := range reviewer.diffs {
+		if !strings.HasPrefix(got, "Contexto da revisao consolidada:") {
+			t.Fatalf("reviewer iteracao %d perdeu o contexto:\n%s", i+1, got)
+		}
 	}
 }
 

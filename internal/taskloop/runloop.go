@@ -139,7 +139,8 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 	}
 
 	diff := captureGitDiff(ctx, workDir)
-	rev, err := deps.FinalReviewer.ReviewConsolidated(ctx, diff)
+	reviewInput := buildFinalReviewInput(absFolder, lastTaskFile, report.TasksCompleted, diff)
+	rev, err := deps.FinalReviewer.ReviewConsolidated(ctx, reviewInput)
 	if err != nil {
 		return s.finalizeReport(report, opts, "erro na revisao final"),
 			fmt.Errorf("taskloop: revisao final: %w", err)
@@ -158,7 +159,7 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 		}
 		report.ActionPlan = &plan
 		emitTelemetry("final_review_verdict", string(rev.Verdict))
-		if stop, err := s.applyImplementDecisions(ctx, absFolder, lastTaskFile, plan, diff, opts, deps, report); stop {
+		if stop, err := s.applyImplementDecisions(ctx, absFolder, lastTaskFile, plan, reviewInput, opts, deps, report); stop {
 			return s.finalizeReport(report, opts, stopReasonForImplement(err, report)), err
 		}
 
@@ -173,7 +174,7 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 				fmt.Errorf("taskloop: review reprovou mas BugfixInvoker/DiffCapturer ausentes")
 		}
 		bf := NewBugfixLoop(deps.BugfixInvoker, deps.FinalReviewer, deps.DiffCapturer, opts.MaxBugfixIterations)
-		bfReport, bfErr := bf.Run(ctx, rev.Findings, diff)
+		bfReport, bfErr := bf.Run(ctx, rev.Findings, reviewInput)
 		report.BugfixCycles = len(bfReport.Iterations)
 		report.Escalated = bfReport.Escalated
 		if bfReport.FinalReview != nil {
@@ -204,10 +205,10 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 				}
 				report.ActionPlan = &plan
 				emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
-				latestDiff := diff
+				latestDiff := buildFinalReviewInput(absFolder, lastTaskFile, report.TasksCompleted, diff)
 				if dc := deps.DiffCapturer; dc != nil {
 					if d, derr := dc.CaptureDiff(ctx); derr == nil {
-						latestDiff = d
+						latestDiff = buildFinalReviewInput(absFolder, lastTaskFile, report.TasksCompleted, d)
 					}
 				}
 				if stop, err := s.applyImplementDecisions(ctx, absFolder, lastTaskFile, plan, latestDiff, opts, deps, report); stop {
@@ -308,7 +309,7 @@ func (s *Service) applyImplementDecisions(
 			return true, fmt.Errorf("taskloop: capturar diff apos ressalvas Implement: %w", err)
 		}
 		if capturedDiff != "" {
-			nextDiff = capturedDiff
+			nextDiff = buildFinalReviewInput(prdFolder, taskFile, report.TasksCompleted, capturedDiff)
 		}
 		return s.applyImplementDecisions(ctx, prdFolder, taskFile, nextPlan, nextDiff, opts, deps, report)
 	case VerdictBlocked:
@@ -380,6 +381,29 @@ func blockedReviewReason(raw string) string {
 		}
 	}
 	return "review nao retornou motivo detalhado"
+}
+
+// reviewContextSeparator delimita o cabecalho de contexto e o diff bruto no payload
+// entregue ao reviewer consolidado. Usado por buildFinalReviewInput,
+// extractReviewContext e attachReviewContext para preservar/recompor o contexto
+// entre iteracoes do BugfixLoop sem poluir o prompt do BugfixInvoker.
+const reviewContextSeparator = "\nDiff consolidado:\n"
+
+func buildFinalReviewInput(prdFolder, taskFile string, completed []string, diff string) string {
+	var b strings.Builder
+	b.WriteString("Contexto da revisao consolidada:\n")
+	fmt.Fprintf(&b, "- PRD: %s\n", filepath.Join(prdFolder, "prd.md"))
+	fmt.Fprintf(&b, "- TechSpec: %s\n", filepath.Join(prdFolder, "techspec.md"))
+	fmt.Fprintf(&b, "- Tasks: %s\n", filepath.Join(prdFolder, "tasks.md"))
+	if taskFile != "" {
+		fmt.Fprintf(&b, "- Ultima task executada: %s\n", taskFile)
+	}
+	if len(completed) > 0 {
+		fmt.Fprintf(&b, "- Tasks executadas neste lote: %s\n", strings.Join(completed, ", "))
+	}
+	b.WriteString(reviewContextSeparator)
+	b.WriteString(diff)
+	return b.String()
 }
 
 // finalizeReport preenche EndTime/StopReason e persiste o report em JSON.
