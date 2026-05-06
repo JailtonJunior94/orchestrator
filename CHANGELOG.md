@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.18.0 (2026-05-06)
+
+### Features
+- **taskloop:** enriquece revisao consolidada com contexto PRD/spec e isola diff do bugfix (38555c1)
+
 ## 0.17.0 (2026-05-05)
 
 ### Features
