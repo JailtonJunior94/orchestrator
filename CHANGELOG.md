@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.18.1 (2026-05-08)
+
+### Bug Fixes
+- **taskloop:** serializa stdout+stderr concorrentes em liveOut do runCmd (246427c)
+- **upgrade:** elimina falso-positivo SCHEMA DIVERGENTE em upgrade --check (9ab214b)
+- **version:** elimina data race em Version mutado por testes paralelos (2a385cf)
+- **fs:** CopyFile sobrescreve destino read-only existente (aadd61c)
+- **fs:** WriteFile sobrescreve arquivos read-only existentes (ba2efba)
+
 ## 0.18.0 (2026-05-06)
 
 ### Features
