@@ -48,6 +48,10 @@ func (f *OSFileSystem) CopyFile(src, dst string) error {
 		return err
 	}
 
+	if info, err := os.Lstat(dst); err == nil && info.Mode().IsRegular() && info.Mode().Perm()&0o200 == 0 {
+		_ = os.Chmod(dst, 0o644)
+	}
+
 	out, err := os.Create(dst)
 	if err != nil {
 		return fmt.Errorf("criar destino %s: %w", dst, err)

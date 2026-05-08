@@ -25,6 +25,30 @@ func TestOS_WriteAndRead(t *testing.T) {
 	}
 }
 
+func TestOS_CopyFile_overwritesReadOnly(t *testing.T) {
+	dir := t.TempDir()
+	f := fs.NewOSFileSystem()
+	src := filepath.Join(dir, "src.md")
+	dst := filepath.Join(dir, "dst.md")
+
+	if err := os.WriteFile(src, []byte("source"), 0o444); err != nil {
+		t.Fatalf("seed src: %v", err)
+	}
+	if err := os.WriteFile(dst, []byte("old"), 0o444); err != nil {
+		t.Fatalf("seed dst: %v", err)
+	}
+	if err := f.CopyFile(src, dst); err != nil {
+		t.Fatalf("CopyFile over read-only: %v", err)
+	}
+	data, err := os.ReadFile(dst)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if string(data) != "source" {
+		t.Errorf("content = %q, want 'source'", data)
+	}
+}
+
 func TestOS_WriteFile_overwritesReadOnly(t *testing.T) {
 	dir := t.TempDir()
 	f := fs.NewOSFileSystem()
