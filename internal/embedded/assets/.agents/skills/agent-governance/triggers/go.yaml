@@ -1,0 +1,29 @@
+triggers:
+  - ref: agent-governance/references/security.md
+    patterns:
+      - "os/exec"
+      - "auth"
+      - "password"
+      - "token"
+      - "http.Client"
+      - "crypto"
+      - "sql"
+      - "deserializ"
+  - ref: agent-governance/references/error-handling.md
+    patterns:
+      - "panic("
+      - "recover("
+      - "errors.New"
+      - "_ ="
+      - "err != nil"
+  - ref: agent-governance/references/ddd.md
+    patterns:
+      - "internal/domain"
+      - "entity"
+      - "aggregate"
+      - "value object"
+  - ref: agent-governance/references/testing.md
+    patterns:
+      - "_test.go"
+      - "coverage"
+      - "TestMain"

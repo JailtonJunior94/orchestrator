@@ -1,0 +1,21 @@
+triggers:
+  - ref: agent-governance/references/security.md
+    patterns:
+      - "eval("
+      - "child_process"
+      - "crypto.createCipher"
+      - "req.body"
+      - "JSON.parse"
+  - ref: agent-governance/references/error-handling.md
+    patterns:
+      - "catch (e)"
+      - "catch(err)"
+      - "unhandledRejection"
+      - "process.exit"
+  - ref: agent-governance/references/testing.md
+    patterns:
+      - ".test.ts"
+      - ".spec.ts"
+      - ".test.js"
+      - ".spec.js"
+      - "coverage"

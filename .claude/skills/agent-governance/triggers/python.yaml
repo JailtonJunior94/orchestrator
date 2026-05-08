@@ -1,0 +1,20 @@
+triggers:
+  - ref: agent-governance/references/security.md
+    patterns:
+      - "exec("
+      - "pickle.loads"
+      - "subprocess.shell=True"
+      - "eval("
+      - "yaml.load"
+  - ref: agent-governance/references/error-handling.md
+    patterns:
+      - "except:"
+      - "except Exception"
+      - "raise"
+      - "assert "
+  - ref: agent-governance/references/testing.md
+    patterns:
+      - "test_"
+      - "pytest"
+      - "unittest"
+      - "coverage"
