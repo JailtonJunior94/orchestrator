@@ -897,3 +897,61 @@ func TestUpgrade_EmbeddedSource_UpdatesSkills(t *testing.T) {
 	}
 }
 
+
+func TestCheckSchemaDivergence_FallsBackToConstantWhenTemplateHoldsPlaceholder(t *testing.T) {
+	ffs := fs.NewFakeFileSystem()
+	out := &bytes.Buffer{}
+	errOut := &bytes.Buffer{}
+	svc := setupTestServiceWithOutput(ffs, out, errOut)
+
+	projectDir := "/proj"
+	sourceDir := "/src"
+
+	if err := ffs.MkdirAll(projectDir); err != nil {
+		t.Fatal(err)
+	}
+	projectAgents := "<!-- governance-schema: " + contextgen.GovernanceSchemaVersion + " -->\n# AGENTS\n"
+	if err := ffs.WriteFile(projectDir+"/AGENTS.md", []byte(projectAgents)); err != nil {
+		t.Fatal(err)
+	}
+
+	templatePath := sourceDir + "/.agents/skills/analyze-project/assets/agents-template.md"
+	if err := ffs.MkdirAll(sourceDir + "/.agents/skills/analyze-project/assets"); err != nil {
+		t.Fatal(err)
+	}
+	if err := ffs.WriteFile(templatePath, []byte("<!-- governance-schema: {{GOVERNANCE_SCHEMA_VERSION}} -->\n")); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := svc.checkSchemaDivergence(sourceDir, projectDir); got {
+		t.Fatalf("checkSchemaDivergence retornou divergente; esperava nao-divergente quando template tem placeholder e projeto usa versao corrente. stdout=%q", out.String())
+	}
+}
+
+func TestCheckSchemaDivergence_DetectsRealDivergenceAgainstConstant(t *testing.T) {
+	ffs := fs.NewFakeFileSystem()
+	out := &bytes.Buffer{}
+	errOut := &bytes.Buffer{}
+	svc := setupTestServiceWithOutput(ffs, out, errOut)
+
+	projectDir := "/proj"
+	sourceDir := "/src"
+
+	if err := ffs.MkdirAll(projectDir); err != nil {
+		t.Fatal(err)
+	}
+	if err := ffs.WriteFile(projectDir+"/AGENTS.md", []byte("<!-- governance-schema: 0.0.1-stale -->\n")); err != nil {
+		t.Fatal(err)
+	}
+	if err := ffs.MkdirAll(sourceDir + "/.agents/skills/analyze-project/assets"); err != nil {
+		t.Fatal(err)
+	}
+	if err := ffs.WriteFile(sourceDir+"/.agents/skills/analyze-project/assets/agents-template.md",
+		[]byte("<!-- governance-schema: {{GOVERNANCE_SCHEMA_VERSION}} -->\n")); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := svc.checkSchemaDivergence(sourceDir, projectDir); !got {
+		t.Fatalf("checkSchemaDivergence retornou nao-divergente; esperava divergencia real. stdout=%q", out.String())
+	}
+}

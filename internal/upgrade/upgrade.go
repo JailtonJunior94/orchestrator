@@ -381,8 +381,20 @@ func (s *Service) regenerateAdapters(sourceDir, projectDir, codexProfile string)
 			filepath.Join(projectDir, ".claude", "scripts", "validate-refactor-evidence.sh"),
 		)
 		s.syncFileIfPresent(
+			filepath.Join(sourceDir, ".claude", "hooks", "validate-preload.sh"),
+			filepath.Join(projectDir, ".claude", "hooks", "validate-preload.sh"),
+		)
+		s.syncFileIfPresent(
+			filepath.Join(sourceDir, ".claude", "hooks", "validate-governance.sh"),
+			filepath.Join(projectDir, ".claude", "hooks", "validate-governance.sh"),
+		)
+		s.syncFileIfPresent(
 			filepath.Join(sourceDir, "scripts", "lib", "check-invocation-depth.sh"),
 			filepath.Join(projectDir, "scripts", "lib", "check-invocation-depth.sh"),
+		)
+		s.syncFileIfPresent(
+			filepath.Join(sourceDir, "scripts", "lib", "parse-hook-input.sh"),
+			filepath.Join(projectDir, "scripts", "lib", "parse-hook-input.sh"),
 		)
 	}
 	if s.fs.IsDir(filepath.Join(projectDir, ".github")) {
@@ -390,14 +402,22 @@ func (s *Service) regenerateAdapters(sourceDir, projectDir, codexProfile string)
 	}
 	if s.fs.IsDir(filepath.Join(projectDir, ".gemini")) {
 		s.adapters.GenerateGemini(sourceDir, projectDir)
-		geminiPreload := filepath.Join(sourceDir, ".gemini", "hooks", "validate-preload.sh")
-		if s.fs.Exists(geminiPreload) {
-			_ = s.fs.CopyFile(geminiPreload, filepath.Join(projectDir, ".gemini", "hooks", "validate-preload.sh"))
-		}
+		s.syncFileIfPresent(
+			filepath.Join(sourceDir, ".gemini", "hooks", "validate-preload.sh"),
+			filepath.Join(projectDir, ".gemini", "hooks", "validate-preload.sh"),
+		)
+		s.syncFileIfPresent(
+			filepath.Join(sourceDir, ".gemini", "hooks", "validate-governance.sh"),
+			filepath.Join(projectDir, ".gemini", "hooks", "validate-governance.sh"),
+		)
 	}
 	if s.fs.Exists(filepath.Join(projectDir, ".codex", "config.toml")) {
 		content := s.adapters.BuildCodexConfig(s.installedCodexSkills(projectDir, codexProfile))
 		_ = s.fs.WriteFile(filepath.Join(projectDir, ".codex", "config.toml"), []byte(content))
+		s.syncFileIfPresent(
+			filepath.Join(sourceDir, ".codex", "hooks", "validate-preload.sh"),
+			filepath.Join(projectDir, ".codex", "hooks", "validate-preload.sh"),
+		)
 	}
 }
 
@@ -446,14 +466,7 @@ func (s *Service) checkSchemaDivergence(sourceDir, projectDir string) bool {
 		return false
 	}
 
-	sourceTemplate := filepath.Join(sourceDir, ".agents", "skills", "analyze-project", "assets", "agents-template.md")
-	sourceSchema := ""
-	if s.fs.Exists(sourceTemplate) {
-		sourceData, err := s.fs.ReadFile(sourceTemplate)
-		if err == nil {
-			sourceSchema = extractSchemaVersion(string(sourceData))
-		}
-	}
+	sourceSchema := resolveSourceSchema(s.fs, sourceDir)
 
 	if sourceSchema != "" && sourceSchema != projectSchema {
 		s.printer.Status("SCHEMA DIVERGENTE", "AGENTS.md",
@@ -462,6 +475,22 @@ func (s *Service) checkSchemaDivergence(sourceDir, projectDir string) bool {
 	}
 
 	return false
+}
+
+// resolveSourceSchema retorna a versao de schema esperada pela fonte.
+// O template `agents-template.md` carrega `{{GOVERNANCE_SCHEMA_VERSION}}` como
+// placeholder substituido em tempo de geracao, entao um valor com `{{` indica
+// que devemos cair de volta para a constante autoritativa em contextgen.
+func resolveSourceSchema(filesystem fs.FileSystem, sourceDir string) string {
+	sourceTemplate := filepath.Join(sourceDir, ".agents", "skills", "analyze-project", "assets", "agents-template.md")
+	if filesystem.Exists(sourceTemplate) {
+		if data, err := filesystem.ReadFile(sourceTemplate); err == nil {
+			if v := extractSchemaVersion(string(data)); v != "" && !strings.Contains(v, "{{") {
+				return v
+			}
+		}
+	}
+	return contextgen.GovernanceSchemaVersion
 }
 
 // extractSchemaVersion extrai o valor de governance-schema do comentario HTML no topo de AGENTS.md.
