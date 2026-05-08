@@ -4,14 +4,56 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
 )
 
 // Set via ldflags at build time.
+//
+// Em producao, ldflags grava Version uma unica vez antes de main e nao
+// concorre com leituras. Em testes paralelos, leitores chamam Get() (atomic
+// load, lock-free) e escritores usam SetForTest (serializados via writerMu).
 var (
 	Version = "dev"
 	Commit  = "none"
 	Date    = "unknown"
+
+	versionAtomic atomic.Pointer[string]
+	writerMu      sync.Mutex
 )
+
+func init() {
+	v := Version
+	versionAtomic.Store(&v)
+}
+
+// Get retorna o valor corrente de Version via atomic load.
+// Lock-free; seguro para uso concorrente com SetForTest.
+func Get() string {
+	if p := versionAtomic.Load(); p != nil {
+		return *p
+	}
+	return Version
+}
+
+// SetForTest substitui o valor lido por Get pelo valor informado e
+// retorna uma funcao de restauracao a ser registrada via t.Cleanup.
+//
+// Serializa multiplos chamadores via writerMu (escritores nao se
+// sobrepoem), mas nao bloqueia leitores em Get — leituras permanecem
+// lock-free via atomic. Reentrante a partir do mesmo teste apenas se
+// restore for chamado antes de novo SetForTest.
+//
+// Destinada exclusivamente a testes.
+func SetForTest(value string) (restore func()) {
+	writerMu.Lock()
+	prev := Get()
+	versionAtomic.Store(&value)
+	return func() {
+		versionAtomic.Store(&prev)
+		writerMu.Unlock()
+	}
+}
 
 // ReadVersionFile le o arquivo VERSION de um diretorio e retorna a versao.
 // Retorna "unknown" se o arquivo nao existir ou nao puder ser lido.
@@ -28,8 +70,8 @@ func ReadVersionFile(dir string) string {
 //  2. Arquivo VERSION no diretorio informado com sufixo "-dev" (builds locais)
 //  3. "dev" como fallback final
 func Resolve(dir string) string {
-	if Version != "dev" {
-		return Version
+	if v := Get(); v != "dev" {
+		return v
 	}
 	if v := ReadVersionFile(dir); v != "unknown" {
 		return v + "-dev"
@@ -41,8 +83,8 @@ func Resolve(dir string) string {
 // resolvendo symlinks antes de extrair o diretorio.
 // Fallback chain: ldflags > VERSION adjacente ao executavel resolvido > "dev"
 func ResolveFromExecutable() string {
-	if Version != "dev" {
-		return Version // ldflags injetado pelo GoReleaser tem prioridade maxima
+	if v := Get(); v != "dev" {
+		return v // ldflags injetado pelo GoReleaser tem prioridade maxima
 	}
 	exe, err := os.Executable()
 	if err != nil {

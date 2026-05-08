@@ -98,9 +98,7 @@ func TestInstall_CopyMode(t *testing.T) {
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
 
-	originalVersion := version.Version
-	t.Cleanup(func() { version.Version = originalVersion })
-	version.Version = "1.0.0-test"
+	t.Cleanup(version.SetForTest("1.0.0-test"))
 
 	// Criar uma skill de teste na fonte
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte(`---
@@ -257,9 +255,7 @@ func TestInstall_Idempotent(t *testing.T) {
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
 
-	originalVersion := version.Version
-	t.Cleanup(func() { version.Version = originalVersion })
-	version.Version = "1.0.0-test"
+	t.Cleanup(version.SetForTest("1.0.0-test"))
 
 	ffs.Files["/source/AGENTS.md"] = []byte("# AGENTS")
 	ffs.Files["/source/.claude/rules/governance.md"] = []byte("# governance")
@@ -666,9 +662,7 @@ func TestInstall_ManifestUsesResolvedExecutableVersion(t *testing.T) {
 	projectDir := t.TempDir()
 	sourceDir := t.TempDir()
 
-	originalVersion := version.Version
-	t.Cleanup(func() { version.Version = originalVersion })
-	version.Version = "dev"
+	t.Cleanup(version.SetForTest("dev"))
 
 	exe, err := os.Executable()
 	if err != nil {
@@ -731,9 +725,7 @@ func TestInstall_ManifestIncludesSkillVersions(t *testing.T) {
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
 
-	originalVersion := version.Version
-	t.Cleanup(func() { version.Version = originalVersion })
-	version.Version = "1.0.0-test"
+	t.Cleanup(version.SetForTest("1.0.0-test"))
 
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.1.0\ndescription: Revisa codigo.\n---\n")
 	ffs.Files["/source/.agents/skills/bugfix/SKILL.md"] = []byte("---\ndescription: Corrige bugs.\n---\n")

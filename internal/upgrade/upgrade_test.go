@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -18,8 +17,6 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/version"
 )
-
-var versionMu sync.Mutex
 
 func setupTestService(ffs *fs.FakeFileSystem) *Service {
 	printer := output.New(false)
@@ -57,14 +54,7 @@ func readManifestFromFakeFS(t *testing.T, ffs *fs.FakeFileSystem, path string) m
 
 func setVersionForTest(t *testing.T, resolvedVersion string) {
 	t.Helper()
-
-	versionMu.Lock()
-	originalVersion := version.Version
-	version.Version = resolvedVersion
-	t.Cleanup(func() {
-		version.Version = originalVersion
-		versionMu.Unlock()
-	})
+	t.Cleanup(version.SetForTest(resolvedVersion))
 }
 
 func TestUpgrade_NoSkillsDir(t *testing.T) {
@@ -906,3 +896,4 @@ func TestUpgrade_EmbeddedSource_UpdatesSkills(t *testing.T) {
 		t.Error("skill nao foi atualizada pela versao embutida")
 	}
 }
+
