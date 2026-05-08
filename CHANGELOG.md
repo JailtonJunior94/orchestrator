@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.19.0 (2026-05-08)
+
+### Features
+- **config:** adiciona runtime config carregada de .claude/config.yaml (a5701da)
+- **triggers:** sistema de triggers de revisao por linguagem (fbbbc38)
+
+### Documentation
+- adiciona matriz de degradacao, equivalencia runloop e tests scripts (9e037ee)
+
+### Chores
+- **skills:** melhora robustez de invocacao e validacao de schema (66d1eec)
+
 ## 0.18.1 (2026-05-08)
 
 ### Bug Fixes
