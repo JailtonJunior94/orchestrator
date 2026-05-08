@@ -1,5 +1,11 @@
 # Concorrência
 
+<!-- TL;DR
+Padrões de concorrência em Go: goroutines, channels, context, sync e quando preferir execução sequencial em vez de concorrência.
+Keywords: goroutine, channel, context, sync, waitgroup, mutex, cancelamento
+Load complete when: tarefa envolve goroutines, channels, sincronização, timeout ou cancelamento via context.
+-->
+
 ## Objetivo
 Usar concorrência apenas quando ela resolver um problema real de latência, throughput ou isolamento.
 

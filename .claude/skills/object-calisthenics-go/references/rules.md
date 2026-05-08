@@ -1,5 +1,11 @@
 # Regras Adaptadas para Go
 
+<!-- TL;DR
+9 regras de object calisthenics adaptadas para Go como heurísticas para reduzir complexidade: indentação, early return, encapsulamento e tamanho de funções/classes.
+Keywords: regras, calisthenics, indentação, early-return, encapsulamento, complexidade, Go
+Load complete when: tarefa envolve aplicar ou revisar as 9 regras de object calisthenics em código Go.
+-->
+
 Estas regras devem ser tratadas como heuristicas para reduzir complexidade acidental, e nao como dogma. Cada regra so deve ser aplicada quando melhorar legibilidade, encapsulamento, testabilidade ou estabilidade do comportamento.
 
 ## 1. Uma camada de indentacao por funcao
@@ -40,6 +46,8 @@ Preferir:
 Evitar:
 - wrappers vazios sem comportamento
 - tipos so para satisfazer a regra sem ganho semantico
+
+Definicao canonica de Value Objects e criterios cross-linguagem: `agent-governance/references/shared-patterns.md` secao "Value Objects". Criterios de dominio (invariantes, transicoes de estado): `agent-governance/references/ddd.md` secao "Value Objects".
 
 ## 4. Colecoes de primeira classe
 

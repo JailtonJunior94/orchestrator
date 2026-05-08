@@ -1,5 +1,11 @@
 # Enforcement Matrix
 
+<!-- TL;DR
+Matriz de capacidades de enforcement por ferramenta de IA (Claude, Gemini, Codex, Copilot): suporte full, partial ou none para cada regra de governança.
+Keywords: enforcement, matriz, claude, gemini, copilot, codex, capacidade
+Load complete when: tarefa exige verificar quais regras de governança são suportadas por qual ferramenta de IA.
+-->
+
 Tabela de capacidades de enforcement por ferramenta de IA suportada.
 
 ## Legenda

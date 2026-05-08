@@ -1,5 +1,11 @@
 # Testes
 
+<!-- TL;DR
+Diretrizes de testes em Go: table-driven tests, FakeFileSystem para unit, testify para asserções e build tag `integration` para testes com IO real.
+Keywords: teste, table-driven, fake, testify, mock, integração, cobertura
+Load complete when: tarefa envolve criação ou revisão de testes unitários, de integração ou estrutura de fakes/mocks em Go.
+-->
+
 ## Objetivo
 Garantir correção, prevenir regressão e documentar comportamento com custo proporcional ao risco.
 

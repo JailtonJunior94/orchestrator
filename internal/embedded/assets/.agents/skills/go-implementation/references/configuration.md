@@ -1,5 +1,11 @@
 # Configuração
 
+<!-- TL;DR
+Diretrizes para carregar configuração em Go: variáveis de ambiente, structs tipadas, validação na inicialização e sem acoplamento global.
+Keywords: configuração, env, struct, validação, inicialização, injeção
+Load complete when: tarefa envolve carregamento, validação ou injeção de configuração em projetos Go.
+-->
+
 ## Objetivo
 Carregar configuração de forma explícita, validada e sem acoplamento global.
 

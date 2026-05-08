@@ -1,5 +1,11 @@
 # Segurança
 
+<!-- TL;DR
+Baseline de segurança para backends Go: validação de input, autenticação JWT, autorização, prevenção de injeção SQL e gestão de segredos.
+Keywords: segurança, jwt, autenticação, autorização, input-validation, sql-injection, secrets
+Load complete when: tarefa envolve validação de input, autenticação, autorização, segredos ou vulnerabilidades em backends Go.
+-->
+
 ## Objetivo
 Proteger o sistema contra vulnerabilidades comuns em backends Go.
 

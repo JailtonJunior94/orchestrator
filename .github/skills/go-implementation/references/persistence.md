@@ -1,5 +1,11 @@
 # Persistência
 
+<!-- TL;DR
+Diretrizes de persistência em Go: repository pattern isolado do domínio, queries explícitas, migrations versionadas e testes com banco real.
+Keywords: persistência, repository, sql, migrations, banco, query, isolamento
+Load complete when: tarefa envolve acesso a banco de dados, repository pattern, migrations ou queries SQL em Go.
+-->
+
 ## Objetivo
 Manter acesso a dados explícito, testável e isolado do domínio.
 

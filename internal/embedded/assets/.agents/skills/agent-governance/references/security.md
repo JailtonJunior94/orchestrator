@@ -1,5 +1,11 @@
 # Segurança
 
+<!-- TL;DR
+Baseline de segurança (R-SEC-001) para projetos com agentes de IA: sem segredos em código, sem ações destrutivas não solicitadas e validação de inputs externos.
+Keywords: segurança, secrets, agente, filesystem, validação, baseline, R-SEC-001
+Load complete when: tarefa envolve execução de agentes, acesso a filesystem, segredos ou qualquer ação com impacto de segurança.
+-->
+
 - Rule ID: R-SEC-001
 - Severidade: hard
 - Escopo: Todo código, configuração, logs e execução.

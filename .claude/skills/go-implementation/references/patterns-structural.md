@@ -1,4 +1,10 @@
-# Design Patterns — Structural e Creational
+# Design Patterns — Structural e Creational (referencia historica)
+
+<!-- TL;DR
+Patterns estruturais e criacionais em Go: Factory Function, Builder/Functional Options, Singleton, Adapter, Decorator, Facade com exemplos completos.
+Keywords: factory, functional-options, adapter, decorator, facade, singleton, builder
+Load complete when: codigo de exemplo completo necessario; Singleton ou patterns raramente uteis (Abstract Factory, Prototype, Flyweight). Nao carregar para Factory/Options/Adapter/Decorator/Facade — definidos inline em SKILL.md.
+-->
 
 ## Principios Gerais
 - Composicao sobre hierarquias. Funcao/tipo concreto antes de pattern.

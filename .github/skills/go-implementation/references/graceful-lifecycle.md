@@ -1,5 +1,11 @@
 # Graceful Lifecycle
 
+<!-- TL;DR
+Padrões de inicialização ordenada e encerramento gracioso em Go para servidores, workers, consumers e CLIs com context e SIGTERM/SIGINT.
+Keywords: graceful-shutdown, lifecycle, sigterm, context, inicialização, servidor, worker
+Load complete when: tarefa envolve startup/shutdown de serviços, servidores HTTP, workers ou consumers em Go.
+-->
+
 ## Objetivo
 Unificar padrões de inicialização ordenada e encerramento gracioso para servidores, workers, consumers e CLIs.
 

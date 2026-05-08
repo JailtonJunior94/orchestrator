@@ -1,5 +1,11 @@
 # Observabilidade
 
+<!-- TL;DR
+Diretrizes cross-linguagem para observabilidade: logging estruturado JSON, tracing distribuído, métricas e correlação de trace_id/request_id em produção.
+Keywords: observabilidade, logging, tracing, métricas, trace_id, opentelemetry, estruturado
+Load complete when: tarefa envolve logging, tracing, métricas ou instrumentação de observabilidade em qualquer linguagem.
+-->
+
 ## Objetivo
 Garantir rastreabilidade, diagnostico e visibilidade operacional em producao.
 

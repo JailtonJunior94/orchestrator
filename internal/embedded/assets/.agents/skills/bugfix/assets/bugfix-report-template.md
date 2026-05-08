@@ -4,6 +4,7 @@
 - Corrigidos: Y
 - Testes de regressao adicionados: Z
 - Pendentes: [lista com motivo]
+- Estado final: done | blocked | failed | needs_input
 
 ## Bugs
 - ID:

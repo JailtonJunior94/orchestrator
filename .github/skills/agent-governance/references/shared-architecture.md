@@ -1,5 +1,11 @@
 # Principios de Arquitetura (Cross-Linguagem)
 
+<!-- TL;DR
+Princípios de arquitetura aplicáveis a qualquer linguagem: módulos coesos, DI explícita, regras de domínio fora de handlers e sinais de excesso de abstração.
+Keywords: arquitetura, módulos, di, domínio, coesão, camadas, cross-linguagem
+Load complete when: tarefa envolve revisão de arquitetura, organização de módulos ou injeção de dependências independente da linguagem.
+-->
+
 ## Diretrizes
 - Modulos/packages coesos com dependencias direcionadas.
 - Regras de dominio fora de handlers, controllers e infraestrutura.

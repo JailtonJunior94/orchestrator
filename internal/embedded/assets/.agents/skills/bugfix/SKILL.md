@@ -9,18 +9,18 @@ description: Corrige bugs pela causa raiz com testes de regressao obrigatorios e
 ## Procedimentos
 
 **Etapa 1: Validar entrada e escopo**
-1. Verificar profundidade de invocação: `source scripts/lib/check-invocation-depth.sh || { echo "failed: depth limit exceeded"; exit 1; }` — parar se o limite for atingido.
+1. Verificar profundidade de invocação: resolver a raiz do repositorio com `repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"` e executar `source "$repo_root/scripts/lib/check-invocation-depth.sh" || { echo "failed: depth limit exceeded"; exit 1; }` — parar se o limite for atingido.
 2. Confirmar que a lista de bugs foi recebida no formato canonico `{ id, severity, file, line, reproduction, expected, actual }`.
-2. Ler `references/canonical-bug-format.md` quando houver duvida sobre campos obrigatorios, severidades ou estados canonicos.
-3. Se a lista vier em arquivo JSON, executar `bash scripts/lib/validate-bug-schema.sh <caminho>` para validar contra o schema canonico antes de prosseguir. Alternativamente, usar `python3 scripts/validate-bug-input.py --input <caminho>` quando o validador de schema nao estiver disponivel.
-4. Se a lista estiver ausente, incompleta ou fora do formato canonico, retornar `needs_input` com os campos faltantes.
-5. Confirmar o escopo de bugs a corrigir antes de editar qualquer arquivo.
+3. Ler `references/canonical-bug-format.md` quando houver duvida sobre campos obrigatorios, severidades ou estados canonicos.
+4. Se a lista vier em arquivo JSON, validar contra o schema canonico com `python3 "$repo_root/.agents/skills/bugfix/scripts/validate-bug-input.py" --input <caminho>` antes de prosseguir. O script tenta JSON Schema (`jsonschema`) e cai para validacao manual equivalente quando a lib nao esta disponivel.
+5. Se a lista estiver ausente, incompleta ou fora do formato canonico, retornar `needs_input` com os campos faltantes.
+6. Confirmar o escopo de bugs a corrigir antes de editar qualquer arquivo.
 
 **Etapa 2: Carregar o contexto tecnico**
 1. Confirmar que o contrato de carga base definido em `AGENTS.md` foi cumprido.
-2. Se a correcao tocar codigo Go, ler tambem `.agents/skills/go-implementation/SKILL.md` e apenas as referencias exigidas pela mudanca.
-4. Ler `bugs.md`, `prd.md`, `techspec.md`, arquivos de tarefa ou contexto de issue quando estiverem disponiveis e forem relevantes para o bug.
-5. Mapear contratos publicos, comportamento esperado, pontos de integracao e risco de regressao antes de propor a correcao.
+2. Se a correcao tocar codigo Go, ler tambem `.agents/skills/go-implementation/SKILL.md` e apenas as referencias exigidas pela mudanca. Para outras linguagens, carregar a skill `.agents/skills/<lang>-implementation/SKILL.md` quando existir; caso contrario, seguir apenas com governanca transversal.
+3. Ler `bugs.md`, `prd.md`, `techspec.md`, arquivos de tarefa ou contexto de issue quando estiverem disponiveis e forem relevantes para o bug.
+4. Mapear contratos publicos, comportamento esperado, pontos de integracao e risco de regressao antes de propor a correcao.
 
 **Etapa 3: Priorizar e diagnosticar**
 1. Ordenar os bugs por severidade: `critical`, `major`, `minor`.
@@ -40,7 +40,7 @@ description: Corrige bugs pela causa raiz com testes de regressao obrigatorios e
 2. Atualizar o estado de cada bug usando apenas `fixed`, `blocked`, `skipped` ou `failed`.
 3. Ler `assets/bugfix-report-template.md`.
 4. Salvar o relatorio em `tasks/prd-<feature-slug>/bugfix_report.md` quando estiver em contexto de tarefa; caso contrario, em `./bugfix_report.md`.
-5. Validar o relatorio com `bash .claude/scripts/validate-bugfix-evidence.sh <caminho-do-relatorio>`; corrigir secoes faltantes antes de encerrar.
+5. Validar o relatorio com `bash "$repo_root/.claude/scripts/validate-bugfix-evidence.sh" <caminho-do-relatorio>`; corrigir secoes faltantes antes de encerrar.
 
 **Etapa 6: Encerrar o fluxo**
 1. Informar total de bugs no escopo, quantos foram corrigidos, quantos testes de regressao foram adicionados e quais itens ficaram pendentes com motivo.
@@ -57,3 +57,15 @@ description: Corrige bugs pela causa raiz com testes de regressao obrigatorios e
 * Se `go test ./...` ou o equivalente do projeto falhar apos a correcao, analisar o log de falha antes de reexecutar.
 * Se a baseline do repositorio ja estiver quebrada, separar claramente a falha preexistente das falhas introduzidas pela correcao.
 * Respeitar o limite de profundidade de invocacao definido em `.agents/skills/agent-governance/SKILL.md`. Bugfix nao deve re-invocar review se ja estiver sendo executado dentro de um ciclo review -> bugfix.
+
+## Resolução de paths
+
+Todo caminho `tasks/prd-<slug>/` referenciado neste documento resolve para `${AI_TASKS_ROOT:-tasks}/${AI_PRD_PREFIX:-prd-}<slug>/`. Defaults preservam o layout histórico. Customização via `.claude/config.yaml` ou `.agents/config.yaml`:
+
+```yaml
+tasks_root: tasks
+prd_prefix: prd-
+evidence_dir: ""
+```
+
+`scripts/lib/check-invocation-depth.sh` (Etapa 1) exporta `AI_TASKS_ROOT`, `AI_PRD_PREFIX`, `AI_EVIDENCE_DIR`, `AI_TOOL` para skills, validators e runtime, garantindo paridade exata entre Claude Code, Codex, Gemini e Copilot.

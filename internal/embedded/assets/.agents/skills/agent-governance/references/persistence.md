@@ -1,5 +1,11 @@
 # Persistencia
 
+<!-- TL;DR
+Diretrizes cross-linguagem para persistência: repository pattern isolando domínio de infraestrutura, queries explícitas e migrations versionadas.
+Keywords: persistência, repository, banco, query, migrations, isolamento, domínio
+Load complete when: tarefa envolve acesso a banco de dados, repository pattern ou migrations em qualquer linguagem.
+-->
+
 ## Objetivo
 Manter acesso a dados explicito, testavel e isolado do dominio.
 

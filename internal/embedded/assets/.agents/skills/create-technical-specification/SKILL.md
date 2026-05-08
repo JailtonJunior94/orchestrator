@@ -47,8 +47,8 @@ description: Cria especificações técnicas prontas para implementação a part
 **Etapa 6: Criar ADRs para decisões materiais**
 1. Ler `assets/adr-template.md`.
 2. Para cada decisão material introduzida na especificação técnica, criar uma ADR separada em `tasks/prd-<slug-da-funcionalidade>/`.
-3. Usar nomes estáveis de arquivo como `adr-001-<slug-da-decisao>.md`. Exemplo: `tasks/prd-telemetry-feedback/adr-001-report-vs-summary.md`.
-4. Vincular as ADRs a partir da especificação técnica usando caminho relativo. Exemplo no cabeçalho da techspec: `**ADRs:** [ADR-001 — Título](adr-001-slug-da-decisao.md)`. Referenciar também dentro da seção "Decisões Chave".
+3. Usar nomes estáveis de arquivo como `adr-001-<slug-da-decisao>.md`.
+4. Vincular as ADRs a partir da especificação técnica.
 
 **Etapa 7: Persistir e reportar**
 1. Salvar a especificação técnica como `tasks/prd-<slug-da-funcionalidade>/techspec.md`.

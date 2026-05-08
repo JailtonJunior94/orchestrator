@@ -1,5 +1,11 @@
 # Interfaces
 
+<!-- TL;DR
+Diretrizes para definição e uso de interfaces em Go: quando criar, quando evitar e como posicionar no pacote consumidor para reduzir acoplamento.
+Keywords: interface, acoplamento, repository, substituição, consumidor, pacote
+Load complete when: tarefa envolve criação, revisão ou posicionamento de interfaces em pacotes Go.
+-->
+
 ## Quando usar
 - Quando existir mais de uma implementação real ou um ponto claro de substituição.
 - Quando um consumidor depender apenas de um comportamento pequeno e estável.

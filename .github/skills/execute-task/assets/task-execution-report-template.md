@@ -3,6 +3,7 @@
 ## Tarefa
 - ID:
 - Título:
+- Arquivo: tasks/prd-<slug>/NN_<nome>.md
 - Estado: pending | in_progress | needs_input | blocked | failed | done
 
 ## Contexto Carregado
@@ -20,6 +21,17 @@
 - Testes: pass | fail | blocked
 - Lint: pass | fail | blocked
 - Veredito do Revisor: APPROVED | APPROVED_WITH_REMARKS | REJECTED | BLOCKED
+
+## Diff Reviewed
+
+sha={{.DiffSHA}}
+verdict={{.Verdict}}
+tool={{.Tool}}
+
+## Coverage
+
+package={{.CoveragePackage}}
+delta={{.CoverageDelta}}
 
 ## Suposições
 - [suposição]

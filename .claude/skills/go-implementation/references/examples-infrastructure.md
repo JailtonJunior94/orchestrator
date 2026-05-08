@@ -1,5 +1,11 @@
 # Exemplos: Infraestrutura
 
+<!-- TL;DR
+Exemplos de código Go para infraestrutura: graceful shutdown, conexão com banco de dados, clientes HTTP e configuração de servidores.
+Keywords: exemplo, infraestrutura, graceful-shutdown, database, http-client, server
+Load complete when: tarefa requer exemplos concretos de infraestrutura como shutdown, banco de dados ou clientes externos.
+-->
+
 ## Graceful Shutdown
 ```go
 // cmd/server/main.go

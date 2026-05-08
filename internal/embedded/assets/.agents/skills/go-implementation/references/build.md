@@ -1,5 +1,11 @@
 # Build, Container e CI
 
+<!-- TL;DR
+Diretrizes para builds reprodutíveis em Go: Dockerfile multi-stage, imagens mínimas e gates de qualidade no pipeline de CI.
+Keywords: build, docker, ci, multi-stage, pipeline, golangci-lint, gorelreleaser
+Load complete when: tarefa envolve Dockerfile, pipeline de CI/CD, build de imagem ou configuração de lint.
+-->
+
 ## Objetivo
 Manter builds reprodutíveis, imagens mínimas e gates de qualidade no pipeline.
 

@@ -54,3 +54,7 @@ description: Cria documentos de requisitos do produto a partir de solicitações
 * Se a solicitação pular direto para detalhes de implementação, redirecionar o documento para a intenção de produto e registrar itens técnicos apenas como restrições de alto nível.
 * Se a definição do problema for ampla o bastante para esconder múltiplas features, dividir o escopo e perguntar qual fatia deve virar o PRD.
 * Se um PRD existente conflitar com novas instruções, preservar as duas versões da decisão no histórico do documento e explicitar o conflito antes de sobrescrever conteúdo.
+
+## Resolução de paths
+
+Todo caminho `tasks/prd-<slug>/` referenciado neste documento resolve para `${AI_TASKS_ROOT:-tasks}/${AI_PRD_PREFIX:-prd-}<slug>/`. Defaults preservam o layout histórico. Customização via `.claude/config.yaml` ou `.agents/config.yaml` (chaves `tasks_root`, `prd_prefix`). `scripts/lib/check-invocation-depth.sh` exporta `AI_TASKS_ROOT` e `AI_PRD_PREFIX` para garantir paridade entre Claude Code, Codex, Gemini e Copilot.

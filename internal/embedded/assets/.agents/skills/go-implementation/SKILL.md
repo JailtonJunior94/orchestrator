@@ -28,12 +28,14 @@ description: Implementa alteracoes em codigo Go usando governanca base, arquitet
 - **Factory Function:** Usar `New*(deps...) (*T, error)` quando construcao exigir validacao de invariantes ou dependencias obrigatorias. Retornar `(T, error)` ou `*T`. Nao usar factory abstrata para um unico tipo concreto.
 - **Functional Options:** Usar `func With*(v) Option` quando o objeto tiver muitos campos opcionais. Preferir sobre builder fluente: `func NewServer(addr string, opts ...ServerOption) *Server`. Cada option e uma `func(*T)` que modifica o alvo.
 - **Adapter:** Usar struct que implementa interface do consumidor e delega para tipo externo quando integrar dependencia incompativel. Repository concreto e o exemplo mais comum.
+- **Decorator:** Struct/funcao que wrapa interface e adiciona comportamento transversal (logging, metricas, retry). Ex: `type loggingRepo struct{ next Repo; log *slog.Logger }` — cada metodo loga e delega para `next`.
+- **Facade:** Service/use case que orquestra multiplas dependencias em operacao de alto nivel. Ex: `func (s *Service) Checkout(ctx, id)` chama orders, payments, notify em sequencia com tratamento de erro.
 
 **Etapa 2: Selecionar apenas o contexto necessario**
 1. Ler `references/interfaces.md` quando a tarefa introduzir, remover ou remodelar interfaces, construtores ou fronteiras de dependencia.
 2. Ler `references/generics.md` quando a tarefa introduzir ou alterar parametros de tipo, constraints ou componentes reutilizaveis com generics.
 3. Ler `references/concurrency.md` quando a tarefa usar goroutines, channels, cancelamento, worker pools ou sincronizacao.
-4. Ler `references/patterns-structural.md` **somente** quando a tarefa envolver Decorator, Facade ou detalhes de Creational nao cobertos inline. Factory Function, Functional Options e Adapter ja estao definidos na secao "Patterns frequentes" acima e NAO devem motivar o carregamento deste arquivo — isso evita ~960 tokens redundantes.
+4. Ler `references/patterns-structural.md` **somente** quando a tarefa envolver Singleton, patterns raramente uteis (Abstract Factory, Prototype, Flyweight) ou codigo de exemplo completo dos patterns. Factory Function, Functional Options, Adapter, Decorator e Facade ja estao definidos na secao "Patterns frequentes" acima e NAO devem motivar o carregamento deste arquivo — isso evita ~960 tokens redundantes. O arquivo e mantido como referencia historica.
 5. Ler `references/patterns-behavioral.md` quando a tarefa envolver strategy, chain of responsibility, observer/eventos, maquina de estado ou template method.
 6. Ler `references/observability.md` quando a tarefa envolver logging, tracing, metricas ou health checks.
 7. Ler `references/api.md` quando a tarefa envolver handlers HTTP/gRPC, middlewares, DTOs ou serializacao.

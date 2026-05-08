@@ -1,5 +1,11 @@
 # Principios de Teste (Cross-Linguagem)
 
+<!-- TL;DR
+Princípios de teste cross-linguagem: testes determinísticos, mocks apenas em fronteiras externas, nomenclatura por cenário e cobertura proporcional ao risco.
+Keywords: teste, unit, integração, mock, determinístico, cobertura, cross-linguagem
+Load complete when: tarefa envolve estratégia de testes, cobertura ou uso de mocks em qualquer linguagem.
+-->
+
 ## Unit Tests (obrigatorio)
 - Todo comportamento de dominio, use case e logica pura deve ter unit test.
 - Nomear pelo cenario, nao pelo metodo.

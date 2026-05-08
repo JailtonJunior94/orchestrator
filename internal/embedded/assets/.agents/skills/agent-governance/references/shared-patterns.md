@@ -1,5 +1,11 @@
 # Patterns Compartilhados (Cross-Linguagem)
 
+<!-- TL;DR
+Padrões recorrentes cross-linguagem (Go, Node, Python): Repository, UseCase, OutboxEvent, UnitOfWork e Factory com exemplos de estrutura e nomenclatura.
+Keywords: padrão, repository, use-case, outbox, factory, unit-of-work, cross-linguagem
+Load complete when: tarefa envolve aplicação de padrões arquiteturais recorrentes em Go, Node ou Python.
+-->
+
 Patterns recorrentes aplicaveis a Go, Node/TypeScript e Python. Cada stack adapta a sintaxe mas preserva a intencao.
 
 ## Repository

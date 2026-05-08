@@ -1,5 +1,11 @@
 # Design Patterns — Behavioral
 
+<!-- TL;DR
+Padrões comportamentais em Go: Strategy, Observer, Command, Pipeline e Middleware com composição sobre hierarquias e sem over-engineering.
+Keywords: strategy, observer, command, pipeline, middleware, padrão, composição
+Load complete when: tarefa envolve aplicação de padrões comportamentais como strategy, pipeline ou middleware em código Go.
+-->
+
 ## Principios Gerais
 - Composicao sobre hierarquias. Funcao/tipo concreto antes de pattern.
 - Pattern apenas com variacao recorrente. No maximo um por problema.

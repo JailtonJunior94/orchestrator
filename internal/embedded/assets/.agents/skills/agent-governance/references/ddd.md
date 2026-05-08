@@ -1,5 +1,11 @@
 # Modelagem de Domínio
 
+<!-- TL;DR
+Regras de DDD (R-DDD-001): domínio explícito com invariantes protegidas, sem structs anêmicas, aggregates com construtores validadores e sem lógica vazando para handlers.
+Keywords: ddd, domínio, agregado, invariante, entidade, value-object, use-case
+Load complete when: tarefa envolve modelagem de domínio, aggregates, value objects, invariantes ou camada de aplicação.
+-->
+
 - Rule ID: R-DDD-001
 - Severidade: hard
 - Escopo: camadas de domínio e aplicação.

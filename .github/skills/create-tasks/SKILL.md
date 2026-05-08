@@ -1,6 +1,6 @@
 ---
 name: create-tasks
-version: 1.0.0
+version: 1.1.0
 description: Cria tarefas incrementais de implementação a partir de um PRD e de uma especificação técnica. Use quando documentos de produto e técnicos aprovados precisarem ser decompostos em itens de trabalho ordenados e testáveis. Não use para mudanças diretas de código, descoberta de funcionalidade ou revisão de branch.
 ---
 
@@ -52,3 +52,7 @@ description: Cria tarefas incrementais de implementação a partir de um PRD e d
 * Se o PRD e a especificação técnica divergirem sobre o escopo, pausar e expor o conflito em vez de codificar os dois nas tarefas.
 * Se uma tarefa proposta misturar preocupações não relacionadas, dividi-la antes de escrever os arquivos.
 * Se o plano exceder 10 itens principais, consolidar ou reagrupar o trabalho até que cada tarefa represente uma fatia coerente de entrega, e não um micro-passo.
+
+## Resolução de paths
+
+Todo caminho `tasks/prd-<slug>/` referenciado neste documento resolve para `${AI_TASKS_ROOT:-tasks}/${AI_PRD_PREFIX:-prd-}<slug>/`. Defaults preservam o layout histórico. Customização via `.claude/config.yaml` ou `.agents/config.yaml` (chaves `tasks_root`, `prd_prefix`). `scripts/lib/check-invocation-depth.sh` exporta `AI_TASKS_ROOT` e `AI_PRD_PREFIX` para garantir paridade entre Claude Code, Codex, Gemini e Copilot.

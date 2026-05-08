@@ -1,5 +1,11 @@
 # Exemplos: Testes e Validacao
 
+<!-- TL;DR
+Exemplos de testes em Go: construtores com invariantes, table-driven tests, mocks, fakes e testes de integração com TempDir.
+Keywords: exemplo, teste, table-driven, mock, fake, invariante, integração
+Load complete when: tarefa requer exemplos concretos de testes unitários, de integração ou uso de fakes/mocks em Go.
+-->
+
 ## Construtor com invariantes
 ```go
 type Config struct {

@@ -1,5 +1,11 @@
 # Tratamento de Erros
 
+<!-- TL;DR
+Regras de tratamento de erros (R-ERR-001): wrapping com fmt.Errorf %w, mensagens claras ao usuário, detalhes técnicos preservados e sem silenciar erros.
+Keywords: erro, wrapping, fmt.Errorf, sentinel, panic, propagação, diagnóstico
+Load complete when: tarefa envolve criação, wrapping, propagação ou apresentação de erros em qualquer camada do código.
+-->
+
 - Rule ID: R-ERR-001
 - Severidade: hard
 - Escopo: Todo codigo com criacao, wrapping, propagacao e apresentacao de erros.

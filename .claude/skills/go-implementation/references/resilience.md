@@ -1,5 +1,11 @@
 # Resiliência
 
+<!-- TL;DR
+Padrões de resiliência em Go: timeouts explícitos, retry com backoff, circuit breaker e bulkhead para proteger contra falhas transitórias.
+Keywords: resiliência, timeout, retry, backoff, circuit-breaker, bulkhead, falha
+Load complete when: tarefa envolve chamadas de rede, retries, circuit breaker ou proteção contra falhas em dependências externas.
+-->
+
 ## Objetivo
 Proteger o sistema contra falhas transitórias e degradação em dependências externas.
 

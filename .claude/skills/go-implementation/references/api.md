@@ -1,5 +1,11 @@
 # API (HTTP/gRPC)
 
+<!-- TL;DR
+Guia de design de APIs HTTP/gRPC em Go: handlers finos, contratos explícitos e separação entre transporte e lógica de negócio.
+Keywords: http, grpc, handler, middleware, dto, rest, request, response
+Load complete when: tarefa envolve criação ou modificação de handlers HTTP/gRPC, middlewares, serialização ou DTOs.
+-->
+
 ## Objetivo
 Manter handlers finos, contratos explícitos e separação clara entre transporte e lógica.
 

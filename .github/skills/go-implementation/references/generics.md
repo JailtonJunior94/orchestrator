@@ -1,5 +1,11 @@
 # Generics
 
+<!-- TL;DR
+Diretrizes para uso de generics em Go: quando usar para coleções tipadas, mappers e result types, e quando preferir implementações concretas.
+Keywords: generics, tipo, constraint, coleção, mapper, result-type, reutilização
+Load complete when: tarefa envolve criação ou revisão de código com generics, constraints ou tipos parametrizados em Go.
+-->
+
 ## Quando usar
 - Quando houver algoritmo ou estrutura reutilizável para múltiplos tipos com a mesma semântica.
 - Quando a alternativa seria duplicação relevante ou uso inseguro de `any`.

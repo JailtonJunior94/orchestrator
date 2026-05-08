@@ -1,6 +1,6 @@
 ---
 name: create-tasks
-version: 1.0.0
+version: 1.1.0
 description: Cria tarefas incrementais de implementação a partir de um PRD e de uma especificação técnica. Use quando documentos de produto e técnicos aprovados precisarem ser decompostos em itens de trabalho ordenados e testáveis. Não use para mudanças diretas de código, descoberta de funcionalidade ou revisão de branch.
 ---
 
@@ -23,8 +23,8 @@ description: Cria tarefas incrementais de implementação a partir de um PRD e d
 1. Ler `assets/tasks-template.md` e `assets/task-template.md` antes de redigir.
 2. Produzir uma lista de alto nível com no máximo 10 tarefas.
 3. Para cada tarefa, incluir objetivo, entregável e dependências.
-4. Parar e aguardar aprovação antes de gerar os arquivos finais — **exceto** quando o usuário incluir aprovação explícita no próprio pedido (ex: "pode prosseguir", "aprovado", "gere as tasks") ou quando o contexto for dogfooding/pipeline automatizado. Nesses casos, prosseguir diretamente para a Etapa 4.
-5. Se a aprovação não estiver disponível na sessão atual e não houver aprovação implícita no contexto, retornar `needs_input` e não escrever os arquivos de tarefa.
+4. Parar e aguardar aprovação antes de gerar os arquivos finais.
+5. Se a aprovação não estiver disponível na sessão atual, retornar `needs_input` e não escrever os arquivos de tarefa.
 
 **Etapa 4: Gerar os artefatos detalhados de tarefa**
 1. Após a aprovação, criar `tasks/prd-<feature-slug>/tasks.md` a partir de `assets/tasks-template.md`.
@@ -52,3 +52,7 @@ description: Cria tarefas incrementais de implementação a partir de um PRD e d
 * Se o PRD e a especificação técnica divergirem sobre o escopo, pausar e expor o conflito em vez de codificar os dois nas tarefas.
 * Se uma tarefa proposta misturar preocupações não relacionadas, dividi-la antes de escrever os arquivos.
 * Se o plano exceder 10 itens principais, consolidar ou reagrupar o trabalho até que cada tarefa represente uma fatia coerente de entrega, e não um micro-passo.
+
+## Resolução de paths
+
+Todo caminho `tasks/prd-<slug>/` referenciado neste documento resolve para `${AI_TASKS_ROOT:-tasks}/${AI_PRD_PREFIX:-prd-}<slug>/`. Defaults preservam o layout histórico. Customização via `.claude/config.yaml` ou `.agents/config.yaml` (chaves `tasks_root`, `prd_prefix`). `scripts/lib/check-invocation-depth.sh` exporta `AI_TASKS_ROOT` e `AI_PRD_PREFIX` para garantir paridade entre Claude Code, Codex, Gemini e Copilot.
