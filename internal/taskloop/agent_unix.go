@@ -33,8 +33,11 @@ func runCmd(ctx context.Context, workDir string, liveOut io.Writer, name string,
 		// Transmite stdout E stderr ao vivo para liveOut (ex: os.Stderr do processo pai).
 		// Permite ver progresso de ferramentas que escrevem em stderr (ex: avisos, status).
 		// O buffer captura independentemente para inclusao no relatorio final.
-		cmd.Stdout = io.MultiWriter(&stdoutBuf, liveOut)
-		cmd.Stderr = io.MultiWriter(&stderrBuf, liveOut)
+		// syncWriter serializa as goroutines de stdout/stderr ao escrever no mesmo destino
+		// (sem isto, writers nao thread-safe como bytes.Buffer racem ao receber ambos).
+		shared := &syncWriter{w: liveOut}
+		cmd.Stdout = io.MultiWriter(&stdoutBuf, shared)
+		cmd.Stderr = io.MultiWriter(&stderrBuf, shared)
 	} else {
 		cmd.Stdout = &stdoutBuf
 		cmd.Stderr = &stderrBuf
