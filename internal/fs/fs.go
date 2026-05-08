@@ -123,6 +123,9 @@ func (f *OSFileSystem) WriteFile(path string, data []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
+	if info, err := os.Lstat(path); err == nil && info.Mode().IsRegular() && info.Mode().Perm()&0o200 == 0 {
+		_ = os.Chmod(path, 0o644)
+	}
 	return os.WriteFile(path, data, 0o644)
 }
 

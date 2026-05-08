@@ -25,6 +25,33 @@ func TestOS_WriteAndRead(t *testing.T) {
 	}
 }
 
+func TestOS_WriteFile_overwritesReadOnly(t *testing.T) {
+	dir := t.TempDir()
+	f := fs.NewOSFileSystem()
+	p := filepath.Join(dir, "governance.md")
+
+	if err := os.WriteFile(p, []byte("old"), 0o444); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	if err := f.WriteFile(p, []byte("new")); err != nil {
+		t.Fatalf("WriteFile over read-only: %v", err)
+	}
+	data, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if string(data) != "new" {
+		t.Errorf("content = %q, want 'new'", data)
+	}
+	info, err := os.Stat(p)
+	if err != nil {
+		t.Fatalf("Stat: %v", err)
+	}
+	if info.Mode().Perm()&0o200 == 0 {
+		t.Errorf("file still not writable after WriteFile, mode = %v", info.Mode().Perm())
+	}
+}
+
 func TestOS_ReadFile_missing(t *testing.T) {
 	f := fs.NewOSFileSystem()
 	_, err := f.ReadFile("/nonexistent/path/file.txt")
