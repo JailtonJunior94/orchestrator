@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.19.1 (2026-05-08)
+
+### Bug Fixes
+- **integration:** atualiza skill budgets apos hardening de invocacao (9635f4d)
+
 ## 0.19.0 (2026-05-08)
 
 ### Features
