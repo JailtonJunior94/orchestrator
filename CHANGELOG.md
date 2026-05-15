@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.0 (2026-05-15)
+
+### Features
+- **execute-all-tasks:** orquestrador PRD com hooks de enforcement (1e35ecb)
+
 ## 0.19.1 (2026-05-08)
 
 ### Bug Fixes
