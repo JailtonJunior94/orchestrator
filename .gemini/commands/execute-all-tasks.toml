@@ -1,0 +1,19 @@
+description = "Orquestra a execucao completa de todas as tarefas de um PRD spawnando um subagent fresh por tarefa (contexto isolado), respeitando o DAG e paralelismo declarados em tasks.md"
+prompt = """
+Use `.agents/skills/execute-all-tasks/SKILL.md` como fluxo canonico desta orquestracao.
+Carregue `.agents/skills/execute-all-tasks/assets/orchestration-report-template.md` apenas no momento de gerar o relatorio agregado.
+
+Regras obrigatorias:
+1. Para CADA tarefa elegivel do PRD, spawnar um subagent `task-executor` via primitiva nativa do Gemini CLI (`@task-executor` ou auto-delegacao).
+2. Cada subagent recebe prompt auto-contido (task file, prd.md, techspec.md, tasks.md) e DEVE retornar EXCLUSIVAMENTE um bloco YAML com `status`, `report_path`, `summary` (1 linha). Sem diffs, codigo ou logs.
+3. Respeitar o DAG: tarefa so entra na wave quando todas suas dependencias estao `done`.
+4. Tarefas com `Paralelizavel=true` na mesma wave: dispatch paralelo de multiplos subagents (Gemini suporta nativamente).
+5. Halt-first: qualquer subagent retornando status `!= done` interrompe novas waves.
+6. NAO mutar `tasks.md` no orquestrador; somente os subagents via `execute-task` Stage 5 atualizam status.
+7. Apos sucesso ou halt, escrever `tasks/prd-<slug>/_orchestration_report.md` com snapshot agregado.
+
+Nao invente um processo paralelo. Nao execute tarefas inline. Nao acumule contexto entre tarefas.
+
+Aplicar a habilidade a esta solicitacao:
+{{args}}
+"""

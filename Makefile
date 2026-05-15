@@ -1,4 +1,4 @@
-.PHONY: build test integration lint vet clean coverage coverage-packages fuzz bench budget
+.PHONY: build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync test-hooks
 
 BINARY := ai-spec
 GOFLAGS := -trimpath
@@ -48,3 +48,12 @@ bench:
 
 budget:
 	go test -tags=integration -run TestTokenBudget ./internal/integration/...
+
+check-skills-sync:
+	bash scripts/check-skills-sync.sh
+
+check-hooks-sync:
+	bash scripts/check-hooks-sync.sh
+
+test-hooks:
+	bash scripts/test-hooks.sh

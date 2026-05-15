@@ -163,6 +163,98 @@ Mantenha este agente estreito: %s.
 	g.printer.Debug("Adaptadores GitHub gerados: %d", count)
 }
 
+// GenerateGeminiAgents cria definicoes de subagent em .gemini/agents/<name>.md
+// espelhando ProcessualSkills + skillRegistry. Mantem paridade com Claude/Copilot.
+func (g *Generator) GenerateGeminiAgents(sourceDir, projectDir string) {
+	agentsDir := filepath.Join(projectDir, ".gemini", "agents")
+	_ = g.fs.MkdirAll(agentsDir)
+	count := 0
+
+	for _, skill := range ProcessualSkills {
+		meta, ok := skillRegistry[skill]
+		if !ok {
+			continue
+		}
+
+		skillFile := filepath.Join(sourceDir, ".agents", "skills", skill, "SKILL.md")
+		if !g.fs.Exists(skillFile) {
+			continue
+		}
+
+		data, err := g.fs.ReadFile(skillFile)
+		if err != nil {
+			continue
+		}
+
+		fm := skills.ParseFrontmatter(data)
+		if fm.Description == "" {
+			continue
+		}
+
+		shortDesc := truncateAtSentence(fm.Description, 120)
+		content := fmt.Sprintf(`---
+name: %s
+description: %s
+---
+
+Use a skill canonica `+"`.agents/skills/%s/SKILL.md`"+` como processo de execucao desta tarefa.
+Mantenha este subagente estreito: %s.
+`, meta.claudeName, shortDesc, skill, meta.instruction)
+
+		_ = g.fs.WriteFile(filepath.Join(agentsDir, meta.claudeName+".md"), []byte(content))
+		count++
+	}
+	g.printer.Debug("Adaptadores Gemini agents gerados: %d", count)
+}
+
+// GenerateCodexAgents cria definicoes de subagent em .codex/agents/<name>.toml
+// espelhando ProcessualSkills + skillRegistry. Mantem paridade com Claude/Copilot.
+func (g *Generator) GenerateCodexAgents(sourceDir, projectDir string) {
+	agentsDir := filepath.Join(projectDir, ".codex", "agents")
+	_ = g.fs.MkdirAll(agentsDir)
+	count := 0
+
+	for _, skill := range ProcessualSkills {
+		meta, ok := skillRegistry[skill]
+		if !ok {
+			continue
+		}
+
+		skillFile := filepath.Join(sourceDir, ".agents", "skills", skill, "SKILL.md")
+		if !g.fs.Exists(skillFile) {
+			continue
+		}
+
+		data, err := g.fs.ReadFile(skillFile)
+		if err != nil {
+			continue
+		}
+
+		fm := skills.ParseFrontmatter(data)
+		if fm.Description == "" {
+			continue
+		}
+
+		shortDesc := truncateAtSentence(fm.Description, 120)
+		content := fmt.Sprintf(`name = %q
+description = %q
+
+instructions = """
+Use a skill canonica .agents/skills/%s/SKILL.md como processo de execucao desta tarefa.
+Mantenha este subagente estreito: %s.
+"""
+
+[[skills.config]]
+path = ".agents/skills/%s"
+enabled = true
+`, meta.claudeName, shortDesc, skill, meta.instruction, skill)
+
+		_ = g.fs.WriteFile(filepath.Join(agentsDir, meta.claudeName+".toml"), []byte(content))
+		count++
+	}
+	g.printer.Debug("Adaptadores Codex agents gerados: %d", count)
+}
+
 // reviewLoopSkills are skills that include a validation loop and need an explicit reminder in the prompt.
 var reviewLoopSkills = map[string]bool{
 	"execute-task": true,

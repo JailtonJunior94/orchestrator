@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# pre-commit hook opcional — instale com:
+#   ln -s ../../scripts/git-hooks/pre-commit .git/hooks/pre-commit
+# Verifica drift entre canônico (.agents/skills/) e mirrors antes de cada commit.
+# Falha o commit se houver drift; rode `./scripts/sync-skills.sh` para corrigir.
+
+set -e
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+# Só roda se houver mudanças em skills
+if git diff --cached --name-only | grep -qE "^(\.agents/skills|\.claude/skills|\.github/skills|internal/embedded/assets/\.agents/skills)/"; then
+  echo "[pre-commit] mudanças em skills detectadas; verificando sync..."
+  if ! bash scripts/check-skills-sync.sh > /tmp/skills-sync.log 2>&1; then
+    echo
+    echo "❌ Skills drift detectado. Veja:"
+    cat /tmp/skills-sync.log
+    echo
+    echo "Para corrigir: bash scripts/sync-skills.sh && git add ."
+    exit 1
+  fi
+  echo "[pre-commit] skills em sync ✓"
+fi
+
+# Hooks sync gate
+if git diff --cached --name-only | grep -qE "^(\.claude|\.agents|\.gemini|\.codex|\.github|internal/embedded/assets/.+)/hooks/"; then
+  echo "[pre-commit] mudanças em hooks detectadas; verificando sync..."
+  if ! bash scripts/check-hooks-sync.sh > /tmp/hooks-sync.log 2>&1; then
+    echo
+    echo "❌ Hooks drift detectado. Veja:"
+    cat /tmp/hooks-sync.log
+    echo
+    echo "Para corrigir: bash scripts/sync-hooks.sh && git add ."
+    exit 1
+  fi
+  echo "[pre-commit] hooks em sync ✓"
+fi
+
+exit 0

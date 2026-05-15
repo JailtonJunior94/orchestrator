@@ -1,3 +1,8 @@
+<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->
+<!-- MANDATÓRIO: preenchido por `create-technical-specification` Etapa 7.1 com sha256 do PRD consumido.
+     Rastreabilidade: `create-tasks` e `execute-task` comparam este hash com o atual do prd.md
+     para detectar drift entre techspec e PRD. NÃO remover este comentário ao editar a techspec. -->
+
 # Especificação Técnica
 
 ## Resumo Executivo

@@ -329,6 +329,72 @@ func TestGenerateGitHub_noSkillFiles(t *testing.T) {
 	}
 }
 
+func TestGenerateGeminiAgents_withSkill(t *testing.T) {
+	g, fsys := newTestGenerator()
+	src := "/source"
+	proj := "/project"
+
+	seedSkill(fsys, src, "execute-task", "Executa tarefa aprovada.")
+
+	g.GenerateGeminiAgents(src, proj)
+
+	agentFile := filepath.Join(proj, ".gemini", "agents", "task-executor.md")
+	if !fsys.Exists(agentFile) {
+		t.Fatalf("GenerateGeminiAgents should create %s", agentFile)
+	}
+	data, _ := fsys.ReadFile(agentFile)
+	body := string(data)
+	if !strings.Contains(body, "name: task-executor") {
+		t.Errorf("agent should declare name task-executor, got: %s", body)
+	}
+	if !strings.Contains(body, ".agents/skills/execute-task/SKILL.md") {
+		t.Errorf("agent should reference canonical SKILL.md path, got: %s", body)
+	}
+}
+
+func TestGenerateGeminiAgents_noSkillFiles(t *testing.T) {
+	g, fsys := newTestGenerator()
+	g.GenerateGeminiAgents("/source", "/project")
+
+	entries, _ := fsys.ReadDir(filepath.Join("/project", ".gemini", "agents"))
+	if len(entries) != 0 {
+		t.Errorf("GenerateGeminiAgents without skill files should produce no agents, got %d", len(entries))
+	}
+}
+
+func TestGenerateCodexAgents_withSkill(t *testing.T) {
+	g, fsys := newTestGenerator()
+	src := "/source"
+	proj := "/project"
+
+	seedSkill(fsys, src, "execute-task", "Executa tarefa aprovada.")
+
+	g.GenerateCodexAgents(src, proj)
+
+	agentFile := filepath.Join(proj, ".codex", "agents", "task-executor.toml")
+	if !fsys.Exists(agentFile) {
+		t.Fatalf("GenerateCodexAgents should create %s", agentFile)
+	}
+	data, _ := fsys.ReadFile(agentFile)
+	body := string(data)
+	if !strings.Contains(body, `name = "task-executor"`) {
+		t.Errorf("agent should declare name = \"task-executor\", got: %s", body)
+	}
+	if !strings.Contains(body, `path = ".agents/skills/execute-task"`) {
+		t.Errorf("agent should reference canonical skill path, got: %s", body)
+	}
+}
+
+func TestGenerateCodexAgents_noSkillFiles(t *testing.T) {
+	g, fsys := newTestGenerator()
+	g.GenerateCodexAgents("/source", "/project")
+
+	entries, _ := fsys.ReadDir(filepath.Join("/project", ".codex", "agents"))
+	if len(entries) != 0 {
+		t.Errorf("GenerateCodexAgents without skill files should produce no agents, got %d", len(entries))
+	}
+}
+
 func TestProcessualSkills_notEmpty(t *testing.T) {
 	if len(adapters.ProcessualSkills) == 0 {
 		t.Error("ProcessualSkills should not be empty")

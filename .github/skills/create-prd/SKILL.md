@@ -1,7 +1,7 @@
 ---
 name: create-prd
-version: 1.1.0
-description: Cria documentos de requisitos do produto a partir de solicitações de funcionalidade. Use quando uma funcionalidade precisar de escopo, objetivos, restrições e requisitos funcionais numerados antes do desenho técnico. Não use para planejamento de implementação, mudanças de código ou decisões de arquitetura técnica.
+version: 1.2.1
+description: Cria documentos de requisitos do produto a partir de solicitações de funcionalidade. Use quando uma funcionalidade precisar de escopo, objetivos, restrições e requisitos funcionais numerados antes do desenho técnico. Detecta artefatos downstream (techspec, tasks) ao evoluir PRD existente e exige confirmação para evitar drift silencioso. Não use para planejamento de implementação, mudanças de código ou decisões de arquitetura técnica.
 ---
 
 # Criar PRD
@@ -12,6 +12,16 @@ description: Cria documentos de requisitos do produto a partir de solicitações
 1. Confirmar que a solicitação é de definição de produto ou funcionalidade, não de implementação ou correção.
 2. Derivar um slug estável da funcionalidade em kebab-case e planejar a saída em `tasks/prd-<slug-da-funcionalidade>/prd.md`.
 3. Se a pasta alvo ou o PRD já existirem, ler primeiro e evoluir o artefato existente em vez de criar um documento concorrente.
+4. **Gate de drift downstream (best-effort, depende do agente verificar)**: ao detectar PRD pré-existente, executar `ls tasks/prd-<slug>/` e verificar a presença de QUALQUER um destes artefatos:
+   - `tasks/prd-<slug>/techspec.md`
+   - `tasks/prd-<slug>/tasks.md`
+   - qualquer `task-*.md` (arquivos de tarefa individual)
+   - qualquer `*_execution_report.md` (evidência de execução por tarefa)
+   - `_orchestration_report.md` (rollup de orquestração via `execute-all-tasks`)
+   - qualquer `adr-*.md` (decisões arquiteturais derivadas)
+   Se algum existir, **parar com `needs_input` mandatório** com mensagem: "PRD será editado; <lista de artefatos detectados> podem ficar desatualizados. Spec-version será incrementada e o spec-hash em tasks.md vai divergir, disparando `blocked` em `execute-task` Stage 1 nas próximas execuções. Você quer (a) prosseguir e regenerar techspec/tasks depois, (b) editar só itens não-disruptivos (typos, clarificações sem mudança de RF), ou (c) cancelar?". Sem confirmação explícita, não editar.
+
+   **Limite honesto**: este gate é **best-effort enforcement** — depende do agente seguir a instrução de listar o diretório. Não há validação programática que force a verificação. Se o agente pular esta etapa, drift silencioso pode ocorrer. Para auditoria robusta, adicionar `bash scripts/check-spec-drift.sh tasks/prd-<slug>/tasks.md` em pre-commit hook ou CI.
 
 **Etapa 2: Coletar o contexto mínimo viável de produto**
 1. Fazer perguntas de esclarecimento cobrindo as seis categorias obrigatórias:

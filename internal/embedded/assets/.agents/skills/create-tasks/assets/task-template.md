@@ -24,6 +24,16 @@
 - [Resultados mensuráveis]
 - [Requisitos de qualidade]
 
+## Skills Necessárias
+
+<!-- MANDATÓRIO: preenchido por `create-tasks` Etapa 4.1 via descoberta agnóstica em `.agents/skills/`.
+     NÃO inclua aqui skills auto-carregadas em runtime: `agent-governance`, `execute-task`, `bugfix`,
+     `review`, `refactor`, nem skills `*-implementation` (linguagem, inferida pelo diff).
+     Use o conteúdo único `Nenhuma além das auto-carregadas (governance + linguagem).` se a tarefa
+     não exigir skill processual extra. -->
+
+- `<skill-name>` — <justificativa de 1 linha do gatilho detectado no PRD/techspec>
+
 ## Testes da Tarefa
 
 - [ ] Testes unitários

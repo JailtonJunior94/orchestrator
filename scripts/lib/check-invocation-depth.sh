@@ -22,6 +22,20 @@
 
 set -euo pipefail
 
+# F30: validacao de AI_TOOL — aceitar apenas valores canonicos.
+# Se vazio: deixa unset (skills caem em modo agnostico).
+# Se invalido: emite warning e faz unset para evitar comportamento indefinido.
+if [[ -n "${AI_TOOL:-}" ]]; then
+  case "$AI_TOOL" in
+    claude|codex|gemini|copilot)
+      ;;  # valores canonicos aceitos
+    *)
+      echo "WARN: AI_TOOL='$AI_TOOL' nao reconhecido (aceitos: claude, codex, gemini, copilot). Fazendo unset para modo agnostico." >&2
+      unset AI_TOOL
+      ;;
+  esac
+fi
+
 AI_INVOCATION_MAX="${AI_INVOCATION_MAX:-2}"
 current="${AI_INVOCATION_DEPTH:-0}"
 

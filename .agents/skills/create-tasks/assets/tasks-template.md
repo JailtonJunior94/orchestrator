@@ -11,11 +11,22 @@
 
 ## Tarefas
 
-| # | Título | Status | Dependências | Paralelizável |
-|---|--------|--------|-------------|---------------|
-| 1.0 | [Título da tarefa] | pending | — | — |
-| 2.0 | [Título da tarefa] | pending | 1.0 | Não |
-| 3.0 | [Título da tarefa] | pending | — | Com 2.0 |
+<!-- Colunas e formato canônico (MANDATÓRIO):
+     - `#`: id decimal `X.Y` (sempre X.0 para tarefas de topo).
+     - `Status`: ^(pending|in_progress|needs_input|blocked|failed|done)$
+     - `Dependências`: ^(—|\d+\.\d+(,\s*\d+\.\d+)*)$  (em-dash unicode quando vazio)
+     - `Paralelizável`: ^(—|Não|Com\s+\d+\.\d+(,\s*\d+\.\d+)*)$
+     - `Skills`: skills processuais extras (descoberta agnóstica em `.agents/skills/`). Use `—` quando
+       não houver. Nunca listar skills auto-carregadas (governance/linguagem) nem `*-implementation`.
+     - `Fase` (OPCIONAL): inteiro positivo para agrupamento visual de fases de entrega. Pode ser
+       omitida em PRDs pequenos; `execute-all-tasks` não consome esta coluna. Se incluída, mantenha
+       em todas as linhas para não quebrar o parser de tabela markdown. -->
+
+| # | Título | Status | Dependências | Paralelizável | Skills |
+|---|--------|--------|-------------|---------------|--------|
+| 1.0 | [Título da tarefa] | pending | — | — | — |
+| 2.0 | [Título da tarefa] | pending | 1.0 | Não | <skill-1>, <skill-2> |
+| 3.0 | [Título da tarefa] | pending | — | Com 2.0 | <skill-1> |
 
 ## Dependências Críticas
 - [Descrever dependências bloqueantes entre tarefas]

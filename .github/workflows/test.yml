@@ -76,6 +76,15 @@ jobs:
       - name: Lint
         run: make lint
 
+      - name: Skills sync drift gate
+        run: make check-skills-sync
+
+      - name: Hooks sync drift gate
+        run: make check-hooks-sync
+
+      - name: Hook smoke tests
+        run: make test-hooks
+
   integration:
     name: Integration tests
     needs: unit

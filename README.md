@@ -62,6 +62,7 @@ Depois da instalacao, o repositorio alvo passa a expor skills e agentes processu
 - `create-technical-specification`
 - `create-tasks`
 - `execute-task`
+- `execute-all-tasks`
 - `review`
 - `bugfix`
 - `refactor`

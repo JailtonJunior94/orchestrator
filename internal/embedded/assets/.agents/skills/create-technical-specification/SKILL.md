@@ -1,7 +1,7 @@
 ---
 name: create-technical-specification
-version: 1.0.0
-description: Cria especificações técnicas prontas para implementação a partir de um PRD aprovado e do contexto do repositório. Use quando arquitetura, interfaces, riscos, ADRs e estratégia de testes precisarem ser definidos antes da codificação. Não use para descoberta de produto, execução de tarefa ou revisão de código.
+version: 1.1.0
+description: Cria especificações técnicas prontas para implementação a partir de um PRD aprovado e do contexto do repositório. Registra spec-hash do PRD consumido no cabeçalho da techspec para rastreabilidade e detecção de drift downstream. Use quando arquitetura, interfaces, riscos, ADRs e estratégia de testes precisarem ser definidos antes da codificação. Não use para descoberta de produto, execução de tarefa ou revisão de código.
 ---
 
 # Criar Especificação Técnica
@@ -51,9 +51,12 @@ description: Cria especificações técnicas prontas para implementação a part
 4. Vincular as ADRs a partir da especificação técnica.
 
 **Etapa 7: Persistir e reportar**
-1. Salvar a especificação técnica como `tasks/prd-<slug-da-funcionalidade>/techspec.md`.
-2. Informar o caminho final, os caminhos das ADRs e os itens ainda em aberto.
-3. Retornar estado final `done` ou `needs_input`.
+1. **Calcular e injetar spec-hash do PRD no topo da techspec** (mandatório):
+   - `<!-- spec-hash-prd: $(sha256sum tasks/prd-<slug>/prd.md | awk '{print $1}') -->`
+   - Esse comentário rastreia qual versão do PRD foi consumida; se o PRD for editado depois, `create-tasks` e `execute-task` detectam o drift comparando este hash com o atual.
+2. Salvar a especificação técnica como `tasks/prd-<slug-da-funcionalidade>/techspec.md`.
+3. Informar o caminho final, os caminhos das ADRs e os itens ainda em aberto.
+4. Retornar estado final `done` ou `needs_input`.
 
 ## Tratamento de Erros
 

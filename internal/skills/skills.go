@@ -61,6 +61,7 @@ var BaseSkills = []string{
 	"create-technical-specification",
 	"create-tasks",
 	"execute-task",
+	"execute-all-tasks",
 	"refactor",
 	"review",
 	"analyze-project",

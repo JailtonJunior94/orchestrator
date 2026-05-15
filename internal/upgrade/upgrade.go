@@ -595,7 +595,7 @@ var upgradePlanningSkills = []string{
 }
 
 func (s *Service) installedCodexSkills(projectDir, codexProfile string) []string {
-	baseSkills := []string{"agent-governance", "bugfix", "review", "refactor", "execute-task"}
+	baseSkills := []string{"agent-governance", "bugfix", "review", "refactor", "execute-task", "execute-all-tasks"}
 
 	if codexProfile != "lean" {
 		baseSkills = append(baseSkills, upgradePlanningSkills...)

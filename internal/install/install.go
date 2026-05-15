@@ -2,6 +2,7 @@ package install
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -96,6 +97,13 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 	for _, tool := range opts.Tools {
 		if err := s.installTool(sourceDir, projectDir, tool, allSkills, linkMode, opts.DryRun, opts.CodexProfile); err != nil {
 			return fmt.Errorf("instalar %s: %w", tool, err)
+		}
+	}
+
+	// 2.5 Instalar hooks canonicos do orquestrador em .agents/hooks/ (source-of-truth).
+	if !opts.DryRun {
+		if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".agents", "hooks")); err != nil {
+			s.printer.Warn("falha ao copiar hooks canonicos: %v", err)
 		}
 	}
 
@@ -313,6 +321,11 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 		}
 	}
 
+	// Hooks de enforcement programatico do orquestrador (execute-all-tasks + execute-task).
+	if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".claude", "hooks")); err != nil {
+		return err
+	}
+
 	parseHookInput := filepath.Join(sourceDir, "scripts", "lib", "parse-hook-input.sh")
 	if s.fs.Exists(parseHookInput) {
 		if err := s.fs.CopyFile(parseHookInput, filepath.Join(projectDir, "scripts", "lib", "parse-hook-input.sh")); err != nil {
@@ -355,6 +368,7 @@ func (s *Service) installGemini(sourceDir, projectDir string, dryRun bool) error
 	if dryRun {
 		s.printer.DryRun("mkdir -p %s", cmdDir)
 		s.printer.DryRun("gerar .gemini/commands/*.toml via adaptadores")
+		s.printer.DryRun("gerar .gemini/agents/*.md via adaptadores")
 		s.printer.DryRun("copiar .gemini/hooks/validate-preload.sh")
 		s.printer.DryRun("copiar .gemini/hooks/validate-governance.sh")
 		s.printer.DryRun("copiar GEMINI.md")
@@ -365,6 +379,7 @@ func (s *Service) installGemini(sourceDir, projectDir string, dryRun bool) error
 		return err
 	}
 	s.adapters.GenerateGemini(sourceDir, projectDir)
+	s.adapters.GenerateGeminiAgents(sourceDir, projectDir)
 
 	hookDir := filepath.Join(projectDir, ".gemini", "hooks")
 	geminiPreload := filepath.Join(sourceDir, ".gemini", "hooks", "validate-preload.sh")
@@ -387,6 +402,10 @@ func (s *Service) installGemini(sourceDir, projectDir string, dryRun bool) error
 		}
 	}
 
+	if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".gemini", "hooks")); err != nil {
+		return err
+	}
+
 	geminiMD := filepath.Join(sourceDir, "GEMINI.md")
 	if s.fs.Exists(geminiMD) {
 		if err := s.fs.CopyFile(geminiMD, filepath.Join(projectDir, "GEMINI.md")); err != nil {
@@ -394,6 +413,49 @@ func (s *Service) installGemini(sourceDir, projectDir string, dryRun bool) error
 		}
 	}
 
+	return nil
+}
+
+// orchestratorHooks lista hooks de enforcement programatico do execute-all-tasks/execute-task.
+// Distribuidos para todos os tools (.claude, .gemini, .codex, .github) para permitir
+// invocacao consistente independente de qual CLI o usuario esteja rodando.
+//
+// O subagent-stop-wrapper.sh eh especifico do Claude Code (registrado em
+// settings.local.json como SubagentStop hook) mas distribuido para todos os
+// tools como utilitario invocavel.
+var orchestratorHooks = []string{
+	"post-execute-task.sh",
+	"pre-execute-all-tasks.sh",
+	"post-wave.sh",
+	"subagent-stop-wrapper.sh",
+}
+
+// copyOrchestratorHooks copia os hooks do execute-all-tasks/execute-task para o
+// diretorio de hooks do tool especificado e preserva permissao +x.
+// Falha silenciosamente para hooks ausentes na fonte (compatibilidade legada).
+func (s *Service) copyOrchestratorHooks(sourceDir, projectDir, toolHookDir string) error {
+	dstDir := filepath.Join(projectDir, toolHookDir)
+	srcDir := filepath.Join(sourceDir, toolHookDir)
+
+	for _, hook := range orchestratorHooks {
+		src := filepath.Join(srcDir, hook)
+		if !s.fs.Exists(src) {
+			continue
+		}
+		if err := s.fs.MkdirAll(dstDir); err != nil {
+			return err
+		}
+		dst := filepath.Join(dstDir, hook)
+		if err := s.fs.CopyFile(src, dst); err != nil {
+			return err
+		}
+		// Preservar permissao executavel (CopyFile do harness nao preserva mode bits).
+		// Usar os.Chmod direto ao filesystem real porque s.fs.Chmod pode nao existir.
+		if err := os.Chmod(dst, 0o755); err != nil {
+			// Nao bloqueante: hook ainda funciona via `bash hook.sh`. Apenas log.
+			s.printer.Warn("nao foi possivel preservar +x em %s: %v", dst, err)
+		}
+	}
 	return nil
 }
 
@@ -419,6 +481,7 @@ func (s *Service) installCodex(sourceDir, projectDir string, skillList []string,
 	if dryRun {
 		s.printer.DryRun("mkdir -p %s", codexDir)
 		s.printer.DryRun("gerar .codex/config.toml")
+		s.printer.DryRun("gerar .codex/agents/*.toml via adaptadores")
 		s.printer.DryRun("copiar .codex/hooks/validate-preload.sh")
 		return nil
 	}
@@ -437,6 +500,8 @@ func (s *Service) installCodex(sourceDir, projectDir string, skillList []string,
 		return err
 	}
 
+	s.adapters.GenerateCodexAgents(sourceDir, projectDir)
+
 	hookDir := filepath.Join(projectDir, ".codex", "hooks")
 	codexPreload := filepath.Join(sourceDir, ".codex", "hooks", "validate-preload.sh")
 	if s.fs.Exists(codexPreload) {
@@ -446,6 +511,10 @@ func (s *Service) installCodex(sourceDir, projectDir string, skillList []string,
 		if err := s.fs.CopyFile(codexPreload, filepath.Join(hookDir, "validate-preload.sh")); err != nil {
 			return err
 		}
+	}
+
+	if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".codex", "hooks")); err != nil {
+		return err
 	}
 
 	return nil
@@ -495,8 +564,12 @@ func (s *Service) installCopilot(sourceDir, projectDir string, skillList []strin
 
 	if !dryRun {
 		s.adapters.GenerateGitHub(sourceDir, projectDir)
+		if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".github", "hooks")); err != nil {
+			return err
+		}
 	} else {
 		s.printer.DryRun("gerar .github/agents/*.agent.md via adaptadores")
+		s.printer.DryRun("copiar .github/hooks/{post-execute-task,pre-execute-all-tasks,post-wave}.sh")
 	}
 
 	return nil
@@ -523,6 +596,17 @@ func defaultClaudeSettings() string {
           {
             "type": "command",
             "command": "bash .claude/hooks/validate-governance.sh"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "task-executor",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/subagent-stop-wrapper.sh"
           }
         ]
       }

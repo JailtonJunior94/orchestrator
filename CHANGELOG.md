@@ -39,6 +39,17 @@
 ## [Unreleased]
 
 ### Features
+- **execute-all-tasks:** nova skill orquestradora de PRD que spawna um subagent fresh por tarefa para isolar contexto (≤100 tokens/task no orquestrador), respeita o DAG declarado em `tasks.md`, paraleliza waves marcadas como `Paralelizável` quando o tool ativo suporta nativamente, halt-first em status não-`done`, retomada idempotente. v1.5.0.
+- **adapters:** `GenerateGeminiAgents` e `GenerateCodexAgents` geram `task-executor` agent files automaticamente para Gemini (`.gemini/agents/`) e Codex (`.codex/agents/`), espelhando o padrão de Claude/Copilot — paridade multi-tool dos 8 agents processuais.
+- **hooks/orchestrator:** 4 hooks bash de enforcement programático (`post-execute-task.sh`, `pre-execute-all-tasks.sh`, `post-wave.sh`, `subagent-stop-wrapper.sh`) cobrindo F2 (evidence path), F13 (path absoluto), F17 (PREFLIGHT_DONE), F18 (cross-PRD spec-hash), F24 (escalation de remark crítico), F25 (checkpoint), F27 (ciclo cross-PRD), F29 (gaps numéricos), F31 (orchestrator checkpoint), F35 (git revert).
+- **install/SubagentStop:** `defaultClaudeSettings()` registra `subagent-stop-wrapper.sh` como SubagentStop hook com matcher `task-executor` — auto-invocação no Claude Code sem dependência de o LLM lembrar.
+- **create-tasks v1.5.0:** templates `tasks-template.md` e `task-template.md` ganham coluna/seção `Skills` mandatória; Etapa 4.1 faz descoberta agnóstica de skills processuais via match semântico contra `description` em `.agents/skills/`; Etapa 5.5 valida sincronia entre coluna e seção.
+- **create-technical-specification v1.1.0:** template injeta `<!-- spec-hash-prd: ... -->` no header (rastreabilidade do PRD consumido + drift detection downstream).
+- **create-prd v1.2.1:** Etapa 1.4 detecta artefatos downstream (techspec, tasks, reports) e exige confirmação humana (best-effort enforcement) antes de editar PRD existente.
+- **execute-task v1.4.0:** carrega skills processuais declaradas em `## Skills Necessárias` (descoberta agnóstica); Stage 4 escala `APPROVED_WITH_REMARKS` com tags `[critical|security|blocker|high]` para `BLOCKED`; Stage 5 escreve checkpoint YAML antes de mutar `tasks.md` (proteção contra crash mid-flight).
+- **scripts/test-hooks:** test harness com 14 asserts empíricos validando F18/F27/F29/F35/F25 com fixtures sintéticos descartáveis.
+- **scripts/sync-hooks + check-hooks-sync:** automação de sincronia canônico→mirrors (.agents, .gemini, .codex, .github, embedded) com pre-commit hook + step CI.
+- **docs/execute-all-tasks-guide.md:** guia operacional de 570 linhas cobrindo prompts copy-paste por tool, anti-padrões, fluxos end-to-end e tabela comparativa de capacidades por tool.
 - **taskloop:** orquestrador `Service.RunLoop` com `TaskSelector`, `AcceptanceGate`, `EvidenceRecorder`, `FinalReviewer`, `BugfixLoop` e `ReservationPlanner` (RF-01 a RF-08).
 - **taskloop:** RF-08(a) — decisão `ActionImplement` em `APPROVED_WITH_REMARKS` reentra o `BugfixLoop` com limite rígido de 3 iterações e escalonamento humano.
 - **taskloop:** telemetria `implement_promoted` por finding promovido a `Critical` via decisão `Implement`.
@@ -46,11 +57,30 @@
 - **taskloop/bugfix:** `splitReviewContext` / `attachReviewContext` preservam o cabeçalho de contexto entre iterações do `BugfixLoop`: o contexto segue para o reviewer mas não polui o prompt do `BugfixInvoker`.
 
 ### Bug Fixes
+- **execute-task:** Stage 2 não dispara mais `needs_input` em tarefas non-code (docs, configs YAML/JSON, SQL, shell, MD); detecção de linguagem agora condicional ao diff (F1).
+- **execute-all-tasks:** validação 4-pass do YAML retornado por subagent (formato canônico, status canônico, evidência física via `realpath` + `[ -s ]`, consistência com `tasks.md`) — fecha alucinação de path e crash silencioso (F2/F13/F25).
+- **execute-all-tasks:** wait-all-then-halt em waves paralelas previne race em `tasks.md` (F3); orientação explícita para subagents usarem `flock -x` ou rename atômico em writes concorrentes.
+- **execute-all-tasks:** regex canônicos estritos para `Status`, `Dependências` (com suporte cross-PRD `<slug>/<id>`), `Paralelizável` — sem parsing tolerante (F7/F12/F20).
+- **execute-all-tasks:** soft timeout (result-discard, não kill) configurável via `AI_TASK_TIMEOUT_SECONDS` ou comentário `<!-- task-timeout-seconds: N -->` no task file (F10/F21).
+- **execute-task:** pre-flight gates condicionais via `AI_PREFLIGHT_DONE=1` evitam re-execução redundante de `ai-spec skills --verify` em cada subagent quando orquestrador já validou (F8/F17).
+- **scripts/lib/check-invocation-depth.sh:** valida `AI_TOOL` ∈ `{claude, codex, gemini, copilot}`; valor inválido → unset (modo agnóstico) com warn (F30).
+- **scripts/check-skills-sync.sh:** loga `SKIP:` explicitamente quando skill é ignorada por falta de SKILL.md no canônico (F34).
+- **internal/install:** `copyOrchestratorHooks` preserva permissão `+x` via `os.Chmod 0o755` após `CopyFile` (F40).
 - **taskloop/reviewer:** `parseVerdict` ancorado em linha dedicada (`Verdict:`/`Veredito:`) para evitar falso positivo de `BLOCKED`/`REJECTED` por palavras-chave em texto livre.
 - **taskloop/reviewer:** `partitionDiff` subdivide seção única oversize em hunks `@@` repetindo o cabeçalho do arquivo; truncamento explícito quando hunk único excede `maxDiffPartitionSize`.
 - **taskloop/runloop:** ramo `bfErr` não-exhausted agora emite `final_review_verdict` preservando paridade com `VerdictRejected`.
 - **taskloop/reviewer:** prompt do reviewer consolidado inclui `BLOCKED` como veredito válido — impedia que o agente retornasse veredito de bloqueio em contextos sem condições de aprovar.
 - **taskloop/bugfix:** `BugfixLoop.Run` passava o `reviewInput` completo (com cabeçalho de contexto) ao `BugfixInvoker`; agora extrai e entrega apenas o diff puro, evitando contaminação do prompt de correção.
+
+### Documentation
+- **docs/execute-all-tasks-guide.md:** novo guia operacional de 570 linhas — pré-requisitos obrigatórios, anatomia dos inputs (tasks.md, task files), regras invioláveis, prompts copy-paste por tool (Claude/Codex/Gemini/Copilot), regras DTPS para paralelismo, fluxos end-to-end e tabela comparativa de capacidades por tool.
+
+### Chores
+- **install:** `BaseSkills` inclui `execute-all-tasks`; `installCodex`/`installGemini`/`installClaude`/`installCopilot` distribuem `task-executor` agent files + 4 hooks orquestrador para 5 dirs (.claude, .agents, .gemini, .codex, .github).
+- **install:** `defaultClaudeSettings()` registra `SubagentStop` matcher `task-executor` para auto-invocação do wrapper de validação programática.
+- **contextgen + upgrade:** allowlists internas incluem `execute-all-tasks` para distribuição correta no Codex `config.toml`.
+- **scripts:** novos `check-skills-sync.sh`, `check-hooks-sync.sh`, `sync-hooks.sh`, `test-hooks.sh`, `git-hooks/pre-commit`; integrados a Makefile (`check-skills-sync`, `check-hooks-sync`, `test-hooks`) e workflow `.github/workflows/test.yml`.
+- **tasks/prd-portability-parity + prd-taskloop-execution-validation:** migração para v1.4+ template (coluna `Skills` em tasks.md, seção `## Skills Necessárias` em todos os 17 task files).
 
 ## 0.16.0 (2026-04-25)
 
