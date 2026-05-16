@@ -9,7 +9,15 @@ description: Corrige bugs pela causa raiz com testes de regressao obrigatorios e
 ## Procedimentos
 
 **Etapa 1: Validar entrada e escopo**
-1. Verificar profundidade de invocação: resolver a raiz do repositorio com `repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"` e executar `source "$repo_root/scripts/lib/check-invocation-depth.sh" || { echo "failed: depth limit exceeded"; exit 1; }` — parar se o limite for atingido.
+1. Verificar profundidade de invocação: resolver a raiz com `repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"` e localizar `check-invocation-depth.sh` em cascata `.agents/lib/` → `scripts/lib/` (B1, suporta bootstrap em projetos que copiam apenas `.agents/`):
+   ```bash
+   _depth_lib=""
+   for d in "$repo_root/.agents/lib" "$repo_root/scripts/lib"; do
+     [[ -r "$d/check-invocation-depth.sh" ]] && { _depth_lib="$d/check-invocation-depth.sh"; break; }
+   done
+   [[ -n "$_depth_lib" ]] || { echo "failed: check-invocation-depth.sh ausente em .agents/lib/ e scripts/lib/"; exit 1; }
+   source "$_depth_lib" || { echo "failed: depth limit exceeded"; exit 1; }
+   ```
 2. Confirmar que a lista de bugs foi recebida no formato canonico `{ id, severity, file, line, reproduction, expected, actual }`.
 3. Ler `references/canonical-bug-format.md` quando houver duvida sobre campos obrigatorios, severidades ou estados canonicos.
 4. Se a lista vier em arquivo JSON, validar contra o schema canonico com `python3 "$repo_root/.agents/skills/bugfix/scripts/validate-bug-input.py" --input <caminho>` antes de prosseguir. O script tenta JSON Schema (`jsonschema`) e cai para validacao manual equivalente quando a lib nao esta disponivel.
@@ -68,4 +76,4 @@ prd_prefix: prd-
 evidence_dir: ""
 ```
 
-`scripts/lib/check-invocation-depth.sh` (Etapa 1) exporta `AI_TASKS_ROOT`, `AI_PRD_PREFIX`, `AI_EVIDENCE_DIR`, `AI_TOOL` para skills, validators e runtime, garantindo paridade exata entre Claude Code, Codex, Gemini e Copilot.
+`check-invocation-depth.sh` (Etapa 1, resolvido em cascata `.agents/lib/` → `scripts/lib/`) exporta `AI_TASKS_ROOT`, `AI_PRD_PREFIX`, `AI_EVIDENCE_DIR`, `AI_TOOL` para skills, validators e runtime, garantindo paridade exata entre Claude Code, Codex, Gemini e Copilot.

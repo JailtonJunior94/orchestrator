@@ -504,6 +504,15 @@
         "flags": {}
       },
       {
+        "name": "hash",
+        "description": "Calcula SHA-256 de um arquivo de forma portavel",
+        "longDescription": "Calcula o SHA-256 de um arquivo usando a implementacao Go embarcada no ai-spec-harness, sem depender de binarios externos como sha256sum ou shasum.",
+        "args": [
+          { "name": "file", "required": true, "description": "Caminho para o arquivo a hashear" }
+        ],
+        "flags": {}
+      },
+      {
         "name": "task-loop",
         "description": "Executa tasks de um PRD folder sequencialmente via agente de IA",
         "longDescription": "Executa em loop todas as tasks elegiveis de uma pasta PRD, invocando o agente de IA configurado.",

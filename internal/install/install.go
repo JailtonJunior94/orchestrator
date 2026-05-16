@@ -107,6 +107,15 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 		}
 	}
 
+	// 2.6 Instalar vendor canonico .agents/lib/ (libs shell consumidas pelos
+	// hooks e skills com fallback cascata .agents/lib/ -> scripts/lib/).
+	// Mantem paridade entre vendor canonico e mirror legado em scripts/lib/.
+	if !opts.DryRun {
+		if err := s.copyAgentsLib(sourceDir, projectDir); err != nil {
+			s.printer.Warn("falha ao copiar .agents/lib/: %v", err)
+		}
+	}
+
 	// 3. Gerar governanca contextual
 	if opts.GenerateCtx {
 		s.printer.Step("Gerando governanca contextual...")
@@ -430,6 +439,75 @@ var orchestratorHooks = []string{
 	"subagent-stop-wrapper.sh",
 }
 
+// agentsLibFiles lista shell libs vendoradas em .agents/lib/ que skills e hooks
+// consomem via cascata `.agents/lib/` -> `scripts/lib/`. Distribuir o vendor
+// canonico evita dependencia exclusiva do mirror legado scripts/lib/.
+var agentsLibFiles = []string{
+	"check-invocation-depth.sh",
+	"parse-hook-input.sh",
+}
+
+// copyAgentsLib copia shell libs canonicas de .agents/lib/ da fonte para o
+// projeto destino. Falha silenciosamente quando o arquivo nao existe na fonte
+// (compatibilidade com installs partindo de bundles antigos sem o vendor).
+func (s *Service) copyAgentsLib(sourceDir, projectDir string) error {
+	dstDir := filepath.Join(projectDir, ".agents", "lib")
+	srcDir := filepath.Join(sourceDir, ".agents", "lib")
+
+	for _, lib := range agentsLibFiles {
+		src := filepath.Join(srcDir, lib)
+		if !s.fs.Exists(src) {
+			continue
+		}
+		if err := s.fs.MkdirAll(dstDir); err != nil {
+			return err
+		}
+		dst := filepath.Join(dstDir, lib)
+		if err := s.fs.CopyFile(src, dst); err != nil {
+			return err
+		}
+		if err := os.Chmod(dst, 0o755); err != nil {
+			s.printer.Warn("nao foi possivel preservar +x em %s: %v", dst, err)
+		}
+	}
+	return nil
+}
+
+// toolValidationHooks lista hooks de validacao por-tool (preload + governanca pos-edicao).
+// Distribuidos opcionalmente para Codex/Gemini/Copilot quando presentes na fonte;
+// Claude tem caminho dedicado em installClaude por suportar PreToolUse/PostToolUse nativos.
+var toolValidationHooks = []string{
+	"validate-preload.sh",
+	"validate-governance.sh",
+}
+
+// copyToolValidationHooks copia hooks de validacao especificos do tool (preload e
+// governanca) quando existirem na fonte. Mantem paridade entre Claude/Codex/Gemini/Copilot.
+// Falha silenciosamente para hooks ausentes — cada tool pode adotar apenas o subset
+// que faz sentido para sua mecanica de invocacao.
+func (s *Service) copyToolValidationHooks(sourceDir, projectDir, toolHookDir string) error {
+	dstDir := filepath.Join(projectDir, toolHookDir)
+	srcDir := filepath.Join(sourceDir, toolHookDir)
+
+	for _, hook := range toolValidationHooks {
+		src := filepath.Join(srcDir, hook)
+		if !s.fs.Exists(src) {
+			continue
+		}
+		if err := s.fs.MkdirAll(dstDir); err != nil {
+			return err
+		}
+		dst := filepath.Join(dstDir, hook)
+		if err := s.fs.CopyFile(src, dst); err != nil {
+			return err
+		}
+		if err := os.Chmod(dst, 0o755); err != nil {
+			s.printer.Warn("nao foi possivel preservar +x em %s: %v", dst, err)
+		}
+	}
+	return nil
+}
+
 // copyOrchestratorHooks copia os hooks do execute-all-tasks/execute-task para o
 // diretorio de hooks do tool especificado e preserva permissao +x.
 // Falha silenciosamente para hooks ausentes na fonte (compatibilidade legada).
@@ -502,15 +580,8 @@ func (s *Service) installCodex(sourceDir, projectDir string, skillList []string,
 
 	s.adapters.GenerateCodexAgents(sourceDir, projectDir)
 
-	hookDir := filepath.Join(projectDir, ".codex", "hooks")
-	codexPreload := filepath.Join(sourceDir, ".codex", "hooks", "validate-preload.sh")
-	if s.fs.Exists(codexPreload) {
-		if err := s.fs.MkdirAll(hookDir); err != nil {
-			return err
-		}
-		if err := s.fs.CopyFile(codexPreload, filepath.Join(hookDir, "validate-preload.sh")); err != nil {
-			return err
-		}
+	if err := s.copyToolValidationHooks(sourceDir, projectDir, filepath.Join(".codex", "hooks")); err != nil {
+		return err
 	}
 
 	if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".codex", "hooks")); err != nil {
@@ -564,12 +635,15 @@ func (s *Service) installCopilot(sourceDir, projectDir string, skillList []strin
 
 	if !dryRun {
 		s.adapters.GenerateGitHub(sourceDir, projectDir)
+		if err := s.copyToolValidationHooks(sourceDir, projectDir, filepath.Join(".github", "hooks")); err != nil {
+			return err
+		}
 		if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".github", "hooks")); err != nil {
 			return err
 		}
 	} else {
 		s.printer.DryRun("gerar .github/agents/*.agent.md via adaptadores")
-		s.printer.DryRun("copiar .github/hooks/{post-execute-task,pre-execute-all-tasks,post-wave}.sh")
+		s.printer.DryRun("copiar .github/hooks/{validate-preload,validate-governance,post-execute-task,pre-execute-all-tasks,post-wave}.sh")
 	}
 
 	return nil

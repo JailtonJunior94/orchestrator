@@ -10,14 +10,31 @@ description: Executa uma tarefa de implementação aprovada via codificação, v
 ## Procedimentos
 
 **Etapa 1: Validar elegibilidade**
-1. `source scripts/lib/check-invocation-depth.sh || { echo "failed: depth limit exceeded"; exit 1; }`. Fallback: `bash` + `eval`.
-2. **Pre-flight gates condicionais (F8)**:
+1. **Resolver lib de profundidade (B1, fallback agnóstico)**: procurar `check-invocation-depth.sh` na ordem `.agents/lib/` → `scripts/lib/`. Primeira existente vence. Garante bootstrap em projetos que copiam apenas `.agents/`:
+   ```bash
+   _depth_lib=""
+   for d in .agents/lib scripts/lib; do
+     [[ -r "$d/check-invocation-depth.sh" ]] && { _depth_lib="$d/check-invocation-depth.sh"; break; }
+   done
+   [[ -n "$_depth_lib" ]] || { echo "failed: check-invocation-depth.sh ausente em .agents/lib/ e scripts/lib/ — vendor a lib ou rode 'ai-spec-harness install'"; exit 1; }
+   source "$_depth_lib" || { echo "failed: depth limit exceeded"; exit 1; }
+   ```
+   Fallback de método (sem `source`): `bash "$_depth_lib"` + `eval`.
+2. **Gate de binário `ai-spec` (B2, sem degradação silenciosa)**: se a Etapa 1.3 abaixo for executar (`AI_PREFLIGHT_DONE` ausente), validar presença do binário antes:
+   ```bash
+   if [[ -z "${AI_PREFLIGHT_DONE:-}" ]] && ! command -v ai-spec >/dev/null 2>&1; then
+     echo "needs_input: binário 'ai-spec' não encontrado no PATH. Instale via 'brew install ai-spec-harness' (ou 'go install github.com/ai-spec-harness/ai-spec-harness/cmd/ai_spec_harness@latest'), OU exporte AI_PREFLIGHT_DONE=1 quando o orquestrador já validou drift e skills lock."
+     exit 1
+   fi
+   ```
+   Sem o binário a skill **deve parar com `needs_input`** — não prosseguir em modo legado silencioso. Princípio: governança acima de automação mágica.
+3. **Pre-flight gates condicionais (F8)**:
    - `AI_PREFLIGHT_DONE=1` exportada → pular gates (orquestrador já validou).
    - Senão: `ai-spec skills --verify` (`blocked` se ≠0); `ai-spec check-spec-drift tasks/prd-<slug>/tasks.md` (`blocked` se RF não coberto).
-3. Derivar `<slug>` do path. Ambíguo → `needs_input`.
-4. Confirmar `tasks.md`, task file alvo, `prd.md`, `techspec.md` presentes.
-5. Selecionar primeira tarefa elegível só se usuário não escolheu.
-6. Confirmar deps em `done` → senão `blocked`.
+4. Derivar `<slug>` do path. Ambíguo → `needs_input`.
+5. Confirmar `tasks.md`, task file alvo, `prd.md`, `techspec.md` presentes.
+6. Selecionar primeira tarefa elegível só se usuário não escolheu.
+7. Confirmar deps em `done` → senão `blocked`.
 
 **Etapa 2: Carregar contexto**
 1. Ler task file, `prd.md`, `techspec.md` por completo.
@@ -29,8 +46,8 @@ description: Executa uma tarefa de implementação aprovada via codificação, v
    - **Tarefas non-code** (docs, configs, SQL, shell, MD): nenhuma skill de linguagem; prosseguir.
 5. **Skills processuais declaradas (F6+F16+F28)**:
    - Parsear seção `## Skills Necessárias` (gerada por `create-tasks` v1.4+).
-   - **Regex estrito**: `^- \`([a-z0-9-]+)\` — .+$`. Linha não-canônica → `failed: malformed Skills Necessárias entry on task <id>: <linha>`.
-   - Conteúdo único exato `Nenhuma além das auto-carregadas (governance + linguagem).` = vazio. Variações → `failed: malformed Skills Necessárias section`.
+   - **Normalizar antes de validar**: trim, colapsar espaços, aceitar separadores equivalentes (` — `, ` - `, `:`) e reformatar mentalmente para `^- \`([a-z0-9-]+)\` — .+$`. Linha semanticamente ambígua → `failed: malformed Skills Necessárias entry on task <id>: <linha>`.
+   - Conteúdo canônico `Nenhuma além das auto-carregadas (governance + linguagem).` = vazio. Variações vazias equivalentes (`Nenhuma.`, `N/A`, `nenhuma`) = vazio com warning.
    - Ler coluna `Skills` em `tasks.md` (`—` = vazio).
    - **Sync gate (sem união silenciosa)**: divergente → `failed: skills sync drift on task <id> — file=<S_file> table=<S_table>`.
    - Ambas vazias: prosseguir (retrocompatível).
@@ -89,4 +106,4 @@ Aplicação: Etapa 2 (refs grandes multi-linguagem), Etapa 3 (subtarefas em paco
 
 ## Resolução de paths
 
-`tasks/prd-<slug>/` resolve para `${AI_TASKS_ROOT:-tasks}/${AI_PRD_PREFIX:-prd-}<slug>/`. Configurar em `.claude/config.yaml`/`.agents/config.yaml` (`tasks_root`, `prd_prefix`, `evidence_dir`, `coverage_threshold`, `language_default`). Vars exportadas por `scripts/lib/check-invocation-depth.sh`. `AI_TOOL` validado contra `{claude, codex, gemini, copilot}`; inválido → unset (modo agnóstico).
+`tasks/prd-<slug>/` resolve para `${AI_TASKS_ROOT:-tasks}/${AI_PRD_PREFIX:-prd-}<slug>/`. Configurar em `.claude/config.yaml`/`.agents/config.yaml` (`tasks_root`, `prd_prefix`, `evidence_dir`, `coverage_threshold`, `language_default`). Vars exportadas por `check-invocation-depth.sh`, resolvido em cascata `.agents/lib/` → `scripts/lib/` (vendor canônico em `.agents/lib/`, mirror legado em `scripts/lib/`). `AI_TOOL` validado contra `{claude, codex, gemini, copilot}`; inválido → unset (modo agnóstico).

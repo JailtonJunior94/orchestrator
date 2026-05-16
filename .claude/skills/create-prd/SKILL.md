@@ -21,7 +21,7 @@ description: Cria documentos de requisitos do produto a partir de solicitações
    - qualquer `adr-*.md` (decisões arquiteturais derivadas)
    Se algum existir, **parar com `needs_input` mandatório** com mensagem: "PRD será editado; <lista de artefatos detectados> podem ficar desatualizados. Spec-version será incrementada e o spec-hash em tasks.md vai divergir, disparando `blocked` em `execute-task` Stage 1 nas próximas execuções. Você quer (a) prosseguir e regenerar techspec/tasks depois, (b) editar só itens não-disruptivos (typos, clarificações sem mudança de RF), ou (c) cancelar?". Sem confirmação explícita, não editar.
 
-   **Limite honesto**: este gate é **best-effort enforcement** — depende do agente seguir a instrução de listar o diretório. Não há validação programática que force a verificação. Se o agente pular esta etapa, drift silencioso pode ocorrer. Para auditoria robusta, adicionar `bash scripts/check-spec-drift.sh tasks/prd-<slug>/tasks.md` em pre-commit hook ou CI.
+   **Limite honesto**: este gate é **best-effort enforcement** — depende do agente seguir a instrução de listar o diretório. Não há validação programática que force a verificação. Se o agente pular esta etapa, drift silencioso pode ocorrer. Para auditoria robusta, adicionar `ai-spec check-spec-drift tasks/prd-<slug>/tasks.md` em pre-commit hook ou CI.
 
 **Etapa 2: Coletar o contexto mínimo viável de produto**
 1. Fazer perguntas de esclarecimento cobrindo as seis categorias obrigatórias:
@@ -67,4 +67,4 @@ description: Cria documentos de requisitos do produto a partir de solicitações
 
 ## Resolução de paths
 
-Todo caminho `tasks/prd-<slug>/` referenciado neste documento resolve para `${AI_TASKS_ROOT:-tasks}/${AI_PRD_PREFIX:-prd-}<slug>/`. Defaults preservam o layout histórico. Customização via `.claude/config.yaml` ou `.agents/config.yaml` (chaves `tasks_root`, `prd_prefix`). `scripts/lib/check-invocation-depth.sh` exporta `AI_TASKS_ROOT` e `AI_PRD_PREFIX` para garantir paridade entre Claude Code, Codex, Gemini e Copilot.
+Todo caminho `tasks/prd-<slug>/` referenciado neste documento resolve para `${AI_TASKS_ROOT:-tasks}/${AI_PRD_PREFIX:-prd-}<slug>/`. Defaults preservam o layout histórico. Customização via `.claude/config.yaml` ou `.agents/config.yaml` (chaves `tasks_root`, `prd_prefix`). `check-invocation-depth.sh` exporta `AI_TASKS_ROOT` e `AI_PRD_PREFIX` para garantir paridade entre Claude Code, Codex, Gemini e Copilot — resolução em cascata `.agents/lib/` → `scripts/lib/` (vendor canônico em `.agents/lib/`).

@@ -3,7 +3,7 @@
 # Suite empirica dos hooks do orquestrador. Constroi fixtures temporarios em
 # tmp/ e valida que cada fragilidade dispara a deteccao esperada.
 #
-# Cobre: F2, F13, F17, F18, F24, F25, F27, F29, F35.
+# Cobre: F2, F13, F17, F18, F24, F25, F27, F29, F35 e contrato YAML.
 #
 # Uso: bash scripts/test-hooks.sh
 # Exit 0 = todos os testes passaram; exit 1 = algum teste falhou.
@@ -16,6 +16,16 @@ HOOKS_DIR="$REPO_ROOT/.claude/hooks"
 TMP_BASE=$(mktemp -d /tmp/test-hooks.XXXXXX)
 TASKS_BASE="$TMP_BASE/tasks"
 mkdir -p "$TASKS_BASE"
+
+# Garante que os hooks testem o CLI da working tree atual, nao uma versao antiga
+# instalada no sistema.
+mkdir -p "$TMP_BASE/bin"
+cat > "$TMP_BASE/bin/ai-spec" <<EOF
+#!/usr/bin/env bash
+cd "$REPO_ROOT" && go run . "\$@"
+EOF
+chmod +x "$TMP_BASE/bin/ai-spec"
+export PATH="$TMP_BASE/bin:$PATH"
 
 # Override env vars para fixtures temporarios.
 export AI_TASKS_ROOT="$(realpath --relative-to="$REPO_ROOT" "$TASKS_BASE" 2>/dev/null || python3 -c "import os; print(os.path.relpath('$TASKS_BASE', '$REPO_ROOT'))")"
@@ -66,7 +76,7 @@ make_prd() {
   echo "# Techspec $slug" > "$dir/techspec.md"
 
   local prd_hash
-  prd_hash=$(sha256sum "$dir/prd.md" | awk '{print $1}')
+  prd_hash=$(ai-spec hash "$dir/prd.md")
 
   cat > "$dir/tasks.md" <<EOF
 <!-- spec-hash-prd: $prd_hash -->
@@ -112,6 +122,23 @@ rm -f "$stderr"
 
 # ============================================================================
 echo
+echo "--- F18: cross-PRD task ausente / nao done ---"
+# ============================================================================
+make_prd "ext_status" "| 1.0 | Foo | pending | — | — | — |"
+make_prd "ext_status_dep" "| 1.0 | Bar | pending | ext_status/1.0 | — | — |"
+stderr=$(mktemp)
+bash "$HOOKS_DIR/pre-execute-all-tasks.sh" "ext_status_dep" 2>"$stderr"; rc=$?
+assert_exit "F18 task externa nao done = exit 1" 1 "$rc"
+assert_stderr_contains "FAIL F18 task not done detectada" "FAIL F18: cross-PRD task not done: ext_status/1.0" "$stderr"
+
+make_prd "ext_missing_dep" "| 1.0 | Bar | pending | ext_status/2.0 | — | — |"
+bash "$HOOKS_DIR/pre-execute-all-tasks.sh" "ext_missing_dep" 2>"$stderr"; rc=$?
+assert_exit "F18 task externa ausente = exit 1" 1 "$rc"
+assert_stderr_contains "FAIL F18 task not found detectada" "FAIL F18: cross-PRD task not found: ext_status/2.0" "$stderr"
+rm -f "$stderr"
+
+# ============================================================================
+echo
 echo "--- F27: cross-PRD circular dependency ---"
 # ============================================================================
 # Criar A → B → A (ciclo)
@@ -133,8 +160,12 @@ make_prd "gaps" \
   "| 5.0 | E | pending | — | — | — |"
 stderr=$(mktemp)
 bash "$HOOKS_DIR/pre-execute-all-tasks.sh" "gaps" 2>"$stderr"; rc=$?
-assert_exit "F29 gaps com warnings = exit 0 (warning nao bloqueia)" 0 "$rc"
-assert_stderr_contains "WARN F29 detectado" "WARN F29: gaps na numeracao" "$stderr"
+assert_exit "F29 gaps sem confirmacao = exit 1" 1 "$rc"
+assert_stderr_contains "FAIL F29 detectado" "FAIL F29: gaps na numeracao" "$stderr"
+
+AI_ALLOW_TASK_ID_GAPS=1 bash "$HOOKS_DIR/pre-execute-all-tasks.sh" "gaps" 2>"$stderr"; rc=$?
+assert_exit "F29 gaps com confirmacao explicita = exit 0" 0 "$rc"
+assert_stderr_contains "WARN F29 detectado" "WARN F29: gaps aceitos por AI_ALLOW_TASK_ID_GAPS=1" "$stderr"
 rm -f "$stderr"
 
 # ============================================================================
@@ -191,6 +222,52 @@ AI_ALLOW_MISSING_CHECKPOINT=1 bash "$HOOKS_DIR/post-execute-task.sh" "nochkpt" "
 assert_exit "F25 com AI_ALLOW_MISSING_CHECKPOINT=1 = exit 0" 0 "$rc"
 assert_stderr_contains "WARN F25 detectado em modo back compat" "WARN F25: checkpoint ausente.*back compat" "$stderr"
 rm -f "$stderr" "$yaml"
+
+# ============================================================================
+echo
+echo "--- Contrato YAML e status drift ---"
+# ============================================================================
+make_prd "yaml_contract" "| 1.0 | A | done | — | — | — |"
+echo "report" > "$TASKS_BASE/prd-yaml_contract/1.0_execution_report.md"
+mkdir -p "$TASKS_BASE/prd-yaml_contract/.checkpoints"
+echo "status: done" > "$TASKS_BASE/prd-yaml_contract/.checkpoints/1.0.yaml"
+
+yaml=$(mktemp)
+cat > "$yaml" <<EOF
+status: done
+report_path: $AI_TASKS_ROOT/prd-yaml_contract/1.0_execution_report.md
+summary: ok
+extra: proibido
+EOF
+stderr=$(mktemp)
+bash "$HOOKS_DIR/post-execute-task.sh" "yaml_contract" "1.0" "$yaml" 2>"$stderr"; rc=$?
+assert_exit "YAML com campo extra = exit 1" 1 "$rc"
+assert_stderr_contains "contract violation campo extra" "contract violation" "$stderr"
+
+cat > "$yaml" <<EOF
+status: done
+report_path: $AI_TASKS_ROOT/prd-yaml_contract/1.0_execution_report.md
+EOF
+bash "$HOOKS_DIR/post-execute-task.sh" "yaml_contract" "1.0" "$yaml" 2>"$stderr"; rc=$?
+assert_exit "YAML sem summary = exit 1" 1 "$rc"
+assert_stderr_contains "contract violation summary ausente" "summary" "$stderr"
+rm -f "$yaml" "$stderr"
+
+make_prd "status_drift" "| 1.0 | A | pending | — | — | — |"
+echo "report" > "$TASKS_BASE/prd-status_drift/1.0_execution_report.md"
+mkdir -p "$TASKS_BASE/prd-status_drift/.checkpoints"
+echo "status: done" > "$TASKS_BASE/prd-status_drift/.checkpoints/1.0.yaml"
+yaml=$(mktemp)
+cat > "$yaml" <<EOF
+status: done
+report_path: $AI_TASKS_ROOT/prd-status_drift/1.0_execution_report.md
+summary: ok
+EOF
+stderr=$(mktemp)
+bash "$HOOKS_DIR/post-execute-task.sh" "status_drift" "1.0" "$yaml" 2>"$stderr"; rc=$?
+assert_exit "status drift done vs pending = exit 1" 1 "$rc"
+assert_stderr_contains "status drift detectado" "status drift" "$stderr"
+rm -f "$yaml" "$stderr"
 
 # ============================================================================
 echo

@@ -50,14 +50,90 @@ PRD_DIR="$REPO_ROOT/$TASKS_ROOT/$PRD_PREFIX$PRD_SLUG"
 errors=0
 warnings=0
 
+trim() {
+  echo "$1" | xargs
+}
+
+normalize_status() {
+  local raw
+  raw=$(trim "$1")
+  printf "%s" "$raw" | tr '[:upper:]' '[:lower:]'
+}
+
+task_status() {
+  local tasks_md="$1"
+  local wanted_id="$2"
+  local line tid status
+  while IFS= read -r line; do
+    case "$line" in
+      "|"*) ;;
+      *) continue ;;
+    esac
+    IFS='|' read -ra cells <<< "$line"
+    [[ ${#cells[@]} -lt 4 ]] && continue
+    tid=$(trim "${cells[1]}")
+    [[ "$tid" == "$wanted_id" ]] || continue
+    status=$(normalize_status "${cells[3]}")
+    echo "$status"
+    return 0
+  done < "$tasks_md"
+  return 1
+}
+
 # === Parse YAML estritamente ===
-status=$(grep -E "^status:[[:space:]]" "$YAML_FILE" | head -1 | sed 's/^status:[[:space:]]*//' | tr -d '"' | tr -d "'" | xargs)
-report_path=$(grep -E "^report_path:[[:space:]]" "$YAML_FILE" | head -1 | sed 's/^report_path:[[:space:]]*//' | tr -d '"' | tr -d "'" | xargs)
+status=""
+report_path=""
+summary=""
+status_count=0
+report_count=0
+summary_count=0
+line_count=0
+
+while IFS= read -r line || [[ -n "$line" ]]; do
+  stripped=$(trim "$line")
+  [[ -z "$stripped" ]] && continue
+  line_count=$((line_count+1))
+  case "$stripped" in
+    status:*)
+      status_count=$((status_count+1))
+      status=$(trim "${stripped#status:}")
+      ;;
+    report_path:*)
+      report_count=$((report_count+1))
+      report_path=$(trim "${stripped#report_path:}")
+      report_path=${report_path#\"}
+      report_path=${report_path%\"}
+      report_path=${report_path#\'}
+      report_path=${report_path%\'}
+      ;;
+    summary:*)
+      summary_count=$((summary_count+1))
+      summary=$(trim "${stripped#summary:}")
+      ;;
+    *)
+      echo "FAIL: contract violation — linha YAML inesperada: $stripped" >&2
+      errors=$((errors+1))
+      ;;
+  esac
+done < "$YAML_FILE"
+
+if [[ "$line_count" -ne 3 ]]; then
+  echo "FAIL: contract violation — YAML deve conter exatamente status, report_path e summary (linhas=$line_count)" >&2
+  errors=$((errors+1))
+fi
+if [[ "$status_count" -ne 1 || "$report_count" -ne 1 || "$summary_count" -ne 1 ]]; then
+  echo "FAIL: contract violation — campos obrigatorios devem aparecer uma unica vez (status=$status_count report_path=$report_count summary=$summary_count)" >&2
+  errors=$((errors+1))
+fi
+if [[ -z "$summary" ]]; then
+  echo "FAIL: contract violation — summary ausente ou vazio" >&2
+  errors=$((errors+1))
+fi
 
 # Validar status canonico
 if ! [[ "$status" =~ ^(done|blocked|failed|needs_input)$ ]]; then
   echo "FAIL: status invalido ou ausente: '$status'" >&2
-  exit 1
+  errors=$((errors+1))
 fi
 
 # === F2 + F13: evidence physical + path relativo ===
@@ -69,7 +145,7 @@ elif [[ "$report_path" =~ ^/ ]]; then
   errors=$((errors+1))
 else
   resolved="$REPO_ROOT/$report_path"
-  if [[ ! -s "$resolved" ]]; then
+  if [[ "$status" == "done" && ! -s "$resolved" ]]; then
     echo "FAIL F2: missing evidence — $resolved ausente ou vazio" >&2
     errors=$((errors+1))
   fi
@@ -105,6 +181,24 @@ if [[ "${AI_VALIDATE_GIT_HISTORY:-0}" == "1" && "$status" == "done" && -n "$repo
   if [[ -n "$diff_sha" ]]; then
     if ! git -C "$REPO_ROOT" cat-file -e "$diff_sha" 2>/dev/null; then
       echo "FAIL F35: DiffSHA $diff_sha do report nao esta no git log atual (revert/branch deletado/history rewrite?)" >&2
+      errors=$((errors+1))
+    fi
+  fi
+fi
+
+# === Consistencia tasks.md para done ===
+if [[ "$status" == "done" ]]; then
+  tasks_md="$PRD_DIR/tasks.md"
+  if [[ ! -f "$tasks_md" ]]; then
+    echo "FAIL: tasks.md ausente para validar status: $tasks_md" >&2
+    errors=$((errors+1))
+  else
+    current_status=$(task_status "$tasks_md" "$TASK_ID" || true)
+    if [[ -z "$current_status" ]]; then
+      echo "FAIL: status drift — tarefa $TASK_ID nao encontrada em tasks.md" >&2
+      errors=$((errors+1))
+    elif [[ "$current_status" != "done" ]]; then
+      echo "FAIL: status drift — tarefa $TASK_ID retornou done mas tasks.md esta $current_status" >&2
       errors=$((errors+1))
     fi
   fi

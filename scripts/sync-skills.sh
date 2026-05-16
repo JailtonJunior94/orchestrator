@@ -69,7 +69,65 @@ for skill_dir in "$canonical"/*/; do
   echo "synced: $skill_name -> $embedded_mirror"
 done
 
+# Sincroniza .agents/lib/ -> scripts/lib/ (B1: vendor canônico em .agents/lib/,
+# mirror legado em scripts/lib/ para compatibilidade retroativa com callers que
+# resolvem `scripts/lib/check-invocation-depth.sh` antes do fallback).
+# Também sincroniza para o embedded mirror para que `ai-spec install` distribua
+# o vendor canônico em projetos consumidores.
+agents_lib="$repo_root/.agents/lib"
+legacy_lib="$repo_root/scripts/lib"
+embedded_lib="$repo_root/internal/embedded/assets/.agents/lib"
+if [[ -d "$agents_lib" ]]; then
+  chmod -R u+w "$legacy_lib" 2>/dev/null || true
+  chmod -R u+w "$embedded_lib" 2>/dev/null || true
+  mkdir -p "$embedded_lib"
+  for lib_file in "$agents_lib"/*.sh; do
+    [[ -f "$lib_file" ]] || continue
+    base="$(basename "$lib_file")"
+    cp -p "$lib_file" "$legacy_lib/$base"
+    echo "synced: lib/$base -> $legacy_lib"
+    cp -p "$lib_file" "$embedded_lib/$base"
+    echo "synced: lib/$base -> $embedded_lib"
+  done
+fi
+
+# Sincroniza hooks canônicos do orquestrador (.agents/hooks/) para todos os mirrors
+# por-tool (.claude/.codex/.gemini/.github e internal/embedded/assets/<tool>/).
+# Os 4 hooks abaixo são idênticos em todos os tools por design (executados via
+# `bash .<tool>/hooks/<hook>.sh` pelo próprio skill).
+agents_hooks="$repo_root/.agents/hooks"
+declare -a orchestrator_hooks=(
+  "post-execute-task.sh"
+  "post-wave.sh"
+  "pre-execute-all-tasks.sh"
+  "subagent-stop-wrapper.sh"
+)
+declare -a tool_hook_mirrors=(
+  "$repo_root/.claude/hooks"
+  "$repo_root/.codex/hooks"
+  "$repo_root/.gemini/hooks"
+  "$repo_root/.github/hooks"
+  "$repo_root/internal/embedded/assets/.agents/hooks"
+  "$repo_root/internal/embedded/assets/.claude/hooks"
+  "$repo_root/internal/embedded/assets/.codex/hooks"
+  "$repo_root/internal/embedded/assets/.gemini/hooks"
+  "$repo_root/internal/embedded/assets/.github/hooks"
+)
+if [[ -d "$agents_hooks" ]]; then
+  for mirror in "${tool_hook_mirrors[@]}"; do
+    mkdir -p "$mirror"
+    for hook in "${orchestrator_hooks[@]}"; do
+      src="$agents_hooks/$hook"
+      [[ -f "$src" ]] || continue
+      cp -p "$src" "$mirror/$hook"
+      chmod +x "$mirror/$hook" 2>/dev/null || true
+    done
+    echo "synced: orchestrator hooks -> $mirror"
+  done
+fi
+
 # Reaplica read-only no canônico para reforçar a fonte de verdade.
 chmod -R a-w "$canonical"
+chmod -R a-w "$agents_lib" 2>/dev/null || true
 
 echo "sync-skills: concluído"

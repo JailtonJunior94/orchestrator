@@ -395,6 +395,76 @@ func TestGenerateCodexAgents_noSkillFiles(t *testing.T) {
 	}
 }
 
+// TestGenerate_executeTaskYAMLContract_allTools verifica que TODOS os 4 adapters
+// (Claude/GitHub/Gemini/Codex) emitem o bloco YAML literal do contrato de retorno
+// para o subagent `task-executor`. Regressao guard contra A02 (Copilot anteriormente
+// descrevia o retorno em prosa, divergindo dos demais tools e quebrando a cadeia
+// de validacao em 4 passos de execute-all-tasks).
+func TestGenerate_executeTaskYAMLContract_allTools(t *testing.T) {
+	const (
+		statusLine     = "status: done | blocked | failed | needs_input"
+		reportPathLine = "report_path: tasks/prd-<slug>/<id>_execution_report.md"
+		summaryLine    = "summary: <1 linha>"
+	)
+
+	cases := []struct {
+		name string
+		gen  func(g *adapters.Generator, src, proj string)
+		path string
+	}{
+		{"claude", func(g *adapters.Generator, src, proj string) { g.GenerateClaude(src, proj) },
+			filepath.Join(".claude", "agents", "task-executor.md")},
+		{"github", func(g *adapters.Generator, src, proj string) { g.GenerateGitHub(src, proj) },
+			filepath.Join(".github", "agents", "task-executor.agent.md")},
+		{"gemini", func(g *adapters.Generator, src, proj string) { g.GenerateGeminiAgents(src, proj) },
+			filepath.Join(".gemini", "agents", "task-executor.md")},
+		{"codex", func(g *adapters.Generator, src, proj string) { g.GenerateCodexAgents(src, proj) },
+			filepath.Join(".codex", "agents", "task-executor.toml")},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			g, fsys := newTestGenerator()
+			src := "/source"
+			proj := "/project"
+			seedSkill(fsys, src, "execute-task", "Executa tarefa aprovada.")
+
+			tc.gen(g, src, proj)
+
+			agentFile := filepath.Join(proj, tc.path)
+			if !fsys.Exists(agentFile) {
+				t.Fatalf("%s adapter should create %s", tc.name, agentFile)
+			}
+			data, _ := fsys.ReadFile(agentFile)
+			body := string(data)
+			for _, line := range []string{statusLine, reportPathLine, summaryLine} {
+				if !strings.Contains(body, line) {
+					t.Errorf("%s adapter: agent file missing YAML contract line %q\nfull body:\n%s", tc.name, line, body)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerate_nonExecuteTaskHasNoYAMLContract garante que o bloco YAML so eh
+// injetado para `execute-task` — outros agents processuais (bugfix, review, etc.)
+// nao devem carregar o contrato porque nao retornam YAML estruturado.
+func TestGenerate_nonExecuteTaskHasNoYAMLContract(t *testing.T) {
+	g, fsys := newTestGenerator()
+	src := "/source"
+	proj := "/project"
+
+	seedSkill(fsys, src, "bugfix", "Corrige bugs no escopo.")
+	g.GenerateClaude(src, proj)
+
+	agentFile := filepath.Join(proj, ".claude", "agents", "bugfixer.md")
+	data, _ := fsys.ReadFile(agentFile)
+	body := string(data)
+	if strings.Contains(body, "status: done | blocked") {
+		t.Errorf("bugfix agent should NOT contain execute-task YAML contract, got:\n%s", body)
+	}
+}
+
 func TestProcessualSkills_notEmpty(t *testing.T) {
 	if len(adapters.ProcessualSkills) == 0 {
 		t.Error("ProcessualSkills should not be empty")

@@ -11,7 +11,7 @@ description: Atualiza CHANGELOG.md, revisa README.md quando necessario, prepara 
 
 **Etapa 1: Validar o escopo de publicacao**
 1. Confirmar que o contrato de carga base definido em `AGENTS.md` foi cumprido.
-2. Antes de invocar outras skills, executar `source scripts/lib/check-invocation-depth.sh || { echo "failed: depth limit exceeded"; exit 1; }`.
+2. Antes de invocar outras skills, resolver `check-invocation-depth.sh` em cascata `.agents/lib/` → `scripts/lib/` (B1) e fazer `source`. Ausente em ambos → `failed: check-invocation-depth.sh ausente; vendor a lib ou rode 'ai-spec-harness install'`. Após `source`, exit limite excedido → `failed: depth limit exceeded`.
 3. Executar `git status --short` e `git diff --stat` para mapear o lote atual.
 4. Se nao houver mudancas locais, retornar `blocked` sem editar arquivos.
 5. Se existir risco de misturar trabalho alheio, explicitar isso antes de continuar, porque esta skill opera com `git add .` e publica o workspace inteiro.

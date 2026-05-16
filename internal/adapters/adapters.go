@@ -26,6 +26,12 @@ var ProcessualSkills = []string{
 	"review", "execute-task", "create-tasks", "create-technical-specification",
 }
 
+// executeTaskYAMLContract eh o bloco YAML literal que TODO subagent task-executor
+// DEVE retornar. Mantido aqui (em vez de embutido na instruction) para garantir
+// paridade textual entre Claude/Codex/Gemini/Copilot — execute-all-tasks valida
+// formato canonico em cadeia de 4 passos (status, report_path, summary).
+const executeTaskYAMLContract = "status: done | blocked | failed | needs_input\nreport_path: tasks/prd-<slug>/<id>_execution_report.md\nsummary: <1 linha>"
+
 type skillMeta struct {
 	claudeName  string
 	claudeFile  string
@@ -115,6 +121,10 @@ Use a habilidade pre-carregada `+"`%s`"+` como processo canonico.
 Mantenha este subagente estreito: %s.
 `, meta.claudeName, shortDesc, skill, skill, meta.instruction)
 
+		if skill == "execute-task" {
+			content += "\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n```yaml\n" + executeTaskYAMLContract + "\n```\n"
+		}
+
 		_ = g.fs.WriteFile(filepath.Join(agentsDir, meta.claudeFile), []byte(content))
 		count++
 	}
@@ -156,6 +166,10 @@ description: %s
 Use a habilidade `+"`%s`"+` como processo canonico.
 Mantenha este agente estreito: %s.
 `, meta.githubName, shortDesc, skill, meta.instruction)
+
+		if skill == "execute-task" {
+			content += "\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n```yaml\n" + executeTaskYAMLContract + "\n```\n"
+		}
 
 		_ = g.fs.WriteFile(filepath.Join(agentsDir, meta.githubFile), []byte(content))
 		count++
@@ -201,6 +215,10 @@ Use a skill canonica `+"`.agents/skills/%s/SKILL.md`"+` como processo de execuca
 Mantenha este subagente estreito: %s.
 `, meta.claudeName, shortDesc, skill, meta.instruction)
 
+		if skill == "execute-task" {
+			content += "\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n```yaml\n" + executeTaskYAMLContract + "\n```\n"
+		}
+
 		_ = g.fs.WriteFile(filepath.Join(agentsDir, meta.claudeName+".md"), []byte(content))
 		count++
 	}
@@ -236,18 +254,24 @@ func (g *Generator) GenerateCodexAgents(sourceDir, projectDir string) {
 		}
 
 		shortDesc := truncateAtSentence(fm.Description, 120)
+		instructions := fmt.Sprintf(`Use a skill canonica .agents/skills/%s/SKILL.md como processo de execucao desta tarefa.
+Mantenha este subagente estreito: %s.`, skill, meta.instruction)
+
+		if skill == "execute-task" {
+			instructions += "\n\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n" + executeTaskYAMLContract
+		}
+
 		content := fmt.Sprintf(`name = %q
 description = %q
 
 instructions = """
-Use a skill canonica .agents/skills/%s/SKILL.md como processo de execucao desta tarefa.
-Mantenha este subagente estreito: %s.
+%s
 """
 
 [[skills.config]]
 path = ".agents/skills/%s"
 enabled = true
-`, meta.claudeName, shortDesc, skill, meta.instruction, skill)
+`, meta.claudeName, shortDesc, instructions, skill)
 
 		_ = g.fs.WriteFile(filepath.Join(agentsDir, meta.claudeName+".toml"), []byte(content))
 		count++

@@ -31,10 +31,10 @@ description: Cria tarefas incrementais de implementação a partir de um PRD e d
 2. Criar um arquivo por tarefa usando `assets/task-template.md`.
 3. Dar a cada tarefa critérios de aceitação explícitos, arquivos relevantes e expectativas de teste.
 4. Garantir que cada tarefa seja executável de forma independente e revisável objetivamente.
-5. Ao escrever `tasks.md`, calcular e inserir os comentários de rastreabilidade de spec no cabeçalho:
-   - `<!-- spec-hash-prd: $(sha256sum tasks/prd-<feature-slug>/prd.md | awk '{print $1}') -->`
-   - `<!-- spec-hash-techspec: $(sha256sum tasks/prd-<feature-slug>/techspec.md | awk '{print $1}') -->`
-   Estes hashes permitem detectar drift posterior via `bash scripts/check-spec-drift.sh`.
+5. Ao escrever `tasks.md`, inserir os comentários de rastreabilidade de spec no cabeçalho e sincronizar via CLI portátil:
+   - `ai-spec sync-spec-hash tasks/prd-<feature-slug>/tasks.md`
+   - O comando atualiza `<!-- spec-hash-prd: ... -->` e `<!-- spec-hash-techspec: ... -->` usando SHA-256 implementado em Go, sem depender de `sha256sum`.
+   Estes hashes permitem detectar drift posterior via `ai-spec check-spec-drift tasks/prd-<feature-slug>/tasks.md`.
 
 **Etapa 4.1: Preencher skills processuais necessárias (descoberta agnóstica, mandatória)**
 
@@ -54,12 +54,12 @@ Sua tarefa nesta etapa é **preencher** esses placeholders com detecção agnós
 4. **Preenchimento mandatório dos placeholders (formato estrito, F28):**
    - Em `tasks.md` coluna `Skills`: lista separada por vírgula dos nomes de skill detectados; ou `—` se nenhuma extra for necessária. A coluna **deve estar preenchida em todas as linhas**, nunca em branco. Cada nome deve casar regex `^[a-z0-9-]+$` (lowercase, dígitos, hífen).
    - Em cada `task-X.Y-*.md` seção `## Skills Necessárias`: uma linha por skill com formato canônico estrito:
-     - Regex obrigatório por linha: `^- \`([a-z0-9-]+)\` — .+$` (hífen, espaço, backtick, nome em backticks, espaço, em-dash, espaço, justificativa não-vazia).
-     - Variantes proibidas: `* skill-name` (asterisco), `- skill-name` (sem backticks), `- "skill-name"` (aspas em vez de backticks), `- \`skill-name\`: justificativa` (dois-pontos em vez de em-dash), `- \`skill-name\` - justificativa` (hífen em vez de em-dash).
-     - Se nenhuma skill processual extra for necessária, substituir os bullets de exemplo pelo conteúdo único exato: `Nenhuma além das auto-carregadas (governance + linguagem).` (sem variações como "Nenhuma." ou "N/A").
+     - Formato canônico preferencial por linha: `^- \`([a-z0-9-]+)\` — .+$` (hífen, espaço, backtick, nome em backticks, espaço, em-dash, espaço, justificativa não-vazia).
+     - Variantes comuns podem ser normalizadas pelo runtime para evitar falso positivo (`:` ou ` - ` entre skill e justificativa, espaços extras), mas o arquivo final deve sair no formato canônico para manter legibilidade e diff estável.
+     - Se nenhuma skill processual extra for necessária, substituir os bullets de exemplo pelo conteúdo canônico: `Nenhuma além das auto-carregadas (governance + linguagem).` O runtime aceita variações vazias equivalentes (`Nenhuma.`, `N/A`) como vazio, mas deve reportar warning e preservar o canônico em novos artefatos.
      - A seção **deve estar presente em todos os task files**.
    - Manter os comentários HTML (`<!-- ... -->`) dos placeholders no arquivo final como guard rails contra futuras alucinações de re-geração.
-   - `execute-task` Stage 2 item 5 aplica os mesmos regex; entrada malformada → `failed: malformed Skills Necessárias entry: <linha>`. Não há tolerância — formato canônico é o contrato.
+   - `execute-task` Stage 2 item 5 aplica normalização antes da validação; entrada semanticamente ambígua ou skill inexistente continua bloqueante.
 5. **Regras agnósticas obrigatórias:**
    - Nunca inventar skill que não exista em `.agents/skills/`. Validar presença lendo o diretório antes de listar.
    - Nunca hardcodar mapeamento; toda detecção parte da `description` do frontmatter da skill descoberta em runtime.
@@ -78,7 +78,7 @@ Sua tarefa nesta etapa é **preencher** esses placeholders com detecção agnós
    - `Não`: tarefa explicitamente sequencial — não paralelizar mesmo se deps permitirem. **Atenção**: deve ser exatamente `Não` com N maiúsculo e til em ã. Não usar `não` (minúsculo), `nao` (sem til), `NÃO` (todo maiúsculo), `No`, `false`, `n`.
    - `Com <id>` ou `Com <id>, <id>, ...`: paralelizável especificamente com as tarefas listadas. **Atenção**: deve ser exatamente `Com ` com C maiúsculo. Não usar `com`, `COM`, `paralelo com`, `&`.
    - **NÃO usar**: `Sim`, `yes`, `parallel`, `Possivelmente`, `talvez`, `pode`, abreviações, ou variações em outras línguas.
-   - Regex case-sensitive aplicado por `execute-all-tasks`: `^(—|Não|Com\s+\d+\.\d+(,\s*\d+\.\d+)*)$`. Valores fora → `failed: malformed Paralelizável on <id>`. **Não há tolerância case-insensitive** — divergência indica geração inconsistente que precisa ser corrigida na origem, não mascarada pelo parser.
+   - Regex canônico aplicado após normalização por `execute-all-tasks`: `^(—|Não|Com\s+\d+\.\d+(,\s*\d+\.\d+)*)$`. Valores equivalentes (`não`, `nao`, `NÃO`, `com 2.0`, espaços extras) são normalizados com warning para evitar falso positivo. Valores semanticamente ambíguos (`Sim`, `talvez`, `pode`) continuam bloqueantes.
    - Exemplos válidos: `—`, `Não`, `Com 2.0`, `Com 1.0, 3.0, 5.0`. Exemplos inválidos: `Não.` (ponto final), `Com 2.0,3.0` (sem espaço após vírgula), `com 2.0` (c minúsculo), `Sim` (palavra não-canônica).
 4. Gerar bloco mermaid `graph TD` em `tasks.md` representando o grafo de dependencias entre tarefas. Formato: `T1["1.0 — Titulo"] --> T2["2.0 — Titulo"]` para cada dependencia.
 
@@ -109,4 +109,4 @@ Antes de reportar `done`, validar que **a coluna `Skills` em `tasks.md` e a seç
 
 ## Resolução de paths
 
-Todo caminho `tasks/prd-<slug>/` referenciado neste documento resolve para `${AI_TASKS_ROOT:-tasks}/${AI_PRD_PREFIX:-prd-}<slug>/`. Defaults preservam o layout histórico. Customização via `.claude/config.yaml` ou `.agents/config.yaml` (chaves `tasks_root`, `prd_prefix`). `scripts/lib/check-invocation-depth.sh` exporta `AI_TASKS_ROOT` e `AI_PRD_PREFIX` para garantir paridade entre Claude Code, Codex, Gemini e Copilot.
+Todo caminho `tasks/prd-<slug>/` referenciado neste documento resolve para `${AI_TASKS_ROOT:-tasks}/${AI_PRD_PREFIX:-prd-}<slug>/`. Defaults preservam o layout histórico. Customização via `.claude/config.yaml` ou `.agents/config.yaml` (chaves `tasks_root`, `prd_prefix`). `check-invocation-depth.sh` exporta `AI_TASKS_ROOT` e `AI_PRD_PREFIX` para garantir paridade entre Claude Code, Codex, Gemini e Copilot — resolução em cascata `.agents/lib/` → `scripts/lib/` (vendor canônico em `.agents/lib/`).

@@ -534,6 +534,129 @@ func TestInstall_Copilot_GeneratesAgents(t *testing.T) {
 	}
 }
 
+// TestInstall_DistributesAgentsLib blinda a distribuicao do vendor canonico
+// .agents/lib/ via install. Skills e hooks consomem essas libs via cascata
+// `.agents/lib/` -> `scripts/lib/`; sem o vendor instalado, a cascata depende
+// exclusivamente do mirror legado.
+func TestInstall_DistributesAgentsLib(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.0.0\ndescription: Revisa codigo.\n---\n")
+	ffs.Files["/source/.agents/lib/check-invocation-depth.sh"] = []byte("#!/usr/bin/env bash\n# canonical lib")
+	ffs.Files["/source/.agents/lib/parse-hook-input.sh"] = []byte("#!/usr/bin/env bash\n# parse hook input")
+
+	svc := setupTestService(ffs)
+
+	err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolClaude},
+		LinkMode:   skills.LinkCopy,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, lib := range []string{"check-invocation-depth.sh", "parse-hook-input.sh"} {
+		path := "/project/.agents/lib/" + lib
+		if !ffs.Exists(path) {
+			t.Errorf("install should distribute canonical vendor %s; not found", path)
+		}
+	}
+}
+
+// TestInstall_AgentsLib_AbsentSource_NoError garante que install nao falha
+// quando a fonte nao tem .agents/lib/ (compat com bundles antigos).
+func TestInstall_AgentsLib_AbsentSource_NoError(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.0.0\ndescription: Revisa codigo.\n---\n")
+	// .agents/lib/ ausente na fonte
+
+	svc := setupTestService(ffs)
+
+	err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolClaude},
+		LinkMode:   skills.LinkCopy,
+	})
+	if err != nil {
+		t.Fatalf("install should not fail when source has no .agents/lib/: %v", err)
+	}
+
+	if ffs.Exists("/project/.agents/lib/check-invocation-depth.sh") {
+		t.Error(".agents/lib/check-invocation-depth.sh should not be created when source has none")
+	}
+}
+
+// TestInstall_Copilot_CopiesValidationHooks blinda A01: instalacao do Copilot
+// deve distribuir validate-preload.sh e validate-governance.sh para .github/hooks/,
+// garantindo paridade com Claude/Codex/Gemini que ja recebem esses hooks.
+func TestInstall_Copilot_CopiesValidationHooks(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.0.0\ndescription: Revisa codigo.\n---\n")
+	ffs.Files["/source/.github/hooks/validate-preload.sh"] = []byte("#!/usr/bin/env bash\n# copilot preload")
+	ffs.Files["/source/.github/hooks/validate-governance.sh"] = []byte("#!/usr/bin/env bash\n# copilot governance")
+
+	svc := setupTestService(ffs)
+
+	err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolCopilot},
+		LinkMode:   skills.LinkCopy,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, hook := range []string{"validate-preload.sh", "validate-governance.sh"} {
+		path := "/project/.github/hooks/" + hook
+		if !ffs.Exists(path) {
+			t.Errorf("Copilot install should copy %s; not found", path)
+		}
+	}
+}
+
+// TestInstall_Codex_CopiesGovernanceHook blinda A01 para Codex: validate-governance.sh
+// agora deve ser distribuido junto com validate-preload.sh.
+func TestInstall_Codex_CopiesGovernanceHook(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.0.0\ndescription: Revisa codigo.\n---\n")
+	ffs.Files["/source/.codex/hooks/validate-preload.sh"] = []byte("#!/usr/bin/env bash\n# codex preload")
+	ffs.Files["/source/.codex/hooks/validate-governance.sh"] = []byte("#!/usr/bin/env bash\n# codex governance")
+
+	svc := setupTestService(ffs)
+
+	err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolCodex},
+		LinkMode:   skills.LinkCopy,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, hook := range []string{"validate-preload.sh", "validate-governance.sh"} {
+		path := "/project/.codex/hooks/" + hook
+		if !ffs.Exists(path) {
+			t.Errorf("Codex install should copy %s; not found", path)
+		}
+	}
+}
+
 func TestInstall_Copilot_DryRun_NoAgentsCreated(t *testing.T) {
 	t.Parallel()
 	ffs := fs.NewFakeFileSystem()

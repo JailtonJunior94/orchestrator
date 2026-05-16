@@ -12,14 +12,20 @@
 # Filtragem: roda APENAS quando o subagent type = task-executor
 # (matching feito em settings.local.json; este wrapper assume task-executor).
 #
-# Comportamento defensivo: erros internos do wrapper NAO bloqueiam o subagent
-# por padrao (exit 0). Override via STRICT_HOOK_FAILURES=1 propaga FAIL.
+# Comportamento defensivo: erros internos do wrapper bloqueiam por padrao.
+# Para modo legado nao-bloqueante, exporte STRICT_HOOK_FAILURES=0.
 
 set -uo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-HOOKS_DIR="$REPO_ROOT/.claude/hooks"
-[[ -d "$HOOKS_DIR" ]] || HOOKS_DIR="$REPO_ROOT/.agents/hooks"
+HOOKS_DIR=""
+for d in "$REPO_ROOT/.claude/hooks" "$REPO_ROOT/.agents/hooks" "$REPO_ROOT/.gemini/hooks" "$REPO_ROOT/.codex/hooks" "$REPO_ROOT/.github/hooks"; do
+  if [[ -d "$d" ]]; then
+    HOOKS_DIR="$d"
+    break
+  fi
+done
+[[ -n "$HOOKS_DIR" ]] || exit 0
 
 POST_EXECUTE_HOOK="$HOOKS_DIR/post-execute-task.sh"
 if [[ ! -x "$POST_EXECUTE_HOOK" && ! -f "$POST_EXECUTE_HOOK" ]]; then
@@ -46,8 +52,14 @@ fi
 report_path=$(echo "$yaml_output" | grep -E "^report_path:[[:space:]]" | head -1 | sed 's/^report_path:[[:space:]]*//' | tr -d '"' | tr -d "'" | xargs)
 [[ -z "$report_path" ]] && exit 0  # Sem report_path no YAML, nao eh task-executor
 
-# Extrair prd-slug e task-id do report_path: tasks/prd-<slug>/<id>_execution_report.md
-prd_slug=$(echo "$report_path" | sed -nE 's|^[^/]*/prd-([^/]+)/.+$|\1|p')
+# Extrair prd-slug e task-id do report_path: <tasks-root>/<prd-prefix><slug>/<id>_execution_report.md
+report_dir=$(dirname "$report_path")
+report_dir_base=$(basename "$report_dir")
+prd_prefix="${AI_PRD_PREFIX:-prd-}"
+prd_slug=""
+case "$report_dir_base" in
+  "$prd_prefix"*) prd_slug="${report_dir_base#"$prd_prefix"}" ;;
+esac
 task_id=$(echo "$report_path" | sed -nE 's|.*/([0-9]+\.[0-9]+)_execution_report\.md$|\1|p')
 
 if [[ -z "$prd_slug" || -z "$task_id" ]]; then
@@ -67,15 +79,15 @@ bash "$POST_EXECUTE_HOOK" "$prd_slug" "$task_id" "$yaml_tmp" 2>"$stderr_tmp"
 hook_exit=$?
 
 if [[ "$hook_exit" -ne 0 ]]; then
-  if [[ "${STRICT_HOOK_FAILURES:-0}" == "1" ]]; then
+  if [[ "${STRICT_HOOK_FAILURES:-1}" != "0" ]]; then
     # Modo estrito: propaga falha como exit 2 (bloqueia operacao no Claude Code)
     cat "$stderr_tmp" >&2
-    echo "[subagent-stop] HOOK FAILURE — bloqueando operacao (STRICT_HOOK_FAILURES=1)" >&2
+    echo "[subagent-stop] HOOK FAILURE — bloqueando operacao (STRICT_HOOK_FAILURES!=0)" >&2
     exit 2
   fi
   # Default: emite stderr mas nao bloqueia
   cat "$stderr_tmp" >&2
-  echo "[subagent-stop] Aviso: post-execute-task FAIL (exit=$hook_exit). Para bloquear, exporte STRICT_HOOK_FAILURES=1." >&2
+  echo "[subagent-stop] Aviso: post-execute-task FAIL (exit=$hook_exit). Modo legado nao-bloqueante por STRICT_HOOK_FAILURES=0." >&2
 fi
 
 exit 0

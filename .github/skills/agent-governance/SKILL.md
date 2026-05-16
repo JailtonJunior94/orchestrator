@@ -58,15 +58,20 @@ Override explicito via `--complexity=<nivel>` prevalece sobre a classificacao au
 
 ## Controle de Profundidade de Invocacao
 
-Quando uma skill invoca outra (ex: execute-task -> review -> bugfix), incrementar `AI_INVOCATION_DEPTH` e verificar o limite antes de prosseguir:
+Quando uma skill invoca outra (ex: execute-task -> review -> bugfix), incrementar `AI_INVOCATION_DEPTH` e verificar o limite antes de prosseguir. Resolver `check-invocation-depth.sh` em cascata para suportar projetos que copiam apenas `.agents/` (B1):
 
 ```bash
-source scripts/lib/check-invocation-depth.sh || { echo "failed: depth limit exceeded"; exit 1; }
+_depth_lib=""
+for d in .agents/lib scripts/lib; do
+  [[ -r "$d/check-invocation-depth.sh" ]] && { _depth_lib="$d/check-invocation-depth.sh"; break; }
+done
+[[ -n "$_depth_lib" ]] || { echo "failed: check-invocation-depth.sh ausente em .agents/lib/ e scripts/lib/"; exit 1; }
+source "$_depth_lib" || { echo "failed: depth limit exceeded"; exit 1; }
 ```
 
 Se `AI_INVOCATION_DEPTH` exceder 2 (o limite padrao de `AI_INVOCATION_MAX`), parar a cadeia e retornar `failed` com diagnostico: "limite de profundidade de invocacao atingido". Isso previne loops entre review e bugfix.
 
-O script `scripts/lib/check-invocation-depth.sh` gerencia o contador automaticamente quando sourced ou chamado como subprocesso.
+O script `check-invocation-depth.sh` (vendor canônico em `.agents/lib/`, mirror legado em `scripts/lib/`) gerencia o contador automaticamente quando sourced ou chamado como subprocesso.
 
 ## Tratamento de Erros
 * Se a tarefa nao deixar claro quais referencias carregar, aplicar `AGENTS.md` como baseline e ler apenas os arquivos tematicos diretamente ligados a superficie alterada.
