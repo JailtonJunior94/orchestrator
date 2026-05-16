@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.21.0 (2026-05-16)
+
+### Features
+- **governance:** fecha lacunas multi-tool e distribui vendor .agents/lib (504ec70)
+
 ## 0.20.0 (2026-05-15)
 
 ### Features

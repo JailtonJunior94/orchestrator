@@ -1,6 +1,6 @@
 ---
 name: python-implementation
-version: 1.0.0
+version: 1.1.0
 description: Implementa alteracoes em codigo Python usando governanca base, convencoes de projeto e validacao proporcional. Use quando a tarefa exigir adicionar, corrigir, refatorar ou validar codigo Python. Nao use para tarefas sem codigo Python.
 ---
 

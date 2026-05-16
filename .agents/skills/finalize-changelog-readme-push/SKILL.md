@@ -1,6 +1,6 @@
 ---
 name: finalize-changelog-readme-push
-version: 1.0.0
+version: 1.1.0
 depends_on: [github-diff-changelog-publisher, semantic-commit]
 description: Atualiza CHANGELOG.md, revisa README.md quando necessario, prepara staging, cria commit semantico e publica no remoto. Use quando um lote de mudancas ja estiver pronto para fechamento e o usuario quiser consolidar documentacao, commit e push em sequencia. Nao use para gerar release versionada, revisar codigo ou publicar apenas parte do workspace sem confirmacao explicita.
 ---

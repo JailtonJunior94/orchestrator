@@ -1,6 +1,6 @@
 ---
 name: node-implementation
-version: 1.0.0
+version: 1.1.0
 description: Implementa alteracoes em codigo Node/TypeScript usando governanca base, convencoes de projeto e validacao proporcional. Use quando a tarefa exigir adicionar, corrigir, refatorar ou validar codigo Node.js ou TypeScript. Nao use para tarefas sem codigo Node/TypeScript.
 ---
 
