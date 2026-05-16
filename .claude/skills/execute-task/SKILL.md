@@ -1,6 +1,6 @@
 ---
 name: execute-task
-version: 1.4.0
+version: 1.5.0
 depends_on: [review, bugfix, agent-governance]
 description: Executa uma tarefa de implementação aprovada via codificação, validação, revisão e captura de evidências. Carrega skills processuais declaradas em `## Skills Necessárias` (formato canônico estrito) + skills de linguagem inferidas do diff. Use quando um task file estiver pronto para implementação. Não use para planejamento.
 ---
