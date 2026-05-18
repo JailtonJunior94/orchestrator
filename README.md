@@ -21,6 +21,7 @@ O projeto padroniza como Claude, Gemini, Codex e GitHub Copilot encontram skills
 - [O que fazer depois da instalacao](#o-que-fazer-depois-da-instalacao)
   - [Cenario 1: projeto existente](#cenario-1-projeto-existente)
   - [Cenario 2: projeto novo](#cenario-2-projeto-novo)
+- [Nucleo operacional](#nucleo-operacional)
 - [Fluxo completo recomendado](#fluxo-completo-recomendado)
 - [Estrategia recomendada para desenvolver uma task](#estrategia-recomendada-para-desenvolver-uma-task)
 - [Artefatos de governanca](#artefatos-de-governanca)
@@ -358,6 +359,28 @@ Depois do PRD aprovado, o fluxo natural e:
 create-technical-specification -> create-tasks -> execute-task
 ```
 
+## Nucleo operacional
+
+O `README.md` continua sendo a entrada executiva. O detalhe operacional agora fica concentrado nestes documentos:
+
+- [Playbook Mestre de Desenvolvimento](docs/development-playbook.md): arvore de decisao para escolher entre `create-prd`, `create-technical-specification`, `create-tasks`, `execute-task`, `task-loop` e `execute-all-tasks`.
+- [Scorecard de Qualidade e Confianca](docs/quality-scorecard.md): criterio objetivo para classificar o bundle em `pass`, `warning` ou `fail`.
+- [Checklist de Preflight e Readiness](docs/preflight-checklist.md): gates bloqueantes e checks recomendados antes de executar.
+- [Biblioteca de Prompts](docs/prompt-library.md): prompts copiaveis por etapa, com variante canonica para `execute-task`.
+- [Matriz de Confiabilidade por Ferramenta](docs/tool-reliability-matrix.md): papel recomendado, risco operacional e custo de contexto por ferramenta.
+- [Bundle canonico de referencia](tasks/prd-example-preflight-entrypoint/): exemplo auditavel end-to-end com `prd.md`, `techspec.md`, `tasks.md`, `task-*.md` e execution reports.
+
+Atalho de decisao:
+
+```text
+Escopo ainda aberto? -> create-prd
+Arquitetura e validacoes ainda em aberto? -> create-technical-specification
+Precisa decompor em tasks pequenas? -> create-tasks
+Vai executar uma task isolada ou medir qualidade real? -> execute-task
+Tem lote pequeno com supervisao frequente? -> task-loop
+Tem bundle maduro com DAG confiavel? -> execute-all-tasks
+```
+
 ## Fluxo completo recomendado
 
 O `ai-spec-harness` nao escreve PRD, tech spec ou codigo por conta propria. Ele instala a governanca para que o agente escolhido execute cada etapa com as skills corretas dentro do repositorio alvo.
@@ -521,55 +544,174 @@ go test ./...
 
 > **Leitura recomendada:** o [Guia de uso das skills](docs/skills-usage-guide.md) detalha o contrato de cada skill — entradas obrigatorias, prompts mandatorios e criterios de aceite — para que voce possa reproduzir cada etapa com fidelidade maxima.
 
-## Estrategia recomendada para desenvolver uma task
+## Estratégia de Desenvolvimento de Alta Performance
 
-Esta estrategia vale para este repositorio e para qualquer projeto instrumentado com `ai-spec-harness`. O objetivo e usar o minimo de contexto e de orquestracao necessario para manter previsibilidade, rastreabilidade e baixo custo por ciclo.
+Este projeto utiliza um fluxo de governança rigoroso para garantir que cada linha de código seja justificada por um requisito e validada por testes. Para obter o melhor equilíbrio entre **eficiência**, **confiança** e **economia de tokens**, siga o protocolo abaixo.
 
-### Qual skill usar em cada momento
+### 1. O Caminho do Sucesso (Golden Path)
 
-| Skill | Quando usar | O que ela protege | Custo operacional |
-| --- | --- | --- | --- |
-| `create-prd` | quando o problema, escopo ou criterio de sucesso ainda nao estao fechados | evita comecar implementacao com requisito ambiguo e detecta drift downstream antes de editar PRD existente | baixo a medio |
-| `create-technical-specification` | quando o PRD ja foi aprovado e voce precisa transformar requisito em arquitetura, interfaces, riscos e testes | reduz retrabalho tecnico e obriga explicitar trade-offs, ADRs e estrategia de validacao | medio |
-| `create-tasks` | quando PRD e tech spec ja estao consistentes e voce quer um plano executavel | limita micro-tasks, exige aprovacao do plano e sincroniza hashes para detectar drift | medio |
-| `execute-task` | padrao para implementar uma task individual, sensivel ou ainda exploratoria | maximiza confianca: valida dependencias, carrega so as skills necessarias, roda validacao proporcional, review e evidencia | medio |
-| `execute-all-tasks` | quando o bundle inteiro ja esta maduro, com DAG valida e tarefas independentes bem marcadas | maximiza throughput com subagentes fresh, halt-first e checkpoint por wave | alto |
+Para qualquer funcionalidade nova ou alteração complexa, o fluxo ideal é:
 
-### Melhor equilibrio entre eficiencia, confianca e economia
+`create-prd` ➔ `create-technical-specification` ➔ `create-tasks` ➔ `execute-task`
 
-Para desenvolver **uma task** com o melhor custo-beneficio, o caminho recomendado e:
+| Etapa | Skill | Por que usar? | Ganho de Eficiência |
+| :--- | :--- | :--- | :--- |
+| **Produto** | `create-prd` | Remove ambiguidade de "o que" fazer. | Evita retrabalho por requisitos mal compreendidos. |
+| **Arquitetura** | `create-technical-specification` | Define "como" fazer e antecipa riscos. | Garante consistência e evita dívida técnica precoce. |
+| **Plano** | `create-tasks` | Divide o problema em fatias testáveis. | Facilita revisões pequenas e paralelas. |
+| **Ação** | `execute-task` | Implementa com rigor e evidências. | Máxima confiança com validação e review embutidos. |
 
-1. `create-prd` apenas se o pedido ainda nao tiver escopo, exclusoes e criterio de sucesso claros.
-2. `create-technical-specification` para fechar arquitetura, riscos, erros, testes e impacto no repositorio.
-3. `create-tasks` para gerar um `tasks.md` curto, com no maximo algumas fatias realmente executaveis e aprovadas.
-4. `execute-task` para implementar a primeira task relevante e medir qualidade real de codigo, review e evidencias.
+### 2. Maximizando a Confiança com Invariantes
 
-Esse e o ponto de melhor equilibrio porque:
+A confiabilidade deste sistema baseia-se em **invariantes físicas**, não apenas em instruções textuais:
+- **Spec-Hash:** O PRD gera um hash SHA-256. A TechSpec registra esse hash. As Tasks registram os hashes de ambos. Se você mudar o PRD, o `execute-task` detectará o "drift" e bloqueará a execução até que a cadeia seja atualizada.
+- **Isolamento de Contexto:** Cada tarefa é executada com o mínimo de contexto necessário (Governance + Skill de Linguagem), reduzindo alucinações causadas por excesso de ruído no prompt.
+- **Gate de Evidências:** Uma task só é marcada como `done` após a geração de um relatório de execução (`execution_report.md`) validado.
 
-- `create-prd` e `create-technical-specification` removem ambiguidade cedo, que e onde o retrabalho custa mais.
-- `create-tasks` injeta gates de drift e dependencias antes da codificacao, reduzindo erro de sequenciamento.
-- `execute-task` tem o maior nivel de confianca por task, com escopo pequeno, validacao proporcional e saida auditavel.
-- `execute-all-tasks` so passa a valer a pena quando o custo de spawn e coordenacao fica menor que o custo de supervisao manual.
+#### Comandos operacionais do `spec-hash`
 
-### Regras praticas de decisao
+A invariante só funciona se for verificada. Os dois comandos abaixo transformam o conceito em gate executável:
 
-- Se o trabalho cabe em uma unica fatia de implementacao, prefira `execute-task` e nao `execute-all-tasks`.
-- Se o PRD mudou depois da tech spec ou das tasks, regenere os artefatos antes de executar; nao force continuidade sobre drift.
-- Se as tasks ainda dependem de muitas decisoes humanas, nao orquestre em lote; finalize primeiro PRD, tech spec ou o plano de tasks.
-- Se houver 3 ou mais tasks independentes, com `Dependencias` e `Paralelizavel` corretos e ja validados, `execute-all-tasks` passa a ser a opcao mais eficiente.
-- Se a feature for critica, mantenha reviewer separado do executor e rode primeiro um lote pequeno antes da execucao completa.
+```bash
+# 1. Detectar drift: bloqueia execução se PRD/TechSpec divergirem dos hashes em tasks.md
+ai-spec check-spec-drift tasks/prd-<slug>/tasks.md
+# Exit 0 = cadeia íntegra; ≠ 0 = drift detectado, execute-task bloqueia
 
-### Protocolo recomendado para este projeto e outros
-
-```text
-1. Defina produto com create-prd somente quando houver ambiguidade real.
-2. Feche arquitetura com create-technical-specification antes de pedir codigo.
-3. Gere poucas tasks boas com create-tasks e aprove o plano.
-4. Execute a primeira task com execute-task.
-5. So depois de validar qualidade, suba para task-loop ou execute-all-tasks.
+# 2. Sincronizar após editar PRD ou TechSpec intencionalmente
+ai-spec sync-spec-hash tasks/prd-<slug>/
+# Recalcula SHA-256 de prd.md e techspec.md e atualiza os comentários em tasks.md
 ```
 
-Em termos praticos: use `execute-task` como default e trate `execute-all-tasks` como acelerador de throughput, nao como substituto de especificacao. Quanto melhor o trio `prd.md` + `techspec.md` + `tasks.md`, menor o consumo de contexto, menor o retrabalho e maior a taxa de sucesso em qualquer repositorio governado por este harness.
+**Regra de ouro:** rode `check-spec-drift` antes de qualquer `execute-task` ou `execute-all-tasks`. Rode `sync-spec-hash` **somente** após decidir conscientemente que a edição no PRD/TechSpec deve invalidar tasks downstream — sincronizar sem reavaliar tasks reintroduz drift silencioso.
+
+### 3. Economia e Escala: Qual execução escolher?
+
+- **Use `execute-task` (Padrão):** Para tasks individuais, correções de bugs ou quando você quer acompanhar o agente de perto. É o método mais seguro e econômico para interações curtas.
+- **Use `execute-all-tasks` (Escala):** Quando você tem um bundle maduro (PRD+TechSpec+Tasks) e quer disparar a implementação de múltiplas tarefas independentes em paralelo. Ele economiza seu tempo de supervisão e utiliza subagentes para manter a sessão principal limpa.
+
+#### Custo de contexto medido (proxy de tokens)
+
+Medição em 2026-05-18 sobre `SKILL.md` deste repositório usando a heurística oficial `chars/3.5`. Dados primários e metodologia em [`audit/sdd-token-baseline-2026-05-18.md`](audit/sdd-token-baseline-2026-05-18.md).
+
+| Cenário | Skills ativas | Tokens estimados |
+| :--- | :--- | ---: |
+| Planejamento completo (PRD + TechSpec + Tasks) | 3 skills de planejamento | ~6.366 |
+| Execução de 1 task (Go) | `agent-governance` + `go-implementation` + `execute-task` | ~6.383 |
+| Execução de 1 task (Node) | `agent-governance` + `node-implementation` + `execute-task` | ~5.809 |
+| Execução de 1 task (Python) | `agent-governance` + `python-implementation` + `execute-task` | ~5.775 |
+| **Prompt direto sem SDD** (controle) | nenhuma skill, contexto re-explicado a cada iteração | **~6.000–12.000 por feature** |
+| `execute-all-tasks` orquestrador (10 tasks) | só orquestração, subagent fresh por task | **≤1.000 no orquestrador** |
+
+**Leitura:** o custo base do SDD é equivalente ao custo de um prompt direto **na primeira iteração**, mas o SDD não paga retrabalho (não recontextualiza a cada iteração) e mantém o orquestrador limpo em PRDs grandes via isolamento por subagent.
+
+> Para evoluir esta medição com dados reais (não estimados), habilite telemetria: `export GOVERNANCE_TELEMETRY=1` e consulte o [Ciclo de feedback por telemetria](docs/telemetry-feedback-cycle.md).
+
+### 4. Escape Hatch: quando o pipeline completo é overhead
+
+O fluxo `create-prd → create-technical-specification → create-tasks → execute-task` é o padrão para **mudanças que alteram comportamento**. Para mudanças triviais, ele é overhead e o desvio é legítimo — desde que regras objetivas sejam respeitadas:
+
+| Tipo de mudança | Sinal observável | Skill direta | Pipeline completo? |
+| :--- | :--- | :--- | :---: |
+| Bug isolado com causa-raiz reproduzível | ≤ 1–2 arquivos, sem RF novo, teste de regressão cabível | `bugfix` | Não |
+| Refactor delimitado, mesmo contrato | Sem mudança em API pública/schema/CLI flags | `refactor` | Não |
+| Renomeação local, typo, comentário | Zero impacto em comportamento | `execute-task` direto sem PRD | Não |
+| Dep bump sem breaking change | `go.mod`/`package.json` apenas | `semantic-commit` direto | Não |
+| Novo RF, novo endpoint, novo flag | Altera contrato público ou cria comportamento | — | **Sim, mandatório** |
+| Mudança em ≥ 3 arquivos com lógica acoplada | Risco de regressão cruzada | — | **Sim, mandatório** |
+| Mudança que reescreve invariante existente | Quebra premissa documentada em ADR/techspec | — | **Sim, mandatório** |
+
+**Regra dura — quando o pipeline NÃO pode ser pulado:**
+1. Qualquer alteração que adicione, remova ou modifique um Requisito Funcional (RF).
+2. Qualquer alteração em contrato público (API HTTP, CLI flags, schema de banco, formato de arquivo).
+3. Qualquer alteração que invalide um ADR existente (consultar [`tasks/adr/`](tasks/adr/) e [`docs/adr/`](docs/adr/)).
+
+Em caso de dúvida, aplique o [Scorecard de Qualidade e Confiança](docs/quality-scorecard.md) — se o bundle ficaria em `fail` por ausência de PRD/TechSpec, o pipeline é mandatório.
+
+### 5. Cheat Sheet — Qual skill usar agora?
+
+Decisão rápida quando você sabe o que precisa fazer mas não sabe por onde começar:
+
+| Situação | Skill recomendada | Por quê |
+| :--- | :--- | :--- |
+| Feature nova com ≥ 3 tasks ou novo RF | `create-prd` → `create-technical-specification` → `create-tasks` → `execute-all-tasks` | Rastreabilidade ponta-a-ponta com `spec-hash` |
+| User Stories brutas como entrada | `us-to-prd` antes de `create-prd` | Converte história em RF numerado |
+| Task única já planejada | `execute-task` | Sem overhead de orquestração |
+| Bug isolado com sintoma reproduzível | `bugfix` | Causa-raiz + teste de regressão obrigatório |
+| Refactor delimitado, sem novo comportamento | `refactor` | Preserva contrato e coleta evidência de não regressão |
+| Diff pronto, falta revisar antes de merge | `review` | Scan determinístico contra regras do repositório |
+| Comentários de PR para triar | `github-pr-comment-triage` | Prioriza e organiza antes de `bugfix`/`execute-task` |
+| Projeto sem governança instalada | `analyze-project` | Detecta stack e instala baseline |
+| Commit, changelog ou release pendente | `semantic-commit` → `github-diff-changelog-publisher` → `github-release-publication-flow` | Pipeline de entrega padronizado |
+
+### 6. Documentos de apoio
+
+Para reproduzir o fluxo com fidelidade máxima, consulte os guias especializados:
+
+- [Estratégia SDD Cross-Project](docs/sdd-strategy.md) — como adotar este SDD em outros repositórios Go/Node/Python
+- [Playbook Mestre de Desenvolvimento](docs/development-playbook.md) — decisão entre planejamento, execução unitária e em lote
+- [Checklist de Preflight e Readiness](docs/preflight-checklist.md) — gates antes de chamar `execute-task` ou `execute-all-tasks`
+- [Scorecard de Qualidade e Confiança](docs/quality-scorecard.md) — critério canônico para classificar prontidão de um bundle
+- [Biblioteca de Prompts](docs/prompt-library.md) — prompts copiáveis com baixo desvio
+- [Matriz de Confiabilidade por Ferramenta](docs/tool-reliability-matrix.md) — qual CLI usar em cada papel (Claude, Codex, Gemini, Copilot)
+- [Guia de uso das skills](docs/skills-usage-guide.md) — contrato detalhado por skill
+- [Ciclo de feedback por telemetria](docs/telemetry-feedback-cycle.md) — como evoluir o SDD com dados reais (`GOVERNANCE_TELEMETRY=1`)
+
+---
+
+## Protocolo Mandatório: Ciclo de Vida do PRD
+
+O PRD não é um documento opcional; é a **âncora de verdade** de todo o desenvolvimento. O descumprimento deste protocolo invalida a governança e quebra as cadeias de confiança automatizadas.
+
+### 1. Início Único e Obrigatório
+Toda e qualquer feature, alteração de comportamento ou nova funcionalidade **DEVE** começar com a skill `create-prd`. 
+- **Sem atalhos:** É proibido pular para a Especificação Técnica ou Implementação sem um PRD aprovado.
+- **Localização:** O arquivo deve residir obrigatoriamente em `tasks/prd-<slug>/prd.md`.
+
+### 2. Anatomia do PRD Objetivo
+O PRD deve ser estritamente focado no **O QUE** e **POR QUE**, evitando detalhes de implementação:
+- **Requisitos Funcionais (RF):** Devem ser numerados (RF-01, RF-02) para permitir o rastreio de cobertura (`check-spec-drift`).
+- **Critérios de Aceite:** Devem ser binários e verificáveis.
+- **Exclusões:** O que NÃO será feito é tão importante quanto o que será.
+
+### 3. Imutabilidade e Sincronização de Drift
+Uma vez que o PRD avança para TechSpec e Tasks, ele torna-se a base de um **hash SHA-256**.
+- **Edição Pós-Aprovação:** Se o PRD for alterado, o sistema de governança detectará o "Drift de Especificação".
+- **Ação Obrigatória:** Após editar um `prd.md`, você **DEVE** rodar `ai-spec sync-spec-hash` para atualizar os hashes em `tasks.md`. O `execute-task` recusará a execução se os hashes divergirem, garantindo que você nunca implemente algo baseado em uma versão obsoleta do requisito.
+
+### 4. Encerramento
+Um PRD só é considerado `done` quando todos os seus requisitos funcionais possuem evidências de teste vinculadas em relatórios de execução.
+
+---
+
+## Avaliação do Modelo de Desenvolvimento (SDD)
+
+Avaliação ancorada nas cinco dimensões do [Scorecard de Qualidade e Confiança](docs/quality-scorecard.md), com peso total 100. Cada dimensão recebe `pass` (100% do peso), `warning` (50%) ou `fail` (0%) e é justificada por evidência verificável neste repositório.
+
+| Dimensão | Peso | Status | Pontos | Evidência objetiva |
+| :--- | :---: | :---: | :---: | :--- |
+| Qualidade do PRD | 25 | `pass` | 25 | `create-prd` exige RF numerado, fora de escopo explícito e gate de drift downstream (`SKILL.md` Etapa 1.4) |
+| Qualidade da Tech Spec | 25 | `pass` | 25 | `create-technical-specification` registra `spec-hash-prd` no cabeçalho; impede consumo de PRD divergente |
+| Qualidade das Tasks | 20 | `pass` | 20 | `create-tasks` gera regex canônicos validados por `pre-execute-all-tasks.sh` (status, dependências, paralelizável) |
+| Readiness de Execução | 20 | `warning` | 10 | `ai-spec` é mandatório mas não é detectado automaticamente em CI; `execute-all-tasks` exige instalação manual prévia |
+| Evidência e Rastreabilidade | 10 | `pass` | 10 | `execution_report.md` + `_orchestration_report.md` + `DiffSHA` validado por `git cat-file` (F35) |
+| **Total** | **100** | — | **90** | Faixa `pass` (85–100) — pronto para executar com risco controlado |
+
+### Pilares estruturais que sustentam a nota
+
+1. **Determinismo procedural:** o `spec-hash` SHA-256 ligando PRD → TechSpec → Tasks elimina a classe de erros "requisito esquecido" ou "implementação obsoleta" — `ai-spec check-spec-drift` bloqueia execução em caso de divergência.
+2. **Defesa em profundidade:** o loop mandatório `Implementação → Validação → Review → Bugfix` garante que o código não apenas funcione, mas siga convenções do projeto.
+3. **Escalabilidade agnóstica:** adaptadores finos por ferramenta (Claude, Gemini, Codex, Copilot) provam a robustez da lógica procedural sobre a sensibilidade do modelo.
+
+### Hard stops conhecidos (por que não é 100/100)
+
+- Readiness depende de `ai-spec` no `PATH` do executor; em ambientes sem o binário, o gate B2 produz `needs_input` em vez de degradar silenciosamente — comportamento correto, mas reduz a portabilidade observada.
+- Telemetria (`GOVERNANCE_TELEMETRY=1`) é opt-in; o ciclo de feedback descrito em [`docs/telemetry-feedback-cycle.md`](docs/telemetry-feedback-cycle.md) só evolui se o operador habilitar.
+
+> **Veredito:** SDD classificado em `pass` operacional (90/100). É um dos modelos de governança mais seguros para desenvolvimento assistido por IA, priorizando **correção e rastreabilidade** sobre velocidade sem controle. Os pontos de atrito restantes são operacionais (instalação, telemetria), não estruturais.
+
+### Aplicar este SDD em outros projetos
+
+O harness é portátil: `ai-spec install <projeto-alvo>` replica skills, adaptadores e invariantes em qualquer repositório Go, Node ou Python. Veja matriz de adoção e custos por arquétipo em [`docs/sdd-strategy.md`](docs/sdd-strategy.md).
 
 ## Artefatos de governanca
 
@@ -940,7 +1082,13 @@ go run . lint .
 
 ### Documentacao
 
+- [Playbook Mestre de Desenvolvimento](docs/development-playbook.md) — arvore de decisao e fluxo recomendado entre task unica, lote curto e orquestracao completa
+- [Scorecard de Qualidade e Confianca](docs/quality-scorecard.md) — criterio `pass` / `warning` / `fail` para readiness do bundle
+- [Checklist de Preflight e Readiness](docs/preflight-checklist.md) — gates bloqueantes antes de `execute-task`, `task-loop` ou `execute-all-tasks`
 - [Guia de uso das skills](docs/skills-usage-guide.md) — contratos, prompts mandatorios e criterios de aceite por skill
+- [Biblioteca de prompts](docs/prompt-library.md) — prompts copiaveis para execucao por task e variantes curta, padrao e rigorosa
+- [Matriz de Confiabilidade por Ferramenta](docs/tool-reliability-matrix.md) — papel recomendado, risco operacional e custo de contexto por ferramenta
+- [Bundle canonico de referencia](tasks/prd-example-preflight-entrypoint/) — exemplo end-to-end auditavel do fluxo governado
 - [Guia do task-loop](docs/task-loop-reference.md) — flags, heuristicas, alternativas e comparativos
 - [Guia de resolucao de problemas](docs/troubleshooting.md) — 12 problemas comuns com sintoma, causa, solucao e verificacao
 - [Telemetria e ciclo de feedback](docs/telemetry-feedback-cycle.md)
