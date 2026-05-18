@@ -194,6 +194,7 @@ func TestGather_SkipNonSkillDirs_TableDriven(t *testing.T) {
 		wantSkippedCount int
 		wantSkippedPath  string // vazio = nao verificar
 		wantSkillName    string // vazio = nao verificar
+		checkJSON        bool   // verificar serializacao JSON de skipped_dirs
 	}{
 		{
 			name: "skill_normal",
@@ -247,6 +248,7 @@ func TestGather_SkipNonSkillDirs_TableDriven(t *testing.T) {
 			wantSkillCount:   1,
 			wantSkippedCount: 1,
 			wantSkippedPath:  ".agents/skills/tests",
+			checkJSON:        true,
 		},
 	}
 
@@ -288,7 +290,7 @@ func TestGather_SkipNonSkillDirs_TableDriven(t *testing.T) {
 				}
 			}
 			// Caso JSON: verificar que skipped_dirs aparece na serializacao JSON quando nao vazio
-			if tc.name == "json_output_contem_skipped_dirs" {
+			if tc.checkJSON {
 				data, merr := json.Marshal(report)
 				if merr != nil {
 					t.Fatalf("json.Marshal falhou: %v", merr)
@@ -302,6 +304,33 @@ func TestGather_SkipNonSkillDirs_TableDriven(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestGather_SkippedDirs_AlwaysForwardSlash garante que o path em SkippedDirs usa
+// forward slash independente do separador de SO (regressao para bug filepath.Join).
+func TestGather_SkippedDirs_AlwaysForwardSlash(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	root := "/repo"
+	ffs.Dirs[root+"/.agents/skills"] = true
+	ffs.Dirs[root+"/.agents/skills/tests"] = true
+	ffs.Files[root+"/.agents/skills/tests/conftest.py"] = []byte("# pytest")
+
+	svc := NewService(ffs, silentPrinter(), nil)
+	report, err := svc.gather(root, false)
+	if err != nil {
+		t.Fatalf("gather nao deve retornar erro: %v", err)
+	}
+	if len(report.SkippedDirs) != 1 {
+		t.Fatalf("esperava 1 SkippedDir, got %d", len(report.SkippedDirs))
+	}
+	got := report.SkippedDirs[0]
+	if strings.Contains(got, "\\") {
+		t.Errorf("SkippedDirs[0] contem backslash (separador Windows): %q — deve sempre usar forward slash", got)
+	}
+	if got != ".agents/skills/tests" {
+		t.Errorf("SkippedDirs[0] = %q, want %q", got, ".agents/skills/tests")
 	}
 }
 

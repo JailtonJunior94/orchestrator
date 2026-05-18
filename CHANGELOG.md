@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Bug Fixes
+- **action/setup-ai-spec:** autenticar chamada à GitHub API com `GITHUB_TOKEN` no step Linux para evitar rate limit (60 req/h → 5.000 req/h) em runners compartilhados
+- **action/setup-ai-spec:** remover `|| true` do `brew link` no restore de cache macOS para expor falha total em vez de silenciar
+- **metrics:** substituir `filepath.Join` por concatenação com forward slash em `SkippedDirs` para garantir separador consistente em qualquer SO
+
+### Tests
+- **metrics:** adicionar teste de regressão `TestGather_SkippedDirs_AlwaysForwardSlash` para invariante de forward slash em `SkippedDirs`
+- **metrics:** refatorar condição de verificação JSON de comparação por nome para campo semântico `checkJSON` na tabela de testes
+- **metrics:** registrar diretório pai explicitamente no setup de `TestGather_SkippedDirs_AlwaysForwardSlash`
+
 ## 0.22.0 (2026-05-18)
 
 ### Features

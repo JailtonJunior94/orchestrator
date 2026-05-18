@@ -120,7 +120,7 @@ func (s *Service) gather(rootDir string, brief bool) (Report, error) {
 		name := e.Name()
 		skillFile := filepath.Join(skillsDir, name, "SKILL.md")
 		if !s.fs.Exists(skillFile) {
-			relPath := filepath.Join(".agents", "skills", name)
+			relPath := ".agents/skills/" + name
 			report.SkippedDirs = append(report.SkippedDirs, relPath)
 			s.printer.Warn("diretorio sem SKILL.md ignorado: %s", relPath)
 			continue

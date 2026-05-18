@@ -23,6 +23,14 @@ runs:
         path: ${{ runner.os == 'macOS' && '/opt/homebrew/Cellar/ai-spec /opt/homebrew/Caskroom/ai-spec' || '/tmp/ai-spec-bin' }}
         key: ${{ runner.os }}-${{ runner.arch }}-ai-spec-${{ inputs.version }}
 
+    - name: Re-link após cache restore (macOS)
+      if: runner.os == 'macOS' && steps.cache.outputs.cache-hit == 'true'
+      shell: bash
+      run: |
+        # actions/cache restaura o Cellar mas não os symlinks em /opt/homebrew/bin/.
+        # brew link recria os symlinks sem re-baixar o pacote.
+        brew link ai-spec --force 2>/dev/null || brew link ai-spec
+
     - name: Install (macOS — Homebrew)
       if: runner.os == 'macOS' && steps.cache.outputs.cache-hit != 'true'
       shell: bash
@@ -37,8 +45,7 @@ runs:
           # para a versão latest disponível na formula. Para pinagem real de versão
           # em macOS, é necessário adicionar uma formula versionada ao tap.
           brew install "ai-spec@${{ inputs.version }}" 2>/dev/null || {
-            echo "Aviso: formula versionada ai-spec@${{ inputs.version }} não encontrada no tap." >&2
-            echo "Instalando versão latest disponível (limitação R-1: tap sem formula versionada)." >&2
+            echo "::warning::Fórmula versionada ai-spec@${{ inputs.version }} não encontrada no tap (R-1: tap sem formula versionada). Instalando versão latest disponível — versão instalada pode divergir da solicitada."
             brew install ai-spec
           }
         fi
@@ -46,6 +53,8 @@ runs:
     - name: Install (Linux — tarball + checksum)
       if: runner.os == 'Linux' && steps.cache.outputs.cache-hit != 'true'
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         set -euo pipefail
         arch="${{ runner.arch }}"
@@ -56,14 +65,20 @@ runs:
         esac
         version="${{ inputs.version }}"
         base="https://github.com/JailtonJunior94/orchestrator/releases"
+        # Quando version=latest, o nome do asset usa a versão real (ex: 0.22.0),
+        # não a string "latest". Resolve via API antes de construir a URL.
         if [ "$version" = "latest" ]; then
-          url="$base/latest/download/ai-spec_${version}_linux_${arch}.tar.gz"
-          checksum_url="$base/latest/download/checksums.txt"
-        else
-          ver_no_v="${version#v}"
-          url="$base/download/${version}/ai-spec_${ver_no_v}_linux_${arch}.tar.gz"
-          checksum_url="$base/download/${version}/checksums.txt"
+          version=$(curl -fsSL \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            "https://api.github.com/repos/JailtonJunior94/orchestrator/releases/latest" \
+            | grep '"tag_name"' | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
+          if [ -z "$version" ]; then
+            echo "Não foi possível resolver a versão latest via GitHub API" >&2; exit 1
+          fi
         fi
+        ver_no_v="${version#v}"
+        url="$base/download/${version}/ai-spec_${ver_no_v}_linux_${arch}.tar.gz"
+        checksum_url="$base/download/${version}/checksums.txt"
         mkdir -p /tmp/ai-spec-bin && cd /tmp/ai-spec-bin
         curl -fsSL -o ai-spec.tar.gz "$url" || { echo "Falha ao baixar $url" >&2; exit 1; }
         curl -fsSL -o checksums.txt "$checksum_url" || { echo "Falha ao baixar checksums" >&2; exit 1; }
