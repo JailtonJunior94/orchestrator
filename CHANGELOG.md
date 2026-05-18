@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.22.0 (2026-05-18)
+
+### Features
+- **sdd-readiness:** fecha scorecard 100/100 com Action dual-channel, hook spec-drift e fix metrics (5153ad3)
+
+### Documentation
+- overhaul de governança e suporte ao SDD (9b94734)
+- **sdd:** consolida estratégia de desenvolvimento de alta performance (8e60e21)
+
 ## 0.21.1 (2026-05-18)
 
 ### Bug Fixes
