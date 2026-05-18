@@ -21,7 +21,7 @@ Se o hook nao estiver presente ou falhar, consulte `.gemini/docs/workaround-prel
 ## Orientacoes Especificas para Gemini
 
 1. Ao iniciar uma tarefa, ler `AGENTS.md` e `.agents/skills/agent-governance/SKILL.md` como contexto base antes de editar codigo.
-2. Usar `@<command>` para invocar o comando TOML correspondente a skill desejada em `.gemini/commands/`.
+2. Usar `@workspace.<command>` para invocar o wrapper TOML correspondente em `.gemini/commands/` e evitar colisao com comandos nativos das skills.
 3. Seguir as etapas procedurais do SKILL.md carregado pelo comando como se fossem instrucoes sequenciais.
 4. Ao final da tarefa, executar os comandos de validacao descritos na secao Validacao do `AGENTS.md`.
 5. Nao confiar em enforcement automatico — a compliance depende de seguir as instrucoes procedurais manualmente.

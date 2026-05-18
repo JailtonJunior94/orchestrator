@@ -109,7 +109,7 @@ TODO: descrever objetivo desta referencia para %s.
 	}
 
 	// Gemini command
-	geminiCmd := rootDir + "/.gemini/commands/" + skillName + ".toml"
+	geminiCmd := rootDir + "/.gemini/commands/workspace." + skillName + ".toml"
 	geminiContent := fmt.Sprintf(`description = "Implementa alteracoes em codigo %s usando a habilidade canonica %s."
 prompt = """
 Use `+"`"+`.agents/skills/%s/SKILL.md`+"`"+` como fluxo canonico desta tarefa.

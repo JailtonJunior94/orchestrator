@@ -264,7 +264,7 @@ Mantenha este subagente estreito: %s.`, skill, meta.instruction)
 		content := fmt.Sprintf(`name = %q
 description = %q
 
-instructions = """
+developer_instructions = """
 %s
 """
 
@@ -323,10 +323,18 @@ func (g *Generator) GenerateGemini(sourceDir, projectDir string) {
 		shortDesc := truncateAtSentence(fm.Description, 120)
 		prompt := g.buildGeminiPrompt(skillsDir, skillName)
 		content := fmt.Sprintf("description = %q\nprompt = \"\"\"\n%s\n\"\"\"\n", shortDesc, prompt)
-		_ = g.fs.WriteFile(filepath.Join(cmdDir, skillName+".toml"), []byte(content))
+		legacyPath := filepath.Join(cmdDir, skillName+".toml")
+		if g.fs.Exists(legacyPath) {
+			_ = g.fs.Remove(legacyPath)
+		}
+		_ = g.fs.WriteFile(filepath.Join(cmdDir, geminiCommandFileName(skillName)), []byte(content))
 		count++
 	}
 	g.printer.Debug("Gemini commands gerados: %d", count)
+}
+
+func geminiCommandFileName(skillName string) string {
+	return "workspace." + skillName + ".toml"
 }
 
 func (g *Generator) buildGeminiPrompt(skillsDir, skillName string) string {

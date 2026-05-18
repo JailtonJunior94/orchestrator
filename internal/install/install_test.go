@@ -492,7 +492,7 @@ func TestInstall_Gemini_DryRun_NoTomlCreated(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	tomlFile := "/project/.gemini/commands/review.toml"
+	tomlFile := "/project/.gemini/commands/workspace.review.toml"
 	if ffs.Exists(tomlFile) {
 		t.Errorf("dry-run should not create %s", tomlFile)
 	}

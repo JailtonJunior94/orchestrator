@@ -1,7 +1,7 @@
 name = "task-executor"
 description = "Executa uma tarefa de implementacao aprovada por meio de codificacao, validacao, revisao e captura de evidencias. Carrega apenas as skills necessarias (governance + linguagem afetada pelo diff) e retorna um sumario compacto."
 
-instructions = """
+developer_instructions = """
 Use a skill canonica `.agents/skills/execute-task/SKILL.md` como processo de execucao desta tarefa.
 
 Carregue sob demanda apenas o que for necessario:

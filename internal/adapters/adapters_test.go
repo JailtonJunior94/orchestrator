@@ -115,7 +115,7 @@ func TestGenerateGemini_withSkill(t *testing.T) {
 
 	g.GenerateGemini(src, proj)
 
-	tomlFile := filepath.Join(proj, ".gemini", "commands", "custom-skill.toml")
+	tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace.custom-skill.toml")
 	if !fsys.Exists(tomlFile) {
 		t.Errorf("GenerateGemini should create %s", tomlFile)
 	}
@@ -134,7 +134,7 @@ func TestGenerateGemini_skipsAgentGovernance(t *testing.T) {
 
 	g.GenerateGemini(src, proj)
 
-	tomlFile := filepath.Join(proj, ".gemini", "commands", "agent-governance.toml")
+	tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace.agent-governance.toml")
 	if fsys.Exists(tomlFile) {
 		t.Error("GenerateGemini should skip agent-governance skill")
 	}
@@ -146,6 +146,24 @@ func TestGenerateGemini_noSkillsDir(t *testing.T) {
 	g.GenerateGemini("/source", "/project")
 }
 
+func TestGenerateGemini_removesLegacyCommandName(t *testing.T) {
+	g, fsys := newTestGenerator()
+	src := "/source"
+	proj := "/project"
+
+	seedSkill(fsys, src, "review", "Revisa codigo.")
+	_ = fsys.WriteFile(filepath.Join(proj, ".gemini", "commands", "review.toml"), []byte("legacy"))
+
+	g.GenerateGemini(src, proj)
+
+	if fsys.Exists(filepath.Join(proj, ".gemini", "commands", "review.toml")) {
+		t.Fatalf("GenerateGemini should remove legacy review.toml to avoid Gemini command conflicts")
+	}
+	if !fsys.Exists(filepath.Join(proj, ".gemini", "commands", "workspace.review.toml")) {
+		t.Fatalf("GenerateGemini should create workspace.review.toml")
+	}
+}
+
 func TestGenerateGemini_processualSkill(t *testing.T) {
 	g, fsys := newTestGenerator()
 	src := "/source"
@@ -155,7 +173,7 @@ func TestGenerateGemini_processualSkill(t *testing.T) {
 
 	g.GenerateGemini(src, proj)
 
-	tomlFile := filepath.Join(proj, ".gemini", "commands", "bugfix.toml")
+	tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace.bugfix.toml")
 	if !fsys.Exists(tomlFile) {
 		t.Fatalf("GenerateGemini should create %s for processual skill", tomlFile)
 	}
@@ -181,7 +199,7 @@ func TestGenerateGemini_languageSkill(t *testing.T) {
 
 	g.GenerateGemini(src, proj)
 
-	tomlFile := filepath.Join(proj, ".gemini", "commands", "go-implementation.toml")
+	tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace.go-implementation.toml")
 	if !fsys.Exists(tomlFile) {
 		t.Fatalf("GenerateGemini should create %s for language skill", tomlFile)
 	}
@@ -201,7 +219,7 @@ func TestGenerateGemini_withAssets(t *testing.T) {
 
 	g.GenerateGemini(src, proj)
 
-	tomlFile := filepath.Join(proj, ".gemini", "commands", "bugfix.toml")
+	tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace.bugfix.toml")
 	data, _ := fsys.ReadFile(tomlFile)
 	content := string(data)
 	if !strings.Contains(content, "context.md") {
@@ -221,7 +239,7 @@ func TestGenerateGemini_withoutAssets(t *testing.T) {
 
 	g.GenerateGemini(src, proj)
 
-	tomlFile := filepath.Join(proj, ".gemini", "commands", "review.toml")
+	tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace.review.toml")
 	data, _ := fsys.ReadFile(tomlFile)
 	content := string(data)
 	if strings.Contains(content, "Carregue") {
@@ -240,7 +258,7 @@ func TestGenerateGemini_reviewSkillHasValidationInstruction(t *testing.T) {
 	g.GenerateGemini(src, proj)
 
 	for _, skill := range []string{"execute-task", "refactor"} {
-		tomlFile := filepath.Join(proj, ".gemini", "commands", skill+".toml")
+		tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace."+skill+".toml")
 		data, _ := fsys.ReadFile(tomlFile)
 		content := string(data)
 		if !strings.Contains(content, "validacao") {
@@ -258,7 +276,7 @@ func TestGenerateGemini_nonReviewSkillNoValidation(t *testing.T) {
 
 	g.GenerateGemini(src, proj)
 
-	tomlFile := filepath.Join(proj, ".gemini", "commands", "create-prd.toml")
+	tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace.create-prd.toml")
 	data, _ := fsys.ReadFile(tomlFile)
 	content := string(data)
 	if strings.Contains(content, "validacao proporcional") {
@@ -382,6 +400,9 @@ func TestGenerateCodexAgents_withSkill(t *testing.T) {
 	}
 	if !strings.Contains(body, `path = ".agents/skills/execute-task"`) {
 		t.Errorf("agent should reference canonical skill path, got: %s", body)
+	}
+	if !strings.Contains(body, `developer_instructions = """`) {
+		t.Errorf("agent should declare developer_instructions, got: %s", body)
 	}
 }
 

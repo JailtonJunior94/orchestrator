@@ -22,6 +22,7 @@ O projeto padroniza como Claude, Gemini, Codex e GitHub Copilot encontram skills
   - [Cenario 1: projeto existente](#cenario-1-projeto-existente)
   - [Cenario 2: projeto novo](#cenario-2-projeto-novo)
 - [Fluxo completo recomendado](#fluxo-completo-recomendado)
+- [Estrategia recomendada para desenvolver uma task](#estrategia-recomendada-para-desenvolver-uma-task)
 - [Artefatos de governanca](#artefatos-de-governanca)
 - [Referencia rapida de comandos](#referencia-rapida-de-comandos)
 - [Exemplos por ferramenta](#exemplos-por-ferramenta)
@@ -520,6 +521,56 @@ go test ./...
 
 > **Leitura recomendada:** o [Guia de uso das skills](docs/skills-usage-guide.md) detalha o contrato de cada skill — entradas obrigatorias, prompts mandatorios e criterios de aceite — para que voce possa reproduzir cada etapa com fidelidade maxima.
 
+## Estrategia recomendada para desenvolver uma task
+
+Esta estrategia vale para este repositorio e para qualquer projeto instrumentado com `ai-spec-harness`. O objetivo e usar o minimo de contexto e de orquestracao necessario para manter previsibilidade, rastreabilidade e baixo custo por ciclo.
+
+### Qual skill usar em cada momento
+
+| Skill | Quando usar | O que ela protege | Custo operacional |
+| --- | --- | --- | --- |
+| `create-prd` | quando o problema, escopo ou criterio de sucesso ainda nao estao fechados | evita comecar implementacao com requisito ambiguo e detecta drift downstream antes de editar PRD existente | baixo a medio |
+| `create-technical-specification` | quando o PRD ja foi aprovado e voce precisa transformar requisito em arquitetura, interfaces, riscos e testes | reduz retrabalho tecnico e obriga explicitar trade-offs, ADRs e estrategia de validacao | medio |
+| `create-tasks` | quando PRD e tech spec ja estao consistentes e voce quer um plano executavel | limita micro-tasks, exige aprovacao do plano e sincroniza hashes para detectar drift | medio |
+| `execute-task` | padrao para implementar uma task individual, sensivel ou ainda exploratoria | maximiza confianca: valida dependencias, carrega so as skills necessarias, roda validacao proporcional, review e evidencia | medio |
+| `execute-all-tasks` | quando o bundle inteiro ja esta maduro, com DAG valida e tarefas independentes bem marcadas | maximiza throughput com subagentes fresh, halt-first e checkpoint por wave | alto |
+
+### Melhor equilibrio entre eficiencia, confianca e economia
+
+Para desenvolver **uma task** com o melhor custo-beneficio, o caminho recomendado e:
+
+1. `create-prd` apenas se o pedido ainda nao tiver escopo, exclusoes e criterio de sucesso claros.
+2. `create-technical-specification` para fechar arquitetura, riscos, erros, testes e impacto no repositorio.
+3. `create-tasks` para gerar um `tasks.md` curto, com no maximo algumas fatias realmente executaveis e aprovadas.
+4. `execute-task` para implementar a primeira task relevante e medir qualidade real de codigo, review e evidencias.
+
+Esse e o ponto de melhor equilibrio porque:
+
+- `create-prd` e `create-technical-specification` removem ambiguidade cedo, que e onde o retrabalho custa mais.
+- `create-tasks` injeta gates de drift e dependencias antes da codificacao, reduzindo erro de sequenciamento.
+- `execute-task` tem o maior nivel de confianca por task, com escopo pequeno, validacao proporcional e saida auditavel.
+- `execute-all-tasks` so passa a valer a pena quando o custo de spawn e coordenacao fica menor que o custo de supervisao manual.
+
+### Regras praticas de decisao
+
+- Se o trabalho cabe em uma unica fatia de implementacao, prefira `execute-task` e nao `execute-all-tasks`.
+- Se o PRD mudou depois da tech spec ou das tasks, regenere os artefatos antes de executar; nao force continuidade sobre drift.
+- Se as tasks ainda dependem de muitas decisoes humanas, nao orquestre em lote; finalize primeiro PRD, tech spec ou o plano de tasks.
+- Se houver 3 ou mais tasks independentes, com `Dependencias` e `Paralelizavel` corretos e ja validados, `execute-all-tasks` passa a ser a opcao mais eficiente.
+- Se a feature for critica, mantenha reviewer separado do executor e rode primeiro um lote pequeno antes da execucao completa.
+
+### Protocolo recomendado para este projeto e outros
+
+```text
+1. Defina produto com create-prd somente quando houver ambiguidade real.
+2. Feche arquitetura com create-technical-specification antes de pedir codigo.
+3. Gere poucas tasks boas com create-tasks e aprove o plano.
+4. Execute a primeira task com execute-task.
+5. So depois de validar qualidade, suba para task-loop ou execute-all-tasks.
+```
+
+Em termos praticos: use `execute-task` como default e trate `execute-all-tasks` como acelerador de throughput, nao como substituto de especificacao. Quanto melhor o trio `prd.md` + `techspec.md` + `tasks.md`, menor o consumo de contexto, menor o retrabalho e maior a taxa de sucesso em qualquer repositorio governado por este harness.
+
 ## Artefatos de governanca
 
 Apos a instalacao, o repositorio alvo contem os seguintes artefatos que os agentes usam para carregar contexto, executar skills e registrar resultados:
@@ -646,31 +697,118 @@ ai-spec skill-bump . --dry-run
 
 Depois que a governanca estiver instalada no repositorio alvo, cada ferramenta consome o baseline de forma um pouco diferente.
 
+### Padrao de prompt efetivo
+
+Para reduzir desvio, o prompt deve sempre ter 4 blocos:
+
+```text
+1. skill explicita
+2. contexto objetivo e verificavel
+3. restricoes reais do repositorio
+4. saida esperada
+```
+
+```text
+Template:
+
+Use a skill <skill>.
+
+Contexto:
+- <fatos concretos>
+- <arquivos, contratos ou restricoes>
+
+Quero no resultado:
+- <artefatos ou decisoes esperadas>
+- <criterios de qualidade>
+```
+
+Evite:
+
+- "faca o melhor possivel"
+- "analise tudo"
+- "implemente completo" sem delimitar escopo
+- pedir PRD, tech spec e execucao no mesmo prompt
+
 ### Codex
 
 ```bash
+ai-spec wrapper codex create-prd .
+ai-spec wrapper codex create-technical-specification .
 ai-spec wrapper codex create-tasks .
 ai-spec wrapper codex execute-task .
 ```
 
-```text
-Use a skill create-prd para criar o PRD desta feature a partir do contexto do repositorio.
-```
+Prompt efetivo para `create-prd`:
 
 ```text
-Use a skill execute-task para implementar a proxima task elegivel com validacao proporcional.
+Use a skill create-prd.
+
+Contexto:
+- queremos adicionar listagem de pagamentos
+- endpoint desejado: GET /payments
+- filtros: status, pagina, data inicial e final
+- usuarios principais: operacao e backoffice
+- nao decidir detalhes de implementacao nesta etapa
+
+Quero no resultado:
+- problema
+- objetivos e nao objetivos
+- requisitos funcionais numerados
+- restricoes e criterios de sucesso
+- suposicoes em aberto, se existirem
+```
+
+Prompt efetivo para `execute-task`:
+
+```text
+Use a skill execute-task para implementar a proxima task elegivel.
+
+Contexto:
+- execute apenas a task selecionada em tasks/prd-payments-list/
+- preserve contratos publicos existentes
+- rode validacao proporcional e review
+
+Quero no resultado:
+- implementacao concluida ou status bloqueante explicito
+- testes e validacoes executadas
+- caminho do execution report
 ```
 
 ### Claude
 
-Claude Code usa os artefatos instalados em `.claude/`, incluindo hooks e skills sincronizadas pelo projeto. O fluxo operacional continua o mesmo: pedir explicitamente a skill desejada dentro do repositorio instrumentado.
+Claude Code usa os artefatos instalados em `.claude/`, incluindo hooks e skills sincronizadas pelo projeto. O melhor resultado vem de prompts curtos, com uma skill por vez.
+
+Prompt efetivo para `create-technical-specification`:
 
 ```text
-Use a skill create-technical-specification com base no PRD aprovado e preserve a arquitetura existente.
+Use a skill create-technical-specification com base no PRD aprovado.
+
+Contexto tecnico:
+- servico Go existente
+- arquitetura atual: handler -> service -> repository
+- preservar contratos publicos existentes
+- explicitar erros, riscos e estrategia de testes
+
+Quero no resultado:
+- desenho de implementacao
+- fronteiras de dominio e interfaces
+- trade-offs e ADRs necessarias
+- estrategia de validacao
 ```
 
+Prompt efetivo para `review`:
+
 ```text
-Use a skill review para revisar o diff atual com foco em regressao, risco e testes faltantes.
+Use a skill review para revisar o diff atual.
+
+Contexto:
+- priorize regressao, risco, seguranca e testes faltantes
+- considere o PRD e a tech spec da feature atual
+
+Quero no resultado:
+- findings ordenados por severidade
+- arquivos e linhas afetadas
+- riscos residuais, se nao houver blockers
 ```
 
 ### Gemini
@@ -680,8 +818,21 @@ ai-spec wrapper gemini create-tasks .
 ai-spec wrapper gemini execute-task .
 ```
 
+Prompt efetivo para `create-tasks`:
+
 ```text
-Use a skill create-tasks para quebrar a tech spec em tasks pequenas, ordenadas e testaveis.
+Use a skill create-tasks.
+
+Contexto:
+- o PRD e a tech spec da feature ja estao aprovados
+- queremos tasks pequenas, independentes e testaveis
+- priorizar ordem segura de entrega
+
+Quero no resultado:
+- proposta inicial com ate 10 tasks
+- dependencias explicitas
+- indicacao de paralelismo seguro
+- arquivos finais tasks.md e task-*.md apos aprovacao
 ```
 
 ### GitHub Copilot
@@ -691,8 +842,34 @@ ai-spec wrapper copilot execute-task .
 ai-spec wrapper copilot review .
 ```
 
+Prompt efetivo para `execute-task`:
+
 ```text
-Use a skill execute-task para implementar a task atual sem quebrar contratos publicos existentes.
+Use a skill execute-task para implementar a task atual.
+
+Contexto:
+- mantenha o escopo restrito ao task file selecionado
+- nao altere comportamento publico fora do que a task exigir
+- gere evidencias e atualize o status somente apos validacao
+
+Quero no resultado:
+- codigo e testes da task
+- resumo das validacoes executadas
+- status final canonico: done, blocked, failed ou needs_input
+```
+
+### Regra pratica para qualquer ferramenta
+
+Se a intencao for implementar **uma** task, o prompt mais eficiente costuma ser:
+
+```text
+Use a skill execute-task para implementar a proxima task elegivel com validacao proporcional.
+```
+
+Se a intencao for preparar o terreno antes de codificar, use um prompt por etapa:
+
+```text
+create-prd -> create-technical-specification -> create-tasks -> execute-task
 ```
 
 ## Operacao da instalacao

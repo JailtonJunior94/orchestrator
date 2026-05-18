@@ -319,7 +319,7 @@ gemini
 #### Atenção específica do Gemini
 
 - **Quota**: dispatch paralelo dispara N chamadas LLM simultâneas. Se sua chave tem rate limit baixo (ex.: free tier 60 RPM), force sequencial editando tasks.md temporariamente: `Paralelizável: Não` em todas as linhas.
-- O `.gemini/commands/execute-all-tasks.toml` é wrapper. A definição do subagent vive em `.gemini/agents/task-executor.md` (distribuído pelo installer).
+- O `.gemini/commands/workspace.execute-all-tasks.toml` é wrapper. A definição do subagent vive em `.gemini/agents/task-executor.md` (distribuído pelo installer).
 - Confirme com `/agents` que `task-executor` está listado antes de invocar.
 
 ---

@@ -819,24 +819,24 @@ func TestE2E_GeminiInstall_TomlContent(t *testing.T) {
 	}
 
 	// setupSourceDir seeds a "review" skill; verify its TOML was generated
-	tomlPath := filepath.Join(projectDir, ".gemini", "commands", "review.toml")
+	tomlPath := filepath.Join(projectDir, ".gemini", "commands", "workspace.review.toml")
 	data, err := os.ReadFile(tomlPath)
 	if err != nil {
-		t.Fatalf("expected .gemini/commands/review.toml to exist after install: %v", err)
+		t.Fatalf("expected .gemini/commands/workspace.review.toml to exist after install: %v", err)
 	}
 
 	content := string(data)
 	if !strings.Contains(content, `description =`) {
-		t.Errorf("review.toml should have 'description =' field, got: %q", content)
+		t.Errorf("workspace.review.toml should have 'description =' field, got: %q", content)
 	}
 	if !strings.Contains(content, `prompt =`) {
-		t.Errorf("review.toml should have 'prompt =' field, got: %q", content)
+		t.Errorf("workspace.review.toml should have 'prompt =' field, got: %q", content)
 	}
 	if !strings.Contains(content, "SKILL.md") {
-		t.Errorf("review.toml prompt should reference SKILL.md, got: %q", content)
+		t.Errorf("workspace.review.toml prompt should reference SKILL.md, got: %q", content)
 	}
 	if !strings.Contains(content, "{{args}}") {
-		t.Errorf("review.toml prompt should contain {{args}} placeholder, got: %q", content)
+		t.Errorf("workspace.review.toml prompt should contain {{args}} placeholder, got: %q", content)
 	}
 }
 

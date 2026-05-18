@@ -71,6 +71,8 @@
 - **taskloop/bugfix:** `splitReviewContext` / `attachReviewContext` preservam o cabeçalho de contexto entre iterações do `BugfixLoop`: o contexto segue para o reviewer mas não polui o prompt do `BugfixInvoker`.
 
 ### Bug Fixes
+- **codex/adapters:** `task-executor.toml` agora usa `developer_instructions` no lugar de `instructions`, tanto no arquivo distribuído quanto no generator. Isso elimina o aviso `Ignoring malformed agent role definition` no Codex. Regressão: `TestGenerateCodexAgents_withSkill`.
+- **gemini/adapters:** wrappers em `.gemini/commands/` passam a usar namespace `workspace.*.toml` e o generator remove automaticamente os nomes legados sem prefixo. Isso evita colisão com comandos nativos das skills no Gemini CLI. Regressão: `TestGenerateGemini_removesLegacyCommandName`, `TestE2E_GeminiInstall_TomlContent`.
 - **execute-task:** Stage 2 não dispara mais `needs_input` em tarefas non-code (docs, configs YAML/JSON, SQL, shell, MD); detecção de linguagem agora condicional ao diff (F1).
 - **execute-all-tasks:** validação 4-pass do YAML retornado por subagent (formato canônico, status canônico, evidência física via `realpath` + `[ -s ]`, consistência com `tasks.md`) — fecha alucinação de path e crash silencioso (F2/F13/F25).
 - **execute-all-tasks:** wait-all-then-halt em waves paralelas previne race em `tasks.md` (F3); orientação explícita para subagents usarem `flock -x` ou rename atômico em writes concorrentes.

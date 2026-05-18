@@ -546,7 +546,7 @@ const geminiExtraGuidance = `
 O Gemini CLI nao suporta hooks, agents ou rules nativos. Para modelar o fluxo de governanca:
 
 1. Ao iniciar uma tarefa, ler ` + "`" + `AGENTS.md` + "`" + ` e ` + "`" + `.agents/skills/agent-governance/SKILL.md` + "`" + ` como contexto base antes de editar codigo.
-2. Usar ` + "`" + `@<command>` + "`" + ` para invocar o comando TOML correspondente a skill desejada.
+2. Usar ` + "`" + `@workspace.<command>` + "`" + ` para invocar o wrapper TOML correspondente e evitar colisao com comandos nativos das skills.
 3. Seguir as etapas procedurais do SKILL.md carregado pelo comando como se fossem instrucoes sequenciais.
 4. Ao final da tarefa, executar os comandos de validacao descritos na secao Validacao do ` + "`" + `AGENTS.md` + "`" + `.
 5. Nao confiar em enforcement automatico — a compliance depende de seguir as instrucoes procedurais manualmente.

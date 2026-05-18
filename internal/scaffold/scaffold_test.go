@@ -77,7 +77,7 @@ func TestScaffold_ThreeArtifacts(t *testing.T) {
 	}
 
 	// artifact 3: Gemini TOML
-	tomlPath := "/root/.gemini/commands/rust-implementation.toml"
+	tomlPath := "/root/.gemini/commands/workspace.rust-implementation.toml"
 	data, ok := ffs.Files[tomlPath]
 	if !ok {
 		t.Fatal("Gemini TOML not created")
@@ -105,7 +105,7 @@ func TestScaffold_Idempotent(t *testing.T) {
 		t.Fatalf("second Execute (idempotency): %v", err)
 	}
 
-	tomlPath := "/root/.gemini/commands/rust-implementation.toml"
+	tomlPath := "/root/.gemini/commands/workspace.rust-implementation.toml"
 	if _, ok := ffs.Files[tomlPath]; !ok {
 		t.Error("Gemini TOML missing after second run")
 	}
