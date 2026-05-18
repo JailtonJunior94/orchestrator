@@ -28,7 +28,8 @@ chmod +x "$TMP_BASE/bin/ai-spec"
 export PATH="$TMP_BASE/bin:$PATH"
 
 # Override env vars para fixtures temporarios.
-export AI_TASKS_ROOT="$(realpath --relative-to="$REPO_ROOT" "$TASKS_BASE" 2>/dev/null || python3 -c "import os; print(os.path.relpath('$TASKS_BASE', '$REPO_ROOT'))")"
+AI_TASKS_ROOT="$(realpath --relative-to="$REPO_ROOT" "$TASKS_BASE" 2>/dev/null || python3 -c "import os; print(os.path.relpath('$TASKS_BASE', '$REPO_ROOT'))")"
+export AI_TASKS_ROOT
 export AI_PRD_PREFIX="prd-"
 
 passed=0
@@ -268,6 +269,161 @@ bash "$HOOKS_DIR/post-execute-task.sh" "status_drift" "1.0" "$yaml" 2>"$stderr";
 assert_exit "status drift done vs pending = exit 1" 1 "$rc"
 assert_stderr_contains "status drift detectado" "status drift" "$stderr"
 rm -f "$yaml" "$stderr"
+
+# ============================================================================
+echo
+echo "--- Bloco 3: spec-drift gate no pre-commit hook ---"
+# ============================================================================
+#
+# Estratégia: criar um TMP_REPO_ROOT com estrutura mínima de PRD e sobrescrever
+# git e ai-spec no PATH com shims controlados por variáveis de ambiente.
+#
+# STAGED_FILES: arquivo de texto com o conteúdo que o shim de `git` retorna em
+#               `git diff --cached --name-only`.
+# AISPEC_EXIT:  código de saída que o shim de `ai-spec check-spec-drift` retorna.
+# AISPEC_VERSION_OUTPUT: saída que o shim retorna para `ai-spec version`.
+#
+# O shim de `git`:
+#   rev-parse --show-toplevel  → TMP_REPO_ROOT
+#   diff --cached --name-only  → conteúdo de STAGED_FILES
+#   qualquer outro subcomando  → delegado ao git real (necessário para grep/cd)
+
+TMP_REPO_ROOT=$(mktemp -d /tmp/test-hooks-repo.XXXXXX)
+STAGED_FILES=$(mktemp /tmp/staged-files.XXXXXX)
+AISPEC_EXIT_FILE=$(mktemp /tmp/aispec-exit.XXXXXX)
+AISPEC_VERSION_FILE=$(mktemp /tmp/aispec-version.XXXXXX)
+export STAGED_FILES AISPEC_EXIT_FILE AISPEC_VERSION_FILE TMP_REPO_ROOT
+
+# Shim de git: controla rev-parse e diff --cached
+cat > "$TMP_BASE/bin/git" <<'GITSHIM'
+#!/usr/bin/env bash
+if [[ "$1" == "rev-parse" && "$2" == "--show-toplevel" ]]; then
+  echo "$TMP_REPO_ROOT"
+elif [[ "$1" == "diff" && "$2" == "--cached" && "$3" == "--name-only" ]]; then
+  cat "$STAGED_FILES" 2>/dev/null
+else
+  /usr/bin/git "$@"
+fi
+GITSHIM
+chmod +x "$TMP_BASE/bin/git"
+
+# Shim de ai-spec para o bloco 3: controla version e check-spec-drift
+cat > "$TMP_BASE/bin/ai-spec" <<'SPECSHIM'
+#!/usr/bin/env bash
+if [[ "$1" == "version" ]]; then
+  cat "$AISPEC_VERSION_FILE" 2>/dev/null || echo "v0.21.0"
+elif [[ "$1" == "check-spec-drift" ]]; then
+  exit_code=$(cat "$AISPEC_EXIT_FILE" 2>/dev/null || echo "0")
+  exit "$exit_code"
+elif [[ "$1" == "hash" ]]; then
+  # Para o helper make_prd que já existe na suíte
+  cd "$REPO_ROOT" && go run . hash "$2"
+else
+  cd "$REPO_ROOT" && go run . "$@"
+fi
+SPECSHIM
+chmod +x "$TMP_BASE/bin/ai-spec"
+
+# Shim de ai-spec ausente (para cenário "sem ai-spec no PATH")
+# Contém apenas o shim de git, sem ai-spec — simula PATH sem o binário.
+NOSPEC_BIN=$(mktemp -d /tmp/nospec-bin.XXXXXX)
+cat > "$NOSPEC_BIN/git" <<'GITSHIM2'
+#!/usr/bin/env bash
+if [[ "$1" == "rev-parse" && "$2" == "--show-toplevel" ]]; then
+  echo "$TMP_REPO_ROOT"
+elif [[ "$1" == "diff" && "$2" == "--cached" && "$3" == "--name-only" ]]; then
+  cat "$STAGED_FILES" 2>/dev/null
+else
+  /usr/bin/git "$@"
+fi
+GITSHIM2
+chmod +x "$NOSPEC_BIN/git"
+
+PRE_COMMIT_HOOK="$REPO_ROOT/scripts/git-hooks/pre-commit"
+
+run_hook_with_staged() {
+  local staged_content="$1"
+  local aispec_version="${2:-v0.21.0}"
+  local aispec_exit="${3:-0}"
+  printf '%s' "$staged_content" > "$STAGED_FILES"
+  printf '%s' "$aispec_version" > "$AISPEC_VERSION_FILE"
+  printf '%s' "$aispec_exit" > "$AISPEC_EXIT_FILE"
+  bash "$PRE_COMMIT_HOOK"
+}
+
+# ────────────────────────────────────────────────────────────
+# Cenário B3-1: staged não inclui prd.md/techspec.md → bloco 3 não dispara
+# ────────────────────────────────────────────────────────────
+echo
+echo "  B3-1: staged apenas README.md → bloco 3 não dispara, exit 0"
+printf 'README.md\n' > "$STAGED_FILES"
+printf 'v0.21.0' > "$AISPEC_VERSION_FILE"
+printf '0' > "$AISPEC_EXIT_FILE"
+mkdir -p "$TMP_REPO_ROOT/tasks/prd-b3test1"
+run_hook_with_staged "README.md" > /dev/null 2>&1; rc_b31=$?
+assert_exit "B3-1: staged=README exit 0" 0 "$rc_b31"
+
+# ────────────────────────────────────────────────────────────
+# Cenário B3-2: prd.md staged, ai-spec retorna exit 0 → sem drift → exit 0
+# ────────────────────────────────────────────────────────────
+echo
+echo "  B3-2: prd.md staged, sem drift → exit 0 + msg 'spec-drift OK'"
+mkdir -p "$TMP_REPO_ROOT/tasks/prd-b3test2"
+touch "$TMP_REPO_ROOT/tasks/prd-b3test2/tasks.md"
+run_hook_with_staged "tasks/prd-b3test2/prd.md" "v0.21.0" "0" > /dev/null 2>&1; rc_b32=$?
+assert_exit "B3-2: sem drift, exit 0" 0 "$rc_b32"
+
+# ────────────────────────────────────────────────────────────
+# Cenário B3-3: prd.md staged, ai-spec retorna exit 1 → drift → exit 1 + remediação
+# ────────────────────────────────────────────────────────────
+echo
+echo "  B3-3: prd.md staged, drift detectado → exit 1 + comando de remediação"
+mkdir -p "$TMP_REPO_ROOT/tasks/prd-b3test3"
+touch "$TMP_REPO_ROOT/tasks/prd-b3test3/tasks.md"
+stderr_b33=$(mktemp)
+printf 'tasks/prd-b3test3/prd.md\n' > "$STAGED_FILES"
+printf 'v0.21.0' > "$AISPEC_VERSION_FILE"
+printf '1' > "$AISPEC_EXIT_FILE"
+bash "$PRE_COMMIT_HOOK" 2>"$stderr_b33"; rc_b33=$?
+assert_exit "B3-3: drift, exit 1" 1 "$rc_b33"
+assert_stderr_contains "B3-3: mensagem de remediação" "ai-spec sync-spec-hash" "$stderr_b33"
+rm -f "$stderr_b33"
+
+# ────────────────────────────────────────────────────────────
+# Cenário B3-4: ai-spec ausente do PATH → warn em stderr + exit 0
+# ────────────────────────────────────────────────────────────
+echo
+echo "  B3-4: ai-spec ausente no PATH → warn + exit 0"
+mkdir -p "$TMP_REPO_ROOT/tasks/prd-b3test4"
+touch "$TMP_REPO_ROOT/tasks/prd-b3test4/tasks.md"
+printf 'tasks/prd-b3test4/prd.md\n' > "$STAGED_FILES"
+stderr_b34=$(mktemp)
+# Rodar com PATH que tem git shim mas sem ai-spec
+PATH="$NOSPEC_BIN:/usr/bin:/bin" \
+  bash "$PRE_COMMIT_HOOK" 2>"$stderr_b34"; rc_b34=$?
+assert_exit "B3-4: sem ai-spec, exit 0" 0 "$rc_b34"
+assert_stderr_contains "B3-4: warn ai-spec ausente" "ai-spec não encontrado" "$stderr_b34"
+rm -f "$stderr_b34"
+
+# ────────────────────────────────────────────────────────────
+# Cenário B3-5: ai-spec versão antiga (v0.10.0 < v0.21.0) → warn + exit 0
+# ────────────────────────────────────────────────────────────
+echo
+echo "  B3-5: ai-spec versão antiga v0.10.0 → warn + exit 0"
+mkdir -p "$TMP_REPO_ROOT/tasks/prd-b3test5"
+touch "$TMP_REPO_ROOT/tasks/prd-b3test5/tasks.md"
+printf 'tasks/prd-b3test5/prd.md\n' > "$STAGED_FILES"
+printf 'v0.10.0' > "$AISPEC_VERSION_FILE"
+stderr_b35=$(mktemp)
+bash "$PRE_COMMIT_HOOK" 2>"$stderr_b35"; rc_b35=$?
+assert_exit "B3-5: versão antiga, exit 0" 0 "$rc_b35"
+assert_stderr_contains "B3-5: warn versão < MIN" "v0.10.0" "$stderr_b35"
+rm -f "$stderr_b35"
+
+# ────────────────────────────────────────────────────────────
+# Limpeza dos temporários do bloco 3
+# ────────────────────────────────────────────────────────────
+rm -rf "$TMP_REPO_ROOT" "$STAGED_FILES" "$AISPEC_EXIT_FILE" "$AISPEC_VERSION_FILE" "$NOSPEC_BIN"
 
 # ============================================================================
 echo

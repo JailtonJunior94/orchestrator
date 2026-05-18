@@ -37,4 +37,56 @@ if git diff --cached --name-only | grep -qE "^(\.claude|\.agents|\.gemini|\.code
   echo "[pre-commit] hooks em sync ✓"
 fi
 
+# ============================================================
+# Bloco 3: spec-drift gate (opt-in, permissivo)
+# ============================================================
+
+MIN_AISPEC_VERSION="v0.21.0"
+
+# Detectar bundles afetados: prd.md ou techspec.md staged
+affected_bundles=$(git diff --cached --name-only | \
+  grep -E '^tasks/prd-[^/]+/(prd|techspec)\.md$' | \
+  sed -E 's|^tasks/(prd-[^/]+)/.*|\1|' | sort -u)
+
+if [ -n "$affected_bundles" ]; then
+  echo "[pre-commit] mudanças em PRD/techspec detectadas; verificando spec-drift..."
+
+  # Gate de presença do binário (permissivo)
+  if ! command -v ai-spec >/dev/null 2>&1; then
+    echo "⚠ ai-spec não encontrado no PATH; spec-drift não foi verificado." >&2
+    echo "  Instale via: brew install JailtonJunior94/homebrew-tap/ai-spec" >&2
+    exit 0
+  fi
+
+  # Gate de versão mínima (permissivo)
+  installed_version=$(ai-spec version 2>/dev/null | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
+  if [ -z "$installed_version" ] || \
+     [ "$(printf '%s\n%s' "$MIN_AISPEC_VERSION" "$installed_version" | sort -V | head -n 1)" != "$MIN_AISPEC_VERSION" ]; then
+    echo "⚠ ai-spec ${installed_version:-(versão indetectável)} < $MIN_AISPEC_VERSION; spec-drift não foi verificado." >&2
+    exit 0
+  fi
+
+  # Loop sequencial coletando falhas
+  drift_found=0
+  for slug in $affected_bundles; do
+    tasks_file="tasks/$slug/tasks.md"
+    if [ ! -f "$tasks_file" ]; then
+      # Bundle sem tasks.md ainda (PRD novo) — pular, não há drift possível
+      continue
+    fi
+    if ! ai-spec check-spec-drift "$tasks_file" > "/tmp/spec-drift-$slug.log" 2>&1; then
+      echo "❌ spec-drift detectado em tasks/$slug/; rode: ai-spec sync-spec-hash tasks/$slug/tasks.md" >&2
+      cat "/tmp/spec-drift-$slug.log" >&2
+      drift_found=1
+    fi
+  done
+
+  if [ "$drift_found" -eq 1 ]; then
+    echo "" >&2
+    echo "Para pular este gate (use com responsabilidade): git commit --no-verify" >&2
+    exit 1
+  fi
+  echo "[pre-commit] spec-drift OK ✓"
+fi
+
 exit 0

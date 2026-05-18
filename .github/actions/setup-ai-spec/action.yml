@@ -1,0 +1,85 @@
+# .github/actions/setup-ai-spec/action.yml
+name: 'Setup ai-spec'
+description: 'Instala o binário ai-spec no PATH do runner (Homebrew em macOS, tarball+sha256 em Linux)'
+
+inputs:
+  version:
+    description: 'Versão a instalar (vX.Y.Z ou latest)'
+    required: false
+    default: 'latest'
+
+outputs:
+  version-installed:
+    description: 'Versão efetivamente instalada (saída de `ai-spec version`)'
+    value: ${{ steps.verify.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Restore cache
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.os == 'macOS' && '/opt/homebrew/Cellar/ai-spec /opt/homebrew/Caskroom/ai-spec' || '/tmp/ai-spec-bin' }}
+        key: ${{ runner.os }}-${{ runner.arch }}-ai-spec-${{ inputs.version }}
+
+    - name: Install (macOS — Homebrew)
+      if: runner.os == 'macOS' && steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        brew tap JailtonJunior94/homebrew-tap
+        if [ "${{ inputs.version }}" = "latest" ]; then
+          brew install ai-spec
+        else
+          # R-1: o tap JailtonJunior94/homebrew-tap não possui formulas versionadas
+          # (ex: ai-spec@v0.21.1). A tentativa de instalar versão específica via
+          # "brew install ai-spec@<version>" falhará silenciosamente e fará fallback
+          # para a versão latest disponível na formula. Para pinagem real de versão
+          # em macOS, é necessário adicionar uma formula versionada ao tap.
+          brew install "ai-spec@${{ inputs.version }}" 2>/dev/null || {
+            echo "Aviso: formula versionada ai-spec@${{ inputs.version }} não encontrada no tap." >&2
+            echo "Instalando versão latest disponível (limitação R-1: tap sem formula versionada)." >&2
+            brew install ai-spec
+          }
+        fi
+
+    - name: Install (Linux — tarball + checksum)
+      if: runner.os == 'Linux' && steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        arch="${{ runner.arch }}"
+        case "$arch" in
+          X64)   arch=amd64 ;;
+          ARM64) arch=arm64 ;;
+          *) echo "Arquitetura não suportada: $arch" >&2; exit 1 ;;
+        esac
+        version="${{ inputs.version }}"
+        base="https://github.com/JailtonJunior94/orchestrator/releases"
+        if [ "$version" = "latest" ]; then
+          url="$base/latest/download/ai-spec_${version}_linux_${arch}.tar.gz"
+          checksum_url="$base/latest/download/checksums.txt"
+        else
+          ver_no_v="${version#v}"
+          url="$base/download/${version}/ai-spec_${ver_no_v}_linux_${arch}.tar.gz"
+          checksum_url="$base/download/${version}/checksums.txt"
+        fi
+        mkdir -p /tmp/ai-spec-bin && cd /tmp/ai-spec-bin
+        curl -fsSL -o ai-spec.tar.gz "$url" || { echo "Falha ao baixar $url" >&2; exit 1; }
+        curl -fsSL -o checksums.txt "$checksum_url" || { echo "Falha ao baixar checksums" >&2; exit 1; }
+        grep "$(basename "$url")" checksums.txt | sha256sum -c - || { echo "Checksum inválido para $(basename "$url")" >&2; exit 1; }
+        tar -xzf ai-spec.tar.gz
+        chmod +x ai-spec
+
+    - name: Add to PATH (Linux)
+      if: runner.os == 'Linux'
+      shell: bash
+      run: echo "/tmp/ai-spec-bin" >> "$GITHUB_PATH"
+
+    - name: Verify install
+      id: verify
+      shell: bash
+      run: |
+        v="$(ai-spec version 2>&1 | head -n 1)"
+        echo "version=$v" >> "$GITHUB_OUTPUT"
+        echo "ai-spec instalado: $v"

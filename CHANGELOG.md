@@ -58,6 +58,8 @@
 ## [Unreleased]
 
 ### Features
+- **ci:** adiciona Action setup-ai-spec com canal dual brew/curl (refs tarefas 4.0/5.0/6.0)
+- **hook:** adiciona bloco spec-drift ao pre-commit existente (refs tarefas 2.0/3.0)
 - **adapters/task-executor:** os 4 generators (Claude/GitHub/Gemini/Codex) agora emitem o bloco YAML literal do contrato de retorno (`status`/`report_path`/`summary`) no agent file de `task-executor`. Fecha falso-positivo `failed: contract violation` em `execute-all-tasks` quando o subagent retornava prosa em vez de YAML. Auditoria A02. Regressão: `TestGenerate_executeTaskYAMLContract_allTools` cobre os 4 tools + guard `TestGenerate_nonExecuteTaskHasNoYAMLContract`.
 - **install/hooks:** nova função `copyToolValidationHooks` distribui `validate-preload.sh` e `validate-governance.sh` para Codex e Copilot (paridade total com Claude/Gemini). Auditoria A01. Hooks novos: `.codex/hooks/validate-governance.sh`, `.github/hooks/validate-preload.sh`, `.github/hooks/validate-governance.sh` (padrão env-based, espelhando convenção Gemini). Regressão: `TestInstall_Copilot_CopiesValidationHooks`, `TestInstall_Codex_CopiesGovernanceHook`.
 - **install/.agents/lib:** novo passo 2.6 distribui vendor canônico shell (`check-invocation-depth.sh`, `parse-hook-input.sh`) para `<projeto>/.agents/lib/`. Skills e hooks deixam de depender exclusivamente do mirror legado `scripts/lib/` — cascata `.agents/lib/` → `scripts/lib/` resolve no primeiro. Regressão: `TestInstall_DistributesAgentsLib`, `TestInstall_AgentsLib_AbsentSource_NoError`.
@@ -80,6 +82,7 @@
 - **taskloop/bugfix:** `splitReviewContext` / `attachReviewContext` preservam o cabeçalho de contexto entre iterações do `BugfixLoop`: o contexto segue para o reviewer mas não polui o prompt do `BugfixInvoker`.
 
 ### Bug Fixes
+- **metrics:** ignora subdiretórios sem SKILL.md com aviso em vez de falhar (ref tarefa 1.0)
 - **codex/adapters:** `task-executor.toml` agora usa `developer_instructions` no lugar de `instructions`, tanto no arquivo distribuído quanto no generator. Isso elimina o aviso `Ignoring malformed agent role definition` no Codex. Regressão: `TestGenerateCodexAgents_withSkill`.
 - **gemini/adapters:** wrappers em `.gemini/commands/` passam a usar namespace `workspace.*.toml` e o generator remove automaticamente os nomes legados sem prefixo. Isso evita colisão com comandos nativos das skills no Gemini CLI. Regressão: `TestGenerateGemini_removesLegacyCommandName`, `TestE2E_GeminiInstall_TomlContent`.
 - **execute-task:** Stage 2 não dispara mais `needs_input` em tarefas non-code (docs, configs YAML/JSON, SQL, shell, MD); detecção de linguagem agora condicional ao diff (F1).

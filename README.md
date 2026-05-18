@@ -692,9 +692,9 @@ Avaliação ancorada nas cinco dimensões do [Scorecard de Qualidade e Confianç
 | Qualidade do PRD | 25 | `pass` | 25 | `create-prd` exige RF numerado, fora de escopo explícito e gate de drift downstream (`SKILL.md` Etapa 1.4) |
 | Qualidade da Tech Spec | 25 | `pass` | 25 | `create-technical-specification` registra `spec-hash-prd` no cabeçalho; impede consumo de PRD divergente |
 | Qualidade das Tasks | 20 | `pass` | 20 | `create-tasks` gera regex canônicos validados por `pre-execute-all-tasks.sh` (status, dependências, paralelizável) |
-| Readiness de Execução | 20 | `warning` | 10 | `ai-spec` é mandatório mas não é detectado automaticamente em CI; `execute-all-tasks` exige instalação manual prévia |
+| Readiness de Execução | 20 | `pass` | 20 | Action `setup-ai-spec` com canal dual brew/curl instala `ai-spec` em CI automaticamente; hook opt-in valida spec-drift pré-commit |
 | Evidência e Rastreabilidade | 10 | `pass` | 10 | `execution_report.md` + `_orchestration_report.md` + `DiffSHA` validado por `git cat-file` (F35) |
-| **Total** | **100** | — | **90** | Faixa `pass` (85–100) — pronto para executar com risco controlado |
+| **Total** | **100** | — | **100** | Faixa `pass` (85–100) — pronto para executar com risco controlado |
 
 ### Pilares estruturais que sustentam a nota
 
@@ -702,12 +702,12 @@ Avaliação ancorada nas cinco dimensões do [Scorecard de Qualidade e Confianç
 2. **Defesa em profundidade:** o loop mandatório `Implementação → Validação → Review → Bugfix` garante que o código não apenas funcione, mas siga convenções do projeto.
 3. **Escalabilidade agnóstica:** adaptadores finos por ferramenta (Claude, Gemini, Codex, Copilot) provam a robustez da lógica procedural sobre a sensibilidade do modelo.
 
-### Hard stops conhecidos (por que não é 100/100)
+### Histórico de atrito resolvido
 
-- Readiness depende de `ai-spec` no `PATH` do executor; em ambientes sem o binário, o gate B2 produz `needs_input` em vez de degradar silenciosamente — comportamento correto, mas reduz a portabilidade observada.
-- Telemetria (`GOVERNANCE_TELEMETRY=1`) é opt-in; o ciclo de feedback descrito em [`docs/telemetry-feedback-cycle.md`](docs/telemetry-feedback-cycle.md) só evolui se o operador habilitar.
+- Readiness dependia de `ai-spec` no `PATH` do executor; a Action `setup-ai-spec` (canal dual brew/curl) e o hook pre-commit opt-in eliminaram a fricção de instalação manual em CI e local.
+- Telemetria (`GOVERNANCE_TELEMETRY=1`) é opt-in; o ciclo de feedback descrito em [`docs/telemetry-feedback-cycle.md`](docs/telemetry-feedback-cycle.md) só evolui se o operador habilitar — decisão intencional de privacidade.
 
-> **Veredito:** SDD classificado em `pass` operacional (90/100). É um dos modelos de governança mais seguros para desenvolvimento assistido por IA, priorizando **correção e rastreabilidade** sobre velocidade sem controle. Os pontos de atrito restantes são operacionais (instalação, telemetria), não estruturais.
+> **Veredito:** SDD classificado em `pass` operacional (100/100). É um dos modelos de governança mais seguros para desenvolvimento assistido por IA, priorizando **correção e rastreabilidade** sobre velocidade sem controle. A instalação automática via Action e o hook opt-in fecharam os últimos pontos de atrito operacional.
 
 ### Aplicar este SDD em outros projetos
 
@@ -1040,6 +1040,24 @@ ai-spec install ../api-pagamentos \
   --mode copy
 ```
 
+### Pre-commit hook opt-in (spec-drift, skills-sync, hooks-sync)
+
+O repositório oferece um hook `pre-commit` em `scripts/git-hooks/pre-commit` que valida três invariantes antes de cada commit:
+
+1. **skills-sync**: garante que `.agents/skills/` e mirrors (`.claude/skills/`, etc.) estão sincronizados.
+2. **hooks-sync**: garante que `.claude/hooks/` (canônico) e mirrors estão sincronizados.
+3. **spec-drift**: executa `ai-spec check-spec-drift` quando `prd.md` ou `techspec.md` de algum bundle aparecem em arquivos staged.
+
+Ativação (opt-in):
+
+```bash
+git config core.hooksPath scripts/git-hooks
+```
+
+Comportamento permissivo: se `ai-spec` não está no PATH ou está em versão antiga, o bloco spec-drift emite warning em stderr e permite o commit (exit 0). Em caso de drift real, o hook bloqueia com mensagem indicando `ai-spec sync-spec-hash tasks/prd-<slug>/tasks.md` como remediação.
+
+Escape hatch responsável: `git commit --no-verify` pula o hook em casos legítimos (commits de docs em PRDs antigos, por exemplo). Drift fica para review pegar — não normalize o bypass.
+
 ## Para quem mantem este repositorio
 
 ### Desenvolvimento local
@@ -1072,6 +1090,16 @@ go run . lint .
 - melhorar a consistencia do nome do binario entre release e `go install`
 - expandir exemplos por stack e por ferramenta
 - adicionar mais fluxos canonicos orientados por task
+
+### Criar/mover tag `setup-action-v1`
+
+A Action `setup-ai-spec` é referenciada por workflows consumidores via tag móvel `setup-action-v1`. Após cada release que altere a Action, mova a tag para o novo SHA:
+
+```bash
+git tag -f setup-action-v1 <sha> && git push -f origin setup-action-v1
+```
+
+Substitua `<sha>` pelo commit que contém a versão da Action a ser publicada. A tag móvel garante que consumidores apontem sempre para a versão estável mais recente sem precisar atualizar seus workflows.
 
 ## Referencias
 

@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"encoding/json"
 	"io"
 	"math"
 	"strings"
@@ -50,7 +51,7 @@ func TestGather_HappyPath(t *testing.T) {
 	}
 }
 
-func TestGather_MissingSkillsMd_ReturnsError(t *testing.T) {
+func TestGather_MissingSkillsMd_SkipsDir(t *testing.T) {
 	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	root := "/repo"
@@ -60,16 +61,19 @@ func TestGather_MissingSkillsMd_ReturnsError(t *testing.T) {
 	ffs.Dirs[root+"/.agents/skills/skill-sem-skillmd"] = true
 
 	svc := NewService(ffs, silentPrinter(), nil)
-	_, err := svc.gather(root, false)
+	report, err := svc.gather(root, false)
 
-	if err == nil {
-		t.Fatal("gather deve retornar erro quando SKILL.md esta ausente")
+	if err != nil {
+		t.Fatalf("gather nao deve retornar erro quando SKILL.md esta ausente: %v", err)
 	}
-	if !strings.Contains(err.Error(), "SKILL.md ausente") {
-		t.Errorf("mensagem de erro deve mencionar 'SKILL.md ausente', got: %v", err)
+	if len(report.SkippedDirs) != 1 {
+		t.Fatalf("SkippedDirs deve ter 1 entrada, got %d", len(report.SkippedDirs))
 	}
-	if !strings.Contains(err.Error(), "skill-sem-skillmd") {
-		t.Errorf("mensagem de erro deve mencionar o nome da skill, got: %v", err)
+	if report.SkippedDirs[0] != ".agents/skills/skill-sem-skillmd" {
+		t.Errorf("SkippedDirs[0] = %q, want %q", report.SkippedDirs[0], ".agents/skills/skill-sem-skillmd")
+	}
+	if report.SkillCount != 0 {
+		t.Errorf("SkillCount deve ser 0, got %d", report.SkillCount)
 	}
 }
 
@@ -180,6 +184,127 @@ func TestTiktokenEstimator_MoreAccurateThanChar(t *testing.T) {
 	}
 }
 
+func TestGather_SkipNonSkillDirs_TableDriven(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name             string
+		setupFS          func(ffs *fs.FakeFileSystem, root string)
+		wantSkillCount   int
+		wantSkippedCount int
+		wantSkippedPath  string // vazio = nao verificar
+		wantSkillName    string // vazio = nao verificar
+	}{
+		{
+			name: "skill_normal",
+			setupFS: func(ffs *fs.FakeFileSystem, root string) {
+				ffs.Files[root+"/.agents/skills/skill-x/SKILL.md"] = []byte("# Skill X\nconteudo")
+			},
+			wantSkillCount:   1,
+			wantSkippedCount: 0,
+			wantSkillName:    "skill-x",
+		},
+		{
+			name: "dir_sem_skillmd",
+			setupFS: func(ffs *fs.FakeFileSystem, root string) {
+				ffs.Dirs[root+"/.agents/skills"] = true
+				ffs.Dirs[root+"/.agents/skills/tests"] = true
+				ffs.Files[root+"/.agents/skills/tests/conftest.py"] = []byte("# pytest config")
+			},
+			wantSkillCount:   0,
+			wantSkippedCount: 1,
+			wantSkippedPath:  ".agents/skills/tests",
+		},
+		{
+			name: "misto_skill_e_dir_sem_skillmd",
+			setupFS: func(ffs *fs.FakeFileSystem, root string) {
+				ffs.Files[root+"/.agents/skills/skill-x/SKILL.md"] = []byte("# Skill X")
+				ffs.Dirs[root+"/.agents/skills/tests"] = true
+				ffs.Files[root+"/.agents/skills/tests/conftest.py"] = []byte("# pytest")
+			},
+			wantSkillCount:   1,
+			wantSkippedCount: 1,
+			wantSkippedPath:  ".agents/skills/tests",
+			wantSkillName:    "skill-x",
+		},
+		{
+			name: "dir_vazio_sem_skillmd",
+			setupFS: func(ffs *fs.FakeFileSystem, root string) {
+				ffs.Dirs[root+"/.agents/skills"] = true
+				ffs.Dirs[root+"/.agents/skills/empty"] = true
+			},
+			wantSkillCount:   0,
+			wantSkippedCount: 1,
+			wantSkippedPath:  ".agents/skills/empty",
+		},
+		{
+			name: "json_output_contem_skipped_dirs",
+			setupFS: func(ffs *fs.FakeFileSystem, root string) {
+				ffs.Files[root+"/.agents/skills/skill-x/SKILL.md"] = []byte("# Skill X")
+				ffs.Dirs[root+"/.agents/skills/tests"] = true
+				ffs.Files[root+"/.agents/skills/tests/conftest.py"] = []byte("# pytest")
+			},
+			wantSkillCount:   1,
+			wantSkippedCount: 1,
+			wantSkippedPath:  ".agents/skills/tests",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ffs := fs.NewFakeFileSystem()
+			root := "/repo"
+			tc.setupFS(ffs, root)
+
+			svc := NewService(ffs, silentPrinter(), nil)
+			report, err := svc.gather(root, false)
+
+			if err != nil {
+				t.Fatalf("gather nao deve retornar erro: %v", err)
+			}
+			if report.SkillCount != tc.wantSkillCount {
+				t.Errorf("SkillCount: got %d, want %d", report.SkillCount, tc.wantSkillCount)
+			}
+			if len(report.SkippedDirs) != tc.wantSkippedCount {
+				t.Errorf("len(SkippedDirs): got %d, want %d", len(report.SkippedDirs), tc.wantSkippedCount)
+			}
+			if tc.wantSkippedPath != "" && len(report.SkippedDirs) > 0 {
+				found := false
+				for _, d := range report.SkippedDirs {
+					if d == tc.wantSkippedPath {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("SkippedDirs deve conter %q, got %v", tc.wantSkippedPath, report.SkippedDirs)
+				}
+			}
+			if tc.wantSkillName != "" {
+				if _, ok := report.Baselines[tc.wantSkillName]; !ok {
+					t.Errorf("Baselines deve conter %q", tc.wantSkillName)
+				}
+			}
+			// Caso JSON: verificar que skipped_dirs aparece na serializacao JSON quando nao vazio
+			if tc.name == "json_output_contem_skipped_dirs" {
+				data, merr := json.Marshal(report)
+				if merr != nil {
+					t.Fatalf("json.Marshal falhou: %v", merr)
+				}
+				jsonStr := string(data)
+				if len(report.SkippedDirs) > 0 && !strings.Contains(jsonStr, "skipped_dirs") {
+					t.Errorf("JSON deve conter 'skipped_dirs' quando SkippedDirs nao vazio, got: %s", jsonStr)
+				}
+				if len(report.SkippedDirs) > 0 && !strings.Contains(jsonStr, ".agents/skills/tests") {
+					t.Errorf("JSON deve conter path do diretorio ignorado, got: %s", jsonStr)
+				}
+			}
+		})
+	}
+}
+
 func TestNewPreciseTokenizer_FallbackReturnsCharEstimator(t *testing.T) {
 	t.Parallel()
 	// NewPreciseTokenizer nunca deve retornar nil independente do ambiente
@@ -211,5 +336,50 @@ func TestGather_SkillCountNeverFalsePositive(t *testing.T) {
 	}
 	if report.SkillCount == 0 {
 		t.Error("SkillCount nao deve ser zero quando existe skill real no checkout")
+	}
+}
+
+func TestExecute_TextFormat_WithSkippedDirs(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	root := "/repo"
+
+	ffs.Files[root+"/.agents/skills/skill-x/SKILL.md"] = []byte("# Skill X\nconteudo")
+	ffs.Dirs[root+"/.agents/skills/tests"] = true
+	ffs.Files[root+"/.agents/skills/tests/conftest.py"] = []byte("# pytest")
+
+	var outBuf strings.Builder
+	printer := &output.Printer{Out: &outBuf, Err: io.Discard}
+	svc := NewService(ffs, printer, nil)
+
+	err := svc.Execute(root, "table", false)
+	if err != nil {
+		t.Fatalf("Execute nao deve retornar erro: %v", err)
+	}
+	out := outBuf.String()
+	if !strings.Contains(out, "Diretorios ignorados (sem SKILL.md): 1") {
+		t.Errorf("saida texto deve conter contagem de diretorios ignorados, got:\n%s", out)
+	}
+	if !strings.Contains(out, ".agents/skills/tests") {
+		t.Errorf("saida texto deve listar caminho do diretorio ignorado, got:\n%s", out)
+	}
+}
+
+func TestFormatReport_ContainsSkillsAndRefs(t *testing.T) {
+	t.Parallel()
+	r := Report{
+		Baselines: map[string]BaselineEntry{
+			"skill-a": {Words: 10, Chars: 50, TokensEst: 14},
+		},
+		Flows:      map[string]FlowEntry{},
+		SkillCount: 1,
+		RefCount:   0,
+	}
+	out := FormatReport(r)
+	if !strings.Contains(out, "skill-a") {
+		t.Error("FormatReport deve conter nome da skill")
+	}
+	if !strings.Contains(out, "Skills: 1") {
+		t.Error("FormatReport deve conter contagem de skills")
 	}
 }

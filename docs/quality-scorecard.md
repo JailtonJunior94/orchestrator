@@ -160,10 +160,10 @@ Bundle: tasks/prd-<slug>/
 PRD: pass (25/25)
 Tech Spec: warning (12,5/25)
 Tasks: pass (20/20)
-Readiness de Execução: warning (10/20)
+Readiness de Execução: pass (20/20)
 Evidência e Rastreabilidade: pass (10/10)
-Total: 77,5/100
-Classificação final: warning
+Total: 87,5/100
+Classificação final: pass
 Decisão: executar somente via execute-task até reduzir lacunas
 ```
 

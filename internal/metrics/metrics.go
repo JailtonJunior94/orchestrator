@@ -21,10 +21,11 @@ type FileMetric struct {
 
 // Report contem metricas completas de contexto.
 type Report struct {
-	Baselines  map[string]BaselineEntry `json:"baselines"`
-	Flows      map[string]FlowEntry     `json:"flows"`
-	SkillCount int                      `json:"skill_count"`
-	RefCount   int                      `json:"reference_count"`
+	Baselines   map[string]BaselineEntry `json:"baselines"`
+	Flows       map[string]FlowEntry     `json:"flows"`
+	SkillCount  int                      `json:"skill_count"`
+	RefCount    int                      `json:"reference_count"`
+	SkippedDirs []string                 `json:"skipped_dirs,omitempty"`
 }
 
 // BaselineEntry descreve o baseline de uma skill.
@@ -83,6 +84,14 @@ func (s *Service) Execute(rootDir, format string, brief bool) error {
 	s.printer.Info("Skills: %d", report.SkillCount)
 	s.printer.Info("References: %d", report.RefCount)
 
+	if len(report.SkippedDirs) > 0 {
+		s.printer.Info("")
+		s.printer.Info("Diretorios ignorados (sem SKILL.md): %d", len(report.SkippedDirs))
+		for _, d := range report.SkippedDirs {
+			s.printer.Info("- %s", d)
+		}
+	}
+
 	return nil
 }
 
@@ -111,7 +120,10 @@ func (s *Service) gather(rootDir string, brief bool) (Report, error) {
 		name := e.Name()
 		skillFile := filepath.Join(skillsDir, name, "SKILL.md")
 		if !s.fs.Exists(skillFile) {
-			return report, fmt.Errorf("SKILL.md ausente em skill %s", name)
+			relPath := filepath.Join(".agents", "skills", name)
+			report.SkippedDirs = append(report.SkippedDirs, relPath)
+			s.printer.Warn("diretorio sem SKILL.md ignorado: %s", relPath)
+			continue
 		}
 
 		entry := BaselineEntry{}
