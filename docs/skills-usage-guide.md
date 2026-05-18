@@ -1,8 +1,8 @@
 # Guia de uso das skills
 
-> Referencia completa de contratos, prompts mandatorios e criterios de aceite para cada skill do pipeline de governanca. Leia este guia quando precisar reproduzir uma etapa com fidelidade maxima.
+> Guia especializado de contratos, prompts mandatorios e criterios de aceite por skill. Use este documento quando a etapa ja estiver escolhida e voce precisar reproduzi-la com fidelidade maxima.
 >
-> Para uma visao geral e instalacao, consulte o [README](../README.md). Para guia especifico do task-loop, consulte [Referencia do task-loop](task-loop-reference.md).
+> Para entrada executiva e navegacao inicial, consulte o [README](../README.md). Para decidir a etapa e o modo de execucao, use o [Playbook Mestre de Desenvolvimento](development-playbook.md). Para prompts reutilizaveis, use a [Biblioteca de prompts](prompt-library.md). Para o modo iterativo, consulte a [Referencia do task-loop](task-loop-reference.md).
 
 Esta secao define o contrato de uso de cada skill. Seguir estas regras nao e opcional: desvios introduzem ambiguidade, retrabalho e artefatos incompativeis entre etapas.
 
@@ -38,6 +38,8 @@ create-technical-specification
 ```
 
 Regra absoluta: nunca execute `execute-task` sem `tasks.md` aprovado. Nunca execute `create-tasks` sem tech spec aprovada. Nunca execute `create-technical-specification` sem PRD aprovado.
+
+Para escolher entre `execute-task`, `task-loop` e `execute-all-tasks`, siga o [Playbook Mestre de Desenvolvimento](development-playbook.md). Este guia detalha o contrato da skill selecionada; ele nao substitui a arvore de decisao nem o scorecard de readiness.
 
 ---
 

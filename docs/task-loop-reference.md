@@ -1,16 +1,17 @@
 # Referencia do task-loop
 
-> Guia consolidado de execucao com o `task-loop`. Cobre flags, heuristicas, alternativas e comparativos.
+> Guia especializado de execucao com o `task-loop`. Cobre flags, heuristicas, alternativas e comparativos do modo iterativo.
 >
-> Para instalar o CLI, consulte o [README](../README.md). Para o pipeline completo de skills, consulte o [Guia de uso das skills](skills-usage-guide.md).
+> Para instalar o CLI, consulte o [README](../README.md). Para decidir se `task-loop` e o modo certo, use o [Playbook Mestre de Desenvolvimento](development-playbook.md). Para readiness do bundle, use o [Scorecard de Qualidade e Confianca](quality-scorecard.md) e o [Checklist de Preflight e Readiness](preflight-checklist.md). Para contratos detalhados de skills, consulte o [Guia de uso das skills](skills-usage-guide.md).
 
 ## Fluxo recomendado
 
-1. Primeiro valide se as tasks estao pequenas, ordenadas e com dependencias claras.
-2. Rode um `dry-run` para confirmar qual task sera escolhida primeiro.
-3. Comece com poucas iteracoes para observar a qualidade do lote inicial.
-4. So depois aumente `max-iterations` e `timeout` para execucao mais longa.
-5. Sempre salve o relatorio final em caminho explicito quando estiver trabalhando em uma feature relevante.
+1. Primeiro confirme no scorecard e no preflight que o bundle ja esta pronto para lote curto.
+2. Depois valide se as tasks estao pequenas, ordenadas e com dependencias claras.
+3. Rode um `dry-run` para confirmar qual task sera escolhida primeiro.
+4. Comece com poucas iteracoes para observar a qualidade do lote inicial.
+5. So depois aumente `max-iterations` e `timeout` para execucao mais longa.
+6. Sempre salve o relatorio final em caminho explicito quando estiver trabalhando em uma feature relevante.
 
 ## Comandos recomendados
 
@@ -117,7 +118,7 @@ Emita a instrucao pronta para o agente:
 ai-spec wrapper codex execute-task .
 ```
 
-Prompt direto para o agente executar uma unica task:
+Exemplo de prompt direto para o agente executar uma unica task:
 
 ```text
 Use a skill execute-task para implementar a task 01_task.md localizada em tasks/prd-payments-list.
@@ -128,6 +129,8 @@ Criterios obrigatorios:
 - executar os testes e validacoes definidos na propria task
 - registrar evidencias de conclusao no arquivo de task
 ```
+
+Para variantes curta, padrao e rigorosa de prompt, prefira a [Biblioteca de prompts](prompt-library.md). O exemplo acima existe para ilustrar a relacao entre ciclo manual e `task-loop`, nao como biblioteca principal de prompts do projeto.
 
 ## Executar todas as tasks elegiveis (com task-loop)
 

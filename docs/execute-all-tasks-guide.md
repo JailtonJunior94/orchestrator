@@ -2,7 +2,7 @@
 
 > Orquestrador agnóstico de PRD que executa todas as tarefas em subagents fresh (contexto isolado por tarefa), respeita o DAG declarado em `tasks.md`, paraleliza quando o tool ativo suporta, halt-first em falha, retomada idempotente.
 
-Este guia é a referência operacional definitiva. Cobre quando usar, pré-requisitos obrigatórios, prompts completos copy-paste para cada um dos 4 tools (Claude Code, Codex CLI, Gemini CLI, Copilot CLI), padrões de eficiência, anti-padrões com falsos positivos conhecidos, e fluxos end-to-end reais.
+Este guia e a referencia especializada de orquestracao completa. Use o [Playbook Mestre de Desenvolvimento](development-playbook.md) para decidir quando subir de `execute-task` ou `task-loop` para este modo. Use o [Scorecard de Qualidade e Confianca](quality-scorecard.md) e o [Checklist de Preflight e Readiness](preflight-checklist.md) para readiness do bundle. Os prompts aqui sao completos e focados em `execute-all-tasks`; para variantes reutilizaveis mais curtas, consulte a [Biblioteca de prompts](prompt-library.md).
 
 ---
 
@@ -62,11 +62,11 @@ tasks/prd-<slug>/
 ### 2.2 Lockfile íntegro
 
 ```bash
-ai-spec skills --verify
+ai-spec skills check
 # deve retornar exit 0
 ```
 
-Se houver drift, **conserte antes** com `ai-spec skills --update` ou equivalente. O orquestrador para com `blocked` se detectar drift.
+Se houver drift, **conserte antes** pelo fluxo de atualizacao de skills adotado no repositorio. O orquestrador para com `blocked` se detectar drift.
 
 ### 2.3 Spec drift / RF coverage
 
@@ -656,7 +656,7 @@ claude
 # Output: "Veredito: REJECTED. Causa: skills-lock.json drift detectado"
 
 # Correção
-> ai-spec skills --update
+> atualizar o lock de skills conforme o fluxo adotado no repositorio
 > # commit do lockfile atualizado
 
 # Retomada (mesma sessão ou nova)
@@ -762,7 +762,7 @@ Use antes de cada `/execute-all-tasks`:
 - [ ] `tasks/prd-<slug>/techspec.md` existe e está aprovado
 - [ ] `tasks/prd-<slug>/tasks.md` tem tabela canônica com `Status`, `Dependências`, `Paralelizável`
 - [ ] Cada `task-X.Y-*.md` existe e tem `Critérios de Sucesso`
-- [ ] `ai-spec skills --verify` retorna 0
+- [ ] `ai-spec skills check` retorna 0
 - [ ] `ai-spec check-spec-drift tasks/prd-<slug>/tasks.md` retorna 0
 - [ ] Estou na raiz do repositório
 - [ ] Sessão do tool é fresh (sem outros subagents ativos)

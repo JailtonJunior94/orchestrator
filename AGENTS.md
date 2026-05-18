@@ -38,6 +38,17 @@ Skills individuais devem declarar apenas cargas adicionais específicas ao seu c
 | Revisão/refatoração Go (OC) | `.agents/skills/object-calisthenics-go/SKILL.md` |
 | Correção de bugs | `.agents/skills/bugfix/SKILL.md` |
 
+## Invariantes de Governança (Obrigatórias)
+
+Para garantir a confiabilidade em qualquer projeto instrumentado por este harness, as seguintes regras são **mandatórias** e não admitem desvios:
+
+1. **Protocolo PRD-First:** Toda e qualquer alteração de comportamento ou nova funcionalidade deve obrigatoriamente iniciar com a criação ou atualização de um PRD (`create-prd`). É proibido implementar código sem um requisito funcional (RF) mapeado.
+2. **Âncora de Confiança (Spec-Hash):** A integridade entre Requisito -> Arquitetura -> Implementação é garantida por hashes SHA-256. 
+   - Ao editar um PRD, você deve sincronizar os hashes rodando `ai-spec sync-spec-hash`.
+   - As skills de execução (`execute-task`, `execute-all-tasks`) devem validar o drift via `ai-spec check-spec-drift` e interromper a execução em caso de inconsistência.
+3. **Isolamento de Contexto:** Agentes devem operar com o mínimo de contexto necessário. O uso de subagentes para tarefas de execução é obrigatório para evitar a poluição da sessão principal e minimizar alucinações.
+4. **Evidência Obrigatória:** Uma tarefa só é considerada concluída (`done`) após a persistência de um relatório de execução (`execution_report.md`) que contenha evidências físicas (logs, testes, outputs) da validação.
+
 ## Governança por Ferramenta
 
 | Arquivo | Ferramenta |
