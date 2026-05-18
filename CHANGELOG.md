@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.22.1 (2026-05-18)
+
+### Bug Fixes
+- **setup-ai-spec,metrics:** autentica GitHub API, corrige brew link e forward slash em SkippedDirs (3748e75)
+
 ## [Unreleased]
 
 ### Bug Fixes
