@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.21.1 (2026-05-18)
+
+### Bug Fixes
+- **gemini,codex:** avoid command and agent-role conflicts (59a7e2e)
+
+### Chores
+- **sync:** propaga bumps de skills v0.21.0 para mirrors (d83d619)
+- **sync:** propaga execute-all-tasks v1.6.0 para mirrors (c88b6dd)
+
 ## 0.21.0 (2026-05-16)
 
 ### Features
