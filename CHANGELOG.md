@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.22.4 (2026-05-19)
+
+### Bug Fixes
+- **ci:** restore shellcheck and skill budget gates (c46eca1)
+
+### Documentation
+- **readme:** document mandatory install and upgrade workflow (3357367)
+
 ## 0.22.3 (2026-05-19)
 
 ### Bug Fixes
