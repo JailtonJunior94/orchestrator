@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.22.2 (2026-05-19)
+
+### Bug Fixes
+- **setup-ai-spec:** usar github.token em vez de secrets.GITHUB_TOKEN na composite action (f66f93c)
+
 ## 0.22.1 (2026-05-18)
 
 ### Bug Fixes
