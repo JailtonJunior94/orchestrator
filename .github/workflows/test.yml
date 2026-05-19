@@ -88,6 +88,16 @@ jobs:
       - name: Hook smoke tests
         run: make test-hooks
 
+      - name: Setup Shellcheck (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Setup Shellcheck (macOS)
+        if: runner.os == 'macOS'
+        run: brew install shellcheck
+
       - name: Shellcheck
         run: shellcheck --severity=warning scripts/git-hooks/pre-commit scripts/*.sh
 

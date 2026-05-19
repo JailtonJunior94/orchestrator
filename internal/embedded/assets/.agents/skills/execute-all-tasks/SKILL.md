@@ -9,7 +9,7 @@ description: Orquestra execução completa de PRD spawnando subagent fresh por t
 
 ## Visão Geral
 
-Delega cada tarefa a **subagent fresh** (primitiva nativa do tool). Subagent carrega só o necessário, executa via `execute-task`, retorna YAML compacto, morre. Orquestrador retém ≤100 tokens/tarefa.
+Delega cada tarefa a subagent. Subagent carrega só o necessário, executa via `execute-task` e retorna YAML compacto. Orquestrador retém ≤100 tokens/tarefa.
 
 Por tarefa: lê → carrega só governance + linguagem do diff + skills declaradas → executa → YAML → contexto descartado → próxima.
 
