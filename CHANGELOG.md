@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.22.3 (2026-05-19)
+
+### Bug Fixes
+- **setup-ai-spec:** baixar tarball com nome original para sha256sum -c verificar corretamente (8ffd97c)
+
 ## 0.22.2 (2026-05-19)
 
 ### Bug Fixes
