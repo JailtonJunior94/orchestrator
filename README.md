@@ -18,9 +18,11 @@ O projeto padroniza como Claude, Gemini, Codex e GitHub Copilot encontram skills
   - [Instalacao via Go](#instalacao-via-go)
   - [Executar sem instalar](#executar-sem-instalar)
 - [Inicio rapido](#inicio-rapido)
+- [Fluxo mandatorio: SDD + Harness](#fluxo-mandatorio-sdd--harness)
 - [O que fazer depois da instalacao](#o-que-fazer-depois-da-instalacao)
   - [Cenario 1: projeto existente](#cenario-1-projeto-existente)
   - [Cenario 2: projeto novo](#cenario-2-projeto-novo)
+  - [Cenario 3: projeto ja instrumentado e desatualizado](#cenario-3-projeto-ja-instrumentado-e-desatualizado)
 - [Nucleo operacional](#nucleo-operacional)
 - [Fluxo completo recomendado](#fluxo-completo-recomendado)
 - [Estrategia recomendada para desenvolver uma task](#estrategia-recomendada-para-desenvolver-uma-task)
@@ -292,6 +294,120 @@ ai-spec lint ../api-pagamentos
 
 O repositorio alvo estara pronto para receber skills e agentes processuais.
 
+## Fluxo mandatorio: SDD + Harness
+
+Se voce quer manter um projeto sempre alinhado com cada versao publicada deste repositorio, siga este ciclo sem atalhos:
+
+1. **SDD primeiro:** qualquer feature, alteracao de comportamento, novo endpoint, nova flag CLI ou mudanca de regra de negocio **DEVE** comecar em `create-prd`.
+2. **Instale o binario `ai-spec`:** sem o binario atualizado, nao existe harness confiavel para instalar, validar ou sincronizar governanca.
+3. **Instale o baseline no projeto:** todo repositorio alvo **DEVE** passar por `ai-spec install` antes de usar skills.
+4. **Atualize o binario a cada release publicada:** saiu nova versao no GitHub Releases, atualize o `ai-spec`.
+5. **Sincronize a governanca instalada em cada projeto:** depois de atualizar o binario, rode `ai-spec upgrade` no repositorio instrumentado.
+6. **Revalide sempre:** toda instalacao ou sincronizacao **DEVE** terminar com `inspect`, `doctor` e `lint`.
+7. **Sem `doctor`, sem confianca operacional:** se `doctor` falhar, trate a instalacao como nao confiavel ate corrigir manifesto, symlinks, permissoes ou estado do git.
+
+### 1. SDD obrigatorio
+
+Para mudanca de comportamento, o fluxo padrao e mandatorio:
+
+```text
+create-prd -> create-technical-specification -> create-tasks -> execute-task
+```
+
+Se houver lote maduro e paralelo seguro, troque apenas o ultimo passo por `execute-all-tasks`.
+
+### 2. Harness e instalacao das skills
+
+`install` e o comando que materializa o harness no repositorio alvo: cria `.agents/skills/`, adaptadores por ferramenta e `.ai_spec_harness.json`.
+
+```bash
+ai-spec install ../api-pagamentos \
+  --source . \
+  --tools codex,claude,gemini,copilot \
+  --langs go
+
+ai-spec inspect ../api-pagamentos
+ai-spec doctor ../api-pagamentos
+ai-spec lint ../api-pagamentos
+```
+
+Sem esse passo, nao existe baseline confiavel para Codex, Claude, Gemini ou Copilot descobrirem skills, agentes e regras.
+
+### 3. Atualizacao obrigatoria do binario a cada release
+
+Quando uma nova versao for publicada em <https://github.com/JailtonJunior94/orchestrator/releases>, atualize primeiro o executavel `ai-spec`.
+
+Homebrew no macOS:
+
+```bash
+brew upgrade ai-spec
+ai-spec version
+```
+
+Go:
+
+```bash
+go install github.com/JailtonJunior94/ai-spec-harness@latest
+ai-spec-harness version
+```
+
+CI GitHub Actions:
+
+```yaml
+- uses: JailtonJunior94/orchestrator/.github/actions/setup-ai-spec@setup-action-v1
+  with:
+    version: latest
+```
+
+Com base nos commits mais recentes da `main`, esta Action e hoje o caminho recomendado para CI: no macOS instala via Homebrew; no Linux baixa o tarball oficial e valida `sha256` antes de expor o binario no `PATH`.
+
+### 4. Sync obrigatorio da governanca instalada
+
+Atualizar o binario nao basta. Depois de cada release publicada, sincronize cada repositorio ja instrumentado para aplicar skills, adaptadores e manifesto da nova versao.
+
+```bash
+ai-spec upgrade ../api-pagamentos --check
+ai-spec upgrade ../api-pagamentos
+ai-spec inspect ../api-pagamentos
+ai-spec doctor ../api-pagamentos
+ai-spec lint ../api-pagamentos
+```
+
+Use `--check` como preflight. Se houver mudanca pendente, aplique o upgrade antes de executar novas tasks no projeto instrumentado.
+
+Se voce estiver sincronizando a partir deste checkout local, pode manter a fonte explicita:
+
+```bash
+ai-spec upgrade ../api-pagamentos --source . --check
+ai-spec upgrade ../api-pagamentos --source . --langs go
+ai-spec inspect ../api-pagamentos
+ai-spec doctor ../api-pagamentos
+ai-spec lint ../api-pagamentos
+```
+
+### 5. Doctor e gate de saude
+
+`doctor` nao e opcional. Ele verifica repositorio git, symlinks, permissoes e manifesto da instalacao.
+
+```bash
+ai-spec doctor ../api-pagamentos
+```
+
+Rode `doctor` em tres momentos: logo apos `install`, logo apos `upgrade` e sempre que houver suspeita de drift local na governanca.
+
+### 6. Regra operacional para ficar sempre atualizado
+
+Checklist minimo por versao publicada:
+
+1. Atualize o binario `ai-spec`.
+2. Rode `ai-spec version` para confirmar a nova versao.
+3. Rode `ai-spec upgrade <repo> --check` em cada repositorio instrumentado.
+4. Rode `ai-spec upgrade <repo>` onde houver mudanca pendente.
+5. Rode `ai-spec inspect <repo>`, `ai-spec doctor <repo>` e `ai-spec lint <repo>`.
+6. Se houver PRD/TechSpec editado intencionalmente no bundle, rode tambem `ai-spec sync-spec-hash tasks/<prd>/tasks.md` para manter o `spec-hash` sincronizado.
+
+Esse e o contrato pratico: **instalar uma vez, atualizar o binario a cada release, sincronizar cada projeto com `upgrade` e revalidar sempre**.
+
 ## O que fazer depois da instalacao
 
 ### Cenario 1: projeto existente
@@ -306,6 +422,7 @@ ai-spec install ../api-legado \
 
 ai-spec inspect ../api-legado
 ai-spec doctor ../api-legado
+ai-spec lint ../api-legado
 cd ../api-legado
 ```
 
@@ -339,6 +456,8 @@ ai-spec install ../novo-produto \
 
 cd ../novo-produto
 ai-spec inspect .
+ai-spec doctor .
+ai-spec lint .
 ```
 
 Prompt inicial sugerido para o agente:
@@ -358,6 +477,39 @@ Depois do PRD aprovado, o fluxo natural e:
 ```text
 create-technical-specification -> create-tasks -> execute-task
 ```
+
+### Cenario 3: projeto ja instrumentado e desatualizado
+
+Se o repositorio ja usa `ai-spec`, mas voce publicou uma nova versao do harness ou das skills, o fluxo mandatorio e: atualizar o binario, sincronizar a governanca instalada e revalidar tudo.
+
+Atualize primeiro o binario:
+
+```bash
+brew upgrade ai-spec
+ai-spec version
+```
+
+Depois sincronize o repositorio instrumentado:
+
+```bash
+ai-spec upgrade ../api-legado --check
+ai-spec upgrade ../api-legado
+ai-spec inspect ../api-legado
+ai-spec doctor ../api-legado
+ai-spec lint ../api-legado
+```
+
+Se voce estiver publicando a atualizacao a partir deste checkout local, mantenha a fonte explicita:
+
+```bash
+ai-spec upgrade ../api-legado --source . --check
+ai-spec upgrade ../api-legado --source . --langs go
+ai-spec inspect ../api-legado
+ai-spec doctor ../api-legado
+ai-spec lint ../api-legado
+```
+
+So depois desse ciclo o repositorio deve voltar a executar novas tasks.
 
 ## Nucleo operacional
 
@@ -407,6 +559,9 @@ ai-spec lint ../api-pagamentos
 ```bash
 ai-spec upgrade ../api-pagamentos --source . --check
 ai-spec upgrade ../api-pagamentos --source . --langs go
+ai-spec inspect ../api-pagamentos
+ai-spec doctor ../api-pagamentos
+ai-spec lint ../api-pagamentos
 ```
 
 ### 4. Entrar no repositorio instrumentado
