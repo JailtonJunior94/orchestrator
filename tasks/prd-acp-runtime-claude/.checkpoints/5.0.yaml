@@ -1,0 +1,4 @@
+status: done
+report_path: tasks/prd-acp-runtime-claude/5.0_execution_report.md
+summary: "Implementado internal/runtime/probe/ com EnsureAvailable, cache via sync.Map+Once, LookPather injetável e testes com 91.1% de cobertura"
+timestamp: "2026-05-20T00:00:00Z"
