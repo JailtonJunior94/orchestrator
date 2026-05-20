@@ -154,3 +154,18 @@ Nao inventar contexto ausente. Nao assumir versao sem verificar. Nao alterar com
 
 - [Guia de troubleshooting](docs/troubleshooting.md) — problemas comuns com sintoma, causa, solucao e verificacao
 - [Ciclo de telemetria](docs/telemetry-feedback-cycle.md) — feedback loop com GOVERNANCE_TELEMETRY
+
+## ADRs
+
+| ADR | Titulo | Status |
+|-----|--------|--------|
+| [001](tasks/adr/001-go-embed-baseline.md) | Assets via go:embed | Aceita |
+| [002](tasks/adr/002-fake-filesystem-testes.md) | FakeFileSystem vs afero | Aceita |
+| [003](tasks/adr/003-paridade-semantica.md) | Invariantes semanticas vs diff textual | Aceita |
+| [004](tasks/adr/004-lazy-loading-referencias.md) | References sob demanda | Aceita |
+| [005](tasks/adr/005-skills-lock-sha256.md) | Lock file SHA-256 | Aceita |
+| [006](docs/adr/006-telemetria-feedback-cycle.md) | Telemetria opt-in append-only | Aceita |
+| [007](docs/adr/007-copilot-cli-stateless-workaround.md) | Copilot injecao manual | Aceita |
+| [008](docs/adr/008-parity-multi-tool-invariants.md) | 29 invariantes 3 niveis | Aceita |
+| [009](tasks/adr/009-acp-protocol-adoption.md) | Adocao do ACP via coder/acp-go-sdk para invocacao de agentes | Aceita |
+| [010](tasks/prd-acp-runtime-claude/adr-010-event-tagged-union.md) | runtime.Event como struct tagged union | Aceita |

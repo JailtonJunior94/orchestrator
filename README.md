@@ -24,6 +24,7 @@ O projeto padroniza como Claude, Gemini, Codex e GitHub Copilot encontram skills
   - [Cenario 2: projeto novo](#cenario-2-projeto-novo)
   - [Cenario 3: projeto ja instrumentado e desatualizado](#cenario-3-projeto-ja-instrumentado-e-desatualizado)
 - [Nucleo operacional](#nucleo-operacional)
+- [Runtime ACP (experimental)](#runtime-acp-experimental)
 - [Fluxo completo recomendado](#fluxo-completo-recomendado)
 - [Estrategia recomendada para desenvolver uma task](#estrategia-recomendada-para-desenvolver-uma-task)
 - [Artefatos de governanca](#artefatos-de-governanca)
@@ -532,6 +533,51 @@ Vai executar uma task isolada ou medir qualidade real? -> execute-task
 Tem lote pequeno com supervisao frequente? -> task-loop
 Tem bundle maduro com DAG confiavel? -> execute-all-tasks
 ```
+
+## Runtime ACP (experimental)
+
+O `ai-spec-harness` suporta um modo de invocacao alternativo para o agente Claude baseado no **Agent Client Protocol (ACP)**, ativado pela flag `--runtime=acp`. Nesse modo, o harness abre uma sessao ACP com o agente e consome um stream de eventos em tempo real, em vez de aguardar o processo encerrar.
+
+### O que e
+
+Em vez de invocar o Claude via `exec.Cmd` one-shot (modo `--runtime=legacy`, padrao), o modo ACP:
+
+- Conecta ao agente via `github.com/coder/acp-go-sdk` e protocolo JSON-RPC sobre stdio.
+- Recebe eventos granulares (`agent_message`, `agent_thought`, `tool_call_start`, `tool_call_update`, `session_end`) em tempo real.
+- Persiste esses eventos em `evidence/<task>/events.jsonl` para auditoria.
+- Cancela a sessao quando o agente fica mudo por mais de `--activity-timeout` (padrao 120s) e registra `cancel_reason=activity_timeout` no `execution_report.md`.
+
+### Como ativar
+
+```bash
+ai-spec task-loop --tool claude --runtime acp
+```
+
+Parametros opcionais:
+
+```bash
+ai-spec task-loop --tool claude --runtime acp --activity-timeout 180s --quiet
+```
+
+### Requisitos de instalacao
+
+O runtime ACP resolve o agente nesta ordem:
+
+1. Binario `claude-agent-acp` no `PATH` — instalacao recomendada para producao.
+2. `npx --yes @agentclientprotocol/claude-agent-acp@<VERSAO_PINADA>` — se `npx` estiver disponivel; requer internet no primeiro uso.
+3. Falha com mensagem clara e tres remedios se nenhum dos dois estiver disponivel.
+
+Para instalar o binario canonico:
+
+```bash
+npm install -g @agentclientprotocol/claude-agent-acp
+```
+
+### Notas importantes
+
+- O modo `--runtime=legacy` permanece o padrao. Nenhuma task existente muda de comportamento sem mudanca explicita de flag.
+- `--runtime=acp` exige `--tool claude`; com qualquer outro tool o CLI falha com exit code 2.
+- Para mais detalhes sobre a decisao arquitetural, ver [ADR-009: Adocao do ACP via coder/acp-go-sdk](tasks/adr/009-acp-protocol-adoption.md).
 
 ## Fluxo completo recomendado
 

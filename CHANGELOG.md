@@ -1,5 +1,28 @@
 # Changelog
 
+## [Unreleased] — ACP runtime for Claude (RF-01–RF-16, ADR-009, ADR-010)
+
+### Features
+
+- **runtime/events:** add domain events model with VOs and state pattern (a01793f)
+- **runtime:** add activity watchdog and error sentinels (7cc780f)
+- **runtime/specs:** add Claude spec with launcher fallbacks and sync script (c6f3aa2)
+- **runtime/probe:** resolve claude-agent-acp launcher with npx fallback and cache (de60bb4)
+- **runtime/persistence:** add events.jsonl writer, tool_calls.md and report enricher (01e5c1e)
+- **runtime/events:** translate acp.SessionUpdate to domain Event (120e3ab)
+- **runtime:** add ACP client, fake server and human renderer (633fd26)
+- **runtime:** add ACPRunner application service with integration tests (5f80510)
+- **cli:** add --runtime/--activity-timeout/--quiet flags, telemetry fields and acp_live CI job (4aaab6f)
+
+### Chores
+
+- **deps:** pin github.com/coder/acp-go-sdk v0.13.0 (ADR-009) (2132dae)
+- **tasks:** mark task 5.0 done and add execution report (c339f93)
+
+### Documentation
+
+- **acp-runtime:** add README section, accept ADR-009 and ADR-010, add CHANGELOG entry
+
 ## 0.22.4 (2026-05-19)
 
 ### Bug Fixes
