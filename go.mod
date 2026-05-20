@@ -3,6 +3,7 @@ module github.com/JailtonJunior94/ai-spec-harness
 go 1.26.2
 
 require (
+	github.com/coder/acp-go-sdk v0.13.0
 	github.com/pkoukk/tiktoken-go v0.1.8
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
 	github.com/spf13/cobra v1.10.2

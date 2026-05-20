@@ -18,7 +18,7 @@ const (
 	// ClaudeSDKVersion é a versão do coder/acp-go-sdk sincronizada com go.mod.
 	// Mantida em sincronia por scripts/sync-acp-sdk-version.sh.
 	// Não editar manualmente — use make sync-acp-sdk-version.
-	ClaudeSDKVersion = "v0.0.0"
+	ClaudeSDKVersion = "v0.13.0"
 )
 
 // Claude retorna a Spec do runtime Claude ACP.
