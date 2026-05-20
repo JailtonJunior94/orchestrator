@@ -1,9 +1,16 @@
 package runtime
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe"
+)
 
 // ErrLauncherUnavailable é retornado quando nenhum launcher (binary ou npx) está disponível.
-var ErrLauncherUnavailable = errors.New("launcher unavailable")
+// Alias de probe.ErrLauncherUnavailable para manter a API pública do pacote runtime.
+//
+//nolint:gochecknoglobals
+var ErrLauncherUnavailable = probe.ErrLauncherUnavailable
 
 // ErrActivityTimeout é retornado (via context.CancelCause) quando o watchdog detecta
 // que o intervalo desde o último evento excede o ActivityTimeout configurado.

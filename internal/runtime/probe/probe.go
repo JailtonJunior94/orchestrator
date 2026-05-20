@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"sync"
 
-	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
@@ -80,7 +79,7 @@ func resolve(ctx context.Context, spec specs.Spec, look LookPather) (specs.Launc
 	}
 
 	msg := fmt.Sprintf(errMsgTemplate, npmPkg, npmVer)
-	return specs.Launcher{}, fmt.Errorf("%s: %w", msg, airuntime.ErrLauncherUnavailable)
+	return specs.Launcher{}, fmt.Errorf("%s: %w", msg, ErrLauncherUnavailable)
 }
 
 // extractPackage extrai o nome do pacote npm do FallbackLauncher.
