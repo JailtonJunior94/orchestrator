@@ -167,5 +167,5 @@ Nao inventar contexto ausente. Nao assumir versao sem verificar. Nao alterar com
 | [006](docs/adr/006-telemetria-feedback-cycle.md) | Telemetria opt-in append-only | Aceita |
 | [007](docs/adr/007-copilot-cli-stateless-workaround.md) | Copilot injecao manual | Aceita |
 | [008](docs/adr/008-parity-multi-tool-invariants.md) | 29 invariantes 3 niveis | Aceita |
-| [009](tasks/adr/009-acp-protocol-adoption.md) | Adocao do ACP via coder/acp-go-sdk para invocacao de agentes | Aceita |
-| [010](tasks/prd-acp-runtime-claude/adr-010-event-tagged-union.md) | runtime.Event como struct tagged union | Aceita |
+| [ADR-009](tasks/adr/009-acp-protocol-adoption.md) | Adocao do ACP via coder/acp-go-sdk para invocacao de agentes | Aceita |
+| [ADR-010](tasks/prd-acp-runtime-claude/adr-010-event-tagged-union.md) | runtime.Event como struct tagged union | Aceita |
