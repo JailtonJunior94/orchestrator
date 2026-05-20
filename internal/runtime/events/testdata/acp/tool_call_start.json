@@ -1,0 +1,1 @@
+{"sessionUpdate":"tool_call","title":"bash","toolCallId":"tc_abc123","status":"pending","rawInput":{"command":"echo hello"}}

@@ -28,7 +28,7 @@
 | 1.0 | Domain Events Model | done | — | Com 2.0, 6.0 | — |
 | 2.0 | Domain Specs (Claude) + Sync Script | done | — | Com 1.0, 6.0 | — |
 | 3.0 | SDK Dependency (go.mod) | done | 2.0 | Com 5.0, 7.0 | — |
-| 4.0 | ACP→Event Conversion | pending | 1.0, 3.0 | Com 5.0, 7.0 | — |
+| 4.0 | ACP→Event Conversion | done | 1.0, 3.0 | Com 5.0, 7.0 | — |
 | 5.0 | Launcher Probe | done | 2.0 | Com 3.0, 6.0, 7.0 | — |
 | 6.0 | Activity Watchdog + Sentinels | done | — | Com 1.0, 2.0, 7.0 | — |
 | 7.0 | Persistence Layer (JSONL + Report + ToolCalls) | done | 1.0 | Com 3.0, 5.0, 6.0 | — |
