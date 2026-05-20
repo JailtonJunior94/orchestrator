@@ -1,0 +1,41 @@
+name: ACP Live Tests
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # nightly 06:00 UTC
+  workflow_dispatch:        # gatilho manual para testes pontuais
+
+jobs:
+  acp-live:
+    name: ACP Live Handshake
+    runs-on: ubuntu-24.04
+    continue-on-error: true  # não bloqueia merges — job opt-in
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Setup Node.js (para npx fallback)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install claude-agent-acp via npm
+        run: npm install -g @agentclientprotocol/claude-agent-acp@0.1.0
+
+      - name: Run ACP live tests
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: make test-acp-live
+
+      - name: Upload evidence artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acp-live-evidence-${{ github.run_id }}
+          path: evidence/
+          if-no-files-found: ignore
+          retention-days: 7

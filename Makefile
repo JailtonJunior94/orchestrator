@@ -1,4 +1,4 @@
-.PHONY: build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync test-hooks sync-acp-sdk-version
+.PHONY: build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync test-hooks sync-acp-sdk-version test-acp-live
 
 BINARY := ai-spec
 GOFLAGS := -trimpath
@@ -63,3 +63,9 @@ test-hooks:
 # Rodar localmente após atualizar go.mod. Não incluído em CI automaticamente (ADR-009).
 sync-acp-sdk-version:
 	bash scripts/sync-acp-sdk-version.sh
+
+# test-acp-live: executa os testes live do runtime ACP.
+# Requer claude-agent-acp ou npx disponíveis no PATH (ver tests/integration/acp_live/README.md).
+# Não incluído em make test (build tag acp_live protege compilação). Rodado pelo CI nightly.
+test-acp-live:
+	go test -tags=acp_live -v ./tests/integration/acp_live

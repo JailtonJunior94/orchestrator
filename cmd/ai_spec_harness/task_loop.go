@@ -2,6 +2,7 @@ package aispecharness
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
@@ -56,6 +57,29 @@ Exemplos:
 		maxIter, _ := cmd.Flags().GetInt("max-iterations")
 		timeout, _ := cmd.Flags().GetDuration("timeout")
 		reportPath, _ := cmd.Flags().GetString("report-path")
+		runtime, _ := cmd.Flags().GetString("runtime")
+		activityTimeout, _ := cmd.Flags().GetDuration("activity-timeout")
+		quiet, _ := cmd.Flags().GetBool("quiet")
+
+		// Validacao de --runtime (RF-01, RF-02, RF-07)
+		if runtime != "legacy" && runtime != "acp" {
+			_, _ = fmt.Fprintf(os.Stderr, "runtime inválido: %q — valores aceitos: legacy, acp\n", runtime)
+			return fmt.Errorf("exit2")
+		}
+		if runtime == "acp" {
+			effectiveTool := tool
+			if effectiveTool == "" {
+				effectiveTool = execTool
+			}
+			if effectiveTool != "claude" {
+				_, _ = fmt.Fprintf(os.Stderr, "runtime acp suporta apenas --tool claude nesta versão\n")
+				return fmt.Errorf("exit2")
+			}
+		}
+		if activityTimeout < 0 {
+			_, _ = fmt.Fprintf(os.Stderr, "--activity-timeout não pode ser negativo\n")
+			return fmt.Errorf("exit2")
+		}
 
 		// Validacao mutua exclusiva entre modo simples e avancado
 		if tool != "" && (execTool != "" || revTool != "") {
@@ -104,6 +128,9 @@ Exemplos:
 			ReviewerPromptTemplate: reviewerTmpl,
 			ExecutorFallbackModel:  execFallbackModel,
 			ReviewerFallbackModel:  revFallbackModel,
+			Runtime:                runtime,
+			ActivityTimeout:        activityTimeout,
+			Quiet:                  quiet,
 		})
 	},
 }
@@ -126,6 +153,11 @@ func init() {
 	taskLoopCmd.Flags().String("reviewer-prompt-template", "", "Caminho do template de prompt de revisao customizado")
 	taskLoopCmd.Flags().String("executor-fallback-model", "", "Modelo de fallback nativo do executor (Claude only)")
 	taskLoopCmd.Flags().String("reviewer-fallback-model", "", "Modelo de fallback nativo do reviewer (Claude only)")
+
+	// Flags ACP runtime (RF-01, RF-02, RF-07, RF-11)
+	taskLoopCmd.Flags().String("runtime", "legacy", "Runtime de invocacao: legacy (default) ou acp (requer --tool claude)")
+	taskLoopCmd.Flags().Duration("activity-timeout", 120*time.Second, "Timeout de inatividade do agente ACP (0 = desabilitado); aceita time.Duration: 90s, 2m")
+	taskLoopCmd.Flags().Bool("quiet", false, "Suprime stream humano (stdout); jsonl e warnings continuam")
 
 	rootCmd.AddCommand(taskLoopCmd)
 }

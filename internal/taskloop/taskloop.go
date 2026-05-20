@@ -11,6 +11,9 @@ import (
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
+	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
 // Options agrupa as opcoes do comando task-loop.
@@ -30,6 +33,11 @@ type Options struct {
 	ReviewerFallbackModel  string // --fallback-model nativo do reviewer (Claude only, camada 1)
 	MaxBugfixIterations    int    // limite rigido de iteracoes do BugfixLoop (RF-06, ADR-003); 0 => default 3
 	NonInteractive         bool   // ReservationPlanner: assume Document como default sem prompts (RF-08, ADR-003)
+
+	// Runtime ACP (RF-01, RF-02, RF-07, RF-11)
+	Runtime         string        // "legacy" (default) ou "acp"
+	ActivityTimeout time.Duration // timeout de inatividade do watchdog ACP; 0 = desabilitado
+	Quiet           bool          // suprime stream humano quando true
 }
 
 // Service orquestra a execucao sequencial de tasks de um PRD folder.
@@ -234,10 +242,21 @@ func (s *Service) Execute(opts Options) error {
 		executorTool = opts.Profiles.Executor.Tool()
 	}
 
-	// Criar invoker do executor e verificar binario
-	invoker, err := s.createInvokerWithFallback(executorTool, opts.ExecutorFallbackModel)
-	if err != nil {
-		return err
+	// Criar invoker: ACP quando runtime=acp, legado nos demais casos.
+	var invoker AgentInvoker
+	if opts.Runtime == "acp" {
+		factory := persistence.NewSessionPersistenceFactory(fs.NewOSFileSystem())
+		runner := airuntime.NewACPRunner(
+			specs.Claude(),
+			airuntime.WithPersistenceFactory(factory),
+		)
+		invoker = NewACPInvoker(runner, opts.Quiet, opts.ActivityTimeout)
+	} else {
+		var invokerErr error
+		invoker, invokerErr = s.createInvokerWithFallback(executorTool, opts.ExecutorFallbackModel)
+		if invokerErr != nil {
+			return invokerErr
+		}
 	}
 
 	if !opts.DryRun {

@@ -25,16 +25,38 @@
         "verbose": {
           "type": "object",
           "properties": {
-            "type": { "type": "string", "const": "bool" },
-            "short": { "type": "string", "const": "-v" },
-            "default": { "type": "boolean", "const": false },
-            "required": { "type": "boolean", "const": false },
-            "description": { "type": "string", "const": "Ativa saida detalhada" }
+            "type": {
+              "type": "string",
+              "const": "bool"
+            },
+            "short": {
+              "type": "string",
+              "const": "-v"
+            },
+            "default": {
+              "type": "boolean",
+              "const": false
+            },
+            "required": {
+              "type": "boolean",
+              "const": false
+            },
+            "description": {
+              "type": "string",
+              "const": "Ativa saida detalhada"
+            }
           },
-          "required": ["type", "default", "required", "description"]
+          "required": [
+            "type",
+            "default",
+            "required",
+            "description"
+          ]
         }
       },
-      "required": ["verbose"]
+      "required": [
+        "verbose"
+      ]
     },
     "commands": {
       "type": "array",
@@ -45,14 +67,26 @@
       "minItems": 20
     }
   },
-  "required": ["tool", "version", "schemaVersion", "globalFlags", "commands"],
+  "required": [
+    "tool",
+    "version",
+    "schemaVersion",
+    "globalFlags",
+    "commands"
+  ],
   "definitions": {
     "flag": {
       "type": "object",
       "properties": {
         "type": {
           "type": "string",
-          "enum": ["string", "bool", "int", "duration", "string[]"]
+          "enum": [
+            "string",
+            "bool",
+            "int",
+            "duration",
+            "string[]"
+          ]
         },
         "default": {},
         "required": {
@@ -65,7 +99,10 @@
           "type": "string"
         }
       },
-      "required": ["type", "required"]
+      "required": [
+        "type",
+        "required"
+      ]
     },
     "argument": {
       "type": "object",
@@ -84,7 +121,10 @@
           "default": false
         }
       },
-      "required": ["name", "required"]
+      "required": [
+        "name",
+        "required"
+      ]
     },
     "command": {
       "type": "object",
@@ -117,7 +157,12 @@
           }
         }
       },
-      "required": ["name", "description", "args", "flags"]
+      "required": [
+        "name",
+        "description",
+        "args",
+        "flags"
+      ]
     }
   },
   "default": {
@@ -139,7 +184,11 @@
         "description": "Instala governanca de IA em um projeto",
         "longDescription": "Instala o pacote de governanca para ferramentas de IA em um projeto alvo.",
         "args": [
-          { "name": "path", "required": true, "description": "Caminho do projeto alvo" }
+          {
+            "name": "path",
+            "required": true,
+            "description": "Caminho do projeto alvo"
+          }
         ],
         "flags": {
           "tools": {
@@ -198,7 +247,11 @@
         "description": "Atualiza skills de governanca em um projeto",
         "longDescription": "Verifica ou atualiza skills de governanca comparando versoes e checksums.",
         "args": [
-          { "name": "path", "required": true, "description": "Caminho do projeto alvo" }
+          {
+            "name": "path",
+            "required": true,
+            "description": "Caminho do projeto alvo"
+          }
         ],
         "flags": {
           "check": {
@@ -229,7 +282,11 @@
         "description": "Remove governanca de IA de um projeto",
         "longDescription": "Remove artefatos de governanca instalados pelo comando install.",
         "args": [
-          { "name": "path", "required": true, "description": "Caminho do projeto alvo" }
+          {
+            "name": "path",
+            "required": true,
+            "description": "Caminho do projeto alvo"
+          }
         ],
         "flags": {
           "dry-run": {
@@ -245,7 +302,11 @@
         "description": "Valida frontmatter de skills de governanca",
         "longDescription": "Valida que todos os SKILL.md possuem frontmatter YAML valido.",
         "args": [
-          { "name": "path", "required": false, "description": "Caminho do projeto (default: diretorio atual)" }
+          {
+            "name": "path",
+            "required": false,
+            "description": "Caminho do projeto (default: diretorio atual)"
+          }
         ],
         "flags": {}
       },
@@ -254,7 +315,11 @@
         "description": "Valida um array de bugs contra bug-schema.json",
         "longDescription": "Valida o array JSON de bugs contra o schema canonico de bugs.",
         "args": [
-          { "name": "bugs.json", "required": true, "description": "Caminho para o arquivo JSON de bugs" }
+          {
+            "name": "bugs.json",
+            "required": true,
+            "description": "Caminho para o arquivo JSON de bugs"
+          }
         ],
         "flags": {
           "schema": {
@@ -269,8 +334,16 @@
         "description": "Valida um relatorio de evidencia Markdown",
         "longDescription": "Valida um relatorio de evidencia Markdown conforme o tipo informado (task, bugfix, refactor).",
         "args": [
-          { "name": "tipo", "required": true, "description": "Tipo de evidencia (task, bugfix, refactor)" },
-          { "name": "arquivo.md", "required": true, "description": "Caminho para o arquivo Markdown de evidencia" }
+          {
+            "name": "tipo",
+            "required": true,
+            "description": "Tipo de evidencia (task, bugfix, refactor)"
+          },
+          {
+            "name": "arquivo.md",
+            "required": true,
+            "description": "Caminho para o arquivo Markdown de evidencia"
+          }
         ],
         "flags": {
           "rf": {
@@ -285,7 +358,11 @@
         "description": "Verifica governanca em arquivos gerados",
         "longDescription": "Detecta problemas de governanca no projeto.",
         "args": [
-          { "name": "path", "required": false, "description": "Caminho do projeto (default: diretorio atual)" }
+          {
+            "name": "path",
+            "required": false,
+            "description": "Caminho do projeto (default: diretorio atual)"
+          }
         ],
         "flags": {
           "strict": {
@@ -307,7 +384,11 @@
         "description": "Inspeciona o estado da instalacao de governanca",
         "longDescription": "Exibe detalhes sobre skills instaladas, ferramentas detectadas, e estado do manifesto.",
         "args": [
-          { "name": "path", "required": true, "description": "Caminho do projeto alvo" }
+          {
+            "name": "path",
+            "required": true,
+            "description": "Caminho do projeto alvo"
+          }
         ],
         "flags": {
           "focus-paths": {
@@ -334,7 +415,11 @@
         "description": "Diagnostica problemas na instalacao de governanca",
         "longDescription": "Executa verificacoes de saude: repositorio git, symlinks, permissoes, manifesto.",
         "args": [
-          { "name": "path", "required": true, "description": "Caminho do projeto alvo" }
+          {
+            "name": "path",
+            "required": true,
+            "description": "Caminho do projeto alvo"
+          }
         ],
         "flags": {}
       },
@@ -343,7 +428,11 @@
         "description": "Reporta metricas de contexto para governanca",
         "longDescription": "Calcula e exibe metricas de tokens estimados por baseline, fluxo e skill.",
         "args": [
-          { "name": "path", "required": false, "description": "Caminho do projeto (default: diretorio atual)" }
+          {
+            "name": "path",
+            "required": false,
+            "description": "Caminho do projeto (default: diretorio atual)"
+          }
         ],
         "flags": {
           "format": {
@@ -371,7 +460,11 @@
         "description": "Gera scaffold de uma nova skill de linguagem",
         "longDescription": "Cria a estrutura de uma nova skill de linguagem com SKILL.md.",
         "args": [
-          { "name": "language", "required": true, "description": "Linguagem alvo do scaffold" }
+          {
+            "name": "language",
+            "required": true,
+            "description": "Linguagem alvo do scaffold"
+          }
         ],
         "flags": {
           "root": {
@@ -387,7 +480,11 @@
         "description": "Calcula a proxima versao SemVer a partir de conventional commits",
         "longDescription": "Calcula a proxima versao SemVer analisando conventional commits desde o ultimo tag v*.",
         "args": [
-          { "name": "path", "required": false, "description": "Caminho do repositorio (default: diretorio atual)" }
+          {
+            "name": "path",
+            "required": false,
+            "description": "Caminho do repositorio (default: diretorio atual)"
+          }
         ],
         "flags": {
           "format": {
@@ -403,7 +500,11 @@
         "description": "Gera ou atualiza o CHANGELOG.md a partir de conventional commits",
         "longDescription": "Analisa os conventional commits desde o ultimo tag e gera uma secao de changelog.",
         "args": [
-          { "name": "path", "required": false, "description": "Caminho do repositorio (default: diretorio atual)" }
+          {
+            "name": "path",
+            "required": false,
+            "description": "Caminho do repositorio (default: diretorio atual)"
+          }
         ],
         "flags": {
           "version": {
@@ -430,8 +531,16 @@
             "name": "log",
             "description": "Registra uso de skill em telemetria (requer GOVERNANCE_TELEMETRY=1)",
             "args": [
-              { "name": "skill", "required": true, "description": "Nome da skill utilizada" },
-              { "name": "ref", "required": false, "description": "Referencia opcional (branch, PR, etc)" }
+              {
+                "name": "skill",
+                "required": true,
+                "description": "Nome da skill utilizada"
+              },
+              {
+                "name": "ref",
+                "required": false,
+                "description": "Referencia opcional (branch, PR, etc)"
+              }
             ],
             "flags": {}
           },
@@ -490,7 +599,11 @@
         "description": "Verifica cobertura de requisitos e drift de spec em relacao a tasks.md",
         "longDescription": "Verifica se os IDs de requisitos (RF-nn, REQ-nn) definidos em prd.md e/ou tasks.md estao cobertos.",
         "args": [
-          { "name": "tasks.md", "required": true, "description": "Caminho para o arquivo tasks.md" }
+          {
+            "name": "tasks.md",
+            "required": true,
+            "description": "Caminho para o arquivo tasks.md"
+          }
         ],
         "flags": {}
       },
@@ -499,7 +612,11 @@
         "description": "Sincroniza os hashes de spec em tasks.md com os arquivos atuais de prd.md e techspec.md",
         "longDescription": "Recalcula os SHA-256 de prd.md e techspec.md e atualiza ou insere os comentarios spec-hash em tasks.md.",
         "args": [
-          { "name": "tasks.md", "required": true, "description": "Caminho para o arquivo tasks.md" }
+          {
+            "name": "tasks.md",
+            "required": true,
+            "description": "Caminho para o arquivo tasks.md"
+          }
         ],
         "flags": {}
       },
@@ -508,7 +625,11 @@
         "description": "Calcula SHA-256 de um arquivo de forma portavel",
         "longDescription": "Calcula o SHA-256 de um arquivo usando a implementacao Go embarcada no ai-spec-harness, sem depender de binarios externos como sha256sum ou shasum.",
         "args": [
-          { "name": "file", "required": true, "description": "Caminho para o arquivo a hashear" }
+          {
+            "name": "file",
+            "required": true,
+            "description": "Caminho para o arquivo a hashear"
+          }
         ],
         "flags": {}
       },
@@ -517,7 +638,11 @@
         "description": "Executa tasks de um PRD folder sequencialmente via agente de IA",
         "longDescription": "Executa em loop todas as tasks elegiveis de uma pasta PRD, invocando o agente de IA configurado.",
         "args": [
-          { "name": "prd-folder", "required": true, "description": "Caminho para a pasta PRD contendo tasks" }
+          {
+            "name": "prd-folder",
+            "required": true,
+            "description": "Caminho para a pasta PRD contendo tasks"
+          }
         ],
         "flags": {
           "tool": {
@@ -593,6 +718,24 @@
             "type": "string",
             "required": false,
             "description": "Modelo de fallback nativo do reviewer (Claude only)"
+          },
+          "runtime": {
+            "type": "string",
+            "default": "legacy",
+            "required": false,
+            "description": "Runtime de invocacao: legacy (default) ou acp (requer --tool claude)"
+          },
+          "activity-timeout": {
+            "type": "duration",
+            "default": "120s",
+            "required": false,
+            "description": "Timeout de inatividade do agente ACP (0 = desabilitado); aceita time.Duration: 90s, 2m"
+          },
+          "quiet": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Suprime stream humano (stdout); jsonl e warnings continuam"
           }
         }
       },
@@ -631,10 +774,27 @@
         "description": "Valida governanca e emite instrucao de invocacao para Codex/Gemini/Copilot",
         "longDescription": "Verifica as condicoes de governanca antes de emitir instrucoes de invocacao.",
         "args": [
-          { "name": "tool", "required": true, "description": "Ferramenta de IA alvo (codex, gemini, copilot)" },
-          { "name": "skill", "required": true, "description": "Nome da skill a invocar" },
-          { "name": "path", "required": false, "description": "Caminho do projeto" },
-          { "name": "args", "required": false, "description": "Argumentos adicionais para a skill", "variadic": true }
+          {
+            "name": "tool",
+            "required": true,
+            "description": "Ferramenta de IA alvo (codex, gemini, copilot)"
+          },
+          {
+            "name": "skill",
+            "required": true,
+            "description": "Nome da skill a invocar"
+          },
+          {
+            "name": "path",
+            "required": false,
+            "description": "Caminho do projeto"
+          },
+          {
+            "name": "args",
+            "required": false,
+            "description": "Argumentos adicionais para a skill",
+            "variadic": true
+          }
         ],
         "flags": {}
       },
@@ -649,7 +809,11 @@
             "name": "check",
             "description": "Verifica versoes de skills externas contra skills-lock.json",
             "args": [
-              { "name": "path", "required": false, "description": "Caminho do projeto (default: diretorio atual)" }
+              {
+                "name": "path",
+                "required": false,
+                "description": "Caminho do projeto (default: diretorio atual)"
+              }
             ],
             "flags": {
               "force": {
@@ -667,8 +831,16 @@
         "description": "Verifica pre-condicoes de uma skill antes de executa-la",
         "longDescription": "Verifica se os arquivos necessarios para uma skill estao presentes no projeto.",
         "args": [
-          { "name": "skill-name", "required": true, "description": "Nome da skill a verificar" },
-          { "name": "path", "required": false, "description": "Caminho do projeto (default: diretorio atual)" }
+          {
+            "name": "skill-name",
+            "required": true,
+            "description": "Nome da skill a verificar"
+          },
+          {
+            "name": "path",
+            "required": false,
+            "description": "Caminho do projeto (default: diretorio atual)"
+          }
         ],
         "flags": {}
       },
@@ -677,7 +849,11 @@
         "description": "Atualiza versao de skills cujo conteudo mudou desde a ultima tag",
         "longDescription": "Compara skills entre a ultima tag e HEAD e atualiza os campos version no frontmatter.",
         "args": [
-          { "name": "path", "required": true, "description": "Caminho do repositorio alvo" }
+          {
+            "name": "path",
+            "required": true,
+            "description": "Caminho do repositorio alvo"
+          }
         ],
         "flags": {
           "dry-run": {
