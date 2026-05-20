@@ -1,4 +1,4 @@
-.PHONY: build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync test-hooks
+.PHONY: build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync test-hooks sync-acp-sdk-version
 
 BINARY := ai-spec
 GOFLAGS := -trimpath
@@ -57,3 +57,9 @@ check-hooks-sync:
 
 test-hooks:
 	bash scripts/test-hooks.sh
+
+# sync-acp-sdk-version: mantém ClaudeSDKVersion em internal/runtime/specs/claude.go
+# sincronizada com a versão de github.com/coder/acp-go-sdk declarada em go.mod.
+# Rodar localmente após atualizar go.mod. Não incluído em CI automaticamente (ADR-009).
+sync-acp-sdk-version:
+	bash scripts/sync-acp-sdk-version.sh

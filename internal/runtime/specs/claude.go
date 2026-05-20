@@ -1,0 +1,42 @@
+package specs
+
+// Constantes do runtime Claude.
+// Política de atualização (PRD §"Restrições Técnicas" + ADR-009):
+//   - ClaudeNpmVersion e ClaudeSDKVersion são constantes Go pinadas. Nunca usar @latest.
+//   - ClaudeNpmVersion só é alterada via processo audit/ (tasks/templates/skill-upgrade-decision.md).
+//   - ClaudeSDKVersion é mantida em sincronia com go.mod por scripts/sync-acp-sdk-version.sh.
+const (
+	// ClaudeNpmPackage é o nome do pacote npm canônico do agente Claude ACP.
+	ClaudeNpmPackage = "@agentclientprotocol/claude-agent-acp"
+
+	// ClaudeNpmVersion é a versão npm pinada do claude-agent-acp.
+	// Pinada conforme ADR-009 §"Decisão": constante Go atualizada somente via audit/.
+	// Não alterar para @latest. Para atualizar: registrar decisão em audit/ e rodar
+	// make sync-acp-sdk-version (que só atualiza ClaudeSDKVersion via go.mod).
+	ClaudeNpmVersion = "0.1.0"
+
+	// ClaudeSDKVersion é a versão do coder/acp-go-sdk sincronizada com go.mod.
+	// Mantida em sincronia por scripts/sync-acp-sdk-version.sh.
+	// Não editar manualmente — use make sync-acp-sdk-version.
+	ClaudeSDKVersion = "v0.0.0"
+)
+
+// Claude retorna a Spec do runtime Claude ACP.
+// Binário canônico: "claude-agent-acp".
+// Fallback: npx --yes @agentclientprotocol/claude-agent-acp@<ClaudeNpmVersion>.
+// AccessModeFlag: "--bypass-permissions" (permite que o agente opere sem prompts interativos).
+func Claude() Spec {
+	return newSpec(
+		"claude",
+		"Claude (ACP)",
+		"claude-agent-acp",
+		nil,
+		[]FallbackLauncher{
+			{
+				Command:   "npx",
+				FixedArgs: []string{"--yes", ClaudeNpmPackage + "@" + ClaudeNpmVersion},
+			},
+		},
+		"--bypass-permissions",
+	)
+}
