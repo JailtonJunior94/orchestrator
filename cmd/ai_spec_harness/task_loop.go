@@ -1,15 +1,27 @@
 package aispecharness
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
+	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/taskloop"
 	"github.com/spf13/cobra"
 )
+
+// runtimeACPCatalog é a fonte de verdade para quais tools podem usar --runtime=acp nesta versão.
+// Responsabilidade do CLI (ADR-012 D-04): specs são unidades atômicas; a tabela de roteamento fica no CLI.
+// Para adicionar suporte a um novo tool: registrar entrada e atualizar testes T-13/T-14/T-15.
+var runtimeACPCatalog = map[string]func() specs.Spec{
+	"claude":  specs.Claude,
+	"copilot": specs.Copilot,
+}
 
 var taskLoopCmd = &cobra.Command{
 	Use:   "task-loop <prd-folder>",
@@ -44,6 +56,7 @@ Exemplos:
 		prdFolder := args[0]
 
 		tool, _ := cmd.Flags().GetString("tool")
+		agentName, _ := cmd.Flags().GetString("agent")
 		execTool, _ := cmd.Flags().GetString("executor-tool")
 		execModel, _ := cmd.Flags().GetString("executor-model")
 		revTool, _ := cmd.Flags().GetString("reviewer-tool")
@@ -71,8 +84,14 @@ Exemplos:
 			if effectiveTool == "" {
 				effectiveTool = execTool
 			}
-			if effectiveTool != "claude" {
-				_, _ = fmt.Fprintf(os.Stderr, "runtime acp suporta apenas --tool claude nesta versão\n")
+			if _, ok := runtimeACPCatalog[effectiveTool]; !ok {
+				supported := make([]string, 0, len(runtimeACPCatalog))
+				for k := range runtimeACPCatalog {
+					supported = append(supported, k)
+				}
+				sort.Strings(supported)
+				_, _ = fmt.Fprintf(os.Stderr,
+					"runtime acp suporta apenas --tool em %v nesta versão\n", supported)
 				return fmt.Errorf("exit2")
 			}
 		}
@@ -81,12 +100,18 @@ Exemplos:
 			return fmt.Errorf("exit2")
 		}
 
+		// Validacao mutua exclusiva de --agent com --tool e modo avancado (D-06)
+		if agentName != "" && (tool != "" || execTool != "" || revTool != "") {
+			_, _ = fmt.Fprintf(os.Stderr, "--agent e mutuamente exclusivo com --tool, --executor-tool e --reviewer-tool\n")
+			return fmt.Errorf("%w", taskloop.ErrFlagsConflitantes)
+		}
+
 		// Validacao mutua exclusiva entre modo simples e avancado
 		if tool != "" && (execTool != "" || revTool != "") {
 			return fmt.Errorf("--tool e --executor-tool/--reviewer-tool sao mutuamente exclusivas")
 		}
-		if tool == "" && execTool == "" {
-			return fmt.Errorf("informe --tool (modo simples) ou --executor-tool (modo avancado)")
+		if tool == "" && execTool == "" && agentName == "" {
+			return fmt.Errorf("informe --tool (modo simples), --executor-tool (modo avancado) ou --agent (agente declarativo)")
 		}
 		if execModel != "" && execTool == "" {
 			return fmt.Errorf("--executor-model requer --executor-tool")
@@ -115,7 +140,7 @@ Exemplos:
 		fsys := fs.NewOSFileSystem()
 
 		svc := taskloop.NewService(fsys, printer)
-		return svc.Execute(taskloop.Options{
+		err = svc.Execute(taskloop.Options{
 			PRDFolder:              prdFolder,
 			Tool:                   tool,
 			DryRun:                 dryRun,
@@ -131,13 +156,20 @@ Exemplos:
 			Runtime:                runtime,
 			ActivityTimeout:        activityTimeout,
 			Quiet:                  quiet,
+			AgentName:              agentName,
 		})
+		if errors.Is(err, airuntime.ErrLauncherUnavailable) {
+			_, _ = fmt.Fprintln(os.Stderr, err)
+			return fmt.Errorf("exit2")
+		}
+		return err
 	},
 }
 
 func init() {
 	// Flags existentes (preservadas)
 	taskLoopCmd.Flags().String("tool", "", "Agente de IA: claude, codex, gemini, copilot (modo simples)")
+	taskLoopCmd.Flags().String("agent", "", "Nome do agente declarativo (AGENT.md); mutuamente exclusivo com --tool e --executor-tool")
 	taskLoopCmd.Flags().Bool("dry-run", false, "Mostra o que seria executado sem invocar o agente")
 	taskLoopCmd.Flags().Int("max-iterations", 20, "Limite maximo de iteracoes do loop")
 	taskLoopCmd.Flags().Duration("timeout", 30*time.Minute, "Timeout por task")
@@ -155,7 +187,7 @@ func init() {
 	taskLoopCmd.Flags().String("reviewer-fallback-model", "", "Modelo de fallback nativo do reviewer (Claude only)")
 
 	// Flags ACP runtime (RF-01, RF-02, RF-07, RF-11)
-	taskLoopCmd.Flags().String("runtime", "legacy", "Runtime de invocacao: legacy (default) ou acp (requer --tool claude)")
+	taskLoopCmd.Flags().String("runtime", "legacy", "Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, copilot)")
 	taskLoopCmd.Flags().Duration("activity-timeout", 120*time.Second, "Timeout de inatividade do agente ACP (0 = desabilitado); aceita time.Duration: 90s, 2m")
 	taskLoopCmd.Flags().Bool("quiet", false, "Suprime stream humano (stdout); jsonl e warnings continuam")
 
