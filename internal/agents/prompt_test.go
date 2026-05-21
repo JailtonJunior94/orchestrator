@@ -69,7 +69,7 @@ func TestBuildAgentBlocks_OrderedAndActive(t *testing.T) {
 	if alphaPos < 0 || betaPos < 0 || zetaPos < 0 {
 		t.Fatal("T-15: todos os agentes devem aparecer no catalogo")
 	}
-	if !(alphaPos < betaPos && betaPos < zetaPos) {
+	if alphaPos >= betaPos || betaPos >= zetaPos {
 		t.Errorf("T-15: ordem incorreta — alpha=%d, beta=%d, zeta=%d", alphaPos, betaPos, zetaPos)
 	}
 }

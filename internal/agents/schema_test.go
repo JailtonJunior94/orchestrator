@@ -246,11 +246,9 @@ Voce e um agente.
 		if err != nil {
 			t.Fatalf("erro inesperado: %v", err)
 		}
-		if got.Prompt == "" {
-			t.Error("Prompt nao deve ser vazio")
-		}
-		if got.Prompt == "Voce e um agente.\n- Priorize invariantes." {
-			// OK — conteudo esperado
+		expected := "Voce e um agente.\n- Priorize invariantes."
+		if got.Prompt != expected {
+			t.Errorf("Prompt = %q, want %q", got.Prompt, expected)
 		}
 	})
 
