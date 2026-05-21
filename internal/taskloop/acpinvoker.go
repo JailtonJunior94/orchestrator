@@ -5,11 +5,16 @@ import (
 	"context"
 	"io"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/telemetry"
 )
+
+var taskPathRe = regexp.MustCompile(`([A-Za-z0-9_./-]*task-\d+\.\d+[A-Za-z0-9_.-]*\.md)`)
+var taskIDRe = regexp.MustCompile(`^task-(\d+\.\d+)`)
 
 // acpInvoker adapta ACPRunner à interface AgentInvoker.
 // É o adapter entre a camada de taskloop e o application service do runtime ACP.
@@ -46,7 +51,7 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (str
 		return "", "", 1, err
 	}
 
-	evidenceDir := filepath.Join(workDir, "evidence", "acp")
+	evidenceDir := deriveEvidenceDir(workDir, prompt)
 	job := airuntime.Job{
 		Prompt:          prompt,
 		WorkDir:         workDir,
@@ -59,6 +64,13 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (str
 
 	summary, runErr := c.runner.Run(ctx, job)
 	exitCode := MapExitCode(summary.CancelReason)
+	_ = telemetry.LogACPSession(workDir, telemetry.ACPSessionEvent{
+		Runtime:            "acp",
+		Launcher:           summary.Launcher,
+		EventsCount:        summary.EventsCount,
+		UnknownEventsCount: summary.UnknownEventsCount,
+		CancelReason:       string(summary.CancelReason),
+	})
 
 	stdout := c.humanBuffer.String()
 	return stdout, "", exitCode, runErr
@@ -87,7 +99,19 @@ func MapExitCode(reason events.CancelReason) int {
 	}
 }
 
+func deriveEvidenceDir(workDir, prompt string) string {
+	match := taskPathRe.FindStringSubmatch(prompt)
+	if len(match) < 2 {
+		return filepath.Join(workDir, "evidence", "acp")
+	}
+	base := filepath.Base(match[1])
+	idMatch := taskIDRe.FindStringSubmatch(base)
+	if len(idMatch) < 2 {
+		return filepath.Join(workDir, "evidence", "acp")
+	}
+	return filepath.Join(workDir, "evidence", "task-"+idMatch[1])
+}
+
 // Garantir que acpInvoker implementa AgentInvoker e LiveOutputSetter.
 var _ AgentInvoker = (*acpInvoker)(nil)
 var _ LiveOutputSetter = (*acpInvoker)(nil)
-

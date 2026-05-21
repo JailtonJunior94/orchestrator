@@ -3,8 +3,10 @@ package runtime_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -168,6 +170,28 @@ func buildRunner(
 	)
 }
 
+func captureStderr(t *testing.T, fn func()) string {
+	t.Helper()
+
+	orig := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe: %v", err)
+	}
+	os.Stderr = w
+	defer func() { os.Stderr = orig }()
+
+	fn()
+
+	_ = w.Close()
+	data, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatalf("io.ReadAll: %v", err)
+	}
+	_ = r.Close()
+	return string(data)
+}
+
 // ---- testes -----------------------------------------------------------------
 
 // TestACPRunner_HappyPath: script com 3 mensagens + 2 tool calls + session_end.
@@ -237,6 +261,9 @@ func TestACPRunner_HappyPath(t *testing.T) {
 	if summary.Launcher != "binary" {
 		t.Errorf("Launcher = %q, want binary", summary.Launcher)
 	}
+	if got := persist.events[len(persist.events)-1].Kind(); got != events.KindSessionEnd {
+		t.Errorf("último evento persistido = %q, want session_end", got)
+	}
 }
 
 // TestACPRunner_ActivityTimeout: script demora mais que o timeout de atividade.
@@ -289,10 +316,8 @@ func TestACPRunner_ActivityTimeout(t *testing.T) {
 }
 
 // TestACPRunner_PermissionDenied: script emite requestPermission.
-// O cliente ACP cancela o requestPermission silenciosamente; o runner encerra normalmente.
+// O runner deve cancelar imediatamente a sessão com permission_denied.
 func TestACPRunner_PermissionDenied(t *testing.T) {
-	t.Parallel()
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -312,32 +337,33 @@ func TestACPRunner_PermissionDenied(t *testing.T) {
 		Quiet:       true,
 	}
 
-	summary, _ := runner.Run(ctx, job)
+	var (
+		summary airuntime.Summary
+		runErr  error
+	)
+	stderr := captureStderr(t, func() {
+		summary, runErr = runner.Run(ctx, job)
+	})
 
-	// O runner não deve entrar em pânico e deve produzir um summary.
-	_ = summary
-
-	// A persistência deve ter sido chamada com ao menos 1 evento.
-	if len(persist.events) == 0 {
-		t.Log("no events persisted (may be acceptable depending on permission flow)")
+	if !errors.Is(runErr, client.ErrPermissionDenied) {
+		t.Fatalf("Run error = %v, want ErrPermissionDenied", runErr)
 	}
-
-	// Cancel reason deve ser um valor válido.
-	validReasons := map[events.CancelReason]bool{
-		events.CancelReasonNone:             true,
-		events.CancelReasonPermissionDenied: true,
-		events.CancelReasonContextCanceled:  true,
+	if summary.CancelReason != events.CancelReasonPermissionDenied {
+		t.Fatalf("CancelReason = %q, want permission_denied", summary.CancelReason)
 	}
-	if !validReasons[summary.CancelReason] {
-		t.Errorf("CancelReason = %q, want none/permission_denied/context_canceled", summary.CancelReason)
+	if !strings.Contains(stderr, "agent requested permission; configure accessMode=bypassPermissions no claude-agent-acp ou execute em ambiente que pré-aprove. Veja ADR-009") {
+		t.Fatalf("stderr = %q, want RF-16 guidance", stderr)
+	}
+	for _, evt := range persist.events {
+		if evt.Kind() == events.KindSessionEnd {
+			t.Fatalf("não esperava session_end após permission_denied")
+		}
 	}
 }
 
 // TestACPRunner_UnknownDrift: script com kinds desconhecidos.
-// Assertar: unknown_events_count > 0, warning emitido.
+// Assertar: unknown_events_count conta eventos, UnknownKinds deduplica kinds e warning segue RF-05.
 func TestACPRunner_UnknownDrift(t *testing.T) {
-	t.Parallel()
-
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -357,7 +383,10 @@ func TestACPRunner_UnknownDrift(t *testing.T) {
 		Quiet:       true,
 	}
 
-	summary, _ := runner.Run(ctx, job)
+	var summary airuntime.Summary
+	stderr := captureStderr(t, func() {
+		summary, _ = runner.Run(ctx, job)
+	})
 
 	// Deve haver eventos unknown registrados.
 	unknownPersisted := 0
@@ -367,13 +396,17 @@ func TestACPRunner_UnknownDrift(t *testing.T) {
 		}
 	}
 
-	if unknownPersisted == 0 && summary.UnknownEventsCount == 0 {
-		t.Error("esperava ao menos 1 evento unknown; got 0")
+	if unknownPersisted != 2 {
+		t.Errorf("eventos unknown persistidos = %d, want 2", unknownPersisted)
 	}
-
-	// Se há unknowns, UnknownKinds não deve ser vazio.
-	if summary.UnknownEventsCount > 0 && len(summary.UnknownKinds) == 0 {
-		t.Error("UnknownKinds vazio quando UnknownEventsCount > 0")
+	if summary.UnknownEventsCount != 2 {
+		t.Errorf("UnknownEventsCount = %d, want 2", summary.UnknownEventsCount)
+	}
+	if len(summary.UnknownKinds) != 1 || summary.UnknownKinds[0] != "user_message_chunk" {
+		t.Errorf("UnknownKinds = %v, want [user_message_chunk]", summary.UnknownKinds)
+	}
+	if !strings.Contains(stderr, "2 unknown ACP events skipped (kinds: user_message_chunk)") {
+		t.Errorf("stderr = %q, want RF-05 aggregated warning", stderr)
 	}
 }
 
@@ -482,6 +515,42 @@ func TestACPRunner_WithRealPersistence(t *testing.T) {
 	if len(data) == 0 {
 		t.Error("events.jsonl está vazio")
 	}
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	if len(lines) < 2 {
+		t.Fatalf("events.jsonl lines = %d, want >= 2", len(lines))
+	}
+
+	var first map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(lines[0]), &first); err != nil {
+		t.Fatalf("unmarshal first line: %v", err)
+	}
+	var kind string
+	if err := json.Unmarshal(first["kind"], &kind); err != nil {
+		t.Fatalf("unmarshal first kind: %v", err)
+	}
+	if kind != string(events.KindRuntimeInit) {
+		t.Fatalf("first kind = %q, want runtime_init", kind)
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(first["raw"], &raw); err != nil {
+		t.Fatalf("unmarshal runtime_init raw: %v", err)
+	}
+	for _, key := range []string{"launcher", "command", "args", "sdk_version", "npm_version"} {
+		if _, ok := raw[key]; !ok {
+			t.Fatalf("runtime_init raw missing key %q", key)
+		}
+	}
+
+	var last map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(lines[len(lines)-1]), &last); err != nil {
+		t.Fatalf("unmarshal last line: %v", err)
+	}
+	if err := json.Unmarshal(last["kind"], &kind); err != nil {
+		t.Fatalf("unmarshal last kind: %v", err)
+	}
+	if kind != string(events.KindSessionEnd) {
+		t.Fatalf("last kind = %q, want session_end", kind)
+	}
 
 	// tool_calls.md deve conter o nome da ferramenta.
 	tcPath := evidenceDir + "/tool_calls.md"
@@ -530,6 +599,472 @@ func TestACPRunner_HumanRenderer(t *testing.T) {
 
 	if !strings.Contains(buf.String(), "olá mundo") {
 		t.Errorf("renderer output %q does not contain 'olá mundo'", buf.String())
+	}
+}
+
+// buildRunnerWithSpec constrói um ACPRunner com spec personalizada e dependências fake.
+func buildRunnerWithSpec(
+	t *testing.T,
+	ctx context.Context,
+	spec specs.Spec,
+	prober airuntime.Prober,
+	script *acpfake.Script,
+	persistFact airuntime.PersistenceFactory,
+) *airuntime.ACPRunner {
+	t.Helper()
+	return airuntime.NewACPRunner(
+		spec,
+		airuntime.WithProber(prober),
+		airuntime.WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}),
+		airuntime.WithPersistenceFactory(persistFact),
+		airuntime.WithRenderer(&discardRenderer{}),
+	)
+}
+
+// proberCopilotBinary retorna um fakeProber com o binário "copilot" disponível.
+func proberCopilotBinary() *fakeProber {
+	return &fakeProber{available: map[string]string{
+		"copilot": "/usr/local/bin/copilot",
+	}}
+}
+
+// TestACPRunner_RuntimeInit_CopilotVersions (T-09): verifica que o payload runtime_init
+// carrega as versões do Spec Copilot (sdk_version=CopilotSDKVersion, npm_version=CopilotNpmVersion).
+// Regressão T-05: versões Claude permanecem byte-idênticas ao que specs.Claude() declara.
+func TestACPRunner_RuntimeInit_CopilotVersions(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("hello from copilot").
+		AppendSessionEnd()
+
+	pfact, persist := newFakePersistenceFactory()
+	copilotSpec := specs.Copilot()
+
+	runner := buildRunnerWithSpec(t, ctx, copilotSpec, proberCopilotBinary(), script, pfact)
+
+	job := airuntime.Job{
+		Prompt:      "test prompt",
+		WorkDir:     t.TempDir(),
+		EvidenceDir: t.TempDir(),
+		Quiet:       true,
+	}
+
+	_, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run: unexpected error: %v", err)
+	}
+
+	// Encontrar evento runtime_init
+	var runtimeInitEvt *events.Event
+	for i := range persist.events {
+		if persist.events[i].Kind() == events.KindRuntimeInit {
+			evtCopy := persist.events[i]
+			runtimeInitEvt = &evtCopy
+			break
+		}
+	}
+	if runtimeInitEvt == nil {
+		t.Fatal("runtime_init event não encontrado em persist.events")
+	}
+
+	// Verificar que RuntimeInitPayload carrega versões Copilot via acessores
+	ri := runtimeInitEvt.RuntimeInit()
+	if ri == nil {
+		t.Fatal("RuntimeInit() payload é nil")
+	}
+
+	if sdkVersion := ri.SDKVersion(); sdkVersion != specs.CopilotSDKVersion {
+		t.Errorf("SDKVersion = %q; want CopilotSDKVersion %q", sdkVersion, specs.CopilotSDKVersion)
+	}
+
+	if npmVersion := ri.NpmVersion(); npmVersion != specs.CopilotNpmVersion {
+		t.Errorf("NpmVersion = %q; want CopilotNpmVersion %q", npmVersion, specs.CopilotNpmVersion)
+	}
+
+	// Verificar que launcher é "binary" (prober retornou binário canônico)
+	if launcher := ri.Launcher(); launcher != "binary" {
+		t.Errorf("Launcher = %q; want %q", launcher, "binary")
+	}
+}
+
+// TestACPRunner_RuntimeInit_ClaudeVersions (T-05 regressão): verifica que runtime_init
+// ainda carrega versões Claude quando spec é Claude().
+func TestACPRunner_RuntimeInit_ClaudeVersions(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("hello from claude").
+		AppendSessionEnd()
+
+	pfact, persist := newFakePersistenceFactory()
+	runner := buildRunner(t, ctx, proberBinary(), script, pfact)
+
+	job := airuntime.Job{
+		Prompt:      "test prompt",
+		WorkDir:     t.TempDir(),
+		EvidenceDir: t.TempDir(),
+		Quiet:       true,
+	}
+
+	_, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run: unexpected error: %v", err)
+	}
+
+	// Encontrar evento runtime_init
+	var runtimeInitEvt *events.Event
+	for i := range persist.events {
+		if persist.events[i].Kind() == events.KindRuntimeInit {
+			evtCopy := persist.events[i]
+			runtimeInitEvt = &evtCopy
+			break
+		}
+	}
+	if runtimeInitEvt == nil {
+		t.Fatal("runtime_init event não encontrado em persist.events")
+	}
+
+	// Verificar que RuntimeInitPayload carrega versões Claude via acessores
+	ri := runtimeInitEvt.RuntimeInit()
+	if ri == nil {
+		t.Fatal("RuntimeInit() payload é nil")
+	}
+
+	if sdkVersion := ri.SDKVersion(); sdkVersion != specs.ClaudeSDKVersion {
+		t.Errorf("SDKVersion = %q; want ClaudeSDKVersion %q", sdkVersion, specs.ClaudeSDKVersion)
+	}
+
+	if npmVersion := ri.NpmVersion(); npmVersion != specs.ClaudeNpmVersion {
+		t.Errorf("NpmVersion = %q; want ClaudeNpmVersion %q", npmVersion, specs.ClaudeNpmVersion)
+	}
+}
+
+// ---- sub-suite Copilot (T-10, T-11, T-12) -----------------------------------
+
+// TestACPIntegration_Copilot_T10: sessão completa Copilot (open → prompt → agent_message → completion).
+// Verifica:
+//   - events.jsonl contém runtime_init com sdk_version=CopilotSDKVersion e npm_version=CopilotNpmVersion.
+//   - Sequência de kinds inclui runtime_init, agent_message, session_end.
+//   - Paridade observacional: Copilot produz os mesmos kinds que Claude para a mesma sequência do fake server.
+func TestACPIntegration_Copilot_T10(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("copilot response T10").
+		AppendSessionEnd()
+
+	// --- Copilot runner ---
+	fakeFS := fs.NewFakeFileSystem()
+	pfact := persistence.NewSessionPersistenceFactory(fakeFS)
+
+	copilotRunner := airuntime.NewACPRunner(
+		specs.Copilot(),
+		airuntime.WithProber(proberCopilotBinary()),
+		airuntime.WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}),
+		airuntime.WithPersistenceFactory(pfact),
+		airuntime.WithRenderer(&discardRenderer{}),
+	)
+
+	evidenceDir := "/evidence/copilot-t10"
+	job := airuntime.Job{
+		Prompt:      "t10 copilot prompt",
+		WorkDir:     "/workdir",
+		EvidenceDir: evidenceDir,
+		Quiet:       true,
+	}
+
+	summary, err := copilotRunner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run (Copilot T10): %v", err)
+	}
+	if summary.CancelReason != events.CancelReasonNone {
+		t.Errorf("CancelReason = %q, want none", summary.CancelReason)
+	}
+	if summary.Launcher != "binary" {
+		t.Errorf("Launcher = %q, want binary", summary.Launcher)
+	}
+
+	// Verificar events.jsonl
+	eventsPath := evidenceDir + "/events.jsonl"
+	data, readErr := fakeFS.ReadFile(eventsPath)
+	if readErr != nil {
+		t.Fatalf("events.jsonl não encontrado: %v", readErr)
+	}
+	if len(data) == 0 {
+		t.Fatal("events.jsonl está vazio")
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	if len(lines) < 2 {
+		t.Fatalf("events.jsonl lines = %d, want >= 2", len(lines))
+	}
+
+	// Primeira linha deve ser runtime_init com versões Copilot
+	var first map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(lines[0]), &first); err != nil {
+		t.Fatalf("unmarshal first line: %v", err)
+	}
+	var kind string
+	if err := json.Unmarshal(first["kind"], &kind); err != nil {
+		t.Fatalf("unmarshal kind: %v", err)
+	}
+	if kind != string(events.KindRuntimeInit) {
+		t.Fatalf("first kind = %q, want runtime_init", kind)
+	}
+
+	// Verificar runtime_init raw contém versões Copilot
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(first["raw"], &raw); err != nil {
+		t.Fatalf("unmarshal runtime_init raw: %v", err)
+	}
+	for _, key := range []string{"launcher", "command", "args", "sdk_version", "npm_version"} {
+		if _, ok := raw[key]; !ok {
+			t.Errorf("runtime_init raw missing key %q", key)
+		}
+	}
+	var sdkVer string
+	if err := json.Unmarshal(raw["sdk_version"], &sdkVer); err != nil {
+		t.Fatalf("unmarshal sdk_version: %v", err)
+	}
+	if sdkVer != specs.CopilotSDKVersion {
+		t.Errorf("sdk_version = %q, want CopilotSDKVersion %q", sdkVer, specs.CopilotSDKVersion)
+	}
+	var npmVer string
+	if err := json.Unmarshal(raw["npm_version"], &npmVer); err != nil {
+		t.Fatalf("unmarshal npm_version: %v", err)
+	}
+	if npmVer != specs.CopilotNpmVersion {
+		t.Errorf("npm_version = %q, want CopilotNpmVersion %q", npmVer, specs.CopilotNpmVersion)
+	}
+
+	// Última linha deve ser session_end
+	var last map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(lines[len(lines)-1]), &last); err != nil {
+		t.Fatalf("unmarshal last line: %v", err)
+	}
+	if err := json.Unmarshal(last["kind"], &kind); err != nil {
+		t.Fatalf("unmarshal last kind: %v", err)
+	}
+	if kind != string(events.KindSessionEnd) {
+		t.Fatalf("last kind = %q, want session_end", kind)
+	}
+
+	// Paridade observacional: coletar kinds de Copilot e comparar com Claude para o mesmo script
+	copilotKinds := make([]string, 0, len(lines))
+	for _, line := range lines {
+		var env map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(line), &env); err != nil {
+			continue
+		}
+		var k string
+		if err := json.Unmarshal(env["kind"], &k); err != nil {
+			continue
+		}
+		copilotKinds = append(copilotKinds, k)
+	}
+
+	// Rodar mesma sequência com Claude para verificar paridade
+	claudeFakeFS := fs.NewFakeFileSystem()
+	claudePfact := persistence.NewSessionPersistenceFactory(claudeFakeFS)
+	claudeScript := acpfake.NewScript().
+		AppendAgentMessage("claude response T10 parity").
+		AppendSessionEnd()
+	claudeCtx, claudeCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer claudeCancel()
+
+	claudeRunner := airuntime.NewACPRunner(
+		specs.Claude(),
+		airuntime.WithProber(proberBinary()),
+		airuntime.WithClientFactory(&fakeClientFactory{script: claudeScript, ctx: claudeCtx, t: t}),
+		airuntime.WithPersistenceFactory(claudePfact),
+		airuntime.WithRenderer(&discardRenderer{}),
+	)
+	claudeEvidenceDir := "/evidence/claude-t10-parity"
+	_, claudeErr := claudeRunner.Run(claudeCtx, airuntime.Job{
+		Prompt:      "t10 claude parity prompt",
+		WorkDir:     "/workdir",
+		EvidenceDir: claudeEvidenceDir,
+		Quiet:       true,
+	})
+	if claudeErr != nil {
+		t.Fatalf("Run (Claude parity T10): %v", claudeErr)
+	}
+
+	claudeData, claudeReadErr := claudeFakeFS.ReadFile(claudeEvidenceDir + "/events.jsonl")
+	if claudeReadErr != nil {
+		t.Fatalf("Claude events.jsonl não encontrado: %v", claudeReadErr)
+	}
+	claudeLines := strings.Split(strings.TrimSpace(string(claudeData)), "\n")
+	claudeKinds := make([]string, 0, len(claudeLines))
+	for _, line := range claudeLines {
+		var env map[string]json.RawMessage
+		if err := json.Unmarshal([]byte(line), &env); err != nil {
+			continue
+		}
+		var k string
+		if err := json.Unmarshal(env["kind"], &k); err != nil {
+			continue
+		}
+		claudeKinds = append(claudeKinds, k)
+	}
+
+	// Paridade: mesmos kinds na mesma ordem (modulo runtime_init payload tool=copilot/claude)
+	if len(copilotKinds) != len(claudeKinds) {
+		t.Errorf("paridade events.jsonl: Copilot kinds=%v, Claude kinds=%v", copilotKinds, claudeKinds)
+	} else {
+		for i, ck := range copilotKinds {
+			if ck != claudeKinds[i] {
+				t.Errorf("paridade events.jsonl[%d]: Copilot=%q, Claude=%q", i, ck, claudeKinds[i])
+			}
+		}
+	}
+}
+
+// TestACPIntegration_Copilot_T11: ≥ 2 tool calls com kinds distintos (Read e Bash).
+// Verifica que tool_calls.md agrega corretamente (counts por tool name).
+func TestACPIntegration_Copilot_T11(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("iniciando T11").
+		AppendToolCall("tc_read", "Read").
+		AppendToolCallUpdate("tc_read", "completed").
+		AppendAgentMessage("entre tool calls").
+		AppendToolCall("tc_bash", "Bash").
+		AppendToolCallUpdate("tc_bash", "completed").
+		AppendAgentMessage("finalizado T11").
+		AppendSessionEnd()
+
+	fakeFS := fs.NewFakeFileSystem()
+	pfact := persistence.NewSessionPersistenceFactory(fakeFS)
+
+	runner := airuntime.NewACPRunner(
+		specs.Copilot(),
+		airuntime.WithProber(proberCopilotBinary()),
+		airuntime.WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}),
+		airuntime.WithPersistenceFactory(pfact),
+		airuntime.WithRenderer(&discardRenderer{}),
+	)
+
+	evidenceDir := "/evidence/copilot-t11"
+	job := airuntime.Job{
+		Prompt:      "t11 copilot prompt",
+		WorkDir:     "/workdir",
+		EvidenceDir: evidenceDir,
+		Quiet:       true,
+	}
+
+	summary, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run (Copilot T11): %v", err)
+	}
+	if summary.CancelReason != events.CancelReasonNone {
+		t.Errorf("CancelReason = %q, want none", summary.CancelReason)
+	}
+
+	// Verificar que summary tem 2 tool calls distintos
+	if len(summary.ToolCalls) != 2 {
+		t.Errorf("ToolCalls len = %d, want 2", len(summary.ToolCalls))
+	}
+
+	// Verificar tool_calls.md contém os tool names
+	tcPath := evidenceDir + "/tool_calls.md"
+	tcData, readErr := fakeFS.ReadFile(tcPath)
+	if readErr != nil {
+		t.Fatalf("tool_calls.md não encontrado: %v", readErr)
+	}
+	tcContent := string(tcData)
+	if !strings.Contains(tcContent, "Read") {
+		t.Errorf("tool_calls.md = %q, want to contain 'Read'", tcContent)
+	}
+	if !strings.Contains(tcContent, "Bash") {
+		t.Errorf("tool_calls.md = %q, want to contain 'Bash'", tcContent)
+	}
+
+	// Verificar que ambos os tool names estão nos summaries
+	toolNames := make(map[string]bool)
+	for _, tc := range summary.ToolCalls {
+		toolNames[tc.Name] = true
+	}
+	if !toolNames["Read"] {
+		t.Errorf("ToolCalls não contém 'Read'; summaries = %v", summary.ToolCalls)
+	}
+	if !toolNames["Bash"] {
+		t.Errorf("ToolCalls não contém 'Bash'; summaries = %v", summary.ToolCalls)
+	}
+}
+
+// TestACPIntegration_Copilot_T12: server inativo → ActivityWatchdog cancela.
+// Verifica que execution_report registra CancelReason = activity_timeout.
+func TestACPIntegration_Copilot_T12(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Script emite primeira mensagem rápida; segunda tem delay maior que o watchdog.
+	script := acpfake.NewScript().
+		AppendAgentMessage("copilot iniciou T12").
+		AppendAgentMessageWithDelay("nunca chega", 500*time.Millisecond).
+		AppendSessionEnd()
+
+	pfact, persist := newFakePersistenceFactory()
+
+	timeout, err := events.NewActivityTimeout(50 * time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runner := buildRunnerWithSpec(t, ctx, specs.Copilot(), proberCopilotBinary(), script, pfact)
+
+	job := airuntime.Job{
+		Prompt:          "t12 copilot watchdog test",
+		WorkDir:         t.TempDir(),
+		EvidenceDir:     t.TempDir(),
+		ActivityTimeout: timeout,
+		Quiet:           true,
+	}
+
+	summary, runErr := runner.Run(ctx, job)
+
+	// Watchdog deve ter disparado com activity_timeout.
+	if runErr != nil {
+		if summary.CancelReason != events.CancelReasonActivityTimeout {
+			t.Errorf("CancelReason = %q, want activity_timeout when error present", summary.CancelReason)
+		}
+	} else {
+		// A sessão pode ter terminado antes do timeout; ambos são válidos.
+		t.Logf("T12: session ended before timeout; CancelReason=%q", summary.CancelReason)
+	}
+
+	// Não deve ser permission_denied neste cenário.
+	if summary.CancelReason == events.CancelReasonPermissionDenied {
+		t.Errorf("CancelReason = permission_denied unexpectedly")
+	}
+
+	// Verificar que EnrichReport foi chamado (execution_report enriquecido).
+	if persist.summary == nil {
+		t.Error("EnrichReport não foi chamado — execution_report não foi enriquecido")
+	}
+
+	// Verificar CancelReason no summary persistido (simula execution_report.md).
+	if runErr != nil && persist.summary != nil {
+		if persist.summary.CancelReason != events.CancelReasonActivityTimeout {
+			t.Errorf("persist.summary.CancelReason = %q, want activity_timeout", persist.summary.CancelReason)
+		}
 	}
 }
 

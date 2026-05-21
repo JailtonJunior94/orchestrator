@@ -2,6 +2,7 @@ package client_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -73,6 +74,9 @@ func TestAcpClient_HappyPath(t *testing.T) {
 	// Esperamos ao menos 4 eventos mapeados (msg1, pensamento, tc start, tc update, msg2).
 	if len(evts) < 4 {
 		t.Errorf("esperava ao menos 4 eventos, got %d: %v", len(evts), kindsOf(evts))
+	}
+	if evts[len(evts)-1].Kind() != events.KindSessionEnd {
+		t.Fatalf("último evento = %q, want session_end", evts[len(evts)-1].Kind())
 	}
 }
 
@@ -165,6 +169,39 @@ func TestAcpClient_AbruptClose(t *testing.T) {
 	// Após o canal fechar, Err() pode ser nil (sessão encerrou normalmente) ou erro.
 	// Ambos são válidos.
 	_ = c.Err()
+}
+
+func TestAcpClient_RequestPermissionCancelsPrompt(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("antes da permissão").
+		AppendRequestPermission("edit_file").
+		AppendAgentMessage("depois da permissão").
+		AppendSessionEnd()
+
+	c := buildClientWithFake(t, ctx, script)
+	defer func() { _ = c.Close() }()
+
+	if err := c.Open(ctx, specs.NewBinaryLauncher("unused"), "prompt"); err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+
+	evts := collectEvents(t, c.Updates(), 8*time.Second)
+	if len(evts) == 0 {
+		t.Fatal("esperava ao menos 1 evento antes do cancelamento")
+	}
+	if !errors.Is(c.Err(), client.ErrPermissionDenied) {
+		t.Fatalf("Err() = %v, want ErrPermissionDenied", c.Err())
+	}
+	for _, evt := range evts {
+		if evt.Kind() == events.KindSessionEnd {
+			t.Fatalf("não esperava session_end após requestPermission cancelado")
+		}
+	}
 }
 
 // TestAcpClient_CloseIdempotent: Close pode ser chamado múltiplas vezes sem pânico.

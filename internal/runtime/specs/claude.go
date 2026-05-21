@@ -38,5 +38,8 @@ func Claude() Spec {
 			},
 		},
 		"--bypass-permissions",
+		ClaudeSDKVersion,
+		ClaudeNpmVersion,
+		ClaudeNpmPackage,
 	)
 }

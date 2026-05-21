@@ -2,10 +2,12 @@ package runtime
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client"
@@ -108,16 +110,17 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 
 	// Fase 3: emitir runtime_init e persistir.
 	launcherCmd, launcherArgs := launcher.Command()
+	initRaw, initRawErr := buildRuntimeInitRaw(launcher.Kind(), launcherCmd, launcherArgs, r.spec.SDKVersion(), r.spec.NPMVersion())
 	initEvt, initErr := events.NewRuntimeInit(
 		r.clock.Now(),
 		launcher.Kind(),
 		launcherCmd,
 		launcherArgs,
-		specs.ClaudeSDKVersion,
-		specs.ClaudeNpmVersion,
-		nil,
+		r.spec.SDKVersion(),
+		r.spec.NPMVersion(),
+		initRaw,
 	)
-	if initErr == nil && persist != nil {
+	if initErr == nil && initRawErr == nil && persist != nil {
 		_ = persist.AppendEvent(initEvt)
 	}
 
@@ -138,6 +141,7 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	counters := events.NewToolCallCounters()
 	var (
 		eventsCount  int
+		unknownCount int
 		unknownKinds []string
 		unknownSet   = make(map[string]struct{})
 	)
@@ -147,6 +151,7 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 		counters.Record(evt)
 
 		if evt.Kind() == events.KindUnknown {
+			unknownCount++
 			if u := evt.Unknown(); u != nil {
 				rk := u.RawKind()
 				if _, seen := unknownSet[rk]; !seen {
@@ -169,12 +174,18 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 
 	// Fase 7: determinar razão de cancelamento.
 	cause := context.Cause(ctx)
-	cancelReason := mapCancelReason(cause)
+	clientErr := c.Err()
+	cancelReason := mapCancelReason(cause, clientErr)
 
 	// Fase 8: warning de unknowns (RF-05).
-	if len(unknownKinds) > 0 {
-		fmt.Fprintf(os.Stderr, "[runtime] aviso: %d kind(s) desconhecido(s) recebido(s): %s\n",
-			len(unknownKinds), strings.Join(unknownKinds, ", "))
+	if unknownCount > 0 {
+		sort.Strings(unknownKinds)
+		fmt.Fprintf(os.Stderr, "%d unknown ACP events skipped (kinds: %s)\n",
+			unknownCount, strings.Join(unknownKinds, ", "))
+	}
+
+	if cancelReason == events.CancelReasonPermissionDenied {
+		fmt.Fprintln(os.Stderr, "agent requested permission; configure accessMode=bypassPermissions no claude-agent-acp ou execute em ambiente que pré-aprove. Veja ADR-009")
 	}
 
 	// Fase 9: persistir tool_calls e enriquecer report.
@@ -182,7 +193,7 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	summary := Summary{
 		Launcher:           launcher.Kind(),
 		EventsCount:        eventsCount,
-		UnknownEventsCount: len(unknownKinds),
+		UnknownEventsCount: unknownCount,
 		CancelReason:       cancelReason,
 		ToolCalls:          toolCallSummaries,
 		UnknownKinds:       unknownKinds,
@@ -197,6 +208,8 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	var runErr error
 	if cause != nil && !errors.Is(cause, context.Canceled) {
 		runErr = cause
+	} else if clientErr != nil {
+		runErr = clientErr
 	} else if err := c.Err(); err != nil {
 		runErr = err
 	}
@@ -205,14 +218,19 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 }
 
 // mapCancelReason mapeia o cause do contexto para um CancelReason.
-func mapCancelReason(cause error) events.CancelReason {
+func mapCancelReason(cause error, clientErr error) events.CancelReason {
 	if cause == nil {
+		if errors.Is(clientErr, client.ErrPermissionDenied) {
+			return events.CancelReasonPermissionDenied
+		}
 		return events.CancelReasonNone
 	}
 	switch {
 	case errors.Is(cause, ErrActivityTimeout):
 		return events.CancelReasonActivityTimeout
 	case errors.Is(cause, ErrPermissionDenied):
+		return events.CancelReasonPermissionDenied
+	case errors.Is(clientErr, client.ErrPermissionDenied):
 		return events.CancelReasonPermissionDenied
 	default:
 		return events.CancelReasonContextCanceled
@@ -222,4 +240,14 @@ func mapCancelReason(cause error) events.CancelReason {
 // SetRenderer substitui o renderer. Usado em testes para capturar output.
 func (r *ACPRunner) SetRenderer(w io.Writer) {
 	r.renderer = render.NewHumanRenderer(w)
+}
+
+func buildRuntimeInitRaw(launcher, command string, args []string, sdkVersion, npmVersion string) ([]byte, error) {
+	return json.Marshal(map[string]any{
+		"launcher":    launcher,
+		"command":     command,
+		"args":        args,
+		"sdk_version": sdkVersion,
+		"npm_version": npmVersion,
+	})
 }

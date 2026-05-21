@@ -14,9 +14,24 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
-// errMsgTemplate é a mensagem de erro para quando nenhum launcher está disponível.
-// Literal exato conforme RF-03.
-const errMsgTemplate = "claude-agent-acp não encontrado. Install claude-agent-acp; OR install %s@%s via npm; OR use --runtime=legacy. Veja tasks/adr/009-acp-protocol-adoption.md"
+// adrByID mapeia spec.ID para o path do ADR correspondente.
+// Decisão D-09 (ADR-012): mapping vive no package probe, não em specs/.
+// Evita acoplamento entre specs/ e a estrutura de docs ADRs.
+// Para IDs desconhecidos, use o fallback "tasks/adr/" documentado em resolve().
+var adrByID = map[string]string{
+	"claude":  "tasks/adr/009-acp-protocol-adoption.md",
+	"copilot": "tasks/adr/012-copilot-cli-acp-native.md",
+}
+
+// formatLauncherUnavailable formata a mensagem de erro quando nenhum launcher está disponível.
+// Parametrizado pelo Spec recebido e pelo path do ADR associado ao spec.ID.
+// Conforme RF-03 e RF-05 (mensagem contém binário, npm@pin, fallback legacy, referência ADR).
+func formatLauncherUnavailable(spec specs.Spec, adrPath string) string {
+	return fmt.Sprintf(
+		"%s não encontrado. Install %s; OR install %s@%s via npm; OR use --runtime=legacy. Veja %s",
+		spec.Command, spec.Command, spec.NPMPackage(), spec.NPMVersion(), adrPath,
+	)
+}
 
 // cacheEntry armazena o resultado do probe para uma spec.
 type cacheEntry struct {
@@ -45,17 +60,20 @@ func EnsureAvailable(ctx context.Context, spec specs.Spec, look LookPather) (spe
 	e := entry.(*cacheEntry)
 
 	e.once.Do(func() {
-		e.launcher, e.err = resolve(ctx, spec, look)
+		e.launcher, e.err = resolve(spec, look)
 	})
 
 	return e.launcher, e.err
 }
 
 // resolve executa a resolução efetiva do launcher (chamado apenas uma vez por spec via once).
-func resolve(ctx context.Context, spec specs.Spec, look LookPather) (specs.Launcher, error) {
+func resolve(spec specs.Spec, look LookPather) (specs.Launcher, error) {
 	// Passo 1: binário canônico no PATH.
+	// FixedArgs do Spec (ex: ["--acp"] para Copilot) são passados ao BinaryLauncher para
+	// garantir que o binário seja invocado com os flags corretos (bug fix: sem FixedArgs,
+	// copilot seria iniciado sem --acp e entraria em modo legado em vez de ACP server).
 	if path, err := look.LookPath(spec.Command); err == nil {
-		return specs.NewBinaryLauncher(path), nil
+		return specs.NewBinaryLauncher(path, spec.FixedArgs...), nil
 	}
 
 	// Passo 2: tentar cada fallback (verifica se o comando do fallback está no PATH).
@@ -66,19 +84,13 @@ func resolve(ctx context.Context, spec specs.Spec, look LookPather) (specs.Launc
 		}
 	}
 
-	// Passo 3: falhar com mensagem com três remédios (RF-03).
-	npmPkg := specs.ClaudeNpmPackage
-	npmVer := specs.ClaudeNpmVersion
-	if len(spec.Fallbacks) > 0 && len(spec.Fallbacks[0].FixedArgs) > 1 {
-		// Extrai do FixedArgs o pacote e versão.
-		arg := spec.Fallbacks[0].FixedArgs[1]
-		if at := findLastAt(arg); at >= 0 {
-			npmPkg = arg[:at]
-			npmVer = arg[at+1:]
-		}
+	// Passo 3: falhar com mensagem com três remédios (RF-03, RF-05).
+	// Lookup do ADR pelo spec.ID; fallback para path raiz quando ID desconhecido.
+	adrPath, ok := adrByID[spec.ID]
+	if !ok {
+		adrPath = "tasks/adr/"
 	}
-
-	msg := fmt.Sprintf(errMsgTemplate, npmPkg, npmVer)
+	msg := formatLauncherUnavailable(spec, adrPath)
 	return specs.Launcher{}, fmt.Errorf("%s: %w", msg, ErrLauncherUnavailable)
 }
 

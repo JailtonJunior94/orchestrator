@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -46,13 +49,22 @@ func (f *testClientFactory) New(workDir string) client.Client {
 // testPersistence implementa runtime.Persistence em memória.
 type testPersistence struct{}
 
-func (p *testPersistence) AppendEvent(_ events.Event) error             { return nil }
+func (p *testPersistence) AppendEvent(_ events.Event) error                { return nil }
 func (p *testPersistence) WriteToolCalls(_ []events.ToolCallSummary) error { return nil }
-func (p *testPersistence) EnrichReport(_ airuntime.Summary) error       { return nil }
+func (p *testPersistence) EnrichReport(_ airuntime.Summary) error          { return nil }
 
 type testPersistenceFactory struct{}
 
 func (f *testPersistenceFactory) New(_ string) (airuntime.Persistence, error) {
+	return &testPersistence{}, nil
+}
+
+type recordingPersistenceFactory struct {
+	evidenceDir string
+}
+
+func (f *recordingPersistenceFactory) New(evidenceDir string) (airuntime.Persistence, error) {
+	f.evidenceDir = evidenceDir
 	return &testPersistence{}, nil
 }
 
@@ -214,6 +226,70 @@ func TestACPInvoker_Invoke_QuietMode(t *testing.T) {
 	}
 	if exitCode != 0 {
 		t.Errorf("exitCode = %d, want 0", exitCode)
+	}
+}
+
+func TestACPInvoker_Invoke_DerivesTaskEvidenceDir(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("ok").
+		AppendSessionEnd()
+
+	persist := &recordingPersistenceFactory{}
+	runner := airuntime.NewACPRunner(
+		specs.Claude(),
+		airuntime.WithProber(&testProber{
+			launcher: specs.NewBinaryLauncher("/fake/claude-agent-acp"),
+		}),
+		airuntime.WithClientFactory(&testClientFactory{script: script, ctx: ctx, t: t}),
+		airuntime.WithPersistenceFactory(persist),
+		airuntime.WithRenderer(&testDiscardRenderer{}),
+	)
+
+	invoker := taskloop.NewACPInvoker(runner, true, 0)
+	prompt := "Use a skill execute-task para implementar a task tasks/prd-acp-runtime-claude/task-9.0-runner-invoker-integration.md."
+	workDir := t.TempDir()
+
+	if _, _, _, err := invoker.Invoke(ctx, prompt, workDir, ""); err != nil {
+		t.Fatalf("Invoke: %v", err)
+	}
+
+	want := filepath.Join(workDir, "evidence", "task-9.0")
+	if persist.evidenceDir != want {
+		t.Fatalf("evidenceDir = %q, want %q", persist.evidenceDir, want)
+	}
+}
+
+func TestACPInvoker_Invoke_LogsTelemetry(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	t.Setenv("GOVERNANCE_TELEMETRY", "1")
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("telemetry").
+		AppendSessionEnd()
+
+	runner := buildTestRunner(t, ctx, script)
+	invoker := taskloop.NewACPInvoker(runner, true, 0)
+	workDir := t.TempDir()
+
+	if _, _, _, err := invoker.Invoke(ctx, "prompt", workDir, ""); err != nil {
+		t.Fatalf("Invoke: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(workDir, ".agents", "telemetry.log"))
+	if err != nil {
+		t.Fatalf("ReadFile telemetry.log: %v", err)
+	}
+	content := string(data)
+	for _, want := range []string{"ref=acp-session", "runtime=acp", "launcher=binary", "events_count=", "cancel_reason=none"} {
+		if !strings.Contains(content, want) {
+			t.Fatalf("telemetry.log = %q, want substring %q", content, want)
+		}
 	}
 }
 

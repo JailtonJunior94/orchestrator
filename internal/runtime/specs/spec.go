@@ -16,7 +16,20 @@ type Spec struct {
 	FixedArgs      []string
 	Fallbacks      []FallbackLauncher
 	AccessModeFlag string
+	// metadata para runtime_init e probe error (ADR-012 D-03)
+	sdkVersion string
+	npmVersion string
+	npmPackage string
 }
+
+// SDKVersion retorna a versão do SDK ACP Go associada a esta Spec.
+func (s Spec) SDKVersion() string { return s.sdkVersion }
+
+// NPMVersion retorna a versão npm pinada do agente ACP associada a esta Spec.
+func (s Spec) NPMVersion() string { return s.npmVersion }
+
+// NPMPackage retorna o nome do pacote npm do agente ACP associado a esta Spec.
+func (s Spec) NPMPackage() string { return s.npmPackage }
 
 // newSpec é o construtor interno, acessível apenas dentro do pacote.
 // Consumidores externos devem usar funções de catálogo como Claude().
@@ -25,6 +38,7 @@ func newSpec(
 	fixedArgs []string,
 	fallbacks []FallbackLauncher,
 	accessModeFlag string,
+	sdkVersion, npmVersion, npmPackage string,
 ) Spec {
 	return Spec{
 		ID:             id,
@@ -33,5 +47,8 @@ func newSpec(
 		FixedArgs:      fixedArgs,
 		Fallbacks:      fallbacks,
 		AccessModeFlag: accessModeFlag,
+		sdkVersion:     sdkVersion,
+		npmVersion:     npmVersion,
+		npmPackage:     npmPackage,
 	}
 }

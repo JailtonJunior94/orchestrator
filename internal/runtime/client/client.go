@@ -8,6 +8,8 @@ package client
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -74,8 +76,18 @@ type acpClient struct {
 	eventCh chan events.Event
 	err     error
 	closed  atomic.Bool
-	once    sync.Once
+	// sendMu serializa sends a eventCh com o close do canal em closeChannel.
+	// SessionUpdate adquire RLock; closeChannel adquire Lock exclusivo.
+	sendMu sync.RWMutex
+	// permissionRequested marca que o agente pediu permissão durante o prompt turn.
+	permissionRequested atomic.Bool
+	once                sync.Once
+	cancel              context.CancelFunc
 }
+
+// ErrPermissionDenied indica que o agente ACP solicitou permissão e o cliente
+// cancelou imediatamente o prompt turn conforme RF-16.
+var ErrPermissionDenied = errors.New("permission denied")
 
 // newACPClient cria um novo acpClient sem ainda abrir a sessão.
 // ioProvider pode ser nil (modo produção: spawn subprocess) ou um IOProvider (modo teste).
@@ -116,8 +128,13 @@ func (c *acpClient) Open(ctx context.Context, launcher specs.Launcher, prompt st
 		return err
 	}
 
+	promptCtx, cancel := context.WithCancel(ctx)
+	c.mu.Lock()
+	c.cancel = cancel
+	c.mu.Unlock()
+
 	// Inicia goroutine de leitura de updates (Prompt do SDK é bloqueante).
-	go c.readLoop(ctx, conn, sessID, prompt)
+	go c.readLoop(promptCtx, conn, sessID, prompt)
 
 	return nil
 }
@@ -153,8 +170,16 @@ func (c *acpClient) startProcess(ctx context.Context, launcher specs.Launcher) (
 // negotiate realiza o handshake ACP e cria a sessão.
 func (c *acpClient) negotiate(ctx context.Context, w io.Writer, r io.Reader, _ string) (*acp.ClientSideConnection, acp.SessionId, error) {
 	impl := &clientImpl{
-		eventCh:    c.eventCh,
-		closedFlag: &c.closed,
+		trySend: c.trySend,
+		onPermission: func() {
+			c.permissionRequested.Store(true)
+			c.mu.Lock()
+			cancel := c.cancel
+			c.mu.Unlock()
+			if cancel != nil {
+				cancel()
+			}
+		},
 	}
 	conn := acp.NewClientSideConnection(impl, w, r)
 
@@ -184,22 +209,55 @@ func (c *acpClient) negotiate(ctx context.Context, w io.Writer, r io.Reader, _ s
 
 // readLoop envia o prompt e consome até o fim da sessão.
 func (c *acpClient) readLoop(ctx context.Context, conn *acp.ClientSideConnection, sessID acp.SessionId, prompt string) {
-	defer c.closeChannel(nil)
+	defer func() {
+		if c.permissionRequested.Load() {
+			c.closeChannel(ErrPermissionDenied)
+			return
+		}
+		c.closeChannel(nil)
+	}()
 
-	_, err := conn.Prompt(ctx, acp.PromptRequest{
+	resp, err := conn.Prompt(ctx, acp.PromptRequest{
 		SessionId: sessID,
 		Prompt:    []acp.ContentBlock{acp.TextBlock(prompt)},
 	})
 	if err != nil {
+		if c.permissionRequested.Load() {
+			c.closeChannel(ErrPermissionDenied)
+			return
+		}
 		if ctx.Err() != nil {
 			c.closeChannel(fmt.Errorf("sessão ACP cancelada: %w", ctx.Err()))
 			return
 		}
 		c.closeChannel(fmt.Errorf("prompt ACP: %w", err))
+		return
+	}
+
+	if evt, evtErr := sessionEndEventFromPromptResponse(resp); evtErr == nil {
+		select {
+		case c.eventCh <- evt:
+		case <-ctx.Done():
+		}
 	}
 }
 
+func sessionEndEventFromPromptResponse(resp acp.PromptResponse) (events.Event, error) {
+	raw, err := json.Marshal(map[string]any{
+		"sessionUpdate": "session_end",
+		"exitCode":      0,
+		"reason":        string(resp.StopReason),
+		"stopReason":    string(resp.StopReason),
+	})
+	if err != nil {
+		return events.Event{}, err
+	}
+	return events.NewSessionEnd(time.Now().UTC(), 0, string(resp.StopReason), raw)
+}
+
 // closeChannel fecha o canal de eventos com um erro opcional. Idempotente.
+// Adquire sendMu em modo exclusivo para que nenhum SessionUpdate concurrent
+// possa fazer send enquanto o canal está sendo fechado (elimina a data race).
 func (c *acpClient) closeChannel(err error) {
 	c.once.Do(func() {
 		c.mu.Lock()
@@ -207,8 +265,26 @@ func (c *acpClient) closeChannel(err error) {
 			c.err = err
 		}
 		c.mu.Unlock()
+		c.sendMu.Lock()
+		c.closed.Store(true)
 		close(c.eventCh)
+		c.sendMu.Unlock()
 	})
+}
+
+// trySend envia evt para eventCh de forma race-free. Retorna false se o canal
+// já foi fechado ou está cheio. SessionUpdate usa esta função em vez de acessar
+// eventCh diretamente.
+func (c *acpClient) trySend(evt events.Event) {
+	c.sendMu.RLock()
+	defer c.sendMu.RUnlock()
+	if c.closed.Load() {
+		return
+	}
+	select {
+	case c.eventCh <- evt:
+	default:
+	}
 }
 
 // Updates retorna o canal de eventos. Fechado em session_end ou erro.
@@ -257,28 +333,21 @@ func (c *acpClient) killProcess() error {
 
 // clientImpl implementa acp.Client para receber SessionUpdate e RequestPermission.
 type clientImpl struct {
-	eventCh    chan<- events.Event
-	closedFlag *atomic.Bool
+	trySend      func(events.Event) // race-free send via acpClient.trySend
+	onPermission func()
 }
 
-func (ci *clientImpl) SessionUpdate(ctx context.Context, n acp.SessionNotification) error {
-	if ci.closedFlag.Load() {
-		return nil
-	}
-
+func (ci *clientImpl) SessionUpdate(_ context.Context, n acp.SessionNotification) error {
 	evt, _ := events.FromACPUpdate("", n.Update)
-
-	select {
-	case ci.eventCh <- evt:
-	case <-ctx.Done():
-	default:
-	}
-
+	ci.trySend(evt)
 	return nil
 }
 
 // RequestPermission cancela imediatamente (RF-16).
 func (ci *clientImpl) RequestPermission(_ context.Context, _ acp.RequestPermissionRequest) (acp.RequestPermissionResponse, error) {
+	if ci.onPermission != nil {
+		ci.onPermission()
+	}
 	return acp.RequestPermissionResponse{
 		Outcome: acp.RequestPermissionOutcome{
 			Cancelled: &acp.RequestPermissionOutcomeCancelled{},
