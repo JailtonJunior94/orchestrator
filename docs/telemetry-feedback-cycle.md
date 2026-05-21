@@ -16,6 +16,27 @@ Sem essa variável, nenhum dado é escrito. Para ativar permanentemente no proje
 
 ---
 
+## Cobertura por Tool
+
+A partir de F1 (ADR-012), o evento `runtime_init` ganha cardinalidade `tool=copilot`
+quando o harness e invocado com `--runtime=acp --tool=copilot`. O campo `launcher`
+distingue `binary` (binario `copilot` local) de `npx` (fallback via npx). Os demais
+campos (`npm_version`, `sdk_version`) sao preenchidos com metadados reais do `Spec`
+Copilot (nao constantes Claude). O subcomando `telemetry report` agrega por `tool`,
+permitindo comparar invocacoes Copilot e Claude no mesmo relatorio.
+
+Exemplo de linha no log com Copilot ACP:
+
+```
+2026-05-21T10:30:00Z skill=execute-task ref=security.md tool=copilot launcher=binary
+```
+
+As invariantes de paridade multi-tool (ADR-008) cobrem `tool=copilot` com os mesmos
+`kinds` de eventos que cobrem Claude. Nenhum novo `kind` de evento foi introduzido
+(ADR-010 invariante preservada).
+
+---
+
 ## Coleta
 
 Cada invocação de skill que passa pela skill `agent-governance` registra uma linha em `.agents/telemetry.log`:

@@ -723,7 +723,7 @@
             "type": "string",
             "default": "legacy",
             "required": false,
-            "description": "Runtime de invocacao: legacy (default) ou acp (requer --tool claude)"
+            "description": "Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, copilot)"
           },
           "activity-timeout": {
             "type": "duration",
@@ -736,6 +736,11 @@
             "default": false,
             "required": false,
             "description": "Suprime stream humano (stdout); jsonl e warnings continuam"
+          },
+          "agent": {
+            "type": "string",
+            "required": false,
+            "description": "Nome do agente declarativo (AGENT.md); mutuamente exclusivo com --tool e --executor-tool"
           }
         }
       },

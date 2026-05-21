@@ -165,7 +165,8 @@ Nao inventar contexto ausente. Nao assumir versao sem verificar. Nao alterar com
 | [004](tasks/adr/004-lazy-loading-referencias.md) | References sob demanda | Aceita |
 | [005](tasks/adr/005-skills-lock-sha256.md) | Lock file SHA-256 | Aceita |
 | [006](docs/adr/006-telemetria-feedback-cycle.md) | Telemetria opt-in append-only | Aceita |
-| [007](docs/adr/007-copilot-cli-stateless-workaround.md) | Copilot injecao manual | Aceita |
+| [007](docs/adr/007-copilot-cli-stateless-workaround.md) | Copilot injecao manual | Substituida por ADR-012 |
 | [008](docs/adr/008-parity-multi-tool-invariants.md) | 29 invariantes 3 niveis | Aceita |
 | [ADR-009](tasks/adr/009-acp-protocol-adoption.md) | Adocao do ACP via coder/acp-go-sdk para invocacao de agentes | Aceita |
 | [ADR-010](tasks/prd-acp-runtime-claude/adr-010-event-tagged-union.md) | runtime.Event como struct tagged union | Aceita |
+| [ADR-012](tasks/adr/012-copilot-cli-acp-native.md) | Copilot CLI como runtime ACP nativo | Aceita |

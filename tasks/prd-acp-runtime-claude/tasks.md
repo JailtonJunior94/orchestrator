@@ -35,7 +35,7 @@
 | 8.0 | ACP Client + Fake Server + Renderer | done | 1.0, 3.0, 4.0 | — | — |
 | 9.0 | Application Runner + Invoker Adapter + Integration Tests | done | 4.0, 5.0, 6.0, 7.0, 8.0 | — | — |
 | 10.0 | CLI Flags + Telemetry + Live Tests + CI Workflow | done | 9.0 | — | — |
-| 11.0 | Docs + ADR Transitions + Final PR | pending | 10.0 | — | finalize-changelog-readme-push, pull-request |
+| 11.0 | Docs + ADR Transitions + Final PR | done | 10.0 | — | finalize-changelog-readme-push, pull-request |
 
 ## Dependências Críticas
 
