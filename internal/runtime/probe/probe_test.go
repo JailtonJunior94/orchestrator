@@ -464,6 +464,22 @@ func TestAdrByID_T20_KnownIDs(t *testing.T) {
 		}
 	})
 
+	t.Run("codex_adr013", func(t *testing.T) {
+		sp := specs.Codex()
+		sp.ID = "codex"
+		probe.ResetCache()
+
+		look := newFakeLookPather(map[string]string{})
+
+		_, err := probe.EnsureAvailable(context.Background(), sp, look)
+		if err == nil {
+			t.Fatal("esperava erro, mas não houve")
+		}
+		if !strings.Contains(err.Error(), "tasks/adr/013-codex-cli-acp-native.md") {
+			t.Errorf("adrByID[\"codex\"] deve apontar para ADR-013\nmensagem: %q", err.Error())
+		}
+	})
+
 	t.Run("copilot_adr012", func(t *testing.T) {
 		sp := copilotSpec()
 		sp.ID = "copilot"
@@ -513,8 +529,8 @@ func TestAdrByID_T21_UnknownIDFallback(t *testing.T) {
 		t.Errorf("mensagem de erro deve conter fallback \"tasks/adr/\" para ID desconhecido\nmensagem: %q", msg)
 	}
 
-	// E não deve conter um ADR específico (009 ou 012).
-	if strings.Contains(msg, "009-") || strings.Contains(msg, "012-") {
+	// E não deve conter um ADR específico (009, 012 ou 013).
+	if strings.Contains(msg, "009-") || strings.Contains(msg, "012-") || strings.Contains(msg, "013-") {
 		t.Errorf("mensagem de erro não deve conter ADR específico para ID desconhecido\nmensagem: %q", msg)
 	}
 }

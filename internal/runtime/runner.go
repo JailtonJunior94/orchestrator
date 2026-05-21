@@ -110,12 +110,26 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 
 	// Fase 3: emitir runtime_init e persistir.
 	launcherCmd, launcherArgs := launcher.Command()
-	initRaw, initRawErr := buildRuntimeInitRaw(launcher.Kind(), launcherCmd, launcherArgs, r.spec.SDKVersion(), r.spec.NPMVersion())
+
+	// F1-Codex: computar bootstrap args e compor argv final.
+	// Ordem: launcherArgs (do probe, já inclui FixedArgs para Claude/Copilot) + bootstrap (do Spec).
+	// Para Claude/Copilot: bootstrap == nil → argv idêntico a launcherArgs (regressão T-19).
+	// Para Codex: bootstrap contém ["-c", "model=...", ...] → prepend antes dos FixedArgs do launcher.
+	// Anti-padrão: nunca mutar launcherArgs diretamente — criar slice novo (ADR-013 D-02).
+	bootstrap := r.spec.BootstrapArgs(j.Model, j.ReasoningEffort, j.AddDirs, j.AccessMode)
+	argv := append([]string{}, launcherArgs...)
+	argv = append(argv, bootstrap...)
+
+	// Criar launcher efetivo com argv completo para c.Open (sem modificar cliente).
+	// Kind original é preservado em launcher.Kind() para o runtime_init event.
+	effectiveLauncher := specs.NewBinaryLauncher(launcherCmd, argv...)
+
+	initRaw, initRawErr := buildRuntimeInitRaw(launcher.Kind(), launcherCmd, argv, r.spec.SDKVersion(), r.spec.NPMVersion())
 	initEvt, initErr := events.NewRuntimeInit(
 		r.clock.Now(),
 		launcher.Kind(),
 		launcherCmd,
-		launcherArgs,
+		argv,
 		r.spec.SDKVersion(),
 		r.spec.NPMVersion(),
 		initRaw,
@@ -128,7 +142,7 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	c := r.factory.New(j.WorkDir)
 	defer func() { _ = c.Close() }()
 
-	if err := c.Open(ctx, launcher, j.Prompt); err != nil {
+	if err := c.Open(ctx, effectiveLauncher, j.Prompt); err != nil {
 		return Summary{}, fmt.Errorf("runner: abrir sessão ACP: %w", err)
 	}
 

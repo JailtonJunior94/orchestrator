@@ -741,6 +741,20 @@
             "type": "string",
             "required": false,
             "description": "Nome do agente declarativo (AGENT.md); mutuamente exclusivo com --tool e --executor-tool"
+          },
+          "reasoning-effort": {
+            "type": "string",
+            "enum": ["low", "medium", "high"],
+            "default": "medium",
+            "required": false,
+            "description": "Esforco de raciocinio do Codex: low|medium|high (default: medium). Apenas Codex consome este parametro; ignorado por Claude/Copilot."
+          },
+          "access-mode": {
+            "type": "string",
+            "enum": ["restricted", "full"],
+            "default": "restricted",
+            "required": false,
+            "description": "Modo de acesso do Codex: restricted|full (default: restricted). AVISO: full ativa sandbox_mode=danger-full-access — use somente em ambientes isolados."
           }
         }
       },

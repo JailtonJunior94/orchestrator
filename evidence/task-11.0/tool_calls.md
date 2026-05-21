@@ -1,0 +1,42 @@
+# Tool Calls
+
+- 1. **Read SKILL.md** — status: done — id: `call_rfFKnRBGRjPhDij71KySZ0ZD`
+- 2. **Read AGENTS.md** — status: done — id: `call_BvhZOfJrChP64ScFIPRkWxo6`
+- 3. **Read SKILL.md** — status: done — id: `call_cNq6CUF8g1B4J6t5pIUC30sS`
+- 4. **Read task-11.0-smoke-test-codex-acp.md** — status: done — id: `call_mjrzU2twzKMAxNPVquFanNul`
+- 5. **bash -lc '_depth_lib=""; for d in .agents/lib scripts/lib; do [[ -r "$d/check-invocation-depth.sh" ]] && { _depth_lib="$d/check-invocation-depth.sh"; break; }; done; [[ -n "$_depth_lib" ]] || { echo "failed: check-invocation-depth.sh ausente"; exit 1; }; source "$_depth_lib" && echo "depth-ok:${AI_INVOCATION_DEPTH:-unknown}"'** — status: done — id: `call_nKjfqLpIeUuQiNg3qT1WKfIp`
+- 6. **command -v ai-spec** — status: done — id: `call_k0LIRhfcjgW037albV2xM1mJ`
+- 7. **Read prd.md** — status: done — id: `call_RDwsY422P1w6NnxHIYSKuRZK`
+- 8. **Read techspec.md** — status: done — id: `call_4SkiblflU2DshVWohOkBwsm4`
+- 9. **Read tasks.md** — status: done — id: `call_Zp47O422cNDz1yhWG0SvTucS`
+- 10. **Read CODEX.md** — status: done — id: `call_XgrvkRW3mgU4pTMWXFSkd2ZI`
+- 11. **ai-spec skills --verify** — status: done — id: `call_xTPwhhO69pNMtQi5EvnzwuUM`
+- 12. **ai-spec check-spec-drift tasks/prd-codex-acp-spec/tasks.md** — status: done — id: `call_pQiKMiPRJfIY5wA7ZMpwbT01`
+- 13. **Read SKILL.md** — status: done — id: `call_I5au7qOdbY4s734jPbMVKb6x`
+- 14. **Read SKILL.md** — status: done — id: `call_Hs8mPkl8W0NZMlXUoAw37q80`
+- 15. **Read ddd.md** — status: done — id: `call_kP1RBzfqdLf9LCWZX3GGiE3f`
+- 16. **Read security.md** — status: done — id: `call_Ee4fXsmei3Rs2NzbDtLdPxom`
+- 17. **Read testing.md** — status: done — id: `call_HPaT2fgO0lUL2XEaJEkKHaqp`
+- 18. **ai-spec skills --help** — status: done — id: `call_XdbGtDBLLwNG9Wwy0x8DyOv3`
+- 19. **Search ^## Status|^Status: in task-11.0-smoke-test-codex-acp.md** — status: done — id: `call_VUs57p5W17ELBl9gRB8DUglg`
+- 20. **List /Users/jailtonjunior/Git/orchestrator/prd-codex-acp-spec, Search execution_report|checkpoints|task-10.0|task-11.0** — status: done — id: `call_voYG2kXuNShI4vzyQTLs6WoA`
+- 21. **Read 10_execution_report.md** — status: done — id: `call_F8Nbh5DNfHOKTdgPGBzJXxRp`
+- 22. **List /Users/jailtonjunior/Git/orchestrator/audit, Search task-10.0|codex-acp-smoke|execution_report|tool_calls|events.jsonl** — status: done — id: `call_NC8yYj2avhOiTVkOCRfSzxli`
+- 23. **Search ^## Status|^Status: in *.md** — status: done — id: `call_zhzXyY7NjbcydFgBra3AdDqZ`
+- 24. **ai-spec skills check** — status: done — id: `call_ALSBoL6d04uZvoux7GlPDdks`
+- 25. **Read 10.0_execution_report.md** — status: done — id: `call_A7q0iaAP6H1F6gEhlBsawcPJ`
+- 26. **Read events.jsonl** — status: done — id: `call_GF4a8owwi6Y6XdryMOPKpPmj`
+- 27. **List /Users/jailtonjunior/Git/orchestrator/task-11.0** — status: done — id: `call_bOUAxbEVjNzMmmReXjuapLyO`
+- 28. **git status --short** — status: done — id: `call_k7irTtr2b9AxtkwkTZX6t3dL`
+- 29. **List /Users/jailtonjunior/Git/orchestrator/.agents, Search task-execution-report-template|validate.*evid|evidence** — status: done — id: `call_kebbW0OKeSFKBaZNPG61nAK1`
+- 30. **Read task-10.0-documentacao-f1-codex.md** — status: done — id: `call_GGxcRDNacYsCH1bILQ2InSNP`
+- 31. **List /Users/jailtonjunior/Git/orchestrator/audit** — status: done — id: `call_Vbu79CrQgUDaJiXeK5W2Uyyn`
+- 32. **List /Users/jailtonjunior/Git/orchestrator/task-11.0** — status: done — id: `call_iOZcASyhcEkyydaQg4LZK83l`
+- 33. **Read task-execution-report-template.md** — status: done — id: `call_z5YymgrTSOVZ6DglGr3bkkpt`
+- 34. **command -v codex-acp || true** — status: done — id: `call_yVN67WUbgU9L7kqNnRvkZ3g8`
+- 35. **command -v npx || true** — status: done — id: `call_D7fD1M39tOcH0ndIitrbLHLO`
+- 36. **Read events.jsonl** — status: done — id: `call_PY2Z9MBSmH4ZMKb7623eNYAO`
+- 37. **Edit /Users/jailtonjunior/Git/orchestrator/tasks/prd-codex-acp-spec/11.0_execution_report.md, /Users/jailtonjunior/Git/orchestrator/tasks/prd-codex-acp-spec/tasks.md, /Users/jailtonjunior/Git/orchestrator/tasks/prd-codex-acp-spec/task-11.0-smoke-test-codex-acp.md** — status: done — id: `call_9lcRDrICoi2v5CLcAtemijBm`
+- 38. **Read task-11.0-smoke-test-codex-acp.md** — status: done — id: `call_qhjaHGw5dFgGs9kD6vy7vHMv`
+- 39. **Search 11\.0 \| Smoke test real codex-acp \+ captura audit/|\| 11\.0 \| in tasks.md** — status: done — id: `call_g8jxfVOLeyuNbt5flmRgxJWR`
+- 40. **Read 11.0_execution_report.md** — status: done — id: `call_vw5Rg6e2wHVmTtIvorvgwIun`

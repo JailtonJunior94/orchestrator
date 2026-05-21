@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
@@ -15,11 +16,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// accessModeFullWarnOnce garante que o warning de --access-mode=full seja emitido
+// apenas uma vez por execução do processo (ADR-013 D-08, R-03 alto).
+var accessModeFullWarnOnce sync.Once
+
 // runtimeACPCatalog é a fonte de verdade para quais tools podem usar --runtime=acp nesta versão.
-// Responsabilidade do CLI (ADR-012 D-04): specs são unidades atômicas; a tabela de roteamento fica no CLI.
-// Para adicionar suporte a um novo tool: registrar entrada e atualizar testes T-13/T-14/T-15.
+// Responsabilidade do CLI (ADR-012 D-04 / ADR-013 D-04): specs são unidades atômicas; a tabela de roteamento fica no CLI.
+// Runtimes suportados nesta versão: claude (ADR-009), codex (ADR-013), copilot (ADR-012).
+// Para adicionar suporte a um novo tool: registrar entrada e atualizar testes T-13/T-14/T-15/T-16.
 var runtimeACPCatalog = map[string]func() specs.Spec{
 	"claude":  specs.Claude,
+	"codex":   specs.Codex,
 	"copilot": specs.Copilot,
 }
 
@@ -73,6 +80,34 @@ Exemplos:
 		runtime, _ := cmd.Flags().GetString("runtime")
 		activityTimeout, _ := cmd.Flags().GetDuration("activity-timeout")
 		quiet, _ := cmd.Flags().GetBool("quiet")
+		reasoningEffort, _ := cmd.Flags().GetString("reasoning-effort")
+		accessMode, _ := cmd.Flags().GetString("access-mode")
+
+		// Validação enum --reasoning-effort (RF-09, RF-10 — ADR-013 D-08)
+		validReasoning := map[string]bool{"low": true, "medium": true, "high": true}
+		if !validReasoning[reasoningEffort] {
+			_, _ = fmt.Fprintf(os.Stderr,
+				"--reasoning-effort inválido: %q — valores aceitos: low|medium|high\n", reasoningEffort)
+			return fmt.Errorf("exit2")
+		}
+
+		// Validação enum --access-mode (RF-11, RF-13 — ADR-013 D-08)
+		validAccess := map[string]bool{"restricted": true, "full": true}
+		if !validAccess[accessMode] {
+			_, _ = fmt.Fprintf(os.Stderr,
+				"--access-mode inválido: %q — valores aceitos: restricted|full\n", accessMode)
+			return fmt.Errorf("exit2")
+		}
+
+		// Warning único para --access-mode=full via sync.Once (R-03 alto, ADR-013 D-08, PRD HU-03/Q1)
+		if accessMode == "full" {
+			accessModeFullWarnOnce.Do(func() {
+				_, _ = fmt.Fprintln(os.Stderr,
+					"WARNING: --access-mode=full ativa sandbox_mode=danger-full-access no codex-acp. "+
+						"Pré-condição: consentimento operacional. Codex terá acesso pleno ao filesystem e à rede. "+
+						"Use somente em ambientes isolados. Ver CODEX.md.")
+			})
+		}
 
 		// Validacao de --runtime (RF-01, RF-02, RF-07)
 		if runtime != "legacy" && runtime != "acp" {
@@ -157,6 +192,8 @@ Exemplos:
 			ActivityTimeout:        activityTimeout,
 			Quiet:                  quiet,
 			AgentName:              agentName,
+			ReasoningEffort:        reasoningEffort,
+			AccessMode:             accessMode,
 		})
 		if errors.Is(err, airuntime.ErrLauncherUnavailable) {
 			_, _ = fmt.Fprintln(os.Stderr, err)
@@ -187,9 +224,16 @@ func init() {
 	taskLoopCmd.Flags().String("reviewer-fallback-model", "", "Modelo de fallback nativo do reviewer (Claude only)")
 
 	// Flags ACP runtime (RF-01, RF-02, RF-07, RF-11)
-	taskLoopCmd.Flags().String("runtime", "legacy", "Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, copilot)")
+	taskLoopCmd.Flags().String("runtime", "legacy", "Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, codex, copilot)")
 	taskLoopCmd.Flags().Duration("activity-timeout", 120*time.Second, "Timeout de inatividade do agente ACP (0 = desabilitado); aceita time.Duration: 90s, 2m")
 	taskLoopCmd.Flags().Bool("quiet", false, "Suprime stream humano (stdout); jsonl e warnings continuam")
+
+	// Flags Codex-específicas (RF-09, RF-10, RF-11, RF-13 — ADR-013 D-08).
+	// Para Claude/Copilot são aceitas mas sem efeito (BootstrapArgs no-op).
+	taskLoopCmd.Flags().String("reasoning-effort", "medium",
+		"Esforço de raciocínio do Codex: low|medium|high (default: medium). Apenas Codex consome este parâmetro; ignorado por Claude/Copilot.")
+	taskLoopCmd.Flags().String("access-mode", "restricted",
+		"Modo de acesso do Codex: restricted|full (default: restricted). AVISO: full ativa sandbox_mode=danger-full-access — use somente em ambientes isolados. Apenas Codex consome este parâmetro.")
 
 	rootCmd.AddCommand(taskLoopCmd)
 }

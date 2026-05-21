@@ -45,6 +45,12 @@ type Options struct {
 	// Quando vazio, o fluxo legado via Tool/Profiles e preservado integralmente (RF-14).
 	// Quando preenchido, o Registry resolve o agente e deriva ProfileConfig via ResolveProfileFromAgent.
 	AgentName string
+
+	// Codex-specific flags (RF-09, RF-10, RF-11, RF-13 — ADR-013 D-08).
+	// Para Claude/Copilot as flags são aceitas mas sem efeito (BootstrapArgs no-op).
+	ReasoningEffort string   // "low" | "medium" | "high" (default "medium")
+	AccessMode      string   // "restricted" | "full" (default "restricted")
+	AddDirs         []string // diretórios adicionais que o agente Codex pode acessar além do WorkDir; ignorado por Claude/Copilot (no-op)
 }
 
 // Service orquestra a execucao sequencial de tasks de um PRD folder.
@@ -296,7 +302,11 @@ func (s *Service) Execute(opts Options) error {
 				spec,
 				airuntime.WithPersistenceFactory(factory),
 			)
-			invoker = NewACPInvoker(runner, opts.Quiet, opts.ActivityTimeout)
+			invoker = NewACPInvoker(runner, opts.Quiet, opts.ActivityTimeout,
+				WithACPInvokerReasoningEffort(opts.ReasoningEffort),
+				WithACPInvokerAccessMode(specs.AccessMode(opts.AccessMode)),
+				WithACPInvokerAddDirs(opts.AddDirs),
+			)
 		}
 	} else {
 		var invokerErr error
@@ -858,6 +868,7 @@ func classifyIterationOutcome(
 // Adicionar nova entrada aqui ao registrar novo tool ACP no catálogo CLI.
 var acpSpecCatalog = map[string]func() specs.Spec{
 	"claude":  specs.Claude,
+	"codex":   specs.Codex,
 	"copilot": specs.Copilot,
 }
 

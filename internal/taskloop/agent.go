@@ -332,8 +332,20 @@ func (c *claudeInvoker) Invoke(ctx context.Context, prompt, workDir, model strin
 
 // --- Codex ---
 
+// codexLegacyDeprecationMsg é o aviso de depreciação emitido na primeira invocação
+// do codexInvoker legado. Contém os literais obrigatórios conforme Tarefa 8.0 e ADR-013 D-05.
+const codexLegacyDeprecationMsg = "WARNING: Codex CLI legado (codex exec --yolo) em uso. " +
+	"Migrar para --runtime=acp (binário codex-acp, pacote @zed-industries/codex-acp). " +
+	"O modo legado será removido em 2 versões minor. Ver ADR-013."
+
+// codexLegacyWarnOnce garante que o aviso de depreciação do codexInvoker legado
+// seja emitido exatamente uma vez por execução do processo (não por task).
+// Declarado em escopo package-level conforme ADR-013 D-05.
+var codexLegacyWarnOnce sync.Once
+
 type codexInvoker struct {
-	liveOut io.Writer
+	liveOut    io.Writer
+	warnWriter io.Writer // destino do aviso de depreciação; padrão os.Stderr
 }
 
 func (c *codexInvoker) BinaryName() string { return "codex" }
@@ -341,6 +353,13 @@ func (c *codexInvoker) BinaryName() string { return "codex" }
 func (c *codexInvoker) SetLiveOutput(w io.Writer) { c.liveOut = w }
 
 func (c *codexInvoker) Invoke(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+	w := c.warnWriter
+	if w == nil {
+		w = os.Stderr
+	}
+	codexLegacyWarnOnce.Do(func() {
+		_, _ = fmt.Fprintln(w, codexLegacyDeprecationMsg)
+	})
 	args := make([]string, 0, 5)
 	args = append(args, "exec")
 	if model != "" {

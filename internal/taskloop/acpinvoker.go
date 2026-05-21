@@ -10,6 +10,7 @@ import (
 
 	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/telemetry"
 )
 
@@ -23,19 +24,50 @@ type acpInvoker struct {
 	humanBuffer     *bytes.Buffer
 	quiet           bool
 	activityTimeout time.Duration
+	// Codex-specific fields propagados ao Job (RF-15, RF-26 — ADR-013 D-02).
+	// Claude/Copilot recebem os valores no Job mas Spec.BootstrapArgs no-op ignora.
+	reasoningEffort string
+	accessMode      specs.AccessMode
+	addDirs         []string
+}
+
+// ACPInvokerOption é uma functional option para acpInvoker (ADR-013 D-02).
+type ACPInvokerOption func(*acpInvoker)
+
+// WithACPInvokerReasoningEffort configura o nível de esforço de raciocínio do Codex.
+// Ignorado por Claude/Copilot via Spec.BootstrapArgs no-op.
+func WithACPInvokerReasoningEffort(effort string) ACPInvokerOption {
+	return func(a *acpInvoker) { a.reasoningEffort = effort }
+}
+
+// WithACPInvokerAccessMode configura o modo de acesso ao sistema de arquivos do Codex.
+// Ignorado por Claude/Copilot via Spec.BootstrapArgs no-op.
+func WithACPInvokerAccessMode(mode specs.AccessMode) ACPInvokerOption {
+	return func(a *acpInvoker) { a.accessMode = mode }
+}
+
+// WithACPInvokerAddDirs configura diretórios adicionais que o Codex pode acessar.
+// Ignorado por Claude/Copilot via Spec.BootstrapArgs no-op.
+func WithACPInvokerAddDirs(dirs []string) ACPInvokerOption {
+	return func(a *acpInvoker) { a.addDirs = dirs }
 }
 
 // NewACPInvoker cria um acpInvoker que delega execução ao runner fornecido.
 // quiet suprime o output do renderer; activityTimeout configura o watchdog.
-func NewACPInvoker(runner *airuntime.ACPRunner, quiet bool, activityTimeout time.Duration) AgentInvoker {
+// opts são functional options opcionais (ex: WithACPInvokerReasoningEffort).
+func NewACPInvoker(runner *airuntime.ACPRunner, quiet bool, activityTimeout time.Duration, opts ...ACPInvokerOption) AgentInvoker {
 	buf := &bytes.Buffer{}
 	runner.SetRenderer(io.MultiWriter(buf))
-	return &acpInvoker{
+	inv := &acpInvoker{
 		runner:          runner,
 		humanBuffer:     buf,
 		quiet:           quiet,
 		activityTimeout: activityTimeout,
 	}
+	for _, o := range opts {
+		o(inv)
+	}
+	return inv
 }
 
 // BinaryName retorna o nome lógico do invoker ACP.
@@ -58,6 +90,11 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (str
 		EvidenceDir:     evidenceDir,
 		ActivityTimeout: timeout,
 		Quiet:           c.quiet,
+		// Codex-specific fields (RF-15, RF-26 — ADR-013 D-02).
+		// Claude/Copilot recebem os valores mas Spec.BootstrapArgs no-op ignora.
+		ReasoningEffort: c.reasoningEffort,
+		AccessMode:      c.accessMode,
+		AddDirs:         c.addDirs,
 	}
 
 	c.humanBuffer.Reset()

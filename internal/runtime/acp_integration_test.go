@@ -1068,6 +1068,539 @@ func TestACPIntegration_Copilot_T12(t *testing.T) {
 	}
 }
 
+// ---- Testes Task 3.0: novos campos em Job (T-19 regressão + zero-value + construção) ----
+
+// TestJob_ZeroValue_AccessMode (Task 3.0): garante que Job{}.AccessMode é o zero-value de
+// specs.AccessMode (string vazia ""), e que o fluxo Claude/Copilot permanece inalterado
+// com o job de zero-value — regressão T-19.
+func TestJob_ZeroValue_AccessMode(t *testing.T) {
+	t.Parallel()
+
+	var j airuntime.Job
+	// Zero-value de specs.AccessMode é "" (não "restricted"), conforme DoD Task 3.0.
+	if j.AccessMode != specs.AccessMode("") {
+		t.Errorf("Job{}.AccessMode = %q, want %q (zero-value string)", j.AccessMode, "")
+	}
+	// ReasoningEffort zero-value deve ser string vazia.
+	if j.ReasoningEffort != "" {
+		t.Errorf("Job{}.ReasoningEffort = %q, want %q", j.ReasoningEffort, "")
+	}
+	// AddDirs zero-value deve ser nil.
+	if j.AddDirs != nil {
+		t.Errorf("Job{}.AddDirs = %v, want nil", j.AddDirs)
+	}
+}
+
+// TestJob_FullConstruction (Task 3.0): garante que Job com os novos campos preenchidos
+// compila e carrega os valores corretamente.
+func TestJob_FullConstruction(t *testing.T) {
+	t.Parallel()
+
+	j := airuntime.Job{
+		ReasoningEffort: "high",
+		AccessMode:      specs.AccessModeFull,
+		AddDirs:         []string{"/x"},
+	}
+	if j.ReasoningEffort != "high" {
+		t.Errorf("ReasoningEffort = %q, want %q", j.ReasoningEffort, "high")
+	}
+	if j.AccessMode != specs.AccessModeFull {
+		t.Errorf("AccessMode = %q, want %q", j.AccessMode, specs.AccessModeFull)
+	}
+	if len(j.AddDirs) != 1 || j.AddDirs[0] != "/x" {
+		t.Errorf("AddDirs = %v, want [/x]", j.AddDirs)
+	}
+}
+
+// TestACPRunner_JobZeroValue_ClaudeRegression (T-19 regressão): Job{} com novos campos
+// zero-value não altera o comportamento de uma sessão Claude normal.
+func TestACPRunner_JobZeroValue_ClaudeRegression(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("regressao T-19 Claude").
+		AppendSessionEnd()
+
+	pfact, _ := newFakePersistenceFactory()
+	runner := buildRunner(t, ctx, proberBinary(), script, pfact)
+
+	// Job com zero-value nos novos campos — deve funcionar como antes.
+	job := airuntime.Job{
+		Prompt:          "regression T-19",
+		WorkDir:         t.TempDir(),
+		EvidenceDir:     t.TempDir(),
+		Quiet:           true,
+		ReasoningEffort: "",
+		AccessMode:      specs.AccessMode(""),
+		AddDirs:         nil,
+	}
+
+	summary, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run: unexpected error: %v", err)
+	}
+	if summary.CancelReason != events.CancelReasonNone {
+		t.Errorf("CancelReason = %q, want none", summary.CancelReason)
+	}
+	if summary.Launcher != "binary" {
+		t.Errorf("Launcher = %q, want binary", summary.Launcher)
+	}
+}
+
+// ---- sub-suite Codex (T-17, T-18, T-31) + regressão Claude T-19 -------------
+
+// proberCodexBinary retorna um fakeProber com o binário "codex-acp" disponível.
+func proberCodexBinary() *fakeProber {
+	return &fakeProber{available: map[string]string{
+		"codex-acp": "/usr/local/bin/codex-acp",
+	}}
+}
+
+// findRuntimeInitArgs extrai o slice de args do primeiro runtime_init persistido.
+func findRuntimeInitArgs(t *testing.T, persist *fakePersistence) []string {
+	t.Helper()
+	for i := range persist.events {
+		if persist.events[i].Kind() == events.KindRuntimeInit {
+			ri := persist.events[i].RuntimeInit()
+			if ri == nil {
+				t.Fatal("RuntimeInit() payload é nil")
+			}
+			return ri.Args()
+		}
+	}
+	t.Fatal("runtime_init event não encontrado em persist.events")
+	return nil
+}
+
+// containsArg verifica se slice contém um argumento específico.
+func containsArg(args []string, needle string) bool {
+	for _, a := range args {
+		if a == needle {
+			return true
+		}
+	}
+	return false
+}
+
+// containsArgPair verifica se slice contém "-c <value>" consecutivos.
+func containsArgPair(args []string, flag, value string) bool {
+	for i := 0; i+1 < len(args); i++ {
+		if args[i] == flag && args[i+1] == value {
+			return true
+		}
+	}
+	return false
+}
+
+// TestACPRunner_Codex_T17_BootstrapArgs_Restricted (T-17): Codex restricted — spawn args
+// contêm -c model=..., -c model_reasoning_effort=..., -c features.code_mode=false,
+// -c features.code_mode_only=false e NÃO contêm sandbox/approval_policy/web_search.
+func TestACPRunner_Codex_T17_BootstrapArgs_Restricted(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("codex restricted T17").
+		AppendSessionEnd()
+
+	pfact, persist := newFakePersistenceFactory()
+	runner := buildRunnerWithSpec(t, ctx, specs.Codex(), proberCodexBinary(), script, pfact)
+
+	job := airuntime.Job{
+		Prompt:          "T17 codex restricted",
+		WorkDir:         t.TempDir(),
+		EvidenceDir:     t.TempDir(),
+		Quiet:           true,
+		Model:           specs.DefaultCodexModel,
+		ReasoningEffort: "medium",
+		AccessMode:      specs.AccessModeRestricted,
+	}
+
+	_, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run: unexpected error: %v", err)
+	}
+
+	args := findRuntimeInitArgs(t, persist)
+
+	// Deve conter -c model="gpt-5.5"
+	if !containsArgPair(args, "-c", `"gpt-5.5"`) {
+		// strconv.Quote("gpt-5.5") = `"gpt-5.5"` ; verificar pelo prefixo model=
+		wantModel := "model=" + `"gpt-5.5"`
+		if !containsArgPair(args, "-c", wantModel) {
+			t.Errorf("args %v: esperava par -c %q (model)", args, wantModel)
+		}
+	}
+
+	// Deve conter -c model_reasoning_effort="medium"
+	wantReasoning := `model_reasoning_effort="medium"`
+	if !containsArgPair(args, "-c", wantReasoning) {
+		t.Errorf("args %v: esperava par -c %q", args, wantReasoning)
+	}
+
+	// Deve conter features.code_mode=false e features.code_mode_only=false
+	if !containsArgPair(args, "-c", "features.code_mode=false") {
+		t.Errorf("args %v: esperava par -c features.code_mode=false", args)
+	}
+	if !containsArgPair(args, "-c", "features.code_mode_only=false") {
+		t.Errorf("args %v: esperava par -c features.code_mode_only=false", args)
+	}
+
+	// NÃO deve conter sandbox_mode (modo restricted)
+	if containsArg(args, `sandbox_mode="danger-full-access"`) {
+		t.Errorf("args %v: NÃO esperava sandbox_mode no modo restricted", args)
+	}
+	if containsArg(args, `approval_policy="never"`) {
+		t.Errorf("args %v: NÃO esperava approval_policy no modo restricted", args)
+	}
+	if containsArg(args, `web_search="live"`) {
+		t.Errorf("args %v: NÃO esperava web_search no modo restricted", args)
+	}
+}
+
+// TestACPRunner_Codex_T18_BootstrapArgs_Full (T-18): Codex full — spawn args
+// contêm todos os de T-17 + sandbox_mode="danger-full-access", approval_policy="never",
+// web_search="live".
+func TestACPRunner_Codex_T18_BootstrapArgs_Full(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("codex full T18").
+		AppendSessionEnd()
+
+	pfact, persist := newFakePersistenceFactory()
+	runner := buildRunnerWithSpec(t, ctx, specs.Codex(), proberCodexBinary(), script, pfact)
+
+	job := airuntime.Job{
+		Prompt:          "T18 codex full access",
+		WorkDir:         t.TempDir(),
+		EvidenceDir:     t.TempDir(),
+		Quiet:           true,
+		Model:           specs.DefaultCodexModel,
+		ReasoningEffort: "high",
+		AccessMode:      specs.AccessModeFull,
+	}
+
+	_, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run: unexpected error: %v", err)
+	}
+
+	args := findRuntimeInitArgs(t, persist)
+
+	// Deve conter features toggles
+	if !containsArgPair(args, "-c", "features.code_mode=false") {
+		t.Errorf("args %v: esperava par -c features.code_mode=false", args)
+	}
+	if !containsArgPair(args, "-c", "features.code_mode_only=false") {
+		t.Errorf("args %v: esperava par -c features.code_mode_only=false", args)
+	}
+
+	// Deve conter sandbox/approval/web_search para AccessModeFull
+	if !containsArgPair(args, "-c", `approval_policy="never"`) {
+		t.Errorf("args %v: esperava par -c approval_policy=%q (full access)", args, `"never"`)
+	}
+	if !containsArgPair(args, "-c", `sandbox_mode="danger-full-access"`) {
+		t.Errorf("args %v: esperava par -c sandbox_mode=%q (full access)", args, `"danger-full-access"`)
+	}
+	if !containsArgPair(args, "-c", `web_search="live"`) {
+		t.Errorf("args %v: esperava par -c web_search=%q (full access)", args, `"live"`)
+	}
+}
+
+// TestACPRunner_Claude_T19_NoCodexFlags (T-19 regressão estendida): sessão Claude
+// com Job zero-value nos campos Codex NÃO produz flags -c no runtime_init args.
+// Valida que BootstrapArgs no-op preserva comportamento pré-F1-Codex.
+func TestACPRunner_Claude_T19_NoCodexFlags(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("claude sem flags codex T19").
+		AppendSessionEnd()
+
+	pfact, persist := newFakePersistenceFactory()
+	runner := buildRunner(t, ctx, proberBinary(), script, pfact)
+
+	// Job zero-value nos campos Codex — Claude usa no-op BootstrapArgs.
+	job := airuntime.Job{
+		Prompt:          "T19 claude regressao",
+		WorkDir:         t.TempDir(),
+		EvidenceDir:     t.TempDir(),
+		Quiet:           true,
+		Model:           "",
+		ReasoningEffort: "",
+		AccessMode:      specs.AccessMode(""),
+		AddDirs:         nil,
+	}
+
+	_, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run: unexpected error: %v", err)
+	}
+
+	args := findRuntimeInitArgs(t, persist)
+
+	// NÃO deve conter -c (nenhum bootstrap flag para Claude — BootstrapArgs no-op).
+	// Nota: fakeProber não injeta FixedArgs (--bypass-permissions); apenas testa ausência de -c.
+	if containsArg(args, "-c") {
+		t.Errorf("args %v: NÃO esperava flag -c em sessão Claude (regressão T-19)", args)
+	}
+}
+
+// TestACPRunner_Copilot_T19_NoCodexFlags (T-19 regressão Copilot): sessão Copilot
+// com Job zero-value nos campos Codex NÃO produz flags -c no runtime_init args.
+func TestACPRunner_Copilot_T19_NoCodexFlags(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("copilot sem flags codex T19").
+		AppendSessionEnd()
+
+	pfact, persist := newFakePersistenceFactory()
+	runner := buildRunnerWithSpec(t, ctx, specs.Copilot(), proberCopilotBinary(), script, pfact)
+
+	job := airuntime.Job{
+		Prompt:          "T19 copilot regressao",
+		WorkDir:         t.TempDir(),
+		EvidenceDir:     t.TempDir(),
+		Quiet:           true,
+		Model:           "",
+		ReasoningEffort: "",
+		AccessMode:      specs.AccessMode(""),
+		AddDirs:         nil,
+	}
+
+	_, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run: unexpected error: %v", err)
+	}
+
+	args := findRuntimeInitArgs(t, persist)
+
+	// NÃO deve conter -c (nenhum bootstrap flag para Copilot — BootstrapArgs no-op).
+	// Nota: fakeProber não injeta FixedArgs (--acp); apenas testa ausência de -c.
+	if containsArg(args, "-c") {
+		t.Errorf("args %v: NÃO esperava flag -c em sessão Copilot (regressão T-19)", args)
+	}
+}
+
+// TestACPRunner_Codex_T20_ToolCallsAndReport (T-20): Codex + fake server emite ≥ 2 tool calls.
+// Valida:
+//   - tool_calls.md agrega corretamente com os nomes das ferramentas.
+//   - execution_report.md contém events_count correto e cancel_reason=none.
+//   - Paridade estrutural com Claude/Copilot (mesmos campos em events.jsonl).
+func TestACPRunner_Codex_T20_ToolCallsAndReport(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("codex iniciou T20").
+		AppendToolCall("tc_search", "search_query").
+		AppendToolCallUpdate("tc_search", "completed").
+		AppendAgentMessage("entre tool calls").
+		AppendToolCall("tc_img", "image_query").
+		AppendToolCallUpdate("tc_img", "completed").
+		AppendAgentMessage("finalizado T20").
+		AppendSessionEnd()
+
+	fakeFS := fs.NewFakeFileSystem()
+	pfact := persistence.NewSessionPersistenceFactory(fakeFS)
+
+	runner := airuntime.NewACPRunner(
+		specs.Codex(),
+		airuntime.WithProber(proberCodexBinary()),
+		airuntime.WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}),
+		airuntime.WithPersistenceFactory(pfact),
+		airuntime.WithRenderer(&discardRenderer{}),
+	)
+
+	evidenceDir := "/evidence/codex-t20"
+	job := airuntime.Job{
+		Prompt:          "T20 codex tool calls",
+		WorkDir:         "/workdir",
+		EvidenceDir:     evidenceDir,
+		Quiet:           true,
+		Model:           specs.DefaultCodexModel,
+		ReasoningEffort: "medium",
+		AccessMode:      specs.AccessModeRestricted,
+	}
+
+	summary, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run (Codex T20): %v", err)
+	}
+	if summary.CancelReason != events.CancelReasonNone {
+		t.Errorf("CancelReason = %q, want none", summary.CancelReason)
+	}
+
+	// Verificar que summary tem ≥ 2 tool calls
+	if len(summary.ToolCalls) < 2 {
+		t.Errorf("ToolCalls len = %d, want >= 2", len(summary.ToolCalls))
+	}
+
+	// Verificar tool_calls.md contém os tool names nativos do Codex (D-09: aliasing adiado)
+	tcPath := evidenceDir + "/tool_calls.md"
+	tcData, readErr := fakeFS.ReadFile(tcPath)
+	if readErr != nil {
+		t.Fatalf("tool_calls.md não encontrado: %v", readErr)
+	}
+	tcContent := string(tcData)
+	if !strings.Contains(tcContent, "search_query") {
+		t.Errorf("tool_calls.md = %q, want to contain 'search_query'", tcContent)
+	}
+	if !strings.Contains(tcContent, "image_query") {
+		t.Errorf("tool_calls.md = %q, want to contain 'image_query'", tcContent)
+	}
+
+	// Verificar events.jsonl estrutura — mesmos kinds que Claude/Copilot
+	eventsPath := evidenceDir + "/events.jsonl"
+	eventsData, eventsErr := fakeFS.ReadFile(eventsPath)
+	if eventsErr != nil {
+		t.Fatalf("events.jsonl não encontrado: %v", eventsErr)
+	}
+	lines := strings.Split(strings.TrimSpace(string(eventsData)), "\n")
+	if len(lines) < 3 {
+		t.Fatalf("events.jsonl lines = %d, want >= 3", len(lines))
+	}
+
+	// Primeira linha deve ser runtime_init
+	var first map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(lines[0]), &first); err != nil {
+		t.Fatalf("unmarshal first line: %v", err)
+	}
+	var kind string
+	if err := json.Unmarshal(first["kind"], &kind); err != nil {
+		t.Fatalf("unmarshal first kind: %v", err)
+	}
+	if kind != string(events.KindRuntimeInit) {
+		t.Fatalf("first kind = %q, want runtime_init", kind)
+	}
+
+	// Última linha deve ser session_end
+	var last map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(lines[len(lines)-1]), &last); err != nil {
+		t.Fatalf("unmarshal last line: %v", err)
+	}
+	if err := json.Unmarshal(last["kind"], &kind); err != nil {
+		t.Fatalf("unmarshal last kind: %v", err)
+	}
+	if kind != string(events.KindSessionEnd) {
+		t.Fatalf("last kind = %q, want session_end", kind)
+	}
+
+	// Verificar execution_report.md contém campos esperados (mesmos que Claude/Copilot)
+	reportPath := evidenceDir + "/execution_report.md"
+	reportData, reportErr := fakeFS.ReadFile(reportPath)
+	if reportErr != nil {
+		t.Fatalf("execution_report.md não encontrado: %v", reportErr)
+	}
+	reportContent := string(reportData)
+	if !strings.Contains(reportContent, "events_count:") {
+		t.Errorf("execution_report.md = %q, want to contain 'events_count:'", reportContent)
+	}
+	if !strings.Contains(reportContent, "cancel_reason: none") {
+		t.Errorf("execution_report.md = %q, want to contain 'cancel_reason: none'", reportContent)
+	}
+	if !strings.Contains(reportContent, "launcher: binary") {
+		t.Errorf("execution_report.md = %q, want to contain 'launcher: binary'", reportContent)
+	}
+	if !strings.Contains(reportContent, "unknown_events_count: 0") {
+		t.Errorf("execution_report.md = %q, want to contain 'unknown_events_count: 0'", reportContent)
+	}
+
+	// Verificar que os dois tool names estão nos summaries
+	toolNames := make(map[string]bool)
+	for _, tc := range summary.ToolCalls {
+		toolNames[tc.Name] = true
+	}
+	if !toolNames["search_query"] {
+		t.Errorf("ToolCalls não contém 'search_query'; summaries = %v", summary.ToolCalls)
+	}
+	if !toolNames["image_query"] {
+		t.Errorf("ToolCalls não contém 'image_query'; summaries = %v", summary.ToolCalls)
+	}
+}
+
+// TestACPRunner_Codex_T21_ActivityWatchdog (T-21): Codex + fake server inativo →
+// ActivityWatchdog cancela via CancelCause(ErrActivityTimeout); CancelReason == "activity_timeout".
+func TestACPRunner_Codex_T21_ActivityWatchdog(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Script emite primeira mensagem rápida; segunda tem delay > timeout do watchdog.
+	script := acpfake.NewScript().
+		AppendAgentMessage("codex iniciou T21").
+		AppendAgentMessageWithDelay("nunca chega", 500*time.Millisecond).
+		AppendSessionEnd()
+
+	pfact, persist := newFakePersistenceFactory()
+
+	timeout, err := events.NewActivityTimeout(50 * time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runner := buildRunnerWithSpec(t, ctx, specs.Codex(), proberCodexBinary(), script, pfact)
+
+	job := airuntime.Job{
+		Prompt:          "T21 codex watchdog",
+		WorkDir:         t.TempDir(),
+		EvidenceDir:     t.TempDir(),
+		ActivityTimeout: timeout,
+		Quiet:           true,
+		Model:           specs.DefaultCodexModel,
+		ReasoningEffort: "medium",
+		AccessMode:      specs.AccessModeRestricted,
+	}
+
+	summary, runErr := runner.Run(ctx, job)
+
+	// Watchdog deve ter disparado com activity_timeout.
+	if runErr != nil {
+		if summary.CancelReason != events.CancelReasonActivityTimeout {
+			t.Errorf("CancelReason = %q, want activity_timeout when error present", summary.CancelReason)
+		}
+	} else {
+		// A sessão pode ter terminado antes do timeout; ambos são válidos.
+		t.Logf("T21: session ended before timeout; CancelReason=%q", summary.CancelReason)
+	}
+
+	// Não deve ser permission_denied neste cenário.
+	if summary.CancelReason == events.CancelReasonPermissionDenied {
+		t.Errorf("CancelReason = permission_denied unexpectedly")
+	}
+
+	// Verificar que EnrichReport foi chamado (execution_report enriquecido).
+	if persist.summary == nil {
+		t.Error("EnrichReport não foi chamado — execution_report não foi enriquecido")
+	}
+
+	// Verificar CancelReason no summary persistido (simula execution_report.md).
+	if runErr != nil && persist.summary != nil {
+		if persist.summary.CancelReason != events.CancelReasonActivityTimeout {
+			t.Errorf("persist.summary.CancelReason = %q, want activity_timeout", persist.summary.CancelReason)
+		}
+	}
+}
+
 // ---- verificação de unused imports ------------------------------------------
 var _ = probe.ResetCache // silenciar import não usado
 var _ = io.Discard

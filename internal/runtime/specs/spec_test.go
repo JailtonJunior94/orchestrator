@@ -44,3 +44,25 @@ func TestSpecAccessorsNonEmpty(t *testing.T) {
 		t.Error("NPMPackage() deve ser não-vazio para Claude")
 	}
 }
+
+// TestBootstrapArgsNoOpClaude (T-10) valida que Claude().BootstrapArgs retorna nil (no-op default).
+// Claude não injeta BootstrapArgsFunc — bootstrapArgs == nil → retorna nil.
+func TestBootstrapArgsNoOpClaude(t *testing.T) {
+	t.Parallel()
+
+	got := specs.Claude().BootstrapArgs("any", "any", nil, specs.AccessModeFull)
+	if got != nil {
+		t.Errorf("Claude().BootstrapArgs() = %v; want nil (no-op)", got)
+	}
+}
+
+// TestBootstrapArgsNoOpCopilot (T-11) valida que Copilot().BootstrapArgs retorna nil (no-op default).
+// Copilot não injeta BootstrapArgsFunc — bootstrapArgs == nil → retorna nil.
+func TestBootstrapArgsNoOpCopilot(t *testing.T) {
+	t.Parallel()
+
+	got := specs.Copilot().BootstrapArgs("any", "any", nil, specs.AccessModeFull)
+	if got != nil {
+		t.Errorf("Copilot().BootstrapArgs() = %v; want nil (no-op)", got)
+	}
+}

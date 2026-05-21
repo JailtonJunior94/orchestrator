@@ -18,12 +18,16 @@ Sem essa variável, nenhum dado é escrito. Para ativar permanentemente no proje
 
 ## Cobertura por Tool
 
-A partir de F1 (ADR-012), o evento `runtime_init` ganha cardinalidade `tool=copilot`
-quando o harness e invocado com `--runtime=acp --tool=copilot`. O campo `launcher`
-distingue `binary` (binario `copilot` local) de `npx` (fallback via npx). Os demais
-campos (`npm_version`, `sdk_version`) sao preenchidos com metadados reais do `Spec`
-Copilot (nao constantes Claude). O subcomando `telemetry report` agrega por `tool`,
-permitindo comparar invocacoes Copilot e Claude no mesmo relatorio.
+A partir de F1 (ADR-012 e ADR-013), os eventos de runtime ganham cardinalidade por ferramenta.
+O subcomando `telemetry report` agrega por `tool`, permitindo comparar invocacoes de
+Claude, Copilot e Codex no mesmo relatorio.
+
+### Copilot ACP (ADR-012)
+
+O evento `runtime_init` ganha cardinalidade `tool=copilot` quando o harness e invocado
+com `--runtime=acp --tool=copilot`. O campo `launcher` distingue `binary` (binario
+`copilot` local) de `npx` (fallback via npx). Os demais campos (`npm_version`,
+`sdk_version`) sao preenchidos com metadados reais do `Spec` Copilot (nao constantes Claude).
 
 Exemplo de linha no log com Copilot ACP:
 
@@ -31,9 +35,27 @@ Exemplo de linha no log com Copilot ACP:
 2026-05-21T10:30:00Z skill=execute-task ref=security.md tool=copilot launcher=binary
 ```
 
-As invariantes de paridade multi-tool (ADR-008) cobrem `tool=copilot` com os mesmos
-`kinds` de eventos que cobrem Claude. Nenhum novo `kind` de evento foi introduzido
-(ADR-010 invariante preservada).
+### Codex ACP (ADR-013)
+
+A partir de F1-Codex, o evento `runtime_init` tambem suporta `tool=codex` quando o
+harness e invocado com `--runtime=acp --tool=codex`. Os campos registrados sao:
+
+- `tool=codex` — identifica o runtime Codex ACP
+- `launcher=binary|npx` — distingue `codex-acp` local de fallback `npx`
+- `npm_version=0.14.0` — versao do adapter `@zed-industries/codex-acp`
+- `sdk_version=v0.13.0` — versao do SDK ACP Go (go.mod)
+
+Exemplo de linha no log com Codex ACP:
+
+```
+2026-05-21T10:30:00Z skill=execute-task ref=security.md tool=codex launcher=binary npm_version=0.14.0 sdk_version=v0.13.0
+```
+
+As invariantes de paridade multi-tool (ADR-008) cobrem `tool=codex` com os **mesmos
+`kinds` de eventos** que cobrem Claude e Copilot (`runtime_init`, `tool_call`,
+`session_end`, etc.). Nenhum novo `kind` de evento foi introduzido para Codex
+(ADR-010 invariante preservada). Tool names Codex-nativos (`search_query`, `image_query`)
+sao preservados ate F2-Codex implementar aliasing canonico.
 
 ---
 

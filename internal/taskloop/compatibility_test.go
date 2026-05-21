@@ -21,6 +21,7 @@ func TestCompatibilityTable_IsSupported(t *testing.T) {
 		{name: "claude + claude-opus-4-6", tool: "claude", model: "claude-opus-4-6", want: true},
 		{name: "claude + claude-sonnet-4-6", tool: "claude", model: "claude-sonnet-4-6", want: true},
 		{name: "claude + claude-haiku-4-5", tool: "claude", model: "claude-haiku-4-5", want: true},
+		{name: "codex + gpt-5.5", tool: "codex", model: "gpt-5.5", want: true},
 		{name: "codex + gpt-5.4", tool: "codex", model: "gpt-5.4", want: true},
 		{name: "codex + gpt-5.4-mini", tool: "codex", model: "gpt-5.4-mini", want: true},
 		{name: "codex + gpt-5.3-codex", tool: "codex", model: "gpt-5.3-codex", want: true},
@@ -80,7 +81,7 @@ func TestCompatibilityTable_Models(t *testing.T) {
 		wantNil   bool
 	}{
 		{name: "claude", tool: "claude", wantLen: 4, wantFirst: "claude-opus-4-7"},
-		{name: "codex", tool: "codex", wantLen: 4, wantFirst: "gpt-5.4"},
+		{name: "codex", tool: "codex", wantLen: 5, wantFirst: "gpt-5.5"},
 		{name: "gemini", tool: "gemini", wantLen: 8, wantFirst: "auto"},
 		{name: "copilot", tool: "copilot", wantLen: 6, wantFirst: "claude-sonnet-4.5"},
 		{name: "ferramenta desconhecida retorna nil", tool: "desconhecida", wantNil: true},
@@ -269,6 +270,40 @@ func TestValidateModelForIDE(t *testing.T) {
 		}
 		if !errors.Is(err, ErrModeloIncompativel) {
 			t.Errorf("errors.Is(err, ErrModeloIncompativel) = false; err = %v", err)
+		}
+	})
+}
+
+// TestCodexCompatibilityTable_T34_T35 valida T-34 e T-35 da tarefa 8.0:
+// T-34: gpt-5.5 deve ser aceito pela ferramenta codex sem --allow-unknown-model.
+// T-35: modelo nao catalogado deve ser rejeitado sem a flag; aceito com allowUnknown=true.
+func TestCodexCompatibilityTable_T34_T35(t *testing.T) {
+	t.Parallel()
+
+	t.Run("T-34: codex + gpt-5.5 aceito sem allow-unknown-model", func(t *testing.T) {
+		t.Parallel()
+		err := ValidateModelForIDE("codex", "gpt-5.5", false)
+		if err != nil {
+			t.Errorf("T-34: nao esperava erro para codex+gpt-5.5, obteve: %v", err)
+		}
+	})
+
+	t.Run("T-35: codex + gpt-4 rejeitado sem allow-unknown-model", func(t *testing.T) {
+		t.Parallel()
+		err := ValidateModelForIDE("codex", "gpt-4", false)
+		if err == nil {
+			t.Fatal("T-35: esperava erro para codex+gpt-4 sem allowUnknown, mas nao houve erro")
+		}
+		if !errors.Is(err, ErrModeloIncompativel) {
+			t.Errorf("T-35: errors.Is(err, ErrModeloIncompativel) = false; err = %v", err)
+		}
+	})
+
+	t.Run("T-35: codex + gpt-4 aceito com allow-unknown-model=true", func(t *testing.T) {
+		t.Parallel()
+		err := ValidateModelForIDE("codex", "gpt-4", true)
+		if err != nil {
+			t.Errorf("T-35: allowUnknown=true deve aceitar qualquer modelo, obteve: %v", err)
 		}
 	})
 }

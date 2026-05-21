@@ -20,6 +20,7 @@ import (
 // Para IDs desconhecidos, use o fallback "tasks/adr/" documentado em resolve().
 var adrByID = map[string]string{
 	"claude":  "tasks/adr/009-acp-protocol-adoption.md",
+	"codex":   "tasks/adr/013-codex-cli-acp-native.md",
 	"copilot": "tasks/adr/012-copilot-cli-acp-native.md",
 }
 

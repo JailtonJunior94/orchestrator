@@ -4519,6 +4519,8 @@ func TestResolveACPSpec(t *testing.T) {
 	}{
 		// Claude: command e "claude-agent-acp" (binario canonico do SDK ACP)
 		{tool: "claude", wantID: "claude", wantCommand: "claude-agent-acp"},
+		// Codex: command e "codex-acp" (binario canonico do codex-acp adapter — ADR-013 D-01)
+		{tool: "codex", wantID: "codex", wantCommand: "codex-acp"},
 		// Copilot: command e "copilot" (binario canonico do Copilot CLI)
 		{tool: "copilot", wantID: "copilot", wantCommand: "copilot"},
 		// Fallback: tool desconhecido → specs.Claude()
@@ -4536,5 +4538,154 @@ func TestResolveACPSpec(t *testing.T) {
 				t.Errorf("resolveACPSpec(%q).Command = %q, want %q", tt.tool, spec.Command, tt.wantCommand)
 			}
 		})
+	}
+}
+
+// TestT26_ClaudeRegressionWithCodexFlags (T-26 — RF-15): Options com Tool="claude",
+// Runtime="acp", ReasoningEffort="high", AccessMode="full" devem fluir corretamente.
+// O invoker ACP é criado via acpInvokerFactory para isolar o teste.
+// O comportamento de Claude permanece idêntico: Spec.BootstrapArgs no-op retorna nil.
+func TestT26_ClaudeRegressionWithCodexFlags(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	var capturedOpts Options
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
+		capturedOpts = opts
+		return &callbackInvoker{
+			binary: "claude-agent-acp",
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+				return "done", "", 0, nil
+			},
+		}
+	}
+
+	opts := Options{
+		PRDFolder:       prd,
+		Tool:            "claude",
+		Runtime:         "acp",
+		MaxIterations:   1,
+		Timeout:         5 * time.Second,
+		ReportPath:      prd + "/report.md",
+		ReasoningEffort: "high",
+		AccessMode:      "full",
+		AddDirs:         []string{"/extra/dir"},
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	// Verificar que os campos Codex chegaram ao factory (propagação correta)
+	if capturedOpts.ReasoningEffort != "high" {
+		t.Errorf("ReasoningEffort = %q, want %q", capturedOpts.ReasoningEffort, "high")
+	}
+	if capturedOpts.AccessMode != "full" {
+		t.Errorf("AccessMode = %q, want %q", capturedOpts.AccessMode, "full")
+	}
+	if len(capturedOpts.AddDirs) != 1 || capturedOpts.AddDirs[0] != "/extra/dir" {
+		t.Errorf("AddDirs = %v, want [\"/extra/dir\"]", capturedOpts.AddDirs)
+	}
+}
+
+// TestT27_LegacyPathDoesNotConsumeCodexFields (T-27 — RF-15): Options com
+// Tool="codex", Runtime="legacy" (com ou sem flags Codex) deve rotear para o
+// invoker legado (via invokerFactory) e os novos campos de Options devem ser ignorados.
+// O caminho codexInvoker legado (internal/taskloop/agent.go) permanece inalterado.
+func TestT27_LegacyPathDoesNotConsumeCodexFields(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	acpFactoryCalled := false
+	legacyInvokerCalled := false
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
+		acpFactoryCalled = true
+		return &callbackInvoker{
+			binary: "codex-acp",
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				return "done", "", 0, nil
+			},
+		}
+	}
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		legacyInvokerCalled = true
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+				return "done", "", 0, nil
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:       prd,
+		Tool:            "codex",
+		Runtime:         "legacy", // caminho legado
+		MaxIterations:   1,
+		Timeout:         5 * time.Second,
+		ReportPath:      prd + "/report.md",
+		ReasoningEffort: "high",   // campos Codex presentes mas devem ser ignorados
+		AccessMode:      "full",   // no caminho legacy
+		AddDirs:         []string{"/extra"},
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	// O caminho legacy deve usar invokerFactory, não acpInvokerFactory
+	if acpFactoryCalled {
+		t.Error("acpInvokerFactory foi chamado no caminho legacy — deveria usar invokerFactory")
+	}
+	if !legacyInvokerCalled {
+		t.Error("invokerFactory (caminho legacy) não foi chamado")
+	}
+}
+
+// TestT32_TaskloopRegressionSuite verifica que Options{} com campos Codex nulos/zero
+// não quebra o fluxo normal quando Runtime="acp" e Tool="claude".
+// Garante regressão zero para fluxos existentes de Claude/Copilot.
+func TestT32_TaskloopRegressionSuite(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
+		// Campos Codex devem ter zero-value quando não especificados
+		if opts.ReasoningEffort != "" {
+			t.Errorf("ReasoningEffort esperado vazio, got %q", opts.ReasoningEffort)
+		}
+		if opts.AccessMode != "" {
+			t.Errorf("AccessMode esperado vazio, got %q", opts.AccessMode)
+		}
+		if opts.AddDirs != nil {
+			t.Errorf("AddDirs esperado nil, got %v", opts.AddDirs)
+		}
+		return &callbackInvoker{
+			binary: "claude-agent-acp",
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+				return "done", "", 0, nil
+			},
+		}
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "claude",
+		Runtime:       "acp",
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		// ReasoningEffort, AccessMode, AddDirs = zero-value (campos não fornecidos)
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
 	}
 }
