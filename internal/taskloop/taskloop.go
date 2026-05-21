@@ -2,6 +2,7 @@ package taskloop
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/JailtonJunior94/ai-spec-harness/internal/agents"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
@@ -38,15 +40,21 @@ type Options struct {
 	Runtime         string        // "legacy" (default) ou "acp"
 	ActivityTimeout time.Duration // timeout de inatividade do watchdog ACP; 0 = desabilitado
 	Quiet           bool          // suprime stream humano quando true
+
+	// AgentName e o nome do agente declarativo (AGENT.md) a ser usado (tarefa 6.0).
+	// Quando vazio, o fluxo legado via Tool/Profiles e preservado integralmente (RF-14).
+	// Quando preenchido, o Registry resolve o agente e deriva ProfileConfig via ResolveProfileFromAgent.
+	AgentName string
 }
 
 // Service orquestra a execucao sequencial de tasks de um PRD folder.
 type Service struct {
-	fsys            fs.FileSystem
-	printer         *output.Printer
-	invokerFactory  func(tool string) (AgentInvoker, error)
-	binaryChecker   func(AgentInvoker) error // nil = usar CheckAgentBinary
-	liveOutOverride io.Writer                // nil = usar os.Stderr; permite injecao em testes
+	fsys              fs.FileSystem
+	printer           *output.Printer
+	invokerFactory    func(tool string) (AgentInvoker, error)
+	acpInvokerFactory func(opts Options) AgentInvoker
+	binaryChecker     func(AgentInvoker) error // nil = usar CheckAgentBinary
+	liveOutOverride   io.Writer                // nil = usar os.Stderr; permite injecao em testes
 }
 
 // NewService cria um novo Service de task-loop.
@@ -172,7 +180,7 @@ func (s *Service) printDryRunAdvancedHeader(opts Options, absFolder, workDir str
 	}
 
 	s.printer.DryRun("--- preview do template (task %s) ---", firstTask.ID)
-	for _, line := range strings.Split(preview, "\n") {
+	for line := range strings.SplitSeq(preview, "\n") {
 		s.printer.DryRun("%s", line)
 	}
 	s.printer.DryRun("--- fim do preview ---")
@@ -190,6 +198,40 @@ func (s *Service) Execute(opts Options) error {
 		path := filepath.Join(absFolder, required)
 		if !s.fsys.Exists(path) {
 			return fmt.Errorf("arquivo obrigatorio nao encontrado: %s", path)
+		}
+	}
+
+	// Pre-flight: resolver agente declarativo quando AgentName estiver preenchido (tarefa 6.0).
+	// Quando AgentName == "", o fluxo legado via Tool/Profiles e preservado integralmente (RF-14).
+	var resolvedAgent *agents.ResolvedAgent
+	var agentCatalog []agents.ResolvedAgent
+	if opts.AgentName != "" {
+		workDirForAgent, wdErr := resolveWorkDir(absFolder, s.fsys)
+		if wdErr != nil {
+			workDirForAgent = absFolder
+		}
+		home, _ := os.UserHomeDir()
+		reg := agents.NewDefaultRegistry(s.fsys, workDirForAgent, home)
+		catalog, _ := reg.Discover(context.Background())
+		agentCatalog = catalog
+		agent, agentErr := reg.Resolve(opts.AgentName)
+		if agentErr != nil {
+			return fmt.Errorf("agente %q nao encontrado: %w", opts.AgentName, agentErr)
+		}
+		resolvedAgent = &agent
+
+		// Derivar ProfileConfig do agente quando Profiles nao foi explicitamente configurado.
+		if opts.Profiles == nil {
+			override := agents.RuntimeOverride{}
+			agentProfile, profileErr := ResolveProfileFromAgent(agent, override, opts.AllowUnknownModel)
+			if profileErr != nil {
+				return fmt.Errorf("erro ao derivar perfil do agente %q: %w", opts.AgentName, profileErr)
+			}
+			opts.Profiles = agentProfile
+		}
+		// Forcar runtime ACP para o fluxo de agente declarativo.
+		if opts.Runtime == "" || opts.Runtime == "legacy" {
+			opts.Runtime = "acp"
 		}
 	}
 
@@ -245,12 +287,17 @@ func (s *Service) Execute(opts Options) error {
 	// Criar invoker: ACP quando runtime=acp, legado nos demais casos.
 	var invoker AgentInvoker
 	if opts.Runtime == "acp" {
-		factory := persistence.NewSessionPersistenceFactory(fs.NewOSFileSystem())
-		runner := airuntime.NewACPRunner(
-			specs.Claude(),
-			airuntime.WithPersistenceFactory(factory),
-		)
-		invoker = NewACPInvoker(runner, opts.Quiet, opts.ActivityTimeout)
+		if s.acpInvokerFactory != nil {
+			invoker = s.acpInvokerFactory(opts)
+		} else {
+			spec := resolveACPSpec(executorTool)
+			factory := persistence.NewSessionPersistenceFactory(fs.NewOSFileSystem())
+			runner := airuntime.NewACPRunner(
+				spec,
+				airuntime.WithPersistenceFactory(factory),
+			)
+			invoker = NewACPInvoker(runner, opts.Quiet, opts.ActivityTimeout)
+		}
 	} else {
 		var invokerErr error
 		invoker, invokerErr = s.createInvokerWithFallback(executorTool, opts.ExecutorFallbackModel)
@@ -264,8 +311,10 @@ func (s *Service) Execute(opts Options) error {
 		if checker == nil {
 			checker = CheckAgentBinary
 		}
-		if err := checker(invoker); err != nil {
-			return err
+		if opts.Runtime != "acp" {
+			if err := checker(invoker); err != nil {
+				return err
+			}
 		}
 
 		// Pre-flight: aviso antecipado de autenticacao para claude.
@@ -387,7 +436,7 @@ func (s *Service) Execute(opts Options) error {
 			relPRD = absFolder
 		}
 
-		promptCtx := BuildPromptContext(relPRD, workDir, s.fsys)
+		promptCtx := BuildPromptContext(relPRD, workDir, s.fsys, resolvedAgent, agentCatalog)
 		prompt := BuildPrompt(relTaskFile, relPRD, promptCtx)
 
 		s.printer.Step("iteracao %d: executando task %s (%s)", iteration, task.ID, task.Title)
@@ -509,6 +558,9 @@ func (s *Service) Execute(opts Options) error {
 		}
 
 		if invokeErr != nil {
+			if opts.Runtime == "acp" && errors.Is(invokeErr, airuntime.ErrLauncherUnavailable) {
+				return invokeErr
+			}
 			s.printer.Error("iteracao %d: %v", iteration, invokeErr)
 		} else if exitCode != 0 {
 			// Nota especifica por ferramenta para output vazio em SIGKILL (exit -1).
@@ -797,6 +849,26 @@ func classifyIterationOutcome(
 	}
 
 	return outcome
+}
+
+// acpSpecCatalog mapeia tool name → construtor de Spec ACP.
+// Espelha runtimeACPCatalog em cmd/ai_spec_harness/task_loop.go (D-04):
+// a tabela CLI é o gate de validação de --runtime=acp; este mapa é o resolvedor
+// interno do Service.Execute para o caminho padrão (acpInvokerFactory == nil).
+// Adicionar nova entrada aqui ao registrar novo tool ACP no catálogo CLI.
+var acpSpecCatalog = map[string]func() specs.Spec{
+	"claude":  specs.Claude,
+	"copilot": specs.Copilot,
+}
+
+// resolveACPSpec retorna a Spec ACP correspondente ao tool informado.
+// Quando o tool não está no catálogo (ex: tool vazio ou não-ACP), retorna specs.Claude()
+// como fallback seguro — a validação no CLI já bloqueou tools inválidos antes de chegar aqui.
+func resolveACPSpec(tool string) specs.Spec {
+	if ctor, ok := acpSpecCatalog[tool]; ok {
+		return ctor()
+	}
+	return specs.Claude()
 }
 
 // resolveWorkDir tenta encontrar a raiz do projeto (diretorio que contem go.mod, .git, ou AGENTS.md).

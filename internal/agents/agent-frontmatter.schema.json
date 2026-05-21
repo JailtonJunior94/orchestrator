@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agent-frontmatter.schema.json",
+  "title": "AGENT.md Frontmatter",
+  "description": "Schema de validacao para o bloco frontmatter de arquivos AGENT.md.",
+  "type": "object",
+  "required": ["name", "description", "version"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "$comment": "Identificador do agente. Deve coincidir com o nome do diretorio pai (RF-06).",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "description": {
+      "$comment": "Descricao funcional do agente.",
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "$comment": "Versao semantica do agente no formato X.Y.Z ou vX.Y.Z (pre-release permitido).",
+      "type": "string",
+      "pattern": "^v?\\d+\\.\\d+\\.\\d+(-[A-Za-z0-9.-]+)?$"
+    },
+    "runtime": {
+      "$comment": "Defaults de configuracao de runtime declarados para o agente.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ide": {
+          "$comment": "Ferramenta de IDE alvo. Valores aceitos: claude, codex, gemini, copilot.",
+          "type": "string",
+          "enum": ["claude", "codex", "gemini", "copilot"]
+        },
+        "model": {
+          "$comment": "Modelo desejado (ex.: claude-opus-4-7). Validado contra CompatibilityTable em tarefa 8.0.",
+          "type": "string"
+        },
+        "reasoning_effort": {
+          "$comment": "Esforco de raciocinio desejado.",
+          "type": "string",
+          "enum": ["low", "medium", "high"]
+        },
+        "access_mode": {
+          "$comment": "Modo de acesso desejado.",
+          "type": "string",
+          "enum": ["bypass-permissions", "review", "readonly"]
+        }
+      }
+    }
+  }
+}

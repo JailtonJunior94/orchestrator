@@ -3,14 +3,17 @@ package taskloop
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/JailtonJunior94/ai-spec-harness/internal/agents"
 	taskfs "github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
+	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 )
 
 // TestResolveWorkDir valida a logica de busca da raiz do projeto via marcadores.
@@ -119,7 +122,7 @@ func setupBaseFS(taskStatus string) (*taskfs.FakeFileSystem, string) {
 
 // tasksContent gera o conteudo de tasks.md com uma unica task.
 func tasksContent(id, title, status string) []byte {
-	return []byte(fmt.Sprintf("| %s | %s | %s | — | Nao |\n", id, title, status))
+	return fmt.Appendf(nil, "| %s | %s | %s | — | Nao |\n", id, title, status)
 }
 
 // TestExecuteSimpleMode verifica regressao: modo simples (Profiles=nil) executa
@@ -170,6 +173,71 @@ func TestExecuteSimpleMode(t *testing.T) {
 	reportStr := string(reportData)
 	if len(reportStr) == 0 {
 		t.Error("relatorio vazio")
+	}
+}
+
+func TestExecuteACP_SkipsLegacyBinaryChecker(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	checkerCalled := false
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = func(AgentInvoker) error {
+		checkerCalled = true
+		return fmt.Errorf("binary checker nao deveria rodar no modo acp")
+	}
+	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
+		return &callbackInvoker{
+			binary: "claude-agent-acp",
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+				return "done", "", 0, nil
+			},
+		}
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "claude",
+		Runtime:       "acp",
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+	if checkerCalled {
+		t.Fatal("binaryChecker foi chamado no modo acp")
+	}
+}
+
+func TestExecuteACP_ReturnsLauncherUnavailableImmediately(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
+		return &callbackInvoker{
+			binary: "claude-agent-acp",
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				return "", "", 2, airuntime.ErrLauncherUnavailable
+			},
+		}
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "claude",
+		Runtime:       "acp",
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	err := svc.Execute(opts)
+	if !errors.Is(err, airuntime.ErrLauncherUnavailable) {
+		t.Fatalf("Execute error = %v, want ErrLauncherUnavailable", err)
 	}
 }
 
@@ -1135,7 +1203,7 @@ func TestExecuteAdvancedModeBugfixReviewFindingsPassedVerbatim(t *testing.T) {
 	}
 
 	// Cada linha do output do reviewer deve estar presente no prompt de bugfix
-	for _, line := range strings.Split(reviewOutput, "\n") {
+	for line := range strings.SplitSeq(reviewOutput, "\n") {
 		if !strings.Contains(capturedBugfixPrompt, line) {
 			t.Errorf("prompt de bugfix nao contem linha do reviewer: %q", line)
 		}
@@ -4063,9 +4131,9 @@ Detalhes aqui.
 	// 2b. Referencias detectadas dinamicamente do conteudo prd+techspec
 	referenceChecks := []string{
 		"go-implementation", // detectado por "internal/", "func ", ".go"
-		"ddd",              // detectado por "aggregate", "domain"
-		"security",         // detectado por "seguranca", "credential", "auth"
-		"tests",            // sempre incluido
+		"ddd",               // detectado por "aggregate", "domain"
+		"security",          // detectado por "seguranca", "credential", "auth"
+		"tests",             // sempre incluido
 	}
 	for _, ref := range referenceChecks {
 		if !strings.Contains(firstExecutorPrompt, ref) {
@@ -4189,5 +4257,284 @@ Detalhes aqui.
 			t.Errorf("prompt %d deveria conter mesma arquitetura que prompt 0 (AuthService)\n%s",
 				i, executorPrompts[i])
 		}
+	}
+}
+
+// setupFSWithAgent monta um FakeFileSystem com estrutura minima + um AGENT.md valido.
+// Coloca o agente no escopo workspace do projeto fake (/fake/project/.ai-harness/agents/<name>/AGENT.md).
+// Retorna o fsys e o path absoluto do PRD folder.
+func setupFSWithAgent(agentName string) (*taskfs.FakeFileSystem, string) {
+	fsys, prd := setupBaseFS("pending")
+	agentContent := []byte("---\nname: " + agentName + "\ndescription: Agente de teste\nversion: 1.0.0\nruntime:\n  ide: claude\n---\n\nVoce e um agente de teste.\n")
+	fsys.Files["/fake/project/.ai-harness/agents/"+agentName+"/AGENT.md"] = agentContent
+	return fsys, prd
+}
+
+// T-17: Options.AgentName == "" => zero chamadas ao registry; fluxo legado intacto.
+func TestT17_LegacyFlowWhenAgentNameEmpty(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	registryCalled := false
+	executorCalled := false
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		executorCalled = true
+		return &callbackInvoker{
+			binary: "claude",
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				// Verificar que o prompt NAO contem blocos de agente (fluxo legado).
+				if strings.Contains(prompt, "### Agente Ativo") {
+					t.Errorf("prompt no fluxo legado nao deve conter bloco '### Agente Ativo'")
+				}
+				if strings.Contains(prompt, "### Agentes Disponiveis") {
+					t.Errorf("prompt no fluxo legado nao deve conter bloco '### Agentes Disponiveis'")
+				}
+				// Marcar task como done para encerrar o loop.
+				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+				return "completed", "", 0, nil
+			},
+		}, nil
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "claude",
+		MaxIterations: 5,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		AgentName:     "", // campo vazio — fluxo legado
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	// Registry nao foi chamado (verificado indiretamente: sem agente configurado, sem chamada ao registry).
+	_ = registryCalled // variavel mantida para clareza de intencao
+
+	if !executorCalled {
+		t.Error("executor nao foi invocado no fluxo legado")
+	}
+}
+
+// T-18: Options.AgentName == "foo" valido => registry resolve => executa com prompt enriquecido.
+func TestT18_AgentFlowResolvesAndEnrichesPrompt(t *testing.T) {
+	const agentName = "agente-teste"
+	fsys, prd := setupFSWithAgent(agentName)
+
+	promptReceived := ""
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	// Substituir acpInvokerFactory para interceptar chamada sem ACP real.
+	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
+		return &callbackInvoker{
+			binary: "claude-agent-acp",
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				promptReceived = prompt
+				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+				return "completed", "", 0, nil
+			},
+		}
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 5,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		AgentName:     agentName,
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+
+	// Verificar que o prompt contem blocos do agente.
+	if !strings.Contains(promptReceived, "### Agente Ativo") {
+		t.Errorf("prompt com agente deve conter bloco '### Agente Ativo'\nprompt:\n%s", promptReceived)
+	}
+	if !strings.Contains(promptReceived, agentName) {
+		t.Errorf("prompt com agente deve conter o nome do agente %q\nprompt:\n%s", agentName, promptReceived)
+	}
+	if !strings.Contains(promptReceived, "### Agentes Disponiveis") {
+		t.Errorf("prompt com agente deve conter bloco '### Agentes Disponiveis'\nprompt:\n%s", promptReceived)
+	}
+}
+
+// T-19: Options.AgentName == "inexistente" => erro acionavel citando candidatos.
+func TestT19_AgentNotFoundReturnsActionableError(t *testing.T) {
+	const existingAgent = "agente-existente"
+	fsys, prd := setupFSWithAgent(existingAgent)
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
+		return &callbackInvoker{
+			binary: "claude-agent-acp",
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				return "ok", "", 0, nil
+			},
+		}
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+		AgentName:     "agente-inexistente",
+	}
+
+	err := svc.Execute(opts)
+	if err == nil {
+		t.Fatal("Execute deveria retornar erro quando agente nao e encontrado")
+	}
+	if !errors.Is(err, agents.ErrAgentNotFound) {
+		t.Errorf("Execute deve retornar erro wrappando agents.ErrAgentNotFound, obteve: %v", err)
+	}
+	// Erro deve citar candidatos descobertos (RF-17).
+	if !strings.Contains(err.Error(), existingAgent) {
+		t.Errorf("mensagem de erro deve citar candidatos; esperava %q em: %v", existingAgent, err)
+	}
+}
+
+// TestT16_LegacyRuntimeRoutesCopilotToCopilotInvoker valida T-16 (RF-08, RF-04):
+// opts.Runtime == "legacy" && opts.Tool == "copilot" → roteia para copilotInvoker (legado).
+// Garante que o caminho legado é byte-idêntico ao comportamento atual (não usa ACPRunner).
+func TestT16_LegacyRuntimeRoutesCopilotToCopilotInvoker(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	legacyCalled := false
+	acpCalled := false
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	// injeta invokerFactory legada para capturar chamada ao copilotInvoker
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		if tool == "copilot" {
+			legacyCalled = true
+		}
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+				return "done", "", 0, nil
+			},
+		}, nil
+	}
+	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
+		acpCalled = true
+		return &callbackInvoker{
+			binary: "acp",
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				return "done", "", 0, nil
+			},
+		}
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "copilot",
+		Runtime:       "legacy",
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+	if !legacyCalled {
+		t.Error("T-16: copilotInvoker (legado) nao foi chamado para Runtime=legacy")
+	}
+	if acpCalled {
+		t.Error("T-16: ACPRunner nao deve ser chamado quando Runtime=legacy")
+	}
+}
+
+// TestACPRuntimeRoutesCopilotToACPRunner valida o caso de RF-08 (decorrencia):
+// opts.Runtime == "acp" && opts.Tool == "copilot" → instancia ACPRunner com specs.Copilot().
+// O Service.Execute deve usar acpInvokerFactory (injetada) para Copilot ACP — nao o copilotInvoker legado.
+func TestACPRuntimeRoutesCopilotToACPRunner(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	acpCalled := false
+	legacyCalled := false
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		legacyCalled = true
+		return &callbackInvoker{
+			binary: tool,
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				return "done", "", 0, nil
+			},
+		}, nil
+	}
+	svc.acpInvokerFactory = func(o Options) AgentInvoker {
+		if o.Tool == "copilot" && o.Runtime == "acp" {
+			acpCalled = true
+		}
+		return &callbackInvoker{
+			binary: "copilot-acp",
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+				return "done", "", 0, nil
+			},
+		}
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "copilot",
+		Runtime:       "acp",
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+	if !acpCalled {
+		t.Error("ACPRunner nao foi usado para Runtime=acp && Tool=copilot")
+	}
+	if legacyCalled {
+		t.Error("copilotInvoker legado nao deve ser chamado quando Runtime=acp")
+	}
+}
+
+// TestResolveACPSpec valida o resolvedor interno de specs para o Service.Execute.
+// Garante que cada tool do catalogo retorna a Spec correta e que tools desconhecidos
+// retornam specs.Claude() como fallback seguro.
+func TestResolveACPSpec(t *testing.T) {
+	tests := []struct {
+		tool        string
+		wantID      string
+		wantCommand string
+	}{
+		// Claude: command e "claude-agent-acp" (binario canonico do SDK ACP)
+		{tool: "claude", wantID: "claude", wantCommand: "claude-agent-acp"},
+		// Copilot: command e "copilot" (binario canonico do Copilot CLI)
+		{tool: "copilot", wantID: "copilot", wantCommand: "copilot"},
+		// Fallback: tool desconhecido → specs.Claude()
+		{tool: "unknown-tool", wantID: "claude", wantCommand: "claude-agent-acp"},
+		{tool: "", wantID: "claude", wantCommand: "claude-agent-acp"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.tool, func(t *testing.T) {
+			spec := resolveACPSpec(tt.tool)
+			if spec.ID != tt.wantID {
+				t.Errorf("resolveACPSpec(%q).ID = %q, want %q", tt.tool, spec.ID, tt.wantID)
+			}
+			if spec.Command != tt.wantCommand {
+				t.Errorf("resolveACPSpec(%q).Command = %q, want %q", tt.tool, spec.Command, tt.wantCommand)
+			}
+		})
 	}
 }

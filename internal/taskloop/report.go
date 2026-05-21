@@ -162,8 +162,10 @@ func (r *Report) renderSimples() []byte {
 				}
 				b.WriteString("- **Agent Output:**\n")
 				b.WriteString("  ```\n")
-				for _, line := range strings.Split(output, "\n") {
-					b.WriteString("  " + line + "\n")
+				for line := range strings.SplitSeq(output, "\n") {
+					b.WriteString("  ")
+					b.WriteString(line)
+					b.WriteByte('\n')
 				}
 				b.WriteString("  ```\n")
 			}
@@ -302,8 +304,10 @@ func (r *Report) renderAvancado() []byte {
 				}
 				b.WriteString("- **Agent Output:**\n")
 				b.WriteString("  ```\n")
-				for _, line := range strings.Split(output, "\n") {
-					b.WriteString("  " + line + "\n")
+				for line := range strings.SplitSeq(output, "\n") {
+					b.WriteString("  ")
+					b.WriteString(line)
+					b.WriteByte('\n')
 				}
 				b.WriteString("  ```\n")
 			}
@@ -322,8 +326,10 @@ func (r *Report) renderAvancado() []byte {
 					}
 					b.WriteString("- **Review Output:**\n")
 					b.WriteString("  ```\n")
-					for _, line := range strings.Split(output, "\n") {
-						b.WriteString("  " + line + "\n")
+					for line := range strings.SplitSeq(output, "\n") {
+						b.WriteString("  ")
+						b.WriteString(line)
+						b.WriteByte('\n')
 					}
 					b.WriteString("  ```\n")
 				}
@@ -343,8 +349,10 @@ func (r *Report) renderAvancado() []byte {
 					}
 					b.WriteString("- **Bugfix Output:**\n")
 					b.WriteString("  ```\n")
-					for _, line := range strings.Split(output, "\n") {
-						b.WriteString("  " + line + "\n")
+					for line := range strings.SplitSeq(output, "\n") {
+						b.WriteString("  ")
+						b.WriteString(line)
+						b.WriteByte('\n')
 					}
 					b.WriteString("  ```\n")
 				}

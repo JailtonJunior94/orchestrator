@@ -198,3 +198,94 @@ func TestErrModeloIncompativel_Sentinela(t *testing.T) {
 		}
 	})
 }
+
+// TestValidateModelForIDE cobre o caso de teste T-13 (RF-09):
+// validacao cruzada runtime.model x runtime.ide via CompatibilityTable
+// quando ambos os campos estao declarados em AGENT.md.
+func TestValidateModelForIDE(t *testing.T) {
+	t.Parallel()
+
+	t.Run("T-13 positivo: claude + claude-opus-4-7 — aceito", func(t *testing.T) {
+		t.Parallel()
+		err := ValidateModelForIDE("claude", "claude-opus-4-7", false)
+		if err != nil {
+			t.Errorf("nao esperava erro, obteve: %v", err)
+		}
+	})
+
+	t.Run("T-13 negativo: claude + gpt-5.4 — erro citando modelos validos", func(t *testing.T) {
+		t.Parallel()
+		err := ValidateModelForIDE("claude", "gpt-5.4", false)
+		if err == nil {
+			t.Fatal("esperava erro para modelo incompativel, mas nao houve erro")
+		}
+		if !errors.Is(err, ErrModeloIncompativel) {
+			t.Errorf("errors.Is(err, ErrModeloIncompativel) = false; err = %v", err)
+		}
+		// Mensagem deve citar o IDE e listar modelos validos.
+		errMsg := err.Error()
+		if !containsAll(errMsg, "claude", "gpt-5.4", "claude-opus-4-7") {
+			t.Errorf("mensagem de erro nao cita ide e modelos validos: %q", errMsg)
+		}
+	})
+
+	t.Run("T-13 bypass: claude + modelo-novo + allowUnknown=true — aceito", func(t *testing.T) {
+		t.Parallel()
+		err := ValidateModelForIDE("claude", "modelo-novo-futuro", true)
+		if err != nil {
+			t.Errorf("allowUnknown=true deve ignorar validacao, obteve: %v", err)
+		}
+	})
+
+	t.Run("modelo vazio — sem validacao, sem erro", func(t *testing.T) {
+		t.Parallel()
+		err := ValidateModelForIDE("claude", "", false)
+		if err != nil {
+			t.Errorf("modelo vazio deve pular validacao, obteve: %v", err)
+		}
+	})
+
+	t.Run("ide desconhecido com modelo — sem erro (IDE nao mapeado, deixa mapIDEToSpec capturar)", func(t *testing.T) {
+		t.Parallel()
+		err := ValidateModelForIDE("ferramenta-desconhecida", "algum-modelo", false)
+		if err != nil {
+			t.Errorf("ide desconhecido nao deve retornar ErrModeloIncompativel aqui; obteve: %v", err)
+		}
+	})
+
+	t.Run("gemini + gemini-2.5-pro — aceito", func(t *testing.T) {
+		t.Parallel()
+		err := ValidateModelForIDE("gemini", "gemini-2.5-pro", false)
+		if err != nil {
+			t.Errorf("nao esperava erro, obteve: %v", err)
+		}
+	})
+
+	t.Run("codex + claude-opus-4-7 — incompativel, cita modelos validos", func(t *testing.T) {
+		t.Parallel()
+		err := ValidateModelForIDE("codex", "claude-opus-4-7", false)
+		if err == nil {
+			t.Fatal("esperava erro para modelo incompativel")
+		}
+		if !errors.Is(err, ErrModeloIncompativel) {
+			t.Errorf("errors.Is(err, ErrModeloIncompativel) = false; err = %v", err)
+		}
+	})
+}
+
+// containsAll retorna true se s contem todos os substrings informados.
+func containsAll(s string, subs ...string) bool {
+	for _, sub := range subs {
+		found := false
+		for i := 0; i <= len(s)-len(sub); i++ {
+			if s[i:i+len(sub)] == sub {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}

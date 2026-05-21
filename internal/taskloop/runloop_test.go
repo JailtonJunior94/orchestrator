@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -145,7 +146,7 @@ func setupRunLoopFS(taskIDs []string) (*taskfs.FakeFileSystem, string) {
 	rows.WriteString("| # | Título | Status | Dependências | Paralelizável |\n")
 	rows.WriteString("|---|--------|--------|--------------|---------------|\n")
 	for _, id := range taskIDs {
-		rows.WriteString("| " + id + " | T " + id + " | done | — | Não |\n")
+		fmt.Fprintf(&rows, "| %s | T %s | done | — | Não |\n", id, id)
 		fsys.Files[prd+"/task-"+id+"-t.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [x] feito\n")
 	}
 	fsys.Files[prd+"/tasks.md"] = []byte(rows.String())
