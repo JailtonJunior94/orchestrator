@@ -7,12 +7,15 @@
 // No-op quando:
 //   - RuntimePreOpenEvent.TasksDir == "" (uso ad-hoc/F1 preservado).
 //   - Job.SkipDriftGuard == true (bypass explícito; --disable-hooks desabilita tudo).
+//   - tasks.md ausente no TasksDir (não é sessão PRD-tracked; ex.: TasksDir usado só pela
+//     memória 2-tier F3). No fluxo real de task-loop o tasks.md sempre existe, preservando RG-02.
 package hooks
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/specdrift"
 )
@@ -46,7 +49,7 @@ func (h *SpecDriftHook) Name() string { return "spec_drift" }
 //  1. Tipo errado → ignorar silenciosamente.
 //  2. TasksDir == "" → no-op (uso ad-hoc/F1 preservado; zero-value seguro).
 //  3. SkipDriftGuard → no-op (bypass explícito).
-//  4. CheckDrift: erro de leitura → propagar como erro de infraestrutura.
+//  4. tasks.md ausente (os.ErrNotExist) → no-op; demais erros de leitura → erro de infraestrutura.
 //  5. NoHashFound em qualquer hash → ErrPRDUntracked.
 //  6. report.Pass == false → ErrSpecDrift.
 func (h *SpecDriftHook) Run(_ context.Context, evt Event) error {
@@ -68,7 +71,13 @@ func (h *SpecDriftHook) Run(_ context.Context, evt Event) error {
 
 	report, err := specdrift.CheckDrift(preOpen.TasksDir)
 	if err != nil {
-		// Erro de infraestrutura (tasks.md não encontrado, permissão negada, etc.)
+		// tasks.md ausente → não é uma sessão PRD-tracked: no-op.
+		// TasksDir também é usado pela memória 2-tier (F3) sem exigir tasks.md; no fluxo real
+		// de task-loop o tasks.md sempre existe (é parseado antes), então RG-02 segue garantido.
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		// Demais erros de infraestrutura (permissão negada, tasks.md ilegível, etc.) → abortar.
 		return fmt.Errorf("spec_drift: verificar drift em %s: %w", preOpen.TasksDir, err)
 	}
 

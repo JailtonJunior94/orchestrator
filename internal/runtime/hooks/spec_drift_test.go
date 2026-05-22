@@ -139,9 +139,31 @@ func TestSpecDriftHook_HashMatch_Pass(t *testing.T) {
 	}
 }
 
-func TestSpecDriftHook_TasksMissing_InfraError(t *testing.T) {
-	// Sem tasks.md: deve retornar erro de infraestrutura (não ErrSpecDrift nem ErrPRDUntracked).
+func TestSpecDriftHook_TasksMissing_NoOp(t *testing.T) {
+	// Sem tasks.md: NÃO é uma sessão PRD-tracked → no-op (não aborta).
+	// TasksDir também é usado pela memória 2-tier (F3) sem exigir tasks.md; abortar aqui
+	// quebrava sessões legítimas (regressão capturada por TestClaude*E2E na suíte de integração).
 	dir := t.TempDir()
+	h := hooks.NewSpecDriftHook(false)
+	evt := hooks.RuntimePreOpenEvent{
+		WorkDir:  dir,
+		SpecID:   "claude",
+		Launcher: "claude",
+		TasksDir: dir,
+	}
+
+	if err := h.Run(context.Background(), evt); err != nil {
+		t.Fatalf("esperado no-op quando tasks.md ausente, got %v", err)
+	}
+}
+
+func TestSpecDriftHook_TasksUnreadable_InfraError(t *testing.T) {
+	// Erro de leitura que NÃO é "não existe" (ex.: tasks.md é um diretório) → erro de infra (aborta).
+	// Garante que apenas a ausência de tasks.md é tolerada; corrupção/permissão ainda falha-rápido.
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "tasks.md"), 0o755); err != nil {
+		t.Fatalf("setup: criar tasks.md como diretório: %v", err)
+	}
 	h := hooks.NewSpecDriftHook(false)
 	evt := hooks.RuntimePreOpenEvent{
 		WorkDir:  dir,
@@ -152,7 +174,7 @@ func TestSpecDriftHook_TasksMissing_InfraError(t *testing.T) {
 
 	err := h.Run(context.Background(), evt)
 	if err == nil {
-		t.Fatal("esperado erro de infraestrutura (tasks.md ausente), got nil")
+		t.Fatal("esperado erro de infraestrutura quando tasks.md é ilegível, got nil")
 	}
 	if errors.Is(err, hooks.ErrSpecDrift) || errors.Is(err, hooks.ErrPRDUntracked) {
 		t.Fatalf("esperado erro de infraestrutura, não sentinel: %v", err)
