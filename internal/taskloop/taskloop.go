@@ -39,7 +39,10 @@ type Options struct {
 	// Runtime ACP (RF-01, RF-02, RF-07, RF-11)
 	Runtime         string        // "legacy" (default) ou "acp"
 	ActivityTimeout time.Duration // timeout de inatividade do watchdog ACP; 0 = desabilitado
-	Quiet           bool          // suprime stream humano quando true
+	// ActivityTimeoutSet indica que ActivityTimeout veio de flag explicita.
+	// Evita que o default do Cobra sobrescreva configs workspace/global.
+	ActivityTimeoutSet bool
+	Quiet              bool // suprime stream humano quando true
 
 	// AgentName e o nome do agente declarativo (AGENT.md) a ser usado (tarefa 6.0).
 	// Quando vazio, o fluxo legado via Tool/Profiles e preservado integralmente (RF-14).
@@ -68,11 +71,18 @@ type Options struct {
 	MemoryWorkflowLimitBytes int // --memory-workflow-limit-bytes (default 12288)
 	MemoryTaskLimitLines     int // --memory-task-limit-lines (default 200)
 	MemoryTaskLimitBytes     int // --memory-task-limit-bytes (default 16384)
+	// MemoryLimitsSet indica que ao menos uma flag --memory-* foi explicitamente alterada.
+	// Usado para preservar overrides do usuario em politicas WindowLarge.
+	MemoryLimitsSet bool
 
 	// DisableHooks desabilita TODOS os hooks Go in-process (F3-Claude, debug).
 	// Quando true, governance, token_budget e memory_persist não são registrados.
 	// Default false = hooks ativos.
 	DisableHooks bool
+
+	// SkipDriftGuard desabilita SOMENTE o spec_drift hook (ADR-022, RG-01/RG-02).
+	// Default false = guard ativo quando há PRD rastreável; mantém governance/token_budget ativos.
+	SkipDriftGuard bool
 
 	// AutoReview habilita o auto-review opt-in (F5-Claude, RF-06).
 	// Quando true, após session end, spawna nova sessão com skill review + git diff.
@@ -333,13 +343,24 @@ func (s *Service) Execute(opts Options) error {
 		if s.acpInvokerFactory != nil {
 			invoker = s.acpInvokerFactory(opts)
 		} else {
+			// Resolver config hierárquica uma vez (ADR-025, RIN-01):
+			// flags CLI > workspace > global > defaults built-in.
+			// O mesmo RuntimeConfig é injetado nos Jobs das 4 CLIs (paridade idêntica).
+			resolvedRC, rcErr := resolveRuntimeConfig(absFolder, optionsToConfigOverrides(opts))
+			if rcErr != nil {
+				return fmt.Errorf("taskloop: wiring RuntimeConfig: %w", rcErr)
+			}
+
 			spec := resolveACPSpec(executorTool)
 			factory := persistence.NewSessionPersistenceFactory(fs.NewOSFileSystem())
 			runner := airuntime.NewACPRunner(
 				spec,
 				airuntime.WithPersistenceFactory(factory),
 			)
-			invoker = NewACPInvoker(runner, opts.Quiet, opts.ActivityTimeout,
+			// Usar o Timeout do RuntimeConfig resolvido (ADR-025).
+			// resolvedRC.Timeout já incorpora a precedência flags > workspace > global > defaults.
+			// Se Timeout estiver disabled (zero), Duration() retorna 0, equivalente a F1.
+			invoker = NewACPInvoker(runner, opts.Quiet, resolvedRC.Timeout.Duration(),
 				WithACPInvokerReasoningEffort(opts.ReasoningEffort),
 				WithACPInvokerAccessMode(specs.AccessMode(opts.AccessMode)),
 				WithACPInvokerAddDirs(opts.AddDirs),
@@ -347,9 +368,16 @@ func (s *Service) Execute(opts Options) error {
 				WithACPInvokerNoNormalize(opts.NoNormalize),
 				WithACPInvokerMemoryLimitLines(opts.MemoryWorkflowLimitLines, opts.MemoryTaskLimitLines),
 				WithACPInvokerMemoryLimitBytes(opts.MemoryWorkflowLimitBytes, opts.MemoryTaskLimitBytes),
+				WithACPInvokerMemoryLimitsExplicit(opts.MemoryLimitsSet),
 				WithACPInvokerDisableHooks(opts.DisableHooks),
+				WithACPInvokerSkipDriftGuard(opts.SkipDriftGuard),
 				WithACPInvokerTasksDir(opts.PRDFolder),
 				WithACPInvokerAutoReview(opts.AutoReview),
+				// RuntimeConfig hierárquico (ADR-025): MaxRetries e RetryBackoffMultiplier
+				// vêm da cascata resolvida (flags > workspace > global > defaults).
+				// Concurrent e BatchSize são consumidos pelo RunLoop via opts (ADR-018).
+				WithACPInvokerMaxRetries(resolvedRC.MaxRetries),
+				WithACPInvokerRetryBackoffMultiplier(resolvedRC.RetryBackoffMultiplier),
 			)
 		}
 	} else {

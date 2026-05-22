@@ -17,10 +17,16 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/platform"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/upgrade"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/version"
 )
+
+// probeTimeout e o timeout maximo por CLI para probe de binario ACP.
+// Curto para nao violar RF-11 (bootstrap < 30s com N CLIs). ADR-024.
+const probeTimeout = 3 * time.Second
 
 // VerifyState representa o estado de uma skill/agente apos verificacao.
 // ADR-019: file-first (le hash do disco, nao recalcula da fonte).
@@ -35,11 +41,24 @@ const (
 	VerifyStateDrifted VerifyState = "drifted"
 )
 
-// VerifyItem representa o resultado de verificacao de uma skill para um agente.
+// VerifyKind classifica o tipo de item verificado.
+// ADR-024: "skill" para skills de governanca; "binary" para binario ACP por CLI.
+type VerifyKind string
+
+const (
+	// VerifyKindSkill indica verificacao de uma skill de governanca.
+	VerifyKindSkill VerifyKind = "skill"
+	// VerifyKindBinary indica verificacao de disponibilidade do binario ACP por CLI.
+	VerifyKindBinary VerifyKind = "binary"
+)
+
+// VerifyItem representa o resultado de verificacao de uma skill ou binario para um agente.
+// ADR-024: campo Kind distingue skill vs binario ACP.
 type VerifyItem struct {
 	Tool  skills.Tool
 	Skill string
 	State VerifyState
+	Kind  VerifyKind // "skill" (default) ou "binary" (ADR-024 RI-04)
 }
 
 // Service orquestra o fluxo de instalacao de governanca.
@@ -50,6 +69,8 @@ type Service struct {
 	adapters    *adapters.Generator
 	ctxgen      *contextgen.Generator
 	agentDetect detect.AgentDetector // para auto-deteccao quando Tools vazio (ADR-019)
+	langDetect  detect.Detector      // para deteccao de stack quando Langs vazio (ADR-024 RI-01)
+	lookPather  probe.LookPather     // para probe de binario ACP (ADR-024 RI-02/RI-04)
 }
 
 func NewService(
@@ -66,6 +87,8 @@ func NewService(
 		adapters:    adpt,
 		ctxgen:      ctxg,
 		agentDetect: detect.NewBinaryAgentDetector(detect.OSLookPather{}, detect.OSHomeDir{}, detect.NewFileDetector(fsys)),
+		langDetect:  detect.NewFileDetector(fsys),
+		lookPather:  probe.OsLookPather(),
 	}
 }
 
@@ -80,6 +103,25 @@ func NewServiceWithDetector(
 ) *Service {
 	svc := NewService(fsys, printer, mfst, adpt, ctxg)
 	svc.agentDetect = det
+	return svc
+}
+
+// NewServiceWithOptions cria um Service com dependencias customizadas (para testes de integracao).
+// Permite injetar AgentDetector, Detector de linguagem e LookPather.
+func NewServiceWithOptions(
+	fsys fs.FileSystem,
+	printer *output.Printer,
+	mfst *manifest.Store,
+	adpt *adapters.Generator,
+	ctxg *contextgen.Generator,
+	det detect.AgentDetector,
+	langDet detect.Detector,
+	lp probe.LookPather,
+) *Service {
+	svc := NewService(fsys, printer, mfst, adpt, ctxg)
+	svc.agentDetect = det
+	svc.langDetect = langDet
+	svc.lookPather = lp
 	return svc
 }
 
@@ -98,6 +140,17 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 		}
 		s.printer.Info("Agentes detectados automaticamente: %v", toolNames(detected))
 		opts.Tools = detected
+	}
+
+	// RI-01: Derivar Langs de DetectLangs quando nao especificado explicitamente.
+	// Permite install transparente sem flag --langs em repos Go/Node/Python.
+	// ADR-024: stack-aware via FileDetector.
+	if len(opts.Langs) == 0 {
+		detectedLangs := s.langDetect.DetectLangs(opts.ProjectDir)
+		if len(detectedLangs) > 0 {
+			s.printer.Info("Linguagens detectadas automaticamente: %v", langNames(detectedLangs))
+			opts.Langs = detectedLangs
+		}
 	}
 
 	if err := s.validate(opts); err != nil {
@@ -170,6 +223,14 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 		if err := s.installTool(sourceDir, projectDir, tool, allSkills, linkMode, opts.DryRun, opts.CodexProfile); err != nil {
 			return fmt.Errorf("instalar %s: %w", tool, err)
 		}
+	}
+
+	// 2.25 RI-02: Probe de binario ACP por CLI (warning nao-fatal).
+	// Executado apos instalar adaptadores, antes de hooks e manifesto.
+	// Timeout curto (3s por CLI) para nao violar RF-11 (bootstrap < 30s).
+	// ADR-024: ausencia = Warn, install nao aborta.
+	if !opts.DryRun {
+		s.probeBinariesWarn(opts.Tools)
 	}
 
 	// 2.5 Instalar hooks canonicos do orquestrador em .agents/hooks/ (source-of-truth).
@@ -285,26 +346,47 @@ func (s *Service) Verify(opts config.InstallOptions) ([]VerifyItem, error) {
 
 	// Determinar tools a verificar.
 	tools := opts.Tools
-	if len(tools) == 0 {
-		// Sem tools especificadas: verificar todas do manifesto, ou tentar deteccao.
-		if s.manifest.Exists(installDir) {
-			mf, err := s.manifest.Load(installDir)
-			if err == nil && len(mf.Tools) > 0 {
+	langs := opts.Langs
+	if s.manifest.Exists(installDir) {
+		mf, err := s.manifest.Load(installDir)
+		if err == nil {
+			if len(tools) == 0 && len(mf.Tools) > 0 {
 				tools = mf.Tools
+			}
+			if len(langs) == 0 && len(mf.Langs) > 0 {
+				langs = mf.Langs
 			}
 		}
 	}
+	if len(langs) == 0 {
+		langs = s.langDetect.DetectLangs(installDir)
+	}
 
-	allSkills := skills.AllSkills(opts.Langs)
+	allSkills := skills.AllSkills(langs)
 
 	// Usar checkSkillsForVerify que reutiliza logica do upgrade.
 	var items []VerifyItem
 	for _, tool := range tools {
 		toolItems := s.verifyToolSkills(absSource, installDir, tool, allSkills)
 		items = append(items, toolItems...)
+
+		// RI-04: Adicionar item "binary" por CLI (current/missing).
+		// Reusa probeBinaryAvailable para consistencia com o probe do install.
+		binaryState := s.probeBinaryAvailable(tool)
+		spec, ok := specForTool(tool)
+		binaryLabel := string(tool) + "-acp"
+		if ok {
+			binaryLabel = spec.Command
+		}
+		items = append(items, VerifyItem{
+			Tool:  tool,
+			Skill: binaryLabel,
+			State: binaryState,
+			Kind:  VerifyKindBinary,
+		})
 	}
 
-	// Se nenhuma tool foi determinada, verificar skills base.
+	// Se nenhuma tool foi determinada, verificar skills base (sem items de binary).
 	if len(tools) == 0 {
 		for _, skill := range allSkills {
 			state := s.verifySkillFile(absSource, installDir, skill)
@@ -312,6 +394,7 @@ func (s *Service) Verify(opts config.InstallOptions) ([]VerifyItem, error) {
 				Tool:  "",
 				Skill: skill,
 				State: state,
+				Kind:  VerifyKindSkill,
 			})
 		}
 	}
@@ -331,10 +414,67 @@ func (s *Service) verifyToolSkills(sourceDir, installDir string, tool skills.Too
 			Tool:  tool,
 			Skill: skill,
 			State: state,
+			Kind:  VerifyKindSkill,
 		})
 	}
 
 	return items
+}
+
+// specForTool retorna a Spec do runtime ACP para a ferramenta, ou zero-value e false.
+// ADR-024: mapeamento canonico Tool -> Spec para probe de binario.
+func specForTool(tool skills.Tool) (specs.Spec, bool) {
+	switch tool {
+	case skills.ToolClaude:
+		return specs.Claude(), true
+	case skills.ToolCodex:
+		return specs.Codex(), true
+	case skills.ToolGemini:
+		return specs.Gemini(), true
+	case skills.ToolCopilot:
+		return specs.Copilot(), true
+	default:
+		return specs.Spec{}, false
+	}
+}
+
+// probeBinaryAvailable testa se o binario ACP de uma tool esta disponivel.
+// Retorna VerifyStateCurrent se disponivel, VerifyStateMissing caso contrario.
+// ADR-024 RI-04: timeout curto para nao violar RF-11.
+func (s *Service) probeBinaryAvailable(tool skills.Tool) VerifyState {
+	spec, ok := specForTool(tool)
+	if !ok {
+		return VerifyStateMissing
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
+	defer cancel()
+	// Limpar cache entre chamadas de verify para garantir resultado fresco.
+	probe.ResetCache()
+	_, err := probe.EnsureAvailable(ctx, spec, s.lookPather)
+	if err != nil {
+		return VerifyStateMissing
+	}
+	return VerifyStateCurrent
+}
+
+// probeBinariesWarn executa probe por CLI e emite Warn para binarios ausentes.
+// Nao-fatal: install continua mesmo sem binario disponivel. ADR-024 RI-02.
+func (s *Service) probeBinariesWarn(tools []skills.Tool) {
+	for _, tool := range tools {
+		spec, ok := specForTool(tool)
+		if !ok {
+			continue
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
+		probe.ResetCache()
+		_, err := probe.EnsureAvailable(ctx, spec, s.lookPather)
+		cancel()
+		if err != nil {
+			s.printer.Warn("[%s] binario ACP '%s' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.", tool, spec.Command)
+		} else {
+			s.printer.Debug("[%s] binario ACP '%s' disponivel.", tool, spec.Command)
+		}
+	}
 }
 
 // verifySkillFile verifica o estado de um arquivo de skill (SKILL.md) no diretorio alvo.

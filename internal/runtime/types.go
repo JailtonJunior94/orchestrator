@@ -108,6 +108,22 @@ type Job struct {
 	// Necessário para instanciar o memory.Store (ReadWorkflow + ReadTask).
 	// Default "" = memory store desabilitado (regressão F1/F2 preservada).
 	TasksDir string
+	// MemoryLimitsExplicit indica que MemoryLimits veio de override explicito do usuario.
+	// WindowLarge deve preservar esses limites em vez de aplicar defaults ampliados.
+	MemoryLimitsExplicit bool
+
+	// SkipDriftGuard desabilita apenas o SpecDriftHook (ADR-022, RG-01/RG-02).
+	// Quando true, o hook spec_drift retorna nil imediatamente sem verificar hash.
+	// Útil em ambientes de CI sem PRD rastreável ou durante desenvolvimento inicial.
+	// Default false = guard ativo quando TasksDir != "".
+	// NOTA: --disable-hooks (DisableHooks) desabilita TODOS os hooks, incluindo spec_drift.
+	// SkipDriftGuard desabilita SOMENTE o spec_drift, mantendo governance/token_budget ativos.
+	SkipDriftGuard bool
+
+	// WindowClass é a classe da janela de contexto da CLI ativa (ADR-023).
+	// Propagado da Spec pelo ACPRunner antes de Run(); não deve ser setado pelo usuário.
+	// Zero-value (WindowStandard) preserva comportamento F1 exato (sem regressão).
+	WindowClass specs.WindowClass
 
 	// AutoReview habilita o auto-review opt-in (F5-Claude).
 	// Quando true, após session end sem erro, spawna nova ACPRunner com prompt da

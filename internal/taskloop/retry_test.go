@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -318,5 +319,85 @@ func TestACPInvoker_Retry_BackoffCalled(t *testing.T) {
 	// Segunda espera deve ser >= primeira (backoff crescente).
 	if sleepDurations[1] < sleepDurations[0] {
 		t.Errorf("backoff não crescente: sleep[0]=%v sleep[1]=%v", sleepDurations[0], sleepDurations[1])
+	}
+}
+
+// TestACPInvoker_Retry_LogsRetryAttempts é a regressão de M1: retry_attempts deve ser
+// propagado ao Summary e surfacado na telemetria (ADR-018, RF-04). Antes da correção, a
+// contagem era escrita em uma variável local descartada — invisível em qualquer artefato.
+func TestACPInvoker_Retry_LogsRetryAttempts(t *testing.T) {
+	t.Setenv("GOVERNANCE_TELEMETRY", "1")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	// Prober falha 2 vezes (transitório), sucede na 3ª → 2 reexecuções.
+	prober := &retryFailingProber{
+		failCount: 2,
+		failErr:   errRetryTransient,
+		launcher:  specs.NewBinaryLauncher("/fake/claude-agent-acp"),
+	}
+	script := acpfake.NewScript().AppendAgentMessage("ok").AppendSessionEnd()
+	factory := &retryTestClientFactory{script: script, ctx: ctx, t: t}
+	runner := airuntime.NewACPRunner(
+		specs.Claude(),
+		airuntime.WithProber(prober),
+		airuntime.WithClientFactory(factory),
+		airuntime.WithPersistenceFactory(&retryTestPersistenceFactory{}),
+		airuntime.WithRenderer(&retryDiscardRenderer{}),
+	)
+	invoker := NewACPInvoker(runner, true, 0,
+		WithACPInvokerMaxRetries(3),
+		WithACPInvokerRetryBackoffMultiplier(0),
+		WithACPInvokerRetryClassifier(&retryCountingClassifier{}),
+		withACPInvokerSleepFn(func(context.Context, time.Duration) error { return nil }),
+	)
+
+	workDir := workDirWithAgentsMDRetry(t)
+	if _, _, _, err := invoker.Invoke(ctx, "prompt", workDir, ""); err != nil {
+		t.Fatalf("Invoke: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(workDir, ".agents", "telemetry.log"))
+	if err != nil {
+		t.Fatalf("ReadFile telemetry.log: %v", err)
+	}
+	if got := string(data); !strings.Contains(got, "retry_attempts=2") {
+		t.Fatalf("telemetry.log deve conter retry_attempts=2; got: %q", got)
+	}
+}
+
+// TestACPInvoker_NoRetry_OmitsRetryAttempts garante que retry_attempts=0 (sucesso na primeira
+// tentativa) é omitido da telemetria — invariante F1 (sem poluição de logs).
+func TestACPInvoker_NoRetry_OmitsRetryAttempts(t *testing.T) {
+	t.Setenv("GOVERNANCE_TELEMETRY", "1")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	prober := &retryFailingProber{failCount: 0, launcher: specs.NewBinaryLauncher("/fake/claude-agent-acp")}
+	script := acpfake.NewScript().AppendAgentMessage("ok").AppendSessionEnd()
+	factory := &retryTestClientFactory{script: script, ctx: ctx, t: t}
+	runner := airuntime.NewACPRunner(
+		specs.Claude(),
+		airuntime.WithProber(prober),
+		airuntime.WithClientFactory(factory),
+		airuntime.WithPersistenceFactory(&retryTestPersistenceFactory{}),
+		airuntime.WithRenderer(&retryDiscardRenderer{}),
+	)
+	invoker := NewACPInvoker(runner, true, 0,
+		withACPInvokerSleepFn(func(context.Context, time.Duration) error { return nil }),
+	)
+
+	workDir := workDirWithAgentsMDRetry(t)
+	if _, _, _, err := invoker.Invoke(ctx, "prompt", workDir, ""); err != nil {
+		t.Fatalf("Invoke: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(workDir, ".agents", "telemetry.log"))
+	if err != nil {
+		t.Fatalf("ReadFile telemetry.log: %v", err)
+	}
+	if got := string(data); strings.Contains(got, "retry_attempts") {
+		t.Fatalf("telemetry.log NÃO deve conter retry_attempts quando 0 (F1); got: %q", got)
 	}
 }

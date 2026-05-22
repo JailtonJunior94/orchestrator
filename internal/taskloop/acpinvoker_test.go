@@ -3,6 +3,7 @@ package taskloop_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/taskloop"
 )
@@ -300,6 +302,48 @@ func TestACPInvoker_Invoke_LogsTelemetry(t *testing.T) {
 		if !strings.Contains(content, want) {
 			t.Fatalf("telemetry.log = %q, want substring %q", content, want)
 		}
+	}
+}
+
+// TestACPInvoker_SkipDriftGuard_BypassesDrift é a regressão de M2: a flag --skip-drift-guard
+// (WithACPInvokerSkipDriftGuard) precisa atravessar option→Job→spec_drift hook e desativar o
+// abort por drift. Antes da correção o campo Job.SkipDriftGuard não tinha produtor (sempre false),
+// tornando o escape hatch inalcançável.
+func TestACPInvoker_SkipDriftGuard_BypassesDrift(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// tasksDir com drift: tasks.md registra hash incorreto para prd.md.
+	tasksDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(tasksDir, "prd.md"), []byte("# PRD\n\nRequisito RF-01\n"), 0o644); err != nil {
+		t.Fatalf("escrever prd.md: %v", err)
+	}
+	driftTasks := "<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->\n# Tasks\n"
+	if err := os.WriteFile(filepath.Join(tasksDir, "tasks.md"), []byte(driftTasks), 0o644); err != nil {
+		t.Fatalf("escrever tasks.md: %v", err)
+	}
+
+	workDir := workDirWithAgentsMD(t)
+
+	// Caso 1: sem skip → spec_drift aborta a sessão com ErrSpecDrift.
+	runner := buildTestRunner(t, ctx, acpfake.NewScript().AppendAgentMessage("ok").AppendSessionEnd())
+	invoker := taskloop.NewACPInvoker(runner, true, 0,
+		taskloop.WithACPInvokerTasksDir(tasksDir),
+	)
+	if _, _, _, err := invoker.Invoke(ctx, "prompt", workDir, ""); err == nil {
+		t.Fatal("esperado abort por drift sem --skip-drift-guard")
+	} else if !errors.Is(err, hooks.ErrSpecDrift) {
+		t.Fatalf("esperado errors.Is(err, ErrSpecDrift); got %v", err)
+	}
+
+	// Caso 2: com skip → o guard é ignorado e a sessão prossegue.
+	runner2 := buildTestRunner(t, ctx, acpfake.NewScript().AppendAgentMessage("ok").AppendSessionEnd())
+	invoker2 := taskloop.NewACPInvoker(runner2, true, 0,
+		taskloop.WithACPInvokerTasksDir(tasksDir),
+		taskloop.WithACPInvokerSkipDriftGuard(true),
+	)
+	if _, _, _, err := invoker2.Invoke(ctx, "prompt", workDir, ""); err != nil {
+		t.Fatalf("com --skip-drift-guard a sessão não deve abortar por drift; got %v", err)
 	}
 }
 

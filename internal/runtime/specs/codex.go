@@ -49,6 +49,10 @@ const (
 // Fallback: npx --yes @zed-industries/codex-acp@<CodexNpmVersion>.
 // FixedArgs vazio — toda configuração via BootstrapArgs em tempo de spawn (ADR-013 D-07).
 // AccessModeFlag vazio — Codex passa access via -c approval_policy=..., não flag dedicada (D-07).
+// CodexMaxTokens é a janela de contexto do Codex (gpt-5.5): 128 000 tokens (ADR-023).
+// Valor estático versionado; sobreposto por config de projeto quando necessário.
+const CodexMaxTokens = 128_000
+
 func Codex() Spec {
 	return newSpecWithBootstrap(
 		"codex",
@@ -66,6 +70,7 @@ func Codex() Spec {
 		CodexNpmVersion,
 		CodexNpmPackage,
 		codexBootstrapArgs,
+		ContextWindow{MaxTokens: CodexMaxTokens},
 	)
 }
 

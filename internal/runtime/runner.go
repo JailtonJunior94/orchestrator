@@ -110,19 +110,12 @@ type eventLoopResult struct {
 	unknownCount int
 	unknownKinds []string
 
-	// Contadores Claude-2026 (F4-Claude) — acumulados por extractClaudeMetricsFromEvent.
-	// Default 0 quando o payload ACP não contém campo "usage" (opt-in, ADR-006).
-	cacheReadTokens          int
-	cacheCreationTokens      int
-	thinkingTokens           int
-	toolCallsNormalizedCount int
+	// Métricas unificadas por driver (ADR-021): substitui os 8 acumuladores paralelos.
+	// MetricSet zero-value preserva comportamento F1 (nenhum campo emitido).
+	metrics events.MetricSet
 
-	// Contadores Gemini-2026 (F4-Gemini) — acumulados apenas quando driver == "gemini".
-	// Default 0 para outros drivers (sem poluição em sessões Claude/Codex/Copilot).
-	geminiCacheReadTokens        int
-	geminiEffectiveContextTokens int
-	geminiPromptTokensBilled     int
-	geminiThoughtsTokens         int
+	// toolCallsNormalizedCount acumula tool-calls normalizadas para persistência no report.
+	toolCallsNormalizedCount int
 }
 
 func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
@@ -141,14 +134,20 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 		return Summary{}, err
 	}
 
+	// ★ ADR-023: propagar WindowClass da Spec para o Job (sem leitura de runtime/handshake).
+	// Zero-value (WindowStandard) preserva comportamento F1.
+	j.WindowClass = r.spec.ContextWindow().Class()
+
 	// ★ F3-Claude: instanciar memory store e injetar contexto no prompt.
 	// j.TasksDir=="" → store nil → sem injeção (regressão F1/F2 preservada).
+	// ★ ADR-023: prepareMemoryStore usa WindowPolicy para ajustar limites por WindowClass.
 	memStore := prepareMemoryStore(j)
 	j.Prompt = prepareMemoryContext(ctx, j, memStore)
 
 	// ★ F3-Claude: instanciar hooks dispatcher e registrar hooks default.
 	// j.DisableHooks=true → dispatcher vazio (debug; sem regressão F1/F2).
-	disp := prepareHooksDispatcher(j, r.spec.ID, memStore)
+	// ★ ADR-023: WindowClass propagada da Spec para sensibilizar token_budget.
+	disp := prepareHooksDispatcher(j, r.spec.ID, memStore, r.spec.ContextWindow().Class())
 
 	// Fase 3: emitir runtime_init e persistir.
 	launcherCmd, launcherArgs := launcher.Command()
@@ -263,6 +262,7 @@ func dispatchPreOpenHooks(ctx context.Context, disp hooks.Dispatcher, j Job, spe
 		WorkDir:  j.WorkDir,
 		SpecID:   specID,
 		Launcher: launcherCmd,
+		TasksDir: j.TasksDir,
 	}); err != nil {
 		return fmt.Errorf("runner: hook runtime.pre_open: %w", err)
 	}
@@ -283,8 +283,8 @@ func dispatchPreOpenHooks(ctx context.Context, disp hooks.Dispatcher, j Job, spe
 }
 
 // runEventLoop executa o loop de fan-out de eventos até o canal c.Updates() fechar.
-// driverID é o ID da spec ativa ("claude", "gemini", "codex", "copilot") e é usado
-// para extração condicional de métricas F4-Gemini (RF-20).
+// driverID é o ID da spec ativa ("claude", "gemini", "codex", "copilot"); usado para
+// selecionar o MetricsExtractor adequado (ADR-021).
 // Retorna os contadores agregados do loop.
 func (r *ACPRunner) runEventLoop(
 	ctx context.Context,
@@ -297,19 +297,18 @@ func (r *ACPRunner) runEventLoop(
 	driverID string,
 ) eventLoopResult {
 	var (
-		eventsCount                  int
-		unknownCount                 int
-		unknownKinds                 []string
-		unknownSet                   = make(map[string]struct{})
-		cacheReadTokens              int
-		cacheCreationTokens          int
-		thinkingTokens               int
-		toolCallsNormalizedCnt       int
-		geminiCacheReadTokens        int
-		geminiEffectiveContextTokens int
-		geminiPromptTokensBilled     int
-		geminiThoughtsTokens         int
+		eventsCount            int
+		unknownCount           int
+		unknownKinds           []string
+		unknownSet             = make(map[string]struct{})
+		metrics                events.MetricSet
+		toolCallsNormalizedCnt int
 	)
+
+	// Selecionar extractor de métricas por driver (ADR-021, Strategy).
+	// ParseDriverID: zero-value (driver vazio) → nullExtractor via ExtractorFor.
+	drvID, _ := specs.ParseDriverID(driverID)
+	extractor := events.ExtractorFor(drvID)
 
 	for evt := range c.Updates() {
 		wd.Touch()
@@ -334,23 +333,11 @@ func (r *ACPRunner) runEventLoop(
 			eventsCount++
 		}
 
-		// ★ F4-Claude: extrair métricas Claude-2026 do payload bruto (opt-in, ADR-006).
-		// Acumula cache_read, cache_creation e thinking tokens por update.
-		m := events.ExtractClaudeMetrics(evt.Raw())
-		cacheReadTokens += m.CacheReadTokens
-		cacheCreationTokens += m.CacheCreationTokens
-		thinkingTokens += m.ThinkingTokens
+		// ★ ADR-021: acumular métricas via MetricSet único por driver (substitui os 8 acumuladores).
+		// extractor.Extract retorna MetricSet{} para drivers sem métricas (codex, copilot).
+		metrics = metrics.Merge(extractor.Extract(evt.Raw()))
 
-		// ★ F4-Gemini: extrair métricas Gemini-2026 do payload bruto (RF-20).
-		// ExtractGeminiMetricsForDriver retorna zero-value para drivers não-Gemini (sem poluição).
-		gm := events.ExtractGeminiMetricsForDriver(driverID, evt.Raw())
-		geminiCacheReadTokens += gm.CacheReadTokens
-		geminiEffectiveContextTokens += gm.EffectiveContextTokens
-		geminiPromptTokensBilled += gm.PromptTokensBilled
-		geminiThoughtsTokens += gm.ThoughtsTokens
-
-		// Acumular tool-calls normalizadas (já incrementado em counters.Record via task 3.0;
-		// aqui capturamos para persistência no report — sem dupla contagem de counters).
+		// Acumular tool-calls normalizadas para persistência no report.
 		if evt.Kind() == events.KindToolCallStart && evt.NormalizedName() != "" {
 			toolCallsNormalizedCnt++
 		}
@@ -369,17 +356,11 @@ func (r *ACPRunner) runEventLoop(
 	}
 
 	return eventLoopResult{
-		eventsCount:                  eventsCount,
-		unknownCount:                 unknownCount,
-		unknownKinds:                 unknownKinds,
-		cacheReadTokens:              cacheReadTokens,
-		cacheCreationTokens:          cacheCreationTokens,
-		thinkingTokens:               thinkingTokens,
-		toolCallsNormalizedCount:     toolCallsNormalizedCnt,
-		geminiCacheReadTokens:        geminiCacheReadTokens,
-		geminiEffectiveContextTokens: geminiEffectiveContextTokens,
-		geminiPromptTokensBilled:     geminiPromptTokensBilled,
-		geminiThoughtsTokens:         geminiThoughtsTokens,
+		eventsCount:              eventsCount,
+		unknownCount:             unknownCount,
+		unknownKinds:             unknownKinds,
+		metrics:                  metrics,
+		toolCallsNormalizedCount: toolCallsNormalizedCnt,
 	}
 }
 
@@ -388,20 +369,14 @@ func (r *ACPRunner) runEventLoop(
 // os valores são incorporados ao Summary (ADR-018, RF-03).
 func buildSummary(launcher string, res eventLoopResult, cancelReason events.CancelReason, toolCalls []events.ToolCallSummary, c client.Client) Summary {
 	s := Summary{
-		Launcher:                     launcher,
-		EventsCount:                  res.eventsCount,
-		UnknownEventsCount:           res.unknownCount,
-		CancelReason:                 cancelReason,
-		ToolCalls:                    toolCalls,
-		UnknownKinds:                 res.unknownKinds,
-		CacheReadTokens:              res.cacheReadTokens,
-		CacheCreationTokens:          res.cacheCreationTokens,
-		ThinkingTokens:               res.thinkingTokens,
-		ToolCallsNormalizedCount:     res.toolCallsNormalizedCount,
-		GeminiCacheReadTokens:        res.geminiCacheReadTokens,
-		GeminiEffectiveContextTokens: res.geminiEffectiveContextTokens,
-		GeminiPromptTokensBilled:     res.geminiPromptTokensBilled,
-		GeminiThoughtsTokens:         res.geminiThoughtsTokens,
+		Launcher:                 launcher,
+		EventsCount:              res.eventsCount,
+		UnknownEventsCount:       res.unknownCount,
+		CancelReason:             cancelReason,
+		ToolCalls:                toolCalls,
+		UnknownKinds:             res.unknownKinds,
+		Metrics:                  res.metrics,
+		ToolCallsNormalizedCount: res.toolCallsNormalizedCount,
 	}
 	// Propagar contadores de backpressure quando o client os expõe (ADR-018, RF-03).
 	s.SlowPublishes = c.SlowPublishes()
@@ -458,25 +433,18 @@ func mapRunError(cause, clientErr error, c client.Client) error {
 }
 
 // prepareMemoryStore instancia o memory.Store quando j.TasksDir != "".
-// Aplica fallback de defaults quando os limites são zero-value (F3-Claude).
+// Aplica WindowPolicy para ajustar limites por WindowClass (ADR-023):
+//   - WindowStandard (zero-value) ⇒ defaults F1 (150/12KB · 200/16KB) — sem regressão.
+//   - WindowLarge ⇒ limites ampliados para CLIs com janela ≥1M (ex: Gemini).
+//
 // Retorna nil quando TasksDir está vazio (regressão F1/F2 preservada).
 func prepareMemoryStore(j Job) memory.Store {
 	if j.TasksDir == "" {
 		return nil
 	}
-	limits := j.MemoryLimits
-	if limits.WorkflowLines == 0 {
-		limits.WorkflowLines = memory.DefaultWorkflowLineLimit
-	}
-	if limits.WorkflowBytes == 0 {
-		limits.WorkflowBytes = memory.DefaultWorkflowByteLimit
-	}
-	if limits.TaskLines == 0 {
-		limits.TaskLines = memory.DefaultTaskLineLimit
-	}
-	if limits.TaskBytes == 0 {
-		limits.TaskBytes = memory.DefaultTaskByteLimit
-	}
+	// WindowPolicy resolve limites considerando WindowClass + base fornecido pelo Job.
+	// Overrides explicitos de memoria prevalecem sobre defaults WindowLarge.
+	limits := memory.DefaultWindowPolicy.LimitsForWithOverride(j.WindowClass, j.MemoryLimits, j.MemoryLimitsExplicit)
 	return memory.New(j.TasksDir, limits)
 }
 
@@ -533,7 +501,9 @@ func injectMemoryContext(prompt string, wf, tk memory.Document, wfErr, tkErr err
 // Quando j.DisableHooks=true, retorna dispatcher vazio (debug; sem hooks ativos).
 // Hook order: governance → token_budget em PointRuntimePreOpen/PointPromptPostBuild;
 // memory_persist em PointSessionPostEnd (conforme task spec).
-func prepareHooksDispatcher(j Job, specID string, store memory.Store) hooks.Dispatcher {
+// windowClass é propagado da Spec para o TokenBudgetHook (ADR-023).
+// Zero-value (WindowStandard) preserva comportamento F1.
+func prepareHooksDispatcher(j Job, specID string, store memory.Store, windowClass specs.WindowClass) hooks.Dispatcher {
 	disp := hooks.New()
 
 	if j.DisableHooks {
@@ -543,8 +513,13 @@ func prepareHooksDispatcher(j Job, specID string, store memory.Store) hooks.Disp
 	// governance: valida AGENTS.md em runtime.pre_open.
 	disp.Register(hooks.PointRuntimePreOpen, hooks.NewGovernanceHook())
 
-	// token_budget: valida tamanho do prompt em prompt.post_build.
-	disp.Register(hooks.PointPromptPostBuild, hooks.NewTokenBudgetHook(specID))
+	// spec_drift: valida spec-hash/PRD-first em runtime.pre_open (ADR-022, RG-01/RG-02).
+	// No-op quando TasksDir=="" (propagado no evento); SkipDriftGuard desabilita só este hook.
+	disp.Register(hooks.PointRuntimePreOpen, hooks.NewSpecDriftHook(j.SkipDriftGuard))
+
+	// token_budget: valida tamanho do prompt em prompt.post_build, sensível à WindowClass (ADR-023).
+	// WindowStandard ⇒ teto F1; WindowLarge ⇒ teto generoso para CLIs com janela ≥1M.
+	disp.Register(hooks.PointPromptPostBuild, hooks.NewTokenBudgetHookWithClass(specID, windowClass))
 
 	// memory_persist: escreve MEMORY.md em session.post_end (apenas quando store disponível).
 	if store != nil {
@@ -618,6 +593,8 @@ func spawnMCPServer(ctx context.Context, r *ACPRunner, j Job, launcherCmd string
 //   - !j.NoNormalize
 //
 // Em qualquer outro caso ou erro de normalização, retorna o evento original sem modificação.
+// Resolve DriverID na fronteira (ADR-020, Tarefa 3.0): specID inválido falha cedo e preserva
+// o evento original (comportamento graceful — sem abortar a sessão, RF-02).
 // Extração de helper segue heurística OC (mantém Run() legível).
 func normalizeEventInline(evt events.Event, specID string, j Job) events.Event {
 	if j.NoNormalize {
@@ -630,10 +607,18 @@ func normalizeEventInline(evt events.Event, specID string, j Job) events.Event {
 	if tc == nil {
 		return evt
 	}
+
+	// Resolver DriverID na fronteira (fail-fast ADR-020): driver inválido → passthrough graceful.
+	drvID, err := specs.ParseDriverID(specID)
+	if err != nil {
+		// DriverID inválido (ErrUnknownDriver): preservar evento original sem abortar sessão.
+		return evt
+	}
+
 	rawName := tc.Name()
 	rawInput := json.RawMessage(tc.Input())
 
-	norm, err := events.BuildNormalizedToolCall(specID, rawName, rawInput, j.WorkDir)
+	norm, err := events.BuildNormalizedToolCallByDriver(drvID, rawName, rawInput, j.WorkDir)
 	if err != nil {
 		// Erro de normalização: preservar evento original sem falhar a sessão (RF-02, graceful).
 		return evt

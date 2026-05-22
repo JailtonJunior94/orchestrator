@@ -80,6 +80,7 @@ Exemplos:
 		reportPath, _ := cmd.Flags().GetString("report-path")
 		runtime, _ := cmd.Flags().GetString("runtime")
 		activityTimeout, _ := cmd.Flags().GetDuration("activity-timeout")
+		activityTimeoutSet := cmd.Flags().Changed("activity-timeout")
 		quiet, _ := cmd.Flags().GetBool("quiet")
 		reasoningEffort, _ := cmd.Flags().GetString("reasoning-effort")
 		accessMode, _ := cmd.Flags().GetString("access-mode")
@@ -89,7 +90,12 @@ Exemplos:
 		memWorkflowLimitBytes, _ := cmd.Flags().GetInt("memory-workflow-limit-bytes")
 		memTaskLimitLines, _ := cmd.Flags().GetInt("memory-task-limit-lines")
 		memTaskLimitBytes, _ := cmd.Flags().GetInt("memory-task-limit-bytes")
+		memoryLimitsSet := cmd.Flags().Changed("memory-workflow-limit-lines") ||
+			cmd.Flags().Changed("memory-workflow-limit-bytes") ||
+			cmd.Flags().Changed("memory-task-limit-lines") ||
+			cmd.Flags().Changed("memory-task-limit-bytes")
 		disableHooks, _ := cmd.Flags().GetBool("disable-hooks")
+		skipDriftGuard, _ := cmd.Flags().GetBool("skip-drift-guard")
 		autoReview, _ := cmd.Flags().GetBool("auto-review")
 
 		// RF-16: switch tool-aware para defaults de memory (F3-Gemini).
@@ -217,31 +223,34 @@ Exemplos:
 
 		svc := taskloop.NewService(fsys, printer)
 		err = svc.Execute(taskloop.Options{
-			PRDFolder:              prdFolder,
-			Tool:                   tool,
-			DryRun:                 dryRun,
-			MaxIterations:          maxIter,
-			Timeout:                timeout,
-			ReportPath:             reportPath,
-			Profiles:               profiles,
-			FallbackTool:           fallbackTool,
-			AllowUnknownModel:      allowUnknown,
-			ReviewerPromptTemplate: reviewerTmpl,
-			ExecutorFallbackModel:  execFallbackModel,
-			ReviewerFallbackModel:  revFallbackModel,
-			Runtime:                runtime,
-			ActivityTimeout:        activityTimeout,
-			Quiet:                  quiet,
-			AgentName:              agentName,
-			ReasoningEffort:        reasoningEffort,
-			AccessMode:             accessMode,
-			MCPNested:              mcpNested,
-			NoNormalize:            noNormalize,
+			PRDFolder:                prdFolder,
+			Tool:                     tool,
+			DryRun:                   dryRun,
+			MaxIterations:            maxIter,
+			Timeout:                  timeout,
+			ReportPath:               reportPath,
+			Profiles:                 profiles,
+			FallbackTool:             fallbackTool,
+			AllowUnknownModel:        allowUnknown,
+			ReviewerPromptTemplate:   reviewerTmpl,
+			ExecutorFallbackModel:    execFallbackModel,
+			ReviewerFallbackModel:    revFallbackModel,
+			Runtime:                  runtime,
+			ActivityTimeout:          activityTimeout,
+			ActivityTimeoutSet:       activityTimeoutSet,
+			Quiet:                    quiet,
+			AgentName:                agentName,
+			ReasoningEffort:          reasoningEffort,
+			AccessMode:               accessMode,
+			MCPNested:                mcpNested,
+			NoNormalize:              noNormalize,
 			MemoryWorkflowLimitLines: memWorkflowLimitLines,
 			MemoryWorkflowLimitBytes: memWorkflowLimitBytes,
 			MemoryTaskLimitLines:     memTaskLimitLines,
 			MemoryTaskLimitBytes:     memTaskLimitBytes,
+			MemoryLimitsSet:          memoryLimitsSet,
 			DisableHooks:             disableHooks,
+			SkipDriftGuard:           skipDriftGuard,
 			AutoReview:               autoReview,
 		})
 		if errors.Is(err, airuntime.ErrLauncherUnavailable) {
@@ -305,6 +314,13 @@ func init() {
 		"Desabilita TODOS os hooks Go in-process: governance, token_budget e memory_persist (F3-Claude, debug). "+
 			"AVISO: --disable-hooks desliga inclusive o hook de governance (validação AGENTS.md). "+
 			"Shell hooks em .claude/hooks/*.sh continuam ativos no modo interativo. Default false.")
+
+	// Flag de bypass do guard de governança em runtime (ADR-022, RG-01/RG-02).
+	// Desabilita SOMENTE o spec_drift; governance/token_budget permanecem ativos.
+	taskLoopCmd.Flags().Bool("skip-drift-guard", false,
+		"Desabilita SOMENTE o hook spec_drift (spec-hash/PRD-first, ADR-022), mantendo governance e "+
+			"token_budget ativos. Use em CI sem PRD rastreável ou durante desenvolvimento inicial. "+
+			"Diferente de --disable-hooks (que desliga todos os hooks). Default false.")
 
 	// Flag F5-Claude: auto-review opt-in (RF-06 — ADR-014 §D-07).
 	// HARD: default false; child session de review tem AutoReview=false forçado (anti-recursão).

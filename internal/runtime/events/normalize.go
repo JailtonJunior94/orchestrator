@@ -17,6 +17,8 @@ import (
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
 //go:embed normalization-rules.yaml
@@ -128,6 +130,27 @@ func BuildNormalizedToolCall(driverID, rawName string, rawInput json.RawMessage,
 	}
 
 	return buildNormalized(rules, driverID, rawName, rawInput)
+}
+
+// BuildNormalizedToolCallByDriver normaliza uma tool-call usando specs.DriverID como fonte de verdade.
+// Propaga o DriverID VO (ADR-020, Tarefa 3.0); resolve na fronteira — driver zero-value (inválido)
+// propaga specs.ErrUnknownDriver imediatamente, antes de carregar as regras.
+//
+// Garantias idênticas a BuildNormalizedToolCall:
+//   - RawName e RawInput nunca são mutados.
+//   - rawName não-mapeado → passthrough (NormalizedName = rawName); sem erro.
+//   - NormalizedInput é uma cópia de RawInput com chaves renomeadas; valores preservados.
+//
+// workDir é usado para localizar o override de projeto (.agents/normalization-rules.yaml).
+func BuildNormalizedToolCallByDriver(driver specs.DriverID, rawName string, rawInput json.RawMessage, workDir string) (NormalizedToolCall, error) {
+	if driver.String() == "" {
+		return NormalizedToolCall{}, fmt.Errorf("%w: driver zero-value não permitido", specs.ErrUnknownDriver)
+	}
+	rules, err := loadRules(workDir)
+	if err != nil {
+		return NormalizedToolCall{}, fmt.Errorf("carregar regras de normalização: %w", err)
+	}
+	return buildNormalized(rules, driver.String(), rawName, rawInput)
 }
 
 // buildNormalized executa a normalização usando regras já carregadas.

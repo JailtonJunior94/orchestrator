@@ -39,10 +39,24 @@ type Spec struct {
 	sdkVersion string
 	npmVersion string
 	npmPackage string
+	// contextWindow é o VO de janela de contexto desta CLI (ADR-023).
+	// Zero-value (MaxTokens==0) ⇒ WindowStandard ⇒ comportamento F1.
+	contextWindow ContextWindow
 	// bootstrapArgs gera argumentos dinâmicos de inicialização (ex: Codex).
 	// nil significa no-op: BootstrapArgs() retorna nil. ADR-013 D-02/D-03.
 	bootstrapArgs BootstrapArgsFunc
 }
+
+// DriverID retorna o DriverID desta Spec (ADR-020).
+// Retorna DriverID zero-value se o ID não for válido (uso ad-hoc; sem panic).
+func (s Spec) DriverID() DriverID {
+	d, _ := ParseDriverID(s.ID)
+	return d
+}
+
+// ContextWindow retorna o VO de janela de contexto desta Spec (ADR-023).
+// Zero-value (MaxTokens==0) ⇒ WindowStandard ⇒ comportamento F1.
+func (s Spec) ContextWindow() ContextWindow { return s.contextWindow }
 
 // SDKVersion retorna a versão do SDK ACP Go associada a esta Spec.
 func (s Spec) SDKVersion() string { return s.sdkVersion }
@@ -71,6 +85,7 @@ func newSpec(
 	fallbacks []FallbackLauncher,
 	accessModeFlag string,
 	sdkVersion, npmVersion, npmPackage string,
+	window ContextWindow,
 ) Spec {
 	return Spec{
 		ID:             id,
@@ -82,6 +97,7 @@ func newSpec(
 		sdkVersion:     sdkVersion,
 		npmVersion:     npmVersion,
 		npmPackage:     npmPackage,
+		contextWindow:  window,
 	}
 }
 
@@ -94,8 +110,9 @@ func newSpecWithBootstrap(
 	accessModeFlag string,
 	sdkVersion, npmVersion, npmPackage string,
 	bootstrapArgs BootstrapArgsFunc,
+	window ContextWindow,
 ) Spec {
-	s := newSpec(id, displayName, command, fixedArgs, fallbacks, accessModeFlag, sdkVersion, npmVersion, npmPackage)
+	s := newSpec(id, displayName, command, fixedArgs, fallbacks, accessModeFlag, sdkVersion, npmVersion, npmPackage, window)
 	s.bootstrapArgs = bootstrapArgs
 	return s
 }

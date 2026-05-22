@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
 // T-NORM-01: Claude bash → NormalizedName="bash"; RawName="bash" (alias para si mesmo)
@@ -315,5 +317,273 @@ input_mappings: {}
 	// Entrada explícita em aliases deve prevalecer sobre inherit_common.
 	if result.NormalizedName != "raw_passthrough" {
 		t.Errorf("explícito não prevaleceu: queria %q, obtive %q", "raw_passthrough", result.NormalizedName)
+	}
+}
+
+// ─── Subtarefa 3.3: Golden tests por driver para input_mappings ───────────────
+
+// T-33-01: Golden — Copilot run com campo "command" produz campo canônico "command" (no-op verificado).
+func TestInputMappingCopilotRunCommandCanonical(t *testing.T) {
+	input := json.RawMessage(`{"command":"./run.sh","timeout":30}`)
+	result, err := BuildNormalizedToolCall("copilot", "run", input, "")
+	if err != nil {
+		t.Fatalf("T-33-01: BuildNormalizedToolCall inesperado: %v", err)
+	}
+
+	var normalized map[string]json.RawMessage
+	if err := json.Unmarshal(result.NormalizedInput, &normalized); err != nil {
+		t.Fatalf("T-33-01: NormalizedInput não é JSON válido: %v", err)
+	}
+
+	// Campo canônico "command" deve estar presente com valor preservado.
+	if v, ok := normalized["command"]; !ok {
+		t.Error("T-33-01: NormalizedInput deveria ter chave canônica 'command'")
+	} else if string(v) != `"./run.sh"` {
+		t.Errorf("T-33-01: valor de 'command': queria %q, obtive %q", `"./run.sh"`, string(v))
+	}
+
+	// Campo não mapeado "timeout" deve ser preservado.
+	if _, ok := normalized["timeout"]; !ok {
+		t.Error("T-33-01: NormalizedInput deveria preservar campo não mapeado 'timeout'")
+	}
+
+	// RawInput nunca mutado.
+	if string(result.RawInput) != string(input) {
+		t.Errorf("T-33-01: RawInput mutado: queria %q, obtive %q", string(input), string(result.RawInput))
+	}
+}
+
+// T-33-02: Golden — Gemini bash com campo "command" produz campo canônico "command" (no-op verificado).
+func TestInputMappingGeminiBashCommandCanonical(t *testing.T) {
+	input := json.RawMessage(`{"command":"ls -la","cwd":"/tmp"}`)
+	result, err := BuildNormalizedToolCall("gemini", "bash", input, "")
+	if err != nil {
+		t.Fatalf("T-33-02: BuildNormalizedToolCall inesperado: %v", err)
+	}
+
+	var normalized map[string]json.RawMessage
+	if err := json.Unmarshal(result.NormalizedInput, &normalized); err != nil {
+		t.Fatalf("T-33-02: NormalizedInput não é JSON válido: %v", err)
+	}
+
+	// Campo canônico "command" deve estar presente com valor preservado.
+	if v, ok := normalized["command"]; !ok {
+		t.Error("T-33-02: NormalizedInput deveria ter chave canônica 'command'")
+	} else if string(v) != `"ls -la"` {
+		t.Errorf("T-33-02: valor de 'command': queria %q, obtive %q", `"ls -la"`, string(v))
+	}
+
+	// Campo não mapeado "cwd" deve ser preservado.
+	if _, ok := normalized["cwd"]; !ok {
+		t.Error("T-33-02: NormalizedInput deveria preservar campo não mapeado 'cwd'")
+	}
+
+	// RawInput nunca mutado.
+	if string(result.RawInput) != string(input) {
+		t.Errorf("T-33-02: RawInput mutado: queria %q, obtive %q", string(input), string(result.RawInput))
+	}
+}
+
+// T-33-03: Paridade cross-driver — campo canônico "command" idêntico entre Claude, Copilot e Gemini.
+// A mesma tool-call (bash equivalente) deve produzir NormalizedInput com "command" em todos os drivers.
+func TestInputMappingCrossDriverCommandCanonical(t *testing.T) {
+	type driverCase struct {
+		driver  string
+		rawName string
+		input   json.RawMessage
+	}
+	cases := []driverCase{
+		{driver: "claude", rawName: "bash", input: json.RawMessage(`{"command":"echo hi"}`)},
+		{driver: "copilot", rawName: "run", input: json.RawMessage(`{"command":"echo hi"}`)},
+		{driver: "gemini", rawName: "bash", input: json.RawMessage(`{"command":"echo hi"}`)},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.driver, func(t *testing.T) {
+			result, err := BuildNormalizedToolCall(tc.driver, tc.rawName, tc.input, "")
+			if err != nil {
+				t.Fatalf("T-33-03[%s]: BuildNormalizedToolCall inesperado: %v", tc.driver, err)
+			}
+
+			var normalized map[string]json.RawMessage
+			if err := json.Unmarshal(result.NormalizedInput, &normalized); err != nil {
+				t.Fatalf("T-33-03[%s]: NormalizedInput não é JSON válido: %v", tc.driver, err)
+			}
+
+			if v, ok := normalized["command"]; !ok {
+				t.Errorf("T-33-03[%s]: campo canônico 'command' ausente em NormalizedInput", tc.driver)
+			} else if string(v) != `"echo hi"` {
+				t.Errorf("T-33-03[%s]: valor de 'command': queria %q, obtive %q", tc.driver, `"echo hi"`, string(v))
+			}
+		})
+	}
+}
+
+// ─── Subtarefa 3.4: Herança — tabela explícita Gemini vence inherit_common ────
+
+// T-34-01: Gemini com tabela explícita em aliases (embedded default) deve usar a tabela explícita.
+// Remover gemini de inherit_common não deve mudar o resultado — tabela explícita é autossuficiente.
+func TestGeminiExplicitAliasWinsOverInheritCommon(t *testing.T) {
+	workDir := t.TempDir()
+	agentsDir := filepath.Join(workDir, ".agents")
+	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
+		t.Fatalf("T-34-01: criar .agents dir: %v", err)
+	}
+
+	// YAML sem inherit_common, com aliases.gemini explícito — resultado deve ser idêntico ao default.
+	withoutInherit := `version: 1
+common_aliases:
+  bash: bash
+  read_file: read
+  write_file: write
+  str_replace_editor: edit
+aliases:
+  gemini:
+    bash: bash
+    read_file: read
+    write_file: write
+    str_replace_editor: edit
+input_mappings:
+  gemini:
+    bash:
+      command: command
+`
+	customPath := filepath.Join(agentsDir, "normalization-rules.yaml")
+	if err := os.WriteFile(customPath, []byte(withoutInherit), 0o644); err != nil {
+		t.Fatalf("T-34-01: escrever custom YAML: %v", err)
+	}
+
+	tests := []struct {
+		rawName      string
+		expectedNorm string
+	}{
+		{"bash", "bash"},
+		{"read_file", "read"},
+		{"write_file", "write"},
+		{"str_replace_editor", "edit"},
+		{"unknown_tool", "unknown_tool"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.rawName, func(t *testing.T) {
+			result, err := BuildNormalizedToolCall("gemini", tc.rawName, json.RawMessage(`{}`), workDir)
+			if err != nil {
+				t.Fatalf("T-34-01: BuildNormalizedToolCall inesperado para %q: %v", tc.rawName, err)
+			}
+			if result.NormalizedName != tc.expectedNorm {
+				t.Errorf("T-34-01: NormalizedName(%q): queria %q, obtive %q",
+					tc.rawName, tc.expectedNorm, result.NormalizedName)
+			}
+		})
+	}
+}
+
+// T-34-02: Default embedded — aliases.gemini explícito (RP-04) produz mesmos resultados
+// que o comportamento pré-RP-04 via inherit_common (regressão zero).
+func TestGeminiExplicitAliasDefaultEmbeddedNoRegression(t *testing.T) {
+	// Usando regras embedded (workDir=""), gemini deve normalizar conforme aliases explícito.
+	tests := []struct {
+		rawName      string
+		expectedNorm string
+	}{
+		{"bash", "bash"},
+		{"read_file", "read"},
+		{"write_file", "write"},
+		{"str_replace_editor", "edit"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.rawName, func(t *testing.T) {
+			result, err := BuildNormalizedToolCall("gemini", tc.rawName, json.RawMessage(`{}`), "")
+			if err != nil {
+				t.Fatalf("T-34-02: BuildNormalizedToolCall inesperado para %q: %v", tc.rawName, err)
+			}
+			if result.NormalizedName != tc.expectedNorm {
+				t.Errorf("T-34-02: NormalizedName(%q): queria %q, obtive %q",
+					tc.rawName, tc.expectedNorm, result.NormalizedName)
+			}
+			// RawName nunca mutado.
+			if result.RawName != tc.rawName {
+				t.Errorf("T-34-02: RawName mutado: queria %q, obtive %q", tc.rawName, result.RawName)
+			}
+		})
+	}
+}
+
+// ─── BuildNormalizedToolCallByDriver (ADR-020, Tarefa 3.0) ────────────────────
+
+// T-35-01: BuildNormalizedToolCallByDriver com DriverID válido — normaliza corretamente.
+func TestBuildNormalizedToolCallByDriver_ValidDriver(t *testing.T) {
+	drvID, err := specs.ParseDriverID("gemini")
+	if err != nil {
+		t.Fatalf("T-35-01: ParseDriverID inesperado: %v", err)
+	}
+	input := json.RawMessage(`{"command":"echo hi"}`)
+	result, err := BuildNormalizedToolCallByDriver(drvID, "bash", input, "")
+	if err != nil {
+		t.Fatalf("T-35-01: BuildNormalizedToolCallByDriver inesperado: %v", err)
+	}
+	if result.NormalizedName != "bash" {
+		t.Errorf("T-35-01: NormalizedName: queria %q, obtive %q", "bash", result.NormalizedName)
+	}
+	// RawInput nunca mutado.
+	if string(result.RawInput) != string(input) {
+		t.Errorf("T-35-01: RawInput mutado")
+	}
+}
+
+// T-35-02: BuildNormalizedToolCallByDriver com DriverID zero-value — retorna ErrUnknownDriver.
+func TestBuildNormalizedToolCallByDriver_ZeroValue(t *testing.T) {
+	var zeroDriver specs.DriverID // zero-value: String() == ""
+	_, err := BuildNormalizedToolCallByDriver(zeroDriver, "bash", json.RawMessage(`{}`), "")
+	if err == nil {
+		t.Fatal("T-35-02: esperava erro para DriverID zero-value, obtive nil")
+	}
+	if !isErrUnknownDriver(err) {
+		t.Errorf("T-35-02: esperava ErrUnknownDriver, obtive: %v", err)
+	}
+}
+
+// isErrUnknownDriver verifica se o erro contém ErrUnknownDriver na cadeia.
+func isErrUnknownDriver(err error) bool {
+	return err != nil && (err == specs.ErrUnknownDriver ||
+		containsString(err.Error(), "driver desconhecido"))
+}
+
+// containsString é um helper interno para verificar substring em string.
+func containsString(s, sub string) bool {
+	return len(s) >= len(sub) && (s == sub || len(sub) == 0 ||
+		func() bool {
+			for i := 0; i <= len(s)-len(sub); i++ {
+				if s[i:i+len(sub)] == sub {
+					return true
+				}
+			}
+			return false
+		}())
+}
+
+// T-35-03: BuildNormalizedToolCallByDriver para Copilot — campo canônico "command".
+func TestBuildNormalizedToolCallByDriver_CopilotRun(t *testing.T) {
+	drvID, err := specs.ParseDriverID("copilot")
+	if err != nil {
+		t.Fatalf("T-35-03: ParseDriverID inesperado: %v", err)
+	}
+	input := json.RawMessage(`{"command":"./deploy.sh"}`)
+	result, err := BuildNormalizedToolCallByDriver(drvID, "run", input, "")
+	if err != nil {
+		t.Fatalf("T-35-03: BuildNormalizedToolCallByDriver inesperado: %v", err)
+	}
+	// NormalizedName: run → bash (via aliases.copilot)
+	if result.NormalizedName != "bash" {
+		t.Errorf("T-35-03: NormalizedName: queria %q, obtive %q", "bash", result.NormalizedName)
+	}
+
+	var normalized map[string]json.RawMessage
+	if err := json.Unmarshal(result.NormalizedInput, &normalized); err != nil {
+		t.Fatalf("T-35-03: NormalizedInput não é JSON válido: %v", err)
+	}
+	if _, ok := normalized["command"]; !ok {
+		t.Error("T-35-03: campo canônico 'command' ausente em NormalizedInput")
 	}
 }

@@ -47,9 +47,9 @@ func (f *fakeClientFactoryForReview) New(workDir string) client.Client {
 // fakePersistenceForReview descarta persistência em testes unitários.
 type fakePersistenceForReview struct{}
 
-func (p *fakePersistenceForReview) AppendEvent(_ events.Event) error               { return nil }
+func (p *fakePersistenceForReview) AppendEvent(_ events.Event) error                { return nil }
 func (p *fakePersistenceForReview) WriteToolCalls(_ []events.ToolCallSummary) error { return nil }
-func (p *fakePersistenceForReview) EnrichReport(_ airuntime.Summary) error         { return nil }
+func (p *fakePersistenceForReview) EnrichReport(_ airuntime.Summary) error          { return nil }
 
 type fakePersistenceFactoryForReview struct{}
 
@@ -269,6 +269,49 @@ func TestAutoReviewDoesntRecurse(t *testing.T) {
 	}
 	if *childAutoReview != false {
 		t.Errorf("T-REV-04: child Job.AutoReview = true — recursão não bloqueada (HARD violado)")
+	}
+}
+
+// TestAutoReviewInheritsSkipDriftGuard é a regressão de M2: o child Job de auto-review deve
+// herdar Job.SkipDriftGuard do parent. Sem isso, um parent que faz bypass do spec_drift veria
+// a sessão de review abortar por drift de forma inconsistente.
+func TestAutoReviewInheritsSkipDriftGuard(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("tarefa pai").
+		AppendSessionEnd()
+
+	var childSkip *bool
+	reviewFn := func(_ context.Context, childJob airuntime.Job) (string, error) {
+		v := childJob.SkipDriftGuard
+		childSkip = &v
+		return "review ok — sem issues", nil
+	}
+
+	runner := buildRunnerWithReviewFn(t, ctx, script, reviewFn)
+
+	job := airuntime.Job{
+		Prompt:         "tarefa pai com skip-drift-guard",
+		WorkDir:        workDirWithAgentsMDForReview(t),
+		EvidenceDir:    t.TempDir(),
+		Quiet:          true,
+		AutoReview:     true,
+		SkipDriftGuard: true, // parent faz bypass do guard
+	}
+
+	if _, err := runner.Run(ctx, job); err != nil {
+		t.Fatalf("Run falhou: %v", err)
+	}
+
+	if childSkip == nil {
+		t.Fatal("reviewOutputFn não foi chamada — auto-review não disparou")
+	}
+	if !*childSkip {
+		t.Error("M2: child Job.SkipDriftGuard = false — bypass do parent não foi herdado")
 	}
 }
 

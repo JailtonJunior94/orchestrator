@@ -54,10 +54,15 @@ type Dispatcher interface {
 
 // RuntimePreOpenEvent é o evento emitido antes de abrir a sessão ACP.
 // Hook governance valida AGENTS.md neste ponto.
+// TasksDir é o caminho do diretório de tasks do PRD ativo (ex: "tasks/prd-foo").
+// Quando vazio, SpecDriftHook opera em modo no-op (uso ad-hoc/F1 preservado).
 type RuntimePreOpenEvent struct {
 	WorkDir  string
 	SpecID   string
 	Launcher string
+	// TasksDir é o diretório do PRD ativo; propagado de Job.TasksDir.
+	// Vazio = sem guard de drift (comportamento F1 preservado).
+	TasksDir string
 }
 
 func (e RuntimePreOpenEvent) Kind() string { return PointRuntimePreOpen }
@@ -82,7 +87,7 @@ func (e ToolCallEvent) Kind() string { return PointToolCallPreDispatch }
 // SessionPostEndEvent é o evento emitido ao final da sessão ACP.
 // Hooks de memória persistem MEMORY.md neste ponto.
 type SessionPostEndEvent struct {
-	Summary interface{} // *runtime.Summary (mutable; typed após task 6.0 wiring)
+	Summary any // *runtime.Summary (mutable; typed após task 6.0 wiring)
 }
 
 func (e SessionPostEndEvent) Kind() string { return PointSessionPostEnd }

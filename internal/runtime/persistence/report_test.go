@@ -1,7 +1,6 @@
 package persistence_test
 
 import (
-	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -11,11 +10,6 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence"
 )
-
-// encodeJSON serializa v para JSON e retorna os bytes.
-func encodeJSON(v any) ([]byte, error) {
-	return json.Marshal(v)
-}
 
 func makeSummary() runtime.Summary {
 	return runtime.Summary{
@@ -159,11 +153,11 @@ func TestRenderClaudeMetricsSection_AllZero_ReturnsEmpty(t *testing.T) {
 }
 
 func TestRenderClaudeMetricsSection_WithValues_ContainsAllFields(t *testing.T) {
+	// ADR-021: RenderClaudeMetricsSection delega para RenderMetricsSection(summary.Metrics).
+	// Testar via MetricSet com campos canônicos Claude (cache_read, thinking) + extra (cache_creation).
+	m := events.NewMetricSet(0, 150, 42, map[string]int{"cache_creation_tokens": 300})
 	summary := runtime.Summary{
-		CacheReadTokens:          150,
-		CacheCreationTokens:      300,
-		ThinkingTokens:           42,
-		ToolCallsNormalizedCount: 5,
+		Metrics: m,
 	}
 	got := persistence.RenderClaudeMetricsSection(summary)
 	if got == "" {
@@ -174,11 +168,9 @@ func TestRenderClaudeMetricsSection_WithValues_ContainsAllFields(t *testing.T) {
 		"cache_read_tokens",
 		"cache_creation_tokens",
 		"thinking_tokens",
-		"tool_calls_normalized",
 		"150",
 		"300",
 		"42",
-		"5",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("seção não contém %q; got:\n%s", want, got)
@@ -192,12 +184,11 @@ func TestEnrichReport_ClaudeMetricsAppended_WhenNonZero(t *testing.T) {
 		t.Fatalf("setup: %v", err)
 	}
 
+	m := events.NewMetricSet(0, 150, 42, map[string]int{"cache_creation_tokens": 300})
 	summary := runtime.Summary{
-		Launcher:            "binary",
-		EventsCount:         10,
-		CacheReadTokens:     150,
-		CacheCreationTokens: 300,
-		ThinkingTokens:      42,
+		Launcher:    "binary",
+		EventsCount: 10,
+		Metrics:     m,
 	}
 
 	if err := persistence.EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
@@ -221,7 +212,7 @@ func TestEnrichReport_ClaudeMetrics_NotPresent_WhenAllZero(t *testing.T) {
 		t.Fatalf("setup: %v", err)
 	}
 
-	summary := makeSummary() // todos campos Claude-2026 = 0
+	summary := makeSummary() // Metrics é zero-value (IsZero()==true)
 
 	if err := persistence.EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
 		t.Fatalf("EnrichReport: %v", err)
@@ -231,58 +222,65 @@ func TestEnrichReport_ClaudeMetrics_NotPresent_WhenAllZero(t *testing.T) {
 	content := string(data)
 
 	if strings.Contains(content, "Métricas Claude-2026") {
-		t.Error("seção Métricas Claude-2026 não deve aparecer quando todos contadores = 0")
+		t.Error("seção Métricas Claude-2026 não deve aparecer quando MetricSet.IsZero()==true")
 	}
 }
 
-// ── Métricas Gemini-2026 — omitempty em Summary (F4-Gemini, RF-19) ──────────────
+// ── Métricas unificadas (ADR-021) ─────────────────────────────────────────────
 
-// TestSummarySerialization_GeminiZeroOmitted valida que campos Gemini* zero são omitidos
-// do JSON de Summary (omitempty). Subtarefa 7.8.
-func TestSummarySerialization_GeminiZeroOmitted(t *testing.T) {
-	// Summary sem campos Gemini (zero-value) — devem ser omitidos do JSON.
-	s := runtime.Summary{
-		Launcher:    "binary",
-		EventsCount: 10,
-	}
-	data, err := encodeJSON(s)
-	if err != nil {
-		t.Fatalf("json.Marshal falhou: %v", err)
-	}
-	for _, field := range []string{
-		"gemini_cache_read_tokens",
-		"gemini_effective_context_tokens",
-		"gemini_prompt_tokens_billed",
-		"gemini_thoughts_tokens",
-	} {
-		if strings.Contains(string(data), field) {
-			t.Errorf("campo %q não deve aparecer no JSON quando zero (omitempty); JSON: %s", field, data)
-		}
+// TestRenderMetricsSection_AllZero valida que MetricSet zero-value não gera seção.
+func TestRenderMetricsSection_AllZero(t *testing.T) {
+	got := persistence.RenderMetricsSection(events.MetricSet{})
+	if got != "" {
+		t.Errorf("esperado string vazia para MetricSet zero; got: %q", got)
 	}
 }
 
-// TestSummarySerialization_GeminiNonZeroPresent valida que campos Gemini* não-zero aparecem no JSON.
-func TestSummarySerialization_GeminiNonZeroPresent(t *testing.T) {
-	s := runtime.Summary{
-		Launcher:                     "binary",
-		GeminiCacheReadTokens:        100,
-		GeminiEffectiveContextTokens: 200,
-		GeminiPromptTokensBilled:     300,
-		GeminiThoughtsTokens:         40,
-	}
-	data, err := encodeJSON(s)
-	if err != nil {
-		t.Fatalf("json.Marshal falhou: %v", err)
+// TestRenderMetricsSection_GeminiFields valida campos Gemini via MetricSet.Extra.
+func TestRenderMetricsSection_GeminiFields(t *testing.T) {
+	m := events.NewMetricSet(0, 100, 0, map[string]int{
+		"effective_context_tokens": 200,
+		"prompt_tokens_billed":     300,
+	})
+	got := persistence.RenderMetricsSection(m)
+	if got == "" {
+		t.Fatal("esperado seção não-vazia para MetricSet Gemini com campos > 0")
 	}
 	for _, want := range []string{
-		"gemini_cache_read_tokens",
-		"gemini_effective_context_tokens",
-		"gemini_prompt_tokens_billed",
-		"gemini_thoughts_tokens",
+		"Métricas Claude-2026",
+		"cache_read_tokens",
+		"effective_context_tokens",
+		"prompt_tokens_billed",
+		"100", "200", "300",
 	} {
-		if !strings.Contains(string(data), want) {
-			t.Errorf("campo %q deve aparecer no JSON quando não-zero; JSON: %s", want, data)
+		if !strings.Contains(got, want) {
+			t.Errorf("seção não contém %q; got:\n%s", want, got)
 		}
+	}
+}
+
+// TestEnrichReport_MetricsSection_Codex valida que Codex (MetricSet zero) não emite seção.
+func TestEnrichReport_MetricsSection_Codex(t *testing.T) {
+	fsys := fs.NewFakeFileSystem()
+	if err := fsys.WriteFile("/report/execution_report.md", []byte("# Relatório\n")); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	summary := runtime.Summary{
+		Launcher:    "binary",
+		EventsCount: 5,
+		// Metrics zero-value → nullExtractor → sem seção de métricas (RP-02).
+	}
+
+	if err := persistence.EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
+		t.Fatalf("EnrichReport: %v", err)
+	}
+
+	data, _ := fsys.ReadFile("/report/execution_report.md")
+	content := string(data)
+
+	if strings.Contains(content, "Métricas") {
+		t.Error("seção de métricas não deve aparecer quando MetricSet.IsZero()==true (Codex/Copilot)")
 	}
 }
 

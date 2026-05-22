@@ -27,6 +27,9 @@ type ACPSessionEvent struct {
 	// DroppedUpdates é o número de eventos descartados por canal cheio (ADR-018, RF-03).
 	// Incluído apenas quando > 0 para não poluir logs de sessões normais.
 	DroppedUpdates uint64
+	// RetryAttempts é o número de reexecuções após falha transitória (ADR-018, RF-04).
+	// 0 = sessão concluída na primeira tentativa; incluído apenas quando > 0 (F1 preservado).
+	RetryAttempts int
 }
 
 // LogACPSession registra campos de sessão ACP em .agents/telemetry.log apenas quando
@@ -66,6 +69,10 @@ func LogACPSession(rootDir string, evt ACPSessionEvent) error {
 	}
 	if evt.DroppedUpdates > 0 {
 		line += fmt.Sprintf(" dropped_updates=%d", evt.DroppedUpdates)
+	}
+	// Tentativas de retry (ADR-018, RF-04, ADR-006 opt-in): incluído apenas quando > 0.
+	if evt.RetryAttempts > 0 {
+		line += fmt.Sprintf(" retry_attempts=%d", evt.RetryAttempts)
 	}
 	line += "\n"
 	_, err = f.WriteString(line)

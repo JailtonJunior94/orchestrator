@@ -842,6 +842,12 @@
             "required": false,
             "description": "Desabilita TODOS os hooks Go in-process (F3-Claude, debug). Shell hooks continuam ativos no modo interativo."
           },
+          "skip-drift-guard": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Desabilita SOMENTE o hook spec_drift (spec-hash/PRD-first, ADR-022), mantendo governance e token_budget ativos. Diferente de --disable-hooks. Default false."
+          },
           "auto-review": {
             "type": "bool",
             "default": false,

@@ -43,6 +43,11 @@ const (
 // Fallback: npx --yes @google/gemini-cli@<GeminiNpmVersion> --acp.
 // AccessModeFlag vazio — ADR-015 D-04: Gemini 0.43.0 não expõe flag análoga a --bypass-permissions;
 // o controle de acesso é feito exclusivamente via --approval-mode em geminiBootstrapArgs (D-05).
+// GeminiMaxTokens é a janela de contexto do Gemini CLI (gemini-2.5-pro): 1 000 000 tokens (ADR-023).
+// Valor ≥ largeTokenThreshold (1M) ⇒ WindowLarge ⇒ limites ampliados de token_budget e memória.
+// Valor estático versionado; sobreposto por config de projeto quando necessário.
+const GeminiMaxTokens = 1_000_000
+
 func Gemini() Spec {
 	return newSpecWithBootstrap(
 		"gemini",
@@ -56,6 +61,7 @@ func Gemini() Spec {
 		"", // AccessModeFlag vazio — ADR-015 D-04
 		GeminiSDKVersion, GeminiNpmVersion, GeminiNpmPackage,
 		geminiBootstrapArgs,
+		ContextWindow{MaxTokens: GeminiMaxTokens},
 	)
 }
 

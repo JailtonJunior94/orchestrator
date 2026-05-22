@@ -30,6 +30,10 @@ const (
 // Binário canônico: "copilot" com FixedArgs=["--acp"].
 // Fallback: npx --yes @github/copilot@<CopilotNpmVersion> --acp.
 // AccessModeFlag vazio (D-07: sem flag análoga a --bypass-permissions do Claude no v0 do Copilot CLI).
+// CopilotMaxTokens é a janela de contexto do Copilot CLI (GPT-4o): 64 000 tokens (ADR-023).
+// Valor estático versionado; sobreposto por config de projeto quando necessário.
+const CopilotMaxTokens = 64_000
+
 func Copilot() Spec {
 	return newSpec(
 		"copilot",
@@ -46,5 +50,6 @@ func Copilot() Spec {
 		CopilotSDKVersion,
 		CopilotNpmVersion,
 		CopilotNpmPackage,
+		ContextWindow{MaxTokens: CopilotMaxTokens},
 	)
 }

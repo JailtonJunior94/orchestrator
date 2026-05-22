@@ -36,9 +36,13 @@ type acpInvoker struct {
 	mcpNested   bool
 	noNormalize bool
 	// F3-Claude fields: memory limits + hooks control.
-	memoryLimits memory.Limits
-	disableHooks bool
-	tasksDir     string
+	memoryLimits         memory.Limits
+	memoryLimitsExplicit bool
+	disableHooks         bool
+	tasksDir             string
+	// skipDriftGuard desabilita SOMENTE o spec_drift hook (ADR-022, RG-01/RG-02).
+	// Propagado a Job.SkipDriftGuard; mantém governance/token_budget ativos.
+	skipDriftGuard bool
 	// F5-Claude: auto-review opt-in.
 	autoReview bool
 	// Retry/backoff (ADR-018, RF-04). maxRetries=0 ⇒ uma tentativa (F1 default).
@@ -101,6 +105,12 @@ func WithACPInvokerMemoryLimitBytes(workflowBytes, taskBytes int) ACPInvokerOpti
 	}
 }
 
+// WithACPInvokerMemoryLimitsExplicit marca limites de memoria como override explicito do usuario.
+// WindowLarge respeita esses limites em vez de substituir por defaults generosos.
+func WithACPInvokerMemoryLimitsExplicit(explicit bool) ACPInvokerOption {
+	return func(a *acpInvoker) { a.memoryLimitsExplicit = explicit }
+}
+
 // WithACPInvokerDisableHooks desabilita TODOS os hooks Go in-process (F3-Claude, debug).
 // Quando true, governance, token_budget e memory_persist não são registrados no runner.
 func WithACPInvokerDisableHooks(disabled bool) ACPInvokerOption {
@@ -117,6 +127,13 @@ func WithACPInvokerTasksDir(dir string) ACPInvokerOption {
 // HARD: default false; child sessions têm AutoReview=false forçado no runner.
 func WithACPInvokerAutoReview(enabled bool) ACPInvokerOption {
 	return func(a *acpInvoker) { a.autoReview = enabled }
+}
+
+// WithACPInvokerSkipDriftGuard desabilita SOMENTE o spec_drift hook (ADR-022, RG-01/RG-02).
+// Default false = guard ativo quando TasksDir != "". Mantém governance/token_budget ativos
+// (diferente de --disable-hooks, que desliga todos os hooks).
+func WithACPInvokerSkipDriftGuard(enabled bool) ACPInvokerOption {
+	return func(a *acpInvoker) { a.skipDriftGuard = enabled }
 }
 
 // WithACPInvokerMaxRetries configura o número máximo de tentativas extras após falha transitória.
@@ -217,16 +234,18 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (str
 		MCPNested:   c.mcpNested,
 		NoNormalize: c.noNormalize,
 		// F3-Claude fields (memory + hooks).
-		MemoryLimits: c.memoryLimits,
-		DisableHooks: c.disableHooks,
-		TasksDir:     c.tasksDir,
+		MemoryLimits:         c.memoryLimits,
+		MemoryLimitsExplicit: c.memoryLimitsExplicit,
+		DisableHooks:         c.disableHooks,
+		TasksDir:             c.tasksDir,
+		SkipDriftGuard:       c.skipDriftGuard,
 		// F5-Claude: auto-review opt-in.
 		AutoReview: c.autoReview,
 	}
 
 	var (
-		summary      airuntime.Summary
-		runErr       error
+		summary       airuntime.Summary
+		runErr        error
 		retryAttempts int
 	)
 
@@ -255,8 +274,8 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (str
 		}
 	}
 
-	// Propagar retry_attempts ao Summary para telemetria (RF-04).
-	// RetryAttempts = 0 quando completou na primeira tentativa (F1 default).
+	// Propagar retry_attempts ao Summary e à telemetria (ADR-018, RF-04).
+	// 0 = sessão concluída na primeira tentativa (F1 default).
 	summary.RetryAttempts = retryAttempts
 
 	exitCode := MapExitCode(summary.CancelReason)
@@ -268,6 +287,7 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (str
 		CancelReason:       string(summary.CancelReason),
 		SlowPublishes:      summary.SlowPublishes,
 		DroppedUpdates:     summary.DroppedUpdates,
+		RetryAttempts:      summary.RetryAttempts,
 	})
 
 	stdout := c.humanBuffer.String()

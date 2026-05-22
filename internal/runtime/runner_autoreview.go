@@ -124,7 +124,7 @@ func collectGitDiff(workDir string) string {
 // runGitDiff executa `git diff [args...]` no workDir e retorna a saída.
 func runGitDiff(workDir string, args ...string) (string, error) {
 	cmdArgs := append([]string{"diff"}, args...) //nolint:gocritic
-	cmd := exec.Command("git", cmdArgs...)        //nolint:gosec
+	cmd := exec.Command("git", cmdArgs...)       //nolint:gosec
 	cmd.Dir = workDir
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -164,11 +164,12 @@ func (r *ACPRunner) runAutoReview(ctx context.Context, j Job) (ReviewResult, err
 		RuntimeConfig: RuntimeConfig{
 			Timeout: mustReviewTimeout(),
 		},
-		Quiet:        true,
-		TasksDir:     j.TasksDir,
-		TaskFileName: j.TaskFileName,
-		DisableHooks: j.DisableHooks,
-		AutoReview:   false, // HARD: recursão bloqueada
+		Quiet:          true,
+		TasksDir:       j.TasksDir,
+		TaskFileName:   j.TaskFileName,
+		DisableHooks:   j.DisableHooks,
+		SkipDriftGuard: j.SkipDriftGuard, // herdar bypass do parent (consistência do guard)
+		AutoReview:     false,            // HARD: recursão bloqueada
 	}
 
 	// Usar reviewOutputFn injetável quando disponível (facilita testes unitários).
@@ -266,4 +267,3 @@ func ParseReviewStatusForTest(output string) string { return parseReviewStatus(o
 func BuildReviewPromptForTest(skillBody, gitDiff string) string {
 	return buildReviewPrompt(skillBody, gitDiff)
 }
-

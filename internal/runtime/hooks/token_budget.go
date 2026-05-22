@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/metrics"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
 // ErrTokenBudgetExceeded é retornado quando o prompt excede o budget de tokens.
@@ -27,19 +28,32 @@ var ErrTokenBudgetExceeded = errors.New("token budget excedido: prompt muito gra
 
 // TokenBudgetHook valida o tamanho do prompt contra o budget da ferramenta.
 // Registrar no ponto PointPromptPostBuild.
+// Ciente da WindowClass: WindowLarge usa ToolBudgetsLarge quando disponível (ADR-023).
+// Zero-value de WindowClass (WindowStandard) preserva comportamento F1 exato.
 type TokenBudgetHook struct {
 	// Tool é o identificador da ferramenta para lookup do budget (ex: "claude").
 	// Default "claude" quando vazio.
 	Tool string
+	// windowClass classifica a janela de contexto da CLI ativa (ADR-023).
+	// Zero-value (WindowStandard) preserva comportamento F1.
+	windowClass specs.WindowClass
 }
 
-// NewTokenBudgetHook cria um TokenBudgetHook para a ferramenta dada.
+// NewTokenBudgetHook cria um TokenBudgetHook para a ferramenta dada com WindowStandard.
 // tool: identificador da ferramenta (ver metrics.ToolBudgets); "" usa "claude".
+// Preserva comportamento F1 — equivalente a NewTokenBudgetHookWithClass(tool, WindowStandard).
 func NewTokenBudgetHook(tool string) *TokenBudgetHook {
+	return NewTokenBudgetHookWithClass(tool, specs.WindowStandard)
+}
+
+// NewTokenBudgetHookWithClass cria um TokenBudgetHook sensível à WindowClass (ADR-023).
+// tool: identificador da ferramenta; "" usa "claude".
+// class: WindowStandard ⇒ ToolBudgets (F1); WindowLarge ⇒ ToolBudgetsLarge quando disponível.
+func NewTokenBudgetHookWithClass(tool string, class specs.WindowClass) *TokenBudgetHook {
 	if tool == "" {
 		tool = "claude"
 	}
-	return &TokenBudgetHook{Tool: tool}
+	return &TokenBudgetHook{Tool: tool, windowClass: class}
 }
 
 // Name retorna o identificador do hook.
@@ -47,7 +61,8 @@ func (h *TokenBudgetHook) Name() string { return "token_budget" }
 
 // Run verifica se o prompt em PromptBuildEvent excede o budget da ferramenta.
 // Retorna ErrTokenBudgetExceeded (com tokens e limite) se exceder.
-func (h *TokenBudgetHook) Run(ctx context.Context, evt Event) error {
+// Usa metrics.CheckBudgetForClass para selecionar teto por WindowClass (ADR-023).
+func (h *TokenBudgetHook) Run(_ context.Context, evt Event) error {
 	promptEvt, ok := evt.(PromptBuildEvent)
 	if !ok {
 		// Ponto errado: ignorar silenciosamente.
@@ -58,7 +73,8 @@ func (h *TokenBudgetHook) Run(ctx context.Context, evt Event) error {
 		return nil
 	}
 
-	tokens, limit, ok := metrics.CheckBudget(*promptEvt.Prompt, h.Tool)
+	isLarge := h.windowClass == specs.WindowLarge
+	tokens, limit, ok := metrics.CheckBudgetForClass(*promptEvt.Prompt, h.Tool, isLarge)
 	if !ok {
 		return fmt.Errorf("%w: %d tokens (limite %d para %q)",
 			ErrTokenBudgetExceeded, tokens, limit, h.Tool)

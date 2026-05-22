@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
 // Verifica que prompt dentro do budget retorna nil.
@@ -81,6 +82,54 @@ func TestTokenBudgetHook_DefaultTool(t *testing.T) {
 	evt := hooks.PromptBuildEvent{Prompt: &small, Spec: "spec"}
 	if err := h.Run(context.Background(), evt); err != nil {
 		t.Fatalf("prompt pequeno com default claude: %v", err)
+	}
+}
+
+// Verifica que WindowLarge usa teto generoso (gemini = 500k tokens).
+func TestTokenBudgetHook_WindowLarge_GenerousBudget(t *testing.T) {
+	h := hooks.NewTokenBudgetHookWithClass("gemini", specs.WindowLarge)
+
+	// ~140k tokens — acima do budget padrão gemini (4000) mas dentro do Large (500k)
+	medium := strings.Repeat("palavra ", 140_000)
+	evt := hooks.PromptBuildEvent{Prompt: &medium, Spec: "gemini"}
+
+	if err := h.Run(context.Background(), evt); err != nil {
+		t.Fatalf("prompt médio com gemini WindowLarge deve estar dentro do budget Large; got: %v", err)
+	}
+}
+
+// Verifica que WindowStandard usa teto conservador (gemini padrão = 4000 tokens).
+func TestTokenBudgetHook_WindowStandard_ConservativeBudget(t *testing.T) {
+	h := hooks.NewTokenBudgetHookWithClass("gemini", specs.WindowStandard)
+
+	// ~35k tokens — excede budget padrão gemini (4000)
+	large := strings.Repeat("x ", 50_000)
+	evt := hooks.PromptBuildEvent{Prompt: &large, Spec: "gemini"}
+
+	err := h.Run(context.Background(), evt)
+	if err == nil {
+		t.Fatal("prompt grande com gemini WindowStandard deve exceder budget padrão; got nil")
+	}
+	if !errors.Is(err, hooks.ErrTokenBudgetExceeded) {
+		t.Errorf("erro = %v; deve envolver ErrTokenBudgetExceeded", err)
+	}
+}
+
+// Verifica que zero-value de WindowClass (WindowStandard) preserva comportamento F1.
+func TestTokenBudgetHook_ZeroValue_WindowClass_IsF1(t *testing.T) {
+	// NewTokenBudgetHook usa WindowStandard (zero-value) internamente.
+	standard := hooks.NewTokenBudgetHook("gemini")
+	explicit := hooks.NewTokenBudgetHookWithClass("gemini", specs.WindowStandard)
+
+	small := strings.Repeat("a", 100)
+	evtStandard := hooks.PromptBuildEvent{Prompt: &small, Spec: "gemini"}
+	evtExplicit := hooks.PromptBuildEvent{Prompt: &small, Spec: "gemini"}
+
+	errStandard := standard.Run(context.Background(), evtStandard)
+	errExplicit := explicit.Run(context.Background(), evtExplicit)
+
+	if errStandard != errExplicit {
+		t.Errorf("zero-value WindowClass deve ser equivalente a WindowStandard: standard=%v explicit=%v", errStandard, errExplicit)
 	}
 }
 

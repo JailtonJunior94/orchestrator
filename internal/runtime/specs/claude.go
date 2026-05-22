@@ -25,6 +25,10 @@ const (
 // Binário canônico: "claude-agent-acp".
 // Fallback: npx --yes @agentclientprotocol/claude-agent-acp@<ClaudeNpmVersion>.
 // AccessModeFlag: "--bypass-permissions" (permite que o agente opere sem prompts interativos).
+// ClaudeMaxTokens é a janela de contexto do Claude (claude-3.x e 4.x): 200 000 tokens (ADR-023).
+// Valor estático versionado; sobreposto por config de projeto quando necessário.
+const ClaudeMaxTokens = 200_000
+
 func Claude() Spec {
 	return newSpec(
 		"claude",
@@ -41,5 +45,6 @@ func Claude() Spec {
 		ClaudeSDKVersion,
 		ClaudeNpmVersion,
 		ClaudeNpmPackage,
+		ContextWindow{MaxTokens: ClaudeMaxTokens},
 	)
 }
