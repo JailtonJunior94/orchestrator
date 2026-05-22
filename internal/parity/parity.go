@@ -261,6 +261,9 @@ func Invariants() []*Invariant {
 		// F2-Claude — invariantes de normalização e MCP nested-agent depth (ADR-008 extensão)
 		invINV30ToolCallsNormalizedNameInvariant,
 		invINV31MCPNestedDepthNeverExceedsMax,
+
+		// RF-19 — invariante de fallback launcher: cadeia declarada para todas as CLIs
+		invFB01FallbackLauncherChainDeclared,
 	}
 }
 
@@ -722,6 +725,34 @@ var invINV31MCPNestedDepthNeverExceedsMax = &Invariant{
 			}
 		}
 		return pass()
+	},
+}
+
+// ── RF-19 — Fallback launcher chain ──────────────────────────────────────────
+
+// invFB01FallbackLauncherChainDeclared verifica que o AGENTS.md referencia
+// agent-governance como base da governanca de execucao — pre-requisito estrutural
+// para o mecanismo de fallback launcher (ADR-017, RF-19).
+// O AGENTS.md gerado sempre inclui "agent-governance" como skill base; sua ausencia
+// indica que o template foi corrompido ou que o instalador nao gerou o artefato corretamente.
+// Paridade de argv direto vs. fallback (RF-19) e coberta pelos testes em parity_test.go
+// e e2e_parity_test.go usando probe.EnsureAvailable com LookPather fake.
+var invFB01FallbackLauncherChainDeclared = &Invariant{
+	ID:          "FB01",
+	Description: "AGENTS.md referencia agent-governance — pre-requisito estrutural do fallback launcher (RF-19, ADR-017)",
+	Level:       Common,
+	Check: func(s Snapshot) Result {
+		agents := s.File("AGENTS.md")
+		if agents == "" {
+			return fail("AGENTS.md nao gerado")
+		}
+		// AGENTS.md padrao inclui "agent-governance" como skill base de governanca.
+		// Presenca garante que o template de governanca esta integro; e pre-requisito
+		// para o mecanismo de fallback launcher documentado em ADR-017.
+		if strings.Contains(agents, "agent-governance") {
+			return pass()
+		}
+		return fail("AGENTS.md nao referencia 'agent-governance' — template de governanca corrompido (RF-19, ADR-017)")
 	},
 }
 

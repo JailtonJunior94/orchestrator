@@ -3,7 +3,9 @@ package taskloop
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"regexp"
 	"time"
@@ -39,6 +41,13 @@ type acpInvoker struct {
 	tasksDir     string
 	// F5-Claude: auto-review opt-in.
 	autoReview bool
+	// Retry/backoff (ADR-018, RF-04). maxRetries=0 ⇒ uma tentativa (F1 default).
+	maxRetries             int
+	retryBackoffMultiplier float64
+	retryBaseDelay         time.Duration
+	retryClassifier        airuntime.RetryClassifier
+	// sleepFn é injetável em testes para evitar esperas reais.
+	sleepFn func(context.Context, time.Duration) error
 }
 
 // ACPInvokerOption é uma functional option para acpInvoker (ADR-013 D-02).
@@ -110,6 +119,39 @@ func WithACPInvokerAutoReview(enabled bool) ACPInvokerOption {
 	return func(a *acpInvoker) { a.autoReview = enabled }
 }
 
+// WithACPInvokerMaxRetries configura o número máximo de tentativas extras após falha transitória.
+// 0 = uma tentativa (comportamento F1 default — sem regressão).
+// ADR-018, RF-04.
+func WithACPInvokerMaxRetries(n int) ACPInvokerOption {
+	return func(a *acpInvoker) { a.maxRetries = n }
+}
+
+// WithACPInvokerRetryBackoffMultiplier configura o multiplicador exponencial entre reexecuções.
+// <=0 = sem espera entre tentativas.
+// ADR-018, RF-04.
+func WithACPInvokerRetryBackoffMultiplier(m float64) ACPInvokerOption {
+	return func(a *acpInvoker) { a.retryBackoffMultiplier = m }
+}
+
+// WithACPInvokerRetryBaseDelay configura a duração base do backoff exponencial.
+// Zero = sem espera (F1 default).
+func WithACPInvokerRetryBaseDelay(d time.Duration) ACPInvokerOption {
+	return func(a *acpInvoker) { a.retryBaseDelay = d }
+}
+
+// WithACPInvokerRetryClassifier injeta um RetryClassifier customizado.
+// Nil = usar NewRetryClassifier() de produção.
+func WithACPInvokerRetryClassifier(c airuntime.RetryClassifier) ACPInvokerOption {
+	return func(a *acpInvoker) { a.retryClassifier = c }
+}
+
+// acpInvokerSleepFnOption injeta uma função de sleep substituível.
+// Nomeada com prefixo interno para distinguir da re-exportação de teste.
+// Acessível em testes via withACPInvokerSleepFn em testhelpers_test.go.
+func acpInvokerSleepFnOption(fn func(context.Context, time.Duration) error) ACPInvokerOption {
+	return func(a *acpInvoker) { a.sleepFn = fn }
+}
+
 // NewACPInvoker cria um acpInvoker que delega execução ao runner fornecido.
 // quiet suprime o output do renderer; activityTimeout configura o watchdog.
 // opts são functional options opcionais (ex: WithACPInvokerReasoningEffort).
@@ -121,6 +163,8 @@ func NewACPInvoker(runner *airuntime.ACPRunner, quiet bool, activityTimeout time
 		humanBuffer:     buf,
 		quiet:           quiet,
 		activityTimeout: activityTimeout,
+		retryClassifier: airuntime.NewRetryClassifier(),
+		sleepFn:         defaultSleepFn,
 	}
 	for _, o := range opts {
 		o(inv)
@@ -128,12 +172,26 @@ func NewACPInvoker(runner *airuntime.ACPRunner, quiet bool, activityTimeout time
 	return inv
 }
 
+// defaultSleepFn aguarda d ou retorna ctx.Err() quando o contexto cancela.
+func defaultSleepFn(ctx context.Context, d time.Duration) error {
+	if d <= 0 {
+		return nil
+	}
+	select {
+	case <-time.After(d):
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 // BinaryName retorna o nome lógico do invoker ACP.
 func (c *acpInvoker) BinaryName() string {
 	return "claude-agent-acp"
 }
 
-// Invoke executa o runner ACP e mapeia Summary para o contrato AgentInvoker.
+// Invoke executa o runner ACP com loop de retry/backoff para falhas transitórias.
+// MaxRetries=0 (default) ⇒ uma tentativa (comportamento F1 preservado, RF-05).
 // Retorna (stdout consolidado, "", exitCode, err) onde exitCode segue RF-10.
 func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (string, string, int, error) {
 	timeout, err := events.NewActivityTimeout(c.activityTimeout)
@@ -143,13 +201,15 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (str
 
 	evidenceDir := deriveEvidenceDir(workDir, prompt)
 	job := airuntime.Job{
-		Prompt:          prompt,
-		WorkDir:         workDir,
-		EvidenceDir:     evidenceDir,
-		ActivityTimeout: timeout,
-		Quiet:           c.quiet,
+		Prompt:      prompt,
+		WorkDir:     workDir,
+		EvidenceDir: evidenceDir,
+		// RuntimeConfig: popula Timeout a partir do ActivityTimeout calculado acima (ADR-018, RF-05).
+		RuntimeConfig: airuntime.RuntimeConfig{
+			Timeout: timeout,
+		},
+		Quiet: c.quiet,
 		// Codex-specific fields (RF-15, RF-26 — ADR-013 D-02).
-		// Claude/Copilot recebem os valores mas Spec.BootstrapArgs no-op ignora.
 		ReasoningEffort: c.reasoningEffort,
 		AccessMode:      c.accessMode,
 		AddDirs:         c.addDirs,
@@ -164,9 +224,41 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (str
 		AutoReview: c.autoReview,
 	}
 
-	c.humanBuffer.Reset()
+	var (
+		summary      airuntime.Summary
+		runErr       error
+		retryAttempts int
+	)
 
-	summary, runErr := c.runner.Run(ctx, job)
+	// Loop de retry/backoff (ADR-018, RF-04).
+	// attempt=0: primeira tentativa; attempt>0: reexecuções após falha transitória.
+	// maxRetries=0 ⇒ loop executa exatamente uma vez (F1 default, RF-05).
+	for attempt := 0; attempt <= c.maxRetries; attempt++ {
+		if attempt > 0 {
+			// Calcular espera de backoff exponencial: base * multiplier^attempt.
+			wait := airuntime.BackoffDuration(c.retryBaseDelay, c.retryBackoffMultiplier, attempt)
+			if sleepErr := c.sleepFn(ctx, wait); sleepErr != nil {
+				// Contexto cancelado durante espera: encerrar sem nova tentativa.
+				runErr = fmt.Errorf("retry %d/%d: contexto cancelado: %w", attempt, c.maxRetries, sleepErr)
+				break
+			}
+			fmt.Fprintf(os.Stderr, "[acpinvoker] retry %d/%d após falha transitória\n", attempt, c.maxRetries)
+			retryAttempts = attempt
+		}
+
+		c.humanBuffer.Reset()
+		summary, runErr = c.runner.Run(ctx, job)
+
+		// Sem erro ou erro fatal: encerrar loop imediatamente.
+		if runErr == nil || !c.retryClassifier.IsTransient(runErr) {
+			break
+		}
+	}
+
+	// Propagar retry_attempts ao Summary para telemetria (RF-04).
+	// RetryAttempts = 0 quando completou na primeira tentativa (F1 default).
+	summary.RetryAttempts = retryAttempts
+
 	exitCode := MapExitCode(summary.CancelReason)
 	_ = telemetry.LogACPSession(workDir, telemetry.ACPSessionEvent{
 		Runtime:            "acp",
@@ -174,6 +266,8 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (str
 		EventsCount:        summary.EventsCount,
 		UnknownEventsCount: summary.UnknownEventsCount,
 		CancelReason:       string(summary.CancelReason),
+		SlowPublishes:      summary.SlowPublishes,
+		DroppedUpdates:     summary.DroppedUpdates,
 	})
 
 	stdout := c.humanBuffer.String()

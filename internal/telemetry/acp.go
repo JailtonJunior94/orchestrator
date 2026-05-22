@@ -21,6 +21,12 @@ type ACPSessionEvent struct {
 	// CancelReason é o motivo de cancelamento: none, activity_timeout, context_canceled,
 	// tool_error, permission_denied.
 	CancelReason string
+	// SlowPublishes é o número de publicações que aguardaram backpressure (ADR-018, RF-03).
+	// Incluído apenas quando > 0 para não poluir logs de sessões normais.
+	SlowPublishes uint64
+	// DroppedUpdates é o número de eventos descartados por canal cheio (ADR-018, RF-03).
+	// Incluído apenas quando > 0 para não poluir logs de sessões normais.
+	DroppedUpdates uint64
 }
 
 // LogACPSession registra campos de sessão ACP em .agents/telemetry.log apenas quando
@@ -46,7 +52,7 @@ func LogACPSession(rootDir string, evt ACPSessionEvent) error {
 
 	ts := time.Now().UTC().Format(time.RFC3339)
 	line := fmt.Sprintf(
-		"%s skill=task-loop ref=acp-session runtime=%s launcher=%s events_count=%d unknown_events_count=%d cancel_reason=%s\n",
+		"%s skill=task-loop ref=acp-session runtime=%s launcher=%s events_count=%d unknown_events_count=%d cancel_reason=%s",
 		ts,
 		evt.Runtime,
 		evt.Launcher,
@@ -54,6 +60,14 @@ func LogACPSession(rootDir string, evt ACPSessionEvent) error {
 		evt.UnknownEventsCount,
 		evt.CancelReason,
 	)
+	// Campos de backpressure (ADR-018, RF-03, ADR-006 opt-in): incluídos apenas quando > 0.
+	if evt.SlowPublishes > 0 {
+		line += fmt.Sprintf(" slow_publishes=%d", evt.SlowPublishes)
+	}
+	if evt.DroppedUpdates > 0 {
+		line += fmt.Sprintf(" dropped_updates=%d", evt.DroppedUpdates)
+	}
+	line += "\n"
 	_, err = f.WriteString(line)
 	return err
 }

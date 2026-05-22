@@ -157,15 +157,18 @@ func (r *ACPRunner) runAutoReview(ctx context.Context, j Job) (ReviewResult, err
 
 	// HARD: child Job tem AutoReview=false (anti-recursão).
 	childJob := Job{
-		Prompt:          prompt,
-		WorkDir:         j.WorkDir,
-		EvidenceDir:     reviewEvidenceDir,
-		ActivityTimeout: mustReviewTimeout(),
-		Quiet:           true,
-		TasksDir:        j.TasksDir,
-		TaskFileName:    j.TaskFileName,
-		DisableHooks:    j.DisableHooks,
-		AutoReview:      false, // HARD: recursão bloqueada
+		Prompt:      prompt,
+		WorkDir:     j.WorkDir,
+		EvidenceDir: reviewEvidenceDir,
+		// RuntimeConfig: apenas Timeout para o review; demais campos inertes (F1).
+		RuntimeConfig: RuntimeConfig{
+			Timeout: mustReviewTimeout(),
+		},
+		Quiet:        true,
+		TasksDir:     j.TasksDir,
+		TaskFileName: j.TaskFileName,
+		DisableHooks: j.DisableHooks,
+		AutoReview:   false, // HARD: recursão bloqueada
 	}
 
 	// Usar reviewOutputFn injetável quando disponível (facilita testes unitários).

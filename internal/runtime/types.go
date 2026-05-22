@@ -6,6 +6,40 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
+// RuntimeConfig agrupa os parâmetros operacionais de uma sessão ACP.
+// Embutido em Job por composição (ADR-018). Todos os campos têm zero-value
+// inerte que preserva o comportamento F1 (regressão zero).
+type RuntimeConfig struct {
+	// Timeout é o timeout de inatividade do watchdog. Zero = desabilitado (F1).
+	// Mapeia o campo ActivityTimeout anterior de Job.
+	Timeout events.ActivityTimeout
+	// MaxRetries é o número máximo de tentativas extras após falha transitória.
+	// 0 = uma tentativa (comportamento F1 preservado).
+	MaxRetries int
+	// RetryBackoffMultiplier é o fator de espera exponencial entre retentativas.
+	// <=0 = sem espera (F1).
+	RetryBackoffMultiplier float64
+	// Concurrent é o grau máximo de paralelismo no runloop.
+	// <=0 é normalizado para 1 (sequencial, F1) por ApplyDefaults.
+	Concurrent int
+	// BatchSize é o tamanho máximo do lote de tasks enviadas por iteração.
+	// <=0 é normalizado para 1 (F1) por ApplyDefaults.
+	BatchSize int
+}
+
+// ApplyDefaults normaliza os campos zero-value de RuntimeConfig para seus
+// valores funcionais mínimos, preservando o comportamento F1 em todos os casos.
+// Timeout, MaxRetries, RetryBackoffMultiplier: zero-value já é inerte — sem alteração.
+// Concurrent <=0 → 1 (sequencial). BatchSize <=0 → 1.
+func (c *RuntimeConfig) ApplyDefaults() {
+	if c.Concurrent <= 0 {
+		c.Concurrent = 1
+	}
+	if c.BatchSize <= 0 {
+		c.BatchSize = 1
+	}
+}
+
 // Job descreve os parâmetros de uma execução ACP.
 type Job struct {
 	// Prompt é o texto enviado ao agente como entrada.
@@ -14,8 +48,9 @@ type Job struct {
 	WorkDir string
 	// EvidenceDir é o diretório onde artefatos de evidência são salvos.
 	EvidenceDir string
-	// ActivityTimeout é o timeout de inatividade. Zero = desabilitado.
-	ActivityTimeout events.ActivityTimeout
+	// RuntimeConfig embute os parâmetros operacionais unificados (ADR-018).
+	// Timeout substitui o campo ActivityTimeout anterior; zero-value preserva F1.
+	RuntimeConfig
 	// Quiet suprime o output do renderer para o usuário.
 	Quiet bool
 

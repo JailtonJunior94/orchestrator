@@ -40,6 +40,16 @@ type Client interface {
 	// Close encerra a sessão e o subprocesso graciosamente.
 	// Idempotente; seguro chamar múltiplas vezes.
 	Close() error
+
+	// SlowPublishes retorna o número acumulado de publicações que bloquearam
+	// por timeout de backpressure antes de entregar o evento (ADR-018, RF-03).
+	// Default 0 quando publishTimeout=0 (drop imediato, comportamento F1).
+	SlowPublishes() uint64
+
+	// DroppedUpdates retorna o número acumulado de eventos descartados quando
+	// o canal estava cheio e o timeout de backpressure expirou (ADR-018, RF-03).
+	// Com timeout=0, qualquer canal cheio resulta em descarte imediato (F1).
+	DroppedUpdates() uint64
 }
 
 // ClientFactory cria instâncias de Client.
@@ -57,7 +67,8 @@ func NewDefaultClientFactory() ClientFactory {
 }
 
 func (f *defaultClientFactory) New(workDir string) Client {
-	return newACPClient(workDir, nil)
+	// Defaults: cap=64, publishTimeout=0 — byte-equivalente ao comportamento F1 (ADR-018, RF-05).
+	return newACPClient(workDir, nil, defaultChannelCap, 0)
 }
 
 // IOProvider permite injetar io.ReadWriter customizados para testes in-process.
@@ -68,8 +79,9 @@ type IOProvider interface {
 
 // acpClient é a implementação real de Client sobre coder/acp-go-sdk.
 type acpClient struct {
-	workDir    string
-	ioProvider IOProvider // nil em produção; injeta pipeconn em testes
+	workDir        string
+	ioProvider     IOProvider    // nil em produção; injeta pipeconn em testes
+	publishTimeout time.Duration // 0 = drop imediato (F1 default); >0 = esperar antes de descartar
 
 	mu      sync.Mutex
 	cmd     *exec.Cmd
@@ -83,19 +95,35 @@ type acpClient struct {
 	permissionRequested atomic.Bool
 	once                sync.Once
 	cancel              context.CancelFunc
+
+	// Contadores atômicos de backpressure (ADR-018, RF-03).
+	// slowPublishes: canal cheio mas o evento foi entregue após aguardar publishTimeout.
+	// droppedUpdates: canal cheio e evento descartado (timeout expirou ou timeout=0).
+	slowPublishes  atomic.Uint64
+	droppedUpdates atomic.Uint64
 }
 
 // ErrPermissionDenied indica que o agente ACP solicitou permissão e o cliente
 // cancelou imediatamente o prompt turn conforme RF-16.
 var ErrPermissionDenied = errors.New("permission denied")
 
+// defaultChannelCap é a capacidade padrão do canal de eventos (F1 default).
+// Mantida em 64 para preservar o comportamento atual byte-equivalente (ADR-018, RF-05).
+const defaultChannelCap = 64
+
 // newACPClient cria um novo acpClient sem ainda abrir a sessão.
 // ioProvider pode ser nil (modo produção: spawn subprocess) ou um IOProvider (modo teste).
-func newACPClient(workDir string, ioProvider IOProvider) *acpClient {
+// cap controla a capacidade do canal; 0 aplica defaultChannelCap (64, F1 default).
+// publishTimeout é o tempo máximo que trySend aguarda antes de descartar; 0 = drop imediato (F1).
+func newACPClient(workDir string, ioProvider IOProvider, cap int, publishTimeout time.Duration) *acpClient {
+	if cap <= 0 {
+		cap = defaultChannelCap
+	}
 	return &acpClient{
-		workDir:    workDir,
-		ioProvider: ioProvider,
-		eventCh:    make(chan events.Event, 64),
+		workDir:        workDir,
+		ioProvider:     ioProvider,
+		publishTimeout: publishTimeout,
+		eventCh:        make(chan events.Event, cap),
 	}
 }
 
@@ -272,19 +300,58 @@ func (c *acpClient) closeChannel(err error) {
 	})
 }
 
-// trySend envia evt para eventCh de forma race-free. Retorna false se o canal
-// já foi fechado ou está cheio. SessionUpdate usa esta função em vez de acessar
-// eventCh diretamente.
+// trySend envia evt para eventCh de forma race-free (ADR-018, RF-03).
+//
+// Comportamento por publishTimeout:
+//   - timeout=0 (F1 default): se o canal estiver cheio, descarta o evento e
+//     incrementa droppedUpdates. Preserva o comportamento atual byte-equivalente.
+//   - timeout>0: aguarda até publishTimeout para entregar o evento; se o canal
+//     ainda estiver cheio após o timeout, descarta e incrementa droppedUpdates.
+//     Entrega bem-sucedida após espera incrementa slowPublishes.
+//
+// Em ambos os casos, retorna imediatamente se o canal já estiver fechado.
 func (c *acpClient) trySend(evt events.Event) {
 	c.sendMu.RLock()
 	defer c.sendMu.RUnlock()
 	if c.closed.Load() {
 		return
 	}
+
+	// Caminho rápido: tentar enviar sem bloquear.
 	select {
 	case c.eventCh <- evt:
+		return // enviado com sucesso sem espera
 	default:
 	}
+
+	// Canal cheio: comportamento depende de publishTimeout.
+	if c.publishTimeout <= 0 {
+		// Drop imediato (F1 default, ADR-018 §D-04).
+		c.droppedUpdates.Add(1)
+		return
+	}
+
+	// publishTimeout > 0: aguardar antes de descartar.
+	timer := time.NewTimer(c.publishTimeout)
+	defer timer.Stop()
+	select {
+	case c.eventCh <- evt:
+		c.slowPublishes.Add(1) // entregue após espera
+	case <-timer.C:
+		c.droppedUpdates.Add(1) // timeout expirado → descarte
+	}
+}
+
+// SlowPublishes retorna o número acumulado de eventos que aguardaram publishTimeout
+// para ser entregues (canal cheio mas entregue dentro do timeout). Thread-safe.
+func (c *acpClient) SlowPublishes() uint64 {
+	return c.slowPublishes.Load()
+}
+
+// DroppedUpdates retorna o número acumulado de eventos descartados por canal cheio.
+// Inclui tanto descartes imediatos (timeout=0) quanto descartes após expiração do timeout. Thread-safe.
+func (c *acpClient) DroppedUpdates() uint64 {
+	return c.droppedUpdates.Load()
 }
 
 // Updates retorna o canal de eventos. Fechado em session_end ou erro.

@@ -310,11 +310,11 @@ func TestACPRunner_ActivityTimeout(t *testing.T) {
 	runner := buildRunner(t, ctx, proberBinary(), script, pfact)
 
 	job := airuntime.Job{
-		Prompt:          "prompt",
-		WorkDir:         workDirWithAgentsMD(t),
-		EvidenceDir:     t.TempDir(),
-		ActivityTimeout: timeout,
-		Quiet:           true,
+		Prompt:        "prompt",
+		WorkDir:       workDirWithAgentsMD(t),
+		EvidenceDir:   t.TempDir(),
+		RuntimeConfig: airuntime.RuntimeConfig{Timeout: timeout},
+		Quiet:         true,
 	}
 
 	summary, runErr := runner.Run(ctx, job)
@@ -1055,11 +1055,11 @@ func TestACPIntegration_Copilot_T12(t *testing.T) {
 	runner := buildRunnerWithSpec(t, ctx, specs.Copilot(), proberCopilotBinary(), script, pfact)
 
 	job := airuntime.Job{
-		Prompt:          "t12 copilot watchdog test",
-		WorkDir:         workDirWithAgentsMD(t),
-		EvidenceDir:     t.TempDir(),
-		ActivityTimeout: timeout,
-		Quiet:           true,
+		Prompt:        "t12 copilot watchdog test",
+		WorkDir:       workDirWithAgentsMD(t),
+		EvidenceDir:   t.TempDir(),
+		RuntimeConfig: airuntime.RuntimeConfig{Timeout: timeout},
+		Quiet:         true,
 	}
 
 	summary, runErr := runner.Run(ctx, job)
@@ -1584,7 +1584,7 @@ func TestACPRunner_Codex_T21_ActivityWatchdog(t *testing.T) {
 		Prompt:          "T21 codex watchdog",
 		WorkDir:         workDirWithAgentsMD(t),
 		EvidenceDir:     t.TempDir(),
-		ActivityTimeout: timeout,
+		RuntimeConfig:   airuntime.RuntimeConfig{Timeout: timeout},
 		Quiet:           true,
 		Model:           specs.DefaultCodexModel,
 		ReasoningEffort: "medium",
@@ -1920,11 +1920,11 @@ func TestACPIntegration_Gemini_ActivityWatchdog(t *testing.T) {
 	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiBinary(), script, pfact)
 
 	job := airuntime.Job{
-		Prompt:          "gemini watchdog test",
-		WorkDir:         workDirWithAgentsMD(t),
-		EvidenceDir:     t.TempDir(),
-		ActivityTimeout: timeout,
-		Quiet:           true,
+		Prompt:        "gemini watchdog test",
+		WorkDir:       workDirWithAgentsMD(t),
+		EvidenceDir:   t.TempDir(),
+		RuntimeConfig: airuntime.RuntimeConfig{Timeout: timeout},
+		Quiet:         true,
 	}
 
 	summary, runErr := runner.Run(ctx, job)

@@ -55,11 +55,12 @@ func TestEnsureAvailable(t *testing.T) {
 			wantLauncher: "binary",
 		},
 		{
+			// ADR-017: fallback genérico — npx é um BinaryLauncher com FixedArgs literais.
 			name: "so_npx_disponivel",
 			available: map[string]string{
 				"npx": "/usr/local/bin/npx",
 			},
-			wantLauncher: "npx",
+			wantLauncher: "binary",
 		},
 		{
 			name:            "nenhum_launcher_disponivel",
@@ -233,10 +234,11 @@ func TestEnsureAvailable_BinaryLauncherCommand(t *testing.T) {
 	}
 }
 
+// TestEnsureAvailable_FallbackWithoutAt testa fallback cujo FixedArgs não tem '@' de versão npm.
+// ADR-017: fallback genérico — FixedArgs são preservados literalmente, sem parsing especial.
 func TestEnsureAvailable_FallbackWithoutAt(t *testing.T) {
 	t.Parallel()
 
-	// Testa fallback cujo FixedArgs[1] não tem '@' (edge case de extractPackage/extractVersion).
 	sp := specs.Spec{
 		ID:      "test-no-at-fallback",
 		Command: "nonexistent-binary",
@@ -256,15 +258,25 @@ func TestEnsureAvailable_FallbackWithoutAt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
-	if launcher.Kind() != "npx" {
-		t.Errorf("kind = %q, want \"npx\"", launcher.Kind())
+	// ADR-017: fallback é materializado como BinaryLauncher (kind="binary"), não NpxLauncher.
+	if launcher.Kind() != "binary" {
+		t.Errorf("kind = %q, want \"binary\"", launcher.Kind())
+	}
+	// FixedArgs literais preservados.
+	cmd, args := launcher.Command()
+	if cmd != "/usr/local/bin/npx" {
+		t.Errorf("command = %q, want \"/usr/local/bin/npx\"", cmd)
+	}
+	if !slices.Equal(args, []string{"--yes", "some-package-no-version"}) {
+		t.Errorf("args = %v, want [\"--yes\", \"some-package-no-version\"]", args)
 	}
 }
 
+// TestEnsureAvailable_FallbackWithEmptyArgs testa fallback cujo FixedArgs está vazio.
+// ADR-017: FixedArgs vazios são preservados — o launcher é iniciado sem args extras.
 func TestEnsureAvailable_FallbackWithEmptyArgs(t *testing.T) {
 	t.Parallel()
 
-	// Testa fallback cujo FixedArgs está vazio (edge case).
 	sp := specs.Spec{
 		ID:      "test-empty-args-fallback",
 		Command: "nonexistent-binary",
@@ -284,19 +296,31 @@ func TestEnsureAvailable_FallbackWithEmptyArgs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
-	if launcher.Kind() != "npx" {
-		t.Errorf("kind = %q, want \"npx\"", launcher.Kind())
+	// ADR-017: BinaryLauncher genérico, não NpxLauncher.
+	if launcher.Kind() != "binary" {
+		t.Errorf("kind = %q, want \"binary\"", launcher.Kind())
+	}
+	cmd, args := launcher.Command()
+	if cmd != "/usr/local/bin/npx" {
+		t.Errorf("command = %q, want \"/usr/local/bin/npx\"", cmd)
+	}
+	if len(args) != 0 {
+		t.Errorf("args = %v, want []", args)
 	}
 }
 
-func TestEnsureAvailable_NpxLauncherArgs(t *testing.T) {
+// TestEnsureAvailable_FallbackLauncherArgs valida que o fallback genérico (ADR-017)
+// preserva Command e FixedArgs literalmente — sem parsing especial de "@pkg@ver".
+// Para a spec Claude, o fallback é {Command:"npx", FixedArgs:["--yes", "@agentclientprotocol/claude-agent-acp@<ver>"]}.
+func TestEnsureAvailable_FallbackLauncherArgs(t *testing.T) {
 	t.Parallel()
 
 	sp := claudeSpec()
-	sp.ID = "claude-npx-args-test"
+	sp.ID = "claude-fallback-args-test"
 
+	const npxPath = "/usr/local/bin/npx"
 	look := newFakeLookPather(map[string]string{
-		"npx": "/usr/local/bin/npx",
+		"npx": npxPath,
 	})
 
 	launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
@@ -304,26 +328,21 @@ func TestEnsureAvailable_NpxLauncherArgs(t *testing.T) {
 		t.Fatalf("erro inesperado: %v", err)
 	}
 
-	if launcher.Kind() != "npx" {
-		t.Fatalf("kind = %q, want \"npx\"", launcher.Kind())
+	// ADR-017: fallback materializado como BinaryLauncher (kind="binary").
+	if launcher.Kind() != "binary" {
+		t.Fatalf("kind = %q, want \"binary\"", launcher.Kind())
 	}
 
 	cmd, args := launcher.Command()
-	if cmd != "npx" {
-		t.Errorf("command = %q, want \"npx\"", cmd)
+	// Command é o path resolvido do binário npx.
+	if cmd != npxPath {
+		t.Errorf("command = %q, want %q", cmd, npxPath)
 	}
 
-	// Verificar que os args contêm --yes e o pacote com versão pinada.
-	found := false
-	for _, arg := range args {
-		if strings.Contains(arg, specs.ClaudeNpmPackage) && strings.Contains(arg, specs.ClaudeNpmVersion) {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Errorf("args não contém o pacote npm esperado %s@%s; args: %v",
-			specs.ClaudeNpmPackage, specs.ClaudeNpmVersion, args)
+	// FixedArgs são os da spec, preservados literalmente: ["--yes", "@agentclientprotocol/claude-agent-acp@<ver>"].
+	wantArgs := []string{"--yes", specs.ClaudeNpmPackage + "@" + specs.ClaudeNpmVersion}
+	if !slices.Equal(args, wantArgs) {
+		t.Errorf("args = %v, want %v", args, wantArgs)
 	}
 }
 
@@ -404,41 +423,37 @@ func TestEnsureAvailable_T07_CopilotBinaryPresent(t *testing.T) {
 	}
 }
 
-// T-08: Spec Copilot, binário ausente, npx presente → retorna NpxLauncher com CopilotNpmPackage/CopilotNpmVersion.
+// T-08: Spec Copilot, binário ausente, npx presente → retorna BinaryLauncher genérico (ADR-017).
+// FixedArgs do fallback incluem "--acp" para manter paridade com o binário direto (RF-05).
 func TestEnsureAvailable_T08_CopilotFallbackNpx(t *testing.T) {
 	t.Parallel()
 
 	sp := copilotSpec()
 	sp.ID = "copilot-t08-test"
 
+	const npxPath = "/usr/local/bin/npx"
 	look := newFakeLookPather(map[string]string{
-		"npx": "/usr/local/bin/npx",
+		"npx": npxPath,
 	})
 
 	launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
-	if launcher.Kind() != "npx" {
-		t.Fatalf("kind = %q, want \"npx\"", launcher.Kind())
+	// ADR-017: BinaryLauncher genérico, não NpxLauncher.
+	if launcher.Kind() != "binary" {
+		t.Fatalf("kind = %q, want \"binary\"", launcher.Kind())
 	}
 
 	cmd, args := launcher.Command()
-	if cmd != "npx" {
-		t.Errorf("command = %q, want \"npx\"", cmd)
+	if cmd != npxPath {
+		t.Errorf("command = %q, want %q", cmd, npxPath)
 	}
 
-	// Verificar que os args contêm o pacote Copilot com versão pinada.
-	found := false
-	for _, arg := range args {
-		if strings.Contains(arg, specs.CopilotNpmPackage) && strings.Contains(arg, specs.CopilotNpmVersion) {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Errorf("args não contém o pacote npm esperado %s@%s; args: %v",
-			specs.CopilotNpmPackage, specs.CopilotNpmVersion, args)
+	// FixedArgs do fallback Copilot: ["--yes", "@github/copilot@<ver>", "--acp"] — preservados literalmente.
+	wantArgs := specs.Copilot().Fallbacks[0].FixedArgs
+	if !slices.Equal(args, wantArgs) {
+		t.Errorf("args = %v, want %v", args, wantArgs)
 	}
 }
 
@@ -621,5 +636,189 @@ func TestEnsureAvailable_ClaudeRegressionErrorMessage(t *testing.T) {
 		if !strings.Contains(msg, part) {
 			t.Errorf("regressão Claude: mensagem deve conter %q\nmensagem completa: %q", part, msg)
 		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Testes adicionais ADR-017: cadeia genérica de fallback (Subtask 2.5)
+// ---------------------------------------------------------------------------
+
+// TestFallbackChain_GenericLauncher valida que qualquer FallbackLauncher (não só npx) é
+// materializado como BinaryLauncher com FixedArgs literais (ADR-017 D-1).
+func TestFallbackChain_GenericLauncher(t *testing.T) {
+	t.Parallel()
+
+	const bunxPath = "/usr/local/bin/bunx"
+	sp := specs.Spec{
+		ID:      "generic-fallback-test",
+		Command: "nonexistent-acp-binary",
+		Fallbacks: []specs.FallbackLauncher{
+			{
+				Command:   "bunx",
+				FixedArgs: []string{"--bun", "@some/acp-agent@2.0.0"},
+			},
+		},
+	}
+
+	look := newFakeLookPather(map[string]string{
+		"bunx": bunxPath,
+	})
+
+	launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+	if launcher.Kind() != "binary" {
+		t.Errorf("kind = %q, want \"binary\"", launcher.Kind())
+	}
+	cmd, args := launcher.Command()
+	if cmd != bunxPath {
+		t.Errorf("command = %q, want %q", cmd, bunxPath)
+	}
+	wantArgs := []string{"--bun", "@some/acp-agent@2.0.0"}
+	if !slices.Equal(args, wantArgs) {
+		t.Errorf("args = %v, want %v", args, wantArgs)
+	}
+}
+
+// TestFallbackChain_MultipleOrder valida que múltiplos fallbacks são tentados em ordem:
+// o primeiro cujo Command exista no PATH vence (ADR-017 D-2).
+func TestFallbackChain_MultipleOrder(t *testing.T) {
+	t.Parallel()
+
+	const secondPath = "/usr/bin/second-launcher"
+	sp := specs.Spec{
+		ID:      "multi-fallback-order-test",
+		Command: "nonexistent-primary",
+		Fallbacks: []specs.FallbackLauncher{
+			{Command: "first-launcher", FixedArgs: []string{"--first"}},
+			{Command: "second-launcher", FixedArgs: []string{"--second"}},
+			{Command: "third-launcher", FixedArgs: []string{"--third"}},
+		},
+	}
+
+	// Apenas o segundo fallback está disponível.
+	look := newFakeLookPather(map[string]string{
+		"second-launcher": secondPath,
+	})
+
+	launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+	if launcher.Kind() != "binary" {
+		t.Errorf("kind = %q, want \"binary\"", launcher.Kind())
+	}
+	cmd, args := launcher.Command()
+	if cmd != secondPath {
+		t.Errorf("command = %q, want %q", cmd, secondPath)
+	}
+	if !slices.Equal(args, []string{"--second"}) {
+		t.Errorf("args = %v, want [\"--second\"]", args)
+	}
+}
+
+// TestFallbackChain_CanonicalFirst valida que o binário canônico é sempre tentado antes dos
+// fallbacks — mesmo que ambos estejam disponíveis (ADR-017 D-2: canônico primeiro).
+func TestFallbackChain_CanonicalFirst(t *testing.T) {
+	t.Parallel()
+
+	const canonicalPath = "/usr/local/bin/primary-acp"
+	const fallbackPath = "/usr/local/bin/npx"
+	sp := specs.Spec{
+		ID:      "canonical-first-test",
+		Command: "primary-acp",
+		FixedArgs: []string{"--server"},
+		Fallbacks: []specs.FallbackLauncher{
+			{Command: "npx", FixedArgs: []string{"--yes", "@example/agent@1.0.0"}},
+		},
+	}
+
+	// Ambos disponíveis — canônico deve vencer.
+	look := newFakeLookPather(map[string]string{
+		"primary-acp": canonicalPath,
+		"npx":         fallbackPath,
+	})
+
+	launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+	cmd, args := launcher.Command()
+	if cmd != canonicalPath {
+		t.Errorf("canônico deve vencer: command = %q, want %q", cmd, canonicalPath)
+	}
+	if !slices.Equal(args, []string{"--server"}) {
+		t.Errorf("args canônico = %v, want [\"--server\"]", args)
+	}
+}
+
+// TestFallbackChain_ArgvParityPerSpec valida paridade byte-equivalente (RF-05):
+// o argv resolvido via fallback genérico é idêntico ao que seria esperado com os
+// FixedArgs declarados nas specs atuais (claude/codex/gemini/copilot).
+func TestFallbackChain_ArgvParityPerSpec(t *testing.T) {
+	t.Parallel()
+
+	const npxPath = "/usr/local/bin/npx"
+
+	tests := []struct {
+		name     string
+		spec     specs.Spec
+		wantCmd  string
+		wantArgs []string
+	}{
+		{
+			name:     "claude_fallback_argv",
+			spec:     specs.Claude(),
+			wantCmd:  npxPath,
+			wantArgs: []string{"--yes", specs.ClaudeNpmPackage + "@" + specs.ClaudeNpmVersion},
+		},
+		{
+			name:     "codex_fallback_argv",
+			spec:     specs.Codex(),
+			wantCmd:  npxPath,
+			wantArgs: []string{"--yes", specs.CodexNpmPackage + "@" + specs.CodexNpmVersion},
+		},
+		{
+			name:     "gemini_fallback_argv",
+			spec:     specs.Gemini(),
+			wantCmd:  npxPath,
+			wantArgs: []string{"--yes", specs.GeminiNpmPackage + "@" + specs.GeminiNpmVersion, "--acp"},
+		},
+		{
+			name:     "copilot_fallback_argv",
+			spec:     specs.Copilot(),
+			wantCmd:  npxPath,
+			wantArgs: []string{"--yes", specs.CopilotNpmPackage + "@" + specs.CopilotNpmVersion, "--acp"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// ID único para isolar cache entre sub-testes.
+			sp := tc.spec
+			sp.ID = tc.name + "-parity"
+
+			look := newFakeLookPather(map[string]string{
+				"npx": npxPath,
+			})
+
+			launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+			if err != nil {
+				t.Fatalf("erro inesperado: %v", err)
+			}
+			if launcher.Kind() != "binary" {
+				t.Errorf("kind = %q, want \"binary\"", launcher.Kind())
+			}
+			cmd, args := launcher.Command()
+			if cmd != tc.wantCmd {
+				t.Errorf("command = %q, want %q", cmd, tc.wantCmd)
+			}
+			if !slices.Equal(args, tc.wantArgs) {
+				t.Errorf("args = %v, want %v", args, tc.wantArgs)
+			}
+		})
 	}
 }

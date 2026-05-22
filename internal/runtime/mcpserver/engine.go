@@ -78,12 +78,15 @@ func spawnNestedSession(ctx context.Context, p SpawnParams) (RunAgentOutput, err
 	}
 
 	childJob := airuntime.Job{
-		Prompt:          prompt,
-		WorkDir:         p.NestedCtx.WorkspaceRoot,
-		EvidenceDir:     childEvidenceDir,
-		ActivityTimeout: events.ActivityTimeout(time.Duration(timeoutSec) * time.Second),
-		Quiet:           true,
-		Model:           model,
+		Prompt:      prompt,
+		WorkDir:     p.NestedCtx.WorkspaceRoot,
+		EvidenceDir: childEvidenceDir,
+		// RuntimeConfig: apenas Timeout para child jobs do MCP nested (ADR-018, RF-05).
+		RuntimeConfig: airuntime.RuntimeConfig{
+			Timeout: events.ActivityTimeout(time.Duration(timeoutSec) * time.Second),
+		},
+		Quiet: true,
+		Model: model,
 	}
 
 	// Criar e executar o child ACPRunner.

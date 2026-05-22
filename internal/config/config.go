@@ -14,13 +14,25 @@ type LocalSource struct {
 
 func (s *LocalSource) SourceDir() string { return s.Dir }
 
+// InstallScope define o escopo de instalacao: projeto (default) ou global.
+// ADR-019.
+type InstallScope string
+
+const (
+	// ScopeProject instala no diretorio do projeto (default).
+	ScopeProject InstallScope = "project"
+	// ScopeGlobal instala globalmente em dirs de config do usuario (~/.aispec/).
+	ScopeGlobal InstallScope = "global"
+)
+
 // InstallOptions agrupa opcoes para o comando install.
 type InstallOptions struct {
 	ProjectDir   string
 	SourceDir    string
-	Tools        []skills.Tool
+	Tools        []skills.Tool  // OPCIONAL: vazio => auto-detect via AgentDetector (ADR-019)
 	Langs        []skills.Lang
 	LinkMode     skills.LinkMode
+	Scope        InstallScope   // novo (ADR-019): "project" (default) ou "global"
 	DryRun       bool
 	GenerateCtx  bool
 	CodexProfile string

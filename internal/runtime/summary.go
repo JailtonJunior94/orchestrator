@@ -19,6 +19,17 @@ type Summary struct {
 	// UnknownKinds são os raw kinds desconhecidos encontrados, deduplicados.
 	UnknownKinds []string
 
+	// Contadores de backpressure do canal ACP (ADR-018, RF-03).
+	// Populados a partir dos contadores atômicos de acpClient ao final da sessão.
+	// Default 0 quando publishTimeout=0 e o canal nunca ficou cheio (F1 default).
+
+	// SlowPublishes é o número de publicações que aguardaram publishTimeout>0 antes
+	// de entregar o evento ao canal. Indica pressão no canal durante a sessão.
+	SlowPublishes uint64 `json:"slow_publishes,omitempty"`
+	// DroppedUpdates é o número de eventos descartados por canal cheio.
+	// Com timeout=0 (F1 default), qualquer canal cheio resulta em descarte imediato.
+	DroppedUpdates uint64 `json:"dropped_updates,omitempty"`
+
 	// F5-Claude: campos de auto-review (populados apenas quando AutoReview=true).
 	// ReviewStatus é "" quando auto-review não executou, "ok" ou "blocked" caso contrário.
 	ReviewStatus string
@@ -54,4 +65,9 @@ type Summary struct {
 	// GeminiThoughtsTokens é o total acumulado de tokens de raciocínio (thoughts) do Gemini 2.5.
 	// Pode ser sempre zero quando thoughts não estão expostos por default (caveat Q8 do PRD).
 	GeminiThoughtsTokens int `json:"gemini_thoughts_tokens,omitempty"`
+
+	// RetryAttempts é o número de tentativas extras realizadas pelo loop de retry (ADR-018, RF-04).
+	// 0 = sessão bem-sucedida na primeira tentativa (comportamento F1 default).
+	// Incrementado pelo acpInvoker para cada reexecução após falha transitória.
+	RetryAttempts int `json:"retry_attempts,omitempty"`
 }

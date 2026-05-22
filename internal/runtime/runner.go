@@ -172,7 +172,7 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	}
 
 	// Fase 5: watchdog de inatividade.
-	wd := NewActivityWatchdog(j.ActivityTimeout, cancelCause, r.clock)
+	wd := NewActivityWatchdog(j.Timeout, cancelCause, r.clock)
 	wd.Start(ctx)
 	defer wd.Stop()
 
@@ -193,7 +193,7 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 
 	// Fase 9: persistir tool_calls e enriquecer report.
 	toolCallSummaries := counters.ToolCalls()
-	summary := buildSummary(launcher.Kind(), loopResult, cancelReason, toolCallSummaries)
+	summary := buildSummary(launcher.Kind(), loopResult, cancelReason, toolCallSummaries, c)
 	persistSummary(persist, toolCallSummaries, summary)
 
 	// ★ F3-Claude: hook session.post_end — memory_persist escreve MEMORY.md.
@@ -384,8 +384,10 @@ func (r *ACPRunner) runEventLoop(
 }
 
 // buildSummary constrói o Summary com os contadores e cancel reason.
-func buildSummary(launcher string, res eventLoopResult, cancelReason events.CancelReason, toolCalls []events.ToolCallSummary) Summary {
-	return Summary{
+// c é o client ACP; quando implementa as métricas de backpressure (SlowPublishes/DroppedUpdates),
+// os valores são incorporados ao Summary (ADR-018, RF-03).
+func buildSummary(launcher string, res eventLoopResult, cancelReason events.CancelReason, toolCalls []events.ToolCallSummary, c client.Client) Summary {
+	s := Summary{
 		Launcher:                     launcher,
 		EventsCount:                  res.eventsCount,
 		UnknownEventsCount:           res.unknownCount,
@@ -401,6 +403,10 @@ func buildSummary(launcher string, res eventLoopResult, cancelReason events.Canc
 		GeminiPromptTokensBilled:     res.geminiPromptTokensBilled,
 		GeminiThoughtsTokens:         res.geminiThoughtsTokens,
 	}
+	// Propagar contadores de backpressure quando o client os expõe (ADR-018, RF-03).
+	s.SlowPublishes = c.SlowPublishes()
+	s.DroppedUpdates = c.DroppedUpdates()
+	return s
 }
 
 // persistSummary persiste tool_calls e enriquece o report quando persist está disponível.

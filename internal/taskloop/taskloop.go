@@ -79,6 +79,15 @@ type Options struct {
 	// HARD: default false; child sessions têm AutoReview=false forçado (anti-recursão).
 	// HARD: Claude NÃO modifica internal/wrapper/ValidTools (ADR-014 §D-07).
 	AutoReview bool
+
+	// Concurrent é o grau máximo de paralelismo no RunLoop (ADR-018, RF-04).
+	// <=0 ou 1 ⇒ execução sequencial idêntica ao atual (F1 default, RF-05).
+	// Apenas tasks sem dependência pendente são executadas em paralelo.
+	Concurrent int
+
+	// BatchSize é o tamanho máximo do lote de tasks por rodada de seleção (ADR-018, RF-04).
+	// <=0 ou 1 ⇒ uma task por iteração (F1 default).
+	BatchSize int
 }
 
 // Service orquestra a execucao sequencial de tasks de um PRD folder.

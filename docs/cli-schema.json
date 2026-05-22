@@ -193,8 +193,14 @@
         "flags": {
           "tools": {
             "type": "string",
-            "required": true,
-            "description": "Ferramentas de IA a instalar (ex: claude,copilot,codex)"
+            "required": false,
+            "description": "Ferramentas de IA a instalar (ex: claude,copilot,codex); auto-detectado quando omitido"
+          },
+          "global": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Instala globalmente em ~/.aispec (ADR-019 RF-07)"
           },
           "langs": {
             "type": "string",
@@ -274,6 +280,41 @@
             "type": "string",
             "required": false,
             "description": "Git ref (branch, tag ou commit) para resolver pacote remoto"
+          }
+        }
+      },
+      {
+        "name": "verify",
+        "description": "Verifica o estado de instalacao das skills (current/missing/drifted)",
+        "longDescription": "Verifica o estado de instalacao das skills de governanca em um projeto. Reporta cada skill como current (ok), missing (ausente) ou drifted (divergente). Reusa o comparador de checksum do modulo de upgrade (file-first).",
+        "args": [
+          {
+            "name": "path",
+            "required": false,
+            "description": "Caminho do projeto alvo (padrao: diretorio atual)"
+          }
+        ],
+        "flags": {
+          "tools": {
+            "type": "string",
+            "required": false,
+            "description": "Ferramentas a verificar: claude,gemini,codex,copilot ou all"
+          },
+          "langs": {
+            "type": "string",
+            "required": false,
+            "description": "Linguagens: go,node,python ou all"
+          },
+          "source": {
+            "type": "string",
+            "required": false,
+            "description": "Diretorio fonte do repositorio de governanca (usa embutido se omitido)"
+          },
+          "global": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Verifica a instalacao global em ~/.aispec"
           }
         }
       },

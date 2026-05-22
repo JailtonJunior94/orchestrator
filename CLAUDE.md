@@ -29,6 +29,51 @@ Consultar antes de mudancas estruturais. Template: [`tasks/adr/000-template.md`]
 - [006](docs/adr/006-telemetria-feedback-cycle.md) — telemetria opt-in append-only
 - [007](docs/adr/007-copilot-cli-stateless-workaround.md) — Copilot injecao manual
 - [008](docs/adr/008-parity-multi-tool-invariants.md) — 29 invariantes 3 niveis
+- [016](tasks/prd-fundacao-portatil/adr-016-config-hierarquico-universal.md) — config hierarquico universal (global+projeto, upward-walk, precedencia)
+- [017](tasks/prd-fundacao-portatil/adr-017-fallback-launcher-chain.md) — fallback launchers genericos ordenados
+- [018](tasks/prd-fundacao-portatil/adr-018-runtimeconfig-retry-backpressure.md) — RuntimeConfig + retry/backoff + backpressure observavel
+- [019](tasks/prd-fundacao-portatil/adr-019-instalador-portatil-detect-verify.md) — instalador portatil: auto-deteccao, escopo global, verify
+
+## Fundacao Portatil (Fases 1–3)
+
+Comportamento implementado (ver [`docs/guia-instalacao-universal.md`](docs/guia-instalacao-universal.md) e [`docs/config-hierarchy.md`](docs/config-hierarchy.md)):
+
+### Instalacao e Verificacao
+
+```bash
+ai-spec-harness install .              # auto-detecta agentes, instala assets
+ai-spec-harness install . --global     # escopo global em ~/.aispec
+ai-spec-harness verify .               # reporta current/missing/drifted por skill/agente
+ai-spec-harness verify --global        # verificacao global
+```
+
+- `--tools` e opcional: sem a flag, detecta automaticamente via binario no PATH + dirs de config.
+- Idempotente: reexecutar converge para o mesmo estado (100% `current`).
+- Bootstrap em repo vazio < 30s (RF-11).
+
+### Hierarquia de Config
+
+Precedencia deterministica (ADR-016):
+
+```
+flags CLI  >  workspace (.claude/config.yaml)  >  global (~/.aispec/config.yaml)  >  defaults built-in
+```
+
+- Config global: `~/.aispec/config.yaml` (opt-in; ausencia nao-fatal).
+- Config de projeto: upward-walk a partir do CWD (marcadores: `.git/`, `.aispec/`, `.claude/`, `.agents/`).
+- Merge campo a campo: cada camada so sobrescreve campos nao-zero.
+
+### Fallback Launchers (ADR-017)
+
+Quando o binario ACP direto nao esta no PATH, o harness tenta os launchers alternativos da cadeia
+(ex.: `npx @zed-industries/codex-acp`). O fallback e transparente — resultado identico ao binario
+direto.
+
+### RuntimeConfig Unificado (ADR-018)
+
+`RuntimeConfig` embute em `Job`: `Timeout`, `MaxRetries`, `RetryBackoffMultiplier`, `Concurrent`,
+`BatchSize`. Zero-value de cada campo preserva comportamento F1 (sem regressao). Configuravel via
+`config.yaml` ou flags CLI.
 
 ## Runtime Capabilities (F2-Claude+)
 

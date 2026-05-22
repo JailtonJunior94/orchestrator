@@ -1,6 +1,7 @@
 package install
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,22 +11,45 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/config"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/contextgen"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/embedded"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/platform"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/upgrade"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/version"
 )
 
+// VerifyState representa o estado de uma skill/agente apos verificacao.
+// ADR-019: file-first (le hash do disco, nao recalcula da fonte).
+type VerifyState string
+
+const (
+	// VerifyStateCurrent indica que o arquivo instalado corresponde ao esperado.
+	VerifyStateCurrent VerifyState = "current"
+	// VerifyStateMissing indica que o arquivo nao esta instalado.
+	VerifyStateMissing VerifyState = "missing"
+	// VerifyStateDrifted indica que o arquivo instalado diverge do esperado.
+	VerifyStateDrifted VerifyState = "drifted"
+)
+
+// VerifyItem representa o resultado de verificacao de uma skill para um agente.
+type VerifyItem struct {
+	Tool  skills.Tool
+	Skill string
+	State VerifyState
+}
+
 // Service orquestra o fluxo de instalacao de governanca.
 type Service struct {
-	fs       fs.FileSystem
-	printer  *output.Printer
-	manifest *manifest.Store
-	adapters *adapters.Generator
-	ctxgen   *contextgen.Generator
+	fs          fs.FileSystem
+	printer     *output.Printer
+	manifest    *manifest.Store
+	adapters    *adapters.Generator
+	ctxgen      *contextgen.Generator
+	agentDetect detect.AgentDetector // para auto-deteccao quando Tools vazio (ADR-019)
 }
 
 func NewService(
@@ -36,15 +60,46 @@ func NewService(
 	ctxg *contextgen.Generator,
 ) *Service {
 	return &Service{
-		fs:       fsys,
-		printer:  printer,
-		manifest: mfst,
-		adapters: adpt,
-		ctxgen:   ctxg,
+		fs:          fsys,
+		printer:     printer,
+		manifest:    mfst,
+		adapters:    adpt,
+		ctxgen:      ctxg,
+		agentDetect: detect.NewBinaryAgentDetector(detect.OSLookPather{}, detect.OSHomeDir{}, detect.NewFileDetector(fsys)),
 	}
 }
 
+// NewServiceWithDetector cria um Service com AgentDetector customizado (para testes).
+func NewServiceWithDetector(
+	fsys fs.FileSystem,
+	printer *output.Printer,
+	mfst *manifest.Store,
+	adpt *adapters.Generator,
+	ctxg *contextgen.Generator,
+	det detect.AgentDetector,
+) *Service {
+	svc := NewService(fsys, printer, mfst, adpt, ctxg)
+	svc.agentDetect = det
+	return svc
+}
+
 func (s *Service) Execute(opts config.InstallOptions) error {
+	// Auto-deteccao quando Tools nao especificado (ADR-019 + RF-06).
+	if len(opts.Tools) == 0 {
+		detected, err := s.agentDetect.Detect(context.Background(), detect.DetectOptions{
+			ProjectDir: opts.ProjectDir,
+		})
+		if err != nil {
+			return fmt.Errorf("auto-detectar agentes: %w", err)
+		}
+		if len(detected) == 0 {
+			s.printer.Warn("Nenhum agente detectado no ambiente. Use --tools para especificar explicitamente.")
+			return nil
+		}
+		s.printer.Info("Agentes detectados automaticamente: %v", toolNames(detected))
+		opts.Tools = detected
+	}
+
 	if err := s.validate(opts); err != nil {
 		return err
 	}
@@ -67,9 +122,26 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 	if err != nil {
 		return fmt.Errorf("resolver caminho fonte: %w", err)
 	}
-	projectDir, err := filepath.Abs(opts.ProjectDir)
-	if err != nil {
-		return fmt.Errorf("resolver caminho projeto: %w", err)
+	// Resolver projectDir: escopo global usa ~/.aispec; projeto usa ProjectDir.
+	// ADR-019, R-SEC-001: paths via os.UserHomeDir, nunca hardcoded.
+	var projectDir string
+	if opts.Scope == config.ScopeGlobal {
+		globalDir, err := globalInstallDir()
+		if err != nil {
+			return fmt.Errorf("escopo global: %w", err)
+		}
+		projectDir = globalDir
+		// Criar dir global se nao existir.
+		if err := s.fs.MkdirAll(projectDir); err != nil {
+			return fmt.Errorf("criar diretorio global %s: %w", projectDir, err)
+		}
+		s.printer.Info("Escopo: global (%s)", projectDir)
+	} else {
+		abs, err := filepath.Abs(opts.ProjectDir)
+		if err != nil {
+			return fmt.Errorf("resolver caminho projeto: %w", err)
+		}
+		projectDir = abs
 	}
 
 	if sourceDir == projectDir {
@@ -157,19 +229,187 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 	return nil
 }
 
+// globalInstallDir retorna o diretorio de instalacao global (~/.aispec).
+// Usa os.UserHomeDir para seguranca (R-SEC-001); retorna erro explicito quando
+// $HOME ausente (ex: CI sem home configurado).
+func globalInstallDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("$HOME nao disponivel (necessario para escopo global): %w", err)
+	}
+	return filepath.Join(home, ".aispec"), nil
+}
+
+// Verify verifica o estado de instalacao das skills para cada ferramenta configurada.
+// Reusa o comparador de checksum do internal/upgrade (file-first: le hash do disco).
+// ADR-019: StatusOK->current, StatusMissing->missing, StatusOutdated|ContentDivergent->drifted.
+//
+// opts.Scope determina o diretorio de instalacao (project ou global).
+// opts.SourceDir e usado como fonte; se vazio, assets embutidos sao extraidos.
+func (s *Service) Verify(opts config.InstallOptions) ([]VerifyItem, error) {
+	// Resolver diretorio de instalacao conforme escopo.
+	var installDir string
+	if opts.Scope == config.ScopeGlobal {
+		globalDir, err := globalInstallDir()
+		if err != nil {
+			return nil, fmt.Errorf("escopo global: %w", err)
+		}
+		installDir = globalDir
+	} else {
+		abs, err := filepath.Abs(opts.ProjectDir)
+		if err != nil {
+			return nil, fmt.Errorf("resolver caminho projeto: %w", err)
+		}
+		installDir = abs
+	}
+
+	// Resolver diretorio fonte (ou extrair embutido).
+	sourceDir := opts.SourceDir
+	var cleanup func()
+	if sourceDir == "" {
+		tmpDir, cl, err := embedded.ExtractToTempDir()
+		if err != nil {
+			return nil, fmt.Errorf("extrair assets embutidos: %w", err)
+		}
+		cleanup = cl
+		sourceDir = tmpDir
+	}
+	if cleanup != nil {
+		defer cleanup()
+	}
+
+	absSource, err := filepath.Abs(sourceDir)
+	if err != nil {
+		return nil, fmt.Errorf("resolver caminho fonte: %w", err)
+	}
+
+	// Determinar tools a verificar.
+	tools := opts.Tools
+	if len(tools) == 0 {
+		// Sem tools especificadas: verificar todas do manifesto, ou tentar deteccao.
+		if s.manifest.Exists(installDir) {
+			mf, err := s.manifest.Load(installDir)
+			if err == nil && len(mf.Tools) > 0 {
+				tools = mf.Tools
+			}
+		}
+	}
+
+	allSkills := skills.AllSkills(opts.Langs)
+
+	// Usar checkSkillsForVerify que reutiliza logica do upgrade.
+	var items []VerifyItem
+	for _, tool := range tools {
+		toolItems := s.verifyToolSkills(absSource, installDir, tool, allSkills)
+		items = append(items, toolItems...)
+	}
+
+	// Se nenhuma tool foi determinada, verificar skills base.
+	if len(tools) == 0 {
+		for _, skill := range allSkills {
+			state := s.verifySkillFile(absSource, installDir, skill)
+			items = append(items, VerifyItem{
+				Tool:  "",
+				Skill: skill,
+				State: state,
+			})
+		}
+	}
+
+	return items, nil
+}
+
+// verifyToolSkills verifica as skills de uma ferramenta especifica no diretorio de instalacao.
+// Mapeia upgrade.SkillStatus para VerifyState (ADR-019).
+func (s *Service) verifyToolSkills(sourceDir, installDir string, tool skills.Tool, skillList []string) []VerifyItem {
+	var items []VerifyItem
+
+	// Verificar skills base (.agents/skills/)
+	for _, skill := range skillList {
+		state := s.verifySkillFile(sourceDir, installDir, skill)
+		items = append(items, VerifyItem{
+			Tool:  tool,
+			Skill: skill,
+			State: state,
+		})
+	}
+
+	return items
+}
+
+// verifySkillFile verifica o estado de um arquivo de skill (SKILL.md) no diretorio alvo.
+// Implementa file-first: le o hash do disco, nao recalcula da fonte.
+// Mapeia upgrade.SkillStatus para VerifyState.
+func (s *Service) verifySkillFile(sourceDir, installDir, skill string) VerifyState {
+	targetSkillMD := filepath.Join(installDir, ".agents", "skills", skill, "SKILL.md")
+
+	// Verificar existencia primeiro (file-first, ADR-019).
+	if !s.fs.Exists(targetSkillMD) {
+		return VerifyStateMissing
+	}
+
+	sourceSkillMD := filepath.Join(sourceDir, ".agents", "skills", skill, "SKILL.md")
+	if !s.fs.Exists(sourceSkillMD) {
+		// Skill nao existe na fonte; considerar current se instalada.
+		return VerifyStateCurrent
+	}
+
+	// Mapear resultado do comparador de checksum (upgrade) para VerifyState.
+	// StatusOK -> current; outros -> drifted.
+	status := s.compareSkillChecksum(sourceSkillMD, targetSkillMD)
+	switch status {
+	case upgrade.StatusOK:
+		return VerifyStateCurrent
+	case upgrade.StatusMissing:
+		return VerifyStateMissing
+	default:
+		// StatusOutdated, StatusContentDivergent, StatusRefsDivergent, StatusNoVersion
+		return VerifyStateDrifted
+	}
+}
+
+// compareSkillChecksum compara o hash do SKILL.md da fonte com o do alvo.
+// Retorna upgrade.StatusOK se identicos, upgrade.StatusMissing se alvo ausente,
+// upgrade.StatusContentDivergent se divergentes.
+// Reusa a logica de comparacao do internal/upgrade (file-first).
+func (s *Service) compareSkillChecksum(sourceFile, targetFile string) upgrade.SkillStatus {
+	if !s.fs.Exists(targetFile) {
+		return upgrade.StatusMissing
+	}
+
+	sourceHash, err1 := s.fs.FileHash(sourceFile)
+	targetHash, err2 := s.fs.FileHash(targetFile)
+
+	if err1 != nil || err2 != nil {
+		return upgrade.StatusContentDivergent
+	}
+
+	if sourceHash == targetHash {
+		return upgrade.StatusOK
+	}
+
+	return upgrade.StatusContentDivergent
+}
+
 func (s *Service) validate(opts config.InstallOptions) error {
-	if opts.ProjectDir == "" {
-		return fmt.Errorf("diretorio alvo e obrigatorio")
-	}
-	if !s.fs.IsDir(opts.ProjectDir) {
-		return fmt.Errorf("diretorio alvo nao encontrado: %s", opts.ProjectDir)
-	}
-	if !s.fs.Writable(opts.ProjectDir) {
-		return fmt.Errorf("sem permissao de escrita em: %s", opts.ProjectDir)
+	// Escopo global: ProjectDir pode estar vazio (resolvido antes via globalInstallDir).
+	// O diretorio ja foi criado e validado em Execute antes de validate ser chamado.
+	if opts.Scope != config.ScopeGlobal {
+		if opts.ProjectDir == "" {
+			return fmt.Errorf("diretorio alvo e obrigatorio")
+		}
+		if !s.fs.IsDir(opts.ProjectDir) {
+			return fmt.Errorf("diretorio alvo nao encontrado: %s", opts.ProjectDir)
+		}
+		if !s.fs.Writable(opts.ProjectDir) {
+			return fmt.Errorf("sem permissao de escrita em: %s", opts.ProjectDir)
+		}
 	}
 	if opts.SourceDir != "" && !s.fs.IsDir(opts.SourceDir) {
 		return fmt.Errorf("diretorio fonte nao encontrado: %s", opts.SourceDir)
 	}
+	// Tools pode ser vazio aqui apenas se chegou via path alternativo; em Execute
+	// a auto-deteccao ja preencheu ou retornou antes. validate permanece defensivo.
 	if len(opts.Tools) == 0 {
 		return fmt.Errorf("nenhuma ferramenta selecionada")
 	}

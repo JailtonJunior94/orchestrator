@@ -1,8 +1,10 @@
-// Package probe implementa a fase EnsureAvailable do RF-03:
-// resolve o launcher do claude-agent-acp na ordem (a) binário canônico no PATH;
-// (b) npx --yes @agentclientprotocol/claude-agent-acp@<VER>;
-// (c) falha com mensagem contendo três remédios.
-// Cache em memória por processo via sync.Map + sync.OnceValues para evitar
+// Package probe implementa a fase EnsureAvailable: resolve o launcher do agente
+// ACP seguindo uma cadeia ordenada de candidatos — (a) binário canônico no PATH;
+// (b) cada FallbackLauncher da spec em ordem, materializado como BinaryLauncher
+// genérico com seus FixedArgs literais; (c) falha com mensagem contendo três
+// remédios. Conforme ADR-017: o fallback npx é apenas um caso particular de
+// FallbackLauncher{Command:"npx", FixedArgs:[...]}, sem tratamento especial.
+// Cache em memória por processo via sync.Map + sync.Once para evitar
 // re-probing por task na mesma invocação CLI.
 package probe
 
@@ -69,20 +71,22 @@ func EnsureAvailable(ctx context.Context, spec specs.Spec, look LookPather) (spe
 }
 
 // resolve executa a resolução efetiva do launcher (chamado apenas uma vez por spec via once).
+// ADR-017: cada FallbackLauncher é tratado como launcher de comando genérico —
+// materializado via NewBinaryLauncher(path, fb.FixedArgs...) sem semântica npx-only.
 func resolve(spec specs.Spec, look LookPather) (specs.Launcher, error) {
 	// Passo 1: binário canônico no PATH.
-	// FixedArgs do Spec (ex: ["--acp"] para Copilot) são passados ao BinaryLauncher para
-	// garantir que o binário seja invocado com os flags corretos (bug fix: sem FixedArgs,
-	// copilot seria iniciado sem --acp e entraria em modo legado em vez de ACP server).
+	// FixedArgs do Spec (ex: ["--acp"] para Copilot/Gemini) são passados ao BinaryLauncher para
+	// garantir que o binário seja invocado com os flags corretos.
 	if path, err := look.LookPath(spec.Command); err == nil {
 		return specs.NewBinaryLauncher(path, spec.FixedArgs...), nil
 	}
 
-	// Passo 2: tentar cada fallback (verifica se o comando do fallback está no PATH).
+	// Passo 2: tentar cada fallback em ordem (ADR-017 D-2).
+	// O primeiro cujo Command exista no PATH vence; FixedArgs são preservados literalmente.
+	// npx é apenas um caso particular de FallbackLauncher — sem tratamento especial.
 	for _, fb := range spec.Fallbacks {
-		if _, err := look.LookPath(fb.Command); err == nil {
-			// fb.Command (ex: npx) está disponível; usar os FixedArgs do fallback.
-			return specs.NewNpxLauncher(extractPackage(fb), extractVersion(fb)), nil
+		if path, err := look.LookPath(fb.Command); err == nil {
+			return specs.NewBinaryLauncher(path, fb.FixedArgs...), nil
 		}
 	}
 
@@ -94,47 +98,6 @@ func resolve(spec specs.Spec, look LookPather) (specs.Launcher, error) {
 	}
 	msg := formatLauncherUnavailable(spec, adrPath)
 	return specs.Launcher{}, fmt.Errorf("%s: %w", msg, ErrLauncherUnavailable)
-}
-
-// extractPackage extrai o nome do pacote npm do FallbackLauncher.
-// Exemplo: FixedArgs = ["--yes", "@agentclientprotocol/claude-agent-acp@0.1.0"]
-// retorna "@agentclientprotocol/claude-agent-acp".
-func extractPackage(fb specs.FallbackLauncher) string {
-	if len(fb.FixedArgs) < 2 {
-		return ""
-	}
-	arg := fb.FixedArgs[1]
-	at := findLastAt(arg)
-	if at < 0 {
-		return arg
-	}
-	return arg[:at]
-}
-
-// extractVersion extrai a versão npm do FallbackLauncher.
-func extractVersion(fb specs.FallbackLauncher) string {
-	if len(fb.FixedArgs) < 2 {
-		return ""
-	}
-	arg := fb.FixedArgs[1]
-	at := findLastAt(arg)
-	if at < 0 {
-		return ""
-	}
-	return arg[at+1:]
-}
-
-// findLastAt encontra a posição do último '@' em uma string.
-// Necessário para separar "@scope/pkg@version" corretamente.
-func findLastAt(s string) int {
-	// Scoped packages começam com @, então buscamos o último @.
-	last := -1
-	for i := 1; i < len(s); i++ {
-		if s[i] == '@' {
-			last = i
-		}
-	}
-	return last
 }
 
 // ResetCache limpa o cache interno. Utilizado apenas em testes.

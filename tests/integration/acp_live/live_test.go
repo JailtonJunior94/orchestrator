@@ -73,11 +73,11 @@ func TestACPLive_Handshake(t *testing.T) {
 	}
 
 	job := airuntime.Job{
-		Prompt:          "echo OK",
-		WorkDir:         t.TempDir(),
-		EvidenceDir:     t.TempDir(),
-		ActivityTimeout: timeout,
-		Quiet:           true,
+		Prompt:        "echo OK",
+		WorkDir:       t.TempDir(),
+		EvidenceDir:   t.TempDir(),
+		RuntimeConfig: airuntime.RuntimeConfig{Timeout: timeout},
+		Quiet:         true,
 	}
 
 	summary, runErr := runner.Run(ctx, job)

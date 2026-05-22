@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -98,44 +99,77 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 	}
 	var lastTaskFile string
 
+	// Normalizar parâmetros de concorrência (ADR-018, RF-05).
+	// Concurrent <=0 ou 1 ⇒ sequencial idêntico ao comportamento atual (F1 default).
+	concurrent := opts.Concurrent
+	if concurrent <= 0 {
+		concurrent = 1
+	}
+	batchSize := opts.BatchSize
+	if batchSize <= 0 {
+		batchSize = 1
+	}
+
 	for {
 		if err := ctx.Err(); err != nil {
 			return s.finalizeReport(report, opts, "contexto cancelado"), err
 		}
 
-		next, err := deps.Selector.Next(ctx, absFolder)
-		if errors.Is(err, ErrNoEligibleTask) {
-			break
-		}
-		if err != nil {
-			return s.finalizeReport(report, opts, "erro na selecao de task"), err
-		}
+		if concurrent <= 1 && batchSize <= 1 {
+			// Caminho sequencial: comportamento byte-equivalente ao atual (F1 default, RF-05).
+			next, err := deps.Selector.Next(ctx, absFolder)
+			if errors.Is(err, ErrNoEligibleTask) {
+				break
+			}
+			if err != nil {
+				return s.finalizeReport(report, opts, "erro na selecao de task"), err
+			}
 
-		taskFile, err := ResolveTaskFile(absFolder, *next, s.fsys)
-		if err != nil {
-			return s.finalizeReport(report, opts, "erro ao resolver arquivo da task"), err
-		}
-		lastTaskFile = taskFile
+			taskFile, err := ResolveTaskFile(absFolder, *next, s.fsys)
+			if err != nil {
+				return s.finalizeReport(report, opts, "erro ao resolver arquivo da task"), err
+			}
+			lastTaskFile = taskFile
 
-		if err := deps.Executor.Execute(ctx, *next, taskFile, absFolder, workDir); err != nil {
-			return s.finalizeReport(report, opts, "erro na execucao da task"),
-				fmt.Errorf("taskloop: execucao da task %s: %w", next.ID, err)
-		}
+			if err := deps.Executor.Execute(ctx, *next, taskFile, absFolder, workDir); err != nil {
+				return s.finalizeReport(report, opts, "erro na execucao da task"),
+					fmt.Errorf("taskloop: execucao da task %s: %w", next.ID, err)
+			}
 
-		accReport, accErr := deps.Gate.Verify(ctx, *next, taskFile)
-		if accErr != nil {
-			emitTelemetry("acceptance_failed", next.ID)
-			return s.finalizeReport(report, opts, "criterios de aceite nao atendidos"),
-				fmt.Errorf("taskloop: aceite da task %s: %w", next.ID, accErr)
-		}
+			accReport, accErr := deps.Gate.Verify(ctx, *next, taskFile)
+			if accErr != nil {
+				emitTelemetry("acceptance_failed", next.ID)
+				return s.finalizeReport(report, opts, "criterios de aceite nao atendidos"),
+					fmt.Errorf("taskloop: aceite da task %s: %w", next.ID, accErr)
+			}
 
-		if err := deps.Recorder.Append(ctx, taskFile, accReport); err != nil {
-			return s.finalizeReport(report, opts, "erro ao registrar evidencia"),
-				fmt.Errorf("taskloop: evidencia da task %s: %w", next.ID, err)
-		}
+			if err := deps.Recorder.Append(ctx, taskFile, accReport); err != nil {
+				return s.finalizeReport(report, opts, "erro ao registrar evidencia"),
+					fmt.Errorf("taskloop: evidencia da task %s: %w", next.ID, err)
+			}
 
-		emitTelemetry("task_completed", next.ID)
-		report.TasksCompleted = append(report.TasksCompleted, next.ID)
+			emitTelemetry("task_completed", next.ID)
+			report.TasksCompleted = append(report.TasksCompleted, next.ID)
+		} else {
+			// Caminho concorrente: selecionar até batchSize tasks e executar até concurrent em paralelo.
+			// Dependências são respeitadas pelo seletor (apenas tasks com deps completas são elegíveis).
+			batch, selErr := selectBatch(ctx, deps.Selector, absFolder, batchSize)
+			if selErr != nil && !errors.Is(selErr, ErrNoEligibleTask) {
+				return s.finalizeReport(report, opts, "erro na selecao de batch"), selErr
+			}
+			if len(batch) == 0 {
+				break
+			}
+
+			completedIDs, lastFile, batchErr := s.executeBatch(ctx, batch, absFolder, workDir, concurrent, deps)
+			if lastFile != "" {
+				lastTaskFile = lastFile
+			}
+			report.TasksCompleted = append(report.TasksCompleted, completedIDs...)
+			if batchErr != nil {
+				return s.finalizeReport(report, opts, "erro na execucao do batch"), batchErr
+			}
+		}
 	}
 
 	diff := captureGitDiff(ctx, workDir)
@@ -432,4 +466,112 @@ func emitTelemetry(event, value string) {
 	}
 	fmt.Fprintf(os.Stderr, "[taskloop] event=%s value=%s ts=%s\n",
 		event, value, time.Now().UTC().Format(time.RFC3339))
+}
+
+// selectBatch seleciona até maxBatch tasks elegíveis sem repetição (ADR-018, RF-04).
+// Chama Selector.Next iterativamente e para quando ErrNoEligibleTask ou maxBatch atingido.
+// Respeita dependências pois o seletor só retorna tasks com deps completas.
+// Nota: tasks já selecionadas nesta rodada são incluídas; o seletor pode retornar a mesma
+// task múltiplas vezes quando não há outras elegíveis — deduplicamos por ID.
+func selectBatch(ctx context.Context, sel TaskSelector, absFolder string, maxBatch int) ([]TaskEntry, error) {
+	seen := make(map[string]bool, maxBatch)
+	batch := make([]TaskEntry, 0, maxBatch)
+	for len(batch) < maxBatch {
+		next, err := sel.Next(ctx, absFolder)
+		if errors.Is(err, ErrNoEligibleTask) {
+			return batch, ErrNoEligibleTask
+		}
+		if err != nil {
+			return batch, err
+		}
+		if seen[next.ID] {
+			// Seletor retornou a mesma task novamente (sem outras elegíveis): parar.
+			break
+		}
+		seen[next.ID] = true
+		batch = append(batch, *next)
+	}
+	return batch, nil
+}
+
+// batchResult é o resultado de uma task executada concorrentemente.
+type batchResult struct {
+	taskID   string
+	taskFile string
+	err      error
+}
+
+// executeBatch executa tasks em paralelo limitado por concurrent (ADR-018, RF-04).
+// Para cada task: Execute → Gate.Verify → Recorder.Append (sequencial por task).
+// Retorna os IDs completados, o último taskFile e o primeiro erro encontrado.
+// Sem erro: todos os completed IDs são incluídos no LoopReport.
+// Com erro: para imediatamente (halt-on-first-error por task).
+func (s *Service) executeBatch(
+	ctx context.Context,
+	batch []TaskEntry,
+	absFolder, workDir string,
+	concurrent int,
+	deps RunLoopDeps,
+) (completedIDs []string, lastTaskFile string, firstErr error) {
+	sem := make(chan struct{}, concurrent)
+	results := make([]batchResult, len(batch))
+	var wg sync.WaitGroup
+
+	for i, task := range batch {
+		taskFile, err := ResolveTaskFile(absFolder, task, s.fsys)
+		if err != nil {
+			results[i] = batchResult{taskID: task.ID, err: err}
+			continue
+		}
+		results[i].taskFile = taskFile
+
+		wg.Add(1)
+		go func(idx int, t TaskEntry, tf string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			if ctx.Err() != nil {
+				results[idx].err = ctx.Err()
+				return
+			}
+
+			execErr := deps.Executor.Execute(ctx, t, tf, absFolder, workDir)
+			if execErr != nil {
+				results[idx].err = fmt.Errorf("taskloop: execucao da task %s: %w", t.ID, execErr)
+				return
+			}
+
+			accReport, accErr := deps.Gate.Verify(ctx, t, tf)
+			if accErr != nil {
+				emitTelemetry("acceptance_failed", t.ID)
+				results[idx].err = fmt.Errorf("taskloop: aceite da task %s: %w", t.ID, accErr)
+				return
+			}
+
+			if recErr := deps.Recorder.Append(ctx, tf, accReport); recErr != nil {
+				results[idx].err = fmt.Errorf("taskloop: evidencia da task %s: %w", t.ID, recErr)
+				return
+			}
+
+			emitTelemetry("task_completed", t.ID)
+			results[idx].taskID = t.ID
+		}(i, task, taskFile)
+	}
+
+	wg.Wait()
+
+	// Coletar resultados preservando ordem de declaração das tasks.
+	for _, r := range results {
+		if r.taskFile != "" {
+			lastTaskFile = r.taskFile
+		}
+		if r.err != nil && firstErr == nil {
+			firstErr = r.err
+		}
+		if r.err == nil && r.taskID != "" {
+			completedIDs = append(completedIDs, r.taskID)
+		}
+	}
+	return completedIDs, lastTaskFile, firstErr
 }
