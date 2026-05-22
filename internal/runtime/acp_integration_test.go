@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -170,6 +171,25 @@ func buildRunner(
 	)
 }
 
+// ensureAgentsMD cria AGENTS.md no diretório fornecido para satisfazer o governance hook (F3-Claude).
+// Chamado nos helpers de setup de jobs onde WorkDir não contém AGENTS.md.
+func ensureAgentsMD(t *testing.T, dir string) {
+	t.Helper()
+	agentsPath := dir + "/AGENTS.md"
+	if err := os.WriteFile(agentsPath, []byte("# Agents\n"), 0o644); err != nil {
+		t.Fatalf("ensureAgentsMD: criar %s: %v", agentsPath, err)
+	}
+}
+
+// workDirWithAgentsMD cria um diretório temporário com AGENTS.md já presente.
+// Helper para testes que precisam de um WorkDir válido para o governance hook (F3-Claude).
+func workDirWithAgentsMD(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	ensureAgentsMD(t, dir)
+	return dir
+}
+
 func captureStderr(t *testing.T, fn func()) string {
 	t.Helper()
 
@@ -218,7 +238,7 @@ func TestACPRunner_HappyPath(t *testing.T) {
 
 	job := airuntime.Job{
 		Prompt:      "do something",
-		WorkDir:     t.TempDir(),
+		WorkDir:     workDirWithAgentsMD(t),
 		EvidenceDir: t.TempDir(),
 		Quiet:       true,
 	}
@@ -291,7 +311,7 @@ func TestACPRunner_ActivityTimeout(t *testing.T) {
 
 	job := airuntime.Job{
 		Prompt:          "prompt",
-		WorkDir:         t.TempDir(),
+		WorkDir:         workDirWithAgentsMD(t),
 		EvidenceDir:     t.TempDir(),
 		ActivityTimeout: timeout,
 		Quiet:           true,
@@ -332,7 +352,7 @@ func TestACPRunner_PermissionDenied(t *testing.T) {
 
 	job := airuntime.Job{
 		Prompt:      "prompt",
-		WorkDir:     t.TempDir(),
+		WorkDir:     workDirWithAgentsMD(t),
 		EvidenceDir: t.TempDir(),
 		Quiet:       true,
 	}
@@ -378,7 +398,7 @@ func TestACPRunner_UnknownDrift(t *testing.T) {
 
 	job := airuntime.Job{
 		Prompt:      "prompt",
-		WorkDir:     t.TempDir(),
+		WorkDir:     workDirWithAgentsMD(t),
 		EvidenceDir: t.TempDir(),
 		Quiet:       true,
 	}
@@ -427,7 +447,7 @@ func TestACPRunner_NpxFallback(t *testing.T) {
 
 	job := airuntime.Job{
 		Prompt:      "prompt",
-		WorkDir:     t.TempDir(),
+		WorkDir:     workDirWithAgentsMD(t),
 		EvidenceDir: t.TempDir(),
 		Quiet:       true,
 	}
@@ -454,7 +474,7 @@ func TestACPRunner_LauncherUnavailable(t *testing.T) {
 
 	job := airuntime.Job{
 		Prompt:      "prompt",
-		WorkDir:     t.TempDir(),
+		WorkDir:     workDirWithAgentsMD(t),
 		EvidenceDir: t.TempDir(),
 	}
 
@@ -491,10 +511,11 @@ func TestACPRunner_WithRealPersistence(t *testing.T) {
 
 	evidenceDir := "/evidence/task-9"
 	job := airuntime.Job{
-		Prompt:      "prompt",
-		WorkDir:     "/workdir",
-		EvidenceDir: evidenceDir,
-		Quiet:       true,
+		Prompt:       "prompt",
+		WorkDir:      "/workdir",
+		EvidenceDir:  evidenceDir,
+		Quiet:        true,
+		DisableHooks: true, // fake FS: /workdir não existe no disco; governance hook desabilitado
 	}
 
 	summary, err := runner.Run(ctx, job)
@@ -587,7 +608,7 @@ func TestACPRunner_HumanRenderer(t *testing.T) {
 
 	job := airuntime.Job{
 		Prompt:      "prompt",
-		WorkDir:     t.TempDir(),
+		WorkDir:     workDirWithAgentsMD(t),
 		EvidenceDir: t.TempDir(),
 		Quiet:       false,
 	}
@@ -648,7 +669,7 @@ func TestACPRunner_RuntimeInit_CopilotVersions(t *testing.T) {
 
 	job := airuntime.Job{
 		Prompt:      "test prompt",
-		WorkDir:     t.TempDir(),
+		WorkDir:     workDirWithAgentsMD(t),
 		EvidenceDir: t.TempDir(),
 		Quiet:       true,
 	}
@@ -708,7 +729,7 @@ func TestACPRunner_RuntimeInit_ClaudeVersions(t *testing.T) {
 
 	job := airuntime.Job{
 		Prompt:      "test prompt",
-		WorkDir:     t.TempDir(),
+		WorkDir:     workDirWithAgentsMD(t),
 		EvidenceDir: t.TempDir(),
 		Quiet:       true,
 	}
@@ -777,10 +798,11 @@ func TestACPIntegration_Copilot_T10(t *testing.T) {
 
 	evidenceDir := "/evidence/copilot-t10"
 	job := airuntime.Job{
-		Prompt:      "t10 copilot prompt",
-		WorkDir:     "/workdir",
-		EvidenceDir: evidenceDir,
-		Quiet:       true,
+		Prompt:       "t10 copilot prompt",
+		WorkDir:      "/workdir",
+		EvidenceDir:  evidenceDir,
+		Quiet:        true,
+		DisableHooks: true, // fake FS: /workdir não existe no disco
 	}
 
 	summary, err := copilotRunner.Run(ctx, job)
@@ -891,10 +913,11 @@ func TestACPIntegration_Copilot_T10(t *testing.T) {
 	)
 	claudeEvidenceDir := "/evidence/claude-t10-parity"
 	_, claudeErr := claudeRunner.Run(claudeCtx, airuntime.Job{
-		Prompt:      "t10 claude parity prompt",
-		WorkDir:     "/workdir",
-		EvidenceDir: claudeEvidenceDir,
-		Quiet:       true,
+		Prompt:       "t10 claude parity prompt",
+		WorkDir:      "/workdir",
+		EvidenceDir:  claudeEvidenceDir,
+		Quiet:        true,
+		DisableHooks: true, // fake FS: /workdir não existe no disco
 	})
 	if claudeErr != nil {
 		t.Fatalf("Run (Claude parity T10): %v", claudeErr)
@@ -961,10 +984,11 @@ func TestACPIntegration_Copilot_T11(t *testing.T) {
 
 	evidenceDir := "/evidence/copilot-t11"
 	job := airuntime.Job{
-		Prompt:      "t11 copilot prompt",
-		WorkDir:     "/workdir",
-		EvidenceDir: evidenceDir,
-		Quiet:       true,
+		Prompt:       "t11 copilot prompt",
+		WorkDir:      "/workdir",
+		EvidenceDir:  evidenceDir,
+		Quiet:        true,
+		DisableHooks: true, // fake FS: /workdir não existe no disco
 	}
 
 	summary, err := runner.Run(ctx, job)
@@ -1032,7 +1056,7 @@ func TestACPIntegration_Copilot_T12(t *testing.T) {
 
 	job := airuntime.Job{
 		Prompt:          "t12 copilot watchdog test",
-		WorkDir:         t.TempDir(),
+		WorkDir:         workDirWithAgentsMD(t),
 		EvidenceDir:     t.TempDir(),
 		ActivityTimeout: timeout,
 		Quiet:           true,
@@ -1130,7 +1154,7 @@ func TestACPRunner_JobZeroValue_ClaudeRegression(t *testing.T) {
 	// Job com zero-value nos novos campos — deve funcionar como antes.
 	job := airuntime.Job{
 		Prompt:          "regression T-19",
-		WorkDir:         t.TempDir(),
+		WorkDir:         workDirWithAgentsMD(t),
 		EvidenceDir:     t.TempDir(),
 		Quiet:           true,
 		ReasoningEffort: "",
@@ -1177,12 +1201,7 @@ func findRuntimeInitArgs(t *testing.T, persist *fakePersistence) []string {
 
 // containsArg verifica se slice contém um argumento específico.
 func containsArg(args []string, needle string) bool {
-	for _, a := range args {
-		if a == needle {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(args, needle)
 }
 
 // containsArgPair verifica se slice contém "-c <value>" consecutivos.
@@ -1213,7 +1232,7 @@ func TestACPRunner_Codex_T17_BootstrapArgs_Restricted(t *testing.T) {
 
 	job := airuntime.Job{
 		Prompt:          "T17 codex restricted",
-		WorkDir:         t.TempDir(),
+		WorkDir:         workDirWithAgentsMD(t),
 		EvidenceDir:     t.TempDir(),
 		Quiet:           true,
 		Model:           specs.DefaultCodexModel,
@@ -1281,7 +1300,7 @@ func TestACPRunner_Codex_T18_BootstrapArgs_Full(t *testing.T) {
 
 	job := airuntime.Job{
 		Prompt:          "T18 codex full access",
-		WorkDir:         t.TempDir(),
+		WorkDir:         workDirWithAgentsMD(t),
 		EvidenceDir:     t.TempDir(),
 		Quiet:           true,
 		Model:           specs.DefaultCodexModel,
@@ -1335,7 +1354,7 @@ func TestACPRunner_Claude_T19_NoCodexFlags(t *testing.T) {
 	// Job zero-value nos campos Codex — Claude usa no-op BootstrapArgs.
 	job := airuntime.Job{
 		Prompt:          "T19 claude regressao",
-		WorkDir:         t.TempDir(),
+		WorkDir:         workDirWithAgentsMD(t),
 		EvidenceDir:     t.TempDir(),
 		Quiet:           true,
 		Model:           "",
@@ -1375,7 +1394,7 @@ func TestACPRunner_Copilot_T19_NoCodexFlags(t *testing.T) {
 
 	job := airuntime.Job{
 		Prompt:          "T19 copilot regressao",
-		WorkDir:         t.TempDir(),
+		WorkDir:         workDirWithAgentsMD(t),
 		EvidenceDir:     t.TempDir(),
 		Quiet:           true,
 		Model:           "",
@@ -1439,6 +1458,7 @@ func TestACPRunner_Codex_T20_ToolCallsAndReport(t *testing.T) {
 		Model:           specs.DefaultCodexModel,
 		ReasoningEffort: "medium",
 		AccessMode:      specs.AccessModeRestricted,
+		DisableHooks:    true, // fake FS: /workdir não existe no disco
 	}
 
 	summary, err := runner.Run(ctx, job)
@@ -1562,7 +1582,7 @@ func TestACPRunner_Codex_T21_ActivityWatchdog(t *testing.T) {
 
 	job := airuntime.Job{
 		Prompt:          "T21 codex watchdog",
-		WorkDir:         t.TempDir(),
+		WorkDir:         workDirWithAgentsMD(t),
 		EvidenceDir:     t.TempDir(),
 		ActivityTimeout: timeout,
 		Quiet:           true,
@@ -1597,6 +1617,567 @@ func TestACPRunner_Codex_T21_ActivityWatchdog(t *testing.T) {
 	if runErr != nil && persist.summary != nil {
 		if persist.summary.CancelReason != events.CancelReasonActivityTimeout {
 			t.Errorf("persist.summary.CancelReason = %q, want activity_timeout", persist.summary.CancelReason)
+		}
+	}
+}
+
+// ---- sub-suite Gemini (RF-09, T-4.0) ----------------------------------------
+
+// proberGeminiBinary retorna um fakeProber com o binário "gemini" disponível.
+func proberGeminiBinary() *fakeProber {
+	return &fakeProber{available: map[string]string{
+		"gemini": "/usr/local/bin/gemini",
+	}}
+}
+
+// proberGeminiNpxOnly retorna um fakeProber com apenas npx disponível (sem binário gemini).
+func proberGeminiNpxOnly() *fakeProber {
+	return &fakeProber{available: map[string]string{
+		"npx": "/usr/local/bin/npx",
+	}}
+}
+
+// TestACPIntegration_Gemini_OpenOK (T-4.0 sub-test 1): sessão completa Gemini
+// (open → agent_message → session_end). Paridade observacional com Claude/Codex/Copilot.
+func TestACPIntegration_Gemini_OpenOK(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("gemini response open OK").
+		AppendSessionEnd()
+
+	fakeFS := fs.NewFakeFileSystem()
+	pfact := persistence.NewSessionPersistenceFactory(fakeFS)
+
+	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiBinary(), script, pfact)
+
+	evidenceDir := "/evidence/gemini-open-ok"
+	job := airuntime.Job{
+		Prompt:       "gemini open OK prompt",
+		WorkDir:      "/workdir",
+		EvidenceDir:  evidenceDir,
+		Quiet:        true,
+		DisableHooks: true,
+	}
+
+	summary, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run (Gemini OpenOK): %v", err)
+	}
+	if summary.CancelReason != events.CancelReasonNone {
+		t.Errorf("CancelReason = %q, want none", summary.CancelReason)
+	}
+	if summary.Launcher != "binary" {
+		t.Errorf("Launcher = %q, want binary", summary.Launcher)
+	}
+
+	// events.jsonl deve existir e ter conteúdo.
+	eventsPath := evidenceDir + "/events.jsonl"
+	data, readErr := fakeFS.ReadFile(eventsPath)
+	if readErr != nil {
+		t.Fatalf("events.jsonl não encontrado: %v", readErr)
+	}
+	if len(data) == 0 {
+		t.Fatal("events.jsonl está vazio")
+	}
+}
+
+// TestACPIntegration_Gemini_Prompt (T-4.0 sub-test 2): valida que prompt é propagado
+// e que runtime_init contém versões Gemini (sdk_version=GeminiSDKVersion, npm_version=GeminiNpmVersion).
+func TestACPIntegration_Gemini_Prompt(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("gemini prompt received").
+		AppendSessionEnd()
+
+	pfact, persist := newFakePersistenceFactory()
+
+	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiBinary(), script, pfact)
+
+	job := airuntime.Job{
+		Prompt:       "test prompt for gemini",
+		WorkDir:      workDirWithAgentsMD(t),
+		EvidenceDir:  t.TempDir(),
+		Quiet:        true,
+	}
+
+	_, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run (Gemini Prompt): %v", err)
+	}
+
+	// Verificar que runtime_init carrega versões Gemini.
+	var runtimeInitEvt *events.Event
+	for i := range persist.events {
+		if persist.events[i].Kind() == events.KindRuntimeInit {
+			evtCopy := persist.events[i]
+			runtimeInitEvt = &evtCopy
+			break
+		}
+	}
+	if runtimeInitEvt == nil {
+		t.Fatal("runtime_init event não encontrado")
+	}
+
+	ri := runtimeInitEvt.RuntimeInit()
+	if ri == nil {
+		t.Fatal("RuntimeInit() payload é nil")
+	}
+
+	if sdkVersion := ri.SDKVersion(); sdkVersion != specs.GeminiSDKVersion {
+		t.Errorf("SDKVersion = %q; want GeminiSDKVersion %q", sdkVersion, specs.GeminiSDKVersion)
+	}
+
+	if npmVersion := ri.NpmVersion(); npmVersion != specs.GeminiNpmVersion {
+		t.Errorf("NpmVersion = %q; want GeminiNpmVersion %q", npmVersion, specs.GeminiNpmVersion)
+	}
+}
+
+// TestACPIntegration_Gemini_TwoToolCalls (T-4.0 sub-test 3): ≥ 2 tool calls distintos.
+// Valida que tool_calls.md agrega corretamente com nomes das ferramentas.
+func TestACPIntegration_Gemini_TwoToolCalls(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("gemini iniciou tool calls").
+		AppendToolCall("tc_read", "read_file").
+		AppendToolCallUpdate("tc_read", "completed").
+		AppendAgentMessage("entre tool calls").
+		AppendToolCall("tc_write", "write_file").
+		AppendToolCallUpdate("tc_write", "completed").
+		AppendAgentMessage("finalizado").
+		AppendSessionEnd()
+
+	fakeFS := fs.NewFakeFileSystem()
+	pfact := persistence.NewSessionPersistenceFactory(fakeFS)
+
+	runner := airuntime.NewACPRunner(
+		specs.Gemini(),
+		airuntime.WithProber(proberGeminiBinary()),
+		airuntime.WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}),
+		airuntime.WithPersistenceFactory(pfact),
+		airuntime.WithRenderer(&discardRenderer{}),
+	)
+
+	evidenceDir := "/evidence/gemini-tool-calls"
+	job := airuntime.Job{
+		Prompt:       "gemini tool calls",
+		WorkDir:      "/workdir",
+		EvidenceDir:  evidenceDir,
+		Quiet:        true,
+		DisableHooks: true,
+	}
+
+	summary, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run (Gemini TwoToolCalls): %v", err)
+	}
+
+	if len(summary.ToolCalls) < 2 {
+		t.Errorf("ToolCalls len = %d, want >= 2", len(summary.ToolCalls))
+	}
+
+	tcPath := evidenceDir + "/tool_calls.md"
+	tcData, readErr := fakeFS.ReadFile(tcPath)
+	if readErr != nil {
+		t.Fatalf("tool_calls.md não encontrado: %v", readErr)
+	}
+	if !strings.Contains(string(tcData), "read_file") {
+		t.Errorf("tool_calls.md não contém 'read_file'; conteúdo=%q", string(tcData))
+	}
+	if !strings.Contains(string(tcData), "write_file") {
+		t.Errorf("tool_calls.md não contém 'write_file'; conteúdo=%q", string(tcData))
+	}
+}
+
+// TestACPIntegration_Gemini_AgentMessage (T-4.0 sub-test 4): múltiplas agent_messages.
+// Valida que events.jsonl registra os kinds corretamente.
+func TestACPIntegration_Gemini_AgentMessage(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("primeira mensagem").
+		AppendAgentMessage("segunda mensagem").
+		AppendAgentMessage("terceira mensagem").
+		AppendSessionEnd()
+
+	pfact, persist := newFakePersistenceFactory()
+
+	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiBinary(), script, pfact)
+
+	job := airuntime.Job{
+		Prompt:      "gemini multi messages",
+		WorkDir:     workDirWithAgentsMD(t),
+		EvidenceDir: t.TempDir(),
+		Quiet:       true,
+	}
+
+	summary, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run (Gemini AgentMessage): %v", err)
+	}
+
+	// Contar agent_messages persistidas.
+	agentMsgCount := 0
+	for _, evt := range persist.events {
+		if evt.Kind() == events.KindAgentMessage {
+			agentMsgCount++
+		}
+	}
+	if agentMsgCount < 3 {
+		t.Errorf("agent_messages persistidas = %d, want >= 3", agentMsgCount)
+	}
+
+	if summary.CancelReason != events.CancelReasonNone {
+		t.Errorf("CancelReason = %q, want none", summary.CancelReason)
+	}
+}
+
+// TestACPIntegration_Gemini_Completion (T-4.0 sub-test 5): verifica que session_end
+// é o último evento e que execution_report.md contém campos esperados.
+func TestACPIntegration_Gemini_Completion(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("gemini completion").
+		AppendToolCall("tc_1", "bash_command").
+		AppendToolCallUpdate("tc_1", "completed").
+		AppendSessionEnd()
+
+	fakeFS := fs.NewFakeFileSystem()
+	pfact := persistence.NewSessionPersistenceFactory(fakeFS)
+
+	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiBinary(), script, pfact)
+
+	evidenceDir := "/evidence/gemini-completion"
+	job := airuntime.Job{
+		Prompt:       "gemini completion",
+		WorkDir:      "/workdir",
+		EvidenceDir:  evidenceDir,
+		Quiet:        true,
+		DisableHooks: true,
+	}
+
+	summary, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run (Gemini Completion): %v", err)
+	}
+	if summary.CancelReason != events.CancelReasonNone {
+		t.Errorf("CancelReason = %q, want none", summary.CancelReason)
+	}
+
+	// execution_report.md deve ter campos esperados.
+	reportPath := evidenceDir + "/execution_report.md"
+	reportData, readErr := fakeFS.ReadFile(reportPath)
+	if readErr != nil {
+		t.Fatalf("execution_report.md não encontrado: %v", readErr)
+	}
+	reportContent := string(reportData)
+	if !strings.Contains(reportContent, "cancel_reason: none") {
+		t.Errorf("execution_report.md deve conter 'cancel_reason: none'; conteúdo=%q", reportContent)
+	}
+	if !strings.Contains(reportContent, "launcher: binary") {
+		t.Errorf("execution_report.md deve conter 'launcher: binary'; conteúdo=%q", reportContent)
+	}
+}
+
+// TestACPIntegration_Gemini_ActivityWatchdog (T-4.0 sub-test 6): Gemini inativo →
+// ActivityWatchdog cancela via CancelCause(ErrActivityTimeout).
+func TestACPIntegration_Gemini_ActivityWatchdog(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("gemini iniciou watchdog test").
+		AppendAgentMessageWithDelay("nunca chega", 500*time.Millisecond).
+		AppendSessionEnd()
+
+	pfact, persist := newFakePersistenceFactory()
+
+	timeout, err := events.NewActivityTimeout(50 * time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiBinary(), script, pfact)
+
+	job := airuntime.Job{
+		Prompt:          "gemini watchdog test",
+		WorkDir:         workDirWithAgentsMD(t),
+		EvidenceDir:     t.TempDir(),
+		ActivityTimeout: timeout,
+		Quiet:           true,
+	}
+
+	summary, runErr := runner.Run(ctx, job)
+
+	if runErr != nil {
+		if summary.CancelReason != events.CancelReasonActivityTimeout {
+			t.Errorf("CancelReason = %q, want activity_timeout when error present", summary.CancelReason)
+		}
+	} else {
+		t.Logf("Gemini Watchdog: session ended before timeout; CancelReason=%q", summary.CancelReason)
+	}
+
+	if summary.CancelReason == events.CancelReasonPermissionDenied {
+		t.Errorf("CancelReason = permission_denied unexpectedly")
+	}
+
+	if persist.summary == nil {
+		t.Error("EnrichReport não foi chamado — execution_report não foi enriquecido")
+	}
+}
+
+// TestACPIntegration_Gemini_LauncherUnavailable (T-4.0 sub-test 7): nenhum launcher
+// disponível (nem gemini binário nem npx) → Run retorna erro.
+func TestACPIntegration_Gemini_LauncherUnavailable(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	pfact, _ := newFakePersistenceFactory()
+	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberNone(), acpfake.NewScript(), pfact)
+
+	job := airuntime.Job{
+		Prompt:      "gemini launcher unavailable",
+		WorkDir:     workDirWithAgentsMD(t),
+		EvidenceDir: t.TempDir(),
+	}
+
+	_, err := runner.Run(ctx, job)
+	if err == nil {
+		t.Fatal("esperava erro quando nenhum launcher disponível para Gemini")
+	}
+}
+
+// TestACPIntegration_Gemini_NpxFallback (T-4.0 sub-test 8): binário "gemini" ausente;
+// npx disponível → Run usa fallback npx e retorna Launcher="npx".
+func TestACPIntegration_Gemini_NpxFallback(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("gemini via npx").
+		AppendSessionEnd()
+
+	pfact, _ := newFakePersistenceFactory()
+	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiNpxOnly(), script, pfact)
+
+	job := airuntime.Job{
+		Prompt:      "gemini npx fallback",
+		WorkDir:     workDirWithAgentsMD(t),
+		EvidenceDir: t.TempDir(),
+		Quiet:       true,
+	}
+
+	summary, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run (Gemini NpxFallback): %v", err)
+	}
+
+	if summary.Launcher != "npx" {
+		t.Errorf("Launcher = %q, want npx", summary.Launcher)
+	}
+}
+
+// TestACPIntegration_Gemini_BootstrapArgsDefault (T-4.0 sub-test 9): valida que
+// geminiBootstrapArgs produz --approval-mode default quando AccessMode = Restricted/zero.
+// Verifica que runtime_init.Args() contém --approval-mode default.
+func TestACPIntegration_Gemini_BootstrapArgsDefault(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("gemini bootstrap restricted").
+		AppendSessionEnd()
+
+	pfact, persist := newFakePersistenceFactory()
+	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiBinary(), script, pfact)
+
+	job := airuntime.Job{
+		Prompt:      "gemini restricted bootstrap",
+		WorkDir:     workDirWithAgentsMD(t),
+		EvidenceDir: t.TempDir(),
+		Quiet:       true,
+		AccessMode:  specs.AccessModeRestricted,
+	}
+
+	_, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run (Gemini BootstrapArgs Restricted): %v", err)
+	}
+
+	args := findRuntimeInitArgs(t, persist)
+
+	if !containsArgPair(args, "--approval-mode", "default") {
+		t.Errorf("args %v: esperava par --approval-mode default (AccessModeRestricted)", args)
+	}
+	// NÃO deve conter yolo em modo restricted.
+	if containsArg(args, "yolo") {
+		t.Errorf("args %v: NÃO esperava yolo no modo restricted", args)
+	}
+}
+
+// TestACPIntegration_Gemini_BootstrapArgsFull (T-4.0 sub-test 10): valida que
+// geminiBootstrapArgs produz --approval-mode yolo quando AccessMode = Full.
+func TestACPIntegration_Gemini_BootstrapArgsFull(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("gemini bootstrap full").
+		AppendSessionEnd()
+
+	pfact, persist := newFakePersistenceFactory()
+	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiBinary(), script, pfact)
+
+	job := airuntime.Job{
+		Prompt:      "gemini full access bootstrap",
+		WorkDir:     workDirWithAgentsMD(t),
+		EvidenceDir: t.TempDir(),
+		Quiet:       true,
+		AccessMode:  specs.AccessModeFull,
+	}
+
+	_, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run (Gemini BootstrapArgs Full): %v", err)
+	}
+
+	args := findRuntimeInitArgs(t, persist)
+
+	if !containsArgPair(args, "--approval-mode", "yolo") {
+		t.Errorf("args %v: esperava par --approval-mode yolo (AccessModeFull)", args)
+	}
+}
+
+// TestACPIntegration_Gemini_ParidadeObservacional (T-4.0 sub-test 11): valida que
+// events.jsonl Gemini tem mesma estrutura (kinds) que Claude para o mesmo script.
+// RF-09: paridade observacional Gemini ↔ Claude/Codex/Copilot.
+func TestACPIntegration_Gemini_ParidadeObservacional(t *testing.T) {
+	t.Parallel()
+
+	// Script idêntico para ambas as sessões.
+	buildScript := func() *acpfake.Script {
+		return acpfake.NewScript().
+			AppendAgentMessage("parity message").
+			AppendToolCall("tc", "some_tool").
+			AppendToolCallUpdate("tc", "completed").
+			AppendSessionEnd()
+	}
+
+	// Sessão Gemini
+	geminiCtx, geminiCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer geminiCancel()
+
+	geminiFakeFS := fs.NewFakeFileSystem()
+	geminiPfact := persistence.NewSessionPersistenceFactory(geminiFakeFS)
+
+	geminiRunner := airuntime.NewACPRunner(
+		specs.Gemini(),
+		airuntime.WithProber(proberGeminiBinary()),
+		airuntime.WithClientFactory(&fakeClientFactory{script: buildScript(), ctx: geminiCtx, t: t}),
+		airuntime.WithPersistenceFactory(geminiPfact),
+		airuntime.WithRenderer(&discardRenderer{}),
+	)
+	geminiDir := "/evidence/gemini-parity"
+	_, geminiErr := geminiRunner.Run(geminiCtx, airuntime.Job{
+		Prompt:       "parity prompt",
+		WorkDir:      "/workdir",
+		EvidenceDir:  geminiDir,
+		Quiet:        true,
+		DisableHooks: true,
+	})
+	if geminiErr != nil {
+		t.Fatalf("Run (Gemini parity): %v", geminiErr)
+	}
+
+	// Sessão Claude (mesma sequência de script)
+	claudeCtx, claudeCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer claudeCancel()
+
+	claudeFakeFS := fs.NewFakeFileSystem()
+	claudePfact := persistence.NewSessionPersistenceFactory(claudeFakeFS)
+
+	claudeRunner := airuntime.NewACPRunner(
+		specs.Claude(),
+		airuntime.WithProber(proberBinary()),
+		airuntime.WithClientFactory(&fakeClientFactory{script: buildScript(), ctx: claudeCtx, t: t}),
+		airuntime.WithPersistenceFactory(claudePfact),
+		airuntime.WithRenderer(&discardRenderer{}),
+	)
+	claudeDir := "/evidence/claude-parity"
+	_, claudeErr := claudeRunner.Run(claudeCtx, airuntime.Job{
+		Prompt:       "parity prompt",
+		WorkDir:      "/workdir",
+		EvidenceDir:  claudeDir,
+		Quiet:        true,
+		DisableHooks: true,
+	})
+	if claudeErr != nil {
+		t.Fatalf("Run (Claude parity): %v", claudeErr)
+	}
+
+	// Extrair kinds de ambas as sessões.
+	extractKinds := func(fakeFS *fs.FakeFileSystem, dir string) []string {
+		t.Helper()
+		data, err := fakeFS.ReadFile(dir + "/events.jsonl")
+		if err != nil {
+			t.Fatalf("events.jsonl não encontrado em %s: %v", dir, err)
+		}
+		lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+		kinds := make([]string, 0, len(lines))
+		for _, line := range lines {
+			var env map[string]json.RawMessage
+			if jsonErr := json.Unmarshal([]byte(line), &env); jsonErr != nil {
+				continue
+			}
+			var k string
+			if jsonErr := json.Unmarshal(env["kind"], &k); jsonErr != nil {
+				continue
+			}
+			kinds = append(kinds, k)
+		}
+		return kinds
+	}
+
+	geminiKinds := extractKinds(geminiFakeFS, geminiDir)
+	claudeKinds := extractKinds(claudeFakeFS, claudeDir)
+
+	// Paridade: mesmos kinds na mesma ordem.
+	if len(geminiKinds) != len(claudeKinds) {
+		t.Errorf("paridade events.jsonl: Gemini kinds(%d)=%v, Claude kinds(%d)=%v",
+			len(geminiKinds), geminiKinds, len(claudeKinds), claudeKinds)
+	} else {
+		for i, gk := range geminiKinds {
+			if gk != claudeKinds[i] {
+				t.Errorf("paridade events.jsonl[%d]: Gemini=%q, Claude=%q", i, gk, claudeKinds[i])
+			}
 		}
 	}
 }

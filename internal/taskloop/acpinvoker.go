@@ -10,6 +10,7 @@ import (
 
 	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/telemetry"
 )
@@ -29,6 +30,15 @@ type acpInvoker struct {
 	reasoningEffort string
 	accessMode      specs.AccessMode
 	addDirs         []string
+	// F2-Claude fields (RF-01, RF-02 — ADR-014).
+	mcpNested   bool
+	noNormalize bool
+	// F3-Claude fields: memory limits + hooks control.
+	memoryLimits memory.Limits
+	disableHooks bool
+	tasksDir     string
+	// F5-Claude: auto-review opt-in.
+	autoReview bool
 }
 
 // ACPInvokerOption é uma functional option para acpInvoker (ADR-013 D-02).
@@ -50,6 +60,54 @@ func WithACPInvokerAccessMode(mode specs.AccessMode) ACPInvokerOption {
 // Ignorado por Claude/Copilot via Spec.BootstrapArgs no-op.
 func WithACPInvokerAddDirs(dirs []string) ACPInvokerOption {
 	return func(a *acpInvoker) { a.addDirs = dirs }
+}
+
+// WithACPInvokerMCPNested habilita o spawn do servidor MCP interno (F2-Claude, RF-01.1).
+// Quando true, ACPRunner spawna mcpserver.Server em goroutine antes de c.Open.
+func WithACPInvokerMCPNested(enabled bool) ACPInvokerOption {
+	return func(a *acpInvoker) { a.mcpNested = enabled }
+}
+
+// WithACPInvokerNoNormalize desabilita a normalização de tool-calls (F2-Claude, RF-02.4, debug).
+// Quando true, BuildNormalizedToolCall não é chamado no loop de eventos.
+func WithACPInvokerNoNormalize(disabled bool) ACPInvokerOption {
+	return func(a *acpInvoker) { a.noNormalize = disabled }
+}
+
+// WithACPInvokerMemoryLimitLines configura os limites de linhas do memory store (F3-Claude).
+// workflowLines e taskLines: 0 = usar default de memory.DefaultLimits() (fallback no runner).
+func WithACPInvokerMemoryLimitLines(workflowLines, taskLines int) ACPInvokerOption {
+	return func(a *acpInvoker) {
+		a.memoryLimits.WorkflowLines = workflowLines
+		a.memoryLimits.TaskLines = taskLines
+	}
+}
+
+// WithACPInvokerMemoryLimitBytes configura os limites de bytes do memory store (F3-Claude).
+// workflowBytes e taskBytes: 0 = usar default de memory.DefaultLimits() (fallback no runner).
+func WithACPInvokerMemoryLimitBytes(workflowBytes, taskBytes int) ACPInvokerOption {
+	return func(a *acpInvoker) {
+		a.memoryLimits.WorkflowBytes = workflowBytes
+		a.memoryLimits.TaskBytes = taskBytes
+	}
+}
+
+// WithACPInvokerDisableHooks desabilita TODOS os hooks Go in-process (F3-Claude, debug).
+// Quando true, governance, token_budget e memory_persist não são registrados no runner.
+func WithACPInvokerDisableHooks(disabled bool) ACPInvokerOption {
+	return func(a *acpInvoker) { a.disableHooks = disabled }
+}
+
+// WithACPInvokerTasksDir configura o caminho do diretório de tasks do PRD ativo (F3-Claude).
+// Necessário para o memory.Store (ReadWorkflow + ReadTask). Default "" = memory desabilitado.
+func WithACPInvokerTasksDir(dir string) ACPInvokerOption {
+	return func(a *acpInvoker) { a.tasksDir = dir }
+}
+
+// WithACPInvokerAutoReview habilita auto-review opt-in (F5-Claude, RF-06).
+// HARD: default false; child sessions têm AutoReview=false forçado no runner.
+func WithACPInvokerAutoReview(enabled bool) ACPInvokerOption {
+	return func(a *acpInvoker) { a.autoReview = enabled }
 }
 
 // NewACPInvoker cria um acpInvoker que delega execução ao runner fornecido.
@@ -95,6 +153,15 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (str
 		ReasoningEffort: c.reasoningEffort,
 		AccessMode:      c.accessMode,
 		AddDirs:         c.addDirs,
+		// F2-Claude fields (RF-01, RF-02 — ADR-014).
+		MCPNested:   c.mcpNested,
+		NoNormalize: c.noNormalize,
+		// F3-Claude fields (memory + hooks).
+		MemoryLimits: c.memoryLimits,
+		DisableHooks: c.disableHooks,
+		TasksDir:     c.tasksDir,
+		// F5-Claude: auto-review opt-in.
+		AutoReview: c.autoReview,
 	}
 
 	c.humanBuffer.Reset()

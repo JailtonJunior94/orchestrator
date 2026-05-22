@@ -529,9 +529,66 @@ func TestAdrByID_T21_UnknownIDFallback(t *testing.T) {
 		t.Errorf("mensagem de erro deve conter fallback \"tasks/adr/\" para ID desconhecido\nmensagem: %q", msg)
 	}
 
-	// E não deve conter um ADR específico (009, 012 ou 013).
-	if strings.Contains(msg, "009-") || strings.Contains(msg, "012-") || strings.Contains(msg, "013-") {
+	// E não deve conter um ADR específico (009, 012, 013 ou 015).
+	if strings.Contains(msg, "009-") || strings.Contains(msg, "012-") || strings.Contains(msg, "013-") || strings.Contains(msg, "015-") {
 		t.Errorf("mensagem de erro não deve conter ADR específico para ID desconhecido\nmensagem: %q", msg)
+	}
+}
+
+// geminiSpec retorna uma spec de teste baseada na spec Gemini.
+func geminiSpec() specs.Spec {
+	return specs.Gemini()
+}
+
+// TestProbeReferencesADR_Gemini valida que adrByID["gemini"] aponta para ADR-015 (T-13 ext, RF-06).
+// Nota: não usa t.Parallel() pois usa ResetCache() que modifica estado global.
+func TestProbeReferencesADR_Gemini(t *testing.T) {
+	sp := geminiSpec()
+	sp.ID = "gemini"
+	probe.ResetCache()
+
+	look := newFakeLookPather(map[string]string{})
+
+	_, err := probe.EnsureAvailable(context.Background(), sp, look)
+	if err == nil {
+		t.Fatal("esperava erro, mas não houve")
+	}
+	if !strings.Contains(err.Error(), "tasks/adr/015-gemini-cli-acp-native.md") {
+		t.Errorf("adrByID[\"gemini\"] deve apontar para ADR-015\nmensagem: %q", err.Error())
+	}
+}
+
+// TestProbeCacheKey_Gemini valida que o cache key do Gemini funciona corretamente (T-13 ext, RF-29).
+// Chamadas subsequentes para a mesma spec.ID retornam resultado em cache sem re-lookup.
+func TestProbeCacheKey_Gemini(t *testing.T) {
+	t.Parallel()
+
+	sp := geminiSpec()
+	sp.ID = "gemini-cache-test"
+
+	look := newFakeLookPather(map[string]string{
+		"gemini": "/usr/local/bin/gemini",
+	})
+
+	probe.ResetCache()
+
+	launcher1, err1 := probe.EnsureAvailable(context.Background(), sp, look)
+	if err1 != nil {
+		t.Fatalf("primeira chamada falhou: %v", err1)
+	}
+
+	launcher2, err2 := probe.EnsureAvailable(context.Background(), sp, look)
+	if err2 != nil {
+		t.Fatalf("segunda chamada falhou: %v", err2)
+	}
+
+	if launcher1.Kind() != launcher2.Kind() {
+		t.Errorf("launcher kinds divergem: %q vs %q", launcher1.Kind(), launcher2.Kind())
+	}
+
+	// LookPath deve ter sido invocado apenas uma vez (cache ativo).
+	if got := look.calls.Load(); got != 1 {
+		t.Errorf("LookPath foi chamado %d vez(es); esperava exatamente 1", got)
 	}
 }
 

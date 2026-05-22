@@ -41,3 +41,23 @@ func WithRenderer(rend Renderer) Option {
 		r.renderer = rend
 	}
 }
+
+// WithMCPServer injeta um MCPServer para spawn condicional em sessões F2-Claude.
+// Quando nil (default), MCP fica desabilitado — comportamento F1-Claude preservado.
+func WithMCPServer(s MCPServer) Option {
+	return func(r *ACPRunner) {
+		r.mcpServer = s
+	}
+}
+
+// WithReviewOutputFn injeta uma função de saída de review para testes unitários (F5-Claude).
+// Em produção usar nil (default) → spawnReviewSession executa o runner real.
+// Em testes: injetar função que retorna output canned sem spawnar sessão ACP real.
+func WithReviewOutputFn(fn autoReviewOutputFn) Option {
+	return func(r *ACPRunner) {
+		r.reviewOutputFn = fn
+	}
+}
+
+// ReviewOutputFn é o tipo exportado de autoReviewOutputFn para uso em testes externos.
+type ReviewOutputFn = autoReviewOutputFn

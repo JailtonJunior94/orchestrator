@@ -30,6 +30,44 @@ type Event struct {
 
 	// raw bruto do update ACP (RF-08)
 	raw json.RawMessage
+
+	// normalizationMeta carrega campos opcionais de normalização de tool-calls (F2-Claude, RF-02).
+	// Preenchido pelo runner quando !Job.NoNormalize e kind == KindToolCallStart.
+	// nil = evento não normalizado (não modifica MarshalJSON para outros kinds).
+	normalizationMeta *normalizationMetaFields
+}
+
+// normalizationMetaFields contém os campos normalized_name e raw_name para o events.jsonl.
+// Separado do Event principal para manter a tagged-union imutável fora do runner (ADR-010).
+type normalizationMetaFields struct {
+	RawName        string `json:"raw_name"`
+	NormalizedName string `json:"normalized_name"`
+}
+
+// WithNormalization retorna uma cópia do Event com metadados de normalização definidos.
+// Não muta o Event receptor — retorna um novo valor (RF-02, RF-02.5).
+func (e Event) WithNormalization(rawName, normalizedName string) Event {
+	e.normalizationMeta = &normalizationMetaFields{
+		RawName:        rawName,
+		NormalizedName: normalizedName,
+	}
+	return e
+}
+
+// NormalizedName retorna o nome normalizado da tool (ou "" quando não normalizado).
+func (e Event) NormalizedName() string {
+	if e.normalizationMeta == nil {
+		return ""
+	}
+	return e.normalizationMeta.NormalizedName
+}
+
+// RawToolName retorna o nome original da tool no campo normalizationMeta (ou "" quando não normalizado).
+func (e Event) RawToolName() string {
+	if e.normalizationMeta == nil {
+		return ""
+	}
+	return e.normalizationMeta.RawName
 }
 
 // NewAgentMessage cria um Event do kind agent_message.
@@ -162,16 +200,23 @@ func (e Event) RuntimeInit() *RuntimeInitPayload { return e.runtimeInit }
 // Unknown retorna o payload de unknown ou nil se o kind não corresponder.
 func (e Event) Unknown() *UnknownPayload { return e.unknown }
 
+// Raw retorna o payload bruto JSON do update ACP (RF-08).
+// Retorna nil quando o evento não carrega raw (ex: construído sinteticamente em testes).
+func (e Event) Raw() json.RawMessage { return e.raw }
+
 // envelopeJSON é o shape canônico do envelope RF-08 gravado no events.jsonl.
 type envelopeJSON struct {
-	TS         string          `json:"ts"`
-	Kind       EventKind       `json:"kind"`
-	ToolCallID ToolCallID      `json:"tool_call_id"`
-	Launcher   string          `json:"launcher"`
-	Raw        json.RawMessage `json:"raw"`
+	TS             string          `json:"ts"`
+	Kind           EventKind       `json:"kind"`
+	ToolCallID     ToolCallID      `json:"tool_call_id"`
+	Launcher       string          `json:"launcher"`
+	Raw            json.RawMessage `json:"raw"`
+	RawName        string          `json:"raw_name,omitempty"`
+	NormalizedName string          `json:"normalized_name,omitempty"`
 }
 
 // MarshalJSON produz o envelope RF-08 conforme a techspec.
+// Quando normalizationMeta está presente (F2-Claude, RF-02), inclui raw_name e normalized_name.
 func (e Event) MarshalJSON() ([]byte, error) {
 	env := envelopeJSON{
 		TS:         e.ts.UTC().Format(time.RFC3339Nano),
@@ -179,6 +224,10 @@ func (e Event) MarshalJSON() ([]byte, error) {
 		ToolCallID: e.toolCallID,
 		Launcher:   e.launcher,
 		Raw:        e.raw,
+	}
+	if e.normalizationMeta != nil {
+		env.RawName = e.normalizationMeta.RawName
+		env.NormalizedName = e.normalizationMeta.NormalizedName
 	}
 	return json.Marshal(env)
 }

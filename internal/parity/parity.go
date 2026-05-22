@@ -24,8 +24,11 @@
 package parity
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/contextgen"
@@ -254,6 +257,10 @@ func Invariants() []*Invariant {
 		invX01CrossToolCanonicalPath,
 		invX02CompactProfileCodexOnly,
 		invX03DepthGuardPresent,
+
+		// F2-Claude — invariantes de normalização e MCP nested-agent depth (ADR-008 extensão)
+		invINV30ToolCallsNormalizedNameInvariant,
+		invINV31MCPNestedDepthNeverExceedsMax,
 	}
 }
 
@@ -590,6 +597,129 @@ var invX03DepthGuardPresent = &Invariant{
 	Check: func(s Snapshot) Result {
 		if s.File("scripts/lib/check-invocation-depth.sh") == "" {
 			return fail("guard de profundidade ausente")
+		}
+		return pass()
+	},
+}
+
+// ── F2-Claude — Invariantes de normalização cross-tool e MCP nested-agent (ADR-008 extensão) ──
+
+// eventsJSONLEntry representa uma entrada mínima do events.jsonl para leitura dos invariantes.
+type eventsJSONLEntry struct {
+	Kind           string `json:"kind"`
+	RawName        string `json:"raw_name,omitempty"`
+	NormalizedName string `json:"normalized_name,omitempty"`
+	Depth          *int   `json:"depth,omitempty"`
+}
+
+// parseEventsJSONL lê as entradas de um arquivo events.jsonl a partir de conteúdo string.
+func parseEventsJSONL(content string) []eventsJSONLEntry {
+	var entries []eventsJSONLEntry
+	for _, line := range strings.Split(strings.TrimSpace(content), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		var e eventsJSONLEntry
+		if err := json.Unmarshal([]byte(line), &e); err == nil {
+			entries = append(entries, e)
+		}
+	}
+	return entries
+}
+
+// defaultMaxAgentDepth é a profundidade máxima padrão de nested-agent (ADR-014).
+const defaultMaxAgentDepth = 3
+
+// maxAgentDepth retorna o limite de profundidade configurado via AISPEC_MAX_AGENT_DEPTH.
+func maxAgentDepth() int {
+	if v := os.Getenv("AISPEC_MAX_AGENT_DEPTH"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			return n
+		}
+	}
+	return defaultMaxAgentDepth
+}
+
+// invINV30ToolCallsNormalizedNameInvariant valida que a mesma operação semântica
+// em Claude e Codex produz o mesmo normalized_name em events.jsonl.
+// Fixtures: tests/fixtures/parity/claude_bash.jsonl + codex_shell.jsonl.
+// Aplicável quando as fixtures existem; skipped silenciosamente quando ausentes.
+var invINV30ToolCallsNormalizedNameInvariant = &Invariant{
+	ID:          "INV-30",
+	Description: "tool_calls_normalized_name_invariant: mesma operação semântica em Claude e Codex produz normalized_name idêntico em events.jsonl",
+	Level:       Common,
+	AppliesTo:   []skills.Tool{skills.ToolClaude, skills.ToolCodex},
+	Check: func(s Snapshot) Result {
+		claudeContent := s.File("tests/fixtures/parity/claude_bash.jsonl")
+		codexContent := s.File("tests/fixtures/parity/codex_shell.jsonl")
+
+		// Sem fixtures: skip (ambientes sem fixtures de parity não devem bloquear)
+		if claudeContent == "" || codexContent == "" {
+			return pass()
+		}
+
+		claudeEntries := parseEventsJSONL(claudeContent)
+		codexEntries := parseEventsJSONL(codexContent)
+
+		// Coletar normalized_names de tool_call_start em cada fixture
+		claudeNames := map[string]bool{}
+		for _, e := range claudeEntries {
+			if e.Kind == "tool_call_start" && e.NormalizedName != "" {
+				claudeNames[e.NormalizedName] = true
+			}
+		}
+		codexNames := map[string]bool{}
+		for _, e := range codexEntries {
+			if e.Kind == "tool_call_start" && e.NormalizedName != "" {
+				codexNames[e.NormalizedName] = true
+			}
+		}
+
+		// Verificar que há pelo menos uma entrada em cada fixture
+		if len(claudeNames) == 0 {
+			return fail("fixture claude_bash.jsonl não contém entradas tool_call_start com normalized_name")
+		}
+		if len(codexNames) == 0 {
+			return fail("fixture codex_shell.jsonl não contém entradas tool_call_start com normalized_name")
+		}
+
+		// Invariante: deve haver pelo menos um normalized_name em comum (mesma operação semântica)
+		for name := range claudeNames {
+			if codexNames[name] {
+				return pass()
+			}
+		}
+		return failf("nenhum normalized_name em comum entre Claude (%v) e Codex (%v)",
+			claudeNames, codexNames)
+	},
+}
+
+// invINV31MCPNestedDepthNeverExceedsMax valida que eventos com kind nested_agent
+// têm depth ≤ AISPEC_MAX_AGENT_DEPTH em qualquer events.jsonl do snapshot.
+// Quando nenhum evento nested_agent existe, o invariante passa (safe-default).
+var invINV31MCPNestedDepthNeverExceedsMax = &Invariant{
+	ID:          "INV-31",
+	Description: "mcp_nested_depth_never_exceeds_max: eventos nested_agent têm depth ≤ AISPEC_MAX_AGENT_DEPTH",
+	Level:       Common,
+	AppliesTo:   nil, // aplica a todas as ferramentas
+	Check: func(s Snapshot) Result {
+		max := maxAgentDepth()
+
+		// Varrer todos os arquivos do snapshot buscando events.jsonl
+		for path, content := range s.Files {
+			if !strings.HasSuffix(path, "events.jsonl") {
+				continue
+			}
+			entries := parseEventsJSONL(string(content))
+			for _, e := range entries {
+				if e.Kind == "nested_agent" && e.Depth != nil {
+					if *e.Depth > max {
+						return failf("events.jsonl %q: evento nested_agent com depth=%d excede max=%d",
+							path, *e.Depth, max)
+					}
+				}
+			}
 		}
 		return pass()
 	},

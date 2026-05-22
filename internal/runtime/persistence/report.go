@@ -11,6 +11,10 @@ import (
 	runtime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 )
 
+// claudeMetricsSectionHeader é o cabeçalho canônico da seção de métricas Claude-2026.
+// Detectado como regex para suportar presença OU ausência no validador de evidence (F4-Claude).
+const claudeMetricsSectionHeader = "## Métricas Claude-2026"
+
 // sectionHeaderRe detecta o marcador exato da seção (início de linha).
 var sectionHeaderRe = regexp.MustCompile(`(?m)^## Runtime ACP$`)
 
@@ -29,6 +33,8 @@ var reportTemplate = template.Must(template.New("runtime-acp").Parse(
 `))
 
 // EnrichReport adiciona ou substitui a seção "## Runtime ACP" no execution_report.md (RF-10).
+// Quando a Summary contém métricas Claude-2026 (F4-Claude), também faz append da seção
+// "## Métricas Claude-2026" ao final do report.
 // A operação é idempotente: chamadas sucessivas produzem o mesmo arquivo.
 func EnrichReport(reportPath string, summary runtime.Summary, fsys fs.FileSystem) error {
 	clean := filepath.Clean(reportPath)
@@ -45,10 +51,59 @@ func EnrichReport(reportPath string, summary runtime.Summary, fsys fs.FileSystem
 	}
 
 	updated := injectSection(string(existing), section)
+
+	// ★ F4-Claude: seção "Métricas Claude-2026" — append opcional.
+	// Omitida quando todos os contadores são zero (evita poluição em relatórios legados).
+	if metricsSection := RenderClaudeMetricsSection(summary); metricsSection != "" {
+		updated = injectClaudeMetricsSection(updated, metricsSection)
+	}
+
 	if err := fsys.WriteFile(clean, []byte(updated)); err != nil {
 		return fmt.Errorf("persistence: escrever %s: %w", clean, err)
 	}
 	return nil
+}
+
+// RenderClaudeMetricsSection renderiza a seção "## Métricas Claude-2026" para o report.
+// Retorna "" quando todos os contadores são zero (seção omitida, compatibilidade retroativa).
+// Exportada para uso em testes e por internal/evidence.
+func RenderClaudeMetricsSection(summary runtime.Summary) string {
+	if summary.CacheReadTokens == 0 &&
+		summary.CacheCreationTokens == 0 &&
+		summary.ThinkingTokens == 0 &&
+		summary.ToolCallsNormalizedCount == 0 {
+		return ""
+	}
+	return fmt.Sprintf(`%s
+| Métrica | Valor |
+|---|---|
+| cache_read_tokens | %d |
+| cache_creation_tokens | %d |
+| thinking_tokens | %d |
+| tool_calls_normalized | %d |
+`, claudeMetricsSectionHeader,
+		summary.CacheReadTokens,
+		summary.CacheCreationTokens,
+		summary.ThinkingTokens,
+		summary.ToolCallsNormalizedCount,
+	)
+}
+
+// injectClaudeMetricsSection substitui ou faz append da seção Métricas Claude-2026.
+// Idempotente: se a seção já existir, substitui; caso contrário faz append.
+func injectClaudeMetricsSection(content, section string) string {
+	headerRe := regexp.MustCompile(`(?m)^## Métricas Claude-2026`)
+	loc := headerRe.FindStringIndex(content)
+	if loc == nil {
+		// Não existe: append.
+		if !strings.HasSuffix(content, "\n") {
+			content += "\n"
+		}
+		return content + "\n" + section
+	}
+	// Existe: substituir até fim do arquivo (seção deve ser a última).
+	start := loc[0]
+	return content[:start] + section
 }
 
 // renderSection renderiza o conteúdo da seção ## Runtime ACP.

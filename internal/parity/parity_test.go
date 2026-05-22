@@ -1,6 +1,7 @@
 package parity
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -403,6 +404,160 @@ func TestParity_NewArtifacts_Gemini_Skipped_WhenClaudeOnly(t *testing.T) {
 	if !results[0].Skipped {
 		t.Error("[GM03] deveria ser skipped em instalacao Claude-only")
 	}
+}
+
+// ── INV-30 e INV-31 — F2-Claude normalization + MCP nested-agent ─────────────
+
+// TestParity_INV30_PassesWithMatchingNormalizedNames valida que INV-30 passa
+// quando Claude e Codex têm o mesmo normalized_name para a mesma operação.
+func TestParity_INV30_PassesWithMatchingNormalizedNames(t *testing.T) {
+	snap := Snapshot{
+		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolCodex},
+		ProjectDir: testProjectDir,
+		Files: map[string][]byte{
+			testProjectDir + "/tests/fixtures/parity/claude_bash.jsonl": []byte(
+				`{"kind":"tool_call_start","raw_name":"bash","normalized_name":"bash"}` + "\n",
+			),
+			testProjectDir + "/tests/fixtures/parity/codex_shell.jsonl": []byte(
+				`{"kind":"tool_call_start","raw_name":"shell","normalized_name":"bash"}` + "\n",
+			),
+		},
+		Dirs:  map[string]bool{},
+		Links: map[string]string{},
+	}
+	r := invINV30ToolCallsNormalizedNameInvariant.Check(snap)
+	if !r.OK {
+		t.Errorf("INV-30 deveria passar com normalized_name em comum: %s", r.Reason)
+	}
+}
+
+// TestParity_INV30_FailsWhenNormalizedNamesDiverge valida que INV-30 falha
+// quando Claude e Codex têm normalized_names diferentes.
+func TestParity_INV30_FailsWhenNormalizedNamesDiverge(t *testing.T) {
+	snap := Snapshot{
+		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolCodex},
+		ProjectDir: testProjectDir,
+		Files: map[string][]byte{
+			testProjectDir + "/tests/fixtures/parity/claude_bash.jsonl": []byte(
+				`{"kind":"tool_call_start","raw_name":"bash","normalized_name":"bash"}` + "\n",
+			),
+			testProjectDir + "/tests/fixtures/parity/codex_shell.jsonl": []byte(
+				`{"kind":"tool_call_start","raw_name":"shell","normalized_name":"execute"}` + "\n",
+			),
+		},
+		Dirs:  map[string]bool{},
+		Links: map[string]string{},
+	}
+	r := invINV30ToolCallsNormalizedNameInvariant.Check(snap)
+	if r.OK {
+		t.Error("INV-30 deveria falhar quando normalized_names divergem entre Claude e Codex")
+	}
+}
+
+// TestParity_INV30_PassesWhenFixturesAbsent valida que INV-30 passa (skipped)
+// quando as fixtures estão ausentes — não bloquear ambientes sem fixtures.
+func TestParity_INV30_PassesWhenFixturesAbsent(t *testing.T) {
+	snap := Snapshot{
+		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolCodex},
+		ProjectDir: testProjectDir,
+		Files:      map[string][]byte{},
+		Dirs:       map[string]bool{},
+		Links:      map[string]string{},
+	}
+	r := invINV30ToolCallsNormalizedNameInvariant.Check(snap)
+	if !r.OK {
+		t.Errorf("INV-30 deveria passar (sem bloquear) quando fixtures ausentes: %s", r.Reason)
+	}
+}
+
+// TestParity_INV30_SkippedWhenCopilotOnly valida que INV-30 é skipped
+// quando apenas Copilot está selecionado (requer Claude ou Codex).
+func TestParity_INV30_SkippedWhenCopilotOnly(t *testing.T) {
+	snap := Snapshot{
+		Tools:      []skills.Tool{skills.ToolCopilot},
+		ProjectDir: testProjectDir,
+		Files:      map[string][]byte{},
+		Dirs:       map[string]bool{},
+		Links:      map[string]string{},
+	}
+	results := Run(snap, []*Invariant{invINV30ToolCallsNormalizedNameInvariant})
+	if len(results) == 0 {
+		t.Fatal("Run retornou zero resultados")
+	}
+	if !results[0].Skipped {
+		t.Error("INV-30 deveria ser skipped quando apenas Copilot está selecionado (sem Claude nem Codex)")
+	}
+}
+
+// TestParity_INV31_PassesWithNoNestedAgentEvents valida que INV-31 passa
+// quando não há eventos nested_agent (safe-default).
+func TestParity_INV31_PassesWithNoNestedAgentEvents(t *testing.T) {
+	snap := Snapshot{
+		Tools:      []skills.Tool{skills.ToolClaude},
+		ProjectDir: testProjectDir,
+		Files: map[string][]byte{
+			testProjectDir + "/evidence/task1/events.jsonl": []byte(
+				`{"kind":"tool_call_start","raw_name":"bash"}` + "\n",
+			),
+		},
+		Dirs:  map[string]bool{},
+		Links: map[string]string{},
+	}
+	r := invINV31MCPNestedDepthNeverExceedsMax.Check(snap)
+	if !r.OK {
+		t.Errorf("INV-31 deveria passar sem eventos nested_agent: %s", r.Reason)
+	}
+}
+
+// TestParity_INV31_PassesWithDepthWithinLimit valida que INV-31 passa
+// quando depth ≤ AISPEC_MAX_AGENT_DEPTH.
+func TestParity_INV31_PassesWithDepthWithinLimit(t *testing.T) {
+	depth := 2
+	snap := Snapshot{
+		Tools:      []skills.Tool{skills.ToolClaude},
+		ProjectDir: testProjectDir,
+		Files: map[string][]byte{
+			testProjectDir + "/evidence/task1/events.jsonl": []byte(nestedAgentLine(depth) + "\n"),
+		},
+		Dirs:  map[string]bool{},
+		Links: map[string]string{},
+	}
+	r := invINV31MCPNestedDepthNeverExceedsMax.Check(snap)
+	if !r.OK {
+		t.Errorf("INV-31 deveria passar com depth=%d ≤ max=3: %s", depth, r.Reason)
+	}
+}
+
+// TestParity_INV31_FailsWhenDepthExceedsMax valida que INV-31 falha
+// quando depth > AISPEC_MAX_AGENT_DEPTH.
+func TestParity_INV31_FailsWhenDepthExceedsMax(t *testing.T) {
+	depth := 5 // acima do default 3
+	snap := Snapshot{
+		Tools:      []skills.Tool{skills.ToolClaude},
+		ProjectDir: testProjectDir,
+		Files: map[string][]byte{
+			testProjectDir + "/evidence/task1/events.jsonl": []byte(nestedAgentLine(depth) + "\n"),
+		},
+		Dirs:  map[string]bool{},
+		Links: map[string]string{},
+	}
+	r := invINV31MCPNestedDepthNeverExceedsMax.Check(snap)
+	if r.OK {
+		t.Errorf("INV-31 deveria falhar com depth=%d > max=3", depth)
+	}
+}
+
+// TestParity_INV31_ApliesToAllTools valida que INV-31 aplica a todas as ferramentas.
+func TestParity_INV31_ApliesToAllTools(t *testing.T) {
+	if invINV31MCPNestedDepthNeverExceedsMax.AppliesTo != nil {
+		t.Errorf("INV-31 AppliesTo deveria ser nil (aplica a todos), got: %v",
+			invINV31MCPNestedDepthNeverExceedsMax.AppliesTo)
+	}
+}
+
+// nestedAgentLine cria uma linha JSON para evento nested_agent com depth dado.
+func nestedAgentLine(depth int) string {
+	return fmt.Sprintf(`{"kind":"nested_agent","depth":%d}`, depth)
 }
 
 // ── Invariantes skipped para ferramentas nao selecionadas ───────────────────

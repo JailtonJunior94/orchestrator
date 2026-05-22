@@ -171,3 +171,4 @@ Nao inventar contexto ausente. Nao assumir versao sem verificar. Nao alterar com
 | [ADR-010](tasks/prd-acp-runtime-claude/adr-010-event-tagged-union.md) | runtime.Event como struct tagged union | Aceita |
 | [ADR-012](tasks/adr/012-copilot-cli-acp-native.md) | Copilot CLI como runtime ACP nativo | Aceita |
 | [ADR-013](tasks/adr/013-codex-cli-acp-native.md) | Codex CLI como runtime ACP nativo | Aceita |
+| [ADR-015](tasks/adr/015-gemini-cli-acp-native.md) | Gemini CLI ACP nativo (ADR-015) | Proposta |

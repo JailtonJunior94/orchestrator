@@ -308,6 +308,60 @@ func TestCodexCompatibilityTable_T34_T35(t *testing.T) {
 	})
 }
 
+// TestCompatibilityTableContainsGemini (RF-28, T-4.0) valida que a CompatibilityTable
+// contém modelos Gemini catalogados e que IsSupported retorna true para eles.
+// Sem mudança de código esperada (RF-28 garante que já estão catalogados em :34-43).
+func TestCompatibilityTableContainsGemini(t *testing.T) {
+	t.Parallel()
+
+	table := NewCompatibilityTable()
+
+	// Validar que "gemini" é uma ferramenta reconhecida na tabela.
+	if !table.IsSupported("gemini", "") {
+		t.Error("CompatibilityTable: 'gemini' não é reconhecida como ferramenta válida")
+	}
+
+	// Validar cada modelo Gemini catalogado em :34-43 de compatibility.go.
+	models := []string{
+		"gemini-2.5-pro",
+		"pro",
+		"flash",
+		"flash-lite",
+		"gemini-2.5-flash",
+		"gemini-2.5-flash-lite",
+		"gemini-3-pro-preview",
+		"auto",
+	}
+	for _, model := range models {
+		t.Run("gemini+"+model, func(t *testing.T) {
+			t.Parallel()
+			if !table.IsSupported("gemini", model) {
+				t.Errorf("IsSupported(%q, %q) = false; esperava true (RF-28)", "gemini", model)
+			}
+		})
+	}
+
+	// Validar que modelos de outras ferramentas não são aceitos para gemini.
+	t.Run("gemini rejeita modelo de outra ferramenta", func(t *testing.T) {
+		t.Parallel()
+		if table.IsSupported("gemini", "gpt-5.4") {
+			t.Error("IsSupported(\"gemini\", \"gpt-5.4\") = true; esperava false")
+		}
+		if table.IsSupported("gemini", "claude-sonnet-4-6") {
+			t.Error("IsSupported(\"gemini\", \"claude-sonnet-4-6\") = true; esperava false")
+		}
+	})
+
+	// Validar que Models("gemini") retorna ≥ 6 entradas.
+	t.Run("gemini tem pelo menos 6 modelos catalogados", func(t *testing.T) {
+		t.Parallel()
+		geminiModels := table.Models("gemini")
+		if len(geminiModels) < 6 {
+			t.Errorf("len(Models(\"gemini\")) = %d; esperava >= 6 (RF-28)", len(geminiModels))
+		}
+	})
+}
+
 // containsAll retorna true se s contem todos os substrings informados.
 func containsAll(s string, subs ...string) bool {
 	for _, sub := range subs {

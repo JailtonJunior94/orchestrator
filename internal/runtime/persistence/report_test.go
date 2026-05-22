@@ -1,6 +1,7 @@
 package persistence_test
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -10,6 +11,11 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence"
 )
+
+// encodeJSON serializa v para JSON e retorna os bytes.
+func encodeJSON(v any) ([]byte, error) {
+	return json.Marshal(v)
+}
 
 func makeSummary() runtime.Summary {
 	return runtime.Summary{
@@ -139,6 +145,144 @@ func TestEnrichReport_WriteError(t *testing.T) {
 	err := persistence.EnrichReport("/report/execution_report.md", makeSummary(), efs)
 	if err == nil {
 		t.Fatal("esperava erro de WriteFile")
+	}
+}
+
+// ── Métricas Claude-2026 ──────────────────────────────────────────────────────
+
+func TestRenderClaudeMetricsSection_AllZero_ReturnsEmpty(t *testing.T) {
+	summary := runtime.Summary{} // todos campos zero
+	got := persistence.RenderClaudeMetricsSection(summary)
+	if got != "" {
+		t.Errorf("esperado string vazia quando todos métricas zero; got: %q", got)
+	}
+}
+
+func TestRenderClaudeMetricsSection_WithValues_ContainsAllFields(t *testing.T) {
+	summary := runtime.Summary{
+		CacheReadTokens:          150,
+		CacheCreationTokens:      300,
+		ThinkingTokens:           42,
+		ToolCallsNormalizedCount: 5,
+	}
+	got := persistence.RenderClaudeMetricsSection(summary)
+	if got == "" {
+		t.Fatal("esperado seção não-vazia quando métricas > 0")
+	}
+	for _, want := range []string{
+		"Métricas Claude-2026",
+		"cache_read_tokens",
+		"cache_creation_tokens",
+		"thinking_tokens",
+		"tool_calls_normalized",
+		"150",
+		"300",
+		"42",
+		"5",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("seção não contém %q; got:\n%s", want, got)
+		}
+	}
+}
+
+func TestEnrichReport_ClaudeMetricsAppended_WhenNonZero(t *testing.T) {
+	fsys := fs.NewFakeFileSystem()
+	if err := fsys.WriteFile("/report/execution_report.md", []byte("# Relatório\n")); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	summary := runtime.Summary{
+		Launcher:            "binary",
+		EventsCount:         10,
+		CacheReadTokens:     150,
+		CacheCreationTokens: 300,
+		ThinkingTokens:      42,
+	}
+
+	if err := persistence.EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
+		t.Fatalf("EnrichReport: %v", err)
+	}
+
+	data, _ := fsys.ReadFile("/report/execution_report.md")
+	content := string(data)
+
+	if !strings.Contains(content, "Métricas Claude-2026") {
+		t.Error("seção Métricas Claude-2026 não encontrada quando métricas > 0")
+	}
+	if !strings.Contains(content, "cache_read_tokens") {
+		t.Error("campo cache_read_tokens não encontrado")
+	}
+}
+
+func TestEnrichReport_ClaudeMetrics_NotPresent_WhenAllZero(t *testing.T) {
+	fsys := fs.NewFakeFileSystem()
+	if err := fsys.WriteFile("/report/execution_report.md", []byte("# Relatório\n")); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	summary := makeSummary() // todos campos Claude-2026 = 0
+
+	if err := persistence.EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
+		t.Fatalf("EnrichReport: %v", err)
+	}
+
+	data, _ := fsys.ReadFile("/report/execution_report.md")
+	content := string(data)
+
+	if strings.Contains(content, "Métricas Claude-2026") {
+		t.Error("seção Métricas Claude-2026 não deve aparecer quando todos contadores = 0")
+	}
+}
+
+// ── Métricas Gemini-2026 — omitempty em Summary (F4-Gemini, RF-19) ──────────────
+
+// TestSummarySerialization_GeminiZeroOmitted valida que campos Gemini* zero são omitidos
+// do JSON de Summary (omitempty). Subtarefa 7.8.
+func TestSummarySerialization_GeminiZeroOmitted(t *testing.T) {
+	// Summary sem campos Gemini (zero-value) — devem ser omitidos do JSON.
+	s := runtime.Summary{
+		Launcher:    "binary",
+		EventsCount: 10,
+	}
+	data, err := encodeJSON(s)
+	if err != nil {
+		t.Fatalf("json.Marshal falhou: %v", err)
+	}
+	for _, field := range []string{
+		"gemini_cache_read_tokens",
+		"gemini_effective_context_tokens",
+		"gemini_prompt_tokens_billed",
+		"gemini_thoughts_tokens",
+	} {
+		if strings.Contains(string(data), field) {
+			t.Errorf("campo %q não deve aparecer no JSON quando zero (omitempty); JSON: %s", field, data)
+		}
+	}
+}
+
+// TestSummarySerialization_GeminiNonZeroPresent valida que campos Gemini* não-zero aparecem no JSON.
+func TestSummarySerialization_GeminiNonZeroPresent(t *testing.T) {
+	s := runtime.Summary{
+		Launcher:                     "binary",
+		GeminiCacheReadTokens:        100,
+		GeminiEffectiveContextTokens: 200,
+		GeminiPromptTokensBilled:     300,
+		GeminiThoughtsTokens:         40,
+	}
+	data, err := encodeJSON(s)
+	if err != nil {
+		t.Fatalf("json.Marshal falhou: %v", err)
+	}
+	for _, want := range []string{
+		"gemini_cache_read_tokens",
+		"gemini_effective_context_tokens",
+		"gemini_prompt_tokens_billed",
+		"gemini_thoughts_tokens",
+	} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("campo %q deve aparecer no JSON quando não-zero; JSON: %s", want, data)
+		}
 	}
 }
 

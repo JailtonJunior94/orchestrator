@@ -4689,3 +4689,81 @@ func TestT32_TaskloopRegressionSuite(t *testing.T) {
 		t.Fatalf("Execute retornou erro inesperado: %v", err)
 	}
 }
+
+// TestServiceRoutesGeminiToACPRunner verifica que Service.Execute roteia Tool="gemini" com
+// Runtime="acp" via ACPRunner (acpInvokerFactory), espelhando o padrão Claude/Codex/Copilot.
+// RF-07 — Task 3.0.
+func TestServiceRoutesGeminiToACPRunner(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	acpInvokerCalled := false
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
+		acpInvokerCalled = true
+		if opts.Tool != "gemini" {
+			t.Errorf("acpInvokerFactory: esperava tool=gemini, got %q", opts.Tool)
+		}
+		return &callbackInvoker{
+			binary: "gemini-acp",
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+				return "done", "", 0, nil
+			},
+		}
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "gemini",
+		Runtime:       "acp",
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+	if !acpInvokerCalled {
+		t.Error("acpInvokerFactory não foi chamado para tool=gemini com runtime=acp")
+	}
+}
+
+// TestServicePropagatesAccessModeForGemini verifica que Options.AccessMode é propagado
+// ao Job via WithACPInvokerAccessMode quando Tool="gemini" e Runtime="acp".
+// RF-07 — Task 3.0, subtarefa 3.2.
+func TestServicePropagatesAccessModeForGemini(t *testing.T) {
+	fsys, prd := setupBaseFS("pending")
+
+	var capturedOpts Options
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
+		capturedOpts = opts
+		return &callbackInvoker{
+			binary: "gemini-acp",
+			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
+				return "done", "", 0, nil
+			},
+		}
+	}
+
+	opts := Options{
+		PRDFolder:     prd,
+		Tool:          "gemini",
+		Runtime:       "acp",
+		AccessMode:    "full",
+		MaxIterations: 1,
+		Timeout:       5 * time.Second,
+		ReportPath:    prd + "/report.md",
+	}
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+	if capturedOpts.AccessMode != "full" {
+		t.Errorf("AccessMode propagado: got %q, want %q", capturedOpts.AccessMode, "full")
+	}
+}

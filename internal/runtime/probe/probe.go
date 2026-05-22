@@ -22,6 +22,7 @@ var adrByID = map[string]string{
 	"claude":  "tasks/adr/009-acp-protocol-adoption.md",
 	"codex":   "tasks/adr/013-codex-cli-acp-native.md",
 	"copilot": "tasks/adr/012-copilot-cli-acp-native.md",
+	"gemini":  "tasks/adr/015-gemini-cli-acp-native.md",
 }
 
 // formatLauncherUnavailable formata a mensagem de erro quando nenhum launcher está disponível.

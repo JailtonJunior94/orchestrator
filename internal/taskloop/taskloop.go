@@ -51,6 +51,34 @@ type Options struct {
 	ReasoningEffort string   // "low" | "medium" | "high" (default "medium")
 	AccessMode      string   // "restricted" | "full" (default "restricted")
 	AddDirs         []string // diretórios adicionais que o agente Codex pode acessar além do WorkDir; ignorado por Claude/Copilot (no-op)
+
+	// F2-Claude flags (RF-01, RF-02 — ADR-014).
+	// MCPNested habilita o servidor MCP interno que expõe a tool run_agent (RF-01.1).
+	// Quando true, ACPRunner spawna mcpserver.Server em goroutine antes de c.Open.
+	// Default false preserva comportamento F1-Claude sem regressão.
+	MCPNested bool
+	// NoNormalize desabilita a normalização de tool-calls driver-aware (RF-02.4, debug).
+	// Quando true, BuildNormalizedToolCall não é chamado no loop de eventos.
+	// Default false = normalização sempre ativa.
+	NoNormalize bool
+
+	// F3-Claude: limites de memória (RF-01, RF-02 — F3-Claude).
+	// Zero-value em cada campo aplica o default de memory.DefaultLimits() no runner.
+	MemoryWorkflowLimitLines int // --memory-workflow-limit-lines (default 150)
+	MemoryWorkflowLimitBytes int // --memory-workflow-limit-bytes (default 12288)
+	MemoryTaskLimitLines     int // --memory-task-limit-lines (default 200)
+	MemoryTaskLimitBytes     int // --memory-task-limit-bytes (default 16384)
+
+	// DisableHooks desabilita TODOS os hooks Go in-process (F3-Claude, debug).
+	// Quando true, governance, token_budget e memory_persist não são registrados.
+	// Default false = hooks ativos.
+	DisableHooks bool
+
+	// AutoReview habilita o auto-review opt-in (F5-Claude, RF-06).
+	// Quando true, após session end, spawna nova sessão com skill review + git diff.
+	// HARD: default false; child sessions têm AutoReview=false forçado (anti-recursão).
+	// HARD: Claude NÃO modifica internal/wrapper/ValidTools (ADR-014 §D-07).
+	AutoReview bool
 }
 
 // Service orquestra a execucao sequencial de tasks de um PRD folder.
@@ -306,6 +334,13 @@ func (s *Service) Execute(opts Options) error {
 				WithACPInvokerReasoningEffort(opts.ReasoningEffort),
 				WithACPInvokerAccessMode(specs.AccessMode(opts.AccessMode)),
 				WithACPInvokerAddDirs(opts.AddDirs),
+				WithACPInvokerMCPNested(opts.MCPNested),
+				WithACPInvokerNoNormalize(opts.NoNormalize),
+				WithACPInvokerMemoryLimitLines(opts.MemoryWorkflowLimitLines, opts.MemoryTaskLimitLines),
+				WithACPInvokerMemoryLimitBytes(opts.MemoryWorkflowLimitBytes, opts.MemoryTaskLimitBytes),
+				WithACPInvokerDisableHooks(opts.DisableHooks),
+				WithACPInvokerTasksDir(opts.PRDFolder),
+				WithACPInvokerAutoReview(opts.AutoReview),
 			)
 		}
 	} else {
@@ -870,6 +905,7 @@ var acpSpecCatalog = map[string]func() specs.Spec{
 	"claude":  specs.Claude,
 	"codex":   specs.Codex,
 	"copilot": specs.Copilot,
+	"gemini":  specs.Gemini,
 }
 
 // resolveACPSpec retorna a Spec ACP correspondente ao tool informado.

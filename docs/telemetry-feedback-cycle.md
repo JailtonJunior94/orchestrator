@@ -57,6 +57,37 @@ As invariantes de paridade multi-tool (ADR-008) cobrem `tool=codex` com os **mes
 (ADR-010 invariante preservada). Tool names Codex-nativos (`search_query`, `image_query`)
 sao preservados ate F2-Codex implementar aliasing canonico.
 
+### Gemini ACP (ADR-015)
+
+A partir de F0-Gemini, o evento `runtime_init` suporta `tool=gemini` quando o harness e
+invocado com `--runtime=acp --tool=gemini`. Os campos registrados sao:
+
+- `tool=gemini` — identifica o runtime Gemini ACP
+- `launcher=binary|npx` — distingue `gemini` local de fallback `npx @google/gemini-cli`
+- `npm_version=0.43.0` — versao pinada do `@google/gemini-cli` (ADR-015 D-02)
+- `sdk_version=v0.13.0` — versao do SDK ACP Go (go.mod, mesma de Claude/Codex/Copilot)
+
+A partir de F4-Gemini, com `GOVERNANCE_TELEMETRY=1`, entradas adicionais Gemini-2026
+sao acrescentadas ao log (aditivas — nao substituem entradas existentes):
+
+- `gemini.cache_read=N` — tokens lidos do context cache Gemini (TTL configuravel)
+- `gemini.effective_context=N` — tamanho real do contexto carregado na sessao
+- `gemini.prompt_billed=N` — tokens efetivamente cobrados apos desconto de cache hit
+- `gemini.thoughts=N` — tokens de reasoning interno Gemini 2.5 (pode ser zero por default)
+
+As **invariantes de paridade multi-tool (ADR-008 e ADR-010) sao preservadas**: Gemini
+emite os mesmos `kinds` de eventos que Claude/Copilot/Codex (`runtime_init`, `tool_call`,
+`session_end`, `nested_agent`, etc.). Nenhum novo `kind` foi introduzido para Gemini.
+Tool names Gemini-nativos sao normalizados via tabela `common` (F2-Gemini) sem alias
+Gemini-especificos — Compozy confirma que os nomes emitidos pela CLI Gemini sao proximos
+ao schema canonico.
+
+Exemplo de linha no log com Gemini ACP:
+
+```
+2026-05-22T10:30:00Z skill=execute-task ref=security.md tool=gemini launcher=binary npm_version=0.43.0 sdk_version=v0.13.0
+```
+
 ---
 
 ## Coleta

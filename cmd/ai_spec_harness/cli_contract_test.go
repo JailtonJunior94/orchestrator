@@ -2,9 +2,11 @@ package aispecharness
 
 import (
 	"encoding/json"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -52,9 +54,7 @@ func flattenSchemaCommandMap(cmds []schemaCommand, prefix string) map[string]sch
 			path = prefix + " " + cmd.Name
 		}
 		result[path] = cmd
-		for k, v := range flattenSchemaCommandMap(cmd.Subcommands, path) {
-			result[k] = v
-		}
+		maps.Copy(result, flattenSchemaCommandMap(cmd.Subcommands, path))
 	}
 	return result
 }
@@ -71,9 +71,7 @@ func cobraCommandMap(cmds []*cobra.Command, prefix string, excluded map[string]b
 			path = prefix + " " + cmd.Name()
 		}
 		result[path] = cmd
-		for k, v := range cobraCommandMap(cmd.Commands(), path, excluded) {
-			result[k] = v
-		}
+		maps.Copy(result, cobraCommandMap(cmd.Commands(), path, excluded))
 	}
 	return result
 }
@@ -159,6 +157,33 @@ func TestCLI_SmokeCommandsExistInCobra(t *testing.T) {
 	}
 }
 
+// TestCLISchemaContainsAllTools (T-13 ext, RF-25) valida que docs/cli-schema.json menciona
+// todas as ferramentas suportadas pelo runtimeACPCatalog na descrição da flag --runtime ou --tool.
+// Garante consistência entre implementação Go e schema documentado.
+func TestCLISchemaContainsAllTools(t *testing.T) {
+	t.Parallel()
+
+	schemaPath := filepath.Join("..", "..", "docs", "cli-schema.json")
+	data, err := os.ReadFile(schemaPath)
+	if err != nil {
+		t.Fatalf("ler cli-schema.json: %v", err)
+	}
+
+	schemaContent := string(data)
+
+	// Todos os tools do runtimeACPCatalog devem aparecer no schema.
+	for tool := range runtimeACPCatalog {
+		if !strings.Contains(schemaContent, tool) {
+			t.Errorf("cli-schema.json não menciona tool %q — atualizar descrição da flag --runtime ou --tool", tool)
+		}
+	}
+
+	// Verificar especificamente que "gemini" está presente (RF-25 ADR-015).
+	if !strings.Contains(schemaContent, "gemini") {
+		t.Error("cli-schema.json não contém 'gemini' — atualizar flag --runtime description (RF-25)")
+	}
+}
+
 // TestCLI_ContractFlagsMatchSchema valida que flags definidas no cli-schema.json
 // existem na implementacao Cobra, e vice-versa (sem drift de flags).
 func TestCLI_ContractFlagsMatchSchema(t *testing.T) {
@@ -185,8 +210,6 @@ func TestCLI_ContractFlagsMatchSchema(t *testing.T) {
 	cobraMap := cobraCommandMap(rootCmd.Commands(), "", excluded)
 
 	for cmdPath, sCmd := range schemaMap {
-		cmdPath := cmdPath
-		sCmd := sCmd
 		cobraCmd, ok := cobraMap[cmdPath]
 		if !ok {
 			continue // ja reportado em TestCLI_ContractMatchesSchema

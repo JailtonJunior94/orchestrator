@@ -499,3 +499,77 @@ func mustMarshalS(v any) string {
 	}
 	return string(b)
 }
+
+// TestExtractClaudeMetrics valida ExtractClaudeMetrics para os casos T-CONV-CR-01..T-CONV-CR-03.
+func TestExtractClaudeMetrics(t *testing.T) {
+	t.Parallel()
+
+	// T-CONV-CR-01: payload com todos os campos de usage presentes → valores extraídos corretamente.
+	t.Run("T-CONV-CR-01_all_usage_fields_present", func(t *testing.T) {
+		t.Parallel()
+
+		raw := json.RawMessage(`{
+			"sessionUpdate": "agent_message",
+			"usage": {
+				"cache_read_input_tokens": 150,
+				"cache_creation_input_tokens": 300,
+				"thoughtTokens": 42,
+				"inputTokens": 500,
+				"outputTokens": 120,
+				"totalTokens": 1112
+			}
+		}`)
+
+		got := events.ExtractClaudeMetrics(raw)
+
+		if got.CacheReadTokens != 150 {
+			t.Errorf("CacheReadTokens = %d; quero 150", got.CacheReadTokens)
+		}
+		if got.CacheCreationTokens != 300 {
+			t.Errorf("CacheCreationTokens = %d; quero 300", got.CacheCreationTokens)
+		}
+		if got.ThinkingTokens != 42 {
+			t.Errorf("ThinkingTokens = %d; quero 42", got.ThinkingTokens)
+		}
+	})
+
+	// T-CONV-CR-02: payload com usage presente mas sem campos opcionais → zeros sem erro.
+	t.Run("T-CONV-CR-02_usage_present_optional_fields_absent", func(t *testing.T) {
+		t.Parallel()
+
+		raw := json.RawMessage(`{
+			"sessionUpdate": "agent_message",
+			"usage": {
+				"inputTokens": 200,
+				"outputTokens": 50,
+				"totalTokens": 250
+			}
+		}`)
+
+		got := events.ExtractClaudeMetrics(raw)
+
+		if got.CacheReadTokens != 0 {
+			t.Errorf("CacheReadTokens = %d; quero 0 (campo ausente)", got.CacheReadTokens)
+		}
+		if got.CacheCreationTokens != 0 {
+			t.Errorf("CacheCreationTokens = %d; quero 0 (campo ausente)", got.CacheCreationTokens)
+		}
+		if got.ThinkingTokens != 0 {
+			t.Errorf("ThinkingTokens = %d; quero 0 (campo ausente)", got.ThinkingTokens)
+		}
+	})
+
+	// T-CONV-CR-03: payload sem campo "usage" → todos zeros, sem erro (comportamento defensivo).
+	t.Run("T-CONV-CR-03_no_usage_field_stays_zero", func(t *testing.T) {
+		t.Parallel()
+
+		raw := json.RawMessage(`{"sessionUpdate": "agent_message", "content": "hello"}`)
+
+		got := events.ExtractClaudeMetrics(raw)
+
+		if got.CacheReadTokens != 0 || got.CacheCreationTokens != 0 || got.ThinkingTokens != 0 {
+			t.Errorf("todos campos devem ser 0 quando usage ausente; got cache_read=%d cache_creation=%d thinking=%d",
+				got.CacheReadTokens, got.CacheCreationTokens, got.ThinkingTokens)
+		}
+	})
+}

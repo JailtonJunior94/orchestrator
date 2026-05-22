@@ -87,6 +87,16 @@ func buildTestRunner(t *testing.T, ctx context.Context, script *acpfake.Script) 
 	)
 }
 
+// workDirWithAgentsMD cria um TempDir com AGENTS.md para satisfazer o governance hook (F3-Claude).
+func workDirWithAgentsMD(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Agents\n"), 0o644); err != nil {
+		t.Fatalf("workDirWithAgentsMD: %v", err)
+	}
+	return dir
+}
+
 // ---- testes -----------------------------------------------------------------
 
 // TestNewACPInvoker_ImplementsAgentInvoker verifica que acpInvoker implementa AgentInvoker.
@@ -140,7 +150,7 @@ func TestACPInvoker_Invoke_HappyPath(t *testing.T) {
 	runner := buildTestRunner(t, ctx, script)
 	invoker := taskloop.NewACPInvoker(runner, false, 0) // quiet=false para capturar output
 
-	stdout, stderr, exitCode, err := invoker.Invoke(ctx, "prompt", t.TempDir(), "claude")
+	stdout, stderr, exitCode, err := invoker.Invoke(ctx, "prompt", workDirWithAgentsMD(t), "claude")
 	if err != nil {
 		t.Fatalf("Invoke: unexpected error: %v", err)
 	}
@@ -220,7 +230,7 @@ func TestACPInvoker_Invoke_QuietMode(t *testing.T) {
 	runner := buildTestRunner(t, ctx, script)
 	invoker := taskloop.NewACPInvoker(runner, true, 0) // quiet=true
 
-	_, _, exitCode, err := invoker.Invoke(ctx, "prompt", t.TempDir(), "")
+	_, _, exitCode, err := invoker.Invoke(ctx, "prompt", workDirWithAgentsMD(t), "")
 	if err != nil {
 		t.Fatalf("Invoke (quiet): %v", err)
 	}
@@ -252,7 +262,7 @@ func TestACPInvoker_Invoke_DerivesTaskEvidenceDir(t *testing.T) {
 
 	invoker := taskloop.NewACPInvoker(runner, true, 0)
 	prompt := "Use a skill execute-task para implementar a task tasks/prd-acp-runtime-claude/task-9.0-runner-invoker-integration.md."
-	workDir := t.TempDir()
+	workDir := workDirWithAgentsMD(t)
 
 	if _, _, _, err := invoker.Invoke(ctx, prompt, workDir, ""); err != nil {
 		t.Fatalf("Invoke: %v", err)
@@ -275,7 +285,7 @@ func TestACPInvoker_Invoke_LogsTelemetry(t *testing.T) {
 
 	runner := buildTestRunner(t, ctx, script)
 	invoker := taskloop.NewACPInvoker(runner, true, 0)
-	workDir := t.TempDir()
+	workDir := workDirWithAgentsMD(t)
 
 	if _, _, _, err := invoker.Invoke(ctx, "prompt", workDir, ""); err != nil {
 		t.Fatalf("Invoke: %v", err)

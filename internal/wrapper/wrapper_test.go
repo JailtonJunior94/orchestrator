@@ -1,6 +1,9 @@
 package wrapper_test
 
 import (
+	"bytes"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -212,5 +215,101 @@ func TestValidTools_ContainsExpected(t *testing.T) {
 	}
 	if wrapper.ValidTools["claude"] {
 		t.Error("claude should not be in ValidTools (uses hooks)")
+	}
+}
+
+// --- Gemini deprecation warning (Task 3.0, RF-08) ---
+
+// TestWrapperEmitsGeminiDeprecationWarningOnce_Helper é o subprocesso helper para o teste
+// principal abaixo. Ativado somente quando GO_TEST_GEMINI_WARN_HELPER=1.
+// Verifica:
+//   - primeira invocação de buildInstruction("gemini") emite warning com literais RF-08.
+//   - segunda invocação no mesmo processo não emite warning adicional (sync.Once).
+func TestWrapperEmitsGeminiDeprecationWarningOnce_Helper(t *testing.T) {
+	if os.Getenv("GO_TEST_GEMINI_WARN_HELPER") != "1" {
+		t.Skip("subprocesso helper; ative com GO_TEST_GEMINI_WARN_HELPER=1")
+	}
+
+	fsys := fullFS()
+
+	// Redireciona GeminiWarnWriter para buffer controlado antes da primeira chamada.
+	var warnBuf bytes.Buffer
+	wrapper.GeminiWarnWriter = &warnBuf
+	t.Cleanup(func() { wrapper.GeminiWarnWriter = nil })
+
+	// Primeira invocação: warning deve aparecer.
+	instruction1, err := wrapper.Execute("gemini", "go-implementation", projectDir, nil, fsys)
+	if err != nil {
+		t.Fatalf("primeira Execute retornou erro inesperado: %v", err)
+	}
+	if instruction1 == "" {
+		t.Error("primeira Execute: instrução vazia")
+	}
+	firstWarn := warnBuf.String()
+	warnBuf.Reset()
+
+	requiredLiterals := []string{
+		"WARNING: Gemini wrapper legado",
+		"gemini run --skill",
+		"--runtime=acp",
+		"ADR-015",
+	}
+	for _, lit := range requiredLiterals {
+		if !strings.Contains(firstWarn, lit) {
+			t.Errorf("warning não contém literal obrigatório %q\nwarning: %q", lit, firstWarn)
+		}
+	}
+	if firstWarn == "" {
+		t.Error("nenhum warning emitido na primeira invocação")
+	}
+
+	// Segunda invocação no mesmo processo: sync.Once já disparou; buffer deve permanecer vazio.
+	_, err = wrapper.Execute("gemini", "go-implementation", projectDir, nil, fsys)
+	if err != nil {
+		t.Fatalf("segunda Execute retornou erro inesperado: %v", err)
+	}
+	secondWarn := warnBuf.String()
+	if secondWarn != "" {
+		t.Errorf("warning emitido novamente na segunda invocação (sync.Once falhou)\noutput: %q", secondWarn)
+	}
+}
+
+// TestWrapperEmitsGeminiDeprecationWarningOnce valida RF-08 via subprocesso isolado.
+// Usa GO_TEST_GEMINI_WARN_HELPER=1 para acionar o helper acima em processo fresh,
+// garantindo que geminiWrapperWarnOnce (package-level) não tenha sido disparado antes.
+func TestWrapperEmitsGeminiDeprecationWarningOnce(t *testing.T) {
+	cmd := exec.Command(os.Args[0],
+		"-test.run=TestWrapperEmitsGeminiDeprecationWarningOnce_Helper",
+		"-test.v",
+	)
+	cmd.Env = append(os.Environ(), "GO_TEST_GEMINI_WARN_HELPER=1")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("subprocesso helper falhou:\n%s", string(out))
+	}
+	if !strings.Contains(string(out), "PASS") {
+		t.Fatalf("subprocesso helper não reportou PASS:\n%s", string(out))
+	}
+}
+
+// TestWrapperGeminiLegacyStillFunctional verifica que buildInstruction("gemini", ...)
+// ainda retorna instrução válida mesmo após o warning ser emitido — wrapper não bloqueante.
+// TD-05 — coexistência wrapper ↔ ACP.
+func TestWrapperGeminiLegacyStillFunctional(t *testing.T) {
+	t.Parallel()
+	fsys := fullFS()
+
+	instruction, err := wrapper.Execute("gemini", "go-implementation", projectDir, nil, fsys)
+	if err != nil {
+		t.Fatalf("Execute retornou erro inesperado: %v", err)
+	}
+	if instruction == "" {
+		t.Error("instrução vazia — wrapper Gemini deve retornar instrução válida mesmo com warning")
+	}
+	if !strings.Contains(instruction, "gemini") {
+		t.Errorf("instrução não contém 'gemini': %q", instruction)
+	}
+	if !strings.Contains(instruction, "go-implementation") {
+		t.Errorf("instrução não contém skill 'go-implementation': %q", instruction)
 	}
 }

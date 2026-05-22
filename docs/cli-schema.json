@@ -723,7 +723,7 @@
             "type": "string",
             "default": "legacy",
             "required": false,
-            "description": "Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, copilot)"
+            "description": "Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, codex, copilot, gemini)"
           },
           "activity-timeout": {
             "type": "duration",
@@ -744,17 +744,68 @@
           },
           "reasoning-effort": {
             "type": "string",
-            "enum": ["low", "medium", "high"],
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
             "default": "medium",
             "required": false,
             "description": "Esforco de raciocinio do Codex: low|medium|high (default: medium). Apenas Codex consome este parametro; ignorado por Claude/Copilot."
           },
           "access-mode": {
             "type": "string",
-            "enum": ["restricted", "full"],
+            "enum": [
+              "restricted",
+              "full"
+            ],
             "default": "restricted",
             "required": false,
             "description": "Modo de acesso do Codex: restricted|full (default: restricted). AVISO: full ativa sandbox_mode=danger-full-access — use somente em ambientes isolados."
+          },
+          "mcp-nested": {
+            "type": "bool",
+            "required": false
+          },
+          "no-normalize": {
+            "type": "bool",
+            "required": false
+          },
+          "memory-workflow-limit-lines": {
+            "type": "int",
+            "default": 150,
+            "required": false,
+            "description": "Limite de linhas do arquivo de workflow memory antes de solicitar compactação (F3-Claude). Default 150."
+          },
+          "memory-workflow-limit-bytes": {
+            "type": "int",
+            "default": 12288,
+            "required": false,
+            "description": "Limite de bytes do arquivo de workflow memory antes de solicitar compactação (F3-Claude). Default 12288 (12KB)."
+          },
+          "memory-task-limit-lines": {
+            "type": "int",
+            "default": 200,
+            "required": false,
+            "description": "Limite de linhas do arquivo de task memory antes de solicitar compactação (F3-Claude). Default 200."
+          },
+          "memory-task-limit-bytes": {
+            "type": "int",
+            "default": 16384,
+            "required": false,
+            "description": "Limite de bytes do arquivo de task memory antes de solicitar compactação (F3-Claude). Default 16384 (16KB)."
+          },
+          "disable-hooks": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Desabilita TODOS os hooks Go in-process (F3-Claude, debug). Shell hooks continuam ativos no modo interativo."
+          },
+          "auto-review": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Habilita auto-review opt-in (F5-Claude): após session end, spawna sessão de review com skill local + git diff. Parseia [HARD]/BLOQUEADO/CRÍTICO → ReviewStatus=blocked. HARD: default false; sessões filho têm auto-review=false forçado (anti-recursão). ADR-014 §D-07."
           }
         }
       },

@@ -195,3 +195,80 @@ func FromACPUpdate(driverID string, update acp.SessionUpdate) (Event, error) {
 	}
 	return NewUnknown(now, rawKind, raw)
 }
+
+// ExtractGeminiMetricsForDriver extrai métricas Gemini-2026 do raw payload
+// apenas quando driverID == "gemini". Retorna GeminiMetrics{} zero-value para
+// qualquer outro driver (defensivo, sem erro).
+//
+// Esta é a função canônica chamada pelo runner.go no loop de eventos para
+// acumular métricas Gemini apenas para sessões Gemini (RF-20).
+func ExtractGeminiMetricsForDriver(driverID string, raw json.RawMessage) GeminiMetrics {
+	if driverID != "gemini" {
+		return GeminiMetrics{}
+	}
+	m, _ := ExtractGeminiMetrics(raw)
+	return m
+}
+
+// claudeUsagePayload é o shape JSON do campo "usage" presente em updates ACP Claude-2026.
+// Campos são todos opcionais — ausência mantém zero value (comportamento defensivo F4-Claude).
+//
+// Mapeamento de campos do payload JSON para métricas Claude-2026:
+//   - "cache_read_input_tokens"     → ClaudeMetrics.CacheReadTokens
+//   - "cache_creation_input_tokens" → ClaudeMetrics.CacheCreationTokens
+//   - "thoughtTokens"               → ClaudeMetrics.ThinkingTokens
+//
+// Nota: "thoughtTokens" corresponde a acp.Usage.ThoughtTokens (*int) definido em
+// acp-go-sdk v0.13.0 (types_gen.go:8833). O campo JSON é "thoughtTokens" (camelCase).
+type claudeUsagePayload struct {
+	CacheReadInputTokens     int `json:"cache_read_input_tokens"`
+	CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
+	ThoughtTokens            int `json:"thoughtTokens"`
+}
+
+// claudeMetricsEnvelope é o shape mínimo do JSON de um update ACP para extração de usage.
+// Apenas o campo "usage" é extraído; demais campos do update são ignorados.
+type claudeMetricsEnvelope struct {
+	Usage *claudeUsagePayload `json:"usage"`
+}
+
+// ClaudeMetrics contém os contadores Claude-2026 extraídos de um único update ACP.
+// Todos os campos têm default zero — extração defensiva sem erro para payloads incompletos.
+type ClaudeMetrics struct {
+	// CacheReadTokens é o total de tokens lidos do cache neste update.
+	CacheReadTokens int
+	// CacheCreationTokens é o total de tokens escritos no cache (cache-warming) neste update.
+	CacheCreationTokens int
+	// ThinkingTokens é o total de tokens de raciocínio (extended thinking) neste update.
+	ThinkingTokens int
+}
+
+// ExtractClaudeMetrics extrai campos opcionais de cache e raciocínio do payload bruto JSON
+// de um events.Event e retorna os valores em um ClaudeMetrics.
+//
+// Comportamento defensivo (F4-Claude, ADR-006):
+//   - raw nil ou vazio → ClaudeMetrics{} (todos zeros), sem erro.
+//   - Campo "usage" ausente → ClaudeMetrics{} (todos zeros), sem erro.
+//   - Erros de unmarshal → ignorados silenciosamente; retorna zeros.
+//
+// Esta função é chamada pelo runner.go (pacote runtime) no loop de eventos para acumular
+// os contadores em runtime.Summary. Exportada para evitar dependência circular
+// (events não importa runtime).
+func ExtractClaudeMetrics(raw json.RawMessage) ClaudeMetrics {
+	if len(raw) == 0 {
+		return ClaudeMetrics{}
+	}
+	var envelope claudeMetricsEnvelope
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return ClaudeMetrics{}
+	}
+	if envelope.Usage == nil {
+		return ClaudeMetrics{}
+	}
+	u := envelope.Usage
+	return ClaudeMetrics{
+		CacheReadTokens:     u.CacheReadInputTokens,
+		CacheCreationTokens: u.CacheCreationInputTokens,
+		ThinkingTokens:      u.ThoughtTokens,
+	}
+}

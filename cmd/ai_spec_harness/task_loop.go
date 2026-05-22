@@ -22,12 +22,13 @@ var accessModeFullWarnOnce sync.Once
 
 // runtimeACPCatalog é a fonte de verdade para quais tools podem usar --runtime=acp nesta versão.
 // Responsabilidade do CLI (ADR-012 D-04 / ADR-013 D-04): specs são unidades atômicas; a tabela de roteamento fica no CLI.
-// Runtimes suportados nesta versão: claude (ADR-009), codex (ADR-013), copilot (ADR-012).
+// Runtimes suportados nesta versão: claude (ADR-009), codex (ADR-013), copilot (ADR-012), gemini (ADR-015).
 // Para adicionar suporte a um novo tool: registrar entrada e atualizar testes T-13/T-14/T-15/T-16.
 var runtimeACPCatalog = map[string]func() specs.Spec{
 	"claude":  specs.Claude,
 	"codex":   specs.Codex,
 	"copilot": specs.Copilot,
+	"gemini":  specs.Gemini,
 }
 
 var taskLoopCmd = &cobra.Command{
@@ -82,6 +83,34 @@ Exemplos:
 		quiet, _ := cmd.Flags().GetBool("quiet")
 		reasoningEffort, _ := cmd.Flags().GetString("reasoning-effort")
 		accessMode, _ := cmd.Flags().GetString("access-mode")
+		mcpNested, _ := cmd.Flags().GetBool("mcp-nested")
+		noNormalize, _ := cmd.Flags().GetBool("no-normalize")
+		memWorkflowLimitLines, _ := cmd.Flags().GetInt("memory-workflow-limit-lines")
+		memWorkflowLimitBytes, _ := cmd.Flags().GetInt("memory-workflow-limit-bytes")
+		memTaskLimitLines, _ := cmd.Flags().GetInt("memory-task-limit-lines")
+		memTaskLimitBytes, _ := cmd.Flags().GetInt("memory-task-limit-bytes")
+		disableHooks, _ := cmd.Flags().GetBool("disable-hooks")
+		autoReview, _ := cmd.Flags().GetBool("auto-review")
+
+		// RF-16: switch tool-aware para defaults de memory (F3-Gemini).
+		// Aplica defaults Gemini-generosos (250 linhas/20 KiB workflow; 400 linhas/32 KiB task)
+		// somente quando --tool gemini e a flag correspondente NÃO foi setada explicitamente.
+		// Override explícito via flag prevalece (ADR-015 TD-04).
+		// Defaults Claude/Codex/Copilot (150/200 linhas, 12/16 KiB) preservados (RF-30).
+		if tool == "gemini" {
+			if !cmd.Flags().Changed("memory-workflow-limit-lines") {
+				memWorkflowLimitLines = 250
+			}
+			if !cmd.Flags().Changed("memory-task-limit-lines") {
+				memTaskLimitLines = 400
+			}
+			if !cmd.Flags().Changed("memory-workflow-limit-bytes") {
+				memWorkflowLimitBytes = 20 * 1024
+			}
+			if !cmd.Flags().Changed("memory-task-limit-bytes") {
+				memTaskLimitBytes = 32 * 1024
+			}
+		}
 
 		// Validação enum --reasoning-effort (RF-09, RF-10 — ADR-013 D-08)
 		validReasoning := map[string]bool{"low": true, "medium": true, "high": true}
@@ -102,10 +131,22 @@ Exemplos:
 		// Warning único para --access-mode=full via sync.Once (R-03 alto, ADR-013 D-08, PRD HU-03/Q1)
 		if accessMode == "full" {
 			accessModeFullWarnOnce.Do(func() {
-				_, _ = fmt.Fprintln(os.Stderr,
-					"WARNING: --access-mode=full ativa sandbox_mode=danger-full-access no codex-acp. "+
-						"Pré-condição: consentimento operacional. Codex terá acesso pleno ao filesystem e à rede. "+
-						"Use somente em ambientes isolados. Ver CODEX.md.")
+				effectiveTool := tool
+				if effectiveTool == "" {
+					effectiveTool = execTool
+				}
+				switch effectiveTool {
+				case "gemini":
+					// RF-33 (ADR-015): warning específico para Gemini --approval-mode=yolo.
+					_, _ = fmt.Fprintln(os.Stderr,
+						"WARNING: --access-mode=full ativa --approval-mode=yolo no gemini-cli. "+
+							"Pré-condição: consentimento operacional. Ver GEMINI.md.")
+				default:
+					_, _ = fmt.Fprintln(os.Stderr,
+						"WARNING: --access-mode=full ativa sandbox_mode=danger-full-access no codex-acp. "+
+							"Pré-condição: consentimento operacional. Codex terá acesso pleno ao filesystem e à rede. "+
+							"Use somente em ambientes isolados. Ver CODEX.md.")
+				}
 			})
 		}
 
@@ -194,6 +235,14 @@ Exemplos:
 			AgentName:              agentName,
 			ReasoningEffort:        reasoningEffort,
 			AccessMode:             accessMode,
+			MCPNested:              mcpNested,
+			NoNormalize:            noNormalize,
+			MemoryWorkflowLimitLines: memWorkflowLimitLines,
+			MemoryWorkflowLimitBytes: memWorkflowLimitBytes,
+			MemoryTaskLimitLines:     memTaskLimitLines,
+			MemoryTaskLimitBytes:     memTaskLimitBytes,
+			DisableHooks:             disableHooks,
+			AutoReview:               autoReview,
 		})
 		if errors.Is(err, airuntime.ErrLauncherUnavailable) {
 			_, _ = fmt.Fprintln(os.Stderr, err)
@@ -234,6 +283,37 @@ func init() {
 		"Esforço de raciocínio do Codex: low|medium|high (default: medium). Apenas Codex consome este parâmetro; ignorado por Claude/Copilot.")
 	taskLoopCmd.Flags().String("access-mode", "restricted",
 		"Modo de acesso do Codex: restricted|full (default: restricted). AVISO: full ativa sandbox_mode=danger-full-access — use somente em ambientes isolados. Apenas Codex consome este parâmetro.")
+
+	// Flags F2-Claude (RF-01, RF-02 — ADR-014).
+	taskLoopCmd.Flags().Bool("mcp-nested", false,
+		"Habilita servidor MCP interno que expõe tool run_agent (F2-Claude). Quando true, spawna mcpserver.Server antes de c.Open. Default false preserva comportamento F1-Claude.")
+	taskLoopCmd.Flags().Bool("no-normalize", false,
+		"Desabilita normalização de tool-calls driver-aware (F2-Claude, debug). Default false = normalização ativa (raw_name e normalized_name gravados lado a lado).")
+
+	// Flags F3-Claude: limites de memória e controle de hooks (RF-01, RF-02 — F3-Claude).
+	// Defaults espelham Compozy: 150 linhas/12KB workflow; 200 linhas/16KB task.
+	// Zero-value em Job.MemoryLimits aplica os defaults de memory.DefaultLimits() (fallback no runner).
+	taskLoopCmd.Flags().Int("memory-workflow-limit-lines", 150,
+		"Limite de linhas do arquivo de workflow memory antes de solicitar compactação (F3-Claude). Default 150.")
+	taskLoopCmd.Flags().Int("memory-workflow-limit-bytes", 12288,
+		"Limite de bytes do arquivo de workflow memory antes de solicitar compactação (F3-Claude). Default 12288 (12KB).")
+	taskLoopCmd.Flags().Int("memory-task-limit-lines", 200,
+		"Limite de linhas do arquivo de task memory antes de solicitar compactação (F3-Claude). Default 200.")
+	taskLoopCmd.Flags().Int("memory-task-limit-bytes", 16384,
+		"Limite de bytes do arquivo de task memory antes de solicitar compactação (F3-Claude). Default 16384 (16KB).")
+	taskLoopCmd.Flags().Bool("disable-hooks", false,
+		"Desabilita TODOS os hooks Go in-process: governance, token_budget e memory_persist (F3-Claude, debug). "+
+			"AVISO: --disable-hooks desliga inclusive o hook de governance (validação AGENTS.md). "+
+			"Shell hooks em .claude/hooks/*.sh continuam ativos no modo interativo. Default false.")
+
+	// Flag F5-Claude: auto-review opt-in (RF-06 — ADR-014 §D-07).
+	// HARD: default false; child session de review tem AutoReview=false forçado (anti-recursão).
+	// HARD: Claude NÃO modifica internal/wrapper/ValidTools (ADR-014 §D-07).
+	taskLoopCmd.Flags().Bool("auto-review", false,
+		"Habilita auto-review opt-in (F5-Claude): após session end, spawna nova sessão com skill review "+
+			"e git diff acumulado. Parseia [HARD]/BLOQUEADO/CRÍTICO → Summary.ReviewStatus=blocked. "+
+			"HARD: default false; sessões filho têm auto-review=false forçado (anti-recursão). "+
+			"Dobra custo de tokens — usar somente quando necessário. Ver ADR-014 §D-07.")
 
 	rootCmd.AddCommand(taskLoopCmd)
 }
