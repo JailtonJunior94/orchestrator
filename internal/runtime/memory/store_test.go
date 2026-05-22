@@ -285,8 +285,8 @@ func TestTaskPathTraversalPrevention(t *testing.T) {
 
 	// O arquivo deve estar dentro do diretório de memória do store, não em /etc/.
 	expectedPath := filepath.Join(dir, "memory", "passwd")
-	if doc.FileState.Path != expectedPath {
-		t.Fatalf("path de traversal não prevenido:\ngot=%q\nwant=%q", doc.FileState.Path, expectedPath)
+	if doc.Path != expectedPath {
+		t.Fatalf("path de traversal não prevenido:\ngot=%q\nwant=%q", doc.Path, expectedPath)
 	}
 }
 

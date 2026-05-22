@@ -112,15 +112,8 @@ func TestResolveParentEvidenceDirFallback(t *testing.T) {
 
 // TestBuildSummaryText valida que o texto de resumo contém campos relevantes.
 func TestBuildSummaryText(t *testing.T) {
-	// buildSummaryText é simples; testamos via spawnNestedSession indiretamente.
-	// Teste direto de unitário do helper.
-	type fakeSum struct {
-		launcher    string
-		eventsCount int
-	}
-	// Não podemos chamar buildSummaryText diretamente sem importar runtime.Summary,
-	// então testamos via helper buildChildPrompt e resolveAgentSpec que são pacote-interno.
-	// Este teste serve como placeholder para engine_test T-MCP-06.
+	// buildSummaryText não é exposta externamente; é validada indiretamente via
+	// buildChildPrompt e resolveAgentSpec (pacote-interno). Placeholder para T-MCP-06.
 	t.Log("buildSummaryText não exposta externamente; validado indiretamente via T-MCP-06")
 }
 
