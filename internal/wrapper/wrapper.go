@@ -106,7 +106,7 @@ func buildInstruction(tool, skill, projectDir string, args []string) string {
 			if w == nil {
 				w = os.Stderr
 			}
-			fmt.Fprintln(w, "WARNING: Gemini wrapper legado (gemini run --skill) em uso. Migrar para --runtime=acp (binário gemini com --acp). Ver ADR-015.")
+			fmt.Fprintln(w, "WARNING: Gemini wrapper legado (gemini run --skill) em uso. Migrar para --runtime=acp (binário gemini com --acp). Ver ADR-015. Guia de migração: docs/migracao-legacy-acp.md.")
 		})
 		return fmt.Sprintf(
 			"Invoke Gemini with skill %q in project %s:\n  gemini run --skill %s --project %s%s",

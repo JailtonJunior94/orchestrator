@@ -336,7 +336,8 @@ func (c *claudeInvoker) Invoke(ctx context.Context, prompt, workDir, model strin
 // do codexInvoker legado. Contém os literais obrigatórios conforme Tarefa 8.0 e ADR-013 D-05.
 const codexLegacyDeprecationMsg = "WARNING: Codex CLI legado (codex exec --yolo) em uso. " +
 	"Migrar para --runtime=acp (binário codex-acp, pacote @zed-industries/codex-acp). " +
-	"O modo legado será removido em 2 versões minor. Ver ADR-013."
+	"O modo legado será removido em 2 versões minor. Ver ADR-013. " +
+	"Guia de migração: docs/migracao-legacy-acp.md."
 
 // codexLegacyWarnOnce garante que o aviso de depreciação do codexInvoker legado
 // seja emitido exatamente uma vez por execução do processo (não por task).
@@ -393,7 +394,8 @@ func (g *geminiInvoker) Invoke(ctx context.Context, prompt, workDir, model strin
 // copilotLegacyDeprecationMsg é o aviso de depreciação emitido na primeira invocação
 // do copilotInvoker legado. Contém os literais obrigatórios conforme Tarefa 7.0.
 const copilotLegacyDeprecationMsg = "WARNING: Copilot CLI em modo legado (sem ACP). " +
-	"Migrar para --runtime=acp. O modo legado será removido em vX.Y.Z. Ver ADR-012."
+	"Migrar para --runtime=acp. O modo legado será removido em vX.Y.Z. Ver ADR-012. " +
+	"Guia de migração: docs/migracao-legacy-acp.md."
 
 type copilotInvoker struct {
 	liveOut    io.Writer

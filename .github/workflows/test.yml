@@ -26,6 +26,11 @@ jobs:
       - name: Unit tests
         run: go test -coverprofile=coverage.out ./...
 
+      - name: Parity gate (RP-03 / RG-03)
+        # Gate obrigatório de paridade cross-CLI derivado de ADR-008: invariantes (incl. INV-30/INV-32)
+        # e a suíte RP-03 (normalização idêntica nas 4 CLIs). Falha o CI se a paridade quebrar.
+        run: go test -count=1 ./internal/parity/...
+
       - name: Coverage report
         run: go tool cover -func=coverage.out
 

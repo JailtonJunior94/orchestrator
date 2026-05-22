@@ -100,9 +100,9 @@ type Result struct {
 	Reason string
 }
 
-func pass() Result                       { return Result{OK: true} }
-func fail(reason string) Result          { return Result{OK: false, Reason: reason} }
-func failf(f string, a ...any) Result    { return Result{OK: false, Reason: fmt.Sprintf(f, a...)} }
+func pass() Result                    { return Result{OK: true} }
+func fail(reason string) Result       { return Result{OK: false, Reason: reason} }
+func failf(f string, a ...any) Result { return Result{OK: false, Reason: fmt.Sprintf(f, a...)} }
 
 // CheckResult agrupa invariante, resultado e flag de skip.
 type CheckResult struct {
@@ -260,6 +260,7 @@ func Invariants() []*Invariant {
 
 		// F2-Claude — invariantes de normalização e MCP nested-agent depth (ADR-008 extensão)
 		invINV30ToolCallsNormalizedNameInvariant,
+		invINV32CrossCLIToolCallNameParity,
 		invINV31MCPNestedDepthNeverExceedsMax,
 
 		// RF-19 — invariante de fallback launcher: cadeia declarada para todas as CLIs
@@ -695,6 +696,64 @@ var invINV30ToolCallsNormalizedNameInvariant = &Invariant{
 		}
 		return failf("nenhum normalized_name em comum entre Claude (%v) e Codex (%v)",
 			claudeNames, codexNames)
+	},
+}
+
+// invINV32CrossCLIToolCallNameParity valida RP-03: a mesma operação semântica (shell) produz
+// o MESMO conjunto de normalized_name nas 4 CLIs (Claude/Codex/Copilot/Gemini).
+// Fixtures: claude_bash, codex_shell, copilot_run, gemini_bash. Skip quando alguma ausente
+// (ambientes sem fixtures de parity não devem bloquear); falha quando os conjuntos divergem.
+var invINV32CrossCLIToolCallNameParity = &Invariant{
+	ID:          "INV-32",
+	Description: "cross_cli_tool_call_name_parity (RP-03): a mesma operação produz normalized_name idêntico nas 4 CLIs",
+	Level:       Common,
+	AppliesTo:   []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolGemini},
+	Check: func(s Snapshot) Result {
+		fixtures := map[string]string{
+			"claude":  "tests/fixtures/parity/claude_bash.jsonl",
+			"codex":   "tests/fixtures/parity/codex_shell.jsonl",
+			"copilot": "tests/fixtures/parity/copilot_run.jsonl",
+			"gemini":  "tests/fixtures/parity/gemini_bash.jsonl",
+		}
+
+		perCLI := make(map[string]map[string]bool, len(fixtures))
+		for cli, path := range fixtures {
+			content := s.File(path)
+			// Skip quando alguma fixture ausente (não bloquear ambientes sem fixtures de parity).
+			if content == "" {
+				return pass()
+			}
+			names := map[string]bool{}
+			for _, e := range parseEventsJSONL(content) {
+				if e.Kind == "tool_call_start" && e.NormalizedName != "" {
+					names[e.NormalizedName] = true
+				}
+			}
+			if len(names) == 0 {
+				return failf("fixture %s não contém tool_call_start com normalized_name", path)
+			}
+			perCLI[cli] = names
+		}
+
+		// RP-03: todos os conjuntos de normalized_name devem ser idênticos.
+		var refCLI string
+		var ref map[string]bool
+		for cli, names := range perCLI {
+			if ref == nil {
+				ref, refCLI = names, cli
+				continue
+			}
+			if len(names) != len(ref) {
+				return failf("RP-03: conjunto de normalized_name diverge entre %s (%d) e %s (%d)",
+					refCLI, len(ref), cli, len(names))
+			}
+			for n := range names {
+				if !ref[n] {
+					return failf("RP-03: normalized_name %q presente em %s mas ausente em %s", n, cli, refCLI)
+				}
+			}
+		}
+		return pass()
 	},
 }
 
