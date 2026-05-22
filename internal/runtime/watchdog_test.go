@@ -36,8 +36,6 @@ func (c *fakeClock) advance(d time.Duration) {
 // TestActivityWatchdog_Disabled verifica que timeout=0 torna Start um no-op:
 // cancel nunca é chamado, nenhuma goroutine é vazada.
 func TestActivityWatchdog_Disabled(t *testing.T) {
-	t.Parallel()
-
 	goroutinesBefore := runtime.NumGoroutine()
 
 	ctx, cancel := context.WithCancelCause(context.Background())
@@ -177,8 +175,6 @@ func TestActivityWatchdog_StopIdempotent(t *testing.T) {
 
 // TestActivityWatchdog_NoGoroutineLeak verifica que Stop() encerra a goroutine sem leak.
 func TestActivityWatchdog_NoGoroutineLeak(t *testing.T) {
-	t.Parallel()
-
 	ctx, cancel := context.WithCancelCause(context.Background())
 	defer cancel(nil)
 
