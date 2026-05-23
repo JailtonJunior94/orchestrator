@@ -1,5 +1,52 @@
 # Changelog
 
+## 0.23.0 (2026-05-23)
+
+### Features
+- **paridade:** suite RP-03 + gate CI de paridade + plano de sunset (task 8.0) (cc298a9)
+- **paridade:** paridade cross-CLI e instalacao universal transparente (c10f798)
+- **foundation:** implement portable foundation (RF-01..RF-19) (f152ead)
+- **runtime:** add Gemini ACP runtime support (30cc945)
+- **codex:** implementar F1-Codex via ACP nativo (ADR-013) (822ae74)
+- **cli:** integrate Copilot ACP catalog and --agent flag in task-loop (a6f5501)
+- **agents:** add declarative agent registry package and integration (3017077)
+- **runtime:** add Copilot ACP spec and generalize newSpec/runner/probe (24e0081)
+- **cli:** add --runtime/--activity-timeout/--quiet flags, telemetry fields and acp_live CI job (4aaab6f)
+- **runtime:** add ACPRunner application service with integration tests (5f80510)
+- **runtime:** add ACP client, fake server and human renderer (633fd26)
+- **runtime/events:** translate acp.SessionUpdate to domain Event (120e3ab)
+- **runtime/persistence:** add events.jsonl writer, tool_calls.md and report enricher (01e5c1e)
+- **runtime/probe:** resolve claude-agent-acp launcher with npx fallback and cache (de60bb4)
+- **runtime/specs:** add Claude spec with launcher fallbacks and sync script (c6f3aa2)
+- **runtime:** add activity watchdog and error sentinels (7cc780f)
+- **runtime/events:** add domain events model with VOs and state pattern (a01793f)
+
+### Bug Fixes
+- **fs:** copia/remove de assets read-only (source imutavel) + cobertura execute-all-tasks (45e429c)
+- **acp:** validação real cross-CLI (claude/copilot/codex) — corrige hangs e bloqueios (b446cde)
+- **governance:** spec_drift no-op quando tasks.md ausente (741d2f6)
+- **tests:** resolve staticcheck lint failures on codex branch (0febf6a)
+- **skills:** re-sync execute-all-tasks mirrors with canonical source (ced8e34)
+- **agents:** resolve staticcheck findings in tests (058fc4e)
+
+### Documentation
+- **readme:** runtime ACP cross-CLI — processo + uso por ferramenta (claude/codex/copilot/gemini) (40f9537)
+- **codex-acp:** add ADR-013 + PRD/TechSpec/Tasks for F1-Codex (708d00b)
+- **research:** add Compozy adaptation analyses and governance drift (ca8d87e)
+- **acp-runtime:** fix ADR-009 and ADR-010 labels in AGENTS.md table (dea381b)
+- **acp-runtime:** finalize README, CHANGELOG, ADR-009/010 acceptance (72f841a)
+
+### Chores
+- **deps:** pin github.com/coder/acp-go-sdk v0.13.0 (ADR-009) (2132dae)
+- **tasks:** mark task 5.0 done and add execution report (c339f93)
+
+### Tests
+- **acp-live:** smoke de handshake honesto e estrito com binário real (f2e7a92)
+- **runtime:** estabilizar testes de goroutine-leak do watchdog (BF-06) (4d8c427)
+
+### CI
+- incluir tests/integration (e2e) no gate de merge (8feb873)
+
 ## [Unreleased] — Gemini CLI via ACP nativo (F0..F5-Gemini, ADR-015)
 
 ### Features
