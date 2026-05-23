@@ -1,4 +1,0 @@
-status: done
-report_path: tasks/prd-acp-runtime-claude/3.0_execution_report.md
-summary: "Pinado github.com/coder/acp-go-sdk v0.13.0 em go.mod, sincronizado ClaudeSDKVersion, criada entrada de auditoria; make test + lint passam com 0 issues"
-timestamp: "2026-05-20T00:00:00Z"

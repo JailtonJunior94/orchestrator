@@ -19,8 +19,6 @@ Esta matriz foi consolidada a partir de fontes reais deste repositorio:
 
 - [Guia de troubleshooting](troubleshooting.md)
 - [Matriz de degradacao](degradation-matrix.md)
-- [Relatorio cross-CLI de 2026-04-22](report-cross-cli-validation-20260422.md)
-- [Relatorio cross-CLI de 2026-04-22 — sessao 2](report-cross-cli-validation-20260422-sessao2.md)
 - [ADR-007 — Copilot CLI stateless workaround](adr/007-copilot-cli-stateless-workaround.md)
 - `docs/bug_report_claude_auth_subprocess.md`
 - `docs/bug_report_codex_maturidade.md`
