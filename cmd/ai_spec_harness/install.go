@@ -44,10 +44,11 @@ var (
 	installNoCtx        bool
 	installCodexProfile string
 	installFocusPaths   string
+	installGlobal       bool
 )
 
 func init() {
-	installCmd.Flags().StringVar(&installTools, "tools", "", "Ferramentas para instalar: claude,gemini,codex,copilot ou all (obrigatorio)")
+	installCmd.Flags().StringVar(&installTools, "tools", "", "Ferramentas para instalar: claude,gemini,codex,copilot ou all (opcional; detecta automaticamente se omitido)")
 	installCmd.Flags().StringVar(&installLangs, "langs", "", "Linguagens: go,node,python ou all")
 	installCmd.Flags().StringVar(&installMode, "mode", "symlink", "Modo de instalacao: symlink ou copy")
 	installCmd.Flags().BoolVar(&installDryRun, "dry-run", false, "Mostra o que seria criado sem executar")
@@ -56,6 +57,7 @@ func init() {
 	installCmd.Flags().BoolVar(&installNoCtx, "no-context", false, "Desabilita geracao de governanca contextual")
 	installCmd.Flags().StringVar(&installCodexProfile, "codex-profile", "full", "Perfil de skills para Codex: full ou lean")
 	installCmd.Flags().StringVar(&installFocusPaths, "focus-paths", "", "Prioriza deteccao de toolchain proximo desses arquivos, separados por virgula (util em monorepos). Alternativa: env FOCUS_PATHS")
+	installCmd.Flags().BoolVar(&installGlobal, "global", false, "Instala globalmente em ~/.aispec (ADR-019 RF-07)")
 
 	rootCmd.AddCommand(installCmd)
 }
@@ -63,14 +65,17 @@ func init() {
 func runInstall(cmd *cobra.Command, args []string) error {
 	projectDir := args[0]
 
-	if err := requireFlag(cmd, "tools", "ai-spec-harness install ./meu-projeto --tools claude,gemini --langs go,python"); err != nil {
-		return err
-	}
-
 	if installRef != "" && installSource != "" {
 		return fmt.Errorf("--ref e --source sao mutuamente exclusivos")
 	}
 
+	scope := config.ScopeProject
+	if installGlobal {
+		scope = config.ScopeGlobal
+	}
+
+	// --tools e opcional: vazio => auto-detect via AgentDetector (ADR-019 + RF-06).
+	// Quando presente, e override explicito (precede deteccao automatica).
 	tools, err := parseToolsFlag(installTools)
 	if err != nil {
 		return err
@@ -123,12 +128,15 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		GenerateCtx:  !installNoCtx,
 		CodexProfile: installCodexProfile,
 		FocusPaths:   parseFocusPaths(installFocusPaths),
+		Scope:        scope,
 	})
 }
 
 func parseToolsFlag(raw string) ([]skills.Tool, error) {
+	// Vazio => auto-detect (ADR-019): retorna nil sem erro para que Execute acione
+	// AgentDetector. Presenca da flag e override explicito.
 	if raw == "" {
-		return nil, fmt.Errorf("flag --tools e obrigatoria")
+		return nil, nil
 	}
 	if raw == "all" {
 		return skills.AllTools, nil

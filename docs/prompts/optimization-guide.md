@@ -13,16 +13,19 @@ Sintetizar a inteligência operacional das skills de governança (`create-prd`, 
 - **Mecanismo de Confiança:** `spec-hash` (SHA-256) ligando PRD -> TechSpec -> Tasks.
 - **Mecanismo de Economia:** Isolamento de contexto via subagentes e carregamento sob demanda de skills de linguagem.
 - **Mecanismo de Rigor:** Stage Gates mandatórios, validação de evidências e loop de review/bugfix.
+- **Portabilidade:** O harness é agnóstico e **deve** ser instalado em outros projetos (Go, Node, Python) para replicar a mesma governança e eficiência.
 
 ### Instruções de Execução
 
 1. **Análise de Eficiência (Custo vs. Valor):**
    - Comparar o overhead de criar documentos (PRD/TechSpec) vs. o custo de retrabalho por alucinação em prompts diretos.
    - Definir o "Caminho Crítico" para tasks isoladas vs. fatias completas de funcionalidade.
+   - **Instalação em Outros Projetos:** Analisar como o comando `ai-spec install` permite levar esta eficiência para qualquer repositório, tornando o SDD mandatório e idêntico em diferentes contextos.
 
 2. **Redação da Seção para o README.md:**
    - **Título:** Estratégia de Desenvolvimento de Alta Performance.
    - **Seção "O Caminho do Sucesso":** Fluxo `PRD -> TechSpec -> Tasks -> Execute`.
+   - **Seção "Instalação e Portabilidade":** Instruções claras de como instalar o SDD em outros projetos usando `ai-spec install`, garantindo que a governança funcione de forma igual em qualquer codebase.
    - **Seção "Maximizando a Confiança":** Explicação curta sobre o `spec-hash` e por que ele impede regressões de requisito.
    - **Seção "Economia de Contexto":** Quando usar `execute-task` (manual/focado) vs `execute-all-tasks` (automático/batch).
    - **Cheat Sheet:** Tabela de decisão rápida "Qual skill usar agora?".
@@ -38,6 +41,7 @@ Sintetizar a inteligência operacional das skills de governança (`create-prd`, 
 ---
 
 ## Justificativa das Adições
+- **Instalação Cross-Project:** Adicionado para garantir que o SDD seja portátil e mandatório em qualquer projeto (Go, Node, Python), mantendo a mesma governança e eficiência em diferentes codebases.
 - **Contexto de spec-hash:** Adicionado para garantir que o guia mencione a principal barreira contra drift de requisitos.
 - **Diferenciação de execução:** Foco explícito em economia de tokens (contexto) para orientar o usuário a não "queimar" orçamento de IA sem necessidade.
 - **Formato Cheat Sheet:** Facilita a adoção rápida por desenvolvedores que não querem ler manuais extensos.

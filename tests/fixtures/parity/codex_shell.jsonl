@@ -1,0 +1,2 @@
+{"ts":"2026-05-21T10:00:00Z","kind":"tool_call_start","tool_call_id":"tc-001","raw_name":"shell","normalized_name":"bash","raw":{"name":"shell","input":{"cmd":"echo hello"}}}
+{"ts":"2026-05-21T10:00:01Z","kind":"tool_call_update","tool_call_id":"tc-001","raw":{"output":"hello\n","status":"complete","final":true}}

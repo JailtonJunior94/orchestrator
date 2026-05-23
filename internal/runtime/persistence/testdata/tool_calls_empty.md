@@ -1,0 +1,1 @@
+Nenhum tool call registrado.

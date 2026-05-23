@@ -1,0 +1,4 @@
+status: done
+report_path: tasks/prd-acp-runtime-claude/8.0_execution_report.md
+summary: "ACP client, fake server e human renderer implementados com cobertura 86.7% agregada e zero regressões"
+timestamp: "2026-05-20T20:45:00Z"

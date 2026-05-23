@@ -2,13 +2,25 @@ package wrapper
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/metrics"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/prerequisites"
 )
+
+// geminiWrapperWarnOnce garante que o aviso de deprecation do wrapper Gemini
+// seja emitido uma única vez por execução do processo (sync.Once — RF-08, ADR-015).
+var geminiWrapperWarnOnce sync.Once
+
+// GeminiWarnWriter é o destino do aviso de deprecation Gemini; padrão os.Stderr.
+// Substituível em testes para capturar a saída sem subprocesso.
+// NOTA: substituição em testes deve ser feita antes da primeira chamada a buildInstruction("gemini").
+var GeminiWarnWriter = io.Writer(nil) // resolvido para os.Stderr quando nil (lazy init)
 
 // ValidTools é o conjunto de ferramentas aceitas pelo wrapper.
 var ValidTools = map[string]bool{
@@ -89,6 +101,13 @@ func buildInstruction(tool, skill, projectDir string, args []string) string {
 			skill, projectDir, skill, projectDir, extraArgs,
 		)
 	case "gemini":
+		geminiWrapperWarnOnce.Do(func() {
+			w := GeminiWarnWriter
+			if w == nil {
+				w = os.Stderr
+			}
+			fmt.Fprintln(w, "WARNING: Gemini wrapper legado (gemini run --skill) em uso. Migrar para --runtime=acp (binário gemini com --acp). Ver ADR-015. Guia de migração: docs/migracao-legacy-acp.md.")
+		})
 		return fmt.Sprintf(
 			"Invoke Gemini with skill %q in project %s:\n  gemini run --skill %s --project %s%s",
 			skill, projectDir, skill, projectDir, extraArgs,

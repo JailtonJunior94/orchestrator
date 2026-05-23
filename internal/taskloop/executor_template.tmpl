@@ -3,7 +3,11 @@ First, read AGENTS.md at the repository root to load governance rules and conven
 Then read and follow the instructions in: .agents/skills/execute-task/SKILL.md
 
 Use a skill execute-task para implementar a task {{.TaskFile}}.
-
+{{if .AgentMetadata}}
+{{.AgentMetadata}}
+{{end}}{{if .AgentCatalog}}
+{{.AgentCatalog}}
+{{end}}
 Contexto obrigatorio:
 - Leia o arquivo de task antes de iniciar qualquer alteracao
 - PRD folder: {{.PRDFolder}}

@@ -25,6 +25,7 @@ func NewCompatibilityTable() *CompatibilityTable {
 				"claude-haiku-4-5",
 			},
 			"codex": {
+				"gpt-5.5",
 				"gpt-5.4",
 				"gpt-5.4-mini",
 				"gpt-5.3-codex",
@@ -94,4 +95,28 @@ func (t *CompatibilityTable) ValidateCombination(tool, model string) error {
 	}
 
 	return fmt.Errorf("%w: %q nao suportado pela ferramenta %q", ErrModeloIncompativel, model, tool)
+}
+
+// ValidateModelForIDE verifica se o modelo e compativel com o IDE declarado no AGENT.md.
+// Quando model e vazio, a validacao e pulada (default do CLI subjacente e usado).
+// Quando allowUnknown for true, a validacao e pulada (paridade com --allow-unknown-model).
+// Retorna erro acionavel citando o IDE e os modelos validos esperados quando incompativel.
+func ValidateModelForIDE(ide, model string, allowUnknown bool) error {
+	if model == "" || allowUnknown {
+		return nil
+	}
+
+	table := NewCompatibilityTable()
+	if table.IsSupported(ide, model) {
+		return nil
+	}
+
+	validModels := table.Models(ide)
+	if validModels == nil {
+		// IDE nao reconhecido na tabela; deixa mapIDEToSpec capturar o erro de IDE.
+		return nil
+	}
+
+	return fmt.Errorf("%w: modelo %q nao e compativel com ide %q — modelos validos: %v",
+		ErrModeloIncompativel, model, ide, validModels)
 }

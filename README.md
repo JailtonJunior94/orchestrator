@@ -24,6 +24,7 @@ O projeto padroniza como Claude, Gemini, Codex e GitHub Copilot encontram skills
   - [Cenario 2: projeto novo](#cenario-2-projeto-novo)
   - [Cenario 3: projeto ja instrumentado e desatualizado](#cenario-3-projeto-ja-instrumentado-e-desatualizado)
 - [Nucleo operacional](#nucleo-operacional)
+- [Runtime ACP (experimental)](#runtime-acp-experimental)
 - [Fluxo completo recomendado](#fluxo-completo-recomendado)
 - [Estrategia recomendada para desenvolver uma task](#estrategia-recomendada-para-desenvolver-uma-task)
 - [Artefatos de governanca](#artefatos-de-governanca)
@@ -532,6 +533,139 @@ Vai executar uma task isolada ou medir qualidade real? -> execute-task
 Tem lote pequeno com supervisao frequente? -> task-loop
 Tem bundle maduro com DAG confiavel? -> execute-all-tasks
 ```
+
+## Runtime ACP (cross-CLI)
+
+O `ai-spec-harness` suporta um modo de execucao baseado no **Agent Client Protocol (ACP)**,
+ativado pela flag `--runtime=acp`. Nesse modo, o harness abre uma sessao ACP com a CLI escolhida e
+consome um stream de eventos em tempo real, em vez de aguardar um processo one-shot encerrar.
+
+O runtime ACP funciona com **quatro CLIs** — `claude`, `codex`, `copilot` e `gemini` — com
+comportamento equivalente (paridade): mesma normalizacao de tool-calls, mesmas metricas unificadas,
+mesma memoria 2-tier, mesmo guard de governanca em runtime e os mesmos artefatos forenses.
+
+### O que e
+
+Em vez de invocar a CLI via `exec.Cmd` one-shot (modo `--runtime=legacy`, padrao), o modo ACP:
+
+- Conecta a CLI via `github.com/coder/acp-go-sdk` (JSON-RPC sobre stdio).
+- Recebe eventos granulares (`agent_message`, `agent_thought`, `tool_call_start`,
+  `tool_call_update`, `session_end`) em tempo real.
+- **Normaliza tool-calls por driver** preservando `raw_name`/`raw_input`: a mesma operacao produz o
+  mesmo `normalized_name` nas 4 CLIs (ex.: claude `bash`, codex `shell`, copilot `run`, gemini
+  `bash` -> todos `bash`; campo canonico `command`). Garantido pela suite `internal/parity` (RP-03)
+  como gate de CI obrigatorio.
+- Persiste eventos em `evidence/<task>/events.jsonl`, `tool_calls.md` e `execution_report.md`.
+- Aplica o guard de governanca em `runtime.pre_open` (spec-hash/PRD-first): aborta antes da sessao
+  se `tasks.md` tiver hash divergente/ausente. Bypass granular com `--skip-drift-guard`.
+- Encerra a sessao com seguranca: watchdog de inatividade (`--activity-timeout`, padrao 120s),
+  **cap absoluto de sessao** (5x o activity-timeout) e kill do grupo de processos no teardown —
+  garante que a sessao nunca penda indefinidamente, mesmo se a CLI emitir keep-alives ou nao
+  encerrar o turn (comportamento observado no codex-acp). Cancelamento registra
+  `cancel_reason=activity_timeout` no `execution_report.md`.
+
+### Permissao de escrita: `--access-mode full`
+
+Por padrao (`--access-mode restricted`), o agente roda em modo restrito e **pede permissao** para
+escrever arquivos — sem aprovacao, a sessao nao altera o repositorio. Para que o agente implemente de
+fato, use `--access-mode full`. O harness traduz isso para cada CLI:
+
+| CLI | `--access-mode full` aplica |
+| --- | --- |
+| claude | `--bypass-permissions` no claude-agent-acp |
+| codex | `-c approval_policy=never -c sandbox_mode=danger-full-access` |
+| gemini | `--approval-mode yolo` |
+| copilot | auto-aprovacao das permissoes via ACP (Copilot nao tem flag de bypass dedicada) |
+
+> **Aviso:** `--access-mode full` da ao agente acesso pleno ao filesystem (e a rede, no codex). Use
+> apenas em ambiente isolado/confiavel.
+
+### Como usar por ferramenta
+
+Todos os comandos rodam dentro do repositorio alvo ja instrumentado (`ai-spec install`) e com um
+PRD folder valido (`prd.md` + `techspec.md` + `tasks.md` com `spec-hash` sincronizado).
+
+**Claude**
+
+```bash
+ai-spec task-loop --tool claude --runtime acp --access-mode full tasks/prd-<slug>
+```
+- Binario: `claude-agent-acp` no PATH, ou fallback `npx --yes @agentclientprotocol/claude-agent-acp@<pin>`.
+- Auth: login do Claude (`~/.claude`) ou `ANTHROPIC_API_KEY`.
+
+**Codex**
+
+```bash
+ai-spec task-loop --tool codex --runtime acp --access-mode full tasks/prd-<slug>
+```
+- Binario: `codex-acp` no PATH, ou fallback `npx --yes @zed-industries/codex-acp@<pin>`.
+- Auth: login do Codex (`~/.codex`).
+
+**Copilot**
+
+```bash
+ai-spec task-loop --tool copilot --runtime acp --access-mode full tasks/prd-<slug>
+```
+- Binario: `copilot --acp` no PATH, ou fallback `npx --yes @github/copilot@<pin> --acp`.
+- Auth: `gh auth login` (conta GitHub com acesso ao Copilot).
+
+**Gemini**
+
+```bash
+ai-spec task-loop --tool gemini --runtime acp --access-mode full tasks/prd-<slug>
+```
+- Binario: `gemini --acp` no PATH, ou fallback `npx --yes @google/gemini-cli@<pin> --acp`.
+- Auth: login do Gemini CLI.
+
+Parametros uteis (validos para qualquer CLI):
+
+```bash
+# uma task por vez, watchdog curto, modo silencioso
+ai-spec task-loop --tool codex --runtime acp --access-mode full \
+  --max-iterations 1 --activity-timeout 2m --quiet tasks/prd-<slug>
+
+# bypass granular do guard spec-drift (mantem governance/token_budget ativos)
+ai-spec task-loop --tool claude --runtime acp --access-mode full \
+  --skip-drift-guard tasks/prd-<slug>
+```
+
+### Resolucao do binario (fallback)
+
+Para cada CLI, o runtime resolve o launcher nesta ordem:
+
+1. Binario direto no `PATH` (recomendado para producao).
+2. Fallback `npx --yes <pacote>@<versao-pinada>` — requer `npx`/Node e internet no primeiro uso.
+3. Falha com mensagem acionavel se nenhum dos dois estiver disponivel.
+
+As versoes npm sao **pinadas** em `internal/runtime/specs/*.go` (nunca `@latest`); atualizacao via
+processo `audit/`.
+
+### Validacao end-to-end (evidencia real)
+
+A paridade foi validada executando o harness de verdade contra um repositorio Go real
+(`devkit-go`, feature isolada `pkg/strutil`), uma task por CLI via `--runtime acp --access-mode full`:
+
+| CLI | Task | Resultado | Duracao |
+| --- | --- | --- | --- |
+| claude | 1.0 (Reverse) | `pending -> done`, exit 0 | ~2m48s |
+| copilot | 2.0 (IsPalindrome) | `pending -> done`, exit 0 | ~3m21s |
+| codex | 3.0 (WordCount) | `pending -> done`, exit 0 | ~3m27s |
+
+Cada sessao: implementou o codigo (rune-aware, idiomatico), rodou os testes, gerou
+`execution_report.md` + checkpoint, marcou a task `done` e **terminou de forma limitada** (sem hang,
+sem processos orfaos).
+
+### Notas importantes
+
+- O modo `--runtime=legacy` permanece o padrao. Nenhuma task existente muda de comportamento sem
+  mudanca explicita de flag.
+- O guard `spec_drift` so atua quando ha `tasks.md` rastreavel; `tasks.md` ausente e no-op (o
+  `TasksDir` tambem alimenta a memoria 2-tier sem exigir PRD).
+- ADRs relacionadas: [ADR-009 (ACP via coder/acp-go-sdk)](tasks/adr/009-acp-protocol-adoption.md),
+  [ADR-012 (Copilot ACP)](tasks/adr/012-copilot-cli-acp-native.md),
+  [ADR-013 (Codex ACP)](tasks/adr/013-codex-cli-acp-native.md),
+  [ADR-015 (Gemini ACP)](tasks/adr/015-gemini-cli-acp-native.md).
+- Para migrar do modo legado, ver o [Guia de migracao legacy -> ACP](docs/migracao-legacy-acp.md).
 
 ## Fluxo completo recomendado
 

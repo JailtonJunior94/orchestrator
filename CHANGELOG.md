@@ -1,5 +1,52 @@
 # Changelog
 
+## [Unreleased] — Gemini CLI via ACP nativo (F0..F5-Gemini, ADR-015)
+
+### Features
+
+- **feat(gemini): F0 spec registration via gemini --acp (ADR-015)** — novo `internal/runtime/specs/gemini.go` com `Command="gemini"`, `FixedArgs=["--acp"]`, `BootstrapArgs=nil`; constantes `GeminiNpmPackage`, `GeminiNpmVersion="0.43.0"`, `DefaultGeminiModel="gemini-2.5-pro"`; registro em `runtimeACPCatalog`; mapeamento D-05 `AccessMode → --approval-mode`; probe estendido com T-13/T-14/T-15/T-16
+- **feat(gemini): F1 paridade ACP E2E + wrapper deprecation** — habilita `--runtime acp --tool gemini` end-to-end; `internal/runtime/client/client.go` e `runner.go` (tool-agnosticos) recebem Gemini via catalog; sub-suite Gemini em `acp_integration_test.go`; smoke test `tests/integration/gemini_acp_smoke_test.go` (skipavel via `-short`); warning de deprecation `sync.Once` em `wrapper.go` quando modo legado invocado; `docs/cli-schema.json` enum atualizado
+- **feat(gemini): F2 normalization cascata + MCP nested-agent** — `.agents/normalization-rules.yaml` e `internal/runtime/events/normalization-rules.yaml` ganham entrada `gemini: { inherit: common, overrides: {} }` (Gemini herda tabela comum, sem aliases especificos); `internal/runtime/events/normalize.go` resolve `inherit: common`; testes T-32/T-33 validam normalizacao; MCP nested-agent cascata automaticamente via `internal/runtime/mcpserver/` (tool-agnostico)
+- **feat(gemini): F3 memory defaults generosos (250/400) + hooks cascata** — `cmd/ai_spec_harness/task_loop.go` aplica defaults Gemini-generosos quando `--tool gemini` e flags nao foram setadas explicitamente (workflow: 250 lin/20 KiB; task: 400 lin/32 KiB vs 150/200 defaults Claude); hooks in-process Go cascateiam automaticamente via `internal/runtime/hooks/dispatcher.go` (tool-agnostico); testes T-34/T-35
+- **feat(gemini): F4 metricas Gemini-2026 (cache_read, effective_context, prompt_billed, thoughts)** — novo `internal/runtime/events/gemini_metrics.go` com `ExtractGeminiMetrics`/`LogGeminiMetrics`; `Summary` acumula `GeminiCacheReadTokens`, `GeminiEffectiveContextTokens`, `GeminiPromptTokensBilled`, `GeminiThoughtsTokens`; `execution_report.md` ganha secao "Metricas Gemini-2026"; telemetria opt-in via `GOVERNANCE_TELEMETRY=1` com entries `gemini.*`; extracao defensiva — ausencia nao bloqueia evidence; testes T-36/T-37/T-38
+- **feat(gemini): F5 auto-review opt-in cascata** — flag `--auto-review` ja e tool-agnostica apos F1-Gemini; `runner_autoreview.go` cascatea sem codigo novo; testes T-39 validam `ReviewStatus=blocked` em issues `[HARD]`; INFO de custo amplificado documentado para Gemini com janela 1M+
+
+### Chores
+
+- **chore(deps): pin @google/gemini-cli@0.43.0** — constante `GeminiNpmVersion="0.43.0"` em `internal/runtime/specs/gemini.go`; validada via `npm view @google/gemini-cli version dist-tags` em 2026-05-22 (dist-tag `latest=0.43.0`); politica de pinning conforme ADR-015 D-02 (audit/ para atualizacoes futuras, nunca `@latest`)
+
+## [Unreleased] — Claude-CLI 2026 waves F2–F5 (RF-01–RF-06, ADR-014)
+
+### Features
+
+- **feat(claude-2026): F2 — MCP nested + normalize** — adiciona `internal/runtime/mcpserver/` com tool `run_agent` via stdio MCP e `internal/runtime/events/normalize.go` com tabelas de alias por ferramenta; `events.jsonl` ganha `normalized_name`/`raw_name`; INV-30 e INV-31 adicionados a suite de paridade
+- **feat(claude-2026): F3 — memory store 2-tier + hooks dispatcher** — adiciona `internal/runtime/memory/` (limites 150 linhas / 12 KB workflow + 200 linhas / 16 KB task) e `internal/runtime/hooks/` com 6 pontos canonicos (governance, token_budget, memory_persist); runner.go integra memoria e hooks via flags `--memory-workflow-limit-lines`, `--memory-task-limit-lines`, `--disable-hooks`
+- **feat(claude-2026): F4 — metricas Claude-2026** — exporta `ExtractClaudeMetrics` e `LogClaudeMetrics` em `internal/runtime/events/metrics.go`; Summary acumula `cache_read_tokens`, `cache_creation_tokens`, `thinking_tokens`; telemetria opt-in via `GOVERNANCE_TELEMETRY=1`
+- **feat(claude-2026): F5 — auto-review opt-in** — flag `--auto-review` (default-off) dispara nova ACPRunner apos sessao principal com skill `review` + git diff; resultado em `evidence/<task>/review.md`; issues `[HARD]` → `ReviewStatus=blocked`; recursao hard-bloqueada no child Job; hook `session.post_review` extensivel
+
+## [Unreleased] — ACP runtime for Claude (RF-01–RF-16, ADR-009, ADR-010)
+
+### Features
+
+- **runtime/events:** add domain events model with VOs and state pattern (a01793f)
+- **runtime:** add activity watchdog and error sentinels (7cc780f)
+- **runtime/specs:** add Claude spec with launcher fallbacks and sync script (c6f3aa2)
+- **runtime/probe:** resolve claude-agent-acp launcher with npx fallback and cache (de60bb4)
+- **runtime/persistence:** add events.jsonl writer, tool_calls.md and report enricher (01e5c1e)
+- **runtime/events:** translate acp.SessionUpdate to domain Event (120e3ab)
+- **runtime:** add ACP client, fake server and human renderer (633fd26)
+- **runtime:** add ACPRunner application service with integration tests (5f80510)
+- **cli:** add --runtime/--activity-timeout/--quiet flags, telemetry fields and acp_live CI job (4aaab6f)
+
+### Chores
+
+- **deps:** pin github.com/coder/acp-go-sdk v0.13.0 (ADR-009) (2132dae)
+- **tasks:** mark task 5.0 done and add execution report (c339f93)
+
+### Documentation
+
+- **acp-runtime:** add README section, accept ADR-009 and ADR-010, add CHANGELOG entry
+
 ## 0.22.4 (2026-05-19)
 
 ### Bug Fixes

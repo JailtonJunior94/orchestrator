@@ -3,6 +3,9 @@ package taskloop
 import (
 	"errors"
 	"fmt"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/agents"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
 // Erros sentinela do dominio de perfil de execucao.
@@ -78,6 +81,60 @@ type ProfileConfig struct {
 	Mode     string            // "simples" ou "avancado"
 	Executor ExecutionProfile
 	Reviewer *ExecutionProfile // nil = reviewer nao configurado
+}
+
+// mapIDEToSpec converte o campo runtime.ide de um AGENT.md em uma specs.Spec concreta.
+// Nesta fase, apenas "claude" e suportado em ACP; demais IDEs retornam erro acionavel.
+// Multi-IDE via ACP e trabalho futuro (Fase 5 do PRD).
+func mapIDEToSpec(ide string) (specs.Spec, error) {
+	switch ide {
+	case "claude":
+		return specs.Claude(), nil
+	default:
+		return specs.Spec{}, fmt.Errorf("ide %q ainda nao suportado em ACP — use --tool legado", ide)
+	}
+}
+
+// ResolveProfileFromAgent deriva um ProfileConfig a partir de um ResolvedAgent e overrides CLI.
+// Aplica a precedencia CLI > AGENT.md > defaults (D-05).
+// Retorna erro quando o runtime.ide declarado nao e suportado em ACP nesta fase.
+// allowUnknownModel controla se a validacao de compatibilidade runtime.model x CompatibilityTable
+// e pulada (paridade com --allow-unknown-model existente).
+func ResolveProfileFromAgent(agent agents.ResolvedAgent, override agents.RuntimeOverride, allowUnknownModel bool) (*ProfileConfig, error) {
+	// Aplicar precedencia: override CLI preenche campos nao setados com defaults do agente.
+	agents.ApplyRuntimePrecedence(&override, agent.Runtime)
+
+	// IDE final: usa override apos precedencia, ou fallback para "claude" como default ACP.
+	ide := override.IDE
+	if ide == "" {
+		ide = "claude"
+	}
+
+	_, err := mapIDEToSpec(ide)
+	if err != nil {
+		return nil, err
+	}
+
+	// Validar runtime.model contra CompatibilityTable (RF-09, T-13).
+	// Modelo vazio e sempre aceito; --allow-unknown-model bypassa a validacao.
+	if err := ValidateModelForIDE(ide, override.Model, allowUnknownModel); err != nil {
+		return nil, fmt.Errorf("agente %q: %w", agent.Name, err)
+	}
+
+	// Mapear para ExecutionProfile usando a ferramenta derivada do IDE.
+	tool := ide
+	model := override.Model
+
+	executor, err := NewExecutionProfile("executor", tool, model)
+	if err != nil {
+		return nil, fmt.Errorf("perfil de agente invalido: %w", err)
+	}
+
+	return &ProfileConfig{
+		Mode:     "agente",
+		Executor: executor,
+		Reviewer: nil, // reviewer nao e configurado via AGENT.md nesta fase
+	}, nil
 }
 
 // ResolveProfiles converte flags CLI em ProfileConfig.

@@ -151,6 +151,33 @@ func TestOS_RemoveAll(t *testing.T) {
 	}
 }
 
+func TestOS_RemoveAll_removesReadOnlyTree(t *testing.T) {
+	dir := t.TempDir()
+	f := fs.NewOSFileSystem()
+	sub := filepath.Join(dir, "tree")
+	nested := filepath.Join(sub, "nested")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(nested, "skill.md"), []byte("old"), 0o444); err != nil {
+		t.Fatalf("seed file: %v", err)
+	}
+	if err := os.Chmod(nested, 0o555); err != nil {
+		t.Fatalf("chmod nested: %v", err)
+	}
+	if err := os.Chmod(sub, 0o555); err != nil {
+		t.Fatalf("chmod sub: %v", err)
+	}
+	t.Cleanup(func() { makeWritableForCleanup(sub) })
+
+	if err := f.RemoveAll(sub); err != nil {
+		t.Fatalf("RemoveAll read-only tree: %v", err)
+	}
+	if f.Exists(sub) {
+		t.Error("directory should not exist after RemoveAll")
+	}
+}
+
 func TestOS_CopyFile(t *testing.T) {
 	dir := t.TempDir()
 	f := fs.NewOSFileSystem()
@@ -189,6 +216,70 @@ func TestOS_CopyDir(t *testing.T) {
 	data, _ := os.ReadFile(filepath.Join(dst, "file.txt"))
 	if string(data) != "hi" {
 		t.Errorf("CopyDir result = %q, want 'hi'", data)
+	}
+}
+
+func TestOS_CopyDir_AllowsUpgradeFromReadOnlySource(t *testing.T) {
+	dir := t.TempDir()
+	f := fs.NewOSFileSystem()
+	src := filepath.Join(dir, "src")
+	dst := filepath.Join(dir, "dst")
+	if err := os.MkdirAll(filepath.Join(src, "skill"), 0o755); err != nil {
+		t.Fatalf("MkdirAll src: %v", err)
+	}
+	skillFile := filepath.Join(src, "skill", "SKILL.md")
+	if err := os.WriteFile(skillFile, []byte("v1"), 0o444); err != nil {
+		t.Fatalf("seed source: %v", err)
+	}
+	if err := os.Chmod(filepath.Join(src, "skill"), 0o555); err != nil {
+		t.Fatalf("chmod source skill: %v", err)
+	}
+	if err := os.Chmod(src, 0o555); err != nil {
+		t.Fatalf("chmod source root: %v", err)
+	}
+	t.Cleanup(func() { makeWritableForCleanup(src) })
+
+	if err := f.CopyDir(src, dst); err != nil {
+		t.Fatalf("first CopyDir: %v", err)
+	}
+	if err := os.Chmod(src, 0o755); err != nil {
+		t.Fatalf("chmod source root writable: %v", err)
+	}
+	if err := os.Chmod(filepath.Join(src, "skill"), 0o755); err != nil {
+		t.Fatalf("chmod source skill writable: %v", err)
+	}
+	if err := os.Chmod(skillFile, 0o644); err != nil {
+		t.Fatalf("chmod source file writable: %v", err)
+	}
+	if err := os.WriteFile(skillFile, []byte("v2"), 0o444); err != nil {
+		t.Fatalf("update source: %v", err)
+	}
+	if err := os.Chmod(skillFile, 0o444); err != nil {
+		t.Fatalf("chmod source file read-only: %v", err)
+	}
+	if err := os.Chmod(filepath.Join(src, "skill"), 0o555); err != nil {
+		t.Fatalf("chmod source skill read-only: %v", err)
+	}
+	if err := os.Chmod(src, 0o555); err != nil {
+		t.Fatalf("chmod source root read-only: %v", err)
+	}
+	if err := f.CopyDir(src, dst); err != nil {
+		t.Fatalf("second CopyDir over read-only-derived dst: %v", err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dst, "skill", "SKILL.md"))
+	if err != nil {
+		t.Fatalf("ReadFile dst: %v", err)
+	}
+	if string(data) != "v2" {
+		t.Errorf("CopyDir result = %q, want 'v2'", data)
+	}
+	info, err := os.Stat(filepath.Join(dst, "skill"))
+	if err != nil {
+		t.Fatalf("Stat dst dir: %v", err)
+	}
+	if info.Mode().Perm()&0o200 == 0 {
+		t.Errorf("copied directory is not writable, mode = %v", info.Mode().Perm())
 	}
 }
 
@@ -287,4 +378,18 @@ func TestOS_ReadDir(t *testing.T) {
 	if len(entries) != 2 {
 		t.Errorf("ReadDir count = %d, want 2", len(entries))
 	}
+}
+
+func makeWritableForCleanup(path string) {
+	_ = filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if info.IsDir() {
+			_ = os.Chmod(p, 0o755)
+			return nil
+		}
+		_ = os.Chmod(p, 0o644)
+		return nil
+	})
 }

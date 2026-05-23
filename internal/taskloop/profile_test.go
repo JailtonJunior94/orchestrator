@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/agents"
 )
 
 func TestNewExecutionProfile(t *testing.T) {
@@ -340,6 +342,73 @@ func TestResolveProfiles(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestResolveProfileFromAgent_CompatibilityValidation(t *testing.T) {
+	t.Parallel()
+
+	makeAgent := func(ide, model string) agents.ResolvedAgent {
+		return agents.ResolvedAgent{
+			Name: "agente-teste",
+			Runtime: agents.RuntimeDefaults{
+				IDE:   ide,
+				Model: model,
+			},
+		}
+	}
+
+	t.Run("T-13 positivo: claude + claude-opus-4-7 — aceito", func(t *testing.T) {
+		t.Parallel()
+		agent := makeAgent("claude", "claude-opus-4-7")
+		_, err := ResolveProfileFromAgent(agent, agents.RuntimeOverride{}, false)
+		if err != nil {
+			t.Errorf("nao esperava erro para modelo compativel, obteve: %v", err)
+		}
+	})
+
+	t.Run("T-13 negativo: claude + gpt-5.4 — erro acionavel", func(t *testing.T) {
+		t.Parallel()
+		agent := makeAgent("claude", "gpt-5.4")
+		_, err := ResolveProfileFromAgent(agent, agents.RuntimeOverride{}, false)
+		if err == nil {
+			t.Fatal("esperava erro para modelo incompativel")
+		}
+		if !errors.Is(err, ErrModeloIncompativel) {
+			t.Errorf("errors.Is(err, ErrModeloIncompativel) = false; err = %v", err)
+		}
+	})
+
+	t.Run("T-13 bypass: claude + modelo-novo + allowUnknownModel=true — aceito", func(t *testing.T) {
+		t.Parallel()
+		agent := makeAgent("claude", "modelo-novo-futuro")
+		_, err := ResolveProfileFromAgent(agent, agents.RuntimeOverride{}, true)
+		if err != nil {
+			t.Errorf("allowUnknownModel=true deve bypassar validacao, obteve: %v", err)
+		}
+	})
+
+	t.Run("modelo vazio — sem validacao, sem erro", func(t *testing.T) {
+		t.Parallel()
+		agent := makeAgent("claude", "")
+		_, err := ResolveProfileFromAgent(agent, agents.RuntimeOverride{}, false)
+		if err != nil {
+			t.Errorf("modelo vazio deve pular validacao, obteve: %v", err)
+		}
+	})
+
+	t.Run("override CLI model compativel prevalece sobre agent incompativel", func(t *testing.T) {
+		t.Parallel()
+		// Agent tem modelo incompativel, mas CLI override e compativel e explicito.
+		agent := makeAgent("claude", "gpt-5.4")
+		override := agents.RuntimeOverride{
+			Model:         "claude-sonnet-4-6",
+			ExplicitModel: true,
+		}
+		_, err := ResolveProfileFromAgent(agent, override, false)
+		if err != nil {
+			t.Errorf("model CLI compativel deve substituir model do agente, obteve: %v", err)
+		}
+	})
 }
 
 func TestSentinelErrors(t *testing.T) {

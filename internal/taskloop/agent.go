@@ -10,8 +10,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"text/template"
 
+	"github.com/JailtonJunior94/ai-spec-harness/internal/agents"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 )
 
@@ -64,22 +66,30 @@ var defaultExecutorTemplate string
 
 // PromptContext agrupa o contexto dinamico extraido de prd.md e techspec.md
 // para enriquecer o prompt do executor com arquitetura e referencias relevantes.
+// Os campos AgentMetadata e AgentCatalog sao preenchidos apenas quando um agente
+// declarativo e informado em BuildPromptContext (RF-14, RF-15, RF-16).
 type PromptContext struct {
-	Architecture string
-	References   string
+	Architecture  string
+	References    string
+	AgentMetadata string // bloco Markdown do agente ativo (vazio no fluxo legado)
+	AgentCatalog  string // bloco Markdown do catalogo de agentes (vazio no fluxo legado)
 }
 
 // ExecutorTemplateData agrupa os placeholders do template do executor.
 type ExecutorTemplateData struct {
-	TaskFile     string
-	PRDFolder    string
-	Architecture string
-	References   string
+	TaskFile      string
+	PRDFolder     string
+	Architecture  string
+	References    string
+	AgentMetadata string // bloco Markdown do agente ativo (vazio no fluxo legado)
+	AgentCatalog  string // bloco Markdown do catalogo de agentes (vazio no fluxo legado)
 }
 
 // BuildPromptContext le prd.md e techspec.md do prdFolder e extrai
 // contexto de arquitetura e referencias relevantes para o prompt.
-func BuildPromptContext(prdFolder, workDir string, fsys fs.FileSystem) PromptContext {
+// Quando agent != nil, injeta blocos metadata e catalogo no contexto (RF-14, RF-15, RF-16).
+// Quando agent == nil, comporta-se exatamente como antes (fluxo legado preservado, RF-14).
+func BuildPromptContext(prdFolder, workDir string, fsys fs.FileSystem, agent *agents.ResolvedAgent, catalog []agents.ResolvedAgent) PromptContext {
 	ctx := PromptContext{}
 
 	techspecPath := filepath.Join(workDir, prdFolder, "techspec.md")
@@ -92,6 +102,13 @@ func BuildPromptContext(prdFolder, workDir string, fsys fs.FileSystem) PromptCon
 
 	ctx.Architecture = extractArchitecture(string(techspec))
 	ctx.References = detectReferences(combined)
+
+	// Enriquecer com blocos do agente quando disponivel (RF-15, RF-16).
+	if agent != nil {
+		metadataBlock, catalogBlock := agents.BuildAgentBlocks(agent, catalog)
+		ctx.AgentMetadata = metadataBlock
+		ctx.AgentCatalog = catalogBlock
+	}
 
 	return ctx
 }
@@ -111,15 +128,14 @@ func extractArchitecture(techspec string) string {
 			continue
 		}
 		rest := techspec[idx:]
-		nlIdx := strings.Index(rest, "\n")
-		if nlIdx < 0 {
+		_, afterHeading, found := strings.Cut(rest, "\n")
+		if !found {
 			continue
 		}
-		afterHeading := rest[nlIdx+1:]
-		nextSection := strings.Index(afterHeading, "\n## ")
+		before, _, hasSplit := strings.Cut(afterHeading, "\n## ")
 		var section string
-		if nextSection >= 0 {
-			section = strings.TrimSpace(afterHeading[:nextSection])
+		if hasSplit {
+			section = strings.TrimSpace(before)
 		} else {
 			section = strings.TrimSpace(afterHeading)
 		}
@@ -176,10 +192,12 @@ func containsAnyPattern(s string, patterns ...string) bool {
 // Arquitetura e referencias sao preenchidos dinamicamente a partir do PromptContext.
 func BuildPrompt(taskFilePath, prdFolder string, ctx PromptContext) string {
 	data := ExecutorTemplateData{
-		TaskFile:     taskFilePath,
-		PRDFolder:    prdFolder,
-		Architecture: ctx.Architecture,
-		References:   ctx.References,
+		TaskFile:      taskFilePath,
+		PRDFolder:     prdFolder,
+		Architecture:  ctx.Architecture,
+		References:    ctx.References,
+		AgentMetadata: ctx.AgentMetadata,
+		AgentCatalog:  ctx.AgentCatalog,
 	}
 
 	tmpl, err := template.New("executor").Parse(defaultExecutorTemplate)
@@ -314,8 +332,21 @@ func (c *claudeInvoker) Invoke(ctx context.Context, prompt, workDir, model strin
 
 // --- Codex ---
 
+// codexLegacyDeprecationMsg é o aviso de depreciação emitido na primeira invocação
+// do codexInvoker legado. Contém os literais obrigatórios conforme Tarefa 8.0 e ADR-013 D-05.
+const codexLegacyDeprecationMsg = "WARNING: Codex CLI legado (codex exec --yolo) em uso. " +
+	"Migrar para --runtime=acp (binário codex-acp, pacote @zed-industries/codex-acp). " +
+	"O modo legado será removido em 2 versões minor. Ver ADR-013. " +
+	"Guia de migração: docs/migracao-legacy-acp.md."
+
+// codexLegacyWarnOnce garante que o aviso de depreciação do codexInvoker legado
+// seja emitido exatamente uma vez por execução do processo (não por task).
+// Declarado em escopo package-level conforme ADR-013 D-05.
+var codexLegacyWarnOnce sync.Once
+
 type codexInvoker struct {
-	liveOut io.Writer
+	liveOut    io.Writer
+	warnWriter io.Writer // destino do aviso de depreciação; padrão os.Stderr
 }
 
 func (c *codexInvoker) BinaryName() string { return "codex" }
@@ -323,6 +354,13 @@ func (c *codexInvoker) BinaryName() string { return "codex" }
 func (c *codexInvoker) SetLiveOutput(w io.Writer) { c.liveOut = w }
 
 func (c *codexInvoker) Invoke(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+	w := c.warnWriter
+	if w == nil {
+		w = os.Stderr
+	}
+	codexLegacyWarnOnce.Do(func() {
+		_, _ = fmt.Fprintln(w, codexLegacyDeprecationMsg)
+	})
 	args := make([]string, 0, 5)
 	args = append(args, "exec")
 	if model != "" {
@@ -353,8 +391,16 @@ func (g *geminiInvoker) Invoke(ctx context.Context, prompt, workDir, model strin
 
 // --- Copilot ---
 
+// copilotLegacyDeprecationMsg é o aviso de depreciação emitido na primeira invocação
+// do copilotInvoker legado. Contém os literais obrigatórios conforme Tarefa 7.0.
+const copilotLegacyDeprecationMsg = "WARNING: Copilot CLI em modo legado (sem ACP). " +
+	"Migrar para --runtime=acp. O modo legado será removido em vX.Y.Z. Ver ADR-012. " +
+	"Guia de migração: docs/migracao-legacy-acp.md."
+
 type copilotInvoker struct {
-	liveOut io.Writer
+	liveOut    io.Writer
+	warnOnce   sync.Once
+	warnWriter io.Writer // destino do aviso de depreciação; padrão os.Stderr
 }
 
 func (c *copilotInvoker) BinaryName() string { return "copilot" }
@@ -362,6 +408,13 @@ func (c *copilotInvoker) BinaryName() string { return "copilot" }
 func (c *copilotInvoker) SetLiveOutput(w io.Writer) { c.liveOut = w }
 
 func (c *copilotInvoker) Invoke(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+	w := c.warnWriter
+	if w == nil {
+		w = os.Stderr
+	}
+	c.warnOnce.Do(func() {
+		_, _ = fmt.Fprintln(w, copilotLegacyDeprecationMsg)
+	})
 	args := make([]string, 0, 6)
 	if model != "" {
 		args = append(args, "--model", model)

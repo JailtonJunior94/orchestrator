@@ -1,0 +1,2 @@
+2026-05-21T15:09:28Z skill=task-loop ref=acp-session runtime=acp launcher=binary events_count=51 unknown_events_count=3 cancel_reason=permission_denied
+2026-05-21T20:08:53Z skill=task-loop ref=acp-session runtime=acp launcher=npx events_count=898 unknown_events_count=11 cancel_reason=none

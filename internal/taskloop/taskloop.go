@@ -2,6 +2,7 @@ package taskloop
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -9,8 +10,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/JailtonJunior94/ai-spec-harness/internal/agents"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
+	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
 // Options agrupa as opcoes do comando task-loop.
@@ -30,15 +35,79 @@ type Options struct {
 	ReviewerFallbackModel  string // --fallback-model nativo do reviewer (Claude only, camada 1)
 	MaxBugfixIterations    int    // limite rigido de iteracoes do BugfixLoop (RF-06, ADR-003); 0 => default 3
 	NonInteractive         bool   // ReservationPlanner: assume Document como default sem prompts (RF-08, ADR-003)
+
+	// Runtime ACP (RF-01, RF-02, RF-07, RF-11)
+	Runtime         string        // "legacy" (default) ou "acp"
+	ActivityTimeout time.Duration // timeout de inatividade do watchdog ACP; 0 = desabilitado
+	// ActivityTimeoutSet indica que ActivityTimeout veio de flag explicita.
+	// Evita que o default do Cobra sobrescreva configs workspace/global.
+	ActivityTimeoutSet bool
+	Quiet              bool // suprime stream humano quando true
+
+	// AgentName e o nome do agente declarativo (AGENT.md) a ser usado (tarefa 6.0).
+	// Quando vazio, o fluxo legado via Tool/Profiles e preservado integralmente (RF-14).
+	// Quando preenchido, o Registry resolve o agente e deriva ProfileConfig via ResolveProfileFromAgent.
+	AgentName string
+
+	// Codex-specific flags (RF-09, RF-10, RF-11, RF-13 — ADR-013 D-08).
+	// Para Claude/Copilot as flags são aceitas mas sem efeito (BootstrapArgs no-op).
+	ReasoningEffort string   // "low" | "medium" | "high" (default "medium")
+	AccessMode      string   // "restricted" | "full" (default "restricted")
+	AddDirs         []string // diretórios adicionais que o agente Codex pode acessar além do WorkDir; ignorado por Claude/Copilot (no-op)
+
+	// F2-Claude flags (RF-01, RF-02 — ADR-014).
+	// MCPNested habilita o servidor MCP interno que expõe a tool run_agent (RF-01.1).
+	// Quando true, ACPRunner spawna mcpserver.Server em goroutine antes de c.Open.
+	// Default false preserva comportamento F1-Claude sem regressão.
+	MCPNested bool
+	// NoNormalize desabilita a normalização de tool-calls driver-aware (RF-02.4, debug).
+	// Quando true, BuildNormalizedToolCall não é chamado no loop de eventos.
+	// Default false = normalização sempre ativa.
+	NoNormalize bool
+
+	// F3-Claude: limites de memória (RF-01, RF-02 — F3-Claude).
+	// Zero-value em cada campo aplica o default de memory.DefaultLimits() no runner.
+	MemoryWorkflowLimitLines int // --memory-workflow-limit-lines (default 150)
+	MemoryWorkflowLimitBytes int // --memory-workflow-limit-bytes (default 12288)
+	MemoryTaskLimitLines     int // --memory-task-limit-lines (default 200)
+	MemoryTaskLimitBytes     int // --memory-task-limit-bytes (default 16384)
+	// MemoryLimitsSet indica que ao menos uma flag --memory-* foi explicitamente alterada.
+	// Usado para preservar overrides do usuario em politicas WindowLarge.
+	MemoryLimitsSet bool
+
+	// DisableHooks desabilita TODOS os hooks Go in-process (F3-Claude, debug).
+	// Quando true, governance, token_budget e memory_persist não são registrados.
+	// Default false = hooks ativos.
+	DisableHooks bool
+
+	// SkipDriftGuard desabilita SOMENTE o spec_drift hook (ADR-022, RG-01/RG-02).
+	// Default false = guard ativo quando há PRD rastreável; mantém governance/token_budget ativos.
+	SkipDriftGuard bool
+
+	// AutoReview habilita o auto-review opt-in (F5-Claude, RF-06).
+	// Quando true, após session end, spawna nova sessão com skill review + git diff.
+	// HARD: default false; child sessions têm AutoReview=false forçado (anti-recursão).
+	// HARD: Claude NÃO modifica internal/wrapper/ValidTools (ADR-014 §D-07).
+	AutoReview bool
+
+	// Concurrent é o grau máximo de paralelismo no RunLoop (ADR-018, RF-04).
+	// <=0 ou 1 ⇒ execução sequencial idêntica ao atual (F1 default, RF-05).
+	// Apenas tasks sem dependência pendente são executadas em paralelo.
+	Concurrent int
+
+	// BatchSize é o tamanho máximo do lote de tasks por rodada de seleção (ADR-018, RF-04).
+	// <=0 ou 1 ⇒ uma task por iteração (F1 default).
+	BatchSize int
 }
 
 // Service orquestra a execucao sequencial de tasks de um PRD folder.
 type Service struct {
-	fsys            fs.FileSystem
-	printer         *output.Printer
-	invokerFactory  func(tool string) (AgentInvoker, error)
-	binaryChecker   func(AgentInvoker) error // nil = usar CheckAgentBinary
-	liveOutOverride io.Writer                // nil = usar os.Stderr; permite injecao em testes
+	fsys              fs.FileSystem
+	printer           *output.Printer
+	invokerFactory    func(tool string) (AgentInvoker, error)
+	acpInvokerFactory func(opts Options) AgentInvoker
+	binaryChecker     func(AgentInvoker) error // nil = usar CheckAgentBinary
+	liveOutOverride   io.Writer                // nil = usar os.Stderr; permite injecao em testes
 }
 
 // NewService cria um novo Service de task-loop.
@@ -164,7 +233,7 @@ func (s *Service) printDryRunAdvancedHeader(opts Options, absFolder, workDir str
 	}
 
 	s.printer.DryRun("--- preview do template (task %s) ---", firstTask.ID)
-	for _, line := range strings.Split(preview, "\n") {
+	for line := range strings.SplitSeq(preview, "\n") {
 		s.printer.DryRun("%s", line)
 	}
 	s.printer.DryRun("--- fim do preview ---")
@@ -182,6 +251,40 @@ func (s *Service) Execute(opts Options) error {
 		path := filepath.Join(absFolder, required)
 		if !s.fsys.Exists(path) {
 			return fmt.Errorf("arquivo obrigatorio nao encontrado: %s", path)
+		}
+	}
+
+	// Pre-flight: resolver agente declarativo quando AgentName estiver preenchido (tarefa 6.0).
+	// Quando AgentName == "", o fluxo legado via Tool/Profiles e preservado integralmente (RF-14).
+	var resolvedAgent *agents.ResolvedAgent
+	var agentCatalog []agents.ResolvedAgent
+	if opts.AgentName != "" {
+		workDirForAgent, wdErr := resolveWorkDir(absFolder, s.fsys)
+		if wdErr != nil {
+			workDirForAgent = absFolder
+		}
+		home, _ := os.UserHomeDir()
+		reg := agents.NewDefaultRegistry(s.fsys, workDirForAgent, home)
+		catalog, _ := reg.Discover(context.Background())
+		agentCatalog = catalog
+		agent, agentErr := reg.Resolve(opts.AgentName)
+		if agentErr != nil {
+			return fmt.Errorf("agente %q nao encontrado: %w", opts.AgentName, agentErr)
+		}
+		resolvedAgent = &agent
+
+		// Derivar ProfileConfig do agente quando Profiles nao foi explicitamente configurado.
+		if opts.Profiles == nil {
+			override := agents.RuntimeOverride{}
+			agentProfile, profileErr := ResolveProfileFromAgent(agent, override, opts.AllowUnknownModel)
+			if profileErr != nil {
+				return fmt.Errorf("erro ao derivar perfil do agente %q: %w", opts.AgentName, profileErr)
+			}
+			opts.Profiles = agentProfile
+		}
+		// Forcar runtime ACP para o fluxo de agente declarativo.
+		if opts.Runtime == "" || opts.Runtime == "legacy" {
+			opts.Runtime = "acp"
 		}
 	}
 
@@ -234,10 +337,55 @@ func (s *Service) Execute(opts Options) error {
 		executorTool = opts.Profiles.Executor.Tool()
 	}
 
-	// Criar invoker do executor e verificar binario
-	invoker, err := s.createInvokerWithFallback(executorTool, opts.ExecutorFallbackModel)
-	if err != nil {
-		return err
+	// Criar invoker: ACP quando runtime=acp, legado nos demais casos.
+	var invoker AgentInvoker
+	if opts.Runtime == "acp" {
+		if s.acpInvokerFactory != nil {
+			invoker = s.acpInvokerFactory(opts)
+		} else {
+			// Resolver config hierárquica uma vez (ADR-025, RIN-01):
+			// flags CLI > workspace > global > defaults built-in.
+			// O mesmo RuntimeConfig é injetado nos Jobs das 4 CLIs (paridade idêntica).
+			resolvedRC, rcErr := resolveRuntimeConfig(absFolder, optionsToConfigOverrides(opts))
+			if rcErr != nil {
+				return fmt.Errorf("taskloop: wiring RuntimeConfig: %w", rcErr)
+			}
+
+			spec := resolveACPSpec(executorTool)
+			factory := persistence.NewSessionPersistenceFactory(fs.NewOSFileSystem())
+			runner := airuntime.NewACPRunner(
+				spec,
+				airuntime.WithPersistenceFactory(factory),
+			)
+			// Usar o Timeout do RuntimeConfig resolvido (ADR-025).
+			// resolvedRC.Timeout já incorpora a precedência flags > workspace > global > defaults.
+			// Se Timeout estiver disabled (zero), Duration() retorna 0, equivalente a F1.
+			invoker = NewACPInvoker(runner, opts.Quiet, resolvedRC.Timeout.Duration(),
+				WithACPInvokerReasoningEffort(opts.ReasoningEffort),
+				WithACPInvokerAccessMode(specs.AccessMode(opts.AccessMode)),
+				WithACPInvokerAddDirs(opts.AddDirs),
+				WithACPInvokerMCPNested(opts.MCPNested),
+				WithACPInvokerNoNormalize(opts.NoNormalize),
+				WithACPInvokerMemoryLimitLines(opts.MemoryWorkflowLimitLines, opts.MemoryTaskLimitLines),
+				WithACPInvokerMemoryLimitBytes(opts.MemoryWorkflowLimitBytes, opts.MemoryTaskLimitBytes),
+				WithACPInvokerMemoryLimitsExplicit(opts.MemoryLimitsSet),
+				WithACPInvokerDisableHooks(opts.DisableHooks),
+				WithACPInvokerSkipDriftGuard(opts.SkipDriftGuard),
+				WithACPInvokerTasksDir(opts.PRDFolder),
+				WithACPInvokerAutoReview(opts.AutoReview),
+				// RuntimeConfig hierárquico (ADR-025): MaxRetries e RetryBackoffMultiplier
+				// vêm da cascata resolvida (flags > workspace > global > defaults).
+				// Concurrent e BatchSize são consumidos pelo RunLoop via opts (ADR-018).
+				WithACPInvokerMaxRetries(resolvedRC.MaxRetries),
+				WithACPInvokerRetryBackoffMultiplier(resolvedRC.RetryBackoffMultiplier),
+			)
+		}
+	} else {
+		var invokerErr error
+		invoker, invokerErr = s.createInvokerWithFallback(executorTool, opts.ExecutorFallbackModel)
+		if invokerErr != nil {
+			return invokerErr
+		}
 	}
 
 	if !opts.DryRun {
@@ -245,8 +393,10 @@ func (s *Service) Execute(opts Options) error {
 		if checker == nil {
 			checker = CheckAgentBinary
 		}
-		if err := checker(invoker); err != nil {
-			return err
+		if opts.Runtime != "acp" {
+			if err := checker(invoker); err != nil {
+				return err
+			}
 		}
 
 		// Pre-flight: aviso antecipado de autenticacao para claude.
@@ -368,7 +518,7 @@ func (s *Service) Execute(opts Options) error {
 			relPRD = absFolder
 		}
 
-		promptCtx := BuildPromptContext(relPRD, workDir, s.fsys)
+		promptCtx := BuildPromptContext(relPRD, workDir, s.fsys, resolvedAgent, agentCatalog)
 		prompt := BuildPrompt(relTaskFile, relPRD, promptCtx)
 
 		s.printer.Step("iteracao %d: executando task %s (%s)", iteration, task.ID, task.Title)
@@ -490,6 +640,9 @@ func (s *Service) Execute(opts Options) error {
 		}
 
 		if invokeErr != nil {
+			if opts.Runtime == "acp" && errors.Is(invokeErr, airuntime.ErrLauncherUnavailable) {
+				return invokeErr
+			}
 			s.printer.Error("iteracao %d: %v", iteration, invokeErr)
 		} else if exitCode != 0 {
 			// Nota especifica por ferramenta para output vazio em SIGKILL (exit -1).
@@ -778,6 +931,28 @@ func classifyIterationOutcome(
 	}
 
 	return outcome
+}
+
+// acpSpecCatalog mapeia tool name → construtor de Spec ACP.
+// Espelha runtimeACPCatalog em cmd/ai_spec_harness/task_loop.go (D-04):
+// a tabela CLI é o gate de validação de --runtime=acp; este mapa é o resolvedor
+// interno do Service.Execute para o caminho padrão (acpInvokerFactory == nil).
+// Adicionar nova entrada aqui ao registrar novo tool ACP no catálogo CLI.
+var acpSpecCatalog = map[string]func() specs.Spec{
+	"claude":  specs.Claude,
+	"codex":   specs.Codex,
+	"copilot": specs.Copilot,
+	"gemini":  specs.Gemini,
+}
+
+// resolveACPSpec retorna a Spec ACP correspondente ao tool informado.
+// Quando o tool não está no catálogo (ex: tool vazio ou não-ACP), retorna specs.Claude()
+// como fallback seguro — a validação no CLI já bloqueou tools inválidos antes de chegar aqui.
+func resolveACPSpec(tool string) specs.Spec {
+	if ctor, ok := acpSpecCatalog[tool]; ok {
+		return ctor()
+	}
+	return specs.Claude()
 }
 
 // resolveWorkDir tenta encontrar a raiz do projeto (diretorio que contem go.mod, .git, ou AGENTS.md).

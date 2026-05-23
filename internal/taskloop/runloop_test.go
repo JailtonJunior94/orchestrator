@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -145,7 +147,7 @@ func setupRunLoopFS(taskIDs []string) (*taskfs.FakeFileSystem, string) {
 	rows.WriteString("| # | Título | Status | Dependências | Paralelizável |\n")
 	rows.WriteString("|---|--------|--------|--------------|---------------|\n")
 	for _, id := range taskIDs {
-		rows.WriteString("| " + id + " | T " + id + " | done | — | Não |\n")
+		fmt.Fprintf(&rows, "| %s | T %s | done | — | Não |\n", id, id)
 		fsys.Files[prd+"/task-"+id+"-t.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [x] feito\n")
 	}
 	fsys.Files[prd+"/tasks.md"] = []byte(rows.String())
@@ -764,5 +766,158 @@ func TestRunLoopBlockedReviewer(t *testing.T) {
 	}
 	if report.FinalReview == nil || report.FinalReview.Verdict != VerdictBlocked {
 		t.Fatalf("FinalReview=%+v, want BLOCKED", report.FinalReview)
+	}
+}
+
+// TestRunLoop_DefaultsSequential verifica que Concurrent=0,BatchSize=0 preserva comportamento F1.
+// RF-05: defaults preservam execução sequencial e contagem atuais.
+func TestRunLoop_DefaultsSequential(t *testing.T) {
+	t.Parallel()
+
+	fsys, prd := setupRunLoopFS([]string{"1.0"})
+
+	sel := &stubSelector{queue: []TaskEntry{{ID: "1.0", Status: "done"}}}
+	exec := &stubExecutor{}
+	gate := &stubGate{}
+	rec := &stubRecorder{}
+	rev := &stubReviewer{}
+	svc := NewService(fsys, newTestPrinter())
+
+	deps := RunLoopDeps{
+		Selector:      sel,
+		Executor:      exec,
+		Gate:          gate,
+		Recorder:      rec,
+		FinalReviewer: rev,
+	}
+
+	// Concurrent=0 e BatchSize=0: devem ser normalizados para 1 (sequencial, F1).
+	opts := Options{
+		PRDFolder:  prd,
+		Concurrent: 0,
+		BatchSize:  0,
+	}
+	report, err := svc.RunLoop(context.Background(), opts, deps)
+	if err != nil {
+		t.Fatalf("RunLoop: %v", err)
+	}
+	if report == nil {
+		t.Fatal("report nil")
+	}
+	// Uma task deve ter sido executada.
+	if exec.calls != 1 {
+		t.Errorf("executor.calls = %d, want 1", exec.calls)
+	}
+	// TasksCompleted deve conter a task.
+	if len(report.TasksCompleted) != 1 {
+		t.Errorf("TasksCompleted len = %d, want 1", len(report.TasksCompleted))
+	}
+}
+
+// atomicCounter é um contador thread-safe para uso em testes de concorrência.
+type atomicCounter struct{ n int32 }
+
+func (c *atomicCounter) Inc() { atomic.AddInt32(&c.n, 1) }
+func (c *atomicCounter) Val() int32 { return atomic.LoadInt32(&c.n) }
+
+// concurrentGate é uma AcceptanceGate thread-safe para testes concorrentes.
+type concurrentGate struct{}
+
+func (g *concurrentGate) Verify(_ context.Context, task TaskEntry, _ string) (AcceptanceReport, error) {
+	return AcceptanceReport{TaskID: task.ID, Passed: true}, nil
+}
+
+// concurrentRecorder é um EvidenceRecorder thread-safe (no-op) para testes concorrentes.
+type concurrentRecorder struct{}
+
+func (r *concurrentRecorder) Append(_ context.Context, _ string, _ AcceptanceReport) error {
+	return nil
+}
+
+// TestRunLoop_Concurrent_ExecutesBatch verifica que Concurrent>1 executa tasks em paralelo.
+// RF-04: Concurrent>1 executa tasks independentes em paralelo sem violar dependências.
+func TestRunLoop_Concurrent_ExecutesBatch(t *testing.T) {
+	t.Parallel()
+
+	fsys, prd := setupRunLoopFS([]string{"1.0", "2.0", "3.0"})
+
+	// Selector retorna as 3 tasks em ordem (dedup para batch).
+	sel := &stubSelector{queue: []TaskEntry{
+		{ID: "1.0", Status: "done"},
+		{ID: "2.0", Status: "done"},
+		{ID: "3.0", Status: "done"},
+	}}
+
+	// Usar contador atômico para evitar data race com -race.
+	counter := &atomicCounter{}
+	exec := TaskExecutorFunc(func(ctx context.Context, task TaskEntry, taskFile, prdFolder, workDir string) error {
+		counter.Inc()
+		return nil
+	})
+
+	rev := &stubReviewer{}
+	svc := NewService(fsys, newTestPrinter())
+
+	deps := RunLoopDeps{
+		Selector:      sel,
+		Executor:      exec,
+		Gate:          &concurrentGate{},
+		Recorder:      &concurrentRecorder{},
+		FinalReviewer: rev,
+	}
+
+	opts := Options{
+		PRDFolder:  prd,
+		Concurrent: 3,
+		BatchSize:  3,
+	}
+	report, err := svc.RunLoop(context.Background(), opts, deps)
+	if err != nil {
+		t.Fatalf("RunLoop concurrent: %v", err)
+	}
+	if report == nil {
+		t.Fatal("report nil")
+	}
+	// Todas as 3 tasks devem ter sido executadas.
+	if counter.Val() != 3 {
+		t.Errorf("executor.calls = %d, want 3", counter.Val())
+	}
+}
+
+// TestRunLoop_Concurrent_Race detecta data races com -race (RF-04 + requisito PRD).
+// Executa com -race pelo runner de testes: go test -race ./internal/taskloop/...
+func TestRunLoop_Concurrent_Race(t *testing.T) {
+	t.Parallel()
+
+	fsys, prd := setupRunLoopFS([]string{"1.0", "2.0"})
+
+	sel := &stubSelector{queue: []TaskEntry{
+		{ID: "1.0", Status: "done"},
+		{ID: "2.0", Status: "done"},
+	}}
+
+	exec := TaskExecutorFunc(func(ctx context.Context, task TaskEntry, taskFile, prdFolder, workDir string) error {
+		// Simular algum trabalho sem sleep para evitar timeout.
+		_ = task.ID
+		return nil
+	})
+
+	svc := NewService(fsys, newTestPrinter())
+	deps := RunLoopDeps{
+		Selector: sel,
+		Executor: exec,
+		// Usar stubs thread-safe para evitar data race com -race.
+		Gate:          &concurrentGate{},
+		Recorder:      &concurrentRecorder{},
+		FinalReviewer: &stubReviewer{},
+	}
+
+	_, err := svc.RunLoop(context.Background(), Options{
+		PRDFolder:  prd,
+		Concurrent: 2,
+		BatchSize:  2,
+	}, deps)
+	if err != nil {
+		t.Fatalf("RunLoop concurrent race: %v", err)
 	}
 }

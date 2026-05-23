@@ -1,0 +1,58 @@
+# Tabelas de normalização de tool-calls por driver ACP.
+# Carregadas em runtime via go:embed (default embedded) e override por projeto
+# em .agents/normalization-rules.yaml local vence sobre embedded.
+# Referência: docs/research/compozy-adaptation-claude-2026.md §"Normalização de tool-calls"
+# version: 1 — schema fechado; versões desconhecidas causam erro no loader.
+
+version: 1
+
+# common_aliases: aliases compartilhados entre drivers que declaram inherit_common.
+# Espelha commonToolTitleAliases de compozy/internal/core/agent/tool_call_name.go:84.
+common_aliases:
+  bash:               bash
+  read_file:          read
+  write_file:         write
+  str_replace_editor: edit
+
+# inherit_common: lista de drivers que herdam common_aliases sem overrides.
+# Gemini está no grupo "drivers compartilhando aliases comuns" junto a Claude/Cursor/Droid/OpenCode/Pi
+# conforme Compozy tool_call_name.go:84.
+inherit_common:
+  - gemini
+
+aliases:
+  claude:
+    # nome_raw : nome_normalizado
+    bash:       bash
+    read_file:  read
+    write_file: write
+    str_replace_editor: edit
+
+  codex:
+    shell:        bash
+    search_query: web_search
+    image_query:  image_search
+
+  copilot:
+    run:   bash
+    fetch: web_search
+
+  cursor:
+    terminal:      bash
+    grep_search:   grep
+    file_search:   glob
+    read_file:     read
+    write_file:    write
+
+input_mappings:
+  # canonicalização de campos de input por driver
+  claude:
+    bash:
+      command: command
+  codex:
+    shell:
+      cmd: command  # Codex usa cmd; canonizar para command
+  cursor:
+    read_file:
+      startLineNumberBaseOne: start_line
+      endLineNumberBaseOne:   end_line

@@ -205,6 +205,56 @@ func TestValidateReviewerIsolationRejectsArbitraryNestedPRDFileCreation(t *testi
 	}
 }
 
+// TestValidateTaskIsolationAllowsMemoryDir é a regressão do conflito memory_persist × isolamento:
+// o hook memory_persist grava tasks/<prd>/memory/MEMORY.md APÓS a sessão; isso NÃO deve disparar
+// violação de isolamento (o subdir memory/ é gerenciado pelo harness, não pelo agente).
+func TestValidateTaskIsolationAllowsMemoryDir(t *testing.T) {
+	const prd = "/fake/project/tasks/prd-test"
+	currentTask := prd + "/task-1.0-test.md"
+
+	fsys := taskfs.NewFakeFileSystem()
+	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
+	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
+	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
+	fsys.Files[currentTask] = []byte("**Status:** pending\n")
+
+	snapshot, err := captureTaskIsolationSnapshot(prd, fsys)
+	if err != nil {
+		t.Fatalf("captureTaskIsolationSnapshot retornou erro inesperado: %v", err)
+	}
+
+	// Hook memory_persist grava MEMORY.md no subdir memory/ após a sessão.
+	fsys.Files[prd+"/memory/MEMORY.md"] = []byte("# Memory\n")
+	fsys.Files[prd+"/1.0_execution_report.md"] = []byte("# Generated\n")
+
+	if err := validateTaskIsolation(snapshot, prd, "1.0", currentTask, fsys); err != nil {
+		t.Fatalf("memory/MEMORY.md (hook memory_persist) não deve disparar violação de isolamento: %v", err)
+	}
+}
+
+// TestIsProtectedPRDFile_HarnessManagedDirsExcluded valida que os subdirs gerenciados pela stack
+// (memory/, .checkpoints/, .partials/) não são protegidos — artefatos da própria stack não devem
+// disparar violação de isolamento (regressão dos falsos-positivos MEMORY.md e .checkpoints/<n>.yaml).
+func TestIsProtectedPRDFile_HarnessManagedDirsExcluded(t *testing.T) {
+	const prd = "/fake/project/tasks/prd-test"
+	managed := []string{
+		prd + "/memory/MEMORY.md",
+		prd + "/.checkpoints/1.0.yaml",
+		prd + "/.partials/tasks.md.1.0.partial",
+	}
+	for _, mode := range []taskIsolationMode{taskIsolationModeExecutor, taskIsolationModeReviewer} {
+		for _, p := range managed {
+			if isProtectedPRDFile(prd, p, mode) {
+				t.Errorf("%s não deveria ser protegido (gerenciado pela stack, mode=%d)", p, mode)
+			}
+		}
+	}
+	// Arquivo arbitrário no PRD folder continua protegido.
+	if !isProtectedPRDFile(prd, prd+"/adr-001.md", taskIsolationModeReviewer) {
+		t.Error("adr-001.md deveria continuar protegido")
+	}
+}
+
 func TestRestoreTaskIsolationSnapshotAtRemovesUnexpectedProtectedPRDFiles(t *testing.T) {
 	const prd = "/fake/project/tasks/prd-test"
 

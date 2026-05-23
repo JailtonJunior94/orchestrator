@@ -1,6 +1,7 @@
 package taskloop
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"os/exec"
@@ -652,7 +653,7 @@ O aggregate Version valida o formato semantico.`
 	_ = fsys.WriteFile("/work/tasks/prd-feat/techspec.md", []byte(techspec))
 	_ = fsys.WriteFile("/work/tasks/prd-feat/prd.md", []byte(prd))
 
-	ctx := BuildPromptContext("tasks/prd-feat", "/work", fsys)
+	ctx := BuildPromptContext("tasks/prd-feat", "/work", fsys, nil, nil)
 
 	if !strings.Contains(ctx.Architecture, "internal/version") {
 		t.Errorf("Architecture deveria conter 'internal/version', obteve: %q", ctx.Architecture)
@@ -672,12 +673,153 @@ O aggregate Version valida o formato semantico.`
 func TestBuildPromptContextArquivosAusentes(t *testing.T) {
 	fsys := fs.NewFakeFileSystem()
 
-	ctx := BuildPromptContext("tasks/prd-inexistente", "/work", fsys)
+	ctx := BuildPromptContext("tasks/prd-inexistente", "/work", fsys, nil, nil)
 
 	if ctx.Architecture != "ler techspec.md para contexto de arquitetura" {
 		t.Errorf("Architecture com techspec ausente deveria ser fallback, obteve: %q", ctx.Architecture)
 	}
 	if ctx.References != "tests" {
 		t.Errorf("References sem conteudo deveria ser 'tests', obteve: %q", ctx.References)
+	}
+}
+
+// TestCopilotInvokerDeprecationWarning valida T-17 e T-18: o aviso de depreciacao do
+// copilotInvoker legado e emitido exatamente uma vez por instancia (sync.Once).
+//
+// T-17: primeira chamada a Invoke emite warning em stderr contendo os literais obrigatorios.
+// T-18: segunda chamada no mesmo copilotInvoker nao emite warning adicional (sync.Once).
+func TestCopilotInvokerDeprecationWarning(t *testing.T) {
+	dir := t.TempDir()
+	writeFakeBinary(t, dir, "copilot")
+
+	origPath := os.Getenv("PATH")
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+origPath)
+
+	t.Run("warns once", func(t *testing.T) {
+		var warnBuf bytes.Buffer
+
+		// nova instancia: sync.Once ainda nao disparou.
+		inv := &copilotInvoker{warnWriter: &warnBuf}
+
+		// T-17: primeira invocacao — warning deve aparecer.
+		if _, _, _, err := inv.Invoke(context.Background(), "prompt1", dir, ""); err != nil {
+			t.Fatalf("primeira Invoke retornou erro inesperado: %v", err)
+		}
+		firstOutput := warnBuf.String()
+		warnBuf.Reset()
+
+		requiredLiterals := []string{"modo legado", "ACP", "ADR-012"}
+		for _, lit := range requiredLiterals {
+			if !strings.Contains(firstOutput, lit) {
+				t.Errorf("T-17: warning nao contem literal obrigatorio %q\nwarning: %q", lit, firstOutput)
+			}
+		}
+		if firstOutput == "" {
+			t.Error("T-17: nenhum warning emitido na primeira invocacao")
+		}
+
+		// T-18: segunda invocacao — sync.Once ja disparou; warnBuf deve permanecer vazio.
+		if _, _, _, err := inv.Invoke(context.Background(), "prompt2", dir, ""); err != nil {
+			t.Fatalf("segunda Invoke retornou erro inesperado: %v", err)
+		}
+		secondOutput := warnBuf.String()
+		if secondOutput != "" {
+			t.Errorf("T-18: warning emitido novamente na segunda invocacao (sync.Once falhou)\noutput: %q", secondOutput)
+		}
+	})
+}
+
+// TestCodexInvokerDeprecationWarning_Helper e um helper de subprocesso para T-28/T-29.
+// Ativado apenas quando GO_TEST_CODEX_WARN_HELPER=1; nao aparece na lista de testes normais.
+func TestCodexInvokerDeprecationWarning_Helper(t *testing.T) {
+	if os.Getenv("GO_TEST_CODEX_WARN_HELPER") != "1" {
+		t.Skip("subprocesso helper; ative com GO_TEST_CODEX_WARN_HELPER=1")
+	}
+
+	dir := t.TempDir()
+	writeFakeBinary(t, dir, "codex")
+	origPath := os.Getenv("PATH")
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+origPath)
+
+	// captura stderr do processo atual via pipe interna substituindo os.Stderr
+	// nao e possivel substituir os.Stderr diretamente; usamos warnWriter injetado.
+	var warnBuf bytes.Buffer
+	inv := &codexInvoker{warnWriter: &warnBuf}
+
+	// T-28: primeira invocacao — warning deve aparecer.
+	if _, _, _, err := inv.Invoke(context.Background(), "prompt1", dir, ""); err != nil {
+		t.Fatalf("primeira Invoke retornou erro inesperado: %v", err)
+	}
+	firstOutput := warnBuf.String()
+	warnBuf.Reset()
+
+	requiredLiterals := []string{"WARNING: Codex CLI legado", "ADR-013"}
+	for _, lit := range requiredLiterals {
+		if !strings.Contains(firstOutput, lit) {
+			t.Errorf("T-28: warning nao contem literal obrigatorio %q\nwarning: %q", lit, firstOutput)
+		}
+	}
+	if firstOutput == "" {
+		t.Error("T-28: nenhum warning emitido na primeira invocacao")
+	}
+
+	// T-29: segunda invocacao — codexLegacyWarnOnce ja disparou; warnBuf deve permanecer vazio.
+	// NOTA: codexLegacyWarnOnce e package-level; a segunda invocacao no mesmo processo nao emite.
+	if _, _, _, err := inv.Invoke(context.Background(), "prompt2", dir, ""); err != nil {
+		t.Fatalf("segunda Invoke retornou erro inesperado: %v", err)
+	}
+	secondOutput := warnBuf.String()
+	if secondOutput != "" {
+		t.Errorf("T-29: warning emitido novamente na segunda invocacao (sync.Once falhou)\noutput: %q", secondOutput)
+	}
+}
+
+// TestCodexInvokerDeprecationWarning valida T-28 e T-29 via subprocesso isolado.
+// Usa GO_TEST_CODEX_WARN_HELPER=1 para acionar o helper acima em processo fresh,
+// garantindo que codexLegacyWarnOnce (package-level) nao tenha sido disparado antes.
+func TestCodexInvokerDeprecationWarning(t *testing.T) {
+	// Executa o helper como subprocesso em processo fresh para garantir sync.Once virgem.
+	cmd := exec.Command(os.Args[0], "-test.run=TestCodexInvokerDeprecationWarning_Helper", "-test.v")
+	cmd.Env = append(os.Environ(), "GO_TEST_CODEX_WARN_HELPER=1")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("subprocesso helper falhou:\nerr: %v\noutput:\n%s", err, out)
+	}
+	// Verifica que o helper nao reportou falha.
+	if strings.Contains(string(out), "FAIL") {
+		t.Errorf("subprocesso helper reportou falha:\n%s", out)
+	}
+}
+
+// TestCopilotInvokerArgsUnchanged verifica que o aviso de depreciacao nao altera os
+// argumentos passados ao subprocesso copilot (caminho legado preservado).
+func TestCopilotInvokerArgsUnchanged(t *testing.T) {
+	dir := t.TempDir()
+	writeFakeBinary(t, dir, "copilot")
+
+	origPath := os.Getenv("PATH")
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+origPath)
+
+	var warnBuf bytes.Buffer
+	inv := &copilotInvoker{warnWriter: &warnBuf}
+
+	stdout, _, exitCode, err := inv.Invoke(context.Background(), "execute task", dir, "")
+	if err != nil {
+		t.Fatalf("Invoke retornou erro inesperado: %v", err)
+	}
+	if exitCode != 0 {
+		t.Fatalf("exit code inesperado: %d", exitCode)
+	}
+
+	wantArgs := []string{"--autopilot", "--yolo", "-p", "execute task"}
+	got := strings.Split(strings.TrimRight(stdout, "\n"), "\n")
+	if len(got) != len(wantArgs) {
+		t.Fatalf("numero de args: got %d, want %d\ngot:  %v\nwant: %v",
+			len(got), len(wantArgs), got, wantArgs)
+	}
+	for i, want := range wantArgs {
+		if got[i] != want {
+			t.Errorf("arg[%d]: got %q, want %q", i, got[i], want)
+		}
 	}
 }

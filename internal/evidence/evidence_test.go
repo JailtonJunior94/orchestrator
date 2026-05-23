@@ -306,3 +306,69 @@ func TestValidate_KindPreserved(t *testing.T) {
 		t.Errorf("esperado Kind=%s, got %s", KindTask, r.Kind)
 	}
 }
+
+// ── Métricas Claude-2026 — validador permissivo (F4-Claude) ──────────────────
+// A seção "Métricas Claude-2026" é OPCIONAL no execution_report.md.
+// Presença ou ausência não deve alterar o resultado de Pass=true para relatório completo.
+
+func TestValidateTask_ClaudeMetricsSection_Absent_DoesNotBlock(t *testing.T) {
+	// Relatório completo SEM a seção de métricas → deve passar (ausência não bloqueia).
+	r := Validate([]byte(taskComplete), KindTask, nil)
+	if !r.Pass {
+		t.Errorf("Pass deve ser true sem seção Métricas Claude-2026; findings: %v", r.Findings)
+	}
+}
+
+func TestValidateTask_ClaudeMetricsSection_Present_DoesNotBlock(t *testing.T) {
+	// Relatório completo COM a seção de métricas → deve continuar passando.
+	withMetrics := taskComplete + `
+## Métricas Claude-2026
+| Métrica | Valor |
+|---|---|
+| cache_read_tokens | 150 |
+| cache_creation_tokens | 300 |
+| thinking_tokens | 42 |
+| tool_calls_normalized | 5 |
+`
+	r := Validate([]byte(withMetrics), KindTask, nil)
+	if !r.Pass {
+		t.Errorf("Pass deve ser true com seção Métricas Claude-2026; findings: %v", r.Findings)
+	}
+}
+
+// ── Métricas Gemini-2026 — validador permissivo (F4-Gemini, RF-20) ────────────
+// A seção "Métricas Gemini-2026" é OPCIONAL no execution_report.md.
+// Presença ou ausência não deve alterar o resultado de Pass=true para relatório completo.
+
+// T-37: TestEvidenceRendersGeminiMetricsSection — relatório com Gemini* não-zero renderiza tabela
+func TestEvidenceRendersGeminiMetricsSection_Present_DoesNotBlock(t *testing.T) {
+	// Relatório completo COM a seção de métricas Gemini → deve continuar passando.
+	withGeminiMetrics := taskComplete + `
+## Métricas Gemini-2026
+| Métrica | Valor |
+|---|---|
+| cache_read_tokens | 100 |
+| effective_context_tokens | 200 |
+| prompt_tokens_billed | 300 |
+| thoughts_tokens | 0 |
+`
+	r := Validate([]byte(withGeminiMetrics), KindTask, nil)
+	if !r.Pass {
+		t.Errorf("Pass deve ser true com seção Métricas Gemini-2026; findings: %v", r.Findings)
+	}
+}
+
+// T-38: TestEvidenceMissingGeminiMetricsDoesNotBlock — ausência da seção Gemini não bloqueia
+func TestEvidenceMissingGeminiMetricsDoesNotBlock(t *testing.T) {
+	// Relatório completo SEM a seção de métricas Gemini → deve passar (ausência não bloqueia).
+	r := Validate([]byte(taskComplete), KindTask, nil)
+	if !r.Pass {
+		t.Errorf("Pass deve ser true sem seção Métricas Gemini-2026; findings: %v", r.Findings)
+	}
+	// Garantir que nenhum finding menciona Gemini.
+	for _, f := range r.Findings {
+		if f.Label == "secao Métricas Gemini-2026" {
+			t.Error("nao esperado finding de 'secao Métricas Gemini-2026' — seção é opcional (RF-20)")
+		}
+	}
+}

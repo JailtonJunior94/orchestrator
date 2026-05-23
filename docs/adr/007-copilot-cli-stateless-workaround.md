@@ -1,6 +1,6 @@
 # ADR-007: Copilot CLI stateless workaround
 
-**Status:** Aceita  
+**Status:** Substituida por ADR-012  
 **Data:** 2026-04-20  
 **Autores:** -
 

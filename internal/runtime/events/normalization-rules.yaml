@@ -1,0 +1,78 @@
+# Tabelas de normalização de tool-calls por driver ACP.
+# Carregadas em runtime via go:embed (default embedded) e override por projeto
+# em .agents/normalization-rules.yaml local vence sobre embedded.
+# Referência: docs/research/compozy-adaptation-claude-2026.md §"Normalização de tool-calls"
+# version: 1 — schema fechado; versões desconhecidas causam erro no loader.
+
+version: 1
+
+# common_aliases: aliases compartilhados entre drivers que declaram inherit_common.
+# Espelha commonToolTitleAliases de compozy/internal/core/agent/tool_call_name.go:84.
+common_aliases:
+  bash:               bash
+  read_file:          read
+  write_file:         write
+  str_replace_editor: edit
+
+# inherit_common: lista de drivers que herdam common_aliases sem overrides.
+# Gemini permanece na lista para retrocompatibilidade; tabela explícita abaixo (RP-04)
+# prevalece sobre herança quando presente (resolveInherit não sobrescreve entrada explícita).
+inherit_common:
+  - gemini
+
+aliases:
+  claude:
+    # nome_raw : nome_normalizado
+    bash:               bash
+    read_file:          read
+    write_file:         write
+    str_replace_editor: edit
+
+  codex:
+    shell:        bash
+    search_query: web_search
+    image_query:  image_search
+
+  copilot:
+    run:   bash
+    fetch: web_search
+
+  gemini:
+    # RP-04: tabela explícita — não depende apenas de inherit_common.
+    # Materializa os aliases herdados de common_aliases como entradas explícitas.
+    # resolveInherit não sobrescreve esta entrada (entrada explícita prevalece).
+    bash:               bash
+    read_file:          read
+    write_file:         write
+    str_replace_editor: edit
+
+  cursor:
+    terminal:      bash
+    grep_search:   grep
+    file_search:   glob
+    read_file:     read
+    write_file:    write
+
+input_mappings:
+  # canonicalização de campos de input por driver
+  claude:
+    bash:
+      command: command
+  codex:
+    shell:
+      cmd: command  # Codex usa cmd; canonizar para command
+  copilot:
+    # RP-01: input_mappings para Copilot.
+    # Copilot expõe tool "run" (mapeada para bash via aliases.copilot).
+    # O campo de input já usa "command" nativamente — no-op verificado.
+    run:
+      command: command  # no-op verificado: Copilot já usa "command" como chave canônica
+  gemini:
+    # RP-01: input_mappings para Gemini.
+    # Gemini expõe tool "bash" com campo "command" — alinhado ao canônico.
+    bash:
+      command: command  # no-op verificado: Gemini já usa "command" como chave canônica
+  cursor:
+    read_file:
+      startLineNumberBaseOne: start_line
+      endLineNumberBaseOne:   end_line

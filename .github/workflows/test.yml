@@ -26,6 +26,11 @@ jobs:
       - name: Unit tests
         run: go test -coverprofile=coverage.out ./...
 
+      - name: Parity gate (RP-03 / RG-03)
+        # Gate obrigatório de paridade cross-CLI derivado de ADR-008: invariantes (incl. INV-30/INV-32)
+        # e a suíte RP-03 (normalização idêntica nas 4 CLIs). Falha o CI se a paridade quebrar.
+        run: go test -count=1 ./internal/parity/...
+
       - name: Coverage report
         run: go tool cover -func=coverage.out
 
@@ -116,7 +121,11 @@ jobs:
           go-version-file: go.mod
 
       - name: Integration tests
-        run: go test -tags=integration ./internal/integration/... ./internal/skills/...
+        # Inclui ./tests/integration/... (e2e claude/gemini via acpfake) — antes fora do gate,
+        # o que dava CI verde enganoso (a regressão do spec_drift só aparecia aqui). Todos os
+        # e2e usam fakes (acpfake), são determinísticos; testes acp_live (binário real) ficam
+        # na build tag acp_live (job nightly), fora deste gate.
+        run: go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/...
 
       - name: Budget
         run: make budget

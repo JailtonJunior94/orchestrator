@@ -97,6 +97,29 @@ make coverage        # relatorio de cobertura
 make bench           # benchmarks
 ```
 
+### Instalacao e Verificacao (Fundacao Portatil)
+
+```bash
+# Instalar em um projeto (auto-deteccao de agentes)
+ai-spec-harness install .
+
+# Instalar selecionando ferramentas manualmente
+ai-spec-harness install . --tools claude,gemini
+
+# Instalar globalmente em ~/.aispec (escopo global, opt-in)
+ai-spec-harness install --global
+
+# Verificar estado dos assets instalados (current/missing/drifted)
+ai-spec-harness verify .
+ai-spec-harness verify --global
+
+# Instalar em modo copy (sem symlinks)
+ai-spec-harness install . --mode copy
+
+# Simular sem executar
+ai-spec-harness install . --dry-run
+```
+
 ## Convencoes
 
 | Aspecto | Regra |
@@ -150,7 +173,48 @@ internal/embedded/
 
 Nao inventar contexto ausente. Nao assumir versao sem verificar. Nao alterar comportamento publico sem registrar. Adaptar exemplos ao contexto real.
 
+## Configuracao
+
+O harness usa hierarquia de config em cascata com precedência determinística:
+
+```
+flags CLI  >  workspace (.claude/config.yaml)  >  global (~/.aispec/config.yaml)  >  defaults built-in
+```
+
+- **Config global:** `~/.aispec/config.yaml` — defaults reutilizaveis entre projetos (opt-in).
+- **Config de projeto:** descoberta por upward-walk a partir do CWD; candidatos: `.aispec/config.yaml` > `.claude/config.yaml` > `.agents/config.yaml`.
+- **Compatibilidade:** sem config global e a partir da raiz do repo, comportamento identico ao atual (F1, zero regressao).
+
+Chaves operacionais aceitas (zero-value preserva comportamento F1):
+`timeout`, `max_retries`, `retry_backoff_multiplier`, `concurrent`, `batch_size`, `default_tool`.
+
+Ver [`docs/config-hierarchy.md`](docs/config-hierarchy.md) para referencia completa.
+
 ## Documentacao
 
+- [Guia de Instalacao Universal](docs/guia-instalacao-universal.md) — bootstrap portatil em qualquer codebase, deteccao automatica, escopo global, verify
+- [Hierarquia de Configuracao](docs/config-hierarchy.md) — precedencia flags > workspace > global > built-in, upward-walk, chaves disponíveis
 - [Guia de troubleshooting](docs/troubleshooting.md) — problemas comuns com sintoma, causa, solucao e verificacao
 - [Ciclo de telemetria](docs/telemetry-feedback-cycle.md) — feedback loop com GOVERNANCE_TELEMETRY
+
+## ADRs
+
+| ADR | Titulo | Status |
+|-----|--------|--------|
+| [001](tasks/adr/001-go-embed-baseline.md) | Assets via go:embed | Aceita |
+| [002](tasks/adr/002-fake-filesystem-testes.md) | FakeFileSystem vs afero | Aceita |
+| [003](tasks/adr/003-paridade-semantica.md) | Invariantes semanticas vs diff textual | Aceita |
+| [004](tasks/adr/004-lazy-loading-referencias.md) | References sob demanda | Aceita |
+| [005](tasks/adr/005-skills-lock-sha256.md) | Lock file SHA-256 | Aceita |
+| [006](docs/adr/006-telemetria-feedback-cycle.md) | Telemetria opt-in append-only | Aceita |
+| [007](docs/adr/007-copilot-cli-stateless-workaround.md) | Copilot injecao manual | Substituida por ADR-012 |
+| [008](docs/adr/008-parity-multi-tool-invariants.md) | 29 invariantes 3 niveis | Aceita |
+| [ADR-009](tasks/adr/009-acp-protocol-adoption.md) | Adocao do ACP via coder/acp-go-sdk para invocacao de agentes | Aceita |
+| [ADR-010](tasks/prd-acp-runtime-claude/adr-010-event-tagged-union.md) | runtime.Event como struct tagged union | Aceita |
+| [ADR-012](tasks/adr/012-copilot-cli-acp-native.md) | Copilot CLI como runtime ACP nativo | Aceita |
+| [ADR-013](tasks/adr/013-codex-cli-acp-native.md) | Codex CLI como runtime ACP nativo | Aceita |
+| [ADR-015](tasks/adr/015-gemini-cli-acp-native.md) | Gemini CLI ACP nativo (ADR-015) | Proposta |
+| [ADR-016](tasks/prd-fundacao-portatil/adr-016-config-hierarquico-universal.md) | Config hierarquico universal (global+projeto, upward-walk, precedencia) | Proposta |
+| [ADR-017](tasks/prd-fundacao-portatil/adr-017-fallback-launcher-chain.md) | Generalizacao de fallback launchers (cadeia generica ordenada) | Proposta |
+| [ADR-018](tasks/prd-fundacao-portatil/adr-018-runtimeconfig-retry-backpressure.md) | RuntimeConfig unificado, retry com backoff e sessao ACP com backpressure observavel | Proposta |
+| [ADR-019](tasks/prd-fundacao-portatil/adr-019-instalador-portatil-detect-verify.md) | Instalador portatil: auto-deteccao de agentes, escopo global e verify file-first | Proposta |

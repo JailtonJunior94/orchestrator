@@ -1,12 +1,6 @@
 package config
 
-import (
-	"fmt"
-	"os"
-	"path/filepath"
-
-	"gopkg.in/yaml.v3"
-)
+import "fmt"
 
 // Runtime agrupa configuracao de runtime consumida por skills, scripts e
 // pelo orquestrador internal/taskloop. Carregada de .claude/config.yaml
@@ -14,12 +8,26 @@ import (
 //
 // Defaults preservam o comportamento anterior a este arquivo (tasks/prd-<slug>),
 // garantindo retrocompatibilidade com projetos que nao fornecam config.yaml.
+//
+// Chaves operacionais opcionais (zero-value => default/F1):
+//   - Timeout: duracao de inatividade (string parseable por time.ParseDuration); "" = sem limite.
+//   - MaxRetries: numero maximo de retentativas; 0 = uma tentativa (F1).
+//   - RetryBackoffMultiplier: multiplicador exponencial; <=0 = sem espera.
+//   - Concurrent: grau de paralelismo; <=0 = 1 (sequencial, F1).
+//   - BatchSize: tamanho do lote; <=0 = 1 (F1).
+//   - DefaultTool: ferramenta padrao quando nao especificada; "" = sem padrao.
 type Runtime struct {
-	TasksRoot         string  `yaml:"tasks_root"`
-	PRDPrefix         string  `yaml:"prd_prefix"`
-	EvidenceDir       string  `yaml:"evidence_dir"`
-	CoverageThreshold float64 `yaml:"coverage_threshold"`
-	LanguageDefault   string  `yaml:"language_default"`
+	TasksRoot               string  `yaml:"tasks_root"`
+	PRDPrefix               string  `yaml:"prd_prefix"`
+	EvidenceDir             string  `yaml:"evidence_dir"`
+	CoverageThreshold       float64 `yaml:"coverage_threshold"`
+	LanguageDefault         string  `yaml:"language_default"`
+	Timeout                 string  `yaml:"timeout"`
+	MaxRetries              int     `yaml:"max_retries"`
+	RetryBackoffMultiplier  float64 `yaml:"retry_backoff_multiplier"`
+	Concurrent              int     `yaml:"concurrent"`
+	BatchSize               int     `yaml:"batch_size"`
+	DefaultTool             string  `yaml:"default_tool"`
 }
 
 // DefaultRuntime retorna a configuracao com defaults compativeis com o layout atual.
@@ -33,56 +41,14 @@ func DefaultRuntime() Runtime {
 	}
 }
 
-// runtimeCandidates lista os caminhos consultados, em ordem.
-// O primeiro existente vence. Caminhos sao relativos a repoRoot.
-func runtimeCandidates() []string {
-	return []string{
-		filepath.Join(".claude", "config.yaml"),
-		filepath.Join(".agents", "config.yaml"),
-	}
-}
-
-// LoadRuntime resolve config.yaml dentro de repoRoot e retorna a configuracao
-// resultante. Quando nenhum arquivo existir, retorna DefaultRuntime sem erro.
+// LoadRuntime e um wrapper fino sobre DefaultResolver para compatibilidade retroativa.
+// Resolve a configuracao a partir de repoRoot como CWD, sem overrides e sem config global.
+// Quando nenhum arquivo existir, retorna DefaultRuntime sem erro.
 // Quando o arquivo existir mas estiver malformado, propaga erro descritivo.
 func LoadRuntime(repoRoot string) (Runtime, error) {
-	cfg := DefaultRuntime()
-	if repoRoot == "" {
-		return cfg, nil
-	}
-
-	for _, rel := range runtimeCandidates() {
-		abs := filepath.Join(repoRoot, rel)
-		data, err := os.ReadFile(abs)
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return cfg, fmt.Errorf("ler %s: %w", rel, err)
-		}
-		if err := yaml.Unmarshal(data, &cfg); err != nil {
-			return cfg, fmt.Errorf("parse %s: %w", rel, err)
-		}
-		applyRuntimeDefaults(&cfg)
-		return cfg, nil
-	}
-
-	return cfg, nil
-}
-
-// applyRuntimeDefaults preenche campos vazios apos parse parcial, preservando
-// retrocompatibilidade com arquivos que so declaram subconjunto das chaves.
-func applyRuntimeDefaults(cfg *Runtime) {
-	d := DefaultRuntime()
-	if cfg.TasksRoot == "" {
-		cfg.TasksRoot = d.TasksRoot
-	}
-	if cfg.PRDPrefix == "" {
-		cfg.PRDPrefix = d.PRDPrefix
-	}
-	if cfg.CoverageThreshold == 0 {
-		cfg.CoverageThreshold = d.CoverageThreshold
-	}
+	r := NewDefaultResolver()
+	r.HomeDir = "" // sem config global: compatibilidade F1 (RF-16)
+	return r.Resolve(repoRoot, Runtime{})
 }
 
 // EnvVars projeta a configuracao em variaveis de ambiente exportadas pelo

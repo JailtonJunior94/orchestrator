@@ -66,7 +66,7 @@ func (f *OSFileSystem) CopyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	return os.Chmod(dst, info.Mode())
+	return os.Chmod(dst, writableFileMode(info.Mode()))
 }
 
 func (f *OSFileSystem) CopyDir(src, dst string) error {
@@ -82,7 +82,11 @@ func (f *OSFileSystem) CopyDir(src, dst string) error {
 		target := filepath.Join(dst, rel)
 
 		if info.IsDir() {
-			return os.MkdirAll(target, info.Mode())
+			mode := writableDirMode(info.Mode())
+			if err := os.MkdirAll(target, mode); err != nil {
+				return err
+			}
+			return os.Chmod(target, mode)
 		}
 		return f.CopyFile(path, target)
 	})
@@ -101,6 +105,7 @@ func (f *OSFileSystem) Remove(path string) error {
 }
 
 func (f *OSFileSystem) RemoveAll(path string) error {
+	_ = chmodTreeWritable(path)
 	return os.RemoveAll(path)
 }
 
@@ -189,4 +194,31 @@ func (f *OSFileSystem) Writable(path string) bool {
 		return false
 	}
 	return info.Mode().Perm()&0o200 != 0
+}
+
+func chmodTreeWritable(path string) error {
+	if _, err := os.Lstat(path); err != nil {
+		return err
+	}
+
+	return filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		switch {
+		case info.IsDir():
+			_ = os.Chmod(p, writableDirMode(info.Mode()))
+		case info.Mode().IsRegular():
+			_ = os.Chmod(p, writableFileMode(info.Mode()))
+		}
+		return nil
+	})
+}
+
+func writableDirMode(mode os.FileMode) os.FileMode {
+	return mode.Perm() | 0o700
+}
+
+func writableFileMode(mode os.FileMode) os.FileMode {
+	return mode.Perm() | 0o600
 }

@@ -200,12 +200,35 @@ func estimateTokens(text string) int {
 	return int(math.Round(float64(len(text)) / 3.5))
 }
 
-// ToolBudgets define o limite maximo de tokens estimados por ferramenta.
+// ToolBudgets define o limite maximo de tokens estimados por ferramenta (WindowStandard/default).
 var ToolBudgets = map[string]int{
 	"claude":  70000,
 	"gemini":  4000,
 	"codex":   13000,
 	"copilot": 2000,
+}
+
+// ToolBudgetsLarge define o limite generoso de tokens por ferramenta para WindowLarge (ADR-023).
+// Aplicado quando ContextWindow.Class() == WindowLarge; driver sem entrada cai em ToolBudgets (sem regressão).
+var ToolBudgetsLarge = map[string]int{
+	"gemini": 500_000, // 500k tokens — janela de 1M; teto generoso para prompts grandes
+}
+
+// CheckBudgetForClass verifica o budget levando em conta a WindowClass (ADR-023).
+// WindowLarge: tenta ToolBudgetsLarge[tool]; se ausente, cai em ToolBudgets[tool].
+// WindowStandard (ou zero-value): usa ToolBudgets[tool] (comportamento F1 preservado).
+func CheckBudgetForClass(content string, tool string, large bool) (tokens int, limit int, ok bool) {
+	tokens = estimateTokens(content)
+	if large {
+		if l, exists := ToolBudgetsLarge[tool]; exists {
+			return tokens, l, tokens <= l
+		}
+	}
+	l, exists := ToolBudgets[tool]
+	if !exists {
+		return tokens, 0, true
+	}
+	return tokens, l, tokens <= l
 }
 
 // CheckBudget estima tokens do conteudo e verifica se esta dentro do budget da ferramenta.

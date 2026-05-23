@@ -19,11 +19,16 @@ type Frontmatter struct {
 	MaxDepth    int
 }
 
-// ParseFrontmatter extrai version e description do frontmatter YAML de um SKILL.md.
-func ParseFrontmatter(content []byte) Frontmatter {
-	var fm Frontmatter
+// ParseFrontmatterFields extrai todos os campos do bloco frontmatter YAML como um mapa
+// de chave → valor. Campos de nível raiz são mapeados diretamente (ex.: "name" → "claude").
+// Campos de blocos indentados são mapeados via dot-notation (ex.: "runtime.ide" → "claude").
+// Apenas blocos de um nível de indentação são suportados (ex.: "runtime.ide", não "a.b.c").
+// A função é agnóstica ao esquema — serve tanto para SKILL.md quanto para AGENT.md.
+func ParseFrontmatterFields(content []byte) map[string]string {
+	fields := make(map[string]string)
 	scanner := bufio.NewScanner(strings.NewReader(string(content)))
 	inFrontmatter := false
+	currentBlock := "" // prefixo do bloco indentado atual (ex.: "runtime")
 
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -37,32 +42,67 @@ func ParseFrontmatter(content []byte) Frontmatter {
 		if !inFrontmatter {
 			continue
 		}
-		if strings.HasPrefix(line, "version:") {
-			fm.Version = strings.TrimSpace(strings.TrimPrefix(line, "version:"))
+
+		// Linha indentada: pertence ao bloco atual.
+		if currentBlock != "" && len(line) > 0 && (line[0] == ' ' || line[0] == '\t') {
+			trimmed := strings.TrimSpace(line)
+			if idx := strings.Index(trimmed, ":"); idx > 0 {
+				key := strings.TrimSpace(trimmed[:idx])
+				val := strings.TrimSpace(trimmed[idx+1:])
+				fields[currentBlock+"."+key] = val
+			}
+			continue
 		}
-		if strings.HasPrefix(line, "name:") {
-			fm.Name = strings.TrimSpace(strings.TrimPrefix(line, "name:"))
+
+		// Linha de nível raiz: encerra qualquer bloco indentado anterior.
+		currentBlock = ""
+
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
 		}
-		if strings.HasPrefix(line, "description:") {
-			fm.Description = strings.TrimSpace(strings.TrimPrefix(line, "description:"))
+
+		idx := strings.Index(trimmed, ":")
+		if idx <= 0 {
+			continue
 		}
-		if strings.HasPrefix(line, "triggers:") {
-			fm.Triggers = parseDependsOn(strings.TrimSpace(strings.TrimPrefix(line, "triggers:")))
+
+		key := strings.TrimSpace(trimmed[:idx])
+		val := strings.TrimSpace(trimmed[idx+1:])
+
+		if val == "" {
+			// Valor vazio: início de um bloco indentado.
+			currentBlock = key
+			continue
 		}
-		if strings.HasPrefix(line, "lang:") {
-			fm.Lang = strings.TrimSpace(strings.TrimPrefix(line, "lang:"))
-		}
-		if strings.HasPrefix(line, "link_mode:") {
-			fm.LinkMode = strings.TrimSpace(strings.TrimPrefix(line, "link_mode:"))
-		}
-		if strings.HasPrefix(line, "depends_on:") {
-			fm.DependsOn = parseDependsOn(strings.TrimSpace(strings.TrimPrefix(line, "depends_on:")))
-		}
-		if strings.HasPrefix(line, "max_depth:") {
-			val := strings.TrimSpace(strings.TrimPrefix(line, "max_depth:"))
-			fm.MaxDepth, _ = strconv.Atoi(val)
-		}
+
+		fields[key] = val
 	}
+	return fields
+}
+
+// ParseFrontmatter extrai version e description do frontmatter YAML de um SKILL.md.
+// É um wrapper fino sobre ParseFrontmatterFields que mapeia o resultado para a struct Frontmatter.
+func ParseFrontmatter(content []byte) Frontmatter {
+	fields := ParseFrontmatterFields(content)
+	var fm Frontmatter
+
+	fm.Name = fields["name"]
+	fm.Version = fields["version"]
+	fm.Description = fields["description"]
+	fm.Lang = fields["lang"]
+	fm.LinkMode = fields["link_mode"]
+
+	if v, ok := fields["triggers"]; ok {
+		fm.Triggers = parseDependsOn(v)
+	}
+	if v, ok := fields["depends_on"]; ok {
+		fm.DependsOn = parseDependsOn(v)
+	}
+	if v, ok := fields["max_depth"]; ok {
+		fm.MaxDepth, _ = strconv.Atoi(v)
+	}
+
 	return fm
 }
 
@@ -79,7 +119,7 @@ func SemverGreater(a, b string) bool {
 	aParts := parseSemver(a)
 	bParts := parseSemver(b)
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if aParts[i] > bParts[i] {
 			return true
 		}
@@ -154,7 +194,7 @@ func ValidateFrontmatter(content []byte, dirName string, availableSkills []strin
 // hasFrontmatterBlock verifica se o conteudo possui um bloco ---...--- valido.
 func hasFrontmatterBlock(content []byte) bool {
 	count := 0
-	for _, line := range strings.Split(string(content), "\n") {
+	for line := range strings.SplitSeq(string(content), "\n") {
 		if strings.TrimSpace(line) == "---" {
 			count++
 			if count >= 2 {
@@ -196,7 +236,7 @@ func isValidPrerelease(v string) bool {
 		return false
 	}
 
-	for _, part := range strings.Split(v, ".") {
+	for part := range strings.SplitSeq(v, ".") {
 		if part == "" {
 			return false
 		}
