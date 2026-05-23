@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.23.2 (2026-05-23)
+
+### Bug Fixes
+- **sync:** nao marcar skills/lib como read-only (quebrava o git) (7dbdc0b)
+
 ## 0.23.1 (2026-05-23)
 
 ### Refactoring
