@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.23.1 (2026-05-23)
+
+### Refactoring
+- **sdd:** migra root de artefatos de tasks/ para .specs/ (833bdd1)
+
+### Chores
+- **cleanup:** remove artefatos obsoletos e traces versionados (f503e3f)
+
 ## 0.23.0 (2026-05-23)
 
 ### Features
