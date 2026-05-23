@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-gemini-cli-acp-2026/9.0_execution_report.md
+summary: "Documentacao consolidada F0..F5-Gemini: GEMINI.md reescrito (5 secoes Runtime Capabilities), ADR-015 em AGENTS.md, 7 entradas CHANGELOG, secao Gemini-2026 em telemetry-feedback-cycle.md"
+timestamp: "2026-05-22T00:00:00Z"

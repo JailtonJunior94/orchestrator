@@ -7,7 +7,7 @@
 #   bash .claude/hooks/post-wave.sh <prd-slug> <wave-id> [results-yaml-file]
 #
 # Comportamento:
-#   - Cria/atualiza tasks/prd-<slug>/_orchestration_report.partial.md
+#   - Cria/atualiza .specs/prd-<slug>/_orchestration_report.partial.md
 #   - Append-only: cada chamada adiciona uma seção da wave
 #   - Quando o orquestrador concluir todas as waves, fica responsavel por
 #     renomear .partial.md -> _orchestration_report.md (rename atomico)
@@ -28,7 +28,7 @@ WAVE_ID="$2"
 RESULTS_FILE="${3:-}"
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-TASKS_ROOT="${AI_TASKS_ROOT:-tasks}"
+TASKS_ROOT="${AI_TASKS_ROOT:-.specs}"
 PRD_PREFIX="${AI_PRD_PREFIX:-prd-}"
 PRD_DIR="$REPO_ROOT/$TASKS_ROOT/$PRD_PREFIX$PRD_SLUG"
 PARTIAL_MD="$PRD_DIR/_orchestration_report.partial.md"

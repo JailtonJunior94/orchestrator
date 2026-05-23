@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-copilot-acp-spec/10.0_execution_report.md
+summary: "Smoke copilot --acp executado: probe bug fix (FixedArgs passados ao NewBinaryLauncher), 51 eventos ACP, 3 unknowns Copilot-específicos, cancel_reason=permission_denied, go test 100% verde"
+timestamp: "2026-05-21T15:30:00Z"

@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-claude-cli-acp-2026/7.0_execution_report.md
+summary: "Métricas Claude-2026 (cache/thinking tokens) extraídas via ExtractClaudeMetrics; seção opcional no report; 4 entries telemetria opt-in; make test verde (83.6%); 31 invariantes verdes"
+timestamp: "2026-05-21T00:00:00Z"

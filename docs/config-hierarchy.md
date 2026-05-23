@@ -26,7 +26,7 @@ regressão) quando nenhuma camada superior está presente.
 
 ```yaml
 # valores default (implícitos — sem arquivo necessário)
-tasks_root: tasks
+tasks_root: .specs
 prd_prefix: prd-
 evidence_dir: ""       # zero-value => sem subdir fixo
 coverage_threshold: 70 # porcentagem; zero-value => 70%
@@ -47,7 +47,7 @@ defaults built-in.
 
 ```yaml
 # ~/.aispec/config.yaml (exemplo)
-tasks_root: tasks
+tasks_root: .specs
 prd_prefix: prd-
 evidence_dir: evidence
 coverage_threshold: 0.80
@@ -78,7 +78,7 @@ Campos presentes no arquivo do projeto sobrescrevem a config global campo a camp
 
 ```yaml
 # .claude/config.yaml (exemplo de projeto)
-tasks_root: tasks
+tasks_root: .specs
 prd_prefix: prd-
 evidence_dir: evidence/tasks
 coverage_threshold: 0.90  # sobrescreve o global (0.80)
@@ -91,7 +91,7 @@ Flags passadas diretamente na linha de comando sobrescrevem todas as camadas. Ap
 
 ```bash
 # Exemplo: sobrescrever tool e timeout em runtime
-ai-spec-harness task-loop --tool gemini --timeout 10m tasks/prd-meu-prd
+ai-spec-harness task-loop --tool gemini --timeout 10m .specs/prd-meu-prd
 ```
 
 ---
@@ -121,7 +121,7 @@ Formato **YAML**. Consistente com `.claude/config.yaml` e `.agents/config.yaml` 
 
 | Chave | Tipo | Padrão | Descrição |
 |-------|------|--------|-----------|
-| `tasks_root` | string | `tasks` | Diretório raiz das tasks |
+| `tasks_root` | string | `.specs` | Diretório raiz dos artefatos SDD |
 | `prd_prefix` | string | `prd-` | Prefixo de diretórios PRD |
 | `evidence_dir` | string | `evidence` | Diretório de evidências |
 | `coverage_threshold` | float | `0.75` | Cobertura mínima de testes (0–1) |
@@ -137,7 +137,7 @@ Formato **YAML**. Consistente com `.claude/config.yaml` e `.agents/config.yaml` 
 
 ```yaml
 # .aispec/config.yaml ou .claude/config.yaml
-tasks_root: tasks
+tasks_root: .specs
 prd_prefix: prd-
 evidence_dir: evidence
 coverage_threshold: 0.80
@@ -190,7 +190,7 @@ para não quebrar chamadores existentes.
 
 ## Referências
 
-- [ADR-016](../tasks/prd-fundacao-portatil/adr-016-config-hierarquico-universal.md) — Decisão arquitetural da config hierárquica
+- [ADR-016](../.specs/prd-fundacao-portatil/adr-016-config-hierarquico-universal.md) — Decisão arquitetural da config hierárquica
 - [Guia de Instalação Universal](guia-instalacao-universal.md) — Bootstrap portátil
 - `internal/config/resolver.go` — Implementação do `DefaultResolver`
 - `internal/config/runtime.go` — Tipo `Runtime` e `LoadRuntime` (wrapper de compat)

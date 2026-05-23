@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-copilot-acp-spec/5.0_execution_report.md
+summary: "Tabela runtimeACPCatalog implementada em cmd/ai_spec_harness/task_loop.go; validação --runtime=acp usa catálogo em vez de literal claude; T-13/T-14/T-15 verdes"
+timestamp: "2026-05-21T00:00:00Z"

@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-func TestDefaultRuntimeBackwardsCompatible(t *testing.T) {
+func TestDefaultRuntimeUsesSpecRoot(t *testing.T) {
 	cfg := DefaultRuntime()
-	if cfg.TasksRoot != "tasks" {
+	if cfg.TasksRoot != ".specs" {
 		t.Fatalf("TasksRoot default invalido: %q", cfg.TasksRoot)
 	}
 	if cfg.PRDPrefix != "prd-" {
@@ -71,7 +71,7 @@ func TestLoadRuntimeFillsPartialFile(t *testing.T) {
 	if cfg.EvidenceDir != "custom/evidence" {
 		t.Fatalf("EvidenceDir esperado 'custom/evidence', got %q", cfg.EvidenceDir)
 	}
-	if cfg.TasksRoot != "tasks" {
+	if cfg.TasksRoot != ".specs" {
 		t.Fatalf("TasksRoot deveria fallback para default, got %q", cfg.TasksRoot)
 	}
 	if cfg.PRDPrefix != "prd-" {

@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-paridade-cross-cli/8.0_execution_report.md
+summary: "Task 8.0 concluida e validada (testes+lint+integracao verdes; review APPROVED)"
+timestamp: 2026-05-22T20:53:20Z

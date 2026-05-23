@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-agent-registry-declarativo/5.0_execution_report.md
+summary: "Implementados precedence.go e prompt.go em internal/agents/ com todos os testes T-10/T-11/T-12/T-15/T-16 passando"
+timestamp: "2026-05-21T00:00:00Z"

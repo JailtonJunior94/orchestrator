@@ -109,9 +109,9 @@ Depois de decidir o fluxo, use estes pontos de apoio:
 
 ## Bundle Canonico de Referencia
 
-O bundle de referencia deste projeto deve viver em `tasks/prd-<slug>/`, com `prd.md`, `techspec.md`, `tasks.md`, `task-*.md` e execution report rastreavel.
+O bundle de referencia deste projeto deve viver em `.specs/prd-<slug>/`, com `prd.md`, `techspec.md`, `tasks.md`, `task-*.md` e execution report rastreavel.
 
-Se esse bundle ainda nao existir na branch atual, trate isso como sinal de que o fluxo documental ainda nao fechou ate a etapa exemplar. Nesta feature, o contrato desse bundle esta definido na task `6.0`, em `tasks/prd-governance-playbook-evolution/task-6.0-canonical-reference-bundle.md`.
+Se esse bundle ainda nao existir na branch atual, trate isso como sinal de que o fluxo documental ainda nao fechou ate a etapa exemplar. Nesta feature, o contrato desse bundle esta definido na task `6.0`, em `.specs/prd-governance-playbook-evolution/task-6.0-canonical-reference-bundle.md`.
 
 ## Sequencia Recomendada em Poucos Passos
 

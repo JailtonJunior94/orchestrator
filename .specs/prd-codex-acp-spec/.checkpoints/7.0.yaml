@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-codex-acp-spec/7.0_execution_report.md
+summary: "Service.Execute propaga ReasoningEffort/AccessMode/AddDirs para Job via acpInvoker; codex adicionado ao acpSpecCatalog; T-26/T-27/T-32 verdes; Gate R-08 zero."
+timestamp: "2026-05-21T00:00:00Z"

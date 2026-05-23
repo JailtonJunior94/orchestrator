@@ -424,7 +424,7 @@ func TestGenerateCodexAgents_noSkillFiles(t *testing.T) {
 func TestGenerate_executeTaskYAMLContract_allTools(t *testing.T) {
 	const (
 		statusLine     = "status: done | blocked | failed | needs_input"
-		reportPathLine = "report_path: tasks/prd-<slug>/<id>_execution_report.md"
+		reportPathLine = "report_path: .specs/prd-<slug>/<id>_execution_report.md"
 		summaryLine    = "summary: <1 linha>"
 	)
 

@@ -22,7 +22,7 @@ Load complete when: tarefa envolve startup, shutdown ou ordem de inicialização
 ## Riscos Universais
 - Shutdown abrupto = 502 no load balancer.
 - Timeout > terminationGracePeriodSeconds = kill forcado.
-- Leak de goroutines/tasks/threads sem cancelamento.
+- Leak de goroutines, tasks ou threads sem cancelamento.
 - Telemetry perdida por falta de flush.
 - Consumer commitando offset de mensagem nao-processada.
 

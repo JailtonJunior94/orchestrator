@@ -15,7 +15,7 @@ import "strconv"
 // Constantes do runtime Codex via ACP adapter @zed-industries/codex-acp.
 // Política de atualização (ADR-009 + ADR-013):
 //   - CodexNpmVersion e CodexSDKVersion são constantes Go pinadas. Nunca usar @latest.
-//   - CodexNpmVersion só é alterada via processo audit/ (tasks/templates/skill-upgrade-decision.md).
+//   - CodexNpmVersion só é alterada via processo audit/ (.specs/templates/skill-upgrade-decision.md).
 //   - CodexSDKVersion é mantida em sincronia com go.mod por scripts/sync-acp-sdk-version.sh.
 const (
 	// CodexNpmPackage é o nome do pacote npm canônico do Codex ACP adapter.
@@ -65,7 +65,7 @@ func Codex() Spec {
 				FixedArgs: []string{"--yes", CodexNpmPackage + "@" + CodexNpmVersion},
 			},
 		},
-		"",               // AccessModeFlag vazio (ADR-013 D-07)
+		"", // AccessModeFlag vazio (ADR-013 D-07)
 		CodexSDKVersion,
 		CodexNpmVersion,
 		CodexNpmPackage,

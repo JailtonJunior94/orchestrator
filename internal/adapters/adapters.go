@@ -30,7 +30,7 @@ var ProcessualSkills = []string{
 // DEVE retornar. Mantido aqui (em vez de embutido na instruction) para garantir
 // paridade textual entre Claude/Codex/Gemini/Copilot — execute-all-tasks valida
 // formato canonico em cadeia de 4 passos (status, report_path, summary).
-const executeTaskYAMLContract = "status: done | blocked | failed | needs_input\nreport_path: tasks/prd-<slug>/<id>_execution_report.md\nsummary: <1 linha>"
+const executeTaskYAMLContract = "status: done | blocked | failed | needs_input\nreport_path: .specs/prd-<slug>/<id>_execution_report.md\nsummary: <1 linha>"
 
 type skillMeta struct {
 	claudeName  string

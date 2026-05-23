@@ -354,13 +354,13 @@ A escolha de **Agent Registry declarativo** como primeiro incremento é estraté
 
 3. **Reuso máximo de código existente**. `internal/skills/frontmatter.go` (parser YAML) e `internal/skills/schema.go` (JSON Schema validation) são reaproveitáveis com pequena generalização. `specs.Launcher` é mantido — `Agent` resolvido produz um `Spec`, não substitui.
 
-A Fase 1 produz um PRD, um TechSpec e um conjunto de tasks executáveis no padrão já estabelecido pelo `tasks/prd-acp-runtime-claude/`. As Fases 2–5 são tratadas como PRDs futuros independentes, conforme seção de Continuidade abaixo.
+A Fase 1 produz um PRD, um TechSpec e um conjunto de tasks executáveis no padrão já estabelecido pelo `.specs/prd-acp-runtime-claude/`. As Fases 2–5 são tratadas como PRDs futuros independentes, conforme seção de Continuidade abaixo.
 
 ---
 
 ## Próximos PRDs (Continuidade)
 
-> **Estado em 2026-05-21**: Fase 1 entregue como PRD/TechSpec/Tasks em [`tasks/prd-agent-registry-declarativo/`](../../tasks/prd-agent-registry-declarativo/) (ADR-011 em [`tasks/adr/011-agent-registry-declarativo.md`](../../tasks/adr/011-agent-registry-declarativo.md)). As Fases 2–5 abaixo são PRDs **futuros independentes** com escopo bruto e dependências mapeadas. Cada uma é candidata a virar um par PRD+TechSpec próprio quando priorizada.
+> **Estado em 2026-05-21**: Fase 1 entregue como PRD/TechSpec/Tasks em [`.specs/prd-agent-registry-declarativo/`](../../.specs/prd-agent-registry-declarativo/) (ADR-011 em [`.specs/adr/011-agent-registry-declarativo.md`](../../.specs/adr/011-agent-registry-declarativo.md)). As Fases 2–5 abaixo são PRDs **futuros independentes** com escopo bruto e dependências mapeadas. Cada uma é candidata a virar um par PRD+TechSpec próprio quando priorizada.
 
 ### F2 — MCP Integration por Agente
 
@@ -438,7 +438,7 @@ A Fase 1 produz um PRD, um TechSpec e um conjunto de tasks executáveis no padr�
 
 | Fase | Status | PRD | Dependências | Risco | Esforço |
 |---|---|---|---|---|---|
-| F1 — Agent Registry | **PRD pronto** (TechSpec + 10 tasks) | `tasks/prd-agent-registry-declarativo/` | — | Baixo | Médio |
+| F1 — Agent Registry | **PRD pronto** (TechSpec + 10 tasks) | `.specs/prd-agent-registry-declarativo/` | — | Baixo | Médio |
 | F2 — MCP Integration | Não iniciado | — | F1 | Médio | Médio |
 | F3 — Memory + Tool Normalization | Não iniciado | — | F1 (Memory: + F2) | Baixo | Médio |
 | F4 — Hooks + Resilience | Não iniciado | — | F1 (idealmente após F2 e F3) | Médio | Médio |

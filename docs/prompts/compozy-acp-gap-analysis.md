@@ -11,7 +11,7 @@ Seu objetivo é realizar uma auditoria técnica impiedosa e mandatória no repos
 *   **Bootstrap Universal:** Analise os mecanismos de instalação automática e configuração que tornam o setup transparente e independente da stack tecnológica do projeto alvo.
 
 ### 2. Auditoria de Gaps (Orchestrator vs. Compozy)
-**Seja extremamente rígido. Analise o nosso codebase (`internal/runtime`, `internal/invocation`, `tasks/*`) contra o estado da arte do Compozy.**
+**Seja extremamente rígido. Analise o nosso codebase (`internal/runtime`, `internal/invocation`, `.specs/*`) contra o estado da arte do Compozy.**
 
 *   **Paridade de Runtime Mandatória:** O que falta no nosso `internal/runtime/` para que ele seja 100% compatível e igualitário entre as 4 CLIs alvo?
 *   **Transparência na Instalação:** O comando `ai-spec install` é capaz de configurar o SDD de forma invisível e funcional em projetos Go, Node ou Python sem ajustes manuais? Identifique atritos que quebram a transparência.

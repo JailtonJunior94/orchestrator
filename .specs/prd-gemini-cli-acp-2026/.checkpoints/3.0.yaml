@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-gemini-cli-acp-2026/3.0_execution_report.md
+summary: "Gemini ACP routing added to acpSpecCatalog; geminiWrapperWarnOnce sync.Once warning implemented in wrapper.go; 4 new tests passing"
+timestamp: "2026-05-22T00:00:00Z"

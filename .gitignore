@@ -15,9 +15,6 @@ Thumbs.db
 coverage.out
 coverage.html
 
-# Tasks
-tasks/
-
 # Temporary prompt files
 .tmp-*
 

@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-fundacao-portatil/4.0_execution_report.md
+summary: "Retry/backoff + pool concorrente implementados: RetryClassifier, BackoffDuration, loop de retry no acpInvoker, executeBatch com semáforo no RunLoop; defaults F1 preservados; -race verde; coverage runtime=76.3%, taskloop=87.0%"
+timestamp: "2026-05-22T14:30:00Z"

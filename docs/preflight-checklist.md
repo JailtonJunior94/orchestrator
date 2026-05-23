@@ -19,11 +19,11 @@ Use esta sequencia antes de executar qualquer fluxo:
 
 ```bash
 command -v ai-spec
-test -f tasks/prd-<slug>/prd.md
-test -f tasks/prd-<slug>/techspec.md
-test -f tasks/prd-<slug>/tasks.md
+test -f .specs/prd-<slug>/prd.md
+test -f .specs/prd-<slug>/techspec.md
+test -f .specs/prd-<slug>/tasks.md
 ai-spec skills check
-ai-spec check-spec-drift tasks/prd-<slug>/tasks.md
+ai-spec check-spec-drift .specs/prd-<slug>/tasks.md
 ```
 
 Se qualquer comando acima falhar, pare. Corrija a causa raiz antes de seguir para a execucao.
@@ -35,10 +35,10 @@ Os itens abaixo sao gate de entrada. Se falharem, o status operacional e "nao ex
 | Check | Como verificar | Se falhar |
 | --- | --- | --- |
 | Binario `ai-spec` disponivel | `command -v ai-spec` | pare; instale o binario antes de continuar |
-| Bundle minimo existe | `test -f tasks/prd-<slug>/prd.md && test -f tasks/prd-<slug>/techspec.md && test -f tasks/prd-<slug>/tasks.md` | pare; faltam artefatos obrigatorios |
+| Bundle minimo existe | `test -f .specs/prd-<slug>/prd.md && test -f .specs/prd-<slug>/techspec.md && test -f .specs/prd-<slug>/tasks.md` | pare; faltam artefatos obrigatorios |
 | Lock de skills verificavel | `ai-spec skills check` | pare se o comando retornar erro; trate drift ou instalacao incompleta |
-| Spec sem drift | `ai-spec check-spec-drift tasks/prd-<slug>/tasks.md` | pare; bundle fora de sincronia entre PRD, tech spec e tasks |
-| Task file alvo existe | `test -f tasks/prd-<slug>/task-X.Y-<nome>.md` | pare; nao execute `execute-task` sem task file real |
+| Spec sem drift | `ai-spec check-spec-drift .specs/prd-<slug>/tasks.md` | pare; bundle fora de sincronia entre PRD, tech spec e tasks |
+| Task file alvo existe | `test -f .specs/prd-<slug>/task-X.Y-<nome>.md` | pare; nao execute `execute-task` sem task file real |
 
 ## Checks Recomendados
 
@@ -58,9 +58,9 @@ Os itens abaixo nao substituem os gates bloqueantes. Se falharem, a execucao ain
 
 Use quando voce vai executar uma unica task ou ainda precisa medir qualidade real.
 
-- [ ] `tasks/prd-<slug>/prd.md`, `techspec.md`, `tasks.md` e o `task-*.md` alvo existem
+- [ ] `.specs/prd-<slug>/prd.md`, `techspec.md`, `tasks.md` e o `task-*.md` alvo existem
 - [ ] `ai-spec skills check` retorna 0
-- [ ] `ai-spec check-spec-drift tasks/prd-<slug>/tasks.md` retorna 0
+- [ ] `ai-spec check-spec-drift .specs/prd-<slug>/tasks.md` retorna 0
 - [ ] a task alvo tem criterio de sucesso e testes explicitados
 - [ ] nao ha ambiguidade material aberta na spec
 
@@ -104,7 +104,7 @@ Os comandos abaixo refletem a CLI instalada hoje neste repositorio:
 
 ```bash
 ai-spec skills check
-ai-spec check-spec-drift tasks/prd-<slug>/tasks.md
+ai-spec check-spec-drift .specs/prd-<slug>/tasks.md
 ai-spec lint .
 ```
 

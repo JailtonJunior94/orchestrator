@@ -1,10 +1,10 @@
 # Guia de Migração: Legacy → `--runtime acp`
 
-> Relacionado: [ADR-012](../tasks/adr/012-copilot-cli-acp-native.md) (Copilot ACP),
-> [ADR-013](../tasks/adr/013-codex-cli-acp-native.md) (Codex ACP),
-> [ADR-015](../tasks/adr/015-gemini-cli-acp-native.md) (Gemini ACP),
+> Relacionado: [ADR-012](../.specs/adr/012-copilot-cli-acp-native.md) (Copilot ACP),
+> [ADR-013](../.specs/adr/013-codex-cli-acp-native.md) (Codex ACP),
+> [ADR-015](../.specs/adr/015-gemini-cli-acp-native.md) (Gemini ACP),
 > ADR-022 (guard de governança) e ADR-026 (sunset do legacy mode) — ambos na pasta do PRD
-> `tasks/prd-paridade-cross-cli/`.
+> `.specs/prd-paridade-cross-cli/`.
 
 Os entrypoints legados (`codex exec`, Copilot sem ACP, wrapper `gemini run --skill`) coexistem com os
 runtimes ACP nativos apenas durante a janela de depreciação. Eles **dobram a superfície de divergência**
@@ -34,10 +34,10 @@ e cai para o fallback `npx` quando necessário (ADR-017).
 
 ```bash
 # Antes (legacy)
-ai-spec task-loop --tool codex tasks/prd-minha-feature
+ai-spec task-loop --tool codex .specs/prd-minha-feature
 
 # Depois (ACP nativo — paridade garantida)
-ai-spec task-loop --tool codex --runtime acp tasks/prd-minha-feature
+ai-spec task-loop --tool codex --runtime acp .specs/prd-minha-feature
 ```
 
 ### Notas de comportamento ao migrar
@@ -65,7 +65,7 @@ fixada na tarefa de remoção, não antecipada aqui — ADR-026).
 
 ## Tarefa futura de remoção (registro)
 
-> Registrada aqui por durabilidade (a pasta `tasks/` é gitignored). Mover para o tracker oficial quando
+> Registrada aqui por durabilidade (a pasta `.specs/` é gitignored). Mover para o tracker oficial quando
 > as pré-condições 1–4 estiverem satisfeitas.
 
 - **Título:** Remover legacy mode (`copilotInvoker`/`codexInvoker` em `internal/taskloop/agent.go` +

@@ -10,7 +10,7 @@ description: Cria tarefas incrementais de implementação a partir de um PRD e d
 
 **Etapa 1: Validar os documentos de origem**
 1. Confirmar que o contrato de carga base definido em `AGENTS.md` foi cumprido.
-2. Confirmar que `tasks/prd-<feature-slug>/prd.md` e `tasks/prd-<feature-slug>/techspec.md` existem.
+2. Confirmar que `.specs/prd-<feature-slug>/prd.md` e `.specs/prd-<feature-slug>/techspec.md` existem.
 2. Ler os dois arquivos por completo antes de propor itens de trabalho.
 3. Parar com `needs_input` se qualquer documento estiver ausente ou contraditório o suficiente para bloquear o planejamento.
 
@@ -27,14 +27,14 @@ description: Cria tarefas incrementais de implementação a partir de um PRD e d
 5. Se a aprovação não estiver disponível na sessão atual, retornar `needs_input` e não escrever os arquivos de tarefa.
 
 **Etapa 4: Gerar os artefatos detalhados de tarefa**
-1. Após a aprovação, criar `tasks/prd-<feature-slug>/tasks.md` a partir de `assets/tasks-template.md`.
+1. Após a aprovação, criar `.specs/prd-<feature-slug>/tasks.md` a partir de `assets/tasks-template.md`.
 2. Criar um arquivo por tarefa usando `assets/task-template.md`.
 3. Dar a cada tarefa critérios de aceitação explícitos, arquivos relevantes e expectativas de teste.
 4. Garantir que cada tarefa seja executável de forma independente e revisável objetivamente.
 5. Ao escrever `tasks.md`, inserir os comentários de rastreabilidade de spec no cabeçalho e sincronizar via CLI portátil:
-   - `ai-spec sync-spec-hash tasks/prd-<feature-slug>/tasks.md`
+   - `ai-spec sync-spec-hash .specs/prd-<feature-slug>/tasks.md`
    - O comando atualiza `<!-- spec-hash-prd: ... -->` e `<!-- spec-hash-techspec: ... -->` usando SHA-256 implementado em Go, sem depender de `sha256sum`.
-   Estes hashes permitem detectar drift posterior via `ai-spec check-spec-drift tasks/prd-<feature-slug>/tasks.md`.
+   Estes hashes permitem detectar drift posterior via `ai-spec check-spec-drift .specs/prd-<feature-slug>/tasks.md`.
 
 **Etapa 4.1: Preencher skills processuais necessárias (descoberta agnóstica, mandatória)**
 
@@ -71,7 +71,7 @@ Sua tarefa nesta etapa é **preencher** esses placeholders com detecção agnós
 2. Marcar dependências críticas explicitamente. Formato canônico da coluna `Dependências`:
    - `—` (em-dash unicode) quando nenhuma. NÃO usar hífen comum `-` nem `none`/`N/A`/vazio.
    - Lista separada por vírgula e espaço para múltiplas dependências internas (mesmo PRD): `1.0, 2.0` (decimal id, sempre).
-   - **Dependência cross-PRD** (opcional): use prefixo `<outro-slug>/` antes do id. Exemplo: `1.0, foundations/3.0, observability/2.0`. O orquestrador (`execute-all-tasks`) interpreta o prefixo como referência ao PRD em `tasks/prd-<outro-slug>/tasks.md` e exige que aquela tarefa esteja `done` antes de tornar a atual `ready`.
+   - **Dependência cross-PRD** (opcional): use prefixo `<outro-slug>/` antes do id. Exemplo: `1.0, foundations/3.0, observability/2.0`. O orquestrador (`execute-all-tasks`) interpreta o prefixo como referência ao PRD em `.specs/prd-<outro-slug>/tasks.md` e exige que aquela tarefa esteja `done` antes de tornar a atual `ready`.
    - Regex aceito: `^(—|(\w[\w-]*\/)?\d+\.\d+(,\s*(\w[\w-]*\/)?\d+\.\d+)*)$`. Valor fora do regex → `failed: malformed dependencies on task <id>`.
 3. Identificar paralelismo seguro apenas quando ele não esconder risco de integração. Formato canônico OBRIGATÓRIO da coluna `Paralelizável` (case-sensitive, com til e maiúscula em `Não`):
    - `—`: tarefa sem par paralelo (default ou primeira da fase).
@@ -109,4 +109,4 @@ Antes de reportar `done`, validar que **a coluna `Skills` em `tasks.md` e a seç
 
 ## Resolução de paths
 
-Todo caminho `tasks/prd-<slug>/` referenciado neste documento resolve para `${AI_TASKS_ROOT:-tasks}/${AI_PRD_PREFIX:-prd-}<slug>/`. Defaults preservam o layout histórico. Customização via `.claude/config.yaml` ou `.agents/config.yaml` (chaves `tasks_root`, `prd_prefix`). `check-invocation-depth.sh` exporta `AI_TASKS_ROOT` e `AI_PRD_PREFIX` para garantir paridade entre Claude Code, Codex, Gemini e Copilot — resolução em cascata `.agents/lib/` → `scripts/lib/` (vendor canônico em `.agents/lib/`).
+Todo caminho `.specs/prd-<slug>/` referenciado neste documento resolve para `${AI_TASKS_ROOT:-.specs}/${AI_PRD_PREFIX:-prd-}<slug>/`. Defaults preservam o layout histórico. Customização via `.claude/config.yaml` ou `.agents/config.yaml` (chaves `tasks_root`, `prd_prefix`). `check-invocation-depth.sh` exporta `AI_TASKS_ROOT` e `AI_PRD_PREFIX` para garantir paridade entre Claude Code, Codex, Gemini e Copilot — resolução em cascata `.agents/lib/` → `scripts/lib/` (vendor canônico em `.agents/lib/`).

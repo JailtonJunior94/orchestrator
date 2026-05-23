@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-gemini-cli-acp-2026/10.0_execution_report.md
+summary: Gate de regressão aprovado — diff-zero RF-32 verde (12/12 módulos), go test ./... 1095 testes 0 falhas, golangci-lint sem regressão Gemini, integration tests verde.
+timestamp: 2026-05-22T13:20:00Z

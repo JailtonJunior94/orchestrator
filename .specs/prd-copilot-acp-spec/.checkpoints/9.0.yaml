@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-copilot-acp-spec/9.0_execution_report.md
+summary: Documentação F1 cross-cutting concluída — COPILOT.md reescrito, AGENTS.md atualizado, ADR-007 marcada substituída, telemetria e cli-schema validados.
+timestamp: 2026-05-21T00:00:00Z

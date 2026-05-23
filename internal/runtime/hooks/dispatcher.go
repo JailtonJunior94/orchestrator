@@ -54,7 +54,7 @@ type Dispatcher interface {
 
 // RuntimePreOpenEvent é o evento emitido antes de abrir a sessão ACP.
 // Hook governance valida AGENTS.md neste ponto.
-// TasksDir é o caminho do diretório de tasks do PRD ativo (ex: "tasks/prd-foo").
+// TasksDir é o caminho do diretório de tasks do PRD ativo (ex: ".specs/prd-foo").
 // Quando vazio, SpecDriftHook opera em modo no-op (uso ad-hoc/F1 preservado).
 type RuntimePreOpenEvent struct {
 	WorkDir  string

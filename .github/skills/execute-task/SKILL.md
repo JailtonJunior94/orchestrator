@@ -30,7 +30,7 @@ description: Executa uma tarefa de implementação aprovada via codificação, v
    Sem o binário a skill **deve parar com `needs_input`** — não prosseguir em modo legado silencioso. Princípio: governança acima de automação mágica.
 3. **Pre-flight gates condicionais (F8)**:
    - `AI_PREFLIGHT_DONE=1` exportada → pular gates (orquestrador já validou).
-   - Senão: `ai-spec skills --verify` (`blocked` se ≠0); `ai-spec check-spec-drift tasks/prd-<slug>/tasks.md` (`blocked` se RF não coberto).
+   - Senão: `ai-spec skills --verify` (`blocked` se ≠0); `ai-spec check-spec-drift .specs/prd-<slug>/tasks.md` (`blocked` se RF não coberto).
 4. Derivar `<slug>` do path. Ambíguo → `needs_input`.
 5. Confirmar `tasks.md`, task file alvo, `prd.md`, `techspec.md` presentes.
 6. Selecionar primeira tarefa elegível só se usuário não escolheu.
@@ -76,17 +76,17 @@ description: Executa uma tarefa de implementação aprovada via codificação, v
 6. Final aceito apenas: `APPROVED`, OU `APPROVED_WITH_REMARKS` confirmado sem remarks críticos.
 
 **Etapa 5: Persistir evidências (F25 checkpoint)**
-1. Salvar `tasks/prd-<slug>/[num]_execution_report.md` (overwrite com `# Generated: <ISO-8601 UTC>` no header — F36) a partir de `assets/task-execution-report-template.md`.
+1. Salvar `.specs/prd-<slug>/[num]_execution_report.md` (overwrite com `# Generated: <ISO-8601 UTC>` no header — F36) a partir de `assets/task-execution-report-template.md`.
 2. Rodar validador de evidências (resolver: `.claude/scripts/...` → `.agents/scripts/...` → `scripts/...`). Nenhum → `failed`. Falha → `blocked`; não mutar tasks.md.
 3. **Checkpoint YAML antes de mutar tasks.md (F25)**:
-   - `mkdir -p tasks/prd-<slug>/.checkpoints/`.
+   - `mkdir -p .specs/prd-<slug>/.checkpoints/`.
    - Escrever `.checkpoints/<num>.yaml.tmp` com `status`, `report_path`, `summary`, `timestamp` (ISO-8601 UTC).
    - `mv -n .yaml.tmp .yaml` atômico. Completo ou inexistente, nunca parcial.
 4. **Só após checkpoint persistido**, mutar tasks.md para `done`.
 5. **Lock atômico em tasks.md (F3+F32)** quando invocador é `execute-all-tasks` em wave paralela:
-   - POSIX: `flock -x -w 30 tasks/prd-<slug>/tasks.md.lock -c '<edit>'`.
+   - POSIX: `flock -x -w 30 .specs/prd-<slug>/tasks.md.lock -c '<edit>'`.
    - Sem `flock`: temp + `mv -n` atômico.
-   - Fallback final (Windows nativo, containers minimal): escrever em `tasks/prd-<slug>/.partials/tasks.md.<num>.partial`; orquestrador consolida na sua Etapa 5.
+   - Fallback final (Windows nativo, containers minimal): escrever em `.specs/prd-<slug>/.partials/tasks.md.<num>.partial`; orquestrador consolida na sua Etapa 5.
    - Lock falha em 30s → `failed: tasks.md lock timeout`.
 
 **Etapa 6: Encerrar**
@@ -106,4 +106,4 @@ Aplicação: Etapa 2 (refs grandes multi-linguagem), Etapa 3 (subtarefas em paco
 
 ## Resolução de paths
 
-`tasks/prd-<slug>/` resolve para `${AI_TASKS_ROOT:-tasks}/${AI_PRD_PREFIX:-prd-}<slug>/`. Configurar em `.claude/config.yaml`/`.agents/config.yaml` (`tasks_root`, `prd_prefix`, `evidence_dir`, `coverage_threshold`, `language_default`). Vars exportadas por `check-invocation-depth.sh`, resolvido em cascata `.agents/lib/` → `scripts/lib/` (vendor canônico em `.agents/lib/`, mirror legado em `scripts/lib/`). `AI_TOOL` validado contra `{claude, codex, gemini, copilot}`; inválido → unset (modo agnóstico).
+`.specs/prd-<slug>/` resolve para `${AI_TASKS_ROOT:-.specs}/${AI_PRD_PREFIX:-prd-}<slug>/`. Configurar em `.claude/config.yaml`/`.agents/config.yaml` (`tasks_root`, `prd_prefix`, `evidence_dir`, `coverage_threshold`, `language_default`). Vars exportadas por `check-invocation-depth.sh`, resolvido em cascata `.agents/lib/` → `scripts/lib/` (vendor canônico em `.agents/lib/`, mirror legado em `scripts/lib/`). `AI_TOOL` validado contra `{claude, codex, gemini, copilot}`; inválido → unset (modo agnóstico).

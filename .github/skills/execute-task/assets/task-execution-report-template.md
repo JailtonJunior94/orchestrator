@@ -3,7 +3,7 @@
 ## Tarefa
 - ID:
 - Título:
-- Arquivo: tasks/prd-<slug>/NN_<nome>.md
+- Arquivo: .specs/prd-<slug>/NN_<nome>.md
 - Estado: pending | in_progress | needs_input | blocked | failed | done
 
 ## Contexto Carregado

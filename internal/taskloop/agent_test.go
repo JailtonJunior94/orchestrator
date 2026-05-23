@@ -75,13 +75,13 @@ func TestBuildPromptContainsAgentsMd(t *testing.T) {
 		Architecture: "pacote internal/taskloop — orquestracao do loop",
 		References:   "go-implementation, tests",
 	}
-	prompt := BuildPrompt("tasks/prd-feat/01_task.md", "tasks/prd-feat", ctx)
+	prompt := BuildPrompt(".specs/prd-feat/01_task.md", ".specs/prd-feat", ctx)
 
 	required := []string{
 		"AGENTS.md",
 		".agents/skills/execute-task/SKILL.md",
-		"tasks/prd-feat/01_task.md",
-		"tasks/prd-feat",
+		".specs/prd-feat/01_task.md",
+		".specs/prd-feat",
 		"Do NOT modify any other task file.",
 		"Do NOT modify any row in tasks.md except the current task row.",
 		"Do NOT start the next task or mark any other row in tasks.md as in_progress.",
@@ -650,10 +650,10 @@ O pacote internal/version resolve versao do binario.
 O internal/version deve usar go.mod e func ResolveFromExecutable.
 O aggregate Version valida o formato semantico.`
 
-	_ = fsys.WriteFile("/work/tasks/prd-feat/techspec.md", []byte(techspec))
-	_ = fsys.WriteFile("/work/tasks/prd-feat/prd.md", []byte(prd))
+	_ = fsys.WriteFile("/work/.specs/prd-feat/techspec.md", []byte(techspec))
+	_ = fsys.WriteFile("/work/.specs/prd-feat/prd.md", []byte(prd))
 
-	ctx := BuildPromptContext("tasks/prd-feat", "/work", fsys, nil, nil)
+	ctx := BuildPromptContext(".specs/prd-feat", "/work", fsys, nil, nil)
 
 	if !strings.Contains(ctx.Architecture, "internal/version") {
 		t.Errorf("Architecture deveria conter 'internal/version', obteve: %q", ctx.Architecture)
@@ -673,7 +673,7 @@ O aggregate Version valida o formato semantico.`
 func TestBuildPromptContextArquivosAusentes(t *testing.T) {
 	fsys := fs.NewFakeFileSystem()
 
-	ctx := BuildPromptContext("tasks/prd-inexistente", "/work", fsys, nil, nil)
+	ctx := BuildPromptContext(".specs/prd-inexistente", "/work", fsys, nil, nil)
 
 	if ctx.Architecture != "ler techspec.md para contexto de arquitetura" {
 		t.Errorf("Architecture com techspec ausente deveria ser fallback, obteve: %q", ctx.Architecture)

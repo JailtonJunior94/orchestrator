@@ -31,7 +31,7 @@ import (
 // Se nTasks == 2: tasks 1.0 (sem deps) e 2.0 (dep em 1.0).
 func setupBugReproFS(nTasks int) (*taskfs.FakeFileSystem, string) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -260,7 +260,7 @@ func TestReproducaoBugLoopNaoAvancaComMaxIteracoes1(t *testing.T) {
 // Este teste valida o comportamento correto via Service.Execute para confirmar que
 // a correcao em taskloop.go e efetiva.
 func TestReproducaoBugPostStatusDeterminationPath(t *testing.T) {
-	const prd = "/fake/project/tasks/prd-test"
+	const prd = "/fake/project/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files["/fake/project/AGENTS.md"] = []byte("# Agents\n")

@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-gemini-cli-acp-2026/4.0_execution_report.md
+summary: "Sub-suite Gemini ACP (11 sub-tests), smoke test, accessModeFullWarnOnce para Gemini (RF-33) e TestCompatibilityTableContainsGemini — 47 pacotes PASS, regressão verde"
+timestamp: "2026-05-22T09:57:00Z"

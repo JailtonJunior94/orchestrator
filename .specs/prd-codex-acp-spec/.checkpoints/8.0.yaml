@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-codex-acp-spec/8.0_execution_report.md
+summary: "codexInvoker warning via codexLegacyWarnOnce (package-level) + gpt-5.5 em CompatibilityTable; T-28/T-29/T-34/T-35 verdes"
+timestamp: "2026-05-21T00:00:00Z"

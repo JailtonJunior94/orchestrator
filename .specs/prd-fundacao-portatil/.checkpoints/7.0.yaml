@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-fundacao-portatil/7.0_execution_report.md
+summary: Paridade 4x4 implementada com 15 subconjuntos table-driven, invariante FB01 adicionado em Invariants(), e2e_parity_test.go criado com build tag integration; cobertura 81%, make test e integration verdes.
+timestamp: "2026-05-22T00:00:00Z"

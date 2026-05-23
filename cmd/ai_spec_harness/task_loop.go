@@ -55,10 +55,10 @@ Exit codes:
   2 — uso incorreto
 
 Exemplos:
-  ai-spec task-loop --tool claude tasks/prd-minha-feature
-  ai-spec task-loop --tool codex --dry-run tasks/prd-minha-feature
+  ai-spec task-loop --tool claude .specs/prd-minha-feature
+  ai-spec task-loop --tool codex --dry-run .specs/prd-minha-feature
   ai-spec task-loop --executor-tool claude --executor-model claude-sonnet-4-6 \
-    --reviewer-tool claude --reviewer-model claude-opus-4-6 tasks/prd-minha-feature`,
+    --reviewer-tool claude --reviewer-model claude-opus-4-6 .specs/prd-minha-feature`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		prdFolder := args[0]

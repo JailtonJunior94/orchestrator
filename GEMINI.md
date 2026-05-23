@@ -28,7 +28,7 @@ Os dois conjuntos coexistem sem conflito. Para portar hooks interativos: `gemini
 Quando o Orchestrator invoca Gemini via ACP (`--runtime acp --tool gemini`), o runtime expoe:
 
 ```bash
-ai-spec task-loop --tool gemini --runtime acp tasks/prd-X
+ai-spec task-loop --tool gemini --runtime acp .specs/prd-X
 ```
 
 - **ACP nativo** via `gemini --acp`. Fallback: `npx --yes @google/gemini-cli@0.43.0 --acp`.
@@ -53,7 +53,7 @@ Para migrar: substituir por `--runtime acp --tool gemini`.
 ## Runtime Capabilities (F2-Gemini+)
 
 ```bash
-ai-spec task-loop --tool gemini --runtime acp --mcp-nested tasks/prd-X
+ai-spec task-loop --tool gemini --runtime acp --mcp-nested .specs/prd-X
 ```
 
 - **MCP nested-agent** (`--mcp-nested`): expoe tool `run_agent(agent_name, prompt, model?, timeout?)`
@@ -71,7 +71,7 @@ ai-spec task-loop --tool gemini --runtime acp --mcp-nested tasks/prd-X
 
 ```bash
 ai-spec task-loop --tool gemini --runtime acp \
-  --memory-workflow-limit-lines 250 tasks/prd-X
+  --memory-workflow-limit-lines 250 .specs/prd-X
 ```
 
 - **Hooks in-process Go**: pontos canonicos `runtime.pre_open`, `prompt.pre_build`,
@@ -102,7 +102,7 @@ ai-spec task-loop --tool gemini --runtime acp \
 ## Runtime Capabilities (F5-Gemini+)
 
 ```bash
-ai-spec task-loop --tool gemini --runtime acp --auto-review tasks/prd-X
+ai-spec task-loop --tool gemini --runtime acp --auto-review .specs/prd-X
 ```
 
 - **Auto-review** (opt-in `--auto-review`, default-off): apos sessao principal spawna nova ACPRunner

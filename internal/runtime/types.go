@@ -104,7 +104,7 @@ type Job struct {
 	// HARD: não afeta .claude/hooks/*.sh — shell hooks continuam ativos no modo interativo.
 	DisableHooks bool
 
-	// TasksDir é o caminho do diretório de tasks do PRD ativo (ex: "tasks/prd-foo").
+	// TasksDir é o caminho do diretório de tasks do PRD ativo (ex: ".specs/prd-foo").
 	// Necessário para instanciar o memory.Store (ReadWorkflow + ReadTask).
 	// Default "" = memory store desabilitado (regressão F1/F2 preservada).
 	TasksDir string

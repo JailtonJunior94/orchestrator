@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-acp-runtime-claude/1.0_execution_report.md
+summary: "Domain Events Model implementado: 9 arquivos de produção + 8 testes + 8 golden fixtures, cobertura 97.3%, lint limpo"
+timestamp: "2026-05-20T00:00:00Z"

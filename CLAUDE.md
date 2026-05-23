@@ -19,20 +19,20 @@
 
 ## ADRs
 
-Consultar antes de mudancas estruturais. Template: [`tasks/adr/000-template.md`](tasks/adr/000-template.md)
+Consultar antes de mudancas estruturais. Template: [`.specs/adr/000-template.md`](.specs/adr/000-template.md)
 
-- [001](tasks/adr/001-go-embed-baseline.md) — assets via `go:embed`
-- [002](tasks/adr/002-fake-filesystem-testes.md) — FakeFileSystem vs afero
-- [003](tasks/adr/003-paridade-semantica.md) — invariantes semanticas vs diff textual
-- [004](tasks/adr/004-lazy-loading-referencias.md) — references sob demanda
-- [005](tasks/adr/005-skills-lock-sha256.md) — lock file SHA-256
+- [001](.specs/adr/001-go-embed-baseline.md) — assets via `go:embed`
+- [002](.specs/adr/002-fake-filesystem-testes.md) — FakeFileSystem vs afero
+- [003](.specs/adr/003-paridade-semantica.md) — invariantes semanticas vs diff textual
+- [004](.specs/adr/004-lazy-loading-referencias.md) — references sob demanda
+- [005](.specs/adr/005-skills-lock-sha256.md) — lock file SHA-256
 - [006](docs/adr/006-telemetria-feedback-cycle.md) — telemetria opt-in append-only
 - [007](docs/adr/007-copilot-cli-stateless-workaround.md) — Copilot injecao manual
 - [008](docs/adr/008-parity-multi-tool-invariants.md) — 29 invariantes 3 niveis
-- [016](tasks/prd-fundacao-portatil/adr-016-config-hierarquico-universal.md) — config hierarquico universal (global+projeto, upward-walk, precedencia)
-- [017](tasks/prd-fundacao-portatil/adr-017-fallback-launcher-chain.md) — fallback launchers genericos ordenados
-- [018](tasks/prd-fundacao-portatil/adr-018-runtimeconfig-retry-backpressure.md) — RuntimeConfig + retry/backoff + backpressure observavel
-- [019](tasks/prd-fundacao-portatil/adr-019-instalador-portatil-detect-verify.md) — instalador portatil: auto-deteccao, escopo global, verify
+- [016](.specs/prd-fundacao-portatil/adr-016-config-hierarquico-universal.md) — config hierarquico universal (global+projeto, upward-walk, precedencia)
+- [017](.specs/prd-fundacao-portatil/adr-017-fallback-launcher-chain.md) — fallback launchers genericos ordenados
+- [018](.specs/prd-fundacao-portatil/adr-018-runtimeconfig-retry-backpressure.md) — RuntimeConfig + retry/backoff + backpressure observavel
+- [019](.specs/prd-fundacao-portatil/adr-019-instalador-portatil-detect-verify.md) — instalador portatil: auto-deteccao, escopo global, verify
 
 ## Fundacao Portatil (Fases 1–3)
 
@@ -82,7 +82,7 @@ Wave F2-Claude ativa quando `--runtime acp` e flags especificas. Defaults preser
 ### MCP Nested Agent (`--mcp-nested`, RF-01)
 
 ```bash
-ai-spec task-loop --tool claude --runtime acp --mcp-nested tasks/prd-X
+ai-spec task-loop --tool claude --runtime acp --mcp-nested .specs/prd-X
 ```
 
 - Spawna `internal/runtime/mcpserver.Server` em goroutine antes de `c.Open`.
@@ -106,7 +106,7 @@ ai-spec task-loop --tool claude --runtime acp --mcp-nested tasks/prd-X
 
 ```bash
 ai-spec task-loop --tool claude --runtime acp \
-  --memory-workflow-limit-lines 100 tasks/prd-X
+  --memory-workflow-limit-lines 100 .specs/prd-X
 ```
 
 - `internal/runtime/memory/` implementa store 2-tier: workflow (150 linhas / 12 KB) + task (200 linhas / 16 KB).
@@ -121,7 +121,7 @@ ai-spec task-loop --tool claude --runtime acp \
 
 ### Precedencia Memoria (F3-Claude)
 
-Quando `tasks/<prd>/memory/` existe, memoria do harness vence sobre auto-memory de Claude Code.
+Quando `.specs/<prd>/memory/` existe, memoria do harness vence sobre auto-memory de Claude Code.
 Fallback: sem o diretorio, auto-memory de Claude Code permanece sem alteracao.
 
 ### Hooks: Shell vs Go
@@ -140,7 +140,7 @@ Os dois conjuntos coexistem sem conflito; `.claude/hooks/*.sh` nao sao modificad
 ### Auto-review Opt-in (F5-Claude, RF-06)
 
 ```bash
-ai-spec task-loop --tool claude --runtime acp --auto-review tasks/prd-X
+ai-spec task-loop --tool claude --runtime acp --auto-review .specs/prd-X
 ```
 
 - Desabilitado por default (`--auto-review` necessario para ativar).

@@ -1,6 +1,6 @@
 # Especificação Técnica — Telemetria: Feedback Loop Acionável
 
-**PRD:** `tasks/prd-telemetry-feedback/prd.md`
+**PRD:** `.specs/prd-telemetry-feedback/prd.md`
 **Data:** 2026-04-20
 **Status:** Pronta para implementação
 **ADRs:** [ADR-001 — Separação Report vs Summary](adr-001-report-vs-summary.md)

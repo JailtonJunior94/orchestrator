@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-gemini-cli-acp-2026/8.0_execution_report.md
+summary: "F5-Gemini integration tests criados: T-39 + HARD issues + INFO sync.Once — todos PASS, diff zero em runner_autoreview.go"
+timestamp: "2026-05-22T13:05:00Z"

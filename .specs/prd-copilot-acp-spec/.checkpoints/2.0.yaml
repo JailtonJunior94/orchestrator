@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-copilot-acp-spec/2.0_execution_report.md
+summary: "Criado specs/copilot.go com 4 constantes pinadas (CopilotNpmVersion=1.0.51 confirmada via npm registry) e Copilot() construtor; copilot_test.go com T-01..T-04 verdes; go vet clean; regressão Claude preservada"
+timestamp: "2026-05-21T00:00:00Z"

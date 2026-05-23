@@ -1,8 +1,8 @@
 # Resumo das Tarefas de Implementacao para Test Feature
 
 ## Metadados
-- **PRD:** `tasks/prd-test/prd.md`
-- **Especificacao Tecnica:** `tasks/prd-test/techspec.md`
+- **PRD:** `.specs/prd-test/prd.md`
+- **Especificacao Tecnica:** `.specs/prd-test/techspec.md`
 - **Total de tarefas:** 3
 - **Tarefas paralelizaveis:** nenhuma
 

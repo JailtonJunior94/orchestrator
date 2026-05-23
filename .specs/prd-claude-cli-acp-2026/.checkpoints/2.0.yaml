@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-claude-cli-acp-2026/2.0_execution_report.md
+summary: "BuildNormalizedToolCall + embedded YAML + INV-30/INV-31 implementados; 94.8% cobertura; zero regressões"
+timestamp: "2026-05-21T00:00:00Z"

@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-claude-cli-acp-2026/5.0_execution_report.md
+summary: "hooks dispatcher + 6 pontos canonicos + governance/token_budget/memory_persist Go hooks criados; 20 testes verdes, cobertura 88.6%, make test verde, shell hooks inalterados"
+timestamp: "2026-05-21T00:00:00Z"

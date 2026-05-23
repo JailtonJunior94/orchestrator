@@ -19,12 +19,12 @@ import (
 // adrByID mapeia spec.ID para o path do ADR correspondente.
 // Decisão D-09 (ADR-012): mapping vive no package probe, não em specs/.
 // Evita acoplamento entre specs/ e a estrutura de docs ADRs.
-// Para IDs desconhecidos, use o fallback "tasks/adr/" documentado em resolve().
+// Para IDs desconhecidos, use o fallback ".specs/adr/" documentado em resolve().
 var adrByID = map[string]string{
-	"claude":  "tasks/adr/009-acp-protocol-adoption.md",
-	"codex":   "tasks/adr/013-codex-cli-acp-native.md",
-	"copilot": "tasks/adr/012-copilot-cli-acp-native.md",
-	"gemini":  "tasks/adr/015-gemini-cli-acp-native.md",
+	"claude":  ".specs/adr/009-acp-protocol-adoption.md",
+	"codex":   ".specs/adr/013-codex-cli-acp-native.md",
+	"copilot": ".specs/adr/012-copilot-cli-acp-native.md",
+	"gemini":  ".specs/adr/015-gemini-cli-acp-native.md",
 }
 
 // formatLauncherUnavailable formata a mensagem de erro quando nenhum launcher está disponível.
@@ -94,7 +94,7 @@ func resolve(spec specs.Spec, look LookPather) (specs.Launcher, error) {
 	// Lookup do ADR pelo spec.ID; fallback para path raiz quando ID desconhecido.
 	adrPath, ok := adrByID[spec.ID]
 	if !ok {
-		adrPath = "tasks/adr/"
+		adrPath = ".specs/adr/"
 	}
 	msg := formatLauncherUnavailable(spec, adrPath)
 	return specs.Launcher{}, fmt.Errorf("%s: %w", msg, ErrLauncherUnavailable)

@@ -69,7 +69,7 @@ Quero no resultado:
 #### Prompt Minimo
 
 ```text
-Use a skill create-technical-specification com base no PRD aprovado em `tasks/<prd-folder>/prd.md`.
+Use a skill create-technical-specification com base no PRD aprovado em `.specs/<prd-folder>/prd.md`.
 
 Contexto tecnico:
 - stack: [linguagem, framework, banco]
@@ -86,7 +86,7 @@ Quero no resultado:
 #### Prompt Robusto
 
 ```text
-Use a skill create-technical-specification com base no PRD aprovado em `tasks/<prd-folder>/prd.md`.
+Use a skill create-technical-specification com base no PRD aprovado em `.specs/<prd-folder>/prd.md`.
 
 Contexto tecnico obrigatorio:
 - stack: [linguagem, framework, banco, runtime]
@@ -115,8 +115,8 @@ Quero no resultado:
 Use a skill create-tasks para decompor a spec aprovada em tasks executaveis.
 
 Arquivos de entrada:
-- `tasks/<prd-folder>/prd.md`
-- `tasks/<prd-folder>/techspec.md`
+- `.specs/<prd-folder>/prd.md`
+- `.specs/<prd-folder>/techspec.md`
 
 Quero no resultado:
 - `tasks.md` com ordem e dependencias
@@ -129,8 +129,8 @@ Quero no resultado:
 Use a skill create-tasks para decompor a spec aprovada em tasks executaveis.
 
 Arquivos de entrada:
-- PRD: `tasks/<prd-folder>/prd.md`
-- Tech spec: `tasks/<prd-folder>/techspec.md`
+- PRD: `.specs/<prd-folder>/prd.md`
+- Tech spec: `.specs/<prd-folder>/techspec.md`
 
 Regras de decomposicao:
 - uma responsabilidade principal por task
@@ -151,14 +151,14 @@ Use estas variantes para executar uma unica task por vez.
 ### Versao Curta
 
 ```text
-Use a skill execute-task para implementar exatamente a task `tasks/prd-<slug>/<task-file>.md`.
+Use a skill execute-task para implementar exatamente a task `.specs/prd-<slug>/<task-file>.md`.
 
 Leia antes de agir:
 - `AGENTS.md`
-- `tasks/prd-<slug>/prd.md`
-- `tasks/prd-<slug>/techspec.md`
-- `tasks/prd-<slug>/tasks.md`
-- `tasks/prd-<slug>/<task-file>.md`
+- `.specs/prd-<slug>/prd.md`
+- `.specs/prd-<slug>/techspec.md`
+- `.specs/prd-<slug>/tasks.md`
+- `.specs/prd-<slug>/<task-file>.md`
 
 Regras:
 - execute somente o escopo da task
@@ -179,15 +179,15 @@ Quero no resultado:
 Use como default. E o melhor equilibrio entre clareza, custo e confianca.
 
 ```text
-Use a skill execute-task para implementar exatamente a task `tasks/prd-<slug>/<task-file>.md`.
+Use a skill execute-task para implementar exatamente a task `.specs/prd-<slug>/<task-file>.md`.
 
 Contexto obrigatorio:
 - Leia `AGENTS.md` na raiz do repositorio antes de qualquer acao.
 - Leia por completo:
-  - `tasks/prd-<slug>/prd.md`
-  - `tasks/prd-<slug>/techspec.md`
-  - `tasks/prd-<slug>/tasks.md`
-  - `tasks/prd-<slug>/<task-file>.md`
+  - `.specs/prd-<slug>/prd.md`
+  - `.specs/prd-<slug>/techspec.md`
+  - `.specs/prd-<slug>/tasks.md`
+  - `.specs/prd-<slug>/<task-file>.md`
 - Execute somente o escopo definido no task file.
 - Preserve contratos publicos, arquitetura atual e convencoes do repositorio.
 - Nao introduza abstracoes, dependencias ou mudancas fora da task sem necessidade explicita.
@@ -213,14 +213,14 @@ Quero no resultado:
 Use em tasks criticas, sensiveis ou quando houve historico de desvio.
 
 ```text
-Use a skill execute-task para implementar exatamente a task `tasks/prd-<slug>/<task-file>.md`.
+Use a skill execute-task para implementar exatamente a task `.specs/prd-<slug>/<task-file>.md`.
 
 Leitura obrigatoria antes de qualquer edicao:
 - `AGENTS.md`
-- `tasks/prd-<slug>/prd.md`
-- `tasks/prd-<slug>/techspec.md`
-- `tasks/prd-<slug>/tasks.md`
-- `tasks/prd-<slug>/<task-file>.md`
+- `.specs/prd-<slug>/prd.md`
+- `.specs/prd-<slug>/techspec.md`
+- `.specs/prd-<slug>/tasks.md`
+- `.specs/prd-<slug>/<task-file>.md`
 
 Restricoes mandatorias:
 - nao saia do escopo do task file
@@ -260,7 +260,7 @@ Formato de saida esperado:
 `task-loop` e um fluxo de CLI, nao uma skill para ser chamada diretamente no prompt. A entrada canonica aqui e o comando, nao uma instrucao textual ao agente:
 
 ```bash
-ai-spec task-loop --tool codex --max-iterations 2 tasks/prd-<slug>
+ai-spec task-loop --tool codex --max-iterations 2 .specs/prd-<slug>
 ```
 
 Use esse modo somente quando:
@@ -274,7 +274,7 @@ Use esse modo somente quando:
 #### Prompt Minimo
 
 ```text
-Use a skill execute-all-tasks para executar o PRD `tasks/prd-<slug>/` inteiro.
+Use a skill execute-all-tasks para executar o PRD `.specs/prd-<slug>/` inteiro.
 
 Contexto:
 - o bundle ja passou por task unitaria e esta maduro para throughput
@@ -307,14 +307,14 @@ Evite:
 Exemplo para a task `4.0` do bundle `governance-playbook-evolution`:
 
 ```text
-Use a skill execute-task para implementar exatamente a task `tasks/prd-governance-playbook-evolution/task-4.0-prompt-library.md`.
+Use a skill execute-task para implementar exatamente a task `.specs/prd-governance-playbook-evolution/task-4.0-prompt-library.md`.
 
 Leitura obrigatoria antes de qualquer edicao:
 - `AGENTS.md`
-- `tasks/prd-governance-playbook-evolution/prd.md`
-- `tasks/prd-governance-playbook-evolution/techspec.md`
-- `tasks/prd-governance-playbook-evolution/tasks.md`
-- `tasks/prd-governance-playbook-evolution/task-4.0-prompt-library.md`
+- `.specs/prd-governance-playbook-evolution/prd.md`
+- `.specs/prd-governance-playbook-evolution/techspec.md`
+- `.specs/prd-governance-playbook-evolution/tasks.md`
+- `.specs/prd-governance-playbook-evolution/task-4.0-prompt-library.md`
 
 Restricoes mandatorias:
 - nao saia do escopo do task file

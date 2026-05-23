@@ -39,7 +39,7 @@ func TestInjectMemoryContext_T_MEM_INJECT_01(t *testing.T) {
 		t.Parallel()
 
 		wf := memory.Document{
-			FileState: memory.FileState{Path: "/tasks/prd-foo/memory/MEMORY.md"},
+			FileState: memory.FileState{Path: "/.specs/prd-foo/memory/MEMORY.md"},
 			Content:   "workflow content aqui",
 			Exists:    true,
 		}
@@ -61,7 +61,7 @@ func TestInjectMemoryContext_T_MEM_INJECT_01(t *testing.T) {
 		t.Parallel()
 
 		tk := memory.Document{
-			FileState: memory.FileState{Path: "/tasks/prd-foo/memory/task-6.0.md"},
+			FileState: memory.FileState{Path: "/.specs/prd-foo/memory/task-6.0.md"},
 			Content:   "task memory content",
 			Exists:    true,
 		}
@@ -81,7 +81,7 @@ func TestInjectMemoryContext_T_MEM_INJECT_01(t *testing.T) {
 
 		wf := memory.Document{
 			FileState: memory.FileState{
-				Path:            "/tasks/prd-foo/memory/MEMORY.md",
+				Path:            "/.specs/prd-foo/memory/MEMORY.md",
 				NeedsCompaction: true,
 			},
 			Content: strings.Repeat("linha\n", 160), // >150 linhas

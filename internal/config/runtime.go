@@ -6,8 +6,8 @@ import "fmt"
 // pelo orquestrador internal/taskloop. Carregada de .claude/config.yaml
 // (fonte canonica) ou .agents/config.yaml (alias) na raiz do projeto.
 //
-// Defaults preservam o comportamento anterior a este arquivo (tasks/prd-<slug>),
-// garantindo retrocompatibilidade com projetos que nao fornecam config.yaml.
+// Defaults usam o layout canonico atual (.specs/prd-<slug>).
+// Projetos que precisam de outro root podem sobrescrever tasks_root.
 //
 // Chaves operacionais opcionais (zero-value => default/F1):
 //   - Timeout: duracao de inatividade (string parseable por time.ParseDuration); "" = sem limite.
@@ -17,23 +17,23 @@ import "fmt"
 //   - BatchSize: tamanho do lote; <=0 = 1 (F1).
 //   - DefaultTool: ferramenta padrao quando nao especificada; "" = sem padrao.
 type Runtime struct {
-	TasksRoot               string  `yaml:"tasks_root"`
-	PRDPrefix               string  `yaml:"prd_prefix"`
-	EvidenceDir             string  `yaml:"evidence_dir"`
-	CoverageThreshold       float64 `yaml:"coverage_threshold"`
-	LanguageDefault         string  `yaml:"language_default"`
-	Timeout                 string  `yaml:"timeout"`
-	MaxRetries              int     `yaml:"max_retries"`
-	RetryBackoffMultiplier  float64 `yaml:"retry_backoff_multiplier"`
-	Concurrent              int     `yaml:"concurrent"`
-	BatchSize               int     `yaml:"batch_size"`
-	DefaultTool             string  `yaml:"default_tool"`
+	TasksRoot              string  `yaml:"tasks_root"`
+	PRDPrefix              string  `yaml:"prd_prefix"`
+	EvidenceDir            string  `yaml:"evidence_dir"`
+	CoverageThreshold      float64 `yaml:"coverage_threshold"`
+	LanguageDefault        string  `yaml:"language_default"`
+	Timeout                string  `yaml:"timeout"`
+	MaxRetries             int     `yaml:"max_retries"`
+	RetryBackoffMultiplier float64 `yaml:"retry_backoff_multiplier"`
+	Concurrent             int     `yaml:"concurrent"`
+	BatchSize              int     `yaml:"batch_size"`
+	DefaultTool            string  `yaml:"default_tool"`
 }
 
 // DefaultRuntime retorna a configuracao com defaults compativeis com o layout atual.
 func DefaultRuntime() Runtime {
 	return Runtime{
-		TasksRoot:         "tasks",
+		TasksRoot:         ".specs",
 		PRDPrefix:         "prd-",
 		EvidenceDir:       "",
 		CoverageThreshold: 70.0,

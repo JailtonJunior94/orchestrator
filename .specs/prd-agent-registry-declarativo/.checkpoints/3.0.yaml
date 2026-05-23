@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-agent-registry-declarativo/3.0_execution_report.md
+summary: Discovery de AGENT.md em escopo global + workspace implementado com mergeWithShadowing e testes T-01 a T-09.
+timestamp: 2026-05-21T12:04:00Z

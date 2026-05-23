@@ -39,7 +39,7 @@ func buildMinimalAgentMD(agentName string) []byte {
 // Retorna o fsys e o path absoluto do PRD folder.
 func buildE2EFS(agentName string) (*taskfs.FakeFileSystem, string) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-e2e"
+	const prd = base + "/.specs/prd-e2e"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -57,7 +57,7 @@ func buildE2EFS(agentName string) (*taskfs.FakeFileSystem, string) {
 // buildLegacyFS monta o mesmo FakeFileSystem sem AGENT.md (fluxo legado).
 func buildLegacyFS() (*taskfs.FakeFileSystem, string) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-e2e"
+	const prd = base + "/.specs/prd-e2e"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -98,7 +98,7 @@ func TestE2EAgent_PromptContainsAgentBlocks(t *testing.T) {
 				invokerCalled = true
 				promptReceived = prompt
 				// Marcar task como done para encerrar loop.
-				fsys.Files["/fake/project/tasks/prd-e2e/tasks.md"] = []byte("| 1.0 | Smoke Task | done | — | Nao |\n")
+				fsys.Files["/fake/project/.specs/prd-e2e/tasks.md"] = []byte("| 1.0 | Smoke Task | done | — | Nao |\n")
 				return "smoke ok", "", 0, nil
 			},
 		}

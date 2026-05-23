@@ -47,8 +47,8 @@ func TestReservationPlanner_Resolve(t *testing.T) {
 		wantErrIs      error
 	}{
 		{
-			name:        "implement_document_discard_validos",
-			findings:    sampleFindings(),
+			name:     "implement_document_discard_validos",
+			findings: sampleFindings(),
 			responses: []promptResponse{
 				{action: ActionImplement, rationale: ""},
 				{action: ActionDocument, rationale: "registrar como follow-up"},
@@ -144,7 +144,7 @@ func TestReservationPlanner_InterativoSemPrompter(t *testing.T) {
 
 func TestWriteActionPlanToTaskFile_Idempotente(t *testing.T) {
 	fsys := fs.NewFakeFileSystem()
-	taskFile := "/tasks/task-x.md"
+	taskFile := "/.specs/task-x.md"
 	original := "# Task X\n\nDescrição inicial.\n"
 	fsys.Files[taskFile] = []byte(original)
 

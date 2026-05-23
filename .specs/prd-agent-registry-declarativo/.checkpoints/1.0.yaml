@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-agent-registry-declarativo/1.0_execution_report.md
+summary: ParseFrontmatterFields extraída como função genérica com suporte a dot-notation para campos nested; zero regressão em internal/skills/
+timestamp: 2026-05-21T00:00:00Z

@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-copilot-acp-spec/8.0_execution_report.md
+summary: "Sub-suite Copilot T-10/T-11/T-12 adicionada a acp_integration_test.go; todos os testes verdes; paridade observacional com Claude confirmada"
+timestamp: "2026-05-21T11:32:00Z"

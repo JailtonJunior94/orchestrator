@@ -25,7 +25,7 @@ description: Converte User Stories brutas em um PRD estruturado com objetivo, es
 1. Redigir as secoes: Objetivo, Escopo, Restricoes, Usuarios-alvo, Requisitos Funcionais.
 2. Adicionar secao de Requisitos Nao-Funcionais quando identificados nas historias.
 3. Incluir a lista original de User Stories como apendice para rastreabilidade.
-4. Salvar em `tasks/<slug-feature>/prd.md`.
+4. Salvar em `.specs/<slug-feature>/prd.md`.
 
 **Etapa 4: Validar com o solicitante**
 1. Apresentar o PRD gerado para revisao.

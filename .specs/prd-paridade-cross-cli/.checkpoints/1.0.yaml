@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-paridade-cross-cli/1.0_execution_report.md
+summary: "DriverID, ContextWindow/WindowClass e MetricSet VOs implementados com testes table-driven; make test verde"
+timestamp: "2026-05-22T00:00:00Z"

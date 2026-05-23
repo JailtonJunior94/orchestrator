@@ -13,11 +13,11 @@
 
 O `compozy/compozy` resolveu em 2026 a limitação que motivou nossa [ADR-007](../adr/007-copilot-cli-stateless-workaround.md) ("Copilot CLI stateless workaround"): o `copilot` CLI passou a expor um servidor ACP nativo (`copilot --acp`) com fallback `npx --yes @github/copilot --acp`. No catálogo `internal/core/agent/registry_specs.go:222-242` do compozy, Copilot está registrado em pé de igualdade com Claude/Codex/Gemini/Cursor/Droid/OpenCode/Pi — mesma estrutura `Spec`, mesmo subprocess JSON-RPC, mesma observabilidade.
 
-A consequência para o `ai-spec-harness` é direta: **a Fase 1 ("Copilot ACP Spec") é a alavanca de maior valor por menor esforço em 2026**. Reutilizando o stack já validado para Claude (`ACPRunner`, `acpClient`, persistência forense, `ActivityWatchdog`, telemetria opt-in), o Copilot deixa de ser caixa-preta (CLI legado via `copilotInvoker`) e ganha paridade observacional total. ADR-007 é formalmente substituída por [ADR-012](../../tasks/adr/012-copilot-cli-acp-native.md).
+A consequência para o `ai-spec-harness` é direta: **a Fase 1 ("Copilot ACP Spec") é a alavanca de maior valor por menor esforço em 2026**. Reutilizando o stack já validado para Claude (`ACPRunner`, `acpClient`, persistência forense, `ActivityWatchdog`, telemetria opt-in), o Copilot deixa de ser caixa-preta (CLI legado via `copilotInvoker`) e ganha paridade observacional total. ADR-007 é formalmente substituída por [ADR-012](../../.specs/adr/012-copilot-cli-acp-native.md).
 
 Esta pesquisa apresenta sete dimensões comparativas com `file:line` reais de ambos os repos, um roadmap de quatro fases (F1 Copilot ACP Spec, F2 Memória 2-níveis, F3 Hook System Go in-process, F4 TUI Bubble Tea + daemon) e exemplos de configuração 2026 para `COPILOT.md` e `.github/copilot-instructions.md`. Correções factuais à literatura interna são documentadas na §"Correções ao prompt original": o sistema de hooks do compozy **não usa JSON-RPC 2.0 wire protocol**, são 33 nomes canônicos (não 32) despachados in-process Go; a compactação de memória é **prompt-driven** (máquina mede, modelo decide), não código-driven; o MCP server reservado expõe **apenas** `run_agent`, não memory/registry tools.
 
-A recomendação operacional é executar F1 nesta sessão (PRD/TechSpec/Tasks já em `tasks/prd-copilot-acp-spec/`) e tratar F2–F4 como PRDs futuros independentes com escopo bruto.
+A recomendação operacional é executar F1 nesta sessão (PRD/TechSpec/Tasks já em `.specs/prd-copilot-acp-spec/`) e tratar F2–F4 como PRDs futuros independentes com escopo bruto.
 
 ---
 
@@ -111,7 +111,7 @@ func (s *Server) RunStdio(ctx context.Context, host HostContext) error {
 
 **Impacto**: ausência impede que um agente sugira "rode `claude-revisor-rigoroso` em seguida" como ação executável dentro da mesma sessão. Para o uso atual do harness (loop sequencial de tasks com um agente por vez) isso é aceitável.
 
-**Gap técnico**: criar `internal/mcp/server/` espelhando `mcpserver/server.go` é trabalho de F-futura (não F1–F4 deste roadmap). Depende de F1 (Agent Registry — já entregue em [`tasks/prd-agent-registry-declarativo/`](../../tasks/prd-agent-registry-declarativo/)) para que `run_agent` tenha algo para resolver.
+**Gap técnico**: criar `internal/mcp/server/` espelhando `mcpserver/server.go` é trabalho de F-futura (não F1–F4 deste roadmap). Depende de F1 (Agent Registry — já entregue em [`.specs/prd-agent-registry-declarativo/`](../../.specs/prd-agent-registry-declarativo/)) para que `run_agent` tenha algo para resolver.
 
 ---
 
@@ -262,7 +262,7 @@ O LLM lê essa diretiva (via skill `cy-workflow-memory`) e executa a compactaç�
 
 **ai-spec-harness**: não há equivalente. Contexto entre runs depende de releitura de `prd.md`/`techspec.md`/`tasks.md` a cada invocação. Aprendizados acumulados não são persistidos.
 
-**Impacto**: agente não acumula conhecimento entre tasks/runs. Cada invocação parte do zero exceto pelo que está no PRD.
+**Impacto**: agente não acumula conhecimento entre .specs/runs. Cada invocação parte do zero exceto pelo que está no PRD.
 
 **Gap técnico**: F2 do roadmap. Esforço baixo — ~250 LOC em `internal/memory/store.go` espelhando `store.go` do compozy + injeção da diretiva de compactação no prompt builder. Decisão de design importante: manter o princípio prompt-driven (não code-driven). Coexiste com persistência forense (não substitui `events.jsonl`).
 
@@ -323,7 +323,7 @@ Legenda: 🟢 implementado · 🟡 parcial · 🔴 ausente · ⭐ vantagem do ha
 - Atualizar `internal/runtime/acp_integration_test.go` com matriz Copilot.
 - Manter `copilotInvoker` CLI legado por uma versão (rota de compatibilidade com aviso de depreciação).
 - Reescrever `COPILOT.md` raiz removendo bloco de workaround stateless e adicionando seção "Copilot via ACP".
-- ADR-012 ([`tasks/adr/012-copilot-cli-acp-native.md`](../../tasks/adr/012-copilot-cli-acp-native.md)) substitui formalmente ADR-007.
+- ADR-012 ([`.specs/adr/012-copilot-cli-acp-native.md`](../../.specs/adr/012-copilot-cli-acp-native.md)) substitui formalmente ADR-007.
 
 **Esforço**: Baixo. **Risco**: Baixo (additivo; flag `--runtime=acp` ainda é opt-in).
 
@@ -407,7 +407,7 @@ O harness suporta esse modo via `--runtime=acp --tool=copilot`.
 ai-spec-harness task-loop \
   --tool copilot \
   --runtime acp \
-  tasks/prd-minha-feature
+  .specs/prd-minha-feature
 \`\`\`
 
 A sessão produz os mesmos artefatos forenses do modo Claude:
@@ -422,7 +422,7 @@ Telemetria opt-in (`GOVERNANCE_TELEMETRY=1`) registra invocações com `tool=cop
 \`\`\`bash
 ai-spec-harness task-loop \
   --tool copilot \
-  tasks/prd-minha-feature
+  .specs/prd-minha-feature
 \`\`\`
 
 Este modo invoca `copilot --autopilot --yolo -p <prompt>` sem ACP.
@@ -431,9 +431,9 @@ até versão vX (ver ADR-012 §"Consequências").
 
 ## ADRs Relevantes
 
-- [ADR-012](tasks/adr/012-copilot-cli-acp-native.md) — Copilot via ACP nativo (substitui ADR-007)
+- [ADR-012](.specs/adr/012-copilot-cli-acp-native.md) — Copilot via ACP nativo (substitui ADR-007)
 - [ADR-007](docs/adr/007-copilot-cli-stateless-workaround.md) — workaround histórico (substituído)
-- [ADR-009](tasks/adr/009-acp-protocol-adoption.md) — pinning de SDK ACP
+- [ADR-009](.specs/adr/009-acp-protocol-adoption.md) — pinning de SDK ACP
 - [ADR-008](docs/adr/008-parity-multi-tool-invariants.md) — invariantes de paridade multi-tool
 ```
 
@@ -453,7 +453,7 @@ Compozy não usa este arquivo. No harness, mantém-se funcional para Copilot Cha
 - Arquitetura: ver `AGENTS.md`
 - Governança: ver `.claude/rules/governance.md`
 - Skills procedurais: `.agents/skills/`
-- ADRs: `docs/adr/` e `tasks/adr/`
+- ADRs: `docs/adr/` e `.specs/adr/`
 
 ## Pipeline
 
@@ -501,7 +501,7 @@ func Copilot() Spec {
 
 ## Continuidade — PRDs Futuros
 
-> **Estado em 2026-05-21**: F1 entregue como PRD/TechSpec/Tasks em [`tasks/prd-copilot-acp-spec/`](../../tasks/prd-copilot-acp-spec/) + ADR-012 em [`tasks/adr/012-copilot-cli-acp-native.md`](../../tasks/adr/012-copilot-cli-acp-native.md). F2–F4 abaixo são PRDs futuros independentes.
+> **Estado em 2026-05-21**: F1 entregue como PRD/TechSpec/Tasks em [`.specs/prd-copilot-acp-spec/`](../../.specs/prd-copilot-acp-spec/) + ADR-012 em [`.specs/adr/012-copilot-cli-acp-native.md`](../../.specs/adr/012-copilot-cli-acp-native.md). F2–F4 abaixo são PRDs futuros independentes.
 
 ### F2 — Memória 2-níveis prompt-driven
 
@@ -575,11 +575,11 @@ func Copilot() Spec {
 - `COPILOT.md` — documenta workaround ADR-007 (a reescrever)
 - `.agents/hooks/` — shell scripts (referência para migração F3)
 - ADR-007 (`docs/adr/007-copilot-cli-stateless-workaround.md`) — substituída por ADR-012
-- ADR-009 (`tasks/adr/009-acp-protocol-adoption.md`) — pinning SDK
+- ADR-009 (`.specs/adr/009-acp-protocol-adoption.md`) — pinning SDK
 - ADR-008 (`docs/adr/008-parity-multi-tool-invariants.md`) — paridade multi-tool
-- ADR-010 (`tasks/prd-acp-runtime-claude/adr-010-event-tagged-union.md`) — tagged union de eventos
-- ADR-011 (`tasks/adr/011-agent-registry-declarativo.md`) — Agent Registry F1 anterior
-- [ADR-012](../../tasks/adr/012-copilot-cli-acp-native.md) — Copilot ACP nativo (substitui ADR-007)
+- ADR-010 (`.specs/prd-acp-runtime-claude/adr-010-event-tagged-union.md`) — tagged union de eventos
+- ADR-011 (`.specs/adr/011-agent-registry-declarativo.md`) — Agent Registry F1 anterior
+- [ADR-012](../../.specs/adr/012-copilot-cli-acp-native.md) — Copilot ACP nativo (substitui ADR-007)
 
 **Pesquisa correlata**:
 - [`docs/research/compozy-adaptation-analysis.md`](compozy-adaptation-analysis.md) — análise genérica original (10 dimensões, F1–F5 roadmap)

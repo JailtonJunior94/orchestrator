@@ -136,7 +136,7 @@ func (p *sequenceRunloopPrompter) Ask(ctx context.Context, f Finding) (Resolutio
 
 func setupRunLoopFS(taskIDs []string) (*taskfs.FakeFileSystem, string) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -817,7 +817,7 @@ func TestRunLoop_DefaultsSequential(t *testing.T) {
 // atomicCounter é um contador thread-safe para uso em testes de concorrência.
 type atomicCounter struct{ n int32 }
 
-func (c *atomicCounter) Inc() { atomic.AddInt32(&c.n, 1) }
+func (c *atomicCounter) Inc()       { atomic.AddInt32(&c.n, 1) }
 func (c *atomicCounter) Val() int32 { return atomic.LoadInt32(&c.n) }
 
 // concurrentGate é uma AcceptanceGate thread-safe para testes concorrentes.

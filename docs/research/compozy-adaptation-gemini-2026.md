@@ -35,7 +35,7 @@ model.IDEGemini: {
 }
 ```
 
-A descoberta arquitetural central desta pesquisa: **o Google já enviou suporte ACP nativo via flag `--acp` no `@google/gemini-cli`** (anteriormente `--experimental-acp`, hoje estável conforme `.compozy/tasks/_archived/20260405-165117-acp-integration/_techspec.md` no compozy). Isso elimina o maior risco que normalmente acompanharia um "F0-Bridge": **não é necessário construir adapter custom** — basta replicar a `Spec` Compozy no harness.
+A descoberta arquitetural central desta pesquisa: **o Google já enviou suporte ACP nativo via flag `--acp` no `@google/gemini-cli`** (anteriormente `--experimental-acp`, hoje estável conforme registro arquivado de integração ACP no Compozy). Isso elimina o maior risco que normalmente acompanharia um "F0-Bridge": **não é necessário construir adapter custom** — basta replicar a `Spec` Compozy no harness.
 
 **Recomendação operacional**: tratar Gemini como continuação natural do trabalho ACP, com cinco fases:
 
@@ -380,13 +380,13 @@ Esta pesquisa avaliou três caminhos:
   - T-14 estendido: `TestGeminiSpecHasCorrectCommandAndFlags`
   - T-15 estendido: `TestGeminiFallbackResolvesViaNpx`
   - T-16 estendido: `TestGeminiBootstrapArgsAlwaysNil`
-- ADR-015 (`tasks/adr/015-gemini-cli-acp-native.md`) — status Proposta — documenta D-01..D-04.
+- ADR-015 (`.specs/adr/015-gemini-cli-acp-native.md`) — status Proposta — documenta D-01..D-04.
 - `GEMINI.md` raiz ganha §"Runtime Capabilities (F0-Gemini+)" (ver §"Exemplos de Configuração 2026").
 
 **Esforço**: Baixo (~3 dias).  
 **Risco**: Baixo (padrão `claude.go` é referência sólida; `gemini --acp` validado pelo Compozy main).  
 **Dependências**: ADR-013 entregue (referência arquitetural); nenhuma outra.  
-**Critério de aceitação**: `ai-spec task-loop --tool gemini --runtime acp --dry-run tasks/prd-X` retorna comando `gemini --acp` (ou `npx --yes @google/gemini-cli@X.Y.Z --acp` no fallback) sem erro.
+**Critério de aceitação**: `ai-spec task-loop --tool gemini --runtime acp --dry-run .specs/prd-X` retorna comando `gemini --acp` (ou `npx --yes @google/gemini-cli@X.Y.Z --acp` no fallback) sem erro.
 
 ### F1-Gemini — Paridade ACP Mínima
 
@@ -408,7 +408,7 @@ Esta pesquisa avaliou três caminhos:
 **Esforço**: Baixo–Médio (~5 dias).  
 **Risco**: Médio (primeira sessão ACP Gemini pode revelar incompatibilidades sutis no event schema — ex: `acp.ToolKindThink` que Claude usa pode não ter equivalente no Gemini).  
 **Dependências**: F0-Gemini entregue.  
-**Critério de aceitação**: `ai-spec task-loop --tool gemini --runtime acp tasks/prd-X` completa uma task simples (edit de 1 arquivo) e produz `events.jsonl` + `tool_calls.md` + `execution_report.md` com seções obrigatórias.
+**Critério de aceitação**: `ai-spec task-loop --tool gemini --runtime acp .specs/prd-X` completa uma task simples (edit de 1 arquivo) e produz `events.jsonl` + `tool_calls.md` + `execution_report.md` com seções obrigatórias.
 
 ### F2-Gemini — MCP nested-agent + tool-call normalization
 
@@ -432,7 +432,7 @@ Esta pesquisa avaliou três caminhos:
 **Esforço**: Baixo (~3 dias).  
 **Risco**: Baixo (infra existe; ajuste de tabela).  
 **Dependências**: F1-Gemini entregue; F2-Claude entregue (provê infra MCP + normalize).  
-**Critério de aceitação**: `ai-spec task-loop --tool gemini --runtime acp --mcp-nested tasks/prd-X` produz `events.jsonl` com `tool_call_kind="nested_agent"` quando Gemini invoca `run_agent`.
+**Critério de aceitação**: `ai-spec task-loop --tool gemini --runtime acp --mcp-nested .specs/prd-X` produz `events.jsonl` com `tool_call_kind="nested_agent"` quando Gemini invoca `run_agent`.
 
 ### F3-Gemini — Hooks + Memory 2-tier com defaults Gemini-generosos
 
@@ -777,9 +777,9 @@ A integração proposta preserva integralmente as invariantes do harness:
 
 Abrir o pacote de governança completo conforme entregue por esta pesquisa:
 
-- **ADR-015** (`tasks/adr/015-gemini-cli-acp-native.md`) — status Proposta — documenta D-01..D-04 cobrindo escolha de `gemini --acp` como command canônico, pinning npm via audit, BootstrapArgs no-op, AccessModeFlag vazio.
-- **PRD** (`tasks/prd-gemini-cli-acp-2026/prd.md`) — RF-01..RF-06 + NFRs — consome ADR-015. RF-01 = F0+F1 (spec + paridade); RF-02 = F2 (MCP + normalization); RF-03 = F3 (hooks + memory + defaults Gemini); RF-04 = F4 (métricas Gemini-2026); RF-05 = F5 (auto-review); RF-06 = deprecation wrapper legado.
-- **TechSpec** (`tasks/prd-gemini-cli-acp-2026/techspec.md`) — cabeçalho com `spec-hash-prd` placeholder — arquitetura, interfaces, riscos, estratégia de testes; pronto para `create-tasks` após `ai-spec sync-spec-hash` materializar o hash.
+- **ADR-015** (`.specs/adr/015-gemini-cli-acp-native.md`) — status Proposta — documenta D-01..D-04 cobrindo escolha de `gemini --acp` como command canônico, pinning npm via audit, BootstrapArgs no-op, AccessModeFlag vazio.
+- **PRD** (`.specs/prd-gemini-cli-acp-2026/prd.md`) — RF-01..RF-06 + NFRs — consome ADR-015. RF-01 = F0+F1 (spec + paridade); RF-02 = F2 (MCP + normalization); RF-03 = F3 (hooks + memory + defaults Gemini); RF-04 = F4 (métricas Gemini-2026); RF-05 = F5 (auto-review); RF-06 = deprecation wrapper legado.
+- **TechSpec** (`.specs/prd-gemini-cli-acp-2026/techspec.md`) — cabeçalho com `spec-hash-prd` placeholder — arquitetura, interfaces, riscos, estratégia de testes; pronto para `create-tasks` após `ai-spec sync-spec-hash` materializar o hash.
 
 **Não escrever código nesta sessão.** Tarefas de implementação ficam para uma sessão posterior via skill `create-tasks` + `execute-task` (subdivididas por fase F0 → F5, com `execute-all-tasks` paralelizando dentro de cada fase quando o DAG permitir).
 
@@ -818,7 +818,7 @@ Sugestão de decomposição: **um único PRD** com RF-N cobrindo F0..F5 e TechSp
 - `internal/core/run/executor/review_hooks.go` — Auto-review como `ExecutionModePRReview`
 - `internal/setup/runtime_agents.go` — `"gemini": "gemini-cli"` (mapping para setup)
 - `internal/setup/agents.go` — referência a `.gemini/antigravity/skills` (setup compozy específico, não aplicável ao harness)
-- `.compozy/tasks/_archived/20260405-165117-acp-integration/_techspec.md` — registro arquivado mencionando `--experimental-acp, --model <model>` (histórico; hoje é `--acp` estável)
+- Registro arquivado de integração ACP no Compozy — mencionava `--experimental-acp, --model <model>` (histórico; hoje é `--acp` estável)
 - `README.md` (raiz Compozy) — "Multi-agent execution. Run tasks through ACP-capable runtimes like Claude Code, Codex, Cursor, Droid, OpenCode, Pi, or Gemini"
 
 **ai-spec-harness (estado em `feat/codex-acp-spec`)**:
@@ -853,11 +853,11 @@ Sugestão de decomposição: **um único PRD** com RF-N cobrindo F0..F5 e TechSp
 - `.gemini/commands/` — Wrappers TOML legados (desativáveis após F1+)
 - `.gemini/agents/` — Agentes declarativos (resolvidos via registry após F2-Gemini)
 - ADR-006 (`docs/adr/006-telemetria-feedback-cycle.md`) — Telemetria opt-in (Gemini herda)
-- ADR-009 (`tasks/adr/009-acp-protocol-adoption.md`) — Pinning SDK (precedente)
-- ADR-011 (`tasks/adr/011-agent-registry-declarativo.md`) — Registry F1
-- ADR-012 (`tasks/adr/012-copilot-cli-acp-native.md`) — Copilot ACP (modelo mais próximo de Gemini: CLI principal + flag `--acp`)
-- ADR-013 (`tasks/adr/013-codex-cli-acp-native.md`) — Codex ACP (precedente de adapter dedicado)
-- ADR-015 (`tasks/adr/015-gemini-cli-acp-native.md`) — **este pacote** (proposto)
+- ADR-009 (`.specs/adr/009-acp-protocol-adoption.md`) — Pinning SDK (precedente)
+- ADR-011 (`.specs/adr/011-agent-registry-declarativo.md`) — Registry F1
+- ADR-012 (`.specs/adr/012-copilot-cli-acp-native.md`) — Copilot ACP (modelo mais próximo de Gemini: CLI principal + flag `--acp`)
+- ADR-013 (`.specs/adr/013-codex-cli-acp-native.md`) — Codex ACP (precedente de adapter dedicado)
+- ADR-015 (`.specs/adr/015-gemini-cli-acp-native.md`) — **este pacote** (proposto)
 
 **Pesquisa correlata**:
 
@@ -958,11 +958,10 @@ Saída de `gemini --help` também lista:
 
 **Implicação para F0-Gemini**: o `AccessModeFlag` na `Spec` permanece vazio (Gemini não tem flag estática como Claude `--bypass-permissions`), mas o mapeamento dinâmico de `AccessMode` → `--approval-mode` é introduzido via `BootstrapArgs` minimal. Os outros valores aceitos pela CLI (`auto_edit`, `plan`) são deliberadamente não usados — preservam simetria binária com Claude/Codex.
 
-**Decisão tomada** (ADR-015 D-05, ver `tasks/adr/015-gemini-cli-acp-native.md`): mapeamento literal `AccessModeRestricted → "default"` e `AccessModeFull → "yolo"`. Testes T-29/T-30/T-31 (declarados na ADR) validam o mapeamento. Esta decisão **diverge intencionalmente do Compozy** (que mantém `BootstrapArgs: nil`) para aproveitar capability exposta pela CLI Gemini 0.43.0 que Compozy ainda não explora. Risco de drift documentado em ADR-015 §"Consequências/Negativas".
+**Decisão tomada** (ADR-015 D-05, ver `.specs/adr/015-gemini-cli-acp-native.md`): mapeamento literal `AccessModeRestricted → "default"` e `AccessModeFull → "yolo"`. Testes T-29/T-30/T-31 (declarados na ADR) validam o mapeamento. Esta decisão **diverge intencionalmente do Compozy** (que mantém `BootstrapArgs: nil`) para aproveitar capability exposta pela CLI Gemini 0.43.0 que Compozy ainda não explora. Risco de drift documentado em ADR-015 §"Consequências/Negativas".
 
 ### Subcomando `gemini mcp`
 
 Embora não explorado neste adendo, a CLI 0.43.0 também expõe `gemini mcp` (mencionado em `gemini --help`). Isso indica suporte nativo a clientes MCP — relevante para F2-Gemini, onde o servidor MCP do harness (`internal/runtime/mcpserver/`, F2-Claude) precisa ser **consumido** pelo Gemini. Compozy comprova que isso funciona via ACP (Gemini parent invoca `run_agent` sem configuração adicional), mas seria útil validar via `gemini mcp` quais MCPs estão configurados antes de habilitar `--mcp-nested` em produção.
 
 Investigação detalhada do `gemini mcp` fica para F2-Gemini (não escopo desta pesquisa).
-

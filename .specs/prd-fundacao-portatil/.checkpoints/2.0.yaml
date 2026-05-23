@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-fundacao-portatil/2.0_execution_report.md
+summary: Fallback launcher chain generalizado em probe.resolve — NewBinaryLauncher genérico substitui extractPackage/extractVersion/NewNpxLauncher; 91.3% coverage; suíte completa verde.
+timestamp: 2026-05-22T00:00:00Z

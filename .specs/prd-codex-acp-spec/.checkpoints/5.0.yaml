@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-codex-acp-spec/5.0_execution_report.md
+summary: "Registered codex in adrByID (ADR-013) and runtimeACPCatalog (specs.Codex); build+tests pass"
+timestamp: "2026-05-21T00:00:00Z"

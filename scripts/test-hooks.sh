@@ -14,7 +14,7 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HOOKS_DIR="$REPO_ROOT/.claude/hooks"
 TMP_BASE=$(mktemp -d /tmp/test-hooks.XXXXXX)
-TASKS_BASE="$TMP_BASE/tasks"
+TASKS_BASE="$TMP_BASE/.spec"
 mkdir -p "$TASKS_BASE"
 
 # Garante que os hooks testem o CLI da working tree atual, nao uma versao antiga
@@ -359,7 +359,7 @@ echo "  B3-1: staged apenas README.md → bloco 3 não dispara, exit 0"
 printf 'README.md\n' > "$STAGED_FILES"
 printf 'v0.21.0' > "$AISPEC_VERSION_FILE"
 printf '0' > "$AISPEC_EXIT_FILE"
-mkdir -p "$TMP_REPO_ROOT/tasks/prd-b3test1"
+mkdir -p "$TMP_REPO_ROOT/.specs/prd-b3test1"
 run_hook_with_staged "README.md" > /dev/null 2>&1; rc_b31=$?
 assert_exit "B3-1: staged=README exit 0" 0 "$rc_b31"
 
@@ -368,9 +368,9 @@ assert_exit "B3-1: staged=README exit 0" 0 "$rc_b31"
 # ────────────────────────────────────────────────────────────
 echo
 echo "  B3-2: prd.md staged, sem drift → exit 0 + msg 'spec-drift OK'"
-mkdir -p "$TMP_REPO_ROOT/tasks/prd-b3test2"
-touch "$TMP_REPO_ROOT/tasks/prd-b3test2/tasks.md"
-run_hook_with_staged "tasks/prd-b3test2/prd.md" "v0.21.0" "0" > /dev/null 2>&1; rc_b32=$?
+mkdir -p "$TMP_REPO_ROOT/.specs/prd-b3test2"
+touch "$TMP_REPO_ROOT/.specs/prd-b3test2/tasks.md"
+run_hook_with_staged ".specs/prd-b3test2/prd.md" "v0.21.0" "0" > /dev/null 2>&1; rc_b32=$?
 assert_exit "B3-2: sem drift, exit 0" 0 "$rc_b32"
 
 # ────────────────────────────────────────────────────────────
@@ -378,10 +378,10 @@ assert_exit "B3-2: sem drift, exit 0" 0 "$rc_b32"
 # ────────────────────────────────────────────────────────────
 echo
 echo "  B3-3: prd.md staged, drift detectado → exit 1 + comando de remediação"
-mkdir -p "$TMP_REPO_ROOT/tasks/prd-b3test3"
-touch "$TMP_REPO_ROOT/tasks/prd-b3test3/tasks.md"
+mkdir -p "$TMP_REPO_ROOT/.specs/prd-b3test3"
+touch "$TMP_REPO_ROOT/.specs/prd-b3test3/tasks.md"
 stderr_b33=$(mktemp)
-printf 'tasks/prd-b3test3/prd.md\n' > "$STAGED_FILES"
+printf '.specs/prd-b3test3/prd.md\n' > "$STAGED_FILES"
 printf 'v0.21.0' > "$AISPEC_VERSION_FILE"
 printf '1' > "$AISPEC_EXIT_FILE"
 bash "$PRE_COMMIT_HOOK" 2>"$stderr_b33"; rc_b33=$?
@@ -394,9 +394,9 @@ rm -f "$stderr_b33"
 # ────────────────────────────────────────────────────────────
 echo
 echo "  B3-4: ai-spec ausente no PATH → warn + exit 0"
-mkdir -p "$TMP_REPO_ROOT/tasks/prd-b3test4"
-touch "$TMP_REPO_ROOT/tasks/prd-b3test4/tasks.md"
-printf 'tasks/prd-b3test4/prd.md\n' > "$STAGED_FILES"
+mkdir -p "$TMP_REPO_ROOT/.specs/prd-b3test4"
+touch "$TMP_REPO_ROOT/.specs/prd-b3test4/tasks.md"
+printf '.specs/prd-b3test4/prd.md\n' > "$STAGED_FILES"
 stderr_b34=$(mktemp)
 # Rodar com PATH que tem git shim mas sem ai-spec
 PATH="$NOSPEC_BIN:/usr/bin:/bin" \
@@ -410,9 +410,9 @@ rm -f "$stderr_b34"
 # ────────────────────────────────────────────────────────────
 echo
 echo "  B3-5: ai-spec versão antiga v0.10.0 → warn + exit 0"
-mkdir -p "$TMP_REPO_ROOT/tasks/prd-b3test5"
-touch "$TMP_REPO_ROOT/tasks/prd-b3test5/tasks.md"
-printf 'tasks/prd-b3test5/prd.md\n' > "$STAGED_FILES"
+mkdir -p "$TMP_REPO_ROOT/.specs/prd-b3test5"
+touch "$TMP_REPO_ROOT/.specs/prd-b3test5/tasks.md"
+printf '.specs/prd-b3test5/prd.md\n' > "$STAGED_FILES"
 printf 'v0.10.0' > "$AISPEC_VERSION_FILE"
 stderr_b35=$(mktemp)
 bash "$PRE_COMMIT_HOOK" 2>"$stderr_b35"; rc_b35=$?

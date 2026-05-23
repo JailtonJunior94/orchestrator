@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-paridade-cross-cli/5.0_execution_report.md
+summary: BuildRuntimeConfig implementado em taskloop com wiring hierarquico, testes verdes, zero-regressao F1
+timestamp: 2026-05-22T16:14:18Z

@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-fundacao-portatil/6.0_execution_report.md
+summary: Escopo global + Verify file-first + idempotência implementados; CLI verify adicionado; cobertura 78.3%; integração e unit tests pass
+timestamp: 2026-05-22T00:00:00Z

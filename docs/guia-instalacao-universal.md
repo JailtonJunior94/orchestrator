@@ -245,8 +245,8 @@ configurados (ex.: `npx @zed-industries/codex-acp`). O fallback é **transparent
 ## Referências
 
 - [Hierarquia de Configuração](config-hierarchy.md) — precedência `flags > workspace > global > built-in`
-- [ADR-016](../tasks/prd-fundacao-portatil/adr-016-config-hierarquico-universal.md) — Config hierárquico universal
-- [ADR-017](../tasks/prd-fundacao-portatil/adr-017-fallback-launcher-chain.md) — Fallback launcher chain
-- [ADR-018](../tasks/prd-fundacao-portatil/adr-018-runtimeconfig-retry-backpressure.md) — RuntimeConfig + retry/backpressure
-- [ADR-019](../tasks/prd-fundacao-portatil/adr-019-instalador-portatil-detect-verify.md) — Instalador portátil
+- [ADR-016](../.specs/prd-fundacao-portatil/adr-016-config-hierarquico-universal.md) — Config hierárquico universal
+- [ADR-017](../.specs/prd-fundacao-portatil/adr-017-fallback-launcher-chain.md) — Fallback launcher chain
+- [ADR-018](../.specs/prd-fundacao-portatil/adr-018-runtimeconfig-retry-backpressure.md) — RuntimeConfig + retry/backpressure
+- [ADR-019](../.specs/prd-fundacao-portatil/adr-019-instalador-portatil-detect-verify.md) — Instalador portátil
 - [Troubleshooting](troubleshooting.md) — Problemas comuns

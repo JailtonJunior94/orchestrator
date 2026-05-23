@@ -47,7 +47,7 @@ description: Corrige bugs pela causa raiz com testes de regressao obrigatorios e
 1. Registrar para cada bug o arquivo alterado, o teste de regressao adicionado e o resultado da validacao.
 2. Atualizar o estado de cada bug usando apenas `fixed`, `blocked`, `skipped` ou `failed`.
 3. Ler `assets/bugfix-report-template.md`.
-4. Salvar o relatorio em `tasks/prd-<feature-slug>/bugfix_report.md` quando estiver em contexto de tarefa; caso contrario, em `./bugfix_report.md`.
+4. Salvar o relatorio em `.specs/prd-<feature-slug>/bugfix_report.md` quando estiver em contexto de tarefa; caso contrario, em `./bugfix_report.md`.
 5. Validar o relatorio com `bash "$repo_root/.claude/scripts/validate-bugfix-evidence.sh" <caminho-do-relatorio>`; corrigir secoes faltantes antes de encerrar.
 
 **Etapa 6: Encerrar o fluxo**
@@ -68,10 +68,10 @@ description: Corrige bugs pela causa raiz com testes de regressao obrigatorios e
 
 ## Resolução de paths
 
-Todo caminho `tasks/prd-<slug>/` referenciado neste documento resolve para `${AI_TASKS_ROOT:-tasks}/${AI_PRD_PREFIX:-prd-}<slug>/`. Defaults preservam o layout histórico. Customização via `.claude/config.yaml` ou `.agents/config.yaml`:
+Todo caminho `.specs/prd-<slug>/` referenciado neste documento resolve para `${AI_TASKS_ROOT:-.specs}/${AI_PRD_PREFIX:-prd-}<slug>/`. Defaults preservam o layout histórico. Customização via `.claude/config.yaml` ou `.agents/config.yaml`:
 
 ```yaml
-tasks_root: tasks
+tasks_root: .specs
 prd_prefix: prd-
 evidence_dir: ""
 ```

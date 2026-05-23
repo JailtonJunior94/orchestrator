@@ -55,5 +55,5 @@ go list -f '{{.GoFiles}}' ./tests/integration/acp_live
 
 ## ADR de Referência
 
-Ver `tasks/adr/009-acp-protocol-adoption.md` para decisões de arquitetura sobre
+Ver `.specs/adr/009-acp-protocol-adoption.md` para decisões de arquitetura sobre
 o protocolo ACP, versão pinada do `claude-agent-acp` e política de upgrade.

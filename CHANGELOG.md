@@ -252,7 +252,7 @@
 - **install:** `defaultClaudeSettings()` registra `SubagentStop` matcher `task-executor` para auto-invocação do wrapper de validação programática.
 - **contextgen + upgrade:** allowlists internas incluem `execute-all-tasks` para distribuição correta no Codex `config.toml`.
 - **scripts:** novos `check-skills-sync.sh`, `check-hooks-sync.sh`, `sync-hooks.sh`, `test-hooks.sh`, `git-hooks/pre-commit`; integrados a Makefile (`check-skills-sync`, `check-hooks-sync`, `test-hooks`) e workflow `.github/workflows/test.yml`.
-- **tasks/prd-portability-parity + prd-taskloop-execution-validation:** migração para v1.4+ template (coluna `Skills` em tasks.md, seção `## Skills Necessárias` em todos os 17 task files).
+- **.specs/prd-portability-parity + prd-taskloop-execution-validation:** migração para v1.4+ template (coluna `Skills` em tasks.md, seção `## Skills Necessárias` em todos os 17 task files).
 
 ## 0.16.0 (2026-04-25)
 

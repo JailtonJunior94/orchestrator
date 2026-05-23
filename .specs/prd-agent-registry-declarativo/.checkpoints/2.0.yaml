@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-agent-registry-declarativo/2.0_execution_report.md
+summary: "Package internal/agents/ criado com tipos, JSON Schema embarcado e validacao completa; todos os testes T-05 a T-09 passam."
+timestamp: "2026-05-21T00:00:00Z"

@@ -10,7 +10,7 @@ Regras obrigatorias:
 4. Tarefas com `Paralelizavel=true` na mesma wave: dispatch paralelo de multiplos subagents (Gemini suporta nativamente).
 5. Halt-first: qualquer subagent retornando status `!= done` interrompe novas waves.
 6. NAO mutar `tasks.md` no orquestrador; somente os subagents via `execute-task` Stage 5 atualizam status.
-7. Apos sucesso ou halt, escrever `tasks/prd-<slug>/_orchestration_report.md` com snapshot agregado.
+7. Apos sucesso ou halt, escrever `.specs/prd-<slug>/_orchestration_report.md` com snapshot agregado.
 
 Nao invente um processo paralelo. Nao execute tarefas inline. Nao acumule contexto entre tarefas.
 

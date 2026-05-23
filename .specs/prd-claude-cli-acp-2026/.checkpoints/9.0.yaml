@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-claude-cli-acp-2026/9.0_execution_report.md
+summary: "Gate cross-wave 9.0 concluido: T-INT-06 verde, make test+integration+parity verdes, CLAUDE.md 5 capabilities, CHANGELOG 4 entries"
+timestamp: 2026-05-21T23:03:30Z

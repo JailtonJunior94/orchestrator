@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-gemini-cli-acp-2026/2.0_execution_report.md
+summary: "Wiring completo: gemini registrado em runtimeACPCatalog, adrByID e cli-schema.json; todos os testes T-13/T-14/T-16 + extensões verdes"
+timestamp: "2026-05-22T00:00:00Z"

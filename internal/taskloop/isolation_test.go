@@ -8,7 +8,7 @@ import (
 )
 
 func TestRestoreTaskIsolationSnapshotAtRemovesUnexpectedTrackedFiles(t *testing.T) {
-	const prd = "/fake/project/tasks/prd-test"
+	const prd = "/fake/project/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
@@ -35,14 +35,14 @@ func TestRestoreTaskIsolationSnapshotAtRemovesUnexpectedTrackedFiles(t *testing.
 
 func TestValidateTaskFileIsolationRejectsUnexpectedTrackedFile(t *testing.T) {
 	before := map[string][]byte{
-		"/fake/project/tasks/prd-test/task-1.0-test.md": []byte("**Status:** pending\n"),
+		"/fake/project/.specs/prd-test/task-1.0-test.md": []byte("**Status:** pending\n"),
 	}
 	after := map[string][]byte{
-		"/fake/project/tasks/prd-test/task-1.0-test.md":  []byte("**Status:** done\n"),
-		"/fake/project/tasks/prd-test/task-2.0-extra.md": []byte("**Status:** pending\n"),
+		"/fake/project/.specs/prd-test/task-1.0-test.md":  []byte("**Status:** done\n"),
+		"/fake/project/.specs/prd-test/task-2.0-extra.md": []byte("**Status:** pending\n"),
 	}
 
-	err := validateTaskFileIsolation(before, after, "/fake/project/tasks/prd-test/task-1.0-test.md", true)
+	err := validateTaskFileIsolation(before, after, "/fake/project/.specs/prd-test/task-1.0-test.md", true)
 	if err == nil {
 		t.Fatal("esperado erro de arquivo novo, recebeu nil")
 	}
@@ -52,7 +52,7 @@ func TestValidateTaskFileIsolationRejectsUnexpectedTrackedFile(t *testing.T) {
 }
 
 func TestValidateReviewerIsolationRejectsCurrentTaskMutation(t *testing.T) {
-	const prd = "/fake/project/tasks/prd-test"
+	const prd = "/fake/project/.specs/prd-test"
 	currentTask := prd + "/task-1.0-test.md"
 
 	fsys := taskfs.NewFakeFileSystem()
@@ -78,7 +78,7 @@ func TestValidateReviewerIsolationRejectsCurrentTaskMutation(t *testing.T) {
 }
 
 func TestValidateReviewerIsolationRejectsCurrentTaskRowMutation(t *testing.T) {
-	const prd = "/fake/project/tasks/prd-test"
+	const prd = "/fake/project/.specs/prd-test"
 	currentTask := prd + "/task-1.0-test.md"
 
 	fsys := taskfs.NewFakeFileSystem()
@@ -105,12 +105,12 @@ func TestValidateReviewerIsolationRejectsCurrentTaskRowMutation(t *testing.T) {
 
 func TestValidateProtectedPRDFileIsolationRejectsMutation(t *testing.T) {
 	before := map[string][]byte{
-		"/fake/project/tasks/prd-test/prd.md":      []byte("# PRD original\n"),
-		"/fake/project/tasks/prd-test/techspec.md": []byte("# TechSpec original\n"),
+		"/fake/project/.specs/prd-test/prd.md":      []byte("# PRD original\n"),
+		"/fake/project/.specs/prd-test/techspec.md": []byte("# TechSpec original\n"),
 	}
 	after := map[string][]byte{
-		"/fake/project/tasks/prd-test/prd.md":      []byte("# PRD alterado\n"),
-		"/fake/project/tasks/prd-test/techspec.md": []byte("# TechSpec original\n"),
+		"/fake/project/.specs/prd-test/prd.md":      []byte("# PRD alterado\n"),
+		"/fake/project/.specs/prd-test/techspec.md": []byte("# TechSpec original\n"),
 	}
 
 	err := validateProtectedPRDFileIsolation(before, after)
@@ -123,7 +123,7 @@ func TestValidateProtectedPRDFileIsolationRejectsMutation(t *testing.T) {
 }
 
 func TestRestoreTaskIsolationSnapshotAtRestoresProtectedPRDFiles(t *testing.T) {
-	const prd = "/fake/project/tasks/prd-test"
+	const prd = "/fake/project/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
@@ -152,7 +152,7 @@ func TestRestoreTaskIsolationSnapshotAtRestoresProtectedPRDFiles(t *testing.T) {
 }
 
 func TestValidateTaskIsolationRejectsArbitraryPRDFileMutation(t *testing.T) {
-	const prd = "/fake/project/tasks/prd-test"
+	const prd = "/fake/project/.specs/prd-test"
 	currentTask := prd + "/task-1.0-test.md"
 
 	fsys := taskfs.NewFakeFileSystem()
@@ -179,7 +179,7 @@ func TestValidateTaskIsolationRejectsArbitraryPRDFileMutation(t *testing.T) {
 }
 
 func TestValidateReviewerIsolationRejectsArbitraryNestedPRDFileCreation(t *testing.T) {
-	const prd = "/fake/project/tasks/prd-test"
+	const prd = "/fake/project/.specs/prd-test"
 	currentTask := prd + "/task-1.0-test.md"
 
 	fsys := taskfs.NewFakeFileSystem()
@@ -206,10 +206,10 @@ func TestValidateReviewerIsolationRejectsArbitraryNestedPRDFileCreation(t *testi
 }
 
 // TestValidateTaskIsolationAllowsMemoryDir é a regressão do conflito memory_persist × isolamento:
-// o hook memory_persist grava tasks/<prd>/memory/MEMORY.md APÓS a sessão; isso NÃO deve disparar
+// o hook memory_persist grava .specs/<prd>/memory/MEMORY.md APÓS a sessão; isso NÃO deve disparar
 // violação de isolamento (o subdir memory/ é gerenciado pelo harness, não pelo agente).
 func TestValidateTaskIsolationAllowsMemoryDir(t *testing.T) {
-	const prd = "/fake/project/tasks/prd-test"
+	const prd = "/fake/project/.specs/prd-test"
 	currentTask := prd + "/task-1.0-test.md"
 
 	fsys := taskfs.NewFakeFileSystem()
@@ -236,7 +236,7 @@ func TestValidateTaskIsolationAllowsMemoryDir(t *testing.T) {
 // (memory/, .checkpoints/, .partials/) não são protegidos — artefatos da própria stack não devem
 // disparar violação de isolamento (regressão dos falsos-positivos MEMORY.md e .checkpoints/<n>.yaml).
 func TestIsProtectedPRDFile_HarnessManagedDirsExcluded(t *testing.T) {
-	const prd = "/fake/project/tasks/prd-test"
+	const prd = "/fake/project/.specs/prd-test"
 	managed := []string{
 		prd + "/memory/MEMORY.md",
 		prd + "/.checkpoints/1.0.yaml",
@@ -256,7 +256,7 @@ func TestIsProtectedPRDFile_HarnessManagedDirsExcluded(t *testing.T) {
 }
 
 func TestRestoreTaskIsolationSnapshotAtRemovesUnexpectedProtectedPRDFiles(t *testing.T) {
-	const prd = "/fake/project/tasks/prd-test"
+	const prd = "/fake/project/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")

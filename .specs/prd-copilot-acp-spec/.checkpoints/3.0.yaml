@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-copilot-acp-spec/3.0_execution_report.md
+summary: "runner.go generalizado: runtime_init usa r.spec.SDKVersion()/NPMVersion() em vez de constantes Claude; T-09 Copilot + T-05 regressão adicionados; 100% verde; diff zero em persistence/ e watchdog.go"
+timestamp: "2026-05-21T14:13:00Z"

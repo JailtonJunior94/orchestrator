@@ -14,7 +14,7 @@ Ao concluir, rode validacao proporcional e retorne EXCLUSIVAMENTE um bloco YAML:
 
 ```yaml
 status: done | blocked | failed | needs_input
-report_path: tasks/prd-<slug>/<id>_execution_report.md
+report_path: .specs/prd-<slug>/<id>_execution_report.md
 summary: <1 linha>
 ```
 

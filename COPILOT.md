@@ -9,7 +9,7 @@ O harness suporta esse modo via `--runtime=acp --tool=copilot`, atingindo parida
 observacional total com Claude: persistencia forense, watchdog de inatividade e
 telemetria opt-in cobrem invocacoes Copilot com os mesmos campos e granularidade.
 
-Ver: [ADR-012](tasks/adr/012-copilot-cli-acp-native.md) — Copilot CLI como runtime ACP nativo (substitui [ADR-007](docs/adr/007-copilot-cli-stateless-workaround.md)).
+Ver: [ADR-012](.specs/adr/012-copilot-cli-acp-native.md) — Copilot CLI como runtime ACP nativo (substitui [ADR-007](docs/adr/007-copilot-cli-stateless-workaround.md)).
 
 ### Pre-requisitos
 
@@ -25,7 +25,7 @@ Ver: [ADR-012](tasks/adr/012-copilot-cli-acp-native.md) — Copilot CLI como run
 ai-spec-harness task-loop \
   --tool copilot \
   --runtime acp \
-  tasks/prd-minha-feature
+  .specs/prd-minha-feature
 ```
 
 A sessao produz os mesmos artefatos forenses do modo Claude:
@@ -47,7 +47,7 @@ ai-spec-harness task-loop \
   --tool copilot \
   --runtime acp \
   --activity-timeout 90s \
-  tasks/prd-minha-feature
+  .specs/prd-minha-feature
 ```
 
 ### Erro de launcher indisponivel
@@ -59,20 +59,20 @@ copilot nao encontrado.
   1. Instale copilot CLI:  https://docs.github.com/en/copilot/reference/copilot-cli-reference/acp-server
   2. OU instale @github/copilot@<pin> via npm.
   3. OU use --runtime=legacy.
-  Ver: tasks/adr/012-copilot-cli-acp-native.md
+  Ver: .specs/adr/012-copilot-cli-acp-native.md
 ```
 
 ---
 
 ## Modo Legado (deprecado): Copilot CLI stateless
 
-> **Status:** Deprecado. Sera removido em versao futura — ver [ADR-012](tasks/adr/012-copilot-cli-acp-native.md) §"Consequencias".
+> **Status:** Deprecado. Sera removido em versao futura — ver [ADR-012](.specs/adr/012-copilot-cli-acp-native.md) §"Consequencias".
 > Migrar para `--runtime=acp` conforme secao acima.
 
 ```bash
 ai-spec-harness task-loop \
   --tool copilot \
-  tasks/prd-minha-feature
+  .specs/prd-minha-feature
 ```
 
 Este modo invoca `copilot --autopilot --yolo -p <prompt>` sem ACP.
@@ -111,9 +111,9 @@ Regras essenciais:
 
 | ADR | Titulo | Status |
 |-----|--------|--------|
-| [ADR-012](tasks/adr/012-copilot-cli-acp-native.md) | Copilot CLI como runtime ACP nativo | Aceita |
+| [ADR-012](.specs/adr/012-copilot-cli-acp-native.md) | Copilot CLI como runtime ACP nativo | Aceita |
 | [ADR-007](docs/adr/007-copilot-cli-stateless-workaround.md) | Copilot CLI stateless workaround | Substituida por ADR-012 |
-| [ADR-009](tasks/adr/009-acp-protocol-adoption.md) | Adocao do ACP via coder/acp-go-sdk | Aceita |
+| [ADR-009](.specs/adr/009-acp-protocol-adoption.md) | Adocao do ACP via coder/acp-go-sdk | Aceita |
 | [ADR-008](docs/adr/008-parity-multi-tool-invariants.md) | 29 invariantes 3 niveis (paridade multi-tool) | Aceita |
 
 ---

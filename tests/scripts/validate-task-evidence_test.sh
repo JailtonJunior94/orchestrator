@@ -47,7 +47,7 @@ VALID_REPORT='# Relatório de Execução de Tarefa
 
 ## Tarefa
 - ID: 5.0
-- Arquivo: tasks/prd-portability-parity/task-5.0.md
+- Arquivo: .specs/prd-portability-parity/task-5.0.md
 - Estado: done
 
 ## Contexto Carregado

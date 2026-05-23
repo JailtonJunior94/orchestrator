@@ -263,7 +263,7 @@ func TestACPInvoker_Invoke_DerivesTaskEvidenceDir(t *testing.T) {
 	)
 
 	invoker := taskloop.NewACPInvoker(runner, true, 0)
-	prompt := "Use a skill execute-task para implementar a task tasks/prd-acp-runtime-claude/task-9.0-runner-invoker-integration.md."
+	prompt := "Use a skill execute-task para implementar a task .specs/prd-acp-runtime-claude/task-9.0-runner-invoker-integration.md."
 	workDir := workDirWithAgentsMD(t)
 
 	if _, _, _, err := invoker.Invoke(ctx, prompt, workDir, ""); err != nil {

@@ -24,7 +24,7 @@ fi
 
 PRD_SLUG="$1"
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-TASKS_ROOT="${AI_TASKS_ROOT:-tasks}"
+TASKS_ROOT="${AI_TASKS_ROOT:-.specs}"
 PRD_PREFIX="${AI_PRD_PREFIX:-prd-}"
 PRD_DIR="$REPO_ROOT/$TASKS_ROOT/$PRD_PREFIX$PRD_SLUG"
 TASKS_MD="$PRD_DIR/tasks.md"

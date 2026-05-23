@@ -3,7 +3,7 @@ package specs
 // Constantes do runtime Claude.
 // Política de atualização (PRD §"Restrições Técnicas" + ADR-009):
 //   - ClaudeNpmVersion e ClaudeSDKVersion são constantes Go pinadas. Nunca usar @latest.
-//   - ClaudeNpmVersion só é alterada via processo audit/ (tasks/templates/skill-upgrade-decision.md).
+//   - ClaudeNpmVersion só é alterada via processo audit/ (.specs/templates/skill-upgrade-decision.md).
 //   - ClaudeSDKVersion é mantida em sincronia com go.mod por scripts/sync-acp-sdk-version.sh.
 const (
 	// ClaudeNpmPackage é o nome do pacote npm canônico do agente Claude ACP.

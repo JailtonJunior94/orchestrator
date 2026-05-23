@@ -405,7 +405,7 @@ Checklist minimo por versao publicada:
 3. Rode `ai-spec upgrade <repo> --check` em cada repositorio instrumentado.
 4. Rode `ai-spec upgrade <repo>` onde houver mudanca pendente.
 5. Rode `ai-spec inspect <repo>`, `ai-spec doctor <repo>` e `ai-spec lint <repo>`.
-6. Se houver PRD/TechSpec editado intencionalmente no bundle, rode tambem `ai-spec sync-spec-hash tasks/<prd>/tasks.md` para manter o `spec-hash` sincronizado.
+6. Se houver PRD/TechSpec editado intencionalmente no bundle, rode tambem `ai-spec sync-spec-hash .specs/<prd>/tasks.md` para manter o `spec-hash` sincronizado.
 
 Esse e o contrato pratico: **instalar uma vez, atualizar o binario a cada release, sincronizar cada projeto com `upgrade` e revalidar sempre**.
 
@@ -521,7 +521,7 @@ O `README.md` continua sendo a entrada executiva. O detalhe operacional agora fi
 - [Checklist de Preflight e Readiness](docs/preflight-checklist.md): gates bloqueantes e checks recomendados antes de executar.
 - [Biblioteca de Prompts](docs/prompt-library.md): prompts copiaveis por etapa, com variante canonica para `execute-task`.
 - [Matriz de Confiabilidade por Ferramenta](docs/tool-reliability-matrix.md): papel recomendado, risco operacional e custo de contexto por ferramenta.
-- [Bundle canonico de referencia](tasks/prd-example-preflight-entrypoint/): exemplo auditavel end-to-end com `prd.md`, `techspec.md`, `tasks.md`, `task-*.md` e execution reports.
+- [Bundle canonico de referencia](.specs/prd-example-preflight-entrypoint/): exemplo auditavel end-to-end com `prd.md`, `techspec.md`, `tasks.md`, `task-*.md` e execution reports.
 
 Atalho de decisao:
 
@@ -588,7 +588,7 @@ PRD folder valido (`prd.md` + `techspec.md` + `tasks.md` com `spec-hash` sincron
 **Claude**
 
 ```bash
-ai-spec task-loop --tool claude --runtime acp --access-mode full tasks/prd-<slug>
+ai-spec task-loop --tool claude --runtime acp --access-mode full .specs/prd-<slug>
 ```
 - Binario: `claude-agent-acp` no PATH, ou fallback `npx --yes @agentclientprotocol/claude-agent-acp@<pin>`.
 - Auth: login do Claude (`~/.claude`) ou `ANTHROPIC_API_KEY`.
@@ -596,7 +596,7 @@ ai-spec task-loop --tool claude --runtime acp --access-mode full tasks/prd-<slug
 **Codex**
 
 ```bash
-ai-spec task-loop --tool codex --runtime acp --access-mode full tasks/prd-<slug>
+ai-spec task-loop --tool codex --runtime acp --access-mode full .specs/prd-<slug>
 ```
 - Binario: `codex-acp` no PATH, ou fallback `npx --yes @zed-industries/codex-acp@<pin>`.
 - Auth: login do Codex (`~/.codex`).
@@ -604,7 +604,7 @@ ai-spec task-loop --tool codex --runtime acp --access-mode full tasks/prd-<slug>
 **Copilot**
 
 ```bash
-ai-spec task-loop --tool copilot --runtime acp --access-mode full tasks/prd-<slug>
+ai-spec task-loop --tool copilot --runtime acp --access-mode full .specs/prd-<slug>
 ```
 - Binario: `copilot --acp` no PATH, ou fallback `npx --yes @github/copilot@<pin> --acp`.
 - Auth: `gh auth login` (conta GitHub com acesso ao Copilot).
@@ -612,7 +612,7 @@ ai-spec task-loop --tool copilot --runtime acp --access-mode full tasks/prd-<slu
 **Gemini**
 
 ```bash
-ai-spec task-loop --tool gemini --runtime acp --access-mode full tasks/prd-<slug>
+ai-spec task-loop --tool gemini --runtime acp --access-mode full .specs/prd-<slug>
 ```
 - Binario: `gemini --acp` no PATH, ou fallback `npx --yes @google/gemini-cli@<pin> --acp`.
 - Auth: login do Gemini CLI.
@@ -622,11 +622,11 @@ Parametros uteis (validos para qualquer CLI):
 ```bash
 # uma task por vez, watchdog curto, modo silencioso
 ai-spec task-loop --tool codex --runtime acp --access-mode full \
-  --max-iterations 1 --activity-timeout 2m --quiet tasks/prd-<slug>
+  --max-iterations 1 --activity-timeout 2m --quiet .specs/prd-<slug>
 
 # bypass granular do guard spec-drift (mantem governance/token_budget ativos)
 ai-spec task-loop --tool claude --runtime acp --access-mode full \
-  --skip-drift-guard tasks/prd-<slug>
+  --skip-drift-guard .specs/prd-<slug>
 ```
 
 ### Resolucao do binario (fallback)
@@ -661,10 +661,10 @@ sem processos orfaos).
   mudanca explicita de flag.
 - O guard `spec_drift` so atua quando ha `tasks.md` rastreavel; `tasks.md` ausente e no-op (o
   `TasksDir` tambem alimenta a memoria 2-tier sem exigir PRD).
-- ADRs relacionadas: [ADR-009 (ACP via coder/acp-go-sdk)](tasks/adr/009-acp-protocol-adoption.md),
-  [ADR-012 (Copilot ACP)](tasks/adr/012-copilot-cli-acp-native.md),
-  [ADR-013 (Codex ACP)](tasks/adr/013-codex-cli-acp-native.md),
-  [ADR-015 (Gemini ACP)](tasks/adr/015-gemini-cli-acp-native.md).
+- ADRs relacionadas: [ADR-009 (ACP via coder/acp-go-sdk)](.specs/adr/009-acp-protocol-adoption.md),
+  [ADR-012 (Copilot ACP)](.specs/adr/012-copilot-cli-acp-native.md),
+  [ADR-013 (Codex ACP)](.specs/adr/013-codex-cli-acp-native.md),
+  [ADR-015 (Gemini ACP)](.specs/adr/015-gemini-cli-acp-native.md).
 - Para migrar do modo legado, ver o [Guia de migracao legacy -> ACP](docs/migracao-legacy-acp.md).
 
 ## Fluxo completo recomendado
@@ -757,7 +757,7 @@ Quero:
 Estrutura esperada:
 
 ```text
-tasks/
+.specs/
   prd-payments-list/
     prd.md
     techspec.md
@@ -776,13 +776,13 @@ O `task-loop` percorre `tasks.md`, identifica a proxima task elegivel e invoca o
 Valide sem gastar ciclo de agente:
 
 ```bash
-ai-spec task-loop --tool codex --dry-run tasks/prd-payments-list
+ai-spec task-loop --tool codex --dry-run .specs/prd-payments-list
 ```
 
 Execute o primeiro lote pequeno para observar qualidade:
 
 ```bash
-ai-spec task-loop --tool codex --max-iterations 2 tasks/prd-payments-list
+ai-spec task-loop --tool codex --max-iterations 2 .specs/prd-payments-list
 ```
 
 Execucao completa com rastreabilidade:
@@ -793,7 +793,7 @@ ai-spec task-loop \
   --max-iterations 10 \
   --timeout 1h \
   --report-path ./task-loop-report-payments.md \
-  tasks/prd-payments-list
+  .specs/prd-payments-list
 ```
 
 #### Flags disponiveis
@@ -863,11 +863,11 @@ A invariante só funciona se for verificada. Os dois comandos abaixo transformam
 
 ```bash
 # 1. Detectar drift: bloqueia execução se PRD/TechSpec divergirem dos hashes em tasks.md
-ai-spec check-spec-drift tasks/prd-<slug>/tasks.md
+ai-spec check-spec-drift .specs/prd-<slug>/tasks.md
 # Exit 0 = cadeia íntegra; ≠ 0 = drift detectado, execute-task bloqueia
 
 # 2. Sincronizar após editar PRD ou TechSpec intencionalmente
-ai-spec sync-spec-hash tasks/prd-<slug>/
+ai-spec sync-spec-hash .specs/prd-<slug>/
 # Recalcula SHA-256 de prd.md e techspec.md e atualiza os comentários em tasks.md
 ```
 
@@ -912,7 +912,7 @@ O fluxo `create-prd → create-technical-specification → create-tasks → exec
 **Regra dura — quando o pipeline NÃO pode ser pulado:**
 1. Qualquer alteração que adicione, remova ou modifique um Requisito Funcional (RF).
 2. Qualquer alteração em contrato público (API HTTP, CLI flags, schema de banco, formato de arquivo).
-3. Qualquer alteração que invalide um ADR existente (consultar [`tasks/adr/`](tasks/adr/) e [`docs/adr/`](docs/adr/)).
+3. Qualquer alteração que invalide um ADR existente (consultar [`.specs/adr/`](.specs/adr/) e [`docs/adr/`](docs/adr/)).
 
 Em caso de dúvida, aplique o [Scorecard de Qualidade e Confiança](docs/quality-scorecard.md) — se o bundle ficaria em `fail` por ausência de PRD/TechSpec, o pipeline é mandatório.
 
@@ -954,7 +954,7 @@ O PRD não é um documento opcional; é a **âncora de verdade** de todo o desen
 ### 1. Início Único e Obrigatório
 Toda e qualquer feature, alteração de comportamento ou nova funcionalidade **DEVE** começar com a skill `create-prd`. 
 - **Sem atalhos:** É proibido pular para a Especificação Técnica ou Implementação sem um PRD aprovado.
-- **Localização:** O arquivo deve residir obrigatoriamente em `tasks/prd-<slug>/prd.md`.
+- **Localização:** O arquivo deve residir obrigatoriamente em `.specs/prd-<slug>/prd.md`.
 
 ### 2. Anatomia do PRD Objetivo
 O PRD deve ser estritamente focado no **O QUE** e **POR QUE**, evitando detalhes de implementação:
@@ -1010,9 +1010,9 @@ Apos a instalacao, o repositorio alvo contem os seguintes artefatos que os agent
 | --- | --- | --- |
 | `AGENTS.md` | raiz do repositorio alvo | fonte canonica de governanca: stack, convencoes, comandos de validacao e instrucoes para todos os agentes |
 | `SKILL.md` | `.agents/skills/<skill-name>/SKILL.md` | define o contrato de uma skill: passos obrigatorios, entradas, saidas e criterios de aceite que o agente deve seguir |
-| `tasks/<folder>/prd.md` | pasta de cada PRD | requisitos do produto aprovados; input obrigatorio para `create-technical-specification` |
-| `tasks/<folder>/techspec.md` | pasta de cada PRD | especificacao tecnica aprovada; input obrigatorio para `create-tasks` e `execute-task` |
-| `tasks/<folder>/tasks.md` | pasta de cada PRD | tabela de tasks com status e dependencias; consumida pelo `task-loop` |
+| `.specs/<folder>/prd.md` | pasta de cada PRD | requisitos do produto aprovados; input obrigatorio para `create-technical-specification` |
+| `.specs/<folder>/techspec.md` | pasta de cada PRD | especificacao tecnica aprovada; input obrigatorio para `create-tasks` e `execute-task` |
+| `.specs/<folder>/tasks.md` | pasta de cada PRD | tabela de tasks com status e dependencias; consumida pelo `task-loop` |
 | `bugs.json` | raiz ou pasta de qualidade | array JSON de bugs no schema canonico; validado por `ai-spec validate-bugs` |
 | `skills-lock.json` | raiz do repositorio fonte | registra SHA-256 de cada skill externa; `ai-spec skills check` detecta mudancas de interface |
 | `.ai_spec_harness.json` | raiz do repositorio alvo | manifesto da instalacao: versao, ferramentas e modo de instalacao |
@@ -1086,13 +1086,13 @@ ai-spec wrapper codex create-tasks .
 ai-spec scaffold rust --root .
 
 # verificar cobertura de requisitos e drift de spec
-ai-spec check-spec-drift tasks/prd-payments-list/tasks.md
+ai-spec check-spec-drift .specs/prd-payments-list/tasks.md
 
 # sincronizar hashes apos editar prd.md ou techspec.md
-ai-spec sync-spec-hash tasks/prd-payments-list/tasks.md
+ai-spec sync-spec-hash .specs/prd-payments-list/tasks.md
 
 # executar todas as tasks elegiveis de um PRD folder
-ai-spec task-loop --tool codex tasks/prd-payments-list
+ai-spec task-loop --tool codex .specs/prd-payments-list
 
 # verificar versoes de skills externas contra o lock file
 ai-spec skills check .
@@ -1195,7 +1195,7 @@ Prompt efetivo para `execute-task`:
 Use a skill execute-task para implementar a proxima task elegivel.
 
 Contexto:
-- execute apenas a task selecionada em tasks/prd-payments-list/
+- execute apenas a task selecionada em .specs/prd-payments-list/
 - preserve contratos publicos existentes
 - rode validacao proporcional e review
 
@@ -1343,7 +1343,7 @@ Ativação (opt-in):
 git config core.hooksPath scripts/git-hooks
 ```
 
-Comportamento permissivo: se `ai-spec` não está no PATH ou está em versão antiga, o bloco spec-drift emite warning em stderr e permite o commit (exit 0). Em caso de drift real, o hook bloqueia com mensagem indicando `ai-spec sync-spec-hash tasks/prd-<slug>/tasks.md` como remediação.
+Comportamento permissivo: se `ai-spec` não está no PATH ou está em versão antiga, o bloco spec-drift emite warning em stderr e permite o commit (exit 0). Em caso de drift real, o hook bloqueia com mensagem indicando `ai-spec sync-spec-hash .specs/prd-<slug>/tasks.md` como remediação.
 
 Escape hatch responsável: `git commit --no-verify` pula o hook em casos legítimos (commits de docs em PRDs antigos, por exemplo). Drift fica para review pegar — não normalize o bypass.
 
@@ -1405,7 +1405,7 @@ Substitua `<sha>` pelo commit que contém a versão da Action a ser publicada. A
 - [Guia de uso das skills](docs/skills-usage-guide.md) — contratos, prompts mandatorios e criterios de aceite por skill
 - [Biblioteca de prompts](docs/prompt-library.md) — prompts copiaveis para execucao por task e variantes curta, padrao e rigorosa
 - [Matriz de Confiabilidade por Ferramenta](docs/tool-reliability-matrix.md) — papel recomendado, risco operacional e custo de contexto por ferramenta
-- [Bundle canonico de referencia](tasks/prd-example-preflight-entrypoint/) — exemplo end-to-end auditavel do fluxo governado
+- [Bundle canonico de referencia](.specs/prd-example-preflight-entrypoint/) — exemplo end-to-end auditavel do fluxo governado
 - [Guia do task-loop](docs/task-loop-reference.md) — flags, heuristicas, alternativas e comparativos
 - [Guia de resolucao de problemas](docs/troubleshooting.md) — 12 problemas comuns com sintoma, causa, solucao e verificacao
 - [Telemetria e ciclo de feedback](docs/telemetry-feedback-cycle.md)

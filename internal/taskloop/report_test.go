@@ -8,10 +8,10 @@ import (
 
 func TestReportRender(t *testing.T) {
 	report := &Report{
-		PRDFolder: "tasks/prd-test",
-		Tool:      "claude",
-		StartTime: time.Date(2026, 4, 19, 14, 0, 0, 0, time.UTC),
-		EndTime:   time.Date(2026, 4, 19, 15, 0, 0, 0, time.UTC),
+		PRDFolder:  ".specs/prd-test",
+		Tool:       "claude",
+		StartTime:  time.Date(2026, 4, 19, 14, 0, 0, 0, time.UTC),
+		EndTime:    time.Date(2026, 4, 19, 15, 0, 0, 0, time.UTC),
 		StopReason: "todas as tasks completadas ou em estado terminal",
 		Iterations: []IterationResult{
 			{
@@ -46,7 +46,7 @@ func TestReportRender(t *testing.T) {
 
 	checks := []string{
 		"# Task Loop Execution Report",
-		"tasks/prd-test",
+		".specs/prd-test",
 		"claude",
 		"2 ",
 		"todas as tasks completadas",
@@ -70,7 +70,7 @@ func TestReportRender(t *testing.T) {
 
 func TestReportRenderEmpty(t *testing.T) {
 	report := &Report{
-		PRDFolder:  "tasks/prd-empty",
+		PRDFolder:  ".specs/prd-empty",
 		Tool:       "codex",
 		StartTime:  time.Now(),
 		EndTime:    time.Now(),
@@ -108,9 +108,9 @@ func TestReportRenderResumoSection(t *testing.T) {
 			},
 		},
 		{
-			name:      "sem iteracoes — secao Resumo nao aparece",
+			name:       "sem iteracoes — secao Resumo nao aparece",
 			iterations: nil,
-			wantNotIn: []string{"## Resumo"},
+			wantNotIn:  []string{"## Resumo"},
 		},
 		{
 			name: "todas com sucesso — falhadas e puladas zero",
@@ -175,7 +175,7 @@ func TestReportRenderResumoSection(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			report := &Report{
-				PRDFolder:  "tasks/prd-test",
+				PRDFolder:  ".specs/prd-test",
 				Tool:       "claude",
 				StartTime:  time.Now(),
 				EndTime:    time.Now(),
@@ -199,7 +199,7 @@ func TestReportRenderResumoSection(t *testing.T) {
 
 func TestReportRenderResumoOrdem(t *testing.T) {
 	report := &Report{
-		PRDFolder:  "tasks/prd-test",
+		PRDFolder:  ".specs/prd-test",
 		Tool:       "claude",
 		StartTime:  time.Now(),
 		EndTime:    time.Now(),
@@ -228,7 +228,7 @@ func TestReportRenderResumoOrdem(t *testing.T) {
 func TestReportTruncatesOutput(t *testing.T) {
 	longOutput := strings.Repeat("x", 3000)
 	report := &Report{
-		PRDFolder:  "tasks/prd-test",
+		PRDFolder:  ".specs/prd-test",
 		Tool:       "claude",
 		StartTime:  time.Now(),
 		EndTime:    time.Now(),
@@ -267,7 +267,7 @@ func TestReportRenderSimples(t *testing.T) {
 			name: "modo simples — cabecalho com Modo e Tool",
 			report: &Report{
 				Mode:       "simples",
-				PRDFolder:  "tasks/prd-minha-feature",
+				PRDFolder:  ".specs/prd-minha-feature",
 				Tool:       "claude",
 				StartTime:  time.Date(2026, 4, 19, 10, 0, 0, 0, time.UTC),
 				EndTime:    time.Date(2026, 4, 19, 10, 30, 0, 0, time.UTC),
@@ -287,7 +287,7 @@ func TestReportRenderSimples(t *testing.T) {
 			wantIn: []string{
 				"**Modo:** simples",
 				"**Tool:** claude",
-				"tasks/prd-minha-feature",
+				".specs/prd-minha-feature",
 				"| # | Task ID | Title | Pre-Status | Post-Status | Duration | Exit Code |",
 				"| 1 | 1.0 | Setup | pending | done |",
 			},
@@ -302,7 +302,7 @@ func TestReportRenderSimples(t *testing.T) {
 			name: "modo simples — tabela nao tem coluna Papel",
 			report: &Report{
 				Mode:       "simples",
-				PRDFolder:  "tasks/prd-test",
+				PRDFolder:  ".specs/prd-test",
 				Tool:       "codex",
 				StartTime:  time.Now(),
 				EndTime:    time.Now(),
@@ -324,7 +324,7 @@ func TestReportRenderSimples(t *testing.T) {
 		{
 			name: "modo vazio (backward compat) — sem linha Modo no cabecalho",
 			report: &Report{
-				PRDFolder:  "tasks/prd-test",
+				PRDFolder:  ".specs/prd-test",
 				Tool:       "claude",
 				StartTime:  time.Now(),
 				EndTime:    time.Now(),
@@ -343,7 +343,7 @@ func TestReportRenderSimples(t *testing.T) {
 			name: "modo simples — ReviewResult em IterationResult nao gera sub-linha na tabela",
 			report: &Report{
 				Mode:       "simples",
-				PRDFolder:  "tasks/prd-test",
+				PRDFolder:  ".specs/prd-test",
 				Tool:       "claude",
 				StartTime:  time.Now(),
 				EndTime:    time.Now(),
@@ -407,7 +407,7 @@ func TestReportRenderAvancado(t *testing.T) {
 			name: "modo avancado — cabecalho com perfis executor e reviewer",
 			report: &Report{
 				Mode:            "avancado",
-				PRDFolder:       "tasks/prd-minha-feature",
+				PRDFolder:       ".specs/prd-minha-feature",
 				ExecutorProfile: &execProfile,
 				ReviewerProfile: &revProfile,
 				StartTime:       time.Date(2026, 4, 19, 10, 0, 0, 0, time.UTC),
@@ -418,7 +418,7 @@ func TestReportRenderAvancado(t *testing.T) {
 				"**Modo:** avancado",
 				"**Executor:** claude / anthropic / claude-sonnet-4-6",
 				"**Reviewer:** codex / openai / gpt-5.4",
-				"tasks/prd-minha-feature",
+				".specs/prd-minha-feature",
 			},
 			wantNotIn: []string{
 				"**Tool:**",
@@ -429,7 +429,7 @@ func TestReportRenderAvancado(t *testing.T) {
 			name: "modo avancado — tabela com coluna Papel",
 			report: &Report{
 				Mode:            "avancado",
-				PRDFolder:       "tasks/prd-test",
+				PRDFolder:       ".specs/prd-test",
 				ExecutorProfile: &execProfile,
 				ReviewerProfile: &revProfile,
 				StartTime:       time.Now(),
@@ -457,7 +457,7 @@ func TestReportRenderAvancado(t *testing.T) {
 			name: "modo avancado — Role vazio assume executor",
 			report: &Report{
 				Mode:            "avancado",
-				PRDFolder:       "tasks/prd-test",
+				PRDFolder:       ".specs/prd-test",
 				ExecutorProfile: &execProfile,
 				StartTime:       time.Now(),
 				EndTime:         time.Now(),
@@ -481,7 +481,7 @@ func TestReportRenderAvancado(t *testing.T) {
 			name: "modo avancado — reviewer nil mostra 'nao configurado'",
 			report: &Report{
 				Mode:            "avancado",
-				PRDFolder:       "tasks/prd-test",
+				PRDFolder:       ".specs/prd-test",
 				ExecutorProfile: &execProfile,
 				ReviewerProfile: nil,
 				StartTime:       time.Now(),
@@ -498,7 +498,7 @@ func TestReportRenderAvancado(t *testing.T) {
 				ep, _ := NewExecutionProfile("executor", "claude", "")
 				return &Report{
 					Mode:            "avancado",
-					PRDFolder:       "tasks/prd-test",
+					PRDFolder:       ".specs/prd-test",
 					ExecutorProfile: &ep,
 					StartTime:       time.Now(),
 					EndTime:         time.Now(),
@@ -513,7 +513,7 @@ func TestReportRenderAvancado(t *testing.T) {
 			name: "modo avancado — sub-linha reviewer presente quando ReviewResult != nil",
 			report: &Report{
 				Mode:            "avancado",
-				PRDFolder:       "tasks/prd-test",
+				PRDFolder:       ".specs/prd-test",
 				ExecutorProfile: &execProfile,
 				ReviewerProfile: &revProfile,
 				StartTime:       time.Now(),
@@ -550,7 +550,7 @@ func TestReportRenderAvancado(t *testing.T) {
 			name: "modo avancado — sub-linha reviewer ausente quando ReviewResult == nil",
 			report: &Report{
 				Mode:            "avancado",
-				PRDFolder:       "tasks/prd-test",
+				PRDFolder:       ".specs/prd-test",
 				ExecutorProfile: &execProfile,
 				ReviewerProfile: &revProfile,
 				StartTime:       time.Now(),
@@ -581,7 +581,7 @@ func TestReportRenderAvancado(t *testing.T) {
 			name: "modo avancado — ReviewResult com exit code != 0 e note",
 			report: &Report{
 				Mode:            "avancado",
-				PRDFolder:       "tasks/prd-test",
+				PRDFolder:       ".specs/prd-test",
 				ExecutorProfile: &execProfile,
 				ReviewerProfile: &revProfile,
 				StartTime:       time.Now(),
@@ -616,7 +616,7 @@ func TestReportRenderAvancado(t *testing.T) {
 			name: "modo avancado — multiplas iteracoes com RF-13: iteracao conta apenas executor",
 			report: &Report{
 				Mode:            "avancado",
-				PRDFolder:       "tasks/prd-test",
+				PRDFolder:       ".specs/prd-test",
 				ExecutorProfile: &execProfile,
 				ReviewerProfile: &revProfile,
 				StartTime:       time.Now(),
@@ -645,7 +645,7 @@ func TestReportRenderAvancado(t *testing.T) {
 			name: "modo avancado — secao Results nao aparece sem iteracoes",
 			report: &Report{
 				Mode:            "avancado",
-				PRDFolder:       "tasks/prd-test",
+				PRDFolder:       ".specs/prd-test",
 				ExecutorProfile: &execProfile,
 				StartTime:       time.Now(),
 				EndTime:         time.Now(),
@@ -687,7 +687,7 @@ func TestReportRenderBugfixOutputTruncation(t *testing.T) {
 
 	report := &Report{
 		Mode:            "avancado",
-		PRDFolder:       "tasks/prd-test",
+		PRDFolder:       ".specs/prd-test",
 		ExecutorProfile: &execProfile,
 		ReviewerProfile: &revProfile,
 		StartTime:       time.Now(),
@@ -730,7 +730,7 @@ func TestReportRenderBugfixOutputTruncation(t *testing.T) {
 func TestReportRenderSimplesModeIgnoresBugfixResult(t *testing.T) {
 	report := &Report{
 		Mode:       "simples",
-		PRDFolder:  "tasks/prd-test",
+		PRDFolder:  ".specs/prd-test",
 		Tool:       "claude",
 		StartTime:  time.Now(),
 		EndTime:    time.Now(),
@@ -785,7 +785,7 @@ func TestReportRenderAvancadoBugfix(t *testing.T) {
 			name: "bugfix presente apos reviewer com exit != 0",
 			report: &Report{
 				Mode:            "avancado",
-				PRDFolder:       "tasks/prd-test",
+				PRDFolder:       ".specs/prd-test",
 				ExecutorProfile: &execProfile,
 				ReviewerProfile: &revProfile,
 				StartTime:       time.Now(),
@@ -828,7 +828,7 @@ func TestReportRenderAvancadoBugfix(t *testing.T) {
 			name: "bugfix com exit != 0 captura note",
 			report: &Report{
 				Mode:            "avancado",
-				PRDFolder:       "tasks/prd-test",
+				PRDFolder:       ".specs/prd-test",
 				ExecutorProfile: &execProfile,
 				ReviewerProfile: &revProfile,
 				StartTime:       time.Now(),
@@ -868,7 +868,7 @@ func TestReportRenderAvancadoBugfix(t *testing.T) {
 			name: "sem bugfix — secao Bugfix Result ausente",
 			report: &Report{
 				Mode:            "avancado",
-				PRDFolder:       "tasks/prd-test",
+				PRDFolder:       ".specs/prd-test",
 				ExecutorProfile: &execProfile,
 				ReviewerProfile: &revProfile,
 				StartTime:       time.Now(),

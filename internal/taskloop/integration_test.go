@@ -110,7 +110,7 @@ func setupIntegrationPRD(t *testing.T, tmpBase string) string {
 
 	mustWriteIntegrationFile(t, filepath.Join(tmpBase, "AGENTS.md"), "# Agents\n")
 
-	prdDir := filepath.Join(tmpBase, "tasks", "prd-integration")
+	prdDir := filepath.Join(tmpBase, ".specs", "prd-integration")
 	if err := os.MkdirAll(prdDir, 0o755); err != nil {
 		t.Fatalf("MkdirAll %s: %v", prdDir, err)
 	}

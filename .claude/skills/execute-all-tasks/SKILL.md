@@ -21,7 +21,7 @@ Paralelismo só quando: `Paralelizável` em tasks.md E tool suporta spawn nativo
 0. **Invocar hook programático** (enforcement real das fragilidades F17, F18, F27, F29):
    `bash .claude/hooks/pre-execute-all-tasks.sh <slug>` (resolver caminho na ordem `.claude/hooks/` → `.agents/hooks/` → `.gemini/hooks/` → `.codex/hooks/` → `.github/hooks/`). Exit ≠ 0 → `failed` repassando stderr do hook. Hook valida regex de tasks.md, gaps numéricos, cross-PRD spec-hash e ciclos. Se ausente em todos os caminhos, prosseguir com validação textual (modo legado).
 1. **`unset AI_PREFLIGHT_DONE` (F17 — também executado pelo hook acima como redundância)** antes de qualquer comando — força orquestrador a rodar próprios gates; re-exporta apenas no prompt do subagent.
-2. Input: slug curto, `prd-<slug>`, ou path. Normalizar para `${AI_TASKS_ROOT:-tasks}/${AI_PRD_PREFIX:-prd-}<slug>/`.
+2. Input: slug curto, `prd-<slug>`, ou path. Normalizar para `${AI_TASKS_ROOT:-.specs}/${AI_PRD_PREFIX:-prd-}<slug>/`.
 3. **Resolver lib de profundidade (B1, fallback agnóstico)**: procurar `check-invocation-depth.sh` na ordem `.agents/lib/` → `scripts/lib/` e fazer `source`. Ausente nas duas → `failed: check-invocation-depth.sh ausente em .agents/lib/ e scripts/lib/ — vendor a lib ou rode 'ai-spec-harness install'`. Comando canônico:
    ```bash
    _depth_lib=""
@@ -40,16 +40,16 @@ Paralelismo só quando: `Paralelizável` em tasks.md E tool suporta spawn nativo
    ```
 5. `ai-spec skills --verify` — `blocked` se drift.
 6. Confirmar `prd.md`, `techspec.md`, `tasks.md` → `needs_input` se faltar.
-7. `ai-spec check-spec-drift tasks/prd-<slug>/tasks.md` → `blocked` se RF não coberto.
+7. `ai-spec check-spec-drift .specs/prd-<slug>/tasks.md` → `blocked` se RF não coberto.
 8. **Validação git opt-in (F35, ativar via `AI_VALIDATE_GIT_HISTORY=1`)**: para cada tarefa `done`, extrair `DiffSHA` do report e validar `git cat-file -e <sha>`. SHA ausente (revert/rewrite) → `needs_input: tarefa <id> done mas DiffSHA <sha> não está no git log — possível revert. (a) re-execute, (b) edite status, (c) cancele`.
 
 **Etapa 2: Construir grafo**
 1. Ler `tasks.md`. Parsear cada linha com regex canônicos (gerados por `create-tasks` v1.4+):
    - `status`: `^(pending|in_progress|needs_input|blocked|failed|done)$` → fora = `failed: malformed status on <id>`.
    - `dependências`: `^(—|(\w[\w-]*\/)?\d+\.\d+(,\s*(\w[\w-]*\/)?\d+\.\d+)*)$`. Cross-PRD via prefixo `<slug>/`. Resolução em 5 passos:
-     1. Ler `tasks/prd-<slug>/tasks.md`. Ausente → `failed: cross-PRD target not found`.
+     1. Ler `.specs/prd-<slug>/tasks.md`. Ausente → `failed: cross-PRD target not found`.
      2. Tarefa inexistente naquele tasks.md → `failed: cross-PRD task not found: <slug>/<id>`.
-     3. **Spec-hash do PRD referenciado (F18)**: extrair `spec-hash-prd` do header e comparar com `ai-spec hash tasks/prd-<slug>/prd.md`. Divergente → `blocked: cross-PRD <slug> tem spec drift; rode 'ai-spec check-spec-drift' e re-execute aquele PRD primeiro`.
+     3. **Spec-hash do PRD referenciado (F18)**: extrair `spec-hash-prd` do header e comparar com `ai-spec hash .specs/prd-<slug>/prd.md`. Divergente → `blocked: cross-PRD <slug> tem spec drift; rode 'ai-spec check-spec-drift' e re-execute aquele PRD primeiro`.
      4. Validar status `done`.
      5. **Ciclo cross-PRD (F27)**: travessia recursiva limitada a 3 níveis verificando se algum elo aponta de volta para PRD ativo. Ciclo → `failed: cross-PRD circular dependency detected: <chain>`. Profundidade > 3 → `blocked: cross-PRD chain too deep (>3); refatorar`.
    - `paralelizável`: normalizar equivalentes seguros (`não`/`nao`/`NÃO` → `Não`, `com 2.0,3.0` → `Com 2.0, 3.0`, `-`/`none`/vazio → `—`) e então validar `^(—|Não|Com\s+\d+\.\d+(,\s*\d+\.\d+)*)$`. Valores ambíguos continuam `failed: malformed Paralelizável on <id>`.
@@ -79,7 +79,7 @@ Prompt do subagent:
 - Contrato de retorno (idêntico em todos os tools):
   ```yaml
   status: done | blocked | failed | needs_input
-  report_path: tasks/prd-<slug>/<id>_execution_report.md
+  report_path: .specs/prd-<slug>/<id>_execution_report.md
   summary: <1 linha>
   ```
   - **`report_path` DEVE ser relativo à raiz do repositório** (F13). Absoluto rejeitado; relativo ao subdir do subagent rejeitado. Validação resolve via `realpath --no-symlinks <repo_root>/<path>`.
@@ -88,7 +88,7 @@ Prompt do subagent:
 **Cadeia de validação ao YAML retornado:**
 
 **Fallback de YAML ausente (F25, crash entre execute-task Stage 5/6):**
-- Sem retorno ou corrompido: verificar `tasks/prd-<slug>/.checkpoints/<id>.yaml` (escrito por `execute-task` Stage 5.3).
+- Sem retorno ou corrompido: verificar `.specs/prd-<slug>/.checkpoints/<id>.yaml` (escrito por `execute-task` Stage 5.3).
 - Existe e parseável: usar como YAML válido (nota no relatório: "recuperado de checkpoint timestamp=<ts>"). Após consumir, `rm` para evitar reuso.
 - Ausente: `failed: no return and no checkpoint`.
 
@@ -108,7 +108,7 @@ Cadeia (do retorno OU checkpoint) — pode ser executada por **hook programátic
    - Só então decidir halt — subagents paralelos podem mutar tasks.md concorrentemente; halt prematuro deixa writes pendentes.
 2. **File lock** em writes de tasks.md: subagents usam `flock -x`/rename atômico/partials (orientação do prompt → `execute-task` Stage 5.5).
 3. **Checkpoint do orquestrador (F31) — invocar hook**:
-   - Após cada wave concluída e validada: `bash .claude/hooks/post-wave.sh <slug> <wave-id> <results-yaml-file>` (busca nos mirrors padrão). Hook escreve `tasks/prd-<slug>/_orchestration_report.partial.md` append-only.
+   - Após cada wave concluída e validada: `bash .claude/hooks/post-wave.sh <slug> <wave-id> <results-yaml-file>` (busca nos mirrors padrão). Hook escreve `.specs/prd-<slug>/_orchestration_report.partial.md` append-only.
    - Próxima invocação detecta `.partial.md` na Etapa 1: lê, consolida com tasks.md atual, usa como ponto de partida.
    - Ao concluir todas as waves: rename atômico `.partial.md` → `_orchestration_report.md`.
    - Se ambos existem na Etapa 1: prefere `.partial.md` + warning para usuário decidir.
@@ -161,7 +161,7 @@ Para Codex/Gemini, formatos foram inferidos de docs 2026, não validados empiric
 
 ## Resolução de paths
 
-`tasks/prd-<slug>/` resolve para `${AI_TASKS_ROOT:-tasks}/${AI_PRD_PREFIX:-prd-}<slug>/`. Configurar em `.claude/config.yaml`/`.agents/config.yaml` (`tasks_root`, `prd_prefix`, `task_timeout_seconds`). Vars exportadas por `check-invocation-depth.sh`, resolvido em cascata `.agents/lib/` → `scripts/lib/` (vendor canônico em `.agents/lib/`, mirror legado em `scripts/lib/`).
+`.specs/prd-<slug>/` resolve para `${AI_TASKS_ROOT:-.specs}/${AI_PRD_PREFIX:-prd-}<slug>/`. Configurar em `.claude/config.yaml`/`.agents/config.yaml` (`tasks_root`, `prd_prefix`, `task_timeout_seconds`). Vars exportadas por `check-invocation-depth.sh`, resolvido em cascata `.agents/lib/` → `scripts/lib/` (vendor canônico em `.agents/lib/`, mirror legado em `scripts/lib/`).
 
 ## Contrato resumido
 
@@ -170,7 +170,7 @@ Para Codex/Gemini, formatos foram inferidos de docs 2026, não validados empiric
 | Input | slug ou path |
 | Pré-condições | prd/techspec/tasks presentes; lockfile íntegro; RF coverage OK |
 | Saída por tarefa | YAML `{status, report_path, summary}` validado em 4 passos + fallback checkpoint |
-| Saída agregada | `tasks/prd-<slug>/_orchestration_report.md` (com `.partial.md` durante execução) |
+| Saída agregada | `.specs/prd-<slug>/_orchestration_report.md` (com `.partial.md` durante execução) |
 | Status final | `done \| partial \| failed \| needs_input` |
 | Mutação direta tasks.md | Não |
 | Re-execução automática | Não |

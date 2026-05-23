@@ -18,13 +18,13 @@
 Inspecao inicial:
 
 ```bash
-ai-spec task-loop --tool codex --dry-run tasks/prd-payments-list
+ai-spec task-loop --tool codex --dry-run .specs/prd-payments-list
 ```
 
 Primeiro lote pequeno:
 
 ```bash
-ai-spec task-loop --tool codex --max-iterations 2 tasks/prd-payments-list
+ai-spec task-loop --tool codex --max-iterations 2 .specs/prd-payments-list
 ```
 
 Execucao mais longa com relatorio salvo:
@@ -35,7 +35,7 @@ ai-spec task-loop \
   --max-iterations 8 \
   --timeout 1h \
   --report-path ./task-loop-report-payments.md \
-  tasks/prd-payments-list
+  .specs/prd-payments-list
 ```
 
 ## Quando cada flag ajuda
@@ -62,7 +62,7 @@ ai-spec task-loop \
   --executor-tool codex \
   --reviewer-tool claude \
   --reviewer-model claude-opus-4-6 \
-  tasks/prd-payments-list
+  .specs/prd-payments-list
 
 # Com modelos explicitamente definidos para ambos os papeis
 ai-spec task-loop \
@@ -71,14 +71,14 @@ ai-spec task-loop \
   --reviewer-tool claude \
   --reviewer-model claude-opus-4-6 \
   --report-path ./task-loop-report.md \
-  tasks/prd-payments-list
+  .specs/prd-payments-list
 
 # Dry-run avancado: exibe perfis, compatibilidade e preview do prompt de revisao
 ai-spec task-loop \
   --executor-tool gemini \
   --reviewer-tool claude \
   --dry-run \
-  tasks/prd-payments-list
+  .specs/prd-payments-list
 ```
 
 | Flag avancada | Quando usar |
@@ -121,7 +121,7 @@ ai-spec wrapper codex execute-task .
 Exemplo de prompt direto para o agente executar uma unica task:
 
 ```text
-Use a skill execute-task para implementar a task 01_task.md localizada em tasks/prd-payments-list.
+Use a skill execute-task para implementar a task 01_task.md localizada em .specs/prd-payments-list.
 
 Criterios obrigatorios:
 - ler o arquivo de task antes de iniciar qualquer alteracao
@@ -138,10 +138,10 @@ Use esse modo quando o pacote de tasks ja estiver maduro, ordenado e com depende
 
 ```bash
 # validar antes de gastar ciclo de agente
-ai-spec task-loop --tool codex --dry-run tasks/prd-payments-list
+ai-spec task-loop --tool codex --dry-run .specs/prd-payments-list
 
 # primeiro lote pequeno para observar qualidade
-ai-spec task-loop --tool codex --max-iterations 2 tasks/prd-payments-list
+ai-spec task-loop --tool codex --max-iterations 2 .specs/prd-payments-list
 
 # execucao completa com relatorio
 ai-spec task-loop \
@@ -149,7 +149,7 @@ ai-spec task-loop \
   --max-iterations 8 \
   --timeout 1h \
   --report-path ./task-loop-report-payments.md \
-  tasks/prd-payments-list
+  .specs/prd-payments-list
 ```
 
 ## Quando usar cada abordagem
@@ -229,8 +229,8 @@ First, read AGENTS.md at the repository root to load governance rules and conven
 
 Then read and follow the instructions in: .agents/skills/execute-task/SKILL.md
 
-Target task file: tasks/prd-payments-list/01_repository.md
-PRD folder: tasks/prd-payments-list
+Target task file: .specs/prd-payments-list/01_repository.md
+PRD folder: .specs/prd-payments-list
 
 Execute ONLY this task. Follow all skill steps:
 1. Validate eligibility
@@ -241,7 +241,7 @@ Execute ONLY this task. Follow all skill steps:
 6. Update task status in task file and tasks.md
 7. Generate execution report
 
-Update **Status:** in tasks/prd-payments-list/01_repository.md and the corresponding row in tasks/prd-payments-list/tasks.md to reflect the final state."
+Update **Status:** in .specs/prd-payments-list/01_repository.md and the corresponding row in .specs/prd-payments-list/tasks.md to reflect the final state."
 ```
 
 Para Codex ou Gemini, substitua o binario e as flags:
@@ -310,7 +310,7 @@ Uso:
 
 ```bash
 chmod +x run-tasks.sh
-./run-tasks.sh tasks/prd-payments-list claude 3
+./run-tasks.sh .specs/prd-payments-list claude 3
 ```
 
 Limitacoes deste script em relacao ao `task-loop`:
@@ -323,7 +323,7 @@ Limitacoes deste script em relacao ao `task-loop`:
 
 ```bash
 # executar uma task, revisar, depois rodar novamente
-ai-spec task-loop --tool claude --max-iterations 1 tasks/prd-payments-list
+ai-spec task-loop --tool claude --max-iterations 1 .specs/prd-payments-list
 ```
 
 ## Comparativo das abordagens

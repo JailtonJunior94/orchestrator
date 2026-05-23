@@ -3,7 +3,7 @@
 // com o resumo da sessão e emite métricas via log.
 //
 // Ponto: PointSessionPostEnd (session.post_end)
-// Responsabilidade: escrever MEMORY.md em tasks/<prd>/memory/ via memory.Store.
+// Responsabilidade: escrever MEMORY.md em .specs/<prd>/memory/ via memory.Store.
 // Formato: ≤150 linhas (conforme DefaultWorkflowLineLimit).
 //
 // HARD: não modificar .claude/hooks/*.sh — shell hooks coexistem (modo interativo).

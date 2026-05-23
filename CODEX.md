@@ -10,7 +10,7 @@ Codex via Agent Client Protocol (ACP) nativo. O harness suporta esse modo via
 persistencia forense, watchdog de inatividade e telemetria opt-in cobrem invocacoes Codex
 com os mesmos campos e granularidade.
 
-Ver: [ADR-013](tasks/adr/013-codex-cli-acp-native.md) — Codex CLI como runtime ACP nativo.
+Ver: [ADR-013](.specs/adr/013-codex-cli-acp-native.md) — Codex CLI como runtime ACP nativo.
 
 ### Pre-requisitos
 
@@ -35,7 +35,7 @@ ai-spec-harness task-loop \
   --runtime acp \
   --reasoning-effort medium \
   --access-mode restricted \
-  tasks/prd-minha-feature
+  .specs/prd-minha-feature
 ```
 
 A sessao produz os mesmos artefatos forenses do modo Claude/Copilot:
@@ -68,7 +68,7 @@ ai-spec-harness task-loop \
   --tool codex \
   --runtime acp \
   --activity-timeout 90s \
-  tasks/prd-minha-feature
+  .specs/prd-minha-feature
 ```
 
 ### Erro de launcher indisponivel
@@ -80,7 +80,7 @@ codex-acp nao encontrado.
   1. Instale o adapter ACP: npm install -g @zed-industries/codex-acp@0.12.0
   2. OU use npx (fallback automatico se npm estiver disponivel).
   3. OU use --runtime=legacy (modo legado; sem artefatos forenses).
-  Ver: tasks/adr/013-codex-cli-acp-native.md
+  Ver: .specs/adr/013-codex-cli-acp-native.md
 ```
 
 ---
@@ -88,13 +88,13 @@ codex-acp nao encontrado.
 ## Modo Legado (deprecado): Codex CLI stateless
 
 > **Status:** Deprecado. Sera removido em 2 versoes minor apos esta — ver
-> [ADR-013](tasks/adr/013-codex-cli-acp-native.md) §"Consequencias" (D-05).
+> [ADR-013](.specs/adr/013-codex-cli-acp-native.md) §"Consequencias" (D-05).
 > Migrar para `--runtime=acp` conforme secao acima.
 
 ```bash
 ai-spec-harness task-loop \
   --tool codex \
-  tasks/prd-minha-feature
+  .specs/prd-minha-feature
 ```
 
 Este modo invoca `codex exec --yolo <prompt>` (CLI legado da OpenAI, sem ACP).
@@ -133,9 +133,9 @@ Regras essenciais:
 
 | ADR | Titulo | Status |
 |-----|--------|--------|
-| [ADR-013](tasks/adr/013-codex-cli-acp-native.md) | Codex CLI como runtime ACP nativo | Aceita |
-| [ADR-012](tasks/adr/012-copilot-cli-acp-native.md) | Copilot CLI como runtime ACP nativo (precedente) | Aceita |
-| [ADR-009](tasks/adr/009-acp-protocol-adoption.md) | Adocao do ACP via coder/acp-go-sdk | Aceita |
+| [ADR-013](.specs/adr/013-codex-cli-acp-native.md) | Codex CLI como runtime ACP nativo | Aceita |
+| [ADR-012](.specs/adr/012-copilot-cli-acp-native.md) | Copilot CLI como runtime ACP nativo (precedente) | Aceita |
+| [ADR-009](.specs/adr/009-acp-protocol-adoption.md) | Adocao do ACP via coder/acp-go-sdk | Aceita |
 | [ADR-008](docs/adr/008-parity-multi-tool-invariants.md) | 29 invariantes 3 niveis (paridade multi-tool) | Aceita |
 
 ---

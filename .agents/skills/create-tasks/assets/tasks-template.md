@@ -4,8 +4,8 @@
 # Resumo das Tarefas de Implementação para [Funcionalidade]
 
 ## Metadados
-- **PRD:** `tasks/prd-[nome-da-funcionalidade]/prd.md`
-- **Especificação Técnica:** `tasks/prd-[nome-da-funcionalidade]/techspec.md`
+- **PRD:** `.specs/prd-[nome-da-funcionalidade]/prd.md`
+- **Especificação Técnica:** `.specs/prd-[nome-da-funcionalidade]/techspec.md`
 - **Total de tarefas:** X
 - **Tarefas paralelizáveis:** [lista ou "nenhuma"]
 

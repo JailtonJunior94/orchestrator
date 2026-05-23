@@ -22,12 +22,12 @@ Seu objetivo é realizar uma auditoria "impiedosa" e cirúrgica no repositório 
 
 #### B. Documentação e Relatórios Obsoletos
 - **Relatórios Temporários:** Remover arquivos de relatório de sessões passadas em `docs/` (ex: `report-cross-cli-validation-*.md`) que não servem mais como base de decisão.
-- **ADRs em Rascunho:** Identificar ADRs em `tasks/adr/` ou `docs/adr/` que foram superadas por ADRs posteriores e não foram marcadas como `Superceded` ou removidas.
-- **Tasks Concluídas/Abandonadas:** Analisar pastas em `tasks/` que não possuem atividade há muito tempo ou cujos PRs/Branches já foram mergeados (usar `gh pr list --state merged` para validar).
+- **ADRs em Rascunho:** Identificar ADRs em `.specs/adr/` ou `docs/adr/` que foram superadas por ADRs posteriores e não foram marcadas como `Superceded` ou removidas.
+- **Tasks Concluídas/Abandonadas:** Analisar pastas em `.specs/` que não possuem atividade há muito tempo ou cujos PRs/Branches já foram mergeados (usar `gh pr list --state merged` para validar).
 
 #### C. Prompts e Skills Desatualizados
 - **Templates Legados:** Prompts em `docs/prompts/` que não seguem a estrutura de 4 blocos definida no `README.md`.
-- **Inconsistência de Skill:** Skills que referenciam ferramentas ou fluxos que mudaram (ex: referências a `tasks/` em vez de `.spec/` se a migração já ocorreu).
+- **Inconsistência de Skill:** Skills que referenciam ferramentas ou fluxos que mudaram (ex: referências a `.specs/` em vez de `.specs/` se a migração já ocorreu).
 
 ### 2. Procedimento de Limpeza (Segurança em Primeiro Lugar)
 

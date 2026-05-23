@@ -50,7 +50,7 @@ São hard requirements. Se algum falhar, o orquestrador retorna `failed` ou `nee
 ### 2.1 Estrutura de arquivos
 
 ```
-tasks/prd-<slug>/
+.specs/prd-<slug>/
 ├── prd.md          ← obrigatório
 ├── techspec.md     ← obrigatório
 ├── tasks.md        ← obrigatório (tabela canônica)
@@ -71,7 +71,7 @@ Se houver drift, **conserte antes** pelo fluxo de atualizacao de skills adotado 
 ### 2.3 Spec drift / RF coverage
 
 ```bash
-ai-spec check-spec-drift tasks/prd-<slug>/tasks.md
+ai-spec check-spec-drift .specs/prd-<slug>/tasks.md
 # deve retornar exit 0
 ```
 
@@ -103,8 +103,8 @@ Exemplo mínimo válido:
 # Resumo das Tarefas de Implementação para <Feature>
 
 ## Metadados
-- **PRD:** `tasks/prd-<slug>/prd.md`
-- **Especificação Técnica:** `tasks/prd-<slug>/techspec.md`
+- **PRD:** `.specs/prd-<slug>/prd.md`
+- **Especificação Técnica:** `.specs/prd-<slug>/techspec.md`
 - **Total de tarefas:** 5
 - **Tarefas paralelizáveis:** 1.0, 2.0 (independentes)
 
@@ -217,7 +217,7 @@ Use a skill execute-all-tasks no PRD `<slug>`. Restrições obrigatórias:
 2. Respeite o flag Paralelizável de tasks.md — não force paralelismo onde está marcado Não.
 3. Halt-first: pare a próxima wave assim que qualquer subagent retornar status diferente de done.
 4. Não mute tasks.md diretamente — somente os subagents via execute-task podem atualizar status.
-5. Ao final (sucesso ou halt), escreva tasks/prd-<slug>/_orchestration_report.md.
+5. Ao final (sucesso ou halt), escreva .specs/prd-<slug>/_orchestration_report.md.
 ```
 
 #### D. Como NÃO invocar (anti-padrão)
@@ -250,14 +250,14 @@ Codex 2026 prefere instrução textual a slash commands. Use o prompt completo:
 Use the execute-all-tasks skill on PRD `<slug>`.
 
 Mandatory behavior:
-1. Read tasks/prd-<slug>/tasks.md, prd.md and techspec.md before scheduling anything.
+1. Read .specs/prd-<slug>/tasks.md, prd.md and techspec.md before scheduling anything.
 2. Build the DAG from the Dependencies column. Compute ready set as: status=pending AND all deps done.
 3. For each ready task, spawn a fresh task-executor subagent. Pass the absolute path of the task file plus PRD/techspec/tasks paths. Each subagent must invoke the execute-task skill internally.
 4. If a wave has multiple parallelizable tasks (Paralelizável=Com ...), spawn all those subagents in parallel and wait for all results before scheduling the next wave.
 5. Each subagent must return ONLY a YAML block with status, report_path, summary. If a subagent returns anything else, treat as failed: contract violation.
 6. Halt-first: stop scheduling new waves the moment any subagent returns status != done.
 7. Never mutate tasks.md from the orchestrator — only the subagents (via execute-task) update status.
-8. After all tasks complete or a halt occurs, write tasks/prd-<slug>/_orchestration_report.md using the template from .agents/skills/execute-all-tasks/assets/orchestration-report-template.md.
+8. After all tasks complete or a halt occurs, write .specs/prd-<slug>/_orchestration_report.md using the template from .agents/skills/execute-all-tasks/assets/orchestration-report-template.md.
 ```
 
 #### B. Invocação curta (quando Codex já carregou a skill)
@@ -305,7 +305,7 @@ Halt-first em qualquer status != done. Não mute tasks.md.
 ```
 Orquestre a execução completa do PRD `<slug>` usando a skill execute-all-tasks.
 Respeite tasks.md, o flag Paralelizável e o DAG. Pare na primeira tarefa não-done
-e gere o relatório agregado em tasks/prd-<slug>/_orchestration_report.md.
+e gere o relatório agregado em .specs/prd-<slug>/_orchestration_report.md.
 ```
 
 #### Sessão recomendada
@@ -399,12 +399,12 @@ Quando o orquestrador para por status não-done, faça:
 
 ### Passo 1: identifique a tarefa que parou
 
-Abra `tasks/prd-<slug>/_orchestration_report.md`. A última entrada com status `≠ done` é a culpada.
+Abra `.specs/prd-<slug>/_orchestration_report.md`. A última entrada com status `≠ done` é a culpada.
 
 ### Passo 2: leia o relatório individual
 
 ```
-tasks/prd-<slug>/<id>_execution_report.md
+.specs/prd-<slug>/<id>_execution_report.md
 ```
 
 O campo `Resultados de Validação` e `Veredito do Revisor` apontam a causa raiz.
@@ -470,7 +470,7 @@ Cenários onde retomar **NÃO é seguro**:
 Artefatos gerados:
 
 ```
-tasks/prd-<slug>/
+.specs/prd-<slug>/
 ├── <id>_execution_report.md         ← um por tarefa executada
 ├── _orchestration_report.md          ← rollup do orquestrador
 └── tasks.md                          ← status atualizado pelos subagents
@@ -552,7 +552,7 @@ Lista crítica de erros que parecem funcionar mas vão te queimar em projeto rea
 ### 10.6 ❌ Rodar de subdiretório
 
 ```bash
-cd tasks/prd-portability-parity
+cd .specs/prd-portability-parity
 claude
 > /execute-all-tasks portability-parity   # falha: scripts/lib/... não encontrado
 ```
@@ -617,7 +617,7 @@ claude
 
 # 1. Discovery / requisitos
 > /us-to-prd "Como admin, quero exportar usuários em CSV..."
-# → tasks/prd-export-csv/prd.md
+# → .specs/prd-export-csv/prd.md
 
 # 2. Refinar PRD
 > /create-prd
@@ -625,11 +625,11 @@ claude
 
 # 3. Spec técnica
 > /create-technical-specification
-# → tasks/prd-export-csv/techspec.md
+# → .specs/prd-export-csv/techspec.md
 
 # 4. Decompor em tasks
 > /create-tasks
-# → tasks/prd-export-csv/tasks.md + task-1.0-*.md ... task-5.0-*.md
+# → .specs/prd-export-csv/tasks.md + task-1.0-*.md ... task-5.0-*.md
 
 # 5. EXECUTAR TUDO (a nova skill)
 > /execute-all-tasks export-csv
@@ -637,7 +637,7 @@ claude
 #   _orchestration_report.md no final
 
 # 6. Validar
-> Leia tasks/prd-export-csv/_orchestration_report.md e confirme que tudo está done.
+> Leia .specs/prd-export-csv/_orchestration_report.md e confirme que tudo está done.
 
 # 7. Release
 > /github-diff-changelog-publisher
@@ -652,7 +652,7 @@ claude
 # Output: halt na tarefa 3.0 (failed: lockfile drift)
 
 # Investigação
-> Leia tasks/prd-portability-parity/3.0_execution_report.md
+> Leia .specs/prd-portability-parity/3.0_execution_report.md
 # Output: "Veredito: REJECTED. Causa: skills-lock.json drift detectado"
 
 # Correção
@@ -693,38 +693,38 @@ Use o mesmo PRD em ambos Claude e Copilot pra comparar comportamento:
 # Terminal 1
 cd ~/projetos/exemplo-claude
 ai-spec install . --tools claude --langs go
-cp -R ~/projetos/source/tasks/prd-foo ./tasks/
+cp -R ~/projetos/source/.specs/prd-foo ./.specs/
 claude
 > /execute-all-tasks foo
 
 # Terminal 2 (em paralelo)
 cd ~/projetos/exemplo-copilot
 ai-spec install . --tools copilot --langs go
-cp -R ~/projetos/source/tasks/prd-foo ./tasks/
+cp -R ~/projetos/source/.specs/prd-foo ./.specs/
 gh copilot
 > /execute-all-tasks foo
 
 # Compare os dois _orchestration_report.md ao final
-diff ~/projetos/exemplo-claude/tasks/prd-foo/_orchestration_report.md \
-     ~/projetos/exemplo-copilot/tasks/prd-foo/_orchestration_report.md
+diff ~/projetos/exemplo-claude/.specs/prd-foo/_orchestration_report.md \
+     ~/projetos/exemplo-copilot/.specs/prd-foo/_orchestration_report.md
 ```
 
 ### 11.5 Fluxo 5 — Sequencial forçado (quota apertada / debug)
 
 ```bash
 # Backup do tasks.md
-cp tasks/prd-foo/tasks.md tasks/prd-foo/tasks.md.bak
+cp .specs/prd-foo/tasks.md .specs/prd-foo/tasks.md.bak
 
 # Patch: troca todos Paralelizável para Não
-sed -i.tmp 's/| Com [^|]*|/| Não |/g' tasks/prd-foo/tasks.md
-rm tasks/prd-foo/tasks.md.tmp
+sed -i.tmp 's/| Com [^|]*|/| Não |/g' .specs/prd-foo/tasks.md
+rm .specs/prd-foo/tasks.md.tmp
 
 # Rodar sequencial
 gemini
 > /execute-all-tasks foo
 
 # Restaurar
-mv tasks/prd-foo/tasks.md.bak tasks/prd-foo/tasks.md
+mv .specs/prd-foo/tasks.md.bak .specs/prd-foo/tasks.md
 ```
 
 ---
@@ -758,12 +758,12 @@ mv tasks/prd-foo/tasks.md.bak tasks/prd-foo/tasks.md
 
 Use antes de cada `/execute-all-tasks`:
 
-- [ ] `tasks/prd-<slug>/prd.md` existe e está aprovado
-- [ ] `tasks/prd-<slug>/techspec.md` existe e está aprovado
-- [ ] `tasks/prd-<slug>/tasks.md` tem tabela canônica com `Status`, `Dependências`, `Paralelizável`
+- [ ] `.specs/prd-<slug>/prd.md` existe e está aprovado
+- [ ] `.specs/prd-<slug>/techspec.md` existe e está aprovado
+- [ ] `.specs/prd-<slug>/tasks.md` tem tabela canônica com `Status`, `Dependências`, `Paralelizável`
 - [ ] Cada `task-X.Y-*.md` existe e tem `Critérios de Sucesso`
 - [ ] `ai-spec skills check` retorna 0
-- [ ] `ai-spec check-spec-drift tasks/prd-<slug>/tasks.md` retorna 0
+- [ ] `ai-spec check-spec-drift .specs/prd-<slug>/tasks.md` retorna 0
 - [ ] Estou na raiz do repositório
 - [ ] Sessão do tool é fresh (sem outros subagents ativos)
 - [ ] Flag `Paralelizável` está honesto (regra DTPS aplicada)

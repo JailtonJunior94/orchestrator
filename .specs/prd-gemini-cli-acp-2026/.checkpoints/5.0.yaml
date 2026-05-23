@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-gemini-cli-acp-2026/5.0_execution_report.md
+summary: "F2-Gemini: YAML inherit:common + resolveInherit + T-32/T-33 verdes; mcpserver diff-zero"
+timestamp: "2026-05-22T00:00:00Z"

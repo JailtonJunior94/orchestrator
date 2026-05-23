@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-codex-acp-spec/6.0_execution_report.md
+summary: "Flags --reasoning-effort e --access-mode registradas com validação enum, sync.Once warning para full, campos propagados a Options; T-23/T-24/T-25/T-30 adicionados; go test ./... verde"
+timestamp: "2026-05-21T00:00:00Z"

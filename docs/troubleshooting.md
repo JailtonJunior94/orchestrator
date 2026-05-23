@@ -108,7 +108,7 @@ Este guia cobre os problemas mais comuns encontrados por usuarios e agentes ao t
    cat skills-lock.json
    ```
 2. Se a modificacao foi intencional, atualize o hash apos registrar a decisao de upgrade em `audit/`:
-   - Crie o registro de decisao usando o template em `tasks/templates/skill-upgrade-decision.md`.
+   - Crie o registro de decisao usando o template em `.specs/templates/skill-upgrade-decision.md`.
    - Preencha os campos obrigatorios: `skill`, `versao anterior`, `versao nova`, `motivador`, `criterio de aceitacao`, `data`.
 3. Atualize o hash no `skills-lock.json` com o SHA-256 recalculado do conteudo atual da skill:
    ```bash

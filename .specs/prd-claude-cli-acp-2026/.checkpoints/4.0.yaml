@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-claude-cli-acp-2026/4.0_execution_report.md
+summary: "memory store 2-tier implementado com 87.2% cobertura e T-MEM-01..05 verdes"
+timestamp: "2026-05-21T00:00:00Z"

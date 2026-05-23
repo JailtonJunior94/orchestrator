@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-acp-runtime-claude/2.0_execution_report.md
+summary: "Domain Specs (Claude) + sync script implementados com 100% cobertura e golangci-lint limpo"
+timestamp: "2026-05-20T00:00:00Z"

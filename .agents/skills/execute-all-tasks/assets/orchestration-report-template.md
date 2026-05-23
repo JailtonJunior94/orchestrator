@@ -2,10 +2,10 @@
 
 ## PRD
 - Slug: <slug>
-- Diretório: tasks/prd-<slug>/
-- PRD: tasks/prd-<slug>/prd.md
-- TechSpec: tasks/prd-<slug>/techspec.md
-- Tasks: tasks/prd-<slug>/tasks.md
+- Diretório: .specs/prd-<slug>/
+- PRD: .specs/prd-<slug>/prd.md
+- TechSpec: .specs/prd-<slug>/techspec.md
+- Tasks: .specs/prd-<slug>/tasks.md
 
 ## Resultado Final
 - Status do orquestrador: done | partial | failed | needs_input
@@ -24,7 +24,7 @@
 ## Tarefas Executadas Nesta Sessão
 | # | Título | Status | Report Path | Summary |
 |---|--------|--------|-------------|---------|
-| <id> | <título> | <status> | tasks/prd-<slug>/<id>_execution_report.md | <1-line summary do subagent> |
+| <id> | <título> | <status> | .specs/prd-<slug>/<id>_execution_report.md | <1-line summary do subagent> |
 
 ## Tarefas Puladas (já estavam done)
 - <id>: <título>

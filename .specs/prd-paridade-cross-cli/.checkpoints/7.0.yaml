@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-paridade-cross-cli/7.0_execution_report.md
+summary: "Instalação universal transparente implementada: RI-01 (lang auto-detect), RI-02 (probe warn não-fatal), RI-04 (binary verify), cenários P/M/G passando"
+timestamp: "2026-05-22T00:00:00Z"

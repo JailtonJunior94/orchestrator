@@ -40,12 +40,12 @@ func TestEnsureAvailable(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name          string
-		available     map[string]string
-		wantLauncher  string // "binary" ou "npx"
-		wantErr       bool
+		name            string
+		available       map[string]string
+		wantLauncher    string // "binary" ou "npx"
+		wantErr         bool
 		wantErrSentinel error
-		wantErrMsg    string
+		wantErrMsg      string
 	}{
 		{
 			name: "binary_canonico_encontrado",
@@ -81,7 +81,7 @@ func TestEnsureAvailable(t *testing.T) {
 			available:       map[string]string{},
 			wantErr:         true,
 			wantErrSentinel: airuntime.ErrLauncherUnavailable,
-			wantErrMsg:      "tasks/adr/",
+			wantErrMsg:      ".specs/adr/",
 		},
 	}
 
@@ -194,7 +194,7 @@ func TestEnsureAvailable_ErrorMessageExact(t *testing.T) {
 	msg := err.Error()
 
 	// Verificar todos os componentes obrigatórios da mensagem de erro (RF-03).
-	// Nota: este teste usa ID único (não "claude"), portanto recebe o fallback "tasks/adr/".
+	// Nota: este teste usa ID único (não "claude"), portanto recebe o fallback ".specs/adr/".
 	// A verificação do ADR específico por spec.ID é coberta em TestAdrByID (T-20/T-21).
 	requiredParts := []string{
 		"claude-agent-acp não encontrado",
@@ -202,7 +202,7 @@ func TestEnsureAvailable_ErrorMessageExact(t *testing.T) {
 		"@agentclientprotocol/claude-agent-acp@",
 		"via npm",
 		"--runtime=legacy",
-		"tasks/adr/",
+		".specs/adr/",
 	}
 
 	for _, part := range requiredParts {
@@ -371,13 +371,13 @@ func TestEnsureAvailable_T06_CopilotNoBinaryNoNpx(t *testing.T) {
 
 	msg := err.Error()
 
-	// O ID "copilot-t06-test" não está em adrByID, portanto usa fallback "tasks/adr/".
+	// O ID "copilot-t06-test" não está em adrByID, portanto usa fallback ".specs/adr/".
 	// A verificação do ADR específico para copilot (ID="copilot") é coberta em T-20/T-21.
 	requiredParts := []string{
 		"copilot não encontrado",
 		specs.CopilotNpmPackage + "@",
 		"--runtime=legacy",
-		"tasks/adr/",
+		".specs/adr/",
 	}
 	for _, part := range requiredParts {
 		if !strings.Contains(msg, part) {
@@ -474,7 +474,7 @@ func TestAdrByID_T20_KnownIDs(t *testing.T) {
 		if err == nil {
 			t.Fatal("esperava erro, mas não houve")
 		}
-		if !strings.Contains(err.Error(), "tasks/adr/009-acp-protocol-adoption.md") {
+		if !strings.Contains(err.Error(), ".specs/adr/009-acp-protocol-adoption.md") {
 			t.Errorf("adrByID[\"claude\"] deve apontar para ADR-009\nmensagem: %q", err.Error())
 		}
 	})
@@ -490,7 +490,7 @@ func TestAdrByID_T20_KnownIDs(t *testing.T) {
 		if err == nil {
 			t.Fatal("esperava erro, mas não houve")
 		}
-		if !strings.Contains(err.Error(), "tasks/adr/013-codex-cli-acp-native.md") {
+		if !strings.Contains(err.Error(), ".specs/adr/013-codex-cli-acp-native.md") {
 			t.Errorf("adrByID[\"codex\"] deve apontar para ADR-013\nmensagem: %q", err.Error())
 		}
 	})
@@ -506,13 +506,13 @@ func TestAdrByID_T20_KnownIDs(t *testing.T) {
 		if err == nil {
 			t.Fatal("esperava erro, mas não houve")
 		}
-		if !strings.Contains(err.Error(), "tasks/adr/012-copilot-cli-acp-native.md") {
+		if !strings.Contains(err.Error(), ".specs/adr/012-copilot-cli-acp-native.md") {
 			t.Errorf("adrByID[\"copilot\"] deve apontar para ADR-012\nmensagem: %q", err.Error())
 		}
 	})
 }
 
-// T-21: adrByID lookup por ID desconhecido → fallback gracioso para "tasks/adr/".
+// T-21: adrByID lookup por ID desconhecido → fallback gracioso para ".specs/adr/".
 func TestAdrByID_T21_UnknownIDFallback(t *testing.T) {
 	t.Parallel()
 
@@ -539,9 +539,9 @@ func TestAdrByID_T21_UnknownIDFallback(t *testing.T) {
 
 	msg := err.Error()
 
-	// Para ID desconhecido, a mensagem deve conter o fallback "tasks/adr/".
-	if !strings.Contains(msg, "tasks/adr/") {
-		t.Errorf("mensagem de erro deve conter fallback \"tasks/adr/\" para ID desconhecido\nmensagem: %q", msg)
+	// Para ID desconhecido, a mensagem deve conter o fallback ".specs/adr/".
+	if !strings.Contains(msg, ".specs/adr/") {
+		t.Errorf("mensagem de erro deve conter fallback \".specs/adr/\" para ID desconhecido\nmensagem: %q", msg)
 	}
 
 	// E não deve conter um ADR específico (009, 012, 013 ou 015).
@@ -568,7 +568,7 @@ func TestProbeReferencesADR_Gemini(t *testing.T) {
 	if err == nil {
 		t.Fatal("esperava erro, mas não houve")
 	}
-	if !strings.Contains(err.Error(), "tasks/adr/015-gemini-cli-acp-native.md") {
+	if !strings.Contains(err.Error(), ".specs/adr/015-gemini-cli-acp-native.md") {
 		t.Errorf("adrByID[\"gemini\"] deve apontar para ADR-015\nmensagem: %q", err.Error())
 	}
 }
@@ -623,14 +623,14 @@ func TestEnsureAvailable_ClaudeRegressionErrorMessage(t *testing.T) {
 
 	msg := err.Error()
 
-	// ID único ("claude-regression-test") não está em adrByID → fallback "tasks/adr/".
+	// ID único ("claude-regression-test") não está em adrByID → fallback ".specs/adr/".
 	// Os demais componentes da mensagem devem estar presentes (RF-03).
 	requiredParts := []string{
 		"claude-agent-acp não encontrado",
 		"Install claude-agent-acp",
 		"@agentclientprotocol/claude-agent-acp@",
 		"--runtime=legacy",
-		"tasks/adr/",
+		".specs/adr/",
 	}
 	for _, part := range requiredParts {
 		if !strings.Contains(msg, part) {
@@ -726,8 +726,8 @@ func TestFallbackChain_CanonicalFirst(t *testing.T) {
 	const canonicalPath = "/usr/local/bin/primary-acp"
 	const fallbackPath = "/usr/local/bin/npx"
 	sp := specs.Spec{
-		ID:      "canonical-first-test",
-		Command: "primary-acp",
+		ID:        "canonical-first-test",
+		Command:   "primary-acp",
 		FixedArgs: []string{"--server"},
 		Fallbacks: []specs.FallbackLauncher{
 			{Command: "npx", FixedArgs: []string{"--yes", "@example/agent@1.0.0"}},

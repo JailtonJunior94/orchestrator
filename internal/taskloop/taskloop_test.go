@@ -26,7 +26,7 @@ func TestResolveWorkDir(t *testing.T) {
 	}{
 		{
 			name:      ".git presente no diretorio pai",
-			prdFolder: "/fake/project/tasks/prd-feature",
+			prdFolder: "/fake/project/.specs/prd-feature",
 			setup: func(fsys *taskfs.FakeFileSystem) {
 				// FakeFileSystem.Exists retorna true para prefixo de arquivo existente.
 				fsys.Files["/fake/project/.git/HEAD"] = []byte("ref: refs/heads/main")
@@ -43,7 +43,7 @@ func TestResolveWorkDir(t *testing.T) {
 		},
 		{
 			name:      "AGENTS.md presente em diretorio ancestral",
-			prdFolder: "/fake/project/tasks/prd-feature",
+			prdFolder: "/fake/project/.specs/prd-feature",
 			setup: func(fsys *taskfs.FakeFileSystem) {
 				fsys.Files["/fake/project/AGENTS.md"] = []byte("# Agents\n")
 			},
@@ -108,7 +108,7 @@ func noBinaryCheck(AgentInvoker) error { return nil }
 // tasks.md inicial tem uma task "1.0" no status solicitado.
 func setupBaseFS(taskStatus string) (*taskfs.FakeFileSystem, string) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -245,7 +245,7 @@ func TestExecuteACP_ReturnsLauncherUnavailableImmediately(t *testing.T) {
 // faz o loop executar ilimitadamente ate todas as tasks estarem concluidas.
 func TestExecuteMaxIterationsZeroRunsUntilAllDone(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -989,7 +989,7 @@ func TestExecuteAdvancedModeBugfixNotInvokedWithoutReviewer(t *testing.T) {
 // Com MaxIterations=2 e 2 tasks, o loop deve completar ambas mesmo com bugfix rodando.
 func TestExecuteAdvancedModeBugfixDoesNotIncrementIteration(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -1215,7 +1215,7 @@ func TestExecuteAdvancedModeBugfixReviewFindingsPassedVerbatim(t *testing.T) {
 // nao para a task cujo reviewer aprovou.
 func TestExecuteAdvancedModeBugfixOnlyForFailedReview(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -1451,7 +1451,7 @@ func TestExecuteIncompatibleModelWithoutFallbackReturnsError(t *testing.T) {
 func TestExecuteMaxIterationsCountsOnlyExecutor(t *testing.T) {
 	// Setup com 2 tasks pendentes
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -1918,7 +1918,7 @@ func TestExecuteFallbackBothRolesSubstituted(t *testing.T) {
 // multiplas tasks elegiveis lista todas no cabecalho e exibe plano de iteracao para cada uma.
 func TestDryRunAdvancedMultipleEligibleTasks(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -1989,7 +1989,7 @@ func TestDryRunAdvancedMultipleEligibleTasks(t *testing.T) {
 // com stop reason especifico e orientacao no relatorio.
 func TestExecuteAuthErrorEarlyTermination(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -2094,7 +2094,7 @@ func TestExecuteEmptyOutputOnTimeoutKill(t *testing.T) {
 // com a proxima task elegivel.
 func TestExecuteNonAuthErrorContinuesLoop(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -2144,7 +2144,7 @@ func TestExecuteNonAuthErrorContinuesLoop(t *testing.T) {
 // ja marcada como in_progress por sessao anterior deve ser retomada pelo loop.
 func TestExecuteResumesInProgressTask(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -2204,7 +2204,7 @@ func TestExecuteResumesInProgressTask(t *testing.T) {
 
 func TestExecutePrioritizesInProgressBeforePending(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -2266,7 +2266,7 @@ func TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders(t *testing.T)
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
 			const base = "/fake/project"
-			const prd = base + "/tasks/prd-test"
+			const prd = base + "/.specs/prd-test"
 
 			fsys := taskfs.NewFakeFileSystem()
 			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -2342,7 +2342,7 @@ func TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders(t *testing.T)
 
 func TestExecuteRejectsUnauthorizedTaskFileMutation(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -2404,7 +2404,7 @@ func TestExecuteRejectsUnauthorizedTaskFileMutation(t *testing.T) {
 
 func TestExecuteRejectsUnexpectedTrackedTaskFileCreation(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -2467,7 +2467,7 @@ func TestExecuteRejectsProtectedPRDFileMutationForAllProviders(t *testing.T) {
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
 			const base = "/fake/project"
-			const prd = base + "/tasks/prd-test"
+			const prd = base + "/.specs/prd-test"
 
 			fsys := taskfs.NewFakeFileSystem()
 			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -2527,7 +2527,7 @@ func TestExecuteRejectsArbitraryPRDFileMutationForAllProviders(t *testing.T) {
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
 			const base = "/fake/project"
-			const prd = base + "/tasks/prd-test"
+			const prd = base + "/.specs/prd-test"
 
 			fsys := taskfs.NewFakeFileSystem()
 			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -2584,7 +2584,7 @@ func TestExecuteRejectsArbitraryPRDFileMutationForAllProviders(t *testing.T) {
 
 func TestExecuteRejectsReviewerIsolationViolation(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -2665,7 +2665,7 @@ func TestExecuteRejectsReviewerIsolationViolation(t *testing.T) {
 
 func TestExecuteRejectsReviewerProtectedPRDMutation(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -2735,7 +2735,7 @@ func TestExecuteRejectsReviewerProtectedPRDMutation(t *testing.T) {
 
 func TestExecuteRejectsReviewerArbitraryPRDMutation(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -2806,7 +2806,7 @@ func TestExecuteRejectsReviewerArbitraryPRDMutation(t *testing.T) {
 
 func TestExecuteRejectsReviewerCurrentTaskMutation(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -2880,7 +2880,7 @@ func TestExecuteRejectsReviewerCurrentTaskMutation(t *testing.T) {
 
 func TestExecuteRejectsReviewerCurrentTaskRowMutation(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -2954,7 +2954,7 @@ func TestExecuteRejectsReviewerCurrentTaskRowMutation(t *testing.T) {
 
 func TestExecuteDoesNotResumeTaskWhenTaskFileStatusIsTerminal(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -3059,7 +3059,7 @@ func TestDryRunAdvancedTemplatePreview(t *testing.T) {
 // o sub-teste correspondente falha.
 func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-parity"
+	const prd = base + "/.specs/prd-parity"
 
 	tools := []string{"claude", "codex", "gemini", "copilot"}
 
@@ -3475,7 +3475,7 @@ func TestSessionIsolationBetweenIterationsForAllTools(t *testing.T) {
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
 			const base = "/fake/project"
-			const prd = base + "/tasks/prd-test"
+			const prd = base + "/.specs/prd-test"
 
 			fsys := taskfs.NewFakeFileSystem()
 			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -3578,7 +3578,7 @@ func TestCaptureValidateIsolationExecutorModeForAllTools(t *testing.T) {
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
 			const base = "/fake/project"
-			const prd = base + "/tasks/prd-test"
+			const prd = base + "/.specs/prd-test"
 
 			fsys := taskfs.NewFakeFileSystem()
 			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -3643,7 +3643,7 @@ func TestSnapshotRestorationAfterTaskFileMutationForAllTools(t *testing.T) {
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
 			const base = "/fake/project"
-			const prd = base + "/tasks/prd-test"
+			const prd = base + "/.specs/prd-test"
 
 			fsys := taskfs.NewFakeFileSystem()
 			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -3719,7 +3719,7 @@ func TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools(t *testing.T)
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
 			const base = "/fake/project"
-			const prd = base + "/tasks/prd-test"
+			const prd = base + "/.specs/prd-test"
 
 			fsys := taskfs.NewFakeFileSystem()
 			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -3790,7 +3790,7 @@ func TestReviewerModeIsolationForAllReviewerTools(t *testing.T) {
 	for _, reviewerTool := range reviewerTools {
 		t.Run(reviewerTool, func(t *testing.T) {
 			const base = "/fake/project"
-			const prd = base + "/tasks/prd-test"
+			const prd = base + "/.specs/prd-test"
 
 			fsys := taskfs.NewFakeFileSystem()
 			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -3878,7 +3878,7 @@ func TestReviewerModeIsolationForAllReviewerTools(t *testing.T) {
 // Subtarefa 4.4.
 func TestSharedStateBetweenIterationsMatchesRF12(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-test"
+	const prd = base + "/.specs/prd-test"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -3975,7 +3975,7 @@ func TestSharedStateBetweenIterationsMatchesRF12(t *testing.T) {
 // executa todas sem limite artificial.
 func TestEnrichedPromptsAndUnlimitedFlow(t *testing.T) {
 	const base = "/fake/project"
-	const prd = base + "/tasks/prd-enriched"
+	const prd = base + "/.specs/prd-enriched"
 
 	fsys := taskfs.NewFakeFileSystem()
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
@@ -4629,8 +4629,8 @@ func TestT27_LegacyPathDoesNotConsumeCodexFields(t *testing.T) {
 		MaxIterations:   1,
 		Timeout:         5 * time.Second,
 		ReportPath:      prd + "/report.md",
-		ReasoningEffort: "high",   // campos Codex presentes mas devem ser ignorados
-		AccessMode:      "full",   // no caminho legacy
+		ReasoningEffort: "high", // campos Codex presentes mas devem ser ignorados
+		AccessMode:      "full", // no caminho legacy
 		AddDirs:         []string{"/extra"},
 	}
 

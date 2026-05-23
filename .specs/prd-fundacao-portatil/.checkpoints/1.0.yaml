@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-fundacao-portatil/1.0_execution_report.md
+summary: config.Resolver implementado com hierarquia global+projeto, upward-walk e precedencia deterministica; cobertura 92.9%; todos testes passam
+timestamp: 2026-05-22T00:00:00Z

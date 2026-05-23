@@ -156,7 +156,7 @@ Nesses casos, o resultado operacional é `fail`.
 ### Modelo de Registro
 
 ```text
-Bundle: tasks/prd-<slug>/
+Bundle: .specs/prd-<slug>/
 PRD: pass (25/25)
 Tech Spec: warning (12,5/25)
 Tasks: pass (20/20)

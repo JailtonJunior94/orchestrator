@@ -3,7 +3,7 @@ package specs
 // Constantes do runtime GitHub Copilot CLI (ACP).
 // Política de atualização (PRD §"Restrições Técnicas" + ADR-012 D-06):
 //   - CopilotNpmVersion e CopilotSDKVersion são constantes Go pinadas. Nunca usar @latest.
-//   - CopilotNpmVersion só é alterada via processo audit/ (tasks/templates/skill-upgrade-decision.md).
+//   - CopilotNpmVersion só é alterada via processo audit/ (.specs/templates/skill-upgrade-decision.md).
 //   - CopilotSDKVersion é mantida em sincronia com go.mod por scripts/sync-acp-sdk-version.sh.
 const (
 	// CopilotNpmPackage é o nome do pacote npm canônico do Copilot CLI ACP.

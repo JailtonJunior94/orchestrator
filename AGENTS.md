@@ -71,7 +71,7 @@ Antes de concluir uma alteração, seguir Etapa 4 de `.agents/skills/agent-gover
 ## Upgrades de Skills Externas
 
 Toda atualização de hash em `skills-lock.json` deve ser acompanhada de um registro
-de decisão salvo em `audit/`. Use o template em `tasks/templates/skill-upgrade-decision.md`.
+de decisão salvo em `audit/`. Use o template em `.specs/templates/skill-upgrade-decision.md`.
 
 Campos obrigatórios: skill, versão anterior, versão nova, motivador, critério de aceitação, data.
 
@@ -201,20 +201,20 @@ Ver [`docs/config-hierarchy.md`](docs/config-hierarchy.md) para referencia compl
 
 | ADR | Titulo | Status |
 |-----|--------|--------|
-| [001](tasks/adr/001-go-embed-baseline.md) | Assets via go:embed | Aceita |
-| [002](tasks/adr/002-fake-filesystem-testes.md) | FakeFileSystem vs afero | Aceita |
-| [003](tasks/adr/003-paridade-semantica.md) | Invariantes semanticas vs diff textual | Aceita |
-| [004](tasks/adr/004-lazy-loading-referencias.md) | References sob demanda | Aceita |
-| [005](tasks/adr/005-skills-lock-sha256.md) | Lock file SHA-256 | Aceita |
+| [001](.specs/adr/001-go-embed-baseline.md) | Assets via go:embed | Aceita |
+| [002](.specs/adr/002-fake-filesystem-testes.md) | FakeFileSystem vs afero | Aceita |
+| [003](.specs/adr/003-paridade-semantica.md) | Invariantes semanticas vs diff textual | Aceita |
+| [004](.specs/adr/004-lazy-loading-referencias.md) | References sob demanda | Aceita |
+| [005](.specs/adr/005-skills-lock-sha256.md) | Lock file SHA-256 | Aceita |
 | [006](docs/adr/006-telemetria-feedback-cycle.md) | Telemetria opt-in append-only | Aceita |
 | [007](docs/adr/007-copilot-cli-stateless-workaround.md) | Copilot injecao manual | Substituida por ADR-012 |
 | [008](docs/adr/008-parity-multi-tool-invariants.md) | 29 invariantes 3 niveis | Aceita |
-| [ADR-009](tasks/adr/009-acp-protocol-adoption.md) | Adocao do ACP via coder/acp-go-sdk para invocacao de agentes | Aceita |
-| [ADR-010](tasks/prd-acp-runtime-claude/adr-010-event-tagged-union.md) | runtime.Event como struct tagged union | Aceita |
-| [ADR-012](tasks/adr/012-copilot-cli-acp-native.md) | Copilot CLI como runtime ACP nativo | Aceita |
-| [ADR-013](tasks/adr/013-codex-cli-acp-native.md) | Codex CLI como runtime ACP nativo | Aceita |
-| [ADR-015](tasks/adr/015-gemini-cli-acp-native.md) | Gemini CLI ACP nativo (ADR-015) | Proposta |
-| [ADR-016](tasks/prd-fundacao-portatil/adr-016-config-hierarquico-universal.md) | Config hierarquico universal (global+projeto, upward-walk, precedencia) | Proposta |
-| [ADR-017](tasks/prd-fundacao-portatil/adr-017-fallback-launcher-chain.md) | Generalizacao de fallback launchers (cadeia generica ordenada) | Proposta |
-| [ADR-018](tasks/prd-fundacao-portatil/adr-018-runtimeconfig-retry-backpressure.md) | RuntimeConfig unificado, retry com backoff e sessao ACP com backpressure observavel | Proposta |
-| [ADR-019](tasks/prd-fundacao-portatil/adr-019-instalador-portatil-detect-verify.md) | Instalador portatil: auto-deteccao de agentes, escopo global e verify file-first | Proposta |
+| [ADR-009](.specs/adr/009-acp-protocol-adoption.md) | Adocao do ACP via coder/acp-go-sdk para invocacao de agentes | Aceita |
+| [ADR-010](.specs/prd-acp-runtime-claude/adr-010-event-tagged-union.md) | runtime.Event como struct tagged union | Aceita |
+| [ADR-012](.specs/adr/012-copilot-cli-acp-native.md) | Copilot CLI como runtime ACP nativo | Aceita |
+| [ADR-013](.specs/adr/013-codex-cli-acp-native.md) | Codex CLI como runtime ACP nativo | Aceita |
+| [ADR-015](.specs/adr/015-gemini-cli-acp-native.md) | Gemini CLI ACP nativo (ADR-015) | Proposta |
+| [ADR-016](.specs/prd-fundacao-portatil/adr-016-config-hierarquico-universal.md) | Config hierarquico universal (global+projeto, upward-walk, precedencia) | Proposta |
+| [ADR-017](.specs/prd-fundacao-portatil/adr-017-fallback-launcher-chain.md) | Generalizacao de fallback launchers (cadeia generica ordenada) | Proposta |
+| [ADR-018](.specs/prd-fundacao-portatil/adr-018-runtimeconfig-retry-backpressure.md) | RuntimeConfig unificado, retry com backoff e sessao ACP com backpressure observavel | Proposta |
+| [ADR-019](.specs/prd-fundacao-portatil/adr-019-instalador-portatil-detect-verify.md) | Instalador portatil: auto-deteccao de agentes, escopo global e verify file-first | Proposta |

@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-acp-runtime-claude/4.0_execution_report.md
+summary: "ACP→Event Conversion implementada com 94.9% de cobertura, lint 0 issues e fuzz 10s sem panic"
+timestamp: 2026-05-20T00:00:00Z

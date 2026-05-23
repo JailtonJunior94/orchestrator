@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-copilot-acp-spec/6.0_execution_report.md
+summary: "Wiring ACP routing by tool: resolveACPSpec + acpSpecCatalog added; T-16 and ACP Copilot tests green; T-22/T-23/T-24 100% verde; R-08 diff zero confirmed"
+timestamp: 2026-05-21T14:24:19Z

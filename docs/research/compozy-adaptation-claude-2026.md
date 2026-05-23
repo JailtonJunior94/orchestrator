@@ -344,7 +344,7 @@ Legenda: 🟢 implementado · 🟡 parcial · 🔴 ausente · ⭐ vantagem do ha
 **Esforço**: Médio (~1 sprint).  
 **Risco**: Médio (MCP é fronteira nova; biblioteca SDK Go ainda matura em 2026).  
 **Dependências**: F1-Codex (ADR-013) entregue; nenhuma outra.  
-**Critério de aceitação**: `ai-spec task-loop --tool claude --runtime acp --mcp-nested tasks/prd-X` produz `events.jsonl` com `tool_call_kind="nested_agent"` quando o Claude invocar `run_agent` no diff.
+**Critério de aceitação**: `ai-spec task-loop --tool claude --runtime acp --mcp-nested .specs/prd-X` produz `events.jsonl` com `tool_call_kind="nested_agent"` quando o Claude invocar `run_agent` no diff.
 
 ### F3-Claude — Prompt hooks + 2-tier memory store
 
@@ -459,8 +459,8 @@ Quando o Orchestrator invoca Claude via ACP, o runtime expõe:
 - **Hooks in-process Go** (F3-Claude+): pontos canônicos `runtime.pre_open`,
   `prompt.pre_build`, `prompt.post_build`, `tool_call.pre_dispatch`,
   `tool_call.post_complete`, `session.post_end`. Para desabilitar: `--disable-hooks`.
-- **Memória 2-tier** (F3-Claude+): workflow `tasks/<prd>/memory/MEMORY.md` +
-  task `tasks/<prd>/memory/<task>.md`. Limites configuráveis; compactação
+- **Memória 2-tier** (F3-Claude+): workflow `.specs/<prd>/memory/MEMORY.md` +
+  task `.specs/<prd>/memory/<task>.md`. Limites configuráveis; compactação
   prompt-driven quando `NeedsCompaction=true`.
 - **Evidence Claude-2026** (F4-Claude+): `execution_report.md` ganha seção
   "Métricas Claude-2026" com `cache_read_tokens`, `cache_creation_tokens`,
@@ -594,7 +594,7 @@ func (s *Store) WriteTask(taskFileName, content string, mode WriteMode) error { 
 | 1 | Biblioteca Go MCP-SDK ainda imatura em 2026-05 — pode quebrar interfaces | Vendor inicial em `internal/runtime/mcpserver/wire/` se necessário; isolar dependência atrás de interface |
 | 2 | `claude-agent-acp@0.1.0` pode ser sucedido por novo pacote em 2026-Q3 | Política de pinning ADR-009 já cobre: atualizar via `audit/`, não `@latest` |
 | 3 | Migração `.claude/hooks/*.sh` → Go pode quebrar UX interativo de Claude Code | Manter shell hooks como camada coexistente; hooks Go só rodam quando runner ACP é o orchestrator |
-| 4 | Memória 2-tier pode duplicar com `~/.claude/projects/.../memory/MEMORY.md` (Claude Code auto-memory) | Documentar precedência: memory do harness vence quando `tasks/<prd>/memory/` existe; auto-memory de Claude Code é fallback |
+| 4 | Memória 2-tier pode duplicar com `~/.claude/projects/.../memory/MEMORY.md` (Claude Code auto-memory) | Documentar precedência: memory do harness vence quando `.specs/<prd>/memory/` existe; auto-memory de Claude Code é fallback |
 | 5 | MCP nested-agent expõe vetor de DoS (recursão infinita) | Profundidade máxima 3 (igual Compozy); timeout obrigatório; trace de `parent_session_id` no contexto |
 | 6 | Auto-review dobra custo de tokens por task | Opt-in `--auto-review`; documentar trade-off em `CLAUDE.md`; futuro: cache de review por SHA do diff |
 | 7 | Tool-call normalization pode mascarar bugs reais do runtime upstream | `raw_name` preservado lado a lado com `normalized_name`; debug via `--no-normalize` |
@@ -606,9 +606,9 @@ func (s *Store) WriteTask(taskFileName, content string, mode WriteMode) error { 
 
 Abrir o pacote de governança completo conforme entregue por esta pesquisa:
 
-- **ADR-014** (`tasks/adr/014-claude-cli-acp-native.md`) — status Proposta — documenta D-01..D-07 cobrindo MCP nested-agent, hooks in-process, memória 2-tier, evidence enrichment, auto-review opt-in.
-- **PRD** (`tasks/prd-claude-cli-acp-2026/prd.md`) — RF-01..RF-06 + NFRs — consome ADR-014.
-- **TechSpec** (`tasks/prd-claude-cli-acp-2026/techspec.md`) — cabeçalho com `spec-hash-prd` placeholder — arquitetura, interfaces, riscos, estratégia de testes; pronto para `create-tasks` após `ai-spec sync-spec-hash` materializar o hash.
+- **ADR-014** (`.specs/adr/014-claude-cli-acp-native.md`) — status Proposta — documenta D-01..D-07 cobrindo MCP nested-agent, hooks in-process, memória 2-tier, evidence enrichment, auto-review opt-in.
+- **PRD** (`.specs/prd-claude-cli-acp-2026/prd.md`) — RF-01..RF-06 + NFRs — consome ADR-014.
+- **TechSpec** (`.specs/prd-claude-cli-acp-2026/techspec.md`) — cabeçalho com `spec-hash-prd` placeholder — arquitetura, interfaces, riscos, estratégia de testes; pronto para `create-tasks` após `ai-spec sync-spec-hash` materializar o hash.
 
 **Não escrever código nesta sessão.** Tarefas de implementação ficam para uma sessão posterior via skill `create-tasks` + `execute-task` (subdivididas por fase F2 → F5, com `execute-all-tasks` paralelizando dentro de cada fase quando o DAG permitir).
 
@@ -671,11 +671,11 @@ Sugestão de decomposição: **um único PRD** com RF-N cobrindo F2..F5 e TechSp
 - `cmd/ai_spec_harness/task_loop.go` — Flags `--mcp-nested`, `--auto-review`, `--memory-*` (F2/F3/F5)
 - `.claude/hooks/` — Shell hooks atuais (coexistem com Go hooks após F3)
 - `.claude/agents/` — Agentes declarativos (resolvidos via registry após F2)
-- ADR-009 (`tasks/adr/009-acp-protocol-adoption.md`) — Pinning SDK (precedente)
-- ADR-011 (`tasks/adr/011-agent-registry-declarativo.md`) — Registry F1
-- ADR-012 (`tasks/adr/012-copilot-cli-acp-native.md`) — Copilot ACP (paridade)
-- ADR-013 (`tasks/adr/013-codex-cli-acp-native.md`) — Codex ACP (paridade; `BootstrapArgs` infra reusada)
-- ADR-014 (`tasks/adr/014-claude-cli-acp-native.md`) — **este pacote**
+- ADR-009 (`.specs/adr/009-acp-protocol-adoption.md`) — Pinning SDK (precedente)
+- ADR-011 (`.specs/adr/011-agent-registry-declarativo.md`) — Registry F1
+- ADR-012 (`.specs/adr/012-copilot-cli-acp-native.md`) — Copilot ACP (paridade)
+- ADR-013 (`.specs/adr/013-codex-cli-acp-native.md`) — Codex ACP (paridade; `BootstrapArgs` infra reusada)
+- ADR-014 (`.specs/adr/014-claude-cli-acp-native.md`) — **este pacote**
 
 **Pesquisa correlata**:
 

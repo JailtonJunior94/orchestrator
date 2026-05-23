@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-gemini-cli-acp-2026/6.0_execution_report.md
+summary: "Switch tool-aware Gemini memory defaults (250/400 linhas) + T-34/T-35 + integration test hooks dispatch — suite verde, diff-zero em store.go e dispatcher.go"
+timestamp: "2026-05-22T10:05:00Z"

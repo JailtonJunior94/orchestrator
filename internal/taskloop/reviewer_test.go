@@ -15,10 +15,10 @@ import (
 // TestReviewBuildPrompt valida os cenarios de construcao do prompt de revisao.
 func TestReviewBuildPrompt(t *testing.T) {
 	data := ReviewTemplateData{
-		TaskFile:       "tasks/prd-feat/task-1.0.md",
-		PRDFolder:      "tasks/prd-feat",
-		TechSpec:       "tasks/prd-feat/techspec.md",
-		TasksFile:      "tasks/prd-feat/tasks.md",
+		TaskFile:       ".specs/prd-feat/task-1.0.md",
+		PRDFolder:      ".specs/prd-feat",
+		TechSpec:       ".specs/prd-feat/techspec.md",
+		TasksFile:      ".specs/prd-feat/tasks.md",
 		Diff:           "diff --git a/main.go b/main.go\n+// change",
 		CompletedTasks: "1.0 (task anterior)",
 		RiskAreas:      "contratos, seguranca",
@@ -50,10 +50,10 @@ Diff: {{.Diff}}`
 			data:         data,
 			wantErr:      false,
 			wantContains: []string{
-				"tasks/prd-feat/task-1.0.md",
-				"tasks/prd-feat",
-				"tasks/prd-feat/techspec.md",
-				"tasks/prd-feat/tasks.md",
+				".specs/prd-feat/task-1.0.md",
+				".specs/prd-feat",
+				".specs/prd-feat/techspec.md",
+				".specs/prd-feat/tasks.md",
 				"diff --git a/main.go b/main.go",
 				".agents/skills/review/SKILL.md",
 				"AGENTS.md",
@@ -77,10 +77,10 @@ Diff: {{.Diff}}`
 			data:    data,
 			wantErr: false,
 			wantContains: []string{
-				"tasks/prd-feat/task-1.0.md",
-				"tasks/prd-feat",
-				"tasks/prd-feat/techspec.md",
-				"tasks/prd-feat/tasks.md",
+				".specs/prd-feat/task-1.0.md",
+				".specs/prd-feat",
+				".specs/prd-feat/techspec.md",
+				".specs/prd-feat/tasks.md",
 				"diff --git a/main.go b/main.go",
 				"1.0 (task anterior)",
 				"contratos, seguranca",
@@ -111,15 +111,15 @@ Diff: {{.Diff}}`
 			templatePath: "",
 			setupFsys:    func() fs.FileSystem { return fs.NewFakeFileSystem() },
 			data: ReviewTemplateData{
-				TaskFile:  "tasks/prd-foo/task-2.0.md",
-				PRDFolder: "tasks/prd-foo",
-				TechSpec:  "tasks/prd-foo/techspec.md",
-				TasksFile: "tasks/prd-foo/tasks.md",
+				TaskFile:  ".specs/prd-foo/task-2.0.md",
+				PRDFolder: ".specs/prd-foo",
+				TechSpec:  ".specs/prd-foo/techspec.md",
+				TasksFile: ".specs/prd-foo/tasks.md",
 				Diff:      "(diff indisponivel)",
 			},
 			wantErr: false,
 			wantContains: []string{
-				"tasks/prd-foo/task-2.0.md",
+				".specs/prd-foo/task-2.0.md",
 				"(diff indisponivel)",
 			},
 		},
@@ -370,10 +370,10 @@ func TestDetectRiskAreas(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			fsys := fs.NewFakeFileSystem()
 			if tt.techspec != "" {
-				_ = fsys.WriteFile("/work/tasks/prd-test/techspec.md", []byte(tt.techspec))
+				_ = fsys.WriteFile("/work/.specs/prd-test/techspec.md", []byte(tt.techspec))
 			}
 
-			got := detectRiskAreas("tasks/prd-test", "/work", tt.diff, fsys)
+			got := detectRiskAreas(".specs/prd-test", "/work", tt.diff, fsys)
 			for _, w := range tt.want {
 				if !strings.Contains(got, w) {
 					t.Errorf("detectRiskAreas() deveria conter %q, obteve: %q", w, got)
@@ -391,10 +391,10 @@ func TestDetectRiskAreas(t *testing.T) {
 // TestBugfixBuildPrompt valida os cenarios de construcao do prompt de bugfix.
 func TestBugfixBuildPrompt(t *testing.T) {
 	data := BugfixTemplateData{
-		TaskFile:       "tasks/prd-feat/task-1.0.md",
-		PRDFolder:      "tasks/prd-feat",
-		TechSpec:       "tasks/prd-feat/techspec.md",
-		TasksFile:      "tasks/prd-feat/tasks.md",
+		TaskFile:       ".specs/prd-feat/task-1.0.md",
+		PRDFolder:      ".specs/prd-feat",
+		TechSpec:       ".specs/prd-feat/techspec.md",
+		TasksFile:      ".specs/prd-feat/tasks.md",
 		ReviewFindings: "- [main.go:42] Achado 1: variavel nao inicializada\n- [handler.go:10] Achado 2: erro nao tratado",
 		Diff:           "diff --git a/main.go b/main.go\n+// change",
 	}
@@ -408,10 +408,10 @@ func TestBugfixBuildPrompt(t *testing.T) {
 			name: "template default resolve todos os placeholders",
 			data: data,
 			wantContains: []string{
-				"tasks/prd-feat/task-1.0.md",
-				"tasks/prd-feat",
-				"tasks/prd-feat/techspec.md",
-				"tasks/prd-feat/tasks.md",
+				".specs/prd-feat/task-1.0.md",
+				".specs/prd-feat",
+				".specs/prd-feat/techspec.md",
+				".specs/prd-feat/tasks.md",
 				"variavel nao inicializada",
 				"erro nao tratado",
 				"diff --git a/main.go b/main.go",
@@ -429,15 +429,15 @@ func TestBugfixBuildPrompt(t *testing.T) {
 		{
 			name: "template com review findings vazio",
 			data: BugfixTemplateData{
-				TaskFile:       "tasks/prd-foo/task-2.0.md",
-				PRDFolder:      "tasks/prd-foo",
-				TechSpec:       "tasks/prd-foo/techspec.md",
-				TasksFile:      "tasks/prd-foo/tasks.md",
+				TaskFile:       ".specs/prd-foo/task-2.0.md",
+				PRDFolder:      ".specs/prd-foo",
+				TechSpec:       ".specs/prd-foo/techspec.md",
+				TasksFile:      ".specs/prd-foo/tasks.md",
 				ReviewFindings: "",
 				Diff:           "(diff indisponivel)",
 			},
 			wantContains: []string{
-				"tasks/prd-foo/task-2.0.md",
+				".specs/prd-foo/task-2.0.md",
 				"(diff indisponivel)",
 				"skill bugfix",
 			},
@@ -470,10 +470,10 @@ func TestBugfixErrBugfixTemplateInvalidoSentinel(t *testing.T) {
 // no prompt de bugfix (contrato de carga base exigido por RF-04).
 func TestBugfixPromptAgentsMdBeforeSkillMd(t *testing.T) {
 	data := BugfixTemplateData{
-		TaskFile:       "tasks/prd-feat/task-1.0.md",
-		PRDFolder:      "tasks/prd-feat",
-		TechSpec:       "tasks/prd-feat/techspec.md",
-		TasksFile:      "tasks/prd-feat/tasks.md",
+		TaskFile:       ".specs/prd-feat/task-1.0.md",
+		PRDFolder:      ".specs/prd-feat",
+		TechSpec:       ".specs/prd-feat/techspec.md",
+		TasksFile:      ".specs/prd-feat/tasks.md",
 		ReviewFindings: "achado critico",
 		Diff:           "diff content",
 	}
@@ -500,10 +500,10 @@ func TestBugfixPromptAgentsMdBeforeSkillMd(t *testing.T) {
 // todas as secoes obrigatorias do template.
 func TestBugfixPromptAllMandatorySections(t *testing.T) {
 	data := BugfixTemplateData{
-		TaskFile:       "tasks/prd-feat/task-1.0.md",
-		PRDFolder:      "tasks/prd-feat",
-		TechSpec:       "tasks/prd-feat/techspec.md",
-		TasksFile:      "tasks/prd-feat/tasks.md",
+		TaskFile:       ".specs/prd-feat/task-1.0.md",
+		PRDFolder:      ".specs/prd-feat",
+		TechSpec:       ".specs/prd-feat/techspec.md",
+		TasksFile:      ".specs/prd-feat/tasks.md",
 		ReviewFindings: "- [handler.go:15] null pointer dereference",
 		Diff:           "diff --git a/handler.go",
 	}
@@ -546,10 +546,10 @@ func TestBugfixPromptPreservesMultilineFindings(t *testing.T) {
 Veredicto: reprovado`
 
 	data := BugfixTemplateData{
-		TaskFile:       "tasks/prd-feat/task-1.0.md",
-		PRDFolder:      "tasks/prd-feat",
-		TechSpec:       "tasks/prd-feat/techspec.md",
-		TasksFile:      "tasks/prd-feat/tasks.md",
+		TaskFile:       ".specs/prd-feat/task-1.0.md",
+		PRDFolder:      ".specs/prd-feat",
+		TechSpec:       ".specs/prd-feat/techspec.md",
+		TasksFile:      ".specs/prd-feat/tasks.md",
 		ReviewFindings: findings,
 		Diff:           "diff content",
 	}

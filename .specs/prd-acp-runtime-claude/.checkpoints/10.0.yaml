@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-acp-runtime-claude/10.0_execution_report.md
+summary: "feat(cli): add --runtime/--activity-timeout/--quiet flags, ACP telemetry fields, live test and nightly CI job"
+timestamp: "2026-05-20T21:15:00Z"

@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-acp-runtime-claude/9.0_execution_report.md
+summary: "ACPRunner application service + acpInvoker adapter + 8 integration tests implemented; all tests pass with -race, coverage ≥85%"
+timestamp: 2026-05-20T20:57:00Z

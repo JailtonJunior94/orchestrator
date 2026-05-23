@@ -350,7 +350,7 @@ Codex não está no `runtimeACPCatalog`. Teste T-14 em `cmd/ai_spec_harness/task
 
 **Impacto**: usuário que tente `ai-spec task-loop --tool codex --runtime acp <prd>` recebe erro com `exit2`. Configuração esperada para F1-Codex.
 
-**Gap técnico**: F1-Codex inverte T-14 (passa a esperar `wantErr: false`) e adiciona `"codex": specs.Codex` ao catálogo. Também registra `"codex": "tasks/adr/013-codex-cli-acp-native.md"` em `internal/runtime/probe/probe.go:21-24`.
+**Gap técnico**: F1-Codex inverte T-14 (passa a esperar `wantErr: false`) e adiciona `"codex": specs.Codex` ao catálogo. Também registra `"codex": ".specs/adr/013-codex-cli-acp-native.md"` em `internal/runtime/probe/probe.go:21-24`.
 
 ---
 
@@ -371,7 +371,7 @@ Legenda: 🟢 implementado · 🟡 parcial · 🔴 ausente · ⭐ vantagem do ha
 | 9 | `CODEX.md` documenta modo ACP 2026 | 🟡 esqueleto de 30 linhas | 🔴 não existe em compozy | Reescrever `CODEX.md` com §"Modo Recomendado (2026)" | **F1-Codex** |
 | 10 | `.codex/config.toml` versionado | 🔴 referenciado mas não comitado | 🔴 não comitado em compozy (config dinâmica via `-c`) | Criar template + installer flow | F1-Codex (com F3 opcional) |
 | 11 | Persistência forense (`events.jsonl`, `tool_calls.md`) para Codex | 🔴 | 🔴 (compozy usa OTel/Grafana) | Reaproveitar runner generalizado (zero código novo) | **F1-Codex** (herda) |
-| 12 | ADR-013 e PRD `prd-codex-acp-spec` | 🔴 | n/a | Escrever ADR-013 (template `tasks/adr/000-template.md`) + PRD com TechSpec + Tasks | **F1-Codex** |
+| 12 | ADR-013 e PRD `prd-codex-acp-spec` | 🔴 | n/a | Escrever ADR-013 (template `.specs/adr/000-template.md`) + PRD com TechSpec + Tasks | **F1-Codex** |
 
 **Critérios de esforço**: Baixo ≤ 1 sprint; Médio 1–2 sprints; Alto ≥ 2 sprints com pesquisa.
 
@@ -399,7 +399,7 @@ Legenda: 🟢 implementado · 🟡 parcial · 🔴 ausente · ⭐ vantagem do ha
 - Estender `internal/runtime/runner.go::Job` com campos `ReasoningEffort string`, `AccessMode specs.AccessMode`, `AddDirs []string`.
 - Adicionar `"codex": specs.Codex` ao `runtimeACPCatalog` em `cmd/ai_spec_harness/task_loop.go:21-24`.
 - Inverter T-14 em `cmd/ai_spec_harness/task_loop_test.go:48-52` (passa a esperar `wantErr: false`) e adicionar T-15 cobrindo `--reasoning-effort high --access-mode restricted`.
-- Adicionar `"codex": "tasks/adr/013-codex-cli-acp-native.md"` em `internal/runtime/probe/probe.go:21-24`.
+- Adicionar `"codex": ".specs/adr/013-codex-cli-acp-native.md"` em `internal/runtime/probe/probe.go:21-24`.
 - Flags novas em `cmd/ai_spec_harness/task_loop.go`:
   - `--reasoning-effort` (default `"medium"`; valores aceitos: `low`, `medium`, `high`)
   - `--access-mode` (default `"restricted"`; valores aceitos: `restricted`, `full`)
@@ -411,8 +411,8 @@ Legenda: 🟢 implementado · 🟡 parcial · 🔴 ausente · ⭐ vantagem do ha
   - T-04 `TestCodexBootstrapArgs` — table-driven com casos: sem model, com model, com reasoning, full access
   - T-05 `TestCodexAccessModeFullAddsSandboxOverrides` — valida triplet sandbox/approval/web_search
 - Reescrever `CODEX.md` (raiz, 30 linhas atuais → ~80 linhas) com §"Modo Recomendado (2026)" descrevendo invocação `codex-acp` via harness, hooks de validação em `.codex/hooks/`, skills em `$CODEX_HOME/skills` (ver §"Exemplos de Configuração 2026" abaixo).
-- ADR-013 ([`tasks/adr/013-codex-cli-acp-native.md`](../../tasks/adr/013-codex-cli-acp-native.md), a criar) documentando: (a) escolha de `codex-acp` sobre `codex` legado; (b) pinning `@zed-industries/codex-acp@0.12.0`; (c) extensão da interface `Spec` com `BootstrapArgs`; (d) novas flags CLI; (e) decisão de adiar aliasing (F2-Codex).
-- PRD `tasks/prd-codex-acp-spec/` com TechSpec + Tasks decompostas conforme padrão `prd-copilot-acp-spec/`.
+- ADR-013 ([`.specs/adr/013-codex-cli-acp-native.md`](../../.specs/adr/013-codex-cli-acp-native.md), a criar) documentando: (a) escolha de `codex-acp` sobre `codex` legado; (b) pinning `@zed-industries/codex-acp@0.12.0`; (c) extensão da interface `Spec` com `BootstrapArgs`; (d) novas flags CLI; (e) decisão de adiar aliasing (F2-Codex).
+- PRD `.specs/prd-codex-acp-spec/` com TechSpec + Tasks decompostas conforme padrão `prd-copilot-acp-spec/`.
 
 **Esforço**: Baixo–Médio. **Risco**: Médio (extensão da interface `Spec` afeta Claude/Copilot; mitigar com default no-op).
 
@@ -420,7 +420,7 @@ Legenda: 🟢 implementado · 🟡 parcial · 🔴 ausente · ⭐ vantagem do ha
 
 **Pré-requisito de viabilidade**: confirmar que `@zed-industries/codex-acp@0.12.0` está disponível via npm registry e suporta os 6 overrides `-c` documentados. Documentar versão na techspec.
 
-**Critério de aceitação**: `ai-spec task-loop --tool codex --runtime acp --reasoning-effort high --access-mode restricted tasks/prd-X` gera `events.jsonl`, `tool_calls.md`, `execution_report.md` paritários aos modos Claude/Copilot.
+**Critério de aceitação**: `ai-spec task-loop --tool codex --runtime acp --reasoning-effort high --access-mode restricted .specs/prd-X` gera `events.jsonl`, `tool_calls.md`, `execution_report.md` paritários aos modos Claude/Copilot.
 
 ### F2-Codex — Tool name aliasing (opcional, baixa prioridade)
 
@@ -482,7 +482,7 @@ ai-spec-harness task-loop \
   --runtime acp \
   --reasoning-effort medium \
   --access-mode restricted \
-  tasks/prd-minha-feature
+  .specs/prd-minha-feature
 \`\`\`
 
 A sessão produz os mesmos artefatos forenses do modo Claude/Copilot:
@@ -508,7 +508,7 @@ O instalador (`ai-spec-harness install`) honra `$CODEX_HOME` e distribui:
 ## Modo Legado (deprecado, será removido em vX): Codex CLI stateless
 
 \`\`\`bash
-ai-spec-harness task-loop --tool codex tasks/prd-minha-feature
+ai-spec-harness task-loop --tool codex .specs/prd-minha-feature
 \`\`\`
 
 Este modo invoca `codex exec --yolo <prompt>` sem ACP. Não produz `events.jsonl`
@@ -517,9 +517,9 @@ nem `tool_calls.md`. Mantido por compatibilidade até versão vX (ver ADR-013
 
 ## ADRs Relevantes
 
-- [ADR-013](tasks/adr/013-codex-cli-acp-native.md) — Codex via ACP nativo (binário `codex-acp`)
-- [ADR-012](tasks/adr/012-copilot-cli-acp-native.md) — Copilot via ACP nativo (precedente)
-- [ADR-009](tasks/adr/009-acp-protocol-adoption.md) — pinning de SDK ACP
+- [ADR-013](.specs/adr/013-codex-cli-acp-native.md) — Codex via ACP nativo (binário `codex-acp`)
+- [ADR-012](.specs/adr/012-copilot-cli-acp-native.md) — Copilot via ACP nativo (precedente)
+- [ADR-009](.specs/adr/009-acp-protocol-adoption.md) — pinning de SDK ACP
 - [ADR-008](docs/adr/008-parity-multi-tool-invariants.md) — invariantes de paridade multi-tool
 ```
 
@@ -566,7 +566,7 @@ import "strconv"
 // Constantes do runtime Codex via ACP adapter (`@zed-industries/codex-acp`).
 // Política de atualização (ADR-009 + ADR-013):
 //   - CodexNpmVersion e CodexSDKVersion são constantes Go pinadas. Nunca usar @latest.
-//   - CodexNpmVersion só é alterada via processo audit/ (tasks/templates/skill-upgrade-decision.md).
+//   - CodexNpmVersion só é alterada via processo audit/ (.specs/templates/skill-upgrade-decision.md).
 //   - CodexSDKVersion é mantida em sincronia com go.mod por scripts/sync-acp-sdk-version.sh.
 const (
     CodexNpmPackage     = "@zed-industries/codex-acp"
@@ -644,14 +644,14 @@ Mudanças propostas para F1-Codex, agrupadas por arquivo (sem código final — 
 | `internal/runtime/specs/codex_test.go` | **Novo arquivo** ~150 LoC | T-01..T-05 espelhando `copilot_test.go` |
 | `internal/runtime/runner.go` | Em `Run()`, chamar `bootstrap := r.spec.BootstrapArgs(...)` e fazer `argv = append(bootstrap, r.spec.FixedArgs...)` | Order matters: `-c` flags vêm antes do que vier em FixedArgs |
 | `internal/runtime/runner.go::Job` | Adicionar campos `ReasoningEffort string`, `AccessMode specs.AccessMode`, `AddDirs []string` | Default `""`/`AccessModeRestricted`/`nil` |
-| `internal/runtime/probe/probe.go:21-24` | `adrByID["codex"] = "tasks/adr/013-codex-cli-acp-native.md"` | Sem outras mudanças no probe |
+| `internal/runtime/probe/probe.go:21-24` | `adrByID["codex"] = ".specs/adr/013-codex-cli-acp-native.md"` | Sem outras mudanças no probe |
 | `cmd/ai_spec_harness/task_loop.go:21-24` | `runtimeACPCatalog["codex"] = specs.Codex` | + atualizar docstring linha 19 |
 | `cmd/ai_spec_harness/task_loop.go:189-192` | Novas flags `--reasoning-effort` (default `medium`), `--access-mode` (default `restricted`) | Propagar via `taskloop.Options` |
 | `cmd/ai_spec_harness/task_loop_test.go:48-52` | Inverter T-14: `wantErr: false`; adicionar T-15 cobrindo `--reasoning-effort=high --access-mode=full` | Garante regressão |
 | `internal/taskloop/agent.go:333-351` | **Manter** `codexInvoker` legado por backward-compat | `--runtime=legacy` continua funcional; emitir warning de depreciação opcional |
 | `CODEX.md` | Reescrever 30→80 linhas conforme §"Exemplos de Configuração 2026" acima | Substitui esqueleto atual |
-| `tasks/adr/013-codex-cli-acp-native.md` | **Novo ADR** seguindo `tasks/adr/000-template.md` | Documenta decisões D-01..D-09 análogas a ADR-012 |
-| `tasks/prd-codex-acp-spec/` | **Novo PRD** (folder com `prd.md`, `techspec.md`, `tasks.md`) | Estrutura espelha `tasks/prd-copilot-acp-spec/` |
+| `.specs/adr/013-codex-cli-acp-native.md` | **Novo ADR** seguindo `.specs/adr/000-template.md` | Documenta decisões D-01..D-09 análogas a ADR-012 |
+| `.specs/prd-codex-acp-spec/` | **Novo PRD** (folder com `prd.md`, `techspec.md`, `tasks.md`) | Estrutura espelha `.specs/prd-copilot-acp-spec/` |
 
 ### Riscos e Mitigações
 
@@ -665,11 +665,11 @@ Mudanças propostas para F1-Codex, agrupadas por arquivo (sem código final — 
 
 ## Continuidade — PRDs Futuros
 
-> **Estado em 2026-05-21**: F1-Copilot entregue como PRD/TechSpec/Tasks em [`tasks/prd-copilot-acp-spec/`](../../tasks/prd-copilot-acp-spec/) + ADR-012. F1-Codex é o **próximo PRD candidato**; F2-Codex e F3-Codex listados aqui são PRDs futuros independentes. F2/F3/F4 do roadmap Copilot (memória, hooks, TUI) cobrem Codex automaticamente após F1-Codex.
+> **Estado em 2026-05-21**: F1-Copilot entregue como PRD/TechSpec/Tasks em [`.specs/prd-copilot-acp-spec/`](../../.specs/prd-copilot-acp-spec/) + ADR-012. F1-Codex é o **próximo PRD candidato**; F2-Codex e F3-Codex listados aqui são PRDs futuros independentes. F2/F3/F4 do roadmap Copilot (memória, hooks, TUI) cobrem Codex automaticamente após F1-Codex.
 
 ### F1-Codex — Codex ACP Spec (próximo)
 
-**Escopo bruto**: ver §"Roadmap" acima. PRD a criar em `tasks/prd-codex-acp-spec/`.
+**Escopo bruto**: ver §"Roadmap" acima. PRD a criar em `.specs/prd-codex-acp-spec/`.
 
 **Risco**: Médio (extensão da interface `Spec`). **Esforço**: Baixo–Médio (1 sprint).
 
@@ -741,12 +741,12 @@ Ver detalhes em [`compozy-adaptation-copilot-2026.md` §"Roadmap"](compozy-adapt
 - `cmd/ai_spec_harness/task_loop_test.go:48-52` — T-14 a inverter
 - `CODEX.md` — esqueleto atual de 30 linhas (a reescrever em F1-Codex)
 - `AGENTS.md` — referência canônica (sem mudanças)
-- ADR-009 (`tasks/adr/009-acp-protocol-adoption.md`) — pinning SDK (precedente)
+- ADR-009 (`.specs/adr/009-acp-protocol-adoption.md`) — pinning SDK (precedente)
 - ADR-008 (`docs/adr/008-parity-multi-tool-invariants.md`) — paridade multi-tool (precedente)
-- ADR-010 (`tasks/prd-acp-runtime-claude/adr-010-event-tagged-union.md`) — tagged union de eventos
-- ADR-011 (`tasks/adr/011-agent-registry-declarativo.md`) — Agent Registry F1 anterior
-- ADR-012 (`tasks/adr/012-copilot-cli-acp-native.md`) — Copilot ACP nativo (precedente direto)
-- ADR-013 (`tasks/adr/013-codex-cli-acp-native.md`) — **a criar em F1-Codex**
+- ADR-010 (`.specs/prd-acp-runtime-claude/adr-010-event-tagged-union.md`) — tagged union de eventos
+- ADR-011 (`.specs/adr/011-agent-registry-declarativo.md`) — Agent Registry F1 anterior
+- ADR-012 (`.specs/adr/012-copilot-cli-acp-native.md`) — Copilot ACP nativo (precedente direto)
+- ADR-013 (`.specs/adr/013-codex-cli-acp-native.md`) — **a criar em F1-Codex**
 
 **Pesquisa correlata**:
 

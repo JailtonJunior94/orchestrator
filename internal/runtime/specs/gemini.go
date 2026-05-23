@@ -13,7 +13,7 @@ package specs
 // Constantes do runtime Gemini CLI via ACP nativo.
 // Política de atualização (ADR-015 D-02):
 //   - GeminiNpmVersion e GeminiSDKVersion são constantes Go pinadas. Nunca usar @latest.
-//   - GeminiNpmVersion só é alterada via processo audit/ (tasks/templates/skill-upgrade-decision.md).
+//   - GeminiNpmVersion só é alterada via processo audit/ (.specs/templates/skill-upgrade-decision.md).
 //   - GeminiSDKVersion é mantida em sincronia com go.mod por scripts/sync-acp-sdk-version.sh.
 //   - Validadas via `npm view @google/gemini-cli version dist-tags` em 2026-05-22:
 //     dist-tag latest = 0.43.0. Flag --acp confirmada estável via

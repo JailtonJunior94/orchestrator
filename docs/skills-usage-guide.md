@@ -115,7 +115,7 @@ Saidas esperadas obrigatorias:
 - [ ] cada RF tem criterio de aceite testavel
 - [ ] nao objetivos estao listados (previnem escopo rastejante)
 - [ ] riscos tem mitigacao ou decisao explicita
-- [ ] artefato salvo em `tasks/<prd-folder>/prd.md`
+- [ ] artefato salvo em `.specs/<prd-folder>/prd.md`
 
 ---
 
@@ -132,7 +132,7 @@ Saidas esperadas obrigatorias:
 **Prompt mandatorio:**
 
 ```text
-Use a skill create-technical-specification com base no PRD aprovado em tasks/<prd-folder>/prd.md.
+Use a skill create-technical-specification com base no PRD aprovado em .specs/<prd-folder>/prd.md.
 
 Contexto tecnico:
 - Stack: [linguagem, frameworks, banco de dados]
@@ -155,7 +155,7 @@ Saidas esperadas obrigatorias:
 - [ ] estrategia de erros explicita (sem "retornar erro generico")
 - [ ] estrategia de testes inclui cenarios de falha
 - [ ] decisoes arquiteturais justificadas (ADR ou nota inline)
-- [ ] artefato salvo em `tasks/<prd-folder>/techspec.md`
+- [ ] artefato salvo em `.specs/<prd-folder>/techspec.md`
 
 ---
 
@@ -173,8 +173,8 @@ Saidas esperadas obrigatorias:
 Use a skill create-tasks para decompor a tech spec aprovada em tasks.
 
 Arquivos de entrada:
-- PRD: tasks/<prd-folder>/prd.md
-- Tech spec: tasks/<prd-folder>/techspec.md
+- PRD: .specs/<prd-folder>/prd.md
+- Tech spec: .specs/<prd-folder>/techspec.md
 
 Regras de decomposicao obrigatorias:
 - uma responsabilidade por task (ex: nao misturar handler com repository na mesma task)
@@ -191,7 +191,7 @@ Saidas esperadas obrigatorias:
 - [ ] nenhuma task tem dependencia circular
 - [ ] cada task tem criterio de pronto com comandos de validacao (ex: `go test ./...`)
 - [ ] tamanho de cada task: implementavel em uma unica sessao de agente
-- [ ] artefatos salvos em `tasks/<prd-folder>/`
+- [ ] artefatos salvos em `.specs/<prd-folder>/`
 
 ---
 
@@ -207,7 +207,7 @@ Saidas esperadas obrigatorias:
 **Prompt mandatorio:**
 
 ```text
-Use a skill execute-task para implementar a task tasks/<prd-folder>/<N>_task.md.
+Use a skill execute-task para implementar a task .specs/<prd-folder>/<N>_task.md.
 
 Contexto obrigatorio:
 - Leia o arquivo de task antes de iniciar qualquer alteracao
@@ -301,7 +301,7 @@ Nao forneca tasks anteriores, outputs de sessoes passadas ou contexto de feature
 ```text
 Nova sessao. Sem contexto anterior.
 
-Tarefa: implementar tasks/<prd-folder>/<N>_task.md
+Tarefa: implementar .specs/<prd-folder>/<N>_task.md
 
 Leia o arquivo de task antes de qualquer acao.
 
@@ -326,7 +326,7 @@ Nao inferir. Se o arquivo de task tiver ambiguidade, pare e aponte antes de impl
 Estrutura do bundle:
 
 ```text
-tasks/prd-payments-list/
+.specs/prd-payments-list/
   prd.md
   techspec.md
   tasks.md
@@ -340,7 +340,7 @@ tasks/prd-payments-list/
 ```text
 Nova sessao. Sem contexto anterior.
 
-Tarefa: implementar tasks/prd-payments-list/task-1.0-repository.md
+Tarefa: implementar .specs/prd-payments-list/task-1.0-repository.md
 
 Leia o arquivo de task antes de qualquer acao.
 
@@ -363,7 +363,7 @@ Regras: siga o criterio de pronto da task. Testes table-driven para filtros. Reg
 ```text
 Nova sessao. Sem contexto anterior.
 
-Tarefa: implementar tasks/prd-payments-list/task-2.0-service.md
+Tarefa: implementar .specs/prd-payments-list/task-2.0-service.md
 
 Leia o arquivo de task antes de qualquer acao.
 
@@ -386,7 +386,7 @@ Regras: siga o criterio de pronto da task. Testes com mock do repository. Regist
 ```text
 Nova sessao. Sem contexto anterior.
 
-Tarefa: implementar tasks/prd-payments-list/task-3.0-handler.md
+Tarefa: implementar .specs/prd-payments-list/task-3.0-handler.md
 
 Leia o arquivo de task antes de qualquer acao.
 
@@ -413,7 +413,7 @@ Se o agente iniciar uma task sem ler o arquivo, introduzir escopo nao previsto, 
 Na sessao anterior houve um desvio: [descreva o desvio].
 Nova sessao. Sem contexto anterior.
 
-Tarefa: reimplementar tasks/<prd-folder>/<N>_task.md do zero.
+Tarefa: reimplementar .specs/<prd-folder>/<N>_task.md do zero.
 [prompt mandatorio completo]
 
 Correcao especifica: [o que nao deve ser feito desta vez]
@@ -570,9 +570,9 @@ Use esta tabela antes de invocar qualquer skill. Se um item obrigatorio estiver 
 | Skill | Obrigatorio antes de invocar | Artefato de saida esperado |
 | --- | --- | --- |
 | `analyze-project` | repositorio com base de codigo real | classificacao + evidencias + mapa de dependencias (registrado antes do PRD) |
-| `create-prd` | problema definido, persona, restricoes de escopo | `tasks/<folder>/prd.md` |
-| `create-technical-specification` | `prd.md` aprovado, contexto tecnico, referencias | `tasks/<folder>/techspec.md` |
-| `create-tasks` | `prd.md` + `techspec.md` aprovados | `tasks/<folder>/tasks.md` + `<N>_task.md` |
+| `create-prd` | problema definido, persona, restricoes de escopo | `.specs/<folder>/prd.md` |
+| `create-technical-specification` | `prd.md` aprovado, contexto tecnico, referencias | `.specs/<folder>/techspec.md` |
+| `create-tasks` | `prd.md` + `techspec.md` aprovados | `.specs/<folder>/tasks.md` + `<N>_task.md` |
 | `execute-task` | task file com criterio de pronto, contexto arquitetural | evidencia no task file, testes passando |
 | `review` | diff ou branch, contexto da implementacao, areas de risco | lista de achados com veredicto |
 | `bugfix` | achados criticos da `review`, causa raiz suspeita, invariantes | causa raiz documentada, testes de regressao, testes passando |

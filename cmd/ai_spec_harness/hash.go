@@ -15,7 +15,7 @@ var hashCmd = &cobra.Command{
 ai-spec-harness, sem depender de binarios externos como sha256sum ou shasum.
 
 Exemplos:
-  ai-spec hash tasks/prd-exemplo/prd.md
+  ai-spec hash .specs/prd-exemplo/prd.md
   ai-spec hash ./techspec.md`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {

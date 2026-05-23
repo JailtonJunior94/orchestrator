@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-agent-registry-declarativo/6.0_execution_report.md
+summary: "Integração de AgentName em taskloop.Options, ResolveProfileFromAgent, BuildPromptContext enriquecido e testes T-17/T-18/T-19 implementados com suíte completa verde."
+timestamp: "2026-05-21T00:00:00Z"

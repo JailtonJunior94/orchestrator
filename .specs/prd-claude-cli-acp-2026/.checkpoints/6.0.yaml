@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-claude-cli-acp-2026/6.0_execution_report.md
+summary: "Integrar memory.Store + hooks.Dispatcher em runner.go com 5 flags F3, memory_persist completo, T-16/T-MEM-INJECT-01/T-INT-03/T-INT-04 e refatoração OC de Run()"
+timestamp: "2026-05-21T21:10:00Z"

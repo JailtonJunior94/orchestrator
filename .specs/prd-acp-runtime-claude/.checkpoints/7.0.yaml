@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-acp-runtime-claude/7.0_execution_report.md
+summary: "Persistence layer implementada com JSONLWriter (93.9% cov, -race verde), WriteToolCalls e EnrichReport idempotente"
+timestamp: "2026-05-20T00:00:00Z"

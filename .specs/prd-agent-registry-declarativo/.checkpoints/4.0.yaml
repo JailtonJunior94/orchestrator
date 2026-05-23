@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-agent-registry-declarativo/4.0_execution_report.md
+summary: Registry com cache por instancia implementado via sync.Once; T-14 e T-19 passam; go test -race green.
+timestamp: 2026-05-21T12:10:00Z

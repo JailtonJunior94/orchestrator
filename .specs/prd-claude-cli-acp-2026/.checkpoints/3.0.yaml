@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-claude-cli-acp-2026/3.0_execution_report.md
+summary: "Integração F2-Claude concluída: MCP server spawn + normalização de tool-calls em runner.go + flags --mcp-nested/--no-normalize + T-15 + T-INT-01/T-INT-02 + CLAUDE.md §Runtime Capabilities"
+timestamp: "2026-05-21T23:45:00Z"
