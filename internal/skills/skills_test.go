@@ -54,6 +54,15 @@ func TestAllSkills(t *testing.T) {
 	}
 }
 
+func TestBaseSkillsIncludesExecuteAllTasks(t *testing.T) {
+	for _, skill := range BaseSkills {
+		if skill == "execute-all-tasks" {
+			return
+		}
+	}
+	t.Fatal("BaseSkills deve incluir execute-all-tasks para instalacao em novos projetos")
+}
+
 func TestComplementarySkills(t *testing.T) {
 	if len(ComplementarySkills) != 11 {
 		t.Errorf("ComplementarySkills count = %d, want 11", len(ComplementarySkills))

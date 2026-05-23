@@ -848,7 +848,7 @@ func TestInstall_EmbeddedSource_NoSourceFlag(t *testing.T) {
 	}
 
 	// Skills canonicas devem ter sido instaladas
-	for _, skill := range []string{"agent-governance", "bugfix", "review", "execute-task"} {
+	for _, skill := range []string{"agent-governance", "bugfix", "review", "execute-task", "execute-all-tasks"} {
 		path := projectDir + "/.agents/skills/" + skill + "/SKILL.md"
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			t.Errorf("skill embutida %s nao instalada", skill)
