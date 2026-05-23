@@ -8,15 +8,17 @@
 # Codex não usa skills neste formato.
 #
 # Estratégia: rsync com --delete para garantir que mirrors sejam idênticos ao canônico.
-# Mirrors de plataforma (.claude/.github) recebem read-only para sinalizar fonte de
-# verdade; o mirror embedded permanece gravável por convenção (é embed source de Go).
+# Os mirrors são GERADOS — não edite-os à mão; altere o canônico (.agents/skills) e rode
+# este script. A fonte de verdade é sinalizada por este comentário e garantida pelo gate
+# `check-skills-sync.sh` (que falha em drift), NÃO por permissão read-only: marcar os
+# arquivos como read-only quebra operações do git (`unable to unlink`/checkout/pull).
 
 set -euo pipefail
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 canonical="$repo_root/.agents/skills"
 
-declare -a mirrors_readonly=(
+declare -a platform_mirrors=(
   "$repo_root/.claude/skills"
   "$repo_root/.github/skills"
 )
@@ -28,9 +30,14 @@ if [[ ! -d "$canonical" ]]; then
   exit 1
 fi
 
-for mirror in "${mirrors_readonly[@]}"; do
+# Auto-heal: limpa estado read-only herdado de versões antigas deste script no canônico,
+# garantindo que git/rsync/cp consigam operar e que `cp -p` não re-propague read-only.
+chmod -R u+w "$canonical" 2>/dev/null || true
+
+for mirror in "${platform_mirrors[@]}"; do
   mkdir -p "$mirror"
-  # Tornar arquivos do mirror graváveis antes do rsync para evitar erro em read-only.
+  # Cura estado read-only herdado de versões antigas deste script (que aplicavam a-w),
+  # para que rsync e o git consigam sobrescrever/remover os arquivos do mirror.
   if [[ -d "$mirror" ]]; then
     chmod -R u+w "$mirror" 2>/dev/null || true
   fi
@@ -41,7 +48,6 @@ for mirror in "${mirrors_readonly[@]}"; do
     skill_name="$(basename "$skill_dir")"
     if [[ -d "$mirror/$skill_name" ]]; then
       rsync -a --delete "$skill_dir" "$mirror/$skill_name/"
-      chmod -R a-w "$mirror/$skill_name"
       echo "synced: $skill_name -> $mirror"
     fi
   done
@@ -78,6 +84,7 @@ agents_lib="$repo_root/.agents/lib"
 legacy_lib="$repo_root/scripts/lib"
 embedded_lib="$repo_root/internal/embedded/assets/.agents/lib"
 if [[ -d "$agents_lib" ]]; then
+  chmod -R u+w "$agents_lib" 2>/dev/null || true
   chmod -R u+w "$legacy_lib" 2>/dev/null || true
   chmod -R u+w "$embedded_lib" 2>/dev/null || true
   mkdir -p "$embedded_lib"
@@ -126,8 +133,8 @@ if [[ -d "$agents_hooks" ]]; then
   done
 fi
 
-# Reaplica read-only no canônico para reforçar a fonte de verdade.
-chmod -R a-w "$canonical"
-chmod -R a-w "$agents_lib" 2>/dev/null || true
+# NÃO reaplicar read-only: arquivos/diretórios read-only quebram operações do git
+# (`unable to unlink old ...`, checkout, pull, restore). A imutabilidade da fonte é
+# garantida pelo gate `check-skills-sync.sh`, não por permissão de filesystem.
 
 echo "sync-skills: concluído"
