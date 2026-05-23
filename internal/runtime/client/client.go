@@ -71,6 +71,13 @@ func (f *defaultClientFactory) New(workDir string) Client {
 	return newACPClient(workDir, nil, defaultChannelCap, 0)
 }
 
+// SetBypassPermissions habilita a auto-aprovação de RequestPermission (AccessMode==full).
+// Não faz parte da interface Client (acessada via type-assertion pelo runner) para evitar
+// churn em fakes de teste. Default false preserva o comportamento F1 (cancelar permissão).
+func (c *acpClient) SetBypassPermissions(enable bool) {
+	c.bypassPermissions.Store(enable)
+}
+
 // IOProvider permite injetar io.ReadWriter customizados para testes in-process.
 // Em produção, é nil e o client usa os pipes do subprocess.
 type IOProvider interface {
@@ -93,8 +100,17 @@ type acpClient struct {
 	sendMu sync.RWMutex
 	// permissionRequested marca que o agente pediu permissão durante o prompt turn.
 	permissionRequested atomic.Bool
-	once                sync.Once
-	cancel              context.CancelFunc
+	// bypassPermissions: quando true, RequestPermission auto-aprova (seleciona opção allow)
+	// em vez de cancelar. Setado pelo runner quando AccessMode==full, para CLIs cujo bypass
+	// é negociado via ACP (ex.: Copilot, sem flag de --bypass-permissions — ADR D-07).
+	bypassPermissions atomic.Bool
+	once              sync.Once
+	cancel            context.CancelFunc
+	// killOnce garante que o subprocesso seja terminado no máximo uma vez (Close + teardown por ctx).
+	killOnce sync.Once
+	// readDone é fechado quando readLoop retorna; sinaliza término normal da sessão para a
+	// goroutine de teardown evitar vazamento e kill desnecessário.
+	readDone chan struct{}
 
 	// Contadores atômicos de backpressure (ADR-018, RF-03).
 	// slowPublishes: canal cheio mas o evento foi entregue após aguardar publishTimeout.
@@ -124,6 +140,7 @@ func newACPClient(workDir string, ioProvider IOProvider, cap int, publishTimeout
 		ioProvider:     ioProvider,
 		publishTimeout: publishTimeout,
 		eventCh:        make(chan events.Event, cap),
+		readDone:       make(chan struct{}),
 	}
 }
 
@@ -164,6 +181,20 @@ func (c *acpClient) Open(ctx context.Context, launcher specs.Launcher, prompt st
 	// Inicia goroutine de leitura de updates (Prompt do SDK é bloqueante).
 	go c.readLoop(promptCtx, conn, sessID, prompt)
 
+	// Teardown por cancelamento (causa raiz do hang de sessão): conn.Prompt lê o stdout do
+	// subprocesso de forma bloqueante e NÃO retorna no cancelamento de ctx quando a CLI fica
+	// silenciosa (ex.: codex-acp que não emite end_turn após concluir). Sem isto, watchdog/cancel
+	// apenas cancelam o ctx e o readLoop fica preso indefinidamente. Ao cancelar, forçamos o kill
+	// do subprocesso, o que destrava a leitura e faz o readLoop retornar e a sessão terminar.
+	// readDone evita vazamento e kill desnecessário quando a sessão termina normalmente.
+	go func() {
+		select {
+		case <-promptCtx.Done():
+			_ = c.killProcess()
+		case <-c.readDone:
+		}
+	}()
+
 	return nil
 }
 
@@ -178,6 +209,11 @@ func (c *acpClient) startProcess(ctx context.Context, launcher specs.Launcher) (
 		c.cmd.Dir = c.workDir
 	}
 	c.cmd.Stderr = os.Stderr
+
+	// Grupo de processos + kill do grupo no cancelamento do ctx (mesma estratégia de agent_unix.go).
+	// Garante que ao cancelar (watchdog/cap absoluto) TODO o subtree do agente seja morto — fecha os
+	// pipes, desbloqueia a leitura do SDK e evita órfãos (ex.: codex-acp spawna um neto que orfanava).
+	configureProcessGroup(c.cmd)
 
 	stdinPipe, err := c.cmd.StdinPipe()
 	if err != nil {
@@ -198,7 +234,8 @@ func (c *acpClient) startProcess(ctx context.Context, launcher specs.Launcher) (
 // negotiate realiza o handshake ACP e cria a sessão.
 func (c *acpClient) negotiate(ctx context.Context, w io.Writer, r io.Reader, _ string) (*acp.ClientSideConnection, acp.SessionId, error) {
 	impl := &clientImpl{
-		trySend: c.trySend,
+		trySend:           c.trySend,
+		bypassPermissions: c.bypassPermissions.Load(),
 		onPermission: func() {
 			c.permissionRequested.Store(true)
 			c.mu.Lock()
@@ -238,6 +275,7 @@ func (c *acpClient) negotiate(ctx context.Context, w io.Writer, r io.Reader, _ s
 // readLoop envia o prompt e consome até o fim da sessão.
 func (c *acpClient) readLoop(ctx context.Context, conn *acp.ClientSideConnection, sessID acp.SessionId, prompt string) {
 	defer func() {
+		close(c.readDone) // sinaliza término normal para a goroutine de teardown
 		if c.permissionRequested.Load() {
 			c.closeChannel(ErrPermissionDenied)
 			return
@@ -375,33 +413,37 @@ func (c *acpClient) Close() error {
 }
 
 // killProcess envia SIGTERM ao subprocesso, aguarda 2s e envia SIGKILL se necessário.
+// killProcess termina o subprocesso ACP de forma idempotente (killOnce): SIGINT com 2s de graça
+// e SIGKILL como fallback. Seguro chamar de múltiplos pontos (Close + teardown por ctx cancelado).
 func (c *acpClient) killProcess() error {
-	c.mu.Lock()
-	cmd := c.cmd
-	c.mu.Unlock()
+	c.killOnce.Do(func() {
+		c.mu.Lock()
+		cmd := c.cmd
+		c.mu.Unlock()
 
-	if cmd == nil || cmd.Process == nil {
-		return nil
-	}
+		if cmd == nil || cmd.Process == nil {
+			return
+		}
 
-	_ = cmd.Process.Signal(os.Interrupt)
-	done := make(chan error, 1)
-	go func() { done <- cmd.Wait() }()
+		_ = interruptProcess(cmd) // SIGINT ao grupo (unix) — mata netos, evita órfãos
+		done := make(chan error, 1)
+		go func() { done <- cmd.Wait() }()
 
-	select {
-	case <-done:
-		return nil
-	case <-time.After(2 * time.Second):
-		_ = cmd.Process.Kill()
-		<-done
-		return nil
-	}
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			_ = killProcessHard(cmd) // SIGKILL ao grupo (unix) após o período de graça
+			<-done
+		}
+	})
+	return nil
 }
 
 // clientImpl implementa acp.Client para receber SessionUpdate e RequestPermission.
 type clientImpl struct {
-	trySend      func(events.Event) // race-free send via acpClient.trySend
-	onPermission func()
+	trySend           func(events.Event) // race-free send via acpClient.trySend
+	onPermission      func()
+	bypassPermissions bool // auto-aprova RequestPermission quando true (AccessMode==full)
 }
 
 func (ci *clientImpl) SessionUpdate(_ context.Context, n acp.SessionNotification) error {
@@ -410,8 +452,20 @@ func (ci *clientImpl) SessionUpdate(_ context.Context, n acp.SessionNotification
 	return nil
 }
 
-// RequestPermission cancela imediatamente (RF-16).
-func (ci *clientImpl) RequestPermission(_ context.Context, _ acp.RequestPermissionRequest) (acp.RequestPermissionResponse, error) {
+// RequestPermission auto-aprova quando bypassPermissions (AccessMode==full): seleciona a
+// primeira opção de allow oferecida pelo agente. Necessário para CLIs cujo bypass é negociado
+// via ACP (ex.: Copilot, sem flag --bypass-permissions — ADR D-07). Sem bypass, cancela (RF-16).
+func (ci *clientImpl) RequestPermission(_ context.Context, req acp.RequestPermissionRequest) (acp.RequestPermissionResponse, error) {
+	if ci.bypassPermissions {
+		for _, opt := range req.Options {
+			if opt.Kind == acp.PermissionOptionKindAllowOnce || opt.Kind == acp.PermissionOptionKindAllowAlways {
+				return acp.RequestPermissionResponse{
+					Outcome: acp.NewRequestPermissionOutcomeSelected(opt.OptionId),
+				}, nil
+			}
+		}
+		// Sem opção de allow disponível: cair no cancelamento padrão.
+	}
 	if ci.onPermission != nil {
 		ci.onPermission()
 	}

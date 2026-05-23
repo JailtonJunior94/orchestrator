@@ -300,10 +300,31 @@ func isProtectedPRDFile(prdFolder, fullPath string, mode taskIsolationMode) bool
 	if relPath == "tasks.md" || isTrackedTaskFile(name) {
 		return false
 	}
+	// Subdiretórios gerenciados pelo harness (não pelo agente) não são arquivos protegidos do PRD.
+	// Sem isso, artefatos gravados pela própria stack disparam falso-positivo de isolamento e
+	// abortam a task-loop ACP:
+	//   - memory/      → hook memory_persist (F3) grava MEMORY.md.
+	//   - .checkpoints/ → execute-task (F25) grava <num>.yaml antes de mutar tasks.md.
+	//   - .partials/    → execute-task (F32) grava tasks.md.<num>.partial em wave paralela.
+	if isHarnessManagedPRDDir(relPath) {
+		return false
+	}
 	if mode == taskIsolationModeExecutor && isAllowedExecutorArtifact(name) {
 		return false
 	}
 	return true
+}
+
+// isHarnessManagedPRDDir indica se relPath está sob um subdiretório do PRD gerenciado pela própria
+// stack (não pelo agente): memory/, .checkpoints/, .partials/. Esses artefatos são legítimos e não
+// devem disparar violação de isolamento. Literais espelham memory.DirName e os paths de execute-task.
+func isHarnessManagedPRDDir(relPath string) bool {
+	for _, dir := range []string{"memory", ".checkpoints", ".partials"} {
+		if relPath == dir || strings.HasPrefix(relPath, dir+string(filepath.Separator)) {
+			return true
+		}
+	}
+	return false
 }
 
 func isAllowedExecutorArtifact(name string) bool {

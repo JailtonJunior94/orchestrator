@@ -13,7 +13,9 @@ const (
 	// Pinada conforme ADR-009 §"Decisão": constante Go atualizada somente via audit/.
 	// Não alterar para @latest. Para atualizar: registrar decisão em audit/ e rodar
 	// make sync-acp-sdk-version (que só atualiza ClaudeSDKVersion via go.mod).
-	ClaudeNpmVersion = "0.1.0"
+	// 0.1.0 nunca foi publicada no npm (versões reais começam em 0.24.0) — o fallback npx
+	// falhava com ETARGET. Corrigido para versão publicada válida; revisar via audit/.
+	ClaudeNpmVersion = "0.37.0"
 
 	// ClaudeSDKVersion é a versão do coder/acp-go-sdk sincronizada com go.mod.
 	// Mantida em sincronia por scripts/sync-acp-sdk-version.sh.

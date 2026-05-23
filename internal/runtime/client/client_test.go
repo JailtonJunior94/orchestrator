@@ -204,6 +204,50 @@ func TestAcpClient_RequestPermissionCancelsPrompt(t *testing.T) {
 	}
 }
 
+// TestAcpClient_RequestPermissionBypassAutoApproves é a regressão do fix de permissão (Copilot):
+// com SetBypassPermissions(true) (AccessMode==full), RequestPermission auto-aprova (seleciona allow)
+// em vez de cancelar — a sessão prossegue até session_end sem ErrPermissionDenied.
+func TestAcpClient_RequestPermissionBypassAutoApproves(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("antes da permissão").
+		AppendRequestPermission("edit_file").
+		AppendAgentMessage("depois da permissão").
+		AppendSessionEnd()
+
+	c := buildClientWithFake(t, ctx, script)
+	defer func() { _ = c.Close() }()
+
+	// AccessMode==full: habilitar bypass antes de abrir a sessão.
+	bp, ok := c.(interface{ SetBypassPermissions(bool) })
+	if !ok {
+		t.Fatal("client não expõe SetBypassPermissions")
+	}
+	bp.SetBypassPermissions(true)
+
+	if err := c.Open(ctx, specs.NewBinaryLauncher("unused"), "prompt"); err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+
+	evts := collectEvents(t, c.Updates(), 8*time.Second)
+	if errors.Is(c.Err(), client.ErrPermissionDenied) {
+		t.Fatalf("com bypass não deveria haver ErrPermissionDenied; Err=%v", c.Err())
+	}
+	var sawSessionEnd bool
+	for _, evt := range evts {
+		if evt.Kind() == events.KindSessionEnd {
+			sawSessionEnd = true
+		}
+	}
+	if !sawSessionEnd {
+		t.Fatal("esperava session_end (sessão prossegue após permissão auto-aprovada)")
+	}
+}
+
 // TestAcpClient_CloseIdempotent: Close pode ser chamado múltiplas vezes sem pânico.
 func TestAcpClient_CloseIdempotent(t *testing.T) {
 	t.Parallel()

@@ -163,6 +163,14 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 
 	// Fase 4: abrir cliente ACP.
 	c := r.factory.New(j.WorkDir)
+	// AccessMode==full ⇒ auto-aprovar RequestPermission via ACP. Necessário para CLIs cujo
+	// bypass não é negociado por flag de CLI (ex.: Copilot — ADR D-07). Codex/Claude já
+	// recebem o bypass via BootstrapArgs (sandbox/--bypass-permissions); este wiring cobre a lacuna.
+	if j.AccessMode == specs.AccessModeFull {
+		if bp, ok := c.(interface{ SetBypassPermissions(bool) }); ok {
+			bp.SetBypassPermissions(true)
+		}
+	}
 	defer func() { _ = c.Close() }()
 	defer stopMCP()
 
@@ -311,8 +319,16 @@ func (r *ACPRunner) runEventLoop(
 	extractor := events.ExtractorFor(drvID)
 
 	for evt := range c.Updates() {
-		wd.Touch()
 		evt = normalizeEventInline(evt, r.spec.ID, j)
+
+		// Resetar o watchdog apenas em progresso RECONHECIDO. Eventos keep-alive/desconhecidos
+		// (usage_update, available_commands_update, chunks vazios, etc.) NÃO contam como atividade:
+		// CLIs como o codex-acp emitem keep-alives sem encerrar o turn (sem end_turn) e, ao resetar
+		// o watchdog a cada keep-alive, a sessão ficava viva para sempre (hang indefinido observado).
+		// Com isto, o watchdog dispara após inatividade real e o teardown por ctx mata o subprocesso.
+		if evt.Kind() != events.KindUnknown {
+			wd.Touch()
+		}
 
 		if evt.Kind() == events.KindToolCallStart {
 			_ = disp.Dispatch(ctx, hooks.PointToolCallPreDispatch, hooks.ToolCallEvent{Phase: "pre_dispatch"})

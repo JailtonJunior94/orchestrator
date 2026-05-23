@@ -111,6 +111,52 @@ func TestActivityWatchdog_KeptAlive(t *testing.T) {
 	}
 }
 
+// TestActivityWatchdog_AbsoluteCapFiresDespiteTouch é a regressão do hang do codex: mesmo com
+// Touch() contínuo (simulando keep-alives que resetam a inatividade), o cap ABSOLUTO (timeout x5)
+// deve disparar quando o tempo total excede o teto — garantindo que a sessão nunca penda para sempre.
+func TestActivityWatchdog_AbsoluteCapFiresDespiteTouch(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancelCause(context.Background())
+	defer cancel(nil)
+
+	const activityTimeout = 60 * time.Millisecond // cap absoluto = 300ms (5x)
+	timeout, err := events.NewActivityTimeout(activityTimeout)
+	if err != nil {
+		t.Fatalf("NewActivityTimeout: %v", err)
+	}
+
+	clk := newFakeClock(time.Now())
+	wd := rtime.NewActivityWatchdog(timeout, func(cause error) { cancel(cause) }, clk)
+	wd.Start(ctx)
+	defer wd.Stop()
+
+	// Loop de keep-alive: avança o tempo total (acima do cap absoluto) mas faz Touch a cada passo
+	// (mantendo a inatividade < timeout). Sem o cap absoluto, isto penduraria para sempre.
+	go func() {
+		for i := 0; i < 50; i++ {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+			clk.advance(50 * time.Millisecond) // < timeout (60ms): inatividade sozinha não dispara
+			wd.Touch()                          // keep-alive: reseta inatividade
+			time.Sleep(40 * time.Millisecond)   // > ticker (~30ms): dá tempo ao watchdog observar
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		// esperado: cap absoluto disparou apesar dos Touch contínuos
+	case <-time.After(5 * time.Second):
+		t.Fatal("cap absoluto não disparou apesar de exceder timeout x5 com Touch contínuo (hang)")
+	}
+	if !errors.Is(context.Cause(ctx), rtime.ErrActivityTimeout) {
+		t.Errorf("cause = %v, want ErrActivityTimeout", context.Cause(ctx))
+	}
+}
+
 // TestActivityWatchdog_Fires verifica que sem Touch além do timeout, cancel é chamado com ErrActivityTimeout.
 // Usa fakeClock para avançar o tempo artificialmente até ultrapassar o timeout.
 func TestActivityWatchdog_Fires(t *testing.T) {

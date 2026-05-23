@@ -12,6 +12,14 @@ import (
 const (
 	maxTickerInterval = 5 * time.Second
 	minTickerInterval = time.Millisecond
+
+	// absoluteSessionCapFactor define o teto absoluto da sessão como múltiplo do ActivityTimeout.
+	// O cap de inatividade (sem progresso reconhecido) é resetado por Touch; o cap ABSOLUTO conta
+	// desde o início e NUNCA é resetado. Garante que uma sessão não penda para sempre quando a CLI
+	// emite eventos keep-alive/periódicos que resetam a inatividade sem encerrar o turn (observado
+	// no codex-acp: completa a task mas a sessão nunca termina). Fator generoso para não matar
+	// trabalho legítimo: trabalho real conclui em ~1x; o cap só age em sessões realmente penduradas.
+	absoluteSessionCapFactor = 5
 )
 
 // ActivityWatchdog monitora o intervalo entre eventos e cancela o contexto (via
@@ -25,12 +33,13 @@ const (
 //	// em cada evento recebido:
 //	wd.Touch()
 type ActivityWatchdog struct {
-	timeout  events.ActivityTimeout
-	cancel   context.CancelCauseFunc
-	lastSeen atomic.Int64 // unix nano do último Touch()
-	clock    Clock
-	stopCh   chan struct{}
-	stopOnce sync.Once
+	timeout   events.ActivityTimeout
+	cancel    context.CancelCauseFunc
+	lastSeen  atomic.Int64 // unix nano do último Touch() (cap de inatividade)
+	startedAt atomic.Int64 // unix nano de Start() (cap absoluto; nunca resetado por Touch)
+	clock     Clock
+	stopCh    chan struct{}
+	stopOnce  sync.Once
 }
 
 // NewActivityWatchdog cria um ActivityWatchdog.
@@ -64,6 +73,10 @@ func (w *ActivityWatchdog) Start(ctx context.Context) {
 		return
 	}
 
+	// startedAt marca o início do monitoramento para o cap absoluto (não resetado por Touch).
+	w.startedAt.Store(w.clock.Now().UnixNano())
+	absoluteCap := w.timeout.Duration() * absoluteSessionCapFactor
+
 	interval := w.tickerInterval()
 
 	go func() {
@@ -78,8 +91,15 @@ func (w *ActivityWatchdog) Start(ctx context.Context) {
 				return
 			case <-ticker.C:
 				now := w.clock.Now()
+				// Cap de inatividade: sem progresso reconhecido por timeout (resetado por Touch).
 				last := time.Unix(0, w.lastSeen.Load())
 				if now.Sub(last) > w.timeout.Duration() {
+					w.cancel(ErrActivityTimeout)
+					return
+				}
+				// Cap absoluto: sessão total excedeu timeout × fator, independentemente de keep-alives.
+				started := time.Unix(0, w.startedAt.Load())
+				if now.Sub(started) > absoluteCap {
 					w.cancel(ErrActivityTimeout)
 					return
 				}
