@@ -1347,6 +1347,66 @@ Comportamento permissivo: se `ai-spec` não está no PATH ou está em versão an
 
 Escape hatch responsável: `git commit --no-verify` pula o hook em casos legítimos (commits de docs em PRDs antigos, por exemplo). Drift fica para review pegar — não normalize o bypass.
 
+### Caso real: atualizar `financialcontrol-api`
+
+Em 2026-05-24, o projeto `/Users/jailtonjunior/Git/financialcontrol-api` foi atualizado a partir dos commits recentes deste repositorio. O objetivo foi aplicar o baseline atual do harness em outro projeto Go e validar a instalacao como evidencia operacional.
+
+Commits usados como referencia:
+
+- `7dbdc0b fix(sync): nao marcar skills/lib como read-only (quebrava o git)`
+- `833bdd1 refactor(sdd): migra root de artefatos de tasks/ para .specs/`
+- `45e429c fix(fs): copia/remove de assets read-only (source imutavel) + cobertura execute-all-tasks`
+- `40f9537 docs(readme): runtime ACP cross-CLI — processo + uso por ferramenta (claude/codex/copilot/gemini)`
+
+O processo atualizou skills de governanca para Claude, Codex, Copilot e Gemini, adicionou `execute-all-tasks`, trocou comandos Gemini antigos para o namespace `workspace.*`, instalou hooks compartilhados e substituiu o symlink legado de `.agents/skills` por uma copia local versionavel.
+
+Comandos reais utilizados:
+
+```bash
+cd /Users/jailtonjunior/Git/orchestrator
+git log --oneline -n 12
+git show --stat --oneline --decorate -n 1 7dbdc0b
+git show --stat --oneline --decorate -n 1 833bdd1
+git show --stat --oneline --decorate -n 1 45e429c
+go run . inspect /Users/jailtonjunior/Git/financialcontrol-api
+go run . verify /Users/jailtonjunior/Git/financialcontrol-api --tools all --langs go
+go run . install /Users/jailtonjunior/Git/financialcontrol-api --tools all --langs go --dry-run
+go run . install /Users/jailtonjunior/Git/financialcontrol-api --tools all --langs go --mode copy
+rm /Users/jailtonjunior/Git/financialcontrol-api/.agents/skills
+go run . install /Users/jailtonjunior/Git/financialcontrol-api --tools all --langs go --mode copy
+go run . verify /Users/jailtonjunior/Git/financialcontrol-api --tools all --langs go
+```
+
+Resultado de validacao do harness:
+
+```text
+Resumo: 96 current, 0 missing, 0 drifted
+```
+
+Observacao operacional: a primeira instalacao em `copy` manteve o symlink legado de `.agents/skills` para `/Users/jailtonjunior/Git/ai-governance/.agents/skills`. O link foi removido e a instalacao repetida para garantir que `.agents/skills` passasse a ser um diretorio local com assets atuais.
+
+#### Validacao com `ai-spec` instalado
+
+Depois da atualizacao pelo checkout local, a instalacao tambem foi validada com o binario instalado no sistema para confirmar o caminho operacional usado fora do desenvolvimento do harness.
+
+Comandos reais utilizados:
+
+```bash
+cd /Users/jailtonjunior/Git/orchestrator
+command -v ai-spec
+ai-spec version
+ai-spec inspect /Users/jailtonjunior/Git/financialcontrol-api
+ai-spec verify /Users/jailtonjunior/Git/financialcontrol-api --tools all --langs go
+```
+
+Resultado:
+
+```text
+/opt/homebrew/bin/ai-spec
+ai-spec-harness 0.23.2 (commit: e5a833a3c3326fefdf40458dc882031ba4daedcb, built: 2026-05-23T22:25:05Z)
+Resumo: 96 current, 0 missing, 0 drifted
+```
+
 ## Para quem mantem este repositorio
 
 ### Desenvolvimento local
