@@ -15,7 +15,7 @@ jobs:
         version: [latest, v0.21.1]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-ai-spec
         with:
           version: ${{ matrix.version }}
