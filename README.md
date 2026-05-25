@@ -31,6 +31,7 @@ O projeto padroniza como Claude, Gemini, Codex e GitHub Copilot encontram skills
 - [Referencia rapida de comandos](#referencia-rapida-de-comandos)
 - [Exemplos por ferramenta](#exemplos-por-ferramenta)
 - [Operacao da instalacao](#operacao-da-instalacao)
+  - [Playbook reutilizavel: ciclo de vida completo da governanca](#playbook-reutilizavel-ciclo-de-vida-completo-da-governanca-qualquer-projeto)
 - [Para quem mantem este repositorio](#para-quem-mantem-este-repositorio)
 - [Referencias](#referencias)
 
@@ -1406,6 +1407,221 @@ Resultado:
 ai-spec-harness 0.23.2 (commit: e5a833a3c3326fefdf40458dc882031ba4daedcb, built: 2026-05-23T22:25:05Z)
 Resumo: 96 current, 0 missing, 0 drifted
 ```
+
+### Playbook reutilizavel: ciclo de vida completo da governanca (qualquer projeto)
+
+Runbook ponta a ponta para **instalar, atualizar ou reinstalar** a governanca em qualquer projeto, com cada comando explicado. Validado no fluxo real de reinstalacao do `financialcontrol-api` (baseline `dev` -> `0.23.2`).
+
+> **Convencao:** defina duas variaveis e reaproveite em todos os comandos.
+>
+> ```bash
+> PROJETO=/caminho/do/projeto-alvo      # ex.: /Users/voce/Git/minha-api
+> FONTE=.                               # repo da governanca (este). Use "." se ja estiver nele,
+>                                       # ou o caminho absoluto: /Users/voce/Git/orchestrator
+> ```
+
+#### Pre-requisitos
+
+```bash
+command -v ai-spec          # confirma que o binario esta no PATH
+ai-spec version             # confirma a versao (ex.: ai-spec-harness 0.23.2)
+```
+
+(macOS: se aparecer _"Apple could not verify"_, veja a secao [Instalacao](#instalacao).)
+
+---
+
+#### 🔄 Como ATUALIZAR (o caminho recomendado para o dia a dia)
+
+Para manter um projeto sempre no baseline mais novo **sem perder customizacoes**, use `upgrade` — nao `uninstall`. Ha duas coisas que podem ficar desatualizadas:
+
+**1. Atualizar o binario `ai-spec` (a ferramenta em si):**
+
+```bash
+brew update && brew upgrade ai-spec     # se instalado via Homebrew
+ai-spec version                         # confirme a nova versao
+```
+
+(Outras formas de instalar/atualizar o binario estao na secao [Instalacao](#instalacao).)
+
+**2. Atualizar a governanca dentro de um projeto:**
+
+```bash
+# a) Primeiro, SO VERIFIQUE se ha algo a atualizar (nao escreve nada):
+ai-spec upgrade $PROJETO --source $FONTE --check
+
+# b) Se houver pendencia, aplique a atualizacao:
+ai-spec upgrade $PROJETO --source $FONTE --langs go
+
+# c) Valide imediatamente (upgrade so e confiavel apos doctor verde):
+ai-spec doctor  $PROJETO
+ai-spec verify  $PROJETO --source $FONTE     # esperado: 0 missing, 0 drifted
+ai-spec lint    $PROJETO
+```
+
+| Quando usar | Comando |
+| --- | --- |
+| Atualizar mantendo a instalacao existente (rotina) | `ai-spec upgrade $PROJETO --source $FONTE` |
+| So checar se ha update pendente (CI, pre-commit) | `ai-spec upgrade $PROJETO --source $FONTE --check` |
+| Reset total / baseline do zero (corrigir instalacao corrompida) | `uninstall` + `install` (passos abaixo) |
+
+> ✅ **Regra de ouro:** `upgrade` para o dia a dia (preserva o que ja existe); `uninstall + install` apenas quando precisar de um baseline limpo do zero. **Sempre** termine qualquer atualizacao com `doctor` verde — sem isso, trate a instalacao como nao confiavel.
+
+> 💡 Rode `ai-spec upgrade $PROJETO --source $FONTE --check` periodicamente (ou no CI) para detectar drift entre o baseline do projeto e a fonte de governanca antes que vire problema.
+
+---
+
+#### Passo 0 — Auditoria (read-only, nao altera nada)
+
+Comece fotografando o estado atual. Nenhum destes comandos escreve no projeto.
+
+```bash
+ai-spec inspect $PROJETO                 # manifesto, skills, toolchain detectado
+ai-spec doctor  $PROJETO                 # saude: git, manifesto, symlinks, permissoes
+ai-spec lint    $PROJETO                 # placeholders, schema, SKILL.md
+ai-spec verify  $PROJETO                 # current / missing / drifted por skill
+ai-spec uninstall $PROJETO --dry-run     # PREVE o que seria removido (nao remove)
+```
+
+| Comando | Pergunta que responde |
+| --- | --- |
+| `inspect` | O que esta instalado? Qual versao, modo, tools, langs? |
+| `doctor` | A instalacao esta saudavel? |
+| `lint` | Os arquivos de governanca sao validos? |
+| `verify` | Cada skill esta `current`, `missing` ou `drifted`? |
+| `uninstall --dry-run` | O que exatamente seria apagado numa desinstalacao? |
+
+#### Passo 1 — Desinstalacao cirurgica (so para reset do zero)
+
+`uninstall` remove **apenas** os arquivos rastreados no manifesto (`.ai_spec_harness.json`). Ele **nao** apaga conteudo seu como `.claude/settings.local.json`.
+
+```bash
+ai-spec uninstall $PROJETO --dry-run     # 1) confira a lista
+ai-spec uninstall $PROJETO               # 2) execute de verdade
+```
+
+Confira o resultado e a preservacao do que e seu:
+
+```bash
+test -f $PROJETO/.ai_spec_harness.json && echo "manifesto presente" || echo "manifesto removido"
+test -f $PROJETO/.claude/settings.local.json && echo "settings preservado" || echo "ATENCAO: settings sumiu"
+```
+
+> ⚠️ **Nunca use `rm -rf .claude .gemini .agents`.** Esses diretorios podem conter conteudo seu (`settings.local.json`, agents/rules proprios) que o `uninstall` preserva de proposito. Remova manualmente apenas symlinks orfaos comprovadamente da governanca (links quebrados apontando para `.agents/skills/<skill-inexistente>`), e nunca arquivos commitados que voce nao criou.
+
+#### Passo 2 — Instalacao limpa (so para reset do zero)
+
+```bash
+ai-spec install $PROJETO \
+  --source $FONTE \      # repo de governanca como fonte de verdade
+  --tools all \          # claude,gemini,codex,copilot (ou subconjunto)
+  --langs go \           # go,node,python ou all (skills de linguagem)
+  --mode copy \          # copy (auto-contido) ou symlink (reflete a fonte)
+  --dry-run              # remova esta linha para executar de verdade
+```
+
+Flags principais do `install`:
+
+| Flag | Valores | Para que serve |
+| --- | --- | --- |
+| `--source` | caminho | Repo de governanca usado como fonte. Sem ele, usa os assets embutidos no binario. |
+| `--tools` | `claude,gemini,codex,copilot` ou `all` | Quais adaptadores gerar. Sem a flag, **auto-detecta** por binario no PATH + dirs de config. |
+| `--langs` | `go,node,python` ou `all` | Skills de linguagem a incluir. |
+| `--mode` | `copy` \| `symlink` | `copy` = snapshot fisico, projeto auto-contido (recomendado p/ outros projetos). `symlink` = reflete mudancas da fonte (bom p/ desenvolver a governanca). |
+| `--dry-run` | — | Simula sem escrever. |
+| `--global` | — | Instala em `~/.aispec` (escopo global). |
+| `--ref` | tag/branch/SHA | Usa um ref git da fonte como base. |
+| `--codex-profile` | `full` \| `lean` | Perfil de skills do Codex. |
+
+#### Passo 3 — Validacao (gate de "100% funcional")
+
+```bash
+ai-spec inspect $PROJETO
+ai-spec doctor  $PROJETO                  # DEVE terminar com "Resultado: tudo ok"
+ai-spec lint    $PROJETO                  # DEVE terminar com "Lint aprovado"
+ai-spec verify  $PROJETO --source $FONTE  # DEVE dar 0 missing, 0 drifted
+```
+
+So considere concluido quando `doctor` estiver verde.
+
+> 🔎 **Por que `verify` sem `--source` pode mostrar "drifted"?** Sem `--source`, o `verify` compara contra os assets **embutidos no binario** (a release instalada). Se voce instalou de uma fonte mais nova que a release (ex.: working tree a frente da tag), as skills mais recentes aparecem como `drifted` — o que e **esperado e correto**. Para validar contra a fonte real da instalacao, sempre rode `verify --source $FONTE`. Ali, `0 drifted` confirma fidelidade.
+
+#### Passo 4 — Conectar os hooks (Claude Code)
+
+O instalador **nao sobrescreve** um `.claude/settings.local.json` existente, entao os hooks `validate-preload` (PreToolUse) e `validate-governance` (PostToolUse) precisam ser adicionados manualmente. Faca merge do bloco `hooks`, preservando suas `permissions`:
+
+```json
+{
+  "permissions": { "allow": ["..."] },
+  "hooks": {
+    "PreToolUse": [
+      { "matcher": "Edit|Write", "hooks": [ { "type": "command", "command": "bash .claude/hooks/validate-preload.sh" } ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Edit|Write", "hooks": [ { "type": "command", "command": "bash .claude/hooks/validate-governance.sh" } ] }
+    ]
+  }
+}
+```
+
+Valide o JSON e faca um smoke test dos scripts:
+
+```bash
+python3 -m json.tool $PROJETO/.claude/settings.local.json >/dev/null && echo "JSON ok"
+( cd $PROJETO && bash .claude/hooks/validate-preload.sh </dev/null;    echo "preload exit=$?" )
+( cd $PROJETO && bash .claude/hooks/validate-governance.sh </dev/null; echo "governance exit=$?" )
+```
+
+> ⚠️ **`.claude/settings.local.json` costuma estar no `.gitignore`** (arquivo local por desenvolvedor). Nesse caso o bloco `hooks` **nao entra no commit** e **cada desenvolvedor precisa adiciona-lo na sua copia**. Se quiser hooks compartilhados via git, mova-os para um `.claude/settings.json` versionado.
+
+#### Passo 5 — Documentar no projeto alvo
+
+Adicione uma secao **"AI Governance"** no README do projeto alvo, registrando: data do baseline, versao do `ai-spec`, modo/tools/langs e como invocar skills (`create-prd`, `execute-task`, `review`, etc.). Isso da rastreabilidade ao time.
+
+#### Passo 6 — Commit (sem push automatico)
+
+```bash
+git -C $PROJETO add -A
+git -C $PROJETO commit -m "chore(governance): atualiza baseline ai-spec <versao>"
+# push fica a seu criterio: git -C $PROJETO push
+```
+
+Nunca rode git destrutivo (`reset --hard`, `clean -fd`, force-push) durante o ciclo. Lembre: arquivos gitignored (como `settings.local.json`) nao serao incluidos.
+
+#### Referencia rapida do ciclo (copia e cola)
+
+```bash
+PROJETO=/caminho/do/projeto-alvo
+FONTE=.
+
+# === ATUALIZAR (rotina) ===
+ai-spec upgrade $PROJETO --source $FONTE --check     # ha update?
+ai-spec upgrade $PROJETO --source $FONTE --langs go  # aplica
+ai-spec doctor  $PROJETO                             # tudo ok
+ai-spec verify  $PROJETO --source $FONTE             # 0 missing, 0 drifted
+
+# === RESET DO ZERO (quando necessario) ===
+ai-spec uninstall $PROJETO --dry-run
+ai-spec uninstall $PROJETO
+ai-spec install   $PROJETO --source $FONTE --tools all --langs go --mode copy
+ai-spec doctor    $PROJETO
+ai-spec lint      $PROJETO
+ai-spec verify    $PROJETO --source $FONTE
+
+# === COMMIT ===
+git -C $PROJETO add -A && git -C $PROJETO commit -m "chore(governance): baseline ai-spec"
+```
+
+#### Armadilhas comuns
+
+| Sintoma | Causa provavel | Acao |
+| --- | --- | --- |
+| `verify` mostra `drifted`, mas `--source` da `0 drifted` | Fonte a frente da release embutida | Esperado; valide com `--source` |
+| `doctor` falha em "Symlinks de skills" | Symlinks orfaos/quebrados | Reinstale; remova so links comprovadamente orfaos |
+| Warning "settings.local.json ja existe" no install | Arquivo preservado de proposito | Conecte os hooks manualmente (Passo 4) |
+| Hooks nao entram no commit | `settings.local.json` gitignored | Use `.claude/settings.json` versionado se quiser compartilhar |
+| `doctor` falha em "Repositorio git" | Projeto sem `git init` | Rode `git init` no projeto alvo |
+| `upgrade --check` acusa pendencia sempre | Binario desatualizado vs fonte | Atualize o binario (`brew upgrade ai-spec`) |
 
 ## Para quem mantem este repositorio
 
