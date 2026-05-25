@@ -1,6 +1,6 @@
 ---
 name: create-technical-specification
-version: 1.2.0
+version: 1.2.1
 description: Cria especificações técnicas prontas para implementação a partir de um PRD aprovado e do contexto do repositório. Registra spec-hash do PRD consumido no cabeçalho da techspec para rastreabilidade e detecção de drift downstream. Use quando arquitetura, interfaces, riscos, ADRs e estratégia de testes precisarem ser definidos antes da codificação. Não use para descoberta de produto, execução de tarefa ou revisão de código.
 ---
 

@@ -38,11 +38,20 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: ./ai-spec skill-bump .
 
+      # skill-bump muta apenas o canonico (.agents/skills); e preciso propagar
+      # para os mirrors (.claude, .github, embedded) — senao o gate
+      # check-skills-sync falha no proximo push normal (o commit de release usa
+      # [skip ci] e nao roda o gate, deixando o drift latente).
+      - name: Sync skill mirrors
+        if: github.ref == 'refs/heads/main'
+        run: bash scripts/sync-skills.sh
+
       - name: Stage skill bumps
         if: github.ref == 'refs/heads/main'
         run: |
-          git diff --quiet .agents/skills/ 2>/dev/null || git add .agents/skills/
-          git diff --quiet internal/embedded/assets/.agents/skills/ 2>/dev/null || git add internal/embedded/assets/.agents/skills/
+          git add -A .agents/skills .agents/lib .agents/hooks \
+            .claude/skills .claude/hooks .codex/hooks .gemini/hooks \
+            .github/skills .github/hooks scripts/lib internal/embedded/assets
 
       - name: Compute next version (semver-next)
         if: github.ref == 'refs/heads/main'
@@ -97,7 +106,9 @@ jobs:
           if [[ "$changed" == "false" ]]; then
             echo "CHANGELOG.md and VERSION unchanged, skipping commit"
           else
-            git add CHANGELOG.md VERSION .agents/skills/ internal/embedded/assets/.agents/skills/
+            git add -A CHANGELOG.md VERSION .agents/skills .agents/lib .agents/hooks \
+              .claude/skills .claude/hooks .codex/hooks .gemini/hooks \
+              .github/skills .github/hooks scripts/lib internal/embedded/assets
             git commit -m "chore(release): update CHANGELOG.md and VERSION for v${{ steps.semver.outputs.target_version }} [skip ci]"
           fi
 
