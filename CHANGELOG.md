@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.23.4 (2026-05-25)
+
+### Bug Fixes
+- **ci:** corrige pin npm quebrado do claude-agent-acp no acp-live (5a96f59)
+
+### CI
+- atualiza actions para runtime Node 24 (deprecacao Node 20) (fdb8326)
+
 ## 0.23.3 (2026-05-25)
 
 ### Bug Fixes
