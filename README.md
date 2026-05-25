@@ -1447,27 +1447,31 @@ ai-spec version                         # confirme a nova versao
 **2. Atualizar a governanca dentro de um projeto:**
 
 ```bash
-# a) Primeiro, SO VERIFIQUE se ha algo a atualizar (nao escreve nada):
-ai-spec upgrade $PROJETO --source $FONTE --check
+# a) Primeiro, SO VERIFIQUE o que mudaria (nao escreve nada):
+ai-spec upgrade $PROJETO --source $FONTE --langs go --check
 
-# b) Se houver pendencia, aplique a atualizacao:
+# b) REVISE a saida antes de aplicar (veja os avisos abaixo), depois aplique:
 ai-spec upgrade $PROJETO --source $FONTE --langs go
 
 # c) Valide imediatamente (upgrade so e confiavel apos doctor verde):
-ai-spec doctor  $PROJETO
-ai-spec verify  $PROJETO --source $FONTE     # esperado: 0 missing, 0 drifted
-ai-spec lint    $PROJETO
+ai-spec doctor  $PROJETO                      # DEVE: "Resultado: tudo ok"
+ai-spec verify  $PROJETO --source $FONTE      # DEVE: 0 drifted (skills instaladas fieis a fonte)
+ai-spec lint    $PROJETO                      # DEVE: "Lint aprovado"
 ```
 
 | Quando usar | Comando |
 | --- | --- |
-| Atualizar mantendo a instalacao existente (rotina) | `ai-spec upgrade $PROJETO --source $FONTE` |
-| So checar se ha update pendente (CI, pre-commit) | `ai-spec upgrade $PROJETO --source $FONTE --check` |
+| Atualizar mantendo a instalacao existente (rotina) | `ai-spec upgrade $PROJETO --source $FONTE --langs go` |
+| So checar o que mudaria (CI, pre-commit) | `ai-spec upgrade $PROJETO --source $FONTE --langs go --check` |
 | Reset total / baseline do zero (corrigir instalacao corrompida) | `uninstall` + `install` (passos abaixo) |
 
-> ✅ **Regra de ouro:** `upgrade` para o dia a dia (preserva o que ja existe); `uninstall + install` apenas quando precisar de um baseline limpo do zero. **Sempre** termine qualquer atualizacao com `doctor` verde — sem isso, trate a instalacao como nao confiavel.
+> ⚠️ **SEMPRE passe `--source` no `upgrade`.** Sem `--source`, o `upgrade` compara contra os assets **embutidos no binario** (a release instalada). Se o projeto foi instalado de uma fonte mais nova que a release, rodar `upgrade` sem `--source` **rebaixa (downgrade)** as skills para a versao embutida. Use sempre `--source $FONTE` apontando para a mesma fonte do `install`.
 
-> 💡 Rode `ai-spec upgrade $PROJETO --source $FONTE --check` periodicamente (ou no CI) para detectar drift entre o baseline do projeto e a fonte de governanca antes que vire problema.
+> ⚠️ **`upgrade --check` e `verify` respondem perguntas DIFERENTES — nao confunda.**
+> - `verify $PROJETO --source $FONTE` audita as skills **ja instaladas** vs a fonte → `0 drifted` confirma fidelidade. **Esta e a porta de saude.**
+> - `upgrade --check --source $FONTE` compara o **conjunto completo de skills da fonte** com o projeto e pode listar como `AUSENTE` skills que existem na fonte mas que o `install` **nao instala** (ex.: `bubbletea`, `finalize-changelog-readme-push` — skills internas/de mantenedor deste repo). Ou seja, **`upgrade --check` pode acusar "N ausentes" mesmo numa instalacao recem-feita e saudavel.** Nao trate isso como erro automaticamente: **revise a lista** — aplicar o `upgrade` ADICIONARIA essas skills ao projeto, o que pode nao ser desejado para um projeto de aplicacao.
+
+> ✅ **Regra de ouro:** `upgrade --source $FONTE` para o dia a dia (preserva o que ja existe); `uninstall + install` apenas quando precisar de um baseline limpo do zero. A confirmacao final de saude e **`doctor` verde + `verify --source` com `0 drifted`** — nao o `upgrade --check`.
 
 ---
 
@@ -1621,7 +1625,8 @@ git -C $PROJETO add -A && git -C $PROJETO commit -m "chore(governance): baseline
 | Warning "settings.local.json ja existe" no install | Arquivo preservado de proposito | Conecte os hooks manualmente (Passo 4) |
 | Hooks nao entram no commit | `settings.local.json` gitignored | Use `.claude/settings.json` versionado se quiser compartilhar |
 | `doctor` falha em "Repositorio git" | Projeto sem `git init` | Rode `git init` no projeto alvo |
-| `upgrade --check` acusa pendencia sempre | Binario desatualizado vs fonte | Atualize o binario (`brew upgrade ai-spec`) |
+| `upgrade --check` lista `AUSENTE` numa instalacao recem-feita | Fonte tem skills internas/de mantenedor que o `install` nao instala (ex.: `bubbletea`, `finalize-changelog-readme-push`) | Esperado; revise a lista. A saude e `doctor` verde + `verify --source 0 drifted`, nao `upgrade --check` |
+| `upgrade` rebaixou (downgrade) as skills | Rodou `upgrade` sem `--source` (comparou com embedded) | Sempre use `upgrade --source $FONTE`; reinstale a partir da fonte para corrigir |
 
 ## Para quem mantem este repositorio
 
