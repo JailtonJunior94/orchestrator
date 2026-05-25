@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.23.3 (2026-05-25)
+
+### Bug Fixes
+- **release:** propaga skill bumps para mirrors e destrava check-skills-sync (d14bb2f)
+
+### Documentation
+- **readme:** corrige falso positivo no playbook de atualizacao (71ff5ea)
+- **readme:** adiciona playbook do ciclo de vida da governanca (df14163)
+- **readme:** documenta atualizacao real do financialcontrol-api (707e292)
+
+### Tests
+- **client:** elimina flaky em RequestPermissionCancelsPrompt (803e9f1)
+
 ## 0.23.2 (2026-05-23)
 
 ### Bug Fixes
