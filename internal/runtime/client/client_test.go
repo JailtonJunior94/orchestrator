@@ -190,10 +190,17 @@ func TestAcpClient_RequestPermissionCancelsPrompt(t *testing.T) {
 		t.Fatalf("Open: %v", err)
 	}
 
+	// Drena ate o canal fechar. A entrega da mensagem pre-permissao NAO e
+	// deterministica: o acp-go-sdk despacha RequestPermission (request JSON-RPC)
+	// em goroutine propria, concorrente com a fila sequencial de notificacoes
+	// (SessionUpdate). O cancelamento disparado pela permissao pode fechar o
+	// eventCh antes da notificacao anterior ser entregue (trySend ve closed e
+	// descarta). Afirmar len(evts) > 0 era a origem do flake (intermitente sob
+	// -race/carga). Afirmamos apenas os invariantes garantidos:
+	//   1. Err() == ErrPermissionDenied (permissionRequested e setado antes do
+	//      cancel; deterministico).
+	//   2. nenhum session_end (cancel impede a resposta normal de Prompt).
 	evts := collectEvents(t, c.Updates(), 8*time.Second)
-	if len(evts) == 0 {
-		t.Fatal("esperava ao menos 1 evento antes do cancelamento")
-	}
 	if !errors.Is(c.Err(), client.ErrPermissionDenied) {
 		t.Fatalf("Err() = %v, want ErrPermissionDenied", c.Err())
 	}
