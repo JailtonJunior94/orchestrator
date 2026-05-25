@@ -9,7 +9,7 @@ Pelo menos um dos seguintes deve estar disponível:
 
 - **Binário direto:** `claude-agent-acp` instalado no PATH
   ```bash
-  npm install -g @agentclientprotocol/claude-agent-acp@0.1.0
+  npm install -g @agentclientprotocol/claude-agent-acp@0.37.0
   # ou via Homebrew se disponível
   ```
 - **Via npx:** `npx` e `node` disponíveis no PATH (fallback automático)

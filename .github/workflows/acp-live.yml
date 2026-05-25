@@ -24,7 +24,9 @@ jobs:
           node-version: "20"
 
       - name: Install claude-agent-acp via npm
-        run: npm install -g @agentclientprotocol/claude-agent-acp@0.1.0
+        # Versao deve acompanhar ClaudeNpmVersion em internal/runtime/specs/claude.go.
+        # (0.1.0 nunca foi publicada no npm — causava ETARGET; versoes reais >= 0.24.0.)
+        run: npm install -g @agentclientprotocol/claude-agent-acp@0.37.0
 
       - name: Run ACP live tests
         env:
