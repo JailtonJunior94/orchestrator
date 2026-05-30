@@ -26,6 +26,41 @@ func NewFileDetector(fsys fs.FileSystem) *FileDetector {
 }
 
 func (d *FileDetector) DetectLangs(projectDir string) []skills.Lang {
+	return d.detectLangsAt(projectDir)
+}
+
+func (d *FileDetector) DetectLangsIn(projectDir string, focusPaths []string) []skills.Lang {
+	langs := d.detectLangsAt(projectDir)
+	seen := make(map[skills.Lang]bool, len(langs))
+	for _, lang := range langs {
+		seen[lang] = true
+	}
+
+	for _, focusPath := range focusPaths {
+		path := filepath.Clean(focusPath)
+		if path == "." || path == "" {
+			continue
+		}
+		if filepath.IsAbs(path) {
+			rel, err := filepath.Rel(projectDir, path)
+			if err != nil || strings.HasPrefix(rel, "..") || filepath.IsAbs(rel) {
+				continue
+			}
+			path = rel
+		}
+		for _, lang := range d.detectLangsAt(filepath.Join(projectDir, path)) {
+			if seen[lang] {
+				continue
+			}
+			seen[lang] = true
+			langs = append(langs, lang)
+		}
+	}
+
+	return langs
+}
+
+func (d *FileDetector) detectLangsAt(projectDir string) []skills.Lang {
 	var langs []skills.Lang
 
 	goIndicators := []string{"go.mod", "go.work"}

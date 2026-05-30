@@ -146,7 +146,7 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 	// Permite install transparente sem flag --langs em repos Go/Node/Python.
 	// ADR-024: stack-aware via FileDetector.
 	if len(opts.Langs) == 0 {
-		detectedLangs := s.langDetect.DetectLangs(opts.ProjectDir)
+		detectedLangs := s.detectLangs(opts.ProjectDir, opts.FocusPaths)
 		if len(detectedLangs) > 0 {
 			s.printer.Info("Linguagens detectadas automaticamente: %v", NewHelper().langNames(detectedLangs))
 			opts.Langs = detectedLangs
@@ -215,7 +215,7 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 	s.printer.Info("")
 
 	// 1. Instalar skills canonicas em .agents/skills/
-	if err := s.installBaseSkills(sourceDir, projectDir, allSkills, linkMode, opts.DryRun); err != nil {
+	if err := s.installBaseSkills(sourceDir, projectDir, allSkills, linkMode, opts.DryRun, opts.FollowExternalSymlinks); err != nil {
 		return fmt.Errorf("instalar skills base: %w", err)
 	}
 
@@ -369,10 +369,10 @@ func (s *Service) Verify(opts config.InstallOptions) ([]VerifyItem, error) {
 		}
 	}
 	if len(langs) == 0 {
-		langs = s.langDetect.DetectLangs(installDir)
+		langs = s.detectLangs(installDir, opts.FocusPaths)
 	}
 
-	allSkills := skills.NewCatalog().AllSkills(langs)
+	allSkills := s.sourceSkills(absSource, langs)
 
 	// Usar checkSkillsForVerify que reutiliza logica do upgrade.
 	var items []VerifyItem
@@ -414,6 +414,42 @@ func (s *Service) Verify(opts config.InstallOptions) ([]VerifyItem, error) {
 
 // verifyToolSkills verifica as skills de uma ferramenta especifica no diretorio de instalacao.
 // Mapeia upgrade.SkillStatus para VerifyState (ADR-019).
+type focusLangDetector interface {
+	DetectLangsIn(projectDir string, focusPaths []string) []skills.Lang
+}
+
+func (s *Service) detectLangs(projectDir string, focusPaths []string) []skills.Lang {
+	if len(focusPaths) > 0 {
+		if detector, ok := s.langDetect.(focusLangDetector); ok {
+			return detector.DetectLangsIn(projectDir, focusPaths)
+		}
+	}
+	return s.langDetect.DetectLangs(projectDir)
+}
+
+func (s *Service) sourceSkills(sourceDir string, langs []skills.Lang) []string {
+	sourceSkillsDir := filepath.Join(sourceDir, ".agents", "skills")
+	entries, err := s.fs.ReadDir(sourceSkillsDir)
+	if err != nil {
+		return skills.NewCatalog().AllSkills(langs)
+	}
+
+	out := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.IsDir() || !NewHelper().shouldProcessSkill(entry.Name(), langs) {
+			continue
+		}
+		// Reconcilia com upgrade.checkSkills: so e skill o diretorio que
+		// contem SKILL.md. Diretorios auxiliares (ex.: tests/ com pytest) sao
+		// ignorados para evitar divergencia entre verify e upgrade --check.
+		if !s.fs.Exists(filepath.Join(sourceSkillsDir, entry.Name(), "SKILL.md")) {
+			continue
+		}
+		out = append(out, entry.Name())
+	}
+	return out
+}
+
 func (s *Service) verifyToolSkills(sourceDir, installDir string, tool skills.Tool, skillList []string) []VerifyItem {
 	var items []VerifyItem
 
@@ -569,9 +605,13 @@ func (s *Service) validate(opts config.InstallOptions) error {
 	return nil
 }
 
-func (s *Service) installBaseSkills(sourceDir, projectDir string, skillList []string, mode skills.LinkMode, dryRun bool) error {
+func (s *Service) installBaseSkills(sourceDir, projectDir string, skillList []string, mode skills.LinkMode, dryRun bool, followExternalSymlinks bool) error {
 	s.printer.Step("Instalando skills canonicas...")
 	skillsDir := filepath.Join(projectDir, ".agents", "skills")
+
+	if err := fs.RefuseExternalSymlink(s.fs, projectDir, skillsDir, followExternalSymlinks); err != nil {
+		return err
+	}
 
 	if dryRun {
 		s.printer.DryRun("mkdir -p %s", skillsDir)
@@ -1114,6 +1154,31 @@ func (s *Service) installCopilot(sourceDir, projectDir string, skillList []strin
 	return nil
 }
 
+func (r1 *Helper) shouldProcessSkill(skillName string, langFilter []skills.Lang) bool {
+	if len(langFilter) == 0 {
+		return true
+	}
+
+	langSkills := map[string]bool{
+		"go-implementation":            true,
+		"object-calisthenics-go":       true,
+		"node-implementation":          true,
+		"python-implementation":        true,
+		"dotnet-csharp-implementation": true,
+	}
+	if !langSkills[skillName] {
+		return true
+	}
+
+	allowed := make(map[string]bool)
+	for _, lang := range langFilter {
+		for _, skill := range skills.NewCatalog().LangSkills([]skills.Lang{lang}) {
+			allowed[skill] = true
+		}
+	}
+	return allowed[skillName]
+}
+
 func (r1 *Helper) defaultClaudeSettings() string {
 	return `{
   "hooks": {
@@ -1163,19 +1228,34 @@ func (r1 *Helper) defaultGeminiSettings() string {
   "hooks": {
     "BeforeTool": [
       {
-        "matcher": "edit|write|replace",
-        "command": "bash .gemini/hooks/validate-preload.sh"
+        "matcher": "write_file|replace|run_shell_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .gemini/hooks/validate-preload.sh"
+          }
+        ]
       }
     ],
     "AfterTool": [
       {
-        "matcher": "edit|write|replace",
-        "command": "bash .gemini/hooks/validate-governance.sh"
+        "matcher": "write_file|replace",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .gemini/hooks/validate-governance.sh"
+          }
+        ]
       }
     ],
     "AfterAgent": [
       {
-        "command": "bash .gemini/hooks/subagent-stop-wrapper.sh"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .gemini/hooks/subagent-stop-wrapper.sh"
+          }
+        ]
       }
     ]
   }
@@ -1184,28 +1264,31 @@ func (r1 *Helper) defaultGeminiSettings() string {
 }
 
 // defaultCopilotHooks devolve o conteudo de .github/hooks/governance.json no formato
-// nativo do Copilot CLI 2026 (version:1, preToolUse/agentStop) apontando para os
-// validadores compartilhados. Paridade com Claude/Gemini.
+// nativo do Copilot CLI 2026 (version:1, hooks.preToolUse/postToolUse/stop) apontando
+// para os validadores compartilhados. Paridade com Claude/Gemini.
 func (r1 *Helper) defaultCopilotHooks() string {
 	return `{
   "version": 1,
-  "preToolUse": [
-    {
-      "match": { "tool": "str_replace_editor|write|bash" },
-      "bash": "bash .github/hooks/validate-preload.sh"
-    }
-  ],
-  "postToolUse": [
-    {
-      "match": { "tool": "str_replace_editor|write" },
-      "bash": "bash .github/hooks/validate-governance.sh"
-    }
-  ],
-  "agentStop": [
-    {
-      "bash": "bash .github/hooks/subagent-stop-wrapper.sh"
-    }
-  ]
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/validate-preload.sh"
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/validate-governance.sh"
+      }
+    ],
+    "stop": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/subagent-stop-wrapper.sh"
+      }
+    ]
+  }
 }
 `
 }
@@ -1216,18 +1299,30 @@ func (r1 *Helper) defaultCopilotHooks() string {
 // config.toml (ver codexGovernanceTOML e enforcement-matrix.md, caveat Codex).
 func (r1 *Helper) defaultCodexHooks() string {
 	return `{
-  "PreToolUse": [
-    {
-      "matcher": "shell|apply_patch|edit",
-      "command": "bash .codex/hooks/validate-preload.sh"
-    }
-  ],
-  "PostToolUse": [
-    {
-      "matcher": "apply_patch|edit",
-      "command": "bash .codex/hooks/validate-governance.sh"
-    }
-  ]
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|apply_patch|edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .codex/hooks/validate-preload.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .codex/hooks/validate-governance.sh"
+          }
+        ]
+      }
+    ]
+  }
 }
 `
 }

@@ -1,45 +1,65 @@
 package lint
 
 import (
-	"os"
+	"encoding/json"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/contextgen"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/skillscheck"
 )
 
-// setupProject cria um diretório temporário com a estrutura mínima de projeto.
-func setupProject(t *testing.T) string {
-	t.Helper()
-	dir := t.TempDir()
-	return dir
+const _projectDir = "/proj"
+
+func newFakeService() (*Service, *fs.FakeFileSystem) {
+	fake := fs.NewFakeFileSystem()
+	return NewService(fake), fake
 }
 
-// writeFile escreve conteúdo em um arquivo, criando diretórios intermediários.
-func writeFile(t *testing.T, dir, rel, content string) {
+func writeFile(t *testing.T, fake *fs.FakeFileSystem, rel, content string) {
 	t.Helper()
-	path := filepath.Join(dir, rel)
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatalf("MkdirAll %s: %v", filepath.Dir(path), err)
+	if err := fake.WriteFile(filepath.Join(_projectDir, rel), []byte(content)); err != nil {
+		t.Fatalf("WriteFile %s: %v", rel, err)
 	}
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatalf("WriteFile %s: %v", path, err)
+}
+
+func writeLock(t *testing.T, fake *fs.FakeFileSystem, entries map[string]skillscheck.LockEntry) {
+	t.Helper()
+	lock := skillscheck.LockFile{Version: 1, Skills: entries}
+	data, err := json.Marshal(lock)
+	if err != nil {
+		t.Fatalf("Marshal skills-lock.json: %v", err)
 	}
+	writeFile(t, fake, "skills-lock.json", string(data))
 }
 
 func validSkillFrontmatter(name string) string {
 	return "---\nname: " + name + "\nversion: 1.0.0\ndescription: Skill de teste\n---\n\n# Conteúdo\n"
 }
 
+func skillFrontmatter(fields ...string) string {
+	return "---\n" + strings.Join(fields, "\n") + "\n---\n\n# Skill\n"
+}
+
+func hasSkillError(errs []LintError, skillName string) bool {
+	for _, e := range errs {
+		if filepath.Base(filepath.Dir(e.File)) == skillName {
+			return true
+		}
+	}
+	return false
+}
+
 func TestLint_Clean(t *testing.T) {
-	dir := setupProject(t)
+	svc, fake := newFakeService()
 
-	writeFile(t, dir, "AGENTS.md", "<!-- governance-schema: "+contextgen.GovernanceSchemaVersion+" -->\n# Regras\n")
-	writeFile(t, dir, ".agents/skills/agent-governance/references/bug-schema.json", `{"type":"object"}`)
-	writeFile(t, dir, ".agents/skills/agent-governance/SKILL.md", validSkillFrontmatter("agent-governance"))
+	writeFile(t, fake, "AGENTS.md", "<!-- governance-schema: "+contextgen.GovernanceSchemaVersion+" -->\n# Regras\n")
+	writeFile(t, fake, ".agents/skills/agent-governance/references/bug-schema.json", `{"type":"object"}`)
+	writeFile(t, fake, ".agents/skills/agent-governance/SKILL.md", validSkillFrontmatter("agent-governance"))
 
-	svc := NewService()
-	errs, err := svc.Execute(dir)
+	errs, err := svc.Execute(_projectDir)
 	if err != nil {
 		t.Fatalf("Execute retornou erro inesperado: %v", err)
 	}
@@ -49,12 +69,11 @@ func TestLint_Clean(t *testing.T) {
 }
 
 func TestLint_PlaceholderInAGENTSMD(t *testing.T) {
-	dir := setupProject(t)
+	svc, fake := newFakeService()
 
-	writeFile(t, dir, "AGENTS.md", "<!-- governance-schema: "+contextgen.GovernanceSchemaVersion+" -->\n# Regras\n{{ TOOLCHAIN_COMMANDS }}\n")
+	writeFile(t, fake, "AGENTS.md", "<!-- governance-schema: "+contextgen.GovernanceSchemaVersion+" -->\n# Regras\n{{ TOOLCHAIN_COMMANDS }}\n")
 
-	svc := NewService()
-	errs, err := svc.Execute(dir)
+	errs, err := svc.Execute(_projectDir)
 	if err != nil {
 		t.Fatalf("Execute retornou erro inesperado: %v", err)
 	}
@@ -75,12 +94,11 @@ func TestLint_PlaceholderInAGENTSMD(t *testing.T) {
 }
 
 func TestLint_SchemaVersionMismatch(t *testing.T) {
-	dir := setupProject(t)
+	svc, fake := newFakeService()
 
-	writeFile(t, dir, "AGENTS.md", "<!-- governance-schema: 0.0.0 -->\n# Regras\n")
+	writeFile(t, fake, "AGENTS.md", "<!-- governance-schema: 0.0.0 -->\n# Regras\n")
 
-	svc := NewService()
-	errs, err := svc.Execute(dir)
+	errs, err := svc.Execute(_projectDir)
 	if err != nil {
 		t.Fatalf("Execute retornou erro inesperado: %v", err)
 	}
@@ -101,12 +119,11 @@ func TestLint_SchemaVersionMismatch(t *testing.T) {
 }
 
 func TestLint_InvalidBugSchema(t *testing.T) {
-	dir := setupProject(t)
+	svc, fake := newFakeService()
 
-	writeFile(t, dir, ".agents/skills/agent-governance/references/bug-schema.json", `{ invalid json }`)
+	writeFile(t, fake, ".agents/skills/agent-governance/references/bug-schema.json", `{ invalid json }`)
 
-	svc := NewService()
-	errs, err := svc.Execute(dir)
+	errs, err := svc.Execute(_projectDir)
 	if err != nil {
 		t.Fatalf("Execute retornou erro inesperado: %v", err)
 	}
@@ -127,44 +144,96 @@ func TestLint_InvalidBugSchema(t *testing.T) {
 }
 
 func TestLint_InvalidSkillFrontmatter(t *testing.T) {
-	dir := setupProject(t)
+	svc, fake := newFakeService()
 
-	// SKILL.md sem description
-	writeFile(t, dir, ".agents/skills/my-skill/SKILL.md", "---\nname: my-skill\nversion: 1.0.0\n---\n\n# Skill\n")
+	writeFile(t, fake, ".agents/skills/my-skill/SKILL.md", skillFrontmatter("name: my-skill", "version: 1.0.0"))
 
-	svc := NewService()
-	errs, err := svc.Execute(dir)
+	errs, err := svc.Execute(_projectDir)
 	if err != nil {
 		t.Fatalf("Execute retornou erro inesperado: %v", err)
 	}
 	if len(errs) == 0 {
 		t.Fatal("esperava erro de frontmatter inválido, obteve 0")
 	}
-
-	found := false
-	for _, e := range errs {
-		if filepath.Base(filepath.Dir(e.File)) == "my-skill" {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !hasSkillError(errs, "my-skill") {
 		t.Errorf("esperava erro referenciando my-skill/SKILL.md, erros: %v", errs)
 	}
 }
 
 func TestLint_MultipleErrors(t *testing.T) {
-	dir := setupProject(t)
+	svc, fake := newFakeService()
 
-	// AGENTS.md com placeholder e schema errado
-	writeFile(t, dir, "AGENTS.md", "<!-- governance-schema: 0.0.0 -->\n# Regras\n{{ PLACEHOLDER }}\n")
+	writeFile(t, fake, "AGENTS.md", "<!-- governance-schema: 0.0.0 -->\n# Regras\n{{ PLACEHOLDER }}\n")
 
-	svc := NewService()
-	errs, err := svc.Execute(dir)
+	errs, err := svc.Execute(_projectDir)
 	if err != nil {
 		t.Fatalf("Execute retornou erro inesperado: %v", err)
 	}
 	if len(errs) < 2 {
 		t.Errorf("esperava pelo menos 2 erros, obteve %d: %v", len(errs), errs)
+	}
+}
+
+func TestLint_SkillVersionRequirementBySourceType(t *testing.T) {
+	scenarios := []struct {
+		name         string
+		lockEntries  map[string]skillscheck.LockEntry
+		skillContent string
+		wantError    bool
+	}{
+		{
+			name: "deve aceitar skill terceira sem version quando lock usa sourceType github",
+			lockEntries: map[string]skillscheck.LockEntry{
+				"external-skill": {SourceType: "github", Source: "owner/repo"},
+			},
+			skillContent: skillFrontmatter("name: external-skill", "description: Skill externa"),
+			wantError:    false,
+		},
+		{
+			name:         "deve rejeitar skill primeira sem version",
+			skillContent: skillFrontmatter("name: external-skill", "description: Skill interna"),
+			wantError:    true,
+		},
+		{
+			name: "deve rejeitar skill terceira sem name",
+			lockEntries: map[string]skillscheck.LockEntry{
+				"external-skill": {SourceType: "github", Source: "owner/repo"},
+			},
+			skillContent: skillFrontmatter("description: Skill externa"),
+			wantError:    true,
+		},
+		{
+			name: "deve rejeitar skill terceira sem description",
+			lockEntries: map[string]skillscheck.LockEntry{
+				"external-skill": {SourceType: "github", Source: "owner/repo"},
+			},
+			skillContent: skillFrontmatter("name: external-skill"),
+			wantError:    true,
+		},
+		{
+			name:         "deve preservar comportamento estrito sem skills-lock",
+			lockEntries:  nil,
+			skillContent: skillFrontmatter("name: external-skill", "description: Skill sem lock"),
+			wantError:    true,
+		},
+	}
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			svc, fake := newFakeService()
+			if scenario.lockEntries != nil {
+				writeLock(t, fake, scenario.lockEntries)
+			}
+			writeFile(t, fake, ".agents/skills/external-skill/SKILL.md", scenario.skillContent)
+
+			errs, err := svc.Execute(_projectDir)
+			if err != nil {
+				t.Fatalf("Execute retornou erro inesperado: %v", err)
+			}
+			gotError := hasSkillError(errs, "external-skill")
+			if gotError != scenario.wantError {
+				t.Fatalf("erro esperado=%v, obtido=%v: %v", scenario.wantError, gotError, errs)
+			}
+		})
 	}
 }

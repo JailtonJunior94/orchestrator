@@ -523,6 +523,94 @@ func TestUpgrade_PopulatesSkillVersionsForLegacyManifest(t *testing.T) {
 	}
 }
 
+func TestUpgrade_InstallsMissingSkillFromSource(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/project/.agents/skills"] = true
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
+
+	svc := setupTestService(ffs)
+	err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+	})
+	if err != nil {
+		t.Fatalf("upgrade falhou: %v", err)
+	}
+
+	if !ffs.Exists("/project/.agents/skills/review/SKILL.md") {
+		t.Fatal("skill ausente nao foi instalada a partir da fonte")
+	}
+}
+
+func TestUpgrade_RefusesExternalSkillsSymlinkByDefault(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/project/.agents"] = true
+	ffs.Dirs["/external/skills"] = true
+	ffs.Links["/project/.agents/skills"] = "/external/skills"
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
+
+	svc := setupTestService(ffs)
+	err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+	})
+	if err == nil {
+		t.Fatal("esperava erro para symlink externo em .agents/skills")
+	}
+	if !strings.Contains(err.Error(), "symlink para fora do projeto") {
+		t.Fatalf("erro nao explica symlink externo: %v", err)
+	}
+	if ffs.Exists("/external/skills/review/SKILL.md") {
+		t.Fatal("upgrade escreveu em repositorio externo apesar do bloqueio")
+	}
+}
+
+func TestUpgrade_FollowsExternalSkillsSymlinkWhenAllowed(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/project/.agents"] = true
+	ffs.Dirs["/external/skills"] = true
+	ffs.Links["/project/.agents/skills"] = "/external/skills"
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
+
+	svc := setupTestService(ffs)
+	err := svc.Execute(config.UpgradeOptions{
+		ProjectDir:             "/project",
+		SourceDir:              "/source",
+		FollowExternalSymlinks: true,
+	})
+	if err != nil {
+		t.Fatalf("upgrade deveria seguir symlink externo quando permitido: %v", err)
+	}
+	if !ffs.Exists("/external/skills/review/SKILL.md") {
+		t.Fatal("skill nao foi instalada no destino externo permitido")
+	}
+}
+
+func TestUpgrade_AllowsRealSkillsDir(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/project/.agents/skills"] = true
+	content := []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = content
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = content
+
+	svc := setupTestService(ffs)
+	err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+	})
+	if err != nil {
+		t.Fatalf("upgrade com diretorio real falhou: %v", err)
+	}
+}
+
 func TestUpgrade_RefsChangedFiles(t *testing.T) {
 	t.Parallel()
 	ffs := fs.NewFakeFileSystem()

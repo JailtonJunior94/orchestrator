@@ -150,6 +150,85 @@ func TestSyncSpecHash_MissingTasksFile(t *testing.T) {
 	}
 }
 
+func TestSyncSpecHash_RemoveDuplicadosEPlaceholders(t *testing.T) {
+	cases := []struct {
+		name         string
+		tasksContent string
+		wantAbsent   []string
+	}{
+		{
+			name: "comentarios duplicados colapsam para um",
+			tasksContent: "<!-- spec-hash-prd: 1111111111111111111111111111111111111111111111111111111111111111 -->\n" +
+				"<!-- spec-hash-prd: 2222222222222222222222222222222222222222222222222222222222222222 -->\n" +
+				"# Tasks\nRF-01 coberto.\n",
+			wantAbsent: []string{"1111111111111111111111111111111111111111111111111111111111111111", "2222222222222222222222222222222222222222222222222222222222222222"},
+		},
+		{
+			name: "placeholder pending run e removido",
+			tasksContent: "<!-- spec-hash-prd: PENDING-RUN: ai-spec sync-spec-hash .specs/prd-todo/tasks.md -->\n" +
+				"# Tasks\nRF-01 coberto.\n",
+			wantAbsent: []string{"PENDING-RUN"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			prdContent := "RF-01 deve existir"
+			writeFileSync(t, dir, "prd.md", prdContent)
+			tasksPath := writeFileSync(t, dir, "tasks.md", tc.tasksContent)
+
+			if err := specdrift.NewCatalog().SyncSpecHash(tasksPath); err != nil {
+				t.Fatalf("erro inesperado: %v", err)
+			}
+
+			got := readFileSync(t, tasksPath)
+			wantComment := fmt.Sprintf("<!-- spec-hash-prd: %s -->", hashOfSync([]byte(prdContent)))
+			if strings.Count(got, "spec-hash-prd") != 1 {
+				t.Fatalf("esperava exatamente um spec-hash-prd, got:\n%s", got)
+			}
+			if !strings.Contains(got, wantComment) {
+				t.Fatalf("hash correto ausente: %s\ngot:\n%s", wantComment, got)
+			}
+			for _, absent := range tc.wantAbsent {
+				if strings.Contains(got, absent) {
+					t.Fatalf("conteudo obsoleto %q ainda presente:\n%s", absent, got)
+				}
+			}
+		})
+	}
+}
+
+func TestSyncSpecHash_Idempotente(t *testing.T) {
+	dir := t.TempDir()
+	prdContent := "RF-01 deve existir"
+	techspecContent := "REQ-01 deve ser implementado"
+
+	writeFileSync(t, dir, "prd.md", prdContent)
+	writeFileSync(t, dir, "techspec.md", techspecContent)
+	tasksPath := writeFileSync(t, dir, "tasks.md", "<!-- spec-hash-prd: PENDING-RUN: ai-spec sync-spec-hash tasks.md -->\nRF-01 e REQ-01 cobertos.\n")
+
+	if err := specdrift.NewCatalog().SyncSpecHash(tasksPath); err != nil {
+		t.Fatalf("primeiro sync falhou: %v", err)
+	}
+	first := readFileSync(t, tasksPath)
+
+	if err := specdrift.NewCatalog().SyncSpecHash(tasksPath); err != nil {
+		t.Fatalf("segundo sync falhou: %v", err)
+	}
+	second := readFileSync(t, tasksPath)
+
+	if first != second {
+		t.Fatalf("sync nao e idempotente\nfirst:\n%s\nsecond:\n%s", first, second)
+	}
+	if strings.Count(second, "spec-hash-prd") != 1 || strings.Count(second, "spec-hash-techspec") != 1 {
+		t.Fatalf("esperava exatamente um hash por label, got:\n%s", second)
+	}
+	if strings.Contains(second, "PENDING-RUN") {
+		t.Fatalf("placeholder nao removido:\n%s", second)
+	}
+}
+
 // TestSyncSpecHash_RoundTrip verifies that sync + CheckDrift passes after syncing.
 func TestSyncSpecHash_RoundTrip(t *testing.T) {
 	dir := t.TempDir()

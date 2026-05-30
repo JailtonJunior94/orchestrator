@@ -27,25 +27,29 @@ func NewFakeFileSystem() *FakeFileSystem {
 }
 
 func (f *FakeFileSystem) MkdirAll(path string) error {
-	f.Dirs[path] = true
+	resolved := f.resolvePath(path)
+	f.Dirs[resolved] = true
 	return nil
 }
 
 func (f *FakeFileSystem) CopyFile(src, dst string) error {
-	data, ok := f.Files[src]
+	resolvedSrc := f.resolvePath(src)
+	data, ok := f.Files[resolvedSrc]
 	if !ok {
 		return fmt.Errorf("arquivo nao encontrado: %s", src)
 	}
-	f.Files[dst] = append([]byte(nil), data...)
+	f.Files[f.resolvePath(dst)] = append([]byte(nil), data...)
 	return nil
 }
 
 func (f *FakeFileSystem) CopyDir(src, dst string) error {
-	f.Dirs[dst] = true
+	resolvedSrc := f.resolvePath(src)
+	resolvedDst := f.resolvePath(dst)
+	f.Dirs[resolvedDst] = true
 	for path, data := range f.Files {
-		if strings.HasPrefix(path, src+"/") {
-			rel, _ := filepath.Rel(src, path)
-			newPath := filepath.Join(dst, rel)
+		if strings.HasPrefix(path, resolvedSrc+"/") {
+			rel, _ := filepath.Rel(resolvedSrc, path)
+			newPath := filepath.Join(resolvedDst, rel)
 			f.Files[newPath] = append([]byte(nil), data...)
 		}
 	}
@@ -64,14 +68,18 @@ func (f *FakeFileSystem) Remove(path string) error {
 }
 
 func (f *FakeFileSystem) RemoveAll(path string) error {
-	delete(f.Dirs, path)
+	resolved := filepath.Clean(path)
+	if !f.IsSymlink(resolved) {
+		resolved = f.resolvePath(resolved)
+	}
+	delete(f.Dirs, resolved)
 	for k := range f.Files {
-		if k == path || strings.HasPrefix(k, path+"/") {
+		if k == resolved || strings.HasPrefix(k, resolved+"/") {
 			delete(f.Files, k)
 		}
 	}
 	for k := range f.Links {
-		if k == path || strings.HasPrefix(k, path+"/") {
+		if k == resolved || strings.HasPrefix(k, resolved+"/") {
 			delete(f.Links, k)
 		}
 	}
@@ -79,18 +87,19 @@ func (f *FakeFileSystem) RemoveAll(path string) error {
 }
 
 func (f *FakeFileSystem) Exists(path string) bool {
-	if _, ok := f.Files[path]; ok {
-		return true
-	}
-	if _, ok := f.Dirs[path]; ok {
-		return true
-	}
 	if _, ok := f.Links[path]; ok {
+		return true
+	}
+	resolved := f.resolvePath(path)
+	if _, ok := f.Files[resolved]; ok {
+		return true
+	}
+	if _, ok := f.Dirs[resolved]; ok {
 		return true
 	}
 	// Verificar se algum arquivo esta dentro desse path (implica diretorio)
 	for k := range f.Files {
-		if strings.HasPrefix(k, path+"/") {
+		if strings.HasPrefix(k, resolved+"/") {
 			return true
 		}
 	}
@@ -98,11 +107,12 @@ func (f *FakeFileSystem) Exists(path string) bool {
 }
 
 func (f *FakeFileSystem) IsDir(path string) bool {
-	if f.Dirs[path] {
+	resolved := f.resolvePath(path)
+	if f.Dirs[resolved] {
 		return true
 	}
 	for k := range f.Files {
-		if strings.HasPrefix(k, path+"/") {
+		if strings.HasPrefix(k, resolved+"/") {
 			return true
 		}
 	}
@@ -114,8 +124,13 @@ func (f *FakeFileSystem) IsSymlink(path string) bool {
 	return ok
 }
 
+func (f *FakeFileSystem) EvalSymlinks(path string) (string, error) {
+	return f.resolvePath(path), nil
+}
+
 func (f *FakeFileSystem) ReadFile(path string) ([]byte, error) {
-	data, ok := f.Files[path]
+	resolved := f.resolvePath(path)
+	data, ok := f.Files[resolved]
 	if !ok {
 		return nil, fmt.Errorf("arquivo nao encontrado: %s", path)
 	}
@@ -123,19 +138,20 @@ func (f *FakeFileSystem) ReadFile(path string) ([]byte, error) {
 }
 
 func (f *FakeFileSystem) WriteFile(path string, data []byte) error {
-	f.Files[path] = append([]byte(nil), data...)
+	f.Files[f.resolvePath(path)] = append([]byte(nil), data...)
 	return nil
 }
 
 func (f *FakeFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
+	resolved := f.resolvePath(path)
 	seen := make(map[string]bool)
 	var entries []os.DirEntry
 
 	for k := range f.Files {
-		if !strings.HasPrefix(k, path+"/") {
+		if !strings.HasPrefix(k, resolved+"/") {
 			continue
 		}
-		rest := strings.TrimPrefix(k, path+"/")
+		rest := strings.TrimPrefix(k, resolved+"/")
 		parts := strings.SplitN(rest, "/", 2)
 		name := parts[0]
 		if seen[name] {
@@ -147,10 +163,10 @@ func (f *FakeFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
 	}
 
 	for k := range f.Dirs {
-		if !strings.HasPrefix(k, path+"/") {
+		if !strings.HasPrefix(k, resolved+"/") {
 			continue
 		}
-		rest := strings.TrimPrefix(k, path+"/")
+		rest := strings.TrimPrefix(k, resolved+"/")
 		parts := strings.SplitN(rest, "/", 2)
 		name := parts[0]
 		if seen[name] {
@@ -165,7 +181,8 @@ func (f *FakeFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
 }
 
 func (f *FakeFileSystem) FileHash(path string) (string, error) {
-	data, ok := f.Files[path]
+	resolved := f.resolvePath(path)
+	data, ok := f.Files[resolved]
 	if !ok {
 		return "", fmt.Errorf("arquivo nao encontrado: %s", path)
 	}
@@ -177,10 +194,11 @@ func (f *FakeFileSystem) DirHash(path string) (string, error) {
 	if !f.IsDir(path) {
 		return "", nil
 	}
+	resolved := f.resolvePath(path)
 	var entries []string
 	for k := range f.Files {
-		if strings.HasPrefix(k, path+"/") {
-			rel, _ := filepath.Rel(path, k)
+		if strings.HasPrefix(k, resolved+"/") {
+			rel, _ := filepath.Rel(resolved, k)
 			entries = append(entries, rel)
 		}
 	}
@@ -194,7 +212,39 @@ func (f *FakeFileSystem) DirHash(path string) (string, error) {
 }
 
 func (f *FakeFileSystem) Writable(path string) bool {
-	return !f.NoWrite[path]
+	return !f.NoWrite[f.resolvePath(path)]
+}
+
+func (f *FakeFileSystem) resolvePath(path string) string {
+	current := filepath.Clean(path)
+	seen := make(map[string]bool)
+	for {
+		if seen[current] {
+			return current
+		}
+		seen[current] = true
+
+		matched := ""
+		matchedTarget := ""
+		for link, target := range f.Links {
+			cleanLink := filepath.Clean(link)
+			if current == cleanLink || strings.HasPrefix(current, cleanLink+string(filepath.Separator)) {
+				if len(cleanLink) > len(matched) {
+					matched = cleanLink
+					matchedTarget = target
+				}
+			}
+		}
+		if matched == "" {
+			return current
+		}
+
+		if !filepath.IsAbs(matchedTarget) {
+			matchedTarget = filepath.Join(filepath.Dir(matched), matchedTarget)
+		}
+		rest := strings.TrimPrefix(current, matched)
+		current = filepath.Clean(matchedTarget + rest)
+	}
 }
 
 type fakeDirEntry struct {

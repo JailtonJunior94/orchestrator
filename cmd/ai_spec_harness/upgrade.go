@@ -41,6 +41,7 @@ Exemplos:
 	cmd.Flags().String("langs", "", "Filtrar por linguagens: go,node,python")
 	cmd.Flags().String("source", "", "Diretorio fonte do repositorio de governanca (opcional; usa embutido se omitido)")
 	cmd.Flags().String("ref", "", "Referencia git (tag, branch, SHA) para usar como fonte (mutualmente exclusivo com --source)")
+	cmd.Flags().Bool("follow-external-symlinks", false, "Permite escrever em .agents/skills quando symlink aponta para fora do projeto")
 	return cmd
 }
 
@@ -49,6 +50,7 @@ func (c *upgradeCommand) run(cmd *cobra.Command, args []string) error {
 	upgradeLangs, _ := cmd.Flags().GetString("langs")
 	upgradeSource, _ := cmd.Flags().GetString("source")
 	upgradeRef, _ := cmd.Flags().GetString("ref")
+	upgradeFollowExternalSymlinks, _ := cmd.Flags().GetBool("follow-external-symlinks")
 
 	if upgradeRef != "" && upgradeSource != "" {
 		return fmt.Errorf("--ref e --source sao mutuamente exclusivos")
@@ -83,9 +85,10 @@ func (c *upgradeCommand) run(cmd *cobra.Command, args []string) error {
 	svc := upgrade.NewService(fsys, printer, mfst, adpt, ctxg)
 
 	return svc.Execute(config.UpgradeOptions{
-		ProjectDir: args[0],
-		SourceDir:  sourceDir,
-		CheckOnly:  upgradeCheckOnly,
-		Langs:      langs,
+		ProjectDir:             args[0],
+		SourceDir:              sourceDir,
+		CheckOnly:              upgradeCheckOnly,
+		Langs:                  langs,
+		FollowExternalSymlinks: upgradeFollowExternalSymlinks,
 	})
 }

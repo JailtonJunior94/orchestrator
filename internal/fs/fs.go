@@ -20,6 +20,7 @@ type FileSystem interface {
 	Exists(path string) bool
 	IsDir(path string) bool
 	IsSymlink(path string) bool
+	EvalSymlinks(path string) (string, error)
 	ReadFile(path string) ([]byte, error)
 	WriteFile(path string, data []byte) error
 	ReadDir(path string) ([]os.DirEntry, error)
@@ -124,6 +125,14 @@ func (f *OSFileSystem) IsDir(path string) bool {
 func (f *OSFileSystem) IsSymlink(path string) bool {
 	info, err := os.Lstat(path)
 	return err == nil && info.Mode()&os.ModeSymlink != 0
+}
+
+func (f *OSFileSystem) EvalSymlinks(path string) (string, error) {
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", fmt.Errorf("resolver symlinks de %s: %w", path, err)
+	}
+	return resolved, nil
 }
 
 func (f *OSFileSystem) ReadFile(path string) ([]byte, error) {

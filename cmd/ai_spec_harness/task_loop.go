@@ -289,7 +289,7 @@ func (c *taskLoopCommand) registerFlags(cmd *cobra.Command) {
 	cmd.Flags().String("reviewer-fallback-model", "", "Modelo de fallback nativo do reviewer (Claude only)")
 
 	// Flags ACP runtime (RF-01, RF-02, RF-07, RF-11)
-	cmd.Flags().String("runtime", "legacy", "Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, codex, copilot)")
+	cmd.Flags().String("runtime", "legacy", "Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, codex, copilot, gemini)")
 	cmd.Flags().Duration("activity-timeout", 120*time.Second, "Timeout de inatividade do agente ACP (0 = desabilitado); aceita time.Duration: 90s, 2m")
 	cmd.Flags().Bool("quiet", false, "Suprime stream humano (stdout); jsonl e warnings continuam")
 

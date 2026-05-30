@@ -87,7 +87,11 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 		return fmt.Errorf("o diretorio alvo nao pode ser o proprio repositorio de regras")
 	}
 
-	if !s.fs.IsDir(filepath.Join(projectDir, ".agents", "skills")) {
+	skillsDir := filepath.Join(projectDir, ".agents", "skills")
+	if err := fs.RefuseExternalSymlink(s.fs, projectDir, skillsDir, opts.FollowExternalSymlinks); err != nil {
+		return err
+	}
+	if !s.fs.IsDir(skillsDir) {
 		return fmt.Errorf("governanca nao instalada em %s (pasta .agents/skills/ ausente). Execute ai-spec-harness install primeiro", projectDir)
 	}
 
@@ -161,9 +165,6 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 	updated := 0
 	for _, c := range checks {
 		if c.Status == StatusOK {
-			continue
-		}
-		if c.Status == StatusMissing {
 			continue
 		}
 

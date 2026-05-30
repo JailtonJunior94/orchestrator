@@ -12,25 +12,30 @@ import (
 
 func newCheckSpecDriftCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "check-spec-drift <tasks.md>",
+		Use:   "check-spec-drift <tasks.md|diretorio-prd>",
 		Short: "Verifica cobertura de requisitos e drift de spec em relacao a tasks.md",
 		Long: `Verifica se os IDs de requisitos (RF-nn, REQ-nn) definidos em prd.md e/ou
 techspec.md estao cobertos em tasks.md, e se os hashes dos arquivos de spec
 coincidem com os registrados em tasks.md.
 
 Exemplos:
+  ai-spec check-spec-drift .specs/prd-todo
   ai-spec check-spec-drift docs/tasks.md
   ai-spec check-spec-drift ./tasks.md`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			tasksPath := args[0]
+			inputPath := args[0]
 
-			if _, err := os.Stat(tasksPath); os.IsNotExist(err) {
-				fmt.Fprintf(os.Stderr, "erro: arquivo nao encontrado: %s\n", tasksPath)
+			info, err := os.Stat(inputPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "erro: caminho nao encontrado: %s\n", inputPath)
 				return newExitError(2)
 			}
 
-			dir := filepath.Dir(tasksPath)
+			dir := inputPath
+			if !info.IsDir() {
+				dir = filepath.Dir(inputPath)
+			}
 
 			report, err := specdrift.NewCatalog().CheckDrift(dir)
 			if err != nil {

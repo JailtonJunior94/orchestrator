@@ -63,6 +63,38 @@ func (s *DetectSuite) TestDetectLangs() {
 	}
 }
 
+func (s *DetectSuite) TestDetectLangsInFocusPaths() {
+	scenarios := []struct {
+		name       string
+		focusPaths []string
+		want       []skills.Lang
+	}{
+		{
+			name:       "deve detectar node em subdiretorio focado",
+			focusPaths: []string{"api"},
+			want:       []skills.Lang{skills.LangNode},
+		},
+		{
+			name:       "deve preservar comportamento raiz quando sem foco",
+			focusPaths: nil,
+			want:       nil,
+		},
+	}
+
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			ffs := fs.NewFakeFileSystem()
+			ffs.Dirs["/project"] = true
+			ffs.Files["/project/api/package.json"] = []byte("{}")
+
+			det := NewFileDetector(ffs)
+			langs := det.DetectLangsIn("/project", scenario.focusPaths)
+
+			s.Equal(scenario.want, langs)
+		})
+	}
+}
+
 func (s *DetectSuite) TestDetectTools() {
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/CLAUDE.md"] = []byte("# Claude")

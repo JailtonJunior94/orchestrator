@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/contextgen"
+	internalfs "github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/skillscheck"
 )
 
 // LintError representa um erro de lint com arquivo, linha e mensagem.
@@ -39,11 +40,16 @@ var _targetFiles = []string{
 var _schemaVersionRe = regexp.MustCompile(`governance-schema:\s*(\S+)`)
 
 // Service executa verificações de lint de governança.
-type Service struct{}
+type Service struct {
+	fs internalfs.FileSystem
+}
 
 // NewService cria um novo Service de lint.
-func NewService() *Service {
-	return &Service{}
+func NewService(fsys ...internalfs.FileSystem) *Service {
+	if len(fsys) > 0 && fsys[0] != nil {
+		return &Service{fs: fsys[0]}
+	}
+	return &Service{fs: internalfs.NewOSFileSystem()}
 }
 
 // Execute executa o lint no projectDir e retorna a lista de erros encontrados.
@@ -63,7 +69,7 @@ func (s *Service) Execute(projectDir string) ([]LintError, error) {
 
 	// 2. Verificar governance-schema em AGENTS.md
 	agentsPath := filepath.Join(projectDir, "AGENTS.md")
-	data, err := os.ReadFile(agentsPath)
+	data, err := s.fs.ReadFile(agentsPath)
 	if err == nil {
 		if vErr := s.checkSchemaVersion(data, "AGENTS.md"); vErr != nil {
 			errs = append(errs, *vErr)
@@ -72,7 +78,7 @@ func (s *Service) Execute(projectDir string) ([]LintError, error) {
 
 	// 3. Validar bug-schema.json como JSON válido
 	bugSchemaPath := filepath.Join(projectDir, ".agents", "skills", "agent-governance", "references", "bug-schema.json")
-	bugData, err := os.ReadFile(bugSchemaPath)
+	bugData, err := s.fs.ReadFile(bugSchemaPath)
 	if err == nil {
 		if !json.Valid(bugData) {
 			errs = append(errs, LintError{
@@ -97,27 +103,27 @@ func (s *Service) CountChecks(projectDir string) int {
 	count := 0
 
 	for _, rel := range _targetFiles {
-		if _, err := os.Stat(filepath.Join(projectDir, rel)); err == nil {
+		if s.fs.Exists(filepath.Join(projectDir, rel)) {
 			count++
 		}
 	}
 
 	// schema version check (usa AGENTS.md — já contado acima se presente)
-	if _, err := os.Stat(filepath.Join(projectDir, "AGENTS.md")); err == nil {
+	if s.fs.Exists(filepath.Join(projectDir, "AGENTS.md")) {
 		count++ // conta separadamente pois é uma verificação distinta
 	}
 
-	if _, err := os.Stat(filepath.Join(projectDir, ".agents", "skills", "agent-governance", "references", "bug-schema.json")); err == nil {
+	if s.fs.Exists(filepath.Join(projectDir, ".agents", "skills", "agent-governance", "references", "bug-schema.json")) {
 		count++
 	}
 
 	skillsDir := filepath.Join(projectDir, ".agents", "skills")
-	entries, err := os.ReadDir(skillsDir)
+	entries, err := s.fs.ReadDir(skillsDir)
 	if err == nil {
 		for _, e := range entries {
 			if e.IsDir() {
 				skillFile := filepath.Join(skillsDir, e.Name(), "SKILL.md")
-				if _, err := os.Stat(skillFile); err == nil {
+				if s.fs.Exists(skillFile) {
 					count++
 				}
 			}
@@ -128,7 +134,7 @@ func (s *Service) CountChecks(projectDir string) int {
 }
 
 func (s *Service) checkPlaceholders(path, rel string) ([]LintError, error) {
-	data, err := os.ReadFile(path)
+	data, err := s.fs.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -179,28 +185,31 @@ func (s *Service) checkSchemaVersion(data []byte, rel string) *LintError {
 
 func (s *Service) checkSkillFrontmatters(projectDir string) []LintError {
 	skillsDir := filepath.Join(projectDir, ".agents", "skills")
-	entries, err := os.ReadDir(skillsDir)
+	entries, err := s.fs.ReadDir(skillsDir)
 	if err != nil {
 		return nil
 	}
+	thirdPartySkills := s.thirdPartySkills(projectDir)
+	catalog := skills.NewCatalog()
 	var errs []LintError
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue
 		}
 		skillFile := filepath.Join(skillsDir, e.Name(), "SKILL.md")
-		data, err := os.ReadFile(skillFile)
+		data, err := s.fs.ReadFile(skillFile)
 		if err != nil {
 			continue
 		}
-		if err := skills.NewCatalog().ValidateFrontmatter(data, "", nil); err != nil {
+		if err := catalog.ValidateFrontmatter(data, "", nil); err != nil {
 			errs = append(errs, LintError{
 				File:    skillFile,
 				Message: fmt.Sprintf("frontmatter invalido: %s", err),
 			})
 			continue
 		}
-		if err := skills.NewCatalog().ValidateFrontmatterSchema(data, e.Name()); err != nil {
+		schemaData := s.frontmatterSchemaContent(data, thirdPartySkills[e.Name()])
+		if err := catalog.ValidateFrontmatterSchema(schemaData, e.Name()); err != nil {
 			errs = append(errs, LintError{
 				File:    skillFile,
 				Message: fmt.Sprintf("schema invalido: %s", err),
@@ -208,4 +217,60 @@ func (s *Service) checkSkillFrontmatters(projectDir string) []LintError {
 		}
 	}
 	return errs
+}
+
+func (s *Service) thirdPartySkills(projectDir string) map[string]bool {
+	lockPath := filepath.Join(projectDir, "skills-lock.json")
+	lockData, err := s.fs.ReadFile(lockPath)
+	if err != nil {
+		return nil
+	}
+
+	var lock skillscheck.LockFile
+	if err := json.Unmarshal(lockData, &lock); err != nil {
+		return nil
+	}
+
+	thirdParty := make(map[string]bool, len(lock.Skills))
+	for skillName, entry := range lock.Skills {
+		if s.isThirdPartySourceType(entry.SourceType) {
+			thirdParty[skillName] = true
+		}
+	}
+	return thirdParty
+}
+
+func (s *Service) isThirdPartySourceType(sourceType string) bool {
+	switch strings.ToLower(strings.TrimSpace(sourceType)) {
+	case "external", "git", "github", "registry", "agentskills":
+		return true
+	default:
+		return false
+	}
+}
+
+func (s *Service) frontmatterSchemaContent(content []byte, thirdParty bool) []byte {
+	if !thirdParty || skills.NewCatalog().ParseFrontmatter(content).Version != "" {
+		return content
+	}
+
+	lines := strings.Split(string(content), "\n")
+	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
+		return content
+	}
+
+	updated := make([]string, 0, len(lines)+1)
+	updated = append(updated, lines[0])
+	inserted := false
+	for _, line := range lines[1:] {
+		if !inserted && strings.TrimSpace(line) == "---" {
+			updated = append(updated, "version: 0.0.0")
+			inserted = true
+		}
+		updated = append(updated, line)
+	}
+	if !inserted {
+		return content
+	}
+	return []byte(strings.Join(updated, "\n"))
 }

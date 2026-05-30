@@ -2,19 +2,34 @@
   "hooks": {
     "BeforeTool": [
       {
-        "matcher": "edit|write|replace",
-        "command": "bash .gemini/hooks/validate-preload.sh"
+        "matcher": "write_file|replace|run_shell_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .gemini/hooks/validate-preload.sh"
+          }
+        ]
       }
     ],
     "AfterTool": [
       {
-        "matcher": "edit|write|replace",
-        "command": "bash .gemini/hooks/validate-governance.sh"
+        "matcher": "write_file|replace",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .gemini/hooks/validate-governance.sh"
+          }
+        ]
       }
     ],
     "AfterAgent": [
       {
-        "command": "bash .gemini/hooks/subagent-stop-wrapper.sh"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .gemini/hooks/subagent-stop-wrapper.sh"
+          }
+        ]
       }
     ]
   }

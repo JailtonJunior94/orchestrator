@@ -79,6 +79,19 @@ func TestFake_IsSymlink(t *testing.T) {
 	}
 }
 
+func TestFake_EvalSymlinks(t *testing.T) {
+	f := fs.NewFakeFileSystem()
+	_ = f.Symlink("/external/skills", "/project/.agents/skills")
+
+	got, err := f.EvalSymlinks("/project/.agents/skills/review")
+	if err != nil {
+		t.Fatalf("EvalSymlinks: %v", err)
+	}
+	if got != "/external/skills/review" {
+		t.Errorf("EvalSymlinks = %q, want /external/skills/review", got)
+	}
+}
+
 func TestFake_Remove(t *testing.T) {
 	f := fs.NewFakeFileSystem()
 	_ = f.WriteFile("/r.txt", []byte("x"))

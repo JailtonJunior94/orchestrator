@@ -200,7 +200,7 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	// Fase 8: warning de unknowns (RF-05).
 	).emitUnknownWarnings(loopResult)
 	if cancelReason == events.CancelReasonPermissionDenied {
-		fmt.Fprintln(os.Stderr, "agent requested permission; configure accessMode=bypassPermissions no claude-agent-acp ou execute em ambiente que pré-aprove. Veja ADR-009")
+		fmt.Fprintln(os.Stderr, "agente solicitou permissão e foi negado: reexecute com --access-mode full para auto-aprovar tool calls via ACP (ou rode em ambiente que pré-aprove). Veja ADR-009/ADR-012")
 	}
 
 	// Fase 9: persistir tool_calls e enriquecer report.

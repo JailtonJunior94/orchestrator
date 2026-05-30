@@ -11,14 +11,16 @@ description: Cria tarefas incrementais de implementação a partir de um PRD e d
 **Etapa 1: Validar os documentos de origem**
 1. Confirmar que o contrato de carga base definido em `AGENTS.md` foi cumprido.
 2. Confirmar que `.specs/prd-<feature-slug>/prd.md` e `.specs/prd-<feature-slug>/techspec.md` existem.
-2. Ler os dois arquivos por completo antes de propor itens de trabalho.
-3. Parar com `needs_input` se qualquer documento estiver ausente ou contraditório o suficiente para bloquear o planejamento.
+3. Ler os dois arquivos por completo antes de propor itens de trabalho.
+4. Enumerar explicitamente todos os IDs `RF-nn` e `REQ-nn` presentes em `prd.md` e `techspec.md`, mantendo a origem de cada ID (`prd.md`, `techspec.md` ou ambos). Essa enumeração é a base obrigatória da cobertura.
+5. Parar com `needs_input` se qualquer documento estiver ausente ou contraditório o suficiente para bloquear o planejamento.
 
 **Etapa 2: Extrair fatias de entrega**
 1. Identificar requisitos, decisões técnicas, pontos de integração, dependências e áreas de risco.
-2. Agrupar o trabalho em fatias que entreguem valor verificável.
+2. Garantir que cada ID `RF-nn`/`REQ-nn` enumerado na Etapa 1 seja coberto por pelo menos uma tarefa proposta. Nenhum requisito pode ficar apenas implícito em texto narrativo.
+3. Agrupar o trabalho em fatias que entreguem valor verificável.
    - **Fatiamento materialmente ambíguo** (granularidade/ordem/paralelismo com trade-offs reais): aplicar `.agents/skills/agent-governance/references/multiple-choice-protocol.md` (2–5 opções, "(Recomendado)", uma pergunta por turno) antes de fixar o plano.
-3. Preferir a sequência `domain -> interfaces/ports -> use cases -> adapters/repositories -> handlers -> integration`, salvo quando a especificação técnica justificar outra ordem.
+4. Preferir a sequência `domain -> interfaces/ports -> use cases -> adapters/repositories -> handlers -> integration`, salvo quando a especificação técnica justificar outra ordem.
 
 **Etapa 3: Propor primeiro o plano de tarefas em alto nível**
 1. Ler `assets/tasks-template.md` e `assets/task-template.md` antes de redigir.
@@ -29,13 +31,15 @@ description: Cria tarefas incrementais de implementação a partir de um PRD e d
 
 **Etapa 4: Gerar os artefatos detalhados de tarefa**
 1. Após a aprovação, criar `.specs/prd-<feature-slug>/tasks.md` a partir de `assets/tasks-template.md`.
-2. Criar um arquivo por tarefa usando `assets/task-template.md`.
-3. Dar a cada tarefa critérios de aceitação explícitos, arquivos relevantes e expectativas de teste.
-4. Garantir que cada tarefa seja executável de forma independente e revisável objetivamente.
-5. Ao escrever `tasks.md`, inserir os comentários de rastreabilidade de spec no cabeçalho e sincronizar via CLI portátil:
+2. Preencher a tabela de `tasks.md` de modo que cada linha liste explicitamente os IDs `RF-nn`/`REQ-nn` cobertos pela tarefa (na coluna/descrição de requisitos do template ou no texto da tarefa quando o template não tiver coluna dedicada).
+3. Validar a cobertura antes de criar os arquivos individuais: cada ID enumerado na Etapa 1 deve aparecer em pelo menos uma linha da tabela de `tasks.md`.
+4. Criar exatamente um arquivo `task-*.md` para cada linha da tabela de `tasks.md`, usando `assets/task-template.md`; não deixar linha sem arquivo correspondente nem arquivo órfão sem linha na tabela.
+5. Dar a cada tarefa critérios de aceitação explícitos, arquivos relevantes e expectativas de teste.
+6. Garantir que cada tarefa seja executável de forma independente e revisável objetivamente.
+7. Não escrever placeholders `PENDING-RUN` para hashes. Ao final da geração de `tasks.md`, sincronizar os comentários de rastreabilidade via CLI portátil usando o caminho do arquivo:
    - `ai-spec sync-spec-hash .specs/prd-<feature-slug>/tasks.md`
-   - O comando atualiza `<!-- spec-hash-prd: ... -->` e `<!-- spec-hash-techspec: ... -->` usando SHA-256 implementado em Go, sem depender de `sha256sum`.
-   Estes hashes permitem detectar drift posterior via `ai-spec check-spec-drift .specs/prd-<feature-slug>/tasks.md`.
+   - O comando atualiza `<!-- spec-hash-prd: ... -->` e `<!-- spec-hash-techspec: ... -->` usando SHA-256 implementado em Go, sem depender de `sha256sum`, e remove comentários obsoletos/duplicados.
+   Estes hashes permitem detectar drift posterior via `ai-spec check-spec-drift .specs/prd-<feature-slug>/tasks.md` ou `ai-spec check-spec-drift .specs/prd-<feature-slug>`.
 
 **Etapa 4.1: Preencher skills processuais necessárias (descoberta agnóstica, mandatória)**
 
@@ -96,11 +100,19 @@ Antes de reportar `done`, validar que **a coluna `Skills` em `tasks.md` e a seç
      - Se divergente: **parar com `failed: skills sync drift on task <id>`**, reportar `S_table` e `S_file` lado a lado. Não escrever `done`.
 2. Esta validação fecha falso positivo onde usuário lê `tasks.md` e vê info diferente do que `execute-task` carregaria. Diferenças indicam alucinação de uma das fontes.
 
+**Etapa 5.6: Validar cobertura e hashes de spec (mandatório)**
+
+1. Rodar `ai-spec check-spec-drift .specs/prd-<feature-slug>` ou `ai-spec check-spec-drift .specs/prd-<feature-slug>/tasks.md` após `sync-spec-hash`.
+2. Se o comando reportar IDs faltantes, voltar à tabela de `tasks.md` e aos arquivos `task-*.md` até que todos os `RF-nn`/`REQ-nn` de `prd.md` e `techspec.md` estejam cobertos.
+3. Se o comando reportar hash ausente/divergente, rodar novamente `ai-spec sync-spec-hash .specs/prd-<feature-slug>/tasks.md` e repetir a validação.
+4. Não reportar `done` enquanto `check-spec-drift` não retornar sem drift.
+
 **Etapa 6: Reportar o resultado**
 1. Listar os arquivos gerados.
 2. Destacar dependências críticas e tarefas paralelizáveis.
 3. Confirmar que Etapa 5.5 retornou ok.
-4. Retornar estado final `done` quando os arquivos forem gerados ou `needs_input` quando a aprovação ainda for necessária.
+4. Confirmar que Etapa 5.6 retornou ok, sem IDs faltantes e sem hashes `PENDING-RUN`/duplicados.
+5. Retornar estado final `done` quando os arquivos forem gerados ou `needs_input` quando a aprovação ainda for necessária.
 
 ## Tratamento de Erros
 

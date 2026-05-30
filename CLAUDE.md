@@ -15,7 +15,6 @@
 ## Telemetria e Auditoria
 
 - Telemetria: `GOVERNANCE_TELEMETRY=1`; ver [`docs/telemetry-feedback-cycle.md`](docs/telemetry-feedback-cycle.md); relatorio: `ai-spec-harness telemetry report`
-- Auditorias salvas em `audit/`, indexadas em [`audit/README.md`](audit/README.md)
 
 ## ADRs
 

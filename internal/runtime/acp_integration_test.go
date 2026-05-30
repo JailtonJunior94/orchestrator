@@ -370,8 +370,8 @@ func TestACPRunner_PermissionDenied(t *testing.T) {
 	if summary.CancelReason != events.CancelReasonPermissionDenied {
 		t.Fatalf("CancelReason = %q, want permission_denied", summary.CancelReason)
 	}
-	if !strings.Contains(stderr, "agent requested permission; configure accessMode=bypassPermissions no claude-agent-acp ou execute em ambiente que pré-aprove. Veja ADR-009") {
-		t.Fatalf("stderr = %q, want RF-16 guidance", stderr)
+	if !strings.Contains(stderr, "--access-mode full") {
+		t.Fatalf("stderr = %q, want RF-16 guidance mencionando --access-mode full", stderr)
 	}
 	for _, evt := range persist.events {
 		if evt.Kind() == events.KindSessionEnd {

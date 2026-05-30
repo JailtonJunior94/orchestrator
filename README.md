@@ -1469,7 +1469,7 @@ ai-spec lint    $PROJETO                      # DEVE: "Lint aprovado"
 
 > ⚠️ **`upgrade --check` e `verify` respondem perguntas DIFERENTES — nao confunda.**
 > - `verify $PROJETO --source $FONTE` audita as skills **ja instaladas** vs a fonte → `0 drifted` confirma fidelidade. **Esta e a porta de saude.**
-> - `upgrade --check --source $FONTE` compara o **conjunto completo de skills da fonte** com o projeto e pode listar como `AUSENTE` skills que existem na fonte mas que o `install` **nao instala** (ex.: `bubbletea`, `finalize-changelog-readme-push` — skills internas/de mantenedor deste repo). Ou seja, **`upgrade --check` pode acusar "N ausentes" mesmo numa instalacao recem-feita e saudavel.** Nao trate isso como erro automaticamente: **revise a lista** — aplicar o `upgrade` ADICIONARIA essas skills ao projeto, o que pode nao ser desejado para um projeto de aplicacao.
+> - `upgrade --check --source $FONTE` compara o **conjunto completo de skills da fonte** com o projeto e pode listar como `AUSENTE` skills que existem na fonte mas que o `install` **nao instala** (ex.: `finalize-changelog-readme-push` — skills internas/de mantenedor deste repo). Ou seja, **`upgrade --check` pode acusar "N ausentes" mesmo numa instalacao recem-feita e saudavel.** Nao trate isso como erro automaticamente: **revise a lista** — aplicar o `upgrade` ADICIONARIA essas skills ao projeto, o que pode nao ser desejado para um projeto de aplicacao.
 
 > ✅ **Regra de ouro:** `upgrade --source $FONTE` para o dia a dia (preserva o que ja existe); `uninstall + install` apenas quando precisar de um baseline limpo do zero. A confirmacao final de saude e **`doctor` verde + `verify --source` com `0 drifted`** — nao o `upgrade --check`.
 
@@ -1625,7 +1625,7 @@ git -C $PROJETO add -A && git -C $PROJETO commit -m "chore(governance): baseline
 | Warning "settings.local.json ja existe" no install | Arquivo preservado de proposito | Conecte os hooks manualmente (Passo 4) |
 | Hooks nao entram no commit | `settings.local.json` gitignored | Use `.claude/settings.json` versionado se quiser compartilhar |
 | `doctor` falha em "Repositorio git" | Projeto sem `git init` | Rode `git init` no projeto alvo |
-| `upgrade --check` lista `AUSENTE` numa instalacao recem-feita | Fonte tem skills internas/de mantenedor que o `install` nao instala (ex.: `bubbletea`, `finalize-changelog-readme-push`) | Esperado; revise a lista. A saude e `doctor` verde + `verify --source 0 drifted`, nao `upgrade --check` |
+| `upgrade --check` lista `AUSENTE` numa instalacao recem-feita | Fonte tem skills internas/de mantenedor que o `install` nao instala (ex.: `finalize-changelog-readme-push`) | Esperado; revise a lista. A saude e `doctor` verde + `verify --source 0 drifted`, nao `upgrade --check` |
 | `upgrade` rebaixou (downgrade) as skills | Rodou `upgrade` sem `--source` (comparou com embedded) | Sempre use `upgrade --source $FONTE`; reinstale a partir da fonte para corrigir |
 
 ## Para quem mantem este repositorio

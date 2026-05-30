@@ -37,8 +37,9 @@ type fakeLangDetector struct {
 	tools []skills.Tool
 }
 
-func (f *fakeLangDetector) DetectLangs(_ string) []skills.Lang { return f.langs }
-func (f *fakeLangDetector) DetectTools(_ string) []skills.Tool { return f.tools }
+func (f *fakeLangDetector) DetectLangs(_ string) []skills.Lang               { return f.langs }
+func (f *fakeLangDetector) DetectLangsIn(_ string, _ []string) []skills.Lang { return f.langs }
+func (f *fakeLangDetector) DetectTools(_ string) []skills.Tool               { return f.tools }
 
 // fakeLookPather implementa probe.LookPather para testes.
 // found lista binarios que "existem" no PATH fake.
@@ -159,6 +160,37 @@ func TestInstall_AutoDetect_DetectsTools(t *testing.T) {
 	// Se falhou por "nenhuma ferramenta", o auto-detect nao funcionou.
 	if err != nil && strings.Contains(err.Error(), "nenhuma ferramenta") {
 		t.Fatalf("auto-detect deveria ter preenchido Tools, mas erro: %v", err)
+	}
+}
+
+func TestInstall_DetectLangsUsesFocusPaths(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	ffs.Files["/project/api/package.json"] = []byte("{}")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.0.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/node-implementation/SKILL.md"] = []byte("---\nversion: 1.0.0\ndescription: Node.\n---\n")
+
+	svc := setupTestService(ffs)
+	err := svc.Execute(config.InstallOptions{
+		ProjectDir:  "/project",
+		SourceDir:   "/source",
+		Tools:       []skills.Tool{skills.ToolClaude},
+		LinkMode:    skills.LinkCopy,
+		FocusPaths:  []string{"api"},
+		GenerateCtx: false,
+	})
+	if err != nil {
+		t.Fatalf("install falhou: %v", err)
+	}
+
+	mf := readManifestFromFakeFS(t, ffs, "/project/.ai_spec_harness.json")
+	if len(mf.Langs) != 1 || mf.Langs[0] != skills.LangNode {
+		t.Fatalf("langs detectadas = %v, want [node]", mf.Langs)
+	}
+	if !ffs.Exists("/project/.agents/skills/node-implementation/SKILL.md") {
+		t.Fatal("skill node-implementation nao foi instalada apos deteccao por focus-path")
 	}
 }
 
@@ -298,6 +330,177 @@ description: Revisa codigo.
 	}
 	if got := mf.SkillVersions["review"]; got != "1.0.0" {
 		t.Errorf("skill_versions[review] incorreto: got %q want %q", got, "1.0.0")
+	}
+}
+
+func TestDefaultHookConfigsUseOfficialSchemas(t *testing.T) {
+	t.Parallel()
+	expectedGemini := `{
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "write_file|replace|run_shell_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .gemini/hooks/validate-preload.sh"
+          }
+        ]
+      }
+    ],
+    "AfterTool": [
+      {
+        "matcher": "write_file|replace",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .gemini/hooks/validate-governance.sh"
+          }
+        ]
+      }
+    ],
+    "AfterAgent": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .gemini/hooks/subagent-stop-wrapper.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+	expectedCodex := `{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|apply_patch|edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .codex/hooks/validate-preload.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "apply_patch|edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .codex/hooks/validate-governance.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+`
+	expectedCopilot := `{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/validate-preload.sh"
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/validate-governance.sh"
+      }
+    ],
+    "stop": [
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/subagent-stop-wrapper.sh"
+      }
+    ]
+  }
+}
+`
+
+	helpers := NewHelper()
+	cases := []struct {
+		name string
+		got  string
+		want string
+	}{
+		{name: "gemini", got: helpers.defaultGeminiSettings(), want: expectedGemini},
+		{name: "codex", got: helpers.defaultCodexHooks(), want: expectedCodex},
+		{name: "copilot", got: helpers.defaultCopilotHooks(), want: expectedCopilot},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.got != tc.want {
+				t.Fatalf("config %s divergente:\ngot:  %s\nwant: %s", tc.name, tc.got, tc.want)
+			}
+			var decoded map[string]any
+			if err := json.Unmarshal([]byte(tc.got), &decoded); err != nil {
+				t.Fatalf("config %s nao e JSON valido: %v", tc.name, err)
+			}
+			if strings.Contains(tc.got, `"match":`) || strings.Contains(tc.got, `"agentStop"`) {
+				t.Fatalf("config %s contem schema legado: %s", tc.name, tc.got)
+			}
+		})
+	}
+}
+
+func TestInstall_RefusesExternalSkillsSymlinkByDefault(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/project/.agents"] = true
+	ffs.Dirs["/source"] = true
+	ffs.Dirs["/external/skills"] = true
+	ffs.Links["/project/.agents/skills"] = "/external/skills"
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.0.0\ndescription: Review.\n---\n")
+
+	svc := setupTestService(ffs)
+	err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolClaude},
+		LinkMode:   skills.LinkCopy,
+	})
+	if err == nil {
+		t.Fatal("esperava erro para symlink externo em .agents/skills")
+	}
+	if !strings.Contains(err.Error(), "symlink para fora do projeto") {
+		t.Fatalf("erro nao explica symlink externo: %v", err)
+	}
+	if ffs.Exists("/external/skills/review/SKILL.md") {
+		t.Fatal("install escreveu em repositorio externo apesar do bloqueio")
+	}
+}
+
+func TestInstall_FollowsExternalSkillsSymlinkWhenAllowed(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/project/.agents"] = true
+	ffs.Dirs["/source"] = true
+	ffs.Dirs["/external/skills"] = true
+	ffs.Links["/project/.agents/skills"] = "/external/skills"
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.0.0\ndescription: Review.\n---\n")
+
+	svc := setupTestService(ffs)
+	err := svc.Execute(config.InstallOptions{
+		ProjectDir:             "/project",
+		SourceDir:              "/source",
+		Tools:                  []skills.Tool{skills.ToolClaude},
+		LinkMode:               skills.LinkCopy,
+		FollowExternalSymlinks: true,
+	})
+	if err != nil {
+		t.Fatalf("install deveria seguir symlink externo quando permitido: %v", err)
+	}
+	if !ffs.Exists("/external/skills/review/SKILL.md") {
+		t.Fatal("skill nao foi instalada no destino externo permitido")
 	}
 }
 
@@ -1259,6 +1462,76 @@ func TestVerify_AllCurrent(t *testing.T) {
 	}
 }
 
+func TestVerify_MatchesUpgradeCheckMissingSourceSet(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/project/.agents/skills"] = true
+	ffs.Files["/source/.agents/skills/source-only/SKILL.md"] = []byte("---\nname: source-only\nversion: 1.0.0\ndescription: Source only.\n---\n")
+
+	svc := setupTestService(ffs)
+	items, err := svc.Verify(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolClaude},
+	})
+	if err != nil {
+		t.Fatalf("Verify falhou: %v", err)
+	}
+
+	foundMissing := false
+	for _, item := range items {
+		if item.Skill == "source-only" && item.State == VerifyStateMissing {
+			foundMissing = true
+		}
+	}
+	if !foundMissing {
+		t.Fatalf("Verify nao reportou skill ausente presente na fonte: %#v", items)
+	}
+
+	printer := output.New(false)
+	upgradeSvc := upgrade.NewService(ffs, printer, manifest.NewStore(ffs), adapters.NewGenerator(ffs, printer), contextgen.NewGenerator(ffs, printer))
+	err = upgradeSvc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		CheckOnly:  true,
+	})
+	if err == nil || !strings.Contains(err.Error(), "ausentes") {
+		t.Fatalf("upgrade --check deveria reportar a mesma skill ausente, err=%v", err)
+	}
+}
+
+// TestVerify_IgnoresSourceDirWithoutSkillMD garante reconcilia com upgrade:
+// diretorios auxiliares na fonte (ex.: tests/ sem SKILL.md) nao sao contados
+// como skill por verify, evitando divergencia com upgrade --check.
+func TestVerify_IgnoresSourceDirWithoutSkillMD(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/project/.agents/skills"] = true
+	// Skill real (com SKILL.md) ausente no projeto -> deve ser missing.
+	ffs.Files["/source/.agents/skills/real-skill/SKILL.md"] = []byte("---\nname: real-skill\nversion: 1.0.0\ndescription: Real.\n---\n")
+	// Diretorio auxiliar sem SKILL.md -> NAO deve aparecer como skill.
+	ffs.Dirs["/source/.agents/skills/tests"] = true
+	ffs.Files["/source/.agents/skills/tests/conftest.py"] = []byte("# pytest\n")
+
+	svc := setupTestService(ffs)
+	items, err := svc.Verify(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolClaude},
+	})
+	if err != nil {
+		t.Fatalf("Verify falhou: %v", err)
+	}
+
+	for _, item := range items {
+		if item.Skill == "tests" {
+			t.Fatalf("Verify contou diretorio sem SKILL.md como skill: %#v", item)
+		}
+	}
+}
+
 // TestVerify_Missing verifica que Verify retorna missing para skills listadas mas nao instaladas.
 // Usa "review" (skill canonica) que esta na fonte mas nao no projeto.
 func TestVerify_Missing(t *testing.T) {
@@ -2133,7 +2406,7 @@ func TestInstall_Gemini_NativeHooks(t *testing.T) {
 }
 
 // TestInstall_Copilot_NativeHooks verifica que install do Copilot gera governance.json
-// no formato nativo 2026 (version:1, preToolUse/agentStop).
+// no formato nativo 2026 (version:1, hooks.preToolUse/postToolUse/stop).
 func TestInstall_Copilot_NativeHooks(t *testing.T) {
 	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
@@ -2155,7 +2428,7 @@ func TestInstall_Copilot_NativeHooks(t *testing.T) {
 		t.Fatalf(".github/hooks/governance.json nao criado: %v", err)
 	}
 	content := string(data)
-	for _, want := range []string{`"version": 1`, "preToolUse", "agentStop", "validate-preload.sh"} {
+	for _, want := range []string{`"version": 1`, `"hooks"`, "preToolUse", "stop", "validate-preload.sh"} {
 		if !strings.Contains(content, want) {
 			t.Errorf(".github/hooks/governance.json sem %q", want)
 		}

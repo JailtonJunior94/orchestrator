@@ -29,23 +29,25 @@ const (
 
 // InstallOptions agrupa opcoes para o comando install.
 type InstallOptions struct {
-	ProjectDir   string
-	SourceDir    string
-	Tools        []skills.Tool // OPCIONAL: vazio => auto-detect via AgentDetector (ADR-019)
-	Langs        []skills.Lang
-	LinkMode     skills.LinkMode
-	Scope        InstallScope // novo (ADR-019): "project" (default) ou "global"
-	DryRun       bool
-	GenerateCtx  bool
-	CodexProfile string
-	FocusPaths   []string
+	ProjectDir             string
+	SourceDir              string
+	Tools                  []skills.Tool // OPCIONAL: vazio => auto-detect via AgentDetector (ADR-019)
+	Langs                  []skills.Lang
+	LinkMode               skills.LinkMode
+	Scope                  InstallScope // novo (ADR-019): "project" (default) ou "global"
+	DryRun                 bool
+	GenerateCtx            bool
+	CodexProfile           string
+	FocusPaths             []string
+	FollowExternalSymlinks bool
 }
 
 // UpgradeOptions agrupa opcoes para o comando upgrade.
 type UpgradeOptions struct {
-	ProjectDir   string
-	SourceDir    string
-	CheckOnly    bool
-	Langs        []skills.Lang
-	CodexProfile string
+	ProjectDir             string
+	SourceDir              string
+	CheckOnly              bool
+	Langs                  []skills.Lang
+	CodexProfile           string
+	FollowExternalSymlinks bool
 }

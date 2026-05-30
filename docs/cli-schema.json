@@ -245,6 +245,12 @@
             "type": "string",
             "required": false,
             "description": "Caminhos de foco para contexto de monorepo"
+          },
+          "follow-external-symlinks": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Permite escrever em .agents/skills quando symlink aponta para fora do projeto"
           }
         }
       },
@@ -280,6 +286,12 @@
             "type": "string",
             "required": false,
             "description": "Git ref (branch, tag ou commit) para resolver pacote remoto"
+          },
+          "follow-external-symlinks": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Permite escrever em .agents/skills quando symlink aponta para fora do projeto"
           }
         }
       },

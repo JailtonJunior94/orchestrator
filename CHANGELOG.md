@@ -65,9 +65,18 @@
 ### Correções
 - **runtime/mcpserver:** sincroniza 6 goroutines de teste via canal de done, eliminando data race detectado por `go test -race`
 - **integration/token-budget:** rebaseline consciente dos sentinelas de orçamento da skill `go-implementation` após crescimento legítimo de conteúdo (preserva o conteúdo da skill)
+- **production-proof:** corrige os 14 achados da validação cross-tool na causa raiz — robustez production-ready sem falso positivo:
+  - **install/verify↔upgrade:** `sourceSkills()` passa a exigir `SKILL.md` para contar um diretório como skill, reconciliando `verify` e `upgrade` (diretórios auxiliares como `tests/` deixam de ser contados)
+  - **install/upgrade:** `upgrade` instala skills ausentes em vez de apenas reportar; `detect` reconhece monorepo via `--focus-paths`
+  - **fs/symlink:** novo `symlink_guard.go` recusa escrita através de symlink externo por padrão (proteção contra travessia para repositórios fora do alvo)
+  - **lint:** isenta versão de skills de terceiros da verificação de versão própria
+  - **specdrift:** `check-spec-drift` aceita caminho de pasta de spec e limpa marcadores `PENDING-RUN`; `create-tasks` cobre RFs sem tarefa
+  - **runtime:** mensagem de `permission_denied` aponta para `--access-mode full`; help de `--runtime` inclui `gemini`
+- **skills(bubbletea):** remove 100% a skill `bubbletea` dos caminhos operacionais (diretório, `skills-lock.json`, referências em `README.md`/`CLAUDE.md`)
 
 ### Testes
 - **config:** migra testes para `testify/suite` table-driven (`config_types_test.go`, `runtime_suite_test.go`); remove `config_test.go` e `runtime_test.go`
+- **production-proof:** adiciona testes de regressão para os achados corrigidos (`install_test.go`, `upgrade_test.go`, `lint_test.go`, `detect_test.go`, `specdrift/sync_test.go`, `spec_drift_test.go`, `fs/fake_test.go`)
 
 ### Infraestrutura
 - **mocks:** adiciona `mockery.yml`, `scripts/check-mocks.sh` e `scripts/normalize-mocks.sh`, além dos mocks gerados por pacote em `*/mocks/`

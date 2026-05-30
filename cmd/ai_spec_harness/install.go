@@ -47,6 +47,7 @@ Exemplos:
 	cmd.Flags().String("codex-profile", "full", "Perfil de skills para Codex: full ou lean")
 	cmd.Flags().String("focus-paths", "", "Prioriza deteccao de toolchain proximo desses arquivos, separados por virgula (util em monorepos). Alternativa: env FOCUS_PATHS")
 	cmd.Flags().Bool("global", false, "Instala globalmente em ~/.aispec (ADR-019 RF-07)")
+	cmd.Flags().Bool("follow-external-symlinks", false, "Permite escrever em .agents/skills quando symlink aponta para fora do projeto")
 	return cmd
 }
 
@@ -62,6 +63,7 @@ func (c *installCommand) run(cmd *cobra.Command, args []string) error {
 	installCodexProfile, _ := cmd.Flags().GetString("codex-profile")
 	installFocusPaths, _ := cmd.Flags().GetString("focus-paths")
 	installGlobal, _ := cmd.Flags().GetBool("global")
+	installFollowExternalSymlinks, _ := cmd.Flags().GetBool("follow-external-symlinks")
 
 	if installRef != "" && installSource != "" {
 		return fmt.Errorf("--ref e --source sao mutuamente exclusivos")
@@ -117,15 +119,16 @@ func (c *installCommand) run(cmd *cobra.Command, args []string) error {
 	svc := install.NewService(fsys, printer, mfst, adpt, ctxg)
 
 	return svc.Execute(config.InstallOptions{
-		ProjectDir:   projectDir,
-		SourceDir:    sourceDir,
-		Tools:        tools,
-		Langs:        langs,
-		LinkMode:     linkMode,
-		DryRun:       installDryRun,
-		GenerateCtx:  !installNoCtx,
-		CodexProfile: installCodexProfile,
-		FocusPaths:   newFlagHelper().parseFocusPaths(installFocusPaths),
-		Scope:        scope,
+		ProjectDir:             projectDir,
+		SourceDir:              sourceDir,
+		Tools:                  tools,
+		Langs:                  langs,
+		LinkMode:               linkMode,
+		DryRun:                 installDryRun,
+		GenerateCtx:            !installNoCtx,
+		CodexProfile:           installCodexProfile,
+		FocusPaths:             newFlagHelper().parseFocusPaths(installFocusPaths),
+		Scope:                  scope,
+		FollowExternalSymlinks: installFollowExternalSymlinks,
 	})
 }
