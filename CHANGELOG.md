@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.25.0 (2026-05-30)
+
+### Features
+- **skills:** reforça node/python/dotnet com regras [HARD], lazy-loading e arquitetura (v1.2.0) (03a1560)
+
+### Documentation
+- **changelog:** registra reforço das skills node/python/dotnet e remove prompts obsoletos (c998e75)
+
 ## 0.24.2 (2026-05-30)
 
 ### Bug Fixes
