@@ -1,6 +1,6 @@
 ---
 name: dotnet-csharp-implementation
-version: 1.0.0
+version: 1.1.0
 description: >
   Implementa alteracoes em codigo .NET/C# usando governanca base, arquitetura, estilo,
   testes e padroes recorrentes. Use quando a tarefa exigir adicionar, corrigir, refatorar

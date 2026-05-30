@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.24.0 (2026-05-30)
+
+### Features
+- **skills:** adiciona skill dotnet-csharp-implementation (efc8127)
+
+### Documentation
+- **prompts:** remove prompts compozy obsoletos e adiciona skills de implementacao (444936f)
+
 ## [Unreleased]
 
 ### Funcionalidades
