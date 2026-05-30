@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.24.1 (2026-05-30)
+
+### Refactoring
+- **go:** aplica Regras Estritas 0–7 ao código (R1, R5.2, R5.11, R5.16, R5.26) (900d8af)
+
+### Documentation
+- **go-implementation:** completa integração das Regras Estritas 0–7 (v1.2.0) (e09c09f)
+
 ## 0.24.0 (2026-05-30)
 
 ### Features
