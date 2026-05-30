@@ -1,5 +1,11 @@
 # API (HTTP) Python
 
+<!-- TL;DR
+Diretrizes para APIs HTTP em Python com handlers finos, contratos tipados, validação de DTOs, middlewares transversais e paginação segura.
+Keywords: api, http, handlers, dto, validação, middleware, paginação
+Load complete when: tarefa envolve handlers HTTP, middlewares, schemas de request/response, validação de transporte ou serialização em Python.
+-->
+
 ## Objetivo
 Manter handlers finos, contratos explicitos e separacao clara entre transporte e logica.
 

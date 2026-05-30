@@ -1,5 +1,11 @@
 # Convencoes Node/TypeScript
 
+<!-- TL;DR
+Convenções Node/TypeScript para preservar estilo existente, tipagem estrita, organização de imports, estrutura de projeto e padrão ESM/CJS.
+Keywords: convenções, typescript, imports, esm, cjs, estrutura, tipagem
+Load complete when: tarefa envolve organização de módulos, estilo de código, imports, estrutura de projeto ou escolhas de tipagem em Node/TypeScript.
+-->
+
 ## Objetivo
 Preservar consistencia, fronteiras e legibilidade em projetos Node/TypeScript.
 

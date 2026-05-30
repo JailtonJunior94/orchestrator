@@ -1,5 +1,11 @@
 # Padroes Node/TypeScript
 
+<!-- TL;DR
+Padrões Node/TypeScript para DI, repository, factory functions, strategy, organização modular e composição sem abstração prematura.
+Keywords: padrões, di, repository, factory, strategy, módulos, composição
+Load complete when: tarefa envolve escolha ou revisão de patterns, strategy, composição versus herança ou organização modular não coberta pelas regras inline do SKILL.md.
+-->
+
 ## Objetivo
 Orientar a escolha de padroes recorrentes, evitando abstracao prematura e complexidade desnecessaria.
 

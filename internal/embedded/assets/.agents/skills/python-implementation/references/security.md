@@ -1,5 +1,11 @@
 # Segurança (Python)
 
+<!-- TL;DR
+Diretrizes de segurança Python para validação de input, autenticação, autorização, segredos, CORS, rate limiting, SQL seguro e dependências.
+Keywords: segurança, validação, autenticação, autorização, segredos, cors, sql
+Load complete when: tarefa envolve input externo, autenticação, autorização, segredos, rate limiting, CORS, SQL com dados do usuário ou auditoria de dependências em Python.
+-->
+
 ## Objetivo
 Proteger o sistema contra vulnerabilidades comuns em backends Python.
 

@@ -1,5 +1,11 @@
 # Observabilidade (Python)
 
+<!-- TL;DR
+Diretrizes de observabilidade Python para logging estruturado, tracing distribuído, métricas com cardinalidade controlada e health checks de liveness/readiness.
+Keywords: observabilidade, logging, tracing, métricas, healthcheck, opentelemetry, readiness
+Load complete when: tarefa envolve logs, traces, métricas, health checks, propagação de contexto ou diagnóstico operacional em Python.
+-->
+
 ## Objetivo
 Garantir rastreabilidade, diagnóstico e visibilidade operacional em produção.
 

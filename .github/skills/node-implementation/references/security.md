@@ -1,5 +1,11 @@
 # Segurança (Node/TypeScript)
 
+<!-- TL;DR
+Diretrizes de segurança Node/TypeScript para validação de input, autenticação, autorização, segredos, HTTP seguro, SQL parametrizado e dependências.
+Keywords: segurança, validação, autenticação, autorização, segredos, cors, sql
+Load complete when: tarefa envolve input externo, authn/authz, segredos, CORS, rate limiting, SQL injection, dependências ou respostas de erro seguras em Node/TypeScript.
+-->
+
 ## Objetivo
 Proteger o sistema contra vulnerabilidades comuns em backends Node/TypeScript.
 

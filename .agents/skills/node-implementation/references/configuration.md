@@ -1,5 +1,11 @@
 # Configuracao
 
+<!-- TL;DR
+Diretrizes de configuração Node/TypeScript: carregar envs uma vez, validar valores, tipar configuração e injetar dependências sem acoplamento global.
+Keywords: configuração, env, zod, validação, segredo, inicialização, dependência
+Load complete when: tarefa envolve variáveis de ambiente, validação de configuração, inicialização de dependências, defaults ou segredos em Node/TypeScript.
+-->
+
 ## Objetivo
 Carregar configuracao de forma explicita, validada e sem acoplamento global.
 

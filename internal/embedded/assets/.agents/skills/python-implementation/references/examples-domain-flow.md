@@ -1,5 +1,11 @@
 # Exemplos: Fluxo End-to-End Python
 
+<!-- TL;DR
+Exemplo end-to-end em Python conectando erros de domínio, entidade, Protocol de repository, service assíncrono, handler FastAPI e testes unitários.
+Keywords: exemplo, domínio, entidade, repository, service, fastapi, testes
+Load complete when: tarefa precisa de um esqueleto concreto de fluxo Python completo entre domínio, aplicação, transporte e teste.
+-->
+
 ## Erros de domínio
 
 ```python

@@ -1,5 +1,11 @@
 # Exemplos: Infraestrutura
 
+<!-- TL;DR
+Exemplos de infraestrutura Python para graceful shutdown com FastAPI/uvicorn, paginação cursor-based e versionamento de API por path.
+Keywords: infraestrutura, shutdown, fastapi, uvicorn, paginação, cursor, versionamento
+Load complete when: tarefa precisa de exemplos concretos de ciclo de vida, paginação ou roteamento/versionamento de API em Python.
+-->
+
 ## Graceful Shutdown (FastAPI + uvicorn)
 ```python
 # src/main.py

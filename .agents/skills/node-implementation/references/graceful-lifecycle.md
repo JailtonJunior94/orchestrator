@@ -1,5 +1,11 @@
 # Graceful Lifecycle Node.js
 
+<!-- TL;DR
+Diretrizes de lifecycle Node.js para shutdown coordenado, signal handling, drenagem de servidor, fechamento de dependências, workers, streams e keep-alive.
+Keywords: lifecycle, shutdown, sigterm, sigint, drain, workers, streams
+Load complete when: tarefa envolve encerramento gracioso, signals, server.close, flush de logs, fechamento de conexões, workers ou streams em Node.js.
+-->
+
 ## Objetivo
 Garantir que o processo encerre de forma ordenada: drena conexões, fecha dependências e sai com código correto.
 

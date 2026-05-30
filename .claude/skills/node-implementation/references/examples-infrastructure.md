@@ -1,5 +1,11 @@
 # Exemplos: Infraestrutura
 
+<!-- TL;DR
+Exemplos de infraestrutura Node/TypeScript para shutdown gracioso em Express, paginação cursor-based e versionamento de API por path.
+Keywords: exemplo, infraestrutura, shutdown, express, paginação, cursor, versionamento
+Load complete when: tarefa precisa de exemplo concreto de graceful shutdown, paginação cursor-based ou versionamento de rotas em Node/TypeScript.
+-->
+
 ## Graceful Shutdown (Express)
 ```typescript
 // src/main.ts

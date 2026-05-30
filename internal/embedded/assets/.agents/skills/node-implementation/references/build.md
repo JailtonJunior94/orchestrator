@@ -1,5 +1,11 @@
 # Build e Packaging Node/TypeScript
 
+<!-- TL;DR
+Diretrizes de build e packaging Node/TypeScript: Dockerfile multi-stage, lockfile/package manager, compilação TypeScript e pipeline CI reprodutível.
+Keywords: build, dockerfile, packaging, lockfile, ci, typescript, monorepo
+Load complete when: tarefa envolve Dockerfile, package manager, pipeline CI, bundling, compilação TypeScript ou empacotamento Node/TypeScript.
+-->
+
 ## Objetivo
 Orientar criacao de Dockerfiles, pipelines de build e empacotamento de projetos Node.js.
 

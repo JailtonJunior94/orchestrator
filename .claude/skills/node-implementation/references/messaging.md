@@ -1,5 +1,11 @@
 # Messaging e Eventos (Node/TypeScript)
 
+<!-- TL;DR
+Diretrizes de messaging Node/TypeScript para produção e consumo de eventos com schema, idempotência, retries, DLQ, ordering e observabilidade.
+Keywords: messaging, eventos, filas, idempotência, retry, dlq, tracing
+Load complete when: tarefa envolve publicar ou consumir mensagens, eventos, filas, tópicos, dead-letter, offsets, acknowledgements ou idempotência de consumidores em Node/TypeScript.
+-->
+
 ## Objetivo
 Manter comunicação assíncrona confiável, rastreável e desacoplada do domínio.
 

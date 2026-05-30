@@ -1,5 +1,11 @@
 # Exemplos: Testes e Validacao
 
+<!-- TL;DR
+Exemplos de testes Node/TypeScript com factory de mocks, parametrized tests em Vitest, validação de DTO com zod e asserção async.
+Keywords: exemplo, teste, vitest, mock, parametrizado, zod, async
+Load complete when: tarefa precisa de exemplos concretos de mocks, testes parametrizados, validação de DTOs ou asserções assíncronas em Node/TypeScript.
+-->
+
 ## Factory de mock para fronteira
 ```typescript
 const makeRepo = () => ({

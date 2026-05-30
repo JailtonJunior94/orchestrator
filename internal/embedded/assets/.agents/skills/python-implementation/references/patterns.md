@@ -1,5 +1,11 @@
 # Padroes Python
 
+<!-- TL;DR
+Diretrizes de padrões Python para DI, repository, dataclasses/attrs, strategy, organização de módulos e composição sobre herança.
+Keywords: padrões, di, repository, dataclass, strategy, módulos, composição
+Load complete when: tarefa envolve strategy, composição versus herança ou organização modular não coberta pelos padrões inline da skill Python.
+-->
+
 ## Objetivo
 Orientar a escolha de padroes recorrentes, evitando abstracao prematura e complexidade desnecessaria.
 

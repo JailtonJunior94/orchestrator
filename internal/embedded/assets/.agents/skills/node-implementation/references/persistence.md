@@ -1,5 +1,11 @@
 # Persistência (Node/TypeScript)
 
+<!-- TL;DR
+Diretrizes de persistência Node/TypeScript para repositories, transações, pool de conexões, migrations e queries tipadas/parametrizadas.
+Keywords: persistência, repository, transação, conexão, migration, query, orm
+Load complete when: tarefa envolve acesso a dados, repositories, transações, migrations, queries, ORM, pool ou fechamento de conexões em Node/TypeScript.
+-->
+
 ## Objetivo
 Manter acesso a dados explícito, testável e isolado do domínio.
 

@@ -1,5 +1,11 @@
 # API (HTTP/GraphQL)
 
+<!-- TL;DR
+Diretrizes para APIs Node/TypeScript: handlers finos, middlewares transversais, DTOs validados, versionamento e paginação sem vazar domínio ou detalhes internos.
+Keywords: api, handler, middleware, dto, validação, versionamento, paginação
+Load complete when: tarefa envolve handlers HTTP ou GraphQL, middlewares, DTOs, validação de request, paginação ou versionamento de API em Node/TypeScript.
+-->
+
 ## Objetivo
 Manter handlers finos, contratos explicitos e separacao clara entre transporte e logica.
 

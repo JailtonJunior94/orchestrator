@@ -1,5 +1,11 @@
 # Convencoes Python
 
+<!-- TL;DR
+Convenções Python para consistência de projeto, PEP 8, type hints, organização de imports, layout de módulos e uso seguro de tipagem moderna.
+Keywords: convenções, pep8, tipagem, imports, módulos, layout, python
+Load complete when: tarefa envolve estrutura de projeto, organização de módulos, padrões de importação, type hints ou convenções gerais em Python.
+-->
+
 ## Objetivo
 Preservar consistencia, fronteiras e legibilidade em projetos Python.
 

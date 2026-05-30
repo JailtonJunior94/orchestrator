@@ -1,5 +1,11 @@
 # Messaging e Eventos (Python)
 
+<!-- TL;DR
+Diretrizes de messaging Python para produção e consumo confiáveis, schemas explícitos, idempotência, retry, DLQ, ordenação e observabilidade de eventos.
+Keywords: messaging, eventos, filas, idempotência, retry, dlq, tracing
+Load complete when: tarefa envolve publicar ou consumir mensagens, eventos, filas, tópicos, retries, dead-letter queues ou idempotência de consumidores em Python.
+-->
+
 ## Objetivo
 Manter comunicação assíncrona confiável, rastreável e desacoplada do domínio.
 

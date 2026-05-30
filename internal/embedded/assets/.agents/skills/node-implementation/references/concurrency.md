@@ -1,5 +1,11 @@
 # Concorrencia Node/TypeScript
 
+<!-- TL;DR
+Diretrizes de concorrência Node/TypeScript: event loop, async/await, controle de Promises, worker threads e streams com backpressure.
+Keywords: concorrência, promises, async, event-loop, workers, streams, backpressure
+Load complete when: tarefa envolve Promises, controle de concorrência, paralelismo, worker threads, streams ou risco de bloquear o event loop em Node.js.
+-->
+
 ## Objetivo
 Orientar uso correto de assincronia, paralelismo e controle de fluxo em Node.js.
 

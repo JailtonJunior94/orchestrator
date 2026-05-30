@@ -1,5 +1,11 @@
 # Exemplos: Fluxo End-to-End Node/TypeScript
 
+<!-- TL;DR
+Exemplo end-to-end Node/TypeScript cobrindo erros de domínio, entidade, repository no consumidor, service, handler HTTP e teste unitário.
+Keywords: exemplo, domínio, entidade, repository, service, handler, teste
+Load complete when: tarefa precisa de esqueleto concreto de fluxo completo entre domínio, aplicação, API e teste em Node/TypeScript.
+-->
+
 ## Erros de domínio
 
 ```typescript

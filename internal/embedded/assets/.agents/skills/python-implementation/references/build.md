@@ -1,5 +1,11 @@
 # Build e Packaging Python
 
+<!-- TL;DR
+Diretrizes de build e packaging em Python: Docker multi-stage, .dockerignore, dependências com lockfile, layout de pacote e gates de CI.
+Keywords: build, packaging, docker, dependências, lockfile, ci, distribuição
+Load complete when: tarefa envolve Dockerfile, pipeline de CI, empacotamento, gerenciamento de dependências ou distribuição de projeto Python.
+-->
+
 ## Objetivo
 Orientar criacao de Dockerfiles, pipelines de build e empacotamento de projetos Python.
 

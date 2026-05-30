@@ -1,5 +1,11 @@
 # Resiliencia Node/TypeScript
 
+<!-- TL;DR
+Diretrizes de resiliência Node/TypeScript para timeouts, retries com backoff, circuit breakers, fallbacks e health checks.
+Keywords: resiliência, timeout, retry, backoff, circuit-breaker, fallback, healthcheck
+Load complete when: tarefa envolve chamadas externas, timeouts, retries, circuit breakers, fallbacks, health checks ou degradação controlada em Node.js.
+-->
+
 ## Objetivo
 Orientar implementacao de retries, circuit breakers, timeouts e fallbacks em servicos Node.js.
 

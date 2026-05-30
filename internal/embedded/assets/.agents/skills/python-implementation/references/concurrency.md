@@ -1,5 +1,11 @@
 # Concorrencia Python
 
+<!-- TL;DR
+Diretrizes de concorrência em Python para asyncio, TaskGroup, semáforos, threading, multiprocessing e padrões producer-consumer ou fan-out/fan-in.
+Keywords: concorrência, asyncio, taskgroup, semaphore, threading, multiprocessing, filas
+Load complete when: tarefa envolve corrotinas, paralelismo, controle de concorrência, threads, processos ou shutdown de tarefas concorrentes em Python.
+-->
+
 ## Objetivo
 Orientar uso correto de asyncio, threading, multiprocessing e controle de fluxo concorrente em Python.
 

@@ -1,5 +1,11 @@
 # Testes Node/TypeScript
 
+<!-- TL;DR
+Diretrizes de testes Node/TypeScript: unit tests determinísticos com mocks de fronteiras, integração isolada com testcontainers e scripts separados.
+Keywords: teste, unitário, integração, vitest, jest, mock, testcontainers
+Load complete when: tarefa envolve criação ou revisão de testes unitários, testes de integração, mocks, factories ou cobertura de regressão em Node/TypeScript.
+-->
+
 ## Objetivo
 Garantir correcao, prevenir regressao e documentar comportamento com custo proporcional ao risco.
 

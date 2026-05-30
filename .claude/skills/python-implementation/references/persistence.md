@@ -1,5 +1,11 @@
 # Persistência (Python)
 
+<!-- TL;DR
+Diretrizes de persistência Python para repositories, transações no use case, connection management, migrations versionadas e queries parametrizadas.
+Keywords: persistência, repository, transações, conexões, migrations, queries, sqlalchemy
+Load complete when: tarefa envolve repositories, transações, migrations, queries, gerenciamento de conexão ou isolamento entre domínio e ORM em Python.
+-->
+
 ## Objetivo
 Manter acesso a dados explícito, testável e isolado do domínio.
 

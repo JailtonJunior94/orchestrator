@@ -1,5 +1,11 @@
 # Exemplos: Testes e Validacao
 
+<!-- TL;DR
+Exemplos de testes Python com pytest fixtures, parametrize, validação de DTOs Pydantic e asserções de erro em código assíncrono.
+Keywords: exemplos, testes, pytest, fixtures, parametrize, pydantic, async
+Load complete when: tarefa precisa de exemplos práticos de fixtures, parametrização, validação de schemas ou asserções async em testes Python.
+-->
+
 ## Fixture com factory
 ```python
 # tests/conftest.py

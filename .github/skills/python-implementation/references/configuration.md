@@ -1,5 +1,11 @@
 # Configuracao
 
+<!-- TL;DR
+Diretrizes para configuração Python explícita, tipada e validada na inicialização, com variáveis de ambiente, pydantic-settings e injeção sem estado global.
+Keywords: configuração, env, pydantic-settings, validação, inicialização, segredos, defaults
+Load complete when: tarefa envolve carregamento de configuração, variáveis de ambiente, validação de settings, defaults ou inicialização de dependências em Python.
+-->
+
 ## Objetivo
 Carregar configuracao de forma explicita, validada e sem acoplamento global.
 

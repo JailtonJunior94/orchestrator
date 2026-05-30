@@ -1,5 +1,11 @@
 # Testes Python
 
+<!-- TL;DR
+Diretrizes de testes Python com pytest/unittest, fixtures, mocks de fronteiras externas, AsyncMock e testes de integração marcados com testcontainers.
+Keywords: testes, pytest, fixtures, mocks, asyncmock, integração, testcontainers
+Load complete when: tarefa envolve criação ou revisão de testes unitários, fixtures, mocks, corrotinas testadas ou testes de integração em Python.
+-->
+
 ## Objetivo
 Garantir correcao, prevenir regressao e documentar comportamento com custo proporcional ao risco.
 

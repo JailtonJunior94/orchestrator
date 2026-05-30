@@ -1,5 +1,11 @@
 # Resiliencia Python
 
+<!-- TL;DR
+Diretrizes de resiliência Python para timeouts explícitos, retries com backoff e jitter, circuit breakers, fallbacks e health checks.
+Keywords: resiliência, timeout, retry, backoff, circuit-breaker, fallback, healthcheck
+Load complete when: tarefa envolve chamadas externas, retries, circuit breakers, timeouts, fallbacks ou health checks de prontidão em Python.
+-->
+
 ## Objetivo
 Orientar implementacao de retries, circuit breakers, timeouts e fallbacks em servicos Python.
 

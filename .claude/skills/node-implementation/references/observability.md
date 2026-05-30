@@ -1,5 +1,11 @@
 # Observabilidade (Node/TypeScript)
 
+<!-- TL;DR
+Diretrizes de observabilidade Node/TypeScript para logging estruturado, tracing OpenTelemetry, métricas com cardinalidade controlada e health checks.
+Keywords: observabilidade, logging, tracing, opentelemetry, métricas, healthcheck, pino
+Load complete when: tarefa envolve logs, traces, métricas, propagação de contexto, health checks ou diagnóstico operacional em Node/TypeScript.
+-->
+
 ## Objetivo
 Garantir rastreabilidade, diagnóstico e visibilidade operacional em produção.
 

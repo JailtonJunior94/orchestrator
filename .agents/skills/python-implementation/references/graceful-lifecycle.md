@@ -1,5 +1,11 @@
 # Graceful Lifecycle
 
+<!-- TL;DR
+Diretrizes de lifecycle gracioso em Python para inicialização ordenada, readiness, signal handling, cancelamento de tasks e shutdown de dependências.
+Keywords: lifecycle, startup, shutdown, sinais, readiness, cancelamento, workers
+Load complete when: tarefa envolve inicialização, SIGTERM/SIGINT, graceful shutdown, drain de workers, cleanup de tasks ou encerramento de dependências em Python.
+-->
+
 ## Objetivo
 Unificar padroes de inicializacao ordenada e encerramento gracioso para servidores ASGI/WSGI, workers e CLIs Python.
 
