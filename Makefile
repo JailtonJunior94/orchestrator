@@ -38,7 +38,8 @@ clean:
 
 coverage:
 	go test -coverprofile=coverage.out ./...
-	go tool cover -func=coverage.out
+	grep -v '/mocks/' coverage.out > coverage_filtered.out
+	go tool cover -func=coverage_filtered.out
 
 coverage-packages:
 	bash scripts/check-package-coverage.sh 70

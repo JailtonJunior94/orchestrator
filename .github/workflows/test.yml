@@ -32,12 +32,14 @@ jobs:
         run: go test -count=1 ./internal/parity/...
 
       - name: Coverage report
-        run: go tool cover -func=coverage.out
+        run: |
+          grep -v '/mocks/' coverage.out > coverage_filtered.out
+          go tool cover -func=coverage_filtered.out
 
       - name: Coverage threshold
         run: |
-          COVERAGE=$(go tool cover -func=coverage.out | grep '^total:' | awk '{print $3}' | tr -d '%')
-          echo "Cobertura total: ${COVERAGE}%"
+          COVERAGE=$(go tool cover -func=coverage_filtered.out | grep '^total:' | awk '{print $3}' | tr -d '%')
+          echo "Cobertura total (excluindo mocks gerados): ${COVERAGE}%"
           if [ "$(echo "$COVERAGE < 75" | bc -l)" = "1" ]; then
             echo "Cobertura ${COVERAGE}% abaixo do threshold minimo de 75%"
             exit 1
