@@ -196,9 +196,13 @@ AI_VALIDATE_GIT_HISTORY=1 bash "$HOOKS_DIR/post-execute-task.sh" "revert" "1.0" 
 assert_exit "F35 com SHA fake = exit 1" 1 "$rc"
 assert_stderr_contains "FAIL F35 detectada" "FAIL F35: DiffSHA deadbeef" "$stderr"
 
-# Sem opt-in deve passar
+# Default-on (RF-04): sem env explicito F35 ainda dispara no SHA fake
 bash "$HOOKS_DIR/post-execute-task.sh" "revert" "1.0" "$yaml" 2>"$stderr"; rc=$?
-assert_exit "F35 sem opt-in = exit 0 (skip)" 0 "$rc"
+assert_exit "F35 default-on (sem env) = exit 1" 1 "$rc"
+
+# Opt-out explicito (AI_VALIDATE_GIT_HISTORY=0) deve pular F35 e passar
+AI_VALIDATE_GIT_HISTORY=0 bash "$HOOKS_DIR/post-execute-task.sh" "revert" "1.0" "$yaml" 2>"$stderr"; rc=$?
+assert_exit "F35 opt-out (=0) = exit 0 (skip)" 0 "$rc"
 rm -f "$stderr" "$yaml"
 
 # ============================================================================

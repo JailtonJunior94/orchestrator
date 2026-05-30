@@ -133,6 +133,38 @@ if [[ -d "$agents_hooks" ]]; then
   done
 fi
 
+# Sincroniza validadores de evidência canônicos (.agents/scripts/) para os mirrors:
+#   - .claude/scripts/ (mirror por-tool consumido por Claude/Copilot)
+#   - internal/embedded/assets/.claude/scripts/ (bundle distribuído por `ai-spec install`)
+# Fonte de verdade: .agents/scripts/ (tool-neutro, portátil). Resolução em cascata pelas skills:
+# .agents/scripts/ -> .claude/scripts/ -> scripts/. Gate de drift: scripts/check-scripts-sync.sh.
+agents_scripts="$repo_root/.agents/scripts"
+declare -a evidence_validators=(
+  "validate-task-evidence.sh"
+  "validate-bugfix-evidence.sh"
+  "validate-refactor-evidence.sh"
+  "validate-review-evidence.sh"
+)
+declare -a script_mirrors=(
+  "$repo_root/.claude/scripts"
+  "$repo_root/internal/embedded/assets/.claude/scripts"
+  "$repo_root/internal/embedded/assets/.agents/scripts"
+)
+if [[ -d "$agents_scripts" ]]; then
+  chmod -R u+w "$agents_scripts" 2>/dev/null || true
+  for mirror in "${script_mirrors[@]}"; do
+    mkdir -p "$mirror"
+    chmod -R u+w "$mirror" 2>/dev/null || true
+    for validator in "${evidence_validators[@]}"; do
+      src="$agents_scripts/$validator"
+      [[ -f "$src" ]] || continue
+      cp -p "$src" "$mirror/$validator"
+      chmod +x "$mirror/$validator" 2>/dev/null || true
+    done
+    echo "synced: evidence validators -> $mirror"
+  done
+fi
+
 # NÃO reaplicar read-only: arquivos/diretórios read-only quebram operações do git
 # (`unable to unlink old ...`, checkout, pull, restore). A imutabilidade da fonte é
 # garantida pelo gate `check-skills-sync.sh`, não por permissão de filesystem.

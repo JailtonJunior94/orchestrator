@@ -1,0 +1,232 @@
+#!/usr/bin/env bash
+# test-validators.sh
+# Suite de fixtures para o gate anti-falso-positivo de validate-task-evidence.sh (RF-01..RF-03).
+# Cobre os casos a/b/c/d da techspec "Abordagem de Testes":
+#   a) critério de aceite não comprovado -> exit 1
+#   b) todos os critérios comprovados -> exit 0
+#   c) "Testes: pass" sem comando de teste -> exit 1
+#   d) task legada sem seção de critérios -> exit 0 (aviso não-fatal)
+#
+# Uso: bash scripts/test-validators.sh
+# Exit 0 = todos passaram; 1 = algum falhou.
+
+set -uo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VALIDATOR="$REPO_ROOT/.agents/scripts/validate-task-evidence.sh"
+TMP_BASE=$(mktemp -d /tmp/test-validators.XXXXXX)
+
+passed=0
+failed=0
+
+cleanup() { rm -rf "$TMP_BASE"; }
+trap cleanup EXIT
+
+assert_exit() {
+  local desc="$1" expected="$2" actual="$3"
+  if [[ "$actual" -eq "$expected" ]]; then
+    echo "  ✓ $desc (exit=$actual)"
+    passed=$((passed+1))
+  else
+    echo "  ✗ $desc (esperado=$expected, obtido=$actual)"
+    failed=$((failed+1))
+  fi
+}
+
+# Task file fixture com 2 critérios de sucesso.
+task_with_criteria() {
+  cat > "$1" <<'EOF'
+# Tarefa X
+## Critérios de Sucesso
+- Critério um funciona.
+- Critério dois funciona.
+EOF
+}
+
+# Task file legado sem seção de critérios.
+task_without_criteria() {
+  cat > "$1" <<'EOF'
+# Tarefa Legada
+## Visão Geral
+Sem critérios formais.
+EOF
+}
+
+# Cabeçalho comum do relatório, parametrizado pela ref de task file.
+report_header() {
+  local task_ref="$1"
+  cat <<EOF
+# Relatório de Execução de Tarefa
+## Tarefa
+- ID: X
+- Arquivo: $task_ref
+- Estado: done
+## Contexto Carregado
+- PRD: n/a
+- TechSpec: n/a
+EOF
+}
+
+base_sections() {
+  cat <<'EOF'
+## Arquivos Alterados
+- foo.go
+## Resultados de Validação
+- Lint: pass
+- Veredito do Revisor: APPROVED
+## Suposições
+- nenhuma
+## Riscos Residuais
+- nenhum
+EOF
+}
+
+# --- Caso a: critério não comprovado -> exit 1 ---
+echo "Caso a: critério de aceite não comprovado"
+task_a="$TMP_BASE/task-a.md"; task_with_criteria "$task_a"
+report_a="$TMP_BASE/report-a.md"
+{
+  report_header "$task_a"
+  cat <<'EOF'
+## Comandos Executados
+- go test ./... -> ok
+## Resultados de Validação
+- Testes: pass
+EOF
+  base_sections
+  cat <<'EOF'
+## Critérios de Aceite
+- Critério um -> comprovado: [evidência]
+EOF
+} > "$report_a"
+bash "$VALIDATOR" "$report_a" >/dev/null 2>&1; assert_exit "critério não comprovado falha" 1 $?
+
+# --- Caso b: todos comprovados -> exit 0 ---
+echo "Caso b: todos os critérios comprovados"
+task_b="$TMP_BASE/task-b.md"; task_with_criteria "$task_b"
+report_b="$TMP_BASE/report-b.md"
+{
+  report_header "$task_b"
+  cat <<'EOF'
+## Comandos Executados
+- go test ./... -> ok
+EOF
+  base_sections
+  cat <<'EOF'
+## Critérios de Aceite
+- Critério um -> comprovado: saída de go test mostra PASS
+- Critério dois -> comprovado: arquivo foo.go contém a função
+EOF
+  echo "## Resultados de Validação"
+  echo "- Testes: pass"
+} > "$report_b"
+# Ajuste: garantir Testes: pass presente uma vez e comando de teste presente.
+bash "$VALIDATOR" "$report_b" >/dev/null 2>&1; assert_exit "todos comprovados passa" 0 $?
+
+# --- Caso c: Testes: pass sem comando -> exit 1 ---
+echo "Caso c: Testes: pass sem comando de teste"
+task_c="$TMP_BASE/task-c.md"; task_with_criteria "$task_c"
+report_c="$TMP_BASE/report-c.md"
+{
+  report_header "$task_c"
+  cat <<'EOF'
+## Comandos Executados
+- echo hello -> ok
+EOF
+  base_sections
+  cat <<'EOF'
+## Critérios de Aceite
+- Critério um -> comprovado: ok
+- Critério dois -> comprovado: ok
+EOF
+  echo "## Resultados de Validação"
+  echo "- Testes: pass"
+} > "$report_c"
+bash "$VALIDATOR" "$report_c" >/dev/null 2>&1; assert_exit "Testes pass sem comando falha" 1 $?
+
+# --- Caso d: task legada sem critérios -> exit 0 ---
+echo "Caso d: task legada sem seção de critérios"
+task_d="$TMP_BASE/task-d.md"; task_without_criteria "$task_d"
+report_d="$TMP_BASE/report-d.md"
+{
+  report_header "$task_d"
+  cat <<'EOF'
+## Comandos Executados
+- go test ./... -> ok
+EOF
+  base_sections
+  echo "## Resultados de Validação"
+  echo "- Testes: pass"
+} > "$report_d"
+out_d=$(bash "$VALIDATOR" "$report_d" 2>&1); code_d=$?
+assert_exit "task legada passa" 0 $code_d
+if echo "$out_d" | grep -q "gate de aceite ignorado"; then
+  echo "  ✓ aviso de gate ignorado presente"
+  passed=$((passed+1))
+else
+  echo "  ✗ aviso de gate ignorado ausente"
+  failed=$((failed+1))
+fi
+
+# --- Casos de review-evidence (RF-20) ---
+REVIEW_VALIDATOR="$REPO_ROOT/.agents/scripts/validate-review-evidence.sh"
+
+# Caso e: review.md válido (APPROVED, sem achados) -> exit 0
+echo "Caso e: review.md válido sem achados"
+review_e="$TMP_BASE/review-e.md"
+cat > "$review_e" <<'EOF'
+# Relatório de Review
+- Veredito: APPROVED
+- Alvo revisado: diff da branch feature/x
+## Achados
+Sem achados.
+## Arquivos Revisados
+- foo.go
+## Riscos Residuais
+- nenhum
+## Validações Executadas
+- go test ./... -> ok
+EOF
+bash "$REVIEW_VALIDATOR" "$review_e" >/dev/null 2>&1; assert_exit "review válido passa" 0 $?
+
+# Caso f: review.md REJECTED sem achado high/critical -> exit 1
+echo "Caso f: review REJECTED sem achado bloqueante"
+review_f="$TMP_BASE/review-f.md"
+cat > "$review_f" <<'EOF'
+# Relatório de Review
+- Veredito: REJECTED
+- Alvo revisado: diff
+## Achados
+- Severidade: low
+- Arquivo: foo.go
+- Impacto: cosmético
+## Arquivos Revisados
+- foo.go
+## Riscos Residuais
+- nenhum
+## Validações Executadas
+- go test ./... -> ok
+EOF
+bash "$REVIEW_VALIDATOR" "$review_f" >/dev/null 2>&1; assert_exit "REJECTED sem high/critical falha" 1 $?
+
+# Caso g: review.md sem seção de validações -> exit 1
+echo "Caso g: review sem seção de validações"
+review_g="$TMP_BASE/review-g.md"
+cat > "$review_g" <<'EOF'
+# Relatório de Review
+- Veredito: APPROVED
+- Alvo revisado: diff
+## Achados
+Sem achados.
+## Arquivos Revisados
+- foo.go
+## Riscos Residuais
+- nenhum
+EOF
+bash "$REVIEW_VALIDATOR" "$review_g" >/dev/null 2>&1; assert_exit "review sem validações falha" 1 $?
+
+echo
+echo "Passaram: $passed | Falharam: $failed"
+[[ "$failed" -eq 0 ]] || exit 1
+echo "Todos os testes de validador passaram."
+exit 0

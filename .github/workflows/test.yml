@@ -95,8 +95,14 @@ jobs:
       - name: Hooks sync drift gate
         run: make check-hooks-sync
 
+      - name: Scripts sync drift gate
+        run: make check-scripts-sync
+
       - name: Hook smoke tests
         run: make test-hooks
+
+      - name: Evidence validator tests
+        run: make test-validators
 
       - name: Setup Shellcheck (Linux)
         if: runner.os == 'Linux'
