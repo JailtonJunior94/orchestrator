@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.26.0 (2026-05-30)
+
+### Features
+- **skills:** endurecimento production-proof da cadeia de governanca (57afd0c)
+- **install:** paridade cross-CLI de validadores e metadado category (7c8d78e)
+
+### Bug Fixes
+- **skillbump:** pular skill removida desde a ultima tag (bbd30ab)
+- **production-proof:** corrige 14 achados cross-tool na causa raiz e remove bubbletea (a34df86)
+
+### Documentation
+- **specs:** artefatos PRD-first da auditoria production-proof (380a3b0)
+
+### Build
+- gate de sync de scripts e suite de validadores (41e15d2)
+
 ## 0.25.0 (2026-05-30)
 
 ### Features

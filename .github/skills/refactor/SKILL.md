@@ -1,6 +1,6 @@
 ---
 name: refactor
-version: 1.0.1
+version: 1.1.0
 category: governance
 depends_on: [review]
 description: Planeja ou executa refatorações incrementais seguras preservando comportamento e coletando evidências de não regressão. Use quando uma refatoração delimitada precisar de orientação consultiva ou execução com validação e revisão. Não use para entrega de nova funcionalidade, definição de escopo de produto ou reescritas cosméticas sem alvo verificado.

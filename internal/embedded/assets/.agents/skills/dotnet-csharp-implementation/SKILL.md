@@ -1,6 +1,6 @@
 ---
 name: dotnet-csharp-implementation
-version: 1.2.0
+version: 1.3.0
 category: language
 description: >
   Implementa alteracoes em codigo .NET/C# usando governanca base, arquitetura, estilo,
