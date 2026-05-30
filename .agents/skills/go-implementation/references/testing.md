@@ -21,6 +21,57 @@ Garantir correção, prevenir regressão e documentar comportamento com custo pr
 - Mocks em `mocks/` do pacote consumidor. Helpers em `_test.go` do mesmo pacote.
 - Nao testar glue code sem logica nem interacao real com banco/fila (isso e integration test).
 
+## R3 — Geracao de mocks via `mockery.yml` (obrigatorio) `[HARD]`
+Todo mock de interface usado em testes DEVE ser gerado via [mockery](https://vektra.github.io/mockery/)
+com configuracao declarada em `mockery.yml` na raiz do modulo (ou sub-modulo Go). E proibido:
+escrever mocks a mao, usar `go generate` com diretivas inline sem `mockery.yml`, ou commitar mocks
+divergentes da interface vigente.
+
+```yaml
+# mockery.yml — raiz do modulo
+with-expecter: true        # OBRIGATORIO — habilita .EXPECT() fluente e type-safe
+mockname: "{{.InterfaceName}}"
+outpkg: "mocks"            # mocks sempre em sub-pacote mocks/ relativo a interface
+filename: "{{.InterfaceName | snakecase}}.go"
+dir: "{{.InterfaceDir}}/mocks"
+packages:
+  github.com/seu-org/seu-projeto/internal/<dominio>/domain/repositories:
+    interfaces:
+      PaymentRepository:
+```
+
+- `with-expecter: true` e obrigatorio.
+- Regenerar com `mockery --config mockery.yml` apos qualquer alteracao de interface.
+- CI gate: falhar se mocks estiverem desatualizados (`mockery --config mockery.yml --dry-run`).
+- Antes de escrever qualquer teste: verificar que `mockery.yml` existe e declara a interface a
+  testar; se nao, adiciona-la e regenerar antes de prosseguir.
+
+## R4 — Padrao obrigatorio de arquivo `_test.go` `[HARD]`
+Todo `_test.go` que cubra use cases, services e handlers DEVE seguir `testify/suite` com cenarios
+table-driven. Testes avulsos com `t.Run` direto sao permitidos apenas para funcoes utilitarias
+simples sem dependencias injetaveis. Ver esqueleto canonico completo em `examples-testing.md`.
+
+Estrutura obrigatoria:
+1. `package <pacote>` (whitebox) ou `<pacote>_test` (blackbox).
+2. Imports em 3 grupos (stdlib | testify/externas | mocks e internos).
+3. Suite struct embutindo `suite.Suite` + todos os mocks como campos tipados.
+4. `TestXxx(t)` registrador: apenas `suite.Run(t, new(XxxSuite))`.
+5. `SetupTest()` reinicia todos os mocks antes de cada cenario (evita vazamento de estado).
+6. Metodo de teste principal com tabela `scenarios` (args, dependencies, `expect func`).
+7. Loop `for _, scenario := range scenarios` com `s.Run` + instanciacao real do SUT dentro do loop.
+
+Cobertura minima de cenarios por metodo `Test<Acao>()`:
+
+| Cenario | Obrigatorio |
+|---------|------------|
+| Happy path — sucesso nominal | sim |
+| Erro de validacao de dominio (input invalido) | sim |
+| Erro de infraestrutura (repositorio/servico externo falha) | sim |
+| Edge case de negocio (normalizacao, idempotencia) | quando aplicavel |
+
+Nomenclatura de cenarios em PT-BR, sem abreviacoes: `"deve criar metodo de pagamento com sucesso"`,
+`"deve retornar erro ao salvar no repositorio"`.
+
 ## Integration Tests (opcional — decisao por projeto)
 Adotar quando: fronteiras de IO criticas onde mocks nao garantem correcao, ou incidente previo de divergencia mock/prod.
 
@@ -70,3 +121,5 @@ Modulos disponiveis: postgres, mysql, redis, kafka, mongodb, rabbitmq, localstac
 - `time.Sleep` para sincronização em teste.
 - Teste que passa sozinho mas falha quando rodado com `./...`.
 - Ignorar `t.Helper()` em funções auxiliares de teste.
+- Mocks escritos a mão ou divergentes da interface (R3 — gerar via `mockery.yml`).
+- `_test.go` de use case/service/handler sem `suite.Suite`, `SetupTest` e `suite.Run` (R4).

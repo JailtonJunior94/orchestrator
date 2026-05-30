@@ -20,6 +20,10 @@
 
 ### Documentação
 - **prompts:** expande `go-implementation-strict-rules.md` com regras estritas de implementação Go
+- **skills(go-implementation):** incorpora por completo as Regras Estritas 0–7 à skill (bump `1.1.0` → `1.2.0`):
+  - adiciona em `references/build.md` o **Checklist de Validação (R0–R7)** que o `SKILL.md` (Etapa 5) já referenciava mas não existia — corrige referência pendente; inclui greps de R0 (`init()`), R1 (funções standalone), R3 (`mockery.yml`/mocks atualizados), R4 (`suite.Suite`/`SetupTest`/`suite.Run`), R5/R6 (`os.Exit`/`log.Fatal`/`panic`/globals/context em struct) e R7 (`interface{}`), mais os gates `go build/vet/test -race`, `golangci-lint` e `mockery --dry-run`
+  - adiciona em `references/interfaces.md` a **Regra 6** explícita: R6.1 (`context.Context` como 1º parâmetro, nunca em struct, propagação obrigatória), R6.2 (tipos concretos por padrão), R6.3 (interface no pacote consumidor) e R6.5 (tabela de decisão sentinel vs tipo customizado)
+  - propaga o canônico `.agents/skills/` para os mirrors `.claude/skills`, `.github/skills` e `internal/embedded/assets/.agents/skills` via `scripts/sync-skills.sh` (drift zero em `make check-skills-sync`)
 - **agents:** atualiza `AGENTS.md` e `GEMINI.md` embarcados com referência à nova skill
 
 ## 0.23.4 (2026-05-25)

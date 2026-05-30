@@ -64,6 +64,47 @@ type ReadWriter interface {
 }
 ```
 
+## Regra 6 — Design e Contratos `[HARD]`
+
+Complementa as diretrizes acima com o numeração das Regras Estritas (ver SKILL.md).
+
+### R6.1 — `context.Context` obrigatório em fronteiras de I/O
+Todo método que faz I/O (rede, banco, arquivo, subprocess, operação cancelável) DEVE receber
+`context.Context` como **primeiro parâmetro**. Nunca armazenar `Context` em campo de struct.
+Propagar o context recebido — `context.Background()`/`context.TODO()` apenas em `main()`,
+inicialização de servidor e testes.
+
+```go
+// PROIBIDO — context em struct
+type Repo struct { ctx context.Context; db *sql.DB }
+// PROIBIDO — I/O sem context
+func (r *Repo) FindByID(id int64) (*Entity, error) {}
+
+// CORRETO — context como primeiro parâmetro
+func (r *Repo) FindByID(ctx context.Context, id int64) (*Entity, error) {}
+```
+
+### R6.2 — Tipos concretos por padrão; interface sob demanda real
+Introduzir interface apenas quando houver múltiplas implementações em produção, necessidade real de
+substituição em teste, ou fronteira de pacote onde o consumidor não deve depender do concreto.
+Ver "Quando usar" / "Quando evitar" acima.
+
+### R6.3 — Interface definida no pacote consumidor
+Declarar a interface no pacote que a **consome**, não no que a implementa (accept interfaces, return
+structs). Exceção: interface compartilhada por múltiplos consumidores pode residir em `pkg/`
+dedicado — nunca em `internal/` do produtor.
+
+### R6.5 — Erros sentinel vs tipo customizado — decisão explícita
+A escolha deve ser explícita e baseada nas necessidades do caller (complementa R5.10). Erros
+exportados passam a fazer **parte da API pública** — documentá-los.
+
+| Caller usa `errors.Is`? | Caller usa `errors.As`? | Mensagem | Use |
+|---|---|---|---|
+| Não | Não | Estática | `errors.New(...)` inline |
+| Não | Não | Dinâmica | `fmt.Errorf("ctx: %v", ...)` |
+| Sim | Não | Estática | `var ErrNome = errors.New(...)` exportado |
+| Sim | Sim | Dinâmica | `type NomeError struct{ ... }` exportado |
+
 ## Riscos Comuns
 - Interface com 5+ métodos que nenhum consumidor usa inteiramente.
 - Interface definida no pacote do implementador em vez do consumidor.

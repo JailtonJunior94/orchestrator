@@ -118,3 +118,65 @@ go test -tags=integration ./...
 - Segredo passado como build arg ou variável de ambiente no Dockerfile.
 - Pipeline de CI sem gate de teste.
 - Ignorar falhas de lint com flags de supressão global.
+
+## Checklist de Validação (R0–R7) `[HARD]`
+
+Executar e reportar o resultado de cada item antes de declarar a tarefa concluída. Qualquer
+resultado diferente do esperado é `[HARD]` (bloqueante de merge). Itens marcados "revisão manual"
+exigem inspeção do diff implementado.
+
+```bash
+# ── R0: init() inexistente ───────────────────────────────────────────────────
+grep -rn "^func init()" --include="*.go" .
+# Esperado: NENHUMA linha
+
+# ── R1: funções standalone proibidas (exceto main/New*/TestXxx/pkg utilitário) ─
+grep -rn "^func [^(]" --include="*.go" . \
+  | grep -v "_test.go" | grep -v "func main()" | grep -v "func New" | grep -v "^cmd/"
+# Esperado: NENHUMA linha (exceto pkg/ utilitários sem estado declarados)
+
+# ── R2: atribuição direta de campo sem transformação ─────────────────────────
+# Revisão manual: "Esta variável local existe apenas para renomear um campo?" → PROIBIDA
+
+# ── R3: mockery.yml presente e mocks atualizados ─────────────────────────────
+test -f mockery.yml && echo "mockery.yml: OK" || echo "[HARD] AUSENTE — criar mockery.yml"
+mockery --config mockery.yml --dry-run 2>&1 | grep -i "error\|differ" \
+  && echo "[HARD] MOCKS DESATUALIZADOS" || echo "Mocks: OK"
+
+# ── R4: padrão testify/suite em testes de use case / service / handler ───────
+find . -path "*/internal/*_test.go" | xargs grep -L "suite\.Suite" 2>/dev/null && echo "[HARD] FALTAM SUITES"
+find . -path "*/internal/*_test.go" | xargs grep -L "SetupTest"   2>/dev/null && echo "[HARD] FALTAM SetupTest"
+find . -path "*/internal/*_test.go" | xargs grep -L "suite\.Run"  2>/dev/null && echo "[HARD] FALTAM suite.Run"
+
+# ── R5/R6: os.Exit / log.Fatal fora de main ──────────────────────────────────
+grep -rn "os\.Exit\|log\.Fatal" --include="*.go" . | grep -v "^cmd/"
+# Esperado: NENHUMA linha
+
+# ── R5: panic fora de inicialização ──────────────────────────────────────────
+grep -rn "\bpanic(" --include="*.go" . | grep -v "_test.go" | grep -v "template\.Must\|regexp\.MustCompile"
+# Esperado: NENHUMA linha (exceto template.Must / regexp.MustCompile em main)
+
+# ── R5: goroutines fire-and-forget — revisão manual ──────────────────────────
+# Toda `go func()` deve ter canal stop+done ou sync.WaitGroup.
+
+# ── R5: type assertion sem comma-ok — revisão manual ─────────────────────────
+# Toda assertion i.(T) deve ter a forma t, ok := i.(T).
+
+# ── R5: globals não exportados sem prefixo _ ─────────────────────────────────
+grep -rn "^var [a-z][a-zA-Z]\|^const [a-z][a-zA-Z]" --include="*.go" . \
+  | grep -v "_test.go" | grep -v "^.*var err"
+# Revisar: globals sem _ que não sejam erros sentinel (var errX)
+
+# ── R6: context.Context não armazenado em struct — revisão manual ────────────
+# Nenhum campo de struct deve ter tipo context.Context.
+
+# ── R7: interface{} proibido — usar any ──────────────────────────────────────
+grep -rn "interface{}" --include="*.go" . | grep -v "_test.go" | grep -v "vendor/"
+# Esperado: NENHUMA linha
+
+# ── Gate de qualidade final ──────────────────────────────────────────────────
+go build ./...
+go vet ./...
+go test ./... -count=1 -race
+golangci-lint run --timeout=5m 2>/dev/null || echo "[SOFT] golangci-lint não disponível"
+```
