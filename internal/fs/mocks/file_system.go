@@ -171,6 +171,62 @@ func (_c *FileSystem_DirHash_Call) RunAndReturn(run func(string) (string, error)
 	return _c
 }
 
+// EvalSymlinks provides a mock function with given fields: path
+func (_m *FileSystem) EvalSymlinks(path string) (string, error) {
+	ret := _m.Called(path)
+
+	if len(ret) == 0 {
+		panic("no return value specified for EvalSymlinks")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string) (string, error)); ok {
+		return rf(path)
+	}
+	if rf, ok := ret.Get(0).(func(string) string); ok {
+		r0 = rf(path)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(string) error); ok {
+		r1 = rf(path)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// FileSystem_EvalSymlinks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EvalSymlinks'
+type FileSystem_EvalSymlinks_Call struct {
+	*mock.Call
+}
+
+// EvalSymlinks is a helper method to define mock.On call
+//   - path string
+func (_e *FileSystem_Expecter) EvalSymlinks(path any) *FileSystem_EvalSymlinks_Call {
+	return &FileSystem_EvalSymlinks_Call{Call: _e.mock.On("EvalSymlinks", path)}
+}
+
+func (_c *FileSystem_EvalSymlinks_Call) Run(run func(path string)) *FileSystem_EvalSymlinks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string))
+	})
+	return _c
+}
+
+func (_c *FileSystem_EvalSymlinks_Call) Return(_a0 string, _a1 error) *FileSystem_EvalSymlinks_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *FileSystem_EvalSymlinks_Call) RunAndReturn(run func(string) (string, error)) *FileSystem_EvalSymlinks_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Exists provides a mock function with given fields: path
 func (_m *FileSystem) Exists(path string) bool {
 	ret := _m.Called(path)
