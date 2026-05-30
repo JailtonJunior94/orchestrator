@@ -231,6 +231,41 @@ func TestServiceExecute(t *testing.T) {
 	}
 }
 
+func TestBumpSkill_SkillDeletedSinceLastTag(t *testing.T) {
+	// Regressao: skill listada no git diff mas removida da arvore de trabalho
+	// deve emitir warning e ser ignorada, sem retornar erro fatal.
+	const (
+		repoPath  = "/repo"
+		skillsDir = ".agents/skills"
+	)
+
+	fsys := fs.NewFakeFileSystem()
+	// bubbletea NAO existe no filesystem — foi removida apos a ultima tag
+	var out bytes.Buffer
+	var errBuf bytes.Buffer
+	printer := &output.Printer{Out: &out, Err: &errBuf}
+	svc := NewService(fsys, printer)
+
+	scriptDir := writeFakeGit(t, fakeGitSpec{
+		describeOutput: "v0.25.0\n",
+		diffOutput:     ".agents/skills/bubbletea/SKILL.md\n",
+		logOutputs: map[string]string{
+			".agents/skills/bubbletea": "abc123 feat(bubbletea): add skill\n",
+		},
+		showBodies: map[string]string{"abc123": ""},
+		showFiles:  map[string]string{},
+	})
+	t.Setenv("PATH", scriptDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	_, err := svc.Execute(repoPath, skillsDir, false)
+	if !errors.Is(err, ErrNoChanges) {
+		t.Fatalf("Execute() error = %v, want ErrNoChanges", err)
+	}
+	if !strings.Contains(errBuf.String(), "bubbletea") {
+		t.Fatalf("warning nao menciona skill removida: %q", errBuf.String())
+	}
+}
+
 func TestExecuteNoTagFound(t *testing.T) {
 	fsys := fs.NewFakeFileSystem()
 	currentPath := "/repo/.agents/skills/review/SKILL.md"

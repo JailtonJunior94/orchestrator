@@ -3,11 +3,12 @@ package skillbump
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	appfs "github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/semver"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
@@ -20,7 +21,7 @@ var (
 
 // Service orquestra o bump de versao das skills alteradas.
 type Service struct {
-	fs      fs.FileSystem
+	fs      appfs.FileSystem
 	printer *output.Printer
 }
 
@@ -33,7 +34,7 @@ type BumpResult struct {
 	Reason          string          `json:"reason"`
 }
 
-func NewService(fsys fs.FileSystem, printer *output.Printer) *Service {
+func NewService(fsys appfs.FileSystem, printer *output.Printer) *Service {
 	return &Service{fs: fsys, printer: printer}
 }
 
@@ -97,6 +98,10 @@ func (s *Service) bumpSkill(repoRoot, lastTag, skillsDir, skillName string, dryR
 	skillPath := filepath.Join(repoRoot, skillsDir, skillName, "SKILL.md")
 	content, err := s.fs.ReadFile(skillPath)
 	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			s.printer.Warn("aviso: skill %s removida desde a ultima tag, pulando", skillName)
+			return BumpResult{}, false, nil
+		}
 		return BumpResult{}, false, fmt.Errorf("ler frontmatter de %s: %w", skillName, err)
 	}
 

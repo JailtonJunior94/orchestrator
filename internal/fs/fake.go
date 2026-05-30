@@ -36,7 +36,7 @@ func (f *FakeFileSystem) CopyFile(src, dst string) error {
 	resolvedSrc := f.resolvePath(src)
 	data, ok := f.Files[resolvedSrc]
 	if !ok {
-		return fmt.Errorf("arquivo nao encontrado: %s", src)
+		return fmt.Errorf("arquivo nao encontrado: %w", os.ErrNotExist)
 	}
 	f.Files[f.resolvePath(dst)] = append([]byte(nil), data...)
 	return nil
@@ -132,7 +132,7 @@ func (f *FakeFileSystem) ReadFile(path string) ([]byte, error) {
 	resolved := f.resolvePath(path)
 	data, ok := f.Files[resolved]
 	if !ok {
-		return nil, fmt.Errorf("arquivo nao encontrado: %s", path)
+		return nil, fmt.Errorf("arquivo nao encontrado: %w", os.ErrNotExist)
 	}
 	return data, nil
 }
@@ -184,7 +184,7 @@ func (f *FakeFileSystem) FileHash(path string) (string, error) {
 	resolved := f.resolvePath(path)
 	data, ok := f.Files[resolved]
 	if !ok {
-		return "", fmt.Errorf("arquivo nao encontrado: %s", path)
+		return "", fmt.Errorf("arquivo nao encontrado: %w", os.ErrNotExist)
 	}
 	h := sha256.Sum256(data)
 	return fmt.Sprintf("%x", h[:]), nil
