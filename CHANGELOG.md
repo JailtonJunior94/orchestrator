@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.2 (2026-05-30)
+
+### Bug Fixes
+- **ci:** exclui pacotes de mocks gerados do calculo de cobertura (5a3edf9)
+
 ## 0.24.1 (2026-05-30)
 
 ### Refactoring
