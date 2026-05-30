@@ -33,6 +33,8 @@ Consultar antes de mudancas estruturais. Template: [`.specs/adr/000-template.md`
 - [017](.specs/prd-fundacao-portatil/adr-017-fallback-launcher-chain.md) — fallback launchers genericos ordenados
 - [018](.specs/prd-fundacao-portatil/adr-018-runtimeconfig-retry-backpressure.md) — RuntimeConfig + retry/backoff + backpressure observavel
 - [019](.specs/prd-fundacao-portatil/adr-019-instalador-portatil-detect-verify.md) — instalador portatil: auto-deteccao, escopo global, verify
+- [PP-001](.specs/prd-skills-production-proof/adr-001-validadores-canonicos-agents-scripts.md) — validadores canonicos em `.agents/scripts/` (tool-neutros, cascata)
+- [PP-002](.specs/prd-skills-production-proof/adr-002-hooks-nativos-paridade-cross-cli.md) — hooks nativos de bloqueio nos 4 CLIs (paridade cross-CLI 2026)
 
 ## Fundacao Portatil (Fases 1–3)
 

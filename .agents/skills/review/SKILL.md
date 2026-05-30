@@ -1,6 +1,7 @@
 ---
 name: review
-version: 1.2.0
+version: 1.3.0
+category: governance
 description: Revisa um diff de código quanto a correção, segurança, regressões e testes faltantes usando regras específicas do repositório. Use quando uma branch ou diff local precisar de revisão no estilo dono do código antes de merge ou fechamento de tarefa. Não use para implementação, planejamento de produto ou limpeza apenas de estilo.
 ---
 
@@ -18,7 +19,8 @@ description: Revisa um diff de código quanto a correção, segurança, regress�
    - `AI_REVIEW_MAX_FILES` (default 8)
    - `AI_REVIEW_MAX_DIFF_LINES` (default 400)
    - Acima do teto, abrir apenas `git diff --stat` + `git diff --name-only` e amostrar arquivos por categoria de risco antes de carregar conteúdo completo.
-4. Ler `prd.md`, `techspec.md` ou arquivo de tarefa **somente quando** o diff toca arquivo citado neles ou a tarefa ativa aponta o documento.
+4. Ler `prd.md` e `techspec.md` quando o diff toca arquivo citado neles ou a tarefa ativa aponta o documento.
+5. **Confronto incondicional de critérios de aceite (RF-14)**: quando houver tarefa ativa (campo `Arquivo:` no contexto/relatório ou task file informada), **sempre** ler a task file e confrontar **cada** critério de `## Critérios de Sucesso`/`## Critérios de Aceite` contra o diff — mesmo que o diff não toque os arquivos citados na task. Para cada critério: marcar `atendido` (com evidência no diff), `não atendido` (achado bloqueante) ou `não verificável pelo diff` (registrar como risco). Um critério não atendido é severidade mínima `high`.
 
 **Etapa 2: Carregar referências sob gatilho**
 
@@ -49,8 +51,9 @@ Confirmar o contrato de carga base definido em `AGENTS.md` quando ele existir; q
 **Etapa 4: Produzir achados antes do veredito**
 
 1. Atribuir severidade canônica a cada achado: `critical`, `high`, `medium`, `low`.
+   - **Severidade de borda** (um achado materialmente ambíguo entre bloqueante `[HARD]` e `soft`): aplicar `.agents/skills/agent-governance/references/multiple-choice-protocol.md` (2–5 opções, "(Recomendado)", uma pergunta por turno) em vez de assumir silenciosamente.
 2. Incluir referência de arquivo, linha quando aplicável, impacto curto e dica de correção.
-3. Para bugs acionáveis, emitir lista no formato `.agents/skills/agent-governance/references/bug-schema.json` para consumo da skill `bugfix`.
+3. Para bugs acionáveis, emitir lista no formato `.agents/skills/agent-governance/references/bug-schema.json` para consumo da skill `bugfix`. **Traduzir a severidade de 4 níveis para o enum de 3 níveis do schema usando `.agents/skills/agent-governance/references/severity-mapping.md`** (`critical→critical`, `high→major`, `medium→minor`, `low→minor`); preservar o nível original no campo de impacto.
 4. Sem achados: dizer explicitamente e registrar riscos residuais e lacunas de teste.
 
 **Etapa 5: Veredito determinístico**
@@ -76,6 +79,13 @@ Retornar bloco contendo, no mínimo:
 - `findings`: lista de `{severity, file, line, impact, fix_hint}`
 - `residual_risks`: lista
 - `validations_run`: comandos de validação executados ou consultados
+
+**Modo evidência persistida (`--auto-review`, RF-20):** quando o review é disparado por
+`execute-task`/`execute-all-tasks` em modo `--auto-review` (ou quando o chamador pede artefato
+persistido), além do output estruturado:
+1. Ler `assets/review-report-template.md` e produzir `evidence/<task>/review.md` preenchido (veredito, achados com severidade canônica, arquivos revisados, riscos residuais, validações).
+2. Validar o artefato com o validador resolvido em cascata portátil (`.agents/scripts/validate-review-evidence.sh` → `.claude/scripts/validate-review-evidence.sh` → `scripts/validate-review-evidence.sh`): `bash "<primeiro-existente>" evidence/<task>/review.md`; corrigir seções faltantes antes de encerrar.
+3. Achados com tag `[HARD]` ou severidade `critical`/`high` mapeiam `ReviewStatus=blocked` no chamador.
 
 ## Tratamento de Erros
 

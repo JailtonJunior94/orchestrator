@@ -1,6 +1,7 @@
 ---
 name: python-implementation
 version: 1.2.0
+category: language
 description: Implementa alteracoes em codigo Python usando governanca base, regras estritas [HARD], convencoes de projeto e validacao proporcional com gates bloqueantes. Use quando a tarefa exigir adicionar, corrigir, refatorar ou validar codigo Python. Nao use para tarefas sem codigo Python.
 ---
 

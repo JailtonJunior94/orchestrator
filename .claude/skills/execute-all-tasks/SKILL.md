@@ -1,6 +1,7 @@
 ---
 name: execute-all-tasks
-version: 1.7.2
+version: 1.8.0
+category: governance
 depends_on: [execute-task, agent-governance]
 description: Orquestra execução completa de PRD spawnando subagent fresh por tarefa para isolar contexto. Respeita DAG, paraleliza onde tool suporta nativamente, halt-first, retomada idempotente. Use para PRD inteiro; não use para uma tarefa única — use execute-task.
 ---
@@ -19,7 +20,7 @@ Paralelismo só quando: `Paralelizável` em tasks.md E tool suporta spawn nativo
 
 **Etapa 1: Validar PRD**
 0. **Invocar hook programático** (enforcement real das fragilidades F17, F18, F27, F29):
-   `bash .claude/hooks/pre-execute-all-tasks.sh <slug>` (resolver caminho na ordem `.claude/hooks/` → `.agents/hooks/` → `.gemini/hooks/` → `.codex/hooks/` → `.github/hooks/`). Exit ≠ 0 → `failed` repassando stderr do hook. Hook valida regex de tasks.md, gaps numéricos, cross-PRD spec-hash e ciclos. Se ausente em todos os caminhos, prosseguir com validação textual (modo legado).
+   `bash .claude/hooks/pre-execute-all-tasks.sh <slug>` (resolver caminho na cascata portátil `.agents/hooks/` → `.claude/hooks/` → `.gemini/hooks/` → `.codex/hooks/` → `.github/hooks/`). Exit ≠ 0 → `failed` repassando stderr do hook. Hook valida regex de tasks.md, gaps numéricos, cross-PRD spec-hash e ciclos. **Ausente em todos os caminhos (sem degradação silenciosa)**: como `.agents/hooks/` é instalado por `ai-spec install` em qualquer tool capaz, a ausência total indica integridade quebrada → `failed: hook de governança 'pre-execute-all-tasks.sh' ausente em todos os caminhos — reinstale via 'ai-spec install'`. Não prosseguir em "modo legado".
 1. **`unset AI_PREFLIGHT_DONE` (F17 — também executado pelo hook acima como redundância)** antes de qualquer comando — força orquestrador a rodar próprios gates; re-exporta apenas no prompt do subagent.
 2. Input: slug curto, `prd-<slug>`, ou path. Normalizar para `${AI_TASKS_ROOT:-.specs}/${AI_PRD_PREFIX:-prd-}<slug>/`.
 3. **Resolver lib de profundidade (B1, fallback agnóstico)**: procurar `check-invocation-depth.sh` na ordem `.agents/lib/` → `scripts/lib/` e fazer `source`. Ausente nas duas → `failed: check-invocation-depth.sh ausente em .agents/lib/ e scripts/lib/ — vendor a lib ou rode 'ai-spec-harness install'`. Comando canônico:
@@ -69,7 +70,28 @@ Repetir até zerar `pending` ou disparar halt:
 
 **Etapa 4: Spawnar subagents**
 
-**Soft timeout (result-discard, F14):** `AI_TASK_TIMEOUT_SECONDS` (default 1800s) configurável em `.claude/config.yaml`. Override por tarefa: `<!-- task-timeout-seconds: N -->` (regex `^task-timeout-seconds:\s*(\d+)\s*$`, sem unidades). **Limitação honesta**: tools (Claude/Gemini/Codex) não oferecem kill nativo; orquestrador apenas registra timeout, marca `failed: timeout after <budget>s`, descarta YAML tardio. **Subagent continua consumindo tokens em background** até completar naturalmente. Para hard kill, coordenação no nível do tool (matar sessão).
+**Timeout + orçamento de tokens (F14, RF-21):** `AI_TASK_TIMEOUT_SECONDS` (default 1800s) e
+`AI_TASK_TOKEN_BUDGET` (default 0 = sem limite; zero-value preserva comportamento F1) configuráveis
+em `.claude/config.yaml`/`.agents/config.yaml`. Override de timeout por tarefa:
+`<!-- task-timeout-seconds: N -->` (regex `^task-timeout-seconds:\s*(\d+)\s*$`, sem unidades).
+Quando o subagent reportar uso de tokens acumulado acima de `AI_TASK_TOKEN_BUDGET`, marcar
+`failed: token budget <budget> exceeded` e não relançar.
+
+**Kill no timeout — depende da primitiva de spawn do tool (verificado 2026):**
+
+| Tool | Primitiva de spawn | Kill nativo no timeout? | Ação ao estourar |
+|---|---|---|---|
+| Codex CLI | `codex exec` (subprocesso OS) | **Sim** — `kill <pid>` do processo `codex exec` | hard kill do PID; `failed: timeout after <budget>s (killed)` |
+| Gemini CLI | `gemini --acp` (subprocesso OS) | **Sim** — encerrar a sessão ACP/subprocesso | hard kill do subprocesso ACP; `failed: timeout after <budget>s (killed)` |
+| Copilot CLI | custom agent / `/fleet` (sessão/subprocesso) | **Parcial** — matar a sessão quando spawnada como subprocesso | kill da sessão quando possível; senão soft-discard |
+| Claude Code | `Agent` (in-process, mesma sessão) | **Não** — sem kill nativo | soft timeout: registra, marca `failed: timeout after <budget>s`, descarta YAML tardio |
+
+**Limitação honesta (Claude)**: a primitiva `Agent` roda in-process; o orquestrador apenas
+descarta o YAML tardio — o subagent continua consumindo tokens até completar naturalmente. Para os
+tools que spawnam subprocesso OS (Codex `codex exec`, Gemini `gemini --acp`, Copilot fleet), o
+orquestrador **mata o processo** (`kill <pid>`) ao estourar o timeout/orçamento, interrompendo o
+consumo. Registrar no `_orchestration_report.md` se o kill foi efetivo (`killed`) ou apenas
+soft-discard (`discarded`).
 
 Prompt do subagent:
 - Paths absolutos do task file, prd.md, techspec.md, tasks.md.
@@ -94,7 +116,7 @@ Prompt do subagent:
 
 Cadeia (do retorno OU checkpoint) — pode ser executada por **hook programático** (enforcement real) ou inline:
 
-**Hook recomendado**: `echo "$YAML" | bash .claude/hooks/post-execute-task.sh <slug> <task-id>` (busca em `.claude/hooks/` → `.agents/hooks/` → outros mirrors). Exit ≠ 0 = falha em F2/F13/F24/F25/F35; reclassificar tarefa para `failed` repassando stderr do hook. Se hook ausente, executar inline conforme abaixo.
+**Hook recomendado**: `echo "$YAML" | bash .claude/hooks/post-execute-task.sh <slug> <task-id>` (cascata portátil `.agents/hooks/` → `.claude/hooks/` → outros mirrors). Exit ≠ 0 = falha em F2/F13/F24/F25/F35; reclassificar tarefa para `failed` repassando stderr do hook. **Sem degradação silenciosa**: ausente em todos os caminhos → `failed: hook 'post-execute-task.sh' ausente — reinstale via 'ai-spec install'`; a cadeia de validação inline abaixo é o contrato que o hook impõe, nunca um substituto silencioso.
 
 1. **Formato canônico**: bloco com exatamente `status`, `report_path`, `summary`, sem campos extras, campos duplicados, comentários ou texto livre/diff → `failed: contract violation`.
 2. **Status canônico**: ∈ `{done, blocked, failed, needs_input}`. Fora → `failed: invalid status`.
@@ -112,7 +134,7 @@ Cadeia (do retorno OU checkpoint) — pode ser executada por **hook programátic
    - Próxima invocação detecta `.partial.md` na Etapa 1: lê, consolida com tasks.md atual, usa como ponto de partida.
    - Ao concluir todas as waves: rename atômico `.partial.md` → `_orchestration_report.md`.
    - Se ambos existem na Etapa 1: prefere `.partial.md` + warning para usuário decidir.
-   - Hook ausente → escrever `.partial.md` inline com mesmo conteúdo (modo legado).
+   - Hook ausente em todos os caminhos → `failed: hook 'post-wave.sh' ausente — reinstale via 'ai-spec install'` (sem modo legado silencioso; `.agents/hooks/` é instalado por padrão).
 4. Renderizar `_orchestration_report.md` (template em `assets/`) com snapshot inicial vs final, tabela executadas, puladas, waves, próximos passos.
 5. NÃO mutar tasks.md no orquestrador — só subagents via `execute-task`.
 
@@ -125,23 +147,31 @@ Contrato de retorno idêntico; primitiva varia.
 
 | Tool | Primitiva | Subagent | Paralelismo | Depth |
 |---|---|---|---|---|
-| Claude Code | `Agent` ([ref](https://code.claude.com/docs/en/sub-agents)) | `.claude/agents/task-executor.md` | múltiplas Agent calls/mensagem | **1** — review/bugfix são skill calls |
-| Codex CLI | `.codex/agents/*.toml` ([ref](https://developers.openai.com/codex/subagents)) | `.codex/agents/task-executor.toml` | concorrentes | assumir 1 |
-| Gemini CLI | `.gemini/agents/*.md` ([ref](https://github.com/google-gemini/gemini-cli/blob/main/docs/core/subagents.md)) | `.gemini/agents/task-executor.md` | dispatch paralelo | n/d |
-| Copilot CLI | Custom Agents ([ref](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/create-custom-agents-for-cli)). Auto-descobre `.github/skills/` (criado por `ai-spec install` espelhando `.agents/skills/`); demais mirrors opcionais | `.github/agents/task-executor.agent.md` | `/fleet` ou multi-session | n/d |
+| Claude Code | `Agent` ([ref](https://code.claude.com/docs/en/sub-agents)) | `.claude/agents/task-executor.md` (nativo) | múltiplas Agent calls/mensagem | **1** — review/bugfix são skill calls |
+| Codex CLI | `codex exec` (subprocesso não-interativo) + `--profile` + MCP nested ([ref](https://developers.openai.com/codex)) | sem diretório de agents nativo — isolamento via `codex exec` | concorrentes (subprocessos) | assumir 1 |
+| Gemini CLI | `gemini skills` + extensões + ACP (`--acp`) nested ([ref](https://github.com/google-gemini/gemini-cli)) | sem diretório de agents nativo — isolamento via `gemini --acp`/skills | dispatch paralelo via subprocessos | n/d |
+| Copilot CLI | Custom Agents ([ref](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/create-custom-agents-for-cli)). Auto-descobre `.github/skills/` (criado por `ai-spec install` espelhando `.agents/skills/`); demais mirrors opcionais | `.github/agents/task-executor.agent.md` (nativo) | `/fleet` ou multi-session | n/d |
 
 Degradação controlada: tool sem subagent nativo → sequencial sem isolamento; registrar no report.
 
-**Validação empírica obrigatória dos agent files (F26)** antes do primeiro uso real:
+**Inventário e validação empírica de subagentes (F26) — verificado em 2026:**
 
-| Tool | Comando | Esperado |
-|---|---|---|
-| Claude | `claude /agents` ou `ls .claude/agents/` | `task-executor` aparece |
-| Codex | `codex agent list` | `task-executor` (formato `.codex/agents/task-executor.toml` é inferido) |
-| Gemini | `gemini agents list` | `task-executor` (formato `.gemini/agents/task-executor.md` é inferido) |
-| Copilot | `gh copilot /skills reload` + `ls .github/agents/` | `task-executor.agent.md` |
+| Tool | Diretório de agents nativo? | Mecanismo de isolamento verificado | Comando de verificação |
+|---|---|---|---|
+| Claude Code | **Sim** (`.claude/agents/`) | subagentes dedicados | `ls .claude/agents/` (8 agents) |
+| Copilot CLI | **Sim** (`.github/agents/`) | custom agents | `ls .github/agents/` (8 agents) |
+| Codex CLI 0.135 | **Não** | `codex exec` (não-interativo) + `--profile` + `codex mcp` nested | `codex --help` (sem subcomando `agents`; há `exec`, `mcp`, `--profile`) |
+| Gemini CLI 0.44 | **Não** | `gemini skills` + `gemini extensions` + ACP (`gemini --acp`) | `gemini skills list`; `gemini --help` (sem subcomando `agents`) |
 
-Para Codex/Gemini, formatos foram inferidos de docs 2026, não validados empiricamente. Se CLI não reconhecer, spawn falha silenciosamente, orquestrador degrada para inline. **Sintoma**: janela do orquestrador acumula contexto após primeira tarefa em vez de ≤100 tokens. Se notar, revalidar formato.
+**Classificação epistêmica (registrar no report)**: Claude/Copilot = **verificado** (diretório
+nativo + agents enumeráveis). Codex/Gemini = **verificado que NÃO há diretório `agents` nativo** —
+o isolamento usa `codex exec`/`gemini --acp` como subprocesso. O arquivo de conveniência
+`.codex/agents/task-executor.toml` e `.gemini/agents/task-executor.md` é um **prompt seed para o
+subprocesso**, não um registro enforçado pelo CLI. **Não fingir enforcement nativo** para Codex/Gemini:
+se o orquestrador não conseguir spawnar subprocesso isolado, degradar para execução inline sequencial
+e registrar explicitamente `subagente: inline (tool sem agents nativo)` no `_orchestration_report.md`.
+**Sintoma de fallback**: a janela do orquestrador acumula contexto após a primeira tarefa em vez de
+≤100 tokens — sinaliza que o isolamento por subprocesso não ativou.
 
 ## Regras invioláveis
 
@@ -175,4 +205,5 @@ Para Codex/Gemini, formatos foram inferidos de docs 2026, não validados empiric
 | Mutação direta tasks.md | Não |
 | Re-execução automática | Não |
 | Paralelismo | Mapping por Tool + flag `Paralelizável` |
-| Timeout default | 1800s soft (não kill) |
+| Timeout default | 1800s; kill nativo p/ Codex/Gemini/Copilot (subprocesso), soft-discard p/ Claude (in-process) |
+| Orçamento de tokens | `AI_TASK_TOKEN_BUDGET` (default 0 = ilimitado; zero-value preserva F1) |

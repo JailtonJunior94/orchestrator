@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "preToolUse": [
+    {
+      "match": { "tool": "str_replace_editor|write|bash" },
+      "bash": "bash .github/hooks/validate-preload.sh"
+    }
+  ],
+  "postToolUse": [
+    {
+      "match": { "tool": "str_replace_editor|write" },
+      "bash": "bash .github/hooks/validate-governance.sh"
+    }
+  ],
+  "agentStop": [
+    {
+      "bash": "bash .github/hooks/subagent-stop-wrapper.sh"
+    }
+  ]
+}

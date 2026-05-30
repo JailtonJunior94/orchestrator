@@ -90,3 +90,13 @@ enabled = true
 path = ".agents/skills/object-calisthenics-go"
 enabled = true
 
+
+# Governanca (paridade cross-CLI): o hook PreToolUse do Codex tem lacuna de
+# route-around documentada. sandbox_mode + approval_policy garantem que mudancas
+# de filesystem e comandos passem por aprovacao, fechando a lacuna (ADR-002).
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+
+[hooks]
+PreToolUse = "bash .codex/hooks/validate-preload.sh"
+PostToolUse = "bash .codex/hooks/validate-governance.sh"

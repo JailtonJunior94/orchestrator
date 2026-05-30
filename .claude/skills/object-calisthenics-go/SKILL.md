@@ -1,6 +1,7 @@
 ---
 name: object-calisthenics-go
 version: 1.0.0
+category: language
 description: Aplica heuristicas de object calisthenics em codigo Go por meio de refatoracoes pequenas com preservacao de comportamento, criterios de revisao e passos de validacao adaptados a packages, structs, interfaces, metodos e tratamento de erro. Use quando o codigo Go precisar de melhoria incremental de desenho, menor complexidade, responsabilidades mais estreitas ou orientacao de revisao baseada em regras. Nao use para definicao de escopo de funcionalidade, migracao de framework, reescritas amplas ou mudancas que exijam quebra de API publica sem aprovacao explicita.
 ---
 

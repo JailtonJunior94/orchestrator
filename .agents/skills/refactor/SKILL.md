@@ -1,6 +1,7 @@
 ---
 name: refactor
 version: 1.0.1
+category: governance
 depends_on: [review]
 description: Planeja ou executa refatorações incrementais seguras preservando comportamento e coletando evidências de não regressão. Use quando uma refatoração delimitada precisar de orientação consultiva ou execução com validação e revisão. Não use para entrega de nova funcionalidade, definição de escopo de produto ou reescritas cosméticas sem alvo verificado.
 ---
@@ -42,7 +43,7 @@ description: Planeja ou executa refatorações incrementais seguras preservando 
 4. Aceitar apenas `APPROVED` ou `APPROVED_WITH_REMARKS` como veredito aprovador final.
 5. Ler `assets/refactor-report-template.md`.
 6. Salvar o relatório em `.specs/prd-<feature-slug>/refactor_report.md` quando estiver em contexto de tarefa; caso contrário, em `./refactor_report.md`.
-7. Validar o relatório com `bash .claude/scripts/validate-refactor-evidence.sh <caminho-do-relatorio>`; corrigir seções faltantes antes de encerrar.
+7. Validar o relatório com o validador resolvido em cascata portátil (`.agents/scripts/validate-refactor-evidence.sh` → `.claude/scripts/validate-refactor-evidence.sh` → `scripts/validate-refactor-evidence.sh`): `bash "<primeiro-existente>" <caminho-do-relatorio>`; corrigir seções faltantes antes de encerrar.
 
 **Etapa 6: Retornar o estado final**
 1. Informar modo, validações, veredito do revisor quando aplicável e caminho do relatório.

@@ -152,8 +152,30 @@ internal/
   taskloop/
 testdata/
 .agents/skills/
+.agents/scripts/   # validadores de evidencia canonicos (tool-neutros)
+.agents/hooks/     # hooks do orquestrador (canonico)
+.agents/lib/       # shell libs vendoradas
 internal/embedded/
 ```
+
+### Validadores de evidencia (paridade cross-CLI)
+
+Os validadores canonicos vivem em `.agents/scripts/` (tool-neutros) e sao espelhados para
+`.claude/scripts/` e `internal/embedded/assets/{.claude,.agents}/scripts/` via `scripts/sync-skills.sh`
+(gate: `make check-scripts-sync`). O instalador copia-os para `.agents/scripts/` do projeto destino
+**sempre** (independente dos tools), garantindo que projetos so-Gemini/Codex/Copilot tenham os
+mesmos gates que Claude. As skills resolvem em cascata `.agents/scripts/` -> `.claude/scripts/` -> `scripts/`.
+
+- `validate-task-evidence.sh` — gate anti-falso-positivo (DoD + cada criterio de aceite + prova forte de testes).
+- `validate-bugfix-evidence.sh` — rastreabilidade de origem default-on (`--no-rf` para opt-out).
+- `validate-refactor-evidence.sh` — evidencia de nao-regressao.
+- `validate-review-evidence.sh` — evidencia do modo `--auto-review` (veredito + severidade).
+
+### Metadado `category` no frontmatter
+
+Cada SKILL.md pode declarar `category: governance|language|processual`. `governance`/`language` sao
+auto-carregadas em runtime; `processual` (ou ausente) e declarada por tarefa. `create-tasks` deriva a
+lista de skills auto-carregadas desse metadado, nao de prosa hardcoded.
 
 ## CI
 
@@ -219,3 +241,5 @@ Ver [`docs/config-hierarchy.md`](docs/config-hierarchy.md) para referencia compl
 | [ADR-017](.specs/prd-fundacao-portatil/adr-017-fallback-launcher-chain.md) | Generalizacao de fallback launchers (cadeia generica ordenada) | Proposta |
 | [ADR-018](.specs/prd-fundacao-portatil/adr-018-runtimeconfig-retry-backpressure.md) | RuntimeConfig unificado, retry com backoff e sessao ACP com backpressure observavel | Proposta |
 | [ADR-019](.specs/prd-fundacao-portatil/adr-019-instalador-portatil-detect-verify.md) | Instalador portatil: auto-deteccao de agentes, escopo global e verify file-first | Proposta |
+| [PP-001](.specs/prd-skills-production-proof/adr-001-validadores-canonicos-agents-scripts.md) | Validadores de evidencia canonicos em `.agents/scripts/` (tool-neutros, cascata) | Aceita |
+| [PP-002](.specs/prd-skills-production-proof/adr-002-hooks-nativos-paridade-cross-cli.md) | Hooks nativos de bloqueio nos 4 CLIs (paridade cross-CLI 2026) | Aceita |

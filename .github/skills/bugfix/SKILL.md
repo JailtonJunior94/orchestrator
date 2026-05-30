@@ -1,6 +1,7 @@
 ---
 name: bugfix
 version: 1.1.1
+category: governance
 description: Corrige bugs pela causa raiz com testes de regressao obrigatorios e evidencia de validacao. Use quando o usuario pedir para corrigir bugs ou referenciar bugs.md, especialmente a partir de achados emitidos pela skill review. Nao use para review ou auditoria sem alteracao, nem para refatoracao sem defeito confirmado.
 ---
 
@@ -18,7 +19,7 @@ description: Corrige bugs pela causa raiz com testes de regressao obrigatorios e
    [[ -n "$_depth_lib" ]] || { echo "failed: check-invocation-depth.sh ausente em .agents/lib/ e scripts/lib/"; exit 1; }
    source "$_depth_lib" || { echo "failed: depth limit exceeded"; exit 1; }
    ```
-2. Confirmar que a lista de bugs foi recebida no formato canonico `{ id, severity, file, line, reproduction, expected, actual }`.
+2. Confirmar que a lista de bugs foi recebida no formato canonico `{ id, severity, file, line, reproduction, expected, actual }`. A `severity` segue o enum do schema (`critical`, `major`, `minor`); interpretar conforme `.agents/skills/agent-governance/references/severity-mapping.md` — `critical`/`major` exigem correcao no escopo, `minor` pode virar risco residual conforme orcamento.
 3. Ler `references/canonical-bug-format.md` quando houver duvida sobre campos obrigatorios, severidades ou estados canonicos.
 4. Se a lista vier em arquivo JSON, validar contra o schema canonico com `python3 "$repo_root/.agents/skills/bugfix/scripts/validate-bug-input.py" --input <caminho>` antes de prosseguir. O script tenta JSON Schema (`jsonschema`) e cai para validacao manual equivalente quando a lib nao esta disponivel.
 5. Se a lista estiver ausente, incompleta ou fora do formato canonico, retornar `needs_input` com os campos faltantes.
@@ -45,10 +46,11 @@ description: Corrige bugs pela causa raiz com testes de regressao obrigatorios e
 
 **Etapa 5: Revisar e registrar evidencias**
 1. Registrar para cada bug o arquivo alterado, o teste de regressao adicionado e o resultado da validacao.
-2. Atualizar o estado de cada bug usando apenas `fixed`, `blocked`, `skipped` ou `failed`.
-3. Ler `assets/bugfix-report-template.md`.
-4. Salvar o relatorio em `.specs/prd-<feature-slug>/bugfix_report.md` quando estiver em contexto de tarefa; caso contrario, em `./bugfix_report.md`.
-5. Validar o relatorio com `bash "$repo_root/.claude/scripts/validate-bugfix-evidence.sh" <caminho-do-relatorio>`; corrigir secoes faltantes antes de encerrar.
+2. Registrar a **origem** de cada bug (campo `Origem:` com RF, task, finding de review ou issue) — rastreabilidade exigida por padrao pelo validador.
+3. Atualizar o estado de cada bug usando apenas `fixed`, `blocked`, `skipped` ou `failed`.
+4. Ler `assets/bugfix-report-template.md`.
+5. Salvar o relatorio em `.specs/prd-<feature-slug>/bugfix_report.md` quando estiver em contexto de tarefa; caso contrario, em `./bugfix_report.md`.
+6. Validar o relatorio com o validador resolvido em cascata portátil (`.agents/scripts/validate-bugfix-evidence.sh` → `.claude/scripts/validate-bugfix-evidence.sh` → `scripts/validate-bugfix-evidence.sh`): `bash "<primeiro-existente>" <caminho-do-relatorio>` (a rastreabilidade de origem e default-on; quando os IDs de RF forem conhecidos, passar `--rf <RF-ID>` para casar cada um); corrigir secoes faltantes antes de encerrar.
 
 **Etapa 6: Encerrar o fluxo**
 1. Informar total de bugs no escopo, quantos foram corrigidos, quantos testes de regressao foram adicionados e quais itens ficaram pendentes com motivo.

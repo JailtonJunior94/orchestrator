@@ -1,0 +1,14 @@
+{
+  "PreToolUse": [
+    {
+      "matcher": "shell|apply_patch|edit",
+      "command": "bash .codex/hooks/validate-preload.sh"
+    }
+  ],
+  "PostToolUse": [
+    {
+      "matcher": "apply_patch|edit",
+      "command": "bash .codex/hooks/validate-governance.sh"
+    }
+  ]
+}
