@@ -32,6 +32,13 @@
 - **analyze-project:** atualiza template e script de governança para suportar .NET/C#
 
 ### Documentação
+- **skills(node/python/dotnet-implementation):** reforça as três skills ao nível de robustez e economia da `go-implementation`, atacando os gaps da auditoria comparativa (bump `1.1.0` → `1.2.0` em cada uma):
+  - adiciona seção **Regras Estritas Obrigatórias** com severidade `[HARD]` (bloqueante de merge) em cada `SKILL.md` — R0–R7 em node/python e R0–R6 em dotnet — derivadas das orientações inline e elevadas a contrato
+  - adiciona **Checklist de Validação** na Etapa 5 de cada skill, com gates concretos e greps de regressão (type check, lint, testes, format)
+  - adiciona bloco **TL;DR** (summary/keywords/load-when) em 17/17 referências de node e 17/17 de python (antes 0/17), restaurando o lazy-loading por complexidade esperado por `agent-governance`
+  - adiciona nota de **teto por complexidade** (trivial/standard/complex) nas três `SKILL.md`
+  - expande `node/architecture.md` e `python/architecture.md` com monólito modular, monorepo/workspaces, projetos legados e escala pequeno/médio/grande
+  - propaga o canônico `.agents/skills/` para os mirrors `.claude/skills`, `.github/skills` e `internal/embedded/assets/.agents/skills` via `scripts/sync-skills.sh` (drift zero em `make check-skills-sync`)
 - **prompts:** expande `go-implementation-strict-rules.md` com regras estritas de implementação Go
 - **skills(go-implementation):** incorpora por completo as Regras Estritas 0–7 à skill (bump `1.1.0` → `1.2.0`):
   - adiciona em `references/build.md` o **Checklist de Validação (R0–R7)** que o `SKILL.md` (Etapa 5) já referenciava mas não existia — corrige referência pendente; inclui greps de R0 (`init()`), R1 (funções standalone), R3 (`mockery.yml`/mocks atualizados), R4 (`suite.Suite`/`SetupTest`/`suite.Run`), R5/R6 (`os.Exit`/`log.Fatal`/`panic`/globals/context em struct) e R7 (`interface{}`), mais os gates `go build/vet/test -race`, `golangci-lint` e `mockery --dry-run`
