@@ -118,6 +118,7 @@ func (s *FrontmatterSuite) TestParseFrontmatterFieldsWrapperConsistency() {
 name: my-skill
 version: 2.0.0
 description: Uma skill de teste.
+category: language
 triggers: [go-implementation]
 depends_on: [review]
 lang: go
@@ -131,6 +132,7 @@ max_depth: 5
 	s.Equal(fields["name"], fm.Name, "name divergente")
 	s.Equal(fields["version"], fm.Version, "version divergente")
 	s.Equal(fields["description"], fm.Description, "description divergente")
+	s.Equal(fields["category"], fm.Category, "category divergente")
 	s.Equal(fields["lang"], fm.Lang, "lang divergente")
 	s.Equal(fields["link_mode"], fm.LinkMode, "link_mode divergente")
 }

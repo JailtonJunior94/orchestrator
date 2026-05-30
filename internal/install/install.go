@@ -250,6 +250,15 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 		}
 	}
 
+	// 2.7 Instalar validadores de evidencia canonicos em .agents/scripts/ (tool-neutro,
+	// SEMPRE). Garante paridade cross-CLI: a cascata `.agents/scripts/` -> `.claude/scripts/`
+	// -> `scripts/` resolve os gates mesmo em projetos sem Claude (so Gemini/Codex/Copilot).
+	if !opts.DryRun {
+		if err := s.copyAgentsScripts(sourceDir, projectDir); err != nil {
+			s.printer.Warn("falha ao copiar .agents/scripts/: %v", err)
+		}
+	}
+
 	// 3. Gerar governanca contextual
 	if opts.GenerateCtx {
 		s.printer.Step("Gerando governanca contextual...")
@@ -662,6 +671,7 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 		s.printer.DryRun("copiar .claude/scripts/validate-task-evidence.sh")
 		s.printer.DryRun("copiar .claude/scripts/validate-bugfix-evidence.sh")
 		s.printer.DryRun("copiar .claude/scripts/validate-refactor-evidence.sh")
+		s.printer.DryRun("copiar .claude/scripts/validate-review-evidence.sh")
 		s.printer.DryRun("copiar .claude/hooks/validate-governance.sh")
 		s.printer.DryRun("copiar .claude/hooks/validate-preload.sh")
 		s.printer.DryRun("copiar scripts/lib/parse-hook-input.sh")
@@ -695,6 +705,13 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 	refactorScript := filepath.Join(sourceDir, ".claude", "scripts", "validate-refactor-evidence.sh")
 	if s.fs.Exists(refactorScript) {
 		if err := s.fs.CopyFile(refactorScript, filepath.Join(projectDir, ".claude", "scripts", "validate-refactor-evidence.sh")); err != nil {
+			return err
+		}
+	}
+
+	reviewScript := filepath.Join(sourceDir, ".claude", "scripts", "validate-review-evidence.sh")
+	if s.fs.Exists(reviewScript) {
+		if err := s.fs.CopyFile(reviewScript, filepath.Join(projectDir, ".claude", "scripts", "validate-review-evidence.sh")); err != nil {
 			return err
 		}
 	}
@@ -799,6 +816,17 @@ func (s *Service) installGemini(sourceDir, projectDir string, dryRun bool) error
 		return err
 	}
 
+	geminiSettings := filepath.Join(projectDir, ".gemini", "settings.json")
+	if !s.fs.Exists(geminiSettings) {
+		if err := s.fs.WriteFile(geminiSettings, []byte(NewHelper().defaultGeminiSettings())); err != nil {
+			return err
+		}
+	} else if data, err := s.fs.ReadFile(geminiSettings); err == nil {
+		if !strings.Contains(string(data), "validate-preload.sh") {
+			s.printer.Warn(".gemini/settings.json ja existe. Adicione os hooks BeforeTool/AfterAgent manualmente (validate-preload, validate-governance).")
+		}
+	}
+
 	geminiMD := filepath.Join(sourceDir, "GEMINI.md")
 	if s.fs.Exists(geminiMD) {
 		if err := s.fs.CopyFile(geminiMD, filepath.Join(projectDir, "GEMINI.md")); err != nil {
@@ -821,6 +849,48 @@ var _orchestratorHooks = []string{
 	"pre-execute-all-tasks.sh",
 	"post-wave.sh",
 	"subagent-stop-wrapper.sh",
+}
+
+// _agentsScriptsFiles lista validadores de evidencia canonicos em .agents/scripts/.
+// Sao tool-neutros e instalados SEMPRE (independente dos tools selecionados), pois a
+// cascata de resolucao das skills e `.agents/scripts/` -> `.claude/scripts/` -> `scripts/`.
+// Instalar em .agents/scripts/ garante paridade: um projeto so-Gemini/Codex/Copilot tem os
+// mesmos gates de evidencia que um projeto Claude.
+var _agentsScriptsFiles = []string{
+	"validate-task-evidence.sh",
+	"validate-bugfix-evidence.sh",
+	"validate-refactor-evidence.sh",
+	"validate-review-evidence.sh",
+}
+
+// copyAgentsScripts copia os validadores canonicos de evidencia para .agents/scripts/ do
+// projeto destino, de forma tool-neutra. Fonte preferencial: sourceDir/.agents/scripts/;
+// fallback: sourceDir/.claude/scripts/ (bundles que so espelham o mirror Claude).
+func (s *Service) copyAgentsScripts(sourceDir, projectDir string) error {
+	dstDir := filepath.Join(projectDir, ".agents", "scripts")
+	primarySrc := filepath.Join(sourceDir, ".agents", "scripts")
+	fallbackSrc := filepath.Join(sourceDir, ".claude", "scripts")
+
+	for _, name := range _agentsScriptsFiles {
+		src := filepath.Join(primarySrc, name)
+		if !s.fs.Exists(src) {
+			src = filepath.Join(fallbackSrc, name)
+		}
+		if !s.fs.Exists(src) {
+			continue
+		}
+		if err := s.fs.MkdirAll(dstDir); err != nil {
+			return err
+		}
+		dst := filepath.Join(dstDir, name)
+		if err := s.fs.CopyFile(src, dst); err != nil {
+			return err
+		}
+		if err := os.Chmod(dst, 0o755); err != nil {
+			s.printer.Warn("nao foi possivel preservar +x em %s: %v", dst, err)
+		}
+	}
+	return nil
 }
 
 // _agentsLibFiles lista shell libs vendoradas em .agents/lib/ que skills e hooks
@@ -958,7 +1028,12 @@ func (s *Service) installCodex(sourceDir, projectDir string, skillList []string,
 	}
 
 	content := s.adapters.BuildCodexConfig(list)
+	content += NewHelper().codexGovernanceTOML()
 	if err := s.fs.WriteFile(filepath.Join(codexDir, "config.toml"), []byte(content)); err != nil {
+		return err
+	}
+
+	if err := s.fs.WriteFile(filepath.Join(codexDir, "hooks.json"), []byte(NewHelper().defaultCodexHooks())); err != nil {
 		return err
 	}
 
@@ -1025,6 +1100,12 @@ func (s *Service) installCopilot(sourceDir, projectDir string, skillList []strin
 		if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".github", "hooks")); err != nil {
 			return err
 		}
+		governance := filepath.Join(projectDir, ".github", "hooks", "governance.json")
+		if !s.fs.Exists(governance) {
+			if err := s.fs.WriteFile(governance, []byte(NewHelper().defaultCopilotHooks())); err != nil {
+				return err
+			}
+		}
 	} else {
 		s.printer.DryRun("gerar .github/agents/*.agent.md via adaptadores")
 		s.printer.DryRun("copiar .github/hooks/{validate-preload,validate-governance,post-execute-task,pre-execute-all-tasks,post-wave}.sh")
@@ -1071,6 +1152,100 @@ func (r1 *Helper) defaultClaudeSettings() string {
     ]
   }
 }
+`
+}
+
+// defaultGeminiSettings devolve o conteudo de .gemini/settings.json com hooks nativos
+// 2026 (BeforeTool/AfterAgent) apontando para os validadores compartilhados. Paridade
+// com Claude: preload de governanca antes de editar, validacao apos editar.
+func (r1 *Helper) defaultGeminiSettings() string {
+	return `{
+  "hooks": {
+    "BeforeTool": [
+      {
+        "matcher": "edit|write|replace",
+        "command": "bash .gemini/hooks/validate-preload.sh"
+      }
+    ],
+    "AfterTool": [
+      {
+        "matcher": "edit|write|replace",
+        "command": "bash .gemini/hooks/validate-governance.sh"
+      }
+    ],
+    "AfterAgent": [
+      {
+        "command": "bash .gemini/hooks/subagent-stop-wrapper.sh"
+      }
+    ]
+  }
+}
+`
+}
+
+// defaultCopilotHooks devolve o conteudo de .github/hooks/governance.json no formato
+// nativo do Copilot CLI 2026 (version:1, preToolUse/agentStop) apontando para os
+// validadores compartilhados. Paridade com Claude/Gemini.
+func (r1 *Helper) defaultCopilotHooks() string {
+	return `{
+  "version": 1,
+  "preToolUse": [
+    {
+      "match": { "tool": "str_replace_editor|write|bash" },
+      "bash": "bash .github/hooks/validate-preload.sh"
+    }
+  ],
+  "postToolUse": [
+    {
+      "match": { "tool": "str_replace_editor|write" },
+      "bash": "bash .github/hooks/validate-governance.sh"
+    }
+  ],
+  "agentStop": [
+    {
+      "bash": "bash .github/hooks/subagent-stop-wrapper.sh"
+    }
+  ]
+}
+`
+}
+
+// defaultCodexHooks devolve o conteudo de .codex/hooks.json no formato nativo do
+// Codex CLI 2026 (PreToolUse). O Codex tem lacuna documentada de route-around, por
+// isso o enforcement por hook e suplementado por sandbox_mode/approval_policy no
+// config.toml (ver codexGovernanceTOML e enforcement-matrix.md, caveat Codex).
+func (r1 *Helper) defaultCodexHooks() string {
+	return `{
+  "PreToolUse": [
+    {
+      "matcher": "shell|apply_patch|edit",
+      "command": "bash .codex/hooks/validate-preload.sh"
+    }
+  ],
+  "PostToolUse": [
+    {
+      "matcher": "apply_patch|edit",
+      "command": "bash .codex/hooks/validate-governance.sh"
+    }
+  ]
+}
+`
+}
+
+// codexGovernanceTOML devolve o bloco TOML de governanca apendado ao .codex/config.toml:
+// sandbox_mode + approval_policy fecham a lacuna de route-around dos hooks do Codex
+// (o hook sozinho nao e suficiente — ver ADR-002 e enforcement-matrix.md).
+func (r1 *Helper) codexGovernanceTOML() string {
+	return `
+# Governanca (paridade cross-CLI): o hook PreToolUse do Codex tem lacuna de
+# route-around documentada. sandbox_mode + approval_policy garantem que mudancas
+# de filesystem e comandos passem por aprovacao, fechando a lacuna (ADR-002).
+sandbox_mode = "workspace-write"
+approval_policy = "on-request"
+
+[hooks]
+PreToolUse = "bash .codex/hooks/validate-preload.sh"
+PostToolUse = "bash .codex/hooks/validate-governance.sh"
 `
 }
 

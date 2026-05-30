@@ -27,6 +27,7 @@ description: Cria especificações técnicas prontas para implementação a part
    - falhas esperadas e idempotência
    - estratégia de testes
 2. Limitar o esclarecimento a duas rodadas.
+   - **Trade-off de arquitetura/interface material** (caminhos com consequências divergentes): aplicar `.agents/skills/agent-governance/references/multiple-choice-protocol.md` (2–5 opções, "(Recomendado)", uma pergunta por turno).
 3. Se a arquitetura continuar bloqueada após duas rodadas, retornar `needs_input` com as decisões faltantes.
 
 **Etapa 4: Verificar conformidade com as regras do repositório**

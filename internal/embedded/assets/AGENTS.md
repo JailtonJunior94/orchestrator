@@ -71,6 +71,18 @@ Cada skill lista suas próprias referências em `references/` com gatilhos de ca
 
 Antes de concluir uma alteração, seguir Etapa 4 de `.agents/skills/agent-governance/SKILL.md`.
 
+Os validadores de evidência canônicos ficam em `.agents/scripts/` (tool-neutros, instalados em
+qualquer projeto independente do CLI). As skills os resolvem em cascata
+`.agents/scripts/` → `.claude/scripts/` → `scripts/`:
+
+- `validate-task-evidence.sh` — gate anti-falso-positivo (DoD + cada critério de aceite + prova forte de testes).
+- `validate-bugfix-evidence.sh` — rastreabilidade de origem default-on (`--no-rf` para opt-out).
+- `validate-refactor-evidence.sh` — evidência de não-regressão.
+- `validate-review-evidence.sh` — evidência do modo `--auto-review` (veredito + severidade).
+
+Esse comportamento é idêntico em Claude, Codex, Copilot e Gemini e em qualquer tipo de projeto
+(pequeno/médio/grande, novo/existente).
+
 ## Restrições
 
 1. Não inventar contexto ausente.

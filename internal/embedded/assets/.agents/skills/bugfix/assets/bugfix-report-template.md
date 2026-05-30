@@ -9,6 +9,7 @@
 ## Bugs
 - ID:
 - Severidade:
+- Origem: [RF-ID | task | finding de review | issue]
 - Estado: fixed | blocked | skipped | failed
 - Causa raiz:
 - Arquivos alterados:

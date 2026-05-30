@@ -21,6 +21,11 @@
       "type": "string",
       "minLength": 1
     },
+    "category": {
+      "$comment": "Classificacao de carregamento da skill: 'governance' e 'language' sao auto-carregadas em runtime; 'processual' e declarada por tarefa. Ausencia equivale a 'processual'.",
+      "type": "string",
+      "enum": ["governance", "language", "processual"]
+    },
     "triggers": {
       "$comment": "Palavras-chave ou padroes que acionam esta skill automaticamente em agentes compatıveis.",
       "type": "array",

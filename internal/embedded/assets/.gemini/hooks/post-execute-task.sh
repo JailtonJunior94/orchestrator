@@ -15,8 +15,9 @@
 #   1 — pelo menos uma validacao falhou; mensagens em stderr
 #   2 — argumentos invalidos
 #
-# Ativacao opcional de validacoes mais caras:
-#   AI_VALIDATE_GIT_HISTORY=1 — habilita F35 (git cat-file no DiffSHA)
+# Ativacao de validacoes mais caras (RF-04, default-on):
+#   AI_VALIDATE_GIT_HISTORY default 1 — habilita F35 (git cat-file no DiffSHA).
+#   Opt-out explicito via AI_VALIDATE_GIT_HISTORY=0 (zero regressao quando desligado).
 
 set -euo pipefail
 
@@ -175,9 +176,9 @@ if [[ "$status" == "done" ]]; then
   fi
 fi
 
-# === F35: validar DiffSHA contra git log (opt-in) ===
-if [[ "${AI_VALIDATE_GIT_HISTORY:-0}" == "1" && "$status" == "done" && -n "$report_path" && -s "$REPO_ROOT/$report_path" ]]; then
-  diff_sha=$(grep -E "^sha=" "$REPO_ROOT/$report_path" | head -1 | sed 's/^sha=//' | xargs)
+# === F35: validar DiffSHA contra git log (default-on; opt-out AI_VALIDATE_GIT_HISTORY=0) ===
+if [[ "${AI_VALIDATE_GIT_HISTORY:-1}" == "1" && "$status" == "done" && -n "$report_path" && -s "$REPO_ROOT/$report_path" ]]; then
+  diff_sha=$(grep -E "^sha=" "$REPO_ROOT/$report_path" 2>/dev/null | head -1 | sed 's/^sha=//' | xargs || true)
   if [[ -n "$diff_sha" ]]; then
     if ! git -C "$REPO_ROOT" cat-file -e "$diff_sha" 2>/dev/null; then
       echo "FAIL F35: DiffSHA $diff_sha do report nao esta no git log atual (revert/branch deletado/history rewrite?)" >&2

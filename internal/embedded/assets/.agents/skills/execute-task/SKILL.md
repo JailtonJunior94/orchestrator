@@ -1,6 +1,7 @@
 ---
 name: execute-task
 version: 1.5.1
+category: governance
 depends_on: [review, bugfix, agent-governance]
 description: Executa uma tarefa de implementação aprovada via codificação, validação, revisão e captura de evidências. Carrega skills processuais declaradas em `## Skills Necessárias` (formato canônico estrito) + skills de linguagem inferidas do diff. Use quando um task file estiver pronto para implementação. Não use para planejamento.
 ---
@@ -65,7 +66,7 @@ description: Executa uma tarefa de implementação aprovada via codificação, v
 **Etapa 4: Validação + revisão (F24)**
 1. Seguir Etapa 4 de `agent-governance`.
 2. Teste/lint do pacote afetado (mandatório). Suíte completa (`hard`) se diff cruzar pacote, alterar API pública, ou tocar config compartilhada.
-3. Verificar critérios com evidência explícita.
+3. Verificar critérios com evidência explícita. **Preencher `## Critérios de Aceite` do report com um item `-> comprovado: <evidência física>` por critério da task file (`## Critérios de Sucesso`/`## Critérios de Aceite`); marcar o DoD. O validador rejeita critério sem comprovação e `Testes: pass` sem comando de teste correspondente.**
 4. Invocar `review` com prd.md + techspec.md como contexto.
 5. **Mapear veredito**:
    - `APPROVED` → Etapa 5.
@@ -77,7 +78,7 @@ description: Executa uma tarefa de implementação aprovada via codificação, v
 
 **Etapa 5: Persistir evidências (F25 checkpoint)**
 1. Salvar `.specs/prd-<slug>/[num]_execution_report.md` (overwrite com `# Generated: <ISO-8601 UTC>` no header — F36) a partir de `assets/task-execution-report-template.md`.
-2. Rodar validador de evidências (resolver: `.claude/scripts/...` → `.agents/scripts/...` → `scripts/...`). Nenhum → `failed`. Falha → `blocked`; não mutar tasks.md.
+2. Rodar validador de evidências (resolver em cascata portátil: `.agents/scripts/...` → `.claude/scripts/...` → `scripts/...`). Nenhum → `failed`. Falha → `blocked`; não mutar tasks.md.
 3. **Checkpoint YAML antes de mutar tasks.md (F25)**:
    - `mkdir -p .specs/prd-<slug>/.checkpoints/`.
    - Escrever `.checkpoints/<num>.yaml.tmp` com `status`, `report_path`, `summary`, `timestamp` (ISO-8601 UTC).

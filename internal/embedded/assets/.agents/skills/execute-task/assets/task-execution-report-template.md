@@ -22,6 +22,18 @@
 - Lint: pass | fail | blocked
 - Veredito do Revisor: APPROVED | APPROVED_WITH_REMARKS | REJECTED | BLOCKED
 
+## Critérios de Aceite
+<!-- Um item por critério da task file (## Critérios de Sucesso / ## Critérios de Aceite).
+     Formato: `- [texto do critério] -> comprovado: <evidência verificável>`.
+     Todo critério deve ter comprovação física (comando, arquivo, teste, output). -->
+- [critério 1] -> comprovado: [evidência]
+
+## Definition of Done (DoD)
+- [ ] Todos os critérios de aceite acima comprovados com evidência física.
+- [ ] Testes da tarefa criados e executados (`Testes: pass` com comando correspondente em Comandos Executados).
+- [ ] Lint/vet/build sem regressão.
+- [ ] Estado de tasks.md sincronizado com este relatório.
+
 ## Diff Reviewed
 
 sha={{.DiffSHA}}

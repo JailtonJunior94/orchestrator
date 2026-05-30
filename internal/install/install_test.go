@@ -224,6 +224,7 @@ description: Revisa codigo.
 	ffs.Files["/source/.claude/scripts/validate-task-evidence.sh"] = []byte("#!/usr/bin/env bash")
 	ffs.Files["/source/.claude/scripts/validate-bugfix-evidence.sh"] = []byte("#!/usr/bin/env bash")
 	ffs.Files["/source/.claude/scripts/validate-refactor-evidence.sh"] = []byte("#!/usr/bin/env bash")
+	ffs.Files["/source/.claude/scripts/validate-review-evidence.sh"] = []byte("#!/usr/bin/env bash")
 	ffs.Files["/source/.claude/hooks/validate-governance.sh"] = []byte("#!/usr/bin/env bash")
 	ffs.Files["/source/.claude/hooks/validate-preload.sh"] = []byte("#!/usr/bin/env bash")
 	ffs.Files["/source/scripts/lib/parse-hook-input.sh"] = []byte("#!/usr/bin/env bash")
@@ -272,6 +273,9 @@ description: Revisa codigo.
 	}
 	if !ffs.Exists("/project/.claude/scripts/validate-refactor-evidence.sh") {
 		t.Error("validate-refactor-evidence.sh nao copiado")
+	}
+	if !ffs.Exists("/project/.claude/scripts/validate-review-evidence.sh") {
+		t.Error("validate-review-evidence.sh nao copiado")
 	}
 	if !ffs.Exists("/project/scripts/lib/check-invocation-depth.sh") {
 		t.Error("check-invocation-depth.sh nao copiado")
@@ -477,6 +481,70 @@ func TestInstall_Gemini_CopiesHook(t *testing.T) {
 	}
 	if !ffs.Exists("/project/.gemini/hooks/validate-governance.sh") {
 		t.Error("gemini hook validate-governance.sh nao copiado")
+	}
+}
+
+// TestInstall_NonClaude_ShipsCanonicalValidators garante paridade cross-CLI (RF-23):
+// um projeto so-Gemini (sem Claude) deve receber os validadores de evidencia canonicos
+// em .agents/scripts/ (cascata tool-neutra), nao apenas em .claude/scripts/.
+func TestInstall_NonClaude_ShipsCanonicalValidators(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	ffs.Files["/source/.agents/scripts/validate-task-evidence.sh"] = []byte("#!/usr/bin/env bash")
+	ffs.Files["/source/.agents/scripts/validate-bugfix-evidence.sh"] = []byte("#!/usr/bin/env bash")
+	ffs.Files["/source/.agents/scripts/validate-refactor-evidence.sh"] = []byte("#!/usr/bin/env bash")
+	ffs.Files["/source/.agents/scripts/validate-review-evidence.sh"] = []byte("#!/usr/bin/env bash")
+
+	svc := setupTestService(ffs)
+
+	err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolGemini},
+		LinkMode:   skills.LinkCopy,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, v := range []string{
+		"validate-task-evidence.sh",
+		"validate-bugfix-evidence.sh",
+		"validate-refactor-evidence.sh",
+		"validate-review-evidence.sh",
+	} {
+		if !ffs.Exists("/project/.agents/scripts/" + v) {
+			t.Errorf("validador canonico %s nao copiado para .agents/scripts/ em install so-Gemini", v)
+		}
+	}
+}
+
+// TestInstall_CanonicalValidators_FallbackToClaudeScripts garante que, quando a fonte so
+// tem o mirror .claude/scripts/ (bundle antigo sem .agents/scripts/), os validadores ainda
+// chegam a .agents/scripts/ via fallback.
+func TestInstall_CanonicalValidators_FallbackToClaudeScripts(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	ffs.Files["/source/.claude/scripts/validate-task-evidence.sh"] = []byte("#!/usr/bin/env bash")
+
+	svc := setupTestService(ffs)
+
+	err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolCodex},
+		LinkMode:   skills.LinkCopy,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if !ffs.Exists("/project/.agents/scripts/validate-task-evidence.sh") {
+		t.Error("fallback .claude/scripts/ -> .agents/scripts/ nao aplicado")
 	}
 }
 
@@ -2031,5 +2099,104 @@ func TestSpecForTool_Unknown(t *testing.T) {
 	_, ok := NewHelper().specForTool(skills.Tool("unknown"))
 	if ok {
 		t.Error("NewHelper().specForTool(unknown): esperado ok=false")
+	}
+}
+
+// TestInstall_Gemini_NativeHooks verifica que install do Gemini gera settings.json
+// com hooks nativos 2026 (BeforeTool/AfterAgent) apontando para os validadores compartilhados.
+func TestInstall_Gemini_NativeHooks(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	svc := setupTestService(ffs)
+
+	if err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolGemini},
+		LinkMode:   skills.LinkCopy,
+	}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data, err := ffs.ReadFile("/project/.gemini/settings.json")
+	if err != nil {
+		t.Fatalf(".gemini/settings.json nao criado: %v", err)
+	}
+	content := string(data)
+	for _, want := range []string{"BeforeTool", "AfterAgent", "validate-preload.sh", "validate-governance.sh"} {
+		if !strings.Contains(content, want) {
+			t.Errorf(".gemini/settings.json sem %q", want)
+		}
+	}
+}
+
+// TestInstall_Copilot_NativeHooks verifica que install do Copilot gera governance.json
+// no formato nativo 2026 (version:1, preToolUse/agentStop).
+func TestInstall_Copilot_NativeHooks(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	svc := setupTestService(ffs)
+
+	if err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolCopilot},
+		LinkMode:   skills.LinkCopy,
+	}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data, err := ffs.ReadFile("/project/.github/hooks/governance.json")
+	if err != nil {
+		t.Fatalf(".github/hooks/governance.json nao criado: %v", err)
+	}
+	content := string(data)
+	for _, want := range []string{`"version": 1`, "preToolUse", "agentStop", "validate-preload.sh"} {
+		if !strings.Contains(content, want) {
+			t.Errorf(".github/hooks/governance.json sem %q", want)
+		}
+	}
+}
+
+// TestInstall_Codex_NativeHooksAndSandbox verifica que install do Codex gera hooks.json
+// e que config.toml inclui sandbox_mode/approval_policy (suplemento da lacuna de route-around).
+func TestInstall_Codex_NativeHooksAndSandbox(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	svc := setupTestService(ffs)
+
+	if err := svc.Execute(config.InstallOptions{
+		ProjectDir:   "/project",
+		SourceDir:    "/source",
+		Tools:        []skills.Tool{skills.ToolCodex},
+		LinkMode:     skills.LinkCopy,
+		CodexProfile: "full",
+	}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	hooks, err := ffs.ReadFile("/project/.codex/hooks.json")
+	if err != nil {
+		t.Fatalf(".codex/hooks.json nao criado: %v", err)
+	}
+	if !strings.Contains(string(hooks), "PreToolUse") {
+		t.Error(".codex/hooks.json sem PreToolUse")
+	}
+
+	cfg, err := ffs.ReadFile("/project/.codex/config.toml")
+	if err != nil {
+		t.Fatalf(".codex/config.toml nao criado: %v", err)
+	}
+	cfgStr := string(cfg)
+	for _, want := range []string{"sandbox_mode", "approval_policy", "[hooks]"} {
+		if !strings.Contains(cfgStr, want) {
+			t.Errorf(".codex/config.toml sem %q", want)
+		}
 	}
 }

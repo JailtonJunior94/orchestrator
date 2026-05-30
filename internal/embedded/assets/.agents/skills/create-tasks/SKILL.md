@@ -1,6 +1,6 @@
 ---
 name: create-tasks
-version: 1.6.1
+version: 1.7.0
 description: Cria tarefas incrementais de implementação a partir de um PRD e de uma especificação técnica. Use quando documentos de produto e técnicos aprovados precisarem ser decompostos em itens de trabalho ordenados e testáveis, incluindo declaração de skills processuais especializadas necessárias por tarefa. Não use para mudanças diretas de código, descoberta de funcionalidade ou revisão de branch.
 ---
 
@@ -17,6 +17,7 @@ description: Cria tarefas incrementais de implementação a partir de um PRD e d
 **Etapa 2: Extrair fatias de entrega**
 1. Identificar requisitos, decisões técnicas, pontos de integração, dependências e áreas de risco.
 2. Agrupar o trabalho em fatias que entreguem valor verificável.
+   - **Fatiamento materialmente ambíguo** (granularidade/ordem/paralelismo com trade-offs reais): aplicar `.agents/skills/agent-governance/references/multiple-choice-protocol.md` (2–5 opções, "(Recomendado)", uma pergunta por turno) antes de fixar o plano.
 3. Preferir a sequência `domain -> interfaces/ports -> use cases -> adapters/repositories -> handlers -> integration`, salvo quando a especificação técnica justificar outra ordem.
 
 **Etapa 3: Propor primeiro o plano de tarefas em alto nível**
@@ -44,11 +45,11 @@ Os templates (`assets/tasks-template.md` e `assets/task-template.md`) já contê
 
 Sua tarefa nesta etapa é **preencher** esses placeholders com detecção agnóstica em runtime — não inventar campos novos nem omitir os existentes.
 
-1. Listar o diretório `.agents/skills/` para enumerar todas as skills disponíveis no projeto. Ignorar as auto-carregadas em runtime — lista **exata e explícita**:
-   - Governance/orquestração: `agent-governance`, `execute-task`, `execute-all-tasks`, `bugfix`, `review`, `refactor`.
-   - Linguagem (detectadas pelo diff em `execute-task` Stage 2): `go-implementation`, `node-implementation`, `python-implementation`, `object-calisthenics-go`.
-   - **Não usar glob `*-implementation`** — overmatch pode ignorar skills futuras com esse sufixo que não sejam de linguagem (ex.: `react-implementation` se um dia for criada como skill de framework, e não de linguagem). A enumeração explícita acima é a fonte de verdade; atualizar quando uma nova skill de linguagem for adicionada ao projeto.
-   - Skills não-listadas acima são candidatas à seção `## Skills Necessárias` se a description casar semanticamente com o objetivo da tarefa.
+1. Listar o diretório `.agents/skills/` para enumerar todas as skills disponíveis no projeto. Classificar cada skill **lendo o campo `category` do frontmatter** de `.agents/skills/<skill>/SKILL.md` (fonte de verdade — não usar lista hardcoded em prosa):
+   - `category: governance` → auto-carregada (orquestração/governança). **Ignorar** na declaração por tarefa.
+   - `category: language` → auto-carregada por detecção de diff em `execute-task` Stage 2. **Ignorar** na declaração por tarefa.
+   - `category: processual` **ou campo ausente** → candidata à seção `## Skills Necessárias` se a `description` casar semanticamente com o objetivo da tarefa.
+   - **Não usar glob nem nomes hardcoded** (ex.: `*-implementation`) para classificar — a classificação deriva exclusivamente do metadado `category`. Skills futuras de linguagem/governança devem declarar `category` no frontmatter para serem auto-detectadas como auto-carregadas; sem o campo, são tratadas como `processual` (declaráveis), que é o fallback seguro.
 2. Para cada skill restante, ler `description` no frontmatter de `.agents/skills/<skill>/SKILL.md`.
 3. Para cada tarefa proposta, comparar semanticamente o objetivo/critérios de aceitação com as descrições das skills disponíveis. Identificar skills cujo gatilho seja claramente acionado pela tarefa.
 4. **Preenchimento mandatório dos placeholders (formato estrito, F28):**

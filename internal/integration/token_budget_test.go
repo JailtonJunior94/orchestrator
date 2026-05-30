@@ -22,6 +22,7 @@ const budgetSkillMD = 4000
 // documentado aqui em vez de relaxar o budget universal de todas as skills.
 var budgetSkillMDOverride = map[string]int{
 	"go-implementation": 4300, // R0-R7 inline always-on (v1.2.0); medido 4136, margem ~4%
+	"execute-all-tasks": 5400, // tabelas verificadas de subagentes (F26) + matriz timeout/kill por tool (RF-21) always-on; medido 4874, margem ~10%
 }
 
 // budgetSingleRef e o limite maximo de tokens para uma unica referencia.

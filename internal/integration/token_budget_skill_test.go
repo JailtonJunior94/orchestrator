@@ -24,7 +24,7 @@ import (
 // Valores com margem de 10% sobre o tamanho atual medido.
 // Atualizar conscientemente ao expandir skills — essa e a intencao do teste.
 var skillBudgets = map[string]int{
-	"agent-governance":       10266, // SKILL.md + 13 refs com TL;DR headers (atualizado em 2026-05-08 apos hardening de invocacao)
+	"agent-governance":       12393, // SKILL.md + 15 refs (atualizado em 2026 apos multiple-choice-protocol.md + severity-mapping.md; margem 10% sobre 11267 medido)
 	"go-implementation":      28049, // SKILL.md (R0-R7 inline, always-on) + 19 refs (atualizado em 2026-05-30 apos integracao das Regras Estritas v1.2.0, commit e09c09f; margem de 10% sobre 25499 medido)
 	"object-calisthenics-go": 4000,  // SKILL.md + 3 refs
 }

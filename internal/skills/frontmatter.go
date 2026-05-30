@@ -12,6 +12,7 @@ type Frontmatter struct {
 	Name        string
 	Version     string
 	Description string
+	Category    string
 	Triggers    []string
 	Lang        string
 	LinkMode    string
@@ -90,6 +91,7 @@ func (catalog *Catalog) ParseFrontmatter(content []byte) Frontmatter {
 	fm.Name = fields["name"]
 	fm.Version = fields["version"]
 	fm.Description = fields["description"]
+	fm.Category = fields["category"]
 	fm.Lang = fields["lang"]
 	fm.LinkMode = fields["link_mode"]
 
