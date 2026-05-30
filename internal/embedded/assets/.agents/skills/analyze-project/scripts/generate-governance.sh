@@ -35,6 +35,7 @@ INSTALL_COPILOT="${INSTALL_COPILOT:-0}"
 INSTALL_GO="${INSTALL_GO:-auto}"
 INSTALL_NODE="${INSTALL_NODE:-auto}"
 INSTALL_PYTHON="${INSTALL_PYTHON:-auto}"
+INSTALL_DOTNET="${INSTALL_DOTNET:-auto}"
 
 # Importar modulo de deteccao de arquitetura
 DETECT_ARCH_SCRIPT="$ROOT_DIR/.agents/skills/agent-governance/scripts/detect-architecture.sh"
@@ -90,6 +91,15 @@ should_include_python() {
     file_exists "pyproject.toml" || file_exists "requirements.txt" || file_exists "setup.py" || file_exists "Pipfile" || has_manifest "pyproject.toml" || has_manifest "requirements.txt"
   else
     [[ "$INSTALL_PYTHON" == "1" ]]
+  fi
+}
+
+should_include_dotnet() {
+  if [[ "$INSTALL_DOTNET" == "auto" ]]; then
+    file_exists "global.json" || file_exists "Directory.Build.props" || file_exists "Directory.Packages.props" \
+      || ls "$PROJECT_DIR"/*.csproj >/dev/null 2>&1 || ls "$PROJECT_DIR"/*.sln >/dev/null 2>&1
+  else
+    [[ "$INSTALL_DOTNET" == "1" ]]
   fi
 }
 
@@ -192,7 +202,7 @@ detect_primary_stack() {
   if file_exists "Cargo.toml"; then
     parts+=("Rust")
   fi
-  if ls "$PROJECT_DIR"/*.csproj >/dev/null 2>&1 || ls "$PROJECT_DIR"/*.sln >/dev/null 2>&1; then
+  if should_include_dotnet; then
     parts+=("C#/.NET")
   fi
 
@@ -267,6 +277,7 @@ build_dependency_flow() {
   should_include_go && active_languages=$((active_languages + 1))
   should_include_node && active_languages=$((active_languages + 1))
   should_include_python && active_languages=$((active_languages + 1))
+  should_include_dotnet && active_languages=$((active_languages + 1))
 
   if [[ "$active_languages" -gt 1 ]]; then
     cat <<'EOF'
@@ -300,6 +311,15 @@ EOF
 - Routers e handlers devem depender de services ou use cases, nao do contrario.
 - Dominio nao deve importar detalhes de framework (FastAPI, Django, Flask), ORM ou drivers.
 - Infraestrutura implementa contratos consumidos pela camada de aplicacao, preservando dependencia para dentro.
+EOF
+    return
+  fi
+
+  if should_include_dotnet; then
+    cat <<'EOF'
+- Endpoints (Minimal APIs/Controllers) e handlers devem depender de use cases ou services, nao do contrario.
+- Dominio nao deve importar detalhes de framework (ASP.NET Core, EF Core, MediatR) nem drivers.
+- Infraestrutura implementa interfaces consumidas pela camada de aplicacao, preservando dependencia para dentro.
 EOF
     return
   fi
@@ -367,6 +387,10 @@ build_language_rules() {
 
   if should_include_python; then
     output+="\nPara tarefas que alteram codigo Python, carregar tambem:\n\n- \`.agents/skills/python-implementation/SKILL.md\`\n"
+  fi
+
+  if should_include_dotnet; then
+    output+="\nPara tarefas que alteram codigo .NET/C#, carregar tambem:\n\n- \`.agents/skills/dotnet-csharp-implementation/SKILL.md\`\n"
   fi
 
   printf '%b' "$output"
@@ -483,6 +507,13 @@ PY
     lines+=("3. Rodar o lint detectado no package afetado quando disponivel.")
   fi
 
+  if should_include_dotnet; then
+    lines+=("Comandos especificos do projeto (.NET/C#):")
+    lines+=("1. Rodar \`dotnet format --verify-no-changes\` quando o projeto oferecer esse passo.")
+    lines+=("2. Rodar \`dotnet build --no-restore\` nos projetos afetados.")
+    lines+=("3. Rodar \`dotnet test --no-build\` nos projetos afetados.")
+  fi
+
   printf '%s\n' "${lines[@]}"
 }
 
@@ -525,6 +556,12 @@ build_stack_section() {
   if should_include_python && (file_exists "pyproject.toml" || file_exists "requirements.txt" || file_exists "setup.py" || file_exists "Pipfile"); then
     lines+=("- Projeto com contexto Python detectado: carregar \`.agents/skills/python-implementation/SKILL.md\` ao alterar codigo Python.")
     lines+=("- Validar versao de Python em \`pyproject.toml\` ou \`.python-version\` antes de usar APIs recentes.")
+    has_stack=1
+  fi
+
+  if should_include_dotnet; then
+    lines+=("- Projeto com contexto .NET/C# detectado: carregar \`.agents/skills/dotnet-csharp-implementation/SKILL.md\` ao alterar codigo .NET/C#.")
+    lines+=("- Validar a versao em \`<TargetFramework>\` do \`.csproj\` ou \`global.json\` antes de usar APIs recentes.")
     has_stack=1
   fi
 

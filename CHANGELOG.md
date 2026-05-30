@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unreleased]
+
+### Funcionalidades
+- **skills:** adiciona skill `dotnet-csharp-implementation` com SKILL.md + 17 referências para implementação .NET 10/C# 14, espelhada em `.agents/`, `.claude/`, `.github/` e `internal/embedded/assets/`
+- **detect:** adiciona detecção automática de projetos .NET/C# (`.csproj`, `*.sln`, `.NET`)
+- **prerequisites:** adiciona validação de pré-requisitos para .NET (`dotnet`, `dotnet-sdk`)
+- **contextgen:** adiciona geração de contexto específico para .NET/C#
+- **skills:** registra `dotnet-csharp-implementation` no catálogo interno de skills
+- **analyze-project:** atualiza template e script de governança para suportar .NET/C#
+
+### Documentação
+- **prompts:** expande `go-implementation-strict-rules.md` com regras estritas de implementação Go
+- **agents:** atualiza `AGENTS.md` e `GEMINI.md` embarcados com referência à nova skill
+
 ## 0.23.4 (2026-05-25)
 
 ### Bug Fixes

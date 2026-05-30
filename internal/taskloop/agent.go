@@ -164,6 +164,9 @@ func detectReferences(content string) string {
 	if containsAnyPattern(lower, ".py", "python", "pip install", "pip3", "django", "flask", "pyproject.toml", "requirements.txt") {
 		refs = append(refs, "python-implementation")
 	}
+	if containsAnyPattern(lower, ".cs", ".csproj", ".sln", "dotnet", ".net", "c#", "csharp", "asp.net", "nuget", "ef core") {
+		refs = append(refs, "dotnet-csharp-implementation")
+	}
 
 	if containsAnyPattern(lower, "domain", "aggregate", "entity", "value object", "bounded context", "ddd") {
 		refs = append(refs, "ddd")

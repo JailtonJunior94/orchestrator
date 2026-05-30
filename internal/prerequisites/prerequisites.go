@@ -41,6 +41,12 @@ var registry = map[string]Check{
 			{Label: "pyproject.toml, setup.py ou requirements.txt", Paths: []string{"pyproject.toml", "setup.py", "requirements.txt"}},
 		},
 	},
+	"dotnet-csharp-implementation": {
+		Skill: "dotnet-csharp-implementation",
+		Required: []FileCheck{
+			{Label: "global.json, Directory.Build.props ou Directory.Packages.props", Paths: []string{"global.json", "Directory.Build.props", "Directory.Packages.props"}},
+		},
+	},
 	"create-tasks": {
 		Skill: "create-tasks",
 		Required: []FileCheck{
@@ -83,7 +89,7 @@ type Result struct {
 func Verify(skill string, projectDir string, fsys fs.FileSystem) (passed bool, results []Result, err error) {
 	check, known := registry[skill]
 	if !known {
-		return false, nil, fmt.Errorf("skill desconhecida: %q — skills suportadas: go-implementation, node-implementation, python-implementation, create-tasks, execute-task, create-technical-specification, bugfix", skill)
+		return false, nil, fmt.Errorf("skill desconhecida: %q — skills suportadas: go-implementation, node-implementation, python-implementation, dotnet-csharp-implementation, create-tasks, execute-task, create-technical-specification, bugfix", skill)
 	}
 
 	absDir, err := filepath.Abs(projectDir)

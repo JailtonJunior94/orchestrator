@@ -2,6 +2,7 @@ package detect
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
@@ -49,7 +50,35 @@ func (d *FileDetector) DetectLangs(projectDir string) []skills.Lang {
 		}
 	}
 
+	if d.hasDotNet(projectDir) {
+		langs = append(langs, skills.LangDotNet)
+	}
+
 	return langs
+}
+
+// hasDotNet detecta um projeto .NET/C# por marcadores de solucao/projeto.
+// Verifica arquivos de nome fixo no nivel de solucao e, na ausencia destes,
+// procura por qualquer arquivo *.sln ou *.csproj no diretorio raiz.
+func (d *FileDetector) hasDotNet(projectDir string) bool {
+	fixed := []string{"global.json", "Directory.Build.props", "Directory.Packages.props"}
+	for _, f := range fixed {
+		if d.fs.Exists(filepath.Join(projectDir, f)) {
+			return true
+		}
+	}
+
+	entries, err := d.fs.ReadDir(projectDir)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		name := e.Name()
+		if strings.HasSuffix(name, ".sln") || strings.HasSuffix(name, ".csproj") {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *FileDetector) DetectTools(projectDir string) []skills.Tool {

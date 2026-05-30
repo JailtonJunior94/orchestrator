@@ -610,6 +610,9 @@ func (s *Service) installedCodexSkills(projectDir, codexProfile string) []string
 	if s.fs.Exists(filepath.Join(projectDir, ".agents", "skills", "python-implementation", "SKILL.md")) {
 		baseSkills = append(baseSkills, "python-implementation")
 	}
+	if s.fs.Exists(filepath.Join(projectDir, ".agents", "skills", "dotnet-csharp-implementation", "SKILL.md")) {
+		baseSkills = append(baseSkills, "dotnet-csharp-implementation")
+	}
 
 	return baseSkills
 }
@@ -633,10 +636,11 @@ func shouldProcessSkill(skillName string, langFilter []skills.Lang) bool {
 	}
 
 	langSkills := map[string]bool{
-		"go-implementation":      true,
-		"object-calisthenics-go": true,
-		"node-implementation":    true,
-		"python-implementation":  true,
+		"go-implementation":            true,
+		"object-calisthenics-go":       true,
+		"node-implementation":          true,
+		"python-implementation":        true,
+		"dotnet-csharp-implementation": true,
 	}
 
 	if !langSkills[skillName] {

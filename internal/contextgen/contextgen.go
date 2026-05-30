@@ -293,7 +293,35 @@ Para tarefas de revisao ou refatoracao incremental de design em Go guiadas por h
 - `+"`"+`.agents/skills/python-implementation/SKILL.md`+"`")
 	}
 
+	if g.hasDotNet(projectDir) {
+		parts = append(parts, `Para tarefas que alteram codigo .NET/C#, carregar tambem:
+
+- `+"`"+`.agents/skills/dotnet-csharp-implementation/SKILL.md`+"`")
+	}
+
 	return strings.Join(parts, "\n\n")
+}
+
+// hasDotNet detecta um projeto .NET/C# por marcadores de solucao/projeto no diretorio raiz.
+func (g *Generator) hasDotNet(projectDir string) bool {
+	fixed := []string{"global.json", "Directory.Build.props", "Directory.Packages.props"}
+	for _, f := range fixed {
+		if g.fs.Exists(filepath.Join(projectDir, f)) {
+			return true
+		}
+	}
+
+	entries, err := g.fs.ReadDir(projectDir)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		name := e.Name()
+		if strings.HasSuffix(name, ".sln") || strings.HasSuffix(name, ".csproj") {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *Generator) buildValidationCommands(toolchain detect.ToolchainResult) string {
@@ -341,6 +369,10 @@ func (g *Generator) buildStackSection(projectDir string) string {
 		lines = append(lines, "- Projeto com contexto Python detectado: carregar `.agents/skills/python-implementation/SKILL.md` ao alterar codigo Python.")
 		lines = append(lines, "- Validar versao de Python em `pyproject.toml` ou `.python-version` antes de usar APIs recentes.")
 	}
+	if g.hasDotNet(projectDir) {
+		lines = append(lines, "- Projeto com contexto .NET/C# detectado: carregar `.agents/skills/dotnet-csharp-implementation/SKILL.md` ao alterar codigo .NET/C#.")
+		lines = append(lines, "- Validar a versao em `<TargetFramework>` do `.csproj` ou `global.json` antes de usar APIs recentes.")
+	}
 
 	if len(lines) == 0 {
 		return ""
@@ -370,6 +402,9 @@ func (g *Generator) buildCodexConfig(projectDir, codexProfile string) string {
 	}
 	if g.fs.Exists(filepath.Join(projectDir, ".agents", "skills", "python-implementation", "SKILL.md")) {
 		baseSkills = append(baseSkills, "python-implementation")
+	}
+	if g.fs.Exists(filepath.Join(projectDir, ".agents", "skills", "dotnet-csharp-implementation", "SKILL.md")) {
+		baseSkills = append(baseSkills, "dotnet-csharp-implementation")
 	}
 
 	var b strings.Builder

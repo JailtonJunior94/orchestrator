@@ -1,22 +1,31 @@
 # Prompt Enriquecido — Regras Estritas para go-implementation
 
+> **Versão:** 2.0.0
 > **Gerado por:** skill `prompt-enricher`
 > **Destino:** skill `go-implementation` — extensão de regras obrigatórias
 > **Escopo:** todo código Go implementado ou revisado pela skill go-implementation
-> **Idioma de saída do agente:** PT-BR (comentários, mensagens de erro, logs)
+> **Idioma de saída do agente:** PT-BR (comentários, erros, mensagens de log)
 > **Referência base:** [Uber Go Style Guide](https://github.com/uber-go/guide/blob/master/style.md)
 
 ---
 
 ## Contexto
 
-Este prompt define restrições obrigatórias e não negociáveis que se sobrepõem às regras existentes
-da skill `go-implementation`. Toda tarefa de implementação Go que as viole deve ser bloqueada e
-corrigida antes de ser considerada concluída.
+Este prompt define restrições obrigatórias e não negociáveis que **se sobrepõem** às regras
+existentes da skill `.agents/skills/go-implementation/SKILL.md`. Em caso de conflito, prevalece
+a restrição mais restritiva. Toda tarefa de implementação Go que viole qualquer regra deste
+documento deve ser **bloqueada e corrigida** antes de ser considerada concluída.
 
 As regras abaixo se aplicam a **qualquer código Go de domínio, aplicação e infraestrutura**
 produzido ou modificado pela skill, independentemente da camada (entity, use case, repository,
 handler, service, adapter).
+
+**Severidade padrão:** toda violação é classificada como `[HARD]` — bloqueante de merge —
+salvo quando explicitamente indicado como `[SOFT]` (melhoria recomendada, não bloqueante).
+
+**Relação com SKILL.md:** os patterns inline do SKILL.md (Factory Function, Functional Options,
+Adapter, Decorator, Facade) e as regras de carregamento de referências permanecem vigentes.
+Este prompt **complementa**, não substitui, o SKILL.md.
 
 ---
 
@@ -92,7 +101,7 @@ As únicas funções standalone permitidas são:
 | `func TestXxx(t *testing.T)` | Registrador de suite exigido pelo `go test`; contém apenas `suite.Run(...)` |
 | Funções de interface pública de pacotes `pkg/` utilitários sem estado | Ex.: `pkg/uuid/New() string` — apenas quando não há estado nem dependências injetáveis |
 
-> ⚠️ **`func init()` é PROIBIDA** — ver Regra 0 abaixo.
+> ⚠️ **`func init()` é PROIBIDA** — ver Regra 0.
 
 > **Critério de aceitação:** `grep -rn "^func [^(]" --include="*.go" .` não deve retornar nenhuma
 > função fora das exceções listadas acima. O agente DEVE executar este comando e corrigir toda
@@ -849,7 +858,10 @@ if isActive {
 }
 ```
 
-### 5.23 Ordenação de imports (3 grupos)
+### 5.23 Ordenação de imports (3 grupos — convenção deste projeto)
+
+O Uber Go Style Guide define 2 grupos (stdlib + todo o resto). Este projeto adota **3 grupos**,
+convenção comum em codebases com muitos pacotes internos, aplicada via `goimports -local`:
 
 ```go
 import (
@@ -860,10 +872,12 @@ import (
     // 2. dependências externas
     "github.com/stretchr/testify/suite"
 
-    // 3. pacotes internos do projeto
+    // 3. pacotes internos do projeto (prefixo do módulo em go.mod)
     "github.com/seu-org/projeto/internal/domain"
 )
 ```
+
+Nunca mescle os grupos. Use `goimports` (não apenas `gofmt`) para manter a ordem.
 
 ### 5.24 Nomes de pacotes
 
@@ -913,53 +927,1028 @@ u := User{
 }
 ```
 
----
+**Exceção:** em test tables com ≤ 3 campos, pode-se omitir os nomes.
 
-O agente DEVE executar e reportar o resultado de cada item:
+### 5.28 Omitir campos zero-value ao inicializar structs
 
-```bash
-# R1 — Detectar funções standalone proibidas (exceto exceções)
-grep -rn "^func [^(]" --include="*.go" . \
-  | grep -v "_test.go" \
-  | grep -v "func main()" \
-  | grep -v "func init()" \
-  | grep -v "func New"
+Ao inicializar structs com nomes de campos (5.27), omita campos que receberiam o zero-value do
+tipo — a menos que o zero-value forneça contexto semântico importante (ex.: test tables).
 
-# R2 — Detectar atribuições diretas de campos (heurística; revisar manualmente)
-# Não há linter automático — revisão manual obrigatória em code review
+```go
+// ❌ PROIBIDO — ruído desnecessário
+user := User{
+    FirstName:  "João",
+    LastName:   "Silva",
+    MiddleName: "",    // zero-value implícito
+    Admin:      false, // zero-value implícito
+}
 
-# R3 — Verificar mockery.yml existe e está atualizado
-test -f mockery.yml && echo "OK" || echo "AUSENTE — criar mockery.yml"
-mockery --config mockery.yml --dry-run 2>&1 | grep -i "error\|differ" || echo "Mocks atualizados"
+// ✅ CORRETO — apenas campos com valor significativo
+user := User{
+    FirstName: "João",
+    LastName:  "Silva",
+}
+```
 
-# R4 — Verificar padrão de suite nos arquivos de teste de use case
-grep -rn "suite\.Suite" --include="*_test.go" internal/
-grep -rn "SetupTest" --include="*_test.go" internal/
-grep -rn "suite\.Run" --include="*_test.go" internal/
+### 5.29 Usar `var` para structs zero-value
 
-# Gate mínimo de testes
-go test ./... -count=1 -race
+Quando todos os campos de uma struct são zero-value, usar `var` em vez de literal vazio.
+
+```go
+// ❌ PROIBIDO
+user := User{}
+
+// ✅ CORRETO — sinaliza explicitamente "valor inicial/zero"
+var user User
+```
+
+### 5.30 Inicializar referências de struct com `&T{}`
+
+Use `&T{}` em vez de `new(T)` para manter consistência com a inicialização de structs.
+
+```go
+// ❌ PROIBIDO — inconsistente, forma de inicialização separada do valor
+sptr := new(T)
+sptr.Name = "bar"
+
+// ✅ CORRETO — consistente com struct literals
+sptr := &T{Name: "bar"}
+```
+
+### 5.31 Inicializar maps com `make()` (exceto literals fixos)
+
+Use `make(map[K]V)` para maps populados programaticamente. Use map literals para conjuntos
+fixos de elementos conhecidos em tempo de compilação.
+
+```go
+// ❌ PROIBIDO — confunde declaração com inicialização
+var m = map[string]Entity{}
+
+// ✅ CORRETO — populado programaticamente
+m := make(map[string]Entity, len(items))
+for _, item := range items {
+    m[item.ID] = item
+}
+
+// ✅ CORRETO — conjunto fixo em tempo de compilação
+m := map[string]string{
+    "pt": "português",
+    "en": "inglês",
+}
+```
+
+### 5.32 Zero-value de `sync.Mutex` é válido — nunca use `new(sync.Mutex)`
+
+O zero-value de `sync.Mutex` e `sync.RWMutex` é válido e usável sem inicialização.
+
+```go
+// ❌ PROIBIDO — alocação desnecessária
+mu := new(sync.Mutex)
+mu.Lock()
+
+// ✅ CORRETO
+var mu sync.Mutex
+mu.Lock()
+
+// ✅ CORRETO — campo em struct (não embutido — ver 5.4)
+type Cache struct {
+    mu   sync.Mutex
+    data map[string]string
+}
+```
+
+### 5.33 Exit Once — uma única saída em `main()`
+
+Além de `os.Exit` e `log.Fatal*` existirem **apenas em `main()`** (Regra 5.16), prefira
+**uma única chamada** delegando toda lógica para uma função `run()` retornando `error`.
+Isso garante que `defer` seja executado, simplifica testes e torna o fluxo previsível.
+
+```go
+// ❌ PROIBIDO — múltiplas saídas, defers pulados
+func main() {
+    args := os.Args[1:]
+    if len(args) != 1 {
+        log.Fatal("argumento obrigatório")
+    }
+    f, err := os.Open(args[0])
+    if err != nil {
+        log.Fatal(err) // defer em f.Close nunca executa
+    }
+    defer f.Close()
+    // ...
+}
+
+// ✅ CORRETO — saída única, lógica testável
+func main() {
+    if err := run(); err != nil {
+        fmt.Fprintln(os.Stderr, err)
+        os.Exit(1)
+    }
+}
+
+func run() error {
+    args := os.Args[1:]
+    if len(args) != 1 {
+        return errors.New("argumento obrigatório")
+    }
+    f, err := os.Open(args[0])
+    if err != nil {
+        return err
+    }
+    defer f.Close()
+    // ...
+    return nil
+}
+```
+
+### 5.34 Goroutines em `init()` são duplamente proibidas
+
+Além de `init()` ser proibida pela Regra 0, é especialmente grave iniciar goroutines em `init()`:
+a goroutine roda sem ciclo de vida controlado, sem mecanismo de parada e impossibilita testes.
+Se um pacote precisa de trabalho em background, exponha um objeto com `Close()`/`Shutdown()`.
+
+```go
+// ❌ DUPLAMENTE PROIBIDO — init + goroutine sem controle
+func init() {
+    go doWork() // goroutine órfã, sem shutdown
+}
+
+// ✅ CORRETO — objeto com ciclo de vida explícito
+type Worker struct {
+    stop chan struct{}
+    done chan struct{}
+}
+
+func NewWorker() *Worker {
+    w := &Worker{
+        stop: make(chan struct{}),
+        done: make(chan struct{}),
+    }
+    go w.run()
+    return w
+}
+
+func (w *Worker) Shutdown() {
+    close(w.stop)
+    <-w.done
+}
+```
+
+### 5.35 Usar `sync.WaitGroup` para múltiplas goroutines
+
+Quando múltiplas goroutines precisam ser aguardadas, use `sync.WaitGroup`. Para uma única
+goroutine, use canal `done chan struct{}`.
+
+```go
+// ✅ CORRETO — múltiplas goroutines
+var wg sync.WaitGroup
+for i := 0; i < n; i++ {
+    wg.Add(1)
+    go func() {
+        defer wg.Done()
+        // ...
+    }()
+}
+wg.Wait()
+
+// ✅ CORRETO — goroutine única
+done := make(chan struct{})
+go func() {
+    defer close(done)
+    // ...
+}()
+<-done
+```
+
+### 5.36 Evitar conversões repetidas de string para `[]byte`
+
+Em hot paths (loops, handlers de alta frequência), converta `string → []byte` uma única vez
+fora do loop.
+
+```go
+// ❌ PROIBIDO em hot path — nova alocação a cada iteração
+for i := 0; i < n; i++ {
+    w.Write([]byte("prefixo:"))
+}
+
+// ✅ CORRETO — converte uma vez, reutiliza
+prefix := []byte("prefixo:")
+for i := 0; i < n; i++ {
+    w.Write(prefix)
+}
+```
+
+### 5.37 Linhas com limite de 99 caracteres `[SOFT]`
+
+Limite suave de **99 caracteres** por linha. Quebre linhas antes desse limite. Não é um limite
+rígido — código que ultrapassa por necessidade é permitido, mas cadeias de chamadas longas
+e literais extensos devem ser quebrados para legibilidade.
+
+### 5.38 Ser consistente
+
+> **"Código consistente é mais fácil de manter, raciocinar e migrar."** — Uber Go Style Guide
+
+Quando múltiplas abordagens são válidas, escolha uma e **mantenha-a em todo o pacote (ou
+módulo)**. Aplicar estilo diferente dentro do mesmo pacote gera overhead cognitivo e
+code reviews dolorosas. Mudanças de estilo devem ser feitas no nível de pacote ou maior.
+
+### 5.39 Agrupar declarações similares
+
+Use blocos `const()`, `var()`, `type()` para declarações relacionadas. Não agrupe declarações
+não relacionadas no mesmo bloco.
+
+```go
+// ❌ PROIBIDO — declarações soltas
+const a = 1
+const b = 2
+var x = "foo"
+var y = "bar"
+
+// ✅ CORRETO — agrupadas
+const (
+    a = 1
+    b = 2
+)
+
+var (
+    x = "foo"
+    y = "bar"
+)
+
+// ❌ PROIBIDO — mistura tipos não relacionados no mesmo bloco
+const (
+    Add Operation = iota + 1
+    Subtract
+    EnvVar = "MY_ENV" // não relacionado
+)
+
+// ✅ CORRETO — separado
+const (
+    Add      Operation = iota + 1
+    Subtract
+)
+const EnvVar = "MY_ENV"
+```
+
+### 5.40 Nomes de funções em MixedCaps
+
+```go
+// ❌ PROIBIDO
+func get_user_by_id() {}
+func GetUser_ByID() {}
+
+// ✅ CORRETO — MixedCaps
+func getUserByID() {}
+func GetUserByID() {}
+
+// ✅ EXCEÇÃO — funções de teste podem usar underscore para agrupar
+func TestGetUser_WhenIDNotFound(t *testing.T) {}
+```
+
+### 5.41 Alias de import apenas para conflitos de nome
+
+Use alias somente quando: (a) o nome do pacote não coincide com o último elemento do caminho,
+ou (b) há conflito direto entre dois imports.
+
+```go
+// ❌ PROIBIDO — alias sem necessidade
+import (
+    runtimetrace "runtime/trace"
+    nettrace     "golang.net/x/trace"
+)
+
+// ✅ CORRETO — alias apenas para resolver conflito
+import (
+    "runtime/trace"
+    nettrace "golang.net/x/trace"
+)
+
+// ✅ CORRETO — alias porque nome do pacote ≠ último segmento do path
+import (
+    client "example.com/client-go"
+    trace  "example.com/trace/v2"
+)
+```
+
+### 5.42 Declarações top-level: omitir tipo quando óbvio
+
+No nível do pacote, use `var` sem especificar o tipo quando ele já é evidente pela expressão.
+Especifique o tipo apenas quando diferente do retorno da expressão.
+
+```go
+// ❌ PROIBIDO — tipo redundante
+var _s string = F()
+func F() string { return "A" }
+
+// ✅ CORRETO
+var _s = F()
+
+// ✅ CORRETO — tipo necessário: F() retorna myError, queremos error
+var _e error = F()
+func F() myError { return myError{} }
+```
+
+### 5.43 Declarações locais: `:=` para valores, `var` para zero-values
+
+```go
+// ❌ PROIBIDO — var para valor explícito
+var s = "foo"
+
+// ✅ CORRETO
+s := "foo"
+
+// ❌ PROIBIDO — literal vazio para slice que receberá append
+filtered := []int{}
+
+// ✅ CORRETO — var para zero-value de slice
+var filtered []int
+for _, v := range list {
+    if v > 10 {
+        filtered = append(filtered, v)
+    }
+}
+```
+
+### 5.44 `nil` é um slice válido
+
+```go
+// ❌ PROIBIDO — literal vazio quando resultado é "nenhum item"
+if x == "" {
+    return []int{}
+}
+
+// ✅ CORRETO
+if x == "" {
+    return nil
+}
+
+// ❌ PROIBIDO — checar nil para saber se está vazio
+func isEmpty(s []string) bool {
+    return s == nil
+}
+
+// ✅ CORRETO — sempre usar len()
+func isEmpty(s []string) bool {
+    return len(s) == 0
+}
+```
+
+> ⚠️ `nil` e `[]T{}` não são idênticos em serialização JSON (nil → `null`, vazio → `[]`).
+> Escolha conscientemente.
+
+### 5.45 Reduzir escopo de variáveis
+
+Declare variáveis no menor escopo possível. Não reduza o escopo se isso forçar aninhamento
+extra (ver 5.21).
+
+```go
+// ❌ PROIBIDO — escopo maior que o necessário
+err := os.WriteFile(name, data, 0644)
+if err != nil {
+    return err
+}
+
+// ✅ CORRETO — err declarada diretamente no if
+if err := os.WriteFile(name, data, 0644); err != nil {
+    return err
+}
+
+// ✅ CORRETO — escopo ampliado quando resultado é usado depois
+data, err := os.ReadFile(name)
+if err != nil {
+    return err
+}
+if err := cfg.Decode(data); err != nil {
+    return err
+}
+```
+
+### 5.46 Evitar parâmetros naked (sem nome aparente)
+
+Parâmetros booleanos ou inteiros sem contexto óbvio devem usar comentário C-style ou, melhor
+ainda, tipos nomeados.
+
+```go
+// ❌ PROIBIDO — "true, true" sem contexto
+printInfo("foo", true, true)
+
+// ✅ MELHOR — comentário inline
+printInfo("foo", true /* isLocal */, true /* done */)
+
+// ✅ IDEAL — tipos nomeados (type-safe, extensível)
+type Region int
+const (
+    UnknownRegion Region = iota
+    Local
+)
+
+type Status int
+const (
+    StatusReady  Status = iota + 1
+    StatusDone
+)
+
+func printInfo(name string, region Region, status Status) {}
+```
+
+### 5.47 Usar raw string literals para evitar escaping
+
+```go
+// ❌ DIFÍCIL DE LER — escaping manual
+wantError := "unknown name:\"test\""
+
+// ✅ CORRETO — backtick literal, sem escape
+wantError := `unknown name:"test"`
+```
+
+### 5.48 Format strings fora de `Printf` devem ser `const`
+
+Permite que `go vet` analise estaticamente a string de formato.
+
+```go
+// ❌ PROIBIDO — variável escapa análise estática
+msg := "valores inesperados %v, %v\n"
+fmt.Printf(msg, 1, 2)
+
+// ✅ CORRETO
+const msg = "valores inesperados %v, %v\n"
+fmt.Printf(msg, 1, 2)
+```
+
+### 5.49 Nomes de funções estilo `Printf` terminam com `f`
+
+Para que `go vet` valide strings de formato em funções customizadas Printf-style, o nome
+deve terminar com `f`.
+
+```go
+// ❌ PROIBIDO — go vet não detecta
+func Wrap(msg string, args ...any) {}
+
+// ✅ CORRETO — go vet verifica com -printfuncs=Wrapf
+func Wrapf(format string, args ...any) {}
+```
+
+### 5.50 Functional Options — padrão obrigatório para structs com muitos opcionais
+
+Quando uma struct tem mais de 3 campos opcionais ou configuráveis, usar Functional Options
+em vez de múltiplos construtores ou builder fluente.
+
+```go
+// ❌ PROIBIDO — múltiplos construtores ou struct exposta
+func NewServer(addr string, timeout int, maxConn int, tls bool) *Server {}
+
+// ✅ CORRETO — functional options
+type ServerOption func(*Server)
+
+func WithTimeout(d time.Duration) ServerOption {
+    return func(s *Server) { s.timeout = d }
+}
+
+func WithMaxConns(n int) ServerOption {
+    return func(s *Server) { s.maxConns = n }
+}
+
+func NewServer(addr string, opts ...ServerOption) *Server {
+    s := &Server{addr: addr, timeout: 30 * time.Second}
+    for _, opt := range opts {
+        opt(s)
+    }
+    return s
+}
 ```
 
 ---
 
-## Restrições Adicionais
+## Regra 6 — Design e Contratos Go
 
-| Restrição | Detalhe |
-|-----------|---------|
-| `context.Context` | Sempre o primeiro parâmetro em métodos com IO/rede/cancelamento |
-| Erros | `fmt.Errorf("contexto da operação: %w", err)` — wrapping obrigatório |
-| Sentinel errors | `var Err<Nome> = errors.New("...")` para erros comparados por `errors.Is` |
-| Estado global | Zero tolerância — nenhum `var` global mutável fora de `init` |
-| `panic` | Proibido em código de produção; permitido apenas em `main` para falha de bootstrap |
-| Mocks manuais | Proibidos — usar apenas mocks gerados por mockery |
+Princípios de design derivados do SKILL.md que têm impacto direto na production-readiness
+e que complementam as regras de estilo do Uber Guide.
+
+### 6.1 `context.Context` é obrigatório em fronteiras de I/O
+
+Todo método que realiza I/O (rede, banco, arquivo, subprocess, operação cancelável) **DEVE**
+receber `context.Context` como **primeiro parâmetro**. Nunca armazene `Context` em struct.
+
+```go
+// ❌ PROIBIDO — context em struct
+type Repo struct {
+    ctx context.Context
+    db  *sql.DB
+}
+
+// ❌ PROIBIDO — operação de I/O sem context
+func (r *Repo) FindByID(id int64) (*Entity, error) {}
+
+// ✅ CORRETO — context como primeiro parâmetro
+func (r *Repo) FindByID(ctx context.Context, id int64) (*Entity, error) {}
+```
+
+**Propagação obrigatória:** nunca passe `context.Background()` ou `context.TODO()` dentro
+de handlers/use cases; propague o context recebido. `context.Background()` é permitido apenas
+em `main()`, inicialização de servidor e testes.
+
+### 6.2 Preferir tipos concretos por padrão — interface sob demanda real
+
+Introduza interface apenas quando houver ao menos **uma** das seguintes condições:
+1. Múltiplas implementações concretas em produção (não apenas em testes)
+2. Necessidade de substituição em testes (mock/fake)
+3. Fronteira entre pacotes onde o consumidor não deve depender do concreto
+
+```go
+// ❌ EVITAR — interface prematura sem consumidor real
+type UserGetter interface {
+    GetUser(ctx context.Context, id int64) (*User, error)
+}
+
+// ✅ CORRETO — concreto por padrão; interface introduzida no pacote consumidor
+// internal/user/repository/postgres_user_repository.go
+type postgresUserRepository struct { db *sql.DB }
+
+// internal/user/usecase/get_user_usecase.go  ← consumidor define a interface
+type UserRepository interface {
+    FindByID(ctx context.Context, id int64) (*User, error)
+}
+```
+
+### 6.3 Interfaces definidas no pacote consumidor
+
+Interfaces devem ser declaradas no pacote que as **consome**, não no pacote que as implementa.
+Isso minimiza acoplamento e permite que implementações evoluam independentemente.
+
+```go
+// ❌ PROIBIDO — interface no pacote produtor
+// internal/repository/user_repository.go
+package repository
+type UserRepository interface { FindByID(...) }
+
+// ✅ CORRETO — interface no pacote consumidor
+// internal/usecase/get_user_usecase.go
+package usecase
+type userRepository interface { FindByID(ctx context.Context, id int64) (*User, error) }
+```
+
+**Exceção:** interfaces que precisam ser compartilhadas por múltiplos consumidores podem
+residir em pacote `pkg/` dedicado — nunca em `internal/` do produtor.
+
+### 6.4 Zero values úteis — projetar structs que funcionam sem construtor
+
+Sempre que possível, projete structs cujo zero-value seja funcional e seguro. Construtores
+(`New*`) são obrigatórios apenas quando há **invariantes a validar** ou **dependências
+obrigatórias a injetar**.
+
+```go
+// ❌ EVITAR — construtor sem invariante real
+func NewConfig() *Config {
+    return &Config{} // zero-value já seria suficiente
+}
+
+// ✅ CORRETO — construtor com invariante
+func NewPaymentService(repo PaymentRepository, obs observability.Observability) (*PaymentService, error) {
+    if repo == nil {
+        return nil, errors.New("repo é obrigatório")
+    }
+    return &PaymentService{repo: repo, obs: obs}, nil
+}
+
+// ✅ CORRETO — zero-value útil (sem construtor necessário)
+var buf bytes.Buffer
+buf.WriteString("olá")
+```
+
+### 6.5 Erros sentinel e tipos customizados — decisão explícita
+
+A escolha entre sentinel error, tipo customizado e `fmt.Errorf` deve ser explícita e baseada
+nas necessidades do caller. Esta regra complementa 5.10 com critério de decisão para o
+**design de pacotes**.
+
+| O caller vai usar `errors.Is`? | O caller vai usar `errors.As`? | Mensagem | Use |
+|---|---|---|---|
+| Não | Não | Estática | `errors.New(...)` inline |
+| Não | Não | Dinâmica | `fmt.Errorf("ctx: %v", ...)` |
+| Sim | Não | Estática | `var ErrNome = errors.New(...)` exportado |
+| Sim | Sim | Dinâmica | `type NomeError struct{ ... }` exportado |
+
+Erros exportados passam a ser **parte da API pública** do pacote — documente-os.
+
+### 6.6 Injeção de dependência via construtor — zero estado global
+
+Todo estado que não é constante de domínio puro deve ser injetado via construtor. É proibido:
+- Estado mutável em variáveis globais de pacote
+- Singletons com `sync.Once` em código de produção (apenas `main()`)
+- Inicialização lazy de dependências via campo opcional não injetado
+
+```go
+// ❌ PROIBIDO — estado global mutável
+var _db *sql.DB
+
+// ❌ PROIBIDO — inicialização lazy
+type Service struct {
+    db   *sql.DB
+    repo *UserRepo // inicializado lazy em Execute()
+}
+
+// ✅ CORRETO — tudo injetado, zero estado global
+type UserService struct {
+    repo UserRepository
+    obs  observability.Observability
+}
+
+func NewUserService(repo UserRepository, obs observability.Observability) *UserService {
+    return &UserService{repo: repo, obs: obs}
+}
+```
+
+---
+
+## Regra 7 — Sempre usar os recursos mais modernos da linguagem Go
+
+O agente **DEVE** escrever código usando a versão de Go declarada em `go.mod` e **preferir
+obrigatoriamente** as APIs, builtins e pacotes introduzidos nas versões recentes da linguagem.
+Reescrever manualmente o que a stdlib já oferece é proibido.
+
+> **Critério de prioridade:** "Existe um builtin, função de stdlib ou idioma da linguagem que
+> faz isso nativamente na versão do `go.mod`?" → se sim, usá-lo é **obrigatório**.
+
+---
+
+### 7.1 `any` em vez de `interface{}`
+
+Desde Go 1.18, `any` é o alias oficial de `interface{}`. Usar `interface{}` é proibido.
+
+```go
+// ❌ PROIBIDO
+func Process(v interface{}) {}
+var m map[string]interface{}
+
+// ✅ CORRETO
+func Process(v any) {}
+var m map[string]any
+```
+
+### 7.2 `log/slog` para logging estruturado — nunca `log` ou `fmt.Println`
+
+Desde Go 1.21, `log/slog` é o logger estruturado oficial da stdlib. É proibido usar `log`,
+`log.Printf`, `fmt.Println` ou qualquer logger caseiro onde logging estruturado seja necessário.
+
+```go
+// ❌ PROIBIDO
+log.Printf("usuário criado: id=%d", id)
+fmt.Println("erro:", err)
+
+// ✅ CORRETO — slog com atributos tipados
+slog.InfoContext(ctx, "usuário criado", slog.Int64("id", id))
+slog.ErrorContext(ctx, "falha ao processar", slog.String("erro", err.Error()))
+
+// ✅ CORRETO — logger injetado via construtor
+type Service struct {
+    log *slog.Logger
+}
+
+func NewService(log *slog.Logger) *Service {
+    return &Service{log: log.With("component", "service")}
+}
+```
+
+### 7.3 Pacote `slices` — nunca loops manuais para operações de coleção
+
+Desde Go 1.21, o pacote `slices` oferece operações seguras, genéricas e idiomáticas.
+
+```go
+// ❌ PROIBIDO — loop manual para operações que slices já oferece
+func contains(items []string, target string) bool {
+    for _, v := range items {
+        if v == target {
+            return true
+        }
+    }
+    return false
+}
+
+// ✅ CORRETO
+import "slices"
+
+slices.Contains(items, target)           // busca
+slices.Index(items, target)              // índice ou -1
+slices.Sort(items)                       // ordenação in-place
+slices.SortFunc(items, cmp.Compare)      // ordenação com comparador
+slices.Reverse(items)                    // inversão in-place
+slices.Compact(items)                    // remove consecutivos duplicados
+slices.Clone(items)                      // cópia superficial
+slices.DeleteFunc(items, pred)           // filtrar fora
+slices.Collect(iter.Seq[T])              // coletar iterador (Go 1.23+)
+```
+
+### 7.4 Pacote `maps` — nunca loops manuais para operações de mapa
+
+Desde Go 1.21, o pacote `maps` oferece operações idiomáticas sobre maps.
+
+```go
+// ❌ PROIBIDO — loop manual para clonar
+func cloneMap(m map[string]int) map[string]int {
+    out := make(map[string]int, len(m))
+    for k, v := range m {
+        out[k] = v
+    }
+    return out
+}
+
+// ✅ CORRETO
+import "maps"
+
+maps.Clone(m)              // cópia superficial
+maps.Keys(m)               // slice de chaves
+maps.Values(m)             // slice de valores
+maps.DeleteFunc(m, pred)   // remover entradas que satisfazem predicate
+maps.Equal(m1, m2)         // comparação elemento a elemento
+maps.Collect(iter.Seq2[K,V]) // coletar iterador (Go 1.23+)
+```
+
+### 7.5 Builtins `min`, `max`, `clear` — nunca implementações manuais
+
+Desde Go 1.21, `min`, `max` e `clear` são builtins nativos.
+
+```go
+// ❌ PROIBIDO
+func min(a, b int) int { if a < b { return a }; return b }
+for k := range m { delete(m, k) } // limpar map manualmente
+
+// ✅ CORRETO
+x := min(a, b)
+y := max(a, b, c)   // aceita variádico
+clear(m)            // limpa map ou zera slice in-place
+```
+
+### 7.6 `errors.Join` para agregar múltiplos erros — nunca concatenação manual
+
+Desde Go 1.20, `errors.Join` cria um erro composto que suporta `errors.Is`/`errors.As`.
+
+```go
+// ❌ PROIBIDO — concatenação que quebra a cadeia de erros
+msg := err1.Error() + "; " + err2.Error()
+return fmt.Errorf("%v; %v", err1, err2)
+
+// ✅ CORRETO — erros compostos e navegáveis
+return errors.Join(err1, err2)
+
+// ✅ CORRETO — com contexto adicional (wrapping + join)
+var errs []error
+for _, item := range items {
+    if err := process(item); err != nil {
+        errs = append(errs, fmt.Errorf("item %s: %w", item.ID, err))
+    }
+}
+return errors.Join(errs...)
+```
+
+### 7.7 Range sobre inteiros — nunca `for i := 0; i < n; i++` sem necessidade
+
+Desde Go 1.22, `range` aceita inteiros diretamente.
+
+```go
+// ❌ EVITAR quando o índice é o único elemento necessário
+for i := 0; i < 10; i++ {
+    fmt.Println(i)
+}
+
+// ✅ CORRETO
+for i := range 10 {
+    fmt.Println(i)
+}
+```
+
+**Exceção:** quando o corpo do loop modifica a variável de iteração ou precisa de controle
+preciso do incremento, o `for` clássico continua sendo a forma correta.
+
+### 7.8 Generics — eliminar duplicação de código com type parameters
+
+Desde Go 1.18, use generics para componentes reutilizáveis em vez de duplicar lógica por tipo
+ou usar `any` com type assertions internas.
+
+```go
+// ❌ PROIBIDO — duplicação de lógica idêntica por tipo
+func ContainsInt(s []int, v int) bool { ... }
+func ContainsString(s []string, v string) bool { ... }
+
+// ❌ PROIBIDO — any com switch de tipo
+func Contains(s any, v any) bool {
+    switch slice := s.(type) { ... }
+}
+
+// ✅ CORRETO — generic com constraint
+func Contains[T comparable](s []T, v T) bool {
+    for _, item := range s {
+        if item == v {
+            return true
+        }
+    }
+    return false
+}
+```
+
+**Regra:** generics são adequados quando a lógica é **idêntica** para vários tipos. Não use
+generics para polimorfismo de comportamento — para isso, use interfaces.
+
+### 7.9 Pacote `cmp` para comparações e ordenação
+
+Desde Go 1.21, `cmp.Compare` e `cmp.Equal` oferecem comparação ordenada e de igualdade
+type-safe para tipos `ordered`.
+
+```go
+// ❌ EVITAR — comparação manual inline
+slices.SortFunc(items, func(a, b Item) int {
+    if a.Price < b.Price { return -1 }
+    if a.Price > b.Price { return 1 }
+    return 0
+})
+
+// ✅ CORRETO
+import "cmp"
+
+slices.SortFunc(items, func(a, b Item) int {
+    return cmp.Compare(a.Price, b.Price)
+})
+
+// multi-campo (lexicográfico)
+slices.SortFunc(items, func(a, b Item) int {
+    return cmp.Or(
+        cmp.Compare(a.Category, b.Category),
+        cmp.Compare(a.Price, b.Price),
+    )
+})
+```
+
+### 7.10 `sync.OnceValue` / `sync.OnceValues` para inicialização lazy segura
+
+Desde Go 1.21, `sync.OnceValue` e `sync.OnceValues` encapsulam o padrão `sync.Once` com
+retorno de valor de forma type-safe.
+
+```go
+// ❌ PROIBIDO — sync.Once manual verboso
+var (
+    _cfg     Config
+    _cfgOnce sync.Once
+)
+func getConfig() Config {
+    _cfgOnce.Do(func() { _cfg = loadConfig() })
+    return _cfg
+}
+
+// ✅ CORRETO — apenas em main/inicialização (não em handlers/use cases)
+var getConfig = sync.OnceValue(loadConfig)
+
+// com erro
+var getDB = sync.OnceValues(func() (*sql.DB, error) {
+    return sql.Open("postgres", os.Getenv("DATABASE_URL"))
+})
+```
+
+> ⚠️ `sync.OnceValue` em `main()` ou setup de servidor é permitido. Em handlers, use cases ou
+> repositories: **proibido** — injetar via construtor (Regra 6.6).
+
+### 7.11 Iteradores com `iter.Seq` / `iter.Seq2` (Go 1.23+)
+
+Desde Go 1.23, o pacote `iter` e range-over-functions permitem iteradores lazy e componíveis
+sem alocação de slice intermediário.
+
+```go
+// ❌ EVITAR — alocação de slice intermediário apenas para iterar
+func AllUsers(ctx context.Context) ([]User, error) { ... }
+users, _ := repo.AllUsers(ctx)
+for _, u := range users { process(u) }
+
+// ✅ CORRETO — iterador lazy quando o caller precisa apenas iterar
+func (r *Repo) Users(ctx context.Context) iter.Seq2[User, error] {
+    return func(yield func(User, error) bool) {
+        rows, err := r.db.QueryContext(ctx, "SELECT ...")
+        if err != nil { yield(User{}, err); return }
+        defer rows.Close()
+        for rows.Next() {
+            var u User
+            if err := rows.Scan(&u.ID, &u.Name); err != nil {
+                if !yield(User{}, err) { return }
+                continue
+            }
+            if !yield(u, nil) { return }
+        }
+    }
+}
+
+// Uso
+for user, err := range repo.Users(ctx) {
+    if err != nil { return err }
+    process(user)
+}
+```
+
+**Quando usar:** iteradores são adequados para coleções grandes ou potencialmente infinitas onde
+materializar o slice seria custoso. Para coleções pequenas e fixas, slice continua correto.
+
+### 7.12 Versão do Go em `go.mod` — nunca assumir; sempre verificar
+
+O agente DEVE verificar a versão de Go no `go.mod` antes de usar qualquer recurso moderno.
+A tabela abaixo lista os recursos por versão mínima:
+
+| Recurso | Versão mínima |
+|---------|--------------|
+| `any`, generics, `comparable` | Go 1.18 |
+| `errors.Join` | Go 1.20 |
+| `slices`, `maps`, `cmp`, `log/slog`, `min`/`max`/`clear`, `sync.OnceValue` | Go 1.21 |
+| Range sobre inteiros, loop variable per-iteration | Go 1.22 |
+| `iter.Seq`, range-over-functions, `slices.Collect`, `maps.Collect` | Go 1.23 |
+| `weak`, melhorias em `sync.Map` | Go 1.24 |
+
+> Se `go.mod` declarar versão anterior ao recurso desejado, o agente **NÃO DEVE** usá-lo e
+> deve registrar explicitamente: `"recurso X requer Go Y; go.mod declara Go Z — não aplicado"`.
+
+---
+
+## Checklist de Validação (obrigatório antes de finalizar)
+
+O agente **DEVE** executar e reportar o resultado de cada item antes de declarar a tarefa concluída.
+Qualquer item com resultado diferente do esperado é `[HARD]` — bloqueante.
+
+```bash
+# ── R0: init() inexistente ────────────────────────────────────────────────────
+grep -rn "^func init()" --include="*.go" .
+# Esperado: NENHUMA linha
+
+# ── R1: funções standalone proibidas ─────────────────────────────────────────
+grep -rn "^func [^(]" --include="*.go" . \
+  | grep -v "_test.go" \
+  | grep -v "func main()" \
+  | grep -v "func New" \
+  | grep -v "^cmd/"
+# Esperado: NENHUMA linha (exceto pkg/ utilitários sem estado declarados)
+
+# ── R2: atribuições diretas de campo sem transformação ────────────────────────
+# Revisão manual obrigatória em cada método implementado.
+# Critério: "Esta variável local existe apenas para renomear um campo?" → PROIBIDA
+
+# ── R3: mockery.yml e mocks atualizados ──────────────────────────────────────
+test -f mockery.yml \
+  && echo "mockery.yml: OK" \
+  || echo "[HARD] AUSENTE — criar mockery.yml antes de escrever testes"
+mockery --config mockery.yml --dry-run 2>&1 | grep -i "error\|differ" \
+  && echo "[HARD] MOCKS DESATUALIZADOS" \
+  || echo "Mocks: OK"
+
+# ── R4: padrão testify/suite nos testes de use case / service / handler ───────
+find . -path "*/internal/*_test.go" | xargs grep -L "suite\.Suite" 2>/dev/null \
+  && echo "[HARD] FALTAM SUITES"
+find . -path "*/internal/*_test.go" | xargs grep -L "SetupTest" 2>/dev/null \
+  && echo "[HARD] FALTAM SetupTest"
+find . -path "*/internal/*_test.go" | xargs grep -L "suite\.Run" 2>/dev/null \
+  && echo "[HARD] FALTAM suite.Run"
+
+# ── R5/R6: os.Exit / log.Fatal fora de main ──────────────────────────────────
+grep -rn "os\.Exit\|log\.Fatal" --include="*.go" . | grep -v "^cmd/"
+# Esperado: NENHUMA linha
+
+# ── R5: panic fora de inicialização ──────────────────────────────────────────
+grep -rn "\bpanic(" --include="*.go" . \
+  | grep -v "_test.go" \
+  | grep -v "template\.Must\|regexp\.MustCompile"
+# Esperado: NENHUMA linha (exceto template.Must / regexp.MustCompile em main)
+
+# ── R5: goroutines fire-and-forget ───────────────────────────────────────────
+# Revisão manual: toda `go func()` deve ter canal stop+done ou sync.WaitGroup
+
+# ── R5: type assertion sem comma-ok ──────────────────────────────────────────
+# Revisão manual: toda assertion i.(T) deve ter a forma t, ok := i.(T)
+
+# ── R5: globals não exportados sem prefixo _ ─────────────────────────────────
+grep -rn "^var [a-z][a-zA-Z]\|^const [a-z][a-zA-Z]" --include="*.go" . \
+  | grep -v "_test.go" | grep -v "^.*var err"
+# Revisar: globals sem _ que não sejam erros sentinel (var errX)
+
+# ── R6: context.Context não armazenado em struct ─────────────────────────────
+# Revisão manual: nenhum campo de struct deve ter tipo context.Context
+
+# ── R7: interface{} proibido — usar any ──────────────────────────────────────
+grep -rn "interface{}" --include="*.go" . | grep -v "_test.go" | grep -v "vendor/"
+# Esperado: NENHUMA linha
+
+# ── Gate de qualidade final ──────────────────────────────────────────────────
+go build ./...
+go vet ./...
+go test ./... -count=1 -race
+golangci-lint run --timeout=5m 2>/dev/null || echo "[SOFT] golangci-lint não disponível"
+```
 
 ---
 
 ## Como Usar Este Prompt com a Skill go-implementation
 
-1. Carregar este arquivo como contexto adicional antes de iniciar qualquer implementação Go.
-2. Toda violação das Regras 1–4 é classificada como `[HARD]` — bloqueante de merge.
-3. O agente não deve finalizar a tarefa sem executar o Checklist de Validação e reportar os resultados.
-4. Em caso de dúvida sobre se uma atribuição é "direta" (Regra 2), aplicar o critério:
-   **"Esta variável local existe apenas para renomear o campo?"** → se sim, é proibida.
+1. Carregar este arquivo **e** o SKILL.md (`.agents/skills/go-implementation/SKILL.md`) antes
+   de iniciar qualquer implementação Go. Este prompt complementa, não substitui, o SKILL.md.
+2. Toda violação das Regras 0–7 é `[HARD]` — bloqueante de merge — salvo quando marcada `[SOFT]`.
+3. Nunca declarar tarefa concluída sem executar **todo** o Checklist de Validação e reportar
+   os resultados explicitamente.
+4. Regra 2 (atribuições diretas): aplicar o critério **"Esta variável local existe apenas para
+   renomear o campo?"** — se sim, é proibida.
+5. As Regras 0–7 são cumulativas e complementares — não há precedência entre elas.
+6. Em conflito entre uma regra deste prompt e o SKILL.md, prevalece a **restrição mais restritiva**.
+7. Regra 7 (recursos modernos): **sempre** verificar a versão em `go.mod` antes de aplicar.
+   Não usar recurso de versão superior à declarada; registrar explicitamente quando isso ocorrer.
+8. Dúvidas sobre Uber Go Style Guide: consultar
+   [github.com/uber-go/guide/blob/master/style.md](https://github.com/uber-go/guide/blob/master/style.md).

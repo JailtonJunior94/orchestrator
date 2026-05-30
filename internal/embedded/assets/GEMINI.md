@@ -23,6 +23,7 @@ Antes de editar codigo, confirmar que estes arquivos foram lidos na sessao:
    - Go: `.agents/skills/go-implementation/SKILL.md`
    - Node/TypeScript: `.agents/skills/node-implementation/SKILL.md`
    - Python: `.agents/skills/python-implementation/SKILL.md`
+   - .NET/C#: `.agents/skills/dotnet-csharp-implementation/SKILL.md`
 
 ## Validacao
 

@@ -35,6 +35,7 @@ Skills individuais devem declarar apenas cargas adicionais específicas ao seu c
 | Go | `.agents/skills/go-implementation/SKILL.md` |
 | Node/TypeScript | `.agents/skills/node-implementation/SKILL.md` |
 | Python | `.agents/skills/python-implementation/SKILL.md` |
+| .NET/C# | `.agents/skills/dotnet-csharp-implementation/SKILL.md` |
 | Revisão/refatoração Go (OC) | `.agents/skills/object-calisthenics-go/SKILL.md` |
 | Correção de bugs | `.agents/skills/bugfix/SKILL.md` |
 

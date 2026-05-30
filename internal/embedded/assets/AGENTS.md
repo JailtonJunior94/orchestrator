@@ -51,6 +51,10 @@ Para tarefas que alteram código Python, carregar também:
 
 - `.agents/skills/python-implementation/SKILL.md`
 
+Para tarefas que alteram código .NET/C#, carregar também:
+
+- `.agents/skills/dotnet-csharp-implementation/SKILL.md`
+
 Para tarefas de revisão ou refatoração incremental de design em Go guiadas por heurísticas de object calisthenics, carregar também:
 
 - `.agents/skills/object-calisthenics-go/SKILL.md`

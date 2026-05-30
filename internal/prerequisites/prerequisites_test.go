@@ -286,6 +286,7 @@ func TestKnownSkills(t *testing.T) {
 		"go-implementation",
 		"node-implementation",
 		"python-implementation",
+		"dotnet-csharp-implementation",
 		"create-tasks",
 		"execute-task",
 		"create-technical-specification",

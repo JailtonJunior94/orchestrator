@@ -27,13 +27,14 @@ const (
 	LangGo     Lang = "go"
 	LangNode   Lang = "node"
 	LangPython Lang = "python"
+	LangDotNet Lang = "dotnet"
 )
 
-var AllLangs = []Lang{LangGo, LangNode, LangPython}
+var AllLangs = []Lang{LangGo, LangNode, LangPython, LangDotNet}
 
 func ParseLang(s string) (Lang, bool) {
 	switch Lang(s) {
-	case LangGo, LangNode, LangPython:
+	case LangGo, LangNode, LangPython, LangDotNet:
 		return Lang(s), true
 	}
 	return "", false
@@ -95,6 +96,8 @@ func LangSkills(langs []Lang) []string {
 			out = append(out, "node-implementation")
 		case LangPython:
 			out = append(out, "python-implementation")
+		case LangDotNet:
+			out = append(out, "dotnet-csharp-implementation")
 		}
 	}
 	return out
