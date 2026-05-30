@@ -15,7 +15,7 @@ import (
 //
 // Files that do not exist are silently skipped (they are optional).
 // Returns an error only when tasks.md cannot be read or written.
-func SyncSpecHash(tasksPath string) error {
+func (c *Catalog) SyncSpecHash(tasksPath string) error {
 	dir := filepath.Dir(tasksPath)
 
 	tasksBytes, err := os.ReadFile(tasksPath)

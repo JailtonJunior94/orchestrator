@@ -4,8 +4,8 @@ package specs
 type launcherKind string
 
 const (
-	launcherBinary launcherKind = "binary"
-	launcherNpx    launcherKind = "npx"
+	_launcherBinary launcherKind = "binary"
+	_launcherNpx    launcherKind = "npx"
 )
 
 // Launcher é um value object imutável que representa como um agente ACP é iniciado.
@@ -19,7 +19,7 @@ type Launcher struct {
 // NewBinaryLauncher cria um Launcher que aponta para um binário no PATH.
 func NewBinaryLauncher(cmd string, args ...string) Launcher {
 	return Launcher{
-		kind: launcherBinary,
+		kind: _launcherBinary,
 		cmd:  cmd,
 		args: args,
 	}
@@ -30,7 +30,7 @@ func NewBinaryLauncher(cmd string, args ...string) Launcher {
 // version é a versão pinada (ex: "0.1.2").
 func NewNpxLauncher(pkg, version string) Launcher {
 	return Launcher{
-		kind: launcherNpx,
+		kind: _launcherNpx,
 		cmd:  "npx",
 		args: []string{"--yes", pkg + "@" + version},
 	}

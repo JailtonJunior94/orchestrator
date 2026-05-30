@@ -54,6 +54,8 @@ type defaultReservationPlanner struct {
 	nonInteractive bool
 }
 
+var _ ReservationPlanner = (*defaultReservationPlanner)(nil)
+
 // NewReservationPlanner cria um ReservationPlanner.
 // Quando nonInteractive=true, todas as decisoes assumem ActionDocument como
 // default seguro e o prompter nao e invocado.
@@ -94,7 +96,7 @@ func (p *defaultReservationPlanner) Resolve(ctx context.Context, findings []Find
 		}
 
 		decision := ReservationDecision{Finding: f, Action: action, Rationale: strings.TrimSpace(rationale)}
-		if err := validateDecision(decision); err != nil {
+		if err := NewCatalog().validateDecision(decision); err != nil {
 			return plan, err
 		}
 		plan.Decisions = append(plan.Decisions, decision)
@@ -103,7 +105,7 @@ func (p *defaultReservationPlanner) Resolve(ctx context.Context, findings []Find
 	return plan, nil
 }
 
-func validateDecision(d ReservationDecision) error {
+func (c *Catalog) validateDecision(d ReservationDecision) error {
 	switch d.Action {
 	case ActionImplement, ActionDocument:
 		return nil
@@ -118,20 +120,20 @@ func validateDecision(d ReservationDecision) error {
 }
 
 const (
-	actionPlanStart = "<!-- action-plan:start -->"
-	actionPlanEnd   = "<!-- action-plan:end -->"
+	_actionPlanStart = "<!-- action-plan:start -->"
+	_actionPlanEnd   = "<!-- action-plan:end -->"
 )
 
 // WriteActionPlanToTaskFile persiste o ActionPlan na secao "## Plano de Ação"
 // do arquivo da ultima task de forma idempotente (substitui bloco delimitado).
-func WriteActionPlanToTaskFile(fsys fs.FileSystem, taskFile string, plan ActionPlan) error {
+func (c *Catalog) WriteActionPlanToTaskFile(fsys fs.FileSystem, taskFile string, plan ActionPlan) error {
 	data, err := fsys.ReadFile(taskFile)
 	if err != nil {
 		return fmt.Errorf("taskloop: erro ao ler arquivo da task %s: %w", taskFile, err)
 	}
 
-	block := buildActionPlanBlock(plan)
-	updated := replaceActionPlanBlock(data, block)
+	block := NewCatalog().buildActionPlanBlock(plan)
+	updated := NewCatalog().replaceActionPlanBlock(data, block)
 
 	if err := fsys.WriteFile(taskFile, updated); err != nil {
 		return fmt.Errorf("taskloop: erro ao escrever plano de acao em %s: %w", taskFile, err)
@@ -139,13 +141,13 @@ func WriteActionPlanToTaskFile(fsys fs.FileSystem, taskFile string, plan ActionP
 	return nil
 }
 
-func buildActionPlanBlock(plan ActionPlan) []byte {
+func (c *Catalog) buildActionPlanBlock(plan ActionPlan) []byte {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "%s\n", actionPlanStart)
+	fmt.Fprintf(&b, "%s\n", _actionPlanStart)
 	fmt.Fprintf(&b, "## Plano de Ação\n\n")
 	if len(plan.Decisions) == 0 {
 		fmt.Fprintf(&b, "(nenhuma ressalva registrada)\n\n")
-		fmt.Fprintf(&b, "%s\n", actionPlanEnd)
+		fmt.Fprintf(&b, "%s\n", _actionPlanEnd)
 		return b.Bytes()
 	}
 	for i, d := range plan.Decisions {
@@ -161,13 +163,13 @@ func buildActionPlanBlock(plan ActionPlan) []byte {
 			fmt.Fprintf(&b, "   - Justificativa: %s\n", d.Rationale)
 		}
 	}
-	fmt.Fprintf(&b, "\n%s\n", actionPlanEnd)
+	fmt.Fprintf(&b, "\n%s\n", _actionPlanEnd)
 	return b.Bytes()
 }
 
-func replaceActionPlanBlock(data, block []byte) []byte {
-	startMarker := []byte(actionPlanStart)
-	endMarker := []byte(actionPlanEnd)
+func (c *Catalog) replaceActionPlanBlock(data, block []byte) []byte {
+	startMarker := []byte(_actionPlanStart)
+	endMarker := []byte(_actionPlanEnd)
 
 	startIdx := bytes.Index(data, startMarker)
 	endIdx := bytes.Index(data, endMarker)
@@ -199,8 +201,8 @@ func replaceActionPlanBlock(data, block []byte) []byte {
 // AppendFollowUpTasks anexa novas linhas de task em tasks.md para cada decisao
 // ActionDocument do plano. Cada follow-up recebe um ID derivado do maior ID
 // existente (ex: "9.0", "10.0"...) e status "pending" sem dependencias.
-func AppendFollowUpTasks(fsys fs.FileSystem, tasksFile string, plan ActionPlan) error {
-	docs := filterDocumentDecisions(plan)
+func (c *Catalog) AppendFollowUpTasks(fsys fs.FileSystem, tasksFile string, plan ActionPlan) error {
+	docs := NewCatalog().filterDocumentDecisions(plan)
 	if len(docs) == 0 {
 		return nil
 	}
@@ -210,26 +212,26 @@ func AppendFollowUpTasks(fsys fs.FileSystem, tasksFile string, plan ActionPlan) 
 		return fmt.Errorf("taskloop: erro ao ler %s: %w", tasksFile, err)
 	}
 
-	existing, err := ParseTasksFile(data)
+	existing, err := NewCatalog().ParseTasksFile(data)
 	if err != nil {
 		return fmt.Errorf("taskloop: erro ao parsear %s: %w", tasksFile, err)
 	}
-	nextID := nextFollowUpID(existing)
+	nextID := NewCatalog().nextFollowUpID(existing)
 
 	var rows bytes.Buffer
 	for i, d := range docs {
-		title := summarizeFinding(d.Finding)
+		title := NewCatalog().summarizeFinding(d.Finding)
 		fmt.Fprintf(&rows, "| %d.0 | %s | pending | — | Não |\n", nextID+i, title)
 	}
 
-	updated := appendRowsAfterTable(data, rows.Bytes())
+	updated := NewCatalog().appendRowsAfterTable(data, rows.Bytes())
 	if err := fsys.WriteFile(tasksFile, updated); err != nil {
 		return fmt.Errorf("taskloop: erro ao escrever %s: %w", tasksFile, err)
 	}
 	return nil
 }
 
-func filterDocumentDecisions(plan ActionPlan) []ReservationDecision {
+func (c *Catalog) filterDocumentDecisions(plan ActionPlan) []ReservationDecision {
 	out := make([]ReservationDecision, 0, len(plan.Decisions))
 	for _, d := range plan.Decisions {
 		if d.Action == ActionDocument {
@@ -239,7 +241,7 @@ func filterDocumentDecisions(plan ActionPlan) []ReservationDecision {
 	return out
 }
 
-func nextFollowUpID(tasks []TaskEntry) int {
+func (c *Catalog) nextFollowUpID(tasks []TaskEntry) int {
 	max := 0
 	for _, t := range tasks {
 		// ID no formato "N.0" ou "N.M"; pegar parte inteira inicial
@@ -257,21 +259,21 @@ func nextFollowUpID(tasks []TaskEntry) int {
 	return max + 1
 }
 
-func summarizeFinding(f Finding) string {
+func (c *Catalog) summarizeFinding(f Finding) string {
 	msg := strings.TrimSpace(f.Message)
 	if msg == "" {
 		msg = "follow-up de ressalva"
 	}
 	if loc := f.File; loc != "" {
 		if f.Line > 0 {
-			return fmt.Sprintf("Follow-up: %s (%s:%d)", truncateText(msg, 80), loc, f.Line)
+			return fmt.Sprintf("Follow-up: %s (%s:%d)", NewCatalog().truncateText(msg, 80), loc, f.Line)
 		}
-		return fmt.Sprintf("Follow-up: %s (%s)", truncateText(msg, 80), loc)
+		return fmt.Sprintf("Follow-up: %s (%s)", NewCatalog().truncateText(msg, 80), loc)
 	}
-	return fmt.Sprintf("Follow-up: %s", truncateText(msg, 80))
+	return fmt.Sprintf("Follow-up: %s", NewCatalog().truncateText(msg, 80))
 }
 
-func truncateText(s string, n int) string {
+func (c *Catalog) truncateText(s string, n int) string {
 	if len(s) <= n {
 		return s
 	}
@@ -281,7 +283,7 @@ func truncateText(s string, n int) string {
 // appendRowsAfterTable insere as novas linhas imediatamente apos a ultima linha
 // nao vazia da tabela de tasks. A tabela e detectada pela presenca do header
 // "| # | Título". Se a tabela nao for detectada, as linhas sao anexadas ao final.
-func appendRowsAfterTable(data, rows []byte) []byte {
+func (c *Catalog) appendRowsAfterTable(data, rows []byte) []byte {
 	lines := strings.Split(string(data), "\n")
 	headerIdx := -1
 	for i, l := range lines {

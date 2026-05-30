@@ -10,8 +10,10 @@ type Clock interface {
 // realClock é a implementação de produção que usa time.Now().
 type realClock struct{}
 
+var _ Clock = realClock{}
+
 // RealClock retorna a implementação de Clock que usa time.Now().
-func RealClock() Clock {
+func (c *Catalog) RealClock() Clock {
 	return realClock{}
 }
 

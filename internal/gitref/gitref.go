@@ -16,9 +16,17 @@ type ResolvedRef struct {
 	Cleanup func()
 }
 
+// Resolver resolve git refs em diretórios temporários.
+type Resolver struct{}
+
+// NewResolver cria um Resolver.
+func NewResolver() *Resolver {
+	return &Resolver{}
+}
+
 // Resolve resolves a git ref (tag, branch, or SHA) in repoPath to a temporary
 // directory containing the file tree at that ref.
-func Resolve(repoPath, ref string) (*ResolvedRef, error) {
+func (r *Resolver) Resolve(repoPath, ref string) (*ResolvedRef, error) {
 	if _, err := exec.LookPath("git"); err != nil {
 		return nil, errors.New("git not found in PATH: please install git")
 	}

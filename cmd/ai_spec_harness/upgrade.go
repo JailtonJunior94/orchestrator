@@ -15,10 +15,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var upgradeCmd = &cobra.Command{
-	Use:   "upgrade <path>",
-	Short: "Atualiza skills de governanca em um projeto",
-	Long: `Verifica ou atualiza skills de governanca comparando versoes e checksums.
+type upgradeCommand struct{}
+
+func newUpgradeCmd() *cobra.Command {
+	handler := &upgradeCommand{}
+	cmd := &cobra.Command{
+		Use:   "upgrade <path>",
+		Short: "Atualiza skills de governanca em um projeto",
+		Long: `Verifica ou atualiza skills de governanca comparando versoes e checksums.
 
 Sem --source, compara com as skills canonicas embutidas no binario.
 
@@ -29,37 +33,33 @@ Exemplos:
   ai-spec-harness upgrade ./meu-projeto --source ~/ai-governance --langs go,node
   ai-spec-harness upgrade ./meu-projeto --ref v1.1.0 --check
   ai-spec-harness upgrade ./meu-projeto --ref v1.1.0`,
-	Args: cobra.ExactArgs(1),
-	RunE: runUpgrade,
+		Args: cobra.ExactArgs(1),
+		RunE: handler.run,
+	}
+
+	cmd.Flags().Bool("check", false, "Apenas verifica sem alterar arquivos")
+	cmd.Flags().String("langs", "", "Filtrar por linguagens: go,node,python")
+	cmd.Flags().String("source", "", "Diretorio fonte do repositorio de governanca (opcional; usa embutido se omitido)")
+	cmd.Flags().String("ref", "", "Referencia git (tag, branch, SHA) para usar como fonte (mutualmente exclusivo com --source)")
+	return cmd
 }
 
-var (
-	upgradeCheckOnly bool
-	upgradeLangs     string
-	upgradeSource    string
-	upgradeRef       string
-)
+func (c *upgradeCommand) run(cmd *cobra.Command, args []string) error {
+	upgradeCheckOnly, _ := cmd.Flags().GetBool("check")
+	upgradeLangs, _ := cmd.Flags().GetString("langs")
+	upgradeSource, _ := cmd.Flags().GetString("source")
+	upgradeRef, _ := cmd.Flags().GetString("ref")
 
-func init() {
-	upgradeCmd.Flags().BoolVar(&upgradeCheckOnly, "check", false, "Apenas verifica sem alterar arquivos")
-	upgradeCmd.Flags().StringVar(&upgradeLangs, "langs", "", "Filtrar por linguagens: go,node,python")
-	upgradeCmd.Flags().StringVar(&upgradeSource, "source", "", "Diretorio fonte do repositorio de governanca (opcional; usa embutido se omitido)")
-	upgradeCmd.Flags().StringVar(&upgradeRef, "ref", "", "Referencia git (tag, branch, SHA) para usar como fonte (mutualmente exclusivo com --source)")
-
-	rootCmd.AddCommand(upgradeCmd)
-}
-
-func runUpgrade(cmd *cobra.Command, args []string) error {
 	if upgradeRef != "" && upgradeSource != "" {
 		return fmt.Errorf("--ref e --source sao mutuamente exclusivos")
 	}
 
-	langs, err := parseLangsFlag(upgradeLangs)
+	langs, err := newFlagHelper().parseLangsFlag(upgradeLangs)
 	if err != nil {
 		return err
 	}
 
-	printer := output.New(verbose)
+	printer := output.New(newCommandEnv().verbose(cmd))
 
 	sourceDir := upgradeSource
 	if upgradeRef != "" {
@@ -67,7 +67,7 @@ func runUpgrade(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("obtendo diretorio atual: %w", err)
 		}
-		resolved, err := gitref.Resolve(cwd, upgradeRef)
+		resolved, err := gitref.NewResolver().Resolve(cwd, upgradeRef)
 		if err != nil {
 			return err
 		}

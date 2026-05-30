@@ -30,8 +30,16 @@ type Runtime struct {
 	DefaultTool            string  `yaml:"default_tool"`
 }
 
+// RuntimeProvider fornece configuracao de runtime stateless.
+type RuntimeProvider struct{}
+
+// NewRuntimeProvider cria um RuntimeProvider stateless.
+func NewRuntimeProvider() *RuntimeProvider {
+	return &RuntimeProvider{}
+}
+
 // DefaultRuntime retorna a configuracao com defaults compativeis com o layout atual.
-func DefaultRuntime() Runtime {
+func (p *RuntimeProvider) DefaultRuntime() Runtime {
 	return Runtime{
 		TasksRoot:         ".specs",
 		PRDPrefix:         "prd-",
@@ -45,7 +53,7 @@ func DefaultRuntime() Runtime {
 // Resolve a configuracao a partir de repoRoot como CWD, sem overrides e sem config global.
 // Quando nenhum arquivo existir, retorna DefaultRuntime sem erro.
 // Quando o arquivo existir mas estiver malformado, propaga erro descritivo.
-func LoadRuntime(repoRoot string) (Runtime, error) {
+func (p *RuntimeProvider) LoadRuntime(repoRoot string) (Runtime, error) {
 	r := NewDefaultResolver()
 	r.HomeDir = "" // sem config global: compatibilidade F1 (RF-16)
 	return r.Resolve(repoRoot, Runtime{})

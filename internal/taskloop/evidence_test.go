@@ -19,26 +19,26 @@ func TestEvidenceRecorder_Append(t *testing.T) {
 	}
 
 	tests := []struct {
-		name          string
+		name           string
 		initialContent string
-		wantContains  []string
-		wantNotLost   string
+		wantContains   []string
+		wantNotLost    string
 	}{
 		{
 			name:           "cria bloco quando ausente",
 			initialContent: "# Task\n\nConteúdo da task.\n",
-			wantContains:   []string{evidenceStart, evidenceEnd, "task-3.0", "3/3"},
+			wantContains:   []string{_evidenceStart, _evidenceEnd, "task-3.0", "3/3"},
 			wantNotLost:    "Conteúdo da task.",
 		},
 		{
-			name: "substitui bloco existente",
-			initialContent: "# Task\n\n" + evidenceStart + "\n## Evidência\n\n**Task:** old\n" + evidenceEnd + "\n",
-			wantContains:   []string{evidenceStart, evidenceEnd, "task-3.0"},
+			name:           "substitui bloco existente",
+			initialContent: "# Task\n\n" + _evidenceStart + "\n## Evidência\n\n**Task:** old\n" + _evidenceEnd + "\n",
+			wantContains:   []string{_evidenceStart, _evidenceEnd, "task-3.0"},
 			wantNotLost:    "# Task",
 		},
 		{
 			name:           "preserva conteudo apos o bloco",
-			initialContent: "# Task\n\n" + evidenceStart + "\nold\n" + evidenceEnd + "\n\n## Proxima Secao\n",
+			initialContent: "# Task\n\n" + _evidenceStart + "\nold\n" + _evidenceEnd + "\n\n## Proxima Secao\n",
 			wantContains:   []string{"## Proxima Secao", "task-3.0"},
 			wantNotLost:    "## Proxima Secao",
 		},

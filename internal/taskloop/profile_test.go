@@ -12,15 +12,15 @@ func TestNewExecutionProfile(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		role        string
-		tool        string
-		model       string
-		wantRole    string
-		wantTool    string
+		name         string
+		role         string
+		tool         string
+		model        string
+		wantRole     string
+		wantTool     string
 		wantProvider string
-		wantModel   string
-		wantErr     error
+		wantModel    string
+		wantErr      error
 	}{
 		{
 			name:         "executor com claude sem model",
@@ -163,7 +163,7 @@ func TestInferProvider(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.tool, func(t *testing.T) {
 			t.Parallel()
-			got := inferProvider(tc.tool)
+			got := NewCatalog().inferProvider(tc.tool)
 			if got != tc.want {
 				t.Errorf("inferProvider(%q) = %q, quer %q", tc.tool, got, tc.want)
 			}
@@ -202,7 +202,7 @@ func TestResolveProfiles(t *testing.T) {
 			wantMode:      "avancado",
 			wantExecTool:  "claude",
 			wantExecModel: "",
-			wantRevTool:   "claude",  // herda executor
+			wantRevTool:   "claude", // herda executor
 			wantRevModel:  "",
 		},
 		{
@@ -224,14 +224,14 @@ func TestResolveProfiles(t *testing.T) {
 			wantMode:      "avancado",
 			wantExecTool:  "gemini",
 			wantExecModel: "gemini-2.5-pro",
-			wantRevTool:   "gemini", // herda
+			wantRevTool:   "gemini",         // herda
 			wantRevModel:  "gemini-2.5-pro", // herda
 		},
 		{
-			name:    "flags conflitantes — tool + executor-tool",
-			tool:    "claude",
+			name:     "flags conflitantes — tool + executor-tool",
+			tool:     "claude",
 			execTool: "codex",
-			wantErr: ErrFlagsConflitantes,
+			wantErr:  ErrFlagsConflitantes,
 		},
 		{
 			name:    "flags conflitantes — tool + reviewer-tool",
@@ -251,9 +251,9 @@ func TestResolveProfiles(t *testing.T) {
 			wantErrMsg: "--reviewer-model requer --reviewer-tool",
 		},
 		{
-			name:    "executor-tool invalida",
+			name:     "executor-tool invalida",
 			execTool: "gpt",
-			wantErr: ErrToolInvalida,
+			wantErr:  ErrToolInvalida,
 		},
 		{
 			name:     "reviewer-tool invalida",
@@ -267,7 +267,7 @@ func TestResolveProfiles(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := ResolveProfiles(tc.tool, tc.execTool, tc.execModel, tc.revTool, tc.revModel)
+			got, err := NewCatalog().ResolveProfiles(tc.tool, tc.execTool, tc.execModel, tc.revTool, tc.revModel)
 
 			// Verificar erro esperado por sentinel
 			if tc.wantErr != nil {
@@ -360,7 +360,7 @@ func TestResolveProfileFromAgent_CompatibilityValidation(t *testing.T) {
 	t.Run("T-13 positivo: claude + claude-opus-4-7 — aceito", func(t *testing.T) {
 		t.Parallel()
 		agent := makeAgent("claude", "claude-opus-4-7")
-		_, err := ResolveProfileFromAgent(agent, agents.RuntimeOverride{}, false)
+		_, err := NewCatalog().ResolveProfileFromAgent(agent, agents.RuntimeOverride{}, false)
 		if err != nil {
 			t.Errorf("nao esperava erro para modelo compativel, obteve: %v", err)
 		}
@@ -369,7 +369,7 @@ func TestResolveProfileFromAgent_CompatibilityValidation(t *testing.T) {
 	t.Run("T-13 negativo: claude + gpt-5.4 — erro acionavel", func(t *testing.T) {
 		t.Parallel()
 		agent := makeAgent("claude", "gpt-5.4")
-		_, err := ResolveProfileFromAgent(agent, agents.RuntimeOverride{}, false)
+		_, err := NewCatalog().ResolveProfileFromAgent(agent, agents.RuntimeOverride{}, false)
 		if err == nil {
 			t.Fatal("esperava erro para modelo incompativel")
 		}
@@ -381,7 +381,7 @@ func TestResolveProfileFromAgent_CompatibilityValidation(t *testing.T) {
 	t.Run("T-13 bypass: claude + modelo-novo + allowUnknownModel=true — aceito", func(t *testing.T) {
 		t.Parallel()
 		agent := makeAgent("claude", "modelo-novo-futuro")
-		_, err := ResolveProfileFromAgent(agent, agents.RuntimeOverride{}, true)
+		_, err := NewCatalog().ResolveProfileFromAgent(agent, agents.RuntimeOverride{}, true)
 		if err != nil {
 			t.Errorf("allowUnknownModel=true deve bypassar validacao, obteve: %v", err)
 		}
@@ -390,7 +390,7 @@ func TestResolveProfileFromAgent_CompatibilityValidation(t *testing.T) {
 	t.Run("modelo vazio — sem validacao, sem erro", func(t *testing.T) {
 		t.Parallel()
 		agent := makeAgent("claude", "")
-		_, err := ResolveProfileFromAgent(agent, agents.RuntimeOverride{}, false)
+		_, err := NewCatalog().ResolveProfileFromAgent(agent, agents.RuntimeOverride{}, false)
 		if err != nil {
 			t.Errorf("modelo vazio deve pular validacao, obteve: %v", err)
 		}
@@ -404,7 +404,7 @@ func TestResolveProfileFromAgent_CompatibilityValidation(t *testing.T) {
 			Model:         "claude-sonnet-4-6",
 			ExplicitModel: true,
 		}
-		_, err := ResolveProfileFromAgent(agent, override, false)
+		_, err := NewCatalog().ResolveProfileFromAgent(agent, override, false)
 		if err != nil {
 			t.Errorf("model CLI compativel deve substituir model do agente, obteve: %v", err)
 		}
@@ -432,7 +432,7 @@ func TestSentinelErrors(t *testing.T) {
 
 	t.Run("ErrFlagsConflitantes via resolveProfiles", func(t *testing.T) {
 		t.Parallel()
-		_, err := ResolveProfiles("claude", "codex", "", "", "")
+		_, err := NewCatalog().ResolveProfiles("claude", "codex", "", "", "")
 		if !errors.Is(err, ErrFlagsConflitantes) {
 			t.Errorf("esperava errors.Is(err, ErrFlagsConflitantes) true, obteve err=%v", err)
 		}
@@ -440,10 +440,9 @@ func TestSentinelErrors(t *testing.T) {
 
 	t.Run("ErrToolInvalida via resolveProfiles executor-tool invalida", func(t *testing.T) {
 		t.Parallel()
-		_, err := ResolveProfiles("", "invalid-tool", "", "", "")
+		_, err := NewCatalog().ResolveProfiles("", "invalid-tool", "", "", "")
 		if !errors.Is(err, ErrToolInvalida) {
 			t.Errorf("esperava errors.Is(err, ErrToolInvalida) true, obteve err=%v", err)
 		}
 	})
 }
-

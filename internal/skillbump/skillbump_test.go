@@ -278,25 +278,25 @@ func TestExecutePropagaFalhaAoBuscarTag(t *testing.T) {
 func TestUpdateFrontmatterVersion(t *testing.T) {
 	t.Run("preserva conteudo apos frontmatter", func(t *testing.T) {
 		content := []byte("---\nname: review\nversion: 1.1.0\ndescription: texto\n---\n\n# Corpo\n")
-		got, err := UpdateFrontmatterVersion(content, "1.1.1")
+		got, err := NewPlanner().UpdateFrontmatterVersion(content, "1.1.1")
 		if err != nil {
-			t.Fatalf("UpdateFrontmatterVersion() error = %v", err)
+			t.Fatalf("NewPlanner().UpdateFrontmatterVersion() error = %v", err)
 		}
 		want := "---\nname: review\nversion: 1.1.1\ndescription: texto\n---\n\n# Corpo\n"
 		if string(got) != want {
-			t.Fatalf("UpdateFrontmatterVersion() = %q, want %q", string(got), want)
+			t.Fatalf("NewPlanner().UpdateFrontmatterVersion() = %q, want %q", string(got), want)
 		}
 	})
 
 	t.Run("insere version quando ausente", func(t *testing.T) {
 		content := []byte("---\nname: review\ndescription: texto\n---\n")
-		got, err := UpdateFrontmatterVersion(content, "1.1.1")
+		got, err := NewPlanner().UpdateFrontmatterVersion(content, "1.1.1")
 		if err != nil {
-			t.Fatalf("UpdateFrontmatterVersion() error = %v", err)
+			t.Fatalf("NewPlanner().UpdateFrontmatterVersion() error = %v", err)
 		}
 		want := "---\nname: review\ndescription: texto\nversion: 1.1.1\n---\n"
 		if string(got) != want {
-			t.Fatalf("UpdateFrontmatterVersion() = %q, want %q", string(got), want)
+			t.Fatalf("NewPlanner().UpdateFrontmatterVersion() = %q, want %q", string(got), want)
 		}
 	})
 }

@@ -10,14 +10,15 @@ func TestUpdateVersion_ValidVersion(t *testing.T) {
 	dir := t.TempDir()
 	versionFile := filepath.Join(dir, "VERSION")
 
-	updateVersionVersion = "1.2.3"
-	updateVersionVersionFile = versionFile
-	t.Cleanup(func() {
-		updateVersionVersion = ""
-		updateVersionVersionFile = "VERSION"
-	})
+	cmd := newUpdateVersionCmd()
+	if err := cmd.Flags().Set("version", "1.2.3"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Flags().Set("version-file", versionFile); err != nil {
+		t.Fatal(err)
+	}
 
-	if err := updateVersionCmd.RunE(updateVersionCmd, nil); err != nil {
+	if err := cmd.RunE(cmd, nil); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 
@@ -36,14 +37,15 @@ func TestUpdateVersion_InvalidVersions(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc, func(t *testing.T) {
 			dir := t.TempDir()
-			updateVersionVersion = tc
-			updateVersionVersionFile = filepath.Join(dir, "VERSION")
-			t.Cleanup(func() {
-				updateVersionVersion = ""
-				updateVersionVersionFile = "VERSION"
-			})
+			cmd := newUpdateVersionCmd()
+			if err := cmd.Flags().Set("version", tc); err != nil {
+				t.Fatal(err)
+			}
+			if err := cmd.Flags().Set("version-file", filepath.Join(dir, "VERSION")); err != nil {
+				t.Fatal(err)
+			}
 
-			err := updateVersionCmd.RunE(updateVersionCmd, nil)
+			err := cmd.RunE(cmd, nil)
 			if err == nil {
 				t.Fatalf("expected error for version %q, got nil", tc)
 			}
@@ -55,14 +57,15 @@ func TestUpdateVersion_CustomVersionFile(t *testing.T) {
 	dir := t.TempDir()
 	versionFile := filepath.Join(dir, "MY_VERSION")
 
-	updateVersionVersion = "2.0.0"
-	updateVersionVersionFile = versionFile
-	t.Cleanup(func() {
-		updateVersionVersion = ""
-		updateVersionVersionFile = "VERSION"
-	})
+	cmd := newUpdateVersionCmd()
+	if err := cmd.Flags().Set("version", "2.0.0"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Flags().Set("version-file", versionFile); err != nil {
+		t.Fatal(err)
+	}
 
-	if err := updateVersionCmd.RunE(updateVersionCmd, nil); err != nil {
+	if err := cmd.RunE(cmd, nil); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 

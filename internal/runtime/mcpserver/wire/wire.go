@@ -18,17 +18,17 @@ const MCPVersion = "2024-11-05"
 
 // Request representa uma requisição JSON-RPC 2.0.
 type Request struct {
-	JSONRPC string          `json:"jsonrpc"`
+	JSONRPC string           `json:"jsonrpc"`
 	ID      *json.RawMessage `json:"id,omitempty"`
-	Method  string          `json:"method"`
-	Params  json.RawMessage `json:"params,omitempty"`
+	Method  string           `json:"method"`
+	Params  json.RawMessage  `json:"params,omitempty"`
 }
 
 // Response representa uma resposta JSON-RPC 2.0.
 type Response struct {
 	JSONRPC string           `json:"jsonrpc"`
 	ID      *json.RawMessage `json:"id,omitempty"`
-	Result  interface{}      `json:"result,omitempty"`
+	Result  any              `json:"result,omitempty"`
 	Error   *RPCError        `json:"error,omitempty"`
 }
 
@@ -56,9 +56,9 @@ const (
 
 // ToolDefinition define uma tool MCP.
 type ToolDefinition struct {
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	InputSchema interface{} `json:"inputSchema"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	InputSchema any    `json:"inputSchema"`
 }
 
 // InitializeResult é o resultado da chamada initialize.
@@ -161,7 +161,7 @@ func (c *Codec) WriteError(id *json.RawMessage, code int, msg string) error {
 }
 
 // WriteResult escreve uma resposta de sucesso JSON-RPC.
-func (c *Codec) WriteResult(id *json.RawMessage, result interface{}) error {
+func (c *Codec) WriteResult(id *json.RawMessage, result any) error {
 	return c.WriteResponse(Response{
 		JSONRPC: "2.0",
 		ID:      id,

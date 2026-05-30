@@ -72,9 +72,8 @@ func TestACPLive_Handshake(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	runner := airuntime.NewACPRunner(
-		specs.Claude(),
-		airuntime.WithPersistenceFactory(&nopPersistenceFactory{}),
+	runner := airuntime.NewACPRunner(specs.NewCatalog().
+		Claude(), airuntime.NewCatalog().WithPersistenceFactory(&nopPersistenceFactory{}),
 	)
 
 	timeout, err := events.NewActivityTimeout(30 * time.Second)

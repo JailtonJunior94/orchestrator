@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	// agentsSubdir e o subdiretorio onde os agentes sao descobertos.
-	agentsSubdir = ".ai-harness/agents"
-	// agentFileName e o nome do arquivo de definicao do agente.
-	agentFileName = "AGENT.md"
+	// _agentsSubdir e o subdiretorio onde os agentes sao descobertos.
+	_agentsSubdir = ".ai-harness/agents"
+	// _agentFileName e o nome do arquivo de definicao do agente.
+	_agentFileName = "AGENT.md"
 )
 
 // discoverAgents escaneia root/.ai-harness/agents/*/AGENT.md usando fsys e retorna
@@ -21,8 +21,8 @@ const (
 // sao silenciosamente ignorados. Falhas de leitura em um agente nao interrompem a descoberta
 // dos demais — o erro e registrado em nivel info e a iteracao continua (decisao: erro agregado
 // por robustez, conforme task 3.0 requirement).
-func discoverAgents(fsys fs.FileSystem, scope Scope, root string) ([]ResolvedAgent, error) {
-	agentsDir := filepath.Join(root, agentsSubdir)
+func (c *Catalog) discoverAgents(fsys fs.FileSystem, scope Scope, root string) ([]ResolvedAgent, error) {
+	agentsDir := filepath.Join(root, _agentsSubdir)
 	if !fsys.Exists(agentsDir) {
 		return nil, nil
 	}
@@ -41,7 +41,7 @@ func discoverAgents(fsys fs.FileSystem, scope Scope, root string) ([]ResolvedAge
 		}
 
 		dirName := entry.Name()
-		agentPath := filepath.Join(agentsDir, dirName, agentFileName)
+		agentPath := filepath.Join(agentsDir, dirName, _agentFileName)
 
 		if !fsys.Exists(agentPath) {
 			continue
@@ -55,7 +55,7 @@ func discoverAgents(fsys fs.FileSystem, scope Scope, root string) ([]ResolvedAge
 			continue
 		}
 
-		agent, err := ValidateAgentFrontmatter(content, dirName)
+		agent, err := NewCatalog().ValidateAgentFrontmatter(content, dirName)
 		if err != nil {
 			// Frontmatter invalido: registra e continua.
 			log.Printf("info: agente %q ignorado: frontmatter invalido em %q: %v", dirName, agentPath, err)
@@ -87,7 +87,7 @@ func discoverAgents(fsys fs.FileSystem, scope Scope, root string) ([]ResolvedAge
 // workspace prevalece em colisao de nome; o agente global homônimo e marcado como shadowed
 // e logado em nivel info (RF-03, D-07). Retorna a lista merged (com workspace ganhando)
 // e a lista de agentes globais que foram ofuscados.
-func mergeWithShadowing(global, workspace []ResolvedAgent) (merged, shadowed []ResolvedAgent) {
+func (c *Catalog) mergeWithShadowing(global, workspace []ResolvedAgent) (merged, shadowed []ResolvedAgent) {
 	// Construir mapa de nomes workspace para deteccao rapida de colisao.
 	workspaceByName := make(map[string]struct{}, len(workspace))
 	for _, a := range workspace {

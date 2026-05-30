@@ -5,66 +5,57 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 )
 
-func TestToolchainDetect_Go(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/go.mod"] = []byte("module example")
-
-	det := NewToolchainDetector(ffs)
-	result := det.Detect("/project")
-
-	entry, ok := result["go"]
-	if !ok {
-		t.Fatal("expected go toolchain entry")
-	}
-	if entry.Fmt != "gofmt -w ." {
-		t.Errorf("fmt: got %q", entry.Fmt)
-	}
-	if entry.Test != "go test ./..." {
-		t.Errorf("test: got %q", entry.Test)
-	}
-	if entry.Lint != "golangci-lint run" {
-		t.Errorf("lint: got %q", entry.Lint)
-	}
+type ToolchainSuite struct {
+	suite.Suite
 }
 
-func TestToolchainDetect_Node(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/package.json"] = []byte(`{
+func TestToolchainSuite(t *testing.T) {
+	suite.Run(t, new(ToolchainSuite))
+}
+
+func (s *ToolchainSuite) TestToolchainDetect() {
+	type expectedEntry struct {
+		key  string
+		fmt  string
+		test string
+		lint string
+	}
+
+	scenarios := []struct {
+		name   string
+		files  map[string][]byte
+		dirs   map[string]bool
+		expect func(result map[string]ToolchainEntry)
+	}{
+		{
+			name:  "deve detectar toolchain go",
+			files: map[string][]byte{"/project/go.mod": []byte("module example")},
+			expect: func(result map[string]ToolchainEntry) {
+				s.assertToolchainEntry(result, expectedEntry{key: "go", fmt: "gofmt -w .", test: "go test ./...", lint: "golangci-lint run"})
+			},
+		},
+		{
+			name: "deve detectar toolchain node",
+			files: map[string][]byte{"/project/package.json": []byte(`{
 		"name": "test",
 		"scripts": {
 			"fmt": "prettier --write .",
 			"test": "vitest run",
 			"lint": "eslint ."
 		}
-	}`)
-
-	det := NewToolchainDetector(ffs)
-	result := det.Detect("/project")
-
-	entry, ok := result["node"]
-	if !ok {
-		t.Fatal("expected node toolchain entry")
-	}
-	if entry.Fmt != "npm run fmt" {
-		t.Errorf("fmt: got %q", entry.Fmt)
-	}
-	if entry.Test != "npm run test" {
-		t.Errorf("test: got %q", entry.Test)
-	}
-	if entry.Lint != "npm run lint" {
-		t.Errorf("lint: got %q", entry.Lint)
-	}
-}
-
-func TestToolchainDetect_Python_Ruff(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/pyproject.toml"] = []byte(`[project]
+	}`)},
+			expect: func(result map[string]ToolchainEntry) {
+				s.assertToolchainEntry(result, expectedEntry{key: "node", fmt: "npm run fmt", test: "npm run test", lint: "npm run lint"})
+			},
+		},
+		{
+			name: "deve detectar toolchain python com ruff",
+			files: map[string][]byte{"/project/pyproject.toml": []byte(`[project]
 name = "test"
 
 [tool.ruff]
@@ -72,304 +63,232 @@ line-length = 88
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-`)
-
-	det := NewToolchainDetector(ffs)
-	result := det.Detect("/project")
-
-	entry, ok := result["python"]
-	if !ok {
-		t.Fatal("expected python toolchain entry")
-	}
-	if entry.Fmt != "ruff format ." {
-		t.Errorf("fmt: got %q", entry.Fmt)
-	}
-	if entry.Test != "pytest" {
-		t.Errorf("test: got %q", entry.Test)
-	}
-	if entry.Lint != "ruff check ." {
-		t.Errorf("lint: got %q", entry.Lint)
-	}
-}
-
-func TestToolchainDetect_Empty(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Dirs["/project"] = true
-
-	det := NewToolchainDetector(ffs)
-	result := det.Detect("/project")
-
-	if len(result) != 0 {
-		t.Errorf("expected empty result, got %v", result)
-	}
-}
-
-func TestToolchainDetect_Polyglot(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/go.mod"] = []byte("module example")
-	ffs.Files["/project/package.json"] = []byte(`{"scripts":{"test":"jest"}}`)
-
-	det := NewToolchainDetector(ffs)
-	result := det.Detect("/project")
-
-	if _, ok := result["go"]; !ok {
-		t.Error("expected go entry")
-	}
-	if _, ok := result["node"]; !ok {
-		t.Error("expected node entry")
-	}
-}
-
-func TestToolchainDetect_MakefileFallback(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/Makefile"] = []byte("fmt:\n\tgofmt -w .\ntest:\n\tgo test ./...\nlint:\n\tgolangci-lint run\n")
-
-	det := NewToolchainDetector(ffs)
-	result := det.Detect("/project")
-
-	entry, ok := result["unknown"]
-	if !ok {
-		t.Fatal("expected unknown toolchain entry for makefile fallback")
-	}
-	if entry.Fmt != "make fmt" {
-		t.Errorf("fmt: got %q, want %q", entry.Fmt, "make fmt")
-	}
-	if entry.Test != "make test" {
-		t.Errorf("test: got %q, want %q", entry.Test, "make test")
-	}
-	if entry.Lint != "make lint" {
-		t.Errorf("lint: got %q, want %q", entry.Lint, "make lint")
-	}
-}
-
-func TestToolchainDetect_Bun(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/package.json"] = []byte(`{"scripts":{"test":"jest","lint":"eslint ."}}`)
-	ffs.Files["/project/bun.lockb"] = []byte("")
-
-	det := NewToolchainDetector(ffs)
-	result := det.Detect("/project")
-
-	entry, ok := result["node"]
-	if !ok {
-		t.Fatal("expected node toolchain entry")
-	}
-	if entry.Test != "bun run test" {
-		t.Errorf("test: got %q, want %q", entry.Test, "bun run test")
-	}
-}
-
-func TestToolchainDetect_PythonOptionalDeps(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/pyproject.toml"] = []byte(`[project]
+`)},
+			expect: func(result map[string]ToolchainEntry) {
+				s.assertToolchainEntry(result, expectedEntry{key: "python", fmt: "ruff format .", test: "pytest", lint: "ruff check ."})
+			},
+		},
+		{
+			name: "deve retornar vazio sem manifestos",
+			dirs: map[string]bool{"/project": true},
+			expect: func(result map[string]ToolchainEntry) {
+				s.Empty(result)
+			},
+		},
+		{
+			name: "deve detectar projeto polyglot",
+			files: map[string][]byte{
+				"/project/go.mod":       []byte("module example"),
+				"/project/package.json": []byte(`{"scripts":{"test":"jest"}}`),
+			},
+			expect: func(result map[string]ToolchainEntry) {
+				s.Contains(result, "go")
+				s.Contains(result, "node")
+			},
+		},
+		{
+			name:  "deve usar makefile como fallback",
+			files: map[string][]byte{"/project/Makefile": []byte("fmt:\n\tgofmt -w .\ntest:\n\tgo test ./...\nlint:\n\tgolangci-lint run\n")},
+			expect: func(result map[string]ToolchainEntry) {
+				s.assertToolchainEntry(result, expectedEntry{key: "unknown", fmt: "make fmt", test: "make test", lint: "make lint"})
+			},
+		},
+		{
+			name: "deve detectar bun para node",
+			files: map[string][]byte{
+				"/project/package.json": []byte(`{"scripts":{"test":"jest","lint":"eslint ."}}`),
+				"/project/bun.lockb":    []byte(""),
+			},
+			expect: func(result map[string]ToolchainEntry) {
+				s.Require().Contains(result, "node")
+				s.Equal("bun run test", result["node"].Test)
+			},
+		},
+		{
+			name: "deve detectar dependencias opcionais python",
+			files: map[string][]byte{"/project/pyproject.toml": []byte(`[project]
 name = "test"
 
 [project.optional-dependencies]
 dev = ["ruff>=0.1", "pytest>=7.0"]
-`)
-
-	det := NewToolchainDetector(ffs)
-	result := det.Detect("/project")
-
-	entry, ok := result["python"]
-	if !ok {
-		t.Fatal("expected python toolchain entry")
-	}
-	if entry.Fmt != "ruff format ." {
-		t.Errorf("fmt: got %q", entry.Fmt)
-	}
-	if entry.Test != "pytest" {
-		t.Errorf("test: got %q", entry.Test)
-	}
-	if entry.Lint != "ruff check ." {
-		t.Errorf("lint: got %q", entry.Lint)
-	}
-}
-
-func TestStrictMode_BinaryPresent(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/go.mod"] = []byte("module example")
-
-	var buf bytes.Buffer
-	det := NewToolchainDetectorStrict(ffs, &buf)
-	result := det.Detect("/project")
-
-	if _, ok := result["go"]; !ok {
-		t.Fatal("expected go toolchain entry")
-	}
-	// gofmt e go sao binarios presentes no PATH em ambiente Go
-	// O teste verifica que o JSON output nao e afetado por strict mode
-	if result["go"].Fmt != "gofmt -w ." {
-		t.Errorf("fmt: got %q", result["go"].Fmt)
-	}
-}
-
-func TestStrictMode_BinaryAbsent(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/go.mod"] = []byte("module example")
-
-	var buf bytes.Buffer
-	det := NewToolchainDetectorStrict(ffs, &buf)
-	result := det.Detect("/project")
-
-	// JSON output deve ser inalterado
-	if result["go"].Lint != "golangci-lint run" {
-		t.Errorf("lint: got %q", result["go"].Lint)
-	}
-
-	// golangci-lint provavelmente nao esta no PATH do CI — se estiver, o warning nao aparece
-	// Verificamos que o mecanismo de warning funciona: se ausente, deve conter "WARNING"
-	// Se presente, buf pode estar vazio — ambos sao validos
-	warn := buf.String()
-	if warn != "" && !strings.Contains(warn, "WARNING") {
-		t.Errorf("expected WARNING prefix in warn output, got: %q", warn)
-	}
-}
-
-func TestStrictMode_NonStrict_NoWarning(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/go.mod"] = []byte("module example")
-
-	var buf bytes.Buffer
-	det := NewToolchainDetectorStrict(ffs, &buf)
-	det.strict = false
-	det.Detect("/project")
-
-	if buf.Len() != 0 {
-		t.Errorf("expected no warnings in non-strict mode, got: %q", buf.String())
-	}
-}
-
-func TestToolchainDetect_FocusPaths_GoWinsOverNodeAtRoot(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/package.json"] = []byte(`{"scripts":{"test":"jest","lint":"eslint ."}}`)
-	ffs.Files["/project/services/api/go.mod"] = []byte("module example")
-	ffs.Dirs["/project/services"] = true
-	ffs.Dirs["/project/services/api"] = true
-
-	det := NewToolchainDetector(ffs)
-	det.FocusPaths = []string{"services/api/handler.go"}
-	result := det.Detect("/project")
-
-	if _, ok := result["go"]; !ok {
-		t.Fatal("expected go toolchain entry")
-	}
-	if _, ok := result["node"]; ok {
-		t.Error("expected no node toolchain entry when focus is on Go subproject")
-	}
-	if result["go"].Test != "go test ./..." {
-		t.Errorf("test: got %q", result["go"].Test)
-	}
-}
-
-func TestToolchainDetect_FocusPaths_Empty_FallsBackToDefault(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/go.mod"] = []byte("module example")
-	ffs.Files["/project/package.json"] = []byte(`{"scripts":{"test":"jest"}}`)
-
-	det := NewToolchainDetector(ffs)
-	// no FocusPaths set
-	result := det.Detect("/project")
-
-	if _, ok := result["go"]; !ok {
-		t.Error("expected go entry with no focus paths")
-	}
-	if _, ok := result["node"]; !ok {
-		t.Error("expected node entry with no focus paths")
-	}
-}
-
-func TestToolchainDetect_FocusPaths_MultipleManifests_HighestOverlapWins(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/services/api/package.json"] = []byte(`{"name":"api","scripts":{"test":"jest"}}`)
-	ffs.Files["/project/services/web/package.json"] = []byte(`{"name":"web","scripts":{"test":"vitest"}}`)
-	ffs.Dirs["/project/services"] = true
-	ffs.Dirs["/project/services/api"] = true
-	ffs.Dirs["/project/services/web"] = true
-
-	det := NewToolchainDetector(ffs)
-	det.FocusPaths = []string{"services/api/handler.go"}
-	result := det.Detect("/project")
-
-	entry, ok := result["node"]
-	if !ok {
-		t.Fatal("expected node toolchain entry")
-	}
-	// services/api/package.json is closer to focus path than services/web/package.json
-	if !strings.Contains(entry.Test, "api") && !strings.Contains(entry.Test, "jest") {
-		t.Errorf("expected jest (api package) to win, got: %q", entry.Test)
-	}
-}
-
-func TestToolchainDetect_FocusPaths_NoMatch_FallsBackToDefault(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/go.mod"] = []byte("module example")
-
-	det := NewToolchainDetector(ffs)
-	det.FocusPaths = []string{"some/unrelated/path/file.rs"}
-	result := det.Detect("/project")
-
-	// No manifest matches the focus path (all scores 0): fall back to default detection
-	if _, ok := result["go"]; !ok {
-		t.Error("expected go entry when no focus path matches any manifest")
-	}
-}
-
-func TestToolchainDetect_Fixture_PythonMonorepo(t *testing.T) {
-	t.Parallel()
-	osfs := fs.NewOSFileSystem()
-	det := NewToolchainDetector(osfs)
-	result := det.Detect(fixtureDir("python-monorepo"))
-
-	entry, ok := result["python"]
-	if !ok {
-		t.Fatal("expected python toolchain entry")
-	}
-	if entry.Fmt != "ruff format ." {
-		t.Errorf("fmt: got %q", entry.Fmt)
-	}
-	if entry.Test != "pytest" {
-		t.Errorf("test: got %q", entry.Test)
-	}
-	if entry.Lint != "ruff check ." {
-		t.Errorf("lint: got %q", entry.Lint)
-	}
-}
-
-func TestToolchainDetect_PnpmWorkspace(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/pnpm-workspace.yaml"] = []byte("packages: ['apps/*']")
-	ffs.Files["/project/package.json"] = []byte(`{"name":"root"}`)
-	ffs.Files["/project/apps/web/package.json"] = []byte(`{
+`)},
+			expect: func(result map[string]ToolchainEntry) {
+				s.assertToolchainEntry(result, expectedEntry{key: "python", fmt: "ruff format .", test: "pytest", lint: "ruff check ."})
+			},
+		},
+		{
+			name: "deve preferir go quando focus path aponta para subprojeto go",
+			files: map[string][]byte{
+				"/project/package.json":        []byte(`{"scripts":{"test":"jest","lint":"eslint ."}}`),
+				"/project/services/api/go.mod": []byte("module example"),
+			},
+			dirs: map[string]bool{
+				"/project/services":     true,
+				"/project/services/api": true,
+			},
+			expect: func(result map[string]ToolchainEntry) {
+				s.Require().Contains(result, "go")
+				s.NotContains(result, "node")
+				s.Equal("go test ./...", result["go"].Test)
+			},
+		},
+		{
+			name: "deve usar deteccao default sem focus paths",
+			files: map[string][]byte{
+				"/project/go.mod":       []byte("module example"),
+				"/project/package.json": []byte(`{"scripts":{"test":"jest"}}`),
+			},
+			expect: func(result map[string]ToolchainEntry) {
+				s.Contains(result, "go")
+				s.Contains(result, "node")
+			},
+		},
+		{
+			name: "deve escolher manifesto com maior overlap de focus path",
+			files: map[string][]byte{
+				"/project/services/api/package.json": []byte(`{"name":"api","scripts":{"test":"jest"}}`),
+				"/project/services/web/package.json": []byte(`{"name":"web","scripts":{"test":"vitest"}}`),
+			},
+			dirs: map[string]bool{
+				"/project/services":     true,
+				"/project/services/api": true,
+				"/project/services/web": true,
+			},
+			expect: func(result map[string]ToolchainEntry) {
+				s.Require().Contains(result, "node")
+				s.True(strings.Contains(result["node"].Test, "api") || strings.Contains(result["node"].Test, "jest"))
+			},
+		},
+		{
+			name:  "deve fazer fallback quando focus path nao casa com manifesto",
+			files: map[string][]byte{"/project/go.mod": []byte("module example")},
+			expect: func(result map[string]ToolchainEntry) {
+				s.Contains(result, "go")
+			},
+		},
+		{
+			name: "deve detectar pnpm workspace",
+			files: map[string][]byte{
+				"/project/pnpm-workspace.yaml": []byte("packages: ['apps/*']"),
+				"/project/package.json":        []byte(`{"name":"root"}`),
+				"/project/apps/web/package.json": []byte(`{
 		"name": "@mono/web",
 		"scripts": {
 			"fmt": "prettier --write .",
 			"test": "vitest run",
 			"lint": "eslint ."
 		}
-	}`)
-
-	det := NewToolchainDetector(ffs)
-	result := det.Detect("/project")
-
-	entry, ok := result["node"]
-	if !ok {
-		t.Fatal("expected node toolchain entry")
+	}`),
+			},
+			expect: func(result map[string]ToolchainEntry) {
+				s.Require().Contains(result, "node")
+				s.Equal("pnpm --filter @mono/web run fmt", result["node"].Fmt)
+			},
+		},
 	}
-	if entry.Fmt != "pnpm --filter @mono/web run fmt" {
-		t.Errorf("fmt: got %q", entry.Fmt)
+
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			ffs := fs.NewFakeFileSystem()
+			for path, content := range scenario.files {
+				ffs.Files[path] = content
+			}
+			for path, exists := range scenario.dirs {
+				ffs.Dirs[path] = exists
+			}
+
+			det := NewToolchainDetector(ffs)
+			s.configureFocusPaths(det, scenario.name)
+			result := det.Detect("/project")
+
+			scenario.expect(result)
+		})
+	}
+}
+
+func (s *ToolchainSuite) TestStrictMode() {
+	scenarios := []struct {
+		name   string
+		strict bool
+		expect func(result map[string]ToolchainEntry, warn string)
+	}{
+		{
+			name:   "deve preservar output quando binario esta presente",
+			strict: true,
+			expect: func(result map[string]ToolchainEntry, warn string) {
+				s.Require().Contains(result, "go")
+				s.Equal("gofmt -w .", result["go"].Fmt)
+			},
+		},
+		{
+			name:   "deve preservar output quando binario esta ausente",
+			strict: true,
+			expect: func(result map[string]ToolchainEntry, warn string) {
+				s.Equal("golangci-lint run", result["go"].Lint)
+				if warn != "" {
+					s.Contains(warn, "WARNING")
+				}
+			},
+		},
+		{
+			name:   "deve omitir warnings fora do modo strict",
+			strict: false,
+			expect: func(result map[string]ToolchainEntry, warn string) {
+				s.Empty(warn)
+			},
+		},
+	}
+
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			ffs := fs.NewFakeFileSystem()
+			ffs.Files["/project/go.mod"] = []byte("module example")
+
+			var buf bytes.Buffer
+			det := NewToolchainDetectorStrict(ffs, &buf)
+			det.strict = scenario.strict
+			result := det.Detect("/project")
+
+			scenario.expect(result, buf.String())
+		})
+	}
+}
+
+func (s *ToolchainSuite) TestToolchainDetectFixturePythonMonorepo() {
+	osfs := fs.NewOSFileSystem()
+	det := NewToolchainDetector(osfs)
+	result := det.Detect(fixtureDir("python-monorepo"))
+
+	s.assertToolchainEntry(result, struct {
+		key  string
+		fmt  string
+		test string
+		lint string
+	}{key: "python", fmt: "ruff format .", test: "pytest", lint: "ruff check ."})
+}
+
+func (s *ToolchainSuite) assertToolchainEntry(result map[string]ToolchainEntry, expected struct {
+	key  string
+	fmt  string
+	test string
+	lint string
+}) {
+	s.T().Helper()
+	s.Require().Contains(result, expected.key)
+	entry := result[expected.key]
+	s.Equal(expected.fmt, entry.Fmt)
+	s.Equal(expected.test, entry.Test)
+	s.Equal(expected.lint, entry.Lint)
+}
+
+func (s *ToolchainSuite) configureFocusPaths(det *ToolchainDetector, name string) {
+	s.T().Helper()
+	switch name {
+	case "deve preferir go quando focus path aponta para subprojeto go":
+		det.FocusPaths = []string{"services/api/handler.go"}
+	case "deve escolher manifesto com maior overlap de focus path":
+		det.FocusPaths = []string{"services/api/handler.go"}
+	case "deve fazer fallback quando focus path nao casa com manifesto":
+		det.FocusPaths = []string{"some/unrelated/path/file.rs"}
 	}
 }

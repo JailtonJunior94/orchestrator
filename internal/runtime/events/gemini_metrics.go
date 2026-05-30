@@ -34,7 +34,7 @@ type geminiMetricsEnvelope struct {
 //
 // Chamada por internal/runtime/events/convert.go quando driver_id == "gemini".
 // Nunca retorna erro para campos ausentes; só falha em JSON syntactically inválido.
-func ExtractGeminiMetrics(raw json.RawMessage) (GeminiMetrics, error) {
+func (c *Catalog) ExtractGeminiMetrics(raw json.RawMessage) (GeminiMetrics, error) {
 	if len(raw) == 0 {
 		return GeminiMetrics{}, nil
 	}
@@ -50,7 +50,7 @@ func ExtractGeminiMetrics(raw json.RawMessage) (GeminiMetrics, error) {
 // LogClaudeMetrics em events/metrics.go (via telemetry package).
 //
 // ctx é reservado para expansão futura (cancelamento, trace); não usado atualmente.
-func LogGeminiMetrics(ctx context.Context, rootDir string, m GeminiMetrics) error {
+func (c *Catalog) LogGeminiMetrics(ctx context.Context, rootDir string, m GeminiMetrics) error {
 	_ = ctx
 	sm := telemetry.GeminiSessionMetrics{
 		CacheReadTokens:        m.CacheReadTokens,
@@ -58,5 +58,5 @@ func LogGeminiMetrics(ctx context.Context, rootDir string, m GeminiMetrics) erro
 		PromptTokensBilled:     m.PromptTokensBilled,
 		ThoughtsTokens:         m.ThoughtsTokens,
 	}
-	return telemetry.LogGeminiMetrics(rootDir, sm)
+	return telemetry.NewCatalog().LogGeminiMetrics(rootDir, sm)
 }

@@ -132,12 +132,14 @@ func TestServerExposesRunAgentOnly(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	go func() { _ = srv.Serve(ctx, input, &out) }()
+	serveDone := make(chan struct{})
+	go func() { _ = srv.Serve(ctx, input, &out); close(serveDone) }()
 
 	// Dar tempo ao servidor para processar.
 	time.Sleep(100 * time.Millisecond)
 	cancel()
 
+	<-serveDone
 	responses := parseResponses(t, &out)
 	if len(responses) < 2 {
 		t.Fatalf("esperado ≥2 respostas, obtido %d", len(responses))
@@ -188,10 +190,12 @@ func TestRunAgentUnknownAgentReturnsError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	go func() { _ = srv.Serve(ctx, input, &out) }()
+	serveDone := make(chan struct{})
+	go func() { _ = srv.Serve(ctx, input, &out); close(serveDone) }()
 	time.Sleep(100 * time.Millisecond)
 	cancel()
 
+	<-serveDone
 	responses := parseResponses(t, &out)
 	if len(responses) == 0 {
 		t.Fatal("nenhuma resposta recebida")
@@ -232,10 +236,12 @@ func TestRunAgentDepthLimit(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	go func() { _ = srv.Serve(ctx, input, &out) }()
+	serveDone := make(chan struct{})
+	go func() { _ = srv.Serve(ctx, input, &out); close(serveDone) }()
 	time.Sleep(100 * time.Millisecond)
 	cancel()
 
+	<-serveDone
 	responses := parseResponses(t, &out)
 	if len(responses) == 0 {
 		t.Fatal("nenhuma resposta recebida")
@@ -371,10 +377,12 @@ func TestServerInitializeHandshake(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	go func() { _ = srv.Serve(ctx, input, &out) }()
+	serveDone := make(chan struct{})
+	go func() { _ = srv.Serve(ctx, input, &out); close(serveDone) }()
 	time.Sleep(100 * time.Millisecond)
 	cancel()
 
+	<-serveDone
 	responses := parseResponses(t, &out)
 	if len(responses) == 0 {
 		t.Fatal("nenhuma resposta ao initialize")
@@ -410,10 +418,12 @@ func TestServerUnknownMethodReturnsMethodNotFound(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	go func() { _ = srv.Serve(ctx, input, &out) }()
+	serveDone := make(chan struct{})
+	go func() { _ = srv.Serve(ctx, input, &out); close(serveDone) }()
 	time.Sleep(100 * time.Millisecond)
 	cancel()
 
+	<-serveDone
 	responses := parseResponses(t, &out)
 	if len(responses) == 0 {
 		t.Fatal("nenhuma resposta")
@@ -444,10 +454,12 @@ func TestRunAgentRequiresAgentName(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	go func() { _ = srv.Serve(ctx, input, &out) }()
+	serveDone := make(chan struct{})
+	go func() { _ = srv.Serve(ctx, input, &out); close(serveDone) }()
 	time.Sleep(100 * time.Millisecond)
 	cancel()
 
+	<-serveDone
 	responses := parseResponses(t, &out)
 	if len(responses) == 0 {
 		t.Fatal("nenhuma resposta")
@@ -485,7 +497,7 @@ func TestNewServerCustomMaxDepth(t *testing.T) {
 // TestLoadNestedContextEmpty valida que contexto vazio retorna struct zerado.
 func TestLoadNestedContextEmpty(t *testing.T) {
 	t.Setenv(EnvContext, "")
-	nc := loadNestedContext()
+	nc := NewCatalog().loadNestedContext()
 	if nc.Depth != 0 || nc.ParentSessionID != "" {
 		t.Fatalf("esperado contexto zerado, obtido %+v", nc)
 	}
@@ -494,7 +506,7 @@ func TestLoadNestedContextEmpty(t *testing.T) {
 // TestLoadNestedContextValid valida que contexto JSON válido é carregado corretamente.
 func TestLoadNestedContextValid(t *testing.T) {
 	t.Setenv(EnvContext, `{"parent_session_id":"abc","depth":2,"workspace_root":"/workspace"}`)
-	nc := loadNestedContext()
+	nc := NewCatalog().loadNestedContext()
 	if nc.ParentSessionID != "abc" || nc.Depth != 2 || nc.WorkspaceRoot != "/workspace" {
 		t.Fatalf("contexto inesperado: %+v", nc)
 	}
@@ -503,7 +515,7 @@ func TestLoadNestedContextValid(t *testing.T) {
 // TestLoadNestedContextInvalidJSON valida fallback para JSON inválido.
 func TestLoadNestedContextInvalidJSON(t *testing.T) {
 	t.Setenv(EnvContext, "not-json{")
-	nc := loadNestedContext()
+	nc := NewCatalog().loadNestedContext()
 	if nc.Depth != 0 {
 		t.Fatalf("esperado depth=0, obtido %d", nc.Depth)
 	}

@@ -62,7 +62,7 @@ func TestResolveWorkDir(t *testing.T) {
 			fsys := taskfs.NewFakeFileSystem()
 			tt.setup(fsys)
 
-			got, err := resolveWorkDir(tt.prdFolder, fsys)
+			got, err := NewCatalog().resolveWorkDir(tt.prdFolder, fsys)
 			if err != nil {
 				t.Fatalf("erro inesperado: %v", err)
 			}
@@ -4530,7 +4530,7 @@ func TestResolveACPSpec(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.tool, func(t *testing.T) {
-			spec := resolveACPSpec(tt.tool)
+			spec := NewCatalog().resolveACPSpec(tt.tool)
 			if spec.ID != tt.wantID {
 				t.Errorf("resolveACPSpec(%q).ID = %q, want %q", tt.tool, spec.ID, tt.wantID)
 			}

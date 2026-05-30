@@ -13,8 +13,8 @@ type fakeGitRepo struct {
 	isRepo bool
 }
 
-func (f *fakeGitRepo) IsRepo(path string) bool              { return f.isRepo }
-func (f *fakeGitRepo) Root(path string) (string, error)     { return path, nil }
+func (f *fakeGitRepo) IsRepo(path string) bool               { return f.isRepo }
+func (f *fakeGitRepo) Root(path string) (string, error)      { return path, nil }
 func (f *fakeGitRepo) RemoteURL(path string) (string, error) { return "", nil }
 
 func silentPrinter() *output.Printer {

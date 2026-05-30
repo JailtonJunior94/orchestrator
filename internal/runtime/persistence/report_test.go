@@ -26,7 +26,7 @@ func TestEnrichReport_FreshAppend(t *testing.T) {
 		t.Fatalf("setup: %v", err)
 	}
 
-	if err := persistence.EnrichReport("/report/execution_report.md", makeSummary(), fsys); err != nil {
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", makeSummary(), fsys); err != nil {
 		t.Fatalf("EnrichReport: %v", err)
 	}
 
@@ -57,7 +57,7 @@ func TestEnrichReport_FreshAppend(t *testing.T) {
 func TestEnrichReport_EmptyFile(t *testing.T) {
 	fsys := fs.NewFakeFileSystem()
 
-	if err := persistence.EnrichReport("/report/execution_report.md", makeSummary(), fsys); err != nil {
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", makeSummary(), fsys); err != nil {
 		t.Fatalf("EnrichReport em arquivo inexistente: %v", err)
 	}
 
@@ -81,7 +81,7 @@ func TestEnrichReport_ReplaceExisting(t *testing.T) {
 		CancelReason:       events.CancelReasonActivityTimeout,
 	}
 
-	if err := persistence.EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
 		t.Fatalf("EnrichReport: %v", err)
 	}
 
@@ -115,12 +115,12 @@ func TestEnrichReport_Idempotency(t *testing.T) {
 	}
 	summary := makeSummary()
 
-	if err := persistence.EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
 		t.Fatalf("primeira chamada: %v", err)
 	}
 	data1, _ := fsys.ReadFile("/report/execution_report.md")
 
-	if err := persistence.EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
 		t.Fatalf("segunda chamada: %v", err)
 	}
 	data2, _ := fsys.ReadFile("/report/execution_report.md")
@@ -136,7 +136,7 @@ func TestEnrichReport_WriteError(t *testing.T) {
 		FakeFileSystem: fs.NewFakeFileSystem(),
 		writeErr:       errors.New("disco cheio"),
 	}
-	err := persistence.EnrichReport("/report/execution_report.md", makeSummary(), efs)
+	err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", makeSummary(), efs)
 	if err == nil {
 		t.Fatal("esperava erro de WriteFile")
 	}
@@ -146,7 +146,7 @@ func TestEnrichReport_WriteError(t *testing.T) {
 
 func TestRenderClaudeMetricsSection_AllZero_ReturnsEmpty(t *testing.T) {
 	summary := runtime.Summary{} // todos campos zero
-	got := persistence.RenderClaudeMetricsSection(summary)
+	got := persistence.NewCatalog().RenderClaudeMetricsSection(summary)
 	if got != "" {
 		t.Errorf("esperado string vazia quando todos métricas zero; got: %q", got)
 	}
@@ -159,7 +159,7 @@ func TestRenderClaudeMetricsSection_WithValues_ContainsAllFields(t *testing.T) {
 	summary := runtime.Summary{
 		Metrics: m,
 	}
-	got := persistence.RenderClaudeMetricsSection(summary)
+	got := persistence.NewCatalog().RenderClaudeMetricsSection(summary)
 	if got == "" {
 		t.Fatal("esperado seção não-vazia quando métricas > 0")
 	}
@@ -191,7 +191,7 @@ func TestEnrichReport_ClaudeMetricsAppended_WhenNonZero(t *testing.T) {
 		Metrics:     m,
 	}
 
-	if err := persistence.EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
 		t.Fatalf("EnrichReport: %v", err)
 	}
 
@@ -214,7 +214,7 @@ func TestEnrichReport_ClaudeMetrics_NotPresent_WhenAllZero(t *testing.T) {
 
 	summary := makeSummary() // Metrics é zero-value (IsZero()==true)
 
-	if err := persistence.EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
 		t.Fatalf("EnrichReport: %v", err)
 	}
 
@@ -230,7 +230,7 @@ func TestEnrichReport_ClaudeMetrics_NotPresent_WhenAllZero(t *testing.T) {
 
 // TestRenderMetricsSection_AllZero valida que MetricSet zero-value não gera seção.
 func TestRenderMetricsSection_AllZero(t *testing.T) {
-	got := persistence.RenderMetricsSection(events.MetricSet{})
+	got := persistence.NewCatalog().RenderMetricsSection(events.MetricSet{})
 	if got != "" {
 		t.Errorf("esperado string vazia para MetricSet zero; got: %q", got)
 	}
@@ -242,7 +242,7 @@ func TestRenderMetricsSection_GeminiFields(t *testing.T) {
 		"effective_context_tokens": 200,
 		"prompt_tokens_billed":     300,
 	})
-	got := persistence.RenderMetricsSection(m)
+	got := persistence.NewCatalog().RenderMetricsSection(m)
 	if got == "" {
 		t.Fatal("esperado seção não-vazia para MetricSet Gemini com campos > 0")
 	}
@@ -272,7 +272,7 @@ func TestEnrichReport_MetricsSection_Codex(t *testing.T) {
 		// Metrics zero-value → nullExtractor → sem seção de métricas (RP-02).
 	}
 
-	if err := persistence.EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
 		t.Fatalf("EnrichReport: %v", err)
 	}
 
@@ -299,7 +299,7 @@ func TestEnrichReport_SectionAtEndOfFile(t *testing.T) {
 		CancelReason:       events.CancelReasonNone,
 	}
 
-	if err := persistence.EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
 		t.Fatalf("EnrichReport: %v", err)
 	}
 

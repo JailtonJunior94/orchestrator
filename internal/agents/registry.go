@@ -31,6 +31,8 @@ type defaultRegistry struct {
 	cachedErr error
 }
 
+var _ Registry = (*defaultRegistry)(nil)
+
 // NewDefaultRegistry cria um Registry com cache proprio.
 // Cache valido pelo tempo de vida da instancia — testes instanciam nova registry entre cenarios.
 func NewDefaultRegistry(fsys fs.FileSystem, workdir, home string) Registry {
@@ -45,8 +47,8 @@ func NewDefaultRegistry(fsys fs.FileSystem, workdir, home string) Registry {
 // mesmo sob chamadas paralelas (T-14, criterio de concorrencia).
 func (r *defaultRegistry) load() {
 	r.once.Do(func() {
-		global, errG := discoverAgents(r.fsys, ScopeGlobal, r.home)
-		workspace, errW := discoverAgents(r.fsys, ScopeWorkspace, r.workdir)
+		global, errG := NewCatalog().discoverAgents(r.fsys, ScopeGlobal, r.home)
+		workspace, errW := NewCatalog().discoverAgents(r.fsys, ScopeWorkspace, r.workdir)
 
 		// Priorizar erro de workspace sobre global; ambos registrados no campo de erro.
 		if errG != nil || errW != nil {
@@ -60,7 +62,7 @@ func (r *defaultRegistry) load() {
 			r.cachedErr = fmt.Errorf("descoberta parcial: %s", strings.Join(parts, "; "))
 		}
 
-		merged, _ := mergeWithShadowing(global, workspace)
+		merged, _ := NewCatalog().mergeWithShadowing(global, workspace)
 		r.cached = merged
 	})
 }

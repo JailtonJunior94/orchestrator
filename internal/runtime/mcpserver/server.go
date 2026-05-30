@@ -71,13 +71,15 @@ type server struct {
 	persistFactory airuntime.PersistenceFactory
 }
 
+var _ Server = (*server)(nil)
+
 // New cria um Server MCP configurado.
 // registry: resolve agent_name para ResolvedAgent.
 // maxDepth: profundidade máxima de aninhamento (default 3 se ≤ 0).
 // persistFactory: fábrica de Persistence para child sessions; pode ser nil (sem persistência).
 func New(registry agents.Registry, maxDepth int, persistFactory airuntime.PersistenceFactory) Server {
 	if maxDepth <= 0 {
-		maxDepth = resolveMaxDepth()
+		maxDepth = NewCatalog().resolveMaxDepth()
 	}
 	return &server{
 		registry:       registry,
@@ -87,7 +89,7 @@ func New(registry agents.Registry, maxDepth int, persistFactory airuntime.Persis
 }
 
 // resolveMaxDepth resolve a profundidade máxima via env AISPEC_MAX_AGENT_DEPTH ou default.
-func resolveMaxDepth() int {
+func (c *Catalog) resolveMaxDepth() int {
 	if v := os.Getenv(EnvMaxDepth); v != "" {
 		if n, err := strconv.Atoi(v); err == nil && n > 0 {
 			return n
@@ -101,7 +103,7 @@ func (s *server) Serve(ctx context.Context, in io.Reader, out io.Writer) error {
 	codec := wire.NewCodec(in, out)
 
 	// Derivar contexto de execução atual (depth do parent).
-	parentCtx := loadNestedContext()
+	parentCtx := NewCatalog().loadNestedContext()
 
 	for {
 		select {
@@ -172,7 +174,7 @@ func (s *server) handleToolsList(codec *wire.Codec, req wire.Request) error {
 			{
 				Name:        ReservedToolName,
 				Description: "Executa um agente nested registrado no harness. Profundidade máxima: " + strconv.Itoa(s.maxDepth) + ".",
-				InputSchema: runAgentInputSchema(),
+				InputSchema: NewCatalog().runAgentInputSchema(),
 			},
 		},
 	}
@@ -245,7 +247,7 @@ func (s *server) handleToolsCall(
 	}
 
 	// Spawnar child session via engine.
-	output, err := spawnNestedSession(childCtx, SpawnParams{
+	output, err := NewCatalog().spawnNestedSession(childCtx, SpawnParams{
 		Agent:          agent,
 		Input:          input,
 		NestedCtx:      childNestedCtx,
@@ -273,7 +275,7 @@ func (s *server) handleToolsCall(
 
 // loadNestedContext carrega o NestedExecutionContext da env var AISPEC_RUN_AGENT_CONTEXT.
 // Retorna contexto zerado (depth=0) quando a env var não está definida (sessão raiz).
-func loadNestedContext() NestedExecutionContext {
+func (c *Catalog) loadNestedContext() NestedExecutionContext {
 	raw := os.Getenv(EnvContext)
 	if raw == "" {
 		return NestedExecutionContext{}
@@ -286,23 +288,23 @@ func loadNestedContext() NestedExecutionContext {
 }
 
 // runAgentInputSchema retorna o JSON Schema da tool run_agent.
-func runAgentInputSchema() map[string]interface{} {
-	return map[string]interface{}{
+func (c *Catalog) runAgentInputSchema() map[string]any {
+	return map[string]any{
 		"type": "object",
-		"properties": map[string]interface{}{
-			"agent_name": map[string]interface{}{
+		"properties": map[string]any{
+			"agent_name": map[string]any{
 				"type":        "string",
 				"description": "Nome do agente declarativo registrado no harness.",
 			},
-			"prompt": map[string]interface{}{
+			"prompt": map[string]any{
 				"type":        "string",
 				"description": "Prompt a ser enviado ao agente.",
 			},
-			"model": map[string]interface{}{
+			"model": map[string]any{
 				"type":        "string",
 				"description": "Modelo a ser usado (opcional; usa default do agente).",
 			},
-			"timeout": map[string]interface{}{
+			"timeout": map[string]any{
 				"type":        "integer",
 				"description": "Timeout em segundos (default 300; máximo 1800).",
 				"minimum":     1,

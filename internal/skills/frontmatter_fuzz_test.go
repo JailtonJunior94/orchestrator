@@ -20,7 +20,7 @@ func FuzzParseFrontmatter(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		// Nao deve causar panic
-		_ = ParseFrontmatter(data)
+		_ = NewCatalog().ParseFrontmatter(data)
 	})
 }
 
@@ -35,6 +35,6 @@ func FuzzValidateFrontmatter(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, data []byte, dirName string) {
 		// Erros sao aceitaveis; panic nao
-		_ = ValidateFrontmatter(data, dirName, nil)
+		_ = NewCatalog().ValidateFrontmatter(data, dirName, nil)
 	})
 }

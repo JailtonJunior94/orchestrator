@@ -18,13 +18,13 @@ import (
 )
 
 const (
-	// reviewSkillPath é o caminho relativo da skill de review lida em runtime.
+	// _reviewSkillPath é o caminho relativo da skill de review lida em runtime.
 	// Falha de leitura gera erro claro — não spawna review sem skill.
-	reviewSkillPath = ".agents/skills/review/SKILL.md"
+	_reviewSkillPath = ".agents/skills/review/SKILL.md"
 
-	// reviewDiffMaxBytes é o limite default de bytes do diff (5 MB).
+	// _reviewDiffMaxBytes é o limite default de bytes do diff (5 MB).
 	// Configurável via env AISPEC_REVIEW_DIFF_MAX.
-	reviewDiffMaxBytes = 5 * 1024 * 1024
+	_reviewDiffMaxBytes = 5 * 1024 * 1024
 )
 
 // ReviewResult agrega o resultado do auto-review.
@@ -42,7 +42,7 @@ type ReviewResult struct {
 // buildReviewPrompt constrói o prompt para a sessão de review.
 // skillBody é o conteúdo de .agents/skills/review/SKILL.md.
 // gitDiff é a saída de git diff (staged + unstaged).
-func buildReviewPrompt(skillBody, gitDiff string) string {
+func (c *Catalog) buildReviewPrompt(skillBody, gitDiff string) string {
 	return fmt.Sprintf(
 		"%s\n\n## Diff a Revisar\n\n```diff\n%s\n```\n\n## Instrução\n"+
 			"Revise o diff acima conforme as regras da skill. Reporte issues por severidade.\n"+
@@ -57,7 +57,7 @@ func buildReviewPrompt(skillBody, gitDiff string) string {
 //   - Contém "BLOQUEADO" → blocked (português; paridade Compozy review)
 //   - Contém "CRÍTICO"   → blocked (sinônimo de hard em PT-BR)
 //   - Caso contrário     → ok
-func parseReviewStatus(reviewOutput string) string {
+func (c *Catalog) parseReviewStatus(reviewOutput string) string {
 	if strings.Contains(reviewOutput, "[HARD]") ||
 		strings.Contains(reviewOutput, "BLOQUEADO") ||
 		strings.Contains(reviewOutput, "CRÍTICO") {
@@ -67,7 +67,7 @@ func parseReviewStatus(reviewOutput string) string {
 }
 
 // extractHardIssues retorna as linhas do review output que contêm marcadores críticos.
-func extractHardIssues(reviewOutput string) []string {
+func (c *Catalog) extractHardIssues(reviewOutput string) []string {
 	var issues []string
 	for line := range strings.SplitSeq(reviewOutput, "\n") {
 		if strings.Contains(line, "[HARD]") ||
@@ -82,8 +82,8 @@ func extractHardIssues(reviewOutput string) []string {
 // collectGitDiff coleta git diff (staged + unstaged) no workDir.
 // Limita saída a reviewDiffMaxBytes (ou AISPEC_REVIEW_DIFF_MAX env).
 // Trunca com warning prefixado quando excede o limite.
-func collectGitDiff(workDir string) string {
-	maxBytes := reviewDiffMaxBytes
+func (c *Catalog) collectGitDiff(workDir string) string {
+	maxBytes := _reviewDiffMaxBytes
 	if envVal := os.Getenv("AISPEC_REVIEW_DIFF_MAX"); envVal != "" {
 		var n int
 		if _, err := fmt.Sscan(envVal, &n); err == nil && n > 0 {
@@ -94,13 +94,13 @@ func collectGitDiff(workDir string) string {
 	var sb strings.Builder
 
 	// git diff --staged (staged changes)
-	staged, err := runGitDiff(workDir, "--staged")
+	staged, err := NewCatalog().runGitDiff(workDir, "--staged")
 	if err == nil && staged != "" {
 		sb.WriteString(staged)
 	}
 
 	// git diff (unstaged changes)
-	unstaged, err := runGitDiff(workDir)
+	unstaged, err := NewCatalog().runGitDiff(workDir)
 	if err == nil && unstaged != "" {
 		if sb.Len() > 0 {
 			sb.WriteString("\n")
@@ -122,7 +122,7 @@ func collectGitDiff(workDir string) string {
 }
 
 // runGitDiff executa `git diff [args...]` no workDir e retorna a saída.
-func runGitDiff(workDir string, args ...string) (string, error) {
+func (c *Catalog) runGitDiff(workDir string, args ...string) (string, error) {
 	cmdArgs := append([]string{"diff"}, args...) //nolint:gocritic
 	cmd := exec.Command("git", cmdArgs...)       //nolint:gosec
 	cmd.Dir = workDir
@@ -149,8 +149,8 @@ func (r *ACPRunner) runAutoReview(ctx context.Context, j Job) (ReviewResult, err
 		return ReviewResult{}, fmt.Errorf("runAutoReview: %w", err)
 	}
 
-	gitDiff := collectGitDiff(j.WorkDir)
-	prompt := buildReviewPrompt(skillBody, gitDiff)
+	gitDiff := NewCatalog().collectGitDiff(j.WorkDir)
+	prompt := NewCatalog().buildReviewPrompt(skillBody, gitDiff)
 
 	reviewEvidenceDir := filepath.Join(j.EvidenceDir, "review")
 	reviewPath := filepath.Join(j.EvidenceDir, "review.md")
@@ -162,7 +162,7 @@ func (r *ACPRunner) runAutoReview(ctx context.Context, j Job) (ReviewResult, err
 		EvidenceDir: reviewEvidenceDir,
 		// RuntimeConfig: apenas Timeout para o review; demais campos inertes (F1).
 		RuntimeConfig: RuntimeConfig{
-			Timeout: mustReviewTimeout(),
+			Timeout: NewCatalog().mustReviewTimeout(),
 		},
 		Quiet:          true,
 		TasksDir:       j.TasksDir,
@@ -180,11 +180,11 @@ func (r *ACPRunner) runAutoReview(ctx context.Context, j Job) (ReviewResult, err
 		reviewOutput, err = r.spawnReviewSession(ctx, childJob)
 	}
 
-	status := parseReviewStatus(reviewOutput)
-	hardIssues := extractHardIssues(reviewOutput)
+	status := NewCatalog().parseReviewStatus(reviewOutput)
+	hardIssues := NewCatalog().extractHardIssues(reviewOutput)
 
 	// Persistir apontador review.md (arquivo pequeno com resumo).
-	reviewPointerContent := buildReviewPointer(reviewEvidenceDir, status)
+	reviewPointerContent := NewCatalog().buildReviewPointer(reviewEvidenceDir, status)
 	_ = os.MkdirAll(filepath.Dir(reviewPath), 0o755)
 	_ = os.WriteFile(reviewPath, []byte(reviewPointerContent), 0o644)
 
@@ -199,15 +199,15 @@ func (r *ACPRunner) runAutoReview(ctx context.Context, j Job) (ReviewResult, err
 // readReviewSkill lê .agents/skills/review/SKILL.md relativo ao workDir ou ao cwd.
 func (r *ACPRunner) readReviewSkill(workDir string) (string, error) {
 	// Tentar relativo ao workDir primeiro.
-	p := filepath.Join(workDir, reviewSkillPath)
+	p := filepath.Join(workDir, _reviewSkillPath)
 	body, err := os.ReadFile(p)
 	if err == nil {
 		return string(body), nil
 	}
 	// Fallback: relativo ao cwd (útil em desenvolvimento local).
-	body, err = os.ReadFile(reviewSkillPath)
+	body, err = os.ReadFile(_reviewSkillPath)
 	if err != nil {
-		return "", fmt.Errorf("ler skill review %q: %w", reviewSkillPath, err)
+		return "", fmt.Errorf("ler skill review %q: %w", _reviewSkillPath, err)
 	}
 	return string(body), nil
 }
@@ -215,19 +215,14 @@ func (r *ACPRunner) readReviewSkill(workDir string) (string, error) {
 // spawnReviewSession cria um runner filho e retorna o output textual.
 // Reutiliza spec, factory e clock do runner pai.
 func (r *ACPRunner) spawnReviewSession(ctx context.Context, childJob Job) (string, error) {
-	reviewRunner := NewACPRunner(r.spec,
-		WithClock(r.clock),
-		WithProber(r.prober),
-		WithClientFactory(r.factory),
-		WithPersistenceFactory(r.persistenceFactory),
-	)
+	reviewRunner := NewACPRunner(r.spec, NewCatalog().WithClock(r.clock), NewCatalog().WithProber(r.prober), NewCatalog().WithClientFactory(r.factory), NewCatalog().WithPersistenceFactory(r.persistenceFactory))
 
 	reviewSummary, runErr := reviewRunner.Run(ctx, childJob)
 
 	// Construir output textual a partir do Summary para parseReviewStatus.
 	// Em produção, o output real vem dos eventos persistidos no evidence dir.
 	// parseReviewStatus opera sobre o texto; aqui mapeamos CancelReason.
-	output := buildReviewOutputFromSummary(reviewSummary, runErr)
+	output := NewCatalog().buildReviewOutputFromSummary(reviewSummary, runErr)
 	return output, runErr
 }
 
@@ -235,7 +230,7 @@ func (r *ACPRunner) spawnReviewSession(ctx context.Context, childJob Job) (strin
 // Em produção o output real vem dos eventos persistidos; aqui construímos a representação
 // baseada no CancelReason para que parseReviewStatus e extractHardIssues possam operar.
 // Testes injetam comportamento via reviewOutputFn.
-func buildReviewOutputFromSummary(s Summary, runErr error) string {
+func (c *Catalog) buildReviewOutputFromSummary(s Summary, runErr error) string {
 	if runErr != nil {
 		return fmt.Sprintf("erro na sessão de review: %v", runErr)
 	}
@@ -246,24 +241,26 @@ func buildReviewOutputFromSummary(s Summary, runErr error) string {
 }
 
 // buildReviewPointer cria o conteúdo do arquivo review.md (apontador conveniente ~3 linhas).
-func buildReviewPointer(evidenceDir, status string) string {
+func (c *Catalog) buildReviewPointer(evidenceDir, status string) string {
 	return fmt.Sprintf("# Auto-Review\n\nReviewStatus: %s\n\nRelatório completo: %s/execution_report.md\n",
 		status, evidenceDir)
 }
 
 // mustReviewTimeout retorna 5*time.Minute como ActivityTimeout para sessões de review.
 // Timeout reduzido vs sessões normais (review é tipicamente rápido; evita hang longo).
-func mustReviewTimeout() events.ActivityTimeout {
+func (c *Catalog) mustReviewTimeout() events.ActivityTimeout {
 	t, _ := events.NewActivityTimeout(5 * time.Minute)
 	return t
 }
 
 // ParseReviewStatusForTest expõe parseReviewStatus para testes externos.
 // Não usar em produção.
-func ParseReviewStatusForTest(output string) string { return parseReviewStatus(output) }
+func (c *Catalog) ParseReviewStatusForTest(output string) string {
+	return NewCatalog().parseReviewStatus(output)
+}
 
 // BuildReviewPromptForTest expõe buildReviewPrompt para testes externos.
 // Não usar em produção.
-func BuildReviewPromptForTest(skillBody, gitDiff string) string {
-	return buildReviewPrompt(skillBody, gitDiff)
+func (c *Catalog) BuildReviewPromptForTest(skillBody, gitDiff string) string {
+	return NewCatalog().buildReviewPrompt(skillBody, gitDiff)
 }

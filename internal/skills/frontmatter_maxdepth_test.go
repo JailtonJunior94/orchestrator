@@ -1,30 +1,52 @@
 package skills
 
-import "testing"
+import (
+	"testing"
 
-func TestMaxDepth_WithValue(t *testing.T) {
-	content := []byte(`---
+	"github.com/stretchr/testify/suite"
+)
+
+type FrontmatterMaxDepthSuite struct {
+	suite.Suite
+}
+
+func TestFrontmatterMaxDepthSuite(t *testing.T) {
+	suite.Run(t, new(FrontmatterMaxDepthSuite))
+}
+
+func (s *FrontmatterMaxDepthSuite) TestMaxDepth() {
+	scenarios := []struct {
+		name    string
+		content []byte
+		want    int
+	}{
+		{
+			name: "deve ler max_depth informado",
+			content: []byte(`---
 name: my-skill
 version: 1.0.0
 description: Uma skill com max_depth.
 max_depth: 3
 ---
-`)
-	fm := ParseFrontmatter(content)
-	if fm.MaxDepth != 3 {
-		t.Errorf("MaxDepth: got %d, want 3", fm.MaxDepth)
-	}
-}
-
-func TestMaxDepth_Default(t *testing.T) {
-	content := []byte(`---
+`),
+			want: 3,
+		},
+		{
+			name: "deve usar zero quando max_depth ausente",
+			content: []byte(`---
 name: my-skill
 version: 1.0.0
 description: Uma skill sem max_depth.
 ---
-`)
-	fm := ParseFrontmatter(content)
-	if fm.MaxDepth != 0 {
-		t.Errorf("MaxDepth: got %d, want 0", fm.MaxDepth)
+`),
+			want: 0,
+		},
+	}
+
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			fm := NewCatalog().ParseFrontmatter(scenario.content)
+			s.Equal(scenario.want, fm.MaxDepth, "MaxDepth")
+		})
 	}
 }

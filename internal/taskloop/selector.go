@@ -28,6 +28,8 @@ type defaultTaskSelector struct {
 	fsys fs.FileSystem
 }
 
+var _ TaskSelector = (*defaultTaskSelector)(nil)
+
 // NewTaskSelector cria um TaskSelector com o filesystem fornecido.
 func NewTaskSelector(fsys fs.FileSystem) TaskSelector {
 	return &defaultTaskSelector{fsys: fsys}
@@ -47,16 +49,16 @@ func (s *defaultTaskSelector) Next(ctx context.Context, prdFolder string) (*Task
 		return nil, fmt.Errorf("taskloop: erro ao ler %s: %w", tasksPath, err)
 	}
 
-	tasks, err := ParseTasksFile(data)
+	tasks, err := NewCatalog().ParseTasksFile(data)
 	if err != nil {
 		return nil, fmt.Errorf("taskloop: erro ao parsear tasks.md: %w", err)
 	}
 
-	if err := detectCycle(tasks); err != nil {
+	if err := NewCatalog().detectCycle(tasks); err != nil {
 		return nil, err
 	}
-	tasks = reconcileTaskStatuses(tasks, prdFolder, s.fsys)
-	eligible := FindEligible(tasks, nil)
+	tasks = NewCatalog().reconcileTaskStatuses(tasks, prdFolder, s.fsys)
+	eligible := NewCatalog().FindEligible(tasks, nil)
 
 	if len(eligible) == 0 {
 		return nil, ErrNoEligibleTask
@@ -74,7 +76,7 @@ func (s *defaultTaskSelector) Next(ctx context.Context, prdFolder string) (*Task
 }
 
 // detectCycle usa DFS para detectar ciclos no grafo de dependencias.
-func detectCycle(tasks []TaskEntry) error {
+func (c *Catalog) detectCycle(tasks []TaskEntry) error {
 	adj := make(map[string][]string, len(tasks))
 	ids := make(map[string]bool, len(tasks))
 	for _, t := range tasks {

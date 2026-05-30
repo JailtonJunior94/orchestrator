@@ -43,8 +43,8 @@ func TestSyncSpecHash_UpdatesExistingHashes(t *testing.T) {
 	techspecContent := "architecture details"
 
 	tasksContent := fmt.Sprintf(
-		"<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->\n"+
-			"<!-- spec-hash-techspec: 0000000000000000000000000000000000000000000000000000000000000000 -->\n"+
+		"<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->\n" +
+			"<!-- spec-hash-techspec: 0000000000000000000000000000000000000000000000000000000000000000 -->\n" +
 			"# Tasks\n",
 	)
 
@@ -52,7 +52,7 @@ func TestSyncSpecHash_UpdatesExistingHashes(t *testing.T) {
 	writeFileSync(t, dir, "techspec.md", techspecContent)
 	tasksPath := writeFileSync(t, dir, "tasks.md", tasksContent)
 
-	if err := specdrift.SyncSpecHash(tasksPath); err != nil {
+	if err := specdrift.NewCatalog().SyncSpecHash(tasksPath); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -80,7 +80,7 @@ func TestSyncSpecHash_InsertsWhenMissing(t *testing.T) {
 	writeFileSync(t, dir, "prd.md", prdContent)
 	tasksPath := writeFileSync(t, dir, "tasks.md", "# Tasks\n")
 
-	if err := specdrift.SyncSpecHash(tasksPath); err != nil {
+	if err := specdrift.NewCatalog().SyncSpecHash(tasksPath); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -104,7 +104,7 @@ func TestSyncSpecHash_SkipsMissingSpecFiles(t *testing.T) {
 	tasksPath := writeFileSync(t, dir, "tasks.md", "# Tasks\n")
 	// no prd.md, no techspec.md
 
-	if err := specdrift.SyncSpecHash(tasksPath); err != nil {
+	if err := specdrift.NewCatalog().SyncSpecHash(tasksPath); err != nil {
 		t.Fatalf("should not error when spec files are absent: %v", err)
 	}
 
@@ -129,7 +129,7 @@ func TestSyncSpecHash_NoOpWhenHashesMatch(t *testing.T) {
 	// capture mtime before sync
 	infoBefore, _ := os.Stat(tasksPath)
 
-	if err := specdrift.SyncSpecHash(tasksPath); err != nil {
+	if err := specdrift.NewCatalog().SyncSpecHash(tasksPath); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -144,7 +144,7 @@ func TestSyncSpecHash_MissingTasksFile(t *testing.T) {
 	dir := t.TempDir()
 	tasksPath := filepath.Join(dir, "tasks.md")
 
-	err := specdrift.SyncSpecHash(tasksPath)
+	err := specdrift.NewCatalog().SyncSpecHash(tasksPath)
 	if err == nil {
 		t.Error("expected error when tasks.md does not exist")
 	}
@@ -162,18 +162,18 @@ func TestSyncSpecHash_RoundTrip(t *testing.T) {
 
 	// tasks.md with stale hashes but correct RF coverage
 	tasksContent := fmt.Sprintf(
-		"<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->\n"+
-			"<!-- spec-hash-techspec: 0000000000000000000000000000000000000000000000000000000000000000 -->\n"+
+		"<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->\n" +
+			"<!-- spec-hash-techspec: 0000000000000000000000000000000000000000000000000000000000000000 -->\n" +
 			"RF-01 done. RF-02 done.\n",
 	)
 
 	tasksPath := writeFileSync(t, dir, "tasks.md", tasksContent)
 
-	if err := specdrift.SyncSpecHash(tasksPath); err != nil {
+	if err := specdrift.NewCatalog().SyncSpecHash(tasksPath); err != nil {
 		t.Fatalf("sync error: %v", err)
 	}
 
-	report, err := specdrift.CheckDrift(dir)
+	report, err := specdrift.NewCatalog().CheckDrift(dir)
 	if err != nil {
 		t.Fatalf("CheckDrift error after sync: %v", err)
 	}

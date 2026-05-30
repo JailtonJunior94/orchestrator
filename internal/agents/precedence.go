@@ -26,8 +26,8 @@ type RuntimeOverride struct {
 
 // ApplyRuntimePrecedence e a versao exportada de applyRuntimePrecedence para uso por pacotes externos
 // (ex: internal/taskloop). Aplica a hierarquia CLI > AGENT.md > defaults.
-func ApplyRuntimePrecedence(cfg *RuntimeOverride, defaults RuntimeDefaults) {
-	applyRuntimePrecedence(cfg, defaults)
+func (c *Catalog) ApplyRuntimePrecedence(cfg *RuntimeOverride, defaults RuntimeDefaults) {
+	NewCatalog().applyRuntimePrecedence(cfg, defaults)
 }
 
 // applyRuntimePrecedence aplica a hierarquia de precedencia:
@@ -35,7 +35,7 @@ func ApplyRuntimePrecedence(cfg *RuntimeOverride, defaults RuntimeDefaults) {
 // Campos marcados como Explicit* preservam o valor CLI.
 // Campos nao marcados sao preenchidos com os defaults do agente quando disponiveis.
 // Funcao pura: sem IO, sem cache, sem estado externo (D-05).
-func applyRuntimePrecedence(cfg *RuntimeOverride, defaults RuntimeDefaults) {
+func (c *Catalog) applyRuntimePrecedence(cfg *RuntimeOverride, defaults RuntimeDefaults) {
 	if !cfg.ExplicitIDE && defaults.IDE != "" {
 		cfg.IDE = defaults.IDE
 	}

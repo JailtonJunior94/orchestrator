@@ -55,7 +55,7 @@ type flowBudgetKey struct {
 	Flow              FlowKind
 }
 
-// flowBudgets define thresholds conservadores de tokens por fluxo/ferramenta/profile.
+// _flowBudgets define thresholds conservadores de tokens por fluxo/ferramenta/profile.
 // Todos os valores sao estimativas operacionais (chars/3.5), nao tokens reais do provedor.
 //
 // Origem dos thresholds:
@@ -67,7 +67,7 @@ type flowBudgetKey struct {
 // Limites definidos como ~4-8x a soma esperada dos artefatos para margem operacional segura.
 // Ferramentas com janela de contexto maior (claude, gemini) recebem limites mais generosos.
 // Planning nao e definido para lean — o perfil lean exclui skills de planejamento por design.
-var flowBudgets = map[flowBudgetKey]int{
+var _flowBudgets = map[flowBudgetKey]int{
 	// claude — janela de contexto grande; standard/full
 	{Tool: "claude", GovernanceProfile: GovernanceProfileStandard, SkillProfile: SkillProfileFull, Flow: FlowExecution}: 20000,
 	{Tool: "claude", GovernanceProfile: GovernanceProfileStandard, SkillProfile: SkillProfileFull, Flow: FlowPlanning}:  40000,
@@ -103,8 +103,8 @@ var flowBudgets = map[flowBudgetKey]int{
 
 // FlowBudget retorna o limite de tokens para uma combinacao de fluxo/ferramenta/profile.
 // Retorna 0 e false se a combinacao nao tiver budget definido (ex: lean + planning).
-func FlowBudget(tool string, gp GovernanceProfile, sp SkillProfile, flow FlowKind) (int, bool) {
-	limit, ok := flowBudgets[flowBudgetKey{Tool: tool, GovernanceProfile: gp, SkillProfile: sp, Flow: flow}]
+func (c *Catalog) FlowBudget(tool string, gp GovernanceProfile, sp SkillProfile, flow FlowKind) (int, bool) {
+	limit, ok := _flowBudgets[flowBudgetKey{Tool: tool, GovernanceProfile: gp, SkillProfile: sp, Flow: flow}]
 	return limit, ok
 }
 
@@ -124,7 +124,7 @@ func (s *Service) MeasureFlow(tool string, gp GovernanceProfile, sp SkillProfile
 		fm := s.fileMetric(p)
 		m.TokensEst += fm.TokensEst
 	}
-	m.TokensLimit, _ = FlowBudget(tool, gp, sp, flow)
+	m.TokensLimit, _ = NewCatalog().FlowBudget(tool, gp, sp, flow)
 	m.WithinBudget = m.TokensLimit == 0 || m.TokensEst <= m.TokensLimit
 	return m
 }

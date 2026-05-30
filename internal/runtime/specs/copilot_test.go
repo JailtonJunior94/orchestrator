@@ -11,7 +11,7 @@ import (
 func TestCopilotSpecDefaults(t *testing.T) {
 	t.Parallel()
 
-	spec := specs.Copilot()
+	spec := specs.NewCatalog().Copilot()
 
 	if got, want := spec.ID, "copilot"; got != want {
 		t.Errorf("ID = %q; want %q", got, want)
@@ -34,7 +34,7 @@ func TestCopilotSpecDefaults(t *testing.T) {
 func TestCopilotSpecMetadata(t *testing.T) {
 	t.Parallel()
 
-	spec := specs.Copilot()
+	spec := specs.NewCatalog().Copilot()
 
 	if got, want := spec.SDKVersion(), specs.CopilotSDKVersion; got != want {
 		t.Errorf("SDKVersion() = %q; want %q", got, want)
@@ -53,7 +53,7 @@ func TestCopilotSpecMetadata(t *testing.T) {
 func TestCopilotSpecFallback(t *testing.T) {
 	t.Parallel()
 
-	spec := specs.Copilot()
+	spec := specs.NewCatalog().Copilot()
 
 	if got, want := len(spec.Fallbacks), 1; got != want {
 		t.Fatalf("len(Fallbacks) = %d; want %d", got, want)
@@ -119,7 +119,7 @@ func TestCopilotConstantsPinned(t *testing.T) {
 func TestCopilotAccessModeFlag(t *testing.T) {
 	t.Parallel()
 
-	spec := specs.Copilot()
+	spec := specs.NewCatalog().Copilot()
 
 	if spec.AccessModeFlag != "" {
 		t.Errorf("AccessModeFlag = %q; want %q (D-07: Copilot v0 sem flag análoga)", spec.AccessModeFlag, "")
@@ -130,7 +130,7 @@ func TestCopilotAccessModeFlag(t *testing.T) {
 func TestCopilotDisplayName(t *testing.T) {
 	t.Parallel()
 
-	spec := specs.Copilot()
+	spec := specs.NewCatalog().Copilot()
 
 	if got, want := spec.DisplayName, "GitHub Copilot CLI (ACP)"; got != want {
 		t.Errorf("DisplayName = %q; want %q", got, want)
@@ -141,8 +141,8 @@ func TestCopilotDisplayName(t *testing.T) {
 func TestCopilotStability(t *testing.T) {
 	t.Parallel()
 
-	a := specs.Copilot()
-	b := specs.Copilot()
+	a := specs.NewCatalog().Copilot()
+	b := specs.NewCatalog().Copilot()
 
 	if a.ID != b.ID {
 		t.Errorf("ID inconsistente: %q != %q", a.ID, b.ID)

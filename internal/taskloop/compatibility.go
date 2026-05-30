@@ -101,7 +101,7 @@ func (t *CompatibilityTable) ValidateCombination(tool, model string) error {
 // Quando model e vazio, a validacao e pulada (default do CLI subjacente e usado).
 // Quando allowUnknown for true, a validacao e pulada (paridade com --allow-unknown-model).
 // Retorna erro acionavel citando o IDE e os modelos validos esperados quando incompativel.
-func ValidateModelForIDE(ide, model string, allowUnknown bool) error {
+func (c *Catalog) ValidateModelForIDE(ide, model string, allowUnknown bool) error {
 	if model == "" || allowUnknown {
 		return nil
 	}

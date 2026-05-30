@@ -15,7 +15,7 @@ import (
 func newTestStore(t *testing.T) (memory.Store, string) {
 	t.Helper()
 	tasksDir := t.TempDir()
-	limits := memory.DefaultLimits()
+	limits := memory.NewCatalog().DefaultLimits()
 	return memory.New(tasksDir, limits), tasksDir
 }
 

@@ -208,7 +208,7 @@ func TestValidateModelForIDE(t *testing.T) {
 
 	t.Run("T-13 positivo: claude + claude-opus-4-7 — aceito", func(t *testing.T) {
 		t.Parallel()
-		err := ValidateModelForIDE("claude", "claude-opus-4-7", false)
+		err := NewCatalog().ValidateModelForIDE("claude", "claude-opus-4-7", false)
 		if err != nil {
 			t.Errorf("nao esperava erro, obteve: %v", err)
 		}
@@ -216,7 +216,7 @@ func TestValidateModelForIDE(t *testing.T) {
 
 	t.Run("T-13 negativo: claude + gpt-5.4 — erro citando modelos validos", func(t *testing.T) {
 		t.Parallel()
-		err := ValidateModelForIDE("claude", "gpt-5.4", false)
+		err := NewCatalog().ValidateModelForIDE("claude", "gpt-5.4", false)
 		if err == nil {
 			t.Fatal("esperava erro para modelo incompativel, mas nao houve erro")
 		}
@@ -232,7 +232,7 @@ func TestValidateModelForIDE(t *testing.T) {
 
 	t.Run("T-13 bypass: claude + modelo-novo + allowUnknown=true — aceito", func(t *testing.T) {
 		t.Parallel()
-		err := ValidateModelForIDE("claude", "modelo-novo-futuro", true)
+		err := NewCatalog().ValidateModelForIDE("claude", "modelo-novo-futuro", true)
 		if err != nil {
 			t.Errorf("allowUnknown=true deve ignorar validacao, obteve: %v", err)
 		}
@@ -240,7 +240,7 @@ func TestValidateModelForIDE(t *testing.T) {
 
 	t.Run("modelo vazio — sem validacao, sem erro", func(t *testing.T) {
 		t.Parallel()
-		err := ValidateModelForIDE("claude", "", false)
+		err := NewCatalog().ValidateModelForIDE("claude", "", false)
 		if err != nil {
 			t.Errorf("modelo vazio deve pular validacao, obteve: %v", err)
 		}
@@ -248,7 +248,7 @@ func TestValidateModelForIDE(t *testing.T) {
 
 	t.Run("ide desconhecido com modelo — sem erro (IDE nao mapeado, deixa mapIDEToSpec capturar)", func(t *testing.T) {
 		t.Parallel()
-		err := ValidateModelForIDE("ferramenta-desconhecida", "algum-modelo", false)
+		err := NewCatalog().ValidateModelForIDE("ferramenta-desconhecida", "algum-modelo", false)
 		if err != nil {
 			t.Errorf("ide desconhecido nao deve retornar ErrModeloIncompativel aqui; obteve: %v", err)
 		}
@@ -256,7 +256,7 @@ func TestValidateModelForIDE(t *testing.T) {
 
 	t.Run("gemini + gemini-2.5-pro — aceito", func(t *testing.T) {
 		t.Parallel()
-		err := ValidateModelForIDE("gemini", "gemini-2.5-pro", false)
+		err := NewCatalog().ValidateModelForIDE("gemini", "gemini-2.5-pro", false)
 		if err != nil {
 			t.Errorf("nao esperava erro, obteve: %v", err)
 		}
@@ -264,7 +264,7 @@ func TestValidateModelForIDE(t *testing.T) {
 
 	t.Run("codex + claude-opus-4-7 — incompativel, cita modelos validos", func(t *testing.T) {
 		t.Parallel()
-		err := ValidateModelForIDE("codex", "claude-opus-4-7", false)
+		err := NewCatalog().ValidateModelForIDE("codex", "claude-opus-4-7", false)
 		if err == nil {
 			t.Fatal("esperava erro para modelo incompativel")
 		}
@@ -282,7 +282,7 @@ func TestCodexCompatibilityTable_T34_T35(t *testing.T) {
 
 	t.Run("T-34: codex + gpt-5.5 aceito sem allow-unknown-model", func(t *testing.T) {
 		t.Parallel()
-		err := ValidateModelForIDE("codex", "gpt-5.5", false)
+		err := NewCatalog().ValidateModelForIDE("codex", "gpt-5.5", false)
 		if err != nil {
 			t.Errorf("T-34: nao esperava erro para codex+gpt-5.5, obteve: %v", err)
 		}
@@ -290,7 +290,7 @@ func TestCodexCompatibilityTable_T34_T35(t *testing.T) {
 
 	t.Run("T-35: codex + gpt-4 rejeitado sem allow-unknown-model", func(t *testing.T) {
 		t.Parallel()
-		err := ValidateModelForIDE("codex", "gpt-4", false)
+		err := NewCatalog().ValidateModelForIDE("codex", "gpt-4", false)
 		if err == nil {
 			t.Fatal("T-35: esperava erro para codex+gpt-4 sem allowUnknown, mas nao houve erro")
 		}
@@ -301,7 +301,7 @@ func TestCodexCompatibilityTable_T34_T35(t *testing.T) {
 
 	t.Run("T-35: codex + gpt-4 aceito com allow-unknown-model=true", func(t *testing.T) {
 		t.Parallel()
-		err := ValidateModelForIDE("codex", "gpt-4", true)
+		err := NewCatalog().ValidateModelForIDE("codex", "gpt-4", true)
 		if err != nil {
 			t.Errorf("T-35: allowUnknown=true deve aceitar qualquer modelo, obteve: %v", err)
 		}

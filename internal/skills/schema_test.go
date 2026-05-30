@@ -3,168 +3,180 @@ package skills
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/suite"
 )
 
-func TestValidateFrontmatterSchema_Valid(t *testing.T) {
-	tests := []struct {
+type FrontmatterSchemaSuite struct {
+	suite.Suite
+}
+
+func TestFrontmatterSchemaSuite(t *testing.T) {
+	suite.Run(t, new(FrontmatterSchemaSuite))
+}
+
+func (s *FrontmatterSchemaSuite) TestValidateFrontmatterSchemaValid() {
+	scenarios := []struct {
 		name      string
 		content   string
 		skillName string
 	}{
 		{
-			name: "campos_obrigatorios",
+			name:    "campos obrigatorios",
 			content: "---\nname: my-skill\nversion: 1.0.0\ndescription: Uma skill valida.\n---\n",
 		},
 		{
-			name: "com_depends_on",
+			name:    "com depends_on",
 			content: "---\nname: execute-task\nversion: 1.2.3\ndescription: Executa tarefas.\ndepends_on: [review]\n---\n",
 		},
 		{
-			name: "versao_com_prefixo_v",
+			name:    "versao com prefixo v",
 			content: "---\nname: my-skill\nversion: v2.0.0\ndescription: Skill com versao prefixada.\n---\n",
 		},
 		{
-			name: "versao_pre_release",
+			name:    "versao pre release",
 			content: "---\nname: my-skill\nversion: 1.0.0-beta\ndescription: Skill pre-release.\n---\n",
 		},
 		{
-			name:      "com_skillname_no_erro",
+			name:      "com skillname no erro",
 			content:   "---\nname: my-skill\nversion: 1.0.0\ndescription: Skill com nome.\n---\n",
 			skillName: "my-skill",
 		},
 		{
-			name: "com_lang_go",
+			name:    "com lang go",
 			content: "---\nname: go-skill\nversion: 1.0.0\ndescription: Skill de Go.\nlang: go\n---\n",
 		},
 		{
-			name: "com_link_mode_symlink",
+			name:    "com link mode symlink",
 			content: "---\nname: my-skill\nversion: 1.0.0\ndescription: Skill com link_mode.\nlink_mode: symlink\n---\n",
 		},
 		{
-			name: "com_max_depth",
+			name:    "com max depth",
 			content: "---\nname: my-skill\nversion: 1.0.0\ndescription: Skill com max_depth.\nmax_depth: 2\n---\n",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateFrontmatterSchema([]byte(tt.content), tt.skillName)
-			if err != nil {
-				t.Errorf("esperava sucesso mas obteve erro: %v", err)
-			}
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			err := NewCatalog().ValidateFrontmatterSchema([]byte(scenario.content), scenario.skillName)
+			s.NoError(err, "esperava sucesso mas obteve erro")
 		})
 	}
 }
 
-func TestValidateFrontmatterSchema_Invalid(t *testing.T) {
-	tests := []struct {
+func (s *FrontmatterSchemaSuite) TestValidateFrontmatterSchemaInvalid() {
+	scenarios := []struct {
 		name        string
 		content     string
 		skillName   string
 		wantContain string
 	}{
 		{
-			name:        "sem_name",
+			name:        "sem name",
 			content:     "---\nversion: 1.0.0\ndescription: Sem name.\n---\n",
 			wantContain: "name",
 		},
 		{
-			name:        "sem_version",
+			name:        "sem version",
 			content:     "---\nname: my-skill\ndescription: Sem version.\n---\n",
 			wantContain: "version",
 		},
 		{
-			name:        "sem_description",
+			name:        "sem description",
 			content:     "---\nname: my-skill\nversion: 1.0.0\n---\n",
 			wantContain: "description",
 		},
 		{
-			name:        "version_invalida",
+			name:        "version invalida",
 			content:     "---\nname: my-skill\nversion: nao-e-semver\ndescription: Version invalida.\n---\n",
 			wantContain: "version",
 		},
 		{
-			name:        "lang_invalido",
+			name:        "lang invalido",
 			content:     "---\nname: my-skill\nversion: 1.0.0\ndescription: Lang invalido.\nlang: rust\n---\n",
 			wantContain: "lang",
 		},
 		{
-			name:        "link_mode_invalido",
+			name:        "link mode invalido",
 			content:     "---\nname: my-skill\nversion: 1.0.0\ndescription: LinkMode invalido.\nlink_mode: hard\n---\n",
 			wantContain: "link_mode",
 		},
 		{
-			name:        "com_skillname_no_erro",
+			name:        "com skillname no erro",
 			content:     "---\nname: my-skill\nversion: 1.0.0\n---\n",
 			skillName:   "my-skill",
 			wantContain: "my-skill",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateFrontmatterSchema([]byte(tt.content), tt.skillName)
-			if err == nil {
-				t.Fatal("esperava erro mas obteve sucesso")
-			}
-			if tt.wantContain != "" && !strings.Contains(err.Error(), tt.wantContain) {
-				t.Errorf("erro %q nao contem %q", err.Error(), tt.wantContain)
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			err := NewCatalog().ValidateFrontmatterSchema([]byte(scenario.content), scenario.skillName)
+			s.Error(err, "esperava erro mas obteve sucesso")
+			if err != nil && scenario.wantContain != "" {
+				s.Contains(err.Error(), scenario.wantContain)
 			}
 		})
 	}
 }
 
-func TestValidateFrontmatterSchema_Fixtures(t *testing.T) {
+func (s *FrontmatterSchemaSuite) TestValidateFrontmatterSchemaFixtures() {
 	repoRoot := filepath.Join("..", "..")
+	scenarios := []struct {
+		name      string
+		file      string
+		skillName string
+		expect    func(err error)
+	}{
+		{
+			name:      "fixture valida",
+			file:      filepath.Join(repoRoot, "testdata", "baselines", "skill-valid.md"),
+			skillName: "skill-valid",
+			expect: func(err error) {
+				s.NoError(err, "fixture valida falhou na validacao")
+			},
+		},
+		{
+			name:      "fixture invalida",
+			file:      filepath.Join(repoRoot, "testdata", "baselines", "skill-invalid.md"),
+			skillName: "skill-invalid",
+			expect: func(err error) {
+				s.Error(err, "fixture invalida deveria falhar na validacao")
+			},
+		},
+	}
 
-	t.Run("fixture_valida", func(t *testing.T) {
-		path := filepath.Join(repoRoot, "testdata", "baselines", "skill-valid.md")
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("ler fixture: %v", err)
-		}
-		if err := ValidateFrontmatterSchema(data, "skill-valid"); err != nil {
-			t.Errorf("fixture valida falhou na validacao: %v", err)
-		}
-	})
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			data, err := os.ReadFile(scenario.file)
+			s.NoError(err, "ler fixture")
 
-	t.Run("fixture_invalida", func(t *testing.T) {
-		path := filepath.Join(repoRoot, "testdata", "baselines", "skill-invalid.md")
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("ler fixture: %v", err)
-		}
-		if err := ValidateFrontmatterSchema(data, "skill-invalid"); err == nil {
-			t.Error("fixture invalida deveria falhar na validacao")
-		}
-	})
+			err = NewCatalog().ValidateFrontmatterSchema(data, scenario.skillName)
+			scenario.expect(err)
+		})
+	}
 }
 
-func TestValidateFrontmatterSchema_EmbeddedSkills(t *testing.T) {
+func (s *FrontmatterSchemaSuite) TestValidateFrontmatterSchemaEmbeddedSkills() {
 	repoRoot := filepath.Join("..", "..")
 	skillsDir := filepath.Join(repoRoot, "internal", "embedded", "assets", ".agents", "skills")
 
 	entries, err := os.ReadDir(skillsDir)
-	if err != nil {
-		t.Fatalf("ler diretorio de skills embarcadas: %v", err)
-	}
+	s.NoError(err, "ler diretorio de skills embarcadas")
 
-	for _, e := range entries {
-		if !e.IsDir() {
+	for _, entry := range entries {
+		if !entry.IsDir() {
 			continue
 		}
-		skillName := e.Name()
-		t.Run(skillName, func(t *testing.T) {
+		skillName := entry.Name()
+		s.Run(skillName, func() {
 			skillFile := filepath.Join(skillsDir, skillName, "SKILL.md")
 			data, err := os.ReadFile(skillFile)
-			if err != nil {
-				t.Fatalf("ler SKILL.md: %v", err)
-			}
-			if err := ValidateFrontmatterSchema(data, skillName); err != nil {
-				t.Errorf("skill embarcada %q falhou no schema: %v", skillName, err)
-			}
+			s.NoError(err, "ler SKILL.md")
+
+			err = NewCatalog().ValidateFrontmatterSchema(data, skillName)
+			s.NoError(err, "skill embarcada %q falhou no schema", skillName)
 		})
 	}
 }

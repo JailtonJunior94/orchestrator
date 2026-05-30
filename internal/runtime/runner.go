@@ -45,6 +45,8 @@ type Renderer interface {
 	Render(evt events.Event)
 }
 
+var _ Renderer = (*render.HumanRenderer)(nil)
+
 // Prober resolve o launcher para um Spec.
 // Em produção, wraps probe.EnsureAvailable (com cache por spec ID).
 // Em testes, pode ser uma implementação sem cache que retorna um Launcher fixo.
@@ -57,13 +59,15 @@ type defaultProber struct {
 	look probe.LookPather
 }
 
+var _ Prober = (*defaultProber)(nil)
+
 // NewDefaultProber cria um Prober de produção que delega para probe.EnsureAvailable.
 func NewDefaultProber() Prober {
-	return &defaultProber{look: probe.OsLookPather()}
+	return &defaultProber{look: probe.NewCatalog().OsLookPather()}
 }
 
 func (p *defaultProber) EnsureAvailable(ctx context.Context, spec specs.Spec) (specs.Launcher, error) {
-	return probe.EnsureAvailable(ctx, spec, p.look)
+	return probe.NewCatalog().EnsureAvailable(ctx, spec, p.look)
 }
 
 // ACPRunner é o application service que orquestra uma sessão ACP completa.
@@ -94,7 +98,7 @@ func NewACPRunner(spec specs.Spec, opts ...Option) *ACPRunner {
 		prober:   NewDefaultProber(),
 		factory:  client.NewDefaultClientFactory(),
 		renderer: render.NewHumanRenderer(os.Stdout),
-		clock:    RealClock(),
+		clock:    NewCatalog().RealClock(),
 	}
 	for _, o := range opts {
 		o(r)
@@ -141,23 +145,23 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	// ★ F3-Claude: instanciar memory store e injetar contexto no prompt.
 	// j.TasksDir=="" → store nil → sem injeção (regressão F1/F2 preservada).
 	// ★ ADR-023: prepareMemoryStore usa WindowPolicy para ajustar limites por WindowClass.
-	memStore := prepareMemoryStore(j)
-	j.Prompt = prepareMemoryContext(ctx, j, memStore)
+	memStore := NewCatalog().prepareMemoryStore(j)
+	j.Prompt = NewCatalog().prepareMemoryContext(ctx, j, memStore)
 
 	// ★ F3-Claude: instanciar hooks dispatcher e registrar hooks default.
 	// j.DisableHooks=true → dispatcher vazio (debug; sem regressão F1/F2).
 	// ★ ADR-023: WindowClass propagada da Spec para sensibilizar token_budget.
-	disp := prepareHooksDispatcher(j, r.spec.ID, memStore, r.spec.ContextWindow().Class())
+	disp := NewCatalog().prepareHooksDispatcher(j, r.spec.ID, memStore, r.spec.ContextWindow().Class())
 
 	// Fase 3: emitir runtime_init e persistir.
 	launcherCmd, launcherArgs := launcher.Command()
 	argv := r.buildArgv(j, launcherArgs)
 
-	effectiveLauncher, stopMCP := spawnMCPServer(ctx, r, j, launcherCmd, argv)
+	effectiveLauncher, stopMCP := NewCatalog().spawnMCPServer(ctx, r, j, launcherCmd, argv)
 	r.emitRuntimeInit(ctx, launcher, launcherCmd, argv, persist)
 
 	// ★ F3-Claude: hooks pre-open + prompt (governance + token_budget).
-	if err := dispatchPreOpenHooks(ctx, disp, j, r.spec.ID, launcherCmd); err != nil {
+	if err := NewCatalog().dispatchPreOpenHooks(ctx, disp, j, r.spec.ID, launcherCmd); err != nil {
 		return Summary{}, err
 	}
 
@@ -190,21 +194,23 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	// Fase 7: determinar razão de cancelamento.
 	cause := context.Cause(ctx)
 	clientErr := c.Err()
-	cancelReason := mapCancelReason(cause, clientErr)
+	cancelReason := NewCatalog().mapCancelReason(cause, clientErr)
+	NewCatalog(
 
 	// Fase 8: warning de unknowns (RF-05).
-	emitUnknownWarnings(loopResult)
+	).emitUnknownWarnings(loopResult)
 	if cancelReason == events.CancelReasonPermissionDenied {
 		fmt.Fprintln(os.Stderr, "agent requested permission; configure accessMode=bypassPermissions no claude-agent-acp ou execute em ambiente que pré-aprove. Veja ADR-009")
 	}
 
 	// Fase 9: persistir tool_calls e enriquecer report.
 	toolCallSummaries := counters.ToolCalls()
-	summary := buildSummary(launcher.Kind(), loopResult, cancelReason, toolCallSummaries, c)
-	persistSummary(persist, toolCallSummaries, summary)
+	summary := NewCatalog().buildSummary(launcher.Kind(), loopResult, cancelReason, toolCallSummaries, c)
+	NewCatalog().persistSummary(persist, toolCallSummaries, summary)
+	NewCatalog(
 
 	// ★ F3-Claude: hook session.post_end — memory_persist escreve MEMORY.md.
-	dispatchSessionPostEnd(ctx, disp, j, loopResult, toolCallSummaries, cancelReason)
+	).dispatchSessionPostEnd(ctx, disp, j, loopResult, toolCallSummaries, cancelReason)
 
 	// ★ F5-Claude: auto-review opt-in (default false; recursão hard-bloqueada no child Job).
 	if j.AutoReview {
@@ -221,7 +227,7 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 		}
 	}
 
-	return summary, mapRunError(cause, clientErr, c)
+	return summary, NewCatalog().mapRunError(cause, clientErr, c)
 }
 
 // createPersistence cria uma instância de Persistence para o evidenceDir.
@@ -247,7 +253,7 @@ func (r *ACPRunner) buildArgv(j Job, launcherArgs []string) []string {
 
 // emitRuntimeInit constrói e persiste o evento runtime_init.
 func (r *ACPRunner) emitRuntimeInit(_ context.Context, launcher specs.Launcher, launcherCmd string, argv []string, persist Persistence) {
-	initRaw, initRawErr := buildRuntimeInitRaw(launcher.Kind(), launcherCmd, r.spec.ID, argv, r.spec.SDKVersion(), r.spec.NPMVersion())
+	initRaw, initRawErr := NewCatalog().buildRuntimeInitRaw(launcher.Kind(), launcherCmd, r.spec.ID, argv, r.spec.SDKVersion(), r.spec.NPMVersion())
 	initEvt, initErr := events.NewRuntimeInit(
 		r.clock.Now(),
 		launcher.Kind(),
@@ -265,7 +271,7 @@ func (r *ACPRunner) emitRuntimeInit(_ context.Context, launcher specs.Launcher, 
 // dispatchPreOpenHooks despacha os hooks antes de abrir a sessão ACP.
 // Sequência: runtime.pre_open → prompt.pre_build → prompt.post_build.
 // Retorna erro se qualquer hook falhar (abort-on-first-error).
-func dispatchPreOpenHooks(ctx context.Context, disp hooks.Dispatcher, j Job, specID, launcherCmd string) error {
+func (c *Catalog) dispatchPreOpenHooks(ctx context.Context, disp hooks.Dispatcher, j Job, specID, launcherCmd string) error {
 	if err := disp.Dispatch(ctx, hooks.PointRuntimePreOpen, hooks.RuntimePreOpenEvent{
 		WorkDir:  j.WorkDir,
 		SpecID:   specID,
@@ -315,11 +321,11 @@ func (r *ACPRunner) runEventLoop(
 
 	// Selecionar extractor de métricas por driver (ADR-021, Strategy).
 	// ParseDriverID: zero-value (driver vazio) → nullExtractor via ExtractorFor.
-	drvID, _ := specs.ParseDriverID(driverID)
-	extractor := events.ExtractorFor(drvID)
+	drvID, _ := specs.NewCatalog().ParseDriverID(driverID)
+	extractor := events.NewCatalog().ExtractorFor(drvID)
 
 	for evt := range c.Updates() {
-		evt = normalizeEventInline(evt, r.spec.ID, j)
+		evt = NewCatalog().normalizeEventInline(evt, r.spec.ID, j)
 
 		// Resetar o watchdog apenas em progresso RECONHECIDO. Eventos keep-alive/desconhecidos
 		// (usage_update, available_commands_update, chunks vazios, etc.) NÃO contam como atividade:
@@ -383,7 +389,7 @@ func (r *ACPRunner) runEventLoop(
 // buildSummary constrói o Summary com os contadores e cancel reason.
 // c é o client ACP; quando implementa as métricas de backpressure (SlowPublishes/DroppedUpdates),
 // os valores são incorporados ao Summary (ADR-018, RF-03).
-func buildSummary(launcher string, res eventLoopResult, cancelReason events.CancelReason, toolCalls []events.ToolCallSummary, c client.Client) Summary {
+func (c *Catalog) buildSummary(launcher string, res eventLoopResult, cancelReason events.CancelReason, toolCalls []events.ToolCallSummary, cl client.Client) Summary {
 	s := Summary{
 		Launcher:                 launcher,
 		EventsCount:              res.eventsCount,
@@ -395,13 +401,13 @@ func buildSummary(launcher string, res eventLoopResult, cancelReason events.Canc
 		ToolCallsNormalizedCount: res.toolCallsNormalizedCount,
 	}
 	// Propagar contadores de backpressure quando o client os expõe (ADR-018, RF-03).
-	s.SlowPublishes = c.SlowPublishes()
-	s.DroppedUpdates = c.DroppedUpdates()
+	s.SlowPublishes = cl.SlowPublishes()
+	s.DroppedUpdates = cl.DroppedUpdates()
 	return s
 }
 
 // persistSummary persiste tool_calls e enriquece o report quando persist está disponível.
-func persistSummary(persist Persistence, toolCalls []events.ToolCallSummary, summary Summary) {
+func (c *Catalog) persistSummary(persist Persistence, toolCalls []events.ToolCallSummary, summary Summary) {
 	if persist == nil {
 		return
 	}
@@ -410,7 +416,7 @@ func persistSummary(persist Persistence, toolCalls []events.ToolCallSummary, sum
 }
 
 // emitUnknownWarnings emite warning de unknowns no stderr.
-func emitUnknownWarnings(res eventLoopResult) {
+func (c *Catalog) emitUnknownWarnings(res eventLoopResult) {
 	if res.unknownCount > 0 {
 		sort.Strings(res.unknownKinds)
 		fmt.Fprintf(os.Stderr, "%d unknown ACP events skipped (kinds: %s)\n",
@@ -419,7 +425,7 @@ func emitUnknownWarnings(res eventLoopResult) {
 }
 
 // dispatchSessionPostEnd despacha o hook session.post_end com o summary da sessão.
-func dispatchSessionPostEnd(
+func (c *Catalog) dispatchSessionPostEnd(
 	ctx context.Context,
 	disp hooks.Dispatcher,
 	j Job,
@@ -438,14 +444,14 @@ func dispatchSessionPostEnd(
 }
 
 // mapRunError mapeia cause + clientErr para o erro de retorno de Run().
-func mapRunError(cause, clientErr error, c client.Client) error {
+func (c *Catalog) mapRunError(cause, clientErr error, cl client.Client) error {
 	if cause != nil && !errors.Is(cause, context.Canceled) {
 		return cause
 	}
 	if clientErr != nil {
 		return clientErr
 	}
-	return c.Err()
+	return cl.Err()
 }
 
 // prepareMemoryStore instancia o memory.Store quando j.TasksDir != "".
@@ -454,7 +460,7 @@ func mapRunError(cause, clientErr error, c client.Client) error {
 //   - WindowLarge ⇒ limites ampliados para CLIs com janela ≥1M (ex: Gemini).
 //
 // Retorna nil quando TasksDir está vazio (regressão F1/F2 preservada).
-func prepareMemoryStore(j Job) memory.Store {
+func (c *Catalog) prepareMemoryStore(j Job) memory.Store {
 	if j.TasksDir == "" {
 		return nil
 	}
@@ -467,7 +473,7 @@ func prepareMemoryStore(j Job) memory.Store {
 // prepareMemoryContext lê workflow + task do memory store e injeta ## Memory Context no prompt.
 // Quando NeedsCompaction=true, anexa diretiva de compactação ao final do prompt.
 // Retorna prompt original quando store é nil (regressão F1/F2).
-func prepareMemoryContext(ctx context.Context, j Job, store memory.Store) string {
+func (c *Catalog) prepareMemoryContext(ctx context.Context, j Job, store memory.Store) string {
 	if store == nil {
 		return j.Prompt
 	}
@@ -475,13 +481,13 @@ func prepareMemoryContext(ctx context.Context, j Job, store memory.Store) string
 	wf, wfErr := store.ReadWorkflow(ctx)
 	tk, tkErr := store.ReadTask(ctx, j.TaskFileName)
 
-	return injectMemoryContext(j.Prompt, wf, tk, wfErr, tkErr)
+	return NewCatalog().injectMemoryContext(j.Prompt, wf, tk, wfErr, tkErr)
 }
 
 // injectMemoryContext é a função pura que injeta ## Memory Context no prompt.
 // Input: prompt base + documentos de workflow e task (podem ser zero-value).
 // Testar isoladamente via T-MEM-INJECT-01.
-func injectMemoryContext(prompt string, wf, tk memory.Document, wfErr, tkErr error) string {
+func (c *Catalog) injectMemoryContext(prompt string, wf, tk memory.Document, wfErr, tkErr error) string {
 	var sb strings.Builder
 
 	hasWorkflow := wfErr == nil && wf.Exists && wf.Content != ""
@@ -519,7 +525,7 @@ func injectMemoryContext(prompt string, wf, tk memory.Document, wfErr, tkErr err
 // memory_persist em PointSessionPostEnd (conforme task spec).
 // windowClass é propagado da Spec para o TokenBudgetHook (ADR-023).
 // Zero-value (WindowStandard) preserva comportamento F1.
-func prepareHooksDispatcher(j Job, specID string, store memory.Store, windowClass specs.WindowClass) hooks.Dispatcher {
+func (c *Catalog) prepareHooksDispatcher(j Job, specID string, store memory.Store, windowClass specs.WindowClass) hooks.Dispatcher {
 	disp := hooks.New()
 
 	if j.DisableHooks {
@@ -549,7 +555,7 @@ func prepareHooksDispatcher(j Job, specID string, store memory.Store, windowClas
 // Retorna o launcher efetivo (possivelmente com --mcp-server injetado) e uma função de parada.
 // Quando MCPNested=false ou r.mcpServer==nil, retorna launcher original e func vazia.
 // Extração de helper segue heurística OC (Run() cresceria >300 LoC sem esta separação).
-func spawnMCPServer(ctx context.Context, r *ACPRunner, j Job, launcherCmd string, argv []string) (specs.Launcher, func()) {
+func (c *Catalog) spawnMCPServer(ctx context.Context, r *ACPRunner, j Job, launcherCmd string, argv []string) (specs.Launcher, func()) {
 	noop := func() {}
 
 	if !j.MCPNested || r.mcpServer == nil {
@@ -612,7 +618,7 @@ func spawnMCPServer(ctx context.Context, r *ACPRunner, j Job, launcherCmd string
 // Resolve DriverID na fronteira (ADR-020, Tarefa 3.0): specID inválido falha cedo e preserva
 // o evento original (comportamento graceful — sem abortar a sessão, RF-02).
 // Extração de helper segue heurística OC (mantém Run() legível).
-func normalizeEventInline(evt events.Event, specID string, j Job) events.Event {
+func (c *Catalog) normalizeEventInline(evt events.Event, specID string, j Job) events.Event {
 	if j.NoNormalize {
 		return evt
 	}
@@ -625,7 +631,7 @@ func normalizeEventInline(evt events.Event, specID string, j Job) events.Event {
 	}
 
 	// Resolver DriverID na fronteira (fail-fast ADR-020): driver inválido → passthrough graceful.
-	drvID, err := specs.ParseDriverID(specID)
+	drvID, err := specs.NewCatalog().ParseDriverID(specID)
 	if err != nil {
 		// DriverID inválido (ErrUnknownDriver): preservar evento original sem abortar sessão.
 		return evt
@@ -634,7 +640,7 @@ func normalizeEventInline(evt events.Event, specID string, j Job) events.Event {
 	rawName := tc.Name()
 	rawInput := json.RawMessage(tc.Input())
 
-	norm, err := events.BuildNormalizedToolCallByDriver(drvID, rawName, rawInput, j.WorkDir)
+	norm, err := events.NewCatalog().BuildNormalizedToolCallByDriver(drvID, rawName, rawInput, j.WorkDir)
 	if err != nil {
 		// Erro de normalização: preservar evento original sem falhar a sessão (RF-02, graceful).
 		return evt
@@ -644,7 +650,7 @@ func normalizeEventInline(evt events.Event, specID string, j Job) events.Event {
 }
 
 // mapCancelReason mapeia o cause do contexto para um CancelReason.
-func mapCancelReason(cause error, clientErr error) events.CancelReason {
+func (c *Catalog) mapCancelReason(cause error, clientErr error) events.CancelReason {
 	if cause == nil {
 		if errors.Is(clientErr, client.ErrPermissionDenied) {
 			return events.CancelReasonPermissionDenied
@@ -670,11 +676,11 @@ func (r *ACPRunner) SetRenderer(w io.Writer) {
 
 // InjectMemoryContextForTest expõe injectMemoryContext para testes (T-MEM-INJECT-01).
 // Não usar em produção: helper puro sem efeitos colaterais.
-func InjectMemoryContextForTest(prompt string, wf, tk memory.Document, wfErr, tkErr error) string {
-	return injectMemoryContext(prompt, wf, tk, wfErr, tkErr)
+func (c *Catalog) InjectMemoryContextForTest(prompt string, wf, tk memory.Document, wfErr, tkErr error) string {
+	return NewCatalog().injectMemoryContext(prompt, wf, tk, wfErr, tkErr)
 }
 
-func buildRuntimeInitRaw(launcher, command, toolID string, args []string, sdkVersion, npmVersion string) ([]byte, error) {
+func (c *Catalog) buildRuntimeInitRaw(launcher, command, toolID string, args []string, sdkVersion, npmVersion string) ([]byte, error) {
 	return json.Marshal(map[string]any{
 		"launcher":    launcher,
 		"command":     command,

@@ -9,7 +9,7 @@ import (
 
 // Log registra uso de skill e referencia em .agents/telemetry.log apenas quando
 // a variavel de ambiente GOVERNANCE_TELEMETRY estiver definida como "1".
-func Log(rootDir, skill, ref string) error {
+func (c *Catalog) Log(rootDir, skill, ref string) error {
 	if os.Getenv("GOVERNANCE_TELEMETRY") != "1" {
 		return nil
 	}
@@ -52,7 +52,7 @@ type GeminiSessionMetrics struct {
 //   - gemini.thoughts=N
 //
 // Sem GOVERNANCE_TELEMETRY=1 ou quando todos os valores são zero: operação é no-op.
-func LogGeminiMetrics(rootDir string, m GeminiSessionMetrics) error {
+func (c *Catalog) LogGeminiMetrics(rootDir string, m GeminiSessionMetrics) error {
 	if os.Getenv("GOVERNANCE_TELEMETRY") != "1" {
 		return nil
 	}
@@ -119,7 +119,7 @@ type ClaudeSessionMetrics struct {
 //   - claude.normalized_tools=N
 //
 // Sem GOVERNANCE_TELEMETRY=1: operação é no-op; nenhum arquivo criado.
-func LogClaudeMetrics(rootDir string, m ClaudeSessionMetrics) error {
+func (c *Catalog) LogClaudeMetrics(rootDir string, m ClaudeSessionMetrics) error {
 	if os.Getenv("GOVERNANCE_TELEMETRY") != "1" {
 		return nil
 	}

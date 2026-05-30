@@ -53,8 +53,8 @@ const (
 // Valor estático versionado; sobreposto por config de projeto quando necessário.
 const CodexMaxTokens = 128_000
 
-func Codex() Spec {
-	return newSpecWithBootstrap(
+func (c *Catalog) Codex() Spec {
+	return NewCatalog().newSpecWithBootstrap(
 		"codex",
 		"Codex (ACP)",
 		"codex-acp",
@@ -69,7 +69,7 @@ func Codex() Spec {
 		CodexSDKVersion,
 		CodexNpmVersion,
 		CodexNpmPackage,
-		codexBootstrapArgs,
+		NewCatalog().codexBootstrapArgs,
 		ContextWindow{MaxTokens: CodexMaxTokens},
 	)
 }
@@ -86,20 +86,20 @@ func Codex() Spec {
 //
 // strconv.Quote escapa os values de model e reasoning — proteção contra injeção (R-SEC-001).
 // Os overrides de sandbox/approval/web_search usam literais com aspas já corretas.
-func codexBootstrapArgs(model, reasoning string, _ []string, mode AccessMode) []string {
+func (c *Catalog) codexBootstrapArgs(model, reasoning string, _ []string, mode AccessMode) []string {
 	args := make([]string, 0, 14)
 	if model != "" {
-		args = appendCodexOverrides(args, "model="+strconv.Quote(model))
+		args = NewCatalog().appendCodexOverrides(args, "model="+strconv.Quote(model))
 	}
 	if reasoning != "" {
-		args = appendCodexOverrides(args, "model_reasoning_effort="+strconv.Quote(reasoning))
+		args = NewCatalog().appendCodexOverrides(args, "model_reasoning_effort="+strconv.Quote(reasoning))
 	}
-	args = appendCodexOverrides(args,
+	args = NewCatalog().appendCodexOverrides(args,
 		"features.code_mode=false",
 		"features.code_mode_only=false",
 	)
 	if mode == AccessModeFull {
-		args = appendCodexOverrides(args,
+		args = NewCatalog().appendCodexOverrides(args,
 			`approval_policy="never"`,
 			`sandbox_mode="danger-full-access"`,
 			`web_search="live"`,
@@ -110,7 +110,7 @@ func codexBootstrapArgs(model, reasoning string, _ []string, mode AccessMode) []
 
 // appendCodexOverrides adiciona cada override como par "-c <override>".
 // Emitir pares garante que o adapter codex-acp receba flags bem formadas.
-func appendCodexOverrides(args []string, overrides ...string) []string {
+func (c *Catalog) appendCodexOverrides(args []string, overrides ...string) []string {
 	for _, o := range overrides {
 		args = append(args, "-c", o)
 	}

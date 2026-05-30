@@ -21,8 +21,8 @@ type Check struct {
 	Optional []FileCheck
 }
 
-// registry mapeia skill -> Check conforme scripts/check-skill-prerequisites.sh.
-var registry = map[string]Check{
+// _registry mapeia skill -> Check conforme scripts/check-skill-prerequisites.sh.
+var _registry = map[string]Check{
 	"go-implementation": {
 		Skill: "go-implementation",
 		Required: []FileCheck{
@@ -76,8 +76,8 @@ var registry = map[string]Check{
 
 // Result representa o resultado de verificação de um FileCheck.
 type Result struct {
-	Label   string
-	Found   bool
+	Label    string
+	Found    bool
 	Optional bool
 }
 
@@ -86,8 +86,8 @@ type Result struct {
 //   - passed: true se todos os required foram encontrados
 //   - results: lista de resultados por check
 //   - err: skill desconhecida ou diretório inválido
-func Verify(skill string, projectDir string, fsys fs.FileSystem) (passed bool, results []Result, err error) {
-	check, known := registry[skill]
+func (r1 *Verifier) Verify(skill string, projectDir string, fsys fs.FileSystem) (passed bool, results []Result, err error) {
+	check, known := _registry[skill]
 	if !known {
 		return false, nil, fmt.Errorf("skill desconhecida: %q — skills suportadas: go-implementation, node-implementation, python-implementation, dotnet-csharp-implementation, create-tasks, execute-task, create-technical-specification, bugfix", skill)
 	}
@@ -103,7 +103,7 @@ func Verify(skill string, projectDir string, fsys fs.FileSystem) (passed bool, r
 	allPassed := true
 
 	for _, fc := range check.Required {
-		found := anyExists(fsys, absDir, fc.Paths)
+		found := NewVerifier().anyExists(fsys, absDir, fc.Paths)
 		if !found {
 			allPassed = false
 		}
@@ -111,7 +111,7 @@ func Verify(skill string, projectDir string, fsys fs.FileSystem) (passed bool, r
 	}
 
 	for _, fc := range check.Optional {
-		found := anyExists(fsys, absDir, fc.Paths)
+		found := NewVerifier().anyExists(fsys, absDir, fc.Paths)
 		results = append(results, Result{Label: fc.Label, Found: found, Optional: true})
 	}
 
@@ -119,15 +119,15 @@ func Verify(skill string, projectDir string, fsys fs.FileSystem) (passed bool, r
 }
 
 // KnownSkills retorna a lista de skills registradas.
-func KnownSkills() []string {
-	skills := make([]string, 0, len(registry))
-	for k := range registry {
+func (r1 *Verifier) KnownSkills() []string {
+	skills := make([]string, 0, len(_registry))
+	for k := range _registry {
 		skills = append(skills, k)
 	}
 	return skills
 }
 
-func anyExists(fsys fs.FileSystem, dir string, paths []string) bool {
+func (r1 *Verifier) anyExists(fsys fs.FileSystem, dir string, paths []string) bool {
 	for _, p := range paths {
 		if fsys.Exists(filepath.Join(dir, p)) {
 			return true

@@ -66,7 +66,7 @@ func NewService(
 func (s *Service) Execute(opts config.UpgradeOptions) error {
 	// Se --source nao fornecido, extrair assets embutidos para temp dir.
 	if opts.SourceDir == "" {
-		tmpDir, cleanup, err := embedded.ExtractToTempDir()
+		tmpDir, cleanup, err := embedded.NewExtractor().ExtractToTempDir()
 		if err != nil {
 			return fmt.Errorf("extrair assets embutidos: %w", err)
 		}
@@ -93,7 +93,7 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 
 	s.printer.Info("Verificando skills em: %s", projectDir)
 	s.printer.Info("Fonte: %s", sourceDir)
-	sourceVersion := version.ResolveFromExecutable()
+	sourceVersion := version.NewProvider().ResolveFromExecutable()
 	s.printer.Info("ai-spec %s", sourceVersion)
 	s.printer.Info("")
 
@@ -203,7 +203,7 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 	if s.manifest.Exists(projectDir) {
 		mf, err := s.manifest.Load(projectDir)
 		if err == nil {
-			currentVersion := version.ResolveFromExecutable()
+			currentVersion := version.NewProvider().ResolveFromExecutable()
 			versionChanged := mf.Version != currentVersion
 			if updated == 0 && !versionChanged {
 				return nil
@@ -211,7 +211,7 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 
 			mf.UpdatedAt = time.Now()
 			mf.Version = currentVersion
-			allSkills := skills.AllSkills(mf.Langs)
+			allSkills := skills.NewCatalog().AllSkills(mf.Langs)
 			mf.Checksums = s.computeChecksums(sourceDir, allSkills)
 			mf.SkillVersions = s.collectSkillVersions(sourceDir, allSkills)
 			_ = s.manifest.Save(projectDir, mf)
@@ -231,8 +231,8 @@ func (s *Service) printCheckVersionInfo(projectDir string) {
 		return
 	}
 
-	binaryVersion := version.ResolveFromExecutable()
-	if !skills.IsValidSemver(mf.Version) || !skills.IsValidSemver(binaryVersion) {
+	binaryVersion := version.NewProvider().ResolveFromExecutable()
+	if !skills.NewCatalog().IsValidSemver(mf.Version) || !skills.NewCatalog().IsValidSemver(binaryVersion) {
 		return
 	}
 
@@ -256,7 +256,7 @@ func (s *Service) checkSkills(sourceDir, projectDir string, langFilter []skills.
 		}
 		skillName := entry.Name()
 
-		if !shouldProcessSkill(skillName, langFilter) {
+		if !NewHelper().shouldProcessSkill(skillName, langFilter) {
 			continue
 		}
 
@@ -267,7 +267,7 @@ func (s *Service) checkSkills(sourceDir, projectDir string, langFilter []skills.
 		if err != nil {
 			continue
 		}
-		sourceFM := skills.ParseFrontmatter(sourceData)
+		sourceFM := skills.NewCatalog().ParseFrontmatter(sourceData)
 		if sourceFM.Version == "" {
 			continue
 		}
@@ -282,7 +282,7 @@ func (s *Service) checkSkills(sourceDir, projectDir string, langFilter []skills.
 		}
 
 		targetData, _ := s.fs.ReadFile(targetSkillMD)
-		targetFM := skills.ParseFrontmatter(targetData)
+		targetFM := skills.NewCatalog().ParseFrontmatter(targetData)
 
 		if targetFM.Version == "" {
 			checks = append(checks, SkillCheck{
@@ -293,7 +293,7 @@ func (s *Service) checkSkills(sourceDir, projectDir string, langFilter []skills.
 			continue
 		}
 
-		if skills.SemverGreater(sourceFM.Version, targetFM.Version) {
+		if skills.NewCatalog().SemverGreater(sourceFM.Version, targetFM.Version) {
 			checks = append(checks, SkillCheck{
 				Name:          skillName,
 				Status:        StatusOutdated,
@@ -350,7 +350,7 @@ func (s *Service) collectSkillVersions(sourceDir string, skillNames []string) ma
 			continue
 		}
 
-		fm := skills.ParseFrontmatter(data)
+		fm := skills.NewCatalog().ParseFrontmatter(data)
 		if fm.Version != "" {
 			versions[name] = fm.Version
 		}
@@ -461,12 +461,12 @@ func (s *Service) checkSchemaDivergence(sourceDir, projectDir string) bool {
 		return false
 	}
 
-	projectSchema := extractSchemaVersion(string(data))
+	projectSchema := NewHelper().extractSchemaVersion(string(data))
 	if projectSchema == "" {
 		return false
 	}
 
-	sourceSchema := resolveSourceSchema(s.fs, sourceDir)
+	sourceSchema := NewHelper().resolveSourceSchema(s.fs, sourceDir)
 
 	if sourceSchema != "" && sourceSchema != projectSchema {
 		s.printer.Status("SCHEMA DIVERGENTE", "AGENTS.md",
@@ -481,11 +481,11 @@ func (s *Service) checkSchemaDivergence(sourceDir, projectDir string) bool {
 // O template `agents-template.md` carrega `{{GOVERNANCE_SCHEMA_VERSION}}` como
 // placeholder substituido em tempo de geracao, entao um valor com `{{` indica
 // que devemos cair de volta para a constante autoritativa em contextgen.
-func resolveSourceSchema(filesystem fs.FileSystem, sourceDir string) string {
+func (r1 *Helper) resolveSourceSchema(filesystem fs.FileSystem, sourceDir string) string {
 	sourceTemplate := filepath.Join(sourceDir, ".agents", "skills", "analyze-project", "assets", "agents-template.md")
 	if filesystem.Exists(sourceTemplate) {
 		if data, err := filesystem.ReadFile(sourceTemplate); err == nil {
-			if v := extractSchemaVersion(string(data)); v != "" && !strings.Contains(v, "{{") {
+			if v := NewHelper().extractSchemaVersion(string(data)); v != "" && !strings.Contains(v, "{{") {
 				return v
 			}
 		}
@@ -494,7 +494,7 @@ func resolveSourceSchema(filesystem fs.FileSystem, sourceDir string) string {
 }
 
 // extractSchemaVersion extrai o valor de governance-schema do comentario HTML no topo de AGENTS.md.
-func extractSchemaVersion(content string) string {
+func (r1 *Helper) extractSchemaVersion(content string) string {
 	for _, line := range strings.SplitN(content, "\n", 5) {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "<!-- governance-schema:") {
@@ -587,7 +587,7 @@ func (s *Service) syncFileIfPresent(src, dst string) {
 	_ = s.fs.CopyFile(src, dst)
 }
 
-var upgradePlanningSkills = []string{
+var _upgradePlanningSkills = []string{
 	"analyze-project",
 	"create-prd",
 	"create-technical-specification",
@@ -598,7 +598,7 @@ func (s *Service) installedCodexSkills(projectDir, codexProfile string) []string
 	baseSkills := []string{"agent-governance", "bugfix", "review", "refactor", "execute-task", "execute-all-tasks"}
 
 	if codexProfile != "lean" {
-		baseSkills = append(baseSkills, upgradePlanningSkills...)
+		baseSkills = append(baseSkills, _upgradePlanningSkills...)
 	}
 
 	if s.fs.Exists(filepath.Join(projectDir, ".agents", "skills", "go-implementation", "SKILL.md")) {
@@ -630,7 +630,7 @@ func (s *Service) computeChecksums(sourceDir string, skillList []string) map[str
 	return checksums
 }
 
-func shouldProcessSkill(skillName string, langFilter []skills.Lang) bool {
+func (r1 *Helper) shouldProcessSkill(skillName string, langFilter []skills.Lang) bool {
 	if len(langFilter) == 0 {
 		return true
 	}
@@ -649,7 +649,7 @@ func shouldProcessSkill(skillName string, langFilter []skills.Lang) bool {
 
 	allowed := make(map[string]bool)
 	for _, l := range langFilter {
-		for _, s := range skills.LangSkills([]skills.Lang{l}) {
+		for _, s := range skills.NewCatalog().LangSkills([]skills.Lang{l}) {
 			allowed[s] = true
 		}
 	}

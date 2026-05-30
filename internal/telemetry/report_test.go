@@ -141,7 +141,7 @@ func TestReport(t *testing.T) {
 				nowLine("review", "schema.json"),
 			},
 			check: func(t *testing.T, data ReportData) {
-				b, err := FormatJSON(data)
+				b, err := NewCatalog().FormatJSON(data)
 				if err != nil {
 					t.Fatalf("FormatJSON: %v", err)
 				}
@@ -180,7 +180,7 @@ func TestReport(t *testing.T) {
 				writeLogLines(t, dir, tc.lines)
 			}
 
-			data, err := Report(dir, tc.since)
+			data, err := NewCatalog().Report(dir, tc.since)
 			if err != nil {
 				t.Fatalf("Report retornou erro inesperado: %v", err)
 			}
@@ -204,7 +204,7 @@ func TestReport(t *testing.T) {
 }
 
 func TestFormatText_SemDados(t *testing.T) {
-	out := FormatText(ReportData{})
+	out := NewCatalog().FormatText(ReportData{})
 	if !strings.Contains(out, "Sem dados") {
 		t.Errorf("esperava mensagem de sem dados, obteve: %s", out)
 	}
@@ -220,7 +220,7 @@ func TestFormatText_ComDados(t *testing.T) {
 		RefsPerInvocation: 1.0,
 		Alerts:            []string{"skill 'x' invocada sem ref"},
 	}
-	out := FormatText(data)
+	out := NewCatalog().FormatText(data)
 	for _, want := range []string{"bugfix", "bug.md", "Alertas", "sem ref"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("esperava %q na saída texto, obteve:\n%s", want, out)

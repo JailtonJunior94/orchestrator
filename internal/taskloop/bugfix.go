@@ -75,14 +75,14 @@ func NewBugfixLoop(invoker BugfixInvoker, reviewer FinalReviewer, capturer DiffC
 func (b *BugfixLoop) Run(ctx context.Context, initialFindings []Finding, initialDiff string) (BugfixLoopReport, error) {
 	report := BugfixLoopReport{}
 
-	critical := filterCritical(initialFindings)
+	critical := NewCatalog().filterCritical(initialFindings)
 	if len(critical) == 0 {
 		report.FinalVerdict = VerdictApproved
 		report.FinalReview = &FinalReviewResult{Verdict: VerdictApproved}
 		return report, nil
 	}
 
-	reviewContext, pureDiff := splitReviewContext(initialDiff)
+	reviewContext, pureDiff := NewCatalog().splitReviewContext(initialDiff)
 	for i := 1; i <= b.maxIters; i++ {
 		if err := ctx.Err(); err != nil {
 			return report, fmt.Errorf("taskloop: bugfix iteracao %d cancelada: %w", i, err)
@@ -97,17 +97,17 @@ func (b *BugfixLoop) Run(ctx context.Context, initialFindings []Finding, initial
 		if err != nil {
 			return report, fmt.Errorf("taskloop: capturar diff apos bugfix %d: %w", i, err)
 		}
-		reviewerInput := attachReviewContext(reviewContext, newDiff)
+		reviewerInput := NewCatalog().attachReviewContext(reviewContext, newDiff)
 
 		rev, err := b.reviewer.ReviewConsolidated(ctx, reviewerInput)
 		if err != nil {
 			return report, fmt.Errorf("taskloop: review apos bugfix %d: %w", i, err)
 		}
 
-		nextCritical := filterCritical(rev.Findings)
+		nextCritical := NewCatalog().filterCritical(rev.Findings)
 		report.Iterations = append(report.Iterations, BugfixIteration{
 			Sequence:         i,
-			RootCause:        extractRootCause(out),
+			RootCause:        NewCatalog().extractRootCause(out),
 			BugfixOutput:     out,
 			ReviewVerdict:    rev.Verdict,
 			CriticalFindings: nextCritical,
@@ -136,25 +136,25 @@ func (b *BugfixLoop) Run(ctx context.Context, initialFindings []Finding, initial
 // splitReviewContext separa o cabecalho de contexto (entregue ao reviewer) do
 // diff puro (entregue ao BugfixInvoker). Se o input nao tiver o separador,
 // reviewContext vem vazio e o input inteiro e tratado como diff puro.
-func splitReviewContext(input string) (reviewContext, diff string) {
-	header, rest, ok := strings.Cut(input, reviewContextSeparator)
+func (c *Catalog) splitReviewContext(input string) (reviewContext, diff string) {
+	header, rest, ok := strings.Cut(input, _reviewContextSeparator)
 	if !ok {
 		return "", input
 	}
 	return header, rest
 }
 
-func attachReviewContext(reviewContext, diff string) string {
+func (c *Catalog) attachReviewContext(reviewContext, diff string) string {
 	if reviewContext == "" {
 		return diff
 	}
 	if strings.HasPrefix(diff, "Contexto da revisao consolidada:\n") {
 		return diff
 	}
-	return reviewContext + reviewContextSeparator + diff
+	return reviewContext + _reviewContextSeparator + diff
 }
 
-func filterCritical(findings []Finding) []Finding {
+func (c *Catalog) filterCritical(findings []Finding) []Finding {
 	out := make([]Finding, 0, len(findings))
 	for _, f := range findings {
 		if f.Severity == SeverityCritical {
@@ -166,7 +166,7 @@ func filterCritical(findings []Finding) []Finding {
 
 // extractRootCause busca uma linha contendo "causa raiz" (PT-BR) ou "root cause" (EN)
 // na saida do bugfix. Retorna string vazia se nao encontrar — campo opcional no relatorio.
-func extractRootCause(bugfixOutput string) string {
+func (c *Catalog) extractRootCause(bugfixOutput string) string {
 	for _, line := range strings.Split(bugfixOutput, "\n") {
 		lower := strings.ToLower(line)
 		if strings.Contains(lower, "causa raiz") || strings.Contains(lower, "root cause") {

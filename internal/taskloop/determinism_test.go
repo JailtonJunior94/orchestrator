@@ -44,8 +44,8 @@ func TestBuildPromptDeterminismo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			primeiro := BuildPrompt(tt.taskFilePath, tt.prdFolder, ctx)
-			segundo := BuildPrompt(tt.taskFilePath, tt.prdFolder, ctx)
+			primeiro := NewCatalog().BuildPrompt(tt.taskFilePath, tt.prdFolder, ctx)
+			segundo := NewCatalog().BuildPrompt(tt.taskFilePath, tt.prdFolder, ctx)
 
 			if primeiro != segundo {
 				t.Errorf("BuildPrompt nao e deterministica: chamadas com mesmos inputs produziram outputs diferentes\nprimeiro:\n%s\nsegundo:\n%s",
@@ -62,7 +62,7 @@ func TestBuildPromptInputsDiferentesProduzemOutputsDiferentes(t *testing.T) {
 		Architecture: "pacote base",
 		References:   "go-implementation, tests",
 	}
-	base := BuildPrompt(".specs/prd-a/task-1.0.md", ".specs/prd-a", ctx)
+	base := NewCatalog().BuildPrompt(".specs/prd-a/task-1.0.md", ".specs/prd-a", ctx)
 
 	variantes := []struct {
 		name         string
@@ -88,7 +88,7 @@ func TestBuildPromptInputsDiferentesProduzemOutputsDiferentes(t *testing.T) {
 
 	for _, v := range variantes {
 		t.Run(v.name, func(t *testing.T) {
-			variante := BuildPrompt(v.taskFilePath, v.prdFolder, ctx)
+			variante := NewCatalog().BuildPrompt(v.taskFilePath, v.prdFolder, ctx)
 			if variante == base {
 				t.Errorf("BuildPrompt com inputs diferentes produziu o mesmo output que o caso base\ninputs: taskFilePath=%q, prdFolder=%q",
 					v.taskFilePath, v.prdFolder)
@@ -164,12 +164,12 @@ Diff: {{.Diff}}`
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			primeiro, err := BuildReviewPrompt(tt.templatePath, tt.data, fsys)
+			primeiro, err := NewCatalog().BuildReviewPrompt(tt.templatePath, tt.data, fsys)
 			if err != nil {
 				t.Fatalf("BuildReviewPrompt (1a chamada) retornou erro inesperado: %v", err)
 			}
 
-			segundo, err := BuildReviewPrompt(tt.templatePath, tt.data, fsys)
+			segundo, err := NewCatalog().BuildReviewPrompt(tt.templatePath, tt.data, fsys)
 			if err != nil {
 				t.Fatalf("BuildReviewPrompt (2a chamada) retornou erro inesperado: %v", err)
 			}
@@ -219,12 +219,12 @@ func TestBuildBugfixPromptDeterminismo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			primeiro, err := BuildBugfixPrompt(tt.data)
+			primeiro, err := NewCatalog().BuildBugfixPrompt(tt.data)
 			if err != nil {
 				t.Fatalf("BuildBugfixPrompt (1a chamada) retornou erro inesperado: %v", err)
 			}
 
-			segundo, err := BuildBugfixPrompt(tt.data)
+			segundo, err := NewCatalog().BuildBugfixPrompt(tt.data)
 			if err != nil {
 				t.Fatalf("BuildBugfixPrompt (2a chamada) retornou erro inesperado: %v", err)
 			}
@@ -249,7 +249,7 @@ func TestBuildBugfixPromptInputsDiferentesProduzemOutputsDiferentes(t *testing.T
 		Diff:           "diff base",
 	}
 
-	base, err := BuildBugfixPrompt(baseData)
+	base, err := NewCatalog().BuildBugfixPrompt(baseData)
 	if err != nil {
 		t.Fatalf("BuildBugfixPrompt base retornou erro: %v", err)
 	}
@@ -295,7 +295,7 @@ func TestBuildBugfixPromptInputsDiferentesProduzemOutputsDiferentes(t *testing.T
 
 	for _, v := range variantes {
 		t.Run(v.name, func(t *testing.T) {
-			variante, err := BuildBugfixPrompt(v.data)
+			variante, err := NewCatalog().BuildBugfixPrompt(v.data)
 			if err != nil {
 				t.Fatalf("BuildBugfixPrompt variante retornou erro: %v", err)
 			}
@@ -321,7 +321,7 @@ func TestBuildReviewPromptInputsDiferentesProduzemOutputsDiferentes(t *testing.T
 		RiskAreas:      "contratos",
 	}
 
-	base, err := BuildReviewPrompt("", baseData, fsys)
+	base, err := NewCatalog().BuildReviewPrompt("", baseData, fsys)
 	if err != nil {
 		t.Fatalf("BuildReviewPrompt base retornou erro: %v", err)
 	}
@@ -370,7 +370,7 @@ func TestBuildReviewPromptInputsDiferentesProduzemOutputsDiferentes(t *testing.T
 
 	for _, v := range variantes {
 		t.Run(v.name, func(t *testing.T) {
-			variante, err := BuildReviewPrompt("", v.data, fsys)
+			variante, err := NewCatalog().BuildReviewPrompt("", v.data, fsys)
 			if err != nil {
 				t.Fatalf("BuildReviewPrompt variante retornou erro: %v", err)
 			}

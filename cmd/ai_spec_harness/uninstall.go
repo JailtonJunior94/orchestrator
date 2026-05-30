@@ -7,26 +7,26 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var uninstallCmd = &cobra.Command{
-	Use:   "uninstall <path>",
-	Short: "Remove governanca de IA de um projeto",
-	Long: `Remove artefatos de governanca instalados pelo comando install.
+func newUninstallCmd() *cobra.Command {
+	var uninstallDryRun bool
+
+	cmd := &cobra.Command{
+		Use:   "uninstall <path>",
+		Short: "Remove governanca de IA de um projeto",
+		Long: `Remove artefatos de governanca instalados pelo comando install.
 
 Exemplos:
   ai-spec-harness uninstall ./meu-projeto
   ai-spec-harness uninstall ./meu-projeto --dry-run`,
-	Args: cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		printer := output.New(verbose)
-		fsys := fs.NewOSFileSystem()
-		svc := uninstall.NewService(fsys, printer)
-		return svc.Execute(args[0], uninstallDryRun)
-	},
-}
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			printer := output.New(newCommandEnv().verbose(cmd))
+			fsys := fs.NewOSFileSystem()
+			svc := uninstall.NewService(fsys, printer)
+			return svc.Execute(args[0], uninstallDryRun)
+		},
+	}
 
-var uninstallDryRun bool
-
-func init() {
-	uninstallCmd.Flags().BoolVar(&uninstallDryRun, "dry-run", false, "Mostra o que seria removido sem executar")
-	rootCmd.AddCommand(uninstallCmd)
+	cmd.Flags().BoolVar(&uninstallDryRun, "dry-run", false, "Mostra o que seria removido sem executar")
+	return cmd
 }

@@ -13,7 +13,7 @@ func TestLog_NoWriteWhenTelemetryDisabled(t *testing.T) {
 	os.Unsetenv("GOVERNANCE_TELEMETRY")
 	dir := t.TempDir()
 
-	if err := Log(dir, "bugfix", "bug.md"); err != nil {
+	if err := NewCatalog().Log(dir, "bugfix", "bug.md"); err != nil {
 		t.Fatalf("expected nil error, got: %v", err)
 	}
 
@@ -28,7 +28,7 @@ func TestLog_WritesLineWhenEnabled(t *testing.T) {
 	dir := t.TempDir()
 
 	before := time.Now().UTC().Add(-time.Second)
-	if err := Log(dir, "bugfix", "bug-schema.json"); err != nil {
+	if err := NewCatalog().Log(dir, "bugfix", "bug-schema.json"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -71,7 +71,7 @@ func TestLogClaudeMetrics_NoWriteWhenDisabled(t *testing.T) {
 		ThinkingTokens:           50,
 		ToolCallsNormalizedCount: 3,
 	}
-	if err := LogClaudeMetrics(dir, m); err != nil {
+	if err := NewCatalog().LogClaudeMetrics(dir, m); err != nil {
 		t.Fatalf("expected nil error, got: %v", err)
 	}
 
@@ -91,7 +91,7 @@ func TestLogClaudeMetrics_WritesEntriesWhenEnabled(t *testing.T) {
 		ThinkingTokens:           42,
 		ToolCallsNormalizedCount: 5,
 	}
-	if err := LogClaudeMetrics(dir, m); err != nil {
+	if err := NewCatalog().LogClaudeMetrics(dir, m); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -120,7 +120,7 @@ func TestLogClaudeMetrics_ZeroValues_WrittenWhenEnabled(t *testing.T) {
 	dir := t.TempDir()
 
 	m := ClaudeSessionMetrics{} // todos zero
-	if err := LogClaudeMetrics(dir, m); err != nil {
+	if err := NewCatalog().LogClaudeMetrics(dir, m); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -149,7 +149,7 @@ func TestLogGeminiMetrics_NoWriteWhenDisabled(t *testing.T) {
 		PromptTokensBilled:     300,
 		ThoughtsTokens:         40,
 	}
-	if err := LogGeminiMetrics(dir, m); err != nil {
+	if err := NewCatalog().LogGeminiMetrics(dir, m); err != nil {
 		t.Fatalf("expected nil error, got: %v", err)
 	}
 
@@ -169,7 +169,7 @@ func TestLogGeminiMetrics_WritesEntriesWhenEnabled(t *testing.T) {
 		PromptTokensBilled:     300,
 		ThoughtsTokens:         40,
 	}
-	if err := LogGeminiMetrics(dir, m); err != nil {
+	if err := NewCatalog().LogGeminiMetrics(dir, m); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -198,7 +198,7 @@ func TestLogGeminiMetrics_ZeroValues_NoWrite(t *testing.T) {
 	dir := t.TempDir()
 
 	m := GeminiSessionMetrics{} // todos zero → no-op (RF-21: registrar apenas quando > 0)
-	if err := LogGeminiMetrics(dir, m); err != nil {
+	if err := NewCatalog().LogGeminiMetrics(dir, m); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -216,7 +216,7 @@ func TestLogGeminiMetrics_PartialValues_OnlyNonZeroWritten(t *testing.T) {
 		CacheReadTokens: 55,
 		// outros campos zero
 	}
-	if err := LogGeminiMetrics(dir, m); err != nil {
+	if err := NewCatalog().LogGeminiMetrics(dir, m); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -256,7 +256,7 @@ func TestSummary_AggregatesCorrectly(t *testing.T) {
 		t.Fatalf("failed to write log: %v", err)
 	}
 
-	result, err := Summary(dir, 0)
+	result, err := NewCatalog().Summary(dir, 0)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

@@ -208,7 +208,7 @@ func TestInstall_CopyMode(t *testing.T) {
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
 
-	t.Cleanup(version.SetForTest("1.0.0-test"))
+	t.Cleanup(version.NewProvider().SetForTest("1.0.0-test"))
 
 	// Criar uma skill de teste na fonte
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte(`---
@@ -365,7 +365,7 @@ func TestInstall_Idempotent(t *testing.T) {
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
 
-	t.Cleanup(version.SetForTest("1.0.0-test"))
+	t.Cleanup(version.NewProvider().SetForTest("1.0.0-test"))
 
 	ffs.Files["/source/AGENTS.md"] = []byte("# AGENTS")
 	ffs.Files["/source/.claude/rules/governance.md"] = []byte("# governance")
@@ -895,7 +895,7 @@ func TestInstall_ManifestUsesResolvedExecutableVersion(t *testing.T) {
 	projectDir := t.TempDir()
 	sourceDir := t.TempDir()
 
-	t.Cleanup(version.SetForTest("dev"))
+	t.Cleanup(version.NewProvider().SetForTest("dev"))
 
 	exe, err := os.Executable()
 	if err != nil {
@@ -958,7 +958,7 @@ func TestInstall_ManifestIncludesSkillVersions(t *testing.T) {
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
 
-	t.Cleanup(version.SetForTest("1.0.0-test"))
+	t.Cleanup(version.NewProvider().SetForTest("1.0.0-test"))
 
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.1.0\ndescription: Revisa codigo.\n---\n")
 	ffs.Files["/source/.agents/skills/bugfix/SKILL.md"] = []byte("---\ndescription: Corrige bugs.\n---\n")
@@ -1157,7 +1157,7 @@ func TestVerify_AllCurrent(t *testing.T) {
 	t.Parallel()
 
 	// Para este teste usar FakeFileSystem, precisamos instalar todas as skills que
-	// skills.AllSkills(nil) retorna. Usamos apenas "review" (skill real) para validar.
+	// skills.NewCatalog().AllSkills(nil) retorna. Usamos apenas "review" (skill real) para validar.
 	ffs := fs.NewFakeFileSystem()
 	skillContent := []byte("---\nversion: 1.0.0\n---\ncontent")
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = skillContent
@@ -1168,7 +1168,7 @@ func TestVerify_AllCurrent(t *testing.T) {
 	ffs.Dirs["/project"] = true
 
 	// Instalar todas as skills listadas em AllSkills para nao ter "missing".
-	for _, sk := range skills.AllSkills(nil) {
+	for _, sk := range skills.NewCatalog().AllSkills(nil) {
 		ffs.Files["/source/.agents/skills/"+sk+"/SKILL.md"] = skillContent
 		ffs.Dirs["/source/.agents/skills/"+sk] = true
 		ffs.Files["/project/.agents/skills/"+sk+"/SKILL.md"] = skillContent
@@ -1200,7 +1200,7 @@ func TestVerify_Missing(t *testing.T) {
 	skillContent := []byte("---\nversion: 1.0.0\n---")
 
 	// Instalar todas as skills exceto "review" no projeto.
-	for _, sk := range skills.AllSkills(nil) {
+	for _, sk := range skills.NewCatalog().AllSkills(nil) {
 		ffs.Files["/source/.agents/skills/"+sk+"/SKILL.md"] = skillContent
 		ffs.Dirs["/source/.agents/skills/"+sk] = true
 		if sk != "review" {
@@ -1240,11 +1240,11 @@ func TestVerify_UsesManifestLangsWhenLangsOmitted(t *testing.T) {
 	ffs := fs.NewFakeFileSystem()
 	skillContent := []byte("---\nversion: 1.0.0\n---")
 
-	for _, sk := range skills.AllSkills([]skills.Lang{skills.LangGo}) {
+	for _, sk := range skills.NewCatalog().AllSkills([]skills.Lang{skills.LangGo}) {
 		ffs.Files["/source/.agents/skills/"+sk+"/SKILL.md"] = skillContent
 		ffs.Dirs["/source/.agents/skills/"+sk] = true
 	}
-	for _, sk := range skills.AllSkills(nil) {
+	for _, sk := range skills.NewCatalog().AllSkills(nil) {
 		ffs.Files["/project/.agents/skills/"+sk+"/SKILL.md"] = skillContent
 		ffs.Dirs["/project/.agents/skills/"+sk] = true
 	}
@@ -1290,7 +1290,7 @@ func TestVerify_Drifted(t *testing.T) {
 	driftedContent := []byte("---\nversion: 1.0.0\n---\nmodificado")
 
 	// Instalar todas as skills corretas exceto "review" que tera conteudo diferente.
-	for _, sk := range skills.AllSkills(nil) {
+	for _, sk := range skills.NewCatalog().AllSkills(nil) {
 		ffs.Files["/source/.agents/skills/"+sk+"/SKILL.md"] = skillContent
 		ffs.Dirs["/source/.agents/skills/"+sk] = true
 		if sk == "review" {
@@ -1353,7 +1353,7 @@ func TestVerify_ScopeProject_UsesProjectDir(t *testing.T) {
 	skillContent := []byte("content-a")
 
 	// Instalar todas as skills na fonte e no projeto para evitar "missing".
-	for _, sk := range skills.AllSkills(nil) {
+	for _, sk := range skills.NewCatalog().AllSkills(nil) {
 		ffs.Files["/source/.agents/skills/"+sk+"/SKILL.md"] = skillContent
 		ffs.Dirs["/source/.agents/skills/"+sk] = true
 		ffs.Files["/project/.agents/skills/"+sk+"/SKILL.md"] = skillContent
@@ -1389,14 +1389,14 @@ func TestGlobalInstallDir_UsesUserHomeDir(t *testing.T) {
 		t.Skip("HOME nao disponivel neste ambiente, pulando")
 	}
 
-	got, err := globalInstallDir()
+	got, err := NewHelper().globalInstallDir()
 	if err != nil {
-		t.Fatalf("globalInstallDir() erro: %v", err)
+		t.Fatalf("NewHelper().globalInstallDir() erro: %v", err)
 	}
 
 	want := filepath.Join(home, ".aispec")
 	if got != want {
-		t.Errorf("globalInstallDir() = %v, want %v", got, want)
+		t.Errorf("NewHelper().globalInstallDir() = %v, want %v", got, want)
 	}
 }
 
@@ -1445,12 +1445,12 @@ func TestInstall_GlobalScope_CreatesAispecDir(t *testing.T) {
 	// O dir seria criado sem dry-run — dry-run impede escrita mas nao resolve o destino.
 	// Verificar via globalInstallDir() com HOME sobrescrito.
 	t.Setenv("HOME", tmpHome)
-	got, err := globalInstallDir()
+	got, err := NewHelper().globalInstallDir()
 	if err != nil {
-		t.Fatalf("globalInstallDir() com HOME=%s: %v", tmpHome, err)
+		t.Fatalf("NewHelper().globalInstallDir() com HOME=%s: %v", tmpHome, err)
 	}
 	if got != expectedGlobalDir {
-		t.Errorf("globalInstallDir() = %v, want %v", got, expectedGlobalDir)
+		t.Errorf("NewHelper().globalInstallDir() = %v, want %v", got, expectedGlobalDir)
 	}
 }
 
@@ -1848,7 +1848,7 @@ func TestVerify_RI04_BinaryItems(t *testing.T) {
 	skillContent := []byte("---\nversion: 1.0.0\n---\ncontent")
 
 	// Instalar todas as skills na fonte e no projeto.
-	for _, sk := range skills.AllSkills(nil) {
+	for _, sk := range skills.NewCatalog().AllSkills(nil) {
 		ffs.Files["/source/.agents/skills/"+sk+"/SKILL.md"] = skillContent
 		ffs.Dirs["/source/.agents/skills/"+sk] = true
 		ffs.Files["/project/.agents/skills/"+sk+"/SKILL.md"] = skillContent
@@ -1902,7 +1902,7 @@ func TestVerify_RI04_BinaryPresent_Current(t *testing.T) {
 	ffs := fs.NewFakeFileSystem()
 	skillContent := []byte("---\nversion: 1.0.0\n---\ncontent")
 
-	for _, sk := range skills.AllSkills(nil) {
+	for _, sk := range skills.NewCatalog().AllSkills(nil) {
 		ffs.Files["/source/.agents/skills/"+sk+"/SKILL.md"] = skillContent
 		ffs.Dirs["/source/.agents/skills/"+sk] = true
 		ffs.Files["/project/.agents/skills/"+sk+"/SKILL.md"] = skillContent
@@ -1944,7 +1944,7 @@ func TestVerify_RI04_SkillItemsHaveKindSkill(t *testing.T) {
 	ffs := fs.NewFakeFileSystem()
 	skillContent := []byte("---\nversion: 1.0.0\n---\ncontent")
 
-	for _, sk := range skills.AllSkills(nil) {
+	for _, sk := range skills.NewCatalog().AllSkills(nil) {
 		ffs.Files["/source/.agents/skills/"+sk+"/SKILL.md"] = skillContent
 		ffs.Dirs["/source/.agents/skills/"+sk] = true
 		ffs.Files["/project/.agents/skills/"+sk+"/SKILL.md"] = skillContent
@@ -2011,16 +2011,16 @@ func TestProbeBinaryAvailable_Current(t *testing.T) {
 func TestSpecForTool_AllTools(t *testing.T) {
 	t.Parallel()
 	for _, tool := range skills.AllTools {
-		spec, ok := specForTool(tool)
+		spec, ok := NewHelper().specForTool(tool)
 		if !ok {
-			t.Errorf("specForTool(%v): expected ok=true", tool)
+			t.Errorf("NewHelper().specForTool(%v): expected ok=true", tool)
 			continue
 		}
 		if spec.ID == "" {
-			t.Errorf("specForTool(%v): spec.ID vazio", tool)
+			t.Errorf("NewHelper().specForTool(%v): spec.ID vazio", tool)
 		}
 		if spec.Command == "" {
-			t.Errorf("specForTool(%v): spec.Command vazio", tool)
+			t.Errorf("NewHelper().specForTool(%v): spec.Command vazio", tool)
 		}
 	}
 }
@@ -2028,8 +2028,8 @@ func TestSpecForTool_AllTools(t *testing.T) {
 // TestSpecForTool_Unknown verifica que specForTool retorna false para tool desconhecida.
 func TestSpecForTool_Unknown(t *testing.T) {
 	t.Parallel()
-	_, ok := specForTool(skills.Tool("unknown"))
+	_, ok := NewHelper().specForTool(skills.Tool("unknown"))
 	if ok {
-		t.Error("specForTool(unknown): esperado ok=false")
+		t.Error("NewHelper().specForTool(unknown): esperado ok=false")
 	}
 }

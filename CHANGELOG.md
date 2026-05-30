@@ -26,6 +26,24 @@
   - propaga o canônico `.agents/skills/` para os mirrors `.claude/skills`, `.github/skills` e `internal/embedded/assets/.agents/skills` via `scripts/sync-skills.sh` (drift zero em `make check-skills-sync`)
 - **agents:** atualiza `AGENTS.md` e `GEMINI.md` embarcados com referência à nova skill
 
+### Refatoração
+- **internal/cmd:** aplica integralmente as Regras Estritas Go 0–7 ao código (alterações *behavior-preserving*, sem mudança de comportamento público):
+  - **R1:** converte funções standalone em métodos de struct em todos os pacotes `internal/` e `cmd/`, com holders dedicados por pacote (24 arquivos `r1_catalog.go`/`r1_receiver.go`); zero funções standalone remanescentes (exceto `New*`/`main`/`Execute`)
+  - **R5.2:** adiciona 38 assertions de interface em tempo de compilação (`var _ Iface = (*T)(nil)`)
+  - **R5.11:** garante comma-ok em type assertion no `internal/runtime/probe` (erro defensivo no caminho de falha)
+  - **R5.16:** remove `os.Exit` fora de `main` — novo `exit_error.go` (tipo `exitError` + `ExitResolver.CodeFor`); os 14 handlers Cobra retornam erro tipado e `main` passa a ser o único chamador de `os.Exit` (códigos de saída preservados)
+  - **R5.26:** prefixo `_` em 120 globais não-exportados de pacote (sentinelas `errX` isentos conforme exceção da regra)
+
+### Correções
+- **runtime/mcpserver:** sincroniza 6 goroutines de teste via canal de done, eliminando data race detectado por `go test -race`
+- **integration/token-budget:** rebaseline consciente dos sentinelas de orçamento da skill `go-implementation` após crescimento legítimo de conteúdo (preserva o conteúdo da skill)
+
+### Testes
+- **config:** migra testes para `testify/suite` table-driven (`config_types_test.go`, `runtime_suite_test.go`); remove `config_test.go` e `runtime_test.go`
+
+### Infraestrutura
+- **mocks:** adiciona `mockery.yml`, `scripts/check-mocks.sh` e `scripts/normalize-mocks.sh`, além dos mocks gerados por pacote em `*/mocks/`
+
 ## 0.23.4 (2026-05-25)
 
 ### Bug Fixes

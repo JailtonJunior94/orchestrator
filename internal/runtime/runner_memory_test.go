@@ -23,7 +23,7 @@ func TestInjectMemoryContext_T_MEM_INJECT_01(t *testing.T) {
 	t.Run("sem documentos: prompt original preservado", func(t *testing.T) {
 		t.Parallel()
 
-		result := airuntime.InjectMemoryContextForTest(
+		result := airuntime.NewCatalog().InjectMemoryContextForTest(
 			basePrompt,
 			memory.Document{},
 			memory.Document{},
@@ -44,7 +44,7 @@ func TestInjectMemoryContext_T_MEM_INJECT_01(t *testing.T) {
 			Exists:    true,
 		}
 
-		result := airuntime.InjectMemoryContextForTest(basePrompt, wf, memory.Document{}, nil, nil)
+		result := airuntime.NewCatalog().InjectMemoryContextForTest(basePrompt, wf, memory.Document{}, nil, nil)
 
 		if !strings.Contains(result, "## Memory Context") {
 			t.Error("deve conter '## Memory Context'")
@@ -66,7 +66,7 @@ func TestInjectMemoryContext_T_MEM_INJECT_01(t *testing.T) {
 			Exists:    true,
 		}
 
-		result := airuntime.InjectMemoryContextForTest(basePrompt, memory.Document{}, tk, nil, nil)
+		result := airuntime.NewCatalog().InjectMemoryContextForTest(basePrompt, memory.Document{}, tk, nil, nil)
 
 		if !strings.Contains(result, "## Memory Context") {
 			t.Error("deve conter '## Memory Context'")
@@ -88,7 +88,7 @@ func TestInjectMemoryContext_T_MEM_INJECT_01(t *testing.T) {
 			Exists:  true,
 		}
 
-		result := airuntime.InjectMemoryContextForTest(basePrompt, wf, memory.Document{}, nil, nil)
+		result := airuntime.NewCatalog().InjectMemoryContextForTest(basePrompt, wf, memory.Document{}, nil, nil)
 
 		const directive = "compact the flagged memory files before proceeding"
 		if !strings.Contains(result, directive) {
@@ -102,7 +102,7 @@ func TestInjectMemoryContext_T_MEM_INJECT_01(t *testing.T) {
 		wf := memory.Document{Exists: false}
 		tk := memory.Document{Exists: false}
 
-		result := airuntime.InjectMemoryContextForTest(basePrompt, wf, tk, nil, nil)
+		result := airuntime.NewCatalog().InjectMemoryContextForTest(basePrompt, wf, tk, nil, nil)
 
 		// Sem documentos: retorna prompt original.
 		if result != basePrompt {
@@ -124,7 +124,7 @@ func TestInjectMemoryContext_T_MEM_INJECT_01(t *testing.T) {
 			Exists:    true,
 		}
 
-		result := airuntime.InjectMemoryContextForTest(basePrompt, wf, tk, nil, nil)
+		result := airuntime.NewCatalog().InjectMemoryContextForTest(basePrompt, wf, tk, nil, nil)
 
 		idxWF := strings.Index(result, "wf-content")
 		idxTK := strings.Index(result, "tk-content")
@@ -142,7 +142,7 @@ func TestInjectMemoryContext_T_MEM_INJECT_01(t *testing.T) {
 
 		// Com documentos vazios (sem TasksDir → store nil → injectMemoryContext não chamado).
 		// Este sub-test valida que o contrato puro também é estável com zero-values.
-		result := airuntime.InjectMemoryContextForTest(
+		result := airuntime.NewCatalog().InjectMemoryContextForTest(
 			basePrompt,
 			memory.Document{Exists: false},
 			memory.Document{Exists: false},

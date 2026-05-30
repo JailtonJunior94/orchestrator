@@ -12,7 +12,7 @@ import (
 // T-NORM-01: Claude bash → NormalizedName="bash"; RawName="bash" (alias para si mesmo)
 func TestNormalizeClaudeBash(t *testing.T) {
 	input := json.RawMessage(`{"command":"echo hello"}`)
-	result, err := BuildNormalizedToolCall("claude", "bash", input, "")
+	result, err := NewCatalog().BuildNormalizedToolCall("claude", "bash", input, "")
 	if err != nil {
 		t.Fatalf("BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -27,7 +27,7 @@ func TestNormalizeClaudeBash(t *testing.T) {
 // T-NORM-02: Codex shell → NormalizedName="bash"; RawName="shell"
 func TestNormalizeCodexShellToBash(t *testing.T) {
 	input := json.RawMessage(`{"cmd":"echo hello"}`)
-	result, err := BuildNormalizedToolCall("codex", "shell", input, "")
+	result, err := NewCatalog().BuildNormalizedToolCall("codex", "shell", input, "")
 	if err != nil {
 		t.Fatalf("BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -42,7 +42,7 @@ func TestNormalizeCodexShellToBash(t *testing.T) {
 // T-NORM-03: Codex search_query → NormalizedName="web_search"
 func TestNormalizeCodexSearchQueryToWebSearch(t *testing.T) {
 	input := json.RawMessage(`{"q":"golang testing"}`)
-	result, err := BuildNormalizedToolCall("codex", "search_query", input, "")
+	result, err := NewCatalog().BuildNormalizedToolCall("codex", "search_query", input, "")
 	if err != nil {
 		t.Fatalf("BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestNormalizationPreservesRawInput(t *testing.T) {
 	original := make(json.RawMessage, len(input))
 	copy(original, input)
 
-	result, err := BuildNormalizedToolCall("claude", "bash", input, "")
+	result, err := NewCatalog().BuildNormalizedToolCall("claude", "bash", input, "")
 	if err != nil {
 		t.Fatalf("BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestNormalizationPreservesRawInput(t *testing.T) {
 // T-NORM-05: cursor read_file com startLineNumberBaseOne → NormalizedInput tem start_line
 func TestNormalizationCanonicalizesFields(t *testing.T) {
 	input := json.RawMessage(`{"startLineNumberBaseOne":10,"endLineNumberBaseOne":20,"filePath":"main.go"}`)
-	result, err := BuildNormalizedToolCall("cursor", "read_file", input, "")
+	result, err := NewCatalog().BuildNormalizedToolCall("cursor", "read_file", input, "")
 	if err != nil {
 		t.Fatalf("BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestNormalizationCanonicalizesFields(t *testing.T) {
 // T-NORM-06: driver desconhecido → passthrough (NormalizedName=rawName); sem erro
 func TestUnknownDriverFallsBack(t *testing.T) {
 	input := json.RawMessage(`{"arg":"value"}`)
-	result, err := BuildNormalizedToolCall("foo", "bar", input, "")
+	result, err := NewCatalog().BuildNormalizedToolCall("foo", "bar", input, "")
 	if err != nil {
 		t.Fatalf("BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -140,7 +140,7 @@ input_mappings: {}
 	}
 
 	input := json.RawMessage(`{}`)
-	result, err := BuildNormalizedToolCall("custom_driver", "custom_tool", input, workDir)
+	result, err := NewCatalog().BuildNormalizedToolCall("custom_driver", "custom_tool", input, workDir)
 	if err != nil {
 		t.Fatalf("BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -156,7 +156,7 @@ input_mappings: {}
 
 // TestBuildNormalizedToolCall_EmptyInput — input vazio retorna sem erro
 func TestBuildNormalizedToolCall_EmptyInput(t *testing.T) {
-	result, err := BuildNormalizedToolCall("claude", "bash", json.RawMessage{}, "")
+	result, err := NewCatalog().BuildNormalizedToolCall("claude", "bash", json.RawMessage{}, "")
 	if err != nil {
 		t.Fatalf("BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -168,7 +168,7 @@ func TestBuildNormalizedToolCall_EmptyInput(t *testing.T) {
 // TestBuildNormalizedToolCall_NonObjectInput — input não-objeto JSON retorna cópia sem erro
 func TestBuildNormalizedToolCall_NonObjectInput(t *testing.T) {
 	input := json.RawMessage(`"just a string"`)
-	result, err := BuildNormalizedToolCall("codex", "shell", input, "")
+	result, err := NewCatalog().BuildNormalizedToolCall("codex", "shell", input, "")
 	if err != nil {
 		t.Fatalf("BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -195,7 +195,7 @@ input_mappings: {}
 		t.Fatalf("escrever custom YAML: %v", err)
 	}
 
-	_, err := BuildNormalizedToolCall("claude", "bash", json.RawMessage(`{}`), workDir)
+	_, err := NewCatalog().BuildNormalizedToolCall("claude", "bash", json.RawMessage(`{}`), workDir)
 	if err == nil {
 		t.Fatal("esperava erro para versão desconhecida, obtive nil")
 	}
@@ -205,7 +205,7 @@ input_mappings: {}
 func TestNormalizationPreservesValuesOnRename(t *testing.T) {
 	// Codex shell: cmd → command; valor deve ser preservado
 	input := json.RawMessage(`{"cmd":"ls /tmp"}`)
-	result, err := BuildNormalizedToolCall("codex", "shell", input, "")
+	result, err := NewCatalog().BuildNormalizedToolCall("codex", "shell", input, "")
 	if err != nil {
 		t.Fatalf("BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -225,7 +225,7 @@ func TestNormalizationPreservesValuesOnRename(t *testing.T) {
 // TestCopilotRunToBash — copilot run → bash
 func TestCopilotRunToBash(t *testing.T) {
 	input := json.RawMessage(`{"script":"./run.sh"}`)
-	result, err := BuildNormalizedToolCall("copilot", "run", input, "")
+	result, err := NewCatalog().BuildNormalizedToolCall("copilot", "run", input, "")
 	if err != nil {
 		t.Fatalf("BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -238,7 +238,7 @@ func TestCopilotRunToBash(t *testing.T) {
 // Valida resolveInherit: gemini está em inherit_common; sem entrada explícita em aliases.
 func TestNormalizeToolCallGeminiInheritsCommon(t *testing.T) {
 	input := json.RawMessage(`{"path":"/tmp/README.md"}`)
-	result, err := BuildNormalizedToolCall("gemini", "read_file", input, "")
+	result, err := NewCatalog().BuildNormalizedToolCall("gemini", "read_file", input, "")
 	if err != nil {
 		t.Fatalf("T-32: BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -254,8 +254,8 @@ func TestNormalizeToolCallGeminiInheritsCommon(t *testing.T) {
 // Cobre bash (alias para si mesmo) e str_replace_editor → edit.
 func TestNormalizeGeminiPreservesRawName(t *testing.T) {
 	tests := []struct {
-		rawName        string
-		expectedNorm   string
+		rawName      string
+		expectedNorm string
 	}{
 		{"bash", "bash"},
 		{"write_file", "write"},
@@ -266,7 +266,7 @@ func TestNormalizeGeminiPreservesRawName(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.rawName, func(t *testing.T) {
 			input := json.RawMessage(`{}`)
-			result, err := BuildNormalizedToolCall("gemini", tc.rawName, input, "")
+			result, err := NewCatalog().BuildNormalizedToolCall("gemini", tc.rawName, input, "")
 			if err != nil {
 				t.Fatalf("T-32b: BuildNormalizedToolCall inesperado para %q: %v", tc.rawName, err)
 			}
@@ -309,7 +309,7 @@ input_mappings: {}
 	}
 
 	input := json.RawMessage(`{}`)
-	result, err := BuildNormalizedToolCall("gemini", "read_file", input, workDir)
+	result, err := NewCatalog().BuildNormalizedToolCall("gemini", "read_file", input, workDir)
 	if err != nil {
 		t.Fatalf("BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -325,7 +325,7 @@ input_mappings: {}
 // T-33-01: Golden — Copilot run com campo "command" produz campo canônico "command" (no-op verificado).
 func TestInputMappingCopilotRunCommandCanonical(t *testing.T) {
 	input := json.RawMessage(`{"command":"./run.sh","timeout":30}`)
-	result, err := BuildNormalizedToolCall("copilot", "run", input, "")
+	result, err := NewCatalog().BuildNormalizedToolCall("copilot", "run", input, "")
 	if err != nil {
 		t.Fatalf("T-33-01: BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -356,7 +356,7 @@ func TestInputMappingCopilotRunCommandCanonical(t *testing.T) {
 // T-33-02: Golden — Gemini bash com campo "command" produz campo canônico "command" (no-op verificado).
 func TestInputMappingGeminiBashCommandCanonical(t *testing.T) {
 	input := json.RawMessage(`{"command":"ls -la","cwd":"/tmp"}`)
-	result, err := BuildNormalizedToolCall("gemini", "bash", input, "")
+	result, err := NewCatalog().BuildNormalizedToolCall("gemini", "bash", input, "")
 	if err != nil {
 		t.Fatalf("T-33-02: BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -400,7 +400,7 @@ func TestInputMappingCrossDriverCommandCanonical(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.driver, func(t *testing.T) {
-			result, err := BuildNormalizedToolCall(tc.driver, tc.rawName, tc.input, "")
+			result, err := NewCatalog().BuildNormalizedToolCall(tc.driver, tc.rawName, tc.input, "")
 			if err != nil {
 				t.Fatalf("T-33-03[%s]: BuildNormalizedToolCall inesperado: %v", tc.driver, err)
 			}
@@ -466,7 +466,7 @@ input_mappings:
 
 	for _, tc := range tests {
 		t.Run(tc.rawName, func(t *testing.T) {
-			result, err := BuildNormalizedToolCall("gemini", tc.rawName, json.RawMessage(`{}`), workDir)
+			result, err := NewCatalog().BuildNormalizedToolCall("gemini", tc.rawName, json.RawMessage(`{}`), workDir)
 			if err != nil {
 				t.Fatalf("T-34-01: BuildNormalizedToolCall inesperado para %q: %v", tc.rawName, err)
 			}
@@ -494,7 +494,7 @@ func TestGeminiExplicitAliasDefaultEmbeddedNoRegression(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.rawName, func(t *testing.T) {
-			result, err := BuildNormalizedToolCall("gemini", tc.rawName, json.RawMessage(`{}`), "")
+			result, err := NewCatalog().BuildNormalizedToolCall("gemini", tc.rawName, json.RawMessage(`{}`), "")
 			if err != nil {
 				t.Fatalf("T-34-02: BuildNormalizedToolCall inesperado para %q: %v", tc.rawName, err)
 			}
@@ -514,12 +514,12 @@ func TestGeminiExplicitAliasDefaultEmbeddedNoRegression(t *testing.T) {
 
 // T-35-01: BuildNormalizedToolCallByDriver com DriverID válido — normaliza corretamente.
 func TestBuildNormalizedToolCallByDriver_ValidDriver(t *testing.T) {
-	drvID, err := specs.ParseDriverID("gemini")
+	drvID, err := specs.NewCatalog().ParseDriverID("gemini")
 	if err != nil {
 		t.Fatalf("T-35-01: ParseDriverID inesperado: %v", err)
 	}
 	input := json.RawMessage(`{"command":"echo hi"}`)
-	result, err := BuildNormalizedToolCallByDriver(drvID, "bash", input, "")
+	result, err := NewCatalog().BuildNormalizedToolCallByDriver(drvID, "bash", input, "")
 	if err != nil {
 		t.Fatalf("T-35-01: BuildNormalizedToolCallByDriver inesperado: %v", err)
 	}
@@ -535,7 +535,7 @@ func TestBuildNormalizedToolCallByDriver_ValidDriver(t *testing.T) {
 // T-35-02: BuildNormalizedToolCallByDriver com DriverID zero-value — retorna ErrUnknownDriver.
 func TestBuildNormalizedToolCallByDriver_ZeroValue(t *testing.T) {
 	var zeroDriver specs.DriverID // zero-value: String() == ""
-	_, err := BuildNormalizedToolCallByDriver(zeroDriver, "bash", json.RawMessage(`{}`), "")
+	_, err := NewCatalog().BuildNormalizedToolCallByDriver(zeroDriver, "bash", json.RawMessage(`{}`), "")
 	if err == nil {
 		t.Fatal("T-35-02: esperava erro para DriverID zero-value, obtive nil")
 	}
@@ -565,12 +565,12 @@ func containsString(s, sub string) bool {
 
 // T-35-03: BuildNormalizedToolCallByDriver para Copilot — campo canônico "command".
 func TestBuildNormalizedToolCallByDriver_CopilotRun(t *testing.T) {
-	drvID, err := specs.ParseDriverID("copilot")
+	drvID, err := specs.NewCatalog().ParseDriverID("copilot")
 	if err != nil {
 		t.Fatalf("T-35-03: ParseDriverID inesperado: %v", err)
 	}
 	input := json.RawMessage(`{"command":"./deploy.sh"}`)
-	result, err := BuildNormalizedToolCallByDriver(drvID, "run", input, "")
+	result, err := NewCatalog().BuildNormalizedToolCallByDriver(drvID, "run", input, "")
 	if err != nil {
 		t.Fatalf("T-35-03: BuildNormalizedToolCallByDriver inesperado: %v", err)
 	}

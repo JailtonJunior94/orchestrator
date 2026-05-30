@@ -3,15 +3,17 @@
 // Shell hook permanece ativo para modo interativo Claude Code (coexistência).
 //
 // Semântica replicada de validate-token-budget.sh:
-//   Verifica se o tamanho do prompt excede o budget de tokens da ferramenta.
-//   Shell hook: soma arquivos .md em .agents/skills + AGENTS.md (budget de governance).
-//   Go hook: verifica o prompt completo já construído em PromptBuildEvent.
-//   Budget padrão: "claude" (70000 tokens) via internal/metrics.CheckBudget.
+//
+//	Verifica se o tamanho do prompt excede o budget de tokens da ferramenta.
+//	Shell hook: soma arquivos .md em .agents/skills + AGENTS.md (budget de governance).
+//	Go hook: verifica o prompt completo já construído em PromptBuildEvent.
+//	Budget padrão: "claude" (70000 tokens) via internal/metrics.CheckBudget.
 //
 // Diferença de escopo intencional:
-//   Shell hook: verifica tamanho do contexto de governance (arquivos estáticos)
-//   Go hook: verifica o prompt runtime completo (contexto dinâmico pós-build)
-//   Ambos coexistem — scopes complementares, não duplicados.
+//
+//	Shell hook: verifica tamanho do contexto de governance (arquivos estáticos)
+//	Go hook: verifica o prompt runtime completo (contexto dinâmico pós-build)
+//	Ambos coexistem — scopes complementares, não duplicados.
 package hooks
 
 import (
@@ -38,6 +40,8 @@ type TokenBudgetHook struct {
 	// Zero-value (WindowStandard) preserva comportamento F1.
 	windowClass specs.WindowClass
 }
+
+var _ Hook = (*TokenBudgetHook)(nil)
 
 // NewTokenBudgetHook cria um TokenBudgetHook para a ferramenta dada com WindowStandard.
 // tool: identificador da ferramenta (ver metrics.ToolBudgets); "" usa "claude".
@@ -74,7 +78,7 @@ func (h *TokenBudgetHook) Run(_ context.Context, evt Event) error {
 	}
 
 	isLarge := h.windowClass == specs.WindowLarge
-	tokens, limit, ok := metrics.CheckBudgetForClass(*promptEvt.Prompt, h.Tool, isLarge)
+	tokens, limit, ok := metrics.NewCatalog().CheckBudgetForClass(*promptEvt.Prompt, h.Tool, isLarge)
 	if !ok {
 		return fmt.Errorf("%w: %d tokens (limite %d para %q)",
 			ErrTokenBudgetExceeded, tokens, limit, h.Tool)

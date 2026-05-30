@@ -15,6 +15,15 @@ import (
 // Referencias sao carregadas sob demanda, nao contam para o budget base.
 const budgetSkillMD = 4000
 
+// budgetSkillMDOverride define limites por skill para o SKILL.md, usados quando uma
+// skill carrega conscientemente conteudo always-on acima do default. go-implementation
+// mantem as Regras Estritas R0-R7 inline no SKILL.md (sempre visiveis, [HARD]) por
+// decisao de design da v1.2.0 (commit e09c09f) — o tradeoff ADR-004 e aceito e
+// documentado aqui em vez de relaxar o budget universal de todas as skills.
+var budgetSkillMDOverride = map[string]int{
+	"go-implementation": 4300, // R0-R7 inline always-on (v1.2.0); medido 4136, margem ~4%
+}
+
 // budgetSingleRef e o limite maximo de tokens para uma unica referencia.
 // Cada referencia carregada incrementalmente nao deve exceder este limite.
 const budgetSingleRef = 3000
@@ -45,10 +54,14 @@ func TestTokenBudget_EmbeddedSkills(t *testing.T) {
 			skillTokens := tokenizer.EstimateTokens(string(skillData))
 
 			// Validar budget do SKILL.md (carregado inicialmente)
-			t.Logf("skill=%s skill_tokens=%d budget=%d", skillName, skillTokens, budgetSkillMD)
-			if skillTokens > budgetSkillMD {
+			maxSkillMD := budgetSkillMD
+			if override, ok := budgetSkillMDOverride[skillName]; ok {
+				maxSkillMD = override
+			}
+			t.Logf("skill=%s skill_tokens=%d budget=%d", skillName, skillTokens, maxSkillMD)
+			if skillTokens > maxSkillMD {
 				t.Errorf("skill %q: SKILL.md tem %d tokens, excede budget de %d tokens",
-					skillName, skillTokens, budgetSkillMD)
+					skillName, skillTokens, maxSkillMD)
 			}
 
 			// Validar budget individual de cada referencia (carregada sob demanda)

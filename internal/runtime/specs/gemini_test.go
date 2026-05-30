@@ -12,7 +12,7 @@ import (
 func TestGeminiSpecHasCorrectCommandAndFlags(t *testing.T) {
 	t.Parallel()
 
-	spec := specs.Gemini()
+	spec := specs.NewCatalog().Gemini()
 
 	if got, want := spec.ID, "gemini"; got != want {
 		t.Errorf("Gemini().ID = %q; want %q", got, want)
@@ -41,7 +41,7 @@ func TestGeminiSpecHasCorrectCommandAndFlags(t *testing.T) {
 func TestGeminiFallbackResolvesViaNpx(t *testing.T) {
 	t.Parallel()
 
-	spec := specs.Gemini()
+	spec := specs.NewCatalog().Gemini()
 
 	if got := len(spec.Fallbacks); got != 1 {
 		t.Fatalf("len(Gemini().Fallbacks) = %d; want 1", got)
@@ -70,7 +70,7 @@ func TestGeminiFallbackResolvesViaNpx(t *testing.T) {
 func TestGeminiBootstrapArgsForRestricted(t *testing.T) {
 	t.Parallel()
 
-	got := specs.Gemini().BootstrapArgs("", "", nil, specs.AccessModeRestricted)
+	got := specs.NewCatalog().Gemini().BootstrapArgs("", "", nil, specs.AccessModeRestricted)
 	want := []string{"--approval-mode", "default"}
 	assertSliceEqual(t, "T-16", got, want)
 }
@@ -80,7 +80,7 @@ func TestGeminiBootstrapArgsForRestricted(t *testing.T) {
 func TestGeminiBootstrapArgsForFull(t *testing.T) {
 	t.Parallel()
 
-	got := specs.Gemini().BootstrapArgs("", "", nil, specs.AccessModeFull)
+	got := specs.NewCatalog().Gemini().BootstrapArgs("", "", nil, specs.AccessModeFull)
 	want := []string{"--approval-mode", "yolo"}
 	assertSliceEqual(t, "T-29", got, want)
 }
@@ -119,7 +119,7 @@ func TestGeminiBootstrapArgsIgnoresModelAndReasoning(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := specs.Gemini().BootstrapArgs(tc.model, tc.reasoning, tc.addDirs, tc.mode)
+			got := specs.NewCatalog().Gemini().BootstrapArgs(tc.model, tc.reasoning, tc.addDirs, tc.mode)
 			assertSliceEqual(t, "T-30/"+tc.name, got, tc.want)
 		})
 	}
@@ -144,7 +144,7 @@ func TestGeminiBootstrapArgsDefaultsToRestricted(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := specs.Gemini().BootstrapArgs("", "", nil, tc.mode)
+			got := specs.NewCatalog().Gemini().BootstrapArgs("", "", nil, tc.mode)
 			assertSliceEqual(t, "T-31/"+tc.name, got, want)
 		})
 	}

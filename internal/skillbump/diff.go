@@ -11,7 +11,7 @@ import (
 )
 
 // ChangedSkills retorna as skills alteradas entre duas refs.
-func ChangedSkills(repoPath, fromRef, toRef, skillsDir string) ([]string, error) {
+func (r1 *Planner) ChangedSkills(repoPath, fromRef, toRef, skillsDir string) ([]string, error) {
 	cmd := exec.Command("git", "-C", filepath.Clean(repoPath), "diff", "--name-only", fromRef, toRef, "--", filepath.Clean(skillsDir))
 	out, err := cmd.Output()
 	if err != nil {
@@ -24,7 +24,7 @@ func ChangedSkills(repoPath, fromRef, toRef, skillsDir string) ([]string, error)
 			continue
 		}
 
-		name, ok := extractSkillName(line, skillsDir)
+		name, ok := NewPlanner().extractSkillName(line, skillsDir)
 		if !ok {
 			continue
 		}
@@ -41,7 +41,7 @@ func ChangedSkills(repoPath, fromRef, toRef, skillsDir string) ([]string, error)
 }
 
 // CommitsForSkill retorna commits que tocaram uma skill.
-func CommitsForSkill(repoPath, fromRef, toRef, skillsDir, skillName string) ([]semver.Commit, error) {
+func (r1 *Planner) CommitsForSkill(repoPath, fromRef, toRef, skillsDir, skillName string) ([]semver.Commit, error) {
 	skillPath := filepath.Clean(filepath.Join(skillsDir, skillName))
 	cmd := exec.Command("git", "-C", filepath.Clean(repoPath), "log", "--format=%H %s", fromRef+".."+toRef, "--", skillPath)
 	out, err := cmd.Output()
@@ -65,7 +65,7 @@ func CommitsForSkill(repoPath, fromRef, toRef, skillsDir, skillName string) ([]s
 			continue
 		}
 
-		commit, err := parseCommit(repoPath, parts[0], parts[1])
+		commit, err := NewPlanner().parseCommit(repoPath, parts[0], parts[1])
 		if err != nil {
 			return nil, fmt.Errorf("falha ao carregar commit %s da skill %s: %w", parts[0], skillName, err)
 		}
@@ -75,7 +75,7 @@ func CommitsForSkill(repoPath, fromRef, toRef, skillsDir, skillName string) ([]s
 	return commits, nil
 }
 
-func readSkillFileAtRef(repoPath, ref, skillsDir, skillName string) ([]byte, error) {
+func (r1 *Planner) readSkillFileAtRef(repoPath, ref, skillsDir, skillName string) ([]byte, error) {
 	skillFile := filepath.ToSlash(filepath.Clean(filepath.Join(skillsDir, skillName, "SKILL.md")))
 	cmd := exec.Command("git", "-C", filepath.Clean(repoPath), "show", ref+":"+skillFile)
 	out, err := cmd.Output()
@@ -86,7 +86,7 @@ func readSkillFileAtRef(repoPath, ref, skillsDir, skillName string) ([]byte, err
 	return out, nil
 }
 
-func parseCommit(repoPath, hash, subject string) (semver.Commit, error) {
+func (r1 *Planner) parseCommit(repoPath, hash, subject string) (semver.Commit, error) {
 	commit := semver.Commit{
 		Hash: hash,
 		Raw:  subject,
@@ -113,7 +113,7 @@ func parseCommit(repoPath, hash, subject string) (semver.Commit, error) {
 	}
 	commit.Type = strings.TrimSpace(prefix)
 
-	body, err := readCommitBody(repoPath, hash)
+	body, err := NewPlanner().readCommitBody(repoPath, hash)
 	if err != nil {
 		return semver.Commit{}, err
 	}
@@ -124,7 +124,7 @@ func parseCommit(repoPath, hash, subject string) (semver.Commit, error) {
 	return commit, nil
 }
 
-func readCommitBody(repoPath, hash string) (string, error) {
+func (r1 *Planner) readCommitBody(repoPath, hash string) (string, error) {
 	cmd := exec.Command("git", "-C", filepath.Clean(repoPath), "show", "--format=%b", "-s", hash)
 	out, err := cmd.Output()
 	if err != nil {
@@ -133,7 +133,7 @@ func readCommitBody(repoPath, hash string) (string, error) {
 	return string(out), nil
 }
 
-func extractSkillName(path, skillsDir string) (string, bool) {
+func (r1 *Planner) extractSkillName(path, skillsDir string) (string, bool) {
 	cleanPath := filepath.ToSlash(filepath.Clean(path))
 	cleanSkillsDir := strings.TrimSuffix(filepath.ToSlash(filepath.Clean(skillsDir)), "/")
 	prefix := cleanSkillsDir + "/"

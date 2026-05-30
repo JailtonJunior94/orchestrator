@@ -11,7 +11,7 @@ import (
 func TestSpecAccessors(t *testing.T) {
 	t.Parallel()
 
-	spec := specs.Claude()
+	spec := specs.NewCatalog().Claude()
 
 	if got, want := spec.SDKVersion(), specs.ClaudeSDKVersion; got != want {
 		t.Errorf("SDKVersion() = %q; want %q", got, want)
@@ -30,7 +30,7 @@ func TestSpecAccessors(t *testing.T) {
 func TestSpecAccessorsNonEmpty(t *testing.T) {
 	t.Parallel()
 
-	spec := specs.Claude()
+	spec := specs.NewCatalog().Claude()
 
 	if spec.SDKVersion() == "" {
 		t.Error("SDKVersion() deve ser não-vazio para Claude")
@@ -50,7 +50,7 @@ func TestSpecAccessorsNonEmpty(t *testing.T) {
 func TestBootstrapArgsNoOpClaude(t *testing.T) {
 	t.Parallel()
 
-	got := specs.Claude().BootstrapArgs("any", "any", nil, specs.AccessModeFull)
+	got := specs.NewCatalog().Claude().BootstrapArgs("any", "any", nil, specs.AccessModeFull)
 	if got != nil {
 		t.Errorf("Claude().BootstrapArgs() = %v; want nil (no-op)", got)
 	}
@@ -61,7 +61,7 @@ func TestBootstrapArgsNoOpClaude(t *testing.T) {
 func TestBootstrapArgsNoOpCopilot(t *testing.T) {
 	t.Parallel()
 
-	got := specs.Copilot().BootstrapArgs("any", "any", nil, specs.AccessModeFull)
+	got := specs.NewCatalog().Copilot().BootstrapArgs("any", "any", nil, specs.AccessModeFull)
 	if got != nil {
 		t.Errorf("Copilot().BootstrapArgs() = %v; want nil (no-op)", got)
 	}
@@ -77,10 +77,10 @@ func TestSpec_ContextWindow_Catalog(t *testing.T) {
 		wantClass specs.WindowClass
 		wantPos   bool // MaxTokens deve ser positivo
 	}{
-		{"claude", specs.Claude(), specs.WindowStandard, true},
-		{"codex", specs.Codex(), specs.WindowStandard, true},
-		{"copilot", specs.Copilot(), specs.WindowStandard, true},
-		{"gemini", specs.Gemini(), specs.WindowLarge, true},
+		{"claude", specs.NewCatalog().Claude(), specs.WindowStandard, true},
+		{"codex", specs.NewCatalog().Codex(), specs.WindowStandard, true},
+		{"copilot", specs.NewCatalog().Copilot(), specs.WindowStandard, true},
+		{"gemini", specs.NewCatalog().Gemini(), specs.WindowLarge, true},
 	}
 
 	for _, tc := range tests {
@@ -105,7 +105,7 @@ func TestSpec_ContextWindow_Catalog(t *testing.T) {
 func TestSpec_Gemini_IsWindowLarge(t *testing.T) {
 	t.Parallel()
 
-	spec := specs.Gemini()
+	spec := specs.NewCatalog().Gemini()
 	cw := spec.ContextWindow()
 
 	if cw.Class() != specs.WindowLarge {
@@ -125,9 +125,9 @@ func TestSpec_ClaudeCodexCopilot_IsWindowStandard(t *testing.T) {
 		name string
 		spec specs.Spec
 	}{
-		{"claude", specs.Claude()},
-		{"codex", specs.Codex()},
-		{"copilot", specs.Copilot()},
+		{"claude", specs.NewCatalog().Claude()},
+		{"codex", specs.NewCatalog().Codex()},
+		{"copilot", specs.NewCatalog().Copilot()},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -148,10 +148,10 @@ func TestSpec_DriverID_Catalog(t *testing.T) {
 		spec specs.Spec
 		want string
 	}{
-		{"claude", specs.Claude(), "claude"},
-		{"codex", specs.Codex(), "codex"},
-		{"copilot", specs.Copilot(), "copilot"},
-		{"gemini", specs.Gemini(), "gemini"},
+		{"claude", specs.NewCatalog().Claude(), "claude"},
+		{"codex", specs.NewCatalog().Codex(), "codex"},
+		{"copilot", specs.NewCatalog().Copilot(), "copilot"},
+		{"gemini", specs.NewCatalog().Gemini(), "gemini"},
 	}
 
 	for _, tc := range tests {

@@ -11,7 +11,7 @@ import (
 
 // cenário 1: payload vazio → zero-value silencioso
 func TestExtractGeminiMetrics_EmptyPayload(t *testing.T) {
-	m, err := events.ExtractGeminiMetrics(json.RawMessage{})
+	m, err := events.NewCatalog().ExtractGeminiMetrics(json.RawMessage{})
 	if err != nil {
 		t.Fatalf("esperado err=nil para payload vazio; got: %v", err)
 	}
@@ -23,7 +23,7 @@ func TestExtractGeminiMetrics_EmptyPayload(t *testing.T) {
 // cenário 2: payload parcial (apenas cache_read_tokens)
 func TestExtractGeminiMetrics_PartialPayload(t *testing.T) {
 	raw := json.RawMessage(`{"usage":{"cache_read_tokens":50}}`)
-	m, err := events.ExtractGeminiMetrics(raw)
+	m, err := events.NewCatalog().ExtractGeminiMetrics(raw)
 	if err != nil {
 		t.Fatalf("esperado err=nil para payload parcial; got: %v", err)
 	}
@@ -44,7 +44,7 @@ func TestExtractGeminiMetrics_PartialPayload(t *testing.T) {
 // cenário 3: payload completo com todos os campos
 func TestExtractGeminiMetrics_FullPayload(t *testing.T) {
 	raw := json.RawMessage(`{"usage":{"cache_read_tokens":100,"effective_context_tokens":200,"prompt_tokens_billed":300,"thoughts_tokens":40}}`)
-	m, err := events.ExtractGeminiMetrics(raw)
+	m, err := events.NewCatalog().ExtractGeminiMetrics(raw)
 	if err != nil {
 		t.Fatalf("esperado err=nil para payload completo; got: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestExtractGeminiMetrics_FullPayload(t *testing.T) {
 // cenário 4: payload com chaves inesperadas — deve ser ignorado silenciosamente
 func TestExtractGeminiMetrics_UnexpectedKeys(t *testing.T) {
 	raw := json.RawMessage(`{"usage":{"cache_read_tokens":77,"unknown_future_field":999},"extra":"data"}`)
-	m, err := events.ExtractGeminiMetrics(raw)
+	m, err := events.NewCatalog().ExtractGeminiMetrics(raw)
 	if err != nil {
 		t.Fatalf("esperado err=nil para payload com chaves inesperadas; got: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestExtractGeminiMetrics_UnexpectedKeys(t *testing.T) {
 // cenário 5: JSON inválido → erro retornado
 func TestExtractGeminiMetrics_InvalidJSON(t *testing.T) {
 	raw := json.RawMessage(`{invalid json`)
-	_, err := events.ExtractGeminiMetrics(raw)
+	_, err := events.NewCatalog().ExtractGeminiMetrics(raw)
 	if err == nil {
 		t.Fatal("esperado err != nil para JSON inválido")
 	}
@@ -91,7 +91,7 @@ func TestExtractGeminiMetrics_InvalidJSON(t *testing.T) {
 func TestExtractGeminiMetricsForDriver_NonGeminiDriver(t *testing.T) {
 	raw := json.RawMessage(`{"usage":{"cache_read_tokens":100,"effective_context_tokens":200}}`)
 	for _, driver := range []string{"claude", "codex", "copilot", ""} {
-		m := events.ExtractGeminiMetricsForDriver(driver, raw)
+		m := events.NewCatalog().ExtractGeminiMetricsForDriver(driver, raw)
 		if m != (events.GeminiMetrics{}) {
 			t.Errorf("driver=%q: esperado GeminiMetrics{} zero-value; got: %+v", driver, m)
 		}
@@ -101,7 +101,7 @@ func TestExtractGeminiMetricsForDriver_NonGeminiDriver(t *testing.T) {
 // TestExtractGeminiMetricsForDriver — driver gemini extrai corretamente
 func TestExtractGeminiMetricsForDriver_GeminiDriver(t *testing.T) {
 	raw := json.RawMessage(`{"usage":{"cache_read_tokens":42,"prompt_tokens_billed":10}}`)
-	m := events.ExtractGeminiMetricsForDriver("gemini", raw)
+	m := events.NewCatalog().ExtractGeminiMetricsForDriver("gemini", raw)
 	if m.CacheReadTokens != 42 {
 		t.Errorf("CacheReadTokens: esperado 42, got %d", m.CacheReadTokens)
 	}

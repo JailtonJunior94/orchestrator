@@ -114,7 +114,7 @@ func (d *ToolchainDetector) detectWithFocusPaths(projectDir string) ToolchainRes
 			if err != nil {
 				rel = p
 			}
-			score := scoreManifest(rel, d.FocusPaths)
+			score := NewCatalog().scoreManifest(rel, d.FocusPaths)
 			candidates = append(candidates, candidate{path: p, lang: mt.lang, score: score})
 		}
 	}
@@ -389,7 +389,7 @@ func (d *ToolchainDetector) detectMakefileFallback(projectDir string) (Toolchain
 	if err != nil {
 		return ToolchainEntry{}, false
 	}
-	targets := parseMakefileTargets(string(data))
+	targets := NewCatalog().parseMakefileTargets(string(data))
 	var entry ToolchainEntry
 	if targets["fmt"] {
 		entry.Fmt = "make fmt"
@@ -403,7 +403,7 @@ func (d *ToolchainDetector) detectMakefileFallback(projectDir string) (Toolchain
 	return entry, true
 }
 
-func parseMakefileTargets(content string) map[string]bool {
+func (r1 *Catalog) parseMakefileTargets(content string) map[string]bool {
 	targets := make(map[string]bool)
 	for _, line := range strings.Split(content, "\n") {
 		for _, name := range []string{"fmt", "test", "lint"} {
@@ -421,17 +421,17 @@ func (d *ToolchainDetector) findManifest(projectDir, name string) bool {
 }
 
 func (d *ToolchainDetector) findManifests(projectDir, name string) []string {
-	return findManifestsRecursive(d.fs, projectDir, name, d.maxDepth)
+	return NewCatalog().findManifestsRecursive(d.fs, projectDir, name, d.maxDepth)
 }
 
 // findManifestsRecursive busca arquivos por nome recursivamente ate maxDepth.
-func findManifestsRecursive(fsys fs.FileSystem, baseDir, name string, maxDepth int) []string {
+func (r1 *Catalog) findManifestsRecursive(fsys fs.FileSystem, baseDir, name string, maxDepth int) []string {
 	var results []string
-	findManifestsHelper(fsys, baseDir, name, 0, maxDepth, &results)
+	NewCatalog().findManifestsHelper(fsys, baseDir, name, 0, maxDepth, &results)
 	return results
 }
 
-func findManifestsHelper(fsys fs.FileSystem, dir, name string, depth, maxDepth int, results *[]string) {
+func (r1 *Catalog) findManifestsHelper(fsys fs.FileSystem, dir, name string, depth, maxDepth int, results *[]string) {
 	if depth > maxDepth {
 		return
 	}
@@ -459,7 +459,7 @@ func findManifestsHelper(fsys fs.FileSystem, dir, name string, depth, maxDepth i
 		if ignoreDirs[e.Name()] {
 			continue
 		}
-		findManifestsHelper(fsys, filepath.Join(dir, e.Name()), name, depth+1, maxDepth, results)
+		NewCatalog().findManifestsHelper(fsys, filepath.Join(dir, e.Name()), name, depth+1, maxDepth, results)
 	}
 }
 

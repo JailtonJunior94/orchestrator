@@ -13,16 +13,16 @@ func TestClassifyIterationOutcome(t *testing.T) {
 	errInvoke := errors.New("dial tcp: connection refused")
 
 	tests := []struct {
-		name        string
-		preStatus   string
-		postStatus  string
-		exitCode    int
-		invokeErr   error
-		stdout      string
-		stderr      string
-		wantSkip    bool
-		wantAbort   bool
-		wantReview  bool
+		name         string
+		preStatus    string
+		postStatus   string
+		exitCode     int
+		invokeErr    error
+		stdout       string
+		stderr       string
+		wantSkip     bool
+		wantAbort    bool
+		wantReview   bool
 		noteContains []string
 	}{
 		// ---- invokeErr != nil ----
@@ -62,39 +62,39 @@ func TestClassifyIterationOutcome(t *testing.T) {
 
 		// ---- isAuthError (exitCode != 0) ----
 		{
-			name:        "auth error em stdout: abort",
-			preStatus:   "pending",
-			postStatus:  "pending",
-			exitCode:    1,
-			invokeErr:   nil,
-			stdout:      "Error: not authenticated — please run /login",
-			wantSkip:    false,
-			wantAbort:   true,
-			wantReview:  false,
+			name:         "auth error em stdout: abort",
+			preStatus:    "pending",
+			postStatus:   "pending",
+			exitCode:     1,
+			invokeErr:    nil,
+			stdout:       "Error: not authenticated — please run /login",
+			wantSkip:     false,
+			wantAbort:    true,
+			wantReview:   false,
 			noteContains: []string{"erro de autenticacao"},
 		},
 		{
-			name:        "auth error em stderr: abort",
-			preStatus:   "pending",
-			postStatus:  "pending",
-			exitCode:    1,
-			invokeErr:   nil,
-			stderr:      "unauthorized access",
-			wantSkip:    false,
-			wantAbort:   true,
-			wantReview:  false,
+			name:         "auth error em stderr: abort",
+			preStatus:    "pending",
+			postStatus:   "pending",
+			exitCode:     1,
+			invokeErr:    nil,
+			stderr:       "unauthorized access",
+			wantSkip:     false,
+			wantAbort:    true,
+			wantReview:   false,
 			noteContains: []string{"erro de autenticacao"},
 		},
 		{
-			name:        "auth error com exitCode zero: nao detectado (isAuthError so verifica exitCode!=0)",
-			preStatus:   "pending",
-			postStatus:  "pending",
-			exitCode:    0,
-			invokeErr:   nil,
-			stdout:      "not authenticated",
-			wantSkip:    true,
-			wantAbort:   false,
-			wantReview:  false,
+			name:         "auth error com exitCode zero: nao detectado (isAuthError so verifica exitCode!=0)",
+			preStatus:    "pending",
+			postStatus:   "pending",
+			exitCode:     0,
+			invokeErr:    nil,
+			stdout:       "not authenticated",
+			wantSkip:     true,
+			wantAbort:    false,
+			wantReview:   false,
 			noteContains: []string{"status inalterado"},
 		},
 
@@ -248,7 +248,7 @@ func TestClassifyIterationOutcome(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := classifyIterationOutcome(
+			got := NewCatalog().classifyIterationOutcome(
 				tt.preStatus,
 				tt.postStatus,
 				tt.exitCode,
@@ -325,7 +325,7 @@ func TestClassifyIterationOutcomeNoteFormat(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := classifyIterationOutcome(
+			got := NewCatalog().classifyIterationOutcome(
 				tt.preStatus, tt.postStatus,
 				tt.exitCode, tt.invokeErr,
 				tt.stdout, tt.stderr,

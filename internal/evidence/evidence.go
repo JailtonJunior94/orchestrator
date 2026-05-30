@@ -28,17 +28,17 @@ type Result struct {
 
 // Validate valida um relatorio Markdown conforme o tipo.
 // rfIDs e opcional — lista de RF-nn/REQ-nn para rastreabilidade (usado em bugfix).
-func Validate(content []byte, kind ReportKind, rfIDs []string) Result {
+func (r1 *Validator) Validate(content []byte, kind ReportKind, rfIDs []string) Result {
 	text := string(content)
 	var findings []Finding
 
 	switch kind {
 	case KindTask:
-		findings = validateTask(text)
+		findings = NewValidator().validateTask(text)
 	case KindBugfix:
-		findings = validateBugfix(text, rfIDs)
+		findings = NewValidator().validateBugfix(text, rfIDs)
 	case KindRefactor:
-		findings = validateRefactor(text)
+		findings = NewValidator().validateRefactor(text)
 	}
 
 	return Result{
@@ -48,7 +48,7 @@ func Validate(content []byte, kind ReportKind, rfIDs []string) Result {
 	}
 }
 
-func hasHeading(text, heading string) bool {
+func (r1 *Validator) hasHeading(text, heading string) bool {
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
 		trimmed := strings.TrimLeft(line, "#")
@@ -64,12 +64,12 @@ func hasHeading(text, heading string) bool {
 	return false
 }
 
-func matchesRegex(text, pattern string) bool {
+func (r1 *Validator) matchesRegex(text, pattern string) bool {
 	re := regexp.MustCompile(`(?i)` + pattern)
 	return re.MatchString(text)
 }
 
-func validateTask(text string) []Finding {
+func (r1 *Validator) validateTask(text string) []Finding {
 	var findings []Finding
 
 	requiredHeadings := []struct {
@@ -85,7 +85,7 @@ func validateTask(text string) []Finding {
 	}
 
 	for _, h := range requiredHeadings {
-		if !hasHeading(text, h.pattern) {
+		if !NewValidator().hasHeading(text, h.pattern) {
 			findings = append(findings, Finding{Label: h.label})
 		}
 	}
@@ -103,14 +103,14 @@ func validateTask(text string) []Finding {
 	}
 
 	for _, p := range requiredPatterns {
-		if !matchesRegex(text, p.pattern) {
+		if !NewValidator().matchesRegex(text, p.pattern) {
 			findings = append(findings, Finding{Label: p.label})
 		}
 	}
 
 	// rastreabilidade condicional: se PRD mencionado, RF-nn ou REQ-nn obrigatorio
-	if matchesRegex(text, `PRD`) {
-		if !matchesRegex(text, `RF-\d+|REQ-\d+`) {
+	if NewValidator().matchesRegex(text, `PRD`) {
+		if !NewValidator().matchesRegex(text, `RF-\d+|REQ-\d+`) {
 			findings = append(findings, Finding{Label: "rastreabilidade RF-nn ou REQ-nn"})
 		}
 	}
@@ -118,7 +118,7 @@ func validateTask(text string) []Finding {
 	return findings
 }
 
-func validateBugfix(text string, rfIDs []string) []Finding {
+func (r1 *Validator) validateBugfix(text string, rfIDs []string) []Finding {
 	var findings []Finding
 
 	requiredHeadings := []struct {
@@ -131,7 +131,7 @@ func validateBugfix(text string, rfIDs []string) []Finding {
 	}
 
 	for _, h := range requiredHeadings {
-		if !hasHeading(text, h.pattern) {
+		if !NewValidator().hasHeading(text, h.pattern) {
 			findings = append(findings, Finding{Label: h.label})
 		}
 	}
@@ -149,7 +149,7 @@ func validateBugfix(text string, rfIDs []string) []Finding {
 	}
 
 	for _, p := range requiredPatterns {
-		if !matchesRegex(text, p.pattern) {
+		if !NewValidator().matchesRegex(text, p.pattern) {
 			findings = append(findings, Finding{Label: p.label})
 		}
 	}
@@ -164,7 +164,7 @@ func validateBugfix(text string, rfIDs []string) []Finding {
 	return findings
 }
 
-func validateRefactor(text string) []Finding {
+func (r1 *Validator) validateRefactor(text string) []Finding {
 	var findings []Finding
 
 	requiredHeadings := []struct {
@@ -180,7 +180,7 @@ func validateRefactor(text string) []Finding {
 	}
 
 	for _, h := range requiredHeadings {
-		if !hasHeading(text, h.pattern) {
+		if !NewValidator().hasHeading(text, h.pattern) {
 			findings = append(findings, Finding{Label: h.label})
 		}
 	}
@@ -196,14 +196,14 @@ func validateRefactor(text string) []Finding {
 	}
 
 	for _, p := range requiredPatterns {
-		if !matchesRegex(text, p.pattern) {
+		if !NewValidator().matchesRegex(text, p.pattern) {
 			findings = append(findings, Finding{Label: p.label})
 		}
 	}
 
 	// condicional: Modo execution exige Veredito do Revisor
-	if matchesRegex(text, `Modo:\s*execution`) {
-		if !matchesRegex(text, `Veredito do Revisor:\s*(APPROVED|APPROVED_WITH_REMARKS|REJECTED|BLOCKED|n/a)`) {
+	if NewValidator().matchesRegex(text, `Modo:\s*execution`) {
+		if !NewValidator().matchesRegex(text, `Veredito do Revisor:\s*(APPROVED|APPROVED_WITH_REMARKS|REJECTED|BLOCKED|n/a)`) {
 			findings = append(findings, Finding{Label: "Veredito do Revisor obrigatorio em Modo execution"})
 		}
 	}

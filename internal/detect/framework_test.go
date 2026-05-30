@@ -3,106 +3,123 @@ package detect
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 )
 
-func TestFrameworkDetect_Go(t *testing.T) {
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/go.mod"] = []byte(`module example
+type FrameworkSuite struct {
+	suite.Suite
+}
+
+func TestFrameworkSuite(t *testing.T) {
+	suite.Run(t, new(FrameworkSuite))
+}
+
+func (s *FrameworkSuite) TestFrameworkDetect() {
+	scenarios := []struct {
+		name   string
+		files  map[string][]byte
+		dirs   map[string]bool
+		expect func(frameworks []string)
+	}{
+		{
+			name: "deve detectar frameworks go",
+			files: map[string][]byte{"/project/go.mod": []byte(`module example
 
 require (
 	github.com/gin-gonic/gin v1.10.0
 	google.golang.org/grpc v1.65.0
-)`)
-
-	det := NewFrameworkDetector(ffs)
-	frameworks := det.Detect("/project")
-
-	if len(frameworks) != 2 {
-		t.Fatalf("expected 2 frameworks, got %d: %v", len(frameworks), frameworks)
-	}
-	if frameworks[0] != "Gin" {
-		t.Errorf("expected Gin, got %s", frameworks[0])
-	}
-	if frameworks[1] != "gRPC" {
-		t.Errorf("expected gRPC, got %s", frameworks[1])
-	}
-}
-
-func TestFrameworkDetect_Node(t *testing.T) {
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/package.json"] = []byte(`{
+)`)},
+			expect: func(frameworks []string) {
+				s.Len(frameworks, 2)
+				s.Equal("Gin", frameworks[0])
+				s.Equal("gRPC", frameworks[1])
+			},
+		},
+		{
+			name: "deve detectar frameworks node",
+			files: map[string][]byte{"/project/package.json": []byte(`{
 		"dependencies": {
 			"express": "^4.0.0",
 			"next": "^14.0.0"
 		}
-	}`)
+	}`)},
+			expect: func(frameworks []string) {
+				s.Len(frameworks, 2)
+			},
+		},
+		{
+			name: "deve detectar frameworks python",
+			files: map[string][]byte{"/project/pyproject.toml": []byte(`[project]
+dependencies = ["fastapi>=0.111"]`)},
+			expect: func(frameworks []string) {
+				s.Equal([]string{"FastAPI"}, frameworks)
+			},
+		},
+		{
+			name: "deve retornar vazio sem manifestos",
+			dirs: map[string]bool{"/project": true},
+			expect: func(frameworks []string) {
+				s.Empty(frameworks)
+			},
+		},
+		{
+			name: "deve deduplicar frameworks",
+			files: map[string][]byte{
+				"/project/go.mod":              []byte("require github.com/gin-gonic/gin v1.10.0"),
+				"/project/services/api/go.mod": []byte("require github.com/gin-gonic/gin v1.10.0"),
+			},
+			expect: func(frameworks []string) {
+				s.Len(frameworks, 1)
+			},
+		},
+	}
 
-	det := NewFrameworkDetector(ffs)
-	frameworks := det.Detect("/project")
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			ffs := fs.NewFakeFileSystem()
+			for path, content := range scenario.files {
+				ffs.Files[path] = content
+			}
+			for path, exists := range scenario.dirs {
+				ffs.Dirs[path] = exists
+			}
 
-	if len(frameworks) != 2 {
-		t.Fatalf("expected 2 frameworks, got %d: %v", len(frameworks), frameworks)
+			det := NewFrameworkDetector(ffs)
+			frameworks := det.Detect("/project")
+
+			scenario.expect(frameworks)
+		})
 	}
 }
 
-func TestFrameworkDetect_Python(t *testing.T) {
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/pyproject.toml"] = []byte(`[project]
-dependencies = ["fastapi>=0.111"]`)
+func (s *FrameworkSuite) TestJoinFrameworks() {
+	scenarios := []struct {
+		name       string
+		frameworks []string
+		expected   string
+	}{
+		{name: "deve descrever lista vazia", frameworks: nil, expected: "nenhum framework dominante identificado"},
+		{name: "deve juntar dois frameworks", frameworks: []string{"Gin", "gRPC"}, expected: "Gin, gRPC"},
+	}
 
-	det := NewFrameworkDetector(ffs)
-	frameworks := det.Detect("/project")
-
-	if len(frameworks) != 1 || frameworks[0] != "FastAPI" {
-		t.Errorf("expected [FastAPI], got %v", frameworks)
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			got := NewCatalog().JoinFrameworks(scenario.frameworks)
+			s.Equal(scenario.expected, got)
+		})
 	}
 }
 
-func TestFrameworkDetect_Empty(t *testing.T) {
-	ffs := fs.NewFakeFileSystem()
-	ffs.Dirs["/project"] = true
-
-	det := NewFrameworkDetector(ffs)
-	frameworks := det.Detect("/project")
-
-	if len(frameworks) != 0 {
-		t.Errorf("expected 0 frameworks, got %v", frameworks)
-	}
-}
-
-func TestFrameworkDetect_Deduplication(t *testing.T) {
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/go.mod"] = []byte("require github.com/gin-gonic/gin v1.10.0")
-	ffs.Files["/project/services/api/go.mod"] = []byte("require github.com/gin-gonic/gin v1.10.0")
-
-	det := NewFrameworkDetector(ffs)
-	frameworks := det.Detect("/project")
-
-	if len(frameworks) != 1 {
-		t.Errorf("expected 1 framework (deduplicated), got %d: %v", len(frameworks), frameworks)
-	}
-}
-
-func TestJoinFrameworks(t *testing.T) {
-	if got := JoinFrameworks(nil); got != "nenhum framework dominante identificado" {
-		t.Errorf("empty: got %q", got)
-	}
-	if got := JoinFrameworks([]string{"Gin", "gRPC"}); got != "Gin, gRPC" {
-		t.Errorf("two: got %q", got)
-	}
-}
-
-func TestDetectPrimaryStack(t *testing.T) {
+func (s *FrameworkSuite) TestDetectPrimaryStack() {
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/go.mod"] = []byte("module example")
 	ffs.Files["/project/package.json"] = []byte("{}")
 
-	stacks := DetectPrimaryStack(ffs, "/project")
-	if len(stacks) != 2 {
-		t.Fatalf("expected 2 stacks, got %d: %v", len(stacks), stacks)
-	}
-	if stacks[0] != "Go" || stacks[1] != "Node.js" {
-		t.Errorf("unexpected stacks: %v", stacks)
-	}
+	stacks := NewCatalog().DetectPrimaryStack(ffs, "/project")
+
+	s.Len(stacks, 2)
+	s.Equal("Go", stacks[0])
+	s.Equal("Node.js", stacks[1])
 }

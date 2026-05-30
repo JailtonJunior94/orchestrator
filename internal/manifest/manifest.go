@@ -12,14 +12,14 @@ const ManifestFile = ".ai_spec_harness.json"
 
 // Manifest persiste metadados da instalacao para upgrades futuros.
 type Manifest struct {
-	Version      string            `json:"version"`
-	CreatedAt    time.Time         `json:"created_at"`
-	UpdatedAt    time.Time         `json:"updated_at"`
-	SourceDir    string            `json:"source_dir"`
-	LinkMode     skills.LinkMode   `json:"link_mode"`
-	Tools        []skills.Tool     `json:"tools"`
-	Langs        []skills.Lang     `json:"langs"`
-	Skills       []string          `json:"skills"`
+	Version       string            `json:"version"`
+	CreatedAt     time.Time         `json:"created_at"`
+	UpdatedAt     time.Time         `json:"updated_at"`
+	SourceDir     string            `json:"source_dir"`
+	LinkMode      skills.LinkMode   `json:"link_mode"`
+	Tools         []skills.Tool     `json:"tools"`
+	Langs         []skills.Lang     `json:"langs"`
+	Skills        []string          `json:"skills"`
 	Checksums     map[string]string `json:"checksums"`
 	CodexProfile  string            `json:"codex_profile,omitempty"`
 	SkillVersions map[string]string `json:"skill_versions,omitempty"`

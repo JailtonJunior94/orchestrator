@@ -4,10 +4,20 @@ import (
 	"math"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/suite"
 )
 
-func TestClassify(t *testing.T) {
-	cases := []struct {
+type ComplexitySuite struct {
+	suite.Suite
+}
+
+func TestComplexitySuite(t *testing.T) {
+	suite.Run(t, new(ComplexitySuite))
+}
+
+func (s *ComplexitySuite) TestClassify() {
+	scenarios := []struct {
 		description string
 		want        Complexity
 	}{
@@ -38,98 +48,81 @@ func TestClassify(t *testing.T) {
 		{"nova api rest para o endpoint de busca", ComplexityComplex},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.description, func(t *testing.T) {
-			got := Classify(tc.description)
-			if got != tc.want {
-				t.Errorf("Classify(%q) = %q, want %q", tc.description, got, tc.want)
-			}
+	for _, scenario := range scenarios {
+		s.Run(scenario.description, func() {
+			got := NewCatalog().Classify(scenario.description)
+			s.Equal(scenario.want, got, "NewCatalog().Classify(%q)", scenario.description)
 		})
 	}
 }
 
-func TestClassify_EmptyDescription(t *testing.T) {
+func (s *ComplexitySuite) TestClassifyEmptyDescription() {
 	// Descricao vazia deve retornar standard (conservador)
-	got := Classify("")
-	if got != ComplexityStandard {
-		t.Errorf("Classify(\"\") = %q, want %q", got, ComplexityStandard)
-	}
+	got := NewCatalog().Classify("")
+	s.Equal(ComplexityStandard, got, "NewCatalog().Classify(\"\")")
 }
 
-func TestClassify_ComplexOverridesTrivial(t *testing.T) {
+func (s *ComplexitySuite) TestClassifyComplexOverridesTrivial() {
 	// Keywords de complexidade tem prioridade sobre triviais
-	got := Classify("refatorar formatacao da interface publica")
-	if got != ComplexityComplex {
-		t.Errorf("keywords complexas devem ter prioridade: got %q, want %q", got, ComplexityComplex)
-	}
+	got := NewCatalog().Classify("refatorar formatacao da interface publica")
+	s.Equal(ComplexityComplex, got, "keywords complexas devem ter prioridade")
 }
 
-func TestParseComplexity(t *testing.T) {
-	cases := []struct {
+func (s *ComplexitySuite) TestParseComplexity() {
+	scenarios := []struct {
+		name   string
 		input  string
 		want   Complexity
 		wantOK bool
 	}{
-		{"trivial", ComplexityTrivial, true},
-		{"standard", ComplexityStandard, true},
-		{"complex", ComplexityComplex, true},
-		{"TRIVIAL", ComplexityTrivial, true},
-		{"STANDARD", ComplexityStandard, true},
-		{"Complex", ComplexityComplex, true},
-		{"  trivial  ", ComplexityTrivial, true},
-		{"invalid", "", false},
-		{"", "", false},
-		{"medium", "", false},
-		{"hard", "", false},
+		{name: "deve aceitar trivial", input: "trivial", want: ComplexityTrivial, wantOK: true},
+		{name: "deve aceitar standard", input: "standard", want: ComplexityStandard, wantOK: true},
+		{name: "deve aceitar complex", input: "complex", want: ComplexityComplex, wantOK: true},
+		{name: "deve aceitar trivial em maiusculas", input: "TRIVIAL", want: ComplexityTrivial, wantOK: true},
+		{name: "deve aceitar standard em maiusculas", input: "STANDARD", want: ComplexityStandard, wantOK: true},
+		{name: "deve aceitar complex capitalizado", input: "Complex", want: ComplexityComplex, wantOK: true},
+		{name: "deve ignorar espacos", input: "  trivial  ", want: ComplexityTrivial, wantOK: true},
+		{name: "deve rejeitar invalid", input: "invalid", want: "", wantOK: false},
+		{name: "deve rejeitar vazio", input: "", want: "", wantOK: false},
+		{name: "deve rejeitar medium", input: "medium", want: "", wantOK: false},
+		{name: "deve rejeitar hard", input: "hard", want: "", wantOK: false},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.input, func(t *testing.T) {
-			got, ok := ParseComplexity(tc.input)
-			if ok != tc.wantOK {
-				t.Errorf("ParseComplexity(%q) ok=%v, want %v", tc.input, ok, tc.wantOK)
-			}
-			if got != tc.want {
-				t.Errorf("ParseComplexity(%q) = %q, want %q", tc.input, got, tc.want)
-			}
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			got, ok := NewCatalog().ParseComplexity(scenario.input)
+			s.Equal(scenario.wantOK, ok, "NewCatalog().ParseComplexity(%q) ok", scenario.input)
+			s.Equal(scenario.want, got, "NewCatalog().ParseComplexity(%q)", scenario.input)
 		})
 	}
 }
 
-func TestReferencesForComplexity_Ordering(t *testing.T) {
-	trivialRefs := ReferencesForComplexity(ComplexityTrivial)
-	standardRefs := ReferencesForComplexity(ComplexityStandard)
-	complexRefs := ReferencesForComplexity(ComplexityComplex)
+func (s *ComplexitySuite) TestReferencesForComplexityOrdering() {
+	trivialRefs := NewCatalog().ReferencesForComplexity(ComplexityTrivial)
+	standardRefs := NewCatalog().ReferencesForComplexity(ComplexityStandard)
+	complexRefs := NewCatalog().ReferencesForComplexity(ComplexityComplex)
 
 	// trivial nao deve carregar nenhuma referencia
-	if len(trivialRefs) != 0 {
-		t.Errorf("trivial deve retornar 0 referencias, got %d: %v", len(trivialRefs), trivialRefs)
-	}
+	s.Len(trivialRefs, 0, "trivial deve retornar 0 referencias")
 
 	// trivial carrega menos que standard
-	if len(trivialRefs) >= len(standardRefs) {
-		t.Errorf("trivial (%d refs) deve ter menos referencias que standard (%d refs)", len(trivialRefs), len(standardRefs))
-	}
+	s.True(len(trivialRefs) < len(standardRefs), "trivial (%d refs) deve ter menos referencias que standard (%d refs)", len(trivialRefs), len(standardRefs))
 
 	// standard carrega menos que complex
-	if len(standardRefs) >= len(complexRefs) {
-		t.Errorf("standard (%d refs) deve ter menos referencias que complex (%d refs)", len(standardRefs), len(complexRefs))
-	}
+	s.True(len(standardRefs) < len(complexRefs), "standard (%d refs) deve ter menos referencias que complex (%d refs)", len(standardRefs), len(complexRefs))
 }
 
-func TestReferencesForComplexity_StandardSubsetOfComplex(t *testing.T) {
-	standardRefs := ReferencesForComplexity(ComplexityStandard)
-	complexRefs := ReferencesForComplexity(ComplexityComplex)
+func (s *ComplexitySuite) TestReferencesForComplexityStandardSubsetOfComplex() {
+	standardRefs := NewCatalog().ReferencesForComplexity(ComplexityStandard)
+	complexRefs := NewCatalog().ReferencesForComplexity(ComplexityComplex)
 
 	complexSet := make(map[string]bool, len(complexRefs))
-	for _, r := range complexRefs {
-		complexSet[r] = true
+	for _, ref := range complexRefs {
+		complexSet[ref] = true
 	}
 
 	for _, ref := range standardRefs {
-		if !complexSet[ref] {
-			t.Errorf("referencia standard %q nao esta presente em complex — standard deve ser subconjunto de complex", ref)
-		}
+		s.True(complexSet[ref], "referencia standard %q nao esta presente em complex — standard deve ser subconjunto de complex", ref)
 	}
 }
 
@@ -138,17 +131,17 @@ func estimateTokens(text string) int {
 	return int(math.Round(float64(len(text)) / 3.5))
 }
 
-// TestReferencesForComplexity_TokenEconomy verifica que o nivel trivial carrega
+// TestReferencesForComplexityTokenEconomy verifica que o nivel trivial carrega
 // menos tokens do que standard, e standard menos que complex.
 // Usa heuristica chars/3.5 (equivalente ao CharEstimator de internal/metrics).
-func TestReferencesForComplexity_TokenEconomy(t *testing.T) {
+func (s *ComplexitySuite) TestReferencesForComplexityTokenEconomy() {
 	// Simular conteudo de AGENTS.md (~10.000 chars) + referencias (~2.000 chars cada)
 	agentsMDChars := 10000
 	refChars := 2000
 
-	trivialRefs := ReferencesForComplexity(ComplexityTrivial)
-	standardRefs := ReferencesForComplexity(ComplexityStandard)
-	complexRefs := ReferencesForComplexity(ComplexityComplex)
+	trivialRefs := NewCatalog().ReferencesForComplexity(ComplexityTrivial)
+	standardRefs := NewCatalog().ReferencesForComplexity(ComplexityStandard)
+	complexRefs := NewCatalog().ReferencesForComplexity(ComplexityComplex)
 
 	trivialTotal := agentsMDChars + len(trivialRefs)*refChars
 	standardTotal := agentsMDChars + len(standardRefs)*refChars
@@ -159,32 +152,24 @@ func TestReferencesForComplexity_TokenEconomy(t *testing.T) {
 	complexTokens := estimateTokens(strings.Repeat("a", complexTotal))
 
 	// trivial deve consumir menos tokens que standard
-	if trivialTokens >= standardTokens {
-		t.Errorf("trivial (%d tokens) deve consumir menos tokens que standard (%d tokens)", trivialTokens, standardTokens)
-	}
+	s.True(trivialTokens < standardTokens, "trivial (%d tokens) deve consumir menos tokens que standard (%d tokens)", trivialTokens, standardTokens)
 
 	// standard deve consumir menos tokens que complex
-	if standardTokens >= complexTokens {
-		t.Errorf("standard (%d tokens) deve consumir menos tokens que complex (%d tokens)", standardTokens, complexTokens)
-	}
+	s.True(standardTokens < complexTokens, "standard (%d tokens) deve consumir menos tokens que complex (%d tokens)", standardTokens, complexTokens)
 
 	// Economia de trivial vs complex deve ser >= 15%
 	economy := float64(complexTokens-trivialTokens) / float64(complexTokens) * 100
-	if economy < 15 {
-		t.Errorf("economia de trivial vs complex deve ser >= 15%%, got %.1f%%", economy)
-	}
+	s.True(economy >= 15, "economia de trivial vs complex deve ser >= 15%%, got %.1f%%", economy)
 
-	t.Logf("economia de tokens: trivial=%d standard=%d complex=%d (economia trivial/complex=%.1f%%)",
+	s.T().Logf("economia de tokens: trivial=%d standard=%d complex=%d (economia trivial/complex=%.1f%%)",
 		trivialTokens, standardTokens, complexTokens, economy)
 }
 
-// TestReferencesForComplexity_UnknownFallsToComplex verifica que o comportamento default
+// TestReferencesForComplexityUnknownFallsToComplex verifica que o comportamento default
 // (switch default) equivale a ComplexityComplex, garantindo carregamento completo seguro.
-func TestReferencesForComplexity_UnknownFallsToComplex(t *testing.T) {
-	unknownRefs := ReferencesForComplexity(Complexity("unknown"))
-	complexRefs := ReferencesForComplexity(ComplexityComplex)
+func (s *ComplexitySuite) TestReferencesForComplexityUnknownFallsToComplex() {
+	unknownRefs := NewCatalog().ReferencesForComplexity(Complexity("unknown"))
+	complexRefs := NewCatalog().ReferencesForComplexity(ComplexityComplex)
 
-	if len(unknownRefs) != len(complexRefs) {
-		t.Errorf("valor desconhecido deve fazer fallback para complex: got %d refs, want %d refs", len(unknownRefs), len(complexRefs))
-	}
+	s.Len(unknownRefs, len(complexRefs), "valor desconhecido deve fazer fallback para complex")
 }

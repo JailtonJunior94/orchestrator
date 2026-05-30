@@ -36,6 +36,8 @@ type TaskExecutor interface {
 // TaskExecutorFunc adapta uma funcao a TaskExecutor.
 type TaskExecutorFunc func(ctx context.Context, task TaskEntry, taskFile, prdFolder, workDir string) error
 
+var _ TaskExecutor = TaskExecutorFunc(nil)
+
 // Execute invoca a funcao adaptada.
 func (f TaskExecutorFunc) Execute(ctx context.Context, task TaskEntry, taskFile, prdFolder, workDir string) error {
 	return f(ctx, task, taskFile, prdFolder, workDir)
@@ -87,7 +89,7 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 		}
 	}
 
-	workDir, err := resolveWorkDir(absFolder, s.fsys)
+	workDir, err := NewCatalog().resolveWorkDir(absFolder, s.fsys)
 	if err != nil {
 		return nil, fmt.Errorf("taskloop: erro ao resolver diretorio de trabalho: %w", err)
 	}
@@ -125,7 +127,7 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 				return s.finalizeReport(report, opts, "erro na selecao de task"), err
 			}
 
-			taskFile, err := ResolveTaskFile(absFolder, *next, s.fsys)
+			taskFile, err := NewCatalog().ResolveTaskFile(absFolder, *next, s.fsys)
 			if err != nil {
 				return s.finalizeReport(report, opts, "erro ao resolver arquivo da task"), err
 			}
@@ -138,7 +140,7 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 
 			accReport, accErr := deps.Gate.Verify(ctx, *next, taskFile)
 			if accErr != nil {
-				emitTelemetry("acceptance_failed", next.ID)
+				NewCatalog().emitTelemetry("acceptance_failed", next.ID)
 				return s.finalizeReport(report, opts, "criterios de aceite nao atendidos"),
 					fmt.Errorf("taskloop: aceite da task %s: %w", next.ID, accErr)
 			}
@@ -147,13 +149,12 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 				return s.finalizeReport(report, opts, "erro ao registrar evidencia"),
 					fmt.Errorf("taskloop: evidencia da task %s: %w", next.ID, err)
 			}
-
-			emitTelemetry("task_completed", next.ID)
+			NewCatalog().emitTelemetry("task_completed", next.ID)
 			report.TasksCompleted = append(report.TasksCompleted, next.ID)
 		} else {
 			// Caminho concorrente: selecionar até batchSize tasks e executar até concurrent em paralelo.
 			// Dependências são respeitadas pelo seletor (apenas tasks com deps completas são elegíveis).
-			batch, selErr := selectBatch(ctx, deps.Selector, absFolder, batchSize)
+			batch, selErr := NewCatalog().selectBatch(ctx, deps.Selector, absFolder, batchSize)
 			if selErr != nil && !errors.Is(selErr, ErrNoEligibleTask) {
 				return s.finalizeReport(report, opts, "erro na selecao de batch"), selErr
 			}
@@ -172,8 +173,8 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 		}
 	}
 
-	diff := captureGitDiff(ctx, workDir)
-	reviewInput := buildFinalReviewInput(absFolder, lastTaskFile, report.TasksCompleted, diff)
+	diff := NewCatalog().captureGitDiff(ctx, workDir)
+	reviewInput := NewCatalog().buildFinalReviewInput(absFolder, lastTaskFile, report.TasksCompleted, diff)
 	rev, err := deps.FinalReviewer.ReviewConsolidated(ctx, reviewInput)
 	if err != nil {
 		return s.finalizeReport(report, opts, "erro na revisao final"),
@@ -183,7 +184,7 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 
 	switch rev.Verdict {
 	case VerdictApproved:
-		emitTelemetry("final_review_verdict", string(rev.Verdict))
+		NewCatalog().emitTelemetry("final_review_verdict", string(rev.Verdict))
 
 	case VerdictApprovedWithRemarks:
 		plan, err := s.resolveActionPlan(ctx, absFolder, lastTaskFile, opts, deps, rev.Findings)
@@ -192,15 +193,15 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 				err
 		}
 		report.ActionPlan = &plan
-		emitTelemetry("final_review_verdict", string(rev.Verdict))
+		NewCatalog().emitTelemetry("final_review_verdict", string(rev.Verdict))
 		if stop, err := s.applyImplementDecisions(ctx, absFolder, lastTaskFile, plan, reviewInput, opts, deps, report); stop {
-			return s.finalizeReport(report, opts, stopReasonForImplement(err, report)), err
+			return s.finalizeReport(report, opts, NewCatalog().stopReasonForImplement(err, report)), err
 		}
 
 	case VerdictBlocked:
-		emitTelemetry("final_review_verdict", string(rev.Verdict))
+		NewCatalog().emitTelemetry("final_review_verdict", string(rev.Verdict))
 		return s.finalizeReport(report, opts, "revisao final bloqueada"),
-			fmt.Errorf("%w: %s", ErrReviewBlocked, blockedReviewReason(rev.RawOutput))
+			fmt.Errorf("%w: %s", ErrReviewBlocked, NewCatalog().blockedReviewReason(rev.RawOutput))
 
 	case VerdictRejected:
 		if deps.BugfixInvoker == nil || deps.DiffCapturer == nil {
@@ -215,13 +216,13 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 			report.FinalReview = bfReport.FinalReview
 		}
 		for _, it := range bfReport.Iterations {
-			emitTelemetry("bugfix_iteration", fmt.Sprintf("%d:%s", it.Sequence, it.ReviewVerdict))
+			NewCatalog().emitTelemetry("bugfix_iteration", fmt.Sprintf("%d:%s", it.Sequence, it.ReviewVerdict))
 		}
 		if errors.Is(bfErr, ErrBugfixExhausted) {
 			if report.FinalReview != nil {
-				emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
+				NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
 			}
-			emitTelemetry("escalated", "bugfix_exhausted")
+			NewCatalog().emitTelemetry("escalated", "bugfix_exhausted")
 			return s.finalizeReport(report, opts, "escalonamento humano apos 3 iteracoes"), bfErr
 		}
 		if bfErr != nil {
@@ -230,7 +231,7 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 		if report.FinalReview != nil {
 			switch report.FinalReview.Verdict {
 			case VerdictApproved:
-				emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
+				NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
 			case VerdictApprovedWithRemarks:
 				plan, err := s.resolveActionPlan(ctx, absFolder, lastTaskFile, opts, deps, report.FinalReview.Findings)
 				if err != nil {
@@ -238,20 +239,20 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 						err
 				}
 				report.ActionPlan = &plan
-				emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
-				latestDiff := buildFinalReviewInput(absFolder, lastTaskFile, report.TasksCompleted, diff)
+				NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
+				latestDiff := NewCatalog().buildFinalReviewInput(absFolder, lastTaskFile, report.TasksCompleted, diff)
 				if dc := deps.DiffCapturer; dc != nil {
 					if d, derr := dc.CaptureDiff(ctx); derr == nil {
-						latestDiff = buildFinalReviewInput(absFolder, lastTaskFile, report.TasksCompleted, d)
+						latestDiff = NewCatalog().buildFinalReviewInput(absFolder, lastTaskFile, report.TasksCompleted, d)
 					}
 				}
 				if stop, err := s.applyImplementDecisions(ctx, absFolder, lastTaskFile, plan, latestDiff, opts, deps, report); stop {
-					return s.finalizeReport(report, opts, stopReasonForImplement(err, report)), err
+					return s.finalizeReport(report, opts, NewCatalog().stopReasonForImplement(err, report)), err
 				}
 			case VerdictBlocked:
-				emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
+				NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
 				return s.finalizeReport(report, opts, "revisao final bloqueada"),
-					fmt.Errorf("%w: %s", ErrReviewBlocked, blockedReviewReason(report.FinalReview.RawOutput))
+					fmt.Errorf("%w: %s", ErrReviewBlocked, NewCatalog().blockedReviewReason(report.FinalReview.RawOutput))
 			}
 		}
 	}
@@ -276,7 +277,7 @@ func (s *Service) applyImplementDecisions(
 	deps RunLoopDeps,
 	report *LoopReport,
 ) (bool, error) {
-	implFindings := findingsForImplement(plan)
+	implFindings := NewCatalog().findingsForImplement(plan)
 	if len(implFindings) == 0 {
 		return false, nil
 	}
@@ -292,7 +293,7 @@ func (s *Service) applyImplementDecisions(
 		if loc == "" {
 			loc = "(sem localizacao)"
 		}
-		emitTelemetry("implement_promoted", loc)
+		NewCatalog().emitTelemetry("implement_promoted", loc)
 	}
 
 	bf := NewBugfixLoop(deps.BugfixInvoker, deps.FinalReviewer, deps.DiffCapturer, opts.MaxBugfixIterations)
@@ -305,23 +306,23 @@ func (s *Service) applyImplementDecisions(
 		report.FinalReview = bfReport.FinalReview
 	}
 	for _, it := range bfReport.Iterations {
-		emitTelemetry("bugfix_iteration", fmt.Sprintf("%d:%s", it.Sequence, it.ReviewVerdict))
+		NewCatalog().emitTelemetry("bugfix_iteration", fmt.Sprintf("%d:%s", it.Sequence, it.ReviewVerdict))
 	}
 	if errors.Is(bfErr, ErrBugfixExhausted) {
 		if report.FinalReview != nil {
-			emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
+			NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
 		}
-		emitTelemetry("escalated", "bugfix_exhausted")
+		NewCatalog().emitTelemetry("escalated", "bugfix_exhausted")
 		return true, bfErr
 	}
 	if bfErr != nil {
 		if report.FinalReview != nil {
-			emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
+			NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
 		}
 		return true, bfErr
 	}
 	if report.FinalReview != nil {
-		emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
+		NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
 	}
 	if report.FinalReview == nil {
 		return false, nil
@@ -343,11 +344,11 @@ func (s *Service) applyImplementDecisions(
 			return true, fmt.Errorf("taskloop: capturar diff apos ressalvas Implement: %w", err)
 		}
 		if capturedDiff != "" {
-			nextDiff = buildFinalReviewInput(prdFolder, taskFile, report.TasksCompleted, capturedDiff)
+			nextDiff = NewCatalog().buildFinalReviewInput(prdFolder, taskFile, report.TasksCompleted, capturedDiff)
 		}
 		return s.applyImplementDecisions(ctx, prdFolder, taskFile, nextPlan, nextDiff, opts, deps, report)
 	case VerdictBlocked:
-		return true, fmt.Errorf("%w: %s", ErrReviewBlocked, blockedReviewReason(report.FinalReview.RawOutput))
+		return true, fmt.Errorf("%w: %s", ErrReviewBlocked, NewCatalog().blockedReviewReason(report.FinalReview.RawOutput))
 	default:
 		return false, nil
 	}
@@ -357,7 +358,7 @@ func (s *Service) applyImplementDecisions(
 // promove-os a SeverityCritical: a opcao do operador de "implementar agora"
 // expressa que o item deve ser tratado pelo BugfixLoop, que so atua sobre
 // Critical. A promocao e local — o report original nao e mutado.
-func findingsForImplement(plan ActionPlan) []Finding {
+func (c *Catalog) findingsForImplement(plan ActionPlan) []Finding {
 	out := make([]Finding, 0, len(plan.Decisions))
 	for _, d := range plan.Decisions {
 		if d.Action == ActionImplement {
@@ -369,7 +370,7 @@ func findingsForImplement(plan ActionPlan) []Finding {
 	return out
 }
 
-func stopReasonForImplement(err error, report *LoopReport) string {
+func (c *Catalog) stopReasonForImplement(err error, report *LoopReport) string {
 	if errors.Is(err, ErrBugfixExhausted) {
 		return "escalonamento humano apos ressalvas Implement"
 	}
@@ -398,16 +399,16 @@ func (s *Service) resolveActionPlan(
 	if taskFile == "" {
 		return ActionPlan{}, fmt.Errorf("taskloop: plano de acao requer arquivo da task final")
 	}
-	if err := WriteActionPlanToTaskFile(s.fsys, taskFile, plan); err != nil {
+	if err := NewCatalog().WriteActionPlanToTaskFile(s.fsys, taskFile, plan); err != nil {
 		return ActionPlan{}, err
 	}
-	if err := AppendFollowUpTasks(s.fsys, filepath.Join(prdFolder, "tasks.md"), plan); err != nil {
+	if err := NewCatalog().AppendFollowUpTasks(s.fsys, filepath.Join(prdFolder, "tasks.md"), plan); err != nil {
 		return ActionPlan{}, err
 	}
 	return plan, nil
 }
 
-func blockedReviewReason(raw string) string {
+func (c *Catalog) blockedReviewReason(raw string) string {
 	for _, line := range strings.Split(raw, "\n") {
 		line = strings.TrimSpace(line)
 		if line != "" {
@@ -417,13 +418,13 @@ func blockedReviewReason(raw string) string {
 	return "review nao retornou motivo detalhado"
 }
 
-// reviewContextSeparator delimita o cabecalho de contexto e o diff bruto no payload
+// _reviewContextSeparator delimita o cabecalho de contexto e o diff bruto no payload
 // entregue ao reviewer consolidado. Usado por buildFinalReviewInput,
 // extractReviewContext e attachReviewContext para preservar/recompor o contexto
 // entre iteracoes do BugfixLoop sem poluir o prompt do BugfixInvoker.
-const reviewContextSeparator = "\nDiff consolidado:\n"
+const _reviewContextSeparator = "\nDiff consolidado:\n"
 
-func buildFinalReviewInput(prdFolder, taskFile string, completed []string, diff string) string {
+func (c *Catalog) buildFinalReviewInput(prdFolder, taskFile string, completed []string, diff string) string {
 	var b strings.Builder
 	b.WriteString("Contexto da revisao consolidada:\n")
 	fmt.Fprintf(&b, "- PRD: %s\n", filepath.Join(prdFolder, "prd.md"))
@@ -435,7 +436,7 @@ func buildFinalReviewInput(prdFolder, taskFile string, completed []string, diff 
 	if len(completed) > 0 {
 		fmt.Fprintf(&b, "- Tasks executadas neste lote: %s\n", strings.Join(completed, ", "))
 	}
-	b.WriteString(reviewContextSeparator)
+	b.WriteString(_reviewContextSeparator)
 	b.WriteString(diff)
 	return b.String()
 }
@@ -460,7 +461,7 @@ func (s *Service) finalizeReport(report *LoopReport, opts Options, stopReason st
 
 // emitTelemetry escreve um evento em stderr quando GOVERNANCE_TELEMETRY=1.
 // Formato: "[taskloop] event=<name> value=<value>".
-func emitTelemetry(event, value string) {
+func (c *Catalog) emitTelemetry(event, value string) {
 	if os.Getenv("GOVERNANCE_TELEMETRY") != "1" {
 		return
 	}
@@ -473,7 +474,7 @@ func emitTelemetry(event, value string) {
 // Respeita dependências pois o seletor só retorna tasks com deps completas.
 // Nota: tasks já selecionadas nesta rodada são incluídas; o seletor pode retornar a mesma
 // task múltiplas vezes quando não há outras elegíveis — deduplicamos por ID.
-func selectBatch(ctx context.Context, sel TaskSelector, absFolder string, maxBatch int) ([]TaskEntry, error) {
+func (c *Catalog) selectBatch(ctx context.Context, sel TaskSelector, absFolder string, maxBatch int) ([]TaskEntry, error) {
 	seen := make(map[string]bool, maxBatch)
 	batch := make([]TaskEntry, 0, maxBatch)
 	for len(batch) < maxBatch {
@@ -518,7 +519,7 @@ func (s *Service) executeBatch(
 	var wg sync.WaitGroup
 
 	for i, task := range batch {
-		taskFile, err := ResolveTaskFile(absFolder, task, s.fsys)
+		taskFile, err := NewCatalog().ResolveTaskFile(absFolder, task, s.fsys)
 		if err != nil {
 			results[i] = batchResult{taskID: task.ID, err: err}
 			continue
@@ -544,7 +545,7 @@ func (s *Service) executeBatch(
 
 			accReport, accErr := deps.Gate.Verify(ctx, t, tf)
 			if accErr != nil {
-				emitTelemetry("acceptance_failed", t.ID)
+				NewCatalog().emitTelemetry("acceptance_failed", t.ID)
 				results[idx].err = fmt.Errorf("taskloop: aceite da task %s: %w", t.ID, accErr)
 				return
 			}
@@ -553,8 +554,7 @@ func (s *Service) executeBatch(
 				results[idx].err = fmt.Errorf("taskloop: evidencia da task %s: %w", t.ID, recErr)
 				return
 			}
-
-			emitTelemetry("task_completed", t.ID)
+			NewCatalog().emitTelemetry("task_completed", t.ID)
 			results[idx].taskID = t.ID
 		}(i, task, taskFile)
 	}

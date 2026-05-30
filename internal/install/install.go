@@ -24,9 +24,9 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/version"
 )
 
-// probeTimeout e o timeout maximo por CLI para probe de binario ACP.
+// _probeTimeout e o timeout maximo por CLI para probe de binario ACP.
 // Curto para nao violar RF-11 (bootstrap < 30s com N CLIs). ADR-024.
-const probeTimeout = 3 * time.Second
+const _probeTimeout = 3 * time.Second
 
 // VerifyState representa o estado de uma skill/agente apos verificacao.
 // ADR-019: file-first (le hash do disco, nao recalcula da fonte).
@@ -88,7 +88,7 @@ func NewService(
 		ctxgen:      ctxg,
 		agentDetect: detect.NewBinaryAgentDetector(detect.OSLookPather{}, detect.OSHomeDir{}, detect.NewFileDetector(fsys)),
 		langDetect:  detect.NewFileDetector(fsys),
-		lookPather:  probe.OsLookPather(),
+		lookPather:  probe.NewCatalog().OsLookPather(),
 	}
 }
 
@@ -138,7 +138,7 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 			s.printer.Warn("Nenhum agente detectado no ambiente. Use --tools para especificar explicitamente.")
 			return nil
 		}
-		s.printer.Info("Agentes detectados automaticamente: %v", toolNames(detected))
+		s.printer.Info("Agentes detectados automaticamente: %v", NewHelper().toolNames(detected))
 		opts.Tools = detected
 	}
 
@@ -148,7 +148,7 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 	if len(opts.Langs) == 0 {
 		detectedLangs := s.langDetect.DetectLangs(opts.ProjectDir)
 		if len(detectedLangs) > 0 {
-			s.printer.Info("Linguagens detectadas automaticamente: %v", langNames(detectedLangs))
+			s.printer.Info("Linguagens detectadas automaticamente: %v", NewHelper().langNames(detectedLangs))
 			opts.Langs = detectedLangs
 		}
 	}
@@ -159,7 +159,7 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 
 	// Se --source nao fornecido, extrair assets embutidos para temp dir.
 	if opts.SourceDir == "" {
-		tmpDir, cleanup, err := embedded.ExtractToTempDir()
+		tmpDir, cleanup, err := embedded.NewExtractor().ExtractToTempDir()
 		if err != nil {
 			return fmt.Errorf("extrair assets embutidos: %w", err)
 		}
@@ -179,7 +179,7 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 	// ADR-019, R-SEC-001: paths via os.UserHomeDir, nunca hardcoded.
 	var projectDir string
 	if opts.Scope == config.ScopeGlobal {
-		globalDir, err := globalInstallDir()
+		globalDir, err := NewHelper().globalInstallDir()
 		if err != nil {
 			return fmt.Errorf("escopo global: %w", err)
 		}
@@ -202,15 +202,16 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 	}
 
 	linkMode := opts.LinkMode
-	if !platform.Current().SupportsSymlinks() && linkMode == skills.LinkSymlink {
-		s.printer.Warn("Plataforma %s nao suporta symlinks nativamente, usando modo copy", platform.Current().OS)
+	plat := platform.NewDetector().Current()
+	if !plat.SupportsSymlinks() && linkMode == skills.LinkSymlink {
+		s.printer.Warn("Plataforma %s nao suporta symlinks nativamente, usando modo copy", plat.OS)
 		linkMode = skills.LinkCopy
 	}
 
-	allSkills := skills.AllSkills(opts.Langs)
+	allSkills := skills.NewCatalog().AllSkills(opts.Langs)
 
-	s.printer.Info("Ferramentas: %v", toolNames(opts.Tools))
-	s.printer.Info("Linguagens:  %v", langNames(opts.Langs))
+	s.printer.Info("Ferramentas: %v", NewHelper().toolNames(opts.Tools))
+	s.printer.Info("Linguagens:  %v", NewHelper().langNames(opts.Langs))
 	s.printer.Info("")
 
 	// 1. Instalar skills canonicas em .agents/skills/
@@ -261,7 +262,7 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 	if !opts.DryRun {
 		checksums := s.computeChecksums(sourceDir, allSkills)
 		mf := &manifest.Manifest{
-			Version:       version.ResolveFromExecutable(),
+			Version:       version.NewProvider().ResolveFromExecutable(),
 			CreatedAt:     time.Now(),
 			UpdatedAt:     time.Now(),
 			SourceDir:     sourceDir,
@@ -293,7 +294,7 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 // globalInstallDir retorna o diretorio de instalacao global (~/.aispec).
 // Usa os.UserHomeDir para seguranca (R-SEC-001); retorna erro explicito quando
 // $HOME ausente (ex: CI sem home configurado).
-func globalInstallDir() (string, error) {
+func (r1 *Helper) globalInstallDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("$HOME nao disponivel (necessario para escopo global): %w", err)
@@ -311,7 +312,7 @@ func (s *Service) Verify(opts config.InstallOptions) ([]VerifyItem, error) {
 	// Resolver diretorio de instalacao conforme escopo.
 	var installDir string
 	if opts.Scope == config.ScopeGlobal {
-		globalDir, err := globalInstallDir()
+		globalDir, err := NewHelper().globalInstallDir()
 		if err != nil {
 			return nil, fmt.Errorf("escopo global: %w", err)
 		}
@@ -328,7 +329,7 @@ func (s *Service) Verify(opts config.InstallOptions) ([]VerifyItem, error) {
 	sourceDir := opts.SourceDir
 	var cleanup func()
 	if sourceDir == "" {
-		tmpDir, cl, err := embedded.ExtractToTempDir()
+		tmpDir, cl, err := embedded.NewExtractor().ExtractToTempDir()
 		if err != nil {
 			return nil, fmt.Errorf("extrair assets embutidos: %w", err)
 		}
@@ -362,7 +363,7 @@ func (s *Service) Verify(opts config.InstallOptions) ([]VerifyItem, error) {
 		langs = s.langDetect.DetectLangs(installDir)
 	}
 
-	allSkills := skills.AllSkills(langs)
+	allSkills := skills.NewCatalog().AllSkills(langs)
 
 	// Usar checkSkillsForVerify que reutiliza logica do upgrade.
 	var items []VerifyItem
@@ -373,7 +374,7 @@ func (s *Service) Verify(opts config.InstallOptions) ([]VerifyItem, error) {
 		// RI-04: Adicionar item "binary" por CLI (current/missing).
 		// Reusa probeBinaryAvailable para consistencia com o probe do install.
 		binaryState := s.probeBinaryAvailable(tool)
-		spec, ok := specForTool(tool)
+		spec, ok := NewHelper().specForTool(tool)
 		binaryLabel := string(tool) + "-acp"
 		if ok {
 			binaryLabel = spec.Command
@@ -423,16 +424,16 @@ func (s *Service) verifyToolSkills(sourceDir, installDir string, tool skills.Too
 
 // specForTool retorna a Spec do runtime ACP para a ferramenta, ou zero-value e false.
 // ADR-024: mapeamento canonico Tool -> Spec para probe de binario.
-func specForTool(tool skills.Tool) (specs.Spec, bool) {
+func (r1 *Helper) specForTool(tool skills.Tool) (specs.Spec, bool) {
 	switch tool {
 	case skills.ToolClaude:
-		return specs.Claude(), true
+		return specs.NewCatalog().Claude(), true
 	case skills.ToolCodex:
-		return specs.Codex(), true
+		return specs.NewCatalog().Codex(), true
 	case skills.ToolGemini:
-		return specs.Gemini(), true
+		return specs.NewCatalog().Gemini(), true
 	case skills.ToolCopilot:
-		return specs.Copilot(), true
+		return specs.NewCatalog().Copilot(), true
 	default:
 		return specs.Spec{}, false
 	}
@@ -442,15 +443,17 @@ func specForTool(tool skills.Tool) (specs.Spec, bool) {
 // Retorna VerifyStateCurrent se disponivel, VerifyStateMissing caso contrario.
 // ADR-024 RI-04: timeout curto para nao violar RF-11.
 func (s *Service) probeBinaryAvailable(tool skills.Tool) VerifyState {
-	spec, ok := specForTool(tool)
+	spec, ok := NewHelper().specForTool(tool)
 	if !ok {
 		return VerifyStateMissing
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), _probeTimeout)
 	defer cancel()
-	// Limpar cache entre chamadas de verify para garantir resultado fresco.
-	probe.ResetCache()
-	_, err := probe.EnsureAvailable(ctx, spec, s.lookPather)
+	probe.
+		// Limpar cache entre chamadas de verify para garantir resultado fresco.
+		NewCatalog().
+		ResetCache()
+	_, err := probe.NewCatalog().EnsureAvailable(ctx, spec, s.lookPather)
 	if err != nil {
 		return VerifyStateMissing
 	}
@@ -461,13 +464,14 @@ func (s *Service) probeBinaryAvailable(tool skills.Tool) VerifyState {
 // Nao-fatal: install continua mesmo sem binario disponivel. ADR-024 RI-02.
 func (s *Service) probeBinariesWarn(tools []skills.Tool) {
 	for _, tool := range tools {
-		spec, ok := specForTool(tool)
+		spec, ok := NewHelper().specForTool(tool)
 		if !ok {
 			continue
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
-		probe.ResetCache()
-		_, err := probe.EnsureAvailable(ctx, spec, s.lookPather)
+		ctx, cancel := context.WithTimeout(context.Background(), _probeTimeout)
+		probe.NewCatalog().
+			ResetCache()
+		_, err := probe.NewCatalog().EnsureAvailable(ctx, spec, s.lookPather)
 		cancel()
 		if err != nil {
 			s.printer.Warn("[%s] binario ACP '%s' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.", tool, spec.Command)
@@ -738,7 +742,7 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 
 	settingsFile := filepath.Join(projectDir, ".claude", "settings.local.json")
 	if !s.fs.Exists(settingsFile) {
-		if err := s.fs.WriteFile(settingsFile, []byte(defaultClaudeSettings())); err != nil {
+		if err := s.fs.WriteFile(settingsFile, []byte(NewHelper().defaultClaudeSettings())); err != nil {
 			return err
 		}
 	} else if data, err := s.fs.ReadFile(settingsFile); err == nil {
@@ -805,24 +809,24 @@ func (s *Service) installGemini(sourceDir, projectDir string, dryRun bool) error
 	return nil
 }
 
-// orchestratorHooks lista hooks de enforcement programatico do execute-all-tasks/execute-task.
+// _orchestratorHooks lista hooks de enforcement programatico do execute-all-tasks/execute-task.
 // Distribuidos para todos os tools (.claude, .gemini, .codex, .github) para permitir
 // invocacao consistente independente de qual CLI o usuario esteja rodando.
 //
 // O subagent-stop-wrapper.sh eh especifico do Claude Code (registrado em
 // settings.local.json como SubagentStop hook) mas distribuido para todos os
 // tools como utilitario invocavel.
-var orchestratorHooks = []string{
+var _orchestratorHooks = []string{
 	"post-execute-task.sh",
 	"pre-execute-all-tasks.sh",
 	"post-wave.sh",
 	"subagent-stop-wrapper.sh",
 }
 
-// agentsLibFiles lista shell libs vendoradas em .agents/lib/ que skills e hooks
+// _agentsLibFiles lista shell libs vendoradas em .agents/lib/ que skills e hooks
 // consomem via cascata `.agents/lib/` -> `scripts/lib/`. Distribuir o vendor
 // canonico evita dependencia exclusiva do mirror legado scripts/lib/.
-var agentsLibFiles = []string{
+var _agentsLibFiles = []string{
 	"check-invocation-depth.sh",
 	"parse-hook-input.sh",
 }
@@ -834,7 +838,7 @@ func (s *Service) copyAgentsLib(sourceDir, projectDir string) error {
 	dstDir := filepath.Join(projectDir, ".agents", "lib")
 	srcDir := filepath.Join(sourceDir, ".agents", "lib")
 
-	for _, lib := range agentsLibFiles {
+	for _, lib := range _agentsLibFiles {
 		src := filepath.Join(srcDir, lib)
 		if !s.fs.Exists(src) {
 			continue
@@ -853,10 +857,10 @@ func (s *Service) copyAgentsLib(sourceDir, projectDir string) error {
 	return nil
 }
 
-// toolValidationHooks lista hooks de validacao por-tool (preload + governanca pos-edicao).
+// _toolValidationHooks lista hooks de validacao por-tool (preload + governanca pos-edicao).
 // Distribuidos opcionalmente para Codex/Gemini/Copilot quando presentes na fonte;
 // Claude tem caminho dedicado em installClaude por suportar PreToolUse/PostToolUse nativos.
-var toolValidationHooks = []string{
+var _toolValidationHooks = []string{
 	"validate-preload.sh",
 	"validate-governance.sh",
 }
@@ -869,7 +873,7 @@ func (s *Service) copyToolValidationHooks(sourceDir, projectDir, toolHookDir str
 	dstDir := filepath.Join(projectDir, toolHookDir)
 	srcDir := filepath.Join(sourceDir, toolHookDir)
 
-	for _, hook := range toolValidationHooks {
+	for _, hook := range _toolValidationHooks {
 		src := filepath.Join(srcDir, hook)
 		if !s.fs.Exists(src) {
 			continue
@@ -895,7 +899,7 @@ func (s *Service) copyOrchestratorHooks(sourceDir, projectDir, toolHookDir strin
 	dstDir := filepath.Join(projectDir, toolHookDir)
 	srcDir := filepath.Join(sourceDir, toolHookDir)
 
-	for _, hook := range orchestratorHooks {
+	for _, hook := range _orchestratorHooks {
 		src := filepath.Join(srcDir, hook)
 		if !s.fs.Exists(src) {
 			continue
@@ -917,17 +921,17 @@ func (s *Service) copyOrchestratorHooks(sourceDir, projectDir, toolHookDir strin
 	return nil
 }
 
-var codexPlanningSkills = map[string]bool{
+var _codexPlanningSkills = map[string]bool{
 	"analyze-project":                true,
 	"create-prd":                     true,
 	"create-technical-specification": true,
 	"create-tasks":                   true,
 }
 
-func filterCodexSkills(skillList []string) []string {
+func (r1 *Helper) filterCodexSkills(skillList []string) []string {
 	out := make([]string, 0, len(skillList))
 	for _, s := range skillList {
-		if !codexPlanningSkills[s] {
+		if !_codexPlanningSkills[s] {
 			out = append(out, s)
 		}
 	}
@@ -950,7 +954,7 @@ func (s *Service) installCodex(sourceDir, projectDir string, skillList []string,
 
 	list := skillList
 	if codexProfile == "lean" {
-		list = filterCodexSkills(skillList)
+		list = NewHelper().filterCodexSkills(skillList)
 	}
 
 	content := s.adapters.BuildCodexConfig(list)
@@ -1029,7 +1033,7 @@ func (s *Service) installCopilot(sourceDir, projectDir string, skillList []strin
 	return nil
 }
 
-func defaultClaudeSettings() string {
+func (r1 *Helper) defaultClaudeSettings() string {
 	return `{
   "hooks": {
     "PreToolUse": [
@@ -1100,7 +1104,7 @@ func (s *Service) collectSkillVersions(sourceDir string, skillNames []string) ma
 			continue
 		}
 
-		fm := skills.ParseFrontmatter(data)
+		fm := skills.NewCatalog().ParseFrontmatter(data)
 		if fm.Version != "" {
 			versions[name] = fm.Version
 		}
@@ -1109,7 +1113,7 @@ func (s *Service) collectSkillVersions(sourceDir string, skillNames []string) ma
 	return versions
 }
 
-func toolNames(tools []skills.Tool) []string {
+func (r1 *Helper) toolNames(tools []skills.Tool) []string {
 	out := make([]string, len(tools))
 	for i, t := range tools {
 		out[i] = string(t)
@@ -1117,7 +1121,7 @@ func toolNames(tools []skills.Tool) []string {
 	return out
 }
 
-func langNames(langs []skills.Lang) []string {
+func (r1 *Helper) langNames(langs []skills.Lang) []string {
 	out := make([]string, len(langs))
 	for i, l := range langs {
 		out[i] = string(l)

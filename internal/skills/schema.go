@@ -2,35 +2,37 @@ package skills
 
 import (
 	"bytes"
-	"encoding/json"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
 //go:embed skill-frontmatter.schema.json
-var frontmatterSchemaJSON []byte
+var _frontmatterSchemaJSON []byte
 
-const frontmatterSchemaURI = "skill-frontmatter.schema.json"
+const _frontmatterSchemaURI = "skill-frontmatter.schema.json"
 
-var compiledFrontmatterSchema *jsonschema.Schema
-
-func init() {
-	schemaDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(frontmatterSchemaJSON))
+// _loadFrontmatterSchema compila o JSON Schema embutido sob demanda, uma unica
+// vez, de forma thread-safe (Regra 7.10 — sync.OnceValues no lugar de init()).
+var _loadFrontmatterSchema = sync.OnceValues(func() (*jsonschema.Schema, error) {
+	schemaDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(_frontmatterSchemaJSON))
 	if err != nil {
-		panic(fmt.Sprintf("schema de frontmatter invalido: %v", err))
+		return nil, fmt.Errorf("schema de frontmatter invalido: %w", err)
 	}
 	compiler := jsonschema.NewCompiler()
-	if err := compiler.AddResource(frontmatterSchemaURI, schemaDoc); err != nil {
-		panic(fmt.Sprintf("carregar schema de frontmatter: %v", err))
+	if err := compiler.AddResource(_frontmatterSchemaURI, schemaDoc); err != nil {
+		return nil, fmt.Errorf("carregar schema de frontmatter: %w", err)
 	}
-	compiledFrontmatterSchema, err = compiler.Compile(frontmatterSchemaURI)
+	schema, err := compiler.Compile(_frontmatterSchemaURI)
 	if err != nil {
-		panic(fmt.Sprintf("compilar schema de frontmatter: %v", err))
+		return nil, fmt.Errorf("compilar schema de frontmatter: %w", err)
 	}
-}
+	return schema, nil
+})
 
 // frontmatterDoc e a representacao serializavel do Frontmatter para validacao via JSON Schema.
 type frontmatterDoc struct {
@@ -47,9 +49,9 @@ type frontmatterDoc struct {
 // ValidateFrontmatterSchema valida o frontmatter de um SKILL.md contra o JSON Schema formal.
 // skillName e usado para gerar mensagens de erro mais claras; pode ser vazio.
 // Retorna erro descrevendo o campo invalido e a skill afetada.
-func ValidateFrontmatterSchema(content []byte, skillName string) error {
-	fm := ParseFrontmatter(content)
-	doc := toFrontmatterDoc(fm)
+func (catalog *Catalog) ValidateFrontmatterSchema(content []byte, skillName string) error {
+	fm := NewCatalog().ParseFrontmatter(content)
+	doc := NewCatalog().toFrontmatterDoc(fm)
 
 	jsonBytes, err := json.Marshal(doc)
 	if err != nil {
@@ -61,16 +63,21 @@ func ValidateFrontmatterSchema(content []byte, skillName string) error {
 		return fmt.Errorf("parsear frontmatter como JSON: %w", err)
 	}
 
-	if err := compiledFrontmatterSchema.Validate(payload); err != nil {
+	schema, err := _loadFrontmatterSchema()
+	if err != nil {
+		return fmt.Errorf("carregar schema de frontmatter: %w", err)
+	}
+
+	if err := schema.Validate(payload); err != nil {
 		if skillName != "" {
-			return fmt.Errorf("skill %q: %s", skillName, formatFrontmatterError(err))
+			return fmt.Errorf("skill %q: %s", skillName, NewCatalog().formatFrontmatterError(err))
 		}
-		return fmt.Errorf("%s", formatFrontmatterError(err))
+		return fmt.Errorf("%s", NewCatalog().formatFrontmatterError(err))
 	}
 	return nil
 }
 
-func toFrontmatterDoc(fm Frontmatter) frontmatterDoc {
+func (catalog *Catalog) toFrontmatterDoc(fm Frontmatter) frontmatterDoc {
 	doc := frontmatterDoc{
 		Name:        fm.Name,
 		Version:     fm.Version,
@@ -90,9 +97,9 @@ func toFrontmatterDoc(fm Frontmatter) frontmatterDoc {
 	return doc
 }
 
-func formatFrontmatterError(err error) string {
+func (catalog *Catalog) formatFrontmatterError(err error) string {
 	var ve *jsonschema.ValidationError
-	if ok := asSchemaValidationError(err, &ve); ok {
+	if ok := NewCatalog().asSchemaValidationError(err, &ve); ok {
 		return ve.Error()
 	}
 	msgs := []string{}
@@ -105,7 +112,7 @@ func formatFrontmatterError(err error) string {
 	return strings.Join(msgs, "; ")
 }
 
-func asSchemaValidationError(err error, target **jsonschema.ValidationError) bool {
+func (catalog *Catalog) asSchemaValidationError(err error, target **jsonschema.ValidationError) bool {
 	if ve, ok := err.(*jsonschema.ValidationError); ok {
 		*target = ve
 		return true

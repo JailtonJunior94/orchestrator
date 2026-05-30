@@ -17,8 +17,8 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/telemetry"
 )
 
-var taskPathRe = regexp.MustCompile(`([A-Za-z0-9_./-]*task-\d+\.\d+[A-Za-z0-9_.-]*\.md)`)
-var taskIDRe = regexp.MustCompile(`^task-(\d+\.\d+)`)
+var _taskPathRe = regexp.MustCompile(`([A-Za-z0-9_./-]*task-\d+\.\d+[A-Za-z0-9_.-]*\.md)`)
+var _taskIDRe = regexp.MustCompile(`^task-(\d+\.\d+)`)
 
 // acpInvoker adapta ACPRunner à interface AgentInvoker.
 // É o adapter entre a camada de taskloop e o application service do runtime ACP.
@@ -59,37 +59,37 @@ type ACPInvokerOption func(*acpInvoker)
 
 // WithACPInvokerReasoningEffort configura o nível de esforço de raciocínio do Codex.
 // Ignorado por Claude/Copilot via Spec.BootstrapArgs no-op.
-func WithACPInvokerReasoningEffort(effort string) ACPInvokerOption {
+func (c *Catalog) WithACPInvokerReasoningEffort(effort string) ACPInvokerOption {
 	return func(a *acpInvoker) { a.reasoningEffort = effort }
 }
 
 // WithACPInvokerAccessMode configura o modo de acesso ao sistema de arquivos do Codex.
 // Ignorado por Claude/Copilot via Spec.BootstrapArgs no-op.
-func WithACPInvokerAccessMode(mode specs.AccessMode) ACPInvokerOption {
+func (c *Catalog) WithACPInvokerAccessMode(mode specs.AccessMode) ACPInvokerOption {
 	return func(a *acpInvoker) { a.accessMode = mode }
 }
 
 // WithACPInvokerAddDirs configura diretórios adicionais que o Codex pode acessar.
 // Ignorado por Claude/Copilot via Spec.BootstrapArgs no-op.
-func WithACPInvokerAddDirs(dirs []string) ACPInvokerOption {
+func (c *Catalog) WithACPInvokerAddDirs(dirs []string) ACPInvokerOption {
 	return func(a *acpInvoker) { a.addDirs = dirs }
 }
 
 // WithACPInvokerMCPNested habilita o spawn do servidor MCP interno (F2-Claude, RF-01.1).
 // Quando true, ACPRunner spawna mcpserver.Server em goroutine antes de c.Open.
-func WithACPInvokerMCPNested(enabled bool) ACPInvokerOption {
+func (c *Catalog) WithACPInvokerMCPNested(enabled bool) ACPInvokerOption {
 	return func(a *acpInvoker) { a.mcpNested = enabled }
 }
 
 // WithACPInvokerNoNormalize desabilita a normalização de tool-calls (F2-Claude, RF-02.4, debug).
 // Quando true, BuildNormalizedToolCall não é chamado no loop de eventos.
-func WithACPInvokerNoNormalize(disabled bool) ACPInvokerOption {
+func (c *Catalog) WithACPInvokerNoNormalize(disabled bool) ACPInvokerOption {
 	return func(a *acpInvoker) { a.noNormalize = disabled }
 }
 
 // WithACPInvokerMemoryLimitLines configura os limites de linhas do memory store (F3-Claude).
 // workflowLines e taskLines: 0 = usar default de memory.DefaultLimits() (fallback no runner).
-func WithACPInvokerMemoryLimitLines(workflowLines, taskLines int) ACPInvokerOption {
+func (c *Catalog) WithACPInvokerMemoryLimitLines(workflowLines, taskLines int) ACPInvokerOption {
 	return func(a *acpInvoker) {
 		a.memoryLimits.WorkflowLines = workflowLines
 		a.memoryLimits.TaskLines = taskLines
@@ -98,7 +98,7 @@ func WithACPInvokerMemoryLimitLines(workflowLines, taskLines int) ACPInvokerOpti
 
 // WithACPInvokerMemoryLimitBytes configura os limites de bytes do memory store (F3-Claude).
 // workflowBytes e taskBytes: 0 = usar default de memory.DefaultLimits() (fallback no runner).
-func WithACPInvokerMemoryLimitBytes(workflowBytes, taskBytes int) ACPInvokerOption {
+func (c *Catalog) WithACPInvokerMemoryLimitBytes(workflowBytes, taskBytes int) ACPInvokerOption {
 	return func(a *acpInvoker) {
 		a.memoryLimits.WorkflowBytes = workflowBytes
 		a.memoryLimits.TaskBytes = taskBytes
@@ -107,65 +107,65 @@ func WithACPInvokerMemoryLimitBytes(workflowBytes, taskBytes int) ACPInvokerOpti
 
 // WithACPInvokerMemoryLimitsExplicit marca limites de memoria como override explicito do usuario.
 // WindowLarge respeita esses limites em vez de substituir por defaults generosos.
-func WithACPInvokerMemoryLimitsExplicit(explicit bool) ACPInvokerOption {
+func (c *Catalog) WithACPInvokerMemoryLimitsExplicit(explicit bool) ACPInvokerOption {
 	return func(a *acpInvoker) { a.memoryLimitsExplicit = explicit }
 }
 
 // WithACPInvokerDisableHooks desabilita TODOS os hooks Go in-process (F3-Claude, debug).
 // Quando true, governance, token_budget e memory_persist não são registrados no runner.
-func WithACPInvokerDisableHooks(disabled bool) ACPInvokerOption {
+func (c *Catalog) WithACPInvokerDisableHooks(disabled bool) ACPInvokerOption {
 	return func(a *acpInvoker) { a.disableHooks = disabled }
 }
 
 // WithACPInvokerTasksDir configura o caminho do diretório de tasks do PRD ativo (F3-Claude).
 // Necessário para o memory.Store (ReadWorkflow + ReadTask). Default "" = memory desabilitado.
-func WithACPInvokerTasksDir(dir string) ACPInvokerOption {
+func (c *Catalog) WithACPInvokerTasksDir(dir string) ACPInvokerOption {
 	return func(a *acpInvoker) { a.tasksDir = dir }
 }
 
 // WithACPInvokerAutoReview habilita auto-review opt-in (F5-Claude, RF-06).
 // HARD: default false; child sessions têm AutoReview=false forçado no runner.
-func WithACPInvokerAutoReview(enabled bool) ACPInvokerOption {
+func (c *Catalog) WithACPInvokerAutoReview(enabled bool) ACPInvokerOption {
 	return func(a *acpInvoker) { a.autoReview = enabled }
 }
 
 // WithACPInvokerSkipDriftGuard desabilita SOMENTE o spec_drift hook (ADR-022, RG-01/RG-02).
 // Default false = guard ativo quando TasksDir != "". Mantém governance/token_budget ativos
 // (diferente de --disable-hooks, que desliga todos os hooks).
-func WithACPInvokerSkipDriftGuard(enabled bool) ACPInvokerOption {
+func (c *Catalog) WithACPInvokerSkipDriftGuard(enabled bool) ACPInvokerOption {
 	return func(a *acpInvoker) { a.skipDriftGuard = enabled }
 }
 
 // WithACPInvokerMaxRetries configura o número máximo de tentativas extras após falha transitória.
 // 0 = uma tentativa (comportamento F1 default — sem regressão).
 // ADR-018, RF-04.
-func WithACPInvokerMaxRetries(n int) ACPInvokerOption {
+func (c *Catalog) WithACPInvokerMaxRetries(n int) ACPInvokerOption {
 	return func(a *acpInvoker) { a.maxRetries = n }
 }
 
 // WithACPInvokerRetryBackoffMultiplier configura o multiplicador exponencial entre reexecuções.
 // <=0 = sem espera entre tentativas.
 // ADR-018, RF-04.
-func WithACPInvokerRetryBackoffMultiplier(m float64) ACPInvokerOption {
+func (c *Catalog) WithACPInvokerRetryBackoffMultiplier(m float64) ACPInvokerOption {
 	return func(a *acpInvoker) { a.retryBackoffMultiplier = m }
 }
 
 // WithACPInvokerRetryBaseDelay configura a duração base do backoff exponencial.
 // Zero = sem espera (F1 default).
-func WithACPInvokerRetryBaseDelay(d time.Duration) ACPInvokerOption {
+func (c *Catalog) WithACPInvokerRetryBaseDelay(d time.Duration) ACPInvokerOption {
 	return func(a *acpInvoker) { a.retryBaseDelay = d }
 }
 
 // WithACPInvokerRetryClassifier injeta um RetryClassifier customizado.
 // Nil = usar NewRetryClassifier() de produção.
-func WithACPInvokerRetryClassifier(c airuntime.RetryClassifier) ACPInvokerOption {
-	return func(a *acpInvoker) { a.retryClassifier = c }
+func (c *Catalog) WithACPInvokerRetryClassifier(rc airuntime.RetryClassifier) ACPInvokerOption {
+	return func(a *acpInvoker) { a.retryClassifier = rc }
 }
 
 // acpInvokerSleepFnOption injeta uma função de sleep substituível.
 // Nomeada com prefixo interno para distinguir da re-exportação de teste.
 // Acessível em testes via withACPInvokerSleepFn em testhelpers_test.go.
-func acpInvokerSleepFnOption(fn func(context.Context, time.Duration) error) ACPInvokerOption {
+func (c *Catalog) acpInvokerSleepFnOption(fn func(context.Context, time.Duration) error) ACPInvokerOption {
 	return func(a *acpInvoker) { a.sleepFn = fn }
 }
 
@@ -181,7 +181,7 @@ func NewACPInvoker(runner *airuntime.ACPRunner, quiet bool, activityTimeout time
 		quiet:           quiet,
 		activityTimeout: activityTimeout,
 		retryClassifier: airuntime.NewRetryClassifier(),
-		sleepFn:         defaultSleepFn,
+		sleepFn:         NewCatalog().defaultSleepFn,
 	}
 	for _, o := range opts {
 		o(inv)
@@ -190,7 +190,7 @@ func NewACPInvoker(runner *airuntime.ACPRunner, quiet bool, activityTimeout time
 }
 
 // defaultSleepFn aguarda d ou retorna ctx.Err() quando o contexto cancela.
-func defaultSleepFn(ctx context.Context, d time.Duration) error {
+func (c *Catalog) defaultSleepFn(ctx context.Context, d time.Duration) error {
 	if d <= 0 {
 		return nil
 	}
@@ -216,7 +216,7 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (str
 		return "", "", 1, err
 	}
 
-	evidenceDir := deriveEvidenceDir(workDir, prompt)
+	evidenceDir := NewCatalog().deriveEvidenceDir(workDir, prompt)
 	job := airuntime.Job{
 		Prompt:      prompt,
 		WorkDir:     workDir,
@@ -255,7 +255,7 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (str
 	for attempt := 0; attempt <= c.maxRetries; attempt++ {
 		if attempt > 0 {
 			// Calcular espera de backoff exponencial: base * multiplier^attempt.
-			wait := airuntime.BackoffDuration(c.retryBaseDelay, c.retryBackoffMultiplier, attempt)
+			wait := airuntime.NewCatalog().BackoffDuration(c.retryBaseDelay, c.retryBackoffMultiplier, attempt)
 			if sleepErr := c.sleepFn(ctx, wait); sleepErr != nil {
 				// Contexto cancelado durante espera: encerrar sem nova tentativa.
 				runErr = fmt.Errorf("retry %d/%d: contexto cancelado: %w", attempt, c.maxRetries, sleepErr)
@@ -278,8 +278,8 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (str
 	// 0 = sessão concluída na primeira tentativa (F1 default).
 	summary.RetryAttempts = retryAttempts
 
-	exitCode := MapExitCode(summary.CancelReason)
-	_ = telemetry.LogACPSession(workDir, telemetry.ACPSessionEvent{
+	exitCode := NewCatalog().MapExitCode(summary.CancelReason)
+	_ = telemetry.NewCatalog().LogACPSession(workDir, telemetry.ACPSessionEvent{
 		Runtime:            "acp",
 		Launcher:           summary.Launcher,
 		EventsCount:        summary.EventsCount,
@@ -306,7 +306,7 @@ func (c *acpInvoker) SetLiveOutput(w io.Writer) {
 //	activity_timeout  → 1
 //	permission_denied → 3
 //	demais            → 1
-func MapExitCode(reason events.CancelReason) int {
+func (c *Catalog) MapExitCode(reason events.CancelReason) int {
 	switch reason {
 	case events.CancelReasonNone:
 		return 0
@@ -317,13 +317,13 @@ func MapExitCode(reason events.CancelReason) int {
 	}
 }
 
-func deriveEvidenceDir(workDir, prompt string) string {
-	match := taskPathRe.FindStringSubmatch(prompt)
+func (c *Catalog) deriveEvidenceDir(workDir, prompt string) string {
+	match := _taskPathRe.FindStringSubmatch(prompt)
 	if len(match) < 2 {
 		return filepath.Join(workDir, "evidence", "acp")
 	}
 	base := filepath.Base(match[1])
-	idMatch := taskIDRe.FindStringSubmatch(base)
+	idMatch := _taskIDRe.FindStringSubmatch(base)
 	if len(idMatch) < 2 {
 		return filepath.Join(workDir, "evidence", "acp")
 	}

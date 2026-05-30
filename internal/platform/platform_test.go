@@ -8,7 +8,7 @@ import (
 )
 
 func TestCurrent_matchesRuntime(t *testing.T) {
-	info := platform.Current()
+	info := platform.NewDetector().Current()
 	if info.OS != runtime.GOOS {
 		t.Errorf("Current().OS = %q, want %q", info.OS, runtime.GOOS)
 	}
@@ -39,7 +39,7 @@ func TestSupportsSymlinks_windows(t *testing.T) {
 }
 
 func TestCurrent_supportsSymlinks(t *testing.T) {
-	info := platform.Current()
+	info := platform.NewDetector().Current()
 	// On any non-Windows CI or dev machine this test runs, symlinks should be supported.
 	if runtime.GOOS != "windows" && !info.SupportsSymlinks() {
 		t.Errorf("Current().SupportsSymlinks() = false on %s, expected true", runtime.GOOS)

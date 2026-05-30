@@ -19,7 +19,7 @@ func TestBuildChildPromptWithAgentPrompt(t *testing.T) {
 	}
 	input := RunAgentInput{Prompt: "revise o código"}
 
-	result := buildChildPrompt(agent, input)
+	result := NewCatalog().buildChildPrompt(agent, input)
 
 	if !strings.Contains(result, "Você é um revisor.") {
 		t.Error("prompt do agente não presente no resultado")
@@ -37,7 +37,7 @@ func TestBuildChildPromptWithoutAgentPrompt(t *testing.T) {
 	agent := agents.ResolvedAgent{Name: "reviewer", Prompt: ""}
 	input := RunAgentInput{Prompt: "faça algo"}
 
-	result := buildChildPrompt(agent, input)
+	result := NewCatalog().buildChildPrompt(agent, input)
 
 	if result != "faça algo" {
 		t.Fatalf("esperado %q, obtido %q", "faça algo", result)
@@ -52,7 +52,7 @@ func TestResolveAgentSpecClaude(t *testing.T) {
 	}
 	for _, tc := range cases {
 		agent := agents.ResolvedAgent{Runtime: agents.RuntimeDefaults{IDE: tc.ide}}
-		spec := resolveAgentSpec(agent)
+		spec := NewCatalog().resolveAgentSpec(agent)
 		if spec.ID != tc.expectID {
 			t.Errorf("IDE=%q: esperado spec.ID=%q, obtido %q", tc.ide, tc.expectID, spec.ID)
 		}
@@ -62,7 +62,7 @@ func TestResolveAgentSpecClaude(t *testing.T) {
 // TestResolveAgentSpecCodex valida que IDE "codex" retorna spec Codex.
 func TestResolveAgentSpecCodex(t *testing.T) {
 	agent := agents.ResolvedAgent{Runtime: agents.RuntimeDefaults{IDE: "codex"}}
-	spec := resolveAgentSpec(agent)
+	spec := NewCatalog().resolveAgentSpec(agent)
 	if spec.ID != "codex" {
 		t.Fatalf("esperado spec.ID=codex, obtido %q", spec.ID)
 	}
@@ -71,7 +71,7 @@ func TestResolveAgentSpecCodex(t *testing.T) {
 // TestResolveAgentSpecCopilot valida que IDE "copilot" retorna spec Copilot.
 func TestResolveAgentSpecCopilot(t *testing.T) {
 	agent := agents.ResolvedAgent{Runtime: agents.RuntimeDefaults{IDE: "copilot"}}
-	spec := resolveAgentSpec(agent)
+	spec := NewCatalog().resolveAgentSpec(agent)
 	if spec.ID != "copilot" {
 		t.Fatalf("esperado spec.ID=copilot, obtido %q", spec.ID)
 	}
@@ -79,8 +79,8 @@ func TestResolveAgentSpecCopilot(t *testing.T) {
 
 // TestGenerateSessionIDIsUnique valida que dois IDs gerados são diferentes.
 func TestGenerateSessionIDIsUnique(t *testing.T) {
-	id1 := generateSessionID("reviewer")
-	id2 := generateSessionID("reviewer")
+	id1 := NewCatalog().generateSessionID("reviewer")
+	id2 := NewCatalog().generateSessionID("reviewer")
 	if id1 == id2 {
 		t.Fatal("esperado IDs únicos para chamadas consecutivas")
 	}
@@ -88,7 +88,7 @@ func TestGenerateSessionIDIsUnique(t *testing.T) {
 
 // TestGenerateSessionIDContainsAgentName valida que o ID contém o nome do agente.
 func TestGenerateSessionIDContainsAgentName(t *testing.T) {
-	id := generateSessionID("my-agent")
+	id := NewCatalog().generateSessionID("my-agent")
 	if !strings.Contains(id, "my-agent") {
 		t.Fatalf("ID %q não contém 'my-agent'", id)
 	}
@@ -96,7 +96,7 @@ func TestGenerateSessionIDContainsAgentName(t *testing.T) {
 
 // TestResolveParentEvidenceDirWithRoot valida que workspace root é usado.
 func TestResolveParentEvidenceDirWithRoot(t *testing.T) {
-	dir := resolveParentEvidenceDir(NestedExecutionContext{WorkspaceRoot: "/workspace"})
+	dir := NewCatalog().resolveParentEvidenceDir(NestedExecutionContext{WorkspaceRoot: "/workspace"})
 	if !strings.HasPrefix(dir, "/workspace") {
 		t.Fatalf("esperado prefix /workspace, obtido %q", dir)
 	}
@@ -104,7 +104,7 @@ func TestResolveParentEvidenceDirWithRoot(t *testing.T) {
 
 // TestResolveParentEvidenceDirFallback valida fallback para tmpdir.
 func TestResolveParentEvidenceDirFallback(t *testing.T) {
-	dir := resolveParentEvidenceDir(NestedExecutionContext{})
+	dir := NewCatalog().resolveParentEvidenceDir(NestedExecutionContext{})
 	if !strings.HasPrefix(dir, os.TempDir()) {
 		t.Fatalf("esperado prefix %q, obtido %q", os.TempDir(), dir)
 	}
@@ -149,7 +149,7 @@ func TestSpawnNestedSessionEvidenceDirCreated(t *testing.T) {
 	defer cancel()
 
 	// Chamar spawnNestedSession — vai criar o dir antes de tentar o spawn.
-	_, err := spawnNestedSession(ctx, params)
+	_, err := NewCatalog().spawnNestedSession(ctx, params)
 
 	// Verificar que o dir evidence/nested/<id>/ foi criado.
 	nestedBase := filepath.Join(tmpDir, "evidence", "nested")
@@ -190,7 +190,7 @@ func TestSpawnNestedSessionEnvVarRestored(t *testing.T) {
 	_ = os.Unsetenv(EnvContext)
 	beforeVal := os.Getenv(EnvContext)
 
-	_, _ = spawnNestedSession(ctx, params)
+	_, _ = NewCatalog().spawnNestedSession(ctx, params)
 
 	afterVal := os.Getenv(EnvContext)
 	if afterVal != beforeVal {

@@ -670,7 +670,7 @@ Nenhum.
 // TestValidateEvidenceCommand verifica a logica do subcomando validate-evidence:
 // relatorio completo → Pass=true (exit 0); relatorio incompleto → Pass=false (exit 1).
 func TestValidateEvidenceCommand(t *testing.T) {
-	result := evidence.Validate([]byte(completeTaskReport), evidence.KindTask, nil)
+	result := evidence.NewValidator().Validate([]byte(completeTaskReport), evidence.KindTask, nil)
 	if !result.Pass {
 		var labels []string
 		for _, f := range result.Findings {
@@ -680,7 +680,7 @@ func TestValidateEvidenceCommand(t *testing.T) {
 	}
 
 	incomplete := strings.ReplaceAll(completeTaskReport, "## Riscos Residuais\n\nNenhum.\n", "")
-	result = evidence.Validate([]byte(incomplete), evidence.KindTask, nil)
+	result = evidence.NewValidator().Validate([]byte(incomplete), evidence.KindTask, nil)
 	if result.Pass {
 		t.Error("relatorio incompleto deveria ser reprovado")
 	}
@@ -709,7 +709,7 @@ func TestCheckSpecDriftCommand(t *testing.T) {
 	tasksOK := fmt.Sprintf("## Tasks\n\nRF-01: implementado\nRF-02: implementado\n<!-- spec-hash-prd: %s -->\n", prdHash)
 	mustWriteFile(t, filepath.Join(tmpDir, "tasks.md"), tasksOK)
 
-	report, err := specdrift.CheckDrift(tmpDir)
+	report, err := specdrift.NewCatalog().CheckDrift(tmpDir)
 	if err != nil {
 		t.Fatalf("CheckDrift: %v", err)
 	}
@@ -721,7 +721,7 @@ func TestCheckSpecDriftCommand(t *testing.T) {
 	tasksWithDrift := fmt.Sprintf("## Tasks\n\nRF-01: implementado\n<!-- spec-hash-prd: %s -->\n", prdHash)
 	mustWriteFile(t, filepath.Join(tmpDir, "tasks.md"), tasksWithDrift)
 
-	report, err = specdrift.CheckDrift(tmpDir)
+	report, err = specdrift.NewCatalog().CheckDrift(tmpDir)
 	if err != nil {
 		t.Fatalf("CheckDrift com drift: %v", err)
 	}

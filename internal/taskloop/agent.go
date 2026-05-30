@@ -50,7 +50,7 @@ var ValidTools = map[string]bool{
 }
 
 // CheckAgentBinary verifica se o binario do agente esta disponivel no PATH.
-func CheckAgentBinary(invoker AgentInvoker) error {
+func (c *Catalog) CheckAgentBinary(invoker AgentInvoker) error {
 	bin := invoker.BinaryName()
 	_, err := exec.LookPath(bin)
 	if err != nil {
@@ -59,10 +59,10 @@ func CheckAgentBinary(invoker AgentInvoker) error {
 	return nil
 }
 
-// defaultExecutorTemplate e o template embutido via go:embed para o prompt do executor.
+// _defaultExecutorTemplate e o template embutido via go:embed para o prompt do executor.
 //
 //go:embed executor_template.tmpl
-var defaultExecutorTemplate string
+var _defaultExecutorTemplate string
 
 // PromptContext agrupa o contexto dinamico extraido de prd.md e techspec.md
 // para enriquecer o prompt do executor com arquitetura e referencias relevantes.
@@ -89,7 +89,7 @@ type ExecutorTemplateData struct {
 // contexto de arquitetura e referencias relevantes para o prompt.
 // Quando agent != nil, injeta blocos metadata e catalogo no contexto (RF-14, RF-15, RF-16).
 // Quando agent == nil, comporta-se exatamente como antes (fluxo legado preservado, RF-14).
-func BuildPromptContext(prdFolder, workDir string, fsys fs.FileSystem, agent *agents.ResolvedAgent, catalog []agents.ResolvedAgent) PromptContext {
+func (c *Catalog) BuildPromptContext(prdFolder, workDir string, fsys fs.FileSystem, agent *agents.ResolvedAgent, catalog []agents.ResolvedAgent) PromptContext {
 	ctx := PromptContext{}
 
 	techspecPath := filepath.Join(workDir, prdFolder, "techspec.md")
@@ -100,12 +100,12 @@ func BuildPromptContext(prdFolder, workDir string, fsys fs.FileSystem, agent *ag
 
 	combined := string(techspec) + "\n" + string(prd)
 
-	ctx.Architecture = extractArchitecture(string(techspec))
-	ctx.References = detectReferences(combined)
+	ctx.Architecture = NewCatalog().extractArchitecture(string(techspec))
+	ctx.References = NewCatalog().detectReferences(combined)
 
 	// Enriquecer com blocos do agente quando disponivel (RF-15, RF-16).
 	if agent != nil {
-		metadataBlock, catalogBlock := agents.BuildAgentBlocks(agent, catalog)
+		metadataBlock, catalogBlock := agents.NewCatalog().BuildAgentBlocks(agent, catalog)
 		ctx.AgentMetadata = metadataBlock
 		ctx.AgentCatalog = catalogBlock
 	}
@@ -116,7 +116,7 @@ func BuildPromptContext(prdFolder, workDir string, fsys fs.FileSystem, agent *ag
 // extractArchitecture extrai o resumo de arquitetura da techspec.
 // Procura secoes "Arquitetura" ou "Resumo Executivo" e retorna
 // um trecho conciso (max 1500 chars) para compor o prompt.
-func extractArchitecture(techspec string) string {
+func (c *Catalog) extractArchitecture(techspec string) string {
 	for _, heading := range []string{
 		"## Arquitetura do Sistema",
 		"## Arquitetura",
@@ -151,27 +151,27 @@ func extractArchitecture(techspec string) string {
 
 // detectReferences analisa o conteudo combinado de prd+techspec e retorna
 // a lista de referencias relevantes para carregar no prompt.
-func detectReferences(content string) string {
+func (c *Catalog) detectReferences(content string) string {
 	lower := strings.ToLower(content)
 	var refs []string
 
-	if containsAnyPattern(lower, ".go", "go.mod", "golang", "internal/", "func ", "package ") {
+	if NewCatalog().containsAnyPattern(lower, ".go", "go.mod", "golang", "internal/", "func ", "package ") {
 		refs = append(refs, "go-implementation")
 	}
-	if containsAnyPattern(lower, ".ts", ".tsx", "node", "npm", "typescript") {
+	if NewCatalog().containsAnyPattern(lower, ".ts", ".tsx", "node", "npm", "typescript") {
 		refs = append(refs, "node-implementation")
 	}
-	if containsAnyPattern(lower, ".py", "python", "pip install", "pip3", "django", "flask", "pyproject.toml", "requirements.txt") {
+	if NewCatalog().containsAnyPattern(lower, ".py", "python", "pip install", "pip3", "django", "flask", "pyproject.toml", "requirements.txt") {
 		refs = append(refs, "python-implementation")
 	}
-	if containsAnyPattern(lower, ".cs", ".csproj", ".sln", "dotnet", ".net", "c#", "csharp", "asp.net", "nuget", "ef core") {
+	if NewCatalog().containsAnyPattern(lower, ".cs", ".csproj", ".sln", "dotnet", ".net", "c#", "csharp", "asp.net", "nuget", "ef core") {
 		refs = append(refs, "dotnet-csharp-implementation")
 	}
 
-	if containsAnyPattern(lower, "domain", "aggregate", "entity", "value object", "bounded context", "ddd") {
+	if NewCatalog().containsAnyPattern(lower, "domain", "aggregate", "entity", "value object", "bounded context", "ddd") {
 		refs = append(refs, "ddd")
 	}
-	if containsAnyPattern(lower, "seguranca", "security", "auth", "credential", "vulnerab") {
+	if NewCatalog().containsAnyPattern(lower, "seguranca", "security", "auth", "credential", "vulnerab") {
 		refs = append(refs, "security")
 	}
 
@@ -180,7 +180,7 @@ func detectReferences(content string) string {
 }
 
 // containsAnyPattern retorna true se s contem qualquer um dos patterns.
-func containsAnyPattern(s string, patterns ...string) bool {
+func (c *Catalog) containsAnyPattern(s string, patterns ...string) bool {
 	for _, p := range patterns {
 		if strings.Contains(s, p) {
 			return true
@@ -193,7 +193,7 @@ func containsAnyPattern(s string, patterns ...string) bool {
 // Inclui instrucao explicita de leitura de AGENTS.md porque --bare pula o
 // carregamento automatico de CLAUDE.md (RF-04, contrato de carga base).
 // Arquitetura e referencias sao preenchidos dinamicamente a partir do PromptContext.
-func BuildPrompt(taskFilePath, prdFolder string, ctx PromptContext) string {
+func (c *Catalog) BuildPrompt(taskFilePath, prdFolder string, ctx PromptContext) string {
 	data := ExecutorTemplateData{
 		TaskFile:      taskFilePath,
 		PRDFolder:     prdFolder,
@@ -203,7 +203,7 @@ func BuildPrompt(taskFilePath, prdFolder string, ctx PromptContext) string {
 		AgentCatalog:  ctx.AgentCatalog,
 	}
 
-	tmpl, err := template.New("executor").Parse(defaultExecutorTemplate)
+	tmpl, err := template.New("executor").Parse(_defaultExecutorTemplate)
 	if err != nil {
 		return fmt.Sprintf("Use a skill execute-task para implementar a task %s. PRD folder: %s", taskFilePath, prdFolder)
 	}
@@ -225,7 +225,7 @@ type LiveOutputSetter interface {
 
 // isAuthError detecta erros de autenticacao conhecidos no output do agente.
 // Retorna true quando o output contem padroes que indicam falha de login/token.
-func isAuthError(output string) bool {
+func (c *Catalog) isAuthError(output string) bool {
 	patterns := []string{
 		"not logged in",
 		"please run /login",
@@ -246,7 +246,7 @@ func isAuthError(output string) bool {
 }
 
 // authGuidance retorna instrucoes de autenticacao especificas por ferramenta.
-func authGuidance(tool string) string {
+func (c *Catalog) authGuidance(tool string) string {
 	switch tool {
 	case "claude":
 		return "execute 'claude' em um terminal separado e faca login com '/login', ou defina ANTHROPIC_API_KEY no ambiente para uso nao-interativo"
@@ -266,7 +266,7 @@ func authGuidance(tool string) string {
 // Nunca bloqueia a execucao — e um aviso antecipado, nao uma prova de autenticacao valida.
 // Util para detectar falha de auth ANTES de iniciar o loop, evitando que a primeira
 // iteracao falhe silenciosamente so na hora de invocar o agente.
-func warnClaudeAuth() string {
+func (c *Catalog) warnClaudeAuth() string {
 	if os.Getenv("ANTHROPIC_API_KEY") != "" {
 		return "" // API key presente — autenticacao nao-interativa disponivel
 	}
@@ -277,13 +277,12 @@ func warnClaudeAuth() string {
 	entries, err := os.ReadDir(filepath.Join(home, ".claude"))
 	if err != nil || len(entries) == 0 {
 		return "ANTHROPIC_API_KEY nao definido e ~/.claude/ vazio ou ausente — " +
-			"autenticacao de subprocesso pode falhar; " +
-			authGuidance("claude")
+			"autenticacao de subprocesso pode falhar; " + NewCatalog().authGuidance("claude")
 	}
 	return "" // diretorio existe com arquivos; sessao provavelmente disponivel
 }
 
-func cleanEnv() []string {
+func (c *Catalog) cleanEnv() []string {
 	env := os.Environ()
 	var cleaned []string
 	for _, e := range env {
@@ -330,22 +329,22 @@ func (c *claudeInvoker) Invoke(ctx context.Context, prompt, workDir, model strin
 	} else {
 		args = append(args, "--dangerously-skip-permissions", "--print", "--bare", "-p", prompt)
 	}
-	return runCmd(ctx, workDir, c.liveOut, bin, args...)
+	return NewCatalog().runCmd(ctx, workDir, c.liveOut, bin, args...)
 }
 
 // --- Codex ---
 
-// codexLegacyDeprecationMsg é o aviso de depreciação emitido na primeira invocação
+// _codexLegacyDeprecationMsg é o aviso de depreciação emitido na primeira invocação
 // do codexInvoker legado. Contém os literais obrigatórios conforme Tarefa 8.0 e ADR-013 D-05.
-const codexLegacyDeprecationMsg = "WARNING: Codex CLI legado (codex exec --yolo) em uso. " +
+const _codexLegacyDeprecationMsg = "WARNING: Codex CLI legado (codex exec --yolo) em uso. " +
 	"Migrar para --runtime=acp (binário codex-acp, pacote @zed-industries/codex-acp). " +
 	"O modo legado será removido em 2 versões minor. Ver ADR-013. " +
 	"Guia de migração: docs/migracao-legacy-acp.md."
 
-// codexLegacyWarnOnce garante que o aviso de depreciação do codexInvoker legado
+// _codexLegacyWarnOnce garante que o aviso de depreciação do codexInvoker legado
 // seja emitido exatamente uma vez por execução do processo (não por task).
 // Declarado em escopo package-level conforme ADR-013 D-05.
-var codexLegacyWarnOnce sync.Once
+var _codexLegacyWarnOnce sync.Once
 
 type codexInvoker struct {
 	liveOut    io.Writer
@@ -361,8 +360,8 @@ func (c *codexInvoker) Invoke(ctx context.Context, prompt, workDir, model string
 	if w == nil {
 		w = os.Stderr
 	}
-	codexLegacyWarnOnce.Do(func() {
-		_, _ = fmt.Fprintln(w, codexLegacyDeprecationMsg)
+	_codexLegacyWarnOnce.Do(func() {
+		_, _ = fmt.Fprintln(w, _codexLegacyDeprecationMsg)
 	})
 	args := make([]string, 0, 5)
 	args = append(args, "exec")
@@ -370,7 +369,7 @@ func (c *codexInvoker) Invoke(ctx context.Context, prompt, workDir, model string
 		args = append(args, "--model", model)
 	}
 	args = append(args, "--yolo", prompt)
-	return runCmd(ctx, workDir, c.liveOut, "codex", args...)
+	return NewCatalog().runCmd(ctx, workDir, c.liveOut, "codex", args...)
 }
 
 // --- Gemini ---
@@ -389,14 +388,14 @@ func (g *geminiInvoker) Invoke(ctx context.Context, prompt, workDir, model strin
 		args = append(args, "--model", model)
 	}
 	args = append(args, "--approval-mode=yolo", "-p", prompt)
-	return runCmd(ctx, workDir, g.liveOut, "gemini", args...)
+	return NewCatalog().runCmd(ctx, workDir, g.liveOut, "gemini", args...)
 }
 
 // --- Copilot ---
 
-// copilotLegacyDeprecationMsg é o aviso de depreciação emitido na primeira invocação
+// _copilotLegacyDeprecationMsg é o aviso de depreciação emitido na primeira invocação
 // do copilotInvoker legado. Contém os literais obrigatórios conforme Tarefa 7.0.
-const copilotLegacyDeprecationMsg = "WARNING: Copilot CLI em modo legado (sem ACP). " +
+const _copilotLegacyDeprecationMsg = "WARNING: Copilot CLI em modo legado (sem ACP). " +
 	"Migrar para --runtime=acp. O modo legado será removido em vX.Y.Z. Ver ADR-012. " +
 	"Guia de migração: docs/migracao-legacy-acp.md."
 
@@ -416,12 +415,12 @@ func (c *copilotInvoker) Invoke(ctx context.Context, prompt, workDir, model stri
 		w = os.Stderr
 	}
 	c.warnOnce.Do(func() {
-		_, _ = fmt.Fprintln(w, copilotLegacyDeprecationMsg)
+		_, _ = fmt.Fprintln(w, _copilotLegacyDeprecationMsg)
 	})
 	args := make([]string, 0, 6)
 	if model != "" {
 		args = append(args, "--model", model)
 	}
 	args = append(args, "--autopilot", "--yolo", "-p", prompt)
-	return runCmd(ctx, workDir, c.liveOut, "copilot", args...)
+	return NewCatalog().runCmd(ctx, workDir, c.liveOut, "copilot", args...)
 }

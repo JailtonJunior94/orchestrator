@@ -22,7 +22,7 @@ func setupFS(files ...string) *fs.FakeFileSystem {
 
 func TestGoImplementation_WithGoMod(t *testing.T) {
 	fsys := setupFS(projectDir + "/go.mod")
-	passed, results, err := prerequisites.Verify("go-implementation", projectDir, fsys)
+	passed, results, err := prerequisites.NewVerifier().Verify("go-implementation", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -36,7 +36,7 @@ func TestGoImplementation_WithGoMod(t *testing.T) {
 
 func TestGoImplementation_WithGoWork(t *testing.T) {
 	fsys := setupFS(projectDir + "/go.work")
-	passed, _, err := prerequisites.Verify("go-implementation", projectDir, fsys)
+	passed, _, err := prerequisites.NewVerifier().Verify("go-implementation", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestGoImplementation_WithGoWork(t *testing.T) {
 
 func TestGoImplementation_Missing(t *testing.T) {
 	fsys := setupFS()
-	passed, results, err := prerequisites.Verify("go-implementation", projectDir, fsys)
+	passed, results, err := prerequisites.NewVerifier().Verify("go-implementation", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestGoImplementation_Missing(t *testing.T) {
 
 func TestNodeImplementation_Pass(t *testing.T) {
 	fsys := setupFS(projectDir + "/package.json")
-	passed, _, err := prerequisites.Verify("node-implementation", projectDir, fsys)
+	passed, _, err := prerequisites.NewVerifier().Verify("node-implementation", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestNodeImplementation_Pass(t *testing.T) {
 
 func TestNodeImplementation_Fail(t *testing.T) {
 	fsys := setupFS()
-	passed, _, err := prerequisites.Verify("node-implementation", projectDir, fsys)
+	passed, _, err := prerequisites.NewVerifier().Verify("node-implementation", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestNodeImplementation_Fail(t *testing.T) {
 
 func TestPythonImplementation_PyprojectToml(t *testing.T) {
 	fsys := setupFS(projectDir + "/pyproject.toml")
-	passed, _, err := prerequisites.Verify("python-implementation", projectDir, fsys)
+	passed, _, err := prerequisites.NewVerifier().Verify("python-implementation", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestPythonImplementation_PyprojectToml(t *testing.T) {
 
 func TestPythonImplementation_SetupPy(t *testing.T) {
 	fsys := setupFS(projectDir + "/setup.py")
-	passed, _, err := prerequisites.Verify("python-implementation", projectDir, fsys)
+	passed, _, err := prerequisites.NewVerifier().Verify("python-implementation", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestPythonImplementation_SetupPy(t *testing.T) {
 
 func TestPythonImplementation_RequirementsTxt(t *testing.T) {
 	fsys := setupFS(projectDir + "/requirements.txt")
-	passed, _, err := prerequisites.Verify("python-implementation", projectDir, fsys)
+	passed, _, err := prerequisites.NewVerifier().Verify("python-implementation", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -120,7 +120,7 @@ func TestPythonImplementation_RequirementsTxt(t *testing.T) {
 
 func TestPythonImplementation_Fail(t *testing.T) {
 	fsys := setupFS()
-	passed, _, err := prerequisites.Verify("python-implementation", projectDir, fsys)
+	passed, _, err := prerequisites.NewVerifier().Verify("python-implementation", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestPythonImplementation_Fail(t *testing.T) {
 
 func TestCreateTasks_BothPresent(t *testing.T) {
 	fsys := setupFS(projectDir+"/prd.md", projectDir+"/techspec.md")
-	passed, results, err := prerequisites.Verify("create-tasks", projectDir, fsys)
+	passed, results, err := prerequisites.NewVerifier().Verify("create-tasks", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -147,7 +147,7 @@ func TestCreateTasks_BothPresent(t *testing.T) {
 
 func TestCreateTasks_MissingPrd(t *testing.T) {
 	fsys := setupFS(projectDir + "/techspec.md")
-	passed, _, err := prerequisites.Verify("create-tasks", projectDir, fsys)
+	passed, _, err := prerequisites.NewVerifier().Verify("create-tasks", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -158,7 +158,7 @@ func TestCreateTasks_MissingPrd(t *testing.T) {
 
 func TestCreateTasks_MissingTechspec(t *testing.T) {
 	fsys := setupFS(projectDir + "/prd.md")
-	passed, _, err := prerequisites.Verify("create-tasks", projectDir, fsys)
+	passed, _, err := prerequisites.NewVerifier().Verify("create-tasks", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestCreateTasks_MissingTechspec(t *testing.T) {
 
 func TestCreateTasks_BothMissing(t *testing.T) {
 	fsys := setupFS()
-	passed, _, err := prerequisites.Verify("create-tasks", projectDir, fsys)
+	passed, _, err := prerequisites.NewVerifier().Verify("create-tasks", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -182,7 +182,7 @@ func TestCreateTasks_BothMissing(t *testing.T) {
 
 func TestExecuteTask_Pass(t *testing.T) {
 	fsys := setupFS(projectDir + "/tasks.md")
-	passed, _, err := prerequisites.Verify("execute-task", projectDir, fsys)
+	passed, _, err := prerequisites.NewVerifier().Verify("execute-task", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestExecuteTask_Pass(t *testing.T) {
 
 func TestExecuteTask_Fail(t *testing.T) {
 	fsys := setupFS()
-	passed, _, err := prerequisites.Verify("execute-task", projectDir, fsys)
+	passed, _, err := prerequisites.NewVerifier().Verify("execute-task", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestExecuteTask_Fail(t *testing.T) {
 
 func TestCreateTechnicalSpecification_Pass(t *testing.T) {
 	fsys := setupFS(projectDir + "/prd.md")
-	passed, _, err := prerequisites.Verify("create-technical-specification", projectDir, fsys)
+	passed, _, err := prerequisites.NewVerifier().Verify("create-technical-specification", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -217,7 +217,7 @@ func TestCreateTechnicalSpecification_Pass(t *testing.T) {
 
 func TestCreateTechnicalSpecification_Fail(t *testing.T) {
 	fsys := setupFS()
-	passed, _, err := prerequisites.Verify("create-technical-specification", projectDir, fsys)
+	passed, _, err := prerequisites.NewVerifier().Verify("create-technical-specification", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -230,7 +230,7 @@ func TestCreateTechnicalSpecification_Fail(t *testing.T) {
 
 func TestBugfix_WithBugsJson(t *testing.T) {
 	fsys := setupFS(projectDir + "/bugs.json")
-	passed, results, err := prerequisites.Verify("bugfix", projectDir, fsys)
+	passed, results, err := prerequisites.NewVerifier().Verify("bugfix", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -244,7 +244,7 @@ func TestBugfix_WithBugsJson(t *testing.T) {
 
 func TestBugfix_WithoutBugsJson(t *testing.T) {
 	fsys := setupFS()
-	passed, results, err := prerequisites.Verify("bugfix", projectDir, fsys)
+	passed, results, err := prerequisites.NewVerifier().Verify("bugfix", projectDir, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -264,7 +264,7 @@ func TestBugfix_WithoutBugsJson(t *testing.T) {
 
 func TestUnknownSkill(t *testing.T) {
 	fsys := setupFS()
-	_, _, err := prerequisites.Verify("nonexistent-skill", projectDir, fsys)
+	_, _, err := prerequisites.NewVerifier().Verify("nonexistent-skill", projectDir, fsys)
 	if err == nil {
 		t.Error("expected error for unknown skill")
 	}
@@ -272,7 +272,7 @@ func TestUnknownSkill(t *testing.T) {
 
 func TestDirectoryNotFound(t *testing.T) {
 	fsys := fs.NewFakeFileSystem()
-	_, _, err := prerequisites.Verify("go-implementation", "/nonexistent", fsys)
+	_, _, err := prerequisites.NewVerifier().Verify("go-implementation", "/nonexistent", fsys)
 	if err == nil {
 		t.Error("expected error for nonexistent directory")
 	}
@@ -281,7 +281,7 @@ func TestDirectoryNotFound(t *testing.T) {
 // --- KnownSkills ---
 
 func TestKnownSkills(t *testing.T) {
-	skills := prerequisites.KnownSkills()
+	skills := prerequisites.NewVerifier().KnownSkills()
 	expected := []string{
 		"go-implementation",
 		"node-implementation",

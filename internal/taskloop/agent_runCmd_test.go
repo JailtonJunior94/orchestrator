@@ -25,7 +25,7 @@ func TestRunCmdStreamsStderrToLiveOut(t *testing.T) {
 	}
 
 	var liveCapture bytes.Buffer
-	stdout, stderr, exitCode, err := runCmd(context.Background(), dir, &liveCapture, path)
+	stdout, stderr, exitCode, err := NewCatalog().runCmd(context.Background(), dir, &liveCapture, path)
 	if err != nil {
 		t.Fatalf("runCmd retornou erro inesperado: %v", err)
 	}
@@ -63,7 +63,7 @@ func TestRunCmdNoLiveOutDoesNotPanic(t *testing.T) {
 		t.Fatalf("nao foi possivel criar script: %v", err)
 	}
 
-	stdout, _, exitCode, err := runCmd(context.Background(), dir, nil, path)
+	stdout, _, exitCode, err := NewCatalog().runCmd(context.Background(), dir, nil, path)
 	if err != nil {
 		t.Fatalf("runCmd retornou erro: %v", err)
 	}

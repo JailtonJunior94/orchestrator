@@ -1,18 +1,17 @@
 package aispecharness
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestUpgradeRef_MutuallyExclusiveWithSource(t *testing.T) {
-	upgradeRef = "v1.1.0"
-	upgradeSource = "/tmp/some-source"
-	t.Cleanup(func() {
-		upgradeRef = ""
-		upgradeSource = ""
-	})
+	cmd := newUpgradeCmd()
+	if err := cmd.Flags().Set("ref", "v1.1.0"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Flags().Set("source", "/tmp/some-source"); err != nil {
+		t.Fatal(err)
+	}
 
-	err := runUpgrade(upgradeCmd, []string{"/tmp/project"})
+	err := (&upgradeCommand{}).run(cmd, []string{"/tmp/project"})
 	if err == nil {
 		t.Fatal("expected error when --ref and --source are both set")
 	}

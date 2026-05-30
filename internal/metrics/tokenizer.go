@@ -15,6 +15,8 @@ type Tokenizer interface {
 // CharEstimator usa a heuristica chars/3.5 (default, sem dependencia externa).
 type CharEstimator struct{}
 
+var _ Tokenizer = CharEstimator{}
+
 func (CharEstimator) EstimateTokens(text string) int {
 	return int(math.Round(float64(len(text)) / 3.5))
 }

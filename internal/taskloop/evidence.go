@@ -13,8 +13,8 @@ import (
 var ErrEvidenceMissing = errors.New("taskloop: evidencia ausente")
 
 const (
-	evidenceStart = "<!-- evidence:start -->"
-	evidenceEnd   = "<!-- evidence:end -->"
+	_evidenceStart = "<!-- evidence:start -->"
+	_evidenceEnd   = "<!-- evidence:end -->"
 )
 
 // EvidenceRecorder persiste AcceptanceReport no arquivo da task de forma idempotente.
@@ -25,6 +25,8 @@ type EvidenceRecorder interface {
 type defaultEvidenceRecorder struct {
 	fsys fs.FileSystem
 }
+
+var _ EvidenceRecorder = (*defaultEvidenceRecorder)(nil)
 
 // NewEvidenceRecorder cria um EvidenceRecorder com o filesystem fornecido.
 func NewEvidenceRecorder(fsys fs.FileSystem) EvidenceRecorder {
@@ -39,8 +41,8 @@ func (r *defaultEvidenceRecorder) Append(_ context.Context, taskFile string, rep
 		return fmt.Errorf("%w: %w", ErrEvidenceMissing, err)
 	}
 
-	block := buildEvidenceBlock(report)
-	updated := replaceEvidenceBlock(data, block)
+	block := NewCatalog().buildEvidenceBlock(report)
+	updated := NewCatalog().replaceEvidenceBlock(data, block)
 
 	if err := r.fsys.WriteFile(taskFile, updated); err != nil {
 		return fmt.Errorf("%w: %w", ErrEvidenceMissing, err)
@@ -48,9 +50,9 @@ func (r *defaultEvidenceRecorder) Append(_ context.Context, taskFile string, rep
 	return nil
 }
 
-func buildEvidenceBlock(r AcceptanceReport) []byte {
+func (c *Catalog) buildEvidenceBlock(r AcceptanceReport) []byte {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "%s\n", evidenceStart)
+	fmt.Fprintf(&b, "%s\n", _evidenceStart)
 	fmt.Fprintf(&b, "## Evidência\n\n")
 	fmt.Fprintf(&b, "**Task:** %s\n", r.TaskID)
 	fmt.Fprintf(&b, "**Passed:** %v\n", r.Passed)
@@ -64,13 +66,13 @@ func buildEvidenceBlock(r AcceptanceReport) []byte {
 	if r.LintOutput != "" {
 		fmt.Fprintf(&b, "### lint\n\n```\n%s\n```\n\n", r.LintOutput)
 	}
-	fmt.Fprintf(&b, "%s\n", evidenceEnd)
+	fmt.Fprintf(&b, "%s\n", _evidenceEnd)
 	return b.Bytes()
 }
 
-func replaceEvidenceBlock(data, block []byte) []byte {
-	startMarker := []byte(evidenceStart)
-	endMarker := []byte(evidenceEnd)
+func (c *Catalog) replaceEvidenceBlock(data, block []byte) []byte {
+	startMarker := []byte(_evidenceStart)
+	endMarker := []byte(_evidenceEnd)
 
 	startIdx := bytes.Index(data, startMarker)
 	endIdx := bytes.Index(data, endMarker)

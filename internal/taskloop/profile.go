@@ -20,8 +20,8 @@ var (
 	ErrFlagsConflitantes = errors.New("flags de modo simples e avancado sao mutuamente exclusivas")
 )
 
-// toolProviderMap mapeia ferramenta para seu provider.
-var toolProviderMap = map[string]string{
+// _toolProviderMap mapeia ferramenta para seu provider.
+var _toolProviderMap = map[string]string{
 	"claude":  "anthropic",
 	"codex":   "openai",
 	"gemini":  "google",
@@ -30,8 +30,8 @@ var toolProviderMap = map[string]string{
 
 // inferProvider retorna o provider para a ferramenta informada.
 // Retorna string vazia se a ferramenta nao for reconhecida.
-func inferProvider(tool string) string {
-	return toolProviderMap[tool]
+func (c *Catalog) inferProvider(tool string) string {
+	return _toolProviderMap[tool]
 }
 
 // ExecutionProfile representa a configuracao completa de um papel no task-loop.
@@ -51,7 +51,7 @@ func NewExecutionProfile(role, tool, model string) (ExecutionProfile, error) {
 		return ExecutionProfile{}, fmt.Errorf("%w: %q", ErrRoleInvalido, role)
 	}
 
-	provider, ok := toolProviderMap[tool]
+	provider, ok := _toolProviderMap[tool]
 	if !ok {
 		return ExecutionProfile{}, fmt.Errorf("%w: %q — opcoes: claude, codex, gemini, copilot", ErrToolInvalida, tool)
 	}
@@ -78,7 +78,7 @@ func (p ExecutionProfile) Model() string { return p.model }
 
 // ProfileConfig agrupa perfis do executor e reviewer para uma execucao.
 type ProfileConfig struct {
-	Mode     string            // "simples" ou "avancado"
+	Mode     string // "simples" ou "avancado"
 	Executor ExecutionProfile
 	Reviewer *ExecutionProfile // nil = reviewer nao configurado
 }
@@ -86,10 +86,10 @@ type ProfileConfig struct {
 // mapIDEToSpec converte o campo runtime.ide de um AGENT.md em uma specs.Spec concreta.
 // Nesta fase, apenas "claude" e suportado em ACP; demais IDEs retornam erro acionavel.
 // Multi-IDE via ACP e trabalho futuro (Fase 5 do PRD).
-func mapIDEToSpec(ide string) (specs.Spec, error) {
+func (c *Catalog) mapIDEToSpec(ide string) (specs.Spec, error) {
 	switch ide {
 	case "claude":
-		return specs.Claude(), nil
+		return specs.NewCatalog().Claude(), nil
 	default:
 		return specs.Spec{}, fmt.Errorf("ide %q ainda nao suportado em ACP — use --tool legado", ide)
 	}
@@ -100,9 +100,11 @@ func mapIDEToSpec(ide string) (specs.Spec, error) {
 // Retorna erro quando o runtime.ide declarado nao e suportado em ACP nesta fase.
 // allowUnknownModel controla se a validacao de compatibilidade runtime.model x CompatibilityTable
 // e pulada (paridade com --allow-unknown-model existente).
-func ResolveProfileFromAgent(agent agents.ResolvedAgent, override agents.RuntimeOverride, allowUnknownModel bool) (*ProfileConfig, error) {
-	// Aplicar precedencia: override CLI preenche campos nao setados com defaults do agente.
-	agents.ApplyRuntimePrecedence(&override, agent.Runtime)
+func (c *Catalog) ResolveProfileFromAgent(agent agents.ResolvedAgent, override agents.RuntimeOverride, allowUnknownModel bool) (*ProfileConfig, error) {
+	agents.
+		// Aplicar precedencia: override CLI preenche campos nao setados com defaults do agente.
+		NewCatalog().
+		ApplyRuntimePrecedence(&override, agent.Runtime)
 
 	// IDE final: usa override apos precedencia, ou fallback para "claude" como default ACP.
 	ide := override.IDE
@@ -110,14 +112,14 @@ func ResolveProfileFromAgent(agent agents.ResolvedAgent, override agents.Runtime
 		ide = "claude"
 	}
 
-	_, err := mapIDEToSpec(ide)
+	_, err := NewCatalog().mapIDEToSpec(ide)
 	if err != nil {
 		return nil, err
 	}
 
 	// Validar runtime.model contra CompatibilityTable (RF-09, T-13).
 	// Modelo vazio e sempre aceito; --allow-unknown-model bypassa a validacao.
-	if err := ValidateModelForIDE(ide, override.Model, allowUnknownModel); err != nil {
+	if err := NewCatalog().ValidateModelForIDE(ide, override.Model, allowUnknownModel); err != nil {
 		return nil, fmt.Errorf("agente %q: %w", agent.Name, err)
 	}
 
@@ -140,7 +142,7 @@ func ResolveProfileFromAgent(agent agents.ResolvedAgent, override agents.Runtime
 // ResolveProfiles converte flags CLI em ProfileConfig.
 // Retorna nil quando tool != "" e execTool == "" (modo simples — caller usa Tool diretamente).
 // Retorna ProfileConfig com Mode="avancado" quando execTool != "".
-func ResolveProfiles(tool, execTool, execModel, revTool, revModel string) (*ProfileConfig, error) {
+func (c *Catalog) ResolveProfiles(tool, execTool, execModel, revTool, revModel string) (*ProfileConfig, error) {
 	// Regra 1: flags mutuamente exclusivas
 	if tool != "" && (execTool != "" || revTool != "") {
 		return nil, fmt.Errorf("%w", ErrFlagsConflitantes)

@@ -34,6 +34,6 @@ func FuzzValidateBugReport(f *testing.F) {
 		}
 
 		// JSONs invalidos devem retornar erro sem panic
-		_ = Validate(bugsPath, schemaPath)
+		_ = NewValidator().Validate(bugsPath, schemaPath)
 	})
 }

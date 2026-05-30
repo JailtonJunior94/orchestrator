@@ -11,7 +11,7 @@ import (
 // mustParseDriver cria DriverID ou falha o teste.
 func mustParseDriver(t *testing.T, s string) specs.DriverID {
 	t.Helper()
-	d, err := specs.ParseDriverID(s)
+	d, err := specs.NewCatalog().ParseDriverID(s)
 	if err != nil {
 		t.Fatalf("ParseDriverID(%q): %v", s, err)
 	}
@@ -22,7 +22,7 @@ func mustParseDriver(t *testing.T, s string) specs.DriverID {
 
 func TestExtractorFor_ReturnsNullExtractor_ForCodex(t *testing.T) {
 	d := mustParseDriver(t, "codex")
-	ext := events.ExtractorFor(d)
+	ext := events.NewCatalog().ExtractorFor(d)
 	// nullExtractor deve retornar zero para qualquer payload.
 	payload := json.RawMessage(`{"usage":{"cache_read_input_tokens":100}}`)
 	m := ext.Extract(payload)
@@ -33,7 +33,7 @@ func TestExtractorFor_ReturnsNullExtractor_ForCodex(t *testing.T) {
 
 func TestExtractorFor_ReturnsNullExtractor_ForCopilot(t *testing.T) {
 	d := mustParseDriver(t, "copilot")
-	ext := events.ExtractorFor(d)
+	ext := events.NewCatalog().ExtractorFor(d)
 	payload := json.RawMessage(`{"usage":{"cache_read_input_tokens":100}}`)
 	m := ext.Extract(payload)
 	if !m.IsZero() {
@@ -42,8 +42,8 @@ func TestExtractorFor_ReturnsNullExtractor_ForCopilot(t *testing.T) {
 }
 
 func TestExtractorFor_ReturnsDifferentExtractors_ForClaudeAndGemini(t *testing.T) {
-	claude := events.ExtractorFor(mustParseDriver(t, "claude"))
-	gemini := events.ExtractorFor(mustParseDriver(t, "gemini"))
+	claude := events.NewCatalog().ExtractorFor(mustParseDriver(t, "claude"))
+	gemini := events.NewCatalog().ExtractorFor(mustParseDriver(t, "gemini"))
 	// Simplesmente garantir que são tipos distintos verificando comportamento diferente.
 	claudePayload := json.RawMessage(`{"usage":{"cache_read_input_tokens":50,"thoughtTokens":10}}`)
 	geminiPayload := json.RawMessage(`{"usage":{"cache_read_tokens":50,"thoughts_tokens":10}}`)
@@ -63,7 +63,7 @@ func TestExtractorFor_ReturnsDifferentExtractors_ForClaudeAndGemini(t *testing.T
 
 func TestClaudeExtractor_FullPayload(t *testing.T) {
 	d := mustParseDriver(t, "claude")
-	ext := events.ExtractorFor(d)
+	ext := events.NewCatalog().ExtractorFor(d)
 
 	payload := json.RawMessage(`{
 		"usage": {
@@ -92,7 +92,7 @@ func TestClaudeExtractor_FullPayload(t *testing.T) {
 
 func TestClaudeExtractor_PartialPayload_OnlyCacheRead(t *testing.T) {
 	d := mustParseDriver(t, "claude")
-	ext := events.ExtractorFor(d)
+	ext := events.NewCatalog().ExtractorFor(d)
 
 	payload := json.RawMessage(`{"usage":{"cache_read_input_tokens":75}}`)
 	m := ext.Extract(payload)
@@ -107,7 +107,7 @@ func TestClaudeExtractor_PartialPayload_OnlyCacheRead(t *testing.T) {
 
 func TestClaudeExtractor_AbsentUsage_ReturnsZero(t *testing.T) {
 	d := mustParseDriver(t, "claude")
-	ext := events.ExtractorFor(d)
+	ext := events.NewCatalog().ExtractorFor(d)
 
 	payload := json.RawMessage(`{"sessionUpdate":"agent_message"}`)
 	m := ext.Extract(payload)
@@ -119,7 +119,7 @@ func TestClaudeExtractor_AbsentUsage_ReturnsZero(t *testing.T) {
 
 func TestClaudeExtractor_NilPayload_ReturnsZero(t *testing.T) {
 	d := mustParseDriver(t, "claude")
-	ext := events.ExtractorFor(d)
+	ext := events.NewCatalog().ExtractorFor(d)
 
 	m := ext.Extract(nil)
 	if !m.IsZero() {
@@ -129,7 +129,7 @@ func TestClaudeExtractor_NilPayload_ReturnsZero(t *testing.T) {
 
 func TestClaudeExtractor_InvalidJSON_ReturnsZero(t *testing.T) {
 	d := mustParseDriver(t, "claude")
-	ext := events.ExtractorFor(d)
+	ext := events.NewCatalog().ExtractorFor(d)
 
 	m := ext.Extract(json.RawMessage(`{invalid json}`))
 	if !m.IsZero() {
@@ -141,7 +141,7 @@ func TestClaudeExtractor_InvalidJSON_ReturnsZero(t *testing.T) {
 
 func TestGeminiExtractor_FullPayload(t *testing.T) {
 	d := mustParseDriver(t, "gemini")
-	ext := events.ExtractorFor(d)
+	ext := events.NewCatalog().ExtractorFor(d)
 
 	payload := json.RawMessage(`{
 		"usage": {
@@ -174,7 +174,7 @@ func TestGeminiExtractor_FullPayload(t *testing.T) {
 
 func TestGeminiExtractor_AbsentUsage_ReturnsZero(t *testing.T) {
 	d := mustParseDriver(t, "gemini")
-	ext := events.ExtractorFor(d)
+	ext := events.NewCatalog().ExtractorFor(d)
 
 	m := ext.Extract(json.RawMessage(`{"sessionUpdate":"agent_message"}`))
 	if !m.IsZero() {
@@ -184,7 +184,7 @@ func TestGeminiExtractor_AbsentUsage_ReturnsZero(t *testing.T) {
 
 func TestGeminiExtractor_NilPayload_ReturnsZero(t *testing.T) {
 	d := mustParseDriver(t, "gemini")
-	ext := events.ExtractorFor(d)
+	ext := events.NewCatalog().ExtractorFor(d)
 
 	m := ext.Extract(nil)
 	if !m.IsZero() {
@@ -204,7 +204,7 @@ func TestNullExtractor_AlwaysReturnsZero(t *testing.T) {
 
 	for _, driver := range []string{"codex", "copilot"} {
 		d := mustParseDriver(t, driver)
-		ext := events.ExtractorFor(d)
+		ext := events.NewCatalog().ExtractorFor(d)
 		for _, p := range payloads {
 			m := ext.Extract(p)
 			if !m.IsZero() {
@@ -228,7 +228,7 @@ func TestExtractor_ZeroIsZero(t *testing.T) {
 // TestExtractor_MergeAssociative valida que Merge é associativo/acumulativo via extractor.
 func TestExtractor_MergeAssociative(t *testing.T) {
 	d := mustParseDriver(t, "claude")
-	ext := events.ExtractorFor(d)
+	ext := events.NewCatalog().ExtractorFor(d)
 
 	p1 := json.RawMessage(`{"usage":{"cache_read_input_tokens":50}}`)
 	p2 := json.RawMessage(`{"usage":{"cache_read_input_tokens":30,"thoughtTokens":10}}`)

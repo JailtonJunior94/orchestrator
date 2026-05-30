@@ -61,33 +61,33 @@ func TestBackoffDuration(t *testing.T) {
 		wantZero    bool
 	}{
 		{
-			name:       "zero base retorna zero",
-			base:       0, multiplier: 2, attempt: 1,
+			name: "zero base retorna zero",
+			base: 0, multiplier: 2, attempt: 1,
 			wantZero: true,
 		},
 		{
-			name:       "multiplier zero retorna zero",
-			base:       100 * time.Millisecond, multiplier: 0, attempt: 1,
+			name: "multiplier zero retorna zero",
+			base: 100 * time.Millisecond, multiplier: 0, attempt: 1,
 			wantZero: true,
 		},
 		{
-			name:       "multiplier negativo retorna zero",
-			base:       100 * time.Millisecond, multiplier: -1, attempt: 1,
+			name: "multiplier negativo retorna zero",
+			base: 100 * time.Millisecond, multiplier: -1, attempt: 1,
 			wantZero: true,
 		},
 		{
-			name:       "attempt zero retorna zero",
-			base:       100 * time.Millisecond, multiplier: 2, attempt: 0,
+			name: "attempt zero retorna zero",
+			base: 100 * time.Millisecond, multiplier: 2, attempt: 0,
 			wantZero: true,
 		},
 		{
-			name:        "attempt 1 retorna base*multiplier",
-			base:        100 * time.Millisecond, multiplier: 2, attempt: 1,
+			name: "attempt 1 retorna base*multiplier",
+			base: 100 * time.Millisecond, multiplier: 2, attempt: 1,
 			wantAtLeast: 200 * time.Millisecond,
 		},
 		{
-			name:        "attempt 2 retorna base*multiplier^2",
-			base:        100 * time.Millisecond, multiplier: 2, attempt: 2,
+			name: "attempt 2 retorna base*multiplier^2",
+			base: 100 * time.Millisecond, multiplier: 2, attempt: 2,
 			wantAtLeast: 400 * time.Millisecond,
 		},
 	}
@@ -96,7 +96,7 @@ func TestBackoffDuration(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := airuntime.BackoffDuration(tc.base, tc.multiplier, tc.attempt)
+			got := airuntime.NewCatalog().BackoffDuration(tc.base, tc.multiplier, tc.attempt)
 			if tc.wantZero {
 				if got != 0 {
 					t.Errorf("BackoffDuration(%v, %v, %d) = %v, want 0", tc.base, tc.multiplier, tc.attempt, got)

@@ -40,7 +40,7 @@ RF-01
 `
 
 func TestValidateTask_Complete(t *testing.T) {
-	r := Validate([]byte(taskComplete), KindTask, nil)
+	r := NewValidator().Validate([]byte(taskComplete), KindTask, nil)
 	if !r.Pass {
 		t.Errorf("esperado Pass=true, findings: %v", r.Findings)
 	}
@@ -50,7 +50,7 @@ func TestValidateTask_Complete(t *testing.T) {
 }
 
 func TestValidateTask_Empty(t *testing.T) {
-	r := Validate([]byte(taskEmpty), KindTask, nil)
+	r := NewValidator().Validate([]byte(taskEmpty), KindTask, nil)
 	if r.Pass {
 		t.Error("esperado Pass=false para relatorio vazio")
 	}
@@ -60,7 +60,7 @@ func TestValidateTask_Empty(t *testing.T) {
 }
 
 func TestValidateTask_Partial(t *testing.T) {
-	r := Validate([]byte(taskPartial), KindTask, nil)
+	r := NewValidator().Validate([]byte(taskPartial), KindTask, nil)
 	if r.Pass {
 		t.Error("esperado Pass=false para relatorio parcial")
 	}
@@ -95,7 +95,7 @@ Veredito do Revisor: APPROVED
 # Suposicoes
 # Riscos Residuais
 `
-	r := Validate([]byte(content), KindTask, nil)
+	r := NewValidator().Validate([]byte(content), KindTask, nil)
 	found := false
 	for _, f := range r.Findings {
 		if f.Label == "rastreabilidade RF-nn ou REQ-nn" {
@@ -137,14 +137,14 @@ Causa raiz: nil pointer
 `
 
 func TestValidateBugfix_Complete(t *testing.T) {
-	r := Validate([]byte(bugfixComplete), KindBugfix, nil)
+	r := NewValidator().Validate([]byte(bugfixComplete), KindBugfix, nil)
 	if !r.Pass {
 		t.Errorf("esperado Pass=true, findings: %v", r.Findings)
 	}
 }
 
 func TestValidateBugfix_Empty(t *testing.T) {
-	r := Validate([]byte(bugfixEmpty), KindBugfix, nil)
+	r := NewValidator().Validate([]byte(bugfixEmpty), KindBugfix, nil)
 	if r.Pass {
 		t.Error("esperado Pass=false para relatorio vazio")
 	}
@@ -154,7 +154,7 @@ func TestValidateBugfix_Empty(t *testing.T) {
 }
 
 func TestValidateBugfix_Partial(t *testing.T) {
-	r := Validate([]byte(bugfixPartial), KindBugfix, nil)
+	r := NewValidator().Validate([]byte(bugfixPartial), KindBugfix, nil)
 	if r.Pass {
 		t.Error("esperado Pass=false para relatorio parcial")
 	}
@@ -169,7 +169,7 @@ func TestValidateBugfix_Partial(t *testing.T) {
 }
 
 func TestValidateBugfix_Traceability(t *testing.T) {
-	r := Validate([]byte(bugfixComplete), KindBugfix, []string{"RF-01"})
+	r := NewValidator().Validate([]byte(bugfixComplete), KindBugfix, []string{"RF-01"})
 	found := false
 	for _, f := range r.Findings {
 		if f.Label == "rastreabilidade RF-01" {
@@ -182,7 +182,7 @@ func TestValidateBugfix_Traceability(t *testing.T) {
 
 	// com RF-01 presente no conteudo
 	withRF := bugfixComplete + "\nRF-01\n"
-	r2 := Validate([]byte(withRF), KindBugfix, []string{"RF-01"})
+	r2 := NewValidator().Validate([]byte(withRF), KindBugfix, []string{"RF-01"})
 	for _, f := range r2.Findings {
 		if f.Label == "rastreabilidade RF-01" {
 			t.Error("nao esperado finding de rastreabilidade RF-01 — ID presente no relatorio")
@@ -252,21 +252,21 @@ Lint: pass
 `
 
 func TestValidateRefactor_Complete(t *testing.T) {
-	r := Validate([]byte(refactorComplete), KindRefactor, nil)
+	r := NewValidator().Validate([]byte(refactorComplete), KindRefactor, nil)
 	if !r.Pass {
 		t.Errorf("esperado Pass=true, findings: %v", r.Findings)
 	}
 }
 
 func TestValidateRefactor_Execution_Complete(t *testing.T) {
-	r := Validate([]byte(refactorExecution), KindRefactor, nil)
+	r := NewValidator().Validate([]byte(refactorExecution), KindRefactor, nil)
 	if !r.Pass {
 		t.Errorf("esperado Pass=true para execution com veredito, findings: %v", r.Findings)
 	}
 }
 
 func TestValidateRefactor_Empty(t *testing.T) {
-	r := Validate([]byte(refactorEmpty), KindRefactor, nil)
+	r := NewValidator().Validate([]byte(refactorEmpty), KindRefactor, nil)
 	if r.Pass {
 		t.Error("esperado Pass=false para relatorio vazio")
 	}
@@ -276,7 +276,7 @@ func TestValidateRefactor_Empty(t *testing.T) {
 }
 
 func TestValidateRefactor_Execution_MissingVeredito(t *testing.T) {
-	r := Validate([]byte(refactorMissingVeredito), KindRefactor, nil)
+	r := NewValidator().Validate([]byte(refactorMissingVeredito), KindRefactor, nil)
 	found := false
 	for _, f := range r.Findings {
 		if f.Label == "Veredito do Revisor obrigatorio em Modo execution" {
@@ -289,7 +289,7 @@ func TestValidateRefactor_Execution_MissingVeredito(t *testing.T) {
 }
 
 func TestValidateRefactor_Advisory_NoVeredito(t *testing.T) {
-	r := Validate([]byte(refactorComplete), KindRefactor, nil)
+	r := NewValidator().Validate([]byte(refactorComplete), KindRefactor, nil)
 	for _, f := range r.Findings {
 		if f.Label == "Veredito do Revisor obrigatorio em Modo execution" {
 			t.Error("nao esperado finding de veredito em Modo advisory")
@@ -301,7 +301,7 @@ func TestValidateRefactor_Advisory_NoVeredito(t *testing.T) {
 // ── Kind check ────────────────────────────────────────────────────────────────
 
 func TestValidate_KindPreserved(t *testing.T) {
-	r := Validate([]byte(taskComplete), KindTask, nil)
+	r := NewValidator().Validate([]byte(taskComplete), KindTask, nil)
 	if r.Kind != KindTask {
 		t.Errorf("esperado Kind=%s, got %s", KindTask, r.Kind)
 	}
@@ -313,7 +313,7 @@ func TestValidate_KindPreserved(t *testing.T) {
 
 func TestValidateTask_ClaudeMetricsSection_Absent_DoesNotBlock(t *testing.T) {
 	// Relatório completo SEM a seção de métricas → deve passar (ausência não bloqueia).
-	r := Validate([]byte(taskComplete), KindTask, nil)
+	r := NewValidator().Validate([]byte(taskComplete), KindTask, nil)
 	if !r.Pass {
 		t.Errorf("Pass deve ser true sem seção Métricas Claude-2026; findings: %v", r.Findings)
 	}
@@ -330,7 +330,7 @@ func TestValidateTask_ClaudeMetricsSection_Present_DoesNotBlock(t *testing.T) {
 | thinking_tokens | 42 |
 | tool_calls_normalized | 5 |
 `
-	r := Validate([]byte(withMetrics), KindTask, nil)
+	r := NewValidator().Validate([]byte(withMetrics), KindTask, nil)
 	if !r.Pass {
 		t.Errorf("Pass deve ser true com seção Métricas Claude-2026; findings: %v", r.Findings)
 	}
@@ -352,7 +352,7 @@ func TestEvidenceRendersGeminiMetricsSection_Present_DoesNotBlock(t *testing.T) 
 | prompt_tokens_billed | 300 |
 | thoughts_tokens | 0 |
 `
-	r := Validate([]byte(withGeminiMetrics), KindTask, nil)
+	r := NewValidator().Validate([]byte(withGeminiMetrics), KindTask, nil)
 	if !r.Pass {
 		t.Errorf("Pass deve ser true com seção Métricas Gemini-2026; findings: %v", r.Findings)
 	}
@@ -361,7 +361,7 @@ func TestEvidenceRendersGeminiMetricsSection_Present_DoesNotBlock(t *testing.T) 
 // T-38: TestEvidenceMissingGeminiMetricsDoesNotBlock — ausência da seção Gemini não bloqueia
 func TestEvidenceMissingGeminiMetricsDoesNotBlock(t *testing.T) {
 	// Relatório completo SEM a seção de métricas Gemini → deve passar (ausência não bloqueia).
-	r := Validate([]byte(taskComplete), KindTask, nil)
+	r := NewValidator().Validate([]byte(taskComplete), KindTask, nil)
 	if !r.Pass {
 		t.Errorf("Pass deve ser true sem seção Métricas Gemini-2026; findings: %v", r.Findings)
 	}

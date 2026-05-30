@@ -58,7 +58,7 @@ func TestValidate_ValidInput(t *testing.T) {
 		}
 	]`)
 
-	if err := Validate(bugs, schema); err != nil {
+	if err := NewValidator().Validate(bugs, schema); err != nil {
 		t.Errorf("expected nil error for valid input, got: %v", err)
 	}
 }
@@ -66,7 +66,7 @@ func TestValidate_ValidInput(t *testing.T) {
 func TestValidate_EmptyArray(t *testing.T) {
 	bugs, schema := setup(t, `[]`)
 
-	err := Validate(bugs, schema)
+	err := NewValidator().Validate(bugs, schema)
 	if err == nil {
 		t.Fatal("expected error for empty array")
 	}
@@ -87,7 +87,7 @@ func TestValidate_MissingSeverity(t *testing.T) {
 		}
 	]`)
 
-	err := Validate(bugs, schema)
+	err := NewValidator().Validate(bugs, schema)
 	if err == nil {
 		t.Fatal("expected error for missing severity")
 	}
@@ -109,7 +109,7 @@ func TestValidate_InvalidSeverityEnum(t *testing.T) {
 		}
 	]`)
 
-	err := Validate(bugs, schema)
+	err := NewValidator().Validate(bugs, schema)
 	if err == nil {
 		t.Fatal("expected error for invalid severity enum")
 	}
@@ -132,7 +132,7 @@ func TestValidate_AdditionalProperties(t *testing.T) {
 		}
 	]`)
 
-	err := Validate(bugs, schema)
+	err := NewValidator().Validate(bugs, schema)
 	if err == nil {
 		t.Fatal("expected error for additional properties")
 	}
@@ -145,7 +145,7 @@ func TestValidate_SchemaMissing(t *testing.T) {
 	dir := t.TempDir()
 	bugsPath := writeFile(t, dir, "bugs.json", `[{"id":"BUG-001","severity":"low","file":"f.go","line":1,"reproduction":"r","expected":"e","actual":"a"}]`)
 
-	err := Validate(bugsPath, filepath.Join(dir, "nonexistent-schema.json"))
+	err := NewValidator().Validate(bugsPath, filepath.Join(dir, "nonexistent-schema.json"))
 	if err == nil {
 		t.Fatal("expected error for missing schema")
 	}
@@ -159,7 +159,7 @@ func TestValidate_SchemaInvalid(t *testing.T) {
 	schemaPath := writeFile(t, dir, "bad-schema.json", `{ this is not valid json }`)
 	bugsPath := writeFile(t, dir, "bugs.json", `[]`)
 
-	err := Validate(bugsPath, schemaPath)
+	err := NewValidator().Validate(bugsPath, schemaPath)
 	if err == nil {
 		t.Fatal("expected error for invalid schema JSON")
 	}
@@ -172,7 +172,7 @@ func TestValidate_BugsFileMissing(t *testing.T) {
 	dir := t.TempDir()
 	schemaPath := writeFile(t, dir, "bug-schema.json", schemaFixture)
 
-	err := Validate(filepath.Join(dir, "nonexistent-bugs.json"), schemaPath)
+	err := NewValidator().Validate(filepath.Join(dir, "nonexistent-bugs.json"), schemaPath)
 	if err == nil {
 		t.Fatal("expected error for missing bugs file")
 	}

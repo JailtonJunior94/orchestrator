@@ -24,14 +24,14 @@ type ContextWindow struct {
 	MaxTokens int
 }
 
-// largeTokenThreshold define o limiar (em tokens) acima do qual a janela é classificada como WindowLarge.
+// _largeTokenThreshold define o limiar (em tokens) acima do qual a janela é classificada como WindowLarge.
 // 1_000_000 tokens (1M) é o referencial de janela grande (ADR-023).
-const largeTokenThreshold = 1_000_000
+const _largeTokenThreshold = 1_000_000
 
 // Class retorna a classe da janela de contexto derivada de MaxTokens.
 // Zero-value (MaxTokens == 0) retorna WindowStandard (invariante F1).
 func (w ContextWindow) Class() WindowClass {
-	if w.MaxTokens >= largeTokenThreshold {
+	if w.MaxTokens >= _largeTokenThreshold {
 		return WindowLarge
 	}
 	return WindowStandard

@@ -162,12 +162,11 @@ func buildRunner(
 	persistFact airuntime.PersistenceFactory,
 ) *airuntime.ACPRunner {
 	t.Helper()
-	return airuntime.NewACPRunner(
-		specs.Claude(),
-		airuntime.WithProber(prober),
-		airuntime.WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}),
-		airuntime.WithPersistenceFactory(persistFact),
-		airuntime.WithRenderer(&discardRenderer{}),
+	return airuntime.NewACPRunner(specs.NewCatalog().
+		Claude(), airuntime.NewCatalog().WithProber(prober), airuntime.NewCatalog().
+		WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(persistFact), airuntime.NewCatalog().
+		WithRenderer(&discardRenderer{}),
 	)
 }
 
@@ -501,12 +500,11 @@ func TestACPRunner_WithRealPersistence(t *testing.T) {
 	fakeFS := fs.NewFakeFileSystem()
 	pfact := persistence.NewSessionPersistenceFactory(fakeFS)
 
-	runner := airuntime.NewACPRunner(
-		specs.Claude(),
-		airuntime.WithProber(proberBinary()),
-		airuntime.WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}),
-		airuntime.WithPersistenceFactory(pfact),
-		airuntime.WithRenderer(&discardRenderer{}),
+	runner := airuntime.NewACPRunner(specs.NewCatalog().
+		Claude(), airuntime.NewCatalog().WithProber(proberBinary()), airuntime.NewCatalog().
+		WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(pfact), airuntime.NewCatalog().
+		WithRenderer(&discardRenderer{}),
 	)
 
 	evidenceDir := "/evidence/task-9"
@@ -598,11 +596,10 @@ func TestACPRunner_HumanRenderer(t *testing.T) {
 	pfact, _ := newFakePersistenceFactory()
 	var buf bytes.Buffer
 
-	runner := airuntime.NewACPRunner(
-		specs.Claude(),
-		airuntime.WithProber(proberBinary()),
-		airuntime.WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}),
-		airuntime.WithPersistenceFactory(pfact),
+	runner := airuntime.NewACPRunner(specs.NewCatalog().
+		Claude(), airuntime.NewCatalog().WithProber(proberBinary()), airuntime.NewCatalog().
+		WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(pfact),
 	)
 	runner.SetRenderer(&buf)
 
@@ -634,11 +631,11 @@ func buildRunnerWithSpec(
 ) *airuntime.ACPRunner {
 	t.Helper()
 	return airuntime.NewACPRunner(
-		spec,
-		airuntime.WithProber(prober),
-		airuntime.WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}),
-		airuntime.WithPersistenceFactory(persistFact),
-		airuntime.WithRenderer(&discardRenderer{}),
+		spec, airuntime.NewCatalog().
+			WithProber(prober), airuntime.NewCatalog().
+			WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+			WithPersistenceFactory(persistFact), airuntime.NewCatalog().
+			WithRenderer(&discardRenderer{}),
 	)
 }
 
@@ -663,7 +660,7 @@ func TestACPRunner_RuntimeInit_CopilotVersions(t *testing.T) {
 		AppendSessionEnd()
 
 	pfact, persist := newFakePersistenceFactory()
-	copilotSpec := specs.Copilot()
+	copilotSpec := specs.NewCatalog().Copilot()
 
 	runner := buildRunnerWithSpec(t, ctx, copilotSpec, proberCopilotBinary(), script, pfact)
 
@@ -788,12 +785,11 @@ func TestACPIntegration_Copilot_T10(t *testing.T) {
 	fakeFS := fs.NewFakeFileSystem()
 	pfact := persistence.NewSessionPersistenceFactory(fakeFS)
 
-	copilotRunner := airuntime.NewACPRunner(
-		specs.Copilot(),
-		airuntime.WithProber(proberCopilotBinary()),
-		airuntime.WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}),
-		airuntime.WithPersistenceFactory(pfact),
-		airuntime.WithRenderer(&discardRenderer{}),
+	copilotRunner := airuntime.NewACPRunner(specs.NewCatalog().
+		Copilot(), airuntime.NewCatalog().WithProber(proberCopilotBinary()), airuntime.NewCatalog().
+		WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(pfact), airuntime.NewCatalog().
+		WithRenderer(&discardRenderer{}),
 	)
 
 	evidenceDir := "/evidence/copilot-t10"
@@ -904,12 +900,11 @@ func TestACPIntegration_Copilot_T10(t *testing.T) {
 	claudeCtx, claudeCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer claudeCancel()
 
-	claudeRunner := airuntime.NewACPRunner(
-		specs.Claude(),
-		airuntime.WithProber(proberBinary()),
-		airuntime.WithClientFactory(&fakeClientFactory{script: claudeScript, ctx: claudeCtx, t: t}),
-		airuntime.WithPersistenceFactory(claudePfact),
-		airuntime.WithRenderer(&discardRenderer{}),
+	claudeRunner := airuntime.NewACPRunner(specs.NewCatalog().
+		Claude(), airuntime.NewCatalog().WithProber(proberBinary()), airuntime.NewCatalog().
+		WithClientFactory(&fakeClientFactory{script: claudeScript, ctx: claudeCtx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(claudePfact), airuntime.NewCatalog().
+		WithRenderer(&discardRenderer{}),
 	)
 	claudeEvidenceDir := "/evidence/claude-t10-parity"
 	_, claudeErr := claudeRunner.Run(claudeCtx, airuntime.Job{
@@ -974,12 +969,11 @@ func TestACPIntegration_Copilot_T11(t *testing.T) {
 	fakeFS := fs.NewFakeFileSystem()
 	pfact := persistence.NewSessionPersistenceFactory(fakeFS)
 
-	runner := airuntime.NewACPRunner(
-		specs.Copilot(),
-		airuntime.WithProber(proberCopilotBinary()),
-		airuntime.WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}),
-		airuntime.WithPersistenceFactory(pfact),
-		airuntime.WithRenderer(&discardRenderer{}),
+	runner := airuntime.NewACPRunner(specs.NewCatalog().
+		Copilot(), airuntime.NewCatalog().WithProber(proberCopilotBinary()), airuntime.NewCatalog().
+		WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(pfact), airuntime.NewCatalog().
+		WithRenderer(&discardRenderer{}),
 	)
 
 	evidenceDir := "/evidence/copilot-t11"
@@ -1052,7 +1046,7 @@ func TestACPIntegration_Copilot_T12(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	runner := buildRunnerWithSpec(t, ctx, specs.Copilot(), proberCopilotBinary(), script, pfact)
+	runner := buildRunnerWithSpec(t, ctx, specs.NewCatalog().Copilot(), proberCopilotBinary(), script, pfact)
 
 	job := airuntime.Job{
 		Prompt:        "t12 copilot watchdog test",
@@ -1228,7 +1222,7 @@ func TestACPRunner_Codex_T17_BootstrapArgs_Restricted(t *testing.T) {
 		AppendSessionEnd()
 
 	pfact, persist := newFakePersistenceFactory()
-	runner := buildRunnerWithSpec(t, ctx, specs.Codex(), proberCodexBinary(), script, pfact)
+	runner := buildRunnerWithSpec(t, ctx, specs.NewCatalog().Codex(), proberCodexBinary(), script, pfact)
 
 	job := airuntime.Job{
 		Prompt:          "T17 codex restricted",
@@ -1296,7 +1290,7 @@ func TestACPRunner_Codex_T18_BootstrapArgs_Full(t *testing.T) {
 		AppendSessionEnd()
 
 	pfact, persist := newFakePersistenceFactory()
-	runner := buildRunnerWithSpec(t, ctx, specs.Codex(), proberCodexBinary(), script, pfact)
+	runner := buildRunnerWithSpec(t, ctx, specs.NewCatalog().Codex(), proberCodexBinary(), script, pfact)
 
 	job := airuntime.Job{
 		Prompt:          "T18 codex full access",
@@ -1390,7 +1384,7 @@ func TestACPRunner_Copilot_T19_NoCodexFlags(t *testing.T) {
 		AppendSessionEnd()
 
 	pfact, persist := newFakePersistenceFactory()
-	runner := buildRunnerWithSpec(t, ctx, specs.Copilot(), proberCopilotBinary(), script, pfact)
+	runner := buildRunnerWithSpec(t, ctx, specs.NewCatalog().Copilot(), proberCopilotBinary(), script, pfact)
 
 	job := airuntime.Job{
 		Prompt:          "T19 copilot regressao",
@@ -1441,12 +1435,11 @@ func TestACPRunner_Codex_T20_ToolCallsAndReport(t *testing.T) {
 	fakeFS := fs.NewFakeFileSystem()
 	pfact := persistence.NewSessionPersistenceFactory(fakeFS)
 
-	runner := airuntime.NewACPRunner(
-		specs.Codex(),
-		airuntime.WithProber(proberCodexBinary()),
-		airuntime.WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}),
-		airuntime.WithPersistenceFactory(pfact),
-		airuntime.WithRenderer(&discardRenderer{}),
+	runner := airuntime.NewACPRunner(specs.NewCatalog().
+		Codex(), airuntime.NewCatalog().WithProber(proberCodexBinary()), airuntime.NewCatalog().
+		WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(pfact), airuntime.NewCatalog().
+		WithRenderer(&discardRenderer{}),
 	)
 
 	evidenceDir := "/evidence/codex-t20"
@@ -1578,7 +1571,7 @@ func TestACPRunner_Codex_T21_ActivityWatchdog(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	runner := buildRunnerWithSpec(t, ctx, specs.Codex(), proberCodexBinary(), script, pfact)
+	runner := buildRunnerWithSpec(t, ctx, specs.NewCatalog().Codex(), proberCodexBinary(), script, pfact)
 
 	job := airuntime.Job{
 		Prompt:          "T21 codex watchdog",
@@ -1652,7 +1645,7 @@ func TestACPIntegration_Gemini_OpenOK(t *testing.T) {
 	fakeFS := fs.NewFakeFileSystem()
 	pfact := persistence.NewSessionPersistenceFactory(fakeFS)
 
-	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiBinary(), script, pfact)
+	runner := buildRunnerWithSpec(t, ctx, specs.NewCatalog().Gemini(), proberGeminiBinary(), script, pfact)
 
 	evidenceDir := "/evidence/gemini-open-ok"
 	job := airuntime.Job{
@@ -1699,13 +1692,13 @@ func TestACPIntegration_Gemini_Prompt(t *testing.T) {
 
 	pfact, persist := newFakePersistenceFactory()
 
-	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiBinary(), script, pfact)
+	runner := buildRunnerWithSpec(t, ctx, specs.NewCatalog().Gemini(), proberGeminiBinary(), script, pfact)
 
 	job := airuntime.Job{
-		Prompt:       "test prompt for gemini",
-		WorkDir:      workDirWithAgentsMD(t),
-		EvidenceDir:  t.TempDir(),
-		Quiet:        true,
+		Prompt:      "test prompt for gemini",
+		WorkDir:     workDirWithAgentsMD(t),
+		EvidenceDir: t.TempDir(),
+		Quiet:       true,
 	}
 
 	_, err := runner.Run(ctx, job)
@@ -1761,12 +1754,11 @@ func TestACPIntegration_Gemini_TwoToolCalls(t *testing.T) {
 	fakeFS := fs.NewFakeFileSystem()
 	pfact := persistence.NewSessionPersistenceFactory(fakeFS)
 
-	runner := airuntime.NewACPRunner(
-		specs.Gemini(),
-		airuntime.WithProber(proberGeminiBinary()),
-		airuntime.WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}),
-		airuntime.WithPersistenceFactory(pfact),
-		airuntime.WithRenderer(&discardRenderer{}),
+	runner := airuntime.NewACPRunner(specs.NewCatalog().
+		Gemini(), airuntime.NewCatalog().WithProber(proberGeminiBinary()), airuntime.NewCatalog().
+		WithClientFactory(&fakeClientFactory{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(pfact), airuntime.NewCatalog().
+		WithRenderer(&discardRenderer{}),
 	)
 
 	evidenceDir := "/evidence/gemini-tool-calls"
@@ -1816,7 +1808,7 @@ func TestACPIntegration_Gemini_AgentMessage(t *testing.T) {
 
 	pfact, persist := newFakePersistenceFactory()
 
-	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiBinary(), script, pfact)
+	runner := buildRunnerWithSpec(t, ctx, specs.NewCatalog().Gemini(), proberGeminiBinary(), script, pfact)
 
 	job := airuntime.Job{
 		Prompt:      "gemini multi messages",
@@ -1863,7 +1855,7 @@ func TestACPIntegration_Gemini_Completion(t *testing.T) {
 	fakeFS := fs.NewFakeFileSystem()
 	pfact := persistence.NewSessionPersistenceFactory(fakeFS)
 
-	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiBinary(), script, pfact)
+	runner := buildRunnerWithSpec(t, ctx, specs.NewCatalog().Gemini(), proberGeminiBinary(), script, pfact)
 
 	evidenceDir := "/evidence/gemini-completion"
 	job := airuntime.Job{
@@ -1917,7 +1909,7 @@ func TestACPIntegration_Gemini_ActivityWatchdog(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiBinary(), script, pfact)
+	runner := buildRunnerWithSpec(t, ctx, specs.NewCatalog().Gemini(), proberGeminiBinary(), script, pfact)
 
 	job := airuntime.Job{
 		Prompt:        "gemini watchdog test",
@@ -1955,7 +1947,7 @@ func TestACPIntegration_Gemini_LauncherUnavailable(t *testing.T) {
 	defer cancel()
 
 	pfact, _ := newFakePersistenceFactory()
-	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberNone(), acpfake.NewScript(), pfact)
+	runner := buildRunnerWithSpec(t, ctx, specs.NewCatalog().Gemini(), proberNone(), acpfake.NewScript(), pfact)
 
 	job := airuntime.Job{
 		Prompt:      "gemini launcher unavailable",
@@ -1982,7 +1974,7 @@ func TestACPIntegration_Gemini_NpxFallback(t *testing.T) {
 		AppendSessionEnd()
 
 	pfact, _ := newFakePersistenceFactory()
-	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiNpxOnly(), script, pfact)
+	runner := buildRunnerWithSpec(t, ctx, specs.NewCatalog().Gemini(), proberGeminiNpxOnly(), script, pfact)
 
 	job := airuntime.Job{
 		Prompt:      "gemini npx fallback",
@@ -2015,7 +2007,7 @@ func TestACPIntegration_Gemini_BootstrapArgsDefault(t *testing.T) {
 		AppendSessionEnd()
 
 	pfact, persist := newFakePersistenceFactory()
-	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiBinary(), script, pfact)
+	runner := buildRunnerWithSpec(t, ctx, specs.NewCatalog().Gemini(), proberGeminiBinary(), script, pfact)
 
 	job := airuntime.Job{
 		Prompt:      "gemini restricted bootstrap",
@@ -2054,7 +2046,7 @@ func TestACPIntegration_Gemini_BootstrapArgsFull(t *testing.T) {
 		AppendSessionEnd()
 
 	pfact, persist := newFakePersistenceFactory()
-	runner := buildRunnerWithSpec(t, ctx, specs.Gemini(), proberGeminiBinary(), script, pfact)
+	runner := buildRunnerWithSpec(t, ctx, specs.NewCatalog().Gemini(), proberGeminiBinary(), script, pfact)
 
 	job := airuntime.Job{
 		Prompt:      "gemini full access bootstrap",
@@ -2098,12 +2090,11 @@ func TestACPIntegration_Gemini_ParidadeObservacional(t *testing.T) {
 	geminiFakeFS := fs.NewFakeFileSystem()
 	geminiPfact := persistence.NewSessionPersistenceFactory(geminiFakeFS)
 
-	geminiRunner := airuntime.NewACPRunner(
-		specs.Gemini(),
-		airuntime.WithProber(proberGeminiBinary()),
-		airuntime.WithClientFactory(&fakeClientFactory{script: buildScript(), ctx: geminiCtx, t: t}),
-		airuntime.WithPersistenceFactory(geminiPfact),
-		airuntime.WithRenderer(&discardRenderer{}),
+	geminiRunner := airuntime.NewACPRunner(specs.NewCatalog().
+		Gemini(), airuntime.NewCatalog().WithProber(proberGeminiBinary()), airuntime.NewCatalog().
+		WithClientFactory(&fakeClientFactory{script: buildScript(), ctx: geminiCtx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(geminiPfact), airuntime.NewCatalog().
+		WithRenderer(&discardRenderer{}),
 	)
 	geminiDir := "/evidence/gemini-parity"
 	_, geminiErr := geminiRunner.Run(geminiCtx, airuntime.Job{
@@ -2124,12 +2115,11 @@ func TestACPIntegration_Gemini_ParidadeObservacional(t *testing.T) {
 	claudeFakeFS := fs.NewFakeFileSystem()
 	claudePfact := persistence.NewSessionPersistenceFactory(claudeFakeFS)
 
-	claudeRunner := airuntime.NewACPRunner(
-		specs.Claude(),
-		airuntime.WithProber(proberBinary()),
-		airuntime.WithClientFactory(&fakeClientFactory{script: buildScript(), ctx: claudeCtx, t: t}),
-		airuntime.WithPersistenceFactory(claudePfact),
-		airuntime.WithRenderer(&discardRenderer{}),
+	claudeRunner := airuntime.NewACPRunner(specs.NewCatalog().
+		Claude(), airuntime.NewCatalog().WithProber(proberBinary()), airuntime.NewCatalog().
+		WithClientFactory(&fakeClientFactory{script: buildScript(), ctx: claudeCtx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(claudePfact), airuntime.NewCatalog().
+		WithRenderer(&discardRenderer{}),
 	)
 	claudeDir := "/evidence/claude-parity"
 	_, claudeErr := claudeRunner.Run(claudeCtx, airuntime.Job{
@@ -2183,5 +2173,5 @@ func TestACPIntegration_Gemini_ParidadeObservacional(t *testing.T) {
 }
 
 // ---- verificação de unused imports ------------------------------------------
-var _ = probe.ResetCache // silenciar import não usado
+var _ = probe.NewCatalog().ResetCache // silenciar import não usado
 var _ = io.Discard

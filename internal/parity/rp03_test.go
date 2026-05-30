@@ -4,17 +4,26 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
 
+type RP03Suite struct {
+	suite.Suite
+}
+
+func TestRP03Suite(t *testing.T) {
+	suite.Run(t, new(RP03Suite))
+}
+
 // TestRP03_CrossCLI_ShellOpNormalizationParity é a prova autoritativa de RP-03: a operação de
 // shell, expressa no vocabulário nativo de cada CLI, normaliza para o MESMO normalized_name
 // ("bash") e a MESMA chave canônica de input ("command") nas 4 CLIs — usando a normalização de
 // produção (events.BuildNormalizedToolCallByDriver). Determinístico, sem rede (R-TEST-001).
-func TestRP03_CrossCLI_ShellOpNormalizationParity(t *testing.T) {
-	t.Parallel()
+func (s *RP03Suite) TestRP03_CrossCLI_ShellOpNormalizationParity() {
 
 	type nativeCall struct {
 		driver   string
@@ -34,59 +43,58 @@ func TestRP03_CrossCLI_ShellOpNormalizationParity(t *testing.T) {
 
 	names := map[string]bool{}
 	for _, c := range calls {
-		drv, err := specs.ParseDriverID(c.driver)
+		drv, err := specs.NewCatalog().ParseDriverID(c.driver)
 		if err != nil {
-			t.Fatalf("ParseDriverID(%q): %v", c.driver, err)
+			s.T().Fatalf("ParseDriverID(%q): %v", c.driver, err)
 		}
-		norm, err := events.BuildNormalizedToolCallByDriver(drv, c.rawName, json.RawMessage(c.rawInput), "")
+		norm, err := events.NewCatalog().BuildNormalizedToolCallByDriver(drv, c.rawName, json.RawMessage(c.rawInput), "")
 		if err != nil {
-			t.Fatalf("[%s] BuildNormalizedToolCallByDriver: %v", c.driver, err)
+			s.T().Fatalf("[%s] BuildNormalizedToolCallByDriver: %v", c.driver, err)
 		}
 
 		// normalized_name idêntico nas 4 CLIs.
 		if norm.NormalizedName != wantName {
-			t.Errorf("[%s] normalized_name = %q, want %q", c.driver, norm.NormalizedName, wantName)
+			s.T().Errorf("[%s] normalized_name = %q, want %q", c.driver, norm.NormalizedName, wantName)
 		}
 		names[norm.NormalizedName] = true
 
 		// Forma de input canônica idêntica: exatamente a chave "command".
 		var got map[string]json.RawMessage
 		if err := json.Unmarshal(norm.NormalizedInput, &got); err != nil {
-			t.Fatalf("[%s] unmarshal normalized input: %v", c.driver, err)
+			s.T().Fatalf("[%s] unmarshal normalized input: %v", c.driver, err)
 		}
 		if _, ok := got[wantKey]; !ok {
-			t.Errorf("[%s] input normalizado sem a chave canônica %q; got %v", c.driver, wantKey, keysOfRaw(got))
+			s.T().Errorf("[%s] input normalizado sem a chave canônica %q; got %v", c.driver, wantKey, keysOfRaw(got))
 		}
 		if len(got) != 1 {
-			t.Errorf("[%s] input normalizado deveria ter exatamente 1 chave (%q); got %v", c.driver, wantKey, keysOfRaw(got))
+			s.T().Errorf("[%s] input normalizado deveria ter exatamente 1 chave (%q); got %v", c.driver, wantKey, keysOfRaw(got))
 		}
 	}
 
 	// O conjunto de normalized_name das 4 CLIs deve ser o singleton {"bash"} (RP-03).
 	if len(names) != 1 {
-		t.Errorf("RP-03: as 4 CLIs deveriam convergir para um único normalized_name; got %v", keysOfBool(names))
+		s.T().Errorf("RP-03: as 4 CLIs deveriam convergir para um único normalized_name; got %v", keysOfBool(names))
 	}
 }
 
 // TestRP03_RawInputNeverMutated garante que a normalização não muta o RawInput original
 // (invariante de paridade: raw preservado byte-a-byte ao lado do normalizado).
-func TestRP03_RawInputNeverMutated(t *testing.T) {
-	t.Parallel()
+func (s *RP03Suite) TestRP03_RawInputNeverMutated() {
 
-	drv, err := specs.ParseDriverID("codex")
+	drv, err := specs.NewCatalog().ParseDriverID("codex")
 	if err != nil {
-		t.Fatalf("ParseDriverID: %v", err)
+		s.T().Fatalf("ParseDriverID: %v", err)
 	}
 	raw := `{"cmd":"echo hello"}`
-	norm, err := events.BuildNormalizedToolCallByDriver(drv, "shell", json.RawMessage(raw), "")
+	norm, err := events.NewCatalog().BuildNormalizedToolCallByDriver(drv, "shell", json.RawMessage(raw), "")
 	if err != nil {
-		t.Fatalf("BuildNormalizedToolCallByDriver: %v", err)
+		s.T().Fatalf("BuildNormalizedToolCallByDriver: %v", err)
 	}
 	if string(norm.RawInput) != raw {
-		t.Errorf("RawInput mutado: got %q, want %q", string(norm.RawInput), raw)
+		s.T().Errorf("RawInput mutado: got %q, want %q", string(norm.RawInput), raw)
 	}
 	if norm.RawName != "shell" {
-		t.Errorf("RawName mutado: got %q, want %q", norm.RawName, "shell")
+		s.T().Errorf("RawName mutado: got %q, want %q", norm.RawName, "shell")
 	}
 }
 
@@ -94,25 +102,25 @@ func TestRP03_RawInputNeverMutated(t *testing.T) {
 
 // TestParity_INV32_PassesWhen4CLIsAgree valida que INV-32 passa quando as 4 fixtures
 // concordam no normalized_name (mesma operação → mesmo conjunto).
-func TestParity_INV32_PassesWhen4CLIsAgree(t *testing.T) {
+func (s *RP03Suite) TestParity_INV32_PassesWhen4CLIsAgree() {
 	snap := snapshotWith4Fixtures("bash", "bash", "bash", "bash")
-	r := invINV32CrossCLIToolCallNameParity.Check(snap)
+	r := _invINV32CrossCLIToolCallNameParity.Check(snap)
 	if !r.OK {
-		t.Errorf("INV-32 deveria passar quando as 4 CLIs concordam: %s", r.Reason)
+		s.T().Errorf("INV-32 deveria passar quando as 4 CLIs concordam: %s", r.Reason)
 	}
 }
 
 // TestParity_INV32_FailsWhenDiverge valida que INV-32 falha quando uma CLI diverge.
-func TestParity_INV32_FailsWhenDiverge(t *testing.T) {
+func (s *RP03Suite) TestParity_INV32_FailsWhenDiverge() {
 	snap := snapshotWith4Fixtures("bash", "bash", "execute", "bash") // copilot diverge
-	r := invINV32CrossCLIToolCallNameParity.Check(snap)
+	r := _invINV32CrossCLIToolCallNameParity.Check(snap)
 	if r.OK {
-		t.Error("INV-32 deveria falhar quando o normalized_name diverge entre CLIs")
+		s.T().Error("INV-32 deveria falhar quando o normalized_name diverge entre CLIs")
 	}
 }
 
 // TestParity_INV32_SkipsWhenFixtureAbsent valida que INV-32 passa (skip) quando falta fixture.
-func TestParity_INV32_SkipsWhenFixtureAbsent(t *testing.T) {
+func (s *RP03Suite) TestParity_INV32_SkipsWhenFixtureAbsent() {
 	snap := Snapshot{
 		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolGemini},
 		ProjectDir: testProjectDir,
@@ -124,9 +132,9 @@ func TestParity_INV32_SkipsWhenFixtureAbsent(t *testing.T) {
 		Dirs:  map[string]bool{},
 		Links: map[string]string{},
 	}
-	r := invINV32CrossCLIToolCallNameParity.Check(snap)
+	r := _invINV32CrossCLIToolCallNameParity.Check(snap)
 	if !r.OK {
-		t.Errorf("INV-32 deveria passar (skip) quando alguma fixture está ausente: %s", r.Reason)
+		s.T().Errorf("INV-32 deveria passar (skip) quando alguma fixture está ausente: %s", r.Reason)
 	}
 }
 

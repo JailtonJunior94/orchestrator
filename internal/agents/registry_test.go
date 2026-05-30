@@ -7,9 +7,19 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/JailtonJunior94/ai-spec-harness/internal/agents"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 )
+
+type RegistrySuite struct {
+	suite.Suite
+}
+
+func TestRegistrySuite(t *testing.T) {
+	suite.Run(t, new(RegistrySuite))
+}
 
 // countingFakeFS e um FakeFileSystem com contador de leituras de arquivo para T-14.
 type countingFakeFS struct {
@@ -37,14 +47,9 @@ func (c *countingFakeFS) getReadCount() int {
 	return c.readCount
 }
 
-// --- T-14: Cache — 2 chamadas a Resolve leem disco 1 vez ---
-
-func TestRegistry_T14_CacheDiscoChamadoUmaVez(t *testing.T) {
-	t.Parallel()
-
+func (s *RegistrySuite) TestResolveCacheDiscoChamadoUmaVez() {
 	cfs := newCountingFakeFS()
 
-	// Criar agente "foo" no workspace.
 	const workdir = "/workspace"
 	const home = "/home/user"
 	agentPath := workdir + "/.ai-harness/agents/foo/AGENT.md"
@@ -52,104 +57,74 @@ func TestRegistry_T14_CacheDiscoChamadoUmaVez(t *testing.T) {
 
 	registry := agents.NewDefaultRegistry(cfs, workdir, home)
 
-	// Primeira chamada.
 	a1, err := registry.Resolve("foo")
-	if err != nil {
-		t.Fatalf("primeira Resolve: erro inesperado: %v", err)
-	}
-	if a1.Name != "foo" {
-		t.Errorf("Resolve retornou agente errado: %q", a1.Name)
-	}
+	s.NoError(err)
+	s.Equal("foo", a1.Name)
 
 	reads1 := cfs.getReadCount()
-	if reads1 == 0 {
-		t.Error("esperado pelo menos 1 leitura de disco na primeira chamada")
-	}
+	s.True(reads1 > 0)
 
-	// Segunda chamada — nao deve ler disco novamente.
 	a2, err := registry.Resolve("foo")
-	if err != nil {
-		t.Fatalf("segunda Resolve: erro inesperado: %v", err)
-	}
-	if a2.Name != "foo" {
-		t.Errorf("segunda Resolve retornou agente errado: %q", a2.Name)
-	}
+	s.NoError(err)
+	s.Equal("foo", a2.Name)
 
 	reads2 := cfs.getReadCount()
-	if reads2 != reads1 {
-		t.Errorf("T-14: disco lido mais de uma vez: %d leituras vs %d apos segunda chamada", reads1, reads2)
+	s.Equal(reads1, reads2)
+}
+
+func (s *RegistrySuite) TestResolveAgentNaoEncontrado() {
+	scenarios := []struct {
+		name   string
+		fsys   func() *fs.FakeFileSystem
+		expect func(err error)
+	}{
+		{
+			name: "deve listar candidatos descobertos",
+			fsys: func() *fs.FakeFileSystem {
+				return setupFakeFS("/home/user", "/workspace", []string{"agente-global-a"}, []string{"agente-workspace-b"})
+			},
+			expect: func(err error) {
+				s.Error(err)
+				s.True(errors.Is(err, agents.ErrAgentNotFound))
+				errMsg := err.Error()
+				s.True(strings.Contains(errMsg, "agente-global-a") || strings.Contains(errMsg, "agente-workspace-b"))
+				s.True(strings.Contains(errMsg, "candidatos"))
+			},
+		},
+		{
+			name: "deve informar quando nenhum candidato foi descoberto",
+			fsys: fs.NewFakeFileSystem,
+			expect: func(err error) {
+				s.True(errors.Is(err, agents.ErrAgentNotFound))
+				s.True(strings.Contains(err.Error(), "nenhum agente descoberto"))
+			},
+		},
+	}
+
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			registry := agents.NewDefaultRegistry(scenario.fsys(), "/workspace", "/home/user")
+
+			_, err := registry.Resolve("agente-inexistente")
+
+			scenario.expect(err)
+		})
 	}
 }
 
-// --- T-19: ErrAgentNotFound lista candidatos descobertos ---
-
-func TestRegistry_T19_AgentNaoEncontradoListaCandidatos(t *testing.T) {
-	t.Parallel()
-
-	fake := setupFakeFS("/home/user", "/workspace",
-		[]string{"agente-global-a"},
-		[]string{"agente-workspace-b"},
-	)
-
+func (s *RegistrySuite) TestDiscoverConcorrencia() {
+	fake := setupFakeFS("/home/user", "/workspace", []string{"agente-alpha", "agente-beta"}, []string{"agente-gamma"})
 	registry := agents.NewDefaultRegistry(fake, "/workspace", "/home/user")
 
-	_, err := registry.Resolve("agente-inexistente")
-
-	if err == nil {
-		t.Fatal("esperado erro ErrAgentNotFound, obteve nil")
-	}
-	if !errors.Is(err, agents.ErrAgentNotFound) {
-		t.Errorf("erro esperado wrapping ErrAgentNotFound, obteve: %v", err)
-	}
-
-	// Mensagem deve listar candidatos descobertos (RF-17).
-	errMsg := err.Error()
-	if !strings.Contains(errMsg, "agente-global-a") && !strings.Contains(errMsg, "agente-workspace-b") {
-		t.Errorf("mensagem de erro nao lista candidatos descobertos: %q", errMsg)
-	}
-	// Workspace prevalece: agente-global-a pode ser shadowed se mesmo nome; aqui sao diferentes.
-	if !strings.Contains(errMsg, "candidatos") {
-		t.Errorf("mensagem de erro deve conter 'candidatos', obteve: %q", errMsg)
-	}
-}
-
-// TestRegistry_T19_SemCandidatos verifica mensagem acionavel quando nenhum agente e descoberto.
-func TestRegistry_T19_SemCandidatos(t *testing.T) {
-	t.Parallel()
-
-	fake := fs.NewFakeFileSystem()
-	registry := agents.NewDefaultRegistry(fake, "/workspace", "/home/user")
-
-	_, err := registry.Resolve("foo")
-
-	if !errors.Is(err, agents.ErrAgentNotFound) {
-		t.Errorf("esperado ErrAgentNotFound, obteve: %v", err)
-	}
-	if !strings.Contains(err.Error(), "nenhum agente descoberto") {
-		t.Errorf("mensagem esperada 'nenhum agente descoberto', obteve: %q", err.Error())
-	}
-}
-
-// --- Concorrencia: 100 goroutines chamando Discover em paralelo ---
-
-func TestRegistry_Concorrencia_100Goroutines(t *testing.T) {
-	t.Parallel()
-
-	fake := setupFakeFS("/home/user", "/workspace",
-		[]string{"agente-alpha", "agente-beta"},
-		[]string{"agente-gamma"},
-	)
-
-	registry := agents.NewDefaultRegistry(fake, "/workspace", "/home/user")
-
-	const n = 100
-	results := make([][]agents.ResolvedAgent, n)
-	errs := make([]error, n)
+	const totalGoroutines = 100
+	results := make([][]agents.ResolvedAgent, totalGoroutines)
+	errs := make([]error, totalGoroutines)
 
 	var wg sync.WaitGroup
-	wg.Add(n)
+	wg.Add(totalGoroutines)
 
-	for idx := range n {
+	for idx := range totalGoroutines {
+		idx := idx
 		go func() {
 			defer wg.Done()
 			list, err := registry.Discover(context.Background())
@@ -160,73 +135,59 @@ func TestRegistry_Concorrencia_100Goroutines(t *testing.T) {
 
 	wg.Wait()
 
-	// Todos devem retornar o mesmo resultado sem race.
 	first := results[0]
-	for i, r := range results {
-		if errs[i] != nil {
-			t.Errorf("goroutine %d: erro inesperado: %v", i, errs[i])
-		}
-		if len(r) != len(first) {
-			t.Errorf("goroutine %d: tamanho diferente: %d vs %d", i, len(r), len(first))
-		}
+	for idx, result := range results {
+		s.NoError(errs[idx])
+		s.Len(result, len(first))
 	}
 }
 
-// --- Testes adicionais de Discover ---
-
-func TestRegistry_Discover_Vazio(t *testing.T) {
-	t.Parallel()
-
-	fake := fs.NewFakeFileSystem()
-	registry := agents.NewDefaultRegistry(fake, "/workspace", "/home/user")
-
-	list, err := registry.Discover(context.Background())
-	if err != nil {
-		t.Fatalf("erro inesperado: %v", err)
+func (s *RegistrySuite) TestDiscover() {
+	scenarios := []struct {
+		name   string
+		fsys   func() *fs.FakeFileSystem
+		expect func(list []agents.ResolvedAgent, err error)
+	}{
+		{
+			name: "deve retornar catalogo vazio",
+			fsys: fs.NewFakeFileSystem,
+			expect: func(list []agents.ResolvedAgent, err error) {
+				s.NoError(err)
+				s.Empty(list)
+			},
+		},
+		{
+			name: "deve manter workspace quando ha colisao no discover",
+			fsys: func() *fs.FakeFileSystem {
+				return setupFakeFS("/home/user", "/workspace", []string{"agente-x"}, []string{"agente-x"})
+			},
+			expect: func(list []agents.ResolvedAgent, err error) {
+				s.NoError(err)
+				if !s.Len(list, 1) {
+					return
+				}
+				s.Equal(agents.ScopeWorkspace, list[0].Scope)
+			},
+		},
 	}
-	if len(list) != 0 {
-		t.Errorf("esperado catalogo vazio, obteve %d agentes", len(list))
+
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			registry := agents.NewDefaultRegistry(scenario.fsys(), "/workspace", "/home/user")
+
+			list, err := registry.Discover(context.Background())
+
+			scenario.expect(list, err)
+		})
 	}
 }
 
-func TestRegistry_Discover_WorkspacePrevaleceEmColisao(t *testing.T) {
-	t.Parallel()
-
-	fake := setupFakeFS("/home/user", "/workspace",
-		[]string{"agente-x"}, // global
-		[]string{"agente-x"}, // workspace: mesmo nome → workspace prevalece
-	)
-
+func (s *RegistrySuite) TestResolveWorkspacePrevaleceEmColisao() {
+	fake := setupFakeFS("/home/user", "/workspace", []string{"agente-x"}, []string{"agente-x"})
 	registry := agents.NewDefaultRegistry(fake, "/workspace", "/home/user")
 
-	list, err := registry.Discover(context.Background())
-	if err != nil {
-		t.Fatalf("erro inesperado: %v", err)
-	}
+	agent, err := registry.Resolve("agente-x")
 
-	if len(list) != 1 {
-		t.Fatalf("esperado 1 agente apos shadowing, obteve %d", len(list))
-	}
-	if list[0].Scope != agents.ScopeWorkspace {
-		t.Errorf("agente deve ter ScopeWorkspace apos shadowing, obteve %v", list[0].Scope)
-	}
-}
-
-func TestRegistry_Resolve_WorkspacePrevaleceEmColisao(t *testing.T) {
-	t.Parallel()
-
-	fake := setupFakeFS("/home/user", "/workspace",
-		[]string{"agente-x"}, // global
-		[]string{"agente-x"}, // workspace: prevalece
-	)
-
-	registry := agents.NewDefaultRegistry(fake, "/workspace", "/home/user")
-
-	a, err := registry.Resolve("agente-x")
-	if err != nil {
-		t.Fatalf("Resolve: erro inesperado: %v", err)
-	}
-	if a.Scope != agents.ScopeWorkspace {
-		t.Errorf("Resolve deve retornar workspace agent em colisao, obteve %v", a.Scope)
-	}
+	s.NoError(err)
+	s.Equal(agents.ScopeWorkspace, agent.Scope)
 }

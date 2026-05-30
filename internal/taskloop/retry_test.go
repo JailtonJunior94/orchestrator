@@ -122,12 +122,11 @@ func TestACPInvoker_Retry_TransientError(t *testing.T) {
 	script := acpfake.NewScript().AppendAgentMessage("ok").AppendSessionEnd()
 	factory := &retryTestClientFactory{script: script, ctx: ctx, t: t}
 
-	runner := airuntime.NewACPRunner(
-		specs.Claude(),
-		airuntime.WithProber(prober),
-		airuntime.WithClientFactory(factory),
-		airuntime.WithPersistenceFactory(&retryTestPersistenceFactory{}),
-		airuntime.WithRenderer(&retryDiscardRenderer{}),
+	runner := airuntime.NewACPRunner(specs.NewCatalog().
+		Claude(), airuntime.NewCatalog().WithProber(prober), airuntime.NewCatalog().
+		WithClientFactory(factory), airuntime.NewCatalog().
+		WithPersistenceFactory(&retryTestPersistenceFactory{}), airuntime.NewCatalog().
+		WithRenderer(&retryDiscardRenderer{}),
 	)
 
 	classifier := &retryCountingClassifier{fatal: false}
@@ -137,11 +136,8 @@ func TestACPInvoker_Retry_TransientError(t *testing.T) {
 		return nil // sem espera real
 	}
 
-	invoker := NewACPInvoker(runner, true, 0,
-		WithACPInvokerMaxRetries(3),
-		WithACPInvokerRetryBackoffMultiplier(0), // sem espera
-		WithACPInvokerRetryClassifier(classifier),
-		withACPInvokerSleepFn(sleepFn),
+	invoker := NewACPInvoker(runner, true, 0, NewCatalog().WithACPInvokerMaxRetries(3), NewCatalog().WithACPInvokerRetryBackoffMultiplier(0), NewCatalog( // sem espera
+	).WithACPInvokerRetryClassifier(classifier), withACPInvokerSleepFn(sleepFn),
 	)
 
 	workDir := workDirWithAgentsMDRetry(t)
@@ -179,12 +175,11 @@ func TestACPInvoker_Retry_FatalError(t *testing.T) {
 	script := acpfake.NewScript().AppendSessionEnd()
 	factory := &retryTestClientFactory{script: script, ctx: ctx, t: t}
 
-	runner := airuntime.NewACPRunner(
-		specs.Claude(),
-		airuntime.WithProber(prober),
-		airuntime.WithClientFactory(factory),
-		airuntime.WithPersistenceFactory(&retryTestPersistenceFactory{}),
-		airuntime.WithRenderer(&retryDiscardRenderer{}),
+	runner := airuntime.NewACPRunner(specs.NewCatalog().
+		Claude(), airuntime.NewCatalog().WithProber(prober), airuntime.NewCatalog().
+		WithClientFactory(factory), airuntime.NewCatalog().
+		WithPersistenceFactory(&retryTestPersistenceFactory{}), airuntime.NewCatalog().
+		WithRenderer(&retryDiscardRenderer{}),
 	)
 
 	classifier := airuntime.NewRetryClassifier()
@@ -194,12 +189,7 @@ func TestACPInvoker_Retry_FatalError(t *testing.T) {
 		return nil
 	}
 
-	invoker := NewACPInvoker(runner, true, 0,
-		WithACPInvokerMaxRetries(3),
-		WithACPInvokerRetryBackoffMultiplier(0),
-		WithACPInvokerRetryClassifier(classifier),
-		withACPInvokerSleepFn(sleepFn),
-	)
+	invoker := NewACPInvoker(runner, true, 0, NewCatalog().WithACPInvokerMaxRetries(3), NewCatalog().WithACPInvokerRetryBackoffMultiplier(0), NewCatalog().WithACPInvokerRetryClassifier(classifier), withACPInvokerSleepFn(sleepFn))
 
 	workDir := workDirWithAgentsMDRetry(t)
 	_, _, _, err := invoker.Invoke(ctx, "prompt", workDir, "")
@@ -229,12 +219,11 @@ func TestACPInvoker_Retry_DefaultsSequential(t *testing.T) {
 		launcher:  specs.NewBinaryLauncher("/fake/claude-agent-acp"),
 	}
 	factory := &retryTestClientFactory{script: script, ctx: ctx, t: t}
-	runner := airuntime.NewACPRunner(
-		specs.Claude(),
-		airuntime.WithProber(prober),
-		airuntime.WithClientFactory(factory),
-		airuntime.WithPersistenceFactory(&retryTestPersistenceFactory{}),
-		airuntime.WithRenderer(&retryDiscardRenderer{}),
+	runner := airuntime.NewACPRunner(specs.NewCatalog().
+		Claude(), airuntime.NewCatalog().WithProber(prober), airuntime.NewCatalog().
+		WithClientFactory(factory), airuntime.NewCatalog().
+		WithPersistenceFactory(&retryTestPersistenceFactory{}), airuntime.NewCatalog().
+		WithRenderer(&retryDiscardRenderer{}),
 	)
 
 	var sleepCalls atomic.Int32
@@ -283,12 +272,11 @@ func TestACPInvoker_Retry_BackoffCalled(t *testing.T) {
 	script := acpfake.NewScript().AppendAgentMessage("ok").AppendSessionEnd()
 	factory := &retryTestClientFactory{script: script, ctx: ctx, t: t}
 
-	runner := airuntime.NewACPRunner(
-		specs.Claude(),
-		airuntime.WithProber(prober),
-		airuntime.WithClientFactory(factory),
-		airuntime.WithPersistenceFactory(&retryTestPersistenceFactory{}),
-		airuntime.WithRenderer(&retryDiscardRenderer{}),
+	runner := airuntime.NewACPRunner(specs.NewCatalog().
+		Claude(), airuntime.NewCatalog().WithProber(prober), airuntime.NewCatalog().
+		WithClientFactory(factory), airuntime.NewCatalog().
+		WithPersistenceFactory(&retryTestPersistenceFactory{}), airuntime.NewCatalog().
+		WithRenderer(&retryDiscardRenderer{}),
 	)
 
 	sleepDurations := make([]time.Duration, 0, 3)
@@ -297,13 +285,7 @@ func TestACPInvoker_Retry_BackoffCalled(t *testing.T) {
 		return nil
 	}
 
-	invoker := NewACPInvoker(runner, true, 0,
-		WithACPInvokerMaxRetries(3),
-		WithACPInvokerRetryBaseDelay(10*time.Millisecond),
-		WithACPInvokerRetryBackoffMultiplier(2.0),
-		WithACPInvokerRetryClassifier(airuntime.NewRetryClassifier()),
-		withACPInvokerSleepFn(sleepFn),
-	)
+	invoker := NewACPInvoker(runner, true, 0, NewCatalog().WithACPInvokerMaxRetries(3), NewCatalog().WithACPInvokerRetryBaseDelay(10*time.Millisecond), NewCatalog().WithACPInvokerRetryBackoffMultiplier(2.0), NewCatalog().WithACPInvokerRetryClassifier(airuntime.NewRetryClassifier()), withACPInvokerSleepFn(sleepFn))
 
 	workDir := workDirWithAgentsMDRetry(t)
 	_, _, _, err := invoker.Invoke(ctx, "prompt", workDir, "")
@@ -339,19 +321,13 @@ func TestACPInvoker_Retry_LogsRetryAttempts(t *testing.T) {
 	}
 	script := acpfake.NewScript().AppendAgentMessage("ok").AppendSessionEnd()
 	factory := &retryTestClientFactory{script: script, ctx: ctx, t: t}
-	runner := airuntime.NewACPRunner(
-		specs.Claude(),
-		airuntime.WithProber(prober),
-		airuntime.WithClientFactory(factory),
-		airuntime.WithPersistenceFactory(&retryTestPersistenceFactory{}),
-		airuntime.WithRenderer(&retryDiscardRenderer{}),
+	runner := airuntime.NewACPRunner(specs.NewCatalog().
+		Claude(), airuntime.NewCatalog().WithProber(prober), airuntime.NewCatalog().
+		WithClientFactory(factory), airuntime.NewCatalog().
+		WithPersistenceFactory(&retryTestPersistenceFactory{}), airuntime.NewCatalog().
+		WithRenderer(&retryDiscardRenderer{}),
 	)
-	invoker := NewACPInvoker(runner, true, 0,
-		WithACPInvokerMaxRetries(3),
-		WithACPInvokerRetryBackoffMultiplier(0),
-		WithACPInvokerRetryClassifier(&retryCountingClassifier{}),
-		withACPInvokerSleepFn(func(context.Context, time.Duration) error { return nil }),
-	)
+	invoker := NewACPInvoker(runner, true, 0, NewCatalog().WithACPInvokerMaxRetries(3), NewCatalog().WithACPInvokerRetryBackoffMultiplier(0), NewCatalog().WithACPInvokerRetryClassifier(&retryCountingClassifier{}), withACPInvokerSleepFn(func(context.Context, time.Duration) error { return nil }))
 
 	workDir := workDirWithAgentsMDRetry(t)
 	if _, _, _, err := invoker.Invoke(ctx, "prompt", workDir, ""); err != nil {
@@ -378,12 +354,11 @@ func TestACPInvoker_NoRetry_OmitsRetryAttempts(t *testing.T) {
 	prober := &retryFailingProber{failCount: 0, launcher: specs.NewBinaryLauncher("/fake/claude-agent-acp")}
 	script := acpfake.NewScript().AppendAgentMessage("ok").AppendSessionEnd()
 	factory := &retryTestClientFactory{script: script, ctx: ctx, t: t}
-	runner := airuntime.NewACPRunner(
-		specs.Claude(),
-		airuntime.WithProber(prober),
-		airuntime.WithClientFactory(factory),
-		airuntime.WithPersistenceFactory(&retryTestPersistenceFactory{}),
-		airuntime.WithRenderer(&retryDiscardRenderer{}),
+	runner := airuntime.NewACPRunner(specs.NewCatalog().
+		Claude(), airuntime.NewCatalog().WithProber(prober), airuntime.NewCatalog().
+		WithClientFactory(factory), airuntime.NewCatalog().
+		WithPersistenceFactory(&retryTestPersistenceFactory{}), airuntime.NewCatalog().
+		WithRenderer(&retryDiscardRenderer{}),
 	)
 	invoker := NewACPInvoker(runner, true, 0,
 		withACPInvokerSleepFn(func(context.Context, time.Duration) error { return nil }),

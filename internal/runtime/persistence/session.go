@@ -16,6 +16,8 @@ type SessionPersistence struct {
 	fsys        fs.FileSystem
 }
 
+var _ airuntime.Persistence = (*SessionPersistence)(nil)
+
 // NewSessionPersistence cria um SessionPersistence para o evidenceDir fornecido.
 func NewSessionPersistence(evidenceDir string, fsys fs.FileSystem) (*SessionPersistence, error) {
 	eventsPath := filepath.Join(evidenceDir, "events.jsonl")
@@ -38,19 +40,21 @@ func (s *SessionPersistence) AppendEvent(evt events.Event) error {
 // WriteToolCalls gera o arquivo tool_calls.md.
 func (s *SessionPersistence) WriteToolCalls(summaries []events.ToolCallSummary) error {
 	path := filepath.Join(s.evidenceDir, "tool_calls.md")
-	return WriteToolCalls(path, summaries, s.fsys)
+	return NewCatalog().WriteToolCalls(path, summaries, s.fsys)
 }
 
 // EnrichReport enriquece o execution_report.md com o summary da sessão.
 func (s *SessionPersistence) EnrichReport(summary airuntime.Summary) error {
 	reportPath := filepath.Join(s.evidenceDir, "execution_report.md")
-	return EnrichReport(reportPath, summary, s.fsys)
+	return NewCatalog().EnrichReport(reportPath, summary, s.fsys)
 }
 
 // sessionPersistenceFactory implementa runtime.PersistenceFactory.
 type sessionPersistenceFactory struct {
 	fsys fs.FileSystem
 }
+
+var _ airuntime.PersistenceFactory = (*sessionPersistenceFactory)(nil)
 
 // NewSessionPersistenceFactory cria uma PersistenceFactory que usa o FileSystem fornecido.
 func NewSessionPersistenceFactory(fsys fs.FileSystem) airuntime.PersistenceFactory {

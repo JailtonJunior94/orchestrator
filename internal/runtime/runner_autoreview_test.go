@@ -71,13 +71,12 @@ func buildRunnerWithReviewFn(
 	reviewFn airuntime.ReviewOutputFn,
 ) *airuntime.ACPRunner {
 	t.Helper()
-	return airuntime.NewACPRunner(
-		specs.Claude(),
-		airuntime.WithProber(&fakeProberForReview{}),
-		airuntime.WithClientFactory(&fakeClientFactoryForReview{script: script, ctx: ctx, t: t}),
-		airuntime.WithPersistenceFactory(&fakePersistenceFactoryForReview{}),
-		airuntime.WithRenderer(&fakeRendererForReview{}),
-		airuntime.WithReviewOutputFn(reviewFn),
+	return airuntime.NewACPRunner(specs.NewCatalog().
+		Claude(), airuntime.NewCatalog().WithProber(&fakeProberForReview{}), airuntime.NewCatalog().
+		WithClientFactory(&fakeClientFactoryForReview{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(&fakePersistenceFactoryForReview{}), airuntime.NewCatalog().
+		WithRenderer(&fakeRendererForReview{}), airuntime.NewCatalog().
+		WithReviewOutputFn(reviewFn),
 	)
 }
 
@@ -337,7 +336,7 @@ func TestParseReviewStatus_AllCases(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := airuntime.ParseReviewStatusForTest(tc.input)
+			got := airuntime.NewCatalog().ParseReviewStatusForTest(tc.input)
 			if got != tc.expect {
 				t.Errorf("parseReviewStatus(%q) = %q, quero %q", tc.input, got, tc.expect)
 			}
@@ -352,7 +351,7 @@ func TestBuildReviewPrompt_ContainsSkillAndDiff(t *testing.T) {
 	skillBody := "# Review Skill\n\nRevise o código."
 	gitDiff := "diff --git a/foo.go b/foo.go\n+func foo() {}"
 
-	prompt := airuntime.BuildReviewPromptForTest(skillBody, gitDiff)
+	prompt := airuntime.NewCatalog().BuildReviewPromptForTest(skillBody, gitDiff)
 
 	if !strings.Contains(prompt, skillBody) {
 		t.Error("prompt deve conter skill body")

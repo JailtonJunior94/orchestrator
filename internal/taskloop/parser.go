@@ -18,8 +18,8 @@ type TaskEntry struct {
 }
 
 var (
-	tableRowRe    = regexp.MustCompile(`^\|\s*(\d+\.\d+)\s*\|`)
-	statusFieldRe = regexp.MustCompile(`(?i)\*\*Status:\*\*\s*(.+)`)
+	_tableRowRe    = regexp.MustCompile(`^\|\s*(\d+\.\d+)\s*\|`)
+	_statusFieldRe = regexp.MustCompile(`(?i)\*\*Status:\*\*\s*(.+)`)
 )
 
 // ParseTasksFile extrai entradas da tabela markdown em tasks.md.
@@ -31,7 +31,7 @@ var (
 // A funcao detecta dinamicamente os indices das colunas Status e
 // Dependencias a partir do header da tabela, suportando layouts com ou
 // sem a coluna Arquivo.
-func ParseTasksFile(content []byte) ([]TaskEntry, error) {
+func (c *Catalog) ParseTasksFile(content []byte) ([]TaskEntry, error) {
 	lines := strings.Split(string(content), "\n")
 	var entries []TaskEntry
 	seen := make(map[string]bool)
@@ -47,14 +47,14 @@ func ParseTasksFile(content []byte) ([]TaskEntry, error) {
 			continue
 		}
 		cols := strings.Split(line, "|")
-		if detectColumnIndices(cols, &statusIdx, &depsIdx) {
+		if NewCatalog().detectColumnIndices(cols, &statusIdx, &depsIdx) {
 			break
 		}
 	}
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if !tableRowRe.MatchString(line) {
+		if !_tableRowRe.MatchString(line) {
 			continue
 		}
 
@@ -70,8 +70,8 @@ func ParseTasksFile(content []byte) ([]TaskEntry, error) {
 		seen[id] = true
 
 		title := strings.TrimSpace(cols[2])
-		status := normalizeStatus(strings.TrimSpace(cols[statusIdx]))
-		deps := parseDependencies(strings.TrimSpace(cols[depsIdx]))
+		status := NewCatalog().normalizeStatus(strings.TrimSpace(cols[statusIdx]))
+		deps := NewCatalog().parseDependencies(strings.TrimSpace(cols[depsIdx]))
 
 		entries = append(entries, TaskEntry{
 			ID:           id,
@@ -88,8 +88,8 @@ func ParseTasksFile(content []byte) ([]TaskEntry, error) {
 }
 
 // ReadTaskFileStatus extrai o campo **Status:** de um arquivo de task individual.
-func ReadTaskFileStatus(content []byte) string {
-	matches := statusFieldRe.FindSubmatch(content)
+func (c *Catalog) ReadTaskFileStatus(content []byte) string {
+	matches := _statusFieldRe.FindSubmatch(content)
 	if len(matches) < 2 {
 		return ""
 	}
@@ -98,20 +98,20 @@ func ReadTaskFileStatus(content []byte) string {
 	if idx := strings.Index(raw, "("); idx > 0 {
 		inner := raw[idx+1:]
 		if end := strings.Index(inner, ")"); end > 0 {
-			return normalizeStatus(inner[:end])
+			return NewCatalog().normalizeStatus(inner[:end])
 		}
 	}
 	fields := strings.Fields(raw)
 	if len(fields) == 0 {
 		return ""
 	}
-	return normalizeStatus(fields[0])
+	return NewCatalog().normalizeStatus(fields[0])
 }
 
 // FindEligible retorna tasks elegiveis: status pending ou in_progress, todas deps done,
 // nao no skipped set. Tasks em "in_progress" tem prioridade sobre "pending" para
 // garantir retomada objetiva da sessao anterior antes de abrir uma nova task.
-func FindEligible(tasks []TaskEntry, skipped map[string]bool) []TaskEntry {
+func (c *Catalog) FindEligible(tasks []TaskEntry, skipped map[string]bool) []TaskEntry {
 	statusMap := make(map[string]string, len(tasks))
 	for _, t := range tasks {
 		statusMap[t.ID] = t.Status
@@ -120,7 +120,7 @@ func FindEligible(tasks []TaskEntry, skipped map[string]bool) []TaskEntry {
 	var inProgress []TaskEntry
 	var pending []TaskEntry
 	for _, t := range tasks {
-		if skipped[t.ID] || !isResumableStatus(t.Status) {
+		if skipped[t.ID] || !NewCatalog().isResumableStatus(t.Status) {
 			continue
 		}
 		allDepsDone := true
@@ -141,21 +141,21 @@ func FindEligible(tasks []TaskEntry, skipped map[string]bool) []TaskEntry {
 	return append(inProgress, pending...)
 }
 
-func isResumableStatus(status string) bool {
+func (c *Catalog) isResumableStatus(status string) bool {
 	return status == "pending" || status == "in_progress"
 }
 
-func reconcileTaskStatuses(tasks []TaskEntry, prdFolder string, fsys fs.FileSystem) []TaskEntry {
+func (c *Catalog) reconcileTaskStatuses(tasks []TaskEntry, prdFolder string, fsys fs.FileSystem) []TaskEntry {
 	reconciled := append([]TaskEntry(nil), tasks...)
 	for i := range reconciled {
-		if !isResumableStatus(reconciled[i].Status) {
+		if !NewCatalog().isResumableStatus(reconciled[i].Status) {
 			continue
 		}
-		taskFile, err := ResolveTaskFile(prdFolder, reconciled[i], fsys)
+		taskFile, err := NewCatalog().ResolveTaskFile(prdFolder, reconciled[i], fsys)
 		if err != nil {
 			continue
 		}
-		if fileStatus := readTaskStatus(taskFile, fsys); fileStatus != "" {
+		if fileStatus := NewCatalog().readTaskStatus(taskFile, fsys); fileStatus != "" {
 			reconciled[i].Status = fileStatus
 		}
 	}
@@ -163,7 +163,7 @@ func reconcileTaskStatuses(tasks []TaskEntry, prdFolder string, fsys fs.FileSyst
 }
 
 // ResolveTaskFile encontra o arquivo de task individual pelo prefixo numerico do ID.
-func ResolveTaskFile(prdFolder string, task TaskEntry, fsys fs.FileSystem) (string, error) {
+func (c *Catalog) ResolveTaskFile(prdFolder string, task TaskEntry, fsys fs.FileSystem) (string, error) {
 	// ID eh algo como "1.0" — o prefixo numerico eh "1"
 	prefix := strings.Split(task.ID, ".")[0]
 
@@ -188,7 +188,7 @@ func ResolveTaskFile(prdFolder string, task TaskEntry, fsys fs.FileSystem) (stri
 			continue
 		}
 		// Verificar convencoes de nome: "1-", "1.0-" ou "task-1.0-"
-		if matchesTaskPrefix(name, prefix, task.ID) {
+		if NewCatalog().matchesTaskPrefix(name, prefix, task.ID) {
 			return filepath.Join(prdFolder, name), nil
 		}
 	}
@@ -196,7 +196,7 @@ func ResolveTaskFile(prdFolder string, task TaskEntry, fsys fs.FileSystem) (stri
 	return "", fmt.Errorf("arquivo de task nao encontrado para ID %s em %s", task.ID, prdFolder)
 }
 
-func matchesTaskPrefix(filename, prefix, fullID string) bool {
+func (c *Catalog) matchesTaskPrefix(filename, prefix, fullID string) bool {
 	// Separadores validos: _, -, .
 	hasSep := func(s string) bool {
 		return len(s) > 0 && (s[0] == '_' || s[0] == '-' || s[0] == '.')
@@ -244,7 +244,7 @@ func matchesTaskPrefix(filename, prefix, fullID string) bool {
 // detectColumnIndices analisa uma linha de header de tabela markdown e
 // atribui os indices das colunas Status e Dependencias. Retorna true se
 // a linha for um header reconhecido.
-func detectColumnIndices(cols []string, statusIdx, depsIdx *int) bool {
+func (c *Catalog) detectColumnIndices(cols []string, statusIdx, depsIdx *int) bool {
 	foundStatus := false
 	for i, col := range cols {
 		h := strings.ToLower(strings.TrimSpace(col))
@@ -259,7 +259,7 @@ func detectColumnIndices(cols []string, statusIdx, depsIdx *int) bool {
 	return foundStatus
 }
 
-func parseDependencies(raw string) []string {
+func (c *Catalog) parseDependencies(raw string) []string {
 	if raw == "" || raw == "\u2014" || raw == "-" || strings.ToLower(raw) == "nenhuma" {
 		return nil
 	}
@@ -275,7 +275,7 @@ func parseDependencies(raw string) []string {
 	return deps
 }
 
-func normalizeStatus(s string) string {
+func (c *Catalog) normalizeStatus(s string) string {
 	s = strings.ToLower(strings.TrimSpace(s))
 	switch s {
 	case "concluido", "concluída", "concluído":
@@ -295,7 +295,7 @@ func normalizeStatus(s string) string {
 }
 
 // AllTerminal verifica se todas as tasks estao em estado terminal (done, failed, blocked).
-func AllTerminal(tasks []TaskEntry) bool {
+func (c *Catalog) AllTerminal(tasks []TaskEntry) bool {
 	for _, t := range tasks {
 		switch t.Status {
 		case "done", "failed", "blocked":
@@ -308,10 +308,10 @@ func AllTerminal(tasks []TaskEntry) bool {
 }
 
 // readTaskStatus le o status de um arquivo de task via fs.FileSystem.
-func readTaskStatus(path string, fsys fs.FileSystem) string {
+func (c *Catalog) readTaskStatus(path string, fsys fs.FileSystem) string {
 	data, err := fsys.ReadFile(path)
 	if err != nil {
 		return ""
 	}
-	return ReadTaskFileStatus(data)
+	return NewCatalog().ReadTaskFileStatus(data)
 }

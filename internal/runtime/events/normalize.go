@@ -22,17 +22,17 @@ import (
 )
 
 //go:embed normalization-rules.yaml
-var defaultRulesYAML []byte
+var _defaultRulesYAML []byte
 
 // ErrUnknownRulesVersion é retornado quando a versão do schema de regras é desconhecida.
 var ErrUnknownRulesVersion = errors.New("versão desconhecida de normalization-rules.yaml")
 
 // normalizationRules contém o schema de normalização de tool-calls por driver.
 type normalizationRules struct {
-	Version       int                                     `yaml:"version"`
+	Version int `yaml:"version"`
 	// CommonAliases contém aliases compartilhados por drivers que declaram inherit_common.
 	// Espelha commonToolTitleAliases de Compozy (tool_call_name.go:84).
-	CommonAliases map[string]string                       `yaml:"common_aliases"`
+	CommonAliases map[string]string `yaml:"common_aliases"`
 	// InheritCommon lista drivers que herdam CommonAliases sem overrides.
 	InheritCommon []string                                `yaml:"inherit_common"`
 	Aliases       map[string]map[string]string            `yaml:"aliases"`
@@ -54,13 +54,12 @@ type NormalizedToolCall struct {
 	NormalizedInput json.RawMessage
 }
 
-
 // loadRules carrega as regras de normalização.
 // Workspace override: procura .agents/normalization-rules.yaml no diretório atual
 // e em workDir (quando fornecido). Vence sobre o embedded default.
 // Schema fechado: version != 1 retorna ErrUnknownRulesVersion.
-func loadRules(workDir string) (*normalizationRules, error) {
-	data := defaultRulesYAML
+func (c *Catalog) loadRules(workDir string) (*normalizationRules, error) {
+	data := _defaultRulesYAML
 
 	// Verificar override por projeto (workspace .agents/normalization-rules.yaml)
 	candidateDirs := []string{workDir, "."}
@@ -86,8 +85,7 @@ func loadRules(workDir string) (*normalizationRules, error) {
 	if rules.Version != 1 {
 		return nil, fmt.Errorf("%w: recebido %d, esperado 1", ErrUnknownRulesVersion, rules.Version)
 	}
-
-	resolveInherit(&rules)
+	NewCatalog().resolveInherit(&rules)
 
 	return &rules, nil
 }
@@ -95,7 +93,7 @@ func loadRules(workDir string) (*normalizationRules, error) {
 // resolveInherit expande drivers declarados em inherit_common para o mapa aliases.
 // Para cada driverID em InheritCommon, se não houver entrada em Aliases, injeta
 // uma cópia de CommonAliases (sem mutação). Drivers com entrada explícita não são sobrescritos.
-func resolveInherit(rules *normalizationRules) {
+func (c *Catalog) resolveInherit(rules *normalizationRules) {
 	if len(rules.InheritCommon) == 0 || len(rules.CommonAliases) == 0 {
 		return
 	}
@@ -123,13 +121,13 @@ func resolveInherit(rules *normalizationRules) {
 //
 // workDir é usado para localizar o override de projeto (.agents/normalization-rules.yaml).
 // Passe "" para usar apenas o diretório de trabalho atual.
-func BuildNormalizedToolCall(driverID, rawName string, rawInput json.RawMessage, workDir string) (NormalizedToolCall, error) {
-	rules, err := loadRules(workDir)
+func (c *Catalog) BuildNormalizedToolCall(driverID, rawName string, rawInput json.RawMessage, workDir string) (NormalizedToolCall, error) {
+	rules, err := NewCatalog().loadRules(workDir)
 	if err != nil {
 		return NormalizedToolCall{}, fmt.Errorf("carregar regras de normalização: %w", err)
 	}
 
-	return buildNormalized(rules, driverID, rawName, rawInput)
+	return NewCatalog().buildNormalized(rules, driverID, rawName, rawInput)
 }
 
 // BuildNormalizedToolCallByDriver normaliza uma tool-call usando specs.DriverID como fonte de verdade.
@@ -142,19 +140,19 @@ func BuildNormalizedToolCall(driverID, rawName string, rawInput json.RawMessage,
 //   - NormalizedInput é uma cópia de RawInput com chaves renomeadas; valores preservados.
 //
 // workDir é usado para localizar o override de projeto (.agents/normalization-rules.yaml).
-func BuildNormalizedToolCallByDriver(driver specs.DriverID, rawName string, rawInput json.RawMessage, workDir string) (NormalizedToolCall, error) {
+func (c *Catalog) BuildNormalizedToolCallByDriver(driver specs.DriverID, rawName string, rawInput json.RawMessage, workDir string) (NormalizedToolCall, error) {
 	if driver.String() == "" {
 		return NormalizedToolCall{}, fmt.Errorf("%w: driver zero-value não permitido", specs.ErrUnknownDriver)
 	}
-	rules, err := loadRules(workDir)
+	rules, err := NewCatalog().loadRules(workDir)
 	if err != nil {
 		return NormalizedToolCall{}, fmt.Errorf("carregar regras de normalização: %w", err)
 	}
-	return buildNormalized(rules, driver.String(), rawName, rawInput)
+	return NewCatalog().buildNormalized(rules, driver.String(), rawName, rawInput)
 }
 
 // buildNormalized executa a normalização usando regras já carregadas.
-func buildNormalized(rules *normalizationRules, driverID, rawName string, rawInput json.RawMessage) (NormalizedToolCall, error) {
+func (c *Catalog) buildNormalized(rules *normalizationRules, driverID, rawName string, rawInput json.RawMessage) (NormalizedToolCall, error) {
 	// 1. Lookup de alias: aliases[driverID][rawName] → normalizedName.
 	//    Miss = passthrough.
 	normalizedName := rawName
@@ -166,7 +164,7 @@ func buildNormalized(rules *normalizationRules, driverID, rawName string, rawInp
 
 	// 2. Normalizar input: renomear chaves conforme input_mappings[driverID][rawName].
 	//    Preservar valores; não decodificar quando não há mapping.
-	normalizedInput, err := normalizeInput(rules, driverID, rawName, rawInput)
+	normalizedInput, err := NewCatalog().normalizeInput(rules, driverID, rawName, rawInput)
 	if err != nil {
 		return NormalizedToolCall{}, fmt.Errorf("normalizar input: %w", err)
 	}
@@ -182,7 +180,7 @@ func buildNormalized(rules *normalizationRules, driverID, rawName string, rawInp
 // normalizeInput aplica renomeação de chaves conforme input_mappings.
 // Quando não há mapping aplicável, retorna uma cópia de rawInput.
 // Nunca muta rawInput.
-func normalizeInput(rules *normalizationRules, driverID, rawName string, rawInput json.RawMessage) (json.RawMessage, error) {
+func (c *Catalog) normalizeInput(rules *normalizationRules, driverID, rawName string, rawInput json.RawMessage) (json.RawMessage, error) {
 	if len(rawInput) == 0 {
 		return json.RawMessage{}, nil
 	}

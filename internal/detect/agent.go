@@ -18,6 +18,8 @@ type LookPather interface {
 // OSLookPather implementa LookPather usando exec.LookPath real.
 type OSLookPather struct{}
 
+var _ LookPather = OSLookPather{}
+
 // LookPath delega para exec.LookPath do sistema.
 func (OSLookPather) LookPath(file string) (string, error) { return exec.LookPath(file) }
 
@@ -28,6 +30,8 @@ type HomeDir interface {
 
 // OSHomeDir implementa HomeDir usando os.UserHomeDir real.
 type OSHomeDir struct{}
+
+var _ HomeDir = OSHomeDir{}
 
 // UserHomeDir delega para os.UserHomeDir.
 func (OSHomeDir) UserHomeDir() (string, error) { return os.UserHomeDir() }
@@ -58,26 +62,26 @@ type agentEntry struct {
 
 // allEntries constroi as entradas a partir das Specs canonicas (ADR-019: reusar nomes
 // de comando das specs, sem duplicar literais).
-func allEntries() []agentEntry {
+func (r1 *Catalog) allEntries() []agentEntry {
 	return []agentEntry{
 		{
 			tool:     skills.ToolClaude,
-			command:  specs.Claude().Command,
+			command:  specs.NewCatalog().Claude().Command,
 			homeDirs: []string{".claude"},
 		},
 		{
 			tool:     skills.ToolCodex,
-			command:  specs.Codex().Command,
+			command:  specs.NewCatalog().Codex().Command,
 			homeDirs: []string{".codex"},
 		},
 		{
 			tool:     skills.ToolGemini,
-			command:  specs.Gemini().Command,
+			command:  specs.NewCatalog().Gemini().Command,
 			homeDirs: []string{".gemini"},
 		},
 		{
 			tool:     skills.ToolCopilot,
-			command:  specs.Copilot().Command,
+			command:  specs.NewCatalog().Copilot().Command,
 			homeDirs: []string{".copilot", filepath.Join(".github", "copilot")},
 		},
 	}
@@ -85,7 +89,7 @@ func allEntries() []agentEntry {
 
 // isDirOnDisk verifica se o path existe e e um diretorio no filesystem real.
 // Usado apenas para dirs de config em $HOME (sinal secundario).
-func isDirOnDisk(path string) bool {
+func (r1 *Catalog) isDirOnDisk(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
 }
@@ -96,6 +100,8 @@ type BinaryAgentDetector struct {
 	homeDir  HomeDir
 	fileDet  *FileDetector // sinal adicional: arquivos de projeto (pode ser nil)
 }
+
+var _ AgentDetector = (*BinaryAgentDetector)(nil)
 
 // NewBinaryAgentDetector cria um detector com dependencias injetadas.
 // fileDet pode ser nil — nesse caso o sinal de arquivos de projeto e omitido.
@@ -132,7 +138,7 @@ func (d *BinaryAgentDetector) Detect(ctx context.Context, opts DetectOptions) ([
 	seen := make(map[skills.Tool]bool)
 	var result []skills.Tool
 
-	for _, entry := range allEntries() {
+	for _, entry := range NewCatalog().allEntries() {
 		if seen[entry.tool] {
 			continue
 		}
@@ -148,7 +154,7 @@ func (d *BinaryAgentDetector) Detect(ctx context.Context, opts DetectOptions) ([
 		if homeErr == nil {
 			for _, sub := range entry.homeDirs {
 				full := filepath.Join(homeRoot, sub)
-				if isDirOnDisk(full) {
+				if NewCatalog().isDirOnDisk(full) {
 					seen[entry.tool] = true
 					result = append(result, entry.tool)
 					break

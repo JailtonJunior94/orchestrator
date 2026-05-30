@@ -54,7 +54,7 @@ func readManifestFromFakeFS(t *testing.T, ffs *fs.FakeFileSystem, path string) m
 
 func setVersionForTest(t *testing.T, resolvedVersion string) {
 	t.Helper()
-	t.Cleanup(version.SetForTest(resolvedVersion))
+	t.Cleanup(version.NewProvider().SetForTest(resolvedVersion))
 }
 
 func TestUpgrade_NoSkillsDir(t *testing.T) {
@@ -896,7 +896,6 @@ func TestUpgrade_EmbeddedSource_UpdatesSkills(t *testing.T) {
 		t.Error("skill nao foi atualizada pela versao embutida")
 	}
 }
-
 
 func TestCheckSchemaDivergence_FallsBackToConstantWhenTemplateHoldsPlaceholder(t *testing.T) {
 	ffs := fs.NewFakeFileSystem()

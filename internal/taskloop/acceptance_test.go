@@ -49,14 +49,14 @@ func TestAcceptanceGate_Verify(t *testing.T) {
 	ptBRSection := makeTaskFile("## Criterios de Sucesso\n\n- [x] Retorna Passed=true.\n- [x] Cobertura >= 90%.\n")
 
 	tests := []struct {
-		name         string
-		taskContent  []byte
-		runnerSetup  func(*stubRunner)
-		wantPassed   bool
-		wantErr      error
-		wantMissing  []string
-		wantTotal    int
-		wantMet      int
+		name        string
+		taskContent []byte
+		runnerSetup func(*stubRunner)
+		wantPassed  bool
+		wantErr     error
+		wantMissing []string
+		wantTotal   int
+		wantMet     int
 	}{
 		{
 			name:        "sucesso pleno — todos criterios marcados e subprocessos ok",
@@ -195,10 +195,10 @@ func TestAcceptanceGate_Verify(t *testing.T) {
 
 func TestParseCriteriaFromTaskFile(t *testing.T) {
 	tests := []struct {
-		name         string
-		content      string
-		wantTotal    int
-		wantMissing  int
+		name        string
+		content     string
+		wantTotal   int
+		wantMissing int
 	}{
 		{
 			name:        "todos marcados",
@@ -228,7 +228,7 @@ func TestParseCriteriaFromTaskFile(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			all, missing := parseCriteriaFromTaskFile([]byte(tc.content))
+			all, missing := NewCatalog().parseCriteriaFromTaskFile([]byte(tc.content))
 			if len(all) != tc.wantTotal {
 				t.Errorf("total = %d, esperado %d", len(all), tc.wantTotal)
 			}

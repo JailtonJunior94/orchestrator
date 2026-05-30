@@ -128,7 +128,7 @@ Diff: {{.Diff}}`
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fsys := tt.setupFsys()
-			got, err := BuildReviewPrompt(tt.templatePath, tt.data, fsys)
+			got, err := NewCatalog().BuildReviewPrompt(tt.templatePath, tt.data, fsys)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatalf("esperado erro, mas BuildReviewPrompt retornou nil")
@@ -154,7 +154,7 @@ Diff: {{.Diff}}`
 func TestReviewErrTemplateInvalidoSentinel(t *testing.T) {
 	fsys := fs.NewFakeFileSystem()
 	_ = fsys.WriteFile("/bad.tmpl", []byte("{{unclosed"))
-	_, err := BuildReviewPrompt("/bad.tmpl", ReviewTemplateData{}, fsys)
+	_, err := NewCatalog().BuildReviewPrompt("/bad.tmpl", ReviewTemplateData{}, fsys)
 	if err == nil {
 		t.Fatal("esperado ErrTemplateInvalido, mas nenhum erro")
 	}
@@ -167,7 +167,7 @@ func TestReviewErrTemplateInvalidoSentinel(t *testing.T) {
 func TestReviewCaptureGitDiff(t *testing.T) {
 	t.Run("dir sem git retorna fallback", func(t *testing.T) {
 		dir := t.TempDir()
-		got := captureGitDiff(context.Background(), dir)
+		got := NewCatalog().captureGitDiff(context.Background(), dir)
 		if got != "(diff indisponivel)" {
 			t.Errorf("esperado fallback, got %q", got)
 		}
@@ -232,7 +232,7 @@ func TestReviewCaptureGitDiff(t *testing.T) {
 			t.Fatalf("nao foi possivel alterar working tree: %v", err)
 		}
 
-		got := captureGitDiff(context.Background(), dir)
+		got := NewCatalog().captureGitDiff(context.Background(), dir)
 		// Com working tree alterado, diff deve conter conteudo real.
 		if got == "(diff indisponivel)" {
 			t.Errorf("esperado diff real mas obteve fallback")
@@ -276,7 +276,7 @@ func TestReviewCaptureGitDiff(t *testing.T) {
 			t.Fatalf("nao foi possivel criar arquivo untracked: %v", err)
 		}
 
-		got := captureGitDiff(context.Background(), dir)
+		got := NewCatalog().captureGitDiff(context.Background(), dir)
 		if got == "(diff indisponivel)" {
 			t.Fatalf("esperado diff real para arquivo untracked")
 		}
@@ -312,7 +312,7 @@ func TestReviewCaptureGitDiff(t *testing.T) {
 			t.Skipf("commit falhou: %v — %s", err, out)
 		}
 
-		got := captureGitDiff(context.Background(), dir)
+		got := NewCatalog().captureGitDiff(context.Background(), dir)
 		if got != "(diff indisponivel)" {
 			t.Errorf("esperado fallback com apenas um commit, got %q", got)
 		}
@@ -373,7 +373,7 @@ func TestDetectRiskAreas(t *testing.T) {
 				_ = fsys.WriteFile("/work/.specs/prd-test/techspec.md", []byte(tt.techspec))
 			}
 
-			got := detectRiskAreas(".specs/prd-test", "/work", tt.diff, fsys)
+			got := NewCatalog().detectRiskAreas(".specs/prd-test", "/work", tt.diff, fsys)
 			for _, w := range tt.want {
 				if !strings.Contains(got, w) {
 					t.Errorf("detectRiskAreas() deveria conter %q, obteve: %q", w, got)
@@ -446,7 +446,7 @@ func TestBugfixBuildPrompt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := BuildBugfixPrompt(tt.data)
+			got, err := NewCatalog().BuildBugfixPrompt(tt.data)
 			if err != nil {
 				t.Fatalf("BuildBugfixPrompt retornou erro inesperado: %v", err)
 			}
@@ -478,7 +478,7 @@ func TestBugfixPromptAgentsMdBeforeSkillMd(t *testing.T) {
 		Diff:           "diff content",
 	}
 
-	prompt, err := BuildBugfixPrompt(data)
+	prompt, err := NewCatalog().BuildBugfixPrompt(data)
 	if err != nil {
 		t.Fatalf("BuildBugfixPrompt retornou erro inesperado: %v", err)
 	}
@@ -508,7 +508,7 @@ func TestBugfixPromptAllMandatorySections(t *testing.T) {
 		Diff:           "diff --git a/handler.go",
 	}
 
-	prompt, err := BuildBugfixPrompt(data)
+	prompt, err := NewCatalog().BuildBugfixPrompt(data)
 	if err != nil {
 		t.Fatalf("BuildBugfixPrompt retornou erro inesperado: %v", err)
 	}
@@ -554,7 +554,7 @@ Veredicto: reprovado`
 		Diff:           "diff content",
 	}
 
-	prompt, err := BuildBugfixPrompt(data)
+	prompt, err := NewCatalog().BuildBugfixPrompt(data)
 	if err != nil {
 		t.Fatalf("BuildBugfixPrompt retornou erro inesperado: %v", err)
 	}
@@ -631,7 +631,7 @@ func TestParseVerdict(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := parseVerdict(tt.raw)
+			got := NewCatalog().parseVerdict(tt.raw)
 			if got != tt.want {
 				t.Errorf("parseVerdict(%q) = %q, want %q", tt.raw, got, tt.want)
 			}
@@ -705,7 +705,7 @@ Veredicto: APPROVED_WITH_REMARKS`,
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := parseFindings(tt.raw)
+			got := NewCatalog().parseFindings(tt.raw)
 			if len(got) != tt.wantLen {
 				t.Fatalf("parseFindings() len = %d, want %d\nraw: %q", len(got), tt.wantLen, tt.raw)
 			}
@@ -746,7 +746,7 @@ Veredicto: REJECTED`,
 
 	for verdict, raw := range fixtures {
 		t.Run(string(verdict), func(t *testing.T) {
-			result := parseReviewOutput(raw)
+			result := NewCatalog().parseReviewOutput(raw)
 			if result.Verdict != verdict {
 				t.Errorf("parseReviewOutput().Verdict = %q, want %q", result.Verdict, verdict)
 			}
@@ -778,7 +778,7 @@ Veredicto: REJECTED`,
 // para diffs pequenos.
 func TestReviewConsolidated_InvocacaoUnica(t *testing.T) {
 	inv := &stubInvoker{stdout: "Veredicto: APPROVED"}
-	fr := &defaultFinalReviewer{invoker: inv, workDir: t.TempDir(), model: "", maxDiff: maxDiffPartitionSize}
+	fr := &defaultFinalReviewer{invoker: inv, workDir: t.TempDir(), model: "", maxDiff: _maxDiffPartitionSize}
 
 	diff := "diff --git a/main.go b/main.go\n+// change\n"
 	result, err := fr.ReviewConsolidated(context.Background(), diff)
@@ -867,7 +867,7 @@ func TestPartitionDiff(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			parts := partitionDiff(tt.diff, tt.maxSize)
+			parts := NewCatalog().partitionDiff(tt.diff, tt.maxSize)
 			if len(parts) != tt.wantParts {
 				t.Errorf("partitionDiff() len = %d, want %d", len(parts), tt.wantParts)
 			}
@@ -894,7 +894,7 @@ func TestPartitionDiffSingleFileOversize(t *testing.T) {
 
 	// maxSize forca subdivisao por hunks.
 	maxSize := 800
-	parts := partitionDiff(diff, maxSize)
+	parts := NewCatalog().partitionDiff(diff, maxSize)
 
 	if len(parts) < 2 {
 		t.Fatalf("len(parts)=%d, esperava >=2 sub-particoes para arquivo unico oversized", len(parts))
@@ -924,7 +924,7 @@ func TestPartitionDiffOversizeHunkTruncates(t *testing.T) {
 	hunk := "@@ -1,1 +1,1 @@\n" + strings.Repeat("+x\n", 5000)
 	diff := header + hunk
 	maxSize := 1000
-	parts := partitionDiff(diff, maxSize)
+	parts := NewCatalog().partitionDiff(diff, maxSize)
 
 	if len(parts) == 0 {
 		t.Fatal("nenhuma particao retornada")
@@ -1034,7 +1034,7 @@ func TestFormatCompletedTasks(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := formatCompletedTasks(tt.iterations, tt.currentTaskID)
+			got := NewCatalog().formatCompletedTasks(tt.iterations, tt.currentTaskID)
 			if got != tt.want {
 				t.Errorf("formatCompletedTasks()\ngot:  %q\nwant: %q", got, tt.want)
 			}

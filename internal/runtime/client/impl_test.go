@@ -19,10 +19,10 @@ import (
 // fakeAgentWithFS é um agente que tenta chamar ReadTextFile e WriteTextFile no cliente,
 // cobrindo os paths de erro do clientImpl.
 type fakeAgentWithFS struct {
-	conn     *acp.AgentSideConnection
-	sessID   acp.SessionId
-	doFS     bool
-	doTerms  bool
+	conn    *acp.AgentSideConnection
+	sessID  acp.SessionId
+	doFS    bool
+	doTerms bool
 }
 
 var _ acp.Agent = (*fakeAgentWithFS)(nil)

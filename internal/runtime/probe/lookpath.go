@@ -11,8 +11,10 @@ type LookPather interface {
 // osLookPather é a implementação padrão que delega para exec.LookPath.
 type osLookPather struct{}
 
+var _ LookPather = osLookPather{}
+
 // OsLookPather retorna a implementação padrão de LookPather que usa exec.LookPath.
-func OsLookPather() LookPather {
+func (c *Catalog) OsLookPather() LookPather {
 	return osLookPather{}
 }
 

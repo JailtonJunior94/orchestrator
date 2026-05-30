@@ -54,12 +54,12 @@ func TestExternalSkills_FrontmatterAndReferences(t *testing.T) {
 			}
 
 			// Validate frontmatter via JSON Schema
-			if err := skills.ValidateFrontmatterSchema(skillData, skillName); err != nil {
+			if err := skills.NewCatalog().ValidateFrontmatterSchema(skillData, skillName); err != nil {
 				t.Errorf("skill externa %q: frontmatter invalido: %v", skillName, err)
 			}
 
 			// Validate name field matches directory name
-			fm := skills.ParseFrontmatter(skillData)
+			fm := skills.NewCatalog().ParseFrontmatter(skillData)
 			if fm.Name != "" && fm.Name != skillName {
 				t.Errorf("skill %q: campo name %q diverge do nome do diretorio", skillName, fm.Name)
 			}

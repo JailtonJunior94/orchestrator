@@ -3,10 +3,20 @@ package skills
 import (
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/suite"
 )
 
-// TestParseFrontmatterFields_FlatFields verifica que campos de nível raiz são mapeados corretamente.
-func TestParseFrontmatterFields_FlatFields(t *testing.T) {
+type FrontmatterSuite struct {
+	suite.Suite
+}
+
+func TestFrontmatterSuite(t *testing.T) {
+	suite.Run(t, new(FrontmatterSuite))
+}
+
+// TestParseFrontmatterFieldsFlatFields verifica que campos de nível raiz são mapeados corretamente.
+func (s *FrontmatterSuite) TestParseFrontmatterFieldsFlatFields() {
 	content := []byte(`---
 name: claude-revisor-rigoroso
 description: Revisor de PR com viés conservador
@@ -15,22 +25,20 @@ version: 1.0.0
 
 Corpo do agente.
 `)
-	fields := ParseFrontmatterFields(content)
+	fields := NewCatalog().ParseFrontmatterFields(content)
 
-	cases := map[string]string{
+	expected := map[string]string{
 		"name":        "claude-revisor-rigoroso",
 		"description": "Revisor de PR com viés conservador",
 		"version":     "1.0.0",
 	}
-	for k, want := range cases {
-		if got := fields[k]; got != want {
-			t.Errorf("fields[%q] = %q, want %q", k, got, want)
-		}
+	for key, want := range expected {
+		s.Equal(want, fields[key], "fields[%q]", key)
 	}
 }
 
-// TestParseFrontmatterFields_NestedBlock verifica que campos indentados são mapeados via dot-notation.
-func TestParseFrontmatterFields_NestedBlock(t *testing.T) {
+// TestParseFrontmatterFieldsNestedBlock verifica que campos indentados são mapeados via dot-notation.
+func (s *FrontmatterSuite) TestParseFrontmatterFieldsNestedBlock() {
 	content := []byte(`---
 name: claude-revisor-rigoroso
 description: Revisor de PR
@@ -42,7 +50,7 @@ runtime:
   access_mode: bypass-permissions
 ---
 `)
-	fields := ParseFrontmatterFields(content)
+	fields := NewCatalog().ParseFrontmatterFields(content)
 
 	nested := map[string]string{
 		"runtime.ide":              "claude",
@@ -50,38 +58,33 @@ runtime:
 		"runtime.reasoning_effort": "high",
 		"runtime.access_mode":      "bypass-permissions",
 	}
-	for k, want := range nested {
-		if got := fields[k]; got != want {
-			t.Errorf("fields[%q] = %q, want %q", k, got, want)
-		}
+	for key, want := range nested {
+		s.Equal(want, fields[key], "fields[%q]", key)
 	}
 	// Campos raiz ainda devem estar presentes.
-	if got := fields["name"]; got != "claude-revisor-rigoroso" {
-		t.Errorf("fields[\"name\"] = %q, want %q", got, "claude-revisor-rigoroso")
+	s.Equal("claude-revisor-rigoroso", fields["name"], "fields[\"name\"]")
+}
+
+func (s *FrontmatterSuite) TestParseFrontmatterFieldsEmptyInputs() {
+	scenarios := []struct {
+		name    string
+		content []byte
+	}{
+		{name: "conteudo sem frontmatter retorna mapa vazio", content: []byte("# Sem frontmatter\nApenas corpo.")},
+		{name: "frontmatter vazio retorna mapa vazio", content: []byte("---\n---\n# Corpo\n")},
+	}
+
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			fields := NewCatalog().ParseFrontmatterFields(scenario.content)
+			s.Empty(fields, "esperado mapa vazio")
+		})
 	}
 }
 
-// TestParseFrontmatterFields_NoFrontmatter verifica que conteúdo sem frontmatter retorna mapa vazio.
-func TestParseFrontmatterFields_NoFrontmatter(t *testing.T) {
-	content := []byte("# Sem frontmatter\nApenas corpo.")
-	fields := ParseFrontmatterFields(content)
-	if len(fields) != 0 {
-		t.Errorf("esperado mapa vazio, got %v", fields)
-	}
-}
-
-// TestParseFrontmatterFields_EmptyFrontmatter verifica que frontmatter vazio retorna mapa vazio.
-func TestParseFrontmatterFields_EmptyFrontmatter(t *testing.T) {
-	content := []byte("---\n---\n# Corpo\n")
-	fields := ParseFrontmatterFields(content)
-	if len(fields) != 0 {
-		t.Errorf("esperado mapa vazio, got %v", fields)
-	}
-}
-
-// TestParseFrontmatterFields_SkillsCompatibility verifica que ParseFrontmatterFields
+// TestParseFrontmatterFieldsSkillsCompatibility verifica que ParseFrontmatterFields
 // preserva comportamento para campos de skills (T-22: zero regressão).
-func TestParseFrontmatterFields_SkillsCompatibility(t *testing.T) {
+func (s *FrontmatterSuite) TestParseFrontmatterFieldsSkillsCompatibility() {
 	content := []byte(`---
 name: execute-task
 version: 1.2.3
@@ -92,7 +95,7 @@ link_mode: hard
 max_depth: 3
 ---
 `)
-	fields := ParseFrontmatterFields(content)
+	fields := NewCatalog().ParseFrontmatterFields(content)
 
 	expected := map[string]string{
 		"name":        "execute-task",
@@ -103,16 +106,14 @@ max_depth: 3
 		"link_mode":   "hard",
 		"max_depth":   "3",
 	}
-	for k, want := range expected {
-		if got := fields[k]; got != want {
-			t.Errorf("fields[%q] = %q, want %q", k, got, want)
-		}
+	for key, want := range expected {
+		s.Equal(want, fields[key], "fields[%q]", key)
 	}
 }
 
-// TestParseFrontmatterFields_WrapperConsistency verifica que ParseFrontmatter (wrapper)
+// TestParseFrontmatterFieldsWrapperConsistency verifica que ParseFrontmatter (wrapper)
 // produz o mesmo resultado que ParseFrontmatterFields para campos de skills.
-func TestParseFrontmatterFields_WrapperConsistency(t *testing.T) {
+func (s *FrontmatterSuite) TestParseFrontmatterFieldsWrapperConsistency() {
 	content := []byte(`---
 name: my-skill
 version: 2.0.0
@@ -124,27 +125,17 @@ link_mode: hard
 max_depth: 5
 ---
 `)
-	fm := ParseFrontmatter(content)
-	fields := ParseFrontmatterFields(content)
+	fm := NewCatalog().ParseFrontmatter(content)
+	fields := NewCatalog().ParseFrontmatterFields(content)
 
-	if fm.Name != fields["name"] {
-		t.Errorf("name divergente: wrapper=%q, fields=%q", fm.Name, fields["name"])
-	}
-	if fm.Version != fields["version"] {
-		t.Errorf("version divergente: wrapper=%q, fields=%q", fm.Version, fields["version"])
-	}
-	if fm.Description != fields["description"] {
-		t.Errorf("description divergente: wrapper=%q, fields=%q", fm.Description, fields["description"])
-	}
-	if fm.Lang != fields["lang"] {
-		t.Errorf("lang divergente: wrapper=%q, fields=%q", fm.Lang, fields["lang"])
-	}
-	if fm.LinkMode != fields["link_mode"] {
-		t.Errorf("link_mode divergente: wrapper=%q, fields=%q", fm.LinkMode, fields["link_mode"])
-	}
+	s.Equal(fields["name"], fm.Name, "name divergente")
+	s.Equal(fields["version"], fm.Version, "version divergente")
+	s.Equal(fields["description"], fm.Description, "description divergente")
+	s.Equal(fields["lang"], fm.Lang, "lang divergente")
+	s.Equal(fields["link_mode"], fm.LinkMode, "link_mode divergente")
 }
 
-func TestParseFrontmatter(t *testing.T) {
+func (s *FrontmatterSuite) TestParseFrontmatter() {
 	content := []byte(`---
 name: analyze-project
 version: 1.2.3
@@ -153,20 +144,14 @@ description: Analisa e classifica projetos.
 
 # Skill
 `)
-	fm := ParseFrontmatter(content)
+	fm := NewCatalog().ParseFrontmatter(content)
 
-	if fm.Version != "1.2.3" {
-		t.Errorf("version: got %q, want %q", fm.Version, "1.2.3")
-	}
-	if fm.Name != "analyze-project" {
-		t.Errorf("name: got %q, want %q", fm.Name, "analyze-project")
-	}
-	if fm.Description != "Analisa e classifica projetos." {
-		t.Errorf("description: got %q, want %q", fm.Description, "Analisa e classifica projetos.")
-	}
+	s.Equal("1.2.3", fm.Version, "version")
+	s.Equal("analyze-project", fm.Name, "name")
+	s.Equal("Analisa e classifica projetos.", fm.Description, "description")
 }
 
-func TestParseFrontmatter_DependsOn(t *testing.T) {
+func (s *FrontmatterSuite) TestParseFrontmatterDependsOn() {
 	content := []byte(`---
 name: execute-task
 version: 1.2.3
@@ -174,110 +159,111 @@ depends_on: [review, bugfix]
 description: Executa tarefas.
 ---
 `)
-	fm := ParseFrontmatter(content)
+	fm := NewCatalog().ParseFrontmatter(content)
 
-	if len(fm.DependsOn) != 2 {
-		t.Fatalf("depends_on: got %#v", fm.DependsOn)
+	s.Len(fm.DependsOn, 2, "depends_on")
+	s.Equal("review", fm.DependsOn[0], "depends_on[0]")
+	s.Equal("bugfix", fm.DependsOn[1], "depends_on[1]")
+}
+
+func (s *FrontmatterSuite) TestParseFrontmatterEmpty() {
+	fm := NewCatalog().ParseFrontmatter([]byte("# Sem frontmatter"))
+	s.Empty(fm.Version, "version")
+}
+
+func (s *FrontmatterSuite) TestValidateFrontmatterInvalid() {
+	scenarios := []struct {
+		name         string
+		content      []byte
+		skillName    string
+		dependencies []string
+		wantContains []string
+	}{
+		{
+			name:         "deve rejeitar bloco ausente",
+			content:      []byte("# Sem frontmatter\nAlgum conteudo."),
+			wantContains: []string{"frontmatter"},
+		},
+		{
+			name:         "deve rejeitar description ausente",
+			content:      []byte("---\nname: my-skill\nversion: 1.0.0\n---\n"),
+			wantContains: []string{"description"},
+		},
+		{
+			name:         "deve rejeitar semver invalido",
+			content:      []byte("---\nname: my-skill\nversion: not-semver\ndescription: A skill.\n---\n"),
+			wantContains: []string{"version", "semver"},
+		},
+		{
+			name:         "deve rejeitar name divergente",
+			content:      []byte("---\nname: wrong-name\nversion: 1.0.0\ndescription: A skill.\n---\n"),
+			skillName:    "my-skill",
+			wantContains: []string{"name"},
+		},
+		{
+			name:         "deve rejeitar depends_on ausente",
+			content:      []byte("---\nname: my-skill\nversion: 1.0.0\ndescription: A skill.\ndepends_on: [ghost-skill]\n---\n"),
+			skillName:    "my-skill",
+			dependencies: []string{"review", "bugfix"},
+			wantContains: []string{"depends_on", "ghost-skill"},
+		},
 	}
-	if fm.DependsOn[0] != "review" || fm.DependsOn[1] != "bugfix" {
-		t.Fatalf("depends_on: got %#v", fm.DependsOn)
+
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			err := NewCatalog().ValidateFrontmatter(scenario.content, scenario.skillName, scenario.dependencies)
+			s.Error(err)
+			if err == nil {
+				return
+			}
+			if len(scenario.wantContains) == 1 {
+				s.Contains(err.Error(), scenario.wantContains[0])
+				return
+			}
+
+			matched := false
+			for _, want := range scenario.wantContains {
+				if strings.Contains(err.Error(), want) {
+					matched = true
+				}
+			}
+			s.True(matched, "expected error containing one of %v, got: %v", scenario.wantContains, err)
+		})
 	}
 }
 
-func TestParseFrontmatter_Empty(t *testing.T) {
-	fm := ParseFrontmatter([]byte("# Sem frontmatter"))
-	if fm.Version != "" {
-		t.Errorf("version: got %q, want empty", fm.Version)
-	}
-}
-
-func TestValidateFrontmatter_MissingBlock(t *testing.T) {
-	content := []byte("# Sem frontmatter\nAlgum conteudo.")
-	err := ValidateFrontmatter(content, "", nil)
-	if err == nil {
-		t.Fatal("expected error for missing frontmatter block")
-	}
-	if !strings.Contains(err.Error(), "frontmatter") {
-		t.Fatalf("expected error containing 'frontmatter', got: %v", err)
-	}
-}
-
-func TestValidateFrontmatter_MissingDescription(t *testing.T) {
-	content := []byte("---\nname: my-skill\nversion: 1.0.0\n---\n")
-	err := ValidateFrontmatter(content, "", nil)
-	if err == nil {
-		t.Fatal("expected error for missing description")
-	}
-	if !strings.Contains(err.Error(), "description") {
-		t.Fatalf("expected error containing 'description', got: %v", err)
-	}
-}
-
-func TestValidateFrontmatter_InvalidSemver(t *testing.T) {
-	content := []byte("---\nname: my-skill\nversion: not-semver\ndescription: A skill.\n---\n")
-	err := ValidateFrontmatter(content, "", nil)
-	if err == nil {
-		t.Fatal("expected error for invalid semver")
-	}
-	if !strings.Contains(err.Error(), "version") && !strings.Contains(err.Error(), "semver") {
-		t.Fatalf("expected error containing 'version' or 'semver', got: %v", err)
-	}
-}
-
-func TestValidateFrontmatter_NameMismatch(t *testing.T) {
-	content := []byte("---\nname: wrong-name\nversion: 1.0.0\ndescription: A skill.\n---\n")
-	err := ValidateFrontmatter(content, "my-skill", nil)
-	if err == nil {
-		t.Fatal("expected error for name mismatch")
-	}
-	if !strings.Contains(err.Error(), "name") {
-		t.Fatalf("expected error containing 'name', got: %v", err)
-	}
-}
-
-func TestValidateFrontmatter_DependsOnMissing(t *testing.T) {
-	content := []byte("---\nname: my-skill\nversion: 1.0.0\ndescription: A skill.\ndepends_on: [ghost-skill]\n---\n")
-	err := ValidateFrontmatter(content, "my-skill", []string{"review", "bugfix"})
-	if err == nil {
-		t.Fatal("expected error for missing dependency")
-	}
-	if !strings.Contains(err.Error(), "depends_on") && !strings.Contains(err.Error(), "ghost-skill") {
-		t.Fatalf("expected error containing 'depends_on' or 'ghost-skill', got: %v", err)
-	}
-}
-
-func TestValidateFrontmatter_ValidSkill(t *testing.T) {
+func (s *FrontmatterSuite) TestValidateFrontmatterValidSkill() {
 	content := []byte("---\nname: my-skill\nversion: 1.0.0\ndescription: Uma skill valida.\n---\n# My Skill\n")
-	err := ValidateFrontmatter(content, "my-skill", nil)
-	if err != nil {
-		t.Fatalf("unexpected error for valid frontmatter: %v", err)
-	}
+	err := NewCatalog().ValidateFrontmatter(content, "my-skill", nil)
+	s.NoError(err, "unexpected error for valid frontmatter")
 }
 
-func TestSemverGreater(t *testing.T) {
-	tests := []struct {
-		a, b string
+func (s *FrontmatterSuite) TestSemverGreater() {
+	scenarios := []struct {
+		name string
+		a    string
+		b    string
 		want bool
 	}{
-		{"1.0.0", "0.9.0", true},
-		{"1.1.0", "1.0.0", true},
-		{"1.0.1", "1.0.0", true},
-		{"1.0.0", "1.0.0", false},
-		{"0.9.0", "1.0.0", false},
-		{"2.0.0-beta", "1.9.9", true},
-		{"v1.1.0", "1.0.0", true},
+		{name: "1.0.0 maior que 0.9.0", a: "1.0.0", b: "0.9.0", want: true},
+		{name: "1.1.0 maior que 1.0.0", a: "1.1.0", b: "1.0.0", want: true},
+		{name: "1.0.1 maior que 1.0.0", a: "1.0.1", b: "1.0.0", want: true},
+		{name: "1.0.0 igual a 1.0.0", a: "1.0.0", b: "1.0.0", want: false},
+		{name: "0.9.0 menor que 1.0.0", a: "0.9.0", b: "1.0.0", want: false},
+		{name: "2.0.0-beta maior que 1.9.9", a: "2.0.0-beta", b: "1.9.9", want: true},
+		{name: "v1.1.0 maior que 1.0.0", a: "v1.1.0", b: "1.0.0", want: true},
 	}
 
-	for _, tt := range tests {
-		got := SemverGreater(tt.a, tt.b)
-		if got != tt.want {
-			t.Errorf("SemverGreater(%q, %q) = %v, want %v", tt.a, tt.b, got, tt.want)
-		}
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			got := NewCatalog().SemverGreater(scenario.a, scenario.b)
+			s.Equal(scenario.want, got, "NewCatalog().SemverGreater(%q, %q)", scenario.a, scenario.b)
+		})
 	}
 }
 
-func TestIsValidSemver(t *testing.T) {
-	tests := []struct {
+func (s *FrontmatterSuite) TestIsValidSemver() {
+	scenarios := []struct {
 		name    string
 		version string
 		want    bool
@@ -293,11 +279,10 @@ func TestIsValidSemver(t *testing.T) {
 		{name: "non numeric", version: "1.2.x", want: false},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := IsValidSemver(tt.version); got != tt.want {
-				t.Fatalf("IsValidSemver(%q) = %v, want %v", tt.version, got, tt.want)
-			}
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			got := NewCatalog().IsValidSemver(scenario.version)
+			s.Equal(scenario.want, got, "NewCatalog().IsValidSemver(%q)", scenario.version)
 		})
 	}
 }

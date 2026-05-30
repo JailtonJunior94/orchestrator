@@ -26,11 +26,11 @@ var ProcessualSkills = []string{
 	"review", "execute-task", "create-tasks", "create-technical-specification",
 }
 
-// executeTaskYAMLContract eh o bloco YAML literal que TODO subagent task-executor
+// _executeTaskYAMLContract eh o bloco YAML literal que TODO subagent task-executor
 // DEVE retornar. Mantido aqui (em vez de embutido na instruction) para garantir
 // paridade textual entre Claude/Codex/Gemini/Copilot — execute-all-tasks valida
 // formato canonico em cadeia de 4 passos (status, report_path, summary).
-const executeTaskYAMLContract = "status: done | blocked | failed | needs_input\nreport_path: .specs/prd-<slug>/<id>_execution_report.md\nsummary: <1 linha>"
+const _executeTaskYAMLContract = "status: done | blocked | failed | needs_input\nreport_path: .specs/prd-<slug>/<id>_execution_report.md\nsummary: <1 linha>"
 
 type skillMeta struct {
 	claudeName  string
@@ -40,7 +40,7 @@ type skillMeta struct {
 	instruction string
 }
 
-var skillRegistry = map[string]skillMeta{
+var _skillRegistry = map[string]skillMeta{
 	"bugfix": {
 		claudeName: "bugfixer", claudeFile: "bugfixer.md",
 		githubName: "Corretor de Bugs", githubFile: "bugfix.agent.md",
@@ -89,7 +89,7 @@ func (g *Generator) GenerateClaude(sourceDir, projectDir string) {
 	count := 0
 
 	for _, skill := range ProcessualSkills {
-		meta, ok := skillRegistry[skill]
+		meta, ok := _skillRegistry[skill]
 		if !ok {
 			continue
 		}
@@ -104,12 +104,12 @@ func (g *Generator) GenerateClaude(sourceDir, projectDir string) {
 			continue
 		}
 
-		fm := skills.ParseFrontmatter(data)
+		fm := skills.NewCatalog().ParseFrontmatter(data)
 		if fm.Description == "" {
 			continue
 		}
 
-		shortDesc := truncateAtSentence(fm.Description, 120)
+		shortDesc := NewHelper().truncateAtSentence(fm.Description, 120)
 		content := fmt.Sprintf(`---
 name: %s
 description: %s
@@ -122,7 +122,7 @@ Mantenha este subagente estreito: %s.
 `, meta.claudeName, shortDesc, skill, skill, meta.instruction)
 
 		if skill == "execute-task" {
-			content += "\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n```yaml\n" + executeTaskYAMLContract + "\n```\n"
+			content += "\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n```yaml\n" + _executeTaskYAMLContract + "\n```\n"
 		}
 
 		_ = g.fs.WriteFile(filepath.Join(agentsDir, meta.claudeFile), []byte(content))
@@ -137,7 +137,7 @@ func (g *Generator) GenerateGitHub(sourceDir, projectDir string) {
 	count := 0
 
 	for _, skill := range ProcessualSkills {
-		meta, ok := skillRegistry[skill]
+		meta, ok := _skillRegistry[skill]
 		if !ok {
 			continue
 		}
@@ -152,12 +152,12 @@ func (g *Generator) GenerateGitHub(sourceDir, projectDir string) {
 			continue
 		}
 
-		fm := skills.ParseFrontmatter(data)
+		fm := skills.NewCatalog().ParseFrontmatter(data)
 		if fm.Description == "" {
 			continue
 		}
 
-		shortDesc := truncateAtSentence(fm.Description, 120)
+		shortDesc := NewHelper().truncateAtSentence(fm.Description, 120)
 		content := fmt.Sprintf(`---
 name: %s
 description: %s
@@ -168,7 +168,7 @@ Mantenha este agente estreito: %s.
 `, meta.githubName, shortDesc, skill, meta.instruction)
 
 		if skill == "execute-task" {
-			content += "\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n```yaml\n" + executeTaskYAMLContract + "\n```\n"
+			content += "\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n```yaml\n" + _executeTaskYAMLContract + "\n```\n"
 		}
 
 		_ = g.fs.WriteFile(filepath.Join(agentsDir, meta.githubFile), []byte(content))
@@ -185,7 +185,7 @@ func (g *Generator) GenerateGeminiAgents(sourceDir, projectDir string) {
 	count := 0
 
 	for _, skill := range ProcessualSkills {
-		meta, ok := skillRegistry[skill]
+		meta, ok := _skillRegistry[skill]
 		if !ok {
 			continue
 		}
@@ -200,12 +200,12 @@ func (g *Generator) GenerateGeminiAgents(sourceDir, projectDir string) {
 			continue
 		}
 
-		fm := skills.ParseFrontmatter(data)
+		fm := skills.NewCatalog().ParseFrontmatter(data)
 		if fm.Description == "" {
 			continue
 		}
 
-		shortDesc := truncateAtSentence(fm.Description, 120)
+		shortDesc := NewHelper().truncateAtSentence(fm.Description, 120)
 		content := fmt.Sprintf(`---
 name: %s
 description: %s
@@ -216,7 +216,7 @@ Mantenha este subagente estreito: %s.
 `, meta.claudeName, shortDesc, skill, meta.instruction)
 
 		if skill == "execute-task" {
-			content += "\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n```yaml\n" + executeTaskYAMLContract + "\n```\n"
+			content += "\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n```yaml\n" + _executeTaskYAMLContract + "\n```\n"
 		}
 
 		_ = g.fs.WriteFile(filepath.Join(agentsDir, meta.claudeName+".md"), []byte(content))
@@ -233,7 +233,7 @@ func (g *Generator) GenerateCodexAgents(sourceDir, projectDir string) {
 	count := 0
 
 	for _, skill := range ProcessualSkills {
-		meta, ok := skillRegistry[skill]
+		meta, ok := _skillRegistry[skill]
 		if !ok {
 			continue
 		}
@@ -248,17 +248,17 @@ func (g *Generator) GenerateCodexAgents(sourceDir, projectDir string) {
 			continue
 		}
 
-		fm := skills.ParseFrontmatter(data)
+		fm := skills.NewCatalog().ParseFrontmatter(data)
 		if fm.Description == "" {
 			continue
 		}
 
-		shortDesc := truncateAtSentence(fm.Description, 120)
+		shortDesc := NewHelper().truncateAtSentence(fm.Description, 120)
 		instructions := fmt.Sprintf(`Use a skill canonica .agents/skills/%s/SKILL.md como processo de execucao desta tarefa.
 Mantenha este subagente estreito: %s.`, skill, meta.instruction)
 
 		if skill == "execute-task" {
-			instructions += "\n\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n" + executeTaskYAMLContract
+			instructions += "\n\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n" + _executeTaskYAMLContract
 		}
 
 		content := fmt.Sprintf(`name = %q
@@ -279,8 +279,8 @@ enabled = true
 	g.printer.Debug("Adaptadores Codex agents gerados: %d", count)
 }
 
-// reviewLoopSkills are skills that include a validation loop and need an explicit reminder in the prompt.
-var reviewLoopSkills = map[string]bool{
+// _reviewLoopSkills are skills that include a validation loop and need an explicit reminder in the prompt.
+var _reviewLoopSkills = map[string]bool{
 	"execute-task": true,
 	"refactor":     true,
 }
@@ -315,25 +315,25 @@ func (g *Generator) GenerateGemini(sourceDir, projectDir string) {
 			continue
 		}
 
-		fm := skills.ParseFrontmatter(data)
+		fm := skills.NewCatalog().ParseFrontmatter(data)
 		if fm.Description == "" {
 			continue
 		}
 
-		shortDesc := truncateAtSentence(fm.Description, 120)
+		shortDesc := NewHelper().truncateAtSentence(fm.Description, 120)
 		prompt := g.buildGeminiPrompt(skillsDir, skillName)
 		content := fmt.Sprintf("description = %q\nprompt = \"\"\"\n%s\n\"\"\"\n", shortDesc, prompt)
 		legacyPath := filepath.Join(cmdDir, skillName+".toml")
 		if g.fs.Exists(legacyPath) {
 			_ = g.fs.Remove(legacyPath)
 		}
-		_ = g.fs.WriteFile(filepath.Join(cmdDir, geminiCommandFileName(skillName)), []byte(content))
+		_ = g.fs.WriteFile(filepath.Join(cmdDir, NewHelper().geminiCommandFileName(skillName)), []byte(content))
 		count++
 	}
 	g.printer.Debug("Gemini commands gerados: %d", count)
 }
 
-func geminiCommandFileName(skillName string) string {
+func (r1 *Helper) geminiCommandFileName(skillName string) string {
 	return "workspace." + skillName + ".toml"
 }
 
@@ -348,7 +348,7 @@ func (g *Generator) buildGeminiPrompt(skillsDir, skillName string) string {
 	sb.WriteString("Leia os assets e references sob demanda conforme descrito no SKILL.md.\n")
 	sb.WriteString("Nao invente um processo paralelo neste comando.")
 
-	if reviewLoopSkills[skillName] {
+	if _reviewLoopSkills[skillName] {
 		sb.WriteString("\n\nAo concluir, rode validacao proporcional e retorne o relatorio com estado final.")
 	}
 
@@ -380,7 +380,7 @@ func (g *Generator) BuildCodexConfig(skillList []string) string {
 	return b.String()
 }
 
-func truncateAtSentence(s string, maxLen int) string {
+func (r1 *Helper) truncateAtSentence(s string, maxLen int) string {
 	if idx := strings.Index(s, ". "); idx >= 0 && idx < maxLen {
 		return s[:idx+1]
 	}

@@ -15,8 +15,8 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
-// sessionCounter garante unicidade dos IDs de sessão mesmo em chamadas sub-nanossegundo.
-var sessionCounter atomic.Uint64
+// _sessionCounter garante unicidade dos IDs de sessão mesmo em chamadas sub-nanossegundo.
+var _sessionCounter atomic.Uint64
 
 // SpawnParams agrupa os parâmetros necessários para spawnar uma child session.
 type SpawnParams struct {
@@ -31,13 +31,13 @@ type SpawnParams struct {
 // Serializa o NestedExecutionContext em AISPEC_RUN_AGENT_CONTEXT antes de spawnar.
 // Persiste eventos do child em <parent_evidence_dir>/nested/<child_session_id>/events.jsonl.
 // Espelha eventos do child no parent com kind="nested_agent".
-func spawnNestedSession(ctx context.Context, p SpawnParams) (RunAgentOutput, error) {
+func (c *Catalog) spawnNestedSession(ctx context.Context, p SpawnParams) (RunAgentOutput, error) {
 	// Derivar spec para o agente, respeitando o IDE declarado no frontmatter.
-	agentSpec := resolveAgentSpec(p.Agent)
+	agentSpec := NewCatalog().resolveAgentSpec(p.Agent)
 
 	// Determinar evidenceDir do child.
-	childSessionID := generateSessionID(p.Agent.Name)
-	parentEvidenceDir := resolveParentEvidenceDir(p.ParentCtx)
+	childSessionID := NewCatalog().generateSessionID(p.Agent.Name)
+	parentEvidenceDir := NewCatalog().resolveParentEvidenceDir(p.ParentCtx)
 	childEvidenceDir := filepath.Join(parentEvidenceDir, "nested", childSessionID)
 
 	if err := os.MkdirAll(childEvidenceDir, 0o755); err != nil {
@@ -64,7 +64,7 @@ func spawnNestedSession(ctx context.Context, p SpawnParams) (RunAgentOutput, err
 	}()
 
 	// Construir prompt combinando o prompt do agente com o prompt do caller.
-	prompt := buildChildPrompt(p.Agent, p.Input)
+	prompt := NewCatalog().buildChildPrompt(p.Agent, p.Input)
 
 	// Construir job para o child runner.
 	model := p.Input.Model
@@ -92,7 +92,7 @@ func spawnNestedSession(ctx context.Context, p SpawnParams) (RunAgentOutput, err
 	// Criar e executar o child ACPRunner.
 	opts := []airuntime.Option{}
 	if p.PersistFactory != nil {
-		opts = append(opts, airuntime.WithPersistenceFactory(p.PersistFactory))
+		opts = append(opts, airuntime.NewCatalog().WithPersistenceFactory(p.PersistFactory))
 	}
 
 	runner := airuntime.NewACPRunner(agentSpec, opts...)
@@ -102,35 +102,35 @@ func spawnNestedSession(ctx context.Context, p SpawnParams) (RunAgentOutput, err
 	}
 
 	return RunAgentOutput{
-		Summary:     buildSummaryText(summary),
+		Summary:     NewCatalog().buildSummaryText(summary),
 		EvidenceDir: childEvidenceDir,
 	}, nil
 }
 
 // resolveAgentSpec retorna o Spec adequado para o agente, baseado em Runtime.IDE declarado.
 // Fallback para Claude quando IDE não especificado.
-func resolveAgentSpec(agent agents.ResolvedAgent) specs.Spec {
+func (c *Catalog) resolveAgentSpec(agent agents.ResolvedAgent) specs.Spec {
 	switch agent.Runtime.IDE {
 	case "codex":
-		return specs.Codex()
+		return specs.NewCatalog().Codex()
 	case "copilot":
-		return specs.Copilot()
+		return specs.NewCatalog().Copilot()
 	default:
 		// claude ou vazio → usar Claude (RFC-01.1)
-		return specs.Claude()
+		return specs.NewCatalog().Claude()
 	}
 }
 
 // generateSessionID gera um identificador de sessão único baseado no nome do agente,
 // timestamp e contador atômico global para garantir unicidade em chamadas sub-nanossegundo.
-func generateSessionID(agentName string) string {
-	seq := sessionCounter.Add(1)
+func (c *Catalog) generateSessionID(agentName string) string {
+	seq := _sessionCounter.Add(1)
 	return fmt.Sprintf("%s-%d-%d", agentName, time.Now().UnixNano(), seq)
 }
 
 // resolveParentEvidenceDir resolve o evidenceDir do parent a partir do contexto.
 // Quando não há workspace root, usa o diretório temporário.
-func resolveParentEvidenceDir(parentCtx NestedExecutionContext) string {
+func (c *Catalog) resolveParentEvidenceDir(parentCtx NestedExecutionContext) string {
 	if parentCtx.WorkspaceRoot != "" {
 		return filepath.Join(parentCtx.WorkspaceRoot, "evidence", "nested")
 	}
@@ -139,7 +139,7 @@ func resolveParentEvidenceDir(parentCtx NestedExecutionContext) string {
 
 // buildChildPrompt constrói o prompt final para o child runner.
 // Prefixa com o corpo do AGENT.md (system prompt do agente) quando presente.
-func buildChildPrompt(agent agents.ResolvedAgent, input RunAgentInput) string {
+func (c *Catalog) buildChildPrompt(agent agents.ResolvedAgent, input RunAgentInput) string {
 	if agent.Prompt == "" {
 		return input.Prompt
 	}
@@ -147,7 +147,7 @@ func buildChildPrompt(agent agents.ResolvedAgent, input RunAgentInput) string {
 }
 
 // buildSummaryText constrói o texto de resumo do child runner para o output da tool.
-func buildSummaryText(summary airuntime.Summary) string {
+func (c *Catalog) buildSummaryText(summary airuntime.Summary) string {
 	return fmt.Sprintf(
 		"sessão concluída: launcher=%s events=%d tool_calls=%d cancel_reason=%s",
 		summary.Launcher,

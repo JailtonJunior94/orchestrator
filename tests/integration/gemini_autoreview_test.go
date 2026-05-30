@@ -40,13 +40,12 @@ func buildGeminiRunnerWithReviewFn(
 	reviewFn airuntime.ReviewOutputFn,
 ) *airuntime.ACPRunner {
 	t.Helper()
-	return airuntime.NewACPRunner(
-		specs.Gemini(),
-		airuntime.WithProber(&e2eFakeProber{}),
-		airuntime.WithClientFactory(&e2eFakeClientFactory{script: script, ctx: ctx, t: t}),
-		airuntime.WithPersistenceFactory(&e2eDiscardPersistenceFactory{}),
-		airuntime.WithRenderer(&e2eDiscardRenderer{}),
-		airuntime.WithReviewOutputFn(reviewFn),
+	return airuntime.NewACPRunner(specs.NewCatalog().
+		Gemini(), airuntime.NewCatalog().WithProber(&e2eFakeProber{}), airuntime.NewCatalog().
+		WithClientFactory(&e2eFakeClientFactory{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(&e2eDiscardPersistenceFactory{}), airuntime.NewCatalog().
+		WithRenderer(&e2eDiscardRenderer{}), airuntime.NewCatalog().
+		WithReviewOutputFn(reviewFn),
 	)
 }
 
@@ -59,9 +58,9 @@ func (f *e2eDiscardPersistenceFactory) New(_ string) (airuntime.Persistence, err
 	return &e2eDiscardPersistence{}, nil
 }
 
-func (p *e2eDiscardPersistence) AppendEvent(_ events.Event) error               { return nil }
+func (p *e2eDiscardPersistence) AppendEvent(_ events.Event) error                { return nil }
 func (p *e2eDiscardPersistence) WriteToolCalls(_ []events.ToolCallSummary) error { return nil }
-func (p *e2eDiscardPersistence) EnrichReport(_ airuntime.Summary) error         { return nil }
+func (p *e2eDiscardPersistence) EnrichReport(_ airuntime.Summary) error          { return nil }
 
 // workDirWithAgentsMDAndReviewSkill cria TempDir com AGENTS.md e .agents/skills/review/SKILL.md.
 func workDirWithAgentsMDAndReviewSkill(t *testing.T) string {
@@ -344,10 +343,10 @@ func TestAutoReviewInfoMessageEmittedOncePerSession(t *testing.T) {
 		}
 
 		// Chamadas que NÃO devem emitir INFO.
-		emitIfNeeded("claude", true)   // tool errado
-		emitIfNeeded("gemini", false)  // autoReview false
-		emitIfNeeded("codex", true)    // tool errado
-		emitIfNeeded("gemini", false)  // autoReview false (de novo)
+		emitIfNeeded("claude", true)  // tool errado
+		emitIfNeeded("gemini", false) // autoReview false
+		emitIfNeeded("codex", true)   // tool errado
+		emitIfNeeded("gemini", false) // autoReview false (de novo)
 
 		mu.Lock()
 		count := emitCount

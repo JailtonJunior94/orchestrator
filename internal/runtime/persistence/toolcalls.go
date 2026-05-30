@@ -12,14 +12,14 @@ import (
 // WriteToolCalls gera o arquivo tool_calls.md (RF-09).
 // Sem summaries: escreve "Nenhum tool call registrado.\n".
 // Com summaries: lista numerada com nome, status e tool_call_id.
-func WriteToolCalls(path string, summaries []events.ToolCallSummary, fsys fs.FileSystem) error {
+func (c *Catalog) WriteToolCalls(path string, summaries []events.ToolCallSummary, fsys fs.FileSystem) error {
 	clean := filepath.Clean(path)
 	dir := filepath.Dir(clean)
 	if err := fsys.MkdirAll(dir); err != nil {
 		return fmt.Errorf("persistence: criar diretório %s: %w", dir, err)
 	}
 
-	content := buildToolCallsContent(summaries)
+	content := NewCatalog().buildToolCallsContent(summaries)
 	if err := fsys.WriteFile(clean, []byte(content)); err != nil {
 		return fmt.Errorf("persistence: escrever %s: %w", clean, err)
 	}
@@ -27,7 +27,7 @@ func WriteToolCalls(path string, summaries []events.ToolCallSummary, fsys fs.Fil
 }
 
 // buildToolCallsContent constrói o conteúdo do tool_calls.md.
-func buildToolCallsContent(summaries []events.ToolCallSummary) string {
+func (c *Catalog) buildToolCallsContent(summaries []events.ToolCallSummary) string {
 	if len(summaries) == 0 {
 		return "Nenhum tool call registrado.\n"
 	}

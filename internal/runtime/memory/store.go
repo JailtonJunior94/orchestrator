@@ -26,7 +26,7 @@ type Limits struct {
 }
 
 // DefaultLimits retorna os limites padrão.
-func DefaultLimits() Limits {
+func (c *Catalog) DefaultLimits() Limits {
 	return Limits{
 		WorkflowLines: DefaultWorkflowLineLimit,
 		WorkflowBytes: DefaultWorkflowByteLimit,
@@ -73,6 +73,8 @@ type store struct {
 	limits   Limits
 }
 
+var _ Store = (*store)(nil)
+
 // New cria um Store com o diretório de tasks e limites fornecidos.
 func New(tasksDir string, limits Limits) Store {
 	return &store{
@@ -104,7 +106,7 @@ func (s *store) ensureDir() error {
 
 // countLines conta o número de bytes '\n' no conteúdo.
 // Não usa strings.Split para evitar custo de memória dobrado.
-func countLines(content string) int {
+func (c *Catalog) countLines(content string) int {
 	count := 0
 	for i := 0; i < len(content); i++ {
 		if content[i] == '\n' {
@@ -115,7 +117,7 @@ func countLines(content string) int {
 }
 
 // readFile lê um arquivo e retorna Document. Retorna Exists:false sem erro quando ausente.
-func readFile(path string, lineLimit, byteLimit int) (Document, error) {
+func (c *Catalog) readFile(path string, lineLimit, byteLimit int) (Document, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -128,7 +130,7 @@ func readFile(path string, lineLimit, byteLimit int) (Document, error) {
 	}
 
 	content := string(data)
-	lineCount := countLines(content)
+	lineCount := NewCatalog().countLines(content)
 	byteCount := len(content)
 	needsCompaction := lineCount > lineLimit || byteCount > byteLimit
 
@@ -145,7 +147,7 @@ func readFile(path string, lineLimit, byteLimit int) (Document, error) {
 }
 
 // writeFile escreve conteúdo em um arquivo com o modo especificado.
-func writeFile(path, content string, mode WriteMode) error {
+func (c *Catalog) writeFile(path, content string, mode WriteMode) error {
 	switch mode {
 	case WriteModeReplace:
 		return os.WriteFile(path, []byte(content), 0o644)
@@ -166,12 +168,12 @@ func writeFile(path, content string, mode WriteMode) error {
 
 // ReadWorkflow lê o documento de workflow do PRD.
 func (s *store) ReadWorkflow(_ context.Context) (Document, error) {
-	return readFile(s.workflowPath(), s.limits.WorkflowLines, s.limits.WorkflowBytes)
+	return NewCatalog().readFile(s.workflowPath(), s.limits.WorkflowLines, s.limits.WorkflowBytes)
 }
 
 // ReadTask lê o documento de uma task específica.
 func (s *store) ReadTask(_ context.Context, taskFileName string) (Document, error) {
-	return readFile(s.taskPath(taskFileName), s.limits.TaskLines, s.limits.TaskBytes)
+	return NewCatalog().readFile(s.taskPath(taskFileName), s.limits.TaskLines, s.limits.TaskBytes)
 }
 
 // WriteWorkflow escreve o documento de workflow do PRD.
@@ -179,7 +181,7 @@ func (s *store) WriteWorkflow(_ context.Context, content string, mode WriteMode)
 	if err := s.ensureDir(); err != nil {
 		return fmt.Errorf("memory: criar diretório: %w", err)
 	}
-	return writeFile(s.workflowPath(), content, mode)
+	return NewCatalog().writeFile(s.workflowPath(), content, mode)
 }
 
 // WriteTask escreve o documento de uma task específica.
@@ -187,5 +189,5 @@ func (s *store) WriteTask(_ context.Context, taskFileName, content string, mode 
 	if err := s.ensureDir(); err != nil {
 		return fmt.Errorf("memory: criar diretório: %w", err)
 	}
-	return writeFile(s.taskPath(taskFileName), content, mode)
+	return NewCatalog().writeFile(s.taskPath(taskFileName), content, mode)
 }

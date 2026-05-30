@@ -19,6 +19,14 @@ const (
 	BumpNone  BumpKind = "none"
 )
 
+// Service calcula decisoes semver a partir de commits convencionais.
+type Service struct{}
+
+// NewService cria um Service stateless.
+func NewService() *Service {
+	return &Service{}
+}
+
 // Commit represents a parsed conventional commit.
 type Commit struct {
 	Hash     string
@@ -42,7 +50,7 @@ type Decision struct {
 }
 
 // FindLastTag finds the most recent reachable v* tag.
-func FindLastTag(repoPath string) (string, error) {
+func (s *Service) FindLastTag(repoPath string) (string, error) {
 	cmd := exec.Command("git", "-C", repoPath, "describe", "--tags", "--abbrev=0", "--match", "v*")
 	out, err := cmd.Output()
 	if err != nil {
@@ -52,7 +60,7 @@ func FindLastTag(repoPath string) (string, error) {
 }
 
 // ParseConventionalCommits parses commits in the given range.
-func ParseConventionalCommits(repoPath, commitRange string) ([]Commit, error) {
+func (s *Service) ParseConventionalCommits(repoPath, commitRange string) ([]Commit, error) {
 	cmd := exec.Command("git", "-C", repoPath, "log", "--format=%H %s", commitRange)
 	out, err := cmd.Output()
 	if err != nil {
@@ -68,13 +76,13 @@ func ParseConventionalCommits(repoPath, commitRange string) ([]Commit, error) {
 		if len(parts) < 2 {
 			continue
 		}
-		c := parseCommit(parts[0], parts[1])
+		c := s.parseCommit(parts[0], parts[1])
 		commits = append(commits, c)
 	}
 
 	// Also check commit bodies for BREAKING CHANGE footer.
 	for i, c := range commits {
-		body, err := getCommitBody(repoPath, c.Hash)
+		body, err := s.getCommitBody(repoPath, c.Hash)
 		if err == nil && strings.Contains(body, "BREAKING CHANGE") {
 			commits[i].Breaking = true
 		}
@@ -83,7 +91,7 @@ func ParseConventionalCommits(repoPath, commitRange string) ([]Commit, error) {
 	return commits, nil
 }
 
-func getCommitBody(repoPath, hash string) (string, error) {
+func (s *Service) getCommitBody(repoPath, hash string) (string, error) {
 	cmd := exec.Command("git", "-C", repoPath, "show", "--format=%b", "-s", hash)
 	out, err := cmd.Output()
 	if err != nil {
@@ -92,7 +100,7 @@ func getCommitBody(repoPath, hash string) (string, error) {
 	return string(out), nil
 }
 
-func parseCommit(hash, subject string) Commit {
+func (s *Service) parseCommit(hash, subject string) Commit {
 	c := Commit{Hash: hash, Raw: subject}
 
 	if strings.Contains(subject, "BREAKING CHANGE") {
@@ -122,18 +130,18 @@ func parseCommit(hash, subject string) Commit {
 }
 
 // DetermineBump returns the highest bump kind from a set of commits.
-func DetermineBump(commits []Commit) BumpKind {
+func (s *Service) DetermineBump(commits []Commit) BumpKind {
 	best := BumpNone
 	for _, c := range commits {
-		b := bumpForCommit(c)
-		if bumpRank(b) > bumpRank(best) {
+		b := s.bumpForCommit(c)
+		if s.bumpRank(b) > s.bumpRank(best) {
 			best = b
 		}
 	}
 	return best
 }
 
-func bumpForCommit(c Commit) BumpKind {
+func (s *Service) bumpForCommit(c Commit) BumpKind {
 	if c.Breaking {
 		return BumpMajor
 	}
@@ -146,7 +154,7 @@ func bumpForCommit(c Commit) BumpKind {
 	return BumpNone
 }
 
-func bumpRank(b BumpKind) int {
+func (s *Service) bumpRank(b BumpKind) int {
 	switch b {
 	case BumpMajor:
 		return 3
@@ -160,7 +168,7 @@ func bumpRank(b BumpKind) int {
 
 // ComputeNext increments the semver string based on bump kind.
 // current may be "v1.2.3" or "1.2.3"; returns bare "1.2.3" without prefix.
-func ComputeNext(current string, bump BumpKind) string {
+func (s *Service) ComputeNext(current string, bump BumpKind) string {
 	v := strings.TrimPrefix(current, "v")
 	parts := strings.Split(v, ".")
 	if len(parts) != 3 {
@@ -185,7 +193,7 @@ func ComputeNext(current string, bump BumpKind) string {
 	return fmt.Sprintf("%d.%d.%d", major, minor, patch)
 }
 
-func readVersionFile(repoPath string) string {
+func (s *Service) readVersionFile(repoPath string) string {
 	data, err := os.ReadFile(filepath.Join(repoPath, "VERSION"))
 	if err != nil {
 		return "0.0.0"
@@ -198,14 +206,14 @@ func readVersionFile(repoPath string) string {
 }
 
 // Evaluate orchestrates all semver logic and returns a Decision.
-func Evaluate(repoPath string) (*Decision, error) {
+func (s *Service) Evaluate(repoPath string) (*Decision, error) {
 	d := &Decision{}
 
-	lastTag, err := FindLastTag(repoPath)
+	lastTag, err := s.FindLastTag(repoPath)
 	if err != nil || lastTag == "" {
 		d.Action = "bootstrap"
 		d.BootstrapRequired = true
-		d.BaseVersion = readVersionFile(repoPath)
+		d.BaseVersion = s.readVersionFile(repoPath)
 		d.Bump = BumpNone
 		d.TargetVersion = d.BaseVersion
 		d.CommitRange = "HEAD"
@@ -216,13 +224,13 @@ func Evaluate(repoPath string) (*Decision, error) {
 	d.BaseVersion = strings.TrimPrefix(lastTag, "v")
 	d.CommitRange = lastTag + "..HEAD"
 
-	commits, err := ParseConventionalCommits(repoPath, d.CommitRange)
+	commits, err := s.ParseConventionalCommits(repoPath, d.CommitRange)
 	if err != nil {
 		commits = []Commit{}
 	}
 	d.CommitCount = len(commits)
 
-	bump := DetermineBump(commits)
+	bump := s.DetermineBump(commits)
 	d.Bump = bump
 
 	if bump == BumpNone {
@@ -231,7 +239,7 @@ func Evaluate(repoPath string) (*Decision, error) {
 	} else {
 		d.Action = "release"
 		d.ReleaseRequired = true
-		d.TargetVersion = ComputeNext(lastTag, bump)
+		d.TargetVersion = s.ComputeNext(lastTag, bump)
 	}
 
 	return d, nil

@@ -3,12 +3,14 @@
 // Shell hook permanece ativo para modo interativo Claude Code (coexistência).
 //
 // Semântica replicada de validate-governance.sh:
-//   Valida que AGENTS.md existe no WorkDir da sessão.
-//   Ausência do arquivo aborta a sessão (exit 1 equivalente = retornar erro).
+//
+//	Valida que AGENTS.md existe no WorkDir da sessão.
+//	Ausência do arquivo aborta a sessão (exit 1 equivalente = retornar erro).
 //
 // Diferença de escopo:
-//   Shell hook: reage a edições (PostToolUse matcher Edit|Write)
-//   Go hook: valida presença no ponto runtime.pre_open (antes de abrir sessão)
+//
+//	Shell hook: reage a edições (PostToolUse matcher Edit|Write)
+//	Go hook: valida presença no ponto runtime.pre_open (antes de abrir sessão)
 package hooks
 
 import (
@@ -25,6 +27,8 @@ var ErrAgentsMDMissing = errors.New("AGENTS.md ausente no WorkDir: sessão abort
 // GovernanceHook valida a presença de AGENTS.md em RuntimePreOpenEvent.WorkDir.
 // Registrar no ponto PointRuntimePreOpen.
 type GovernanceHook struct{}
+
+var _ Hook = (*GovernanceHook)(nil)
 
 // NewGovernanceHook cria um GovernanceHook pronto para registro.
 func NewGovernanceHook() *GovernanceHook {

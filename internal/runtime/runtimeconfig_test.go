@@ -128,7 +128,7 @@ func TestJob_RuntimeConfigEmbedded(t *testing.T) {
 			Concurrent:             3,
 			BatchSize:              5,
 		},
-		Quiet:    true,
+		Quiet:     true,
 		MCPNested: false,
 	}
 

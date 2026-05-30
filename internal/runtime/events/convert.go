@@ -15,7 +15,7 @@ import (
 
 // rawDiscriminator lê o campo "sessionUpdate" do JSON bruto sem unmarshal completo.
 // Retorna "" quando o campo não existe ou não é string.
-func rawDiscriminator(b json.RawMessage) string {
+func (c *Catalog) rawDiscriminator(b json.RawMessage) string {
 	var m map[string]json.RawMessage
 	if err := json.Unmarshal(b, &m); err != nil {
 		return ""
@@ -33,7 +33,7 @@ func rawDiscriminator(b json.RawMessage) string {
 
 // extractExitCode tenta extrair o campo "exitCode" do JSON bruto.
 // Retorna 0 quando ausente ou inválido.
-func extractExitCode(b json.RawMessage) int {
+func (c *Catalog) extractExitCode(b json.RawMessage) int {
 	var m map[string]json.RawMessage
 	if err := json.Unmarshal(b, &m); err != nil {
 		return 0
@@ -50,7 +50,7 @@ func extractExitCode(b json.RawMessage) int {
 }
 
 // extractErrorReason tenta extrair os campos "error" ou "reason" do JSON bruto.
-func extractErrorReason(b json.RawMessage) string {
+func (c *Catalog) extractErrorReason(b json.RawMessage) string {
 	var m map[string]json.RawMessage
 	if err := json.Unmarshal(b, &m); err != nil {
 		return ""
@@ -68,7 +68,7 @@ func extractErrorReason(b json.RawMessage) string {
 
 // contentBlockText extrai o texto de um acp.ContentBlock.
 // Retorna "" quando o bloco não contém texto (image, audio, resource, etc.).
-func contentBlockText(cb acp.ContentBlock) string {
+func (c *Catalog) contentBlockText(cb acp.ContentBlock) string {
 	if cb.Text != nil {
 		return cb.Text.Text
 	}
@@ -76,7 +76,7 @@ func contentBlockText(cb acp.ContentBlock) string {
 }
 
 // isFinalStatus retorna true quando o ToolCallStatus indica conclusão da chamada.
-func isFinalStatus(s acp.ToolCallStatus) bool {
+func (c *Catalog) isFinalStatus(s acp.ToolCallStatus) bool {
 	return s == acp.ToolCallStatusCompleted || s == acp.ToolCallStatusFailed
 }
 
@@ -86,14 +86,14 @@ func isFinalStatus(s acp.ToolCallStatus) bool {
 // direto ao JSON antes do parse.
 //
 // Nunca retorna erro — variantes desconhecidas viram events.NewUnknown.
-func FromACPRaw(driverID string, raw json.RawMessage) (Event, error) {
+func (c *Catalog) FromACPRaw(driverID string, raw json.RawMessage) (Event, error) {
 	now := time.Now().UTC()
 
-	disc := rawDiscriminator(raw)
+	disc := NewCatalog().rawDiscriminator(raw)
 	switch disc {
 	case "session_end":
-		exitCode := extractExitCode(raw)
-		reason := extractErrorReason(raw)
+		exitCode := NewCatalog().extractExitCode(raw)
+		reason := NewCatalog().extractErrorReason(raw)
 		return NewSessionEnd(now, exitCode, reason, raw)
 
 	case "":
@@ -114,7 +114,7 @@ func FromACPRaw(driverID string, raw json.RawMessage) (Event, error) {
 //   - O campo raw é preenchido com o JSON serializado do update (RF-08).
 //
 // driverID é o identificador da sessão (correlação em logs); reservado para uso futuro.
-func FromACPUpdate(driverID string, update acp.SessionUpdate) (Event, error) {
+func (c *Catalog) FromACPUpdate(driverID string, update acp.SessionUpdate) (Event, error) {
 	now := time.Now().UTC()
 
 	// Serializa o update para raw (RF-08: "raw: <acp.SessionUpdate JSON inteiro>").
@@ -122,11 +122,11 @@ func FromACPUpdate(driverID string, update acp.SessionUpdate) (Event, error) {
 	raw, _ := json.Marshal(update)
 
 	// Discriminador extraído do JSON serializado para diagnóstico em unknowns.
-	disc := rawDiscriminator(raw)
+	disc := NewCatalog().rawDiscriminator(raw)
 
 	// --- AgentMessageChunk → agent_message ---
 	if update.AgentMessageChunk != nil {
-		text := contentBlockText(update.AgentMessageChunk.Content)
+		text := NewCatalog().contentBlockText(update.AgentMessageChunk.Content)
 		if text == "" {
 			// Chunk de texto vazio: não é um evento de mensagem válido.
 			// RF-05: produzir unknown sem erro.
@@ -137,7 +137,7 @@ func FromACPUpdate(driverID string, update acp.SessionUpdate) (Event, error) {
 
 	// --- AgentThoughtChunk → agent_thought ---
 	if update.AgentThoughtChunk != nil {
-		text := contentBlockText(update.AgentThoughtChunk.Content)
+		text := NewCatalog().contentBlockText(update.AgentThoughtChunk.Content)
 		if text == "" {
 			return NewUnknown(now, "agent_thought_chunk_empty", raw)
 		}
@@ -171,7 +171,7 @@ func FromACPUpdate(driverID string, update acp.SessionUpdate) (Event, error) {
 		if tcu.Status != nil {
 			status = *tcu.Status
 		}
-		final := isFinalStatus(status)
+		final := NewCatalog().isFinalStatus(status)
 
 		var outputStr string
 		if tcu.RawOutput != nil {
@@ -202,11 +202,11 @@ func FromACPUpdate(driverID string, update acp.SessionUpdate) (Event, error) {
 //
 // Esta é a função canônica chamada pelo runner.go no loop de eventos para
 // acumular métricas Gemini apenas para sessões Gemini (RF-20).
-func ExtractGeminiMetricsForDriver(driverID string, raw json.RawMessage) GeminiMetrics {
+func (c *Catalog) ExtractGeminiMetricsForDriver(driverID string, raw json.RawMessage) GeminiMetrics {
 	if driverID != "gemini" {
 		return GeminiMetrics{}
 	}
-	m, _ := ExtractGeminiMetrics(raw)
+	m, _ := NewCatalog().ExtractGeminiMetrics(raw)
 	return m
 }
 
@@ -254,7 +254,7 @@ type ClaudeMetrics struct {
 // Esta função é chamada pelo runner.go (pacote runtime) no loop de eventos para acumular
 // os contadores em runtime.Summary. Exportada para evitar dependência circular
 // (events não importa runtime).
-func ExtractClaudeMetrics(raw json.RawMessage) ClaudeMetrics {
+func (c *Catalog) ExtractClaudeMetrics(raw json.RawMessage) ClaudeMetrics {
 	if len(raw) == 0 {
 		return ClaudeMetrics{}
 	}

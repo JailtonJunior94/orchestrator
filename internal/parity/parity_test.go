@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
@@ -25,21 +27,29 @@ func cloneFiles(orig map[string][]byte) map[string][]byte {
 
 const testProjectDir = "/project"
 
+type ParitySuite struct {
+	suite.Suite
+}
+
+func TestParitySuite(t *testing.T) {
+	suite.Run(t, new(ParitySuite))
+}
+
 // runAllInvariants executa o harness completo e reporta falhas.
-// Invariantes Common e ToolSpecific causam t.Error; BestEffort causam t.Log.
+// Invariantes Common e ToolSpecific causam s.T().Error; BestEffort causam s.T().Log.
 func runAllInvariants(t *testing.T, tools []skills.Tool, codexProfile string) {
 	t.Helper()
-	snap, err := Generate(testProjectDir, tools, nil, codexProfile)
+	snap, err := NewChecker().Generate(testProjectDir, tools, nil, codexProfile)
 	if err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
-	assertInvariants(t, snap, Invariants())
+	assertInvariants(t, snap, NewChecker().Invariants())
 }
 
 // assertInvariants verifica os invariantes sobre um snapshot ja gerado.
 func assertInvariants(t *testing.T, snap Snapshot, invariants []*Invariant) {
 	t.Helper()
-	results := Run(snap, invariants)
+	results := NewChecker().Run(snap, invariants)
 	for _, cr := range results {
 		if cr.Skipped {
 			continue
@@ -62,45 +72,45 @@ func assertInvariants(t *testing.T, snap Snapshot, invariants []*Invariant) {
 
 // ── Cenarios por combinacao de ferramentas ───────────────────────────────────
 
-func TestParity_AllTools(t *testing.T) {
-	runAllInvariants(t, skills.AllTools, "full")
+func (s *ParitySuite) TestParity_AllTools() {
+	runAllInvariants(s.T(), skills.AllTools, "full")
 }
 
-func TestParity_ClaudeOnly(t *testing.T) {
-	runAllInvariants(t, []skills.Tool{skills.ToolClaude}, "full")
+func (s *ParitySuite) TestParity_ClaudeOnly() {
+	runAllInvariants(s.T(), []skills.Tool{skills.ToolClaude}, "full")
 }
 
-func TestParity_GeminiOnly(t *testing.T) {
-	runAllInvariants(t, []skills.Tool{skills.ToolGemini}, "full")
+func (s *ParitySuite) TestParity_GeminiOnly() {
+	runAllInvariants(s.T(), []skills.Tool{skills.ToolGemini}, "full")
 }
 
-func TestParity_CopilotOnly(t *testing.T) {
-	runAllInvariants(t, []skills.Tool{skills.ToolCopilot}, "full")
+func (s *ParitySuite) TestParity_CopilotOnly() {
+	runAllInvariants(s.T(), []skills.Tool{skills.ToolCopilot}, "full")
 }
 
-func TestParity_CodexOnly(t *testing.T) {
-	runAllInvariants(t, []skills.Tool{skills.ToolCodex}, "full")
+func (s *ParitySuite) TestParity_CodexOnly() {
+	runAllInvariants(s.T(), []skills.Tool{skills.ToolCodex}, "full")
 }
 
-func TestParity_ClaudeAndGemini(t *testing.T) {
-	runAllInvariants(t, []skills.Tool{skills.ToolClaude, skills.ToolGemini}, "full")
+func (s *ParitySuite) TestParity_ClaudeAndGemini() {
+	runAllInvariants(s.T(), []skills.Tool{skills.ToolClaude, skills.ToolGemini}, "full")
 }
 
-func TestParity_ClaudeAndCodex(t *testing.T) {
-	runAllInvariants(t, []skills.Tool{skills.ToolClaude, skills.ToolCodex}, "full")
+func (s *ParitySuite) TestParity_ClaudeAndCodex() {
+	runAllInvariants(s.T(), []skills.Tool{skills.ToolClaude, skills.ToolCodex}, "full")
 }
 
 // ── Profile Codex lean ───────────────────────────────────────────────────────
 
-func TestParity_CodexLean_ExcludesPlanningSkills(t *testing.T) {
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolCodex}, nil, "lean")
+func (s *ParitySuite) TestParity_CodexLean_ExcludesPlanningSkills() {
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolCodex}, nil, "lean")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
 
 	content := snap.File(".codex/config.toml")
 	if content == "" {
-		t.Fatal(".codex/config.toml nao gerado")
+		s.T().Fatal(".codex/config.toml nao gerado")
 	}
 
 	planningSkills := []string{
@@ -111,65 +121,65 @@ func TestParity_CodexLean_ExcludesPlanningSkills(t *testing.T) {
 	}
 	for _, skill := range planningSkills {
 		if strings.Contains(content, skill) {
-			t.Errorf("Codex lean profile nao deve conter skill de planejamento: %s", skill)
+			s.T().Errorf("Codex lean profile nao deve conter skill de planejamento: %s", skill)
 		}
 	}
 
 	// Skills base devem estar presentes mesmo no perfil lean
 	for _, skill := range []string{"agent-governance", "bugfix", "review", "refactor", "execute-task"} {
 		if !strings.Contains(content, skill) {
-			t.Errorf("Codex lean profile deve conter skill base: %s", skill)
+			s.T().Errorf("Codex lean profile deve conter skill base: %s", skill)
 		}
 	}
 }
 
-func TestParity_CodexFull_IncludesPlanningSkills(t *testing.T) {
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolCodex}, nil, "full")
+func (s *ParitySuite) TestParity_CodexFull_IncludesPlanningSkills() {
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolCodex}, nil, "full")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
 
 	content := snap.File(".codex/config.toml")
 	for _, skill := range []string{"analyze-project", "create-prd", "create-technical-specification", "create-tasks"} {
 		if !strings.Contains(content, skill) {
-			t.Errorf("Codex full profile deve conter skill de planejamento: %s", skill)
+			s.T().Errorf("Codex full profile deve conter skill de planejamento: %s", skill)
 		}
 	}
 }
 
 // ── Consistencia de AGENTS.md em todos os cenarios ──────────────────────────
 
-func TestParity_AgentsMD_Standard_ContainsVerboseSections(t *testing.T) {
+func (s *ParitySuite) TestParity_AgentsMD_Standard_ContainsVerboseSections() {
 	// Com mais de uma ferramenta, AGENTS.md deve usar profile standard (com secoes verbose)
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolClaude, skills.ToolCodex}, nil, "full")
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolClaude, skills.ToolCodex}, nil, "full")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
 	content := snap.File("AGENTS.md")
 	for _, section := range []string{"## Diretrizes de Estrutura", "### Composicao Multi-Linguagem"} {
 		if !strings.Contains(content, section) {
-			t.Errorf("profile standard deve conter %q em instalacao multi-ferramenta", section)
+			s.T().Errorf("profile standard deve conter %q em instalacao multi-ferramenta", section)
 		}
 	}
 }
 
-func TestParity_AgentsMD_Compact_StripsVerboseSections(t *testing.T) {
+func (s *ParitySuite) TestParity_AgentsMD_Compact_StripsVerboseSections() {
 	// Com apenas Codex, AGENTS.md deve usar profile compact (sem secoes verbose)
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolCodex}, nil, "full")
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolCodex}, nil, "full")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
 	content := snap.File("AGENTS.md")
 	if strings.Contains(content, "## Diretrizes de Estrutura") {
-		t.Error("profile compact nao deve conter '## Diretrizes de Estrutura'")
+		s.T().Error("profile compact nao deve conter '## Diretrizes de Estrutura'")
 	}
 	if strings.Contains(content, "### Composicao Multi-Linguagem") {
-		t.Error("profile compact nao deve conter '### Composicao Multi-Linguagem'")
+		s.T().Error("profile compact nao deve conter '### Composicao Multi-Linguagem'")
 	}
 	// Secoes essenciais devem permanecer
 	for _, section := range []string{"## Arquitetura", "## Validacao", "## Restricoes", "## Notas por Ferramenta"} {
 		if !strings.Contains(content, section) {
-			t.Errorf("profile compact deve preservar secao essencial: %q", section)
+			s.T().Errorf("profile compact deve preservar secao essencial: %q", section)
 		}
 	}
 }
@@ -179,51 +189,51 @@ func TestParity_AgentsMD_Compact_StripsVerboseSections(t *testing.T) {
 // TestParity_DriftDetection_MissingCanonicalPath verifica que o invariante X01
 // detecta quando um artefato nao referencia o caminho canonico .agents/skills/.
 // Esse teste confirma que o harness identifica drift, nao apenas ausencia de arquivo.
-func TestParity_DriftDetection_MissingCanonicalPath(t *testing.T) {
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolClaude, skills.ToolGemini}, nil, "full")
+func (s *ParitySuite) TestParity_DriftDetection_MissingCanonicalPath() {
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolClaude, skills.ToolGemini}, nil, "full")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
 
 	// Introduzir drift: substituir CLAUDE.md por versao sem referencia canonica
 	claudePath := filepath.Join(testProjectDir, "CLAUDE.md")
 	snap.Files[claudePath] = []byte("# Claude\nConteudo sem referencia ao caminho canonico.")
 
-	results := Run(snap, []*Invariant{invX01CrossToolCanonicalPath})
+	results := NewChecker().Run(snap, []*Invariant{_invX01CrossToolCanonicalPath})
 	if len(results) == 0 {
-		t.Fatal("Run retornou zero resultados")
+		s.T().Fatal("Run retornou zero resultados")
 	}
 
 	x01 := results[0]
 	if x01.Skipped {
-		t.Fatal("X01 nao deveria ser skipped para Claude+Gemini")
+		s.T().Fatal("X01 nao deveria ser skipped para Claude+Gemini")
 	}
 	if x01.Result.OK {
-		t.Error("X01 deveria detectar drift quando CLAUDE.md nao referencia '.agents/skills/'")
+		s.T().Error("X01 deveria detectar drift quando CLAUDE.md nao referencia '.agents/skills/'")
 	}
 	if !strings.Contains(x01.Result.Reason, "claude") {
-		t.Errorf("mensagem de erro deveria identificar a ferramenta com drift, got: %q", x01.Result.Reason)
+		s.T().Errorf("mensagem de erro deveria identificar a ferramenta com drift, got: %q", x01.Result.Reason)
 	}
 }
 
 // TestParity_DriftDetection_MissingArtifact verifica que o invariante X01
 // reporta falha quando um artefato esperado esta ausente.
-func TestParity_DriftDetection_MissingArtifact(t *testing.T) {
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolGemini}, nil, "full")
+func (s *ParitySuite) TestParity_DriftDetection_MissingArtifact() {
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolGemini}, nil, "full")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
 
 	// Remover GEMINI.md para simular artefato ausente
 	geminiPath := filepath.Join(testProjectDir, "GEMINI.md")
 	delete(snap.Files, geminiPath)
 
-	results := Run(snap, []*Invariant{invX01CrossToolCanonicalPath})
+	results := NewChecker().Run(snap, []*Invariant{_invX01CrossToolCanonicalPath})
 	if len(results) == 0 {
-		t.Fatal("Run retornou zero resultados")
+		s.T().Fatal("Run retornou zero resultados")
 	}
 	if results[0].Result.OK {
-		t.Error("X01 deveria detectar artefato ausente para Gemini")
+		s.T().Error("X01 deveria detectar artefato ausente para Gemini")
 	}
 }
 
@@ -232,10 +242,10 @@ func TestParity_DriftDetection_MissingArtifact(t *testing.T) {
 // TestParity_BestEffort_DoesNotBlockOnMissingDoc confirma o comportamento do harness:
 // invariantes BestEffort sao verificados e reportados, mas nao classificados como
 // falhas criticas. O teste garante que o harness nao confunde best-effort com common.
-func TestParity_BestEffort_DoesNotBlockOnMissingDoc(t *testing.T) {
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolGemini}, nil, "full")
+func (s *ParitySuite) TestParity_BestEffort_DoesNotBlockOnMissingDoc() {
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolGemini}, nil, "full")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
 
 	// Remover secao de best-effort do GEMINI.md (simula geracao incompleta)
@@ -246,66 +256,66 @@ func TestParity_BestEffort_DoesNotBlockOnMissingDoc(t *testing.T) {
 		snap.Files[geminiPath] = []byte(original[:idx])
 	}
 
-	results := Run(snap, []*Invariant{invGM02GeminiMDBestEffortDoc})
+	results := NewChecker().Run(snap, []*Invariant{_invGM02GeminiMDBestEffortDoc})
 	if len(results) == 0 {
-		t.Fatal("Run retornou zero resultados")
+		s.T().Fatal("Run retornou zero resultados")
 	}
 
 	cr := results[0]
 	if cr.Skipped {
-		t.Fatal("GM02 nao deveria ser skipped para Gemini")
+		s.T().Fatal("GM02 nao deveria ser skipped para Gemini")
 	}
 	// Confirmar que o nivel e BestEffort (nao Common)
 	if cr.Invariant.Level != BestEffort {
-		t.Errorf("GM02 deveria ter nivel BestEffort, got: %s", cr.Invariant.Level)
+		s.T().Errorf("GM02 deveria ter nivel BestEffort, got: %s", cr.Invariant.Level)
 	}
-	// O resultado pode ser falha (a secao foi removida), mas isso nao deve causar t.Error no harness
-	// O teste de integracao (runAllInvariants) usa t.Log para BestEffort, nunca t.Error
+	// O resultado pode ser falha (a secao foi removida), mas isso nao deve causar s.T().Error no harness
+	// O teste de integracao (runAllInvariants) usa s.T().Log para BestEffort, nunca s.T().Error
 }
 
 // ── Novos artefatos T12: presenca ───────────────────────────────────────────
 
-func TestParity_NewArtifacts_Claude_Present(t *testing.T) {
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
+func (s *ParitySuite) TestParity_NewArtifacts_Claude_Present() {
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
 	invariants := []*Invariant{
-		invCL03ClaudeHookGovernancePresent,
-		invCL04ClaudeHookPreloadPresent,
-		invCL05ClaudeRulesGovernancePresent,
-		invCL06ClaudeScriptTaskEvidencePresent,
-		invCL07ClaudeScriptBugfixEvidencePresent,
-		invCL08ClaudeScriptRefactorEvidencePresent,
+		_invCL03ClaudeHookGovernancePresent,
+		_invCL04ClaudeHookPreloadPresent,
+		_invCL05ClaudeRulesGovernancePresent,
+		_invCL06ClaudeScriptTaskEvidencePresent,
+		_invCL07ClaudeScriptBugfixEvidencePresent,
+		_invCL08ClaudeScriptRefactorEvidencePresent,
 	}
 	for _, inv := range invariants {
 		r := inv.Check(snap)
 		if !r.OK {
-			t.Errorf("[%s] deveria passar com artefato presente: %s", inv.ID, r.Reason)
+			s.T().Errorf("[%s] deveria passar com artefato presente: %s", inv.ID, r.Reason)
 		}
 	}
 }
 
-func TestParity_NewArtifacts_Claude_Absent(t *testing.T) {
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
+func (s *ParitySuite) TestParity_NewArtifacts_Claude_Absent() {
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
 
 	absenceTests := []struct {
 		inv  *Invariant
 		path string
 	}{
-		{invCL03ClaudeHookGovernancePresent, ".claude/hooks/validate-governance.sh"},
-		{invCL04ClaudeHookPreloadPresent, ".claude/hooks/validate-preload.sh"},
-		{invCL05ClaudeRulesGovernancePresent, ".claude/rules/governance.md"},
-		{invCL06ClaudeScriptTaskEvidencePresent, ".claude/scripts/validate-task-evidence.sh"},
-		{invCL07ClaudeScriptBugfixEvidencePresent, ".claude/scripts/validate-bugfix-evidence.sh"},
-		{invCL08ClaudeScriptRefactorEvidencePresent, ".claude/scripts/validate-refactor-evidence.sh"},
+		{_invCL03ClaudeHookGovernancePresent, ".claude/hooks/validate-governance.sh"},
+		{_invCL04ClaudeHookPreloadPresent, ".claude/hooks/validate-preload.sh"},
+		{_invCL05ClaudeRulesGovernancePresent, ".claude/rules/governance.md"},
+		{_invCL06ClaudeScriptTaskEvidencePresent, ".claude/scripts/validate-task-evidence.sh"},
+		{_invCL07ClaudeScriptBugfixEvidencePresent, ".claude/scripts/validate-bugfix-evidence.sh"},
+		{_invCL08ClaudeScriptRefactorEvidencePresent, ".claude/scripts/validate-refactor-evidence.sh"},
 	}
 
 	for _, tc := range absenceTests {
-		t.Run(tc.inv.ID, func(t *testing.T) {
+		s.Run(tc.inv.ID, func() {
 			absent := Snapshot{
 				Tools:      snap.Tools,
 				ProjectDir: snap.ProjectDir,
@@ -317,33 +327,33 @@ func TestParity_NewArtifacts_Claude_Absent(t *testing.T) {
 
 			r := tc.inv.Check(absent)
 			if r.OK {
-				t.Errorf("[%s] deveria falhar quando artefato esta ausente", tc.inv.ID)
+				s.T().Errorf("[%s] deveria falhar quando artefato esta ausente", tc.inv.ID)
 			}
 			if tc.inv.Level != ToolSpecific {
-				t.Errorf("[%s] deveria ter nivel ToolSpecific, got: %s", tc.inv.ID, tc.inv.Level)
+				s.T().Errorf("[%s] deveria ter nivel ToolSpecific, got: %s", tc.inv.ID, tc.inv.Level)
 			}
 		})
 	}
 }
 
-func TestParity_NewArtifacts_Gemini_HookPreload_Present(t *testing.T) {
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolGemini}, nil, "full")
+func (s *ParitySuite) TestParity_NewArtifacts_Gemini_HookPreload_Present() {
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolGemini}, nil, "full")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
-	r := invGM03GeminiHookPreloadPresent.Check(snap)
+	r := _invGM03GeminiHookPreloadPresent.Check(snap)
 	if !r.OK {
-		t.Errorf("[GM03] deveria passar com hook presente: %s", r.Reason)
+		s.T().Errorf("[GM03] deveria passar com hook presente: %s", r.Reason)
 	}
-	if invGM03GeminiHookPreloadPresent.Level != BestEffort {
-		t.Errorf("[GM03] deveria ter nivel BestEffort, got: %s", invGM03GeminiHookPreloadPresent.Level)
+	if _invGM03GeminiHookPreloadPresent.Level != BestEffort {
+		s.T().Errorf("[GM03] deveria ter nivel BestEffort, got: %s", _invGM03GeminiHookPreloadPresent.Level)
 	}
 }
 
-func TestParity_NewArtifacts_Gemini_HookPreload_Absent(t *testing.T) {
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolGemini}, nil, "full")
+func (s *ParitySuite) TestParity_NewArtifacts_Gemini_HookPreload_Absent() {
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolGemini}, nil, "full")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
 	absent := Snapshot{
 		Tools:      snap.Tools,
@@ -354,33 +364,33 @@ func TestParity_NewArtifacts_Gemini_HookPreload_Absent(t *testing.T) {
 	}
 	delete(absent.Files, filepath.Join(testProjectDir, ".gemini/hooks/validate-preload.sh"))
 
-	r := invGM03GeminiHookPreloadPresent.Check(absent)
+	r := _invGM03GeminiHookPreloadPresent.Check(absent)
 	if r.OK {
-		t.Error("[GM03] deveria falhar quando hook esta ausente")
+		s.T().Error("[GM03] deveria falhar quando hook esta ausente")
 	}
 }
 
-func TestParity_NewArtifacts_DepthGuard_Present(t *testing.T) {
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
+func (s *ParitySuite) TestParity_NewArtifacts_DepthGuard_Present() {
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
-	r := invX03DepthGuardPresent.Check(snap)
+	r := _invX03DepthGuardPresent.Check(snap)
 	if !r.OK {
-		t.Errorf("[X03] deveria passar com guard presente: %s", r.Reason)
+		s.T().Errorf("[X03] deveria passar com guard presente: %s", r.Reason)
 	}
-	if invX03DepthGuardPresent.Level != Common {
-		t.Errorf("[X03] deveria ter nivel Common, got: %s", invX03DepthGuardPresent.Level)
+	if _invX03DepthGuardPresent.Level != Common {
+		s.T().Errorf("[X03] deveria ter nivel Common, got: %s", _invX03DepthGuardPresent.Level)
 	}
-	if invX03DepthGuardPresent.AppliesTo != nil {
-		t.Errorf("[X03] AppliesTo deveria ser nil (aplica a todos), got: %v", invX03DepthGuardPresent.AppliesTo)
+	if _invX03DepthGuardPresent.AppliesTo != nil {
+		s.T().Errorf("[X03] AppliesTo deveria ser nil (aplica a todos), got: %v", _invX03DepthGuardPresent.AppliesTo)
 	}
 }
 
-func TestParity_NewArtifacts_DepthGuard_Absent(t *testing.T) {
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
+func (s *ParitySuite) TestParity_NewArtifacts_DepthGuard_Absent() {
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
 	absent := Snapshot{
 		Tools:      snap.Tools,
@@ -391,23 +401,23 @@ func TestParity_NewArtifacts_DepthGuard_Absent(t *testing.T) {
 	}
 	delete(absent.Files, filepath.Join(testProjectDir, "scripts/lib/check-invocation-depth.sh"))
 
-	r := invX03DepthGuardPresent.Check(absent)
+	r := _invX03DepthGuardPresent.Check(absent)
 	if r.OK {
-		t.Error("[X03] deveria falhar quando guard esta ausente")
+		s.T().Error("[X03] deveria falhar quando guard esta ausente")
 	}
 }
 
-func TestParity_NewArtifacts_Gemini_Skipped_WhenClaudeOnly(t *testing.T) {
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
+func (s *ParitySuite) TestParity_NewArtifacts_Gemini_Skipped_WhenClaudeOnly() {
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
-	results := Run(snap, []*Invariant{invGM03GeminiHookPreloadPresent})
+	results := NewChecker().Run(snap, []*Invariant{_invGM03GeminiHookPreloadPresent})
 	if len(results) == 0 {
-		t.Fatal("Run retornou zero resultados")
+		s.T().Fatal("Run retornou zero resultados")
 	}
 	if !results[0].Skipped {
-		t.Error("[GM03] deveria ser skipped em instalacao Claude-only")
+		s.T().Error("[GM03] deveria ser skipped em instalacao Claude-only")
 	}
 }
 
@@ -415,7 +425,7 @@ func TestParity_NewArtifacts_Gemini_Skipped_WhenClaudeOnly(t *testing.T) {
 
 // TestParity_INV30_PassesWithMatchingNormalizedNames valida que INV-30 passa
 // quando Claude e Codex têm o mesmo normalized_name para a mesma operação.
-func TestParity_INV30_PassesWithMatchingNormalizedNames(t *testing.T) {
+func (s *ParitySuite) TestParity_INV30_PassesWithMatchingNormalizedNames() {
 	snap := Snapshot{
 		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolCodex},
 		ProjectDir: testProjectDir,
@@ -430,15 +440,15 @@ func TestParity_INV30_PassesWithMatchingNormalizedNames(t *testing.T) {
 		Dirs:  map[string]bool{},
 		Links: map[string]string{},
 	}
-	r := invINV30ToolCallsNormalizedNameInvariant.Check(snap)
+	r := _invINV30ToolCallsNormalizedNameInvariant.Check(snap)
 	if !r.OK {
-		t.Errorf("INV-30 deveria passar com normalized_name em comum: %s", r.Reason)
+		s.T().Errorf("INV-30 deveria passar com normalized_name em comum: %s", r.Reason)
 	}
 }
 
 // TestParity_INV30_FailsWhenNormalizedNamesDiverge valida que INV-30 falha
 // quando Claude e Codex têm normalized_names diferentes.
-func TestParity_INV30_FailsWhenNormalizedNamesDiverge(t *testing.T) {
+func (s *ParitySuite) TestParity_INV30_FailsWhenNormalizedNamesDiverge() {
 	snap := Snapshot{
 		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolCodex},
 		ProjectDir: testProjectDir,
@@ -453,15 +463,15 @@ func TestParity_INV30_FailsWhenNormalizedNamesDiverge(t *testing.T) {
 		Dirs:  map[string]bool{},
 		Links: map[string]string{},
 	}
-	r := invINV30ToolCallsNormalizedNameInvariant.Check(snap)
+	r := _invINV30ToolCallsNormalizedNameInvariant.Check(snap)
 	if r.OK {
-		t.Error("INV-30 deveria falhar quando normalized_names divergem entre Claude e Codex")
+		s.T().Error("INV-30 deveria falhar quando normalized_names divergem entre Claude e Codex")
 	}
 }
 
 // TestParity_INV30_PassesWhenFixturesAbsent valida que INV-30 passa (skipped)
 // quando as fixtures estão ausentes — não bloquear ambientes sem fixtures.
-func TestParity_INV30_PassesWhenFixturesAbsent(t *testing.T) {
+func (s *ParitySuite) TestParity_INV30_PassesWhenFixturesAbsent() {
 	snap := Snapshot{
 		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolCodex},
 		ProjectDir: testProjectDir,
@@ -469,15 +479,15 @@ func TestParity_INV30_PassesWhenFixturesAbsent(t *testing.T) {
 		Dirs:       map[string]bool{},
 		Links:      map[string]string{},
 	}
-	r := invINV30ToolCallsNormalizedNameInvariant.Check(snap)
+	r := _invINV30ToolCallsNormalizedNameInvariant.Check(snap)
 	if !r.OK {
-		t.Errorf("INV-30 deveria passar (sem bloquear) quando fixtures ausentes: %s", r.Reason)
+		s.T().Errorf("INV-30 deveria passar (sem bloquear) quando fixtures ausentes: %s", r.Reason)
 	}
 }
 
 // TestParity_INV30_SkippedWhenCopilotOnly valida que INV-30 é skipped
 // quando apenas Copilot está selecionado (requer Claude ou Codex).
-func TestParity_INV30_SkippedWhenCopilotOnly(t *testing.T) {
+func (s *ParitySuite) TestParity_INV30_SkippedWhenCopilotOnly() {
 	snap := Snapshot{
 		Tools:      []skills.Tool{skills.ToolCopilot},
 		ProjectDir: testProjectDir,
@@ -485,18 +495,18 @@ func TestParity_INV30_SkippedWhenCopilotOnly(t *testing.T) {
 		Dirs:       map[string]bool{},
 		Links:      map[string]string{},
 	}
-	results := Run(snap, []*Invariant{invINV30ToolCallsNormalizedNameInvariant})
+	results := NewChecker().Run(snap, []*Invariant{_invINV30ToolCallsNormalizedNameInvariant})
 	if len(results) == 0 {
-		t.Fatal("Run retornou zero resultados")
+		s.T().Fatal("Run retornou zero resultados")
 	}
 	if !results[0].Skipped {
-		t.Error("INV-30 deveria ser skipped quando apenas Copilot está selecionado (sem Claude nem Codex)")
+		s.T().Error("INV-30 deveria ser skipped quando apenas Copilot está selecionado (sem Claude nem Codex)")
 	}
 }
 
 // TestParity_INV31_PassesWithNoNestedAgentEvents valida que INV-31 passa
 // quando não há eventos nested_agent (safe-default).
-func TestParity_INV31_PassesWithNoNestedAgentEvents(t *testing.T) {
+func (s *ParitySuite) TestParity_INV31_PassesWithNoNestedAgentEvents() {
 	snap := Snapshot{
 		Tools:      []skills.Tool{skills.ToolClaude},
 		ProjectDir: testProjectDir,
@@ -508,15 +518,15 @@ func TestParity_INV31_PassesWithNoNestedAgentEvents(t *testing.T) {
 		Dirs:  map[string]bool{},
 		Links: map[string]string{},
 	}
-	r := invINV31MCPNestedDepthNeverExceedsMax.Check(snap)
+	r := _invINV31MCPNestedDepthNeverExceedsMax.Check(snap)
 	if !r.OK {
-		t.Errorf("INV-31 deveria passar sem eventos nested_agent: %s", r.Reason)
+		s.T().Errorf("INV-31 deveria passar sem eventos nested_agent: %s", r.Reason)
 	}
 }
 
 // TestParity_INV31_PassesWithDepthWithinLimit valida que INV-31 passa
 // quando depth ≤ AISPEC_MAX_AGENT_DEPTH.
-func TestParity_INV31_PassesWithDepthWithinLimit(t *testing.T) {
+func (s *ParitySuite) TestParity_INV31_PassesWithDepthWithinLimit() {
 	depth := 2
 	snap := Snapshot{
 		Tools:      []skills.Tool{skills.ToolClaude},
@@ -527,15 +537,15 @@ func TestParity_INV31_PassesWithDepthWithinLimit(t *testing.T) {
 		Dirs:  map[string]bool{},
 		Links: map[string]string{},
 	}
-	r := invINV31MCPNestedDepthNeverExceedsMax.Check(snap)
+	r := _invINV31MCPNestedDepthNeverExceedsMax.Check(snap)
 	if !r.OK {
-		t.Errorf("INV-31 deveria passar com depth=%d ≤ max=3: %s", depth, r.Reason)
+		s.T().Errorf("INV-31 deveria passar com depth=%d ≤ max=3: %s", depth, r.Reason)
 	}
 }
 
 // TestParity_INV31_FailsWhenDepthExceedsMax valida que INV-31 falha
 // quando depth > AISPEC_MAX_AGENT_DEPTH.
-func TestParity_INV31_FailsWhenDepthExceedsMax(t *testing.T) {
+func (s *ParitySuite) TestParity_INV31_FailsWhenDepthExceedsMax() {
 	depth := 5 // acima do default 3
 	snap := Snapshot{
 		Tools:      []skills.Tool{skills.ToolClaude},
@@ -546,17 +556,17 @@ func TestParity_INV31_FailsWhenDepthExceedsMax(t *testing.T) {
 		Dirs:  map[string]bool{},
 		Links: map[string]string{},
 	}
-	r := invINV31MCPNestedDepthNeverExceedsMax.Check(snap)
+	r := _invINV31MCPNestedDepthNeverExceedsMax.Check(snap)
 	if r.OK {
-		t.Errorf("INV-31 deveria falhar com depth=%d > max=3", depth)
+		s.T().Errorf("INV-31 deveria falhar com depth=%d > max=3", depth)
 	}
 }
 
 // TestParity_INV31_ApliesToAllTools valida que INV-31 aplica a todas as ferramentas.
-func TestParity_INV31_ApliesToAllTools(t *testing.T) {
-	if invINV31MCPNestedDepthNeverExceedsMax.AppliesTo != nil {
-		t.Errorf("INV-31 AppliesTo deveria ser nil (aplica a todos), got: %v",
-			invINV31MCPNestedDepthNeverExceedsMax.AppliesTo)
+func (s *ParitySuite) TestParity_INV31_ApliesToAllTools() {
+	if _invINV31MCPNestedDepthNeverExceedsMax.AppliesTo != nil {
+		s.T().Errorf("INV-31 AppliesTo deveria ser nil (aplica a todos), got: %v",
+			_invINV31MCPNestedDepthNeverExceedsMax.AppliesTo)
 	}
 }
 
@@ -567,13 +577,13 @@ func nestedAgentLine(depth int) string {
 
 // ── Invariantes skipped para ferramentas nao selecionadas ───────────────────
 
-func TestParity_SkippedInvariants_ClaudeOnly(t *testing.T) {
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
+func (s *ParitySuite) TestParity_SkippedInvariants_ClaudeOnly() {
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
 
-	results := Run(snap, Invariants())
+	results := NewChecker().Run(snap, NewChecker().Invariants())
 
 	// Invariantes de Gemini, Copilot e Codex devem ser skipped
 	expectedSkipped := map[string]bool{
@@ -589,7 +599,7 @@ func TestParity_SkippedInvariants_ClaudeOnly(t *testing.T) {
 	}
 	for id := range expectedSkipped {
 		if !skipped[id] {
-			t.Errorf("invariante %s deveria ser skipped para instalacao Claude-only", id)
+			s.T().Errorf("invariante %s deveria ser skipped para instalacao Claude-only", id)
 		}
 	}
 
@@ -599,7 +609,7 @@ func TestParity_SkippedInvariants_ClaudeOnly(t *testing.T) {
 		isClaudeOrCommon := strings.HasPrefix(id, "CL") ||
 			(len(id) >= 2 && id[0] == 'C' && id[1] >= '0' && id[1] <= '9')
 		if isClaudeOrCommon && cr.Skipped {
-			t.Errorf("invariante %s nao deveria ser skipped para instalacao Claude-only", id)
+			s.T().Errorf("invariante %s nao deveria ser skipped para instalacao Claude-only", id)
 		}
 	}
 }
@@ -636,21 +646,20 @@ func toolSubsetName(tools []skills.Tool) string {
 // TestParity_Matrix4x4_AllSubsets executa a suíte completa de invariantes para
 // cada combinacao nao-vazia das 4 CLIs (15 subconjuntos) no profile "full".
 // Cobre RF-18: paridade 4x4 via table-driven com Generate+Run.
-func TestParity_Matrix4x4_AllSubsets(t *testing.T) {
+func (s *ParitySuite) TestParity_Matrix4x4_AllSubsets() {
 	subsets := allToolSubsets()
 	for _, tools := range subsets {
 		tools := tools // captura para goroutine
 		name := toolSubsetName(tools)
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			runAllInvariants(t, tools, "full")
+		s.Run(name, func() {
+			runAllInvariants(s.T(), tools, "full")
 		})
 	}
 }
 
 // TestParity_Matrix4x4_CodexSubsets_CompactProfile executa combinacoes Codex-only
 // com profile compact para garantir paridade em profile alternativo.
-func TestParity_Matrix4x4_CodexSubsets_CompactProfile(t *testing.T) {
+func (s *ParitySuite) TestParity_Matrix4x4_CodexSubsets_CompactProfile() {
 	tests := []struct {
 		name    string
 		tools   []skills.Tool
@@ -663,17 +672,16 @@ func TestParity_Matrix4x4_CodexSubsets_CompactProfile(t *testing.T) {
 	}
 	for _, tc := range tests {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			runAllInvariants(t, tc.tools, tc.profile)
+		s.Run(tc.name, func() {
+			runAllInvariants(s.T(), tc.tools, tc.profile)
 		})
 	}
 }
 
 // TestParity_Matrix4x4_InvariantCoverage verifica que todos os 4 grupos de
 // invariantes (C*, CL*, GM*, CP*, CD*, X*, FB*) estao representados na suite.
-func TestParity_Matrix4x4_InvariantCoverage(t *testing.T) {
-	invariants := Invariants()
+func (s *ParitySuite) TestParity_Matrix4x4_InvariantCoverage() {
+	invariants := NewChecker().Invariants()
 
 	prefixes := map[string]bool{
 		"C":   false, // Common (C01-C04)
@@ -697,7 +705,7 @@ func TestParity_Matrix4x4_InvariantCoverage(t *testing.T) {
 
 	for prefix, found := range prefixes {
 		if !found {
-			t.Errorf("grupo de invariantes com prefixo %q nao encontrado na suite", prefix)
+			s.T().Errorf("grupo de invariantes com prefixo %q nao encontrado na suite", prefix)
 		}
 	}
 }
@@ -725,42 +733,41 @@ func (f *fakeLookPather) LookPath(name string) (string, error) {
 // que o launcher direto (ambos sao "binary"); e o argv do fallback corresponde
 // aos FixedArgs declarados na spec.
 // Usa LookPather fake — sem dependencia de binario real no PATH.
-func TestParity_FallbackArgvParity_AllSpecs(t *testing.T) {
-	t.Parallel()
+func (s *ParitySuite) TestParity_FallbackArgvParity_AllSpecs() {
 
 	const npxPath = "/usr/local/bin/npx"
 
 	tests := []struct {
-		name      string
-		spec      specs.Spec
-		wantKind  string
-		wantCmd   string
-		wantArgs  []string
+		name     string
+		spec     specs.Spec
+		wantKind string
+		wantCmd  string
+		wantArgs []string
 	}{
 		{
 			name:     "claude_fallback_parity",
-			spec:     specs.Claude(),
+			spec:     specs.NewCatalog().Claude(),
 			wantKind: "binary",
 			wantCmd:  npxPath,
 			wantArgs: []string{"--yes", specs.ClaudeNpmPackage + "@" + specs.ClaudeNpmVersion},
 		},
 		{
 			name:     "codex_fallback_parity",
-			spec:     specs.Codex(),
+			spec:     specs.NewCatalog().Codex(),
 			wantKind: "binary",
 			wantCmd:  npxPath,
 			wantArgs: []string{"--yes", specs.CodexNpmPackage + "@" + specs.CodexNpmVersion},
 		},
 		{
 			name:     "gemini_fallback_parity",
-			spec:     specs.Gemini(),
+			spec:     specs.NewCatalog().Gemini(),
 			wantKind: "binary",
 			wantCmd:  npxPath,
 			wantArgs: []string{"--yes", specs.GeminiNpmPackage + "@" + specs.GeminiNpmVersion, "--acp"},
 		},
 		{
 			name:     "copilot_fallback_parity",
-			spec:     specs.Copilot(),
+			spec:     specs.NewCatalog().Copilot(),
 			wantKind: "binary",
 			wantCmd:  npxPath,
 			wantArgs: []string{"--yes", specs.CopilotNpmPackage + "@" + specs.CopilotNpmVersion, "--acp"},
@@ -769,8 +776,7 @@ func TestParity_FallbackArgvParity_AllSpecs(t *testing.T) {
 
 	for _, tc := range tests {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+		s.Run(tc.name, func() {
 
 			// Usar ID unico para isolar cache do probe entre sub-testes.
 			sp := tc.spec
@@ -779,19 +785,19 @@ func TestParity_FallbackArgvParity_AllSpecs(t *testing.T) {
 			// Somente npx disponivel — binario direto ausente (RF-19).
 			look := newFakeLookPather(map[string]string{"npx": npxPath})
 
-			launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+			launcher, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 			if err != nil {
-				t.Fatalf("probe.EnsureAvailable falhou com apenas npx disponivel: %v", err)
+				s.T().Fatalf("probe.EnsureAvailable falhou com apenas npx disponivel: %v", err)
 			}
 			if launcher.Kind() != tc.wantKind {
-				t.Errorf("kind = %q, want %q (fallback deve ser BinaryLauncher generico — ADR-017)", launcher.Kind(), tc.wantKind)
+				s.T().Errorf("kind = %q, want %q (fallback deve ser BinaryLauncher generico — ADR-017)", launcher.Kind(), tc.wantKind)
 			}
 			cmd, args := launcher.Command()
 			if cmd != tc.wantCmd {
-				t.Errorf("command = %q, want %q", cmd, tc.wantCmd)
+				s.T().Errorf("command = %q, want %q", cmd, tc.wantCmd)
 			}
 			if !slices.Equal(args, tc.wantArgs) {
-				t.Errorf("args = %v, want %v (FixedArgs do fallback devem ser preservados literalmente)", args, tc.wantArgs)
+				s.T().Errorf("args = %v, want %v (FixedArgs do fallback devem ser preservados literalmente)", args, tc.wantArgs)
 			}
 		})
 	}
@@ -799,25 +805,23 @@ func TestParity_FallbackArgvParity_AllSpecs(t *testing.T) {
 
 // TestParity_FallbackArgvParity_DirectBinaryWins valida que quando o binario direto
 // esta disponivel, ele e preferido ao fallback (ADR-017: canonico primeiro).
-func TestParity_FallbackArgvParity_DirectBinaryWins(t *testing.T) {
-	t.Parallel()
+func (s *ParitySuite) TestParity_FallbackArgvParity_DirectBinaryWins() {
 
 	tests := []struct {
-		name        string
-		spec        specs.Spec
-		binaryName  string
-		binaryPath  string
+		name       string
+		spec       specs.Spec
+		binaryName string
+		binaryPath string
 	}{
-		{"claude_direct", specs.Claude(), "claude-agent-acp", "/usr/local/bin/claude-agent-acp"},
-		{"codex_direct", specs.Codex(), "codex-acp", "/usr/local/bin/codex-acp"},
-		{"gemini_direct", specs.Gemini(), "gemini", "/usr/local/bin/gemini"},
-		{"copilot_direct", specs.Copilot(), "copilot", "/usr/local/bin/copilot"},
+		{"claude_direct", specs.NewCatalog().Claude(), "claude-agent-acp", "/usr/local/bin/claude-agent-acp"},
+		{"codex_direct", specs.NewCatalog().Codex(), "codex-acp", "/usr/local/bin/codex-acp"},
+		{"gemini_direct", specs.NewCatalog().Gemini(), "gemini", "/usr/local/bin/gemini"},
+		{"copilot_direct", specs.NewCatalog().Copilot(), "copilot", "/usr/local/bin/copilot"},
 	}
 
 	for _, tc := range tests {
 		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
+		s.Run(tc.name, func() {
 
 			sp := tc.spec
 			sp.ID = tc.name + "-direct-rf19"
@@ -828,13 +832,13 @@ func TestParity_FallbackArgvParity_DirectBinaryWins(t *testing.T) {
 				"npx":         "/usr/local/bin/npx",
 			})
 
-			launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+			launcher, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 			if err != nil {
-				t.Fatalf("probe.EnsureAvailable falhou: %v", err)
+				s.T().Fatalf("probe.EnsureAvailable falhou: %v", err)
 			}
 			cmd, _ := launcher.Command()
 			if cmd != tc.binaryPath {
-				t.Errorf("binario direto deve vencer sobre fallback: command = %q, want %q", cmd, tc.binaryPath)
+				s.T().Errorf("binario direto deve vencer sobre fallback: command = %q, want %q", cmd, tc.binaryPath)
 			}
 		})
 	}
@@ -842,29 +846,27 @@ func TestParity_FallbackArgvParity_DirectBinaryWins(t *testing.T) {
 
 // TestParity_FallbackArgvParity_NoBinaryNoFallback valida que quando nem o binario
 // direto nem o fallback estao disponiveis, EnsureAvailable retorna ErrLauncherUnavailable.
-func TestParity_FallbackArgvParity_NoBinaryNoFallback(t *testing.T) {
-	t.Parallel()
+func (s *ParitySuite) TestParity_FallbackArgvParity_NoBinaryNoFallback() {
 
-	allSpecs := []specs.Spec{
-		specs.Claude(),
-		specs.Codex(),
-		specs.Gemini(),
-		specs.Copilot(),
+	allSpecs := []specs.Spec{specs.NewCatalog().
+		Claude(), specs.NewCatalog().
+		Codex(), specs.NewCatalog().
+		Gemini(), specs.NewCatalog().
+		Copilot(),
 	}
 
 	for _, sp := range allSpecs {
 		sp := sp
-		t.Run(sp.ID+"_no_binary_no_fallback", func(t *testing.T) {
-			t.Parallel()
+		s.Run(sp.ID+"_no_binary_no_fallback", func() {
 
 			sp.ID = sp.ID + "-nobin-rf19"
 
 			// Nenhum binario disponivel.
 			look := newFakeLookPather(map[string]string{})
 
-			_, err := probe.EnsureAvailable(context.Background(), sp, look)
+			_, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 			if err == nil {
-				t.Fatal("esperava ErrLauncherUnavailable, mas nao houve erro")
+				s.T().Fatal("esperava ErrLauncherUnavailable, mas nao houve erro")
 			}
 		})
 	}
@@ -872,22 +874,21 @@ func TestParity_FallbackArgvParity_NoBinaryNoFallback(t *testing.T) {
 
 // TestParity_FB01_Invariant_PassesOnValidSnapshot valida que FB01 passa
 // para snapshots gerados normalmente (agent-governance presente em AGENTS.md).
-func TestParity_FB01_Invariant_PassesOnValidSnapshot(t *testing.T) {
+func (s *ParitySuite) TestParity_FB01_Invariant_PassesOnValidSnapshot() {
 	for _, tools := range [][]skills.Tool{
 		{skills.ToolClaude},
 		{skills.ToolCodex},
 		skills.AllTools,
 	} {
 		tools := tools
-		t.Run(toolSubsetName(tools), func(t *testing.T) {
-			t.Parallel()
-			snap, err := Generate(testProjectDir, tools, nil, "full")
+		s.Run(toolSubsetName(tools), func() {
+			snap, err := NewChecker().Generate(testProjectDir, tools, nil, "full")
 			if err != nil {
-				t.Fatalf("Generate: %v", err)
+				s.T().Fatalf("Generate: %v", err)
 			}
-			r := invFB01FallbackLauncherChainDeclared.Check(snap)
+			r := _invFB01FallbackLauncherChainDeclared.Check(snap)
 			if !r.OK {
-				t.Errorf("[FB01] deveria passar para snapshot valido: %s", r.Reason)
+				s.T().Errorf("[FB01] deveria passar para snapshot valido: %s", r.Reason)
 			}
 		})
 	}
@@ -895,28 +896,28 @@ func TestParity_FB01_Invariant_PassesOnValidSnapshot(t *testing.T) {
 
 // TestParity_FB01_Invariant_FailsOnCorruptedAgentsMD valida que FB01 falha
 // quando AGENTS.md nao contem agent-governance (template corrompido).
-func TestParity_FB01_Invariant_FailsOnCorruptedAgentsMD(t *testing.T) {
-	snap, err := Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
+func (s *ParitySuite) TestParity_FB01_Invariant_FailsOnCorruptedAgentsMD() {
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
 	if err != nil {
-		t.Fatalf("Generate: %v", err)
+		s.T().Fatalf("Generate: %v", err)
 	}
 
 	// Substituir AGENTS.md por conteudo corrompido (sem referencia a agent-governance).
 	agentsPath := filepath.Join(testProjectDir, "AGENTS.md")
 	snap.Files[agentsPath] = []byte("<!-- governance-schema: 1.0.0 -->\n# Regras\nConteudo corrompido sem skills referenciadas.")
 
-	r := invFB01FallbackLauncherChainDeclared.Check(snap)
+	r := _invFB01FallbackLauncherChainDeclared.Check(snap)
 	if r.OK {
-		t.Error("[FB01] deveria falhar quando AGENTS.md nao contem agent-governance")
+		s.T().Error("[FB01] deveria falhar quando AGENTS.md nao contem agent-governance")
 	}
 }
 
 // TestParity_FB01_InvariantLevel verifica que FB01 tem nivel Common (nao BestEffort).
-func TestParity_FB01_InvariantLevel(t *testing.T) {
-	if invFB01FallbackLauncherChainDeclared.Level != Common {
-		t.Errorf("[FB01] Level = %q, want Common", invFB01FallbackLauncherChainDeclared.Level)
+func (s *ParitySuite) TestParity_FB01_InvariantLevel() {
+	if _invFB01FallbackLauncherChainDeclared.Level != Common {
+		s.T().Errorf("[FB01] Level = %q, want Common", _invFB01FallbackLauncherChainDeclared.Level)
 	}
-	if invFB01FallbackLauncherChainDeclared.AppliesTo != nil {
-		t.Errorf("[FB01] AppliesTo deveria ser nil (aplica a todos), got %v", invFB01FallbackLauncherChainDeclared.AppliesTo)
+	if _invFB01FallbackLauncherChainDeclared.AppliesTo != nil {
+		s.T().Errorf("[FB01] AppliesTo deveria ser nil (aplica a todos), got %v", _invFB01FallbackLauncherChainDeclared.AppliesTo)
 	}
 }

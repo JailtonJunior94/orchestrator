@@ -44,7 +44,7 @@ func (s *Service) Execute(repoPath, skillsDir string, dryRun bool) ([]BumpResult
 		return nil, fmt.Errorf("resolver caminho do repositorio: %w", err)
 	}
 
-	lastTag, err := findLastTag(repoRoot)
+	lastTag, err := NewPlanner().findLastTag(repoRoot)
 	if err != nil {
 		if errors.Is(err, ErrNoTagFound) {
 			return nil, fmt.Errorf("%w: execute skill-bump apos a primeira release", ErrNoTagFound)
@@ -55,7 +55,7 @@ func (s *Service) Execute(repoPath, skillsDir string, dryRun bool) ([]BumpResult
 		return nil, fmt.Errorf("%w: execute skill-bump apos a primeira release", ErrNoTagFound)
 	}
 
-	changedSkills, err := ChangedSkills(repoRoot, lastTag, "HEAD", skillsDir)
+	changedSkills, err := NewPlanner().ChangedSkills(repoRoot, lastTag, "HEAD", skillsDir)
 	if err != nil {
 		return nil, err
 	}
@@ -88,47 +88,47 @@ func (s *Service) Execute(repoPath, skillsDir string, dryRun bool) ([]BumpResult
 }
 
 func (s *Service) bumpSkill(repoRoot, lastTag, skillsDir, skillName string, dryRun bool) (BumpResult, bool, error) {
-	commits, err := CommitsForSkill(repoRoot, lastTag, "HEAD", skillsDir, skillName)
+	commits, err := NewPlanner().CommitsForSkill(repoRoot, lastTag, "HEAD", skillsDir, skillName)
 	if err != nil {
 		return BumpResult{}, false, err
 	}
 
-	bumpKind := plannedBump(commits)
+	bumpKind := NewPlanner().plannedBump(commits)
 	skillPath := filepath.Join(repoRoot, skillsDir, skillName, "SKILL.md")
 	content, err := s.fs.ReadFile(skillPath)
 	if err != nil {
 		return BumpResult{}, false, fmt.Errorf("ler frontmatter de %s: %w", skillName, err)
 	}
 
-	if err := validateFrontmatter(content); err != nil {
+	if err := NewPlanner().validateFrontmatter(content); err != nil {
 		s.printer.Warn("aviso: skill %s com frontmatter invalido, pulando", skillName)
 		return BumpResult{}, false, nil
 	}
 
-	current := skills.ParseFrontmatter(content)
+	current := skills.NewCatalog().ParseFrontmatter(content)
 	switch {
 	case current.Version == "":
 		s.printer.Warn("aviso: skill %s sem campo version no frontmatter, pulando", skillName)
 		return BumpResult{}, false, nil
-	case !skills.IsValidSemver(current.Version):
+	case !skills.NewCatalog().IsValidSemver(current.Version):
 		s.printer.Warn("aviso: skill %s com frontmatter invalido, pulando", skillName)
 		return BumpResult{}, false, nil
 	}
 
-	targetVersion := semver.ComputeNext(current.Version, bumpKind)
-	if previousContent, err := readSkillFileAtRef(repoRoot, lastTag, skillsDir, skillName); err == nil {
-		previous := skills.ParseFrontmatter(previousContent)
-		if previous.Version != "" && skills.IsValidSemver(previous.Version) {
-			targetVersion = semver.ComputeNext(previous.Version, bumpKind)
+	targetVersion := semver.NewService().ComputeNext(current.Version, bumpKind)
+	if previousContent, err := NewPlanner().readSkillFileAtRef(repoRoot, lastTag, skillsDir, skillName); err == nil {
+		previous := skills.NewCatalog().ParseFrontmatter(previousContent)
+		if previous.Version != "" && skills.NewCatalog().IsValidSemver(previous.Version) {
+			targetVersion = semver.NewService().ComputeNext(previous.Version, bumpKind)
 		}
 	}
 
-	if current.Version == targetVersion || skills.SemverGreater(current.Version, targetVersion) {
+	if current.Version == targetVersion || skills.NewCatalog().SemverGreater(current.Version, targetVersion) {
 		return BumpResult{}, false, nil
 	}
 
 	if !dryRun {
-		updated, err := UpdateFrontmatterVersion(content, targetVersion)
+		updated, err := NewPlanner().UpdateFrontmatterVersion(content, targetVersion)
 		if err != nil {
 			return BumpResult{}, false, fmt.Errorf("falha ao atualizar frontmatter de %s: %w", skillName, err)
 		}
@@ -142,20 +142,20 @@ func (s *Service) bumpSkill(repoRoot, lastTag, skillsDir, skillName string, dryR
 		PreviousVersion: current.Version,
 		NewVersion:      targetVersion,
 		BumpKind:        bumpKind,
-		Reason:          describeReason(commits, bumpKind),
+		Reason:          NewPlanner().describeReason(commits, bumpKind),
 	}, true, nil
 }
 
-func plannedBump(commits []semver.Commit) semver.BumpKind {
-	if bump := semver.DetermineBump(commits); bump != semver.BumpNone {
+func (r1 *Planner) plannedBump(commits []semver.Commit) semver.BumpKind {
+	if bump := semver.NewService().DetermineBump(commits); bump != semver.BumpNone {
 		return bump
 	}
 	return semver.BumpPatch
 }
 
-func describeReason(commits []semver.Commit, bump semver.BumpKind) string {
+func (r1 *Planner) describeReason(commits []semver.Commit, bump semver.BumpKind) string {
 	for _, commit := range commits {
-		if commitMatchesBump(commit, bump) {
+		if NewPlanner().commitMatchesBump(commit, bump) {
 			return commit.Raw
 		}
 	}
@@ -165,7 +165,7 @@ func describeReason(commits []semver.Commit, bump semver.BumpKind) string {
 	return "conteudo alterado"
 }
 
-func commitMatchesBump(commit semver.Commit, bump semver.BumpKind) bool {
+func (r1 *Planner) commitMatchesBump(commit semver.Commit, bump semver.BumpKind) bool {
 	switch bump {
 	case semver.BumpMajor:
 		return commit.Breaking
@@ -178,7 +178,7 @@ func commitMatchesBump(commit semver.Commit, bump semver.BumpKind) bool {
 	}
 }
 
-func findLastTag(repoPath string) (string, error) {
+func (r1 *Planner) findLastTag(repoPath string) (string, error) {
 	cmd := exec.Command("git", "-C", filepath.Clean(repoPath), "describe", "--tags", "--abbrev=0", "--match", "v*")
 	out, err := cmd.CombinedOutput()
 	if err != nil {

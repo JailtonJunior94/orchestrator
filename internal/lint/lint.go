@@ -27,8 +27,8 @@ func (e LintError) String() string {
 	return fmt.Sprintf("ERRO: %s: %s", e.File, e.Message)
 }
 
-// targetFiles são os arquivos verificados por placeholders não renderizados.
-var targetFiles = []string{
+// _targetFiles são os arquivos verificados por placeholders não renderizados.
+var _targetFiles = []string{
 	"AGENTS.md",
 	"CLAUDE.md",
 	"GEMINI.md",
@@ -36,7 +36,7 @@ var targetFiles = []string{
 	".github/copilot-instructions.md",
 }
 
-var schemaVersionRe = regexp.MustCompile(`governance-schema:\s*(\S+)`)
+var _schemaVersionRe = regexp.MustCompile(`governance-schema:\s*(\S+)`)
 
 // Service executa verificações de lint de governança.
 type Service struct{}
@@ -52,9 +52,9 @@ func (s *Service) Execute(projectDir string) ([]LintError, error) {
 	var errs []LintError
 
 	// 1. Detectar placeholders {{ em arquivos alvo
-	for _, rel := range targetFiles {
+	for _, rel := range _targetFiles {
 		path := filepath.Join(projectDir, rel)
-		fileErrs, err := checkPlaceholders(path, rel)
+		fileErrs, err := s.checkPlaceholders(path, rel)
 		if err != nil {
 			continue // arquivo não existe — pular
 		}
@@ -65,7 +65,7 @@ func (s *Service) Execute(projectDir string) ([]LintError, error) {
 	agentsPath := filepath.Join(projectDir, "AGENTS.md")
 	data, err := os.ReadFile(agentsPath)
 	if err == nil {
-		if vErr := checkSchemaVersion(data, "AGENTS.md"); vErr != nil {
+		if vErr := s.checkSchemaVersion(data, "AGENTS.md"); vErr != nil {
 			errs = append(errs, *vErr)
 		}
 	}
@@ -83,7 +83,7 @@ func (s *Service) Execute(projectDir string) ([]LintError, error) {
 	}
 
 	// 4. Validar frontmatter dos SKILL.md
-	skillErrs := checkSkillFrontmatters(projectDir)
+	skillErrs := s.checkSkillFrontmatters(projectDir)
 	errs = append(errs, skillErrs...)
 
 	if len(errs) == 0 {
@@ -96,7 +96,7 @@ func (s *Service) Execute(projectDir string) ([]LintError, error) {
 func (s *Service) CountChecks(projectDir string) int {
 	count := 0
 
-	for _, rel := range targetFiles {
+	for _, rel := range _targetFiles {
 		if _, err := os.Stat(filepath.Join(projectDir, rel)); err == nil {
 			count++
 		}
@@ -127,7 +127,7 @@ func (s *Service) CountChecks(projectDir string) int {
 	return count
 }
 
-func checkPlaceholders(path, rel string) ([]LintError, error) {
+func (s *Service) checkPlaceholders(path, rel string) ([]LintError, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -142,14 +142,14 @@ func checkPlaceholders(path, rel string) ([]LintError, error) {
 			errs = append(errs, LintError{
 				File:    rel,
 				Line:    lineNum,
-				Message: fmt.Sprintf("placeholder nao renderizado: %s", extractPlaceholder(line)),
+				Message: fmt.Sprintf("placeholder nao renderizado: %s", s.extractPlaceholder(line)),
 			})
 		}
 	}
 	return errs, nil
 }
 
-func extractPlaceholder(line string) string {
+func (s *Service) extractPlaceholder(line string) string {
 	start := strings.Index(line, "{{")
 	if start < 0 {
 		return "{{"
@@ -161,8 +161,8 @@ func extractPlaceholder(line string) string {
 	return strings.TrimSpace(line[start : start+end+2])
 }
 
-func checkSchemaVersion(data []byte, rel string) *LintError {
-	matches := schemaVersionRe.FindSubmatch(data)
+func (s *Service) checkSchemaVersion(data []byte, rel string) *LintError {
+	matches := _schemaVersionRe.FindSubmatch(data)
 	if matches == nil {
 		return nil
 	}
@@ -177,7 +177,7 @@ func checkSchemaVersion(data []byte, rel string) *LintError {
 	return nil
 }
 
-func checkSkillFrontmatters(projectDir string) []LintError {
+func (s *Service) checkSkillFrontmatters(projectDir string) []LintError {
 	skillsDir := filepath.Join(projectDir, ".agents", "skills")
 	entries, err := os.ReadDir(skillsDir)
 	if err != nil {
@@ -193,14 +193,14 @@ func checkSkillFrontmatters(projectDir string) []LintError {
 		if err != nil {
 			continue
 		}
-		if err := skills.ValidateFrontmatter(data, "", nil); err != nil {
+		if err := skills.NewCatalog().ValidateFrontmatter(data, "", nil); err != nil {
 			errs = append(errs, LintError{
 				File:    skillFile,
 				Message: fmt.Sprintf("frontmatter invalido: %s", err),
 			})
 			continue
 		}
-		if err := skills.ValidateFrontmatterSchema(data, e.Name()); err != nil {
+		if err := skills.NewCatalog().ValidateFrontmatterSchema(data, e.Name()); err != nil {
 			errs = append(errs, LintError{
 				File:    skillFile,
 				Message: fmt.Sprintf("schema invalido: %s", err),

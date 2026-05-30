@@ -3,7 +3,6 @@ package aispecharness
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/config"
@@ -17,10 +16,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var installCmd = &cobra.Command{
-	Use:   "install <path>",
-	Short: "Instala governanca de IA em um projeto",
-	Long: `Instala o pacote de governanca para ferramentas de IA em um projeto alvo.
+type installCommand struct{}
+
+func newInstallCmd() *cobra.Command {
+	handler := &installCommand{}
+	cmd := &cobra.Command{
+		Use:   "install <path>",
+		Short: "Instala governanca de IA em um projeto",
+		Long: `Instala o pacote de governanca para ferramentas de IA em um projeto alvo.
 
 Sem --source, usa as skills canonicas embutidas no binario.
 
@@ -30,40 +33,35 @@ Exemplos:
   ai-spec-harness install ./meu-projeto --tools claude --dry-run
   ai-spec-harness install ./meu-projeto --tools all --langs all --source ~/ai-governance
   ai-spec-harness install ./meu-projeto --tools all --ref v1.0.0`,
-	Args: cobra.ExactArgs(1),
-	RunE: runInstall,
+		Args: cobra.ExactArgs(1),
+		RunE: handler.run,
+	}
+
+	cmd.Flags().String("tools", "", "Ferramentas para instalar: claude,gemini,codex,copilot ou all (opcional; detecta automaticamente se omitido)")
+	cmd.Flags().String("langs", "", "Linguagens: go,node,python ou all")
+	cmd.Flags().String("mode", "symlink", "Modo de instalacao: symlink ou copy")
+	cmd.Flags().Bool("dry-run", false, "Mostra o que seria criado sem executar")
+	cmd.Flags().String("source", "", "Diretorio fonte do repositorio de governanca (opcional; usa embutido se omitido)")
+	cmd.Flags().String("ref", "", "Referencia git (tag, branch, SHA) para usar como fonte; forca --mode copy (mutualmente exclusivo com --source)")
+	cmd.Flags().Bool("no-context", false, "Desabilita geracao de governanca contextual")
+	cmd.Flags().String("codex-profile", "full", "Perfil de skills para Codex: full ou lean")
+	cmd.Flags().String("focus-paths", "", "Prioriza deteccao de toolchain proximo desses arquivos, separados por virgula (util em monorepos). Alternativa: env FOCUS_PATHS")
+	cmd.Flags().Bool("global", false, "Instala globalmente em ~/.aispec (ADR-019 RF-07)")
+	return cmd
 }
 
-var (
-	installTools        string
-	installLangs        string
-	installMode         string
-	installDryRun       bool
-	installSource       string
-	installRef          string
-	installNoCtx        bool
-	installCodexProfile string
-	installFocusPaths   string
-	installGlobal       bool
-)
-
-func init() {
-	installCmd.Flags().StringVar(&installTools, "tools", "", "Ferramentas para instalar: claude,gemini,codex,copilot ou all (opcional; detecta automaticamente se omitido)")
-	installCmd.Flags().StringVar(&installLangs, "langs", "", "Linguagens: go,node,python ou all")
-	installCmd.Flags().StringVar(&installMode, "mode", "symlink", "Modo de instalacao: symlink ou copy")
-	installCmd.Flags().BoolVar(&installDryRun, "dry-run", false, "Mostra o que seria criado sem executar")
-	installCmd.Flags().StringVar(&installSource, "source", "", "Diretorio fonte do repositorio de governanca (opcional; usa embutido se omitido)")
-	installCmd.Flags().StringVar(&installRef, "ref", "", "Referencia git (tag, branch, SHA) para usar como fonte; forca --mode copy (mutualmente exclusivo com --source)")
-	installCmd.Flags().BoolVar(&installNoCtx, "no-context", false, "Desabilita geracao de governanca contextual")
-	installCmd.Flags().StringVar(&installCodexProfile, "codex-profile", "full", "Perfil de skills para Codex: full ou lean")
-	installCmd.Flags().StringVar(&installFocusPaths, "focus-paths", "", "Prioriza deteccao de toolchain proximo desses arquivos, separados por virgula (util em monorepos). Alternativa: env FOCUS_PATHS")
-	installCmd.Flags().BoolVar(&installGlobal, "global", false, "Instala globalmente em ~/.aispec (ADR-019 RF-07)")
-
-	rootCmd.AddCommand(installCmd)
-}
-
-func runInstall(cmd *cobra.Command, args []string) error {
+func (c *installCommand) run(cmd *cobra.Command, args []string) error {
 	projectDir := args[0]
+	installTools, _ := cmd.Flags().GetString("tools")
+	installLangs, _ := cmd.Flags().GetString("langs")
+	installMode, _ := cmd.Flags().GetString("mode")
+	installDryRun, _ := cmd.Flags().GetBool("dry-run")
+	installSource, _ := cmd.Flags().GetString("source")
+	installRef, _ := cmd.Flags().GetString("ref")
+	installNoCtx, _ := cmd.Flags().GetBool("no-context")
+	installCodexProfile, _ := cmd.Flags().GetString("codex-profile")
+	installFocusPaths, _ := cmd.Flags().GetString("focus-paths")
+	installGlobal, _ := cmd.Flags().GetBool("global")
 
 	if installRef != "" && installSource != "" {
 		return fmt.Errorf("--ref e --source sao mutuamente exclusivos")
@@ -76,22 +74,22 @@ func runInstall(cmd *cobra.Command, args []string) error {
 
 	// --tools e opcional: vazio => auto-detect via AgentDetector (ADR-019 + RF-06).
 	// Quando presente, e override explicito (precede deteccao automatica).
-	tools, err := parseToolsFlag(installTools)
+	tools, err := newFlagHelper().parseToolsFlag(installTools)
 	if err != nil {
 		return err
 	}
 
-	langs, err := parseLangsFlag(installLangs)
+	langs, err := newFlagHelper().parseLangsFlag(installLangs)
 	if err != nil {
 		return err
 	}
 
-	linkMode, ok := skills.ParseLinkMode(installMode)
+	linkMode, ok := skills.NewCatalog().ParseLinkMode(installMode)
 	if !ok {
 		return fmt.Errorf("modo invalido: %s (use symlink ou copy)", installMode)
 	}
 
-	printer := output.New(verbose)
+	printer := output.New(newCommandEnv().verbose(cmd))
 
 	sourceDir := installSource
 	if installRef != "" {
@@ -99,7 +97,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("obtendo diretorio atual: %w", err)
 		}
-		resolved, err := gitref.Resolve(cwd, installRef)
+		resolved, err := gitref.NewResolver().Resolve(cwd, installRef)
 		if err != nil {
 			return err
 		}
@@ -127,66 +125,7 @@ func runInstall(cmd *cobra.Command, args []string) error {
 		DryRun:       installDryRun,
 		GenerateCtx:  !installNoCtx,
 		CodexProfile: installCodexProfile,
-		FocusPaths:   parseFocusPaths(installFocusPaths),
+		FocusPaths:   newFlagHelper().parseFocusPaths(installFocusPaths),
 		Scope:        scope,
 	})
-}
-
-func parseToolsFlag(raw string) ([]skills.Tool, error) {
-	// Vazio => auto-detect (ADR-019): retorna nil sem erro para que Execute acione
-	// AgentDetector. Presenca da flag e override explicito.
-	if raw == "" {
-		return nil, nil
-	}
-	if raw == "all" {
-		return skills.AllTools, nil
-	}
-	var tools []skills.Tool
-	for _, s := range strings.Split(raw, ",") {
-		s = strings.TrimSpace(s)
-		t, ok := skills.ParseTool(s)
-		if !ok {
-			return nil, fmt.Errorf("ferramenta invalida: %s (opcoes: claude, gemini, codex, copilot, all)", s)
-		}
-		tools = append(tools, t)
-	}
-	return tools, nil
-}
-
-// parseFocusPaths converte a flag --focus-paths (comma-separated) ou a env var
-// FOCUS_PATHS (newline ou comma-separated) em uma slice de caminhos.
-func parseFocusPaths(raw string) []string {
-	if raw == "" {
-		raw = os.Getenv("FOCUS_PATHS")
-	}
-	if raw == "" {
-		return nil
-	}
-	var paths []string
-	for _, p := range strings.FieldsFunc(raw, func(r rune) bool { return r == ',' || r == '\n' }) {
-		p = strings.TrimSpace(p)
-		if p != "" {
-			paths = append(paths, p)
-		}
-	}
-	return paths
-}
-
-func parseLangsFlag(raw string) ([]skills.Lang, error) {
-	if raw == "" || raw == "none" {
-		return nil, nil
-	}
-	if raw == "all" {
-		return skills.AllLangs, nil
-	}
-	var langs []skills.Lang
-	for _, s := range strings.Split(raw, ",") {
-		s = strings.TrimSpace(s)
-		l, ok := skills.ParseLang(s)
-		if !ok {
-			return nil, fmt.Errorf("linguagem invalida: %s (opcoes: go, node, python, all)", s)
-		}
-		langs = append(langs, l)
-	}
-	return langs, nil
 }

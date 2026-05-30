@@ -141,8 +141,8 @@ func TestActivityWatchdog_AbsoluteCapFiresDespiteTouch(t *testing.T) {
 			default:
 			}
 			clk.advance(50 * time.Millisecond) // < timeout (60ms): inatividade sozinha não dispara
-			wd.Touch()                          // keep-alive: reseta inatividade
-			time.Sleep(40 * time.Millisecond)   // > ticker (~30ms): dá tempo ao watchdog observar
+			wd.Touch()                         // keep-alive: reseta inatividade
+			time.Sleep(40 * time.Millisecond)  // > ticker (~30ms): dá tempo ao watchdog observar
 		}
 	}()
 

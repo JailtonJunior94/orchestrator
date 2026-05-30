@@ -14,7 +14,7 @@ func TestTMEM01_WriteReadWorkflow(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	limits := memory.DefaultLimits()
+	limits := memory.NewCatalog().DefaultLimits()
 	s := memory.New(dir, limits)
 	ctx := context.Background()
 
@@ -45,7 +45,7 @@ func TestTMEM02_WorkflowLineCompaction(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	limits := memory.DefaultLimits() // WorkflowLines = 150
+	limits := memory.NewCatalog().DefaultLimits() // WorkflowLines = 150
 	s := memory.New(dir, limits)
 	ctx := context.Background()
 
@@ -78,7 +78,7 @@ func TestTMEM03_WorkflowByteCompaction(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	limits := memory.DefaultLimits() // WorkflowBytes = 12*1024 = 12288
+	limits := memory.NewCatalog().DefaultLimits() // WorkflowBytes = 12*1024 = 12288
 	s := memory.New(dir, limits)
 	ctx := context.Background()
 
@@ -121,7 +121,7 @@ func TestTMEM04_ReadWorkflowNotFound(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	limits := memory.DefaultLimits()
+	limits := memory.NewCatalog().DefaultLimits()
 	s := memory.New(dir, limits)
 	ctx := context.Background()
 
@@ -142,7 +142,7 @@ func TestTMEM05_AppendMode(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	limits := memory.DefaultLimits()
+	limits := memory.NewCatalog().DefaultLimits()
 	s := memory.New(dir, limits)
 	ctx := context.Background()
 
@@ -173,7 +173,7 @@ func TestReadTaskNotFound(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	s := memory.New(dir, memory.DefaultLimits())
+	s := memory.New(dir, memory.NewCatalog().DefaultLimits())
 	ctx := context.Background()
 
 	doc, err := s.ReadTask(ctx, "task-inexistente.md")
@@ -189,7 +189,7 @@ func TestWriteReadTask(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	s := memory.New(dir, memory.DefaultLimits())
+	s := memory.New(dir, memory.NewCatalog().DefaultLimits())
 	ctx := context.Background()
 
 	content := "# Task Memory\ncontexto relevante\n"
@@ -216,7 +216,7 @@ func TestTaskLineCompaction(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	limits := memory.DefaultLimits() // TaskLines = 200
+	limits := memory.NewCatalog().DefaultLimits() // TaskLines = 200
 	s := memory.New(dir, limits)
 	ctx := context.Background()
 
@@ -242,7 +242,7 @@ func TestTaskAppendMode(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	s := memory.New(dir, memory.DefaultLimits())
+	s := memory.New(dir, memory.NewCatalog().DefaultLimits())
 	ctx := context.Background()
 
 	first := "parte 1\n"
@@ -268,7 +268,7 @@ func TestTaskPathTraversalPrevention(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	s := memory.New(dir, memory.DefaultLimits())
+	s := memory.New(dir, memory.NewCatalog().DefaultLimits())
 	ctx := context.Background()
 
 	// Tentar traversal: filepath.Base deve prevenir isso.
@@ -294,7 +294,7 @@ func TestWriteModeInvalid(t *testing.T) {
 	t.Parallel()
 
 	dir := t.TempDir()
-	s := memory.New(dir, memory.DefaultLimits())
+	s := memory.New(dir, memory.NewCatalog().DefaultLimits())
 	ctx := context.Background()
 
 	// Primeiro garantir que o diretório e arquivo existem.
@@ -311,7 +311,7 @@ func TestWriteModeInvalid(t *testing.T) {
 func TestDefaultLimits(t *testing.T) {
 	t.Parallel()
 
-	l := memory.DefaultLimits()
+	l := memory.NewCatalog().DefaultLimits()
 	if l.WorkflowLines != memory.DefaultWorkflowLineLimit {
 		t.Errorf("WorkflowLines: got=%d want=%d", l.WorkflowLines, memory.DefaultWorkflowLineLimit)
 	}

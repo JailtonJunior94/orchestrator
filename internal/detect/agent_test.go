@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
@@ -31,165 +33,155 @@ func (f fakeHomeDir) UserHomeDir() (string, error) {
 	return f.home, f.err
 }
 
-// --- Testes ---
+type AgentSuite struct {
+	suite.Suite
+}
 
-func TestBinaryAgentDetector_BinaryInPath(t *testing.T) {
-	t.Parallel()
+func TestAgentSuite(t *testing.T) {
+	suite.Run(t, new(AgentSuite))
+}
 
-	lp := fakeLookPath{present: map[string]bool{
-		"claude-agent-acp": true,
-		"codex-acp":        true,
-	}}
-	hd := fakeHomeDir{home: "/nonexistent-home-dir-xyz"}
-	det := NewBinaryAgentDetector(lp, hd, nil)
-
-	got, err := det.Detect(context.Background(), DetectOptions{})
-	if err != nil {
-		t.Fatalf("Detect retornou erro inesperado: %v", err)
+func (s *AgentSuite) TestBinaryAgentDetectorDetect() {
+	type args struct {
+		lookPath   fakeLookPath
+		homeDir    fakeHomeDir
+		projectDir string
+		files      map[string][]byte
+		dirs       map[string]bool
+		fileDet    bool
 	}
 
-	toolSet := toSet(got)
-	if !toolSet[skills.ToolClaude] {
-		t.Error("esperava ToolClaude detectado via binario")
+	scenarios := []struct {
+		name   string
+		args   args
+		expect func(got []skills.Tool, err error)
+	}{
+		{
+			name: "deve detectar agentes por binarios no path",
+			args: args{
+				lookPath: fakeLookPath{present: map[string]bool{
+					"claude-agent-acp": true,
+					"codex-acp":        true,
+				}},
+				homeDir: fakeHomeDir{home: "/nonexistent-home-dir-xyz"},
+			},
+			expect: func(got []skills.Tool, err error) {
+				s.NoError(err)
+				toolSet := toSet(got)
+				s.True(toolSet[skills.ToolClaude], "esperava ToolClaude detectado via binario")
+				s.True(toolSet[skills.ToolCodex], "esperava ToolCodex detectado via binario")
+				s.False(toolSet[skills.ToolGemini], "nao esperava ToolGemini — binario ausente")
+				s.False(toolSet[skills.ToolCopilot], "nao esperava ToolCopilot — binario ausente")
+			},
+		},
+		{
+			name: "deve detectar agente por arquivo do projeto",
+			args: args{
+				lookPath:   fakeLookPath{present: map[string]bool{}},
+				homeDir:    fakeHomeDir{home: "/nonexistent-home-xyz"},
+				projectDir: "/project",
+				files:      map[string][]byte{"/project/CLAUDE.md": []byte("# Claude")},
+				fileDet:    true,
+			},
+			expect: func(got []skills.Tool, err error) {
+				s.NoError(err)
+				toolSet := toSet(got)
+				s.True(toolSet[skills.ToolClaude], "esperava ToolClaude detectado via arquivo de projeto")
+				s.Len(got, 1)
+			},
+		},
+		{
+			name: "deve retornar vazio para repositorio sem sinais",
+			args: args{
+				lookPath:   fakeLookPath{present: map[string]bool{}},
+				homeDir:    fakeHomeDir{home: "/nonexistent-home-xyz"},
+				projectDir: "/empty-project",
+				dirs:       map[string]bool{"/empty-project": true},
+				fileDet:    true,
+			},
+			expect: func(got []skills.Tool, err error) {
+				s.NoError(err)
+				s.Empty(got)
+			},
+		},
+		{
+			name: "deve degradar graciosamente quando home dir retorna erro",
+			args: args{
+				lookPath: fakeLookPath{present: map[string]bool{}},
+				homeDir:  fakeHomeDir{err: errors.New("HOME nao definido")},
+			},
+			expect: func(got []skills.Tool, err error) {
+				s.NoError(err)
+				s.Empty(got)
+			},
+		},
+		{
+			name: "deve detectar todos os binarios suportados",
+			args: args{
+				lookPath: fakeLookPath{present: map[string]bool{
+					"claude-agent-acp": true,
+					"codex-acp":        true,
+					"gemini":           true,
+					"copilot":          true,
+				}},
+				homeDir: fakeHomeDir{home: "/nonexistent-home-xyz"},
+			},
+			expect: func(got []skills.Tool, err error) {
+				s.NoError(err)
+				s.Len(got, 4)
+			},
+		},
+		{
+			name: "deve evitar duplicidade quando agente aparece em binario e arquivo",
+			args: args{
+				lookPath:   fakeLookPath{present: map[string]bool{"claude-agent-acp": true}},
+				homeDir:    fakeHomeDir{home: "/nonexistent-home-xyz"},
+				projectDir: "/project",
+				files:      map[string][]byte{"/project/CLAUDE.md": []byte("# Claude")},
+				fileDet:    true,
+			},
+			expect: func(got []skills.Tool, err error) {
+				s.NoError(err)
+				count := 0
+				for _, tool := range got {
+					if tool == skills.ToolClaude {
+						count++
+					}
+				}
+				s.Equal(1, count)
+			},
+		},
 	}
-	if !toolSet[skills.ToolCodex] {
-		t.Error("esperava ToolCodex detectado via binario")
-	}
-	if toolSet[skills.ToolGemini] {
-		t.Error("nao esperava ToolGemini — binario ausente")
-	}
-	if toolSet[skills.ToolCopilot] {
-		t.Error("nao esperava ToolCopilot — binario ausente")
+
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			ffs := fs.NewFakeFileSystem()
+			for path, content := range scenario.args.files {
+				ffs.Files[path] = content
+			}
+			for path, exists := range scenario.args.dirs {
+				ffs.Dirs[path] = exists
+			}
+
+			var fileDet *FileDetector
+			if scenario.args.fileDet {
+				fileDet = NewFileDetector(ffs)
+			}
+
+			det := NewBinaryAgentDetector(scenario.args.lookPath, scenario.args.homeDir, fileDet)
+			got, err := det.Detect(context.Background(), DetectOptions{ProjectDir: scenario.args.projectDir})
+
+			scenario.expect(got, err)
+		})
 	}
 }
 
-func TestBinaryAgentDetector_FileProjectOnly(t *testing.T) {
-	t.Parallel()
-
-	// Nenhum binario no PATH.
-	lp := fakeLookPath{present: map[string]bool{}}
-	// Home dir inexistente => sem sinal de dir de config.
-	hd := fakeHomeDir{home: "/nonexistent-home-xyz"}
-	// FakeFileSystem com indicador de Claude via CLAUDE.md.
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/CLAUDE.md"] = []byte("# Claude")
-	fileDet := NewFileDetector(ffs)
-	det := NewBinaryAgentDetector(lp, hd, fileDet)
-
-	got, err := det.Detect(context.Background(), DetectOptions{ProjectDir: "/project"})
-	if err != nil {
-		t.Fatalf("Detect retornou erro: %v", err)
-	}
-
-	toolSet := toSet(got)
-	if !toolSet[skills.ToolClaude] {
-		t.Error("esperava ToolClaude detectado via arquivo de projeto")
-	}
-	if len(got) != 1 {
-		t.Errorf("esperava exatamente 1 ferramenta, got %d: %v", len(got), got)
-	}
-}
-
-func TestBinaryAgentDetector_EmptyRepo_NoBinaries(t *testing.T) {
-	t.Parallel()
-
-	// Sem binarios, sem home existente, sem arquivos de projeto.
-	lp := fakeLookPath{present: map[string]bool{}}
-	hd := fakeHomeDir{home: "/nonexistent-home-xyz"}
-	ffs := fs.NewFakeFileSystem()
-	ffs.Dirs["/empty-project"] = true
-	fileDet := NewFileDetector(ffs)
-	det := NewBinaryAgentDetector(lp, hd, fileDet)
-
-	got, err := det.Detect(context.Background(), DetectOptions{ProjectDir: "/empty-project"})
-	if err != nil {
-		t.Fatalf("Detect retornou erro: %v", err)
-	}
-	if len(got) != 0 {
-		t.Errorf("esperava vazio, got %v", got)
-	}
-}
-
-func TestBinaryAgentDetector_HomeDirError_DegradesGracefully(t *testing.T) {
-	t.Parallel()
-
-	// UserHomeDir retorna erro => sinal de config dir e omitido, sem falha fatal.
-	lp := fakeLookPath{present: map[string]bool{}}
-	hd := fakeHomeDir{err: errors.New("HOME nao definido")}
-	det := NewBinaryAgentDetector(lp, hd, nil)
-
-	got, err := det.Detect(context.Background(), DetectOptions{})
-	if err != nil {
-		t.Fatalf("Detect nao deve retornar erro quando HOME ausente: %v", err)
-	}
-	if len(got) != 0 {
-		t.Errorf("esperava vazio sem binarios e sem HOME, got %v", got)
-	}
-}
-
-func TestBinaryAgentDetector_AllBinaries(t *testing.T) {
-	t.Parallel()
-
-	lp := fakeLookPath{present: map[string]bool{
-		"claude-agent-acp": true,
-		"codex-acp":        true,
-		"gemini":           true,
-		"copilot":          true,
-	}}
-	hd := fakeHomeDir{home: "/nonexistent-home-xyz"}
-	det := NewBinaryAgentDetector(lp, hd, nil)
-
-	got, err := det.Detect(context.Background(), DetectOptions{})
-	if err != nil {
-		t.Fatalf("Detect retornou erro: %v", err)
-	}
-	if len(got) != 4 {
-		t.Errorf("esperava 4 ferramentas, got %d: %v", len(got), got)
-	}
-}
-
-func TestBinaryAgentDetector_NoDuplicates(t *testing.T) {
-	t.Parallel()
-
-	// Claude via binario E via arquivo de projeto => deve aparecer uma unica vez.
-	lp := fakeLookPath{present: map[string]bool{"claude-agent-acp": true}}
-	hd := fakeHomeDir{home: "/nonexistent-home-xyz"}
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/CLAUDE.md"] = []byte("# Claude")
-	fileDet := NewFileDetector(ffs)
-	det := NewBinaryAgentDetector(lp, hd, fileDet)
-
-	got, err := det.Detect(context.Background(), DetectOptions{ProjectDir: "/project"})
-	if err != nil {
-		t.Fatalf("Detect retornou erro: %v", err)
-	}
-
-	count := 0
-	for _, t := range got {
-		if t == skills.ToolClaude {
-			count++
-		}
-	}
-	if count != 1 {
-		t.Errorf("ToolClaude deveria aparecer exatamente 1 vez, got %d", count)
-	}
-}
-
-func TestAllEntries_CommandsMatchSpecs(t *testing.T) {
-	t.Parallel()
-
-	// Verifica que allEntries reusa nomes de comando das Specs (sem duplicar literais).
-	entries := allEntries()
-	if len(entries) != 4 {
-		t.Fatalf("esperava 4 entries (claude, codex, gemini, copilot), got %d", len(entries))
-	}
-	for _, e := range entries {
-		if e.command == "" {
-			t.Errorf("entry %s tem command vazio", e.tool)
-		}
-		if e.tool == "" {
-			t.Error("entry com tool vazio")
-		}
+func (s *AgentSuite) TestAllEntriesCommandsMatchSpecs() {
+	entries := NewCatalog().allEntries()
+	s.Require().Len(entries, 4, "esperava 4 entries (claude, codex, gemini, copilot)")
+	for _, entry := range entries {
+		s.NotEmpty(entry.command, "entry %s tem command vazio", entry.tool)
+		s.NotEmpty(entry.tool, "entry com tool vazio")
 	}
 }
 

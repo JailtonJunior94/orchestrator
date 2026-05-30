@@ -1,20 +1,20 @@
 package aispecharness
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestInstallRef_MutuallyExclusiveWithSource(t *testing.T) {
-	installTools = "claude"
-	installRef = "v1.0.0"
-	installSource = "/tmp/some-source"
-	t.Cleanup(func() {
-		installTools = ""
-		installRef = ""
-		installSource = ""
-	})
+	cmd := newInstallCmd()
+	if err := cmd.Flags().Set("tools", "claude"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Flags().Set("ref", "v1.0.0"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Flags().Set("source", "/tmp/some-source"); err != nil {
+		t.Fatal(err)
+	}
 
-	err := runInstall(installCmd, []string{"/tmp/project"})
+	err := (&installCommand{}).run(cmd, []string{"/tmp/project"})
 	if err == nil {
 		t.Fatal("expected error when --ref and --source are both set")
 	}

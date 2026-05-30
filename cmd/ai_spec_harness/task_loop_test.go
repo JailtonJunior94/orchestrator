@@ -139,7 +139,7 @@ func TestTaskLoopFlags_Quiet(t *testing.T) {
 	t.Parallel()
 
 	// Verificar que a flag existe no comando.
-	f := taskLoopCmd.Flags().Lookup("quiet")
+	f := newTaskLoopCmd().Flags().Lookup("quiet")
 	if f == nil {
 		t.Fatal("flag --quiet nao registrada no taskLoopCmd")
 	}
@@ -152,7 +152,7 @@ func TestTaskLoopFlags_Quiet(t *testing.T) {
 func TestTaskLoopFlags_RuntimeFlagDefault(t *testing.T) {
 	t.Parallel()
 
-	f := taskLoopCmd.Flags().Lookup("runtime")
+	f := newTaskLoopCmd().Flags().Lookup("runtime")
 	if f == nil {
 		t.Fatal("flag --runtime nao registrada")
 	}
@@ -165,7 +165,7 @@ func TestTaskLoopFlags_RuntimeFlagDefault(t *testing.T) {
 func TestTaskLoopFlags_ActivityTimeoutDefault(t *testing.T) {
 	t.Parallel()
 
-	f := taskLoopCmd.Flags().Lookup("activity-timeout")
+	f := newTaskLoopCmd().Flags().Lookup("activity-timeout")
 	if f == nil {
 		t.Fatal("flag --activity-timeout nao registrada")
 	}
@@ -253,7 +253,7 @@ func TestTaskLoopFlags_AgentExclusivity(t *testing.T) {
 func TestTaskLoopFlags_AgentFlagRegistered(t *testing.T) {
 	t.Parallel()
 
-	f := taskLoopCmd.Flags().Lookup("agent")
+	f := newTaskLoopCmd().Flags().Lookup("agent")
 	if f == nil {
 		t.Fatal("flag --agent nao registrada no taskLoopCmd")
 	}
@@ -284,9 +284,9 @@ func validateRuntimeFlags(runtime, tool string, activityTimeout time.Duration) e
 		return fmt.Errorf("exit2")
 	}
 	if runtime == "acp" {
-		if _, ok := runtimeACPCatalog[tool]; !ok {
-			supported := make([]string, 0, len(runtimeACPCatalog))
-			for k := range runtimeACPCatalog {
+		if _, ok := _runtimeACPCatalog[tool]; !ok {
+			supported := make([]string, 0, len(_runtimeACPCatalog))
+			for k := range _runtimeACPCatalog {
 				supported = append(supported, k)
 			}
 			sort.Strings(supported)
@@ -322,7 +322,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 	t.Run("T-15: claude acp aceito (regressão)", func(t *testing.T) {
 		t.Parallel()
 
-		if _, ok := runtimeACPCatalog["claude"]; !ok {
+		if _, ok := _runtimeACPCatalog["claude"]; !ok {
 			t.Error("runtimeACPCatalog não contém 'claude' — regressão")
 		}
 		err := validateRuntimeFlags("acp", "claude", 0)
@@ -335,7 +335,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 	t.Run("T-13: copilot acp aceito", func(t *testing.T) {
 		t.Parallel()
 
-		if _, ok := runtimeACPCatalog["copilot"]; !ok {
+		if _, ok := _runtimeACPCatalog["copilot"]; !ok {
 			t.Error("runtimeACPCatalog não contém 'copilot'")
 		}
 		err := validateRuntimeFlags("acp", "copilot", 0)
@@ -349,7 +349,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 	t.Run("T-14: gemini acp aceito (ADR-015, RF-25)", func(t *testing.T) {
 		t.Parallel()
 
-		if _, ok := runtimeACPCatalog["gemini"]; !ok {
+		if _, ok := _runtimeACPCatalog["gemini"]; !ok {
 			t.Error("runtimeACPCatalog não contém 'gemini' — tarefa 2.0 não aplicada")
 		}
 		err := validateRuntimeFlags("acp", "gemini", 0)
@@ -362,10 +362,10 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 	t.Run("TestRuntimeACPCatalogIncludesGemini: catálogo inclui gemini (T-13 ext)", func(t *testing.T) {
 		t.Parallel()
 
-		if _, ok := runtimeACPCatalog["gemini"]; !ok {
+		if _, ok := _runtimeACPCatalog["gemini"]; !ok {
 			t.Error("runtimeACPCatalog não contém 'gemini' (T-13 ext — ADR-015)")
 		}
-		spec := runtimeACPCatalog["gemini"]()
+		spec := _runtimeACPCatalog["gemini"]()
 		if spec.ID != "gemini" {
 			t.Errorf("runtimeACPCatalog[\"gemini\"]().ID = %q, esperava \"gemini\"", spec.ID)
 		}
@@ -409,8 +409,8 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 	t.Run("T-16: catálogo contém exatamente claude, codex, copilot e gemini", func(t *testing.T) {
 		t.Parallel()
 
-		keys := make([]string, 0, len(runtimeACPCatalog))
-		for k := range runtimeACPCatalog {
+		keys := make([]string, 0, len(_runtimeACPCatalog))
+		for k := range _runtimeACPCatalog {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
@@ -431,7 +431,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 	t.Run("construtores do catálogo retornam Specs válidas", func(t *testing.T) {
 		t.Parallel()
 
-		for tool, ctor := range runtimeACPCatalog {
+		for tool, ctor := range _runtimeACPCatalog {
 			spec := ctor()
 			if spec.ID != tool {
 				t.Errorf("runtimeACPCatalog[%q]().ID = %q, esperava %q", tool, spec.ID, tool)
@@ -448,7 +448,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 func TestRuntimeACPCatalogIncludesGemini(t *testing.T) {
 	t.Parallel()
 
-	ctor, ok := runtimeACPCatalog["gemini"]
+	ctor, ok := _runtimeACPCatalog["gemini"]
 	if !ok {
 		t.Fatal("runtimeACPCatalog não contém 'gemini' — task 2.0 não aplicada")
 	}
@@ -471,7 +471,7 @@ func TestRuntimeACPCatalogIncludesGemini(t *testing.T) {
 func TestTaskLoopFlags_ReasoningEffortRegistered(t *testing.T) {
 	t.Parallel()
 
-	f := taskLoopCmd.Flags().Lookup("reasoning-effort")
+	f := newTaskLoopCmd().Flags().Lookup("reasoning-effort")
 	if f == nil {
 		t.Fatal("flag --reasoning-effort nao registrada no taskLoopCmd")
 	}
@@ -492,7 +492,7 @@ func TestTaskLoopFlags_ReasoningEffortRegistered(t *testing.T) {
 func TestTaskLoopFlags_AccessModeRegistered(t *testing.T) {
 	t.Parallel()
 
-	f := taskLoopCmd.Flags().Lookup("access-mode")
+	f := newTaskLoopCmd().Flags().Lookup("access-mode")
 	if f == nil {
 		t.Fatal("flag --access-mode nao registrada no taskLoopCmd")
 	}
@@ -731,7 +731,7 @@ func TestTaskLoopFlags_T30_WarningSyncOnce_Global(t *testing.T) {
 
 	// Referência explícita ao ponteiro confirma existência e tipo; compilação falha se ausente.
 	// Usando ponteiro para evitar cópia de sync.Once (go vet: assignment copies lock value).
-	_ = &accessModeFullWarnOnce
+	_ = &_accessModeFullWarnOnce
 }
 
 // TestTaskLoopFlags_T15_MCPNestedNoNormalize valida as flags F2-Claude --mcp-nested e --no-normalize (T-15).
@@ -743,7 +743,7 @@ func TestTaskLoopFlags_T15_MCPNestedNoNormalize(t *testing.T) {
 	t.Run("mcp-nested registrada com default false", func(t *testing.T) {
 		t.Parallel()
 
-		f := taskLoopCmd.Flags().Lookup("mcp-nested")
+		f := newTaskLoopCmd().Flags().Lookup("mcp-nested")
 		if f == nil {
 			t.Fatal("flag --mcp-nested nao registrada no taskLoopCmd")
 		}
@@ -759,7 +759,7 @@ func TestTaskLoopFlags_T15_MCPNestedNoNormalize(t *testing.T) {
 	t.Run("no-normalize registrada com default false", func(t *testing.T) {
 		t.Parallel()
 
-		f := taskLoopCmd.Flags().Lookup("no-normalize")
+		f := newTaskLoopCmd().Flags().Lookup("no-normalize")
 		if f == nil {
 			t.Fatal("flag --no-normalize nao registrada no taskLoopCmd")
 		}
@@ -788,8 +788,8 @@ func TestTaskLoopFlags_T15_MCPNestedNoNormalize(t *testing.T) {
 	t.Run("defaults false preservam comportamento F1-Claude", func(t *testing.T) {
 		t.Parallel()
 
-		mcpFlag := taskLoopCmd.Flags().Lookup("mcp-nested")
-		normFlag := taskLoopCmd.Flags().Lookup("no-normalize")
+		mcpFlag := newTaskLoopCmd().Flags().Lookup("mcp-nested")
+		normFlag := newTaskLoopCmd().Flags().Lookup("no-normalize")
 		if mcpFlag == nil || normFlag == nil {
 			t.Fatal("flags F2-Claude nao registradas")
 		}
@@ -808,7 +808,7 @@ func TestTaskLoopFlags_T16_F3Flags(t *testing.T) {
 	t.Run("T-16a: memory-workflow-limit-lines default 150", func(t *testing.T) {
 		t.Parallel()
 
-		f := taskLoopCmd.Flags().Lookup("memory-workflow-limit-lines")
+		f := newTaskLoopCmd().Flags().Lookup("memory-workflow-limit-lines")
 		if f == nil {
 			t.Fatal("flag --memory-workflow-limit-lines nao registrada")
 		}
@@ -820,7 +820,7 @@ func TestTaskLoopFlags_T16_F3Flags(t *testing.T) {
 	t.Run("T-16b: memory-workflow-limit-bytes default 12288", func(t *testing.T) {
 		t.Parallel()
 
-		f := taskLoopCmd.Flags().Lookup("memory-workflow-limit-bytes")
+		f := newTaskLoopCmd().Flags().Lookup("memory-workflow-limit-bytes")
 		if f == nil {
 			t.Fatal("flag --memory-workflow-limit-bytes nao registrada")
 		}
@@ -832,7 +832,7 @@ func TestTaskLoopFlags_T16_F3Flags(t *testing.T) {
 	t.Run("T-16c: memory-task-limit-lines default 200", func(t *testing.T) {
 		t.Parallel()
 
-		f := taskLoopCmd.Flags().Lookup("memory-task-limit-lines")
+		f := newTaskLoopCmd().Flags().Lookup("memory-task-limit-lines")
 		if f == nil {
 			t.Fatal("flag --memory-task-limit-lines nao registrada")
 		}
@@ -844,7 +844,7 @@ func TestTaskLoopFlags_T16_F3Flags(t *testing.T) {
 	t.Run("T-16d: memory-task-limit-bytes default 16384", func(t *testing.T) {
 		t.Parallel()
 
-		f := taskLoopCmd.Flags().Lookup("memory-task-limit-bytes")
+		f := newTaskLoopCmd().Flags().Lookup("memory-task-limit-bytes")
 		if f == nil {
 			t.Fatal("flag --memory-task-limit-bytes nao registrada")
 		}
@@ -856,7 +856,7 @@ func TestTaskLoopFlags_T16_F3Flags(t *testing.T) {
 	t.Run("T-16e: disable-hooks default false", func(t *testing.T) {
 		t.Parallel()
 
-		f := taskLoopCmd.Flags().Lookup("disable-hooks")
+		f := newTaskLoopCmd().Flags().Lookup("disable-hooks")
 		if f == nil {
 			t.Fatal("flag --disable-hooks nao registrada")
 		}
@@ -877,8 +877,8 @@ func TestTaskLoopFlags_T16_F3Flags(t *testing.T) {
 		t.Parallel()
 
 		// Verificar que ambas as flags existem e são do tipo correto (não interferem entre si).
-		dhFlag := taskLoopCmd.Flags().Lookup("disable-hooks")
-		mwlFlag := taskLoopCmd.Flags().Lookup("memory-workflow-limit-lines")
+		dhFlag := newTaskLoopCmd().Flags().Lookup("disable-hooks")
+		mwlFlag := newTaskLoopCmd().Flags().Lookup("memory-workflow-limit-lines")
 
 		if dhFlag == nil || mwlFlag == nil {
 			t.Fatal("flags F3 ausentes")
@@ -1007,7 +1007,7 @@ func TestAccessModeFullWarnOnce_GeminiVsCodex(t *testing.T) {
 func TestGeminiSpecHasCorrectCommandAndFlags(t *testing.T) {
 	t.Parallel()
 
-	ctor, ok := runtimeACPCatalog["gemini"]
+	ctor, ok := _runtimeACPCatalog["gemini"]
 	if !ok {
 		t.Fatal("runtimeACPCatalog não contém 'gemini'")
 	}
@@ -1025,7 +1025,7 @@ func TestGeminiSpecHasCorrectCommandAndFlags(t *testing.T) {
 func TestGeminiFallbackResolvesViaNpx(t *testing.T) {
 	t.Parallel()
 
-	ctor, ok := runtimeACPCatalog["gemini"]
+	ctor, ok := _runtimeACPCatalog["gemini"]
 	if !ok {
 		t.Fatal("runtimeACPCatalog não contém 'gemini'")
 	}
@@ -1166,7 +1166,7 @@ func TestGeminiDefaultsDoNotAffectClaudeCodexCopilot(t *testing.T) {
 func TestTaskLoopFlags_ReasoningEffortAndAccessModeDefaults(t *testing.T) {
 	t.Parallel()
 
-	f := taskLoopCmd.Flags().Lookup("reasoning-effort")
+	f := newTaskLoopCmd().Flags().Lookup("reasoning-effort")
 	if f == nil {
 		t.Fatal("flag --reasoning-effort nao encontrada")
 	}
@@ -1174,7 +1174,7 @@ func TestTaskLoopFlags_ReasoningEffortAndAccessModeDefaults(t *testing.T) {
 		t.Errorf("default --reasoning-effort = %q, esperava medium", f.DefValue)
 	}
 
-	g := taskLoopCmd.Flags().Lookup("access-mode")
+	g := newTaskLoopCmd().Flags().Lookup("access-mode")
 	if g == nil {
 		t.Fatal("flag --access-mode nao encontrada")
 	}

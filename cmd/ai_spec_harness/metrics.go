@@ -7,10 +7,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var metricsCmd = &cobra.Command{
-	Use:   "metrics [path]",
-	Short: "Reporta metricas de contexto para governanca",
-	Long: `Calcula e exibe metricas de tokens estimados por baseline, fluxo
+func newMetricsCmd() *cobra.Command {
+	var metricsFormat string
+	var metricsPrecise bool
+	var metricsBrief bool
+
+	cmd := &cobra.Command{
+		Use:   "metrics [path]",
+		Short: "Reporta metricas de contexto para governanca",
+		Long: `Calcula e exibe metricas de tokens estimados por baseline, fluxo
 e perfil de carga de skills e referencias.
 
 Por default usa a heuristica chars/3.5 (sem dependencia externa).
@@ -20,40 +25,35 @@ Exemplos:
   ai-spec-harness metrics
   ai-spec-harness metrics ~/ai-spec --format json
   ai-spec-harness metrics --precise`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		rootDir := "."
-		if len(args) > 0 {
-			rootDir = args[0]
-		}
-		printer := output.New(verbose)
-		fsys := fs.NewOSFileSystem()
-
-		var tok metrics.Tokenizer
-		if metricsPrecise {
-			var usingTiktoken bool
-			tok, usingTiktoken = metrics.NewPreciseTokenizer()
-			if usingTiktoken {
-				printer.Info("Tokenizer: tiktoken/cl100k_base (preciso)")
-			} else {
-				printer.Info("Tokenizer: chars/3.5 (fallback — tiktoken nao disponivel)")
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rootDir := "."
+			if len(args) > 0 {
+				rootDir = args[0]
 			}
-		} else {
-			tok = metrics.NewCharEstimator()
-		}
+			printer := output.New(newCommandEnv().verbose(cmd))
+			fsys := fs.NewOSFileSystem()
 
-		svc := metrics.NewService(fsys, printer, tok)
-		return svc.Execute(rootDir, metricsFormat, metricsBrief)
-	},
-}
+			var tok metrics.Tokenizer
+			if metricsPrecise {
+				var usingTiktoken bool
+				tok, usingTiktoken = metrics.NewPreciseTokenizer()
+				if usingTiktoken {
+					printer.Info("Tokenizer: tiktoken/cl100k_base (preciso)")
+				} else {
+					printer.Info("Tokenizer: chars/3.5 (fallback — tiktoken nao disponivel)")
+				}
+			} else {
+				tok = metrics.NewCharEstimator()
+			}
 
-var metricsFormat string
-var metricsPrecise bool
-var metricsBrief bool
+			svc := metrics.NewService(fsys, printer, tok)
+			return svc.Execute(rootDir, metricsFormat, metricsBrief)
+		},
+	}
 
-func init() {
-	metricsCmd.Flags().StringVar(&metricsFormat, "format", "table", "Formato de saida: table ou json")
-	metricsCmd.Flags().BoolVar(&metricsPrecise, "precise", false, "Usa tiktoken cl100k_base para contagem precisa de tokens (~15% mais preciso)")
-	metricsCmd.Flags().BoolVar(&metricsBrief, "brief", false, "Estima economia com modo brief (apenas TL;DR de referencias)")
-	rootCmd.AddCommand(metricsCmd)
+	cmd.Flags().StringVar(&metricsFormat, "format", "table", "Formato de saida: table ou json")
+	cmd.Flags().BoolVar(&metricsPrecise, "precise", false, "Usa tiktoken cl100k_base para contagem precisa de tokens (~15% mais preciso)")
+	cmd.Flags().BoolVar(&metricsBrief, "brief", false, "Estima economia com modo brief (apenas TL;DR de referencias)")
+	return cmd
 }

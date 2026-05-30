@@ -12,6 +12,8 @@ type LocalSource struct {
 	Dir string
 }
 
+var _ SourceProvider = (*LocalSource)(nil)
+
 func (s *LocalSource) SourceDir() string { return s.Dir }
 
 // InstallScope define o escopo de instalacao: projeto (default) ou global.
@@ -29,10 +31,10 @@ const (
 type InstallOptions struct {
 	ProjectDir   string
 	SourceDir    string
-	Tools        []skills.Tool  // OPCIONAL: vazio => auto-detect via AgentDetector (ADR-019)
+	Tools        []skills.Tool // OPCIONAL: vazio => auto-detect via AgentDetector (ADR-019)
 	Langs        []skills.Lang
 	LinkMode     skills.LinkMode
-	Scope        InstallScope   // novo (ADR-019): "project" (default) ou "global"
+	Scope        InstallScope // novo (ADR-019): "project" (default) ou "global"
 	DryRun       bool
 	GenerateCtx  bool
 	CodexProfile string

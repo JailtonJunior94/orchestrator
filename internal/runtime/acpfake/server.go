@@ -147,12 +147,12 @@ func (a *fakeAgent) Prompt(ctx context.Context, p acp.PromptRequest) (acp.Prompt
 		}
 
 		// Update vazio = marcador de sessão finalizada (AppendSessionEnd).
-		if isSessionEnd(su.Update) {
+		if NewCatalog().isSessionEnd(su.Update) {
 			return acp.PromptResponse{StopReason: acp.StopReasonEndTurn}, nil
 		}
 
 		// Plan com entrada "requestPermission:*" = solicitar permissão (RF-16).
-		if reqPerm, toolName := isRequestPermission(su.Update); reqPerm {
+		if reqPerm, toolName := NewCatalog().isRequestPermission(su.Update); reqPerm {
 			_, _ = conn.RequestPermission(ctx, acp.RequestPermissionRequest{
 				SessionId: p.SessionId,
 				ToolCall: acp.ToolCallUpdate{
@@ -186,7 +186,7 @@ func (a *fakeAgent) Prompt(ctx context.Context, p acp.PromptRequest) (acp.Prompt
 }
 
 // isSessionEnd retorna true para o marcador de fim de sessão (update vazio).
-func isSessionEnd(u acp.SessionUpdate) bool {
+func (c *Catalog) isSessionEnd(u acp.SessionUpdate) bool {
 	return u.AgentMessageChunk == nil &&
 		u.AgentThoughtChunk == nil &&
 		u.ToolCall == nil &&
@@ -196,7 +196,7 @@ func isSessionEnd(u acp.SessionUpdate) bool {
 }
 
 // isRequestPermission detecta o marcador de requestPermission.
-func isRequestPermission(u acp.SessionUpdate) (bool, string) {
+func (c *Catalog) isRequestPermission(u acp.SessionUpdate) (bool, string) {
 	if u.Plan == nil || len(u.Plan.Entries) == 0 {
 		return false, ""
 	}

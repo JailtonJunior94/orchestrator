@@ -20,7 +20,7 @@ func makeCommits() []semver.Commit {
 
 func TestGroupByType(t *testing.T) {
 	commits := makeCommits()
-	groups := GroupByType(commits)
+	groups := NewGenerator().GroupByType(commits)
 
 	if len(groups["feat"]) != 2 {
 		t.Fatalf("expected 2 feat entries, got %d", len(groups["feat"]))
@@ -48,7 +48,7 @@ func TestGroupByType_SkipsNoType(t *testing.T) {
 	commits := []semver.Commit{
 		{Hash: "abc1234567", Type: "", Subject: "some random message", Raw: "some random message"},
 	}
-	groups := GroupByType(commits)
+	groups := NewGenerator().GroupByType(commits)
 	if len(groups) != 0 {
 		t.Errorf("expected empty groups, got %v", groups)
 	}
@@ -58,15 +58,15 @@ func TestGroupByType_ScopeExtracted(t *testing.T) {
 	commits := []semver.Commit{
 		{Hash: "abc1234567", Type: "feat", Subject: "add feature", Raw: "feat(myScope): add feature"},
 	}
-	groups := GroupByType(commits)
+	groups := NewGenerator().GroupByType(commits)
 	if groups["feat"][0].Scope != "myScope" {
 		t.Errorf("expected scope 'myScope', got '%s'", groups["feat"][0].Scope)
 	}
 }
 
 func TestRenderSection(t *testing.T) {
-	groups := GroupByType(makeCommits())
-	section := RenderSection("1.3.0", "2026-04-20", groups)
+	groups := NewGenerator().GroupByType(makeCommits())
+	section := NewGenerator().RenderSection("1.3.0", "2026-04-20", groups)
 
 	checks := []string{
 		"## 1.3.0 (2026-04-20)",
@@ -89,8 +89,8 @@ func TestRenderSection_NoBreaking(t *testing.T) {
 	commits := []semver.Commit{
 		{Hash: "abc1234567", Type: "feat", Subject: "simple feature", Raw: "feat: simple feature"},
 	}
-	groups := GroupByType(commits)
-	section := RenderSection("1.1.0", "2026-01-01", groups)
+	groups := NewGenerator().GroupByType(commits)
+	section := NewGenerator().RenderSection("1.1.0", "2026-01-01", groups)
 
 	if strings.Contains(section, "Breaking Changes") {
 		t.Error("section should not contain Breaking Changes when there are none")
@@ -102,7 +102,7 @@ func TestUpdateChangelog_NewFile(t *testing.T) {
 	path := filepath.Join(dir, "CHANGELOG.md")
 
 	section := "## 1.0.0 (2026-01-01)\n\n### Features\n- init (abc1234)\n\n"
-	if err := UpdateChangelog(path, section); err != nil {
+	if err := NewGenerator().UpdateChangelog(path, section); err != nil {
 		t.Fatal(err)
 	}
 
@@ -126,7 +126,7 @@ func TestUpdateChangelog_ExistingFile(t *testing.T) {
 	}
 
 	newSection := "## 1.1.0 (2026-04-20)\n\n### Features\n- new feature (new5678)\n\n"
-	if err := UpdateChangelog(path, newSection); err != nil {
+	if err := NewGenerator().UpdateChangelog(path, newSection); err != nil {
 		t.Fatal(err)
 	}
 

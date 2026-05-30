@@ -34,12 +34,12 @@ type DriftReport struct {
 	Pass     bool
 }
 
-var idRegex = regexp.MustCompile(`(?i)(RF-\d+|REQ-\d+)`)
+var _idRegex = regexp.MustCompile(`(?i)(RF-\d+|REQ-\d+)`)
 
 // CheckCoverage extracts RF-nn/REQ-nn IDs from sourceContent and verifies
 // their presence in targetContent (case-insensitive).
-func CheckCoverage(sourceContent, targetContent []byte) CoverageResult {
-	matches := idRegex.FindAllString(string(sourceContent), -1)
+func (c *Catalog) CheckCoverage(sourceContent, targetContent []byte) CoverageResult {
+	matches := _idRegex.FindAllString(string(sourceContent), -1)
 
 	seen := make(map[string]struct{})
 	var foundIDs []string
@@ -68,7 +68,7 @@ func CheckCoverage(sourceContent, targetContent []byte) CoverageResult {
 
 // CheckHash calculates SHA-256 of specContent and compares it with the hash
 // registered in tasksContent via comment <!-- spec-hash-{label}: {hash} -->.
-func CheckHash(specContent, tasksContent []byte, label string) HashResult {
+func (c *Catalog) CheckHash(specContent, tasksContent []byte, label string) HashResult {
 	sum := sha256.Sum256(specContent)
 	actualHash := fmt.Sprintf("%x", sum)
 
@@ -97,7 +97,7 @@ func CheckHash(specContent, tasksContent []byte, label string) HashResult {
 
 // CheckDrift runs both coverage and hash checks for a directory.
 // It expects to find prd.md, techspec.md (optional), and tasks.md.
-func CheckDrift(dir string) (DriftReport, error) {
+func (c *Catalog) CheckDrift(dir string) (DriftReport, error) {
 	tasksPath := filepath.Join(dir, "tasks.md")
 	tasksContent, err := os.ReadFile(tasksPath)
 	if err != nil {
@@ -122,7 +122,7 @@ func CheckDrift(dir string) (DriftReport, error) {
 			continue
 		}
 
-		cov := CheckCoverage(specContent, tasksContent)
+		cov := NewCatalog().CheckCoverage(specContent, tasksContent)
 		cov.SourceFile = spec.filename
 		cov.TargetFile = "tasks.md"
 		report.Coverage = append(report.Coverage, cov)
@@ -130,7 +130,7 @@ func CheckDrift(dir string) (DriftReport, error) {
 			report.Pass = false
 		}
 
-		hash := CheckHash(specContent, tasksContent, spec.label)
+		hash := NewCatalog().CheckHash(specContent, tasksContent, spec.label)
 		hash.File = spec.filename
 		report.Hashes = append(report.Hashes, hash)
 		if !hash.Match {

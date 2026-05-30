@@ -13,21 +13,30 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var skillsMode string
+type versionCommand struct{}
 
-var versionCmd = &cobra.Command{
-	Use:   "version",
-	Short: "Exibe a versao do ai-spec-harness",
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return runVersion(cmd.OutOrStdout(), skillsMode, "")
-	},
+func newVersionCmd() *cobra.Command {
+	handler := &versionCommand{}
+	var skillsMode string
+
+	cmd := &cobra.Command{
+		Use:   "version",
+		Short: "Exibe a versao do ai-spec-harness",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return handler.run(cmd.OutOrStdout(), skillsMode, "")
+		},
+	}
+
+	cmd.Flags().StringVar(&skillsMode, "skills", "", "Listar versoes de skills: embedded, installed, ou ambos (sem valor)")
+	cmd.Flags().Lookup("skills").NoOptDefVal = "both"
+	return cmd
 }
 
 // runVersion exibe a versao do CLI e, opcionalmente, as versoes das skills.
 // installedDir sobrescreve o diretorio de busca de skills instaladas (usado em testes);
 // se vazio, usa os.Getwd().
-func runVersion(w io.Writer, mode string, installedDir string) error {
-	fmt.Fprintf(w, "ai-spec-harness %s (commit: %s, built: %s)\n", version.Resolve("."), version.Commit, version.Date)
+func (c *versionCommand) run(w io.Writer, mode string, installedDir string) error {
+	fmt.Fprintf(w, "ai-spec-harness %s (commit: %s, built: %s)\n", version.NewProvider().Resolve("."), version.Commit, version.Date)
 
 	if mode == "" {
 		return nil
@@ -35,52 +44,52 @@ func runVersion(w io.Writer, mode string, installedDir string) error {
 
 	switch mode {
 	case "embedded":
-		skills, err := listEmbeddedSkills()
+		skills, err := c.listEmbeddedSkills()
 		if err != nil {
 			return fmt.Errorf("listar skills embutidas: %w", err)
 		}
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Embedded skills:")
-		fprintSkills(w, skills)
+		c.fprintSkills(w, skills)
 
 	case "installed":
-		dir, err := resolveInstalledDir(installedDir)
+		dir, err := c.resolveInstalledDir(installedDir)
 		if err != nil {
 			return err
 		}
-		skills, err := listInstalledSkillsFromPath(dir)
+		skills, err := c.listInstalledSkillsFromPath(dir)
 		if err != nil {
 			return fmt.Errorf("listar skills instaladas: %w", err)
 		}
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Installed skills:")
-		fprintSkills(w, skills)
+		c.fprintSkills(w, skills)
 
 	default: // "both"
-		embSkills, err := listEmbeddedSkills()
+		embSkills, err := c.listEmbeddedSkills()
 		if err != nil {
 			return fmt.Errorf("listar skills embutidas: %w", err)
 		}
-		dir, err := resolveInstalledDir(installedDir)
+		dir, err := c.resolveInstalledDir(installedDir)
 		if err != nil {
 			return err
 		}
-		instSkills, err := listInstalledSkillsFromPath(dir)
+		instSkills, err := c.listInstalledSkillsFromPath(dir)
 		if err != nil {
 			return fmt.Errorf("listar skills instaladas: %w", err)
 		}
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Embedded skills:")
-		fprintSkills(w, embSkills)
+		c.fprintSkills(w, embSkills)
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "Installed skills:")
-		fprintSkills(w, instSkills)
+		c.fprintSkills(w, instSkills)
 	}
 
 	return nil
 }
 
-func resolveInstalledDir(override string) (string, error) {
+func (c *versionCommand) resolveInstalledDir(override string) (string, error) {
 	if override != "" {
 		return override, nil
 	}
@@ -91,18 +100,12 @@ func resolveInstalledDir(override string) (string, error) {
 	return cwd, nil
 }
 
-func init() {
-	versionCmd.Flags().StringVar(&skillsMode, "skills", "", "Listar versoes de skills: embedded, installed, ou ambos (sem valor)")
-	versionCmd.Flags().Lookup("skills").NoOptDefVal = "both"
-	rootCmd.AddCommand(versionCmd)
-}
-
 type skillEntry struct {
 	Name    string
 	Version string
 }
 
-func listEmbeddedSkills() ([]skillEntry, error) {
+func (c *versionCommand) listEmbeddedSkills() ([]skillEntry, error) {
 	const root = "assets/.agents/skills"
 
 	entries, err := embedded.Assets.ReadDir(root)
@@ -122,7 +125,7 @@ func listEmbeddedSkills() ([]skillEntry, error) {
 			skills = append(skills, skillEntry{Name: skillName})
 			continue
 		}
-		fm := internalskills.ParseFrontmatter(data)
+		fm := internalskills.NewCatalog().ParseFrontmatter(data)
 		name := fm.Name
 		if name == "" {
 			name = skillName
@@ -136,7 +139,7 @@ func listEmbeddedSkills() ([]skillEntry, error) {
 	return skills, nil
 }
 
-func listInstalledSkillsFromPath(dir string) ([]skillEntry, error) {
+func (c *versionCommand) listInstalledSkillsFromPath(dir string) ([]skillEntry, error) {
 	skillsDir := filepath.Join(dir, ".agents", "skills")
 	if _, err := os.Stat(skillsDir); os.IsNotExist(err) {
 		return nil, nil
@@ -159,7 +162,7 @@ func listInstalledSkillsFromPath(dir string) ([]skillEntry, error) {
 			skills = append(skills, skillEntry{Name: skillName})
 			continue
 		}
-		fm := internalskills.ParseFrontmatter(data)
+		fm := internalskills.NewCatalog().ParseFrontmatter(data)
 		name := fm.Name
 		if name == "" {
 			name = skillName
@@ -173,7 +176,7 @@ func listInstalledSkillsFromPath(dir string) ([]skillEntry, error) {
 	return skills, nil
 }
 
-func fprintSkills(w io.Writer, skills []skillEntry) {
+func (c *versionCommand) fprintSkills(w io.Writer, skills []skillEntry) {
 	if len(skills) == 0 {
 		fmt.Fprintln(w, "  nenhuma skill instalada")
 		return

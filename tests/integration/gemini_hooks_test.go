@@ -48,12 +48,11 @@ func TestGeminiHooksDispatch(t *testing.T) {
 
 		pfact, _ := newE2EPersistenceFactory()
 
-		runner := airuntime.NewACPRunner(
-			specs.Gemini(),
-			airuntime.WithProber(&geminiHookFakeProber{}),
-			airuntime.WithClientFactory(&geminiHookFakeClientFactory{script: script, ctx: ctx, t: t}),
-			airuntime.WithPersistenceFactory(pfact),
-			airuntime.WithRenderer(&e2eDiscardRenderer{}),
+		runner := airuntime.NewACPRunner(specs.NewCatalog().
+			Gemini(), airuntime.NewCatalog().WithProber(&geminiHookFakeProber{}), airuntime.NewCatalog().
+			WithClientFactory(&geminiHookFakeClientFactory{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+			WithPersistenceFactory(pfact), airuntime.NewCatalog().
+			WithRenderer(&e2eDiscardRenderer{}),
 		)
 
 		// WorkDir com AGENTS.md: governance hook (runtime.pre_open) deve passar.
@@ -90,12 +89,11 @@ func TestGeminiHooksDispatch(t *testing.T) {
 
 		pfact, _ := newE2EPersistenceFactory()
 
-		runner := airuntime.NewACPRunner(
-			specs.Gemini(),
-			airuntime.WithProber(&geminiHookFakeProber{}),
-			airuntime.WithClientFactory(&geminiHookFakeClientFactory{script: script, ctx: ctx, t: t}),
-			airuntime.WithPersistenceFactory(pfact),
-			airuntime.WithRenderer(&e2eDiscardRenderer{}),
+		runner := airuntime.NewACPRunner(specs.NewCatalog().
+			Gemini(), airuntime.NewCatalog().WithProber(&geminiHookFakeProber{}), airuntime.NewCatalog().
+			WithClientFactory(&geminiHookFakeClientFactory{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+			WithPersistenceFactory(pfact), airuntime.NewCatalog().
+			WithRenderer(&e2eDiscardRenderer{}),
 		)
 
 		// Sem AGENTS.md: sem hooks ativos, não deve falhar.

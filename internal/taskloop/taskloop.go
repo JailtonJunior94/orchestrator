@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -138,7 +139,7 @@ func (s *Service) createInvokerWithFallback(tool, fallbackModel string) (AgentIn
 // compatibilityStatusLabel retorna o label de compatibilidade para exibicao no dry-run.
 // Verifica a tabela interna independentemente de AllowUnknownModel: o status reflete
 // o que a tabela conhece, nao se o usuario optou por ignorar a validacao.
-func compatibilityStatusLabel(table *CompatibilityTable, tool, model string) string {
+func (c *Catalog) compatibilityStatusLabel(table *CompatibilityTable, tool, model string) string {
 	if table.IsSupported(tool, model) {
 		return "✓ (compativel)"
 	}
@@ -160,7 +161,7 @@ func (s *Service) printDryRunAdvancedHeader(opts Options, absFolder, workDir str
 	if execModelDisplay == "" {
 		execModelDisplay = "default"
 	}
-	execStatus := compatibilityStatusLabel(table, exec.Tool(), exec.Model())
+	execStatus := NewCatalog().compatibilityStatusLabel(table, exec.Tool(), exec.Model())
 	s.printer.DryRun("executor: %s / %s / %s %s", exec.Tool(), exec.Provider(), execModelDisplay, execStatus)
 
 	// Reviewer — tool / provider / model + status de compatibilidade (quando configurado)
@@ -170,7 +171,7 @@ func (s *Service) printDryRunAdvancedHeader(opts Options, absFolder, workDir str
 		if revModelDisplay == "" {
 			revModelDisplay = "default"
 		}
-		revStatus := compatibilityStatusLabel(table, rev.Tool(), rev.Model())
+		revStatus := NewCatalog().compatibilityStatusLabel(table, rev.Tool(), rev.Model())
 		s.printer.DryRun("reviewer: %s / %s / %s %s", rev.Tool(), rev.Provider(), revModelDisplay, revStatus)
 	}
 
@@ -186,12 +187,12 @@ func (s *Service) printDryRunAdvancedHeader(opts Options, absFolder, workDir str
 	if err != nil {
 		return
 	}
-	tasks, err := ParseTasksFile(tasksContent)
+	tasks, err := NewCatalog().ParseTasksFile(tasksContent)
 	if err != nil {
 		return
 	}
-	tasks = reconcileTaskStatuses(tasks, absFolder, s.fsys)
-	eligible := FindEligible(tasks, nil)
+	tasks = NewCatalog().reconcileTaskStatuses(tasks, absFolder, s.fsys)
+	eligible := NewCatalog().FindEligible(tasks, nil)
 
 	if len(eligible) == 0 {
 		s.printer.DryRun("tasks elegiveis: nenhuma")
@@ -206,7 +207,7 @@ func (s *Service) printDryRunAdvancedHeader(opts Options, absFolder, workDir str
 
 	// RF-12: preview do template resolvido para a primeira task elegivel
 	firstTask := eligible[0]
-	taskFile, err := ResolveTaskFile(absFolder, firstTask, s.fsys)
+	taskFile, err := NewCatalog().ResolveTaskFile(absFolder, firstTask, s.fsys)
 	if err != nil {
 		return
 	}
@@ -219,14 +220,14 @@ func (s *Service) printDryRunAdvancedHeader(opts Options, absFolder, workDir str
 		relPRD = absFolder
 	}
 
-	preview, err := BuildReviewPrompt(opts.ReviewerPromptTemplate, ReviewTemplateData{
+	preview, err := NewCatalog().BuildReviewPrompt(opts.ReviewerPromptTemplate, ReviewTemplateData{
 		TaskFile:       relTaskFile,
 		PRDFolder:      relPRD,
 		TechSpec:       filepath.Join(relPRD, "techspec.md"),
 		TasksFile:      filepath.Join(relPRD, "tasks.md"),
 		Diff:           "(dry-run: diff nao disponivel)",
 		CompletedTasks: "(dry-run: nenhuma task executada)",
-		RiskAreas:      detectRiskAreas(relPRD, workDir, "", s.fsys),
+		RiskAreas:      NewCatalog().detectRiskAreas(relPRD, workDir, "", s.fsys),
 	}, s.fsys)
 	if err != nil {
 		return
@@ -259,7 +260,7 @@ func (s *Service) Execute(opts Options) error {
 	var resolvedAgent *agents.ResolvedAgent
 	var agentCatalog []agents.ResolvedAgent
 	if opts.AgentName != "" {
-		workDirForAgent, wdErr := resolveWorkDir(absFolder, s.fsys)
+		workDirForAgent, wdErr := NewCatalog().resolveWorkDir(absFolder, s.fsys)
 		if wdErr != nil {
 			workDirForAgent = absFolder
 		}
@@ -276,7 +277,7 @@ func (s *Service) Execute(opts Options) error {
 		// Derivar ProfileConfig do agente quando Profiles nao foi explicitamente configurado.
 		if opts.Profiles == nil {
 			override := agents.RuntimeOverride{}
-			agentProfile, profileErr := ResolveProfileFromAgent(agent, override, opts.AllowUnknownModel)
+			agentProfile, profileErr := NewCatalog().ResolveProfileFromAgent(agent, override, opts.AllowUnknownModel)
 			if profileErr != nil {
 				return fmt.Errorf("erro ao derivar perfil do agente %q: %w", opts.AgentName, profileErr)
 			}
@@ -346,38 +347,25 @@ func (s *Service) Execute(opts Options) error {
 			// Resolver config hierárquica uma vez (ADR-025, RIN-01):
 			// flags CLI > workspace > global > defaults built-in.
 			// O mesmo RuntimeConfig é injetado nos Jobs das 4 CLIs (paridade idêntica).
-			resolvedRC, rcErr := resolveRuntimeConfig(absFolder, optionsToConfigOverrides(opts))
+			resolvedRC, rcErr := NewCatalog().resolveRuntimeConfig(absFolder, NewCatalog().optionsToConfigOverrides(opts))
 			if rcErr != nil {
 				return fmt.Errorf("taskloop: wiring RuntimeConfig: %w", rcErr)
 			}
 
-			spec := resolveACPSpec(executorTool)
+			spec := NewCatalog().resolveACPSpec(executorTool)
 			factory := persistence.NewSessionPersistenceFactory(fs.NewOSFileSystem())
 			runner := airuntime.NewACPRunner(
-				spec,
-				airuntime.WithPersistenceFactory(factory),
+				spec, airuntime.NewCatalog().
+					WithPersistenceFactory(factory),
 			)
 			// Usar o Timeout do RuntimeConfig resolvido (ADR-025).
 			// resolvedRC.Timeout já incorpora a precedência flags > workspace > global > defaults.
 			// Se Timeout estiver disabled (zero), Duration() retorna 0, equivalente a F1.
-			invoker = NewACPInvoker(runner, opts.Quiet, resolvedRC.Timeout.Duration(),
-				WithACPInvokerReasoningEffort(opts.ReasoningEffort),
-				WithACPInvokerAccessMode(specs.AccessMode(opts.AccessMode)),
-				WithACPInvokerAddDirs(opts.AddDirs),
-				WithACPInvokerMCPNested(opts.MCPNested),
-				WithACPInvokerNoNormalize(opts.NoNormalize),
-				WithACPInvokerMemoryLimitLines(opts.MemoryWorkflowLimitLines, opts.MemoryTaskLimitLines),
-				WithACPInvokerMemoryLimitBytes(opts.MemoryWorkflowLimitBytes, opts.MemoryTaskLimitBytes),
-				WithACPInvokerMemoryLimitsExplicit(opts.MemoryLimitsSet),
-				WithACPInvokerDisableHooks(opts.DisableHooks),
-				WithACPInvokerSkipDriftGuard(opts.SkipDriftGuard),
-				WithACPInvokerTasksDir(opts.PRDFolder),
-				WithACPInvokerAutoReview(opts.AutoReview),
-				// RuntimeConfig hierárquico (ADR-025): MaxRetries e RetryBackoffMultiplier
-				// vêm da cascata resolvida (flags > workspace > global > defaults).
-				// Concurrent e BatchSize são consumidos pelo RunLoop via opts (ADR-018).
-				WithACPInvokerMaxRetries(resolvedRC.MaxRetries),
-				WithACPInvokerRetryBackoffMultiplier(resolvedRC.RetryBackoffMultiplier),
+			invoker = NewACPInvoker(runner, opts.Quiet, resolvedRC.Timeout.Duration(), NewCatalog().WithACPInvokerReasoningEffort(opts.ReasoningEffort), NewCatalog().WithACPInvokerAccessMode(specs.AccessMode(opts.AccessMode)), NewCatalog().WithACPInvokerAddDirs(opts.AddDirs), NewCatalog().WithACPInvokerMCPNested(opts.MCPNested), NewCatalog().WithACPInvokerNoNormalize(opts.NoNormalize), NewCatalog().WithACPInvokerMemoryLimitLines(opts.MemoryWorkflowLimitLines, opts.MemoryTaskLimitLines), NewCatalog().WithACPInvokerMemoryLimitBytes(opts.MemoryWorkflowLimitBytes, opts.MemoryTaskLimitBytes), NewCatalog().WithACPInvokerMemoryLimitsExplicit(opts.MemoryLimitsSet), NewCatalog().WithACPInvokerDisableHooks(opts.DisableHooks), NewCatalog().WithACPInvokerSkipDriftGuard(opts.SkipDriftGuard), NewCatalog().WithACPInvokerTasksDir(opts.PRDFolder), NewCatalog().WithACPInvokerAutoReview(opts.AutoReview), NewCatalog(
+			// RuntimeConfig hierárquico (ADR-025): MaxRetries e RetryBackoffMultiplier
+			// vêm da cascata resolvida (flags > workspace > global > defaults).
+			// Concurrent e BatchSize são consumidos pelo RunLoop via opts (ADR-018).
+			).WithACPInvokerMaxRetries(resolvedRC.MaxRetries), NewCatalog().WithACPInvokerRetryBackoffMultiplier(resolvedRC.RetryBackoffMultiplier),
 			)
 		}
 	} else {
@@ -391,7 +379,7 @@ func (s *Service) Execute(opts Options) error {
 	if !opts.DryRun {
 		checker := s.binaryChecker
 		if checker == nil {
-			checker = CheckAgentBinary
+			checker = NewCatalog().CheckAgentBinary
 		}
 		if opts.Runtime != "acp" {
 			if err := checker(invoker); err != nil {
@@ -403,7 +391,7 @@ func (s *Service) Execute(opts Options) error {
 		// Detecta ausencia de ANTHROPIC_API_KEY e de sessao local antes de iniciar
 		// o loop, evitando que a falha de auth so apareca na primeira iteracao.
 		if executorTool == "claude" {
-			if warn := warnClaudeAuth(); warn != "" {
+			if warn := NewCatalog().warnClaudeAuth(); warn != "" {
 				s.printer.Warn("claude auth: %s", warn)
 			}
 		}
@@ -420,7 +408,7 @@ func (s *Service) Execute(opts Options) error {
 	}
 
 	// Resolver diretorio de trabalho (raiz do projeto — pai do prd folder ou cwd)
-	workDir, err := resolveWorkDir(absFolder, s.fsys)
+	workDir, err := NewCatalog().resolveWorkDir(absFolder, s.fsys)
 	if err != nil {
 		return fmt.Errorf("erro ao resolver diretorio de trabalho: %w", err)
 	}
@@ -446,7 +434,7 @@ func (s *Service) Execute(opts Options) error {
 	skipped := make(map[string]bool)
 	iteration := 0
 
-	maxLabel := fmt.Sprintf("%d", opts.MaxIterations)
+	maxLabel := strconv.Itoa(opts.MaxIterations)
 	if opts.MaxIterations == 0 {
 		maxLabel = "ilimitado"
 	}
@@ -465,15 +453,15 @@ func (s *Service) Execute(opts Options) error {
 			return fmt.Errorf("erro ao ler tasks.md: %w", err)
 		}
 
-		tasks, err := ParseTasksFile(tasksContent)
+		tasks, err := NewCatalog().ParseTasksFile(tasksContent)
 		if err != nil {
 			return fmt.Errorf("erro ao parsear tasks.md: %w", err)
 		}
-		tasks = reconcileTaskStatuses(tasks, absFolder, s.fsys)
+		tasks = NewCatalog().reconcileTaskStatuses(tasks, absFolder, s.fsys)
 
-		eligible := FindEligible(tasks, skipped)
+		eligible := NewCatalog().FindEligible(tasks, skipped)
 		if len(eligible) == 0 {
-			if AllTerminal(tasks) {
+			if NewCatalog().AllTerminal(tasks) {
 				report.StopReason = "todas as tasks completadas ou em estado terminal"
 			} else {
 				report.StopReason = "nenhuma task elegivel (restantes estao bloqueadas, falharam ou aguardam input)"
@@ -486,7 +474,7 @@ func (s *Service) Execute(opts Options) error {
 		iteration++ // RF-13: conta apenas iteracoes de executor; reviewer e sub-etapa
 
 		// Resolver arquivo da task
-		taskFile, err := ResolveTaskFile(absFolder, task, s.fsys)
+		taskFile, err := NewCatalog().ResolveTaskFile(absFolder, task, s.fsys)
 		if err != nil {
 			s.printer.Warn("iteracao %d: %v — pulando task %s", iteration, err, task.ID)
 			skipped[task.ID] = true
@@ -504,7 +492,7 @@ func (s *Service) Execute(opts Options) error {
 
 		// Ler status pre-execucao do arquivo individual
 		preStatus := task.Status
-		if fileStatus := readTaskStatus(taskFile, s.fsys); fileStatus != "" {
+		if fileStatus := NewCatalog().readTaskStatus(taskFile, s.fsys); fileStatus != "" {
 			preStatus = fileStatus
 		}
 
@@ -518,8 +506,8 @@ func (s *Service) Execute(opts Options) error {
 			relPRD = absFolder
 		}
 
-		promptCtx := BuildPromptContext(relPRD, workDir, s.fsys, resolvedAgent, agentCatalog)
-		prompt := BuildPrompt(relTaskFile, relPRD, promptCtx)
+		promptCtx := NewCatalog().BuildPromptContext(relPRD, workDir, s.fsys, resolvedAgent, agentCatalog)
+		prompt := NewCatalog().BuildPrompt(relTaskFile, relPRD, promptCtx)
 
 		s.printer.Step("iteracao %d: executando task %s (%s)", iteration, task.ID, task.Title)
 
@@ -556,7 +544,7 @@ func (s *Service) Execute(opts Options) error {
 			executorModel = opts.Profiles.Executor.Model()
 		}
 
-		snapshot, err := captureTaskIsolationSnapshotWithMode(absFolder, taskIsolationModeExecutor, s.fsys)
+		snapshot, err := NewCatalog().captureTaskIsolationSnapshotWithMode(absFolder, _taskIsolationModeExecutor, s.fsys)
 		if err != nil {
 			return fmt.Errorf("erro ao capturar snapshot de isolamento da task %s: %w", task.ID, err)
 		}
@@ -568,16 +556,16 @@ func (s *Service) Execute(opts Options) error {
 		elapsed := time.Since(startTime)
 		cancel()
 
-		isolationErr := validateTaskIsolation(snapshot, absFolder, task.ID, taskFile, s.fsys)
+		isolationErr := NewCatalog().validateTaskIsolation(snapshot, absFolder, task.ID, taskFile, s.fsys)
 		if isolationErr != nil {
-			if restoreErr := restoreTaskIsolationSnapshotAt(snapshot, absFolder, s.fsys); restoreErr != nil {
+			if restoreErr := NewCatalog().restoreTaskIsolationSnapshotAt(snapshot, absFolder, s.fsys); restoreErr != nil {
 				return fmt.Errorf("violacao de isolamento na task %s: %v; falha ao restaurar snapshot: %w", task.ID, isolationErr, restoreErr)
 			}
 		}
 
 		// Ler status pos-execucao
 		postStatus := preStatus
-		if fileStatus := readTaskStatus(taskFile, s.fsys); fileStatus != "" {
+		if fileStatus := NewCatalog().readTaskStatus(taskFile, s.fsys); fileStatus != "" {
 			postStatus = fileStatus
 		}
 
@@ -587,7 +575,7 @@ func (s *Service) Execute(opts Options) error {
 		// preStatus, ele e a fonte prioritaria — tasks.md nao deve sobrescreve-lo.
 		if postStatus == preStatus {
 			if updatedContent, readErr := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md")); readErr == nil {
-				if updatedTasks, parseErr := ParseTasksFile(updatedContent); parseErr == nil {
+				if updatedTasks, parseErr := NewCatalog().ParseTasksFile(updatedContent); parseErr == nil {
 					for _, ut := range updatedTasks {
 						if ut.ID == task.ID && ut.Status != "" {
 							postStatus = ut.Status
@@ -616,17 +604,17 @@ func (s *Service) Execute(opts Options) error {
 			report.Iterations = append(report.Iterations, iterResult)
 			report.StopReason = fmt.Sprintf("abortado: agente violou isolamento da task %s", task.ID)
 			if content, err := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md")); err == nil {
-				if finalTasks, err := ParseTasksFile(content); err == nil {
+				if finalTasks, err := NewCatalog().ParseTasksFile(content); err == nil {
 					report.FinalTasks = finalTasks
 				}
 			}
 			break
 		}
 
-		outcome := classifyIterationOutcome(preStatus, postStatus, exitCode, invokeErr, stdout, stderr)
+		outcome := NewCatalog().classifyIterationOutcome(preStatus, postStatus, exitCode, invokeErr, stdout, stderr)
 
 		if outcome.Abort {
-			guidance := authGuidance(executorTool)
+			guidance := NewCatalog().authGuidance(executorTool)
 			iterResult.Note = fmt.Sprintf("erro de autenticacao: %s nao esta autenticado — %s", executorTool, guidance)
 			s.printer.Error("  erro de autenticacao detectado para %s — %s", executorTool, guidance)
 			report.Iterations = append(report.Iterations, iterResult)
@@ -636,7 +624,7 @@ func (s *Service) Execute(opts Options) error {
 		}
 
 		if outcome.Note != "" {
-			iterResult.Note = appendNote(iterResult.Note, outcome.Note)
+			iterResult.Note = NewCatalog().appendNote(iterResult.Note, outcome.Note)
 		}
 
 		if invokeErr != nil {
@@ -648,11 +636,11 @@ func (s *Service) Execute(opts Options) error {
 			// Nota especifica por ferramenta para output vazio em SIGKILL (exit -1).
 			// Nao entra em classifyIterationOutcome porque requer o nome da ferramenta.
 			if exitCode == -1 && stdout == "" && stderr == "" {
-				iterResult.Note = appendNote(iterResult.Note,
+				iterResult.Note = NewCatalog().appendNote(iterResult.Note,
 					fmt.Sprintf("saida vazia — %s pode requerer TTY ou nao suportar output em pipe", executorTool))
 			}
 			if stderr != "" {
-				s.printer.Debug("stderr: %s", truncate(stderr, 500))
+				s.printer.Debug("stderr: %s", NewCatalog().truncate(stderr, 500))
 			}
 		}
 
@@ -667,26 +655,26 @@ func (s *Service) Execute(opts Options) error {
 		// e o reviewer deve operar sobre o estado observavel da task.
 		// RF-13: reviewer e sub-etapa e nao incrementa o contador de iteracoes.
 		if opts.Profiles != nil && opts.Profiles.Reviewer != nil && outcome.RunReviewer {
-			reviewSnapshot, err := captureTaskIsolationSnapshotWithMode(absFolder, taskIsolationModeReviewer, s.fsys)
+			reviewSnapshot, err := NewCatalog().captureTaskIsolationSnapshotWithMode(absFolder, _taskIsolationModeReviewer, s.fsys)
 			if err != nil {
 				return fmt.Errorf("erro ao capturar snapshot de isolamento do reviewer na task %s: %w", task.ID, err)
 			}
 			iterResult.ReviewResult = s.invokeReviewer(opts, relTaskFile, relPRD, workDir, task.ID, report.Iterations)
-			reviewIsolationErr := validateReviewerIsolation(reviewSnapshot, absFolder, task.ID, taskFile, s.fsys)
+			reviewIsolationErr := NewCatalog().validateReviewerIsolation(reviewSnapshot, absFolder, task.ID, taskFile, s.fsys)
 			if reviewIsolationErr != nil {
-				if restoreErr := restoreTaskIsolationSnapshotAt(reviewSnapshot, absFolder, s.fsys); restoreErr != nil {
+				if restoreErr := NewCatalog().restoreTaskIsolationSnapshotAt(reviewSnapshot, absFolder, s.fsys); restoreErr != nil {
 					return fmt.Errorf("violacao de isolamento do reviewer na task %s: %v; falha ao restaurar snapshot: %w", task.ID, reviewIsolationErr, restoreErr)
 				}
 				if iterResult.ReviewResult == nil {
 					iterResult.ReviewResult = &ReviewResult{}
 				}
-				iterResult.ReviewResult.Note = appendNote(iterResult.ReviewResult.Note,
+				iterResult.ReviewResult.Note = NewCatalog().appendNote(iterResult.ReviewResult.Note,
 					fmt.Sprintf("violacao de isolamento detectada: %v", reviewIsolationErr))
 				s.printer.Error("iteracao %d: reviewer violou isolamento da task %s: %v", iteration, task.ID, reviewIsolationErr)
 				report.Iterations = append(report.Iterations, iterResult)
 				report.StopReason = fmt.Sprintf("abortado: reviewer violou isolamento da task %s", task.ID)
 				if content, err := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md")); err == nil {
-					if finalTasks, err := ParseTasksFile(content); err == nil {
+					if finalTasks, err := NewCatalog().ParseTasksFile(content); err == nil {
 						report.FinalTasks = finalTasks
 					}
 				}
@@ -699,29 +687,29 @@ func (s *Service) Execute(opts Options) error {
 		// Reutiliza o executor para aplicar correcoes com prompt de bugfix.
 		// Nao incrementa o contador de iteracoes (sub-etapa como o reviewer).
 		if iterResult.ReviewResult != nil && iterResult.ReviewResult.ExitCode != 0 {
-			bugfixSnapshot, bfSnapErr := captureTaskIsolationSnapshotWithMode(absFolder, taskIsolationModeExecutor, s.fsys)
+			bugfixSnapshot, bfSnapErr := NewCatalog().captureTaskIsolationSnapshotWithMode(absFolder, _taskIsolationModeExecutor, s.fsys)
 			if bfSnapErr != nil {
 				return fmt.Errorf("erro ao capturar snapshot de isolamento do bugfix na task %s: %w", task.ID, bfSnapErr)
 			}
 
-			diff := captureGitDiff(context.Background(), workDir)
+			diff := NewCatalog().captureGitDiff(context.Background(), workDir)
 			iterResult.BugfixResult = s.invokeBugfix(opts, relTaskFile, relPRD, workDir, iterResult.ReviewResult.Output, diff)
 
-			bugfixIsolationErr := validateTaskIsolation(bugfixSnapshot, absFolder, task.ID, taskFile, s.fsys)
+			bugfixIsolationErr := NewCatalog().validateTaskIsolation(bugfixSnapshot, absFolder, task.ID, taskFile, s.fsys)
 			if bugfixIsolationErr != nil {
-				if restoreErr := restoreTaskIsolationSnapshotAt(bugfixSnapshot, absFolder, s.fsys); restoreErr != nil {
+				if restoreErr := NewCatalog().restoreTaskIsolationSnapshotAt(bugfixSnapshot, absFolder, s.fsys); restoreErr != nil {
 					return fmt.Errorf("violacao de isolamento do bugfix na task %s: %v; falha ao restaurar snapshot: %w", task.ID, bugfixIsolationErr, restoreErr)
 				}
 				if iterResult.BugfixResult == nil {
 					iterResult.BugfixResult = &BugfixResult{}
 				}
-				iterResult.BugfixResult.Note = appendNote(iterResult.BugfixResult.Note,
+				iterResult.BugfixResult.Note = NewCatalog().appendNote(iterResult.BugfixResult.Note,
 					fmt.Sprintf("violacao de isolamento detectada: %v", bugfixIsolationErr))
 				s.printer.Error("iteracao %d: bugfix violou isolamento da task %s: %v", iteration, task.ID, bugfixIsolationErr)
 				report.Iterations = append(report.Iterations, iterResult)
 				report.StopReason = fmt.Sprintf("abortado: bugfix violou isolamento da task %s", task.ID)
 				if content, err := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md")); err == nil {
-					if finalTasks, err := ParseTasksFile(content); err == nil {
+					if finalTasks, err := NewCatalog().ParseTasksFile(content); err == nil {
 						report.FinalTasks = finalTasks
 					}
 				}
@@ -739,7 +727,7 @@ func (s *Service) Execute(opts Options) error {
 		report.StopReason = fmt.Sprintf("limite de iteracoes atingido (%d)", opts.MaxIterations)
 		// Ler estado final das tasks
 		if content, err := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md")); err == nil {
-			if tasks, err := ParseTasksFile(content); err == nil {
+			if tasks, err := NewCatalog().ParseTasksFile(content); err == nil {
 				report.FinalTasks = tasks
 			}
 		}
@@ -774,8 +762,8 @@ func (s *Service) invokeReviewer(opts Options, relTaskFile, relPRD, workDir, tas
 		}
 	}
 
-	diff := captureGitDiff(context.Background(), workDir)
-	reviewPrompt, promptErr := BuildReviewPrompt(
+	diff := NewCatalog().captureGitDiff(context.Background(), workDir)
+	reviewPrompt, promptErr := NewCatalog().BuildReviewPrompt(
 		opts.ReviewerPromptTemplate,
 		ReviewTemplateData{
 			TaskFile:       relTaskFile,
@@ -783,8 +771,8 @@ func (s *Service) invokeReviewer(opts Options, relTaskFile, relPRD, workDir, tas
 			TechSpec:       filepath.Join(relPRD, "techspec.md"),
 			TasksFile:      filepath.Join(relPRD, "tasks.md"),
 			Diff:           diff,
-			CompletedTasks: formatCompletedTasks(iterations, taskID),
-			RiskAreas:      detectRiskAreas(relPRD, workDir, diff, s.fsys),
+			CompletedTasks: NewCatalog().formatCompletedTasks(iterations, taskID),
+			RiskAreas:      NewCatalog().detectRiskAreas(relPRD, workDir, diff, s.fsys),
 		},
 		s.fsys,
 	)
@@ -835,7 +823,7 @@ func (s *Service) invokeBugfix(opts Options, relTaskFile, relPRD, workDir, revie
 		}
 	}
 
-	bugfixPrompt, promptErr := BuildBugfixPrompt(BugfixTemplateData{
+	bugfixPrompt, promptErr := NewCatalog().BuildBugfixPrompt(BugfixTemplateData{
 		TaskFile:       relTaskFile,
 		PRDFolder:      relPRD,
 		TechSpec:       filepath.Join(relPRD, "techspec.md"),
@@ -895,7 +883,7 @@ type iterationOutcome struct {
 //   - invokeErr == nil && postStatus=="done" → RunReviewer=true
 //   - postStatus == preStatus                → Skip=true, Note=appended "status inalterado..."
 //   - postStatus em {failed,blocked,needs_input} → Skip=true
-func classifyIterationOutcome(
+func (c *Catalog) classifyIterationOutcome(
 	preStatus, postStatus string,
 	exitCode int,
 	invokeErr error,
@@ -908,7 +896,7 @@ func classifyIterationOutcome(
 		outcome.Note = fmt.Sprintf("erro de invocacao: %v", invokeErr)
 	} else if exitCode != 0 {
 		combined := stdout + stderr
-		if isAuthError(combined) {
+		if NewCatalog().isAuthError(combined) {
 			return iterationOutcome{Abort: true, Note: "erro de autenticacao"}
 		}
 		outcome.Note = fmt.Sprintf("agente saiu com codigo %d", exitCode)
@@ -921,7 +909,7 @@ func classifyIterationOutcome(
 
 	// Status inalterado → skip para prevenir loop infinito
 	if postStatus == preStatus {
-		outcome.Note = appendNote(outcome.Note, "status inalterado apos execucao; pulando")
+		outcome.Note = NewCatalog().appendNote(outcome.Note, "status inalterado apos execucao; pulando")
 		outcome.Skip = true
 	}
 
@@ -933,31 +921,31 @@ func classifyIterationOutcome(
 	return outcome
 }
 
-// acpSpecCatalog mapeia tool name → construtor de Spec ACP.
+// _acpSpecCatalog mapeia tool name → construtor de Spec ACP.
 // Espelha runtimeACPCatalog em cmd/ai_spec_harness/task_loop.go (D-04):
 // a tabela CLI é o gate de validação de --runtime=acp; este mapa é o resolvedor
 // interno do Service.Execute para o caminho padrão (acpInvokerFactory == nil).
 // Adicionar nova entrada aqui ao registrar novo tool ACP no catálogo CLI.
-var acpSpecCatalog = map[string]func() specs.Spec{
-	"claude":  specs.Claude,
-	"codex":   specs.Codex,
-	"copilot": specs.Copilot,
-	"gemini":  specs.Gemini,
+var _acpSpecCatalog = map[string]func() specs.Spec{
+	"claude":  specs.NewCatalog().Claude,
+	"codex":   specs.NewCatalog().Codex,
+	"copilot": specs.NewCatalog().Copilot,
+	"gemini":  specs.NewCatalog().Gemini,
 }
 
 // resolveACPSpec retorna a Spec ACP correspondente ao tool informado.
 // Quando o tool não está no catálogo (ex: tool vazio ou não-ACP), retorna specs.Claude()
 // como fallback seguro — a validação no CLI já bloqueou tools inválidos antes de chegar aqui.
-func resolveACPSpec(tool string) specs.Spec {
-	if ctor, ok := acpSpecCatalog[tool]; ok {
+func (c *Catalog) resolveACPSpec(tool string) specs.Spec {
+	if ctor, ok := _acpSpecCatalog[tool]; ok {
 		return ctor()
 	}
-	return specs.Claude()
+	return specs.NewCatalog().Claude()
 }
 
 // resolveWorkDir tenta encontrar a raiz do projeto (diretorio que contem go.mod, .git, ou AGENTS.md).
 // Recebe fsys para manter testabilidade com FakeFileSystem.
-func resolveWorkDir(prdFolder string, fsys fs.FileSystem) (string, error) {
+func (c *Catalog) resolveWorkDir(prdFolder string, fsys fs.FileSystem) (string, error) {
 	dir, err := filepath.Abs(prdFolder)
 	if err != nil {
 		return "", err
@@ -977,14 +965,14 @@ func resolveWorkDir(prdFolder string, fsys fs.FileSystem) (string, error) {
 	}
 }
 
-func truncate(s string, maxLen int) string {
+func (c *Catalog) truncate(s string, maxLen int) string {
 	if len(s) <= maxLen {
 		return s
 	}
 	return s[:maxLen] + "..."
 }
 
-func appendNote(existing, addition string) string {
+func (c *Catalog) appendNote(existing, addition string) string {
 	if existing == "" {
 		return addition
 	}

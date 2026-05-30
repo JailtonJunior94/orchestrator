@@ -75,7 +75,7 @@ func TestGov16_EmbeddedSkills_ValidFrontmatterSchema(t *testing.T) {
 			if err != nil {
 				t.Fatalf("SKILL.md nao encontrado em %q: %v", skillName, err)
 			}
-			if err := skills.ValidateFrontmatterSchema(data, skillName); err != nil {
+			if err := skills.NewCatalog().ValidateFrontmatterSchema(data, skillName); err != nil {
 				t.Errorf("skill embarcada %q falhou no JSON Schema: %v", skillName, err)
 			}
 		})
@@ -212,8 +212,8 @@ func extractScriptPath(command string) string {
 
 // lockFile representa a estrutura de skills-lock.json.
 type lockFile struct {
-	Version int                     `json:"version"`
-	Skills  map[string]lockEntry    `json:"skills"`
+	Version int                  `json:"version"`
+	Skills  map[string]lockEntry `json:"skills"`
 }
 
 type lockEntry struct {
@@ -278,7 +278,7 @@ func TestGov16_SkillsLock_ExternalSkillsHaveLockEntry(t *testing.T) {
 	for _, s := range skills.BaseSkills {
 		managed[s] = true
 	}
-	for _, s := range skills.LangSkills(skills.AllLangs) {
+	for _, s := range skills.NewCatalog().LangSkills(skills.AllLangs) {
 		managed[s] = true
 	}
 
@@ -344,12 +344,12 @@ func TestGov16_Parity_InvariantsPass_CodexOnly(t *testing.T) {
 func runGovParity(t *testing.T, tools []skills.Tool, profile string) {
 	t.Helper()
 
-	snap, err := parity.Generate("/project-gov-test", tools, nil, profile)
+	snap, err := parity.NewChecker().Generate("/project-gov-test", tools, nil, profile)
 	if err != nil {
 		t.Fatalf("gerar snapshot de paridade: %v", err)
 	}
 
-	results := parity.Run(snap, parity.Invariants())
+	results := parity.NewChecker().Run(snap, parity.NewChecker().Invariants())
 	for _, cr := range results {
 		if cr.Skipped || cr.Result.OK {
 			continue
@@ -372,7 +372,7 @@ func runGovParity(t *testing.T, tools []skills.Tool, profile string) {
 // mensagem que identifica a ferramenta e o artefato ausente.
 // Este teste documenta o comportamento de diagnostico do harness.
 func TestGov16_Parity_InvariantDivergence_ReportsSkillAndAgent(t *testing.T) {
-	snap, err := parity.Generate("/project-gov-divergence", []skills.Tool{skills.ToolClaude}, nil, "full")
+	snap, err := parity.NewChecker().Generate("/project-gov-divergence", []skills.Tool{skills.ToolClaude}, nil, "full")
 	if err != nil {
 		t.Fatalf("gerar snapshot: %v", err)
 	}
@@ -381,7 +381,7 @@ func TestGov16_Parity_InvariantDivergence_ReportsSkillAndAgent(t *testing.T) {
 	hookPath := "/project-gov-divergence/.claude/hooks/validate-governance.sh"
 	delete(snap.Files, hookPath)
 
-	results := parity.Run(snap, parity.Invariants())
+	results := parity.NewChecker().Run(snap, parity.NewChecker().Invariants())
 
 	foundFailure := false
 	for _, cr := range results {

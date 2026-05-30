@@ -61,6 +61,9 @@ type ClientFactory interface {
 // defaultClientFactory é a implementação de produção de ClientFactory.
 type defaultClientFactory struct{}
 
+var _ ClientFactory = (*defaultClientFactory)(nil)
+var _ Client = (*acpClient)(nil)
+
 // NewDefaultClientFactory cria a factory de produção.
 func NewDefaultClientFactory() ClientFactory {
 	return &defaultClientFactory{}
@@ -68,7 +71,7 @@ func NewDefaultClientFactory() ClientFactory {
 
 func (f *defaultClientFactory) New(workDir string) Client {
 	// Defaults: cap=64, publishTimeout=0 — byte-equivalente ao comportamento F1 (ADR-018, RF-05).
-	return newACPClient(workDir, nil, defaultChannelCap, 0)
+	return NewCatalog().newACPClient(workDir, nil, _defaultChannelCap, 0)
 }
 
 // SetBypassPermissions habilita a auto-aprovação de RequestPermission (AccessMode==full).
@@ -123,17 +126,17 @@ type acpClient struct {
 // cancelou imediatamente o prompt turn conforme RF-16.
 var ErrPermissionDenied = errors.New("permission denied")
 
-// defaultChannelCap é a capacidade padrão do canal de eventos (F1 default).
+// _defaultChannelCap é a capacidade padrão do canal de eventos (F1 default).
 // Mantida em 64 para preservar o comportamento atual byte-equivalente (ADR-018, RF-05).
-const defaultChannelCap = 64
+const _defaultChannelCap = 64
 
 // newACPClient cria um novo acpClient sem ainda abrir a sessão.
 // ioProvider pode ser nil (modo produção: spawn subprocess) ou um IOProvider (modo teste).
 // cap controla a capacidade do canal; 0 aplica defaultChannelCap (64, F1 default).
 // publishTimeout é o tempo máximo que trySend aguarda antes de descartar; 0 = drop imediato (F1).
-func newACPClient(workDir string, ioProvider IOProvider, cap int, publishTimeout time.Duration) *acpClient {
+func (c *Catalog) newACPClient(workDir string, ioProvider IOProvider, cap int, publishTimeout time.Duration) *acpClient {
 	if cap <= 0 {
-		cap = defaultChannelCap
+		cap = _defaultChannelCap
 	}
 	return &acpClient{
 		workDir:        workDir,
@@ -209,11 +212,12 @@ func (c *acpClient) startProcess(ctx context.Context, launcher specs.Launcher) (
 		c.cmd.Dir = c.workDir
 	}
 	c.cmd.Stderr = os.Stderr
+	NewCatalog(
 
 	// Grupo de processos + kill do grupo no cancelamento do ctx (mesma estratégia de agent_unix.go).
 	// Garante que ao cancelar (watchdog/cap absoluto) TODO o subtree do agente seja morto — fecha os
 	// pipes, desbloqueia a leitura do SDK e evita órfãos (ex.: codex-acp spawna um neto que orfanava).
-	configureProcessGroup(c.cmd)
+	).configureProcessGroup(c.cmd)
 
 	stdinPipe, err := c.cmd.StdinPipe()
 	if err != nil {
@@ -300,7 +304,7 @@ func (c *acpClient) readLoop(ctx context.Context, conn *acp.ClientSideConnection
 		return
 	}
 
-	if evt, evtErr := sessionEndEventFromPromptResponse(resp); evtErr == nil {
+	if evt, evtErr := NewCatalog().sessionEndEventFromPromptResponse(resp); evtErr == nil {
 		select {
 		case c.eventCh <- evt:
 		case <-ctx.Done():
@@ -308,7 +312,7 @@ func (c *acpClient) readLoop(ctx context.Context, conn *acp.ClientSideConnection
 	}
 }
 
-func sessionEndEventFromPromptResponse(resp acp.PromptResponse) (events.Event, error) {
+func (c *Catalog) sessionEndEventFromPromptResponse(resp acp.PromptResponse) (events.Event, error) {
 	raw, err := json.Marshal(map[string]any{
 		"sessionUpdate": "session_end",
 		"exitCode":      0,
@@ -425,14 +429,14 @@ func (c *acpClient) killProcess() error {
 			return
 		}
 
-		_ = interruptProcess(cmd) // SIGINT ao grupo (unix) — mata netos, evita órfãos
+		_ = NewCatalog().interruptProcess(cmd) // SIGINT ao grupo (unix) — mata netos, evita órfãos
 		done := make(chan error, 1)
 		go func() { done <- cmd.Wait() }()
 
 		select {
 		case <-done:
 		case <-time.After(2 * time.Second):
-			_ = killProcessHard(cmd) // SIGKILL ao grupo (unix) após o período de graça
+			_ = NewCatalog().killProcessHard(cmd) // SIGKILL ao grupo (unix) após o período de graça
 			<-done
 		}
 	})
@@ -447,7 +451,7 @@ type clientImpl struct {
 }
 
 func (ci *clientImpl) SessionUpdate(_ context.Context, n acp.SessionNotification) error {
-	evt, _ := events.FromACPUpdate("", n.Update)
+	evt, _ := events.NewCatalog().FromACPUpdate("", n.Update)
 	ci.trySend(evt)
 	return nil
 }

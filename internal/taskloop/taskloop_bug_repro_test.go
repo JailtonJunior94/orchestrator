@@ -119,7 +119,7 @@ func TestReproducaoBugStatusTasksMdOverwrite(t *testing.T) {
 				if err != nil {
 					t.Fatalf("task file nao encontrado: %v", err)
 				}
-				taskFileStatus := ReadTaskFileStatus(taskFileData)
+				taskFileStatus := NewCatalog().ReadTaskFileStatus(taskFileData)
 				if taskFileStatus != "done" {
 					t.Fatalf("pre-condicao falhou: task file deveria estar 'done', got %q", taskFileStatus)
 				}
@@ -272,7 +272,7 @@ func TestReproducaoBugPostStatusDeterminationPath(t *testing.T) {
 	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
 	// Confirmar que readTaskStatus retorna "done" do task file
-	primaryStatus := readTaskStatus(prd+"/task-1.0-a.md", fsys)
+	primaryStatus := NewCatalog().readTaskStatus(prd+"/task-1.0-a.md", fsys)
 	if primaryStatus != "done" {
 		t.Fatalf("readTaskStatus deveria retornar 'done', got %q", primaryStatus)
 	}
@@ -284,7 +284,7 @@ func TestReproducaoBugPostStatusDeterminationPath(t *testing.T) {
 	if postStatus == preStatus {
 		// fallback: checar tasks.md apenas se task file nao mudou
 		updatedContent, _ := fsys.ReadFile(prd + "/tasks.md")
-		updatedTasks, _ := ParseTasksFile(updatedContent)
+		updatedTasks, _ := NewCatalog().ParseTasksFile(updatedContent)
 		for _, ut := range updatedTasks {
 			if ut.ID == "1.0" && ut.Status != "" {
 				postStatus = ut.Status

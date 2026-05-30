@@ -54,7 +54,7 @@ func TestParseTasksFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			entries, err := ParseTasksFile([]byte(tt.content))
+			entries, err := NewCatalog().ParseTasksFile([]byte(tt.content))
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("esperava erro, mas nao recebeu")
@@ -78,7 +78,7 @@ func TestParseTasksFile_Fields(t *testing.T) {
 | 2.0 | Implement ports | in_progress | 1.0 | Nao |
 | 3.0 | Add adapters | done | 1.0, 2.0 | Com 2.0 |
 `
-	entries, err := ParseTasksFile([]byte(content))
+	entries, err := NewCatalog().ParseTasksFile([]byte(content))
 	if err != nil {
 		t.Fatalf("erro: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestParseTasksFile_WithArquivoColumn(t *testing.T) {
 | 4.0 | Registrar templates | task-4.0-tapi.md | done | — | Sim |
 | 5.0 | Implementar adapter | task-5.0-adapter.md | pending | 1.0, 2.0, 4.0 | Não |
 `
-	entries, err := ParseTasksFile([]byte(content))
+	entries, err := NewCatalog().ParseTasksFile([]byte(content))
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
@@ -144,7 +144,7 @@ func TestParseTasksFile_WithArquivoColumn(t *testing.T) {
 	}
 
 	// FindEligible deve retornar 1.0 e 2.0 (sem deps) mas nao 5.0 (deps nao satisfeitas)
-	eligible := FindEligible(entries, nil)
+	eligible := NewCatalog().FindEligible(entries, nil)
 	ids := make(map[string]bool, len(eligible))
 	for _, e := range eligible {
 		ids[e.ID] = true
@@ -168,7 +168,7 @@ func TestParseTasksFile_WithoutArquivoColumn(t *testing.T) {
 | 2.0 | Modelos de domínio | done | — | Com 1.0 |
 | 3.0 | Validação de domínio | pending | 1.0, 2.0 | Não |
 `
-	entries, err := ParseTasksFile([]byte(content))
+	entries, err := NewCatalog().ParseTasksFile([]byte(content))
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
@@ -231,7 +231,7 @@ func TestReadTaskFileStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ReadTaskFileStatus([]byte(tt.content))
+			got := NewCatalog().ReadTaskFileStatus([]byte(tt.content))
 			if got != tt.want {
 				t.Errorf("ReadTaskFileStatus() = %q, want %q", got, tt.want)
 			}
@@ -250,7 +250,7 @@ func TestFindEligible(t *testing.T) {
 	}
 
 	t.Run("sem skipped", func(t *testing.T) {
-		eligible := FindEligible(tasks, nil)
+		eligible := NewCatalog().FindEligible(tasks, nil)
 		// 6.0 retomavel em in_progress deve vir antes das pendentes elegiveis.
 		if len(eligible) != 3 {
 			t.Fatalf("esperava 3 elegiveis, recebeu %d", len(eligible))
@@ -268,7 +268,7 @@ func TestFindEligible(t *testing.T) {
 
 	t.Run("com skipped", func(t *testing.T) {
 		skipped := map[string]bool{"2.0": true}
-		eligible := FindEligible(tasks, skipped)
+		eligible := NewCatalog().FindEligible(tasks, skipped)
 		if len(eligible) != 2 {
 			t.Fatalf("esperava 2 elegiveis, recebeu %d", len(eligible))
 		}
@@ -285,7 +285,7 @@ func TestFindEligible(t *testing.T) {
 			{ID: "1.0", Title: "A", Status: "pending", Dependencies: nil},
 			{ID: "2.0", Title: "B", Status: "pending", Dependencies: []string{"1.0"}},
 		}
-		eligible := FindEligible(blocked, nil)
+		eligible := NewCatalog().FindEligible(blocked, nil)
 		// Apenas 1.0 eh elegivel (sem deps)
 		if len(eligible) != 1 {
 			t.Fatalf("esperava 1 elegivel, recebeu %d", len(eligible))
@@ -303,7 +303,7 @@ func TestFindEligible_InProgressRetomavel(t *testing.T) {
 		{ID: "3.0", Title: "C", Status: "in_progress", Dependencies: []string{"9.0"}},
 	}
 
-	eligible := FindEligible(tasks, nil)
+	eligible := NewCatalog().FindEligible(tasks, nil)
 	if len(eligible) != 1 {
 		t.Fatalf("esperava 1 elegivel retomavel, recebeu %d", len(eligible))
 	}
@@ -319,7 +319,7 @@ func TestFindEligible_PrioritizesInProgressOverPending(t *testing.T) {
 		{ID: "3.0", Title: "Pending second", Status: "pending", Dependencies: nil},
 	}
 
-	eligible := FindEligible(tasks, nil)
+	eligible := NewCatalog().FindEligible(tasks, nil)
 	if len(eligible) != 3 {
 		t.Fatalf("esperava 3 elegiveis, recebeu %d", len(eligible))
 	}
@@ -339,7 +339,7 @@ func TestReconcileTaskStatusesUsesTaskFileStatus(t *testing.T) {
 		{ID: "1.0", Title: "Task One", Status: "in_progress"},
 	}
 
-	got := reconcileTaskStatuses(tasks, "/prd", fsys)
+	got := NewCatalog().reconcileTaskStatuses(tasks, "/prd", fsys)
 	if got[0].Status != "blocked" {
 		t.Fatalf("status reconciliado = %q, want blocked", got[0].Status)
 	}
@@ -355,7 +355,7 @@ func TestAllTerminal(t *testing.T) {
 			{Status: "failed"},
 			{Status: "blocked"},
 		}
-		if !AllTerminal(tasks) {
+		if !NewCatalog().AllTerminal(tasks) {
 			t.Error("esperava true")
 		}
 	})
@@ -365,7 +365,7 @@ func TestAllTerminal(t *testing.T) {
 			{Status: "done"},
 			{Status: "pending"},
 		}
-		if AllTerminal(tasks) {
+		if NewCatalog().AllTerminal(tasks) {
 			t.Error("esperava false")
 		}
 	})
@@ -388,7 +388,7 @@ func TestNormalizeStatus(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			got := normalizeStatus(tt.input)
+			got := NewCatalog().normalizeStatus(tt.input)
 			if got != tt.want {
 				t.Errorf("normalizeStatus(%q) = %q, want %q", tt.input, got, tt.want)
 			}
@@ -449,7 +449,7 @@ func TestResolveTaskFile(t *testing.T) {
 				fsys.Files["/prd/"+f] = []byte("content")
 			}
 			entry := TaskEntry{ID: tt.taskID}
-			got, err := ResolveTaskFile("/prd", entry, fsys)
+			got, err := NewCatalog().ResolveTaskFile("/prd", entry, fsys)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatalf("esperava erro, recebeu %q", got)
@@ -511,7 +511,7 @@ func TestReadTaskStatus(t *testing.T) {
 			for path, content := range tt.files {
 				fsys.Files[path] = content
 			}
-			got := readTaskStatus(tt.path, fsys)
+			got := NewCatalog().readTaskStatus(tt.path, fsys)
 			if got != tt.want {
 				t.Errorf("readTaskStatus() = %q, want %q", got, tt.want)
 			}
@@ -559,7 +559,7 @@ func TestMatchesTaskPrefix(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.filename, func(t *testing.T) {
-			got := matchesTaskPrefix(tt.filename, tt.prefix, tt.fullID)
+			got := NewCatalog().matchesTaskPrefix(tt.filename, tt.prefix, tt.fullID)
 			if got != tt.want {
 				t.Errorf("matchesTaskPrefix(%q, %q, %q) = %v, want %v",
 					tt.filename, tt.prefix, tt.fullID, got, tt.want)
@@ -592,7 +592,7 @@ func TestParseTasksFile_DuplicateIDsFromAuxTable(t *testing.T) {
 | 10.0 | Renderizar task ativa | ` + "`" + `renderActiveTask()` + "`" + ` completo | RF-02 |
 | 11.0 | Renderizar fila | ` + "`" + `renderQueueSummary()` + "`" + ` 6 contadores | RF-08 |
 `
-	entries, err := ParseTasksFile([]byte(content))
+	entries, err := NewCatalog().ParseTasksFile([]byte(content))
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
@@ -616,7 +616,7 @@ func TestParseTasksFile_DuplicateIDsFromAuxTable(t *testing.T) {
 	}
 
 	// Apos deduplicacao, FindEligible deve encontrar 11.0 (deps de 8.0 satisfeitas).
-	eligible := FindEligible(entries, nil)
+	eligible := NewCatalog().FindEligible(entries, nil)
 	found := false
 	for _, e := range eligible {
 		if e.ID == "11.0" {

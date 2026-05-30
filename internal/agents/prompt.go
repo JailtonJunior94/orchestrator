@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// catalogLimit e o numero maximo de entradas no bloco de catalogo (RF-16).
-const catalogLimit = 200
+// _catalogLimit e o numero maximo de entradas no bloco de catalogo (RF-16).
+const _catalogLimit = 200
 
 // BuildAgentBlocks produz dois blocos textuais para enriquecimento de prompt (RF-15, RF-16):
 //   - metadata: bloco Markdown com informacoes do agente ativo.
@@ -15,15 +15,15 @@ const catalogLimit = 200
 //     por name, com o agente ativo marcado com [active]. Entradas excedentes a 200 sao descartadas.
 //
 // Funcao pura: sem IO, sem cache, sem estado externo.
-func BuildAgentBlocks(agent *ResolvedAgent, catalog []ResolvedAgent) (metadata, catalogBlock string) {
-	metadata = buildMetadataBlock(agent)
-	catalogBlock = buildCatalogBlock(agent, catalog)
+func (c *Catalog) BuildAgentBlocks(agent *ResolvedAgent, catalog []ResolvedAgent) (metadata, catalogBlock string) {
+	metadata = NewCatalog().buildMetadataBlock(agent)
+	catalogBlock = NewCatalog().buildCatalogBlock(agent, catalog)
 	return metadata, catalogBlock
 }
 
 // buildMetadataBlock constroi o bloco de metadados do agente ativo.
 // Retorna string vazia quando agent e nil.
-func buildMetadataBlock(agent *ResolvedAgent) string {
+func (c *Catalog) buildMetadataBlock(agent *ResolvedAgent) string {
 	if agent == nil {
 		return ""
 	}
@@ -33,14 +33,14 @@ func buildMetadataBlock(agent *ResolvedAgent) string {
 	fmt.Fprintf(&sb, "- **Versao**: %s\n", agent.Metadata.Version)
 	fmt.Fprintf(&sb, "- **Descricao**: %s\n", agent.Metadata.Description)
 
-	runtimeParts := buildRuntimeLine(agent.Runtime)
+	runtimeParts := NewCatalog().buildRuntimeLine(agent.Runtime)
 	fmt.Fprintf(&sb, "- **Runtime**: %s\n", runtimeParts)
 	return sb.String()
 }
 
 // buildRuntimeLine constroi a linha de runtime no formato "ide / model / reasoning_effort / access_mode".
 // Campos vazios sao omitidos.
-func buildRuntimeLine(rt RuntimeDefaults) string {
+func (c *Catalog) buildRuntimeLine(rt RuntimeDefaults) string {
 	var parts []string
 	if rt.IDE != "" {
 		parts = append(parts, rt.IDE)
@@ -62,7 +62,7 @@ func buildRuntimeLine(rt RuntimeDefaults) string {
 
 // buildCatalogBlock constroi o bloco de catalogo ordenado lexicograficamente por name.
 // Aplica o limite de 200 entradas (RF-16) e marca o agente ativo com [active].
-func buildCatalogBlock(active *ResolvedAgent, catalog []ResolvedAgent) string {
+func (c *Catalog) buildCatalogBlock(active *ResolvedAgent, catalog []ResolvedAgent) string {
 	// Copiar para nao mutar o slice original.
 	entries := make([]ResolvedAgent, len(catalog))
 	copy(entries, catalog)
@@ -73,8 +73,8 @@ func buildCatalogBlock(active *ResolvedAgent, catalog []ResolvedAgent) string {
 	})
 
 	// Aplicar limite de 200 entradas.
-	if len(entries) > catalogLimit {
-		entries = entries[:catalogLimit]
+	if len(entries) > _catalogLimit {
+		entries = entries[:_catalogLimit]
 	}
 
 	var sb strings.Builder

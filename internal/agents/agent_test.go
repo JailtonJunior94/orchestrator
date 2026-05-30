@@ -3,38 +3,39 @@ package agents_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/JailtonJunior94/ai-spec-harness/internal/agents"
 )
 
-func TestScopeString(t *testing.T) {
-	t.Parallel()
+type AgentSuite struct {
+	suite.Suite
+}
 
-	tests := []struct {
+func TestAgentSuite(t *testing.T) {
+	suite.Run(t, new(AgentSuite))
+}
+
+func (s *AgentSuite) TestScopeString() {
+	scenarios := []struct {
+		name  string
 		scope agents.Scope
 		want  string
 	}{
-		{agents.ScopeGlobal, "global"},
-		{agents.ScopeWorkspace, "workspace"},
+		{name: "deve retornar escopo global", scope: agents.ScopeGlobal, want: "global"},
+		{name: "deve retornar escopo workspace", scope: agents.ScopeWorkspace, want: "workspace"},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.want, func(t *testing.T) {
-			t.Parallel()
-			got := tc.scope.String()
-			if got != tc.want {
-				t.Errorf("Scope.String() = %q, quer %q", got, tc.want)
-			}
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			s.Equal(scenario.want, scenario.scope.String())
 		})
 	}
 }
 
-func TestResolvedAgentZeroValue(t *testing.T) {
-	t.Parallel()
-	var a agents.ResolvedAgent
-	if a.Name != "" {
-		t.Error("zero value de ResolvedAgent.Name deve ser vazio")
-	}
-	if a.Scope != agents.ScopeGlobal {
-		t.Error("zero value de ResolvedAgent.Scope deve ser ScopeGlobal")
-	}
+func (s *AgentSuite) TestResolvedAgentZeroValue() {
+	var agent agents.ResolvedAgent
+
+	s.Empty(agent.Name)
+	s.Equal(agents.ScopeGlobal, agent.Scope)
 }

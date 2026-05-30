@@ -12,26 +12,29 @@ import (
 //
 // Em producao, ldflags grava Version uma unica vez antes de main e nao
 // concorre com leituras. Em testes paralelos, leitores chamam Get() (atomic
-// load, lock-free) e escritores usam SetForTest (serializados via writerMu).
+// load, lock-free) e escritores usam SetForTest (serializados via _writerMu).
 var (
 	Version = "dev"
 	Commit  = "none"
 	Date    = "unknown"
 
-	versionAtomic atomic.Pointer[string]
-	writerMu      sync.Mutex
+	_versionAtomic atomic.Pointer[string]
+	_writerMu      sync.Mutex
 )
 
-func init() {
-	v := Version
-	versionAtomic.Store(&v)
+// Provider resolve a versao do binario.
+type Provider struct{}
+
+// NewProvider cria um Provider stateless.
+func NewProvider() *Provider {
+	return &Provider{}
 }
 
 // Get retorna o valor corrente de Version via atomic load.
 // Lock-free; seguro para uso concorrente com SetForTest.
-func Get() string {
-	if p := versionAtomic.Load(); p != nil {
-		return *p
+func (p *Provider) Get() string {
+	if current := _versionAtomic.Load(); current != nil {
+		return *current
 	}
 	return Version
 }
@@ -45,19 +48,19 @@ func Get() string {
 // restore for chamado antes de novo SetForTest.
 //
 // Destinada exclusivamente a testes.
-func SetForTest(value string) (restore func()) {
-	writerMu.Lock()
-	prev := Get()
-	versionAtomic.Store(&value)
+func (p *Provider) SetForTest(value string) (restore func()) {
+	_writerMu.Lock()
+	prev := p.Get()
+	_versionAtomic.Store(&value)
 	return func() {
-		versionAtomic.Store(&prev)
-		writerMu.Unlock()
+		_versionAtomic.Store(&prev)
+		_writerMu.Unlock()
 	}
 }
 
 // ReadVersionFile le o arquivo VERSION de um diretorio e retorna a versao.
 // Retorna "unknown" se o arquivo nao existir ou nao puder ser lido.
-func ReadVersionFile(dir string) string {
+func (p *Provider) ReadVersionFile(dir string) string {
 	data, err := os.ReadFile(filepath.Join(dir, "VERSION"))
 	if err != nil {
 		return "unknown"
@@ -69,11 +72,11 @@ func ReadVersionFile(dir string) string {
 //  1. Versao injetada via ldflags (releases via GoReleaser)
 //  2. Arquivo VERSION no diretorio informado com sufixo "-dev" (builds locais)
 //  3. "dev" como fallback final
-func Resolve(dir string) string {
-	if v := Get(); v != "dev" {
+func (p *Provider) Resolve(dir string) string {
+	if v := p.Get(); v != "dev" {
 		return v
 	}
-	if v := ReadVersionFile(dir); v != "unknown" {
+	if v := p.ReadVersionFile(dir); v != "unknown" {
 		return v + "-dev"
 	}
 	return "dev"
@@ -82,8 +85,8 @@ func Resolve(dir string) string {
 // ResolveFromExecutable localiza o VERSION file adjacente ao binario,
 // resolvendo symlinks antes de extrair o diretorio.
 // Fallback chain: ldflags > VERSION adjacente ao executavel resolvido > "dev"
-func ResolveFromExecutable() string {
-	if v := Get(); v != "dev" {
+func (p *Provider) ResolveFromExecutable() string {
+	if v := p.Get(); v != "dev" {
 		return v // ldflags injetado pelo GoReleaser tem prioridade maxima
 	}
 	exe, err := os.Executable()
@@ -95,7 +98,7 @@ func ResolveFromExecutable() string {
 		return "dev"
 	}
 	dir := filepath.Dir(resolved)
-	if v := ReadVersionFile(dir); v != "unknown" {
+	if v := p.ReadVersionFile(dir); v != "unknown" {
 		return v + "-dev"
 	}
 	return "dev"

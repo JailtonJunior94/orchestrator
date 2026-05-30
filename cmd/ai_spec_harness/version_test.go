@@ -10,7 +10,7 @@ import (
 // TestVersionNoFlag verifica RF-10: sem flag, a saida exibe apenas a versao do CLI.
 func TestVersionNoFlag(t *testing.T) {
 	var sb strings.Builder
-	if err := runVersion(&sb, "", ""); err != nil {
+	if err := (&versionCommand{}).run(&sb, "", ""); err != nil {
 		t.Fatalf("runVersion erro inesperado: %v", err)
 	}
 	out := sb.String()
@@ -25,7 +25,7 @@ func TestVersionNoFlag(t *testing.T) {
 // TestVersionSkillsEmbedded verifica RF-11a: --skills=embedded lista skills embutidas.
 func TestVersionSkillsEmbedded(t *testing.T) {
 	var sb strings.Builder
-	if err := runVersion(&sb, "embedded", ""); err != nil {
+	if err := (&versionCommand{}).run(&sb, "embedded", ""); err != nil {
 		t.Fatalf("runVersion erro inesperado: %v", err)
 	}
 	out := sb.String()
@@ -61,7 +61,7 @@ description: Skill de teste
 	}
 
 	var sb strings.Builder
-	if err := runVersion(&sb, "installed", dir); err != nil {
+	if err := (&versionCommand{}).run(&sb, "installed", dir); err != nil {
 		t.Fatalf("runVersion erro inesperado: %v", err)
 	}
 	out := sb.String()
@@ -99,7 +99,7 @@ description: Outra skill de teste
 	}
 
 	var sb strings.Builder
-	if err := runVersion(&sb, "both", dir); err != nil {
+	if err := (&versionCommand{}).run(&sb, "both", dir); err != nil {
 		t.Fatalf("runVersion erro inesperado: %v", err)
 	}
 	out := sb.String()
@@ -131,7 +131,7 @@ description: Skill sem campo version no frontmatter
 	}
 
 	var sb strings.Builder
-	if err := runVersion(&sb, "installed", dir); err != nil {
+	if err := (&versionCommand{}).run(&sb, "installed", dir); err != nil {
 		t.Fatalf("runVersion erro inesperado: %v", err)
 	}
 	out := sb.String()
@@ -145,7 +145,7 @@ func TestVersionSkillsInstalledEmpty(t *testing.T) {
 	dir := t.TempDir()
 
 	var sb strings.Builder
-	if err := runVersion(&sb, "installed", dir); err != nil {
+	if err := (&versionCommand{}).run(&sb, "installed", dir); err != nil {
 		t.Fatalf("runVersion erro inesperado: %v", err)
 	}
 	out := sb.String()
@@ -159,7 +159,7 @@ func TestVersionSkillsInstalledEmpty(t *testing.T) {
 
 // TestVersionSkillsEmbeddedSorted verifica que skills embutidas sao exibidas em ordem alfabetica.
 func TestVersionSkillsEmbeddedSorted(t *testing.T) {
-	skills, err := listEmbeddedSkills()
+	skills, err := (&versionCommand{}).listEmbeddedSkills()
 	if err != nil {
 		t.Fatalf("listEmbeddedSkills erro: %v", err)
 	}

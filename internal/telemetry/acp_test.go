@@ -15,7 +15,7 @@ func TestTelemetry_LegacyUnchanged(t *testing.T) {
 	dir := t.TempDir()
 
 	// Caminho legacy: usa Log() — sem campos ACP.
-	if err := Log(dir, "execute-task", "go-implementation"); err != nil {
+	if err := NewCatalog().Log(dir, "execute-task", "go-implementation"); err != nil {
 		t.Fatalf("Log: %v", err)
 	}
 
@@ -56,7 +56,7 @@ func TestTelemetry_ACPFields(t *testing.T) {
 		CancelReason:       "none",
 	}
 
-	if err := LogACPSession(dir, evt); err != nil {
+	if err := NewCatalog().LogACPSession(dir, evt); err != nil {
 		t.Fatalf("LogACPSession: %v", err)
 	}
 
@@ -93,7 +93,7 @@ func TestLogACPSession_NoWriteWhenDisabled(t *testing.T) {
 	dir := t.TempDir()
 
 	evt := ACPSessionEvent{Runtime: "acp", Launcher: "binary"}
-	if err := LogACPSession(dir, evt); err != nil {
+	if err := NewCatalog().LogACPSession(dir, evt); err != nil {
 		t.Fatalf("LogACPSession: %v", err)
 	}
 
@@ -117,7 +117,7 @@ func TestLogACPSession_AllCancelReasons(t *testing.T) {
 				Launcher:     "npx",
 				CancelReason: reason,
 			}
-			if err := LogACPSession(dir, evt); err != nil {
+			if err := NewCatalog().LogACPSession(dir, evt); err != nil {
 				t.Fatalf("LogACPSession: %v", err)
 			}
 

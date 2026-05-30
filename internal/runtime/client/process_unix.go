@@ -14,7 +14,7 @@ import (
 // terminado — fecha os pipes, desbloqueia a leitura bloqueante do SDK ACP e evita processos órfãos
 // (ex.: codex-acp via npx spawna um neto que, sem isto, sobrevive ao kill do processo direto).
 // WaitDelay limita a drenagem dos pipes após o SIGKILL para garantir que cmd.Wait() retorne.
-func configureProcessGroup(cmd *exec.Cmd) {
+func (c *Catalog) configureProcessGroup(cmd *exec.Cmd) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error {
 		if cmd.Process == nil {
@@ -27,11 +27,11 @@ func configureProcessGroup(cmd *exec.Cmd) {
 
 // interruptProcess envia SIGINT ao GRUPO do subprocesso (PID negativo) — mata também netos
 // (ex.: codex-acp via npx), evitando órfãos no teardown explícito (Close/conclusão natural).
-func interruptProcess(cmd *exec.Cmd) error {
+func (c *Catalog) interruptProcess(cmd *exec.Cmd) error {
 	return syscall.Kill(-cmd.Process.Pid, syscall.SIGINT)
 }
 
 // killProcessHard envia SIGKILL ao GRUPO do subprocesso (fallback após o período de graça).
-func killProcessHard(cmd *exec.Cmd) error {
+func (c *Catalog) killProcessHard(cmd *exec.Cmd) error {
 	return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 }

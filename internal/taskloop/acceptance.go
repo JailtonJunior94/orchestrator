@@ -40,6 +40,8 @@ type defaultAcceptanceGate struct {
 	runner CommandRunner
 }
 
+var _ AcceptanceGate = (*defaultAcceptanceGate)(nil)
+
 // NewAcceptanceGate cria um AcceptanceGate com filesystem e runner fornecidos.
 func NewAcceptanceGate(fsys fs.FileSystem, runner CommandRunner) AcceptanceGate {
 	return &defaultAcceptanceGate{fsys: fsys, runner: runner}
@@ -54,7 +56,7 @@ func (g *defaultAcceptanceGate) Verify(ctx context.Context, task TaskEntry, task
 		return report, fmt.Errorf("taskloop: erro ao ler arquivo da task %s: %w", taskFile, err)
 	}
 
-	criteria, missing := parseCriteriaFromTaskFile(data)
+	criteria, missing := NewCatalog().parseCriteriaFromTaskFile(data)
 	report.CriteriaTotal = len(criteria)
 	report.CriteriaMet = len(criteria) - len(missing)
 	report.MissingItems = missing
@@ -92,7 +94,7 @@ func (g *defaultAcceptanceGate) Verify(ctx context.Context, task TaskEntry, task
 
 // parseCriteriaFromTaskFile extrai os criterios de aceite da secao "## Definition of Done"
 // ou "## Criterios de Sucesso" do arquivo da task. Retorna todos os criterios e os nao marcados.
-func parseCriteriaFromTaskFile(data []byte) (allCriteria []string, missing []string) {
+func (c *Catalog) parseCriteriaFromTaskFile(data []byte) (allCriteria []string, missing []string) {
 	lines := strings.Split(string(data), "\n")
 
 	inSection := false
@@ -100,13 +102,13 @@ func parseCriteriaFromTaskFile(data []byte) (allCriteria []string, missing []str
 		trimmed := strings.TrimSpace(line)
 
 		// Detectar inicio da secao de criterios
-		if isAcceptanceSection(trimmed) {
+		if NewCatalog().isAcceptanceSection(trimmed) {
 			inSection = true
 			continue
 		}
 
 		// Parar na proxima secao de nivel equivalente
-		if inSection && strings.HasPrefix(trimmed, "## ") && !isAcceptanceSection(trimmed) {
+		if inSection && strings.HasPrefix(trimmed, "## ") && !NewCatalog().isAcceptanceSection(trimmed) {
 			break
 		}
 
@@ -139,11 +141,10 @@ func parseCriteriaFromTaskFile(data []byte) (allCriteria []string, missing []str
 	return allCriteria, missing
 }
 
-func isAcceptanceSection(line string) bool {
+func (c *Catalog) isAcceptanceSection(line string) bool {
 	lower := strings.ToLower(line)
 	return strings.HasPrefix(lower, "## definition of done") ||
 		strings.HasPrefix(lower, "## criterios de sucesso") ||
 		strings.HasPrefix(lower, "## critérios de sucesso") ||
 		strings.HasPrefix(lower, "## acceptance criteria")
 }
-

@@ -9,11 +9,19 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
+// Validator valida arquivos bugs.json contra schema JSON.
+type Validator struct{}
+
+// NewValidator cria um Validator stateless.
+func NewValidator() *Validator {
+	return &Validator{}
+}
+
 // Validate valida o array de bugs em bugsPath contra o schema JSON em schemaPath.
 // schemaPath deve apontar para um arquivo JSON Schema valido (draft 2020-12).
 // Retorna erro explicito se o schema nao for encontrado, for invalido,
 // ou se o payload nao for conforme.
-func Validate(bugsPath, schemaPath string) error {
+func (v *Validator) Validate(bugsPath, schemaPath string) error {
 	schemaData, err := os.ReadFile(schemaPath)
 	if err != nil {
 		return fmt.Errorf("ler schema %q: %w", schemaPath, err)
@@ -45,15 +53,15 @@ func Validate(bugsPath, schemaPath string) error {
 	}
 
 	if err := schema.Validate(payload); err != nil {
-		return fmt.Errorf("validacao falhou: %s", formatValidationError(err))
+		return fmt.Errorf("validacao falhou: %s", v.formatValidationError(err))
 	}
 
 	return nil
 }
 
-func formatValidationError(err error) string {
+func (v *Validator) formatValidationError(err error) string {
 	var ve *jsonschema.ValidationError
-	if ok := asValidationError(err, &ve); ok {
+	if ok := v.asValidationError(err, &ve); ok {
 		return ve.Error()
 	}
 	msgs := []string{}
@@ -66,7 +74,7 @@ func formatValidationError(err error) string {
 	return strings.Join(msgs, "; ")
 }
 
-func asValidationError(err error, target **jsonschema.ValidationError) bool {
+func (v *Validator) asValidationError(err error, target **jsonschema.ValidationError) bool {
 	if ve, ok := err.(*jsonschema.ValidationError); ok {
 		*target = ve
 		return true

@@ -16,7 +16,7 @@ func TestCheckCoverage_AllPresent(t *testing.T) {
 	prd := []byte("Requirements: RF-01, RF-02, RF-03")
 	tasks := []byte("This task covers RF-01, RF-02, and RF-03.")
 
-	result := specdrift.CheckCoverage(prd, tasks)
+	result := specdrift.NewCatalog().CheckCoverage(prd, tasks)
 
 	if !result.Pass {
 		t.Errorf("expected Pass=true, got false; missing=%v", result.MissingIDs)
@@ -33,7 +33,7 @@ func TestCheckCoverage_MissingID(t *testing.T) {
 	prd := []byte("Requirements: RF-01, RF-02")
 	tasks := []byte("This task covers RF-01 only.")
 
-	result := specdrift.CheckCoverage(prd, tasks)
+	result := specdrift.NewCatalog().CheckCoverage(prd, tasks)
 
 	if result.Pass {
 		t.Error("expected Pass=false, got true")
@@ -47,7 +47,7 @@ func TestCheckCoverage_CaseInsensitive(t *testing.T) {
 	prd := []byte("rf-01 and req-02 must be covered")
 	tasks := []byte("RF-01 and REQ-02 are implemented here")
 
-	result := specdrift.CheckCoverage(prd, tasks)
+	result := specdrift.NewCatalog().CheckCoverage(prd, tasks)
 
 	if !result.Pass {
 		t.Errorf("expected Pass=true (case-insensitive), missing=%v", result.MissingIDs)
@@ -58,7 +58,7 @@ func TestCheckCoverage_REQIDs(t *testing.T) {
 	prd := []byte("REQ-01 and REQ-02 are required")
 	tasks := []byte("REQ-01 done. REQ-02 done.")
 
-	result := specdrift.CheckCoverage(prd, tasks)
+	result := specdrift.NewCatalog().CheckCoverage(prd, tasks)
 
 	if !result.Pass {
 		t.Errorf("expected Pass=true, missing=%v", result.MissingIDs)
@@ -69,7 +69,7 @@ func TestCheckCoverage_EmptySource(t *testing.T) {
 	prd := []byte("No requirements here")
 	tasks := []byte("Some tasks")
 
-	result := specdrift.CheckCoverage(prd, tasks)
+	result := specdrift.NewCatalog().CheckCoverage(prd, tasks)
 
 	if !result.Pass {
 		t.Error("expected Pass=true when no IDs in source")
@@ -83,7 +83,7 @@ func TestCheckCoverage_DuplicateIDsInSource(t *testing.T) {
 	prd := []byte("RF-01 is mentioned. RF-01 is mentioned again. RF-02 too.")
 	tasks := []byte("RF-01 and RF-02 covered.")
 
-	result := specdrift.CheckCoverage(prd, tasks)
+	result := specdrift.NewCatalog().CheckCoverage(prd, tasks)
 
 	if !result.Pass {
 		t.Errorf("expected Pass=true, missing=%v", result.MissingIDs)
@@ -105,7 +105,7 @@ func TestCheckHash_Match(t *testing.T) {
 	h := hashOf(spec)
 	tasks := []byte(fmt.Sprintf("<!-- spec-hash-prd: %s -->", h))
 
-	result := specdrift.CheckHash(spec, tasks, "prd")
+	result := specdrift.NewCatalog().CheckHash(spec, tasks, "prd")
 
 	if !result.Match {
 		t.Errorf("expected Match=true, got false; actual=%s expected=%s", result.ActualHash, result.ExpectedHash)
@@ -119,7 +119,7 @@ func TestCheckHash_Divergent(t *testing.T) {
 	spec := []byte("spec content v2")
 	tasks := []byte("<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->")
 
-	result := specdrift.CheckHash(spec, tasks, "prd")
+	result := specdrift.NewCatalog().CheckHash(spec, tasks, "prd")
 
 	if result.Match {
 		t.Error("expected Match=false for divergent hash")
@@ -133,7 +133,7 @@ func TestCheckHash_NoComment(t *testing.T) {
 	spec := []byte("spec content")
 	tasks := []byte("No hash comment here")
 
-	result := specdrift.CheckHash(spec, tasks, "prd")
+	result := specdrift.NewCatalog().CheckHash(spec, tasks, "prd")
 
 	if !result.NoHashFound {
 		t.Error("expected NoHashFound=true")
@@ -148,7 +148,7 @@ func TestCheckHash_TechspecLabel(t *testing.T) {
 	h := hashOf(spec)
 	tasks := []byte(fmt.Sprintf("<!-- spec-hash-techspec: %s -->", h))
 
-	result := specdrift.CheckHash(spec, tasks, "techspec")
+	result := specdrift.NewCatalog().CheckHash(spec, tasks, "techspec")
 
 	if !result.Match {
 		t.Errorf("expected Match=true for techspec label")
@@ -161,7 +161,7 @@ func TestCheckHash_WrongLabel(t *testing.T) {
 	// Hash is for "prd" but we query "techspec"
 	tasks := []byte(fmt.Sprintf("<!-- spec-hash-prd: %s -->", h))
 
-	result := specdrift.CheckHash(spec, tasks, "techspec")
+	result := specdrift.NewCatalog().CheckHash(spec, tasks, "techspec")
 
 	if !result.NoHashFound {
 		t.Error("expected NoHashFound=true when querying wrong label")
@@ -195,7 +195,7 @@ func TestCheckDrift_FullPass(t *testing.T) {
 	writeFile(t, dir, "techspec.md", techspecContent)
 	writeFile(t, dir, "tasks.md", tasksContent)
 
-	report, err := specdrift.CheckDrift(dir)
+	report, err := specdrift.NewCatalog().CheckDrift(dir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -217,7 +217,7 @@ func TestCheckDrift_FullPass(t *testing.T) {
 func TestCheckDrift_MissingTasksFile(t *testing.T) {
 	dir := t.TempDir()
 
-	_, err := specdrift.CheckDrift(dir)
+	_, err := specdrift.NewCatalog().CheckDrift(dir)
 	if err == nil {
 		t.Error("expected error when tasks.md is absent")
 	}
@@ -234,7 +234,7 @@ func TestCheckDrift_OnlyPRD(t *testing.T) {
 	writeFile(t, dir, "tasks.md", tasksContent)
 	// no techspec.md
 
-	report, err := specdrift.CheckDrift(dir)
+	report, err := specdrift.NewCatalog().CheckDrift(dir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -256,7 +256,7 @@ func TestCheckDrift_CoverageFail(t *testing.T) {
 	writeFile(t, dir, "prd.md", prdContent)
 	writeFile(t, dir, "tasks.md", tasksContent)
 
-	report, err := specdrift.CheckDrift(dir)
+	report, err := specdrift.NewCatalog().CheckDrift(dir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -274,7 +274,7 @@ func TestCheckDrift_HashFail(t *testing.T) {
 	writeFile(t, dir, "prd.md", prdContent)
 	writeFile(t, dir, "tasks.md", tasksContent)
 
-	report, err := specdrift.CheckDrift(dir)
+	report, err := specdrift.NewCatalog().CheckDrift(dir)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

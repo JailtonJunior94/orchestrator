@@ -207,7 +207,7 @@ func TestBugfixLoop_PreserveReviewContextAcrossIterations(t *testing.T) {
 	)
 
 	rawDiff := "diff --git a/a.go b/a.go\n"
-	initial := "Contexto da revisao consolidada:\n- PRD: /tmp/prd.md\n- TechSpec: /tmp/techspec.md\n" + reviewContextSeparator + rawDiff
+	initial := "Contexto da revisao consolidada:\n- PRD: /tmp/prd.md\n- TechSpec: /tmp/techspec.md\n" + _reviewContextSeparator + rawDiff
 	_, err := loop.Run(context.Background(), criticals, initial)
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
@@ -222,7 +222,7 @@ func TestBugfixLoop_PreserveReviewContextAcrossIterations(t *testing.T) {
 		"Contexto da revisao consolidada:",
 		"- PRD: /tmp/prd.md",
 		"- TechSpec: /tmp/techspec.md",
-		reviewContextSeparator + "diff-after-bugfix",
+		_reviewContextSeparator + "diff-after-bugfix",
 	} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("payload do reviewer nao contem %q:\n%s", want, got)
@@ -254,7 +254,7 @@ func TestBugfixLoop_InvokerReceivesPureDiffAcrossIterations(t *testing.T) {
 	capturer := &stubDiffCapturer{diffs: []string{"diff-iter-1", "diff-iter-2"}}
 	loop := NewBugfixLoop(invoker, reviewer, capturer, 2)
 
-	initial := "Contexto da revisao consolidada:\n- PRD: /tmp/prd.md\n" + reviewContextSeparator + "diff-inicial"
+	initial := "Contexto da revisao consolidada:\n- PRD: /tmp/prd.md\n" + _reviewContextSeparator + "diff-inicial"
 	_, err := loop.Run(context.Background(), criticals, initial)
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
@@ -331,7 +331,7 @@ func TestExtractRootCause(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractRootCause(tt.in)
+			got := NewCatalog().extractRootCause(tt.in)
 			if got != tt.want {
 				t.Errorf("esperado %q, obtido %q", tt.want, got)
 			}
@@ -346,7 +346,7 @@ func TestFilterCritical(t *testing.T) {
 		{Severity: SeverityCritical, Message: "c"},
 		{Severity: SeveritySuggestion, Message: "d"},
 	}
-	got := filterCritical(in)
+	got := NewCatalog().filterCritical(in)
 	if len(got) != 2 {
 		t.Fatalf("esperado 2 criticos, obtido %d", len(got))
 	}

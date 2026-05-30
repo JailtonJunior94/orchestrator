@@ -36,7 +36,7 @@ func (p WindowPolicy) LimitsFor(class specs.WindowClass, base Limits) Limits {
 // override explicito do usuario. Para WindowLarge, overrides explicitos prevalecem.
 func (p WindowPolicy) LimitsForWithOverride(class specs.WindowClass, base Limits, explicit bool) Limits {
 	// Aplicar defaults F1 nos campos zero antes de qualquer ajuste.
-	base = applyDefaultsToLimits(base)
+	base = NewCatalog().applyDefaultsToLimits(base)
 
 	if class != specs.WindowLarge {
 		// WindowStandard (zero-value incluso): retornar limites base com defaults F1.
@@ -58,7 +58,7 @@ func (p WindowPolicy) LimitsForWithOverride(class specs.WindowClass, base Limits
 
 // applyDefaultsToLimits preenche campos zero-value com os defaults F1.
 // Espelha a lógica de prepareMemoryStore em runner.go (sem duplicar a fonte única em store.go).
-func applyDefaultsToLimits(l Limits) Limits {
+func (c *Catalog) applyDefaultsToLimits(l Limits) Limits {
 	if l.WorkflowLines == 0 {
 		l.WorkflowLines = DefaultWorkflowLineLimit
 	}

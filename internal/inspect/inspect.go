@@ -48,8 +48,8 @@ func (s *Service) Execute(projectDir string) error {
 			s.printer.Info("  Atualizado em: %s", mf.UpdatedAt.Format("2006-01-02 15:04:05"))
 			s.printer.Info("  Fonte:         %s", mf.SourceDir)
 			s.printer.Info("  Modo:          %s", mf.LinkMode)
-			s.printer.Info("  Ferramentas:   %v", toolNames(mf.Tools))
-			s.printer.Info("  Linguagens:    %v", langNames(mf.Langs))
+			s.printer.Info("  Ferramentas:   %v", s.toolNames(mf.Tools))
+			s.printer.Info("  Linguagens:    %v", s.langNames(mf.Langs))
 			s.printer.Info("  Skills:        %d", len(mf.Skills))
 			s.printer.Info("")
 		}
@@ -76,7 +76,7 @@ func (s *Service) Execute(projectDir string) error {
 				ver := ""
 				skillMD := filepath.Join(skillPath, "SKILL.md")
 				if data, err := s.fs.ReadFile(skillMD); err == nil {
-					fm := skills.ParseFrontmatter(data)
+					fm := skills.NewCatalog().ParseFrontmatter(data)
 					if fm.Version != "" {
 						ver = fm.Version
 					}
@@ -91,16 +91,16 @@ func (s *Service) Execute(projectDir string) error {
 
 	// Ferramentas detectadas
 	tools := s.detector.DetectTools(absDir)
-	s.printer.Info("Ferramentas detectadas: %v", toolNames(tools))
+	s.printer.Info("Ferramentas detectadas: %v", s.toolNames(tools))
 
 	// Linguagens detectadas
 	langs := s.detector.DetectLangs(absDir)
-	s.printer.Info("Linguagens detectadas: %v", langNames(langs))
+	s.printer.Info("Linguagens detectadas: %v", s.langNames(langs))
 
 	return nil
 }
 
-func toolNames(tools []skills.Tool) []string {
+func (s *Service) toolNames(tools []skills.Tool) []string {
 	out := make([]string, len(tools))
 	for i, t := range tools {
 		out[i] = string(t)
@@ -108,7 +108,7 @@ func toolNames(tools []skills.Tool) []string {
 	return out
 }
 
-func langNames(langs []skills.Lang) []string {
+func (s *Service) langNames(langs []skills.Lang) []string {
 	out := make([]string, len(langs))
 	for i, l := range langs {
 		out[i] = string(l)

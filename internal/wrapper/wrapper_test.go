@@ -44,7 +44,7 @@ func fullFS() *fs.FakeFileSystem {
 func TestExecute_HappyPath_Codex(t *testing.T) {
 	t.Parallel()
 	fsys := fullFS()
-	instruction, err := wrapper.Execute("codex", "go-implementation", projectDir, nil, fsys)
+	instruction, err := wrapper.NewExecutor().Execute("codex", "go-implementation", projectDir, nil, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestExecute_HappyPath_Codex(t *testing.T) {
 func TestExecute_HappyPath_Gemini(t *testing.T) {
 	t.Parallel()
 	fsys := fullFS()
-	instruction, err := wrapper.Execute("gemini", "go-implementation", projectDir, nil, fsys)
+	instruction, err := wrapper.NewExecutor().Execute("gemini", "go-implementation", projectDir, nil, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestExecute_HappyPath_Gemini(t *testing.T) {
 func TestExecute_HappyPath_Copilot(t *testing.T) {
 	t.Parallel()
 	fsys := fullFS()
-	instruction, err := wrapper.Execute("copilot", "go-implementation", projectDir, nil, fsys)
+	instruction, err := wrapper.NewExecutor().Execute("copilot", "go-implementation", projectDir, nil, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestExecute_HappyPath_Copilot(t *testing.T) {
 func TestExecute_HappyPath_WithArgs(t *testing.T) {
 	t.Parallel()
 	fsys := fullFS()
-	instruction, err := wrapper.Execute("codex", "go-implementation", projectDir, []string{"--verbose", "--timeout=30"}, fsys)
+	instruction, err := wrapper.NewExecutor().Execute("codex", "go-implementation", projectDir, []string{"--verbose", "--timeout=30"}, fsys)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestExecute_HappyPath_WithArgs(t *testing.T) {
 func TestExecute_InvalidTool(t *testing.T) {
 	t.Parallel()
 	fsys := fullFS()
-	_, err := wrapper.Execute("claude", "go-implementation", projectDir, nil, fsys)
+	_, err := wrapper.NewExecutor().Execute("claude", "go-implementation", projectDir, nil, fsys)
 	if err == nil {
 		t.Error("expected error for invalid tool 'claude'")
 	}
@@ -109,7 +109,7 @@ func TestExecute_InvalidTool(t *testing.T) {
 func TestExecute_UnknownTool(t *testing.T) {
 	t.Parallel()
 	fsys := fullFS()
-	_, err := wrapper.Execute("unknown-tool", "go-implementation", projectDir, nil, fsys)
+	_, err := wrapper.NewExecutor().Execute("unknown-tool", "go-implementation", projectDir, nil, fsys)
 	if err == nil {
 		t.Error("expected error for unknown tool")
 	}
@@ -123,7 +123,7 @@ func TestExecute_MissingAgentsMD(t *testing.T) {
 		[]string{projectDir + "/go.mod"},
 		[]string{projectDir + "/.agents/skills/agent-governance"},
 	)
-	_, err := wrapper.Execute("codex", "go-implementation", projectDir, nil, fsys)
+	_, err := wrapper.NewExecutor().Execute("codex", "go-implementation", projectDir, nil, fsys)
 	if err == nil {
 		t.Error("expected error when AGENTS.md is missing")
 	}
@@ -143,7 +143,7 @@ func TestExecute_MissingAgentGovernance(t *testing.T) {
 		},
 		[]string{},
 	)
-	_, err := wrapper.Execute("codex", "go-implementation", projectDir, nil, fsys)
+	_, err := wrapper.NewExecutor().Execute("codex", "go-implementation", projectDir, nil, fsys)
 	if err == nil {
 		t.Error("expected error when agent-governance dir is missing")
 	}
@@ -161,7 +161,7 @@ func TestExecute_PrerequisitesFail(t *testing.T) {
 		[]string{projectDir + "/AGENTS.md"},
 		[]string{projectDir + "/.agents/skills/agent-governance"},
 	)
-	_, err := wrapper.Execute("codex", "go-implementation", projectDir, nil, fsys)
+	_, err := wrapper.NewExecutor().Execute("codex", "go-implementation", projectDir, nil, fsys)
 	if err == nil {
 		t.Error("expected error when prerequisites are not met")
 	}
@@ -176,7 +176,7 @@ func TestExecute_UnknownSkill(t *testing.T) {
 		[]string{projectDir + "/AGENTS.md"},
 		[]string{projectDir + "/.agents/skills/agent-governance"},
 	)
-	_, err := wrapper.Execute("codex", "nonexistent-skill", projectDir, nil, fsys)
+	_, err := wrapper.NewExecutor().Execute("codex", "nonexistent-skill", projectDir, nil, fsys)
 	if err == nil {
 		t.Error("expected error for unknown skill")
 	}
@@ -194,7 +194,7 @@ func TestExecute_BudgetExceeded_Copilot(t *testing.T) {
 	)
 	fsys.Files[projectDir+"/AGENTS.md"] = []byte(bigContent)
 
-	_, err := wrapper.Execute("copilot", "go-implementation", projectDir, nil, fsys)
+	_, err := wrapper.NewExecutor().Execute("copilot", "go-implementation", projectDir, nil, fsys)
 	if err == nil {
 		t.Error("expected error when budget is exceeded for copilot")
 	}
@@ -238,7 +238,7 @@ func TestWrapperEmitsGeminiDeprecationWarningOnce_Helper(t *testing.T) {
 	t.Cleanup(func() { wrapper.GeminiWarnWriter = nil })
 
 	// Primeira invocação: warning deve aparecer.
-	instruction1, err := wrapper.Execute("gemini", "go-implementation", projectDir, nil, fsys)
+	instruction1, err := wrapper.NewExecutor().Execute("gemini", "go-implementation", projectDir, nil, fsys)
 	if err != nil {
 		t.Fatalf("primeira Execute retornou erro inesperado: %v", err)
 	}
@@ -264,7 +264,7 @@ func TestWrapperEmitsGeminiDeprecationWarningOnce_Helper(t *testing.T) {
 	}
 
 	// Segunda invocação no mesmo processo: sync.Once já disparou; buffer deve permanecer vazio.
-	_, err = wrapper.Execute("gemini", "go-implementation", projectDir, nil, fsys)
+	_, err = wrapper.NewExecutor().Execute("gemini", "go-implementation", projectDir, nil, fsys)
 	if err != nil {
 		t.Fatalf("segunda Execute retornou erro inesperado: %v", err)
 	}
@@ -299,7 +299,7 @@ func TestWrapperGeminiLegacyStillFunctional(t *testing.T) {
 	t.Parallel()
 	fsys := fullFS()
 
-	instruction, err := wrapper.Execute("gemini", "go-implementation", projectDir, nil, fsys)
+	instruction, err := wrapper.NewExecutor().Execute("gemini", "go-implementation", projectDir, nil, fsys)
 	if err != nil {
 		t.Fatalf("Execute retornou erro inesperado: %v", err)
 	}

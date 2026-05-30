@@ -50,7 +50,7 @@ type Spec struct {
 // DriverID retorna o DriverID desta Spec (ADR-020).
 // Retorna DriverID zero-value se o ID não for válido (uso ad-hoc; sem panic).
 func (s Spec) DriverID() DriverID {
-	d, _ := ParseDriverID(s.ID)
+	d, _ := NewCatalog().ParseDriverID(s.ID)
 	return d
 }
 
@@ -79,7 +79,7 @@ func (s Spec) BootstrapArgs(model, reasoning string, addDirs []string, mode Acce
 
 // newSpec é o construtor interno, acessível apenas dentro do pacote.
 // Consumidores externos devem usar funções de catálogo como Claude().
-func newSpec(
+func (c *Catalog) newSpec(
 	id, displayName, command string,
 	fixedArgs []string,
 	fallbacks []FallbackLauncher,
@@ -103,7 +103,7 @@ func newSpec(
 
 // newSpecWithBootstrap é o variant constructor para specs que injetam uma
 // BootstrapArgsFunc dinâmica (ex: Codex). ADR-013 D-03.
-func newSpecWithBootstrap(
+func (c *Catalog) newSpecWithBootstrap(
 	id, displayName, command string,
 	fixedArgs []string,
 	fallbacks []FallbackLauncher,
@@ -112,7 +112,7 @@ func newSpecWithBootstrap(
 	bootstrapArgs BootstrapArgsFunc,
 	window ContextWindow,
 ) Spec {
-	s := newSpec(id, displayName, command, fixedArgs, fallbacks, accessModeFlag, sdkVersion, npmVersion, npmPackage, window)
+	s := NewCatalog().newSpec(id, displayName, command, fixedArgs, fallbacks, accessModeFlag, sdkVersion, npmVersion, npmPackage, window)
 	s.bootstrapArgs = bootstrapArgs
 	return s
 }

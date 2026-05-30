@@ -11,10 +11,10 @@ import (
 type ArchitectureType string
 
 const (
-	ArchMonorepo        ArchitectureType = "monorepo"
-	ArchModular         ArchitectureType = "monolito modular"
-	ArchMicroservice    ArchitectureType = "microservico"
-	ArchMonolith        ArchitectureType = "monolito"
+	ArchMonorepo     ArchitectureType = "monorepo"
+	ArchModular      ArchitectureType = "monolito modular"
+	ArchMicroservice ArchitectureType = "microservico"
+	ArchMonolith     ArchitectureType = "monolito"
 )
 
 // ArchitectureResult agrupa a deteccao de arquitetura e padrao.
@@ -132,7 +132,7 @@ func (d *ArchitectureDetector) hasAnyFiles(projectDir, subdir string) bool {
 }
 
 // DescribeArchitecture retorna descricao formatada da arquitetura detectada.
-func DescribeArchitecture(archType ArchitectureType, stack, frameworks string) string {
+func (r1 *Catalog) DescribeArchitecture(archType ArchitectureType, stack, frameworks string) string {
 	switch archType {
 	case ArchMonorepo:
 		return fmt.Sprintf(`O projeto aparenta ser um monorepo, com multiplos componentes ou workspaces sob a mesma raiz. A governanca deve preservar fronteiras entre pacotes e validar apenas os workspaces afetados.
@@ -158,7 +158,7 @@ Frameworks detectados: %s.`, stack, frameworks)
 }
 
 // ArchitectureRules retorna regras especificas para o tipo de arquitetura.
-func ArchitectureRules(archType ArchitectureType) string {
+func (r1 *Catalog) ArchitectureRules(archType ArchitectureType) string {
 	switch archType {
 	case ArchMonorepo:
 		return `## Regras por Arquitetura
@@ -188,7 +188,7 @@ func ArchitectureRules(archType ArchitectureType) string {
 }
 
 // ArchitectureRestrictions retorna restricoes extras por arquitetura.
-func ArchitectureRestrictions(archType ArchitectureType) string {
+func (r1 *Catalog) ArchitectureRestrictions(archType ArchitectureType) string {
 	switch archType {
 	case ArchMonorepo:
 		return "\n5. Nao alterar contratos entre workspaces sem deixar o impacto explicito."

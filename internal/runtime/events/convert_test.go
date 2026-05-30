@@ -143,7 +143,7 @@ func TestFromACPUpdate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			evt, err := events.FromACPUpdate(testDriverID, tc.update)
+			evt, err := events.NewCatalog().FromACPUpdate(testDriverID, tc.update)
 			if err != nil {
 				t.Fatalf("FromACPUpdate() erro inesperado: %v", err)
 			}
@@ -184,7 +184,7 @@ func TestFromACPUpdateEdgeCases(t *testing.T) {
 				},
 			},
 		}
-		evt, err := events.FromACPUpdate(testDriverID, update)
+		evt, err := events.NewCatalog().FromACPUpdate(testDriverID, update)
 		if err != nil {
 			t.Fatalf("erro inesperado: %v", err)
 		}
@@ -200,7 +200,7 @@ func TestFromACPUpdateEdgeCases(t *testing.T) {
 				Content: acp.ContentBlock{}, // bloco sem variante
 			},
 		}
-		evt, err := events.FromACPUpdate(testDriverID, update)
+		evt, err := events.NewCatalog().FromACPUpdate(testDriverID, update)
 		if err != nil {
 			t.Fatalf("erro inesperado: %v", err)
 		}
@@ -212,7 +212,7 @@ func TestFromACPUpdateEdgeCases(t *testing.T) {
 	t.Run("tool_call_empty_id", func(t *testing.T) {
 		t.Parallel()
 		update := buildToolCallUpdate("", "bash", nil)
-		evt, err := events.FromACPUpdate(testDriverID, update)
+		evt, err := events.NewCatalog().FromACPUpdate(testDriverID, update)
 		if err != nil {
 			t.Fatalf("erro inesperado: %v", err)
 		}
@@ -232,7 +232,7 @@ func TestFromACPUpdateEdgeCases(t *testing.T) {
 				Status:     nil,
 			},
 		}
-		evt, err := events.FromACPUpdate(testDriverID, update)
+		evt, err := events.NewCatalog().FromACPUpdate(testDriverID, update)
 		if err != nil {
 			t.Fatalf("erro inesperado: %v", err)
 		}
@@ -251,7 +251,7 @@ func TestFromACPUpdateEdgeCases(t *testing.T) {
 	t.Run("tool_call_nil_raw_input", func(t *testing.T) {
 		t.Parallel()
 		update := buildToolCallUpdate("tc_zero", "grep", nil)
-		evt, err := events.FromACPUpdate(testDriverID, update)
+		evt, err := events.NewCatalog().FromACPUpdate(testDriverID, update)
 		if err != nil {
 			t.Fatalf("erro inesperado: %v", err)
 		}
@@ -305,7 +305,7 @@ func TestFromACPRaw(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			evt, err := events.FromACPRaw(testDriverID, json.RawMessage(tc.raw))
+			evt, err := events.NewCatalog().FromACPRaw(testDriverID, json.RawMessage(tc.raw))
 			if err != nil {
 				t.Fatalf("FromACPRaw() erro inesperado: %v", err)
 			}
@@ -353,7 +353,7 @@ func TestFromACPRawFixtures(t *testing.T) {
 			var evt events.Event
 
 			if fx.viaRaw {
-				evt, err = events.FromACPRaw(testDriverID, json.RawMessage(raw))
+				evt, err = events.NewCatalog().FromACPRaw(testDriverID, json.RawMessage(raw))
 				if err != nil {
 					t.Fatalf("FromACPRaw() erro inesperado: %v", err)
 				}
@@ -362,7 +362,7 @@ func TestFromACPRawFixtures(t *testing.T) {
 				if err := json.Unmarshal(raw, &update); err != nil {
 					t.Fatalf("unmarshal fixture %s: %v", fx.file, err)
 				}
-				evt, err = events.FromACPUpdate(testDriverID, update)
+				evt, err = events.NewCatalog().FromACPUpdate(testDriverID, update)
 				if err != nil {
 					t.Fatalf("FromACPUpdate() erro inesperado: %v", err)
 				}
@@ -419,7 +419,7 @@ func TestFromACPUpdateEnvelopeGolden(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			evt, err := events.FromACPUpdate(testDriverID, tc.update)
+			evt, err := events.NewCatalog().FromACPUpdate(testDriverID, tc.update)
 			if err != nil {
 				t.Fatalf("FromACPUpdate() erro: %v", err)
 			}
@@ -476,14 +476,14 @@ func FuzzFromACPUpdate(f *testing.F) {
 		if err := json.Unmarshal(data, &update); err != nil {
 			// SDK não conseguiu desserializar: input inválido para FromACPUpdate.
 			// Testar via FromACPRaw para cobrir o caminho de bytes brutos.
-			evt, err := events.FromACPRaw("fuzz-driver", json.RawMessage(data))
+			evt, err := events.NewCatalog().FromACPRaw("fuzz-driver", json.RawMessage(data))
 			if err != nil {
 				t.Errorf("FromACPRaw panic/erro para input: %s — %v", data, err)
 			}
 			_ = evt
 			return
 		}
-		evt, err := events.FromACPUpdate("fuzz-driver", update)
+		evt, err := events.NewCatalog().FromACPUpdate("fuzz-driver", update)
 		if err != nil {
 			t.Errorf("FromACPUpdate retornou erro inesperado: %v", err)
 		}
@@ -520,7 +520,7 @@ func TestExtractClaudeMetrics(t *testing.T) {
 			}
 		}`)
 
-		got := events.ExtractClaudeMetrics(raw)
+		got := events.NewCatalog().ExtractClaudeMetrics(raw)
 
 		if got.CacheReadTokens != 150 {
 			t.Errorf("CacheReadTokens = %d; quero 150", got.CacheReadTokens)
@@ -546,7 +546,7 @@ func TestExtractClaudeMetrics(t *testing.T) {
 			}
 		}`)
 
-		got := events.ExtractClaudeMetrics(raw)
+		got := events.NewCatalog().ExtractClaudeMetrics(raw)
 
 		if got.CacheReadTokens != 0 {
 			t.Errorf("CacheReadTokens = %d; quero 0 (campo ausente)", got.CacheReadTokens)
@@ -565,7 +565,7 @@ func TestExtractClaudeMetrics(t *testing.T) {
 
 		raw := json.RawMessage(`{"sessionUpdate": "agent_message", "content": "hello"}`)
 
-		got := events.ExtractClaudeMetrics(raw)
+		got := events.NewCatalog().ExtractClaudeMetrics(raw)
 
 		if got.CacheReadTokens != 0 || got.CacheCreationTokens != 0 || got.ThinkingTokens != 0 {
 			t.Errorf("todos campos devem ser 0 quando usage ausente; got cache_read=%d cache_creation=%d thinking=%d",

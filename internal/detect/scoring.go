@@ -6,7 +6,7 @@ import (
 )
 
 // commonPrefixDepth counts the number of shared directory segments between two paths.
-func commonPrefixDepth(a, b string) int {
+func (r1 *Catalog) commonPrefixDepth(a, b string) int {
 	aParts := strings.Split(filepath.ToSlash(filepath.Dir(a)), "/")
 	bParts := strings.Split(filepath.ToSlash(filepath.Dir(b)), "/")
 
@@ -29,10 +29,10 @@ func commonPrefixDepth(a, b string) int {
 }
 
 // scoreManifest returns the maximum commonPrefixDepth between manifestPath and any focus path.
-func scoreManifest(manifestPath string, focusPaths []string) int {
+func (r1 *Catalog) scoreManifest(manifestPath string, focusPaths []string) int {
 	max := 0
 	for _, fp := range focusPaths {
-		if s := commonPrefixDepth(manifestPath, fp); s > max {
+		if s := NewCatalog().commonPrefixDepth(manifestPath, fp); s > max {
 			max = s
 		}
 	}

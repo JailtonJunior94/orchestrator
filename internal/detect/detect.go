@@ -19,6 +19,8 @@ type FileDetector struct {
 	fs fs.FileSystem
 }
 
+var _ Detector = (*FileDetector)(nil)
+
 func NewFileDetector(fsys fs.FileSystem) *FileDetector {
 	return &FileDetector{fs: fsys}
 }

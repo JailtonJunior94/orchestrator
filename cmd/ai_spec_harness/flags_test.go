@@ -9,10 +9,10 @@ import (
 
 func TestRequireFlag(t *testing.T) {
 	cases := []struct {
-		name      string
-		setValue  string // vazio = nao chamar Set (flag ausente)
-		wantErr   bool
-		wantMsg   string
+		name     string
+		setValue string // vazio = nao chamar Set (flag ausente)
+		wantErr  bool
+		wantMsg  string
 	}{
 		{
 			name:    "flag ausente: erro com 'e obrigatoria'",
@@ -42,7 +42,7 @@ func TestRequireFlag(t *testing.T) {
 				_ = cmd.Flags().Set("tools", tc.setValue)
 			}
 
-			err := requireFlag(cmd, "tools", "ai-spec-harness install ./proj --tools claude")
+			err := newFlagHelper().requireFlag(cmd, "tools", "ai-spec-harness install ./proj --tools claude")
 			if tc.wantErr && err == nil {
 				t.Fatal("esperava erro, nao obteve")
 			}
@@ -60,7 +60,7 @@ func TestRequireFlag_ExemploNoErro(t *testing.T) {
 	cmd := &cobra.Command{Use: "test"}
 	cmd.Flags().String("tools", "", "")
 
-	err := requireFlag(cmd, "tools", "ai-spec-harness install ./proj --tools claude")
+	err := newFlagHelper().requireFlag(cmd, "tools", "ai-spec-harness install ./proj --tools claude")
 	if err == nil {
 		t.Fatal("esperava erro")
 	}

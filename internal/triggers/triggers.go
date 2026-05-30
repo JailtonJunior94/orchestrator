@@ -26,6 +26,8 @@ type embeddedLoader struct {
 	baseDir string
 }
 
+var _ Loader = (*embeddedLoader)(nil)
+
 // NewLoader retorna um Loader que le YAMLs a partir de baseDir usando fsys.
 // Linguagens suportadas: "go", "node", "python". Qualquer outra (inclusive "")
 // usa fallback para "go".
@@ -36,7 +38,7 @@ func NewLoader(fsys fs.FileSystem, baseDir string) Loader {
 // Load retorna os gatilhos para a linguagem indicada.
 // Linguagem desconhecida ou vazia faz fallback para go.yaml.
 func (l *embeddedLoader) Load(lang string) ([]Trigger, error) {
-	normalized := normalizeLang(lang)
+	normalized := l.normalizeLang(lang)
 	path := filepath.Join(l.baseDir, normalized+".yaml")
 
 	data, err := l.fs.ReadFile(path)
@@ -54,7 +56,7 @@ func (l *embeddedLoader) Load(lang string) ([]Trigger, error) {
 }
 
 // normalizeLang mapeia a linguagem para o nome de arquivo suportado; fallback go.
-func normalizeLang(lang string) string {
+func (l *embeddedLoader) normalizeLang(lang string) string {
 	switch lang {
 	case "go", "node", "python":
 		return lang
@@ -63,9 +65,17 @@ func normalizeLang(lang string) string {
 	}
 }
 
+// Detector detecta linguagem a partir de caminhos de arquivo.
+type Detector struct{}
+
+// NewDetector cria um Detector stateless.
+func NewDetector() *Detector {
+	return &Detector{}
+}
+
 // DetectLang retorna a linguagem majoritaria de um conjunto de caminhos de arquivo
 // com base na extensao dominante. Retorna "" quando nenhuma extensao conhecida domina.
-func DetectLang(files []string) string {
+func (d *Detector) DetectLang(files []string) string {
 	counts := make(map[string]int, 3)
 	for _, f := range files {
 		switch filepath.Ext(f) {

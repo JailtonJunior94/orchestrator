@@ -7,7 +7,7 @@ import (
 )
 
 func TestParseFocusPaths_CommaSeparated(t *testing.T) {
-	got := parseFocusPaths("services/go-api/handler.go,services/go-api/main.go")
+	got := newFlagHelper().parseFocusPaths("services/go-api/handler.go,services/go-api/main.go")
 	want := []string{"services/go-api/handler.go", "services/go-api/main.go"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("parseFocusPaths comma: got %v, want %v", got, want)
@@ -15,7 +15,7 @@ func TestParseFocusPaths_CommaSeparated(t *testing.T) {
 }
 
 func TestParseFocusPaths_NewlineSeparated(t *testing.T) {
-	got := parseFocusPaths("services/go-api/handler.go\nservices/web/app.ts")
+	got := newFlagHelper().parseFocusPaths("services/go-api/handler.go\nservices/web/app.ts")
 	want := []string{"services/go-api/handler.go", "services/web/app.ts"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("parseFocusPaths newline: got %v, want %v", got, want)
@@ -23,7 +23,7 @@ func TestParseFocusPaths_NewlineSeparated(t *testing.T) {
 }
 
 func TestParseFocusPaths_Single(t *testing.T) {
-	got := parseFocusPaths("services/go-api/handler.go")
+	got := newFlagHelper().parseFocusPaths("services/go-api/handler.go")
 	want := []string{"services/go-api/handler.go"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("parseFocusPaths single: got %v, want %v", got, want)
@@ -31,7 +31,7 @@ func TestParseFocusPaths_Single(t *testing.T) {
 }
 
 func TestParseFocusPaths_Empty(t *testing.T) {
-	got := parseFocusPaths("")
+	got := newFlagHelper().parseFocusPaths("")
 	if got != nil {
 		t.Errorf("parseFocusPaths empty: got %v, want nil", got)
 	}
@@ -40,7 +40,7 @@ func TestParseFocusPaths_Empty(t *testing.T) {
 func TestParseFocusPaths_EnvVar_NewlineSeparated(t *testing.T) {
 	t.Setenv("FOCUS_PATHS", "services/go-api/handler.go\nservices/web/app.ts")
 
-	got := parseFocusPaths("")
+	got := newFlagHelper().parseFocusPaths("")
 	want := []string{"services/go-api/handler.go", "services/web/app.ts"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("parseFocusPaths env newline: got %v, want %v", got, want)
@@ -50,7 +50,7 @@ func TestParseFocusPaths_EnvVar_NewlineSeparated(t *testing.T) {
 func TestParseFocusPaths_EnvVar_CommaSeparated(t *testing.T) {
 	t.Setenv("FOCUS_PATHS", "services/go-api/handler.go,services/web/app.ts")
 
-	got := parseFocusPaths("")
+	got := newFlagHelper().parseFocusPaths("")
 	want := []string{"services/go-api/handler.go", "services/web/app.ts"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("parseFocusPaths env comma: got %v, want %v", got, want)
@@ -60,7 +60,7 @@ func TestParseFocusPaths_EnvVar_CommaSeparated(t *testing.T) {
 func TestParseFocusPaths_FlagTakesPrecedenceOverEnv(t *testing.T) {
 	t.Setenv("FOCUS_PATHS", "from/env/file.go")
 
-	got := parseFocusPaths("from/flag/file.go")
+	got := newFlagHelper().parseFocusPaths("from/flag/file.go")
 	want := []string{"from/flag/file.go"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("parseFocusPaths flag precedence: got %v, want %v", got, want)
@@ -68,7 +68,7 @@ func TestParseFocusPaths_FlagTakesPrecedenceOverEnv(t *testing.T) {
 }
 
 func TestParseFocusPaths_TrimsWhitespace(t *testing.T) {
-	got := parseFocusPaths("  services/go-api/handler.go , services/web/app.ts  ")
+	got := newFlagHelper().parseFocusPaths("  services/go-api/handler.go , services/web/app.ts  ")
 	want := []string{"services/go-api/handler.go", "services/web/app.ts"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("parseFocusPaths trim: got %v, want %v", got, want)
@@ -104,28 +104,19 @@ func TestInstallFocusPaths_E2E(t *testing.T) {
 	}
 
 	// Run install with --focus-paths pointing at the Go subproject
-	installTools = "claude"
-	installLangs = ""
-	installMode = "copy"
-	installDryRun = false
-	installSource = sourceDir
-	installRef = ""
-	installNoCtx = false
-	installCodexProfile = "full"
-	installFocusPaths = "services/api/handler.go"
-	t.Cleanup(func() {
-		installTools = ""
-		installLangs = ""
-		installMode = "symlink"
-		installDryRun = false
-		installSource = ""
-		installRef = ""
-		installNoCtx = false
-		installCodexProfile = "full"
-		installFocusPaths = ""
-	})
+	cmd := newInstallCmd()
+	for name, value := range map[string]string{
+		"tools":       "claude",
+		"mode":        "copy",
+		"source":      sourceDir,
+		"focus-paths": "services/api/handler.go",
+	} {
+		if err := cmd.Flags().Set(name, value); err != nil {
+			t.Fatal(err)
+		}
+	}
 
-	err := runInstall(installCmd, []string{projectDir})
+	err := (&installCommand{}).run(cmd, []string{projectDir})
 	if err != nil {
 		t.Fatalf("install with --focus-paths failed: %v", err)
 	}

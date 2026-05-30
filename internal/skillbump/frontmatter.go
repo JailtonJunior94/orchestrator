@@ -9,19 +9,19 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var versionLinePattern = regexp.MustCompile(`(?m)^([ \t]*)version:\s*.*$`)
+var _versionLinePattern = regexp.MustCompile(`(?m)^([ \t]*)version:\s*.*$`)
 
 // UpdateFrontmatterVersion atualiza o campo version no frontmatter YAML.
-func UpdateFrontmatterVersion(content []byte, newVersion string) ([]byte, error) {
-	bodyStart, bodyEnd, lineEnding, err := frontmatterBodyRange(content)
+func (r1 *Planner) UpdateFrontmatterVersion(content []byte, newVersion string) ([]byte, error) {
+	bodyStart, bodyEnd, lineEnding, err := NewPlanner().frontmatterBodyRange(content)
 	if err != nil {
 		return nil, fmt.Errorf("frontmatter invalido: %w", err)
 	}
 
 	body := string(content[bodyStart:bodyEnd])
-	if versionLinePattern.MatchString(body) {
-		replaced := versionLinePattern.ReplaceAllString(body, "${1}version: "+newVersion)
-		return joinFrontmatter(content, bodyStart, bodyEnd, replaced), nil
+	if _versionLinePattern.MatchString(body) {
+		replaced := _versionLinePattern.ReplaceAllString(body, "${1}version: "+newVersion)
+		return NewPlanner().joinFrontmatter(content, bodyStart, bodyEnd, replaced), nil
 	}
 
 	inserted := body
@@ -29,10 +29,10 @@ func UpdateFrontmatterVersion(content []byte, newVersion string) ([]byte, error)
 		inserted += lineEnding
 	}
 	inserted += "version: " + newVersion + lineEnding
-	return joinFrontmatter(content, bodyStart, bodyEnd, inserted), nil
+	return NewPlanner().joinFrontmatter(content, bodyStart, bodyEnd, inserted), nil
 }
 
-func joinFrontmatter(content []byte, bodyStart, bodyEnd int, updated string) []byte {
+func (r1 *Planner) joinFrontmatter(content []byte, bodyStart, bodyEnd int, updated string) []byte {
 	result := make([]byte, 0, len(content)+len(updated)-(bodyEnd-bodyStart))
 	result = append(result, content[:bodyStart]...)
 	result = append(result, updated...)
@@ -40,8 +40,8 @@ func joinFrontmatter(content []byte, bodyStart, bodyEnd int, updated string) []b
 	return result
 }
 
-func frontmatterBodyRange(content []byte) (int, int, string, error) {
-	line, next, ending := readLine(content, 0)
+func (r1 *Planner) frontmatterBodyRange(content []byte) (int, int, string, error) {
+	line, next, ending := NewPlanner().readLine(content, 0)
 	if strings.TrimSpace(line) != "---" {
 		return 0, 0, "", fmt.Errorf("delimitador inicial ausente")
 	}
@@ -51,7 +51,7 @@ func frontmatterBodyRange(content []byte) (int, int, string, error) {
 	}
 
 	for pos := next; pos < len(content); {
-		currentLine, nextPos, _ := readLine(content, pos)
+		currentLine, nextPos, _ := NewPlanner().readLine(content, pos)
 		if strings.TrimSpace(currentLine) == "---" {
 			return next, pos, ending, nil
 		}
@@ -61,8 +61,8 @@ func frontmatterBodyRange(content []byte) (int, int, string, error) {
 	return 0, 0, "", fmt.Errorf("delimitador final ausente")
 }
 
-func validateFrontmatter(content []byte) error {
-	bodyStart, bodyEnd, _, err := frontmatterBodyRange(content)
+func (r1 *Planner) validateFrontmatter(content []byte) error {
+	bodyStart, bodyEnd, _, err := NewPlanner().frontmatterBodyRange(content)
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func validateFrontmatter(content []byte) error {
 	return nil
 }
 
-func readLine(content []byte, start int) (string, int, string) {
+func (r1 *Planner) readLine(content []byte, start int) (string, int, string) {
 	if start >= len(content) {
 		return "", len(content), ""
 	}

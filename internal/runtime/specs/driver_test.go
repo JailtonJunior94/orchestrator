@@ -13,7 +13,7 @@ func TestParseDriverID(t *testing.T) {
 	for _, name := range validDrivers {
 		t.Run("valid/"+name, func(t *testing.T) {
 			t.Parallel()
-			got, err := ParseDriverID(name)
+			got, err := NewCatalog().ParseDriverID(name)
 			if err != nil {
 				t.Fatalf("ParseDriverID(%q) inesperado erro: %v", name, err)
 			}
@@ -38,7 +38,7 @@ func TestParseDriverID(t *testing.T) {
 	for _, tc := range invalidCases {
 		t.Run("invalid/"+tc.input, func(t *testing.T) {
 			t.Parallel()
-			_, err := ParseDriverID(tc.input)
+			_, err := NewCatalog().ParseDriverID(tc.input)
 			if err == nil {
 				t.Fatalf("ParseDriverID(%q) esperava erro, obteve nil", tc.input)
 			}
@@ -52,7 +52,7 @@ func TestParseDriverID(t *testing.T) {
 func TestDriverID_String_Idempotent(t *testing.T) {
 	t.Parallel()
 
-	d, err := ParseDriverID("codex")
+	d, err := NewCatalog().ParseDriverID("codex")
 	if err != nil {
 		t.Fatal(err)
 	}

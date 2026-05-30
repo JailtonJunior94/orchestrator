@@ -11,7 +11,7 @@ func TestReadVersionFile_Exists(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "VERSION"), []byte("  1.2.3\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	got := ReadVersionFile(dir)
+	got := NewProvider().ReadVersionFile(dir)
 	if got != "1.2.3" {
 		t.Errorf("ReadVersionFile: got %q, want %q", got, "1.2.3")
 	}
@@ -19,7 +19,7 @@ func TestReadVersionFile_Exists(t *testing.T) {
 
 func TestReadVersionFile_Missing(t *testing.T) {
 	dir := t.TempDir()
-	got := ReadVersionFile(dir)
+	got := NewProvider().ReadVersionFile(dir)
 	if got != "unknown" {
 		t.Errorf("ReadVersionFile: got %q, want %q", got, "unknown")
 	}
@@ -52,14 +52,14 @@ func TestResolve(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Cleanup(SetForTest(tc.ldflags))
+			t.Cleanup(NewProvider().SetForTest(tc.ldflags))
 			dir := t.TempDir()
 			if tc.fileContent != "" {
 				if err := os.WriteFile(filepath.Join(dir, "VERSION"), []byte(tc.fileContent+"\n"), 0644); err != nil {
 					t.Fatal(err)
 				}
 			}
-			got := Resolve(dir)
+			got := NewProvider().Resolve(dir)
 			if got != tc.want {
 				t.Errorf("Resolve: got %q, want %q", got, tc.want)
 			}
@@ -69,15 +69,15 @@ func TestResolve(t *testing.T) {
 
 func TestResolveFromExecutable(t *testing.T) {
 	t.Run("ldflags setado: retorna ldflags sem tocar filesystem", func(t *testing.T) {
-		t.Cleanup(SetForTest("1.1.0-test"))
-		got := ResolveFromExecutable()
+		t.Cleanup(NewProvider().SetForTest("1.1.0-test"))
+		got := NewProvider().ResolveFromExecutable()
 		if got != "1.1.0-test" {
 			t.Errorf("ResolveFromExecutable: got %q, want %q", got, "1.1.0-test")
 		}
 	})
 
 	t.Run("dev com VERSION file adjacente: retorna versao-dev", func(t *testing.T) {
-		t.Cleanup(SetForTest("dev"))
+		t.Cleanup(NewProvider().SetForTest("dev"))
 		exe, err := os.Executable()
 		if err != nil {
 			t.Fatal(err)
@@ -92,14 +92,14 @@ func TestResolveFromExecutable(t *testing.T) {
 		}
 		defer func() { _ = os.Remove(versionFile) }()
 
-		got := ResolveFromExecutable()
+		got := NewProvider().ResolveFromExecutable()
 		if got != content+"-dev" {
 			t.Errorf("ResolveFromExecutable: got %q, want %q", got, content+"-dev")
 		}
 	})
 
 	t.Run("dev sem VERSION file: retorna dev", func(t *testing.T) {
-		t.Cleanup(SetForTest("dev"))
+		t.Cleanup(NewProvider().SetForTest("dev"))
 		exe, err := os.Executable()
 		if err != nil {
 			t.Fatal(err)
@@ -109,7 +109,7 @@ func TestResolveFromExecutable(t *testing.T) {
 		versionFile := filepath.Join(dir, "VERSION")
 		_ = os.Remove(versionFile) // garante que nao existe
 
-		got := ResolveFromExecutable()
+		got := NewProvider().ResolveFromExecutable()
 		if got != "dev" {
 			t.Errorf("ResolveFromExecutable: got %q, want %q", got, "dev")
 		}
@@ -124,8 +124,8 @@ func TestSetForTest_Concurrent(t *testing.T) {
 	done := make(chan struct{}, N)
 	for i := 0; i < N; i++ {
 		go func() {
-			restore := SetForTest("concurrent-test")
-			_ = Get()
+			restore := NewProvider().SetForTest("concurrent-test")
+			_ = NewProvider().Get()
 			restore()
 			done <- struct{}{}
 		}()

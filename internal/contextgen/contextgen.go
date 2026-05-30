@@ -61,9 +61,9 @@ func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, 
 
 	fwDetector := detect.NewFrameworkDetector(g.fs)
 	frameworks := fwDetector.Detect(projectDir)
-	frameworksStr := detect.JoinFrameworks(frameworks)
+	frameworksStr := detect.NewCatalog().JoinFrameworks(frameworks)
 
-	stacks := detect.DetectPrimaryStack(g.fs, projectDir)
+	stacks := detect.NewCatalog().DetectPrimaryStack(g.fs, projectDir)
 	stackStr := strings.Join(stacks, ",")
 
 	tcDetector := detect.NewToolchainDetector(g.fs)
@@ -73,12 +73,12 @@ func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, 
 	toolchain := tcDetector.Detect(projectDir)
 
 	dirTree := g.buildDirectoryTree(projectDir)
-	archDescription := detect.DescribeArchitecture(archResult.Type, stackStr, frameworksStr)
+	archDescription := detect.NewCatalog().DescribeArchitecture(archResult.Type, stackStr, frameworksStr)
 	depFlow := g.buildDependencyFlow(projectDir)
-	archRules := detect.ArchitectureRules(archResult.Type)
+	archRules := detect.NewCatalog().ArchitectureRules(archResult.Type)
 	langRules := g.buildLanguageRules(projectDir)
 	validationCmds := g.buildValidationCommands(toolchain)
-	archRestrictions := detect.ArchitectureRestrictions(archResult.Type)
+	archRestrictions := detect.NewCatalog().ArchitectureRestrictions(archResult.Type)
 
 	// Gerar AGENTS.md
 	agentsContent := g.renderAgentsTemplate(
@@ -88,7 +88,7 @@ func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, 
 	)
 
 	if governanceProfile == "compact" {
-		agentsContent = stripCompactSections(agentsContent)
+		agentsContent = g.stripCompactSections(agentsContent)
 	}
 
 	if err := g.fs.WriteFile(filepath.Join(projectDir, "AGENTS.md"), []byte(agentsContent)); err != nil {
@@ -132,7 +132,7 @@ func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, 
 			"`.gemini/commands/` sao adaptadores finos que apontam para a habilidade correta.",
 			stackSection,
 		)
-		content += geminiExtraGuidance
+		content += _geminiExtraGuidance
 		if err := g.fs.WriteFile(filepath.Join(projectDir, "GEMINI.md"), []byte(content)); err != nil {
 			return fmt.Errorf("escrever GEMINI.md: %w", err)
 		}
@@ -147,7 +147,7 @@ func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, 
 			"`.github/agents/` sao wrappers leves que apontam para a habilidade correta.",
 			stackSection,
 		)
-		content += copilotExtraGuidance
+		content += _copilotExtraGuidance
 		copilotPath := filepath.Join(projectDir, ".github", "copilot-instructions.md")
 		_ = g.fs.MkdirAll(filepath.Dir(copilotPath))
 		if err := g.fs.WriteFile(copilotPath, []byte(content)); err != nil {
@@ -380,7 +380,7 @@ func (g *Generator) buildStackSection(projectDir string) string {
 	return "## Stack\n\n" + strings.Join(lines, "\n") + "\n"
 }
 
-var planningSkills = []string{
+var _planningSkills = []string{
 	"analyze-project",
 	"create-prd",
 	"create-technical-specification",
@@ -391,7 +391,7 @@ func (g *Generator) buildCodexConfig(projectDir, codexProfile string) string {
 	baseSkills := []string{"agent-governance", "bugfix", "review", "refactor", "execute-task", "execute-all-tasks"}
 
 	if codexProfile != "lean" {
-		baseSkills = append(baseSkills, planningSkills...)
+		baseSkills = append(baseSkills, _planningSkills...)
 	}
 
 	if g.fs.Exists(filepath.Join(projectDir, ".agents", "skills", "go-implementation", "SKILL.md")) {
@@ -574,7 +574,7 @@ Use `+"`"+`AGENTS.md`+"`"+` como %s deste repositorio.
 	return content
 }
 
-const geminiExtraGuidance = `
+const _geminiExtraGuidance = `
 
 ## Orientacoes Especificas para Gemini
 
@@ -587,7 +587,7 @@ O Gemini CLI nao suporta hooks, agents ou rules nativos. Para modelar o fluxo de
 5. Nao confiar em enforcement automatico — a compliance depende de seguir as instrucoes procedurais manualmente.
 `
 
-const copilotExtraGuidance = `
+const _copilotExtraGuidance = `
 
 ## Orientacoes Especificas para Copilot
 
@@ -603,15 +603,15 @@ O GitHub Copilot suporta agents em ` + "`" + `.github/agents/` + "`" + ` e carre
 // stripCompactSections remove secoes verbose do AGENTS.md para profile compact.
 // Remove os blocos "## Diretrizes de Estrutura" e "### Composicao Multi-Linguagem"
 // ate o inicio do proximo cabecalho de mesmo ou maior nivel.
-func stripCompactSections(content string) string {
-	content = stripSection(content, "## Diretrizes de Estrutura", "## ")
-	content = stripSection(content, "### Composicao Multi-Linguagem", "## ")
+func (g *Generator) stripCompactSections(content string) string {
+	content = g.stripSection(content, "## Diretrizes de Estrutura", "## ")
+	content = g.stripSection(content, "### Composicao Multi-Linguagem", "## ")
 	return content
 }
 
 // stripSection remove o bloco que começa em startHeader ate (exclusive) a proxima
 // linha que comece com nextPrefix (mesmo nivel ou superior).
-func stripSection(content, startHeader, nextPrefix string) string {
+func (g *Generator) stripSection(content, startHeader, nextPrefix string) string {
 	startIdx := strings.Index(content, "\n"+startHeader)
 	if startIdx == -1 {
 		// tenta no inicio do arquivo

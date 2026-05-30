@@ -10,10 +10,10 @@ import (
 	"time"
 )
 
-func runCmd(ctx context.Context, workDir string, liveOut io.Writer, name string, args ...string) (string, string, int, error) {
+func (c *Catalog) runCmd(ctx context.Context, workDir string, liveOut io.Writer, name string, args ...string) (string, string, int, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = workDir
-	cmd.Env = cleanEnv()
+	cmd.Env = NewCatalog().cleanEnv()
 
 	// No Windows nao ha suporte a grupos de processos Unix; apenas mata o processo pai.
 	cmd.Cancel = func() error {

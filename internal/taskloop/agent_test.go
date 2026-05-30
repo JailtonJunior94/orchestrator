@@ -75,7 +75,7 @@ func TestBuildPromptContainsAgentsMd(t *testing.T) {
 		Architecture: "pacote internal/taskloop — orquestracao do loop",
 		References:   "go-implementation, tests",
 	}
-	prompt := BuildPrompt(".specs/prd-feat/01_task.md", ".specs/prd-feat", ctx)
+	prompt := NewCatalog().BuildPrompt(".specs/prd-feat/01_task.md", ".specs/prd-feat", ctx)
 
 	required := []string{
 		"AGENTS.md",
@@ -259,7 +259,7 @@ func TestIsAuthError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := isAuthError(tt.output)
+			got := NewCatalog().isAuthError(tt.output)
 			if got != tt.want {
 				t.Errorf("isAuthError(%q) = %v, want %v", tt.output, got, tt.want)
 			}
@@ -270,13 +270,13 @@ func TestIsAuthError(t *testing.T) {
 // TestAuthGuidance valida que authGuidance retorna orientacao especifica por ferramenta.
 func TestAuthGuidance(t *testing.T) {
 	for _, tool := range []string{"claude", "copilot", "gemini", "codex"} {
-		guidance := authGuidance(tool)
+		guidance := NewCatalog().authGuidance(tool)
 		if guidance == "" {
 			t.Errorf("authGuidance(%q) retornou string vazia", tool)
 		}
 	}
 	// Ferramenta desconhecida deve retornar orientacao generica
-	guidance := authGuidance("desconhecido")
+	guidance := NewCatalog().authGuidance("desconhecido")
 	if guidance == "" {
 		t.Error("authGuidance para ferramenta desconhecida retornou string vazia")
 	}
@@ -287,7 +287,7 @@ func TestAuthGuidance(t *testing.T) {
 // Claude Code em modo subprocesso nao herda sessao do processo pai — ANTHROPIC_API_KEY
 // e a alternativa suportada para uso programatico.
 func TestAuthGuidanceClaudeAnthropicKey(t *testing.T) {
-	guidance := authGuidance("claude")
+	guidance := NewCatalog().authGuidance("claude")
 	if !strings.Contains(guidance, "ANTHROPIC_API_KEY") {
 		t.Errorf("authGuidance(\"claude\") deve mencionar ANTHROPIC_API_KEY como alternativa, obteve: %q", guidance)
 	}
@@ -297,7 +297,7 @@ func TestAuthGuidanceClaudeAnthropicKey(t *testing.T) {
 // quando ANTHROPIC_API_KEY esta definido (autenticacao nao-interativa disponivel).
 func TestWarnClaudeAuthWithAPIKey(t *testing.T) {
 	t.Setenv("ANTHROPIC_API_KEY", "sk-test-key")
-	got := warnClaudeAuth()
+	got := NewCatalog().warnClaudeAuth()
 	if got != "" {
 		t.Errorf("warnClaudeAuth() com ANTHROPIC_API_KEY definido deve retornar \"\", obteve: %q", got)
 	}
@@ -323,7 +323,7 @@ func TestCleanEnvResetsAIInvocationDepth(t *testing.T) {
 	// Simula processo pai com profundidade diferente de 0
 	t.Setenv("AI_INVOCATION_DEPTH", "99")
 
-	env := cleanEnv()
+	env := NewCatalog().cleanEnv()
 
 	var depthValues []string
 	for _, e := range env {
@@ -520,7 +520,7 @@ A paridade semantica exige equivalencia entre ferramentas.
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := extractArchitecture(tt.techspec)
+			got := NewCatalog().extractArchitecture(tt.techspec)
 			if got != tt.want {
 				t.Errorf("extractArchitecture()\ngot:  %q\nwant: %q", got, tt.want)
 			}
@@ -533,7 +533,7 @@ func TestExtractArchitectureTruncation(t *testing.T) {
 	longContent := strings.Repeat("x", 2000)
 	techspec := "## Arquitetura do Sistema\n\n" + longContent + "\n\n## Proximo"
 
-	got := extractArchitecture(techspec)
+	got := NewCatalog().extractArchitecture(techspec)
 	if len(got) > 1510 {
 		t.Errorf("extractArchitecture deveria truncar a ~1500 chars, obteve %d chars", len(got))
 	}
@@ -589,7 +589,7 @@ func TestDetectReferences(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := detectReferences(tt.content)
+			got := NewCatalog().detectReferences(tt.content)
 			for _, w := range tt.want {
 				if !strings.Contains(got, w) {
 					t.Errorf("detectReferences() deveria conter %q, obteve: %q", w, got)
@@ -621,7 +621,7 @@ func TestContainsAnyPattern(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := containsAnyPattern(tt.s, tt.patterns...)
+			got := NewCatalog().containsAnyPattern(tt.s, tt.patterns...)
 			if got != tt.want {
 				t.Errorf("containsAnyPattern(%q, %v) = %v, want %v", tt.s, tt.patterns, got, tt.want)
 			}
@@ -653,7 +653,7 @@ O aggregate Version valida o formato semantico.`
 	_ = fsys.WriteFile("/work/.specs/prd-feat/techspec.md", []byte(techspec))
 	_ = fsys.WriteFile("/work/.specs/prd-feat/prd.md", []byte(prd))
 
-	ctx := BuildPromptContext(".specs/prd-feat", "/work", fsys, nil, nil)
+	ctx := NewCatalog().BuildPromptContext(".specs/prd-feat", "/work", fsys, nil, nil)
 
 	if !strings.Contains(ctx.Architecture, "internal/version") {
 		t.Errorf("Architecture deveria conter 'internal/version', obteve: %q", ctx.Architecture)
@@ -673,7 +673,7 @@ O aggregate Version valida o formato semantico.`
 func TestBuildPromptContextArquivosAusentes(t *testing.T) {
 	fsys := fs.NewFakeFileSystem()
 
-	ctx := BuildPromptContext(".specs/prd-inexistente", "/work", fsys, nil, nil)
+	ctx := NewCatalog().BuildPromptContext(".specs/prd-inexistente", "/work", fsys, nil, nil)
 
 	if ctx.Architecture != "ler techspec.md para contexto de arquitetura" {
 		t.Errorf("Architecture com techspec ausente deveria ser fallback, obteve: %q", ctx.Architecture)

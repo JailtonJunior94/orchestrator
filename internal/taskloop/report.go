@@ -25,10 +25,10 @@ type BugfixResult struct {
 // Report armazena os resultados consolidados da execucao do task-loop.
 type Report struct {
 	PRDFolder       string
-	Tool            string             // preservado para modo simples
-	Mode            string             // "simples" ou "avancado"
-	ExecutorProfile *ExecutionProfile  // nil em modo simples
-	ReviewerProfile *ExecutionProfile  // nil quando reviewer nao configurado
+	Tool            string            // preservado para modo simples
+	Mode            string            // "simples" ou "avancado"
+	ExecutorProfile *ExecutionProfile // nil em modo simples
+	ReviewerProfile *ExecutionProfile // nil quando reviewer nao configurado
 	StartTime       time.Time
 	EndTime         time.Time
 	StopReason      string
@@ -52,7 +52,7 @@ type IterationResult struct {
 	BugfixResult *BugfixResult // nil quando bugfix nao executado
 }
 
-const maxOutputLen = 2000
+const _maxOutputLen = 2000
 
 // Render gera o relatorio consolidado em formato Markdown.
 // Quando Mode == "avancado", inclui perfis de execucao, coluna Papel e sub-linhas de reviewer.
@@ -157,8 +157,8 @@ func (r *Report) renderSimples() []byte {
 			}
 			if it.AgentOutput != "" {
 				output := it.AgentOutput
-				if len(output) > maxOutputLen {
-					output = output[:maxOutputLen] + "\n... (truncated)"
+				if len(output) > _maxOutputLen {
+					output = output[:_maxOutputLen] + "\n... (truncated)"
 				}
 				b.WriteString("- **Agent Output:**\n")
 				b.WriteString("  ```\n")
@@ -187,11 +187,11 @@ func (r *Report) renderAvancado() []byte {
 	b.WriteString("- **Modo:** avancado\n")
 	if r.ExecutorProfile != nil {
 		ep := r.ExecutorProfile
-		fmt.Fprintf(&b, "- **Executor:** %s / %s / %s\n", ep.Tool(), ep.Provider(), modelOrDefault(ep.Model()))
+		fmt.Fprintf(&b, "- **Executor:** %s / %s / %s\n", ep.Tool(), ep.Provider(), NewCatalog().modelOrDefault(ep.Model()))
 	}
 	if r.ReviewerProfile != nil {
 		rp := r.ReviewerProfile
-		fmt.Fprintf(&b, "- **Reviewer:** %s / %s / %s\n", rp.Tool(), rp.Provider(), modelOrDefault(rp.Model()))
+		fmt.Fprintf(&b, "- **Reviewer:** %s / %s / %s\n", rp.Tool(), rp.Provider(), NewCatalog().modelOrDefault(rp.Model()))
 	} else {
 		b.WriteString("- **Reviewer:** nao configurado\n")
 	}
@@ -299,8 +299,8 @@ func (r *Report) renderAvancado() []byte {
 			}
 			if it.AgentOutput != "" {
 				output := it.AgentOutput
-				if len(output) > maxOutputLen {
-					output = output[:maxOutputLen] + "\n... (truncated)"
+				if len(output) > _maxOutputLen {
+					output = output[:_maxOutputLen] + "\n... (truncated)"
 				}
 				b.WriteString("- **Agent Output:**\n")
 				b.WriteString("  ```\n")
@@ -321,8 +321,8 @@ func (r *Report) renderAvancado() []byte {
 				}
 				if rr.Output != "" {
 					output := rr.Output
-					if len(output) > maxOutputLen {
-						output = output[:maxOutputLen] + "\n... (truncated)"
+					if len(output) > _maxOutputLen {
+						output = output[:_maxOutputLen] + "\n... (truncated)"
 					}
 					b.WriteString("- **Review Output:**\n")
 					b.WriteString("  ```\n")
@@ -344,8 +344,8 @@ func (r *Report) renderAvancado() []byte {
 				}
 				if bf.Output != "" {
 					output := bf.Output
-					if len(output) > maxOutputLen {
-						output = output[:maxOutputLen] + "\n... (truncated)"
+					if len(output) > _maxOutputLen {
+						output = output[:_maxOutputLen] + "\n... (truncated)"
 					}
 					b.WriteString("- **Bugfix Output:**\n")
 					b.WriteString("  ```\n")
@@ -365,7 +365,7 @@ func (r *Report) renderAvancado() []byte {
 }
 
 // modelOrDefault retorna o modelo ou "default" quando o modelo nao esta configurado.
-func modelOrDefault(model string) string {
+func (c *Catalog) modelOrDefault(model string) string {
 	if model == "" {
 		return "default"
 	}

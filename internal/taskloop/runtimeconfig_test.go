@@ -12,7 +12,7 @@ import (
 func TestBuildRuntimeConfig_TimeoutVazio(t *testing.T) {
 	t.Parallel()
 
-	rc, err := taskloop.BuildRuntimeConfig(config.Runtime{})
+	rc, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{})
 	if err != nil {
 		t.Fatalf("erro inesperado com Runtime zero-value: %v", err)
 	}
@@ -25,7 +25,7 @@ func TestBuildRuntimeConfig_TimeoutVazio(t *testing.T) {
 func TestBuildRuntimeConfig_TimeoutValido(t *testing.T) {
 	t.Parallel()
 
-	rc, err := taskloop.BuildRuntimeConfig(config.Runtime{Timeout: "30s"})
+	rc, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{Timeout: "30s"})
 	if err != nil {
 		t.Fatalf("erro inesperado com timeout=30s: %v", err)
 	}
@@ -41,7 +41,7 @@ func TestBuildRuntimeConfig_TimeoutValido(t *testing.T) {
 func TestBuildRuntimeConfig_TimeoutMalformado(t *testing.T) {
 	t.Parallel()
 
-	_, err := taskloop.BuildRuntimeConfig(config.Runtime{Timeout: "10x"})
+	_, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{Timeout: "10x"})
 	if err == nil {
 		t.Fatal("esperava erro com timeout malformado, obteve nil")
 	}
@@ -59,7 +59,7 @@ func TestBuildRuntimeConfig_TimeoutMalformado(t *testing.T) {
 func TestBuildRuntimeConfig_NumericosMapeados1a1(t *testing.T) {
 	t.Parallel()
 
-	rc, err := taskloop.BuildRuntimeConfig(config.Runtime{
+	rc, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{
 		MaxRetries:             3,
 		RetryBackoffMultiplier: 1.5,
 		Concurrent:             4,
@@ -87,7 +87,7 @@ func TestBuildRuntimeConfig_NumericosMapeados1a1(t *testing.T) {
 func TestBuildRuntimeConfig_RegressaoF1(t *testing.T) {
 	t.Parallel()
 
-	rc, err := taskloop.BuildRuntimeConfig(config.Runtime{})
+	rc, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{})
 	if err != nil {
 		t.Fatalf("erro inesperado com Runtime zero-value: %v", err)
 	}
@@ -147,7 +147,7 @@ func TestBuildRuntimeConfig_ApplyDefaultsNormalization(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			rc, err := taskloop.BuildRuntimeConfig(config.Runtime{
+			rc, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{
 				Concurrent: tc.concurrent,
 				BatchSize:  tc.batchSize,
 			})
@@ -169,9 +169,9 @@ func TestBuildRuntimeConfig_TimeoutVariedades(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		timeout     string
-		wantErr     bool
+		name         string
+		timeout      string
+		wantErr      bool
 		wantDisabled bool
 		wantDuration time.Duration
 	}{
@@ -186,7 +186,7 @@ func TestBuildRuntimeConfig_TimeoutVariedades(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			rc, err := taskloop.BuildRuntimeConfig(config.Runtime{Timeout: tc.timeout})
+			rc, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{Timeout: tc.timeout})
 			if tc.wantErr {
 				if err == nil {
 					t.Fatal("esperava erro, obteve nil")
@@ -227,7 +227,7 @@ func TestBuildRuntimeConfig_ParidadeCLIs(t *testing.T) {
 	for _, driver := range drivers {
 		t.Run(driver, func(t *testing.T) {
 			t.Parallel()
-			rc, err := taskloop.BuildRuntimeConfig(cfg)
+			rc, err := taskloop.NewCatalog().BuildRuntimeConfig(cfg)
 			if err != nil {
 				t.Fatalf("driver %s: erro inesperado: %v", driver, err)
 			}

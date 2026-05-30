@@ -190,9 +190,9 @@ func TestDetectLang(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := DetectLang(tc.files)
+			got := NewDetector().DetectLang(tc.files)
 			if got != tc.want {
-				t.Errorf("DetectLang(%v) = %q, want %q", tc.files, got, tc.want)
+				t.Errorf("NewDetector().DetectLang(%v) = %q, want %q", tc.files, got, tc.want)
 			}
 		})
 	}

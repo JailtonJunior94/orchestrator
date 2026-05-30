@@ -112,7 +112,7 @@ func (s *Service) Execute(projectDir string, dryRun bool) error {
 		data, err := s.fs.ReadFile(settingsFile)
 		if err == nil {
 			content := string(data)
-			if isGeneratedClaudeSettings(content) {
+			if s.isGeneratedClaudeSettings(content) {
 				safeRm(settingsFile)
 			} else if strings.Contains(content, "validate-governance") || strings.Contains(content, "validate-preload") {
 				s.printer.Warn(".claude/settings.local.json contem configuracoes alem dos hooks de governanca — mantido.")
@@ -194,14 +194,14 @@ func (s *Service) Execute(projectDir string, dryRun bool) error {
 	return nil
 }
 
-func isGeneratedClaudeSettings(content string) bool {
+func (s *Service) isGeneratedClaudeSettings(content string) bool {
 	normalize := func(v string) string {
 		return strings.Join(strings.Fields(v), "")
 	}
-	return normalize(content) == normalize(defaultClaudeSettings())
+	return normalize(content) == normalize(s.defaultClaudeSettings())
 }
 
-func defaultClaudeSettings() string {
+func (s *Service) defaultClaudeSettings() string {
 	return `{
   "hooks": {
     "PreToolUse": [

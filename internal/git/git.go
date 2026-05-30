@@ -16,6 +16,8 @@ type Repository interface {
 // CLIRepository usa o binario git do sistema.
 type CLIRepository struct{}
 
+var _ Repository = (*CLIRepository)(nil)
+
 func NewCLIRepository() *CLIRepository { return &CLIRepository{} }
 
 func (r *CLIRepository) IsRepo(path string) bool {

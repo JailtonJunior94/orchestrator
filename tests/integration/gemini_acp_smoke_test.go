@@ -19,13 +19,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
-	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 )
 
 // TestGeminiACPSmoke (RF-12) valida que o harness pode invocar Gemini via ACP
@@ -68,11 +68,10 @@ func TestGeminiACPSmoke(t *testing.T) {
 	// Prober fake: resolve "gemini" sem subprocess real.
 	smokeProber := &smokeGeminiProber{geminiAvailable: geminiAvailable}
 
-	runner := airuntime.NewACPRunner(
-		specs.Gemini(),
-		airuntime.WithProber(smokeProber),
-		airuntime.WithClientFactory(&smokeGeminiFakeClientFactory{script: script, ctx: ctx, t: t}),
-		airuntime.WithPersistenceFactory(pfact),
+	runner := airuntime.NewACPRunner(specs.NewCatalog().
+		Gemini(), airuntime.NewCatalog().WithProber(smokeProber), airuntime.NewCatalog().
+		WithClientFactory(&smokeGeminiFakeClientFactory{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(pfact),
 	)
 
 	evidenceDir := "/evidence/gemini-smoke"

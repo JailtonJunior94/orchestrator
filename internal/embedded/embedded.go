@@ -12,14 +12,14 @@ var Assets embed.FS
 
 // ExtractToTempDir extrai os assets embutidos para um diretorio temporario
 // e retorna o caminho e uma funcao de limpeza.
-func ExtractToTempDir() (string, func(), error) {
+func (r1 *Extractor) ExtractToTempDir() (string, func(), error) {
 	dir, err := os.MkdirTemp("", "ai-spec-harness-embedded-*")
 	if err != nil {
 		return "", nil, err
 	}
 	cleanup := func() { os.RemoveAll(dir) }
 
-	if err := copyFS(Assets, "assets", dir); err != nil {
+	if err := NewExtractor().copyFS(Assets, "assets", dir); err != nil {
 		cleanup()
 		return "", nil, err
 	}
@@ -27,7 +27,7 @@ func ExtractToTempDir() (string, func(), error) {
 }
 
 // copyFS copia o conteudo de um embed.FS para um diretorio de destino no OS.
-func copyFS(fsys embed.FS, root, dst string) error {
+func (r1 *Extractor) copyFS(fsys embed.FS, root, dst string) error {
 	return fs.WalkDir(fsys, root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err

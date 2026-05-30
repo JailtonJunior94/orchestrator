@@ -8,7 +8,7 @@ import (
 func TestOptionsToConfigOverrides_ActivityTimeoutDefaultDoesNotOverrideConfig(t *testing.T) {
 	t.Parallel()
 
-	got := optionsToConfigOverrides(Options{
+	got := NewCatalog().optionsToConfigOverrides(Options{
 		ActivityTimeout: 120 * time.Second,
 	})
 
@@ -20,7 +20,7 @@ func TestOptionsToConfigOverrides_ActivityTimeoutDefaultDoesNotOverrideConfig(t 
 func TestOptionsToConfigOverrides_ActivityTimeoutExplicitOverridesConfig(t *testing.T) {
 	t.Parallel()
 
-	got := optionsToConfigOverrides(Options{
+	got := NewCatalog().optionsToConfigOverrides(Options{
 		ActivityTimeout:    90 * time.Second,
 		ActivityTimeoutSet: true,
 	})
@@ -35,7 +35,7 @@ func TestOptionsToConfigOverrides_ActivityTimeoutExplicitOverridesConfig(t *test
 func TestOptionsToConfigOverrides_ActivityTimeoutExplicitZeroOverrides(t *testing.T) {
 	t.Parallel()
 
-	got := optionsToConfigOverrides(Options{
+	got := NewCatalog().optionsToConfigOverrides(Options{
 		ActivityTimeout:    0,
 		ActivityTimeoutSet: true,
 	})
@@ -54,7 +54,7 @@ func TestResolveRuntimeConfig_DefaultWatchdogIs120s(t *testing.T) {
 	// Default do Cobra (120s) sem flag explícita: ActivityTimeoutSet=false.
 	opts := Options{ActivityTimeout: 120 * time.Second, ActivityTimeoutSet: false}
 
-	rc, err := resolveRuntimeConfig(dir, optionsToConfigOverrides(opts))
+	rc, err := NewCatalog().resolveRuntimeConfig(dir, NewCatalog().optionsToConfigOverrides(opts))
 	if err != nil {
 		t.Fatalf("resolveRuntimeConfig: %v", err)
 	}
@@ -71,7 +71,7 @@ func TestResolveRuntimeConfig_ExplicitZeroDisablesWatchdog(t *testing.T) {
 	dir := t.TempDir()
 	opts := Options{ActivityTimeout: 0, ActivityTimeoutSet: true}
 
-	rc, err := resolveRuntimeConfig(dir, optionsToConfigOverrides(opts))
+	rc, err := NewCatalog().resolveRuntimeConfig(dir, NewCatalog().optionsToConfigOverrides(opts))
 	if err != nil {
 		t.Fatalf("resolveRuntimeConfig: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestResolveRuntimeConfig_ExplicitValueWins(t *testing.T) {
 	dir := t.TempDir()
 	opts := Options{ActivityTimeout: 45 * time.Second, ActivityTimeoutSet: true}
 
-	rc, err := resolveRuntimeConfig(dir, optionsToConfigOverrides(opts))
+	rc, err := NewCatalog().resolveRuntimeConfig(dir, NewCatalog().optionsToConfigOverrides(opts))
 	if err != nil {
 		t.Fatalf("resolveRuntimeConfig: %v", err)
 	}

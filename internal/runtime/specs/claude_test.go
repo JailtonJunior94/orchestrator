@@ -11,7 +11,7 @@ import (
 func TestClaudeSnapshot(t *testing.T) {
 	t.Parallel()
 
-	spec := specs.Claude()
+	spec := specs.NewCatalog().Claude()
 
 	if got, want := spec.ID, "claude"; got != want {
 		t.Errorf("ID = %q; want %q", got, want)
@@ -61,8 +61,8 @@ func TestClaudeSnapshot(t *testing.T) {
 func TestClaudeStability(t *testing.T) {
 	t.Parallel()
 
-	a := specs.Claude()
-	b := specs.Claude()
+	a := specs.NewCatalog().Claude()
+	b := specs.NewCatalog().Claude()
 
 	if a.ID != b.ID {
 		t.Errorf("ID inconsistente: %q != %q", a.ID, b.ID)
@@ -86,9 +86,9 @@ func TestLauncherKind(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		launcher  specs.Launcher
-		wantKind  string
+		name     string
+		launcher specs.Launcher
+		wantKind string
 	}{
 		{
 			name:     "binary launcher",
@@ -170,7 +170,7 @@ func TestLauncherCommand(t *testing.T) {
 func TestClaudeNpmFallbackFormat(t *testing.T) {
 	t.Parallel()
 
-	spec := specs.Claude()
+	spec := specs.NewCatalog().Claude()
 
 	if len(spec.Fallbacks) == 0 {
 		t.Fatal("Claude() deve ter ao menos um fallback")

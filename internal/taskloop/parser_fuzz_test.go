@@ -29,7 +29,7 @@ func FuzzParseTaskFile(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		// Erros sao aceitaveis; panic nao
-		_, _ = ParseTasksFile(data)
+		_, _ = NewCatalog().ParseTasksFile(data)
 	})
 }
 
@@ -47,6 +47,6 @@ func FuzzReadTaskFileStatus(f *testing.F) {
 	f.Add([]byte("**Status:**\r\n"))
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		_ = ReadTaskFileStatus(data)
+		_ = NewCatalog().ReadTaskFileStatus(data)
 	})
 }

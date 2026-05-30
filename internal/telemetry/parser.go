@@ -18,7 +18,7 @@ type logEntry struct {
 // dentro da janela de tempo definida por since (0 = sem filtro).
 // Linhas malformadas são ignoradas silenciosamente.
 // Retorna slice vazio e err=nil se o arquivo não existir.
-func parseLogEntries(logPath string, since time.Duration) ([]logEntry, error) {
+func (c *Catalog) parseLogEntries(logPath string, since time.Duration) ([]logEntry, error) {
 	f, err := os.Open(logPath)
 	if err != nil {
 		if os.IsNotExist(err) {

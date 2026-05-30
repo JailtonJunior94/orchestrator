@@ -78,14 +78,13 @@ func (r *testDiscardRenderer) Render(_ events.Event) {}
 // buildTestRunner cria um ACPRunner com dependências fake para testes do invoker.
 func buildTestRunner(t *testing.T, ctx context.Context, script *acpfake.Script) *airuntime.ACPRunner {
 	t.Helper()
-	return airuntime.NewACPRunner(
-		specs.Claude(),
-		airuntime.WithProber(&testProber{
-			launcher: specs.NewBinaryLauncher("/fake/claude-agent-acp"),
-		}),
-		airuntime.WithClientFactory(&testClientFactory{script: script, ctx: ctx, t: t}),
-		airuntime.WithPersistenceFactory(&testPersistenceFactory{}),
-		airuntime.WithRenderer(&testDiscardRenderer{}),
+	return airuntime.NewACPRunner(specs.NewCatalog().
+		Claude(), airuntime.NewCatalog().WithProber(&testProber{
+		launcher: specs.NewBinaryLauncher("/fake/claude-agent-acp"),
+	}), airuntime.NewCatalog().
+		WithClientFactory(&testClientFactory{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(&testPersistenceFactory{}), airuntime.NewCatalog().
+		WithRenderer(&testDiscardRenderer{}),
 	)
 }
 
@@ -189,7 +188,7 @@ func TestACPInvoker_Invoke_ExitCodes(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := taskloop.MapExitCode(tt.reason)
+			got := taskloop.NewCatalog().MapExitCode(tt.reason)
 			if got != tt.wantCode {
 				t.Errorf("MapExitCode(%q) = %d, want %d", tt.reason, got, tt.wantCode)
 			}
@@ -252,14 +251,13 @@ func TestACPInvoker_Invoke_DerivesTaskEvidenceDir(t *testing.T) {
 		AppendSessionEnd()
 
 	persist := &recordingPersistenceFactory{}
-	runner := airuntime.NewACPRunner(
-		specs.Claude(),
-		airuntime.WithProber(&testProber{
-			launcher: specs.NewBinaryLauncher("/fake/claude-agent-acp"),
-		}),
-		airuntime.WithClientFactory(&testClientFactory{script: script, ctx: ctx, t: t}),
-		airuntime.WithPersistenceFactory(persist),
-		airuntime.WithRenderer(&testDiscardRenderer{}),
+	runner := airuntime.NewACPRunner(specs.NewCatalog().
+		Claude(), airuntime.NewCatalog().WithProber(&testProber{
+		launcher: specs.NewBinaryLauncher("/fake/claude-agent-acp"),
+	}), airuntime.NewCatalog().
+		WithClientFactory(&testClientFactory{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(persist), airuntime.NewCatalog().
+		WithRenderer(&testDiscardRenderer{}),
 	)
 
 	invoker := taskloop.NewACPInvoker(runner, true, 0)
@@ -327,8 +325,8 @@ func TestACPInvoker_SkipDriftGuard_BypassesDrift(t *testing.T) {
 
 	// Caso 1: sem skip → spec_drift aborta a sessão com ErrSpecDrift.
 	runner := buildTestRunner(t, ctx, acpfake.NewScript().AppendAgentMessage("ok").AppendSessionEnd())
-	invoker := taskloop.NewACPInvoker(runner, true, 0,
-		taskloop.WithACPInvokerTasksDir(tasksDir),
+	invoker := taskloop.NewACPInvoker(runner, true, 0, taskloop.NewCatalog().
+		WithACPInvokerTasksDir(tasksDir),
 	)
 	if _, _, _, err := invoker.Invoke(ctx, "prompt", workDir, ""); err == nil {
 		t.Fatal("esperado abort por drift sem --skip-drift-guard")
@@ -338,9 +336,9 @@ func TestACPInvoker_SkipDriftGuard_BypassesDrift(t *testing.T) {
 
 	// Caso 2: com skip → o guard é ignorado e a sessão prossegue.
 	runner2 := buildTestRunner(t, ctx, acpfake.NewScript().AppendAgentMessage("ok").AppendSessionEnd())
-	invoker2 := taskloop.NewACPInvoker(runner2, true, 0,
-		taskloop.WithACPInvokerTasksDir(tasksDir),
-		taskloop.WithACPInvokerSkipDriftGuard(true),
+	invoker2 := taskloop.NewACPInvoker(runner2, true, 0, taskloop.NewCatalog().
+		WithACPInvokerTasksDir(tasksDir), taskloop.NewCatalog().
+		WithACPInvokerSkipDriftGuard(true),
 	)
 	if _, _, _, err := invoker2.Invoke(ctx, "prompt", workDir, ""); err != nil {
 		t.Fatalf("com --skip-drift-guard a sessão não deve abortar por drift; got %v", err)

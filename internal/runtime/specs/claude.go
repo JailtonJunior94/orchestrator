@@ -31,8 +31,8 @@ const (
 // Valor estático versionado; sobreposto por config de projeto quando necessário.
 const ClaudeMaxTokens = 200_000
 
-func Claude() Spec {
-	return newSpec(
+func (c *Catalog) Claude() Spec {
+	return NewCatalog().newSpec(
 		"claude",
 		"Claude (ACP)",
 		"claude-agent-acp",

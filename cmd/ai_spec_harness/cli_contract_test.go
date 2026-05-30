@@ -19,9 +19,9 @@ type schemaDefault struct {
 }
 
 type schemaCommand struct {
-	Name        string                     `json:"name"`
-	Flags       map[string]schemaFlag      `json:"flags,omitempty"`
-	Subcommands []schemaCommand            `json:"subcommands,omitempty"`
+	Name        string                `json:"name"`
+	Flags       map[string]schemaFlag `json:"flags,omitempty"`
+	Subcommands []schemaCommand       `json:"subcommands,omitempty"`
 }
 
 type schemaFlag struct {
@@ -98,7 +98,7 @@ func TestCLI_ContractMatchesSchema(t *testing.T) {
 	// Extrair comandos do Cobra (excluindo help e completion — auto-gerados)
 	excluded := map[string]bool{"help": true, "completion": true}
 	var cobraCmds []string
-	for _, cmd := range rootCmd.Commands() {
+	for _, cmd := range newRootCmd().Commands() {
 		if cmd.Hidden || excluded[cmd.Name()] {
 			continue
 		}
@@ -148,7 +148,7 @@ var smokeTestCommands = []string{
 // na arvore Cobra do binario. Falha se um comando for removido sem atualizar o workflow.
 func TestCLI_SmokeCommandsExistInCobra(t *testing.T) {
 	excluded := map[string]bool{"help": true, "completion": true}
-	cobraMap := cobraCommandMap(rootCmd.Commands(), "", excluded)
+	cobraMap := cobraCommandMap(newRootCmd().Commands(), "", excluded)
 
 	for _, name := range smokeTestCommands {
 		if _, ok := cobraMap[name]; !ok {
@@ -172,7 +172,7 @@ func TestCLISchemaContainsAllTools(t *testing.T) {
 	schemaContent := string(data)
 
 	// Todos os tools do runtimeACPCatalog devem aparecer no schema.
-	for tool := range runtimeACPCatalog {
+	for tool := range _runtimeACPCatalog {
 		if !strings.Contains(schemaContent, tool) {
 			t.Errorf("cli-schema.json não menciona tool %q — atualizar descrição da flag --runtime ou --tool", tool)
 		}
@@ -207,7 +207,7 @@ func TestCLI_ContractFlagsMatchSchema(t *testing.T) {
 
 	excluded := map[string]bool{"help": true, "completion": true}
 	schemaMap := flattenSchemaCommandMap(raw.Default.Commands, "")
-	cobraMap := cobraCommandMap(rootCmd.Commands(), "", excluded)
+	cobraMap := cobraCommandMap(newRootCmd().Commands(), "", excluded)
 
 	for cmdPath, sCmd := range schemaMap {
 		cobraCmd, ok := cobraMap[cmdPath]
@@ -238,4 +238,3 @@ func TestCLI_ContractFlagsMatchSchema(t *testing.T) {
 		})
 	}
 }
-

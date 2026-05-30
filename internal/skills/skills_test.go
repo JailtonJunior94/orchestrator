@@ -1,70 +1,96 @@
 package skills
 
-import "testing"
+import (
+	"testing"
 
-func TestParseTool(t *testing.T) {
-	for _, name := range []string{"claude", "gemini", "codex", "copilot"} {
-		tool, ok := ParseTool(name)
-		if !ok {
-			t.Errorf("ParseTool(%q) failed", name)
-		}
-		if string(tool) != name {
-			t.Errorf("ParseTool(%q) = %q", name, tool)
-		}
+	"github.com/stretchr/testify/suite"
+)
+
+type SkillsSuite struct {
+	suite.Suite
+}
+
+func TestSkillsSuite(t *testing.T) {
+	suite.Run(t, new(SkillsSuite))
+}
+
+func (s *SkillsSuite) TestParseTool() {
+	scenarios := []struct {
+		name   string
+		input  string
+		want   Tool
+		wantOK bool
+	}{
+		{name: "deve aceitar claude", input: "claude", want: ToolClaude, wantOK: true},
+		{name: "deve aceitar gemini", input: "gemini", want: ToolGemini, wantOK: true},
+		{name: "deve aceitar codex", input: "codex", want: ToolCodex, wantOK: true},
+		{name: "deve aceitar copilot", input: "copilot", want: ToolCopilot, wantOK: true},
+		{name: "deve rejeitar invalido", input: "invalid", wantOK: false},
 	}
-	_, ok := ParseTool("invalid")
-	if ok {
-		t.Error("ParseTool(invalid) should fail")
+
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			tool, ok := NewCatalog().ParseTool(scenario.input)
+			s.Equal(scenario.wantOK, ok, "NewCatalog().ParseTool(%q) ok", scenario.input)
+			if scenario.wantOK {
+				s.Equal(string(scenario.want), string(tool), "NewCatalog().ParseTool(%q)", scenario.input)
+			}
+		})
 	}
 }
 
-func TestParseLang(t *testing.T) {
-	for _, name := range []string{"go", "node", "python"} {
-		lang, ok := ParseLang(name)
-		if !ok {
-			t.Errorf("ParseLang(%q) failed", name)
-		}
-		if string(lang) != name {
-			t.Errorf("ParseLang(%q) = %q", name, lang)
-		}
+func (s *SkillsSuite) TestParseLang() {
+	scenarios := []struct {
+		name   string
+		input  string
+		want   Lang
+		wantOK bool
+	}{
+		{name: "deve aceitar go", input: "go", want: LangGo, wantOK: true},
+		{name: "deve aceitar node", input: "node", want: LangNode, wantOK: true},
+		{name: "deve aceitar python", input: "python", want: LangPython, wantOK: true},
+		{name: "deve rejeitar rust", input: "rust", wantOK: false},
 	}
-	_, ok := ParseLang("rust")
-	if ok {
-		t.Error("ParseLang(rust) should fail")
+
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			lang, ok := NewCatalog().ParseLang(scenario.input)
+			s.Equal(scenario.wantOK, ok, "NewCatalog().ParseLang(%q) ok", scenario.input)
+			if scenario.wantOK {
+				s.Equal(string(scenario.want), string(lang), "NewCatalog().ParseLang(%q)", scenario.input)
+			}
+		})
 	}
 }
 
-func TestLangSkills(t *testing.T) {
-	s := LangSkills([]Lang{LangGo})
-	if len(s) != 2 || s[0] != "go-implementation" || s[1] != "object-calisthenics-go" {
-		t.Errorf("LangSkills(go) = %v", s)
+func (s *SkillsSuite) TestLangSkills() {
+	scenarios := []struct {
+		name  string
+		langs []Lang
+		want  []string
+	}{
+		{name: "deve mapear go para duas skills", langs: []Lang{LangGo}, want: []string{"go-implementation", "object-calisthenics-go"}},
+		{name: "deve mapear node e python para duas skills", langs: []Lang{LangNode, LangPython}, want: []string{"node-implementation", "python-implementation"}},
 	}
 
-	s = LangSkills([]Lang{LangNode, LangPython})
-	if len(s) != 2 {
-		t.Errorf("LangSkills(node, python) = %v", s)
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			got := NewCatalog().LangSkills(scenario.langs)
+			s.Equal(scenario.want, got)
+		})
 	}
 }
 
-func TestAllSkills(t *testing.T) {
-	all := AllSkills([]Lang{LangGo})
+func (s *SkillsSuite) TestAllSkills() {
+	all := NewCatalog().AllSkills([]Lang{LangGo})
 	want := len(BaseSkills) + len(ComplementarySkills) + 2
-	if len(all) != want {
-		t.Errorf("AllSkills(go) = %d skills, want %d", len(all), want)
-	}
+	s.Len(all, want, "NewCatalog().AllSkills(go)")
 }
 
-func TestBaseSkillsIncludesExecuteAllTasks(t *testing.T) {
-	for _, skill := range BaseSkills {
-		if skill == "execute-all-tasks" {
-			return
-		}
-	}
-	t.Fatal("BaseSkills deve incluir execute-all-tasks para instalacao em novos projetos")
+func (s *SkillsSuite) TestBaseSkillsIncludesExecuteAllTasks() {
+	s.Contains(BaseSkills, "execute-all-tasks", "BaseSkills deve incluir execute-all-tasks para instalacao em novos projetos")
 }
 
-func TestComplementarySkills(t *testing.T) {
-	if len(ComplementarySkills) != 11 {
-		t.Errorf("ComplementarySkills count = %d, want 11", len(ComplementarySkills))
-	}
+func (s *SkillsSuite) TestComplementarySkills() {
+	s.Len(ComplementarySkills, 11, "ComplementarySkills count")
 }

@@ -3,29 +3,67 @@ package detect
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
 
-func TestDetectLangs(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/project/go.mod"] = []byte("module example")
-	ffs.Files["/project/package.json"] = []byte("{}")
+type DetectSuite struct {
+	suite.Suite
+}
 
-	det := NewFileDetector(ffs)
-	langs := det.DetectLangs("/project")
+func TestDetectSuite(t *testing.T) {
+	suite.Run(t, new(DetectSuite))
+}
 
-	if len(langs) != 2 {
-		t.Fatalf("expected 2 langs, got %d", len(langs))
+func (s *DetectSuite) TestDetectLangs() {
+	scenarios := []struct {
+		name   string
+		files  map[string][]byte
+		dirs   map[string]bool
+		expect func(langs []skills.Lang)
+	}{
+		{
+			name: "deve detectar go e node",
+			files: map[string][]byte{
+				"/project/go.mod":       []byte("module example"),
+				"/project/package.json": []byte("{}"),
+			},
+			expect: func(langs []skills.Lang) {
+				s.Len(langs, 2)
+				s.Equal(skills.LangGo, langs[0])
+				s.Equal(skills.LangNode, langs[1])
+			},
+		},
+		{
+			name: "deve retornar vazio quando nao ha manifestos",
+			dirs: map[string]bool{"/project": true},
+			expect: func(langs []skills.Lang) {
+				s.Empty(langs)
+			},
+		},
 	}
-	if langs[0] != skills.LangGo || langs[1] != skills.LangNode {
-		t.Errorf("unexpected langs: %v", langs)
+
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			ffs := fs.NewFakeFileSystem()
+			for path, content := range scenario.files {
+				ffs.Files[path] = content
+			}
+			for path, exists := range scenario.dirs {
+				ffs.Dirs[path] = exists
+			}
+
+			det := NewFileDetector(ffs)
+			langs := det.DetectLangs("/project")
+
+			scenario.expect(langs)
+		})
 	}
 }
 
-func TestDetectTools(t *testing.T) {
-	t.Parallel()
+func (s *DetectSuite) TestDetectTools() {
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/CLAUDE.md"] = []byte("# Claude")
 	ffs.Files["/project/GEMINI.md"] = []byte("# Gemini")
@@ -33,20 +71,5 @@ func TestDetectTools(t *testing.T) {
 	det := NewFileDetector(ffs)
 	tools := det.DetectTools("/project")
 
-	if len(tools) != 2 {
-		t.Fatalf("expected 2 tools, got %d", len(tools))
-	}
-}
-
-func TestDetectLangs_Empty(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Dirs["/project"] = true
-
-	det := NewFileDetector(ffs)
-	langs := det.DetectLangs("/project")
-
-	if len(langs) != 0 {
-		t.Errorf("expected 0 langs, got %v", langs)
-	}
+	s.Len(tools, 2)
 }

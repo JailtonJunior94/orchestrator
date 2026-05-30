@@ -14,10 +14,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var verifyCmd = &cobra.Command{
-	Use:   "verify [path]",
-	Short: "Verifica o estado de instalacao das skills (current/missing/drifted)",
-	Long: `Verifica o estado de instalacao das skills de governanca em um projeto.
+type verifyCommand struct{}
+
+func newVerifyCmd() *cobra.Command {
+	handler := &verifyCommand{}
+	cmd := &cobra.Command{
+		Use:   "verify [path]",
+		Short: "Verifica o estado de instalacao das skills (current/missing/drifted)",
+		Long: `Verifica o estado de instalacao das skills de governanca em um projeto.
 
 Reporta cada skill como current (ok), missing (ausente) ou drifted (divergente).
 Reusa o comparador de checksum do modulo de upgrade (file-first: le hash do disco).
@@ -32,38 +36,34 @@ Exemplos:
   ai-spec-harness verify . --tools claude,gemini
   ai-spec-harness verify --global
   ai-spec-harness verify ./meu-projeto --source ~/ai-governance`,
-	Args: cobra.MaximumNArgs(1),
-	RunE: runVerify,
+		Args: cobra.MaximumNArgs(1),
+		RunE: handler.run,
+	}
+
+	cmd.Flags().String("tools", "", "Ferramentas a verificar: claude,gemini,codex,copilot ou all (opcional)")
+	cmd.Flags().String("langs", "", "Linguagens: go,node,python ou all")
+	cmd.Flags().String("source", "", "Diretorio fonte do repositorio de governanca (opcional; usa embutido se omitido)")
+	cmd.Flags().Bool("global", false, "Verifica a instalacao global em ~/.aispec")
+	return cmd
 }
 
-var (
-	verifyTools  string
-	verifyLangs  string
-	verifySource string
-	verifyGlobal bool
-)
+func (c *verifyCommand) run(cmd *cobra.Command, args []string) error {
+	verifyTools, _ := cmd.Flags().GetString("tools")
+	verifyLangs, _ := cmd.Flags().GetString("langs")
+	verifySource, _ := cmd.Flags().GetString("source")
+	verifyGlobal, _ := cmd.Flags().GetBool("global")
 
-func init() {
-	verifyCmd.Flags().StringVar(&verifyTools, "tools", "", "Ferramentas a verificar: claude,gemini,codex,copilot ou all (opcional)")
-	verifyCmd.Flags().StringVar(&verifyLangs, "langs", "", "Linguagens: go,node,python ou all")
-	verifyCmd.Flags().StringVar(&verifySource, "source", "", "Diretorio fonte do repositorio de governanca (opcional; usa embutido se omitido)")
-	verifyCmd.Flags().BoolVar(&verifyGlobal, "global", false, "Verifica a instalacao global em ~/.aispec")
-
-	rootCmd.AddCommand(verifyCmd)
-}
-
-func runVerify(cmd *cobra.Command, args []string) error {
 	projectDir := "."
 	if len(args) > 0 {
 		projectDir = args[0]
 	}
 
-	tools, err := parseToolsFlag(verifyTools)
+	tools, err := newFlagHelper().parseToolsFlag(verifyTools)
 	if err != nil {
 		return err
 	}
 
-	langs, err := parseLangsFlag(verifyLangs)
+	langs, err := newFlagHelper().parseLangsFlag(verifyLangs)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func runVerify(cmd *cobra.Command, args []string) error {
 		scope = config.ScopeGlobal
 	}
 
-	printer := output.New(verbose)
+	printer := output.New(newCommandEnv().verbose(cmd))
 	fsys := fs.NewOSFileSystem()
 	mfst := manifest.NewStore(fsys)
 	adpt := adapters.NewGenerator(fsys, printer)
@@ -124,7 +124,7 @@ func runVerify(cmd *cobra.Command, args []string) error {
 				printer.Info("  [%s]", item.Tool)
 			}
 		}
-		stateLabel := stateEmoji(item.State)
+		stateLabel := c.stateEmoji(item.State)
 		printer.Info("    %-40s %s", item.Skill, stateLabel)
 	}
 
@@ -140,7 +140,7 @@ func runVerify(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func stateEmoji(state install.VerifyState) string {
+func (c *verifyCommand) stateEmoji(state install.VerifyState) string {
 	switch state {
 	case install.VerifyStateCurrent:
 		return "current"

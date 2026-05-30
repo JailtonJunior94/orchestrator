@@ -79,7 +79,7 @@ func TestParseLogEntries(t *testing.T) {
 				}
 			}
 
-			entries, err := parseLogEntries(logPath, tc.since)
+			entries, err := NewCatalog().parseLogEntries(logPath, tc.since)
 			if err != nil {
 				t.Fatalf("parseLogEntries retornou erro inesperado: %v", err)
 			}

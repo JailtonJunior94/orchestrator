@@ -8,6 +8,14 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/semver"
 )
 
+// Generator gera secoes de changelog.
+type Generator struct{}
+
+// NewGenerator cria um Generator stateless.
+func NewGenerator() *Generator {
+	return &Generator{}
+}
+
 // ChangelogEntry represents a single entry in the changelog.
 type ChangelogEntry struct {
 	Type        string
@@ -17,7 +25,7 @@ type ChangelogEntry struct {
 	Breaking    bool
 }
 
-var typeLabels = map[string]string{
+var _typeLabels = map[string]string{
 	"feat":     "Features",
 	"fix":      "Bug Fixes",
 	"perf":     "Performance Improvements",
@@ -30,11 +38,11 @@ var typeLabels = map[string]string{
 	"style":    "Style",
 }
 
-// typeOrder defines the display order for changelog sections.
-var typeOrder = []string{"feat", "fix", "perf", "refactor", "docs", "chore", "test", "ci", "build", "style"}
+// _typeOrder defines the display order for changelog sections.
+var _typeOrder = []string{"feat", "fix", "perf", "refactor", "docs", "chore", "test", "ci", "build", "style"}
 
 // GroupByType groups commits into ChangelogEntry slices keyed by commit type.
-func GroupByType(commits []semver.Commit) map[string][]ChangelogEntry {
+func (g *Generator) GroupByType(commits []semver.Commit) map[string][]ChangelogEntry {
 	groups := make(map[string][]ChangelogEntry)
 	for _, c := range commits {
 		if c.Type == "" {
@@ -42,7 +50,6 @@ func GroupByType(commits []semver.Commit) map[string][]ChangelogEntry {
 		}
 		// Parse scope from raw subject: feat(scope): desc
 		scope := ""
-		description := c.Subject
 		raw := c.Raw
 		idx := strings.Index(raw, ":")
 		if idx >= 0 {
@@ -57,8 +64,8 @@ func GroupByType(commits []semver.Commit) map[string][]ChangelogEntry {
 		entry := ChangelogEntry{
 			Type:        c.Type,
 			Scope:       scope,
-			Description: description,
-			Hash:        shortHash(c.Hash),
+			Description: c.Subject,
+			Hash:        g.shortHash(c.Hash),
 			Breaking:    c.Breaking,
 		}
 		groups[c.Type] = append(groups[c.Type], entry)
@@ -66,7 +73,7 @@ func GroupByType(commits []semver.Commit) map[string][]ChangelogEntry {
 	return groups
 }
 
-func shortHash(hash string) string {
+func (g *Generator) shortHash(hash string) string {
 	if len(hash) >= 7 {
 		return hash[:7]
 	}
@@ -74,7 +81,7 @@ func shortHash(hash string) string {
 }
 
 // RenderSection generates the Markdown for a single version section.
-func RenderSection(version, date string, groups map[string][]ChangelogEntry) string {
+func (g *Generator) RenderSection(version, date string, groups map[string][]ChangelogEntry) string {
 	var sb strings.Builder
 
 	fmt.Fprintf(&sb, "## %s (%s)\n", version, date)
@@ -90,12 +97,12 @@ func RenderSection(version, date string, groups map[string][]ChangelogEntry) str
 	}
 
 	// Write sections in order.
-	for _, t := range typeOrder {
+	for _, t := range _typeOrder {
 		entries, ok := groups[t]
 		if !ok || len(entries) == 0 {
 			continue
 		}
-		label, ok := typeLabels[t]
+		label, ok := _typeLabels[t]
 		if !ok {
 			label = strings.ToUpper(t[:1]) + t[1:]
 		}
@@ -104,14 +111,14 @@ func RenderSection(version, date string, groups map[string][]ChangelogEntry) str
 			if e.Breaking {
 				continue // printed separately
 			}
-			sb.WriteString(renderLine(e))
+			sb.WriteString(g.renderLine(e))
 		}
 	}
 
 	if len(breaking) > 0 {
 		sb.WriteString("\n### Breaking Changes\n")
 		for _, e := range breaking {
-			sb.WriteString(renderLine(e))
+			sb.WriteString(g.renderLine(e))
 		}
 	}
 
@@ -119,18 +126,18 @@ func RenderSection(version, date string, groups map[string][]ChangelogEntry) str
 	return sb.String()
 }
 
-func renderLine(e ChangelogEntry) string {
+func (g *Generator) renderLine(e ChangelogEntry) string {
 	if e.Scope != "" {
 		return fmt.Sprintf("- **%s:** %s (%s)\n", e.Scope, e.Description, e.Hash)
 	}
 	return fmt.Sprintf("- %s (%s)\n", e.Description, e.Hash)
 }
 
-const changelogHeader = "# Changelog\n"
+const _changelogHeader = "# Changelog\n"
 
 // UpdateChangelog inserts newSection into filePath after the `# Changelog` header.
 // If the file does not exist it is created from scratch.
-func UpdateChangelog(filePath, newSection string) error {
+func (g *Generator) UpdateChangelog(filePath, newSection string) error {
 	existing := ""
 	data, err := os.ReadFile(filePath)
 	if err == nil {
@@ -139,31 +146,32 @@ func UpdateChangelog(filePath, newSection string) error {
 
 	var result string
 	if existing == "" {
-		result = changelogHeader + "\n" + newSection
-	} else if strings.HasPrefix(existing, changelogHeader) {
-		rest := existing[len(changelogHeader):]
-		result = changelogHeader + "\n" + newSection + strings.TrimLeft(rest, "\n")
+		result = _changelogHeader + "\n" + newSection
+	} else if strings.HasPrefix(existing, _changelogHeader) {
+		rest := existing[len(_changelogHeader):]
+		result = _changelogHeader + "\n" + newSection + strings.TrimLeft(rest, "\n")
 	} else {
 		// File exists but has no standard header — prepend everything.
-		result = changelogHeader + "\n" + newSection + existing
+		result = _changelogHeader + "\n" + newSection + existing
 	}
 
 	return os.WriteFile(filePath, []byte(result), 0644)
 }
 
 // GenerateChangelog orchestrates fetching commits, grouping, rendering and writing.
-func GenerateChangelog(repoPath, version, date, filePath string) (string, error) {
-	d, err := semver.Evaluate(repoPath)
+func (g *Generator) GenerateChangelog(repoPath, version, date, filePath string) (string, error) {
+	semverService := semver.NewService()
+	d, err := semverService.Evaluate(repoPath)
 	if err != nil {
 		return "", fmt.Errorf("evaluating semver: %w", err)
 	}
 
-	commits, err := semver.ParseConventionalCommits(repoPath, d.CommitRange)
+	commits, err := semverService.ParseConventionalCommits(repoPath, d.CommitRange)
 	if err != nil {
 		return "", fmt.Errorf("parsing commits: %w", err)
 	}
 
-	groups := GroupByType(commits)
-	section := RenderSection(version, date, groups)
+	groups := g.GroupByType(commits)
+	section := g.RenderSection(version, date, groups)
 	return section, nil
 }

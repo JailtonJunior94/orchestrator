@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const maxTopN = 5
+const _maxTopN = 5
 
 // ReportData contém as métricas acionáveis derivadas do log de telemetria.
 type ReportData struct {
@@ -37,9 +37,9 @@ type RefMetric struct {
 
 // Report lê .agents/telemetry.log, aplica filtro de período e retorna métricas acionáveis.
 // Linhas malformadas são ignoradas sem erro. Log ausente retorna ReportData zero-value com err=nil.
-func Report(rootDir string, since time.Duration) (ReportData, error) {
+func (c *Catalog) Report(rootDir string, since time.Duration) (ReportData, error) {
 	logPath := filepath.Join(rootDir, ".agents", "telemetry.log")
-	entries, err := parseLogEntries(logPath, since)
+	entries, err := NewCatalog().parseLogEntries(logPath, since)
 	if err != nil {
 		return ReportData{}, err
 	}
@@ -72,9 +72,9 @@ func Report(rootDir string, since time.Duration) (ReportData, error) {
 		return ReportData{}, nil
 	}
 
-	skills := topSkills(skillCounts, total)
-	refs := topRefs(refCounts)
-	alerts := buildAlerts(skillCounts, skillRefs)
+	skills := NewCatalog().topSkills(skillCounts, total)
+	refs := NewCatalog().topRefs(refCounts)
+	alerts := NewCatalog().buildAlerts(skillCounts, skillRefs)
 
 	var refsPerInv float64
 	if total > 0 {
@@ -91,14 +91,14 @@ func Report(rootDir string, since time.Duration) (ReportData, error) {
 		TotalInvocations:  total,
 		Skills:            skills,
 		Refs:              refs,
-		EstimatedTokens:   totalRefLoads * tokensPerRefLoad,
+		EstimatedTokens:   totalRefLoads * _tokensPerRefLoad,
 		RefsPerInvocation: refsPerInv,
 		Alerts:            alerts,
 	}, nil
 }
 
 // FormatText formata ReportData como texto legível.
-func FormatText(data ReportData) string {
+func (c *Catalog) FormatText(data ReportData) string {
 	if data.TotalInvocations == 0 {
 		return "Sem dados de telemetria no período especificado.\n"
 	}
@@ -108,12 +108,12 @@ func FormatText(data ReportData) string {
 	fmt.Fprintf(&sb, "Período: %s\n", data.Period)
 	fmt.Fprintf(&sb, "Total de invocações: %d\n", data.TotalInvocations)
 
-	fmt.Fprintf(&sb, "\nSkills Mais Usadas (top %d):\n", maxTopN)
+	fmt.Fprintf(&sb, "\nSkills Mais Usadas (top %d):\n", _maxTopN)
 	for i, s := range data.Skills {
 		fmt.Fprintf(&sb, "  %d. %-30s %d  (%.1f%%)\n", i+1, s.Name, s.Count, s.Percentage)
 	}
 
-	fmt.Fprintf(&sb, "\nReferências Mais Carregadas (top %d):\n", maxTopN)
+	fmt.Fprintf(&sb, "\nReferências Mais Carregadas (top %d):\n", _maxTopN)
 	if len(data.Refs) == 0 {
 		fmt.Fprintf(&sb, "  (nenhuma referência carregada)\n")
 	}
@@ -124,7 +124,7 @@ func FormatText(data ReportData) string {
 	fmt.Fprintf(&sb, "\nMétricas:\n")
 	fmt.Fprintf(&sb, "  Refs por invocação (média): %.1f\n", data.RefsPerInvocation)
 	fmt.Fprintf(&sb, "  Tokens estimados:           %d (%d refs × %d tok/ref)\n",
-		data.EstimatedTokens, data.EstimatedTokens/max1(tokensPerRefLoad), tokensPerRefLoad)
+		data.EstimatedTokens, data.EstimatedTokens/NewCatalog().max1(_tokensPerRefLoad), _tokensPerRefLoad)
 
 	if len(data.Alerts) > 0 {
 		fmt.Fprintf(&sb, "\nAlertas:\n")
@@ -137,7 +137,7 @@ func FormatText(data ReportData) string {
 }
 
 // FormatJSON serializa ReportData como JSON.
-func FormatJSON(data ReportData) ([]byte, error) {
+func (c *Catalog) FormatJSON(data ReportData) ([]byte, error) {
 	b, err := json.MarshalIndent(data, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("serializar relatório: %w", err)
@@ -145,7 +145,7 @@ func FormatJSON(data ReportData) ([]byte, error) {
 	return b, nil
 }
 
-func topSkills(counts map[string]int, total int) []SkillMetric {
+func (c *Catalog) topSkills(counts map[string]int, total int) []SkillMetric {
 	type kv struct {
 		k string
 		v int
@@ -160,8 +160,8 @@ func topSkills(counts map[string]int, total int) []SkillMetric {
 		}
 		return pairs[i].k < pairs[j].k
 	})
-	if len(pairs) > maxTopN {
-		pairs = pairs[:maxTopN]
+	if len(pairs) > _maxTopN {
+		pairs = pairs[:_maxTopN]
 	}
 	out := make([]SkillMetric, len(pairs))
 	for i, p := range pairs {
@@ -174,7 +174,7 @@ func topSkills(counts map[string]int, total int) []SkillMetric {
 	return out
 }
 
-func topRefs(counts map[string]int) []RefMetric {
+func (c *Catalog) topRefs(counts map[string]int) []RefMetric {
 	type kv struct {
 		k string
 		v int
@@ -189,8 +189,8 @@ func topRefs(counts map[string]int) []RefMetric {
 		}
 		return pairs[i].k < pairs[j].k
 	})
-	if len(pairs) > maxTopN {
-		pairs = pairs[:maxTopN]
+	if len(pairs) > _maxTopN {
+		pairs = pairs[:_maxTopN]
 	}
 	out := make([]RefMetric, len(pairs))
 	for i, p := range pairs {
@@ -199,7 +199,7 @@ func topRefs(counts map[string]int) []RefMetric {
 	return out
 }
 
-func buildAlerts(skillCounts map[string]int, skillRefs map[string]bool) []string {
+func (c *Catalog) buildAlerts(skillCounts map[string]int, skillRefs map[string]bool) []string {
 	var alerts []string
 	names := make([]string, 0, len(skillCounts))
 	for k := range skillCounts {
@@ -217,7 +217,7 @@ func buildAlerts(skillCounts map[string]int, skillRefs map[string]bool) []string
 	return alerts
 }
 
-func max1(v int) int {
+func (c *Catalog) max1(v int) int {
 	if v == 0 {
 		return 1
 	}

@@ -17,7 +17,7 @@ type DriverID struct{ value string }
 // ParseDriverID valida s contra o conjunto canônico {claude, codex, copilot, gemini}
 // e retorna o DriverID correspondente.
 // Retorna ErrUnknownDriver (envolvido) quando s não pertence ao conjunto.
-func ParseDriverID(s string) (DriverID, error) {
+func (c *Catalog) ParseDriverID(s string) (DriverID, error) {
 	switch s {
 	case "claude", "codex", "copilot", "gemini":
 		return DriverID{value: s}, nil

@@ -22,7 +22,7 @@ const (
 	KindUnknown EventKind = "unknown"
 )
 
-var validKinds = map[EventKind]struct{}{
+var _validKinds = map[EventKind]struct{}{
 	KindAgentMessage:   {},
 	KindAgentThought:   {},
 	KindToolCallStart:  {},
@@ -34,9 +34,9 @@ var validKinds = map[EventKind]struct{}{
 
 // ParseEventKind valida e retorna um EventKind a partir de uma string.
 // Retorna erro se o valor não pertencer ao enum fechado.
-func ParseEventKind(s string) (EventKind, error) {
+func (c *Catalog) ParseEventKind(s string) (EventKind, error) {
 	k := EventKind(s)
-	if _, ok := validKinds[k]; !ok {
+	if _, ok := _validKinds[k]; !ok {
 		return "", fmt.Errorf("kind desconhecido: %q", s)
 	}
 	return k, nil

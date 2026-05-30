@@ -13,7 +13,7 @@ func TestHashFile(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	got, err := hashFile(path)
+	got, err := (&hashCommand{}).hashFile(path)
 	if err != nil {
 		t.Fatalf("hashFile returned error: %v", err)
 	}

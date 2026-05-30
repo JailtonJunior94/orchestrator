@@ -34,8 +34,8 @@ const (
 // Valor estático versionado; sobreposto por config de projeto quando necessário.
 const CopilotMaxTokens = 64_000
 
-func Copilot() Spec {
-	return newSpec(
+func (c *Catalog) Copilot() Spec {
+	return NewCatalog().newSpec(
 		"copilot",
 		"GitHub Copilot CLI (ACP)",
 		"copilot",

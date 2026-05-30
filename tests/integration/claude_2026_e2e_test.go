@@ -111,14 +111,14 @@ func buildE2ERunner(
 	opts ...airuntime.Option,
 ) *airuntime.ACPRunner {
 	t.Helper()
-	baseOpts := []airuntime.Option{
-		airuntime.WithProber(&e2eFakeProber{}),
-		airuntime.WithClientFactory(&e2eFakeClientFactory{script: script, ctx: ctx, t: t}),
-		airuntime.WithPersistenceFactory(persistFact),
-		airuntime.WithRenderer(&e2eDiscardRenderer{}),
+	baseOpts := []airuntime.Option{airuntime.NewCatalog().
+		WithProber(&e2eFakeProber{}), airuntime.NewCatalog().
+		WithClientFactory(&e2eFakeClientFactory{script: script, ctx: ctx, t: t}), airuntime.NewCatalog().
+		WithPersistenceFactory(persistFact), airuntime.NewCatalog().
+		WithRenderer(&e2eDiscardRenderer{}),
 	}
 	baseOpts = append(baseOpts, opts...)
-	return airuntime.NewACPRunner(specs.Claude(), baseOpts...)
+	return airuntime.NewACPRunner(specs.NewCatalog().Claude(), baseOpts...)
 }
 
 // ---- T-INT-01: MCP Nested Agent E2E -----------------------------------------
@@ -163,8 +163,8 @@ func TestClaudeMCPNestedAgentE2E(t *testing.T) {
 	// Criar mock MCP server que implementa a interface runtime.MCPServer.
 	mockServer := &e2eMockMCPServer{}
 
-	runner := buildE2ERunner(t, ctx, script, pfact,
-		airuntime.WithMCPServer(mockServer),
+	runner := buildE2ERunner(t, ctx, script, pfact, airuntime.NewCatalog().
+		WithMCPServer(mockServer),
 	)
 
 	job := airuntime.Job{
@@ -589,8 +589,8 @@ func TestClaudeAutoReviewBlocksOnHardIssueE2E(t *testing.T) {
 		return "[HARD] eval() detected — uso de eval() é proibido por segurança", nil
 	})
 
-	runner := buildE2ERunner(t, ctx, script, pfact,
-		airuntime.WithReviewOutputFn(reviewFn),
+	runner := buildE2ERunner(t, ctx, script, pfact, airuntime.NewCatalog().
+		WithReviewOutputFn(reviewFn),
 	)
 
 	// Criar AGENTS.md + skill de review mínima para o governance hook + readReviewSkill.
@@ -695,9 +695,9 @@ func TestClaudeCrossWaveSmokeE2E(t *testing.T) {
 		return "APPROVED — nenhuma issue critica encontrada", nil
 	})
 
-	runner := buildE2ERunner(t, ctx, script, pfact,
-		airuntime.WithMCPServer(mockMCP),
-		airuntime.WithReviewOutputFn(reviewFn),
+	runner := buildE2ERunner(t, ctx, script, pfact, airuntime.NewCatalog().
+		WithMCPServer(mockMCP), airuntime.NewCatalog().
+		WithReviewOutputFn(reviewFn),
 	)
 
 	// F3: WorkDir com AGENTS.md (governance hook) + TasksDir com memory/.
@@ -727,10 +727,10 @@ func TestClaudeCrossWaveSmokeE2E(t *testing.T) {
 		WorkDir:     workDir,
 		EvidenceDir: t.TempDir(),
 		Quiet:       true,
-		MCPNested:   true,  // F2: habilita MCP server spawn
-		NoNormalize: false, // F2: normalizacao ativa (default)
+		MCPNested:   true,     // F2: habilita MCP server spawn
+		NoNormalize: false,    // F2: normalizacao ativa (default)
 		TasksDir:    tasksDir, // F3: memory store ativo
-		AutoReview:  true,  // F5: auto-review habilitado
+		AutoReview:  true,     // F5: auto-review habilitado
 		// DisableHooks=false (default) — F3 hooks ativos
 	}
 

@@ -32,26 +32,26 @@ func TestTrend_ReturnsFourWeeks(t *testing.T) {
 		writeTestLog(t, dir, []string{entry})
 	}
 
-	trend, err := Trend(dir)
+	trend, err := NewCatalog().Trend(dir)
 	if err != nil {
 		t.Fatalf("Trend: %v", err)
 	}
 
-	if len(trend.Weeks) != weeksForTrend {
-		t.Errorf("esperado %d semanas, got %d", weeksForTrend, len(trend.Weeks))
+	if len(trend.Weeks) != _weeksForTrend {
+		t.Errorf("esperado %d semanas, got %d", _weeksForTrend, len(trend.Weeks))
 	}
 }
 
 func TestTrend_EmptyLog_ReturnsFourEmptyWeeks(t *testing.T) {
 	dir := t.TempDir()
 
-	trend, err := Trend(dir)
+	trend, err := NewCatalog().Trend(dir)
 	if err != nil {
 		t.Fatalf("Trend: %v", err)
 	}
 
-	if len(trend.Weeks) != weeksForTrend {
-		t.Errorf("esperado %d semanas, got %d", weeksForTrend, len(trend.Weeks))
+	if len(trend.Weeks) != _weeksForTrend {
+		t.Errorf("esperado %d semanas, got %d", _weeksForTrend, len(trend.Weeks))
 	}
 	for _, w := range trend.Weeks {
 		if w.Invocations != 0 {
@@ -69,7 +69,7 @@ func TestFormatTrend_ContainsWeekLabels(t *testing.T) {
 			{Week: "2026-W18", Invocations: 0},
 		},
 	}
-	result := FormatTrend(data)
+	result := NewCatalog().FormatTrend(data)
 	for _, w := range data.Weeks {
 		if !containsStr(result, w.Week) {
 			t.Errorf("FormatTrend deveria conter %q", w.Week)
@@ -80,7 +80,7 @@ func TestFormatTrend_ContainsWeekLabels(t *testing.T) {
 func TestBudgetCheck_NoAlerts_WhenUnderBudget(t *testing.T) {
 	dir := t.TempDir()
 	// Nenhum log = sem alertas
-	bc, err := BudgetCheck(dir, 0)
+	bc, err := NewCatalog().BudgetCheck(dir, 0)
 	if err != nil {
 		t.Fatalf("BudgetCheck: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestBudgetCheck_Alert_WhenOverBudget(t *testing.T) {
 	}
 	writeTestLog(t, dir, lines)
 
-	bc, err := BudgetCheck(dir, 0)
+	bc, err := NewCatalog().BudgetCheck(dir, 0)
 	if err != nil {
 		t.Fatalf("BudgetCheck: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestFormatTopSkills_ContainsSkillNames(t *testing.T) {
 		{Name: "agent-governance", Count: 30, Percentage: 30.0},
 		{Name: "bugfix", Count: 20, Percentage: 20.0},
 	}
-	result := FormatTopSkills(skills)
+	result := NewCatalog().FormatTopSkills(skills)
 	for _, s := range skills {
 		if !containsStr(result, s.Name) {
 			t.Errorf("FormatTopSkills deveria conter %q", s.Name)
@@ -142,7 +142,7 @@ func TestFormatTopSkills_ContainsSkillNames(t *testing.T) {
 }
 
 func TestFormatTopSkills_Empty_ReturnsNoData(t *testing.T) {
-	result := FormatTopSkills(nil)
+	result := NewCatalog().FormatTopSkills(nil)
 	if result == "" {
 		t.Error("FormatTopSkills com nil nao deve retornar string vazia")
 	}

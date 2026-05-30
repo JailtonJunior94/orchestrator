@@ -64,8 +64,8 @@ type FinalReviewer interface {
 	ReviewConsolidated(ctx context.Context, diff string) (FinalReviewResult, error)
 }
 
-// maxDiffPartitionSize e o limite em bytes para cada particao de diff enviada ao reviewer.
-const maxDiffPartitionSize = 100_000
+// _maxDiffPartitionSize e o limite em bytes para cada particao de diff enviada ao reviewer.
+const _maxDiffPartitionSize = 100_000
 
 type defaultFinalReviewer struct {
 	invoker AgentInvoker
@@ -74,13 +74,15 @@ type defaultFinalReviewer struct {
 	maxDiff int
 }
 
+var _ FinalReviewer = (*defaultFinalReviewer)(nil)
+
 // NewFinalReviewer cria um FinalReviewer que usa o AgentInvoker fornecido.
 func NewFinalReviewer(invoker AgentInvoker, workDir, model string) FinalReviewer {
 	return &defaultFinalReviewer{
 		invoker: invoker,
 		workDir: workDir,
 		model:   model,
-		maxDiff: maxDiffPartitionSize,
+		maxDiff: _maxDiffPartitionSize,
 	}
 }
 
@@ -88,24 +90,24 @@ func NewFinalReviewer(invoker AgentInvoker, workDir, model string) FinalReviewer
 // Quando o diff excede maxDiff, particiona por arquivo antes de enviar.
 // Agrega vereditos (o mais grave prevalece) e une os achados de todas as particoes.
 func (r *defaultFinalReviewer) ReviewConsolidated(ctx context.Context, diff string) (FinalReviewResult, error) {
-	partitions := partitionDiff(diff, r.maxDiff)
+	partitions := NewCatalog().partitionDiff(diff, r.maxDiff)
 
 	var allFindings []Finding
 	var rawParts []string
 	worstVerdict := VerdictApproved
 
 	for _, part := range partitions {
-		prompt := buildConsolidatedReviewPrompt(part)
+		prompt := NewCatalog().buildConsolidatedReviewPrompt(part)
 		stdout, _, _, err := r.invoker.Invoke(ctx, prompt, r.workDir, r.model)
 		if err != nil {
 			return FinalReviewResult{}, fmt.Errorf("taskloop: erro ao invocar review: %w", err)
 		}
 
-		result := parseReviewOutput(stdout)
+		result := NewCatalog().parseReviewOutput(stdout)
 		allFindings = append(allFindings, result.Findings...)
 		rawParts = append(rawParts, result.RawOutput)
 
-		if verdictWeight(result.Verdict) > verdictWeight(worstVerdict) {
+		if NewCatalog().verdictWeight(result.Verdict) > NewCatalog().verdictWeight(worstVerdict) {
 			worstVerdict = result.Verdict
 		}
 	}
@@ -117,7 +119,7 @@ func (r *defaultFinalReviewer) ReviewConsolidated(ctx context.Context, diff stri
 	}, nil
 }
 
-func verdictWeight(v ReviewVerdict) int {
+func (c *Catalog) verdictWeight(v ReviewVerdict) int {
 	switch v {
 	case VerdictBlocked:
 		return 3
@@ -131,7 +133,7 @@ func verdictWeight(v ReviewVerdict) int {
 }
 
 // buildConsolidatedReviewPrompt constroi o prompt para revisao consolidada do diff.
-func buildConsolidatedReviewPrompt(diff string) string {
+func (c *Catalog) buildConsolidatedReviewPrompt(diff string) string {
 	return fmt.Sprintf(`First, read AGENTS.md at the repository root to load governance rules and conventions.
 
 Then read and follow the instructions in: .agents/skills/review/SKILL.md
@@ -160,23 +162,23 @@ Diff consolidado:
 }
 
 // parseReviewOutput extrai veredito e achados da saida bruta da skill review.
-func parseReviewOutput(raw string) FinalReviewResult {
+func (c *Catalog) parseReviewOutput(raw string) FinalReviewResult {
 	return FinalReviewResult{
-		Verdict:   parseVerdict(raw),
-		Findings:  parseFindings(raw),
+		Verdict:   NewCatalog().parseVerdict(raw),
+		Findings:  NewCatalog().parseFindings(raw),
 		RawOutput: raw,
 	}
 }
 
-// verdictLineRe casa uma linha dedicada de veredito do tipo
+// _verdictLineRe casa uma linha dedicada de veredito do tipo
 // "Verdict: APPROVED_WITH_REMARKS" / "Veredito - REJECTED" / "**Veredito final:** APPROVED".
 // Ancora a deteccao em linha propria para evitar falso positivo quando o corpo
 // menciona palavras-chave (ex.: "CI was blocked earlier").
-var verdictLineRe = regexp.MustCompile(`(?im)^\s*[*_>\s-]*(?:final\s+)?(?:verdict|veredic?to|vereditto|veredicto)(?:\s+final)?\s*[:\-–]\s*[*_` + "`" + `]*\s*(APPROVED_WITH_REMARKS|APPROVED WITH REMARKS|APPROVED|APROVADO\s+COM\s+RESSALVAS|APROVADO|REJECTED|REPROVADO|REJEITADO|BLOCKED|BLOQUEAD[OA])\b`)
+var _verdictLineRe = regexp.MustCompile(`(?im)^\s*[*_>\s-]*(?:final\s+)?(?:verdict|veredic?to|vereditto|veredicto)(?:\s+final)?\s*[:\-–]\s*[*_` + "`" + `]*\s*(APPROVED_WITH_REMARKS|APPROVED WITH REMARKS|APPROVED|APROVADO\s+COM\s+RESSALVAS|APROVADO|REJECTED|REPROVADO|REJEITADO|BLOCKED|BLOQUEAD[OA])\b`)
 
 // parseVerdict extrai o veredito da saida bruta. Verifica do mais especifico ao mais geral.
-func parseVerdict(raw string) ReviewVerdict {
-	if m := verdictLineRe.FindStringSubmatch(raw); len(m) > 1 {
+func (c *Catalog) parseVerdict(raw string) ReviewVerdict {
+	if m := _verdictLineRe.FindStringSubmatch(raw); len(m) > 1 {
 		token := strings.ToUpper(strings.Join(strings.Fields(m[1]), " "))
 		switch {
 		case strings.HasPrefix(token, "APPROVED_WITH_REMARKS"),
@@ -194,20 +196,20 @@ func parseVerdict(raw string) ReviewVerdict {
 
 	lower := strings.ToLower(raw)
 
-	if containsAnyPattern(lower,
+	if NewCatalog().containsAnyPattern(lower,
 		"approved_with_remarks", "aprovado com ressalvas", "approved with remarks",
 		"approved_with_observations", "aprovado com observacoes", "aprovado com observações",
 		"approved with observations",
 	) {
 		return VerdictApprovedWithRemarks
 	}
-	if containsAnyPattern(lower, "blocked", "bloqueado", "bloqueada") {
+	if NewCatalog().containsAnyPattern(lower, "blocked", "bloqueado", "bloqueada") {
 		return VerdictBlocked
 	}
-	if containsAnyPattern(lower, "rejected", "reprovado", "rejeitado") {
+	if NewCatalog().containsAnyPattern(lower, "rejected", "reprovado", "rejeitado") {
 		return VerdictRejected
 	}
-	if containsAnyPattern(lower, "approved", "aprovado") {
+	if NewCatalog().containsAnyPattern(lower, "approved", "aprovado") {
 		return VerdictApproved
 	}
 	return VerdictBlocked
@@ -215,14 +217,14 @@ func parseVerdict(raw string) ReviewVerdict {
 
 // parseFindings extrai achados individuais da saida bruta.
 // Reconhece marcadores [Critical], [Important], [Suggestion] e variantes PT-BR.
-func parseFindings(raw string) []Finding {
+func (c *Catalog) parseFindings(raw string) []Finding {
 	var findings []Finding
 	for _, line := range strings.Split(raw, "\n") {
-		sev, ok := extractSeverity(line)
+		sev, ok := NewCatalog().extractSeverity(line)
 		if !ok {
 			continue
 		}
-		file, lineNum := extractFileLine(line)
+		file, lineNum := NewCatalog().extractFileLine(line)
 		findings = append(findings, Finding{
 			Severity: sev,
 			File:     file,
@@ -234,14 +236,14 @@ func parseFindings(raw string) []Finding {
 }
 
 // extractSeverity detecta severidade na linha. Retorna (severity, true) se encontrada.
-func extractSeverity(line string) (Severity, bool) {
+func (c *Catalog) extractSeverity(line string) (Severity, bool) {
 	lower := strings.ToLower(line)
 	switch {
-	case containsAnyPattern(lower, "[critical]", "[critico]", "[crítico]"):
+	case NewCatalog().containsAnyPattern(lower, "[critical]", "[critico]", "[crítico]"):
 		return SeverityCritical, true
-	case containsAnyPattern(lower, "[important]", "[importante]"):
+	case NewCatalog().containsAnyPattern(lower, "[important]", "[importante]"):
 		return SeverityImportant, true
-	case containsAnyPattern(lower, "[suggestion]", "[sugestao]", "[sugestão]"):
+	case NewCatalog().containsAnyPattern(lower, "[suggestion]", "[sugestao]", "[sugestão]"):
 		return SeveritySuggestion, true
 	default:
 		return "", false
@@ -249,7 +251,7 @@ func extractSeverity(line string) (Severity, bool) {
 }
 
 // extractFileLine tenta extrair arquivo e numero de linha de padroes como [file.go:42].
-func extractFileLine(line string) (file string, lineNum int) {
+func (c *Catalog) extractFileLine(line string) (file string, lineNum int) {
 	start := strings.Index(line, "[")
 	for start >= 0 {
 		end := strings.Index(line[start:], "]")
@@ -279,7 +281,7 @@ func extractFileLine(line string) (file string, lineNum int) {
 
 // partitionDiff divide o diff em particoes que cabem em maxSize bytes.
 // Tenta manter arquivos inteiros em cada particao (divide em cabecalhos "diff --git").
-func partitionDiff(diff string, maxSize int) []string {
+func (c *Catalog) partitionDiff(diff string, maxSize int) []string {
 	if len(diff) <= maxSize {
 		return []string{diff}
 	}
@@ -322,7 +324,7 @@ func partitionDiff(diff string, maxSize int) []string {
 	for _, s := range fileSections {
 		if len(s) > maxSize {
 			flush()
-			partitions = append(partitions, splitFileSection(s, maxSize)...)
+			partitions = append(partitions, NewCatalog().splitFileSection(s, maxSize)...)
 			continue
 		}
 		if current.Len() > 0 && current.Len()+len(s) > maxSize {
@@ -341,7 +343,7 @@ func partitionDiff(diff string, maxSize int) []string {
 // com o marcador "# (continuacao truncada de <arquivo>)".
 // Quando ate um unico hunk ainda excede maxSize, aplica truncamento explicito
 // apendando "\n# ... [truncado: secao excede maxDiffPartitionSize]\n".
-func splitFileSection(section string, maxSize int) []string {
+func (c *Catalog) splitFileSection(section string, maxSize int) []string {
 	lines := strings.Split(section, "\n")
 	headerEnd := -1
 	for i, l := range lines {
@@ -383,7 +385,7 @@ func splitFileSection(section string, maxSize int) []string {
 			if part.Len() > len(header) {
 				out = append(out, part.String())
 			}
-			out = append(out, truncateOversize(header+piece, maxSize))
+			out = append(out, NewCatalog().truncateOversize(header+piece, maxSize))
 			part.Reset()
 			part.WriteString(header)
 			first = true
@@ -401,12 +403,12 @@ func splitFileSection(section string, maxSize int) []string {
 		out = append(out, part.String())
 	}
 	if len(out) == 0 {
-		return []string{truncateOversize(section, maxSize)}
+		return []string{NewCatalog().truncateOversize(section, maxSize)}
 	}
 	return out
 }
 
-func truncateOversize(s string, maxSize int) string {
+func (c *Catalog) truncateOversize(s string, maxSize int) string {
 	const marker = "\n# ... [truncado: secao excede maxDiffPartitionSize]\n"
 	if len(s) <= maxSize {
 		return s
@@ -421,15 +423,15 @@ func truncateOversize(s string, maxSize int) string {
 // ErrTemplateInvalido indica erro no parsing ou execucao do template de revisao.
 var ErrTemplateInvalido = errors.New("template de revisao invalido")
 
-// defaultReviewTemplate e o template embutido via go:embed.
+// _defaultReviewTemplate e o template embutido via go:embed.
 //
 //go:embed review_template.tmpl
-var defaultReviewTemplate string
+var _defaultReviewTemplate string
 
-// defaultBugfixTemplate e o template embutido via go:embed para o prompt de bugfix.
+// _defaultBugfixTemplate e o template embutido via go:embed para o prompt de bugfix.
 //
 //go:embed bugfix_template.tmpl
-var defaultBugfixTemplate string
+var _defaultBugfixTemplate string
 
 // ReviewTemplateData agrupa os placeholders do template de revisao.
 type ReviewTemplateData struct {
@@ -446,7 +448,7 @@ type ReviewTemplateData struct {
 // Se templatePath != "", carrega template customizado do disco via fsys.
 // Se templatePath == "", usa defaultReviewTemplate embutido.
 // Retorna erro wrappado com ErrTemplateInvalido em caso de falha de parsing ou execucao.
-func BuildReviewPrompt(templatePath string, data ReviewTemplateData, fsys fs.FileSystem) (string, error) {
+func (c *Catalog) BuildReviewPrompt(templatePath string, data ReviewTemplateData, fsys fs.FileSystem) (string, error) {
 	var tmplContent string
 	if templatePath != "" {
 		raw, err := fsys.ReadFile(templatePath)
@@ -455,7 +457,7 @@ func BuildReviewPrompt(templatePath string, data ReviewTemplateData, fsys fs.Fil
 		}
 		tmplContent = string(raw)
 	} else {
-		tmplContent = defaultReviewTemplate
+		tmplContent = _defaultReviewTemplate
 	}
 
 	tmpl, err := template.New("review").Parse(tmplContent)
@@ -474,21 +476,21 @@ func BuildReviewPrompt(templatePath string, data ReviewTemplateData, fsys fs.Fil
 // captureGitDiff agrega o diff do working tree atual: staged, unstaged e arquivos
 // untracked. Se o diretorio nao for um repo git valido ou o working tree estiver
 // limpo, retorna "(diff indisponivel)". Nao e erro bloqueante.
-func captureGitDiff(ctx context.Context, workDir string) string {
-	if !isGitWorkTree(ctx, workDir) {
+func (c *Catalog) captureGitDiff(ctx context.Context, workDir string) string {
+	if !NewCatalog().isGitWorkTree(ctx, workDir) {
 		return "(diff indisponivel)"
 	}
 
 	var sections []string
 
-	if diff, ok := commandDiff(ctx, workDir, false, "git", "diff", "--binary", "--cached", "--"); ok {
+	if diff, ok := NewCatalog().commandDiff(ctx, workDir, false, "git", "diff", "--binary", "--cached", "--"); ok {
 		sections = append(sections, diff)
 	}
-	if diff, ok := commandDiff(ctx, workDir, false, "git", "diff", "--binary", "--"); ok {
+	if diff, ok := NewCatalog().commandDiff(ctx, workDir, false, "git", "diff", "--binary", "--"); ok {
 		sections = append(sections, diff)
 	}
 
-	untracked, err := commandOutputLines(ctx, workDir, "git", "ls-files", "--others", "--exclude-standard", "--")
+	untracked, err := NewCatalog().commandOutputLines(ctx, workDir, "git", "ls-files", "--others", "--exclude-standard", "--")
 	if err != nil {
 		if len(strings.TrimSpace(strings.Join(sections, "\n"))) > 0 {
 			return strings.Join(sections, "\n") + "\n"
@@ -499,7 +501,7 @@ func captureGitDiff(ctx context.Context, workDir string) string {
 		if file == "" {
 			continue
 		}
-		if diff, ok := commandDiff(ctx, workDir, true, "git", "diff", "--binary", "--no-index", "--", os.DevNull, file); ok {
+		if diff, ok := NewCatalog().commandDiff(ctx, workDir, true, "git", "diff", "--binary", "--no-index", "--", os.DevNull, file); ok {
 			sections = append(sections, diff)
 		}
 	}
@@ -511,19 +513,19 @@ func captureGitDiff(ctx context.Context, workDir string) string {
 	return combined + "\n"
 }
 
-func isGitWorkTree(ctx context.Context, workDir string) bool {
-	out, err := commandOutput(ctx, workDir, "git", "rev-parse", "--is-inside-work-tree")
+func (c *Catalog) isGitWorkTree(ctx context.Context, workDir string) bool {
+	out, err := NewCatalog().commandOutput(ctx, workDir, "git", "rev-parse", "--is-inside-work-tree")
 	return err == nil && strings.TrimSpace(string(out)) == "true"
 }
 
-func commandOutput(ctx context.Context, dir, name string, args ...string) ([]byte, error) {
+func (c *Catalog) commandOutput(ctx context.Context, dir, name string, args ...string) ([]byte, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
 	return cmd.Output()
 }
 
-func commandOutputLines(ctx context.Context, dir, name string, args ...string) ([]string, error) {
-	out, err := commandOutput(ctx, dir, name, args...)
+func (c *Catalog) commandOutputLines(ctx context.Context, dir, name string, args ...string) ([]string, error) {
+	out, err := NewCatalog().commandOutput(ctx, dir, name, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -534,7 +536,7 @@ func commandOutputLines(ctx context.Context, dir, name string, args ...string) (
 	return strings.Split(trimmed, "\n"), nil
 }
 
-func commandDiff(ctx context.Context, dir string, allowExitOne bool, name string, args ...string) (string, bool) {
+func (c *Catalog) commandDiff(ctx context.Context, dir string, allowExitOne bool, name string, args ...string) (string, bool) {
 	cmd := exec.CommandContext(ctx, name, args...)
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
@@ -554,26 +556,26 @@ func commandDiff(ctx context.Context, dir string, allowExitOne bool, name string
 
 // detectRiskAreas analisa o conteudo combinado de techspec e diff para detectar
 // areas de risco relevantes para a revisao.
-func detectRiskAreas(prdFolder, workDir string, diff string, fsys fs.FileSystem) string {
+func (c *Catalog) detectRiskAreas(prdFolder, workDir string, diff string, fsys fs.FileSystem) string {
 	techspecPath := filepath.Join(workDir, prdFolder, "techspec.md")
 	techspec, _ := fsys.ReadFile(techspecPath)
 	combined := strings.ToLower(string(techspec) + "\n" + diff)
 
 	var areas []string
 
-	if containsAnyPattern(combined, "performance", "latencia", "latency", "benchmark", "cache", "pool", "buffer") {
+	if NewCatalog().containsAnyPattern(combined, "performance", "latencia", "latency", "benchmark", "cache", "pool", "buffer") {
 		areas = append(areas, "performance")
 	}
-	if containsAnyPattern(combined, "seguranca", "security", "auth", "credential", "token", "injection", "xss", "csrf") {
+	if NewCatalog().containsAnyPattern(combined, "seguranca", "security", "auth", "credential", "token", "injection", "xss", "csrf") {
 		areas = append(areas, "seguranca")
 	}
-	if containsAnyPattern(combined, "interface ", "contrato", "contract", "assinatura publica", "public api", "breaking change") {
+	if NewCatalog().containsAnyPattern(combined, "interface ", "contrato", "contract", "assinatura publica", "public api", "breaking change") {
 		areas = append(areas, "contratos")
 	}
-	if containsAnyPattern(combined, "goroutine", "mutex", "channel", "sync.", "concurren", "race", "deadlock", "lock") {
+	if NewCatalog().containsAnyPattern(combined, "goroutine", "mutex", "channel", "sync.", "concurren", "race", "deadlock", "lock") {
 		areas = append(areas, "concorrencia")
 	}
-	if containsAnyPattern(combined, "migra", "schema", "database", "sql", "query") {
+	if NewCatalog().containsAnyPattern(combined, "migra", "schema", "database", "sql", "query") {
 		areas = append(areas, "persistencia")
 	}
 
@@ -598,8 +600,8 @@ var ErrBugfixTemplateInvalido = errors.New("template de bugfix invalido")
 
 // BuildBugfixPrompt constroi o prompt de bugfix a partir do template embutido.
 // Retorna erro wrappado com ErrBugfixTemplateInvalido em caso de falha de parsing ou execucao.
-func BuildBugfixPrompt(data BugfixTemplateData) (string, error) {
-	tmpl, err := template.New("bugfix").Parse(defaultBugfixTemplate)
+func (c *Catalog) BuildBugfixPrompt(data BugfixTemplateData) (string, error) {
+	tmpl, err := template.New("bugfix").Parse(_defaultBugfixTemplate)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrBugfixTemplateInvalido, err)
 	}
@@ -614,7 +616,7 @@ func BuildBugfixPrompt(data BugfixTemplateData) (string, error) {
 
 // formatCompletedTasks formata a lista de tasks ja executadas no bundle
 // a partir das iteracoes anteriores do report.
-func formatCompletedTasks(iterations []IterationResult, currentTaskID string) string {
+func (c *Catalog) formatCompletedTasks(iterations []IterationResult, currentTaskID string) string {
 	var completed []string
 	seen := make(map[string]bool)
 

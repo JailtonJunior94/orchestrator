@@ -14,6 +14,6 @@ description: skill de teste para benchmark
 Conteudo do SKILL.md para benchmark.
 `)
 	for b.Loop() {
-		_ = ValidateFrontmatterSchema(validYAML, "test-skill")
+		_ = NewCatalog().ValidateFrontmatterSchema(validYAML, "test-skill")
 	}
 }

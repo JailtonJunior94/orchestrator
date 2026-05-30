@@ -56,7 +56,7 @@ func setupRepo(t *testing.T) string {
 func TestResolveTag(t *testing.T) {
 	repo := setupRepo(t)
 
-	ref, err := gitref.Resolve(repo, "v1.0.0")
+	ref, err := gitref.NewResolver().Resolve(repo, "v1.0.0")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestResolveTag(t *testing.T) {
 func TestResolveBranch(t *testing.T) {
 	repo := setupRepo(t)
 
-	ref, err := gitref.Resolve(repo, "main")
+	ref, err := gitref.NewResolver().Resolve(repo, "main")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -117,7 +117,7 @@ func TestResolveShortSHA(t *testing.T) {
 	}
 	shortSHA := string(out[:len(out)-1]) // trim newline
 
-	ref, err := gitref.Resolve(repo, shortSHA)
+	ref, err := gitref.NewResolver().Resolve(repo, shortSHA)
 	if err != nil {
 		t.Fatalf("unexpected error resolving short SHA %q: %v", shortSHA, err)
 	}
@@ -131,7 +131,7 @@ func TestResolveShortSHA(t *testing.T) {
 func TestResolveInvalidRef(t *testing.T) {
 	repo := setupRepo(t)
 
-	_, err := gitref.Resolve(repo, "nonexistent-ref-xyz")
+	_, err := gitref.NewResolver().Resolve(repo, "nonexistent-ref-xyz")
 	if err == nil {
 		t.Fatal("expected error for invalid ref, got nil")
 	}
@@ -140,7 +140,7 @@ func TestResolveInvalidRef(t *testing.T) {
 func TestResolveNonGitDir(t *testing.T) {
 	notRepo := t.TempDir()
 
-	_, err := gitref.Resolve(notRepo, "main")
+	_, err := gitref.NewResolver().Resolve(notRepo, "main")
 	if err == nil {
 		t.Fatal("expected error for non-git directory, got nil")
 	}
@@ -149,7 +149,7 @@ func TestResolveNonGitDir(t *testing.T) {
 func TestCleanupRemovesTempDir(t *testing.T) {
 	repo := setupRepo(t)
 
-	ref, err := gitref.Resolve(repo, "v1.0.0")
+	ref, err := gitref.NewResolver().Resolve(repo, "v1.0.0")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

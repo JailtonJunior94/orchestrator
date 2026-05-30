@@ -3,8 +3,18 @@ package metrics
 import (
 	"testing"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 )
+
+type FlowSuite struct {
+	suite.Suite
+}
+
+func TestFlowSuite(t *testing.T) {
+	suite.Run(t, new(FlowSuite))
+}
 
 // repeatedBytes retorna um slice de n bytes para simular artefatos de tamanho controlado.
 func repeatedBytes(n int) []byte {
@@ -15,12 +25,8 @@ func repeatedBytes(n int) []byte {
 	return b
 }
 
-// TestMeasureFlow_CompactVsStandard verifica que o limite de tokens para profile compact
-// e menor que o limite para profile standard na mesma ferramenta e fluxo.
-// Este e um contrato de estimativa operacional, nao tokens reais do provedor.
-func TestMeasureFlow_CompactVsStandard(t *testing.T) {
+func (s *FlowSuite) TestMeasureFlowCompactVsStandard() {
 	ffs := fs.NewFakeFileSystem()
-	// AGENTS.md compact simula ~5.000 chars; standard simula ~10.000 chars
 	ffs.Files["/repo/AGENTS.compact.md"] = repeatedBytes(5000)
 	ffs.Files["/repo/AGENTS.standard.md"] = repeatedBytes(10000)
 	ffs.Files["/repo/.agents/skills/agent-governance/SKILL.md"] = repeatedBytes(3000)
@@ -42,102 +48,130 @@ func TestMeasureFlow_CompactVsStandard(t *testing.T) {
 	compact := svc.MeasureFlow("claude", GovernanceProfileCompact, SkillProfileLean, FlowExecution, compactArtifacts)
 	standard := svc.MeasureFlow("claude", GovernanceProfileStandard, SkillProfileFull, FlowExecution, standardArtifacts)
 
-	// compact deve ter limite mais baixo que standard
-	if compact.TokensLimit >= standard.TokensLimit {
-		t.Errorf("compact.TokensLimit (%d) deve ser menor que standard.TokensLimit (%d)", compact.TokensLimit, standard.TokensLimit)
+	s.True(compact.TokensLimit < standard.TokensLimit, "compact.TokensLimit (%d) deve ser menor que standard.TokensLimit (%d)", compact.TokensLimit, standard.TokensLimit)
+	s.True(compact.TokensEst < standard.TokensEst, "compact.TokensEst (%d) deve ser menor que standard.TokensEst (%d)", compact.TokensEst, standard.TokensEst)
+}
+
+func (s *FlowSuite) TestFlowBudgetProfiles() {
+	scenarios := []struct {
+		name   string
+		tool   string
+		gov    GovernanceProfile
+		skill  SkillProfile
+		flow   FlowKind
+		expect func(limit int, ok bool)
+	}{
+		{
+			name:  "deve negar budget lean para planejamento",
+			tool:  "codex",
+			gov:   GovernanceProfileCompact,
+			skill: SkillProfileLean,
+			flow:  FlowPlanning,
+			expect: func(limit int, ok bool) {
+				s.False(ok, "lean profile nao deve ter budget para FlowPlanning — planejamento requer full profile")
+			},
+		},
+		{
+			name:  "deve definir budget full para planejamento",
+			tool:  "codex",
+			gov:   GovernanceProfileStandard,
+			skill: SkillProfileFull,
+			flow:  FlowPlanning,
+			expect: func(limit int, ok bool) {
+				s.True(ok, "full profile deve ter budget para FlowPlanning")
+			},
+		},
 	}
-	// compact deve ter menos tokens estimados (AGENTS.md menor)
-	if compact.TokensEst >= standard.TokensEst {
-		t.Errorf("compact.TokensEst (%d) deve ser menor que standard.TokensEst (%d)", compact.TokensEst, standard.TokensEst)
+
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			limit, ok := NewCatalog().FlowBudget(scenario.tool, scenario.gov, scenario.skill, scenario.flow)
+
+			scenario.expect(limit, ok)
+		})
 	}
 }
 
-// TestMeasureFlow_LeanVsFull verifica que planning flow nao tem budget definido para lean profile
-// (planejamento nao faz parte do lean por design) e que full profile tem budget para planning.
-func TestMeasureFlow_LeanVsFull(t *testing.T) {
-	_, leanHasBudget := FlowBudget("codex", GovernanceProfileCompact, SkillProfileLean, FlowPlanning)
-	_, fullHasBudget := FlowBudget("codex", GovernanceProfileStandard, SkillProfileFull, FlowPlanning)
+func (s *FlowSuite) TestFlowBudgetTwoTools() {
+	claudeLimit, claudeOk := NewCatalog().FlowBudget("claude", GovernanceProfileStandard, SkillProfileFull, FlowExecution)
+	codexLimit, codexOk := NewCatalog().FlowBudget("codex", GovernanceProfileStandard, SkillProfileFull, FlowExecution)
 
-	// lean nao deve ter budget de planejamento — o perfil lean exclui skills de planejamento
-	if leanHasBudget {
-		t.Error("lean profile nao deve ter budget para FlowPlanning — planejamento requer full profile")
-	}
-	// full deve ter budget de planejamento
-	if !fullHasBudget {
-		t.Error("full profile deve ter budget para FlowPlanning")
-	}
+	s.True(claudeOk, "claude deve ter budget definido para execution/standard/full")
+	s.True(codexOk, "codex deve ter budget definido para execution/standard/full")
+	s.True(claudeLimit > codexLimit, "claude (%d) deve ter limite maior que codex (%d) — janela de contexto maior", claudeLimit, codexLimit)
 }
 
-// TestMeasureFlow_TwoTools verifica que claude e codex tem limites diferentes para o mesmo fluxo,
-// refletindo suas capacidades de contexto distintas.
-// Esta diferenca e contrato: codex tem janela menor, portanto limite mais restritivo.
-func TestMeasureFlow_TwoTools(t *testing.T) {
-	claudeLimit, claudeOk := FlowBudget("claude", GovernanceProfileStandard, SkillProfileFull, FlowExecution)
-	codexLimit, codexOk := FlowBudget("codex", GovernanceProfileStandard, SkillProfileFull, FlowExecution)
-
-	if !claudeOk {
-		t.Fatal("claude deve ter budget definido para execution/standard/full")
+func (s *FlowSuite) TestMeasureFlowBudgetStatus() {
+	scenarios := []struct {
+		name   string
+		tool   string
+		gov    GovernanceProfile
+		skill  SkillProfile
+		flow   FlowKind
+		files  map[string][]byte
+		paths  []string
+		expect func(m FlowMeasurement)
+	}{
+		{
+			name:  "deve aceitar artefatos leves dentro do budget",
+			tool:  "claude",
+			gov:   GovernanceProfileStandard,
+			skill: SkillProfileFull,
+			flow:  FlowExecution,
+			files: map[string][]byte{
+				"/repo/AGENTS.md": repeatedBytes(3000),
+				"/repo/.agents/skills/agent-governance/SKILL.md": repeatedBytes(3000),
+			},
+			paths: []string{
+				"/repo/AGENTS.md",
+				"/repo/.agents/skills/agent-governance/SKILL.md",
+			},
+			expect: func(m FlowMeasurement) {
+				s.True(m.WithinBudget, "artefatos leves devem estar dentro do budget: est=%d limit=%d", m.TokensEst, m.TokensLimit)
+			},
+		},
+		{
+			name:  "deve rejeitar artefatos acima do budget",
+			tool:  "codex",
+			gov:   GovernanceProfileCompact,
+			skill: SkillProfileLean,
+			flow:  FlowExecution,
+			files: map[string][]byte{
+				"/repo/AGENTS.md": repeatedBytes(20000),
+			},
+			paths: []string{"/repo/AGENTS.md"},
+			expect: func(m FlowMeasurement) {
+				s.False(m.WithinBudget, "artefatos grandes devem exceder o budget do codex compact lean: est=%d limit=%d", m.TokensEst, m.TokensLimit)
+			},
+		},
+		{
+			name:  "deve aceitar combinacao sem budget definido",
+			tool:  "ferramenta-desconhecida",
+			gov:   GovernanceProfileStandard,
+			skill: SkillProfileFull,
+			flow:  FlowExecution,
+			files: map[string][]byte{
+				"/repo/AGENTS.md": repeatedBytes(100000),
+			},
+			paths: []string{"/repo/AGENTS.md"},
+			expect: func(m FlowMeasurement) {
+				s.True(m.WithinBudget, "combinacao sem budget definido deve retornar WithinBudget=true")
+				s.Zero(m.TokensLimit, "combinacao sem budget deve ter TokensLimit=0")
+			},
+		},
 	}
-	if !codexOk {
-		t.Fatal("codex deve ter budget definido para execution/standard/full")
-	}
-	if claudeLimit <= codexLimit {
-		t.Errorf("claude (%d) deve ter limite maior que codex (%d) — janela de contexto maior", claudeLimit, codexLimit)
-	}
-}
 
-// TestMeasureFlow_WithinBudget verifica que artefatos leves ficam dentro do budget.
-// TokensEst e estimativa operacional, nao tokens reais do provedor.
-func TestMeasureFlow_WithinBudget(t *testing.T) {
-	ffs := fs.NewFakeFileSystem()
-	// Artefatos pequenos: 3000 + 3000 = 6000 chars => ~1714 tokens est. (bem abaixo de 20000)
-	ffs.Files["/repo/AGENTS.md"] = repeatedBytes(3000)
-	ffs.Files["/repo/.agents/skills/agent-governance/SKILL.md"] = repeatedBytes(3000)
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			ffs := fs.NewFakeFileSystem()
+			for path, content := range scenario.files {
+				ffs.Files[path] = content
+			}
+			svc := NewService(ffs, silentPrinter(), nil)
 
-	svc := NewService(ffs, silentPrinter(), nil)
-	m := svc.MeasureFlow("claude", GovernanceProfileStandard, SkillProfileFull, FlowExecution, []string{
-		"/repo/AGENTS.md",
-		"/repo/.agents/skills/agent-governance/SKILL.md",
-	})
+			m := svc.MeasureFlow(scenario.tool, scenario.gov, scenario.skill, scenario.flow, scenario.paths)
 
-	if !m.WithinBudget {
-		t.Errorf("artefatos leves devem estar dentro do budget: est=%d limit=%d", m.TokensEst, m.TokensLimit)
-	}
-}
-
-// TestMeasureFlow_ExceedsBudget verifica que artefatos excessivos excedem o budget do perfil mais restritivo.
-// codex compact lean execution tem limite de 5000 tokens est.
-// 20000 chars / 3.5 ~= 5714 tokens est., que excede 5000.
-func TestMeasureFlow_ExceedsBudget(t *testing.T) {
-	ffs := fs.NewFakeFileSystem()
-	// 20000 chars => ~5714 tokens est. > limite codex compact lean (5000)
-	ffs.Files["/repo/AGENTS.md"] = repeatedBytes(20000)
-
-	svc := NewService(ffs, silentPrinter(), nil)
-	m := svc.MeasureFlow("codex", GovernanceProfileCompact, SkillProfileLean, FlowExecution, []string{
-		"/repo/AGENTS.md",
-	})
-
-	if m.WithinBudget {
-		t.Errorf("artefatos grandes devem exceder o budget do codex compact lean: est=%d limit=%d", m.TokensEst, m.TokensLimit)
-	}
-}
-
-// TestMeasureFlow_UnknownBudget verifica que combinacoes sem budget definido nao falham.
-// WithinBudget deve ser true quando o budget nao esta definido.
-func TestMeasureFlow_UnknownBudget(t *testing.T) {
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/repo/AGENTS.md"] = repeatedBytes(100000) // qualquer tamanho
-
-	svc := NewService(ffs, silentPrinter(), nil)
-	m := svc.MeasureFlow("ferramenta-desconhecida", GovernanceProfileStandard, SkillProfileFull, FlowExecution, []string{
-		"/repo/AGENTS.md",
-	})
-
-	if !m.WithinBudget {
-		t.Error("combinacao sem budget definido deve retornar WithinBudget=true")
-	}
-	if m.TokensLimit != 0 {
-		t.Errorf("combinacao sem budget deve ter TokensLimit=0, got %d", m.TokensLimit)
+			scenario.expect(m)
+		})
 	}
 }

@@ -153,7 +153,7 @@ func TestWriteActionPlanToTaskFile_Idempotente(t *testing.T) {
 		{Finding: Finding{File: "b.go", Line: 20, Message: "[Suggestion] simplificar Y"}, Action: ActionDocument, Rationale: "follow-up"},
 	}}
 
-	if err := WriteActionPlanToTaskFile(fsys, taskFile, plan); err != nil {
+	if err := NewCatalog().WriteActionPlanToTaskFile(fsys, taskFile, plan); err != nil {
 		t.Fatalf("primeira escrita: %v", err)
 	}
 	first := string(fsys.Files[taskFile])
@@ -164,7 +164,7 @@ func TestWriteActionPlanToTaskFile_Idempotente(t *testing.T) {
 		t.Fatalf("acoes nao formatadas: %s", first)
 	}
 
-	if err := WriteActionPlanToTaskFile(fsys, taskFile, plan); err != nil {
+	if err := NewCatalog().WriteActionPlanToTaskFile(fsys, taskFile, plan); err != nil {
 		t.Fatalf("segunda escrita: %v", err)
 	}
 	second := string(fsys.Files[taskFile])
@@ -198,12 +198,12 @@ texto.
 		{Finding: Finding{File: "d.go", Message: "[Suggestion] descartar"}, Action: ActionDiscard, Rationale: "fora do escopo"},
 	}}
 
-	if err := AppendFollowUpTasks(fsys, tasksFile, plan); err != nil {
+	if err := NewCatalog().AppendFollowUpTasks(fsys, tasksFile, plan); err != nil {
 		t.Fatalf("erro: %v", err)
 	}
 
 	updated := string(fsys.Files[tasksFile])
-	tasks, err := ParseTasksFile(fsys.Files[tasksFile])
+	tasks, err := NewCatalog().ParseTasksFile(fsys.Files[tasksFile])
 	if err != nil {
 		t.Fatalf("parse: %v\n%s", err, updated)
 	}
@@ -232,7 +232,7 @@ func TestAppendFollowUpTasks_SemDocumentNaoModifica(t *testing.T) {
 	plan := ActionPlan{Decisions: []ReservationDecision{
 		{Finding: Finding{File: "a.go"}, Action: ActionImplement},
 	}}
-	if err := AppendFollowUpTasks(fsys, tasksFile, plan); err != nil {
+	if err := NewCatalog().AppendFollowUpTasks(fsys, tasksFile, plan); err != nil {
 		t.Fatalf("erro: %v", err)
 	}
 	if string(fsys.Files[tasksFile]) != original {

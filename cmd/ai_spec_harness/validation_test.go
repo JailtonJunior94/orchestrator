@@ -21,10 +21,14 @@ func TestChangelogVersion_Validation(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			changelogVersion = tc.version
-			t.Cleanup(func() { changelogVersion = "" })
+			cmd := newChangelogCmd()
+			if tc.version != "" {
+				if err := cmd.Flags().Set("version", tc.version); err != nil {
+					t.Fatal(err)
+				}
+			}
 
-			err := changelogCmd.RunE(changelogCmd, nil)
+			err := cmd.RunE(cmd, nil)
 			if err == nil {
 				t.Fatal("esperava erro")
 			}
@@ -54,13 +58,14 @@ func TestUpdateVersion_FlagValidation(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			updateVersionVersion = tc.version
-			t.Cleanup(func() {
-				updateVersionVersion = ""
-				updateVersionVersionFile = "VERSION"
-			})
+			cmd := newUpdateVersionCmd()
+			if tc.version != "" {
+				if err := cmd.Flags().Set("version", tc.version); err != nil {
+					t.Fatal(err)
+				}
+			}
 
-			err := updateVersionCmd.RunE(updateVersionCmd, nil)
+			err := cmd.RunE(cmd, nil)
 			if err == nil {
 				t.Fatal("esperava erro")
 			}

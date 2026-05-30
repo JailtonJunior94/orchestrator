@@ -31,6 +31,8 @@ type FileSystem interface {
 // OSFileSystem implementa FileSystem usando o sistema operacional real.
 type OSFileSystem struct{}
 
+var _ FileSystem = (*OSFileSystem)(nil)
+
 func NewOSFileSystem() *OSFileSystem { return &OSFileSystem{} }
 
 func (f *OSFileSystem) MkdirAll(path string) error {
@@ -66,7 +68,7 @@ func (f *OSFileSystem) CopyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	return os.Chmod(dst, writableFileMode(info.Mode()))
+	return os.Chmod(dst, f.writableFileMode(info.Mode()))
 }
 
 func (f *OSFileSystem) CopyDir(src, dst string) error {
@@ -82,7 +84,7 @@ func (f *OSFileSystem) CopyDir(src, dst string) error {
 		target := filepath.Join(dst, rel)
 
 		if info.IsDir() {
-			mode := writableDirMode(info.Mode())
+			mode := f.writableDirMode(info.Mode())
 			if err := os.MkdirAll(target, mode); err != nil {
 				return err
 			}
@@ -105,7 +107,7 @@ func (f *OSFileSystem) Remove(path string) error {
 }
 
 func (f *OSFileSystem) RemoveAll(path string) error {
-	_ = chmodTreeWritable(path)
+	_ = f.chmodTreeWritable(path)
 	return os.RemoveAll(path)
 }
 
@@ -196,7 +198,7 @@ func (f *OSFileSystem) Writable(path string) bool {
 	return info.Mode().Perm()&0o200 != 0
 }
 
-func chmodTreeWritable(path string) error {
+func (f *OSFileSystem) chmodTreeWritable(path string) error {
 	if _, err := os.Lstat(path); err != nil {
 		return err
 	}
@@ -207,18 +209,18 @@ func chmodTreeWritable(path string) error {
 		}
 		switch {
 		case info.IsDir():
-			_ = os.Chmod(p, writableDirMode(info.Mode()))
+			_ = os.Chmod(p, f.writableDirMode(info.Mode()))
 		case info.Mode().IsRegular():
-			_ = os.Chmod(p, writableFileMode(info.Mode()))
+			_ = os.Chmod(p, f.writableFileMode(info.Mode()))
 		}
 		return nil
 	})
 }
 
-func writableDirMode(mode os.FileMode) os.FileMode {
+func (f *OSFileSystem) writableDirMode(mode os.FileMode) os.FileMode {
 	return mode.Perm() | 0o700
 }
 
-func writableFileMode(mode os.FileMode) os.FileMode {
+func (f *OSFileSystem) writableFileMode(mode os.FileMode) os.FileMode {
 	return mode.Perm() | 0o600
 }

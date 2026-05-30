@@ -28,16 +28,16 @@ const (
 	ComplexityComplex Complexity = "complex"
 )
 
-// trivialKeywords indica descricoes de tarefas triviais (sem mudanca de comportamento).
-var trivialKeywords = []string{
+// _trivialKeywords indica descricoes de tarefas triviais (sem mudanca de comportamento).
+var _trivialKeywords = []string{
 	"rename", "typo", "import", "formatacao", "format", "whitespace",
 	"espacamento", "indentacao", "indent", "indent", "comentario", "comment",
 	"organizar", "reorganizar", "reorder", "sort", "ordenar", "ajustar",
 	"ajuste", "cosmetic", "cosmetico", "lint-fix", "lintfix",
 }
 
-// complexKeywords indica descricoes que exigem carregamento completo de referencias.
-var complexKeywords = []string{
+// _complexKeywords indica descricoes que exigem carregamento completo de referencias.
+var _complexKeywords = []string{
 	"interface", "public", "breaking", "migration", "migracao",
 	"feature", "funcionalidade", "nova feature", "novo endpoint",
 	"nova api", "new api", "refactor", "refatorar", "refatoracao",
@@ -50,7 +50,7 @@ var complexKeywords = []string{
 // ParseComplexity converte uma string para Complexity.
 // Retorna false se o valor nao for um dos tres niveis validos.
 // Usado para validar o flag --complexity=<valor>.
-func ParseComplexity(s string) (Complexity, bool) {
+func (catalog *Catalog) ParseComplexity(s string) (Complexity, bool) {
 	switch Complexity(strings.ToLower(strings.TrimSpace(s))) {
 	case ComplexityTrivial, ComplexityStandard, ComplexityComplex:
 		return Complexity(strings.ToLower(strings.TrimSpace(s))), true
@@ -61,15 +61,15 @@ func ParseComplexity(s string) (Complexity, bool) {
 // Classify classifica a complexidade de uma tarefa com base em heuristicas de keywords.
 // A classificacao e conservadora: descricoes ambiguas ou ausentes retornam ComplexityStandard.
 // Keywords de complexidade tem prioridade sobre keywords triviais.
-func Classify(description string) Complexity {
+func (catalog *Catalog) Classify(description string) Complexity {
 	lower := strings.ToLower(description)
 
-	for _, kw := range complexKeywords {
+	for _, kw := range _complexKeywords {
 		if strings.Contains(lower, kw) {
 			return ComplexityComplex
 		}
 	}
-	for _, kw := range trivialKeywords {
+	for _, kw := range _trivialKeywords {
 		if strings.Contains(lower, kw) {
 			return ComplexityTrivial
 		}
@@ -85,7 +85,7 @@ func Classify(description string) Complexity {
 //   - trivial  → nenhuma referencia (apenas AGENTS.md e suficiente)
 //   - standard → referencias de error-handling e testing (mudancas localizadas)
 //   - complex  → todas as referencias (comportamento atual, sem restricao)
-func ReferencesForComplexity(c Complexity) []string {
+func (catalog *Catalog) ReferencesForComplexity(c Complexity) []string {
 	switch c {
 	case ComplexityTrivial:
 		return []string{}

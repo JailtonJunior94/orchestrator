@@ -10,16 +10,16 @@ import (
 )
 
 const (
-	maxTickerInterval = 5 * time.Second
-	minTickerInterval = time.Millisecond
+	_maxTickerInterval = 5 * time.Second
+	_minTickerInterval = time.Millisecond
 
-	// absoluteSessionCapFactor define o teto absoluto da sessão como múltiplo do ActivityTimeout.
+	// _absoluteSessionCapFactor define o teto absoluto da sessão como múltiplo do ActivityTimeout.
 	// O cap de inatividade (sem progresso reconhecido) é resetado por Touch; o cap ABSOLUTO conta
 	// desde o início e NUNCA é resetado. Garante que uma sessão não penda para sempre quando a CLI
 	// emite eventos keep-alive/periódicos que resetam a inatividade sem encerrar o turn (observado
 	// no codex-acp: completa a task mas a sessão nunca termina). Fator generoso para não matar
 	// trabalho legítimo: trabalho real conclui em ~1x; o cap só age em sessões realmente penduradas.
-	absoluteSessionCapFactor = 5
+	_absoluteSessionCapFactor = 5
 )
 
 // ActivityWatchdog monitora o intervalo entre eventos e cancela o contexto (via
@@ -46,7 +46,7 @@ type ActivityWatchdog struct {
 // Se clock for nil, usa RealClock().
 func NewActivityWatchdog(timeout events.ActivityTimeout, cancel context.CancelCauseFunc, clock Clock) *ActivityWatchdog {
 	if clock == nil {
-		clock = RealClock()
+		clock = NewCatalog().RealClock()
 	}
 	w := &ActivityWatchdog{
 		timeout: timeout,
@@ -75,7 +75,7 @@ func (w *ActivityWatchdog) Start(ctx context.Context) {
 
 	// startedAt marca o início do monitoramento para o cap absoluto (não resetado por Touch).
 	w.startedAt.Store(w.clock.Now().UnixNano())
-	absoluteCap := w.timeout.Duration() * absoluteSessionCapFactor
+	absoluteCap := w.timeout.Duration() * _absoluteSessionCapFactor
 
 	interval := w.tickerInterval()
 
@@ -119,11 +119,11 @@ func (w *ActivityWatchdog) Stop() {
 // tickerInterval calcula o intervalo do ticker: min(timeout/2, 5s), nunca menor que 1ms.
 func (w *ActivityWatchdog) tickerInterval() time.Duration {
 	half := w.timeout.Duration() / 2
-	if half > maxTickerInterval {
-		half = maxTickerInterval
+	if half > _maxTickerInterval {
+		half = _maxTickerInterval
 	}
-	if half < minTickerInterval {
-		half = minTickerInterval
+	if half < _minTickerInterval {
+		half = _minTickerInterval
 	}
 	return half
 }

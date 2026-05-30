@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-const weeksForTrend = 4
+const _weeksForTrend = 4
 
 // WeeklyBucket agrupa invocacoes de uma semana.
 type WeeklyBucket struct {
@@ -22,9 +22,9 @@ type TrendData struct {
 }
 
 // Trend calcula a evolucao de invocacoes por semana nas ultimas weeksForTrend semanas.
-func Trend(rootDir string) (TrendData, error) {
+func (c *Catalog) Trend(rootDir string) (TrendData, error) {
 	logPath := filepath.Join(rootDir, ".agents", "telemetry.log")
-	entries, err := parseLogEntries(logPath, time.Duration(weeksForTrend)*7*24*time.Hour)
+	entries, err := NewCatalog().parseLogEntries(logPath, time.Duration(_weeksForTrend)*7*24*time.Hour)
 	if err != nil {
 		return TrendData{}, err
 	}
@@ -39,12 +39,12 @@ func Trend(rootDir string) (TrendData, error) {
 
 	// Gerar as ultimas weeksForTrend semanas (mesmo sem dados)
 	now := time.Now().UTC()
-	weeks := make([]WeeklyBucket, weeksForTrend)
-	for i := weeksForTrend - 1; i >= 0; i-- {
+	weeks := make([]WeeklyBucket, _weeksForTrend)
+	for i := _weeksForTrend - 1; i >= 0; i-- {
 		t := now.AddDate(0, 0, -7*i)
 		year, week := t.ISOWeek()
 		key := fmt.Sprintf("%d-W%02d", year, week)
-		weeks[weeksForTrend-1-i] = WeeklyBucket{
+		weeks[_weeksForTrend-1-i] = WeeklyBucket{
 			Week:        key,
 			Invocations: buckets[key],
 		}
@@ -54,7 +54,7 @@ func Trend(rootDir string) (TrendData, error) {
 }
 
 // FormatTrend formata TrendData como tabela ASCII.
-func FormatTrend(data TrendData) string {
+func (c *Catalog) FormatTrend(data TrendData) string {
 	if len(data.Weeks) == 0 {
 		return "Sem dados de tendencia.\n"
 	}
@@ -67,7 +67,7 @@ func FormatTrend(data TrendData) string {
 	}
 
 	var sb strings.Builder
-	fmt.Fprintf(&sb, "Tendencia de Invocacoes (ultimas %d semanas):\n", weeksForTrend)
+	fmt.Fprintf(&sb, "Tendencia de Invocacoes (ultimas %d semanas):\n", _weeksForTrend)
 	fmt.Fprintf(&sb, "%-12s  %-5s  %s\n", "Semana", "Count", "Barra")
 	fmt.Fprintf(&sb, "%s\n", strings.Repeat("-", 50))
 
@@ -95,25 +95,25 @@ type BudgetCheckData struct {
 	OK     bool          `json:"ok"`
 }
 
-// defaultSkillBudgetInvocations define o limite de invocacoes esperadas por skill.
+// _defaultSkillBudgetInvocations define o limite de invocacoes esperadas por skill.
 // Superar este limite pode indicar carregamento excessivo ou loop de governanca.
-var defaultSkillBudgetInvocations = map[string]int{
-	"agent-governance":        500,
-	"go-implementation":       300,
-	"object-calisthenics-go":  100,
-	"bugfix":                  200,
-	"review":                  200,
-	"refactor":                100,
-	"execute-task":            200,
-	"create-prd":              50,
-	"create-tasks":            50,
+var _defaultSkillBudgetInvocations = map[string]int{
+	"agent-governance":               500,
+	"go-implementation":              300,
+	"object-calisthenics-go":         100,
+	"bugfix":                         200,
+	"review":                         200,
+	"refactor":                       100,
+	"execute-task":                   200,
+	"create-prd":                     50,
+	"create-tasks":                   50,
 	"create-technical-specification": 50,
 }
 
 // BudgetCheck verifica se alguma skill excedeu o budget de invocacoes esperado.
-func BudgetCheck(rootDir string, since time.Duration) (BudgetCheckData, error) {
+func (c *Catalog) BudgetCheck(rootDir string, since time.Duration) (BudgetCheckData, error) {
 	logPath := filepath.Join(rootDir, ".agents", "telemetry.log")
-	entries, err := parseLogEntries(logPath, since)
+	entries, err := NewCatalog().parseLogEntries(logPath, since)
 	if err != nil {
 		return BudgetCheckData{}, err
 	}
@@ -133,7 +133,7 @@ func BudgetCheck(rootDir string, since time.Duration) (BudgetCheckData, error) {
 	sort.Strings(names)
 
 	for _, skill := range names {
-		budget, ok := defaultSkillBudgetInvocations[skill]
+		budget, ok := _defaultSkillBudgetInvocations[skill]
 		if !ok {
 			continue
 		}
@@ -153,7 +153,7 @@ func BudgetCheck(rootDir string, since time.Duration) (BudgetCheckData, error) {
 }
 
 // FormatBudgetCheck formata BudgetCheckData como texto legivel.
-func FormatBudgetCheck(data BudgetCheckData) string {
+func (c *Catalog) FormatBudgetCheck(data BudgetCheckData) string {
 	if data.OK || len(data.Alerts) == 0 {
 		return "Budget check: todas as skills dentro do limite esperado.\n"
 	}
@@ -166,7 +166,7 @@ func FormatBudgetCheck(data BudgetCheckData) string {
 }
 
 // FormatTopSkills formata as top skills como tabela ASCII ordenada por frequencia.
-func FormatTopSkills(skills []SkillMetric) string {
+func (c *Catalog) FormatTopSkills(skills []SkillMetric) string {
 	if len(skills) == 0 {
 		return "Sem dados de uso de skills.\n"
 	}

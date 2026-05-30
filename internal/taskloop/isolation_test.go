@@ -17,14 +17,14 @@ func TestRestoreTaskIsolationSnapshotAtRemovesUnexpectedTrackedFiles(t *testing.
 	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
 	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n")
 
-	snapshot, err := captureTaskIsolationSnapshot(prd, fsys)
+	snapshot, err := NewCatalog().captureTaskIsolationSnapshot(prd, fsys)
 	if err != nil {
 		t.Fatalf("captureTaskIsolationSnapshot retornou erro inesperado: %v", err)
 	}
 
 	fsys.Files[prd+"/task-3.0-intrusa.md"] = []byte("**Status:** pending\n")
 
-	if err := restoreTaskIsolationSnapshotAt(snapshot, prd, fsys); err != nil {
+	if err := NewCatalog().restoreTaskIsolationSnapshotAt(snapshot, prd, fsys); err != nil {
 		t.Fatalf("restoreTaskIsolationSnapshotAt retornou erro inesperado: %v", err)
 	}
 
@@ -42,7 +42,7 @@ func TestValidateTaskFileIsolationRejectsUnexpectedTrackedFile(t *testing.T) {
 		"/fake/project/.specs/prd-test/task-2.0-extra.md": []byte("**Status:** pending\n"),
 	}
 
-	err := validateTaskFileIsolation(before, after, "/fake/project/.specs/prd-test/task-1.0-test.md", true)
+	err := NewCatalog().validateTaskFileIsolation(before, after, "/fake/project/.specs/prd-test/task-1.0-test.md", true)
 	if err == nil {
 		t.Fatal("esperado erro de arquivo novo, recebeu nil")
 	}
@@ -61,14 +61,14 @@ func TestValidateReviewerIsolationRejectsCurrentTaskMutation(t *testing.T) {
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
 	fsys.Files[currentTask] = []byte("**Status:** done\n")
 
-	snapshot, err := captureTaskIsolationSnapshot(prd, fsys)
+	snapshot, err := NewCatalog().captureTaskIsolationSnapshot(prd, fsys)
 	if err != nil {
 		t.Fatalf("captureTaskIsolationSnapshot retornou erro inesperado: %v", err)
 	}
 
 	fsys.Files[currentTask] = []byte("**Status:** blocked\n")
 
-	err = validateReviewerIsolation(snapshot, prd, "1.0", currentTask, fsys)
+	err = NewCatalog().validateReviewerIsolation(snapshot, prd, "1.0", currentTask, fsys)
 	if err == nil {
 		t.Fatal("esperado erro quando reviewer altera a task atual")
 	}
@@ -87,14 +87,14 @@ func TestValidateReviewerIsolationRejectsCurrentTaskRowMutation(t *testing.T) {
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
 	fsys.Files[currentTask] = []byte("**Status:** done\n")
 
-	snapshot, err := captureTaskIsolationSnapshot(prd, fsys)
+	snapshot, err := NewCatalog().captureTaskIsolationSnapshot(prd, fsys)
 	if err != nil {
 		t.Fatalf("captureTaskIsolationSnapshot retornou erro inesperado: %v", err)
 	}
 
 	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | blocked | — | Nao |\n")
 
-	err = validateReviewerIsolation(snapshot, prd, "1.0", currentTask, fsys)
+	err = NewCatalog().validateReviewerIsolation(snapshot, prd, "1.0", currentTask, fsys)
 	if err == nil {
 		t.Fatal("esperado erro quando reviewer altera a row da task atual")
 	}
@@ -113,7 +113,7 @@ func TestValidateProtectedPRDFileIsolationRejectsMutation(t *testing.T) {
 		"/fake/project/.specs/prd-test/techspec.md": []byte("# TechSpec original\n"),
 	}
 
-	err := validateProtectedPRDFileIsolation(before, after)
+	err := NewCatalog().validateProtectedPRDFileIsolation(before, after)
 	if err == nil {
 		t.Fatal("esperado erro de mutacao em arquivo protegido do PRD, recebeu nil")
 	}
@@ -131,7 +131,7 @@ func TestRestoreTaskIsolationSnapshotAtRestoresProtectedPRDFiles(t *testing.T) {
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec original\n")
 	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
 
-	snapshot, err := captureTaskIsolationSnapshot(prd, fsys)
+	snapshot, err := NewCatalog().captureTaskIsolationSnapshot(prd, fsys)
 	if err != nil {
 		t.Fatalf("captureTaskIsolationSnapshot retornou erro inesperado: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestRestoreTaskIsolationSnapshotAtRestoresProtectedPRDFiles(t *testing.T) {
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD alterado\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec alterado\n")
 
-	if err := restoreTaskIsolationSnapshotAt(snapshot, prd, fsys); err != nil {
+	if err := NewCatalog().restoreTaskIsolationSnapshotAt(snapshot, prd, fsys); err != nil {
 		t.Fatalf("restoreTaskIsolationSnapshotAt retornou erro inesperado: %v", err)
 	}
 
@@ -162,14 +162,14 @@ func TestValidateTaskIsolationRejectsArbitraryPRDFileMutation(t *testing.T) {
 	fsys.Files[currentTask] = []byte("**Status:** pending\n")
 	fsys.Files[prd+"/notes.md"] = []byte("original\n")
 
-	snapshot, err := captureTaskIsolationSnapshotWithMode(prd, taskIsolationModeExecutor, fsys)
+	snapshot, err := NewCatalog().captureTaskIsolationSnapshotWithMode(prd, _taskIsolationModeExecutor, fsys)
 	if err != nil {
 		t.Fatalf("captureTaskIsolationSnapshotWithMode retornou erro inesperado: %v", err)
 	}
 
 	fsys.Files[prd+"/notes.md"] = []byte("alterado indevidamente\n")
 
-	err = validateTaskIsolation(snapshot, prd, "1.0", currentTask, fsys)
+	err = NewCatalog().validateTaskIsolation(snapshot, prd, "1.0", currentTask, fsys)
 	if err == nil {
 		t.Fatal("esperado erro quando executor altera arquivo arbitrario do PRD")
 	}
@@ -189,14 +189,14 @@ func TestValidateReviewerIsolationRejectsArbitraryNestedPRDFileCreation(t *testi
 	fsys.Files[currentTask] = []byte("**Status:** done\n")
 	fsys.Files[prd+"/docs/context.md"] = []byte("contexto\n")
 
-	snapshot, err := captureTaskIsolationSnapshotWithMode(prd, taskIsolationModeReviewer, fsys)
+	snapshot, err := NewCatalog().captureTaskIsolationSnapshotWithMode(prd, _taskIsolationModeReviewer, fsys)
 	if err != nil {
 		t.Fatalf("captureTaskIsolationSnapshotWithMode retornou erro inesperado: %v", err)
 	}
 
 	fsys.Files[prd+"/docs/review-notes.md"] = []byte("nao permitido\n")
 
-	err = validateReviewerIsolation(snapshot, prd, "1.0", currentTask, fsys)
+	err = NewCatalog().validateReviewerIsolation(snapshot, prd, "1.0", currentTask, fsys)
 	if err == nil {
 		t.Fatal("esperado erro quando reviewer cria arquivo arbitrario do PRD")
 	}
@@ -218,7 +218,7 @@ func TestValidateTaskIsolationAllowsMemoryDir(t *testing.T) {
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
 	fsys.Files[currentTask] = []byte("**Status:** pending\n")
 
-	snapshot, err := captureTaskIsolationSnapshot(prd, fsys)
+	snapshot, err := NewCatalog().captureTaskIsolationSnapshot(prd, fsys)
 	if err != nil {
 		t.Fatalf("captureTaskIsolationSnapshot retornou erro inesperado: %v", err)
 	}
@@ -227,7 +227,7 @@ func TestValidateTaskIsolationAllowsMemoryDir(t *testing.T) {
 	fsys.Files[prd+"/memory/MEMORY.md"] = []byte("# Memory\n")
 	fsys.Files[prd+"/1.0_execution_report.md"] = []byte("# Generated\n")
 
-	if err := validateTaskIsolation(snapshot, prd, "1.0", currentTask, fsys); err != nil {
+	if err := NewCatalog().validateTaskIsolation(snapshot, prd, "1.0", currentTask, fsys); err != nil {
 		t.Fatalf("memory/MEMORY.md (hook memory_persist) não deve disparar violação de isolamento: %v", err)
 	}
 }
@@ -242,15 +242,15 @@ func TestIsProtectedPRDFile_HarnessManagedDirsExcluded(t *testing.T) {
 		prd + "/.checkpoints/1.0.yaml",
 		prd + "/.partials/tasks.md.1.0.partial",
 	}
-	for _, mode := range []taskIsolationMode{taskIsolationModeExecutor, taskIsolationModeReviewer} {
+	for _, mode := range []taskIsolationMode{_taskIsolationModeExecutor, _taskIsolationModeReviewer} {
 		for _, p := range managed {
-			if isProtectedPRDFile(prd, p, mode) {
+			if NewCatalog().isProtectedPRDFile(prd, p, mode) {
 				t.Errorf("%s não deveria ser protegido (gerenciado pela stack, mode=%d)", p, mode)
 			}
 		}
 	}
 	// Arquivo arbitrário no PRD folder continua protegido.
-	if !isProtectedPRDFile(prd, prd+"/adr-001.md", taskIsolationModeReviewer) {
+	if !NewCatalog().isProtectedPRDFile(prd, prd+"/adr-001.md", _taskIsolationModeReviewer) {
 		t.Error("adr-001.md deveria continuar protegido")
 	}
 }
@@ -265,14 +265,14 @@ func TestRestoreTaskIsolationSnapshotAtRemovesUnexpectedProtectedPRDFiles(t *tes
 	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
 	fsys.Files[prd+"/docs/context.md"] = []byte("contexto\n")
 
-	snapshot, err := captureTaskIsolationSnapshotWithMode(prd, taskIsolationModeExecutor, fsys)
+	snapshot, err := NewCatalog().captureTaskIsolationSnapshotWithMode(prd, _taskIsolationModeExecutor, fsys)
 	if err != nil {
 		t.Fatalf("captureTaskIsolationSnapshotWithMode retornou erro inesperado: %v", err)
 	}
 
 	fsys.Files[prd+"/docs/intruso.md"] = []byte("intruso\n")
 
-	if err := restoreTaskIsolationSnapshotAt(snapshot, prd, fsys); err != nil {
+	if err := NewCatalog().restoreTaskIsolationSnapshotAt(snapshot, prd, fsys); err != nil {
 		t.Fatalf("restoreTaskIsolationSnapshotAt retornou erro inesperado: %v", err)
 	}
 
@@ -298,7 +298,7 @@ func TestIsTrackedTaskFile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := isTrackedTaskFile(tt.filename); got != tt.want {
+			if got := NewCatalog().isTrackedTaskFile(tt.filename); got != tt.want {
 				t.Fatalf("isTrackedTaskFile(%q) = %v, want %v", tt.filename, got, tt.want)
 			}
 		})

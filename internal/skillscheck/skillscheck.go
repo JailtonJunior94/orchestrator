@@ -33,21 +33,21 @@ type LockFile struct {
 type VersionDrift string
 
 const (
-	DriftNone     VersionDrift = "ok"          // versao identica
-	DriftMinor    VersionDrift = "minor"        // patch ou minor: compativel
-	DriftBreaking VersionDrift = "breaking"     // major bump: potencialmente quebra
-	DriftNoLock   VersionDrift = "no-lock"      // skill instalada sem lock entry
-	DriftNoSkill  VersionDrift = "no-skill"     // lock entry sem skill instalada
-	DriftUnknown  VersionDrift = "unknown"      // versao ausente em lock ou SKILL.md
+	DriftNone     VersionDrift = "ok"       // versao identica
+	DriftMinor    VersionDrift = "minor"    // patch ou minor: compativel
+	DriftBreaking VersionDrift = "breaking" // major bump: potencialmente quebra
+	DriftNoLock   VersionDrift = "no-lock"  // skill instalada sem lock entry
+	DriftNoSkill  VersionDrift = "no-skill" // lock entry sem skill instalada
+	DriftUnknown  VersionDrift = "unknown"  // versao ausente em lock ou SKILL.md
 )
 
 // SkillVersionCheck armazena o resultado da verificacao de versao de uma skill.
 type SkillVersionCheck struct {
-	Name        string
-	LockedVer   string
+	Name         string
+	LockedVer    string
 	InstalledVer string
-	Drift       VersionDrift
-	Breaking    bool
+	Drift        VersionDrift
+	Breaking     bool
 }
 
 // Service executa verificacoes de versao de skills externas.
@@ -88,10 +88,10 @@ func (s *Service) Check(projectDir string) ([]SkillVersionCheck, error) {
 			continue
 		}
 
-		fm := skills.ParseFrontmatter(skillData)
+		fm := skills.NewCatalog().ParseFrontmatter(skillData)
 		installedVer := fm.Version
 
-		drift := classifyDrift(entry.Version, installedVer)
+		drift := s.classifyDrift(entry.Version, installedVer)
 		results = append(results, SkillVersionCheck{
 			Name:         skillName,
 			LockedVer:    entry.Version,
@@ -105,15 +105,15 @@ func (s *Service) Check(projectDir string) ([]SkillVersionCheck, error) {
 }
 
 // classifyDrift classifica a mudanca entre versao do lock e versao instalada.
-func classifyDrift(locked, installed string) VersionDrift {
+func (s *Service) classifyDrift(locked, installed string) VersionDrift {
 	if locked == "" || installed == "" {
 		return DriftUnknown
 	}
 	if locked == installed {
 		return DriftNone
 	}
-	lockedMajor := parseMajor(locked)
-	installedMajor := parseMajor(installed)
+	lockedMajor := s.parseMajor(locked)
+	installedMajor := s.parseMajor(installed)
 	if lockedMajor < 0 || installedMajor < 0 {
 		return DriftUnknown
 	}
@@ -125,7 +125,7 @@ func classifyDrift(locked, installed string) VersionDrift {
 
 // parseMajor extrai o numero de versao major de uma string semver (ex: "1.2.3" -> 1).
 // Retorna -1 se o formato for invalido.
-func parseMajor(v string) int {
+func (s *Service) parseMajor(v string) int {
 	v = strings.TrimPrefix(v, "v")
 	parts := strings.SplitN(v, ".", 2)
 	if len(parts) == 0 {

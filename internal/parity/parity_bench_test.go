@@ -7,13 +7,13 @@ import (
 )
 
 func BenchmarkCheckParity_AllTools(b *testing.B) {
-	snap, err := Generate("/bench-project", skills.AllTools, nil, "full")
+	snap, err := NewChecker().Generate("/bench-project", skills.AllTools, nil, "full")
 	if err != nil {
 		b.Fatalf("Generate: %v", err)
 	}
-	invariants := Invariants()
+	invariants := NewChecker().Invariants()
 	b.ResetTimer()
 	for b.Loop() {
-		Run(snap, invariants)
+		NewChecker().Run(snap, invariants)
 	}
 }

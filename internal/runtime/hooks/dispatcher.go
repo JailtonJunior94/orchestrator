@@ -107,6 +107,8 @@ type dispatcher struct {
 	hooks map[string][]Hook
 }
 
+var _ Dispatcher = (*dispatcher)(nil)
+
 // New retorna um Dispatcher vazio pronto para uso.
 func New() Dispatcher {
 	return &dispatcher{

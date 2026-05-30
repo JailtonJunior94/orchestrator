@@ -14,7 +14,7 @@ import (
 
 func TestWriteToolCalls_Empty(t *testing.T) {
 	fsys := fs.NewFakeFileSystem()
-	err := persistence.WriteToolCalls("/evidence/task/tool_calls.md", nil, fsys)
+	err := persistence.NewCatalog().WriteToolCalls("/evidence/task/tool_calls.md", nil, fsys)
 	if err != nil {
 		t.Fatalf("WriteToolCalls(nil): %v", err)
 	}
@@ -49,7 +49,7 @@ func TestWriteToolCalls_WithEvents(t *testing.T) {
 		},
 	}
 
-	err := persistence.WriteToolCalls("/evidence/task/tool_calls.md", summaries, fsys)
+	err := persistence.NewCatalog().WriteToolCalls("/evidence/task/tool_calls.md", summaries, fsys)
 	if err != nil {
 		t.Fatalf("WriteToolCalls: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestWriteToolCalls_MkdirError(t *testing.T) {
 		FakeFileSystem: fs.NewFakeFileSystem(),
 		mkdirErr:       errors.New("sem espaço"),
 	}
-	err := persistence.WriteToolCalls("/dir/tool_calls.md", nil, efs)
+	err := persistence.NewCatalog().WriteToolCalls("/dir/tool_calls.md", nil, efs)
 	if err == nil {
 		t.Fatal("esperava erro de MkdirAll")
 	}
@@ -79,7 +79,7 @@ func TestWriteToolCalls_WriteError(t *testing.T) {
 		FakeFileSystem: fs.NewFakeFileSystem(),
 		writeErr:       errors.New("disco cheio"),
 	}
-	err := persistence.WriteToolCalls("/dir/tool_calls.md", nil, efs)
+	err := persistence.NewCatalog().WriteToolCalls("/dir/tool_calls.md", nil, efs)
 	if err == nil {
 		t.Fatal("esperava erro de WriteFile")
 	}

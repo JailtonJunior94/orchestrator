@@ -25,15 +25,15 @@ const (
 	ComplexityComplex ComplexityLevel = "complex"
 )
 
-// standardRefs sao as referencias carregadas no nivel standard.
+// _standardRefs sao as referencias carregadas no nivel standard.
 // Baseado no mapeamento de agent-governance/SKILL.md.
-var standardRefs = map[string]bool{
+var _standardRefs = map[string]bool{
 	"error-handling.md": true,
 	"testing.md":        true,
 }
 
-// tldrRegexp captura o bloco <!-- TL;DR ... --> no inicio de referencias.
-var tldrRegexp = regexp.MustCompile(`(?s)<!--\s*TL;DR\s*(.*?)-->`)
+// _tldrRegexp captura o bloco <!-- TL;DR ... --> no inicio de referencias.
+var _tldrRegexp = regexp.MustCompile(`(?s)<!--\s*TL;DR\s*(.*?)-->`)
 
 // LoadOptions configura o comportamento de carregamento de referencias.
 type LoadOptions struct {
@@ -99,7 +99,7 @@ func (l *Loader) LoadSkillReferences(skillDir string, opts LoadOptions) (map[str
 			continue
 		}
 
-		if level == ComplexityStandard && !standardRefs[name] {
+		if level == ComplexityStandard && !_standardRefs[name] {
 			continue
 		}
 
@@ -116,7 +116,7 @@ func (l *Loader) LoadSkillReferences(skillDir string, opts LoadOptions) (map[str
 // extractTLDR extrai o conteudo do bloco <!-- TL;DR ... -->.
 // Se nao encontrado, retorna o conteudo completo (fallback seguro).
 func (l *Loader) extractTLDR(content string) string {
-	m := tldrRegexp.FindStringSubmatch(content)
+	m := _tldrRegexp.FindStringSubmatch(content)
 	if m == nil {
 		return content
 	}

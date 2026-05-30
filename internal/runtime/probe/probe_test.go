@@ -33,7 +33,7 @@ func (f *fakeLookPather) LookPath(name string) (string, error) {
 
 // claudeSpec retorna uma spec de teste baseada na spec Claude.
 func claudeSpec() specs.Spec {
-	return specs.Claude()
+	return specs.NewCatalog().Claude()
 }
 
 func TestEnsureAvailable(t *testing.T) {
@@ -93,7 +93,7 @@ func TestEnsureAvailable(t *testing.T) {
 			sp.ID = "claude-test-" + tc.name
 			look := newFakeLookPather(tc.available)
 
-			launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+			launcher, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 
 			if tc.wantErr {
 				if err == nil {
@@ -128,18 +128,20 @@ func TestEnsureAvailable_Cache(t *testing.T) {
 	look := newFakeLookPather(map[string]string{
 		"claude-agent-acp": "/usr/local/bin/claude-agent-acp",
 	})
+	probe.
 
-	// Limpa cache antes do teste de caching para garantir estado limpo.
-	probe.ResetCache()
+		// Limpa cache antes do teste de caching para garantir estado limpo.
+		NewCatalog().
+		ResetCache()
 
 	// Primeira chamada: deve resolver.
-	launcher1, err1 := probe.EnsureAvailable(context.Background(), sp, look)
+	launcher1, err1 := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err1 != nil {
 		t.Fatalf("primeira chamada falhou: %v", err1)
 	}
 
 	// Segunda chamada com a mesma spec.
-	launcher2, err2 := probe.EnsureAvailable(context.Background(), sp, look)
+	launcher2, err2 := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err2 != nil {
 		t.Fatalf("segunda chamada falhou: %v", err2)
 	}
@@ -169,7 +171,7 @@ func TestEnsureAvailable_ContextCanceled(t *testing.T) {
 		"claude-agent-acp": "/usr/local/bin/claude-agent-acp",
 	})
 
-	_, err := probe.EnsureAvailable(ctx, sp, look)
+	_, err := probe.NewCatalog().EnsureAvailable(ctx, sp, look)
 	if err == nil {
 		t.Fatal("esperava erro de contexto cancelado, mas não houve")
 	}
@@ -186,7 +188,7 @@ func TestEnsureAvailable_ErrorMessageExact(t *testing.T) {
 
 	look := newFakeLookPather(map[string]string{})
 
-	_, err := probe.EnsureAvailable(context.Background(), sp, look)
+	_, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err == nil {
 		t.Fatal("esperava erro, mas não houve")
 	}
@@ -223,7 +225,7 @@ func TestEnsureAvailable_BinaryLauncherCommand(t *testing.T) {
 		"claude-agent-acp": expectedPath,
 	})
 
-	launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+	launcher, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
@@ -254,7 +256,7 @@ func TestEnsureAvailable_FallbackWithoutAt(t *testing.T) {
 		"npx": "/usr/local/bin/npx",
 	})
 
-	launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+	launcher, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
@@ -292,7 +294,7 @@ func TestEnsureAvailable_FallbackWithEmptyArgs(t *testing.T) {
 		"npx": "/usr/local/bin/npx",
 	})
 
-	launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+	launcher, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
@@ -323,7 +325,7 @@ func TestEnsureAvailable_FallbackLauncherArgs(t *testing.T) {
 		"npx": npxPath,
 	})
 
-	launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+	launcher, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
@@ -348,7 +350,7 @@ func TestEnsureAvailable_FallbackLauncherArgs(t *testing.T) {
 
 // copilotSpec retorna uma spec de teste baseada na spec Copilot.
 func copilotSpec() specs.Spec {
-	return specs.Copilot()
+	return specs.NewCatalog().Copilot()
 }
 
 // T-06: Spec Copilot, binário ausente, npx ausente → erro com mensagem completa.
@@ -361,7 +363,7 @@ func TestEnsureAvailable_T06_CopilotNoBinaryNoNpx(t *testing.T) {
 
 	look := newFakeLookPather(map[string]string{})
 
-	_, err := probe.EnsureAvailable(context.Background(), sp, look)
+	_, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err == nil {
 		t.Fatal("esperava erro, mas não houve")
 	}
@@ -400,7 +402,7 @@ func TestEnsureAvailable_T07_CopilotBinaryPresent(t *testing.T) {
 		"copilot": expectedPath,
 	})
 
-	launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+	launcher, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
@@ -415,7 +417,7 @@ func TestEnsureAvailable_T07_CopilotBinaryPresent(t *testing.T) {
 
 	// Verificar que spec.FixedArgs estão incluídos nos args do launcher.
 	// Para Copilot, FixedArgs = ["--acp"]; sem isso o binário roda em modo legado.
-	wantArgs := specs.Copilot().FixedArgs
+	wantArgs := specs.NewCatalog().Copilot().FixedArgs
 	for _, wantArg := range wantArgs {
 		if !slices.Contains(args, wantArg) {
 			t.Errorf("args %v não contém FixedArg %q (spec.FixedArgs devem ser incluídos pelo probe)", args, wantArg)
@@ -436,7 +438,7 @@ func TestEnsureAvailable_T08_CopilotFallbackNpx(t *testing.T) {
 		"npx": npxPath,
 	})
 
-	launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+	launcher, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
@@ -451,7 +453,7 @@ func TestEnsureAvailable_T08_CopilotFallbackNpx(t *testing.T) {
 	}
 
 	// FixedArgs do fallback Copilot: ["--yes", "@github/copilot@<ver>", "--acp"] — preservados literalmente.
-	wantArgs := specs.Copilot().Fallbacks[0].FixedArgs
+	wantArgs := specs.NewCatalog().Copilot().Fallbacks[0].FixedArgs
 	if !slices.Equal(args, wantArgs) {
 		t.Errorf("args = %v, want %v", args, wantArgs)
 	}
@@ -466,11 +468,12 @@ func TestAdrByID_T20_KnownIDs(t *testing.T) {
 	t.Run("claude_adr009", func(t *testing.T) {
 		sp := claudeSpec()
 		sp.ID = "claude"
-		probe.ResetCache()
+		probe.NewCatalog().
+			ResetCache()
 
 		look := newFakeLookPather(map[string]string{})
 
-		_, err := probe.EnsureAvailable(context.Background(), sp, look)
+		_, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 		if err == nil {
 			t.Fatal("esperava erro, mas não houve")
 		}
@@ -480,13 +483,14 @@ func TestAdrByID_T20_KnownIDs(t *testing.T) {
 	})
 
 	t.Run("codex_adr013", func(t *testing.T) {
-		sp := specs.Codex()
+		sp := specs.NewCatalog().Codex()
 		sp.ID = "codex"
-		probe.ResetCache()
+		probe.NewCatalog().
+			ResetCache()
 
 		look := newFakeLookPather(map[string]string{})
 
-		_, err := probe.EnsureAvailable(context.Background(), sp, look)
+		_, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 		if err == nil {
 			t.Fatal("esperava erro, mas não houve")
 		}
@@ -498,11 +502,12 @@ func TestAdrByID_T20_KnownIDs(t *testing.T) {
 	t.Run("copilot_adr012", func(t *testing.T) {
 		sp := copilotSpec()
 		sp.ID = "copilot"
-		probe.ResetCache()
+		probe.NewCatalog().
+			ResetCache()
 
 		look := newFakeLookPather(map[string]string{})
 
-		_, err := probe.EnsureAvailable(context.Background(), sp, look)
+		_, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 		if err == nil {
 			t.Fatal("esperava erro, mas não houve")
 		}
@@ -529,7 +534,7 @@ func TestAdrByID_T21_UnknownIDFallback(t *testing.T) {
 
 	look := newFakeLookPather(map[string]string{})
 
-	_, err := probe.EnsureAvailable(context.Background(), sp, look)
+	_, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err == nil {
 		t.Fatal("esperava erro, mas não houve")
 	}
@@ -552,7 +557,7 @@ func TestAdrByID_T21_UnknownIDFallback(t *testing.T) {
 
 // geminiSpec retorna uma spec de teste baseada na spec Gemini.
 func geminiSpec() specs.Spec {
-	return specs.Gemini()
+	return specs.NewCatalog().Gemini()
 }
 
 // TestProbeReferencesADR_Gemini valida que adrByID["gemini"] aponta para ADR-015 (T-13 ext, RF-06).
@@ -560,11 +565,12 @@ func geminiSpec() specs.Spec {
 func TestProbeReferencesADR_Gemini(t *testing.T) {
 	sp := geminiSpec()
 	sp.ID = "gemini"
-	probe.ResetCache()
+	probe.NewCatalog().
+		ResetCache()
 
 	look := newFakeLookPather(map[string]string{})
 
-	_, err := probe.EnsureAvailable(context.Background(), sp, look)
+	_, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err == nil {
 		t.Fatal("esperava erro, mas não houve")
 	}
@@ -584,15 +590,15 @@ func TestProbeCacheKey_Gemini(t *testing.T) {
 	look := newFakeLookPather(map[string]string{
 		"gemini": "/usr/local/bin/gemini",
 	})
+	probe.NewCatalog().
+		ResetCache()
 
-	probe.ResetCache()
-
-	launcher1, err1 := probe.EnsureAvailable(context.Background(), sp, look)
+	launcher1, err1 := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err1 != nil {
 		t.Fatalf("primeira chamada falhou: %v", err1)
 	}
 
-	launcher2, err2 := probe.EnsureAvailable(context.Background(), sp, look)
+	launcher2, err2 := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err2 != nil {
 		t.Fatalf("segunda chamada falhou: %v", err2)
 	}
@@ -616,7 +622,7 @@ func TestEnsureAvailable_ClaudeRegressionErrorMessage(t *testing.T) {
 
 	look := newFakeLookPather(map[string]string{})
 
-	_, err := probe.EnsureAvailable(context.Background(), sp, look)
+	_, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err == nil {
 		t.Fatal("esperava erro, mas não houve")
 	}
@@ -664,7 +670,7 @@ func TestFallbackChain_GenericLauncher(t *testing.T) {
 		"bunx": bunxPath,
 	})
 
-	launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+	launcher, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
@@ -702,7 +708,7 @@ func TestFallbackChain_MultipleOrder(t *testing.T) {
 		"second-launcher": secondPath,
 	})
 
-	launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+	launcher, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
@@ -740,7 +746,7 @@ func TestFallbackChain_CanonicalFirst(t *testing.T) {
 		"npx":         fallbackPath,
 	})
 
-	launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+	launcher, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
@@ -769,25 +775,25 @@ func TestFallbackChain_ArgvParityPerSpec(t *testing.T) {
 	}{
 		{
 			name:     "claude_fallback_argv",
-			spec:     specs.Claude(),
+			spec:     specs.NewCatalog().Claude(),
 			wantCmd:  npxPath,
 			wantArgs: []string{"--yes", specs.ClaudeNpmPackage + "@" + specs.ClaudeNpmVersion},
 		},
 		{
 			name:     "codex_fallback_argv",
-			spec:     specs.Codex(),
+			spec:     specs.NewCatalog().Codex(),
 			wantCmd:  npxPath,
 			wantArgs: []string{"--yes", specs.CodexNpmPackage + "@" + specs.CodexNpmVersion},
 		},
 		{
 			name:     "gemini_fallback_argv",
-			spec:     specs.Gemini(),
+			spec:     specs.NewCatalog().Gemini(),
 			wantCmd:  npxPath,
 			wantArgs: []string{"--yes", specs.GeminiNpmPackage + "@" + specs.GeminiNpmVersion, "--acp"},
 		},
 		{
 			name:     "copilot_fallback_argv",
-			spec:     specs.Copilot(),
+			spec:     specs.NewCatalog().Copilot(),
 			wantCmd:  npxPath,
 			wantArgs: []string{"--yes", specs.CopilotNpmPackage + "@" + specs.CopilotNpmVersion, "--acp"},
 		},
@@ -805,7 +811,7 @@ func TestFallbackChain_ArgvParityPerSpec(t *testing.T) {
 				"npx": npxPath,
 			})
 
-			launcher, err := probe.EnsureAvailable(context.Background(), sp, look)
+			launcher, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
 			if err != nil {
 				t.Fatalf("erro inesperado: %v", err)
 			}

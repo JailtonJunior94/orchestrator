@@ -69,7 +69,7 @@ func (h *SpecDriftHook) Run(_ context.Context, evt Event) error {
 		return nil
 	}
 
-	report, err := specdrift.CheckDrift(preOpen.TasksDir)
+	report, err := specdrift.NewCatalog().CheckDrift(preOpen.TasksDir)
 	if err != nil {
 		// tasks.md ausente → não é uma sessão PRD-tracked: no-op.
 		// TasksDir também é usado pela memória 2-tier (F3) sem exigir tasks.md; no fluxo real

@@ -17,6 +17,8 @@ type RetryClassifier interface {
 // Erros fatais (lista explícita) retornam false; demais erros retornam true.
 type defaultRetryClassifier struct{}
 
+var _ RetryClassifier = (*defaultRetryClassifier)(nil)
+
 // NewRetryClassifier retorna a implementação de produção de RetryClassifier.
 func NewRetryClassifier() RetryClassifier {
 	return &defaultRetryClassifier{}
@@ -52,7 +54,7 @@ func (c *defaultRetryClassifier) IsTransient(err error) bool {
 // Fórmula: base * multiplier^attempt.
 // Quando multiplier <= 0, retorna 0 (sem espera — comportamento F1 default).
 // Quando base == 0, retorna 0.
-func BackoffDuration(base time.Duration, multiplier float64, attempt int) time.Duration {
+func (c *Catalog) BackoffDuration(base time.Duration, multiplier float64, attempt int) time.Duration {
 	if base <= 0 || multiplier <= 0 || attempt <= 0 {
 		return 0
 	}

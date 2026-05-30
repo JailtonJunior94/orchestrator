@@ -89,7 +89,7 @@ Se mais de 4 referencias forem necessarias para a mesma tarefa, priorizar as 3 m
 
 	for _, ref := range refs {
 		title := strings.ReplaceAll(ref, "-", " ")
-		title = titleCase(title)
+		title = s.titleCase(title)
 		content := fmt.Sprintf(`> **Carregar quando:** TODO — **Escopo:** TODO
 
 # %s
@@ -139,7 +139,7 @@ Aplicar a habilidade a esta solicitacao:
 	return nil
 }
 
-func titleCase(s string) string {
+func (s *Service) titleCase(text string) string {
 	prev := ' '
 	return strings.Map(func(r rune) rune {
 		if unicode.IsSpace(rune(prev)) || prev == '-' {
@@ -148,5 +148,5 @@ func titleCase(s string) string {
 		}
 		prev = r
 		return r
-	}, s)
+	}, text)
 }

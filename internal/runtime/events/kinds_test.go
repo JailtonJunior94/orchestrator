@@ -26,7 +26,7 @@ func TestParseEventKind(t *testing.T) {
 		tc := tc
 		t.Run("valid/"+tc.input, func(t *testing.T) {
 			t.Parallel()
-			got, err := events.ParseEventKind(tc.input)
+			got, err := events.NewCatalog().ParseEventKind(tc.input)
 			if err != nil {
 				t.Fatalf("ParseEventKind(%q) erro inesperado: %v", tc.input, err)
 			}
@@ -41,7 +41,7 @@ func TestParseEventKind(t *testing.T) {
 		s := s
 		t.Run("invalid/"+s, func(t *testing.T) {
 			t.Parallel()
-			_, err := events.ParseEventKind(s)
+			_, err := events.NewCatalog().ParseEventKind(s)
 			if err == nil {
 				t.Errorf("ParseEventKind(%q) esperava erro; obteve nil", s)
 			}

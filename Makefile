@@ -1,10 +1,21 @@
-.PHONY: build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync test-hooks sync-acp-sdk-version test-acp-live
+.PHONY: build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync test-hooks sync-acp-sdk-version test-acp-live mocks check-mocks
 
 BINARY := ai-spec
 GOFLAGS := -trimpath
+MOCKERY_VERSION := v2.53.4
 
 build:
 	CGO_ENABLED=0 go build $(GOFLAGS) -o $(BINARY) .
+
+# mocks: (re)gera os mocks declarados em mockery.yml via mockery.
+# Pos-processa para usar 'any' no lugar de 'interface{}' (Regra 7.1).
+mocks:
+	go run github.com/vektra/mockery/v2@$(MOCKERY_VERSION) --config mockery.yml
+	bash scripts/normalize-mocks.sh
+
+# check-mocks: falha se os mocks estiverem desatualizados em relacao as interfaces.
+check-mocks:
+	bash scripts/check-mocks.sh
 
 test:
 	go test ./...

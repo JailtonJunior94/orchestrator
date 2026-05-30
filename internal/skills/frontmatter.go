@@ -24,7 +24,7 @@ type Frontmatter struct {
 // Campos de blocos indentados são mapeados via dot-notation (ex.: "runtime.ide" → "claude").
 // Apenas blocos de um nível de indentação são suportados (ex.: "runtime.ide", não "a.b.c").
 // A função é agnóstica ao esquema — serve tanto para SKILL.md quanto para AGENT.md.
-func ParseFrontmatterFields(content []byte) map[string]string {
+func (catalog *Catalog) ParseFrontmatterFields(content []byte) map[string]string {
 	fields := make(map[string]string)
 	scanner := bufio.NewScanner(strings.NewReader(string(content)))
 	inFrontmatter := false
@@ -83,8 +83,8 @@ func ParseFrontmatterFields(content []byte) map[string]string {
 
 // ParseFrontmatter extrai version e description do frontmatter YAML de um SKILL.md.
 // É um wrapper fino sobre ParseFrontmatterFields que mapeia o resultado para a struct Frontmatter.
-func ParseFrontmatter(content []byte) Frontmatter {
-	fields := ParseFrontmatterFields(content)
+func (catalog *Catalog) ParseFrontmatter(content []byte) Frontmatter {
+	fields := NewCatalog().ParseFrontmatterFields(content)
 	var fm Frontmatter
 
 	fm.Name = fields["name"]
@@ -94,10 +94,10 @@ func ParseFrontmatter(content []byte) Frontmatter {
 	fm.LinkMode = fields["link_mode"]
 
 	if v, ok := fields["triggers"]; ok {
-		fm.Triggers = parseDependsOn(v)
+		fm.Triggers = NewCatalog().parseDependsOn(v)
 	}
 	if v, ok := fields["depends_on"]; ok {
-		fm.DependsOn = parseDependsOn(v)
+		fm.DependsOn = NewCatalog().parseDependsOn(v)
 	}
 	if v, ok := fields["max_depth"]; ok {
 		fm.MaxDepth, _ = strconv.Atoi(v)
@@ -107,17 +107,17 @@ func ParseFrontmatter(content []byte) Frontmatter {
 }
 
 // ParseFrontmatterName extrai o campo name do frontmatter YAML.
-func ParseFrontmatterName(content []byte) string {
-	return ParseFrontmatter(content).Name
+func (catalog *Catalog) ParseFrontmatterName(content []byte) string {
+	return NewCatalog().ParseFrontmatter(content).Name
 }
 
 // SemverGreater retorna true se a > b usando comparacao semver simples.
-func SemverGreater(a, b string) bool {
+func (catalog *Catalog) SemverGreater(a, b string) bool {
 	if a == b {
 		return false
 	}
-	aParts := parseSemver(a)
-	bParts := parseSemver(b)
+	aParts := NewCatalog().parseSemver(a)
+	bParts := NewCatalog().parseSemver(b)
 
 	for i := range 3 {
 		if aParts[i] > bParts[i] {
@@ -130,7 +130,7 @@ func SemverGreater(a, b string) bool {
 	return false
 }
 
-func parseSemver(v string) [3]int {
+func (catalog *Catalog) parseSemver(v string) [3]int {
 	var parts [3]int
 	// Remover prefixo v se presente
 	v = strings.TrimPrefix(v, "v")
@@ -157,18 +157,18 @@ func parseSemver(v string) [3]int {
 // ValidateFrontmatter valida os campos obrigatorios do frontmatter de um SKILL.md.
 // dirName e o nome do diretorio da skill (vazio para nao verificar name).
 // availableSkills e a lista de skills disponiveis (nil para nao verificar depends_on).
-func ValidateFrontmatter(content []byte, dirName string, availableSkills []string) error {
-	if !hasFrontmatterBlock(content) {
+func (catalog *Catalog) ValidateFrontmatter(content []byte, dirName string, availableSkills []string) error {
+	if !NewCatalog().hasFrontmatterBlock(content) {
 		return fmt.Errorf("frontmatter ausente: o arquivo nao possui bloco ---...---")
 	}
 
-	fm := ParseFrontmatter(content)
+	fm := NewCatalog().ParseFrontmatter(content)
 
 	if fm.Description == "" {
 		return fmt.Errorf("campo description e obrigatorio no frontmatter")
 	}
 
-	if fm.Version != "" && !IsValidSemver(fm.Version) {
+	if fm.Version != "" && !NewCatalog().IsValidSemver(fm.Version) {
 		return fmt.Errorf("version %q nao e um semver valido (esperado: X.Y.Z)", fm.Version)
 	}
 
@@ -192,7 +192,7 @@ func ValidateFrontmatter(content []byte, dirName string, availableSkills []strin
 }
 
 // hasFrontmatterBlock verifica se o conteudo possui um bloco ---...--- valido.
-func hasFrontmatterBlock(content []byte) bool {
+func (catalog *Catalog) hasFrontmatterBlock(content []byte) bool {
 	count := 0
 	for line := range strings.SplitSeq(string(content), "\n") {
 		if strings.TrimSpace(line) == "---" {
@@ -206,10 +206,10 @@ func hasFrontmatterBlock(content []byte) bool {
 }
 
 // IsValidSemver verifica se a string e um semver valido no formato X.Y.Z com prefixo v opcional.
-func IsValidSemver(v string) bool {
+func (catalog *Catalog) IsValidSemver(v string) bool {
 	v = strings.TrimPrefix(v, "v")
 	if core, prerelease, hasPrerelease := strings.Cut(v, "-"); hasPrerelease {
-		if !isValidPrerelease(prerelease) {
+		if !NewCatalog().isValidPrerelease(prerelease) {
 			return false
 		}
 		v = core
@@ -231,7 +231,7 @@ func IsValidSemver(v string) bool {
 	return true
 }
 
-func isValidPrerelease(v string) bool {
+func (catalog *Catalog) isValidPrerelease(v string) bool {
 	if v == "" {
 		return false
 	}
@@ -255,7 +255,7 @@ func isValidPrerelease(v string) bool {
 	return true
 }
 
-func parseDependsOn(raw string) []string {
+func (catalog *Catalog) parseDependsOn(raw string) []string {
 	raw = strings.TrimSpace(raw)
 	raw = strings.TrimPrefix(raw, "[")
 	raw = strings.TrimSuffix(raw, "]")

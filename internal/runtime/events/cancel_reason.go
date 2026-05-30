@@ -18,7 +18,7 @@ const (
 	CancelReasonPermissionDenied CancelReason = "permission_denied"
 )
 
-var validCancelReasons = map[CancelReason]struct{}{
+var _validCancelReasons = map[CancelReason]struct{}{
 	CancelReasonNone:             {},
 	CancelReasonActivityTimeout:  {},
 	CancelReasonContextCanceled:  {},
@@ -27,9 +27,9 @@ var validCancelReasons = map[CancelReason]struct{}{
 }
 
 // ParseCancelReason valida e retorna um CancelReason a partir de uma string.
-func ParseCancelReason(s string) (CancelReason, error) {
+func (c *Catalog) ParseCancelReason(s string) (CancelReason, error) {
 	r := CancelReason(s)
-	if _, ok := validCancelReasons[r]; !ok {
+	if _, ok := _validCancelReasons[r]; !ok {
 		return "", fmt.Errorf("motivo de cancelamento desconhecido: %q", s)
 	}
 	return r, nil

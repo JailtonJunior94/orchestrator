@@ -10,61 +10,59 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var checkSpecDriftCmd = &cobra.Command{
-	Use:   "check-spec-drift <tasks.md>",
-	Short: "Verifica cobertura de requisitos e drift de spec em relacao a tasks.md",
-	Long: `Verifica se os IDs de requisitos (RF-nn, REQ-nn) definidos em prd.md e/ou
+func newCheckSpecDriftCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "check-spec-drift <tasks.md>",
+		Short: "Verifica cobertura de requisitos e drift de spec em relacao a tasks.md",
+		Long: `Verifica se os IDs de requisitos (RF-nn, REQ-nn) definidos em prd.md e/ou
 techspec.md estao cobertos em tasks.md, e se os hashes dos arquivos de spec
 coincidem com os registrados em tasks.md.
 
 Exemplos:
   ai-spec check-spec-drift docs/tasks.md
   ai-spec check-spec-drift ./tasks.md`,
-	Args: cobra.ExactArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		tasksPath := args[0]
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			tasksPath := args[0]
 
-		if _, err := os.Stat(tasksPath); os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "erro: arquivo nao encontrado: %s\n", tasksPath)
-			os.Exit(2)
-		}
-
-		dir := filepath.Dir(tasksPath)
-
-		report, err := specdrift.CheckDrift(dir)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "erro: %s\n", err)
-			os.Exit(2)
-		}
-
-		for _, cov := range report.Coverage {
-			if len(cov.MissingIDs) > 0 {
-				fmt.Printf("DRIFT: %s → %s: IDs faltantes: %s\n",
-					cov.SourceFile, cov.TargetFile, strings.Join(cov.MissingIDs, ", "))
+			if _, err := os.Stat(tasksPath); os.IsNotExist(err) {
+				fmt.Fprintf(os.Stderr, "erro: arquivo nao encontrado: %s\n", tasksPath)
+				return newExitError(2)
 			}
-		}
 
-		for _, h := range report.Hashes {
-			if !h.Match {
-				if h.NoHashFound {
-					fmt.Printf("AVISO: hash de %s nao encontrado em tasks.md\n", h.File)
-				} else {
-					fmt.Printf("DRIFT: hash de %s divergente (esperado: %s, atual: %s)\n",
-						h.File, h.ExpectedHash, h.ActualHash)
+			dir := filepath.Dir(tasksPath)
+
+			report, err := specdrift.NewCatalog().CheckDrift(dir)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "erro: %s\n", err)
+				return newExitError(2)
+			}
+
+			for _, cov := range report.Coverage {
+				if len(cov.MissingIDs) > 0 {
+					fmt.Printf("DRIFT: %s → %s: IDs faltantes: %s\n",
+						cov.SourceFile, cov.TargetFile, strings.Join(cov.MissingIDs, ", "))
 				}
 			}
-		}
 
-		if report.Pass {
-			fmt.Println("OK: sem drift detectado.")
-			return nil
-		}
+			for _, h := range report.Hashes {
+				if !h.Match {
+					if h.NoHashFound {
+						fmt.Printf("AVISO: hash de %s nao encontrado em tasks.md\n", h.File)
+					} else {
+						fmt.Printf("DRIFT: hash de %s divergente (esperado: %s, atual: %s)\n",
+							h.File, h.ExpectedHash, h.ActualHash)
+					}
+				}
+			}
 
-		os.Exit(1)
-		return nil
-	},
-}
+			if report.Pass {
+				fmt.Println("OK: sem drift detectado.")
+				return nil
+			}
 
-func init() {
-	rootCmd.AddCommand(checkSpecDriftCmd)
+			return newExitError(1)
+		},
+	}
+	return cmd
 }

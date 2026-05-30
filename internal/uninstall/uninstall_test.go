@@ -17,7 +17,6 @@ func TestUninstall_RemovesSkills(t *testing.T) {
 	ffs.Files["/project/.ai_spec_harness.json"] = []byte("{}")
 	ffs.Files["/project/.claude/hooks/validate-governance.sh"] = []byte("gov")
 	ffs.Files["/project/.claude/hooks/validate-preload.sh"] = []byte("pre")
-	ffs.Files["/project/.claude/settings.local.json"] = []byte(defaultClaudeSettings())
 	ffs.Files["/project/.claude/scripts/validate-bugfix-evidence.sh"] = []byte("bugfix")
 	ffs.Files["/project/.claude/scripts/validate-refactor-evidence.sh"] = []byte("refactor")
 	ffs.Files["/project/scripts/lib/parse-hook-input.sh"] = []byte("helper")
@@ -25,6 +24,7 @@ func TestUninstall_RemovesSkills(t *testing.T) {
 
 	printer := output.New(false)
 	svc := NewService(ffs, printer)
+	ffs.Files["/project/.claude/settings.local.json"] = []byte(svc.defaultClaudeSettings())
 
 	err := svc.Execute("/project", false)
 	if err != nil {
@@ -72,6 +72,7 @@ func TestUninstall_RemovesGeminiHook(t *testing.T) {
 
 	printer := output.New(false)
 	svc := NewService(ffs, printer)
+	ffs.Files["/project/.claude/settings.local.json"] = []byte(svc.defaultClaudeSettings())
 
 	err := svc.Execute("/project", false)
 	if err != nil {
@@ -91,6 +92,7 @@ func TestUninstall_DryRunDoesNotRemove(t *testing.T) {
 
 	printer := output.New(false)
 	svc := NewService(ffs, printer)
+	ffs.Files["/project/.claude/settings.local.json"] = []byte(svc.defaultClaudeSettings())
 
 	err := svc.Execute("/project", true)
 	if err != nil {
@@ -113,6 +115,7 @@ func TestUninstall_NoSkillsDir(t *testing.T) {
 
 	printer := output.New(false)
 	svc := NewService(ffs, printer)
+	ffs.Files["/project/.claude/settings.local.json"] = []byte(svc.defaultClaudeSettings())
 
 	err := svc.Execute("/project", false)
 	if err == nil {
@@ -128,6 +131,7 @@ func TestUninstall_PreservesAgentsLocal(t *testing.T) {
 
 	printer := output.New(false)
 	svc := NewService(ffs, printer)
+	ffs.Files["/project/.claude/settings.local.json"] = []byte(svc.defaultClaudeSettings())
 
 	err := svc.Execute("/project", false)
 	if err != nil {

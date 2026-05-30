@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
 
@@ -13,33 +14,34 @@ import (
 )
 
 //go:embed agent-frontmatter.schema.json
-var agentFrontmatterSchemaJSON []byte
+var _agentFrontmatterSchemaJSON []byte
 
-const agentFrontmatterSchemaURI = "agent-frontmatter.schema.json"
+const _agentFrontmatterSchemaURI = "agent-frontmatter.schema.json"
 
-var compiledAgentFrontmatterSchema *jsonschema.Schema
-
-func init() {
-	schemaDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(agentFrontmatterSchemaJSON))
+// _loadAgentFrontmatterSchema compila o JSON Schema embutido sob demanda, uma
+// unica vez, de forma thread-safe (Regra 7.10 — sync.OnceValues no lugar de init()).
+var _loadAgentFrontmatterSchema = sync.OnceValues(func() (*jsonschema.Schema, error) {
+	schemaDoc, err := jsonschema.UnmarshalJSON(bytes.NewReader(_agentFrontmatterSchemaJSON))
 	if err != nil {
-		panic(fmt.Sprintf("schema de frontmatter de agente invalido: %v", err))
+		return nil, fmt.Errorf("schema de frontmatter de agente invalido: %w", err)
 	}
 	compiler := jsonschema.NewCompiler()
-	if err := compiler.AddResource(agentFrontmatterSchemaURI, schemaDoc); err != nil {
-		panic(fmt.Sprintf("carregar schema de frontmatter de agente: %v", err))
+	if err := compiler.AddResource(_agentFrontmatterSchemaURI, schemaDoc); err != nil {
+		return nil, fmt.Errorf("carregar schema de frontmatter de agente: %w", err)
 	}
-	compiledAgentFrontmatterSchema, err = compiler.Compile(agentFrontmatterSchemaURI)
+	schema, err := compiler.Compile(_agentFrontmatterSchemaURI)
 	if err != nil {
-		panic(fmt.Sprintf("compilar schema de frontmatter de agente: %v", err))
+		return nil, fmt.Errorf("compilar schema de frontmatter de agente: %w", err)
 	}
-}
+	return schema, nil
+})
 
 // agentFrontmatterDoc e a representacao serializavel do frontmatter de AGENT.md para validacao JSON Schema.
 type agentFrontmatterDoc struct {
-	Name        string              `json:"name,omitempty"`
-	Description string              `json:"description,omitempty"`
-	Version     string              `json:"version,omitempty"`
-	Runtime     *agentRuntimeDoc    `json:"runtime,omitempty"`
+	Name        string           `json:"name,omitempty"`
+	Description string           `json:"description,omitempty"`
+	Version     string           `json:"version,omitempty"`
+	Runtime     *agentRuntimeDoc `json:"runtime,omitempty"`
 }
 
 type agentRuntimeDoc struct {
@@ -52,8 +54,8 @@ type agentRuntimeDoc struct {
 // ValidateAgentFrontmatter parseia e valida o frontmatter de um AGENT.md, retornando o ResolvedAgent
 // correspondente ou um erro sentinela descritivo. dirName e o nome do diretorio pai (para RF-06);
 // pode ser vazio para ignorar a verificacao de coincidencia de nome.
-func ValidateAgentFrontmatter(content []byte, dirName string) (ResolvedAgent, error) {
-	fields := skills.ParseFrontmatterFields(content)
+func (c *Catalog) ValidateAgentFrontmatter(content []byte, dirName string) (ResolvedAgent, error) {
+	fields := skills.NewCatalog().ParseFrontmatterFields(content)
 
 	doc := agentFrontmatterDoc{
 		Name:        fields["name"],
@@ -84,8 +86,13 @@ func ValidateAgentFrontmatter(content []byte, dirName string) (ResolvedAgent, er
 		return ResolvedAgent{}, fmt.Errorf("%w: parsear frontmatter como JSON: %v", ErrFrontmatterInvalid, err)
 	}
 
-	if err := compiledAgentFrontmatterSchema.Validate(payload); err != nil {
-		return ResolvedAgent{}, fmt.Errorf("%w: %s", ErrFrontmatterInvalid, formatAgentSchemaError(err))
+	schema, err := _loadAgentFrontmatterSchema()
+	if err != nil {
+		return ResolvedAgent{}, fmt.Errorf("%w: %v", ErrFrontmatterInvalid, err)
+	}
+
+	if err := schema.Validate(payload); err != nil {
+		return ResolvedAgent{}, fmt.Errorf("%w: %s", ErrFrontmatterInvalid, NewCatalog().formatAgentSchemaError(err))
 	}
 
 	// RF-06: name no frontmatter deve coincidir com o nome do diretorio pai.
@@ -100,7 +107,7 @@ func ValidateAgentFrontmatter(content []byte, dirName string) (ResolvedAgent, er
 			Description: doc.Description,
 			Version:     doc.Version,
 		},
-		Prompt: extractPromptBody(content),
+		Prompt: NewCatalog().extractPromptBody(content),
 	}
 
 	if doc.Runtime != nil {
@@ -116,7 +123,7 @@ func ValidateAgentFrontmatter(content []byte, dirName string) (ResolvedAgent, er
 }
 
 // extractPromptBody extrai o corpo do AGENT.md apos o segundo delimitador ---.
-func extractPromptBody(content []byte) string {
+func (c *Catalog) extractPromptBody(content []byte) string {
 	text := string(content)
 	count := 0
 	lines := strings.Split(text, "\n")
@@ -136,7 +143,7 @@ func extractPromptBody(content []byte) string {
 	return strings.TrimSpace(strings.Join(lines[bodyStart:], "\n"))
 }
 
-func formatAgentSchemaError(err error) string {
+func (c *Catalog) formatAgentSchemaError(err error) string {
 	if ve, ok := err.(*jsonschema.ValidationError); ok {
 		return ve.Error()
 	}

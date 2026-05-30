@@ -48,8 +48,8 @@ const (
 // Valor estático versionado; sobreposto por config de projeto quando necessário.
 const GeminiMaxTokens = 1_000_000
 
-func Gemini() Spec {
-	return newSpecWithBootstrap(
+func (c *Catalog) Gemini() Spec {
+	return NewCatalog().newSpecWithBootstrap(
 		"gemini",
 		"Gemini (ACP)",
 		"gemini",
@@ -60,7 +60,7 @@ func Gemini() Spec {
 		}},
 		"", // AccessModeFlag vazio — ADR-015 D-04
 		GeminiSDKVersion, GeminiNpmVersion, GeminiNpmPackage,
-		geminiBootstrapArgs,
+		NewCatalog().geminiBootstrapArgs,
 		ContextWindow{MaxTokens: GeminiMaxTokens},
 	)
 }
@@ -79,7 +79,7 @@ func Gemini() Spec {
 //	AccessModeRestricted  → --approval-mode default (modo padrão com aprovação)
 //	"" (vazio)            → --approval-mode default (fallback seguro)
 //	qualquer outro valor  → --approval-mode default (fallback seguro)
-func geminiBootstrapArgs(_, _ string, _ []string, mode AccessMode) []string {
+func (c *Catalog) geminiBootstrapArgs(_, _ string, _ []string, mode AccessMode) []string {
 	switch mode {
 	case AccessModeFull:
 		return []string{"--approval-mode", "yolo"}

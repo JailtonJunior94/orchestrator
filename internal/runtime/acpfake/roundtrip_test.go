@@ -17,7 +17,7 @@ type minimalClient struct {
 }
 
 func (c *minimalClient) SessionUpdate(_ context.Context, n acp.SessionNotification) error {
-	evt, _ := events.FromACPUpdate("", n.Update)
+	evt, _ := events.NewCatalog().FromACPUpdate("", n.Update)
 	select {
 	case c.eventCh <- evt:
 	default:

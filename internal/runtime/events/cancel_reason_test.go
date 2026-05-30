@@ -24,7 +24,7 @@ func TestParseCancelReason(t *testing.T) {
 		tc := tc
 		t.Run("valid/"+tc.input, func(t *testing.T) {
 			t.Parallel()
-			got, err := events.ParseCancelReason(tc.input)
+			got, err := events.NewCatalog().ParseCancelReason(tc.input)
 			if err != nil {
 				t.Fatalf("ParseCancelReason(%q) erro inesperado: %v", tc.input, err)
 			}
@@ -39,7 +39,7 @@ func TestParseCancelReason(t *testing.T) {
 		s := s
 		t.Run("invalid/"+s, func(t *testing.T) {
 			t.Parallel()
-			_, err := events.ParseCancelReason(s)
+			_, err := events.NewCatalog().ParseCancelReason(s)
 			if err == nil {
 				t.Errorf("ParseCancelReason(%q) esperava erro; obteve nil", s)
 			}

@@ -196,7 +196,7 @@ func (s *Service) fileMetric(path string) FileMetric {
 	}
 }
 
-func estimateTokens(text string) int {
+func (c *Catalog) estimateTokens(text string) int {
 	return int(math.Round(float64(len(text)) / 3.5))
 }
 
@@ -217,8 +217,8 @@ var ToolBudgetsLarge = map[string]int{
 // CheckBudgetForClass verifica o budget levando em conta a WindowClass (ADR-023).
 // WindowLarge: tenta ToolBudgetsLarge[tool]; se ausente, cai em ToolBudgets[tool].
 // WindowStandard (ou zero-value): usa ToolBudgets[tool] (comportamento F1 preservado).
-func CheckBudgetForClass(content string, tool string, large bool) (tokens int, limit int, ok bool) {
-	tokens = estimateTokens(content)
+func (c *Catalog) CheckBudgetForClass(content string, tool string, large bool) (tokens int, limit int, ok bool) {
+	tokens = NewCatalog().estimateTokens(content)
 	if large {
 		if l, exists := ToolBudgetsLarge[tool]; exists {
 			return tokens, l, tokens <= l
@@ -234,8 +234,8 @@ func CheckBudgetForClass(content string, tool string, large bool) (tokens int, l
 // CheckBudget estima tokens do conteudo e verifica se esta dentro do budget da ferramenta.
 // Retorna tokens estimados, o limite da ferramenta e se esta dentro do budget.
 // Se a ferramenta nao tiver budget definido, ok sera sempre true.
-func CheckBudget(content string, tool string) (tokens int, limit int, ok bool) {
-	tokens = estimateTokens(content)
+func (c *Catalog) CheckBudget(content string, tool string) (tokens int, limit int, ok bool) {
+	tokens = NewCatalog().estimateTokens(content)
 	limit, exists := ToolBudgets[tool]
 	if !exists {
 		return tokens, 0, true
@@ -244,7 +244,7 @@ func CheckBudget(content string, tool string) (tokens int, limit int, ok bool) {
 }
 
 // FormatReport formata o report em string legivel.
-func FormatReport(r Report) string {
+func (c *Catalog) FormatReport(r Report) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "Baselines:\n")
 	for stack, entry := range r.Baselines {

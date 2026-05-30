@@ -10,31 +10,34 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var skillBumpCmd = &cobra.Command{
-	Use:   "skill-bump <path>",
-	Short: "Atualiza versao de skills cujo conteudo mudou desde a ultima tag",
-	Long: `Compara skills entre a ultima tag e HEAD e atualiza os campos version no frontmatter.
+type skillBumpCommand struct{}
+
+func newSkillBumpCmd() *cobra.Command {
+	handler := &skillBumpCommand{}
+	var skillBumpDryRun bool
+
+	cmd := &cobra.Command{
+		Use:   "skill-bump <path>",
+		Short: "Atualiza versao de skills cujo conteudo mudou desde a ultima tag",
+		Long: `Compara skills entre a ultima tag e HEAD e atualiza os campos version no frontmatter.
 
 Exemplos:
   ai-spec-harness skill-bump .
   ai-spec-harness skill-bump . --dry-run
   ai-spec-harness skill-bump ./meu-projeto`,
-	Args: cobra.ExactArgs(1),
-	RunE: runSkillBump,
+		Args: cobra.ExactArgs(1),
+		RunE: handler.run,
+	}
+
+	cmd.Flags().BoolVar(&skillBumpDryRun, "dry-run", false, "Exibe as mudancas sem alterar arquivos")
+	return cmd
 }
 
-var skillBumpDryRun bool
-
-func init() {
-	skillBumpCmd.Flags().BoolVar(&skillBumpDryRun, "dry-run", false, "Exibe as mudancas sem alterar arquivos")
-	rootCmd.AddCommand(skillBumpCmd)
-}
-
-func runSkillBump(cmd *cobra.Command, args []string) error {
+func (c *skillBumpCommand) run(cmd *cobra.Command, args []string) error {
 	repoPath := args[0]
 	dryRun, _ := cmd.Flags().GetBool("dry-run")
 
-	printer := output.New(verbose)
+	printer := output.New(newCommandEnv().verbose(cmd))
 	fsys := fs.NewOSFileSystem()
 	svc := skillbump.NewService(fsys, printer)
 

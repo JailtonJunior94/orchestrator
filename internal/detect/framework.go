@@ -28,7 +28,7 @@ func (d *FrameworkDetector) Detect(projectDir string) []string {
 	}
 
 	// Go frameworks
-	goMods := findManifestsRecursive(d.fs, projectDir, "go.mod", 4)
+	goMods := NewCatalog().findManifestsRecursive(d.fs, projectDir, "go.mod", 4)
 	for _, goMod := range goMods {
 		data, err := d.fs.ReadFile(goMod)
 		if err != nil {
@@ -54,7 +54,7 @@ func (d *FrameworkDetector) Detect(projectDir string) []string {
 	}
 
 	// Node frameworks
-	packages := findManifestsRecursive(d.fs, projectDir, "package.json", 4)
+	packages := NewCatalog().findManifestsRecursive(d.fs, projectDir, "package.json", 4)
 	for _, pkg := range packages {
 		data, err := d.fs.ReadFile(pkg)
 		if err != nil {
@@ -80,7 +80,7 @@ func (d *FrameworkDetector) Detect(projectDir string) []string {
 	}
 
 	// Python frameworks
-	pyprojects := findManifestsRecursive(d.fs, projectDir, "pyproject.toml", 4)
+	pyprojects := NewCatalog().findManifestsRecursive(d.fs, projectDir, "pyproject.toml", 4)
 	for _, pyp := range pyprojects {
 		data, err := d.fs.ReadFile(pyp)
 		if err != nil {
@@ -99,7 +99,7 @@ func (d *FrameworkDetector) Detect(projectDir string) []string {
 		}
 	}
 
-	requirements := findManifestsRecursive(d.fs, projectDir, "requirements.txt", 4)
+	requirements := NewCatalog().findManifestsRecursive(d.fs, projectDir, "requirements.txt", 4)
 	for _, req := range requirements {
 		data, err := d.fs.ReadFile(req)
 		if err != nil {
@@ -122,7 +122,7 @@ func (d *FrameworkDetector) Detect(projectDir string) []string {
 }
 
 // DetectPrimaryStack detecta as stacks principais do projeto.
-func DetectPrimaryStack(fsys fs.FileSystem, projectDir string) []string {
+func (r1 *Catalog) DetectPrimaryStack(fsys fs.FileSystem, projectDir string) []string {
 	var parts []string
 
 	goIndicators := []string{"go.mod", "go.work"}
@@ -166,7 +166,7 @@ func DetectPrimaryStack(fsys fs.FileSystem, projectDir string) []string {
 }
 
 // JoinFrameworks junta frameworks com virgula ou retorna fallback.
-func JoinFrameworks(frameworks []string) string {
+func (r1 *Catalog) JoinFrameworks(frameworks []string) string {
 	if len(frameworks) == 0 {
 		return "nenhum framework dominante identificado"
 	}

@@ -20,33 +20,33 @@ type taskIsolationSnapshot struct {
 type taskIsolationMode int
 
 const (
-	taskIsolationModeExecutor taskIsolationMode = iota
-	taskIsolationModeReviewer
+	_taskIsolationModeExecutor taskIsolationMode = iota
+	_taskIsolationModeReviewer
 )
 
-var trackedTaskFileNameRe = regexp.MustCompile(`^(?i)(\d+(?:\.\d+)?[._-].+|task-\d+\.\d+[._-].+|task-\d+[._-].+|task-\d+_[^.]+|task-\d+-[^.]+|task-\d+\.\d+_[^.]+|task-\d+\.\d+-[^.]+|TASK-\d+[._-].+)\.md$`)
+var _trackedTaskFileNameRe = regexp.MustCompile(`^(?i)(\d+(?:\.\d+)?[._-].+|task-\d+\.\d+[._-].+|task-\d+[._-].+|task-\d+_[^.]+|task-\d+-[^.]+|task-\d+\.\d+_[^.]+|task-\d+\.\d+-[^.]+|TASK-\d+[._-].+)\.md$`)
 
-func captureTaskIsolationSnapshot(prdFolder string, fsys fs.FileSystem) (*taskIsolationSnapshot, error) {
-	return captureTaskIsolationSnapshotWithMode(prdFolder, taskIsolationModeExecutor, fsys)
+func (c *Catalog) captureTaskIsolationSnapshot(prdFolder string, fsys fs.FileSystem) (*taskIsolationSnapshot, error) {
+	return NewCatalog().captureTaskIsolationSnapshotWithMode(prdFolder, _taskIsolationModeExecutor, fsys)
 }
 
-func captureTaskIsolationSnapshotWithMode(prdFolder string, mode taskIsolationMode, fsys fs.FileSystem) (*taskIsolationSnapshot, error) {
+func (c *Catalog) captureTaskIsolationSnapshotWithMode(prdFolder string, mode taskIsolationMode, fsys fs.FileSystem) (*taskIsolationSnapshot, error) {
 	tasksContent, err := fsys.ReadFile(filepath.Join(prdFolder, "tasks.md"))
 	if err != nil {
 		return nil, fmt.Errorf("ler tasks.md para snapshot: %w", err)
 	}
 
-	taskRows, err := extractTaskRows(tasksContent)
+	taskRows, err := NewCatalog().extractTaskRows(tasksContent)
 	if err != nil {
 		return nil, fmt.Errorf("snapshot das rows de tasks.md: %w", err)
 	}
 
-	taskFiles, err := readTaskFiles(prdFolder, fsys)
+	taskFiles, err := NewCatalog().readTaskFiles(prdFolder, fsys)
 	if err != nil {
 		return nil, fmt.Errorf("snapshot dos arquivos de task: %w", err)
 	}
 
-	prdFiles, err := readProtectedPRDFiles(prdFolder, mode, fsys)
+	prdFiles, err := NewCatalog().readProtectedPRDFiles(prdFolder, mode, fsys)
 	if err != nil {
 		return nil, fmt.Errorf("snapshot dos arquivos protegidos do PRD: %w", err)
 	}
@@ -59,21 +59,21 @@ func captureTaskIsolationSnapshotWithMode(prdFolder string, mode taskIsolationMo
 	}, nil
 }
 
-func validateTaskIsolation(snapshot *taskIsolationSnapshot, prdFolder, currentTaskID, currentTaskFile string, fsys fs.FileSystem) error {
-	return validateTaskIsolationWithMode(snapshot, prdFolder, currentTaskID, currentTaskFile, taskIsolationModeExecutor, fsys)
+func (c *Catalog) validateTaskIsolation(snapshot *taskIsolationSnapshot, prdFolder, currentTaskID, currentTaskFile string, fsys fs.FileSystem) error {
+	return NewCatalog().validateTaskIsolationWithMode(snapshot, prdFolder, currentTaskID, currentTaskFile, _taskIsolationModeExecutor, fsys)
 }
 
-func validateReviewerIsolation(snapshot *taskIsolationSnapshot, prdFolder, currentTaskID, currentTaskFile string, fsys fs.FileSystem) error {
-	return validateTaskIsolationWithMode(snapshot, prdFolder, currentTaskID, currentTaskFile, taskIsolationModeReviewer, fsys)
+func (c *Catalog) validateReviewerIsolation(snapshot *taskIsolationSnapshot, prdFolder, currentTaskID, currentTaskFile string, fsys fs.FileSystem) error {
+	return NewCatalog().validateTaskIsolationWithMode(snapshot, prdFolder, currentTaskID, currentTaskFile, _taskIsolationModeReviewer, fsys)
 }
 
-func validateTaskIsolationWithMode(snapshot *taskIsolationSnapshot, prdFolder, currentTaskID, currentTaskFile string, mode taskIsolationMode, fsys fs.FileSystem) error {
+func (c *Catalog) validateTaskIsolationWithMode(snapshot *taskIsolationSnapshot, prdFolder, currentTaskID, currentTaskFile string, mode taskIsolationMode, fsys fs.FileSystem) error {
 	currentTasksContent, err := fsys.ReadFile(filepath.Join(prdFolder, "tasks.md"))
 	if err != nil {
 		return fmt.Errorf("nao foi possivel reler tasks.md apos execucao: %w", err)
 	}
 
-	currentRows, err := extractTaskRows(currentTasksContent)
+	currentRows, err := NewCatalog().extractTaskRows(currentTasksContent)
 	if err != nil {
 		return fmt.Errorf("tasks.md ficou invalido apos execucao: %w", err)
 	}
@@ -82,33 +82,33 @@ func validateTaskIsolationWithMode(snapshot *taskIsolationSnapshot, prdFolder, c
 		return fmt.Errorf("row da task atual %s foi removida de tasks.md", currentTaskID)
 	}
 
-	if err := validateTaskRowIsolation(snapshot.taskRows, currentRows, currentTaskID, mode == taskIsolationModeExecutor); err != nil {
+	if err := NewCatalog().validateTaskRowIsolation(snapshot.taskRows, currentRows, currentTaskID, mode == _taskIsolationModeExecutor); err != nil {
 		return err
 	}
 
-	currentTaskFiles, err := readTaskFiles(prdFolder, fsys)
+	currentTaskFiles, err := NewCatalog().readTaskFiles(prdFolder, fsys)
 	if err != nil {
 		return fmt.Errorf("nao foi possivel reler arquivos de task apos execucao: %w", err)
 	}
 
-	if err := validateTaskFileIsolation(snapshot.taskFiles, currentTaskFiles, currentTaskFile, mode == taskIsolationModeExecutor); err != nil {
+	if err := NewCatalog().validateTaskFileIsolation(snapshot.taskFiles, currentTaskFiles, currentTaskFile, mode == _taskIsolationModeExecutor); err != nil {
 		return err
 	}
 
-	currentPRDFiles, err := readProtectedPRDFiles(prdFolder, mode, fsys)
+	currentPRDFiles, err := NewCatalog().readProtectedPRDFiles(prdFolder, mode, fsys)
 	if err != nil {
 		return fmt.Errorf("nao foi possivel reler arquivos protegidos do PRD apos execucao: %w", err)
 	}
 
-	if err := validateProtectedPRDFileIsolation(snapshot.prdFiles, currentPRDFiles); err != nil {
+	if err := NewCatalog().validateProtectedPRDFileIsolation(snapshot.prdFiles, currentPRDFiles); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func restoreTaskIsolationSnapshotAt(snapshot *taskIsolationSnapshot, prdFolder string, fsys fs.FileSystem) error {
-	currentTaskFiles, err := readTaskFiles(prdFolder, fsys)
+func (c *Catalog) restoreTaskIsolationSnapshotAt(snapshot *taskIsolationSnapshot, prdFolder string, fsys fs.FileSystem) error {
+	currentTaskFiles, err := NewCatalog().readTaskFiles(prdFolder, fsys)
 	if err != nil {
 		return fmt.Errorf("listar arquivos atuais de task para restauracao: %w", err)
 	}
@@ -121,7 +121,7 @@ func restoreTaskIsolationSnapshotAt(snapshot *taskIsolationSnapshot, prdFolder s
 		}
 	}
 
-	currentPRDFiles, err := readProtectedPRDFiles(prdFolder, taskIsolationModeReviewer, fsys)
+	currentPRDFiles, err := NewCatalog().readProtectedPRDFiles(prdFolder, _taskIsolationModeReviewer, fsys)
 	if err != nil {
 		return fmt.Errorf("listar arquivos protegidos atuais do PRD para restauracao: %w", err)
 	}
@@ -153,7 +153,7 @@ func restoreTaskIsolationSnapshotAt(snapshot *taskIsolationSnapshot, prdFolder s
 	return nil
 }
 
-func validateTaskRowIsolation(before, after map[string]string, currentTaskID string, allowCurrentTaskMutation bool) error {
+func (c *Catalog) validateTaskRowIsolation(before, after map[string]string, currentTaskID string, allowCurrentTaskMutation bool) error {
 	for id, rowBefore := range before {
 		rowAfter, ok := after[id]
 		if !ok {
@@ -176,7 +176,7 @@ func validateTaskRowIsolation(before, after map[string]string, currentTaskID str
 	return nil
 }
 
-func validateTaskFileIsolation(before, after map[string][]byte, currentTaskFile string, allowCurrentTaskMutation bool) error {
+func (c *Catalog) validateTaskFileIsolation(before, after map[string][]byte, currentTaskFile string, allowCurrentTaskMutation bool) error {
 	for path, contentBefore := range before {
 		contentAfter, ok := after[path]
 		if !ok {
@@ -202,7 +202,7 @@ func validateTaskFileIsolation(before, after map[string][]byte, currentTaskFile 
 	return nil
 }
 
-func validateProtectedPRDFileIsolation(before, after map[string][]byte) error {
+func (c *Catalog) validateProtectedPRDFileIsolation(before, after map[string][]byte) error {
 	for path, contentBefore := range before {
 		contentAfter, ok := after[path]
 		if !ok {
@@ -222,7 +222,7 @@ func validateProtectedPRDFileIsolation(before, after map[string][]byte) error {
 	return nil
 }
 
-func readTaskFiles(prdFolder string, fsys fs.FileSystem) (map[string][]byte, error) {
+func (c *Catalog) readTaskFiles(prdFolder string, fsys fs.FileSystem) (map[string][]byte, error) {
 	entries, err := fsys.ReadDir(prdFolder)
 	if err != nil {
 		return nil, err
@@ -235,7 +235,7 @@ func readTaskFiles(prdFolder string, fsys fs.FileSystem) (map[string][]byte, err
 		}
 
 		name := entry.Name()
-		if !isTrackedTaskFile(name) {
+		if !NewCatalog().isTrackedTaskFile(name) {
 			continue
 		}
 
@@ -250,10 +250,10 @@ func readTaskFiles(prdFolder string, fsys fs.FileSystem) (map[string][]byte, err
 	return files, nil
 }
 
-func readProtectedPRDFiles(prdFolder string, mode taskIsolationMode, fsys fs.FileSystem) (map[string][]byte, error) {
+func (c *Catalog) readProtectedPRDFiles(prdFolder string, mode taskIsolationMode, fsys fs.FileSystem) (map[string][]byte, error) {
 	files := make(map[string][]byte)
-	if err := walkFiles(prdFolder, fsys, func(path string) error {
-		if !isProtectedPRDFile(prdFolder, path, mode) {
+	if err := NewCatalog().walkFiles(prdFolder, fsys, func(path string) error {
+		if !NewCatalog().isProtectedPRDFile(prdFolder, path, mode) {
 			return nil
 		}
 		content, err := fsys.ReadFile(path)
@@ -268,7 +268,7 @@ func readProtectedPRDFiles(prdFolder string, mode taskIsolationMode, fsys fs.Fil
 	return files, nil
 }
 
-func walkFiles(root string, fsys fs.FileSystem, visit func(path string) error) error {
+func (c *Catalog) walkFiles(root string, fsys fs.FileSystem, visit func(path string) error) error {
 	entries, err := fsys.ReadDir(root)
 	if err != nil {
 		return err
@@ -277,7 +277,7 @@ func walkFiles(root string, fsys fs.FileSystem, visit func(path string) error) e
 	for _, entry := range entries {
 		fullPath := filepath.Join(root, entry.Name())
 		if entry.IsDir() {
-			if err := walkFiles(fullPath, fsys, visit); err != nil {
+			if err := NewCatalog().walkFiles(fullPath, fsys, visit); err != nil {
 				return err
 			}
 			continue
@@ -290,14 +290,14 @@ func walkFiles(root string, fsys fs.FileSystem, visit func(path string) error) e
 	return nil
 }
 
-func isProtectedPRDFile(prdFolder, fullPath string, mode taskIsolationMode) bool {
+func (c *Catalog) isProtectedPRDFile(prdFolder, fullPath string, mode taskIsolationMode) bool {
 	relPath, err := filepath.Rel(prdFolder, fullPath)
 	if err != nil {
 		return false
 	}
 	name := filepath.Base(fullPath)
 
-	if relPath == "tasks.md" || isTrackedTaskFile(name) {
+	if relPath == "tasks.md" || NewCatalog().isTrackedTaskFile(name) {
 		return false
 	}
 	// Subdiretórios gerenciados pelo harness (não pelo agente) não são arquivos protegidos do PRD.
@@ -306,10 +306,10 @@ func isProtectedPRDFile(prdFolder, fullPath string, mode taskIsolationMode) bool
 	//   - memory/      → hook memory_persist (F3) grava MEMORY.md.
 	//   - .checkpoints/ → execute-task (F25) grava <num>.yaml antes de mutar tasks.md.
 	//   - .partials/    → execute-task (F32) grava tasks.md.<num>.partial em wave paralela.
-	if isHarnessManagedPRDDir(relPath) {
+	if NewCatalog().isHarnessManagedPRDDir(relPath) {
 		return false
 	}
-	if mode == taskIsolationModeExecutor && isAllowedExecutorArtifact(name) {
+	if mode == _taskIsolationModeExecutor && NewCatalog().isAllowedExecutorArtifact(name) {
 		return false
 	}
 	return true
@@ -318,7 +318,7 @@ func isProtectedPRDFile(prdFolder, fullPath string, mode taskIsolationMode) bool
 // isHarnessManagedPRDDir indica se relPath está sob um subdiretório do PRD gerenciado pela própria
 // stack (não pelo agente): memory/, .checkpoints/, .partials/. Esses artefatos são legítimos e não
 // devem disparar violação de isolamento. Literais espelham memory.DirName e os paths de execute-task.
-func isHarnessManagedPRDDir(relPath string) bool {
+func (c *Catalog) isHarnessManagedPRDDir(relPath string) bool {
 	for _, dir := range []string{"memory", ".checkpoints", ".partials"} {
 		if relPath == dir || strings.HasPrefix(relPath, dir+string(filepath.Separator)) {
 			return true
@@ -327,13 +327,13 @@ func isHarnessManagedPRDDir(relPath string) bool {
 	return false
 }
 
-func isAllowedExecutorArtifact(name string) bool {
+func (c *Catalog) isAllowedExecutorArtifact(name string) bool {
 	return strings.Contains(name, "execution_report") ||
 		strings.Contains(name, "bugfix_report") ||
 		name == "report.md"
 }
 
-func isTrackedTaskFile(name string) bool {
+func (c *Catalog) isTrackedTaskFile(name string) bool {
 	if !strings.HasSuffix(name, ".md") {
 		return false
 	}
@@ -343,17 +343,17 @@ func isTrackedTaskFile(name string) bool {
 	if strings.Contains(name, "execution_report") || strings.Contains(name, "bugfix_report") || name == "report.md" {
 		return false
 	}
-	return trackedTaskFileNameRe.MatchString(name)
+	return _trackedTaskFileNameRe.MatchString(name)
 }
 
-func extractTaskRows(content []byte) (map[string]string, error) {
+func (c *Catalog) extractTaskRows(content []byte) (map[string]string, error) {
 	lines := strings.Split(string(content), "\n")
 	rows := make(map[string]string)
 	found := false
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if !tableRowRe.MatchString(trimmed) {
+		if !_tableRowRe.MatchString(trimmed) {
 			continue
 		}
 		found = true

@@ -8,6 +8,6 @@ import (
 
 func main() {
 	if err := aispecharness.Execute(); err != nil {
-		os.Exit(1)
+		os.Exit(aispecharness.NewExitResolver().CodeFor(err))
 	}
 }

@@ -60,7 +60,7 @@ func TestEvaluate_Bootstrap(t *testing.T) {
 	dir := initRepo(t)
 	addCommit(t, dir, "chore: initial")
 
-	d, err := semver.Evaluate(dir)
+	d, err := semver.NewService().Evaluate(dir)
 	if err != nil {
 		t.Fatalf("Evaluate: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestEvaluate_NoRelease(t *testing.T) {
 	addCommit(t, dir, "docs: update readme")
 	addCommit(t, dir, "chore: bump ci")
 
-	d, err := semver.Evaluate(dir)
+	d, err := semver.NewService().Evaluate(dir)
 	if err != nil {
 		t.Fatalf("Evaluate: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestEvaluate_PatchBump(t *testing.T) {
 	addTag(t, dir, "v1.2.3")
 	addCommit(t, dir, "fix: correct nil pointer")
 
-	d, err := semver.Evaluate(dir)
+	d, err := semver.NewService().Evaluate(dir)
 	if err != nil {
 		t.Fatalf("Evaluate: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestEvaluate_MinorBump(t *testing.T) {
 	addTag(t, dir, "v1.2.0")
 	addCommit(t, dir, "feat: add X")
 
-	d, err := semver.Evaluate(dir)
+	d, err := semver.NewService().Evaluate(dir)
 	if err != nil {
 		t.Fatalf("Evaluate: %v", err)
 	}
@@ -154,7 +154,7 @@ func TestEvaluate_MajorBump_ExclamationMark(t *testing.T) {
 	addTag(t, dir, "v1.0.0")
 	addCommit(t, dir, "feat!: remove legacy API")
 
-	d, err := semver.Evaluate(dir)
+	d, err := semver.NewService().Evaluate(dir)
 	if err != nil {
 		t.Fatalf("Evaluate: %v", err)
 	}
@@ -185,7 +185,7 @@ func TestEvaluate_MajorBump_BreakingChangeFooter(t *testing.T) {
 		t.Fatalf("git commit: %v\n%s", err, out)
 	}
 
-	d, err := semver.Evaluate(dir)
+	d, err := semver.NewService().Evaluate(dir)
 	if err != nil {
 		t.Fatalf("Evaluate: %v", err)
 	}
@@ -202,7 +202,7 @@ func TestEvaluate_HighestBumpWins(t *testing.T) {
 	addCommit(t, dir, "feat: add Y")
 	addCommit(t, dir, "docs: update")
 
-	d, err := semver.Evaluate(dir)
+	d, err := semver.NewService().Evaluate(dir)
 	if err != nil {
 		t.Fatalf("Evaluate: %v", err)
 	}
@@ -232,7 +232,7 @@ func TestDetermineBump(t *testing.T) {
 		{[]semver.Commit{{Breaking: true}}, semver.BumpMajor},
 	}
 	for _, tc := range cases {
-		got := semver.DetermineBump(tc.commits)
+		got := semver.NewService().DetermineBump(tc.commits)
 		if got != tc.want {
 			t.Errorf("DetermineBump(%v) = %q, want %q", tc.commits, got, tc.want)
 		}
@@ -252,7 +252,7 @@ func TestComputeNext(t *testing.T) {
 		{"v1.2.0", semver.BumpMinor, "1.3.0"},
 	}
 	for _, tc := range cases {
-		got := semver.ComputeNext(tc.current, tc.bump)
+		got := semver.NewService().ComputeNext(tc.current, tc.bump)
 		if got != tc.want {
 			t.Errorf("ComputeNext(%q, %q) = %q, want %q", tc.current, tc.bump, got, tc.want)
 		}

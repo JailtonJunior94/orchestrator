@@ -34,6 +34,8 @@ type MemoryPersistHook struct {
 	store memory.Store
 }
 
+var _ Hook = (*MemoryPersistHook)(nil)
+
 // NewMemoryPersistHook cria um MemoryPersistHook com o store fornecido.
 // store deve ser instanciado via memory.New(tasksDir, limits) pelo runner.
 func NewMemoryPersistHook(store memory.Store) *MemoryPersistHook {
@@ -58,7 +60,7 @@ func (h *MemoryPersistHook) Run(ctx context.Context, evt Event) error {
 		return nil
 	}
 
-	content := buildMemoryContent(summary)
+	content := h.buildMemoryContent(summary)
 
 	if err := h.store.WriteWorkflow(ctx, content, memory.WriteModeReplace); err != nil {
 		return fmt.Errorf("memory_persist: escrever MEMORY.md: %w", err)
@@ -77,7 +79,7 @@ func (h *MemoryPersistHook) Run(ctx context.Context, evt Event) error {
 // buildMemoryContent constrói o conteúdo MEMORY.md a partir do resumo da sessão.
 // Formato fixo ≤150 linhas (DefaultWorkflowLineLimit).
 // Texto exato de cabeçalho compatível com Compozy memory format.
-func buildMemoryContent(s SessionSummary) string {
+func (h *MemoryPersistHook) buildMemoryContent(s SessionSummary) string {
 	return fmt.Sprintf(`# Workflow Memory
 
 Keep only durable, cross-task context here. Do not duplicate facts that are obvious from the repository, PRD documents, or git history.

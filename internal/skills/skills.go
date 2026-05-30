@@ -12,7 +12,7 @@ const (
 
 var AllTools = []Tool{ToolClaude, ToolGemini, ToolCodex, ToolCopilot}
 
-func ParseTool(s string) (Tool, bool) {
+func (catalog *Catalog) ParseTool(s string) (Tool, bool) {
 	switch Tool(s) {
 	case ToolClaude, ToolGemini, ToolCodex, ToolCopilot:
 		return Tool(s), true
@@ -32,7 +32,7 @@ const (
 
 var AllLangs = []Lang{LangGo, LangNode, LangPython, LangDotNet}
 
-func ParseLang(s string) (Lang, bool) {
+func (catalog *Catalog) ParseLang(s string) (Lang, bool) {
 	switch Lang(s) {
 	case LangGo, LangNode, LangPython, LangDotNet:
 		return Lang(s), true
@@ -48,7 +48,7 @@ const (
 	LinkCopy    LinkMode = "copy"
 )
 
-func ParseLinkMode(s string) (LinkMode, bool) {
+func (catalog *Catalog) ParseLinkMode(s string) (LinkMode, bool) {
 	switch LinkMode(s) {
 	case LinkSymlink, LinkCopy:
 		return LinkMode(s), true
@@ -86,7 +86,7 @@ var ComplementarySkills = []string{
 }
 
 // LangSkills retorna as skills de implementacao para as linguagens selecionadas.
-func LangSkills(langs []Lang) []string {
+func (catalog *Catalog) LangSkills(langs []Lang) []string {
 	var out []string
 	for _, l := range langs {
 		switch l {
@@ -104,7 +104,7 @@ func LangSkills(langs []Lang) []string {
 }
 
 // AllSkills retorna a lista completa de skills a instalar.
-func AllSkills(langs []Lang) []string {
+func (catalog *Catalog) AllSkills(langs []Lang) []string {
 	base := append(BaseSkills, ComplementarySkills...)
-	return append(base, LangSkills(langs)...)
+	return append(base, NewCatalog().LangSkills(langs)...)
 }

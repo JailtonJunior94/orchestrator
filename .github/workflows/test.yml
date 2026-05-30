@@ -87,6 +87,9 @@ jobs:
       - name: Skills sync drift gate
         run: make check-skills-sync
 
+      - name: Mocks drift gate
+        run: make check-mocks
+
       - name: Hooks sync drift gate
         run: make check-hooks-sync
 

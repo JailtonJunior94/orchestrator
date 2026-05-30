@@ -20,7 +20,7 @@ type MetricsExtractor interface {
 
 // ExtractorFor retorna o MetricsExtractor adequado para o driver.
 // Driver desconhecido (zero-value de DriverID ou driver sem métricas) → nullExtractor.
-func ExtractorFor(d specs.DriverID) MetricsExtractor {
+func (c *Catalog) ExtractorFor(d specs.DriverID) MetricsExtractor {
 	switch d.String() {
 	case "claude":
 		return claudeExtractor{}
@@ -38,8 +38,10 @@ func ExtractorFor(d specs.DriverID) MetricsExtractor {
 // Reutiliza a lógica de ExtractClaudeMetrics preservando o contrato defensivo (F4-Claude).
 type claudeExtractor struct{}
 
+var _ MetricsExtractor = claudeExtractor{}
+
 func (claudeExtractor) Extract(raw json.RawMessage) MetricSet {
-	m := ExtractClaudeMetrics(raw)
+	m := NewCatalog().ExtractClaudeMetrics(raw)
 	if m.CacheReadTokens == 0 && m.CacheCreationTokens == 0 && m.ThinkingTokens == 0 {
 		return MetricSet{}
 	}
@@ -55,8 +57,10 @@ func (claudeExtractor) Extract(raw json.RawMessage) MetricSet {
 // Reutiliza ExtractGeminiMetrics preservando o contrato defensivo (RF-18/RF-20).
 type geminiExtractor struct{}
 
+var _ MetricsExtractor = geminiExtractor{}
+
 func (geminiExtractor) Extract(raw json.RawMessage) MetricSet {
-	m, _ := ExtractGeminiMetrics(raw)
+	m, _ := NewCatalog().ExtractGeminiMetrics(raw)
 	if m.CacheReadTokens == 0 && m.EffectiveContextTokens == 0 &&
 		m.PromptTokensBilled == 0 && m.ThoughtsTokens == 0 {
 		return MetricSet{}
@@ -73,6 +77,8 @@ func (geminiExtractor) Extract(raw json.RawMessage) MetricSet {
 // nullExtractor retorna MetricSet{} zero-value para qualquer payload.
 // Usado para Codex, Copilot e drivers sem métricas definidas.
 type nullExtractor struct{}
+
+var _ MetricsExtractor = nullExtractor{}
 
 func (nullExtractor) Extract(_ json.RawMessage) MetricSet {
 	return MetricSet{}

@@ -30,21 +30,21 @@ type MetricSet struct {
 // Valores negativos são tratados como zero (defensivo).
 func NewMetricSet(totalTokens, cacheReadTokens, thinkingTokens int, extra map[string]int) MetricSet {
 	m := MetricSet{
-		totalTokens:     max0(totalTokens),
-		cacheReadTokens: max0(cacheReadTokens),
-		thinkingTokens:  max0(thinkingTokens),
+		totalTokens:     NewCatalog().max0(totalTokens),
+		cacheReadTokens: NewCatalog().max0(cacheReadTokens),
+		thinkingTokens:  NewCatalog().max0(thinkingTokens),
 	}
 	if len(extra) > 0 {
 		m.extra = make(map[string]int, len(extra))
 		for k, v := range extra {
-			m.extra[k] = max0(v)
+			m.extra[k] = NewCatalog().max0(v)
 		}
 	}
 	return m
 }
 
 // max0 retorna 0 quando v é negativo, garantindo contadores >= 0.
-func max0(v int) int {
+func (c *Catalog) max0(v int) int {
 	if v < 0 {
 		return 0
 	}

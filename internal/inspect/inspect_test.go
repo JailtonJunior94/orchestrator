@@ -129,7 +129,7 @@ version: 2.0.0
 
 func TestToolNames(t *testing.T) {
 	tools := []skills.Tool{skills.ToolClaude, skills.ToolGemini}
-	names := toolNames(tools)
+	names := (&Service{}).toolNames(tools)
 	if len(names) != 2 {
 		t.Fatalf("len = %d, want 2", len(names))
 	}
@@ -143,7 +143,7 @@ func TestToolNames(t *testing.T) {
 
 func TestLangNames(t *testing.T) {
 	langs := []skills.Lang{skills.LangGo, skills.LangPython}
-	names := langNames(langs)
+	names := (&Service{}).langNames(langs)
 	if len(names) != 2 {
 		t.Fatalf("len = %d, want 2", len(names))
 	}

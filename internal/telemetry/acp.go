@@ -36,7 +36,7 @@ type ACPSessionEvent struct {
 // GOVERNANCE_TELEMETRY=1. O caminho legacy não deve chamar esta função.
 // Compatibilidade com leitores atuais: campos novos são adicionados como atributos extras
 // na linha de log; parsers que não entendem esses campos simplesmente os ignoram.
-func LogACPSession(rootDir string, evt ACPSessionEvent) error {
+func (c *Catalog) LogACPSession(rootDir string, evt ACPSessionEvent) error {
 	if os.Getenv("GOVERNANCE_TELEMETRY") != "1" {
 		return nil
 	}

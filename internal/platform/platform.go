@@ -8,7 +8,16 @@ type Info struct {
 	Arch string
 }
 
-func Current() Info {
+// Detector detecta informações da plataforma de execução.
+type Detector struct{}
+
+// NewDetector cria um Detector.
+func NewDetector() *Detector {
+	return &Detector{}
+}
+
+// Current retorna as informações da plataforma de execução atual.
+func (d *Detector) Current() Info {
 	return Info{OS: runtime.GOOS, Arch: runtime.GOARCH}
 }
 
