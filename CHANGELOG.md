@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.27.1 (2026-06-02)
+
+### Bug Fixes
+- **codex,tests:** hooks como MatcherGroup e snapshot tests consistentes (d8e9bc3)
+
+### Documentation
+- **readme:** adiciona secao Instalacao em outros repositorios (b8933f5)
+
 ## 0.27.0 (2026-06-02)
 
 ### Features
