@@ -2467,7 +2467,7 @@ func TestInstall_Codex_NativeHooksAndSandbox(t *testing.T) {
 		t.Fatalf(".codex/config.toml nao criado: %v", err)
 	}
 	cfgStr := string(cfg)
-	for _, want := range []string{"sandbox_mode", "approval_policy", "[hooks]"} {
+	for _, want := range []string{"sandbox_mode", "approval_policy", "[[hooks.PreToolUse]]", "[[hooks.PostToolUse]]"} {
 		if !strings.Contains(cfgStr, want) {
 			t.Errorf(".codex/config.toml sem %q", want)
 		}

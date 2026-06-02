@@ -844,6 +844,10 @@ func TestPythonMonorepoSnapshot(t *testing.T) {
 	projectDir := t.TempDir()
 	fixtureDir := filepath.Join("..", "..", "testdata", "python-monorepo")
 
+	// A deteccao de arquitetura/framework/diretorio le projectDir, nao sourceDir.
+	// Copiamos a fixture para projectDir para que detect.* identifique monorepo + FastAPI.
+	copyFixtureTree(t, fixtureDir, projectDir)
+
 	fsys := fs.NewOSFileSystem()
 	g := contextgen.NewGenerator(fsys, output.New(false))
 
@@ -857,13 +861,22 @@ func TestPythonMonorepoSnapshot(t *testing.T) {
 	}
 
 	snapshotPath := filepath.Join("..", "..", "testdata", "snapshots", "python-monorepo.agents.md")
+
+	if os.Getenv("UPDATE_SNAPSHOTS") == "1" {
+		if err := os.WriteFile(snapshotPath, data, 0o644); err != nil {
+			t.Fatalf("escrever snapshot: %v", err)
+		}
+		t.Logf("snapshot atualizado: %s", snapshotPath)
+		return
+	}
+
 	expected, err := os.ReadFile(snapshotPath)
 	if err != nil {
 		t.Fatalf("snapshot nao encontrado: %s", snapshotPath)
 	}
 
 	if string(expected) != string(data) {
-		t.Errorf("output diverge do snapshot: %s\nExecte UPDATE_SNAPSHOTS=1 no contextgen_test para atualizar.", snapshotPath)
+		t.Errorf("output diverge do snapshot: %s\nExecte UPDATE_SNAPSHOTS=1 para atualizar.", snapshotPath)
 	}
 
 	// Verificacoes de sanidade para python-monorepo
@@ -873,6 +886,36 @@ func TestPythonMonorepoSnapshot(t *testing.T) {
 	}
 	if !strings.Contains(content, "agent-governance") {
 		t.Error("AGENTS.md deve mencionar agent-governance skill")
+	}
+}
+
+func copyFixtureTree(t *testing.T, src, dst string) {
+	t.Helper()
+	if err := filepath.Walk(src, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, p)
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			return nil
+		}
+		target := filepath.Join(dst, rel)
+		if info.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		data, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			return err
+		}
+		return os.WriteFile(target, data, info.Mode().Perm())
+	}); err != nil {
+		t.Fatalf("copyFixtureTree %s -> %s: %v", src, dst, err)
 	}
 }
 

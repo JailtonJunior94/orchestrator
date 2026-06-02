@@ -1347,9 +1347,15 @@ func (r1 *Helper) codexGovernanceTOML() string {
 sandbox_mode = "workspace-write"
 approval_policy = "on-request"
 
-[hooks]
-PreToolUse = "bash .codex/hooks/validate-preload.sh"
-PostToolUse = "bash .codex/hooks/validate-governance.sh"
+[[hooks.PreToolUse]]
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = "bash .codex/hooks/validate-preload.sh"
+
+[[hooks.PostToolUse]]
+[[hooks.PostToolUse.hooks]]
+type = "command"
+command = "bash .codex/hooks/validate-governance.sh"
 `
 }
 

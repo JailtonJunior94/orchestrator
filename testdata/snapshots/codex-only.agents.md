@@ -41,16 +41,6 @@ Padrao arquitetural nao inferido com alta confianca; assumir composicao simples 
 6. Rodar validacoes proporcionais a mudanca.
 7. Registrar bloqueios e suposicoes explicitamente quando o contexto estiver incompleto.
 
-## Diretrizes de Estrutura
-
-1. Priorize entendimento do codigo e do contexto atual antes de propor refatoracoes.
-2. Respeite padroes existentes de nomenclatura, organizacao e tratamento de erro.
-3. Defina estrutura simples, evolutiva e com defaults explicitos.
-4. Evite reescritas amplas quando uma alteracao localizada resolver o problema.
-5. Estabeleca contratos, testes e comandos de validacao cedo quando eles ainda nao existirem.
-6. Considere risco de regressao como restricao principal.
-7. Evite overengineering disfarcado de arquitetura futura.
-
 ## Regras por Arquitetura
 
 1. Preservar coesao local e dependencia unidirecional entre packages.
@@ -75,10 +65,6 @@ Para tarefas de correcao de bugs com remediacao e teste de regressao, carregar t
 
 - `.agents/skills/bugfix/SKILL.md`
 
-### Composicao Multi-Linguagem
-
-Em projetos com mais de uma linguagem (ex: monorepo Go + Node), carregar apenas a skill da linguagem afetada pela mudanca. Se a tarefa cruzar linguagens, carregar ambas e aplicar a validacao de cada stack nos arquivos correspondentes. Nao misturar convencoes de uma linguagem em arquivos de outra.
-
 ## Referencias
 
 Cada skill lista suas proprias referencias em `references/` com gatilhos de carregamento no respectivo `SKILL.md`. Nao duplicar a listagem aqui — consultar o SKILL.md da skill ativa para saber quais referencias carregar e em que condicao.
@@ -102,6 +88,20 @@ Cada skill lista suas proprias referencias em `references/` com gatilhos de carr
 
 Ferramentas sem enforcement programatico dependem do modelo seguir instrucoes procedurais. A compliance nessas ferramentas e best-effort.
 
+## Economia de Contexto
+
+Carregar o minimo necessario para a tarefa reduz custo de tokens em 35-50%:
+
+| Complexidade | Criterio | O que carregar |
+|---|---|---|
+| `trivial` | Rename, typo, import, formatacao | Apenas AGENTS.md |
+| `standard` | Bug fix, novo metodo, refactor local | AGENTS.md + TL;DR das references afetadas |
+| `complex` | Nova feature, interface publica, migracao | AGENTS.md + referencias completas |
+
+- Classificar a complexidade **antes** de carregar qualquer referencia.
+- Quando a reference tiver bloco `<!-- TL;DR ... -->`, preferir o TL;DR ao documento completo em tarefas standard.
+- Override explicito via `--complexity=<nivel>` prevalece sobre classificacao automatica.
+
 ## Validacao
 
 Antes de concluir uma alteracao:
@@ -119,3 +119,10 @@ Comandos detectados no projeto (Go):
 2. Nao assumir versao de linguagem, framework ou runtime sem verificar.
 3. Nao alterar comportamento publico sem deixar isso explicito.
 4. Nao usar exemplos como copia cega; adaptar ao contexto real.
+
+
+### Controle de profundidade de invocacao
+
+- Skills que invocam outros skills (execute-task, refactor) devem verificar profundidade via `scripts/lib/check-invocation-depth.sh`.
+- Limite padrao: 2 niveis. Configuravel via `AI_INVOCATION_MAX`.
+- Variaveis de ambiente: `AI_INVOCATION_DEPTH` (corrente), `AI_INVOCATION_MAX` (limite).
