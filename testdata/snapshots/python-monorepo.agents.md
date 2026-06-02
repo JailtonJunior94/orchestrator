@@ -7,22 +7,35 @@ Este diretorio centraliza regras para uso com agentes de IA em tarefas reais de 
 
 Use estas instrucoes para manter consistencia, seguranca e qualidade ao trabalhar com codigo, configuracao, validacao e evolucao de sistemas.
 
-## Arquitetura: monolito
+## Arquitetura: monorepo
 
-O projeto aparenta ser um monolito unico. A governanca deve privilegiar coesao local, limites de pacote claros e crescimento incremental da estrutura.
+O projeto aparenta ser um monorepo, com multiplos componentes ou workspaces sob a mesma raiz. A governanca deve preservar fronteiras entre pacotes e validar apenas os workspaces afetados.
 
 Stack detectada: stack principal nao detectada automaticamente.
-Frameworks detectados: nenhum framework dominante identificado.
+Frameworks detectados: FastAPI.
 
 ## Estrutura de Pastas
 
 ```
 .
+README.md
+packages
+packages/shared
+packages/shared/pyproject.toml
+services
+services/api
+services/api/pyproject.toml
+services/api/tests
+services/api/tests/__init__.py
+services/worker
+services/worker/pyproject.toml
+services/worker/tests
+services/worker/tests/__init__.py
 ```
 
 ## Padrao Arquitetural
 
-Padrao arquitetural nao inferido com alta confianca; assumir composicao simples e dependencias explicitas.
+Predominio de arquitetura em camadas, com separacao entre transporte, servicos, persistencia e modelos.
 
 ### Fluxo de Dependencias
 
@@ -51,9 +64,9 @@ Padrao arquitetural nao inferido com alta confianca; assumir composicao simples 
 
 ## Regras por Arquitetura
 
-1. Preservar coesao local e dependencia unidirecional entre packages.
-2. Evitar helpers transversais que escondam regra de negocio ou IO.
-3. Crescer a estrutura apenas quando o codigo atual ja nao comportar a mudanca com clareza.
+1. Limitar mudancas ao workspace, pacote ou servico afetado.
+2. Nao criar dependencias internas cruzadas sem contrato explicito.
+3. Validar primeiro apenas os workspaces impactados antes de ampliar o escopo.
 
 ## Regras por Linguagem
 
@@ -114,6 +127,10 @@ Antes de concluir uma alteracao:
 
 Seguir Etapa 4 de `.agents/skills/agent-governance/SKILL.md` como base canonica.
 
+Comandos detectados no projeto (Python):
+1. Rodar fmt: `ruff format .`.
+2. Rodar test: `pytest`.
+3. Rodar lint: `ruff check .`.
 
 ## Restricoes
 
@@ -122,6 +139,7 @@ Seguir Etapa 4 de `.agents/skills/agent-governance/SKILL.md` como base canonica.
 3. Nao alterar comportamento publico sem deixar isso explicito.
 4. Nao usar exemplos como copia cega; adaptar ao contexto real.
 
+5. Nao alterar contratos entre workspaces sem deixar o impacto explicito.
 
 ### Controle de profundidade de invocacao
 

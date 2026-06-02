@@ -6,6 +6,10 @@ Keywords: arquitetura, módulos, di, domínio, coesão, camadas, cross-linguagem
 Load complete when: tarefa envolve revisão de arquitetura, organização de módulos ou injeção de dependências independente da linguagem.
 -->
 
+- Rule ID: R-ARC-002
+- Severidade: guideline
+- Escopo: arquitetura cross-linguagem.
+
 ## Diretrizes
 - Modulos/packages coesos com dependencias direcionadas.
 - Regras de dominio fora de handlers, controllers e infraestrutura.

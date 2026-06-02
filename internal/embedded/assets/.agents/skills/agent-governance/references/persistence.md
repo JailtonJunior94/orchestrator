@@ -6,6 +6,10 @@ Keywords: persistência, repository, banco, query, migrations, isolamento, domí
 Load complete when: tarefa envolve acesso a banco de dados, repository pattern ou migrations em qualquer linguagem.
 -->
 
+- Rule ID: R-DAT-001
+- Severidade: hard
+- Escopo: camada de persistência e acesso a dados.
+
 ## Objetivo
 Manter acesso a dados explicito, testavel e isolado do dominio.
 

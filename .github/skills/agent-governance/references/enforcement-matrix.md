@@ -6,6 +6,10 @@ Keywords: enforcement, matriz, claude, gemini, copilot, codex, hook, PreToolUse,
 Load complete when: tarefa exige verificar quais regras de governança são tecnicamente impostas por qual ferramenta de IA.
 -->
 
+- Rule ID: R-ENF-001
+- Severidade: informativo
+- Escopo: enforcement de governança em CLIs de IA.
+
 Tabela de capacidades de enforcement por ferramenta de IA suportada.
 
 ## Atualização 2026 (importante)

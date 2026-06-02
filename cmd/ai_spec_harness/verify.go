@@ -44,6 +44,7 @@ Exemplos:
 	cmd.Flags().String("langs", "", "Linguagens: go,node,python ou all")
 	cmd.Flags().String("source", "", "Diretorio fonte do repositorio de governanca (opcional; usa embutido se omitido)")
 	cmd.Flags().Bool("global", false, "Verifica a instalacao global em ~/.aispec")
+	cmd.Flags().Bool("by-cli", false, "Adiciona resumo por-CLI (claude/codex/copilot) ao output")
 	return cmd
 }
 
@@ -52,6 +53,7 @@ func (c *verifyCommand) run(cmd *cobra.Command, args []string) error {
 	verifyLangs, _ := cmd.Flags().GetString("langs")
 	verifySource, _ := cmd.Flags().GetString("source")
 	verifyGlobal, _ := cmd.Flags().GetBool("global")
+	verifyByCLI, _ := cmd.Flags().GetBool("by-cli")
 
 	projectDir := "."
 	if len(args) > 0 {
@@ -130,6 +132,45 @@ func (c *verifyCommand) run(cmd *cobra.Command, args []string) error {
 
 	printer.Info("")
 	printer.Info("Resumo: %d current, %d missing, %d drifted", nCurrent, nMissing, nDrifted)
+
+	if verifyByCLI {
+		// Resumo estruturado por CLI: util em scripts CI que verificam paridade entre
+		// Claude/Codex/Copilot. Ordenado por nome de tool para output deterministico.
+		printer.Info("")
+		printer.Info("Por CLI:")
+		counts := make(map[skills.Tool]struct{ current, missing, drifted int })
+		for _, item := range items {
+			c := counts[item.Tool]
+			switch item.State {
+			case install.VerifyStateCurrent:
+				c.current++
+			case install.VerifyStateMissing:
+				c.missing++
+			case install.VerifyStateDrifted:
+				c.drifted++
+			}
+			counts[item.Tool] = c
+		}
+		// Ordem fixa: claude, codex, copilot, gemini, depois quaisquer outros.
+		ordered := []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolGemini}
+		seen := make(map[skills.Tool]bool, len(ordered))
+		emit := func(tool skills.Tool) {
+			if _, ok := counts[tool]; !ok {
+				return
+			}
+			seen[tool] = true
+			c := counts[tool]
+			printer.Info("  %-10s current=%d missing=%d drifted=%d", string(tool), c.current, c.missing, c.drifted)
+		}
+		for _, t := range ordered {
+			emit(t)
+		}
+		for tool := range counts {
+			if !seen[tool] {
+				emit(tool)
+			}
+		}
+	}
 
 	if nMissing > 0 || nDrifted > 0 {
 		printer.Info("")

@@ -327,6 +327,12 @@
             "default": false,
             "required": false,
             "description": "Verifica a instalacao global em ~/.aispec"
+          },
+          "by-cli": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Adiciona resumo por-CLI (claude/codex/copilot) ao output"
           }
         }
       },

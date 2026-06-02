@@ -6,6 +6,10 @@ Keywords: padrão, repository, use-case, outbox, factory, unit-of-work, cross-li
 Load complete when: tarefa envolve aplicação de padrões arquiteturais recorrentes em Go, Node ou Python.
 -->
 
+- Rule ID: R-PAT-001
+- Severidade: guideline
+- Escopo: patterns recorrentes cross-linguagem.
+
 Patterns recorrentes aplicaveis a Go, Node/TypeScript e Python. Cada stack adapta a sintaxe mas preserva a intencao.
 
 ## Repository

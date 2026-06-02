@@ -6,6 +6,10 @@ Keywords: observabilidade, logging, tracing, métricas, trace_id, opentelemetry,
 Load complete when: tarefa envolve logging, tracing, métricas ou instrumentação de observabilidade em qualquer linguagem.
 -->
 
+- Rule ID: R-OBS-001
+- Severidade: hard
+- Escopo: observabilidade (logs/traces/metrics) cross-linguagem.
+
 ## Objetivo
 Garantir rastreabilidade, diagnostico e visibilidade operacional em producao.
 

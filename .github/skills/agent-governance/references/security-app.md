@@ -6,6 +6,10 @@ Keywords: segurança, input-validation, jwt, autenticação, autorização, sql-
 Load complete when: tarefa envolve validação de input, autenticação, autorização ou prevenção de vulnerabilidades em qualquer linguagem.
 -->
 
+- Rule ID: R-APPSEC-001
+- Severidade: hard
+- Escopo: segurança aplicada na camada de aplicação.
+
 ## Input Validation
 - Usar schema validation (Node: zod, joi, class-validator; Python: pydantic, marshmallow, attrs) em vez de validacao manual.
 - Usar allowlist em vez de denylist quando possivel.

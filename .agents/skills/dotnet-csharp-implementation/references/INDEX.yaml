@@ -1,0 +1,120 @@
+# INDEX de carga surgical para dotnet-csharp-implementation.
+# Resolver: .agents/scripts/resolve-references.sh
+schema: 1
+skill: dotnet-csharp-implementation
+references:
+  - id: architecture
+    file: architecture.md
+    topics: [arquitetura, projects, solution]
+    always: true
+    est_tokens: 800
+  - id: api
+    file: api.md
+    topics: [api, minimal-api, controller, mediatr]
+    when_to_load:
+      file_patterns: ["**/Controllers/**", "**/Program.cs", "**/Endpoints/**"]
+      diff_signals: ["MapGet(", "MapPost(", "[ApiController]", "WebApplication.CreateBuilder", "IMediator"]
+    est_tokens: 700
+  - id: build
+    file: build.md
+    topics: [build, csproj, sln, msbuild]
+    when_to_load:
+      file_patterns: ["**/*.csproj", "**/*.sln", "global.json", "Directory.Build.props", "Dockerfile"]
+      diff_signals: []
+    est_tokens: 500
+  - id: concurrency
+    file: concurrency.md
+    topics: [task, async, await, channel]
+    when_to_load:
+      file_patterns: []
+      diff_signals: ["async Task", "await ", "Task.Run", "Channel<", "CancellationToken"]
+    est_tokens: 800
+  - id: configuration
+    file: configuration.md
+    topics: [config, appsettings, options-pattern]
+    when_to_load:
+      file_patterns: ["**/appsettings*.json", "**/Program.cs", "**/Startup.cs"]
+      diff_signals: ["IConfiguration", "IOptions<", "Configure<"]
+    est_tokens: 600
+  - id: conventions
+    file: conventions.md
+    topics: [convencoes, editorconfig, stylecop]
+    always: true
+    est_tokens: 600
+  - id: examples-domain-flow
+    file: examples-domain-flow.md
+    topics: [domain, entity, value-object, aggregate]
+    when_to_load:
+      file_patterns: ["**/Domain/**", "**/Entities/**"]
+      diff_signals: ["class.*Entity", "record.*ValueObject", "AggregateRoot"]
+    est_tokens: 1200
+  - id: examples-infrastructure
+    file: examples-infrastructure.md
+    topics: [infrastructure, repository, adapter]
+    when_to_load:
+      file_patterns: ["**/Infrastructure/**", "**/Adapters/**"]
+      diff_signals: []
+    est_tokens: 1100
+  - id: examples-testing
+    file: examples-testing.md
+    topics: [testing, xunit, nunit, moq]
+    when_to_load:
+      file_patterns: ["**/*Tests/**", "**/*.Tests.cs"]
+      diff_signals: ["[Fact]", "[Theory]", "Mock<", "FluentAssertions"]
+    est_tokens: 1000
+  - id: graceful-lifecycle
+    file: graceful-lifecycle.md
+    topics: [shutdown, sigterm, IHostedService, lifecycle]
+    when_to_load:
+      file_patterns: ["**/Program.cs", "**/Startup.cs", "**/*HostedService*.cs"]
+      diff_signals: ["IHostedService", "BackgroundService", "ApplicationStopping", "Host.CreateDefaultBuilder"]
+    est_tokens: 700
+  - id: messaging
+    file: messaging.md
+    topics: [messaging, masstransit, rabbitmq, kafka, servicebus]
+    when_to_load:
+      file_patterns: ["**/Messaging/**", "**/Events/**"]
+      diff_signals: ["MassTransit", "IBus", "IConsumer<", "ServiceBus", "Publish<"]
+    est_tokens: 800
+  - id: observability
+    file: observability.md
+    topics: [observability, otel, serilog, opentelemetry]
+    when_to_load:
+      file_patterns: []
+      diff_signals: ["Serilog", "OpenTelemetry", "ILogger<", "Activity.Current", "Meter"]
+    est_tokens: 800
+  - id: patterns
+    file: patterns.md
+    topics: [patterns, mediator, decorator, repository]
+    when_to_load:
+      file_patterns: []
+      diff_signals: []
+    est_tokens: 800
+  - id: persistence
+    file: persistence.md
+    topics: [persistence, efcore, dapper, sql]
+    when_to_load:
+      file_patterns: ["**/Persistence/**", "**/Repositories/**", "**/DbContext*.cs"]
+      diff_signals: ["DbContext", "DbSet<", "Dapper", "EntityTypeConfiguration", ".HasOne(", ".HasMany("]
+    est_tokens: 900
+  - id: resilience
+    file: resilience.md
+    topics: [retry, polly, circuit-breaker, timeout]
+    when_to_load:
+      file_patterns: []
+      diff_signals: ["Polly", "AddPolicyHandler", "WaitAndRetry", "CircuitBreaker"]
+    est_tokens: 700
+  - id: security
+    file: security.md
+    topics: [security, jwt, authn, authz, identity]
+    when_to_load:
+      file_patterns: ["**/Auth/**", "**/Security/**", "**/Middleware/**"]
+      diff_signals: ["[Authorize]", "JwtBearer", "AddAuthentication", "AddAuthorization", "IdentityUser"]
+    est_tokens: 800
+  - id: testing
+    file: testing.md
+    topics: [testing, unit, integration]
+    when_to_load:
+      file_patterns: ["**/*Tests/**"]
+      diff_signals: []
+    est_tokens: 800

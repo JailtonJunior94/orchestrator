@@ -7,27 +7,34 @@ Este diretorio centraliza regras para uso com agentes de IA em tarefas reais de 
 
 Use estas instrucoes para manter consistencia, seguranca e qualidade ao trabalhar com codigo, configuracao, validacao e evolucao de sistemas.
 
-## Arquitetura: monolito
+## Arquitetura: monolito modular
 
-O projeto aparenta ser um monolito unico. A governanca deve privilegiar coesao local, limites de pacote claros e crescimento incremental da estrutura.
+O projeto aparenta ser um monolito modular, com separacao relevante por modulos, dominios ou componentes internos. A governanca deve proteger essas fronteiras e evitar dependencias circulares.
 
-Stack detectada: stack principal nao detectada automaticamente.
+Stack detectada: Go.
 Frameworks detectados: nenhum framework dominante identificado.
 
 ## Estrutura de Pastas
 
 ```
 .
+go.mod
+internal
+internal/customer
+internal/notification
+internal/order
+internal/payment
 ```
 
 ## Padrao Arquitetural
 
-Padrao arquitetural nao inferido com alta confianca; assumir composicao simples e dependencias explicitas.
+Predominio de packages internos coesos, com estrutura orientada por dominio ou componente.
 
 ### Fluxo de Dependencias
 
-- Dependencias devem apontar de bordas externas para o nucleo do negocio.
-- Detalhes de framework, IO e persistencia nao devem vazar para o centro do sistema.
+- Transporte e adapters devem depender de casos de uso ou servicos explicitos, nao do contrario.
+- Dominio nao deve conhecer detalhes de HTTP, banco, filas, serializacao ou drivers.
+- Infraestrutura pode implementar contratos consumidos pela aplicacao, preservando dependencia para dentro.
 
 ## Modo de trabalho
 
@@ -51,9 +58,9 @@ Padrao arquitetural nao inferido com alta confianca; assumir composicao simples 
 
 ## Regras por Arquitetura
 
-1. Preservar coesao local e dependencia unidirecional entre packages.
-2. Evitar helpers transversais que escondam regra de negocio ou IO.
-3. Crescer a estrutura apenas quando o codigo atual ja nao comportar a mudanca com clareza.
+1. Respeitar fronteiras entre modulos e bounded contexts.
+2. Evitar dependencia circular entre packages internos.
+3. Nao extrair shared helpers sem demanda comprovada de mais de um modulo.
 
 ## Regras por Linguagem
 
@@ -61,7 +68,13 @@ Para tarefas que alteram codigo, carregar a skill:
 
 - `.agents/skills/agent-governance/SKILL.md`
 
+Para tarefas que alteram codigo Go, carregar tambem:
 
+- `.agents/skills/go-implementation/SKILL.md`
+
+Para tarefas de revisao ou refatoracao incremental de design em Go guiadas por heuristicas de object calisthenics, carregar tambem:
+
+- `.agents/skills/object-calisthenics-go/SKILL.md`
 
 Para tarefas de correcao de bugs com remediacao e teste de regressao, carregar tambem:
 
@@ -114,6 +127,10 @@ Antes de concluir uma alteracao:
 
 Seguir Etapa 4 de `.agents/skills/agent-governance/SKILL.md` como base canonica.
 
+Comandos detectados no projeto (Go):
+1. Rodar fmt: `gofmt -w .`.
+2. Rodar test: `go test ./...`.
+3. Rodar lint: `golangci-lint run`.
 
 ## Restricoes
 

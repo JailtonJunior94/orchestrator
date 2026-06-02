@@ -144,6 +144,10 @@ declare -a evidence_validators=(
   "validate-bugfix-evidence.sh"
   "validate-refactor-evidence.sh"
   "validate-review-evidence.sh"
+  "hook-prereq-gate.sh"
+  "resolve-references.sh"
+  "validate-skill-prerequisites.sh"
+  "validate-governance-references.sh"
 )
 declare -a script_mirrors=(
   "$repo_root/.claude/scripts"

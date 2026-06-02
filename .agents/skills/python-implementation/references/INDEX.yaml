@@ -1,0 +1,120 @@
+# INDEX de carga surgical para python-implementation.
+# Resolver: .agents/scripts/resolve-references.sh
+schema: 1
+skill: python-implementation
+references:
+  - id: architecture
+    file: architecture.md
+    topics: [arquitetura, pacotes, camadas]
+    always: true
+    est_tokens: 800
+  - id: api
+    file: api.md
+    topics: [api, fastapi, flask, django]
+    when_to_load:
+      file_patterns: ["**/routers/**", "**/views/**", "**/api/**", "**/endpoints/**"]
+      diff_signals: ["@app.get", "@app.post", "@router.", "APIRouter(", "Flask(", "FastAPI(", "django.urls"]
+    est_tokens: 700
+  - id: build
+    file: build.md
+    topics: [build, pyproject, poetry, pip]
+    when_to_load:
+      file_patterns: ["pyproject.toml", "requirements*.txt", "setup.py", "setup.cfg", "Pipfile", "Dockerfile"]
+      diff_signals: []
+    est_tokens: 500
+  - id: concurrency
+    file: concurrency.md
+    topics: [asyncio, threading, multiprocessing]
+    when_to_load:
+      file_patterns: []
+      diff_signals: ["asyncio.", "async def", "await ", "ThreadPoolExecutor", "multiprocessing."]
+    est_tokens: 800
+  - id: configuration
+    file: configuration.md
+    topics: [config, env, settings]
+    when_to_load:
+      file_patterns: ["**/config/**", "**/*.env*", "**/settings.py", "**/settings/**"]
+      diff_signals: ["os.environ", "BaseSettings", "dotenv", "django.conf.settings"]
+    est_tokens: 600
+  - id: conventions
+    file: conventions.md
+    topics: [convencoes, ruff, black, mypy]
+    always: true
+    est_tokens: 600
+  - id: examples-domain-flow
+    file: examples-domain-flow.md
+    topics: [domain, entity, value-object, usecase, application]
+    when_to_load:
+      file_patterns: ["**/domain/**", "**/entities/**", "**/application/**", "**/use_case*/**", "**/usecases/**"]
+      diff_signals: ["@dataclass", "class.*Entity", "class.*Aggregate", "Protocol", "class.*UseCase"]
+    est_tokens: 1100
+  - id: examples-infrastructure
+    file: examples-infrastructure.md
+    topics: [infra, adapter, gateway, bootstrap, runtime]
+    when_to_load:
+      file_patterns: ["**/infrastructure/**", "**/adapters/**", "**/gateway/**", "**/bootstrap/**", "**/runtime/**"]
+      diff_signals: []
+    est_tokens: 1000
+  - id: examples-testing
+    file: examples-testing.md
+    topics: [testing, pytest, unittest]
+    when_to_load:
+      file_patterns: ["**/test_*.py", "**/*_test.py", "**/tests/**"]
+      diff_signals: ["pytest", "@pytest.", "unittest.TestCase", "monkeypatch."]
+    est_tokens: 1000
+  - id: graceful-lifecycle
+    file: graceful-lifecycle.md
+    topics: [shutdown, signal, sigterm]
+    when_to_load:
+      file_patterns: ["**/main.py", "**/app.py", "**/__main__.py", "**/manage.py"]
+      diff_signals: ["signal.signal", "atexit.register", "FastAPI(lifespan", "@app.on_event"]
+    est_tokens: 700
+  - id: messaging
+    file: messaging.md
+    topics: [messaging, kafka, rabbitmq, celery]
+    when_to_load:
+      file_patterns: ["**/messaging/**", "**/events/**", "**/tasks.py"]
+      diff_signals: ["kafka", "pika.", "aio_pika", "celery.", "@celery_app.task", "@shared_task"]
+    est_tokens: 800
+  - id: observability
+    file: observability.md
+    topics: [observability, otel, structlog, loguru]
+    when_to_load:
+      file_patterns: []
+      diff_signals: ["structlog", "loguru", "opentelemetry", "logging.getLogger", "prometheus_client"]
+    est_tokens: 800
+  - id: patterns
+    file: patterns.md
+    topics: [patterns, repository, usecase]
+    when_to_load:
+      file_patterns: []
+      diff_signals: []
+    est_tokens: 800
+  - id: persistence
+    file: persistence.md
+    topics: [persistence, sqlalchemy, django-orm, asyncpg]
+    when_to_load:
+      file_patterns: ["**/repository/**", "**/repositories/**", "**/persistence/**", "**/models/**", "**/db/**"]
+      diff_signals: ["sqlalchemy", "asyncpg", "DeclarativeBase", "Session(", "django.db.models", "asyncpg.connect"]
+    est_tokens: 900
+  - id: resilience
+    file: resilience.md
+    topics: [retry, tenacity, circuit-breaker]
+    when_to_load:
+      file_patterns: []
+      diff_signals: ["tenacity", "@retry", "circuitbreaker", "asyncio.wait_for"]
+    est_tokens: 700
+  - id: security
+    file: security.md
+    topics: [security, jwt, auth, cryptography]
+    when_to_load:
+      file_patterns: ["**/auth/**", "**/security/**", "**/middleware/**"]
+      diff_signals: ["jwt.encode", "jwt.decode", "passlib", "bcrypt", "cryptography", "subprocess.run"]
+    est_tokens: 800
+  - id: testing
+    file: testing.md
+    topics: [testing, unit, integration]
+    when_to_load:
+      file_patterns: ["**/test_*.py", "**/*_test.py", "**/tests/**"]
+      diff_signals: []
+    est_tokens: 800

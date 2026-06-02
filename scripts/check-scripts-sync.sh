@@ -20,6 +20,10 @@ EVIDENCE_VALIDATORS=(
   "validate-bugfix-evidence.sh"
   "validate-refactor-evidence.sh"
   "validate-review-evidence.sh"
+  "hook-prereq-gate.sh"
+  "resolve-references.sh"
+  "validate-skill-prerequisites.sh"
+  "validate-governance-references.sh"
 )
 
 declare -a mirror_dirs=(

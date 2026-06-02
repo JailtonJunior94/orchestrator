@@ -6,6 +6,10 @@ Keywords: teste, unit, integração, mock, determinístico, cobertura, cross-lin
 Load complete when: tarefa envolve estratégia de testes, cobertura ou uso de mocks em qualquer linguagem.
 -->
 
+- Rule ID: R-XTEST-001
+- Severidade: guideline
+- Escopo: estratégia de testes cross-linguagem.
+
 ## Unit Tests (obrigatorio)
 - Todo comportamento de dominio, use case e logica pura deve ter unit test.
 - Nomear pelo cenario, nao pelo metodo.

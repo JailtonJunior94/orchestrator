@@ -7,17 +7,23 @@ Este diretorio centraliza regras para uso com agentes de IA em tarefas reais de 
 
 Use estas instrucoes para manter consistencia, seguranca e qualidade ao trabalhar com codigo, configuracao, validacao e evolucao de sistemas.
 
-## Arquitetura: monolito
+## Arquitetura: microservico
 
-O projeto aparenta ser um monolito unico. A governanca deve privilegiar coesao local, limites de pacote claros e crescimento incremental da estrutura.
+O projeto aparenta ser um microservico independente, com foco em contrato de API, inicializacao, dependencias externas e seguranca operacional. A governanca deve preservar o escopo do servico e o seu deploy independente.
 
-Stack detectada: stack principal nao detectada automaticamente.
-Frameworks detectados: nenhum framework dominante identificado.
+Stack detectada: Python.
+Frameworks detectados: FastAPI.
 
 ## Estrutura de Pastas
 
 ```
 .
+Dockerfile
+k8s
+k8s/deployment.yaml
+pyproject.toml
+src
+src/main.py
 ```
 
 ## Padrao Arquitetural
@@ -26,8 +32,9 @@ Padrao arquitetural nao inferido com alta confianca; assumir composicao simples 
 
 ### Fluxo de Dependencias
 
-- Dependencias devem apontar de bordas externas para o nucleo do negocio.
-- Detalhes de framework, IO e persistencia nao devem vazar para o centro do sistema.
+- Routers e handlers devem depender de services ou use cases, nao do contrario.
+- Dominio nao deve importar detalhes de framework (FastAPI, Django, Flask), ORM ou drivers.
+- Infraestrutura implementa contratos consumidos pela camada de aplicacao, preservando dependencia para dentro.
 
 ## Modo de trabalho
 
@@ -51,9 +58,9 @@ Padrao arquitetural nao inferido com alta confianca; assumir composicao simples 
 
 ## Regras por Arquitetura
 
-1. Preservar coesao local e dependencia unidirecional entre packages.
-2. Evitar helpers transversais que escondam regra de negocio ou IO.
-3. Crescer a estrutura apenas quando o codigo atual ja nao comportar a mudanca com clareza.
+1. Preservar contratos publicados e compatibilidade de integracao.
+2. Manter inicializacao, observabilidade e shutdown como parte do comportamento do servico.
+3. Nao acoplar o servico a convencoes de outros servicos sem contrato explicito.
 
 ## Regras por Linguagem
 
@@ -61,7 +68,9 @@ Para tarefas que alteram codigo, carregar a skill:
 
 - `.agents/skills/agent-governance/SKILL.md`
 
+Para tarefas que alteram codigo Python, carregar tambem:
 
+- `.agents/skills/python-implementation/SKILL.md`
 
 Para tarefas de correcao de bugs com remediacao e teste de regressao, carregar tambem:
 
@@ -114,6 +123,10 @@ Antes de concluir uma alteracao:
 
 Seguir Etapa 4 de `.agents/skills/agent-governance/SKILL.md` como base canonica.
 
+Comandos detectados no projeto (Python):
+1. Rodar fmt: `ruff format .`.
+2. Rodar test: `pytest`.
+3. Rodar lint: `ruff check .`.
 
 ## Restricoes
 
@@ -122,6 +135,7 @@ Seguir Etapa 4 de `.agents/skills/agent-governance/SKILL.md` como base canonica.
 3. Nao alterar comportamento publico sem deixar isso explicito.
 4. Nao usar exemplos como copia cega; adaptar ao contexto real.
 
+5. Nao alterar contratos externos, readiness, observabilidade ou semantica operacional sem explicitar a mudanca.
 
 ### Controle de profundidade de invocacao
 

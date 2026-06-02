@@ -1,0 +1,120 @@
+# INDEX de carga surgical para node-implementation.
+# Resolver: .agents/scripts/resolve-references.sh
+schema: 1
+skill: node-implementation
+references:
+  - id: architecture
+    file: architecture.md
+    topics: [arquitetura, modulos, camadas]
+    always: true
+    est_tokens: 800
+  - id: api
+    file: api.md
+    topics: [api, http, express, fastify, nestjs, hono]
+    when_to_load:
+      file_patterns: ["**/controller*.ts", "**/controller*.js", "**/routes/**", "**/api/**"]
+      diff_signals: ["express(", "@Controller", "Fastify(", "Hono(", "app.get(", "app.post("]
+    est_tokens: 700
+  - id: build
+    file: build.md
+    topics: [build, package.json, tsconfig, vite, webpack]
+    when_to_load:
+      file_patterns: ["package.json", "tsconfig*.json", "Dockerfile", "vite.config.*", "webpack.config.*"]
+      diff_signals: []
+    est_tokens: 500
+  - id: concurrency
+    file: concurrency.md
+    topics: [async, promise, worker, eventloop]
+    when_to_load:
+      file_patterns: []
+      diff_signals: ["Promise.all", "async function", "Worker(", "setImmediate"]
+    est_tokens: 700
+  - id: configuration
+    file: configuration.md
+    topics: [config, env, dotenv]
+    when_to_load:
+      file_patterns: ["**/config/**", "**/*.env*"]
+      diff_signals: ["process.env", "dotenv", "@nestjs/config"]
+    est_tokens: 500
+  - id: conventions
+    file: conventions.md
+    topics: [convencoes, eslint, prettier]
+    always: true
+    est_tokens: 600
+  - id: examples-domain-flow
+    file: examples-domain-flow.md
+    topics: [domain, entity, value-object]
+    when_to_load:
+      file_patterns: ["**/domain/**", "**/entities/**"]
+      diff_signals: ["class.*Entity", "class.*Aggregate"]
+    est_tokens: 1100
+  - id: examples-infrastructure
+    file: examples-infrastructure.md
+    topics: [infra, adapter, gateway]
+    when_to_load:
+      file_patterns: ["**/infrastructure/**", "**/adapters/**"]
+      diff_signals: []
+    est_tokens: 1000
+  - id: examples-testing
+    file: examples-testing.md
+    topics: [testing, jest, vitest, mocha]
+    when_to_load:
+      file_patterns: ["**/*.test.ts", "**/*.test.js", "**/*.spec.ts", "**/*.spec.js"]
+      diff_signals: ["describe(", "it(", "test(", "jest.", "vi.mock"]
+    est_tokens: 900
+  - id: graceful-lifecycle
+    file: graceful-lifecycle.md
+    topics: [shutdown, signal, sigterm]
+    when_to_load:
+      file_patterns: ["**/main.ts", "**/main.js", "**/index.ts", "**/server.ts"]
+      diff_signals: ["process.on('SIGTERM'", "process.on('SIGINT'", "server.close"]
+    est_tokens: 700
+  - id: messaging
+    file: messaging.md
+    topics: [messaging, kafka, rabbitmq, nats, event]
+    when_to_load:
+      file_patterns: ["**/messaging/**", "**/events/**"]
+      diff_signals: ["kafkajs", "amqplib", "@nestjs/microservices", ".publish(", ".subscribe("]
+    est_tokens: 800
+  - id: observability
+    file: observability.md
+    topics: [observability, otel, pino, winston, prometheus]
+    when_to_load:
+      file_patterns: []
+      diff_signals: ["pino(", "winston.", "@opentelemetry/", "prom-client"]
+    est_tokens: 800
+  - id: patterns
+    file: patterns.md
+    topics: [patterns, repository, usecase, factory]
+    when_to_load:
+      file_patterns: []
+      diff_signals: []
+    est_tokens: 800
+  - id: persistence
+    file: persistence.md
+    topics: [persistence, database, typeorm, prisma, knex]
+    when_to_load:
+      file_patterns: ["**/repository/**", "**/persistence/**", "**/db/**", "prisma/schema.prisma"]
+      diff_signals: ["typeorm", "@Entity", "prisma.", "knex("]
+    est_tokens: 900
+  - id: resilience
+    file: resilience.md
+    topics: [retry, circuit-breaker, timeout]
+    when_to_load:
+      file_patterns: []
+      diff_signals: ["AbortController", "p-retry", "cockatiel", "opossum"]
+    est_tokens: 700
+  - id: security
+    file: security.md
+    topics: [security, jwt, helmet, auth, cors]
+    when_to_load:
+      file_patterns: ["**/auth/**", "**/security/**", "**/middleware/**"]
+      diff_signals: ["jsonwebtoken", "helmet(", "passport", "bcrypt", "argon2"]
+    est_tokens: 800
+  - id: testing
+    file: testing.md
+    topics: [testing, unit, integration]
+    when_to_load:
+      file_patterns: ["**/*.test.ts", "**/*.spec.ts", "**/*.test.js", "**/*.spec.js"]
+      diff_signals: []
+    est_tokens: 800

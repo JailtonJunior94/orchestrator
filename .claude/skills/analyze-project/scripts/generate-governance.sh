@@ -16,12 +16,36 @@ done
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-ROOT_DIR="$(cd "$SKILL_DIR/../../.." && pwd)"
+ROOT_DIR="$(cd "$SKILL_DIR/../../.." 2>/dev/null && pwd)" || ROOT_DIR=""
 
-# shellcheck source=../../../../scripts/lib/codex-config.sh
-source "$ROOT_DIR/scripts/lib/codex-config.sh"
-# shellcheck source=../../../../scripts/lib/find-manifests.sh
-source "$ROOT_DIR/scripts/lib/find-manifests.sh"
+# Carregar libs com cadeia de fallback (1) local da skill, (2) raiz do repo legado.
+# Mantemos a skill portatil: quando instalada em outro repo, lib local sempre resolve.
+_load_lib() {
+  local name="$1"
+  local candidates=(
+    "$SCRIPT_DIR/lib/$name"
+    "${ROOT_DIR:+$ROOT_DIR/scripts/lib/$name}"
+  )
+  local candidate
+  for candidate in "${candidates[@]}"; do
+    [[ -z "$candidate" ]] && continue
+    if [[ -f "$candidate" ]]; then
+      # shellcheck source=/dev/null
+      source "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+_load_lib "codex-config.sh" || {
+  echo "ERRO: lib codex-config.sh nao encontrada em $SCRIPT_DIR/lib/ nem em $ROOT_DIR/scripts/lib/" >&2
+  exit 1
+}
+_load_lib "find-manifests.sh" || {
+  echo "ERRO: lib find-manifests.sh nao encontrada em $SCRIPT_DIR/lib/ nem em $ROOT_DIR/scripts/lib/" >&2
+  exit 1
+}
 
 PROJECT_DIR="${1:-.}"
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
@@ -47,6 +71,54 @@ trim() {
   value="${value#"${value%%[![:space:]]*}"}"
   value="${value%"${value##*[![:space:]]}"}"
   printf '%s' "$value"
+}
+
+# merge_write: escreve conteudo em arquivo preservando secoes customizadas pelo usuario.
+# Estrategia:
+#   - Conteudo gerado e SEMPRE delimitado por marcadores ai-spec:generated-{start,end}.
+#   - Arquivo inexistente: escreve direto com marcadores.
+#   - Arquivo com marcadores: substitui SO o bloco entre marcadores; preserva o resto.
+#   - Arquivo sem marcadores (provavelmente customizado): salva .bak antes de escrever.
+# Argumentos: file_path open_marker close_marker content
+merge_write() {
+  local file="$1" open="$2" close="$3" content="$4"
+
+  if [[ ! -f "$file" ]]; then
+    {
+      printf '%s\n' "$open"
+      printf '%s\n' "$content"
+      printf '%s\n' "$close"
+    } > "$file"
+    return 0
+  fi
+
+  if grep -qF "$open" "$file" && grep -qF "$close" "$file"; then
+    awk -v open="$open" -v close="$close" -v new="$content" '
+      BEGIN { in_block = 0 }
+      $0 == open {
+        print open
+        print new
+        print close
+        in_block = 1
+        next
+      }
+      in_block && $0 == close { in_block = 0; next }
+      in_block { next }
+      { print }
+    ' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+    return 0
+  fi
+
+  # Arquivo existente sem marcadores: backup antes de sobrescrever para nunca
+  # perder customizacao do usuario. Recovery: cat <arquivo>.bak para inspecionar.
+  cp "$file" "$file.bak"
+  {
+    printf '%s\n' "$open"
+    printf '%s\n' "$content"
+    printf '%s\n' "$close"
+  } > "$file"
+  echo "AVISO: $file foi sobrescrito (backup: $file.bak) — sem marcadores ai-spec na versao anterior." >&2
+  return 0
 }
 
 file_exists() {
@@ -211,9 +283,8 @@ detect_primary_stack() {
     return
   fi
 
-  local joined
-  joined="$(IFS=', '; printf '%s' "${parts[*]}")"
-  printf '%s' "$joined"
+  # Join com ", " usando awk (bash ${arr[*]} so usa o primeiro char do IFS).
+  printf '%s\n' "${parts[@]}" | awk 'NR==1{printf "%s",$0; next} {printf ", %s",$0}'
 }
 
 build_directory_tree() {
@@ -376,21 +447,46 @@ EOF
 build_language_rules() {
   local output=""
 
+  # Bloco de descoberta surgical (Frente 3): aponta SKILL.md + INDEX.yaml para
+  # cada stack aplicavel ao projeto. INDEX.yaml mapeia references por escopo
+  # (file_patterns + diff_signals); o agente carrega so o que a tarefa toca.
+  # O resolver pode ser invocado por hooks: bash .agents/scripts/resolve-references.sh <skill> <files...>
+  local has_stack=0
+  if should_include_go || should_include_node || should_include_python || should_include_dotnet; then
+    has_stack=1
+    output+="### Skills de linguagem deste projeto (carga surgical)\n\n"
+    output+="Em tarefas que toquem codigo, **sempre** consultar:\n\n"
+    output+="- O SKILL.md da skill obrigatoria correspondente.\n"
+    output+="- O \`references/INDEX.yaml\` da mesma skill (mapa de references por escopo).\n\n"
+    output+="Carregar references *apenas* quando o escopo da tarefa casar em \`file_patterns\` ou \`diff_signals\` do INDEX. Resolver opcional: \`bash .agents/scripts/resolve-references.sh <skill> <files...>\` (le diff em stdin). Validador bloqueante: \`bash .agents/scripts/validate-skill-prerequisites.sh <files...>\`.\n\n"
+  fi
+
   if should_include_go; then
-    output+="Para tarefas que alteram codigo Go, carregar tambem:\n\n- \`.agents/skills/go-implementation/SKILL.md\`\n"
-    output+="\nPara tarefas de revisao ou refatoracao incremental de design em Go guiadas por heuristicas de object calisthenics, carregar tambem:\n\n- \`.agents/skills/object-calisthenics-go/SKILL.md\`\n"
+    output+="**Go** (extensao .go):\n\n"
+    output+="- Skill: \`.agents/skills/go-implementation/SKILL.md\`\n"
+    output+="- Indice de references: \`.agents/skills/go-implementation/references/INDEX.yaml\`\n"
+    output+="- Heuristicas de object calisthenics (review/refactor): \`.agents/skills/object-calisthenics-go/SKILL.md\`\n\n"
   fi
 
   if should_include_node; then
-    output+="\nPara tarefas que alteram codigo Node/TypeScript, carregar tambem:\n\n- \`.agents/skills/node-implementation/SKILL.md\`\n"
+    output+="**Node/TypeScript** (extensoes .ts, .tsx, .js, .jsx, .mjs, .cjs):\n\n"
+    output+="- Skill: \`.agents/skills/node-implementation/SKILL.md\`\n"
+    output+="- Indice de references: \`.agents/skills/node-implementation/references/INDEX.yaml\`\n\n"
   fi
 
   if should_include_python; then
-    output+="\nPara tarefas que alteram codigo Python, carregar tambem:\n\n- \`.agents/skills/python-implementation/SKILL.md\`\n"
+    output+="**Python**:\n\n"
+    output+="- Skill: \`.agents/skills/python-implementation/SKILL.md\`\n\n"
   fi
 
   if should_include_dotnet; then
-    output+="\nPara tarefas que alteram codigo .NET/C#, carregar tambem:\n\n- \`.agents/skills/dotnet-csharp-implementation/SKILL.md\`\n"
+    output+="**.NET/C#** (extensoes .cs, .csproj):\n\n"
+    output+="- Skill: \`.agents/skills/dotnet-csharp-implementation/SKILL.md\`\n"
+    output+="- Indice de references: \`.agents/skills/dotnet-csharp-implementation/references/INDEX.yaml\`\n\n"
+  fi
+
+  if [[ "$has_stack" == "1" ]]; then
+    output+="Politica de economia: o INDEX.yaml e leve (~2 KB). references/*.md so entram no contexto sob demanda.\n"
   fi
 
   printf '%b' "$output"
@@ -663,36 +759,47 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
   [[ "$INSTALL_CODEX" == "1" ]]   && echo "[dry-run] Geraria .codex/config.toml"
   [[ "$INSTALL_COPILOT" == "1" ]] && echo "[dry-run] Geraria .github/copilot-instructions.md"
 else
-  printf '%s\n' "$_agents_content" > "$PROJECT_DIR/AGENTS.md"
+  # Marcadores de merge inteligente (Frente 5): tudo entre eles e gerado e pode
+  # ser sobrescrito em reexecucoes; tudo fora e preservado.
+  AGENTS_OPEN="<!-- ai-spec:generated-start v${GOVERNANCE_SCHEMA_VERSION} -->"
+  AGENTS_CLOSE="<!-- ai-spec:generated-end -->"
 
   if [[ "$GOVERNANCE_PROFILE" == "compact" ]]; then
-    awk '
+    _agents_content="$(printf '%s\n' "$_agents_content" | awk '
       BEGIN { skip=0 }
       /^## Diretrizes de Estrutura$/ { skip=1; next }
       /^### Composicao Multi-Linguagem$/ { skip=1; next }
       /^## / && skip { skip=0 }
       skip { next }
       { print }
-    ' "$PROJECT_DIR/AGENTS.md" > "$PROJECT_DIR/AGENTS.md.tmp" && \
-    mv "$PROJECT_DIR/AGENTS.md.tmp" "$PROJECT_DIR/AGENTS.md"
+    ')"
   fi
 
-  # Append local extensions if present (never overwritten by upgrade)
+  merge_write "$PROJECT_DIR/AGENTS.md" "$AGENTS_OPEN" "$AGENTS_CLOSE" "$_agents_content"
+
+  # Append local extensions if present (never overwritten by upgrade). Como
+  # AGENTS.local.md fica FORA dos marcadores, sobrevive a reexecucoes mesmo
+  # quando merge_write substitui o bloco gerado.
   if [[ -f "$PROJECT_DIR/AGENTS.local.md" ]]; then
-    printf '\n' >> "$PROJECT_DIR/AGENTS.md"
-    cat "$PROJECT_DIR/AGENTS.local.md" >> "$PROJECT_DIR/AGENTS.md"
+    if ! grep -qF "AGENTS.local.md content" "$PROJECT_DIR/AGENTS.md" 2>/dev/null; then
+      printf '\n<!-- AGENTS.local.md content -->\n' >> "$PROJECT_DIR/AGENTS.md"
+      cat "$PROJECT_DIR/AGENTS.local.md" >> "$PROJECT_DIR/AGENTS.md"
+    fi
   fi
 
   AI_TOOL_TEMPLATE="$SKILL_DIR/assets/ai-tool-template.md"
 
+  TOOL_OPEN_MD="<!-- ai-spec:generated-start v${GOVERNANCE_SCHEMA_VERSION} -->"
+  TOOL_CLOSE_MD="<!-- ai-spec:generated-end -->"
+
   if [[ "$INSTALL_CLAUDE" == "1" ]]; then
-    render_template "$AI_TOOL_TEMPLATE" \
+    _claude_content="$(render_template "$AI_TOOL_TEMPLATE" \
       "TOOL_NAME" "Claude Code" \
       "TOOL_INSTRUCTION" "fonte canonica das regras" \
       "CONFIG_LINE_2" "\`.claude/skills/\` sao symlinks para \`.agents/skills/\` — a fonte de verdade e sempre \`.agents/skills/\`." \
       "CONFIG_LINE_3" "\`.claude/agents/\` sao wrappers leves que delegam para a habilidade canonica." \
-      "SECAO_STACK" "$STACK_SECTION" \
-      > "$PROJECT_DIR/CLAUDE.md"
+      "SECAO_STACK" "$STACK_SECTION")"
+    merge_write "$PROJECT_DIR/CLAUDE.md" "$TOOL_OPEN_MD" "$TOOL_CLOSE_MD" "$_claude_content"
   fi
 
   if [[ "$INSTALL_GEMINI" == "1" ]]; then
@@ -720,23 +827,29 @@ GEMINI_EXTRA
 
   if [[ "$INSTALL_CODEX" == "1" ]]; then
     mkdir -p "$PROJECT_DIR/.codex"
-    _codex_go=0; _codex_node=0; _codex_python=0
+    _codex_go=0; _codex_node=0; _codex_python=0; _codex_dotnet=0
     should_include_go && _codex_go=1
     should_include_node && _codex_node=1
     should_include_python && _codex_python=1
-    build_codex_config "$_codex_go" "$_codex_node" "$_codex_python" > "$PROJECT_DIR/.codex/config.toml"
+    should_include_dotnet && _codex_dotnet=1
+    _codex_content="$(build_codex_config "$_codex_go" "$_codex_node" "$_codex_python" "$_codex_dotnet")"
+    # TOML usa comentarios `#` para os marcadores (HTML nao se aplica).
+    merge_write "$PROJECT_DIR/.codex/config.toml" \
+      "# ai-spec:generated-start v${GOVERNANCE_SCHEMA_VERSION}" \
+      "# ai-spec:generated-end" \
+      "$_codex_content"
   fi
 
   if [[ "$INSTALL_COPILOT" == "1" ]]; then
-    render_template "$AI_TOOL_TEMPLATE" \
+    mkdir -p "$PROJECT_DIR/.github"
+    _copilot_content="$(render_template "$AI_TOOL_TEMPLATE" \
       "TOOL_NAME" "GitHub Copilot CLI" \
       "TOOL_INSTRUCTION" "instrucao principal" \
       "CONFIG_LINE_2" "\`.agents/skills/\` e a fonte de verdade dos fluxos procedurais." \
       "CONFIG_LINE_3" "\`.github/agents/\` sao wrappers leves que apontam para a habilidade correta." \
-      "SECAO_STACK" "$STACK_SECTION" \
-      > "$PROJECT_DIR/.github/copilot-instructions.md"
-    # Append Copilot-specific guidance
-    cat >> "$PROJECT_DIR/.github/copilot-instructions.md" <<'COPILOT_EXTRA'
+      "SECAO_STACK" "$STACK_SECTION")"
+    # Concatena o extra do Copilot ao conteudo gerado, dentro do bloco merged.
+    _copilot_extra=$(cat <<'COPILOT_EXTRA'
 
 ## Orientacoes Especificas para Copilot
 
@@ -748,6 +861,9 @@ O GitHub Copilot suporta agents em `.github/agents/` e carrega `copilot-instruct
 4. Ao final da tarefa, executar os comandos de validacao descritos na secao Validacao acima.
 5. Enforcement depende do modelo seguir as instrucoes — nao ha bloqueio automatico.
 COPILOT_EXTRA
+)
+    _copilot_content="${_copilot_content}${_copilot_extra}"
+    merge_write "$PROJECT_DIR/.github/copilot-instructions.md" "$TOOL_OPEN_MD" "$TOOL_CLOSE_MD" "$_copilot_content"
   fi
 fi
 

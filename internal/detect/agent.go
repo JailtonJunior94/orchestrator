@@ -121,6 +121,12 @@ func NewBinaryAgentDetector(lp LookPather, hd HomeDir, fd *FileDetector) *Binary
 //
 // Basta qualquer sinal para incluir o Tool. Duplicatas sao eliminadas.
 // Nunca executa binarios — LookPath apenas (R-SEC-001).
+//
+// Politica Gemini (opt-in por projeto): Gemini so e incluido se houver sinal
+// explicito no proprio projectDir (`.gemini/` ou `GEMINI.md`). Binario no PATH
+// ou ~/.gemini sozinhos NAO bastam — evita instalar governanca Gemini em
+// projetos novos so porque o usuario tem o CLI instalado globalmente. Para
+// forcar Gemini sem o sinal de projeto, use `--tools=gemini` ou `--tools=all`.
 func (d *BinaryAgentDetector) Detect(ctx context.Context, opts DetectOptions) ([]skills.Tool, error) {
 	homeRoot, homeErr := d.homeDir.UserHomeDir()
 	// homeErr nao aborta — global e opt-in; sem $HOME degrada sem erro fatal.
@@ -170,6 +176,20 @@ func (d *BinaryAgentDetector) Detect(ctx context.Context, opts DetectOptions) ([
 			seen[entry.tool] = true
 			result = append(result, entry.tool)
 		}
+	}
+
+	// Politica Gemini opt-in: remove Gemini se ele entrou apenas por sinais
+	// de ambiente (PATH/HOME) sem sinal explicito no projeto. Reduz superficie
+	// de instalacao em repos novos, focando paridade nos 3 CLIs inegociaveis
+	// (Claude/Codex/Copilot). Documentado no godoc de Detect acima.
+	if seen[skills.ToolGemini] && !fileToolSet[skills.ToolGemini] {
+		filtered := result[:0]
+		for _, t := range result {
+			if t != skills.ToolGemini {
+				filtered = append(filtered, t)
+			}
+		}
+		result = filtered
 	}
 
 	return result, nil

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -254,7 +255,13 @@ func TestContextgen_Snapshots(t *testing.T) {
 
 	for _, tc := range fixtures {
 		t.Run(tc.name, func(t *testing.T) {
+			// Em produção, o instalador escreve a governança DENTRO do projeto que ja
+			// contém o código (projectDir == diretório do projeto real). O detector
+			// roda contra projectDir. O test simula isso copiando a fixture para o
+			// tmpdir antes de gerar — produção-fidedigno.
 			projectDir := t.TempDir()
+			copyFixtureIntoTmp(t, tc.dir, projectDir)
+
 			fsys := fs.NewOSFileSystem()
 			g := NewGenerator(fsys, output.New(false))
 
@@ -270,6 +277,14 @@ func TestContextgen_Snapshots(t *testing.T) {
 			snapshotPath := filepath.Join(snapshotsDir, tc.name+".agents.md")
 			assertMatchesSnapshot(t, snapshotPath, string(data))
 		})
+	}
+}
+
+func copyFixtureIntoTmp(t *testing.T, fixtureDir, destDir string) {
+	t.Helper()
+	cmd := exec.Command("cp", "-R", fixtureDir+"/.", destDir+"/")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("copyFixture: %v\n%s", err, out)
 	}
 }
 

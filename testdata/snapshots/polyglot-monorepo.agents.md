@@ -7,27 +7,38 @@ Este diretorio centraliza regras para uso com agentes de IA em tarefas reais de 
 
 Use estas instrucoes para manter consistencia, seguranca e qualidade ao trabalhar com codigo, configuracao, validacao e evolucao de sistemas.
 
-## Arquitetura: monolito
+## Arquitetura: monorepo
 
-O projeto aparenta ser um monolito unico. A governanca deve privilegiar coesao local, limites de pacote claros e crescimento incremental da estrutura.
+O projeto aparenta ser um monorepo, com multiplos componentes ou workspaces sob a mesma raiz. A governanca deve preservar fronteiras entre pacotes e validar apenas os workspaces afetados.
 
-Stack detectada: stack principal nao detectada automaticamente.
+Stack detectada: Go,Node.js.
 Frameworks detectados: nenhum framework dominante identificado.
 
 ## Estrutura de Pastas
 
 ```
 .
+apps
+apps/web
+apps/web/package.json
+go.work
+package.json
+services
+services/go-api
+services/go-api/go.mod
+services/python-worker
+services/python-worker/pyproject.toml
 ```
 
 ## Padrao Arquitetural
 
-Padrao arquitetural nao inferido com alta confianca; assumir composicao simples e dependencias explicitas.
+Predominio de arquitetura em camadas, com separacao entre transporte, servicos, persistencia e modelos.
 
 ### Fluxo de Dependencias
 
-- Dependencias devem apontar de bordas externas para o nucleo do negocio.
-- Detalhes de framework, IO e persistencia nao devem vazar para o centro do sistema.
+- Cada stack deve expor contratos por fronteiras estaveis (HTTP/gRPC/eventos/arquivos), sem assumir detalhes internos de runtime de outra linguagem.
+- Mudancas em contratos compartilhados devem atualizar produtores e consumidores da stack afetada e validar cada runtime com seu proprio toolchain.
+- Compartilhar schemas, payloads e semantica operacional e aceitavel; compartilhar convencoes de framework, helpers de runtime ou acoplamento de deploy entre linguagens nao e.
 
 ## Modo de trabalho
 
@@ -51,9 +62,9 @@ Padrao arquitetural nao inferido com alta confianca; assumir composicao simples 
 
 ## Regras por Arquitetura
 
-1. Preservar coesao local e dependencia unidirecional entre packages.
-2. Evitar helpers transversais que escondam regra de negocio ou IO.
-3. Crescer a estrutura apenas quando o codigo atual ja nao comportar a mudanca com clareza.
+1. Limitar mudancas ao workspace, pacote ou servico afetado.
+2. Nao criar dependencias internas cruzadas sem contrato explicito.
+3. Validar primeiro apenas os workspaces impactados antes de ampliar o escopo.
 
 ## Regras por Linguagem
 
@@ -61,7 +72,17 @@ Para tarefas que alteram codigo, carregar a skill:
 
 - `.agents/skills/agent-governance/SKILL.md`
 
+Para tarefas que alteram codigo Go, carregar tambem:
 
+- `.agents/skills/go-implementation/SKILL.md`
+
+Para tarefas de revisao ou refatoracao incremental de design em Go guiadas por heuristicas de object calisthenics, carregar tambem:
+
+- `.agents/skills/object-calisthenics-go/SKILL.md`
+
+Para tarefas que alteram codigo Node/TypeScript, carregar tambem:
+
+- `.agents/skills/node-implementation/SKILL.md`
 
 Para tarefas de correcao de bugs com remediacao e teste de regressao, carregar tambem:
 
@@ -114,6 +135,14 @@ Antes de concluir uma alteracao:
 
 Seguir Etapa 4 de `.agents/skills/agent-governance/SKILL.md` como base canonica.
 
+Comandos detectados no projeto (Go):
+1. Rodar fmt: `gofmt -w .`.
+2. Rodar test: `go test ./...`.
+3. Rodar lint: `golangci-lint run`.
+Comandos detectados no projeto (Node):
+1. Rodar test: `cd apps/web && npm run test`.
+Comandos detectados no projeto (Python):
+1. Rodar test: `pytest`.
 
 ## Restricoes
 
@@ -122,6 +151,7 @@ Seguir Etapa 4 de `.agents/skills/agent-governance/SKILL.md` como base canonica.
 3. Nao alterar comportamento publico sem deixar isso explicito.
 4. Nao usar exemplos como copia cega; adaptar ao contexto real.
 
+5. Nao alterar contratos entre workspaces sem deixar o impacto explicito.
 
 ### Controle de profundidade de invocacao
 

@@ -2,6 +2,7 @@
 name: dotnet-csharp-implementation
 version: 1.3.0
 category: language
+prerequisites: [agent-governance]
 description: >
   Implementa alteracoes em codigo .NET/C# usando governanca base, arquitetura, estilo,
   testes e padroes recorrentes. Use quando a tarefa exigir adicionar, corrigir, refatorar

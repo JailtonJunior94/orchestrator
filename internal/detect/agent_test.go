@@ -116,7 +116,7 @@ func (s *AgentSuite) TestBinaryAgentDetectorDetect() {
 			},
 		},
 		{
-			name: "deve detectar todos os binarios suportados",
+			name: "deve detectar 3 CLIs inegociaveis sem incluir Gemini (opt-in por projeto)",
 			args: args{
 				lookPath: fakeLookPath{present: map[string]bool{
 					"claude-agent-acp": true,
@@ -128,7 +128,32 @@ func (s *AgentSuite) TestBinaryAgentDetectorDetect() {
 			},
 			expect: func(got []skills.Tool, err error) {
 				s.NoError(err)
-				s.Len(got, 4)
+				// Gemini e opt-in por sinal de projeto; mesmo com binario no
+				// PATH, sem .gemini/ ou GEMINI.md no projectDir nao entra.
+				s.Len(got, 3)
+				for _, t := range got {
+					s.NotEqual(skills.ToolGemini, t, "Gemini nao deve aparecer sem sinal de projeto")
+				}
+			},
+		},
+		{
+			name: "deve incluir Gemini quando ha sinal de projeto (.gemini/ ou GEMINI.md)",
+			args: args{
+				lookPath:   fakeLookPath{present: map[string]bool{"gemini": true}},
+				homeDir:    fakeHomeDir{home: "/nonexistent-home-xyz"},
+				projectDir: "/project",
+				files:      map[string][]byte{"/project/GEMINI.md": []byte("# Gemini")},
+				fileDet:    true,
+			},
+			expect: func(got []skills.Tool, err error) {
+				s.NoError(err)
+				hasGemini := false
+				for _, t := range got {
+					if t == skills.ToolGemini {
+						hasGemini = true
+					}
+				}
+				s.True(hasGemini, "Gemini deve aparecer quando ha sinal de projeto")
 			},
 		},
 		{

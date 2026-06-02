@@ -6,6 +6,10 @@ Keywords: messaging, evento, outbox, idempotente, broker, assíncrono, rastreabi
 Load complete when: tarefa envolve produção ou consumo de mensagens/eventos assíncronos em qualquer linguagem.
 -->
 
+- Rule ID: R-MSG-001
+- Severidade: hard
+- Escopo: produção e consumo de eventos assíncronos.
+
 ## Objetivo
 Manter comunicacao assincrona confiavel, rastreavel e desacoplada do dominio.
 

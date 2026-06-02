@@ -11,13 +11,14 @@ Use estas instrucoes para manter consistencia, seguranca e qualidade ao trabalha
 
 O projeto aparenta ser um monolito unico. A governanca deve privilegiar coesao local, limites de pacote claros e crescimento incremental da estrutura.
 
-Stack detectada: stack principal nao detectada automaticamente.
-Frameworks detectados: nenhum framework dominante identificado.
+Stack detectada: Node.js.
+Frameworks detectados: Express.
 
 ## Estrutura de Pastas
 
 ```
 .
+package.json
 ```
 
 ## Padrao Arquitetural
@@ -26,8 +27,9 @@ Padrao arquitetural nao inferido com alta confianca; assumir composicao simples 
 
 ### Fluxo de Dependencias
 
-- Dependencias devem apontar de bordas externas para o nucleo do negocio.
-- Detalhes de framework, IO e persistencia nao devem vazar para o centro do sistema.
+- Controllers e routers devem depender de services ou use cases, nao do contrario.
+- Dominio nao deve importar detalhes de framework (Express, Fastify, NestJS), ORM ou drivers.
+- Infraestrutura implementa interfaces consumidas pela camada de aplicacao, preservando dependencia para dentro.
 
 ## Modo de trabalho
 
@@ -61,7 +63,9 @@ Para tarefas que alteram codigo, carregar a skill:
 
 - `.agents/skills/agent-governance/SKILL.md`
 
+Para tarefas que alteram codigo Node/TypeScript, carregar tambem:
 
+- `.agents/skills/node-implementation/SKILL.md`
 
 Para tarefas de correcao de bugs com remediacao e teste de regressao, carregar tambem:
 
@@ -114,6 +118,10 @@ Antes de concluir uma alteracao:
 
 Seguir Etapa 4 de `.agents/skills/agent-governance/SKILL.md` como base canonica.
 
+Comandos detectados no projeto (Node):
+1. Rodar fmt: `npm run fmt`.
+2. Rodar test: `npm run test`.
+3. Rodar lint: `npm run lint`.
 
 ## Restricoes
 

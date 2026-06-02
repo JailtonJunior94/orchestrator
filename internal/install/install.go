@@ -891,16 +891,25 @@ var _orchestratorHooks = []string{
 	"subagent-stop-wrapper.sh",
 }
 
-// _agentsScriptsFiles lista validadores de evidencia canonicos em .agents/scripts/.
+// _agentsScriptsFiles lista validadores e gates canonicos em .agents/scripts/.
 // Sao tool-neutros e instalados SEMPRE (independente dos tools selecionados), pois a
 // cascata de resolucao das skills e `.agents/scripts/` -> `.claude/scripts/` -> `scripts/`.
 // Instalar em .agents/scripts/ garante paridade: um projeto so-Gemini/Codex/Copilot tem os
-// mesmos gates de evidencia que um projeto Claude.
+// mesmos gates de evidencia E de descoberta cirurgica que um projeto Claude.
 var _agentsScriptsFiles = []string{
+	// Validadores de evidencia (legados).
 	"validate-task-evidence.sh",
 	"validate-bugfix-evidence.sh",
 	"validate-refactor-evidence.sh",
 	"validate-review-evidence.sh",
+	// Gates de descoberta cirurgica (production-proof inegociavel).
+	// hook-prereq-gate.sh e chamado pelos hooks PreToolUse dos 3 CLIs e orquestra
+	// validate-skill-prerequisites + resolve-references para emitir guidance
+	// cirurgica e bloquear quando a skill da stack tocada nao esta presente.
+	"hook-prereq-gate.sh",
+	"resolve-references.sh",
+	"validate-skill-prerequisites.sh",
+	"validate-governance-references.sh",
 }
 
 // copyAgentsScripts copia os validadores canonicos de evidencia para .agents/scripts/ do

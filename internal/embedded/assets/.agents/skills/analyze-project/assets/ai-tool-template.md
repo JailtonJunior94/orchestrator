@@ -20,10 +20,14 @@ Antes de editar codigo, confirmar que estes arquivos foram lidos na sessao:
 1. `AGENTS.md` — regras de arquitetura, modo de trabalho e restricoes.
 2. `.agents/skills/agent-governance/SKILL.md` — governanca, DDD, erros, seguranca e testes sob demanda.
 3. A skill de linguagem correspondente quando a tarefa alterar codigo:
-   - Go: `.agents/skills/go-implementation/SKILL.md`
-   - Node/TypeScript: `.agents/skills/node-implementation/SKILL.md`
+   - Go: `.agents/skills/go-implementation/SKILL.md` (+ `references/INDEX.yaml`)
+   - Node/TypeScript: `.agents/skills/node-implementation/SKILL.md` (+ `references/INDEX.yaml`)
    - Python: `.agents/skills/python-implementation/SKILL.md`
-   - .NET/C#: `.agents/skills/dotnet-csharp-implementation/SKILL.md`
+   - .NET/C#: `.agents/skills/dotnet-csharp-implementation/SKILL.md` (+ `references/INDEX.yaml`)
+
+### Carga surgical de references (economia de tokens)
+
+Sempre leia o `references/INDEX.yaml` da skill carregada — ele mapeia cada reference para `file_patterns` e `diff_signals`. **Carregue references/*.md apenas quando o escopo da tarefa casar com a entrada do INDEX** (refs marcadas `always: true` sempre entram). Atalho: `bash .agents/scripts/resolve-references.sh <skill> <arquivos...>` lista exatamente o que carregar (le diff em stdin). Gate bloqueante quando a skill obrigatoria nao esta acessivel: `bash .agents/scripts/validate-skill-prerequisites.sh <arquivos...>`.
 
 ## Validacao
 
