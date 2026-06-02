@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.27.0 (2026-06-02)
+
+### Features
+- **governance:** descoberta cirurgica cross-CLI com gates inegociaveis (8bb379d)
+
+### Chores
+- **mocks:** regenera mock FileSystem apos correcao do FakeFileSystem (8ba6718)
+
 ## 0.26.0 (2026-05-30)
 
 ### Features

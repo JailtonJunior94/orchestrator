@@ -1,6 +1,6 @@
 ---
 name: agent-governance
-version: 1.2.0
+version: 1.3.0
 category: governance
 description: Orquestra regras de governanca, DDD, tratamento de erros, seguranca e testes para tarefas com agentes de IA. Use quando a tarefa exigir aplicar padroes obrigatorios antes de analisar, editar ou validar codigo. Nao use para tarefas casuais sem alteracao de codigo nem para substituir skills especificas de linguagem.
 ---

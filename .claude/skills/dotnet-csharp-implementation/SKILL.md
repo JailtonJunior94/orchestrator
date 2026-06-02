@@ -1,6 +1,6 @@
 ---
 name: dotnet-csharp-implementation
-version: 1.3.0
+version: 1.4.0
 category: language
 prerequisites: [agent-governance]
 description: >
