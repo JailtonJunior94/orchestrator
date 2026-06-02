@@ -17,6 +17,7 @@ O projeto padroniza como Claude, Gemini, Codex e GitHub Copilot encontram skills
   - [Download direto](#download-direto)
   - [Instalacao via Go](#instalacao-via-go)
   - [Executar sem instalar](#executar-sem-instalar)
+- [Instalacao em outros repositorios](#instalacao-em-outros-repositorios)
 - [Inicio rapido](#inicio-rapido)
 - [Fluxo mandatorio: SDD + Harness](#fluxo-mandatorio-sdd--harness)
 - [O que fazer depois da instalacao](#o-que-fazer-depois-da-instalacao)
@@ -73,6 +74,27 @@ Depois da instalacao, o repositorio alvo passa a expor skills e agentes processu
 - `bugfix`
 - `refactor`
 - `finalize-changelog-readme-push`
+
+### Camada de descoberta cirurgica (cross-CLI)
+
+Alem dos artefatos acima, a instalacao entrega uma camada de **descoberta
+cirurgica** que opera em cada `PreToolUse` dos 3 CLIs (Claude, Codex, Copilot):
+
+1. **`references/INDEX.yaml`** em cada skill de linguagem (Go, Node, Python,
+   .NET) mapeia cada reference a `file_patterns` e `diff_signals` — define
+   *quando* carregar.
+2. **`.agents/scripts/hook-prereq-gate.sh`** e o gate compartilhado invocado
+   pelos hooks `validate-preload.sh` dos 3 CLIs. Orquestra:
+   - **`validate-skill-prerequisites.sh`** — bloqueia o `PreToolUse` se a skill
+     da extensao tocada nao esta acessivel (sem alucinacao por falta de
+     descoberta).
+   - **`resolve-references.sh`** — emite em `stderr` a lista exata de references
+     a carregar para *aquela* edicao (so as que casam com path + diff).
+3. Resultado pratico: **bloqueio inegociavel** quando a governanca esta
+   incompleta, **guidance economica** quando esta completa (1–3 references por
+   edit de codigo, **silencio total** em edits de docs/config).
+
+Detalhes operacionais em [Instalacao em outros repositorios](#instalacao-em-outros-repositorios).
 
 ## Instalacao
 
@@ -278,6 +300,168 @@ alias ai-spec="ai-spec-harness"
 ```bash
 go run . --help
 ```
+
+## Instalacao em outros repositorios
+
+Esta secao explica como instalar e usar o harness em qualquer repositorio terceiro
+(Go, Node/TypeScript, Python ou .NET/C#), com **gates inegociaveis cross-CLI**
+(Claude, Codex, Copilot) e **carga cirurgica** de references — so o estritamente
+necessario para a edicao em curso entra no contexto do agente.
+
+### Passo 1: build do binario (uma vez por maquina)
+
+```bash
+cd /caminho/para/orchestrator
+git pull
+go build -o ai-spec .
+sudo mv ai-spec /usr/local/bin/   # ou: cp ai-spec ~/bin/
+```
+
+### Passo 2: instalar no repo destino
+
+```bash
+cd /caminho/do/repo-destino
+ai-spec install . --mode copy        # self-contained (recomendado)
+# ou
+ai-spec install . --mode symlink     # auto-atualiza ao seguir o orchestrator
+```
+
+O comando **auto-detecta**:
+
+- Stack (Go, Node, Python, .NET) via manifesto na raiz (`go.mod`, `package.json`,
+  `pyproject.toml`, `*.csproj`).
+- CLIs presentes: Claude / Codex / Copilot por sinais de binario no PATH ou
+  arquivos de projeto. Gemini e **opt-in por projeto** — so entra se ja houver
+  `.gemini/` ou `GEMINI.md` no destino, ou se voce passar `--tools=gemini`/`all`.
+
+Gera dentro do repo destino:
+
+- `AGENTS.md`, `CLAUDE.md`, `.codex/config.toml`, `.github/copilot-instructions.md`
+  com marcadores `<!-- ai-spec:generated-start/end -->` para **merge inteligente**
+  em reinstalacoes (customizacoes fora dos marcadores sao preservadas; criacao de
+  `.bak` no primeiro contato com arquivo sem marcadores).
+- `.agents/skills/` — todas as skills + `references/INDEX.yaml` da linguagem
+  detectada (mapa surgical por `file_patterns` e `diff_signals`).
+- `.agents/scripts/` — 4 gates (`hook-prereq-gate.sh`, `resolve-references.sh`,
+  `validate-skill-prerequisites.sh`, `validate-governance-references.sh`) e os 4
+  validadores de evidencia.
+- `.claude/hooks/`, `.codex/hooks/`, `.github/hooks/` — hooks `PreToolUse` ja
+  cabeados ao gate compartilhado para os 3 CLIs.
+
+### Passo 3: ativar PreToolUse no Claude Code (uma vez por repo)
+
+Edite `.claude/settings.local.json` no repo destino:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [{
+      "matcher": "Edit|Write|MultiEdit",
+      "hooks": [{
+        "type": "command",
+        "command": "bash .claude/hooks/validate-preload.sh"
+      }]
+    }]
+  }
+}
+```
+
+Codex e Copilot ja vem prontos via `.codex/hooks.json` e `.github/hooks/governance.json`.
+
+### Passo 4: sessao diaria
+
+Antes da primeira edicao na sessao, confirme que voce leu `AGENTS.md`:
+
+```bash
+export GOVERNANCE_PRELOAD_CONFIRMED=1
+```
+
+A partir dai, **cada edicao de codigo** dispara automaticamente:
+
+1. **Bloqueio inegociavel** se a skill da extensao tocada nao esta acessivel
+   (`.go` exige `go-implementation/SKILL.md` + `references/INDEX.yaml`; idem para
+   Node/Python/.NET). Mensagem clara aponta a skill ausente e o comando para
+   corrigir.
+2. **Guidance cirurgica em stderr** — lista exata das references a carregar para
+   *aquela* edicao. Exemplo real (edit em `internal/repository/user.go` com diff
+   contendo `db.QueryContext`):
+
+   ```
+   GUIDANCE (carga surgical): references a carregar para esta edicao:
+   go-implementation/architecture          (always)
+   go-implementation/examples-infrastructure  file_pattern:**/infrastructure/**
+   go-implementation/persistence           diff_signal:db.QueryContext
+   ```
+3. **Silencio total** em edits de `.md`, `.yaml`, etc. — zero overhead, zero
+   ruido no contexto. Validado: README.md em repo terceiro produz exit 0 e 0
+   chars de saida.
+
+### Passo 5: verificar a instalacao
+
+```bash
+ai-spec verify . --by-cli
+```
+
+Saida esperada:
+
+```text
+Resumo: 96 current, 0 missing, 0 drifted
+
+Por CLI:
+  claude     current=24 missing=0 drifted=0
+  codex      current=24 missing=0 drifted=0
+  copilot    current=24 missing=0 drifted=0
+```
+
+A flag `--by-cli` reporta drift por CLI separadamente — voce identifica se a
+divergencia esta no espelho Claude, Codex ou Copilot sem ter que adivinhar.
+
+### Passo 6: atualizar quando o orchestrator evolui
+
+```bash
+# 1. atualizar o binario
+cd /caminho/para/orchestrator && git pull && go build -o ai-spec . \
+  && sudo mv ai-spec /usr/local/bin/
+
+# 2. reaplicar no repo destino (mesmo --mode usado antes)
+cd /caminho/do/repo-destino && ai-spec install . --mode <copy|symlink>
+```
+
+### Variaveis de ambiente operacionais
+
+| Variavel | Efeito | Quando usar |
+|---|---|---|
+| `GOVERNANCE_PRELOAD_CONFIRMED=1` | Confirma que carregou AGENTS.md na sessao | Rotina diaria |
+| `PREREQ_MODE=warn` | Gate emite aviso mas nao bloqueia | Debug / pipelines legados |
+| `GOVERNANCE_PRELOAD_MODE=warn` | Hook nao bloqueia por ausencia de preload | Debug |
+| `AGENTS_ROOT=<dir>` | Override do project root para resolucao de skills | Testes E2E |
+| `GATE_DIFF=<texto>` | Injeta diff manualmente no resolver | Smoke isolado |
+
+### Troubleshooting
+
+| Sintoma | Causa provavel | Solucao |
+|---|---|---|
+| `BLOQUEIO: skill obrigatoria nao acessivel` | Skill nao instalada ou `INDEX.yaml` ausente | `ai-spec install .` |
+| Hook nao dispara em Edit/Write | `.claude/settings.local.json` sem o JSON do Passo 3 | Cole o JSON e reabra a sessao |
+| `governanca nao carregada` em toda edicao | Falta `export GOVERNANCE_PRELOAD_CONFIRMED=1` | Exporte na sessao |
+| `verify` reporta `drifted` | Edicao manual dentro dos marcadores ou skills divergiram | `ai-spec install .` para resincronizar |
+| Quero remover tudo | — | `ai-spec uninstall .` |
+
+### Resumo em 3 comandos para comecar agora
+
+```bash
+# 1. build (uma vez por maquina)
+cd /caminho/para/orchestrator && go build -o /usr/local/bin/ai-spec .
+
+# 2. instalar em qualquer repo
+cd /caminho/do/repo-destino && ai-spec install . --mode copy
+
+# 3. ativar na sessao
+export GOVERNANCE_PRELOAD_CONFIRMED=1
+```
+
+Pronto — Claude/Codex/Copilot passam a operar com gates inegociaveis e guidance
+cirurgica em cada `PreToolUse`.
 
 ## Inicio rapido
 
@@ -1057,6 +1241,9 @@ ai-spec doctor ../api-pagamentos
 
 # verificar governanca gerada
 ai-spec lint ../api-pagamentos
+
+# verificar instalacao com resumo por-CLI (paridade Claude/Codex/Copilot)
+ai-spec verify ../api-pagamentos --by-cli
 
 # atualizar instalacao
 ai-spec upgrade ../api-pagamentos --source . --langs go
