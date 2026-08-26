@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.28.0 (2026-08-26)
+
+### Features
+- **skills:** gate skills --verify com verificacao de hash SHA-256 (c9f61b6)
+
+### Bug Fixes
+- **cli:** exit code 2 real para uso incorreto no task-loop (de463a9)
+
+### Documentation
+- corrige guia de instalacao e alinha referencias ao gate skills --verify (0add30a)
+
+### Chores
+- remove .pyc rastreado e ignora caches e temp de sessao (9130549)
+
 ## 0.27.1 (2026-06-02)
 
 ### Bug Fixes
