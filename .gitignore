@@ -20,4 +20,3 @@ coverage.html
 
 # Run-time artifacts
 task-loop-report-*.md
-audit/

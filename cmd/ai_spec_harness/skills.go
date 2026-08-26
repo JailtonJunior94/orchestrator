@@ -13,13 +13,56 @@ import (
 type skillsCommand struct{}
 
 func newSkillsCmd() *cobra.Command {
+	var verify bool
+
 	cmd := &cobra.Command{
 		Use:   "skills",
 		Short: "Gerencia skills externas e detecta mudancas de versao",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if !verify {
+				return cmd.Help()
+			}
+			projectDir := "."
+			if len(args) > 0 {
+				projectDir = args[0]
+			}
+			return runSkillsVerify(cmd, projectDir)
+		},
 	}
 
+	cmd.Flags().BoolVar(&verify, "verify", false,
+		"Gate de integridade: versao sem breaking + hash SHA-256 igual ao lock (exit != 0 em divergencia)")
 	cmd.AddCommand(newSkillsCheckCmd())
 	return cmd
+}
+
+// runSkillsVerify executa o gate de integridade das skills externas (ADR-005).
+// Emite uma linha por falha e retorna exitError(1) se houver divergencia;
+// usado como gate bloqueante pelas skills execute-task/execute-all-tasks.
+func runSkillsVerify(cmd *cobra.Command, projectDir string) error {
+	printer := output.New(newCommandEnv().verbose(cmd))
+	fsys := fs.NewOSFileSystem()
+	svc := skillscheck.NewService(fsys, printer)
+
+	failures, err := svc.Verify(projectDir)
+	if err != nil {
+		return err
+	}
+
+	if len(failures) > 0 {
+		sort.Slice(failures, func(i, j int) bool {
+			return failures[i].Check.Name < failures[j].Check.Name
+		})
+		for _, f := range failures {
+			fmt.Printf("[!!] %s: %s\n", f.Check.Name, f.Reason)
+		}
+		fmt.Printf("\n%d divergencia(s) de integridade. Atualize skills-lock.json apos registrar a decisao em audit/.\n", len(failures))
+		return newExitError(1)
+	}
+
+	fmt.Println("Integridade das skills OK (versao + hash SHA-256).")
+	return nil
 }
 
 func newSkillsCheckCmd() *cobra.Command {

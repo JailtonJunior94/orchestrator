@@ -1,7 +1,9 @@
 package skillscheck_test
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"io"
 	"path/filepath"
 	"testing"
@@ -136,5 +138,148 @@ func TestCheck_VersaoDesconhecida(t *testing.T) {
 	}
 	if results[0].Drift != skillscheck.DriftUnknown {
 		t.Errorf("drift esperado=%s, obtido=%s", skillscheck.DriftUnknown, results[0].Drift)
+	}
+}
+
+func skillMDContent(skillName, version string) []byte {
+	return []byte("---\nname: " + skillName + "\nversion: " + version + "\n---\n# Skill\n")
+}
+
+func TestCheck_HashMatch(t *testing.T) {
+	svc, fake := newService(t)
+	dir := "/proj"
+
+	sum := sha256.Sum256(skillMDContent("my-skill", "1.0.0"))
+	writeLock(t, fake, dir, map[string]skillscheck.LockEntry{
+		"my-skill": {Version: "1.0.0", ComputedHash: fmt.Sprintf("%x", sum)},
+	})
+	writeSkillMD(t, fake, dir, "my-skill", "1.0.0")
+
+	results, err := svc.Check(dir)
+	if err != nil {
+		t.Fatalf("Check erro inesperado: %v", err)
+	}
+	if !results[0].HashMatch {
+		t.Error("HashMatch esperado=true com computedHash correto")
+	}
+}
+
+func TestCheck_HashDivergente(t *testing.T) {
+	svc, fake := newService(t)
+	dir := "/proj"
+
+	writeLock(t, fake, dir, map[string]skillscheck.LockEntry{
+		"my-skill": {Version: "1.0.0", ComputedHash: "deadbeef"},
+	})
+	writeSkillMD(t, fake, dir, "my-skill", "1.0.0")
+
+	results, err := svc.Check(dir)
+	if err != nil {
+		t.Fatalf("Check erro inesperado: %v", err)
+	}
+	if results[0].HashMatch {
+		t.Error("HashMatch esperado=false com computedHash divergente")
+	}
+}
+
+func TestVerify_SemFalhas(t *testing.T) {
+	svc, fake := newService(t)
+	dir := "/proj"
+
+	sum := sha256.Sum256(skillMDContent("my-skill", "1.0.0"))
+	writeLock(t, fake, dir, map[string]skillscheck.LockEntry{
+		"my-skill": {Version: "1.0.0", ComputedHash: fmt.Sprintf("%x", sum)},
+	})
+	writeSkillMD(t, fake, dir, "my-skill", "1.0.0")
+
+	failures, err := svc.Verify(dir)
+	if err != nil {
+		t.Fatalf("Verify erro inesperado: %v", err)
+	}
+	if len(failures) != 0 {
+		t.Errorf("esperado 0 falhas, obtido %d: %+v", len(failures), failures)
+	}
+}
+
+func TestVerify_VersaoAusenteHashIntegro(t *testing.T) {
+	// Locks antigos sem campo version: versao desconhecida nao falha o gate
+	// quando o hash do conteudo bate (regressao do falso positivo detectado
+	// na instalacao real em limateixeira-agents).
+	svc, fake := newService(t)
+	dir := "/proj"
+
+	sum := sha256.Sum256(skillMDContent("my-skill", ""))
+	writeLock(t, fake, dir, map[string]skillscheck.LockEntry{
+		"my-skill": {ComputedHash: fmt.Sprintf("%x", sum)},
+	})
+	writeSkillMD(t, fake, dir, "my-skill", "")
+
+	failures, err := svc.Verify(dir)
+	if err != nil {
+		t.Fatalf("Verify erro inesperado: %v", err)
+	}
+	if len(failures) != 0 {
+		t.Errorf("versao ausente + hash integro nao deve falhar, obtido: %+v", failures)
+	}
+}
+
+func TestVerify_Falhas(t *testing.T) {
+	tests := []struct {
+		name       string
+		entry      skillscheck.LockEntry
+		install    bool
+		version    string
+		wantReason string
+	}{
+		{
+			name:       "skill nao instalada",
+			entry:      skillscheck.LockEntry{Version: "1.0.0", ComputedHash: "abc"},
+			install:    false,
+			wantReason: "skill nao instalada",
+		},
+		{
+			name:       "hash divergente",
+			entry:      skillscheck.LockEntry{Version: "1.0.0", ComputedHash: "deadbeef"},
+			install:    true,
+			version:    "1.0.0",
+			wantReason: "hash diverge do registrado em skills-lock.json",
+		},
+		{
+			name:       "major bump breaking",
+			entry:      skillscheck.LockEntry{Version: "1.0.0", ComputedHash: "abc"},
+			install:    true,
+			version:    "2.0.0",
+			wantReason: "breaking: major version bump",
+		},
+		{
+			name:       "versao desconhecida com hash divergente",
+			entry:      skillscheck.LockEntry{Version: "", ComputedHash: "abc"},
+			install:    true,
+			version:    "1.0.0",
+			wantReason: "hash diverge do registrado em skills-lock.json",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc, fake := newService(t)
+			dir := "/proj"
+
+			writeLock(t, fake, dir, map[string]skillscheck.LockEntry{"my-skill": tt.entry})
+			if tt.install {
+				writeSkillMD(t, fake, dir, "my-skill", tt.version)
+			}
+
+			failures, err := svc.Verify(dir)
+			if err != nil {
+				t.Fatalf("Verify erro inesperado: %v", err)
+			}
+			if len(failures) != 1 {
+				t.Fatalf("esperado 1 falha, obtido %d", len(failures))
+			}
+			if failures[0].Reason != tt.wantReason {
+				t.Errorf("reason esperado=%q, obtido=%q", tt.wantReason, failures[0].Reason)
+			}
+		})
 	}
 }

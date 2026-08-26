@@ -937,8 +937,21 @@
         "name": "skills",
         "description": "Gerencia skills externas e detecta mudancas de versao",
         "longDescription": "Verifica versoes de skills externas contra skills-lock.json.",
-        "args": [],
-        "flags": {},
+        "args": [
+          {
+            "name": "path",
+            "required": false,
+            "description": "Caminho do projeto (usado com --verify; default: diretorio atual)"
+          }
+        ],
+        "flags": {
+          "verify": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Gate de integridade: versao sem breaking + hash SHA-256 igual ao lock (exit != 0 em divergencia)"
+          }
+        },
         "subcommands": [
           {
             "name": "check",

@@ -4,6 +4,7 @@
 package skillscheck
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -48,6 +49,9 @@ type SkillVersionCheck struct {
 	InstalledVer string
 	Drift        VersionDrift
 	Breaking     bool
+	// HashMatch indica se o SHA-256 do SKILL.md instalado bate com o
+	// computedHash do lock (ADR-005). Falso quando a skill nao esta instalada.
+	HashMatch bool
 }
 
 // Service executa verificacoes de versao de skills externas.
@@ -98,10 +102,50 @@ func (s *Service) Check(projectDir string) ([]SkillVersionCheck, error) {
 			InstalledVer: installedVer,
 			Drift:        drift,
 			Breaking:     drift == DriftBreaking,
+			HashMatch:    s.hashOf(skillData) == entry.ComputedHash,
 		})
 	}
 
 	return results, nil
+}
+
+// hashOf calcula o SHA-256 hex do conteudo do SKILL.md, mesmo procedimento
+// documentado em docs/troubleshooting.md para atualizar o lock.
+func (s *Service) hashOf(content []byte) string {
+	sum := sha256.Sum256(content)
+	return fmt.Sprintf("%x", sum)
+}
+
+// IntegrityFailure classifica o motivo de falha de integridade de uma skill,
+// usado pelo gate `skills --verify` (bloqueante em divergencia).
+type IntegrityFailure struct {
+	Check  SkillVersionCheck
+	Reason string
+}
+
+// Verify executa o gate de integridade: versao sem breaking, skill
+// instalada e hash SHA-256 identico ao lock. Versao desconhecida (ausente no
+// lock ou no SKILL.md) NAO falha quando o hash bate — locks antigos sem campo
+// version continuam verificaveis pelo conteudo (ADR-005). Retorna apenas as
+// falhas; slice vazio significa integridade preservada.
+func (s *Service) Verify(projectDir string) ([]IntegrityFailure, error) {
+	results, err := s.Check(projectDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var failures []IntegrityFailure
+	for _, r := range results {
+		switch {
+		case r.Drift == DriftNoSkill:
+			failures = append(failures, IntegrityFailure{Check: r, Reason: "skill nao instalada"})
+		case r.Drift == DriftBreaking:
+			failures = append(failures, IntegrityFailure{Check: r, Reason: "breaking: major version bump"})
+		case !r.HashMatch:
+			failures = append(failures, IntegrityFailure{Check: r, Reason: "hash diverge do registrado em skills-lock.json"})
+		}
+	}
+	return failures, nil
 }
 
 // classifyDrift classifica a mudanca entre versao do lock e versao instalada.
