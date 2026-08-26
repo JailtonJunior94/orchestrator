@@ -24,7 +24,7 @@ description: Executa uma tarefa de implementação aprovada via codificação, v
 2. **Gate de binário `ai-spec` (B2, sem degradação silenciosa)**: se a Etapa 1.3 abaixo for executar (`AI_PREFLIGHT_DONE` ausente), validar presença do binário antes:
    ```bash
    if [[ -z "${AI_PREFLIGHT_DONE:-}" ]] && ! command -v ai-spec >/dev/null 2>&1; then
-     echo "needs_input: binário 'ai-spec' não encontrado no PATH. Instale via 'brew install ai-spec-harness' (ou 'go install github.com/ai-spec-harness/ai-spec-harness/cmd/ai_spec_harness@latest'), OU exporte AI_PREFLIGHT_DONE=1 quando o orquestrador já validou drift e skills lock."
+     echo "needs_input: binário 'ai-spec' não encontrado no PATH. Instale via 'brew install jailtonjunior94/tap/ai-spec' (ou 'go install github.com/JailtonJunior94/ai-spec-harness@latest'), OU exporte AI_PREFLIGHT_DONE=1 quando o orquestrador já validou drift e skills lock."
      exit 1
    fi
    ```

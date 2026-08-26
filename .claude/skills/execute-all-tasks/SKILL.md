@@ -35,7 +35,7 @@ Paralelismo só quando: `Paralelizável` em tasks.md E tool suporta spawn nativo
 4. **Gate de binário `ai-spec` (B2, sem degradação silenciosa)**: validar presença antes dos comandos do pré-voo. Ausente → `needs_input` com instrução de instalação:
    ```bash
    if ! command -v ai-spec >/dev/null 2>&1; then
-     echo "needs_input: binário 'ai-spec' não encontrado no PATH. Instale via 'brew install ai-spec-harness' (ou 'go install github.com/ai-spec-harness/ai-spec-harness/cmd/ai_spec_harness@latest'). O orquestrador não pode degradar silenciosamente para 'modo legado' — princípio: governança acima de automação mágica."
+     echo "needs_input: binário 'ai-spec' não encontrado no PATH. Instale via 'brew install jailtonjunior94/tap/ai-spec' (ou 'go install github.com/JailtonJunior94/ai-spec-harness@latest'). O orquestrador não pode degradar silenciosamente para 'modo legado' — princípio: governança acima de automação mágica."
      exit 1
    fi
    ```

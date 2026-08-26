@@ -36,6 +36,10 @@ runs:
       shell: bash
       run: |
         brew tap JailtonJunior94/homebrew-tap
+        # Homebrew >= 6.x recusa formulas de taps nao confiados (erro:
+        # "Refusing to load formula ... from untrusted tap"). Confiar
+        # explicitamente antes do install — runner efemero, sem risco residual.
+        brew trust --tap jailtonjunior94/tap
         if [ "${{ inputs.version }}" = "latest" ]; then
           brew install ai-spec
         else
