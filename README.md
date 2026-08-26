@@ -1199,7 +1199,7 @@ Apos a instalacao, o repositorio alvo contem os seguintes artefatos que os agent
 | `.specs/<folder>/techspec.md` | pasta de cada PRD | especificacao tecnica aprovada; input obrigatorio para `create-tasks` e `execute-task` |
 | `.specs/<folder>/tasks.md` | pasta de cada PRD | tabela de tasks com status e dependencias; consumida pelo `task-loop` |
 | `bugs.json` | raiz ou pasta de qualidade | array JSON de bugs no schema canonico; validado por `ai-spec validate-bugs` |
-| `skills-lock.json` | raiz do repositorio fonte | registra SHA-256 de cada skill externa; `ai-spec skills check` detecta mudancas de interface |
+| `skills-lock.json` | raiz do repositorio fonte | registra SHA-256 de cada skill externa; `ai-spec skills check` detecta mudancas de versao e `ai-spec skills --verify` e o gate de integridade (versao + hash) |
 | `.ai_spec_harness.json` | raiz do repositorio alvo | manifesto da instalacao: versao, ferramentas e modo de instalacao |
 
 > **Regra pratica:** sempre que um prompt ou exemplo mencionar `AGENTS.md` ou `SKILL.md`, o agente deve ler esses arquivos antes de qualquer acao. Eles sao a fonte de verdade — nao inferencias do historico de conversa.
@@ -1216,6 +1216,7 @@ Apos a instalacao, o repositorio alvo contem os seguintes artefatos que os agent
 | `metrics` | Calcula metricas de contexto e custo estimado de tokens |
 | `telemetry` | Registra e resume uso de skills e referencias; suporta `--trend`, `--budget-check` e `--top-skills` |
 | `skills check` | Verifica versoes de skills externas contra `skills-lock.json` e detecta mudancas de interface |
+| `skills --verify` | Gate de integridade: falha (exit != 0) se versao ou hash SHA-256 divergirem de `skills-lock.json`; usado por `execute-task`/`execute-all-tasks` |
 | `validate` | Valida frontmatter YAML de `SKILL.md` |
 | `validate-bugs` | Valida um array JSON de bugs contra o schema canonico |
 | `prerequisites` | Verifica se uma skill pode ser executada em um projeto |
@@ -1285,6 +1286,9 @@ ai-spec task-loop --tool codex .specs/prd-payments-list
 # verificar versoes de skills externas contra o lock file
 ai-spec skills check .
 ai-spec skills check . --force
+
+# gate de integridade (versao + hash SHA-256) — bloqueante
+ai-spec skills --verify .
 
 # ver tendencia semanal de invocacoes de telemetria
 ai-spec telemetry report --trend

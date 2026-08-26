@@ -62,7 +62,7 @@ São hard requirements. Se algum falhar, o orquestrador retorna `failed` ou `nee
 ### 2.2 Lockfile íntegro
 
 ```bash
-ai-spec skills check
+ai-spec skills --verify
 # deve retornar exit 0
 ```
 
@@ -762,7 +762,7 @@ Use antes de cada `/execute-all-tasks`:
 - [ ] `.specs/prd-<slug>/techspec.md` existe e está aprovado
 - [ ] `.specs/prd-<slug>/tasks.md` tem tabela canônica com `Status`, `Dependências`, `Paralelizável`
 - [ ] Cada `task-X.Y-*.md` existe e tem `Critérios de Sucesso`
-- [ ] `ai-spec skills check` retorna 0
+- [ ] `ai-spec skills --verify` retorna 0
 - [ ] `ai-spec check-spec-drift .specs/prd-<slug>/tasks.md` retorna 0
 - [ ] Estou na raiz do repositório
 - [ ] Sessão do tool é fresh (sem outros subagents ativos)

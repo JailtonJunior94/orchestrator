@@ -22,7 +22,7 @@ command -v ai-spec
 test -f .specs/prd-<slug>/prd.md
 test -f .specs/prd-<slug>/techspec.md
 test -f .specs/prd-<slug>/tasks.md
-ai-spec skills check
+ai-spec skills --verify
 ai-spec check-spec-drift .specs/prd-<slug>/tasks.md
 ```
 
@@ -36,7 +36,7 @@ Os itens abaixo sao gate de entrada. Se falharem, o status operacional e "nao ex
 | --- | --- | --- |
 | Binario `ai-spec` disponivel | `command -v ai-spec` | pare; instale o binario antes de continuar |
 | Bundle minimo existe | `test -f .specs/prd-<slug>/prd.md && test -f .specs/prd-<slug>/techspec.md && test -f .specs/prd-<slug>/tasks.md` | pare; faltam artefatos obrigatorios |
-| Lock de skills verificavel | `ai-spec skills check` | pare se o comando retornar erro; trate drift ou instalacao incompleta |
+| Lock de skills verificavel | `ai-spec skills --verify` | pare se o comando retornar erro; trate drift ou instalacao incompleta |
 | Spec sem drift | `ai-spec check-spec-drift .specs/prd-<slug>/tasks.md` | pare; bundle fora de sincronia entre PRD, tech spec e tasks |
 | Task file alvo existe | `test -f .specs/prd-<slug>/task-X.Y-<nome>.md` | pare; nao execute `execute-task` sem task file real |
 

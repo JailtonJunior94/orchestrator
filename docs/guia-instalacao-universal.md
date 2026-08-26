@@ -28,20 +28,31 @@ obrigatórias. O instalador detecta automaticamente quais agentes de IA estão p
 ### Via Homebrew (macOS/Linux recomendado)
 
 ```bash
-brew install ai-spec-harness
+brew install jailtonjunior94/tap/ai-spec
 ```
+
+Instala o binário como `ai-spec`.
 
 ### Via Go install
 
 ```bash
-go install github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness@latest
+go install github.com/JailtonJunior94/ai-spec-harness@latest
 ```
+
+Gera o binário `ai-spec-harness`. Não use `cmd/ai_spec_harness` no `go install` — aquele path
+é um pacote de biblioteca, não o `main` (o `main.go` fica na raiz do módulo).
 
 Após a instalação, confirme:
 
 ```bash
-ai-spec-harness --version
+ai-spec version            # instalado via brew/release
+ai-spec-harness version    # instalado via go install
 ```
+
+> **Nota sobre nomes:** o binário de release/brew chama-se `ai-spec`; o gerado via `go install`
+> chama-se `ai-spec-harness`. É o mesmo CLI — todos os comandos `ai-spec-harness ...` deste guia
+> funcionam como `ai-spec ...` quando instalado via brew. Para padronizar, crie um alias em
+> `~/.zshrc`/`~/.bashrc`: `alias ai-spec="ai-spec-harness"` (ou o inverso).
 
 ---
 
@@ -231,7 +242,7 @@ configurados (ex.: `npx @zed-industries/codex-acp`). O fallback é **transparent
 # .github/workflows/install-governance.yml
 - name: Install ai-spec-harness
   run: |
-    go install github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness@latest
+    go install github.com/JailtonJunior94/ai-spec-harness@latest
 
 - name: Bootstrap governance
   run: ai-spec-harness install . --tools claude,gemini --mode copy
