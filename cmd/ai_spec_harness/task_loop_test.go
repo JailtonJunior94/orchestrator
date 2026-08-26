@@ -2,6 +2,7 @@ package aispecharness
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -10,16 +11,24 @@ import (
 	"time"
 )
 
+// exitCode2 verifica que err carrega um exitError com codigo 2 (uso incorreto),
+// mesmo contrato aplicado pelo RunE do taskLoopCmd em producao.
+func exitCode2(err error) bool {
+	var ee *exitError
+	return errors.As(err, &ee) && ee.ExitCode() == 2
+}
+
 // TestTaskLoopFlags_Runtime valida as regras de validação da flag --runtime (RF-01, RF-02).
 func TestTaskLoopFlags_Runtime(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
-		runtime string
-		tool    string
-		wantErr bool
-		wantMsg string
+		name      string
+		runtime   string
+		tool      string
+		wantErr   bool
+		wantExit2 bool
+		wantMsg   string
 	}{
 		{
 			name:    "runtime legacy valido",
@@ -34,11 +43,11 @@ func TestTaskLoopFlags_Runtime(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "runtime invalido",
-			runtime: "invalid",
-			tool:    "claude",
-			wantErr: true,
-			wantMsg: "exit2",
+			name:      "runtime invalido",
+			runtime:   "invalid",
+			tool:      "claude",
+			wantErr:   true,
+			wantExit2: true,
 		},
 		{
 			name:    "T-13: runtime acp com tool copilot valido (RF-06)",
@@ -59,10 +68,11 @@ func TestTaskLoopFlags_Runtime(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "runtime acp sem tool invalido (RF-02)",
-			runtime: "acp",
-			tool:    "",
-			wantErr: true,
+			name:      "runtime acp sem tool invalido (RF-02)",
+			runtime:   "acp",
+			tool:      "",
+			wantErr:   true,
+			wantExit2: true,
 			// sem tool: cai em "informe --tool" antes ou em validação de runtime+tool
 		},
 	}
@@ -77,6 +87,9 @@ func TestTaskLoopFlags_Runtime(t *testing.T) {
 			}
 			if !tt.wantErr && err != nil {
 				t.Errorf("nao esperava erro, obteve: %v", err)
+			}
+			if tt.wantExit2 && err != nil && !exitCode2(err) {
+				t.Errorf("erro deve carregar exit code 2 (exitError), obteve: %q", err.Error())
 			}
 			if tt.wantMsg != "" && err != nil {
 				if !strings.Contains(err.Error(), tt.wantMsg) {
@@ -281,7 +294,7 @@ func validateAgentFlags(agentName, tool, execTool, revTool string) error {
 // Usa runtimeACPCatalog como fonte de verdade — mesma tabela do RunE (D-04).
 func validateRuntimeFlags(runtime, tool string, activityTimeout time.Duration) error {
 	if runtime != "legacy" && runtime != "acp" {
-		return fmt.Errorf("exit2")
+		return newExitError(2)
 	}
 	if runtime == "acp" {
 		if _, ok := _runtimeACPCatalog[tool]; !ok {
@@ -290,11 +303,11 @@ func validateRuntimeFlags(runtime, tool string, activityTimeout time.Duration) e
 				supported = append(supported, k)
 			}
 			sort.Strings(supported)
-			return fmt.Errorf("exit2: runtime acp suporta apenas --tool em %v nesta versão", supported)
+			return fmt.Errorf("runtime acp suporta apenas --tool em %v nesta versão: %w", supported, newExitError(2))
 		}
 	}
 	if activityTimeout < 0 {
-		return fmt.Errorf("exit2")
+		return newExitError(2)
 	}
 	return nil
 }
@@ -304,11 +317,11 @@ func validateRuntimeFlags(runtime, tool string, activityTimeout time.Duration) e
 func validateEnumFlags(reasoningEffort, accessMode string) error {
 	validReasoning := map[string]bool{"low": true, "medium": true, "high": true}
 	if !validReasoning[reasoningEffort] {
-		return fmt.Errorf("exit2: --reasoning-effort inválido: %q — valores aceitos: low|medium|high", reasoningEffort)
+		return fmt.Errorf("--reasoning-effort inválido: %q — valores aceitos: low|medium|high: %w", reasoningEffort, newExitError(2))
 	}
 	validAccess := map[string]bool{"restricted": true, "full": true}
 	if !validAccess[accessMode] {
-		return fmt.Errorf("exit2: --access-mode inválido: %q — valores aceitos: restricted|full", accessMode)
+		return fmt.Errorf("--access-mode inválido: %q — valores aceitos: restricted|full: %w", accessMode, newExitError(2))
 	}
 	return nil
 }
@@ -505,7 +518,7 @@ func TestTaskLoopFlags_AccessModeRegistered(t *testing.T) {
 	}
 }
 
-// TestTaskLoopFlags_T24_ReasoningEffortInvalido valida que --reasoning-effort inválido retorna exit2 (T-24, RF-09).
+// TestTaskLoopFlags_T24_ReasoningEffortInvalido valida que --reasoning-effort inválido retorna exit code 2 (T-24, RF-09).
 func TestTaskLoopFlags_T24_ReasoningEffortInvalido(t *testing.T) {
 	t.Parallel()
 
@@ -532,21 +545,21 @@ func TestTaskLoopFlags_T24_ReasoningEffortInvalido(t *testing.T) {
 			wantErr:         false,
 		},
 		{
-			name:            "T-24: invalid retorna exit2",
+			name:            "T-24: invalid retorna exit code 2",
 			reasoningEffort: "invalid",
 			wantErr:         true,
 			wantExit2:       true,
 			wantMsg:         "low|medium|high",
 		},
 		{
-			name:            "T-24: ultra retorna exit2 com enum listado",
+			name:            "T-24: ultra retorna exit code 2 com enum listado",
 			reasoningEffort: "ultra",
 			wantErr:         true,
 			wantExit2:       true,
 			wantMsg:         "low|medium|high",
 		},
 		{
-			name:            "T-24: vazio retorna exit2",
+			name:            "T-24: vazio retorna exit code 2",
 			reasoningEffort: "",
 			wantErr:         true,
 			wantExit2:       true,
@@ -564,8 +577,8 @@ func TestTaskLoopFlags_T24_ReasoningEffortInvalido(t *testing.T) {
 			if !tt.wantErr && err != nil {
 				t.Errorf("nao esperava erro, obteve: %v", err)
 			}
-			if tt.wantExit2 && err != nil && !strings.Contains(err.Error(), "exit2") {
-				t.Errorf("erro deve conter 'exit2', obteve: %q", err.Error())
+			if tt.wantExit2 && err != nil && !exitCode2(err) {
+				t.Errorf("erro deve carregar exit code 2 (exitError), obteve: %q", err.Error())
 			}
 			if tt.wantMsg != "" && err != nil && !strings.Contains(err.Error(), tt.wantMsg) {
 				t.Errorf("erro %q nao contem %q", err.Error(), tt.wantMsg)
@@ -574,7 +587,7 @@ func TestTaskLoopFlags_T24_ReasoningEffortInvalido(t *testing.T) {
 	}
 }
 
-// TestTaskLoopFlags_T25_AccessModeInvalido valida que --access-mode inválido retorna exit2 (T-25, RF-11).
+// TestTaskLoopFlags_T25_AccessModeInvalido valida que --access-mode inválido retorna exit code 2 (T-25, RF-11).
 func TestTaskLoopFlags_T25_AccessModeInvalido(t *testing.T) {
 	t.Parallel()
 
@@ -596,21 +609,21 @@ func TestTaskLoopFlags_T25_AccessModeInvalido(t *testing.T) {
 			wantErr:    false,
 		},
 		{
-			name:       "T-25: open retorna exit2",
+			name:       "T-25: open retorna exit code 2",
 			accessMode: "open",
 			wantErr:    true,
 			wantExit2:  true,
 			wantMsg:    "restricted|full",
 		},
 		{
-			name:       "T-25: danger retorna exit2 com enum listado",
+			name:       "T-25: danger retorna exit code 2 com enum listado",
 			accessMode: "danger",
 			wantErr:    true,
 			wantExit2:  true,
 			wantMsg:    "restricted|full",
 		},
 		{
-			name:       "T-25: vazio retorna exit2",
+			name:       "T-25: vazio retorna exit code 2",
 			accessMode: "",
 			wantErr:    true,
 			wantExit2:  true,
@@ -628,8 +641,8 @@ func TestTaskLoopFlags_T25_AccessModeInvalido(t *testing.T) {
 			if !tt.wantErr && err != nil {
 				t.Errorf("nao esperava erro, obteve: %v", err)
 			}
-			if tt.wantExit2 && err != nil && !strings.Contains(err.Error(), "exit2") {
-				t.Errorf("erro deve conter 'exit2', obteve: %q", err.Error())
+			if tt.wantExit2 && err != nil && !exitCode2(err) {
+				t.Errorf("erro deve carregar exit code 2 (exitError), obteve: %q", err.Error())
 			}
 			if tt.wantMsg != "" && err != nil && !strings.Contains(err.Error(), tt.wantMsg) {
 				t.Errorf("erro %q nao contem %q", err.Error(), tt.wantMsg)

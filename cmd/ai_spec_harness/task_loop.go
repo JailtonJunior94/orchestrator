@@ -127,7 +127,7 @@ Exemplos:
 			if !validReasoning[reasoningEffort] {
 				_, _ = fmt.Fprintf(os.Stderr,
 					"--reasoning-effort inválido: %q — valores aceitos: low|medium|high\n", reasoningEffort)
-				return fmt.Errorf("exit2")
+				return newExitError(2)
 			}
 
 			// Validação enum --access-mode (RF-11, RF-13 — ADR-013 D-08)
@@ -135,7 +135,7 @@ Exemplos:
 			if !validAccess[accessMode] {
 				_, _ = fmt.Fprintf(os.Stderr,
 					"--access-mode inválido: %q — valores aceitos: restricted|full\n", accessMode)
-				return fmt.Errorf("exit2")
+				return newExitError(2)
 			}
 
 			// Warning único para --access-mode=full via sync.Once (R-03 alto, ADR-013 D-08, PRD HU-03/Q1)
@@ -163,7 +163,7 @@ Exemplos:
 			// Validacao de --runtime (RF-01, RF-02, RF-07)
 			if runtime != "legacy" && runtime != "acp" {
 				_, _ = fmt.Fprintf(os.Stderr, "runtime inválido: %q — valores aceitos: legacy, acp\n", runtime)
-				return fmt.Errorf("exit2")
+				return newExitError(2)
 			}
 			if runtime == "acp" {
 				effectiveTool := tool
@@ -178,12 +178,12 @@ Exemplos:
 					sort.Strings(supported)
 					_, _ = fmt.Fprintf(os.Stderr,
 						"runtime acp suporta apenas --tool em %v nesta versão\n", supported)
-					return fmt.Errorf("exit2")
+					return newExitError(2)
 				}
 			}
 			if activityTimeout < 0 {
 				_, _ = fmt.Fprintf(os.Stderr, "--activity-timeout não pode ser negativo\n")
-				return fmt.Errorf("exit2")
+				return newExitError(2)
 			}
 
 			// Validacao mutua exclusiva de --agent com --tool e modo avancado (D-06)
@@ -258,7 +258,7 @@ Exemplos:
 			})
 			if errors.Is(err, airuntime.ErrLauncherUnavailable) {
 				_, _ = fmt.Fprintln(os.Stderr, err)
-				return fmt.Errorf("exit2")
+				return newExitError(2)
 			}
 			return err
 		},
