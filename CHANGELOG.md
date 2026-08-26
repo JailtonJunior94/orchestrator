@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.28.1 (2026-08-26)
+
+### Bug Fixes
+- **ci:** confia no tap homebrew no setup-ai-spec e corrige comandos de instalacao (1dd0bb9)
+
 ## 0.28.0 (2026-08-26)
 
 ### Features
