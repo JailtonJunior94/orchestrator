@@ -20,3 +20,10 @@ coverage.html
 
 # Run-time artifacts
 task-loop-report-*.md
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Session temp de CLIs
+.codex/tmp/
