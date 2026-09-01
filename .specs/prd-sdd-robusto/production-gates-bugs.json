@@ -34,5 +34,14 @@
     "reproduction": "Executar bash scripts/test-sdd-evals.sh no runner Windows com a fixture paths/02-absolute-unix.execution.reject.json.",
     "expected": "Paths absolutos POSIX e Windows devem ser rejeitados em qualquer sistema operacional.",
     "actual": "O path absoluto POSIX /etc/passwd e aceito no Windows pela validacao dependente da plataforma."
+  },
+  {
+    "id": "BUG-105",
+    "severity": "major",
+    "file": "internal/taskloop/e2e_agent_test.go",
+    "line": 116,
+    "reproduction": "Executar make smoke-adapters no runner Windows.",
+    "expected": "O smoke de adaptadores deve executar com o FakeFileSystem em todos os sistemas suportados.",
+    "actual": "O teste usa caminhos POSIX hardcoded e nao encontra tasks.md no Windows."
   }
 ]

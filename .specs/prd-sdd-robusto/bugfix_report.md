@@ -1,8 +1,8 @@
 # Relatorio de Bugfix
 
-- Total de bugs no escopo: 4
-- Corrigidos: 4
-- Testes de regressao adicionados: 4
+- Total de bugs no escopo: 5
+- Corrigidos: 5
+- Testes de regressao adicionados: 5
 - Pendentes: nenhum
 - Estado final: done
 
@@ -68,9 +68,25 @@
   `go test ./... -count=1 -race`, `make vet`, `make build` e `make lint`
   passaram; o linter encerrou com `0 issues`.
 
+- ID: BUG-105
+- Severidade: major
+- Origem: NFR-04; finding de review do gate de producao
+- Estado: fixed
+- Causa raiz: o smoke de adaptadores inseria arquivos no `FakeFileSystem` com
+  paths POSIX literais, enquanto o filesystem normaliza consultas com as regras
+  de `filepath` do sistema operacional. No Windows, as chaves do mapa usavam
+  separadores diferentes e `tasks.md` nao era encontrado.
+- Arquivos alterados: `internal/taskloop/e2e_agent_test.go`
+- Teste de regressao: `TestE2EAgent_PromptContainsAgentBlocks`, executado por
+  `make smoke-adapters`, agora monta o workspace absoluto e todos os artefatos
+  com `filepath.Join`, preservando a mesma fixture em sistemas POSIX e Windows.
+- Validacao: `go test ./internal/taskloop/... -count=1`, `make smoke-adapters`,
+  `go test ./... -race`, `make lint`, `make vet`, `make build` e
+  `git diff --check` passaram.
+
 ## Comandos Executados
 
-- `python3 .agents/skills/bugfix/scripts/validate-bug-input.py --input .specs/prd-sdd-robusto/production-gates-bugs.json` -> SUCCESS: 4 bugs validados no formato canonico.
+- `python3 .agents/skills/bugfix/scripts/validate-bug-input.py --input .specs/prd-sdd-robusto/production-gates-bugs.json` -> SUCCESS: 5 bugs validados no formato canonico.
 - `go test ./internal/fs ./internal/taskloop ./internal/wrapper -count=1` -> passou.
 - `make mocks` -> passou; 40 mocks normalizados por mockery v3.7.4.
 - `make check-mocks` -> passou em duas execucoes consecutivas.
@@ -79,6 +95,13 @@
 - `go vet ./...` -> passou.
 - `go build ./...` -> passou.
 - `git diff --check` -> passou.
+- `go test ./internal/taskloop/... -count=1` -> passou.
+- `make smoke-adapters` -> passou.
+- `go test ./... -race` -> passou.
+- `make lint` -> passou (0 issues).
+- `make vet` -> passou.
+- `make build` -> passou.
+- `bash .agents/scripts/validate-bugfix-evidence.sh --rf NFR-04 .specs/prd-sdd-robusto/bugfix_report.md` -> passou.
 - Revisao manual do delta de BUG-101..103 -> APPROVED, sem achados critical/high/medium/low.
 - `go test ./internal/sdd -count=1` -> passou (35 testes).
 - `make test-sdd-evals` -> passou (21 fixtures; 1 aceita e 20 rejeitadas).
@@ -98,3 +121,5 @@
   regeneracoes consecutivas.
 - A deteccao de paths do BUG-104 e lexical e independente do runner; a matriz
   remota em Windows continua sendo a evidencia complementar para o ambiente de CI.
+- BUG-105 foi validado no runner local com paths nativos; a execucao remota da
+  matriz Windows permanece a prova complementar do ambiente de CI.

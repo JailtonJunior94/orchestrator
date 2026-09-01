@@ -13,6 +13,7 @@ package taskloop
 import (
 	"context"
 	"io"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -38,35 +39,39 @@ func buildMinimalAgentMD(agentName string) []byte {
 // buildE2EFS monta um FakeFileSystem com estrutura de projeto + AGENT.md no escopo workspace.
 // Retorna o fsys e o path absoluto do PRD folder.
 func buildE2EFS(agentName string) (*taskfs.FakeFileSystem, string) {
-	const base = "/fake/project"
-	const prd = base + "/.specs/prd-e2e"
+	base := e2eWorkspacePath()
+	prd := filepath.Join(base, ".specs", "prd-e2e")
 
 	fsys := taskfs.NewFakeFileSystem()
-	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
-	fsys.Files[prd+"/prd.md"] = []byte("# PRD E2E\n\n## Arquitetura do Sistema\n\nArquitetura de smoke.\n")
-	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec E2E\n\n## Arquitetura do Sistema\n\nPackage internal/agents/.\n")
-	fsys.Files[prd+"/task-1.0-smoke.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Smoke Task | pending | — | Nao |\n")
+	fsys.Files[filepath.Join(base, "AGENTS.md")] = []byte("# Agents\n")
+	fsys.Files[filepath.Join(prd, "prd.md")] = []byte("# PRD E2E\n\n## Arquitetura do Sistema\n\nArquitetura de smoke.\n")
+	fsys.Files[filepath.Join(prd, "techspec.md")] = []byte("# TechSpec E2E\n\n## Arquitetura do Sistema\n\nPackage internal/agents/.\n")
+	fsys.Files[filepath.Join(prd, "task-1.0-smoke.md")] = []byte("**Status:** pending\n")
+	fsys.Files[filepath.Join(prd, "tasks.md")] = []byte("| 1.0 | Smoke Task | pending | — | Nao |\n")
 
-	// AGENT.md no escopo workspace (workdir = /fake/project).
-	fsys.Files[base+"/.ai-harness/agents/"+agentName+"/AGENT.md"] = buildMinimalAgentMD(agentName)
+	// AGENT.md no escopo workspace.
+	fsys.Files[filepath.Join(base, ".ai-harness", "agents", agentName, "AGENT.md")] = buildMinimalAgentMD(agentName)
 
 	return fsys, prd
 }
 
 // buildLegacyFS monta o mesmo FakeFileSystem sem AGENT.md (fluxo legado).
 func buildLegacyFS() (*taskfs.FakeFileSystem, string) {
-	const base = "/fake/project"
-	const prd = base + "/.specs/prd-e2e"
+	base := e2eWorkspacePath()
+	prd := filepath.Join(base, ".specs", "prd-e2e")
 
 	fsys := taskfs.NewFakeFileSystem()
-	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
-	fsys.Files[prd+"/prd.md"] = []byte("# PRD E2E\n")
-	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec E2E\n")
-	fsys.Files[prd+"/task-1.0-smoke.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Smoke Task | pending | — | Nao |\n")
+	fsys.Files[filepath.Join(base, "AGENTS.md")] = []byte("# Agents\n")
+	fsys.Files[filepath.Join(prd, "prd.md")] = []byte("# PRD E2E\n")
+	fsys.Files[filepath.Join(prd, "techspec.md")] = []byte("# TechSpec E2E\n")
+	fsys.Files[filepath.Join(prd, "task-1.0-smoke.md")] = []byte("**Status:** pending\n")
+	fsys.Files[filepath.Join(prd, "tasks.md")] = []byte("| 1.0 | Smoke Task | pending | — | Nao |\n")
 
 	return fsys, prd
+}
+
+func e2eWorkspacePath() string {
+	return filepath.Join(string(filepath.Separator), "fake", "project")
 }
 
 func newE2EPrinter() *output.Printer {
@@ -98,7 +103,7 @@ func TestE2EAgent_PromptContainsAgentBlocks(t *testing.T) {
 				invokerCalled = true
 				promptReceived = prompt
 				// Marcar task como done para encerrar loop.
-				fsys.Files["/fake/project/.specs/prd-e2e/tasks.md"] = []byte("| 1.0 | Smoke Task | done | — | Nao |\n")
+				fsys.Files[filepath.Join(prd, "tasks.md")] = []byte("| 1.0 | Smoke Task | done | — | Nao |\n")
 				return "smoke ok", "", 0, nil
 			},
 		}
@@ -109,7 +114,7 @@ func TestE2EAgent_PromptContainsAgentBlocks(t *testing.T) {
 		AgentName:     agentName,
 		MaxIterations: 3,
 		Timeout:       5 * time.Second,
-		ReportPath:    prd + "/report.md",
+		ReportPath:    filepath.Join(prd, "report.md"),
 	}
 
 	if err := svc.Execute(opts); err != nil {
@@ -169,7 +174,7 @@ func TestE2EAgent_ForensicArtifactStructureIdentical(t *testing.T) {
 					if strings.Contains(prompt, "### Agentes Disponiveis") {
 						t.Errorf("fluxo legado nao deve conter '### Agentes Disponiveis' no prompt")
 					}
-					fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Smoke Task | done | — | Nao |\n")
+					fsys.Files[filepath.Join(prd, "tasks.md")] = []byte("| 1.0 | Smoke Task | done | — | Nao |\n")
 					return "legado ok", "", 0, nil
 				},
 			}, nil
@@ -180,14 +185,14 @@ func TestE2EAgent_ForensicArtifactStructureIdentical(t *testing.T) {
 			Tool:          "claude",
 			MaxIterations: 3,
 			Timeout:       5 * time.Second,
-			ReportPath:    prd + "/report.md",
+			ReportPath:    filepath.Join(prd, "report.md"),
 		}
 
 		if err := svc.Execute(opts); err != nil {
 			t.Fatalf("Execute legado retornou erro: %v", err)
 		}
 
-		reportData, err := fsys.ReadFile(prd + "/report.md")
+		reportData, err := fsys.ReadFile(filepath.Join(prd, "report.md"))
 		if err != nil {
 			t.Fatalf("relatorio legado nao encontrado: %v", err)
 		}
@@ -206,7 +211,7 @@ func TestE2EAgent_ForensicArtifactStructureIdentical(t *testing.T) {
 			return &callbackInvoker{
 				binary: "claude-agent-acp",
 				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-					fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Smoke Task | done | — | Nao |\n")
+					fsys.Files[filepath.Join(prd, "tasks.md")] = []byte("| 1.0 | Smoke Task | done | — | Nao |\n")
 					return "agent ok", "", 0, nil
 				},
 			}
@@ -217,14 +222,14 @@ func TestE2EAgent_ForensicArtifactStructureIdentical(t *testing.T) {
 			AgentName:     agentName,
 			MaxIterations: 3,
 			Timeout:       5 * time.Second,
-			ReportPath:    prd + "/report.md",
+			ReportPath:    filepath.Join(prd, "report.md"),
 		}
 
 		if err := svc.Execute(opts); err != nil {
 			t.Fatalf("Execute agent retornou erro: %v", err)
 		}
 
-		reportData, err := fsys.ReadFile(prd + "/report.md")
+		reportData, err := fsys.ReadFile(filepath.Join(prd, "report.md"))
 		if err != nil {
 			t.Fatalf("relatorio agent nao encontrado: %v", err)
 		}
@@ -257,7 +262,7 @@ func TestE2EAgent_ReportProduced(t *testing.T) {
 		return &callbackInvoker{
 			binary: "claude-agent-acp",
 			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Smoke Task | done | — | Nao |\n")
+				fsys.Files[filepath.Join(prd, "tasks.md")] = []byte("| 1.0 | Smoke Task | done | — | Nao |\n")
 				return "report test ok", "", 0, nil
 			},
 		}
@@ -268,14 +273,14 @@ func TestE2EAgent_ReportProduced(t *testing.T) {
 		AgentName:     agentName,
 		MaxIterations: 3,
 		Timeout:       5 * time.Second,
-		ReportPath:    prd + "/report.md",
+		ReportPath:    filepath.Join(prd, "report.md"),
 	}
 
 	if err := svc.Execute(opts); err != nil {
 		t.Fatalf("Execute retornou erro inesperado: %v", err)
 	}
 
-	reportData, err := fsys.ReadFile(prd + "/report.md")
+	reportData, err := fsys.ReadFile(filepath.Join(prd, "report.md"))
 	if err != nil {
 		t.Fatalf("relatorio nao encontrado: %v", err)
 	}
@@ -304,7 +309,7 @@ func TestE2EAgent_LegacyFlowDoesNotUseRegistry(t *testing.T) {
 				if strings.Contains(prompt, "### Agente Ativo") {
 					t.Errorf("fluxo legado nao deve conter bloco de agente no prompt")
 				}
-				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Smoke Task | done | — | Nao |\n")
+				fsys.Files[filepath.Join(prd, "tasks.md")] = []byte("| 1.0 | Smoke Task | done | — | Nao |\n")
 				return "ok", "", 0, nil
 			},
 		}, nil
@@ -316,7 +321,7 @@ func TestE2EAgent_LegacyFlowDoesNotUseRegistry(t *testing.T) {
 		AgentName:     "", // legado
 		MaxIterations: 3,
 		Timeout:       5 * time.Second,
-		ReportPath:    prd + "/report.md",
+		ReportPath:    filepath.Join(prd, "report.md"),
 	}
 
 	if err := svc.Execute(opts); err != nil {
