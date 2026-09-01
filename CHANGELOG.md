@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.29.0 (2026-09-01)
+
+### Features
+- **sdd:** implementa fluxo robusto e verificável (09c837b)
+
 ## 0.28.1 (2026-08-26)
 
 ### Bug Fixes

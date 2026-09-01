@@ -1,6 +1,6 @@
 ---
 name: execute-all-tasks
-version: 1.8.1
+version: 1.9.0
 category: governance
 depends_on: [execute-task, agent-governance]
 description: Orquestra execução completa de PRD spawnando subagent fresh por tarefa para isolar contexto. Respeita DAG, usa somente capacidades detectadas pelo CLI, halt-first e retomada idempotente. Use para PRD inteiro; não use para uma tarefa única — use execute-task.
