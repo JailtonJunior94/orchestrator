@@ -25,5 +25,14 @@
     "reproduction": "Executar make check-mocks com Go 1.27.0.",
     "expected": "O gate valida que mocks gerados correspondem a mockery.yml e encerra com codigo zero.",
     "actual": "mockery v2.53.4 encerra com erro de tipos da biblioteca padrao e o gate falha."
+  },
+  {
+    "id": "BUG-104",
+    "severity": "major",
+    "file": "internal/sdd/result_schema.go",
+    "line": 1,
+    "reproduction": "Executar bash scripts/test-sdd-evals.sh no runner Windows com a fixture paths/02-absolute-unix.execution.reject.json.",
+    "expected": "Paths absolutos POSIX e Windows devem ser rejeitados em qualquer sistema operacional.",
+    "actual": "O path absoluto POSIX /etc/passwd e aceito no Windows pela validacao dependente da plataforma."
   }
 ]

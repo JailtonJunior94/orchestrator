@@ -1,8 +1,8 @@
 # Relatorio de Bugfix
 
-- Total de bugs no escopo: 3
-- Corrigidos: 3
-- Testes de regressao adicionados: 3
+- Total de bugs no escopo: 4
+- Corrigidos: 4
+- Testes de regressao adicionados: 4
 - Pendentes: nenhum
 - Estado final: done
 
@@ -51,9 +51,26 @@
 - Validacao: `make mocks`, `make check-mocks` (duas vezes), `make lint` (0 issues),
   `go test ./... -count=1 -race`, `go vet ./...` e `go build ./...` passaram.
 
+- ID: BUG-104
+- Severidade: major
+- Origem: NFR-03; finding de review do gate de producao
+- Estado: fixed
+- Causa raiz: a validacao delegava a `filepath.IsAbs` e `filepath.VolumeName`,
+  cuja interpretacao depende do sistema operacional do runner. Como consequencia,
+  paths POSIX absolutos nao eram reconhecidos no Windows e paths Windows nao eram
+  reconhecidos de forma equivalente em sistemas POSIX.
+- Arquivos alterados: `internal/sdd/result_schema.go`,
+  `internal/sdd/result_schema_test.go`
+- Teste de regressao: `TestResultValidatorRejectsAbsoluteEvidencePathsOnEveryPlatform`
+  cobre paths relativos POSIX e Windows aceitos e rejeita sintaxes absolutas POSIX,
+  raiz Windows, volume, UNC e prefixo estendido do Windows.
+- Validacao: `go test ./internal/sdd -count=1`, `make test-sdd-evals`,
+  `go test ./... -count=1 -race`, `make vet`, `make build` e `make lint`
+  passaram; o linter encerrou com `0 issues`.
+
 ## Comandos Executados
 
-- `python3 .agents/skills/bugfix/scripts/validate-bug-input.py --input .specs/prd-sdd-robusto/production-gates-bugs.json` -> SUCCESS: 3 bugs validados no formato canonico.
+- `python3 .agents/skills/bugfix/scripts/validate-bug-input.py --input .specs/prd-sdd-robusto/production-gates-bugs.json` -> SUCCESS: 4 bugs validados no formato canonico.
 - `go test ./internal/fs ./internal/taskloop ./internal/wrapper -count=1` -> passou.
 - `make mocks` -> passou; 40 mocks normalizados por mockery v3.7.4.
 - `make check-mocks` -> passou em duas execucoes consecutivas.
@@ -63,6 +80,13 @@
 - `go build ./...` -> passou.
 - `git diff --check` -> passou.
 - Revisao manual do delta de BUG-101..103 -> APPROVED, sem achados critical/high/medium/low.
+- `go test ./internal/sdd -count=1` -> passou (35 testes).
+- `make test-sdd-evals` -> passou (21 fixtures; 1 aceita e 20 rejeitadas).
+- `go test ./... -count=1 -race` -> passou (2604 testes em 67 pacotes).
+- `make vet` -> passou.
+- `make build` -> passou.
+- `make lint` -> passou (0 issues).
+- `git diff --check` -> passou.
 
 ## Riscos Residuais
 
@@ -72,3 +96,5 @@
 - A migracao para mockery v3.7.4 altera a forma do codigo gerado, mas todos os
   mocks permanecem declarados em `mockery.yml`, compilam e sao estaveis em
   regeneracoes consecutivas.
+- A deteccao de paths do BUG-104 e lexical e independente do runner; a matriz
+  remota em Windows continua sendo a evidencia complementar para o ambiente de CI.

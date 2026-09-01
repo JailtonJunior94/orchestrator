@@ -1,6 +1,8 @@
 package sdd_test
 
 import (
+	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/sdd"
@@ -24,6 +26,39 @@ func TestResultValidatorValidateExecutionJSON(t *testing.T) {
 			_, err := sdd.NewResultValidator().ValidateExecutionJSON(scenario.content)
 			if (err != nil) != scenario.wantErr {
 				t.Fatalf("erro=%v, wantErr=%t", err, scenario.wantErr)
+			}
+		})
+	}
+}
+
+func TestResultValidatorRejectsAbsoluteEvidencePathsOnEveryPlatform(t *testing.T) {
+	valid := `{"schema_version":2,"run_id":"run-1","task_id":"2.0","attempt":1,"status":"done","base_sha":"0123456789012345678901234567890123456789","patch_sha256":"0123456789012345678901234567890123456789012345678901234567890123","final_state_sha256":"0123456789012345678901234567890123456789012345678901234567890123","coverage_regression":false,"tests":[{"command":"go test ./...","exit_code":0,"output_sha256":"0123456789012345678901234567890123456789012345678901234567890123"}],"criteria":[{"id":"AC-01","evidence_ref":"report.md#criterion"}],"evidence":["report.md"],"review_verdict":"approved"}`
+	cases := []struct {
+		name      string
+		reference string
+		wantErr   bool
+	}{
+		{name: "aceita caminho relativo POSIX", reference: "evidence/report.md"},
+		{name: "aceita caminho relativo Windows", reference: `evidence\report.md`},
+		{name: "rejeita caminho absoluto POSIX", reference: "/etc/passwd", wantErr: true},
+		{name: "rejeita caminho com raiz Windows", reference: `\Windows\System32\config`, wantErr: true},
+		{name: "rejeita caminho com volume Windows", reference: `C:\evidence\report.md`, wantErr: true},
+		{name: "rejeita caminho UNC Windows", reference: `\\servidor\compartilhamento\report.md`, wantErr: true},
+		{name: "rejeita caminho Windows com prefixo estendido", reference: `\\?\C:\evidence\report.md`, wantErr: true},
+	}
+	for _, scenario := range cases {
+		t.Run(scenario.name, func(t *testing.T) {
+			referenceJSON, err := json.Marshal(scenario.reference)
+			if err != nil {
+				t.Fatalf("serializar referencia: %v", err)
+			}
+			content := []byte(strings.ReplaceAll(valid, `"report.md"`, string(referenceJSON)))
+			_, err = sdd.NewResultValidator().ValidateExecutionJSON(content)
+			if (err != nil) != scenario.wantErr {
+				t.Fatalf("erro=%v, wantErr=%t", err, scenario.wantErr)
+			}
+			if scenario.wantErr && !strings.Contains(err.Error(), "referencia de evidencia deve ser caminho relativo") {
+				t.Fatalf("erro deveria rejeitar path absoluto, recebeu: %v", err)
 			}
 		})
 	}

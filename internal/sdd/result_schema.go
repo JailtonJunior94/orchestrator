@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -112,8 +111,10 @@ func (v *ResultValidator) validateEvidencePaths(evidence []string, criteria []Cr
 func (v *ResultValidator) validateEvidencePath(reference string) error {
 	path, _, _ := strings.Cut(reference, "#")
 	normalized := strings.ReplaceAll(path, "\\", "/")
-	if path == "" || filepath.IsAbs(path) || filepath.VolumeName(path) != "" ||
-		(len(normalized) >= 3 && normalized[1] == ':' && normalized[2] == '/') {
+	if path == "" || strings.HasPrefix(normalized, "/") ||
+		(len(normalized) >= 2 && normalized[1] == ':' &&
+			((normalized[0] >= 'A' && normalized[0] <= 'Z') ||
+				(normalized[0] >= 'a' && normalized[0] <= 'z'))) {
 		return fmt.Errorf("referencia de evidencia deve ser caminho relativo: %q", reference)
 	}
 	for _, segment := range strings.Split(normalized, "/") {
