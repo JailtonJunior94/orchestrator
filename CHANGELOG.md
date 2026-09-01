@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.29.1 (2026-09-01)
+
+### Bug Fixes
+- **sdd:** rejeita paths absolutos em qualquer plataforma (fc80388)
+
 ## 0.29.0 (2026-09-01)
 
 ### Features
