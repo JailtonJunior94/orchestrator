@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.29.2 (2026-09-01)
+
+### Bug Fixes
+- **ci:** torna smoke de adaptadores portável (8d94675)
+
 ## 0.29.1 (2026-09-01)
 
 ### Bug Fixes
