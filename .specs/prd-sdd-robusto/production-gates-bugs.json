@@ -1,0 +1,29 @@
+[
+  {
+    "id": "BUG-101",
+    "severity": "major",
+    "file": "internal/fs/fs.go",
+    "line": 223,
+    "reproduction": "Executar make lint no checkout atual.",
+    "expected": "Nenhum alerta G122 de operacao de filesystem vulneravel a TOCTOU.",
+    "actual": "gosec reporta G122 em chmodTreeWritable e em seu helper de teste."
+  },
+  {
+    "id": "BUG-102",
+    "severity": "major",
+    "file": "internal/taskloop/agent_test.go",
+    "line": 782,
+    "reproduction": "Executar make lint no checkout atual.",
+    "expected": "Nenhum alerta G702 para subprocessos controlados pelos testes.",
+    "actual": "gosec reporta G702 nos helpers de subprocesso de taskloop e wrapper."
+  },
+  {
+    "id": "BUG-103",
+    "severity": "major",
+    "file": "scripts/check-mocks.sh",
+    "line": 25,
+    "reproduction": "Executar make check-mocks com Go 1.27.0.",
+    "expected": "O gate valida que mocks gerados correspondem a mockery.yml e encerra com codigo zero.",
+    "actual": "mockery v2.53.4 encerra com erro de tipos da biblioteca padrao e o gate falha."
+  }
+]

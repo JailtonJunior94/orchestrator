@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # subagent-stop-wrapper.sh
 # Wrapper invocado pelo Claude Code SubagentStop hook quando um subagent
-# task-executor termina. Parseia o output do subagent (YAML), extrai
-# prd-slug + task-id, e invoca post-execute-task.sh para validacao.
+# task-executor termina. O output final do subagent continua sendo o envelope
+# YAML minimo exigido pelos adaptadores; o contrato operacional e' o resultado
+# SDD v2 persistido no checkpoint JSON da tentativa. O wrapper extrai a
+# identidade do envelope e encaminha somente o JSON versionado ao hook estrito.
 #
 # Convencao Claude Code:
 #   - stdin: JSON com {"hook_event_name": "...", "subagent_output": "..."}
@@ -67,15 +69,30 @@ if [[ -z "$prd_slug" || -z "$task_id" ]]; then
   exit 0
 fi
 
-# Invocar hook de validacao
-yaml_tmp=$(mktemp /tmp/subagent-stop.yaml.XXXXXX)
-echo "$yaml_output" > "$yaml_tmp"
-trap "rm -f $yaml_tmp" EXIT
+# O YAML e' uma interface humana/adapter e nao pode ser interpretado como
+# execution-result em modo estrito. A mesma identidade aponta para o checkpoint
+# JSON versionado, escrito antes de tasks.md ser mutado pelo execute-task. O
+# caminho vem da configuracao do workspace, nunca do report_path controlado pelo
+# subagent; assim um envelope malicioso nao consegue direcionar o hook para JSON
+# fora do repositorio.
+tasks_root="${AI_TASKS_ROOT:-.specs}"
+if [[ "$tasks_root" == /* || "$tasks_root" == *".."* ]]; then
+  echo "[subagent-stop] AI_TASKS_ROOT invalido para resultado SDD v2: $tasks_root" >&2
+  exit 2
+fi
+result_json="$REPO_ROOT/$tasks_root/${prd_prefix}${prd_slug}/.checkpoints/${task_id}.json"
+if [[ ! -s "$result_json" ]]; then
+  echo "[subagent-stop] resultado SDD v2 ausente: $result_json" >&2
+  if [[ "${STRICT_HOOK_FAILURES:-1}" != "0" ]]; then
+    exit 2
+  fi
+  exit 0
+fi
 
 stderr_tmp=$(mktemp /tmp/subagent-stop-err.XXXXXX)
-trap "rm -f $stderr_tmp $yaml_tmp" EXIT
+trap "rm -f $stderr_tmp" EXIT
 
-bash "$POST_EXECUTE_HOOK" "$prd_slug" "$task_id" "$yaml_tmp" 2>"$stderr_tmp"
+bash "$POST_EXECUTE_HOOK" "$prd_slug" "$task_id" "$result_json" 2>"$stderr_tmp"
 hook_exit=$?
 
 if [[ "$hook_exit" -ne 0 ]]; then

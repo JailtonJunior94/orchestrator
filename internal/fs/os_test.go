@@ -2,6 +2,7 @@ package fs_test
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"testing"
 
@@ -175,6 +176,39 @@ func TestOS_RemoveAll_removesReadOnlyTree(t *testing.T) {
 	}
 	if f.Exists(sub) {
 		t.Error("directory should not exist after RemoveAll")
+	}
+}
+
+func TestOS_RemoveAll_doesNotFollowSymlinkOutsideTree(t *testing.T) {
+	dir := t.TempDir()
+	f := fs.NewOSFileSystem()
+	tree := filepath.Join(dir, "tree")
+	outside := filepath.Join(dir, "outside.txt")
+	link := filepath.Join(tree, "outside-link")
+
+	if err := os.MkdirAll(tree, 0o755); err != nil {
+		t.Fatalf("MkdirAll tree: %v", err)
+	}
+	if err := os.WriteFile(outside, []byte("preservar"), 0o600); err != nil {
+		t.Fatalf("seed outside: %v", err)
+	}
+	if err := os.Symlink(outside, link); err != nil {
+		t.Fatalf("Symlink: %v", err)
+	}
+	if err := os.Chmod(tree, 0o555); err != nil {
+		t.Fatalf("chmod tree: %v", err)
+	}
+	t.Cleanup(func() { makeWritableForCleanup(tree) })
+
+	if err := f.RemoveAll(tree); err != nil {
+		t.Fatalf("RemoveAll tree with symlink: %v", err)
+	}
+	content, err := os.ReadFile(outside)
+	if err != nil {
+		t.Fatalf("ReadFile outside: %v", err)
+	}
+	if string(content) != "preservar" {
+		t.Errorf("outside content = %q, want preserved content", content)
 	}
 }
 
@@ -381,15 +415,37 @@ func TestOS_ReadDir(t *testing.T) {
 }
 
 func makeWritableForCleanup(path string) {
-	_ = filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if info.IsDir() {
-			_ = os.Chmod(p, 0o755)
-			return nil
-		}
-		_ = os.Chmod(p, 0o644)
-		return nil
-	})
+	root, err := os.OpenRoot(path)
+	if err != nil {
+		return
+	}
+	defer func() { _ = root.Close() }()
+	makeRootWritable(root, ".")
+}
+
+func makeRootWritable(root *os.Root, name string) {
+	info, err := root.Lstat(name)
+	if err != nil || info.Mode()&os.ModeSymlink != 0 {
+		return
+	}
+
+	file, err := root.Open(name)
+	if err != nil {
+		return
+	}
+	defer func() { _ = file.Close() }()
+
+	if !info.IsDir() {
+		_ = file.Chmod(0o644)
+		return
+	}
+
+	_ = file.Chmod(0o755)
+	entries, err := file.ReadDir(-1)
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		makeRootWritable(root, path.Join(name, entry.Name()))
+	}
 }

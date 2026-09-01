@@ -34,7 +34,7 @@ type DriftReport struct {
 	Pass     bool
 }
 
-var _idRegex = regexp.MustCompile(`(?i)(RF-\d+|REQ-\d+)`)
+var _idRegex = regexp.MustCompile(`(?i)(RF-\d+|NFR-\d+|REQ-\d+)`)
 
 // CheckCoverage extracts RF-nn/REQ-nn IDs from sourceContent and verifies
 // their presence in targetContent (case-insensitive).
@@ -64,6 +64,39 @@ func (c *Catalog) CheckCoverage(sourceContent, targetContent []byte) CoverageRes
 		MissingIDs: missingIDs,
 		Pass:       len(missingIDs) == 0,
 	}
+}
+
+// CheckStructuralCoverage usa exclusivamente a tabela de cobertura quando ela existe.
+// Isso impede que a mera repetição de um ID em texto narrativo seja tratada como vínculo.
+func (c *Catalog) CheckStructuralCoverage(sourceContent, tasksContent []byte) CoverageResult {
+	covered := NewCatalog().coverageTableContent(tasksContent)
+	if covered == nil {
+		return NewCatalog().CheckCoverage(sourceContent, tasksContent)
+	}
+	return NewCatalog().CheckCoverage(sourceContent, covered)
+}
+
+func (c *Catalog) coverageTableContent(tasksContent []byte) []byte {
+	lines := strings.Split(string(tasksContent), "\n")
+	inSection := false
+	var table []string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "## ") {
+			if inSection {
+				break
+			}
+			inSection = strings.EqualFold(strings.TrimSpace(strings.TrimPrefix(trimmed, "## ")), "Cobertura de Requisitos")
+			continue
+		}
+		if inSection && strings.HasPrefix(trimmed, "|") {
+			table = append(table, trimmed)
+		}
+	}
+	if len(table) < 3 {
+		return nil
+	}
+	return []byte(strings.Join(table, "\n"))
 }
 
 // CheckHash calculates SHA-256 of specContent and compares it with the hash
@@ -122,7 +155,7 @@ func (c *Catalog) CheckDrift(dir string) (DriftReport, error) {
 			continue
 		}
 
-		cov := NewCatalog().CheckCoverage(specContent, tasksContent)
+		cov := NewCatalog().CheckStructuralCoverage(specContent, tasksContent)
 		cov.SourceFile = spec.filename
 		cov.TargetFile = "tasks.md"
 		report.Coverage = append(report.Coverage, cov)

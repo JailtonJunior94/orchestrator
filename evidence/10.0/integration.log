@@ -1,0 +1,7 @@
+$ make integration
+go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/...
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/integration	0.988s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	1.047s
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	7.402s
+
+exit_code=0

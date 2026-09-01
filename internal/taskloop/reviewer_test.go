@@ -819,6 +819,37 @@ func TestReviewConsolidated_VerdictosAgregados(t *testing.T) {
 	}
 }
 
+func TestReviewConsolidated_RoteiaLinguagensEDerrubaAprovacaoComAlta(t *testing.T) {
+	inv := &stubInvoker{stdout: "- [High] [src/api.ts:12] validacao ausente\nVeredicto: APPROVED"}
+	fr := &defaultFinalReviewer{invoker: inv, workDir: t.TempDir(), model: "", maxDiff: _maxDiffPartitionSize}
+	diff := "diff --git a/internal/service.go b/internal/service.go\n+++ b/internal/service.go\n" +
+		"diff --git a/src/api.ts b/src/api.ts\n+++ b/src/api.ts\n" +
+		"diff --git a/tools/check.py b/tools/check.py\n+++ b/tools/check.py\n"
+
+	result, err := fr.ReviewConsolidated(context.Background(), diff)
+	if err != nil {
+		t.Fatalf("ReviewConsolidated: %v", err)
+	}
+	if result.Verdict != VerdictRejected {
+		t.Fatalf("veredito = %q, want REJECTED para achado alto", result.Verdict)
+	}
+	if len(result.Findings) != 1 || result.Findings[0].Severity != SeverityCritical {
+		t.Fatalf("achados = %+v, want alta normalizada como critica", result.Findings)
+	}
+}
+
+func TestDetectReviewLanguages_OrdenaSemDuplicar(t *testing.T) {
+	diff := "diff --git a/a.py b/a.py\n+++ b/a.py\n" +
+		"diff --git a/a.go b/a.go\n+++ b/a.go\n" +
+		"diff --git a/b.go b/b.go\n+++ b/b.go\n" +
+		"diff --git a/web/a.tsx b/web/a.tsx\n+++ b/web/a.tsx\n"
+	got := NewCatalog().detectReviewLanguages(diff)
+	want := []string{"Go", "Node/TypeScript", "Python"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Fatalf("linguagens = %v, want %v", got, want)
+	}
+}
+
 // stubInvokerMulti retorna outputs diferentes a cada chamada.
 type stubInvokerMulti struct {
 	outputs []string

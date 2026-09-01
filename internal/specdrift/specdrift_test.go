@@ -93,6 +93,15 @@ func TestCheckCoverage_DuplicateIDsInSource(t *testing.T) {
 	}
 }
 
+func TestCheckStructuralCoverage_IgnoresNarrativeMentions(t *testing.T) {
+	prd := []byte("RF-01 e RF-02")
+	tasks := []byte("RF-01 aparece no texto.\n## Cobertura de Requisitos\n\n| Tarefa | Requisitos cobertos |\n|---|---|\n| 1.0 | RF-01 |\n")
+	result := specdrift.NewCatalog().CheckStructuralCoverage(prd, tasks)
+	if result.Pass || len(result.MissingIDs) != 1 || result.MissingIDs[0] != "RF-02" {
+		t.Fatalf("cobertura estrutural deveria reportar RF-02, got %#v", result)
+	}
+}
+
 // --- CheckHash ---
 
 func hashOf(content []byte) string {

@@ -1,0 +1,2 @@
+$ ./ai-spec check-spec-drift .specs/prd-sdd-robusto/tasks.md
+OK: sem drift detectado.

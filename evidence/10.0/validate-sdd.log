@@ -1,0 +1,2 @@
+$ ./ai-spec validate-sdd .specs/prd-sdd-robusto
+OK: estado SDD v2 valido para .specs/prd-sdd-robusto

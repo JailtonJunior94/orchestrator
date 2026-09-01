@@ -104,6 +104,11 @@ func (r *defaultFinalReviewer) ReviewConsolidated(ctx context.Context, diff stri
 		}
 
 		result := NewCatalog().parseReviewOutput(stdout)
+		// Uma critica/alta invalida qualquer aprovacao declarada pelo runtime.
+		// O contrato SDD exige bloqueio pelo achado, nao confianca na conclusao.
+		if NewCatalog().hasBlockingFinding(result.Findings) {
+			result.Verdict = VerdictRejected
+		}
 		allFindings = append(allFindings, result.Findings...)
 		rawParts = append(rawParts, result.RawOutput)
 
@@ -134,6 +139,7 @@ func (c *Catalog) verdictWeight(v ReviewVerdict) int {
 
 // buildConsolidatedReviewPrompt constroi o prompt para revisao consolidada do diff.
 func (c *Catalog) buildConsolidatedReviewPrompt(diff string) string {
+	languages := strings.Join(NewCatalog().detectReviewLanguages(diff), ", ")
 	return fmt.Sprintf(`First, read AGENTS.md at the repository root to load governance rules and conventions.
 
 Then read and follow the instructions in: .agents/skills/review/SKILL.md
@@ -147,6 +153,7 @@ Focos obrigatorios:
 - seguranca: ha injecao de dependencia insegura, dado sensivel exposto ou validacao faltando?
 - testes: todos os cenarios de criterio de pronto estao cobertos?
 - divida tecnica introduzida: o que precisara de refactor futuro?
+- linguagens detectadas no patch: %s. Aplique as convencoes e riscos de cada uma.
 
 Saidas esperadas:
 - lista de achados por categoria: [Critical], [Important], [Suggestion]
@@ -158,7 +165,53 @@ Do NOT modify any files. Review in read-only mode and report findings only via s
 Diff consolidado:
 `+"```"+`
 %s
-`+"```", diff)
+`+"```", languages, diff)
+}
+
+// detectReviewLanguages roteia a revisão pelos arquivos efetivamente alterados,
+// sem inferir linguagem pelo nome do repositório.
+func (c *Catalog) detectReviewLanguages(diff string) []string {
+	seen := make(map[string]bool)
+	for _, line := range strings.Split(diff, "\n") {
+		if !strings.HasPrefix(line, "+++ b/") && !strings.HasPrefix(line, "diff --git ") {
+			continue
+		}
+		name := line
+		if strings.HasPrefix(line, "+++ b/") {
+			name = strings.TrimPrefix(line, "+++ b/")
+		}
+		ext := strings.ToLower(filepath.Ext(name))
+		switch ext {
+		case ".go":
+			seen["Go"] = true
+		case ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs":
+			seen["Node/TypeScript"] = true
+		case ".py":
+			seen["Python"] = true
+		case ".cs", ".csproj", ".sln":
+			seen[".NET/C#"] = true
+		}
+	}
+	if len(seen) == 0 {
+		return []string{"geral"}
+	}
+	ordered := []string{"Go", "Node/TypeScript", "Python", ".NET/C#"}
+	out := make([]string, 0, len(seen))
+	for _, language := range ordered {
+		if seen[language] {
+			out = append(out, language)
+		}
+	}
+	return out
+}
+
+func (c *Catalog) hasBlockingFinding(findings []Finding) bool {
+	for _, finding := range findings {
+		if finding.Severity == SeverityCritical {
+			return true
+		}
+	}
+	return false
 }
 
 // parseReviewOutput extrai veredito e achados da saida bruta da skill review.
@@ -240,6 +293,8 @@ func (c *Catalog) extractSeverity(line string) (Severity, bool) {
 	lower := strings.ToLower(line)
 	switch {
 	case NewCatalog().containsAnyPattern(lower, "[critical]", "[critico]", "[crítico]"):
+		return SeverityCritical, true
+	case NewCatalog().containsAnyPattern(lower, "[high]", "[alta]", "[alto]"):
 		return SeverityCritical, true
 	case NewCatalog().containsAnyPattern(lower, "[important]", "[importante]"):
 		return SeverityImportant, true

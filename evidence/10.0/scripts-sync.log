@@ -1,0 +1,6 @@
+$ make check-scripts-sync
+bash scripts/check-scripts-sync.sh
+
+Validadores em sync: 24
+Drift / missing: 0
+Todos os validadores de evidencia sincronizados.

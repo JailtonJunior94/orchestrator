@@ -13,7 +13,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
-mockery_version="v2.53.4"
+mockery_version="v3.7.4"
 
 # Snapshot dos mocks atuais.
 before="$(mktemp)"
@@ -22,7 +22,7 @@ find internal -path "*/mocks/*.go" -type f -print0 \
   | xargs -0 shasum > "$before"
 
 # Regenera os mocks in-place.
-go run "github.com/vektra/mockery/v2@${mockery_version}" --config mockery.yml >/dev/null 2>&1
+go run "github.com/vektra/mockery/v3@${mockery_version}" --config mockery.yml >/dev/null 2>&1
 bash "$repo_root/scripts/normalize-mocks.sh" >/dev/null 2>&1
 
 after="$(mktemp)"

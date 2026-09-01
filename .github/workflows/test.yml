@@ -140,3 +140,25 @@ jobs:
 
       - name: Budget
         run: make budget
+
+  sdd-evals:
+    name: SDD evals and adapter smoke (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-2025]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Corpus adversarial SDD determinístico
+        shell: bash
+        run: bash scripts/test-sdd-evals.sh
+
+      - name: Smoke dos adaptadores sem credenciais
+        shell: bash
+        run: go test -count=1 ./internal/adapters/... ./internal/taskloop/... -run 'TestGenerate_executeTaskYAMLContract_allTools|TestE2EAgent_PromptContainsAgentBlocks'

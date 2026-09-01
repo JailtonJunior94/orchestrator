@@ -1,0 +1,2 @@
+$ bash .agents/scripts/validate-task-evidence.sh .specs/prd-sdd-robusto/10.0_execution_report.md
+Validação do pacote de evidências aprovada: .specs/prd-sdd-robusto/10.0_execution_report.md

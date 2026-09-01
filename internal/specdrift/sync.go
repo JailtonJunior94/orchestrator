@@ -2,11 +2,14 @@ package specdrift
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/sdd"
 )
 
 // SyncSpecHash recomputa os SHA-256 de prd.md e techspec.md encontrados no
@@ -15,6 +18,9 @@ import (
 // por spec existente.
 func (c *Catalog) SyncSpecHash(tasksPath string) error {
 	dir := filepath.Dir(tasksPath)
+	if err := c.guardApprovedState(dir); err != nil {
+		return err
+	}
 
 	tasksBytes, err := os.ReadFile(tasksPath)
 	if err != nil {
@@ -53,4 +59,38 @@ func (c *Catalog) SyncSpecHash(tasksPath string) error {
 	}
 
 	return os.WriteFile(tasksPath, []byte(updated), 0o644)
+}
+
+func (c *Catalog) guardApprovedState(dir string) error {
+	store := sdd.NewStore()
+	state, err := store.Load(dir)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("validar estado SDD antes de sincronizar: %w", err)
+	}
+	for _, artifact := range []struct {
+		kind sdd.Artifact
+		file string
+	}{
+		{kind: sdd.ArtifactPRD, file: "prd.md"},
+		{kind: sdd.ArtifactTechSpec, file: "techspec.md"},
+	} {
+		entry := state.Artifacts[artifact.kind]
+		if !entry.Approved {
+			continue
+		}
+		digest, digestErr := store.DigestFile(filepath.Join(dir, artifact.file))
+		if digestErr != nil {
+			return digestErr
+		}
+		if digest != entry.SHA256 {
+			if _, invalidateErr := store.Invalidate(dir, artifact.kind); invalidateErr != nil {
+				return invalidateErr
+			}
+			return fmt.Errorf("%s aprovado foi alterado; downstream marcado stale, reprove antes de sincronizar", artifact.kind)
+		}
+	}
+	return nil
 }

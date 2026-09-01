@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-sdd-robusto/9.0_execution_report.md
+summary: Corpus adversarial SDD e matriz CI cross-platform validados sem credenciais.
+timestamp: 2026-09-01T14:11:56Z

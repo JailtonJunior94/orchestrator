@@ -1,0 +1,53 @@
+$ ./ai-spec --help
+ai-spec-harness instala, inspeciona e atualiza pacotes de governanca para ferramentas
+de IA (Claude, Gemini, Codex, Copilot) em repositorios de software.
+
+Exemplos:
+  ai-spec-harness install ./meu-projeto --tools claude,gemini --langs go,python
+  ai-spec-harness upgrade ./meu-projeto
+  ai-spec-harness inspect ./meu-projeto
+  ai-spec-harness doctor ./meu-projeto
+
+Usage:
+  ai-spec-harness [command]
+
+Available Commands:
+  approve              Aprova um artefato SDD e registra seu digest imutável
+  changelog            Gera ou atualiza o CHANGELOG.md a partir de conventional commits
+  check-spec-drift     Verifica cobertura de requisitos e drift de spec em relacao a tasks.md
+  completion           Generate the autocompletion script for the specified shell
+  doctor               Diagnostica problemas na instalacao de governanca
+  hash                 Calcula SHA-256 de um arquivo de forma portavel
+  help                 Help about any command
+  inspect              Inspeciona o estado da instalacao de governanca
+  install              Instala governanca de IA em um projeto
+  invalidate           Invalida artefatos downstream aprovados
+  lint                 Verifica governança em arquivos gerados
+  metrics              Reporta metricas de contexto para governanca
+  orchestrate          Valida estado SDD e inicia uma execução recuperável
+  prerequisites        Verifica pre-condicoes de uma skill antes de executa-la
+  runtime-capabilities Detecta capacidades locais para orquestração segura
+  scaffold             Gera scaffold de uma nova skill de linguagem
+  semver-next          Calcula a proxima versao SemVer a partir de conventional commits
+  skill-bump           Atualiza versao de skills cujo conteudo mudou desde a ultima tag
+  skills               Gerencia skills externas e detecta mudancas de versao
+  sync-spec-hash       Sincroniza os hashes de spec em tasks.md com os arquivos atuais de prd.md e techspec.md
+  task-loop            Executa tasks de um PRD folder sequencialmente via agente de IA
+  telemetry            Gerencia telemetria de uso de skills
+  uninstall            Remove governanca de IA de um projeto
+  update-version       Atualiza o arquivo VERSION com validacao semver
+  upgrade              Atualiza skills de governanca em um projeto
+  validate             Valida frontmatter de skills de governanca
+  validate-bugs        Valida um array de bugs contra bug-schema.json
+  validate-evidence    Valida um relatorio de evidencia Markdown
+  validate-result      Valida um resultado SDD JSON versionado
+  validate-sdd         Valida o contrato SDD versionado de um PRD
+  verify               Verifica o estado de instalacao das skills (current/missing/drifted)
+  version              Exibe a versao do ai-spec-harness
+  wrapper              Valida governanca e emite instrucao de invocacao para Codex/Gemini/Copilot
+
+Flags:
+  -h, --help      help for ai-spec-harness
+  -v, --verbose   Exibir logs detalhados
+
+Use "ai-spec-harness [command] --help" for more information about a command.

@@ -29,12 +29,28 @@ fi
 PRD_SLUG="$1"
 TASK_ID="$2"
 
+contains_forbidden_path_syntax() {
+  local value="$1"
+  value="$(printf '%s' "$value" | tr '\\' '/')"
+  [[ "$value" == /* || "$value" =~ ^[A-Za-z]:/ ]] ||
+    [[ "$value" == ".." || "$value" == ../* || "$value" == */../* || "$value" == */.. ]]
+}
+
+if [[ -z "$PRD_SLUG" || "$PRD_SLUG" =~ [\\/] || "$PRD_SLUG" == *".."* ]]; then
+  echo "FAIL F13: prd-slug inválido (absoluto ou traversal): $PRD_SLUG" >&2
+  exit 2
+fi
+if ! [[ "$TASK_ID" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+  echo "FAIL F13: task-id inválido: $TASK_ID" >&2
+  exit 2
+fi
+
 # Modo arquivo ou stdin
 if [[ $# -ge 3 ]]; then
   YAML_FILE="$3"
 else
   YAML_FILE=$(mktemp /tmp/post-execute-task.yaml.XXXXXX)
-  trap "rm -f $YAML_FILE" EXIT
+  trap 'rm -f "$YAML_FILE"' EXIT
   cat > "$YAML_FILE"
 fi
 
@@ -44,9 +60,33 @@ if [[ ! -s "$YAML_FILE" ]]; then
 fi
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+REPO_ROOT="$(cd -P "$REPO_ROOT" && pwd)"
 TASKS_ROOT="${AI_TASKS_ROOT:-.specs}"
 PRD_PREFIX="${AI_PRD_PREFIX:-prd-}"
 PRD_DIR="$REPO_ROOT/$TASKS_ROOT/$PRD_PREFIX$PRD_SLUG"
+
+# O contrato SDD v2 e' JSON e a sua interpretacao pertence exclusivamente ao
+# CLI. O hook so encaminha o arquivo e a identidade esperada, sem derivar
+# estado de Markdown/YAML. O contrato legado fica opt-in durante a janela de
+# compatibilidade e nao habilita automacao estrita.
+if [[ "${AI_SDD_LEGACY_HOOK_CONTRACT:-0}" != "1" ]]; then
+  if [[ ! -f "$YAML_FILE" ]]; then
+    echo "FAIL: resultado SDD JSON ausente: $YAML_FILE" >&2
+    exit 1
+  fi
+  AI_SPEC_BIN="${AI_SPEC_BIN:-ai-spec}"
+  if [[ "$AI_SPEC_BIN" == */* ]]; then
+    if [[ ! -x "$AI_SPEC_BIN" ]]; then
+      echo "FAIL: executavel AI_SPEC_BIN indisponivel: $AI_SPEC_BIN" >&2
+      exit 1
+    fi
+  elif ! command -v "$AI_SPEC_BIN" >/dev/null 2>&1; then
+    echo "FAIL: binario ai-spec ausente para validar resultado SDD v2" >&2
+    exit 1
+  fi
+  "$AI_SPEC_BIN" validate-result execution "$YAML_FILE" --task-id "$TASK_ID"
+  exit $?
+fi
 
 errors=0
 warnings=0
@@ -137,15 +177,29 @@ if ! [[ "$status" =~ ^(done|blocked|failed|needs_input)$ ]]; then
   errors=$((errors+1))
 fi
 
-# === F2 + F13: evidence physical + path relativo ===
+# === F2 + F13: evidence physical + containment de path ===
 if [[ -z "$report_path" ]]; then
   echo "FAIL F2: report_path ausente no YAML" >&2
   errors=$((errors+1))
-elif [[ "$report_path" =~ ^/ ]]; then
-  echo "FAIL F13: report_path absoluto rejeitado: $report_path (deve ser relativo a raiz do repo)" >&2
+elif contains_forbidden_path_syntax "$report_path"; then
+  echo "FAIL F13: report_path com path absoluto ou traversal rejeitado: $report_path" >&2
   errors=$((errors+1))
 else
   resolved="$REPO_ROOT/$report_path"
+  # realpath resolve o componente final e todos os symlinks. Comparar o caminho
+  # físico impede que um link aparentemente relativo saia do repositório.
+  if [[ -e "$resolved" || -L "$resolved" ]]; then
+    physical_resolved="$(realpath "$resolved" 2>/dev/null || true)"
+    if [[ -z "$physical_resolved" ]]; then
+      echo "FAIL F13: report_path não pode ser resolvido com realpath: $report_path" >&2
+      errors=$((errors+1))
+    elif [[ "$physical_resolved" != "$REPO_ROOT" && "$physical_resolved" != "$REPO_ROOT/"* ]]; then
+      echo "FAIL F13: report_path resolve fora do repositório: $report_path -> $physical_resolved" >&2
+      errors=$((errors+1))
+    else
+      resolved="$physical_resolved"
+    fi
+  fi
   if [[ "$status" == "done" && ! -s "$resolved" ]]; then
     echo "FAIL F2: missing evidence — $resolved ausente ou vazio" >&2
     errors=$((errors+1))

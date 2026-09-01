@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 )
@@ -108,8 +109,27 @@ func (f *OSFileSystem) Remove(path string) error {
 }
 
 func (f *OSFileSystem) RemoveAll(path string) error {
-	_ = f.chmodTreeWritable(path)
-	return os.RemoveAll(path)
+	if path == "" {
+		return nil
+	}
+
+	root, err := os.OpenRoot(filepath.Dir(path))
+	if err != nil {
+		return os.RemoveAll(path)
+	}
+	defer func() { _ = root.Close() }()
+
+	name := filepath.Base(path)
+	info, err := root.Lstat(name)
+	if err == nil && info.IsDir() {
+		childRoot, err := root.OpenRoot(name)
+		if err == nil {
+			_ = f.chmodTreeWritable(childRoot, ".")
+			_ = childRoot.Close()
+		}
+	}
+
+	return root.RemoveAll(name)
 }
 
 func (f *OSFileSystem) Exists(path string) bool {
@@ -207,23 +227,38 @@ func (f *OSFileSystem) Writable(path string) bool {
 	return info.Mode().Perm()&0o200 != 0
 }
 
-func (f *OSFileSystem) chmodTreeWritable(path string) error {
-	if _, err := os.Lstat(path); err != nil {
+func (f *OSFileSystem) chmodTreeWritable(root *os.Root, name string) error {
+	info, err := root.Lstat(name)
+	if err != nil || info.Mode()&os.ModeSymlink != 0 {
 		return err
 	}
 
-	return filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		switch {
-		case info.IsDir():
-			_ = os.Chmod(p, f.writableDirMode(info.Mode()))
-		case info.Mode().IsRegular():
-			_ = os.Chmod(p, f.writableFileMode(info.Mode()))
+	file, err := root.Open(name)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = file.Close() }()
+
+	if !info.IsDir() {
+		if info.Mode().IsRegular() {
+			return file.Chmod(f.writableFileMode(info.Mode()))
 		}
 		return nil
-	})
+	}
+
+	if err := file.Chmod(f.writableDirMode(info.Mode())); err != nil {
+		return err
+	}
+	entries, err := file.ReadDir(-1)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if err := f.chmodTreeWritable(root, path.Join(name, entry.Name())); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (f *OSFileSystem) writableDirMode(mode os.FileMode) os.FileMode {

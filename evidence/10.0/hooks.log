@@ -1,0 +1,89 @@
+$ make test-hooks
+bash scripts/test-hooks.sh
+--- F02: adaptador JSON estrito ---
+OK: resultado SDD execution valido
+  ✓ F02 resultado JSON completo = exit 0 (exit=0)
+  ✓ F02 resultado JSON incompleto = exit 1 (exit=1)
+--- F02b: wrapper encaminha checkpoint JSON v2 ---
+OK: resultado SDD execution valido
+  ✓ F02b YAML e encaminhado ao checkpoint JSON v2 (exit=0)
+
+===============================================
+TEST HARNESS — hooks do orquestrador
+===============================================
+
+--- F18: cross-PRD spec-hash drift ---
+  ✓ F18 sem drift = exit 0 (exit=0)
+  ✓ F18 com drift = exit 1 (exit=1)
+  ✓ stderr contem 'FAIL F18: cross-PRD 'extb_v1' tem spec drift'
+
+--- F18: cross-PRD task ausente / nao done ---
+  ✓ F18 task externa nao done = exit 1 (exit=1)
+  ✓ stderr contem 'FAIL F18: cross-PRD task not done: ext_status/1.0'
+  ✓ F18 task externa ausente = exit 1 (exit=1)
+  ✓ stderr contem 'FAIL F18: cross-PRD task not found: ext_status/2.0'
+
+--- F27: cross-PRD circular dependency ---
+  ✓ F27 ciclo detectado = exit 1 (exit=1)
+  ✓ stderr contem 'FAIL F27: ciclo cross-PRD detectado'
+
+--- F29: gaps numericos ---
+  ✓ F29 gaps sem confirmacao = exit 1 (exit=1)
+  ✓ stderr contem 'FAIL F29: gaps na numeracao'
+  ✓ F29 gaps com confirmacao explicita = exit 0 (exit=0)
+  ✓ stderr contem 'WARN F29: gaps aceitos por AI_ALLOW_TASK_ID_GAPS=1'
+
+--- F35: git revert (DiffSHA inexistente) ---
+  ✓ F35 com SHA fake = exit 1 (exit=1)
+  ✓ stderr contem 'FAIL F35: DiffSHA deadbeef'
+  ✓ F35 default-on (sem env) = exit 1 (exit=1)
+  ✓ F35 opt-out (=0) = exit 0 (skip) (exit=0)
+
+--- F13: containment de report_path ---
+  ✓ F13 path absoluto = exit 1 (exit=1)
+  ✓ stderr contem 'FAIL F13: report_path'
+  ✓ F13 traversal = exit 1 (exit=1)
+  ✓ stderr contem 'path absoluto ou traversal'
+  ✓ F13 symlink externo = exit 1 (exit=1)
+  ✓ stderr contem 'resolve fora do repositório'
+
+--- F25: checkpoint ausente bloqueia (default FAIL) ---
+  ✓ F25 sem checkpoint default = exit 1 (FAIL) (exit=1)
+  ✓ stderr contem 'FAIL F25: checkpoint ausente'
+  ✓ F25 com AI_ALLOW_MISSING_CHECKPOINT=1 = exit 0 (exit=0)
+  ✓ stderr contem 'WARN F25: checkpoint ausente.*back compat'
+
+--- Contrato YAML e status drift ---
+  ✓ YAML com campo extra = exit 1 (exit=1)
+  ✓ stderr contem 'contract violation'
+  ✓ YAML sem summary = exit 1 (exit=1)
+  ✓ stderr contem 'summary'
+  ✓ status drift done vs pending = exit 1 (exit=1)
+  ✓ stderr contem 'status drift'
+
+--- Bloco 3: spec-drift gate no pre-commit hook ---
+
+  B3-1: staged apenas README.md → bloco 3 não dispara, exit 0
+  ✓ B3-1: staged=README exit 0 (exit=0)
+
+  B3-2: prd.md staged, sem drift → exit 0 + msg 'spec-drift OK'
+  ✓ B3-2: sem drift, exit 0 (exit=0)
+
+  B3-3: prd.md staged, drift detectado → exit 1 + comando de remediação
+[pre-commit] mudanças em PRD/techspec detectadas; verificando spec-drift...
+  ✓ B3-3: drift, exit 1 (exit=1)
+  ✓ stderr contem 'ai-spec sync-spec-hash'
+
+  B3-4: ai-spec ausente no PATH → warn + exit 0
+[pre-commit] mudanças em PRD/techspec detectadas; verificando spec-drift...
+  ✓ B3-4: sem ai-spec, exit 0 (exit=0)
+  ✓ stderr contem 'ai-spec não encontrado'
+
+  B3-5: ai-spec versão antiga v0.10.0 → warn + exit 0
+[pre-commit] mudanças em PRD/techspec detectadas; verificando spec-drift...
+  ✓ B3-5: versão antiga, exit 0 (exit=0)
+  ✓ stderr contem 'v0.10.0'
+
+===============================================
+Resultado: 44 asserts OK, 0 asserts FAIL
+===============================================

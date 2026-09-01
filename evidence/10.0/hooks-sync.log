@@ -1,0 +1,6 @@
+$ make check-hooks-sync
+bash scripts/check-hooks-sync.sh
+
+Hooks em sync: 36
+Drift / missing: 0
+Todos os hooks orquestrador sincronizados.

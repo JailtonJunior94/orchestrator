@@ -17,7 +17,7 @@
      - `Dependências`: ^(—|\d+\.\d+(,\s*\d+\.\d+)*)$  (em-dash unicode quando vazio)
      - `Paralelizável`: ^(—|Não|Com\s+\d+\.\d+(,\s*\d+\.\d+)*)$
      - `Skills`: skills processuais extras (descoberta agnóstica em `.agents/skills/`). Use `—` quando
-       não houver. Nunca listar skills auto-carregadas (governance/linguagem) nem `*-implementation`.
+       não houver. Nunca listar skills auto-carregadas (`category: governance` ou `category: language`).
      - `Fase` (OPCIONAL): inteiro positivo para agrupamento visual de fases de entrega. Pode ser
        omitida em PRDs pequenos; `execute-all-tasks` não consome esta coluna. Se incluída, mantenha
        em todas as linhas para não quebrar o parser de tabela markdown. -->
@@ -46,7 +46,7 @@
 ```mermaid
 graph TD
     T1["1.0 — Titulo da tarefa"]
-    T2["2.0 — Titulo da tarefa"] --> T1
+    T1 --> T2["2.0 — Titulo da tarefa"]
     T3["3.0 — Titulo da tarefa"]
 ```
 

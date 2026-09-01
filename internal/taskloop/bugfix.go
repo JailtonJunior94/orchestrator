@@ -12,6 +12,11 @@ import (
 // e true e cabe ao chamador disparar o relatorio de escalonamento humano.
 var ErrBugfixExhausted = errors.New("taskloop: limite de 3 iteracoes de bugfix atingido")
 
+// ErrBugfixEvidenceIncomplete indica que o executor nao forneceu a prova minima
+// exigida para uma tentativa de correcao. Sem a reproducao que falhava e o teste
+// que passou depois da alteracao, a revisao fresca nao e evidencia suficiente.
+var ErrBugfixEvidenceIncomplete = errors.New("taskloop: evidencia de bugfix incompleta")
+
 // DefaultMaxBugfixIterations e o limite rigido de iteracoes de bugfix (RF-06, ADR-003).
 const DefaultMaxBugfixIterations = 3
 
@@ -30,7 +35,10 @@ type DiffCapturer interface {
 // BugfixIteration registra o resultado de uma unica iteracao do ciclo bugfix -> review.
 type BugfixIteration struct {
 	Sequence         int
+	Origin           string
 	RootCause        string
+	FailBefore       string
+	PassAfter        string
 	BugfixOutput     string
 	ReviewVerdict    ReviewVerdict
 	CriticalFindings []Finding
@@ -92,6 +100,10 @@ func (b *BugfixLoop) Run(ctx context.Context, initialFindings []Finding, initial
 		if err != nil {
 			return report, fmt.Errorf("taskloop: bugfix iteracao %d: %w", i, err)
 		}
+		evidence, err := NewCatalog().extractBugfixEvidence(out)
+		if err != nil {
+			return report, fmt.Errorf("taskloop: bugfix iteracao %d: %w", i, err)
+		}
 
 		newDiff, err := b.capturer.CaptureDiff(ctx)
 		if err != nil {
@@ -107,7 +119,10 @@ func (b *BugfixLoop) Run(ctx context.Context, initialFindings []Finding, initial
 		nextCritical := NewCatalog().filterCritical(rev.Findings)
 		report.Iterations = append(report.Iterations, BugfixIteration{
 			Sequence:         i,
+			Origin:           NewCatalog().formatBugfixOrigin(critical),
 			RootCause:        NewCatalog().extractRootCause(out),
+			FailBefore:       evidence.FailBefore,
+			PassAfter:        evidence.PassAfter,
 			BugfixOutput:     out,
 			ReviewVerdict:    rev.Verdict,
 			CriticalFindings: nextCritical,
@@ -131,6 +146,56 @@ func (b *BugfixLoop) Run(ctx context.Context, initialFindings []Finding, initial
 	}
 	report.Escalated = true
 	return report, ErrBugfixExhausted
+}
+
+type bugfixEvidence struct {
+	FailBefore string
+	PassAfter  string
+}
+
+// extractBugfixEvidence exige marcadores explicitos no retorno do executor.
+// O texto e preservado no relatorio, mas estes campos estruturados permitem ao
+// orquestrador falhar fechado antes de aceitar uma nova revisao como prova.
+func (c *Catalog) extractBugfixEvidence(output string) (bugfixEvidence, error) {
+	evidence := bugfixEvidence{
+		FailBefore: c.findEvidenceValue(output, "fail-before", "falha antes"),
+		PassAfter:  c.findEvidenceValue(output, "pass-after", "passa depois"),
+	}
+	if evidence.FailBefore == "" || evidence.PassAfter == "" {
+		return bugfixEvidence{}, fmt.Errorf("%w: informe Fail-before e Pass-after", ErrBugfixEvidenceIncomplete)
+	}
+	return evidence, nil
+}
+
+func (c *Catalog) findEvidenceValue(output string, labels ...string) string {
+	for _, line := range strings.Split(output, "\n") {
+		trimmed := strings.TrimSpace(line)
+		lower := strings.ToLower(trimmed)
+		for _, label := range labels {
+			prefix := strings.ToLower(label) + ":"
+			if strings.HasPrefix(lower, prefix) {
+				return strings.TrimSpace(trimmed[len(prefix):])
+			}
+		}
+	}
+	return ""
+}
+
+// formatBugfixOrigin preserva a origem dos achados sem depender de texto livre
+// emitido pelo executor. A origem e sempre a revisao fresca que acionou a tentativa.
+func (c *Catalog) formatBugfixOrigin(findings []Finding) string {
+	origins := make([]string, 0, len(findings))
+	for _, finding := range findings {
+		location := strings.TrimSpace(finding.File)
+		if finding.Line > 0 {
+			location = fmt.Sprintf("%s:%d", location, finding.Line)
+		}
+		if location == "" {
+			location = "sem localizacao"
+		}
+		origins = append(origins, "finding de review: "+location)
+	}
+	return strings.Join(origins, ", ")
 }
 
 // splitReviewContext separa o cabecalho de contexto (entregue ao reviewer) do

@@ -28,6 +28,8 @@ Regras de execucao nao negociaveis:
 - nao altere comportamento fora do escopo dos achados listados
 - ao finalizar: rode os testes, rode o lint e registre o output como evidencia
 - nao declare o bugfix concluido sem evidencia de que a causa raiz foi eliminada
+- emita, em linhas separadas e nao vazias: `Fail-before: <comando e falha observada>` e
+  `Pass-after: <comando e sucesso observado>`; a tentativa sera rejeitada sem ambas
 
 Saidas esperadas:
 - diff com a correcao minima necessaria

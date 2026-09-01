@@ -95,7 +95,7 @@ type runloopBugfixInvoker struct {
 func (b *runloopBugfixInvoker) InvokeBugfix(ctx context.Context, findings []Finding, diff string) (string, error) {
 	b.calls++
 	b.diffs = append(b.diffs, diff)
-	return "applied bugfix", nil
+	return "applied bugfix\nFail-before: go test ./... falhou reproduzindo o achado\nPass-after: go test ./... passou apos a correcao", nil
 }
 
 type runloopDiffCapturer struct{}
@@ -318,7 +318,8 @@ func TestRunLoopRejectedThenBugfixApproves(t *testing.T) {
 		DiffCapturer:  &runloopDiffCapturer{},
 	}
 
-	report, err := svc.RunLoop(context.Background(), Options{PRDFolder: prd, MaxBugfixIterations: 3}, deps)
+	reportPath := prd + "/loop-report.json"
+	report, err := svc.RunLoop(context.Background(), Options{PRDFolder: prd, MaxBugfixIterations: 3, ReportPath: reportPath}, deps)
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
@@ -333,6 +334,20 @@ func TestRunLoopRejectedThenBugfixApproves(t *testing.T) {
 	}
 	if report.FinalReview == nil || report.FinalReview.Verdict != VerdictApproved {
 		t.Fatalf("verdict final do report = %+v, want APPROVED", report.FinalReview)
+	}
+	if len(report.BugfixAttempts) != 1 {
+		t.Fatalf("BugfixAttempts = %d, want 1", len(report.BugfixAttempts))
+	}
+	attempt := report.BugfixAttempts[0]
+	if attempt.Origin != "finding de review: x.go:1" || attempt.FailBefore == "" || attempt.PassAfter == "" {
+		t.Fatalf("evidencia da tentativa incompleta: %+v", attempt)
+	}
+	persisted, err := fsys.ReadFile(reportPath)
+	if err != nil {
+		t.Fatalf("ler report persistido: %v", err)
+	}
+	if !strings.Contains(string(persisted), "bugfix_attempts") || !strings.Contains(string(persisted), "FailBefore") {
+		t.Fatalf("report nao persistiu evidencias da tentativa: %s", persisted)
 	}
 }
 

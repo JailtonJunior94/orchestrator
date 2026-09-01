@@ -68,6 +68,10 @@ func criticalFinding(msg string) Finding {
 	return Finding{Severity: SeverityCritical, Message: msg}
 }
 
+func bugfixEvidenceOutput(rootCause string) string {
+	return rootCause + "\nFail-before: go test ./... falhou reproduzindo o achado\nPass-after: go test ./... passou apos a correcao"
+}
+
 func TestBugfixLoop_Run(t *testing.T) {
 	criticals := []Finding{criticalFinding("[Critical] x")}
 	approved := FinalReviewResult{Verdict: VerdictApproved}
@@ -96,7 +100,7 @@ func TestBugfixLoop_Run(t *testing.T) {
 		{
 			name:           "aprovado na 1a iteracao",
 			initial:        criticals,
-			invokerOutputs: []string{"causa raiz: nil pointer\nfix aplicado"},
+			invokerOutputs: []string{bugfixEvidenceOutput("causa raiz: nil pointer")},
 			reviewResults:  []FinalReviewResult{approved},
 			wantIterations: 1,
 			wantVerdict:    VerdictApproved,
@@ -104,7 +108,7 @@ func TestBugfixLoop_Run(t *testing.T) {
 		{
 			name:           "aprovado com ressalvas na 1a iteracao",
 			initial:        criticals,
-			invokerOutputs: []string{"root cause: race condition"},
+			invokerOutputs: []string{bugfixEvidenceOutput("root cause: race condition")},
 			reviewResults:  []FinalReviewResult{withRemarks},
 			wantIterations: 1,
 			wantVerdict:    VerdictApprovedWithRemarks,
@@ -112,7 +116,7 @@ func TestBugfixLoop_Run(t *testing.T) {
 		{
 			name:           "aprovado na 2a iteracao",
 			initial:        criticals,
-			invokerOutputs: []string{"fix 1", "fix 2"},
+			invokerOutputs: []string{bugfixEvidenceOutput("fix 1"), bugfixEvidenceOutput("fix 2")},
 			reviewResults:  []FinalReviewResult{stillCritical, approved},
 			wantIterations: 2,
 			wantVerdict:    VerdictApproved,
@@ -120,7 +124,7 @@ func TestBugfixLoop_Run(t *testing.T) {
 		{
 			name:           "aprovado na 3a iteracao",
 			initial:        criticals,
-			invokerOutputs: []string{"fix 1", "fix 2", "fix 3"},
+			invokerOutputs: []string{bugfixEvidenceOutput("fix 1"), bugfixEvidenceOutput("fix 2"), bugfixEvidenceOutput("fix 3")},
 			reviewResults:  []FinalReviewResult{stillCritical, stillCritical, approved},
 			wantIterations: 3,
 			wantVerdict:    VerdictApproved,
@@ -128,7 +132,7 @@ func TestBugfixLoop_Run(t *testing.T) {
 		{
 			name:           "exaurido apos 3 iteracoes",
 			initial:        criticals,
-			invokerOutputs: []string{"fix 1", "fix 2", "fix 3"},
+			invokerOutputs: []string{bugfixEvidenceOutput("fix 1"), bugfixEvidenceOutput("fix 2"), bugfixEvidenceOutput("fix 3")},
 			reviewResults:  []FinalReviewResult{stillCritical, stillCritical, stillCritical},
 			wantErr:        ErrBugfixExhausted,
 			wantIterations: 3,
@@ -138,7 +142,7 @@ func TestBugfixLoop_Run(t *testing.T) {
 		{
 			name:           "respeita maxIters customizado",
 			initial:        criticals,
-			invokerOutputs: []string{"fix 1"},
+			invokerOutputs: []string{bugfixEvidenceOutput("fix 1")},
 			reviewResults:  []FinalReviewResult{stillCritical},
 			maxIters:       1,
 			wantErr:        ErrBugfixExhausted,
@@ -198,7 +202,7 @@ func TestBugfixLoop_DefaultMaxIterations(t *testing.T) {
 func TestBugfixLoop_PreserveReviewContextAcrossIterations(t *testing.T) {
 	criticals := []Finding{criticalFinding("[Critical] x")}
 	reviewer := &stubFinalReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved}}}
-	invoker := &stubBugfixInvoker{outputs: []string{"causa raiz: ajuste no prompt"}}
+	invoker := &stubBugfixInvoker{outputs: []string{bugfixEvidenceOutput("causa raiz: ajuste no prompt")}}
 	loop := NewBugfixLoop(
 		invoker,
 		reviewer,
@@ -250,7 +254,7 @@ func TestBugfixLoop_InvokerReceivesPureDiffAcrossIterations(t *testing.T) {
 		{Verdict: VerdictRejected, Findings: []Finding{criticalFinding("[Critical] x")}},
 		{Verdict: VerdictApproved},
 	}}
-	invoker := &stubBugfixInvoker{outputs: []string{"causa raiz: a", "causa raiz: b"}}
+	invoker := &stubBugfixInvoker{outputs: []string{bugfixEvidenceOutput("causa raiz: a"), bugfixEvidenceOutput("causa raiz: b")}}
 	capturer := &stubDiffCapturer{diffs: []string{"diff-iter-1", "diff-iter-2"}}
 	loop := NewBugfixLoop(invoker, reviewer, capturer, 2)
 
@@ -293,7 +297,7 @@ func TestBugfixLoop_PropagaErroDoBugfix(t *testing.T) {
 func TestBugfixLoop_PropagaErroDoReviewer(t *testing.T) {
 	revErr := errors.New("review falhou")
 	loop := NewBugfixLoop(
-		&stubBugfixInvoker{outputs: []string{"out"}},
+		&stubBugfixInvoker{outputs: []string{bugfixEvidenceOutput("out")}},
 		&stubFinalReviewer{err: revErr},
 		&stubDiffCapturer{},
 		3,
@@ -308,7 +312,7 @@ func TestBugfixLoop_RespeitaCancelamentoDeContexto(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	loop := NewBugfixLoop(
-		&stubBugfixInvoker{outputs: []string{"o"}},
+		&stubBugfixInvoker{outputs: []string{bugfixEvidenceOutput("o")}},
 		&stubFinalReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved}}},
 		&stubDiffCapturer{},
 		3,
@@ -316,6 +320,44 @@ func TestBugfixLoop_RespeitaCancelamentoDeContexto(t *testing.T) {
 	_, err := loop.Run(ctx, []Finding{criticalFinding("x")}, "diff")
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("esperado context.Canceled, obtido %v", err)
+	}
+}
+
+func TestBugfixLoop_RejeitaEvidenciaIncompleta(t *testing.T) {
+	loop := NewBugfixLoop(
+		&stubBugfixInvoker{outputs: []string{"causa raiz: sem prova"}},
+		&stubFinalReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved}}},
+		&stubDiffCapturer{diffs: []string{"diff"}},
+		1,
+	)
+
+	_, err := loop.Run(context.Background(), []Finding{criticalFinding("x")}, "diff")
+	if !errors.Is(err, ErrBugfixEvidenceIncomplete) {
+		t.Fatalf("erro = %v, want ErrBugfixEvidenceIncomplete", err)
+	}
+}
+
+func TestBugfixLoop_PersisteOrigemEProvasPorTentativa(t *testing.T) {
+	loop := NewBugfixLoop(
+		&stubBugfixInvoker{outputs: []string{bugfixEvidenceOutput("causa raiz: ponteiro nulo")}},
+		&stubFinalReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved}}},
+		&stubDiffCapturer{diffs: []string{"diff"}},
+		1,
+	)
+
+	report, err := loop.Run(context.Background(), []Finding{{Severity: SeverityCritical, File: "internal/x.go", Line: 42}}, "diff")
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(report.Iterations) != 1 {
+		t.Fatalf("iteracoes = %d, want 1", len(report.Iterations))
+	}
+	iteration := report.Iterations[0]
+	if iteration.Origin != "finding de review: internal/x.go:42" {
+		t.Errorf("origem = %q", iteration.Origin)
+	}
+	if iteration.FailBefore == "" || iteration.PassAfter == "" {
+		t.Errorf("provas ausentes: %+v", iteration)
 	}
 }
 

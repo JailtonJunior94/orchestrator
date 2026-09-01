@@ -1,0 +1,41 @@
+$ make lint
+Running linter...
+Installing golangci-lint...
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.1
+GOGC=20 golangci-lint run --config .golangci.yml --timeout 10m --verbose
+level=info msg="golangci-lint has version 2.13.2 built with go1.27.0 from 27774aa on 2026-08-27T22:52:01Z"
+level=info msg="[config_reader] Used config file .golangci.yml"
+level=info msg="[config_reader] Module name \"github.com/JailtonJunior94/ai-spec-harness\""
+level=info msg="[goenv] Read go env for 10.329416ms: map[string]string{\"GOCACHE\":\"/Users/jailtonjunior/Library/Caches/go-build\", \"GOROOT\":\"/Users/jailtonjunior/.gvm/gos/go1.27.0\"}"
+level=info msg="[lintersdb] Active 6 linters: [errcheck gosec govet ineffassign staticcheck unused]"
+level=info msg="[loader] Go packages loading at mode 8767 (name|types_sizes|deps|exports_file|files|compiled_files|imports) took 460.713541ms"
+level=info msg="[runner/filename_unadjuster] Pre-built 0 adjustments in 47.106708ms"
+level=info msg="[linters_context/goanalysis] analyzers took 0s with no stages"
+level=info msg="[runner/max_same_issues] 1/4 issues with text \"G122: Filesystem operation in filepath.Walk/WalkDir callback uses race-prone path; consider root-scoped APIs (e.g. os.Root) to prevent symlink TOCTOU traversal\" were hidden, use --max-same-issues"
+level=info msg="[runner] Issues before processing: 46, after processing: 5"
+level=info msg="[runner] Processors filtering stat (in/out): uniq_by_line: 6/6, path_shortener: 5/5, filename_unadjuster: 46/46, diff: 6/6, max_per_file_from_linter: 6/6, max_same_issues: 6/5, source_code: 5/5, severity-rules: 5/5, path_absoluter: 46/46, path_relativity: 46/46, exclusion_rules: 6/6, path_prettifier: 5/5, fixer: 6/6, max_from_linter: 5/5, sort_results: 5/5, cgo: 46/46, invalid_issue: 46/46, exclusion_paths: 46/46, generated_file_filter: 46/6, nolint_filter: 6/6"
+level=info msg="[runner] processing took 4.445084ms with stages: nolint_filter: 2.814959ms, generated_file_filter: 920.459µs, source_code: 615.875µs, max_same_issues: 41.042µs, path_relativity: 36.208µs, uniq_by_line: 4.083µs, path_shortener: 2.084µs, sort_results: 1.876µs, cgo: 1.874µs, invalid_issue: 1.625µs, path_absoluter: 1.25µs, max_from_linter: 1.166µs, filename_unadjuster: 542ns, max_per_file_from_linter: 458ns, exclusion_paths: 458ns, fixer: 334ns, exclusion_rules: 333ns, path_prettifier: 292ns, diff: 125ns, severity-rules: 41ns"
+level=info msg="[runner] linters took 615.089709ms with stages: goanalysis_metalinter: 610.570666ms"
+internal/fs/fs.go:223:16: G122: Filesystem operation in filepath.Walk/WalkDir callback uses race-prone path; consider root-scoped APIs (e.g. os.Root) to prevent symlink TOCTOU traversal (gosec)
+			_ = os.Chmod(p, f.writableFileMode(info.Mode()))
+			            ^
+internal/fs/os_test.go:389:16: G122: Filesystem operation in filepath.Walk/WalkDir callback uses race-prone path; consider root-scoped APIs (e.g. os.Root) to prevent symlink TOCTOU traversal (gosec)
+			_ = os.Chmod(p, 0o755)
+			            ^
+internal/fs/os_test.go:392:15: G122: Filesystem operation in filepath.Walk/WalkDir callback uses race-prone path; consider root-scoped APIs (e.g. os.Root) to prevent symlink TOCTOU traversal (gosec)
+		_ = os.Chmod(p, 0o644)
+		            ^
+internal/taskloop/agent_test.go:782:21: G702: Command injection via taint analysis (gosec)
+	cmd := exec.Command(os.Args[0], "-test.run=TestCodexInvokerDeprecationWarning_Helper", "-test.v")
+	                   ^
+internal/wrapper/wrapper_test.go:281:21: G702: Command injection via taint analysis (gosec)
+	cmd := exec.Command(os.Args[0],
+	                   ^
+5 issues:
+* gosec: 5
+level=info msg="File cache stats: 4 entries of total size 52.6KiB"
+level=info msg="Memory: 13 samples, avg is 46.8MB, max is 52.0MB"
+level=info msg="Execution took 1.134920542s"
+make: *** [lint] Error 1
+
+exit_code=2

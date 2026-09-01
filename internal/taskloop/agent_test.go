@@ -779,7 +779,7 @@ func TestCodexInvokerDeprecationWarning_Helper(t *testing.T) {
 // garantindo que codexLegacyWarnOnce (package-level) nao tenha sido disparado antes.
 func TestCodexInvokerDeprecationWarning(t *testing.T) {
 	// Executa o helper como subprocesso em processo fresh para garantir sync.Once virgem.
-	cmd := exec.Command(os.Args[0], "-test.run=TestCodexInvokerDeprecationWarning_Helper", "-test.v")
+	cmd := exec.Command(testBinary(t), "-test.run=TestCodexInvokerDeprecationWarning_Helper", "-test.v")
 	cmd.Env = append(os.Environ(), "GO_TEST_CODEX_WARN_HELPER=1")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -789,6 +789,16 @@ func TestCodexInvokerDeprecationWarning(t *testing.T) {
 	if strings.Contains(string(out), "FAIL") {
 		t.Errorf("subprocesso helper reportou falha:\n%s", out)
 	}
+}
+
+func testBinary(t *testing.T) string {
+	t.Helper()
+
+	binary, err := os.Executable()
+	if err != nil {
+		t.Fatalf("resolver binario de teste: %v", err)
+	}
+	return binary
 }
 
 // TestCopilotInvokerArgsUnchanged verifica que o aviso de depreciacao nao altera os

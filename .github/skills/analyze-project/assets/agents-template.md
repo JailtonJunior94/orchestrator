@@ -67,24 +67,12 @@ Em projetos com mais de uma linguagem (ex: monorepo Go + Node), carregar apenas 
 
 Cada skill lista suas proprias referencias em `references/` com gatilhos de carregamento no respectivo `SKILL.md`. Nao duplicar a listagem aqui — consultar o SKILL.md da skill ativa para saber quais referencias carregar e em que condicao.
 
-## Notas por Ferramenta
+## Adaptadores e Capacidades
 
-- **Claude Code**: skills pre-carregadas via `.claude/skills/`, hooks via `.claude/hooks/`, agents delegados via `.claude/agents/`.
-- **Gemini CLI**: commands em `.gemini/commands/*.toml` apontam para skills canonicas. Sem hooks ou agents nativos — o modelo deve seguir as instrucoes procedurais do SKILL.md carregado.
-- **Codex**: le `AGENTS.md` como instrucao de sessao. Entradas em `.codex/config.toml` sao metadados para `upgrade.sh`, nao spec oficial do Codex CLI. O agente deve seguir as instrucoes de `AGENTS.md` para descobrir e carregar skills.
-- **Copilot**: `.github/copilot-instructions.md` como instrucao principal. `.github/agents/` sao wrappers. Sem hooks nativos — compliance depende do modelo seguir as instrucoes.
-
-### Matrix de Enforcement
-
-| Capacidade | Claude Code | Gemini CLI | Codex | Copilot |
-|---|---|---|---|---|
-| Carga base automatica | hook PreToolUse | procedural | procedural | procedural |
-| Protecao de governanca | hook PostToolUse | procedural | procedural | procedural |
-| Skills pre-carregadas | sim (symlinks) | sim (commands) | nao | sim (agents) |
-| Enforcement programatico | sim (hooks) | nao | nao | nao |
-| Validacao de evidencias | script | procedural | procedural | procedural |
-
-Ferramentas sem enforcement programatico dependem do modelo seguir instrucoes procedurais. A compliance nessas ferramentas e best-effort.
+Use somente os adaptadores instalados neste projeto. Antes de isolamento, escrita concorrente,
+paralelismo ou cancelamento, consultar `ai-spec runtime-capabilities <raiz-do-worktree>` e seguir
+o JSON retornado. Sem capacidade comprovada, o fluxo deve falhar fechado ou seguir somente no modo
+sequencial/read-only aceito pelo CLI. Não registre matriz, versão ou suporte estático por ferramenta.
 
 ## Validacao
 

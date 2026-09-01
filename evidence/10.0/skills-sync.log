@@ -1,0 +1,9 @@
+$ make check-skills-sync
+bash scripts/check-skills-sync.sh
+
+Skills em sync: 78
+Skills com drift: 0
+Libs em sync: 2 (legacy + embedded)
+Hooks do orquestrador em sync: 4 hooks x 9 mirrors
+Hooks de validacao por-tool em paridade: 2 hooks x 8 tools
+Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/

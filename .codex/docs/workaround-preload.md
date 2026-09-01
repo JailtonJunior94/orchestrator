@@ -4,20 +4,18 @@
 
 ## Contexto
 
-O Codex nao suporta hooks de pre/pos-edicao equivalentes ao Claude Code (PreToolUse/PostToolUse). O arquivo `.codex/config.toml` lista apenas as skills disponiveis para resolucao pelo harness — nao ha mecanismo para interceptar operacoes de edicao de arquivo.
+Este adaptador não declara capacidades estáticas. Antes de uma operação que dependa de isolamento
+ou escrita concorrente, consulte `ai-spec runtime-capabilities <raiz-do-worktree>`; o CLI é a fonte
+de verdade local e bloqueia escrita concorrente sem isolamento comprovado.
 
-## Capacidades do Codex
+## Capacidades do adaptador
 
-| Mecanismo | Suporte |
-|-----------|---------|
-| PreToolUse hooks | Nao suportado |
-| PostToolUse hooks | Nao suportado |
-| Instrucoes de sessao (AGENTS.md) | Suportado via system prompt |
-| Skills via config.toml | Suportado |
+Consulte o runtime instalado e seus adaptadores em vez de inferir suporte por esta documentação.
 
 ## Workaround recomendado
 
-Como o Codex nao suporta hooks automaticos, use as seguintes alternativas para manter compliance:
+Quando os hooks configurados não fornecerem o gate necessário, use as seguintes alternativas para
+manter compliance:
 
 1. **Variavel de ambiente pre-sessao:** Configurar `GOVERNANCE_PRELOAD_CONFIRMED=1` antes de iniciar uma sessao Codex confirma explicitamente que o contrato de carga base sera seguido.
 
@@ -34,4 +32,5 @@ Como o Codex nao suporta hooks automaticos, use as seguintes alternativas para m
 
 ## Gap registrado
 
-Codex nao oferece enforcement automatico de governanca. A compliance depende inteiramente do modelo seguir as instrucoes procedurais do `AGENTS.md` e das skills carregadas. Este gap esta documentado para rastreabilidade.
+Instruções e scripts não substituem gates do CLI. Sem prova local de capacidade, bloqueie a
+operação ou reduza-a ao modo read-only/sequencial aceito pelo CLI.

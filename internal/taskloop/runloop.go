@@ -21,6 +21,7 @@ type LoopReport struct {
 	TasksCompleted []string           `json:"tasks_completed"`
 	FinalReview    *FinalReviewResult `json:"final_review,omitempty"`
 	BugfixCycles   int                `json:"bugfix_cycles"`
+	BugfixAttempts []BugfixIteration  `json:"bugfix_attempts,omitempty"`
 	Escalated      bool               `json:"escalated"`
 	ActionPlan     *ActionPlan        `json:"action_plan,omitempty"`
 	StopReason     string             `json:"stop_reason"`
@@ -211,6 +212,7 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 		bf := NewBugfixLoop(deps.BugfixInvoker, deps.FinalReviewer, deps.DiffCapturer, opts.MaxBugfixIterations)
 		bfReport, bfErr := bf.Run(ctx, rev.Findings, reviewInput)
 		report.BugfixCycles = len(bfReport.Iterations)
+		report.BugfixAttempts = append(report.BugfixAttempts, bfReport.Iterations...)
 		report.Escalated = bfReport.Escalated
 		if bfReport.FinalReview != nil {
 			report.FinalReview = bfReport.FinalReview
@@ -299,6 +301,7 @@ func (s *Service) applyImplementDecisions(
 	bf := NewBugfixLoop(deps.BugfixInvoker, deps.FinalReviewer, deps.DiffCapturer, opts.MaxBugfixIterations)
 	bfReport, bfErr := bf.Run(ctx, implFindings, diff)
 	report.BugfixCycles += len(bfReport.Iterations)
+	report.BugfixAttempts = append(report.BugfixAttempts, bfReport.Iterations...)
 	if bfReport.Escalated {
 		report.Escalated = true
 	}

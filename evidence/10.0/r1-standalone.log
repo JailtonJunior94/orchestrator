@@ -1,0 +1,51 @@
+$ bash -c matches=\$\(grep\ -rn\ \"\^func\ \[\^\(\]\"\ --include=\"\*.go\"\ .\ \|\ grep\ -v\ \"_test.go\"\ \|\ grep\ -v\ \"func\ main\(\)\"\ \|\ grep\ -v\ \"func\ New\"\ \|\ grep\ -v\ \"\^cmd/\"\ \|\|\ true\)\;\ if\ \[\ -n\ \"\$matches\"\ \]\;\ then\ printf\ \"%s\\n\"\ \"\$matches\"\;\ exit\ 1\;\ fi
+./cmd/ai_spec_harness/exit_error.go:17:func newExitError(code int) *exitError {
+./cmd/ai_spec_harness/skills.go:15:func newSkillsCmd() *cobra.Command {
+./cmd/ai_spec_harness/skills.go:43:func runSkillsVerify(cmd *cobra.Command, projectDir string) error {
+./cmd/ai_spec_harness/skills.go:68:func newSkillsCheckCmd() *cobra.Command {
+./cmd/ai_spec_harness/version.go:18:func newVersionCmd() *cobra.Command {
+./cmd/ai_spec_harness/prerequisites.go:12:func newPrerequisitesCmd() *cobra.Command {
+./cmd/ai_spec_harness/wrapper.go:12:func newWrapperCmd() *cobra.Command {
+./cmd/ai_spec_harness/metrics.go:10:func newMetricsCmd() *cobra.Command {
+./cmd/ai_spec_harness/update_version.go:14:func newUpdateVersionCmd() *cobra.Command {
+./cmd/ai_spec_harness/sync_spec_hash.go:11:func newSyncSpecHashCmd() *cobra.Command {
+./cmd/ai_spec_harness/upgrade.go:20:func newUpgradeCmd() *cobra.Command {
+./cmd/ai_spec_harness/telemetry.go:13:func newTelemetryCmd() *cobra.Command {
+./cmd/ai_spec_harness/telemetry.go:25:func newTelemetryLogCmd() *cobra.Command {
+./cmd/ai_spec_harness/telemetry.go:42:func newTelemetrySummaryCmd() *cobra.Command {
+./cmd/ai_spec_harness/telemetry.go:70:func newTelemetryReportCmd() *cobra.Command {
+./cmd/ai_spec_harness/task_loop.go:36:func newTaskLoopCmd() *cobra.Command {
+./cmd/ai_spec_harness/skill_bump.go:15:func newSkillBumpCmd() *cobra.Command {
+./cmd/ai_spec_harness/validate_evidence.go:11:func newValidateEvidenceCmd() *cobra.Command {
+./cmd/ai_spec_harness/flags.go:15:func newFlagHelper() *flagHelper {
+./cmd/ai_spec_harness/sdd.go:14:func newApproveCmd() *cobra.Command {
+./cmd/ai_spec_harness/sdd.go:30:func newInvalidateCmd() *cobra.Command {
+./cmd/ai_spec_harness/sdd.go:46:func newOrchestrateCmd() *cobra.Command {
+./cmd/ai_spec_harness/sdd.go:70:func newValidateSDDCmd() *cobra.Command {
+./cmd/ai_spec_harness/sdd.go:81:func newRuntimeCapabilitiesCmd() *cobra.Command {
+./cmd/ai_spec_harness/scaffold.go:10:func newScaffoldCmd() *cobra.Command {
+./cmd/ai_spec_harness/uninstall.go:10:func newUninstallCmd() *cobra.Command {
+./cmd/ai_spec_harness/changelog.go:12:func newChangelogCmd() *cobra.Command {
+./cmd/ai_spec_harness/validate_bugs.go:8:func newValidateBugsCmd() *cobra.Command {
+./cmd/ai_spec_harness/validate.go:15:func newValidateCmd() *cobra.Command {
+./cmd/ai_spec_harness/inspect.go:13:func newInspectCmd() *cobra.Command {
+./cmd/ai_spec_harness/spec_drift.go:13:func newCheckSpecDriftCmd() *cobra.Command {
+./cmd/ai_spec_harness/hash.go:13:func newHashCmd() *cobra.Command {
+./cmd/ai_spec_harness/lint.go:14:func newLintCmd() *cobra.Command {
+./cmd/ai_spec_harness/semver_next.go:12:func newSemverNextCmd() *cobra.Command {
+./cmd/ai_spec_harness/sdd_result.go:11:func newValidateResultCmd() *cobra.Command {
+./cmd/ai_spec_harness/doctor.go:12:func newDoctorCmd() *cobra.Command {
+./cmd/ai_spec_harness/root.go:12:func newRootCmd() *cobra.Command {
+./cmd/ai_spec_harness/root.go:74:func newCommandEnv() *commandEnv {
+./cmd/ai_spec_harness/root.go:83:func Execute() error {
+./cmd/ai_spec_harness/verify.go:19:func newVerifyCmd() *cobra.Command {
+./cmd/ai_spec_harness/install.go:21:func newInstallCmd() *cobra.Command {
+./internal/taskloop/orchestrator_lock_unix.go:12:func acquireOrchestratorLock(path string) (func() error, error) {
+./internal/taskloop/orchestrator.go:39:func DetectRuntimeCapabilities(ctx context.Context, workDir string) (RuntimeCapabilities, error) {
+./internal/taskloop/orchestrator.go:107:func pathsOverlap(left, right string) bool {
+./internal/taskloop/orchestrator_lock_windows.go:14:func acquireOrchestratorLock(path string) (func() error, error) {
+./internal/fs/symlink_guard.go:10:func RefuseExternalSymlink(filesystem FileSystem, projectDir, destination string, followExternal bool) error {
+./internal/fs/symlink_guard.go:53:func symlinkAncestors(absProject, absDestination string) []string {
+./internal/fs/symlink_guard.go:70:func pathInsideRoot(root, path string) bool {
+
+exit_code=1

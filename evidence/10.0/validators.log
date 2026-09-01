@@ -1,0 +1,29 @@
+$ make test-validators
+bash scripts/test-validators.sh
+Caso a: critério de aceite não comprovado
+  ✓ critério não comprovado falha (exit=1)
+Caso b: todos os critérios comprovados
+  ✓ todos comprovados passa (exit=0)
+Caso c: Testes: pass sem comando de teste
+  ✓ Testes pass sem comando falha (exit=1)
+Caso d: task legada sem seção de critérios
+  ✓ task legada passa (exit=0)
+  ✓ aviso de gate ignorado presente
+Caso e: review.md válido sem achados
+  ✓ review válido passa (exit=0)
+Caso f: review REJECTED sem achado bloqueante
+  ✓ REJECTED sem high/critical falha (exit=1)
+Caso g: review sem seção de validações
+  ✓ review sem validações falha (exit=1)
+
+Passaram: 8 | Falharam: 0
+Todos os testes de validador passaram.
+bash tests/scripts/validate-task-evidence_test.sh .agents/scripts/validate-task-evidence.sh
+PASS [TC1-valido]
+PASS [TC2-sem-sha]
+PASS [TC3-sem-verdict]
+PASS [TC4-tool-invalida]
+PASS [TC5-delta-regressao]
+PASS [TC6-delta-ok]
+
+Resultado: 6 passaram, 0 falharam

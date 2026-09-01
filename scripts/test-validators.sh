@@ -64,6 +64,13 @@ report_header() {
 ## Contexto Carregado
 - PRD: n/a
 - TechSpec: n/a
+## Diff Reviewed
+sha=abc1234def5678901234567890abcdef01234567
+verdict=APPROVED
+tool=claude
+## Coverage
+package=fixture
+delta=+0.0%
 EOF
 }
 

@@ -17,15 +17,16 @@ TMP_BASE=$(mktemp -d /tmp/test-hooks.XXXXXX)
 TASKS_BASE="$TMP_BASE/.spec"
 mkdir -p "$TASKS_BASE"
 
-# Garante que os hooks testem o CLI da working tree atual, nao uma versao antiga
-# instalada no sistema.
+# Garante que os hooks testem o binario construido da working tree atual, nao
+# uma versao Homebrew possivelmente desatualizada no PATH.
+AI_SPEC_BIN="$REPO_ROOT/ai-spec"
+export AI_SPEC_BIN
+(cd "$REPO_ROOT" && go build -o ./ai-spec .)
 mkdir -p "$TMP_BASE/bin"
-cat > "$TMP_BASE/bin/ai-spec" <<EOF
-#!/usr/bin/env bash
-cd "$REPO_ROOT" && go run . "\$@"
-EOF
-chmod +x "$TMP_BASE/bin/ai-spec"
-export PATH="$TMP_BASE/bin:$PATH"
+
+# Os cenarios historicos abaixo exercitam somente o fallback YAML opt-in. O
+# contrato estrito JSON v2 e validado explicitamente no primeiro cenario F02.
+export AI_SDD_LEGACY_HOOK_CONTRACT=1
 
 # Override env vars para fixtures temporarios.
 AI_TASKS_ROOT="$(realpath --relative-to="$REPO_ROOT" "$TASKS_BASE" 2>/dev/null || python3 -c "import os; print(os.path.relpath('$TASKS_BASE', '$REPO_ROOT'))")"
@@ -77,7 +78,7 @@ make_prd() {
   echo "# Techspec $slug" > "$dir/techspec.md"
 
   local prd_hash
-  prd_hash=$(ai-spec hash "$dir/prd.md")
+  prd_hash="$($AI_SPEC_BIN hash "$dir/prd.md")"
 
   cat > "$dir/tasks.md" <<EOF
 <!-- spec-hash-prd: $prd_hash -->
@@ -98,6 +99,46 @@ desync_prd_hash() {
   local slug="$1"
   echo "# PRD $slug — EDITADO" > "$TASKS_BASE/prd-$slug/prd.md"
 }
+
+# ============================================================================
+echo "--- F02: adaptador JSON estrito ---"
+# ============================================================================
+strict_result=$(mktemp)
+cat > "$strict_result" <<EOF
+{"schema_version":2,"run_id":"run-hooks","task_id":"2.0","attempt":1,"status":"done","base_sha":"0123456789012345678901234567890123456789","patch_sha256":"0123456789012345678901234567890123456789012345678901234567890123","final_state_sha256":"0123456789012345678901234567890123456789012345678901234567890123","coverage_regression":false,"tests":[{"command":"go test ./...","exit_code":0,"output_sha256":"0123456789012345678901234567890123456789012345678901234567890123"}],"criteria":[{"id":"AC-01","evidence_ref":"report.md#criterion"}],"evidence":["report.md"],"review_verdict":"approved"}
+EOF
+stderr=$(mktemp)
+env -u AI_SDD_LEGACY_HOOK_CONTRACT bash "$HOOKS_DIR/post-execute-task.sh" "hooks" "2.0" "$strict_result" 2>"$stderr"; rc=$?
+assert_exit "F02 resultado JSON completo = exit 0" 0 "$rc"
+printf '{}' > "$strict_result"
+env -u AI_SDD_LEGACY_HOOK_CONTRACT bash "$HOOKS_DIR/post-execute-task.sh" "hooks" "2.0" "$strict_result" 2>"$stderr"; rc=$?
+assert_exit "F02 resultado JSON incompleto = exit 1" 1 "$rc"
+rm -f "$strict_result" "$stderr"
+
+# O wrapper deve converter o envelope YAML do subagent no checkpoint JSON SDD
+# correspondente antes de chamar o hook estrito.
+echo "--- F02b: wrapper encaminha checkpoint JSON v2 ---"
+wrapper_root="$(mktemp -d "$REPO_ROOT/.tmp-test-hooks-wrapper.XXXXXX")"
+wrapper_tasks_root="${wrapper_root#"$REPO_ROOT"/}"
+wrapper_dir="$wrapper_root/prd-wrapper"
+mkdir -p "$wrapper_dir/.checkpoints"
+cat > "$wrapper_dir/.checkpoints/2.0.json" <<EOF
+{"schema_version":2,"run_id":"run-wrapper","task_id":"2.0","attempt":1,"status":"done","base_sha":"0123456789012345678901234567890123456789","patch_sha256":"0123456789012345678901234567890123456789012345678901234567890123","final_state_sha256":"0123456789012345678901234567890123456789012345678901234567890123","coverage_regression":false,"tests":[{"command":"go test ./...","exit_code":0,"output_sha256":"0123456789012345678901234567890123456789012345678901234567890123"}],"criteria":[{"id":"AC-01","evidence_ref":"report.md#criterion"}],"evidence":["report.md"],"review_verdict":"approved"}
+EOF
+wrapper_yaml="status: done
+report_path: $wrapper_tasks_root/prd-wrapper/2.0_execution_report.md
+summary: resultado versionado"
+printf '%b\n' "$wrapper_yaml" | env -u AI_SDD_LEGACY_HOOK_CONTRACT AI_TASKS_ROOT="$wrapper_tasks_root" STRICT_HOOK_FAILURES=1 bash "$HOOKS_DIR/subagent-stop-wrapper.sh" 2>"$stderr"; rc=$?
+assert_exit "F02b YAML e encaminhado ao checkpoint JSON v2" 0 "$rc"
+rm -rf "$wrapper_root"
+rm -f "$stderr"
+
+# Os cenários do bloco 3 instalam shims de git/ai-spec neste diretório para
+# controlar somente o pre-commit. O contrato SDD estrito acima já usou
+# explicitamente AI_SPEC_BIN apontando ao binário local construído.
+export PATH="$TMP_BASE/bin:$PATH"
+
+echo
 
 echo "==============================================="
 echo "TEST HARNESS — hooks do orquestrador"
@@ -175,7 +216,8 @@ echo "--- F35: git revert (DiffSHA inexistente) ---"
 # ============================================================================
 make_prd "revert" "| 1.0 | A | done | — | — | — |"
 # Criar report com DiffSHA fake
-cat > "$TASKS_BASE/prd-revert/1.0_execution_report.md" <<EOF
+revert_report=".test-hooks-revert-report.md"
+cat > "$REPO_ROOT/$revert_report" <<EOF
 # Report
 
 sha=deadbeefcafe1234567890abcdef1234567890ab
@@ -184,7 +226,7 @@ EOF
 yaml=$(mktemp)
 cat > "$yaml" <<EOF
 status: done
-report_path: $AI_TASKS_ROOT/prd-revert/1.0_execution_report.md
+report_path: $revert_report
 summary: ok
 EOF
 # Criar checkpoint pra evitar F25 FAIL
@@ -203,18 +245,62 @@ assert_exit "F35 default-on (sem env) = exit 1" 1 "$rc"
 # Opt-out explicito (AI_VALIDATE_GIT_HISTORY=0) deve pular F35 e passar
 AI_VALIDATE_GIT_HISTORY=0 bash "$HOOKS_DIR/post-execute-task.sh" "revert" "1.0" "$yaml" 2>"$stderr"; rc=$?
 assert_exit "F35 opt-out (=0) = exit 0 (skip)" 0 "$rc"
-rm -f "$stderr" "$yaml"
+rm -f "$stderr" "$yaml" "$REPO_ROOT/$revert_report"
+
+# ============================================================================
+echo
+echo "--- F13: containment de report_path ---"
+# ============================================================================
+make_prd "path_containment" "| 1.0 | A | done | — | — | — |"
+mkdir -p "$TASKS_BASE/prd-path_containment/.checkpoints"
+echo "status: done" > "$TASKS_BASE/prd-path_containment/.checkpoints/1.0.yaml"
+echo "report seguro" > "$TASKS_BASE/prd-path_containment/1.0_execution_report.md"
+yaml=$(mktemp)
+stderr=$(mktemp)
+
+cat > "$yaml" <<EOF
+status: done
+report_path: /tmp/report.md
+summary: ok
+EOF
+bash "$HOOKS_DIR/post-execute-task.sh" "path_containment" "1.0" "$yaml" 2>"$stderr"; rc=$?
+assert_exit "F13 path absoluto = exit 1" 1 "$rc"
+assert_stderr_contains "F13 path absoluto detectado" "FAIL F13: report_path" "$stderr"
+
+cat > "$yaml" <<EOF
+status: done
+report_path: ../fora.md
+summary: ok
+EOF
+bash "$HOOKS_DIR/post-execute-task.sh" "path_containment" "1.0" "$yaml" 2>"$stderr"; rc=$?
+assert_exit "F13 traversal = exit 1" 1 "$rc"
+assert_stderr_contains "F13 traversal detectado" "path absoluto ou traversal" "$stderr"
+
+outside_report="$TMP_BASE/outside-report.md"
+echo "não deve ser aceito" > "$outside_report"
+symlink_report="$REPO_ROOT/.test-hook-external-report-link.md"
+ln -s "$outside_report" "$symlink_report"
+cat > "$yaml" <<EOF
+status: done
+report_path: .test-hook-external-report-link.md
+summary: ok
+EOF
+bash "$HOOKS_DIR/post-execute-task.sh" "path_containment" "1.0" "$yaml" 2>"$stderr"; rc=$?
+assert_exit "F13 symlink externo = exit 1" 1 "$rc"
+assert_stderr_contains "F13 symlink externo detectado" "resolve fora do repositório" "$stderr"
+rm -f "$symlink_report" "$yaml" "$stderr"
 
 # ============================================================================
 echo
 echo "--- F25: checkpoint ausente bloqueia (default FAIL) ---"
 # ============================================================================
 make_prd "nochkpt" "| 1.0 | A | done | — | — | — |"
-echo "report" > "$TASKS_BASE/prd-nochkpt/1.0_execution_report.md"
+nochkpt_report=".test-hooks-nochkpt-report.md"
+echo "report" > "$REPO_ROOT/$nochkpt_report"
 yaml=$(mktemp)
 cat > "$yaml" <<EOF
 status: done
-report_path: $AI_TASKS_ROOT/prd-nochkpt/1.0_execution_report.md
+report_path: $nochkpt_report
 summary: ok
 EOF
 stderr=$(mktemp)
@@ -226,21 +312,22 @@ assert_stderr_contains "FAIL F25 detectada" "FAIL F25: checkpoint ausente" "$std
 AI_ALLOW_MISSING_CHECKPOINT=1 bash "$HOOKS_DIR/post-execute-task.sh" "nochkpt" "1.0" "$yaml" 2>"$stderr"; rc=$?
 assert_exit "F25 com AI_ALLOW_MISSING_CHECKPOINT=1 = exit 0" 0 "$rc"
 assert_stderr_contains "WARN F25 detectado em modo back compat" "WARN F25: checkpoint ausente.*back compat" "$stderr"
-rm -f "$stderr" "$yaml"
+rm -f "$stderr" "$yaml" "$REPO_ROOT/$nochkpt_report"
 
 # ============================================================================
 echo
 echo "--- Contrato YAML e status drift ---"
 # ============================================================================
 make_prd "yaml_contract" "| 1.0 | A | done | — | — | — |"
-echo "report" > "$TASKS_BASE/prd-yaml_contract/1.0_execution_report.md"
+yaml_contract_report=".test-hooks-yaml-contract-report.md"
+echo "report" > "$REPO_ROOT/$yaml_contract_report"
 mkdir -p "$TASKS_BASE/prd-yaml_contract/.checkpoints"
 echo "status: done" > "$TASKS_BASE/prd-yaml_contract/.checkpoints/1.0.yaml"
 
 yaml=$(mktemp)
 cat > "$yaml" <<EOF
 status: done
-report_path: $AI_TASKS_ROOT/prd-yaml_contract/1.0_execution_report.md
+report_path: $yaml_contract_report
 summary: ok
 extra: proibido
 EOF
@@ -256,23 +343,24 @@ EOF
 bash "$HOOKS_DIR/post-execute-task.sh" "yaml_contract" "1.0" "$yaml" 2>"$stderr"; rc=$?
 assert_exit "YAML sem summary = exit 1" 1 "$rc"
 assert_stderr_contains "contract violation summary ausente" "summary" "$stderr"
-rm -f "$yaml" "$stderr"
+rm -f "$yaml" "$stderr" "$REPO_ROOT/$yaml_contract_report"
 
 make_prd "status_drift" "| 1.0 | A | pending | — | — | — |"
-echo "report" > "$TASKS_BASE/prd-status_drift/1.0_execution_report.md"
+status_drift_report=".test-hooks-status-drift-report.md"
+echo "report" > "$REPO_ROOT/$status_drift_report"
 mkdir -p "$TASKS_BASE/prd-status_drift/.checkpoints"
 echo "status: done" > "$TASKS_BASE/prd-status_drift/.checkpoints/1.0.yaml"
 yaml=$(mktemp)
 cat > "$yaml" <<EOF
 status: done
-report_path: $AI_TASKS_ROOT/prd-status_drift/1.0_execution_report.md
+report_path: $status_drift_report
 summary: ok
 EOF
 stderr=$(mktemp)
 bash "$HOOKS_DIR/post-execute-task.sh" "status_drift" "1.0" "$yaml" 2>"$stderr"; rc=$?
 assert_exit "status drift done vs pending = exit 1" 1 "$rc"
 assert_stderr_contains "status drift detectado" "status drift" "$stderr"
-rm -f "$yaml" "$stderr"
+rm -f "$yaml" "$stderr" "$REPO_ROOT/$status_drift_report"
 
 # ============================================================================
 echo

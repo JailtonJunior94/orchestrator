@@ -7,7 +7,7 @@ Use `AGENTS.md` como fonte canonica das regras deste repositorio.
 1. Ler `AGENTS.md` no inicio da sessao.
 2. `.agents/skills/` e a fonte de verdade dos fluxos procedurais.
 3. `.gemini/commands/` sao adaptadores finos que apontam para a habilidade correta.
-4. Em tarefas de execucao, carregar apenas `AGENTS.md`, `agent-governance` e a skill operacional da linguagem ou atividade afetada.
+4. Em tarefas de execucao, carregar apenas `AGENTS.md`, `agent-governance` e a skill operacional da linguagem ou atividade afetada. Para isolamento ou escrita concorrente, consultar `ai-spec runtime-capabilities <raiz-do-worktree>`; não inferir capacidades pela ferramenta ou versão.
 5. Skills de planejamento (`analyze-project`, `create-prd`, `create-technical-specification`, `create-tasks`) entram apenas quando a tarefa pedir esse fluxo explicitamente.
 6. Carregar referencias adicionais apenas quando a tarefa exigir.
 7. Preservar estilo, arquitetura e fronteiras existentes antes de propor mudancas.
@@ -36,7 +36,8 @@ Ao concluir uma alteracao:
 
 ## Hooks de Governanca
 
-O Gemini CLI nao suporta hooks automaticos (PreToolUse/PostToolUse) nativos. Os scripts em `.gemini/hooks/` sao utilitarios manuais invocados explicitamente ou via `--hook`.
+Os scripts em `.gemini/hooks/` são adaptadores locais. Capacidades de isolamento e escrita são
+determinadas pelo CLI em runtime, não por esta documentação.
 
 | Script | Finalidade |
 |--------|-----------|
@@ -55,4 +56,4 @@ bash .gemini/hooks/validate-governance.sh .agents/skills/review/SKILL.md
 2. Usar `@workspace.<command>` para invocar o wrapper TOML correspondente em `.gemini/commands/` e evitar colisao com comandos nativos das skills.
 3. Seguir as etapas procedurais do SKILL.md carregado pelo comando como se fossem instrucoes sequenciais.
 4. Ao final da tarefa, executar os comandos de validacao descritos na secao Validacao do `AGENTS.md`.
-5. Nao confiar em enforcement automatico — a compliance depende de seguir as instrucoes procedurais manualmente.
+5. Não usar instruções ou scripts como bypass de capacidade: sem prova do CLI, bloquear a escrita concorrente.

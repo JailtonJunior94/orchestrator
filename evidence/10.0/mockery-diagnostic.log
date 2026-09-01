@@ -1,0 +1,7 @@
+$ go run github.com/vektra/mockery/v2@v2.53.4 --config mockery.yml
+01 Sep 26 11:15 -03 INF Starting mockery dry-run=false version=v2.53.4
+01 Sep 26 11:15 -03 INF Using config: mockery.yml dry-run=false version=v2.53.4
+2026/09/01 11:15:15 internal error: package "os/exec" without types was imported from "github.com/JailtonJunior94/ai-spec-harness/internal/git"
+exit status 1
+
+exit_code=1

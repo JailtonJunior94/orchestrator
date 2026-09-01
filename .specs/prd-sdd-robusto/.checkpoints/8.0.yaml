@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-sdd-robusto/8.0_execution_report.md
+summary: Skills e adaptadores portáveis delegam invariantes ao CLI com templates verificados.
+timestamp: 2026-09-01T14:05:13Z

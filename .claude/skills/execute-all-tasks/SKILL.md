@@ -3,7 +3,7 @@ name: execute-all-tasks
 version: 1.8.1
 category: governance
 depends_on: [execute-task, agent-governance]
-description: Orquestra execução completa de PRD spawnando subagent fresh por tarefa para isolar contexto. Respeita DAG, paraleliza onde tool suporta nativamente, halt-first, retomada idempotente. Use para PRD inteiro; não use para uma tarefa única — use execute-task.
+description: Orquestra execução completa de PRD spawnando subagent fresh por tarefa para isolar contexto. Respeita DAG, usa somente capacidades detectadas pelo CLI, halt-first e retomada idempotente. Use para PRD inteiro; não use para uma tarefa única — use execute-task.
 ---
 
 # Executar Todas as Tarefas de um PRD
@@ -14,7 +14,8 @@ Delega cada tarefa a subagent. Subagent carrega só o necessário, executa via `
 
 Por tarefa: lê → carrega só governance + linguagem do diff + skills declaradas → executa → YAML → contexto descartado → próxima.
 
-Paralelismo só quando: `Paralelizável` em tasks.md E tool suporta spawn nativo.
+Paralelismo e isolamento são decididos pelo CLI a partir das capacidades locais detectadas;
+as skills não mantêm inventários de versões ou ferramentas.
 
 ## Procedimentos
 
@@ -65,7 +66,9 @@ Repetir até zerar `pending` ou disparar halt:
 2. `ready = { t : t.status=="pending" E todas dep(t).status=="done" }`.
 3. `ready == ∅` com `pending > 0` → `failed` reportando ciclo/dep órfã.
 4. Compor wave: alguma `paralelizável=false` → só ela. Senão, todas `paralelizável=true` juntas.
-5. Verificar suporte do tool a paralelismo nativo. Sem suporte → degradar sequencial.
+5. Executar `ai-spec runtime-capabilities <raiz-do-worktree>` e usar somente o JSON retornado.
+   Se `isolated_worktrees` for `false`, bloquear escrita concorrente e degradar apenas operações
+   permitidas pelo CLI para sequencial/read-only.
 6. Disparar Etapa 4. Coletar resultados. Qualquer `≠ done` após validação → Etapa 5 (halt).
 
 **Etapa 4: Spawnar subagents**
@@ -77,21 +80,11 @@ em `.claude/config.yaml`/`.agents/config.yaml`. Override de timeout por tarefa:
 Quando o subagent reportar uso de tokens acumulado acima de `AI_TASK_TOKEN_BUDGET`, marcar
 `failed: token budget <budget> exceeded` e não relançar.
 
-**Kill no timeout — depende da primitiva de spawn do tool (verificado 2026):**
-
-| Tool | Primitiva de spawn | Kill nativo no timeout? | Ação ao estourar |
-|---|---|---|---|
-| Codex CLI | `codex exec` (subprocesso OS) | **Sim** — `kill <pid>` do processo `codex exec` | hard kill do PID; `failed: timeout after <budget>s (killed)` |
-| Gemini CLI | `gemini --acp` (subprocesso OS) | **Sim** — encerrar a sessão ACP/subprocesso | hard kill do subprocesso ACP; `failed: timeout after <budget>s (killed)` |
-| Copilot CLI | custom agent / `/fleet` (sessão/subprocesso) | **Parcial** — matar a sessão quando spawnada como subprocesso | kill da sessão quando possível; senão soft-discard |
-| Claude Code | `Agent` (in-process, mesma sessão) | **Não** — sem kill nativo | soft timeout: registra, marca `failed: timeout after <budget>s`, descarta YAML tardio |
-
-**Limitação honesta (Claude)**: a primitiva `Agent` roda in-process; o orquestrador apenas
-descarta o YAML tardio — o subagent continua consumindo tokens até completar naturalmente. Para os
-tools que spawnam subprocesso OS (Codex `codex exec`, Gemini `gemini --acp`, Copilot fleet), o
-orquestrador **mata o processo** (`kill <pid>`) ao estourar o timeout/orçamento, interrompendo o
-consumo. Registrar no `_orchestration_report.md` se o kill foi efetivo (`killed`) ou apenas
-soft-discard (`discarded`).
+**Timeout e cancelamento:** consulte `ai-spec runtime-capabilities <raiz-do-worktree>` antes do
+spawn. O adaptador só pode aplicar a estratégia de interrupção declarada pelo CLI e deve registrar
+o resultado (`killed`, `discarded` ou falha) no `_orchestration_report.md`. Sem capacidade de
+cancelamento, marque a tentativa como `failed` ao expirar e descarte resultados tardios; não
+presuma que um runtime ou versão específica consiga encerrar o trabalho.
 
 Prompt do subagent:
 - Paths absolutos do task file, prd.md, techspec.md, tasks.md.
@@ -141,44 +134,20 @@ Cadeia (do retorno OU checkpoint) — pode ser executada por **hook programátic
 **Etapa 6: Encerrar**
 Retornar status: `done` (todas done), `partial` (alguma não-done), `failed` (pré-voo abortou), `needs_input`.
 
-## Mapeamento por Tool
+## Capacidades e adaptadores
 
-Contrato de retorno idêntico; primitiva varia.
-
-| Tool | Primitiva | Subagent | Paralelismo | Depth |
-|---|---|---|---|---|
-| Claude Code | `Agent` ([ref](https://code.claude.com/docs/en/sub-agents)) | `.claude/agents/task-executor.md` (nativo) | múltiplas Agent calls/mensagem | **1** — review/bugfix são skill calls |
-| Codex CLI | `codex exec` (subprocesso não-interativo) + `--profile` + MCP nested ([ref](https://developers.openai.com/codex)) | sem diretório de agents nativo — isolamento via `codex exec` | concorrentes (subprocessos) | assumir 1 |
-| Gemini CLI | `gemini skills` + extensões + ACP (`--acp`) nested ([ref](https://github.com/google-gemini/gemini-cli)) | sem diretório de agents nativo — isolamento via `gemini --acp`/skills | dispatch paralelo via subprocessos | n/d |
-| Copilot CLI | Custom Agents ([ref](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/create-custom-agents-for-cli)). Auto-descobre `.github/skills/` (criado por `ai-spec install` espelhando `.agents/skills/`); demais mirrors opcionais | `.github/agents/task-executor.agent.md` (nativo) | `/fleet` ou multi-session | n/d |
-
-Degradação controlada: tool sem subagent nativo → sequencial sem isolamento; registrar no report.
-
-**Inventário e validação empírica de subagentes (F26) — verificado em 2026:**
-
-| Tool | Diretório de agents nativo? | Mecanismo de isolamento verificado | Comando de verificação |
-|---|---|---|---|
-| Claude Code | **Sim** (`.claude/agents/`) | subagentes dedicados | `ls .claude/agents/` (8 agents) |
-| Copilot CLI | **Sim** (`.github/agents/`) | custom agents | `ls .github/agents/` (8 agents) |
-| Codex CLI 0.135 | **Não** | `codex exec` (não-interativo) + `--profile` + `codex mcp` nested | `codex --help` (sem subcomando `agents`; há `exec`, `mcp`, `--profile`) |
-| Gemini CLI 0.44 | **Não** | `gemini skills` + `gemini extensions` + ACP (`gemini --acp`) | `gemini skills list`; `gemini --help` (sem subcomando `agents`) |
-
-**Classificação epistêmica (registrar no report)**: Claude/Copilot = **verificado** (diretório
-nativo + agents enumeráveis). Codex/Gemini = **verificado que NÃO há diretório `agents` nativo** —
-o isolamento usa `codex exec`/`gemini --acp` como subprocesso. O arquivo de conveniência
-`.codex/agents/task-executor.toml` e `.gemini/agents/task-executor.md` é um **prompt seed para o
-subprocesso**, não um registro enforçado pelo CLI. **Não fingir enforcement nativo** para Codex/Gemini:
-se o orquestrador não conseguir spawnar subprocesso isolado, degradar para execução inline sequencial
-e registrar explicitamente `subagente: inline (tool sem agents nativo)` no `_orchestration_report.md`.
-**Sintoma de fallback**: a janela do orquestrador acumula contexto após a primeira tarefa em vez de
-≤100 tokens — sinaliza que o isolamento por subprocesso não ativou.
+O contrato de retorno é idêntico em todos os adaptadores. Antes de escolher spawn, paralelismo ou
+modo de escrita, consulte `ai-spec runtime-capabilities <raiz-do-worktree>` e registre o JSON
+retornado no relatório. Não inferir suporte por nome, versão, diretório ou tabela desta skill. Se a
+capacidade necessária estiver ausente, escrita concorrente deve falhar fechada; somente o caminho
+sequencial ou read-only aceito pelo CLI pode prosseguir.
 
 ## Regras invioláveis
 
 1. Toda tarefa em subagent fresh — orquestrador nunca executa `execute-task` inline.
 2. Contrato YAML estrito; violação = `failed: contract violation`.
-3. Paralelismo só com flag em tasks.md E suporte nativo do tool.
-4. Não coordenar arquivos entre paralelos — confiar no `Paralelizável`.
+3. Paralelismo só com flag em tasks.md e capacidades aprovadas pelo CLI.
+4. Não coordenar arquivos entre paralelos sem ownership disjunto validado pelo CLI.
 5. Orquestrador inline apenas: parsing tasks.md, DAG, report final, pré-voo, checkpoint.
 
 ## Tratamento de Erros
@@ -204,6 +173,6 @@ e registrar explicitamente `subagente: inline (tool sem agents nativo)` no `_orc
 | Status final | `done \| partial \| failed \| needs_input` |
 | Mutação direta tasks.md | Não |
 | Re-execução automática | Não |
-| Paralelismo | Mapping por Tool + flag `Paralelizável` |
-| Timeout default | 1800s; kill nativo p/ Codex/Gemini/Copilot (subprocesso), soft-discard p/ Claude (in-process) |
+| Paralelismo | `runtime-capabilities` + flag `Paralelizável` + ownership disjunto |
+| Timeout default | 1800s; estratégia de interrupção detectada e registrada pelo adaptador |
 | Orçamento de tokens | `AI_TASK_TOKEN_BUDGET` (default 0 = ilimitado; zero-value preserva F1) |

@@ -162,6 +162,39 @@ if ! grep -Eiq "veredito do revisor[[:space:]]*:[[:space:]]*(APPROVED|APPROVED_W
   missing=1
 fi
 
+# Contrato mínimo do diff revisado (RF-03). Estes valores não podem ser apenas
+# declarados no texto: precisam estar no bloco estruturado produzido pelo executor.
+diff_sha="$(grep -E '^sha=[[:space:]]*[0-9a-fA-F]{40}([0-9a-fA-F]{24})?[[:space:]]*$' "$report_file" | head -1 | sed -E 's/^sha=[[:space:]]*//; s/[[:space:]]*$//')" || true
+if [[ -z "$diff_sha" ]]; then
+  echo "FALTANDO: missing diff sha imutável (sha= deve ter 40 ou 64 hexadecimais)"
+  missing=1
+fi
+
+review_verdict="$(grep -E '^verdict=[[:space:]]*(APPROVED|APPROVED_WITH_REMARKS|REJECTED|BLOCKED)[[:space:]]*$' "$report_file" | head -1 | sed -E 's/^verdict=[[:space:]]*//; s/[[:space:]]*$//')" || true
+if [[ -z "$review_verdict" ]]; then
+  echo "FALTANDO: veredito do reviewer no bloco Diff Reviewed"
+  missing=1
+elif [[ "$review_verdict" != "APPROVED" && "$review_verdict" != "APPROVED_WITH_REMARKS" ]]; then
+  echo "FALTANDO: veredito do reviewer não aprova execução: $review_verdict"
+  missing=1
+fi
+
+review_tool="$(grep -E '^tool=[[:space:]]*(claude|codex|gemini|copilot)[[:space:]]*$' "$report_file" | head -1 | sed -E 's/^tool=[[:space:]]*//; s/[[:space:]]*$//')" || true
+if [[ -z "$review_tool" ]]; then
+  echo "FALTANDO: tool não canônica ou ausente no bloco Diff Reviewed"
+  missing=1
+fi
+
+# Cobertura não pode regredir. A ausência da métrica falha fechada.
+coverage_delta="$(grep -E '^delta=[[:space:]]*[+-]?[0-9]+([.][0-9]+)?%[[:space:]]*$' "$report_file" | head -1 | sed -E 's/^delta=[[:space:]]*//; s/%[[:space:]]*$//')" || true
+if [[ -z "$coverage_delta" ]]; then
+  echo "FALTANDO: coverage delta ausente ou inválido"
+  missing=1
+elif awk -v delta="$coverage_delta" 'BEGIN { exit !(delta < 0) }'; then
+  printf 'FALTANDO: coverage regression detectada (delta=%s%%)\n' "$coverage_delta"
+  missing=1
+fi
+
 if [[ $missing -ne 0 ]]; then
   echo ""
   echo "Validação do pacote de evidências falhou: $report_file"

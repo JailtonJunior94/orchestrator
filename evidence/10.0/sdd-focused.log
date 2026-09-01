@@ -1,0 +1,5 @@
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd	3.532s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd/tasks	3.552s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	7.835s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	3.882s

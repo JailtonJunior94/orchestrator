@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-sdd-robusto/6.0_execution_report.md
+summary: Isolamento fail-closed e snapshot cumulativo validados.
+timestamp: 2026-09-01T12:37:03Z

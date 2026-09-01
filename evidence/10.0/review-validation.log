@@ -1,0 +1,3 @@
+$ bash .agents/scripts/validate-review-evidence.sh evidence/10.0/review.md
+Validacao do pacote de evidencias de review aprovada: evidence/10.0/review.md
+exit_code=0

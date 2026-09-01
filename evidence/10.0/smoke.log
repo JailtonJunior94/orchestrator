@@ -1,0 +1,5 @@
+$ make smoke-adapters
+go test -count=1 ./internal/adapters/... ./internal/taskloop/... -run 'TestGenerate_executeTaskYAMLContract_allTools|TestE2EAgent_PromptContainsAgentBlocks'
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/adapters	0.192s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	0.291s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks	[no test files]

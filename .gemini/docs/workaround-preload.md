@@ -4,7 +4,9 @@
 
 ## Contexto
 
-O Gemini CLI nao suporta hooks automaticos (PreToolUse/PostToolUse) nativos como o Claude Code. Os scripts em `.gemini/hooks/` sao utilitarios manuais, nao acionados automaticamente.
+Este adaptador não declara capacidades estáticas do Gemini CLI. Os scripts em `.gemini/hooks/`
+são utilitários locais; antes de qualquer operação que exija isolamento ou escrita concorrente,
+consulte `ai-spec runtime-capabilities <raiz-do-worktree>` e siga o resultado fail-closed do CLI.
 
 ## Scripts disponíveis
 
@@ -23,12 +25,14 @@ bash .gemini/hooks/validate-preload.sh path/to/file.go
 bash .gemini/hooks/validate-governance.sh .agents/skills/review/SKILL.md
 ```
 
-## Invocacao via flag --hook (se suportado pela versao do Gemini CLI)
+## Invocacao via adaptador instalado
 
 ```bash
-gemini --hook "bash .gemini/hooks/validate-preload.sh {file}" \
-       --hook "bash .gemini/hooks/validate-governance.sh {file}"
+ai-spec runtime-capabilities <raiz-do-worktree>
 ```
+
+Use o mecanismo de hook declarado pelo JSON retornado. Se não houver capacidade declarada, execute
+os scripts manualmente e não trate isso como prova de isolamento ou escrita concorrente.
 
 ## Variaveis de controle
 
@@ -40,4 +44,5 @@ gemini --hook "bash .gemini/hooks/validate-preload.sh {file}" \
 
 ## Limitacao conhecida
 
-Sem hooks automaticos, a compliance depende de seguir as instrucoes procedurais manualmente. Use `GOVERNANCE_PRELOAD_CONFIRMED=1` em sessoes longas onde o contrato ja foi confirmado no inicio.
+Instruções e scripts não comprovam isolamento. Use `GOVERNANCE_PRELOAD_CONFIRMED=1` apenas para
+o preload já confirmado; nunca como bypass de uma capacidade ausente no CLI.

@@ -1,8 +1,8 @@
-.PHONY: build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync check-scripts-sync test-hooks test-validators sync-acp-sdk-version test-acp-live mocks check-mocks
+.PHONY: build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync check-scripts-sync test-hooks test-validators test-sdd-evals smoke-adapters test-portable-skills sync-acp-sdk-version test-acp-live mocks check-mocks
 
 BINARY := ai-spec
 GOFLAGS := -trimpath
-MOCKERY_VERSION := v2.53.4
+MOCKERY_VERSION := v3.7.4
 
 build:
 	CGO_ENABLED=0 go build $(GOFLAGS) -o $(BINARY) .
@@ -10,7 +10,7 @@ build:
 # mocks: (re)gera os mocks declarados em mockery.yml via mockery.
 # Pos-processa para usar 'any' no lugar de 'interface{}' (Regra 7.1).
 mocks:
-	go run github.com/vektra/mockery/v2@$(MOCKERY_VERSION) --config mockery.yml
+	go run github.com/vektra/mockery/v3@$(MOCKERY_VERSION) --config mockery.yml
 	bash scripts/normalize-mocks.sh
 
 # check-mocks: falha se os mocks estiverem desatualizados em relacao as interfaces.
@@ -75,6 +75,16 @@ test-hooks:
 
 test-validators:
 	bash scripts/test-validators.sh
+	bash tests/scripts/validate-task-evidence_test.sh .agents/scripts/validate-task-evidence.sh
+
+test-sdd-evals:
+	bash scripts/test-sdd-evals.sh
+
+smoke-adapters:
+	go test -count=1 ./internal/adapters/... ./internal/taskloop/... -run 'TestGenerate_executeTaskYAMLContract_allTools|TestE2EAgent_PromptContainsAgentBlocks'
+
+test-portable-skills:
+	bash scripts/test-portable-skills.sh
 
 # sync-acp-sdk-version: mantém ClaudeSDKVersion em internal/runtime/specs/claude.go
 # sincronizada com a versão de github.com/coder/acp-go-sdk declarada em go.mod.

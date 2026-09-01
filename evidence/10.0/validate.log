@@ -1,0 +1,2 @@
+$ ./ai-spec validate .specs/prd-sdd-robusto
+nenhuma skill encontrada em .specs/prd-sdd-robusto

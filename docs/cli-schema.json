@@ -680,6 +680,59 @@
         "flags": {}
       },
       {
+        "name": "approve",
+        "description": "Aprova um artefato SDD e registra seu digest imutável",
+        "args": [],
+        "flags": {}
+      },
+      {
+        "name": "invalidate",
+        "description": "Invalida artefatos downstream aprovados",
+        "args": [],
+        "flags": {
+          "from": { "type": "string", "required": true }
+        }
+      },
+      {
+        "name": "orchestrate",
+        "description": "Valida estado SDD e inicia uma execução recuperável",
+        "args": [],
+        "flags": {
+          "run-id": { "type": "string", "required": false }
+        }
+      },
+      {
+        "name": "runtime-capabilities",
+        "description": "Detecta capacidades locais para orquestração segura",
+        "args": [],
+        "flags": {}
+      },
+      {
+        "name": "validate-sdd",
+        "description": "Valida o contrato SDD versionado de um PRD",
+        "args": [],
+        "flags": {}
+      },
+      {
+        "name": "validate-result",
+        "description": "Valida um resultado SDD JSON versionado",
+        "args": [
+          {
+            "name": "tipo",
+            "required": true,
+            "description": "Tipo do resultado: execution, review ou checkpoint"
+          },
+          {
+            "name": "arquivo-json",
+            "required": true,
+            "description": "Caminho do resultado JSON"
+          }
+        ],
+        "flags": {
+          "task-id": { "type": "string", "required": false }
+        }
+      },
+      {
         "name": "hash",
         "description": "Calcula SHA-256 de um arquivo de forma portavel",
         "longDescription": "Calcula o SHA-256 de um arquivo usando a implementacao Go embarcada no ai-spec-harness, sem depender de binarios externos como sha256sum ou shasum.",

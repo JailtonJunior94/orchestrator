@@ -1,0 +1,6 @@
+$ bash -c matches=\$\(grep\ -rn\ \"os\\\\.Exit\\\\\|log\\\\.Fatal\"\ --include=\"\*.go\"\ .\ \|\ grep\ -v\ \"\^cmd/\"\ \|\|\ true\)\;\ if\ \[\ -n\ \"\$matches\"\ \]\;\ then\ printf\ \"%s\\n\"\ \"\$matches\"\;\ exit\ 1\;\ fi
+./cmd/ai_spec_harness/exit_error.go:9:// sem chamar os.Exit fora de main (Regra 5.16). O handler e responsavel por
+./cmd/ai_spec_harness/exit_error_test.go:11:// codigos de saida que antes era garantido por chamadas diretas a os.Exit.
+./main.go:11:		os.Exit(aispecharness.NewExitResolver().CodeFor(err))
+
+exit_code=1

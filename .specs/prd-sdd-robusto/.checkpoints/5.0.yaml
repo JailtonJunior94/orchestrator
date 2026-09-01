@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-sdd-robusto/5.0_execution_report.md
+summary: Orquestrador com eventos append-only, lock exclusivo e retomada idempotente validado.
+timestamp: 2026-09-01T12:29:48Z

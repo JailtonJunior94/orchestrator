@@ -1,0 +1,32 @@
+{
+  "schema_version": 2,
+  "run_id": "run-sdd-robusto",
+  "task_id": "7.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "3f49c200bc5ae75848526200991f0efd280ecd02",
+  "patch_sha256": "227d672e8d09bb20b2b685cf6ce8ce659598a4f53e0f15bbb86b8420ea9e6181",
+  "final_state_sha256": "2223d2f23bcb1b22b34b9997a0b720b8982ec2c01c3965608a680344bac3350a",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go test ./internal/taskloop -count=1",
+      "exit_code": 0,
+      "output_sha256": "ffbddd1b9db2e228df47a42dcd4a8dea57c04f63022e3a0e13dfadc60aeffded"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "RF-15",
+      "evidence_ref": ".specs/prd-sdd-robusto/7.0_execution_report.md#criterios-de-aceite"
+    },
+    {
+      "id": "RF-16",
+      "evidence_ref": ".specs/prd-sdd-robusto/7.0_execution_report.md#criterios-de-aceite"
+    }
+  ],
+  "evidence": [
+    ".specs/prd-sdd-robusto/7.0_execution_report.md"
+  ],
+  "review_verdict": "approved"
+}

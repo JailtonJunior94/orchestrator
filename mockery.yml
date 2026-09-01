@@ -1,10 +1,7 @@
-quiet: false
-disable-version-string: true
-resolve-type-alias: false
-issue-845-fix: true
-with-expecter: true
-mockname: "{{.InterfaceName}}"
-outpkg: "mocks"
+log-level: warn
+template: testify
+structname: "{{.InterfaceName}}"
+pkgname: "mocks"
 filename: "{{.InterfaceName | snakecase}}.go"
 dir: "{{.InterfaceDir}}/mocks"
 packages:

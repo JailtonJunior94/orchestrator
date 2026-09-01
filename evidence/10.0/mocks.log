@@ -1,0 +1,5 @@
+$ make check-mocks
+bash scripts/check-mocks.sh
+make: *** [check-mocks] Error 1
+
+exit_code=2

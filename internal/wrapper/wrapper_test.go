@@ -278,7 +278,7 @@ func TestWrapperEmitsGeminiDeprecationWarningOnce_Helper(t *testing.T) {
 // Usa GO_TEST_GEMINI_WARN_HELPER=1 para acionar o helper acima em processo fresh,
 // garantindo que geminiWrapperWarnOnce (package-level) não tenha sido disparado antes.
 func TestWrapperEmitsGeminiDeprecationWarningOnce(t *testing.T) {
-	cmd := exec.Command(os.Args[0],
+	cmd := exec.Command(testBinary(t),
 		"-test.run=TestWrapperEmitsGeminiDeprecationWarningOnce_Helper",
 		"-test.v",
 	)
@@ -290,6 +290,16 @@ func TestWrapperEmitsGeminiDeprecationWarningOnce(t *testing.T) {
 	if !strings.Contains(string(out), "PASS") {
 		t.Fatalf("subprocesso helper não reportou PASS:\n%s", string(out))
 	}
+}
+
+func testBinary(t *testing.T) string {
+	t.Helper()
+
+	binary, err := os.Executable()
+	if err != nil {
+		t.Fatalf("resolver binario de teste: %v", err)
+	}
+	return binary
 }
 
 // TestWrapperGeminiLegacyStillFunctional verifica que buildInstruction("gemini", ...)
