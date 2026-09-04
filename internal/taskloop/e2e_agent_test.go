@@ -38,8 +38,9 @@ func buildMinimalAgentMD(agentName string) []byte {
 
 // buildE2EFS monta um FakeFileSystem com estrutura de projeto + AGENT.md no escopo workspace.
 // Retorna o fsys e o path absoluto do PRD folder.
-func buildE2EFS(agentName string) (*taskfs.FakeFileSystem, string) {
-	base := e2eWorkspacePath()
+func buildE2EFS(t *testing.T, agentName string) (*taskfs.FakeFileSystem, string) {
+	t.Helper()
+	base := e2eWorkspacePath(t)
 	prd := filepath.Join(base, ".specs", "prd-e2e")
 
 	fsys := taskfs.NewFakeFileSystem()
@@ -56,8 +57,9 @@ func buildE2EFS(agentName string) (*taskfs.FakeFileSystem, string) {
 }
 
 // buildLegacyFS monta o mesmo FakeFileSystem sem AGENT.md (fluxo legado).
-func buildLegacyFS() (*taskfs.FakeFileSystem, string) {
-	base := e2eWorkspacePath()
+func buildLegacyFS(t *testing.T) (*taskfs.FakeFileSystem, string) {
+	t.Helper()
+	base := e2eWorkspacePath(t)
 	prd := filepath.Join(base, ".specs", "prd-e2e")
 
 	fsys := taskfs.NewFakeFileSystem()
@@ -70,8 +72,15 @@ func buildLegacyFS() (*taskfs.FakeFileSystem, string) {
 	return fsys, prd
 }
 
-func e2eWorkspacePath() string {
-	return filepath.Join(string(filepath.Separator), "fake", "project")
+func e2eWorkspacePath(t *testing.T) string {
+	t.Helper()
+
+	path, err := filepath.Abs(filepath.Join("fake", "project"))
+	if err != nil {
+		t.Fatalf("resolver caminho absoluto do workspace E2E: %v", err)
+	}
+
+	return path
 }
 
 func newE2EPrinter() *output.Printer {
@@ -87,7 +96,7 @@ func newE2EPrinter() *output.Printer {
 // agente aparece em ambos os blocos.
 func TestE2EAgent_PromptContainsAgentBlocks(t *testing.T) {
 	const agentName = "agente-smoke"
-	fsys, prd := buildE2EFS(agentName)
+	fsys, prd := buildE2EFS(t, agentName)
 
 	var promptReceived string
 	var invokerCalled bool
@@ -159,7 +168,7 @@ func TestE2EAgent_PromptContainsAgentBlocks(t *testing.T) {
 // agente (blocos metadata/catalogo) e adicional, nao altera o esqueleto do report.
 func TestE2EAgent_ForensicArtifactStructureIdentical(t *testing.T) {
 	t.Run("legado", func(t *testing.T) {
-		fsys, prd := buildLegacyFS()
+		fsys, prd := buildLegacyFS(t)
 
 		svc := NewService(fsys, newE2EPrinter())
 		svc.binaryChecker = noBinaryCheck
@@ -203,7 +212,7 @@ func TestE2EAgent_ForensicArtifactStructureIdentical(t *testing.T) {
 
 	t.Run("agent", func(t *testing.T) {
 		const agentName = "agente-baseline"
-		fsys, prd := buildE2EFS(agentName)
+		fsys, prd := buildE2EFS(t, agentName)
 
 		svc := NewService(fsys, newE2EPrinter())
 		svc.binaryChecker = noBinaryCheck
@@ -254,7 +263,7 @@ func TestE2EAgent_ForensicArtifactStructureIdentical(t *testing.T) {
 // quando --agent e usado, mesmo com invoker stub sem ACP real.
 func TestE2EAgent_ReportProduced(t *testing.T) {
 	const agentName = "agente-report"
-	fsys, prd := buildE2EFS(agentName)
+	fsys, prd := buildE2EFS(t, agentName)
 
 	svc := NewService(fsys, newE2EPrinter())
 	svc.binaryChecker = noBinaryCheck
@@ -295,7 +304,7 @@ func TestE2EAgent_ReportProduced(t *testing.T) {
 // quando AgentName == "", o fluxo legado nao acessa o registry de agentes.
 // Identico ao T-17 existente mas posicionado no E2E smoke para rastreabilidade.
 func TestE2EAgent_LegacyFlowDoesNotUseRegistry(t *testing.T) {
-	fsys, prd := buildLegacyFS()
+	fsys, prd := buildLegacyFS(t)
 
 	legacyCalled := false
 

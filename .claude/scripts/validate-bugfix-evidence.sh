@@ -123,6 +123,68 @@ for rf_id in "${rf_ids[@]+"${rf_ids[@]}"}"; do
   fi
 done
 
+# Validação estrutural por bug e reconciliação dos totalizadores. Uma ocorrência
+# global não pode servir como prova para múltiplos bugs.
+if ! python3 - "$report_file" <<'PY'
+import re
+import sys
+
+text = open(sys.argv[1], encoding="utf-8").read()
+bugs_section = re.search(r"(?ims)^##\s+Bugs\s*$\n(.*?)(?=^##\s+Comandos Executados\s*$)", text)
+if not bugs_section:
+    print("FALTANDO: blocos individuais de bugs")
+    raise SystemExit(1)
+blocks = re.split(r"(?im)(?=^-\s*ID\s*:)", bugs_section.group(1))
+blocks = [block for block in blocks if re.match(r"(?im)^-\s*ID\s*:\s*\S+", block)]
+if not blocks:
+    print("FALTANDO: nenhum bloco '- ID:' encontrado")
+    raise SystemExit(1)
+
+failed = False
+states = []
+tests = 0
+required = ("Severidade", "Origem", "Estado", "Causa raiz", "Arquivos alterados", "Teste de regressao", "Validacao")
+for block in blocks:
+    bug_id = re.search(r"(?im)^-\s*ID\s*:\s*(\S+)", block).group(1)
+    for field in required:
+        match = re.search(rf"(?im)^-\s*{field}\s*:\s*(.+)$", block)
+        if not match or not match.group(1).strip():
+            print(f"FALTANDO: {field} no bloco {bug_id}")
+            failed = True
+    state = re.search(r"(?im)^-\s*Estado\s*:\s*(fixed|blocked|skipped|failed)\s*$", block)
+    states.append(state.group(1).lower() if state else "invalid")
+    test = re.search(r"(?im)^-\s*Teste de regressao\s*:\s*(.+)$", block)
+    if test and test.group(1).strip():
+        tests += 1
+
+def total(label):
+    match = re.search(rf"(?im)^-\s*{label}\s*:\s*(\d+)\s*$", text)
+    return int(match.group(1)) if match else None
+
+declared_total = total("Total de bugs no escopo")
+declared_fixed = total("Corrigidos")
+declared_tests = total("Testes de regressao adicionados")
+actual_fixed = states.count("fixed")
+for label, declared, actual in (
+    ("Total de bugs no escopo", declared_total, len(blocks)),
+    ("Corrigidos", declared_fixed, actual_fixed),
+    ("Testes de regressao adicionados", declared_tests, tests),
+):
+    if declared != actual:
+        print(f"FALTANDO: totalizador {label}={declared!r} diverge dos blocos ({actual})")
+        failed = True
+
+pending = len(blocks) - actual_fixed
+pending_line = re.search(r"(?im)^-\s*Pendentes\s*:\s*(.+)$", text)
+if not pending_line or (pending == 0 and pending_line.group(1).strip().lower() != "nenhum") or (pending > 0 and pending_line.group(1).strip().lower() == "nenhum"):
+    print(f"FALTANDO: Pendentes diverge dos blocos ({pending})")
+    failed = True
+raise SystemExit(1 if failed else 0)
+PY
+then
+  missing=1
+fi
+
 if [[ $missing -ne 0 ]]; then
   echo ""
   echo "Validacao do pacote de evidencias de bugfix falhou: $report_file"

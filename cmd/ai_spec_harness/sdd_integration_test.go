@@ -15,8 +15,13 @@ import (
 
 func TestSDDCommandsLifecycleIntegration(t *testing.T) {
 	prdDir := t.TempDir()
-	for _, file := range []string{"prd.md", "techspec.md", "tasks.md"} {
-		if err := os.WriteFile(filepath.Join(prdDir, file), []byte(file), 0o644); err != nil {
+	artifacts := map[string]string{
+		"prd.md":      "## Requisitos Funcionais\n\n- RF-01: fluxo.\n\n## Requisitos Não Funcionais\n\n- NFR-01: robustez.\n",
+		"techspec.md": "# TechSpec\n",
+		"tasks.md":    "## Tarefas\n\n| # | Status | Dependências | Paralelizável | Ownership |\n|---|---|---|---|---|\n| 1.0 | pending | — | Não | internal/a |\n\n## Cobertura de Requisitos\n\n| Tarefa | Requisitos cobertos |\n|---|---|\n| 1.0 | RF-01, NFR-01 |\n",
+	}
+	for file, content := range artifacts {
+		if err := os.WriteFile(filepath.Join(prdDir, file), []byte(content), 0o644); err != nil {
 			t.Fatalf("criar %s: %v", file, err)
 		}
 	}
@@ -48,6 +53,53 @@ func TestSDDCommandsLifecycleIntegration(t *testing.T) {
 		if entry.Status != sdd.StatusStale || entry.Approved {
 			t.Fatalf("%s deveria estar stale e sem aprovacao: %#v", artifact, entry)
 		}
+	}
+}
+
+func TestSDDMigrationCommandsRequireConfirmationAndScopeRollback(t *testing.T) {
+	prdDir := t.TempDir()
+	artifacts := map[string]string{
+		"prd.md":      "## Requisitos Funcionais\n\n- RF-01: fluxo.\n",
+		"techspec.md": "# TechSpec\n",
+		"tasks.md":    "## Tarefas\n\n| # | Status | Dependências | Paralelizável | Ownership |\n|---|---|---|---|---|\n| 1.0 | pending | — | Não | internal/a |\n\n## Cobertura de Requisitos\n\n| Tarefa | Requisitos cobertos |\n|---|---|\n| 1.0 | RF-01 |\n",
+	}
+	for name, content := range artifacts {
+		if err := os.WriteFile(filepath.Join(prdDir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	legacy := []byte(`{"schema_version":1}`)
+	statePath := filepath.Join(prdDir, "sdd-state.json")
+	if err := os.WriteFile(statePath, legacy, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	execute := func(args ...string) error {
+		t.Helper()
+		t.Setenv("AI_INVOCATION_DEPTH", "0")
+		root := newRootCmd()
+		root.SetArgs(args)
+		return root.Execute()
+	}
+	if err := execute("migrate-sdd", prdDir, "--run-id", "migration-1", "--dry-run"); err != nil {
+		t.Fatal(err)
+	}
+	if content, err := os.ReadFile(statePath); err != nil || string(content) != string(legacy) {
+		t.Fatal("dry-run alterou estado")
+	}
+	if err := execute("migrate-sdd", prdDir, "--run-id", "migration-1"); err == nil {
+		t.Fatal("migração sem --confirm deveria falhar")
+	}
+	if err := execute("migrate-sdd", prdDir, "--run-id", "migration-1", "--confirm"); err != nil {
+		t.Fatal(err)
+	}
+	if err := execute("rollback-sdd", prdDir, "--run-id", "outro", "--confirm"); err == nil {
+		t.Fatal("rollback de outro run deveria falhar")
+	}
+	if err := execute("rollback-sdd", prdDir, "--run-id", "migration-1", "--confirm"); err != nil {
+		t.Fatal(err)
+	}
+	if content, err := os.ReadFile(statePath); err != nil || string(content) != string(legacy) {
+		t.Fatal("rollback nao restaurou estado legado")
 	}
 }
 

@@ -2,6 +2,7 @@ package evidence
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -145,13 +146,36 @@ func (r1 *Validator) validateBugfix(text string, rfIDs []string) []Finding {
 		{"Teste de regressao", `Teste de regress`},
 		{"Validacao", `Valida`},
 		{"Corrigidos contagem", `Corrigidos:\s*\d+`},
-		{"Estado done/blocked/failed/needs_input", `Estado:\s*(done|blocked|failed|needs_input)`},
+		{"Estado done/blocked/failed/needs_input", `Estado(?: final)?:\s*(done|blocked|failed|needs_input)`},
 	}
 
 	for _, p := range requiredPatterns {
 		if !NewValidator().matchesRegex(text, p.pattern) {
 			findings = append(findings, Finding{Label: p.label})
 		}
+	}
+
+	blocks := NewValidator().bugBlocks(text)
+	if len(blocks) == 0 {
+		findings = append(findings, Finding{Label: "blocos individuais de bugs"})
+	} else {
+		fixed := 0
+		tests := 0
+		for _, block := range blocks {
+			id := block["id"]
+			for _, field := range []string{"severidade", "origem", "estado", "causa raiz", "arquivos alterados", "teste de regressao", "validacao"} {
+				if strings.TrimSpace(block[field]) == "" {
+					findings = append(findings, Finding{Label: field + " no bloco " + id})
+				}
+			}
+			if block["estado"] == "fixed" {
+				fixed++
+			}
+			if block["teste de regressao"] != "" {
+				tests++
+			}
+		}
+		findings = append(findings, NewValidator().reconcileBugfixTotals(text, len(blocks), fixed, tests)...)
 	}
 
 	// rastreabilidade: cada rfID deve aparecer no relatorio
@@ -161,6 +185,62 @@ func (r1 *Validator) validateBugfix(text string, rfIDs []string) []Finding {
 		}
 	}
 
+	return findings
+}
+
+func (r1 *Validator) bugBlocks(text string) []map[string]string {
+	lines := strings.Split(text, "\n")
+	var blocks []map[string]string
+	var current map[string]string
+	inBugs := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.EqualFold(strings.TrimSpace(strings.TrimLeft(trimmed, "#")), "Bugs") {
+			inBugs = true
+			continue
+		}
+		if inBugs && strings.HasPrefix(trimmed, "#") {
+			break
+		}
+		if !inBugs || !strings.HasPrefix(trimmed, "-") {
+			continue
+		}
+		field, value, found := strings.Cut(strings.TrimSpace(strings.TrimPrefix(trimmed, "-")), ":")
+		if !found {
+			continue
+		}
+		key := strings.ToLower(strings.TrimSpace(field))
+		if key == "id" {
+			current = make(map[string]string)
+			blocks = append(blocks, current)
+		}
+		if current != nil {
+			current[key] = strings.TrimSpace(value)
+		}
+	}
+	return blocks
+}
+
+func (r1 *Validator) reconcileBugfixTotals(text string, total, fixed, tests int) []Finding {
+	var findings []Finding
+	for _, expected := range []struct {
+		label string
+		value int
+	}{
+		{label: "Total de bugs no escopo", value: total},
+		{label: "Corrigidos", value: fixed},
+		{label: "Testes de regressao adicionados", value: tests},
+	} {
+		match := regexp.MustCompile(`(?im)^-\s*` + regexp.QuoteMeta(expected.label) + `\s*:\s*(\d+)\s*$`).FindStringSubmatch(text)
+		if len(match) != 2 {
+			findings = append(findings, Finding{Label: "totalizador " + expected.label})
+			continue
+		}
+		value, err := strconv.Atoi(match[1])
+		if err != nil || value != expected.value {
+			findings = append(findings, Finding{Label: "totalizador " + expected.label + " diverge dos blocos"})
+		}
+	}
 	return findings
 }
 

@@ -1,0 +1,2 @@
+bash scripts/test-sdd-evals.sh
+sdd evals: {"accepted":1,"escape_rate":0.0,"false_negative_rate":0.0,"false_positive_rate":0.0,"fixtures":21,"latency_ms":{"max":12.192,"mean":11.34,"total":238.147},"quality_rate":1.0,"rejected":20}

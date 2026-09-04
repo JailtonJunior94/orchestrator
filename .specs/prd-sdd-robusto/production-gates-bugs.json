@@ -43,5 +43,194 @@
     "reproduction": "Executar make smoke-adapters no runner Windows.",
     "expected": "O smoke de adaptadores deve executar com o FakeFileSystem em todos os sistemas suportados.",
     "actual": "O teste usa caminhos POSIX hardcoded e nao encontra tasks.md no Windows."
+  },
+  {
+    "id": "BUG-106",
+    "severity": "major",
+    "file": "internal/taskloop/e2e_agent_test.go",
+    "line": 76,
+    "reproduction": "Executar make smoke-adapters no runner Windows apos a correcao do BUG-105.",
+    "expected": "O workspace do FakeFileSystem deve usar exatamente o mesmo caminho absoluto resolvido pelo servico em todos os sistemas suportados.",
+    "actual": "O helper monta um caminho enraizado sem volume no Windows; o servico o transforma em caminho absoluto com volume e deixa de localizar tasks.md."
+  },
+  {
+    "id": "BUG-107",
+    "severity": "major",
+    "file": "scripts/check-mocks.sh",
+    "line": 25,
+    "reproduction": "Executar make check-mocks no job Linux da CI com Go 1.26.2.",
+    "expected": "A verificacao de mocks deve ser deterministica entre os ambientes oficialmente suportados e encerrar com codigo zero quando os mocks versionados estao sincronizados.",
+    "actual": "O gate falha na CI Linux apos regenerar mocks, enquanto passa localmente, sem expor o diagnostico do gerador."
+  },
+  {
+    "id": "BUG-108",
+    "severity": "critical",
+    "file": "internal/sdd/state.go",
+    "line": 231,
+    "reproduction": "Alterar tasks.md depois da aprovacao e executar ai-spec validate-sdd no diretorio do PRD.",
+    "expected": "A validacao deve comparar os digests aprovados com os arquivos atuais e falhar fechada quando qualquer artefato estiver stale.",
+    "actual": "validate-sdd valida apenas o formato dos digests persistidos e retorna sucesso mesmo quando tasks.md diverge do SHA-256 aprovado."
+  },
+  {
+    "id": "BUG-109",
+    "severity": "critical",
+    "file": "internal/sdd/state.go",
+    "line": 56,
+    "reproduction": "Inicializar e aprovar um PRD SDD v2 e inspecionar sdd-state.json.",
+    "expected": "O estado v2 deve persistir requisitos RF/NFR, DAG, estados das tarefas, ownership e referencias de evidencia, alem dos artefatos e eventos.",
+    "actual": "O estado persistido contem somente schema_version, run_id, artifacts e events, sem o modelo operacional exigido por RF-06."
+  },
+  {
+    "id": "BUG-110",
+    "severity": "critical",
+    "file": "cmd/ai_spec_harness/sdd.go",
+    "line": 46,
+    "reproduction": "Executar ai-spec orchestrate em um PRD aprovado com tarefas prontas.",
+    "expected": "O comando deve validar o modelo estrutural, obter o lock de escritor, criar ou retomar tentativas idempotentes e persistir as transicoes operacionais.",
+    "actual": "O comando apenas verifica tres flags de aprovacao e imprime OK; nenhuma tarefa, tentativa, DAG ou evento de execucao e processado."
+  },
+  {
+    "id": "BUG-111",
+    "severity": "major",
+    "file": "internal/sdd/tasks/parser.go",
+    "line": 37,
+    "reproduction": "Executar validate-sdd sobre um PRD com NFR sem cobertura ou tasks.md com DAG estrutural invalido.",
+    "expected": "O CLI deve usar o parser estrutural em producao e validar cobertura completa de RF e NFR, dependencias, ciclos, ownership e paralelismo.",
+    "actual": "NewParser e usado apenas em testes, e a extracao le somente a secao Requisitos Funcionais; NFR e DAG malformado nao bloqueiam validate-sdd."
+  },
+  {
+    "id": "BUG-112",
+    "severity": "critical",
+    "file": ".agents/scripts/validate-task-evidence.sh",
+    "line": 1,
+    "reproduction": "Criar um execution_report.md com comandos, hashes e evidencias apenas declarados em texto, sem arquivos de log ou com digest que nao corresponde ao conteudo, e executar o validador.",
+    "expected": "O gate deve exigir evidencias fisicas contidas no repositorio, verificar seus digests e confrontar identidade, patch e criterios antes de aceitar done.",
+    "actual": "O validador aceita correspondencias textuais e nao exige que logs/evidencias existam nem que os hashes declarados correspondam aos artefatos."
+  },
+  {
+    "id": "BUG-113",
+    "severity": "critical",
+    "file": ".github/workflows/release.yml",
+    "line": 3,
+    "reproduction": "Fazer push em main que conclua o workflow Tests com falha e observar o workflow release do mesmo SHA.",
+    "expected": "Nenhuma versao, tag ou artefato deve ser publicado antes de todos os jobs obrigatorios do workflow Tests concluirem com sucesso para o mesmo SHA.",
+    "actual": "O release dispara diretamente em push, sem dependencia do workflow Tests; o SHA 8d946753 teve Tests failure e release success com publicacao da v0.29.2."
+  },
+  {
+    "id": "BUG-114",
+    "severity": "critical",
+    "file": "internal/taskloop/orchestrator.go",
+    "line": 218,
+    "reproduction": "Iniciar uma tentativa com um snapshot e finaliza-la com um ExecutionResult contendo hashes artificiais e referencias de evidencia inexistentes.",
+    "expected": "Finish deve confrontar o resultado com o snapshot persistido da tentativa, validar a existencia e contencao das evidencias e rejeitar qualquer divergencia.",
+    "actual": "Finish valida somente formato e presenca; o teste newDoneResult usa hashes artificiais e arquivo inexistente e ainda recebe done."
+  },
+  {
+    "id": "BUG-115",
+    "severity": "major",
+    "file": ".specs/prd-sdd-robusto/.checkpoints/1.0.yaml",
+    "line": 1,
+    "reproduction": "Inspecionar os checkpoints persistidos das tarefas 1.0 a 10.0 e valida-los contra execution-result.schema.json.",
+    "expected": "Todo checkpoint deve usar o mesmo contrato JSON v2 versionado do resultado de execucao, conforme RF-05.",
+    "actual": "Nove tarefas possuem YAML minimo fora do schema; somente 7.0.json usa o contrato v2."
+  },
+  {
+    "id": "BUG-116",
+    "severity": "major",
+    "file": ".agents/scripts/validate-bugfix-evidence.sh",
+    "line": 86,
+    "reproduction": "Criar bugfix_report.md com varios bugs, mas fornecer causa, teste, origem e estado apenas para um deles, mantendo totalizadores declarados incorretos.",
+    "expected": "O validador deve verificar cada bug individualmente e reconciliar total, corrigidos, testes e pendentes com os blocos reais.",
+    "actual": "O gate procura apenas ocorrencias globais dos campos e aceita totalizadores sem reconciliacao por bug."
+  },
+  {
+    "id": "BUG-117",
+    "severity": "major",
+    "file": "evals/sdd/manifest.json",
+    "line": 5,
+    "reproduction": "Executar make test-sdd-evals e inspecionar as metricas produzidas pelo corpus.",
+    "expected": "O corpus deve medir e aplicar thresholds deterministas de qualidade, escapes, falsos positivos, falsos negativos e latencia, registrando tokens e custo apenas quando observados.",
+    "actual": "O manifest e a saida registram contagens e valores constantes, sem calcular taxas de escape, falso positivo/negativo ou latencia exigidas por RF-18."
+  },
+  {
+    "id": "BUG-118",
+    "severity": "major",
+    "file": "scripts/check-mocks.sh",
+    "line": 22,
+    "reproduction": "Executar check-mocks com um MOCKERY_BIN que altera parcialmente um mock e termina com status nao-zero.",
+    "expected": "O gate deve limpar todos os temporarios e preservar integralmente o worktree em caminhos de sucesso, drift e falha do gerador.",
+    "actual": "A geracao ocorre in-place; em falha, o tempfile de snapshot e alteracoes parciais podem permanecer no worktree."
+  },
+  {
+    "id": "BUG-119",
+    "severity": "major",
+    "file": ".specs/prd-sdd-robusto/10.0_execution_report.md",
+    "line": 46,
+    "reproduction": "Comparar o digest e a base do relatorio/review final com o patch cumulativo e o HEAD atuais apos os bugfixes.",
+    "expected": "A tarefa final deve possuir logs fisicos, digest recomputavel e revisao independente fresca que cubram o exato patch candidato.",
+    "actual": "O relatorio e o review atuais antecedem o HEAD e as correcoes pos-plano, mas continuam aprovados pelos validadores sintaticos."
+  },
+  {
+    "id": "BUG-120",
+    "severity": "critical",
+    "file": "internal/taskloop/orchestrator.go",
+    "line": 218,
+    "reproduction": "Iniciar uma tentativa, alterar o workspace como a tarefa deve fazer e finalizar com o digest do patch final.",
+    "expected": "O snapshot inicial deve vincular a base da tentativa, enquanto Finish recomputa e valida o patch e o estado finais produzidos pela execucao.",
+    "actual": "Finish exige que patch_sha256 e final_state_sha256 sejam identicos ao snapshot capturado antes da execucao; uma tarefa que altera codigo nao pode finalizar, e um resultado stale identico ao inicio pode ser aceito."
+  },
+  {
+    "id": "BUG-121",
+    "severity": "critical",
+    "file": "internal/sdd/state.go",
+    "line": 390,
+    "reproduction": "Aprovar tasks.md contendo tarefas done cujos checkpoints JSON v2 estao blocked ou ausentes.",
+    "expected": "Uma task so pode entrar como done no estado operacional quando seu checkpoint done e suas evidencias fisicas forem validados pelo contrato v2.",
+    "actual": "populateOperationalModel importa done diretamente da tabela Markdown e adiciona qualquer execution_report existente, sem validar checkpoint, resultado ou prova fisica."
+  },
+  {
+    "id": "BUG-122",
+    "severity": "critical",
+    "file": ".agents/scripts/validate-task-evidence.sh",
+    "line": 198,
+    "reproduction": "Fornecer report e execution-result com o mesmo patch_sha256 inventado, mantendo logs fisicos validos, e executar o validador.",
+    "expected": "O digest do patch deve ser confrontado com um snapshot fisico canonico ou recomputado a partir da base e do estado final.",
+    "actual": "O gate apenas compara o hash textual do Markdown com o JSON; dois valores falsos iguais passam sem qualquer artefato de patch correspondente."
+  },
+  {
+    "id": "BUG-123",
+    "severity": "major",
+    "file": "internal/sdd/tasks/parser.go",
+    "line": 205,
+    "reproduction": "Declarar uma dependencia cross-PRD para um PRD inexistente, task ausente, nao concluida, stale ou ciclica e executar validate-sdd.",
+    "expected": "A validacao estrutural deve resolver o PRD externo, validar hash aprovado, task existente e done e detectar ciclos cross-PRD fail-closed.",
+    "actual": "validateDependencies reconhece o formato cross-PRD e simplesmente ignora o elo, aceitando qualquer destino sem resolucao."
+  },
+  {
+    "id": "BUG-124",
+    "severity": "major",
+    "file": "cmd/ai_spec_harness/sdd.go",
+    "line": 1,
+    "reproduction": "Executar ai-spec --help e tentar migrar ou reverter um sdd-state legado/incompleto conforme a TechSpec.",
+    "expected": "migrate-sdd --dry-run deve planejar sem escrita, a migracao real deve exigir confirmacao explicita e o rollback deve remover apenas estado v2 criado pelo run_id informado.",
+    "actual": "Nao existem comandos de migracao ou rollback; o estado legado do proprio PRD fica bloqueado sem caminho operacional seguro."
+  },
+  {
+    "id": "BUG-125",
+    "severity": "minor",
+    "file": ".github/workflows/release.yml",
+    "line": 150,
+    "reproduction": "Executar actionlint nos workflows alterados.",
+    "expected": "O workflow de release deve passar actionlint e shellcheck sem findings.",
+    "actual": "actionlint falha com SC2129 no passo Publish workflow summary."
+  },
+  {
+    "id": "BUG-126",
+    "severity": "major",
+    "file": ".specs/prd-sdd-robusto/sdd-state.json",
+    "line": 20,
+    "reproduction": "Executar ai-spec validate-sdd .specs/prd-sdd-robusto.",
+    "expected": "O estado aprovado contém modelo operacional completo e valida com sucesso.",
+    "actual": "O estado não contém requirements, DAG, tasks ou evidence_refs e falha como modelo operacional incompleto."
   }
 ]

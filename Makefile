@@ -1,4 +1,4 @@
-.PHONY: build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync check-scripts-sync test-hooks test-validators test-sdd-evals smoke-adapters test-portable-skills sync-acp-sdk-version test-acp-live mocks check-mocks
+.PHONY: build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync check-scripts-sync test-hooks test-validators test-sdd-evals smoke-adapters test-portable-skills sync-acp-sdk-version test-acp-live mocks check-mocks test-check-mocks
 
 BINARY := ai-spec
 GOFLAGS := -trimpath
@@ -16,6 +16,9 @@ mocks:
 # check-mocks: falha se os mocks estiverem desatualizados em relacao as interfaces.
 check-mocks:
 	bash scripts/check-mocks.sh
+
+test-check-mocks:
+	bash scripts/check-mocks_test.sh
 
 test:
 	go test ./...
@@ -76,6 +79,7 @@ test-hooks:
 test-validators:
 	bash scripts/test-validators.sh
 	bash tests/scripts/validate-task-evidence_test.sh .agents/scripts/validate-task-evidence.sh
+	bash tests/scripts/validate-bugfix-evidence_test.sh .agents/scripts/validate-bugfix-evidence.sh
 
 test-sdd-evals:
 	bash scripts/test-sdd-evals.sh

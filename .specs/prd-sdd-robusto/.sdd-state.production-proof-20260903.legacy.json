@@ -1,0 +1,58 @@
+{
+  "schema_version": 2,
+  "run_id": "manual",
+  "artifacts": {
+    "prd": {
+      "status": "approved",
+      "sha256": "36b6efdd09b6f3fae7881c3bd21ab3eb3af77a4869f5d25ad14ed707923bb18d",
+      "approved": true
+    },
+    "tasks": {
+      "status": "approved",
+      "sha256": "fd5c42fc7a92302c676878f626b852b15b0a31a77ba3ba592c75aafe53fa8ec9",
+      "approved": true
+    },
+    "techspec": {
+      "status": "approved",
+      "sha256": "0bac95b2459ec0932af924e8e0e20b2e22e78677cd2600edadd33c036922c632",
+      "approved": true
+    }
+  },
+  "events": [
+    {
+      "at": "2026-08-31T14:19:13.795625Z",
+      "run_id": "manual",
+      "action": "initialized"
+    },
+    {
+      "at": "2026-08-31T14:19:13.802712Z",
+      "run_id": "manual",
+      "action": "approved",
+      "detail": "prd"
+    },
+    {
+      "at": "2026-08-31T14:19:14.221053Z",
+      "run_id": "manual",
+      "action": "approved",
+      "detail": "techspec"
+    },
+    {
+      "at": "2026-08-31T14:19:14.371052Z",
+      "run_id": "manual",
+      "action": "approved",
+      "detail": "tasks"
+    },
+    {
+      "at": "2026-08-31T14:20:12.426768Z",
+      "run_id": "manual",
+      "action": "approved",
+      "detail": "techspec"
+    },
+    {
+      "at": "2026-08-31T14:20:12.975647Z",
+      "run_id": "manual",
+      "action": "approved",
+      "detail": "tasks"
+    }
+  ]
+}

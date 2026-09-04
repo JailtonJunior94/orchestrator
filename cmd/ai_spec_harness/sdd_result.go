@@ -3,8 +3,10 @@ package aispecharness
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/sdd"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/taskloop"
 	"github.com/spf13/cobra"
 )
 
@@ -19,6 +21,9 @@ func newValidateResultCmd() *cobra.Command {
 				return fmt.Errorf("ler resultado SDD: %w", err)
 			}
 			expectedTaskID, _ := cmd.Flags().GetString("task-id")
+			verifyPhysical, _ := cmd.Flags().GetBool("verify-physical")
+			prdDir, _ := cmd.Flags().GetString("prd-dir")
+			exclusions, _ := cmd.Flags().GetStringSlice("exclude")
 			validator := sdd.NewResultValidator()
 			switch args[0] {
 			case "execution":
@@ -28,6 +33,19 @@ func newValidateResultCmd() *cobra.Command {
 				}
 				if expectedTaskID != "" && result.TaskID != expectedTaskID {
 					return fmt.Errorf("task_id do resultado %q diverge do esperado %q", result.TaskID, expectedTaskID)
+				}
+				if verifyPhysical {
+					if prdDir == "" {
+						return fmt.Errorf("--prd-dir e obrigatorio com --verify-physical")
+					}
+					resultPath, pathErr := filepath.Abs(args[1])
+					if pathErr != nil {
+						return fmt.Errorf("resolver arquivo de resultado: %w", pathErr)
+					}
+					exclusions = append(exclusions, resultPath)
+					if err := taskloop.NewOrchestrator(sdd.NewStore()).ValidateExecutionEvidence(prdDir, result, exclusions...); err != nil {
+						return fmt.Errorf("validar provas fisicas do resultado: %w", err)
+					}
 				}
 			case "checkpoint":
 				result, err := validator.ValidateCheckpointJSON(content)
@@ -53,5 +71,8 @@ func newValidateResultCmd() *cobra.Command {
 		},
 	}
 	command.Flags().String("task-id", "", "identificador da tarefa esperado")
+	command.Flags().Bool("verify-physical", false, "recompoe e valida patch, estado final e evidencias fisicas")
+	command.Flags().String("prd-dir", "", "diretorio do PRD usado na recomposicao fisica")
+	command.Flags().StringSlice("exclude", nil, "envelope operacional adicional excluido do patch canonico")
 	return command
 }

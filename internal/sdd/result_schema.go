@@ -65,6 +65,11 @@ func (v *ResultValidator) ValidateExecutionJSON(content []byte) (ExecutionResult
 	if err := v.validateEvidencePaths(result.Evidence, result.Criteria); err != nil {
 		return ExecutionResult{}, err
 	}
+	if result.PatchRef != "" {
+		if err := v.validateEvidencePath(result.PatchRef); err != nil {
+			return ExecutionResult{}, fmt.Errorf("validar artefato do patch: %w", err)
+		}
+	}
 	return result, nil
 }
 

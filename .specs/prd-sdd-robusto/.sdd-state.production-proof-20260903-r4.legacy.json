@@ -1,0 +1,395 @@
+{
+  "schema_version": 2,
+  "run_id": "production-proof-20260903-r3",
+  "artifacts": {
+    "prd": {
+      "status": "approved",
+      "sha256": "36b6efdd09b6f3fae7881c3bd21ab3eb3af77a4869f5d25ad14ed707923bb18d",
+      "approved": true
+    },
+    "tasks": {
+      "status": "approved",
+      "sha256": "dd9add9184684cfd613a7066d127da9dcdf63326f6830dbcfcd34a06e3fd49ff",
+      "approved": true
+    },
+    "techspec": {
+      "status": "approved",
+      "sha256": "0bac95b2459ec0932af924e8e0e20b2e22e78677cd2600edadd33c036922c632",
+      "approved": true
+    }
+  },
+  "requirements": [
+    {
+      "id": "NFR-01",
+      "kind": "non_functional"
+    },
+    {
+      "id": "NFR-02",
+      "kind": "non_functional"
+    },
+    {
+      "id": "NFR-03",
+      "kind": "non_functional"
+    },
+    {
+      "id": "NFR-04",
+      "kind": "non_functional"
+    },
+    {
+      "id": "NFR-05",
+      "kind": "non_functional"
+    },
+    {
+      "id": "RF-01",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-02",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-03",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-04",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-05",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-06",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-07",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-08",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-09",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-10",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-11",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-12",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-13",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-14",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-15",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-16",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-17",
+      "kind": "functional"
+    },
+    {
+      "id": "RF-18",
+      "kind": "functional"
+    }
+  ],
+  "dag": [
+    {
+      "task_id": "1.0",
+      "dependencies": null
+    },
+    {
+      "task_id": "10.0",
+      "dependencies": [
+        "9.0"
+      ]
+    },
+    {
+      "task_id": "2.0",
+      "dependencies": [
+        "1.0"
+      ]
+    },
+    {
+      "task_id": "3.0",
+      "dependencies": [
+        "2.0"
+      ]
+    },
+    {
+      "task_id": "4.0",
+      "dependencies": [
+        "3.0"
+      ]
+    },
+    {
+      "task_id": "5.0",
+      "dependencies": [
+        "4.0"
+      ]
+    },
+    {
+      "task_id": "6.0",
+      "dependencies": [
+        "5.0"
+      ]
+    },
+    {
+      "task_id": "7.0",
+      "dependencies": [
+        "6.0"
+      ]
+    },
+    {
+      "task_id": "8.0",
+      "dependencies": [
+        "7.0"
+      ]
+    },
+    {
+      "task_id": "9.0",
+      "dependencies": [
+        "8.0"
+      ]
+    }
+  ],
+  "tasks": {
+    "1.0": {
+      "id": "1.0",
+      "status": "done",
+      "requirements": [
+        "RF-01",
+        "RF-03",
+        "RF-04",
+        "RF-05"
+      ],
+      "dependencies": null,
+      "ownership": null,
+      "parallel": false,
+      "attempt": 0,
+      "evidence_refs": [
+        "evidence/10.0/final-proof-validation.log",
+        "evidence/10.0/final-independent-review.md"
+      ]
+    },
+    "10.0": {
+      "id": "10.0",
+      "status": "done",
+      "requirements": [
+        "NFR-03",
+        "NFR-04"
+      ],
+      "dependencies": [
+        "9.0"
+      ],
+      "ownership": null,
+      "parallel": false,
+      "attempt": 0,
+      "evidence_refs": [
+        "evidence/10.0/final-proof-validation.log",
+        "evidence/10.0/final-independent-review.md"
+      ]
+    },
+    "2.0": {
+      "id": "2.0",
+      "status": "done",
+      "requirements": [
+        "RF-02",
+        "RF-03",
+        "RF-05"
+      ],
+      "dependencies": [
+        "1.0"
+      ],
+      "ownership": null,
+      "parallel": false,
+      "attempt": 0,
+      "evidence_refs": [
+        "evidence/10.0/final-proof-validation.log",
+        "evidence/10.0/final-independent-review.md"
+      ]
+    },
+    "3.0": {
+      "id": "3.0",
+      "status": "done",
+      "requirements": [
+        "RF-06",
+        "RF-07",
+        "RF-08",
+        "NFR-01",
+        "NFR-02",
+        "NFR-05"
+      ],
+      "dependencies": [
+        "2.0"
+      ],
+      "ownership": null,
+      "parallel": false,
+      "attempt": 0,
+      "evidence_refs": [
+        "evidence/10.0/final-proof-validation.log",
+        "evidence/10.0/final-independent-review.md"
+      ]
+    },
+    "4.0": {
+      "id": "4.0",
+      "status": "done",
+      "requirements": [
+        "RF-09",
+        "RF-10"
+      ],
+      "dependencies": [
+        "3.0"
+      ],
+      "ownership": null,
+      "parallel": false,
+      "attempt": 0,
+      "evidence_refs": [
+        "evidence/10.0/final-proof-validation.log",
+        "evidence/10.0/final-independent-review.md"
+      ]
+    },
+    "5.0": {
+      "id": "5.0",
+      "status": "done",
+      "requirements": [
+        "RF-11"
+      ],
+      "dependencies": [
+        "4.0"
+      ],
+      "ownership": null,
+      "parallel": false,
+      "attempt": 0,
+      "evidence_refs": [
+        "evidence/10.0/final-proof-validation.log",
+        "evidence/10.0/final-independent-review.md"
+      ]
+    },
+    "6.0": {
+      "id": "6.0",
+      "status": "done",
+      "requirements": [
+        "RF-12",
+        "RF-13",
+        "RF-14",
+        "NFR-02"
+      ],
+      "dependencies": [
+        "5.0"
+      ],
+      "ownership": null,
+      "parallel": false,
+      "attempt": 0,
+      "evidence_refs": [
+        "evidence/10.0/final-proof-validation.log",
+        "evidence/10.0/final-independent-review.md"
+      ]
+    },
+    "7.0": {
+      "id": "7.0",
+      "status": "done",
+      "requirements": [
+        "RF-15",
+        "RF-16"
+      ],
+      "dependencies": [
+        "6.0"
+      ],
+      "ownership": null,
+      "parallel": false,
+      "attempt": 0,
+      "evidence_refs": [
+        "evidence/10.0/final-proof-validation.log",
+        "evidence/10.0/final-independent-review.md"
+      ]
+    },
+    "8.0": {
+      "id": "8.0",
+      "status": "done",
+      "requirements": [
+        "RF-17"
+      ],
+      "dependencies": [
+        "7.0"
+      ],
+      "ownership": null,
+      "parallel": false,
+      "attempt": 0,
+      "evidence_refs": [
+        "evidence/10.0/final-proof-validation.log",
+        "evidence/10.0/final-independent-review.md"
+      ]
+    },
+    "9.0": {
+      "id": "9.0",
+      "status": "done",
+      "requirements": [
+        "RF-18",
+        "NFR-04"
+      ],
+      "dependencies": [
+        "8.0"
+      ],
+      "ownership": null,
+      "parallel": false,
+      "attempt": 0,
+      "evidence_refs": [
+        "evidence/10.0/final-proof-validation.log",
+        "evidence/10.0/final-independent-review.md"
+      ]
+    }
+  },
+  "evidence_refs": [
+    "evidence/10.0/final-independent-review.md",
+    "evidence/10.0/final-independent-review.md",
+    "evidence/10.0/final-independent-review.md",
+    "evidence/10.0/final-independent-review.md",
+    "evidence/10.0/final-independent-review.md",
+    "evidence/10.0/final-independent-review.md",
+    "evidence/10.0/final-independent-review.md",
+    "evidence/10.0/final-independent-review.md",
+    "evidence/10.0/final-independent-review.md",
+    "evidence/10.0/final-independent-review.md",
+    "evidence/10.0/final-proof-validation.log",
+    "evidence/10.0/final-proof-validation.log",
+    "evidence/10.0/final-proof-validation.log",
+    "evidence/10.0/final-proof-validation.log",
+    "evidence/10.0/final-proof-validation.log",
+    "evidence/10.0/final-proof-validation.log",
+    "evidence/10.0/final-proof-validation.log",
+    "evidence/10.0/final-proof-validation.log",
+    "evidence/10.0/final-proof-validation.log",
+    "evidence/10.0/final-proof-validation.log"
+  ],
+  "migration": {
+    "run_id": "production-proof-20260903-r3",
+    "backup_ref": ".sdd-state.production-proof-20260903-r3.legacy.json"
+  },
+  "events": [
+    {
+      "at": "2026-09-03T13:09:43.26813Z",
+      "run_id": "production-proof-20260903-r3",
+      "action": "migrated"
+    }
+  ]
+}

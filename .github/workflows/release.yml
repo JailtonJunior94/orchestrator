@@ -1,11 +1,10 @@
 name: release
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - "v*"
+  workflow_run:
+    workflows: ["Tests"]
+    branches: [main]
+    types: [completed]
 
 permissions:
   contents: write
@@ -13,6 +12,7 @@ permissions:
 jobs:
   release:
     name: Release
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     concurrency:
       group: release-${{ github.ref_name }}
@@ -22,6 +22,14 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Verify tested SHA
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ github.event.workflow_run.head_sha }}" || {
+            echo "[HARD] checkout diverge do SHA aprovado pelo workflow Tests" >&2
+            exit 1
+          }
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -31,11 +39,9 @@ jobs:
       # ─── Auto-release pipeline (push to main) ────────────────────────────────
 
       - name: Build ai-spec binary
-        if: github.ref == 'refs/heads/main'
         run: go build -o ai-spec ./main.go
 
       - name: Auto-bump skill versions
-        if: github.ref == 'refs/heads/main'
         run: ./ai-spec skill-bump .
 
       # skill-bump muta apenas o canonico (.agents/skills); e preciso propagar
@@ -43,18 +49,15 @@ jobs:
       # check-skills-sync falha no proximo push normal (o commit de release usa
       # [skip ci] e nao roda o gate, deixando o drift latente).
       - name: Sync skill mirrors
-        if: github.ref == 'refs/heads/main'
         run: bash scripts/sync-skills.sh
 
       - name: Stage skill bumps
-        if: github.ref == 'refs/heads/main'
         run: |
           git add -A .agents/skills .agents/lib .agents/hooks \
             .claude/skills .claude/hooks .codex/hooks .gemini/hooks \
             .github/skills .github/hooks scripts/lib internal/embedded/assets
 
       - name: Compute next version (semver-next)
-        if: github.ref == 'refs/heads/main'
         id: semver
         run: |
           ./ai-spec semver-next . | tee /tmp/semver_output.txt
@@ -64,14 +67,11 @@ jobs:
           done < /tmp/semver_output.txt
 
       - name: Evaluate release conditions
-        if: github.ref == 'refs/heads/main'
         id: check
-        env:
-          HEAD_COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
           TARGET="${{ steps.semver.outputs.target_version }}"
           ACTION="${{ steps.semver.outputs.action }}"
-          MSG="$HEAD_COMMIT_MSG"
+          MSG="$(git log -1 --pretty=%B)"
 
           if [[ "$MSG" == *"[skip ci]"* ]]; then
             echo "should_release=false" >> "$GITHUB_OUTPUT"
@@ -88,15 +88,15 @@ jobs:
           fi
 
       - name: Update VERSION file
-        if: github.ref == 'refs/heads/main' && steps.check.outputs.should_release == 'true'
+        if: steps.check.outputs.should_release == 'true'
         run: ./ai-spec update-version --version "${{ steps.semver.outputs.target_version }}"
 
       - name: Generate CHANGELOG.md
-        if: github.ref == 'refs/heads/main' && steps.check.outputs.should_release == 'true'
+        if: steps.check.outputs.should_release == 'true'
         run: ./ai-spec changelog . --version "${{ steps.semver.outputs.target_version }}"
 
       - name: Commit CHANGELOG.md
-        if: github.ref == 'refs/heads/main' && steps.check.outputs.should_release == 'true'
+        if: steps.check.outputs.should_release == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -113,13 +113,13 @@ jobs:
           fi
 
       - name: Create annotated tag
-        if: github.ref == 'refs/heads/main' && steps.check.outputs.should_release == 'true'
+        if: steps.check.outputs.should_release == 'true'
         run: |
           git tag -a "v${{ steps.semver.outputs.target_version }}" \
             -m "Release v${{ steps.semver.outputs.target_version }}"
 
       - name: Push commit and tag
-        if: github.ref == 'refs/heads/main' && steps.check.outputs.should_release == 'true'
+        if: steps.check.outputs.should_release == 'true'
         run: |
           git push origin HEAD:main
           git push origin "v${{ steps.semver.outputs.target_version }}"
@@ -127,7 +127,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run GoReleaser (auto-release)
-        if: github.ref == 'refs/heads/main' && steps.check.outputs.should_release == 'true'
+        if: steps.check.outputs.should_release == 'true'
         uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
@@ -139,7 +139,7 @@ jobs:
           GORELEASER_CURRENT_TAG: v${{ steps.semver.outputs.target_version }}
 
       - name: Smoke test do binario
-        if: github.ref == 'refs/heads/main' && steps.check.outputs.should_release == 'true'
+        if: steps.check.outputs.should_release == 'true'
         continue-on-error: false
         run: |
           ./dist/ai-spec_linux_amd64_v1/ai-spec version
@@ -147,47 +147,21 @@ jobs:
           ./dist/ai-spec_linux_amd64_v1/ai-spec inspect .
 
       - name: Publish workflow summary
-        if: github.ref == 'refs/heads/main'
         run: |
-          if [[ "${{ steps.check.outputs.should_release }}" == "true" ]]; then
-            echo "## Release published" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
-            echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Version   | \`v${{ steps.semver.outputs.target_version }}\` |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Bump      | \`${{ steps.semver.outputs.bump }}\` |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Action    | \`${{ steps.semver.outputs.action }}\` |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Range     | \`${{ steps.semver.outputs.commit_range }}\` |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Commits   | ${{ steps.semver.outputs.commit_count }} |" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "## Release skipped" >> "$GITHUB_STEP_SUMMARY"
-            echo "" >> "$GITHUB_STEP_SUMMARY"
-            echo "**Reason:** ${{ steps.check.outputs.skip_reason }}" >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      # ─── Manual tag fallback (push of v* tag) ────────────────────────────────
-
-      - name: Check if GitHub release already exists
-        if: startsWith(github.ref, 'refs/tags/v')
-        id: release_check
-        run: |
-          if gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" > /dev/null 2>&1; then
-            echo "release_exists=true" >> "$GITHUB_OUTPUT"
-            echo "Release ${{ github.ref_name }} already exists — skipping GoReleaser"
-          else
-            echo "release_exists=false" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Run GoReleaser (manual tag)
-        if: startsWith(github.ref, 'refs/tags/v') && steps.release_check.outputs.release_exists != 'true'
-        uses: goreleaser/goreleaser-action@v7
-        with:
-          distribution: goreleaser
-          version: "~> v2"
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
-
+          {
+            if [[ "${{ steps.check.outputs.should_release }}" == "true" ]]; then
+              echo "## Release published"
+              echo ""
+              echo "| Field | Value |"
+              echo "|-------|-------|"
+              echo "| Version   | \`v${{ steps.semver.outputs.target_version }}\` |"
+              echo "| Bump      | \`${{ steps.semver.outputs.bump }}\` |"
+              echo "| Action    | \`${{ steps.semver.outputs.action }}\` |"
+              echo "| Range     | \`${{ steps.semver.outputs.commit_range }}\` |"
+              echo "| Commits   | ${{ steps.semver.outputs.commit_count }} |"
+            else
+              echo "## Release skipped"
+              echo ""
+              echo "**Reason:** ${{ steps.check.outputs.skip_reason }}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

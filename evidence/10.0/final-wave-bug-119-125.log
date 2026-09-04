@@ -1,0 +1,29 @@
+Wave final de producao BUG-119..BUG-125
+Data: 2026-09-02
+Toolchain: GOTOOLCHAIN=go1.26.2 (go.mod: go 1.26.2)
+
+Gates dirigidos:
+- go test ./internal/taskloop -run 'TestOrchestratorFinishesAttemptIdempotently|TestOrchestratorFinishRejectsSnapshotAndPhysicalEvidenceDivergence' -count=1: PASS
+- go test ./internal/sdd -run 'TestStoreImportsDoneOnlyFromValidPhysicalCheckpoint|TestStoreMigrationDryRunAndRunIDScopedRollback' -count=1: PASS
+- go test ./internal/sdd/tasks -run TestParserParseAtResolvesCrossPRDFailClosed -count=1: PASS
+- go test -tags=integration ./cmd/ai_spec_harness -run TestSDDMigrationCommandsRequireConfirmationAndScopeRollback -count=1: PASS
+- bash tests/scripts/validate-task-evidence_test.sh .agents/scripts/validate-task-evidence.sh: PASS (9/9)
+- actionlint .github/workflows/release.yml: PASS (sem output/findings)
+
+Gates amplos:
+- make test: PASS
+- make integration: PASS
+- make vet: PASS
+- make build: PASS
+- make lint: PASS (0 issues)
+- go test ./... -count=1 -race: PASS (todos os pacotes)
+- make test-validators: PASS (8/8 base, 9/9 task evidence, bugfix evidence OK)
+- make test-sdd-evals: PASS (21 fixtures; accepted=1, rejected=20, escape_rate=0, false_negative_rate=0, false_positive_rate=0, quality_rate=1)
+- make check-scripts-sync: PASS (24 em sync, drift/missing=0)
+- actionlint .github/workflows/test.yml .github/workflows/release.yml: PASS (sem output/findings)
+- git diff --check: PASS
+
+Observacoes verificaveis:
+- A primeira invocacao sem GOTOOLCHAIN falhou antes dos testes porque artefatos locais go1.27.0 divergiam do binario go1.27.1; a repeticao fixada em go1.26.2, versao declarada no modulo, passou.
+- scripts/verify-go-mod.sh nao existe neste repositorio; nenhum substituto foi inventado.
+- Nenhuma execucao remota de CI foi afirmada.

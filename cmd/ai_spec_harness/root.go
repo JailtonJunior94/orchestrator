@@ -61,6 +61,8 @@ Exemplos:
 	cmd.AddCommand(newInvalidateCmd())
 	cmd.AddCommand(newOrchestrateCmd())
 	cmd.AddCommand(newRuntimeCapabilitiesCmd())
+	cmd.AddCommand(newMigrateSDDCmd())
+	cmd.AddCommand(newRollbackSDDCmd())
 	cmd.AddCommand(newValidateBugsCmd())
 	cmd.AddCommand(newValidateEvidenceCmd())
 	cmd.AddCommand(newVerifyCmd())

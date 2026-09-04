@@ -1,32 +1,30 @@
 {
   "schema_version": 2,
-  "run_id": "run-sdd-robusto",
+  "run_id": "production-proof-20260902",
   "task_id": "7.0",
-  "attempt": 1,
+  "attempt": 2,
   "status": "done",
-  "base_sha": "3f49c200bc5ae75848526200991f0efd280ecd02",
-  "patch_sha256": "227d672e8d09bb20b2b685cf6ce8ce659598a4f53e0f15bbb86b8420ea9e6181",
-  "final_state_sha256": "2223d2f23bcb1b22b34b9997a0b720b8982ec2c01c3965608a680344bac3350a",
+  "base_sha": "8d946753fe2834c471e4b3bd7e9c3bd791e38847",
+  "patch_sha256": "3ee8339cfdb34beb276c9489360cc304f9f7cc5c8421d5e7896e7778a3078de5",
+  "patch_ref": "evidence/10.0/final-candidate.patch",
+  "final_state_sha256": "3949c0a4945d9a9e2fac5f15dfc04eb5987bd354df1e63981e4b83d58cc03700",
   "coverage_regression": false,
   "tests": [
     {
-      "command": "go test ./internal/taskloop -count=1",
+      "command": "go test ./... -count=1 -race; make integration; go vet ./...; go build ./...; make lint; validators/evals/sync/mocks/smoke/actionlint/shellcheck",
       "exit_code": 0,
-      "output_sha256": "ffbddd1b9db2e228df47a42dcd4a8dea57c04f63022e3a0e13dfadc60aeffded"
+      "output_sha256": "dd257d44b0281cd8ede62ae5cdb0c3c7bb788a9033dad825e5f98ef8d0390b12"
     }
   ],
   "criteria": [
     {
-      "id": "RF-15",
-      "evidence_ref": ".specs/prd-sdd-robusto/7.0_execution_report.md#criterios-de-aceite"
-    },
-    {
-      "id": "RF-16",
-      "evidence_ref": ".specs/prd-sdd-robusto/7.0_execution_report.md#criterios-de-aceite"
+      "id": "TASK-7.0-AC",
+      "evidence_ref": "evidence/10.0/final-proof-validation-r2.log#gates"
     }
   ],
   "evidence": [
-    ".specs/prd-sdd-robusto/7.0_execution_report.md"
+    "evidence/10.0/final-proof-validation-r2.log",
+    "evidence/10.0/final-independent-review.md"
   ],
   "review_verdict": "approved"
 }

@@ -729,7 +729,10 @@
           }
         ],
         "flags": {
-          "task-id": { "type": "string", "required": false }
+          "task-id": { "type": "string", "required": false },
+          "verify-physical": { "type": "bool", "required": false },
+          "prd-dir": { "type": "string", "required": false },
+          "exclude": { "type": "stringSlice", "required": false }
         }
       },
       {
@@ -1044,6 +1047,25 @@
           }
         ],
         "flags": {}
+      },
+      {
+        "name": "migrate-sdd",
+        "description": "Migra estado SDD legado para o contrato v2",
+        "args": [{"name": "diretorio-prd", "required": true}],
+        "flags": {
+          "run-id": {"type": "string", "required": true},
+          "dry-run": {"type": "bool", "required": false},
+          "confirm": {"type": "bool", "required": false}
+        }
+      },
+      {
+        "name": "rollback-sdd",
+        "description": "Reverte somente o estado v2 criado por uma migração",
+        "args": [{"name": "diretorio-prd", "required": true}],
+        "flags": {
+          "run-id": {"type": "string", "required": true},
+          "confirm": {"type": "bool", "required": false}
+        }
       },
       {
         "name": "skill-bump",

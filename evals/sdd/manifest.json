@@ -4,9 +4,12 @@
   "description": "Casos determinísticos executados localmente contra os contratos SDD.",
   "quality_metrics": {
     "minimum_adversarial_fixtures": 20,
+    "minimum_quality_rate": 1.0,
+    "maximum_escape_rate": 0.0,
+    "maximum_false_positive_rate": 0.0,
+    "maximum_false_negative_rate": 0.0,
+    "maximum_total_latency_ms": 60000,
     "required_categories": ["schema", "integrity", "proof", "paths", "review"],
-    "prompt_tokens": 0,
-    "external_cost_usd": 0,
-    "latency_policy": "medida informativa; nenhum limite temporal fragil bloqueia o CI"
+    "unobserved_metrics": ["prompt_tokens", "external_cost_usd"]
   }
 }

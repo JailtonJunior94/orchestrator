@@ -14,12 +14,41 @@ set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VALIDATOR="$REPO_ROOT/.agents/scripts/validate-task-evidence.sh"
-TMP_BASE=$(mktemp -d /tmp/test-validators.XXXXXX)
+scratch_root="${TMPDIR:-$REPO_ROOT/.scratch}"
+mkdir -p "$scratch_root"
+TMP_ROOT=$(mktemp -d "$scratch_root/test-validators.XXXXXX")
+TMP_BASE="$TMP_ROOT/repository"
+mkdir -p "$TMP_BASE"
+git -C "$TMP_BASE" init -q
+git -C "$TMP_BASE" config user.email "validators-test@example.invalid"
+git -C "$TMP_BASE" config user.name "Validators Test"
+git -C "$TMP_BASE" config commit.gpgsign false
+for task in a b c; do
+  printf '# Tarefa X\n## Critérios de Sucesso\n- Critério um funciona.\n- Critério dois funciona.\n' >"$TMP_BASE/task-$task.md"
+done
+printf '# Tarefa Legada\n## Visão Geral\nSem critérios formais.\n' >"$TMP_BASE/task-d.md"
+printf 'base\n' >"$TMP_BASE/tracked.txt"
+git -C "$TMP_BASE" add .
+git -C "$TMP_BASE" commit -qm "test: baseline"
+printf 'estado final\n' >"$TMP_BASE/tracked.txt"
+mkdir -p "$TMP_BASE/evidence"
+
+GOTOOLCHAIN="${GOTOOLCHAIN:-auto}" go build -o "$TMP_ROOT/ai-spec" "$REPO_ROOT"
+export AI_SPEC_BIN="$TMP_ROOT/ai-spec"
+git -C "$TMP_BASE" diff --binary HEAD -- . >"$TMP_BASE/evidence/patch.diff"
+PATCH_SHA="$(shasum -a 256 "$TMP_BASE/evidence/patch.diff" | awk '{print $1}')"
+BASE_SHA="$(git -C "$TMP_BASE" rev-parse HEAD)"
+FINAL_STATE_SHA="$( { printf '%s\n' "$BASE_SHA"; cat "$TMP_BASE/evidence/patch.diff"; } | shasum -a 256 | awk '{print $1}')"
+printf 'PASS\n' >"$TMP_BASE/evidence/test.log"
+TEST_SHA="$(shasum -a 256 "$TMP_BASE/evidence/test.log" | awk '{print $1}')"
+cat >"$TMP_BASE/result.json" <<EOF
+{"schema_version":2,"run_id":"test","task_id":"1.0","attempt":1,"status":"done","base_sha":"$BASE_SHA","patch_sha256":"$PATCH_SHA","patch_ref":"evidence/patch.diff","final_state_sha256":"$FINAL_STATE_SHA","coverage_regression":false,"tests":[{"command":"go test ./...","exit_code":0,"output_sha256":"$TEST_SHA"}],"criteria":[{"id":"AC-1","evidence_ref":"evidence/test.log#pass"}],"evidence":["evidence/test.log"],"review_verdict":"approved"}
+EOF
 
 passed=0
 failed=0
 
-cleanup() { rm -rf "$TMP_BASE"; }
+cleanup() { rm -rf "$TMP_ROOT"; }
 trap cleanup EXIT
 
 assert_exit() {
@@ -58,16 +87,18 @@ report_header() {
   cat <<EOF
 # Relatório de Execução de Tarefa
 ## Tarefa
-- ID: X
+- ID: 1.0
 - Arquivo: $task_ref
 - Estado: done
 ## Contexto Carregado
 - PRD: n/a
 - TechSpec: n/a
 ## Diff Reviewed
-sha=abc1234def5678901234567890abcdef01234567
+sha=$PATCH_SHA
 verdict=APPROVED
 tool=claude
+## Execution Result
+result_path=result.json
 ## Coverage
 package=fixture
 delta=+0.0%
@@ -106,7 +137,9 @@ EOF
 - Critério um -> comprovado: [evidência]
 EOF
 } > "$report_a"
-bash "$VALIDATOR" "$report_a" >/dev/null 2>&1; assert_exit "critério não comprovado falha" 1 $?
+bash "$VALIDATOR" "$report_a" >/dev/null 2>&1; code_a=$?
+rm -f "$report_a"
+assert_exit "critério não comprovado falha" 1 $code_a
 
 # --- Caso b: todos comprovados -> exit 0 ---
 echo "Caso b: todos os critérios comprovados"
@@ -128,7 +161,10 @@ EOF
   echo "- Testes: pass"
 } > "$report_b"
 # Ajuste: garantir Testes: pass presente uma vez e comando de teste presente.
-bash "$VALIDATOR" "$report_b" >/dev/null 2>&1; assert_exit "todos comprovados passa" 0 $?
+out_b=$(bash "$VALIDATOR" "$report_b" 2>&1); code_b=$?
+rm -f "$report_b"
+assert_exit "todos comprovados passa" 0 $code_b
+if [[ "$code_b" -ne 0 ]]; then printf '    diagnostico: %s\n' "$out_b"; fi
 
 # --- Caso c: Testes: pass sem comando -> exit 1 ---
 echo "Caso c: Testes: pass sem comando de teste"
@@ -149,7 +185,9 @@ EOF
   echo "## Resultados de Validação"
   echo "- Testes: pass"
 } > "$report_c"
-bash "$VALIDATOR" "$report_c" >/dev/null 2>&1; assert_exit "Testes pass sem comando falha" 1 $?
+bash "$VALIDATOR" "$report_c" >/dev/null 2>&1; code_c=$?
+rm -f "$report_c"
+assert_exit "Testes pass sem comando falha" 1 $code_c
 
 # --- Caso d: task legada sem critérios -> exit 0 ---
 echo "Caso d: task legada sem seção de critérios"
@@ -166,6 +204,7 @@ EOF
   echo "- Testes: pass"
 } > "$report_d"
 out_d=$(bash "$VALIDATOR" "$report_d" 2>&1); code_d=$?
+rm -f "$report_d"
 assert_exit "task legada passa" 0 $code_d
 if echo "$out_d" | grep -q "gate de aceite ignorado"; then
   echo "  ✓ aviso de gate ignorado presente"

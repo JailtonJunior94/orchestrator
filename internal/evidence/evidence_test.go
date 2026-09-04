@@ -1,6 +1,7 @@
 package evidence
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -110,17 +111,22 @@ Veredito do Revisor: APPROVED
 // ── Bugfix ────────────────────────────────────────────────────────────────────
 
 const bugfixComplete = `# Bugs
-Bug-01: crash no startup
+- ID: Bug-01
+- Severidade: major
+- Origem: issue #1
+- Estado: fixed
+- Causa raiz: nil pointer
+- Arquivos alterados: internal/a.go
+- Teste de regressao: adicionado
+- Validacao: ok
 
 # Comandos Executados
 go test ./...
 
-Estado: fixed
-Causa raiz: nil pointer
-Teste de regressao: adicionado
-Validacao: ok
-Corrigidos: 1
-Estado: done
+- Total de bugs no escopo: 1
+- Corrigidos: 1
+- Testes de regressao adicionados: 1
+- Estado final: done
 
 # Riscos Residuais
 nenhum
@@ -187,6 +193,22 @@ func TestValidateBugfix_Traceability(t *testing.T) {
 		if f.Label == "rastreabilidade RF-01" {
 			t.Error("nao esperado finding de rastreabilidade RF-01 — ID presente no relatorio")
 		}
+	}
+}
+
+func TestValidateBugfixRejectsIncompleteBlockAndWrongTotals(t *testing.T) {
+	content := strings.Replace(bugfixComplete, "- Causa raiz: nil pointer\n", "", 1)
+	content = strings.Replace(content, "- Corrigidos: 1", "- Corrigidos: 0", 1)
+	result := NewValidator().Validate([]byte(content), KindBugfix, nil)
+	if result.Pass {
+		t.Fatal("bloco incompleto e totalizador divergente deveriam falhar")
+	}
+	labels := make(map[string]bool, len(result.Findings))
+	for _, finding := range result.Findings {
+		labels[finding.Label] = true
+	}
+	if !labels["causa raiz no bloco Bug-01"] || !labels["totalizador Corrigidos diverge dos blocos"] {
+		t.Fatalf("findings inesperados: %#v", result.Findings)
 	}
 }
 

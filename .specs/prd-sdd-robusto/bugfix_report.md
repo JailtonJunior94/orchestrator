@@ -1,8 +1,8 @@
 # Relatorio de Bugfix
 
-- Total de bugs no escopo: 5
-- Corrigidos: 5
-- Testes de regressao adicionados: 5
+- Total de bugs no escopo: 26
+- Corrigidos: 26
+- Testes de regressao adicionados: 26
 - Pendentes: nenhum
 - Estado final: done
 
@@ -84,9 +84,245 @@
   `go test ./... -race`, `make lint`, `make vet`, `make build` e
   `git diff --check` passaram.
 
+- ID: BUG-106
+- Severidade: major
+- Origem: NFR-04; finding de review do gate de producao
+- Estado: fixed
+- Causa raiz: a correcao inicial do BUG-105 ainda construia o workspace falso a
+  partir de uma raiz sem volume. No Windows, o servico transforma o caminho em
+  absoluto com volume antes de consultar o `FakeFileSystem`, divergindo da chave
+  usada na fixture.
+- Arquivos alterados: `internal/taskloop/e2e_agent_test.go`
+- Teste de regressao: o helper `e2eWorkspacePath(t)` usa `filepath.Abs` e os
+  cenarios `TestE2EAgent_PromptContainsAgentBlocks` e
+  `TestE2EAgent_ForensicArtifactStructureIdentical` cobrem os fluxos agent e
+  legado no mesmo workspace absoluto que o servico resolve.
+- Validacao: `GOTOOLCHAIN=go1.26.2 make smoke-adapters` passou, cobrindo o
+  smoke de adaptadores com a versao declarada pelo modulo.
+
+- ID: BUG-107
+- Severidade: major
+- Origem: NFR-03; finding de review do gate de producao
+- Estado: fixed
+- Causa raiz: o gate gerava mocks in-place, misturando diferenças de ambiente e
+  alterações parciais do gerador ao worktree que estava sendo verificado; além
+  disso, o stderr era suprimido e impedia diagnosticar a divergência Linux.
+- Arquivos alterados: `scripts/check-mocks.sh`, `scripts/check-mocks_test.sh`,
+  `Makefile` e `.github/workflows/test.yml`
+- Teste de regressao: `scripts/check-mocks_test.sh` simula sucesso, drift e falha
+  parcial do gerador e confirma que nenhum caminho altera o worktree original.
+- Validacao: `bash scripts/check-mocks_test.sh` passou com geração integralmente
+  isolada e diagnóstico preservado.
+
+- ID: BUG-108
+- Severidade: critical
+- Origem: RF-08; finding de review do gate de producao
+- Estado: fixed
+- Causa raiz: `validate-sdd` validava somente a forma do digest persistido.
+- Arquivos alterados: `internal/sdd/state.go`, `cmd/ai_spec_harness/sdd.go`
+- Teste de regressao: `TestStoreValidateDirectoryRejectsApprovedArtifactDrift` altera `tasks.md` após aprovação e exige erro stale.
+- Validacao: testes dirigidos SDD passaram; o estado real desatualizado agora falha fechado.
+
+- ID: BUG-109
+- Severidade: critical
+- Origem: RF-06; finding de review do gate de producao
+- Estado: fixed
+- Causa raiz: `State` persistia somente artefatos e eventos.
+- Arquivos alterados: `internal/sdd/state.go`
+- Teste de regressao: `TestStorePersistsCompleteOperationalModel` prova requisitos RF/NFR, DAG e task state persistidos.
+- Validacao: testes dirigidos SDD passaram.
+
+- ID: BUG-110
+- Severidade: critical
+- Origem: RF-07, RF-11; finding de review do gate de producao
+- Estado: fixed
+- Causa raiz: o comando encerrava após três flags booleanas, sem iniciar tentativa.
+- Arquivos alterados: `cmd/ai_spec_harness/sdd.go`, `internal/taskloop/orchestrator.go`
+- Teste de regressao: testes de início idempotente, lock e persistência de tentativa cobrem o fluxo real sem runtime remoto.
+- Validacao: testes dirigidos do CLI e taskloop passaram.
+
+- ID: BUG-111
+- Severidade: major
+- Origem: RF-09, RF-10; finding de review do gate de producao
+- Estado: fixed
+- Causa raiz: o parser lia apenas RF e não era chamado pelo CLI; a tabela canônica no topo também não era reconhecida.
+- Arquivos alterados: `internal/sdd/tasks/parser.go`, `cmd/ai_spec_harness/sdd.go`
+- Teste de regressao: `TestParserParse` cobre NFR sem cobertura e `TestParserAcceptsCanonicalTasksTableBeforeSections` cobre o formato aprovado.
+- Validacao: testes dirigidos SDD passaram.
+
+- ID: BUG-112
+- Severidade: critical
+- Origem: RF-01, RF-03; finding de review do gate de producao
+- Estado: fixed
+- Causa raiz: o validador aceitava hashes e evidências mencionados apenas em Markdown.
+- Arquivos alterados: `.agents/scripts/validate-task-evidence.sh`, mirrors e testes shell.
+- Teste de regressao: a suíte rejeita result JSON ausente, patch divergente e exige digest de log físico contido.
+- Validacao: oito cenários de `validate-task-evidence_test.sh` passaram.
+
+- ID: BUG-113
+- Severidade: critical
+- Origem: NFR-04; incidente release v0.29.2 no SHA 8d946753
+- Estado: fixed
+- Causa raiz: `release.yml` disparava diretamente no push, em paralelo aos testes.
+- Arquivos alterados: `.github/workflows/release.yml`
+- Teste de regressao: contrato do workflow exige `workflow_run` de `Tests` concluído com sucesso e verifica o `head_sha` no checkout.
+- Validacao: inspeção do YAML confirmou condição fail-closed e vínculo ao SHA testado.
+
+- ID: BUG-114
+- Severidade: critical
+- Origem: RF-03, RF-14; finding de review do gate de producao
+- Estado: fixed
+- Causa raiz: `Finish` validava apenas presença/formato do resultado, sem snapshot ou arquivos.
+- Arquivos alterados: `internal/taskloop/orchestrator.go`, `internal/taskloop/orchestrator_test.go`
+- Teste de regressao: `TestOrchestratorFinishRejectsSnapshotAndPhysicalEvidenceDivergence` cobre patch artificial, arquivo ausente e digest falso.
+- Validacao: testes dirigidos do taskloop passaram.
+
+- ID: BUG-115
+- Severidade: major
+- Origem: RF-05, NFR-01; finding de review do gate de producao
+- Estado: fixed
+- Causa raiz: checkpoints históricos usavam YAML mínimo fora do schema v2.
+- Arquivos alterados: `.specs/prd-sdd-robusto/.checkpoints/*.json`, `scripts/test-sdd-evals.sh`
+- Teste de regressao: o gate rejeita qualquer YAML legado e valida todo checkpoint pelo `execution-result.schema.json`.
+- Validacao: dez checkpoints v2 passaram no schema e permanecem `blocked`, sem promover prova histórica incompleta a `done`.
+
+- ID: BUG-116
+- Severidade: major
+- Origem: RF-16; finding de review do gate de producao
+- Estado: fixed
+- Causa raiz: campos e totais eram procurados globalmente no relatório.
+- Arquivos alterados: `.agents/scripts/validate-bugfix-evidence.sh`, `internal/evidence/evidence.go` e testes.
+- Teste de regressao: relatório com segundo bloco incompleto e total incorreto é rejeitado pelo shell e pelo validador Go.
+- Validacao: testes shell e `go test ./internal/evidence` passaram.
+
+- ID: BUG-117
+- Severidade: major
+- Origem: RF-18; finding de review do gate de producao
+- Estado: fixed
+- Causa raiz: o corpus imprimia contagens e custo/tokens constantes, sem matriz de classificação ou latência observada.
+- Arquivos alterados: `evals/sdd/manifest.json`, `scripts/test-sdd-evals.sh`
+- Teste de regressao: o runner calcula quality, escape, falso positivo/negativo e latências e aplica thresholds do manifest.
+- Validacao: 21 fixtures produziram quality=1, escapes/FP/FN=0 e latência total observada de 226.230 ms.
+
+- ID: BUG-118
+- Severidade: major
+- Origem: NFR-03; finding de review do gate de producao
+- Estado: fixed
+- Causa raiz: geração in-place podia deixar mocks parciais e temporários em falha ou drift.
+- Arquivos alterados: `scripts/check-mocks.sh`, `scripts/check-mocks_test.sh`
+- Teste de regressao: geradores falsos cobrem sucesso, drift e falha após escrita parcial em árvore isolada.
+- Validacao: `bash scripts/check-mocks_test.sh` passou e o fixture original permaneceu byte a byte intacto.
+
+- ID: BUG-119
+- Severidade: major
+- Origem: RF-03, RF-15; finding de review do gate final de producao
+- Estado: fixed
+- Causa raiz: o relatório 10.0 e a revisão referenciavam um snapshot anterior às
+  correções pós-plano, sem vínculo físico com o candidato cumulativo atual.
+- Arquivos alterados: `.specs/prd-sdd-robusto/10.0_execution_report.md`,
+  `evidence/10.0/final-wave-bug-119-125.log`, snapshot físico final e resultado
+  da revisão independente fresca.
+- Teste de regressao: o pacote final é validado contra um artefato físico de patch
+  com SHA-256 recomputável, logs frescos e revisão independente do mesmo digest.
+- Validacao: gates locais amplos e dirigidos estão persistidos em
+  `evidence/10.0/final-wave-bug-119-125.log`; revisão externa/remota não é alegada.
+
+- ID: BUG-120
+- Severidade: critical
+- Origem: RF-11, RF-14; finding de review do gate final de producao
+- Estado: fixed
+- Causa raiz: `Finish` comparava o resultado final ao snapshot inicial imutável,
+  tornando uma alteração legítima impossível e permitindo um resultado stale.
+- Arquivos alterados: `internal/taskloop/orchestrator.go`,
+  `internal/taskloop/orchestrator_test.go`.
+- Teste de regressao: `TestOrchestratorFinishesAttemptIdempotently` modifica o
+  workspace após `Start`, exige digests finais diferentes dos iniciais e conclui;
+  `TestOrchestratorFinishRejectsSnapshotAndPhysicalEvidenceDivergence` rejeita
+  patch e provas artificiais.
+- Validacao: testes dirigidos de `internal/taskloop` e race global passaram.
+
+- ID: BUG-121
+- Severidade: critical
+- Origem: RF-03, RF-05, RF-06; finding de review do gate final de producao
+- Estado: fixed
+- Causa raiz: o modelo operacional promovia `done` diretamente de `tasks.md` e
+  aceitava um relatório pela mera existência do path.
+- Arquivos alterados: `internal/sdd/state.go`, `internal/sdd/state_test.go`.
+- Teste de regressao: `TestStoreImportsDoneOnlyFromValidPhysicalCheckpoint`
+  cobre checkpoint done com provas físicas, checkpoint blocked e ausência do
+  checkpoint, que agora falha fechada.
+- Validacao: testes dirigidos de `internal/sdd` e a suíte global passaram.
+
+- ID: BUG-122
+- Severidade: critical
+- Origem: RF-01, RF-03, RF-14; finding de review do gate final de producao
+- Estado: fixed
+- Causa raiz: o validador comparava dois campos textuais controlados pelo mesmo
+  produtor e não exigia um artefato físico correspondente ao patch.
+- Arquivos alterados: `.agents/scripts/validate-task-evidence.sh`, mirrors
+  sincronizados e `tests/scripts/validate-task-evidence_test.sh`.
+- Teste de regressao: `TC9-patch-fisico-divergente` mantém Markdown/JSON
+  coerentes e adultera somente o patch físico; o gate rejeita pelo digest.
+- Validacao: 9/9 cenários passaram e 24 mirrors ficaram em sync.
+
+- ID: BUG-123
+- Severidade: major
+- Origem: RF-10; finding de review do gate final de producao
+- Estado: fixed
+- Causa raiz: dependências cross-PRD reconhecidas pelo parser eram ignoradas.
+- Arquivos alterados: `internal/sdd/tasks/parser.go`,
+  `internal/sdd/tasks/parser_test.go`.
+- Teste de regressao: `TestParserParseAtResolvesCrossPRDFailClosed` cobre PRD e
+  task ausentes, task não done, hash stale, ciclo cross-PRD e destino válido.
+- Validacao: testes dirigidos do parser e suíte global passaram.
+
+- ID: BUG-124
+- Severidade: major
+- Origem: RF-07, NFR-01 e seção Migração e Rollback da TechSpec; finding de review
+- Estado: fixed
+- Causa raiz: o CLI não expunha caminho operacional para migrar estado legado
+  nem rollback limitado à identidade da migração.
+- Arquivos alterados: `cmd/ai_spec_harness/root.go`,
+  `cmd/ai_spec_harness/sdd.go`, `internal/sdd/state.go` e testes associados.
+- Teste de regressao: `TestStoreMigrationDryRunAndRunIDScopedRollback` e
+  `TestSDDMigrationCommandsRequireConfirmationAndScopeRollback` provam dry-run
+  sem escrita, confirmação obrigatória e rejeição de outro `run_id`.
+- Validacao: testes unitários e de integração dirigidos passaram.
+
+- ID: BUG-125
+- Severidade: minor
+- Origem: NFR-04; finding de actionlint no gate final de producao
+- Estado: fixed
+- Causa raiz: o summary fazia múltiplos redirecionamentos consecutivos para o
+  mesmo arquivo, disparando ShellCheck SC2129.
+- Arquivos alterados: `.github/workflows/release.yml`.
+- Teste de regressao: `actionlint` analisa `test.yml` e `release.yml` sem findings.
+- Validacao: `actionlint .github/workflows/test.yml .github/workflows/release.yml`
+  passou sem output.
+
+- ID: BUG-126
+- Severidade: major
+- Origem: RF-06; gate `validate-sdd` do estado operacional de produção
+- Estado: fixed
+- Causa raiz: o estado aprovado foi criado antes da persistência do modelo
+  operacional v2 e permaneceu sem requisitos, DAG, tarefas e evidências,
+  apesar dos artefatos e checkpoints já estarem no contrato atual.
+- Arquivos alterados: `sdd-state.json`, checkpoints JSON v2,
+  `scripts/test-sdd-evals.sh` e evidências finais.
+- Teste de regressao: `scripts/test-sdd-evals.sh` agora valida o
+  `sdd-state.json` do PRD após validar todos os checkpoints; a suíte falha
+  fechada se o modelo operacional aprovado estiver incompleto.
+- Validacao: `go run . migrate-sdd .specs/prd-sdd-robusto --run-id
+  production-proof-20260903-r2 --confirm`, `go run . validate-sdd
+  .specs/prd-sdd-robusto` e o resultado físico 10.0 passaram.
+
 ## Comandos Executados
 
-- `python3 .agents/skills/bugfix/scripts/validate-bug-input.py --input .specs/prd-sdd-robusto/production-gates-bugs.json` -> SUCCESS: 5 bugs validados no formato canonico.
+- `python3 .agents/skills/bugfix/scripts/validate-bug-input.py --input .specs/prd-sdd-robusto/production-gates-bugs.json` -> SUCCESS: 26 bugs validados no formato canonico.
+- Gates dirigidos BUG-120..125, `make test`, `make integration`, `make vet`,
+  `make build`, `make lint`, race global, validators, evals, sync, actionlint e
+  `git diff --check` -> passaram; saída consolidada em
+  `evidence/10.0/final-wave-bug-119-125.log`.
 - `go test ./internal/fs ./internal/taskloop ./internal/wrapper -count=1` -> passou.
 - `make mocks` -> passou; 40 mocks normalizados por mockery v3.7.4.
 - `make check-mocks` -> passou em duas execucoes consecutivas.
@@ -95,6 +331,28 @@
 - `go vet ./...` -> passou.
 - `go build ./...` -> passou.
 - `git diff --check` -> passou.
+- `GOTOOLCHAIN=go1.26.2 go test ./internal/evidence ./internal/sdd/... ./internal/taskloop ./cmd/ai_spec_harness -count=1` -> passou, 1007 testes.
+- `GOTOOLCHAIN=go1.26.2 bash scripts/test-sdd-evals.sh` -> passou, métricas calculadas e thresholds atendidos.
+- `bash scripts/test-validators.sh` -> passou, 8 cenários.
+- `bash tests/scripts/validate-task-evidence_test.sh .agents/scripts/validate-task-evidence.sh` -> passou, 8 cenários.
+- `bash tests/scripts/validate-bugfix-evidence_test.sh .agents/scripts/validate-bugfix-evidence.sh` -> passou.
+- `bash scripts/check-mocks_test.sh` -> passou para sucesso, drift e falha parcial.
+- `bash scripts/check-scripts-sync.sh` -> passou, 24 comparações em sync.
+- `GOTOOLCHAIN=go1.26.2 make check-mocks` -> passou em duas execucoes consecutivas.
+- `GOTOOLCHAIN=go1.26.2 make smoke-adapters` -> passou.
+- `bash -n scripts/check-mocks.sh` -> passou.
+- `make test-check-mocks` -> passou; simulacao hermetica confirmou status nao-zero
+  e diagnostico integral quando o gerador falha.
+- `GOTOOLCHAIN=go1.26.2 make test` -> passou.
+- `GOTOOLCHAIN=go1.26.2 make integration` -> passou.
+- `GOTOOLCHAIN=go1.26.2 make vet` -> passou.
+- `GOTOOLCHAIN=go1.26.2 make build` -> passou.
+- `GOTOOLCHAIN=go1.26.2 make lint` -> passou, 0 issues.
+- `GOTOOLCHAIN=go1.26.2 go test ./... -count=1 -race` -> passou.
+- `GOTOOLCHAIN=go1.26.2 make test-sdd-evals` -> passou (21 fixtures; 1 aceita e 20 rejeitadas).
+- `GOTOOLCHAIN=go1.26.2 make test-validators` -> passou.
+- `ai-spec validate-sdd .specs/prd-sdd-robusto` -> passou.
+- `ai-spec check-spec-drift .specs/prd-sdd-robusto/tasks.md` -> passou.
 - `go test ./internal/taskloop/... -count=1` -> passou.
 - `make smoke-adapters` -> passou.
 - `go test ./... -race` -> passou.
@@ -123,3 +381,6 @@
   remota em Windows continua sendo a evidencia complementar para o ambiente de CI.
 - BUG-105 foi validado no runner local com paths nativos; a execucao remota da
   matriz Windows permanece a prova complementar do ambiente de CI.
+- BUG-106 e BUG-107 foram executados localmente com o toolchain Go 1.26.2
+  declarado no modulo; a matriz remota continua sendo a evidencia complementar
+  dos runners Ubuntu, macOS e Windows.

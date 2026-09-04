@@ -195,6 +195,85 @@ elif awk -v delta="$coverage_delta" 'BEGIN { exit !(delta < 0) }'; then
   missing=1
 fi
 
+# Estado done exige o resultado JSON v2 e evidências físicas contidas. O digest
+# de cada teste deve corresponder ao conteúdo de pelo menos um arquivo declarado.
+if grep -Eiq "estado[[:space:]]*:[[:space:]]*done" "$report_file"; then
+  if ! python3 - "$report_file" <<'PY'
+import hashlib
+import json
+import os
+import re
+import subprocess
+import sys
+
+report = os.path.realpath(sys.argv[1])
+text = open(report, encoding="utf-8").read()
+match = re.search(r"(?im)^result_path\s*=\s*(\S+)\s*$", text)
+if not match:
+    print("FALTANDO: result_path do execution-result.json")
+    raise SystemExit(1)
+
+try:
+    root = subprocess.check_output(
+        ["git", "-C", os.path.dirname(report), "rev-parse", "--show-toplevel"],
+        text=True, stderr=subprocess.DEVNULL,
+    ).strip()
+except (OSError, subprocess.CalledProcessError):
+    root = os.path.dirname(report)
+root = os.path.realpath(root)
+
+def contained(reference):
+    relative = reference.split("#", 1)[0]
+    if not relative or os.path.isabs(relative):
+        raise ValueError(f"referencia nao relativa: {reference}")
+    path = os.path.realpath(os.path.join(root, relative))
+    if os.path.commonpath([root, path]) != root or not os.path.isfile(path):
+        raise ValueError(f"evidencia ausente ou fora do repositorio: {reference}")
+    return path
+
+try:
+    result_path = contained(match.group(1))
+    result = json.load(open(result_path, encoding="utf-8"))
+    required = {"schema_version", "run_id", "task_id", "attempt", "status", "base_sha", "patch_sha256", "patch_ref", "final_state_sha256", "tests", "criteria", "evidence", "review_verdict"}
+    if result.get("schema_version") != 2 or result.get("status") != "done" or not required.issubset(result):
+        raise ValueError("execution-result v2 done incompleto")
+    task = re.search(r"(?im)^-\s*ID\s*:\s*(\S+)\s*$", text)
+    patch = re.search(r"(?im)^sha\s*=\s*([0-9a-f]{64})\s*$", text)
+    if not task or task.group(1) != result["task_id"]:
+        raise ValueError("task_id diverge do relatorio")
+    if not patch or patch.group(1).lower() != result["patch_sha256"].lower():
+        raise ValueError("patch_sha256 diverge do Diff Reviewed")
+    validator = os.environ.get("AI_SPEC_BIN", "ai-spec")
+    validation = subprocess.run(
+        [validator, "validate-result", "execution", result_path,
+         "--task-id", result["task_id"], "--verify-physical",
+         "--prd-dir", os.path.dirname(report), "--exclude", report],
+        text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        check=False,
+    )
+    if validation.returncode != 0:
+        detail = " ".join(validation.stdout.split())
+        raise ValueError(f"snapshot fisico canonico invalido: {detail}")
+    digests = {}
+    for reference in result["evidence"]:
+        path = contained(reference)
+        digests[reference.split("#", 1)[0].replace("\\", "/")] = hashlib.sha256(open(path, "rb").read()).hexdigest()
+    for criterion in result["criteria"]:
+        reference = criterion["evidence_ref"].split("#", 1)[0].replace("\\", "/")
+        if reference not in digests:
+            raise ValueError(f"criterio {criterion.get('id')} sem evidencia declarada")
+    for proof in result["tests"]:
+        if proof.get("exit_code") != 0 or proof.get("output_sha256") not in digests.values():
+            raise ValueError(f"teste sem log fisico correspondente: {proof.get('command')}")
+except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as error:
+    print(f"FALTANDO: prova fisica invalida: {error}")
+    raise SystemExit(1)
+PY
+  then
+    missing=1
+  fi
+fi
+
 if [[ $missing -ne 0 ]]; then
   echo ""
   echo "Validação do pacote de evidências falhou: $report_file"

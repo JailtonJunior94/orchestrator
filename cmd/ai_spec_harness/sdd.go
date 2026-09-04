@@ -2,6 +2,7 @@ package aispecharness
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -54,13 +55,30 @@ func newOrchestrateCmd() *cobra.Command {
 		if err != nil {
 			return err
 		}
+		state, err = store.ValidateDirectory(args[0])
+		if err != nil {
+			return fmt.Errorf("orquestracao bloqueada: %w", err)
+		}
 		for _, artifact := range []sdd.Artifact{sdd.ArtifactPRD, sdd.ArtifactTechSpec, sdd.ArtifactTasks} {
 			entry := state.Artifacts[artifact]
 			if !entry.Approved || entry.Status != sdd.StatusApproved {
 				return fmt.Errorf("orquestracao bloqueada: %s nao esta aprovado", artifact)
 			}
 		}
-		fmt.Printf("OK: estado SDD validado para run_id=%s\n", state.RunID)
+		orchestrator := taskloop.NewOrchestrator(store)
+		snapshot, err := orchestrator.CaptureSnapshotFromGit(cmd.Context(), args[0])
+		if err != nil {
+			return fmt.Errorf("orquestracao bloqueada: %w", err)
+		}
+		_, taskID, attempt, err := orchestrator.StartNext(args[0], state.RunID, snapshot)
+		if errors.Is(err, taskloop.ErrNoReadyTask) {
+			fmt.Printf("OK: nenhuma task pendente para run_id=%s\n", state.RunID)
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		fmt.Printf("OK: tentativa iniciada run_id=%s task_id=%s attempt=%d\n", state.RunID, taskID, attempt)
 		return nil
 	}}
 	cmd.Flags().String("run-id", "manual", "identificador da execução")
@@ -69,13 +87,58 @@ func newOrchestrateCmd() *cobra.Command {
 
 func newValidateSDDCmd() *cobra.Command {
 	return &cobra.Command{Use: "validate-sdd <diretorio-prd>", Short: "Valida o contrato SDD versionado de um PRD", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
-		state, err := sdd.NewStore().Load(args[0])
+		state, err := sdd.NewStore().ValidateDirectory(args[0])
 		if err != nil {
 			return err
 		}
 		fmt.Printf("OK: estado SDD v%d valido para %s\n", state.SchemaVersion, filepath.Clean(args[0]))
 		return nil
 	}}
+}
+
+func newMigrateSDDCmd() *cobra.Command {
+	cmd := &cobra.Command{Use: "migrate-sdd <diretorio-prd> --run-id <id>", Short: "Migra estado SDD legado para v2 com confirmação explícita", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		runID, _ := cmd.Flags().GetString("run-id")
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		confirm, _ := cmd.Flags().GetBool("confirm")
+		if !dryRun && !confirm {
+			return fmt.Errorf("migrate-sdd requer --confirm fora de --dry-run")
+		}
+		state, err := sdd.NewStore().Migrate(args[0], runID, dryRun)
+		if err != nil {
+			return err
+		}
+		mode := "planejada"
+		if !dryRun {
+			mode = "concluída"
+		}
+		fmt.Printf("OK: migração SDD %s para run_id=%s tasks=%d\n", mode, state.RunID, len(state.Tasks))
+		return nil
+	}}
+	cmd.Flags().String("run-id", "", "identificador exclusivo da migração")
+	cmd.Flags().Bool("dry-run", false, "planeja sem escrever")
+	cmd.Flags().Bool("confirm", false, "confirma escrita do estado v2")
+	_ = cmd.MarkFlagRequired("run-id")
+	return cmd
+}
+
+func newRollbackSDDCmd() *cobra.Command {
+	cmd := &cobra.Command{Use: "rollback-sdd <diretorio-prd> --run-id <id> --confirm", Short: "Remove somente estado v2 criado pela migração indicada", Args: cobra.ExactArgs(1), RunE: func(cmd *cobra.Command, args []string) error {
+		runID, _ := cmd.Flags().GetString("run-id")
+		confirm, _ := cmd.Flags().GetBool("confirm")
+		if !confirm {
+			return fmt.Errorf("rollback-sdd requer --confirm")
+		}
+		if err := sdd.NewStore().RollbackMigration(args[0], runID); err != nil {
+			return err
+		}
+		fmt.Printf("OK: rollback SDD concluído para run_id=%s\n", runID)
+		return nil
+	}}
+	cmd.Flags().String("run-id", "", "identificador exclusivo da migração")
+	cmd.Flags().Bool("confirm", false, "confirma remoção do estado v2 migrado")
+	_ = cmd.MarkFlagRequired("run-id")
+	return cmd
 }
 
 func newRuntimeCapabilitiesCmd() *cobra.Command {

@@ -1,0 +1,30 @@
+{
+  "schema_version": 2,
+  "run_id": "production-proof-20260902",
+  "task_id": "3.0",
+  "attempt": 2,
+  "status": "done",
+  "base_sha": "8d946753fe2834c471e4b3bd7e9c3bd791e38847",
+  "patch_sha256": "3ee8339cfdb34beb276c9489360cc304f9f7cc5c8421d5e7896e7778a3078de5",
+  "patch_ref": "evidence/10.0/final-candidate.patch",
+  "final_state_sha256": "3949c0a4945d9a9e2fac5f15dfc04eb5987bd354df1e63981e4b83d58cc03700",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go test ./... -count=1 -race; make integration; go vet ./...; go build ./...; make lint; validators/evals/sync/mocks/smoke/actionlint/shellcheck",
+      "exit_code": 0,
+      "output_sha256": "dd257d44b0281cd8ede62ae5cdb0c3c7bb788a9033dad825e5f98ef8d0390b12"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "TASK-3.0-AC",
+      "evidence_ref": "evidence/10.0/final-proof-validation-r2.log#gates"
+    }
+  ],
+  "evidence": [
+    "evidence/10.0/final-proof-validation-r2.log",
+    "evidence/10.0/final-independent-review.md"
+  ],
+  "review_verdict": "approved"
+}

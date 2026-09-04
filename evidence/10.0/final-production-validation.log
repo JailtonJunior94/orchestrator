@@ -1,0 +1,345 @@
+SDD production validation 2026-09-03T13:01:31Z
++ go test ./... -count=1 -race
+?   	github.com/JailtonJunior94/ai-spec-harness	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	1.509s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/adapters	1.642s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/agents	1.870s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/agents/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/bugschema	2.076s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/changelog	2.162s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/config	2.347s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/config/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/contextgen	2.613s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/detect	2.816s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/detect/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/doctor	1.716s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/embedded	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/evidence	1.725s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/fs	1.649s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/fs/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/git	1.671s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/git/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/gitref	3.133s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/inspect	1.552s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/install	1.859s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/invocation	1.443s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/lint	1.465s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/manifest	1.479s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/metrics	2.309s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/metrics/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/output	1.476s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/parity	1.480s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/platform	1.207s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/prerequisites	1.190s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	1.881s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake	1.620s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client	6.217s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events	1.350s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks	1.547s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver	2.395s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/wire	1.883s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory	2.061s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/mocks	[no test files]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence	1.636s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe	1.858s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/render	1.905s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	1.652s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/scaffold	1.316s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd	1.680s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd/tasks	1.405s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/semver	3.624s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillbump	8.516s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	1.409s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillscheck	1.487s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdrift	1.996s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	13.242s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/telemetry	2.013s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/triggers	1.749s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/triggers/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/uninstall	1.924s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/upgrade	1.714s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/version	1.669s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/wrapper	2.547s
++ make integration
+go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/...
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/integration	0.861s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	1.075s
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	6.482s
++ go vet ./...
++ go build ./...
++ make lint
+Running linter...
+Installing golangci-lint...
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.1
+GOGC=20 golangci-lint run --config .golangci.yml --timeout 10m --verbose
+level=info msg="golangci-lint has version 2.13.2 built with go1.27.0 from 27774aa on 2026-08-27T22:52:01Z"
+level=info msg="[config_reader] Used config file .golangci.yml"
+level=info msg="[config_reader] Module name \"github.com/JailtonJunior94/ai-spec-harness\""
+level=info msg="[goenv] Read go env for 9.178375ms: map[string]string{\"GOCACHE\":\"/Users/jailtonjunior/Library/Caches/go-build\", \"GOROOT\":\"/Users/jailtonjunior/.gvm/gos/go1.27.0\"}"
+level=info msg="[lintersdb] Active 6 linters: [errcheck gosec govet ineffassign staticcheck unused]"
+level=info msg="[loader] Go packages loading at mode 8767 (types_sizes|deps|files|imports|name|compiled_files|exports_file) took 3.076380208s"
+level=info msg="[runner/filename_unadjuster] Pre-built 0 adjustments in 42.960042ms"
+level=info msg="[linters_context/goanalysis] analyzers took 10.123230591s with top 10 stages: gosec: 1.335064457s, buildir: 611.77031ms, unused: 445.412332ms, S1038: 384.819333ms, QF1010: 216.549417ms, nilness: 212.267126ms, SA1012: 184.889498ms, SA4021: 159.01821ms, printf: 143.448249ms, S1008: 143.381125ms"
+level=info msg="[runner] Issues before processing: 40, after processing: 0"
+level=info msg="[runner] Processors filtering stat (in/out): cgo: 40/40, invalid_issue: 40/40, generated_file_filter: 40/0, path_absoluter: 40/40, filename_unadjuster: 40/40, path_relativity: 40/40, exclusion_paths: 40/40"
+level=info msg="[runner] processing took 1.69092ms with stages: generated_file_filter: 1.654417ms, path_relativity: 27.5µs, invalid_issue: 1.876µs, cgo: 1.583µs, path_absoluter: 1.375µs, nolint_filter: 750ns, sort_results: 750ns, exclusion_rules: 417ns, fixer: 417ns, max_same_issues: 416ns, exclusion_paths: 375ns, filename_unadjuster: 334ns, path_prettifier: 167ns, source_code: 167ns, uniq_by_line: 84ns, max_from_linter: 84ns, path_shortener: 83ns, severity-rules: 42ns, diff: 42ns, max_per_file_from_linter: 41ns"
+level=info msg="[runner] linters took 5.264179834s with stages: goanalysis_metalinter: 5.262399917s"
+0 issues.
+level=info msg="File cache stats: 0 entries of total size 0B"
+level=info msg="Memory: 85 samples, avg is 119.2MB, max is 194.8MB"
+level=info msg="Execution took 8.393668791s"
++ make test-validators
+bash scripts/test-validators.sh
+Caso a: critério de aceite não comprovado
+  ✓ critério não comprovado falha (exit=1)
+Caso b: todos os critérios comprovados
+  ✓ todos comprovados passa (exit=0)
+Caso c: Testes: pass sem comando de teste
+  ✓ Testes pass sem comando falha (exit=1)
+Caso d: task legada sem seção de critérios
+  ✓ task legada passa (exit=0)
+  ✓ aviso de gate ignorado presente
+Caso e: review.md válido sem achados
+  ✓ review válido passa (exit=0)
+Caso f: review REJECTED sem achado bloqueante
+  ✓ REJECTED sem high/critical falha (exit=1)
+Caso g: review sem seção de validações
+  ✓ review sem validações falha (exit=1)
+
+Passaram: 8 | Falharam: 0
+Todos os testes de validador passaram.
+bash tests/scripts/validate-task-evidence_test.sh .agents/scripts/validate-task-evidence.sh
+PASS [TC1-valido]
+PASS [TC2-sem-sha]
+PASS [TC3-sem-verdict]
+PASS [TC4-tool-invalida]
+PASS [TC5-delta-regressao]
+PASS [TC6-delta-ok]
+PASS [TC7-result-ausente]
+PASS [TC8-patch-divergente]
+PASS [TC9-patch-fisico-divergente]
+PASS [TC10-patch-arbitrario-autoconsistente]
+PASS [TC11-estado-final-inventado]
+
+Resultado: 11 passaram, 0 falharam
+bash tests/scripts/validate-bugfix-evidence_test.sh .agents/scripts/validate-bugfix-evidence.sh
+validate-bugfix-evidence: blocos e totalizadores OK
++ make test-sdd-evals
+bash scripts/test-sdd-evals.sh
+sdd evals: {"accepted":1,"escape_rate":0.0,"false_negative_rate":0.0,"false_positive_rate":0.0,"fixtures":21,"latency_ms":{"max":14.001,"mean":11.298,"total":237.253},"quality_rate":1.0,"rejected":20}
++ make check-skills-sync
+bash scripts/check-skills-sync.sh
+
+Skills em sync: 78
+Skills com drift: 0
+Libs em sync: 2 (legacy + embedded)
+Hooks do orquestrador em sync: 4 hooks x 9 mirrors
+Hooks de validacao por-tool em paridade: 2 hooks x 8 tools
+Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
++ make check-hooks-sync
+bash scripts/check-hooks-sync.sh
+
+Hooks em sync: 36
+Drift / missing: 0
+Todos os hooks orquestrador sincronizados.
++ make check-scripts-sync
+bash scripts/check-scripts-sync.sh
+
+Validadores em sync: 24
+Drift / missing: 0
+Todos os validadores de evidencia sincronizados.
++ make check-mocks
+bash scripts/check-mocks.sh
+Mocks: OK (sincronizados com mockery.yml)
++ make smoke-adapters
+go test -count=1 ./internal/adapters/... ./internal/taskloop/... -run 'TestGenerate_executeTaskYAMLContract_allTools|TestE2EAgent_PromptContainsAgentBlocks'
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/adapters	0.350s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	0.581s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks	[no test files]
++ actionlint workflows
++ shellcheck touched shell scripts
++ git diff --check
++ go test ./internal/taskloop ./internal/sdd/tasks -count=1 -race
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	9.723s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd/tasks	1.285s
++ final go test ./... -count=1 -race
+?   	github.com/JailtonJunior94/ai-spec-harness	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	2.624s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/adapters	3.594s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/agents	2.160s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/agents/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/bugschema	1.462s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/changelog	3.248s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/config	2.966s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/config/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/contextgen	1.849s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/detect	4.044s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/detect/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/doctor	2.903s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/embedded	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/evidence	2.808s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/fs	2.798s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/fs/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/git	2.696s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/git/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/gitref	4.128s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/inspect	2.637s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/install	3.053s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/invocation	2.434s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/lint	2.501s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/manifest	2.542s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/metrics	3.424s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/metrics/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/output	2.572s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/parity	2.454s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/platform	2.072s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/prerequisites	2.244s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	2.727s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake	2.553s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client	7.712s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events	2.403s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks	2.261s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver	3.181s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/wire	2.682s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory	2.674s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/mocks	[no test files]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence	2.459s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe	2.767s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/render	2.433s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	2.477s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/scaffold	2.151s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd	2.474s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd/tasks	2.565s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/semver	4.338s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillbump	11.118s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	2.455s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillscheck	2.399s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdrift	2.407s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	15.893s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/telemetry	2.526s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/triggers	2.029s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/triggers/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/uninstall	2.323s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/upgrade	2.786s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/version	2.614s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/wrapper	3.654s
++ final go vet ./...
++ final go build ./...
++ final git diff --check
++ gofmt -l changed Go files
++ R0 init audit
+R0: OK
++ R5 exit/fatal audit outside cmd
+R5: OK
++ R5 panic audit
+grep: unrecognized option `--glob'
+usage: grep [-abcdDEFGHhIiJLlMmnOopqRSsUVvwXxZz] [-A num] [-B num] [-C[num]]
+	[-e pattern] [-f file] [--binary-files=value] [--color=when]
+	[--context[=num]] [--directories=action] [--label] [--line-buffered]
+	[--null] [pattern] [file ...]
+R5: OK
++ R7 interface audit
+grep: unrecognized option `--glob'
+usage: grep [-abcdDEFGHhIiJLlMmnOopqRSsUVvwXxZz] [-A num] [-B num] [-C[num]]
+	[-e pattern] [-f file] [--binary-files=value] [--color=when]
+	[--context[=num]] [--directories=action] [--label] [--line-buffered]
+	[--null] [pattern] [file ...]
+R7: OK
+R1/R2/R6: revisao manual do delta - metodos adicionados em Orchestrator; nenhuma atribuicao-alias de campo ou contexto armazenado.
++ make check-mocks
+bash scripts/check-mocks.sh
+Mocks: OK (sincronizados com mockery.yml)
++ corrected R5 panic audit
+internal/detect/mocks/detector.go:44:		panic("no return value specified for DetectLangs")
+internal/detect/mocks/detector.go:97:		panic("no return value specified for DetectTools")
+internal/detect/mocks/agent_detector.go:47:		panic("no return value specified for Detect")
+internal/detect/mocks/home_dir.go:43:		panic("no return value specified for UserHomeDir")
+internal/detect/mocks/look_pather.go:43:		panic("no return value specified for LookPath")
+internal/metrics/mocks/tokenizer.go:43:		panic("no return value specified for EstimateTokens")
+internal/metrics/mocks/tokenizer.go:94:		panic("no return value specified for Name")
+internal/config/mocks/resolver.go:44:		panic("no return value specified for Resolve")
+internal/config/mocks/source_provider.go:43:		panic("no return value specified for SourceDir")
+internal/triggers/mocks/loader.go:44:		panic("no return value specified for Load")
+internal/runtime/mocks/persistence.go:45:		panic("no return value specified for AppendEvent")
+internal/runtime/mocks/persistence.go:96:		panic("no return value specified for EnrichReport")
+internal/runtime/mocks/persistence.go:147:		panic("no return value specified for WriteToolCalls")
+internal/runtime/mocks/clock.go:45:		panic("no return value specified for Now")
+internal/runtime/mocks/retry_classifier.go:43:		panic("no return value specified for IsTransient")
+internal/runtime/mocks/prober.go:46:		panic("no return value specified for EnsureAvailable")
+internal/runtime/mocks/mcp_server.go:46:		panic("no return value specified for Serve")
+internal/runtime/mocks/persistence_factory.go:44:		panic("no return value specified for New")
+internal/runtime/memory/mocks/store.go:46:		panic("no return value specified for ReadTask")
+internal/runtime/memory/mocks/store.go:112:		panic("no return value specified for ReadWorkflow")
+internal/runtime/memory/mocks/store.go:172:		panic("no return value specified for WriteTask")
+internal/runtime/memory/mocks/store.go:241:		panic("no return value specified for WriteWorkflow")
+internal/runtime/hooks/mocks/event.go:43:		panic("no return value specified for Kind")
+internal/runtime/hooks/mocks/dispatcher.go:46:		panic("no return value specified for Dispatch")
+internal/runtime/hooks/mocks/hook.go:46:		panic("no return value specified for Name")
+internal/runtime/hooks/mocks/hook.go:90:		panic("no return value specified for Run")
+internal/runtime/events/mocks/metrics_extractor.go:46:		panic("no return value specified for Extract")
+internal/runtime/client/mocks/client.go:47:		panic("no return value specified for Close")
+internal/runtime/client/mocks/client.go:91:		panic("no return value specified for DroppedUpdates")
+internal/runtime/client/mocks/client.go:135:		panic("no return value specified for Err")
+internal/runtime/client/mocks/client.go:179:		panic("no return value specified for Open")
+internal/runtime/client/mocks/client.go:242:		panic("no return value specified for SlowPublishes")
+internal/runtime/client/mocks/client.go:286:		panic("no return value specified for Updates")
+internal/runtime/client/mocks/client_factory.go:44:		panic("no return value specified for New")
+internal/runtime/client/mocks/io_provider.go:45:		panic("no return value specified for Provide")
+internal/runtime/probe/mocks/look_pather.go:43:		panic("no return value specified for LookPath")
+internal/runtime/mcpserver/mocks/server.go:46:		panic("no return value specified for Serve")
+internal/agents/mocks/registry.go:46:		panic("no return value specified for Discover")
+internal/agents/mocks/registry.go:108:		panic("no return value specified for Resolve")
+internal/taskloop/mocks/agent_invoker.go:45:		panic("no return value specified for BinaryName")
+internal/taskloop/mocks/agent_invoker.go:89:		panic("no return value specified for Invoke")
+internal/taskloop/mocks/acceptance_gate.go:46:		panic("no return value specified for Verify")
+internal/taskloop/mocks/evidence_recorder.go:46:		panic("no return value specified for Append")
+internal/taskloop/mocks/prompter.go:46:		panic("no return value specified for Ask")
+internal/taskloop/mocks/diff_capturer.go:45:		panic("no return value specified for CaptureDiff")
+internal/taskloop/mocks/task_selector.go:46:		panic("no return value specified for Next")
+internal/taskloop/mocks/final_reviewer.go:46:		panic("no return value specified for ReviewConsolidated")
+internal/taskloop/mocks/command_runner.go:51:		panic("no return value specified for Run")
+internal/taskloop/mocks/task_executor.go:46:		panic("no return value specified for Execute")
+internal/taskloop/mocks/reservation_planner.go:46:		panic("no return value specified for Resolve")
+internal/taskloop/mocks/bugfix_invoker.go:46:		panic("no return value specified for InvokeBugfix")
+internal/fs/mocks/file_system.go:45:		panic("no return value specified for CopyDir")
+internal/fs/mocks/file_system.go:102:		panic("no return value specified for CopyFile")
+internal/fs/mocks/file_system.go:159:		panic("no return value specified for DirHash")
+internal/fs/mocks/file_system.go:219:		panic("no return value specified for EvalSymlinks")
+internal/fs/mocks/file_system.go:279:		panic("no return value specified for Exists")
+internal/fs/mocks/file_system.go:330:		panic("no return value specified for FileHash")
+internal/fs/mocks/file_system.go:390:		panic("no return value specified for IsDir")
+internal/fs/mocks/file_system.go:441:		panic("no return value specified for IsSymlink")
+internal/fs/mocks/file_system.go:492:		panic("no return value specified for MkdirAll")
+internal/fs/mocks/file_system.go:543:		panic("no return value specified for ReadDir")
+internal/fs/mocks/file_system.go:605:		panic("no return value specified for ReadFile")
+internal/fs/mocks/file_system.go:667:		panic("no return value specified for Remove")
+internal/fs/mocks/file_system.go:718:		panic("no return value specified for RemoveAll")
+internal/fs/mocks/file_system.go:769:		panic("no return value specified for Symlink")
+internal/fs/mocks/file_system.go:826:		panic("no return value specified for Writable")
+internal/fs/mocks/file_system.go:877:		panic("no return value specified for WriteFile")
+internal/git/mocks/repository.go:43:		panic("no return value specified for IsRepo")
+internal/git/mocks/repository.go:94:		panic("no return value specified for RemoteURL")
+internal/git/mocks/repository.go:154:		panic("no return value specified for Root")
+R5: findings
++ scoped R5 panic audit excluding generated mocks
+R5: OK
++ scoped R7 interface audit excluding generated mocks
+R7: OK
++ final make test-sdd-evals (inclui BUG-126)
+bash scripts/test-sdd-evals.sh
+importar task 1.0: digest do teste sem evidencia fisica
+make: *** [test-sdd-evals] Error 1

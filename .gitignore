@@ -17,6 +17,7 @@ coverage.html
 
 # Temporary prompt files
 .tmp-*
+.scratch/
 
 # Run-time artifacts
 task-loop-report-*.md

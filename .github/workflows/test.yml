@@ -92,6 +92,9 @@ jobs:
       - name: Mocks drift gate
         run: make check-mocks
 
+      - name: Mocks failure diagnostic test
+        run: make test-check-mocks
+
       - name: Hooks sync drift gate
         run: make check-hooks-sync
 

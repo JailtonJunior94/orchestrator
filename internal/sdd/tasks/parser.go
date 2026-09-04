@@ -2,7 +2,11 @@
 package tasks
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -18,6 +22,7 @@ var (
 // Task representa uma task e seus vínculos declarados no artefato humano.
 type Task struct {
 	ID           string
+	Status       string
 	Dependencies []string
 	Ownership    []string
 	Parallel     bool
@@ -40,6 +45,11 @@ func NewParser() *Parser {
 
 // Parse extrai e valida requisitos, cobertura, dependências, ciclos e ownership.
 func (p *Parser) Parse(prdContent, tasksContent []byte) (Document, error) {
+	return p.ParseAt("", prdContent, tasksContent)
+}
+
+// ParseAt resolve também dependências cross-PRD a partir do diretório atual.
+func (p *Parser) ParseAt(prdDir string, prdContent, tasksContent []byte) (Document, error) {
 	requirements, err := p.parseRequirements(string(prdContent))
 	if err != nil {
 		return Document{}, err
@@ -53,20 +63,21 @@ func (p *Parser) Parse(prdContent, tasksContent []byte) (Document, error) {
 		return Document{}, err
 	}
 	document := Document{Requirements: requirements, Tasks: tasks, Coverage: coverage}
-	if err := p.validate(document); err != nil {
+	if err := p.validate(prdDir, document); err != nil {
 		return Document{}, err
 	}
 	return document, nil
 }
 
 func (p *Parser) parseRequirements(content string) ([]string, error) {
-	section := p.section(content, "Requisitos Funcionais")
-	if len(section) == 0 {
+	functional := p.section(content, "Requisitos Funcionais")
+	nonFunctional := p.section(content, "Requisitos Não Funcionais")
+	if len(functional) == 0 {
 		return nil, fmt.Errorf("vinculos estruturais: seção Requisitos Funcionais ausente no PRD")
 	}
 	requirements := make([]string, 0)
 	seen := make(map[string]struct{})
-	for _, line := range section {
+	for _, line := range append(functional, nonFunctional...) {
 		trimmed := strings.TrimSpace(line)
 		if !strings.HasPrefix(trimmed, "-") {
 			continue
@@ -91,6 +102,9 @@ func (p *Parser) parseRequirements(content string) ([]string, error) {
 func (p *Parser) parseTasks(content string) ([]Task, error) {
 	rows := p.table(content, "Tarefas")
 	if len(rows) < 3 {
+		rows = p.firstTable(content)
+	}
+	if len(rows) < 3 {
 		return nil, fmt.Errorf("vinculos estruturais: tabela Tarefas ausente ou vazia")
 	}
 	headers := p.headers(rows[0])
@@ -99,6 +113,7 @@ func (p *Parser) parseTasks(content string) ([]Task, error) {
 		return nil, fmt.Errorf("vinculos estruturais: coluna # ausente na tabela Tarefas")
 	}
 	depsIndex := p.column(headers, "dependências", "dependencias", "deps")
+	statusIndex := p.column(headers, "status", "estado")
 	parallelIndex := p.column(headers, "paralelizável", "paralelizavel", "parallel_group")
 	ownershipIndex := p.column(headers, "ownership", "arquivos", "paths")
 
@@ -118,6 +133,9 @@ func (p *Parser) parseTasks(content string) ([]Task, error) {
 		}
 		seen[id] = struct{}{}
 		task := Task{ID: id}
+		if statusIndex >= 0 && statusIndex < len(columns) {
+			task.Status = strings.ToLower(strings.TrimSpace(columns[statusIndex]))
+		}
 		if depsIndex >= 0 && depsIndex < len(columns) {
 			task.Dependencies = p.references(columns[depsIndex])
 		}
@@ -130,6 +148,24 @@ func (p *Parser) parseTasks(content string) ([]Task, error) {
 		tasks = append(tasks, task)
 	}
 	return tasks, nil
+}
+
+func (p *Parser) firstTable(content string) []string {
+	lines := strings.Split(content, "\n")
+	result := make([]string, 0)
+	started := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "|") {
+			started = true
+			result = append(result, trimmed)
+			continue
+		}
+		if started {
+			break
+		}
+	}
+	return result
 }
 
 func (p *Parser) parseCoverage(content string) (map[string][]string, error) {
@@ -164,7 +200,7 @@ func (p *Parser) parseCoverage(content string) (map[string][]string, error) {
 	return coverage, nil
 }
 
-func (p *Parser) validate(document Document) error {
+func (p *Parser) validate(prdDir string, document Document) error {
 	tasksByID := make(map[string]Task, len(document.Tasks))
 	for _, task := range document.Tasks {
 		tasksByID[task.ID] = task
@@ -189,18 +225,18 @@ func (p *Parser) validate(document Document) error {
 			covered[requirement] = struct{}{}
 		}
 	}
-	for requirement := range requirements {
+	for _, requirement := range document.Requirements {
 		if _, exists := covered[requirement]; !exists {
 			return fmt.Errorf("vinculos estruturais: requisito %s sem cobertura", requirement)
 		}
 	}
-	if err := p.validateDependencies(tasksByID); err != nil {
+	if err := p.validateDependencies(prdDir, tasksByID); err != nil {
 		return err
 	}
 	return p.validateOwnership(document.Tasks)
 }
 
-func (p *Parser) validateDependencies(tasks map[string]Task) error {
+func (p *Parser) validateDependencies(prdDir string, tasks map[string]Task) error {
 	state := make(map[string]int, len(tasks))
 	var visit func(string) error
 	visit = func(id string) error {
@@ -213,6 +249,16 @@ func (p *Parser) validateDependencies(tasks map[string]Task) error {
 		state[id] = 1
 		for _, dependency := range tasks[id].Dependencies {
 			if _crossPRDPattern.MatchString(dependency) {
+				if prdDir == "" {
+					return fmt.Errorf("vinculos estruturais: dependencia cross-PRD %s requer diretorio para resolucao", dependency)
+				}
+				root, err := filepath.Abs(prdDir)
+				if err != nil {
+					return err
+				}
+				if err := p.validateCrossDependency(root, dependency, map[string]bool{root + ":" + id: true}); err != nil {
+					return err
+				}
 				continue
 			}
 			if !_taskIDPattern.MatchString(dependency) {
@@ -235,6 +281,76 @@ func (p *Parser) validateDependencies(tasks map[string]Task) error {
 	sort.Strings(ids)
 	for _, id := range ids {
 		if err := visit(id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type externalState struct {
+	SchemaVersion int `json:"schema_version"`
+	Artifacts     map[string]struct {
+		SHA256   string `json:"sha256"`
+		Approved bool   `json:"approved"`
+	} `json:"artifacts"`
+	Tasks map[string]struct {
+		Status       string   `json:"status"`
+		Dependencies []string `json:"dependencies"`
+	} `json:"tasks"`
+}
+
+func (p *Parser) validateCrossDependency(currentDir, reference string, stack map[string]bool) error {
+	slug, taskID, _ := strings.Cut(reference, ":")
+	targetDir := filepath.Join(filepath.Dir(currentDir), slug)
+	return p.validateExternalTask(targetDir, taskID, stack)
+}
+
+func (p *Parser) validateExternalTask(prdDir, taskID string, stack map[string]bool) error {
+	absolute, err := filepath.Abs(prdDir)
+	if err != nil {
+		return fmt.Errorf("vinculos estruturais: resolver PRD externo: %w", err)
+	}
+	key := absolute + ":" + taskID
+	if stack[key] {
+		return fmt.Errorf("vinculos estruturais: ciclo cross-PRD em %s", key)
+	}
+	stack[key] = true
+	defer delete(stack, key)
+	content, err := os.ReadFile(filepath.Join(absolute, "sdd-state.json"))
+	if err != nil {
+		return fmt.Errorf("vinculos estruturais: estado do PRD externo %s ausente: %w", absolute, err)
+	}
+	var state externalState
+	if err := json.Unmarshal(content, &state); err != nil || state.SchemaVersion != 2 {
+		return fmt.Errorf("vinculos estruturais: estado do PRD externo %s invalido", absolute)
+	}
+	artifact, exists := state.Artifacts["tasks"]
+	if !exists || !artifact.Approved || len(artifact.SHA256) != sha256.Size*2 {
+		return fmt.Errorf("vinculos estruturais: tasks externo nao aprovado em %s", absolute)
+	}
+	tasksContent, err := os.ReadFile(filepath.Join(absolute, "tasks.md"))
+	if err != nil {
+		return fmt.Errorf("vinculos estruturais: ler tasks externo: %w", err)
+	}
+	digest := sha256.Sum256(tasksContent)
+	if hex.EncodeToString(digest[:]) != artifact.SHA256 {
+		return fmt.Errorf("vinculos estruturais: tasks externo stale em %s", absolute)
+	}
+	task, exists := state.Tasks[taskID]
+	if !exists || task.Status != "done" {
+		return fmt.Errorf("vinculos estruturais: task externa %s nao esta done", key)
+	}
+	for _, dependency := range task.Dependencies {
+		if _crossPRDPattern.MatchString(dependency) {
+			if err := p.validateCrossDependency(absolute, dependency, stack); err != nil {
+				return err
+			}
+			continue
+		}
+		if local, ok := state.Tasks[dependency]; !ok || local.Status != "done" {
+			return fmt.Errorf("vinculos estruturais: dependencia %s da task externa %s nao esta done", dependency, key)
+		}
+		if err := p.validateExternalTask(absolute, dependency, stack); err != nil {
 			return err
 		}
 	}
