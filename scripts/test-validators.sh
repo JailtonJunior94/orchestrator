@@ -219,7 +219,7 @@ bash "$VALIDATOR" "$report_c" >/dev/null 2>&1; code_c=$?
 rm -f "$report_c"
 assert_exit "Testes pass sem comando falha" 1 $code_c
 
-# --- Caso d: task legada sem critérios -> exit 0 ---
+# --- Caso d: task legada sem critérios -> exit 1 (fail-closed desde 0.31.0) ---
 echo "Caso d: task legada sem seção de critérios"
 task_d="$TMP_BASE/task-d.md"; task_without_criteria "$task_d"
 report_d="$TMP_BASE/report-d.md"
@@ -234,55 +234,31 @@ EOF
   echo "- Testes: pass"
 } > "$report_d"
 out_d=$(bash "$VALIDATOR" "$report_d" 2>&1); code_d=$?
+assert_exit "task legada falha por padrão" 1 $code_d
+if echo "$out_d" | grep -q "fail-closed desde 0.31.0"; then
+  echo "  ✓ diagnóstico de fail-closed presente"
+  passed=$((passed+1))
+else
+  echo "  ✗ diagnóstico de fail-closed ausente"
+  failed=$((failed+1))
+fi
+
+# --- Caso d2: opt-out explícito reabre o legado, com aviso ruidoso ---
+echo "Caso d2: AI_SDD_STRICT_EVIDENCE=0 reabre o legado"
+out_d2=$(AI_SDD_STRICT_EVIDENCE=0 bash "$VALIDATOR" "$report_d" 2>&1); code_d2=$?
+assert_exit "opt-out explícito passa" 0 $code_d2
+if echo "$out_d2" | grep -q "NAO comprova os criterios"; then
+  echo "  ✓ opt-out avisa que a evidência não comprova critérios"
+  passed=$((passed+1))
+else
+  echo "  ✗ opt-out silencioso (regressão do BUG-127)"
+  failed=$((failed+1))
+fi
 rm -f "$report_d"
-assert_exit "task legada passa" 0 $code_d
-if echo "$out_d" | grep -q "gate de aceite ignorado"; then
-  echo "  ✓ aviso de gate ignorado presente"
-  passed=$((passed+1))
-else
-  echo "  ✗ aviso de gate ignorado ausente"
-  failed=$((failed+1))
-fi
 
-# --- Caso d2: modo estrito fecha o escape de legado (NFR-01) ---
-echo "Caso d2: task legada sob AI_SDD_STRICT_EVIDENCE=1"
-report_d2="$TMP_BASE/report-d2.md"
-{
-  report_header "$task_d"
-  cat <<'EOF'
-## Comandos Executados
-- go test ./... -> ok
-EOF
-  base_sections
-  echo "## Resultados de Validação"
-  echo "- Testes: pass"
-} > "$report_d2"
-out_d2=$(AI_SDD_STRICT_EVIDENCE=1 bash "$VALIDATOR" "$report_d2" 2>&1); code_d2=$?
-assert_exit "task legada falha em modo estrito" 1 $code_d2
-if echo "$out_d2" | grep -q "modo estrito"; then
-  echo "  ✓ diagnostico de modo estrito presente"
-  passed=$((passed+1))
-else
-  echo "  ✗ diagnostico de modo estrito ausente"
-  failed=$((failed+1))
-fi
-
-# --- Caso d3: sem a env var, o mesmo relatório continua passando (0 regressão) ---
-echo "Caso d3: mesmo relatório sem modo estrito permanece warning-only"
-out_d3=$(bash "$VALIDATOR" "$report_d2" 2>&1); code_d3=$?
-rm -f "$report_d2"
-assert_exit "task legada passa sem modo estrito" 0 $code_d3
-if echo "$out_d3" | grep -q "gate de aceite ignorado"; then
-  echo "  ✓ aviso de legado preservado no default"
-  passed=$((passed+1))
-else
-  echo "  ✗ aviso de legado ausente no default"
-  failed=$((failed+1))
-fi
-
-# --- Caso d4: 'Arquivo:' não resolvível também fecha em modo estrito ---
-echo "Caso d4: referência de task file inexistente sob modo estrito"
-report_d4="$TMP_BASE/report-d4.md"
+# --- Caso d3: referência de task file não resolvível também é fail-closed ---
+echo "Caso d3: referência de task file inexistente"
+report_d3="$TMP_BASE/report-d3.md"
 {
   report_header "$TMP_BASE/task-inexistente.md"
   cat <<'EOF'
@@ -292,10 +268,10 @@ EOF
   base_sections
   echo "## Resultados de Validação"
   echo "- Testes: pass"
-} > "$report_d4"
-AI_SDD_STRICT_EVIDENCE=1 bash "$VALIDATOR" "$report_d4" >/dev/null 2>&1; code_d4=$?
-rm -f "$report_d4"
-assert_exit "referência não resolvível falha em modo estrito" 1 $code_d4
+} > "$report_d3"
+bash "$VALIDATOR" "$report_d3" >/dev/null 2>&1; code_d3=$?
+rm -f "$report_d3"
+assert_exit "referência não resolvível falha por padrão" 1 $code_d3
 
 # --- Casos de review-evidence (RF-20) ---
 REVIEW_VALIDATOR="$REPO_ROOT/.agents/scripts/validate-review-evidence.sh"
