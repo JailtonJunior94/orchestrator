@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.29.3 (2026-09-05)
+
+### Bug Fixes
+- **fs:** torna FakeFileSystem agnostico ao separador de caminho (62b15f4)
+- **sdd:** estabiliza digest de spec em checkout com CRLF (c5fb328)
+- **tests:** repara fixtures do gate de hooks e remove dependencia de rtk (2049a4d)
+- **scripts:** torna gate de aceite fail-closed em awk byte-oriented (68ac9c8)
+- **taskloop:** elimina panic no parser com header de tabela parcial (44b8a03)
+
+### Documentation
+- **sdd:** agenda modo estrito como padrao para v0.31.0 (119eac8)
+- **sdd:** registra rodada de prontidao para producao (BUG-127..130) (551ce98)
+
+### CI
+- torna fuzz e cobertura por pacote bloqueantes (09fccbe)
+- completa alvos de fuzz e adiciona gate de skills portateis (2c9c4cd)
+
 ## 0.29.2 (2026-09-01)
 
 ### Bug Fixes
