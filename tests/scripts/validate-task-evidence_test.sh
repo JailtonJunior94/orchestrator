@@ -29,13 +29,13 @@ mkdir -p "$TMPDIR_BASE/evidence"
 git -C "$TMPDIR_BASE" diff --binary HEAD -- . >"$TMPDIR_BASE/evidence/patch.diff"
 PATCH_SHA="$(shasum -a 256 "$TMPDIR_BASE/evidence/patch.diff" | awk '{print $1}')"
 BASE_SHA="$(git -C "$TMPDIR_BASE" rev-parse HEAD)"
-FINAL_STATE_SHA="$( { printf '%s\n' "$BASE_SHA"; rtk cat "$TMPDIR_BASE/evidence/patch.diff"; } | shasum -a 256 | awk '{print $1}')"
+FINAL_STATE_SHA="$( { printf '%s\n' "$BASE_SHA"; cat "$TMPDIR_BASE/evidence/patch.diff"; } | shasum -a 256 | awk '{print $1}')"
 printf 'PASS\n' >"$TMPDIR_BASE/evidence/test.log"
 TEST_SHA="$(shasum -a 256 "$TMPDIR_BASE/evidence/test.log" | awk '{print $1}')"
 cat >"$TMPDIR_BASE/result.json" <<EOF
 {"schema_version":2,"run_id":"test","task_id":"5.0","attempt":1,"status":"done","base_sha":"$BASE_SHA","patch_sha256":"$PATCH_SHA","patch_ref":"evidence/patch.diff","final_state_sha256":"$FINAL_STATE_SHA","coverage_regression":false,"tests":[{"command":"go test ./...","exit_code":0,"output_sha256":"$TEST_SHA"}],"criteria":[{"id":"AC-1","evidence_ref":"evidence/test.log#pass"}],"evidence":["evidence/test.log"],"review_verdict":"approved"}
 EOF
-VALID_RESULT="$(rtk cat "$TMPDIR_BASE/result.json")"
+VALID_RESULT="$(cat "$TMPDIR_BASE/result.json")"
 
 run_case() {
   local label="$1"
