@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.30.0 (2026-09-05)
+
+### Features
+- **sdd:** torna a evidencia auditavel apos o commit (RF-14) (c5a27a4)
+
+### Chores
+- **deps:** atualiza Go para 1.27.1 e golangci-lint para 2.13.2 (d239d85)
+
 ## 0.29.3 (2026-09-05)
 
 ### Bug Fixes
