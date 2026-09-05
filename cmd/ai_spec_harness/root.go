@@ -56,6 +56,7 @@ Exemplos:
 	cmd.AddCommand(newUpgradeCmd())
 	cmd.AddCommand(newValidateCmd())
 	cmd.AddCommand(newValidateResultCmd())
+	cmd.AddCommand(newSealEvidenceCmd())
 	cmd.AddCommand(newValidateSDDCmd())
 	cmd.AddCommand(newApproveCmd())
 	cmd.AddCommand(newInvalidateCmd())

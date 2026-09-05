@@ -58,7 +58,18 @@ ou com conflito/ownership desconhecido, a tarefa é sequencial ou `blocked` conf
 
 O snapshot de patch é gerado a partir de `git diff --binary HEAD`, staged diff e arquivos novos
 enumerados explicitamente. O contrato armazena SHA da base, SHA-256 do patch e SHA-256 do estado
-final relevante. Commit SHA pode ser adicionado, mas não é condição para prova.
+final relevante.
+
+A prova de fechamento é verificada contra a árvore de trabalho viva, que deixa de existir quando o
+trabalho é commitado. Por isso a evidência é selada em duas fases: `seal-evidence` grava
+`commit_sha` e `commit_patch_sha256`, este último recomputado por `git diff base..commit` com as
+mesmas exclusões do fechamento — as duas fases compartilham `buildExclusions` para não divergirem.
+O selo exige que o commit descenda da base registrada e recusa reselagem. A verificação selada não
+toca a árvore de trabalho, então permanece válida indefinidamente.
+
+Limite explícito: o selo vincula a evidência a um commit e a torna imutável e reverificável dali em
+diante; ele não prova que o commit é byte-idêntico à árvore do fechamento, porque essa árvore já
+não existe no momento do selo.
 
 ## Revisão e Bugfix
 

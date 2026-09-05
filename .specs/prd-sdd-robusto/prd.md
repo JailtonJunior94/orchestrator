@@ -59,7 +59,9 @@ fechadas quando não houver prova suficiente.
 - RF-13: Capacidades de runtime devem ser detectadas; escrita que exige isolamento sem suporte
   deve falhar fechada.
 - RF-14: O patch deve ser identificado por SHA base, SHA-256 do patch completo e digest do estado
-  final; commit SHA é opcional.
+  final. A evidência de uma tarefa `done` deve ser selada com o commit SHA que a contém e o digest
+  do patch recomputado no range base..commit; sem o selo, a prova vale apenas no instante do
+  fechamento e não é re-auditável.
 - RF-15: Revisão deve ser fresca, read-only, multi-language e usar diff cumulativo inclusive
   arquivos staged, unstaged e não rastreados.
 - RF-16: Bugfix deve persistir origem, fail-before, pass-after e revisão fresca por tentativa.

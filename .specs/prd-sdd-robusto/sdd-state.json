@@ -4,17 +4,17 @@
   "artifacts": {
     "prd": {
       "status": "approved",
-      "sha256": "36b6efdd09b6f3fae7881c3bd21ab3eb3af77a4869f5d25ad14ed707923bb18d",
+      "sha256": "4e7ffa1afdc23ac1b4c0215e473438d18b19ee42eba21c48e5ed94c430058a66",
       "approved": true
     },
     "tasks": {
       "status": "approved",
-      "sha256": "dd9add9184684cfd613a7066d127da9dcdf63326f6830dbcfcd34a06e3fd49ff",
+      "sha256": "d46674b9ae57a9223728b2baf66b35e5eaa0be54ad17d4f7f88d6a27ff8f69e0",
       "approved": true
     },
     "techspec": {
       "status": "approved",
-      "sha256": "0bac95b2459ec0932af924e8e0e20b2e22e78677cd2600edadd33c036922c632",
+      "sha256": "d10eb85dce9f28d04d95cc372dcd280287bd218458fd7b7c9e9fb2cb42c85e2e",
       "approved": true
     }
   },
@@ -390,6 +390,54 @@
       "at": "2026-09-03T13:11:20.199167Z",
       "run_id": "production-proof-20260903-r4",
       "action": "migrated"
+    },
+    {
+      "at": "2026-09-05T11:21:43.588223816Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "invalidated",
+      "detail": "prd"
+    },
+    {
+      "at": "2026-09-05T11:21:51.237987214Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "invalidated",
+      "detail": "prd"
+    },
+    {
+      "at": "2026-09-05T11:21:59.734250432Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "invalidated",
+      "detail": "prd"
+    },
+    {
+      "at": "2026-09-05T11:21:59.758440805Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "invalidated",
+      "detail": "prd"
+    },
+    {
+      "at": "2026-09-05T11:22:31.303468457Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "approved",
+      "detail": "prd"
+    },
+    {
+      "at": "2026-09-05T11:22:31.313132195Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "approved",
+      "detail": "techspec"
+    },
+    {
+      "at": "2026-09-05T11:22:31.330908296Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "approved",
+      "detail": "tasks"
+    },
+    {
+      "at": "2026-09-05T11:22:41.58185399Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "approved",
+      "detail": "tasks"
     }
   ]
 }

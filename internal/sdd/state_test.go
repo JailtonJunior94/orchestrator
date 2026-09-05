@@ -370,3 +370,58 @@ func TestStoreAcceptsCanonicalArtifactStates(t *testing.T) {
 		})
 	}
 }
+
+// TestApproveDesbloqueiaArtefatoEditadoAposAprovacao cobre o impasse do ciclo de
+// vida: um PRD aprovado e depois editado ficava travado para sempre. Ele constava
+// como approved (logo, reaprovacao recusada) mas com digest divergente (logo, todo
+// downstream falhava), e `invalidate --from prd` marca os descendentes, nunca a
+// origem. Sem saida, um PRD aprovado nao podia ser emendado.
+func TestApproveDesbloqueiaArtefatoEditadoAposAprovacao(t *testing.T) {
+	dir := t.TempDir()
+	writeValidSDDArtifacts(t, dir)
+	store := sdd.NewStore()
+	if _, err := store.Initialize(dir, "run-1"); err != nil {
+		t.Fatalf("inicializar: %v", err)
+	}
+	for _, artifact := range []sdd.Artifact{sdd.ArtifactPRD, sdd.ArtifactTechSpec, sdd.ArtifactTasks} {
+		if _, err := store.Approve(dir, artifact); err != nil {
+			t.Fatalf("aprovar %s: %v", artifact, err)
+		}
+	}
+
+	// Reaprovar um artefato intacto continua proibido: a porta so existe para
+	// conteudo que mudou, nao para churn de estado.
+	if _, err := store.Approve(dir, sdd.ArtifactPRD); err == nil {
+		t.Fatal("reaprovar artefato inalterado deveria ser recusado")
+	}
+
+	prdPath := filepath.Join(dir, "prd.md")
+	original, err := os.ReadFile(prdPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(prdPath, append(original, []byte("\nTexto adicional sem novo requisito.\n")...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := store.Approve(dir, sdd.ArtifactPRD); err != nil {
+		t.Fatalf("PRD editado apos aprovacao ficou travado: %v", err)
+	}
+
+	// Downstream intacto continua exigindo invalidacao explicita: a emenda do
+	// PRD nao aprova sozinha o que dele deriva.
+	if _, err := store.Approve(dir, sdd.ArtifactTechSpec); err == nil {
+		t.Fatal("techspec intacto nao deveria ser reaprovavel sem invalidacao")
+	}
+	if _, err := store.Invalidate(dir, sdd.ArtifactPRD); err != nil {
+		t.Fatalf("invalidar descendentes: %v", err)
+	}
+	for _, artifact := range []sdd.Artifact{sdd.ArtifactTechSpec, sdd.ArtifactTasks} {
+		if _, err := store.Approve(dir, artifact); err != nil {
+			t.Fatalf("reaprovar %s apos invalidacao: %v", artifact, err)
+		}
+	}
+	if _, err := store.ValidateDirectory(dir); err != nil {
+		t.Fatalf("estado deveria voltar a ser valido apos o ciclo completo: %v", err)
+	}
+}

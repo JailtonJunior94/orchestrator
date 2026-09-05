@@ -357,62 +357,83 @@ func (o *Orchestrator) ValidateExecutionEvidence(prdDir string, result sdd.Execu
 	return nil
 }
 
+// snapshotExclusions devolve o conjunto canonico de exclusoes usado tanto no
+// fechamento quanto no selo. Isolado para que as duas fases nao possam divergir.
+// SealEvidence vincula a evidencia de uma tarefa ao commit que a contem.
+//
+// O fechamento prova contra a arvore de trabalho viva, que deixa de existir
+// assim que o trabalho e commitado — por isso a prova de fechamento nao e
+// re-auditavel depois. O selo resolve isso gravando commit_sha e o digest do
+// patch recomputado a partir do range base..commit, que qualquer auditor
+// reproduz a qualquer momento usando somente os dois SHAs.
+//
+// Limite honesto do que o selo prova: ele vincula a evidencia a um commit e a
+// torna imutavel e reverificavel dali em diante. Ele nao prova que o commit e
+// byte-identico a arvore de trabalho do fechamento, porque essa arvore ja nao
+// existe no momento do selo.
+func (o *Orchestrator) SealEvidence(prdDir string, result sdd.ExecutionResult, commitSHA string, additionalExclusions ...string) (sdd.ExecutionResult, error) {
+	if result.Status != sdd.StatusDone {
+		return sdd.ExecutionResult{}, fmt.Errorf("taskloop: apenas resultado done pode ser selado (status=%s)", result.Status)
+	}
+	if result.CommitSHA != "" {
+		return sdd.ExecutionResult{}, fmt.Errorf("taskloop: evidencia da tarefa %s ja selada no commit %s", result.TaskID, result.CommitSHA)
+	}
+	root, excluded, err := o.buildExclusions(prdDir, result, additionalExclusions...)
+	if err != nil {
+		return sdd.ExecutionResult{}, err
+	}
+	resolved, err := o.gitOutput(root, "rev-parse", "--verify", commitSHA+"^{commit}")
+	if err != nil {
+		return sdd.ExecutionResult{}, fmt.Errorf("taskloop: resolver commit do selo %q: %w", commitSHA, err)
+	}
+	commit := strings.TrimSpace(string(resolved))
+
+	// O commit precisa descender da base registrada, senao a evidencia estaria
+	// sendo vinculada a uma linha de historia que nao contem o trabalho provado.
+	if err := o.gitRun(root, "merge-base", "--is-ancestor", result.BaseSHA, commit); err != nil {
+		return sdd.ExecutionResult{}, fmt.Errorf("taskloop: commit %s nao descende da base registrada %s", commit, result.BaseSHA)
+	}
+	patch, err := o.committedPatch(root, result.BaseSHA, commit, excluded)
+	if err != nil {
+		return sdd.ExecutionResult{}, err
+	}
+	if len(patch) == 0 {
+		return sdd.ExecutionResult{}, fmt.Errorf("taskloop: range %s..%s nao contem mudanca apos exclusoes; selo recusado", result.BaseSHA, commit)
+	}
+	digest := sha256.Sum256(patch)
+	sealed := result
+	sealed.CommitSHA = commit
+	sealed.CommitPatchSHA256 = hex.EncodeToString(digest[:])
+	return sealed, nil
+}
+
+// VerifySealedEvidence reverifica uma evidencia selada usando apenas os SHAs
+// registrados. Nao toca a arvore de trabalho, entao continua valida
+// indefinidamente depois do commit — e o que torna a evidencia auditavel.
+func (o *Orchestrator) VerifySealedEvidence(prdDir string, result sdd.ExecutionResult, additionalExclusions ...string) error {
+	if result.CommitSHA == "" || result.CommitPatchSHA256 == "" {
+		return fmt.Errorf("taskloop: evidencia da tarefa %s nao esta selada", result.TaskID)
+	}
+	root, excluded, err := o.buildExclusions(prdDir, result, additionalExclusions...)
+	if err != nil {
+		return err
+	}
+	patch, err := o.committedPatch(root, result.BaseSHA, result.CommitSHA, excluded)
+	if err != nil {
+		return err
+	}
+	digest := sha256.Sum256(patch)
+	if recomputed := hex.EncodeToString(digest[:]); recomputed != strings.ToLower(result.CommitPatchSHA256) {
+		return fmt.Errorf("taskloop: patch do commit %s diverge do selo registrado", result.CommitSHA)
+	}
+	return nil
+}
+
 func (o *Orchestrator) captureFinalSnapshot(prdDir string, result sdd.ExecutionResult, additionalExclusions ...string) (Snapshot, []byte, error) {
-	root, err := o.repositoryRoot(prdDir)
+	root, excluded, err := o.buildExclusions(prdDir, result, additionalExclusions...)
 	if err != nil {
 		return Snapshot{}, nil, err
 	}
-	excluded := make(map[string]bool, len(result.Evidence)+3)
-	for _, reference := range result.Evidence {
-		path := filepath.ToSlash(strings.Split(reference, "#")[0])
-		if strings.HasPrefix(path, "evidence/") {
-			excluded[path] = true
-		}
-	}
-	patchReference := filepath.ToSlash(strings.Split(result.PatchRef, "#")[0])
-	if !strings.HasPrefix(patchReference, "evidence/") {
-		return Snapshot{}, nil, fmt.Errorf("taskloop: artefato do patch deve estar em evidence/: %q", result.PatchRef)
-	}
-	excluded[patchReference] = true
-	for _, reference := range additionalExclusions {
-		path := strings.Split(reference, "#")[0]
-		if filepath.IsAbs(path) {
-			relative, relativeErr := filepath.Rel(root, path)
-			if relativeErr != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
-				return Snapshot{}, nil, fmt.Errorf("taskloop: exclusao operacional escapa do repositorio: %q", reference)
-			}
-			path = relative
-		}
-		path = filepath.ToSlash(path)
-		if path != "" {
-			excluded[path] = true
-		}
-	}
-	absolutePRDDir, err := filepath.Abs(prdDir)
-	if err != nil {
-		return Snapshot{}, nil, fmt.Errorf("taskloop: resolver diretorio absoluto do PRD: %w", err)
-	}
-	resolvedPRDDir, err := filepath.EvalSymlinks(absolutePRDDir)
-	if err != nil {
-		return Snapshot{}, nil, fmt.Errorf("taskloop: resolver diretorio do PRD: %w", err)
-	}
-	for _, name := range []string{"sdd-state.json", ".sdd-orchestrate.lock"} {
-		path, relativeErr := filepath.Rel(root, filepath.Join(resolvedPRDDir, name))
-		if relativeErr != nil {
-			return Snapshot{}, nil, fmt.Errorf("taskloop: resolver artefato operacional: %w", relativeErr)
-		}
-		excluded[filepath.ToSlash(path)] = true
-	}
-	migrationBackupPath, relativeErr := filepath.Rel(root, filepath.Join(resolvedPRDDir, ".sdd-state.*.legacy.json"))
-	if relativeErr != nil {
-		return Snapshot{}, nil, fmt.Errorf("taskloop: resolver backup operacional: %w", relativeErr)
-	}
-	excluded[filepath.ToSlash(migrationBackupPath)] = true
-	checkpointsPath, relativeErr := filepath.Rel(root, filepath.Join(resolvedPRDDir, ".checkpoints"))
-	if relativeErr != nil {
-		return Snapshot{}, nil, fmt.Errorf("taskloop: resolver checkpoints operacionais: %w", relativeErr)
-	}
-	excluded[filepath.ToSlash(checkpointsPath)+"/**"] = true
 	base, err := o.gitOutput(prdDir, "rev-parse", "HEAD")
 	if err != nil {
 		return Snapshot{}, nil, fmt.Errorf("taskloop: capturar SHA base final: %w", err)
@@ -425,8 +446,86 @@ func (o *Orchestrator) captureFinalSnapshot(prdDir string, result sdd.ExecutionR
 	return snapshot, patch, nil
 }
 
-func (o *Orchestrator) semanticPatch(root string, excluded map[string]bool) ([]byte, error) {
-	args := []string{"diff", "--binary", "HEAD", "--", "."}
+// buildExclusions monta o conjunto canonico de caminhos que nao entram no patch:
+// evidencias, artefato do patch, estado operacional e checkpoints. Fechamento e
+// selo compartilham esta funcao para que as duas fases nao possam divergir na
+// regra — se divergissem, o digest do selo nunca bateria com o do fechamento por
+// um motivo invisivel.
+func (o *Orchestrator) buildExclusions(prdDir string, result sdd.ExecutionResult, additionalExclusions ...string) (string, map[string]bool, error) {
+	root, err := o.repositoryRoot(prdDir)
+	if err != nil {
+		return "", nil, err
+	}
+	excluded := make(map[string]bool, len(result.Evidence)+3)
+	for _, reference := range result.Evidence {
+		path := filepath.ToSlash(strings.Split(reference, "#")[0])
+		if strings.HasPrefix(path, "evidence/") {
+			excluded[path] = true
+		}
+	}
+	patchReference := filepath.ToSlash(strings.Split(result.PatchRef, "#")[0])
+	if !strings.HasPrefix(patchReference, "evidence/") {
+		return "", nil, fmt.Errorf("taskloop: artefato do patch deve estar em evidence/: %q", result.PatchRef)
+	}
+	excluded[patchReference] = true
+	for _, reference := range additionalExclusions {
+		path := strings.Split(reference, "#")[0]
+		if filepath.IsAbs(path) {
+			relative, relativeErr := filepath.Rel(root, path)
+			if relativeErr != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+				return "", nil, fmt.Errorf("taskloop: exclusao operacional escapa do repositorio: %q", reference)
+			}
+			path = relative
+		}
+		path = filepath.ToSlash(path)
+		if path != "" {
+			excluded[path] = true
+		}
+	}
+	absolutePRDDir, err := filepath.Abs(prdDir)
+	if err != nil {
+		return "", nil, fmt.Errorf("taskloop: resolver diretorio absoluto do PRD: %w", err)
+	}
+	resolvedPRDDir, err := filepath.EvalSymlinks(absolutePRDDir)
+	if err != nil {
+		return "", nil, fmt.Errorf("taskloop: resolver diretorio do PRD: %w", err)
+	}
+	for _, name := range []string{"sdd-state.json", ".sdd-orchestrate.lock"} {
+		path, relativeErr := filepath.Rel(root, filepath.Join(resolvedPRDDir, name))
+		if relativeErr != nil {
+			return "", nil, fmt.Errorf("taskloop: resolver artefato operacional: %w", relativeErr)
+		}
+		excluded[filepath.ToSlash(path)] = true
+	}
+	migrationBackupPath, relativeErr := filepath.Rel(root, filepath.Join(resolvedPRDDir, ".sdd-state.*.legacy.json"))
+	if relativeErr != nil {
+		return "", nil, fmt.Errorf("taskloop: resolver backup operacional: %w", relativeErr)
+	}
+	excluded[filepath.ToSlash(migrationBackupPath)] = true
+	checkpointsPath, relativeErr := filepath.Rel(root, filepath.Join(resolvedPRDDir, ".checkpoints"))
+	if relativeErr != nil {
+		return "", nil, fmt.Errorf("taskloop: resolver checkpoints operacionais: %w", relativeErr)
+	}
+	excluded[filepath.ToSlash(checkpointsPath)+"/**"] = true
+	return root, excluded, nil
+}
+
+// committedPatch recompoe o patch canonico entre dois commits, aplicando as
+// mesmas exclusoes do snapshot de fechamento. Diferente de semanticPatch, nao
+// depende da arvore de trabalho: e reproduzivel por qualquer auditor, a
+// qualquer momento, a partir apenas dos dois SHAs.
+func (o *Orchestrator) committedPatch(root, baseSHA, commitSHA string, excluded map[string]bool) ([]byte, error) {
+	args := []string{"diff", "--binary", baseSHA, commitSHA, "--", "."}
+	args = appendExclusions(args, excluded)
+	patch, err := o.gitOutput(root, args...)
+	if err != nil {
+		return nil, fmt.Errorf("taskloop: capturar diff commitado %s..%s: %w", baseSHA, commitSHA, err)
+	}
+	return patch, nil
+}
+
+// appendExclusions acrescenta os pathspecs de exclusao em ordem deterministica.
+func appendExclusions(args []string, excluded map[string]bool) []string {
 	keys := make([]string, 0, len(excluded))
 	for path := range excluded {
 		keys = append(keys, path)
@@ -435,6 +534,12 @@ func (o *Orchestrator) semanticPatch(root string, excluded map[string]bool) ([]b
 	for _, path := range keys {
 		args = append(args, ":(exclude)"+path)
 	}
+	return args
+}
+
+func (o *Orchestrator) semanticPatch(root string, excluded map[string]bool) ([]byte, error) {
+	args := []string{"diff", "--binary", "HEAD", "--", "."}
+	args = appendExclusions(args, excluded)
 	tracked, err := o.gitOutput(root, args...)
 	if err != nil {
 		return nil, fmt.Errorf("taskloop: capturar diff rastreado: %w", err)
@@ -481,6 +586,12 @@ func (o *Orchestrator) isExcluded(path string, excluded map[string]bool) bool {
 		}
 	}
 	return false
+}
+
+// gitRun executa um comando git cujo valor esta no codigo de saida, nao na saida.
+func (o *Orchestrator) gitRun(workDir string, args ...string) error {
+	_, err := o.gitOutput(workDir, args...)
+	return err
 }
 
 func (o *Orchestrator) gitOutput(workDir string, args ...string) ([]byte, error) {

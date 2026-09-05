@@ -130,6 +130,8 @@ type ExecutionResult struct {
 	BaseSHA            string           `json:"base_sha"`
 	PatchSHA256        string           `json:"patch_sha256"`
 	PatchRef           string           `json:"patch_ref,omitempty"`
+	CommitSHA          string           `json:"commit_sha,omitempty"`
+	CommitPatchSHA256  string           `json:"commit_patch_sha256,omitempty"`
 	FinalStateSHA256   string           `json:"final_state_sha256"`
 	CoverageRegression bool             `json:"coverage_regression"`
 	Tests              []TestProof      `json:"tests"`
@@ -718,7 +720,22 @@ func (s *Store) validateApproval(state State, prdDir string, artifact Artifact) 
 		return fmt.Errorf("%w: artefato desconhecido %q", ErrInvalidState, artifact)
 	}
 	if entry.Status != StatusDraft && entry.Status != StatusStale {
-		return fmt.Errorf("%w: transicao para aprovar %s a partir de %s nao permitida", ErrInvalidState, artifact, entry.Status)
+		// Um artefato aprovado cujo conteudo nao corresponde mais ao digest
+		// registrado ja e, por definicao, stale — mesmo que o estado ainda diga
+		// approved. Sem esta porta, editar um PRD aprovado o deixa travado para
+		// sempre: `invalidate --from prd` marca os descendentes mas nao a origem,
+		// e a reaprovacao e recusada por ainda constar como approved.
+		selfPath, pathErr := s.artifactPath(prdDir, artifact)
+		if pathErr != nil {
+			return pathErr
+		}
+		selfDigest, digestErr := s.digestFile(selfPath)
+		if digestErr != nil {
+			return digestErr
+		}
+		if selfDigest == entry.SHA256 {
+			return fmt.Errorf("%w: transicao para aprovar %s a partir de %s nao permitida", ErrInvalidState, artifact, entry.Status)
+		}
 	}
 	for _, prerequisite := range s.prerequisites(artifact) {
 		prerequisiteEntry := state.Artifacts[prerequisite]
