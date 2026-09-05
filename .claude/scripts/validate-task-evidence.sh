@@ -23,7 +23,15 @@ missing=0
 # Default preserva o comportamento warning-only da janela de compatibilidade.
 strict_evidence="${AI_SDD_STRICT_EVIDENCE:-0}"
 
+# _STRICT_DEFAULT_VERSION e a versao em que o modo estrito passa a ser o padrao.
+# NFR-01 concede warning-only por duas versoes menores; o fluxo SDD entrou em
+# 0.29.0, entao a janela cobre 0.29 e 0.30 e fecha em 0.31.0.
+_STRICT_DEFAULT_VERSION="0.31.0"
+
 # legacy_escape emite aviso na janela de compatibilidade e falha em modo estrito.
+# O aviso anuncia a versao do flip: BUG-127 mostrou que um escape silencioso e
+# indistinguivel de um gate aprovando, entao quem depende do legado precisa ver
+# o prazo em toda execucao, nao so no CHANGELOG.
 legacy_escape() {
   local reason="$1"
   if [[ "$strict_evidence" == "1" ]]; then
@@ -31,6 +39,8 @@ legacy_escape() {
     missing=1
   else
     echo "AVISO: $reason — gate de aceite ignorado (legado)."
+    echo "AVISO: este escape sera removido em v$_STRICT_DEFAULT_VERSION, quando o modo estrito" \
+         "passa a ser o padrao. Valide agora com AI_SDD_STRICT_EVIDENCE=1."
   fi
 }
 
