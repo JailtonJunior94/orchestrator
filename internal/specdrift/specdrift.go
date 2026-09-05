@@ -1,12 +1,13 @@
 package specdrift
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/specdigest"
 )
 
 // CoverageResult contains IDs found and missing between source and target.
@@ -102,8 +103,7 @@ func (c *Catalog) coverageTableContent(tasksContent []byte) []byte {
 // CheckHash calculates SHA-256 of specContent and compares it with the hash
 // registered in tasksContent via comment <!-- spec-hash-{label}: {hash} -->.
 func (c *Catalog) CheckHash(specContent, tasksContent []byte, label string) HashResult {
-	sum := sha256.Sum256(specContent)
-	actualHash := fmt.Sprintf("%x", sum)
+	actualHash := specdigest.Canonical(specContent)
 
 	pattern := fmt.Sprintf(`<!--\s*spec-hash-%s:\s*([0-9a-f]+)\s*-->`, regexp.QuoteMeta(label))
 	re := regexp.MustCompile(pattern)

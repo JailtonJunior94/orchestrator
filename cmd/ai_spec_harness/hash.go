@@ -1,11 +1,12 @@
 package aispecharness
 
 import (
-	"crypto/sha256"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/specdigest"
 )
 
 type hashCommand struct{}
@@ -39,6 +40,5 @@ func (c *hashCommand) hashFile(path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("calcular hash de %s: %w", path, err)
 	}
-	sum := sha256.Sum256(data)
-	return fmt.Sprintf("%x", sum), nil
+	return specdigest.Canonical(data), nil
 }

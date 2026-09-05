@@ -15,6 +15,8 @@ import (
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/sdd/tasks"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/specdigest"
 )
 
 const SchemaVersion = 2
@@ -743,8 +745,7 @@ func (s *Store) digestFile(path string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("ler artefato para aprovar: %w", err)
 	}
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:]), nil
+	return specdigest.Canonical(data), nil
 }
 
 // DigestFile calcula o digest canônico usado para vincular um artefato aprovado.
