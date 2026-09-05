@@ -1,4 +1,4 @@
-.PHONY: build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync check-scripts-sync test-hooks test-validators test-sdd-evals smoke-adapters test-portable-skills sync-acp-sdk-version test-acp-live mocks check-mocks test-check-mocks
+.PHONY: check-spec-paths build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync check-scripts-sync test-hooks test-validators test-sdd-evals smoke-adapters test-portable-skills sync-acp-sdk-version test-acp-live mocks check-mocks test-check-mocks
 
 BINARY := ai-spec
 GOFLAGS := -trimpath
@@ -75,6 +75,12 @@ check-scripts-sync:
 
 test-hooks:
 	bash scripts/test-hooks.sh
+
+# check-spec-paths: falha se artefato de contrato sob gestao SDD citar caminho
+# que nao existe. Provado nos dois sentidos por tests/scripts/.
+check-spec-paths:
+	bash scripts/check-spec-paths.sh
+	bash tests/scripts/check-spec-paths_test.sh
 
 test-validators:
 	bash scripts/test-validators.sh

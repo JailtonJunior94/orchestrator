@@ -26,8 +26,9 @@ orquestração e outro para revisão. A implementação manteve orquestração e
 de `internal/taskloop`, que já era o dono do laço de execução, e deixou em `internal/sdd` apenas o
 estado e os contratos de resultado. A tabela acima reflete o código real. Os dois pacotes previstos
 nunca existiram, e a divergência sobreviveu à auditoria de requisitos porque `validate-sdd` compara
-hashes e vínculos RF→tarefa, não a prosa que descreve componentes — limitação registrada aqui para
-que a próxima revisão do contrato considere cobrir também as referências de caminho.
+hashes e vínculos RF→tarefa, não a prosa que descreve componentes — limitação fechada por
+`scripts/check-spec-paths.sh`, que reprova artefato de contrato sob gestão SDD citando caminho
+inexistente, e é provado nos dois sentidos por `tests/scripts/check-spec-paths_test.sh`.
 
 ## Contratos
 

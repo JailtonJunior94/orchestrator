@@ -171,6 +171,22 @@ mesmos gates que Claude. As skills resolvem em cascata `.agents/scripts/` -> `.c
 - `validate-refactor-evidence.sh` — evidencia de nao-regressao.
 - `validate-review-evidence.sh` — evidencia do modo `--auto-review` (veredito + severidade).
 
+### Gate de referencias de caminho
+
+`make check-spec-paths` falha quando um artefato de contrato (`prd.md`, `techspec.md`, `tasks.md`)
+de um PRD **sob gestao SDD** cita um caminho que nao existe no repositorio.
+
+O gate nasceu de um defeito real: a techspec de `prd-sdd-robusto` declarou por meses dois pacotes
+que nunca existiram, e a divergencia sobreviveu a auditoria completa dos requisitos porque
+`validate-sdd` compara hashes e vinculos RF->tarefa, nao a prosa que descreve componentes.
+
+O escopo e deliberadamente restrito a PRDs com `sdd-state.json`: specs historicas citam caminhos ja
+removidos e arquivos de projetos externos analisados na epoca, e reescreve-las seria errado. Um PRD
+entra no escopo quando entra em gestao SDD.
+
+Notacao de simbolo (`arquivo.go::Func`), pacote Go (`internal/fs.FileSystem`), comando, placeholder
+e caminho opcional por decisao de arquitetura nao sao tratados como referencia de caminho.
+
 ### Selo de evidencia (RF-14)
 
 A prova de fechamento e verificada contra a arvore de trabalho viva, que deixa de existir quando o

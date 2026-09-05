@@ -9,12 +9,12 @@
     },
     "tasks": {
       "status": "approved",
-      "sha256": "ec5e3de1cb8f7edb1a94c153bf6631f006d00686294396a7525184260fa4ae84",
+      "sha256": "ac34849c342ed772544f81c1d0f3e3d8820ec3c1a16f17ab3a3101bcb3319bfa",
       "approved": true
     },
     "techspec": {
       "status": "approved",
-      "sha256": "7d707fd9397cac643bdbc54764f7386160130d7f44b405af81527cb847840eb3",
+      "sha256": "5b4e73f6d449d536a1a2351b91840efe5d7a04c08dfca6f711c7af2f1c79b144",
       "approved": true
     }
   },
@@ -483,6 +483,24 @@
     },
     {
       "at": "2026-09-05T15:52:59.658922559Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "approved",
+      "detail": "tasks"
+    },
+    {
+      "at": "2026-09-05T19:55:19.774354274Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "invalidated",
+      "detail": "techspec"
+    },
+    {
+      "at": "2026-09-05T19:55:19.781344276Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "approved",
+      "detail": "techspec"
+    },
+    {
+      "at": "2026-09-05T19:55:19.810569533Z",
       "run_id": "production-proof-20260903-r4",
       "action": "approved",
       "detail": "tasks"

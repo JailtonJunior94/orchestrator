@@ -111,6 +111,9 @@ jobs:
       - name: Evidence validator tests
         run: make test-validators
 
+      - name: Spec path reference gate
+        run: make check-spec-paths
+
       - name: Portable skills contract gate
         run: make test-portable-skills
 
