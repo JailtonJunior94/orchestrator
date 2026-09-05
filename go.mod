@@ -1,6 +1,6 @@
 module github.com/JailtonJunior94/ai-spec-harness
 
-go 1.26.2
+go 1.27.1
 
 require (
 	github.com/coder/acp-go-sdk v0.13.0
