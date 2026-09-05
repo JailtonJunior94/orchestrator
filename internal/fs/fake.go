@@ -74,12 +74,12 @@ func (f *FakeFileSystem) RemoveAll(path string) error {
 	}
 	delete(f.Dirs, resolved)
 	for k := range f.Files {
-		if k == resolved || strings.HasPrefix(k, resolved+"/") {
+		if k == resolved || withinDir(k, resolved) {
 			delete(f.Files, k)
 		}
 	}
 	for k := range f.Links {
-		if k == resolved || strings.HasPrefix(k, resolved+"/") {
+		if k == resolved || withinDir(k, resolved) {
 			delete(f.Links, k)
 		}
 	}
@@ -99,7 +99,7 @@ func (f *FakeFileSystem) Exists(path string) bool {
 	}
 	// Verificar se algum arquivo esta dentro desse path (implica diretorio)
 	for k := range f.Files {
-		if strings.HasPrefix(k, resolved+"/") {
+		if withinDir(k, resolved) {
 			return true
 		}
 	}
@@ -112,7 +112,7 @@ func (f *FakeFileSystem) IsDir(path string) bool {
 		return true
 	}
 	for k := range f.Files {
-		if strings.HasPrefix(k, resolved+"/") {
+		if withinDir(k, resolved) {
 			return true
 		}
 	}
@@ -148,10 +148,10 @@ func (f *FakeFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
 	var entries []os.DirEntry
 
 	for k := range f.Files {
-		if !strings.HasPrefix(k, resolved+"/") {
+		rest, ok := relativeWithin(k, resolved)
+		if !ok {
 			continue
 		}
-		rest := strings.TrimPrefix(k, resolved+"/")
 		parts := strings.SplitN(rest, "/", 2)
 		name := parts[0]
 		if seen[name] {
@@ -163,10 +163,10 @@ func (f *FakeFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
 	}
 
 	for k := range f.Dirs {
-		if !strings.HasPrefix(k, resolved+"/") {
+		rest, ok := relativeWithin(k, resolved)
+		if !ok {
 			continue
 		}
-		rest := strings.TrimPrefix(k, resolved+"/")
 		parts := strings.SplitN(rest, "/", 2)
 		name := parts[0]
 		if seen[name] {
@@ -261,3 +261,39 @@ func (e *fakeDirEntry) Type() os.FileMode {
 	return 0
 }
 func (e *fakeDirEntry) Info() (os.FileInfo, error) { return nil, nil }
+
+// relativeWithin retorna o trecho de key relativo a dir, com "/" como separador,
+// e informa se key esta de fato dentro de dir.
+//
+// As chaves do fake sao gravadas diretamente pelos testes via filepath.Join, entao
+// carregam o separador nativo da plataforma. Comparar com "/" fixo tornava o fake
+// cego no Windows: ReadDir nao enumerava nada e a descoberta de agentes falhava
+// com "nenhum agente descoberto", embora os arquivos estivessem no mapa.
+func relativeWithin(key, dir string) (string, bool) {
+	normalizedKey := toSlash(key)
+	normalizedDir := toSlash(dir)
+	prefix := normalizedDir + "/"
+	if !strings.HasPrefix(normalizedKey, prefix) {
+		return "", false
+	}
+	return strings.TrimPrefix(normalizedKey, prefix), true
+}
+
+// withinDir reporta se key esta contido em dir, independente do separador.
+func withinDir(key, dir string) bool {
+	_, ok := relativeWithin(key, dir)
+	return ok
+}
+
+// toSlash converte "\\" em "/" em qualquer plataforma, diferente de
+// filepath.ToSlash, que e no-op fora do Windows. A conversao incondicional torna
+// o comportamento do fake identico em todos os sistemas e, principalmente,
+// verificavel no Linux: era justamente a impossibilidade de exercitar o caminho
+// do Windows localmente que deixou esta classe de defeito escapar ate a CI.
+//
+// O custo e tratar "\\" como separador tambem no Linux, onde e um caractere
+// valido em nome de arquivo. E aceitavel num duble de teste: o codigo de producao
+// monta caminhos com filepath.Join, que nunca emite "\\" fora do Windows.
+func toSlash(path string) string {
+	return strings.ReplaceAll(path, `\`, "/")
+}
