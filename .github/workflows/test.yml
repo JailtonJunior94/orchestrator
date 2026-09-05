@@ -46,7 +46,6 @@ jobs:
           fi
 
       - name: Coverage por pacote critico
-        continue-on-error: true
         run: bash scripts/check-package-coverage.sh 70
 
       - name: Verificar snapshots atualizados
@@ -56,8 +55,11 @@ jobs:
             exit 1
           }
 
-      - name: Fuzz (opcional)
-        continue-on-error: true
+      # Bloqueante desde a rodada de prontidao: o BUG-130 (panic em ParseTasksFile)
+      # existia no corpus e escapou por semanas justamente porque este passo nao
+      # falhava o job. Descoberta time-boxed em 10s por alvo; o corpus versionado
+      # em testdata/fuzz cobre a regressao no go test.
+      - name: Fuzz
         run: |
           go test -fuzz=FuzzParseFrontmatter -fuzztime=10s ./internal/skills/
           go test -fuzz=FuzzValidateFrontmatter -fuzztime=10s ./internal/skills/
