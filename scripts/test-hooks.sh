@@ -105,7 +105,7 @@ echo "--- F02: adaptador JSON estrito ---"
 # ============================================================================
 strict_result=$(mktemp)
 cat > "$strict_result" <<EOF
-{"schema_version":2,"run_id":"run-hooks","task_id":"2.0","attempt":1,"status":"done","base_sha":"0123456789012345678901234567890123456789","patch_sha256":"0123456789012345678901234567890123456789012345678901234567890123","final_state_sha256":"0123456789012345678901234567890123456789012345678901234567890123","coverage_regression":false,"tests":[{"command":"go test ./...","exit_code":0,"output_sha256":"0123456789012345678901234567890123456789012345678901234567890123"}],"criteria":[{"id":"AC-01","evidence_ref":"report.md#criterion"}],"evidence":["report.md"],"review_verdict":"approved"}
+{"schema_version":2,"run_id":"run-hooks","task_id":"2.0","attempt":1,"status":"done","base_sha":"0123456789012345678901234567890123456789","patch_sha256":"0123456789012345678901234567890123456789012345678901234567890123","patch_ref":"evidence/patch.diff","final_state_sha256":"0123456789012345678901234567890123456789012345678901234567890123","coverage_regression":false,"tests":[{"command":"go test ./...","exit_code":0,"output_sha256":"0123456789012345678901234567890123456789012345678901234567890123"}],"criteria":[{"id":"AC-01","evidence_ref":"report.md#criterion"}],"evidence":["report.md"],"review_verdict":"approved"}
 EOF
 stderr=$(mktemp)
 env -u AI_SDD_LEGACY_HOOK_CONTRACT bash "$HOOKS_DIR/post-execute-task.sh" "hooks" "2.0" "$strict_result" 2>"$stderr"; rc=$?
@@ -123,7 +123,7 @@ wrapper_tasks_root="${wrapper_root#"$REPO_ROOT"/}"
 wrapper_dir="$wrapper_root/prd-wrapper"
 mkdir -p "$wrapper_dir/.checkpoints"
 cat > "$wrapper_dir/.checkpoints/2.0.json" <<EOF
-{"schema_version":2,"run_id":"run-wrapper","task_id":"2.0","attempt":1,"status":"done","base_sha":"0123456789012345678901234567890123456789","patch_sha256":"0123456789012345678901234567890123456789012345678901234567890123","final_state_sha256":"0123456789012345678901234567890123456789012345678901234567890123","coverage_regression":false,"tests":[{"command":"go test ./...","exit_code":0,"output_sha256":"0123456789012345678901234567890123456789012345678901234567890123"}],"criteria":[{"id":"AC-01","evidence_ref":"report.md#criterion"}],"evidence":["report.md"],"review_verdict":"approved"}
+{"schema_version":2,"run_id":"run-wrapper","task_id":"2.0","attempt":1,"status":"done","base_sha":"0123456789012345678901234567890123456789","patch_sha256":"0123456789012345678901234567890123456789012345678901234567890123","patch_ref":"evidence/patch.diff","final_state_sha256":"0123456789012345678901234567890123456789012345678901234567890123","coverage_regression":false,"tests":[{"command":"go test ./...","exit_code":0,"output_sha256":"0123456789012345678901234567890123456789012345678901234567890123"}],"criteria":[{"id":"AC-01","evidence_ref":"report.md#criterion"}],"evidence":["report.md"],"review_verdict":"approved"}
 EOF
 wrapper_yaml="status: done
 report_path: $wrapper_tasks_root/prd-wrapper/2.0_execution_report.md
