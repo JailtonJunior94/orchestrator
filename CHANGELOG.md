@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.1 (2026-09-05)
+
+### Bug Fixes
+- **semver:** detecta BREAKING CHANGE apenas como footer (2bb3001)
+
 ## 1.0.0 (2026-09-05)
 
 ### Features
