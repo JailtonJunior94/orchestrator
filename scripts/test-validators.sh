@@ -141,6 +141,36 @@ bash "$VALIDATOR" "$report_a" >/dev/null 2>&1; code_a=$?
 rm -f "$report_a"
 assert_exit "critério não comprovado falha" 1 $code_a
 
+# --- Caso a2 (regressão): mesmo gate sob locale de bytes (mawk/LC_ALL=C) ---
+# Guarda contra classes de regex multibyte em bracket ([eé]) que fazem awk
+# byte-oriented deixar de casar "Critérios" e desligar o gate silenciosamente.
+echo "Caso a2: critério não comprovado sob LC_ALL=C"
+report_a2="$TMP_BASE/report-a2.md"
+{
+  report_header "$task_a"
+  cat <<'EOF'
+## Comandos Executados
+- go test ./... -> ok
+## Resultados de Validação
+- Testes: pass
+EOF
+  base_sections
+  cat <<'EOF'
+## Critérios de Aceite
+- Critério um -> comprovado: [evidência]
+EOF
+} > "$report_a2"
+out_a2=$(LC_ALL=C bash "$VALIDATOR" "$report_a2" 2>&1); code_a2=$?
+rm -f "$report_a2"
+assert_exit "critério não comprovado falha sob LC_ALL=C" 1 $code_a2
+if echo "$out_a2" | grep -q "gate de aceite ignorado"; then
+  echo "  ✗ gate de aceite desligado sob LC_ALL=C (fail-open)"
+  failed=$((failed+1))
+else
+  echo "  ✓ gate de aceite permanece ativo sob LC_ALL=C"
+  passed=$((passed+1))
+fi
+
 # --- Caso b: todos comprovados -> exit 0 ---
 echo "Caso b: todos os critérios comprovados"
 task_b="$TMP_BASE/task-b.md"; task_with_criteria "$task_b"
@@ -213,6 +243,59 @@ else
   echo "  ✗ aviso de gate ignorado ausente"
   failed=$((failed+1))
 fi
+
+# --- Caso d2: modo estrito fecha o escape de legado (NFR-01) ---
+echo "Caso d2: task legada sob AI_SDD_STRICT_EVIDENCE=1"
+report_d2="$TMP_BASE/report-d2.md"
+{
+  report_header "$task_d"
+  cat <<'EOF'
+## Comandos Executados
+- go test ./... -> ok
+EOF
+  base_sections
+  echo "## Resultados de Validação"
+  echo "- Testes: pass"
+} > "$report_d2"
+out_d2=$(AI_SDD_STRICT_EVIDENCE=1 bash "$VALIDATOR" "$report_d2" 2>&1); code_d2=$?
+assert_exit "task legada falha em modo estrito" 1 $code_d2
+if echo "$out_d2" | grep -q "modo estrito"; then
+  echo "  ✓ diagnostico de modo estrito presente"
+  passed=$((passed+1))
+else
+  echo "  ✗ diagnostico de modo estrito ausente"
+  failed=$((failed+1))
+fi
+
+# --- Caso d3: sem a env var, o mesmo relatório continua passando (0 regressão) ---
+echo "Caso d3: mesmo relatório sem modo estrito permanece warning-only"
+out_d3=$(bash "$VALIDATOR" "$report_d2" 2>&1); code_d3=$?
+rm -f "$report_d2"
+assert_exit "task legada passa sem modo estrito" 0 $code_d3
+if echo "$out_d3" | grep -q "gate de aceite ignorado"; then
+  echo "  ✓ aviso de legado preservado no default"
+  passed=$((passed+1))
+else
+  echo "  ✗ aviso de legado ausente no default"
+  failed=$((failed+1))
+fi
+
+# --- Caso d4: 'Arquivo:' não resolvível também fecha em modo estrito ---
+echo "Caso d4: referência de task file inexistente sob modo estrito"
+report_d4="$TMP_BASE/report-d4.md"
+{
+  report_header "$TMP_BASE/task-inexistente.md"
+  cat <<'EOF'
+## Comandos Executados
+- go test ./... -> ok
+EOF
+  base_sections
+  echo "## Resultados de Validação"
+  echo "- Testes: pass"
+} > "$report_d4"
+AI_SDD_STRICT_EVIDENCE=1 bash "$VALIDATOR" "$report_d4" >/dev/null 2>&1; code_d4=$?
+rm -f "$report_d4"
+assert_exit "referência não resolvível falha em modo estrito" 1 $code_d4
 
 # --- Casos de review-evidence (RF-20) ---
 REVIEW_VALIDATOR="$REPO_ROOT/.agents/scripts/validate-review-evidence.sh"
