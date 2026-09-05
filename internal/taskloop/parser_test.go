@@ -627,3 +627,38 @@ func TestParseTasksFile_DuplicateIDsFromAuxTable(t *testing.T) {
 		t.Errorf("11.0 deveria ser elegivel apos deduplicacao, mas nao foi encontrada em %v", eligible)
 	}
 }
+
+// TestParseTasksFile_LinhaSemHeaderNaoCorrompeIndices garante que uma linha que
+// cita apenas "Dependencias" nao seja tratada como header parcial. Antes da
+// correcao, depsIdx era sobrescrito mesmo sem coluna Status e a leitura de
+// cols[statusIdx] estourava os limites do slice (panic no fuzz).
+func TestParseTasksFile_LinhaSemHeaderNaoCorrompeIndices(t *testing.T) {
+	content := " |DependenCiA \n|0.0|"
+
+	entries, err := NewCatalog().ParseTasksFile([]byte(content))
+	if err == nil {
+		t.Fatalf("esperado erro para tabela sem tasks validas, obtido %d entradas", len(entries))
+	}
+}
+
+// TestParseTasksFile_HeaderComDepsAntesDeStatus cobre o layout em que a coluna
+// Dependencias precede Status: o guarda de limites precisa considerar o maior
+// indice efetivamente lido, nao apenas depsIdx.
+func TestParseTasksFile_HeaderComDepsAntesDeStatus(t *testing.T) {
+	content := `| # | Titulo | Dependencias | Status |
+|---|--------|--------------|--------|
+| 1.0 | Task A | — | done |
+| 2.0 | Task B truncada |
+`
+
+	entries, err := NewCatalog().ParseTasksFile([]byte(content))
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("esperado 1 entrada (linha truncada ignorada), obtido %d", len(entries))
+	}
+	if entries[0].ID != "1.0" || entries[0].Status != "done" {
+		t.Fatalf("entrada inesperada: %+v", entries[0])
+	}
+}
