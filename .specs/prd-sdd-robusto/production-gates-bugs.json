@@ -232,5 +232,41 @@
     "reproduction": "Executar ai-spec validate-sdd .specs/prd-sdd-robusto.",
     "expected": "O estado aprovado contém modelo operacional completo e valida com sucesso.",
     "actual": "O estado não contém requirements, DAG, tasks ou evidence_refs e falha como modelo operacional incompleto."
+  },
+  {
+    "id": "BUG-127",
+    "severity": "critical",
+    "file": ".agents/scripts/validate-task-evidence.sh",
+    "line": 93,
+    "reproduction": "Executar make test-validators em runner com awk byte-oriented (mawk).",
+    "expected": "Relatorio com criterio de aceite nao comprovado deve falhar (exit 1).",
+    "actual": "Classe de bracket multibyte Crit[eé]rios nao casa em mawk; criteria_count=0 desliga o gate e o relatorio passa com exit 0."
+  },
+  {
+    "id": "BUG-128",
+    "severity": "major",
+    "file": "scripts/test-hooks.sh",
+    "line": 105,
+    "reproduction": "Executar make test-hooks no checkout atual.",
+    "expected": "Fixtures F02 e F02b devem satisfazer o contrato execution-result v2 e sair com exit 0.",
+    "actual": "As fixtures nao declaram patch_ref, exigido para status done; 2 asserts falham e o gate fica vermelho em main."
+  },
+  {
+    "id": "BUG-129",
+    "severity": "major",
+    "file": "tests/scripts/validate-task-evidence_test.sh",
+    "line": 32,
+    "reproduction": "Executar bash tests/scripts/validate-task-evidence_test.sh em ambiente sem rtk no PATH.",
+    "expected": "A suite depende apenas de utilitarios POSIX e executa os 11 casos.",
+    "actual": "O script versionado invoca 'rtk cat'; sob set -e a substituicao retorna 127 e a suite aborta antes do primeiro caso."
+  },
+  {
+    "id": "BUG-130",
+    "severity": "critical",
+    "file": "internal/taskloop/parser.go",
+    "line": 73,
+    "reproduction": "Executar make fuzz (FuzzParseTaskFile) com o input ' |DependenCiA \\n|0.0|'.",
+    "expected": "Nenhum input deve causar panic no parser de tasks.md.",
+    "actual": "detectColumnIndices grava depsIdx sem header valido e o guarda ignora statusIdx: panic: index out of range [3] with length 3."
   }
 ]
