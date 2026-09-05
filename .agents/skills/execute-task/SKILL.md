@@ -1,6 +1,6 @@
 ---
 name: execute-task
-version: 1.7.0
+version: 1.7.1
 category: governance
 depends_on: [review, bugfix, agent-governance]
 description: Executa uma tarefa de implementação aprovada via codificação, validação, revisão e captura de evidências. Carrega skills processuais declaradas em `## Skills Necessárias` (formato canônico estrito) + skills de linguagem inferidas do diff. Use quando um task file estiver pronto para implementação. Não use para planejamento.
@@ -91,6 +91,7 @@ description: Executa uma tarefa de implementação aprovada via codificação, v
    - Lock falha em 30s → `failed: tasks.md lock timeout`.
 
 **Etapa 6: Selar evidência (RF-14)**
+0. **Aplicável apenas quando o projeto adota o contrato de resultado SDD**, ou seja, quando existe um `execution-result.json` para a tarefa. Projeto que não o produz pula esta etapa sem erro e sem marcar `blocked`; o selo não é pré-condição de `done`.
 1. A prova de execução é verificada contra a árvore de trabalho viva, que deixa de existir quando o trabalho é commitado. Sem selo, a evidência **não é re-auditável** depois do merge.
 2. O harness não cria commits (`R-GOV-001`). Portanto o selo só é possível **depois** que o trabalho da tarefa foi commitado — normalmente pela skill `semantic-commit` ou pelo humano.
 3. Se já houver commit contendo a tarefa:
