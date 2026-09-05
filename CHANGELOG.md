@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.2 (2026-09-05)
+
+### Bug Fixes
+- **skills:** selo de evidencia nao pode bloquear projeto sem contrato SDD (e1bfdeb)
+
 ## 1.0.1 (2026-09-05)
 
 ### Bug Fixes
