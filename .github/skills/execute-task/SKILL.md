@@ -1,6 +1,6 @@
 ---
 name: execute-task
-version: 1.6.1
+version: 1.7.0
 category: governance
 depends_on: [review, bugfix, agent-governance]
 description: Executa uma tarefa de implementação aprovada via codificação, validação, revisão e captura de evidências. Carrega skills processuais declaradas em `## Skills Necessárias` (formato canônico estrito) + skills de linguagem inferidas do diff. Use quando um task file estiver pronto para implementação. Não use para planejamento.
@@ -90,8 +90,18 @@ description: Executa uma tarefa de implementação aprovada via codificação, v
    - Fallback final (Windows nativo, containers minimal): escrever em `.specs/prd-<slug>/.partials/tasks.md.<num>.partial`; orquestrador consolida na sua Etapa 5.
    - Lock falha em 30s → `failed: tasks.md lock timeout`.
 
-**Etapa 6: Encerrar**
-Retornar `done`, `blocked`, `failed` ou `needs_input` (canônico) com path do relatório, validações e veredito do reviewer.
+**Etapa 6: Selar evidência (RF-14)**
+1. A prova de execução é verificada contra a árvore de trabalho viva, que deixa de existir quando o trabalho é commitado. Sem selo, a evidência **não é re-auditável** depois do merge.
+2. O harness não cria commits (`R-GOV-001`). Portanto o selo só é possível **depois** que o trabalho da tarefa foi commitado — normalmente pela skill `semantic-commit` ou pelo humano.
+3. Se já houver commit contendo a tarefa:
+   - `ai-spec seal-evidence <result.json> --prd-dir .specs/prd-<slug> --commit <sha>`
+   - O comando grava `commit_sha` + `commit_patch_sha256` e recusa commit que não descenda da base registrada.
+   - Conferir com `--verify`; a verificação não toca a árvore de trabalho e permanece válida indefinidamente.
+4. Se ainda não houver commit: **não** inventar um SHA e **não** commitar por conta própria. Registrar `selo pendente` em "Riscos Residuais" do relatório e informar no retorno da Etapa 7.
+5. Falha do selo (commit fora da linha da base, range vazio, resultado já selado) → `blocked`; não mutar estado.
+
+**Etapa 7: Encerrar**
+Retornar `done`, `blocked`, `failed` ou `needs_input` (canônico) com path do relatório, validações, veredito do reviewer e estado do selo (`selado em <sha>` ou `selo pendente`).
 
 ## Paralelismo e Subagentes
 

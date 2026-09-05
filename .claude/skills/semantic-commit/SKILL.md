@@ -1,6 +1,6 @@
 ---
 name: semantic-commit
-version: 1.0.0
+version: 1.1.0
 description: Cria commits semanticos no padrao Conventional Commits (feat, fix, chore, docs, refactor, test, ci). Use quando precisar commitar mudancas com mensagem estruturada e rastreavel. Nao use para revisar ou implementar codigo — apenas para a acao de commit.
 ---
 
@@ -25,6 +25,18 @@ description: Cria commits semanticos no padrao Conventional Commits (feat, fix, 
 1. Confirmar com o usuario o texto final da mensagem antes de commitar.
 2. Executar `git commit -m "$(cat <<'EOF'\n<mensagem>\nEOF\n)"`.
 3. Nunca usar `--no-verify` ou `--no-gpg-sign` a menos que explicitamente solicitado.
+
+**Etapa 4: Selar evidencia SDD pendente (RF-14)**
+1. Aplicavel apenas quando o commit contem o trabalho de uma tarefa SDD cujo
+   `execution-result` ainda nao tem `commit_sha`.
+2. A prova de execucao e verificada contra a arvore de trabalho viva, que acabou
+   de deixar de existir com este commit. Sem selo, a evidencia da tarefa nao e
+   re-auditavel depois do merge.
+3. Executar, com o SHA recem-criado:
+   `ai-spec seal-evidence <result.json> --prd-dir .specs/prd-<slug> --commit HEAD`
+4. Conferir com `--verify`. A verificacao nao toca a arvore de trabalho e
+   permanece valida indefinidamente.
+5. Sem resultado SDD associado ao commit, pular esta etapa sem erro.
 
 ## Tratamento de Erros
 
