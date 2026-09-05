@@ -1,5 +1,5 @@
 <!-- spec-hash-prd: 6bf36a9566ac7ab0bf400012d56195e750aec0c2e916b1b761cac3b12d00f484 -->
-<!-- spec-hash-techspec: d10eb85dce9f28d04d95cc372dcd280287bd218458fd7b7c9e9fb2cb42c85e2e -->
+<!-- spec-hash-techspec: 7d707fd9397cac643bdbc54764f7386160130d7f44b405af81527cb847840eb3 -->
 # Tarefas — SDD robusto e verificável
 
 | # | Título | Status | Dependências | Paralelizável | Skills |

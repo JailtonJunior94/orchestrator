@@ -14,11 +14,20 @@ evidências incompletas; a compatibilidade legada é somente leitura/warning dur
 |---|---|
 | `internal/sdd` | schema, validação, transições, hashes, escrita atômica e eventos |
 | `internal/sdd/tasks` | parser estrutural de Markdown, DAG, ownership e cobertura |
-| `internal/sdd/orchestrator` | plano idempotente, lock de escritor, tentativas e isolamento |
-| `internal/sdd/review` | snapshot cumulativo e contrato determinístico de revisão |
+| `internal/taskloop` (orquestrador) | plano idempotente, lock de escritor, tentativas, isolamento e snapshot cumulativo |
+| `internal/taskloop` (revisão) | veredito, parsing de review e disparo do revisor independente |
+| `internal/sdd` (contratos de resultado) | schemas JSON de execução e revisão, com validação estrita compartilhada |
 | `cmd/ai_spec_harness` | `validate`, `approve`, `invalidate`, `orchestrate` e migração |
 | `.agents/hooks` | adaptadores que chamam CLI; nunca interpretam YAML/Markdown como verdade |
 | `evals/sdd` | corpus adversarial e resultados agregados |
+
+Nota de reconciliação. A primeira redação desta techspec previa dois pacotes próprios sob internal/sdd, um para
+orquestração e outro para revisão. A implementação manteve orquestração e revisão dentro
+de `internal/taskloop`, que já era o dono do laço de execução, e deixou em `internal/sdd` apenas o
+estado e os contratos de resultado. A tabela acima reflete o código real. Os dois pacotes previstos
+nunca existiram, e a divergência sobreviveu à auditoria de requisitos porque `validate-sdd` compara
+hashes e vínculos RF→tarefa, não a prosa que descreve componentes — limitação registrada aqui para
+que a próxima revisão do contrato considere cobrir também as referências de caminho.
 
 ## Contratos
 
