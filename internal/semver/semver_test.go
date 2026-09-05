@@ -258,3 +258,60 @@ func TestComputeNext(t *testing.T) {
 		}
 	}
 }
+
+// commitWithBody cria um commit com corpo, para exercitar a deteccao de footer.
+func commitWithBody(t *testing.T, dir, message string) {
+	t.Helper()
+	f := filepath.Join(dir, "arquivo.txt")
+	if err := os.WriteFile(f, []byte(message), 0600); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	if out, err := exec.Command("git", "-C", dir, "add", "-A").CombinedOutput(); err != nil {
+		t.Fatalf("git add: %v\n%s", err, out)
+	}
+	cmd := exec.Command("git", "-C", dir, "-c", "commit.gpgsign=false", "commit", "-m", message)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git commit: %v\n%s", err, out)
+	}
+}
+
+// TestEvaluate_MencaoEmProsaNaoEhBreaking reproduz o incidente que publicou a
+// v1.0.0 no lugar da 0.31.0: o corpo do commit explicava a regra do footer e a
+// verificacao, feita com strings.Contains, tratou a mencao como o proprio
+// footer. Um commit que apenas documenta a convencao nao pode disparar major.
+func TestEvaluate_MencaoEmProsaNaoEhBreaking(t *testing.T) {
+	dir := initRepo(t)
+	addCommit(t, dir, "chore: setup")
+	addTag(t, dir, "v0.30.0")
+	commitWithBody(t, dir, "feat(scripts): fecha o gate fail-open\n\n"+
+		"Nota de versionamento: esta e uma mudanca de comportamento, mas o footer\n"+
+		"BREAKING CHANGE levaria o semver-next a 1.0.0. A quebra esta descrita em\n"+
+		"prosa para que o bump caia em 0.31.0.")
+
+	d, err := semver.NewService().Evaluate(dir)
+	if err != nil {
+		t.Fatalf("Evaluate: %v", err)
+	}
+	if d.Bump != semver.BumpMinor {
+		t.Fatalf("bump = %q, want minor (mencao em prosa nao e footer)", d.Bump)
+	}
+	if d.TargetVersion != "0.31.0" {
+		t.Fatalf("target_version = %q, want 0.31.0", d.TargetVersion)
+	}
+}
+
+// TestEvaluate_FooterComHifenEhBreaking cobre a grafia alternativa da spec.
+func TestEvaluate_FooterComHifenEhBreaking(t *testing.T) {
+	dir := initRepo(t)
+	addCommit(t, dir, "chore: setup")
+	addTag(t, dir, "v1.0.0")
+	commitWithBody(t, dir, "feat: nova api\n\nBREAKING-CHANGE: remove a api antiga")
+
+	d, err := semver.NewService().Evaluate(dir)
+	if err != nil {
+		t.Fatalf("Evaluate: %v", err)
+	}
+	if d.Bump != semver.BumpMajor {
+		t.Fatalf("bump = %q, want major", d.Bump)
+	}
+}
