@@ -21,26 +21,26 @@ missing=0
 
 # Modo estrito (NFR-01): fail-closed nos escapes de legado do gate de aceite.
 # Default preserva o comportamento warning-only da janela de compatibilidade.
-strict_evidence="${AI_SDD_STRICT_EVIDENCE:-0}"
+# Modo estrito e o padrao desde 0.31.0. A janela de compatibilidade do NFR-01
+# concedia warning-only por duas versoes menores a partir de 0.29.0 (o fluxo SDD),
+# cobrindo 0.29 e 0.30; ambas ja foram publicadas.
+strict_evidence="${AI_SDD_STRICT_EVIDENCE:-1}"
 
-# _STRICT_DEFAULT_VERSION e a versao em que o modo estrito passa a ser o padrao.
-# NFR-01 concede warning-only por duas versoes menores; o fluxo SDD entrou em
-# 0.29.0, entao a janela cobre 0.29 e 0.30 e fecha em 0.31.0.
-_STRICT_DEFAULT_VERSION="0.31.0"
-
-# legacy_escape emite aviso na janela de compatibilidade e falha em modo estrito.
-# O aviso anuncia a versao do flip: BUG-127 mostrou que um escape silencioso e
-# indistinguivel de um gate aprovando, entao quem depende do legado precisa ver
-# o prazo em toda execucao, nao so no CHANGELOG.
+# legacy_escape falha por padrao. O opt-out existe para migracao, mas e ruidoso
+# de proposito: BUG-127 mostrou que o problema nunca foi o escape existir, e sim
+# ele ser silencioso — um gate que se desliga sozinho e indistinguivel de um gate
+# que aprovou. Quem optar pelo legado ve isso em toda execucao.
 legacy_escape() {
   local reason="$1"
-  if [[ "$strict_evidence" == "1" ]]; then
-    echo "FALTANDO: $reason (modo estrito: AI_SDD_STRICT_EVIDENCE=1)"
+  if [[ "$strict_evidence" != "0" ]]; then
+    echo "FALTANDO: $reason"
+    echo "FALTANDO: o gate de aceite e fail-closed desde 0.31.0; declare os criterios" \
+         "na task file e comprove-os no relatorio."
     missing=1
   else
-    echo "AVISO: $reason — gate de aceite ignorado (legado)."
-    echo "AVISO: este escape sera removido em v$_STRICT_DEFAULT_VERSION, quando o modo estrito" \
-         "passa a ser o padrao. Valide agora com AI_SDD_STRICT_EVIDENCE=1."
+    echo "AVISO: $reason — gate de aceite ignorado (AI_SDD_STRICT_EVIDENCE=0)."
+    echo "AVISO: este opt-out reabre um gate fail-open e existe apenas para migracao;" \
+         "a evidencia validada assim NAO comprova os criterios de aceite."
   fi
 }
 

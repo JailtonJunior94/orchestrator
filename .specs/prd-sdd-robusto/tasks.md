@@ -1,4 +1,4 @@
-<!-- spec-hash-prd: 4e7ffa1afdc23ac1b4c0215e473438d18b19ee42eba21c48e5ed94c430058a66 -->
+<!-- spec-hash-prd: 6bf36a9566ac7ab0bf400012d56195e750aec0c2e916b1b761cac3b12d00f484 -->
 <!-- spec-hash-techspec: d10eb85dce9f28d04d95cc372dcd280287bd218458fd7b7c9e9fb2cb42c85e2e -->
 # Tarefas — SDD robusto e verificável
 

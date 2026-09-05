@@ -137,6 +137,9 @@
 ### Correções
 - **sdd:** um artefato aprovado e depois editado ficava travado para sempre — constava como `approved` (reaprovação recusada) mas com digest divergente (todo downstream falhando), e `invalidate --from` marca os descendentes, nunca a origem. Um PRD aprovado não podia ser emendado
 
+### Funcionalidades
+- **scripts:** o gate de critérios de aceite passa a ser **fail-closed por padrão** (0.31.0). Um relatório cuja task file não seja resolvível, ou cuja task não declare critérios, agora falha em vez de emitir aviso. `AI_SDD_STRICT_EVIDENCE=0` reabre o legado apenas para migração, com aviso explícito de que a evidência assim validada não comprova os critérios
+
 ### Depreciações
 - **scripts:** os escapes de legado do gate de critérios de aceite passam a emitir aviso com prazo explícito e **serão removidos em `v0.31.0`**, quando o modo estrito vira o padrão. A janela de duas versões menores concedida por NFR-01 cobre `0.29` e `0.30`. Para validar desde já, exporte `AI_SDD_STRICT_EVIDENCE=1`
 

@@ -72,8 +72,9 @@ fechadas quando não houver prova suficiente.
 
 ## Requisitos Não Funcionais
 
-- NFR-01: novas validações são fail-closed em modo estrito; legado fica warning-only durante duas
-  versões menores e não habilita automação confiável.
+- NFR-01: novas validações são fail-closed por padrão. O legado ficou warning-only durante duas
+  versões menores a partir de `0.29.0` — janela cumprida em `0.29` e `0.30` — e desde `0.31.0` o
+  escape exige opt-out explícito e ruidoso, que não habilita automação confiável.
 - NFR-02: toda escrita de estado deve ser atômica e preservar eventos append-only.
 - NFR-03: o código mantém Go declarado em `go.mod`, DI explícita, erros contextualizados em PT-BR
   e testes determinísticos.

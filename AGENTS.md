@@ -188,13 +188,14 @@ arvore de trabalho, entao permanece valida indefinidamente. Limite: o selo torna
 imutavel e reverificavel dali em diante, mas nao prova que o commit e byte-identico a arvore do
 fechamento — essa arvore ja nao existe quando o selo e aplicado.
 
-`AI_SDD_STRICT_EVIDENCE=1` fecha os escapes de compatibilidade de
-`validate-task-evidence.sh` (NFR-01): um relatorio cuja task file nao seja resolvivel pelo campo
-`Arquivo:`, ou cuja task nao declare secao de criterios, passa a falhar em vez de emitir aviso.
-Sem a variavel o comportamento warning-only da janela de compatibilidade e preservado. Essa
-janela fecha em **v0.31.0**: NFR-01 concede warning-only por duas versoes menores, o fluxo SDD
-entrou em `0.29.0`, e a partir de `0.31.0` o modo estrito passa a ser o padrao. O validador ja
-anuncia o prazo em toda execucao que usa o escape.
+O gate de criterios de aceite e **fail-closed desde a 0.31.0**: um relatorio cuja task file nao seja
+resolvivel pelo campo `Arquivo:`, ou cuja task nao declare secao de criterios, falha. A janela de
+compatibilidade do NFR-01 concedia warning-only por duas versoes menores a partir de `0.29.0`, e
+cobriu `0.29` e `0.30`.
+
+`AI_SDD_STRICT_EVIDENCE=0` reabre o comportamento legado apenas para migracao. O opt-out e ruidoso
+de proposito: BUG-127 mostrou que o problema nunca foi o escape existir, e sim ele ser silencioso —
+um gate que se desliga sozinho e indistinguivel de um gate que aprovou.
 
 As expressoes regulares desses validadores nao podem usar classes de bracket com caracteres
 multibyte (`Crit[eé]rios`): em `awk` byte-oriented (mawk, padrao nos runners Linux) elas nunca

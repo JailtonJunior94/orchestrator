@@ -15,7 +15,14 @@ git -C "$TMPDIR_BASE" config user.email "evidence-test@example.invalid"
 git -C "$TMPDIR_BASE" config user.name "Evidence Test"
 git -C "$TMPDIR_BASE" config commit.gpgsign false
 printf 'base\n' >"$TMPDIR_BASE/tracked.txt"
-git -C "$TMPDIR_BASE" add tracked.txt
+# Task file real, rastreado no baseline: desde 0.31.0 o gate de aceite e
+# fail-closed, entao a fixture valida precisa declarar criterios e o relatorio
+# precisa comprova-los. Precisa existir antes do commit base para nao entrar no
+# patch como arquivo novo.
+mkdir -p "$TMPDIR_BASE/.specs/prd-portability-parity"
+printf '# Tarefa 5.0\n\n## Critérios de Sucesso\n\n- Evidência é validada.\n' \
+  >"$TMPDIR_BASE/.specs/prd-portability-parity/task-5.0.md"
+git -C "$TMPDIR_BASE" add tracked.txt .specs
 git -C "$TMPDIR_BASE" commit -qm "test: baseline"
 printf 'estado final\n' >"$TMPDIR_BASE/tracked.txt"
 
@@ -107,6 +114,9 @@ result_path=result.json
 
 package=internal/taskloop
 delta=+0.5%
+
+## Critérios de Aceite
+- Evidência é validada -> comprovado: saída de make test mostra pass
 
 ## Suposições
 - Nenhuma.

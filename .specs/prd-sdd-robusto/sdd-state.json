@@ -4,12 +4,12 @@
   "artifacts": {
     "prd": {
       "status": "approved",
-      "sha256": "4e7ffa1afdc23ac1b4c0215e473438d18b19ee42eba21c48e5ed94c430058a66",
+      "sha256": "6bf36a9566ac7ab0bf400012d56195e750aec0c2e916b1b761cac3b12d00f484",
       "approved": true
     },
     "tasks": {
       "status": "approved",
-      "sha256": "d46674b9ae57a9223728b2baf66b35e5eaa0be54ad17d4f7f88d6a27ff8f69e0",
+      "sha256": "f1299b5eda1f3fb52708ca152ce38932dd241ca19ebec39df806ad47b1fd7186",
       "approved": true
     },
     "techspec": {
@@ -435,6 +435,36 @@
     },
     {
       "at": "2026-09-05T11:22:41.58185399Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "approved",
+      "detail": "tasks"
+    },
+    {
+      "at": "2026-09-05T12:33:39.008241785Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "invalidated",
+      "detail": "prd"
+    },
+    {
+      "at": "2026-09-05T12:33:39.0171829Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "approved",
+      "detail": "prd"
+    },
+    {
+      "at": "2026-09-05T12:33:39.024340489Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "approved",
+      "detail": "techspec"
+    },
+    {
+      "at": "2026-09-05T12:33:39.043704173Z",
+      "run_id": "production-proof-20260903-r4",
+      "action": "approved",
+      "detail": "tasks"
+    },
+    {
+      "at": "2026-09-05T12:33:39.071473108Z",
       "run_id": "production-proof-20260903-r4",
       "action": "approved",
       "detail": "tasks"
