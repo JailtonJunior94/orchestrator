@@ -1150,10 +1150,96 @@ O PRD deve ser estritamente focado no **O QUE** e **POR QUE**, evitando detalhes
 ### 3. Imutabilidade e Sincronização de Drift
 Uma vez que o PRD avança para TechSpec e Tasks, ele torna-se a base de um **hash SHA-256**.
 - **Edição Pós-Aprovação:** Se o PRD for alterado, o sistema de governança detectará o "Drift de Especificação".
-- **Ação Obrigatória:** Após editar um `prd.md`, você **DEVE** rodar `ai-spec sync-spec-hash` para atualizar os hashes em `tasks.md`. O `execute-task` recusará a execução se os hashes divergirem, garantindo que você nunca implemente algo baseado em uma versão obsoleta do requisito.
+- **Ação Obrigatória:** Após editar um `prd.md`, você **DEVE** ressincronizar os hashes em `tasks.md`. O `execute-task` recusará a execução se os hashes divergirem, garantindo que você nunca implemente algo baseado em uma versão obsoleta do requisito.
+- **Ordem obrigatória:** `sync-spec-hash` **recusa** rodar enquanto houver artefato aprovado stale — de propósito, para que a sincronização de hash nunca oculte um drift real (RF-08). A sequência correta está em [Ciclo de vida do estado SDD](#ciclo-de-vida-do-estado-sdd).
 
 ### 4. Encerramento
 Um PRD só é considerado `done` quando todos os seus requisitos funcionais possuem evidências de teste vinculadas em relatórios de execução.
+
+---
+
+## Ciclo de vida do estado SDD
+
+O estado operacional vive em `.specs/prd-<slug>/sdd-state.json` (schema v2). O Markdown é a projeção
+humana; o estado é o que as automações leem. Todos os comandos abaixo são do binário `ai-spec`.
+
+### Sequência canônica
+
+```bash
+# 1. Aprovar em cascata. O primeiro `approve` cria o sdd-state.json se ele ainda
+#    não existir — não há comando de init separado. Cada artefato exige o
+#    anterior aprovado e com o conteúdo intacto.
+ai-spec approve prd      .specs/prd-exemplo
+ai-spec approve techspec .specs/prd-exemplo
+ai-spec approve tasks    .specs/prd-exemplo
+
+# 2. Validar o contrato (schema, hashes, vínculos RF→tarefa, DAG, ownership)
+ai-spec validate-sdd .specs/prd-exemplo
+
+# 3. Executar de forma recuperável (lock exclusivo, eventos append-only)
+ai-spec orchestrate .specs/prd-exemplo --run-id <id>
+```
+
+> `validate-sdd` num PRD sem estado falha com `open .../sdd-state.json: no such file or directory`.
+> O estado nasce no primeiro `approve`.
+
+### Editando um artefato já aprovado
+
+Esta é a parte que **não é adivinhável** e onde é fácil travar. Editar um `prd.md` aprovado deixa
+todo o downstream stale, e `sync-spec-hash` se recusa a rodar nesse estado — justamente para que a
+sincronização de hash não esconda o drift (RF-08).
+
+```bash
+# depois de editar prd.md (e/ou techspec.md)
+ai-spec invalidate .specs/prd-exemplo --from prd   # marca descendentes como stale
+ai-spec approve prd      .specs/prd-exemplo         # reaprova a origem alterada
+ai-spec approve techspec .specs/prd-exemplo
+ai-spec sync-spec-hash   .specs/prd-exemplo/tasks.md
+ai-spec approve tasks    .specs/prd-exemplo         # tasks.md mudou no passo anterior
+ai-spec validate-sdd     .specs/prd-exemplo
+```
+
+> Reaprovar um artefato **intacto** é recusado: a reaprovação existe para aceitar conteúdo que
+> mudou, não para churn de estado.
+
+### Selo de evidência (RF-14)
+
+A prova de execução é verificada contra a árvore de trabalho viva, que deixa de existir quando o
+trabalho é commitado. **Sem selo, a evidência de uma tarefa não é re-auditável depois do merge.**
+
+O harness nunca cria commits (`R-GOV-001`), então o selo é uma segunda fase, aplicada **depois** do
+commit:
+
+```bash
+ai-spec seal-evidence <result.json> --prd-dir .specs/prd-exemplo --commit HEAD
+ai-spec seal-evidence <result.json> --prd-dir .specs/prd-exemplo --verify
+```
+
+O selo grava `commit_sha` e `commit_patch_sha256` (o patch recomputado em `base..commit` com as
+mesmas exclusões do fechamento), exige que o commit descenda da base registrada e recusa reselagem.
+A verificação não toca a árvore de trabalho, então permanece válida indefinidamente.
+
+**Limite honesto:** o selo torna a evidência imutável e reverificável dali em diante; ele não prova
+que o commit é byte-idêntico à árvore do fechamento, porque essa árvore já não existe no momento do
+selo.
+
+### Validação de resultados e migração
+
+```bash
+ai-spec validate-result execution <result.json>              # contrato JSON v2 estrito
+ai-spec validate-result execution <result.json> \
+  --verify-physical --prd-dir .specs/prd-exemplo             # + provas físicas
+
+ai-spec migrate-sdd  .specs/prd-exemplo --dry-run            # nunca altera estado
+ai-spec rollback-sdd .specs/prd-exemplo --run-id <id>        # remove só o estado v2 daquela execução
+```
+
+### Gate de critérios de aceite
+
+Fail-closed desde a `0.31.0`: um relatório cuja task file não seja resolvível pelo campo `Arquivo:`,
+ou cuja task não declare seção de critérios, **falha**. `AI_SDD_STRICT_EVIDENCE=0` reabre o legado
+apenas para migração, e avisa explicitamente que a evidência assim validada não comprova os
+critérios.
 
 ---
 
