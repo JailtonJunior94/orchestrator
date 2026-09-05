@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0 (2026-09-05)
+
+### Features
+- **gates:** reprova artefato de contrato que cita caminho inexistente (abf3247)
+
+### Documentation
+- **sdd:** reconcilia a techspec com a estrutura real do codigo (f7f53fe)
+
 ## 1.0.2 (2026-09-05)
 
 ### Bug Fixes
