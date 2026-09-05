@@ -19,6 +19,21 @@ fi
 
 missing=0
 
+# Modo estrito (NFR-01): fail-closed nos escapes de legado do gate de aceite.
+# Default preserva o comportamento warning-only da janela de compatibilidade.
+strict_evidence="${AI_SDD_STRICT_EVIDENCE:-0}"
+
+# legacy_escape emite aviso na janela de compatibilidade e falha em modo estrito.
+legacy_escape() {
+  local reason="$1"
+  if [[ "$strict_evidence" == "1" ]]; then
+    echo "FALTANDO: $reason (modo estrito: AI_SDD_STRICT_EVIDENCE=1)"
+    missing=1
+  else
+    echo "AVISO: $reason — gate de aceite ignorado (legado)."
+  fi
+}
+
 require_pattern() {
   local pattern="$1"
   local label="$2"
@@ -90,19 +105,19 @@ fi
 
 if [[ -n "$task_path" ]]; then
   criteria_count="$(awk '
-    /^#+[[:space:]]+Crit[eé]rios de (Sucesso|Aceite)/ { capture=1; next }
+    /^#+[[:space:]]+Crit(e|é)rios de (Sucesso|Aceite)/ { capture=1; next }
     /^#+[[:space:]]/ { if (capture) capture=0 }
     capture && /^[[:space:]]*-[[:space:]]+/ { c++ }
     END { print c+0 }
   ' "$task_path")"
 
   if [[ "$criteria_count" -gt 0 ]]; then
-    if ! grep -Eiq "^#+[[:space:]]+crit[eé]rios de aceite" "$report_file"; then
+    if ! grep -Eiq "^#+[[:space:]]+crit(e|é)rios de aceite" "$report_file"; then
       echo "FALTANDO: seção '## Critérios de Aceite' no relatório (task define $criteria_count critério(s))"
       missing=1
     else
       proven_count="$(awk '
-        /^#+[[:space:]]+Crit[eé]rios de Aceite/ { capture=1; next }
+        /^#+[[:space:]]+Crit(e|é)rios de Aceite/ { capture=1; next }
         /^#+[[:space:]]/ { if (capture) capture=0 }
         capture && /->[[:space:]]*comprovado[[:space:]]*:/ {
           if ($0 !~ /comprovado[[:space:]]*:[[:space:]]*(\[ev|\[evid|\[\][[:space:]]*$|$)/) p++
@@ -115,10 +130,10 @@ if [[ -n "$task_path" ]]; then
       fi
     fi
   else
-    echo "AVISO: task file ($task_path) sem seção de critérios — gate de aceite ignorado (legado)."
+    legacy_escape "task file ($task_path) sem seção de critérios"
   fi
 else
-  echo "AVISO: relatório sem referência resolvível a task file (campo 'Arquivo:') — gate de aceite ignorado (legado)."
+  legacy_escape "relatório sem referência resolvível a task file (campo 'Arquivo:')"
 fi
 
 # Rastreabilidade PRD → teste: se o relatório referencia um PRD com arquivo real (não n/a),

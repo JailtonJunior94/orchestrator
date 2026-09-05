@@ -67,7 +67,7 @@ fi
 
 if [[ "$has_no_findings" -eq 0 ]]; then
   # Exigir ao menos uma severidade canonica declarada quando ha achados
-  if ! grep -Eiq "severidade[[:space:]]*:[[:space:]]*(critical|high|medium|low|cr[ií]tico|alta|m[eé]dia|baixa)" "$report_file" \
+  if ! grep -Eiq "severidade[[:space:]]*:[[:space:]]*(critical|high|medium|low|cr(i|í)tico|alta|m(e|é)dia|baixa)" "$report_file" \
      && ! grep -Eiq "severity[[:space:]]*:[[:space:]]*(critical|high|medium|low)" "$report_file"; then
     echo "FALTANDO: severidade canonica em ao menos um achado (critical|high|medium|low) ou declaração 'Sem achados'"
     missing=1
@@ -75,7 +75,7 @@ if [[ "$has_no_findings" -eq 0 ]]; then
 fi
 
 if [[ "$verdict_value" == "REJECTED" ]]; then
-  if ! grep -Eiq "severidade[[:space:]]*:[[:space:]]*(critical|high|cr[ií]tico|alta)" "$report_file" \
+  if ! grep -Eiq "severidade[[:space:]]*:[[:space:]]*(critical|high|cr(i|í)tico|alta)" "$report_file" \
      && ! grep -Eiq "severity[[:space:]]*:[[:space:]]*(critical|high)" "$report_file"; then
     echo "FALTANDO: veredito REJECTED exige ao menos um achado de severidade critical ou high comprovado"
     missing=1

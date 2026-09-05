@@ -171,6 +171,16 @@ mesmos gates que Claude. As skills resolvem em cascata `.agents/scripts/` -> `.c
 - `validate-refactor-evidence.sh` — evidencia de nao-regressao.
 - `validate-review-evidence.sh` — evidencia do modo `--auto-review` (veredito + severidade).
 
+`AI_SDD_STRICT_EVIDENCE=1` fecha os escapes de compatibilidade de
+`validate-task-evidence.sh` (NFR-01): um relatorio cuja task file nao seja resolvivel pelo campo
+`Arquivo:`, ou cuja task nao declare secao de criterios, passa a falhar em vez de emitir aviso.
+Sem a variavel o comportamento warning-only da janela de compatibilidade e preservado.
+
+As expressoes regulares desses validadores nao podem usar classes de bracket com caracteres
+multibyte (`Crit[eé]rios`): em `awk` byte-oriented (mawk, padrao nos runners Linux) elas nunca
+casam e o gate se desliga silenciosamente. Usar alternacao (`Crit(e|é)rios`). O caso "a2" de
+`scripts/test-validators.sh` trava essa invariante executando o gate sob `LC_ALL=C`.
+
 ### Metadado `category` no frontmatter
 
 Cada SKILL.md pode declarar `category: governance|language|processual`. `governance`/`language` sao
