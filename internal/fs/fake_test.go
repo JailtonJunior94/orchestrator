@@ -221,3 +221,39 @@ func TestFake_ReadDir(t *testing.T) {
 		t.Errorf("ReadDir count = %d, want 2", len(entries))
 	}
 }
+
+// TestFake_SeparadorNativoDoWindows cobre o caso em que as chaves do fake foram
+// gravadas com o separador nativo do Windows, como acontece quando um teste usa
+// filepath.Join naquele sistema. Antes da correcao, ReadDir/Exists/IsDir
+// comparavam com "/" fixo, nao enxergavam nada e a descoberta de agentes falhava
+// com "nenhum agente descoberto" apenas no runner Windows.
+//
+// O teste roda em qualquer plataforma porque monta as chaves com "\" explicito.
+func TestFake_SeparadorNativoDoWindows(t *testing.T) {
+	fsys := fs.NewFakeFileSystem()
+	base := `D:\a\projeto\fake\project`
+	agentsDir := base + `\.ai-harness\agents`
+	fsys.Files[agentsDir+`\agente-smoke\AGENT.md`] = []byte("---\nname: agente-smoke\n---\n")
+	fsys.Files[base+`\AGENTS.md`] = []byte("# Agents\n")
+
+	if !fsys.Exists(agentsDir) {
+		t.Fatal("Exists nao reconheceu diretorio com separador de Windows")
+	}
+	if !fsys.IsDir(agentsDir) {
+		t.Fatal("IsDir nao reconheceu diretorio com separador de Windows")
+	}
+
+	entries, err := fsys.ReadDir(agentsDir)
+	if err != nil {
+		t.Fatalf("ReadDir retornou erro: %v", err)
+	}
+	if len(entries) != 1 {
+		t.Fatalf("ReadDir devolveu %d entradas, quer 1", len(entries))
+	}
+	if got := entries[0].Name(); got != "agente-smoke" {
+		t.Fatalf("entrada = %q, quer %q", got, "agente-smoke")
+	}
+	if !entries[0].IsDir() {
+		t.Fatal("entrada deveria ser diretorio")
+	}
+}
