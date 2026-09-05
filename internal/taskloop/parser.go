@@ -59,7 +59,9 @@ func (c *Catalog) ParseTasksFile(content []byte) ([]TaskEntry, error) {
 		}
 
 		cols := strings.Split(line, "|")
-		if len(cols) <= depsIdx {
+		// A linha precisa conter todas as colunas efetivamente lidas abaixo:
+		// ID (1), titulo (2), status e dependencias (indices detectados).
+		if len(cols) <= max(2, statusIdx, depsIdx) {
 			continue
 		}
 
@@ -244,19 +246,26 @@ func (c *Catalog) matchesTaskPrefix(filename, prefix, fullID string) bool {
 // detectColumnIndices analisa uma linha de header de tabela markdown e
 // atribui os indices das colunas Status e Dependencias. Retorna true se
 // a linha for um header reconhecido.
+// A atribuicao e atomica: uma linha que cita apenas "Dependencias" nao e um
+// header valido e nao pode deixar os indices parcialmente sobrescritos.
 func (c *Catalog) detectColumnIndices(cols []string, statusIdx, depsIdx *int) bool {
 	foundStatus := false
+	detectedStatus, detectedDeps := *statusIdx, *depsIdx
 	for i, col := range cols {
 		h := strings.ToLower(strings.TrimSpace(col))
 		switch h {
 		case "status":
-			*statusIdx = i
+			detectedStatus = i
 			foundStatus = true
 		case "dependências", "dependencias", "dependência", "dependencia", "deps":
-			*depsIdx = i
+			detectedDeps = i
 		}
 	}
-	return foundStatus
+	if !foundStatus {
+		return false
+	}
+	*statusIdx, *depsIdx = detectedStatus, detectedDeps
+	return true
 }
 
 func (c *Catalog) parseDependencies(raw string) []string {
