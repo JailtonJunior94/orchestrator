@@ -180,6 +180,107 @@
     },
     "commands": [
       {
+        "name": "approve",
+        "description": "Aprova um artefato SDD e registra seu digest imutável",
+        "args": [],
+        "flags": {}
+      },
+      {
+        "name": "changelog",
+        "description": "Gera ou atualiza o CHANGELOG.md a partir de conventional commits",
+        "longDescription": "Analisa os conventional commits desde o ultimo tag e gera uma secao de changelog.",
+        "args": [
+          {
+            "name": "path",
+            "required": false,
+            "description": "Caminho do repositorio (default: diretorio atual)"
+          }
+        ],
+        "flags": {
+          "version": {
+            "type": "string",
+            "required": true,
+            "description": "Versao para a entrada no changelog"
+          },
+          "dry-run": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Exibe o changelog sem gravar o arquivo"
+          }
+        }
+      },
+      {
+        "name": "check-spec-drift",
+        "description": "Verifica cobertura de requisitos e drift de spec em relacao a tasks.md",
+        "longDescription": "Verifica se os IDs de requisitos (RF-nn, REQ-nn) definidos em prd.md e/ou tasks.md estao cobertos.",
+        "args": [
+          {
+            "name": "tasks.md",
+            "required": true,
+            "description": "Caminho para o arquivo tasks.md"
+          }
+        ],
+        "flags": {}
+      },
+      {
+        "name": "doctor",
+        "description": "Diagnostica problemas na instalacao de governanca",
+        "longDescription": "Executa verificacoes de saude: repositorio git, symlinks, permissoes, manifesto.",
+        "args": [
+          {
+            "name": "path",
+            "required": true,
+            "description": "Caminho do projeto alvo"
+          }
+        ],
+        "flags": {}
+      },
+      {
+        "name": "hash",
+        "description": "Calcula SHA-256 de um arquivo de forma portavel",
+        "longDescription": "Calcula o SHA-256 de um arquivo usando a implementacao Go embarcada no ai-spec-harness, sem depender de binarios externos como sha256sum ou shasum.",
+        "args": [
+          {
+            "name": "file",
+            "required": true,
+            "description": "Caminho para o arquivo a hashear"
+          }
+        ],
+        "flags": {}
+      },
+      {
+        "name": "inspect",
+        "description": "Inspeciona o estado da instalacao de governanca",
+        "longDescription": "Exibe detalhes sobre skills instaladas, ferramentas detectadas, e estado do manifesto.",
+        "args": [
+          {
+            "name": "path",
+            "required": true,
+            "description": "Caminho do projeto alvo"
+          }
+        ],
+        "flags": {
+          "focus-paths": {
+            "type": "string",
+            "required": false,
+            "description": "Caminhos de foco para contexto de monorepo"
+          },
+          "brief": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Carrega apenas blocos TL;DR das referencias (economiza tokens)"
+          },
+          "complexity": {
+            "type": "string",
+            "default": "complex",
+            "required": false,
+            "description": "Filtra referencias por nivel de complexidade: trivial, standard, complex"
+          }
+        }
+      },
+      {
         "name": "install",
         "description": "Instala governanca de IA em um projeto",
         "longDescription": "Instala o pacote de governanca para ferramentas de IA em um projeto alvo.",
@@ -255,160 +356,13 @@
         }
       },
       {
-        "name": "upgrade",
-        "description": "Atualiza skills de governanca em um projeto",
-        "longDescription": "Verifica ou atualiza skills de governanca comparando versoes e checksums.",
-        "args": [
-          {
-            "name": "path",
-            "required": true,
-            "description": "Caminho do projeto alvo"
-          }
-        ],
+        "name": "invalidate",
+        "description": "Invalida artefatos downstream aprovados",
+        "args": [],
         "flags": {
-          "check": {
-            "type": "bool",
-            "default": false,
-            "required": false,
-            "description": "Apenas verifica se ha atualizacoes disponiveis"
-          },
-          "langs": {
+          "from": {
             "type": "string",
-            "required": false,
-            "description": "Linguagens do projeto"
-          },
-          "source": {
-            "type": "string",
-            "required": false,
-            "description": "Caminho alternativo para o pacote de governanca"
-          },
-          "ref": {
-            "type": "string",
-            "required": false,
-            "description": "Git ref (branch, tag ou commit) para resolver pacote remoto"
-          },
-          "follow-external-symlinks": {
-            "type": "bool",
-            "default": false,
-            "required": false,
-            "description": "Permite escrever em .agents/skills quando symlink aponta para fora do projeto"
-          }
-        }
-      },
-      {
-        "name": "verify",
-        "description": "Verifica o estado de instalacao das skills (current/missing/drifted)",
-        "longDescription": "Verifica o estado de instalacao das skills de governanca em um projeto. Reporta cada skill como current (ok), missing (ausente) ou drifted (divergente). Reusa o comparador de checksum do modulo de upgrade (file-first).",
-        "args": [
-          {
-            "name": "path",
-            "required": false,
-            "description": "Caminho do projeto alvo (padrao: diretorio atual)"
-          }
-        ],
-        "flags": {
-          "tools": {
-            "type": "string",
-            "required": false,
-            "description": "Ferramentas a verificar: claude,gemini,codex,copilot ou all"
-          },
-          "langs": {
-            "type": "string",
-            "required": false,
-            "description": "Linguagens: go,node,python ou all"
-          },
-          "source": {
-            "type": "string",
-            "required": false,
-            "description": "Diretorio fonte do repositorio de governanca (usa embutido se omitido)"
-          },
-          "global": {
-            "type": "bool",
-            "default": false,
-            "required": false,
-            "description": "Verifica a instalacao global em ~/.aispec"
-          },
-          "by-cli": {
-            "type": "bool",
-            "default": false,
-            "required": false,
-            "description": "Adiciona resumo por-CLI (claude/codex/copilot) ao output"
-          }
-        }
-      },
-      {
-        "name": "uninstall",
-        "description": "Remove governanca de IA de um projeto",
-        "longDescription": "Remove artefatos de governanca instalados pelo comando install.",
-        "args": [
-          {
-            "name": "path",
-            "required": true,
-            "description": "Caminho do projeto alvo"
-          }
-        ],
-        "flags": {
-          "dry-run": {
-            "type": "bool",
-            "default": false,
-            "required": false,
-            "description": "Simula a remocao sem alterar o filesystem"
-          }
-        }
-      },
-      {
-        "name": "validate",
-        "description": "Valida frontmatter de skills de governanca",
-        "longDescription": "Valida que todos os SKILL.md possuem frontmatter YAML valido.",
-        "args": [
-          {
-            "name": "path",
-            "required": false,
-            "description": "Caminho do projeto (default: diretorio atual)"
-          }
-        ],
-        "flags": {}
-      },
-      {
-        "name": "validate-bugs",
-        "description": "Valida um array de bugs contra bug-schema.json",
-        "longDescription": "Valida o array JSON de bugs contra o schema canonico de bugs.",
-        "args": [
-          {
-            "name": "bugs.json",
-            "required": true,
-            "description": "Caminho para o arquivo JSON de bugs"
-          }
-        ],
-        "flags": {
-          "schema": {
-            "type": "string",
-            "required": false,
-            "description": "Caminho para schema JSON customizado"
-          }
-        }
-      },
-      {
-        "name": "validate-evidence",
-        "description": "Valida um relatorio de evidencia Markdown",
-        "longDescription": "Valida um relatorio de evidencia Markdown conforme o tipo informado (task, bugfix, refactor).",
-        "args": [
-          {
-            "name": "tipo",
-            "required": true,
-            "description": "Tipo de evidencia (task, bugfix, refactor)"
-          },
-          {
-            "name": "arquivo.md",
-            "required": true,
-            "description": "Caminho para o arquivo Markdown de evidencia"
-          }
-        ],
-        "flags": {
-          "rf": {
-            "type": "string[]",
-            "required": false,
-            "description": "IDs de requisitos funcionais esperados (repetivel)"
+            "required": true
           }
         }
       },
@@ -437,50 +391,6 @@
             "description": "Valida skills contra docs/skill-schema.json"
           }
         }
-      },
-      {
-        "name": "inspect",
-        "description": "Inspeciona o estado da instalacao de governanca",
-        "longDescription": "Exibe detalhes sobre skills instaladas, ferramentas detectadas, e estado do manifesto.",
-        "args": [
-          {
-            "name": "path",
-            "required": true,
-            "description": "Caminho do projeto alvo"
-          }
-        ],
-        "flags": {
-          "focus-paths": {
-            "type": "string",
-            "required": false,
-            "description": "Caminhos de foco para contexto de monorepo"
-          },
-          "brief": {
-            "type": "bool",
-            "default": false,
-            "required": false,
-            "description": "Carrega apenas blocos TL;DR das referencias (economiza tokens)"
-          },
-          "complexity": {
-            "type": "string",
-            "default": "complex",
-            "required": false,
-            "description": "Filtra referencias por nivel de complexidade: trivial, standard, complex"
-          }
-        }
-      },
-      {
-        "name": "doctor",
-        "description": "Diagnostica problemas na instalacao de governanca",
-        "longDescription": "Executa verificacoes de saude: repositorio git, symlinks, permissoes, manifesto.",
-        "args": [
-          {
-            "name": "path",
-            "required": true,
-            "description": "Caminho do projeto alvo"
-          }
-        ],
-        "flags": {}
       },
       {
         "name": "metrics",
@@ -515,6 +425,85 @@
         }
       },
       {
+        "name": "migrate-sdd",
+        "description": "Migra estado SDD legado para o contrato v2",
+        "args": [
+          {
+            "name": "diretorio-prd",
+            "required": true
+          }
+        ],
+        "flags": {
+          "run-id": {
+            "type": "string",
+            "required": true
+          },
+          "dry-run": {
+            "type": "bool",
+            "required": false
+          },
+          "confirm": {
+            "type": "bool",
+            "required": false
+          }
+        }
+      },
+      {
+        "name": "orchestrate",
+        "description": "Valida estado SDD e inicia uma execução recuperável",
+        "args": [],
+        "flags": {
+          "run-id": {
+            "type": "string",
+            "required": false
+          }
+        }
+      },
+      {
+        "name": "prerequisites",
+        "description": "Verifica pre-condicoes de uma skill antes de executa-la",
+        "longDescription": "Verifica se os arquivos necessarios para uma skill estao presentes no projeto.",
+        "args": [
+          {
+            "name": "skill-name",
+            "required": true,
+            "description": "Nome da skill a verificar"
+          },
+          {
+            "name": "path",
+            "required": false,
+            "description": "Caminho do projeto (default: diretorio atual)"
+          }
+        ],
+        "flags": {}
+      },
+      {
+        "name": "rollback-sdd",
+        "description": "Reverte somente o estado v2 criado por uma migração",
+        "args": [
+          {
+            "name": "diretorio-prd",
+            "required": true
+          }
+        ],
+        "flags": {
+          "run-id": {
+            "type": "string",
+            "required": true
+          },
+          "confirm": {
+            "type": "bool",
+            "required": false
+          }
+        }
+      },
+      {
+        "name": "runtime-capabilities",
+        "description": "Detecta capacidades locais para orquestração segura",
+        "args": [],
+        "flags": {}
+      },
+      {
         "name": "scaffold",
         "description": "Gera scaffold de uma nova skill de linguagem",
         "longDescription": "Cria a estrutura de uma nova skill de linguagem com SKILL.md.",
@@ -531,6 +520,31 @@
             "default": ".",
             "required": false,
             "description": "Diretorio raiz para gerar o scaffold"
+          }
+        }
+      },
+      {
+        "name": "seal-evidence",
+        "description": "Vincula a evidência de uma tarefa ao commit que a contém (RF-14)",
+        "args": [
+          {
+            "name": "arquivo-resultado-json",
+            "required": true,
+            "description": "Caminho do execution-result JSON a selar ou verificar"
+          }
+        ],
+        "flags": {
+          "prd-dir": {
+            "type": "string",
+            "required": true
+          },
+          "commit": {
+            "type": "string",
+            "required": false
+          },
+          "verify": {
+            "type": "bool",
+            "required": false
           }
         }
       },
@@ -555,116 +569,64 @@
         }
       },
       {
-        "name": "changelog",
-        "description": "Gera ou atualiza o CHANGELOG.md a partir de conventional commits",
-        "longDescription": "Analisa os conventional commits desde o ultimo tag e gera uma secao de changelog.",
+        "name": "skill-bump",
+        "description": "Atualiza versao de skills cujo conteudo mudou desde a ultima tag",
+        "longDescription": "Compara skills entre a ultima tag e HEAD e atualiza os campos version no frontmatter.",
         "args": [
           {
             "name": "path",
-            "required": false,
-            "description": "Caminho do repositorio (default: diretorio atual)"
+            "required": true,
+            "description": "Caminho do repositorio alvo"
           }
         ],
         "flags": {
-          "version": {
-            "type": "string",
-            "required": true,
-            "description": "Versao para a entrada no changelog"
-          },
           "dry-run": {
-            "type": "bool",
-            "default": false,
+            "type": "boolean",
             "required": false,
-            "description": "Exibe o changelog sem gravar o arquivo"
+            "description": "Exibe as mudancas sem alterar arquivos"
           }
         }
       },
       {
-        "name": "telemetry",
-        "description": "Gerencia telemetria de uso de skills",
-        "longDescription": "Comando pai para subcomandos de telemetria.",
-        "args": [],
-        "flags": {},
+        "name": "skills",
+        "description": "Gerencia skills externas e detecta mudancas de versao",
+        "longDescription": "Verifica versoes de skills externas contra skills-lock.json.",
+        "args": [
+          {
+            "name": "path",
+            "required": false,
+            "description": "Caminho do projeto (usado com --verify; default: diretorio atual)"
+          }
+        ],
+        "flags": {
+          "verify": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Gate de integridade: versao sem breaking + hash SHA-256 igual ao lock (exit != 0 em divergencia)"
+          }
+        },
         "subcommands": [
           {
-            "name": "log",
-            "description": "Registra uso de skill em telemetria (requer GOVERNANCE_TELEMETRY=1)",
+            "name": "check",
+            "description": "Verifica versoes de skills externas contra skills-lock.json",
             "args": [
               {
-                "name": "skill",
-                "required": true,
-                "description": "Nome da skill utilizada"
-              },
-              {
-                "name": "ref",
+                "name": "path",
                 "required": false,
-                "description": "Referencia opcional (branch, PR, etc)"
+                "description": "Caminho do projeto (default: diretorio atual)"
               }
             ],
-            "flags": {}
-          },
-          {
-            "name": "summary",
-            "description": "Exibe resumo de telemetria agrupado por skill e referencia",
-            "args": [],
             "flags": {
-              "since": {
-                "type": "string",
-                "required": false,
-                "description": "Filtra registros a partir de uma data (formato ISO 8601)"
-              }
-            }
-          },
-          {
-            "name": "report",
-            "description": "Exibe relatório acionável de telemetria com métricas e alertas",
-            "args": [],
-            "flags": {
-              "since": {
-                "type": "string",
-                "required": false,
-                "description": "Filtrar por período (ex: 24h, 168h)"
-              },
-              "format": {
-                "type": "string",
-                "default": "text",
-                "required": false,
-                "description": "Formato de saída: text ou json"
-              },
-              "trend": {
+              "force": {
                 "type": "bool",
                 "default": false,
                 "required": false,
-                "description": "Exibe evolucao de invocacoes por semana (ultimas 4 semanas)"
-              },
-              "top-skills": {
-                "type": "bool",
-                "default": false,
-                "required": false,
-                "description": "Exibe ranking de skills por frequencia de uso"
-              },
-              "budget-check": {
-                "type": "bool",
-                "default": false,
-                "required": false,
-                "description": "Alerta se alguma skill excedeu o budget de invocacoes esperado"
+                "description": "Aceita breaking changes sem bloquear (exit code 0)"
               }
             }
           }
         ]
-      },
-      {
-        "name": "check-spec-drift",
-        "description": "Verifica cobertura de requisitos e drift de spec em relacao a tasks.md",
-        "longDescription": "Verifica se os IDs de requisitos (RF-nn, REQ-nn) definidos em prd.md e/ou tasks.md estao cobertos.",
-        "args": [
-          {
-            "name": "tasks.md",
-            "required": true,
-            "description": "Caminho para o arquivo tasks.md"
-          }
-        ],
-        "flags": {}
       },
       {
         "name": "sync-spec-hash",
@@ -675,75 +637,6 @@
             "name": "tasks.md",
             "required": true,
             "description": "Caminho para o arquivo tasks.md"
-          }
-        ],
-        "flags": {}
-      },
-      {
-        "name": "approve",
-        "description": "Aprova um artefato SDD e registra seu digest imutável",
-        "args": [],
-        "flags": {}
-      },
-      {
-        "name": "invalidate",
-        "description": "Invalida artefatos downstream aprovados",
-        "args": [],
-        "flags": {
-          "from": { "type": "string", "required": true }
-        }
-      },
-      {
-        "name": "orchestrate",
-        "description": "Valida estado SDD e inicia uma execução recuperável",
-        "args": [],
-        "flags": {
-          "run-id": { "type": "string", "required": false }
-        }
-      },
-      {
-        "name": "runtime-capabilities",
-        "description": "Detecta capacidades locais para orquestração segura",
-        "args": [],
-        "flags": {}
-      },
-      {
-        "name": "validate-sdd",
-        "description": "Valida o contrato SDD versionado de um PRD",
-        "args": [],
-        "flags": {}
-      },
-      {
-        "name": "validate-result",
-        "description": "Valida um resultado SDD JSON versionado",
-        "args": [
-          {
-            "name": "tipo",
-            "required": true,
-            "description": "Tipo do resultado: execution, review ou checkpoint"
-          },
-          {
-            "name": "arquivo-json",
-            "required": true,
-            "description": "Caminho do resultado JSON"
-          }
-        ],
-        "flags": {
-          "task-id": { "type": "string", "required": false },
-          "verify-physical": { "type": "bool", "required": false },
-          "prd-dir": { "type": "string", "required": false },
-          "exclude": { "type": "stringSlice", "required": false }
-        }
-      },
-      {
-        "name": "hash",
-        "description": "Calcula SHA-256 de um arquivo de forma portavel",
-        "longDescription": "Calcula o SHA-256 de um arquivo usando a implementacao Go embarcada no ai-spec-harness, sem depender de binarios externos como sha256sum ou shasum.",
-        "args": [
-          {
-            "name": "file",
-            "required": true,
-            "description": "Caminho para o arquivo a hashear"
           }
         ],
         "flags": {}
@@ -931,6 +824,100 @@
         }
       },
       {
+        "name": "telemetry",
+        "description": "Gerencia telemetria de uso de skills",
+        "longDescription": "Comando pai para subcomandos de telemetria.",
+        "args": [],
+        "flags": {},
+        "subcommands": [
+          {
+            "name": "log",
+            "description": "Registra uso de skill em telemetria (requer GOVERNANCE_TELEMETRY=1)",
+            "args": [
+              {
+                "name": "skill",
+                "required": true,
+                "description": "Nome da skill utilizada"
+              },
+              {
+                "name": "ref",
+                "required": false,
+                "description": "Referencia opcional (branch, PR, etc)"
+              }
+            ],
+            "flags": {}
+          },
+          {
+            "name": "summary",
+            "description": "Exibe resumo de telemetria agrupado por skill e referencia",
+            "args": [],
+            "flags": {
+              "since": {
+                "type": "string",
+                "required": false,
+                "description": "Filtra registros a partir de uma data (formato ISO 8601)"
+              }
+            }
+          },
+          {
+            "name": "report",
+            "description": "Exibe relatório acionável de telemetria com métricas e alertas",
+            "args": [],
+            "flags": {
+              "since": {
+                "type": "string",
+                "required": false,
+                "description": "Filtrar por período (ex: 24h, 168h)"
+              },
+              "format": {
+                "type": "string",
+                "default": "text",
+                "required": false,
+                "description": "Formato de saída: text ou json"
+              },
+              "trend": {
+                "type": "bool",
+                "default": false,
+                "required": false,
+                "description": "Exibe evolucao de invocacoes por semana (ultimas 4 semanas)"
+              },
+              "top-skills": {
+                "type": "bool",
+                "default": false,
+                "required": false,
+                "description": "Exibe ranking de skills por frequencia de uso"
+              },
+              "budget-check": {
+                "type": "bool",
+                "default": false,
+                "required": false,
+                "description": "Alerta se alguma skill excedeu o budget de invocacoes esperado"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "uninstall",
+        "description": "Remove governanca de IA de um projeto",
+        "longDescription": "Remove artefatos de governanca instalados pelo comando install.",
+        "args": [
+          {
+            "name": "path",
+            "required": true,
+            "description": "Caminho do projeto alvo"
+          }
+        ],
+        "flags": {
+          "dry-run": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Simula a remocao sem alterar o filesystem"
+          }
+        }
+      },
+      {
         "name": "update-version",
         "description": "Atualiza o arquivo VERSION com validacao semver",
         "longDescription": "Atualiza o arquivo VERSION com a versao especificada, validando o formato semver.",
@@ -946,6 +933,184 @@
             "default": "VERSION",
             "required": false,
             "description": "Caminho do arquivo de versao"
+          }
+        }
+      },
+      {
+        "name": "upgrade",
+        "description": "Atualiza skills de governanca em um projeto",
+        "longDescription": "Verifica ou atualiza skills de governanca comparando versoes e checksums.",
+        "args": [
+          {
+            "name": "path",
+            "required": true,
+            "description": "Caminho do projeto alvo"
+          }
+        ],
+        "flags": {
+          "check": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Apenas verifica se ha atualizacoes disponiveis"
+          },
+          "langs": {
+            "type": "string",
+            "required": false,
+            "description": "Linguagens do projeto"
+          },
+          "source": {
+            "type": "string",
+            "required": false,
+            "description": "Caminho alternativo para o pacote de governanca"
+          },
+          "ref": {
+            "type": "string",
+            "required": false,
+            "description": "Git ref (branch, tag ou commit) para resolver pacote remoto"
+          },
+          "follow-external-symlinks": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Permite escrever em .agents/skills quando symlink aponta para fora do projeto"
+          }
+        }
+      },
+      {
+        "name": "validate",
+        "description": "Valida frontmatter de skills de governanca",
+        "longDescription": "Valida que todos os SKILL.md possuem frontmatter YAML valido.",
+        "args": [
+          {
+            "name": "path",
+            "required": false,
+            "description": "Caminho do projeto (default: diretorio atual)"
+          }
+        ],
+        "flags": {}
+      },
+      {
+        "name": "validate-bugs",
+        "description": "Valida um array de bugs contra bug-schema.json",
+        "longDescription": "Valida o array JSON de bugs contra o schema canonico de bugs.",
+        "args": [
+          {
+            "name": "bugs.json",
+            "required": true,
+            "description": "Caminho para o arquivo JSON de bugs"
+          }
+        ],
+        "flags": {
+          "schema": {
+            "type": "string",
+            "required": false,
+            "description": "Caminho para schema JSON customizado"
+          }
+        }
+      },
+      {
+        "name": "validate-evidence",
+        "description": "Valida um relatorio de evidencia Markdown",
+        "longDescription": "Valida um relatorio de evidencia Markdown conforme o tipo informado (task, bugfix, refactor).",
+        "args": [
+          {
+            "name": "tipo",
+            "required": true,
+            "description": "Tipo de evidencia (task, bugfix, refactor)"
+          },
+          {
+            "name": "arquivo.md",
+            "required": true,
+            "description": "Caminho para o arquivo Markdown de evidencia"
+          }
+        ],
+        "flags": {
+          "rf": {
+            "type": "string[]",
+            "required": false,
+            "description": "IDs de requisitos funcionais esperados (repetivel)"
+          }
+        }
+      },
+      {
+        "name": "validate-result",
+        "description": "Valida um resultado SDD JSON versionado",
+        "args": [
+          {
+            "name": "tipo",
+            "required": true,
+            "description": "Tipo do resultado: execution, review ou checkpoint"
+          },
+          {
+            "name": "arquivo-json",
+            "required": true,
+            "description": "Caminho do resultado JSON"
+          }
+        ],
+        "flags": {
+          "task-id": {
+            "type": "string",
+            "required": false
+          },
+          "verify-physical": {
+            "type": "bool",
+            "required": false
+          },
+          "prd-dir": {
+            "type": "string",
+            "required": false
+          },
+          "exclude": {
+            "type": "stringSlice",
+            "required": false
+          }
+        }
+      },
+      {
+        "name": "validate-sdd",
+        "description": "Valida o contrato SDD versionado de um PRD",
+        "args": [],
+        "flags": {}
+      },
+      {
+        "name": "verify",
+        "description": "Verifica o estado de instalacao das skills (current/missing/drifted)",
+        "longDescription": "Verifica o estado de instalacao das skills de governanca em um projeto. Reporta cada skill como current (ok), missing (ausente) ou drifted (divergente). Reusa o comparador de checksum do modulo de upgrade (file-first).",
+        "args": [
+          {
+            "name": "path",
+            "required": false,
+            "description": "Caminho do projeto alvo (padrao: diretorio atual)"
+          }
+        ],
+        "flags": {
+          "tools": {
+            "type": "string",
+            "required": false,
+            "description": "Ferramentas a verificar: claude,gemini,codex,copilot ou all"
+          },
+          "langs": {
+            "type": "string",
+            "required": false,
+            "description": "Linguagens: go,node,python ou all"
+          },
+          "source": {
+            "type": "string",
+            "required": false,
+            "description": "Diretorio fonte do repositorio de governanca (usa embutido se omitido)"
+          },
+          "global": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Verifica a instalacao global em ~/.aispec"
+          },
+          "by-cli": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Adiciona resumo por-CLI (claude/codex/copilot) ao output"
           }
         }
       },
@@ -988,103 +1153,6 @@
           }
         ],
         "flags": {}
-      },
-      {
-        "name": "skills",
-        "description": "Gerencia skills externas e detecta mudancas de versao",
-        "longDescription": "Verifica versoes de skills externas contra skills-lock.json.",
-        "args": [
-          {
-            "name": "path",
-            "required": false,
-            "description": "Caminho do projeto (usado com --verify; default: diretorio atual)"
-          }
-        ],
-        "flags": {
-          "verify": {
-            "type": "bool",
-            "default": false,
-            "required": false,
-            "description": "Gate de integridade: versao sem breaking + hash SHA-256 igual ao lock (exit != 0 em divergencia)"
-          }
-        },
-        "subcommands": [
-          {
-            "name": "check",
-            "description": "Verifica versoes de skills externas contra skills-lock.json",
-            "args": [
-              {
-                "name": "path",
-                "required": false,
-                "description": "Caminho do projeto (default: diretorio atual)"
-              }
-            ],
-            "flags": {
-              "force": {
-                "type": "bool",
-                "default": false,
-                "required": false,
-                "description": "Aceita breaking changes sem bloquear (exit code 0)"
-              }
-            }
-          }
-        ]
-      },
-      {
-        "name": "prerequisites",
-        "description": "Verifica pre-condicoes de uma skill antes de executa-la",
-        "longDescription": "Verifica se os arquivos necessarios para uma skill estao presentes no projeto.",
-        "args": [
-          {
-            "name": "skill-name",
-            "required": true,
-            "description": "Nome da skill a verificar"
-          },
-          {
-            "name": "path",
-            "required": false,
-            "description": "Caminho do projeto (default: diretorio atual)"
-          }
-        ],
-        "flags": {}
-      },
-      {
-        "name": "migrate-sdd",
-        "description": "Migra estado SDD legado para o contrato v2",
-        "args": [{"name": "diretorio-prd", "required": true}],
-        "flags": {
-          "run-id": {"type": "string", "required": true},
-          "dry-run": {"type": "bool", "required": false},
-          "confirm": {"type": "bool", "required": false}
-        }
-      },
-      {
-        "name": "rollback-sdd",
-        "description": "Reverte somente o estado v2 criado por uma migração",
-        "args": [{"name": "diretorio-prd", "required": true}],
-        "flags": {
-          "run-id": {"type": "string", "required": true},
-          "confirm": {"type": "bool", "required": false}
-        }
-      },
-      {
-        "name": "skill-bump",
-        "description": "Atualiza versao de skills cujo conteudo mudou desde a ultima tag",
-        "longDescription": "Compara skills entre a ultima tag e HEAD e atualiza os campos version no frontmatter.",
-        "args": [
-          {
-            "name": "path",
-            "required": true,
-            "description": "Caminho do repositorio alvo"
-          }
-        ],
-        "flags": {
-          "dry-run": {
-            "type": "boolean",
-            "required": false,
-            "description": "Exibe as mudancas sem alterar arquivos"
-          }
-        }
       }
     ]
   }

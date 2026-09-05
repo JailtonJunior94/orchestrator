@@ -171,6 +171,23 @@ mesmos gates que Claude. As skills resolvem em cascata `.agents/scripts/` -> `.c
 - `validate-refactor-evidence.sh` — evidencia de nao-regressao.
 - `validate-review-evidence.sh` — evidencia do modo `--auto-review` (veredito + severidade).
 
+### Selo de evidencia (RF-14)
+
+A prova de fechamento e verificada contra a arvore de trabalho viva, que deixa de existir quando o
+trabalho e commitado — por isso ela nao e re-auditavel depois. `ai-spec seal-evidence` fecha essa
+lacuna gravando `commit_sha` e `commit_patch_sha256` (o patch recomputado em `base..commit` com as
+mesmas exclusoes do fechamento):
+
+```bash
+ai-spec seal-evidence .specs/prd-x/result.json --prd-dir .specs/prd-x   # selar apos commitar
+ai-spec seal-evidence .specs/prd-x/result.json --prd-dir .specs/prd-x --verify
+```
+
+O selo exige que o commit descenda da base registrada e recusa reselagem. A verificacao nao toca a
+arvore de trabalho, entao permanece valida indefinidamente. Limite: o selo torna a evidencia
+imutavel e reverificavel dali em diante, mas nao prova que o commit e byte-identico a arvore do
+fechamento — essa arvore ja nao existe quando o selo e aplicado.
+
 `AI_SDD_STRICT_EVIDENCE=1` fecha os escapes de compatibilidade de
 `validate-task-evidence.sh` (NFR-01): um relatorio cuja task file nao seja resolvivel pelo campo
 `Arquivo:`, ou cuja task nao declare secao de criterios, passa a falhar em vez de emitir aviso.

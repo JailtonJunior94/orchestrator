@@ -123,6 +123,12 @@
 ### Funcionalidades
 - **scripts:** `AI_SDD_STRICT_EVIDENCE=1` fecha os escapes de compatibilidade de `validate-task-evidence.sh` (NFR-01), fazendo falhar o relatório cuja task file não seja resolvível ou cuja task não declare seção de critérios
 
+### Funcionalidades
+- **sdd:** `ai-spec seal-evidence` vincula a evidência de uma tarefa ao commit que a contém (RF-14). A prova de fechamento depende da árvore de trabalho viva e evapora no commit; o selo grava `commit_sha` + `commit_patch_sha256` e torna a evidência re-auditável indefinidamente, a partir apenas dos dois SHAs
+
+### Correções
+- **sdd:** um artefato aprovado e depois editado ficava travado para sempre — constava como `approved` (reaprovação recusada) mas com digest divergente (todo downstream falhando), e `invalidate --from` marca os descendentes, nunca a origem. Um PRD aprovado não podia ser emendado
+
 ### Depreciações
 - **scripts:** os escapes de legado do gate de critérios de aceite passam a emitir aviso com prazo explícito e **serão removidos em `v0.31.0`**, quando o modo estrito vira o padrão. A janela de duas versões menores concedida por NFR-01 cobre `0.29` e `0.30`. Para validar desde já, exporte `AI_SDD_STRICT_EVIDENCE=1`
 
