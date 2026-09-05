@@ -29,7 +29,7 @@ integration:
 lint:
 	@echo "Running linter..."
 	@echo "Installing golangci-lint..."
-	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.2.1
+	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
 	GOGC=20 golangci-lint run --config .golangci.yml --timeout 10m --verbose
 
 vet:
