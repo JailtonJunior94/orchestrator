@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -59,6 +60,15 @@ func (s *Service) FindLastTag(repoPath string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+// _breakingFooterRe casa o footer BREAKING CHANGE do Conventional Commits: token
+// no inicio da linha, seguido de dois-pontos. A verificacao anterior usava
+// strings.Contains, entao qualquer mencao em prosa disparava um bump major —
+// inclusive um commit que apenas documentasse esta regra, que foi como a v1.0.0
+// acabou sendo publicada no lugar da 0.31.0.
+//
+// A spec aceita as duas grafias, com espaco e com hifen.
+var _breakingFooterRe = regexp.MustCompile(`(?m)^[[:space:]]*BREAKING[ -]CHANGE[[:space:]]*:`)
+
 // ParseConventionalCommits parses commits in the given range.
 func (s *Service) ParseConventionalCommits(repoPath, commitRange string) ([]Commit, error) {
 	cmd := exec.Command("git", "-C", repoPath, "log", "--format=%H %s", commitRange)
@@ -80,10 +90,10 @@ func (s *Service) ParseConventionalCommits(repoPath, commitRange string) ([]Comm
 		commits = append(commits, c)
 	}
 
-	// Also check commit bodies for BREAKING CHANGE footer.
+	// Also check commit bodies for the BREAKING CHANGE footer.
 	for i, c := range commits {
 		body, err := s.getCommitBody(repoPath, c.Hash)
-		if err == nil && strings.Contains(body, "BREAKING CHANGE") {
+		if err == nil && _breakingFooterRe.MatchString(body) {
 			commits[i].Breaking = true
 		}
 	}
@@ -103,7 +113,7 @@ func (s *Service) getCommitBody(repoPath, hash string) (string, error) {
 func (s *Service) parseCommit(hash, subject string) Commit {
 	c := Commit{Hash: hash, Raw: subject}
 
-	if strings.Contains(subject, "BREAKING CHANGE") {
+	if _breakingFooterRe.MatchString(subject) {
 		c.Breaking = true
 	}
 
