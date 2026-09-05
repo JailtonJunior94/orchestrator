@@ -60,7 +60,9 @@ jobs:
         continue-on-error: true
         run: |
           go test -fuzz=FuzzParseFrontmatter -fuzztime=10s ./internal/skills/
+          go test -fuzz=FuzzValidateFrontmatter -fuzztime=10s ./internal/skills/
           go test -fuzz=FuzzParseTaskFile -fuzztime=10s ./internal/taskloop/
+          go test -fuzz=FuzzReadTaskFileStatus -fuzztime=10s ./internal/taskloop/
           go test -fuzz=FuzzValidateBugReport -fuzztime=10s ./internal/bugschema/
           go test -fuzz=FuzzParseConfig -fuzztime=10s ./internal/config/
           go test -fuzz=FuzzParseManifest -fuzztime=10s ./internal/manifest/
@@ -106,6 +108,9 @@ jobs:
 
       - name: Evidence validator tests
         run: make test-validators
+
+      - name: Portable skills contract gate
+        run: make test-portable-skills
 
       - name: Setup Shellcheck (Linux)
         if: runner.os == 'Linux'
