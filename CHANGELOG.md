@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.0 (2026-09-05)
+
+### Features
+
+### Documentation
+- **sdd:** integra o selo ao fluxo e documenta o ciclo de vida (b3b176a)
+
+### Breaking Changes
+- **scripts:** fecha o gate de aceite fail-open por padrao (b2508a1)
+
 ## 0.30.0 (2026-09-05)
 
 ### Features
