@@ -1,7 +1,6 @@
 package specdrift
 
 import (
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"os"
@@ -10,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/sdd"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/specdigest"
 )
 
 // SyncSpecHash recomputa os SHA-256 de prd.md e techspec.md encontrados no
@@ -45,8 +45,7 @@ func (c *Catalog) SyncSpecHash(tasksPath string) error {
 			continue
 		}
 
-		sum := sha256.Sum256(specBytes)
-		hash := fmt.Sprintf("%x", sum)
+		hash := specdigest.Canonical(specBytes)
 		toInsert = append(toInsert, fmt.Sprintf("<!-- spec-hash-%s: %s -->", spec.label, hash))
 	}
 

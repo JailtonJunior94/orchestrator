@@ -1,0 +1,19 @@
+# Terminadores de linha normalizados no checkout.
+#
+# Sem isto, o Git for Windows (core.autocrlf=true por padrao) reescreve LF como
+# CRLF e altera o conteudo dos artefatos: digests de spec divergem, fixtures
+# deterministicas dos gates deixam de bater e scripts shell falham sob bash.
+# O digest canonico (internal/specdigest) ja normaliza por conta propria; isto e
+# a segunda camada, para fixtures e scripts.
+
+*        text=auto eol=lf
+
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.ico    binary
+*.pdf    binary
+*.zip    binary
+*.gz     binary
+*.exe    binary

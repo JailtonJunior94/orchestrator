@@ -291,3 +291,19 @@ func TestCheckDrift_HashFail(t *testing.T) {
 		t.Error("expected Pass=false due to hash mismatch")
 	}
 }
+
+// TestCheckHash_CRLFNaoGeraDrift cobre o checkout Windows com core.autocrlf=true:
+// o mesmo artefato reescrito com CRLF nao pode divergir do hash registrado em LF,
+// senao todo PRD aprovado apareceria como drift fora de Linux/macOS.
+func TestCheckHash_CRLFNaoGeraDrift(t *testing.T) {
+	specLF := []byte("# PRD\n\n- RF-01: exemplo\n")
+	sum := sha256.Sum256(specLF)
+	tasks := []byte(fmt.Sprintf("<!-- spec-hash-prd: %x -->\n# Tasks\n", sum))
+
+	specCRLF := []byte("# PRD\r\n\r\n- RF-01: exemplo\r\n")
+
+	result := specdrift.NewCatalog().CheckHash(specCRLF, tasks, "prd")
+	if !result.Match {
+		t.Fatalf("CRLF gerou drift indevido: esperado=%s obtido=%s", result.ExpectedHash, result.ActualHash)
+	}
+}
