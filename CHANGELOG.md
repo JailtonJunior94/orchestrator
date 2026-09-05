@@ -97,6 +97,22 @@
 
 ## [Unreleased]
 
+### Correções
+- **scripts:** o gate de critérios de aceite voltava `exit 0` para relatórios com critério não comprovado em runners com `awk` byte-oriented (mawk, padrão no Linux). A classe de bracket multibyte `Crit[eé]rios` nunca casava, o gate se desligava sozinho e a evidência passava sem prova — fail-open no invariante que RF-01/RF-03 exigem fail-closed
+- **sdd:** digest de spec deixava de bater em checkout com `core.autocrlf=true` (padrão do Git for Windows), marcando artefatos aprovados como `stale` sem ninguém tê-los editado. Afetava qualquer usuário de Windows, não só a CI
+- **fs:** `FakeFileSystem` comparava containment de diretório com `/` fixo e ficava cego ao separador nativo do Windows, quebrando a descoberta de agentes
+- **taskloop:** `panic: index out of range` em `ParseTasksFile` com header de tabela parcial
+
+### Funcionalidades
+- **scripts:** `AI_SDD_STRICT_EVIDENCE=1` fecha os escapes de compatibilidade de `validate-task-evidence.sh` (NFR-01), fazendo falhar o relatório cuja task file não seja resolvível ou cuja task não declare seção de critérios
+
+### Depreciações
+- **scripts:** os escapes de legado do gate de critérios de aceite passam a emitir aviso com prazo explícito e **serão removidos em `v0.31.0`**, quando o modo estrito vira o padrão. A janela de duas versões menores concedida por NFR-01 cobre `0.29` e `0.30`. Para validar desde já, exporte `AI_SDD_STRICT_EVIDENCE=1`
+
+### CI
+- **test.yml:** `fuzz` e `coverage por pacote` deixam de ser `continue-on-error` e passam a reprovar o job — o panic em `ParseTasksFile` estava no corpus e escapou por semanas porque a CI o encontrava e seguia verde
+- **test.yml:** passo de fuzz recupera paridade com `make fuzz` (9 alvos) e `make test-portable-skills` passa a rodar
+
 ### Funcionalidades
 - **skills:** adiciona skill `dotnet-csharp-implementation` com SKILL.md + 17 referências para implementação .NET 10/C# 14, espelhada em `.agents/`, `.claude/`, `.github/` e `internal/embedded/assets/`
 - **detect:** adiciona detecção automática de projetos .NET/C# (`.csproj`, `*.sln`, `.NET`)

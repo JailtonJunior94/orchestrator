@@ -174,7 +174,10 @@ mesmos gates que Claude. As skills resolvem em cascata `.agents/scripts/` -> `.c
 `AI_SDD_STRICT_EVIDENCE=1` fecha os escapes de compatibilidade de
 `validate-task-evidence.sh` (NFR-01): um relatorio cuja task file nao seja resolvivel pelo campo
 `Arquivo:`, ou cuja task nao declare secao de criterios, passa a falhar em vez de emitir aviso.
-Sem a variavel o comportamento warning-only da janela de compatibilidade e preservado.
+Sem a variavel o comportamento warning-only da janela de compatibilidade e preservado. Essa
+janela fecha em **v0.31.0**: NFR-01 concede warning-only por duas versoes menores, o fluxo SDD
+entrou em `0.29.0`, e a partir de `0.31.0` o modo estrito passa a ser o padrao. O validador ja
+anuncia o prazo em toda execucao que usa o escape.
 
 As expressoes regulares desses validadores nao podem usar classes de bracket com caracteres
 multibyte (`Crit[eé]rios`): em `awk` byte-oriented (mawk, padrao nos runners Linux) elas nunca
