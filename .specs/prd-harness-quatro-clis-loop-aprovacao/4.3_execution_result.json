@@ -1,0 +1,88 @@
+{
+  "schema_version": 2,
+  "run_id": "task-4.3-extrator-criterios-e-adaptador-taskloop-2026-09-10",
+  "task_id": "4.3",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "f8c23fb0202c4052dcfca7d55be2a23cae930961",
+  "patch_sha256": "93eaa90f70d6b33f8d9ff8b65e97cc60a2f1492c0b920d8d9166ef11315386a6",
+  "patch_ref": "evidence/task-4.3/4.3.patch",
+  "final_state_sha256": "ea79093915fb8e9aaea55b10d6ebc4b41d844a6c8dd875486b9f9773f9e7440a",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./... && go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "f0dabcec9b6854e166812652419858875b2a95e68d9ed37f902692cda88c77fa"
+    },
+    {
+      "command": "go test -tags=integration ./internal/taskloop/... -count=1",
+      "exit_code": 0,
+      "output_sha256": "aa9c545f15a25523928a066135ed9f1faf2c95e1ee631ed8e4ecfe5ba81803ec"
+    },
+    {
+      "command": "go test ./internal/taskcriteria/... ./internal/taskloop/... -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "3fbe9bcf3f3131f129f0f3d8a0be50529b6db33fd95944d5ebf1b58feef09a90"
+    },
+    {
+      "command": "make check-spec-paths check-skills-sync check-scripts-sync check-hooks-sync check-mocks",
+      "exit_code": 0,
+      "output_sha256": "8e854777134d4a8ed47603c939e7ba667d15b3ccad91e5bd89e433c4b4f74f1e"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "RF-34-taskcriteria-extract-leaf-package-green",
+      "evidence_ref": "evidence/task-4.3/unit-tests.log"
+    },
+    {
+      "id": "RF-34-approval-adapters-reference-approval-package",
+      "evidence_ref": "evidence/task-4.3/grep-approval.log"
+    },
+    {
+      "id": "RF-34-adapters-no-verdict-decision-logic-no-verdict-read",
+      "evidence_ref": "evidence/task-4.3/grep-verdict.log"
+    },
+    {
+      "id": "RF-34-diff-scope-new-files-plus-acceptance-delegation-only",
+      "evidence_ref": "evidence/task-4.3/diff-stat.log"
+    },
+    {
+      "id": "RF-34-taskloop-suite-green-without-assertion-changes",
+      "evidence_ref": "evidence/task-4.3/unit-tests.log"
+    },
+    {
+      "id": "RF-34-t-rev-01-02-04-untouched-and-green",
+      "evidence_ref": "evidence/task-4.3/build-vet-test.log"
+    },
+    {
+      "id": "R-STYLE-001-new-code-english-zero-comments-no-underscore-prefix",
+      "evidence_ref": "evidence/task-4.3/4.3.patch"
+    },
+    {
+      "id": "make-sync-gates-green",
+      "evidence_ref": "evidence/task-4.3/sync-gates.log"
+    },
+    {
+      "id": "build-vet-test-green",
+      "evidence_ref": "evidence/task-4.3/build-vet-test.log"
+    },
+    {
+      "id": "integration-taskloop-green",
+      "evidence_ref": "evidence/task-4.3/integration.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-4.3/4.3.patch",
+    "evidence/task-4.3/build-vet-test.log",
+    "evidence/task-4.3/integration.log",
+    "evidence/task-4.3/unit-tests.log",
+    "evidence/task-4.3/sync-gates.log",
+    "evidence/task-4.3/grep-approval.log",
+    "evidence/task-4.3/grep-verdict.log",
+    "evidence/task-4.3/diff-stat.log",
+    "evidence/task-4.3/review.md"
+  ],
+  "review_verdict": "approved"
+}

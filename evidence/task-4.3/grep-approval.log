@@ -1,0 +1,7 @@
+12:	_ approval.Reviewer   = (*reviewerPort)(nil)
+13:	_ approval.Fixer      = (*fixerPort)(nil)
+14:	_ approval.Repository = (*repositoryPort)(nil)
+32:func (p *reviewerPort) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
+35:		return approval.ReviewerOutput{}, err
+count:
+35

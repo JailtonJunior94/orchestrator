@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria"
 )
 
 // ErrAcceptanceFailed indica que a task nao cumpriu todos os criterios de aceite.
@@ -92,59 +93,6 @@ func (g *defaultAcceptanceGate) Verify(ctx context.Context, task TaskEntry, task
 	return report, nil
 }
 
-// parseCriteriaFromTaskFile extrai os criterios de aceite da secao "## Definition of Done"
-// ou "## Criterios de Sucesso" do arquivo da task. Retorna todos os criterios e os nao marcados.
 func (c *Catalog) parseCriteriaFromTaskFile(data []byte) (allCriteria []string, missing []string) {
-	lines := strings.Split(string(data), "\n")
-
-	inSection := false
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-
-		// Detectar inicio da secao de criterios
-		if NewCatalog().isAcceptanceSection(trimmed) {
-			inSection = true
-			continue
-		}
-
-		// Parar na proxima secao de nivel equivalente
-		if inSection && strings.HasPrefix(trimmed, "## ") && !NewCatalog().isAcceptanceSection(trimmed) {
-			break
-		}
-
-		if !inSection {
-			continue
-		}
-
-		// Capturar itens de checklist: "- [ ] texto" ou "- [x] texto"
-		if strings.HasPrefix(trimmed, "- [") {
-			// item = "x] texto" ou " ] texto"
-			item := trimmed[3:]
-			if len(item) < 2 {
-				continue
-			}
-			checked := item[0] == 'x' || item[0] == 'X'
-			// Remover "] " ou "]"
-			rest := item[1:]
-			rest = strings.TrimPrefix(rest, "]")
-			text := strings.TrimSpace(rest)
-			if text == "" {
-				continue
-			}
-			allCriteria = append(allCriteria, text)
-			if !checked {
-				missing = append(missing, text)
-			}
-		}
-	}
-
-	return allCriteria, missing
-}
-
-func (c *Catalog) isAcceptanceSection(line string) bool {
-	lower := strings.ToLower(line)
-	return strings.HasPrefix(lower, "## definition of done") ||
-		strings.HasPrefix(lower, "## criterios de sucesso") ||
-		strings.HasPrefix(lower, "## critérios de sucesso") ||
-		strings.HasPrefix(lower, "## acceptance criteria")
+	return taskcriteria.Extract(data), taskcriteria.Pending(data)
 }

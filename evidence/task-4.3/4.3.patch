@@ -1,0 +1,716 @@
+diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+index ffa5143..3fc9b0b 100644
+--- a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+@@ -28,7 +28,7 @@
+ | 3.0 | Mapa 1:1 critério-evidência como dado verificável | done | 1.0 | Com 2.0 | — |
+ | 4.1 | Veredito da fonte real do revisor e adaptadores das portas (D1) | done | 2.0, 3.0 | Não | — |
+ | 4.2 | Evidência por rodada, revisão por delta e reset de profundidade (D2) | done | 4.1 | Não | — |
+-| 4.3 | Extrator de critérios compartilhado e adaptador de portas em taskloop | pending | 4.2 | Não | — |
++| 4.3 | Extrator de critérios compartilhado e adaptador de portas em taskloop | done | 4.2 | Não | — |
+ | 4.4 | Service.Execute conduz o Cycle (critérios por task, estabelece o padrão) | pending | 4.3 | Não | — |
+ | 4.5 | Adequação das fixtures de revisão ao contrato de texto bruto | pending | 4.4 | Não | — |
+ | 4.6 | RunLoop conduz o Cycle; BugfixLoop reduzido a projetor de evidência | pending | 4.5 | Não | — |
+diff --git a/internal/taskloop/acceptance.go b/internal/taskloop/acceptance.go
+index 65306fc..0a8b01c 100644
+--- a/internal/taskloop/acceptance.go
++++ b/internal/taskloop/acceptance.go
+@@ -7,6 +7,7 @@ import (
+ 	"strings"
+ 
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria"
+ )
+ 
+ // ErrAcceptanceFailed indica que a task nao cumpriu todos os criterios de aceite.
+@@ -92,59 +93,6 @@ func (g *defaultAcceptanceGate) Verify(ctx context.Context, task TaskEntry, task
+ 	return report, nil
+ }
+ 
+-// parseCriteriaFromTaskFile extrai os criterios de aceite da secao "## Definition of Done"
+-// ou "## Criterios de Sucesso" do arquivo da task. Retorna todos os criterios e os nao marcados.
+ func (c *Catalog) parseCriteriaFromTaskFile(data []byte) (allCriteria []string, missing []string) {
+-	lines := strings.Split(string(data), "\n")
+-
+-	inSection := false
+-	for _, line := range lines {
+-		trimmed := strings.TrimSpace(line)
+-
+-		// Detectar inicio da secao de criterios
+-		if NewCatalog().isAcceptanceSection(trimmed) {
+-			inSection = true
+-			continue
+-		}
+-
+-		// Parar na proxima secao de nivel equivalente
+-		if inSection && strings.HasPrefix(trimmed, "## ") && !NewCatalog().isAcceptanceSection(trimmed) {
+-			break
+-		}
+-
+-		if !inSection {
+-			continue
+-		}
+-
+-		// Capturar itens de checklist: "- [ ] texto" ou "- [x] texto"
+-		if strings.HasPrefix(trimmed, "- [") {
+-			// item = "x] texto" ou " ] texto"
+-			item := trimmed[3:]
+-			if len(item) < 2 {
+-				continue
+-			}
+-			checked := item[0] == 'x' || item[0] == 'X'
+-			// Remover "] " ou "]"
+-			rest := item[1:]
+-			rest = strings.TrimPrefix(rest, "]")
+-			text := strings.TrimSpace(rest)
+-			if text == "" {
+-				continue
+-			}
+-			allCriteria = append(allCriteria, text)
+-			if !checked {
+-				missing = append(missing, text)
+-			}
+-		}
+-	}
+-
+-	return allCriteria, missing
+-}
+-
+-func (c *Catalog) isAcceptanceSection(line string) bool {
+-	lower := strings.ToLower(line)
+-	return strings.HasPrefix(lower, "## definition of done") ||
+-		strings.HasPrefix(lower, "## criterios de sucesso") ||
+-		strings.HasPrefix(lower, "## critérios de sucesso") ||
+-		strings.HasPrefix(lower, "## acceptance criteria")
++	return taskcriteria.Extract(data), taskcriteria.Pending(data)
+ }
+diff --git a/internal/taskcriteria/extract.go b/internal/taskcriteria/extract.go
+new file mode 100644
+index 0000000..2d2a36c
+--- /dev/null
++++ b/internal/taskcriteria/extract.go
+@@ -0,0 +1,71 @@
++package taskcriteria
++
++import "strings"
++
++func Extract(content []byte) []string {
++	return collect(content, false)
++}
++
++func Pending(content []byte) []string {
++	return collect(content, true)
++}
++
++func collect(content []byte, onlyUnchecked bool) []string {
++	var items []string
++	inSection := false
++	for _, line := range strings.Split(string(content), "\n") {
++		trimmed := strings.TrimSpace(line)
++
++		if isAcceptanceSection(trimmed) {
++			inSection = true
++			continue
++		}
++
++		if inSection && strings.HasPrefix(trimmed, "## ") && !isAcceptanceSection(trimmed) {
++			break
++		}
++
++		if !inSection {
++			continue
++		}
++
++		text, checked, ok := parseChecklistItem(trimmed)
++		if !ok {
++			continue
++		}
++		if onlyUnchecked && checked {
++			continue
++		}
++		items = append(items, text)
++	}
++
++	return items
++}
++
++func parseChecklistItem(trimmed string) (text string, checked bool, ok bool) {
++	if !strings.HasPrefix(trimmed, "- [") {
++		return "", false, false
++	}
++
++	item := trimmed[3:]
++	if len(item) < 2 {
++		return "", false, false
++	}
++
++	checked = item[0] == 'x' || item[0] == 'X'
++	rest := strings.TrimPrefix(item[1:], "]")
++	text = strings.TrimSpace(rest)
++	if text == "" {
++		return "", false, false
++	}
++
++	return text, checked, true
++}
++
++func isAcceptanceSection(line string) bool {
++	lower := strings.ToLower(line)
++	return strings.HasPrefix(lower, "## definition of done") ||
++		strings.HasPrefix(lower, "## criterios de sucesso") ||
++		strings.HasPrefix(lower, "## critérios de sucesso") ||
++		strings.HasPrefix(lower, "## acceptance criteria")
++}
+diff --git a/internal/taskcriteria/extract_test.go b/internal/taskcriteria/extract_test.go
+new file mode 100644
+index 0000000..ee54814
+--- /dev/null
++++ b/internal/taskcriteria/extract_test.go
+@@ -0,0 +1,117 @@
++package taskcriteria_test
++
++import (
++	"strings"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria"
++)
++
++func TestExtract(t *testing.T) {
++	tests := []struct {
++		name        string
++		content     string
++		wantAll     []string
++		wantPending []string
++	}{
++		{
++			name:        "definition of done all checked",
++			content:     "## Definition of Done\n\n- [x] Item A\n- [x] Item B\n",
++			wantAll:     []string{"Item A", "Item B"},
++			wantPending: nil,
++		},
++		{
++			name:        "definition of done none checked",
++			content:     "## Definition of Done\n\n- [ ] Item A\n- [ ] Item B\n",
++			wantAll:     []string{"Item A", "Item B"},
++			wantPending: []string{"Item A", "Item B"},
++		},
++		{
++			name:        "mixed checked and unchecked",
++			content:     "## Definition of Done\n\n- [x] Done item\n- [ ] Open item\n",
++			wantAll:     []string{"Done item", "Open item"},
++			wantPending: []string{"Open item"},
++		},
++		{
++			name:        "no relevant section",
++			content:     "## Other Section\n\n- [ ] Item A\n",
++			wantAll:     nil,
++			wantPending: nil,
++		},
++		{
++			name:        "section ends at next heading",
++			content:     "## Definition of Done\n\n- [x] Item A\n\n## Next Section\n\n- [ ] Ignored\n",
++			wantAll:     []string{"Item A"},
++			wantPending: nil,
++		},
++		{
++			name:        "portuguese criterios de sucesso",
++			content:     "## Critérios de Sucesso\n\n- [x] Retorna verde\n- [ ] Cobertura alta\n",
++			wantAll:     []string{"Retorna verde", "Cobertura alta"},
++			wantPending: []string{"Cobertura alta"},
++		},
++		{
++			name:        "acceptance criteria heading",
++			content:     "## Acceptance Criteria\n\n- [X] Builds\n- [ ] Lints\n",
++			wantAll:     []string{"Builds", "Lints"},
++			wantPending: []string{"Lints"},
++		},
++		{
++			name:        "multiple equivalent sections accumulate",
++			content:     "## Definition of Done\n\n- [x] First\n\n## Acceptance Criteria\n\n- [ ] Second\n",
++			wantAll:     []string{"First", "Second"},
++			wantPending: []string{"Second"},
++		},
++		{
++			name:        "blank checklist text is skipped",
++			content:     "## Definition of Done\n\n- [ ] \n- [x] Real item\n",
++			wantAll:     []string{"Real item"},
++			wantPending: nil,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			gotAll := taskcriteria.Extract([]byte(tc.content))
++			if !equal(gotAll, tc.wantAll) {
++				t.Errorf("Extract() = %v, want %v", gotAll, tc.wantAll)
++			}
++			gotPending := taskcriteria.Pending([]byte(tc.content))
++			if !equal(gotPending, tc.wantPending) {
++				t.Errorf("Pending() = %v, want %v", gotPending, tc.wantPending)
++			}
++		})
++	}
++}
++
++func equal(got, want []string) bool {
++	if len(got) != len(want) {
++		return false
++	}
++	for i := range got {
++		if got[i] != want[i] {
++			return false
++		}
++	}
++	return true
++}
++
++func TestExtractIgnoresChecklistOutsideSection(t *testing.T) {
++	content := strings.Join([]string{
++		"# Task",
++		"",
++		"## Overview",
++		"- [ ] not a criterion",
++		"",
++		"## Definition of Done",
++		"- [ ] the only criterion",
++		"",
++		"## Files",
++		"- [ ] also not a criterion",
++	}, "\n")
++
++	all := taskcriteria.Extract([]byte(content))
++	if len(all) != 1 || all[0] != "the only criterion" {
++		t.Fatalf("Extract() = %v, want [the only criterion]", all)
++	}
++}
+diff --git a/internal/taskloop/approval_adapters.go b/internal/taskloop/approval_adapters.go
+new file mode 100644
+index 0000000..99de287
+--- /dev/null
++++ b/internal/taskloop/approval_adapters.go
+@@ -0,0 +1,199 @@
++package taskloop
++
++import (
++	"context"
++	"fmt"
++	"strings"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
++)
++
++var (
++	_ approval.Reviewer   = (*reviewerPort)(nil)
++	_ approval.Fixer      = (*fixerPort)(nil)
++	_ approval.Repository = (*repositoryPort)(nil)
++)
++
++const (
++	parityEvidenceCommand = "parity-stage"
++	parityEvidenceRecord  = "criteria gate deferred to task 5.0"
++	defaultFindingFile    = "unspecified"
++	defaultFindingRule    = "review-finding"
++)
++
++type reviewerPort struct {
++	reviewer FinalReviewer
++}
++
++func newReviewerPort(reviewer FinalReviewer) *reviewerPort {
++	return &reviewerPort{reviewer: reviewer}
++}
++
++func (p *reviewerPort) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
++	result, err := p.reviewer.ReviewConsolidated(ctx, request.Target().String())
++	if err != nil {
++		return approval.ReviewerOutput{}, err
++	}
++
++	findings, err := translateReviewFindings(result.Findings)
++	if err != nil {
++		return approval.ReviewerOutput{}, err
++	}
++
++	criteriaMap, err := parityCriteriaMap(request)
++	if err != nil {
++		return approval.ReviewerOutput{}, err
++	}
++
++	return approval.NewReviewerOutput(result.RawOutput, findings, criteriaMap), nil
++}
++
++func parityCriteriaMap(request approval.ReviewRequest) (approval.CriteriaMap, error) {
++	var criteria []approval.AcceptanceCriterion
++	for criterion := range request.Criteria() {
++		criteria = append(criteria, criterion)
++	}
++
++	criteriaMap, err := approval.NewCriteriaMap(criteria)
++	if err != nil {
++		return approval.CriteriaMap{}, err
++	}
++
++	evidence, err := approval.NewCommandEvidence(parityEvidenceCommand, parityEvidenceRecord)
++	if err != nil {
++		return approval.CriteriaMap{}, err
++	}
++
++	for _, criterion := range criteria {
++		criteriaMap, err = criteriaMap.WithEvidence(criterion, evidence)
++		if err != nil {
++			return approval.CriteriaMap{}, err
++		}
++	}
++
++	return criteriaMap, nil
++}
++
++func translateReviewFindings(in []Finding) ([]approval.Finding, error) {
++	out := make([]approval.Finding, 0, len(in))
++	for _, finding := range in {
++		file := strings.TrimSpace(finding.File)
++		if file == "" {
++			file = defaultFindingFile
++		}
++
++		translated, err := approval.NewFinding(translateSeverity(finding.Severity), file, defaultFindingRule, finding.Message)
++		if err != nil {
++			return nil, err
++		}
++		out = append(out, translated)
++	}
++	return out, nil
++}
++
++func translateSeverity(severity Severity) approval.Severity {
++	switch severity {
++	case SeverityCritical:
++		return approval.SeverityCritical
++	case SeverityImportant:
++		return approval.SeverityMedium
++	default:
++		return approval.SeverityLow
++	}
++}
++
++type bugfixEvidenceRecorder struct {
++	entries []bugfixEvidence
++}
++
++func newBugfixEvidenceRecorder() *bugfixEvidenceRecorder {
++	return &bugfixEvidenceRecorder{}
++}
++
++func (r *bugfixEvidenceRecorder) record(entry bugfixEvidence) {
++	r.entries = append(r.entries, entry)
++}
++
++func (r *bugfixEvidenceRecorder) Entries() []bugfixEvidence {
++	return append([]bugfixEvidence(nil), r.entries...)
++}
++
++type fixerPort struct {
++	invoker  BugfixInvoker
++	recorder *bugfixEvidenceRecorder
++}
++
++func newFixerPort(invoker BugfixInvoker, recorder *bugfixEvidenceRecorder) *fixerPort {
++	return &fixerPort{invoker: invoker, recorder: recorder}
++}
++
++func (p *fixerPort) Fix(ctx context.Context, request approval.FixRequest) error {
++	output, err := p.invoker.InvokeBugfix(ctx, reverseFindings(request), request.Target().String())
++	if err != nil {
++		return err
++	}
++
++	evidence, err := NewCatalog().extractBugfixEvidence(output)
++	if err != nil {
++		return err
++	}
++
++	p.recorder.record(evidence)
++	return nil
++}
++
++func reverseFindings(request approval.FixRequest) []Finding {
++	var out []Finding
++	for finding := range request.Findings() {
++		out = append(out, Finding{
++			Severity: reverseSeverity(finding.Severity()),
++			File:     finding.File(),
++			Message:  finding.Description(),
++		})
++	}
++	return out
++}
++
++func reverseSeverity(severity approval.Severity) Severity {
++	switch severity {
++	case approval.SeverityCritical, approval.SeverityHigh:
++		return SeverityCritical
++	case approval.SeverityMedium:
++		return SeverityImportant
++	default:
++		return SeveritySuggestion
++	}
++}
++
++type repositoryPort struct {
++	capturer DiffCapturer
++	workDir  string
++}
++
++func newRepositoryPort(capturer DiffCapturer, workDir string) *repositoryPort {
++	return &repositoryPort{capturer: capturer, workDir: workDir}
++}
++
++func (p *repositoryPort) Checkpoint(ctx context.Context) (approval.Checkpoint, error) {
++	out, err := NewCatalog().commandOutput(ctx, p.workDir, "git", "rev-parse", "HEAD")
++	if err != nil {
++		return approval.Checkpoint{}, fmt.Errorf("taskloop: git rev-parse HEAD: %w", err)
++	}
++	return approval.NewCheckpoint(strings.TrimSpace(string(out)))
++}
++
++func (p *repositoryPort) FullTarget(ctx context.Context) (approval.ReviewTarget, error) {
++	return p.captureTarget(ctx)
++}
++
++func (p *repositoryPort) Delta(ctx context.Context, _ approval.Checkpoint) (approval.ReviewTarget, error) {
++	return p.captureTarget(ctx)
++}
++
++func (p *repositoryPort) captureTarget(ctx context.Context) (approval.ReviewTarget, error) {
++	diff, err := p.capturer.CaptureDiff(ctx)
++	if err != nil {
++		return approval.ReviewTarget{}, err
++	}
++	return approval.NewReviewTarget(diff), nil
++}
+diff --git a/internal/taskloop/approval_adapters_test.go b/internal/taskloop/approval_adapters_test.go
+new file mode 100644
+index 0000000..aa11234
+--- /dev/null
++++ b/internal/taskloop/approval_adapters_test.go
+@@ -0,0 +1,219 @@
++package taskloop
++
++import (
++	"context"
++	"os"
++	"os/exec"
++	"path/filepath"
++	"strings"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
++)
++
++func newReviewRequestForPort(t *testing.T, target string, descriptions ...string) approval.ReviewRequest {
++	t.Helper()
++	task, err := approval.NewTaskIdentity("task-4.3")
++	if err != nil {
++		t.Fatalf("task identity: %v", err)
++	}
++	agent, err := approval.NewAgentIdentity("agent-x")
++	if err != nil {
++		t.Fatalf("agent identity: %v", err)
++	}
++	var criteria []approval.AcceptanceCriterion
++	for _, d := range descriptions {
++		c, cErr := approval.NewAcceptanceCriterion(d)
++		if cErr != nil {
++			t.Fatalf("criterion %q: %v", d, cErr)
++		}
++		criteria = append(criteria, c)
++	}
++	request, err := approval.NewReviewRequest(task, agent, 1, approval.NewReviewTarget(target), criteria)
++	if err != nil {
++		t.Fatalf("review request: %v", err)
++	}
++	return request
++}
++
++func newFixRequestForPort(t *testing.T, target string, findings ...approval.Finding) approval.FixRequest {
++	t.Helper()
++	task, err := approval.NewTaskIdentity("task-4.3")
++	if err != nil {
++		t.Fatalf("task identity: %v", err)
++	}
++	agent, err := approval.NewAgentIdentity("agent-x")
++	if err != nil {
++		t.Fatalf("agent identity: %v", err)
++	}
++	request, err := approval.NewFixRequest(task, agent, 1, findings, approval.NewReviewTarget(target))
++	if err != nil {
++		t.Fatalf("fix request: %v", err)
++	}
++	return request
++}
++
++func TestReviewerPortTranslatesCallAndReturnsRawText(t *testing.T) {
++	const raw = "## Review\n\nAll good.\n\nVerdict: REJECTED\n"
++	reviewer := &stubFinalReviewer{results: []FinalReviewResult{{
++		Verdict:   VerdictApproved,
++		RawOutput: raw,
++		Findings:  []Finding{{Severity: SeverityCritical, File: "a.go", Line: 10, Message: "boom"}},
++	}}}
++
++	port := newReviewerPort(reviewer)
++	request := newReviewRequestForPort(t, "diff --git a/a.go b/a.go", "builds green", "tests pass")
++
++	output, err := port.Review(context.Background(), request)
++	if err != nil {
++		t.Fatalf("Review: %v", err)
++	}
++
++	if output.RawText() != raw {
++		t.Errorf("RawText = %q, want %q", output.RawText(), raw)
++	}
++	if reviewer.diffs[0] != "diff --git a/a.go b/a.go" {
++		t.Errorf("target passed through = %q", reviewer.diffs[0])
++	}
++
++	findings := output.FindingsList()
++	if len(findings) != 1 || findings[0].Severity() != approval.SeverityCritical || findings[0].File() != "a.go" {
++		t.Fatalf("translated findings = %+v", findings)
++	}
++	if findings[0].Rule() != defaultFindingRule {
++		t.Errorf("rule = %q, want %q", findings[0].Rule(), defaultFindingRule)
++	}
++}
++
++func TestReviewerPortCriteriaMapReachesComplete(t *testing.T) {
++	reviewer := &stubFinalReviewer{results: []FinalReviewResult{{RawOutput: "Verdict: APPROVED\n"}}}
++	port := newReviewerPort(reviewer)
++	request := newReviewRequestForPort(t, "diff", "criterion one", "criterion two")
++
++	output, err := port.Review(context.Background(), request)
++	if err != nil {
++		t.Fatalf("Review: %v", err)
++	}
++
++	criteriaMap := output.CriteriaMap()
++	if !criteriaMap.Complete() {
++		t.Fatalf("criteria map not complete: %d/%d", criteriaMap.Bound(), criteriaMap.Total())
++	}
++
++	verdict := approval.NewTranslator().Translate(output.RawText())
++	if _, proofErr := approval.NewApprovalProof(verdict, criteriaMap); proofErr != nil {
++		t.Fatalf("approval proof from parity output: %v", proofErr)
++	}
++}
++
++func TestReviewerPortDefaultsMissingFindingFile(t *testing.T) {
++	reviewer := &stubFinalReviewer{results: []FinalReviewResult{{
++		RawOutput: "Verdict: REJECTED\n",
++		Findings:  []Finding{{Severity: SeverityImportant, Message: "no file"}},
++	}}}
++	port := newReviewerPort(reviewer)
++
++	output, err := port.Review(context.Background(), newReviewRequestForPort(t, "diff", "c1"))
++	if err != nil {
++		t.Fatalf("Review: %v", err)
++	}
++	findings := output.FindingsList()
++	if len(findings) != 1 || findings[0].File() != defaultFindingFile {
++		t.Fatalf("expected default file, got %+v", findings)
++	}
++	if findings[0].Severity() != approval.SeverityMedium {
++		t.Errorf("severity = %v, want medium", findings[0].Severity())
++	}
++}
++
++func TestFixerPortRecordsEvidenceSideChannel(t *testing.T) {
++	invoker := &stubBugfixInvoker{outputs: []string{bugfixEvidenceOutput("root cause: nil deref")}}
++	recorder := newBugfixEvidenceRecorder()
++	port := newFixerPort(invoker, recorder)
++
++	finding, err := approval.NewFinding(approval.SeverityCritical, "a.go", "R-1", "boom")
++	if err != nil {
++		t.Fatalf("finding: %v", err)
++	}
++	request := newFixRequestForPort(t, "pure diff", finding)
++
++	if fixErr := port.Fix(context.Background(), request); fixErr != nil {
++		t.Fatalf("Fix: %v", fixErr)
++	}
++	if invoker.diffs[0] != "pure diff" {
++		t.Errorf("diff passed through = %q", invoker.diffs[0])
++	}
++	entries := recorder.Entries()
++	if len(entries) != 1 || entries[0].FailBefore == "" || entries[0].PassAfter == "" {
++		t.Fatalf("recorder entries = %+v", entries)
++	}
++}
++
++func TestFixerPortFailsClosedWithoutEvidenceMarkers(t *testing.T) {
++	invoker := &stubBugfixInvoker{outputs: []string{"fixed it, trust me"}}
++	recorder := newBugfixEvidenceRecorder()
++	port := newFixerPort(invoker, recorder)
++
++	finding, err := approval.NewFinding(approval.SeverityCritical, "a.go", "R-1", "boom")
++	if err != nil {
++		t.Fatalf("finding: %v", err)
++	}
++
++	fixErr := port.Fix(context.Background(), newFixRequestForPort(t, "diff", finding))
++	if fixErr == nil {
++		t.Fatal("expected fail-closed error, got nil")
++	}
++	if len(recorder.Entries()) != 0 {
++		t.Errorf("recorder should stay empty on failure, got %+v", recorder.Entries())
++	}
++}
++
++func TestRepositoryPortCaptureTargets(t *testing.T) {
++	capturer := &stubDiffCapturer{diffs: []string{"full diff", "delta diff"}}
++	port := newRepositoryPort(capturer, t.TempDir())
++
++	full, err := port.FullTarget(context.Background())
++	if err != nil {
++		t.Fatalf("FullTarget: %v", err)
++	}
++	if full.String() != "full diff" {
++		t.Errorf("FullTarget = %q", full.String())
++	}
++
++	delta, err := port.Delta(context.Background(), approval.Checkpoint{})
++	if err != nil {
++		t.Fatalf("Delta: %v", err)
++	}
++	if delta.String() != "delta diff" {
++		t.Errorf("Delta = %q", delta.String())
++	}
++}
++
++func TestRepositoryPortCheckpointFromGitRevParse(t *testing.T) {
++	dir := t.TempDir()
++	run := func(args ...string) {
++		t.Helper()
++		cmd := exec.Command("git", args...)
++		cmd.Dir = dir
++		if out, err := cmd.CombinedOutput(); err != nil {
++			t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
++		}
++	}
++	run("init")
++	run("config", "user.email", "t@example.com")
++	run("config", "user.name", "T")
++	if err := os.WriteFile(filepath.Join(dir, "f.txt"), []byte("x\n"), 0o644); err != nil {
++		t.Fatalf("write: %v", err)
++	}
++	run("add", ".")
++	run("commit", "-m", "base")
++
++	port := newRepositoryPort(&stubDiffCapturer{}, dir)
++	checkpoint, err := port.Checkpoint(context.Background())
++	if err != nil {
++		t.Fatalf("Checkpoint: %v", err)
++	}
++	if checkpoint.Zero() || len(checkpoint.String()) < 7 {
++		t.Fatalf("checkpoint = %q", checkpoint.String())
++	}
++}
