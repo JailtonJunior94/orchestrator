@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/agents"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
@@ -651,18 +652,28 @@ func (s *Service) Execute(opts Options) error {
 			skipped[task.ID] = true
 		}
 
-		// === REVIEWER (RF-05, RF-06, RF-07) ===
-		// Invocado quando: modo avancado com reviewer configurado, sem erro de invocacao
-		// e status da task e "done". O exit code do executor nao e verificado: o agente
-		// pode ter sido morto por timeout (exit -1) depois de marcar a task como done,
-		// e o reviewer deve operar sobre o estado observavel da task.
-		// RF-13: reviewer e sub-etapa e nao incrementa o contador de iteracoes.
+		cycleConducted := false
 		if opts.Profiles != nil && opts.Profiles.Reviewer != nil && outcome.RunReviewer {
 			reviewSnapshot, err := NewCatalog().captureTaskIsolationSnapshotWithMode(absFolder, _taskIsolationModeReviewer, s.fsys)
 			if err != nil {
 				return fmt.Errorf("erro ao capturar snapshot de isolamento do reviewer na task %s: %w", task.ID, err)
 			}
-			iterResult.ReviewResult = s.invokeReviewer(opts, relTaskFile, relPRD, workDir, task.ID, report.Iterations)
+
+			var cycleCriteria []approval.AcceptanceCriterion
+			if taskFileContent, readErr := s.fsys.ReadFile(taskFile); readErr == nil {
+				cycleCriteria, _ = acceptanceCriteriaFromTaskFile(taskFileContent)
+			}
+			if len(cycleCriteria) > 0 {
+				cycleCtx, cycleCancel := context.WithTimeout(context.Background(), opts.Timeout)
+				review, bugfix := s.conductApprovalCycle(cycleCtx, opts, task, cycleCriteria, relTaskFile, relPRD, workDir)
+				cycleCancel()
+				cycleConducted = true
+				iterResult.ReviewResult = review
+				iterResult.BugfixResult = bugfix
+			}
+			if !cycleConducted {
+				iterResult.ReviewResult = s.invokeReviewer(opts, relTaskFile, relPRD, workDir, task.ID, report.Iterations)
+			}
 			reviewIsolationErr := NewCatalog().validateReviewerIsolation(reviewSnapshot, absFolder, task.ID, taskFile, s.fsys)
 			if reviewIsolationErr != nil {
 				if restoreErr := NewCatalog().restoreTaskIsolationSnapshotAt(reviewSnapshot, absFolder, s.fsys); restoreErr != nil {
@@ -689,7 +700,7 @@ func (s *Service) Execute(opts Options) error {
 		// Invocado quando: reviewer executou e retornou exit != 0 (achados criticos).
 		// Reutiliza o executor para aplicar correcoes com prompt de bugfix.
 		// Nao incrementa o contador de iteracoes (sub-etapa como o reviewer).
-		if iterResult.ReviewResult != nil && iterResult.ReviewResult.ExitCode != 0 {
+		if !cycleConducted && iterResult.ReviewResult != nil && iterResult.ReviewResult.ExitCode != 0 {
 			bugfixSnapshot, bfSnapErr := NewCatalog().captureTaskIsolationSnapshotWithMode(absFolder, _taskIsolationModeExecutor, s.fsys)
 			if bfSnapErr != nil {
 				return fmt.Errorf("erro ao capturar snapshot de isolamento do bugfix na task %s: %w", task.ID, bfSnapErr)

@@ -27,12 +27,12 @@ que `RunLoop` e `ACPRunner` seguem depois.
 
 ## Subtarefas
 
-- [ ] 4.4.1 Construir o `Cycle` no ponto de revisão de `Service.Execute` com identidade da task,
+- [x] 4.4.1 Construir o `Cycle` no ponto de revisão de `Service.Execute` com identidade da task,
       identidade do agente, política a partir de `opts`, critérios do task file e as três portas do
       adaptador de 4.3.
-- [ ] 4.4.2 Traduzir `CycleResult` para `IterationResult.ReviewResult` / `BugfixResult` preservando
+- [x] 4.4.2 Traduzir `CycleResult` para `IterationResult.ReviewResult` / `BugfixResult` preservando
       os campos observáveis hoje (status, saída, notas).
-- [ ] 4.4.3 Ajustar cirurgicamente asserções incompatíveis em `taskloop_test.go` /
+- [x] 4.4.3 Ajustar cirurgicamente asserções incompatíveis em `taskloop_test.go` /
       `reviewer_test.go`, cada ajuste justificado por requisito.
 
 ## Detalhes de Implementação
@@ -61,7 +61,7 @@ Nenhuma além das auto-carregadas (governance + linguagem).
 
 ## Testes da Tarefa
 
-- [ ] Testes unitários
+- [x] Testes unitários
 - [ ] Testes de integração
 
 Cobertura obrigatória:

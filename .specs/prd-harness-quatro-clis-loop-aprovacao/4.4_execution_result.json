@@ -1,0 +1,79 @@
+{
+  "schema_version": 2,
+  "run_id": "task-4.4-service-execute-ao-agregado-2026-09-10",
+  "task_id": "4.4",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "767b81c6ea8b6819c4b3588ec845327c3eae5d80",
+  "patch_sha256": "ca48652b32bf60b205bc8c248ea12210b58e104a6b7096af6327680b711bb38e",
+  "patch_ref": "evidence/task-4.4/4.4.patch",
+  "final_state_sha256": "3841f4239b023e9b83806ceed0a83dcb83c86d61ef49c85d63fb67205fe74959",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./... && go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "20334bb3b9fb79c13b1183d3e8005a65132da0620a27d3b822407c4ec3e9044e"
+    },
+    {
+      "command": "go test -tags=integration ./internal/taskloop/... -count=1",
+      "exit_code": 0,
+      "output_sha256": "28717a87358dbe60c15618196056aa1ff224c04471ab83ec09d99764ef1808d2"
+    },
+    {
+      "command": "go test ./internal/taskcriteria/... ./internal/taskloop/... -count=1",
+      "exit_code": 0,
+      "output_sha256": "279b553bf742743cfc66daad3b0097b68e14c1d24636b8fea425eb995220e8c0"
+    },
+    {
+      "command": "make check-spec-paths check-skills-sync check-scripts-sync check-hooks-sync check-mocks",
+      "exit_code": 0,
+      "output_sha256": "8e854777134d4a8ed47603c939e7ba667d15b3ccad91e5bd89e433c4b4f74f1e"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "grep-approval-in-taskloop-go",
+      "evidence_ref": "evidence/task-4.4/grep-approval.log"
+    },
+    {
+      "id": "taskloop-suite-green-no-assertion-changes",
+      "evidence_ref": "evidence/task-4.4/unit-tests.log"
+    },
+    {
+      "id": "RF-34-service-execute-conducts-cycle-review-and-fix-fresh-session",
+      "evidence_ref": "evidence/task-4.4/unit-tests.log"
+    },
+    {
+      "id": "t-rev-01-02-04-untouched-and-green",
+      "evidence_ref": "evidence/task-4.4/build-vet-test.log"
+    },
+    {
+      "id": "R-STYLE-001-new-code-english-zero-comments-no-underscore-prefix",
+      "evidence_ref": "evidence/task-4.4/4.4.patch"
+    },
+    {
+      "id": "make-sync-gates-green",
+      "evidence_ref": "evidence/task-4.4/sync-gates.log"
+    },
+    {
+      "id": "build-vet-test-green",
+      "evidence_ref": "evidence/task-4.4/build-vet-test.log"
+    },
+    {
+      "id": "integration-taskloop-green",
+      "evidence_ref": "evidence/task-4.4/integration.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-4.4/4.4.patch",
+    "evidence/task-4.4/build-vet-test.log",
+    "evidence/task-4.4/integration.log",
+    "evidence/task-4.4/unit-tests.log",
+    "evidence/task-4.4/sync-gates.log",
+    "evidence/task-4.4/grep-approval.log",
+    "evidence/task-4.4/diff-stat.log",
+    "evidence/task-4.4/review.md"
+  ],
+  "review_verdict": "approved"
+}
