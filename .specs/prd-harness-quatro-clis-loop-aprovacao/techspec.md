@@ -184,6 +184,109 @@ não-convergência.
 bloqueado, fingerprint repetida, teto de rodadas. A aprovação **não** passa por ali — só a prova abre o
 estado Aprovado.
 
+### Integração do agregado nos três caminhos (Bloco D)
+
+Esta subseção resolve as três lacunas de design que travaram a migração do loop ao agregado (fase F2b),
+com decisões ancoradas no código real. Nenhuma altera o invariante central: `Cycle.approve` continua
+exigindo `ApprovalProof` válida (`internal/approval/proof.go:11-19`) e `NewCycle` continua recusando
+lista de critérios vazia (`internal/approval/cycle.go:44-46`).
+
+#### D-B1 — Fonte dos critérios de aceite por caminho
+
+A extração de critérios passa a viver num pacote-folha novo, **`internal/taskcriteria`** (imports:
+apenas `bufio`/`strings`), com uma função exportada `Extract(content []byte) []string` que devolve os
+itens de checklist sob `## Definition of Done` / `## Critérios de Sucesso` / `## Acceptance Criteria`
+— a mesma detecção de seção hoje embutida em `internal/taskloop/acceptance.go:144-150`.
+`parseCriteriaFromTaskFile` (`internal/taskloop/acceptance.go:97`) é refatorada para delegar a ela,
+preservando o cálculo de `missing`. O pacote-folha é necessário porque `internal/runtime` **não pode**
+importar `internal/taskloop` (o ciclo de import é inverso: `taskloop.go` importa `airuntime`).
+
+Cada consumidor converte `[]string` → `[]approval.AcceptanceCriterion` via `approval.NewAcceptanceCriterion`
+(`internal/approval/evidence.go:72`), deduplicando por descrição:
+
+| Caminho | call site | Fonte dos critérios |
+|---|---|---|
+| `Service.Execute` | `internal/taskloop/taskloop.go:480` (`taskFile` já em escopo) | `taskcriteria.Extract` do **task file da task corrente** (critérios por task — caminho canônico, migra primeiro) |
+| `ACPRunner` | `internal/runtime/runner.go:216-228` | `taskcriteria.Extract(filepath.Join(job.TasksDir, job.TaskFileName))` — ambos os campos já existem no `Job` (usados em `internal/runtime/runner_autoreview.go:173-174`). Com `TaskFileName == ""` (uso interativo de `--auto-review` sem contexto de task) mantém-se o `runAutoReview` one-shot atual, sem `Cycle` — zero regressão |
+| `RunLoop` | `internal/taskloop/runloop.go:207` (`case VerdictRejected`) | **União** dos critérios de todos os task files de `report.TasksCompleted` (RunLoop já resolve cada task file via `NewCatalog().ResolveTaskFile`), deduplicada por descrição. União vazia (defensivo; os gates da F2a tornam-na não-vazia) → o lote mantém o caminho legado `FinalReviewer` sem `Cycle` |
+
+#### D-B1-corolário — Como o `MapaDeCriterios` alcança `Completo()` no estágio de paridade
+
+O `CriteriaMap` é produzido pela **porta `Reviewer`** (`internal/approval/ports.go:41-45`,
+`ReviewerOutput.CriteriaMap()`), nunca pelo `Cycle`. Duas fontes:
+
+1. **Pós-F2c (critério estrito, tarefa 5.0)**: o adaptador parseia a seção 1:1 critério→evidência da
+   saída real da skill `review` (introduzida pela tarefa 3.0 / F2a) para um `CriteriaMap` real
+   (RF-52/53/54).
+2. **Estágio de paridade (Bloco D, antes de 5.0)**: o adaptador constrói o mapa a partir da lista de
+   critérios e vincula cada um a uma **evidência-sentinela de paridade** via
+   `CriteriaMap.WithEvidence` (`internal/approval/evidence.go:140-148`) com
+   `approval.NewCommandEvidence("parity-stage", "criteria gate deferred to task 5.0")`
+   (`internal/approval/evidence.go:43-50`).
+
+O shim fica **confinado ao adaptador (ACL)** — o domínio permanece intacto: `Cycle` só aprova por mapa
+completo, `NewApprovalProof` inalterado. A tarefa 5.0 substitui o vínculo-sentinela pelo parsing da
+seção real e vira `translateReviewStatus` / o critério de encerramento. O shim é explicitamente
+time-boxed e removido em 5.0.
+
+#### D-B2 — Adequação das fixtures ao contrato de texto bruto (fatia própria)
+
+O `Translator` deriva o veredito de `output.RawText()` fail-closed (`internal/approval/cycle.go:188`,
+`internal/approval/translator.go:13-20`): texto sem linha `Verdict:` canônica resolve para
+`VerdictBlocked`. Os stubs vivos devolvem `FinalReviewResult{Verdict: ...}` com `RawOutput` vazio.
+Escopo real da reescrita, por `grep`:
+
+| Arquivo | Ocorrências | Ação |
+|---|---|---|
+| `internal/taskloop/runloop_test.go` | `stubReviewer` (`:67-88`) + 16 literais `FinalReviewResult{}` | anexar `RawOutput` com linha `Verdict: <token>` casando o campo `.Verdict` já declarado |
+| `internal/taskloop/integration_test.go` | 3 literais (`:439`, `:483`, `:538`) | idem |
+| `internal/taskloop/bugfix_test.go` | 16 literais | **intocado** — `BugfixLoop` não passa a conduzir o `Cycle` (ver D-B3); seu stub `FinalReviewer` permanece |
+| `internal/taskloop/reviewer_test.go` | 0 (testa `defaultFinalReviewer` sobre texto) | intocado |
+| `internal/runtime/runner_autoreview_test.go` | T-REV-01/02/04 já migrados em 4.1 | intocado |
+
+Cada edição é justificada 1:1 por RF-46/RF-40 ("a tradução lê a saída real do revisor"). É fatia
+própria (nova 4.5), executável isoladamente: enquanto a produção não migrou, anexar `RawOutput` é
+no-op não-regressível; o critério verde inclui um teste de tabela que afirma
+`approval.NewTranslator().Translate(fixture.RawOutput) == fixture.Verdict` para toda fixture,
+travando o contrato.
+
+#### D-B3 — Fronteira `Cycle` ↔ `BugfixLoop`
+
+O `Cycle` **absorve a orquestração**: laço de rodadas, `policy.Decide` (bloqueado / não-convergência /
+diff vazio / teto), `fixRound` (chama `Fixer.Fix` + recalcula delta), máquina de estados e ponto de
+corte por rodada — tudo já em `internal/approval/cycle.go:69-134`.
+
+`BugfixLoop` **sai do ramo `VerdictRejected` de `RunLoop`** e permanece **apenas como projetor de
+evidência/telemetria**:
+
+- `internal/taskloop/runloop.go:207-259`: `NewBugfixLoop(...).Run(...)` → construção + `Cycle.Run` via
+  o adaptador de `internal/taskloop` (D-B1) e a união de critérios.
+- Nova função `bugfixAttemptsFromCycle(result approval.CycleResult) []BugfixIteration` em
+  `internal/taskloop/bugfix.go` (**este arquivo entra no escopo**) reconstrói `BugfixIteration`
+  (`Sequence`, `Origin`, `RootCause`, `FailBefore`, `PassAfter`, `ReviewVerdict`, `CriticalFindings`)
+  a partir de `result.Rounds()` (`internal/approval/round.go:56`) e `cycle.Events()`, mantendo
+  `LoopReport.BugfixAttempts`/`BugfixCycles`/`Escalated`/`FinalReview` populados e as asserções
+  nominais de `runloop_test.go` verdes.
+- `Origin`/`CriticalFindings`: dos `Findings()` de cada rodada, via `formatBugfixOrigin`
+  (`internal/taskloop/bugfix.go:186`, reusada).
+- `FailBefore`/`PassAfter`/`RootCause`/`BugfixOutput`: a porta `Fixer` só devolve `error`
+  (`internal/approval/ports.go:15`). O **adaptador `fixerPort` de `internal/taskloop`** captura a saída
+  bruta de `BugfixInvoker.InvokeBugfix` e extrai `Fail-before`/`Pass-after` reusando
+  `extractBugfixEvidence` (`internal/taskloop/bugfix.go:159`) num side-channel
+  (`*bugfixEvidenceRecorder`, uma entrada por chamada `Fix`) que o `RunLoop` lê após `Cycle.Run`. A
+  checagem fail-closed de `extractBugfixEvidence` (`bugfix.go:164`) migra para o adaptador: correção
+  sem marcadores → `error` de `Fix` (erro de infra, não estado terminal), mesma semântica de
+  `ErrBugfixEvidenceIncomplete` hoje.
+- `CycleResult.Reason() ∈ {ReasonMaxRounds, ReasonNoConvergence, ReasonEmptyDiff}` → mapeado na
+  fronteira do `RunLoop` para `ErrBugfixExhausted` + `report.Escalated = true` + o stop reason
+  "escalonamento humano" existente. São estados terminais RF-45 — **não** disparam retry.
+- `BugfixLoop.Run` e `bugfix_test.go` permanecem: ainda são chamados por `applyImplementDecisions`
+  (`internal/taskloop/runloop.go:301`, re-entrada `APPROVED_WITH_REMARKS` → Implement). Colapsar esse
+  segundo call site fica fora do estágio de paridade — risco residual registrado.
+
+`bugfix_test.go` recebe testes **aditivos** para `bugfixAttemptsFromCycle`; nenhuma asserção existente
+muda.
+
 ## Sequenciamento de Desenvolvimento
 
 ### Restrição de ordem descoberta na análise
@@ -200,7 +303,7 @@ muda e nenhum teste falha. Por isso a Fase 3 precede a Fase 4.
 | **F0 — Gates operáveis** | Tornar os gates capazes de rodar e de dizer a verdade: portabilidade do gate de referências de caminho para shell sem recursos de versão 4; notação de caminho planejado; desarme do gate de contrato que exige a string do agente a remover | — |
 | **F1 — Domínio** | Pacote de domínio da aprovação completo, com mocks e testes de invariante. Nenhum consumidor ainda | F0 |
 | **F2a — Mapa 1:1 (pré-requisito bloqueante)** | Seção de critérios no template de artefato de revisão, asserção nos validadores canônicos, rotina de revisão no validador em Go, restrição do escape legado, propagação aos espelhos | F0 |
-| **F2b — Ciclo** | Promoção do loop existente; correção dos defeitos de veredito sintético e de sobrescrita de evidência; evidência numerada por rodada; reset de profundidade; revisão por delta | F1, F2a |
+| **F2b — Ciclo** | Ordem interna fixa: (1) veredito da fonte real + adaptadores runtime (D1); (2) evidência por rodada, delta, reset de profundidade (D2); (3) extrator `internal/taskcriteria` + adaptador de portas em `internal/taskloop` (D-B1); (4) `Service.Execute` conduz o `Cycle` — critérios por task, estabelece o padrão; (5) adequação das fixtures ao contrato de texto bruto (D-B2); (6) `RunLoop` conduz o `Cycle`, `BugfixLoop` reduzido a projetor de evidência (D-B3); (7) `ACPRunner` + fiação das quatro lacunas nos três caminhos; (8) prova de paridade + E2E | F1, F2a |
 | **F2c — Critério estrito** | Cadeia de propagação do teto de rodadas e virada do critério de encerramento | F2b |
 | **F3a — Catálogo** | Registro único de agentes, ordem canônica, sincronia dos catálogos, separação entre detecção e diagnóstico | F1 |
 | **F3b — OpenCode** | Spec por subcomando, detecção, instalação de pegada mínima, janela derivada do modelo, entradas nas células de ocupante único | F3a |
@@ -220,6 +323,14 @@ depois, por verificação empírica: o gate de referências de caminho usa um re
 na versão instalada em ambientes de desenvolvimento, saindo com sucesso sem verificar nada; e a notação
 de caminho planejado que este documento promete na seção de arquivos relevantes não tem implementação.
 Sem F0, o requisito de manter o gate verde é vazio, porque o gate não roda.
+
+**Sobre a ordem interna de F2b.** A migração dos três call sites não é atômica: cada um difere na fonte
+dos critérios de aceite. `Service.Execute` tem critérios por task e migra **primeiro**, estabelecendo o
+padrão do adaptador; `RunLoop` conduz revisão consolidada sem critérios em escopo e migra **por último**,
+com a união dos task files do lote como fonte. A adequação das fixtures ao contrato de texto bruto
+(D-B2) é fatia própria entre os dois, porque toca ~19 literais de teste de forma mecânica e bissectável
+que não cabe num único `go test` vermelho junto da mudança de produção. Ver
+"### Integração do agregado nos três caminhos (Bloco D)".
 
 ### Ordem de build da Fase 4 (remoção)
 

@@ -1,11 +1,11 @@
 <!-- spec-hash-prd: 0a9ad37a14dece6109b909750abfb8ec3c61f4a66181934758687842764737ce -->
-<!-- spec-hash-techspec: f09a0e597817db1f55c0b2982b661da888554ba826711120f2fa52f1d269dd85 -->
+<!-- spec-hash-techspec: b7b9c12a22fd7c707f4d048532bcb917810b032337a7cbfbcc12701203409af3 -->
 # Resumo das Tarefas de Implementação para Quatro CLIs Oficiais e Ciclo de Aprovação
 
 ## Metadados
 - **PRD:** `.specs/prd-harness-quatro-clis-loop-aprovacao/prd.md`
 - **Especificação Técnica:** `.specs/prd-harness-quatro-clis-loop-aprovacao/techspec.md`
-- **Total de tarefas:** 16
+- **Total de tarefas:** 18
 - **Tarefas paralelizáveis:** 2.0 e 3.0
 
 ## Tarefas
@@ -28,11 +28,13 @@
 | 3.0 | Mapa 1:1 critério-evidência como dado verificável | done | 1.0 | Com 2.0 | — |
 | 4.1 | Veredito da fonte real do revisor e adaptadores das portas (D1) | done | 2.0, 3.0 | Não | — |
 | 4.2 | Evidência por rodada, revisão por delta e reset de profundidade (D2) | done | 4.1 | Não | — |
-| 4.3 | Adaptador de taskloop e migração de RunLoop ao agregado | pending | 4.2 | Não | — |
-| 4.4 | Migração de Service.Execute ao agregado (caminho real de produção) | pending | 4.3 | Não | — |
-| 4.5 | Migração de ACPRunner e fiação das quatro lacunas nos três caminhos | pending | 4.4 | Não | — |
-| 4.6 | Prova de paridade entre os três caminhos e fluxos E2E | pending | 4.5 | Não | — |
-| 5.0 | Propagação do teto de rodadas e virada do critério estrito | pending | 4.6 | Não | — |
+| 4.3 | Extrator de critérios compartilhado e adaptador de portas em taskloop | pending | 4.2 | Não | — |
+| 4.4 | Service.Execute conduz o Cycle (critérios por task, estabelece o padrão) | pending | 4.3 | Não | — |
+| 4.5 | Adequação das fixtures de revisão ao contrato de texto bruto | pending | 4.4 | Não | — |
+| 4.6 | RunLoop conduz o Cycle; BugfixLoop reduzido a projetor de evidência | pending | 4.5 | Não | — |
+| 4.7 | ACPRunner conduz o Cycle e fiação das quatro lacunas nos três caminhos | pending | 4.6 | Não | — |
+| 4.8 | Prova de paridade entre os três caminhos e fluxos E2E | pending | 4.7 | Não | — |
+| 5.0 | Propagação do teto de rodadas e virada do critério estrito | pending | 4.8 | Não | — |
 | 6.0 | Catálogo de Agentes como registro único | done | 2.0 | Não | domain-modeling-production |
 | 7.0 | OpenCode como agente oficial de primeira classe | pending | 6.0 | Não | — |
 | 8.0 | Enforcement não-desligável do OpenCode | pending | 7.0 | Não | — |
@@ -56,16 +58,21 @@
   Gemini sair. Esvaziá-las muda o comportamento sem que nenhum teste falhe.
 - **9.0 precede 10.0.** Os gates de paridade são escritos com as células ainda completas, para que
   fiquem vermelhos exatamente se a remoção degradar a cobertura. Inverter elimina o único sinal.
-- **4.1 → 4.2 → 4.3 → 4.4 → 4.5 → 4.6 → 5.0 são estritamente sequenciais.** A antiga tarefa 4.0 foi
-  decomposta durante a execução (ver `## Riscos de Integração`): 4.1 faz o veredito vir da saída real
-  do revisor (D1); 4.2 corrige a evidência por rodada, o delta e o reset de profundidade (D2 +
-  contratos órfãos); 4.3–4.6 promovem o loop ao agregado nos três caminhos de produção — 4.3 (adaptador
-  de taskloop + `RunLoop`), 4.4 (`Service.Execute`), 4.5 (`ACPRunner` + fiação das quatro lacunas),
-  4.6 (prova de paridade + E2E). A virada do critério estrito (5.0) só é segura depois de 4.6.
+- **4.1 → 4.2 → 4.3 → 4.4 → 4.5 → 4.6 → 4.7 → 4.8 → 5.0 são estritamente sequenciais.** A antiga tarefa
+  4.0 foi decomposta durante a execução (ver `## Riscos de Integração`): 4.1 faz o veredito vir da saída
+  real do revisor (D1); 4.2 corrige a evidência por rodada, o delta e o reset de profundidade (D2 +
+  contratos órfãos); 4.3–4.8 promovem o loop ao agregado nos três caminhos de produção, na ordem
+  ditada pela fonte dos critérios de aceite — 4.3 (extrator `internal/taskcriteria` + adaptador de
+  portas em `internal/taskloop`), 4.4 (`Service.Execute` — critérios por task, estabelece o padrão),
+  4.5 (adequação das fixtures ao contrato de texto bruto — fatia própria, só teste), 4.6 (`RunLoop` —
+  critérios pela união dos task files do lote; `BugfixLoop` vira projetor de evidência), 4.7
+  (`ACPRunner` + fiação das quatro lacunas), 4.8 (prova de paridade + E2E). A virada do critério
+  estrito (5.0) só é segura depois de 4.8. A terceira decomposição está registrada na techspec,
+  subseção "Integração do agregado nos três caminhos (Bloco D)" (B1/B2/B3).
 
 ## Riscos de Integração
 
-**Excesso deliberado do teto default de 10 tarefas: este PRD é decomposto em 16.**
+**Excesso deliberado do teto default de 10 tarefas: este PRD é decomposto em 18.**
 
 O teto existe para forçar consolidação de PRDs grandes em fatias coerentes. A consolidação foi aplicada
 até o limite do que é seguro. Os itens além de dez não são fragmentação — são dependências duras que
@@ -81,8 +88,21 @@ evidência por rodada, delta, reset de profundidade), 4.3 (promoção aos três 
 ~230 KB de testes com asserções lenientes a ajustar cirurgicamente, quatro lacunas × três caminhos, mais
 prova de paridade e cinco fluxos E2E. Segunda decomposição: 4.3 (adaptador de taskloop + `RunLoop`),
 4.4 (`Service.Execute` — caminho real de produção), 4.5 (`ACPRunner` + fiação das quatro lacunas nos
-três caminhos), 4.6 (prova de paridade entre os três caminhos + fluxos E2E). Cobertura de RF preservada
-integralmente (ver tabela). A virada do critério estrito permanece em 5.0.
+três caminhos), 4.6 (prova de paridade entre os três caminhos + fluxos E2E).
+
+**Terceira decomposição da tarefa 4.3 (aplicada após 3 travas de design).** A execução de 4.3 travou
+três vezes por lacunas de design não resolvíveis pelo executor: B1 — `Cycle.Run` só aprova por
+`CriteriaMap` completo e o caminho `RunLoop` não tem critérios em escopo; B2 — o `Translator` lê texto
+bruto e os stubs vivos devolvem `RawOutput` vazio, fechando tudo como `blocked`; B3 — a fronteira
+`Cycle` ↔ `BugfixLoop` não estava especificada. As três foram resolvidas com decisões concretas na
+techspec (subseção "Integração do agregado nos três caminhos (Bloco D)"). O re-fatiamento
+resultante: 4.3 (extrator `internal/taskcriteria` + adaptador de portas em `internal/taskloop`, sem
+migrar call site), 4.4 (`Service.Execute` — tem critérios por task, migra primeiro e fixa o padrão),
+4.5 (adequação das fixtures ao contrato de texto bruto — fatia própria, só teste, ~19 literais),
+4.6 (`RunLoop` — critérios pela união dos task files do lote; `BugfixLoop` vira projetor de evidência
+a partir dos eventos do `Cycle`; `bugfix.go` entra no escopo), 4.7 (`ACPRunner` + fiação das quatro
+lacunas), 4.8 (prova de paridade + E2E). Cobertura de RF preservada integralmente (ver tabela). A
+virada do critério estrito permanece em 5.0.
 
 Três restrições impediam chegar a dez já no plano original:
 
@@ -127,8 +147,10 @@ custo de dissolver a verificação de não-regressão dentro da tarefa de maior 
 | 4.2 | RF-38, RF-39, RF-42, RF-44, RF-58 |
 | 4.3 | RF-34 |
 | 4.4 | RF-34 |
-| 4.5 | RF-31 |
-| 4.6 | RF-31, RF-34 |
+| 4.5 | RF-34 |
+| 4.6 | RF-34 |
+| 4.7 | RF-31 |
+| 4.8 | RF-31, RF-34 |
 | 5.0 | RF-32, RF-35, RF-36, RF-56 |
 | 6.0 | RF-07, RF-22, RF-26 |
 | 7.0 | RF-06, RF-10, RF-11, RF-12, RF-13, RF-14, RF-15, RF-16, RF-17, RF-18 |
@@ -146,10 +168,12 @@ graph TD
     T3["3.0 — Mapa 1:1 como dado"]
     T41["4.1 — Veredito da fonte real (D1)"]
     T42["4.2 — Evidencia por rodada, delta, profundidade (D2)"]
-    T43["4.3 — Adaptador taskloop + RunLoop"]
-    T44["4.4 — Service.Execute ao agregado"]
-    T45["4.5 — ACPRunner + 4 lacunas fiadas"]
-    T46["4.6 — Paridade 3 caminhos + E2E"]
+    T43["4.3 — Extrator de criterios + adaptador taskloop"]
+    T44["4.4 — Service.Execute conduz o Cycle"]
+    T45["4.5 — Fixtures ao contrato de texto bruto"]
+    T46["4.6 — RunLoop conduz o Cycle"]
+    T47["4.7 — ACPRunner + 4 lacunas fiadas"]
+    T48["4.8 — Paridade 3 caminhos + E2E"]
     T5["5.0 — Teto e criterio estrito"]
     T6["6.0 — Catalogo como registro unico"]
     T7["7.0 — OpenCode oficial"]
@@ -166,7 +190,9 @@ graph TD
     T43 --> T44
     T44 --> T45
     T45 --> T46
-    T46 --> T5
+    T46 --> T47
+    T47 --> T48
+    T48 --> T5
     T2 --> T6
     T6 --> T7
     T7 --> T8
