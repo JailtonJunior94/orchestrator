@@ -5,7 +5,7 @@
 ## Metadados
 - **PRD:** `.specs/prd-harness-quatro-clis-loop-aprovacao/prd.md`
 - **Especificação Técnica:** `.specs/prd-harness-quatro-clis-loop-aprovacao/techspec.md`
-- **Total de tarefas:** 13
+- **Total de tarefas:** 16
 - **Tarefas paralelizáveis:** 2.0 e 3.0
 
 ## Tarefas
@@ -28,8 +28,11 @@
 | 3.0 | Mapa 1:1 critério-evidência como dado verificável | done | 1.0 | Com 2.0 | — |
 | 4.1 | Veredito da fonte real do revisor e adaptadores das portas (D1) | done | 2.0, 3.0 | Não | — |
 | 4.2 | Evidência por rodada, revisão por delta e reset de profundidade (D2) | done | 4.1 | Não | — |
-| 4.3 | Promoção do loop nos três caminhos de produção e as quatro lacunas | pending | 4.2 | Não | — |
-| 5.0 | Propagação do teto de rodadas e virada do critério estrito | pending | 4.3 | Não | — |
+| 4.3 | Adaptador de taskloop e migração de RunLoop ao agregado | pending | 4.2 | Não | — |
+| 4.4 | Migração de Service.Execute ao agregado (caminho real de produção) | pending | 4.3 | Não | — |
+| 4.5 | Migração de ACPRunner e fiação das quatro lacunas nos três caminhos | pending | 4.4 | Não | — |
+| 4.6 | Prova de paridade entre os três caminhos e fluxos E2E | pending | 4.5 | Não | — |
+| 5.0 | Propagação do teto de rodadas e virada do critério estrito | pending | 4.6 | Não | — |
 | 6.0 | Catálogo de Agentes como registro único | done | 2.0 | Não | domain-modeling-production |
 | 7.0 | OpenCode como agente oficial de primeira classe | pending | 6.0 | Não | — |
 | 8.0 | Enforcement não-desligável do OpenCode | pending | 7.0 | Não | — |
@@ -53,27 +56,32 @@
   Gemini sair. Esvaziá-las muda o comportamento sem que nenhum teste falhe.
 - **9.0 precede 10.0.** Os gates de paridade são escritos com as células ainda completas, para que
   fiquem vermelhos exatamente se a remoção degradar a cobertura. Inverter elimina o único sinal.
-- **4.1 → 4.2 → 4.3 → 5.0 são estritamente sequenciais.** A antiga tarefa 4.0 foi decomposta em três
-  fatias commit-sized (ver `## Riscos de Integração`): 4.1 faz o veredito vir da saída real do revisor
-  (D1); 4.2 corrige a evidência por rodada, o delta e o reset de profundidade (D2 + contratos órfãos);
-  4.3 promove o loop aos três caminhos de produção e fecha as quatro lacunas. A virada do critério
-  estrito (5.0) só é segura depois de 4.3.
+- **4.1 → 4.2 → 4.3 → 4.4 → 4.5 → 4.6 → 5.0 são estritamente sequenciais.** A antiga tarefa 4.0 foi
+  decomposta durante a execução (ver `## Riscos de Integração`): 4.1 faz o veredito vir da saída real
+  do revisor (D1); 4.2 corrige a evidência por rodada, o delta e o reset de profundidade (D2 +
+  contratos órfãos); 4.3–4.6 promovem o loop ao agregado nos três caminhos de produção — 4.3 (adaptador
+  de taskloop + `RunLoop`), 4.4 (`Service.Execute`), 4.5 (`ACPRunner` + fiação das quatro lacunas),
+  4.6 (prova de paridade + E2E). A virada do critério estrito (5.0) só é segura depois de 4.6.
 
 ## Riscos de Integração
 
-**Excesso deliberado do teto default de 10 tarefas: este PRD é decomposto em 13.**
+**Excesso deliberado do teto default de 10 tarefas: este PRD é decomposto em 16.**
 
 O teto existe para forçar consolidação de PRDs grandes em fatias coerentes. A consolidação foi aplicada
 até o limite do que é seguro. Os itens além de dez não são fragmentação — são dependências duras que
 nenhuma outra fatia pode absorver.
 
-**Decomposição da tarefa 4.0 em 4.1/4.2/4.3 (aplicada durante a execução).** A tarefa 4.0 original foi
-`failed` na execução com raio de explosão subestimado pela techspec: migrar `Summary.ReviewStatus` dos
-três caminhos de produção ao agregado fail-closed toca ~81 asserções de veredito em
-`internal/taskloop/*_test.go`, e `runEventLoop` não captura o transcript real do revisor exigido por
-RF-57. As três fatias resultantes são commit-sized e revisáveis isoladamente: 4.1 (D1 — veredito da
-fonte real, só o caminho runtime), 4.2 (D2 — evidência por rodada, delta, reset de profundidade),
-4.3 (promoção aos três caminhos + quatro lacunas + paridade). A cobertura de RF é preservada
+**Decomposição da tarefa 4.0 (aplicada durante a execução, em dois passos).** A tarefa 4.0 original foi
+`failed`: migrar `Summary.ReviewStatus` dos três caminhos de produção ao agregado fail-closed toca ~81
+asserções de veredito em `internal/taskloop/*_test.go` e `runEventLoop` não captura o transcript real do
+revisor (RF-57). Primeira decomposição: 4.1 (D1 — veredito da fonte real, caminho runtime), 4.2 (D2 —
+evidência por rodada, delta, reset de profundidade), 4.3 (promoção aos três caminhos). Na execução, a
+4.3 revelou-se ainda grande demais para um passo verde-verificável — três call sites de produção
+(`runner.go` 25 KB, `taskloop.go` 36 KB, `runloop.go` 20 KB), um adaptador novo em `internal/taskloop`,
+~230 KB de testes com asserções lenientes a ajustar cirurgicamente, quatro lacunas × três caminhos, mais
+prova de paridade e cinco fluxos E2E. Segunda decomposição: 4.3 (adaptador de taskloop + `RunLoop`),
+4.4 (`Service.Execute` — caminho real de produção), 4.5 (`ACPRunner` + fiação das quatro lacunas nos
+três caminhos), 4.6 (prova de paridade entre os três caminhos + fluxos E2E). Cobertura de RF preservada
 integralmente (ver tabela). A virada do critério estrito permanece em 5.0.
 
 Três restrições impediam chegar a dez já no plano original:
@@ -117,7 +125,10 @@ custo de dissolver a verificação de não-regressão dentro da tarefa de maior 
 | 3.0 | RF-47, RF-51, RF-52, RF-53, RF-54 |
 | 4.1 | RF-40, RF-57 |
 | 4.2 | RF-38, RF-39, RF-42, RF-44, RF-58 |
-| 4.3 | RF-31, RF-34 |
+| 4.3 | RF-34 |
+| 4.4 | RF-34 |
+| 4.5 | RF-31 |
+| 4.6 | RF-31, RF-34 |
 | 5.0 | RF-32, RF-35, RF-36, RF-56 |
 | 6.0 | RF-07, RF-22, RF-26 |
 | 7.0 | RF-06, RF-10, RF-11, RF-12, RF-13, RF-14, RF-15, RF-16, RF-17, RF-18 |
@@ -135,7 +146,10 @@ graph TD
     T3["3.0 — Mapa 1:1 como dado"]
     T41["4.1 — Veredito da fonte real (D1)"]
     T42["4.2 — Evidencia por rodada, delta, profundidade (D2)"]
-    T43["4.3 — Promocao aos tres caminhos + lacunas"]
+    T43["4.3 — Adaptador taskloop + RunLoop"]
+    T44["4.4 — Service.Execute ao agregado"]
+    T45["4.5 — ACPRunner + 4 lacunas fiadas"]
+    T46["4.6 — Paridade 3 caminhos + E2E"]
     T5["5.0 — Teto e criterio estrito"]
     T6["6.0 — Catalogo como registro unico"]
     T7["7.0 — OpenCode oficial"]
@@ -149,7 +163,10 @@ graph TD
     T3 --> T41
     T41 --> T42
     T42 --> T43
-    T43 --> T5
+    T43 --> T44
+    T44 --> T45
+    T45 --> T46
+    T46 --> T5
     T2 --> T6
     T6 --> T7
     T7 --> T8
