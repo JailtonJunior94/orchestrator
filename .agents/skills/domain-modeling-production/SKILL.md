@@ -1,5 +1,6 @@
 ---
 name: domain-modeling-production
+version: 1.0.0
 description: Conduz modelagem de dominio orientada a producao em PT-BR, transformando problema de negocio, linguagem ubiqua, regras, invariantes, comandos, eventos, estados e fronteiras em um modelo explicito, economico, robusto e implementavel. Use para discovery de dominio, desenho de workflows, definicao de agregados, contratos, politicas e erros de negocio antes de codigo, API ou backlog. Nao use para brainstorming solto, refinamento apenas de UX, implementacao direta de codigo ou arquitetura de infraestrutura sem foco no dominio.
 ---
 

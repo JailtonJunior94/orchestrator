@@ -44,8 +44,24 @@ Nenhum risco novo além do já documentado para o gate: skills modificadas local
 registro passam a falhar em `skills --verify`. Comportamento intencional
 (docs/troubleshooting.md).
 
+## Adendo — `version` no frontmatter das 2 skills novas
+
+`internal/skills/skill-frontmatter.schema.json` marca `version` como `required`, e o teste de
+integração `TestExternalSkills_FrontmatterAndReferences` (`-tags=integration`) já falhava desde
+`ba80b56` para `design-patterns-mandatory` e `domain-modeling-production` (frontmatter sem
+`version`). Correção: adicionado `version: 1.0.0` ao frontmatter de ambas (primeira versão
+rastreada). Hashes re-ancorados:
+
+- `design-patterns-mandatory`: `23765fd14638cece494170ba1e957a44bd54d4c5ba464d01fc6239c8c534b2da`
+- `domain-modeling-production`: `bd043a8a4cdc1667ea936332c799f66aa7ae3090c6e733870f912107d8544151`
+
+`go test -tags=integration -run TestExternalSkills_FrontmatterAndReferences ./internal/integration/`
+passa após a correção.
+
 ## Resultado
 
-- [x] `skills-lock.json` atualizado com os 3 novos hashes + `version` de `semantic-commit` → 1.1.0
+- [x] `skills-lock.json` atualizado com os hashes + `version` de `semantic-commit` → 1.1.0
+- [x] `version: 1.0.0` adicionado a `design-patterns-mandatory` e `domain-modeling-production`; hashes re-ancorados; `version` registrado no lock
 - [x] `ai-spec skills --verify` exit 0
+- [x] `TestExternalSkills_FrontmatterAndReferences` verde
 - [x] Registro salvo em `audit/skill-upgrade-lock-hash-resync-2026-09-10.md`

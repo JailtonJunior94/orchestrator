@@ -1,5 +1,6 @@
 ---
 name: design-patterns-mandatory
+version: 1.0.0
 description: Padroniza a selecao, justificativa, especificacao, refatoracao e validacao dos design patterns classicos do catalogo Refactoring.Guru com foco obrigatorio em economia, eficiencia e robustez, produzindo decisoes deterministicas, pseudocodigo canonico, mapeamento por paradigma e plano de testes para uso em desenvolvimento de software. Use quando o pedido envolver escolher, aplicar, revisar, comparar ou rejeitar padroes de projeto em codigo ou arquitetura de aplicacao. Nao use para documentacao generica, ensino teorico sem contexto de implementacao, ou para recomendar padroes sem evidencia tecnica suficiente.
 ---
 
