@@ -27,7 +27,7 @@
 | 2.0 | Pacote de domínio do Ciclo de Aprovação, sem consumidor | done | 1.0 | Com 3.0 | domain-modeling-production |
 | 3.0 | Mapa 1:1 critério-evidência como dado verificável | done | 1.0 | Com 2.0 | — |
 | 4.1 | Veredito da fonte real do revisor e adaptadores das portas (D1) | done | 2.0, 3.0 | Não | — |
-| 4.2 | Evidência por rodada, revisão por delta e reset de profundidade (D2) | pending | 4.1 | Não | — |
+| 4.2 | Evidência por rodada, revisão por delta e reset de profundidade (D2) | done | 4.1 | Não | — |
 | 4.3 | Promoção do loop nos três caminhos de produção e as quatro lacunas | pending | 4.2 | Não | — |
 | 5.0 | Propagação do teto de rodadas e virada do critério estrito | pending | 4.3 | Não | — |
 | 6.0 | Catálogo de Agentes como registro único | done | 2.0 | Não | domain-modeling-production |

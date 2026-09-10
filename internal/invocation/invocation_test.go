@@ -85,3 +85,37 @@ func TestIncrementDepth_FromZero(t *testing.T) {
 		t.Errorf("expected AI_INVOCATION_DEPTH=1, got %s", got)
 	}
 }
+
+func TestResetDepthRestoresPreviousValue(t *testing.T) {
+	resetEnv()
+	os.Setenv(_envDepth, "1")
+	defer resetEnv()
+
+	restore := NewGuard().ResetDepth()
+	if got := os.Getenv(_envDepth); got != "0" {
+		t.Fatalf("expected AI_INVOCATION_DEPTH=0 during round, got %s", got)
+	}
+
+	restore()
+	if got := os.Getenv(_envDepth); got != "1" {
+		t.Fatalf("expected AI_INVOCATION_DEPTH restored to 1, got %s", got)
+	}
+}
+
+func TestResetDepthUnsetsWhenAbsent(t *testing.T) {
+	resetEnv()
+	defer resetEnv()
+
+	restore := NewGuard().ResetDepth()
+	restore()
+
+	if _, ok := os.LookupEnv(_envDepth); ok {
+		t.Fatal("expected AI_INVOCATION_DEPTH to be unset after restore")
+	}
+}
+
+func TestResetDepthDoesNotChangeDefaultMax(t *testing.T) {
+	if _defaultMax != 2 {
+		t.Fatalf("_defaultMax = %d, want 2 (reset must not raise the ceiling)", _defaultMax)
+	}
+}

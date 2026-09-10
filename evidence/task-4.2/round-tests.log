@@ -1,0 +1,12 @@
+=== RUN   TestEvidenceRoundAddressesAreDistinctAndImmutable
+--- PASS: TestEvidenceRoundAddressesAreDistinctAndImmutable (0.00s)
+=== RUN   TestEvidenceRunAutoReviewRoundIsNumberedAndExclusive
+--- PASS: TestEvidenceRunAutoReviewRoundIsNumberedAndExclusive (0.01s)
+=== RUN   TestReviewPriorSHAEnvIsScopedToRoundAndRestored
+--- PASS: TestReviewPriorSHAEnvIsScopedToRoundAndRestored (0.00s)
+=== RUN   TestReviewPriorSHAValueComesFromRepositoryCutPoint
+--- PASS: TestReviewPriorSHAValueComesFromRepositoryCutPoint (0.01s)
+=== RUN   TestReviewRoundResetsInvocationDepthWithoutRaisingLimit
+--- PASS: TestReviewRoundResetsInvocationDepthWithoutRaisingLimit (0.01s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	0.034s

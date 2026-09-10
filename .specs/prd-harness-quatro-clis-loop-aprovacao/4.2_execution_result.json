@@ -1,0 +1,84 @@
+{
+  "schema_version": 2,
+  "run_id": "task-4.2-evidencia-rodada-delta-profundidade-2026-09-10",
+  "task_id": "4.2",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "ac56696a1e08c88bee5c45be9c44cbfb30fd1e80",
+  "patch_sha256": "269238399b65028fff09f803c9eb98d5ba3ad0ecd7714eac755a0c6d747bf47a",
+  "patch_ref": "evidence/task-4.2/4.2.patch",
+  "final_state_sha256": "f1d4c931d77330865951e4e1246a4407b3a9e0d947f0a5fbd4750b9342f168c7",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./... && go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "c460b44ff353992b68701cb97b0e7651d5144795975e6939c313d62fdf3c328b"
+    },
+    {
+      "command": "go test -tags=integration ./internal/runtime/... -count=1",
+      "exit_code": 0,
+      "output_sha256": "04745da3d7b58aded651c8edefde4cdf427317f3a2dd47e61e1935a6fefd92b3"
+    },
+    {
+      "command": "go test ./internal/runtime/ -run TestEvidence|TestReviewPriorSHA|TestReviewRoundResets -v -count=1",
+      "exit_code": 0,
+      "output_sha256": "9355e9d13bbc660b64bb9f61f3cfca351f07c3859698c4ce85e8cbd21bd30bcf"
+    },
+    {
+      "command": "go test ./internal/invocation/ -run ResetDepth -v -count=1",
+      "exit_code": 0,
+      "output_sha256": "7797e48a85cbdfb9372dc642c2a3c805896281bfd31531e70d85b64a6d5fc8b0"
+    },
+    {
+      "command": "make check-spec-paths check-skills-sync check-scripts-sync check-hooks-sync",
+      "exit_code": 0,
+      "output_sha256": "422e1b36806c12d71c9b0d67f32a2d12073b965043748e537df4a5cb41fcbba7"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "RF-58-buildReviewPointer-no-longer-overwrites-skill-review-md",
+      "evidence_ref": "evidence/task-4.2/d2-grep.log"
+    },
+    {
+      "id": "RF-42-D2-two-rounds-distinct-immutable-addresses-exclusive-write",
+      "evidence_ref": "evidence/task-4.2/round-tests.log"
+    },
+    {
+      "id": "RF-39-prior-sha-absent-round-1-present-round-n-from-cutpoint",
+      "evidence_ref": "evidence/task-4.2/round-tests.log"
+    },
+    {
+      "id": "RF-38-depth-reset-per-round-without-raising-defaultMax",
+      "evidence_ref": "evidence/task-4.2/defaultmax-guard.log"
+    },
+    {
+      "id": "RF-44-review-child-job-does-not-open-new-cycle",
+      "evidence_ref": "evidence/task-4.2/round-tests.log"
+    },
+    {
+      "id": "R-STYLE-001-new-code-english-zero-comments-no-underscore-prefix",
+      "evidence_ref": "evidence/task-4.2/4.2.patch"
+    },
+    {
+      "id": "make-sync-gates-green-review-skill-mirrors-in-sync",
+      "evidence_ref": "evidence/task-4.2/sync-gates.log"
+    },
+    {
+      "id": "build-vet-test-and-integration-green",
+      "evidence_ref": "evidence/task-4.2/build-vet-test.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-4.2/4.2.patch",
+    "evidence/task-4.2/build-vet-test.log",
+    "evidence/task-4.2/integration.log",
+    "evidence/task-4.2/round-tests.log",
+    "evidence/task-4.2/invocation-tests.log",
+    "evidence/task-4.2/sync-gates.log",
+    "evidence/task-4.2/d2-grep.log",
+    "evidence/task-4.2/defaultmax-guard.log"
+  ],
+  "review_verdict": "approved"
+}

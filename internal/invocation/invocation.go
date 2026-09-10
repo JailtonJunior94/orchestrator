@@ -38,6 +38,18 @@ func (g *Guard) IncrementDepth() {
 	_ = os.Setenv(_envDepth, strconv.Itoa(depth+1))
 }
 
+func (g *Guard) ResetDepth() func() {
+	previous, had := os.LookupEnv(_envDepth)
+	_ = os.Setenv(_envDepth, "0")
+	return func() {
+		if had {
+			_ = os.Setenv(_envDepth, previous)
+			return
+		}
+		_ = os.Unsetenv(_envDepth)
+	}
+}
+
 func (g *Guard) readInt(key string, defaultValue int) int {
 	raw := os.Getenv(key)
 	if raw == "" {

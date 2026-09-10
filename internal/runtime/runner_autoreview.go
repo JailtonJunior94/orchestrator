@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/invocation"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
 )
 
@@ -26,6 +27,8 @@ const (
 	// _reviewDiffMaxBytes é o limite default de bytes do diff (5 MB).
 	// Configurável via env AISPEC_REVIEW_DIFF_MAX.
 	_reviewDiffMaxBytes = 5 * 1024 * 1024
+
+	envReviewPriorSHA = "AI_REVIEW_PRIOR_SHA"
 )
 
 // ReviewResult agrega o resultado do auto-review.
@@ -140,28 +143,29 @@ func (c *Catalog) runGitDiff(workDir string, args ...string) (string, error) {
 // Em produção é nil; em testes pode ser substituída via campo do runner (não exposto — testado via mock).
 type autoReviewOutputFn func(ctx context.Context, j Job) (string, error)
 
-// runAutoReview spawna nova ACPRunner com prompt de review e retorna ReviewResult.
-// HARD: child Job tem AutoReview=false forçado (anti-recursão — T-REV-04 valida).
-// HARD: falha de leitura da skill → erro claro, não spawna review.
 func (r *ACPRunner) runAutoReview(ctx context.Context, j Job) (ReviewResult, error) {
-	// Ler skill de review em runtime (não embutir inline).
+	return r.runAutoReviewRound(ctx, j, 1, "")
+}
+
+func (r *ACPRunner) runAutoReviewRound(ctx context.Context, j Job, round int, priorSHA string) (ReviewResult, error) {
+	if round < 1 {
+		return ReviewResult{}, fmt.Errorf("runAutoReviewRound: round %d below one", round)
+	}
+
 	skillBody, err := r.readReviewSkill(j.WorkDir)
 	if err != nil {
-		return ReviewResult{}, fmt.Errorf("runAutoReview: %w", err)
+		return ReviewResult{}, fmt.Errorf("runAutoReviewRound: %w", err)
 	}
 
 	gitDiff := NewCatalog().collectGitDiff(j.WorkDir)
 	prompt := NewCatalog().buildReviewPrompt(skillBody, gitDiff)
 
-	reviewEvidenceDir := filepath.Join(j.EvidenceDir, "review")
-	reviewPath := filepath.Join(j.EvidenceDir, "review.md")
+	reviewEvidenceDir := NewCatalog().roundReviewEvidenceDir(j.EvidenceDir, round)
 
-	// HARD: child Job tem AutoReview=false (anti-recursão).
 	childJob := Job{
 		Prompt:      prompt,
 		WorkDir:     j.WorkDir,
 		EvidenceDir: reviewEvidenceDir,
-		// RuntimeConfig: apenas Timeout para o review; demais campos inertes (F1).
 		RuntimeConfig: RuntimeConfig{
 			Timeout: NewCatalog().mustReviewTimeout(),
 		},
@@ -169,25 +173,73 @@ func (r *ACPRunner) runAutoReview(ctx context.Context, j Job) (ReviewResult, err
 		TasksDir:       j.TasksDir,
 		TaskFileName:   j.TaskFileName,
 		DisableHooks:   j.DisableHooks,
-		SkipDriftGuard: j.SkipDriftGuard, // herdar bypass do parent (consistência do guard)
-		AutoReview:     false,            // HARD: recursão bloqueada
+		SkipDriftGuard: j.SkipDriftGuard,
+		AutoReview:     false,
 	}
 
-	reviewOutput, err := r.spawnReviewSession(ctx, childJob)
+	restoreEnv := NewCatalog().applyRoundReviewEnv(round, priorSHA)
+	reviewOutput, runErr := r.spawnReviewSession(ctx, childJob)
+	restoreEnv()
 
 	status := NewCatalog().translateReviewStatus(reviewOutput)
 	hardIssues := NewCatalog().extractHardIssues(reviewOutput)
 
-	reviewPointerContent := NewCatalog().buildReviewPointer(reviewEvidenceDir, status)
-	_ = os.MkdirAll(filepath.Dir(reviewPath), 0o755)
-	_ = os.WriteFile(reviewPath, []byte(reviewPointerContent), 0o644)
+	evidencePath, writeErr := NewCatalog().writeRoundReviewEvidence(reviewEvidenceDir, reviewOutput)
+	if writeErr != nil {
+		return ReviewResult{}, writeErr
+	}
 
 	return ReviewResult{
 		Status:     status,
-		Path:       reviewPath,
+		Path:       evidencePath,
 		Output:     reviewOutput,
 		HardIssues: hardIssues,
-	}, err
+	}, runErr
+}
+
+func (c *Catalog) roundReviewEvidenceDir(evidenceDir string, round int) string {
+	return filepath.Join(evidenceDir, "review", fmt.Sprintf("round-%d", round))
+}
+
+func (c *Catalog) writeRoundReviewEvidence(roundDir, content string) (string, error) {
+	if err := os.MkdirAll(roundDir, 0o755); err != nil {
+		return "", fmt.Errorf("write round review evidence: %w", err)
+	}
+	path := filepath.Join(roundDir, "review.md")
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o644)
+	if err != nil {
+		return "", fmt.Errorf("write round review evidence at %q: %w", path, err)
+	}
+	defer func() { _ = file.Close() }()
+	if _, err := file.WriteString(content); err != nil {
+		return "", fmt.Errorf("write round review evidence at %q: %w", path, err)
+	}
+	return path, nil
+}
+
+func (c *Catalog) applyRoundReviewEnv(round int, priorSHA string) func() {
+	restoreDepth := invocation.NewGuard().ResetDepth()
+	restorePrior := c.applyPriorReviewSHA(round, priorSHA)
+	return func() {
+		restorePrior()
+		restoreDepth()
+	}
+}
+
+func (c *Catalog) applyPriorReviewSHA(round int, priorSHA string) func() {
+	previous, had := os.LookupEnv(envReviewPriorSHA)
+	if round > 1 && priorSHA != "" {
+		_ = os.Setenv(envReviewPriorSHA, priorSHA)
+	} else {
+		_ = os.Unsetenv(envReviewPriorSHA)
+	}
+	return func() {
+		if had {
+			_ = os.Setenv(envReviewPriorSHA, previous)
+			return
+		}
+		_ = os.Unsetenv(envReviewPriorSHA)
+	}
 }
 
 // readReviewSkill lê .agents/skills/review/SKILL.md relativo ao workDir ou ao cwd.
@@ -277,12 +329,6 @@ func (f *reviewCaptureFactory) New(evidenceDir string) (Persistence, error) {
 		f.capture.inner = inner
 	}
 	return f.capture, nil
-}
-
-// buildReviewPointer cria o conteúdo do arquivo review.md (apontador conveniente ~3 linhas).
-func (c *Catalog) buildReviewPointer(evidenceDir, status string) string {
-	return fmt.Sprintf("# Auto-Review\n\nReviewStatus: %s\n\nRelatório completo: %s/execution_report.md\n",
-		status, evidenceDir)
 }
 
 // mustReviewTimeout retorna 5*time.Minute como ActivityTimeout para sessões de review.

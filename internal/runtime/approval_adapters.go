@@ -61,10 +61,11 @@ func (c *Catalog) revParseHead(workDir string) (string, error) {
 type ReviewerAdapter struct {
 	runner  *ACPRunner
 	baseJob Job
+	repo    approval.Repository
 }
 
 func NewReviewerAdapter(runner *ACPRunner, baseJob Job) *ReviewerAdapter {
-	return &ReviewerAdapter{runner: runner, baseJob: baseJob}
+	return &ReviewerAdapter{runner: runner, baseJob: baseJob, repo: NewRepositoryAdapter(baseJob.WorkDir)}
 }
 
 func (a *ReviewerAdapter) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
@@ -77,11 +78,29 @@ func (a *ReviewerAdapter) Review(ctx context.Context, request approval.ReviewReq
 	}
 	job.Prompt = NewCatalog().buildReviewPrompt(skillBody, request.Target().String())
 
+	priorSHA, err := a.priorCutPoint(ctx, request.Round())
+	if err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+
+	restoreEnv := NewCatalog().applyRoundReviewEnv(request.Round(), priorSHA)
 	rawText, err := a.runner.spawnReviewSession(ctx, job)
+	restoreEnv()
 	if err != nil {
 		return approval.ReviewerOutput{}, err
 	}
 	return approval.NewReviewerOutput(rawText, nil, approval.CriteriaMap{}), nil
+}
+
+func (a *ReviewerAdapter) priorCutPoint(ctx context.Context, round int) (string, error) {
+	if round < 2 {
+		return "", nil
+	}
+	checkpoint, err := a.repo.Checkpoint(ctx)
+	if err != nil {
+		return "", err
+	}
+	return checkpoint.String(), nil
 }
 
 type FixerAdapter struct {
