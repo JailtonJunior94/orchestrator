@@ -1,0 +1,115 @@
+package runtime
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"io"
+	"os/exec"
+	"strings"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
+)
+
+var (
+	_ approval.Reviewer   = (*ReviewerAdapter)(nil)
+	_ approval.Fixer      = (*FixerAdapter)(nil)
+	_ approval.Repository = (*RepositoryAdapter)(nil)
+)
+
+type RepositoryAdapter struct {
+	catalog *Catalog
+	workDir string
+}
+
+func NewRepositoryAdapter(workDir string) *RepositoryAdapter {
+	return &RepositoryAdapter{catalog: NewCatalog(), workDir: workDir}
+}
+
+func (a *RepositoryAdapter) Checkpoint(_ context.Context) (approval.Checkpoint, error) {
+	head, err := a.catalog.revParseHead(a.workDir)
+	if err != nil {
+		return approval.Checkpoint{}, err
+	}
+	return approval.NewCheckpoint(head)
+}
+
+func (a *RepositoryAdapter) FullTarget(_ context.Context) (approval.ReviewTarget, error) {
+	return approval.NewReviewTarget(a.catalog.collectGitDiff(a.workDir)), nil
+}
+
+func (a *RepositoryAdapter) Delta(_ context.Context, since approval.Checkpoint) (approval.ReviewTarget, error) {
+	diff, err := a.catalog.runGitDiff(a.workDir, since.String())
+	if err != nil {
+		return approval.ReviewTarget{}, err
+	}
+	return approval.NewReviewTarget(diff), nil
+}
+
+func (c *Catalog) revParseHead(workDir string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = workDir
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = io.Discard
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("git rev-parse HEAD: %w", err)
+	}
+	return strings.TrimSpace(out.String()), nil
+}
+
+type ReviewerAdapter struct {
+	runner  *ACPRunner
+	baseJob Job
+}
+
+func NewReviewerAdapter(runner *ACPRunner, baseJob Job) *ReviewerAdapter {
+	return &ReviewerAdapter{runner: runner, baseJob: baseJob}
+}
+
+func (a *ReviewerAdapter) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
+	job := a.baseJob
+	job.AutoReview = false
+
+	skillBody, err := a.runner.readReviewSkill(job.WorkDir)
+	if err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+	job.Prompt = NewCatalog().buildReviewPrompt(skillBody, request.Target().String())
+
+	rawText, err := a.runner.spawnReviewSession(ctx, job)
+	if err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+	return approval.NewReviewerOutput(rawText, nil, approval.CriteriaMap{}), nil
+}
+
+type FixerAdapter struct {
+	runner  *ACPRunner
+	baseJob Job
+}
+
+func NewFixerAdapter(runner *ACPRunner, baseJob Job) *FixerAdapter {
+	return &FixerAdapter{runner: runner, baseJob: baseJob}
+}
+
+func (a *FixerAdapter) Fix(ctx context.Context, request approval.FixRequest) error {
+	job := a.baseJob
+	job.AutoReview = false
+	job.Prompt = a.buildFixPrompt(request)
+
+	_, err := a.runner.Run(ctx, job)
+	return err
+}
+
+func (a *FixerAdapter) buildFixPrompt(request approval.FixRequest) string {
+	var sb strings.Builder
+	sb.WriteString("## Findings to fix\n\n")
+	for finding := range request.Findings() {
+		fmt.Fprintf(&sb, "- [%s] %s (%s): %s\n", finding.Severity().String(), finding.File(), finding.Rule(), finding.Description())
+	}
+	sb.WriteString("\n## Target\n\n```diff\n")
+	sb.WriteString(request.Target().String())
+	sb.WriteString("\n```\n")
+	return sb.String()
+}

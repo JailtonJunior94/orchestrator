@@ -1,0 +1,26 @@
+=== RUN   TestAutoReviewOkWhenNoHardMarkers
+=== PAUSE TestAutoReviewOkWhenNoHardMarkers
+=== RUN   TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason
+=== PAUSE TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason
+=== RUN   TestAutoReviewFailClosedWithoutCanonicalVerdict
+=== PAUSE TestAutoReviewFailClosedWithoutCanonicalVerdict
+=== CONT  TestAutoReviewOkWhenNoHardMarkers
+=== CONT  TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason
+=== CONT  TestAutoReviewFailClosedWithoutCanonicalVerdict
+    runner_autoreview_test.go:438: RF-46: ReviewStatus = "ok", want blocked (absence of canonical verdict must not infer approval)
+2026/09/10 18:12:09 INFO connection closed cause="peer connection closed"
+2026/09/10 18:12:09 INFO connection closed cause="peer connection closed"
+2026/09/10 18:12:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/10 18:12:09 INFO connection closed cause="io: read/write on closed pipe"
+--- PASS: TestAutoReviewOkWhenNoHardMarkers (0.00s)
+--- FAIL: TestAutoReviewFailClosedWithoutCanonicalVerdict (0.00s)
+=== NAME  TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason
+    runner_autoreview_test.go:404: D1: ReviewStatus = "ok", want blocked (real reviewer verdict must win over synthetic text)
+2026/09/10 18:12:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/10 18:12:09 INFO connection closed cause="peer connection closed"
+2026/09/10 18:12:09 INFO connection closed cause="peer connection closed"
+2026/09/10 18:12:09 INFO connection closed cause="io: read/write on closed pipe"
+--- FAIL: TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason (0.01s)
+FAIL
+FAIL	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	0.012s
+FAIL

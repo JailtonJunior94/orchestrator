@@ -1,0 +1,83 @@
+{
+  "schema_version": 2,
+  "run_id": "task-4.1-veredito-fonte-real-2026-09-10",
+  "task_id": "4.1",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "fc56ff3a071d3b95dc4a766de8993933c9cc1dff",
+  "patch_sha256": "8d01144e0f387721579154ee395086d1c2456b385e9d0e04a4254fc2454122ff",
+  "patch_ref": "evidence/task-4.1/4.1.patch",
+  "final_state_sha256": "5a135d649f2dc7d199f225f6f928a72e340cb994992b544e0f55b26ebefbb343",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./... && go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "b1acefcece863d6be3a9fdd7e25dae14d05d41fbd05b808f1d7d76196bce217f"
+    },
+    {
+      "command": "go test -tags=integration ./internal/runtime/... -count=1",
+      "exit_code": 0,
+      "output_sha256": "96c1a466f8f75b599a2ef0f45e019e8d3f83d756f9e2bc0200ca6ea7703bf6c7"
+    },
+    {
+      "command": "go test ./internal/runtime/ -run TestAutoReview|TestParseReviewStatus|TestBuildReviewPrompt|Adapter -v -count=1",
+      "exit_code": 0,
+      "output_sha256": "915ddef5a22e21bdc3478cba9eeacce21073d258cecd7a74c1cf6abfaac50e77"
+    },
+    {
+      "command": "make check-spec-paths check-skills-sync check-scripts-sync",
+      "exit_code": 0,
+      "output_sha256": "fe3cb47a406baae5c9df86393c3a6d5958947f8fe3d1cdf64addde8d6a15c88e"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "RF-57-grep-buildReviewOutputFromSummary-zero",
+      "evidence_ref": "evidence/task-4.1/d1-grep.log"
+    },
+    {
+      "id": "D1-real-verdict-blocks-with-empty-cancelreason",
+      "evidence_ref": "evidence/task-4.1/autoreview-tests.log"
+    },
+    {
+      "id": "D1-pre-fix-failure-recorded",
+      "evidence_ref": "evidence/task-4.1/d1-baseline-failure.log"
+    },
+    {
+      "id": "RF-46-fail-closed-without-canonical-verdict",
+      "evidence_ref": "evidence/task-4.1/autoreview-tests.log"
+    },
+    {
+      "id": "TestAutoReview-green-and-T-REV-03-fixture-migrated",
+      "evidence_ref": "evidence/task-4.1/autoreview-tests.log"
+    },
+    {
+      "id": "baseline-4.1.1-attached",
+      "evidence_ref": "evidence/task-4.1/baseline-review-status.log"
+    },
+    {
+      "id": "R-STYLE-001-new-code-english-zero-comments",
+      "evidence_ref": "evidence/task-4.1/4.1.patch"
+    },
+    {
+      "id": "make-sync-gates-green",
+      "evidence_ref": "evidence/task-4.1/sync-gates.log"
+    },
+    {
+      "id": "build-vet-test-and-integration-green",
+      "evidence_ref": "evidence/task-4.1/build-vet-test.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-4.1/4.1.patch",
+    "evidence/task-4.1/build-vet-test.log",
+    "evidence/task-4.1/integration.log",
+    "evidence/task-4.1/autoreview-tests.log",
+    "evidence/task-4.1/sync-gates.log",
+    "evidence/task-4.1/d1-grep.log",
+    "evidence/task-4.1/d1-baseline-failure.log",
+    "evidence/task-4.1/baseline-review-status.log"
+  ],
+  "review_verdict": "approved"
+}

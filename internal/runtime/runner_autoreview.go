@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
 )
 
@@ -172,18 +173,11 @@ func (r *ACPRunner) runAutoReview(ctx context.Context, j Job) (ReviewResult, err
 		AutoReview:     false,            // HARD: recursão bloqueada
 	}
 
-	// Usar reviewOutputFn injetável quando disponível (facilita testes unitários).
-	var reviewOutput string
-	if r.reviewOutputFn != nil {
-		reviewOutput, err = r.reviewOutputFn(ctx, childJob)
-	} else {
-		reviewOutput, err = r.spawnReviewSession(ctx, childJob)
-	}
+	reviewOutput, err := r.spawnReviewSession(ctx, childJob)
 
-	status := NewCatalog().parseReviewStatus(reviewOutput)
+	status := NewCatalog().translateReviewStatus(reviewOutput)
 	hardIssues := NewCatalog().extractHardIssues(reviewOutput)
 
-	// Persistir apontador review.md (arquivo pequeno com resumo).
 	reviewPointerContent := NewCatalog().buildReviewPointer(reviewEvidenceDir, status)
 	_ = os.MkdirAll(filepath.Dir(reviewPath), 0o755)
 	_ = os.WriteFile(reviewPath, []byte(reviewPointerContent), 0o644)
@@ -212,32 +206,77 @@ func (r *ACPRunner) readReviewSkill(workDir string) (string, error) {
 	return string(body), nil
 }
 
-// spawnReviewSession cria um runner filho e retorna o output textual.
-// Reutiliza spec, factory e clock do runner pai.
 func (r *ACPRunner) spawnReviewSession(ctx context.Context, childJob Job) (string, error) {
-	reviewRunner := NewACPRunner(r.spec, NewCatalog().WithClock(r.clock), NewCatalog().WithProber(r.prober), NewCatalog().WithClientFactory(r.factory), NewCatalog().WithPersistenceFactory(r.persistenceFactory))
+	if r.reviewOutputFn != nil {
+		return r.reviewOutputFn(ctx, childJob)
+	}
 
-	reviewSummary, runErr := reviewRunner.Run(ctx, childJob)
+	capture := &reviewOutputCapture{}
+	reviewRunner := NewACPRunner(r.spec, NewCatalog().WithClock(r.clock), NewCatalog().WithProber(r.prober), NewCatalog().WithClientFactory(r.factory), NewCatalog().WithPersistenceFactory(&reviewCaptureFactory{inner: r.persistenceFactory, capture: capture}))
 
-	// Construir output textual a partir do Summary para parseReviewStatus.
-	// Em produção, o output real vem dos eventos persistidos no evidence dir.
-	// parseReviewStatus opera sobre o texto; aqui mapeamos CancelReason.
-	output := NewCatalog().buildReviewOutputFromSummary(reviewSummary, runErr)
-	return output, runErr
+	_, runErr := reviewRunner.Run(ctx, childJob)
+	return capture.String(), runErr
 }
 
-// buildReviewOutputFromSummary constrói representação textual do resultado do review.
-// Em produção o output real vem dos eventos persistidos; aqui construímos a representação
-// baseada no CancelReason para que parseReviewStatus e extractHardIssues possam operar.
-// Testes injetam comportamento via reviewOutputFn.
-func (c *Catalog) buildReviewOutputFromSummary(s Summary, runErr error) string {
-	if runErr != nil {
-		return fmt.Sprintf("erro na sessão de review: %v", runErr)
+func (c *Catalog) translateReviewStatus(reviewOutput string) string {
+	if approval.NewTranslator().Translate(reviewOutput).Approves() {
+		return "ok"
 	}
-	if s.CancelReason != events.CancelReasonNone {
-		return fmt.Sprintf("sessão de review encerrada com: %s", s.CancelReason)
+	return "blocked"
+}
+
+type reviewOutputCapture struct {
+	inner Persistence
+	buf   strings.Builder
+}
+
+func (r *reviewOutputCapture) AppendEvent(evt events.Event) error {
+	if evt.Kind() == events.KindAgentMessage {
+		if msg := evt.AgentMessage(); msg != nil {
+			if r.buf.Len() > 0 {
+				r.buf.WriteByte('\n')
+			}
+			r.buf.WriteString(msg.Text())
+		}
 	}
-	return "review concluído sem marcadores hard"
+	if r.inner != nil {
+		return r.inner.AppendEvent(evt)
+	}
+	return nil
+}
+
+func (r *reviewOutputCapture) WriteToolCalls(summary []events.ToolCallSummary) error {
+	if r.inner != nil {
+		return r.inner.WriteToolCalls(summary)
+	}
+	return nil
+}
+
+func (r *reviewOutputCapture) EnrichReport(summary Summary) error {
+	if r.inner != nil {
+		return r.inner.EnrichReport(summary)
+	}
+	return nil
+}
+
+func (r *reviewOutputCapture) String() string {
+	return r.buf.String()
+}
+
+type reviewCaptureFactory struct {
+	inner   PersistenceFactory
+	capture *reviewOutputCapture
+}
+
+func (f *reviewCaptureFactory) New(evidenceDir string) (Persistence, error) {
+	if f.inner != nil {
+		inner, err := f.inner.New(evidenceDir)
+		if err != nil {
+			return nil, err
+		}
+		f.capture.inner = inner
+	}
+	return f.capture, nil
 }
 
 // buildReviewPointer cria o conteúdo do arquivo review.md (apontador conveniente ~3 linhas).

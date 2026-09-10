@@ -1,0 +1,92 @@
+=== RUN   TestRepositoryAdapterCheckpointAndTargets
+=== PAUSE TestRepositoryAdapterCheckpointAndTargets
+=== RUN   TestReviewerAdapterReturnsRawReviewerText
+=== PAUSE TestReviewerAdapterReturnsRawReviewerText
+=== RUN   TestFixerAdapterRunsSessionWithFindings
+=== PAUSE TestFixerAdapterRunsSessionWithFindings
+=== RUN   TestAutoReviewSkipsWhenFlagFalse
+=== PAUSE TestAutoReviewSkipsWhenFlagFalse
+=== RUN   TestAutoReviewBlocksOnHardIssue
+=== PAUSE TestAutoReviewBlocksOnHardIssue
+=== RUN   TestAutoReviewOkWhenNoHardMarkers
+=== PAUSE TestAutoReviewOkWhenNoHardMarkers
+=== RUN   TestAutoReviewDoesntRecurse
+=== PAUSE TestAutoReviewDoesntRecurse
+=== RUN   TestAutoReviewInheritsSkipDriftGuard
+=== PAUSE TestAutoReviewInheritsSkipDriftGuard
+=== RUN   TestParseReviewStatus_AllCases
+=== PAUSE TestParseReviewStatus_AllCases
+=== RUN   TestBuildReviewPrompt_ContainsSkillAndDiff
+=== PAUSE TestBuildReviewPrompt_ContainsSkillAndDiff
+=== RUN   TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason
+=== PAUSE TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason
+=== RUN   TestAutoReviewFailClosedWithoutCanonicalVerdict
+=== PAUSE TestAutoReviewFailClosedWithoutCanonicalVerdict
+=== CONT  TestRepositoryAdapterCheckpointAndTargets
+=== CONT  TestAutoReviewDoesntRecurse
+=== CONT  TestAutoReviewOkWhenNoHardMarkers
+=== CONT  TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason
+=== CONT  TestAutoReviewSkipsWhenFlagFalse
+=== CONT  TestAutoReviewBlocksOnHardIssue
+=== CONT  TestBuildReviewPrompt_ContainsSkillAndDiff
+=== CONT  TestAutoReviewFailClosedWithoutCanonicalVerdict
+--- PASS: TestBuildReviewPrompt_ContainsSkillAndDiff (0.00s)
+=== CONT  TestParseReviewStatus_AllCases
+=== RUN   TestParseReviewStatus_AllCases/[HARD]_presente
+=== PAUSE TestParseReviewStatus_AllCases/[HARD]_presente
+=== RUN   TestParseReviewStatus_AllCases/BLOQUEADO_presente
+=== PAUSE TestParseReviewStatus_AllCases/BLOQUEADO_presente
+=== RUN   TestParseReviewStatus_AllCases/CRÍTICO_presente
+=== PAUSE TestParseReviewStatus_AllCases/CRÍTICO_presente
+=== RUN   TestParseReviewStatus_AllCases/sem_marcadores_hard
+=== PAUSE TestParseReviewStatus_AllCases/sem_marcadores_hard
+=== RUN   TestParseReviewStatus_AllCases/vazio
+=== PAUSE TestParseReviewStatus_AllCases/vazio
+=== RUN   TestParseReviewStatus_AllCases/[HARD]_minúsculo_—_não_deve_bloquear
+=== PAUSE TestParseReviewStatus_AllCases/[HARD]_minúsculo_—_não_deve_bloquear
+=== CONT  TestAutoReviewInheritsSkipDriftGuard
+--- PASS: TestAutoReviewSkipsWhenFlagFalse (0.00s)
+=== CONT  TestFixerAdapterRunsSessionWithFindings
+2026/09/10 18:13:05 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/10 18:13:05 INFO connection closed cause="peer connection closed"
+--- PASS: TestFixerAdapterRunsSessionWithFindings (0.00s)
+=== CONT  TestReviewerAdapterReturnsRawReviewerText
+2026/09/10 18:13:05 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/10 18:13:05 INFO connection closed cause="peer connection closed"
+--- PASS: TestReviewerAdapterReturnsRawReviewerText (0.00s)
+=== CONT  TestParseReviewStatus_AllCases/[HARD]_presente
+=== CONT  TestParseReviewStatus_AllCases/sem_marcadores_hard
+=== CONT  TestParseReviewStatus_AllCases/[HARD]_minúsculo_—_não_deve_bloquear
+=== CONT  TestParseReviewStatus_AllCases/vazio
+=== CONT  TestParseReviewStatus_AllCases/CRÍTICO_presente
+=== CONT  TestParseReviewStatus_AllCases/BLOQUEADO_presente
+--- PASS: TestParseReviewStatus_AllCases (0.00s)
+    --- PASS: TestParseReviewStatus_AllCases/[HARD]_presente (0.00s)
+    --- PASS: TestParseReviewStatus_AllCases/sem_marcadores_hard (0.00s)
+    --- PASS: TestParseReviewStatus_AllCases/[HARD]_minúsculo_—_não_deve_bloquear (0.00s)
+    --- PASS: TestParseReviewStatus_AllCases/vazio (0.00s)
+    --- PASS: TestParseReviewStatus_AllCases/CRÍTICO_presente (0.00s)
+    --- PASS: TestParseReviewStatus_AllCases/BLOQUEADO_presente (0.00s)
+2026/09/10 18:13:05 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/10 18:13:05 INFO connection closed cause="peer connection closed"
+2026/09/10 18:13:05 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/10 18:13:05 INFO connection closed cause="peer connection closed"
+2026/09/10 18:13:05 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/10 18:13:05 INFO connection closed cause="peer connection closed"
+--- PASS: TestAutoReviewDoesntRecurse (0.01s)
+2026/09/10 18:13:05 INFO connection closed cause="io: read/write on closed pipe"
+--- PASS: TestAutoReviewOkWhenNoHardMarkers (0.01s)
+2026/09/10 18:13:05 INFO connection closed cause="peer connection closed"
+--- PASS: TestAutoReviewInheritsSkipDriftGuard (0.00s)
+2026/09/10 18:13:05 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/10 18:13:05 INFO connection closed cause="peer connection closed"
+2026/09/10 18:13:05 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/10 18:13:05 INFO connection closed cause="peer connection closed"
+2026/09/10 18:13:05 INFO connection closed cause="io: read/write on closed pipe"
+--- PASS: TestAutoReviewBlocksOnHardIssue (0.01s)
+2026/09/10 18:13:05 INFO connection closed cause="peer connection closed"
+--- PASS: TestAutoReviewFailClosedWithoutCanonicalVerdict (0.01s)
+--- PASS: TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason (0.01s)
+--- PASS: TestRepositoryAdapterCheckpointAndTargets (0.01s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	0.020s
