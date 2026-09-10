@@ -15,6 +15,15 @@ eventos e rodadas do `Cycle`.
 - RF-34: cada rodada de revisão e de correção executa em sessão/subagente novo.
 - `RunLoop` conduz o `Cycle` via o adaptador de 4.3; critérios = união dos task files do lote.
   União vazia → o lote mantém o caminho legado `FinalReviewer` sem `Cycle` (defensivo).
+- **G1 (techspec D-B3-G1):** `repositoryPort.Checkpoint` ganha fallback quando `git rev-parse HEAD`
+  falha → `approval.NewCheckpoint(hex(sha256(diff capturado)))`. `Service.Execute` continua obtendo a
+  SHA git quando há repositório (zero regressão em 4.4).
+- **G2 (techspec D-B3-G2):** as fixtures de escalonamento (`TestRunLoopRejectedEscalated`,
+  `TestRunLoopIntegrationEscalonamento`) passam a **variar findings por rodada** (exercita
+  `ReasonMaxRounds`, `BugfixCycles == 3` preservado); teste **novo** dedicado a `ReasonNoConvergence`
+  (findings idênticos → aborto na rodada 2, `Escalated`, sem retry). As asserções "findings idênticos
+  → 3 ciclos" são atualizadas por conflito direto com RF-37, cada uma justificada por requisito.
+  Isso toca `integration_test.go` por motivo RF-37.
 - `internal/taskloop/bugfix.go` **entra no escopo**: nova função
   `bugfixAttemptsFromCycle(result approval.CycleResult) []BugfixIteration` reconstrói
   `BugfixIteration` (`Sequence`, `Origin`, `RootCause`, `FailBefore`, `PassAfter`, `ReviewVerdict`,
@@ -53,8 +62,10 @@ Seguir a techspec desta pasta, fase **`F2b — Ciclo`** (ordem interna, item 6) 
 - Teste: estado terminal do `Cycle` (`ReasonMaxRounds` / `ReasonNoConvergence` / `ReasonEmptyDiff`)
   → `Escalated=true`, sem retry (RF-45).
 - Teste aditivo: `bugfixAttemptsFromCycle` reconstrói `BugfixIteration` das rodadas do `Cycle`.
-- `git diff internal/taskloop/runloop_test.go` — apenas ajustes justificados; `bugfix_test.go` sem
-  inversão de asserção.
+- `git diff internal/taskloop/runloop_test.go internal/taskloop/integration_test.go` — apenas ajustes
+  justificados por requisito (RF-37 / D-B3-G2); `bugfix_test.go` sem inversão de asserção.
+- `repositoryPort.Checkpoint` retorna checkpoint válido sob `FakeFileSystem` sem `.git` (fallback
+  sha256 do diff — D-B3-G1); teste dedicado.
 - T-REV-01/02/04 verdes e sem alteração de asserção.
 - Estilo R-STYLE-001 no código novo/tocado.
 - `make check-spec-paths check-skills-sync check-scripts-sync` verde.

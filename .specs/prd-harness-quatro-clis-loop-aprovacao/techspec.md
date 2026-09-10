@@ -287,6 +287,39 @@ evidência/telemetria**:
 `bugfix_test.go` recebe testes **aditivos** para `bugfixAttemptsFromCycle`; nenhuma asserção existente
 muda.
 
+#### D-B3-G1 — `Checkpoint` sem repositório git
+
+`repositoryPort.Checkpoint` (`internal/taskloop/approval_adapters.go:176-183`) executa
+`git rev-parse HEAD` em `workDir`. O caminho `Service.Execute` (4.4) roda contra repositórios git
+reais nos testes, mas os testes unitários de `RunLoop` usam `setupRunLoopFS` sobre `FakeFileSystem`
+(`internal/taskloop/runloop_test.go:137`) — sem `.git`, diretório inexistente em disco —, o que faria
+`Cycle.Run` abortar na rodada 1 com erro de infraestrutura, não estado terminal.
+
+Resolução, alinhada ao PRD ("o agregado do Ciclo não depende de protocolo, CLI ou filesystem"):
+`repositoryPort.Checkpoint` passa a **cair em fallback** quando `git rev-parse HEAD` falha —
+`approval.NewCheckpoint(hex(sha256(diff capturado)))`, um checkpoint de conteúdo. `Delta` já ignora o
+valor do checkpoint (`Delta(ctx, _ approval.Checkpoint)` re-captura o alvo), então o fallback não muda
+o comportamento de revisão por delta no estágio de paridade; `Service.Execute` continua obtendo a SHA
+git quando o repositório existe (zero regressão em 4.4). A refinação da revisão por delta no caminho
+consolidado (`AI_REVIEW_PRIOR_SHA` real) permanece fora do estágio de paridade.
+
+#### D-B3-G2 — RF-37 (não-convergência) vs. fixtures de escalonamento
+
+`policy.Decide` (`internal/approval/policy.go:48`) aborta com `ReasonNoConvergence` quando a
+fingerprint da rodada repete a anterior (RF-37) — comportamento **desejado**, embutido no `Cycle` e
+não desativável. As fixtures de escalonamento (`TestRunLoopRejectedEscalated`,
+`TestRunLoopIntegrationEscalonamento`) retornam findings **idênticos em todas as rodadas** e asseveram
+`report.BugfixCycles == 3` — o que codifica exatamente o comportamento pré-RF-37 (rodar as 3 rodadas
+mesmo sem convergência).
+
+Resolução: as fixtures de escalonamento passam a **variar os findings por rodada** (arquivo ou regra
+distintos), exercitando a exaustão real do teto (`ReasonMaxRounds`, `BugfixCycles == 3` preservado); e
+`runloop_test.go` ganha um teste **novo** dedicado a `ReasonNoConvergence` (findings idênticos → aborto
+na rodada 2, `Escalated = true`, sem retry). As asserções que hoje esperam "findings idênticos → 3
+ciclos" são atualizadas por conflito direto com RF-37, cada uma justificada por requisito no relatório.
+Isso toca `internal/taskloop/integration_test.go` por motivo RF-37 (distinto do motivo D-B2 que
+restringiu a fatia 4.5) — dentro do escopo de 4.6.
+
 ## Sequenciamento de Desenvolvimento
 
 ### Restrição de ordem descoberta na análise
