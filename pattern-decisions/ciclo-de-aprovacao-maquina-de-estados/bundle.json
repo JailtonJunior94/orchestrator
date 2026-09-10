@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "slug": "ciclo-de-aprovacao-maquina-de-estados",
+  "title": "Ciclo de Aprovacao: maquina de estados sem pattern formal",
+  "created_at": "2026-09-10T15:08:55Z",
+  "language": "pt-BR",
+  "status": "done",
+  "context_mode": "codebase",
+  "selector_input": {
+    "file": "selector-input.json"
+  },
+  "selector_output": {
+    "file": "selector-output.json"
+  },
+  "decision_bundle": {
+    "file": "decision.md",
+    "title": "Ciclo de Aprovacao: maquina de estados sem pattern formal"
+  },
+  "implementation_bundle": {
+    "file": "implementation.md"
+  },
+  "transcript": {
+    "file": "transcript.md"
+  },
+  "primary_pattern": "nao aplicar padrao",
+  "complementary_pattern": "",
+  "rejected_patterns": [
+    "State",
+    "Strategy",
+    "Template Method",
+    "Observer",
+    "Command",
+    "Memento"
+  ],
+  "readiness": {
+    "status": "done",
+    "blockers": []
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "problem": "Percorrer uma arvore simples, mas sem contrato uniforme entre folha e agregado.",
+  "signals": ["recursive_tree_structure", "custom_traversal", "low_change_frequency"],
+  "constraints": ["preserve_public_contract"]
+}

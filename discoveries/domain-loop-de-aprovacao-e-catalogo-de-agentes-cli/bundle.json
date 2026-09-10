@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "slug": "loop-de-aprovacao-e-catalogo-de-agentes-cli",
+  "title": "Ciclo de Aprovacao e Catalogo de Agentes",
+  "created_at": "2026-09-10T14:35:20Z",
+  "language": "pt-BR",
+  "status": "done",
+  "domain_model": {
+    "file": "domain-model.md",
+    "title": "Ciclo de Aprovacao e Catalogo de Agentes"
+  },
+  "transcript": {
+    "file": "transcript.md"
+  },
+  "bounded_contexts": [
+    "Catalogo de Agentes",
+    "Ciclo de Aprovacao"
+  ],
+  "primary_workflow": "O Ciclo conduz rodadas ate Veredito APPROVED com mapa 1:1 completo, ou para com motivo canonico.",
+  "commands": [
+    "SubmeterParaAprovacao",
+    "RegistrarAgente",
+    "RemoverAgente"
+  ],
+  "events": [
+    "RodadaIniciada",
+    "RodadaConcluida",
+    "CicloEncerrado"
+  ],
+  "decisions": [
+    "Termo canonico: `Ciclo de Aprovacao`.",
+    "Dois bounded contexts, com evidencia como saida do Ciclo.",
+    "Restricao dominante: correcao fail-closed.",
+    "Agregado `Catalogo de Agentes`, com Agente como Value Object imutavel.",
+    "Eventos: `RodadaIniciada`, `RodadaConcluida`, `CicloEncerrado`.",
+    "Estado ilegal alvo: Ciclo encerrado com sucesso sem veredito e sem mapa 1:1.",
+    "Nao-convergencia como transicao terminal explicita, nao erro.",
+    "Comando unico `SubmeterParaAprovacao`; o agregado e dono das rodadas.",
+    "`Veredito` como Value Object com construtor validante.",
+    "Resultado tipado + sentinelas para falha de infraestrutura.",
+    "Fingerprint sobre `{severidade, arquivo, regra}` normalizados.",
+    "`PoliticaDeAprovacao` como Value Object injetado.",
+    "Agregado em pacote de dominio proprio, sem dependencia de ACP, CLI ou filesystem.",
+    "Fronteira mais sensivel: o texto do revisor, com camada anticorrupcao fail-closed.",
+    "Consistencia forte em memoria; evidencia append-only imutavel por rodada.",
+    "Postura de custo: abortar cedo e barato."
+  ],
+  "readiness": {
+    "status": "done",
+    "blockers": []
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "problem": "O Runtime de Sessao consome hoje um contrato estreito de quatro metodos (memory.Store) para ler e gravar memoria em arquivo. A feature de memoria duravel introduz um subsistema muito maior atras desse ponto: parse de Fatos em Pagina Markdown, cinco politicas stateless (relevancia, orcamento, lease, sanitizacao, compactacao), agregado de camada com lock, e reconciliacao de sessao orfa. O consumidor nao pode orquestrar esses passos nem ver essa complexidade, e o contrato existente nao pode mudar porque quebraria os chamadores e os mocks gerados, violando a restricao de zero regressao.",
+  "signals": [
+    "subsystem_too_complex",
+    "prefer_composition"
+  ],
+  "constraints": [
+    "preserve_public_contract",
+    "avoid_inheritance",
+    "minimize_indirection",
+    "avoid_global_state",
+    "team_needs_low_cognitive_load"
+  ],
+  "force_reject": []
+}

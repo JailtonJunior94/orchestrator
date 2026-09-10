@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "slug": "memoria-duravel-de-agentes",
+  "title": "Memoria Duravel de Agentes",
+  "created_at": "2026-09-10T14:34:24Z",
+  "language": "pt-BR",
+  "status": "done",
+  "domain_model": {
+    "file": "domain-model.md",
+    "title": "Memoria Duravel de Agentes"
+  },
+  "transcript": {
+    "file": "transcript.md"
+  },
+  "bounded_contexts": [
+    "Memoria"
+  ],
+  "primary_workflow": "captura, consolidacao, recuperacao e handoff do conhecimento de sessao",
+  "commands": [
+    "RegistrarFato",
+    "PromoverFato",
+    "ArquivarFato",
+    "RecuperarContexto",
+    "CompactarCamada",
+    "ReivindicarBastao",
+    "LiberarBastao",
+    "ReconciliarSessaoOrfa",
+    "MigrarMemoria"
+  ],
+  "events": [
+    "FatoRegistrado",
+    "FatoArquivado",
+    "FatoPromovido",
+    "ContradicaoDetectada",
+    "SegredoRedigido",
+    "CompactacaoExecutada",
+    "BastaoTransferido"
+  ],
+  "decisions": [
+    "Evolucao nativa em Go adotando os conceitos de captura, consolidacao, recuperacao e handoff, sem daemon, sem rede e sem chamada de modelo de linguagem no caminho padrao.",
+    "Fato e o termo canonico e a unidade de conhecimento; Pagina e a forma de persistencia.",
+    "Contexto Memoria proprio, separado de Evidencia, porque conhecimento consolidado e prova selada tem naturezas distintas.",
+    "Tres camadas de memoria: projeto, PRD e task.",
+    "Durabilidade em tres niveis, Efemero, DePRD e Duravel, governando camada e ciclo de vida.",
+    "Identidade do Fato formada por chave semantica declarada e hash de conteudo.",
+    "Captura ao encerramento da sessao, com reconciliacao de sessao orfa na abertura seguinte.",
+    "Sete eventos de dominio, alinhados ao que o relatorio de execucao precisa registrar.",
+    "Ordem de precedencia entre invariantes: segredo, depois nao perda, depois dono unico, depois orcamento.",
+    "Erros tipados com falha fechada na escrita e degradacao explicita na leitura.",
+    "Agregado CamadaDeMemoria como fronteira transacional, com Fato como entidade interna, e BastaoDeContinuidade como agregado proprio.",
+    "Consistencia forte por camada e eventual entre camadas.",
+    "Menor desenho que preserva as invariantes, sem indice persistido e reutilizando lock e pontos de ciclo de vida existentes.",
+    "Promocao para a camada de projeto exclusivamente por marcacao explicita.",
+    "Conteudo de autoria humana preservado, contado no orcamento e sinalizado para compactacao humana, nunca reescrito."
+  ],
+  "readiness": {
+    "status": "done",
+    "blockers": []
+  }
+}

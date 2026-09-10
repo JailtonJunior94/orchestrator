@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "slug": "memoria-duravel-fachada",
+  "title": "Fachada do Subsistema de Memoria Duravel",
+  "created_at": "2026-09-10T15:02:39Z",
+  "language": "pt-BR",
+  "status": "done",
+  "context_mode": "codebase",
+  "selector_input": {
+    "file": "selector-input.json"
+  },
+  "selector_output": {
+    "file": "selector-output.json"
+  },
+  "decision_bundle": {
+    "file": "decision.md",
+    "title": "Fachada do Subsistema de Memoria Duravel"
+  },
+  "implementation_bundle": {
+    "file": "implementation.md"
+  },
+  "transcript": {
+    "file": "transcript.md"
+  },
+  "primary_pattern": "Facade",
+  "complementary_pattern": "",
+  "rejected_patterns": [
+    "Decorator",
+    "Adapter",
+    "Proxy",
+    "Strategy",
+    "State",
+    "Command",
+    "Memento",
+    "Observer"
+  ],
+  "readiness": {
+    "status": "done",
+    "blockers": []
+  }
+}

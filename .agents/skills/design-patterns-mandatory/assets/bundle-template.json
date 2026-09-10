@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "slug": "",
+  "title": "",
+  "created_at": "",
+  "language": "pt-BR",
+  "status": "draft",
+  "context_mode": "codebase",
+  "selector_input": {
+    "file": "selector-input.json"
+  },
+  "selector_output": {
+    "file": "selector-output.json"
+  },
+  "decision_bundle": {
+    "file": "decision.md",
+    "title": ""
+  },
+  "implementation_bundle": {
+    "file": "implementation.md"
+  },
+  "transcript": {
+    "file": "transcript.md"
+  },
+  "primary_pattern": "",
+  "complementary_pattern": "",
+  "rejected_patterns": [],
+  "readiness": {
+    "status": "draft",
+    "blockers": []
+  }
+}

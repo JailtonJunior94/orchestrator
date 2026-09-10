@@ -1,0 +1,5 @@
+{
+  "problem": "Traduzir uma unica integracao pontual e estavel, sem perspectiva real de novas variantes.",
+  "signals": ["external_interface_mismatch", "single_variant_only", "low_change_frequency"],
+  "constraints": ["preserve_public_contract"]
+}

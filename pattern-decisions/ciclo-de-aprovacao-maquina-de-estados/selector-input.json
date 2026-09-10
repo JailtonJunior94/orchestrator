@@ -1,0 +1,16 @@
+{
+  "problem": "O Ciclo de Aprovacao precisa conduzir rodadas de revisao e correcao entre quatro estados (EmRevisao, EmCorrecao, Aprovado, Bloqueado) com transicoes permitidas e proibidas explicitas, onde o comportamento de cada passo depende do estado corrente e o estado Aprovado so pode ser alcancado com veredito APPROVED e mapa de criterios completo. Hoje a logica equivalente e um if/else linear em internal/taskloop/bugfix.go:83 que sai cedo demais e nao modela estados.",
+  "signals": [
+    "state_transition_driven_behavior",
+    "strict_test_isolation"
+  ],
+  "constraints": [
+    "preserve_public_contract",
+    "minimize_indirection",
+    "team_needs_low_cognitive_load",
+    "avoid_global_state"
+  ],
+  "force_reject": [
+    "state"
+  ]
+}

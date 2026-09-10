@@ -1,0 +1,265 @@
+{
+  "status": "reject",
+  "primary_pattern": null,
+  "complementary_pattern": null,
+  "simpler_alternative": "Usar solucao direta, modulo pequeno ou refactor local",
+  "rejected_patterns": [],
+  "candidate_scores": [
+    {
+      "key": "factory-method",
+      "name": "Factory Method",
+      "group": "criacional",
+      "simpler_alternative": "Usar construtor ou funcao fabrica simples",
+      "score": 0,
+      "strong_hits": [],
+      "weak_hits": [],
+      "blocker_hits": [],
+      "high_bar": false
+    },
+    {
+      "key": "abstract-factory",
+      "name": "Abstract Factory",
+      "group": "criacional",
+      "simpler_alternative": "Usar funcoes fabrica simples por produto",
+      "score": -3,
+      "strong_hits": [],
+      "weak_hits": [],
+      "blocker_hits": [],
+      "high_bar": true
+    },
+    {
+      "key": "builder",
+      "name": "Builder",
+      "group": "criacional",
+      "simpler_alternative": "Usar construtor simples, literal de objeto ou funcao com defaults",
+      "score": -2,
+      "strong_hits": [],
+      "weak_hits": [
+        "preserve_public_contract"
+      ],
+      "blocker_hits": [],
+      "high_bar": true
+    },
+    {
+      "key": "prototype",
+      "name": "Prototype",
+      "group": "criacional",
+      "simpler_alternative": "Usar funcao fabrica simples que monte o objeto do zero",
+      "score": 1,
+      "strong_hits": [],
+      "weak_hits": [
+        "preserve_public_contract"
+      ],
+      "blocker_hits": [],
+      "high_bar": false
+    },
+    {
+      "key": "singleton",
+      "name": "Singleton",
+      "group": "criacional",
+      "simpler_alternative": "Usar injecao de dependencia com ownership explicito",
+      "score": -10,
+      "strong_hits": [],
+      "weak_hits": [],
+      "blocker_hits": [
+        "avoid_global_state",
+        "strict_test_isolation"
+      ],
+      "high_bar": true
+    },
+    {
+      "key": "adapter",
+      "name": "Adapter",
+      "group": "estrutural",
+      "simpler_alternative": "Usar funcao tradutora local",
+      "score": 1,
+      "strong_hits": [],
+      "weak_hits": [
+        "preserve_public_contract"
+      ],
+      "blocker_hits": [],
+      "high_bar": false
+    },
+    {
+      "key": "bridge",
+      "name": "Bridge",
+      "group": "estrutural",
+      "simpler_alternative": "Usar composicao direta sem dupla hierarquia",
+      "score": -3,
+      "strong_hits": [],
+      "weak_hits": [],
+      "blocker_hits": [],
+      "high_bar": true
+    },
+    {
+      "key": "composite",
+      "name": "Composite",
+      "group": "estrutural",
+      "simpler_alternative": "Usar colecao simples ou recursao local",
+      "score": 0,
+      "strong_hits": [],
+      "weak_hits": [],
+      "blocker_hits": [],
+      "high_bar": false
+    },
+    {
+      "key": "decorator",
+      "name": "Decorator",
+      "group": "estrutural",
+      "simpler_alternative": "Usar composicao direta ou wrapper unico",
+      "score": -1,
+      "strong_hits": [],
+      "weak_hits": [],
+      "blocker_hits": [],
+      "high_bar": false
+    },
+    {
+      "key": "facade",
+      "name": "Facade",
+      "group": "estrutural",
+      "simpler_alternative": "Usar funcao de alto nivel ou modulo simplificado",
+      "score": 1,
+      "strong_hits": [],
+      "weak_hits": [
+        "preserve_public_contract"
+      ],
+      "blocker_hits": [],
+      "high_bar": false
+    },
+    {
+      "key": "flyweight",
+      "name": "Flyweight",
+      "group": "estrutural",
+      "simpler_alternative": "Usar deduplicacao simples ou cache local",
+      "score": -2,
+      "strong_hits": [],
+      "weak_hits": [],
+      "blocker_hits": [],
+      "high_bar": true
+    },
+    {
+      "key": "proxy",
+      "name": "Proxy",
+      "group": "estrutural",
+      "simpler_alternative": "Usar wrapper unico especializado",
+      "score": -1,
+      "strong_hits": [],
+      "weak_hits": [],
+      "blocker_hits": [],
+      "high_bar": false
+    },
+    {
+      "key": "chain-of-responsibility",
+      "name": "Chain of Responsibility",
+      "group": "comportamental",
+      "simpler_alternative": "Usar sequencia explicita de funcoes",
+      "score": 1,
+      "strong_hits": [],
+      "weak_hits": [
+        "preserve_public_contract"
+      ],
+      "blocker_hits": [],
+      "high_bar": false
+    },
+    {
+      "key": "command",
+      "name": "Command",
+      "group": "comportamental",
+      "simpler_alternative": "Usar chamada direta ou funcao callback",
+      "score": 0,
+      "strong_hits": [],
+      "weak_hits": [],
+      "blocker_hits": [],
+      "high_bar": false
+    },
+    {
+      "key": "iterator",
+      "name": "Iterator",
+      "group": "comportamental",
+      "simpler_alternative": "Usar iteracao nativa da linguagem",
+      "score": 0,
+      "strong_hits": [],
+      "weak_hits": [],
+      "blocker_hits": [],
+      "high_bar": false
+    },
+    {
+      "key": "mediator",
+      "name": "Mediator",
+      "group": "comportamental",
+      "simpler_alternative": "Usar orquestrador simples ou modulo de servico",
+      "score": -2,
+      "strong_hits": [],
+      "weak_hits": [
+        "preserve_public_contract"
+      ],
+      "blocker_hits": [],
+      "high_bar": true
+    },
+    {
+      "key": "memento",
+      "name": "Memento",
+      "group": "comportamental",
+      "simpler_alternative": "Usar clone controlado ou event log simples",
+      "score": 0,
+      "strong_hits": [],
+      "weak_hits": [],
+      "blocker_hits": [],
+      "high_bar": false
+    },
+    {
+      "key": "observer",
+      "name": "Observer",
+      "group": "comportamental",
+      "simpler_alternative": "Usar callback direto ou chamada sequencial explicita",
+      "score": 0,
+      "strong_hits": [],
+      "weak_hits": [],
+      "blocker_hits": [],
+      "high_bar": false
+    },
+    {
+      "key": "strategy",
+      "name": "Strategy",
+      "group": "comportamental",
+      "simpler_alternative": "Usar funcao parametrizada ou dispatch table",
+      "score": 0,
+      "strong_hits": [],
+      "weak_hits": [],
+      "blocker_hits": [],
+      "high_bar": false
+    },
+    {
+      "key": "template-method",
+      "name": "Template Method",
+      "group": "comportamental",
+      "simpler_alternative": "Usar funcao de alto nivel com callbacks ou Strategy",
+      "score": 0,
+      "strong_hits": [],
+      "weak_hits": [],
+      "blocker_hits": [],
+      "high_bar": false
+    },
+    {
+      "key": "visitor",
+      "name": "Visitor",
+      "group": "comportamental",
+      "simpler_alternative": "Usar metodos diretos na estrutura ou funcoes por tipo",
+      "score": -3,
+      "strong_hits": [],
+      "weak_hits": [],
+      "blocker_hits": [],
+      "high_bar": true
+    }
+  ],
+  "economy_case": [
+    "Nenhum pattern atingiu score e evidencia suficientes para pagar o custo estrutural."
+  ],
+  "efficiency_case": [
+    "A indirecao adicional seria maior que o beneficio provavel."
+  ],
+  "robustness_case": [
+    "A ausencia de sinais fortes torna a recomendacao arriscada."
+  ],
+  "evidence_gaps": []
+}

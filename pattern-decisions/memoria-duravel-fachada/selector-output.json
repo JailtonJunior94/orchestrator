@@ -1,0 +1,46 @@
+{
+  "status": "ok",
+  "primary_pattern": {
+    "pattern": "Facade",
+    "group": "estrutural",
+    "score": 4,
+    "strong_hits": [
+      "subsystem_too_complex"
+    ],
+    "weak_hits": [
+      "preserve_public_contract"
+    ],
+    "blockers_considered": []
+  },
+  "complementary_pattern": null,
+  "simpler_alternative": "Usar funcao de alto nivel ou modulo simplificado",
+  "rejected_patterns": [],
+  "candidate_scores": [
+    {
+      "key": "facade",
+      "name": "Facade",
+      "group": "estrutural",
+      "simpler_alternative": "Usar funcao de alto nivel ou modulo simplificado",
+      "score": 4,
+      "strong_hits": [
+        "subsystem_too_complex"
+      ],
+      "weak_hits": [
+        "preserve_public_contract"
+      ],
+      "blocker_hits": [],
+      "high_bar": false
+    }
+  ],
+  "economy_case": [
+    "Reduz acoplamento ou branching usando os sinais fortes: subsystem_too_complex."
+  ],
+  "efficiency_case": [
+    "Reduz friccao de manutencao ao organizar responsabilidade estrutural recorrente."
+  ],
+  "robustness_case": [
+    "Permite reorganizar a estrutura preservando contrato publico.",
+    "Isola a variacao em fronteiras pequenas, reduzindo efeito colateral."
+  ],
+  "evidence_gaps": []
+}

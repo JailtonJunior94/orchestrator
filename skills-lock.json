@@ -7,6 +7,18 @@
       "version": "1.0.0",
       "computedHash": "ce8d962e126b442f553fe00fda126475020bdfea5fd38624d32a4d735e7d97ba"
     },
+    "design-patterns-mandatory": {
+      "source": "JailtonJunior94/skills",
+      "sourceType": "github",
+      "skillPath": "skills/design-patterns-mandatory/SKILL.md",
+      "computedHash": "c9e562aa50d5dcc4b5b6a71dc9c1571c4d08d85bb25a03f5a572e1494ca64ced"
+    },
+    "domain-modeling-production": {
+      "source": "JailtonJunior94/skills",
+      "sourceType": "github",
+      "skillPath": "skills/domain-modeling-production/SKILL.md",
+      "computedHash": "0a548091f281fcb1a290a25ed8c19f6f5289ec21688c234332d9d04a03dab0cc"
+    },
     "finalize-changelog-readme-push": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
