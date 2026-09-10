@@ -28,7 +28,7 @@
 | 3.0 | Mapa 1:1 critério-evidência como dado verificável | done | 1.0 | Com 2.0 | — |
 | 4.0 | Promoção do loop ao agregado e correção dos defeitos de causa-raiz | pending | 2.0, 3.0 | Não | — |
 | 5.0 | Propagação do teto de rodadas e virada do critério estrito | pending | 4.0 | Não | — |
-| 6.0 | Catálogo de Agentes como registro único | pending | 2.0 | Não | domain-modeling-production |
+| 6.0 | Catálogo de Agentes como registro único | done | 2.0 | Não | domain-modeling-production |
 | 7.0 | OpenCode como agente oficial de primeira classe | pending | 6.0 | Não | — |
 | 8.0 | Enforcement não-desligável do OpenCode | pending | 7.0 | Não | — |
 | 9.0 | Hooks e paridade comprovada nos quatro agentes | pending | 8.0 | Não | — |

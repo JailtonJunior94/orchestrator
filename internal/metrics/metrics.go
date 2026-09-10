@@ -9,6 +9,7 @@ import (
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
 // FileMetric descreve metricas de um unico arquivo.
@@ -200,18 +201,28 @@ func (c *Catalog) estimateTokens(text string) int {
 	return int(math.Round(float64(len(text)) / 3.5))
 }
 
-// ToolBudgets define o limite maximo de tokens estimados por ferramenta (WindowStandard/default).
-var ToolBudgets = map[string]int{
-	"claude":  70000,
-	"gemini":  4000,
-	"codex":   13000,
-	"copilot": 2000,
+var ToolBudgets = NewCatalog().toolBudgets()
+
+var ToolBudgetsLarge = NewCatalog().toolBudgetsLarge()
+
+func (c *Catalog) toolBudgets() map[string]int {
+	registry := specs.NewCatalog().Registry()
+	out := make(map[string]int, len(registry))
+	for _, agent := range registry {
+		out[agent.ID()] = agent.StandardBudget()
+	}
+	return out
 }
 
-// ToolBudgetsLarge define o limite generoso de tokens por ferramenta para WindowLarge (ADR-023).
-// Aplicado quando ContextWindow.Class() == WindowLarge; driver sem entrada cai em ToolBudgets (sem regressão).
-var ToolBudgetsLarge = map[string]int{
-	"gemini": 500_000, // 500k tokens — janela de 1M; teto generoso para prompts grandes
+func (c *Catalog) toolBudgetsLarge() map[string]int {
+	registry := specs.NewCatalog().Registry()
+	out := make(map[string]int, len(registry))
+	for _, agent := range registry {
+		if agent.LargeBudget() > 0 {
+			out[agent.ID()] = agent.LargeBudget()
+		}
+	}
+	return out
 }
 
 // CheckBudgetForClass verifica o budget levando em conta a WindowClass (ADR-023).

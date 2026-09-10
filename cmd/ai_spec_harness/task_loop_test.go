@@ -297,9 +297,9 @@ func validateRuntimeFlags(runtime, tool string, activityTimeout time.Duration) e
 		return newExitError(2)
 	}
 	if runtime == "acp" {
-		if _, ok := _runtimeACPCatalog[tool]; !ok {
-			supported := make([]string, 0, len(_runtimeACPCatalog))
-			for k := range _runtimeACPCatalog {
+		if _, ok := runtimeACPCatalog[tool]; !ok {
+			supported := make([]string, 0, len(runtimeACPCatalog))
+			for k := range runtimeACPCatalog {
 				supported = append(supported, k)
 			}
 			sort.Strings(supported)
@@ -335,7 +335,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 	t.Run("T-15: claude acp aceito (regressão)", func(t *testing.T) {
 		t.Parallel()
 
-		if _, ok := _runtimeACPCatalog["claude"]; !ok {
+		if _, ok := runtimeACPCatalog["claude"]; !ok {
 			t.Error("runtimeACPCatalog não contém 'claude' — regressão")
 		}
 		err := validateRuntimeFlags("acp", "claude", 0)
@@ -348,7 +348,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 	t.Run("T-13: copilot acp aceito", func(t *testing.T) {
 		t.Parallel()
 
-		if _, ok := _runtimeACPCatalog["copilot"]; !ok {
+		if _, ok := runtimeACPCatalog["copilot"]; !ok {
 			t.Error("runtimeACPCatalog não contém 'copilot'")
 		}
 		err := validateRuntimeFlags("acp", "copilot", 0)
@@ -362,7 +362,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 	t.Run("T-14: gemini acp aceito (ADR-015, RF-25)", func(t *testing.T) {
 		t.Parallel()
 
-		if _, ok := _runtimeACPCatalog["gemini"]; !ok {
+		if _, ok := runtimeACPCatalog["gemini"]; !ok {
 			t.Error("runtimeACPCatalog não contém 'gemini' — tarefa 2.0 não aplicada")
 		}
 		err := validateRuntimeFlags("acp", "gemini", 0)
@@ -375,10 +375,10 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 	t.Run("TestRuntimeACPCatalogIncludesGemini: catálogo inclui gemini (T-13 ext)", func(t *testing.T) {
 		t.Parallel()
 
-		if _, ok := _runtimeACPCatalog["gemini"]; !ok {
+		if _, ok := runtimeACPCatalog["gemini"]; !ok {
 			t.Error("runtimeACPCatalog não contém 'gemini' (T-13 ext — ADR-015)")
 		}
-		spec := _runtimeACPCatalog["gemini"]()
+		spec := runtimeACPCatalog["gemini"]()
 		if spec.ID != "gemini" {
 			t.Errorf("runtimeACPCatalog[\"gemini\"]().ID = %q, esperava \"gemini\"", spec.ID)
 		}
@@ -422,8 +422,8 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 	t.Run("T-16: catálogo contém exatamente claude, codex, copilot e gemini", func(t *testing.T) {
 		t.Parallel()
 
-		keys := make([]string, 0, len(_runtimeACPCatalog))
-		for k := range _runtimeACPCatalog {
+		keys := make([]string, 0, len(runtimeACPCatalog))
+		for k := range runtimeACPCatalog {
 			keys = append(keys, k)
 		}
 		sort.Strings(keys)
@@ -444,7 +444,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 	t.Run("construtores do catálogo retornam Specs válidas", func(t *testing.T) {
 		t.Parallel()
 
-		for tool, ctor := range _runtimeACPCatalog {
+		for tool, ctor := range runtimeACPCatalog {
 			spec := ctor()
 			if spec.ID != tool {
 				t.Errorf("runtimeACPCatalog[%q]().ID = %q, esperava %q", tool, spec.ID, tool)
@@ -461,7 +461,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 func TestRuntimeACPCatalogIncludesGemini(t *testing.T) {
 	t.Parallel()
 
-	ctor, ok := _runtimeACPCatalog["gemini"]
+	ctor, ok := runtimeACPCatalog["gemini"]
 	if !ok {
 		t.Fatal("runtimeACPCatalog não contém 'gemini' — task 2.0 não aplicada")
 	}
@@ -1020,7 +1020,7 @@ func TestAccessModeFullWarnOnce_GeminiVsCodex(t *testing.T) {
 func TestGeminiSpecHasCorrectCommandAndFlags(t *testing.T) {
 	t.Parallel()
 
-	ctor, ok := _runtimeACPCatalog["gemini"]
+	ctor, ok := runtimeACPCatalog["gemini"]
 	if !ok {
 		t.Fatal("runtimeACPCatalog não contém 'gemini'")
 	}
@@ -1038,7 +1038,7 @@ func TestGeminiSpecHasCorrectCommandAndFlags(t *testing.T) {
 func TestGeminiFallbackResolvesViaNpx(t *testing.T) {
 	t.Parallel()
 
-	ctor, ok := _runtimeACPCatalog["gemini"]
+	ctor, ok := runtimeACPCatalog["gemini"]
 	if !ok {
 		t.Fatal("runtimeACPCatalog não contém 'gemini'")
 	}

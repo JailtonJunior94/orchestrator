@@ -352,7 +352,10 @@ func (s *Service) Execute(opts Options) error {
 				return fmt.Errorf("taskloop: wiring RuntimeConfig: %w", rcErr)
 			}
 
-			spec := NewCatalog().resolveACPSpec(executorTool)
+			spec, specErr := NewCatalog().resolveACPSpec(executorTool)
+			if specErr != nil {
+				return fmt.Errorf("taskloop: resolver spec ACP: %w", specErr)
+			}
 			factory := persistence.NewSessionPersistenceFactory(fs.NewOSFileSystem())
 			runner := airuntime.NewACPRunner(
 				spec, airuntime.NewCatalog().
@@ -921,26 +924,10 @@ func (c *Catalog) classifyIterationOutcome(
 	return outcome
 }
 
-// _acpSpecCatalog mapeia tool name → construtor de Spec ACP.
-// Espelha runtimeACPCatalog em cmd/ai_spec_harness/task_loop.go (D-04):
-// a tabela CLI é o gate de validação de --runtime=acp; este mapa é o resolvedor
-// interno do Service.Execute para o caminho padrão (acpInvokerFactory == nil).
-// Adicionar nova entrada aqui ao registrar novo tool ACP no catálogo CLI.
-var _acpSpecCatalog = map[string]func() specs.Spec{
-	"claude":  specs.NewCatalog().Claude,
-	"codex":   specs.NewCatalog().Codex,
-	"copilot": specs.NewCatalog().Copilot,
-	"gemini":  specs.NewCatalog().Gemini,
-}
+var acpSpecCatalog = specs.NewCatalog().ACPSpecCatalog()
 
-// resolveACPSpec retorna a Spec ACP correspondente ao tool informado.
-// Quando o tool não está no catálogo (ex: tool vazio ou não-ACP), retorna specs.Claude()
-// como fallback seguro — a validação no CLI já bloqueou tools inválidos antes de chegar aqui.
-func (c *Catalog) resolveACPSpec(tool string) specs.Spec {
-	if ctor, ok := _acpSpecCatalog[tool]; ok {
-		return ctor()
-	}
-	return specs.NewCatalog().Claude()
+func (c *Catalog) resolveACPSpec(tool string) (specs.Spec, error) {
+	return specs.NewCatalog().ResolveACPSpec(tool)
 }
 
 // resolveWorkDir tenta encontrar a raiz do projeto (diretorio que contem go.mod, .git, ou AGENTS.md).

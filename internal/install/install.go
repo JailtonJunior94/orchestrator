@@ -470,18 +470,11 @@ func (s *Service) verifyToolSkills(sourceDir, installDir string, tool skills.Too
 // specForTool retorna a Spec do runtime ACP para a ferramenta, ou zero-value e false.
 // ADR-024: mapeamento canonico Tool -> Spec para probe de binario.
 func (r1 *Helper) specForTool(tool skills.Tool) (specs.Spec, bool) {
-	switch tool {
-	case skills.ToolClaude:
-		return specs.NewCatalog().Claude(), true
-	case skills.ToolCodex:
-		return specs.NewCatalog().Codex(), true
-	case skills.ToolGemini:
-		return specs.NewCatalog().Gemini(), true
-	case skills.ToolCopilot:
-		return specs.NewCatalog().Copilot(), true
-	default:
+	spec, err := specs.NewCatalog().ResolveACPSpec(string(tool))
+	if err != nil {
 		return specs.Spec{}, false
 	}
+	return spec, true
 }
 
 // probeBinaryAvailable testa se o binario ACP de uma tool esta disponivel.

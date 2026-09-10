@@ -151,8 +151,7 @@ func (c *verifyCommand) run(cmd *cobra.Command, args []string) error {
 			}
 			counts[item.Tool] = c
 		}
-		// Ordem fixa: claude, codex, copilot, gemini, depois quaisquer outros.
-		ordered := []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolGemini}
+		ordered := skills.AllTools
 		seen := make(map[skills.Tool]bool, len(ordered))
 		emit := func(tool skills.Tool) {
 			if _, ok := counts[tool]; !ok {

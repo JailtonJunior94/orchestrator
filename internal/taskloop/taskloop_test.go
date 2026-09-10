@@ -14,6 +14,7 @@ import (
 	taskfs "github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
 // TestResolveWorkDir valida a logica de busca da raiz do projeto via marcadores.
@@ -4508,34 +4509,40 @@ func TestACPRuntimeRoutesCopilotToACPRunner(t *testing.T) {
 	}
 }
 
-// TestResolveACPSpec valida o resolvedor interno de specs para o Service.Execute.
-// Garante que cada tool do catalogo retorna a Spec correta e que tools desconhecidos
-// retornam specs.Claude() como fallback seguro.
 func TestResolveACPSpec(t *testing.T) {
-	tests := []struct {
+	known := []struct {
 		tool        string
 		wantID      string
 		wantCommand string
 	}{
-		// Claude: command e "claude-agent-acp" (binario canonico do SDK ACP)
 		{tool: "claude", wantID: "claude", wantCommand: "claude-agent-acp"},
-		// Codex: command e "codex-acp" (binario canonico do codex-acp adapter — ADR-013 D-01)
 		{tool: "codex", wantID: "codex", wantCommand: "codex-acp"},
-		// Copilot: command e "copilot" (binario canonico do Copilot CLI)
 		{tool: "copilot", wantID: "copilot", wantCommand: "copilot"},
-		// Fallback: tool desconhecido → specs.Claude()
-		{tool: "unknown-tool", wantID: "claude", wantCommand: "claude-agent-acp"},
-		{tool: "", wantID: "claude", wantCommand: "claude-agent-acp"},
+		{tool: "gemini", wantID: "gemini", wantCommand: "gemini"},
 	}
-
-	for _, tt := range tests {
+	for _, tt := range known {
 		t.Run(tt.tool, func(t *testing.T) {
-			spec := NewCatalog().resolveACPSpec(tt.tool)
+			spec, err := NewCatalog().resolveACPSpec(tt.tool)
+			if err != nil {
+				t.Fatalf("resolveACPSpec(%q) unexpected error: %v", tt.tool, err)
+			}
 			if spec.ID != tt.wantID {
 				t.Errorf("resolveACPSpec(%q).ID = %q, want %q", tt.tool, spec.ID, tt.wantID)
 			}
 			if spec.Command != tt.wantCommand {
 				t.Errorf("resolveACPSpec(%q).Command = %q, want %q", tt.tool, spec.Command, tt.wantCommand)
+			}
+		})
+	}
+
+	for _, unknown := range []string{"unknown-tool", ""} {
+		t.Run("missing/"+unknown, func(t *testing.T) {
+			spec, err := NewCatalog().resolveACPSpec(unknown)
+			if !errors.Is(err, specs.ErrToolNotInCatalog) {
+				t.Fatalf("resolveACPSpec(%q) err = %v, want specs.ErrToolNotInCatalog", unknown, err)
+			}
+			if spec.ID != "" {
+				t.Errorf("resolveACPSpec(%q) returned non-zero Spec %q — silent fallback reintroduced", unknown, spec.ID)
 			}
 		})
 	}

@@ -1,5 +1,7 @@
 package skills
 
+import "github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
+
 // Tool representa uma ferramenta de IA suportada.
 type Tool string
 
@@ -10,12 +12,22 @@ const (
 	ToolCopilot Tool = "copilot"
 )
 
-var AllTools = []Tool{ToolClaude, ToolGemini, ToolCodex, ToolCopilot}
+var AllTools = NewCatalog().canonicalTools()
+
+func (catalog *Catalog) canonicalTools() []Tool {
+	ids := specs.NewCatalog().CanonicalOrder()
+	out := make([]Tool, 0, len(ids))
+	for _, id := range ids {
+		out = append(out, Tool(id))
+	}
+	return out
+}
 
 func (catalog *Catalog) ParseTool(s string) (Tool, bool) {
-	switch Tool(s) {
-	case ToolClaude, ToolGemini, ToolCodex, ToolCopilot:
-		return Tool(s), true
+	for _, t := range NewCatalog().canonicalTools() {
+		if string(t) == s {
+			return t, true
+		}
 	}
 	return "", false
 }

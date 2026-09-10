@@ -18,12 +18,12 @@ type DriverID struct{ value string }
 // e retorna o DriverID correspondente.
 // Retorna ErrUnknownDriver (envolvido) quando s não pertence ao conjunto.
 func (c *Catalog) ParseDriverID(s string) (DriverID, error) {
-	switch s {
-	case "claude", "codex", "copilot", "gemini":
-		return DriverID{value: s}, nil
-	default:
-		return DriverID{}, fmt.Errorf("%w: %q", ErrUnknownDriver, s)
+	for _, id := range c.CanonicalOrder() {
+		if id == s {
+			return DriverID{value: s}, nil
+		}
 	}
+	return DriverID{}, fmt.Errorf("%w: %q", ErrUnknownDriver, s)
 }
 
 // String retorna a representação canônica do driver (ex: "claude").

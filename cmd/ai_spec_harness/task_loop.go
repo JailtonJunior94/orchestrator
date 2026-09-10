@@ -20,16 +20,7 @@ import (
 // apenas uma vez por execução do processo (ADR-013 D-08, R-03 alto).
 var _accessModeFullWarnOnce sync.Once
 
-// _runtimeACPCatalog é a fonte de verdade para quais tools podem usar --runtime=acp nesta versão.
-// Responsabilidade do CLI (ADR-012 D-04 / ADR-013 D-04): specs são unidades atômicas; a tabela de roteamento fica no CLI.
-// Runtimes suportados nesta versão: claude (ADR-009), codex (ADR-013), copilot (ADR-012), gemini (ADR-015).
-// Para adicionar suporte a um novo tool: registrar entrada e atualizar testes T-13/T-14/T-15/T-16.
-var _runtimeACPCatalog = map[string]func() specs.Spec{
-	"claude":  specs.NewCatalog().Claude,
-	"codex":   specs.NewCatalog().Codex,
-	"copilot": specs.NewCatalog().Copilot,
-	"gemini":  specs.NewCatalog().Gemini,
-}
+var runtimeACPCatalog = specs.NewCatalog().ACPSpecCatalog()
 
 type taskLoopCommand struct{}
 
@@ -170,9 +161,9 @@ Exemplos:
 				if effectiveTool == "" {
 					effectiveTool = execTool
 				}
-				if _, ok := _runtimeACPCatalog[effectiveTool]; !ok {
-					supported := make([]string, 0, len(_runtimeACPCatalog))
-					for k := range _runtimeACPCatalog {
+				if _, ok := runtimeACPCatalog[effectiveTool]; !ok {
+					supported := make([]string, 0, len(runtimeACPCatalog))
+					for k := range runtimeACPCatalog {
 						supported = append(supported, k)
 					}
 					sort.Strings(supported)

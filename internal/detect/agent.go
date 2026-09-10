@@ -60,31 +60,22 @@ type agentEntry struct {
 	homeDirs []string // subdirs em $HOME que indicam presenca do agente
 }
 
-// allEntries constroi as entradas a partir das Specs canonicas (ADR-019: reusar nomes
-// de comando das specs, sem duplicar literais).
 func (r1 *Catalog) allEntries() []agentEntry {
-	return []agentEntry{
-		{
-			tool:     skills.ToolClaude,
-			command:  specs.NewCatalog().Claude().Command,
-			homeDirs: []string{".claude"},
-		},
-		{
-			tool:     skills.ToolCodex,
-			command:  specs.NewCatalog().Codex().Command,
-			homeDirs: []string{".codex"},
-		},
-		{
-			tool:     skills.ToolGemini,
-			command:  specs.NewCatalog().Gemini().Command,
-			homeDirs: []string{".gemini"},
-		},
-		{
-			tool:     skills.ToolCopilot,
-			command:  specs.NewCatalog().Copilot().Command,
-			homeDirs: []string{".copilot", filepath.Join(".github", "copilot")},
-		},
+	registry := specs.NewCatalog().Registry()
+	out := make([]agentEntry, 0, len(registry))
+	for _, agent := range registry {
+		homeDirs := agent.Signals().HomeDirs()
+		normalized := make([]string, 0, len(homeDirs))
+		for _, d := range homeDirs {
+			normalized = append(normalized, filepath.FromSlash(d))
+		}
+		out = append(out, agentEntry{
+			tool:     skills.Tool(agent.ID()),
+			command:  agent.Signals().Command(),
+			homeDirs: normalized,
+		})
 	}
+	return out
 }
 
 // isDirOnDisk verifica se o path existe e e um diretorio no filesystem real.
