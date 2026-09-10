@@ -1,0 +1,14 @@
+=== RUN   TestStubReviewerRawOutputMatchesDeclaredVerdict
+=== RUN   TestStubReviewerRawOutputMatchesDeclaredVerdict/approved
+=== RUN   TestStubReviewerRawOutputMatchesDeclaredVerdict/approved_with_remarks
+=== RUN   TestStubReviewerRawOutputMatchesDeclaredVerdict/rejected
+=== RUN   TestStubReviewerRawOutputMatchesDeclaredVerdict/blocked
+--- PASS: TestStubReviewerRawOutputMatchesDeclaredVerdict (0.00s)
+    --- PASS: TestStubReviewerRawOutputMatchesDeclaredVerdict/approved (0.00s)
+    --- PASS: TestStubReviewerRawOutputMatchesDeclaredVerdict/approved_with_remarks (0.00s)
+    --- PASS: TestStubReviewerRawOutputMatchesDeclaredVerdict/rejected (0.00s)
+    --- PASS: TestStubReviewerRawOutputMatchesDeclaredVerdict/blocked (0.00s)
+=== RUN   TestStubReviewerDefaultResultCarriesRawText
+--- PASS: TestStubReviewerDefaultResultCarriesRawText (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	0.008s

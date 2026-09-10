@@ -1,0 +1,90 @@
+{
+  "schema_version": 2,
+  "run_id": "task-4.5-fixtures-texto-bruto-2026-09-10",
+  "task_id": "4.5",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "f86b0ceaab72f185d1e3a27b77aa94f8e5a177fd",
+  "patch_sha256": "23291c45e9b60f15bbe564529ac5837ad37a63aaa6f9869e3c884937ef56f78f",
+  "patch_ref": "evidence/task-4.5/4.5.patch",
+  "final_state_sha256": "f9e256c16c93d57238815524f18f20fd425cdfcde84447fdf1e2c91f292d6197",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./... && go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "1d9a9487c75a0997f511c90e02df8596f4539fafb0c40cd13bbeac16c7147f76"
+    },
+    {
+      "command": "go test -tags=integration ./internal/taskloop/... -count=1",
+      "exit_code": 0,
+      "output_sha256": "51bfbdebdf823aabc50f2e27286c9b4059a4022e07eacc09b8599869f40b753b"
+    },
+    {
+      "command": "go test ./internal/taskloop/... -count=1",
+      "exit_code": 0,
+      "output_sha256": "803c3ad93ace7e02f9f304302db6bcca1d46bac1ca22565186026823873c83ff"
+    },
+    {
+      "command": "go test ./internal/taskloop/ -run 'StubReviewerRawOutput|StubReviewerDefaultResult' -v -count=1",
+      "exit_code": 0,
+      "output_sha256": "a41e1c5dac192721d37204765bcbce7affd031341c683978d8122e82fabcad78"
+    },
+    {
+      "command": "make check-spec-paths check-skills-sync check-scripts-sync check-hooks-sync check-mocks",
+      "exit_code": 0,
+      "output_sha256": "8e854777134d4a8ed47603c939e7ba667d15b3ccad91e5bd89e433c4b4f74f1e"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "diff-stat-only-three-test-files",
+      "evidence_ref": "evidence/task-4.5/diff-stat.log"
+    },
+    {
+      "id": "every-finalreviewresult-with-verdict-has-rawoutput-or-inherits-stub",
+      "evidence_ref": "evidence/task-4.5/grep-fixtures.log"
+    },
+    {
+      "id": "contract-table-test-translate-rawoutput-equals-verdict-green",
+      "evidence_ref": "evidence/task-4.5/contract-test.log"
+    },
+    {
+      "id": "taskloop-suite-green-no-assertion-inversion",
+      "evidence_ref": "evidence/task-4.5/unit-tests.log"
+    },
+    {
+      "id": "bugfix-test-and-runner-autoreview-test-untouched",
+      "evidence_ref": "evidence/task-4.5/untouched.log"
+    },
+    {
+      "id": "R-STYLE-001-new-touched-test-code-english-zero-comments-no-underscore",
+      "evidence_ref": "evidence/task-4.5/4.5.patch"
+    },
+    {
+      "id": "make-sync-gates-green",
+      "evidence_ref": "evidence/task-4.5/sync-gates.log"
+    },
+    {
+      "id": "build-vet-test-green",
+      "evidence_ref": "evidence/task-4.5/build-vet-test.log"
+    },
+    {
+      "id": "integration-taskloop-green",
+      "evidence_ref": "evidence/task-4.5/integration.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-4.5/4.5.patch",
+    "evidence/task-4.5/build-vet-test.log",
+    "evidence/task-4.5/integration.log",
+    "evidence/task-4.5/unit-tests.log",
+    "evidence/task-4.5/contract-test.log",
+    "evidence/task-4.5/sync-gates.log",
+    "evidence/task-4.5/grep-fixtures.log",
+    "evidence/task-4.5/diff-stat.log",
+    "evidence/task-4.5/untouched.log",
+    "evidence/task-4.5/review.md"
+  ],
+  "review_verdict": "approved"
+}

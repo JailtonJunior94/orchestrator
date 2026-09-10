@@ -78,7 +78,7 @@ func (r *stubReviewer) ReviewConsolidated(ctx context.Context, diff string) (Fin
 		return FinalReviewResult{}, r.err
 	}
 	if len(r.results) == 0 {
-		return FinalReviewResult{Verdict: VerdictApproved}, nil
+		return FinalReviewResult{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)}, nil
 	}
 	out := r.results[0]
 	if len(r.results) > 1 {
@@ -167,7 +167,7 @@ func TestRunLoopApprovedDirect(t *testing.T) {
 		Executor:      &stubExecutor{},
 		Gate:          &stubGate{},
 		Recorder:      &stubRecorder{},
-		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved}}},
+		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)}}},
 	}
 
 	report, err := svc.RunLoop(context.Background(), Options{
@@ -244,10 +244,9 @@ func TestRunLoopApprovedWithRemarks(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			results := []FinalReviewResult{{Verdict: VerdictApprovedWithRemarks, Findings: findings}}
+			results := []FinalReviewResult{{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)}}
 			if tc.action == ActionImplement {
-				// ActionImplement reentra o BugfixLoop; reviewer subsequente aprova.
-				results = append(results, FinalReviewResult{Verdict: VerdictApproved})
+				results = append(results, FinalReviewResult{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)})
 			}
 			deps := RunLoopDeps{
 				Selector:      &stubSelector{queue: []TaskEntry{{ID: "1.0", Title: "T 1.0"}}},
@@ -304,8 +303,8 @@ func TestRunLoopRejectedThenBugfixApproves(t *testing.T) {
 
 	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
-		{Verdict: VerdictRejected, Findings: critical},    // 1a chamada (RunLoop)
-		{Verdict: VerdictApproved, Findings: []Finding{}}, // dentro do bugfix loop
+		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+		{Verdict: VerdictApproved, Findings: []Finding{}, RawOutput: rawVerdict(VerdictApproved)},
 	}}
 
 	deps := RunLoopDeps{
@@ -360,8 +359,8 @@ func TestRunLoopRejectedThenBugfixWithRemarks(t *testing.T) {
 	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
 	remarks := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 2, Message: "documentar follow-up"}}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
-		{Verdict: VerdictRejected, Findings: critical},
-		{Verdict: VerdictApprovedWithRemarks, Findings: remarks},
+		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+		{Verdict: VerdictApprovedWithRemarks, Findings: remarks, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
 	}}
 
 	deps := RunLoopDeps{
@@ -404,10 +403,10 @@ func TestRunLoopRejectedEscalated(t *testing.T) {
 	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
 	// Reviewer sempre retorna criticos.
 	reviewer := &stubReviewer{results: []FinalReviewResult{
-		{Verdict: VerdictRejected, Findings: critical},
-		{Verdict: VerdictRejected, Findings: critical},
-		{Verdict: VerdictRejected, Findings: critical},
-		{Verdict: VerdictRejected, Findings: critical},
+		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
 	}}
 
 	deps := RunLoopDeps{
@@ -474,8 +473,8 @@ func TestRunLoopApprovedWithRemarksImplementReentersBugfix(t *testing.T) {
 		{Severity: SeverityImportant, File: "b.go", Line: 2, Message: "ressalva 2"},
 	}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
-		{Verdict: VerdictApprovedWithRemarks, Findings: findings},
-		{Verdict: VerdictApproved, Findings: nil},
+		{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
+		{Verdict: VerdictApproved, Findings: nil, RawOutput: rawVerdict(VerdictApproved)},
 	}}
 	bf := &runloopBugfixInvoker{}
 
@@ -518,12 +517,13 @@ func TestRunLoopApprovedWithRemarksImplementExhaustsEscalates(t *testing.T) {
 	findings := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "ressalva persistente"}}
 	// Cinco resultados: 1 RunLoop inicial + 3 ciclos de bugfix sem aprovar.
 	results := []FinalReviewResult{
-		{Verdict: VerdictApprovedWithRemarks, Findings: findings},
+		{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
 	}
 	for i := 0; i < 4; i++ {
 		results = append(results, FinalReviewResult{
-			Verdict:  VerdictRejected,
-			Findings: []Finding{{Severity: SeverityCritical, File: "a.go", Line: 1, Message: "ressalva persistente"}},
+			Verdict:   VerdictRejected,
+			RawOutput: rawVerdict(VerdictRejected),
+			Findings:  []Finding{{Severity: SeverityCritical, File: "a.go", Line: 1, Message: "ressalva persistente"}},
 		})
 	}
 	reviewer := &stubReviewer{results: results}
@@ -558,8 +558,8 @@ func TestRunLoopApprovedWithRemarksImplementThenRemarksNeedsNewPlan(t *testing.T
 	initial := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "implementar ajuste"}}
 	secondRound := []Finding{{Severity: SeveritySuggestion, File: "b.go", Line: 2, Message: "documentar follow-up"}}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
-		{Verdict: VerdictApprovedWithRemarks, Findings: initial},
-		{Verdict: VerdictApprovedWithRemarks, Findings: secondRound},
+		{Verdict: VerdictApprovedWithRemarks, Findings: initial, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
+		{Verdict: VerdictApprovedWithRemarks, Findings: secondRound, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
 	}}
 
 	deps := RunLoopDeps{
@@ -617,9 +617,9 @@ func TestRunLoopRemarksImplementRecursionPreservesContext(t *testing.T) {
 	first := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "ajuste 1"}}
 	second := []Finding{{Severity: SeverityImportant, File: "b.go", Line: 2, Message: "ajuste 2"}}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
-		{Verdict: VerdictApprovedWithRemarks, Findings: first},
-		{Verdict: VerdictApprovedWithRemarks, Findings: second},
-		{Verdict: VerdictApproved},
+		{Verdict: VerdictApprovedWithRemarks, Findings: first, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
+		{Verdict: VerdictApprovedWithRemarks, Findings: second, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
+		{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)},
 	}}
 	invoker := &runloopBugfixInvoker{}
 	deps := RunLoopDeps{
@@ -675,7 +675,7 @@ func TestRunLoopApprovedWithRemarksImplementThenBlocked(t *testing.T) {
 
 	initial := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "implementar ajuste"}}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
-		{Verdict: VerdictApprovedWithRemarks, Findings: initial},
+		{Verdict: VerdictApprovedWithRemarks, Findings: initial, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
 		{Verdict: VerdictBlocked, RawOutput: "BLOCKED: faltou diff para validar follow-up"},
 	}}
 
@@ -723,7 +723,7 @@ func TestRunLoopImplementEmitsTelemetry(t *testing.T) {
 		{Severity: SeveritySuggestion, File: "b.go", Line: 0, Message: "ressalva B"},
 	}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
-		{Verdict: VerdictApprovedWithRemarks, Findings: findings},
+		{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
 	}}
 
 	deps := RunLoopDeps{

@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-quatro-clis-loop-aprovacao/4.5_execution_report.md
+summary: Fixtures de revisao de internal/taskloop anexam RawOutput canonico casando o veredito; teste de contrato Translate(RawOutput)==Verdict adicionado
+timestamp: 2026-09-10T22:38:01Z

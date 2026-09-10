@@ -24,11 +24,11 @@ mudança mecânica antes da migração de `RunLoop` (4.6).
 
 ## Subtarefas
 
-- [ ] 4.5.1 Anexar `RawOutput` ao `stubReviewer` default (`internal/taskloop/runloop_test.go:67-88`)
+- [x] 4.5.1 Anexar `RawOutput` ao `stubReviewer` default (`internal/taskloop/runloop_test.go:67-88`)
       e aos 16 literais `FinalReviewResult{}` do arquivo.
-- [ ] 4.5.2 Anexar `RawOutput` aos 3 literais de `internal/taskloop/integration_test.go`
+- [x] 4.5.2 Anexar `RawOutput` aos 3 literais de `internal/taskloop/integration_test.go`
       (`:439`, `:483`, `:538`).
-- [ ] 4.5.3 Adicionar teste de tabela que afirma
+- [x] 4.5.3 Adicionar teste de tabela que afirma
       `approval.NewTranslator().Translate(fixture.RawOutput) == fixture.Verdict` para toda fixture
       com veredito — trava do contrato.
 

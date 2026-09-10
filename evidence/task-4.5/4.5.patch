@@ -1,0 +1,267 @@
+diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/task-4.5-fixtures-texto-bruto.md b/.specs/prd-harness-quatro-clis-loop-aprovacao/task-4.5-fixtures-texto-bruto.md
+index ab101cc..5e441e1 100644
+--- a/.specs/prd-harness-quatro-clis-loop-aprovacao/task-4.5-fixtures-texto-bruto.md
++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/task-4.5-fixtures-texto-bruto.md
+@@ -24,11 +24,11 @@ mudança mecânica antes da migração de `RunLoop` (4.6).
+ 
+ ## Subtarefas
+ 
+-- [ ] 4.5.1 Anexar `RawOutput` ao `stubReviewer` default (`internal/taskloop/runloop_test.go:67-88`)
++- [x] 4.5.1 Anexar `RawOutput` ao `stubReviewer` default (`internal/taskloop/runloop_test.go:67-88`)
+       e aos 16 literais `FinalReviewResult{}` do arquivo.
+-- [ ] 4.5.2 Anexar `RawOutput` aos 3 literais de `internal/taskloop/integration_test.go`
++- [x] 4.5.2 Anexar `RawOutput` aos 3 literais de `internal/taskloop/integration_test.go`
+       (`:439`, `:483`, `:538`).
+-- [ ] 4.5.3 Adicionar teste de tabela que afirma
++- [x] 4.5.3 Adicionar teste de tabela que afirma
+       `approval.NewTranslator().Translate(fixture.RawOutput) == fixture.Verdict` para toda fixture
+       com veredito — trava do contrato.
+ 
+diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+index cbcb32a..027ba17 100644
+--- a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+@@ -30,7 +30,7 @@
+ | 4.2 | Evidência por rodada, revisão por delta e reset de profundidade (D2) | done | 4.1 | Não | — |
+ | 4.3 | Extrator de critérios compartilhado e adaptador de portas em taskloop | done | 4.2 | Não | — |
+ | 4.4 | Service.Execute conduz o Cycle (critérios por task, estabelece o padrão) | done | 4.3 | Não | — |
+-| 4.5 | Adequação das fixtures de revisão ao contrato de texto bruto | pending | 4.4 | Não | — |
++| 4.5 | Adequação das fixtures de revisão ao contrato de texto bruto | done | 4.4 | Não | — |
+ | 4.6 | RunLoop conduz o Cycle; BugfixLoop reduzido a projetor de evidência | pending | 4.5 | Não | — |
+ | 4.7 | ACPRunner conduz o Cycle e fiação das quatro lacunas nos três caminhos | pending | 4.6 | Não | — |
+ | 4.8 | Prova de paridade entre os três caminhos e fluxos E2E | pending | 4.7 | Não | — |
+diff --git a/internal/taskloop/integration_test.go b/internal/taskloop/integration_test.go
+index 9360dc2..1eff805 100644
+--- a/internal/taskloop/integration_test.go
++++ b/internal/taskloop/integration_test.go
+@@ -436,7 +436,7 @@ func TestRunLoopIntegrationCaminhoFeliz(t *testing.T) {
+ 		Executor:      &stubExecutor{},
+ 		Gate:          &stubGate{},
+ 		Recorder:      &stubRecorder{},
+-		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved}}},
++		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)}}},
+ 	}
+ 
+ 	var report *LoopReport
+@@ -481,10 +481,10 @@ func TestRunLoopIntegrationEscalonamento(t *testing.T) {
+ 
+ 	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
+ 	reviewer := &stubReviewer{results: []FinalReviewResult{
+-		{Verdict: VerdictRejected, Findings: critical},
+-		{Verdict: VerdictRejected, Findings: critical},
+-		{Verdict: VerdictRejected, Findings: critical},
+-		{Verdict: VerdictRejected, Findings: critical},
++		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+ 	}}
+ 
+ 	deps := RunLoopDeps{
+@@ -535,7 +535,7 @@ func TestRunLoopIntegrationApprovedWithRemarksNonInteractive(t *testing.T) {
+ 		Executor:      &stubExecutor{},
+ 		Gate:          &stubGate{},
+ 		Recorder:      &stubRecorder{},
+-		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApprovedWithRemarks, Findings: findings}}},
++		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)}}},
+ 	}
+ 
+ 	report, err := svc.RunLoop(context.Background(), Options{
+diff --git a/internal/taskloop/runloop_test.go b/internal/taskloop/runloop_test.go
+index 24b44c7..b4206bb 100644
+--- a/internal/taskloop/runloop_test.go
++++ b/internal/taskloop/runloop_test.go
+@@ -78,7 +78,7 @@ func (r *stubReviewer) ReviewConsolidated(ctx context.Context, diff string) (Fin
+ 		return FinalReviewResult{}, r.err
+ 	}
+ 	if len(r.results) == 0 {
+-		return FinalReviewResult{Verdict: VerdictApproved}, nil
++		return FinalReviewResult{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)}, nil
+ 	}
+ 	out := r.results[0]
+ 	if len(r.results) > 1 {
+@@ -167,7 +167,7 @@ func TestRunLoopApprovedDirect(t *testing.T) {
+ 		Executor:      &stubExecutor{},
+ 		Gate:          &stubGate{},
+ 		Recorder:      &stubRecorder{},
+-		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved}}},
++		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)}}},
+ 	}
+ 
+ 	report, err := svc.RunLoop(context.Background(), Options{
+@@ -244,10 +244,9 @@ func TestRunLoopApprovedWithRemarks(t *testing.T) {
+ 
+ 	for _, tc := range cases {
+ 		t.Run(tc.name, func(t *testing.T) {
+-			results := []FinalReviewResult{{Verdict: VerdictApprovedWithRemarks, Findings: findings}}
++			results := []FinalReviewResult{{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)}}
+ 			if tc.action == ActionImplement {
+-				// ActionImplement reentra o BugfixLoop; reviewer subsequente aprova.
+-				results = append(results, FinalReviewResult{Verdict: VerdictApproved})
++				results = append(results, FinalReviewResult{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)})
+ 			}
+ 			deps := RunLoopDeps{
+ 				Selector:      &stubSelector{queue: []TaskEntry{{ID: "1.0", Title: "T 1.0"}}},
+@@ -304,8 +303,8 @@ func TestRunLoopRejectedThenBugfixApproves(t *testing.T) {
+ 
+ 	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
+ 	reviewer := &stubReviewer{results: []FinalReviewResult{
+-		{Verdict: VerdictRejected, Findings: critical},    // 1a chamada (RunLoop)
+-		{Verdict: VerdictApproved, Findings: []Finding{}}, // dentro do bugfix loop
++		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictApproved, Findings: []Finding{}, RawOutput: rawVerdict(VerdictApproved)},
+ 	}}
+ 
+ 	deps := RunLoopDeps{
+@@ -360,8 +359,8 @@ func TestRunLoopRejectedThenBugfixWithRemarks(t *testing.T) {
+ 	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
+ 	remarks := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 2, Message: "documentar follow-up"}}
+ 	reviewer := &stubReviewer{results: []FinalReviewResult{
+-		{Verdict: VerdictRejected, Findings: critical},
+-		{Verdict: VerdictApprovedWithRemarks, Findings: remarks},
++		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictApprovedWithRemarks, Findings: remarks, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
+ 	}}
+ 
+ 	deps := RunLoopDeps{
+@@ -404,10 +403,10 @@ func TestRunLoopRejectedEscalated(t *testing.T) {
+ 	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
+ 	// Reviewer sempre retorna criticos.
+ 	reviewer := &stubReviewer{results: []FinalReviewResult{
+-		{Verdict: VerdictRejected, Findings: critical},
+-		{Verdict: VerdictRejected, Findings: critical},
+-		{Verdict: VerdictRejected, Findings: critical},
+-		{Verdict: VerdictRejected, Findings: critical},
++		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+ 	}}
+ 
+ 	deps := RunLoopDeps{
+@@ -474,8 +473,8 @@ func TestRunLoopApprovedWithRemarksImplementReentersBugfix(t *testing.T) {
+ 		{Severity: SeverityImportant, File: "b.go", Line: 2, Message: "ressalva 2"},
+ 	}
+ 	reviewer := &stubReviewer{results: []FinalReviewResult{
+-		{Verdict: VerdictApprovedWithRemarks, Findings: findings},
+-		{Verdict: VerdictApproved, Findings: nil},
++		{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
++		{Verdict: VerdictApproved, Findings: nil, RawOutput: rawVerdict(VerdictApproved)},
+ 	}}
+ 	bf := &runloopBugfixInvoker{}
+ 
+@@ -518,12 +517,13 @@ func TestRunLoopApprovedWithRemarksImplementExhaustsEscalates(t *testing.T) {
+ 	findings := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "ressalva persistente"}}
+ 	// Cinco resultados: 1 RunLoop inicial + 3 ciclos de bugfix sem aprovar.
+ 	results := []FinalReviewResult{
+-		{Verdict: VerdictApprovedWithRemarks, Findings: findings},
++		{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
+ 	}
+ 	for i := 0; i < 4; i++ {
+ 		results = append(results, FinalReviewResult{
+-			Verdict:  VerdictRejected,
+-			Findings: []Finding{{Severity: SeverityCritical, File: "a.go", Line: 1, Message: "ressalva persistente"}},
++			Verdict:   VerdictRejected,
++			RawOutput: rawVerdict(VerdictRejected),
++			Findings:  []Finding{{Severity: SeverityCritical, File: "a.go", Line: 1, Message: "ressalva persistente"}},
+ 		})
+ 	}
+ 	reviewer := &stubReviewer{results: results}
+@@ -558,8 +558,8 @@ func TestRunLoopApprovedWithRemarksImplementThenRemarksNeedsNewPlan(t *testing.T
+ 	initial := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "implementar ajuste"}}
+ 	secondRound := []Finding{{Severity: SeveritySuggestion, File: "b.go", Line: 2, Message: "documentar follow-up"}}
+ 	reviewer := &stubReviewer{results: []FinalReviewResult{
+-		{Verdict: VerdictApprovedWithRemarks, Findings: initial},
+-		{Verdict: VerdictApprovedWithRemarks, Findings: secondRound},
++		{Verdict: VerdictApprovedWithRemarks, Findings: initial, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
++		{Verdict: VerdictApprovedWithRemarks, Findings: secondRound, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
+ 	}}
+ 
+ 	deps := RunLoopDeps{
+@@ -617,9 +617,9 @@ func TestRunLoopRemarksImplementRecursionPreservesContext(t *testing.T) {
+ 	first := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "ajuste 1"}}
+ 	second := []Finding{{Severity: SeverityImportant, File: "b.go", Line: 2, Message: "ajuste 2"}}
+ 	reviewer := &stubReviewer{results: []FinalReviewResult{
+-		{Verdict: VerdictApprovedWithRemarks, Findings: first},
+-		{Verdict: VerdictApprovedWithRemarks, Findings: second},
+-		{Verdict: VerdictApproved},
++		{Verdict: VerdictApprovedWithRemarks, Findings: first, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
++		{Verdict: VerdictApprovedWithRemarks, Findings: second, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
++		{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)},
+ 	}}
+ 	invoker := &runloopBugfixInvoker{}
+ 	deps := RunLoopDeps{
+@@ -675,7 +675,7 @@ func TestRunLoopApprovedWithRemarksImplementThenBlocked(t *testing.T) {
+ 
+ 	initial := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "implementar ajuste"}}
+ 	reviewer := &stubReviewer{results: []FinalReviewResult{
+-		{Verdict: VerdictApprovedWithRemarks, Findings: initial},
++		{Verdict: VerdictApprovedWithRemarks, Findings: initial, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
+ 		{Verdict: VerdictBlocked, RawOutput: "BLOCKED: faltou diff para validar follow-up"},
+ 	}}
+ 
+@@ -723,7 +723,7 @@ func TestRunLoopImplementEmitsTelemetry(t *testing.T) {
+ 		{Severity: SeveritySuggestion, File: "b.go", Line: 0, Message: "ressalva B"},
+ 	}
+ 	reviewer := &stubReviewer{results: []FinalReviewResult{
+-		{Verdict: VerdictApprovedWithRemarks, Findings: findings},
++		{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
+ 	}}
+ 
+ 	deps := RunLoopDeps{
+diff --git a/internal/taskloop/approval_rawtext_contract_test.go b/internal/taskloop/approval_rawtext_contract_test.go
+new file mode 100644
+index 0000000..6df4e9f
+--- /dev/null
++++ b/internal/taskloop/approval_rawtext_contract_test.go
+@@ -0,0 +1,50 @@
++package taskloop
++
++import (
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
++)
++
++func rawVerdict(v ReviewVerdict) string {
++	return "Verdict: " + string(v)
++}
++
++func TestStubReviewerRawOutputMatchesDeclaredVerdict(t *testing.T) {
++	translator := approval.NewTranslator()
++
++	cases := []struct {
++		name    string
++		verdict ReviewVerdict
++	}{
++		{"approved", VerdictApproved},
++		{"approved_with_remarks", VerdictApprovedWithRemarks},
++		{"rejected", VerdictRejected},
++		{"blocked", VerdictBlocked},
++	}
++
++	for _, tc := range cases {
++		t.Run(tc.name, func(t *testing.T) {
++			raw := rawVerdict(tc.verdict)
++			if got := translator.Translate(raw).String(); got != string(tc.verdict) {
++				t.Fatalf("Translate(%q).String() = %q, want %q", raw, got, tc.verdict)
++			}
++		})
++	}
++}
++
++func TestStubReviewerDefaultResultCarriesRawText(t *testing.T) {
++	reviewer := &stubReviewer{}
++
++	result, err := reviewer.ReviewConsolidated(t.Context(), "diff")
++	if err != nil {
++		t.Fatalf("ReviewConsolidated: %v", err)
++	}
++	if result.RawOutput == "" {
++		t.Fatal("default stub result has empty RawOutput")
++	}
++	translator := approval.NewTranslator()
++	if got := translator.Translate(result.RawOutput).String(); got != string(result.Verdict) {
++		t.Fatalf("Translate(RawOutput).String() = %q, want %q", got, result.Verdict)
++	}
++}

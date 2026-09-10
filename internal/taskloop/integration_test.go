@@ -436,7 +436,7 @@ func TestRunLoopIntegrationCaminhoFeliz(t *testing.T) {
 		Executor:      &stubExecutor{},
 		Gate:          &stubGate{},
 		Recorder:      &stubRecorder{},
-		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved}}},
+		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)}}},
 	}
 
 	var report *LoopReport
@@ -481,10 +481,10 @@ func TestRunLoopIntegrationEscalonamento(t *testing.T) {
 
 	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
-		{Verdict: VerdictRejected, Findings: critical},
-		{Verdict: VerdictRejected, Findings: critical},
-		{Verdict: VerdictRejected, Findings: critical},
-		{Verdict: VerdictRejected, Findings: critical},
+		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
 	}}
 
 	deps := RunLoopDeps{
@@ -535,7 +535,7 @@ func TestRunLoopIntegrationApprovedWithRemarksNonInteractive(t *testing.T) {
 		Executor:      &stubExecutor{},
 		Gate:          &stubGate{},
 		Recorder:      &stubRecorder{},
-		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApprovedWithRemarks, Findings: findings}}},
+		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)}}},
 	}
 
 	report, err := svc.RunLoop(context.Background(), Options{
