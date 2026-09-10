@@ -125,11 +125,13 @@ ai-spec-harness install . --dry-run
 
 | Aspecto | Regra |
 |---------|-------|
-| Idioma | PT-BR (comentarios, erros, mensagens) |
+| Idioma (codigo) | **Ingles obrigatorio** em todo o codigo-fonte: identificadores, pacotes, mensagens de erro, nomes de teste e de arquivo. Ver `.claude/rules/code-style.md` (R-STYLE-001, hard) |
+| Comentarios | **Zero comentarios no codigo** (linha, bloco e doc-comments). Regra hard, inegociavel. Ver `.claude/rules/code-style.md` |
+| Idioma (docs) | PT-BR em artefatos `.md`, relatorios, ADRs, PRDs, changelog |
 | Commits | Conventional Commits: tipo em ingles, corpo em portugues |
 | Testes | table-driven; FakeFileSystem (unit); t.TempDir() (integration) |
 | DI | injetar via construtor; zero estado global |
-| Erros | `fmt.Errorf("contexto: %w", err)` |
+| Erros | `fmt.Errorf("context: %w", err)` — texto em ingles, sem comentario |
 | Pacotes | um por responsabilidade em `internal/` |
 | Interfaces | definir no pacote consumidor quando possivel |
 

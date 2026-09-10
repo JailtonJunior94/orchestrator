@@ -8,6 +8,11 @@ packages:
   github.com/JailtonJunior94/ai-spec-harness/internal/agents:
     interfaces:
       Registry:
+  github.com/JailtonJunior94/ai-spec-harness/internal/approval:
+    interfaces:
+      Reviewer:
+      Fixer:
+      Repository:
   github.com/JailtonJunior94/ai-spec-harness/internal/config:
     interfaces:
       Resolver:

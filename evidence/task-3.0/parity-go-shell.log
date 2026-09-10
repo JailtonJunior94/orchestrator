@@ -1,0 +1,5 @@
+absent       shell=FAIL go=     match=NO
+incomplete   shell=FAIL go=     match=NO
+nverif       shell=FAIL go=     match=NO
+badev        shell=FAIL go=     match=NO
+valid        shell=PASS go=     match=NO

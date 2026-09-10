@@ -1,0 +1,31 @@
+# Isolamento do dominio + lint + imports autorizados — task 2.0
+## 2026-09-10T16:51:35Z
+
+$ go list -deps ./internal/approval | grep -E '^github.com/JailtonJunior94/ai-spec-harness/internal/(runtime|taskloop|detect|install|manifest)'
+(vazio — nenhuma dependencia de pacote interno de infraestrutura)
+
+$ go list -deps ./internal/approval | grep -E '^github.com/JailtonJunior94'
+github.com/JailtonJunior94/ai-spec-harness/internal/approval
+
+$ go list -f '{{join .Imports "\n"}}' ./internal/approval
+context
+crypto/sha256
+encoding/hex
+errors
+fmt
+iter
+slices
+strings
+
+$ go list -f '{{join .Imports "\n"}}' ./internal/approval | grep -E 'acp|net/http|path/filepath|os$'
+(vazio)
+
+$ ls internal/approval/*.go | grep -v _test | wc -l
+16
+
+$ golangci-lint run --config .golangci.yml ./internal/approval/...
+0 issues.
+exit=0
+
+$ gofmt -l internal/approval/
+(vazio acima = formatado)

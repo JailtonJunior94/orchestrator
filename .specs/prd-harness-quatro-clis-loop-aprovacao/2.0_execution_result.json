@@ -1,0 +1,95 @@
+{
+  "schema_version": 2,
+  "run_id": "task-2.0-pacote-dominio-aprovacao-2026-09-10",
+  "task_id": "2.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "ba80b5637bef1ff372c6e7ac15eea8437322dcc8",
+  "patch_sha256": "1d15462f6a8df07d26d790ddb0fb8f0ac7752c64d1e6c7995bdafe58ef2ae187",
+  "patch_ref": "evidence/task-2.0/2.0.patch",
+  "final_state_sha256": "c22b11f47d71b6e984cabff86ea5e63bdfa4158ea879991b0bc5ef71f2ff6913",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./... && go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "ebbaf313df98723851175202f78c31bc5624b9af93e8b372223c7142672331e9"
+    },
+    {
+      "command": "go test ./internal/approval/... -count=1 -race -cover -v",
+      "exit_code": 0,
+      "output_sha256": "c6f46f3ac1c70a63bede44f763b3d0a88028f8006adcd54a5ab6c1974dc1614c"
+    },
+    {
+      "command": "go test ./internal/approval/ -run Fuzz -v -count=1 ; go test ./internal/approval/ -fuzz FuzzTranslator -fuzztime 30s ; go test ./internal/approval/ -fuzz FuzzFingerprint -fuzztime 30s",
+      "exit_code": 0,
+      "output_sha256": "18930d13a14db740d77ac22bfa63be783777df4551583bbcf8476792607719fd"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "RF-30-agregado-dominio-isolado-zero-import-infra",
+      "evidence_ref": "evidence/task-2.0/isolation-lint.log"
+    },
+    {
+      "id": "RF-33-aprovado-so-com-APPROVED-e-mapa-1a1-completo",
+      "evidence_ref": "evidence/task-2.0/approval-suite.log#TestApprovalProofSuite"
+    },
+    {
+      "id": "RF-37-politica-decidir-checagens-baratas-antes-da-cara",
+      "evidence_ref": "evidence/task-2.0/approval-suite.log#TestApprovalPolicySuite"
+    },
+    {
+      "id": "RF-41-motivo-canonico-conjunto-fechado-de-cinco",
+      "evidence_ref": "evidence/task-2.0/approval-suite.log#TestValueObjectsSuite"
+    },
+    {
+      "id": "RF-45-estados-terminais-sao-resultados-nao-erros",
+      "evidence_ref": "evidence/task-2.0/approval-suite.log#TestCycleFlowSuite"
+    },
+    {
+      "id": "RF-46-traducao-fail-closed-sem-declaracao-canonica-BLOCKED",
+      "evidence_ref": "evidence/task-2.0/approval-suite.log#TestTranslatorSuite"
+    },
+    {
+      "id": "RF-48-linha-de-evidencia-tres-formas-validas",
+      "evidence_ref": "evidence/task-2.0/approval-suite.log#TestValueObjectsSuite"
+    },
+    {
+      "id": "RF-49-criterio-nao-verificavel-proibe-APPROVED",
+      "evidence_ref": "evidence/task-2.0/approval-suite.log#TestApprovalProofSuite"
+    },
+    {
+      "id": "RF-50-criterio-nao-atendido-severidade-minima-alta",
+      "evidence_ref": "evidence/task-2.0/approval-suite.log#TestValueObjectsSuite"
+    },
+    {
+      "id": "build-vet-test-suite-completa-verde-sem-regressao",
+      "evidence_ref": "evidence/task-2.0/build-vet-test.log"
+    },
+    {
+      "id": "quinze-arquivos-e-mocks-tres-portas-make-check-mocks-verde",
+      "evidence_ref": "evidence/task-2.0/isolation-lint.log"
+    },
+    {
+      "id": "transicoes-proibidas-caixa-branca-uma-assercao-por-linha",
+      "evidence_ref": "evidence/task-2.0/approval-suite.log#TestForbiddenTransitionSuite"
+    },
+    {
+      "id": "fingerprint-estabilidade-instabilidade-e-nao-calculadas-nunca-iguais",
+      "evidence_ref": "evidence/task-2.0/approval-suite.log#TestFingerprintSuite"
+    },
+    {
+      "id": "fuzzing-tradutor-e-fingerprint-executavel-sem-crash",
+      "evidence_ref": "evidence/task-2.0/fuzz.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-2.0/2.0.patch",
+    "evidence/task-2.0/build-vet-test.log",
+    "evidence/task-2.0/approval-suite.log",
+    "evidence/task-2.0/isolation-lint.log",
+    "evidence/task-2.0/fuzz.log"
+  ],
+  "review_verdict": "approved"
+}

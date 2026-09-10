@@ -1,0 +1,48 @@
+Caso a: critério de aceite não comprovado
+  ✓ critério não comprovado falha (exit=1)
+Caso a2: critério não comprovado sob LC_ALL=C
+  ✓ critério não comprovado falha sob LC_ALL=C (exit=1)
+  ✓ gate de aceite permanece ativo sob LC_ALL=C
+Caso b: todos os critérios comprovados
+  ✓ todos comprovados passa (exit=0)
+Caso c: Testes: pass sem comando de teste
+  ✓ Testes pass sem comando falha (exit=1)
+Caso d: task legada sem seção de critérios
+  ✓ task legada falha por padrão (exit=1)
+  ✓ diagnóstico de fail-closed presente
+Caso d2: AI_SDD_STRICT_EVIDENCE=0 reabre o legado
+  ✓ opt-out explícito passa (exit=0)
+  ✓ opt-out avisa que a evidência não comprova critérios
+Caso d3: referência de task file inexistente
+  ✓ referência não resolvível falha por padrão (exit=1)
+Caso e: review.md válido sem achados
+  ✓ review válido passa (exit=0)
+  ✓ review válido passa sob LC_ALL=C (exit=0)
+Caso f: review REJECTED sem achado bloqueante
+  ✓ REJECTED sem high/critical falha (exit=1)
+Caso g: review sem seção de validações
+  ✓ review sem validações falha (exit=1)
+Caso h1: mapa 1:1 ausente falha
+  ✓ mapa h1-ausente espera exit 1 (exit=1)
+  ✓ mapa h1-ausente espera exit 1 sob LC_ALL=C (exit=1)
+Caso h2: mapa 1:1 incompleto (critério sem evidência) falha
+  ✓ mapa h2-incompleto espera exit 1 (exit=1)
+  ✓ mapa h2-incompleto espera exit 1 sob LC_ALL=C (exit=1)
+Caso h3: critério não verificável falha
+  ✓ mapa h3-nverif espera exit 1 (exit=1)
+  ✓ mapa h3-nverif espera exit 1 sob LC_ALL=C (exit=1)
+Caso h4: linha de evidência fora das três formas de RF-48 falha
+  ✓ mapa h4-badev espera exit 1 (exit=1)
+  ✓ mapa h4-badev espera exit 1 sob LC_ALL=C (exit=1)
+Caso h5: mapa 1:1 completo e válido passa
+  ✓ mapa h5-ok espera exit 0 (exit=0)
+  ✓ mapa h5-ok espera exit 0 sob LC_ALL=C (exit=0)
+Caso h6: AI_SDD_STRICT_EVIDENCE=0 NÃO reabre o mapa 1:1
+  ✓ opt-out legado não faz o mapa incompleto passar (exit=1)
+  ✓ mapa 1:1 permanece fail-closed sob AI_SDD_STRICT_EVIDENCE=0
+Caso i: relatório declara critérios sem task file resolvível é fail-closed mesmo com opt-out
+  ✓ critérios sem task file falha mesmo com opt-out (exit=1)
+  ✓ opt-out não alcança o confronto 1:1 (RF-53)
+
+Passaram: 28 | Falharam: 0
+Todos os testes de validador passaram.

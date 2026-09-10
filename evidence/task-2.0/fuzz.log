@@ -1,0 +1,46 @@
+# Fuzz — FuzzTranslator e FuzzFingerprint (task 2.0)
+## 2026-09-10T16:51:43Z
+
+$ go test ./internal/approval/ -run Fuzz -v -count=1   (seed corpus + regressao)
+=== RUN   FuzzFingerprint
+=== RUN   FuzzFingerprint/seed#0
+=== RUN   FuzzFingerprint/seed#1
+=== RUN   FuzzFingerprint/seed#2
+=== RUN   FuzzFingerprint/aee628d832253db9
+--- PASS: FuzzFingerprint (0.00s)
+    --- PASS: FuzzFingerprint/seed#0 (0.00s)
+    --- PASS: FuzzFingerprint/seed#1 (0.00s)
+    --- PASS: FuzzFingerprint/seed#2 (0.00s)
+    --- PASS: FuzzFingerprint/aee628d832253db9 (0.00s)
+=== RUN   FuzzTranslator
+=== RUN   FuzzTranslator/seed#0
+=== RUN   FuzzTranslator/seed#1
+=== RUN   FuzzTranslator/seed#2
+=== RUN   FuzzTranslator/seed#3
+=== RUN   FuzzTranslator/seed#4
+=== RUN   FuzzTranslator/seed#5
+--- PASS: FuzzTranslator (0.00s)
+    --- PASS: FuzzTranslator/seed#0 (0.00s)
+    --- PASS: FuzzTranslator/seed#1 (0.00s)
+    --- PASS: FuzzTranslator/seed#2 (0.00s)
+    --- PASS: FuzzTranslator/seed#3 (0.00s)
+    --- PASS: FuzzTranslator/seed#4 (0.00s)
+    --- PASS: FuzzTranslator/seed#5 (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/approval	0.002s
+
+$ go test ./internal/approval/ -run '^$' -fuzz FuzzTranslator -fuzztime 30s
+fuzz: elapsed: 24s, execs: 940861 (41552/sec), new interesting: 44 (total: 234)
+fuzz: elapsed: 27s, execs: 1067444 (42193/sec), new interesting: 46 (total: 236)
+fuzz: elapsed: 30s, execs: 1192181 (41577/sec), new interesting: 46 (total: 236)
+fuzz: elapsed: 30s, execs: 1192181 (0/sec), new interesting: 46 (total: 236)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/approval	30.107s
+
+$ go test ./internal/approval/ -run '^$' -fuzz FuzzFingerprint -fuzztime 30s
+fuzz: elapsed: 24s, execs: 861384 (36955/sec), new interesting: 8 (total: 98)
+fuzz: elapsed: 27s, execs: 973891 (37488/sec), new interesting: 8 (total: 98)
+fuzz: elapsed: 30s, execs: 1085023 (37059/sec), new interesting: 9 (total: 99)
+fuzz: elapsed: 30s, execs: 1085023 (0/sec), new interesting: 9 (total: 99)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/approval	30.099s

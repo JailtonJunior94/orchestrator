@@ -57,6 +57,8 @@ fuzz:
 	go test -fuzz=FuzzParseManifest -fuzztime=30s ./internal/manifest/
 	go test -fuzz=FuzzDetectLanguages -fuzztime=30s ./internal/detect/
 	go test -fuzz=FuzzDetectToolchain -fuzztime=30s ./internal/detect/
+	go test -fuzz=FuzzTranslator -fuzztime=30s ./internal/approval/
+	go test -fuzz=FuzzFingerprint -fuzztime=30s ./internal/approval/
 
 bench:
 	go test -bench=. -benchmem ./internal/metrics/ ./internal/skills/ ./internal/parity/

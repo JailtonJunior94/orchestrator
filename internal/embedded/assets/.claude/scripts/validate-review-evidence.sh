@@ -85,6 +85,71 @@ fi
 # Diff/alvo revisado: exigir evidencia de que algo foi efetivamente lido
 require_pattern "(diff|branch|commit|arquivos? revisad)" "referência ao alvo revisado (diff/branch/commit/arquivos)"
 
+map_heading_re='^#+[[:space:]]+mapa de crit(e|é)rios de aceite'
+if ! grep -Eiq "$map_heading_re" "$report_file"; then
+  echo "FALTANDO: seção 'Mapa de Criterios de Aceite' (mapa 1:1 criterio -> evidencia, RF-47/RF-51)"
+  missing=1
+else
+  in_map=0
+  criteria_lines=0
+  while IFS= read -r line; do
+    if [[ "$line" =~ ^#+[[:space:]] ]]; then
+      if grep -Eiq "$map_heading_re" <<<"#$line" || grep -Eiq 'mapa de crit(e|é)rios de aceite' <<<"$line"; then
+        in_map=1
+      else
+        in_map=0
+      fi
+      continue
+    fi
+    [[ "$in_map" -eq 1 ]] || continue
+    [[ "$line" =~ ^-[[:space:]]*'[' ]] || continue
+    criteria_lines=$((criteria_lines + 1))
+
+    marker="$(printf '%s' "$line" | sed -E 's/^-[[:space:]]*\[([^]]*)\].*/\1/' | tr 'A-Z' 'a-z' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//')"
+    if [[ "$line" == *"->"* ]]; then
+      evidence="${line#*->}"
+      evidence="${evidence# }"
+    else
+      evidence=""
+    fi
+
+    case "$marker" in
+      "atendido"|"nao atendido"|"não atendido") : ;;
+      "nao verificavel"|"nao verificável"|"não verificavel"|"não verificável")
+        echo "FALTANDO: criterio marcado 'nao verificavel' proibe APPROVED (RF-49): $line"
+        missing=1
+        ;;
+      *)
+        echo "FALTANDO: marcador de criterio invalido no mapa 1:1 (use: atendido, nao atendido, nao verificavel): $line"
+        missing=1
+        ;;
+    esac
+
+    if [[ -z "${evidence// /}" ]]; then
+      echo "FALTANDO: criterio sem linha de evidencia no mapa 1:1 (esperado '-> <evidencia>'): $line"
+      missing=1
+      continue
+    fi
+
+    if grep -Eq '(^|[^[:alnum:]_])[[:alnum:]_./-]+:[0-9]+' <<<"$evidence"; then
+      :
+    elif grep -Eiq '(test|teste|spec).*(pass|fail|passed|failed|(^|[^[:alpha:]])ok([^[:alpha:]]|$)|erro|error)' <<<"$evidence"; then
+      :
+    elif grep -Eiq '(go (test|build|vet)|gotestsum|bash |sh |npm|pnpm|yarn|pytest|make |grep |python|cargo |dotnet |shasum|awk |sed |cat |\./)' <<<"$evidence" \
+         && grep -Eiq '(->|=>|exit|sa(i|í)da|output|pass|fail|(^|[^[:alpha:]])ok([^[:alpha:]]|$))' <<<"$evidence"; then
+      :
+    else
+      echo "FALTANDO: linha de evidencia fora das tres formas de RF-48 (comando+saida, arquivo:linha, teste+resultado): $line"
+      missing=1
+    fi
+  done < "$report_file"
+
+  if [[ "$criteria_lines" -eq 0 ]]; then
+    echo "FALTANDO: seção 'Mapa de Criterios de Aceite' sem nenhuma linha de criterio ('- ' seguido de marcador entre colchetes)"
+    missing=1
+  fi
+fi
+
 if [[ $missing -ne 0 ]]; then
   echo ""
   echo "Validacao do pacote de evidencias de review falhou: $report_file"

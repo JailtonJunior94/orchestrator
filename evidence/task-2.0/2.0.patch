@@ -1,0 +1,4159 @@
+diff --git a/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh b/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh
+index 0466029..88af610 100644
+--- a/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh
++++ b/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh
+@@ -6,7 +6,14 @@ if ! command -v rg >/dev/null 2>&1; then
+   exit 1
+ fi
+ 
+-mapfile -t files < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
++# Array preenchido via laco `read` em vez do builtin de bash 4+ para leitura de
++# array: o macOS entrega bash 3.2 em /bin/bash, onde esse builtin nao existe e,
++# sob `set -e`, abortava a skill inteira. O laco e portavel e preserva os nomes
++# byte-identicos, inclusive com espaco.
++files=()
++while IFS= read -r linha; do
++  files+=("$linha")
++done < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
+ 
+ if [ "${#files[@]}" -eq 0 ]; then
+   echo "nenhum arquivo Go encontrado no workspace atual" >&2
+diff --git a/.claude/skills/object-calisthenics-go/scripts/list-go-files.sh b/.claude/skills/object-calisthenics-go/scripts/list-go-files.sh
+index 0466029..88af610 100644
+--- a/.claude/skills/object-calisthenics-go/scripts/list-go-files.sh
++++ b/.claude/skills/object-calisthenics-go/scripts/list-go-files.sh
+@@ -6,7 +6,14 @@ if ! command -v rg >/dev/null 2>&1; then
+   exit 1
+ fi
+ 
+-mapfile -t files < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
++# Array preenchido via laco `read` em vez do builtin de bash 4+ para leitura de
++# array: o macOS entrega bash 3.2 em /bin/bash, onde esse builtin nao existe e,
++# sob `set -e`, abortava a skill inteira. O laco e portavel e preserva os nomes
++# byte-identicos, inclusive com espaco.
++files=()
++while IFS= read -r linha; do
++  files+=("$linha")
++done < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
+ 
+ if [ "${#files[@]}" -eq 0 ]; then
+   echo "nenhum arquivo Go encontrado no workspace atual" >&2
+diff --git a/.github/skills/object-calisthenics-go/scripts/list-go-files.sh b/.github/skills/object-calisthenics-go/scripts/list-go-files.sh
+index 0466029..88af610 100644
+--- a/.github/skills/object-calisthenics-go/scripts/list-go-files.sh
++++ b/.github/skills/object-calisthenics-go/scripts/list-go-files.sh
+@@ -6,7 +6,14 @@ if ! command -v rg >/dev/null 2>&1; then
+   exit 1
+ fi
+ 
+-mapfile -t files < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
++# Array preenchido via laco `read` em vez do builtin de bash 4+ para leitura de
++# array: o macOS entrega bash 3.2 em /bin/bash, onde esse builtin nao existe e,
++# sob `set -e`, abortava a skill inteira. O laco e portavel e preserva os nomes
++# byte-identicos, inclusive com espaco.
++files=()
++while IFS= read -r linha; do
++  files+=("$linha")
++done < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
+ 
+ if [ "${#files[@]}" -eq 0 ]; then
+   echo "nenhum arquivo Go encontrado no workspace atual" >&2
+diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+index 8b26c92..aa5038e 100644
+--- a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+@@ -23,8 +23,8 @@
+ 
+ | # | Título | Status | Dependências | Paralelizável | Skills |
+ |---|--------|--------|-------------|---------------|--------|
+-| 1.0 | Tornar os gates capazes de rodar e de dizer a verdade | pending | — | — | — |
+-| 2.0 | Pacote de domínio do Ciclo de Aprovação, sem consumidor | pending | 1.0 | Com 3.0 | domain-modeling-production |
++| 1.0 | Tornar os gates capazes de rodar e de dizer a verdade | done | — | — | — |
++| 2.0 | Pacote de domínio do Ciclo de Aprovação, sem consumidor | done | 1.0 | Com 3.0 | domain-modeling-production |
+ | 3.0 | Mapa 1:1 critério-evidência como dado verificável | pending | 1.0 | Com 2.0 | — |
+ | 4.0 | Promoção do loop ao agregado e correção dos defeitos de causa-raiz | pending | 2.0, 3.0 | Não | — |
+ | 5.0 | Propagação do teto de rodadas e virada do critério estrito | pending | 4.0 | Não | — |
+diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/techspec.md b/.specs/prd-harness-quatro-clis-loop-aprovacao/techspec.md
+index cf07fec..578e0ff 100644
+--- a/.specs/prd-harness-quatro-clis-loop-aprovacao/techspec.md
++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/techspec.md
+@@ -45,9 +45,9 @@ CLI, então ele bloqueia a própria remoção e precisa ser o primeiro item alte
+ 
+ | Componente | Responsabilidade |
+ |---|---|
+-| `internal/approval` (pacote novo) | Agregado `Ciclo`, entidade `Rodada`, Value Objects de conjunto fechado, tabela de transições, tradução anticorrupção do texto do revisor e política de parada. Zero dependência de ACP, CLI ou filesystem |
+-| `internal/approval/portas.go` | Três interfaces declaradas no consumidor — `Revisor`, `Corretor`, `Repositorio` — que dão ao agregado o que ele não pode fazer sozinho |
+-| `internal/approval/mocks/` | Mocks gerados por `mockery.yml` para as três portas |
++| `internal/approval` (planejado) — pacote novo | Agregado `Ciclo`, entidade `Rodada`, Value Objects de conjunto fechado, tabela de transições, tradução anticorrupção do texto do revisor e política de parada. Zero dependência de ACP, CLI ou filesystem |
++| `internal/approval/portas.go` (planejado) | Três interfaces declaradas no consumidor — `Revisor`, `Corretor`, `Repositorio` — que dão ao agregado o que ele não pode fazer sozinho |
++| `internal/approval/mocks/` (planejado) | Mocks gerados por `mockery.yml` para as três portas |
+ | Spec do OpenCode em `internal/runtime/specs/` | Runtime ACP por subcomando, com launcher de fallback e janela derivada do modelo |
+ | Plugin de governança do OpenCode | Hook de pré-ferramenta que bloqueia por exceção e sinaliza carga via sentinela |
+ | Gate de encerramento canônico | Script tool-neutro que bloqueia o fim da sessão sem veredito aprovado, registrado nos 4 CLIs |
+diff --git a/AGENTS.md b/AGENTS.md
+index 0bda1c1..5510d78 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -125,11 +125,13 @@ ai-spec-harness install . --dry-run
+ 
+ | Aspecto | Regra |
+ |---------|-------|
+-| Idioma | PT-BR (comentarios, erros, mensagens) |
++| Idioma (codigo) | **Ingles obrigatorio** em todo o codigo-fonte: identificadores, pacotes, mensagens de erro, nomes de teste e de arquivo. Ver `.claude/rules/code-style.md` (R-STYLE-001, hard) |
++| Comentarios | **Zero comentarios no codigo** (linha, bloco e doc-comments). Regra hard, inegociavel. Ver `.claude/rules/code-style.md` |
++| Idioma (docs) | PT-BR em artefatos `.md`, relatorios, ADRs, PRDs, changelog |
+ | Commits | Conventional Commits: tipo em ingles, corpo em portugues |
+ | Testes | table-driven; FakeFileSystem (unit); t.TempDir() (integration) |
+ | DI | injetar via construtor; zero estado global |
+-| Erros | `fmt.Errorf("contexto: %w", err)` |
++| Erros | `fmt.Errorf("context: %w", err)` — texto em ingles, sem comentario |
+ | Pacotes | um por responsabilidade em `internal/` |
+ | Interfaces | definir no pacote consumidor quando possivel |
+ 
+diff --git a/Makefile b/Makefile
+index 35381fa..5055c8c 100644
+--- a/Makefile
++++ b/Makefile
+@@ -57,6 +57,8 @@ fuzz:
+ 	go test -fuzz=FuzzParseManifest -fuzztime=30s ./internal/manifest/
+ 	go test -fuzz=FuzzDetectLanguages -fuzztime=30s ./internal/detect/
+ 	go test -fuzz=FuzzDetectToolchain -fuzztime=30s ./internal/detect/
++	go test -fuzz=FuzzTranslator -fuzztime=30s ./internal/approval/
++	go test -fuzz=FuzzFingerprint -fuzztime=30s ./internal/approval/
+ 
+ bench:
+ 	go test -bench=. -benchmem ./internal/metrics/ ./internal/skills/ ./internal/parity/
+diff --git a/cmd/ai_spec_harness/cli_contract_test.go b/cmd/ai_spec_harness/cli_contract_test.go
+index 51db1b8..6e07cc2 100644
+--- a/cmd/ai_spec_harness/cli_contract_test.go
++++ b/cmd/ai_spec_harness/cli_contract_test.go
+@@ -171,17 +171,18 @@ func TestCLISchemaContainsAllTools(t *testing.T) {
+ 
+ 	schemaContent := string(data)
+ 
++	// Guarda de vacuidade: um catálogo vazio faria o laço abaixo passar
++	// trivialmente sem verificar nada. Catálogo vazio é falha explícita.
++	if len(_runtimeACPCatalog) == 0 {
++		t.Fatal("_runtimeACPCatalog vazio — o laço de verificação passaria trivialmente sem checar o schema")
++	}
++
+ 	// Todos os tools do runtimeACPCatalog devem aparecer no schema.
+ 	for tool := range _runtimeACPCatalog {
+ 		if !strings.Contains(schemaContent, tool) {
+ 			t.Errorf("cli-schema.json não menciona tool %q — atualizar descrição da flag --runtime ou --tool", tool)
+ 		}
+ 	}
+-
+-	// Verificar especificamente que "gemini" está presente (RF-25 ADR-015).
+-	if !strings.Contains(schemaContent, "gemini") {
+-		t.Error("cli-schema.json não contém 'gemini' — atualizar flag --runtime description (RF-25)")
+-	}
+ }
+ 
+ // TestCLI_ContractFlagsMatchSchema valida que flags definidas no cli-schema.json
+diff --git a/internal/embedded/assets/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh b/internal/embedded/assets/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh
+index 0466029..88af610 100644
+--- a/internal/embedded/assets/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh
++++ b/internal/embedded/assets/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh
+@@ -6,7 +6,14 @@ if ! command -v rg >/dev/null 2>&1; then
+   exit 1
+ fi
+ 
+-mapfile -t files < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
++# Array preenchido via laco `read` em vez do builtin de bash 4+ para leitura de
++# array: o macOS entrega bash 3.2 em /bin/bash, onde esse builtin nao existe e,
++# sob `set -e`, abortava a skill inteira. O laco e portavel e preserva os nomes
++# byte-identicos, inclusive com espaco.
++files=()
++while IFS= read -r linha; do
++  files+=("$linha")
++done < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
+ 
+ if [ "${#files[@]}" -eq 0 ]; then
+   echo "nenhum arquivo Go encontrado no workspace atual" >&2
+diff --git a/mockery.yml b/mockery.yml
+index 9c010dc..e11c47e 100644
+--- a/mockery.yml
++++ b/mockery.yml
+@@ -8,6 +8,11 @@ packages:
+   github.com/JailtonJunior94/ai-spec-harness/internal/agents:
+     interfaces:
+       Registry:
++  github.com/JailtonJunior94/ai-spec-harness/internal/approval:
++    interfaces:
++      Reviewer:
++      Fixer:
++      Repository:
+   github.com/JailtonJunior94/ai-spec-harness/internal/config:
+     interfaces:
+       Resolver:
+diff --git a/scripts/check-spec-paths.sh b/scripts/check-spec-paths.sh
+index 38a1f1c..2c6b81d 100755
+--- a/scripts/check-spec-paths.sh
++++ b/scripts/check-spec-paths.sh
+@@ -31,6 +31,22 @@ _PREFIXES='^(internal|cmd|scripts|docs|tests|evals|deployment|migrations|taskfil
+ # quando a pessoa opta por cria-los, entao ausencia nao e defeito.
+ _OPTIONAL='^(\.agents/config\.yaml|\.claude/config\.yaml|\.claude/settings\.json)$'
+ 
++planned_paths() {
++  # Caminhos citados no artefato e imediatamente seguidos do marcador
++  # `(planejado)` sao referencias futuras deliberadas: aceitas sem resolver no
++  # repositorio, ao contrario de referencia quebrada por erro.
++  local file="$1"
++  grep -ohE '`[^`]+`[[:space:]]*\(planejado\)' "$file" 2>/dev/null \
++    | sed -E 's/`([^`]*)`[[:space:]]*\(planejado\)/\1/' \
++    | while read -r token; do
++        token="${token%%::*}"
++        token="${token%%:*}"
++        token="${token%/}"
++        [[ -n "$token" ]] || continue
++        printf '%s\n' "$token"
++      done
++}
++
+ extract_paths() {
+   local file="$1"
+   grep -ohE '`[^`]+`' "$file" 2>/dev/null | tr -d '`' | while read -r token; do
+@@ -51,9 +67,21 @@ extract_paths() {
+   done
+ }
+ 
+-prd_dirs=("$@")
++# Array inicializado explicitamente antes de qualquer expansao: bash 3.2 sob
++# `set -u` recusa expansao de array nao inicializado.
++prd_dirs=()
++for _arg in "$@"; do
++  prd_dirs+=("$_arg")
++done
+ if [[ ${#prd_dirs[@]} -eq 0 ]]; then
+-  mapfile -t prd_dirs < <(find .specs -name 'sdd-state.json' -not -path '*/.checkpoints/*' 2>/dev/null | sed 's|/sdd-state.json||' | sort)
++  # Leitura linha a linha em vez do builtin de bash 4+ para popular array: no
++  # macOS bash 3.2 esse builtin nao existe e, como este script roda sob
++  # `set -uo pipefail` sem `-e`, o erro nao abortava e o gate saia 0 sem
++  # verificar nada. O laco `read` e portavel e preserva conteudo byte-identico,
++  # inclusive caminhos com espaco.
++  while IFS= read -r linha; do
++    prd_dirs+=("$linha")
++  done < <(find .specs -name 'sdd-state.json' -not -path '*/.checkpoints/*' 2>/dev/null | sed 's|/sdd-state.json||' | sort)
+ fi
+ 
+ if [[ ${#prd_dirs[@]} -eq 0 ]]; then
+@@ -67,8 +95,16 @@ for prd in "${prd_dirs[@]}"; do
+   for artifact in prd.md techspec.md tasks.md; do
+     file="$prd/$artifact"
+     [[ -f "$file" ]] || continue
++    planned="
++$(planned_paths "$file")
++"
+     while read -r path; do
+       [[ -n "$path" ]] || continue
++      case "$planned" in
++        *"
++$path
++"*) continue ;;
++      esac
+       checked=$((checked+1))
+       if [[ ! -e "$path" ]]; then
+         echo "FALTANDO: $file cita caminho inexistente: $path"
+diff --git a/skills-lock.json b/skills-lock.json
+index 2a165b2..ebf4318 100644
+--- a/skills-lock.json
++++ b/skills-lock.json
+@@ -11,13 +11,13 @@
+       "source": "JailtonJunior94/skills",
+       "sourceType": "github",
+       "skillPath": "skills/design-patterns-mandatory/SKILL.md",
+-      "computedHash": "c9e562aa50d5dcc4b5b6a71dc9c1571c4d08d85bb25a03f5a572e1494ca64ced"
++      "computedHash": "9540189e448c1ee5ebccb75128dbca61bd26a7ad71ec042e2bc40f4422d204cd"
+     },
+     "domain-modeling-production": {
+       "source": "JailtonJunior94/skills",
+       "sourceType": "github",
+       "skillPath": "skills/domain-modeling-production/SKILL.md",
+-      "computedHash": "0a548091f281fcb1a290a25ed8c19f6f5289ec21688c234332d9d04a03dab0cc"
++      "computedHash": "66827dd6ae276129fd55961d5e07be1b356828b3dbcaf28509aefc801ad9dd5b"
+     },
+     "finalize-changelog-readme-push": {
+       "source": "JailtonJunior94/skills",
+@@ -76,8 +76,8 @@
+     "semantic-commit": {
+       "source": "JailtonJunior94/skills",
+       "sourceType": "github",
+-      "version": "1.0.0",
+-      "computedHash": "ea289b301d4afae4f798a8a394eb74aaa943fd5990307fc0c86da07036167280"
++      "version": "1.1.0",
++      "computedHash": "967598b88fc05a2c7f63651696adf6c49735d8af15fde9a359c34e09ff5351bf"
+     },
+     "us-to-prd": {
+       "source": "JailtonJunior94/skills",
+diff --git a/tests/scripts/check-spec-paths_test.sh b/tests/scripts/check-spec-paths_test.sh
+index a112605..0efbe7b 100755
+--- a/tests/scripts/check-spec-paths_test.sh
++++ b/tests/scripts/check-spec-paths_test.sh
+@@ -45,7 +45,22 @@ printf '# TechSpec\n\nConfig opcional em `.agents/config.yaml`.\n' > "$TMP/prd-f
+ bash "$GATE" "$TMP/prd-fixture" >/dev/null 2>&1
+ assert "caminho opcional documentado nao reprova" 0 $?
+ 
+-# Caso 5: PRD sem sdd-state.json fica fora do escopo
++# Caso 5: caminho inexistente marcado como (planejado) -> aprova
++printf '# TechSpec\n\nO pacote `internal/sdd/orchestrator` (planejado) ainda nao existe.\n' > "$TMP/prd-fixture/techspec.md"
++bash "$GATE" "$TMP/prd-fixture" >/dev/null 2>&1
++assert "caminho inexistente com marcador (planejado) aprova" 0 $?
++
++# Caso 6: (planejado) nao mascara outro caminho inexistente sem marcador na mesma spec
++printf '# TechSpec\n\n`internal/sdd/orchestrator` (planejado) e `internal/sdd/review` (quebrado).\n' > "$TMP/prd-fixture/techspec.md"
++out=$(bash "$GATE" "$TMP/prd-fixture" 2>&1); code=$?
++assert "marcador (planejado) nao mascara caminho quebrado vizinho" 1 $code
++if echo "$out" | grep -q "internal/sdd/review" && ! echo "$out" | grep -q "internal/sdd/orchestrator"; then
++  echo "  OK   diagnostico acusa so o caminho sem marcador"; pass=$((pass+1))
++else
++  echo "  FAIL diagnostico deveria acusar apenas internal/sdd/review"; fail=$((fail+1))
++fi
++
++# Caso 7: PRD sem sdd-state.json fica fora do escopo
+ rm -f "$TMP/prd-fixture/sdd-state.json"
+ printf '# TechSpec\n\nComponente `internal/sdd/orchestrator`.\n' > "$TMP/prd-fixture/techspec.md"
+ bash "$GATE" >/dev/null 2>&1
+diff --git a/.claude/rules/code-style.md b/.claude/rules/code-style.md
+new file mode 100644
+index 0000000..b6bd921
+--- /dev/null
++++ b/.claude/rules/code-style.md
+@@ -0,0 +1,63 @@
++# Estilo de Codigo — Idioma e Comentarios
++
++- Rule ID: R-STYLE-001
++- Severidade: hard
++- Escopo: todo o codigo-fonte do repositorio (`.go`, scripts `.sh`, `.py`, `.js` e demais linguagens de implementacao).
++
++## Objetivo
++
++Padronizar idioma e ausencia de comentarios em todo codigo produzido ou editado por agentes de IA.
++Regra mandatoria e inegociavel, definida pelo dono do repositorio.
++
++## R-STYLE-001.1 — Codigo em ingles
++
++Todo codigo-fonte e escrito em ingles:
++
++- Identificadores: tipos, structs, interfaces, funcoes, metodos, variaveis, campos, constantes, enums.
++- Nomes de pacote e nomes de arquivo de codigo.
++- Mensagens de erro (`fmt.Errorf`, `errors.New`, panics), textos de log e strings internas.
++- Nomes de teste (`TestXxx`, subtests `t.Run("...")`) e nomes de fixture.
++
++Excecao unica: string que e contrato externo verificavel (saida CLI ja publicada, chave de
++protocolo, formato consumido por terceiro) permanece no idioma do contrato. A excecao exige
++justificativa explicita no relatorio de execucao.
++
++## R-STYLE-001.2 — Zero comentarios no codigo
++
++Nenhum comentario em codigo criado ou editado:
++
++- Sem comentarios de linha (`//`), de bloco (`/* */`), de shell/python (`#`) fora de shebang.
++- Sem doc-comments (`// FuncName ...`), sem TODO/FIXME/NOTE, sem codigo comentado.
++- Shebang (`#!/usr/bin/env bash`) e diretivas obrigatorias da linguagem (`//go:embed`,
++  `//go:build`, `# -*- coding: -*-`) nao sao comentarios e sao permitidos.
++- Ao editar arquivo existente que contenha comentarios nas linhas tocadas, remover esses
++  comentarios. Nao e obrigatorio varrer o arquivo inteiro, apenas o diff.
++
++O codigo deve ser autoexplicativo: nomes claros, funcoes pequenas, early return. Quando um
++comentario pareceria necessario, refatorar para eliminar a necessidade.
++
++## R-STYLE-001.3 — Sem prefixo underline em identificadores Go
++
++Go nao usa `_` como prefixo de identificador para indicar visibilidade. Proibido em qualquer
++identificador de codigo Go (var, const, func, tipo, campo, parametro, metodo):
++
++- Simbolo privado ao pacote: primeira letra minuscula (`verdictPrefixes`, `newCycle`).
++- Simbolo exportado: primeira letra maiuscula (`VerdictPrefixes`, `NewCycle`).
++- `_` isolado como blank identifier (`_, err :=`, `for _, x := range`) e permitido.
++- `_` no meio de nome so em nome de teste/subtest quando a convencao ja exige (`Test_Foo`,
++  arquivos `_test.go`, sufixos `_linux.go`).
++
++Vale tambem para nomes que hoje existem no repo com esse prefixo: renomear ao tocar.
++
++## Aplicacao
++
++- Vale para toda skill de implementacao (`go-implementation`, `python-implementation`,
++  `node-implementation`, `dotnet-csharp-implementation`) e para `execute-task` /
++  `execute-all-tasks`.
++- Sobrepoe qualquer convencao anterior de PT-BR em comentarios ou de doc-comments.
++- Artefatos `.md`, relatorios de execucao, ADRs, PRDs, techspecs e changelog continuam em PT-BR.
++
++## Precedencia
++
++Integra a governanca transversal de `.claude/rules/` (nivel 1 de `governance.md`). Conflito com
++guia de estilo de linguagem: prevalece esta regra por ser `hard` e convencao explicita local.
+diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/1.0_execution_report.md b/.specs/prd-harness-quatro-clis-loop-aprovacao/1.0_execution_report.md
+new file mode 100644
+index 0000000..ff50ae2
+--- /dev/null
++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/1.0_execution_report.md
+@@ -0,0 +1,101 @@
++# Relatório de Execução de Tarefa
++
++<!-- Generated: 2026-09-10T16:20:00Z -->
++
++## Tarefa
++- ID: 1.0
++- Título: Tornar os gates capazes de rodar e de dizer a verdade
++- Arquivo: .specs/prd-harness-quatro-clis-loop-aprovacao/task-1.0-gates-operaveis.md
++- Estado: done
++
++## Contexto Carregado
++- PRD: .specs/prd-harness-quatro-clis-loop-aprovacao/prd.md
++- TechSpec: .specs/prd-harness-quatro-clis-loop-aprovacao/techspec.md (seções "Sequenciamento de Desenvolvimento" → `F0 — Gates operáveis`, "Ordem de build da Fase 4 (remoção)" etapa 1, "Arquivos Relevantes e Dependentes")
++- Governança: AGENTS.md base contract, `.claude/rules/governance.md` (R-GOV-001), skill `agent-governance`, skill `go-implementation` (diff toca `.go`)
++- Skills processuais declaradas: `Nenhuma além das auto-carregadas (governance + linguagem).` (coluna `Skills` de tasks.md para 1.0 = `—`; em sync)
++
++## Comandos Executados
++- `source .agents/lib/check-invocation-depth.sh` -> ok (depth=0)
++- `export AI_PREFLIGHT_DONE=1` -> pré-voo já validado pelo orquestrador
++- `grep -c mapfile scripts/check-spec-paths.sh` -> `0`
++- `grep -rc mapfile <4 espelhos list-go-files.sh>` -> `0` em cada
++- `grep -c planejado scripts/check-spec-paths.sh` -> `3`
++- `bash scripts/check-spec-paths.sh` (sem sdd-state.json no repo) -> `Nenhum PRD sob gestao SDD encontrado; nada a verificar.` exit 0 (sem `mapfile: command not found`)
++- `bash scripts/check-spec-paths.sh` (com sdd-state.json temporário no PRD, revertido) -> `Referencias de caminho: 49 verificadas, todas resolvem (1 PRD sob gestao SDD).` exit 0
++- antes dos markers `(planejado)`: mesmo comando -> `FALTANDO: ... internal/approval`, `internal/approval/mocks`, `internal/approval/portas.go` exit 1 (confirma que o gate agora executa e reprova)
++- `bash tests/scripts/check-spec-paths_test.sh` -> `9 OK, 0 FAIL` (nomeia `caminho inexistente com marcador (planejado) aprova` e `marcador (planejado) nao mascara caminho quebrado vizinho` exit=1)
++- `PATH=<fake rg> bash .agents/skills/object-calisthenics-go/scripts/list-go-files.sh | wc -l` -> `426`, exit 0
++- `rtk proxy go test ./cmd/ai_spec_harness/ -run 'TestCLI_Contract|TestCLISchemaContainsAllTools' -count=1 -v` -> `--- PASS: TestCLISchemaContainsAllTools`, `--- PASS: TestCLI_ContractMatchesSchema`, `PASS`
++- catálogo esvaziado localmente + `go test -run TestCLISchemaContainsAllTools` -> `--- FAIL ... _runtimeACPCatalog vazio` (guarda de vacuidade comprovada); revertido
++- `grep -n 'gemini' cmd/ai_spec_harness/cli_contract_test.go` -> nenhuma ocorrência (rc=1)
++- `bash scripts/check-scripts-sync.sh` -> `Validadores em sync: 24 / Drift: 0` exit 0
++- `bash scripts/check-skills-sync.sh` -> `Skills com drift: 0 / Todos os mirrors sincronizados` exit 0
++- `make check-spec-paths` (com sdd-state.json temporário) -> script + test suite verdes, rc=0
++- `go build ./...` -> ok
++- `go vet ./...` -> ok
++- `go test ./... -count=1` -> `2652 passed in 68 packages`
++- `gofmt -l cmd/ai_spec_harness/cli_contract_test.go cmd/ai_spec_harness/task_loop.go` -> vazio (formatado)
++- `ai-spec skills --verify` -> `Integridade das skills OK` exit 0
++- `grep -rnE 'mapfile|readarray|declare -A|\$\{v\^\^\}|\$\{v,,\}' scripts/ tests/scripts/ .agents/scripts/ .claude/scripts/` -> apenas `declare -a` (array indexado, válido em bash 3.2); nenhum builtin de bash 4+ em caminho de gate
++
++## Arquivos Alterados
++- scripts/check-spec-paths.sh — remoção de `mapfile`; array `prd_dirs` inicializado antes da expansão (bash 3.2 + `set -u`); laço `while IFS= read -r`; nova função `planned_paths()` e guarda no laço de verificação que aceita caminho seguido do marcador `(planejado)`
++- tests/scripts/check-spec-paths_test.sh — casos novos: caminho inexistente com `(planejado)` aprova; `(planejado)` não mascara caminho quebrado vizinho (exit 1, diagnóstico só do quebrado); renumeração do caso "PRD sem sdd-state.json"
++- cmd/ai_spec_harness/cli_contract_test.go — remoção do bloco literal `strings.Contains(schemaContent, "gemini")` (linhas 181-184); guarda de vacuidade `if len(_runtimeACPCatalog) == 0 { t.Fatal(...) }` antes do laço
++- .agents/skills/object-calisthenics-go/scripts/list-go-files.sh — remoção de `mapfile`; array `files` via laço `while IFS= read -r`
++- .claude/skills/object-calisthenics-go/scripts/list-go-files.sh — espelho sincronizado (byte-idêntico ao canônico)
++- .github/skills/object-calisthenics-go/scripts/list-go-files.sh — espelho sincronizado
++- internal/embedded/assets/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh — espelho sincronizado
++- .specs/prd-harness-quatro-clis-loop-aprovacao/techspec.md — markers `(planejado)` em `internal/approval`, `internal/approval/portas.go`, `internal/approval/mocks/` na tabela "Componentes novos", para manter RF-63 verde após o gate voltar a executar
++
++## Resultados de Validação
++- Testes: pass (`go test ./... -count=1` -> 2652 passed / 68 packages; `bash tests/scripts/check-spec-paths_test.sh` -> 9 OK 0 FAIL; guarda de vacuidade exercitada com FAIL controlado e revertida)
++- Lint: pass (`go vet ./...` limpo; `gofmt -l` vazio; `check-skills-sync` + `check-scripts-sync` verdes)
++- Veredito do Revisor: APPROVED_WITH_REMARKS (somente remarks `low`; sem tag `[critical]`/`[security]`/`[blocker]`/`[high]`)
++
++## Critérios de Aceite
++- `bash scripts/check-spec-paths.sh` não imprime `mapfile: command not found` e não sai 0 sem verificar; lista os PRDs sob gestão SDD -> comprovado: sem sdd-state.json no repo o gate imprime `Nenhum PRD sob gestao SDD encontrado` (comportamento correto — nenhum PRD sob gestão SDD ativa no working tree); com `sdd-state.json` presente no PRD alvo (estado runtime, criado/removido na evidência) imprime `Referencias de caminho: 49 verificadas, todas resolvem (1 PRD sob gestao SDD)` exit 0; `mapfile` removido (`grep -c mapfile` = 0)
++- `grep -c mapfile scripts/check-spec-paths.sh` retorna `0` -> comprovado: saída `0`
++- `grep -rc mapfile` nos 4 espelhos retorna `0` -> comprovado: `list-go-files.sh:0` para `.agents/`, `.claude/`, `.github/`, `internal/embedded/assets/.agents/`
++- `bash .agents/skills/object-calisthenics-go/scripts/list-go-files.sh | wc -l` > 0 com exit 0 -> comprovado: `426` linhas, exit 0 (com binário `rg` no PATH)
++- `grep -c planejado scripts/check-spec-paths.sh` > 0 -> comprovado: `3`
++- `bash tests/scripts/check-spec-paths_test.sh` passa, nomeia o caso `(planejado)`, e caminho inexistente sem marcador continua exit 1 -> comprovado: `9 OK, 0 FAIL`; casos "caminho inexistente com marcador (planejado) aprova" (exit 0) e "marcador (planejado) nao mascara caminho quebrado vizinho" (exit 1) presentes; caso 2 "caminho inexistente reprova (exit=1)" preservado
++- `go test ./cmd/ai_spec_harness/ -run TestCLI_Contract -count=1` passa; asserção `"gemini"` das linhas 181-184 removida -> comprovado: `--- PASS: TestCLI_ContractMatchesSchema`; `grep -n 'gemini' cmd/ai_spec_harness/cli_contract_test.go` sem resultado
++- teste de contrato falha quando `_runtimeACPCatalog` está vazio -> comprovado: catálogo esvaziado localmente -> `--- FAIL: TestCLISchemaContainsAllTools ... _runtimeACPCatalog vazio`; revertido em seguida (`grep -n '"gemini":' task_loop.go` volta a resolver)
++- `make check-skills-sync check-scripts-sync` passa -> comprovado: `Skills com drift: 0`; `Drift / missing: 0`; exit 0 em ambos
++- `go build ./... && go vet ./... && go test ./... -count=1` verde -> comprovado: build ok, vet limpo, `2652 passed in 68 packages`
++- RF-08 (gate de contrato de CI desarmado antes de qualquer outra alteração) -> comprovado: bloco literal removido; laço remanescente sobre `_runtimeACPCatalog` ganhou guarda de vacuidade (catálogo vazio = `t.Fatal`, não sucesso trivial); direção inversa (agente aposentado no schema) NÃO ligada aqui (pertence à etapa 10 da Fase 4)
++- RF-63 (gate que reprova artefato citando caminho inexistente permanece verde após a entrega) -> comprovado: gate agora executa (49 refs verificadas) e sai 0 sobre os artefatos do PRD; markers `(planejado)` cobrem os 3 caminhos futuros `internal/approval*`; caminho sem marcador continua reprovando (caso 2 e caso 6 do teste)
++
++## Definition of Done (DoD)
++- [x] Todos os critérios de aceite acima comprovados com evidência física.
++- [x] Testes da tarefa criados e executados (`Testes: pass` — `bash tests/scripts/check-spec-paths_test.sh` e `go test ./...` em Comandos Executados).
++- [x] Lint/vet/build sem regressão.
++- [x] Estado de tasks.md sincronizado com este relatório.
++
++## Diff Reviewed
++
++sha=5e2268d17a23d82b6a1b07694c060245a33d76fe89d7942ef6fd4d2be29326df
++verdict=APPROVED_WITH_REMARKS
++tool=claude
++result_path=.specs/prd-harness-quatro-clis-loop-aprovacao/1.0_execution_result.json
++
++## Coverage
++
++package=cmd/ai_spec_harness
++delta=0%
++
++## Suposições
++- `AI_PREFLIGHT_DONE=1`: o orquestrador já validou skills lockfile, spec-drift e hook de governança; gates de pré-voo pulados conforme instrução.
++- A ausência de `sdd-state.json` no working tree é legítima: nenhum PRD está sob orquestração SDD ativa neste checkout. O gate lista PRDs reais quando o estado runtime existe (comprovado com estado temporário).
++- O ambiente de execução é Linux bash 5.2; a portabilidade para macOS bash 3.2 foi verificada estaticamente (nenhum builtin de bash 4+ remanescente; construções usadas — `arr=()`, `arr+=()`, `while IFS= read -r`, `${#arr[@]}`, `case` glob, `<(...)` — são válidas desde bash 3.0).
++
++## Riscos Residuais
++- [low] Execução real em `/bin/bash` 3.2 do macOS não pôde ser exercitada neste ambiente (Linux). Mitigação: varredura estática de builtins de bash 4+ em caminho de gate (limpa) e inicialização explícita de arrays antes de qualquer expansão sob `set -u`.
++- [low] O critério de sucesso "a saída lista os diretórios de PRD" só se materializa quando `sdd-state.json` existe (artefato de runtime do orquestrador). No checkout limpo o gate corretamente reporta ausência de PRDs sob gestão SDD; a capacidade de listar e verificar foi comprovada com estado temporário e pela suíte `tests/scripts/check-spec-paths_test.sh`.
++- [nota] `techspec.md` foi modificado após `tasks.md` — drift temporal aparente, porém a alteração (markers `(planejado)`) é explicitamente mandatada por esta task file (subtarefa 1.4 e seção "Detalhes de Implementação") e por RF-63; é reconciliação intra-tarefa, não drift externo.
++- [nota] `skills-lock.json` e `audit/skill-upgrade-lock-hash-resync-2026-09-10.md` aparecem como modificados/não rastreados no working tree, mas são remediação de pré-voo do orquestrador, fora do escopo desta tarefa; não tocados aqui.
++- [selo] `ai-spec seal-evidence`: selo pendente — o trabalho da tarefa ainda não foi commitado; SHA não inventado, commit não criado (R-GOV-001).
++
++## Conflitos de Regra
++- none
+diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/1.0_execution_result.json b/.specs/prd-harness-quatro-clis-loop-aprovacao/1.0_execution_result.json
+new file mode 100644
+index 0000000..68b4271
+--- /dev/null
++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/1.0_execution_result.json
+@@ -0,0 +1,66 @@
++{
++  "schema_version": 2,
++  "run_id": "task-1.0-gates-operaveis-2026-09-10",
++  "task_id": "1.0",
++  "attempt": 1,
++  "status": "done",
++  "base_sha": "ba80b5637bef1ff372c6e7ac15eea8437322dcc8",
++  "patch_sha256": "5e2268d17a23d82b6a1b07694c060245a33d76fe89d7942ef6fd4d2be29326df",
++  "patch_ref": "evidence/task-1.0/1.0.patch",
++  "final_state_sha256": "30bb3f1254947f3b89defa4ed17a12031536c7d4966dd3dcd25d9bd7296cd3cf",
++  "coverage_regression": false,
++  "tests": [
++    {
++      "command": "go test ./... -count=1",
++      "exit_code": 0,
++      "output_sha256": "1096a6325733145b1d6ae39cbd6afc92e0440727e8c7312b987ee03f5b02bf14"
++    },
++    {
++      "command": "bash tests/scripts/check-spec-paths_test.sh",
++      "exit_code": 0,
++      "output_sha256": "685d67be81ec8793c4f4115073b9c4712874d85825cd180eefe3dd978b8b930f"
++    },
++    {
++      "command": "make check-spec-paths && bash scripts/check-scripts-sync.sh && bash scripts/check-skills-sync.sh",
++      "exit_code": 0,
++      "output_sha256": "409ecc25601ed6dbc1c4b5f1c82b2bd464b9e1e09eb87657503a436c14dff2b2"
++    }
++  ],
++  "criteria": [
++    {
++      "id": "RF-08-gate-contrato-desarmado",
++      "evidence_ref": "evidence/task-1.0/go-build-test.log"
++    },
++    {
++      "id": "RF-63-gate-spec-paths-verde-executa",
++      "evidence_ref": "evidence/task-1.0/gates-suite.log"
++    },
++    {
++      "id": "mapfile-removido-portabilidade-bash32",
++      "evidence_ref": "evidence/task-1.0/gates-suite.log"
++    },
++    {
++      "id": "notacao-planejado-tres-resultados",
++      "evidence_ref": "evidence/task-1.0/spec-paths-test.log"
++    },
++    {
++      "id": "guarda-vacuidade-catalogo-acp",
++      "evidence_ref": "evidence/task-1.0/go-build-test.log"
++    },
++    {
++      "id": "espelhos-list-go-files-sincronizados",
++      "evidence_ref": "evidence/task-1.0/gates-suite.log"
++    },
++    {
++      "id": "build-vet-test-verde",
++      "evidence_ref": "evidence/task-1.0/go-build-test.log"
++    }
++  ],
++  "evidence": [
++    "evidence/task-1.0/gates-suite.log",
++    "evidence/task-1.0/spec-paths-test.log",
++    "evidence/task-1.0/go-build-test.log",
++    "evidence/task-1.0/1.0.patch"
++  ],
++  "review_verdict": "approved"
++}
+diff --git a/audit/skill-upgrade-lock-hash-resync-2026-09-10.md b/audit/skill-upgrade-lock-hash-resync-2026-09-10.md
+new file mode 100644
+index 0000000..3c6cf6b
+--- /dev/null
++++ b/audit/skill-upgrade-lock-hash-resync-2026-09-10.md
+@@ -0,0 +1,51 @@
++# Decisão de Upgrade — re-ancoragem de 3 hashes do skills-lock.json
++
++## Metadados
++
++- **Skills:** `design-patterns-mandatory`, `domain-modeling-production`, `semantic-commit`
++- **Versão anterior (hash):**
++  - `design-patterns-mandatory`: `c9e562aa50d5dcc4b5b6a71dc9c1571c4d08d85bb25a03f5a572e1494ca64ced` (sem `version` no lock)
++  - `domain-modeling-production`: `0a548091f281fcb1a290a25ed8c19f6f5289ec21688c234332d9d04a03dab0cc` (sem `version` no lock)
++  - `semantic-commit`: `ea289b301d4afae4f798a8a394eb74aaa943fd5990307fc0c86da07036167280` (lock `version` 1.0.0)
++- **Versão nova (hash):**
++  - `design-patterns-mandatory`: `9540189e448c1ee5ebccb75128dbca61bd26a7ad71ec042e2bc40f4422d204cd`
++  - `domain-modeling-production`: `66827dd6ae276129fd55961d5e07be1b356828b3dbcaf28509aefc801ad9dd5b`
++  - `semantic-commit`: `967598b88fc05a2c7f63651696adf6c49735d8af15fde9a359c34e09ff5351bf` (lock `version` → 1.1.0, alinhado ao frontmatter instalado)
++- **Data:** 2026-09-10
++- **Responsável:** Stefany Lima Teixeira (decisão), execução assistida por Claude Code
++
++## Motivador
++
++O commit `ba80b56` ("feat(skills): adiciona skills de design patterns e domain modeling")
++registrou `design-patterns-mandatory` e `domain-modeling-production` no `skills-lock.json`
++com `computedHash` que não corresponde ao conteúdo commitado de `.agents/skills/<nome>/SKILL.md`
++(drift de conteúdo sem re-hash). Em paralelo, `semantic-commit` foi atualizado para o
++frontmatter `version: 1.1.0` (bump compatível, não-breaking) sem re-ancoragem do hash nem
++sincronização do campo `version` no lock.
++
++O gate `ai-spec skills --verify` (bloqueante, ADR-005) reprovava as 3 skills por
++"hash diverge do registrado em skills-lock.json", impedindo a Etapa 1 de
++`execute-all-tasks` para o PRD `harness-quatro-clis-loop-aprovacao`
++(a skill `domain-modeling-production` é exigida pelas tarefas 2.0 e 6.0 desse PRD).
++
++Verificação: working tree limpo e idêntico ao HEAD; nenhuma modificação local não
++registrada. As divergências são de estado commitado. O conteúdo atual das 3 SKILL.md
++é o conteúdo pretendido — a correção é re-ancorar o hash, não reverter o conteúdo.
++
++## Critério de Aceitação
++
++- `ai-spec skills --verify` retorna exit 0 com "Integridade das skills OK (versao + hash SHA-256)." — **verificado**.
++- `computedHash` de cada skill == `sha256sum .agents/skills/<nome>/SKILL.md` — **verificado**.
++- Demais 11 skills do lock permanecem inalteradas.
++
++## Riscos
++
++Nenhum risco novo além do já documentado para o gate: skills modificadas localmente sem
++registro passam a falhar em `skills --verify`. Comportamento intencional
++(docs/troubleshooting.md).
++
++## Resultado
++
++- [x] `skills-lock.json` atualizado com os 3 novos hashes + `version` de `semantic-commit` → 1.1.0
++- [x] `ai-spec skills --verify` exit 0
++- [x] Registro salvo em `audit/skill-upgrade-lock-hash-resync-2026-09-10.md`
+diff --git a/evidence/task-1.0/1.0.patch b/evidence/task-1.0/1.0.patch
+new file mode 100644
+index 0000000..86a74eb
+--- /dev/null
++++ b/evidence/task-1.0/1.0.patch
+@@ -0,0 +1,322 @@
++diff --git a/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh b/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh
++index 0466029..88af610 100644
++--- a/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh
+++++ b/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh
++@@ -6,7 +6,14 @@ if ! command -v rg >/dev/null 2>&1; then
++   exit 1
++ fi
++ 
++-mapfile -t files < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
+++# Array preenchido via laco `read` em vez do builtin de bash 4+ para leitura de
+++# array: o macOS entrega bash 3.2 em /bin/bash, onde esse builtin nao existe e,
+++# sob `set -e`, abortava a skill inteira. O laco e portavel e preserva os nomes
+++# byte-identicos, inclusive com espaco.
+++files=()
+++while IFS= read -r linha; do
+++  files+=("$linha")
+++done < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
++ 
++ if [ "${#files[@]}" -eq 0 ]; then
++   echo "nenhum arquivo Go encontrado no workspace atual" >&2
++diff --git a/.claude/skills/object-calisthenics-go/scripts/list-go-files.sh b/.claude/skills/object-calisthenics-go/scripts/list-go-files.sh
++index 0466029..88af610 100644
++--- a/.claude/skills/object-calisthenics-go/scripts/list-go-files.sh
+++++ b/.claude/skills/object-calisthenics-go/scripts/list-go-files.sh
++@@ -6,7 +6,14 @@ if ! command -v rg >/dev/null 2>&1; then
++   exit 1
++ fi
++ 
++-mapfile -t files < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
+++# Array preenchido via laco `read` em vez do builtin de bash 4+ para leitura de
+++# array: o macOS entrega bash 3.2 em /bin/bash, onde esse builtin nao existe e,
+++# sob `set -e`, abortava a skill inteira. O laco e portavel e preserva os nomes
+++# byte-identicos, inclusive com espaco.
+++files=()
+++while IFS= read -r linha; do
+++  files+=("$linha")
+++done < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
++ 
++ if [ "${#files[@]}" -eq 0 ]; then
++   echo "nenhum arquivo Go encontrado no workspace atual" >&2
++diff --git a/.github/skills/object-calisthenics-go/scripts/list-go-files.sh b/.github/skills/object-calisthenics-go/scripts/list-go-files.sh
++index 0466029..88af610 100644
++--- a/.github/skills/object-calisthenics-go/scripts/list-go-files.sh
+++++ b/.github/skills/object-calisthenics-go/scripts/list-go-files.sh
++@@ -6,7 +6,14 @@ if ! command -v rg >/dev/null 2>&1; then
++   exit 1
++ fi
++ 
++-mapfile -t files < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
+++# Array preenchido via laco `read` em vez do builtin de bash 4+ para leitura de
+++# array: o macOS entrega bash 3.2 em /bin/bash, onde esse builtin nao existe e,
+++# sob `set -e`, abortava a skill inteira. O laco e portavel e preserva os nomes
+++# byte-identicos, inclusive com espaco.
+++files=()
+++while IFS= read -r linha; do
+++  files+=("$linha")
+++done < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
++ 
++ if [ "${#files[@]}" -eq 0 ]; then
++   echo "nenhum arquivo Go encontrado no workspace atual" >&2
++diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
++index 8b26c92..4d0cb3b 100644
++--- a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
++@@ -23,7 +23,7 @@
++ 
++ | # | Título | Status | Dependências | Paralelizável | Skills |
++ |---|--------|--------|-------------|---------------|--------|
++-| 1.0 | Tornar os gates capazes de rodar e de dizer a verdade | pending | — | — | — |
+++| 1.0 | Tornar os gates capazes de rodar e de dizer a verdade | done | — | — | — |
++ | 2.0 | Pacote de domínio do Ciclo de Aprovação, sem consumidor | pending | 1.0 | Com 3.0 | domain-modeling-production |
++ | 3.0 | Mapa 1:1 critério-evidência como dado verificável | pending | 1.0 | Com 2.0 | — |
++ | 4.0 | Promoção do loop ao agregado e correção dos defeitos de causa-raiz | pending | 2.0, 3.0 | Não | — |
++diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/techspec.md b/.specs/prd-harness-quatro-clis-loop-aprovacao/techspec.md
++index cf07fec..578e0ff 100644
++--- a/.specs/prd-harness-quatro-clis-loop-aprovacao/techspec.md
+++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/techspec.md
++@@ -45,9 +45,9 @@ CLI, então ele bloqueia a própria remoção e precisa ser o primeiro item alte
++ 
++ | Componente | Responsabilidade |
++ |---|---|
++-| `internal/approval` (pacote novo) | Agregado `Ciclo`, entidade `Rodada`, Value Objects de conjunto fechado, tabela de transições, tradução anticorrupção do texto do revisor e política de parada. Zero dependência de ACP, CLI ou filesystem |
++-| `internal/approval/portas.go` | Três interfaces declaradas no consumidor — `Revisor`, `Corretor`, `Repositorio` — que dão ao agregado o que ele não pode fazer sozinho |
++-| `internal/approval/mocks/` | Mocks gerados por `mockery.yml` para as três portas |
+++| `internal/approval` (planejado) — pacote novo | Agregado `Ciclo`, entidade `Rodada`, Value Objects de conjunto fechado, tabela de transições, tradução anticorrupção do texto do revisor e política de parada. Zero dependência de ACP, CLI ou filesystem |
+++| `internal/approval/portas.go` (planejado) | Três interfaces declaradas no consumidor — `Revisor`, `Corretor`, `Repositorio` — que dão ao agregado o que ele não pode fazer sozinho |
+++| `internal/approval/mocks/` (planejado) | Mocks gerados por `mockery.yml` para as três portas |
++ | Spec do OpenCode em `internal/runtime/specs/` | Runtime ACP por subcomando, com launcher de fallback e janela derivada do modelo |
++ | Plugin de governança do OpenCode | Hook de pré-ferramenta que bloqueia por exceção e sinaliza carga via sentinela |
++ | Gate de encerramento canônico | Script tool-neutro que bloqueia o fim da sessão sem veredito aprovado, registrado nos 4 CLIs |
++diff --git a/cmd/ai_spec_harness/cli_contract_test.go b/cmd/ai_spec_harness/cli_contract_test.go
++index 51db1b8..6e07cc2 100644
++--- a/cmd/ai_spec_harness/cli_contract_test.go
+++++ b/cmd/ai_spec_harness/cli_contract_test.go
++@@ -171,17 +171,18 @@ func TestCLISchemaContainsAllTools(t *testing.T) {
++ 
++ 	schemaContent := string(data)
++ 
+++	// Guarda de vacuidade: um catálogo vazio faria o laço abaixo passar
+++	// trivialmente sem verificar nada. Catálogo vazio é falha explícita.
+++	if len(_runtimeACPCatalog) == 0 {
+++		t.Fatal("_runtimeACPCatalog vazio — o laço de verificação passaria trivialmente sem checar o schema")
+++	}
+++
++ 	// Todos os tools do runtimeACPCatalog devem aparecer no schema.
++ 	for tool := range _runtimeACPCatalog {
++ 		if !strings.Contains(schemaContent, tool) {
++ 			t.Errorf("cli-schema.json não menciona tool %q — atualizar descrição da flag --runtime ou --tool", tool)
++ 		}
++ 	}
++-
++-	// Verificar especificamente que "gemini" está presente (RF-25 ADR-015).
++-	if !strings.Contains(schemaContent, "gemini") {
++-		t.Error("cli-schema.json não contém 'gemini' — atualizar flag --runtime description (RF-25)")
++-	}
++ }
++ 
++ // TestCLI_ContractFlagsMatchSchema valida que flags definidas no cli-schema.json
++diff --git a/internal/embedded/assets/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh b/internal/embedded/assets/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh
++index 0466029..88af610 100644
++--- a/internal/embedded/assets/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh
+++++ b/internal/embedded/assets/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh
++@@ -6,7 +6,14 @@ if ! command -v rg >/dev/null 2>&1; then
++   exit 1
++ fi
++ 
++-mapfile -t files < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
+++# Array preenchido via laco `read` em vez do builtin de bash 4+ para leitura de
+++# array: o macOS entrega bash 3.2 em /bin/bash, onde esse builtin nao existe e,
+++# sob `set -e`, abortava a skill inteira. O laco e portavel e preserva os nomes
+++# byte-identicos, inclusive com espaco.
+++files=()
+++while IFS= read -r linha; do
+++  files+=("$linha")
+++done < <(rg --files -g '*.go' -g '!vendor/**' -g '!**/testdata/**' -g '!**/node_modules/**')
++ 
++ if [ "${#files[@]}" -eq 0 ]; then
++   echo "nenhum arquivo Go encontrado no workspace atual" >&2
++diff --git a/scripts/check-spec-paths.sh b/scripts/check-spec-paths.sh
++index 38a1f1c..2c6b81d 100755
++--- a/scripts/check-spec-paths.sh
+++++ b/scripts/check-spec-paths.sh
++@@ -31,6 +31,22 @@ _PREFIXES='^(internal|cmd|scripts|docs|tests|evals|deployment|migrations|taskfil
++ # quando a pessoa opta por cria-los, entao ausencia nao e defeito.
++ _OPTIONAL='^(\.agents/config\.yaml|\.claude/config\.yaml|\.claude/settings\.json)$'
++ 
+++planned_paths() {
+++  # Caminhos citados no artefato e imediatamente seguidos do marcador
+++  # `(planejado)` sao referencias futuras deliberadas: aceitas sem resolver no
+++  # repositorio, ao contrario de referencia quebrada por erro.
+++  local file="$1"
+++  grep -ohE '`[^`]+`[[:space:]]*\(planejado\)' "$file" 2>/dev/null \
+++    | sed -E 's/`([^`]*)`[[:space:]]*\(planejado\)/\1/' \
+++    | while read -r token; do
+++        token="${token%%::*}"
+++        token="${token%%:*}"
+++        token="${token%/}"
+++        [[ -n "$token" ]] || continue
+++        printf '%s\n' "$token"
+++      done
+++}
+++
++ extract_paths() {
++   local file="$1"
++   grep -ohE '`[^`]+`' "$file" 2>/dev/null | tr -d '`' | while read -r token; do
++@@ -51,9 +67,21 @@ extract_paths() {
++   done
++ }
++ 
++-prd_dirs=("$@")
+++# Array inicializado explicitamente antes de qualquer expansao: bash 3.2 sob
+++# `set -u` recusa expansao de array nao inicializado.
+++prd_dirs=()
+++for _arg in "$@"; do
+++  prd_dirs+=("$_arg")
+++done
++ if [[ ${#prd_dirs[@]} -eq 0 ]]; then
++-  mapfile -t prd_dirs < <(find .specs -name 'sdd-state.json' -not -path '*/.checkpoints/*' 2>/dev/null | sed 's|/sdd-state.json||' | sort)
+++  # Leitura linha a linha em vez do builtin de bash 4+ para popular array: no
+++  # macOS bash 3.2 esse builtin nao existe e, como este script roda sob
+++  # `set -uo pipefail` sem `-e`, o erro nao abortava e o gate saia 0 sem
+++  # verificar nada. O laco `read` e portavel e preserva conteudo byte-identico,
+++  # inclusive caminhos com espaco.
+++  while IFS= read -r linha; do
+++    prd_dirs+=("$linha")
+++  done < <(find .specs -name 'sdd-state.json' -not -path '*/.checkpoints/*' 2>/dev/null | sed 's|/sdd-state.json||' | sort)
++ fi
++ 
++ if [[ ${#prd_dirs[@]} -eq 0 ]]; then
++@@ -67,8 +95,16 @@ for prd in "${prd_dirs[@]}"; do
++   for artifact in prd.md techspec.md tasks.md; do
++     file="$prd/$artifact"
++     [[ -f "$file" ]] || continue
+++    planned="
+++$(planned_paths "$file")
+++"
++     while read -r path; do
++       [[ -n "$path" ]] || continue
+++      case "$planned" in
+++        *"
+++$path
+++"*) continue ;;
+++      esac
++       checked=$((checked+1))
++       if [[ ! -e "$path" ]]; then
++         echo "FALTANDO: $file cita caminho inexistente: $path"
++diff --git a/skills-lock.json b/skills-lock.json
++index 2a165b2..ebf4318 100644
++--- a/skills-lock.json
+++++ b/skills-lock.json
++@@ -11,13 +11,13 @@
++       "source": "JailtonJunior94/skills",
++       "sourceType": "github",
++       "skillPath": "skills/design-patterns-mandatory/SKILL.md",
++-      "computedHash": "c9e562aa50d5dcc4b5b6a71dc9c1571c4d08d85bb25a03f5a572e1494ca64ced"
+++      "computedHash": "9540189e448c1ee5ebccb75128dbca61bd26a7ad71ec042e2bc40f4422d204cd"
++     },
++     "domain-modeling-production": {
++       "source": "JailtonJunior94/skills",
++       "sourceType": "github",
++       "skillPath": "skills/domain-modeling-production/SKILL.md",
++-      "computedHash": "0a548091f281fcb1a290a25ed8c19f6f5289ec21688c234332d9d04a03dab0cc"
+++      "computedHash": "66827dd6ae276129fd55961d5e07be1b356828b3dbcaf28509aefc801ad9dd5b"
++     },
++     "finalize-changelog-readme-push": {
++       "source": "JailtonJunior94/skills",
++@@ -76,8 +76,8 @@
++     "semantic-commit": {
++       "source": "JailtonJunior94/skills",
++       "sourceType": "github",
++-      "version": "1.0.0",
++-      "computedHash": "ea289b301d4afae4f798a8a394eb74aaa943fd5990307fc0c86da07036167280"
+++      "version": "1.1.0",
+++      "computedHash": "967598b88fc05a2c7f63651696adf6c49735d8af15fde9a359c34e09ff5351bf"
++     },
++     "us-to-prd": {
++       "source": "JailtonJunior94/skills",
++diff --git a/tests/scripts/check-spec-paths_test.sh b/tests/scripts/check-spec-paths_test.sh
++index a112605..0efbe7b 100755
++--- a/tests/scripts/check-spec-paths_test.sh
+++++ b/tests/scripts/check-spec-paths_test.sh
++@@ -45,7 +45,22 @@ printf '# TechSpec\n\nConfig opcional em `.agents/config.yaml`.\n' > "$TMP/prd-f
++ bash "$GATE" "$TMP/prd-fixture" >/dev/null 2>&1
++ assert "caminho opcional documentado nao reprova" 0 $?
++ 
++-# Caso 5: PRD sem sdd-state.json fica fora do escopo
+++# Caso 5: caminho inexistente marcado como (planejado) -> aprova
+++printf '# TechSpec\n\nO pacote `internal/sdd/orchestrator` (planejado) ainda nao existe.\n' > "$TMP/prd-fixture/techspec.md"
+++bash "$GATE" "$TMP/prd-fixture" >/dev/null 2>&1
+++assert "caminho inexistente com marcador (planejado) aprova" 0 $?
+++
+++# Caso 6: (planejado) nao mascara outro caminho inexistente sem marcador na mesma spec
+++printf '# TechSpec\n\n`internal/sdd/orchestrator` (planejado) e `internal/sdd/review` (quebrado).\n' > "$TMP/prd-fixture/techspec.md"
+++out=$(bash "$GATE" "$TMP/prd-fixture" 2>&1); code=$?
+++assert "marcador (planejado) nao mascara caminho quebrado vizinho" 1 $code
+++if echo "$out" | grep -q "internal/sdd/review" && ! echo "$out" | grep -q "internal/sdd/orchestrator"; then
+++  echo "  OK   diagnostico acusa so o caminho sem marcador"; pass=$((pass+1))
+++else
+++  echo "  FAIL diagnostico deveria acusar apenas internal/sdd/review"; fail=$((fail+1))
+++fi
+++
+++# Caso 7: PRD sem sdd-state.json fica fora do escopo
++ rm -f "$TMP/prd-fixture/sdd-state.json"
++ printf '# TechSpec\n\nComponente `internal/sdd/orchestrator`.\n' > "$TMP/prd-fixture/techspec.md"
++ bash "$GATE" >/dev/null 2>&1
++diff --git a/audit/skill-upgrade-lock-hash-resync-2026-09-10.md b/audit/skill-upgrade-lock-hash-resync-2026-09-10.md
++new file mode 100644
++index 0000000..3c6cf6b
++--- /dev/null
+++++ b/audit/skill-upgrade-lock-hash-resync-2026-09-10.md
++@@ -0,0 +1,51 @@
+++# Decisão de Upgrade — re-ancoragem de 3 hashes do skills-lock.json
+++
+++## Metadados
+++
+++- **Skills:** `design-patterns-mandatory`, `domain-modeling-production`, `semantic-commit`
+++- **Versão anterior (hash):**
+++  - `design-patterns-mandatory`: `c9e562aa50d5dcc4b5b6a71dc9c1571c4d08d85bb25a03f5a572e1494ca64ced` (sem `version` no lock)
+++  - `domain-modeling-production`: `0a548091f281fcb1a290a25ed8c19f6f5289ec21688c234332d9d04a03dab0cc` (sem `version` no lock)
+++  - `semantic-commit`: `ea289b301d4afae4f798a8a394eb74aaa943fd5990307fc0c86da07036167280` (lock `version` 1.0.0)
+++- **Versão nova (hash):**
+++  - `design-patterns-mandatory`: `9540189e448c1ee5ebccb75128dbca61bd26a7ad71ec042e2bc40f4422d204cd`
+++  - `domain-modeling-production`: `66827dd6ae276129fd55961d5e07be1b356828b3dbcaf28509aefc801ad9dd5b`
+++  - `semantic-commit`: `967598b88fc05a2c7f63651696adf6c49735d8af15fde9a359c34e09ff5351bf` (lock `version` → 1.1.0, alinhado ao frontmatter instalado)
+++- **Data:** 2026-09-10
+++- **Responsável:** Stefany Lima Teixeira (decisão), execução assistida por Claude Code
+++
+++## Motivador
+++
+++O commit `ba80b56` ("feat(skills): adiciona skills de design patterns e domain modeling")
+++registrou `design-patterns-mandatory` e `domain-modeling-production` no `skills-lock.json`
+++com `computedHash` que não corresponde ao conteúdo commitado de `.agents/skills/<nome>/SKILL.md`
+++(drift de conteúdo sem re-hash). Em paralelo, `semantic-commit` foi atualizado para o
+++frontmatter `version: 1.1.0` (bump compatível, não-breaking) sem re-ancoragem do hash nem
+++sincronização do campo `version` no lock.
+++
+++O gate `ai-spec skills --verify` (bloqueante, ADR-005) reprovava as 3 skills por
+++"hash diverge do registrado em skills-lock.json", impedindo a Etapa 1 de
+++`execute-all-tasks` para o PRD `harness-quatro-clis-loop-aprovacao`
+++(a skill `domain-modeling-production` é exigida pelas tarefas 2.0 e 6.0 desse PRD).
+++
+++Verificação: working tree limpo e idêntico ao HEAD; nenhuma modificação local não
+++registrada. As divergências são de estado commitado. O conteúdo atual das 3 SKILL.md
+++é o conteúdo pretendido — a correção é re-ancorar o hash, não reverter o conteúdo.
+++
+++## Critério de Aceitação
+++
+++- `ai-spec skills --verify` retorna exit 0 com "Integridade das skills OK (versao + hash SHA-256)." — **verificado**.
+++- `computedHash` de cada skill == `sha256sum .agents/skills/<nome>/SKILL.md` — **verificado**.
+++- Demais 11 skills do lock permanecem inalteradas.
+++
+++## Riscos
+++
+++Nenhum risco novo além do já documentado para o gate: skills modificadas localmente sem
+++registro passam a falhar em `skills --verify`. Comportamento intencional
+++(docs/troubleshooting.md).
+++
+++## Resultado
+++
+++- [x] `skills-lock.json` atualizado com os 3 novos hashes + `version` de `semantic-commit` → 1.1.0
+++- [x] `ai-spec skills --verify` exit 0
+++- [x] Registro salvo em `audit/skill-upgrade-lock-hash-resync-2026-09-10.md`
+diff --git a/evidence/task-1.0/gates-suite.log b/evidence/task-1.0/gates-suite.log
+new file mode 100644
+index 0000000..a797450
+--- /dev/null
++++ b/evidence/task-1.0/gates-suite.log
+@@ -0,0 +1,62 @@
++### /bin/bash --version (runtime host)
++GNU bash, versão 5.2.21(1)-release (x86_64-pc-linux-gnu)
++
++### grep -c mapfile scripts/check-spec-paths.sh
++0
++
++### grep -rc mapfile <4 espelhos>
++.claude/skills/object-calisthenics-go/scripts/list-go-files.sh:0
++.agents/skills/object-calisthenics-go/scripts/list-go-files.sh:0
++internal/embedded/assets/.agents/skills/object-calisthenics-go/scripts/list-go-files.sh:0
++.github/skills/object-calisthenics-go/scripts/list-go-files.sh:0
++
++### grep -c planejado scripts/check-spec-paths.sh
++3
++
++### grep -n gemini cmd/ai_spec_harness/cli_contract_test.go (esperado: vazio)
++rc=1
++
++### audit builtins bash4 em caminho de gate
++nenhum builtin bash4 encontrado
++
++### bash scripts/check-spec-paths.sh (com sdd-state.json temporario)
++Referencias de caminho: 49 verificadas, todas resolvem (1 PRD sob gestao SDD).
++rc=0
++
++### make check-spec-paths
++bash scripts/check-spec-paths.sh
++Referencias de caminho: 49 verificadas, todas resolvem (1 PRD sob gestao SDD).
++bash tests/scripts/check-spec-paths_test.sh
++  OK   caminho existente aprova (exit=0)
++  OK   caminho inexistente reprova (exit=1)
++  OK   diagnostico nomeia o caminho invalido
++  OK   simbolo, comando e placeholder nao viram caminho (exit=0)
++  OK   caminho opcional documentado nao reprova (exit=0)
++  OK   caminho inexistente com marcador (planejado) aprova (exit=0)
++  OK   marcador (planejado) nao mascara caminho quebrado vizinho (exit=1)
++  OK   diagnostico acusa so o caminho sem marcador
++  OK   PRD historico sem estado SDD fica fora do escopo (exit=0)
++
++Resultado: 9 OK, 0 FAIL
++rc=0
++
++### bash scripts/check-spec-paths.sh (repo limpo, sem PRD sob SDD)
++Nenhum PRD sob gestao SDD encontrado; nada a verificar.
++rc=0
++
++### bash scripts/check-scripts-sync.sh
++
++Validadores em sync: 24
++Drift / missing: 0
++Todos os validadores de evidencia sincronizados.
++rc=0
++
++### bash scripts/check-skills-sync.sh
++
++Skills em sync: 80
++Skills com drift: 0
++Libs em sync: 2 (legacy + embedded)
++Hooks do orquestrador em sync: 4 hooks x 9 mirrors
++Hooks de validacao por-tool em paridade: 2 hooks x 8 tools
++Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
++rc=0
+diff --git a/evidence/task-1.0/go-build-test.log b/evidence/task-1.0/go-build-test.log
+new file mode 100644
+index 0000000..596cc57
+--- /dev/null
++++ b/evidence/task-1.0/go-build-test.log
+@@ -0,0 +1,69 @@
++### go build ./...
++rc=0
++
++### go vet ./...
++rc=0
++
++### go test ./... -count=1
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/triggers/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/uninstall	0.003s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/upgrade	0.032s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/version	0.003s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/wrapper	0.004s
++rc=0
++
++### go test ./cmd/ai_spec_harness/ -run TestCLI_Contract -count=1 -v (via rtk proxy)
++=== RUN   TestCLI_ContractMatchesSchema
++--- PASS: TestCLI_ContractMatchesSchema (0.00s)
++=== RUN   TestCLISchemaContainsAllTools
++=== RUN   TestCLI_ContractFlagsMatchSchema
++=== RUN   TestCLI_ContractFlagsMatchSchema/check-spec-drift
++=== RUN   TestCLI_ContractFlagsMatchSchema/install
++=== RUN   TestCLI_ContractFlagsMatchSchema/metrics
++=== RUN   TestCLI_ContractFlagsMatchSchema/prerequisites
++=== RUN   TestCLI_ContractFlagsMatchSchema/runtime-capabilities
++=== RUN   TestCLI_ContractFlagsMatchSchema/skills
++=== RUN   TestCLI_ContractFlagsMatchSchema/sync-spec-hash
++=== RUN   TestCLI_ContractFlagsMatchSchema/uninstall
++=== RUN   TestCLI_ContractFlagsMatchSchema/semver-next
++=== RUN   TestCLI_ContractFlagsMatchSchema/validate-evidence
++=== RUN   TestCLI_ContractFlagsMatchSchema/validate-result
++=== RUN   TestCLI_ContractFlagsMatchSchema/validate-sdd
++=== RUN   TestCLI_ContractFlagsMatchSchema/verify
++=== RUN   TestCLI_ContractFlagsMatchSchema/lint
++=== RUN   TestCLI_ContractFlagsMatchSchema/telemetry_summary
++=== RUN   TestCLI_ContractFlagsMatchSchema/approve
++=== RUN   TestCLI_ContractFlagsMatchSchema/inspect
++=== RUN   TestCLI_ContractFlagsMatchSchema/invalidate
++=== RUN   TestCLI_ContractFlagsMatchSchema/seal-evidence
++=== RUN   TestCLI_ContractFlagsMatchSchema/upgrade
++=== RUN   TestCLI_ContractFlagsMatchSchema/validate
++=== RUN   TestCLI_ContractFlagsMatchSchema/version
++=== RUN   TestCLI_ContractFlagsMatchSchema/migrate-sdd
++=== RUN   TestCLI_ContractFlagsMatchSchema/doctor
++=== RUN   TestCLI_ContractFlagsMatchSchema/orchestrate
++=== RUN   TestCLI_ContractFlagsMatchSchema/telemetry_log
++=== RUN   TestCLI_ContractFlagsMatchSchema/validate-bugs
++=== RUN   TestCLI_ContractFlagsMatchSchema/changelog
++=== RUN   TestCLI_ContractFlagsMatchSchema/task-loop
++=== RUN   TestCLI_ContractFlagsMatchSchema/update-version
++=== RUN   TestCLI_ContractFlagsMatchSchema/wrapper
++=== RUN   TestCLI_ContractFlagsMatchSchema/telemetry
++=== RUN   TestCLI_ContractFlagsMatchSchema/telemetry_report
++=== RUN   TestCLI_ContractFlagsMatchSchema/hash
++=== RUN   TestCLI_ContractFlagsMatchSchema/rollback-sdd
++=== RUN   TestCLI_ContractFlagsMatchSchema/scaffold
++=== RUN   TestCLI_ContractFlagsMatchSchema/skill-bump
++=== RUN   TestCLI_ContractFlagsMatchSchema/skills_check
++--- PASS: TestCLI_ContractFlagsMatchSchema (0.00s)
++--- PASS: TestCLISchemaContainsAllTools (0.00s)
++PASS
++ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	0.007s
++
++### guarda de vacuidade: catalogo esvaziado -> teste FALHA (revertido em seguida)
++    cli_contract_test.go:177: _runtimeACPCatalog vazio — o laço de verificação passaria trivialmente sem checar o schema
++--- FAIL: TestCLISchemaContainsAllTools (0.00s)
++FAIL
++FAIL	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	0.005s
++FAIL
++catalogo revertido: 2 entrada gemini
+diff --git a/evidence/task-1.0/spec-paths-test.log b/evidence/task-1.0/spec-paths-test.log
+new file mode 100644
+index 0000000..b643d44
+--- /dev/null
++++ b/evidence/task-1.0/spec-paths-test.log
+@@ -0,0 +1,17 @@
++### bash tests/scripts/check-spec-paths_test.sh
++  OK   caminho existente aprova (exit=0)
++  OK   caminho inexistente reprova (exit=1)
++  OK   diagnostico nomeia o caminho invalido
++  OK   simbolo, comando e placeholder nao viram caminho (exit=0)
++  OK   caminho opcional documentado nao reprova (exit=0)
++  OK   caminho inexistente com marcador (planejado) aprova (exit=0)
++  OK   marcador (planejado) nao mascara caminho quebrado vizinho (exit=1)
++  OK   diagnostico acusa so o caminho sem marcador
++  OK   PRD historico sem estado SDD fica fora do escopo (exit=0)
++
++Resultado: 9 OK, 0 FAIL
++rc=0
++
++### PATH=<fake rg> bash .agents/skills/object-calisthenics-go/scripts/list-go-files.sh | wc -l
++426
++pipeline rc=0
+diff --git a/internal/approval/cycle.go b/internal/approval/cycle.go
+new file mode 100644
+index 0000000..2ecd5de
+--- /dev/null
++++ b/internal/approval/cycle.go
+@@ -0,0 +1,250 @@
++package approval
++
++import (
++	"context"
++	"fmt"
++	"iter"
++	"slices"
++)
++
++type Cycle struct {
++	task     TaskIdentity
++	agent    AgentIdentity
++	policy   ApprovalPolicy
++	criteria []AcceptanceCriterion
++
++	reviewer   Reviewer
++	fixer      Fixer
++	repository Repository
++	translator Translator
++	calculator FingerprintCalculator
++
++	machine stateMachine
++	rounds  []Round
++	events  []Event
++	started bool
++	closed  bool
++}
++
++func NewCycle(
++	task TaskIdentity,
++	agent AgentIdentity,
++	policy ApprovalPolicy,
++	criteria []AcceptanceCriterion,
++	reviewer Reviewer,
++	fixer Fixer,
++	repository Repository,
++) (*Cycle, error) {
++	if task.Zero() || agent.Zero() {
++		return nil, fmt.Errorf("%w: missing identity in cycle", ErrInvalidIdentity)
++	}
++	if policy.MaxRounds() < 1 {
++		return nil, InvalidMaxRoundsError{Value: policy.MaxRounds()}
++	}
++	if len(criteria) == 0 {
++		return nil, fmt.Errorf("%w: cycle without acceptance criteria", ErrInvalidCriteriaMap)
++	}
++	for _, c := range criteria {
++		if c.Zero() {
++			return nil, fmt.Errorf("%w: uninitialized criterion in cycle", ErrInvalidCriterion)
++		}
++	}
++	if reviewer == nil || fixer == nil || repository == nil {
++		return nil, fmt.Errorf("%w: nil port in cycle", ErrInvalidRequest)
++	}
++	return &Cycle{
++		task:       task,
++		agent:      agent,
++		policy:     policy,
++		criteria:   slices.Clone(criteria),
++		reviewer:   reviewer,
++		fixer:      fixer,
++		repository: repository,
++		translator: NewTranslator(),
++		calculator: NewFingerprintCalculator(),
++		machine:    stateMachine{current: StateInReview},
++	}, nil
++}
++
++func (c *Cycle) Run(ctx context.Context) (CycleResult, error) {
++	if c.started {
++		return CycleResult{}, ErrCycleAlreadyStarted
++	}
++	c.started = true
++
++	var (
++		previousCheckpoint  Checkpoint
++		previousFingerprint Fingerprint
++		changed             = true
++	)
++	guard := c.policy.MaxRounds() + 1
++
++	for number := 1; number <= guard; number++ {
++		c.emit(RoundStarted{Number: number})
++
++		checkpoint, err := c.repository.Checkpoint(ctx)
++		if err != nil {
++			return CycleResult{}, fmt.Errorf("checkpoint round %d: %w", number, err)
++		}
++
++		target, err := c.roundTarget(ctx, number, previousCheckpoint)
++		if err != nil {
++			return CycleResult{}, err
++		}
++
++		round, criteriaMap, err := c.reviewRound(ctx, number, target)
++		if err != nil {
++			return CycleResult{}, err
++		}
++		c.rounds = append(c.rounds, round)
++		c.emit(RoundCompleted{Number: number, Verdict: round.Verdict(), Fingerprint: round.Fingerprint()})
++
++		proof, proofErr := NewApprovalProof(round.Verdict(), criteriaMap)
++		if proofErr == nil {
++			return c.approve(proof)
++		}
++		c.emit(ProofRejected{Number: number, Reason: proofErr.Error()})
++
++		reason, stop := c.policy.Decide(StopDecision{
++			Verdict:             round.Verdict(),
++			CurrentRound:        number,
++			CurrentFingerprint:  round.Fingerprint(),
++			PreviousFingerprint: previousFingerprint,
++			Changed:             changed,
++		})
++		if stop {
++			return c.closeBlocked(reason)
++		}
++
++		findings := slices.Collect(round.Findings())
++		if len(findings) == 0 {
++			return c.closeBlocked(ReasonBlockedInput)
++		}
++
++		didChange, err := c.fixRound(ctx, number, findings, target, checkpoint)
++		if err != nil {
++			return CycleResult{}, err
++		}
++		changed = didChange
++		previousFingerprint = round.Fingerprint()
++		previousCheckpoint = checkpoint
++	}
++
++	return CycleResult{}, fmt.Errorf("%w: cycle exceeded the defensive guard of %d rounds", ErrCycleClosed, guard)
++}
++
++func (c *Cycle) State() State {
++	return c.machine.currentState()
++}
++
++func (c *Cycle) RoundCount() int {
++	return len(c.rounds)
++}
++
++func (c *Cycle) CurrentVerdict() Verdict {
++	if len(c.rounds) == 0 {
++		return 0
++	}
++	return c.rounds[len(c.rounds)-1].Verdict()
++}
++
++func (c *Cycle) Closed() bool {
++	return c.closed
++}
++
++func (c *Cycle) Rounds() iter.Seq[Round] {
++	return slices.Values(c.rounds)
++}
++
++func (c *Cycle) Events() iter.Seq[Event] {
++	return slices.Values(c.events)
++}
++
++func (c *Cycle) roundTarget(ctx context.Context, number int, previousCheckpoint Checkpoint) (ReviewTarget, error) {
++	if number == 1 {
++		target, err := c.repository.FullTarget(ctx)
++		if err != nil {
++			return ReviewTarget{}, fmt.Errorf("full target round %d: %w", number, err)
++		}
++		return target, nil
++	}
++	target, err := c.repository.Delta(ctx, previousCheckpoint)
++	if err != nil {
++		return ReviewTarget{}, fmt.Errorf("delta round %d: %w", number, err)
++	}
++	return target, nil
++}
++
++func (c *Cycle) reviewRound(ctx context.Context, number int, target ReviewTarget) (Round, CriteriaMap, error) {
++	request, err := NewReviewRequest(c.task, c.agent, number, target, c.criteria)
++	if err != nil {
++		return Round{}, CriteriaMap{}, err
++	}
++	output, err := c.reviewer.Review(ctx, request)
++	if err != nil {
++		return Round{}, CriteriaMap{}, fmt.Errorf("review round %d: %w", number, err)
++	}
++
++	verdict := c.translator.Translate(output.RawText())
++	findings := output.FindingsList()
++	fingerprint := c.calculator.Compute(findings)
++
++	round, err := NewRound(number)
++	if err != nil {
++		return Round{}, CriteriaMap{}, err
++	}
++	completed, err := round.Complete(verdict, findings, fingerprint)
++	if err != nil {
++		return Round{}, CriteriaMap{}, err
++	}
++	return completed, output.CriteriaMap(), nil
++}
++
++func (c *Cycle) fixRound(ctx context.Context, number int, findings []Finding, target ReviewTarget, checkpoint Checkpoint) (bool, error) {
++	if err := c.machine.transition(StateInFix); err != nil {
++		return false, err
++	}
++	c.emit(FixRequested{Number: number})
++
++	request, err := NewFixRequest(c.task, c.agent, number, findings, target)
++	if err != nil {
++		return false, err
++	}
++	if err := c.fixer.Fix(ctx, request); err != nil {
++		return false, fmt.Errorf("fix round %d: %w", number, err)
++	}
++
++	delta, err := c.repository.Delta(ctx, checkpoint)
++	if err != nil {
++		return false, fmt.Errorf("post-fix delta round %d: %w", number, err)
++	}
++	if err := c.machine.transition(StateInReview); err != nil {
++		return false, err
++	}
++	return !delta.Empty(), nil
++}
++
++func (c *Cycle) approve(proof ApprovalProof) (CycleResult, error) {
++	if !proof.Valid() {
++		return CycleResult{}, fmt.Errorf("%w: approve rejects a zero-value proof", ErrInsufficientProof)
++	}
++	if err := c.machine.transition(StateApproved); err != nil {
++		return CycleResult{}, err
++	}
++	c.closed = true
++	c.emit(CycleClosed{Reason: ReasonApproved, Approved: true, Rounds: len(c.rounds)})
++	return NewApprovedResult(proof, c.rounds)
++}
++
++func (c *Cycle) closeBlocked(reason StopReason) (CycleResult, error) {
++	if err := c.machine.transition(StateBlocked); err != nil {
++		return CycleResult{}, err
++	}
++	c.closed = true
++	c.emit(CycleClosed{Reason: reason, Approved: false, Rounds: len(c.rounds)})
++	return NewClosedResult(reason, c.rounds)
++}
++
++func (c *Cycle) emit(event Event) {
++	c.events = append(c.events, event)
++}
+diff --git a/internal/approval/cycle_flow_test.go b/internal/approval/cycle_flow_test.go
+new file mode 100644
+index 0000000..082160f
+--- /dev/null
++++ b/internal/approval/cycle_flow_test.go
+@@ -0,0 +1,178 @@
++package approval_test
++
++import (
++	"context"
++	"strconv"
++	"testing"
++
++	"github.com/stretchr/testify/mock"
++	"github.com/stretchr/testify/suite"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval/mocks"
++)
++
++type CycleFlowSuite struct {
++	suite.Suite
++	reviewer *mocks.Reviewer
++	fixer    *mocks.Fixer
++	repo     *mocks.Repository
++}
++
++func TestCycleFlowSuite(t *testing.T) {
++	suite.Run(t, new(CycleFlowSuite))
++}
++
++func (s *CycleFlowSuite) SetupTest() {
++	s.reviewer = mocks.NewReviewer(s.T())
++	s.fixer = mocks.NewFixer(s.T())
++	s.repo = mocks.NewRepository(s.T())
++}
++
++func (s *CycleFlowSuite) criterion(desc string) approval.AcceptanceCriterion {
++	c, err := approval.NewAcceptanceCriterion(desc)
++	s.Require().NoError(err)
++	return c
++}
++
++func (s *CycleFlowSuite) completeMap() approval.CriteriaMap {
++	c := s.criterion("only criterion")
++	ev, err := approval.NewCommandEvidence("go test ./...", "ok")
++	s.Require().NoError(err)
++	m, err := approval.NewCriteriaMap([]approval.AcceptanceCriterion{c})
++	s.Require().NoError(err)
++	m, err = m.WithEvidence(c, ev)
++	s.Require().NoError(err)
++	return m
++}
++
++func (s *CycleFlowSuite) finding(rule string) approval.Finding {
++	f, err := approval.NewFinding(approval.SeverityHigh, "a.go", rule, "")
++	s.Require().NoError(err)
++	return f
++}
++
++func (s *CycleFlowSuite) newCycle() *approval.Cycle {
++	task, err := approval.NewTaskIdentity("task-2.0")
++	s.Require().NoError(err)
++	agent, err := approval.NewAgentIdentity("claude")
++	s.Require().NoError(err)
++	policy, err := approval.NewApprovalPolicy(approval.WithMaxRounds(2))
++	s.Require().NoError(err)
++	cycle, err := approval.NewCycle(task, agent, policy,
++		[]approval.AcceptanceCriterion{s.criterion("only criterion")},
++		s.reviewer, s.fixer, s.repo)
++	s.Require().NoError(err)
++	return cycle
++}
++
++func (s *CycleFlowSuite) expectCheckpointAndTargets(delta approval.ReviewTarget) {
++	cp, err := approval.NewCheckpoint("sha-base")
++	s.Require().NoError(err)
++	s.repo.EXPECT().Checkpoint(mock.Anything).Return(cp, nil).Maybe()
++	s.repo.EXPECT().FullTarget(mock.Anything).Return(approval.NewReviewTarget("full diff"), nil).Maybe()
++	s.repo.EXPECT().Delta(mock.Anything, mock.Anything).Return(delta, nil).Maybe()
++}
++
++func (s *CycleFlowSuite) TestApprovesOnFirstRound() {
++	s.expectCheckpointAndTargets(approval.NewReviewTarget("later"))
++	s.reviewer.EXPECT().Review(mock.Anything, mock.Anything).
++		Return(approval.NewReviewerOutput("Verdict: APPROVED", nil, s.completeMap()), nil).Once()
++
++	result, err := s.newCycle().Run(context.Background())
++
++	s.Require().NoError(err)
++	s.True(result.Approved())
++	s.Equal(approval.ReasonApproved, result.Reason())
++	s.Equal(1, result.RoundCount())
++	s.fixer.AssertNotCalled(s.T(), "Fix", mock.Anything, mock.Anything)
++}
++
++func (s *CycleFlowSuite) TestBlockedInputStopsWithoutCallingFixer() {
++	s.expectCheckpointAndTargets(approval.NewReviewTarget("later"))
++	s.reviewer.EXPECT().Review(mock.Anything, mock.Anything).
++		Return(approval.NewReviewerOutput("Verdict: BLOCKED", nil, s.completeMap()), nil).Once()
++
++	cycle := s.newCycle()
++	result, err := cycle.Run(context.Background())
++
++	s.Require().NoError(err)
++	s.False(result.Approved())
++	s.Equal(approval.ReasonBlockedInput, result.Reason())
++	s.Equal(approval.StateBlocked, cycle.State())
++	s.fixer.AssertNotCalled(s.T(), "Fix", mock.Anything, mock.Anything)
++}
++
++func (s *CycleFlowSuite) TestExhaustsCeilingReturnsBlocked() {
++	s.expectCheckpointAndTargets(approval.NewReviewTarget("changed"))
++	s.fixer.EXPECT().Fix(mock.Anything, mock.Anything).Return(nil)
++	s.reviewer.EXPECT().Review(mock.Anything, mock.Anything).
++		RunAndReturn(func(_ context.Context, req approval.ReviewRequest) (approval.ReviewerOutput, error) {
++			return approval.NewReviewerOutput("Verdict: REJECTED", []approval.Finding{s.finding("R" + strconv.Itoa(req.Round()))}, s.completeMap()), nil
++		})
++
++	cycle := s.newCycle()
++	result, err := cycle.Run(context.Background())
++
++	s.Require().NoError(err)
++	s.False(result.Approved())
++	s.Equal(approval.ReasonMaxRounds, result.Reason())
++	s.Equal(2, result.RoundCount())
++	s.Equal(approval.StateBlocked, cycle.State())
++}
++
++func (s *CycleFlowSuite) TestAbortsOnRepeatedFingerprint() {
++	s.expectCheckpointAndTargets(approval.NewReviewTarget("changed"))
++	s.fixer.EXPECT().Fix(mock.Anything, mock.Anything).Return(nil).Once()
++	s.reviewer.EXPECT().Review(mock.Anything, mock.Anything).
++		Return(approval.NewReviewerOutput("Verdict: REJECTED", []approval.Finding{s.finding("R1")}, s.completeMap()), nil)
++
++	policy, err := approval.NewApprovalPolicy(approval.WithMaxRounds(5))
++	s.Require().NoError(err)
++	task, _ := approval.NewTaskIdentity("task-2.0")
++	agent, _ := approval.NewAgentIdentity("claude")
++	cycle, err := approval.NewCycle(task, agent, policy,
++		[]approval.AcceptanceCriterion{s.criterion("only criterion")}, s.reviewer, s.fixer, s.repo)
++	s.Require().NoError(err)
++
++	result, err := cycle.Run(context.Background())
++
++	s.Require().NoError(err)
++	s.Equal(approval.ReasonNoConvergence, result.Reason())
++	s.Equal(2, result.RoundCount())
++}
++
++func (s *CycleFlowSuite) TestAbortsOnEmptyDiff() {
++	s.expectCheckpointAndTargets(approval.NewReviewTarget(""))
++	s.fixer.EXPECT().Fix(mock.Anything, mock.Anything).Return(nil).Once()
++	s.reviewer.EXPECT().Review(mock.Anything, mock.Anything).
++		RunAndReturn(func(_ context.Context, req approval.ReviewRequest) (approval.ReviewerOutput, error) {
++			return approval.NewReviewerOutput("Verdict: REJECTED", []approval.Finding{s.finding("R" + strconv.Itoa(req.Round()))}, s.completeMap()), nil
++		})
++
++	policy, err := approval.NewApprovalPolicy(approval.WithMaxRounds(5))
++	s.Require().NoError(err)
++	task, _ := approval.NewTaskIdentity("task-2.0")
++	agent, _ := approval.NewAgentIdentity("claude")
++	cycle, err := approval.NewCycle(task, agent, policy,
++		[]approval.AcceptanceCriterion{s.criterion("only criterion")}, s.reviewer, s.fixer, s.repo)
++	s.Require().NoError(err)
++
++	result, err := cycle.Run(context.Background())
++
++	s.Require().NoError(err)
++	s.Equal(approval.ReasonEmptyDiff, result.Reason())
++}
++
++func (s *CycleFlowSuite) TestSecondRunIsRejected() {
++	s.expectCheckpointAndTargets(approval.NewReviewTarget("later"))
++	s.reviewer.EXPECT().Review(mock.Anything, mock.Anything).
++		Return(approval.NewReviewerOutput("Verdict: APPROVED", nil, s.completeMap()), nil).Once()
++
++	cycle := s.newCycle()
++	_, err := cycle.Run(context.Background())
++	s.Require().NoError(err)
++
++	_, err = cycle.Run(context.Background())
++	s.Require().ErrorIs(err, approval.ErrCycleAlreadyStarted)
++}
+diff --git a/internal/approval/errors.go b/internal/approval/errors.go
+new file mode 100644
+index 0000000..e9b84fb
+--- /dev/null
++++ b/internal/approval/errors.go
+@@ -0,0 +1,48 @@
++package approval
++
++import (
++	"errors"
++	"fmt"
++)
++
++type InvalidMaxRoundsError struct {
++	Value int
++}
++
++type ForbiddenTransitionError struct {
++	From State
++	To   State
++}
++
++var (
++	ErrInvalidIdentity       = errors.New("approval: invalid identity")
++	ErrInvalidVerdict        = errors.New("approval: verdict outside the closed set")
++	ErrInvalidStopReason     = errors.New("approval: invalid stop reason")
++	ErrInvalidSeverity       = errors.New("approval: invalid severity")
++	ErrInvalidFinding        = errors.New("approval: invalid finding")
++	ErrInvalidEvidence       = errors.New("approval: invalid evidence line")
++	ErrInvalidCriterion      = errors.New("approval: invalid acceptance criterion")
++	ErrInvalidCriteriaMap    = errors.New("approval: invalid criteria map")
++	ErrInsufficientProof     = errors.New("approval: insufficient approval proof")
++	ErrForbiddenTransition   = errors.New("approval: forbidden state transition")
++	ErrRoundAlreadyCompleted = errors.New("approval: round already completed")
++	ErrInvalidRound          = errors.New("approval: invalid round number")
++	ErrInvalidState          = errors.New("approval: invalid state")
++	ErrInvalidRequest        = errors.New("approval: invalid request")
++	ErrInvalidCheckpoint     = errors.New("approval: invalid checkpoint")
++	ErrCycleAlreadyStarted   = errors.New("approval: cycle already started")
++	ErrCycleNotStarted       = errors.New("approval: cycle not started")
++	ErrCycleClosed           = errors.New("approval: cycle already closed")
++)
++
++func (e InvalidMaxRoundsError) Error() string {
++	return fmt.Sprintf("approval: max rounds %d invalid: minimum 1", e.Value)
++}
++
++func (e ForbiddenTransitionError) Error() string {
++	return fmt.Sprintf("approval: forbidden transition %s -> %s", e.From, e.To)
++}
++
++func (e ForbiddenTransitionError) Is(target error) bool {
++	return target == ErrForbiddenTransition
++}
+diff --git a/internal/approval/events.go b/internal/approval/events.go
+new file mode 100644
+index 0000000..1c42113
+--- /dev/null
++++ b/internal/approval/events.go
+@@ -0,0 +1,50 @@
++package approval
++
++type Event interface {
++	EventName() string
++}
++
++type RoundStarted struct {
++	Number int
++}
++
++type RoundCompleted struct {
++	Number      int
++	Verdict     Verdict
++	Fingerprint Fingerprint
++}
++
++type ProofRejected struct {
++	Number int
++	Reason string
++}
++
++type FixRequested struct {
++	Number int
++}
++
++type CycleClosed struct {
++	Reason   StopReason
++	Approved bool
++	Rounds   int
++}
++
++func (e RoundStarted) EventName() string {
++	return "round_started"
++}
++
++func (e RoundCompleted) EventName() string {
++	return "round_completed"
++}
++
++func (e ProofRejected) EventName() string {
++	return "proof_rejected"
++}
++
++func (e FixRequested) EventName() string {
++	return "fix_requested"
++}
++
++func (e CycleClosed) EventName() string {
++	return "cycle_closed"
++}
+diff --git a/internal/approval/evidence.go b/internal/approval/evidence.go
+new file mode 100644
+index 0000000..22579bc
+--- /dev/null
++++ b/internal/approval/evidence.go
+@@ -0,0 +1,223 @@
++package approval
++
++import (
++	"fmt"
++	"iter"
++	"strings"
++)
++
++type EvidenceForm int
++
++const (
++	_ EvidenceForm = iota
++	EvidenceFormCommandOutput
++	EvidenceFormFileLineInDiff
++	EvidenceFormTestResult
++)
++
++type EvidenceLine struct {
++	form      EvidenceForm
++	reference string
++	record    string
++	valid     bool
++}
++
++type AcceptanceCriterion struct {
++	description string
++}
++
++type CriteriaMap struct {
++	bindings []criterionBinding
++}
++
++type criterionBinding struct {
++	criterion    AcceptanceCriterion
++	evidence     EvidenceLine
++	unverifiable bool
++}
++
++type diffReference struct {
++	raw string
++}
++
++func NewCommandEvidence(command, recordedOutput string) (EvidenceLine, error) {
++	cmd := strings.TrimSpace(command)
++	out := strings.TrimSpace(recordedOutput)
++	if cmd == "" || out == "" {
++		return EvidenceLine{}, fmt.Errorf("%w: command form needs a command and a recorded output", ErrInvalidEvidence)
++	}
++	return EvidenceLine{form: EvidenceFormCommandOutput, reference: cmd, record: out, valid: true}, nil
++}
++
++func NewFileLineEvidence(reference string, presentInDiff bool) (EvidenceLine, error) {
++	ref := strings.TrimSpace(reference)
++	if !(diffReference{raw: ref}).wellFormed() {
++		return EvidenceLine{}, fmt.Errorf("%w: reference %q is not in file:line form", ErrInvalidEvidence, reference)
++	}
++	if !presentInDiff {
++		return EvidenceLine{}, fmt.Errorf("%w: reference %q absent from the reviewed diff", ErrInvalidEvidence, ref)
++	}
++	return EvidenceLine{form: EvidenceFormFileLineInDiff, reference: ref, record: "present in diff", valid: true}, nil
++}
++
++func NewTestEvidence(testName, recordedResult string) (EvidenceLine, error) {
++	name := strings.TrimSpace(testName)
++	res := strings.TrimSpace(recordedResult)
++	if name == "" || res == "" {
++		return EvidenceLine{}, fmt.Errorf("%w: test form needs a name and a recorded result", ErrInvalidEvidence)
++	}
++	return EvidenceLine{form: EvidenceFormTestResult, reference: name, record: res, valid: true}, nil
++}
++
++func NewAcceptanceCriterion(description string) (AcceptanceCriterion, error) {
++	d := strings.TrimSpace(description)
++	if d == "" {
++		return AcceptanceCriterion{}, fmt.Errorf("%w: empty description", ErrInvalidCriterion)
++	}
++	return AcceptanceCriterion{description: d}, nil
++}
++
++func NewCriteriaMap(criteria []AcceptanceCriterion) (CriteriaMap, error) {
++	if len(criteria) == 0 {
++		return CriteriaMap{}, fmt.Errorf("%w: no acceptance criteria", ErrInvalidCriteriaMap)
++	}
++	seen := make(map[string]struct{}, len(criteria))
++	bindings := make([]criterionBinding, 0, len(criteria))
++	for _, c := range criteria {
++		if c.description == "" {
++			return CriteriaMap{}, fmt.Errorf("%w: uninitialized criterion", ErrInvalidCriteriaMap)
++		}
++		if _, dup := seen[c.description]; dup {
++			return CriteriaMap{}, fmt.Errorf("%w: duplicate criterion %q", ErrInvalidCriteriaMap, c.description)
++		}
++		seen[c.description] = struct{}{}
++		bindings = append(bindings, criterionBinding{criterion: c})
++	}
++	return CriteriaMap{bindings: bindings}, nil
++}
++
++func (d diffReference) wellFormed() bool {
++	cut := strings.LastIndex(d.raw, ":")
++	if cut <= 0 || cut == len(d.raw)-1 {
++		return false
++	}
++	file, line := d.raw[:cut], d.raw[cut+1:]
++	if strings.TrimSpace(file) == "" {
++		return false
++	}
++	for _, r := range line {
++		if r < '0' || r > '9' {
++			return false
++		}
++	}
++	return true
++}
++
++func (l EvidenceLine) Form() EvidenceForm {
++	return l.form
++}
++
++func (l EvidenceLine) Reference() string {
++	return l.reference
++}
++
++func (l EvidenceLine) Record() string {
++	return l.record
++}
++
++func (l EvidenceLine) Valid() bool {
++	return l.valid
++}
++
++func (c AcceptanceCriterion) Description() string {
++	return c.description
++}
++
++func (c AcceptanceCriterion) Zero() bool {
++	return c.description == ""
++}
++
++func (m CriteriaMap) WithEvidence(criterion AcceptanceCriterion, evidence EvidenceLine) (CriteriaMap, error) {
++	if !evidence.Valid() {
++		return CriteriaMap{}, fmt.Errorf("%w: invalid evidence for %q", ErrInvalidEvidence, criterion.description)
++	}
++	return m.update(criterion, func(b *criterionBinding) {
++		b.evidence = evidence
++		b.unverifiable = false
++	})
++}
++
++func (m CriteriaMap) AsUnverifiable(criterion AcceptanceCriterion) (CriteriaMap, error) {
++	return m.update(criterion, func(b *criterionBinding) {
++		b.evidence = EvidenceLine{}
++		b.unverifiable = true
++	})
++}
++
++func (m CriteriaMap) Complete() bool {
++	return m.Total() > 0 && m.Bound() == m.Total()
++}
++
++func (m CriteriaMap) Bound() int {
++	n := 0
++	for _, b := range m.bindings {
++		if b.evidence.Valid() && !b.unverifiable {
++			n++
++		}
++	}
++	return n
++}
++
++func (m CriteriaMap) Total() int {
++	return len(m.bindings)
++}
++
++func (m CriteriaMap) Criteria() iter.Seq[AcceptanceCriterion] {
++	return func(yield func(AcceptanceCriterion) bool) {
++		for _, b := range m.bindings {
++			if !yield(b.criterion) {
++				return
++			}
++		}
++	}
++}
++
++func (m CriteriaMap) Unverifiable() iter.Seq[AcceptanceCriterion] {
++	return func(yield func(AcceptanceCriterion) bool) {
++		for _, b := range m.bindings {
++			if b.unverifiable && !yield(b.criterion) {
++				return
++			}
++		}
++	}
++}
++
++func (m CriteriaMap) Pending() iter.Seq[AcceptanceCriterion] {
++	return func(yield func(AcceptanceCriterion) bool) {
++		for _, b := range m.bindings {
++			if (b.unverifiable || !b.evidence.Valid()) && !yield(b.criterion) {
++				return
++			}
++		}
++	}
++}
++
++func (m CriteriaMap) update(criterion AcceptanceCriterion, mutate func(*criterionBinding)) (CriteriaMap, error) {
++	if criterion.Zero() {
++		return CriteriaMap{}, fmt.Errorf("%w: uninitialized criterion", ErrInvalidCriterion)
++	}
++	next := make([]criterionBinding, len(m.bindings))
++	copy(next, m.bindings)
++	found := false
++	for i := range next {
++		if next[i].criterion.description == criterion.description {
++			mutate(&next[i])
++			found = true
++			break
++		}
++	}
++	if !found {
++		return CriteriaMap{}, fmt.Errorf("%w: criterion %q absent from the map", ErrInvalidCriteriaMap, criterion.description)
++	}
++	return CriteriaMap{bindings: next}, nil
++}
+diff --git a/internal/approval/finding.go b/internal/approval/finding.go
+new file mode 100644
+index 0000000..b505282
+--- /dev/null
++++ b/internal/approval/finding.go
+@@ -0,0 +1,121 @@
++package approval
++
++import (
++	"fmt"
++	"strings"
++)
++
++type Severity int
++
++type BugLevel int
++
++const (
++	_ Severity = iota
++	SeverityLow
++	SeverityMedium
++	SeverityHigh
++	SeverityCritical
++)
++
++const (
++	_ BugLevel = iota
++	BugLevelMinor
++	BugLevelMajor
++	BugLevelCritical
++)
++
++type Finding struct {
++	severity    Severity
++	file        string
++	rule        string
++	description string
++}
++
++func NewFinding(severity Severity, file, rule, description string) (Finding, error) {
++	if !severity.valid() {
++		return Finding{}, fmt.Errorf("%w: value %d", ErrInvalidSeverity, int(severity))
++	}
++	f := strings.TrimSpace(file)
++	if f == "" {
++		return Finding{}, fmt.Errorf("%w: finding without file", ErrInvalidFinding)
++	}
++	r := strings.TrimSpace(rule)
++	if r == "" {
++		return Finding{}, fmt.Errorf("%w: finding without rule identifier", ErrInvalidFinding)
++	}
++	return Finding{
++		severity:    severity,
++		file:        f,
++		rule:        r,
++		description: strings.TrimSpace(description),
++	}, nil
++}
++
++func (s Severity) String() string {
++	switch s {
++	case SeverityLow:
++		return "low"
++	case SeverityMedium:
++		return "medium"
++	case SeverityHigh:
++		return "high"
++	case SeverityCritical:
++		return "critical"
++	default:
++		return "invalid_severity"
++	}
++}
++
++func (s Severity) BugLevel() (BugLevel, error) {
++	switch s {
++	case SeverityCritical:
++		return BugLevelCritical, nil
++	case SeverityHigh:
++		return BugLevelMajor, nil
++	case SeverityMedium, SeverityLow:
++		return BugLevelMinor, nil
++	default:
++		return 0, fmt.Errorf("%w: value %d", ErrInvalidSeverity, int(s))
++	}
++}
++
++func (s Severity) Blocks() bool {
++	return s == SeverityHigh || s == SeverityCritical
++}
++
++func (s Severity) valid() bool {
++	return s >= SeverityLow && s <= SeverityCritical
++}
++
++func (n BugLevel) String() string {
++	switch n {
++	case BugLevelMinor:
++		return "minor"
++	case BugLevelMajor:
++		return "major"
++	case BugLevelCritical:
++		return "critical"
++	default:
++		return "invalid_level"
++	}
++}
++
++func (f Finding) Severity() Severity {
++	return f.severity
++}
++
++func (f Finding) File() string {
++	return f.file
++}
++
++func (f Finding) Rule() string {
++	return f.rule
++}
++
++func (f Finding) Description() string {
++	return f.description
++}
++
++func (f Finding) identityKey() string {
++	return fmt.Sprintf("%d\x1f%s\x1f%s", int(f.severity), f.file, f.rule)
++}
+diff --git a/internal/approval/fingerprint.go b/internal/approval/fingerprint.go
+new file mode 100644
+index 0000000..1d467c7
+--- /dev/null
++++ b/internal/approval/fingerprint.go
+@@ -0,0 +1,48 @@
++package approval
++
++import (
++	"crypto/sha256"
++	"encoding/hex"
++	"slices"
++	"strings"
++)
++
++const fingerprintSeparator = "\x1e"
++
++type Fingerprint struct {
++	hash     string
++	computed bool
++}
++
++type FingerprintCalculator struct{}
++
++func NewFingerprintCalculator() FingerprintCalculator {
++	return FingerprintCalculator{}
++}
++
++func (c FingerprintCalculator) Compute(findings []Finding) Fingerprint {
++	keys := make([]string, 0, len(findings))
++	for _, f := range findings {
++		keys = append(keys, f.identityKey())
++	}
++	slices.Sort(keys)
++	keys = slices.Compact(keys)
++
++	sum := sha256.Sum256([]byte(strings.Join(keys, fingerprintSeparator)))
++	return Fingerprint{hash: hex.EncodeToString(sum[:]), computed: true}
++}
++
++func (f Fingerprint) Equal(other Fingerprint) bool {
++	if !f.computed || !other.computed {
++		return false
++	}
++	return f.hash == other.hash
++}
++
++func (f Fingerprint) Computed() bool {
++	return f.computed
++}
++
++func (f Fingerprint) String() string {
++	return f.hash
++}
+diff --git a/internal/approval/fingerprint_test.go b/internal/approval/fingerprint_test.go
+new file mode 100644
+index 0000000..672f7cc
+--- /dev/null
++++ b/internal/approval/fingerprint_test.go
+@@ -0,0 +1,130 @@
++package approval
++
++import (
++	"strings"
++	"testing"
++
++	"github.com/stretchr/testify/suite"
++)
++
++type FingerprintSuite struct {
++	suite.Suite
++	calc FingerprintCalculator
++}
++
++func TestFingerprintSuite(t *testing.T) {
++	suite.Run(t, new(FingerprintSuite))
++}
++
++func (s *FingerprintSuite) SetupTest() {
++	s.calc = NewFingerprintCalculator()
++}
++
++func (s *FingerprintSuite) findingWith(sev Severity, file, rule string) Finding {
++	return mustFinding(s.T(), sev, file, rule)
++}
++
++func (s *FingerprintSuite) TestStableUnderReordering() {
++	a := s.findingWith(SeverityHigh, "a.go", "R1")
++	b := s.findingWith(SeverityLow, "b.go", "R2")
++
++	first := s.calc.Compute([]Finding{a, b})
++	second := s.calc.Compute([]Finding{b, a})
++
++	s.True(first.Equal(second))
++}
++
++func (s *FingerprintSuite) TestStableUnderDuplicates() {
++	a := s.findingWith(SeverityHigh, "a.go", "R1")
++
++	first := s.calc.Compute([]Finding{a})
++	second := s.calc.Compute([]Finding{a, a, a})
++
++	s.True(first.Equal(second))
++}
++
++func (s *FingerprintSuite) TestStableUnderLineNumberChange() {
++	before := s.calc.Compute([]Finding{s.findingWith(SeverityHigh, "a.go", "R1")})
++	afterFinding, err := NewFinding(SeverityHigh, "a.go", "R1", "now reported at another line")
++	s.Require().NoError(err)
++	after := s.calc.Compute([]Finding{afterFinding})
++
++	s.True(before.Equal(after))
++}
++
++func (s *FingerprintSuite) TestStableUnderAgentIdentifierChange() {
++	before := s.calc.Compute([]Finding{s.findingWith(SeverityHigh, "a.go", "R1")})
++	afterFinding, err := NewFinding(SeverityHigh, "a.go", "R1", "agent id BUG-9999")
++	s.Require().NoError(err)
++	after := s.calc.Compute([]Finding{afterFinding})
++
++	s.True(before.Equal(after))
++}
++
++func (s *FingerprintSuite) TestUnstableUnderSeverityChange() {
++	first := s.calc.Compute([]Finding{s.findingWith(SeverityHigh, "a.go", "R1")})
++	second := s.calc.Compute([]Finding{s.findingWith(SeverityCritical, "a.go", "R1")})
++
++	s.False(first.Equal(second))
++}
++
++func (s *FingerprintSuite) TestUnstableUnderFileChange() {
++	first := s.calc.Compute([]Finding{s.findingWith(SeverityHigh, "a.go", "R1")})
++	second := s.calc.Compute([]Finding{s.findingWith(SeverityHigh, "b.go", "R1")})
++
++	s.False(first.Equal(second))
++}
++
++func (s *FingerprintSuite) TestUnstableUnderRuleChange() {
++	first := s.calc.Compute([]Finding{s.findingWith(SeverityHigh, "a.go", "R1")})
++	second := s.calc.Compute([]Finding{s.findingWith(SeverityHigh, "a.go", "R2")})
++
++	s.False(first.Equal(second))
++}
++
++func (s *FingerprintSuite) TestUncomputedNeverEqual() {
++	var a, b Fingerprint
++	s.False(a.Equal(b))
++
++	computed := s.calc.Compute(nil)
++	s.False(a.Equal(computed))
++	s.False(computed.Equal(a))
++}
++
++func (s *FingerprintSuite) TestComputedEmptyIsStable() {
++	s.True(s.calc.Compute(nil).Equal(s.calc.Compute([]Finding{})))
++}
++
++func FuzzFingerprint(f *testing.F) {
++	f.Add("a.go", "R1", 3, "b.go", "R2", 1)
++	f.Add("", "", 0, "", "", 0)
++	f.Add("x", "y", 99, "x", "y", -5)
++
++	calc := NewFingerprintCalculator()
++	f.Fuzz(func(t *testing.T, f1, r1 string, s1 int, f2, r2 string, s2 int) {
++		build := func(file, rule string, sev int) []Finding {
++			normalized := Severity((sev%4+4)%4 + 1)
++			if strings.TrimSpace(file) == "" {
++				file = "placeholder.go"
++			}
++			if strings.TrimSpace(rule) == "" {
++				rule = "R0"
++			}
++			finding, err := NewFinding(normalized, file, rule, "")
++			if err != nil {
++				t.Fatalf("NewFinding: %v", err)
++			}
++			return []Finding{finding}
++		}
++
++		set := append(build(f1, r1, s1), build(f2, r2, s2)...)
++		reversed := append(build(f2, r2, s2), build(f1, r1, s1)...)
++
++		if !calc.Compute(set).Equal(calc.Compute(reversed)) {
++			t.Fatalf("fingerprint not order-independent for %q/%q and %q/%q", f1, r1, f2, r2)
++		}
++		if !calc.Compute(set).Equal(calc.Compute(set)) {
++			t.Fatal("fingerprint not deterministic")
++		}
++	})
++}
+diff --git a/internal/approval/helpers_test.go b/internal/approval/helpers_test.go
+new file mode 100644
+index 0000000..bb2ff76
+--- /dev/null
++++ b/internal/approval/helpers_test.go
+@@ -0,0 +1,120 @@
++package approval
++
++import (
++	"context"
++	"testing"
++
++	"github.com/stretchr/testify/require"
++)
++
++type stubReviewer struct {
++	output ReviewerOutput
++	err    error
++}
++
++func (s stubReviewer) Review(context.Context, ReviewRequest) (ReviewerOutput, error) {
++	return s.output, s.err
++}
++
++type stubFixer struct {
++	err error
++}
++
++func (s stubFixer) Fix(context.Context, FixRequest) error {
++	return s.err
++}
++
++type stubRepository struct {
++	full  ReviewTarget
++	delta ReviewTarget
++}
++
++func (s stubRepository) Checkpoint(context.Context) (Checkpoint, error) {
++	return NewCheckpoint("sha-0")
++}
++
++func (s stubRepository) FullTarget(context.Context) (ReviewTarget, error) {
++	return s.full, nil
++}
++
++func (s stubRepository) Delta(context.Context, Checkpoint) (ReviewTarget, error) {
++	return s.delta, nil
++}
++
++func mustCriterion(t *testing.T, description string) AcceptanceCriterion {
++	t.Helper()
++	c, err := NewAcceptanceCriterion(description)
++	require.NoError(t, err)
++	return c
++}
++
++func mustCommandEvidence(t *testing.T) EvidenceLine {
++	t.Helper()
++	e, err := NewCommandEvidence("go test ./internal/approval/...", "ok  internal/approval  0.2s")
++	require.NoError(t, err)
++	return e
++}
++
++func completeCriteriaMap(t *testing.T) CriteriaMap {
++	t.Helper()
++	c1 := mustCriterion(t, "criterion one")
++	c2 := mustCriterion(t, "criterion two")
++	m, err := NewCriteriaMap([]AcceptanceCriterion{c1, c2})
++	require.NoError(t, err)
++	m, err = m.WithEvidence(c1, mustCommandEvidence(t))
++	require.NoError(t, err)
++	m, err = m.WithEvidence(c2, mustCommandEvidence(t))
++	require.NoError(t, err)
++	require.True(t, m.Complete())
++	return m
++}
++
++func incompleteCriteriaMap(t *testing.T) CriteriaMap {
++	t.Helper()
++	c1 := mustCriterion(t, "criterion one")
++	c2 := mustCriterion(t, "criterion two")
++	m, err := NewCriteriaMap([]AcceptanceCriterion{c1, c2})
++	require.NoError(t, err)
++	m, err = m.WithEvidence(c1, mustCommandEvidence(t))
++	require.NoError(t, err)
++	require.False(t, m.Complete())
++	return m
++}
++
++func unverifiableCriteriaMap(t *testing.T) CriteriaMap {
++	t.Helper()
++	c1 := mustCriterion(t, "criterion one")
++	c2 := mustCriterion(t, "criterion two")
++	m, err := NewCriteriaMap([]AcceptanceCriterion{c1, c2})
++	require.NoError(t, err)
++	m, err = m.WithEvidence(c1, mustCommandEvidence(t))
++	require.NoError(t, err)
++	m, err = m.AsUnverifiable(c2)
++	require.NoError(t, err)
++	require.False(t, m.Complete())
++	return m
++}
++
++func mustFinding(t *testing.T, sev Severity, file, rule string) Finding {
++	t.Helper()
++	f, err := NewFinding(sev, file, rule, "")
++	require.NoError(t, err)
++	return f
++}
++
++func newStubCycle(t *testing.T) *Cycle {
++	t.Helper()
++	task, err := NewTaskIdentity("task-2.0")
++	require.NoError(t, err)
++	agent, err := NewAgentIdentity("claude")
++	require.NoError(t, err)
++	policy, err := NewApprovalPolicy()
++	require.NoError(t, err)
++	cycle, err := NewCycle(
++		task, agent, policy,
++		[]AcceptanceCriterion{mustCriterion(t, "criterion one")},
++		stubReviewer{}, stubFixer{}, stubRepository{},
++	)
++	require.NoError(t, err)
++	return cycle
++}
+diff --git a/internal/approval/identities.go b/internal/approval/identities.go
+new file mode 100644
+index 0000000..6d325bc
+--- /dev/null
++++ b/internal/approval/identities.go
+@@ -0,0 +1,46 @@
++package approval
++
++import (
++	"fmt"
++	"strings"
++)
++
++type TaskIdentity struct {
++	value string
++}
++
++type AgentIdentity struct {
++	value string
++}
++
++func NewTaskIdentity(value string) (TaskIdentity, error) {
++	v := strings.TrimSpace(value)
++	if v == "" {
++		return TaskIdentity{}, fmt.Errorf("%w: empty task identity", ErrInvalidIdentity)
++	}
++	return TaskIdentity{value: v}, nil
++}
++
++func NewAgentIdentity(value string) (AgentIdentity, error) {
++	v := strings.TrimSpace(value)
++	if v == "" {
++		return AgentIdentity{}, fmt.Errorf("%w: empty agent identity", ErrInvalidIdentity)
++	}
++	return AgentIdentity{value: v}, nil
++}
++
++func (i TaskIdentity) String() string {
++	return i.value
++}
++
++func (i TaskIdentity) Zero() bool {
++	return i.value == ""
++}
++
++func (i AgentIdentity) String() string {
++	return i.value
++}
++
++func (i AgentIdentity) Zero() bool {
++	return i.value == ""
++}
+diff --git a/internal/approval/mocks/fixer.go b/internal/approval/mocks/fixer.go
+new file mode 100644
+index 0000000..79f3c61
+--- /dev/null
++++ b/internal/approval/mocks/fixer.go
+@@ -0,0 +1,96 @@
++// Code generated by mockery; DO NOT EDIT.
++// github.com/vektra/mockery
++// template: testify
++
++package mocks
++
++import (
++	"context"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
++	mock "github.com/stretchr/testify/mock"
++)
++
++// NewFixer creates a new instance of Fixer. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
++// The first argument is typically a *testing.T value.
++func NewFixer(t interface {
++	mock.TestingT
++	Cleanup(func())
++}) *Fixer {
++	mock := &Fixer{}
++	mock.Mock.Test(t)
++
++	t.Cleanup(func() { mock.AssertExpectations(t) })
++
++	return mock
++}
++
++// Fixer is an autogenerated mock type for the Fixer type
++type Fixer struct {
++	mock.Mock
++}
++
++type Fixer_Expecter struct {
++	mock *mock.Mock
++}
++
++func (_m *Fixer) EXPECT() *Fixer_Expecter {
++	return &Fixer_Expecter{mock: &_m.Mock}
++}
++
++// Fix provides a mock function for the type Fixer
++func (_mock *Fixer) Fix(ctx context.Context, request approval.FixRequest) error {
++	ret := _mock.Called(ctx, request)
++
++	if len(ret) == 0 {
++		panic("no return value specified for Fix")
++	}
++
++	var r0 error
++	if returnFunc, ok := ret.Get(0).(func(context.Context, approval.FixRequest) error); ok {
++		r0 = returnFunc(ctx, request)
++	} else {
++		r0 = ret.Error(0)
++	}
++	return r0
++}
++
++// Fixer_Fix_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Fix'
++type Fixer_Fix_Call struct {
++	*mock.Call
++}
++
++// Fix is a helper method to define mock.On call
++//   - ctx context.Context
++//   - request approval.FixRequest
++func (_e *Fixer_Expecter) Fix(ctx any, request any) *Fixer_Fix_Call {
++	return &Fixer_Fix_Call{Call: _e.mock.On("Fix", ctx, request)}
++}
++
++func (_c *Fixer_Fix_Call) Run(run func(ctx context.Context, request approval.FixRequest)) *Fixer_Fix_Call {
++	_c.Call.Run(func(args mock.Arguments) {
++		var arg0 context.Context
++		if args[0] != nil {
++			arg0 = args[0].(context.Context)
++		}
++		var arg1 approval.FixRequest
++		if args[1] != nil {
++			arg1 = args[1].(approval.FixRequest)
++		}
++		run(
++			arg0,
++			arg1,
++		)
++	})
++	return _c
++}
++
++func (_c *Fixer_Fix_Call) Return(err error) *Fixer_Fix_Call {
++	_c.Call.Return(err)
++	return _c
++}
++
++func (_c *Fixer_Fix_Call) RunAndReturn(run func(ctx context.Context, request approval.FixRequest) error) *Fixer_Fix_Call {
++	_c.Call.Return(run)
++	return _c
++}
+diff --git a/internal/approval/mocks/repository.go b/internal/approval/mocks/repository.go
+new file mode 100644
+index 0000000..c12ffc9
+--- /dev/null
++++ b/internal/approval/mocks/repository.go
+@@ -0,0 +1,225 @@
++// Code generated by mockery; DO NOT EDIT.
++// github.com/vektra/mockery
++// template: testify
++
++package mocks
++
++import (
++	"context"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
++	mock "github.com/stretchr/testify/mock"
++)
++
++// NewRepository creates a new instance of Repository. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
++// The first argument is typically a *testing.T value.
++func NewRepository(t interface {
++	mock.TestingT
++	Cleanup(func())
++}) *Repository {
++	mock := &Repository{}
++	mock.Mock.Test(t)
++
++	t.Cleanup(func() { mock.AssertExpectations(t) })
++
++	return mock
++}
++
++// Repository is an autogenerated mock type for the Repository type
++type Repository struct {
++	mock.Mock
++}
++
++type Repository_Expecter struct {
++	mock *mock.Mock
++}
++
++func (_m *Repository) EXPECT() *Repository_Expecter {
++	return &Repository_Expecter{mock: &_m.Mock}
++}
++
++// Checkpoint provides a mock function for the type Repository
++func (_mock *Repository) Checkpoint(ctx context.Context) (approval.Checkpoint, error) {
++	ret := _mock.Called(ctx)
++
++	if len(ret) == 0 {
++		panic("no return value specified for Checkpoint")
++	}
++
++	var r0 approval.Checkpoint
++	var r1 error
++	if returnFunc, ok := ret.Get(0).(func(context.Context) (approval.Checkpoint, error)); ok {
++		return returnFunc(ctx)
++	}
++	if returnFunc, ok := ret.Get(0).(func(context.Context) approval.Checkpoint); ok {
++		r0 = returnFunc(ctx)
++	} else {
++		r0 = ret.Get(0).(approval.Checkpoint)
++	}
++	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
++		r1 = returnFunc(ctx)
++	} else {
++		r1 = ret.Error(1)
++	}
++	return r0, r1
++}
++
++// Repository_Checkpoint_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Checkpoint'
++type Repository_Checkpoint_Call struct {
++	*mock.Call
++}
++
++// Checkpoint is a helper method to define mock.On call
++//   - ctx context.Context
++func (_e *Repository_Expecter) Checkpoint(ctx any) *Repository_Checkpoint_Call {
++	return &Repository_Checkpoint_Call{Call: _e.mock.On("Checkpoint", ctx)}
++}
++
++func (_c *Repository_Checkpoint_Call) Run(run func(ctx context.Context)) *Repository_Checkpoint_Call {
++	_c.Call.Run(func(args mock.Arguments) {
++		var arg0 context.Context
++		if args[0] != nil {
++			arg0 = args[0].(context.Context)
++		}
++		run(
++			arg0,
++		)
++	})
++	return _c
++}
++
++func (_c *Repository_Checkpoint_Call) Return(checkpoint approval.Checkpoint, err error) *Repository_Checkpoint_Call {
++	_c.Call.Return(checkpoint, err)
++	return _c
++}
++
++func (_c *Repository_Checkpoint_Call) RunAndReturn(run func(ctx context.Context) (approval.Checkpoint, error)) *Repository_Checkpoint_Call {
++	_c.Call.Return(run)
++	return _c
++}
++
++// Delta provides a mock function for the type Repository
++func (_mock *Repository) Delta(ctx context.Context, since approval.Checkpoint) (approval.ReviewTarget, error) {
++	ret := _mock.Called(ctx, since)
++
++	if len(ret) == 0 {
++		panic("no return value specified for Delta")
++	}
++
++	var r0 approval.ReviewTarget
++	var r1 error
++	if returnFunc, ok := ret.Get(0).(func(context.Context, approval.Checkpoint) (approval.ReviewTarget, error)); ok {
++		return returnFunc(ctx, since)
++	}
++	if returnFunc, ok := ret.Get(0).(func(context.Context, approval.Checkpoint) approval.ReviewTarget); ok {
++		r0 = returnFunc(ctx, since)
++	} else {
++		r0 = ret.Get(0).(approval.ReviewTarget)
++	}
++	if returnFunc, ok := ret.Get(1).(func(context.Context, approval.Checkpoint) error); ok {
++		r1 = returnFunc(ctx, since)
++	} else {
++		r1 = ret.Error(1)
++	}
++	return r0, r1
++}
++
++// Repository_Delta_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Delta'
++type Repository_Delta_Call struct {
++	*mock.Call
++}
++
++// Delta is a helper method to define mock.On call
++//   - ctx context.Context
++//   - since approval.Checkpoint
++func (_e *Repository_Expecter) Delta(ctx any, since any) *Repository_Delta_Call {
++	return &Repository_Delta_Call{Call: _e.mock.On("Delta", ctx, since)}
++}
++
++func (_c *Repository_Delta_Call) Run(run func(ctx context.Context, since approval.Checkpoint)) *Repository_Delta_Call {
++	_c.Call.Run(func(args mock.Arguments) {
++		var arg0 context.Context
++		if args[0] != nil {
++			arg0 = args[0].(context.Context)
++		}
++		var arg1 approval.Checkpoint
++		if args[1] != nil {
++			arg1 = args[1].(approval.Checkpoint)
++		}
++		run(
++			arg0,
++			arg1,
++		)
++	})
++	return _c
++}
++
++func (_c *Repository_Delta_Call) Return(reviewTarget approval.ReviewTarget, err error) *Repository_Delta_Call {
++	_c.Call.Return(reviewTarget, err)
++	return _c
++}
++
++func (_c *Repository_Delta_Call) RunAndReturn(run func(ctx context.Context, since approval.Checkpoint) (approval.ReviewTarget, error)) *Repository_Delta_Call {
++	_c.Call.Return(run)
++	return _c
++}
++
++// FullTarget provides a mock function for the type Repository
++func (_mock *Repository) FullTarget(ctx context.Context) (approval.ReviewTarget, error) {
++	ret := _mock.Called(ctx)
++
++	if len(ret) == 0 {
++		panic("no return value specified for FullTarget")
++	}
++
++	var r0 approval.ReviewTarget
++	var r1 error
++	if returnFunc, ok := ret.Get(0).(func(context.Context) (approval.ReviewTarget, error)); ok {
++		return returnFunc(ctx)
++	}
++	if returnFunc, ok := ret.Get(0).(func(context.Context) approval.ReviewTarget); ok {
++		r0 = returnFunc(ctx)
++	} else {
++		r0 = ret.Get(0).(approval.ReviewTarget)
++	}
++	if returnFunc, ok := ret.Get(1).(func(context.Context) error); ok {
++		r1 = returnFunc(ctx)
++	} else {
++		r1 = ret.Error(1)
++	}
++	return r0, r1
++}
++
++// Repository_FullTarget_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FullTarget'
++type Repository_FullTarget_Call struct {
++	*mock.Call
++}
++
++// FullTarget is a helper method to define mock.On call
++//   - ctx context.Context
++func (_e *Repository_Expecter) FullTarget(ctx any) *Repository_FullTarget_Call {
++	return &Repository_FullTarget_Call{Call: _e.mock.On("FullTarget", ctx)}
++}
++
++func (_c *Repository_FullTarget_Call) Run(run func(ctx context.Context)) *Repository_FullTarget_Call {
++	_c.Call.Run(func(args mock.Arguments) {
++		var arg0 context.Context
++		if args[0] != nil {
++			arg0 = args[0].(context.Context)
++		}
++		run(
++			arg0,
++		)
++	})
++	return _c
++}
++
++func (_c *Repository_FullTarget_Call) Return(reviewTarget approval.ReviewTarget, err error) *Repository_FullTarget_Call {
++	_c.Call.Return(reviewTarget, err)
++	return _c
++}
++
++func (_c *Repository_FullTarget_Call) RunAndReturn(run func(ctx context.Context) (approval.ReviewTarget, error)) *Repository_FullTarget_Call {
++	_c.Call.Return(run)
++	return _c
++}
+diff --git a/internal/approval/mocks/reviewer.go b/internal/approval/mocks/reviewer.go
+new file mode 100644
+index 0000000..66ccefc
+--- /dev/null
++++ b/internal/approval/mocks/reviewer.go
+@@ -0,0 +1,105 @@
++// Code generated by mockery; DO NOT EDIT.
++// github.com/vektra/mockery
++// template: testify
++
++package mocks
++
++import (
++	"context"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
++	mock "github.com/stretchr/testify/mock"
++)
++
++// NewReviewer creates a new instance of Reviewer. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
++// The first argument is typically a *testing.T value.
++func NewReviewer(t interface {
++	mock.TestingT
++	Cleanup(func())
++}) *Reviewer {
++	mock := &Reviewer{}
++	mock.Mock.Test(t)
++
++	t.Cleanup(func() { mock.AssertExpectations(t) })
++
++	return mock
++}
++
++// Reviewer is an autogenerated mock type for the Reviewer type
++type Reviewer struct {
++	mock.Mock
++}
++
++type Reviewer_Expecter struct {
++	mock *mock.Mock
++}
++
++func (_m *Reviewer) EXPECT() *Reviewer_Expecter {
++	return &Reviewer_Expecter{mock: &_m.Mock}
++}
++
++// Review provides a mock function for the type Reviewer
++func (_mock *Reviewer) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
++	ret := _mock.Called(ctx, request)
++
++	if len(ret) == 0 {
++		panic("no return value specified for Review")
++	}
++
++	var r0 approval.ReviewerOutput
++	var r1 error
++	if returnFunc, ok := ret.Get(0).(func(context.Context, approval.ReviewRequest) (approval.ReviewerOutput, error)); ok {
++		return returnFunc(ctx, request)
++	}
++	if returnFunc, ok := ret.Get(0).(func(context.Context, approval.ReviewRequest) approval.ReviewerOutput); ok {
++		r0 = returnFunc(ctx, request)
++	} else {
++		r0 = ret.Get(0).(approval.ReviewerOutput)
++	}
++	if returnFunc, ok := ret.Get(1).(func(context.Context, approval.ReviewRequest) error); ok {
++		r1 = returnFunc(ctx, request)
++	} else {
++		r1 = ret.Error(1)
++	}
++	return r0, r1
++}
++
++// Reviewer_Review_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Review'
++type Reviewer_Review_Call struct {
++	*mock.Call
++}
++
++// Review is a helper method to define mock.On call
++//   - ctx context.Context
++//   - request approval.ReviewRequest
++func (_e *Reviewer_Expecter) Review(ctx any, request any) *Reviewer_Review_Call {
++	return &Reviewer_Review_Call{Call: _e.mock.On("Review", ctx, request)}
++}
++
++func (_c *Reviewer_Review_Call) Run(run func(ctx context.Context, request approval.ReviewRequest)) *Reviewer_Review_Call {
++	_c.Call.Run(func(args mock.Arguments) {
++		var arg0 context.Context
++		if args[0] != nil {
++			arg0 = args[0].(context.Context)
++		}
++		var arg1 approval.ReviewRequest
++		if args[1] != nil {
++			arg1 = args[1].(approval.ReviewRequest)
++		}
++		run(
++			arg0,
++			arg1,
++		)
++	})
++	return _c
++}
++
++func (_c *Reviewer_Review_Call) Return(reviewerOutput approval.ReviewerOutput, err error) *Reviewer_Review_Call {
++	_c.Call.Return(reviewerOutput, err)
++	return _c
++}
++
++func (_c *Reviewer_Review_Call) RunAndReturn(run func(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error)) *Reviewer_Review_Call {
++	_c.Call.Return(run)
++	return _c
++}
+diff --git a/internal/approval/policy.go b/internal/approval/policy.go
+new file mode 100644
+index 0000000..2f36e78
+--- /dev/null
++++ b/internal/approval/policy.go
+@@ -0,0 +1,58 @@
++package approval
++
++const defaultMaxRounds = 5
++
++type ApprovalPolicy struct {
++	maxRounds int
++}
++
++type PolicyOption func(*policyConfig)
++
++type StopDecision struct {
++	Verdict             Verdict
++	CurrentRound        int
++	CurrentFingerprint  Fingerprint
++	PreviousFingerprint Fingerprint
++	Changed             bool
++}
++
++type policyConfig struct {
++	maxRounds int
++}
++
++func NewApprovalPolicy(options ...PolicyOption) (ApprovalPolicy, error) {
++	cfg := policyConfig{maxRounds: defaultMaxRounds}
++	for _, option := range options {
++		option(&cfg)
++	}
++	if cfg.maxRounds < 1 {
++		return ApprovalPolicy{}, InvalidMaxRoundsError{Value: cfg.maxRounds}
++	}
++	return ApprovalPolicy(cfg), nil
++}
++
++func WithMaxRounds(maxRounds int) PolicyOption {
++	return func(cfg *policyConfig) {
++		cfg.maxRounds = maxRounds
++	}
++}
++
++func (p ApprovalPolicy) MaxRounds() int {
++	return p.maxRounds
++}
++
++func (p ApprovalPolicy) Decide(input StopDecision) (StopReason, bool) {
++	if input.Verdict == VerdictBlocked {
++		return ReasonBlockedInput, true
++	}
++	if input.CurrentFingerprint.Equal(input.PreviousFingerprint) {
++		return ReasonNoConvergence, true
++	}
++	if !input.Changed {
++		return ReasonEmptyDiff, true
++	}
++	if input.CurrentRound >= p.maxRounds {
++		return ReasonMaxRounds, true
++	}
++	return 0, false
++}
+diff --git a/internal/approval/policy_test.go b/internal/approval/policy_test.go
+new file mode 100644
+index 0000000..d12145f
+--- /dev/null
++++ b/internal/approval/policy_test.go
+@@ -0,0 +1,102 @@
++package approval
++
++import (
++	"errors"
++	"testing"
++
++	"github.com/stretchr/testify/suite"
++)
++
++type ApprovalPolicySuite struct {
++	suite.Suite
++}
++
++func TestApprovalPolicySuite(t *testing.T) {
++	suite.Run(t, new(ApprovalPolicySuite))
++}
++
++func (s *ApprovalPolicySuite) TestDefaultMaxRounds() {
++	policy, err := NewApprovalPolicy()
++	s.Require().NoError(err)
++	s.Equal(5, policy.MaxRounds())
++}
++
++func (s *ApprovalPolicySuite) TestRejectsMaxRoundsBelowOne() {
++	for _, ceiling := range []int{0, -1, -10} {
++		_, err := NewApprovalPolicy(WithMaxRounds(ceiling))
++		s.Require().Error(err)
++		var typed InvalidMaxRoundsError
++		s.Require().True(errors.As(err, &typed))
++		s.Equal(ceiling, typed.Value)
++	}
++}
++
++func (s *ApprovalPolicySuite) TestDecideChecksOrder() {
++	calc := NewFingerprintCalculator()
++	repeated := calc.Compute([]Finding{mustFinding(s.T(), SeverityHigh, "a.go", "R1")})
++	distinct := calc.Compute([]Finding{mustFinding(s.T(), SeverityLow, "b.go", "R2")})
++
++	policy, err := NewApprovalPolicy(WithMaxRounds(1))
++	s.Require().NoError(err)
++
++	s.Run("blocked_verdict_wins_first", func() {
++		reason, stop := policy.Decide(StopDecision{
++			Verdict:             VerdictBlocked,
++			CurrentRound:        1,
++			CurrentFingerprint:  repeated,
++			PreviousFingerprint: repeated,
++			Changed:             false,
++		})
++		s.True(stop)
++		s.Equal(ReasonBlockedInput, reason)
++	})
++
++	s.Run("repeated_fingerprint_before_ceiling", func() {
++		reason, stop := policy.Decide(StopDecision{
++			Verdict:             VerdictRejected,
++			CurrentRound:        1,
++			CurrentFingerprint:  repeated,
++			PreviousFingerprint: repeated,
++			Changed:             false,
++		})
++		s.True(stop)
++		s.Equal(ReasonNoConvergence, reason)
++	})
++
++	s.Run("empty_diff_before_ceiling", func() {
++		reason, stop := policy.Decide(StopDecision{
++			Verdict:             VerdictRejected,
++			CurrentRound:        1,
++			CurrentFingerprint:  distinct,
++			PreviousFingerprint: repeated,
++			Changed:             false,
++		})
++		s.True(stop)
++		s.Equal(ReasonEmptyDiff, reason)
++	})
++
++	s.Run("ceiling_last", func() {
++		reason, stop := policy.Decide(StopDecision{
++			Verdict:             VerdictRejected,
++			CurrentRound:        1,
++			CurrentFingerprint:  distinct,
++			PreviousFingerprint: repeated,
++			Changed:             true,
++		})
++		s.True(stop)
++		s.Equal(ReasonMaxRounds, reason)
++	})
++
++	s.Run("no_stop_when_room_remains", func() {
++		roomy, err := NewApprovalPolicy(WithMaxRounds(5))
++		s.Require().NoError(err)
++		_, stop := roomy.Decide(StopDecision{
++			Verdict:             VerdictRejected,
++			CurrentRound:        1,
++			CurrentFingerprint:  distinct,
++			PreviousFingerprint: repeated,
++			Changed:             true,
++		})
++		s.False(stop)
++	})
++}
+diff --git a/internal/approval/ports.go b/internal/approval/ports.go
+new file mode 100644
+index 0000000..158c7f3
+--- /dev/null
++++ b/internal/approval/ports.go
+@@ -0,0 +1,183 @@
++package approval
++
++import (
++	"context"
++	"fmt"
++	"iter"
++	"slices"
++	"strings"
++)
++
++type Reviewer interface {
++	Review(ctx context.Context, request ReviewRequest) (ReviewerOutput, error)
++}
++
++type Fixer interface {
++	Fix(ctx context.Context, request FixRequest) error
++}
++
++type Repository interface {
++	Checkpoint(ctx context.Context) (Checkpoint, error)
++	FullTarget(ctx context.Context) (ReviewTarget, error)
++	Delta(ctx context.Context, since Checkpoint) (ReviewTarget, error)
++}
++
++type ReviewRequest struct {
++	task     TaskIdentity
++	agent    AgentIdentity
++	round    int
++	target   ReviewTarget
++	criteria []AcceptanceCriterion
++}
++
++type FixRequest struct {
++	task     TaskIdentity
++	agent    AgentIdentity
++	round    int
++	findings []Finding
++	target   ReviewTarget
++}
++
++type ReviewerOutput struct {
++	rawText     string
++	findings    []Finding
++	criteriaMap CriteriaMap
++}
++
++type Checkpoint struct {
++	value string
++}
++
++type ReviewTarget struct {
++	value string
++}
++
++func NewReviewRequest(task TaskIdentity, agent AgentIdentity, round int, target ReviewTarget, criteria []AcceptanceCriterion) (ReviewRequest, error) {
++	if task.Zero() || agent.Zero() {
++		return ReviewRequest{}, fmt.Errorf("%w: missing identity in review request", ErrInvalidRequest)
++	}
++	if round < 1 {
++		return ReviewRequest{}, fmt.Errorf("%w: round %d", ErrInvalidRequest, round)
++	}
++	if len(criteria) == 0 {
++		return ReviewRequest{}, fmt.Errorf("%w: review request without acceptance criteria", ErrInvalidRequest)
++	}
++	return ReviewRequest{
++		task:     task,
++		agent:    agent,
++		round:    round,
++		target:   target,
++		criteria: slices.Clone(criteria),
++	}, nil
++}
++
++func NewFixRequest(task TaskIdentity, agent AgentIdentity, round int, findings []Finding, target ReviewTarget) (FixRequest, error) {
++	if task.Zero() || agent.Zero() {
++		return FixRequest{}, fmt.Errorf("%w: missing identity in fix request", ErrInvalidRequest)
++	}
++	if round < 1 {
++		return FixRequest{}, fmt.Errorf("%w: round %d", ErrInvalidRequest, round)
++	}
++	if len(findings) == 0 {
++		return FixRequest{}, fmt.Errorf("%w: fix request without findings", ErrInvalidRequest)
++	}
++	return FixRequest{
++		task:     task,
++		agent:    agent,
++		round:    round,
++		findings: slices.Clone(findings),
++		target:   target,
++	}, nil
++}
++
++func NewReviewerOutput(rawText string, findings []Finding, criteriaMap CriteriaMap) ReviewerOutput {
++	return ReviewerOutput{
++		rawText:     rawText,
++		findings:    slices.Clone(findings),
++		criteriaMap: criteriaMap,
++	}
++}
++
++func NewCheckpoint(value string) (Checkpoint, error) {
++	v := strings.TrimSpace(value)
++	if v == "" {
++		return Checkpoint{}, fmt.Errorf("%w: empty checkpoint", ErrInvalidCheckpoint)
++	}
++	return Checkpoint{value: v}, nil
++}
++
++func NewReviewTarget(value string) ReviewTarget {
++	return ReviewTarget{value: value}
++}
++
++func (r ReviewRequest) Task() TaskIdentity {
++	return r.task
++}
++
++func (r ReviewRequest) Agent() AgentIdentity {
++	return r.agent
++}
++
++func (r ReviewRequest) Round() int {
++	return r.round
++}
++
++func (r ReviewRequest) Target() ReviewTarget {
++	return r.target
++}
++
++func (r ReviewRequest) Criteria() iter.Seq[AcceptanceCriterion] {
++	return slices.Values(r.criteria)
++}
++
++func (r FixRequest) Task() TaskIdentity {
++	return r.task
++}
++
++func (r FixRequest) Agent() AgentIdentity {
++	return r.agent
++}
++
++func (r FixRequest) Round() int {
++	return r.round
++}
++
++func (r FixRequest) Target() ReviewTarget {
++	return r.target
++}
++
++func (r FixRequest) Findings() iter.Seq[Finding] {
++	return slices.Values(r.findings)
++}
++
++func (o ReviewerOutput) RawText() string {
++	return o.rawText
++}
++
++func (o ReviewerOutput) Findings() iter.Seq[Finding] {
++	return slices.Values(o.findings)
++}
++
++func (o ReviewerOutput) FindingsList() []Finding {
++	return slices.Clone(o.findings)
++}
++
++func (o ReviewerOutput) CriteriaMap() CriteriaMap {
++	return o.criteriaMap
++}
++
++func (c Checkpoint) String() string {
++	return c.value
++}
++
++func (c Checkpoint) Zero() bool {
++	return c.value == ""
++}
++
++func (t ReviewTarget) String() string {
++	return t.value
++}
++
++func (t ReviewTarget) Empty() bool {
++	return strings.TrimSpace(t.value) == ""
++}
+diff --git a/internal/approval/proof.go b/internal/approval/proof.go
+new file mode 100644
+index 0000000..6943390
+--- /dev/null
++++ b/internal/approval/proof.go
+@@ -0,0 +1,31 @@
++package approval
++
++import "fmt"
++
++type ApprovalProof struct {
++	verdict     Verdict
++	criteriaMap CriteriaMap
++	valid       bool
++}
++
++func NewApprovalProof(verdict Verdict, criteriaMap CriteriaMap) (ApprovalProof, error) {
++	if !verdict.Approves() {
++		return ApprovalProof{}, fmt.Errorf("%w: verdict %q does not approve", ErrInsufficientProof, verdict.String())
++	}
++	if !criteriaMap.Complete() {
++		return ApprovalProof{}, fmt.Errorf("%w: 1:1 map incomplete (%d/%d criteria)", ErrInsufficientProof, criteriaMap.Bound(), criteriaMap.Total())
++	}
++	return ApprovalProof{verdict: verdict, criteriaMap: criteriaMap, valid: true}, nil
++}
++
++func (p ApprovalProof) Verdict() Verdict {
++	return p.verdict
++}
++
++func (p ApprovalProof) CriteriaMap() CriteriaMap {
++	return p.criteriaMap
++}
++
++func (p ApprovalProof) Valid() bool {
++	return p.valid
++}
+diff --git a/internal/approval/proof_test.go b/internal/approval/proof_test.go
+new file mode 100644
+index 0000000..8188369
+--- /dev/null
++++ b/internal/approval/proof_test.go
+@@ -0,0 +1,70 @@
++package approval
++
++import (
++	"testing"
++
++	"github.com/stretchr/testify/suite"
++)
++
++type ApprovalProofSuite struct {
++	suite.Suite
++}
++
++func TestApprovalProofSuite(t *testing.T) {
++	suite.Run(t, new(ApprovalProofSuite))
++}
++
++func (s *ApprovalProofSuite) TestRejectsApprovedWithRemarks() {
++	_, err := NewApprovalProof(VerdictApprovedWithRemarks, completeCriteriaMap(s.T()))
++	s.Require().ErrorIs(err, ErrInsufficientProof)
++}
++
++func (s *ApprovalProofSuite) TestRejectsRejected() {
++	_, err := NewApprovalProof(VerdictRejected, completeCriteriaMap(s.T()))
++	s.Require().ErrorIs(err, ErrInsufficientProof)
++}
++
++func (s *ApprovalProofSuite) TestRejectsBlocked() {
++	_, err := NewApprovalProof(VerdictBlocked, completeCriteriaMap(s.T()))
++	s.Require().ErrorIs(err, ErrInsufficientProof)
++}
++
++func (s *ApprovalProofSuite) TestRejectsZeroValueVerdict() {
++	var zero Verdict
++	_, err := NewApprovalProof(zero, completeCriteriaMap(s.T()))
++	s.Require().ErrorIs(err, ErrInsufficientProof)
++}
++
++func (s *ApprovalProofSuite) TestRejectsIncompleteMap() {
++	_, err := NewApprovalProof(VerdictApproved, incompleteCriteriaMap(s.T()))
++	s.Require().ErrorIs(err, ErrInsufficientProof)
++}
++
++func (s *ApprovalProofSuite) TestRejectsUnverifiableCriterion() {
++	_, err := NewApprovalProof(VerdictApproved, unverifiableCriteriaMap(s.T()))
++	s.Require().ErrorIs(err, ErrInsufficientProof)
++}
++
++func (s *ApprovalProofSuite) TestRejectsEmptyMap() {
++	_, err := NewApprovalProof(VerdictApproved, CriteriaMap{})
++	s.Require().ErrorIs(err, ErrInsufficientProof)
++}
++
++func (s *ApprovalProofSuite) TestApproveRejectsZeroValueProof() {
++	cycle := newStubCycle(s.T())
++	_, err := cycle.approve(ApprovalProof{})
++	s.Require().ErrorIs(err, ErrInsufficientProof)
++	s.Equal(StateInReview, cycle.State())
++}
++
++func (s *ApprovalProofSuite) TestApprovedResultRejectsZeroValueProof() {
++	_, err := NewApprovedResult(ApprovalProof{}, nil)
++	s.Require().ErrorIs(err, ErrInsufficientProof)
++}
++
++func (s *ApprovalProofSuite) TestValidProofOpensApproval() {
++	proof, err := NewApprovalProof(VerdictApproved, completeCriteriaMap(s.T()))
++	s.Require().NoError(err)
++	s.True(proof.Valid())
++	s.Equal(VerdictApproved, proof.Verdict())
++}
+diff --git a/internal/approval/result.go b/internal/approval/result.go
+new file mode 100644
+index 0000000..2ca2e22
+--- /dev/null
++++ b/internal/approval/result.go
+@@ -0,0 +1,60 @@
++package approval
++
++import (
++	"fmt"
++	"iter"
++	"slices"
++)
++
++type CycleResult struct {
++	reason   StopReason
++	approved bool
++	rounds   []Round
++	proof    ApprovalProof
++}
++
++func NewApprovedResult(proof ApprovalProof, rounds []Round) (CycleResult, error) {
++	if !proof.Valid() {
++		return CycleResult{}, fmt.Errorf("%w: approved result requires a valid proof", ErrInsufficientProof)
++	}
++	return CycleResult{
++		reason:   ReasonApproved,
++		approved: true,
++		rounds:   slices.Clone(rounds),
++		proof:    proof,
++	}, nil
++}
++
++func NewClosedResult(reason StopReason, rounds []Round) (CycleResult, error) {
++	if _, err := NewStopReason(reason); err != nil {
++		return CycleResult{}, err
++	}
++	if reason == ReasonApproved {
++		return CycleResult{}, fmt.Errorf("%w: approved closure requires a proof", ErrInsufficientProof)
++	}
++	return CycleResult{
++		reason:   reason,
++		approved: false,
++		rounds:   slices.Clone(rounds),
++	}, nil
++}
++
++func (r CycleResult) Approved() bool {
++	return r.approved
++}
++
++func (r CycleResult) Reason() StopReason {
++	return r.reason
++}
++
++func (r CycleResult) Proof() ApprovalProof {
++	return r.proof
++}
++
++func (r CycleResult) RoundCount() int {
++	return len(r.rounds)
++}
++
++func (r CycleResult) Rounds() iter.Seq[Round] {
++	return slices.Values(r.rounds)
++}
+diff --git a/internal/approval/round.go b/internal/approval/round.go
+new file mode 100644
+index 0000000..3be983e
+--- /dev/null
++++ b/internal/approval/round.go
+@@ -0,0 +1,66 @@
++package approval
++
++import (
++	"fmt"
++	"iter"
++	"slices"
++)
++
++type Round struct {
++	number      int
++	verdict     Verdict
++	findings    []Finding
++	fingerprint Fingerprint
++	concluded   bool
++}
++
++func NewRound(number int) (Round, error) {
++	if number < 1 {
++		return Round{}, fmt.Errorf("%w: number %d", ErrInvalidRound, number)
++	}
++	return Round{number: number}, nil
++}
++
++func (r Round) Complete(verdict Verdict, findings []Finding, fingerprint Fingerprint) (Round, error) {
++	if r.concluded {
++		return Round{}, fmt.Errorf("%w: round %d", ErrRoundAlreadyCompleted, r.number)
++	}
++	if _, err := NewVerdict(verdict); err != nil {
++		return Round{}, err
++	}
++	return Round{
++		number:      r.number,
++		verdict:     verdict,
++		findings:    slices.Clone(findings),
++		fingerprint: fingerprint,
++		concluded:   true,
++	}, nil
++}
++
++func (r Round) Number() int {
++	return r.number
++}
++
++func (r Round) Verdict() Verdict {
++	return r.verdict
++}
++
++func (r Round) Fingerprint() Fingerprint {
++	return r.fingerprint
++}
++
++func (r Round) Concluded() bool {
++	return r.concluded
++}
++
++func (r Round) Findings() iter.Seq[Finding] {
++	return slices.Values(r.findings)
++}
++
++func (r Round) CountBySeverity() map[Severity]int {
++	count := make(map[Severity]int, 4)
++	for _, f := range r.findings {
++		count[f.severity]++
++	}
++	return count
++}
+diff --git a/internal/approval/state.go b/internal/approval/state.go
+new file mode 100644
+index 0000000..493a20c
+--- /dev/null
++++ b/internal/approval/state.go
+@@ -0,0 +1,66 @@
++package approval
++
++import "slices"
++
++type State int
++
++const (
++	_ State = iota
++	StateInReview
++	StateInFix
++	StateApproved
++	StateBlocked
++)
++
++var allowedTransitions = map[State][]State{
++	StateInReview: {StateApproved, StateBlocked, StateInFix},
++	StateInFix:    {StateInReview, StateBlocked},
++	StateApproved: nil,
++	StateBlocked:  nil,
++}
++
++type stateMachine struct {
++	current State
++}
++
++func NewState(s State) (State, error) {
++	if s < StateInReview || s > StateBlocked {
++		return 0, ErrInvalidState
++	}
++	return s, nil
++}
++
++func (s State) String() string {
++	switch s {
++	case StateInReview:
++		return "in_review"
++	case StateInFix:
++		return "in_fix"
++	case StateApproved:
++		return "approved"
++	case StateBlocked:
++		return "blocked"
++	default:
++		return "invalid_state"
++	}
++}
++
++func (s State) Terminal() bool {
++	targets, known := allowedTransitions[s]
++	return known && len(targets) == 0
++}
++
++func (m *stateMachine) currentState() State {
++	return m.current
++}
++
++func (m *stateMachine) transition(target State) error {
++	if _, err := NewState(target); err != nil {
++		return ForbiddenTransitionError{From: m.current, To: target}
++	}
++	if !slices.Contains(allowedTransitions[m.current], target) {
++		return ForbiddenTransitionError{From: m.current, To: target}
++	}
++	m.current = target
++	return nil
++}
+diff --git a/internal/approval/stop_reason.go b/internal/approval/stop_reason.go
+new file mode 100644
+index 0000000..4223166
+--- /dev/null
++++ b/internal/approval/stop_reason.go
+@@ -0,0 +1,42 @@
++package approval
++
++import "fmt"
++
++type StopReason int
++
++const (
++	_ StopReason = iota
++	ReasonApproved
++	ReasonMaxRounds
++	ReasonNoConvergence
++	ReasonEmptyDiff
++	ReasonBlockedInput
++)
++
++func NewStopReason(r StopReason) (StopReason, error) {
++	if !r.valid() {
++		return 0, fmt.Errorf("%w: value %d", ErrInvalidStopReason, int(r))
++	}
++	return r, nil
++}
++
++func (r StopReason) String() string {
++	switch r {
++	case ReasonApproved:
++		return "approved"
++	case ReasonMaxRounds:
++		return "max_rounds"
++	case ReasonNoConvergence:
++		return "no_convergence"
++	case ReasonEmptyDiff:
++		return "empty_diff"
++	case ReasonBlockedInput:
++		return "blocked_input"
++	default:
++		return "invalid_reason"
++	}
++}
++
++func (r StopReason) valid() bool {
++	return r >= ReasonApproved && r <= ReasonBlockedInput
++}
+diff --git a/internal/approval/testdata/fuzz/FuzzFingerprint/aee628d832253db9 b/internal/approval/testdata/fuzz/FuzzFingerprint/aee628d832253db9
+new file mode 100644
+index 0000000..2587596
+--- /dev/null
++++ b/internal/approval/testdata/fuzz/FuzzFingerprint/aee628d832253db9
+@@ -0,0 +1,7 @@
++go test fuzz v1
++string("0")
++string("0")
++int(99)
++string("0")
++string(" ")
++int(-5)
+diff --git a/internal/approval/transitions_test.go b/internal/approval/transitions_test.go
+new file mode 100644
+index 0000000..08bacbb
+--- /dev/null
++++ b/internal/approval/transitions_test.go
+@@ -0,0 +1,77 @@
++package approval
++
++import (
++	"errors"
++	"testing"
++
++	"github.com/stretchr/testify/suite"
++)
++
++type ForbiddenTransitionSuite struct {
++	suite.Suite
++}
++
++func TestForbiddenTransitionSuite(t *testing.T) {
++	suite.Run(t, new(ForbiddenTransitionSuite))
++}
++
++func (s *ForbiddenTransitionSuite) TestForbiddenTransitions() {
++	cases := []struct {
++		name string
++		from State
++		to   State
++	}{
++		{"fix_cannot_approve", StateInFix, StateApproved},
++		{"approved_is_terminal_to_review", StateApproved, StateInReview},
++		{"approved_is_terminal_to_fix", StateApproved, StateInFix},
++		{"approved_is_terminal_to_blocked", StateApproved, StateBlocked},
++		{"blocked_does_not_resume_review", StateBlocked, StateInReview},
++		{"blocked_does_not_resume_fix", StateBlocked, StateInFix},
++		{"no_self_transition_in_review", StateInReview, StateInReview},
++		{"no_self_transition_in_fix", StateInFix, StateInFix},
++	}
++
++	for _, tc := range cases {
++		s.Run(tc.name, func() {
++			machine := stateMachine{current: tc.from}
++			err := machine.transition(tc.to)
++
++			s.Require().Error(err)
++			s.Require().ErrorIs(err, ErrForbiddenTransition)
++			var typed ForbiddenTransitionError
++			s.Require().True(errors.As(err, &typed))
++			s.Equal(tc.from, typed.From)
++			s.Equal(tc.to, typed.To)
++			s.Equal(tc.from, machine.currentState())
++		})
++	}
++}
++
++func (s *ForbiddenTransitionSuite) TestAllowedTransitions() {
++	cases := []struct {
++		name string
++		from State
++		to   State
++	}{
++		{"review_to_approved", StateInReview, StateApproved},
++		{"review_to_blocked", StateInReview, StateBlocked},
++		{"review_to_fix", StateInReview, StateInFix},
++		{"fix_to_review", StateInFix, StateInReview},
++		{"fix_to_blocked", StateInFix, StateBlocked},
++	}
++
++	for _, tc := range cases {
++		s.Run(tc.name, func() {
++			machine := stateMachine{current: tc.from}
++			s.Require().NoError(machine.transition(tc.to))
++			s.Equal(tc.to, machine.currentState())
++		})
++	}
++}
++
++func (s *ForbiddenTransitionSuite) TestTerminalStates() {
++	s.True(StateApproved.Terminal())
++	s.True(StateBlocked.Terminal())
++	s.False(StateInReview.Terminal())
++	s.False(StateInFix.Terminal())
++}
+diff --git a/internal/approval/translator.go b/internal/approval/translator.go
+new file mode 100644
+index 0000000..9844ffd
+--- /dev/null
++++ b/internal/approval/translator.go
+@@ -0,0 +1,52 @@
++package approval
++
++import "strings"
++
++var verdictPrefixes = []string{"verdict:", "veredicto:", "veredito:"}
++
++type Translator struct{}
++
++func NewTranslator() Translator {
++	return Translator{}
++}
++
++func (t Translator) Translate(rawText string) Verdict {
++	for line := range strings.Lines(rawText) {
++		if verdict, declared := t.fromLine(line); declared {
++			return verdict
++		}
++	}
++	return VerdictBlocked
++}
++
++func (t Translator) fromLine(line string) (Verdict, bool) {
++	normalized := strings.ToLower(strings.TrimSpace(line))
++	normalized = strings.ReplaceAll(normalized, "*", "")
++	normalized = strings.ReplaceAll(normalized, "#", "")
++	normalized = strings.TrimSpace(normalized)
++	for _, prefix := range verdictPrefixes {
++		rest, found := strings.CutPrefix(normalized, prefix)
++		if !found {
++			continue
++		}
++		return t.fromToken(rest), true
++	}
++	return 0, false
++}
++
++func (t Translator) fromToken(raw string) Verdict {
++	token := strings.Trim(raw, " \t`'\".,;:()[]")
++	token = strings.Join(strings.Fields(token), "_")
++	switch token {
++	case "approved_with_remarks", "aprovado_com_ressalvas":
++		return VerdictApprovedWithRemarks
++	case "approved", "aprovado":
++		return VerdictApproved
++	case "rejected", "reprovado":
++		return VerdictRejected
++	case "blocked", "bloqueado":
++		return VerdictBlocked
++	default:
++		return VerdictBlocked
++	}
++}
+diff --git a/internal/approval/translator_test.go b/internal/approval/translator_test.go
+new file mode 100644
+index 0000000..0a3b3f2
+--- /dev/null
++++ b/internal/approval/translator_test.go
+@@ -0,0 +1,93 @@
++package approval
++
++import (
++	"testing"
++
++	"github.com/stretchr/testify/suite"
++)
++
++type TranslatorSuite struct {
++	suite.Suite
++	translator Translator
++}
++
++func TestTranslatorSuite(t *testing.T) {
++	suite.Run(t, new(TranslatorSuite))
++}
++
++func (s *TranslatorSuite) SetupTest() {
++	s.translator = NewTranslator()
++}
++
++func (s *TranslatorSuite) TestCanonicalDeclarations() {
++	cases := []struct {
++		name string
++		text string
++		want Verdict
++	}{
++		{"en_approved", "verdict: APPROVED", VerdictApproved},
++		{"en_approved_with_remarks", "verdict: APPROVED_WITH_REMARKS", VerdictApprovedWithRemarks},
++		{"en_rejected", "verdict: REJECTED", VerdictRejected},
++		{"en_blocked", "verdict: BLOCKED", VerdictBlocked},
++		{"pt_aprovado", "veredito: APROVADO", VerdictApproved},
++		{"pt_aprovado_com_ressalvas", "veredito: aprovado com ressalvas", VerdictApprovedWithRemarks},
++		{"pt_reprovado", "veredicto: REPROVADO", VerdictRejected},
++		{"pt_bloqueado", "veredito: bloqueado", VerdictBlocked},
++		{"markdown_bold", "**Verdict:** `approved`", VerdictApproved},
++		{"embedded_line", "summary of review\nVerdict: rejected\nmore notes", VerdictRejected},
++	}
++
++	for _, tc := range cases {
++		s.Run(tc.name, func() {
++			s.Equal(tc.want, s.translator.Translate(tc.text))
++		})
++	}
++}
++
++func (s *TranslatorSuite) TestApprovedWithRemarksIsNotReadAsApproved() {
++	s.Equal(VerdictApprovedWithRemarks, s.translator.Translate("verdict: APPROVED_WITH_REMARKS"))
++	s.NotEqual(VerdictApproved, s.translator.Translate("verdict: APPROVED_WITH_REMARKS"))
++}
++
++func (s *TranslatorSuite) TestFailsClosedWithoutCanonicalDeclaration() {
++	cases := []string{
++		"",
++		"the code looks fine to me, no blockers",
++		"LGTM, ship it",
++		"no critical findings were identified",
++		"status: approved",
++		"verdict: something-else",
++	}
++	for _, text := range cases {
++		s.Run(text, func() {
++			s.Equal(VerdictBlocked, s.translator.Translate(text))
++		})
++	}
++}
++
++func FuzzTranslator(f *testing.F) {
++	f.Add("verdict: APPROVED")
++	f.Add("verdict: APPROVED_WITH_REMARKS")
++	f.Add("veredito: reprovado")
++	f.Add("no negative markers here")
++	f.Add("")
++	f.Add("verdict:\n\n\tapproved   ")
++
++	translator := NewTranslator()
++	valid := map[Verdict]struct{}{
++		VerdictApproved:            {},
++		VerdictApprovedWithRemarks: {},
++		VerdictRejected:            {},
++		VerdictBlocked:             {},
++	}
++
++	f.Fuzz(func(t *testing.T, text string) {
++		got := translator.Translate(text)
++		if _, ok := valid[got]; !ok {
++			t.Fatalf("translator produced an out-of-set verdict %d for %q", int(got), text)
++		}
++		if got == VerdictApproved && translator.Translate(text) != VerdictApproved {
++			t.Fatal("translator is not deterministic")
++		}
++	})
++}
+diff --git a/internal/approval/value_objects_test.go b/internal/approval/value_objects_test.go
+new file mode 100644
+index 0000000..75ce841
+--- /dev/null
++++ b/internal/approval/value_objects_test.go
+@@ -0,0 +1,286 @@
++package approval
++
++import (
++	"errors"
++	"slices"
++	"testing"
++
++	"github.com/stretchr/testify/suite"
++)
++
++type ValueObjectsSuite struct {
++	suite.Suite
++}
++
++func TestValueObjectsSuite(t *testing.T) {
++	suite.Run(t, new(ValueObjectsSuite))
++}
++
++func (s *ValueObjectsSuite) TestIdentities() {
++	_, err := NewTaskIdentity("  ")
++	s.Require().ErrorIs(err, ErrInvalidIdentity)
++	_, err = NewAgentIdentity("")
++	s.Require().ErrorIs(err, ErrInvalidIdentity)
++
++	task, err := NewTaskIdentity(" task-1 ")
++	s.Require().NoError(err)
++	s.Equal("task-1", task.String())
++	s.False(task.Zero())
++	s.True(TaskIdentity{}.Zero())
++	s.True(AgentIdentity{}.Zero())
++}
++
++func (s *ValueObjectsSuite) TestVerdict() {
++	s.True(VerdictApproved.Approves())
++	s.False(VerdictApprovedWithRemarks.Approves())
++	s.Equal("APPROVED_WITH_REMARKS", VerdictApprovedWithRemarks.String())
++	s.Equal("REJECTED", VerdictRejected.String())
++	s.Equal("BLOCKED", VerdictBlocked.String())
++	s.Equal("INVALID_VERDICT", Verdict(0).String())
++
++	_, err := NewVerdict(Verdict(99))
++	s.Require().ErrorIs(err, ErrInvalidVerdict)
++	v, err := NewVerdict(VerdictApproved)
++	s.Require().NoError(err)
++	s.Equal(VerdictApproved, v)
++}
++
++func (s *ValueObjectsSuite) TestStopReason() {
++	s.Equal("approved", ReasonApproved.String())
++	s.Equal("max_rounds", ReasonMaxRounds.String())
++	s.Equal("no_convergence", ReasonNoConvergence.String())
++	s.Equal("empty_diff", ReasonEmptyDiff.String())
++	s.Equal("blocked_input", ReasonBlockedInput.String())
++	s.Equal("invalid_reason", StopReason(0).String())
++
++	_, err := NewStopReason(StopReason(42))
++	s.Require().ErrorIs(err, ErrInvalidStopReason)
++}
++
++func (s *ValueObjectsSuite) TestState() {
++	s.Equal("in_review", StateInReview.String())
++	s.Equal("in_fix", StateInFix.String())
++	s.Equal("invalid_state", State(0).String())
++	_, err := NewState(State(9))
++	s.Require().ErrorIs(err, ErrInvalidState)
++}
++
++func (s *ValueObjectsSuite) TestSeverityAndBugLevel() {
++	s.Equal("low", SeverityLow.String())
++	s.Equal("critical", SeverityCritical.String())
++	s.Equal("invalid_severity", Severity(0).String())
++	s.True(SeverityHigh.Blocks())
++	s.True(SeverityCritical.Blocks())
++	s.False(SeverityMedium.Blocks())
++
++	for sev, want := range map[Severity]BugLevel{
++		SeverityLow:      BugLevelMinor,
++		SeverityMedium:   BugLevelMinor,
++		SeverityHigh:     BugLevelMajor,
++		SeverityCritical: BugLevelCritical,
++	} {
++		got, err := sev.BugLevel()
++		s.Require().NoError(err)
++		s.Equal(want, got)
++	}
++	_, err := Severity(0).BugLevel()
++	s.Require().ErrorIs(err, ErrInvalidSeverity)
++	s.Equal("major", BugLevelMajor.String())
++	s.Equal("invalid_level", BugLevel(0).String())
++}
++
++func (s *ValueObjectsSuite) TestFindingValidation() {
++	_, err := NewFinding(Severity(0), "a.go", "R1", "")
++	s.Require().ErrorIs(err, ErrInvalidSeverity)
++	_, err = NewFinding(SeverityLow, "  ", "R1", "")
++	s.Require().ErrorIs(err, ErrInvalidFinding)
++	_, err = NewFinding(SeverityLow, "a.go", " ", "")
++	s.Require().ErrorIs(err, ErrInvalidFinding)
++
++	f, err := NewFinding(SeverityHigh, " a.go ", " R1 ", " boom ")
++	s.Require().NoError(err)
++	s.Equal("a.go", f.File())
++	s.Equal("R1", f.Rule())
++	s.Equal("boom", f.Description())
++	s.Equal(SeverityHigh, f.Severity())
++}
++
++func (s *ValueObjectsSuite) TestEvidenceForms() {
++	_, err := NewCommandEvidence("cmd", "")
++	s.Require().ErrorIs(err, ErrInvalidEvidence)
++	_, err = NewTestEvidence("", "pass")
++	s.Require().ErrorIs(err, ErrInvalidEvidence)
++	_, err = NewFileLineEvidence("a.go", true)
++	s.Require().ErrorIs(err, ErrInvalidEvidence)
++	_, err = NewFileLineEvidence("a.go:12", false)
++	s.Require().ErrorIs(err, ErrInvalidEvidence)
++	_, err = NewFileLineEvidence("a.go:xx", true)
++	s.Require().ErrorIs(err, ErrInvalidEvidence)
++
++	line, err := NewFileLineEvidence("dir/a.go:12", true)
++	s.Require().NoError(err)
++	s.Equal(EvidenceFormFileLineInDiff, line.Form())
++	s.Equal("dir/a.go:12", line.Reference())
++	s.NotEmpty(line.Record())
++	s.True(line.Valid())
++	s.False(EvidenceLine{}.Valid())
++
++	tst, err := NewTestEvidence("TestX", "pass")
++	s.Require().NoError(err)
++	s.Equal(EvidenceFormTestResult, tst.Form())
++}
++
++func (s *ValueObjectsSuite) TestCriteriaMap() {
++	_, err := NewCriteriaMap(nil)
++	s.Require().ErrorIs(err, ErrInvalidCriteriaMap)
++
++	c1 := mustCriterion(s.T(), "c1")
++	dup := mustCriterion(s.T(), "c1")
++	_, err = NewCriteriaMap([]AcceptanceCriterion{c1, dup})
++	s.Require().ErrorIs(err, ErrInvalidCriteriaMap)
++
++	c2 := mustCriterion(s.T(), "c2")
++	m, err := NewCriteriaMap([]AcceptanceCriterion{c1, c2})
++	s.Require().NoError(err)
++	s.Equal(2, m.Total())
++	s.Equal(0, m.Bound())
++	s.False(m.Complete())
++
++	_, err = m.WithEvidence(c1, EvidenceLine{})
++	s.Require().ErrorIs(err, ErrInvalidEvidence)
++	_, err = m.WithEvidence(mustCriterion(s.T(), "absent"), mustCommandEvidence(s.T()))
++	s.Require().ErrorIs(err, ErrInvalidCriteriaMap)
++	_, err = m.WithEvidence(AcceptanceCriterion{}, mustCommandEvidence(s.T()))
++	s.Require().ErrorIs(err, ErrInvalidCriterion)
++
++	m, err = m.WithEvidence(c1, mustCommandEvidence(s.T()))
++	s.Require().NoError(err)
++	m, err = m.AsUnverifiable(c2)
++	s.Require().NoError(err)
++	s.Equal(1, len(slices.Collect(m.Unverifiable())))
++	s.Equal(1, len(slices.Collect(m.Pending())))
++	s.Equal(2, len(slices.Collect(m.Criteria())))
++	s.False(m.Complete())
++
++	m, err = m.WithEvidence(c2, mustCommandEvidence(s.T()))
++	s.Require().NoError(err)
++	s.True(m.Complete())
++	s.Equal(0, len(slices.Collect(m.Pending())))
++}
++
++func (s *ValueObjectsSuite) TestRound() {
++	_, err := NewRound(0)
++	s.Require().ErrorIs(err, ErrInvalidRound)
++
++	r, err := NewRound(1)
++	s.Require().NoError(err)
++	s.False(r.Concluded())
++
++	_, err = r.Complete(Verdict(0), nil, Fingerprint{})
++	s.Require().ErrorIs(err, ErrInvalidVerdict)
++
++	findings := []Finding{
++		mustFinding(s.T(), SeverityHigh, "a.go", "R1"),
++		mustFinding(s.T(), SeverityHigh, "b.go", "R2"),
++		mustFinding(s.T(), SeverityLow, "c.go", "R3"),
++	}
++	done, err := r.Complete(VerdictRejected, findings, NewFingerprintCalculator().Compute(findings))
++	s.Require().NoError(err)
++	s.True(done.Concluded())
++	s.Equal(1, done.Number())
++	s.Equal(VerdictRejected, done.Verdict())
++	s.Equal(3, len(slices.Collect(done.Findings())))
++	s.Equal(map[Severity]int{SeverityHigh: 2, SeverityLow: 1}, done.CountBySeverity())
++
++	_, err = done.Complete(VerdictApproved, nil, Fingerprint{})
++	s.Require().ErrorIs(err, ErrRoundAlreadyCompleted)
++}
++
++func (s *ValueObjectsSuite) TestResult() {
++	_, err := NewClosedResult(ReasonApproved, nil)
++	s.Require().ErrorIs(err, ErrInsufficientProof)
++	_, err = NewClosedResult(StopReason(0), nil)
++	s.Require().ErrorIs(err, ErrInvalidStopReason)
++
++	closed, err := NewClosedResult(ReasonMaxRounds, []Round{})
++	s.Require().NoError(err)
++	s.False(closed.Approved())
++	s.Equal(ReasonMaxRounds, closed.Reason())
++	s.Equal(0, closed.RoundCount())
++
++	proof, err := NewApprovalProof(VerdictApproved, completeCriteriaMap(s.T()))
++	s.Require().NoError(err)
++	approved, err := NewApprovedResult(proof, nil)
++	s.Require().NoError(err)
++	s.True(approved.Approved())
++	s.Equal(proof.Verdict(), approved.Proof().Verdict())
++	s.Equal(0, len(slices.Collect(approved.Rounds())))
++}
++
++func (s *ValueObjectsSuite) TestEvents() {
++	events := []Event{
++		RoundStarted{Number: 1},
++		RoundCompleted{Number: 1, Verdict: VerdictRejected},
++		ProofRejected{Number: 1, Reason: "x"},
++		FixRequested{Number: 1},
++		CycleClosed{Reason: ReasonMaxRounds},
++	}
++	names := make([]string, 0, len(events))
++	for _, e := range events {
++		names = append(names, e.EventName())
++	}
++	s.Equal([]string{"round_started", "round_completed", "proof_rejected", "fix_requested", "cycle_closed"}, names)
++}
++
++func (s *ValueObjectsSuite) TestPortsValidation() {
++	task, _ := NewTaskIdentity("t")
++	agent, _ := NewAgentIdentity("a")
++	crit := []AcceptanceCriterion{mustCriterion(s.T(), "c")}
++
++	_, err := NewReviewRequest(TaskIdentity{}, agent, 1, ReviewTarget{}, crit)
++	s.Require().ErrorIs(err, ErrInvalidRequest)
++	_, err = NewReviewRequest(task, agent, 0, ReviewTarget{}, crit)
++	s.Require().ErrorIs(err, ErrInvalidRequest)
++	_, err = NewReviewRequest(task, agent, 1, ReviewTarget{}, nil)
++	s.Require().ErrorIs(err, ErrInvalidRequest)
++	rr, err := NewReviewRequest(task, agent, 2, NewReviewTarget("d"), crit)
++	s.Require().NoError(err)
++	s.Equal(2, rr.Round())
++	s.Equal("t", rr.Task().String())
++	s.Equal("a", rr.Agent().String())
++	s.Equal("d", rr.Target().String())
++	s.Equal(1, len(slices.Collect(rr.Criteria())))
++
++	_, err = NewFixRequest(task, agent, 1, nil, ReviewTarget{})
++	s.Require().ErrorIs(err, ErrInvalidRequest)
++	fr, err := NewFixRequest(task, agent, 1, []Finding{mustFinding(s.T(), SeverityHigh, "a.go", "R1")}, NewReviewTarget("d"))
++	s.Require().NoError(err)
++	s.Equal(1, len(slices.Collect(fr.Findings())))
++	s.Equal("d", fr.Target().String())
++	s.Equal(1, fr.Round())
++	s.Equal("t", fr.Task().String())
++	s.Equal("a", fr.Agent().String())
++
++	_, err = NewCheckpoint("  ")
++	s.Require().ErrorIs(err, ErrInvalidCheckpoint)
++	cp, err := NewCheckpoint("sha")
++	s.Require().NoError(err)
++	s.Equal("sha", cp.String())
++	s.False(cp.Zero())
++	s.True(Checkpoint{}.Zero())
++
++	out := NewReviewerOutput("raw", []Finding{mustFinding(s.T(), SeverityLow, "a.go", "R1")}, completeCriteriaMap(s.T()))
++	s.Equal("raw", out.RawText())
++	s.Equal(1, len(slices.Collect(out.Findings())))
++	s.Equal(1, len(out.FindingsList()))
++	s.True(out.CriteriaMap().Complete())
++	s.True(NewReviewTarget(" ").Empty())
++	s.False(NewReviewTarget("x").Empty())
++}
++
++func (s *ValueObjectsSuite) TestForbiddenTransitionErrorIs() {
++	err := ForbiddenTransitionError{From: StateApproved, To: StateInReview}
++	s.Require().True(errors.Is(err, ErrForbiddenTransition))
++	s.Contains(err.Error(), "approved")
++	s.Contains(InvalidMaxRoundsError{Value: -3}.Error(), "-3")
++}
+diff --git a/internal/approval/verdict.go b/internal/approval/verdict.go
+new file mode 100644
+index 0000000..653c74a
+--- /dev/null
++++ b/internal/approval/verdict.go
+@@ -0,0 +1,43 @@
++package approval
++
++import "fmt"
++
++type Verdict int
++
++const (
++	_ Verdict = iota
++	VerdictApproved
++	VerdictApprovedWithRemarks
++	VerdictRejected
++	VerdictBlocked
++)
++
++func NewVerdict(v Verdict) (Verdict, error) {
++	if !v.valid() {
++		return 0, fmt.Errorf("%w: value %d", ErrInvalidVerdict, int(v))
++	}
++	return v, nil
++}
++
++func (v Verdict) Approves() bool {
++	return v == VerdictApproved
++}
++
++func (v Verdict) String() string {
++	switch v {
++	case VerdictApproved:
++		return "APPROVED"
++	case VerdictApprovedWithRemarks:
++		return "APPROVED_WITH_REMARKS"
++	case VerdictRejected:
++		return "REJECTED"
++	case VerdictBlocked:
++		return "BLOCKED"
++	default:
++		return "INVALID_VERDICT"
++	}
++}
++
++func (v Verdict) valid() bool {
++	return v >= VerdictApproved && v <= VerdictBlocked
++}

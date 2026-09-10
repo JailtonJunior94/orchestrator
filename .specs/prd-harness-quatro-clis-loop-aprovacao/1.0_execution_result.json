@@ -1,0 +1,66 @@
+{
+  "schema_version": 2,
+  "run_id": "task-1.0-gates-operaveis-2026-09-10",
+  "task_id": "1.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "ba80b5637bef1ff372c6e7ac15eea8437322dcc8",
+  "patch_sha256": "5e2268d17a23d82b6a1b07694c060245a33d76fe89d7942ef6fd4d2be29326df",
+  "patch_ref": "evidence/task-1.0/1.0.patch",
+  "final_state_sha256": "30bb3f1254947f3b89defa4ed17a12031536c7d4966dd3dcd25d9bd7296cd3cf",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "1096a6325733145b1d6ae39cbd6afc92e0440727e8c7312b987ee03f5b02bf14"
+    },
+    {
+      "command": "bash tests/scripts/check-spec-paths_test.sh",
+      "exit_code": 0,
+      "output_sha256": "685d67be81ec8793c4f4115073b9c4712874d85825cd180eefe3dd978b8b930f"
+    },
+    {
+      "command": "make check-spec-paths && bash scripts/check-scripts-sync.sh && bash scripts/check-skills-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "409ecc25601ed6dbc1c4b5f1c82b2bd464b9e1e09eb87657503a436c14dff2b2"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "RF-08-gate-contrato-desarmado",
+      "evidence_ref": "evidence/task-1.0/go-build-test.log"
+    },
+    {
+      "id": "RF-63-gate-spec-paths-verde-executa",
+      "evidence_ref": "evidence/task-1.0/gates-suite.log"
+    },
+    {
+      "id": "mapfile-removido-portabilidade-bash32",
+      "evidence_ref": "evidence/task-1.0/gates-suite.log"
+    },
+    {
+      "id": "notacao-planejado-tres-resultados",
+      "evidence_ref": "evidence/task-1.0/spec-paths-test.log"
+    },
+    {
+      "id": "guarda-vacuidade-catalogo-acp",
+      "evidence_ref": "evidence/task-1.0/go-build-test.log"
+    },
+    {
+      "id": "espelhos-list-go-files-sincronizados",
+      "evidence_ref": "evidence/task-1.0/gates-suite.log"
+    },
+    {
+      "id": "build-vet-test-verde",
+      "evidence_ref": "evidence/task-1.0/go-build-test.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-1.0/gates-suite.log",
+    "evidence/task-1.0/spec-paths-test.log",
+    "evidence/task-1.0/go-build-test.log",
+    "evidence/task-1.0/1.0.patch"
+  ],
+  "review_verdict": "approved"
+}

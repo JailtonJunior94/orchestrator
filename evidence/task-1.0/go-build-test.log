@@ -1,0 +1,69 @@
+### go build ./...
+rc=0
+
+### go vet ./...
+rc=0
+
+### go test ./... -count=1
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/triggers/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/uninstall	0.003s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/upgrade	0.032s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/version	0.003s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/wrapper	0.004s
+rc=0
+
+### go test ./cmd/ai_spec_harness/ -run TestCLI_Contract -count=1 -v (via rtk proxy)
+=== RUN   TestCLI_ContractMatchesSchema
+--- PASS: TestCLI_ContractMatchesSchema (0.00s)
+=== RUN   TestCLISchemaContainsAllTools
+=== RUN   TestCLI_ContractFlagsMatchSchema
+=== RUN   TestCLI_ContractFlagsMatchSchema/check-spec-drift
+=== RUN   TestCLI_ContractFlagsMatchSchema/install
+=== RUN   TestCLI_ContractFlagsMatchSchema/metrics
+=== RUN   TestCLI_ContractFlagsMatchSchema/prerequisites
+=== RUN   TestCLI_ContractFlagsMatchSchema/runtime-capabilities
+=== RUN   TestCLI_ContractFlagsMatchSchema/skills
+=== RUN   TestCLI_ContractFlagsMatchSchema/sync-spec-hash
+=== RUN   TestCLI_ContractFlagsMatchSchema/uninstall
+=== RUN   TestCLI_ContractFlagsMatchSchema/semver-next
+=== RUN   TestCLI_ContractFlagsMatchSchema/validate-evidence
+=== RUN   TestCLI_ContractFlagsMatchSchema/validate-result
+=== RUN   TestCLI_ContractFlagsMatchSchema/validate-sdd
+=== RUN   TestCLI_ContractFlagsMatchSchema/verify
+=== RUN   TestCLI_ContractFlagsMatchSchema/lint
+=== RUN   TestCLI_ContractFlagsMatchSchema/telemetry_summary
+=== RUN   TestCLI_ContractFlagsMatchSchema/approve
+=== RUN   TestCLI_ContractFlagsMatchSchema/inspect
+=== RUN   TestCLI_ContractFlagsMatchSchema/invalidate
+=== RUN   TestCLI_ContractFlagsMatchSchema/seal-evidence
+=== RUN   TestCLI_ContractFlagsMatchSchema/upgrade
+=== RUN   TestCLI_ContractFlagsMatchSchema/validate
+=== RUN   TestCLI_ContractFlagsMatchSchema/version
+=== RUN   TestCLI_ContractFlagsMatchSchema/migrate-sdd
+=== RUN   TestCLI_ContractFlagsMatchSchema/doctor
+=== RUN   TestCLI_ContractFlagsMatchSchema/orchestrate
+=== RUN   TestCLI_ContractFlagsMatchSchema/telemetry_log
+=== RUN   TestCLI_ContractFlagsMatchSchema/validate-bugs
+=== RUN   TestCLI_ContractFlagsMatchSchema/changelog
+=== RUN   TestCLI_ContractFlagsMatchSchema/task-loop
+=== RUN   TestCLI_ContractFlagsMatchSchema/update-version
+=== RUN   TestCLI_ContractFlagsMatchSchema/wrapper
+=== RUN   TestCLI_ContractFlagsMatchSchema/telemetry
+=== RUN   TestCLI_ContractFlagsMatchSchema/telemetry_report
+=== RUN   TestCLI_ContractFlagsMatchSchema/hash
+=== RUN   TestCLI_ContractFlagsMatchSchema/rollback-sdd
+=== RUN   TestCLI_ContractFlagsMatchSchema/scaffold
+=== RUN   TestCLI_ContractFlagsMatchSchema/skill-bump
+=== RUN   TestCLI_ContractFlagsMatchSchema/skills_check
+--- PASS: TestCLI_ContractFlagsMatchSchema (0.00s)
+--- PASS: TestCLISchemaContainsAllTools (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	0.007s
+
+### guarda de vacuidade: catalogo esvaziado -> teste FALHA (revertido em seguida)
+    cli_contract_test.go:177: _runtimeACPCatalog vazio — o laço de verificação passaria trivialmente sem checar o schema
+--- FAIL: TestCLISchemaContainsAllTools (0.00s)
+FAIL
+FAIL	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	0.005s
+FAIL
+catalogo revertido: 2 entrada gemini

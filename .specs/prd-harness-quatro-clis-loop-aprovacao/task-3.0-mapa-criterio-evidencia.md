@@ -48,36 +48,36 @@ Usar alternação (`(não atendido|nao atendido)`), e travar a invariante por ca
 
 ## Subtarefas
 
-- [ ] 3.1 Acrescentar a `.agents/skills/review/assets/review-report-template.md` a seção de mapa 1:1,
+- [x] 3.1 Acrescentar a `.agents/skills/review/assets/review-report-template.md` a seção de mapa 1:1,
       com uma linha por critério no formato
       `- [atendido|não atendido|não verificável] <critério> -> <linha de evidência>`, e instrução
       explícita de que a seção é obrigatória para toda tarefa ativa.
-- [ ] 3.2 Propagar o template aos 3 espelhos: `.claude/skills/review/assets/review-report-template.md`,
+- [x] 3.2 Propagar o template aos 3 espelhos: `.claude/skills/review/assets/review-report-template.md`,
       `.github/skills/review/assets/review-report-template.md` e
       `internal/embedded/assets/.agents/skills/review/assets/review-report-template.md`.
-- [ ] 3.3 Adicionar a `.agents/scripts/validate-review-evidence.sh` a asserção fail-closed do mapa:
+- [x] 3.3 Adicionar a `.agents/scripts/validate-review-evidence.sh` a asserção fail-closed do mapa:
       ausência da seção falha; seção presente com critério sem linha de evidência falha; critério
       marcado `não verificável` falha; linha de evidência fora das três formas de RF-48 falha.
-- [ ] 3.4 Escrever todas as expressões novas com **alternação**, jamais com classe de colchete contendo
+- [x] 3.4 Escrever todas as expressões novas com **alternação**, jamais com classe de colchete contendo
       caractere multibyte, e validar cada uma sob `LC_ALL=C`.
-- [ ] 3.5 Propagar o validador aos 3 espelhos: `.claude/scripts/validate-review-evidence.sh`,
+- [x] 3.5 Propagar o validador aos 3 espelhos: `.claude/scripts/validate-review-evidence.sh`,
       `internal/embedded/assets/.agents/scripts/validate-review-evidence.sh` e
       `internal/embedded/assets/.claude/scripts/validate-review-evidence.sh`.
-- [ ] 3.6 Implementar em `internal/evidence/evidence.go` a rotina `validateReview`, ao lado de
+- [x] 3.6 Implementar em `internal/evidence/evidence.go` a rotina `validateReview`, ao lado de
       `validateTask` (`:73`), `validateBugfix` (`:122`) e `validateRefactor` (`:247`), com a mesma
       forma de retorno (`[]Finding`) e registrada no despacho por `ReportKind` de
       `Validator.Validate` (`:32`).
-- [ ] 3.7 Restringir o escape legado: em `.agents/scripts/validate-task-evidence.sh:27`,
+- [x] 3.7 Restringir o escape legado: em `.agents/scripts/validate-task-evidence.sh:27`,
       `strict_evidence="${AI_SDD_STRICT_EVIDENCE:-1}"` e o aviso de `:41` passam a **não** alcançar as
       asserções do mapa 1:1 nem o critério `APPROVED` estrito. `AI_SDD_STRICT_EVIDENCE=0` continua
       reabrindo apenas o escopo legado pré-existente. Propagar aos espelhos do validador de tarefa.
-- [ ] 3.8 Acrescentar casos a `scripts/test-validators.sh`, cada um executado também sob `LC_ALL=C`,
+- [x] 3.8 Acrescentar casos a `scripts/test-validators.sh`, cada um executado também sob `LC_ALL=C`,
       espelhando a estrutura do caso "a2" (`:144-166`): mapa ausente falha; mapa incompleto falha;
       critério `não verificável` falha; linha de evidência inválida falha; mapa completo e válido passa;
       e — o caso decisivo — `AI_SDD_STRICT_EVIDENCE=0` **não** faz nenhum dos anteriores passar.
-- [ ] 3.9 Adicionar testes em Go para `validateReview` em `internal/evidence/`, com tabela cobrindo os
+- [x] 3.9 Adicionar testes em Go para `validateReview` em `internal/evidence/`, com tabela cobrindo os
       mesmos cenários, garantindo a paridade Go↔shell exigida por RF-52.
-- [ ] 3.10 Rodar os gates de sincronia e registrar a evidência.
+- [x] 3.10 Rodar os gates de sincronia e registrar a evidência.
 
 ## Detalhes de Implementação
 
@@ -146,8 +146,8 @@ Nenhuma além das auto-carregadas (governance + linguagem).
 
 ## Testes da Tarefa
 
-- [ ] Testes unitários
-- [ ] Testes de integração
+- [x] Testes unitários
+- [x] Testes de integração
 
 Cobertura obrigatória:
 

@@ -1,0 +1,28 @@
+=== RUN   TestValidateReview_CriteriaMap
+=== RUN   TestValidateReview_CriteriaMap/mapa_ausente
+=== RUN   TestValidateReview_CriteriaMap/mapa_incompleto_criterio_sem_evidencia
+=== RUN   TestValidateReview_CriteriaMap/criterio_nao_verificavel
+=== RUN   TestValidateReview_CriteriaMap/linha_de_evidencia_invalida
+=== RUN   TestValidateReview_CriteriaMap/mapa_completo_e_valido
+--- PASS: TestValidateReview_CriteriaMap (0.00s)
+    --- PASS: TestValidateReview_CriteriaMap/mapa_ausente (0.00s)
+    --- PASS: TestValidateReview_CriteriaMap/mapa_incompleto_criterio_sem_evidencia (0.00s)
+    --- PASS: TestValidateReview_CriteriaMap/criterio_nao_verificavel (0.00s)
+    --- PASS: TestValidateReview_CriteriaMap/linha_de_evidencia_invalida (0.00s)
+    --- PASS: TestValidateReview_CriteriaMap/mapa_completo_e_valido (0.00s)
+=== RUN   TestValidateReview_ParityWithShellValidator
+=== RUN   TestValidateReview_ParityWithShellValidator/mapa_ausente
+=== RUN   TestValidateReview_ParityWithShellValidator/mapa_incompleto
+=== RUN   TestValidateReview_ParityWithShellValidator/criterio_nao_verificavel
+=== RUN   TestValidateReview_ParityWithShellValidator/evidencia_invalida
+=== RUN   TestValidateReview_ParityWithShellValidator/mapa_valido
+--- PASS: TestValidateReview_ParityWithShellValidator (0.08s)
+    --- PASS: TestValidateReview_ParityWithShellValidator/mapa_ausente (0.01s)
+    --- PASS: TestValidateReview_ParityWithShellValidator/mapa_incompleto (0.02s)
+    --- PASS: TestValidateReview_ParityWithShellValidator/criterio_nao_verificavel (0.02s)
+    --- PASS: TestValidateReview_ParityWithShellValidator/evidencia_invalida (0.02s)
+    --- PASS: TestValidateReview_ParityWithShellValidator/mapa_valido (0.02s)
+=== RUN   TestValidateReview_KindPreserved
+--- PASS: TestValidateReview_KindPreserved (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/evidence	0.081s

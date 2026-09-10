@@ -11,13 +11,13 @@
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
       "skillPath": "skills/design-patterns-mandatory/SKILL.md",
-      "computedHash": "c9e562aa50d5dcc4b5b6a71dc9c1571c4d08d85bb25a03f5a572e1494ca64ced"
+      "computedHash": "9540189e448c1ee5ebccb75128dbca61bd26a7ad71ec042e2bc40f4422d204cd"
     },
     "domain-modeling-production": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
       "skillPath": "skills/domain-modeling-production/SKILL.md",
-      "computedHash": "0a548091f281fcb1a290a25ed8c19f6f5289ec21688c234332d9d04a03dab0cc"
+      "computedHash": "66827dd6ae276129fd55961d5e07be1b356828b3dbcaf28509aefc801ad9dd5b"
     },
     "finalize-changelog-readme-push": {
       "source": "JailtonJunior94/skills",
@@ -76,8 +76,8 @@
     "semantic-commit": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
-      "version": "1.0.0",
-      "computedHash": "ea289b301d4afae4f798a8a394eb74aaa943fd5990307fc0c86da07036167280"
+      "version": "1.1.0",
+      "computedHash": "967598b88fc05a2c7f63651696adf6c49735d8af15fde9a359c34e09ff5351bf"
     },
     "us-to-prd": {
       "source": "JailtonJunior94/skills",

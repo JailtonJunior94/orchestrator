@@ -113,6 +113,11 @@ if [[ -n "$task_file_ref" && "$task_file_ref" != *"<slug>"* && "$task_file_ref" 
   fi
 fi
 
+report_has_criteria=0
+if grep -Eiq "^#+[[:space:]]+crit(e|é)rios de aceite" "$report_file"; then
+  report_has_criteria=1
+fi
+
 if [[ -n "$task_path" ]]; then
   criteria_count="$(awk '
     /^#+[[:space:]]+Crit(e|é)rios de (Sucesso|Aceite)/ { capture=1; next }
@@ -139,9 +144,17 @@ if [[ -n "$task_path" ]]; then
         missing=1
       fi
     fi
+  elif [[ "$report_has_criteria" -eq 1 ]]; then
+    echo "FALTANDO: relatório declara '## Critérios de Aceite' mas a task file ($task_path) não tem" \
+         "seção de critérios — mapa 1:1 não confrontável (RF-53); AI_SDD_STRICT_EVIDENCE não reabre este gate."
+    missing=1
   else
     legacy_escape "task file ($task_path) sem seção de critérios"
   fi
+elif [[ "$report_has_criteria" -eq 1 ]]; then
+  echo "FALTANDO: relatório declara '## Critérios de Aceite' mas não há task file resolvível para" \
+       "confronto 1:1 (RF-53); AI_SDD_STRICT_EVIDENCE não reabre este gate."
+  missing=1
 else
   legacy_escape "relatório sem referência resolvível a task file (campo 'Arquivo:')"
 fi

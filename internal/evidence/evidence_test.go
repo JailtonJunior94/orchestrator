@@ -1,6 +1,9 @@
 package evidence
 
 import (
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -318,6 +321,146 @@ func TestValidateRefactor_Advisory_NoVeredito(t *testing.T) {
 		}
 	}
 	_ = r
+}
+
+// ── Review — mapa 1:1 criterio -> evidencia (RF-47, RF-48, RF-49, RF-51, RF-52) ──
+
+func reviewWithMap(mapSection string) string {
+	return `# Relatorio de Review
+- Veredito: APPROVED
+- Alvo revisado: diff
+` + mapSection + `
+## Achados
+Sem achados.
+## Arquivos Revisados
+- foo.go
+## Riscos Residuais
+- nenhum
+## Validacoes Executadas
+- go test ./... -> ok
+`
+}
+
+func hasFindingContaining(findings []Finding, needle string) bool {
+	for _, f := range findings {
+		if strings.Contains(f.Label, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestValidateReview_CriteriaMap(t *testing.T) {
+	validMap := `## Mapa de Criterios de Aceite
+- [atendido] Criterio um -> go test ./... -> PASS
+- [atendido] Criterio dois -> internal/foo.go:42`
+
+	cases := []struct {
+		name    string
+		content string
+		want    bool
+		needle  string
+	}{
+		{
+			name:    "mapa ausente",
+			content: reviewWithMap(""),
+			want:    false,
+			needle:  "secao Mapa de Criterios de Aceite",
+		},
+		{
+			name: "mapa incompleto criterio sem evidencia",
+			content: reviewWithMap(`## Mapa de Criterios de Aceite
+- [atendido] Criterio um -> internal/foo.go:1
+- [atendido] Criterio dois`),
+			want:   false,
+			needle: "criterio sem linha de evidencia",
+		},
+		{
+			name: "criterio nao verificavel",
+			content: reviewWithMap(`## Mapa de Criterios de Aceite
+- [nao verificavel] Criterio um -> internal/foo.go:1`),
+			want:   false,
+			needle: "nao verificavel proibe APPROVED",
+		},
+		{
+			name: "linha de evidencia invalida",
+			content: reviewWithMap(`## Mapa de Criterios de Aceite
+- [atendido] Criterio um -> porque confio no autor da mudanca`),
+			want:   false,
+			needle: "fora das tres formas de RF-48",
+		},
+		{
+			name:    "mapa completo e valido",
+			content: reviewWithMap(validMap),
+			want:    true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := NewValidator().Validate([]byte(tc.content), KindReview, nil)
+			if r.Pass != tc.want {
+				t.Fatalf("Pass=%v, esperado %v; findings: %v", r.Pass, tc.want, r.Findings)
+			}
+			if tc.needle != "" && !hasFindingContaining(r.Findings, tc.needle) {
+				t.Fatalf("esperado finding contendo %q; findings: %v", tc.needle, r.Findings)
+			}
+		})
+	}
+}
+
+func TestValidateReview_ParityWithShellValidator(t *testing.T) {
+	shell, err := exec.LookPath("bash")
+	if err != nil {
+		t.Skip("bash indisponivel")
+	}
+	validator := filepath.Join("..", "..", ".agents", "scripts", "validate-review-evidence.sh")
+	if _, err := os.Stat(validator); err != nil {
+		t.Skipf("validador shell ausente: %v", err)
+	}
+
+	validMap := `## Mapa de Criterios de Aceite
+- [atendido] Criterio um -> go test ./... -> PASS
+- [atendido] Criterio dois -> internal/foo.go:42`
+
+	scenarios := []struct {
+		name    string
+		mapPart string
+	}{
+		{"mapa ausente", ""},
+		{"mapa incompleto", "## Mapa de Criterios de Aceite\n- [atendido] Criterio um -> internal/foo.go:1\n- [atendido] Criterio dois"},
+		{"criterio nao verificavel", "## Mapa de Criterios de Aceite\n- [nao verificavel] Criterio um -> internal/foo.go:1"},
+		{"evidencia invalida", "## Mapa de Criterios de Aceite\n- [atendido] Criterio um -> porque confio no autor"},
+		{"mapa valido", validMap},
+	}
+
+	dir := t.TempDir()
+	for _, sc := range scenarios {
+		t.Run(sc.name, func(t *testing.T) {
+			content := reviewWithMap(sc.mapPart)
+			path := filepath.Join(dir, "review.md")
+			if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			goPass := NewValidator().Validate([]byte(content), KindReview, nil).Pass
+
+			cmd := exec.Command(shell, validator, path)
+			cmd.Env = append(os.Environ(), "LC_ALL=C")
+			shellPass := cmd.Run() == nil
+
+			if goPass != shellPass {
+				t.Fatalf("paridade quebrada: go pass=%v, shell pass=%v", goPass, shellPass)
+			}
+		})
+	}
+}
+
+func TestValidateReview_KindPreserved(t *testing.T) {
+	r := NewValidator().Validate([]byte(reviewWithMap("## Mapa de Criterios de Aceite\n- [atendido] C -> internal/foo.go:1")), KindReview, nil)
+	if r.Kind != KindReview {
+		t.Errorf("esperado Kind=%s, got %s", KindReview, r.Kind)
+	}
 }
 
 // ── Kind check ────────────────────────────────────────────────────────────────

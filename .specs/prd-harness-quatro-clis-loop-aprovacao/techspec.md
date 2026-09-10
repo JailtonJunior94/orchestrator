@@ -45,9 +45,9 @@ CLI, então ele bloqueia a própria remoção e precisa ser o primeiro item alte
 
 | Componente | Responsabilidade |
 |---|---|
-| `internal/approval` (pacote novo) | Agregado `Ciclo`, entidade `Rodada`, Value Objects de conjunto fechado, tabela de transições, tradução anticorrupção do texto do revisor e política de parada. Zero dependência de ACP, CLI ou filesystem |
-| `internal/approval/portas.go` | Três interfaces declaradas no consumidor — `Revisor`, `Corretor`, `Repositorio` — que dão ao agregado o que ele não pode fazer sozinho |
-| `internal/approval/mocks/` | Mocks gerados por `mockery.yml` para as três portas |
+| `internal/approval` (planejado) — pacote novo | Agregado `Ciclo`, entidade `Rodada`, Value Objects de conjunto fechado, tabela de transições, tradução anticorrupção do texto do revisor e política de parada. Zero dependência de ACP, CLI ou filesystem |
+| `internal/approval/portas.go` (planejado) | Três interfaces declaradas no consumidor — `Revisor`, `Corretor`, `Repositorio` — que dão ao agregado o que ele não pode fazer sozinho |
+| `internal/approval/mocks/` (planejado) | Mocks gerados por `mockery.yml` para as três portas |
 | Spec do OpenCode em `internal/runtime/specs/` | Runtime ACP por subcomando, com launcher de fallback e janela derivada do modelo |
 | Plugin de governança do OpenCode | Hook de pré-ferramenta que bloqueia por exceção e sinaliza carga via sentinela |
 | Gate de encerramento canônico | Script tool-neutro que bloqueia o fim da sessão sem veredito aprovado, registrado nos 4 CLIs |

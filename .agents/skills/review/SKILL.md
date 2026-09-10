@@ -1,6 +1,6 @@
 ---
 name: review
-version: 1.3.0
+version: 1.4.0
 category: governance
 description: Revisa um diff de código quanto a correção, segurança, regressões e testes faltantes usando regras específicas do repositório. Use quando uma branch ou diff local precisar de revisão no estilo dono do código antes de merge ou fechamento de tarefa. Não use para implementação, planejamento de produto ou limpeza apenas de estilo.
 ---
@@ -83,7 +83,7 @@ Retornar bloco contendo, no mínimo:
 **Modo evidência persistida (`--auto-review`, RF-20):** quando o review é disparado por
 `execute-task`/`execute-all-tasks` em modo `--auto-review` (ou quando o chamador pede artefato
 persistido), além do output estruturado:
-1. Ler `assets/review-report-template.md` e produzir `evidence/<task>/review.md` preenchido (veredito, achados com severidade canônica, arquivos revisados, riscos residuais, validações).
+1. Ler `assets/review-report-template.md` e produzir `evidence/<task>/review.md` preenchido (veredito, achados com severidade canônica, arquivos revisados, riscos residuais, validações). **Preencher obrigatoriamente a seção `## Mapa de Critérios de Aceite` (RF-47): uma linha por critério da task file no formato literal `- [atendido|não atendido|não verificável] <critério> -> <linha de evidência>`, com a linha de evidência em uma das três formas de RF-48 (comando com saída registrada, `arquivo:linha` no diff revisado, ou nome de teste com resultado). Critério `não verificável` proíbe `APPROVED` (RF-49). Seção ausente ou mapa incompleto reprova o validador (RF-51).**
 2. Validar o artefato com o validador resolvido em cascata portátil (`.agents/scripts/validate-review-evidence.sh` → `.claude/scripts/validate-review-evidence.sh` → `scripts/validate-review-evidence.sh`): `bash "<primeiro-existente>" evidence/<task>/review.md`; corrigir seções faltantes antes de encerrar.
 3. Achados com tag `[HARD]` ou severidade `critical`/`high` mapeiam `ReviewStatus=blocked` no chamador.
 

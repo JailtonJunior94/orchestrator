@@ -23,9 +23,9 @@
 
 | # | Título | Status | Dependências | Paralelizável | Skills |
 |---|--------|--------|-------------|---------------|--------|
-| 1.0 | Tornar os gates capazes de rodar e de dizer a verdade | pending | — | — | — |
-| 2.0 | Pacote de domínio do Ciclo de Aprovação, sem consumidor | pending | 1.0 | Com 3.0 | domain-modeling-production |
-| 3.0 | Mapa 1:1 critério-evidência como dado verificável | pending | 1.0 | Com 2.0 | — |
+| 1.0 | Tornar os gates capazes de rodar e de dizer a verdade | done | — | — | — |
+| 2.0 | Pacote de domínio do Ciclo de Aprovação, sem consumidor | done | 1.0 | Com 3.0 | domain-modeling-production |
+| 3.0 | Mapa 1:1 critério-evidência como dado verificável | done | 1.0 | Com 2.0 | — |
 | 4.0 | Promoção do loop ao agregado e correção dos defeitos de causa-raiz | pending | 2.0, 3.0 | Não | — |
 | 5.0 | Propagação do teto de rodadas e virada do critério estrito | pending | 4.0 | Não | — |
 | 6.0 | Catálogo de Agentes como registro único | pending | 2.0 | Não | domain-modeling-production |

@@ -276,13 +276,18 @@ assert_exit "referência não resolvível falha por padrão" 1 $code_d3
 # --- Casos de review-evidence (RF-20) ---
 REVIEW_VALIDATOR="$REPO_ROOT/.agents/scripts/validate-review-evidence.sh"
 
-# Caso e: review.md válido (APPROVED, sem achados) -> exit 0
+VALID_MAP='## Mapa de Critérios de Aceite
+- [atendido] Critério um -> go test ./... -> PASS
+- [atendido] Critério dois -> internal/foo.go:42'
+
+# Caso e: review.md válido (APPROVED, sem achados, mapa 1:1 completo) -> exit 0
 echo "Caso e: review.md válido sem achados"
 review_e="$TMP_BASE/review-e.md"
-cat > "$review_e" <<'EOF'
+cat > "$review_e" <<EOF
 # Relatório de Review
 - Veredito: APPROVED
 - Alvo revisado: diff da branch feature/x
+$VALID_MAP
 ## Achados
 Sem achados.
 ## Arquivos Revisados
@@ -293,14 +298,16 @@ Sem achados.
 - go test ./... -> ok
 EOF
 bash "$REVIEW_VALIDATOR" "$review_e" >/dev/null 2>&1; assert_exit "review válido passa" 0 $?
+LC_ALL=C bash "$REVIEW_VALIDATOR" "$review_e" >/dev/null 2>&1; assert_exit "review válido passa sob LC_ALL=C" 0 $?
 
 # Caso f: review.md REJECTED sem achado high/critical -> exit 1
 echo "Caso f: review REJECTED sem achado bloqueante"
 review_f="$TMP_BASE/review-f.md"
-cat > "$review_f" <<'EOF'
+cat > "$review_f" <<EOF
 # Relatório de Review
 - Veredito: REJECTED
 - Alvo revisado: diff
+$VALID_MAP
 ## Achados
 - Severidade: low
 - Arquivo: foo.go
@@ -317,10 +324,11 @@ bash "$REVIEW_VALIDATOR" "$review_f" >/dev/null 2>&1; assert_exit "REJECTED sem 
 # Caso g: review.md sem seção de validações -> exit 1
 echo "Caso g: review sem seção de validações"
 review_g="$TMP_BASE/review-g.md"
-cat > "$review_g" <<'EOF'
+cat > "$review_g" <<EOF
 # Relatório de Review
 - Veredito: APPROVED
 - Alvo revisado: diff
+$VALID_MAP
 ## Achados
 Sem achados.
 ## Arquivos Revisados
@@ -329,6 +337,96 @@ Sem achados.
 - nenhum
 EOF
 bash "$REVIEW_VALIDATOR" "$review_g" >/dev/null 2>&1; assert_exit "review sem validações falha" 1 $?
+
+# --- Casos do mapa 1:1 critério -> evidência (RF-47, RF-48, RF-49, RF-51, RF-53, RF-54) ---
+review_body() {
+  cat <<EOF
+## Achados
+Sem achados.
+## Arquivos Revisados
+- foo.go
+## Riscos Residuais
+- nenhum
+## Validações Executadas
+- go test ./... -> ok
+EOF
+}
+
+MAP_CASE_FILE=""
+map_case() {
+  local name="$1" expected="$2" map_block="$3"
+  local f="$TMP_BASE/review-$name.md"
+  {
+    printf '# Relatório de Review\n- Veredito: APPROVED\n- Alvo revisado: diff\n'
+    printf '%s\n' "$map_block"
+    review_body
+  } > "$f"
+  local c1 c2
+  bash "$REVIEW_VALIDATOR" "$f" >/dev/null 2>&1; c1=$?
+  LC_ALL=C bash "$REVIEW_VALIDATOR" "$f" >/dev/null 2>&1; c2=$?
+  assert_exit "mapa $name espera exit $expected" "$expected" "$c1"
+  assert_exit "mapa $name espera exit $expected sob LC_ALL=C" "$expected" "$c2"
+  MAP_CASE_FILE="$f"
+}
+
+echo "Caso h1: mapa 1:1 ausente falha"
+map_case "h1-ausente" 1 ""
+
+echo "Caso h2: mapa 1:1 incompleto (critério sem evidência) falha"
+map_case "h2-incompleto" 1 '## Mapa de Critérios de Aceite
+- [atendido] Critério um -> internal/foo.go:1
+- [atendido] Critério dois'
+map_missing_ev="$MAP_CASE_FILE"
+
+echo "Caso h3: critério não verificável falha"
+map_case "h3-nverif" 1 '## Mapa de Critérios de Aceite
+- [não verificável] Critério um -> internal/foo.go:1'
+
+echo "Caso h4: linha de evidência fora das três formas de RF-48 falha"
+map_case "h4-badev" 1 '## Mapa de Critérios de Aceite
+- [atendido] Critério um -> porque confio no autor da mudança'
+
+echo "Caso h5: mapa 1:1 completo e válido passa"
+map_case "h5-ok" 0 "$VALID_MAP"
+
+echo "Caso h6: AI_SDD_STRICT_EVIDENCE=0 NÃO reabre o mapa 1:1"
+out_h6=$(AI_SDD_STRICT_EVIDENCE=0 bash "$REVIEW_VALIDATOR" "$map_missing_ev" 2>&1); code_h6=$?
+assert_exit "opt-out legado não faz o mapa incompleto passar" 1 $code_h6
+if echo "$out_h6" | grep -q "gate de aceite ignorado"; then
+  echo "  ✗ mapa 1:1 desligado por AI_SDD_STRICT_EVIDENCE=0 (regressão de RF-53)"
+  failed=$((failed+1))
+else
+  echo "  ✓ mapa 1:1 permanece fail-closed sob AI_SDD_STRICT_EVIDENCE=0"
+  passed=$((passed+1))
+fi
+
+# --- Caso i: RF-53 no validador de tarefa — relatório com critérios sem task file resolvível ---
+echo "Caso i: relatório declara critérios sem task file resolvível é fail-closed mesmo com opt-out"
+report_i="$TMP_BASE/report-i.md"
+{
+  report_header "$TMP_BASE/task-inexistente.md"
+  cat <<'EOF'
+## Comandos Executados
+- go test ./... -> ok
+EOF
+  base_sections
+  cat <<'EOF'
+## Resultados de Validação
+- Testes: pass
+## Critérios de Aceite
+- Critério um -> comprovado: ok
+EOF
+} > "$report_i"
+out_i=$(AI_SDD_STRICT_EVIDENCE=0 bash "$VALIDATOR" "$report_i" 2>&1); code_i=$?
+rm -f "$report_i"
+assert_exit "critérios sem task file falha mesmo com opt-out" 1 $code_i
+if echo "$out_i" | grep -q "gate de aceite ignorado"; then
+  echo "  ✗ opt-out reabriu o confronto 1:1 (regressão de RF-53)"
+  failed=$((failed+1))
+else
+  echo "  ✓ opt-out não alcança o confronto 1:1 (RF-53)"
+  passed=$((passed+1))
+fi
 
 echo
 echo "Passaram: $passed | Falharam: $failed"

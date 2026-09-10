@@ -13,6 +13,7 @@ const (
 	KindTask     ReportKind = "task"
 	KindBugfix   ReportKind = "bugfix"
 	KindRefactor ReportKind = "refactor"
+	KindReview   ReportKind = "review"
 )
 
 // Finding representa uma secao ou padrao faltante.
@@ -40,6 +41,8 @@ func (r1 *Validator) Validate(content []byte, kind ReportKind, rfIDs []string) R
 		findings = NewValidator().validateBugfix(text, rfIDs)
 	case KindRefactor:
 		findings = NewValidator().validateRefactor(text)
+	case KindReview:
+		findings = NewValidator().validateReview(text)
 	}
 
 	return Result{
@@ -240,6 +243,105 @@ func (r1 *Validator) reconcileBugfixTotals(text string, total, fixed, tests int)
 		if err != nil || value != expected.value {
 			findings = append(findings, Finding{Label: "totalizador " + expected.label + " diverge dos blocos"})
 		}
+	}
+	return findings
+}
+
+func (r1 *Validator) validateReview(text string) []Finding {
+	var findings []Finding
+
+	if !NewValidator().matchesRegex(text, `veredito\s*:\s*(APPROVED|APPROVED_WITH_REMARKS|REJECTED|BLOCKED)`) &&
+		!NewValidator().matchesRegex(text, `verdict\s*:\s*(APPROVED|APPROVED_WITH_REMARKS|REJECTED|BLOCKED)`) {
+		findings = append(findings, Finding{Label: "veredito canonico do review"})
+	}
+
+	requiredHeadings := []struct {
+		label   string
+		pattern string
+	}{
+		{"secao Achados", "Achados"},
+		{"secao Arquivos Revisados", "Arquivos Revisados"},
+		{"secao Riscos Residuais", "Riscos Residuais"},
+		{"secao Validacoes Executadas", "Validac"},
+	}
+	for _, h := range requiredHeadings {
+		if !NewValidator().hasHeading(text, h.pattern) {
+			findings = append(findings, Finding{Label: h.label})
+		}
+	}
+
+	return append(findings, NewValidator().validateCriteriaMap(text)...)
+}
+
+var (
+	criteriaMapHeadingRe = regexp.MustCompile(`(?i)mapa de crit(e|é)rios de aceite`)
+	criteriaLineRe       = regexp.MustCompile(`^-\s*\[`)
+	criteriaMarkerRe     = regexp.MustCompile(`^-\s*\[([^\]]*)\]`)
+	evidenceFileLineRe   = regexp.MustCompile(`[A-Za-z0-9_./-]+:[0-9]+`)
+	evidenceTestRe       = regexp.MustCompile(`(?i)(test|teste|spec).*(pass|fail|passed|failed|\bok\b|erro|error)`)
+	evidenceCommandRe    = regexp.MustCompile(`(?i)(go (test|build|vet)|gotestsum|bash |sh |npm|pnpm|yarn|pytest|make |grep |python|cargo |dotnet |shasum|awk |sed |cat |\./)`)
+	evidenceOutcomeRe    = regexp.MustCompile(`(?i)(->|=>|exit|sa(i|í)da|output|pass|fail|\bok\b)`)
+)
+
+func (r1 *Validator) validateCriteriaMap(text string) []Finding {
+	lines := strings.Split(text, "\n")
+	headingAt := -1
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "#") && criteriaMapHeadingRe.MatchString(trimmed) {
+			headingAt = i
+			break
+		}
+	}
+	if headingAt == -1 {
+		return []Finding{{Label: "secao Mapa de Criterios de Aceite"}}
+	}
+
+	var findings []Finding
+	criteria := 0
+	for _, line := range lines[headingAt+1:] {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "#") {
+			break
+		}
+		if !criteriaLineRe.MatchString(trimmed) {
+			continue
+		}
+		criteria++
+
+		marker := ""
+		if m := criteriaMarkerRe.FindStringSubmatch(trimmed); m != nil {
+			marker = strings.ToLower(strings.TrimSpace(m[1]))
+		}
+		evidence := ""
+		if idx := strings.Index(trimmed, "->"); idx != -1 {
+			evidence = strings.TrimSpace(trimmed[idx+2:])
+		}
+
+		switch marker {
+		case "atendido", "nao atendido", "não atendido":
+		case "nao verificavel", "nao verificável", "não verificavel", "não verificável":
+			findings = append(findings, Finding{Label: "criterio nao verificavel proibe APPROVED: " + trimmed})
+		default:
+			findings = append(findings, Finding{Label: "marcador de criterio invalido no mapa 1:1: " + trimmed})
+		}
+
+		if evidence == "" {
+			findings = append(findings, Finding{Label: "criterio sem linha de evidencia no mapa 1:1: " + trimmed})
+			continue
+		}
+
+		switch {
+		case evidenceFileLineRe.MatchString(evidence):
+		case evidenceTestRe.MatchString(evidence):
+		case evidenceCommandRe.MatchString(evidence) && evidenceOutcomeRe.MatchString(evidence):
+		default:
+			findings = append(findings, Finding{Label: "linha de evidencia fora das tres formas de RF-48: " + trimmed})
+		}
+	}
+
+	if criteria == 0 {
+		findings = append(findings, Finding{Label: "mapa 1:1 sem nenhuma linha de criterio"})
 	}
 	return findings
 }

@@ -1,0 +1,36 @@
+# go build ./... && go vet ./... && go test ./... -count=1
+## 2026-09-10T16:51:12Z
+
+$ go build ./...
+exit=0
+
+$ go vet ./...
+exit=0
+
+$ go test ./... -count=1
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/mocks	[no test files]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence	0.019s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe	0.011s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/render	0.004s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	0.004s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/scaffold	0.002s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd	0.139s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd/tasks	0.004s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/semver	0.280s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillbump	0.122s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	0.024s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillscheck	0.009s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdigest	0.002s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdrift	0.019s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	0.424s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/telemetry	0.013s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/triggers	0.003s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/triggers/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/uninstall	0.002s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/upgrade	0.029s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/version	0.003s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/wrapper	0.004s
+aggregate exit=0

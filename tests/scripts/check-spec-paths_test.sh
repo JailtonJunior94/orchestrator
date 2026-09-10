@@ -45,7 +45,22 @@ printf '# TechSpec\n\nConfig opcional em `.agents/config.yaml`.\n' > "$TMP/prd-f
 bash "$GATE" "$TMP/prd-fixture" >/dev/null 2>&1
 assert "caminho opcional documentado nao reprova" 0 $?
 
-# Caso 5: PRD sem sdd-state.json fica fora do escopo
+# Caso 5: caminho inexistente marcado como (planejado) -> aprova
+printf '# TechSpec\n\nO pacote `internal/sdd/orchestrator` (planejado) ainda nao existe.\n' > "$TMP/prd-fixture/techspec.md"
+bash "$GATE" "$TMP/prd-fixture" >/dev/null 2>&1
+assert "caminho inexistente com marcador (planejado) aprova" 0 $?
+
+# Caso 6: (planejado) nao mascara outro caminho inexistente sem marcador na mesma spec
+printf '# TechSpec\n\n`internal/sdd/orchestrator` (planejado) e `internal/sdd/review` (quebrado).\n' > "$TMP/prd-fixture/techspec.md"
+out=$(bash "$GATE" "$TMP/prd-fixture" 2>&1); code=$?
+assert "marcador (planejado) nao mascara caminho quebrado vizinho" 1 $code
+if echo "$out" | grep -q "internal/sdd/review" && ! echo "$out" | grep -q "internal/sdd/orchestrator"; then
+  echo "  OK   diagnostico acusa so o caminho sem marcador"; pass=$((pass+1))
+else
+  echo "  FAIL diagnostico deveria acusar apenas internal/sdd/review"; fail=$((fail+1))
+fi
+
+# Caso 7: PRD sem sdd-state.json fica fora do escopo
 rm -f "$TMP/prd-fixture/sdd-state.json"
 printf '# TechSpec\n\nComponente `internal/sdd/orchestrator`.\n' > "$TMP/prd-fixture/techspec.md"
 bash "$GATE" >/dev/null 2>&1

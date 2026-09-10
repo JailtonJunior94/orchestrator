@@ -171,16 +171,17 @@ func TestCLISchemaContainsAllTools(t *testing.T) {
 
 	schemaContent := string(data)
 
+	// Guarda de vacuidade: um catálogo vazio faria o laço abaixo passar
+	// trivialmente sem verificar nada. Catálogo vazio é falha explícita.
+	if len(_runtimeACPCatalog) == 0 {
+		t.Fatal("_runtimeACPCatalog vazio — o laço de verificação passaria trivialmente sem checar o schema")
+	}
+
 	// Todos os tools do runtimeACPCatalog devem aparecer no schema.
 	for tool := range _runtimeACPCatalog {
 		if !strings.Contains(schemaContent, tool) {
 			t.Errorf("cli-schema.json não menciona tool %q — atualizar descrição da flag --runtime ou --tool", tool)
 		}
-	}
-
-	// Verificar especificamente que "gemini" está presente (RF-25 ADR-015).
-	if !strings.Contains(schemaContent, "gemini") {
-		t.Error("cli-schema.json não contém 'gemini' — atualizar flag --runtime description (RF-25)")
 	}
 }
 

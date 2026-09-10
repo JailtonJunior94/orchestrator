@@ -1,0 +1,73 @@
+{
+  "schema_version": 2,
+  "run_id": "task-3.0-mapa-criterio-evidencia-2026-09-10",
+  "task_id": "3.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "ba80b5637bef1ff372c6e7ac15eea8437322dcc8",
+  "patch_sha256": "da98d34f773d400626d8aeded2ede389ffd8b9bf333883790e732468a77d58ac",
+  "patch_ref": "evidence/task-3.0/3.0.patch",
+  "final_state_sha256": "86346a23a39472db9bf4708e61240136abe7fc6d77ade963a5473a2b22149edb",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./... && go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "602813d2d947ffa6bd997d50b2bd9dc73ec5aff5a7ee170075b42bc2b2ec5a0e"
+    },
+    {
+      "command": "go test ./internal/evidence/... -count=1 -v -run Review|CriteriaMap",
+      "exit_code": 0,
+      "output_sha256": "013f4c63723a865b52b6ec820afd7e70eea5c1412480e478b38df288a783b68f"
+    },
+    {
+      "command": "bash scripts/test-validators.sh",
+      "exit_code": 0,
+      "output_sha256": "0bbc14865694440d268078be412f69be0f4f460d170c283b76e6e00cb39b620d"
+    },
+    {
+      "command": "make check-skills-sync check-scripts-sync check-spec-paths",
+      "exit_code": 0,
+      "output_sha256": "210a010a93a6cce3f57b4b80f15d9408739852c19dfa4d7e3e448addd76d4faa"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "RF-47-template-mapa-1a1-quatro-espelhos",
+      "evidence_ref": "evidence/task-3.0/sync-gates.log"
+    },
+    {
+      "id": "RF-51-validador-shell-fail-closed",
+      "evidence_ref": "evidence/task-3.0/validators.log"
+    },
+    {
+      "id": "RF-52-validador-go-validateReview",
+      "evidence_ref": "evidence/task-3.0/evidence-go.log"
+    },
+    {
+      "id": "RF-53-escape-legado-nao-alcanca-mapa",
+      "evidence_ref": "evidence/task-3.0/validators.log"
+    },
+    {
+      "id": "RF-54-sem-classe-multibyte-locale-bytes",
+      "evidence_ref": "evidence/task-3.0/validators.log"
+    },
+    {
+      "id": "paridade-go-shell-cinco-cenarios",
+      "evidence_ref": "evidence/task-3.0/parity-go-shell.log"
+    },
+    {
+      "id": "suite-completa-verde",
+      "evidence_ref": "evidence/task-3.0/build-vet-test.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-3.0/3.0.patch",
+    "evidence/task-3.0/build-vet-test.log",
+    "evidence/task-3.0/evidence-go.log",
+    "evidence/task-3.0/validators.log",
+    "evidence/task-3.0/sync-gates.log",
+    "evidence/task-3.0/parity-go-shell.log"
+  ],
+  "review_verdict": "approved"
+}
