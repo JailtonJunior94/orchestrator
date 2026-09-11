@@ -44,7 +44,7 @@ version: 1.2.0
 		"updated_at": "2026-04-01T00:00:00Z",
 		"source_dir": "/governance",
 		"link_mode": "copy",
-		"tools": ["claude", "gemini"],
+		"tools": ["claude", "opencode"],
 		"langs": ["go"],
 		"skills": ["go-implementation"],
 		"checksums": {}
@@ -128,7 +128,7 @@ version: 2.0.0
 }
 
 func TestToolNames(t *testing.T) {
-	tools := []skills.Tool{skills.ToolClaude, skills.ToolGemini}
+	tools := []skills.Tool{skills.ToolClaude, skills.ToolOpenCode}
 	names := (&Service{}).toolNames(tools)
 	if len(names) != 2 {
 		t.Fatalf("len = %d, want 2", len(names))
@@ -136,8 +136,8 @@ func TestToolNames(t *testing.T) {
 	if names[0] != "claude" {
 		t.Errorf("names[0] = %q, want claude", names[0])
 	}
-	if names[1] != "gemini" {
-		t.Errorf("names[1] = %q, want gemini", names[1])
+	if names[1] != "opencode" {
+		t.Errorf("names[1] = %q, want opencode", names[1])
 	}
 }
 

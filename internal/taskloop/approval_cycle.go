@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria"
 )
 
@@ -97,6 +98,90 @@ func acceptanceCriteriaFromTaskFile(content []byte) ([]approval.AcceptanceCriter
 	return criteria, nil
 }
 
+func acceptanceCriteriaUnion(prdFolder string, taskIDs []string, fsys fs.FileSystem) ([]approval.AcceptanceCriterion, error) {
+	seen := make(map[string]bool)
+	var criteria []approval.AcceptanceCriterion
+	for _, id := range taskIDs {
+		taskFile, err := NewCatalog().ResolveTaskFile(prdFolder, TaskEntry{ID: id}, fsys)
+		if err != nil {
+			continue
+		}
+		content, err := fsys.ReadFile(taskFile)
+		if err != nil {
+			continue
+		}
+		for _, description := range taskcriteria.Extract(content) {
+			key := strings.TrimSpace(description)
+			if key == "" || seen[key] {
+				continue
+			}
+			seen[key] = true
+			criterion, err := approval.NewAcceptanceCriterion(description)
+			if err != nil {
+				return nil, err
+			}
+			criteria = append(criteria, criterion)
+		}
+	}
+	return criteria, nil
+}
+
+func runLoopAgentIdentity(opts Options) string {
+	if identity := strings.TrimSpace(cycleAgentIdentity(opts)); identity != "" {
+		return identity
+	}
+	return "runloop"
+}
+
+func runLoopBugfixMaxIterations(opts Options) int {
+	if opts.MaxBugfixIterations > 0 {
+		return opts.MaxBugfixIterations
+	}
+	return DefaultMaxBugfixIterations
+}
+
+func cycleApprovalPolicy(maxRounds int) (approval.ApprovalPolicy, error) {
+	if maxRounds > 0 {
+		return approval.NewApprovalPolicy(approval.WithMaxRounds(maxRounds))
+	}
+	return approval.NewApprovalPolicy()
+}
+
+func (s *Service) runRejectedCycle(
+	ctx context.Context,
+	opts Options,
+	criteria []approval.AcceptanceCriterion,
+	rev FinalReviewResult,
+	deps RunLoopDeps,
+	workDir string,
+) (approval.CycleResult, *bugfixEvidenceRecorder, error) {
+	taskIdentity, err := approval.NewTaskIdentity("runloop:" + strings.TrimSpace(opts.PRDFolder))
+	if err != nil {
+		return approval.CycleResult{}, nil, err
+	}
+	agentIdentity, err := approval.NewAgentIdentity(runLoopAgentIdentity(opts))
+	if err != nil {
+		return approval.CycleResult{}, nil, err
+	}
+	policy, err := approval.NewApprovalPolicy(approval.WithMaxRounds(runLoopBugfixMaxIterations(opts) + 1))
+	if err != nil {
+		return approval.CycleResult{}, nil, err
+	}
+
+	recorder := newBugfixEvidenceRecorder()
+	reviewer := newPrimedReviewerPort(rev, deps.FinalReviewer)
+	fixer := newFixerPort(deps.BugfixInvoker, recorder)
+	repository := newRepositoryPort(deps.DiffCapturer, workDir)
+
+	cycle, err := approval.NewCycle(taskIdentity, agentIdentity, policy, criteria, reviewer, fixer, repository)
+	if err != nil {
+		return approval.CycleResult{}, nil, err
+	}
+
+	result, runErr := cycle.Run(ctx)
+	return result, recorder, runErr
+}
+
 func cycleAgentIdentity(opts Options) string {
 	if strings.TrimSpace(opts.AgentName) != "" {
 		return opts.AgentName
@@ -172,7 +257,7 @@ func (s *Service) conductApprovalCycle(
 	if err != nil {
 		return &ReviewResult{Note: fmt.Sprintf("invalid agent identity: %v", err)}, nil
 	}
-	policy, err := approval.NewApprovalPolicy()
+	policy, err := cycleApprovalPolicy(opts.MaxBugfixIterations)
 	if err != nil {
 		return &ReviewResult{Note: fmt.Sprintf("invalid approval policy: %v", err)}, nil
 	}
@@ -200,6 +285,8 @@ func (s *Service) conductApprovalCycle(
 		review.Note = fmt.Sprintf("approval cycle error: %v", runErr)
 		return review, bugfixResultFromCycle(bugfixInvoker, elapsed, false, true)
 	}
+
+	review.CycleStopReason = result.Reason().String()
 
 	if result.Approved() {
 		review.ExitCode = 0

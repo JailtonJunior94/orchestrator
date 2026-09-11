@@ -26,9 +26,9 @@ func (s *BudgetSuite) TestToolBudgetsDefined() {
 		tool string
 	}{
 		{name: "deve definir budget para claude", tool: "claude"},
-		{name: "deve definir budget para gemini", tool: "gemini"},
 		{name: "deve definir budget para codex", tool: "codex"},
 		{name: "deve definir budget para copilot", tool: "copilot"},
+		{name: "deve definir budget para opencode", tool: "opencode"},
 	}
 
 	for _, scenario := range scenarios {
@@ -89,7 +89,6 @@ func (s *BudgetSuite) TestGeneratedGovernanceWithinBudget() {
 		key  string
 	}{
 		{name: "deve manter governanca claude dentro do budget", tool: skills.ToolClaude, key: "claude"},
-		{name: "deve manter governanca gemini dentro do budget", tool: skills.ToolGemini, key: "gemini"},
 		{name: "deve manter governanca codex dentro do budget", tool: skills.ToolCodex, key: "codex"},
 		{name: "deve manter governanca copilot dentro do budget", tool: skills.ToolCopilot, key: "copilot"},
 	}

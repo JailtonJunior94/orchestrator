@@ -16,13 +16,12 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
 
-// setupSourceDirMultiTool estende setupSourceDir com artefatos Gemini e Codex
+// setupSourceDirMultiTool estende setupSourceDir com artefatos Copilot e Codex
 // para testes que exigem instalacao de multiplas ferramentas.
 func setupSourceDirMultiTool(t *testing.T, dir string) {
 	t.Helper()
 	setupSourceDir(t, dir)
-	mustWriteFile(t, filepath.Join(dir, "GEMINI.md"), "# Gemini CLI\n")
-	mustWriteExecFile(t, filepath.Join(dir, ".gemini/hooks/validate-preload.sh"), "#!/usr/bin/env bash\nif [[ \"${GOVERNANCE_PRELOAD_CONFIRMED:-}\" != \"1\" ]]; then exit 1; fi\n")
+	mustWriteExecFile(t, filepath.Join(dir, ".github/hooks/validate-preload.sh"), "#!/usr/bin/env bash\nif [[ \"${GOVERNANCE_PRELOAD_CONFIRMED:-}\" != \"1\" ]]; then exit 1; fi\n")
 	mustWriteExecFile(t, filepath.Join(dir, ".codex/hooks/validate-preload.sh"), "#!/usr/bin/env bash\nif [[ \"${GOVERNANCE_PRELOAD_CONFIRMED:-}\" != \"1\" ]]; then exit 1; fi\n")
 }
 
@@ -43,7 +42,7 @@ func readManifest(t *testing.T, projectDir string) manifest.Manifest {
 // ---- Subtask 14.1: Testes de install em cenarios reais ----
 
 // TestE2E14_Install_AllTools_AllArtifactsPresent verifica que um install completo
-// com Claude, Gemini e Codex cria todos os diretorios e artefatos esperados.
+// com Claude, Copilot e Codex cria todos os diretorios e artefatos esperados.
 func TestE2E14_Install_AllTools_AllArtifactsPresent(t *testing.T) {
 	sourceDir := t.TempDir()
 	projectDir := t.TempDir()
@@ -53,7 +52,7 @@ func TestE2E14_Install_AllTools_AllArtifactsPresent(t *testing.T) {
 	err := newInstallSvc(fsys).Execute(config.InstallOptions{
 		ProjectDir: projectDir,
 		SourceDir:  sourceDir,
-		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolGemini, skills.ToolCodex},
+		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolCopilot, skills.ToolCodex},
 		LinkMode:   skills.LinkCopy,
 	})
 	if err != nil {
@@ -63,7 +62,7 @@ func TestE2E14_Install_AllTools_AllArtifactsPresent(t *testing.T) {
 	expectedDirs := []string{
 		filepath.Join(projectDir, ".agents"),
 		filepath.Join(projectDir, ".claude"),
-		filepath.Join(projectDir, ".gemini"),
+		filepath.Join(projectDir, ".github"),
 		filepath.Join(projectDir, ".codex"),
 	}
 	for _, d := range expectedDirs {
@@ -84,9 +83,9 @@ func TestE2E14_Install_AllTools_AllArtifactsPresent(t *testing.T) {
 	}
 }
 
-// TestE2E_InstallHooks_GeminiAndCodexHooksInstalledAndBlocking verifica que os hooks
-// de preload do Gemini e do Codex sao instalados e bloqueiam execucao sem a variavel.
-func TestE2E_InstallHooks_GeminiAndCodexHooksInstalledAndBlocking(t *testing.T) {
+// TestE2E_InstallHooks_CopilotAndCodexHooksInstalledAndBlocking verifica que os hooks
+// de preload do Copilot e do Codex sao instalados e bloqueiam execucao sem a variavel.
+func TestE2E_InstallHooks_CopilotAndCodexHooksInstalledAndBlocking(t *testing.T) {
 	sourceDir := t.TempDir()
 	projectDir := t.TempDir()
 	setupSourceDirMultiTool(t, sourceDir)
@@ -95,17 +94,17 @@ func TestE2E_InstallHooks_GeminiAndCodexHooksInstalledAndBlocking(t *testing.T) 
 	err := newInstallSvc(fsys).Execute(config.InstallOptions{
 		ProjectDir: projectDir,
 		SourceDir:  sourceDir,
-		Tools:      []skills.Tool{skills.ToolGemini, skills.ToolCodex},
+		Tools:      []skills.Tool{skills.ToolCopilot, skills.ToolCodex},
 		LinkMode:   skills.LinkCopy,
 	})
 	if err != nil {
-		t.Fatalf("install com Gemini e Codex: %v", err)
+		t.Fatalf("install com Copilot e Codex: %v", err)
 	}
 
-	geminiHook := filepath.Join(projectDir, ".gemini", "hooks", "validate-preload.sh")
+	copilotHook := filepath.Join(projectDir, ".github", "hooks", "validate-preload.sh")
 	codexHook := filepath.Join(projectDir, ".codex", "hooks", "validate-preload.sh")
 
-	for _, hookPath := range []string{geminiHook, codexHook} {
+	for _, hookPath := range []string{copilotHook, codexHook} {
 		info, err := os.Stat(hookPath)
 		if err != nil {
 			t.Errorf("hook nao instalado: %s: %v", hookPath, err)
@@ -116,18 +115,18 @@ func TestE2E_InstallHooks_GeminiAndCodexHooksInstalledAndBlocking(t *testing.T) 
 		}
 	}
 
-	// Verificar que o hook Gemini retorna exit 1 sem GOVERNANCE_PRELOAD_CONFIRMED
-	cmd := exec.Command("bash", geminiHook)
+	// Verificar que o hook Copilot retorna exit 1 sem GOVERNANCE_PRELOAD_CONFIRMED
+	cmd := exec.Command("bash", copilotHook)
 	cmd.Env = []string{}
 	if err := cmd.Run(); err == nil {
-		t.Error("hook Gemini deveria retornar exit 1 sem GOVERNANCE_PRELOAD_CONFIRMED")
+		t.Error("hook Copilot deveria retornar exit 1 sem GOVERNANCE_PRELOAD_CONFIRMED")
 	}
 
-	// Verificar que o hook Gemini retorna exit 0 com GOVERNANCE_PRELOAD_CONFIRMED=1
-	cmd = exec.Command("bash", geminiHook)
+	// Verificar que o hook Copilot retorna exit 0 com GOVERNANCE_PRELOAD_CONFIRMED=1
+	cmd = exec.Command("bash", copilotHook)
 	cmd.Env = []string{"GOVERNANCE_PRELOAD_CONFIRMED=1"}
 	if err := cmd.Run(); err != nil {
-		t.Errorf("hook Gemini deveria retornar exit 0 com GOVERNANCE_PRELOAD_CONFIRMED=1: %v", err)
+		t.Errorf("hook Copilot deveria retornar exit 0 com GOVERNANCE_PRELOAD_CONFIRMED=1: %v", err)
 	}
 
 	// Verificar que o hook Codex retorna exit 1 sem GOVERNANCE_PRELOAD_CONFIRMED
@@ -145,9 +144,9 @@ func TestE2E_InstallHooks_GeminiAndCodexHooksInstalledAndBlocking(t *testing.T) 
 	}
 }
 
-// TestE2E14_Install_ClaudeOnly_NoGeminiNoCodex verifica que install com apenas Claude
-// nao cria diretorios ou artefatos de Gemini e Codex.
-func TestE2E14_Install_ClaudeOnly_NoGeminiNoCodex(t *testing.T) {
+// TestE2E14_Install_ClaudeOnly_NoOpenCodeNoCodex verifica que install com apenas Claude
+// nao cria diretorios ou artefatos de Copilot e Codex.
+func TestE2E14_Install_ClaudeOnly_NoOpenCodeNoCodex(t *testing.T) {
 	sourceDir := t.TempDir()
 	projectDir := t.TempDir()
 	setupSourceDir(t, sourceDir)
@@ -171,9 +170,9 @@ func TestE2E14_Install_ClaudeOnly_NoGeminiNoCodex(t *testing.T) {
 		t.Errorf(".agents/ deve existir apos install claude: %v", err)
 	}
 
-	// Artefatos Gemini e Codex NAO devem existir
-	if _, err := os.Stat(filepath.Join(projectDir, ".gemini")); err == nil {
-		t.Error(".gemini/ nao deve existir apos install apenas claude")
+	// Artefatos Copilot e Codex NAO devem existir
+	if _, err := os.Stat(filepath.Join(projectDir, ".github", "hooks")); err == nil {
+		t.Error(".github/hooks/ nao deve existir apos install apenas claude")
 	}
 	if _, err := os.Stat(filepath.Join(projectDir, ".codex")); err == nil {
 		t.Error(".codex/ nao deve existir apos install apenas claude")

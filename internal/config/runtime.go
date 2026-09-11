@@ -28,6 +28,7 @@ type Runtime struct {
 	Concurrent             int     `yaml:"concurrent"`
 	BatchSize              int     `yaml:"batch_size"`
 	DefaultTool            string  `yaml:"default_tool"`
+	MaxBugfixIterations    int     `yaml:"max_bugfix_iterations"`
 }
 
 // RuntimeProvider fornece configuracao de runtime stateless.

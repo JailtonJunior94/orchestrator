@@ -1,0 +1,18 @@
+=== RUN   TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing
+--- PASS: TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing (0.53s)
+=== RUN   TestOpenCodeGovernancePluginAllowsWhenPrerequisiteSatisfied
+--- PASS: TestOpenCodeGovernancePluginAllowsWhenPrerequisiteSatisfied (0.75s)
+=== RUN   TestOpenCodeGovernancePluginIgnoresNonMutatingTools
+--- PASS: TestOpenCodeGovernancePluginIgnoresNonMutatingTools (0.14s)
+=== RUN   TestOpenCodeGovernancePluginTimeoutIsDenial
+--- PASS: TestOpenCodeGovernancePluginTimeoutIsDenial (0.32s)
+=== RUN   TestOpenCodeGovernancePluginOrchestratedFailsClosedWithoutValidator
+--- PASS: TestOpenCodeGovernancePluginOrchestratedFailsClosedWithoutValidator (0.26s)
+=== RUN   TestOpenCodeGovernancePluginMemoizesByToolAndFiles
+--- PASS: TestOpenCodeGovernancePluginMemoizesByToolAndFiles (0.17s)
+=== RUN   TestOpenCodeGovernancePluginStatsValidatorOnceAcrossMultipleTools
+--- PASS: TestOpenCodeGovernancePluginStatsValidatorOnceAcrossMultipleTools (1.49s)
+=== RUN   TestOpenCodeGovernancePluginInteractiveWarnsOnceWithoutValidator
+--- PASS: TestOpenCodeGovernancePluginInteractiveWarnsOnceWithoutValidator (0.11s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	4.160s

@@ -146,6 +146,7 @@ func (s *ResolverSuite) TestResolve() {
 					"concurrent: 4",
 					"batch_size: 10",
 					"default_tool: claude",
+					"max_bugfix_iterations: 5",
 				}, "\n") + "\n",
 			},
 			args: args{cwd: "/project"},
@@ -157,6 +158,48 @@ func (s *ResolverSuite) TestResolve() {
 				s.Equal(4, got.Concurrent)
 				s.Equal(10, got.BatchSize)
 				s.Equal("claude", got.DefaultTool)
+				s.Equal(5, got.MaxBugfixIterations)
+			},
+		},
+		{
+			name: "deve respeitar precedencia completa flags > workspace > global > built-in para max_bugfix_iterations",
+			files: map[string]string{
+				"/home/user/.aispec/config.yaml": "max_bugfix_iterations: 2\n",
+				"/project/.claude/config.yaml":   "max_bugfix_iterations: 7\n",
+			},
+			dirs: map[string]bool{"/project/.git": true},
+			args: args{
+				homeDir:   "/home/user",
+				cwd:       "/project",
+				overrides: Runtime{MaxBugfixIterations: 9},
+			},
+			expect: func(got Runtime, err error) {
+				s.NoError(err)
+				s.Equal(9, got.MaxBugfixIterations)
+			},
+		},
+		{
+			name: "deve usar max_bugfix_iterations do workspace quando a flag nao sobrescreve",
+			files: map[string]string{
+				"/home/user/.aispec/config.yaml": "max_bugfix_iterations: 2\n",
+				"/project/.claude/config.yaml":   "max_bugfix_iterations: 7\n",
+			},
+			dirs: map[string]bool{"/project/.git": true},
+			args: args{homeDir: "/home/user", cwd: "/project"},
+			expect: func(got Runtime, err error) {
+				s.NoError(err)
+				s.Equal(7, got.MaxBugfixIterations)
+			},
+		},
+		{
+			name: "deve usar max_bugfix_iterations do global quando nao ha config de workspace",
+			files: map[string]string{
+				"/home/user/.aispec/config.yaml": "max_bugfix_iterations: 2\n",
+			},
+			args: args{homeDir: "/home/user", cwd: "/project"},
+			expect: func(got Runtime, err error) {
+				s.NoError(err)
+				s.Equal(2, got.MaxBugfixIterations)
 			},
 		},
 		{
@@ -170,6 +213,7 @@ func (s *ResolverSuite) TestResolve() {
 				s.Zero(got.Concurrent)
 				s.Zero(got.BatchSize)
 				s.Empty(got.DefaultTool)
+				s.Zero(got.MaxBugfixIterations)
 			},
 		},
 		{
@@ -206,6 +250,17 @@ func (s *ResolverSuite) TestResolve() {
 			scenario.expect(got, err)
 		})
 	}
+}
+
+func (s *ResolverSuite) TestMergeIntoMaxBugfixIterations() {
+	r := &DefaultResolver{}
+	dst := Runtime{MaxBugfixIterations: 3}
+
+	r.mergeInto(&dst, Runtime{MaxBugfixIterations: 8})
+	s.Equal(8, dst.MaxBugfixIterations, "mergeInto deve sobrescrever com valor nao-zero de src")
+
+	r.mergeInto(&dst, Runtime{})
+	s.Equal(8, dst.MaxBugfixIterations, "mergeInto nao deve sobrescrever com zero-value de src")
 }
 
 func (s *ResolverSuite) TestLoadRuntime() {

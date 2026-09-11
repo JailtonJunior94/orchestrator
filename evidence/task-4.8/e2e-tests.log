@@ -1,0 +1,170 @@
+=== RUN   TestE2EApprovalCycle_ApprovesFirstRound
+=== PAUSE TestE2EApprovalCycle_ApprovesFirstRound
+=== RUN   TestE2EApprovalCycle_ApprovesThirdRoundAfterTwoFixes
+=== PAUSE TestE2EApprovalCycle_ApprovesThirdRoundAfterTwoFixes
+=== RUN   TestE2EApprovalCycle_AbortsOnRepeatedFingerprintWithoutSpendingNextRound
+=== PAUSE TestE2EApprovalCycle_AbortsOnRepeatedFingerprintWithoutSpendingNextRound
+=== RUN   TestE2EApprovalCycle_AbortsOnEmptyDiffAfterFix
+=== PAUSE TestE2EApprovalCycle_AbortsOnEmptyDiffAfterFix
+=== RUN   TestE2EApprovalCycle_RemediationWithoutDiffStillProducesRoundEvidence
+=== PAUSE TestE2EApprovalCycle_RemediationWithoutDiffStillProducesRoundEvidence
+=== RUN   TestE2EApprovalCycle_ApprovedWithRemarksFeedsBackToFix
+=== PAUSE TestE2EApprovalCycle_ApprovedWithRemarksFeedsBackToFix
+=== CONT  TestE2EApprovalCycle_ApprovesFirstRound
+=== CONT  TestE2EApprovalCycle_AbortsOnEmptyDiffAfterFix
+=== CONT  TestE2EApprovalCycle_ApprovesThirdRoundAfterTwoFixes
+=== CONT  TestE2EApprovalCycle_AbortsOnRepeatedFingerprintWithoutSpendingNextRound
+=== CONT  TestE2EApprovalCycle_ApprovedWithRemarksFeedsBackToFix
+=== CONT  TestE2EApprovalCycle_RemediationWithoutDiffStillProducesRoundEvidence
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+--- PASS: TestE2EApprovalCycle_ApprovesFirstRound (0.42s)
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+--- PASS: TestE2EApprovalCycle_RemediationWithoutDiffStillProducesRoundEvidence (0.54s)
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+--- PASS: TestE2EApprovalCycle_AbortsOnEmptyDiffAfterFix (0.56s)
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+--- PASS: TestE2EApprovalCycle_ApprovedWithRemarksFeedsBackToFix (0.57s)
+--- PASS: TestE2EApprovalCycle_AbortsOnRepeatedFingerprintWithoutSpendingNextRound (0.57s)
+2026/09/11 06:56:09 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:09 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:09 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:09 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:09 INFO connection closed cause="peer connection closed"
+--- PASS: TestE2EApprovalCycle_ApprovesThirdRoundAfterTwoFixes (0.67s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	0.968s
+=== RUN   TestApprovalCycleParityAcrossThreeProductionPaths
+2026/09/11 06:56:11 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:11 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:11 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:12 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:12 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:12 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:12 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:12 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:12 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:12 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:56:12 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:56:12 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:56:12 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:12 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:12 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:12 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:12 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:12 INFO connection closed cause="peer connection closed"
+2026/09/11 06:56:12 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:56:12 INFO connection closed cause="peer connection closed"
+--- PASS: TestApprovalCycleParityAcrossThreeProductionPaths (1.15s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	1.994s

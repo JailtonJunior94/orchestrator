@@ -26,14 +26,12 @@ func TestCompatibilityTable_IsSupported(t *testing.T) {
 		{name: "codex + gpt-5.4-mini", tool: "codex", model: "gpt-5.4-mini", want: true},
 		{name: "codex + gpt-5.3-codex", tool: "codex", model: "gpt-5.3-codex", want: true},
 		{name: "codex + gpt-5.3-codex-spark", tool: "codex", model: "gpt-5.3-codex-spark", want: true},
-		{name: "gemini + auto", tool: "gemini", model: "auto", want: true},
-		{name: "gemini + pro", tool: "gemini", model: "pro", want: true},
-		{name: "gemini + flash", tool: "gemini", model: "flash", want: true},
-		{name: "gemini + flash-lite", tool: "gemini", model: "flash-lite", want: true},
-		{name: "gemini + gemini-2.5-pro", tool: "gemini", model: "gemini-2.5-pro", want: true},
-		{name: "gemini + gemini-2.5-flash", tool: "gemini", model: "gemini-2.5-flash", want: true},
-		{name: "gemini + gemini-2.5-flash-lite", tool: "gemini", model: "gemini-2.5-flash-lite", want: true},
-		{name: "gemini + gemini-3-pro-preview", tool: "gemini", model: "gemini-3-pro-preview", want: true},
+		{name: "opencode + claude-opus-4", tool: "opencode", model: "claude-opus-4", want: true},
+		{name: "opencode + claude-sonnet-4", tool: "opencode", model: "claude-sonnet-4", want: true},
+		{name: "opencode + claude-haiku-4", tool: "opencode", model: "claude-haiku-4", want: true},
+		{name: "opencode + gpt-5", tool: "opencode", model: "gpt-5", want: true},
+		{name: "opencode + gemini-2.5-pro", tool: "opencode", model: "gemini-2.5-pro", want: true},
+		{name: "opencode + gemini-2.5-flash", tool: "opencode", model: "gemini-2.5-flash", want: true},
 		{name: "copilot + claude-sonnet-4.5", tool: "copilot", model: "claude-sonnet-4.5", want: true},
 		{name: "copilot + claude-sonnet-4.6", tool: "copilot", model: "claude-sonnet-4.6", want: true},
 		{name: "copilot + gpt-5.4", tool: "copilot", model: "gpt-5.4", want: true},
@@ -43,12 +41,12 @@ func TestCompatibilityTable_IsSupported(t *testing.T) {
 		// model vazio — sempre valido para ferramenta conhecida
 		{name: "claude + model vazio", tool: "claude", model: "", want: true},
 		{name: "codex + model vazio", tool: "codex", model: "", want: true},
-		{name: "gemini + model vazio", tool: "gemini", model: "", want: true},
+		{name: "opencode + model vazio", tool: "opencode", model: "", want: true},
 		{name: "copilot + model vazio", tool: "copilot", model: "", want: true},
 		// combinacoes invalidas — modelo nao catalogado
 		{name: "claude + modelo desconhecido", tool: "claude", model: "gpt-5.4", want: false},
 		{name: "codex + modelo desconhecido", tool: "codex", model: "claude-sonnet-4-6", want: false},
-		{name: "gemini + modelo desconhecido", tool: "gemini", model: "gpt-5.4", want: false},
+		{name: "opencode + modelo desconhecido", tool: "opencode", model: "gpt-4", want: false},
 		{name: "copilot + modelo desconhecido", tool: "copilot", model: "gemini-2.5-pro", want: false},
 		// ferramenta desconhecida — sempre false
 		{name: "ferramenta desconhecida com model", tool: "unknown-tool", model: "gpt-5.4", want: false},
@@ -82,7 +80,7 @@ func TestCompatibilityTable_Models(t *testing.T) {
 	}{
 		{name: "claude", tool: "claude", wantLen: 4, wantFirst: "claude-opus-4-7"},
 		{name: "codex", tool: "codex", wantLen: 5, wantFirst: "gpt-5.5"},
-		{name: "gemini", tool: "gemini", wantLen: 8, wantFirst: "auto"},
+		{name: "opencode", tool: "opencode", wantLen: 6, wantFirst: "claude-opus-4"},
 		{name: "copilot", tool: "copilot", wantLen: 6, wantFirst: "claude-sonnet-4.5"},
 		{name: "ferramenta desconhecida retorna nil", tool: "desconhecida", wantNil: true},
 		{name: "ferramenta vazia retorna nil", tool: "", wantNil: true},
@@ -131,7 +129,7 @@ func TestCompatibilityTable_ValidateCombination(t *testing.T) {
 		},
 		{
 			name:    "model vazio em ferramenta conhecida — valido",
-			tool:    "gemini",
+			tool:    "opencode",
 			model:   "",
 			wantErr: nil,
 		},
@@ -254,9 +252,9 @@ func TestValidateModelForIDE(t *testing.T) {
 		}
 	})
 
-	t.Run("gemini + gemini-2.5-pro — aceito", func(t *testing.T) {
+	t.Run("opencode + gemini-2.5-pro — aceito", func(t *testing.T) {
 		t.Parallel()
-		err := NewCatalog().ValidateModelForIDE("gemini", "gemini-2.5-pro", false)
+		err := NewCatalog().ValidateModelForIDE("opencode", "gemini-2.5-pro", false)
 		if err != nil {
 			t.Errorf("nao esperava erro, obteve: %v", err)
 		}
@@ -308,56 +306,50 @@ func TestCodexCompatibilityTable_T34_T35(t *testing.T) {
 	})
 }
 
-// TestCompatibilityTableContainsGemini (RF-28, T-4.0) valida que a CompatibilityTable
-// contém modelos Gemini catalogados e que IsSupported retorna true para eles.
-// Sem mudança de código esperada (RF-28 garante que já estão catalogados em :34-43).
-func TestCompatibilityTableContainsGemini(t *testing.T) {
+// TestCompatibilityTableContainsOpenCode valida que a CompatibilityTable
+// contém modelos OpenCode catalogados e que IsSupported retorna true para eles.
+func TestCompatibilityTableContainsOpenCode(t *testing.T) {
 	t.Parallel()
 
 	table := NewCompatibilityTable()
 
-	// Validar que "gemini" é uma ferramenta reconhecida na tabela.
-	if !table.IsSupported("gemini", "") {
-		t.Error("CompatibilityTable: 'gemini' não é reconhecida como ferramenta válida")
+	// Validar que "opencode" é uma ferramenta reconhecida na tabela.
+	if !table.IsSupported("opencode", "") {
+		t.Error("CompatibilityTable: 'opencode' não é reconhecida como ferramenta válida")
 	}
 
-	// Validar cada modelo Gemini catalogado em :34-43 de compatibility.go.
+	// Validar cada modelo OpenCode catalogado em compatibility.go.
 	models := []string{
+		"claude-opus-4",
+		"claude-sonnet-4",
+		"claude-haiku-4",
+		"gpt-5",
 		"gemini-2.5-pro",
-		"pro",
-		"flash",
-		"flash-lite",
 		"gemini-2.5-flash",
-		"gemini-2.5-flash-lite",
-		"gemini-3-pro-preview",
-		"auto",
 	}
 	for _, model := range models {
-		t.Run("gemini+"+model, func(t *testing.T) {
+		t.Run("opencode+"+model, func(t *testing.T) {
 			t.Parallel()
-			if !table.IsSupported("gemini", model) {
-				t.Errorf("IsSupported(%q, %q) = false; esperava true (RF-28)", "gemini", model)
+			if !table.IsSupported("opencode", model) {
+				t.Errorf("IsSupported(%q, %q) = false; esperava true", "opencode", model)
 			}
 		})
 	}
 
-	// Validar que modelos de outras ferramentas não são aceitos para gemini.
-	t.Run("gemini rejeita modelo de outra ferramenta", func(t *testing.T) {
+	// Validar que modelo nao catalogado nao e aceito para opencode.
+	t.Run("opencode rejeita modelo nao catalogado", func(t *testing.T) {
 		t.Parallel()
-		if table.IsSupported("gemini", "gpt-5.4") {
-			t.Error("IsSupported(\"gemini\", \"gpt-5.4\") = true; esperava false")
-		}
-		if table.IsSupported("gemini", "claude-sonnet-4-6") {
-			t.Error("IsSupported(\"gemini\", \"claude-sonnet-4-6\") = true; esperava false")
+		if table.IsSupported("opencode", "gpt-4") {
+			t.Error("IsSupported(\"opencode\", \"gpt-4\") = true; esperava false")
 		}
 	})
 
-	// Validar que Models("gemini") retorna ≥ 6 entradas.
-	t.Run("gemini tem pelo menos 6 modelos catalogados", func(t *testing.T) {
+	// Validar que Models("opencode") retorna >= 6 entradas.
+	t.Run("opencode tem pelo menos 6 modelos catalogados", func(t *testing.T) {
 		t.Parallel()
-		geminiModels := table.Models("gemini")
-		if len(geminiModels) < 6 {
-			t.Errorf("len(Models(\"gemini\")) = %d; esperava >= 6 (RF-28)", len(geminiModels))
+		openCodeModels := table.Models("opencode")
+		if len(openCodeModels) < 6 {
+			t.Errorf("len(Models(\"opencode\")) = %d; esperava >= 6", len(openCodeModels))
 		}
 	})
 }

@@ -25,7 +25,7 @@ cd "$REPO_ROOT" || exit 2
 # Prefixos ancorados na raiz do repositorio. Um token so e tratado como caminho
 # quando comeca por um destes: evita tratar pacote npm, flag de comando ou
 # caminho relativo a outra raiz como referencia deste repositorio.
-_PREFIXES='^(internal|cmd|scripts|docs|tests|evals|deployment|migrations|taskfiles|configs|\.agents|\.claude|\.github|\.codex|\.gemini|\.specs)/'
+_PREFIXES='^(internal|cmd|scripts|docs|tests|evals|deployment|migrations|taskfiles|configs|\.agents|\.claude|\.github|\.codex|\.opencode|\.specs)/'
 
 # Caminhos documentados como opcionais por decisao de arquitetura: existem apenas
 # quando a pessoa opta por cria-los, entao ausencia nao e defeito.

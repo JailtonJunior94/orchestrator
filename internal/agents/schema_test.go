@@ -203,7 +203,7 @@ func (s *SchemaSuite) TestValidateAgentFrontmatterAceitaTodosRuntimeIDE() {
 	}{
 		{name: "deve aceitar claude", ide: "claude"},
 		{name: "deve aceitar codex", ide: "codex"},
-		{name: "deve aceitar gemini", ide: "gemini"},
+		{name: "deve aceitar opencode", ide: "opencode"},
 		{name: "deve aceitar copilot", ide: "copilot"},
 	}
 

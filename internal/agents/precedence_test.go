@@ -66,8 +66,8 @@ func (s *PrecedenceSuite) TestApplyRuntimePrecedence() {
 		{
 			name: "deve preservar todos os campos explicitados pela CLI",
 			cfg: &RuntimeOverride{
-				IDE:                     "gemini",
-				Model:                   "gemini-pro",
+				IDE:                     "opencode",
+				Model:                   "opencode-model",
 				ReasoningEffort:         "low",
 				AccessMode:              "readonly",
 				ExplicitIDE:             true,
@@ -82,8 +82,8 @@ func (s *PrecedenceSuite) TestApplyRuntimePrecedence() {
 				AccessMode:      "bypass-permissions",
 			},
 			expect: func(cfg *RuntimeOverride) {
-				s.Equal("gemini", cfg.IDE)
-				s.Equal("gemini-pro", cfg.Model)
+				s.Equal("opencode", cfg.IDE)
+				s.Equal("opencode-model", cfg.Model)
 				s.Equal("low", cfg.ReasoningEffort)
 				s.Equal("readonly", cfg.AccessMode)
 			},

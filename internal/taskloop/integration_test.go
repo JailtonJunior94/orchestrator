@@ -55,7 +55,7 @@ import (
 // 2. Substitui "**Status:** <status>" por "**Status:** done" no task file
 // 3. Retorna exit 0
 //
-// Funciona com todos os adapters: claude (-p <prompt>), codex (posicional), gemini (-p), copilot (-p).
+// Funciona com todos os adapters: claude (-p <prompt>), codex (posicional), copilot (-p).
 const successMockScript = `#!/usr/bin/env python3
 import sys, re, os
 
@@ -181,7 +181,7 @@ func runIntegrationExecute(t *testing.T, prdDir, tool, reportPath string, timeou
 //     Verificacoes: loop abortado, stop reason contem "autenticado".
 //
 // Para cada cenario, o mesmo comportamento e esperado para todas as ferramentas:
-// claude (binary claude), claude (binary claudiney), codex, gemini, copilot.
+// claude (binary claude), claude (binary claudiney), codex, copilot.
 func TestParidadeIntegration(t *testing.T) {
 	type toolCase struct {
 		tool     string   // ferramenta para Options.Tool
@@ -193,7 +193,6 @@ func TestParidadeIntegration(t *testing.T) {
 		{tool: "claude", binaries: []string{"claude"}, label: "claude"},
 		{tool: "claude", binaries: []string{"claudiney"}, label: "claude-claudiney"},
 		{tool: "codex", binaries: []string{"codex"}, label: "codex"},
-		{tool: "gemini", binaries: []string{"gemini"}, label: "gemini"},
 		{tool: "copilot", binaries: []string{"copilot"}, label: "copilot"},
 	}
 
@@ -371,7 +370,6 @@ func TestParidadeIntegrationTimeout(t *testing.T) {
 	}{
 		{"claude", "claude", "claude"},
 		{"codex", "codex", "codex"},
-		{"gemini", "gemini", "gemini"},
 		{"copilot", "copilot", "copilot"},
 	}
 
@@ -479,12 +477,14 @@ func TestRunLoopIntegrationEscalonamento(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
 	svc := NewService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
 
-	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
+	findingAt := func(file string) []Finding {
+		return []Finding{{Severity: SeverityCritical, File: file, Line: 1, Message: "bug"}}
+	}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
-		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
-		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
-		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
-		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+		{Verdict: VerdictRejected, Findings: findingAt("a.go"), RawOutput: rawVerdict(VerdictRejected)},
+		{Verdict: VerdictRejected, Findings: findingAt("b.go"), RawOutput: rawVerdict(VerdictRejected)},
+		{Verdict: VerdictRejected, Findings: findingAt("c.go"), RawOutput: rawVerdict(VerdictRejected)},
+		{Verdict: VerdictRejected, Findings: findingAt("d.go"), RawOutput: rawVerdict(VerdictRejected)},
 	}}
 
 	deps := RunLoopDeps{

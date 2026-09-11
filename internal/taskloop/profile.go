@@ -22,10 +22,10 @@ var (
 
 // _toolProviderMap mapeia ferramenta para seu provider.
 var _toolProviderMap = map[string]string{
-	"claude":  "anthropic",
-	"codex":   "openai",
-	"gemini":  "google",
-	"copilot": "github",
+	"claude":   "anthropic",
+	"codex":    "openai",
+	"copilot":  "github",
+	"opencode": "opencode",
 }
 
 // inferProvider retorna o provider para a ferramenta informada.
@@ -38,7 +38,7 @@ func (c *Catalog) inferProvider(tool string) string {
 // Value Object: imutavel, auto-validante, fail fast no construtor.
 type ExecutionProfile struct {
 	role     string // "executor" ou "reviewer"
-	tool     string // claude, codex, gemini, copilot
+	tool     string // claude, codex, copilot, opencode
 	provider string // anthropic, openai, google, github (inferido)
 	model    string // modelo especifico ou "" (default da ferramenta)
 }
@@ -53,7 +53,7 @@ func NewExecutionProfile(role, tool, model string) (ExecutionProfile, error) {
 
 	provider, ok := _toolProviderMap[tool]
 	if !ok {
-		return ExecutionProfile{}, fmt.Errorf("%w: %q — opcoes: claude, codex, gemini, copilot", ErrToolInvalida, tool)
+		return ExecutionProfile{}, fmt.Errorf("%w: %q — opcoes: claude, codex, copilot, opencode", ErrToolInvalida, tool)
 	}
 
 	return ExecutionProfile{

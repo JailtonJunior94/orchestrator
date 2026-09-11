@@ -15,10 +15,8 @@ common_aliases:
   str_replace_editor: edit
 
 # inherit_common: lista de drivers que herdam common_aliases sem overrides.
-# Gemini está no grupo "drivers compartilhando aliases comuns" junto a Claude/Cursor/Droid/OpenCode/Pi
-# conforme Compozy tool_call_name.go:84.
 inherit_common:
-  - gemini
+  - opencode
 
 aliases:
   claude:

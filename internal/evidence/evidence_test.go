@@ -501,39 +501,29 @@ func TestValidateTask_ClaudeMetricsSection_Present_DoesNotBlock(t *testing.T) {
 	}
 }
 
-// ── Métricas Gemini-2026 — validador permissivo (F4-Gemini, RF-20) ────────────
-// A seção "Métricas Gemini-2026" é OPCIONAL no execution_report.md.
-// Presença ou ausência não deve alterar o resultado de Pass=true para relatório completo.
+// ── Métricas por driver — validador permissivo ────────────────────────────────
+// Uma seção extra de métricas por driver (ex: "Métricas OpenCode") é OPCIONAL no
+// execution_report.md. Presença ou ausência não deve alterar o resultado de
+// Pass=true para relatório completo.
 
-// T-37: TestEvidenceRendersGeminiMetricsSection — relatório com Gemini* não-zero renderiza tabela
-func TestEvidenceRendersGeminiMetricsSection_Present_DoesNotBlock(t *testing.T) {
-	// Relatório completo COM a seção de métricas Gemini → deve continuar passando.
-	withGeminiMetrics := taskComplete + `
-## Métricas Gemini-2026
+func TestEvidenceRendersDriverMetricsSection_Present_DoesNotBlock(t *testing.T) {
+	// Relatório completo COM uma seção de métricas extra → deve continuar passando.
+	withDriverMetrics := taskComplete + `
+## Métricas OpenCode
 | Métrica | Valor |
 |---|---|
 | cache_read_tokens | 100 |
-| effective_context_tokens | 200 |
-| prompt_tokens_billed | 300 |
-| thoughts_tokens | 0 |
 `
-	r := NewValidator().Validate([]byte(withGeminiMetrics), KindTask, nil)
+	r := NewValidator().Validate([]byte(withDriverMetrics), KindTask, nil)
 	if !r.Pass {
-		t.Errorf("Pass deve ser true com seção Métricas Gemini-2026; findings: %v", r.Findings)
+		t.Errorf("Pass deve ser true com seção de métricas extra; findings: %v", r.Findings)
 	}
 }
 
-// T-38: TestEvidenceMissingGeminiMetricsDoesNotBlock — ausência da seção Gemini não bloqueia
-func TestEvidenceMissingGeminiMetricsDoesNotBlock(t *testing.T) {
-	// Relatório completo SEM a seção de métricas Gemini → deve passar (ausência não bloqueia).
+func TestEvidenceMissingDriverMetricsDoesNotBlock(t *testing.T) {
+	// Relatório completo SEM seção de métricas extra → deve passar (ausência não bloqueia).
 	r := NewValidator().Validate([]byte(taskComplete), KindTask, nil)
 	if !r.Pass {
-		t.Errorf("Pass deve ser true sem seção Métricas Gemini-2026; findings: %v", r.Findings)
-	}
-	// Garantir que nenhum finding menciona Gemini.
-	for _, f := range r.Findings {
-		if f.Label == "secao Métricas Gemini-2026" {
-			t.Error("nao esperado finding de 'secao Métricas Gemini-2026' — seção é opcional (RF-20)")
-		}
+		t.Errorf("Pass deve ser true sem seção de métricas extra; findings: %v", r.Findings)
 	}
 }

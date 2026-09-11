@@ -122,12 +122,10 @@ declare -a orchestrator_hooks=(
 declare -a tool_hook_mirrors=(
   "$repo_root/.claude/hooks"
   "$repo_root/.codex/hooks"
-  "$repo_root/.gemini/hooks"
   "$repo_root/.github/hooks"
   "$repo_root/internal/embedded/assets/.agents/hooks"
   "$repo_root/internal/embedded/assets/.claude/hooks"
   "$repo_root/internal/embedded/assets/.codex/hooks"
-  "$repo_root/internal/embedded/assets/.gemini/hooks"
   "$repo_root/internal/embedded/assets/.github/hooks"
 )
 hook_drift=0
@@ -170,11 +168,9 @@ declare -a validation_hooks=(
 declare -a tool_dirs=(
   "$repo_root/.claude/hooks"
   "$repo_root/.codex/hooks"
-  "$repo_root/.gemini/hooks"
   "$repo_root/.github/hooks"
   "$repo_root/internal/embedded/assets/.claude/hooks"
   "$repo_root/internal/embedded/assets/.codex/hooks"
-  "$repo_root/internal/embedded/assets/.gemini/hooks"
   "$repo_root/internal/embedded/assets/.github/hooks"
 )
 validation_drift=0
@@ -191,7 +187,51 @@ if [[ "$validation_drift" -eq 0 ]]; then
   echo "Hooks de validacao por-tool em paridade: ${#validation_hooks[@]} hooks x ${#tool_dirs[@]} tools"
 fi
 
-if [[ "$drift_count" -gt 0 || "$lib_drift" -gt 0 || "$hook_drift" -gt 0 || "$validation_drift" -gt 0 ]]; then
+session_end_canonical="$repo_root/.agents/scripts/validate-session-end.sh"
+declare -a session_end_gate_dirs=(
+  "$repo_root/.claude/hooks"
+  "$repo_root/.codex/hooks"
+  "$repo_root/.github/hooks"
+  "$repo_root/internal/embedded/assets/.claude/hooks"
+  "$repo_root/internal/embedded/assets/.codex/hooks"
+  "$repo_root/internal/embedded/assets/.github/hooks"
+  "$repo_root/internal/embedded/assets/.agents/scripts"
+)
+session_end_drift=0
+if [[ -f "$session_end_canonical" ]]; then
+  for mirror in "${session_end_gate_dirs[@]}"; do
+    mirror_path="$mirror/validate-session-end.sh"
+    if [[ ! -f "$mirror_path" ]]; then
+      echo "DRIFT session-end gate: validate-session-end.sh ausente em $mirror"
+      session_end_drift=$((session_end_drift + 1))
+      continue
+    fi
+    if ! diff -q "$session_end_canonical" "$mirror_path" > /dev/null 2>&1; then
+      echo "DRIFT session-end gate: validate-session-end.sh diverge entre .agents/scripts e $mirror"
+      session_end_drift=$((session_end_drift + 1))
+    fi
+  done
+  if [[ "$session_end_drift" -eq 0 ]]; then
+    echo "Gate de encerramento em paridade nos 4 agentes oficiais: ${#session_end_gate_dirs[@]} mirrors"
+  fi
+fi
+
+opencode_plugin_drift=0
+opencode_plugin_embedded="$repo_root/internal/embedded/assets/.opencode/plugin/governance.js"
+if [[ ! -f "$opencode_plugin_embedded" ]]; then
+  echo "DRIFT opencode plugin: governance.js ausente em internal/embedded/assets/.opencode/plugin/"
+  opencode_plugin_drift=1
+elif [[ -f "$repo_root/.opencode/plugin/governance.js" ]]; then
+  if ! diff -q "$repo_root/.opencode/plugin/governance.js" "$opencode_plugin_embedded" > /dev/null 2>&1; then
+    echo "DRIFT opencode plugin: governance.js diverge entre .opencode/plugin e internal/embedded/assets/.opencode/plugin"
+    opencode_plugin_drift=1
+  fi
+fi
+if [[ "$opencode_plugin_drift" -eq 0 ]]; then
+  echo "Plugin do OpenCode presente e em paridade: internal/embedded/assets/.opencode/plugin/governance.js"
+fi
+
+if [[ "$drift_count" -gt 0 || "$lib_drift" -gt 0 || "$hook_drift" -gt 0 || "$validation_drift" -gt 0 || "$session_end_drift" -gt 0 || "$opencode_plugin_drift" -gt 0 ]]; then
   echo
   echo "Para corrigir: ./scripts/sync-skills.sh"
   exit 1

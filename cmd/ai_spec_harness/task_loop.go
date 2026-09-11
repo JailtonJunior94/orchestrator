@@ -12,6 +12,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/taskloop"
 	"github.com/spf13/cobra"
 )
@@ -30,7 +31,7 @@ func newTaskLoopCmd() *cobra.Command {
 		Use:   "task-loop <prd-folder>",
 		Short: "Executa tasks de um PRD folder sequencialmente via agente de IA",
 		Long: `Executa em loop todas as tasks elegiveis de uma pasta PRD, invocando
-um agente de IA (Claude Code, Codex, Gemini ou Copilot) para cada task.
+um agente de IA (Claude Code, Codex, Copilot ou OpenCode) para cada task.
 
 Cada iteracao:
   1. Parseia tasks.md para identificar a proxima task elegivel
@@ -92,26 +93,8 @@ Exemplos:
 			disableHooks, _ := cmd.Flags().GetBool("disable-hooks")
 			skipDriftGuard, _ := cmd.Flags().GetBool("skip-drift-guard")
 			autoReview, _ := cmd.Flags().GetBool("auto-review")
-
-			// RF-16: switch tool-aware para defaults de memory (F3-Gemini).
-			// Aplica defaults Gemini-generosos (250 linhas/20 KiB workflow; 400 linhas/32 KiB task)
-			// somente quando --tool gemini e a flag correspondente NÃO foi setada explicitamente.
-			// Override explícito via flag prevalece (ADR-015 TD-04).
-			// Defaults Claude/Codex/Copilot (150/200 linhas, 12/16 KiB) preservados (RF-30).
-			if tool == "gemini" {
-				if !cmd.Flags().Changed("memory-workflow-limit-lines") {
-					memWorkflowLimitLines = 250
-				}
-				if !cmd.Flags().Changed("memory-task-limit-lines") {
-					memTaskLimitLines = 400
-				}
-				if !cmd.Flags().Changed("memory-workflow-limit-bytes") {
-					memWorkflowLimitBytes = 20 * 1024
-				}
-				if !cmd.Flags().Changed("memory-task-limit-bytes") {
-					memTaskLimitBytes = 32 * 1024
-				}
-			}
+			maxBugfixIterations, _ := cmd.Flags().GetInt("max-bugfix-iterations")
+			maxBugfixIterationsSet := cmd.Flags().Changed("max-bugfix-iterations")
 
 			// Validação enum --reasoning-effort (RF-09, RF-10 — ADR-013 D-08)
 			validReasoning := map[string]bool{"low": true, "medium": true, "high": true}
@@ -132,22 +115,10 @@ Exemplos:
 			// Warning único para --access-mode=full via sync.Once (R-03 alto, ADR-013 D-08, PRD HU-03/Q1)
 			if accessMode == "full" {
 				_accessModeFullWarnOnce.Do(func() {
-					effectiveTool := tool
-					if effectiveTool == "" {
-						effectiveTool = execTool
-					}
-					switch effectiveTool {
-					case "gemini":
-						// RF-33 (ADR-015): warning específico para Gemini --approval-mode=yolo.
-						_, _ = fmt.Fprintln(os.Stderr,
-							"WARNING: --access-mode=full ativa --approval-mode=yolo no gemini-cli. "+
-								"Pré-condição: consentimento operacional. Ver GEMINI.md.")
-					default:
-						_, _ = fmt.Fprintln(os.Stderr,
-							"WARNING: --access-mode=full ativa sandbox_mode=danger-full-access no codex-acp. "+
-								"Pré-condição: consentimento operacional. Codex terá acesso pleno ao filesystem e à rede. "+
-								"Use somente em ambientes isolados. Ver CODEX.md.")
-					}
+					_, _ = fmt.Fprintln(os.Stderr,
+						"WARNING: --access-mode=full ativa sandbox_mode=danger-full-access no codex-acp. "+
+							"Pré-condição: consentimento operacional. Codex terá acesso pleno ao filesystem e à rede. "+
+							"Use somente em ambientes isolados. Ver CODEX.md.")
 				})
 			}
 
@@ -162,6 +133,12 @@ Exemplos:
 					effectiveTool = execTool
 				}
 				if _, ok := runtimeACPCatalog[effectiveTool]; !ok {
+					if _, resolveErr := skills.NewCatalog().ResolveTool(effectiveTool); resolveErr != nil {
+						var removedErr *skills.RemovedAgentError
+						if errors.As(resolveErr, &removedErr) {
+							return removedErr
+						}
+					}
 					supported := make([]string, 0, len(runtimeACPCatalog))
 					for k := range runtimeACPCatalog {
 						supported = append(supported, k)
@@ -175,6 +152,15 @@ Exemplos:
 			if activityTimeout < 0 {
 				_, _ = fmt.Fprintf(os.Stderr, "--activity-timeout não pode ser negativo\n")
 				return newExitError(2)
+			}
+
+			if maxBugfixIterationsSet && maxBugfixIterations < 1 {
+				_, _ = fmt.Fprintf(os.Stderr,
+					"--max-bugfix-iterations inválido: %d — minimo aceito: 1\n", maxBugfixIterations)
+				return newExitError(2)
+			}
+			if !maxBugfixIterationsSet {
+				maxBugfixIterations = 0
 			}
 
 			// Validacao mutua exclusiva de --agent com --tool e modo avancado (D-06)
@@ -197,9 +183,11 @@ Exemplos:
 				return fmt.Errorf("--reviewer-model requer --reviewer-tool")
 			}
 
-			// Validacao de ferramenta no modo simples
-			if tool != "" && !taskloop.ValidTools[tool] {
-				return fmt.Errorf("ferramenta invalida %q — opcoes: claude, codex, gemini, copilot", tool)
+			if tool != "" && runtime == "legacy" && !taskloop.ValidTools[tool] {
+				if _, err := skills.NewCatalog().ResolveTool(tool); err != nil {
+					return err
+				}
+				return fmt.Errorf("ferramenta invalida %q — opcoes: claude, codex, copilot", tool)
 			}
 
 			// Resolver perfis: converte flags em ProfileConfig (nil = modo simples)
@@ -246,6 +234,8 @@ Exemplos:
 				DisableHooks:             disableHooks,
 				SkipDriftGuard:           skipDriftGuard,
 				AutoReview:               autoReview,
+				MaxBugfixIterations:      maxBugfixIterations,
+				MaxBugfixIterationsSet:   maxBugfixIterationsSet,
 			})
 			if errors.Is(err, airuntime.ErrLauncherUnavailable) {
 				_, _ = fmt.Fprintln(os.Stderr, err)
@@ -261,7 +251,7 @@ Exemplos:
 
 func (c *taskLoopCommand) registerFlags(cmd *cobra.Command) {
 	// Flags existentes (preservadas)
-	cmd.Flags().String("tool", "", "Agente de IA: claude, codex, gemini, copilot (modo simples)")
+	cmd.Flags().String("tool", "", "Agente de IA: claude, codex, copilot, opencode (modo simples)")
 	cmd.Flags().String("agent", "", "Nome do agente declarativo (AGENT.md); mutuamente exclusivo com --tool e --executor-tool")
 	cmd.Flags().Bool("dry-run", false, "Mostra o que seria executado sem invocar o agente")
 	cmd.Flags().Int("max-iterations", 20, "Limite maximo de iteracoes do loop")
@@ -269,9 +259,9 @@ func (c *taskLoopCommand) registerFlags(cmd *cobra.Command) {
 	cmd.Flags().String("report-path", "", "Caminho do relatorio final (default: task-loop-report-<timestamp>.md)")
 
 	// Flags novas — modo avancado por papel
-	cmd.Flags().String("executor-tool", "", "Ferramenta do executor (modo avancado): claude, codex, gemini, copilot")
+	cmd.Flags().String("executor-tool", "", "Ferramenta do executor (modo avancado): claude, codex, copilot, opencode")
 	cmd.Flags().String("executor-model", "", "Modelo do executor (ex: claude-sonnet-4-6)")
-	cmd.Flags().String("reviewer-tool", "", "Ferramenta do reviewer (modo avancado): claude, codex, gemini, copilot")
+	cmd.Flags().String("reviewer-tool", "", "Ferramenta do reviewer (modo avancado): claude, codex, copilot, opencode")
 	cmd.Flags().String("reviewer-model", "", "Modelo do reviewer (ex: claude-opus-4-6)")
 	cmd.Flags().String("fallback-tool", "", "Ferramenta de fallback para validacao pre-loop")
 	cmd.Flags().Bool("allow-unknown-model", false, "Aceitar combinacoes ferramenta-modelo nao catalogadas")
@@ -280,7 +270,7 @@ func (c *taskLoopCommand) registerFlags(cmd *cobra.Command) {
 	cmd.Flags().String("reviewer-fallback-model", "", "Modelo de fallback nativo do reviewer (Claude only)")
 
 	// Flags ACP runtime (RF-01, RF-02, RF-07, RF-11)
-	cmd.Flags().String("runtime", "legacy", "Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, codex, copilot, gemini)")
+	cmd.Flags().String("runtime", "legacy", "Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, codex, copilot, opencode)")
 	cmd.Flags().Duration("activity-timeout", 120*time.Second, "Timeout de inatividade do agente ACP (0 = desabilitado); aceita time.Duration: 90s, 2m")
 	cmd.Flags().Bool("quiet", false, "Suprime stream humano (stdout); jsonl e warnings continuam")
 
@@ -328,4 +318,10 @@ func (c *taskLoopCommand) registerFlags(cmd *cobra.Command) {
 			"e git diff acumulado. Parseia [HARD]/BLOQUEADO/CRÍTICO → Summary.ReviewStatus=blocked. "+
 			"HARD: default false; sessões filho têm auto-review=false forçado (anti-recursão). "+
 			"Dobra custo de tokens — usar somente quando necessário. Ver ADR-014 §D-07.")
+
+	cmd.Flags().Int("max-bugfix-iterations", 5,
+		"Teto de rodadas do Ciclo de Aprovacao (RF-35); minimo aceito 1; default 5. "+
+			"Configuravel tambem via arquivo de configuracao (workspace/global), respeitando a precedencia "+
+			"flags > workspace > global > defaults (ADR-016). Valor 0 ou negativo falha explicitamente "+
+			"em vez de ser normalizado em silencio.")
 }

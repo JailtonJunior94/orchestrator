@@ -8,10 +8,11 @@ import (
 
 // ReviewResult armazena o resultado da revisao de uma task.
 type ReviewResult struct {
-	Duration time.Duration
-	ExitCode int
-	Output   string
-	Note     string
+	Duration        time.Duration
+	ExitCode        int
+	Output          string
+	Note            string
+	CycleStopReason string
 }
 
 // BugfixResult armazena o resultado do bugfix invocado apos revisao com achados criticos.
@@ -318,6 +319,9 @@ func (r *Report) renderAvancado() []byte {
 				fmt.Fprintf(&b, "- **Exit Code:** %d\n", rr.ExitCode)
 				if rr.Note != "" {
 					fmt.Fprintf(&b, "- **Note:** %s\n", rr.Note)
+				}
+				if rr.CycleStopReason != "" {
+					fmt.Fprintf(&b, "- **Cycle Stop Reason:** %s\n", rr.CycleStopReason)
 				}
 				if rr.Output != "" {
 					output := rr.Output

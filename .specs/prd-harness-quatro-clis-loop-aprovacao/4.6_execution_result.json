@@ -1,0 +1,106 @@
+{
+  "schema_version": 2,
+  "run_id": "task-4.6-runloop-ao-agregado-2026-09-11",
+  "task_id": "4.6",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
+  "patch_sha256": "27858a87fadee4a917d43ce85eb5baebbcf334f64b846a04f434fb12e4beff88",
+  "patch_ref": "evidence/task-4.6/4.6.patch",
+  "final_state_sha256": "51f93f4dff15db2f71d3db74fb2361ebaf85b74a2e11cfcf715d3bd16a8df5ba",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./... && go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "452d7a73002c608776e512e3d5ea867cfc4432f74202dc5fb7ba9d4bef89c1eb"
+    },
+    {
+      "command": "go test -tags=integration ./internal/taskloop/... -count=1",
+      "exit_code": 0,
+      "output_sha256": "a6424f4508781823c881d6eb5a640bde9d46d058598f121917441bd39c2b6313"
+    },
+    {
+      "command": "go test ./internal/taskloop/... -count=1",
+      "exit_code": 0,
+      "output_sha256": "eca4bb1d69715ff81d8e3b8fa2c9934ec86c362dc4a75deecee9a1cfc43dc152"
+    },
+    {
+      "command": "go test ./internal/taskloop/... ./internal/approval/... -run 'TestRunLoopRejected|TestBugfixAttemptsFromCycle|TestFinalReviewFromCycleResult|TestRepositoryPortCheckpointFallsBackToDiffHashWithoutGit' -v -count=1",
+      "exit_code": 0,
+      "output_sha256": "3551bcbd6772d2b70b53e6cb7918fb8dba4c6aab72184a0bccf2a749fbc496da"
+    },
+    {
+      "command": "make check-spec-paths check-skills-sync check-scripts-sync",
+      "exit_code": 0,
+      "output_sha256": "fe3cb47a406baae5c9df86393c3a6d5958947f8fe3d1cdf64addde8d6a15c88e"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "grep-approval-occurrences-in-runloop-and-bugfix",
+      "evidence_ref": "evidence/task-4.6/approval-grep.log"
+    },
+    {
+      "id": "taskloop-suite-green-no-assertion-inversion",
+      "evidence_ref": "evidence/task-4.6/unit-tests.log"
+    },
+    {
+      "id": "runloop-conducts-cycle-fresh-round-session-rf34",
+      "evidence_ref": "evidence/task-4.6/db3-tests.log"
+    },
+    {
+      "id": "cycle-terminal-state-escalates-no-retry-rf45",
+      "evidence_ref": "evidence/task-4.6/db3-tests.log"
+    },
+    {
+      "id": "bugfix-attempts-from-cycle-reconstructs-iterations",
+      "evidence_ref": "evidence/task-4.6/db3-tests.log"
+    },
+    {
+      "id": "runloop-integration-test-diffs-justified-by-requirement",
+      "evidence_ref": "evidence/task-4.6/diff-stat.log"
+    },
+    {
+      "id": "bugfix-test-untouched-no-assertion-inversion",
+      "evidence_ref": "evidence/task-4.6/bugfix-test-untouched.log"
+    },
+    {
+      "id": "checkpoint-fallback-sha256-without-git-db3g1",
+      "evidence_ref": "evidence/task-4.6/db3-tests.log"
+    },
+    {
+      "id": "t-rev-01-02-04-green-untouched",
+      "evidence_ref": "evidence/task-4.6/build-vet-test.log"
+    },
+    {
+      "id": "r-style-001-new-touched-code-english-zero-comments-no-underscore",
+      "evidence_ref": "evidence/task-4.6/4.6.patch"
+    },
+    {
+      "id": "make-sync-gates-green",
+      "evidence_ref": "evidence/task-4.6/sync-gates.log"
+    },
+    {
+      "id": "build-vet-test-green",
+      "evidence_ref": "evidence/task-4.6/build-vet-test.log"
+    },
+    {
+      "id": "integration-taskloop-green",
+      "evidence_ref": "evidence/task-4.6/integration.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-4.6/4.6.patch",
+    "evidence/task-4.6/build-vet-test.log",
+    "evidence/task-4.6/integration.log",
+    "evidence/task-4.6/unit-tests.log",
+    "evidence/task-4.6/db3-tests.log",
+    "evidence/task-4.6/approval-grep.log",
+    "evidence/task-4.6/diff-stat.log",
+    "evidence/task-4.6/bugfix-test-untouched.log",
+    "evidence/task-4.6/sync-gates.log",
+    "evidence/task-4.6/review.md"
+  ],
+  "review_verdict": "approved"
+}

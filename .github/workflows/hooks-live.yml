@@ -1,0 +1,41 @@
+name: Hooks Live Tests (not a merge gate)
+
+on:
+  schedule:
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  hooks-live:
+    name: Hooks Live Dispatch (nightly, not a merge gate)
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Setup Node.js (opencode)
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Install opencode-ai via npm
+        run: npm install -g opencode-ai@1.18.30
+
+      - name: Run hooks live tests
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: make test-hooks-live
+
+      - name: Upload evidence artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hooks-live-evidence-${{ github.run_id }}
+          path: evidence/
+          if-no-files-found: ignore
+          retention-days: 7

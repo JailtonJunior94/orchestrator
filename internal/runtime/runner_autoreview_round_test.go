@@ -42,6 +42,7 @@ func gitRepoWithReviewSkill(t *testing.T) string {
 	run("init")
 	run("config", "user.email", "test@example.com")
 	run("config", "user.name", "Test")
+	run("config", "commit.gpgsign", "false")
 	run("add", ".")
 	run("commit", "-m", "base")
 	return dir

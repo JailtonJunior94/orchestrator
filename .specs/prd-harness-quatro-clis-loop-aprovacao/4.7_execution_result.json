@@ -1,0 +1,99 @@
+{
+  "schema_version": 2,
+  "run_id": "task-4.7-acprunner-e-quatro-lacunas-2026-09-11",
+  "task_id": "4.7",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
+  "patch_sha256": "ca681a983db9025e57d0148fb0ee0670dc2aa8eb53b9c07d8d85991c5afcc283",
+  "patch_ref": "evidence/task-4.7/4.7.patch",
+  "final_state_sha256": "f6769443dfb413aa9e4a0099bbb1df078c1d3bad18b8d0ca68faca82ba738661",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./... && GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "229866e6e0b378fe3207be409212f23a46968dc6c4f407f232292f87e6a7996e"
+    },
+    {
+      "command": "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false go test -tags=integration ./internal/runtime/... -count=1",
+      "exit_code": 0,
+      "output_sha256": "dff32e3359c42bd2b0ef0ac37cdad4d2ed957cc48fe4108476a523d5112e5644"
+    },
+    {
+      "command": "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false go test ./internal/runtime/ -run TestACPRunner -v -count=1",
+      "exit_code": 0,
+      "output_sha256": "b4e6683f3777b53a33bcc8c9f83bcd6e0b00d55d4febc11d8797cf8a49b1d192"
+    },
+    {
+      "command": "make check-spec-paths check-skills-sync check-scripts-sync check-hooks-sync",
+      "exit_code": 0,
+      "output_sha256": "422e1b36806c12d71c9b0d67f32a2d12073b965043748e537df4a5cb41fcbba7"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "grep-approval-occurrences-in-runner-go",
+      "evidence_ref": "evidence/task-4.7/approval-grep.log"
+    },
+    {
+      "id": "t-rev-01-02-04-green-no-assertion-change",
+      "evidence_ref": "evidence/task-4.7/cycle-tests.log"
+    },
+    {
+      "id": "runner-autoreview-test-diff-empty",
+      "evidence_ref": "evidence/task-4.7/diff-stat-autoreview-test.log"
+    },
+    {
+      "id": "approved-with-remarks-feeds-fix-round",
+      "evidence_ref": "evidence/task-4.7/cycle-tests.log"
+    },
+    {
+      "id": "repeated-fingerprint-aborts-without-spending-next-round",
+      "evidence_ref": "evidence/task-4.7/cycle-tests.log"
+    },
+    {
+      "id": "fix-without-diff-aborts",
+      "evidence_ref": "evidence/task-4.7/cycle-tests.log"
+    },
+    {
+      "id": "cycle-terminal-state-no-retry-rf45",
+      "evidence_ref": "evidence/task-4.7/cycle-tests.log"
+    },
+    {
+      "id": "empty-task-file-name-keeps-one-shot",
+      "evidence_ref": "evidence/task-4.7/cycle-tests.log"
+    },
+    {
+      "id": "r-style-001-new-touched-code",
+      "evidence_ref": "evidence/task-4.7/4.7.patch"
+    },
+    {
+      "id": "make-sync-gates-green",
+      "evidence_ref": "evidence/task-4.7/sync-gates.log"
+    },
+    {
+      "id": "build-vet-test-green",
+      "evidence_ref": "evidence/task-4.7/build-vet-test.log"
+    },
+    {
+      "id": "integration-runtime-taskloop-green",
+      "evidence_ref": "evidence/task-4.7/integration.log"
+    },
+    {
+      "id": "golden-files-byte-identical",
+      "evidence_ref": "evidence/task-4.7/sync-gates.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-4.7/4.7.patch",
+    "evidence/task-4.7/build-vet-test.log",
+    "evidence/task-4.7/integration.log",
+    "evidence/task-4.7/cycle-tests.log",
+    "evidence/task-4.7/approval-grep.log",
+    "evidence/task-4.7/diff-stat-autoreview-test.log",
+    "evidence/task-4.7/sync-gates.log",
+    "evidence/task-4.7/review.md"
+  ],
+  "review_verdict": "approved"
+}

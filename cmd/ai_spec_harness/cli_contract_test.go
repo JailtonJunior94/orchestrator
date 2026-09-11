@@ -185,6 +185,30 @@ func TestCLISchemaContainsAllTools(t *testing.T) {
 	}
 }
 
+// TestCLISchemaDoesNotContainRetiredAgents (task 10.0, direção inversa de
+// TestCLISchemaContainsAllTools) valida que nenhum agente aposentado do
+// conjunto canônico aparece em docs/cli-schema.json. Teste negativo: garante
+// que a remoção física de um agente (ex.: Gemini) não deixa resíduo textual no
+// contrato do CLI documentado.
+func TestCLISchemaDoesNotContainRetiredAgents(t *testing.T) {
+	t.Parallel()
+
+	schemaPath := filepath.Join("..", "..", "docs", "cli-schema.json")
+	data, err := os.ReadFile(schemaPath)
+	if err != nil {
+		t.Fatalf("ler cli-schema.json: %v", err)
+	}
+
+	schemaContent := strings.ToLower(string(data))
+
+	retiredAgents := []string{"gemini"}
+	for _, agent := range retiredAgents {
+		if strings.Contains(schemaContent, agent) {
+			t.Errorf("cli-schema.json cita agente aposentado %q — remover residuo textual (RF-08, tarefa 10.0)", agent)
+		}
+	}
+}
+
 // TestCLI_ContractFlagsMatchSchema valida que flags definidas no cli-schema.json
 // existem na implementacao Cobra, e vice-versa (sem drift de flags).
 func TestCLI_ContractFlagsMatchSchema(t *testing.T) {

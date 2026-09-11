@@ -61,3 +61,9 @@ func (c *Catalog) WithReviewOutputFn(fn autoReviewOutputFn) Option {
 
 // ReviewOutputFn é o tipo exportado de autoReviewOutputFn para uso em testes externos.
 type ReviewOutputFn = autoReviewOutputFn
+
+func (c *Catalog) WithHandshakeWaiterFactory(f HandshakeWaiterFactory) Option {
+	return func(r *ACPRunner) {
+		r.handshakeWaiterFactory = f
+	}
+}

@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"sort"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
 
 // exitCode2 verifica que err carrega um exitError com codigo 2 (uso incorreto),
@@ -62,9 +66,9 @@ func TestTaskLoopFlags_Runtime(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "T-14: runtime acp com tool gemini valido (RF-25 ADR-015)",
+			name:    "T-14: runtime acp com tool opencode valido (task 7.0)",
 			runtime: "acp",
-			tool:    "gemini",
+			tool:    "opencode",
 			wantErr: false,
 		},
 		{
@@ -188,6 +192,94 @@ func TestTaskLoopFlags_ActivityTimeoutDefault(t *testing.T) {
 	}
 }
 
+func TestTaskLoopFlags_MaxBugfixIterationsDefault(t *testing.T) {
+	t.Parallel()
+
+	f := newTaskLoopCmd().Flags().Lookup("max-bugfix-iterations")
+	if f == nil {
+		t.Fatal("flag --max-bugfix-iterations nao registrada")
+	}
+	if f.DefValue != "5" {
+		t.Errorf("default de --max-bugfix-iterations = %q, quero 5", f.DefValue)
+	}
+	if !strings.Contains(f.Usage, "5") {
+		t.Errorf("texto de ajuda de --max-bugfix-iterations nao cita o default 5: %q", f.Usage)
+	}
+}
+
+func TestTaskLoopFlags_MaxBugfixIterationsInvalido(t *testing.T) {
+	tests := []struct {
+		name      string
+		args      []string
+		wantErr   bool
+		wantExit2 bool
+		wantMsg   string
+	}{
+		{
+			name: "ausente preserva comportamento pre-mudanca",
+			args: []string{"task-loop", "--tool", "claude", "--dry-run", "does-not-exist-prd"},
+		},
+		{
+			name:      "zero e invalido",
+			args:      []string{"task-loop", "--tool", "claude", "--max-bugfix-iterations", "0", "does-not-exist-prd"},
+			wantErr:   true,
+			wantExit2: true,
+			wantMsg:   "minimo aceito: 1",
+		},
+		{
+			name:      "negativo e invalido",
+			args:      []string{"task-loop", "--tool", "claude", "--max-bugfix-iterations", "-3", "does-not-exist-prd"},
+			wantErr:   true,
+			wantExit2: true,
+			wantMsg:   "minimo aceito: 1",
+		},
+		{
+			name: "positivo explicito e valido",
+			args: []string{"task-loop", "--tool", "claude", "--dry-run", "--max-bugfix-iterations", "2", "does-not-exist-prd"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("AI_INVOCATION_DEPTH", "0")
+
+			origStderr := os.Stderr
+			r, w, pipeErr := os.Pipe()
+			if pipeErr != nil {
+				t.Fatalf("os.Pipe: %v", pipeErr)
+			}
+			os.Stderr = w
+
+			root := newRootCmd()
+			root.SetArgs(tt.args)
+			root.SetOut(&bytes.Buffer{})
+			root.SetErr(&bytes.Buffer{})
+			err := root.Execute()
+
+			_ = w.Close()
+			os.Stderr = origStderr
+			stderrBytes, _ := io.ReadAll(r)
+			stderr := string(stderrBytes)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("esperava erro para args %v, nao obteve", tt.args)
+				}
+				if tt.wantExit2 && !exitCode2(err) {
+					t.Errorf("erro deve carregar exit code 2, obteve: %v", err)
+				}
+				if tt.wantMsg != "" && !strings.Contains(stderr, tt.wantMsg) {
+					t.Errorf("stderr %q nao contem %q", stderr, tt.wantMsg)
+				}
+				return
+			}
+			if strings.Contains(stderr, "max-bugfix-iterations") {
+				t.Fatalf("nao esperava erro de --max-bugfix-iterations, stderr: %q", stderr)
+			}
+		})
+	}
+}
+
 // TestTaskLoopFlags_AgentExclusivity valida exclusividade de --agent com --tool e modo avancado (T-20, T-21, D-06).
 func TestTaskLoopFlags_AgentExclusivity(t *testing.T) {
 	t.Parallel()
@@ -221,7 +313,7 @@ func TestTaskLoopFlags_AgentExclusivity(t *testing.T) {
 		{
 			name:      "agent + reviewer-tool gera conflito",
 			agentName: "foo",
-			revTool:   "gemini",
+			revTool:   "opencode",
 			wantErr:   true,
 			errMsg:    "mutuamente exclusivas",
 		},
@@ -298,6 +390,12 @@ func validateRuntimeFlags(runtime, tool string, activityTimeout time.Duration) e
 	}
 	if runtime == "acp" {
 		if _, ok := runtimeACPCatalog[tool]; !ok {
+			if _, resolveErr := skills.NewCatalog().ResolveTool(tool); resolveErr != nil {
+				var removedErr *skills.RemovedAgentError
+				if errors.As(resolveErr, &removedErr) {
+					return removedErr
+				}
+			}
 			supported := make([]string, 0, len(runtimeACPCatalog))
 			for k := range runtimeACPCatalog {
 				supported = append(supported, k)
@@ -327,7 +425,7 @@ func validateEnumFlags(reasoningEffort, accessMode string) error {
 }
 
 // TestRuntimeACPCatalog_T13_T14_T15 valida T-13 (Copilot ACP aceito),
-// T-14 (Gemini ACP rejeitado com lista ordenada) e T-15 (Claude ACP regressão).
+// T-14 (tool desconhecida rejeitada com lista ordenada) e T-15 (Claude ACP regressão).
 func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 	t.Parallel()
 
@@ -357,69 +455,54 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 		}
 	})
 
-	// T-14: Gemini ACP — aceito após ADR-015 (RF-25).
-	// Antes da task 2.0: gemini era rejeitado. Após registrar "gemini" em runtimeACPCatalog, deve ser aceito.
-	t.Run("T-14: gemini acp aceito (ADR-015, RF-25)", func(t *testing.T) {
+	t.Run("TestRuntimeACPCatalogIncludesOpenCode: catálogo inclui opencode (task 7.0)", func(t *testing.T) {
 		t.Parallel()
 
-		if _, ok := runtimeACPCatalog["gemini"]; !ok {
-			t.Error("runtimeACPCatalog não contém 'gemini' — tarefa 2.0 não aplicada")
+		if _, ok := runtimeACPCatalog["opencode"]; !ok {
+			t.Error("runtimeACPCatalog não contém 'opencode' (task 7.0 — ADR-003)")
 		}
-		err := validateRuntimeFlags("acp", "gemini", 0)
-		if err != nil {
-			t.Errorf("gemini acp deve passar validação após ADR-015, obteve: %v", err)
-		}
-	})
-
-	// TestRuntimeACPCatalogIncludesGemini (T-13 estendido): verifica que "gemini" está no catálogo.
-	t.Run("TestRuntimeACPCatalogIncludesGemini: catálogo inclui gemini (T-13 ext)", func(t *testing.T) {
-		t.Parallel()
-
-		if _, ok := runtimeACPCatalog["gemini"]; !ok {
-			t.Error("runtimeACPCatalog não contém 'gemini' (T-13 ext — ADR-015)")
-		}
-		spec := runtimeACPCatalog["gemini"]()
-		if spec.ID != "gemini" {
-			t.Errorf("runtimeACPCatalog[\"gemini\"]().ID = %q, esperava \"gemini\"", spec.ID)
+		spec := runtimeACPCatalog["opencode"]()
+		if spec.ID != "opencode" {
+			t.Errorf("runtimeACPCatalog[\"opencode\"]().ID = %q, esperava \"opencode\"", spec.ID)
 		}
 		if spec.Command == "" {
-			t.Error("runtimeACPCatalog[\"gemini\"]().Command vazio")
+			t.Error("runtimeACPCatalog[\"opencode\"]().Command vazio")
 		}
 	})
 
-	// T-14b: tool desconhecida ainda deve ser rejeitada com lista ordenada incluindo gemini.
-	t.Run("T-14b: tool desconhecida rejeitada com lista ordenada incluindo gemini", func(t *testing.T) {
+	// T-14b: tool desconhecida ainda deve ser rejeitada com lista ordenada.
+	t.Run("T-14b: tool desconhecida rejeitada com lista ordenada", func(t *testing.T) {
 		t.Parallel()
 
 		err := validateRuntimeFlags("acp", "unknown-tool", 0)
 		if err == nil {
 			t.Error("tool desconhecida deve ser rejeitada")
 		}
-		// Verificar que a mensagem contém todas as tools suportadas ordenadas incluindo gemini.
+		// Verificar que a mensagem contém todas as tools suportadas ordenadas.
 		msg := err.Error()
-		for _, tool := range []string{"claude", "codex", "copilot", "gemini"} {
+		for _, tool := range []string{"claude", "codex", "copilot", "opencode"} {
 			if !strings.Contains(msg, tool) {
 				t.Errorf("mensagem de erro deve listar %q, obteve: %q", tool, msg)
 			}
 		}
-		// Verificar ordem lexicográfica: claude < codex < copilot < gemini.
+		// Verificar ordem lexicográfica: claude < codex < copilot < opencode.
 		idxClaude := strings.Index(msg, "claude")
 		idxCodex := strings.Index(msg, "codex")
 		idxCopilot := strings.Index(msg, "copilot")
-		idxGemini := strings.Index(msg, "gemini")
+		idxOpenCode := strings.Index(msg, "opencode")
 		if idxClaude > idxCodex {
 			t.Errorf("'claude' deve aparecer antes de 'codex' (ordem lexicográfica): %q", msg)
 		}
 		if idxCodex > idxCopilot {
 			t.Errorf("'codex' deve aparecer antes de 'copilot' (ordem lexicográfica): %q", msg)
 		}
-		if idxCopilot > idxGemini {
-			t.Errorf("'copilot' deve aparecer antes de 'gemini' (ordem lexicográfica): %q", msg)
+		if idxCopilot > idxOpenCode {
+			t.Errorf("'copilot' deve aparecer antes de 'opencode' (ordem lexicográfica): %q", msg)
 		}
 	})
 
-	// T-16: Catálogo deve conter exatamente claude, codex, copilot e gemini (após task 2.0).
-	t.Run("T-16: catálogo contém exatamente claude, codex, copilot e gemini", func(t *testing.T) {
+	// T-16: Catálogo deve conter exatamente claude, codex, copilot e opencode.
+	t.Run("T-16: catálogo contém exatamente claude, codex, copilot e opencode", func(t *testing.T) {
 		t.Parallel()
 
 		keys := make([]string, 0, len(runtimeACPCatalog))
@@ -428,7 +511,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 		}
 		sort.Strings(keys)
 
-		expected := []string{"claude", "codex", "copilot", "gemini"}
+		expected := []string{"claude", "codex", "copilot", "opencode"}
 		if len(keys) != len(expected) {
 			t.Errorf("catálogo tem %d entradas, esperava %d: %v", len(keys), len(expected), keys)
 			return
@@ -456,27 +539,27 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
 	})
 }
 
-// TestRuntimeACPCatalogIncludesGemini (T-13 ext) valida que runtimeACPCatalog contém "gemini" após ADR-015.
-// Critérios: entrada presente, ID correto, Command não vazio, validateRuntimeFlags aceita gemini+acp.
-func TestRuntimeACPCatalogIncludesGemini(t *testing.T) {
+// TestRuntimeACPCatalogIncludesOpenCode valida que runtimeACPCatalog contém "opencode".
+// Critérios: entrada presente, ID correto, Command não vazio, validateRuntimeFlags aceita opencode+acp.
+func TestRuntimeACPCatalogIncludesOpenCode(t *testing.T) {
 	t.Parallel()
 
-	ctor, ok := runtimeACPCatalog["gemini"]
+	ctor, ok := runtimeACPCatalog["opencode"]
 	if !ok {
-		t.Fatal("runtimeACPCatalog não contém 'gemini' — task 2.0 não aplicada")
+		t.Fatal("runtimeACPCatalog não contém 'opencode'")
 	}
 
 	spec := ctor()
-	if spec.ID != "gemini" {
-		t.Errorf("runtimeACPCatalog[\"gemini\"]().ID = %q, esperava \"gemini\"", spec.ID)
+	if spec.ID != "opencode" {
+		t.Errorf("runtimeACPCatalog[\"opencode\"]().ID = %q, esperava \"opencode\"", spec.ID)
 	}
 	if spec.Command == "" {
-		t.Error("runtimeACPCatalog[\"gemini\"]().Command vazio")
+		t.Error("runtimeACPCatalog[\"opencode\"]().Command vazio")
 	}
 
-	// Gate de validação deve aceitar gemini+acp sem erro.
-	if err := validateRuntimeFlags("acp", "gemini", 0); err != nil {
-		t.Errorf("validateRuntimeFlags(\"acp\", \"gemini\", 0) retornou erro inesperado: %v", err)
+	// Gate de validação deve aceitar opencode+acp sem erro.
+	if err := validateRuntimeFlags("acp", "opencode", 0); err != nil {
+		t.Errorf("validateRuntimeFlags(\"acp\", \"opencode\", 0) retornou erro inesperado: %v", err)
 	}
 }
 
@@ -906,272 +989,51 @@ func TestTaskLoopFlags_T16_F3Flags(t *testing.T) {
 	})
 }
 
-// TestAccessModeFullEmitsWarningForGemini (RF-33, T-4.0) valida que o warning
-// específico para Gemini --access-mode=full é emitido exatamente uma vez via sync.Once.
-// Mensagem deve corresponder ao texto literal de RF-33 (ADR-015 §"Mensagens de Erro e Warning Literais").
-func TestAccessModeFullEmitsWarningForGemini(t *testing.T) {
-	// Não paralelo: usa sync.Once local para isolamento (não afeta accessModeFullWarnOnce global).
-	var localOnce sync.Once
-	var buf bytes.Buffer
-	geminiWarnMsg := "WARNING: --access-mode=full ativa --approval-mode=yolo no gemini-cli. " +
-		"Pré-condição: consentimento operacional. Ver GEMINI.md."
-
-	emitGeminiWarning := func() {
-		localOnce.Do(func() {
-			fmt.Fprintln(&buf, geminiWarnMsg)
-		})
-	}
-
-	// Primeira invocação: deve emitir warning.
-	emitGeminiWarning()
-	if !strings.Contains(buf.String(), "WARNING") {
-		t.Errorf("primeira invocacao deve emitir warning; buffer=%q", buf.String())
-	}
-	if !strings.Contains(buf.String(), "--approval-mode=yolo") {
-		t.Errorf("warning deve mencionar --approval-mode=yolo; buffer=%q", buf.String())
-	}
-	if !strings.Contains(buf.String(), "gemini-cli") {
-		t.Errorf("warning deve mencionar gemini-cli; buffer=%q", buf.String())
-	}
-	if !strings.Contains(buf.String(), "GEMINI.md") {
-		t.Errorf("warning deve referenciar GEMINI.md; buffer=%q", buf.String())
-	}
-
-	firstOutput := buf.String()
-
-	// Segunda e terceira invocações: sync.Once não deve emitir novamente.
-	emitGeminiWarning()
-	emitGeminiWarning()
-	if buf.String() != firstOutput {
-		t.Errorf("invocacoes adicionais nao devem emitir warning; buffer=%q", buf.String())
-	}
-
-	// Verificar que a mensagem menciona consentimento operacional.
-	if !strings.Contains(firstOutput, "consentimento operacional") {
-		t.Errorf("warning deve mencionar consentimento operacional; output=%q", firstOutput)
-	}
-}
-
-// TestAccessModeFullWarnOnce_GeminiVsCodex (RF-33, T-4.0) valida que o switch de
-// ferramenta no warning de --access-mode=full distingue gemini de codex/default.
-func TestAccessModeFullWarnOnce_GeminiVsCodex(t *testing.T) {
-	// Não paralelo: testa lógica do switch tool-aware de forma isolada.
-
-	t.Run("gemini emite mensagem específica RF-33", func(t *testing.T) {
-		var once sync.Once
-		var buf bytes.Buffer
-		tool := "gemini"
-		switch tool {
-		case "gemini":
-			once.Do(func() {
-				fmt.Fprintln(&buf,
-					"WARNING: --access-mode=full ativa --approval-mode=yolo no gemini-cli. "+
-						"Pré-condição: consentimento operacional. Ver GEMINI.md.")
-			})
-		default:
-			once.Do(func() {
-				fmt.Fprintln(&buf, "WARNING: --access-mode=full ativa sandbox_mode=danger-full-access no codex-acp. "+
-					"Pré-condição: consentimento operacional. Codex terá acesso pleno ao filesystem e à rede. "+
-					"Use somente em ambientes isolados. Ver CODEX.md.")
-			})
-		}
-		out := buf.String()
-		if !strings.Contains(out, "gemini-cli") {
-			t.Errorf("gemini: mensagem deve mencionar gemini-cli; got=%q", out)
-		}
-		if !strings.Contains(out, "--approval-mode=yolo") {
-			t.Errorf("gemini: mensagem deve mencionar --approval-mode=yolo; got=%q", out)
-		}
-		if strings.Contains(out, "sandbox_mode") {
-			t.Errorf("gemini: mensagem NÃO deve mencionar sandbox_mode; got=%q", out)
-		}
-	})
-
-	t.Run("codex emite mensagem de sandbox (regressão)", func(t *testing.T) {
-		var once sync.Once
-		var buf bytes.Buffer
-		tool := "codex"
-		switch tool {
-		case "gemini":
-			once.Do(func() {
-				fmt.Fprintln(&buf,
-					"WARNING: --access-mode=full ativa --approval-mode=yolo no gemini-cli. "+
-						"Pré-condição: consentimento operacional. Ver GEMINI.md.")
-			})
-		default:
-			once.Do(func() {
-				fmt.Fprintln(&buf, "WARNING: --access-mode=full ativa sandbox_mode=danger-full-access no codex-acp. "+
-					"Pré-condição: consentimento operacional. Codex terá acesso pleno ao filesystem e à rede. "+
-					"Use somente em ambientes isolados. Ver CODEX.md.")
-			})
-		}
-		out := buf.String()
-		if strings.Contains(out, "gemini-cli") {
-			t.Errorf("codex: mensagem NÃO deve mencionar gemini-cli; got=%q", out)
-		}
-		if !strings.Contains(out, "sandbox_mode=danger-full-access") {
-			t.Errorf("codex: mensagem deve mencionar sandbox_mode=danger-full-access; got=%q", out)
-		}
-	})
-}
-
-// TestGeminiSpecHasCorrectCommandAndFlags (T-14 estendido, RF-05, RF-25) valida que
-// runtimeACPCatalog["gemini"]() retorna Spec com Command=gemini e FixedArgs=[--acp].
-func TestGeminiSpecHasCorrectCommandAndFlags(t *testing.T) {
+// TestOpenCodeSpecHasCorrectCommandAndFlags valida que
+// runtimeACPCatalog["opencode"]() retorna Spec com Command=opencode e FixedArgs=[acp].
+func TestOpenCodeSpecHasCorrectCommandAndFlags(t *testing.T) {
 	t.Parallel()
 
-	ctor, ok := runtimeACPCatalog["gemini"]
+	ctor, ok := runtimeACPCatalog["opencode"]
 	if !ok {
-		t.Fatal("runtimeACPCatalog não contém 'gemini'")
+		t.Fatal("runtimeACPCatalog não contém 'opencode'")
 	}
 	spec := ctor()
-	if spec.Command != "gemini" {
-		t.Errorf("Command = %q; want %q", spec.Command, "gemini")
+	if spec.Command != "opencode" {
+		t.Errorf("Command = %q; want %q", spec.Command, "opencode")
 	}
-	if len(spec.FixedArgs) != 1 || spec.FixedArgs[0] != "--acp" {
-		t.Errorf("FixedArgs = %v; want [--acp]", spec.FixedArgs)
+	if len(spec.FixedArgs) != 1 || spec.FixedArgs[0] != "acp" {
+		t.Errorf("FixedArgs = %v; want [acp]", spec.FixedArgs)
 	}
 }
 
-// TestGeminiFallbackResolvesViaNpx (T-15 estendido, RF-25) valida que
-// runtimeACPCatalog["gemini"]() expõe fallback npx com o package pinado.
-func TestGeminiFallbackResolvesViaNpx(t *testing.T) {
+// TestOpenCodeFallbackResolvesViaNpx valida que
+// runtimeACPCatalog["opencode"]() expõe fallback npx com o package pinado.
+func TestOpenCodeFallbackResolvesViaNpx(t *testing.T) {
 	t.Parallel()
 
-	ctor, ok := runtimeACPCatalog["gemini"]
+	ctor, ok := runtimeACPCatalog["opencode"]
 	if !ok {
-		t.Fatal("runtimeACPCatalog não contém 'gemini'")
+		t.Fatal("runtimeACPCatalog não contém 'opencode'")
 	}
 	spec := ctor()
 	if len(spec.Fallbacks) == 0 {
-		t.Fatal("Gemini Spec não declara nenhum fallback")
+		t.Fatal("OpenCode Spec não declara nenhum fallback")
 	}
 	fb := spec.Fallbacks[0]
 	if fb.Command != "npx" {
 		t.Errorf("Fallbacks[0].Command = %q; want npx", fb.Command)
 	}
-	// Deve conter @google/gemini-cli@<version> no slice de args
+	// Deve conter opencode-ai@<version> no slice de args
 	found := false
 	for _, arg := range fb.FixedArgs {
-		if strings.HasPrefix(arg, "@google/gemini-cli@") {
+		if strings.HasPrefix(arg, "opencode-ai@") {
 			found = true
 			break
 		}
 	}
 	if !found {
-		t.Errorf("Fallbacks[0].FixedArgs = %v; want to contain '@google/gemini-cli@<version>'", fb.FixedArgs)
-	}
-}
-
-// resolveMemoryLimits replica o switch tool-aware de F3-Gemini em task_loop.go para testes unitários.
-// changedFlags é o conjunto de flags setadas explicitamente via CLI (replica cmd.Flags().Changed()).
-func resolveMemoryLimits(tool string, workflowLines, taskLines, workflowBytes, taskBytes int, changedFlags map[string]bool) (wfLines, tskLines, wfBytes, tskBytes int) {
-	wfLines, tskLines, wfBytes, tskBytes = workflowLines, taskLines, workflowBytes, taskBytes
-	if tool == "gemini" {
-		if !changedFlags["memory-workflow-limit-lines"] {
-			wfLines = 250
-		}
-		if !changedFlags["memory-task-limit-lines"] {
-			tskLines = 400
-		}
-		if !changedFlags["memory-workflow-limit-bytes"] {
-			wfBytes = 20 * 1024
-		}
-		if !changedFlags["memory-task-limit-bytes"] {
-			tskBytes = 32 * 1024
-		}
-	}
-	return
-}
-
-// TestGeminiDefaultsMemoryLimitsAreGenerous (T-34, RF-16) valida que CLI sem flags de memory
-// e --tool gemini resolve para defaults Gemini-generosos: 250 linhas / 400 linhas / 20 KiB / 32 KiB.
-func TestGeminiDefaultsMemoryLimitsAreGenerous(t *testing.T) {
-	t.Parallel()
-
-	// Defaults de flag: valores de init() do comando (flag não foi changed).
-	wfLines, tskLines, wfBytes, tskBytes := resolveMemoryLimits(
-		"gemini", 150, 200, 12288, 16384,
-		map[string]bool{}, // nenhuma flag changed
-	)
-
-	if wfLines != 250 {
-		t.Errorf("T-34: memory-workflow-limit-lines com --tool gemini = %d, quero 250", wfLines)
-	}
-	if tskLines != 400 {
-		t.Errorf("T-34: memory-task-limit-lines com --tool gemini = %d, quero 400", tskLines)
-	}
-	if wfBytes != 20*1024 {
-		t.Errorf("T-34: memory-workflow-limit-bytes com --tool gemini = %d, quero %d (20 KiB)", wfBytes, 20*1024)
-	}
-	if tskBytes != 32*1024 {
-		t.Errorf("T-34: memory-task-limit-bytes com --tool gemini = %d, quero %d (32 KiB)", tskBytes, 32*1024)
-	}
-}
-
-// TestGeminiMemoryLimitOverrideByCliFlag (T-35, RF-16) valida que --memory-task-limit-lines 600
-// prevalece sobre o default Gemini; --memory-workflow-limit-lines sem override ainda usa 250.
-func TestGeminiMemoryLimitOverrideByCliFlag(t *testing.T) {
-	t.Parallel()
-
-	// Usuário setou explicitamente apenas --memory-task-limit-lines 600.
-	wfLines, tskLines, wfBytes, tskBytes := resolveMemoryLimits(
-		"gemini", 150, 600, 12288, 16384,
-		map[string]bool{"memory-task-limit-lines": true},
-	)
-
-	// Override explícito prevalece.
-	if tskLines != 600 {
-		t.Errorf("T-35: memory-task-limit-lines com override = %d, quero 600 (override CLI)", tskLines)
-	}
-	// Workflow não foi changed → default Gemini-generoso aplicado.
-	if wfLines != 250 {
-		t.Errorf("T-35: memory-workflow-limit-lines sem override = %d, quero 250 (default Gemini)", wfLines)
-	}
-	if wfBytes != 20*1024 {
-		t.Errorf("T-35: memory-workflow-limit-bytes sem override = %d, quero %d (20 KiB)", wfBytes, 20*1024)
-	}
-	// task-limit-bytes não foi changed → default Gemini.
-	if tskBytes != 32*1024 {
-		t.Errorf("T-35: memory-task-limit-bytes sem override = %d, quero %d (32 KiB)", tskBytes, 32*1024)
-	}
-}
-
-// TestGeminiDefaultsDoNotAffectClaudeCodexCopilot (regressão RF-30) valida que
-// o switch tool-aware NÃO altera defaults para claude, codex e copilot.
-func TestGeminiDefaultsDoNotAffectClaudeCodexCopilot(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		tool string
-	}{
-		{"claude"},
-		{"codex"},
-		{"copilot"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.tool, func(t *testing.T) {
-			t.Parallel()
-
-			wfLines, tskLines, wfBytes, tskBytes := resolveMemoryLimits(
-				tt.tool, 150, 200, 12288, 16384,
-				map[string]bool{}, // nenhuma flag changed
-			)
-
-			if wfLines != 150 {
-				t.Errorf("RF-30: %s: workflow lines = %d, quero 150 (default Claude/Codex/Copilot)", tt.tool, wfLines)
-			}
-			if tskLines != 200 {
-				t.Errorf("RF-30: %s: task lines = %d, quero 200 (default Claude/Codex/Copilot)", tt.tool, tskLines)
-			}
-			if wfBytes != 12288 {
-				t.Errorf("RF-30: %s: workflow bytes = %d, quero 12288 (12 KiB)", tt.tool, wfBytes)
-			}
-			if tskBytes != 16384 {
-				t.Errorf("RF-30: %s: task bytes = %d, quero 16384 (16 KiB)", tt.tool, tskBytes)
-			}
-		})
+		t.Errorf("Fallbacks[0].FixedArgs = %v; want to contain 'opencode-ai@<version>'", fb.FixedArgs)
 	}
 }
 
@@ -1193,5 +1055,38 @@ func TestTaskLoopFlags_ReasoningEffortAndAccessModeDefaults(t *testing.T) {
 	}
 	if g.DefValue != "restricted" {
 		t.Errorf("default --access-mode = %q, esperava restricted", g.DefValue)
+	}
+}
+
+// TestValidateRuntimeFlags_RemovedAgentTypedError (RF-03, tarefa 10.0) valida que
+// invocar --tool gemini com --runtime acp produz o erro tipado RemovedAgentError,
+// distinguivel do erro generico de valor invalido via errors.As.
+func TestValidateRuntimeFlags_RemovedAgentTypedError(t *testing.T) {
+	t.Parallel()
+
+	err := validateRuntimeFlags("acp", "gemini", 0)
+	if err == nil {
+		t.Fatal("esperava erro para --tool gemini, obteve nil")
+	}
+
+	var removedErr *skills.RemovedAgentError
+	if !errors.As(err, &removedErr) {
+		t.Fatalf("erro deveria ser RemovedAgentError (errors.As), obteve: %v", err)
+	}
+	if removedErr.Agent != "gemini" {
+		t.Errorf("RemovedAgentError.Agent = %q, want %q", removedErr.Agent, "gemini")
+	}
+	msg := err.Error()
+	for _, want := range []string{"claude", "codex", "copilot", "opencode", "migracao-legacy-acp.md"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("mensagem de erro deveria conter %q, got: %q", want, msg)
+		}
+	}
+
+	// Ferramenta genuinamente desconhecida (nunca existiu) NAO deve produzir RemovedAgentError.
+	genericErr := validateRuntimeFlags("acp", "not-a-real-tool", 0)
+	var genericRemoved *skills.RemovedAgentError
+	if errors.As(genericErr, &genericRemoved) {
+		t.Error("ferramenta desconhecida generica nao deveria ser RemovedAgentError")
 	}
 }

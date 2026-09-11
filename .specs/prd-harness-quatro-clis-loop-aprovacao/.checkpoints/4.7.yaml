@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-quatro-clis-loop-aprovacao/4.7_execution_report.md
+summary: ACPRunner conduz o approval.Cycle via os adaptadores de internal/runtime quando job.TaskFileName != ""; fallback one-shot preservado; quatro lacunas fiadas em Summary (CycleRounds/CycleStopReason)
+timestamp: 2026-09-11T09:16:34Z

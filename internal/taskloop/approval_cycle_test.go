@@ -26,6 +26,7 @@ func newGitRepoDir(t *testing.T) string {
 	run("init")
 	run("config", "user.email", "cycle@example.com")
 	run("config", "user.name", "Cycle")
+	run("config", "commit.gpgsign", "false")
 	run("commit", "--allow-empty", "-m", "base")
 	return dir
 }
@@ -212,6 +213,52 @@ func TestExecuteFallsBackToLegacyReviewWhenTaskFileHasNoCriteria(t *testing.T) {
 	}
 	if strings.Contains(reviewerPrompt, "Diff consolidado") {
 		t.Errorf("expected legacy review prompt, got the cycle consolidated one:\n%s", reviewerPrompt)
+	}
+}
+
+func TestExecuteApprovalCycleHonorsConfiguredMaxBugfixIterations(t *testing.T) {
+	fsys, prd, _ := setupCycleFS(t, "- [ ] regra de negocio coberta")
+
+	var reviewerCalls, executorCalls int
+
+	svc := NewService(fsys, newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
+		switch tool {
+		case "claude":
+			return &callbackInvoker{binary: "claude", fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				executorCalls++
+				fsys.Files[filepath.Join(prd, "tasks.md")] = tasksContent("1.0", "Cycle Task", "done")
+				return "executor output", "", 0, nil
+			}}, nil
+		case "codex":
+			return &callbackInvoker{binary: "codex", fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
+				reviewerCalls++
+				return "[Critical] [main.go:10] variavel nao inicializada\n\nVerdict: REJECTED\n", "", 1, nil
+			}}, nil
+		default:
+			return nil, fmt.Errorf("tool not configured in test: %s", tool)
+		}
+	}
+
+	opts := cycleOptions(prd)
+	opts.MaxBugfixIterations = 1
+	opts.MaxBugfixIterationsSet = true
+
+	if err := svc.Execute(opts); err != nil {
+		t.Fatalf("Execute unexpected error: %v", err)
+	}
+
+	if reviewerCalls != 1 {
+		t.Fatalf("reviewer called %d times, want 1 (teto de 1 rodada esgota na primeira review)", reviewerCalls)
+	}
+	if executorCalls != 1 {
+		t.Fatalf("executor called %d times, want 1 (execucao original apenas; teto de 1 nao aciona bugfix)", executorCalls)
+	}
+
+	reportStr := readFileString(t, fsys, filepath.Join(prd, "report.md"))
+	if !strings.Contains(reportStr, "approval cycle closed without approval: max_rounds") {
+		t.Errorf("report deveria registrar encerramento por max_rounds, sem aprovacao:\n%s", reportStr)
 	}
 }
 

@@ -45,9 +45,9 @@ CLI, então ele bloqueia a própria remoção e precisa ser o primeiro item alte
 
 | Componente | Responsabilidade |
 |---|---|
-| `internal/approval` (planejado) — pacote novo | Agregado `Ciclo`, entidade `Rodada`, Value Objects de conjunto fechado, tabela de transições, tradução anticorrupção do texto do revisor e política de parada. Zero dependência de ACP, CLI ou filesystem |
-| `internal/approval/portas.go` (planejado) | Três interfaces declaradas no consumidor — `Revisor`, `Corretor`, `Repositorio` — que dão ao agregado o que ele não pode fazer sozinho |
-| `internal/approval/mocks/` (planejado) | Mocks gerados por `mockery.yml` para as três portas |
+| `internal/approval` — pacote novo | Agregado `Ciclo`, entidade `Rodada`, Value Objects de conjunto fechado, tabela de transições, tradução anticorrupção do texto do revisor e política de parada. Zero dependência de ACP, CLI ou filesystem |
+| `internal/approval/ports.go` | Três interfaces declaradas no consumidor — `Reviewer`, `Fixer`, `Repository` — que dão ao agregado o que ele não pode fazer sozinho |
+| `internal/approval/mocks/` | Mocks gerados por `mockery.yml` para as três portas |
 | Spec do OpenCode em `internal/runtime/specs/` | Runtime ACP por subcomando, com launcher de fallback e janela derivada do modelo |
 | Plugin de governança do OpenCode | Hook de pré-ferramenta que bloqueia por exceção e sinaliza carga via sentinela |
 | Gate de encerramento canônico | Script tool-neutro que bloqueia o fim da sessão sem veredito aprovado, registrado nos 4 CLIs |
@@ -86,21 +86,21 @@ Pacote sem dependência de ACP, CLI ou filesystem. Imports permitidos: `context`
 
 | Arquivo | Responsabilidade |
 |---|---|
-| `identidades.go` | `IdentidadeDaTarefa`, `IdentidadeDoAgente` (dado opaco vindo do Catálogo) |
-| `veredito.go` | `Veredito` — conjunto fechado de 4, construtor validante, zero-value inválido |
-| `motivo.go` | `MotivoDeParada` — conjunto fechado de 5 |
-| `achado.go` | `Severidade` (`iota+1`), `Achado`, tradução 4→3 níveis para o schema de bugs |
-| `evidencia.go` | `LinhaDeEvidencia` (3 formas), `CriterioDeAceite`, `MapaDeCriterios` |
-| `prova.go` | `ProvaDeAprovacao` — o tipo que torna "Aprovado sem prova" inconstruível |
+| `identities.go` | `TaskIdentity`, `AgentIdentity` (dado opaco vindo do Catálogo) |
+| `verdict.go` | `Verdict` — conjunto fechado de 4, construtor validante, zero-value inválido |
+| `stop_reason.go` | `StopReason` — conjunto fechado de 5 |
+| `finding.go` | `Severity` (`iota+1`), `Finding`, tradução 4→3 níveis para o schema de bugs |
+| `evidence.go` | `EvidenceLine` (3 formas), `AcceptanceCriterion`, `CriteriaMap` |
+| `proof.go` | `ApprovalProof` — o tipo que torna "Aprovado sem prova" inconstruível |
 | `fingerprint.go` | `Fingerprint` + calculadora SHA-256 sobre conjunto ordenado |
-| `politica.go` | `PoliticaDeAprovacao` imutável + Functional Options + `Decidir` |
-| `estado.go` | `Estado` (`iota+1`) + `TabelaDeTransicoes` |
-| `rodada.go` | Entidade `Rodada`, imutável após concluída |
-| `tradutor.go` | Camada anticorrupção fail-closed: texto do revisor → veredito |
-| `portas.go` | `Revisor`, `Corretor`, `Repositorio` + DTOs opacos |
-| `eventos.go` / `resultado.go` | Eventos de domínio e resultado do comando |
-| `erros.go` | Sentinelas (`errors.Is`) + tipos customizados (`errors.As`) |
-| `ciclo.go` | Agregado `Ciclo` |
+| `policy.go` | `ApprovalPolicy` imutável + Functional Options + `Decide` |
+| `state.go` | `State` (`iota+1`) + tabela de transições |
+| `round.go` | Entidade `Round`, imutável após concluída |
+| `translator.go` | Camada anticorrupção fail-closed: texto do revisor → veredito |
+| `ports.go` | `Reviewer`, `Fixer`, `Repository` + DTOs opacos |
+| `events.go` / `result.go` | Eventos de domínio e resultado do comando |
+| `errors.go` | Sentinelas (`errors.Is`) + tipos customizados (`errors.As`) |
+| `cycle.go` | Agregado `Cycle` |
 
 ### Interfaces Chave
 

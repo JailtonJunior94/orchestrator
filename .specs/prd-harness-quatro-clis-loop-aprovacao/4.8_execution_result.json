@@ -1,0 +1,98 @@
+{
+  "schema_version": 2,
+  "run_id": "task-4.8-paridade-e-e2e-2026-09-11",
+  "task_id": "4.8",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
+  "patch_sha256": "13e624f71eb7853f62d4f91dd1d5c510cde76dd3ae0e22522e4c9abd10dd0fca",
+  "patch_ref": "evidence/task-4.8/4.8.patch",
+  "final_state_sha256": "e00b6cfb5882538255c3396ac2b15da32ce8f31f6368cf186b873dc965f232ed",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "6b833249b6bec39beab72e65f3cf36b9a09f7beae6375d6790797c41e3f67820"
+    },
+    {
+      "command": "go test -tags=integration ./internal/runtime/... ./internal/taskloop/... -count=1",
+      "exit_code": 0,
+      "output_sha256": "b85fb9117457c6d7afc8ac068c177434684a58c8e83830310e31372ea44a7585"
+    },
+    {
+      "command": "go test ./internal/runtime -run TestE2EApprovalCycle -v -count=1 && go test ./internal/taskloop -run TestApprovalCycleParityAcrossThreeProductionPaths -v -count=1",
+      "exit_code": 0,
+      "output_sha256": "38a32c585d117709055f0fcc63d83c160669c67a9c56ef29a456e51ba08cd190"
+    },
+    {
+      "command": "make check-spec-paths check-skills-sync check-scripts-sync check-hooks-sync check-mocks budget",
+      "exit_code": 0,
+      "output_sha256": "2c696ca22d2bd7e52aee016efec534cba2432de2d8b6b79743ffaeb4c8f4c7a7"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "parity-test-across-three-paths-green",
+      "evidence_ref": "evidence/task-4.8/e2e-tests.log"
+    },
+    {
+      "id": "five-e2e-flows-green",
+      "evidence_ref": "evidence/task-4.8/e2e-tests.log"
+    },
+    {
+      "id": "approved-with-remarks-feeds-back-green",
+      "evidence_ref": "evidence/task-4.8/e2e-tests.log"
+    },
+    {
+      "id": "grep-approval-occurrences-three-files",
+      "evidence_ref": "evidence/task-4.8/approval-grep.log"
+    },
+    {
+      "id": "t-rev-01-02-04-green-no-assertion-change",
+      "evidence_ref": "evidence/task-4.8/trev-diffstat.log"
+    },
+    {
+      "id": "style-r-style-001-new-touched-code",
+      "evidence_ref": "evidence/task-4.8/build.log"
+    },
+    {
+      "id": "sync-gates-green",
+      "evidence_ref": "evidence/task-4.8/sync-gates.log"
+    },
+    {
+      "id": "build-vet-test-green",
+      "evidence_ref": "evidence/task-4.8/test.log"
+    },
+    {
+      "id": "integration-tag-green",
+      "evidence_ref": "evidence/task-4.8/integration.log"
+    },
+    {
+      "id": "governance-golden-files-untouched",
+      "evidence_ref": "evidence/task-4.8/sync-gates.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-4.8/4.8.patch",
+    "evidence/task-4.8/build.log",
+    "evidence/task-4.8/vet.log",
+    "evidence/task-4.8/test.log",
+    "evidence/task-4.8/integration.log",
+    "evidence/task-4.8/e2e-tests.log",
+    "evidence/task-4.8/approval-grep.log",
+    "evidence/task-4.8/trev-diffstat.log",
+    "evidence/task-4.8/sync-gates.log"
+  ],
+  "review_verdict": "approved"
+}

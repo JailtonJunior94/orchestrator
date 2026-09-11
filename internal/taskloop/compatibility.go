@@ -31,15 +31,13 @@ func NewCompatibilityTable() *CompatibilityTable {
 				"gpt-5.3-codex",
 				"gpt-5.3-codex-spark",
 			},
-			"gemini": {
-				"auto",
-				"pro",
-				"flash",
-				"flash-lite",
+			"opencode": {
+				"claude-opus-4",
+				"claude-sonnet-4",
+				"claude-haiku-4",
+				"gpt-5",
 				"gemini-2.5-pro",
 				"gemini-2.5-flash",
-				"gemini-2.5-flash-lite",
-				"gemini-3-pro-preview",
 			},
 			"copilot": {
 				"claude-sonnet-4.5",

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
 )
 
 // ErrBugfixExhausted indica que o ciclo bugfix -> review atingiu o limite de
@@ -151,6 +153,57 @@ func (b *BugfixLoop) Run(ctx context.Context, initialFindings []Finding, initial
 type bugfixEvidence struct {
 	FailBefore string
 	PassAfter  string
+	Output     string
+	RootCause  string
+}
+
+func bugfixAttemptsFromCycle(result approval.CycleResult, recorder *bugfixEvidenceRecorder) []BugfixIteration {
+	var rounds []approval.Round
+	for round := range result.Rounds() {
+		rounds = append(rounds, round)
+	}
+	entries := recorder.Entries()
+	total := len(entries)
+	if len(rounds)-1 < total {
+		total = len(rounds) - 1
+	}
+	if total < 0 {
+		total = 0
+	}
+
+	iterations := make([]BugfixIteration, 0, total)
+	for i := 0; i < total; i++ {
+		origin := NewCatalog().filterCritical(reverseApprovalFindings(rounds[i].Findings()))
+		review := rounds[i+1]
+		entry := entries[i]
+		iterations = append(iterations, BugfixIteration{
+			Sequence:         i + 1,
+			Origin:           NewCatalog().formatBugfixOrigin(origin),
+			RootCause:        entry.RootCause,
+			FailBefore:       entry.FailBefore,
+			PassAfter:        entry.PassAfter,
+			BugfixOutput:     entry.Output,
+			ReviewVerdict:    reverseVerdict(review.Verdict()),
+			CriticalFindings: NewCatalog().filterCritical(reverseApprovalFindings(review.Findings())),
+		})
+	}
+	return iterations
+}
+
+func finalReviewFromCycleResult(result approval.CycleResult) *FinalReviewResult {
+	var last approval.Round
+	found := false
+	for round := range result.Rounds() {
+		last = round
+		found = true
+	}
+	if !found {
+		return nil
+	}
+	return &FinalReviewResult{
+		Verdict:  reverseVerdict(last.Verdict()),
+		Findings: NewCatalog().filterCritical(reverseApprovalFindings(last.Findings())),
+	}
 }
 
 // extractBugfixEvidence exige marcadores explicitos no retorno do executor.

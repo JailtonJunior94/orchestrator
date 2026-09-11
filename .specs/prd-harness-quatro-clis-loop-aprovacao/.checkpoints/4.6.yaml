@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-quatro-clis-loop-aprovacao/4.6_execution_report.md
+summary: RunLoop conduz o approval.Cycle no case VerdictRejected via uniao de criterios do lote; BugfixLoop reduzido a projetor de evidencia via bugfixAttemptsFromCycle
+timestamp: 2026-09-11T08:46:10Z

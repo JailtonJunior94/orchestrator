@@ -1,0 +1,18 @@
+=== RUN   TestParityGatePassesForMandatoryMatrix
+=== PAUSE TestParityGatePassesForMandatoryMatrix
+=== RUN   TestParityGateFailsWhenAgentLosesCanonicalPoint
+=== PAUSE TestParityGateFailsWhenAgentLosesCanonicalPoint
+=== RUN   TestParityGateFailsWhenValidatorDiverges
+=== PAUSE TestParityGateFailsWhenValidatorDiverges
+=== RUN   TestParityGateFailsWhenCellHasNoDispatchProof
+=== PAUSE TestParityGateFailsWhenCellHasNoDispatchProof
+=== CONT  TestParityGatePassesForMandatoryMatrix
+--- PASS: TestParityGatePassesForMandatoryMatrix (0.00s)
+=== CONT  TestParityGateFailsWhenCellHasNoDispatchProof
+--- PASS: TestParityGateFailsWhenCellHasNoDispatchProof (0.00s)
+=== CONT  TestParityGateFailsWhenAgentLosesCanonicalPoint
+--- PASS: TestParityGateFailsWhenAgentLosesCanonicalPoint (0.00s)
+=== CONT  TestParityGateFailsWhenValidatorDiverges
+--- PASS: TestParityGateFailsWhenValidatorDiverges (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	0.212s

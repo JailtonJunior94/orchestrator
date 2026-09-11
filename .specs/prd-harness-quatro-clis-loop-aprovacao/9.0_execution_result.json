@@ -1,0 +1,121 @@
+{
+  "schema_version": 2,
+  "run_id": "task-9.0-hooks-e-paridade-2026-09-11",
+  "task_id": "9.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
+  "patch_sha256": "0743fe276de62ddd45a1ec9cc4d1f0e19f73a2d2d79f001ed60897204051be58",
+  "patch_ref": "evidence/task-9.0/9.0.patch",
+  "final_state_sha256": "2e9f21287f8e9b49561c3699718c5c4aabc216302e1d7c7c4c28feca22712388",
+  "coverage_regression": false,
+  "review_verdict": "approved",
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "c243ebd918adf405910756bed4c85716ad480b887beeb735ea68e89be747c28f"
+    },
+    {
+      "command": "go test ./internal/install/... -run TestInstall -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "119b157e422ca19faf1dd8968728d9a1a174bf10fe0c0b2e45d46b3a635c5424"
+    },
+    {
+      "command": "go test -tags=integration ./tests/integration/... -run 'TestSessionEndGate|TestPreToolHookDispatch|TestPostToolHookDispatch|TestOpenCodeGovernancePlugin' -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "1f757d331465625df37260327755baebfc0b77373d7cd7b214e0954dcf4bbc1e"
+    },
+    {
+      "command": "go test ./internal/runtime/specs/... -run TestParityGate -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "26fb45ffbbf6a6b015f2bcfb1edeaea070b704c9a39f2e7d1222ad6174372a23"
+    },
+    {
+      "command": "bash scripts/check-skills-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "9a69d4cfe6161b775267a73e236c6acef118504209d43e3422ee4e8253c04b23"
+    },
+    {
+      "command": "bash scripts/check-hooks-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "33f5777b007f2189aa399e27867642c3a0b78cba0fc3b41e3ac546812dff1715"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "copilot-agentstop-key-fixed",
+      "evidence_ref": "evidence/task-9.0/install-test.log"
+    },
+    {
+      "id": "inverted-assertion-fixed",
+      "evidence_ref": "evidence/task-9.0/install-test.log"
+    },
+    {
+      "id": "mandatory-matrix-12-cells",
+      "evidence_ref": "evidence/task-9.0/install-test.log"
+    },
+    {
+      "id": "parity-build-gate-3-negative-tests",
+      "evidence_ref": "evidence/task-9.0/parity-gate-test.log"
+    },
+    {
+      "id": "simulated-dispatch-4-clis-nonzero-on-violation",
+      "evidence_ref": "evidence/task-9.0/integration-test-scoped.log"
+    },
+    {
+      "id": "nightly-target-and-workflow-not-merge-gate",
+      "evidence_ref": "evidence/task-9.0/hooks-live-skip-proof.log"
+    },
+    {
+      "id": "nightly-fails-on-skipped-cell",
+      "evidence_ref": "evidence/task-9.0/hooks-live-skip-proof.log"
+    },
+    {
+      "id": "verify-prints-inert-unknown-nonzero-exit-on-inert",
+      "evidence_ref": "evidence/task-9.0/verify-inert-unknown.log"
+    },
+    {
+      "id": "detection-never-execs-binary",
+      "evidence_ref": "evidence/task-9.0/detect-no-exec-grep.log"
+    },
+    {
+      "id": "no-codex-trust-bypass-flag",
+      "evidence_ref": "evidence/task-9.0/no-bypass-grep.log"
+    },
+    {
+      "id": "sync-gates-cover-session-end-and-opencode-plugin",
+      "evidence_ref": "evidence/task-9.0/check-skills-sync.log"
+    },
+    {
+      "id": "gemini-still-present-green",
+      "evidence_ref": "evidence/task-9.0/test.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-9.0/build.log",
+    "evidence/task-9.0/vet.log",
+    "evidence/task-9.0/test.log",
+    "evidence/task-9.0/install-test.log",
+    "evidence/task-9.0/integration-test-scoped.log",
+    "evidence/task-9.0/parity-gate-test.log",
+    "evidence/task-9.0/check-skills-sync.log",
+    "evidence/task-9.0/check-hooks-sync.log",
+    "evidence/task-9.0/coverage.log",
+    "evidence/task-9.0/hooks-live-skip-proof.log",
+    "evidence/task-9.0/verify-inert-unknown.log",
+    "evidence/task-9.0/detect-no-exec-grep.log",
+    "evidence/task-9.0/no-bypass-grep.log",
+    "evidence/task-9.0/integration-test.log"
+  ]
+}

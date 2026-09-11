@@ -1,0 +1,6 @@
+=== RUN   TestResolveWindowNilResolverIsByteIdenticalForExistingAgents
+=== PAUSE TestResolveWindowNilResolverIsByteIdenticalForExistingAgents
+=== CONT  TestResolveWindowNilResolverIsByteIdenticalForExistingAgents
+--- PASS: TestResolveWindowNilResolverIsByteIdenticalForExistingAgents (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	0.180s

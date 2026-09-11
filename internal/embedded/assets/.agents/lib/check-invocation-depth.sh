@@ -27,10 +27,10 @@ set -euo pipefail
 # Se invalido: emite warning e faz unset para evitar comportamento indefinido.
 if [[ -n "${AI_TOOL:-}" ]]; then
   case "$AI_TOOL" in
-    claude|codex|gemini|copilot)
+    claude|codex|copilot|opencode)
       ;;  # valores canonicos aceitos
     *)
-      echo "WARN: AI_TOOL='$AI_TOOL' nao reconhecido (aceitos: claude, codex, gemini, copilot). Fazendo unset para modo agnostico." >&2
+      echo "WARN: AI_TOOL='$AI_TOOL' nao reconhecido (aceitos: claude, codex, copilot, opencode). Fazendo unset para modo agnostico." >&2
       unset AI_TOOL
       ;;
   esac

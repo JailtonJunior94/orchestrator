@@ -1,0 +1,9 @@
+
+Skills em sync: 80
+Skills com drift: 0
+Libs em sync: 2 (legacy + embedded)
+Hooks do orquestrador em sync: 4 hooks x 7 mirrors
+Hooks de validacao por-tool em paridade: 2 hooks x 6 tools
+Gate de encerramento em paridade nos 4 agentes oficiais: 7 mirrors
+Plugin do OpenCode presente e em paridade: internal/embedded/assets/.opencode/plugin/governance.js
+Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/

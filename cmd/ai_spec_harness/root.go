@@ -16,10 +16,10 @@ func newRootCmd() *cobra.Command {
 		Use:   "ai-spec-harness",
 		Short: "Ferramenta CLI para governanca de IA em projetos de software",
 		Long: `ai-spec-harness instala, inspeciona e atualiza pacotes de governanca para ferramentas
-de IA (Claude, Gemini, Codex, Copilot) em repositorios de software.
+de IA (Claude, Codex, Copilot, OpenCode) em repositorios de software.
 
 Exemplos:
-  ai-spec-harness install ./meu-projeto --tools claude,gemini --langs go,python
+  ai-spec-harness install ./meu-projeto --tools claude,opencode --langs go,python
   ai-spec-harness upgrade ./meu-projeto
   ai-spec-harness inspect ./meu-projeto
   ai-spec-harness doctor ./meu-projeto`,
@@ -48,6 +48,7 @@ Exemplos:
 	cmd.AddCommand(newSkillBumpCmd())
 	cmd.AddCommand(newSkillsCmd())
 	cmd.AddCommand(newCheckSpecDriftCmd())
+	cmd.AddCommand(newCheckTraceabilityCmd())
 	cmd.AddCommand(newSyncSpecHashCmd())
 	cmd.AddCommand(newTaskLoopCmd())
 	cmd.AddCommand(newTelemetryCmd())

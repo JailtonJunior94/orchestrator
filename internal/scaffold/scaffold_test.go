@@ -2,7 +2,6 @@ package scaffold
 
 import (
 	"io"
-	"strings"
 	"testing"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
@@ -76,20 +75,6 @@ func TestScaffold_ThreeArtifacts(t *testing.T) {
 		t.Error("references/conventions.md not created")
 	}
 
-	// artifact 3: Gemini TOML
-	tomlPath := "/root/.gemini/commands/workspace.rust-implementation.toml"
-	data, ok := ffs.Files[tomlPath]
-	if !ok {
-		t.Fatal("Gemini TOML not created")
-	}
-
-	content := string(data)
-	if !strings.Contains(content, "rust-implementation") {
-		t.Error("TOML does not reference skill name")
-	}
-	if !strings.Contains(content, "{{args}}") {
-		t.Error("TOML missing {{args}} placeholder")
-	}
 }
 
 func TestScaffold_Idempotent(t *testing.T) {
@@ -105,8 +90,8 @@ func TestScaffold_Idempotent(t *testing.T) {
 		t.Fatalf("second Execute (idempotency): %v", err)
 	}
 
-	tomlPath := "/root/.gemini/commands/workspace.rust-implementation.toml"
-	if _, ok := ffs.Files[tomlPath]; !ok {
-		t.Error("Gemini TOML missing after second run")
+	skillDir := "/root/.agents/skills/rust-implementation"
+	if _, ok := ffs.Files[skillDir+"/SKILL.md"]; !ok {
+		t.Error("SKILL.md missing after second run")
 	}
 }

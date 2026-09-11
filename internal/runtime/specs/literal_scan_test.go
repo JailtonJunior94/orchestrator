@@ -20,7 +20,7 @@ var literalScanAllowlist = map[string]string{
 	"wrapper.go":       "legacy per-tool wrapper generation; outside the ACP path",
 }
 
-var agentIDs = []string{"claude", "codex", "copilot", "gemini"}
+var agentIDs = []string{"claude", "codex", "copilot", "opencode"}
 
 func TestNoAgentListLiteralOutsideRegistry(t *testing.T) {
 	t.Parallel()

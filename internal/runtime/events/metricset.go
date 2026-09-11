@@ -14,7 +14,7 @@ type MetricField struct {
 
 // MetricSet é um Value Object que acumula contadores canônicos de métricas de sessão.
 // Campos canônicos: totalTokens, cacheReadTokens, thinkingTokens.
-// Campos driver-específicos ficam em extra (ex: effective_context_tokens para Gemini).
+// Campos driver-específicos ficam em extra (ex: cache_creation_tokens para Claude).
 //
 // Imutável por design: Merge retorna novo valor sem mutar o receptor (R-DDD-001).
 // Zero-value é válido: IsZero() == true; Fields() == nil (comportamento F1).

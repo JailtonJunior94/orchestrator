@@ -6,7 +6,6 @@
   "link_mode": "copy",
   "tools": [
     "claude",
-    "gemini",
     "codex",
     "copilot"
   ],

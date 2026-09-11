@@ -3,6 +3,8 @@ package detect
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -70,7 +72,6 @@ func (s *AgentSuite) TestBinaryAgentDetectorDetect() {
 				toolSet := toSet(got)
 				s.True(toolSet[skills.ToolClaude], "esperava ToolClaude detectado via binario")
 				s.True(toolSet[skills.ToolCodex], "esperava ToolCodex detectado via binario")
-				s.False(toolSet[skills.ToolGemini], "nao esperava ToolGemini — binario ausente")
 				s.False(toolSet[skills.ToolCopilot], "nao esperava ToolCopilot — binario ausente")
 			},
 		},
@@ -116,44 +117,46 @@ func (s *AgentSuite) TestBinaryAgentDetectorDetect() {
 			},
 		},
 		{
-			name: "deve detectar 3 CLIs inegociaveis sem incluir Gemini (opt-in por projeto)",
+			name: "deve detectar todos os agentes do registro via binario no PATH, sem politica opt-in por agente",
 			args: args{
 				lookPath: fakeLookPath{present: map[string]bool{
 					"claude-agent-acp": true,
 					"codex-acp":        true,
-					"gemini":           true,
 					"copilot":          true,
+					"opencode":         true,
 				}},
 				homeDir: fakeHomeDir{home: "/nonexistent-home-xyz"},
 			},
 			expect: func(got []skills.Tool, err error) {
 				s.NoError(err)
-				// Gemini e opt-in por sinal de projeto; mesmo com binario no
-				// PATH, sem .gemini/ ou GEMINI.md no projectDir nao entra.
-				s.Len(got, 3)
-				for _, t := range got {
-					s.NotEqual(skills.ToolGemini, t, "Gemini nao deve aparecer sem sinal de projeto")
-				}
+				toolSet := toSet(got)
+				s.True(toolSet[skills.ToolOpenCode], "OpenCode deve entrar como 1a classe via binario no PATH, sem opt-in por agente")
+				s.Len(got, len(skills.AllTools), "todos os agentes do registro devem ser detectados quando os binarios estao presentes")
 			},
 		},
 		{
-			name: "deve incluir Gemini quando ha sinal de projeto (.gemini/ ou GEMINI.md)",
+			name: "deve detectar OpenCode apenas pelo binario no PATH",
 			args: args{
-				lookPath:   fakeLookPath{present: map[string]bool{"gemini": true}},
+				lookPath: fakeLookPath{present: map[string]bool{"opencode": true}},
+				homeDir:  fakeHomeDir{home: "/nonexistent-home-xyz"},
+			},
+			expect: func(got []skills.Tool, err error) {
+				s.NoError(err)
+				s.True(toSet(got)[skills.ToolOpenCode], "esperava ToolOpenCode via binario")
+			},
+		},
+		{
+			name: "deve detectar OpenCode apenas pelo sinal de projeto",
+			args: args{
+				lookPath:   fakeLookPath{present: map[string]bool{}},
 				homeDir:    fakeHomeDir{home: "/nonexistent-home-xyz"},
 				projectDir: "/project",
-				files:      map[string][]byte{"/project/GEMINI.md": []byte("# Gemini")},
+				files:      map[string][]byte{"/project/opencode.json": []byte("{}")},
 				fileDet:    true,
 			},
 			expect: func(got []skills.Tool, err error) {
 				s.NoError(err)
-				hasGemini := false
-				for _, t := range got {
-					if t == skills.ToolGemini {
-						hasGemini = true
-					}
-				}
-				s.True(hasGemini, "Gemini deve aparecer quando ha sinal de projeto")
+				s.True(toSet(got)[skills.ToolOpenCode], "esperava ToolOpenCode via sinal de projeto")
 			},
 		},
 		{
@@ -201,9 +204,20 @@ func (s *AgentSuite) TestBinaryAgentDetectorDetect() {
 	}
 }
 
+func (s *AgentSuite) TestDetectOpenCodeByHomeConfigDirOnly() {
+	home := s.T().TempDir()
+	s.Require().NoError(os.MkdirAll(filepath.Join(home, ".config", "opencode"), 0o755))
+
+	det := NewBinaryAgentDetector(fakeLookPath{present: map[string]bool{}}, fakeHomeDir{home: home}, nil)
+	got, err := det.Detect(context.Background(), DetectOptions{})
+
+	s.NoError(err)
+	s.True(toSet(got)[skills.ToolOpenCode], "esperava ToolOpenCode via diretorio de config do usuario")
+}
+
 func (s *AgentSuite) TestAllEntriesCommandsMatchSpecs() {
 	entries := NewCatalog().allEntries()
-	s.Require().Len(entries, 4, "esperava 4 entries (claude, codex, gemini, copilot)")
+	s.Require().Len(entries, len(skills.AllTools), "esperava uma entry por agente do registro")
 	for _, entry := range entries {
 		s.NotEmpty(entry.command, "entry %s tem command vazio", entry.tool)
 		s.NotEmpty(entry.tool, "entry com tool vazio")

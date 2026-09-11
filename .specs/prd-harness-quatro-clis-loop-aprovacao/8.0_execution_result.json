@@ -1,0 +1,123 @@
+{
+  "schema_version": 2,
+  "run_id": "task-8.0-enforcement-opencode-2026-09-11",
+  "task_id": "8.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
+  "patch_sha256": "299445210551142d727478e1154ebd8d3116d3b659d769c90b7d498514a9d964",
+  "patch_ref": "evidence/task-8.0/8.0.patch",
+  "final_state_sha256": "fd35210fb863d6f8974d7cf9ec4f89a05b49e26c19883e4a02db06218bf013a3",
+  "coverage_regression": false,
+  "review_verdict": "approved",
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "d814d8438652c871ee159a891d159d5f8e34f4e16c195e2a8d2dbccbc7b763be"
+    },
+    {
+      "command": "go test -tags=integration ./tests/integration/... -run OpenCode -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "79ac72e2786e13b5c24317e115929e3c91a60352a773428ec3194b089f6f8189"
+    },
+    {
+      "command": "go test -tags=acp_live ./tests/integration/acp_live/... -run OpenCode -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "a56bd29cd09c5f9b064335f87acf54aecad7aab5974086a1e165ccb2c821c3cc"
+    },
+    {
+      "command": "go test ./internal/runtime/... ./internal/runtime/specs/... ./internal/runtime/handshake/... ./internal/runtime/client/... ./internal/install/... ./internal/embedded/... -run \"OpenCode|Enforcement|EnvPolicy|Handshake|Waiter\" -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "d18732fdce9056eada890268010cc5639061c9b7b04afe507b579e6749e16c02"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "build-vet-test-green",
+      "evidence_ref": "evidence/task-8.0/build.log"
+    },
+    {
+      "id": "real-acp-dispatch-blocks-tool-call",
+      "evidence_ref": "evidence/task-8.0/unit-enforcement.log"
+    },
+    {
+      "id": "block-inside-subagent-task",
+      "evidence_ref": "evidence/task-8.0/unit-enforcement.log"
+    },
+    {
+      "id": "robust-to-consecutive-exceptions",
+      "evidence_ref": "evidence/task-8.0/unit-enforcement.log"
+    },
+    {
+      "id": "permission-hook-scan-gate-fails-on-reintroduction",
+      "evidence_ref": "evidence/task-8.0/unit-enforcement.log"
+    },
+    {
+      "id": "validator-timeout-is-denial",
+      "evidence_ref": "evidence/task-8.0/integration-opencode.log"
+    },
+    {
+      "id": "missing-validator-bifurcates-by-mode",
+      "evidence_ref": "evidence/task-8.0/integration-opencode.log"
+    },
+    {
+      "id": "permission-block-fine-patterns-no-ask",
+      "evidence_ref": "evidence/task-8.0/unit-enforcement.log"
+    },
+    {
+      "id": "argv-never-contains-pure-flag",
+      "evidence_ref": "evidence/task-8.0/unit-enforcement.log"
+    },
+    {
+      "id": "child-env-sanitized-parent-env-untouched",
+      "evidence_ref": "evidence/task-8.0/unit-enforcement.log"
+    },
+    {
+      "id": "zero-value-envpolicy-byte-identical-inheritance",
+      "evidence_ref": "evidence/task-8.0/unit-enforcement.log"
+    },
+    {
+      "id": "handshake-aborts-session-without-signal",
+      "evidence_ref": "evidence/task-8.0/unit-enforcement.log"
+    },
+    {
+      "id": "sentinel-path-unique-per-session-residual-rejected",
+      "evidence_ref": "evidence/task-8.0/unit-enforcement.log"
+    },
+    {
+      "id": "install-verify-fail-noisily-without-plugin-runtime",
+      "evidence_ref": "evidence/task-8.0/unit-enforcement.log"
+    },
+    {
+      "id": "two-kill-switch-tests-replicated-under-acp",
+      "evidence_ref": "evidence/task-8.0/acp-live-opencode.log"
+    },
+    {
+      "id": "precondition-rejection-metric-opt-in-only",
+      "evidence_ref": "evidence/task-8.0/unit-enforcement.log"
+    },
+    {
+      "id": "mandatory-matrix-opencode-covers-canonical-points",
+      "evidence_ref": "evidence/task-8.0/unit-enforcement.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-8.0/build.log",
+    "evidence/task-8.0/vet.log",
+    "evidence/task-8.0/test.log",
+    "evidence/task-8.0/integration-opencode.log",
+    "evidence/task-8.0/acp-live-opencode.log",
+    "evidence/task-8.0/unit-enforcement.log"
+  ]
+}

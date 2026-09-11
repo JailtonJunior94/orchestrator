@@ -1,0 +1,103 @@
+{
+  "schema_version": 2,
+  "run_id": "task-5.0-teto-e-criterio-estrito-2026-09-11",
+  "task_id": "5.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
+  "patch_sha256": "7089312258709ce99e3e72c01bff421278ada9a00a22fcdd474ed146ba0eb6d4",
+  "patch_ref": "evidence/task-5.0/5.0.patch",
+  "final_state_sha256": "94cb4d4bc10761dee8fd5b9573bb3711419a6c659a86545106f9dc68ebad66ef",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "f0aa339cd51a488aca0393bd8047713af7072b7432f574c294ee710fe1c4cc91"
+    },
+    {
+      "command": "go test ./cmd/ai_spec_harness/ -run TestCLI_Contract -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "439172480890c73cb9a6a5c37c4743a5de8f7470874f6b8344307558c509a751"
+    },
+    {
+      "command": "go test ./cmd/ai_spec_harness/... -run TestTaskLoopFlags_MaxBugfixIterations -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "85783a4daca2772a90b1118e4345b1cf31cff72d640e77f389f0db522c164d41"
+    },
+    {
+      "command": "go test ./internal/config/... -count=1 -v -run TestResolverSuite",
+      "exit_code": 0,
+      "output_sha256": "02587af66b0396ab71361bb9647edfb6e69986717f9af9f7b8acbc5ac78a50ea"
+    },
+    {
+      "command": "go test ./internal/taskloop/... -count=1 -v -run TestExecuteApprovalCycleHonorsConfiguredMaxBugfixIterations|TestResolveRuntimeConfig_MaxBugfixIterationsFromWorkspaceConfigOnly|TestApplyResolvedMaxBugfixIterations|TestBuildRuntimeConfig_MaxBugfixIterations|TestOptionsToConfigOverrides_MaxBugfixIterations",
+      "exit_code": 0,
+      "output_sha256": "b0d676fbe00667df076d13fecf67067336d5284a7558641e532bc1bbb2bc030f"
+    },
+    {
+      "command": "go test ./internal/runtime/... -count=1 -v -run TestACPRunnerCycleHonorsConfiguredMaxRounds|TestACPRunnerCycleDefaultMaxRoundsIsFiveWithoutConfiguration",
+      "exit_code": 0,
+      "output_sha256": "c548ea8e740e36f87d46847266fef801de1fa3296574a836fa4fa79cf5752659"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "build-vet-test-green",
+      "evidence_ref": "evidence/task-5.0/test.log"
+    },
+    {
+      "id": "cli-contract-flag-schema-parity",
+      "evidence_ref": "evidence/task-5.0/cli-contract.log"
+    },
+    {
+      "id": "help-shows-default-5",
+      "evidence_ref": "evidence/task-5.0/help.log"
+    },
+    {
+      "id": "zero-and-negative-fail-explicitly",
+      "evidence_ref": "evidence/task-5.0/cli-validation.log"
+    },
+    {
+      "id": "config-precedence-global-workspace-flag",
+      "evidence_ref": "evidence/task-5.0/config-precedence.log"
+    },
+    {
+      "id": "config-file-only-reaches-taskloop-options",
+      "evidence_ref": "evidence/task-5.0/taskloop-cycle.log"
+    },
+    {
+      "id": "remarks-feed-back-and-max-rounds-blocks",
+      "evidence_ref": "evidence/task-5.0/runtime-cycle.log"
+    },
+    {
+      "id": "reviewer-approved-no-remarks",
+      "evidence_ref": "evidence/task-5.0/review.md"
+    }
+  ],
+  "evidence": [
+    "evidence/task-5.0/5.0.patch",
+    "evidence/task-5.0/build.log",
+    "evidence/task-5.0/vet.log",
+    "evidence/task-5.0/test.log",
+    "evidence/task-5.0/cli-contract.log",
+    "evidence/task-5.0/flag-validation.log",
+    "evidence/task-5.0/config-precedence.log",
+    "evidence/task-5.0/taskloop-cycle.log",
+    "evidence/task-5.0/runtime-cycle.log",
+    "evidence/task-5.0/help.log",
+    "evidence/task-5.0/cli-validation.log",
+    "evidence/task-5.0/review.md"
+  ],
+  "review_verdict": "approved"
+}

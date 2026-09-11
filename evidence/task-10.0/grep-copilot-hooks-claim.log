@@ -1,0 +1,13 @@
+### grep por afirmacao de que Copilot nao tem hooks nativos nos 9 golden snapshots
+exit_code_grep=1
+
+### listagem dos 9 arquivos golden verificados
+testdata/snapshots/codex-only.agents.md
+testdata/snapshots/go-microservice.agents.md
+testdata/snapshots/go-modular.agents.md
+testdata/snapshots/go-monolith.agents.md
+testdata/snapshots/node-api.agents.md
+testdata/snapshots/node-monorepo.agents.md
+testdata/snapshots/polyglot-monorepo.agents.md
+testdata/snapshots/python-api.agents.md
+testdata/snapshots/python-monorepo.agents.md

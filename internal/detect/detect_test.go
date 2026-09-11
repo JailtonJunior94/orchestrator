@@ -98,7 +98,7 @@ func (s *DetectSuite) TestDetectLangsInFocusPaths() {
 func (s *DetectSuite) TestDetectTools() {
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/CLAUDE.md"] = []byte("# Claude")
-	ffs.Files["/project/GEMINI.md"] = []byte("# Gemini")
+	ffs.Files["/project/.github/copilot-instructions.md"] = []byte("# Copilot")
 
 	det := NewFileDetector(ffs)
 	tools := det.DetectTools("/project")

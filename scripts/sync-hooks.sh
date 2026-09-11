@@ -2,8 +2,8 @@
 # sync-hooks.sh
 # Sincroniza hooks do orquestrador (post-execute-task, pre-execute-all-tasks, post-wave)
 # do diretorio canonico (.claude/hooks/) para os mirrors:
-#   - .agents/hooks/, .gemini/hooks/, .codex/hooks/, .github/hooks/
-#   - internal/embedded/assets/{.claude,.agents,.gemini,.codex,.github}/hooks/
+#   - .agents/hooks/, .codex/hooks/, .github/hooks/
+#   - internal/embedded/assets/{.claude,.agents,.codex,.github}/hooks/
 #
 # Estrategia: rsync com --delete dos hooks orquestrador apenas (preserva outros hooks
 # como validate-governance, validate-preload).
@@ -29,12 +29,10 @@ ORCHESTRATOR_HOOKS=(
 
 declare -a mirror_dirs=(
   "$repo_root/.agents/hooks"
-  "$repo_root/.gemini/hooks"
   "$repo_root/.codex/hooks"
   "$repo_root/.github/hooks"
   "$repo_root/internal/embedded/assets/.claude/hooks"
   "$repo_root/internal/embedded/assets/.agents/hooks"
-  "$repo_root/internal/embedded/assets/.gemini/hooks"
   "$repo_root/internal/embedded/assets/.codex/hooks"
   "$repo_root/internal/embedded/assets/.github/hooks"
 )

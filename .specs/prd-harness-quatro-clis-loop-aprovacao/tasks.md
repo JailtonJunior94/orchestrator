@@ -1,5 +1,5 @@
 <!-- spec-hash-prd: 0a9ad37a14dece6109b909750abfb8ec3c61f4a66181934758687842764737ce -->
-<!-- spec-hash-techspec: a07967f3662d761e1faaf0fba6eef3b20682dc59316ec530e532acfbc20063f5 -->
+<!-- spec-hash-techspec: ad94bddb5367b571aab9ae4b61d3df5b390f1cd1b9be2749a47bd436eabf40e8 -->
 # Resumo das Tarefas de Implementação para Quatro CLIs Oficiais e Ciclo de Aprovação
 
 ## Metadados
@@ -31,16 +31,16 @@
 | 4.3 | Extrator de critérios compartilhado e adaptador de portas em taskloop | done | 4.2 | Não | — |
 | 4.4 | Service.Execute conduz o Cycle (critérios por task, estabelece o padrão) | done | 4.3 | Não | — |
 | 4.5 | Adequação das fixtures de revisão ao contrato de texto bruto | done | 4.4 | Não | — |
-| 4.6 | RunLoop conduz o Cycle; BugfixLoop reduzido a projetor de evidência | pending | 4.5 | Não | — |
-| 4.7 | ACPRunner conduz o Cycle e fiação das quatro lacunas nos três caminhos | pending | 4.6 | Não | — |
-| 4.8 | Prova de paridade entre os três caminhos e fluxos E2E | pending | 4.7 | Não | — |
-| 5.0 | Propagação do teto de rodadas e virada do critério estrito | pending | 4.8 | Não | — |
+| 4.6 | RunLoop conduz o Cycle; BugfixLoop reduzido a projetor de evidência | done | 4.5 | Não | — |
+| 4.7 | ACPRunner conduz o Cycle e fiação das quatro lacunas nos três caminhos | done | 4.6 | Não | — |
+| 4.8 | Prova de paridade entre os três caminhos e fluxos E2E | done | 4.7 | Não | — |
+| 5.0 | Propagação do teto de rodadas e virada do critério estrito | done | 4.8 | Não | — |
 | 6.0 | Catálogo de Agentes como registro único | done | 2.0 | Não | domain-modeling-production |
-| 7.0 | OpenCode como agente oficial de primeira classe | pending | 6.0 | Não | — |
-| 8.0 | Enforcement não-desligável do OpenCode | pending | 7.0 | Não | — |
-| 9.0 | Hooks e paridade comprovada nos quatro agentes | pending | 8.0 | Não | — |
-| 10.0 | Remoção total do Gemini e desinstalação fiel | pending | 9.0 | Não | — |
-| 11.0 | Fechamento: rastreabilidade, não-regressão e release major | pending | 5.0, 10.0 | — | github-diff-changelog-publisher |
+| 7.0 | OpenCode como agente oficial de primeira classe | done | 6.0 | Não | — |
+| 8.0 | Enforcement não-desligável do OpenCode | done | 7.0 | Não | — |
+| 9.0 | Hooks e paridade comprovada nos quatro agentes | done | 8.0 | Não | — |
+| 10.0 | Remoção total do Gemini e desinstalação fiel | done | 9.0 | Não | — |
+| 11.0 | Fechamento: rastreabilidade, não-regressão e release major | done | 5.0, 10.0 | — | github-diff-changelog-publisher |
 
 ## Dependências Críticas
 

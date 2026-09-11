@@ -63,7 +63,7 @@ func setupBugReproFS(nTasks int) (*taskfs.FakeFileSystem, string) {
 //
 // Este teste FALHA com o codigo atual — falha intencional que evidencia o bug.
 func TestReproducaoBugStatusTasksMdOverwrite(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	tests := []struct {
 		name       string
@@ -172,7 +172,7 @@ func TestReproducaoBugStatusTasksMdOverwrite(t *testing.T) {
 // BUG ATUAL: iteracao 1 e desperdicada (task 1.0 marcada como "status inalterado"),
 // task 2.0 nunca executada. Este teste FALHA com o codigo atual.
 func TestReproducaoBugLoopNaoAvancaComMaxIteracoes1(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -318,7 +318,7 @@ func TestReproducaoBugPostStatusDeterminationPath(t *testing.T) {
 // Roda o mesmo cenario de TestExecuteSimpleMode (invoker atualiza tasks.md e task file)
 // para confirmar que o caminho feliz nao foi quebrado pelos novos testes.
 func TestRegressaoExistentesNaoAfetados(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {

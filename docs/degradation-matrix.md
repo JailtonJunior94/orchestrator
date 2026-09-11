@@ -2,7 +2,7 @@
 
 Documento canônico que descreve o comportamento do fluxo `execute-task → review → bugfix` quando componentes esperados estão ausentes ou parcialmente disponíveis. Todo fallback é **explícito e anotado**: relatórios e validators emitem `degraded:<reason>:<tool>` em vez de operar silenciosamente.
 
-Os 4 agentes suportados (Claude Code, Codex, Gemini, Copilot) seguem a mesma matriz; quando uma limitação é tool-specific, está marcada na coluna **Tool-specific**.
+Os 4 agentes suportados (Claude Code, Codex, Copilot, OpenCode) seguem a mesma matriz; quando uma limitação é tool-specific, está marcada na coluna **Tool-specific**.
 
 ## Convenções
 
@@ -39,17 +39,16 @@ Severidades:
 | 13 | Cobertura ≥ `coverage_threshold` | warn | `validate-task-evidence.sh` falha se delta < `-2.0%`; relatório anotado e task volta a `pending` | Regressão de cobertura silenciosa | Adicionar testes e re-rodar `task test` | — | `degraded:coverage-regression:<pkg>:<delta>` |
 | 14 | `CLAUDE.md` | best-effort | Claude Code carrega via `AGENTS.md` apenas; comportamento ainda paritário via skills | Sem espelho específico para Claude; OK porque AGENTS.md é canônico | `ai-spec install --tools claude` | claude | `degraded:claude-md-missing` |
 | 15 | `.codex/config.toml` | best-effort | Codex usa `AGENTS.md` direto; gates injetados via wrapper CLI | Sem prelúdio específico Codex | `ai-spec install --tools codex` | codex | `degraded:codex-config-missing` |
-| 16 | `GEMINI.md` | best-effort | Gemini carrega via `AGENTS.md`; skills via `.gemini/commands/*.toml` | Sem instruções inline customizadas | `ai-spec install --tools gemini` | gemini | `degraded:gemini-md-missing` |
-| 17 | `COPILOT.md` | best-effort | Copilot é stateless (ADR-007); cada invocação reinjeta gates via `ai-spec wrapper copilot` | Custo de prompt maior; semântica preservada | `ai-spec install --tools copilot` | copilot | `degraded:copilot-md-missing` |
-| 18 | `yq` para parser YAML em scripts | warn | `check-invocation-depth.sh` usa fallback awk para chaves planas | Schema aninhado não é suportado em fallback | `brew install yq` ou `apt install yq` | — | `degraded:yq-missing-fallback-awk` |
-| 19 | `git` no PATH | block | `doctor`, `check-invocation-depth.sh` e `reviewer` não conseguem resolver raiz nem capturar diff | Fluxo inteiro indisponível | Instalar git | — | `degraded:git-missing:<tool>` |
-| 20 | `golangci-lint` (Go) ou equivalente | warn | Etapa 4 marca lint como `skipped`; testes ainda obrigatórios | Lint não verificado; review pode emitir achados estilísticos extras | `brew install golangci-lint` | — | `degraded:lint-tool-missing:<tool>` |
+| 16 | `COPILOT.md` | best-effort | Copilot é stateless (ADR-007); cada invocação reinjeta gates via `ai-spec wrapper copilot` | Custo de prompt maior; semântica preservada | `ai-spec install --tools copilot` | copilot | `degraded:copilot-md-missing` |
+| 17 | `yq` para parser YAML em scripts | warn | `check-invocation-depth.sh` usa fallback awk para chaves planas | Schema aninhado não é suportado em fallback | `brew install yq` ou `apt install yq` | — | `degraded:yq-missing-fallback-awk` |
+| 18 | `git` no PATH | block | `doctor`, `check-invocation-depth.sh` e `reviewer` não conseguem resolver raiz nem capturar diff | Fluxo inteiro indisponível | Instalar git | — | `degraded:git-missing:<tool>` |
+| 19 | `golangci-lint` (Go) ou equivalente | warn | Etapa 4 marca lint como `skipped`; testes ainda obrigatórios | Lint não verificado; review pode emitir achados estilísticos extras | `brew install golangci-lint` | — | `degraded:lint-tool-missing:<tool>` |
 
 ---
 
 ## Política de promoção `BestEffort` → `Common`
 
-Limitações tecnicamente irredutíveis (linhas 14–17) são `BestEffort` em `internal/parity/parity.go`. Quando uma limitação puder ser eliminada (ex.: Copilot ganhar suporte stateful), a entrada correspondente é promovida a `Common` no mesmo PR que adiciona a capacidade — nunca antes.
+Limitações tecnicamente irredutíveis (linhas 14–16) são `BestEffort` em `internal/parity/parity.go`. Quando uma limitação puder ser eliminada (ex.: Copilot ganhar suporte stateful), a entrada correspondente é promovida a `Common` no mesmo PR que adiciona a capacidade — nunca antes.
 
 ## Como o fluxo emite anotações de degradação
 

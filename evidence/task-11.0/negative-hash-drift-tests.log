@@ -1,0 +1,6 @@
+=== RUN   TestCheckHash_Divergent
+--- PASS: TestCheckHash_Divergent (0.00s)
+=== RUN   TestCheckDrift_HashFail
+--- PASS: TestCheckDrift_HashFail (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdrift	0.209s

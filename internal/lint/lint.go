@@ -32,7 +32,6 @@ func (e LintError) String() string {
 var _targetFiles = []string{
 	"AGENTS.md",
 	"CLAUDE.md",
-	"GEMINI.md",
 	".codex/config.toml",
 	".github/copilot-instructions.md",
 }

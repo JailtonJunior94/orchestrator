@@ -227,7 +227,7 @@ func setupSourceDirFull(t *testing.T, dir string) {
 
 	govHook := `#!/usr/bin/env bash
 INPUT=$(cat)
-if echo "$INPUT" | grep -qiE '"(AGENTS|CLAUDE|GEMINI)\.md"'; then
+if echo "$INPUT" | grep -qiE '"(AGENTS|CLAUDE)\.md"'; then
     MODE="${GOVERNANCE_HOOK_MODE:-warn}"
     if [[ "$MODE" == "fail" ]]; then
         echo "ERRO: Modificacao de governanca bloqueada" >&2
@@ -306,53 +306,6 @@ func TestE2E_CrossToolUpgrade_CodexToClaude(t *testing.T) {
 	hooksDir := filepath.Join(projectDir, ".claude", "hooks")
 	if info, err := os.Stat(hooksDir); err != nil || !info.IsDir() {
 		t.Errorf(".claude/hooks/ deve existir apos install claude: %v", err)
-	}
-}
-
-func TestE2E_CrossToolUpgrade_CopilotToGemini(t *testing.T) {
-	sourceDir := t.TempDir()
-	projectDir := t.TempDir()
-	setupSourceDir(t, sourceDir)
-
-	fsys := fs.NewOSFileSystem()
-
-	// Primeira instalacao: apenas Copilot
-	err := newInstallSvc(fsys).Execute(config.InstallOptions{
-		ProjectDir: projectDir,
-		SourceDir:  sourceDir,
-		Tools:      []skills.Tool{skills.ToolCopilot},
-		LinkMode:   skills.LinkCopy,
-	})
-	if err != nil {
-		t.Fatalf("install copilot: %v", err)
-	}
-
-	githubAgents := filepath.Join(projectDir, ".github", "agents")
-	geminiCmds := filepath.Join(projectDir, ".gemini", "commands")
-
-	if info, err := os.Stat(githubAgents); err != nil || !info.IsDir() {
-		t.Errorf(".github/agents/ deve existir apos install copilot: %v", err)
-	}
-	if _, err := os.Stat(geminiCmds); err == nil {
-		t.Error(".gemini/commands/ nao deve existir antes de instalar gemini")
-	}
-
-	// Segunda instalacao: Copilot + Gemini
-	err = newInstallSvc(fsys).Execute(config.InstallOptions{
-		ProjectDir: projectDir,
-		SourceDir:  sourceDir,
-		Tools:      []skills.Tool{skills.ToolCopilot, skills.ToolGemini},
-		LinkMode:   skills.LinkCopy,
-	})
-	if err != nil {
-		t.Fatalf("install copilot+gemini: %v", err)
-	}
-
-	if info, err := os.Stat(githubAgents); err != nil || !info.IsDir() {
-		t.Errorf(".github/agents/ deve ser preservado apos upgrade para copilot+gemini: %v", err)
-	}
-	if info, err := os.Stat(geminiCmds); err != nil || !info.IsDir() {
-		t.Errorf(".gemini/commands/ deve existir apos install gemini: %v", err)
 	}
 }
 
@@ -519,8 +472,8 @@ func TestE2E_PreloadHook_NonCodeFile(t *testing.T) {
 
 // T13 — Testes E2E para novos fluxos
 
-// setupSourceDirWithEvidenceArtifacts estende setupSourceDir com scripts de evidencia,
-// check-invocation-depth.sh e hook Gemini para os cenarios T13.
+// setupSourceDirWithEvidenceArtifacts estende setupSourceDir com scripts de evidencia
+// e check-invocation-depth.sh para os cenarios T13.
 func setupSourceDirWithEvidenceArtifacts(t *testing.T, dir string) {
 	t.Helper()
 	setupSourceDir(t, dir)
@@ -528,7 +481,6 @@ func setupSourceDirWithEvidenceArtifacts(t *testing.T, dir string) {
 	mustWriteFile(t, filepath.Join(dir, ".claude/scripts/validate-bugfix-evidence.sh"), "#!/usr/bin/env bash\n")
 	mustWriteFile(t, filepath.Join(dir, ".claude/scripts/validate-refactor-evidence.sh"), "#!/usr/bin/env bash\n")
 	mustWriteFile(t, filepath.Join(dir, "scripts/lib/check-invocation-depth.sh"), "#!/usr/bin/env bash\n")
-	mustWriteExecFile(t, filepath.Join(dir, ".gemini/hooks/validate-preload.sh"), "#!/usr/bin/env bash\nexit 0\n")
 }
 
 func TestInstallCopiesAllEvidenceScripts(t *testing.T) {
@@ -595,40 +547,6 @@ func TestInstallCopiesInvocationDepthGuard(t *testing.T) {
 
 	if _, err := os.Stat(depthGuardPath); err == nil {
 		t.Error("expected check-invocation-depth.sh to be removed after uninstall")
-	}
-}
-
-func TestGeminiHookInstalled(t *testing.T) {
-	sourceDir := t.TempDir()
-	projectDir := t.TempDir()
-	setupSourceDir(t, sourceDir)
-	mustWriteExecFile(t, filepath.Join(sourceDir, ".gemini/hooks/validate-preload.sh"), "#!/usr/bin/env bash\nexit 0\n")
-
-	fsys := fs.NewOSFileSystem()
-	if err := newInstallSvc(fsys).Execute(config.InstallOptions{
-		ProjectDir: projectDir,
-		SourceDir:  sourceDir,
-		Tools:      []skills.Tool{skills.ToolGemini},
-		LinkMode:   skills.LinkCopy,
-	}); err != nil {
-		t.Fatalf("install: %v", err)
-	}
-
-	hookPath := filepath.Join(projectDir, ".gemini/hooks/validate-preload.sh")
-	info, err := os.Stat(hookPath)
-	if err != nil {
-		t.Fatalf("expected .gemini/hooks/validate-preload.sh to exist after install: %v", err)
-	}
-	if info.Mode()&0o111 == 0 {
-		t.Errorf("validate-preload.sh deve ser executavel, modo=%v", info.Mode())
-	}
-
-	if err := newUninstallSvc(fsys).Execute(projectDir, false); err != nil {
-		t.Fatalf("uninstall: %v", err)
-	}
-
-	if _, err := os.Stat(hookPath); err == nil {
-		t.Error("expected .gemini/hooks/validate-preload.sh to be removed after uninstall")
 	}
 }
 
@@ -801,45 +719,6 @@ func TestE2E_CopilotInstall_GeneratesEightAgents(t *testing.T) {
 	}
 }
 
-func TestE2E_GeminiInstall_TomlContent(t *testing.T) {
-	sourceDir := t.TempDir()
-	projectDir := t.TempDir()
-	setupSourceDir(t, sourceDir)
-
-	fsys := fs.NewOSFileSystem()
-
-	err := newInstallSvc(fsys).Execute(config.InstallOptions{
-		ProjectDir: projectDir,
-		SourceDir:  sourceDir,
-		Tools:      []skills.Tool{skills.ToolGemini},
-		LinkMode:   skills.LinkCopy,
-	})
-	if err != nil {
-		t.Fatalf("install: %v", err)
-	}
-
-	// setupSourceDir seeds a "review" skill; verify its TOML was generated
-	tomlPath := filepath.Join(projectDir, ".gemini", "commands", "workspace.review.toml")
-	data, err := os.ReadFile(tomlPath)
-	if err != nil {
-		t.Fatalf("expected .gemini/commands/workspace.review.toml to exist after install: %v", err)
-	}
-
-	content := string(data)
-	if !strings.Contains(content, `description =`) {
-		t.Errorf("workspace.review.toml should have 'description =' field, got: %q", content)
-	}
-	if !strings.Contains(content, `prompt =`) {
-		t.Errorf("workspace.review.toml should have 'prompt =' field, got: %q", content)
-	}
-	if !strings.Contains(content, "SKILL.md") {
-		t.Errorf("workspace.review.toml prompt should reference SKILL.md, got: %q", content)
-	}
-	if !strings.Contains(content, "{{args}}") {
-		t.Errorf("workspace.review.toml prompt should contain {{args}} placeholder, got: %q", content)
-	}
-}
-
 func TestPythonMonorepoSnapshot(t *testing.T) {
 	projectDir := t.TempDir()
 	fixtureDir := filepath.Join("..", "..", "testdata", "python-monorepo")
@@ -999,7 +878,7 @@ func TestUpgradeRecopiesNewArtifacts(t *testing.T) {
 	if err := newInstallSvc(fsys).Execute(config.InstallOptions{
 		ProjectDir: projectDir,
 		SourceDir:  sourceDir,
-		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolGemini},
+		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolOpenCode},
 		LinkMode:   skills.LinkCopy,
 	}); err != nil {
 		t.Fatalf("install: %v", err)
@@ -1027,11 +906,5 @@ func TestUpgradeRecopiesNewArtifacts(t *testing.T) {
 	}
 	if strings.Contains(string(data), "CORROMPIDO") {
 		t.Error("validate-bugfix-evidence.sh deveria ser restaurado pelo upgrade")
-	}
-
-	// .gemini/hooks/validate-preload.sh deve ser re-copiado pelo upgrade
-	geminiHook := filepath.Join(projectDir, ".gemini/hooks/validate-preload.sh")
-	if _, err := os.Stat(geminiHook); err != nil {
-		t.Errorf(".gemini/hooks/validate-preload.sh deve existir apos upgrade: %v", err)
 	}
 }

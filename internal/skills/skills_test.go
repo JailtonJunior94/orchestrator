@@ -1,6 +1,7 @@
 package skills
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -22,9 +23,9 @@ func (s *SkillsSuite) TestParseTool() {
 		wantOK bool
 	}{
 		{name: "deve aceitar claude", input: "claude", want: ToolClaude, wantOK: true},
-		{name: "deve aceitar gemini", input: "gemini", want: ToolGemini, wantOK: true},
 		{name: "deve aceitar codex", input: "codex", want: ToolCodex, wantOK: true},
 		{name: "deve aceitar copilot", input: "copilot", want: ToolCopilot, wantOK: true},
+		{name: "deve aceitar opencode", input: "opencode", want: ToolOpenCode, wantOK: true},
 		{name: "deve rejeitar invalido", input: "invalid", wantOK: false},
 	}
 
@@ -93,4 +94,32 @@ func (s *SkillsSuite) TestBaseSkillsIncludesExecuteAllTasks() {
 
 func (s *SkillsSuite) TestComplementarySkills() {
 	s.Len(ComplementarySkills, 11, "ComplementarySkills count")
+}
+
+func (s *SkillsSuite) TestResolveToolRemovedAgent() {
+	tool, err := NewCatalog().ResolveTool("gemini")
+	s.Empty(string(tool))
+	s.Require().Error(err)
+
+	var removedErr *RemovedAgentError
+	s.Require().ErrorAs(err, &removedErr, "erro deve ser RemovedAgentError, distinguivel via errors.As")
+	s.Equal("gemini", removedErr.Agent)
+	s.Contains(removedErr.MigrationGuide, "migracao-legacy-acp.md")
+	s.Contains(removedErr.Error(), "claude")
+	s.Contains(removedErr.Error(), "opencode")
+}
+
+func (s *SkillsSuite) TestResolveToolGenericInvalid() {
+	tool, err := NewCatalog().ResolveTool("not-a-real-tool")
+	s.Empty(string(tool))
+	s.Require().Error(err)
+
+	var removedErr *RemovedAgentError
+	s.False(errors.As(err, &removedErr), "valor generico invalido nao deve ser RemovedAgentError")
+}
+
+func (s *SkillsSuite) TestResolveToolValid() {
+	tool, err := NewCatalog().ResolveTool("claude")
+	s.NoError(err)
+	s.Equal(ToolClaude, tool)
 }

@@ -10,7 +10,7 @@ import (
 const (
 	scriptPreTool     = ".agents/scripts/hook-prereq-gate.sh"
 	scriptPostTool    = ".agents/hooks/post-execute-task.sh"
-	scriptSessionEnd  = ".agents/hooks/subagent-stop-wrapper.sh"
+	scriptSessionEnd  = ".agents/scripts/validate-session-end.sh"
 	largeBudgetAbsent = 0
 )
 
@@ -38,7 +38,7 @@ type Agent struct {
 	specID         string
 	enforcement    Enforcement
 	signals        DetectionSignals
-	inheritsEnv    bool
+	envPolicy      EnvPolicy
 	adrPath        string
 	standardBudget int
 	largeBudget    int
@@ -118,12 +118,12 @@ func (c *Catalog) SpecOf(a Agent) (Spec, error) {
 	switch a.specID {
 	case "claude":
 		return NewCatalog().Claude(), nil
-	case "gemini":
-		return NewCatalog().Gemini(), nil
 	case "codex":
 		return NewCatalog().Codex(), nil
 	case "copilot":
 		return NewCatalog().Copilot(), nil
+	case "opencode":
+		return NewCatalog().OpenCode(), nil
 	default:
 		return Spec{}, fmt.Errorf("%w: specID %q", ErrUnknownAgent, a.specID)
 	}
@@ -139,18 +139,11 @@ func (c *Catalog) buildRegistry() []Agent {
 			c.canonicalEnforcement("PreToolUse", "PostToolUse", "Stop"),
 		),
 		c.newAgent(
-			"gemini", "Gemini (ACP)", "gemini", "gemini",
-			[]string{".gemini"},
-			".specs/adr/015-gemini-cli-acp-native.md",
-			4000, 500_000,
-			c.canonicalEnforcement("PreToolUse", "PostToolUse", "Stop"),
-		),
-		c.newAgent(
 			"codex", "Codex (ACP)", "codex", "codex-acp",
 			[]string{".codex"},
 			".specs/adr/013-codex-cli-acp-native.md",
 			13000, largeBudgetAbsent,
-			c.canonicalEnforcement("pre_tool_use", "post_tool_use", "stop"),
+			c.canonicalEnforcement("PreToolUse", "PostToolUse", "Stop"),
 			c.mustPrecondition(PreconditionTrustedHash, "register the hook hash via the Codex interactive interface before orchestrating", true),
 		),
 		c.newAgent(
@@ -158,8 +151,18 @@ func (c *Catalog) buildRegistry() []Agent {
 			[]string{".copilot", ".github/copilot"},
 			".specs/adr/012-copilot-cli-acp-native.md",
 			2000, largeBudgetAbsent,
-			c.canonicalEnforcement("preToolUse", "postToolUse", "stop"),
+			c.canonicalEnforcement("preToolUse", "postToolUse", "agentStop"),
 			c.mustPrecondition(PreconditionTrustedFolder, "add the project folder to the Copilot CLI trusted folders list", false),
+		),
+		c.newAgentWithEnvPolicy(
+			"opencode", "OpenCode (ACP)", "opencode", "opencode",
+			[]string{".config/opencode"},
+			".specs/prd-harness-quatro-clis-loop-aprovacao/adr-003-opencode-acp-subcomando.md",
+			4000, 500_000,
+			c.NewEnvPolicy(OpenCodeKillSwitchVars...),
+			c.canonicalEnforcement("tool.execute.before", "tool.execute.after", "session.idle"),
+			c.mustPrecondition(PreconditionNoKillSwitch, "unset OPENCODE_PURE, OPENCODE_DISABLE_PROJECT_CONFIG, OPENCODE_DISABLE_EXTERNAL_SKILLS and --pure before orchestrating", false),
+			c.mustPrecondition(PreconditionHandshake, "wait for the governance plugin load handshake before the first prompt", true),
 		),
 	}
 }
@@ -201,6 +204,18 @@ func (c *Catalog) newAgent(
 	enf Enforcement,
 	preconditions ...EnforcementPrecondition,
 ) Agent {
+	return c.newAgentWithEnvPolicy(id, displayName, specID, command, homeDirs, adrPath, standardBudget, largeBudget, EnvPolicy{}, enf, preconditions...)
+}
+
+func (c *Catalog) newAgentWithEnvPolicy(
+	id, displayName, specID, command string,
+	homeDirs []string,
+	adrPath string,
+	standardBudget, largeBudget int,
+	envPolicy EnvPolicy,
+	enf Enforcement,
+	preconditions ...EnforcementPrecondition,
+) Agent {
 	identity, err := c.NewAgentIdentity(id, displayName)
 	if err != nil {
 		panic(fmt.Sprintf("agent registry: invalid identity: %v", err))
@@ -216,7 +231,7 @@ func (c *Catalog) newAgent(
 		specID:         specID,
 		enforcement:    enf,
 		signals:        DetectionSignals{command: command, homeDirs: slices.Clone(homeDirs)},
-		inheritsEnv:    true,
+		envPolicy:      envPolicy,
 		adrPath:        adrPath,
 		standardBudget: standardBudget,
 		largeBudget:    largeBudget,
@@ -246,7 +261,18 @@ func (a Agent) Enforcement() Enforcement { return a.enforcement }
 
 func (a Agent) Signals() DetectionSignals { return a.signals }
 
-func (a Agent) InheritsEnv() bool { return a.inheritsEnv }
+func (a Agent) InheritsEnv() bool { return a.envPolicy.IsZero() }
+
+func (a Agent) EnvPolicy() EnvPolicy { return a.envPolicy }
+
+func (a Agent) RequiresHandshake() bool {
+	for _, p := range a.enforcement.preconditions {
+		if p.kind == PreconditionHandshake {
+			return true
+		}
+	}
+	return false
+}
 
 func (a Agent) ADRPath() string { return a.adrPath }
 
@@ -260,7 +286,8 @@ func (a Agent) Equal(other Agent) bool {
 	if a.valid != other.valid ||
 		a.identity != other.identity ||
 		a.specID != other.specID ||
-		a.inheritsEnv != other.inheritsEnv ||
+		a.envPolicy.IsZero() != other.envPolicy.IsZero() ||
+		!slices.Equal(a.envPolicy.StripVars(), other.envPolicy.StripVars()) ||
 		a.adrPath != other.adrPath ||
 		a.standardBudget != other.standardBudget ||
 		a.largeBudget != other.largeBudget ||

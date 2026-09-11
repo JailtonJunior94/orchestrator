@@ -1,0 +1,66 @@
+=== RUN   TestCheckCoverage_AllPresent
+--- PASS: TestCheckCoverage_AllPresent (0.00s)
+=== RUN   TestCheckCoverage_MissingID
+--- PASS: TestCheckCoverage_MissingID (0.00s)
+=== RUN   TestCheckCoverage_CaseInsensitive
+--- PASS: TestCheckCoverage_CaseInsensitive (0.00s)
+=== RUN   TestCheckCoverage_REQIDs
+--- PASS: TestCheckCoverage_REQIDs (0.00s)
+=== RUN   TestCheckCoverage_EmptySource
+--- PASS: TestCheckCoverage_EmptySource (0.00s)
+=== RUN   TestCheckCoverage_DuplicateIDsInSource
+--- PASS: TestCheckCoverage_DuplicateIDsInSource (0.00s)
+=== RUN   TestCheckStructuralCoverage_IgnoresNarrativeMentions
+--- PASS: TestCheckStructuralCoverage_IgnoresNarrativeMentions (0.00s)
+=== RUN   TestCheckHash_Match
+--- PASS: TestCheckHash_Match (0.00s)
+=== RUN   TestCheckHash_Divergent
+--- PASS: TestCheckHash_Divergent (0.00s)
+=== RUN   TestCheckHash_NoComment
+--- PASS: TestCheckHash_NoComment (0.00s)
+=== RUN   TestCheckHash_TechspecLabel
+--- PASS: TestCheckHash_TechspecLabel (0.00s)
+=== RUN   TestCheckHash_WrongLabel
+--- PASS: TestCheckHash_WrongLabel (0.00s)
+=== RUN   TestCheckTechspecPRDConsistency_Match
+--- PASS: TestCheckTechspecPRDConsistency_Match (0.00s)
+=== RUN   TestCheckTechspecPRDConsistency_Divergent
+--- PASS: TestCheckTechspecPRDConsistency_Divergent (0.00s)
+=== RUN   TestCheckTechspecPRDConsistency_NoHeader
+--- PASS: TestCheckTechspecPRDConsistency_NoHeader (0.00s)
+=== RUN   TestCheckDrift_TechspecEmbeddedPRDHashDivergesFailsReport
+--- PASS: TestCheckDrift_TechspecEmbeddedPRDHashDivergesFailsReport (0.00s)
+=== RUN   TestCheckDrift_FullPass
+--- PASS: TestCheckDrift_FullPass (0.00s)
+=== RUN   TestCheckDrift_MissingTasksFile
+--- PASS: TestCheckDrift_MissingTasksFile (0.00s)
+=== RUN   TestCheckDrift_OnlyPRD
+--- PASS: TestCheckDrift_OnlyPRD (0.00s)
+=== RUN   TestCheckDrift_CoverageFail
+--- PASS: TestCheckDrift_CoverageFail (0.00s)
+=== RUN   TestCheckDrift_HashFail
+--- PASS: TestCheckDrift_HashFail (0.00s)
+=== RUN   TestCheckHash_CRLFNaoGeraDrift
+--- PASS: TestCheckHash_CRLFNaoGeraDrift (0.00s)
+=== RUN   TestSyncSpecHash_UpdatesExistingHashes
+--- PASS: TestSyncSpecHash_UpdatesExistingHashes (0.00s)
+=== RUN   TestSyncSpecHash_InsertsWhenMissing
+--- PASS: TestSyncSpecHash_InsertsWhenMissing (0.00s)
+=== RUN   TestSyncSpecHash_SkipsMissingSpecFiles
+--- PASS: TestSyncSpecHash_SkipsMissingSpecFiles (0.00s)
+=== RUN   TestSyncSpecHash_NoOpWhenHashesMatch
+--- PASS: TestSyncSpecHash_NoOpWhenHashesMatch (0.00s)
+=== RUN   TestSyncSpecHash_MissingTasksFile
+--- PASS: TestSyncSpecHash_MissingTasksFile (0.00s)
+=== RUN   TestSyncSpecHash_RemoveDuplicadosEPlaceholders
+=== RUN   TestSyncSpecHash_RemoveDuplicadosEPlaceholders/comentarios_duplicados_colapsam_para_um
+=== RUN   TestSyncSpecHash_RemoveDuplicadosEPlaceholders/placeholder_pending_run_e_removido
+--- PASS: TestSyncSpecHash_RemoveDuplicadosEPlaceholders (0.00s)
+    --- PASS: TestSyncSpecHash_RemoveDuplicadosEPlaceholders/comentarios_duplicados_colapsam_para_um (0.00s)
+    --- PASS: TestSyncSpecHash_RemoveDuplicadosEPlaceholders/placeholder_pending_run_e_removido (0.00s)
+=== RUN   TestSyncSpecHash_Idempotente
+--- PASS: TestSyncSpecHash_Idempotente (0.00s)
+=== RUN   TestSyncSpecHash_RoundTrip
+--- PASS: TestSyncSpecHash_RoundTrip (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdrift	0.226s

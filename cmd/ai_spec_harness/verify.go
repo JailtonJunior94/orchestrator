@@ -33,18 +33,19 @@ Sem --source, usa as skills canonicas embutidas no binario.
 
 Exemplos:
   ai-spec-harness verify ./meu-projeto
-  ai-spec-harness verify . --tools claude,gemini
+  ai-spec-harness verify . --tools claude,opencode
   ai-spec-harness verify --global
   ai-spec-harness verify ./meu-projeto --source ~/ai-governance`,
 		Args: cobra.MaximumNArgs(1),
 		RunE: handler.run,
 	}
 
-	cmd.Flags().String("tools", "", "Ferramentas a verificar: claude,gemini,codex,copilot ou all (opcional)")
+	cmd.Flags().String("tools", "", "Ferramentas a verificar: claude,codex,copilot,opencode ou all (opcional)")
 	cmd.Flags().String("langs", "", "Linguagens: go,node,python ou all")
 	cmd.Flags().String("source", "", "Diretorio fonte do repositorio de governanca (opcional; usa embutido se omitido)")
 	cmd.Flags().Bool("global", false, "Verifica a instalacao global em ~/.aispec")
 	cmd.Flags().Bool("by-cli", false, "Adiciona resumo por-CLI (claude/codex/copilot) ao output")
+	cmd.Flags().Bool("check-codex-trust", false, "Verifica trust de hooks do Codex via RPC read-only hooks/list do codex app-server (executa binario, opt-in explicito)")
 	return cmd
 }
 
@@ -54,6 +55,7 @@ func (c *verifyCommand) run(cmd *cobra.Command, args []string) error {
 	verifySource, _ := cmd.Flags().GetString("source")
 	verifyGlobal, _ := cmd.Flags().GetBool("global")
 	verifyByCLI, _ := cmd.Flags().GetBool("by-cli")
+	checkCodexTrust, _ := cmd.Flags().GetBool("check-codex-trust")
 
 	projectDir := "."
 	if len(args) > 0 {
@@ -84,11 +86,12 @@ func (c *verifyCommand) run(cmd *cobra.Command, args []string) error {
 	svc := install.NewService(fsys, printer, mfst, adpt, ctxg)
 
 	items, err := svc.Verify(config.InstallOptions{
-		ProjectDir: projectDir,
-		SourceDir:  verifySource,
-		Tools:      tools,
-		Langs:      langs,
-		Scope:      scope,
+		ProjectDir:      projectDir,
+		SourceDir:       verifySource,
+		Tools:           tools,
+		Langs:           langs,
+		Scope:           scope,
+		CheckCodexTrust: checkCodexTrust,
 	})
 	if err != nil {
 		return fmt.Errorf("verificar instalacao: %w", err)
@@ -100,8 +103,7 @@ func (c *verifyCommand) run(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Contadores por estado.
-	var nCurrent, nMissing, nDrifted int
+	var nCurrent, nMissing, nDrifted, nInert, nUnknown int
 	for _, item := range items {
 		switch item.State {
 		case install.VerifyStateCurrent:
@@ -110,14 +112,16 @@ func (c *verifyCommand) run(cmd *cobra.Command, args []string) error {
 			nMissing++
 		case install.VerifyStateDrifted:
 			nDrifted++
+		case install.VerifyStateInert:
+			nInert++
+		case install.VerifyStateUnknown:
+			nUnknown++
 		}
 	}
 
-	// Exibir resultados.
 	printer.Info("Resultado da verificacao:")
 	printer.Info("")
 
-	// Agrupar por tool para exibicao mais clara.
 	seen := make(map[skills.Tool]bool)
 	for _, item := range items {
 		if !seen[item.Tool] {
@@ -127,18 +131,22 @@ func (c *verifyCommand) run(cmd *cobra.Command, args []string) error {
 			}
 		}
 		stateLabel := c.stateEmoji(item.State)
+		if item.Remedy != "" && (item.State == install.VerifyStateInert || item.State == install.VerifyStateUnknown) {
+			printer.Info("    %-40s %s (remedio: %s)", item.Skill, stateLabel, item.Remedy)
+			continue
+		}
 		printer.Info("    %-40s %s", item.Skill, stateLabel)
 	}
 
 	printer.Info("")
-	printer.Info("Resumo: %d current, %d missing, %d drifted", nCurrent, nMissing, nDrifted)
+	printer.Info("Resumo: %d current, %d missing, %d drifted, %d inert, %d unknown", nCurrent, nMissing, nDrifted, nInert, nUnknown)
 
 	if verifyByCLI {
 		// Resumo estruturado por CLI: util em scripts CI que verificam paridade entre
 		// Claude/Codex/Copilot. Ordenado por nome de tool para output deterministico.
 		printer.Info("")
 		printer.Info("Por CLI:")
-		counts := make(map[skills.Tool]struct{ current, missing, drifted int })
+		counts := make(map[skills.Tool]struct{ current, missing, drifted, inert, unknown int })
 		for _, item := range items {
 			c := counts[item.Tool]
 			switch item.State {
@@ -148,6 +156,10 @@ func (c *verifyCommand) run(cmd *cobra.Command, args []string) error {
 				c.missing++
 			case install.VerifyStateDrifted:
 				c.drifted++
+			case install.VerifyStateInert:
+				c.inert++
+			case install.VerifyStateUnknown:
+				c.unknown++
 			}
 			counts[item.Tool] = c
 		}
@@ -159,7 +171,7 @@ func (c *verifyCommand) run(cmd *cobra.Command, args []string) error {
 			}
 			seen[tool] = true
 			c := counts[tool]
-			printer.Info("  %-10s current=%d missing=%d drifted=%d", string(tool), c.current, c.missing, c.drifted)
+			printer.Info("  %-10s current=%d missing=%d drifted=%d inert=%d unknown=%d", string(tool), c.current, c.missing, c.drifted, c.inert, c.unknown)
 		}
 		for _, t := range ordered {
 			emit(t)
@@ -171,10 +183,15 @@ func (c *verifyCommand) run(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if nMissing > 0 || nDrifted > 0 {
+	if nUnknown > 0 {
 		printer.Info("")
-		printer.Info("Dica: execute 'ai-spec-harness install' para corrigir skills faltantes ou divergentes.")
-		return fmt.Errorf("%d skill(s) nao current (missing: %d, drifted: %d)", nMissing+nDrifted, nMissing, nDrifted)
+		printer.Info("Aviso: %d pre-condicao(oes) unknown — ausencia de informacao, nao contabilizada como sucesso. Use --check-codex-trust para diagnostico do Codex.", nUnknown)
+	}
+
+	if nMissing > 0 || nDrifted > 0 || nInert > 0 {
+		printer.Info("")
+		printer.Info("Dica: execute 'ai-spec-harness install' para corrigir skills faltantes ou divergentes; pre-condicoes inert exigem acao manual (ver remedio acima).")
+		return fmt.Errorf("%d skill(s)/precondicao(oes) nao current (missing: %d, drifted: %d, inert: %d)", nMissing+nDrifted+nInert, nMissing, nDrifted, nInert)
 	}
 
 	return nil
@@ -188,6 +205,10 @@ func (c *verifyCommand) stateEmoji(state install.VerifyState) string {
 		return "MISSING"
 	case install.VerifyStateDrifted:
 		return "DRIFTED"
+	case install.VerifyStateInert:
+		return "INERT"
+	case install.VerifyStateUnknown:
+		return "unknown"
 	default:
 		return string(state)
 	}

@@ -1,70 +1,73 @@
 # Relatório de Orquestração — prd-harness-quatro-clis-loop-aprovacao
 
-**Data:** 2026-09-10
+**Data:** 2026-09-11
 **Skill:** execute-all-tasks
-**Status final:** `partial` — halt na tarefa 6.0 (`blocked`)
+**Status final:** `done` — 18/18 tarefas concluídas e validadas
 
 ## Pré-voo
 
 | Gate | Resultado |
 |---|---|
-| `pre-execute-all-tasks.sh` | OK (11 tarefas validadas) |
+| `pre-execute-all-tasks.sh` | OK (18 tarefas validadas) |
 | `check-invocation-depth.sh` / binário `ai-spec` | presentes |
-| `ai-spec skills --verify` | inicialmente FALHOU (3 hashes divergentes); resolvido por resync com `audit/skill-upgrade-lock-hash-resync-2026-09-10.md`; re-verificado exit 0 |
+| `ai-spec skills --verify` | OK |
 | `ai-spec check-spec-drift tasks.md` | OK, sem drift |
 | `runtime-capabilities .` | `{"supports_write":true,"supports_worktree":true,"isolated_worktrees":false}` → execução sequencial, sem paralelismo |
 
 ## Snapshot inicial vs final
 
-| Métrica | Inicial | Final |
+| Métrica | Inicial (desta sessão) | Final |
 |---|---|---|
-| Total | 11 | 11 |
-| `done` | 0 | 3 |
-| `blocked` | 0 | 1 |
-| `pending` | 11 | 7 |
+| Total | 18 | 18 |
+| `done` (pré-existente) | 11 (1.0, 2.0, 3.0, 4.1–4.5, 6.0) | — |
+| `done` (executado nesta sessão) | 0 | 7 (4.6, 4.7, 4.8, 5.0, 7.0, 8.0, 9.0, 10.0, 11.0 — 9 tarefas) |
+| `pending` | 9 | 0 |
 
-## Tarefas executadas
+## Tarefas executadas nesta sessão
 
-| # | Título | Wave | Retorno | Validação | Evidência |
-|---|--------|------|---------|-----------|-----------|
-| 1.0 | Gates capazes de rodar e dizer a verdade | 1 | `done` | hook exit 0 (SDD v2 válido) | `1.0_execution_report.md` |
-| 2.0 | Pacote de domínio do Ciclo de Aprovação | 2 | `done` | hook exit 0 | `2.0_execution_report.md` |
-| 3.0 | Mapa 1:1 critério-evidência como dado | 3 | `done` | hook exit 0 | `3.0_execution_report.md` |
-| 6.0 | Catálogo de Agentes como registro único | 4 | `blocked` | respeitado (não re-executado) | `6.0_execution_report.md` |
+| # | Título | Retorno | Validação (evidência física + tasks.md) | Evidência |
+|---|--------|---------|------------------------------------------|-----------|
+| 4.6 | RunLoop conduz o Cycle; BugfixLoop projetor de evidência | `done` | OK | `4.6_execution_report.md` |
+| 4.7 | ACPRunner conduz o Cycle e fiação das quatro lacunas | `done` | OK | `4.7_execution_report.md` |
+| 4.8 | Prova de paridade entre os três caminhos e fluxos E2E | `done` | OK | `4.8_execution_report.md` |
+| 5.0 | Propagação do teto de rodadas e virada do critério estrito | `done` | OK | `5.0_execution_report.md` |
+| 7.0 | OpenCode como agente oficial de primeira classe | `done` | OK (subagent retomado 1x para finalizar evidência) | `7.0_execution_report.md` |
+| 8.0 | Enforcement não-desligável do OpenCode | `done` | OK | `8.0_execution_report.md` |
+| 9.0 | Hooks e paridade comprovada nos quatro agentes | `done` | OK | `9.0_execution_report.md` |
+| 10.0 | Remoção total do Gemini e desinstalação fiel | `done` | OK — 46 ocorrências residuais de "gemini" em `.go` auditadas e justificadas (modelos Gemini via OpenCode, `RemovedAgentError`, limpeza de resíduo legado `.gemini/`/`GEMINI.md`, comentários históricos); nenhuma lógica de agente remanescente | `10.0_execution_report.md` |
+| 11.0 | Fechamento: rastreabilidade, não-regressão e release major | `done` | OK — publicação remota **não realizada** (fora de escopo, R-GOV-001) | `11.0_execution_report.md` |
 
-## Tarefas puladas (done pré-existente)
+## Tarefas pré-existentes (done antes desta sessão)
 
-Nenhuma.
+1.0, 2.0, 3.0, 4.1, 4.2, 4.3, 4.4, 4.5, 6.0 — validadas por sessões anteriores, não re-executadas.
 
 ## Waves
 
-- Wave 1: `{1.0}` — sequencial (aresta sem predecessora).
-- Wave 2: `{2.0}` — sequencial (`isolated_worktrees: false` força serial mesmo com flag `Com 3.0`).
-- Wave 3: `{3.0}` — idem.
-- Wave 4: `{6.0}` — **blocked**. Halt-first acionado.
+Todas as 9 tarefas desta sessão são `Paralelizável: Não` e formam uma única cadeia sequencial de
+dependências (4.6→4.7→4.8→5.0→7.0→8.0→9.0→10.0→11.0, com 11.0 também dependendo de 5.0). Com
+`isolated_worktrees: false`, cada uma rodou em wave própria de tamanho 1, um subagent fresh por vez.
 
-## Motivo do halt (tarefa 6.0)
+## Validação final agregada
 
-Refactor estrutural amplo: 28 arquivos, techspec §Fase 4 prescreve **sequência topológica com commit por
-etapa** (15 etapas), e a mudança de assinatura de `resolveACPSpec` (`+error`) é "a armadilha de regressão
-mais cara" (fallback silencioso que roda o job no agente errado).
+- `go build ./... && go vet ./... && go test ./... -count=1` → **2898 testes, 75 pacotes, 0 falhas**.
+- `bash scripts/check-skills-sync.sh` → 80 skills em sync, 0 drift; plugin OpenCode em paridade.
+- `bash scripts/check-hooks-sync.sh` → 28 hooks em sync, 0 drift; gate de encerramento 7/7 mirrors.
+- `bash scripts/check-scripts-sync.sh` → 24 validadores em sync, 0 drift.
+- `bash scripts/check-spec-paths.sh` → exit 0.
+- `ai-spec check-spec-drift tasks.md` → sem drift.
+- `VERSION` → `2.0.0` (major, refletindo remoção do agente Gemini e virada do critério estrito).
+- `git tag --list` → nenhuma tag nova; nenhuma publicação remota disparada.
 
-Conflito de regra registrado pelo executor:
+## Cobertura de Requisitos
 
-- techspec §Ordem de build da Fase 4 / ADR-002 exigem commit por etapa
-- **R-GOV-001** proíbe o harness de criar commits; regra de sessão exige autorização explícita do usuário para commitar
-- a árvore compartilhada (1.0–3.0, 47 arquivos não commitados) fica **sem ponto de retorno** se um estado intermediário quebrar
+Os 63 RFs do PRD estão mapeados 1:1 às 18 tarefas na tabela "Cobertura de Requisitos" de `tasks.md`,
+com rastreabilidade requisito → tarefa → critério → evidência formalizada na tarefa 11.0 (RF-55).
 
-O executor escolheu `blocked` em vez de violar R-GOV-001 ou entregar refactor amplo sem checkpoint. Decisão correta.
+## Próximos passos
 
-## Estado do working tree
-
-- 33 arquivos tracked modificados, +844/−48
-- untracked: `internal/approval/` (pacote inteiro), `.claude/rules/code-style.md`, `audit/`, `evidence/task-{1,2,3}.0/`, artefatos `.specs/.../{1,2,3,6}.0_*`, `.checkpoints/`
-- **Nada commitado.** Último commit: `ba80b56`.
-
-## Próximos passos (requer decisão do usuário)
-
-O desbloqueio da 6.0 — e das tarefas 7.0–10.0, todas estruturais e `Não` paralelizáveis — exige pontos de
-retorno em git. Opções na mensagem ao usuário. Após a decisão, retomar da 6.0 (idempotente; `_orchestration_report.md`
-consolidado com tasks.md atual).
+- Nenhum requisito do PRD em aberto.
+- Publicação remota da release (`git tag v2.0.0` + `git push --tags` + release notes no GitHub) fica
+  **pendente de pedido explícito do usuário**, conforme registrado na evidência da tarefa 11.0 e por
+  proibição de R-GOV-001 (Segurança Operacional) de publicação remota sem solicitação direta.
+- Recomenda-se revisão humana do diff completo antes de qualquer commit/push, dado o raio de explosão
+  da tarefa 10.0 (remoção do Gemini, ~264 arquivos alterados).

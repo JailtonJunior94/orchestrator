@@ -1,0 +1,726 @@
+=== RUN   TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing
+=== PAUSE TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing
+=== RUN   TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent
+=== PAUSE TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent
+=== RUN   TestInstall_OpenCode_ModelFlagMapsToConfigKey
+=== PAUSE TestInstall_OpenCode_ModelFlagMapsToConfigKey
+=== RUN   TestInstall_OpenCode_WritesOnlyPermissionBlock
+=== PAUSE TestInstall_OpenCode_WritesOnlyPermissionBlock
+=== RUN   TestInstall_OpenCode_IdempotentReinstall
+=== PAUSE TestInstall_OpenCode_IdempotentReinstall
+=== RUN   TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks
+=== PAUSE TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks
+=== RUN   TestInstall_OpenCode_DepositsPluginDir
+=== PAUSE TestInstall_OpenCode_DepositsPluginDir
+=== RUN   TestInstall_OpenCode_ShipsCanonicalValidators
+=== PAUSE TestInstall_OpenCode_ShipsCanonicalValidators
+=== RUN   TestInstall_Validate_MissingProjectDir
+=== PAUSE TestInstall_Validate_MissingProjectDir
+=== RUN   TestInstall_AutoDetect_EmptyEnv_NoError
+=== PAUSE TestInstall_AutoDetect_EmptyEnv_NoError
+=== RUN   TestInstall_AutoDetect_DetectsTools
+=== PAUSE TestInstall_AutoDetect_DetectsTools
+=== RUN   TestInstall_DetectLangsUsesFocusPaths
+=== PAUSE TestInstall_DetectLangsUsesFocusPaths
+=== RUN   TestInstall_FlagOverride_PrecedesAutoDetect
+=== PAUSE TestInstall_FlagOverride_PrecedesAutoDetect
+=== RUN   TestInstall_Validate_SameDir
+=== PAUSE TestInstall_Validate_SameDir
+=== RUN   TestInstall_CopyMode
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-task-evidence.sh: chmod /project/.agents/scripts/validate-task-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-bugfix-evidence.sh: chmod /project/.agents/scripts/validate-bugfix-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-refactor-evidence.sh: chmod /project/.agents/scripts/validate-refactor-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-review-evidence.sh: chmod /project/.agents/scripts/validate-review-evidence.sh: no such file or directory
+-> Gerando governanca contextual...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_CopyMode (0.00s)
+=== RUN   TestInstall_RefusesExternalSkillsSymlinkByDefault
+=== PAUSE TestInstall_RefusesExternalSkillsSymlinkByDefault
+=== RUN   TestInstall_FollowsExternalSkillsSymlinkWhenAllowed
+=== PAUSE TestInstall_FollowsExternalSkillsSymlinkWhenAllowed
+=== RUN   TestInstall_Codex_LeanProfile
+=== PAUSE TestInstall_Codex_LeanProfile
+=== RUN   TestInstall_Codex_FullProfile
+=== PAUSE TestInstall_Codex_FullProfile
+=== RUN   TestInstall_Idempotent
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-task-evidence.sh: chmod /project/.agents/scripts/validate-task-evidence.sh: no such file or directory
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-task-evidence.sh: chmod /project/.agents/scripts/validate-task-evidence.sh: no such file or directory
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Idempotent (0.00s)
+=== RUN   TestInstall_NoCtx_CopiesAGENTSMD
+=== PAUSE TestInstall_NoCtx_CopiesAGENTSMD
+=== RUN   TestInstall_Gemini_CopiesHook
+=== PAUSE TestInstall_Gemini_CopiesHook
+=== RUN   TestInstall_NonClaude_ShipsCanonicalValidators
+=== PAUSE TestInstall_NonClaude_ShipsCanonicalValidators
+=== RUN   TestInstall_CanonicalValidators_FallbackToClaudeScripts
+=== PAUSE TestInstall_CanonicalValidators_FallbackToClaudeScripts
+=== RUN   TestInstall_Gemini_GovernanceHookAbsent_NoError
+=== PAUSE TestInstall_Gemini_GovernanceHookAbsent_NoError
+=== RUN   TestInstall_Gemini_CopiesGEMINIMD
+=== PAUSE TestInstall_Gemini_CopiesGEMINIMD
+=== RUN   TestInstall_Gemini_NoGEMINIMDInSource_NoError
+=== PAUSE TestInstall_Gemini_NoGEMINIMDInSource_NoError
+=== RUN   TestInstall_Gemini_NoHookInSource_NoError
+=== PAUSE TestInstall_Gemini_NoHookInSource_NoError
+=== RUN   TestInstall_Gemini_DryRun_NoTomlCreated
+=== PAUSE TestInstall_Gemini_DryRun_NoTomlCreated
+=== RUN   TestInstall_Copilot_GeneratesAgents
+=== PAUSE TestInstall_Copilot_GeneratesAgents
+=== RUN   TestInstall_DistributesAgentsLib
+=== PAUSE TestInstall_DistributesAgentsLib
+=== RUN   TestInstall_AgentsLib_AbsentSource_NoError
+=== PAUSE TestInstall_AgentsLib_AbsentSource_NoError
+=== RUN   TestInstall_Copilot_CopiesValidationHooks
+=== PAUSE TestInstall_Copilot_CopiesValidationHooks
+=== RUN   TestInstall_Codex_CopiesGovernanceHook
+=== PAUSE TestInstall_Codex_CopiesGovernanceHook
+=== RUN   TestInstall_Copilot_DryRun_NoAgentsCreated
+=== PAUSE TestInstall_Copilot_DryRun_NoAgentsCreated
+=== RUN   TestInstall_DryRun
+=== PAUSE TestInstall_DryRun
+=== RUN   TestInstall_EmbeddedSource_NoSourceFlag
+=== PAUSE TestInstall_EmbeddedSource_NoSourceFlag
+=== RUN   TestInstall_EmbeddedSource_AllToolsAllLangs
+=== PAUSE TestInstall_EmbeddedSource_AllToolsAllLangs
+=== RUN   TestInstall_ManifestUsesResolvedExecutableVersion
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_ManifestUsesResolvedExecutableVersion3308432263/001
+Modo de instalacao: copy
+--- PASS: TestInstall_ManifestUsesResolvedExecutableVersion (0.01s)
+=== RUN   TestInstall_ManifestIncludesSkillVersions
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_ManifestIncludesSkillVersions (0.00s)
+=== RUN   TestInstall_RefResolved_UsesCopyMode
+=== PAUSE TestInstall_RefResolved_UsesCopyMode
+=== RUN   TestInstall_ExternalSource_Override
+=== PAUSE TestInstall_ExternalSource_Override
+=== RUN   TestInstall_GlobalScope_CreatesAispecDir
+Escopo: global (/var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir896900187/001/.aispec)
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir896900187/001/.aispec/.agents/skills
+-> Instalando claude...
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir896900187/001/.aispec/.claude/skills
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir896900187/001/.aispec/.claude/agents
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir896900187/001/.aispec/.claude/rules
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir896900187/001/.aispec/.claude/scripts
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir896900187/001/.aispec/.claude/hooks
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir896900187/001/.aispec/scripts/lib
+  [dry-run] copiar .claude/rules/governance.md
+  [dry-run] copiar .claude/scripts/validate-task-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-bugfix-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-refactor-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-review-evidence.sh
+  [dry-run] copiar .claude/hooks/validate-governance.sh
+  [dry-run] copiar .claude/hooks/validate-preload.sh
+  [dry-run] copiar .claude/hooks/validate-session-end.sh
+  [dry-run] copiar scripts/lib/parse-hook-input.sh
+  [dry-run] copiar scripts/lib/check-invocation-depth.sh
+  [dry-run] configurar hooks PreToolUse e PostToolUse em .claude/settings.local.json
+  [dry-run] gerar .claude/agents/*.md via adaptadores
+
+[dry-run] Nenhum arquivo foi alterado.
+--- PASS: TestInstall_GlobalScope_CreatesAispecDir (0.00s)
+=== RUN   TestInstall_Idempotent_VerifyAllCurrent
+=== PAUSE TestInstall_Idempotent_VerifyAllCurrent
+=== RUN   TestInstall_RI01_LangAutoDetect_Go
+=== PAUSE TestInstall_RI01_LangAutoDetect_Go
+=== RUN   TestInstall_RI01_LangAutoDetect_Node
+=== PAUSE TestInstall_RI01_LangAutoDetect_Node
+=== RUN   TestInstall_RI01_LangAutoDetect_Python
+=== PAUSE TestInstall_RI01_LangAutoDetect_Python
+=== RUN   TestInstall_RI01_ExplicitLangs_SkipsAutoDetect
+=== PAUSE TestInstall_RI01_ExplicitLangs_SkipsAutoDetect
+=== RUN   TestInstall_RI02_ProbeWarn_BinaryAbsent
+=== PAUSE TestInstall_RI02_ProbeWarn_BinaryAbsent
+=== RUN   TestInstall_RI02_ProbeWarn_BinaryPresent
+=== PAUSE TestInstall_RI02_ProbeWarn_BinaryPresent
+=== RUN   TestInstall_Gemini_NativeHooks
+=== PAUSE TestInstall_Gemini_NativeHooks
+=== RUN   TestInstall_Copilot_NativeHooks
+=== PAUSE TestInstall_Copilot_NativeHooks
+=== RUN   TestInstall_Codex_NativeHooksAndSandbox
+=== PAUSE TestInstall_Codex_NativeHooksAndSandbox
+=== CONT  TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing
+=== CONT  TestInstall_RI02_ProbeWarn_BinaryAbsent
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando opencode...
+=== CONT  TestInstall_RI01_ExplicitLangs_SkipsAutoDetect
+AVISO: [claude] binario ACP 'claude-agent-acp' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+=== CONT  TestInstall_RI01_LangAutoDetect_Python
+--- PASS: TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing (0.00s)
+Linguagens detectadas automaticamente: [python]
+Ferramentas: [claude]
+Linguagens:  [python]
+=== CONT  TestInstall_RefResolved_UsesCopyMode
+
+-> Instalando skills canonicas...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+-> Instalando claude...
+Ferramentas: [claude]
+=== CONT  TestInstall_RI01_LangAutoDetect_Node
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+=== CONT  TestInstall_RI01_LangAutoDetect_Go
+-> Instalando claude...
+Linguagens detectadas automaticamente: [node]
+Linguagens detectadas automaticamente: [go]
+Ferramentas: [claude]
+Ferramentas: [claude]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+AVISO: [claude] binario ACP 'claude-agent-acp' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+=== CONT  TestInstall_Idempotent_VerifyAllCurrent
+-> Instalando claude...
+AVISO: [claude] binario ACP 'claude-agent-acp' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: [claude] binario ACP 'claude-agent-acp' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+=== CONT  TestInstall_EmbeddedSource_NoSourceFlag
+AVISO: [claude] binario ACP 'claude-agent-acp' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+=== CONT  TestInstall_DryRun
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+  [dry-run] mkdir -p /project/.agents/skills
+  [dry-run] link_or_copy /source/.agents/skills/review -> /project/.agents/skills/review
+-> Instalando claude...
+  [dry-run] mkdir -p /project/.claude/skills
+  [dry-run] mkdir -p /project/.claude/agents
+  [dry-run] mkdir -p /project/.claude/rules
+  [dry-run] mkdir -p /project/.claude/scripts
+  [dry-run] mkdir -p /project/.claude/hooks
+  [dry-run] mkdir -p /project/scripts/lib
+  [dry-run] link ../../.agents/skills/review -> /project/.claude/skills/review
+  [dry-run] copiar .claude/rules/governance.md
+  [dry-run] copiar .claude/scripts/validate-task-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-bugfix-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-refactor-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-review-evidence.sh
+  [dry-run] copiar .claude/hooks/validate-governance.sh
+  [dry-run] copiar .claude/hooks/validate-preload.sh
+  [dry-run] copiar .claude/hooks/validate-session-end.sh
+  [dry-run] copiar scripts/lib/parse-hook-input.sh
+  [dry-run] copiar scripts/lib/check-invocation-depth.sh
+  [dry-run] configurar hooks PreToolUse e PostToolUse em .claude/settings.local.json
+  [dry-run] gerar .claude/agents/*.md via adaptadores
+-> Gerando governanca contextual...
+  [dry-run] Geraria AGENTS.md (schema 1.0.0, profile standard)
+  [dry-run] Geraria CLAUDE.md
+
+[dry-run] Nenhum arquivo foi alterado.
+=== CONT  TestInstall_ExternalSource_Override
+--- PASS: TestInstall_RI02_ProbeWarn_BinaryAbsent (0.00s)
+--- PASS: TestInstall_RI01_LangAutoDetect_Python (0.00s)
+--- PASS: TestInstall_RI01_LangAutoDetect_Go (0.00s)
+--- PASS: TestInstall_DryRun (0.00s)
+=== CONT  TestInstall_EmbeddedSource_AllToolsAllLangs
+=== CONT  TestInstall_Copilot_DryRun_NoAgentsCreated
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_RI01_LangAutoDetect_Node (0.00s)
+=== CONT  TestInstall_Codex_CopiesGovernanceHook
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_RI01_ExplicitLangs_SkipsAutoDetect (0.00s)
+Ferramentas: [codex]
+Ferramentas: [copilot]
+Linguagens:  []
+
+=== CONT  TestInstall_Copilot_CopiesValidationHooks
+-> Instalando skills canonicas...
+  [dry-run] mkdir -p /project/.agents/skills
+  [dry-run] link_or_copy /source/.agents/skills/review -> /project/.agents/skills/review
+-> Instalando copilot...
+  [dry-run] mkdir -p /project/.github/skills
+  [dry-run] mkdir -p /project/.github/agents
+  [dry-run] link ../../.agents/skills/review -> /project/.github/skills/review
+  [dry-run] gerar .github/agents/*.agent.md via adaptadores
+  [dry-run] copiar .github/hooks/{validate-preload,validate-governance,post-execute-task,pre-execute-all-tasks,post-wave}.sh
+
+[dry-run] Nenhum arquivo foi alterado.
+--- PASS: TestInstall_Copilot_DryRun_NoAgentsCreated (0.00s)
+=== CONT  TestInstall_AgentsLib_AbsentSource_NoError
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+AVISO: nao foi possivel preservar +x em /project/.codex/hooks/validate-preload.sh: chmod /project/.codex/hooks/validate-preload.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.codex/hooks/validate-governance.sh: chmod /project/.codex/hooks/validate-governance.sh: no such file or directory
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_AgentsLib_AbsentSource_NoError (0.00s)
+=== CONT  TestInstall_DistributesAgentsLib
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Codex_CopiesGovernanceHook (0.00s)
+=== CONT  TestInstall_Copilot_GeneratesAgents
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+-> Instalando copilot...
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+AVISO: nao foi possivel preservar +x em /project/.github/hooks/validate-preload.sh: chmod /project/.github/hooks/validate-preload.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.github/hooks/validate-governance.sh: chmod /project/.github/hooks/validate-governance.sh: no such file or directory
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Copilot_CopiesValidationHooks (0.00s)
+=== CONT  TestInstall_Gemini_DryRun_NoTomlCreated
+Ferramentas: [gemini]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+  [dry-run] mkdir -p /project/.agents/skills
+  [dry-run] link_or_copy /source/.agents/skills/review -> /project/.agents/skills/review
+-> Instalando gemini...
+  [dry-run] mkdir -p /project/.gemini/commands
+  [dry-run] gerar .gemini/commands/*.toml via adaptadores
+  [dry-run] gerar .gemini/agents/*.md via adaptadores
+  [dry-run] copiar .gemini/hooks/validate-preload.sh
+  [dry-run] copiar .gemini/hooks/validate-governance.sh
+  [dry-run] copiar GEMINI.md
+
+[dry-run] Nenhum arquivo foi alterado.
+--- PASS: TestInstall_Gemini_DryRun_NoTomlCreated (0.00s)
+=== CONT  TestInstall_Gemini_NoHookInSource_NoError
+AVISO: nao foi possivel preservar +x em /project/.agents/lib/check-invocation-depth.sh: chmod /project/.agents/lib/check-invocation-depth.sh: no such file or directory
+Ferramentas: [gemini]
+AVISO: nao foi possivel preservar +x em /project/.agents/lib/parse-hook-input.sh: chmod /project/.agents/lib/parse-hook-input.sh: no such file or directory
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando gemini...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_DistributesAgentsLib (0.00s)
+=== CONT  TestInstall_Gemini_NoGEMINIMDInSource_NoError
+Ferramentas: [gemini]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando gemini...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Copilot_GeneratesAgents (0.00s)
+=== CONT  TestInstall_Gemini_CopiesGEMINIMD
+Ferramentas: [gemini]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando gemini...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Gemini_NoHookInSource_NoError (0.00s)
+=== CONT  TestInstall_Gemini_GovernanceHookAbsent_NoError
+Ferramentas: [gemini]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando gemini...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Gemini_NoGEMINIMDInSource_NoError (0.00s)
+=== CONT  TestInstall_CanonicalValidators_FallbackToClaudeScripts
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Gemini_CopiesGEMINIMD (0.00s)
+=== CONT  TestInstall_NonClaude_ShipsCanonicalValidators
+Ferramentas: [gemini]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+-> Instalando gemini...
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-task-evidence.sh: chmod /project/.agents/scripts/validate-task-evidence.sh: no such file or directory
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Gemini_GovernanceHookAbsent_NoError (0.00s)
+=== CONT  TestInstall_Gemini_CopiesHook
+Ferramentas: [gemini]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando gemini...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_CanonicalValidators_FallbackToClaudeScripts (0.00s)
+=== CONT  TestInstall_NoCtx_CopiesAGENTSMD
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-task-evidence.sh: chmod /project/.agents/scripts/validate-task-evidence.sh: no such file or directory
+-> Instalando claude...
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-bugfix-evidence.sh: chmod /project/.agents/scripts/validate-bugfix-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-refactor-evidence.sh: chmod /project/.agents/scripts/validate-refactor-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-review-evidence.sh: chmod /project/.agents/scripts/validate-review-evidence.sh: no such file or directory
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Gemini_CopiesHook (0.00s)
+=== CONT  TestInstall_Codex_FullProfile
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_NoCtx_CopiesAGENTSMD (0.00s)
+=== CONT  TestInstall_Codex_LeanProfile
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_NonClaude_ShipsCanonicalValidators (0.00s)
+=== CONT  TestInstall_FollowsExternalSkillsSymlinkWhenAllowed
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Codex_FullProfile (0.00s)
+=== CONT  TestInstall_RefusesExternalSkillsSymlinkByDefault
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+--- PASS: TestInstall_RefusesExternalSkillsSymlinkByDefault (0.00s)
+=== CONT  TestInstall_Validate_SameDir
+--- PASS: TestInstall_Validate_SameDir (0.00s)
+=== CONT  TestInstall_FlagOverride_PrecedesAutoDetect
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+-> Instalando claude...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_FollowsExternalSkillsSymlinkWhenAllowed (0.00s)
+=== CONT  TestInstall_DetectLangsUsesFocusPaths
+Linguagens detectadas automaticamente: [node]
+Ferramentas: [claude]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_FlagOverride_PrecedesAutoDetect (0.00s)
+=== CONT  TestInstall_AutoDetect_DetectsTools
+Agentes detectados automaticamente: [claude]
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Codex_LeanProfile (0.00s)
+=== CONT  TestInstall_AutoDetect_EmptyEnv_NoError
+AVISO: Nenhum agente detectado no ambiente. Use --tools para especificar explicitamente.
+--- PASS: TestInstall_AutoDetect_EmptyEnv_NoError (0.00s)
+=== CONT  TestInstall_Validate_MissingProjectDir
+--- PASS: TestInstall_Validate_MissingProjectDir (0.00s)
+=== CONT  TestInstall_OpenCode_ShipsCanonicalValidators
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_AutoDetect_DetectsTools (0.00s)
+=== CONT  TestInstall_OpenCode_DepositsPluginDir
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-task-evidence.sh: chmod /project-opencode/.agents/scripts/validate-task-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-bugfix-evidence.sh: chmod /project-opencode/.agents/scripts/validate-bugfix-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-refactor-evidence.sh: chmod /project-opencode/.agents/scripts/validate-refactor-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-review-evidence.sh: chmod /project-opencode/.agents/scripts/validate-review-evidence.sh: no such file or directory
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /project-opencode
+Modo de instalacao: copy
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+--- PASS: TestInstall_OpenCode_DepositsPluginDir (0.00s)
+=== CONT  TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-task-evidence.sh: chmod /project-claude/.agents/scripts/validate-task-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-bugfix-evidence.sh: chmod /project-claude/.agents/scripts/validate-bugfix-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-refactor-evidence.sh: chmod /project-claude/.agents/scripts/validate-refactor-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-review-evidence.sh: chmod /project-claude/.agents/scripts/validate-review-evidence.sh: no such file or directory
+
+Governanca para IA instalada em: /project
+Modo de instalacao: symlink
+--- PASS: TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks (0.00s)
+=== CONT  TestInstall_OpenCode_IdempotentReinstall
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+--- PASS: TestInstall_DetectLangsUsesFocusPaths (0.00s)
+
+-> Instalando opencode...
+Governanca para IA instalada em: /project-claude
+Modo de instalacao: copy
+=== CONT  TestInstall_OpenCode_WritesOnlyPermissionBlock
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+--- PASS: TestInstall_OpenCode_ShipsCanonicalValidators (0.00s)
+=== CONT  TestInstall_OpenCode_ModelFlagMapsToConfigKey
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+-> Instalando opencode...
+--- PASS: TestInstall_OpenCode_WritesOnlyPermissionBlock (0.00s)
+=== CONT  TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+-> Instalando claude...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_ModelFlagMapsToConfigKey (0.00s)
+=== CONT  TestInstall_RI02_ProbeWarn_BinaryPresent
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: [opencode] binario ACP 'opencode' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent (0.00s)
+=== CONT  TestInstall_Gemini_NativeHooks
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_RI02_ProbeWarn_BinaryPresent (0.00s)
+=== CONT  TestInstall_Codex_NativeHooksAndSandbox
+-> Instalando opencode...
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+Ferramentas: [gemini]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando gemini...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_IdempotentReinstall (0.00s)
+=== CONT  TestInstall_Copilot_NativeHooks
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Gemini_NativeHooks (0.00s)
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Codex_NativeHooksAndSandbox (0.00s)
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Copilot_NativeHooks (0.00s)
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_RefResolved_UsesCopyMode2608466193/002
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_Idempotent_VerifyAllCurrent3413743684/002
+Modo de instalacao: copy
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_ExternalSource_Override539296009/001
+Modo de instalacao: copy
+-> Instalando claude...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_Idempotent_VerifyAllCurrent3413743684/002
+Modo de instalacao: copy
+--- PASS: TestInstall_RefResolved_UsesCopyMode (0.02s)
+--- PASS: TestInstall_ExternalSource_Override (0.02s)
+--- PASS: TestInstall_Idempotent_VerifyAllCurrent (0.02s)
+Ferramentas: [claude gemini codex copilot opencode]
+Linguagens:  [go node python dotnet]
+
+-> Instalando skills canonicas...
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando claude...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_EmbeddedSource_NoSourceFlag3375327849/001
+Modo de instalacao: copy
+-> Instalando gemini...
+-> Instalando codex...
+--- PASS: TestInstall_EmbeddedSource_NoSourceFlag (0.12s)
+-> Instalando copilot...
+-> Instalando opencode...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_EmbeddedSource_AllToolsAllLangs774273246/001
+Modo de instalacao: copy
+--- PASS: TestInstall_EmbeddedSource_AllToolsAllLangs (0.22s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/install	0.463s

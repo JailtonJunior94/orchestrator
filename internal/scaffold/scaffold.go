@@ -108,28 +108,10 @@ TODO: descrever objetivo desta referencia para %s.
 		}
 	}
 
-	// Gemini command
-	geminiCmd := rootDir + "/.gemini/commands/workspace." + skillName + ".toml"
-	geminiContent := fmt.Sprintf(`description = "Implementa alteracoes em codigo %s usando a habilidade canonica %s."
-prompt = """
-Use `+"`"+`.agents/skills/%s/SKILL.md`+"`"+` como fluxo canonico desta tarefa.
-Leia os assets e references sob demanda conforme descrito no SKILL.md.
-Nao invente um processo paralelo neste comando.
-
-Aplicar a habilidade a esta solicitacao:
-{{args}}
-"""
-`, langUpper, skillName, skillName)
-	_ = s.fs.MkdirAll(rootDir + "/.gemini/commands")
-	if err := s.fs.WriteFile(geminiCmd, []byte(geminiContent)); err != nil {
-		return err
-	}
-
 	s.printer.Info("")
 	s.printer.Info("Scaffold criado com sucesso:")
 	s.printer.Info("  Skill:   %s/SKILL.md", skillDir)
 	s.printer.Info("  Refs:    %s/references/ (%d stubs)", skillDir, len(refs))
-	s.printer.Info("  Gemini:  %s", geminiCmd)
 	s.printer.Info("")
 	s.printer.Info("Passos manuais restantes:")
 	s.printer.Info("  1. Preencher os stubs em references/ com conteudo real.")

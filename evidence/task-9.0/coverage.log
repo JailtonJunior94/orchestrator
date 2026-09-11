@@ -1,0 +1,4 @@
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/install	0.721s	coverage: 83.7% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	1.032s	coverage: 85.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/precondition	0.646s	coverage: 53.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/doctor	1.277s	coverage: 71.1% of statements

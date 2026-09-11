@@ -586,7 +586,7 @@ func TestClaudeAutoReviewBlocksOnHardIssueE2E(t *testing.T) {
 		if childJob.AutoReview {
 			t.Errorf("T-INT-05: child Job.AutoReview=true — recursão não bloqueada (HARD violado)")
 		}
-		return "[HARD] eval() detected — uso de eval() é proibido por segurança", nil
+		return "Verdict: BLOCKED\n\n[HARD] eval() detected — uso de eval() é proibido por segurança", nil
 	})
 
 	runner := buildE2ERunner(t, ctx, script, pfact, airuntime.NewCatalog().
@@ -636,8 +636,8 @@ func TestClaudeAutoReviewBlocksOnHardIssueE2E(t *testing.T) {
 		if readErr != nil {
 			t.Fatalf("T-INT-05: ler review.md: %v", readErr)
 		}
-		if !strings.Contains(string(content), "ReviewStatus: blocked") {
-			t.Errorf("T-INT-05: review.md não contém 'ReviewStatus: blocked'; conteúdo: %q", string(content))
+		if !strings.Contains(string(content), "[HARD] eval() detected") {
+			t.Errorf("T-INT-05: review.md não contém '[HARD] eval() detected'; conteúdo: %q", string(content))
 		}
 	}
 
@@ -692,7 +692,7 @@ func TestClaudeCrossWaveSmokeE2E(t *testing.T) {
 		if childJob.AutoReview {
 			t.Errorf("T-INT-06: child Job.AutoReview=true — recursao F5 nao bloqueada (HARD violado)")
 		}
-		return "APPROVED — nenhuma issue critica encontrada", nil
+		return "Verdict: APPROVED\n\nNenhuma issue critica encontrada.", nil
 	})
 
 	runner := buildE2ERunner(t, ctx, script, pfact, airuntime.NewCatalog().

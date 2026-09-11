@@ -2,7 +2,10 @@ package taskloop
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"iter"
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
@@ -10,6 +13,7 @@ import (
 
 var (
 	_ approval.Reviewer   = (*reviewerPort)(nil)
+	_ approval.Reviewer   = (*primedReviewerPort)(nil)
 	_ approval.Fixer      = (*fixerPort)(nil)
 	_ approval.Repository = (*repositoryPort)(nil)
 )
@@ -46,6 +50,33 @@ func (p *reviewerPort) Review(ctx context.Context, request approval.ReviewReques
 	}
 
 	return approval.NewReviewerOutput(result.RawOutput, findings, criteriaMap), nil
+}
+
+type primedReviewerPort struct {
+	primed   FinalReviewResult
+	consumed bool
+	delegate *reviewerPort
+}
+
+func newPrimedReviewerPort(primed FinalReviewResult, reviewer FinalReviewer) *primedReviewerPort {
+	return &primedReviewerPort{primed: primed, delegate: newReviewerPort(reviewer)}
+}
+
+func (p *primedReviewerPort) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
+	if p.consumed {
+		return p.delegate.Review(ctx, request)
+	}
+	p.consumed = true
+
+	findings, err := translateReviewFindings(p.primed.Findings)
+	if err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+	criteriaMap, err := parityCriteriaMap(request)
+	if err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+	return approval.NewReviewerOutput(p.primed.RawOutput, findings, criteriaMap), nil
 }
 
 func parityCriteriaMap(request approval.ReviewRequest) (approval.CriteriaMap, error) {
@@ -137,14 +168,20 @@ func (p *fixerPort) Fix(ctx context.Context, request approval.FixRequest) error 
 	if err != nil {
 		return err
 	}
+	evidence.Output = output
+	evidence.RootCause = NewCatalog().extractRootCause(output)
 
 	p.recorder.record(evidence)
 	return nil
 }
 
 func reverseFindings(request approval.FixRequest) []Finding {
+	return reverseApprovalFindings(request.Findings())
+}
+
+func reverseApprovalFindings(findings iter.Seq[approval.Finding]) []Finding {
 	var out []Finding
-	for finding := range request.Findings() {
+	for finding := range findings {
 		out = append(out, Finding{
 			Severity: reverseSeverity(finding.Severity()),
 			File:     finding.File(),
@@ -152,6 +189,10 @@ func reverseFindings(request approval.FixRequest) []Finding {
 		})
 	}
 	return out
+}
+
+func reverseVerdict(verdict approval.Verdict) ReviewVerdict {
+	return ReviewVerdict(verdict.String())
 }
 
 func reverseSeverity(severity approval.Severity) Severity {
@@ -176,10 +217,19 @@ func newRepositoryPort(capturer DiffCapturer, workDir string) *repositoryPort {
 
 func (p *repositoryPort) Checkpoint(ctx context.Context) (approval.Checkpoint, error) {
 	out, err := NewCatalog().commandOutput(ctx, p.workDir, "git", "rev-parse", "HEAD")
-	if err != nil {
-		return approval.Checkpoint{}, fmt.Errorf("taskloop: git rev-parse HEAD: %w", err)
+	if err == nil {
+		return approval.NewCheckpoint(strings.TrimSpace(string(out)))
 	}
-	return approval.NewCheckpoint(strings.TrimSpace(string(out)))
+	return p.contentCheckpoint(ctx)
+}
+
+func (p *repositoryPort) contentCheckpoint(ctx context.Context) (approval.Checkpoint, error) {
+	diff, err := p.capturer.CaptureDiff(ctx)
+	if err != nil {
+		return approval.Checkpoint{}, fmt.Errorf("taskloop: fallback checkpoint diff capture: %w", err)
+	}
+	sum := sha256.Sum256([]byte(diff))
+	return approval.NewCheckpoint(hex.EncodeToString(sum[:]))
 }
 
 func (p *repositoryPort) FullTarget(ctx context.Context) (approval.ReviewTarget, error) {

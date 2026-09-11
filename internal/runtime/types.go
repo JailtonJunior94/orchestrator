@@ -24,7 +24,8 @@ type RuntimeConfig struct {
 	Concurrent int
 	// BatchSize é o tamanho máximo do lote de tasks enviadas por iteração.
 	// <=0 é normalizado para 1 (F1) por ApplyDefaults.
-	BatchSize int
+	BatchSize           int
+	MaxBugfixIterations int
 }
 
 // ApplyDefaults normaliza os campos zero-value de RuntimeConfig para seus

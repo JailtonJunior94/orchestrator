@@ -46,6 +46,7 @@ func (c *Catalog) BuildRuntimeConfig(resolved config.Runtime) (airuntime.Runtime
 		RetryBackoffMultiplier: resolved.RetryBackoffMultiplier,
 		Concurrent:             resolved.Concurrent,
 		BatchSize:              resolved.BatchSize,
+		MaxBugfixIterations:    resolved.MaxBugfixIterations,
 	}
 	rc.ApplyDefaults()
 	return rc, nil
@@ -77,6 +78,13 @@ func (c *Catalog) resolveRuntimeConfig(cwd string, flagsOverrides config.Runtime
 	return rc, nil
 }
 
+func (c *Catalog) applyResolvedMaxBugfixIterations(opts Options, resolved airuntime.RuntimeConfig) Options {
+	if resolved.MaxBugfixIterations > 0 {
+		opts.MaxBugfixIterations = resolved.MaxBugfixIterations
+	}
+	return opts
+}
+
 // optionsToConfigOverrides mapeia os campos de Options relevantes para config.Runtime,
 // formando a camada de overrides das flags CLI (maior precedência na cascata ADR-016).
 // Apenas campos não-zero são propagados; zero-value preserva a camada inferior (F1).
@@ -87,9 +95,14 @@ func (c *Catalog) optionsToConfigOverrides(opts Options) config.Runtime {
 	if opts.ActivityTimeoutSet && opts.ActivityTimeout >= 0 {
 		timeout = opts.ActivityTimeout.String()
 	}
+	var maxBugfixIterations int
+	if opts.MaxBugfixIterationsSet {
+		maxBugfixIterations = opts.MaxBugfixIterations
+	}
 	return config.Runtime{
-		Timeout:    timeout,
-		Concurrent: opts.Concurrent,
-		BatchSize:  opts.BatchSize,
+		Timeout:             timeout,
+		Concurrent:          opts.Concurrent,
+		BatchSize:           opts.BatchSize,
+		MaxBugfixIterations: maxBugfixIterations,
 	}
 }

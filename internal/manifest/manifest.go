@@ -23,6 +23,19 @@ type Manifest struct {
 	Checksums     map[string]string `json:"checksums"`
 	CodexProfile  string            `json:"codex_profile,omitempty"`
 	SkillVersions map[string]string `json:"skill_versions,omitempty"`
+
+	// InstalledFiles rastreia, individualmente, os caminhos (relativos a
+	// SourceDir/ProjectDir do projeto) que esta instalacao criou. Campo
+	// aditivo (RF-05, RF-60): manifestos antigos no disco nao o possuem, e
+	// sua ausencia (nil, distinto de slice vazio) sinaliza a desinstalacao a
+	// cair no caminho conservador anunciado em vez de assumir uma lista fixa.
+	InstalledFiles []string `json:"installed_files,omitempty"`
+}
+
+// HasFileTracking reporta se o manifesto rastreia arquivos individualmente
+// (campo aditivo presente). Manifestos gravados antes desta tarefa nao o tem.
+func (m *Manifest) HasFileTracking() bool {
+	return m.InstalledFiles != nil
 }
 
 // Store gerencia leitura e escrita do manifesto.

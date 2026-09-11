@@ -236,15 +236,15 @@ func TestRenderMetricsSection_AllZero(t *testing.T) {
 	}
 }
 
-// TestRenderMetricsSection_GeminiFields valida campos Gemini via MetricSet.Extra.
-func TestRenderMetricsSection_GeminiFields(t *testing.T) {
+// TestRenderMetricsSection_ExtraFields valida campos extra por driver via MetricSet.Extra.
+func TestRenderMetricsSection_ExtraFields(t *testing.T) {
 	m := events.NewMetricSet(0, 100, 0, map[string]int{
 		"effective_context_tokens": 200,
 		"prompt_tokens_billed":     300,
 	})
 	got := persistence.NewCatalog().RenderMetricsSection(m)
 	if got == "" {
-		t.Fatal("esperado seção não-vazia para MetricSet Gemini com campos > 0")
+		t.Fatal("esperado seção não-vazia para MetricSet com campos extra > 0")
 	}
 	for _, want := range []string{
 		"Métricas Claude-2026",

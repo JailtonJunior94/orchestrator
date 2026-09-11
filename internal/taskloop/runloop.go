@@ -10,21 +10,24 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
 )
 
 // LoopReport agrega o resultado da execucao de Service.RunLoop (RF-01, RF-02, RF-05, RF-07).
 // Serializado em JSON estavel: ordem dos campos segue a definicao da struct.
 type LoopReport struct {
-	PRDFolder      string             `json:"prd_folder"`
-	StartTime      time.Time          `json:"start_time"`
-	EndTime        time.Time          `json:"end_time"`
-	TasksCompleted []string           `json:"tasks_completed"`
-	FinalReview    *FinalReviewResult `json:"final_review,omitempty"`
-	BugfixCycles   int                `json:"bugfix_cycles"`
-	BugfixAttempts []BugfixIteration  `json:"bugfix_attempts,omitempty"`
-	Escalated      bool               `json:"escalated"`
-	ActionPlan     *ActionPlan        `json:"action_plan,omitempty"`
-	StopReason     string             `json:"stop_reason"`
+	PRDFolder       string             `json:"prd_folder"`
+	StartTime       time.Time          `json:"start_time"`
+	EndTime         time.Time          `json:"end_time"`
+	TasksCompleted  []string           `json:"tasks_completed"`
+	FinalReview     *FinalReviewResult `json:"final_review,omitempty"`
+	BugfixCycles    int                `json:"bugfix_cycles"`
+	BugfixAttempts  []BugfixIteration  `json:"bugfix_attempts,omitempty"`
+	Escalated       bool               `json:"escalated"`
+	ActionPlan      *ActionPlan        `json:"action_plan,omitempty"`
+	StopReason      string             `json:"stop_reason"`
+	CycleStopReason string             `json:"cycle_stop_reason,omitempty"`
 }
 
 // TaskExecutor abstrai a invocacao da skill execute-task em uma unica task.
@@ -209,26 +212,59 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 			return s.finalizeReport(report, opts, "bugfix loop nao configurado"),
 				fmt.Errorf("taskloop: review reprovou mas BugfixInvoker/DiffCapturer ausentes")
 		}
-		bf := NewBugfixLoop(deps.BugfixInvoker, deps.FinalReviewer, deps.DiffCapturer, opts.MaxBugfixIterations)
-		bfReport, bfErr := bf.Run(ctx, rev.Findings, reviewInput)
-		report.BugfixCycles = len(bfReport.Iterations)
-		report.BugfixAttempts = append(report.BugfixAttempts, bfReport.Iterations...)
-		report.Escalated = bfReport.Escalated
-		if bfReport.FinalReview != nil {
-			report.FinalReview = bfReport.FinalReview
+
+		criteria, criteriaErr := acceptanceCriteriaUnion(absFolder, report.TasksCompleted, s.fsys)
+		if criteriaErr != nil {
+			return s.finalizeReport(report, opts, "erro ao extrair criterios do lote"), criteriaErr
 		}
-		for _, it := range bfReport.Iterations {
-			NewCatalog().emitTelemetry("bugfix_iteration", fmt.Sprintf("%d:%s", it.Sequence, it.ReviewVerdict))
+
+		exhausted := false
+		if len(criteria) == 0 {
+			bf := NewBugfixLoop(deps.BugfixInvoker, deps.FinalReviewer, deps.DiffCapturer, opts.MaxBugfixIterations)
+			bfReport, bfErr := bf.Run(ctx, rev.Findings, reviewInput)
+			report.BugfixCycles = len(bfReport.Iterations)
+			report.BugfixAttempts = append(report.BugfixAttempts, bfReport.Iterations...)
+			report.Escalated = bfReport.Escalated
+			if bfReport.FinalReview != nil {
+				report.FinalReview = bfReport.FinalReview
+			}
+			for _, it := range bfReport.Iterations {
+				NewCatalog().emitTelemetry("bugfix_iteration", fmt.Sprintf("%d:%s", it.Sequence, it.ReviewVerdict))
+			}
+			if errors.Is(bfErr, ErrBugfixExhausted) {
+				exhausted = true
+			} else if bfErr != nil {
+				return s.finalizeReport(report, opts, "erro no bugfix loop"), bfErr
+			}
+		} else {
+			var result approval.CycleResult
+			var recorder *bugfixEvidenceRecorder
+			var cycleErr error
+			result, recorder, cycleErr = s.runRejectedCycle(ctx, opts, criteria, rev, deps, workDir)
+			if cycleErr != nil {
+				return s.finalizeReport(report, opts, "erro no ciclo de aprovacao"),
+					fmt.Errorf("taskloop: ciclo de aprovacao: %w", cycleErr)
+			}
+			iterations := bugfixAttemptsFromCycle(result, recorder)
+			report.BugfixCycles = len(iterations)
+			report.BugfixAttempts = append(report.BugfixAttempts, iterations...)
+			report.FinalReview = finalReviewFromCycleResult(result)
+			report.CycleStopReason = result.Reason().String()
+			for _, it := range iterations {
+				NewCatalog().emitTelemetry("bugfix_iteration", fmt.Sprintf("%d:%s", it.Sequence, it.ReviewVerdict))
+			}
+			if !result.Approved() {
+				report.Escalated = true
+				exhausted = true
+			}
 		}
-		if errors.Is(bfErr, ErrBugfixExhausted) {
+
+		if exhausted {
 			if report.FinalReview != nil {
 				NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
 			}
 			NewCatalog().emitTelemetry("escalated", "bugfix_exhausted")
-			return s.finalizeReport(report, opts, "escalonamento humano apos 3 iteracoes"), bfErr
-		}
-		if bfErr != nil {
-			return s.finalizeReport(report, opts, "erro no bugfix loop"), bfErr
+			return s.finalizeReport(report, opts, "escalonamento humano apos 3 iteracoes"), ErrBugfixExhausted
 		}
 		if report.FinalReview != nil {
 			switch report.FinalReview.Verdict {

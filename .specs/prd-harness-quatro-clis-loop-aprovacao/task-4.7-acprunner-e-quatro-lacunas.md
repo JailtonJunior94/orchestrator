@@ -34,12 +34,12 @@ esta fatia é a **fiação** por caminho.
 
 ## Subtarefas
 
-- [ ] 4.7.1 Migrar `runner.go:216-228` para conduzir o `Cycle` via os adaptadores de
+- [x] 4.7.1 Migrar `runner.go:216-228` para conduzir o `Cycle` via os adaptadores de
       `internal/runtime`; critérios do `job.TaskFileName`; fallback one-shot quando ausente.
-- [ ] 4.7.2 Fiar as quatro lacunas em `Summary` / `LoopReport` / telemetria nos três caminhos, de
+- [x] 4.7.2 Fiar as quatro lacunas em `Summary` / `LoopReport` / telemetria nos três caminhos, de
       forma que a saída de cada rodada seja distinguível (número, veredito, contagem por severidade,
       motivo de parada) sem abrir os artefatos de evidência.
-- [ ] 4.7.3 Garantir que estados terminais do `Cycle` não acionem retry.
+- [x] 4.7.3 Garantir que estados terminais do `Cycle` não acionem retry.
 
 ## Detalhes de Implementação
 
@@ -72,7 +72,7 @@ Nenhuma além das auto-carregadas (governance + linguagem).
 
 ## Testes da Tarefa
 
-- [ ] Testes unitários
+- [x] Testes unitários
 - [ ] Testes de integração
 
 Cobertura obrigatória:

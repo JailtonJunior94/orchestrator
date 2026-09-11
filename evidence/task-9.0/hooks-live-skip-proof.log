@@ -1,0 +1,7 @@
+=== RUN   TestHooksLiveMatrixNoCellSkipped
+    live_test.go:48: hooks_live: 3 cell(s) skipped — nightly matrix must not skip cells: copilot/post-tool (binary copilot not found in PATH — hooks_live requires the four CLIs installed and authenticated); copilot/pre-tool (binary copilot not found in PATH — hooks_live requires the four CLIs installed and authenticated); copilot/session-end (binary copilot not found in PATH — hooks_live requires the four CLIs installed and authenticated)
+--- FAIL: TestHooksLiveMatrixNoCellSkipped (2.18s)
+FAIL
+FAIL	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	2.575s
+FAIL
+exit_code=1

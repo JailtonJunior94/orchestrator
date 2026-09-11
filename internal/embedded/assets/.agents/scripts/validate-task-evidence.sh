@@ -217,7 +217,7 @@ elif [[ "$review_verdict" != "APPROVED" && "$review_verdict" != "APPROVED_WITH_R
   missing=1
 fi
 
-review_tool="$(grep -E '^tool=[[:space:]]*(claude|codex|gemini|copilot)[[:space:]]*$' "$report_file" | head -1 | sed -E 's/^tool=[[:space:]]*//; s/[[:space:]]*$//')" || true
+review_tool="$(grep -E '^tool=[[:space:]]*(claude|codex|copilot|opencode)[[:space:]]*$' "$report_file" | head -1 | sed -E 's/^tool=[[:space:]]*//; s/[[:space:]]*$//')" || true
 if [[ -z "$review_tool" ]]; then
   echo "FALTANDO: tool não canônica ou ausente no bloco Diff Reviewed"
   missing=1

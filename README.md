@@ -4,7 +4,7 @@ CLI em Go para instalar, validar, inspecionar e atualizar governanca operacional
 
 O nome do modulo Go e `ai-spec-harness`. O binario publicado via release se chama `ai-spec`. Este README usa `ai-spec` em todos os exemplos.
 
-O projeto padroniza como Claude, Gemini, Codex e GitHub Copilot encontram skills, agentes, comandos e contexto de execucao dentro de um repositorio alvo. O foco nao e "conversar com um modelo" — e tornar fluxos repetidos como PRD, especificacao tecnica, decomposicao de tasks, review e execucao de tarefas mais previsiveis e auditaveis.
+O projeto padroniza como Claude, Codex, GitHub Copilot e OpenCode encontram skills, agentes, comandos e contexto de execucao dentro de um repositorio alvo. O foco nao e "conversar com um modelo" — e tornar fluxos repetidos como PRD, especificacao tecnica, decomposicao de tasks, review e execucao de tarefas mais previsiveis e auditaveis.
 
 ## Sumario
 
@@ -42,7 +42,7 @@ Sem uma estrutura canonica, cada repositorio tende a ter prompts soltos, instruc
 
 - instalar um baseline de governanca em um projeto alvo
 - distribuir skills compartilhadas por `symlink` ou copia
-- gerar adaptadores por ferramenta para Claude, Gemini, Codex e Copilot
+- gerar adaptadores por ferramenta para Claude, Codex, Copilot e OpenCode
 - validar `SKILL.md`, schema de bugs e artefatos de governanca
 - inspecionar e diagnosticar instalacoes existentes
 - medir custo estimado de contexto por baseline e fluxo
@@ -55,7 +55,7 @@ O CLI usa este repositorio como fonte de governanca e instala os artefatos neces
 ```text
 .agents/skills/
 .claude/agents/
-.gemini/commands/
+.opencode/plugin/
 .github/agents/
 .github/copilot-instructions.md
 .codex/config.toml
@@ -330,9 +330,9 @@ O comando **auto-detecta**:
 
 - Stack (Go, Node, Python, .NET) via manifesto na raiz (`go.mod`, `package.json`,
   `pyproject.toml`, `*.csproj`).
-- CLIs presentes: Claude / Codex / Copilot por sinais de binario no PATH ou
-  arquivos de projeto. Gemini e **opt-in por projeto** — so entra se ja houver
-  `.gemini/` ou `GEMINI.md` no destino, ou se voce passar `--tools=gemini`/`all`.
+- CLIs presentes: Claude / Codex / Copilot / OpenCode por sinais de binario no
+  PATH, diretorio de configuracao do usuario ou arquivos de projeto — os
+  quatro agentes sao detectados pelos mesmos tres sinais, sem excecao.
 
 Gera dentro do repo destino:
 
@@ -470,7 +470,7 @@ Instale a governanca em um repositorio alvo usando este repositorio como fonte, 
 ```bash
 ai-spec install ../api-pagamentos \
   --source . \
-  --tools claude,gemini,codex,copilot \
+  --tools claude,opencode,codex,copilot \
   --langs go
 
 ai-spec inspect ../api-pagamentos
@@ -509,7 +509,7 @@ Se houver lote maduro e paralelo seguro, troque apenas o ultimo passo por `execu
 ```bash
 ai-spec install ../api-pagamentos \
   --source . \
-  --tools codex,claude,gemini,copilot \
+  --tools codex,claude,opencode,copilot \
   --langs go
 
 ai-spec inspect ../api-pagamentos
@@ -517,7 +517,7 @@ ai-spec doctor ../api-pagamentos
 ai-spec lint ../api-pagamentos
 ```
 
-Sem esse passo, nao existe baseline confiavel para Codex, Claude, Gemini ou Copilot descobrirem skills, agentes e regras.
+Sem esse passo, nao existe baseline confiavel para Codex, Claude, Copilot ou OpenCode descobrirem skills, agentes e regras.
 
 ### 3. Atualizacao obrigatoria do binario a cada release
 
@@ -603,7 +603,7 @@ Se o repositorio ja tem codigo, instale a governanca, valide e peca ao agente um
 ```bash
 ai-spec install ../api-legado \
   --source . \
-  --tools codex,claude,gemini,copilot \
+  --tools codex,claude,opencode,copilot \
   --langs go
 
 ai-spec inspect ../api-legado
@@ -637,7 +637,7 @@ cd ../ai-spec-harness
 
 ai-spec install ../novo-produto \
   --source . \
-  --tools codex,claude,gemini,copilot \
+  --tools codex,claude,opencode,copilot \
   --langs go
 
 cd ../novo-produto
@@ -725,7 +725,7 @@ O `ai-spec-harness` suporta um modo de execucao baseado no **Agent Client Protoc
 ativado pela flag `--runtime=acp`. Nesse modo, o harness abre uma sessao ACP com a CLI escolhida e
 consome um stream de eventos em tempo real, em vez de aguardar um processo one-shot encerrar.
 
-O runtime ACP funciona com **quatro CLIs** — `claude`, `codex`, `copilot` e `gemini` — com
+O runtime ACP funciona com **quatro CLIs** — `claude`, `codex`, `copilot` e `opencode` — com
 comportamento equivalente (paridade): mesma normalizacao de tool-calls, mesmas metricas unificadas,
 mesma memoria 2-tier, mesmo guard de governanca em runtime e os mesmos artefatos forenses.
 
@@ -737,7 +737,7 @@ Em vez de invocar a CLI via `exec.Cmd` one-shot (modo `--runtime=legacy`, padrao
 - Recebe eventos granulares (`agent_message`, `agent_thought`, `tool_call_start`,
   `tool_call_update`, `session_end`) em tempo real.
 - **Normaliza tool-calls por driver** preservando `raw_name`/`raw_input`: a mesma operacao produz o
-  mesmo `normalized_name` nas 4 CLIs (ex.: claude `bash`, codex `shell`, copilot `run`, gemini
+  mesmo `normalized_name` nas 4 CLIs (ex.: claude `bash`, codex `shell`, copilot `run`, opencode
   `bash` -> todos `bash`; campo canonico `command`). Garantido pela suite `internal/parity` (RP-03)
   como gate de CI obrigatorio.
 - Persiste eventos em `evidence/<task>/events.jsonl`, `tool_calls.md` e `execution_report.md`.
@@ -759,8 +759,8 @@ fato, use `--access-mode full`. O harness traduz isso para cada CLI:
 | --- | --- |
 | claude | `--bypass-permissions` no claude-agent-acp |
 | codex | `-c approval_policy=never -c sandbox_mode=danger-full-access` |
-| gemini | `--approval-mode yolo` |
 | copilot | auto-aprovacao das permissoes via ACP (Copilot nao tem flag de bypass dedicada) |
+| opencode | nao se aplica — controlado declarativamente pelo bloco `permission` do `opencode.json`, nao por flag (RF-16/RF-20) |
 
 > **Aviso:** `--access-mode full` da ao agente acesso pleno ao filesystem (e a rede, no codex). Use
 > apenas em ambiente isolado/confiavel.
@@ -794,13 +794,13 @@ ai-spec task-loop --tool copilot --runtime acp --access-mode full .specs/prd-<sl
 - Binario: `copilot --acp` no PATH, ou fallback `npx --yes @github/copilot@<pin> --acp`.
 - Auth: `gh auth login` (conta GitHub com acesso ao Copilot).
 
-**Gemini**
+**OpenCode**
 
 ```bash
-ai-spec task-loop --tool gemini --runtime acp --access-mode full .specs/prd-<slug>
+ai-spec task-loop --tool opencode --runtime acp --access-mode full .specs/prd-<slug>
 ```
-- Binario: `gemini --acp` no PATH, ou fallback `npx --yes @google/gemini-cli@<pin> --acp`.
-- Auth: login do Gemini CLI.
+- Binario: `opencode acp` no PATH, ou fallback `npx --yes opencode-ai@<pin> acp`.
+- Auth: login do OpenCode (`opencode auth login`) ou credenciais do provider configurado.
 
 Parametros uteis (validos para qualquer CLI):
 
@@ -849,7 +849,7 @@ sem processos orfaos).
 - ADRs relacionadas: [ADR-009 (ACP via coder/acp-go-sdk)](.specs/adr/009-acp-protocol-adoption.md),
   [ADR-012 (Copilot ACP)](.specs/adr/012-copilot-cli-acp-native.md),
   [ADR-013 (Codex ACP)](.specs/adr/013-codex-cli-acp-native.md),
-  [ADR-015 (Gemini ACP)](.specs/adr/015-gemini-cli-acp-native.md).
+  [ADR-003 (OpenCode ACP)](.specs/prd-harness-quatro-clis-loop-aprovacao/adr-003-opencode-acp-subcomando.md).
 - Para migrar do modo legado, ver o [Guia de migracao legacy -> ACP](docs/migracao-legacy-acp.md).
 
 ## Fluxo completo recomendado
@@ -861,7 +861,7 @@ O `ai-spec-harness` nao escreve PRD, tech spec ou codigo por conta propria. Ele 
 ```bash
 ai-spec install ../api-pagamentos \
   --source . \
-  --tools codex,claude,gemini,copilot \
+  --tools codex,claude,opencode,copilot \
   --langs go
 ```
 
@@ -984,7 +984,7 @@ ai-spec task-loop \
 #### Flags disponiveis
 
 **Modo Simples (Agente Unico)**
-- `--tool`: agente unico (claude, codex, gemini, copilot)
+- `--tool`: agente unico (claude, codex, copilot, opencode)
 - `--dry-run`: valida ordem e elegibilidade sem executar
 - `--max-iterations`: limite de tasks por execucao (0 = sem limite)
 - `--timeout`: tempo limite por task
@@ -1126,7 +1126,7 @@ Para reproduzir o fluxo com fidelidade máxima, consulte os guias especializados
 - [Checklist de Preflight e Readiness](docs/preflight-checklist.md) — gates antes de chamar `execute-task` ou `execute-all-tasks`
 - [Scorecard de Qualidade e Confiança](docs/quality-scorecard.md) — critério canônico para classificar prontidão de um bundle
 - [Biblioteca de Prompts](docs/prompt-library.md) — prompts copiáveis com baixo desvio
-- [Matriz de Confiabilidade por Ferramenta](docs/tool-reliability-matrix.md) — qual CLI usar em cada papel (Claude, Codex, Gemini, Copilot)
+- [Matriz de Confiabilidade por Ferramenta](docs/tool-reliability-matrix.md) — qual CLI usar em cada papel (Claude, Codex, Copilot, OpenCode)
 - [Guia de uso das skills](docs/skills-usage-guide.md) — contrato detalhado por skill
 - [Ciclo de feedback por telemetria](docs/telemetry-feedback-cycle.md) — como evoluir o SDD com dados reais (`GOVERNANCE_TELEMETRY=1`)
 
@@ -1260,7 +1260,7 @@ Avaliação ancorada nas cinco dimensões do [Scorecard de Qualidade e Confianç
 
 1. **Determinismo procedural:** o `spec-hash` SHA-256 ligando PRD → TechSpec → Tasks elimina a classe de erros "requisito esquecido" ou "implementação obsoleta" — `ai-spec check-spec-drift` bloqueia execução em caso de divergência.
 2. **Defesa em profundidade:** o loop mandatório `Implementação → Validação → Review → Bugfix` garante que o código não apenas funcione, mas siga convenções do projeto.
-3. **Escalabilidade agnóstica:** adaptadores finos por ferramenta (Claude, Gemini, Codex, Copilot) provam a robustez da lógica procedural sobre a sensibilidade do modelo.
+3. **Escalabilidade agnóstica:** adaptadores finos por ferramenta (Claude, Codex, Copilot, OpenCode) provam a robustez da lógica procedural sobre a sensibilidade do modelo.
 
 ### Histórico de atrito resolvido
 
@@ -1309,7 +1309,7 @@ Apos a instalacao, o repositorio alvo contem os seguintes artefatos que os agent
 | `check-spec-drift` | Verifica cobertura de IDs `RF-nn`/`REQ-nn` do PRD em `tasks.md` e detecta divergencia de hash entre `prd.md`/`techspec.md` e os hashes registrados |
 | `sync-spec-hash` | Recalcula SHA-256 de `prd.md` e `techspec.md` e atualiza os comentarios `spec-hash` em `tasks.md`; usar apos editar o PRD para evitar bloqueio do `task-loop` |
 | `task-loop` | Executa todas as tasks elegiveis de um PRD folder via agente de IA |
-| `wrapper` | Emite instrucoes de invocacao para Codex, Gemini e Copilot |
+| `wrapper` | Emite instrucoes de invocacao para Codex e Copilot |
 | `scaffold` | Cria a estrutura inicial de uma nova skill de linguagem |
 | `uninstall` | Remove artefatos instalados pelo CLI |
 | `completion` | Gera scripts de autocompletion para shell |
@@ -1518,30 +1518,6 @@ Quero no resultado:
 - findings ordenados por severidade
 - arquivos e linhas afetadas
 - riscos residuais, se nao houver blockers
-```
-
-### Gemini
-
-```bash
-ai-spec wrapper gemini create-tasks .
-ai-spec wrapper gemini execute-task .
-```
-
-Prompt efetivo para `create-tasks`:
-
-```text
-Use a skill create-tasks.
-
-Contexto:
-- o PRD e a tech spec da feature ja estao aprovados
-- queremos tasks pequenas, independentes e testaveis
-- priorizar ordem segura de entrega
-
-Quero no resultado:
-- proposta inicial com ate 10 tasks
-- dependencias explicitas
-- indicacao de paralelismo seguro
-- arquivos finais tasks.md e task-*.md apos aprovacao
 ```
 
 ### GitHub Copilot
@@ -1788,14 +1764,14 @@ test -f $PROJETO/.ai_spec_harness.json && echo "manifesto presente" || echo "man
 test -f $PROJETO/.claude/settings.local.json && echo "settings preservado" || echo "ATENCAO: settings sumiu"
 ```
 
-> ⚠️ **Nunca use `rm -rf .claude .gemini .agents`.** Esses diretorios podem conter conteudo seu (`settings.local.json`, agents/rules proprios) que o `uninstall` preserva de proposito. Remova manualmente apenas symlinks orfaos comprovadamente da governanca (links quebrados apontando para `.agents/skills/<skill-inexistente>`), e nunca arquivos commitados que voce nao criou.
+> ⚠️ **Nunca use `rm -rf .claude .opencode .agents`.** Esses diretorios podem conter conteudo seu (`settings.local.json`, agents/rules proprios) que o `uninstall` preserva de proposito. Remova manualmente apenas symlinks orfaos comprovadamente da governanca (links quebrados apontando para `.agents/skills/<skill-inexistente>`), e nunca arquivos commitados que voce nao criou.
 
 #### Passo 2 — Instalacao limpa (so para reset do zero)
 
 ```bash
 ai-spec install $PROJETO \
   --source $FONTE \      # repo de governanca como fonte de verdade
-  --tools all \          # claude,gemini,codex,copilot (ou subconjunto)
+  --tools all \          # claude,codex,copilot,opencode (ou subconjunto)
   --langs go \           # go,node,python ou all (skills de linguagem)
   --mode copy \          # copy (auto-contido) ou symlink (reflete a fonte)
   --dry-run              # remova esta linha para executar de verdade
@@ -1806,7 +1782,7 @@ Flags principais do `install`:
 | Flag | Valores | Para que serve |
 | --- | --- | --- |
 | `--source` | caminho | Repo de governanca usado como fonte. Sem ele, usa os assets embutidos no binario. |
-| `--tools` | `claude,gemini,codex,copilot` ou `all` | Quais adaptadores gerar. Sem a flag, **auto-detecta** por binario no PATH + dirs de config. |
+| `--tools` | `claude,codex,copilot,opencode` ou `all` | Quais adaptadores gerar. Sem a flag, **auto-detecta** por binario no PATH + dirs de config. |
 | `--langs` | `go,node,python` ou `all` | Skills de linguagem a incluir. |
 | `--mode` | `copy` \| `symlink` | `copy` = snapshot fisico, projeto auto-contido (recomendado p/ outros projetos). `symlink` = reflete mudancas da fonte (bom p/ desenvolver a governanca). |
 | `--dry-run` | — | Simula sem escrever. |

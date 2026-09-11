@@ -28,9 +28,9 @@
       "additionalProperties": false,
       "properties": {
         "ide": {
-          "$comment": "Ferramenta de IDE alvo. Valores aceitos: claude, codex, gemini, copilot.",
+          "$comment": "Ferramenta de IDE alvo. Valores aceitos: claude, codex, copilot, opencode.",
           "type": "string",
-          "enum": ["claude", "codex", "gemini", "copilot"]
+          "enum": ["claude", "codex", "copilot", "opencode"]
         },
         "model": {
           "$comment": "Modelo desejado (ex.: claude-opus-4-7). Validado contra CompatibilityTable em tarefa 8.0.",

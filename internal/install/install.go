@@ -2,6 +2,7 @@ package install
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,6 +18,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/platform"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/precondition"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
@@ -27,6 +29,8 @@ import (
 // _probeTimeout e o timeout maximo por CLI para probe de binario ACP.
 // Curto para nao violar RF-11 (bootstrap < 30s com N CLIs). ADR-024.
 const _probeTimeout = 3 * time.Second
+
+const codexTrustRPCTimeout = 5 * time.Second
 
 // VerifyState representa o estado de uma skill/agente apos verificacao.
 // ADR-019: file-first (le hash do disco, nao recalcula da fonte).
@@ -39,6 +43,8 @@ const (
 	VerifyStateMissing VerifyState = "missing"
 	// VerifyStateDrifted indica que o arquivo instalado diverge do esperado.
 	VerifyStateDrifted VerifyState = "drifted"
+	VerifyStateInert   VerifyState = "inert"
+	VerifyStateUnknown VerifyState = "unknown"
 )
 
 // VerifyKind classifica o tipo de item verificado.
@@ -49,16 +55,19 @@ const (
 	// VerifyKindSkill indica verificacao de uma skill de governanca.
 	VerifyKindSkill VerifyKind = "skill"
 	// VerifyKindBinary indica verificacao de disponibilidade do binario ACP por CLI.
-	VerifyKindBinary VerifyKind = "binary"
+	VerifyKindBinary       VerifyKind = "binary"
+	VerifyKindRuntime      VerifyKind = "runtime"
+	VerifyKindPrecondition VerifyKind = "precondition"
 )
 
 // VerifyItem representa o resultado de verificacao de uma skill ou binario para um agente.
 // ADR-024: campo Kind distingue skill vs binario ACP.
 type VerifyItem struct {
-	Tool  skills.Tool
-	Skill string
-	State VerifyState
-	Kind  VerifyKind // "skill" (default) ou "binary" (ADR-024 RI-04)
+	Tool   skills.Tool
+	Skill  string
+	State  VerifyState
+	Kind   VerifyKind
+	Remedy string
 }
 
 // Service orquestra o fluxo de instalacao de governanca.
@@ -221,7 +230,7 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 
 	// 2. Instalar adaptadores por ferramenta
 	for _, tool := range opts.Tools {
-		if err := s.installTool(sourceDir, projectDir, tool, allSkills, linkMode, opts.DryRun, opts.CodexProfile); err != nil {
+		if err := s.installTool(sourceDir, projectDir, tool, allSkills, linkMode, opts.DryRun, opts.CodexProfile, opts.Model); err != nil {
 			return fmt.Errorf("instalar %s: %w", tool, err)
 		}
 	}
@@ -252,7 +261,7 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 
 	// 2.7 Instalar validadores de evidencia canonicos em .agents/scripts/ (tool-neutro,
 	// SEMPRE). Garante paridade cross-CLI: a cascata `.agents/scripts/` -> `.claude/scripts/`
-	// -> `scripts/` resolve os gates mesmo em projetos sem Claude (so Gemini/Codex/Copilot).
+	// -> `scripts/` resolve os gates mesmo em projetos sem Claude (so Codex/Copilot/OpenCode).
 	if !opts.DryRun {
 		if err := s.copyAgentsScripts(sourceDir, projectDir); err != nil {
 			s.printer.Warn("falha ao copiar .agents/scripts/: %v", err)
@@ -271,17 +280,18 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 	if !opts.DryRun {
 		checksums := s.computeChecksums(sourceDir, allSkills)
 		mf := &manifest.Manifest{
-			Version:       version.NewProvider().ResolveFromExecutable(),
-			CreatedAt:     time.Now(),
-			UpdatedAt:     time.Now(),
-			SourceDir:     sourceDir,
-			LinkMode:      linkMode,
-			Tools:         opts.Tools,
-			Langs:         opts.Langs,
-			Skills:        allSkills,
-			Checksums:     checksums,
-			CodexProfile:  opts.CodexProfile,
-			SkillVersions: s.collectSkillVersions(sourceDir, allSkills),
+			Version:        version.NewProvider().ResolveFromExecutable(),
+			CreatedAt:      time.Now(),
+			UpdatedAt:      time.Now(),
+			SourceDir:      sourceDir,
+			LinkMode:       linkMode,
+			Tools:          opts.Tools,
+			Langs:          opts.Langs,
+			Skills:         allSkills,
+			Checksums:      checksums,
+			CodexProfile:   opts.CodexProfile,
+			SkillVersions:  s.collectSkillVersions(sourceDir, allSkills),
+			InstalledFiles: s.expectedInstalledPaths(projectDir, opts.Tools),
 		}
 		if err := s.manifest.Save(projectDir, mf); err != nil {
 			return fmt.Errorf("salvar manifesto: %w", err)
@@ -394,6 +404,21 @@ func (s *Service) Verify(opts config.InstallOptions) ([]VerifyItem, error) {
 			State: binaryState,
 			Kind:  VerifyKindBinary,
 		})
+
+		if tool == skills.ToolOpenCode {
+			runtimeState := VerifyStateCurrent
+			if _, lookErr := s.lookPather.LookPath(specs.OpenCodePluginRuntime); lookErr != nil {
+				runtimeState = VerifyStateMissing
+			}
+			items = append(items, VerifyItem{
+				Tool:  tool,
+				Skill: "governance-plugin-runtime(" + specs.OpenCodePluginRuntime + ")",
+				State: runtimeState,
+				Kind:  VerifyKindRuntime,
+			})
+		}
+
+		items = append(items, s.verifyPreconditions(tool, installDir, opts.CheckCodexTrust)...)
 	}
 
 	// Se nenhuma tool foi determinada, verificar skills base (sem items de binary).
@@ -496,6 +521,46 @@ func (s *Service) probeBinaryAvailable(tool skills.Tool) VerifyState {
 		return VerifyStateMissing
 	}
 	return VerifyStateCurrent
+}
+
+func (s *Service) verifyPreconditions(tool skills.Tool, installDir string, checkCodexTrust bool) []VerifyItem {
+	agent, err := specs.NewCatalog().AgentByID(string(tool))
+	if err != nil {
+		return nil
+	}
+
+	var codexCheck precondition.CodexTrustChecker
+	if checkCodexTrust {
+		codexCheck = func() (specs.PreconditionState, error) {
+			client := precondition.NewCodexAppServerClient("")
+			ctx, cancel := context.WithTimeout(context.Background(), codexTrustRPCTimeout)
+			defer cancel()
+			return precondition.EvaluateCodexTrustedHash(ctx, client, codexTrustRPCTimeout)
+		}
+	}
+
+	configPath, _ := precondition.DefaultCopilotConfigPath()
+	reader := precondition.NewFileCopilotConfigReader(configPath)
+
+	items := make([]VerifyItem, 0, len(agent.Enforcement().Preconditions()))
+	for _, pre := range agent.Enforcement().Preconditions() {
+		report := precondition.Evaluate(pre, installDir, reader, codexCheck)
+		state := VerifyStateCurrent
+		switch report.State {
+		case specs.PreconditionInert:
+			state = VerifyStateInert
+		case specs.PreconditionUnknown:
+			state = VerifyStateUnknown
+		}
+		items = append(items, VerifyItem{
+			Tool:   tool,
+			Skill:  "precondition(" + pre.Kind().String() + ")",
+			State:  state,
+			Kind:   VerifyKindPrecondition,
+			Remedy: report.Remedy,
+		})
+	}
+	return items
 }
 
 // probeBinariesWarn executa probe por CLI e emite Warn para binarios ausentes.
@@ -636,18 +701,18 @@ func (s *Service) installBaseSkills(sourceDir, projectDir string, skillList []st
 	return nil
 }
 
-func (s *Service) installTool(sourceDir, projectDir string, tool skills.Tool, skillList []string, mode skills.LinkMode, dryRun bool, codexProfile string) error {
+func (s *Service) installTool(sourceDir, projectDir string, tool skills.Tool, skillList []string, mode skills.LinkMode, dryRun bool, codexProfile, model string) error {
 	s.printer.Step("Instalando %s...", tool)
 
 	switch tool {
 	case skills.ToolClaude:
 		return s.installClaude(sourceDir, projectDir, skillList, mode, dryRun)
-	case skills.ToolGemini:
-		return s.installGemini(sourceDir, projectDir, dryRun)
 	case skills.ToolCodex:
 		return s.installCodex(sourceDir, projectDir, skillList, codexProfile, dryRun)
 	case skills.ToolCopilot:
 		return s.installCopilot(sourceDir, projectDir, skillList, mode, dryRun)
+	case skills.ToolOpenCode:
+		return s.installOpenCode(sourceDir, projectDir, dryRun, model)
 	}
 	return nil
 }
@@ -707,6 +772,7 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 		s.printer.DryRun("copiar .claude/scripts/validate-review-evidence.sh")
 		s.printer.DryRun("copiar .claude/hooks/validate-governance.sh")
 		s.printer.DryRun("copiar .claude/hooks/validate-preload.sh")
+		s.printer.DryRun("copiar .claude/hooks/validate-session-end.sh")
 		s.printer.DryRun("copiar scripts/lib/parse-hook-input.sh")
 		s.printer.DryRun("copiar scripts/lib/check-invocation-depth.sh")
 		s.printer.DryRun("configurar hooks PreToolUse e PostToolUse em .claude/settings.local.json")
@@ -764,6 +830,13 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 		}
 	}
 
+	sessionEndHook := filepath.Join(sourceDir, ".claude", "hooks", "validate-session-end.sh")
+	if s.fs.Exists(sessionEndHook) {
+		if err := s.fs.CopyFile(sessionEndHook, filepath.Join(hookDir, "validate-session-end.sh")); err != nil {
+			return err
+		}
+	}
+
 	// Hooks de enforcement programatico do orquestrador (execute-all-tasks + execute-task).
 	if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".claude", "hooks")); err != nil {
 		return err
@@ -806,103 +879,23 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 	return nil
 }
 
-func (s *Service) installGemini(sourceDir, projectDir string, dryRun bool) error {
-	cmdDir := filepath.Join(projectDir, ".gemini", "commands")
-	if dryRun {
-		s.printer.DryRun("mkdir -p %s", cmdDir)
-		s.printer.DryRun("gerar .gemini/commands/*.toml via adaptadores")
-		s.printer.DryRun("gerar .gemini/agents/*.md via adaptadores")
-		s.printer.DryRun("copiar .gemini/hooks/validate-preload.sh")
-		s.printer.DryRun("copiar .gemini/hooks/validate-governance.sh")
-		s.printer.DryRun("copiar GEMINI.md")
-		return nil
-	}
-
-	if err := s.fs.MkdirAll(cmdDir); err != nil {
-		return err
-	}
-	s.adapters.GenerateGemini(sourceDir, projectDir)
-	s.adapters.GenerateGeminiAgents(sourceDir, projectDir)
-
-	hookDir := filepath.Join(projectDir, ".gemini", "hooks")
-	geminiPreload := filepath.Join(sourceDir, ".gemini", "hooks", "validate-preload.sh")
-	if s.fs.Exists(geminiPreload) {
-		if err := s.fs.MkdirAll(hookDir); err != nil {
-			return err
-		}
-		if err := s.fs.CopyFile(geminiPreload, filepath.Join(hookDir, "validate-preload.sh")); err != nil {
-			return err
-		}
-	}
-
-	geminiGovernance := filepath.Join(sourceDir, ".gemini", "hooks", "validate-governance.sh")
-	if s.fs.Exists(geminiGovernance) {
-		if err := s.fs.MkdirAll(hookDir); err != nil {
-			return err
-		}
-		if err := s.fs.CopyFile(geminiGovernance, filepath.Join(hookDir, "validate-governance.sh")); err != nil {
-			return err
-		}
-	}
-
-	if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".gemini", "hooks")); err != nil {
-		return err
-	}
-
-	geminiSettings := filepath.Join(projectDir, ".gemini", "settings.json")
-	if !s.fs.Exists(geminiSettings) {
-		if err := s.fs.WriteFile(geminiSettings, []byte(NewHelper().defaultGeminiSettings())); err != nil {
-			return err
-		}
-	} else if data, err := s.fs.ReadFile(geminiSettings); err == nil {
-		if !strings.Contains(string(data), "validate-preload.sh") {
-			s.printer.Warn(".gemini/settings.json ja existe. Adicione os hooks BeforeTool/AfterAgent manualmente (validate-preload, validate-governance).")
-		}
-	}
-
-	geminiMD := filepath.Join(sourceDir, "GEMINI.md")
-	if s.fs.Exists(geminiMD) {
-		if err := s.fs.CopyFile(geminiMD, filepath.Join(projectDir, "GEMINI.md")); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// _orchestratorHooks lista hooks de enforcement programatico do execute-all-tasks/execute-task.
-// Distribuidos para todos os tools (.claude, .gemini, .codex, .github) para permitir
-// invocacao consistente independente de qual CLI o usuario esteja rodando.
-//
-// O subagent-stop-wrapper.sh eh especifico do Claude Code (registrado em
-// settings.local.json como SubagentStop hook) mas distribuido para todos os
-// tools como utilitario invocavel.
-var _orchestratorHooks = []string{
+var orchestratorHooks = []string{
 	"post-execute-task.sh",
 	"pre-execute-all-tasks.sh",
 	"post-wave.sh",
 	"subagent-stop-wrapper.sh",
 }
 
-// _agentsScriptsFiles lista validadores e gates canonicos em .agents/scripts/.
-// Sao tool-neutros e instalados SEMPRE (independente dos tools selecionados), pois a
-// cascata de resolucao das skills e `.agents/scripts/` -> `.claude/scripts/` -> `scripts/`.
-// Instalar em .agents/scripts/ garante paridade: um projeto so-Gemini/Codex/Copilot tem os
-// mesmos gates de evidencia E de descoberta cirurgica que um projeto Claude.
-var _agentsScriptsFiles = []string{
-	// Validadores de evidencia (legados).
+var agentsScriptsFiles = []string{
 	"validate-task-evidence.sh",
 	"validate-bugfix-evidence.sh",
 	"validate-refactor-evidence.sh",
 	"validate-review-evidence.sh",
-	// Gates de descoberta cirurgica (production-proof inegociavel).
-	// hook-prereq-gate.sh e chamado pelos hooks PreToolUse dos 3 CLIs e orquestra
-	// validate-skill-prerequisites + resolve-references para emitir guidance
-	// cirurgica e bloquear quando a skill da stack tocada nao esta presente.
 	"hook-prereq-gate.sh",
 	"resolve-references.sh",
 	"validate-skill-prerequisites.sh",
 	"validate-governance-references.sh",
+	"validate-session-end.sh",
 }
 
 // copyAgentsScripts copia os validadores canonicos de evidencia para .agents/scripts/ do
@@ -913,7 +906,7 @@ func (s *Service) copyAgentsScripts(sourceDir, projectDir string) error {
 	primarySrc := filepath.Join(sourceDir, ".agents", "scripts")
 	fallbackSrc := filepath.Join(sourceDir, ".claude", "scripts")
 
-	for _, name := range _agentsScriptsFiles {
+	for _, name := range agentsScriptsFiles {
 		src := filepath.Join(primarySrc, name)
 		if !s.fs.Exists(src) {
 			src = filepath.Join(fallbackSrc, name)
@@ -970,15 +963,16 @@ func (s *Service) copyAgentsLib(sourceDir, projectDir string) error {
 }
 
 // _toolValidationHooks lista hooks de validacao por-tool (preload + governanca pos-edicao).
-// Distribuidos opcionalmente para Codex/Gemini/Copilot quando presentes na fonte;
+// Distribuidos opcionalmente para Codex/Copilot quando presentes na fonte;
 // Claude tem caminho dedicado em installClaude por suportar PreToolUse/PostToolUse nativos.
 var _toolValidationHooks = []string{
 	"validate-preload.sh",
 	"validate-governance.sh",
+	"validate-session-end.sh",
 }
 
 // copyToolValidationHooks copia hooks de validacao especificos do tool (preload e
-// governanca) quando existirem na fonte. Mantem paridade entre Claude/Codex/Gemini/Copilot.
+// governanca) quando existirem na fonte. Mantem paridade entre Claude/Codex/Copilot.
 // Falha silenciosamente para hooks ausentes — cada tool pode adotar apenas o subset
 // que faz sentido para sua mecanica de invocacao.
 func (s *Service) copyToolValidationHooks(sourceDir, projectDir, toolHookDir string) error {
@@ -1011,7 +1005,7 @@ func (s *Service) copyOrchestratorHooks(sourceDir, projectDir, toolHookDir strin
 	dstDir := filepath.Join(projectDir, toolHookDir)
 	srcDir := filepath.Join(sourceDir, toolHookDir)
 
-	for _, hook := range _orchestratorHooks {
+	for _, hook := range orchestratorHooks {
 		src := filepath.Join(srcDir, hook)
 		if !s.fs.Exists(src) {
 			continue
@@ -1156,6 +1150,70 @@ func (s *Service) installCopilot(sourceDir, projectDir string, skillList []strin
 	return nil
 }
 
+var ErrOpenCodePluginRuntimeMissing = fmt.Errorf("opencode governance plugin runtime %q not found on PATH — install it before installing/verifying the opencode agent", specs.OpenCodePluginRuntime)
+
+var openCodeRequiredTools = []string{"bash", "edit", "write", "multiedit", "patch"}
+
+var openCodePermissionFactory = specs.DefaultOpenCodePermission
+
+func (s *Service) installOpenCode(sourceDir, projectDir string, dryRun bool, model string) error {
+	if _, err := s.lookPather.LookPath(specs.OpenCodePluginRuntime); err != nil {
+		return ErrOpenCodePluginRuntimeMissing
+	}
+
+	pluginDir := filepath.Join(projectDir, ".opencode", "plugin")
+	configPath := filepath.Join(projectDir, specs.OpenCodeConfigFileName)
+
+	if dryRun {
+		s.printer.DryRun("mkdir -p %s", pluginDir)
+		s.printer.DryRun("merge permission block into %s", configPath)
+		return nil
+	}
+
+	if err := s.fs.MkdirAll(pluginDir); err != nil {
+		return err
+	}
+
+	sourcePluginDir := filepath.Join(sourceDir, ".opencode", "plugin")
+	if s.fs.IsDir(sourcePluginDir) {
+		if err := s.fs.CopyDir(sourcePluginDir, pluginDir); err != nil {
+			return err
+		}
+	}
+
+	var existing []byte
+	if s.fs.Exists(configPath) {
+		data, err := s.fs.ReadFile(configPath)
+		if err != nil {
+			return err
+		}
+		existing = data
+	}
+
+	permission := openCodePermissionFactory()
+	if err := specs.ValidatePermissionBlock(permission, openCodeRequiredTools...); err != nil {
+		return fmt.Errorf("opencode permission block: %w", err)
+	}
+
+	merged, err := specs.MergeOpenCodeConfig(existing, permission, model)
+	if err != nil {
+		return err
+	}
+	if err := specs.ValidatePermissionBlock(decodeWrittenPermission(merged), openCodeRequiredTools...); err != nil {
+		return fmt.Errorf("opencode permission block written to disk: %w", err)
+	}
+	return s.fs.WriteFile(configPath, merged)
+}
+
+func decodeWrittenPermission(configBytes []byte) map[string]any {
+	var doc map[string]any
+	if err := json.Unmarshal(configBytes, &doc); err != nil {
+		return nil
+	}
+	perm, _ := doc["permission"].(map[string]any)
+	return perm
+}
+
 func (r1 *Helper) shouldProcessSkill(skillName string, langFilter []skills.Lang) bool {
 	if len(langFilter) == 0 {
 		return true
@@ -1216,46 +1274,13 @@ func (r1 *Helper) defaultClaudeSettings() string {
           }
         ]
       }
-    ]
-  }
-}
-`
-}
-
-// defaultGeminiSettings devolve o conteudo de .gemini/settings.json com hooks nativos
-// 2026 (BeforeTool/AfterAgent) apontando para os validadores compartilhados. Paridade
-// com Claude: preload de governanca antes de editar, validacao apos editar.
-func (r1 *Helper) defaultGeminiSettings() string {
-	return `{
-  "hooks": {
-    "BeforeTool": [
-      {
-        "matcher": "write_file|replace|run_shell_command",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .gemini/hooks/validate-preload.sh"
-          }
-        ]
-      }
     ],
-    "AfterTool": [
-      {
-        "matcher": "write_file|replace",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .gemini/hooks/validate-governance.sh"
-          }
-        ]
-      }
-    ],
-    "AfterAgent": [
+    "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bash .gemini/hooks/subagent-stop-wrapper.sh"
+            "command": "bash .claude/hooks/validate-session-end.sh"
           }
         ]
       }
@@ -1265,9 +1290,7 @@ func (r1 *Helper) defaultGeminiSettings() string {
 `
 }
 
-// defaultCopilotHooks devolve o conteudo de .github/hooks/governance.json no formato
-// nativo do Copilot CLI 2026 (version:1, hooks.preToolUse/postToolUse/stop) apontando
-// para os validadores compartilhados. Paridade com Claude/Gemini.
+
 func (r1 *Helper) defaultCopilotHooks() string {
 	return `{
   "version": 1,
@@ -1284,10 +1307,14 @@ func (r1 *Helper) defaultCopilotHooks() string {
         "bash": "bash .github/hooks/validate-governance.sh"
       }
     ],
-    "stop": [
+    "agentStop": [
       {
         "type": "command",
         "bash": "bash .github/hooks/subagent-stop-wrapper.sh"
+      },
+      {
+        "type": "command",
+        "bash": "bash .github/hooks/validate-session-end.sh"
       }
     ]
   }
@@ -1323,6 +1350,16 @@ func (r1 *Helper) defaultCodexHooks() string {
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .codex/hooks/validate-session-end.sh"
+          }
+        ]
+      }
     ]
   }
 }
@@ -1349,6 +1386,11 @@ command = "bash .codex/hooks/validate-preload.sh"
 [[hooks.PostToolUse.hooks]]
 type = "command"
 command = "bash .codex/hooks/validate-governance.sh"
+
+[[hooks.Stop]]
+[[hooks.Stop.hooks]]
+type = "command"
+command = "bash .codex/hooks/validate-session-end.sh"
 `
 }
 
@@ -1403,6 +1445,100 @@ func (r1 *Helper) langNames(langs []skills.Lang) []string {
 	out := make([]string, len(langs))
 	for i, l := range langs {
 		out[i] = string(l)
+	}
+	return out
+}
+
+// expectedInstalledPaths enumera, apos a instalacao concluida, os caminhos
+// estaticos (relativos a projectDir) que esta instalacao efetivamente criou —
+// hooks, scripts, libs e arquivos de configuracao nucleo por ferramenta.
+// Cada candidato so entra na lista se existir em disco (s.fs.Exists), evitando
+// falso-positivo quando a fonte nao tinha o arquivo correspondente.
+//
+// Skills e adaptadores gerados por skill (.claude/agents/*.md,
+// .github/agents/*.agent.md, .codex/agents/*.toml, .agents/skills/<skill>/...)
+// nao entram aqui: a desinstalacao continua removendo-os por enumeracao de
+// diretorio (jah correto hoje, pois reflete o conteudo real do disco em vez de
+// uma lista estatica que ficaria desatualizada a cada skill nova).
+func (s *Service) expectedInstalledPaths(projectDir string, tools []skills.Tool) []string {
+	toolSet := make(map[skills.Tool]bool, len(tools))
+	for _, t := range tools {
+		toolSet[t] = true
+	}
+
+	var candidates []string
+
+	// Tool-neutro: sempre instalado independente de quais tools foram selecionadas.
+	candidates = append(candidates,
+		filepath.Join(".agents", "hooks", "post-execute-task.sh"),
+		filepath.Join(".agents", "hooks", "pre-execute-all-tasks.sh"),
+		filepath.Join(".agents", "hooks", "post-wave.sh"),
+		filepath.Join(".agents", "hooks", "subagent-stop-wrapper.sh"),
+		filepath.Join(".agents", "lib", "check-invocation-depth.sh"),
+		filepath.Join(".agents", "lib", "parse-hook-input.sh"),
+	)
+	for _, f := range agentsScriptsFiles {
+		candidates = append(candidates, filepath.Join(".agents", "scripts", f))
+	}
+
+	if toolSet[skills.ToolClaude] {
+		candidates = append(candidates,
+			filepath.Join(".claude", "rules", "governance.md"),
+			filepath.Join(".claude", "scripts", "validate-task-evidence.sh"),
+			filepath.Join(".claude", "scripts", "validate-bugfix-evidence.sh"),
+			filepath.Join(".claude", "scripts", "validate-refactor-evidence.sh"),
+			filepath.Join(".claude", "scripts", "validate-review-evidence.sh"),
+			filepath.Join(".claude", "hooks", "validate-governance.sh"),
+			filepath.Join(".claude", "hooks", "validate-preload.sh"),
+			filepath.Join(".claude", "hooks", "validate-session-end.sh"),
+			filepath.Join(".claude", "hooks", "post-execute-task.sh"),
+			filepath.Join(".claude", "hooks", "pre-execute-all-tasks.sh"),
+			filepath.Join(".claude", "hooks", "post-wave.sh"),
+			filepath.Join(".claude", "hooks", "subagent-stop-wrapper.sh"),
+			filepath.Join("scripts", "lib", "parse-hook-input.sh"),
+			filepath.Join("scripts", "lib", "check-invocation-depth.sh"),
+			"AGENTS.md",
+			"CLAUDE.md",
+		)
+	}
+
+	if toolSet[skills.ToolCodex] {
+		candidates = append(candidates,
+			filepath.Join(".codex", "config.toml"),
+			filepath.Join(".codex", "hooks.json"),
+			filepath.Join(".codex", "hooks", "validate-preload.sh"),
+			filepath.Join(".codex", "hooks", "validate-governance.sh"),
+			filepath.Join(".codex", "hooks", "validate-session-end.sh"),
+			filepath.Join(".codex", "hooks", "post-execute-task.sh"),
+			filepath.Join(".codex", "hooks", "pre-execute-all-tasks.sh"),
+			filepath.Join(".codex", "hooks", "post-wave.sh"),
+			filepath.Join(".codex", "hooks", "subagent-stop-wrapper.sh"),
+		)
+	}
+
+	if toolSet[skills.ToolCopilot] {
+		candidates = append(candidates,
+			filepath.Join(".github", "copilot-instructions.md"),
+			filepath.Join(".github", "hooks", "validate-preload.sh"),
+			filepath.Join(".github", "hooks", "validate-governance.sh"),
+			filepath.Join(".github", "hooks", "validate-session-end.sh"),
+			filepath.Join(".github", "hooks", "post-execute-task.sh"),
+			filepath.Join(".github", "hooks", "pre-execute-all-tasks.sh"),
+			filepath.Join(".github", "hooks", "post-wave.sh"),
+			filepath.Join(".github", "hooks", "subagent-stop-wrapper.sh"),
+			filepath.Join(".github", "hooks", "governance.json"),
+		)
+	}
+
+	if toolSet[skills.ToolOpenCode] {
+		candidates = append(candidates, filepath.Join(".opencode", "plugin"))
+	}
+
+	out := make([]string, 0, len(candidates))
+	for _, rel := range candidates {
+		if s.fs.Exists(filepath.Join(projectDir, rel)) || s.fs.IsDir(filepath.Join(projectDir, rel)) {
+			out = append(out, rel)
+		}
 	}
 	return out
 }

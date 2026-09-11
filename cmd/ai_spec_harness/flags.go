@@ -42,9 +42,9 @@ func (h *flagHelper) parseToolsFlag(raw string) ([]skills.Tool, error) {
 	var tools []skills.Tool
 	for _, s := range strings.Split(raw, ",") {
 		s = strings.TrimSpace(s)
-		t, ok := skills.NewCatalog().ParseTool(s)
-		if !ok {
-			return nil, fmt.Errorf("ferramenta invalida: %s (opcoes: claude, gemini, codex, copilot, all)", s)
+		t, err := skills.NewCatalog().ResolveTool(s)
+		if err != nil {
+			return nil, err
 		}
 		tools = append(tools, t)
 	}

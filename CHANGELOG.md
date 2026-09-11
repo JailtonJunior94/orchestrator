@@ -1,5 +1,108 @@
 # Changelog
 
+## 2.0.0 (2026-09-11)
+
+Release major: consolida os quatro CLIs oficiais (Claude Code, Codex, GitHub Copilot CLI,
+OpenCode), remove o Gemini e substitui a rodada única de revisão por um Ciclo de Aprovação
+determinístico. Nenhum default muda para Claude, Codex e Copilot além dos listados explicitamente
+abaixo (O-06); todos os demais fluxos permanecem byte-idênticos (RF-62), comprovado pela suíte de
+não-regressão e pelos vetores 1 (ambiente do processo filho) e 2 (janela de contexto estática).
+
+### Breaking Changes
+
+- **agents:** remove totalmente o Gemini CLI do conjunto suportado — diretório `.gemini/`,
+  `GEMINI.md`, invoker legado com aviso de depreciação, geradores de adaptador dedicados, extrator
+  de métricas próprio, testes/fixtures de integração e de paridade dedicados (RF-01, RF-02, task
+  10.0). Invocar `--tool gemini` produz erro tipado e explicativo (`skills.RemovedAgentError`,
+  distinguível via `errors.As`) citando o conjunto suportado `{claude, codex, copilot, opencode}`
+  e apontando para o guia de migração (`docs/migracao-legacy-acp.md#gemini-removido`) — nunca mais
+  o erro genérico de valor inválido (RF-03).
+- **agents:** adiciona o OpenCode como quarto agente oficial de 1ª classe (ACP nativo via
+  subcomando `opencode acp`, versão pinada, sem `@latest`), preenchendo antes da remoção do Gemini
+  as duas células de "ocupante único" que ficariam vazias — `ToolBudgetsLarge` em
+  `internal/metrics/metrics.go` e `inherit_common` das regras de normalização — cada uma agora
+  coberta por gate de não-vacuidade (RF-06, RF-10..RF-18, tasks 6.0/7.0/8.0).
+- **approval:** `APPROVED_WITH_REMARKS` **deixa de fechar tarefa como `done`** — a regra antiga que
+  permitia isso é removida; os achados da ressalva realimentam a correção. O Ciclo só encerra como
+  aprovado com veredito `APPROVED` **e** mapa 1:1 completo de critério de aceite → evidência
+  verificável; esgotado o teto de rodadas sem aprovação, o resultado é **sempre `blocked`**, nunca
+  `done` (RF-33, RF-36, task 5.0). Quem dependia do comportamento antigo (ressalva não-crítica
+  fechando a tarefa) passa a ver `blocked` com histórico de rodadas.
+- **cli:** nova flag `--max-bugfix-iterations` (default **5**) expõe pela primeira vez o teto de
+  rodadas do Ciclo de Aprovação, antes fixo em código sem nenhum escritor (RF-35, task 5.0). O
+  Ciclo continua **desligado por default** no modo orquestrado (mesma flag opt-in que já ativava a
+  auto-revisão) — ativá-lo agora faz o ciclo **iterar** em vez de rodar uma única vez.
+- **install/uninstall:** a desinstalação passa a ser **dirigida pelo manifesto** (campo aditivo
+  `InstalledFiles`), removendo todos os arquivos que a instalação de fato criou — antes, 6 arquivos
+  escapavam da limpeza (RF-05, RF-60, task 10.0). Manifesto antigo, gravado antes deste campo
+  existir, cai em caminho conservador **anunciado explicitamente na saída**, preservando arquivos
+  do usuário; nenhuma remoção silenciosa.
+- **copilot:** corrige a chave do hook de encerramento de sessão do Copilot (`stop` → `agentStop`,
+  o nome oficial do evento) — o gate de encerramento do Copilot, que **nunca disparava** por causa
+  da chave inválida, passa a disparar de fato (RF-59, task 9.0). Quem dependia do gate
+  silenciosamente inativo no Copilot passa a vê-lo bloquear encerramento de sessão com tarefa ativa
+  sem veredito `APPROVED`.
+- **runtime:** o veredito de revisão em produção deixa de ser derivado de texto **sintético**
+  (`buildReviewOutputFromSummary`) e passa a consumir a **saída real do revisor**; a escrita do
+  relatório de revisão pelo Go deixa de sobrescrever o artefato produzido pela skill (RF-57,
+  RF-58, tasks 4.1/4.2). Sessões com `--auto-review`/Ciclo ativado que hoje aprovavam sempre podem
+  passar a bloquear — é a correção do falso positivo que motivou esta entrega, não uma regressão.
+- **runtime:** o guarda de profundidade de invocação, que impedia qualquer ciclo de correção de
+  passar da 1ª rodada, agora reseta a profundidade a cada rodada do Ciclo (RF-38, tasks 4.2/5.0) —
+  efeito observável apenas com o Ciclo ativado (opt-in).
+- **contextgen:** o `AGENTS.md` gerado por `install`/`analyze-project` deixa de citar os quatro
+  agentes incondicionalmente nas seções "Notas por Ferramenta" e "Matrix de Enforcement" — passa a
+  citar **apenas** os agentes efetivamente selecionados (`--tools`), corrigindo também a afirmação
+  falsa de que o Copilot não tem hooks nativos (RF-09, task 10.0, subtarefas 10.12/10.13). Projetos
+  que selecionam um subconjunto de agentes (ex.: `--tools claude`) verão um `AGENTS.md` menor e
+  correto na próxima geração — nenhum agente fora do conjunto selecionado aparece mais.
+
+### Features
+
+- **domain:** novo pacote `internal/approval` — agregado do Ciclo de Aprovação sem dependência de
+  protocolo ACP, CLI ou filesystem; dono da contagem de rodadas, veredito corrente e critério de
+  parada; consumido por `Service.Execute`, `RunLoop` e `ACPRunner` (RF-30, RF-31, RF-34, RF-41,
+  RF-42, RF-43, RF-44, RF-45, tasks 2.0, 4.1–4.8).
+- **domain:** mapa 1:1 critério de aceite → evidência como dado verificável e fail-closed; critério
+  "não verificável pelo diff" proíbe `APPROVED` (RF-46..RF-54, task 3.0).
+- **opencode:** enforcement não-desligável — hook de pré-ferramenta por exceção, permissões
+  declarativas, sanitização do ambiente do processo filho contra os interruptores conhecidos
+  (`OPENCODE_PURE`, `OPENCODE_DISABLE_PROJECT_CONFIG`, `OPENCODE_DISABLE_EXTERNAL_SKILLS`) e
+  handshake ativo do plugin de governança antes do primeiro prompt (RF-19..RF-21, task 8.0).
+- **opencode:** janela de contexto derivada do modelo por tabela versionada (casamento exato e por
+  maior prefixo), com fallback conservador declarado e testado para modelo não resolvível — sem
+  efeito para Claude/Codex/Copilot, cuja janela permanece estática (RF-17, task 7.0).
+- **hooks:** gate canônico de encerramento de sessão presente nos quatro agentes, bloqueando
+  encerramento com tarefa ativa sem veredito `APPROVED` (RF-27, task 9.0).
+- **traceability:** `ai-spec check-traceability <diretorio-prd>` deriva e verifica a cadeia
+  requisito → tarefa → critério → evidência a partir dos próprios artefatos (RF-55, task 11.0).
+- **catalog:** registro único de agentes (`internal/runtime/specs.Registry`) — elimina as duas
+  ordens canônicas divergentes e os dois catálogos ACP espelhados que hoje coexistiam (RF-07,
+  task 6.0).
+
+### Fixes
+
+- **install:** chave de evento do hook de encerramento do Copilot corrigida (ver Breaking Changes).
+- **uninstall:** desinstalação incompleta corrigida via manifesto por arquivo (ver Breaking
+  Changes).
+- **runtime:** veredito sintético e sobrescrita do artefato de revisão corrigidos (ver Breaking
+  Changes).
+
+### Documentation
+
+- **migration:** guia de migração do Gemini removido em
+  `docs/migracao-legacy-acp.md#gemini-removido`, referenciado pelo erro tipado de invocação.
+- **sdd:** rastreabilidade requisito → tarefa → critério → evidência ancorada por hash
+  (`spec-hash-prd`/`spec-hash-techspec` em `tasks.md`), verificável via `ai-spec check-spec-drift`
+  e `ai-spec check-traceability` (RF-55, task 11.0).
+
+> **Nota de proveniência:** as entradas acima foram compiladas a partir dos relatórios de execução
+> de cada tarefa (`.specs/prd-harness-quatro-clis-loop-aprovacao/*_execution_report.md`) e da
+> especificação técnica, não apenas do histórico `git log` — a maior parte do trabalho desta
+> release estava presente na árvore de trabalho, ainda não commitada, no momento da preparação
+> deste changelog. Nenhum hash de commit é citado onde a mudança correspondente ainda não foi
+> commitada.
+
 ## 1.1.0 (2026-09-05)
 
 ### Features

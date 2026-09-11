@@ -35,7 +35,7 @@ func (s *RP03Suite) TestRP03_CrossCLI_ShellOpNormalizationParity() {
 		{"claude", "bash", `{"command":"echo hello"}`},
 		{"codex", "shell", `{"cmd":"echo hello"}`},
 		{"copilot", "run", `{"command":"echo hello"}`},
-		{"gemini", "bash", `{"command":"echo hello"}`},
+		{"opencode", "bash", `{"command":"echo hello"}`},
 	}
 
 	const wantName = "bash"
@@ -122,7 +122,7 @@ func (s *RP03Suite) TestParity_INV32_FailsWhenDiverge() {
 // TestParity_INV32_SkipsWhenFixtureAbsent valida que INV-32 passa (skip) quando falta fixture.
 func (s *RP03Suite) TestParity_INV32_SkipsWhenFixtureAbsent() {
 	snap := Snapshot{
-		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolGemini},
+		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolOpenCode},
 		ProjectDir: testProjectDir,
 		Files: map[string][]byte{
 			// apenas 2 das 4 fixtures presentes
@@ -144,15 +144,15 @@ func fixtureLine(normalizedName string) []byte {
 	return []byte(`{"kind":"tool_call_start","raw_name":"x","normalized_name":"` + normalizedName + `"}` + "\n")
 }
 
-func snapshotWith4Fixtures(claude, codex, copilot, gemini string) Snapshot {
+func snapshotWith4Fixtures(claude, codex, copilot, opencode string) Snapshot {
 	return Snapshot{
-		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolGemini},
+		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolOpenCode},
 		ProjectDir: testProjectDir,
 		Files: map[string][]byte{
 			testProjectDir + "/tests/fixtures/parity/claude_bash.jsonl": fixtureLine(claude),
 			testProjectDir + "/tests/fixtures/parity/codex_shell.jsonl": fixtureLine(codex),
 			testProjectDir + "/tests/fixtures/parity/copilot_run.jsonl": fixtureLine(copilot),
-			testProjectDir + "/tests/fixtures/parity/gemini_bash.jsonl": fixtureLine(gemini),
+			testProjectDir + "/tests/fixtures/parity/opencode_bash.jsonl": fixtureLine(opencode),
 		},
 		Dirs:  map[string]bool{},
 		Links: map[string]string{},

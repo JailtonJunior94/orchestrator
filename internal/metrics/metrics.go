@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"path/filepath"
@@ -223,6 +224,30 @@ func (c *Catalog) toolBudgetsLarge() map[string]int {
 		}
 	}
 	return out
+}
+
+var ErrToolBudgetsLargeCoverage = errors.New("tool budgets large: coverage gate failed")
+
+func checkToolBudgetsLargeCoverage(registry []specs.Agent, budgetsLarge map[string]int) error {
+	known := make(map[string]bool, len(registry))
+	for _, agent := range registry {
+		known[agent.ID()] = true
+		if agent.LargeBudget() > 0 {
+			if _, ok := budgetsLarge[agent.ID()]; !ok {
+				return fmt.Errorf("%w: agent %q has a positive LargeBudget but no ToolBudgetsLarge entry", ErrToolBudgetsLargeCoverage, agent.ID())
+			}
+		}
+	}
+	for id := range budgetsLarge {
+		if !known[id] {
+			return fmt.Errorf("%w: orphan key %q in ToolBudgetsLarge", ErrToolBudgetsLargeCoverage, id)
+		}
+	}
+	return nil
+}
+
+func (c *Catalog) CheckToolBudgetsLargeCoverage() error {
+	return checkToolBudgetsLargeCoverage(specs.NewCatalog().Registry(), ToolBudgetsLarge)
 }
 
 // CheckBudgetForClass verifica o budget levando em conta a WindowClass (ADR-023).

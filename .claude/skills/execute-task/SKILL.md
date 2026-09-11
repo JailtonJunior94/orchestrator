@@ -118,4 +118,4 @@ Aplicação: Etapa 2 (refs grandes multi-linguagem), Etapa 3 (subtarefas em paco
 
 ## Resolução de paths
 
-`.specs/prd-<slug>/` resolve para `${AI_TASKS_ROOT:-.specs}/${AI_PRD_PREFIX:-prd-}<slug>/`. Configurar em `.claude/config.yaml`/`.agents/config.yaml` (`tasks_root`, `prd_prefix`, `evidence_dir`, `coverage_threshold`, `language_default`). Vars exportadas por `check-invocation-depth.sh`, resolvido em cascata `.agents/lib/` → `scripts/lib/` (vendor canônico em `.agents/lib/`, mirror legado em `scripts/lib/`). `AI_TOOL` validado contra `{claude, codex, gemini, copilot}`; inválido → unset (modo agnóstico).
+`.specs/prd-<slug>/` resolve para `${AI_TASKS_ROOT:-.specs}/${AI_PRD_PREFIX:-prd-}<slug>/`. Configurar em `.claude/config.yaml`/`.agents/config.yaml` (`tasks_root`, `prd_prefix`, `evidence_dir`, `coverage_threshold`, `language_default`). Vars exportadas por `check-invocation-depth.sh`, resolvido em cascata `.agents/lib/` → `scripts/lib/` (vendor canônico em `.agents/lib/`, mirror legado em `scripts/lib/`). `AI_TOOL` validado contra `{claude, codex, copilot, opencode}`; inválido → unset (modo agnóstico).

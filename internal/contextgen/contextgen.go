@@ -44,9 +44,6 @@ func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, 
 		if toolSet[skills.ToolClaude] {
 			g.printer.DryRun("Geraria CLAUDE.md")
 		}
-		if toolSet[skills.ToolGemini] {
-			g.printer.DryRun("Geraria GEMINI.md")
-		}
 		if toolSet[skills.ToolCopilot] {
 			g.printer.DryRun("Geraria .github/copilot-instructions.md")
 		}
@@ -85,6 +82,7 @@ func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, 
 		archResult.Type, archDescription, dirTree,
 		archResult.Pattern, depFlow, archRules,
 		langRules, validationCmds, archRestrictions,
+		g.buildToolNotes(tools), g.buildEnforcementMatrix(tools),
 	)
 
 	if governanceProfile == "compact" {
@@ -120,21 +118,6 @@ func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, 
 		)
 		if err := g.fs.WriteFile(filepath.Join(projectDir, "CLAUDE.md"), []byte(content)); err != nil {
 			return fmt.Errorf("escrever CLAUDE.md: %w", err)
-		}
-	}
-
-	// GEMINI.md
-	if toolSet[skills.ToolGemini] {
-		content := g.renderAIToolTemplate(
-			"Gemini CLI",
-			"fonte canonica das regras",
-			"`.agents/skills/` e a fonte de verdade dos fluxos procedurais.",
-			"`.gemini/commands/` sao adaptadores finos que apontam para a habilidade correta.",
-			stackSection,
-		)
-		content += _geminiExtraGuidance
-		if err := g.fs.WriteFile(filepath.Join(projectDir, "GEMINI.md"), []byte(content)); err != nil {
-			return fmt.Errorf("escrever GEMINI.md: %w", err)
 		}
 	}
 
@@ -176,7 +159,7 @@ func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, 
 func (g *Generator) buildDirectoryTree(projectDir string) string {
 	ignoreDirs := map[string]bool{
 		".git": true, ".agents": true, ".claude": true, ".codex": true,
-		".gemini": true, "node_modules": true, "vendor": true, "dist": true,
+		".opencode": true, "node_modules": true, "vendor": true, "dist": true,
 		"build": true, "bin": true, "target": true, "__pycache__": true,
 	}
 	ignoreFiles := map[string]bool{".gitkeep": true}
@@ -414,9 +397,133 @@ func (g *Generator) buildCodexConfig(projectDir, codexProfile string) string {
 	return b.String()
 }
 
+// toolNoteEntry descreve a integracao de governanca de um agente para as
+// secoes "Notas por Ferramenta" e "Matrix de Enforcement" do AGENTS.md
+// gerado. Os campos refletem o estado real de enforcement de cada agente
+// (RF-22, RF-27) — nao a lista completa do catalogo, e sim apenas os
+// agentes efetivamente selecionados na geracao corrente (corrige o bug de
+// tabela estatica que ignorava os agentes selecionados).
+type toolNoteEntry struct {
+	tool         skills.Tool
+	displayName  string
+	note         string
+	preTool      string
+	postTool     string
+	preloaded    string
+	programmatic string
+	evidence     string
+}
+
+var toolNoteCatalog = []toolNoteEntry{
+	{
+		tool:         skills.ToolClaude,
+		displayName:  "Claude Code",
+		note:         "skills pre-carregadas via `.claude/skills/`, hooks via `.claude/hooks/`, agents delegados via `.claude/agents/`.",
+		preTool:      "hook PreToolUse",
+		postTool:     "hook PostToolUse",
+		preloaded:    "sim (symlinks)",
+		programmatic: "sim (hooks)",
+		evidence:     "script",
+	},
+	{
+		tool:         skills.ToolCodex,
+		displayName:  "Codex",
+		note:         "le `AGENTS.md` como instrucao de sessao. Entradas em `.codex/config.toml` sao metadados para `upgrade.sh`, nao spec oficial do Codex CLI. Hooks nativos de projeto exigem trust concedido via `/hooks` na TUI interativa; sem trust o gate fica inerte.",
+		preTool:      "hook (exige trust)",
+		postTool:     "hook (exige trust)",
+		preloaded:    "nao",
+		programmatic: "sim (hooks, condicionado a trust)",
+		evidence:     "script",
+	},
+	{
+		tool:         skills.ToolCopilot,
+		displayName:  "Copilot",
+		note:         "`.github/copilot-instructions.md` como instrucao principal. `.github/agents/` sao wrappers. Hooks nativos de projeto (`.github/hooks/*.json`) disparam apenas quando a pasta do projeto esta na lista de pastas confiaveis do Copilot CLI.",
+		preTool:      "hook preToolUse (exige pasta confiavel)",
+		postTool:     "hook postToolUse (exige pasta confiavel)",
+		preloaded:    "sim (agents)",
+		programmatic: "sim (hooks, condicionado a pasta confiavel)",
+		evidence:     "script",
+	},
+	{
+		tool:         skills.ToolOpenCode,
+		displayName:  "OpenCode",
+		note:         "`AGENTS.md` e `.agents/skills/` de projeto sao carregados nativamente. Plugin de governanca em `.opencode/plugin/` bloqueia por excecao no hook `tool.execute.before`.",
+		preTool:      "hook tool.execute.before",
+		postTool:     "hook tool.execute.after",
+		preloaded:    "sim (nativo, sem copia)",
+		programmatic: "sim (hooks)",
+		evidence:     "script",
+	},
+}
+
+// buildToolNotes monta a secao "Notas por Ferramenta" apenas com os agentes
+// efetivamente selecionados, na ordem canonica do registro (RF-22).
+func (g *Generator) buildToolNotes(tools []skills.Tool) string {
+	toolSet := make(map[skills.Tool]bool, len(tools))
+	for _, t := range tools {
+		toolSet[t] = true
+	}
+	var lines []string
+	for _, entry := range toolNoteCatalog {
+		if !toolSet[entry.tool] {
+			continue
+		}
+		lines = append(lines, fmt.Sprintf("- **%s**: %s", entry.displayName, entry.note))
+	}
+	return strings.Join(lines, "\n")
+}
+
+// buildEnforcementMatrix monta a "Matrix de Enforcement" apenas com as
+// colunas dos agentes efetivamente selecionados (RF-22, corrige RF-09
+// bug pre-existente que ignorava os agentes selecionados).
+func (g *Generator) buildEnforcementMatrix(tools []skills.Tool) string {
+	toolSet := make(map[skills.Tool]bool, len(tools))
+	for _, t := range tools {
+		toolSet[t] = true
+	}
+	var selected []toolNoteEntry
+	for _, entry := range toolNoteCatalog {
+		if toolSet[entry.tool] {
+			selected = append(selected, entry)
+		}
+	}
+	if len(selected) == 0 {
+		return ""
+	}
+
+	header := []string{"Capacidade"}
+	preTool := []string{"Carga base automatica"}
+	postTool := []string{"Protecao de governanca"}
+	preloaded := []string{"Skills pre-carregadas"}
+	programmatic := []string{"Enforcement programatico"}
+	evidence := []string{"Validacao de evidencias"}
+	for _, entry := range selected {
+		header = append(header, entry.displayName)
+		preTool = append(preTool, entry.preTool)
+		postTool = append(postTool, entry.postTool)
+		preloaded = append(preloaded, entry.preloaded)
+		programmatic = append(programmatic, entry.programmatic)
+		evidence = append(evidence, entry.evidence)
+	}
+
+	sep := make([]string, len(header))
+	for i := range sep {
+		sep[i] = "---"
+	}
+
+	rows := [][]string{header, sep, preTool, postTool, preloaded, programmatic, evidence}
+	var lines []string
+	for _, row := range rows {
+		lines = append(lines, "| "+strings.Join(row, " | ")+" |")
+	}
+	return strings.Join(lines, "\n")
+}
+
 func (g *Generator) renderAgentsTemplate(
 	archType detect.ArchitectureType, archDescription, dirTree,
 	archPattern, depFlow, archRules, langRules, validationCmds, archRestrictions string,
+	toolNotes, enforcementMatrix string,
 ) string {
 	return fmt.Sprintf(`<!-- governance-schema: %s -->
 # Regras para Agentes de IA
@@ -487,20 +594,11 @@ Cada skill lista suas proprias referencias em `+"`"+`references/`+"`"+` com gati
 
 ## Notas por Ferramenta
 
-- **Claude Code**: skills pre-carregadas via `+"`"+`.claude/skills/`+"`"+`, hooks via `+"`"+`.claude/hooks/`+"`"+`, agents delegados via `+"`"+`.claude/agents/`+"`"+`.
-- **Gemini CLI**: commands em `+"`"+`.gemini/commands/*.toml`+"`"+` apontam para skills canonicas. Sem hooks ou agents nativos — o modelo deve seguir as instrucoes procedurais do SKILL.md carregado.
-- **Codex**: le `+"`"+`AGENTS.md`+"`"+` como instrucao de sessao. Entradas em `+"`"+`.codex/config.toml`+"`"+` sao metadados para `+"`"+`upgrade.sh`+"`"+`, nao spec oficial do Codex CLI. O agente deve seguir as instrucoes de `+"`"+`AGENTS.md`+"`"+` para descobrir e carregar skills.
-- **Copilot**: `+"`"+`.github/copilot-instructions.md`+"`"+` como instrucao principal. `+"`"+`.github/agents/`+"`"+` sao wrappers. Sem hooks nativos — compliance depende do modelo seguir as instrucoes.
+%s
 
 ### Matrix de Enforcement
 
-| Capacidade | Claude Code | Gemini CLI | Codex | Copilot |
-|---|---|---|---|---|
-| Carga base automatica | hook PreToolUse | procedural | procedural | procedural |
-| Protecao de governanca | hook PostToolUse | procedural | procedural | procedural |
-| Skills pre-carregadas | sim (symlinks) | sim (commands) | nao | sim (agents) |
-| Enforcement programatico | sim (hooks) | nao | nao | nao |
-| Validacao de evidencias | script | procedural | procedural | procedural |
+%s
 
 Ferramentas sem enforcement programatico dependem do modelo seguir instrucoes procedurais. A compliance nessas ferramentas e best-effort.
 
@@ -546,6 +644,8 @@ Antes de concluir uma alteracao:
 		depFlow,
 		archRules,
 		langRules,
+		toolNotes,
+		enforcementMatrix,
 		validationCmds,
 		archRestrictions,
 	)
@@ -574,30 +674,17 @@ Use `+"`"+`AGENTS.md`+"`"+` como %s deste repositorio.
 	return content
 }
 
-const _geminiExtraGuidance = `
-
-## Orientacoes Especificas para Gemini
-
-O Gemini CLI nao suporta hooks, agents ou rules nativos. Para modelar o fluxo de governanca:
-
-1. Ao iniciar uma tarefa, ler ` + "`" + `AGENTS.md` + "`" + ` e ` + "`" + `.agents/skills/agent-governance/SKILL.md` + "`" + ` como contexto base antes de editar codigo.
-2. Usar ` + "`" + `@workspace.<command>` + "`" + ` para invocar o wrapper TOML correspondente e evitar colisao com comandos nativos das skills.
-3. Seguir as etapas procedurais do SKILL.md carregado pelo comando como se fossem instrucoes sequenciais.
-4. Ao final da tarefa, executar os comandos de validacao descritos na secao Validacao do ` + "`" + `AGENTS.md` + "`" + `.
-5. Nao confiar em enforcement automatico — a compliance depende de seguir as instrucoes procedurais manualmente.
-`
-
 const _copilotExtraGuidance = `
 
 ## Orientacoes Especificas para Copilot
 
-O GitHub Copilot suporta agents em ` + "`" + `.github/agents/` + "`" + ` e carrega ` + "`" + `copilot-instructions.md` + "`" + ` automaticamente, mas nao suporta hooks de enforcement. Para manter compliance:
+O GitHub Copilot suporta agents em ` + "`" + `.github/agents/` + "`" + ` e carrega ` + "`" + `copilot-instructions.md` + "`" + ` automaticamente. Hooks nativos de projeto em ` + "`" + `.github/hooks/*.json` + "`" + ` (preToolUse, postToolUse, agentStop) disparam enforcement programatico, condicionado a pasta do projeto estar na lista de pastas confiaveis do Copilot CLI. Para manter compliance:
 
 1. Usar agents disponiveis em ` + "`" + `.github/agents/` + "`" + ` para delegar tarefas processuais (review, bugfix, execute-task, etc.).
 2. Cada agent aponta para a skill canonica em ` + "`" + `.agents/skills/` + "`" + ` — seguir as etapas procedurais do SKILL.md referenciado.
 3. Ao iniciar uma tarefa, confirmar que ` + "`" + `AGENTS.md` + "`" + ` e ` + "`" + `agent-governance/SKILL.md` + "`" + ` foram lidos.
 4. Ao final da tarefa, executar os comandos de validacao descritos na secao Validacao acima.
-5. Enforcement depende do modelo seguir as instrucoes — nao ha bloqueio automatico.
+5. Adicionar a pasta do projeto as pastas confiaveis do Copilot CLI para que os hooks nativos disparem — sem isso, enforcement depende do modelo seguir as instrucoes.
 `
 
 // stripCompactSections remove secoes verbose do AGENTS.md para profile compact.

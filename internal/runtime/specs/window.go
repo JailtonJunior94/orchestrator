@@ -11,7 +11,7 @@ const (
 	WindowStandard WindowClass = iota
 
 	// WindowLarge representa janelas de contexto grandes (>= 1M tokens).
-	// Exemplo: Gemini com janela de 1M+ tokens.
+	// Exemplo: OpenCode com modelo de janela 1M+ tokens.
 	WindowLarge
 )
 

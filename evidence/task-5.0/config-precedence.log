@@ -1,0 +1,45 @@
+=== RUN   TestResolverSuite
+=== RUN   TestResolverSuite/TestLoadRuntime
+=== RUN   TestResolverSuite/TestLoadRuntime/deve_retornar_DefaultRuntime_quando_nao_ha_config
+=== RUN   TestResolverSuite/TestLoadRuntime/deve_mesclar_config_de_projeto_com_defaults
+=== RUN   TestResolverSuite/TestMergeIntoMaxBugfixIterations
+=== RUN   TestResolverSuite/TestResolve
+=== RUN   TestResolverSuite/TestResolve/deve_retornar_DefaultRuntime_quando_nao_ha_config_global_nem_projeto
+=== RUN   TestResolverSuite/TestResolve/deve_respeitar_precedencia_flags_>_projeto_>_global_>_built-in
+=== RUN   TestResolverSuite/TestResolve/deve_encontrar_config_de_projeto_via_upward-walk_a_partir_de_subdir_profundo
+=== RUN   TestResolverSuite/TestResolve/deve_tratar_ausencia_de_config_global_como_nao-fatal
+=== RUN   TestResolverSuite/TestResolve/deve_retornar_erro_ao_parsear_config_global_malformada
+=== RUN   TestResolverSuite/TestResolve/deve_retornar_erro_ao_parsear_config_de_projeto_malformada
+=== RUN   TestResolverSuite/TestResolve/deve_parar_o_upward-walk_ao_encontrar_marcador_.git
+=== RUN   TestResolverSuite/TestResolve/deve_priorizar_.aispec_sobre_.claude_no_mesmo_diretorio
+=== RUN   TestResolverSuite/TestResolve/deve_ler_e_mesclar_as_novas_chaves_operacionais
+=== RUN   TestResolverSuite/TestResolve/deve_respeitar_precedencia_completa_flags_>_workspace_>_global_>_built-in_para_max_bugfix_iterations
+=== RUN   TestResolverSuite/TestResolve/deve_usar_max_bugfix_iterations_do_workspace_quando_a_flag_nao_sobrescreve
+=== RUN   TestResolverSuite/TestResolve/deve_usar_max_bugfix_iterations_do_global_quando_nao_ha_config_de_workspace
+=== RUN   TestResolverSuite/TestResolve/deve_preservar_comportamento_F1_quando_campos_operacionais_sao_zero-value
+=== RUN   TestResolverSuite/TestResolve/deve_ignorar_config_global_quando_HomeDir_e_vazio
+=== RUN   TestResolverSuite/TestResolve/deve_mesclar_campo_a_campo_sem_sobrescrever_campos_nao_declarados
+--- PASS: TestResolverSuite (0.00s)
+    --- PASS: TestResolverSuite/TestLoadRuntime (0.00s)
+        --- PASS: TestResolverSuite/TestLoadRuntime/deve_retornar_DefaultRuntime_quando_nao_ha_config (0.00s)
+        --- PASS: TestResolverSuite/TestLoadRuntime/deve_mesclar_config_de_projeto_com_defaults (0.00s)
+    --- PASS: TestResolverSuite/TestMergeIntoMaxBugfixIterations (0.00s)
+    --- PASS: TestResolverSuite/TestResolve (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_retornar_DefaultRuntime_quando_nao_ha_config_global_nem_projeto (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_respeitar_precedencia_flags_>_projeto_>_global_>_built-in (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_encontrar_config_de_projeto_via_upward-walk_a_partir_de_subdir_profundo (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_tratar_ausencia_de_config_global_como_nao-fatal (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_retornar_erro_ao_parsear_config_global_malformada (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_retornar_erro_ao_parsear_config_de_projeto_malformada (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_parar_o_upward-walk_ao_encontrar_marcador_.git (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_priorizar_.aispec_sobre_.claude_no_mesmo_diretorio (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_ler_e_mesclar_as_novas_chaves_operacionais (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_respeitar_precedencia_completa_flags_>_workspace_>_global_>_built-in_para_max_bugfix_iterations (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_usar_max_bugfix_iterations_do_workspace_quando_a_flag_nao_sobrescreve (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_usar_max_bugfix_iterations_do_global_quando_nao_ha_config_de_workspace (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_preservar_comportamento_F1_quando_campos_operacionais_sao_zero-value (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_ignorar_config_global_quando_HomeDir_e_vazio (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_mesclar_campo_a_campo_sem_sobrescrever_campos_nao_declarados (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/config	0.269s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/config/mocks	[no test files]

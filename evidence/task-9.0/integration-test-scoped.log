@@ -1,0 +1,163 @@
+=== RUN   TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing
+=== PAUSE TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing
+=== RUN   TestPreToolHookDispatchAllowsNonCodeFiles
+=== PAUSE TestPreToolHookDispatchAllowsNonCodeFiles
+=== RUN   TestPostToolHookDispatchBlocksGovernanceFileEdit
+=== PAUSE TestPostToolHookDispatchBlocksGovernanceFileEdit
+=== RUN   TestPostToolHookDispatchAllowsRegularFileEdit
+=== PAUSE TestPostToolHookDispatchAllowsRegularFileEdit
+=== RUN   TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing
+--- PASS: TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing (0.26s)
+=== RUN   TestOpenCodeGovernancePluginAllowsWhenPrerequisiteSatisfied
+--- PASS: TestOpenCodeGovernancePluginAllowsWhenPrerequisiteSatisfied (0.20s)
+=== RUN   TestOpenCodeGovernancePluginIgnoresNonMutatingTools
+--- PASS: TestOpenCodeGovernancePluginIgnoresNonMutatingTools (0.04s)
+=== RUN   TestOpenCodeGovernancePluginTimeoutIsDenial
+--- PASS: TestOpenCodeGovernancePluginTimeoutIsDenial (0.25s)
+=== RUN   TestOpenCodeGovernancePluginOrchestratedFailsClosedWithoutValidator
+--- PASS: TestOpenCodeGovernancePluginOrchestratedFailsClosedWithoutValidator (0.05s)
+=== RUN   TestOpenCodeGovernancePluginMemoizesByToolAndFiles
+--- PASS: TestOpenCodeGovernancePluginMemoizesByToolAndFiles (0.05s)
+=== RUN   TestOpenCodeGovernancePluginStatsValidatorOnceAcrossMultipleTools
+--- PASS: TestOpenCodeGovernancePluginStatsValidatorOnceAcrossMultipleTools (0.34s)
+=== RUN   TestOpenCodeGovernancePluginInteractiveWarnsOnceWithoutValidator
+--- PASS: TestOpenCodeGovernancePluginInteractiveWarnsOnceWithoutValidator (0.04s)
+=== RUN   TestOpenCodeGovernancePluginSessionIdleBlocksActiveTaskWithoutApprovedVerdict
+--- PASS: TestOpenCodeGovernancePluginSessionIdleBlocksActiveTaskWithoutApprovedVerdict (0.08s)
+=== RUN   TestOpenCodeGovernancePluginSessionIdleAllowsWhenNoActiveTask
+--- PASS: TestOpenCodeGovernancePluginSessionIdleAllowsWhenNoActiveTask (0.06s)
+=== RUN   TestOpenCodeGovernancePluginToolExecuteAfterIsSafeNoOp
+--- PASS: TestOpenCodeGovernancePluginToolExecuteAfterIsSafeNoOp (0.04s)
+=== RUN   TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict
+=== PAUSE TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved
+=== CONT  TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing
+=== CONT  TestPostToolHookDispatchAllowsRegularFileEdit
+=== CONT  TestPostToolHookDispatchBlocksGovernanceFileEdit
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved
+=== CONT  TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict
+=== CONT  TestPreToolHookDispatchAllowsNonCodeFiles
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/done
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/done
+=== RUN   TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/claude
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+=== PAUSE TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/claude
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/approved
+=== RUN   TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/codex
+=== PAUSE TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/codex
+=== RUN   TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/copilot
+=== PAUSE TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/copilot
+=== RUN   TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/opencode
+=== PAUSE TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/opencode
+=== CONT  TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/claude
+=== CONT  TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/opencode
+=== CONT  TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/copilot
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/done
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/done
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/approved
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/done
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/done
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/approved
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/done
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/done
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/approved
+=== CONT  TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/codex
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/done
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/done
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/approved
+--- PASS: TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict (0.00s)
+    --- PASS: TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/opencode (0.10s)
+    --- PASS: TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/codex (0.11s)
+    --- PASS: TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/claude (0.12s)
+    --- PASS: TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/copilot (0.12s)
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/done
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando copilot...
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/approved
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/done
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPostToolHookDispatchAllowsRegularFileEdit1356152415/001
+Modo de instalacao: copy
+=== RUN   TestPostToolHookDispatchAllowsRegularFileEdit/copilot
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchAllowsNonCodeFiles2182105288/001
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing1164623123/001
+Modo de instalacao: copy
+=== RUN   TestPreToolHookDispatchAllowsNonCodeFiles/copilot
+=== RUN   TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/claude
+=== RUN   TestPostToolHookDispatchAllowsRegularFileEdit/claude
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPostToolHookDispatchBlocksGovernanceFileEdit4075042562/001
+Modo de instalacao: copy
+=== RUN   TestPostToolHookDispatchBlocksGovernanceFileEdit/claude
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/approved
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/approved
+=== RUN   TestPreToolHookDispatchAllowsNonCodeFiles/claude
+=== RUN   TestPostToolHookDispatchAllowsRegularFileEdit/codex
+=== RUN   TestPostToolHookDispatchBlocksGovernanceFileEdit/codex
+=== RUN   TestPostToolHookDispatchBlocksGovernanceFileEdit/copilot
+--- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved (0.00s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/done (0.09s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/done (0.10s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/done (0.09s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/approved (0.10s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/done (0.09s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/approved (0.09s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/approved (0.10s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/approved (0.09s)
+=== RUN   TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/codex
+=== RUN   TestPreToolHookDispatchAllowsNonCodeFiles/codex
+--- PASS: TestPostToolHookDispatchAllowsRegularFileEdit (0.34s)
+    --- PASS: TestPostToolHookDispatchAllowsRegularFileEdit/copilot (0.00s)
+    --- PASS: TestPostToolHookDispatchAllowsRegularFileEdit/claude (0.08s)
+    --- PASS: TestPostToolHookDispatchAllowsRegularFileEdit/codex (0.00s)
+--- PASS: TestPostToolHookDispatchBlocksGovernanceFileEdit (0.34s)
+    --- PASS: TestPostToolHookDispatchBlocksGovernanceFileEdit/claude (0.09s)
+    --- PASS: TestPostToolHookDispatchBlocksGovernanceFileEdit/codex (0.00s)
+    --- PASS: TestPostToolHookDispatchBlocksGovernanceFileEdit/copilot (0.01s)
+=== RUN   TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/copilot
+--- PASS: TestPreToolHookDispatchAllowsNonCodeFiles (0.40s)
+    --- PASS: TestPreToolHookDispatchAllowsNonCodeFiles/copilot (0.06s)
+    --- PASS: TestPreToolHookDispatchAllowsNonCodeFiles/claude (0.07s)
+    --- PASS: TestPreToolHookDispatchAllowsNonCodeFiles/codex (0.03s)
+--- PASS: TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing (0.41s)
+    --- PASS: TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/claude (0.11s)
+    --- PASS: TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/codex (0.03s)
+    --- PASS: TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/copilot (0.03s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	5.118s
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	3.433s [no tests to run]

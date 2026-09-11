@@ -1,0 +1,140 @@
+{
+  "schema_version": 2,
+  "run_id": "task-11.0-rastreabilidade-e-release-2026-09-11",
+  "task_id": "11.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
+  "patch_sha256": "7efaa4e33bf78e9fdba6e1e85f4e4083b2086ffd9d0550e241e483886a22154a",
+  "patch_ref": "evidence/task-11.0/11.0.patch",
+  "final_state_sha256": "1e71e0b52b3476710d518121bcd8c31dd0909c0c7e3ba07649b42e7ec22aa179",
+  "coverage_regression": false,
+  "review_verdict": "approved",
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "2f0868e2f571315ab1dc3d0ce971ac5a4d9d2c1253152ffa5d34b62aeea8a954"
+    },
+    {
+      "command": "bash scripts/check-spec-paths.sh",
+      "exit_code": 0,
+      "output_sha256": "be018e44a8a6f2d8fd49a2c2cc4039c747abe493493092c372dfa9456d9fd187"
+    },
+    {
+      "command": "go run . check-spec-drift .specs/prd-harness-quatro-clis-loop-aprovacao",
+      "exit_code": 0,
+      "output_sha256": "e035843db844e1991ea97b7d0d7f5f6a6c841d72f118ca397a2fc7080ea5985e"
+    },
+    {
+      "command": "go run . check-traceability .specs/prd-harness-quatro-clis-loop-aprovacao",
+      "exit_code": 0,
+      "output_sha256": "3dd1c4a0da7b50ebddae3f3ee98e9ec7d0f897ce5e4ecf46942c917cc9d2e0cc"
+    },
+    {
+      "command": "go test ./internal/specdrift/... -run TestCheckHash_Divergent|TestCheckDrift_HashFail -v",
+      "exit_code": 0,
+      "output_sha256": "d12ffce31eba7a901791636e4a2b88fc5298d33d02868791feb61ecaadb2121d"
+    },
+    {
+      "command": "go test ./internal/traceability/... -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "cf4c81214e441eb9588cd13d10d187af4ef7fb433fa6f5de5e9db106ced024ea"
+    },
+    {
+      "command": "go test ./internal/specdrift/... -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "217c2a598e549c4541398a0031a5766a6fb43c494e4a40d33a04aeb270c6a9b7"
+    },
+    {
+      "command": "go test ./internal/runtime/client/... -run TestAcpClient_NilChildEnvInheritsFullEnvironByteIdentical -v",
+      "exit_code": 0,
+      "output_sha256": "3129503045f296b4918695f19e229c379ca945eaef9593b4dcbf9c6a9ed8a1df"
+    },
+    {
+      "command": "go test ./internal/runtime/specs/... -run TestResolveWindowNilResolverIsByteIdenticalForExistingAgents -v",
+      "exit_code": 0,
+      "output_sha256": "97d857f9178f12b711c5a36fdc24c8b4389d37257cefcb98d3df0993fa97ebcf"
+    },
+    {
+      "command": "go test ./internal/runtime/... -run TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue -v",
+      "exit_code": 0,
+      "output_sha256": "ae87357b9b2ad07410083a21a3f11ca96fbd5ec31f80157a2e1c420abc00ee46"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "tasks-md-hashes-filled-and-drift-gate-fails-negative-test",
+      "evidence_ref": "evidence/task-11.0/negative-hash-drift-tests.log"
+    },
+    {
+      "id": "prd-sha256-matches-techspec-header-spec-hash-prd",
+      "evidence_ref": "evidence/task-11.0/check-spec-drift.log"
+    },
+    {
+      "id": "traceability-map-covers-63-rfs-with-negative-gates",
+      "evidence_ref": "evidence/task-11.0/traceability-unit-tests.log"
+    },
+    {
+      "id": "non-regression-suite-claude-codex-copilot",
+      "evidence_ref": "evidence/task-11.0/nonregression-suite.log"
+    },
+    {
+      "id": "vector-1-child-env-byte-identical",
+      "evidence_ref": "evidence/task-11.0/vetor1-env-byte-identical.log"
+    },
+    {
+      "id": "vector-2-window-resolution-byte-identical",
+      "evidence_ref": "evidence/task-11.0/vetor2-window-byte-identical.log"
+    },
+    {
+      "id": "changelog-breaking-changes-section-complete",
+      "evidence_ref": "CHANGELOG.md"
+    },
+    {
+      "id": "migration-guide-exists-and-referenced-by-typed-error",
+      "evidence_ref": "evidence/task-11.0/check-spec-paths.log"
+    },
+    {
+      "id": "version-is-major-no-new-tag-no-publish",
+      "evidence_ref": "evidence/task-11.0/git-tags-before-after.log"
+    },
+    {
+      "id": "build-vet-test-and-spec-paths-green",
+      "evidence_ref": "evidence/task-11.0/go-test.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-11.0/11.0.patch",
+    "evidence/task-11.0/go-build.log",
+    "evidence/task-11.0/go-vet.log",
+    "evidence/task-11.0/go-test.log",
+    "evidence/task-11.0/check-spec-paths.log",
+    "evidence/task-11.0/check-spec-drift.log",
+    "evidence/task-11.0/check-traceability.log",
+    "evidence/task-11.0/negative-hash-drift-tests.log",
+    "evidence/task-11.0/traceability-unit-tests.log",
+    "evidence/task-11.0/specdrift-unit-tests.log",
+    "evidence/task-11.0/vetor1-env-byte-identical.log",
+    "evidence/task-11.0/vetor2-window-byte-identical.log",
+    "evidence/task-11.0/nonregression-suite.log",
+    "evidence/task-11.0/prd-sha256.log",
+    "evidence/task-11.0/techspec-header.log",
+    "evidence/task-11.0/git-tags-before-after.log",
+    "evidence/task-11.0/version.log",
+    "evidence/task-11.0/check-hooks-sync.log",
+    "evidence/task-11.0/check-scripts-sync.log",
+    "evidence/task-11.0/check-skills-sync.log",
+    "evidence/task-11.0/cmd-gates.log"
+  ]
+}

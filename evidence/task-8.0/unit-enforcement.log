@@ -1,0 +1,371 @@
+=== RUN   TestApplyEnforcement_OpenCodeSetsChildEnvAndHandshakeWaiter
+--- PASS: TestApplyEnforcement_OpenCodeSetsChildEnvAndHandshakeWaiter (0.00s)
+=== RUN   TestApplyEnforcement_OtherAgentsAreByteIdenticalNoop
+--- PASS: TestApplyEnforcement_OtherAgentsAreByteIdenticalNoop (0.00s)
+=== RUN   TestApplyEnforcement_HandshakeConstructionFailurePropagates
+--- PASS: TestApplyEnforcement_HandshakeConstructionFailurePropagates (0.00s)
+=== RUN   TestApplyEnforcement_UnknownAgentIsNoop
+--- PASS: TestApplyEnforcement_UnknownAgentIsNoop (0.00s)
+=== RUN   TestOpenCodeArgvNeverContainsPureFlag
+--- PASS: TestOpenCodeArgvNeverContainsPureFlag (0.00s)
+=== RUN   TestOpenCodeAgentEnvPolicyZeroValueWouldInheritIntact
+--- PASS: TestOpenCodeAgentEnvPolicyZeroValueWouldInheritIntact (0.00s)
+=== RUN   TestACPIntegration_OpenCode_GovernanceBlockSurvivesConsecutiveExceptions
+=== PAUSE TestACPIntegration_OpenCode_GovernanceBlockSurvivesConsecutiveExceptions
+=== RUN   TestACPIntegration_OpenCode_GovernanceBlockInsideSubagentTask
+=== PAUSE TestACPIntegration_OpenCode_GovernanceBlockInsideSubagentTask
+=== RUN   TestACPIntegration_OpenCode_PreconditionRejectionMetricOnlyWithTelemetryOptIn
+=== RUN   TestACPIntegration_OpenCode_PreconditionRejectionMetricOnlyWithTelemetryOptIn/without_opt-in
+=== RUN   TestACPIntegration_OpenCode_PreconditionRejectionMetricOnlyWithTelemetryOptIn/with_opt-in
+2026/09/11 09:14:24 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 09:14:24 INFO connection closed cause="peer connection closed"
+2026/09/11 09:14:24 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 09:14:24 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPIntegration_OpenCode_PreconditionRejectionMetricOnlyWithTelemetryOptIn (0.02s)
+    --- PASS: TestACPIntegration_OpenCode_PreconditionRejectionMetricOnlyWithTelemetryOptIn/without_opt-in (0.02s)
+    --- PASS: TestACPIntegration_OpenCode_PreconditionRejectionMetricOnlyWithTelemetryOptIn/with_opt-in (0.01s)
+=== RUN   TestACPIntegration_OpenCode_ToolCallsAndReport
+=== PAUSE TestACPIntegration_OpenCode_ToolCallsAndReport
+=== RUN   TestACPIntegration_OpenCode_ArgvIncludesSubcommandAndCwd
+=== PAUSE TestACPIntegration_OpenCode_ArgvIncludesSubcommandAndCwd
+=== RUN   TestACPIntegration_OpenCode_ActivityWatchdog
+=== PAUSE TestACPIntegration_OpenCode_ActivityWatchdog
+=== CONT  TestACPIntegration_OpenCode_GovernanceBlockSurvivesConsecutiveExceptions
+=== CONT  TestACPIntegration_OpenCode_ArgvIncludesSubcommandAndCwd
+=== CONT  TestACPIntegration_OpenCode_ToolCallsAndReport
+=== CONT  TestACPIntegration_OpenCode_GovernanceBlockInsideSubagentTask
+=== CONT  TestACPIntegration_OpenCode_ActivityWatchdog
+--- PASS: TestACPIntegration_OpenCode_GovernanceBlockInsideSubagentTask (0.02s)
+2026/09/11 09:14:24 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 09:14:24 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPIntegration_OpenCode_ArgvIncludesSubcommandAndCwd (0.02s)
+2026/09/11 09:14:24 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 09:14:24 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPIntegration_OpenCode_GovernanceBlockSurvivesConsecutiveExceptions (0.02s)
+2026/09/11 09:14:24 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 09:14:24 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPIntegration_OpenCode_ToolCallsAndReport (0.02s)
+2026/09/11 09:14:24 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 09:14:24 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPIntegration_OpenCode_ActivityWatchdog (0.11s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	0.494s
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake	0.520s [no tests to run]
+=== RUN   TestAcpClient_HandshakeAbortsSessionBeforeFirstPrompt
+=== PAUSE TestAcpClient_HandshakeAbortsSessionBeforeFirstPrompt
+=== RUN   TestAcpClient_HandshakeSuccessAllowsSessionToProceed
+=== PAUSE TestAcpClient_HandshakeSuccessAllowsSessionToProceed
+=== CONT  TestAcpClient_HandshakeAbortsSessionBeforeFirstPrompt
+=== CONT  TestAcpClient_HandshakeSuccessAllowsSessionToProceed
+2026/09/11 09:14:25 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 09:14:25 INFO connection closed cause="peer connection closed"
+--- PASS: TestAcpClient_HandshakeSuccessAllowsSessionToProceed (0.01s)
+=== NAME  TestAcpClient_HandshakeAbortsSessionBeforeFirstPrompt
+    client_test.go:389: collectEvents: timeout atingido
+2026/09/11 09:14:27 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 09:14:27 INFO connection closed cause="peer connection closed"
+--- PASS: TestAcpClient_HandshakeAbortsSessionBeforeFirstPrompt (2.01s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client	3.203s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client/mocks	[no test files]
+=== RUN   TestNormalizeOpenCodeInheritsCommonAliases
+=== PAUSE TestNormalizeOpenCodeInheritsCommonAliases
+=== CONT  TestNormalizeOpenCodeInheritsCommonAliases
+--- PASS: TestNormalizeOpenCodeInheritsCommonAliases (0.01s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events	0.938s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events/mocks	[no test files]
+=== RUN   TestNewWaiterEmptySessionDirCreatesOwnUniqueDir
+=== PAUSE TestNewWaiterEmptySessionDirCreatesOwnUniqueDir
+=== RUN   TestNewWaiterPathIsUniquePerSessionDir
+=== PAUSE TestNewWaiterPathIsUniquePerSessionDir
+=== RUN   TestNewWaiterRemovesStaleSentinelBeforeSpawn
+=== PAUSE TestNewWaiterRemovesStaleSentinelBeforeSpawn
+=== RUN   TestWaiterSucceedsWhenSignalArrives
+=== PAUSE TestWaiterSucceedsWhenSignalArrives
+=== RUN   TestWaiterAbortsWithoutSignalBeforeTimeout
+=== PAUSE TestWaiterAbortsWithoutSignalBeforeTimeout
+=== RUN   TestWaiterHonorsContextCancellation
+=== PAUSE TestWaiterHonorsContextCancellation
+=== CONT  TestNewWaiterEmptySessionDirCreatesOwnUniqueDir
+=== CONT  TestWaiterSucceedsWhenSignalArrives
+=== CONT  TestWaiterHonorsContextCancellation
+=== CONT  TestWaiterAbortsWithoutSignalBeforeTimeout
+--- PASS: TestNewWaiterEmptySessionDirCreatesOwnUniqueDir (0.00s)
+=== CONT  TestNewWaiterPathIsUniquePerSessionDir
+=== CONT  TestNewWaiterRemovesStaleSentinelBeforeSpawn
+--- PASS: TestNewWaiterPathIsUniquePerSessionDir (0.00s)
+--- PASS: TestWaiterHonorsContextCancellation (0.02s)
+--- PASS: TestNewWaiterRemovesStaleSentinelBeforeSpawn (0.05s)
+--- PASS: TestWaiterAbortsWithoutSignalBeforeTimeout (0.05s)
+--- PASS: TestWaiterSucceedsWhenSignalArrives (0.05s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/handshake	0.748s
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks	1.645s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks/mocks	[no test files]
+=== RUN   TestServerInitializeHandshake
+--- PASS: TestServerInitializeHandshake (0.10s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver	1.519s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/wire	1.691s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory	1.614s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/mocks	[no test files]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence	1.897s [no tests to run]
+=== RUN   TestEnsureAvailable_OpenCode_DirectBinaryArgvHasSubcommandFirst
+=== PAUSE TestEnsureAvailable_OpenCode_DirectBinaryArgvHasSubcommandFirst
+=== RUN   TestEnsureAvailable_OpenCode_FallbackArgvIsPinnedAndSubcommandFirst
+=== PAUSE TestEnsureAvailable_OpenCode_FallbackArgvIsPinnedAndSubcommandFirst
+=== CONT  TestEnsureAvailable_OpenCode_DirectBinaryArgvHasSubcommandFirst
+--- PASS: TestEnsureAvailable_OpenCode_DirectBinaryArgvHasSubcommandFirst (0.00s)
+=== CONT  TestEnsureAvailable_OpenCode_FallbackArgvIsPinnedAndSubcommandFirst
+--- PASS: TestEnsureAvailable_OpenCode_FallbackArgvIsPinnedAndSubcommandFirst (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe	2.017s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/render	1.898s [no tests to run]
+=== RUN   TestNewEnforcementRejectsIncompleteCoverage
+=== PAUSE TestNewEnforcementRejectsIncompleteCoverage
+=== RUN   TestEnforcementPreconditionRemedyAndStates
+=== PAUSE TestEnforcementPreconditionRemedyAndStates
+=== RUN   TestEnvPolicyZeroValueAppliesNil
+=== PAUSE TestEnvPolicyZeroValueAppliesNil
+=== RUN   TestEnvPolicyStripsKnownKillSwitches
+=== PAUSE TestEnvPolicyStripsKnownKillSwitches
+=== RUN   TestEnvPolicyApplyNeverMutatesInputSlice
+=== PAUSE TestEnvPolicyApplyNeverMutatesInputSlice
+=== RUN   TestEnvPolicyStripVarsReturnsClone
+=== PAUSE TestEnvPolicyStripVarsReturnsClone
+=== RUN   TestOpenCodeAgentEnvPolicyStripsExactlyTheThreeKillSwitches
+=== PAUSE TestOpenCodeAgentEnvPolicyStripsExactlyTheThreeKillSwitches
+=== RUN   TestOpenCodeAgentRequiresHandshake
+=== PAUSE TestOpenCodeAgentRequiresHandshake
+=== RUN   TestOtherAgentsDoNotRequireHandshakeAndInheritEnvByDefault
+=== PAUSE TestOtherAgentsDoNotRequireHandshakeAndInheritEnvByDefault
+=== RUN   TestEnvPolicyAppliedToRealEnvironProducesSameLengthMinusStripped
+=== PAUSE TestEnvPolicyAppliedToRealEnvironProducesSameLengthMinusStripped
+=== RUN   TestMergeOpenCodeConfigPreservesSchemaAndExistingFields
+=== PAUSE TestMergeOpenCodeConfigPreservesSchemaAndExistingFields
+=== RUN   TestMergeOpenCodeConfigNeverWritesSkillsOrInstructions
+=== PAUSE TestMergeOpenCodeConfigNeverWritesSkillsOrInstructions
+=== RUN   TestMergeOpenCodeConfigPreservesExistingSkillsAndInstructions
+=== PAUSE TestMergeOpenCodeConfigPreservesExistingSkillsAndInstructions
+=== RUN   TestMergeOpenCodeConfigIsIdempotent
+=== PAUSE TestMergeOpenCodeConfigIsIdempotent
+=== RUN   TestMergeOpenCodeConfigWritesModelKey
+=== PAUSE TestMergeOpenCodeConfigWritesModelKey
+=== RUN   TestDefaultOpenCodePermissionForbidsWildcardDenyAndAsk
+=== PAUSE TestDefaultOpenCodePermissionForbidsWildcardDenyAndAsk
+=== RUN   TestValidatePermissionBlockAcceptsDefaultOpenCodePermission
+=== PAUSE TestValidatePermissionBlockAcceptsDefaultOpenCodePermission
+=== RUN   TestOpenCodeArgvSubcommandBeforeFlags
+=== PAUSE TestOpenCodeArgvSubcommandBeforeFlags
+=== RUN   TestOpenCodeFallbackPinnedVersion
+=== PAUSE TestOpenCodeFallbackPinnedVersion
+=== RUN   TestResolveOpenCodeWindowExactMatch
+=== PAUSE TestResolveOpenCodeWindowExactMatch
+=== RUN   TestResolveOpenCodeWindowLongestPrefixMatch
+=== PAUSE TestResolveOpenCodeWindowLongestPrefixMatch
+=== RUN   TestResolveOpenCodeWindowUnknownModelFallsBackConservative
+=== PAUSE TestResolveOpenCodeWindowUnknownModelFallsBackConservative
+=== RUN   TestResolveOpenCodeWindowEmptyModelFallsBackConservative
+=== PAUSE TestResolveOpenCodeWindowEmptyModelFallsBackConservative
+=== RUN   TestResolveOpenCodeWindowNeverExceedsTableEntry
+=== PAUSE TestResolveOpenCodeWindowNeverExceedsTableEntry
+=== CONT  TestNewEnforcementRejectsIncompleteCoverage
+--- PASS: TestNewEnforcementRejectsIncompleteCoverage (0.00s)
+=== CONT  TestResolveOpenCodeWindowNeverExceedsTableEntry
+--- PASS: TestResolveOpenCodeWindowNeverExceedsTableEntry (0.00s)
+=== CONT  TestResolveOpenCodeWindowEmptyModelFallsBackConservative
+--- PASS: TestResolveOpenCodeWindowEmptyModelFallsBackConservative (0.00s)
+=== CONT  TestResolveOpenCodeWindowUnknownModelFallsBackConservative
+--- PASS: TestResolveOpenCodeWindowUnknownModelFallsBackConservative (0.00s)
+=== CONT  TestResolveOpenCodeWindowLongestPrefixMatch
+--- PASS: TestResolveOpenCodeWindowLongestPrefixMatch (0.00s)
+=== CONT  TestResolveOpenCodeWindowExactMatch
+--- PASS: TestResolveOpenCodeWindowExactMatch (0.00s)
+=== CONT  TestOpenCodeFallbackPinnedVersion
+--- PASS: TestOpenCodeFallbackPinnedVersion (0.00s)
+=== CONT  TestOpenCodeArgvSubcommandBeforeFlags
+--- PASS: TestOpenCodeArgvSubcommandBeforeFlags (0.00s)
+=== CONT  TestValidatePermissionBlockAcceptsDefaultOpenCodePermission
+--- PASS: TestValidatePermissionBlockAcceptsDefaultOpenCodePermission (0.00s)
+=== CONT  TestDefaultOpenCodePermissionForbidsWildcardDenyAndAsk
+--- PASS: TestDefaultOpenCodePermissionForbidsWildcardDenyAndAsk (0.00s)
+=== CONT  TestMergeOpenCodeConfigWritesModelKey
+=== CONT  TestOpenCodeAgentRequiresHandshake
+--- PASS: TestOpenCodeAgentRequiresHandshake (0.00s)
+=== CONT  TestMergeOpenCodeConfigIsIdempotent
+=== CONT  TestEnvPolicyApplyNeverMutatesInputSlice
+--- PASS: TestEnvPolicyApplyNeverMutatesInputSlice (0.00s)
+=== CONT  TestOpenCodeAgentEnvPolicyStripsExactlyTheThreeKillSwitches
+--- PASS: TestOpenCodeAgentEnvPolicyStripsExactlyTheThreeKillSwitches (0.00s)
+=== CONT  TestEnvPolicyStripVarsReturnsClone
+--- PASS: TestEnvPolicyStripVarsReturnsClone (0.00s)
+=== CONT  TestEnvPolicyZeroValueAppliesNil
+--- PASS: TestEnvPolicyZeroValueAppliesNil (0.00s)
+=== CONT  TestEnvPolicyStripsKnownKillSwitches
+--- PASS: TestEnvPolicyStripsKnownKillSwitches (0.00s)
+=== CONT  TestMergeOpenCodeConfigPreservesSchemaAndExistingFields
+--- PASS: TestMergeOpenCodeConfigPreservesSchemaAndExistingFields (0.00s)
+=== CONT  TestMergeOpenCodeConfigPreservesExistingSkillsAndInstructions
+--- PASS: TestMergeOpenCodeConfigIsIdempotent (0.00s)
+=== CONT  TestEnvPolicyAppliedToRealEnvironProducesSameLengthMinusStripped
+--- PASS: TestEnvPolicyAppliedToRealEnvironProducesSameLengthMinusStripped (0.00s)
+=== CONT  TestOtherAgentsDoNotRequireHandshakeAndInheritEnvByDefault
+--- PASS: TestOtherAgentsDoNotRequireHandshakeAndInheritEnvByDefault (0.00s)
+=== CONT  TestMergeOpenCodeConfigNeverWritesSkillsOrInstructions
+--- PASS: TestMergeOpenCodeConfigNeverWritesSkillsOrInstructions (0.00s)
+--- PASS: TestMergeOpenCodeConfigWritesModelKey (0.00s)
+--- PASS: TestMergeOpenCodeConfigPreservesExistingSkillsAndInstructions (0.00s)
+=== CONT  TestEnforcementPreconditionRemedyAndStates
+--- PASS: TestEnforcementPreconditionRemedyAndStates (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	1.569s
+=== RUN   TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing
+=== PAUSE TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing
+=== RUN   TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent
+=== PAUSE TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent
+=== RUN   TestVerify_OpenCode_NeverReportsCurrentWhenPluginRuntimeMissing
+=== PAUSE TestVerify_OpenCode_NeverReportsCurrentWhenPluginRuntimeMissing
+=== RUN   TestInstall_OpenCode_ModelFlagMapsToConfigKey
+=== PAUSE TestInstall_OpenCode_ModelFlagMapsToConfigKey
+=== RUN   TestInstall_OpenCode_WritesOnlyPermissionBlock
+=== PAUSE TestInstall_OpenCode_WritesOnlyPermissionBlock
+=== RUN   TestInstall_OpenCode_IdempotentReinstall
+=== PAUSE TestInstall_OpenCode_IdempotentReinstall
+=== RUN   TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks
+=== PAUSE TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks
+=== RUN   TestInstall_OpenCode_DepositsPluginDir
+=== PAUSE TestInstall_OpenCode_DepositsPluginDir
+=== RUN   TestInstall_OpenCode_ShipsCanonicalValidators
+=== PAUSE TestInstall_OpenCode_ShipsCanonicalValidators
+=== CONT  TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing
+=== CONT  TestInstall_OpenCode_IdempotentReinstall
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+-> Instalando opencode...
+--- PASS: TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing (0.00s)
+=== CONT  TestVerify_OpenCode_NeverReportsCurrentWhenPluginRuntimeMissing
+=== CONT  TestInstall_OpenCode_ModelFlagMapsToConfigKey
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+=== CONT  TestInstall_OpenCode_WritesOnlyPermissionBlock
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+=== CONT  TestInstall_OpenCode_DepositsPluginDir
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+=== CONT  TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+=== CONT  TestInstall_OpenCode_ShipsCanonicalValidators
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+=== CONT  TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+AVISO: [opencode] binario ACP 'opencode' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+-> Instalando opencode...
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-task-evidence.sh: chmod /project-opencode/.agents/scripts/validate-task-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-bugfix-evidence.sh: chmod /project-opencode/.agents/scripts/validate-bugfix-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-refactor-evidence.sh: chmod /project-opencode/.agents/scripts/validate-refactor-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-review-evidence.sh: chmod /project-opencode/.agents/scripts/validate-review-evidence.sh: no such file or directory
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_DepositsPluginDir (0.01s)
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent (0.01s)
+
+Governanca para IA instalada em: /project
+Modo de instalacao: symlink
+--- PASS: TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks (0.01s)
+--- PASS: TestInstall_OpenCode_ModelFlagMapsToConfigKey (0.01s)
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /project-opencode
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_WritesOnlyPermissionBlock (0.01s)
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_IdempotentReinstall (0.01s)
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-task-evidence.sh: chmod /project-claude/.agents/scripts/validate-task-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-bugfix-evidence.sh: chmod /project-claude/.agents/scripts/validate-bugfix-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-refactor-evidence.sh: chmod /project-claude/.agents/scripts/validate-refactor-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-review-evidence.sh: chmod /project-claude/.agents/scripts/validate-review-evidence.sh: no such file or directory
+
+Governanca para IA instalada em: /project-claude
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_ShipsCanonicalValidators (0.01s)
+--- PASS: TestVerify_OpenCode_NeverReportsCurrentWhenPluginRuntimeMissing (0.12s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/install	1.899s
+=== RUN   TestOpenCodeGovernancePluginNeverRegistersPermissionHook
+=== PAUSE TestOpenCodeGovernancePluginNeverRegistersPermissionHook
+=== RUN   TestOpenCodeGovernancePluginCoversExactlyThreeCanonicalHooks
+=== PAUSE TestOpenCodeGovernancePluginCoversExactlyThreeCanonicalHooks
+=== CONT  TestOpenCodeGovernancePluginNeverRegistersPermissionHook
+=== CONT  TestOpenCodeGovernancePluginCoversExactlyThreeCanonicalHooks
+--- PASS: TestOpenCodeGovernancePluginCoversExactlyThreeCanonicalHooks (0.00s)
+--- PASS: TestOpenCodeGovernancePluginNeverRegistersPermissionHook (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/embedded	1.721s

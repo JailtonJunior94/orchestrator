@@ -19,7 +19,7 @@
 # Unlock (override do bloqueio sem mudar o modo):
 #   GOVERNANCE_PRELOAD_CONFIRMED=1  — bypass do bloqueio para sessoes que ja
 #                                     confirmaram o contrato. Util em ferramentas
-#                                     single-round (Codex, Copilot, Gemini CLI).
+#                                     single-round (Codex, Copilot, OpenCode).
 
 set -euo pipefail
 

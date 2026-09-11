@@ -1,0 +1,2 @@
+internal/detect/no_exec_test.go:17:	forbidden := []string{"exec.Command", "exec.CommandContext", "cmd.Run(", "cmd.Start(", "cmd.Output(", "cmd.CombinedOutput("}
+exit=0

@@ -12,15 +12,15 @@
 //   - Claude Code: enforcement programatico via hooks PreToolUse/PostToolUse.
 //     Invariantes marcados ToolSpecific para Claude sao obrigatorios.
 //
-//   - Gemini CLI: sem hooks ou agents nativos. Compliance depende do modelo
-//     seguir instrucoes procedurais. Invariantes BestEffort documentam a lacuna
-//     mas nao bloqueiam.
-//
-//   - Codex: le AGENTS.md como instrucao de sessao. Sem hooks nativos.
+//   - Codex: le AGENTS.md como instrucao de sessao. Hooks nativos de projeto
+//     exigem trust concedido via TUI interativa; sem trust o gate fica inerte.
 //     config.toml lista metadados de skills para upgrade.sh — nao enforcement real.
 //
-//   - Copilot: carrega copilot-instructions.md automaticamente, sem hooks.
-//     Compliance depende do modelo seguir instrucoes.
+//   - Copilot: carrega copilot-instructions.md automaticamente. Hooks nativos
+//     de projeto disparam apenas quando a pasta esta na lista de pastas confiaveis.
+//
+//   - OpenCode: carrega AGENTS.md e .agents/skills/ nativamente. Enforcement
+//     via hook tool.execute.before do plugin de governanca.
 package parity
 
 import (
@@ -206,11 +206,6 @@ func (r1 *Checker) Generate(projectDir string, tools []skills.Tool, langs []skil
 		}
 	}
 
-	// Stub para hook Gemini instalado pelo install.Service
-	if toolSet[skills.ToolGemini] {
-		_ = ffs.WriteFile(filepath.Join(projectDir, ".gemini/hooks/validate-preload.sh"), []byte("#!/bin/sh\n# stub"))
-	}
-
 	// Stub para guard de profundidade (cross-tool, sempre instalado com Claude)
 	_ = ffs.WriteFile(filepath.Join(projectDir, "scripts/lib/check-invocation-depth.sh"), []byte("#!/bin/sh\n# stub"))
 
@@ -235,7 +230,6 @@ func (r1 *Checker) Invariants() []*Invariant {
 		// Por ferramenta — presenca e referencia canonica
 		_invCL01ClaudeMDPresent,
 		_invCL02ClaudeMDCanonicalPath,
-		_invGM01GeminiMDPresent,
 		_invCP01CopilotMDPresent,
 		_invCD01CodexConfigPresent,
 		_invCD02CodexConfigCanonicalPath,
@@ -248,11 +242,8 @@ func (r1 *Checker) Invariants() []*Invariant {
 		_invCL07ClaudeScriptBugfixEvidencePresent,
 		_invCL08ClaudeScriptRefactorEvidencePresent,
 
-		// Gemini — hook de preload instalado
-		_invGM03GeminiHookPreloadPresent,
 
 		// Best-effort — documenta limites de enforcement
-		_invGM02GeminiMDBestEffortDoc,
 		_invCP02CopilotMDBestEffortDoc,
 
 		// Cross-tool — detecta drift entre destinos
@@ -359,41 +350,7 @@ var _invCL02ClaudeMDCanonicalPath = &Invariant{
 	},
 }
 
-// ── Gemini ──────────────────────────────────────────────────────────────────
-
-var _invGM01GeminiMDPresent = &Invariant{
-	ID:          "GM01",
-	Description: "GEMINI.md e gerado e menciona AGENTS.md como fonte canonica",
-	Level:       Common,
-	AppliesTo:   []skills.Tool{skills.ToolGemini},
-	Check: func(s Snapshot) Result {
-		c := s.File("GEMINI.md")
-		if c == "" {
-			return NewChecker().fail("GEMINI.md nao gerado")
-		}
-		if !strings.Contains(c, "AGENTS.md") {
-			return NewChecker().fail("GEMINI.md nao menciona AGENTS.md")
-		}
-		return NewChecker().pass()
-	},
-}
-
-var _invGM02GeminiMDBestEffortDoc = &Invariant{
-	ID:          "GM02",
-	Description: "GEMINI.md documenta ausencia de enforcement automatico",
-	Level:       BestEffort,
-	AppliesTo:   []skills.Tool{skills.ToolGemini},
-	Check: func(s Snapshot) Result {
-		c := s.File("GEMINI.md")
-		if !strings.Contains(c, "Orientacoes Especificas para Gemini") {
-			return NewChecker().fail("GEMINI.md nao contem secao de orientacoes especificas")
-		}
-		if !strings.Contains(c, "Nao confiar em enforcement automatico") {
-			return NewChecker().fail("GEMINI.md nao documenta limitacao de enforcement")
-		}
-		return NewChecker().pass()
-	},
-}
+// ── Gemini removido: invariantes GM01/GM02/GM03 descontinuadas (RF-02) ──────
 
 // ── Copilot ─────────────────────────────────────────────────────────────────
 
@@ -416,7 +373,7 @@ var _invCP01CopilotMDPresent = &Invariant{
 
 var _invCP02CopilotMDBestEffortDoc = &Invariant{
 	ID:          "CP02",
-	Description: "copilot-instructions.md documenta ausencia de hooks de enforcement",
+	Description: "copilot-instructions.md documenta a pre-condicao de pasta confiavel para os hooks nativos",
 	Level:       BestEffort,
 	AppliesTo:   []skills.Tool{skills.ToolCopilot},
 	Check: func(s Snapshot) Result {
@@ -424,8 +381,8 @@ var _invCP02CopilotMDBestEffortDoc = &Invariant{
 		if !strings.Contains(c, "Orientacoes Especificas para Copilot") {
 			return NewChecker().fail("copilot-instructions.md nao contem secao de orientacoes especificas")
 		}
-		if !strings.Contains(c, "Enforcement depende do modelo") {
-			return NewChecker().fail("copilot-instructions.md nao documenta limitacao de enforcement")
+		if !strings.Contains(c, "pastas confiaveis do Copilot CLI") {
+			return NewChecker().fail("copilot-instructions.md nao documenta a pre-condicao de pasta confiavel")
 		}
 		return NewChecker().pass()
 	},
@@ -475,7 +432,6 @@ var _invX01CrossToolCanonicalPath = &Invariant{
 	Check: func(s Snapshot) Result {
 		artifacts := map[skills.Tool]string{
 			skills.ToolClaude:  "CLAUDE.md",
-			skills.ToolGemini:  "GEMINI.md",
 			skills.ToolCopilot: ".github/copilot-instructions.md",
 			skills.ToolCodex:   ".codex/config.toml",
 		}
@@ -571,21 +527,6 @@ var _invCL08ClaudeScriptRefactorEvidencePresent = &Invariant{
 	Check: func(s Snapshot) Result {
 		if s.File(".claude/scripts/validate-refactor-evidence.sh") == "" {
 			return NewChecker().fail("script validate-refactor-evidence.sh ausente")
-		}
-		return NewChecker().pass()
-	},
-}
-
-// ── Gemini — hook de preload (T12) ───────────────────────────────────────────
-
-var _invGM03GeminiHookPreloadPresent = &Invariant{
-	ID:          "GM03",
-	Description: ".gemini/hooks/validate-preload.sh deve existir",
-	Level:       BestEffort,
-	AppliesTo:   []skills.Tool{skills.ToolGemini},
-	Check: func(s Snapshot) Result {
-		if s.File(".gemini/hooks/validate-preload.sh") == "" {
-			return NewChecker().fail("hook Gemini validate-preload.sh ausente")
 		}
 		return NewChecker().pass()
 	},
@@ -702,20 +643,19 @@ var _invINV30ToolCallsNormalizedNameInvariant = &Invariant{
 }
 
 // _invINV32CrossCLIToolCallNameParity valida RP-03: a mesma operação semântica (shell) produz
-// o MESMO conjunto de normalized_name nas 4 CLIs (Claude/Codex/Copilot/Gemini).
-// Fixtures: claude_bash, codex_shell, copilot_run, gemini_bash. Skip quando alguma ausente
+// o MESMO conjunto de normalized_name nas CLIs com fixture de parity disponível
+// (Claude/Codex/Copilot). Skip quando alguma ausente
 // (ambientes sem fixtures de parity não devem bloquear); falha quando os conjuntos divergem.
 var _invINV32CrossCLIToolCallNameParity = &Invariant{
 	ID:          "INV-32",
-	Description: "cross_cli_tool_call_name_parity (RP-03): a mesma operação produz normalized_name idêntico nas 4 CLIs",
+	Description: "cross_cli_tool_call_name_parity (RP-03): a mesma operação produz normalized_name idêntico nas CLIs com fixture",
 	Level:       Common,
-	AppliesTo:   []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolGemini},
+	AppliesTo:   []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot},
 	Check: func(s Snapshot) Result {
 		fixtures := map[string]string{
 			"claude":  "tests/fixtures/parity/claude_bash.jsonl",
 			"codex":   "tests/fixtures/parity/codex_shell.jsonl",
 			"copilot": "tests/fixtures/parity/copilot_run.jsonl",
-			"gemini":  "tests/fixtures/parity/gemini_bash.jsonl",
 		}
 
 		perCLI := make(map[string]map[string]bool, len(fixtures))

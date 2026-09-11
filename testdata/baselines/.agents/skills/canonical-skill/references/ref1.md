@@ -17,7 +17,7 @@ real do provedor de IA (tiktoken, SentencePiece, etc.).
 | Ferramenta | Budget (tokens est.) | Janela de Contexto |
 |-----------|---------------------|--------------------|
 | claude    | 70.000              | Grande             |
-| gemini    | 4.000               | Grande             |
+| opencode  | 4.000               | Grande             |
 | codex     | 13.000              | Medio              |
 | copilot   | 2.000               | Restrito           |
 

@@ -50,7 +50,6 @@ func TestPortability_GenerateGovernance(t *testing.T) {
 				"INSTALL_CLAUDE":  "1",
 				"INSTALL_CODEX":   "1",
 				"INSTALL_COPILOT": "1",
-				"INSTALL_GEMINI":  "0",
 			})
 
 			canonical := []string{
@@ -97,7 +96,6 @@ func TestPortability_GenerateGovernance(t *testing.T) {
 				"INSTALL_CLAUDE":  "1",
 				"INSTALL_CODEX":   "1",
 				"INSTALL_COPILOT": "1",
-				"INSTALL_GEMINI":  "0",
 			})
 			assertContains(t, filepath.Join(workDir, "AGENTS.md"), "Convencoes Customizadas Test")
 			assertContains(t, filepath.Join(workDir, "AGENTS.md"), "Marco unico de teste portabilidade.")

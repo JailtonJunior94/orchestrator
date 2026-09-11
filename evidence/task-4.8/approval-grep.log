@@ -1,0 +1,13 @@
+internal/runtime/runner.go:743:	taskIdentity, err := approval.NewTaskIdentity(j.TaskFileName)
+internal/runtime/runner.go:747:	agentIdentity, err := approval.NewAgentIdentity(r.spec.ID)
+internal/runtime/runner.go:751:	var policyOpts []approval.PolicyOption
+internal/runtime/runner.go:753:		policyOpts = append(policyOpts, approval.WithMaxRounds(j.MaxBugfixIterations))
+internal/runtime/runner.go:755:	policy, err := approval.NewApprovalPolicy(policyOpts...)
+internal/runtime/runner.go:767:	cycle, err := approval.NewCycle(taskIdentity, agentIdentity, policy, criteria, reviewer, fixer, repository)
+internal/runtime/runner.go:780:func buildCycleOutcome(j Job, result approval.CycleResult) autoReviewOutcome {
+internal/runtime/runner.go:803:func severityCounts(counts map[approval.Severity]int) map[string]int {
+internal/runtime/runner.go:814:func criteriaFromTaskFile(tasksDir, taskFileName string) ([]approval.AcceptanceCriterion, error) {
+internal/runtime/runner.go:821:	var criteria []approval.AcceptanceCriterion
+internal/runtime/runner.go:828:		criterion, err := approval.NewAcceptanceCriterion(description)
+internal/taskloop/taskloop.go:664:			var cycleCriteria []approval.AcceptanceCriterion
+internal/taskloop/runloop.go:239:			var result approval.CycleResult

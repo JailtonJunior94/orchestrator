@@ -197,4 +197,7 @@ func (r *DefaultResolver) mergeInto(dst *Runtime, src Runtime) {
 	if src.DefaultTool != "" {
 		dst.DefaultTool = src.DefaultTool
 	}
+	if src.MaxBugfixIterations != 0 {
+		dst.MaxBugfixIterations = src.MaxBugfixIterations
+	}
 }

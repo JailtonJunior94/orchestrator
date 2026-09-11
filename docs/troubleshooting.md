@@ -64,7 +64,7 @@ Este guia cobre os problemas mais comuns encontrados por usuarios e agentes ao t
    ```
 4. Se o problema persistir, reinstale a governanca:
    ```bash
-   ai-spec install . --source <caminho-para-governanca> --tools claude,gemini,codex,copilot --langs go
+   ai-spec install . --source <caminho-para-governanca> --tools claude,codex,copilot,opencode --langs go
    ```
 
 **Verificacao:** `ai-spec lint .`
@@ -73,9 +73,9 @@ Este guia cobre os problemas mais comuns encontrados por usuarios e agentes ao t
 
 ## Problema: Parity check falha inesperadamente
 
-**Sintoma:** Em CI, a verificacao de paridade multi-agente retorna falha ou aviso inesperado. Localmente o resultado pode ser diferente. A mensagem menciona um invariante `BestEffort` como `GEMINI-MD` ou `COPILOT-MD`.
+**Sintoma:** Em CI, a verificacao de paridade multi-agente retorna falha ou aviso inesperado. Localmente o resultado pode ser diferente. A mensagem menciona um invariante `BestEffort` como `COPILOT-MD`.
 
-**Causa:** Invariantes classificados como `BestEffort` verificam conformidade procedural que nao tem enforcement automatico (por exemplo, presenca de documentacao opcional em `GEMINI.md` ou `.github/copilot-instructions.md`). Em CI, o projeto alvo pode nao ter esses arquivos, fazendo com que o check emita aviso mesmo sem bloquear o build.
+**Causa:** Invariantes classificados como `BestEffort` verificam conformidade procedural que nao tem enforcement automatico (por exemplo, presenca de documentacao opcional em `.github/copilot-instructions.md`). Em CI, o projeto alvo pode nao ter esses arquivos, fazendo com que o check emita aviso mesmo sem bloquear o build.
 
 **Solucao:**
 

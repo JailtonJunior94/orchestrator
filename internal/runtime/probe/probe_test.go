@@ -555,16 +555,17 @@ func TestAdrByID_T21_UnknownIDFallback(t *testing.T) {
 	}
 }
 
-// geminiSpec retorna uma spec de teste baseada na spec Gemini.
-func geminiSpec() specs.Spec {
-	return specs.NewCatalog().Gemini()
+// openCodeSpec retorna uma spec de teste baseada na spec OpenCode.
+func openCodeSpec() specs.Spec {
+	return specs.NewCatalog().OpenCode()
 }
 
-// TestProbeReferencesADR_Gemini valida que adrByID["gemini"] aponta para ADR-015 (T-13 ext, RF-06).
-// Nota: não usa t.Parallel() pois usa ResetCache() que modifica estado global.
-func TestProbeReferencesADR_Gemini(t *testing.T) {
-	sp := geminiSpec()
-	sp.ID = "gemini"
+// TestProbeReferencesADR_OpenCode valida que adrByID["opencode"] aponta para o ADR do
+// subcomando OpenCode (RF-06). Nota: não usa t.Parallel() pois usa ResetCache() que
+// modifica estado global.
+func TestProbeReferencesADR_OpenCode(t *testing.T) {
+	sp := openCodeSpec()
+	sp.ID = "opencode"
 	probe.NewCatalog().
 		ResetCache()
 
@@ -574,21 +575,21 @@ func TestProbeReferencesADR_Gemini(t *testing.T) {
 	if err == nil {
 		t.Fatal("esperava erro, mas não houve")
 	}
-	if !strings.Contains(err.Error(), ".specs/adr/015-gemini-cli-acp-native.md") {
-		t.Errorf("adrByID[\"gemini\"] deve apontar para ADR-015\nmensagem: %q", err.Error())
+	if !strings.Contains(err.Error(), "adr-003-opencode-acp-subcomando.md") {
+		t.Errorf("adrByID[\"opencode\"] deve apontar para o ADR do OpenCode\nmensagem: %q", err.Error())
 	}
 }
 
-// TestProbeCacheKey_Gemini valida que o cache key do Gemini funciona corretamente (T-13 ext, RF-29).
+// TestProbeCacheKey_OpenCode valida que o cache key do OpenCode funciona corretamente (RF-29).
 // Chamadas subsequentes para a mesma spec.ID retornam resultado em cache sem re-lookup.
-func TestProbeCacheKey_Gemini(t *testing.T) {
+func TestProbeCacheKey_OpenCode(t *testing.T) {
 	t.Parallel()
 
-	sp := geminiSpec()
-	sp.ID = "gemini-cache-test"
+	sp := openCodeSpec()
+	sp.ID = "opencode-cache-test"
 
 	look := newFakeLookPather(map[string]string{
-		"gemini": "/usr/local/bin/gemini",
+		"opencode": "/usr/local/bin/opencode",
 	})
 	probe.NewCatalog().
 		ResetCache()
@@ -761,7 +762,7 @@ func TestFallbackChain_CanonicalFirst(t *testing.T) {
 
 // TestFallbackChain_ArgvParityPerSpec valida paridade byte-equivalente (RF-05):
 // o argv resolvido via fallback genérico é idêntico ao que seria esperado com os
-// FixedArgs declarados nas specs atuais (claude/codex/gemini/copilot).
+// FixedArgs declarados nas specs atuais (claude/codex/copilot/opencode).
 func TestFallbackChain_ArgvParityPerSpec(t *testing.T) {
 	t.Parallel()
 
@@ -786,10 +787,10 @@ func TestFallbackChain_ArgvParityPerSpec(t *testing.T) {
 			wantArgs: []string{"--yes", specs.CodexNpmPackage + "@" + specs.CodexNpmVersion},
 		},
 		{
-			name:     "gemini_fallback_argv",
-			spec:     specs.NewCatalog().Gemini(),
+			name:     "opencode_fallback_argv",
+			spec:     specs.NewCatalog().OpenCode(),
 			wantCmd:  npxPath,
-			wantArgs: []string{"--yes", specs.GeminiNpmPackage + "@" + specs.GeminiNpmVersion, "--acp"},
+			wantArgs: []string{"--yes", specs.OpenCodeNpmPackage + "@" + specs.OpenCodeNpmVersion, "acp"},
 		},
 		{
 			name:     "copilot_fallback_argv",
@@ -826,5 +827,60 @@ func TestFallbackChain_ArgvParityPerSpec(t *testing.T) {
 				t.Errorf("args = %v, want %v", args, tc.wantArgs)
 			}
 		})
+	}
+}
+
+func TestEnsureAvailable_OpenCode_DirectBinaryArgvHasSubcommandFirst(t *testing.T) {
+	t.Parallel()
+
+	sp := specs.NewCatalog().OpenCode()
+	sp.ID = "opencode-direct-parity"
+
+	look := newFakeLookPather(map[string]string{
+		"opencode": "/usr/local/bin/opencode",
+	})
+
+	launcher, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if launcher.Kind() != "binary" {
+		t.Errorf("kind = %q, want \"binary\"", launcher.Kind())
+	}
+	cmd, args := launcher.Command()
+	if cmd != "/usr/local/bin/opencode" {
+		t.Errorf("command = %q, want %q", cmd, "/usr/local/bin/opencode")
+	}
+	if !slices.Equal(args, []string{"acp"}) {
+		t.Errorf("args = %v, want [acp]", args)
+	}
+}
+
+func TestEnsureAvailable_OpenCode_FallbackArgvIsPinnedAndSubcommandFirst(t *testing.T) {
+	t.Parallel()
+
+	const npxPath = "/usr/local/bin/npx"
+
+	sp := specs.NewCatalog().OpenCode()
+	sp.ID = "opencode-fallback-parity"
+
+	look := newFakeLookPather(map[string]string{
+		"npx": npxPath,
+	})
+
+	launcher, err := probe.NewCatalog().EnsureAvailable(context.Background(), sp, look)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if launcher.Kind() != "binary" {
+		t.Errorf("kind = %q, want \"binary\"", launcher.Kind())
+	}
+	cmd, args := launcher.Command()
+	if cmd != npxPath {
+		t.Errorf("command = %q, want %q", cmd, npxPath)
+	}
+	wantArgs := []string{"--yes", specs.OpenCodeNpmPackage + "@" + specs.OpenCodeNpmVersion, "acp"}
+	if !slices.Equal(args, wantArgs) {
+		t.Errorf("args = %v, want %v", args, wantArgs)
 	}
 }

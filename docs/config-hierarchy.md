@@ -91,7 +91,7 @@ Flags passadas diretamente na linha de comando sobrescrevem todas as camadas. Ap
 
 ```bash
 # Exemplo: sobrescrever tool e timeout em runtime
-ai-spec-harness task-loop --tool gemini --timeout 10m .specs/prd-meu-prd
+ai-spec-harness task-loop --tool opencode --timeout 10m .specs/prd-meu-prd
 ```
 
 ---
@@ -131,7 +131,7 @@ Formato **YAML**. Consistente com `.claude/config.yaml` e `.agents/config.yaml` 
 | `retry_backoff_multiplier` | float | `0.0` | Fator de espera exponencial entre tentativas |
 | `concurrent` | int | `0` | Grau de paralelismo no runloop (0 ou 1 = sequencial) |
 | `batch_size` | int | `0` | Tamanho do lote de tasks por iteração (0 ou 1 = sem lote) |
-| `default_tool` | string | `""` | Ferramenta padrão (claude, codex, gemini, copilot) |
+| `default_tool` | string | `""` | Ferramenta padrão (claude, codex, copilot, opencode) |
 
 ### Exemplo completo
 

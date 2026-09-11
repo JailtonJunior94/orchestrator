@@ -78,4 +78,4 @@ prd_prefix: prd-
 evidence_dir: ""
 ```
 
-`check-invocation-depth.sh` (Etapa 1, resolvido em cascata `.agents/lib/` → `scripts/lib/`) exporta `AI_TASKS_ROOT`, `AI_PRD_PREFIX`, `AI_EVIDENCE_DIR`, `AI_TOOL` para skills, validators e runtime, garantindo paridade exata entre Claude Code, Codex, Gemini e Copilot.
+`check-invocation-depth.sh` (Etapa 1, resolvido em cascata `.agents/lib/` → `scripts/lib/`) exporta `AI_TASKS_ROOT`, `AI_PRD_PREFIX`, `AI_EVIDENCE_DIR`, `AI_TOOL` para skills, validators e runtime, garantindo paridade exata entre Claude Code, Codex, Copilot e OpenCode.

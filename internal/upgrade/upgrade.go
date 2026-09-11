@@ -401,17 +401,6 @@ func (s *Service) regenerateAdapters(sourceDir, projectDir, codexProfile string)
 	if s.fs.IsDir(filepath.Join(projectDir, ".github")) {
 		s.adapters.GenerateGitHub(sourceDir, projectDir)
 	}
-	if s.fs.IsDir(filepath.Join(projectDir, ".gemini")) {
-		s.adapters.GenerateGemini(sourceDir, projectDir)
-		s.syncFileIfPresent(
-			filepath.Join(sourceDir, ".gemini", "hooks", "validate-preload.sh"),
-			filepath.Join(projectDir, ".gemini", "hooks", "validate-preload.sh"),
-		)
-		s.syncFileIfPresent(
-			filepath.Join(sourceDir, ".gemini", "hooks", "validate-governance.sh"),
-			filepath.Join(projectDir, ".gemini", "hooks", "validate-governance.sh"),
-		)
-	}
 	if s.fs.Exists(filepath.Join(projectDir, ".codex", "config.toml")) {
 		content := s.adapters.BuildCodexConfig(s.installedCodexSkills(projectDir, codexProfile))
 		_ = s.fs.WriteFile(filepath.Join(projectDir, ".codex", "config.toml"), []byte(content))
@@ -433,9 +422,6 @@ func (s *Service) regenerateGovernance(sourceDir, projectDir, codexProfile strin
 	var tools []skills.Tool
 	if s.fs.Exists(filepath.Join(projectDir, "CLAUDE.md")) {
 		tools = append(tools, skills.ToolClaude)
-	}
-	if s.fs.Exists(filepath.Join(projectDir, "GEMINI.md")) {
-		tools = append(tools, skills.ToolGemini)
 	}
 	if s.fs.Exists(filepath.Join(projectDir, ".codex", "config.toml")) {
 		tools = append(tools, skills.ToolCodex)

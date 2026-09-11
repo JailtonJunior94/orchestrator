@@ -21,7 +21,7 @@ set -uo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 HOOKS_DIR=""
-for d in "$REPO_ROOT/.claude/hooks" "$REPO_ROOT/.agents/hooks" "$REPO_ROOT/.gemini/hooks" "$REPO_ROOT/.codex/hooks" "$REPO_ROOT/.github/hooks"; do
+for d in "$REPO_ROOT/.claude/hooks" "$REPO_ROOT/.agents/hooks" "$REPO_ROOT/.codex/hooks" "$REPO_ROOT/.github/hooks"; do
   if [[ -d "$d" ]]; then
     HOOKS_DIR="$d"
     break

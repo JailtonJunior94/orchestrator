@@ -1,0 +1,82 @@
+=== RUN   TestCLI_ContractMatchesSchema
+--- PASS: TestCLI_ContractMatchesSchema (0.00s)
+=== RUN   TestCLI_ContractFlagsMatchSchema
+=== RUN   TestCLI_ContractFlagsMatchSchema/check-spec-drift
+=== RUN   TestCLI_ContractFlagsMatchSchema/invalidate
+=== RUN   TestCLI_ContractFlagsMatchSchema/scaffold
+=== RUN   TestCLI_ContractFlagsMatchSchema/sync-spec-hash
+=== RUN   TestCLI_ContractFlagsMatchSchema/task-loop
+=== RUN   TestCLI_ContractFlagsMatchSchema/telemetry
+=== RUN   TestCLI_ContractFlagsMatchSchema/version
+=== RUN   TestCLI_ContractFlagsMatchSchema/migrate-sdd
+=== RUN   TestCLI_ContractFlagsMatchSchema/prerequisites
+=== RUN   TestCLI_ContractFlagsMatchSchema/skill-bump
+=== RUN   TestCLI_ContractFlagsMatchSchema/uninstall
+=== RUN   TestCLI_ContractFlagsMatchSchema/approve
+=== RUN   TestCLI_ContractFlagsMatchSchema/doctor
+=== RUN   TestCLI_ContractFlagsMatchSchema/inspect
+=== RUN   TestCLI_ContractFlagsMatchSchema/lint
+=== RUN   TestCLI_ContractFlagsMatchSchema/telemetry_report
+=== RUN   TestCLI_ContractFlagsMatchSchema/validate-result
+=== RUN   TestCLI_ContractFlagsMatchSchema/verify
+=== RUN   TestCLI_ContractFlagsMatchSchema/telemetry_log
+=== RUN   TestCLI_ContractFlagsMatchSchema/rollback-sdd
+=== RUN   TestCLI_ContractFlagsMatchSchema/runtime-capabilities
+=== RUN   TestCLI_ContractFlagsMatchSchema/semver-next
+=== RUN   TestCLI_ContractFlagsMatchSchema/skills
+=== RUN   TestCLI_ContractFlagsMatchSchema/upgrade
+=== RUN   TestCLI_ContractFlagsMatchSchema/skills_check
+=== RUN   TestCLI_ContractFlagsMatchSchema/telemetry_summary
+=== RUN   TestCLI_ContractFlagsMatchSchema/update-version
+=== RUN   TestCLI_ContractFlagsMatchSchema/validate
+=== RUN   TestCLI_ContractFlagsMatchSchema/wrapper
+=== RUN   TestCLI_ContractFlagsMatchSchema/install
+=== RUN   TestCLI_ContractFlagsMatchSchema/metrics
+=== RUN   TestCLI_ContractFlagsMatchSchema/seal-evidence
+=== RUN   TestCLI_ContractFlagsMatchSchema/validate-evidence
+=== RUN   TestCLI_ContractFlagsMatchSchema/validate-sdd
+=== RUN   TestCLI_ContractFlagsMatchSchema/changelog
+=== RUN   TestCLI_ContractFlagsMatchSchema/hash
+=== RUN   TestCLI_ContractFlagsMatchSchema/orchestrate
+=== RUN   TestCLI_ContractFlagsMatchSchema/validate-bugs
+--- PASS: TestCLI_ContractFlagsMatchSchema (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/check-spec-drift (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/invalidate (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/scaffold (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/sync-spec-hash (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/task-loop (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/telemetry (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/version (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/migrate-sdd (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/prerequisites (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/skill-bump (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/uninstall (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/approve (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/doctor (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/inspect (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/lint (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/telemetry_report (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/validate-result (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/verify (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/telemetry_log (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/rollback-sdd (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/runtime-capabilities (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/semver-next (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/skills (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/upgrade (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/skills_check (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/telemetry_summary (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/update-version (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/validate (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/wrapper (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/install (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/metrics (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/seal-evidence (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/validate-evidence (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/validate-sdd (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/changelog (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/hash (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/orchestrate (0.00s)
+    --- PASS: TestCLI_ContractFlagsMatchSchema/validate-bugs (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	0.308s

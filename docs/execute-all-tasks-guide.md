@@ -81,8 +81,8 @@ Se houver RF não coberto, para com `blocked`. Reabra a fase de planejamento.
 
 - **Claude Code**: invoque em sessão nova (`claude` no terminal limpo). Nunca de dentro de outro Agent.
 - **Codex CLI**: invoque em sessão raiz (`codex`). Não use dentro de um subagent ativo (verifique com `/agent`).
-- **Gemini CLI**: invoque em sessão raiz (`gemini`). Não use dentro de um `@agent-name` ativo.
 - **Copilot CLI**: invoque em sessão raiz (`gh copilot`). Não use dentro de um `/fleet` aninhado.
+- **OpenCode**: invoque em sessão raiz (`opencode`). Não use dentro de um subagente ativo.
 
 ### 2.5 Working directory
 
@@ -281,26 +281,12 @@ codex --codex-profile full
 
 ---
 
-### 5.3 Gemini CLI
+### 5.3 OpenCode
 
-#### A. Slash command (preferido — slim e determinístico)
+#### A. Invocação descritiva (auto-orquestração)
 
-```
-/execute-all-tasks <slug>
-```
-
-#### B. Invocação via `@agent` (controle fino)
-
-```
-@task-executor não — preciso do orquestrador.
-
-Use a skill execute-all-tasks no PRD `<slug>`. Para cada tarefa elegível, delegue ao
-subagent @task-executor com prompt auto-contido (path da task + prd + techspec).
-Cada @task-executor deve retornar APENAS YAML com status, report_path, summary.
-Halt-first em qualquer status != done. Não mute tasks.md.
-```
-
-#### C. Invocação descritiva (auto-orquestração)
+OpenCode carrega `AGENTS.md` e `.agents/skills/` de projeto nativamente (sem cópia nem
+`skills.paths`, V-09/V-10) — não há wrapper de comando dedicado a instalar.
 
 ```
 Orquestre a execução completa do PRD `<slug>` usando a skill execute-all-tasks.
@@ -312,15 +298,17 @@ e gere o relatório agregado em .specs/prd-<slug>/_orchestration_report.md.
 
 ```bash
 cd ~/projetos/meu-app
-gemini
-> /execute-all-tasks portability-parity
+opencode
+> Orquestre a execução completa do PRD `portability-parity` usando a skill execute-all-tasks.
 ```
 
-#### Atenção específica do Gemini
+#### Atenção específica do OpenCode
 
-- **Quota**: dispatch paralelo dispara N chamadas LLM simultâneas. Se sua chave tem rate limit baixo (ex.: free tier 60 RPM), force sequencial editando tasks.md temporariamente: `Paralelizável: Não` em todas as linhas.
-- O `.gemini/commands/workspace.execute-all-tasks.toml` é wrapper. A definição do subagent vive em `.gemini/agents/task-executor.md` (distribuído pelo installer).
-- Confirme com `/agents` que `task-executor` está listado antes de invocar.
+- O plugin de governança (`.opencode/plugin/`) bloqueia por exceção no hook `tool.execute.before`;
+  confirme que o handshake de carga do plugin ocorreu antes do primeiro prompt (RF-21).
+- Nenhum dos três interruptores de ambiente conhecidos (`OPENCODE_PURE`,
+  `OPENCODE_DISABLE_PROJECT_CONFIG`, `OPENCODE_DISABLE_EXTERNAL_SKILLS`) deve estar setado — eles
+  desligam o gate de governança.
 
 ---
 
@@ -461,9 +449,9 @@ Cenários onde retomar **NÃO é seguro**:
 
 **Codex CLI**: use `--verbose` para ver o spawn de cada subagent. `/agent list` mostra threads ativos.
 
-**Gemini CLI**: o painel de status mostra subagents em execução. `/agents status` lista os ativos.
-
 **Copilot CLI**: a session view mostra progresso por subagent em real-time.
+
+**OpenCode**: eventos de tool-call aparecem no stream ACP; consulte `evidence/<task>/events.jsonl` para o registro completo.
 
 ### 9.2 Após a execução
 
@@ -720,8 +708,8 @@ sed -i.tmp 's/| Com [^|]*|/| Não |/g' .specs/prd-foo/tasks.md
 rm .specs/prd-foo/tasks.md.tmp
 
 # Rodar sequencial
-gemini
-> /execute-all-tasks foo
+opencode
+> Orquestre a execução completa do PRD `foo` usando a skill execute-all-tasks.
 
 # Restaurar
 mv .specs/prd-foo/tasks.md.bak .specs/prd-foo/tasks.md
@@ -731,16 +719,16 @@ mv .specs/prd-foo/tasks.md.bak .specs/prd-foo/tasks.md
 
 ## 12. Tabela de comparação por tool
 
-| Capacidade | Claude Code | Codex CLI | Gemini CLI | Copilot CLI |
+| Capacidade | Claude Code | Codex CLI | Copilot CLI | OpenCode |
 |---|---|---|---|---|
-| Slash command `/execute-all-tasks` | ✅ nativo | ⚠️ prefira descrição | ✅ nativo via `.gemini/commands/*.toml` | ✅ nativo |
-| Subagent `task-executor` formal | ✅ `.claude/agents/task-executor.md` | ✅ `.codex/agents/task-executor.toml` | ✅ `.gemini/agents/task-executor.md` | ✅ `.github/agents/task-executor.agent.md` |
-| Isolamento de contexto por subagent | ✅ janela 100% fresca (oficial) | ⚠️ thread isolada + herança de config | ✅ isolated context loop (oficial) | ✅ janela própria (oficial) |
-| Paralelismo nativo | ✅ múltiplas Agent calls/mensagem | ✅ subagents concorrentes | ✅ dispatch paralelo | ✅ `/fleet` |
+| Slash command `/execute-all-tasks` | ✅ nativo | ⚠️ prefira descrição | ✅ nativo | ⚠️ prefira descrição (sem wrapper de comando) |
+| Subagent `task-executor` formal | ✅ `.claude/agents/task-executor.md` | ✅ `.codex/agents/task-executor.toml` | ✅ `.github/agents/task-executor.agent.md` | ⚠️ não aplicável — skill carregada nativamente via `AGENTS.md` |
+| Isolamento de contexto por subagent | ✅ janela 100% fresca (oficial) | ⚠️ thread isolada + herança de config | ✅ janela própria (oficial) | ⚠️ depende do modo de invocação |
+| Paralelismo nativo | ✅ múltiplas Agent calls/mensagem | ✅ subagents concorrentes | ✅ `/fleet` | ❓ não documentado |
 | Depth limit explícito | ⚠️ **1 nível** (oficial) — não invocar dentro de subagent | ❓ não documentado | ❓ não documentado | ❓ não documentado |
-| Statefulness da sessão | ⚠️ session-bounded | ✅ persiste em `~/.codex/sessions/` | ⚠️ session-bounded | ✅ persiste em `~/.copilot/session-state/` |
-| Worktree isolation entre sessions paralelas | ❌ manual | ❌ manual | ❌ manual | ✅ automático |
-| Confiança alta pra produção | ✅ máxima (referência) | ⚠️ média (isolamento parcial) | ✅ alta | ✅ alta |
+| Statefulness da sessão | ⚠️ session-bounded | ✅ persiste em `~/.codex/sessions/` | ✅ persiste em `~/.copilot/session-state/` | ⚠️ session-bounded |
+| Worktree isolation entre sessions paralelas | ❌ manual | ❌ manual | ✅ automático | ❌ manual |
+| Confiança alta pra produção | ✅ máxima (referência) | ⚠️ média (isolamento parcial) | ✅ alta | ⚠️ enforcement provado (V-04/V-05); orquestração multi-subagent não documentada |
 | Custo por orquestração (relativo) | $$ | $$ | $$ | $$ |
 
 ### Recomendação por cenário
@@ -750,7 +738,7 @@ mv .specs/prd-foo/tasks.md.bak .specs/prd-foo/tasks.md
 | PRD crítico em produção, primeira vez rodando a skill | **Claude Code** | Isolamento mais forte, doc oficial mais clara, validação empírica neste guia |
 | Pipeline CI/CD com múltiplos PRDs simultâneos | **Copilot CLI** | Worktree automático isola sessions sem coordenação manual |
 | Time grande com cota OpenAI | **Codex CLI** | Mas marque tudo `Paralelizável=Não` ou monitore drift de config |
-| Validação contínua / iteração rápida | **Gemini CLI** | Slash command direto + paralelismo nativo bom para dev local |
+| Validação contínua / iteração rápida | **Codex CLI** | Slash command direto + subagents concorrentes bom para dev local |
 
 ---
 
@@ -792,5 +780,4 @@ Use após cada orquestração:
 - AGENTS.md — base contract de todas as skills
 - Doc oficial Claude Code Sub-agents: https://code.claude.com/docs/en/sub-agents
 - Doc oficial Codex Subagents: https://developers.openai.com/codex/subagents
-- Doc oficial Gemini CLI Subagents: https://github.com/google-gemini/gemini-cli/blob/main/docs/core/subagents.md
 - Doc oficial Copilot CLI Custom Agents: https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/create-custom-agents-for-cli

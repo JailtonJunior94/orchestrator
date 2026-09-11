@@ -1,9 +1,74 @@
 package taskloop
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
+
+	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 )
+
+func TestOptionsToConfigOverrides_MaxBugfixIterationsDefaultDoesNotOverrideConfig(t *testing.T) {
+	t.Parallel()
+
+	got := NewCatalog().optionsToConfigOverrides(Options{MaxBugfixIterations: 5})
+
+	if got.MaxBugfixIterations != 0 {
+		t.Fatalf("default do Cobra nao deve virar override; got %d", got.MaxBugfixIterations)
+	}
+}
+
+func TestOptionsToConfigOverrides_MaxBugfixIterationsExplicitOverridesConfig(t *testing.T) {
+	t.Parallel()
+
+	got := NewCatalog().optionsToConfigOverrides(Options{
+		MaxBugfixIterations:    9,
+		MaxBugfixIterationsSet: true,
+	})
+
+	if got.MaxBugfixIterations != 9 {
+		t.Fatalf("flag explicita deve virar override; got %d", got.MaxBugfixIterations)
+	}
+}
+
+func TestResolveRuntimeConfig_MaxBugfixIterationsFromWorkspaceConfigOnly(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	claudeDir := filepath.Join(dir, ".claude")
+	if err := os.MkdirAll(claudeDir, 0o755); err != nil {
+		t.Fatalf("mkdir .claude: %v", err)
+	}
+	yaml := "max_bugfix_iterations: 4\n"
+	if err := os.WriteFile(filepath.Join(claudeDir, "config.yaml"), []byte(yaml), 0o644); err != nil {
+		t.Fatalf("write config.yaml: %v", err)
+	}
+
+	opts := Options{}
+	rc, err := NewCatalog().resolveRuntimeConfig(dir, NewCatalog().optionsToConfigOverrides(opts))
+	if err != nil {
+		t.Fatalf("resolveRuntimeConfig: %v", err)
+	}
+	if rc.MaxBugfixIterations != 4 {
+		t.Fatalf("MaxBugfixIterations resolvido do arquivo de workspace = %d, want 4", rc.MaxBugfixIterations)
+	}
+
+	resolvedOpts := NewCatalog().applyResolvedMaxBugfixIterations(opts, rc)
+	if resolvedOpts.MaxBugfixIterations != 4 {
+		t.Fatalf("Options.MaxBugfixIterations apos resolucao de config = %d, want 4", resolvedOpts.MaxBugfixIterations)
+	}
+}
+
+func TestApplyResolvedMaxBugfixIterations_ZeroValuePreservesOptions(t *testing.T) {
+	t.Parallel()
+
+	opts := Options{MaxBugfixIterations: 0}
+	got := NewCatalog().applyResolvedMaxBugfixIterations(opts, airuntime.RuntimeConfig{})
+	if got.MaxBugfixIterations != 0 {
+		t.Fatalf("Options.MaxBugfixIterations deveria permanecer 0; got %d", got.MaxBugfixIterations)
+	}
+}
 
 func TestOptionsToConfigOverrides_ActivityTimeoutDefaultDoesNotOverrideConfig(t *testing.T) {
 	t.Parallel()

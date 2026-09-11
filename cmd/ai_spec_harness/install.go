@@ -28,7 +28,7 @@ func newInstallCmd() *cobra.Command {
 Sem --source, usa as skills canonicas embutidas no binario.
 
 Exemplos:
-  ai-spec-harness install ./meu-projeto --tools claude,gemini --langs go,python
+  ai-spec-harness install ./meu-projeto --tools claude,opencode --langs go,python
   ai-spec-harness install ./meu-projeto --tools all --langs all --mode copy
   ai-spec-harness install ./meu-projeto --tools claude --dry-run
   ai-spec-harness install ./meu-projeto --tools all --langs all --source ~/ai-governance
@@ -37,7 +37,7 @@ Exemplos:
 		RunE: handler.run,
 	}
 
-	cmd.Flags().String("tools", "", "Ferramentas para instalar: claude,gemini,codex,copilot ou all (opcional; detecta automaticamente se omitido)")
+	cmd.Flags().String("tools", "", "Ferramentas para instalar: claude,codex,copilot,opencode ou all (opcional; detecta automaticamente se omitido)")
 	cmd.Flags().String("langs", "", "Linguagens: go,node,python ou all")
 	cmd.Flags().String("mode", "symlink", "Modo de instalacao: symlink ou copy")
 	cmd.Flags().Bool("dry-run", false, "Mostra o que seria criado sem executar")
@@ -48,6 +48,7 @@ Exemplos:
 	cmd.Flags().String("focus-paths", "", "Prioriza deteccao de toolchain proximo desses arquivos, separados por virgula (util em monorepos). Alternativa: env FOCUS_PATHS")
 	cmd.Flags().Bool("global", false, "Instala globalmente em ~/.aispec (ADR-019 RF-07)")
 	cmd.Flags().Bool("follow-external-symlinks", false, "Permite escrever em .agents/skills quando symlink aponta para fora do projeto")
+	cmd.Flags().String("model", "", "Modelo default do agente (OpenCode: mapeado para a chave 'model' do opencode.json)")
 	return cmd
 }
 
@@ -64,6 +65,7 @@ func (c *installCommand) run(cmd *cobra.Command, args []string) error {
 	installFocusPaths, _ := cmd.Flags().GetString("focus-paths")
 	installGlobal, _ := cmd.Flags().GetBool("global")
 	installFollowExternalSymlinks, _ := cmd.Flags().GetBool("follow-external-symlinks")
+	installModel, _ := cmd.Flags().GetString("model")
 
 	if installRef != "" && installSource != "" {
 		return fmt.Errorf("--ref e --source sao mutuamente exclusivos")
@@ -130,5 +132,6 @@ func (c *installCommand) run(cmd *cobra.Command, args []string) error {
 		FocusPaths:             newFlagHelper().parseFocusPaths(installFocusPaths),
 		Scope:                  scope,
 		FollowExternalSymlinks: installFollowExternalSymlinks,
+		Model:                  installModel,
 	})
 }

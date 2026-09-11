@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
 )
 
 // stubBugfixInvoker simula a invocacao da skill bugfix.
@@ -358,6 +360,80 @@ func TestBugfixLoop_PersisteOrigemEProvasPorTentativa(t *testing.T) {
 	}
 	if iteration.FailBefore == "" || iteration.PassAfter == "" {
 		t.Errorf("provas ausentes: %+v", iteration)
+	}
+}
+
+func mustCompletedRound(t *testing.T, number int, verdict approval.Verdict, findings []approval.Finding) approval.Round {
+	t.Helper()
+	round, err := approval.NewRound(number)
+	if err != nil {
+		t.Fatalf("NewRound(%d): %v", number, err)
+	}
+	fingerprint := approval.NewFingerprintCalculator().Compute(findings)
+	completed, err := round.Complete(verdict, findings, fingerprint)
+	if err != nil {
+		t.Fatalf("Complete round %d: %v", number, err)
+	}
+	return completed
+}
+
+func TestBugfixAttemptsFromCycle(t *testing.T) {
+	findingA, err := approval.NewFinding(approval.SeverityCritical, "a.go", "R-1", "bug a")
+	if err != nil {
+		t.Fatalf("finding a: %v", err)
+	}
+	findingB, err := approval.NewFinding(approval.SeverityCritical, "b.go", "R-1", "bug b")
+	if err != nil {
+		t.Fatalf("finding b: %v", err)
+	}
+
+	round1 := mustCompletedRound(t, 1, approval.VerdictRejected, []approval.Finding{findingA})
+	round2 := mustCompletedRound(t, 2, approval.VerdictRejected, []approval.Finding{findingB})
+	round3 := mustCompletedRound(t, 3, approval.VerdictApproved, nil)
+
+	result, err := approval.NewClosedResult(approval.ReasonMaxRounds, []approval.Round{round1, round2, round3})
+	if err != nil {
+		t.Fatalf("NewClosedResult: %v", err)
+	}
+
+	recorder := newBugfixEvidenceRecorder()
+	recorder.record(bugfixEvidence{FailBefore: "fail1", PassAfter: "pass1", Output: "out1", RootCause: "cause1"})
+	recorder.record(bugfixEvidence{FailBefore: "fail2", PassAfter: "pass2", Output: "out2", RootCause: "cause2"})
+
+	iterations := bugfixAttemptsFromCycle(result, recorder)
+	if len(iterations) != 2 {
+		t.Fatalf("iteracoes = %d, want 2", len(iterations))
+	}
+
+	first := iterations[0]
+	if first.Sequence != 1 || first.Origin != "finding de review: a.go" || first.ReviewVerdict != VerdictRejected ||
+		first.FailBefore != "fail1" || first.PassAfter != "pass1" || first.BugfixOutput != "out1" || first.RootCause != "cause1" {
+		t.Errorf("primeira iteracao inesperada: %+v", first)
+	}
+	if len(first.CriticalFindings) != 1 || first.CriticalFindings[0].File != "b.go" {
+		t.Errorf("CriticalFindings da primeira iteracao = %+v, want b.go", first.CriticalFindings)
+	}
+
+	second := iterations[1]
+	if second.Sequence != 2 || second.Origin != "finding de review: b.go" || second.ReviewVerdict != VerdictApproved ||
+		second.FailBefore != "fail2" || second.PassAfter != "pass2" {
+		t.Errorf("segunda iteracao inesperada: %+v", second)
+	}
+	if len(second.CriticalFindings) != 0 {
+		t.Errorf("CriticalFindings da segunda iteracao = %+v, want vazio", second.CriticalFindings)
+	}
+}
+
+func TestFinalReviewFromCycleResult(t *testing.T) {
+	round1 := mustCompletedRound(t, 1, approval.VerdictRejected, nil)
+	result, err := approval.NewClosedResult(approval.ReasonEmptyDiff, []approval.Round{round1})
+	if err != nil {
+		t.Fatalf("NewClosedResult: %v", err)
+	}
+
+	got := finalReviewFromCycleResult(result)
+	if got == nil || got.Verdict != VerdictRejected {
+		t.Fatalf("finalReviewFromCycleResult = %+v, want VerdictRejected", got)
 	}
 }
 

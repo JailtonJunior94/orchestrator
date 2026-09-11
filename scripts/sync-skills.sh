@@ -4,7 +4,6 @@
 # e para o bundle embedded (internal/embedded/assets/.agents/skills) usado pelo
 # binário ai-spec via go:embed e distribuído via `ai-spec upgrade`.
 #
-# Gemini consome o canônico via .gemini/commands/<skill>.toml e não exige cópia.
 # Codex não usa skills neste formato.
 #
 # Estratégia: rsync com --delete para garantir que mirrors sejam idênticos ao canônico.
@@ -99,7 +98,7 @@ if [[ -d "$agents_lib" ]]; then
 fi
 
 # Sincroniza hooks canônicos do orquestrador (.agents/hooks/) para todos os mirrors
-# por-tool (.claude/.codex/.gemini/.github e internal/embedded/assets/<tool>/).
+# por-tool (.claude/.codex/.github e internal/embedded/assets/<tool>/).
 # Os 4 hooks abaixo são idênticos em todos os tools por design (executados via
 # `bash .<tool>/hooks/<hook>.sh` pelo próprio skill).
 agents_hooks="$repo_root/.agents/hooks"
@@ -112,12 +111,10 @@ declare -a orchestrator_hooks=(
 declare -a tool_hook_mirrors=(
   "$repo_root/.claude/hooks"
   "$repo_root/.codex/hooks"
-  "$repo_root/.gemini/hooks"
   "$repo_root/.github/hooks"
   "$repo_root/internal/embedded/assets/.agents/hooks"
   "$repo_root/internal/embedded/assets/.claude/hooks"
   "$repo_root/internal/embedded/assets/.codex/hooks"
-  "$repo_root/internal/embedded/assets/.gemini/hooks"
   "$repo_root/internal/embedded/assets/.github/hooks"
 )
 if [[ -d "$agents_hooks" ]]; then

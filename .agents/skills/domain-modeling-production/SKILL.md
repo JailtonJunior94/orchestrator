@@ -14,7 +14,7 @@ description: Conduz modelagem de dominio orientada a producao em PT-BR, transfor
 <critical>Economia, eficiencia e robustez sao restricoes de primeira classe. A skill DEVE preferir modelo simples, correto e operacionalmente sustentavel a uma taxonomia elegante, mas cara ou fraca.</critical>
 <critical>Nao materializar o modelo enquanto existir ambiguidade material em linguagem ubiqua, regra critica, ownership, fronteira, invariantes, erro de negocio ou trade-off operacional relevante.</critical>
 <critical>O bundle so e considerado pronto quando `scripts/validate-bundle.py` retornar `SUCCESS`.</critical>
-<critical>O comportamento da skill DEVE ser agnostico de agente: Claude Code, Codex, Gemini e Copilot DEVEM seguir a mesma ordem de passos, os mesmos gates, os mesmos artefatos e a mesma politica de clarificacao.</critical>
+<critical>O comportamento da skill DEVE ser agnostico de agente: Claude Code, Codex, Copilot e OpenCode DEVEM seguir a mesma ordem de passos, os mesmos gates, os mesmos artefatos e a mesma politica de clarificacao.</critical>
 
 ## Entrada Obrigatoria
 - Problema, fluxo ou capacidade de negocio a ser modelado.

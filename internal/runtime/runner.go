@@ -7,16 +7,21 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
+	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/handshake"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/render"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/telemetry"
 )
 
 // MCPServer define a interface do servidor MCP interno (F2-Claude).
@@ -87,6 +92,9 @@ type ACPRunner struct {
 	// reviewOutputFn é injetável para testes unitários (F5-Claude).
 	// nil = usar spawnReviewSession (produção).
 	reviewOutputFn autoReviewOutputFn
+	// handshakeWaiterFactory constrói o waiter do handshake de governança do OpenCode.
+	// nil = usar defaultHandshakeWaiterFactory (produção).
+	handshakeWaiterFactory HandshakeWaiterFactory
 }
 
 // NewACPRunner cria um ACPRunner com defaults de produção.
@@ -94,11 +102,12 @@ type ACPRunner struct {
 // A PersistenceFactory deve ser injetada via WithPersistenceFactory.
 func NewACPRunner(spec specs.Spec, opts ...Option) *ACPRunner {
 	r := &ACPRunner{
-		spec:     spec,
-		prober:   NewDefaultProber(),
-		factory:  client.NewDefaultClientFactory(),
-		renderer: render.NewHumanRenderer(os.Stdout),
-		clock:    NewCatalog().RealClock(),
+		spec:                   spec,
+		prober:                 NewDefaultProber(),
+		factory:                client.NewDefaultClientFactory(),
+		renderer:               render.NewHumanRenderer(os.Stdout),
+		clock:                  NewCatalog().RealClock(),
+		handshakeWaiterFactory: NewDefaultHandshakeWaiterFactory(),
 	}
 	for _, o := range opts {
 		o(r)
@@ -140,7 +149,7 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 
 	// ★ ADR-023: propagar WindowClass da Spec para o Job (sem leitura de runtime/handshake).
 	// Zero-value (WindowStandard) preserva comportamento F1.
-	j.WindowClass = r.spec.ContextWindow().Class()
+	j.WindowClass = r.spec.ResolveWindow(j.Model).Class()
 
 	// ★ F3-Claude: instanciar memory store e injetar contexto no prompt.
 	// j.TasksDir=="" → store nil → sem injeção (regressão F1/F2 preservada).
@@ -151,7 +160,7 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	// ★ F3-Claude: instanciar hooks dispatcher e registrar hooks default.
 	// j.DisableHooks=true → dispatcher vazio (debug; sem regressão F1/F2).
 	// ★ ADR-023: WindowClass propagada da Spec para sensibilizar token_budget.
-	disp := NewCatalog().prepareHooksDispatcher(j, r.spec.ID, memStore, r.spec.ContextWindow().Class())
+	disp := NewCatalog().prepareHooksDispatcher(j, r.spec.ID, memStore, r.spec.ResolveWindow(j.Model).Class())
 
 	// Fase 3: emitir runtime_init e persistir.
 	launcherCmd, launcherArgs := launcher.Command()
@@ -178,7 +187,16 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	defer func() { _ = c.Close() }()
 	defer stopMCP()
 
+	releaseEnforcement, err := r.applyEnforcement(c, j)
+	if err != nil {
+		return Summary{}, err
+	}
+	defer releaseEnforcement()
+
 	if err := c.Open(ctx, effectiveLauncher, j.Prompt); err != nil {
+		if errors.Is(err, handshake.ErrSignalNotReceived) {
+			_ = telemetry.NewCatalog().LogPreconditionRejection(j.WorkDir, r.spec.ID, "handshake_signal_not_received")
+		}
 		return Summary{}, fmt.Errorf("runner: abrir sessão ACP: %w", err)
 	}
 
@@ -212,15 +230,16 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	// ★ F3-Claude: hook session.post_end — memory_persist escreve MEMORY.md.
 	).dispatchSessionPostEnd(ctx, disp, j, loopResult, toolCallSummaries, cancelReason)
 
-	// ★ F5-Claude: auto-review opt-in (default false; recursão hard-bloqueada no child Job).
 	if j.AutoReview {
-		reviewResult, reviewErr := r.runAutoReview(ctx, j)
+		reviewOutcome, reviewErr := r.performAutoReview(ctx, j)
 		if reviewErr == nil {
-			summary.ReviewStatus = reviewResult.Status
-			summary.ReviewPath = reviewResult.Path
+			summary.ReviewStatus = reviewOutcome.status
+			summary.ReviewPath = reviewOutcome.path
+			summary.CycleRounds = reviewOutcome.cycleRounds
+			summary.CycleStopReason = reviewOutcome.cycleStopReason
 			_ = disp.Dispatch(ctx, hooks.PointSessionPostReview, hooks.SessionPostReviewEvent{
-				ReviewPath: reviewResult.Path,
-				Blocked:    reviewResult.Status == "blocked",
+				ReviewPath: reviewOutcome.path,
+				Blocked:    reviewOutcome.status == "blocked",
 			})
 		} else {
 			fmt.Fprintf(os.Stderr, "runner: auto-review falhou (session continua): %v\n", reviewErr)
@@ -246,7 +265,7 @@ func (r *ACPRunner) createPersistence(evidenceDir string) (Persistence, error) {
 // buildArgv compõe o argv final a partir dos launcherArgs e bootstrap args do Spec.
 // Anti-padrão: nunca mutar launcherArgs diretamente — criar slice novo (ADR-013 D-02).
 func (r *ACPRunner) buildArgv(j Job, launcherArgs []string) []string {
-	bootstrap := r.spec.BootstrapArgs(j.Model, j.ReasoningEffort, j.AddDirs, j.AccessMode)
+	bootstrap := r.spec.BootstrapArgs(j.Model, j.ReasoningEffort, j.AddDirs, j.AccessMode, j.WorkDir)
 	argv := append([]string{}, launcherArgs...)
 	return append(argv, bootstrap...)
 }
@@ -297,7 +316,7 @@ func (c *Catalog) dispatchPreOpenHooks(ctx context.Context, disp hooks.Dispatche
 }
 
 // runEventLoop executa o loop de fan-out de eventos até o canal c.Updates() fechar.
-// driverID é o ID da spec ativa ("claude", "gemini", "codex", "copilot"); usado para
+// driverID é o ID da spec ativa ("claude", "codex", "copilot", "opencode"); usado para
 // selecionar o MetricsExtractor adequado (ADR-021).
 // Retorna os contadores agregados do loop.
 func (r *ACPRunner) runEventLoop(
@@ -457,7 +476,7 @@ func (c *Catalog) mapRunError(cause, clientErr error, cl client.Client) error {
 // prepareMemoryStore instancia o memory.Store quando j.TasksDir != "".
 // Aplica WindowPolicy para ajustar limites por WindowClass (ADR-023):
 //   - WindowStandard (zero-value) ⇒ defaults F1 (150/12KB · 200/16KB) — sem regressão.
-//   - WindowLarge ⇒ limites ampliados para CLIs com janela ≥1M (ex: Gemini).
+//   - WindowLarge ⇒ limites ampliados para CLIs com janela ≥1M (ex: OpenCode com modelo Gemini).
 //
 // Retorna nil quando TasksDir está vazio (regressão F1/F2 preservada).
 func (c *Catalog) prepareMemoryStore(j Job) memory.Store {
@@ -689,4 +708,128 @@ func (c *Catalog) buildRuntimeInitRaw(launcher, command, toolID string, args []s
 		"npm_version": npmVersion,
 		"tool":        toolID,
 	})
+}
+
+type CycleRoundSummary struct {
+	Number             int            `json:"number"`
+	Verdict            string         `json:"verdict"`
+	FindingsBySeverity map[string]int `json:"findings_by_severity,omitempty"`
+}
+
+type autoReviewOutcome struct {
+	status          string
+	path            string
+	cycleRounds     []CycleRoundSummary
+	cycleStopReason string
+}
+
+func (r *ACPRunner) performAutoReview(ctx context.Context, j Job) (autoReviewOutcome, error) {
+	if strings.TrimSpace(j.TaskFileName) == "" {
+		result, err := r.runAutoReview(ctx, j)
+		if err != nil {
+			return autoReviewOutcome{}, err
+		}
+		return autoReviewOutcome{status: result.Status, path: result.Path}, nil
+	}
+	return r.runApprovalCycle(ctx, j)
+}
+
+func (r *ACPRunner) runApprovalCycle(ctx context.Context, j Job) (autoReviewOutcome, error) {
+	criteria, err := criteriaFromTaskFile(j.TasksDir, j.TaskFileName)
+	if err != nil {
+		return autoReviewOutcome{}, fmt.Errorf("runApprovalCycle: %w", err)
+	}
+
+	taskIdentity, err := approval.NewTaskIdentity(j.TaskFileName)
+	if err != nil {
+		return autoReviewOutcome{}, fmt.Errorf("runApprovalCycle: %w", err)
+	}
+	agentIdentity, err := approval.NewAgentIdentity(r.spec.ID)
+	if err != nil {
+		return autoReviewOutcome{}, fmt.Errorf("runApprovalCycle: %w", err)
+	}
+	var policyOpts []approval.PolicyOption
+	if j.MaxBugfixIterations > 0 {
+		policyOpts = append(policyOpts, approval.WithMaxRounds(j.MaxBugfixIterations))
+	}
+	policy, err := approval.NewApprovalPolicy(policyOpts...)
+	if err != nil {
+		return autoReviewOutcome{}, fmt.Errorf("runApprovalCycle: %w", err)
+	}
+
+	baseJob := j
+	baseJob.AutoReview = false
+
+	reviewer := NewReviewerAdapter(r, baseJob)
+	fixer := NewFixerAdapter(r, baseJob)
+	repository := NewRepositoryAdapter(j.WorkDir)
+
+	cycle, err := approval.NewCycle(taskIdentity, agentIdentity, policy, criteria, reviewer, fixer, repository)
+	if err != nil {
+		return autoReviewOutcome{}, fmt.Errorf("runApprovalCycle: %w", err)
+	}
+
+	result, runErr := cycle.Run(ctx)
+	if runErr != nil {
+		return autoReviewOutcome{}, fmt.Errorf("runApprovalCycle: %w", runErr)
+	}
+
+	return buildCycleOutcome(j, result), nil
+}
+
+func buildCycleOutcome(j Job, result approval.CycleResult) autoReviewOutcome {
+	rounds := make([]CycleRoundSummary, 0, result.RoundCount())
+	for round := range result.Rounds() {
+		rounds = append(rounds, CycleRoundSummary{
+			Number:             round.Number(),
+			Verdict:            round.Verdict().String(),
+			FindingsBySeverity: severityCounts(round.CountBySeverity()),
+		})
+	}
+
+	status := "blocked"
+	if result.Approved() {
+		status = "ok"
+	}
+
+	return autoReviewOutcome{
+		status:          status,
+		path:            filepath.Join(j.EvidenceDir, "review"),
+		cycleRounds:     rounds,
+		cycleStopReason: result.Reason().String(),
+	}
+}
+
+func severityCounts(counts map[approval.Severity]int) map[string]int {
+	if len(counts) == 0 {
+		return nil
+	}
+	result := make(map[string]int, len(counts))
+	for severity, n := range counts {
+		result[severity.String()] = n
+	}
+	return result
+}
+
+func criteriaFromTaskFile(tasksDir, taskFileName string) ([]approval.AcceptanceCriterion, error) {
+	content, err := os.ReadFile(filepath.Join(tasksDir, taskFileName))
+	if err != nil {
+		return nil, fmt.Errorf("read task file for cycle criteria: %w", err)
+	}
+
+	seen := make(map[string]bool)
+	var criteria []approval.AcceptanceCriterion
+	for _, description := range taskcriteria.Extract(content) {
+		key := strings.TrimSpace(description)
+		if key == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		criterion, err := approval.NewAcceptanceCriterion(description)
+		if err != nil {
+			return nil, err
+		}
+		criteria = append(criteria, criterion)
+	}
+	return criteria, nil
 }

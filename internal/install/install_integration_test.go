@@ -483,7 +483,7 @@ func TestIntegration_7_5_ScenarioG_Monorepo(t *testing.T) {
 
 	createMinimalSource(t, sourceDir, []string{"review", "go-implementation", "node-implementation", "execute-task"})
 
-	lp := newFakeLookPatherInt()
+	lp := newFakeLookPatherInt("bash") // sem binario de agente ACP; bash disponivel para o plugin do OpenCode (RF-23)
 	svc := newRealServiceWithLookPather(t, lp)
 
 	// Instalar para todos os 4 CLIs.
@@ -553,15 +553,16 @@ func TestIntegration_7_5_ProbeNonFatal_BinaryAbsent(t *testing.T) {
 
 	createMinimalSource(t, sourceDir, []string{"review"})
 
-	// Nenhum binario disponivel (probe falhara para todos).
-	lp := newFakeLookPatherInt()
+	// Nenhum binario de agente disponivel (probe falhara para todos);
+	// bash disponivel para o plugin do OpenCode (RF-23).
+	lp := newFakeLookPatherInt("bash")
 	svc := newRealServiceWithLookPather(t, lp)
 
 	start := time.Now()
 	err := svc.Execute(config.InstallOptions{
 		ProjectDir:  projectDir,
 		SourceDir:   sourceDir,
-		Tools:       []skills.Tool{skills.ToolClaude, skills.ToolGemini, skills.ToolCodex, skills.ToolCopilot},
+		Tools:       []skills.Tool{skills.ToolClaude, skills.ToolOpenCode, skills.ToolCodex, skills.ToolCopilot},
 		Langs:       nil,
 		LinkMode:    skills.LinkCopy,
 		GenerateCtx: false,

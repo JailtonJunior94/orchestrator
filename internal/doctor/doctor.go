@@ -1,15 +1,21 @@
 package doctor
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/git"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/precondition"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
+
+const codexTrustDoctorTimeout = 5 * time.Second
 
 // Check representa um diagnostico individual.
 type Check struct {
@@ -31,6 +37,10 @@ func NewService(fsys fs.FileSystem, printer *output.Printer, mfst *manifest.Stor
 }
 
 func (s *Service) Execute(projectDir string) error {
+	return s.ExecuteWithOptions(projectDir, false)
+}
+
+func (s *Service) ExecuteWithOptions(projectDir string, checkCodexTrust bool) error {
 	absDir, err := filepath.Abs(projectDir)
 	if err != nil {
 		return err
@@ -44,6 +54,10 @@ func (s *Service) Execute(projectDir string) error {
 	s.printer.Info("")
 
 	checks := s.runChecks(absDir)
+	if checkCodexTrust {
+		s.printer.Info("Executando RPC read-only hooks/list do codex app-server (opt-in explicito)...")
+		checks = append(checks, s.checkCodexTrustedHash())
+	}
 
 	var failCount int
 	for _, c := range checks {
@@ -177,4 +191,23 @@ func (s *Service) checkGitBinary() Check {
 		return Check{Name: "Git instalado", Status: "fail", Detail: "git nao encontrado no PATH"}
 	}
 	return Check{Name: "Git instalado", Status: "ok", Detail: "disponivel"}
+}
+
+func (s *Service) checkCodexTrustedHash() Check {
+	client := precondition.NewCodexAppServerClient("")
+	ctx, cancel := context.WithTimeout(context.Background(), codexTrustDoctorTimeout)
+	defer cancel()
+
+	state, err := precondition.EvaluateCodexTrustedHash(ctx, client, codexTrustDoctorTimeout)
+	if err != nil {
+		return Check{Name: "Trust de hooks do Codex", Status: "warn", Detail: fmt.Sprintf("unknown — RPC hooks/list falhou: %v", err)}
+	}
+	switch state {
+	case specs.PreconditionCurrent:
+		return Check{Name: "Trust de hooks do Codex", Status: "ok", Detail: "hook de projeto confiado (trusted_hash presente)"}
+	case specs.PreconditionInert:
+		return Check{Name: "Trust de hooks do Codex", Status: "fail", Detail: "hook de projeto sem trust — conceda via TUI interativa (/hooks) antes de orquestrar"}
+	default:
+		return Check{Name: "Trust de hooks do Codex", Status: "warn", Detail: "unknown — sem informacao de trust"}
+	}
 }

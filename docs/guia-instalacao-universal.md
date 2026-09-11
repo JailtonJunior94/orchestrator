@@ -7,7 +7,7 @@
 
 O `ai-spec-harness` instala-se em qualquer codebase em **menos de 30 segundos**, sem flags
 obrigatórias. O instalador detecta automaticamente quais agentes de IA estão presentes no ambiente
-(Claude, Codex, Gemini, Copilot) e materializa os assets de governança para cada um.
+(Claude, Codex, Copilot, OpenCode) e materializa os assets de governança para cada um.
 
 ---
 
@@ -18,8 +18,8 @@ obrigatórias. O instalador detecta automaticamente quais agentes de IA estão p
 - Pelo menos um agente de IA instalado no sistema:
   - **Claude Code**: `claude-agent-acp` ou `claude` no PATH
   - **Codex**: `codex-acp` ou `npx @zed-industries/codex-acp` disponível
-  - **Gemini CLI**: `gemini` no PATH
   - **GitHub Copilot**: `copilot` ou `gh copilot` no PATH
+  - **OpenCode**: `opencode` no PATH
 
 ---
 
@@ -71,12 +71,12 @@ O instalador:
 2. Materializa os assets de governança (skills, regras) para cada agente detectado.
 3. Cria o manifesto `.ai_spec_harness.json` com checksums dos arquivos instalados.
 
-Saída esperada (exemplo com Claude e Gemini detectados):
+Saída esperada (exemplo com Claude e OpenCode detectados):
 
 ```
-Agentes detectados: claude, gemini
+Agentes detectados: claude, opencode
 Instalando skills para claude... OK
-Instalando skills para gemini... OK
+Instalando skills para opencode... OK
 Manifesto atualizado: .ai_spec_harness.json
 ```
 
@@ -94,7 +94,7 @@ Resultado da verificacao:
   [claude]
     agent-governance                         current
     go-implementation                        current
-  [gemini]
+  [opencode]
     agent-governance                         current
     go-implementation                        current
 
@@ -115,7 +115,7 @@ Segunda execução converge para o mesmo estado — zero drift, 100% `current`.
 ## Escopo Global (`--global`)
 
 Instala os assets de governança em `~/.aispec/` e nos diretórios globais por-agente
-(`~/.claude/`, `~/.codex/`, `~/.gemini/`, `~/.config/github-copilot/`).
+(`~/.claude/`, `~/.codex/`, `~/.config/opencode/`, `~/.config/github-copilot/`).
 
 ```bash
 # Instalação global (afeta todos os projetos do usuário)
@@ -135,8 +135,8 @@ ai-spec-harness verify --global
 A flag `--tools` é **opcional**. Use-a para sobrescrever a detecção automática:
 
 ```bash
-# Instalar apenas para Claude e Gemini (override da detecção)
-ai-spec-harness install . --tools claude,gemini
+# Instalar apenas para Claude e OpenCode (override da detecção)
+ai-spec-harness install . --tools claude,opencode
 
 # Instalar para todas as ferramentas suportadas
 ai-spec-harness install . --tools all
@@ -245,7 +245,7 @@ configurados (ex.: `npx @zed-industries/codex-acp`). O fallback é **transparent
     go install github.com/JailtonJunior94/ai-spec-harness@latest
 
 - name: Bootstrap governance
-  run: ai-spec-harness install . --tools claude,gemini --mode copy
+  run: ai-spec-harness install . --tools claude,opencode --mode copy
 
 - name: Verify governance
   run: ai-spec-harness verify .

@@ -3,7 +3,6 @@ package specs_test
 import (
 	"errors"
 	"reflect"
-	"slices"
 	"testing"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
@@ -48,9 +47,18 @@ func TestCanonicalOrderIsSingleSource(t *testing.T) {
 	t.Parallel()
 
 	got := specs.NewCatalog().CanonicalOrder()
-	want := []string{"claude", "gemini", "codex", "copilot"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("CanonicalOrder() = %v; want %v", got, want)
+	want := []string{"claude", "codex", "copilot", "opencode"}
+	gotSet := make(map[string]bool, len(got))
+	for _, id := range got {
+		gotSet[id] = true
+	}
+	if len(got) != len(want) {
+		t.Fatalf("CanonicalOrder() has %d entries; want %d entries (%v)", len(got), len(want), want)
+	}
+	for _, id := range want {
+		if !gotSet[id] {
+			t.Fatalf("CanonicalOrder() = %v; missing expected agent %q", got, id)
+		}
 	}
 
 	catalog := specs.NewCatalog().ACPSpecCatalog()

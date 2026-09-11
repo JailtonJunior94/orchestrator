@@ -224,6 +224,19 @@
         "flags": {}
       },
       {
+        "name": "check-traceability",
+        "description": "Verifica a cadeia requisito -> tarefa -> criterio -> evidencia",
+        "longDescription": "Deriva o mapa de rastreabilidade a partir de prd.md, tasks.md e dos relatorios de execucao sob o diretorio informado, e reprova RF sem tarefa, tarefa sem relatorio ou criterio, e criterio sem linha de evidencia.",
+        "args": [
+          {
+            "name": "diretorio-prd",
+            "required": true,
+            "description": "Caminho do diretorio do PRD sob gestao SDD"
+          }
+        ],
+        "flags": {}
+      },
+      {
         "name": "doctor",
         "description": "Diagnostica problemas na instalacao de governanca",
         "longDescription": "Executa verificacoes de saude: repositorio git, symlinks, permissoes, manifesto.",
@@ -234,7 +247,14 @@
             "description": "Caminho do projeto alvo"
           }
         ],
-        "flags": {}
+        "flags": {
+          "codex-trust": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Verifica trust de hooks do Codex via RPC read-only hooks/list do codex app-server (executa binario, opt-in explicito)"
+          }
+        }
       },
       {
         "name": "hash",
@@ -295,7 +315,7 @@
           "tools": {
             "type": "string",
             "required": false,
-            "description": "Ferramentas de IA a instalar (ex: claude,copilot,codex); auto-detectado quando omitido"
+            "description": "Ferramentas de IA a instalar (ex: claude,copilot,codex,opencode); auto-detectado quando omitido"
           },
           "global": {
             "type": "bool",
@@ -352,6 +372,11 @@
             "default": false,
             "required": false,
             "description": "Permite escrever em .agents/skills quando symlink aponta para fora do projeto"
+          },
+          "model": {
+            "type": "string",
+            "required": false,
+            "description": "Modelo default do agente (OpenCode: mapeado para a chave 'model' do opencode.json)"
           }
         }
       },
@@ -656,7 +681,7 @@
           "tool": {
             "type": "string",
             "required": false,
-            "description": "Agente de IA: claude, codex, gemini, copilot (modo simples — mutuamente exclusivo com --executor-tool)"
+            "description": "Agente de IA: claude, codex, copilot, opencode (modo simples — mutuamente exclusivo com --executor-tool)"
           },
           "dry-run": {
             "type": "bool",
@@ -684,7 +709,7 @@
           "executor-tool": {
             "type": "string",
             "required": false,
-            "description": "Ferramenta do executor (modo avancado): claude, codex, gemini, copilot"
+            "description": "Ferramenta do executor (modo avancado): claude, codex, copilot, opencode"
           },
           "executor-model": {
             "type": "string",
@@ -694,7 +719,7 @@
           "reviewer-tool": {
             "type": "string",
             "required": false,
-            "description": "Ferramenta do reviewer (modo avancado): claude, codex, gemini, copilot"
+            "description": "Ferramenta do reviewer (modo avancado): claude, codex, copilot, opencode"
           },
           "reviewer-model": {
             "type": "string",
@@ -731,7 +756,7 @@
             "type": "string",
             "default": "legacy",
             "required": false,
-            "description": "Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, codex, copilot, gemini)"
+            "description": "Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, codex, copilot, opencode)"
           },
           "activity-timeout": {
             "type": "duration",
@@ -820,6 +845,12 @@
             "default": false,
             "required": false,
             "description": "Habilita auto-review opt-in (F5-Claude): após session end, spawna sessão de review com skill local + git diff. Parseia [HARD]/BLOQUEADO/CRÍTICO → ReviewStatus=blocked. HARD: default false; sessões filho têm auto-review=false forçado (anti-recursão). ADR-014 §D-07."
+          },
+          "max-bugfix-iterations": {
+            "type": "int",
+            "default": 5,
+            "required": false,
+            "description": "Teto de rodadas do Ciclo de Aprovacao (RF-35); minimo aceito 1. Configuravel tambem via arquivo de configuracao (workspace/global), respeitando a precedencia flags > workspace > global > defaults (ADR-016). Valor 0 ou negativo falha explicitamente quando a flag e passada; nunca e normalizado em silencio."
           }
         }
       },
@@ -1088,7 +1119,7 @@
           "tools": {
             "type": "string",
             "required": false,
-            "description": "Ferramentas a verificar: claude,gemini,codex,copilot ou all"
+            "description": "Ferramentas a verificar: claude,codex,copilot,opencode ou all"
           },
           "langs": {
             "type": "string",
@@ -1111,6 +1142,12 @@
             "default": false,
             "required": false,
             "description": "Adiciona resumo por-CLI (claude/codex/copilot) ao output"
+          },
+          "check-codex-trust": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Verifica trust de hooks do Codex via RPC read-only hooks/list do codex app-server (executa binario, opt-in explicito)"
           }
         }
       },
@@ -1127,13 +1164,13 @@
       },
       {
         "name": "wrapper",
-        "description": "Valida governanca e emite instrucao de invocacao para Codex/Gemini/Copilot",
+        "description": "Valida governanca e emite instrucao de invocacao para Codex/Copilot",
         "longDescription": "Verifica as condicoes de governanca antes de emitir instrucoes de invocacao.",
         "args": [
           {
             "name": "tool",
             "required": true,
-            "description": "Ferramenta de IA alvo (codex, gemini, copilot)"
+            "description": "Ferramenta de IA alvo (codex, copilot)"
           },
           {
             "name": "skill",

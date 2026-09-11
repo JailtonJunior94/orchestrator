@@ -15,10 +15,8 @@ common_aliases:
   str_replace_editor: edit
 
 # inherit_common: lista de drivers que herdam common_aliases sem overrides.
-# Gemini permanece na lista para retrocompatibilidade; tabela explícita abaixo (RP-04)
-# prevalece sobre herança quando presente (resolveInherit não sobrescreve entrada explícita).
 inherit_common:
-  - gemini
+  - opencode
 
 aliases:
   claude:
@@ -36,15 +34,6 @@ aliases:
   copilot:
     run:   bash
     fetch: web_search
-
-  gemini:
-    # RP-04: tabela explícita — não depende apenas de inherit_common.
-    # Materializa os aliases herdados de common_aliases como entradas explícitas.
-    # resolveInherit não sobrescreve esta entrada (entrada explícita prevalece).
-    bash:               bash
-    read_file:          read
-    write_file:         write
-    str_replace_editor: edit
 
   cursor:
     terminal:      bash
@@ -67,11 +56,6 @@ input_mappings:
     # O campo de input já usa "command" nativamente — no-op verificado.
     run:
       command: command  # no-op verificado: Copilot já usa "command" como chave canônica
-  gemini:
-    # RP-01: input_mappings para Gemini.
-    # Gemini expõe tool "bash" com campo "command" — alinhado ao canônico.
-    bash:
-      command: command  # no-op verificado: Gemini já usa "command" como chave canônica
   cursor:
     read_file:
       startLineNumberBaseOne: start_line

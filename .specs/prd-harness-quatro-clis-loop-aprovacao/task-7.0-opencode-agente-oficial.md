@@ -61,45 +61,45 @@ nenhum teste falhe. Junto entra o **gate de COBERTURA** — não de não-vazio.
 
 ## Subtarefas
 
-- [ ] 7.1 Criar a spec do OpenCode em `internal/runtime/specs/opencode.go` (planejado), com `FixedArgs`
+- [x] 7.1 Criar a spec do OpenCode em `internal/runtime/specs/opencode.go` (planejado), com `FixedArgs`
       iniciando pelo subcomando `acp`.
-- [ ] 7.2 **Travar a invariante de prefixo posicional** por validação de formato: nenhum item de
+- [x] 7.2 **Travar a invariante de prefixo posicional** por validação de formato: nenhum item de
       `FixedArgs` pode aparecer depois de um argumento iniciado por hífen. A validação falha de modo
       visível se a forma de invocação mudar a montante.
-- [ ] 7.3 Declarar o **launcher de fallback** via gerenciador de pacotes com **versão pinada em
+- [x] 7.3 Declarar o **launcher de fallback** via gerenciador de pacotes com **versão pinada em
       constante**; adicionar gate que reprova a string `@latest` em qualquer launcher.
-- [ ] 7.4 Registrar o OpenCode no registro único criado em 6.0, com os três pontos canônicos cobertos
+- [x] 7.4 Registrar o OpenCode no registro único criado em 6.0, com os três pontos canônicos cobertos
       (o construtor de `Enforcement` recusa cobertura incompleta).
-- [ ] 7.5 Implementar a **detecção de primeira classe** pelos três sinais (binário no `PATH`, diretório
+- [x] 7.5 Implementar a **detecção de primeira classe** pelos três sinais (binário no `PATH`, diretório
       de configuração do usuário, sinal de projeto), sem executar binário (RF-26, tarefa 6.0).
-- [ ] 7.6 Remover qualquer política de detecção **opt-in específica por agente** que ainda exista, de
+- [x] 7.6 Remover qualquer política de detecção **opt-in específica por agente** que ainda exista, de
       modo que nenhum agente seja cidadão de segunda classe da própria detecção.
-- [ ] 7.7 Implementar a instalação de **pegada mínima**: merge idempotente que escreve **apenas** o bloco
+- [x] 7.7 Implementar a instalação de **pegada mínima**: merge idempotente que escreve **apenas** o bloco
       `permission` no `opencode.json`, preservando `$schema` e todos os campos preexistentes e **nunca**
       removendo configuração do usuário.
-- [ ] 7.8 **NÃO escrever** `skills.paths` nem `instructions`, e adicionar teste que **falha** se qualquer
+- [x] 7.8 **NÃO escrever** `skills.paths` nem `instructions`, e adicionar teste que **falha** se qualquer
       uma das duas chaves for escrita pelo instalador — a regressão aqui é silenciosa e cara
       (duplicação da árvore de skills).
-- [ ] 7.9 Depositar o plugin de governança em `.opencode/plugin/` (auto-descoberto, sem entrada de
+- [x] 7.9 Depositar o plugin de governança em `.opencode/plugin/` (auto-descoberto, sem entrada de
       configuração). O **conteúdo** do plugin — bloqueio por exceção — é da tarefa 8.0; aqui apenas o
       caminho de depósito e a idempotência.
-- [ ] 7.10 Instalar os **validadores canônicos** pelo mesmo caminho tool-neutro dos demais agentes.
-- [ ] 7.11 Implementar a **tabela versionada de janela por modelo**, com resolução por casamento exato,
+- [x] 7.10 Instalar os **validadores canônicos** pelo mesmo caminho tool-neutro dos demais agentes.
+- [x] 7.11 Implementar a **tabela versionada de janela por modelo**, com resolução por casamento exato,
       depois por maior prefixo (cobrindo sufixos de data em identificadores de modelo), e **fallback
       conservador** em qualquer caminho não resolvido.
-- [ ] 7.12 Tornar a função de resolução de janela **opcional na spec**: ausente, o comportamento dos três
+- [x] 7.12 Tornar a função de resolução de janela **opcional na spec**: ausente, o comportamento dos três
       agentes atuais é byte-idêntico ao de hoje.
-- [ ] 7.13 Mapear a flag de modelo do harness para a chave `model` do `opencode.json`, sem presumir
+- [x] 7.13 Mapear a flag de modelo do harness para a chave `model` do `opencode.json`, sem presumir
       nenhuma flag do subcomando (V-02).
-- [ ] 7.14 **Assumir as células de ocupante único**: entrada do OpenCode em
+- [x] 7.14 **Assumir as células de ocupante único**: entrada do OpenCode em
       `internal/metrics/metrics.go:213-215` (`ToolBudgetsLarge`) e em `inherit_common` nos **dois**
       arquivos de regras de normalização (`.agents/normalization-rules.yaml:20-21` e
       `internal/runtime/events/normalization-rules.yaml:20-21`), mantendo o espelhamento verificado pelo
       gate de sincronia.
-- [ ] 7.15 Criar o **gate de COBERTURA** (não de não-vazio): todo agente cuja janela resolvida for grande
+- [x] 7.15 Criar o **gate de COBERTURA** (não de não-vazio): todo agente cuja janela resolvida for grande
       precisa de entrada em `ToolBudgetsLarge`, e nenhuma chave órfã pode existir. O gate força decisão
       explícita em vez de aceitar valor de fachada.
-- [ ] 7.16 Completar a **paridade observacional**: eventos, renderização de tool-calls, relatório de
+- [x] 7.16 Completar a **paridade observacional**: eventos, renderização de tool-calls, relatório de
       execução, watchdog, telemetria opt-in e tabela de alias de normalização própria do OpenCode.
 
 ## Detalhes de Implementação
@@ -170,7 +170,7 @@ Nenhuma além das auto-carregadas (governance + linguagem).
 
 ## Testes da Tarefa
 
-- [ ] Testes unitários
+- [x] Testes unitários
   - Construção do argv para as duas formas (flag e subcomando), com suíte em tabela.
   - Validação de formato de `FixedArgs`: prefixo posicional válido aceito; item após hífen recusado.
   - Pinagem de versão do launcher de fallback; ausência de `@latest`.
@@ -179,7 +179,7 @@ Nenhuma além das auto-carregadas (governance + linguagem).
     de `skills.paths` e `instructions`.
   - Resolução de janela: exato, maior prefixo, desconhecido, vazio; fallback nunca superestima.
   - Gate de cobertura de orçamento: agente sem entrada e chave órfã.
-- [ ] Testes de integração
+- [x] Testes de integração
   - `install` + `verify` sobre repositório temporário com OpenCode: estado `current` por skill e por
     agente; reexecução converge para o mesmo estado.
   - Paridade de validadores canônicos entre projeto somente-OpenCode e somente-Claude.

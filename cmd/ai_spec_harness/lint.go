@@ -19,7 +19,7 @@ func newLintCmd() *cobra.Command {
 		Use:   "lint [path]",
 		Short: "Verifica governança em arquivos gerados",
 		Long: `Detecta problemas de governança no projeto:
-  - Placeholders não renderizados {{ em AGENTS.md, CLAUDE.md, GEMINI.md, .codex/config.toml, copilot-instructions.md
+  - Placeholders não renderizados {{ em AGENTS.md, CLAUDE.md, .codex/config.toml, copilot-instructions.md
   - Versão de governance-schema em AGENTS.md divergente da versão atual do CLI
   - bug-schema.json inválido
   - SKILL.md com frontmatter inválido

@@ -80,8 +80,8 @@ func (s *ParitySuite) TestParity_ClaudeOnly() {
 	runAllInvariants(s.T(), []skills.Tool{skills.ToolClaude}, "full")
 }
 
-func (s *ParitySuite) TestParity_GeminiOnly() {
-	runAllInvariants(s.T(), []skills.Tool{skills.ToolGemini}, "full")
+func (s *ParitySuite) TestParity_OpenCodeOnly() {
+	runAllInvariants(s.T(), []skills.Tool{skills.ToolOpenCode}, "full")
 }
 
 func (s *ParitySuite) TestParity_CopilotOnly() {
@@ -92,8 +92,8 @@ func (s *ParitySuite) TestParity_CodexOnly() {
 	runAllInvariants(s.T(), []skills.Tool{skills.ToolCodex}, "full")
 }
 
-func (s *ParitySuite) TestParity_ClaudeAndGemini() {
-	runAllInvariants(s.T(), []skills.Tool{skills.ToolClaude, skills.ToolGemini}, "full")
+func (s *ParitySuite) TestParity_ClaudeAndOpenCode() {
+	runAllInvariants(s.T(), []skills.Tool{skills.ToolClaude, skills.ToolOpenCode}, "full")
 }
 
 func (s *ParitySuite) TestParity_ClaudeAndCodex() {
@@ -190,7 +190,7 @@ func (s *ParitySuite) TestParity_AgentsMD_Compact_StripsVerboseSections() {
 // detecta quando um artefato nao referencia o caminho canonico .agents/skills/.
 // Esse teste confirma que o harness identifica drift, nao apenas ausencia de arquivo.
 func (s *ParitySuite) TestParity_DriftDetection_MissingCanonicalPath() {
-	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolClaude, skills.ToolGemini}, nil, "full")
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolClaude, skills.ToolCodex}, nil, "full")
 	if err != nil {
 		s.T().Fatalf("Generate: %v", err)
 	}
@@ -206,7 +206,7 @@ func (s *ParitySuite) TestParity_DriftDetection_MissingCanonicalPath() {
 
 	x01 := results[0]
 	if x01.Skipped {
-		s.T().Fatal("X01 nao deveria ser skipped para Claude+Gemini")
+		s.T().Fatal("X01 nao deveria ser skipped para Claude+Codex")
 	}
 	if x01.Result.OK {
 		s.T().Error("X01 deveria detectar drift quando CLAUDE.md nao referencia '.agents/skills/'")
@@ -219,21 +219,21 @@ func (s *ParitySuite) TestParity_DriftDetection_MissingCanonicalPath() {
 // TestParity_DriftDetection_MissingArtifact verifica que o invariante X01
 // reporta falha quando um artefato esperado esta ausente.
 func (s *ParitySuite) TestParity_DriftDetection_MissingArtifact() {
-	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolGemini}, nil, "full")
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolCodex}, nil, "full")
 	if err != nil {
 		s.T().Fatalf("Generate: %v", err)
 	}
 
-	// Remover GEMINI.md para simular artefato ausente
-	geminiPath := filepath.Join(testProjectDir, "GEMINI.md")
-	delete(snap.Files, geminiPath)
+	// Remover config.toml para simular artefato ausente
+	codexPath := filepath.Join(testProjectDir, ".codex", "config.toml")
+	delete(snap.Files, codexPath)
 
 	results := NewChecker().Run(snap, []*Invariant{_invX01CrossToolCanonicalPath})
 	if len(results) == 0 {
 		s.T().Fatal("Run retornou zero resultados")
 	}
 	if results[0].Result.OK {
-		s.T().Error("X01 deveria detectar artefato ausente para Gemini")
+		s.T().Error("X01 deveria detectar artefato ausente para Codex")
 	}
 }
 
@@ -243,31 +243,31 @@ func (s *ParitySuite) TestParity_DriftDetection_MissingArtifact() {
 // invariantes BestEffort sao verificados e reportados, mas nao classificados como
 // falhas criticas. O teste garante que o harness nao confunde best-effort com common.
 func (s *ParitySuite) TestParity_BestEffort_DoesNotBlockOnMissingDoc() {
-	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolGemini}, nil, "full")
+	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolCopilot}, nil, "full")
 	if err != nil {
 		s.T().Fatalf("Generate: %v", err)
 	}
 
-	// Remover secao de best-effort do GEMINI.md (simula geracao incompleta)
-	geminiPath := filepath.Join(testProjectDir, "GEMINI.md")
-	original := string(snap.Files[geminiPath])
+	// Remover secao de best-effort de copilot-instructions.md (simula geracao incompleta)
+	copilotPath := filepath.Join(testProjectDir, ".github", "copilot-instructions.md")
+	original := string(snap.Files[copilotPath])
 	// Truncar no inicio da secao de orientacoes especificas
 	if idx := strings.Index(original, "## Orientacoes Especificas"); idx > 0 {
-		snap.Files[geminiPath] = []byte(original[:idx])
+		snap.Files[copilotPath] = []byte(original[:idx])
 	}
 
-	results := NewChecker().Run(snap, []*Invariant{_invGM02GeminiMDBestEffortDoc})
+	results := NewChecker().Run(snap, []*Invariant{_invCP02CopilotMDBestEffortDoc})
 	if len(results) == 0 {
 		s.T().Fatal("Run retornou zero resultados")
 	}
 
 	cr := results[0]
 	if cr.Skipped {
-		s.T().Fatal("GM02 nao deveria ser skipped para Gemini")
+		s.T().Fatal("CP02 nao deveria ser skipped para Copilot")
 	}
 	// Confirmar que o nivel e BestEffort (nao Common)
 	if cr.Invariant.Level != BestEffort {
-		s.T().Errorf("GM02 deveria ter nivel BestEffort, got: %s", cr.Invariant.Level)
+		s.T().Errorf("CP02 deveria ter nivel BestEffort, got: %s", cr.Invariant.Level)
 	}
 	// O resultado pode ser falha (a secao foi removida), mas isso nao deve causar s.T().Error no harness
 	// O teste de integracao (runAllInvariants) usa s.T().Log para BestEffort, nunca s.T().Error
@@ -336,40 +336,6 @@ func (s *ParitySuite) TestParity_NewArtifacts_Claude_Absent() {
 	}
 }
 
-func (s *ParitySuite) TestParity_NewArtifacts_Gemini_HookPreload_Present() {
-	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolGemini}, nil, "full")
-	if err != nil {
-		s.T().Fatalf("Generate: %v", err)
-	}
-	r := _invGM03GeminiHookPreloadPresent.Check(snap)
-	if !r.OK {
-		s.T().Errorf("[GM03] deveria passar com hook presente: %s", r.Reason)
-	}
-	if _invGM03GeminiHookPreloadPresent.Level != BestEffort {
-		s.T().Errorf("[GM03] deveria ter nivel BestEffort, got: %s", _invGM03GeminiHookPreloadPresent.Level)
-	}
-}
-
-func (s *ParitySuite) TestParity_NewArtifacts_Gemini_HookPreload_Absent() {
-	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolGemini}, nil, "full")
-	if err != nil {
-		s.T().Fatalf("Generate: %v", err)
-	}
-	absent := Snapshot{
-		Tools:      snap.Tools,
-		ProjectDir: snap.ProjectDir,
-		Files:      cloneFiles(snap.Files),
-		Dirs:       snap.Dirs,
-		Links:      snap.Links,
-	}
-	delete(absent.Files, filepath.Join(testProjectDir, ".gemini/hooks/validate-preload.sh"))
-
-	r := _invGM03GeminiHookPreloadPresent.Check(absent)
-	if r.OK {
-		s.T().Error("[GM03] deveria falhar quando hook esta ausente")
-	}
-}
-
 func (s *ParitySuite) TestParity_NewArtifacts_DepthGuard_Present() {
 	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
 	if err != nil {
@@ -407,17 +373,17 @@ func (s *ParitySuite) TestParity_NewArtifacts_DepthGuard_Absent() {
 	}
 }
 
-func (s *ParitySuite) TestParity_NewArtifacts_Gemini_Skipped_WhenClaudeOnly() {
+func (s *ParitySuite) TestParity_NewArtifacts_Copilot_Skipped_WhenClaudeOnly() {
 	snap, err := NewChecker().Generate(testProjectDir, []skills.Tool{skills.ToolClaude}, nil, "full")
 	if err != nil {
 		s.T().Fatalf("Generate: %v", err)
 	}
-	results := NewChecker().Run(snap, []*Invariant{_invGM03GeminiHookPreloadPresent})
+	results := NewChecker().Run(snap, []*Invariant{_invCP02CopilotMDBestEffortDoc})
 	if len(results) == 0 {
 		s.T().Fatal("Run retornou zero resultados")
 	}
 	if !results[0].Skipped {
-		s.T().Error("[GM03] deveria ser skipped em instalacao Claude-only")
+		s.T().Error("[CP02] deveria ser skipped em instalacao Claude-only")
 	}
 }
 
@@ -585,9 +551,8 @@ func (s *ParitySuite) TestParity_SkippedInvariants_ClaudeOnly() {
 
 	results := NewChecker().Run(snap, NewChecker().Invariants())
 
-	// Invariantes de Gemini, Copilot e Codex devem ser skipped
+	// Invariantes de Copilot e Codex devem ser skipped
 	expectedSkipped := map[string]bool{
-		"GM01": true, "GM02": true, "GM03": true,
 		"CP01": true, "CP02": true,
 		"CD01": true, "CD02": true,
 	}
@@ -616,10 +581,10 @@ func (s *ParitySuite) TestParity_SkippedInvariants_ClaudeOnly() {
 
 // ── Matriz 4×4 table-driven (RF-18) ────────────────────────────────────────
 
-// allToolSubsets retorna todas as combinacoes nao-vazias das 4 CLIs.
-// 4 tools => 2^4 - 1 = 15 subconjuntos + fullset = 16 combinacoes.
+// allToolSubsets retorna todas as combinacoes nao-vazias das CLIs canonicas.
+// n tools => 2^n - 1 subconjuntos.
 func allToolSubsets() [][]skills.Tool {
-	all := skills.AllTools // [claude, gemini, codex, copilot]
+	all := skills.AllTools
 	n := len(all)
 	sets := make([][]skills.Tool, 0, 1<<n)
 	for mask := 1; mask < (1 << n); mask++ {
@@ -678,15 +643,14 @@ func (s *ParitySuite) TestParity_Matrix4x4_CodexSubsets_CompactProfile() {
 	}
 }
 
-// TestParity_Matrix4x4_InvariantCoverage verifica que todos os 4 grupos de
-// invariantes (C*, CL*, GM*, CP*, CD*, X*, FB*) estao representados na suite.
+// TestParity_Matrix4x4_InvariantCoverage verifica que todos os grupos de
+// invariantes (C*, CL*, CP*, CD*, X*, FB*) estao representados na suite.
 func (s *ParitySuite) TestParity_Matrix4x4_InvariantCoverage() {
 	invariants := NewChecker().Invariants()
 
 	prefixes := map[string]bool{
 		"C":   false, // Common (C01-C04)
 		"CL":  false, // Claude
-		"GM":  false, // Gemini
 		"CP":  false, // Copilot
 		"CD":  false, // Codex
 		"X":   false, // Cross-tool
@@ -759,11 +723,11 @@ func (s *ParitySuite) TestParity_FallbackArgvParity_AllSpecs() {
 			wantArgs: []string{"--yes", specs.CodexNpmPackage + "@" + specs.CodexNpmVersion},
 		},
 		{
-			name:     "gemini_fallback_parity",
-			spec:     specs.NewCatalog().Gemini(),
+			name:     "opencode_fallback_parity",
+			spec:     specs.NewCatalog().OpenCode(),
 			wantKind: "binary",
 			wantCmd:  npxPath,
-			wantArgs: []string{"--yes", specs.GeminiNpmPackage + "@" + specs.GeminiNpmVersion, "--acp"},
+			wantArgs: []string{"--yes", specs.OpenCodeNpmPackage + "@" + specs.OpenCodeNpmVersion, "acp"},
 		},
 		{
 			name:     "copilot_fallback_parity",
@@ -815,7 +779,7 @@ func (s *ParitySuite) TestParity_FallbackArgvParity_DirectBinaryWins() {
 	}{
 		{"claude_direct", specs.NewCatalog().Claude(), "claude-agent-acp", "/usr/local/bin/claude-agent-acp"},
 		{"codex_direct", specs.NewCatalog().Codex(), "codex-acp", "/usr/local/bin/codex-acp"},
-		{"gemini_direct", specs.NewCatalog().Gemini(), "gemini", "/usr/local/bin/gemini"},
+		{"opencode_direct", specs.NewCatalog().OpenCode(), "opencode", "/usr/local/bin/opencode"},
 		{"copilot_direct", specs.NewCatalog().Copilot(), "copilot", "/usr/local/bin/copilot"},
 	}
 
@@ -851,7 +815,7 @@ func (s *ParitySuite) TestParity_FallbackArgvParity_NoBinaryNoFallback() {
 	allSpecs := []specs.Spec{specs.NewCatalog().
 		Claude(), specs.NewCatalog().
 		Codex(), specs.NewCatalog().
-		Gemini(), specs.NewCatalog().
+		OpenCode(), specs.NewCatalog().
 		Copilot(),
 	}
 

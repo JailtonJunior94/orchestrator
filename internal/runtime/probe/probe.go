@@ -75,7 +75,7 @@ func (c *Catalog) EnsureAvailable(ctx context.Context, spec specs.Spec, look Loo
 // materializado via NewBinaryLauncher(path, fb.FixedArgs...) sem semântica npx-only.
 func (c *Catalog) resolve(spec specs.Spec, look LookPather) (specs.Launcher, error) {
 	// Passo 1: binário canônico no PATH.
-	// FixedArgs do Spec (ex: ["--acp"] para Copilot/Gemini) são passados ao BinaryLauncher para
+	// FixedArgs do Spec (ex: ["--acp"] para Copilot, ["acp"] para OpenCode) são passados ao BinaryLauncher para
 	// garantir que o binário seja invocado com os flags corretos.
 	if path, err := look.LookPath(spec.Command); err == nil {
 		return specs.NewBinaryLauncher(path, spec.FixedArgs...), nil

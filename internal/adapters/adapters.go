@@ -26,11 +26,11 @@ var ProcessualSkills = []string{
 	"review", "execute-task", "create-tasks", "create-technical-specification",
 }
 
-// _executeTaskYAMLContract eh o bloco YAML literal que TODO subagent task-executor
+// executeTaskYAMLContract eh o bloco YAML literal que TODO subagent task-executor
 // DEVE retornar. Mantido aqui (em vez de embutido na instruction) para garantir
-// paridade textual entre Claude/Codex/Gemini/Copilot — execute-all-tasks valida
+// paridade textual entre Claude/Codex/Copilot/OpenCode — execute-all-tasks valida
 // formato canonico em cadeia de 4 passos (status, report_path, summary).
-const _executeTaskYAMLContract = "status: done | blocked | failed | needs_input\nreport_path: .specs/prd-<slug>/<id>_execution_report.md\nsummary: <1 linha>"
+const executeTaskYAMLContract = "status: done | blocked | failed | needs_input\nreport_path: .specs/prd-<slug>/<id>_execution_report.md\nsummary: <1 linha>"
 
 type skillMeta struct {
 	claudeName  string
@@ -122,7 +122,7 @@ Mantenha este subagente estreito: %s.
 `, meta.claudeName, shortDesc, skill, skill, meta.instruction)
 
 		if skill == "execute-task" {
-			content += "\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n```yaml\n" + _executeTaskYAMLContract + "\n```\n"
+			content += "\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n```yaml\n" + executeTaskYAMLContract + "\n```\n"
 		}
 
 		_ = g.fs.WriteFile(filepath.Join(agentsDir, meta.claudeFile), []byte(content))
@@ -168,61 +168,13 @@ Mantenha este agente estreito: %s.
 `, meta.githubName, shortDesc, skill, meta.instruction)
 
 		if skill == "execute-task" {
-			content += "\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n```yaml\n" + _executeTaskYAMLContract + "\n```\n"
+			content += "\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n```yaml\n" + executeTaskYAMLContract + "\n```\n"
 		}
 
 		_ = g.fs.WriteFile(filepath.Join(agentsDir, meta.githubFile), []byte(content))
 		count++
 	}
 	g.printer.Debug("Adaptadores GitHub gerados: %d", count)
-}
-
-// GenerateGeminiAgents cria definicoes de subagent em .gemini/agents/<name>.md
-// espelhando ProcessualSkills + skillRegistry. Mantem paridade com Claude/Copilot.
-func (g *Generator) GenerateGeminiAgents(sourceDir, projectDir string) {
-	agentsDir := filepath.Join(projectDir, ".gemini", "agents")
-	_ = g.fs.MkdirAll(agentsDir)
-	count := 0
-
-	for _, skill := range ProcessualSkills {
-		meta, ok := _skillRegistry[skill]
-		if !ok {
-			continue
-		}
-
-		skillFile := filepath.Join(sourceDir, ".agents", "skills", skill, "SKILL.md")
-		if !g.fs.Exists(skillFile) {
-			continue
-		}
-
-		data, err := g.fs.ReadFile(skillFile)
-		if err != nil {
-			continue
-		}
-
-		fm := skills.NewCatalog().ParseFrontmatter(data)
-		if fm.Description == "" {
-			continue
-		}
-
-		shortDesc := NewHelper().truncateAtSentence(fm.Description, 120)
-		content := fmt.Sprintf(`---
-name: %s
-description: %s
----
-
-Use a skill canonica `+"`.agents/skills/%s/SKILL.md`"+` como processo de execucao desta tarefa.
-Mantenha este subagente estreito: %s.
-`, meta.claudeName, shortDesc, skill, meta.instruction)
-
-		if skill == "execute-task" {
-			content += "\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n```yaml\n" + _executeTaskYAMLContract + "\n```\n"
-		}
-
-		_ = g.fs.WriteFile(filepath.Join(agentsDir, meta.claudeName+".md"), []byte(content))
-		count++
-	}
-	g.printer.Debug("Adaptadores Gemini agents gerados: %d", count)
 }
 
 // GenerateCodexAgents cria definicoes de subagent em .codex/agents/<name>.toml
@@ -258,7 +210,7 @@ func (g *Generator) GenerateCodexAgents(sourceDir, projectDir string) {
 Mantenha este subagente estreito: %s.`, skill, meta.instruction)
 
 		if skill == "execute-task" {
-			instructions += "\n\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n" + _executeTaskYAMLContract
+			instructions += "\n\nAo concluir, retorne EXCLUSIVAMENTE um bloco YAML (sem diffs, codigo ou logs):\n\n" + executeTaskYAMLContract
 		}
 
 		content := fmt.Sprintf(`name = %q
@@ -277,83 +229,6 @@ enabled = true
 		count++
 	}
 	g.printer.Debug("Adaptadores Codex agents gerados: %d", count)
-}
-
-// _reviewLoopSkills are skills that include a validation loop and need an explicit reminder in the prompt.
-var _reviewLoopSkills = map[string]bool{
-	"execute-task": true,
-	"refactor":     true,
-}
-
-func (g *Generator) GenerateGemini(sourceDir, projectDir string) {
-	cmdDir := filepath.Join(projectDir, ".gemini", "commands")
-	_ = g.fs.MkdirAll(cmdDir)
-	count := 0
-
-	skillsDir := filepath.Join(sourceDir, ".agents", "skills")
-	entries, err := g.fs.ReadDir(skillsDir)
-	if err != nil {
-		return
-	}
-
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-		skillName := entry.Name()
-		if skillName == "agent-governance" {
-			continue
-		}
-
-		skillFile := filepath.Join(skillsDir, skillName, "SKILL.md")
-		if !g.fs.Exists(skillFile) {
-			continue
-		}
-
-		data, err := g.fs.ReadFile(skillFile)
-		if err != nil {
-			continue
-		}
-
-		fm := skills.NewCatalog().ParseFrontmatter(data)
-		if fm.Description == "" {
-			continue
-		}
-
-		shortDesc := NewHelper().truncateAtSentence(fm.Description, 120)
-		prompt := g.buildGeminiPrompt(skillsDir, skillName)
-		content := fmt.Sprintf("description = %q\nprompt = \"\"\"\n%s\n\"\"\"\n", shortDesc, prompt)
-		legacyPath := filepath.Join(cmdDir, skillName+".toml")
-		if g.fs.Exists(legacyPath) {
-			_ = g.fs.Remove(legacyPath)
-		}
-		_ = g.fs.WriteFile(filepath.Join(cmdDir, NewHelper().geminiCommandFileName(skillName)), []byte(content))
-		count++
-	}
-	g.printer.Debug("Gemini commands gerados: %d", count)
-}
-
-func (r1 *Helper) geminiCommandFileName(skillName string) string {
-	return "workspace." + skillName + ".toml"
-}
-
-func (g *Generator) buildGeminiPrompt(skillsDir, skillName string) string {
-	var sb strings.Builder
-	fmt.Fprintf(&sb, "Use `.agents/skills/%s/SKILL.md` como fluxo canonico desta tarefa.\n", skillName)
-
-	for _, a := range g.collectSkillAssets(skillsDir, skillName) {
-		fmt.Fprintf(&sb, "Carregue `%s` antes de iniciar.\n", a)
-	}
-
-	sb.WriteString("Leia os assets e references sob demanda conforme descrito no SKILL.md.\n")
-	sb.WriteString("Nao invente um processo paralelo neste comando.")
-
-	if _reviewLoopSkills[skillName] {
-		sb.WriteString("\n\nAo concluir, rode validacao proporcional e retorne o relatorio com estado final.")
-	}
-
-	sb.WriteString("\n\nAplicar a habilidade a esta solicitacao:\n{{args}}")
-	return sb.String()
 }
 
 func (g *Generator) collectSkillAssets(skillsDir, skillName string) []string {

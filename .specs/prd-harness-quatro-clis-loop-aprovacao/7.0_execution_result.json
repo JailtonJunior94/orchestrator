@@ -1,0 +1,54 @@
+{
+  "schema_version": 2,
+  "run_id": "task-7.0-opencode-agente-oficial-2026-09-11",
+  "task_id": "7.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
+  "patch_sha256": "6d931a3b9f10f1e49013dbdcf6079328b62df2a73653e217dddee864e7ff4d5f",
+  "patch_ref": "evidence/task-7.0/7.0.patch",
+  "final_state_sha256": "ed0f86744352221d571d9e02faa015da2b4fdb01989cfe88e8150fd766031b37",
+  "coverage_regression": false,
+  "review_verdict": "approved",
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "2ebb056affb74a160bfc776d81b159c4233332d4be36e945425f43292398abcb"
+    }
+  ],
+  "criteria": [
+    {"id": "build-vet-test-green", "evidence_ref": "evidence/task-7.0/review.md"},
+    {"id": "argv-subcommand-before-flags", "evidence_ref": "evidence/task-7.0/review.md"},
+    {"id": "fixed-args-format-validation-rejects", "evidence_ref": "evidence/task-7.0/review.md"},
+    {"id": "fallback-launcher-pinned-version-gate", "evidence_ref": "evidence/task-7.0/review.md"},
+    {"id": "install-detects-opencode-three-signals", "evidence_ref": "evidence/task-7.0/review.md"},
+    {"id": "no-opt-in-detection-policy-remains", "evidence_ref": "evidence/task-7.0/review.md"},
+    {"id": "opencode-json-only-permission-block", "evidence_ref": "evidence/task-7.0/review.md"},
+    {"id": "installer-never-writes-skills-paths-or-instructions", "evidence_ref": "evidence/task-7.0/review.md"},
+    {"id": "reinstall-idempotent", "evidence_ref": "evidence/task-7.0/review.md"},
+    {"id": "plugin-deposited-no-config-reference", "evidence_ref": "evidence/task-7.0/review.md"},
+    {"id": "canonical-validators-parity-opencode-vs-claude", "evidence_ref": "evidence/task-7.0/review.md"},
+    {"id": "window-resolution-exact-prefix-unknown-empty", "evidence_ref": "evidence/task-7.0/review.md"},
+    {"id": "tool-budgets-large-coverage-gate", "evidence_ref": "evidence/task-7.0/review.md"},
+    {"id": "inherit-common-both-normalization-files-sync-gate", "evidence_ref": "evidence/task-7.0/review.md"},
+    {"id": "observational-parity-events-toolcalls-report", "evidence_ref": "evidence/task-7.0/review.md"},
+    {"id": "non-regression-argv-window-existing-agents", "evidence_ref": "evidence/task-7.0/review.md"}
+  ],
+  "evidence": [
+    "evidence/task-7.0/build.log",
+    "evidence/task-7.0/vet.log",
+    "evidence/task-7.0/test.log",
+    "evidence/task-7.0/review.md"
+  ]
+}

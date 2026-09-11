@@ -20,13 +20,13 @@ obrigatória. Fecha o estágio de paridade — o gate de não-regressão mais im
 
 ## Subtarefas
 
-- [ ] 4.8.1 Teste de paridade: mesmo cenário de entrada produz veredito, motivo canônico e estrutura
+- [x] 4.8.1 Teste de paridade: mesmo cenário de entrada produz veredito, motivo canônico e estrutura
       de evidência idênticos em `ACPRunner`, `Service.Execute` e `RunLoop`.
-- [ ] 4.8.2 Cinco fluxos E2E com o servidor ACP falso in-process já existente no repositório:
+- [x] 4.8.2 Cinco fluxos E2E com o servidor ACP falso in-process já existente no repositório:
       (a) aprova na primeira rodada; (b) aprova na terceira após duas correções; (c) aborta por
       fingerprint repetida **sem gastar a rodada seguinte**; (d) aborta por ausência de mudança;
       (e) remediação sem diff.
-- [ ] 4.8.3 Teste dedicado: `APPROVED_WITH_REMARKS` realimenta a correção ponta a ponta.
+- [x] 4.8.3 Teste dedicado: `APPROVED_WITH_REMARKS` realimenta a correção ponta a ponta.
 
 ## Detalhes de Implementação
 
@@ -57,8 +57,8 @@ Nenhuma além das auto-carregadas (governance + linguagem).
 
 ## Testes da Tarefa
 
-- [ ] Testes unitários
-- [ ] Testes de integração
+- [x] Testes unitários
+- [x] Testes de integração
 
 Cobertura obrigatória:
 

@@ -82,6 +82,30 @@ func TestBuildRuntimeConfig_NumericosMapeados1a1(t *testing.T) {
 	}
 }
 
+func TestBuildRuntimeConfig_MaxBugfixIterationsMapeado1a1(t *testing.T) {
+	t.Parallel()
+
+	rc, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{MaxBugfixIterations: 7})
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+	if rc.MaxBugfixIterations != 7 {
+		t.Errorf("MaxBugfixIterations = %d, want 7", rc.MaxBugfixIterations)
+	}
+}
+
+func TestBuildRuntimeConfig_MaxBugfixIterationsZeroValuePreservaF1(t *testing.T) {
+	t.Parallel()
+
+	rc, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{})
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+	if rc.MaxBugfixIterations != 0 {
+		t.Errorf("MaxBugfixIterations zero-value = %d, want 0 (F1 — sem normalização silenciosa)", rc.MaxBugfixIterations)
+	}
+}
+
 // TestBuildRuntimeConfig_RegressaoF1 verifica que zero-value preserva comportamento F1.
 // Concurrent e BatchSize são normalizados para 1 por ApplyDefaults (mínimo funcional).
 func TestBuildRuntimeConfig_RegressaoF1(t *testing.T) {
@@ -223,7 +247,7 @@ func TestBuildRuntimeConfig_ParidadeCLIs(t *testing.T) {
 	}
 
 	// Simula construção para cada uma das 4 CLIs a partir da mesma config resolvida.
-	drivers := []string{"claude", "codex", "copilot", "gemini"}
+	drivers := []string{"claude", "codex", "copilot", "opencode"}
 	for _, driver := range drivers {
 		t.Run(driver, func(t *testing.T) {
 			t.Parallel()

@@ -36,7 +36,8 @@ type Options struct {
 	ExecutorFallbackModel  string // --fallback-model nativo do executor (Claude only, camada 1)
 	ReviewerFallbackModel  string // --fallback-model nativo do reviewer (Claude only, camada 1)
 	MaxBugfixIterations    int    // limite rigido de iteracoes do BugfixLoop (RF-06, ADR-003); 0 => default 3
-	NonInteractive         bool   // ReservationPlanner: assume Document como default sem prompts (RF-08, ADR-003)
+	MaxBugfixIterationsSet bool
+	NonInteractive         bool // ReservationPlanner: assume Document como default sem prompts (RF-08, ADR-003)
 
 	// Runtime ACP (RF-01, RF-02, RF-07, RF-11)
 	Runtime         string        // "legacy" (default) ou "acp"
@@ -352,6 +353,7 @@ func (s *Service) Execute(opts Options) error {
 			if rcErr != nil {
 				return fmt.Errorf("taskloop: wiring RuntimeConfig: %w", rcErr)
 			}
+			opts = NewCatalog().applyResolvedMaxBugfixIterations(opts, resolvedRC)
 
 			spec, specErr := NewCatalog().resolveACPSpec(executorTool)
 			if specErr != nil {
@@ -369,7 +371,7 @@ func (s *Service) Execute(opts Options) error {
 			// RuntimeConfig hierárquico (ADR-025): MaxRetries e RetryBackoffMultiplier
 			// vêm da cascata resolvida (flags > workspace > global > defaults).
 			// Concurrent e BatchSize são consumidos pelo RunLoop via opts (ADR-018).
-			).WithACPInvokerMaxRetries(resolvedRC.MaxRetries), NewCatalog().WithACPInvokerRetryBackoffMultiplier(resolvedRC.RetryBackoffMultiplier),
+			).WithACPInvokerMaxRetries(resolvedRC.MaxRetries), NewCatalog().WithACPInvokerRetryBackoffMultiplier(resolvedRC.RetryBackoffMultiplier), NewCatalog().WithACPInvokerMaxBugfixIterations(resolvedRC.MaxBugfixIterations),
 			)
 		}
 	} else {
@@ -401,7 +403,7 @@ func (s *Service) Execute(opts Options) error {
 		}
 
 		// Configurar streaming de output do agente para o terminal.
-		// Permite ao usuario acompanhar progresso de agentes lentos (ex: Gemini).
+		// Permite ao usuario acompanhar progresso de agentes lentos.
 		if lo, ok := invoker.(LiveOutputSetter); ok {
 			liveOut := s.liveOutOverride
 			if liveOut == nil {

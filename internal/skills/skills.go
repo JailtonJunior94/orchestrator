@@ -1,18 +1,48 @@
 package skills
 
-import "github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
+)
 
 // Tool representa uma ferramenta de IA suportada.
 type Tool string
 
 const (
-	ToolClaude  Tool = "claude"
-	ToolGemini  Tool = "gemini"
-	ToolCodex   Tool = "codex"
-	ToolCopilot Tool = "copilot"
+	ToolClaude   Tool = "claude"
+	ToolCodex    Tool = "codex"
+	ToolCopilot  Tool = "copilot"
+	ToolOpenCode Tool = "opencode"
 )
 
 var AllTools = NewCatalog().canonicalTools()
+
+// RemovedAgentError e o erro tipado e explicativo emitido quando um agente
+// descontinuado e invocado por nome (RF-03). Distinguivel do erro generico de
+// valor invalido via errors.As.
+type RemovedAgentError struct {
+	Agent          string
+	Supported      []Tool
+	MigrationGuide string
+}
+
+func (e *RemovedAgentError) Error() string {
+	names := make([]string, 0, len(e.Supported))
+	for _, t := range e.Supported {
+		names = append(names, string(t))
+	}
+	return fmt.Sprintf(
+		"agente %q foi removido — conjunto suportado: {%s}; guia de migracao: %s",
+		e.Agent, strings.Join(names, ", "), e.MigrationGuide,
+	)
+}
+
+// removedAgentGuides mapeia agentes descontinuados ao guia de migracao correspondente.
+var removedAgentGuides = map[string]string{
+	"gemini": "docs/migracao-legacy-acp.md#gemini-removido",
+}
 
 func (catalog *Catalog) canonicalTools() []Tool {
 	ids := specs.NewCatalog().CanonicalOrder()
@@ -30,6 +60,22 @@ func (catalog *Catalog) ParseTool(s string) (Tool, bool) {
 		}
 	}
 	return "", false
+}
+
+// ResolveTool resolve um nome de ferramenta em Tool, distinguindo agente removido
+// (RemovedAgentError, RF-03) de valor generico invalido.
+func (catalog *Catalog) ResolveTool(s string) (Tool, error) {
+	if t, ok := catalog.ParseTool(s); ok {
+		return t, nil
+	}
+	if guide, isRemoved := removedAgentGuides[s]; isRemoved {
+		return "", &RemovedAgentError{Agent: s, Supported: AllTools, MigrationGuide: guide}
+	}
+	names := make([]string, 0, len(AllTools))
+	for _, t := range AllTools {
+		names = append(names, string(t))
+	}
+	return "", fmt.Errorf("ferramenta invalida: %q — opcoes: %s", s, strings.Join(names, ", "))
 }
 
 // Lang representa uma linguagem suportada.

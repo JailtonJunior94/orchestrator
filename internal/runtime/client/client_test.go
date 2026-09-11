@@ -3,6 +3,9 @@ package client_test
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -344,6 +347,230 @@ func TestLauncher_CommandNotFound(t *testing.T) {
 	err := c.Open(ctx, launcher, "prompt")
 	if err == nil {
 		t.Error("esperava erro ao abrir com launcher inexistente")
+	}
+}
+
+type fakeHandshakeWaiter struct {
+	err error
+}
+
+func (w fakeHandshakeWaiter) Wait(_ context.Context) error { return w.err }
+
+func TestAcpClient_HandshakeAbortsSessionBeforeFirstPrompt(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("nunca deveria chegar ao modelo").
+		AppendSessionEnd()
+
+	c := buildClientWithFake(t, ctx, script)
+	defer func() { _ = c.Close() }()
+
+	hw, ok := c.(interface {
+		SetHandshakeWaiter(client.HandshakeWaiter)
+	})
+	if !ok {
+		t.Fatal("client não expõe SetHandshakeWaiter")
+	}
+	wantErr := errors.New("sentinel not received")
+	hw.SetHandshakeWaiter(fakeHandshakeWaiter{err: wantErr})
+
+	err := c.Open(ctx, specs.NewBinaryLauncher("unused"), "prompt")
+	if err == nil {
+		t.Fatal("Open() com handshake falho deveria retornar erro; sessão não pode prosseguir")
+	}
+	if !errors.Is(err, wantErr) {
+		t.Fatalf("Open() erro = %v; want wrap de %v", err, wantErr)
+	}
+
+	evts := collectEvents(t, c.Updates(), 2*time.Second)
+	for _, evt := range evts {
+		t.Errorf("nenhum evento deveria ser emitido — handshake abortou antes do primeiro prompt; evt=%+v", evt)
+	}
+}
+
+func TestAcpClient_HandshakeSuccessAllowsSessionToProceed(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("olá após handshake").
+		AppendSessionEnd()
+
+	c := buildClientWithFake(t, ctx, script)
+	defer func() { _ = c.Close() }()
+
+	hw, ok := c.(interface {
+		SetHandshakeWaiter(client.HandshakeWaiter)
+	})
+	if !ok {
+		t.Fatal("client não expõe SetHandshakeWaiter")
+	}
+	hw.SetHandshakeWaiter(fakeHandshakeWaiter{err: nil})
+
+	if err := c.Open(ctx, specs.NewBinaryLauncher("unused"), "prompt"); err != nil {
+		t.Fatalf("Open() com handshake bem-sucedido: %v", err)
+	}
+
+	evts := collectEvents(t, c.Updates(), 5*time.Second)
+	var sawSessionEnd bool
+	for _, evt := range evts {
+		if evt.Kind() == events.KindSessionEnd {
+			sawSessionEnd = true
+		}
+	}
+	if !sawSessionEnd {
+		t.Fatal("esperava session_end após handshake bem-sucedido")
+	}
+}
+
+func TestAcpClient_ChildEnvSanitizationAppliesToSpawnedProcessOnly(t *testing.T) {
+	dir := t.TempDir()
+	envDumpPath := filepath.Join(dir, "envdump.txt")
+	scriptPath := filepath.Join(dir, "dump-env.sh")
+	scriptBody := "#!/bin/sh\n" +
+		"{ echo \"AISPEC_TEST_MARKER=$AISPEC_TEST_MARKER\"; echo \"OPENCODE_PURE=$OPENCODE_PURE\"; } > " + envDumpPath + "\n" +
+		"exit 1\n"
+	if err := os.WriteFile(scriptPath, []byte(scriptBody), 0o755); err != nil {
+		t.Fatalf("write script: %v", err)
+	}
+
+	t.Setenv("OPENCODE_PURE", "1")
+
+	sanitized := make([]string, 0, len(os.Environ()))
+	for _, kv := range os.Environ() {
+		if strings.HasPrefix(kv, "OPENCODE_PURE=") {
+			continue
+		}
+		sanitized = append(sanitized, kv)
+	}
+	sanitized = append(sanitized, "AISPEC_TEST_MARKER=present")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	factory := client.NewDefaultClientFactory()
+	c := factory.New(dir)
+	defer func() { _ = c.Close() }()
+
+	ce, ok := c.(interface{ SetChildEnv([]string) })
+	if !ok {
+		t.Fatal("client não expõe SetChildEnv")
+	}
+	ce.SetChildEnv(sanitized)
+
+	_ = c.Open(ctx, specs.NewBinaryLauncher(scriptPath), "prompt")
+
+	deadline := time.Now().Add(10 * time.Second)
+	var data []byte
+	for time.Now().Before(deadline) {
+		var readErr error
+		data, readErr = os.ReadFile(envDumpPath)
+		if readErr == nil && len(data) > 0 {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	if os.Getenv("OPENCODE_PURE") != "1" {
+		t.Fatal("sanitização vazou para o ambiente do processo pai (teste) — RF-21 violado")
+	}
+	if !strings.Contains(string(data), "AISPEC_TEST_MARKER=present") {
+		t.Fatalf("processo filho não recebeu childEnv sanitizado; dump=%q", data)
+	}
+	if strings.Contains(string(data), "OPENCODE_PURE=1") {
+		t.Fatalf("processo filho ainda contém o interruptor OPENCODE_PURE; dump=%q", data)
+	}
+}
+
+func parseEnvDump(t *testing.T, data []byte) map[string]string {
+	t.Helper()
+	out := make(map[string]string)
+	for _, line := range strings.Split(strings.TrimRight(string(data), "\n"), "\n") {
+		if line == "" {
+			continue
+		}
+		name, value, ok := strings.Cut(line, "=")
+		if !ok {
+			t.Fatalf("linha de dump sem '=': %q", line)
+		}
+		out[name] = value
+	}
+	return out
+}
+
+func TestAcpClient_NilChildEnvInheritsFullEnvironByteIdentical(t *testing.T) {
+	dir := t.TempDir()
+	envDumpPath := filepath.Join(dir, "envdump.txt")
+	scriptPath := filepath.Join(dir, "dump-full-env.sh")
+	scriptBody := "#!/bin/sh\nenv > " + envDumpPath + "\nexit 1\n"
+	if err := os.WriteFile(scriptPath, []byte(scriptBody), 0o755); err != nil {
+		t.Fatalf("write script: %v", err)
+	}
+
+	t.Setenv("AISPEC_VETOR1_MARKER", "present-in-parent")
+
+	shellBootstrapArtifacts := map[string]bool{"SHLVL": true, "OLDPWD": true, "PWD": true, "_": true}
+
+	want := make(map[string]string, len(os.Environ()))
+	for _, kv := range os.Environ() {
+		name, value, ok := strings.Cut(kv, "=")
+		if !ok || shellBootstrapArtifacts[name] {
+			continue
+		}
+		want[name] = value
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	factory := client.NewDefaultClientFactory()
+	c := factory.New(dir)
+	defer func() { _ = c.Close() }()
+
+	_ = c.Open(ctx, specs.NewBinaryLauncher(scriptPath), "prompt")
+
+	deadline := time.Now().Add(10 * time.Second)
+	var data []byte
+	for time.Now().Before(deadline) {
+		var readErr error
+		data, readErr = os.ReadFile(envDumpPath)
+		if readErr == nil && len(data) > 0 {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if len(data) == 0 {
+		t.Fatal("processo filho não produziu dump de ambiente")
+	}
+
+	got := parseEnvDump(t, data)
+	for name := range shellBootstrapArtifacts {
+		delete(got, name)
+	}
+
+	if len(got) != len(want) {
+		t.Fatalf("ambiente do filho tem %d variáveis; pai tem %d (não é byte-idêntico)", len(got), len(want))
+	}
+	for name, wantValue := range want {
+		gotValue, ok := got[name]
+		if !ok {
+			t.Errorf("variável %q ausente no ambiente do filho — herança não é byte-idêntica", name)
+			continue
+		}
+		if gotValue != wantValue {
+			t.Errorf("variável %q = %q no filho; pai tinha %q", name, gotValue, wantValue)
+		}
+	}
+	for name := range got {
+		if _, ok := want[name]; !ok {
+			t.Errorf("variável %q presente no filho mas ausente no pai — ambiente foi alterado", name)
+		}
 	}
 }
 

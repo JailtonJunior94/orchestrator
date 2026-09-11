@@ -151,6 +151,21 @@ func (p CanonicalPoint) String() string {
 	}
 }
 
+func (k PreconditionKind) String() string {
+	switch k {
+	case PreconditionTrustedFolder:
+		return "trusted-folder"
+	case PreconditionNoKillSwitch:
+		return "no-kill-switch"
+	case PreconditionHandshake:
+		return "handshake"
+	case PreconditionTrustedHash:
+		return "trusted-hash"
+	default:
+		return "unknown"
+	}
+}
+
 func (s PreconditionState) IsFailure() bool {
 	return s == PreconditionInert
 }

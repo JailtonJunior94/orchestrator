@@ -2,6 +2,8 @@ package taskloop
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -189,6 +191,25 @@ func TestRepositoryPortCaptureTargets(t *testing.T) {
 	}
 }
 
+func TestRepositoryPortCheckpointFallsBackToDiffHashWithoutGit(t *testing.T) {
+	dir := t.TempDir()
+	capturer := &stubDiffCapturer{diffs: []string{"diff without a git repository"}}
+
+	port := newRepositoryPort(capturer, dir)
+	checkpoint, err := port.Checkpoint(context.Background())
+	if err != nil {
+		t.Fatalf("Checkpoint: %v", err)
+	}
+	if checkpoint.Zero() {
+		t.Fatal("checkpoint should not be zero-valued in the fallback path")
+	}
+
+	want := sha256.Sum256([]byte("diff without a git repository"))
+	if got := checkpoint.String(); got != hex.EncodeToString(want[:]) {
+		t.Errorf("checkpoint = %q, want sha256 of the captured diff", got)
+	}
+}
+
 func TestRepositoryPortCheckpointFromGitRevParse(t *testing.T) {
 	dir := t.TempDir()
 	run := func(args ...string) {
@@ -202,6 +223,7 @@ func TestRepositoryPortCheckpointFromGitRevParse(t *testing.T) {
 	run("init")
 	run("config", "user.email", "t@example.com")
 	run("config", "user.name", "T")
+	run("config", "commit.gpgsign", "false")
 	if err := os.WriteFile(filepath.Join(dir, "f.txt"), []byte("x\n"), 0o644); err != nil {
 		t.Fatalf("write: %v", err)
 	}

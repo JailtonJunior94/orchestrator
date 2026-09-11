@@ -36,8 +36,11 @@ type Summary struct {
 	// ReviewPath é o caminho de evidence/<task>/review.md (apontador conveniente).
 	ReviewPath string
 
+	CycleRounds     []CycleRoundSummary `json:"cycle_rounds,omitempty"`
+	CycleStopReason string              `json:"cycle_stop_reason,omitempty"`
+
 	// Metrics é o conjunto unificado de métricas da sessão (ADR-021).
-	// Substitui os campos planos Claude/Gemini por um único MetricSet por driver.
+	// Substitui os campos planos por driver por um único MetricSet por driver.
 	// Zero-value (IsZero()==true) preserva comportamento F1 — nenhuma seção de métricas emitida.
 	Metrics events.MetricSet
 

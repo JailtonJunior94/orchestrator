@@ -1,0 +1,74 @@
+=== inert (copilot untrusted folder) ===
+Resultado da verificacao:
+
+  [copilot]
+    agent-governance                         MISSING
+    analyze-project                          MISSING
+    bugfix                                   MISSING
+    confluence-changelog-publisher           MISSING
+    create-prd                               MISSING
+    create-tasks                             MISSING
+    create-technical-specification           MISSING
+    dotnet-csharp-implementation             MISSING
+    execute-all-tasks                        MISSING
+    execute-task                             MISSING
+    github-diff-changelog-publisher          MISSING
+    github-pr-comment-triage                 MISSING
+    github-release-publication-flow          MISSING
+    go-implementation                        MISSING
+    jira-tasks                               MISSING
+    node-implementation                      MISSING
+    object-calisthenics-go                   MISSING
+    otel-grafana-dashboards                  MISSING
+    postman-collection-generator             MISSING
+    prompt-enricher                          MISSING
+    pull-request                             MISSING
+    python-implementation                    MISSING
+    refactor                                 MISSING
+    review                                   MISSING
+    semantic-commit                          MISSING
+    us-to-prd                                MISSING
+    copilot                                  current
+    precondition(trusted-folder)             INERT (remedio: add the project folder to the Copilot CLI trusted folders list)
+
+Resumo: 1 current, 26 missing, 0 drifted, 1 inert, 0 unknown
+
+Dica: execute 'ai-spec-harness install' para corrigir skills faltantes ou divergentes; pre-condicoes inert exigem acao manual (ver remedio acima).
+27 skill(s)/precondicao(oes) nao current (missing: 26, drifted: 0, inert: 1)
+exit status 1
+exit_code=1
+
+=== unknown (codex trust without --check-codex-trust) ===
+Resultado da verificacao:
+
+  [codex]
+    agent-governance                         current
+    analyze-project                          current
+    bugfix                                   current
+    confluence-changelog-publisher           current
+    create-prd                               current
+    create-tasks                             current
+    create-technical-specification           current
+    execute-all-tasks                        current
+    execute-task                             current
+    github-diff-changelog-publisher          current
+    github-pr-comment-triage                 current
+    github-release-publication-flow          current
+    go-implementation                        current
+    jira-tasks                               current
+    object-calisthenics-go                   current
+    otel-grafana-dashboards                  current
+    postman-collection-generator             current
+    prompt-enricher                          current
+    pull-request                             current
+    refactor                                 current
+    review                                   current
+    semantic-commit                          current
+    us-to-prd                                current
+    codex-acp                                current
+    precondition(trusted-hash)               unknown (remedio: register the hook hash via the Codex interactive interface before orchestrating)
+
+Resumo: 24 current, 0 missing, 0 drifted, 0 inert, 1 unknown
+
+Aviso: 1 pre-condicao(oes) unknown — ausencia de informacao, nao contabilizada como sucesso. Use --check-codex-trust para diagnostico do Codex.
+exit_code=0

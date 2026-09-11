@@ -6,10 +6,40 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
 )
+
+var cycleFileLineReference = regexp.MustCompile(`[\w./-]+\.[A-Za-z0-9]+:\d+`)
+
+const (
+	parityEvidenceCommand = "parity-stage"
+	parityEvidenceRecord  = "criteria gate deferred to task 5.0"
+	cycleFindingFile      = "unspecified"
+	cycleFindingRule      = "review-finding"
+)
+
+var cycleSeverityMarkers = []struct {
+	token    string
+	severity approval.Severity
+}{
+	{"[critical]", approval.SeverityCritical},
+	{"[crítico]", approval.SeverityCritical},
+	{"[critico]", approval.SeverityCritical},
+	{"[hard]", approval.SeverityHigh},
+	{"[high]", approval.SeverityHigh},
+	{"[alta]", approval.SeverityHigh},
+	{"[alto]", approval.SeverityHigh},
+	{"[medium]", approval.SeverityMedium},
+	{"[important]", approval.SeverityMedium},
+	{"[importante]", approval.SeverityMedium},
+	{"[low]", approval.SeverityLow},
+	{"[suggestion]", approval.SeverityLow},
+	{"[sugestão]", approval.SeverityLow},
+	{"[sugestao]", approval.SeverityLow},
+}
 
 var (
 	_ approval.Reviewer   = (*ReviewerAdapter)(nil)
@@ -89,7 +119,65 @@ func (a *ReviewerAdapter) Review(ctx context.Context, request approval.ReviewReq
 	if err != nil {
 		return approval.ReviewerOutput{}, err
 	}
-	return approval.NewReviewerOutput(rawText, nil, approval.CriteriaMap{}), nil
+	criteriaMap, err := parityCriteriaMap(request)
+	if err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+	return approval.NewReviewerOutput(rawText, parseCycleFindings(rawText), criteriaMap), nil
+}
+
+func parseCycleFindings(rawText string) []approval.Finding {
+	var findings []approval.Finding
+	for _, line := range strings.Split(rawText, "\n") {
+		severity, ok := severityFromLine(strings.ToLower(line))
+		if !ok {
+			continue
+		}
+		file := cycleFindingFile
+		if ref := cycleFileLineReference.FindString(line); ref != "" {
+			file = ref
+		}
+		finding, err := approval.NewFinding(severity, file, cycleFindingRule, strings.TrimSpace(line))
+		if err != nil {
+			continue
+		}
+		findings = append(findings, finding)
+	}
+	return findings
+}
+
+func severityFromLine(lowerLine string) (approval.Severity, bool) {
+	for _, marker := range cycleSeverityMarkers {
+		if strings.Contains(lowerLine, marker.token) {
+			return marker.severity, true
+		}
+	}
+	return 0, false
+}
+
+func parityCriteriaMap(request approval.ReviewRequest) (approval.CriteriaMap, error) {
+	var criteria []approval.AcceptanceCriterion
+	for criterion := range request.Criteria() {
+		criteria = append(criteria, criterion)
+	}
+
+	criteriaMap, err := approval.NewCriteriaMap(criteria)
+	if err != nil {
+		return approval.CriteriaMap{}, err
+	}
+
+	evidence, err := approval.NewCommandEvidence(parityEvidenceCommand, parityEvidenceRecord)
+	if err != nil {
+		return approval.CriteriaMap{}, err
+	}
+
+	for _, criterion := range criteria {
+		criteriaMap, err = criteriaMap.WithEvidence(criterion, evidence)
+		if err != nil {
+			return approval.CriteriaMap{}, err
+		}
+	}
+	return criteriaMap, nil
 }
 
 func (a *ReviewerAdapter) priorCutPoint(ctx context.Context, round int) (string, error) {

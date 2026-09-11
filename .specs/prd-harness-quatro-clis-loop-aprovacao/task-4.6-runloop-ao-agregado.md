@@ -39,13 +39,13 @@ eventos e rodadas do `Cycle`.
 
 ## Subtarefas
 
-- [ ] 4.6.1 Coletar a união de critérios dos task files de `report.TasksCompleted` e construir o
+- [x] 4.6.1 Coletar a união de critérios dos task files de `report.TasksCompleted` e construir o
       `Cycle`.
-- [ ] 4.6.2 Substituir `NewBugfixLoop(...).Run(...)` no `case VerdictRejected` pela construção e
+- [x] 4.6.2 Substituir `NewBugfixLoop(...).Run(...)` no `case VerdictRejected` pela construção e
       `Run` do `Cycle`; ler o side-channel `*bugfixEvidenceRecorder` do adaptador após `Cycle.Run`.
-- [ ] 4.6.3 Implementar `bugfixAttemptsFromCycle` em `bugfix.go` e mapear estados terminais para
+- [x] 4.6.3 Implementar `bugfixAttemptsFromCycle` em `bugfix.go` e mapear estados terminais para
       `Escalated` / `ErrBugfixExhausted`.
-- [ ] 4.6.4 Ajustar cirurgicamente asserções incompatíveis em `runloop_test.go`; cada ajuste
+- [x] 4.6.4 Ajustar cirurgicamente asserções incompatíveis em `runloop_test.go`; cada ajuste
       justificado por requisito.
 
 ## Detalhes de Implementação

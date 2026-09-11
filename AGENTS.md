@@ -55,9 +55,9 @@ Para garantir a confiabilidade em qualquer projeto instrumentado por este harnes
 | Arquivo | Ferramenta |
 |---------|-----------|
 | `CLAUDE.md` | Claude Code (hooks, rules, agents) |
-| `GEMINI.md` | Gemini CLI (commands, orientações procedurais) |
 | `CODEX.md` | Codex (config.toml, instrução de sessão) |
 | `COPILOT.md` | GitHub Copilot (Chat e gh copilot CLI); contexto via `.github/copilot-instructions.md` |
+| — | OpenCode carrega `AGENTS.md` e `.agents/skills/` nativamente; nenhum arquivo dedicado (RF-13) |
 
 Esses arquivos são suplementares a este `AGENTS.md`. A fonte de verdade dos fluxos procedurais permanece em `.agents/skills/`.
 
@@ -105,7 +105,7 @@ make bench           # benchmarks
 ai-spec-harness install .
 
 # Instalar selecionando ferramentas manualmente
-ai-spec-harness install . --tools claude,gemini
+ai-spec-harness install . --tools claude,opencode
 
 # Instalar globalmente em ~/.aispec (escopo global, opt-in)
 ai-spec-harness install --global
@@ -165,7 +165,7 @@ internal/embedded/
 Os validadores canonicos vivem em `.agents/scripts/` (tool-neutros) e sao espelhados para
 `.claude/scripts/` e `internal/embedded/assets/{.claude,.agents}/scripts/` via `scripts/sync-skills.sh`
 (gate: `make check-scripts-sync`). O instalador copia-os para `.agents/scripts/` do projeto destino
-**sempre** (independente dos tools), garantindo que projetos so-Gemini/Codex/Copilot tenham os
+**sempre** (independente dos tools), garantindo que projetos so-Codex/Copilot/OpenCode tenham os
 mesmos gates que Claude. As skills resolvem em cascata `.agents/scripts/` -> `.claude/scripts/` -> `scripts/`.
 
 - `validate-task-evidence.sh` — gate anti-falso-positivo (DoD + cada criterio de aceite + prova forte de testes).
@@ -285,7 +285,7 @@ Ver [`docs/config-hierarchy.md`](docs/config-hierarchy.md) para referencia compl
 | [ADR-010](.specs/prd-acp-runtime-claude/adr-010-event-tagged-union.md) | runtime.Event como struct tagged union | Aceita |
 | [ADR-012](.specs/adr/012-copilot-cli-acp-native.md) | Copilot CLI como runtime ACP nativo | Aceita |
 | [ADR-013](.specs/adr/013-codex-cli-acp-native.md) | Codex CLI como runtime ACP nativo | Aceita |
-| [ADR-015](.specs/adr/015-gemini-cli-acp-native.md) | Gemini CLI ACP nativo (ADR-015) | Proposta |
+| [ADR-015](.specs/adr/015-gemini-cli-acp-native.md) | Gemini CLI ACP nativo — agente removido (tarefa 10.0) | Substituida |
 | [ADR-016](.specs/prd-fundacao-portatil/adr-016-config-hierarquico-universal.md) | Config hierarquico universal (global+projeto, upward-walk, precedencia) | Proposta |
 | [ADR-017](.specs/prd-fundacao-portatil/adr-017-fallback-launcher-chain.md) | Generalizacao de fallback launchers (cadeia generica ordenada) | Proposta |
 | [ADR-018](.specs/prd-fundacao-portatil/adr-018-runtimeconfig-retry-backpressure.md) | RuntimeConfig unificado, retry com backoff e sessao ACP com backpressure observavel | Proposta |

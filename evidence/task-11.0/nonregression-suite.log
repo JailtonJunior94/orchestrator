@@ -1,0 +1,62 @@
+=== RUN   TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue
+=== RUN   TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue/claude
+2026/09/11 12:21:36 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 12:21:36 INFO connection closed cause="peer connection closed"
+=== RUN   TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue/codex
+2026/09/11 12:21:36 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 12:21:36 INFO connection closed cause="peer connection closed"
+=== RUN   TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue/copilot
+2026/09/11 12:21:36 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 12:21:36 INFO connection closed cause="peer connection closed"
+--- PASS: TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue (0.01s)
+    --- PASS: TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue/claude (0.00s)
+    --- PASS: TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue/codex (0.00s)
+    --- PASS: TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue/copilot (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	0.788s
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake	0.413s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client	0.249s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events	1.618s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/handshake	0.928s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks	1.106s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver	1.300s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/wire	1.455s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory	1.525s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/mocks	[no test files]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence	1.599s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/precondition	1.377s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe	1.442s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/render	1.420s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	1.397s [no tests to run]

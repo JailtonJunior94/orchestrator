@@ -1,0 +1,9 @@
+728:	taskIdentity, err := approval.NewTaskIdentity(j.TaskFileName)
+732:	agentIdentity, err := approval.NewAgentIdentity(r.spec.ID)
+736:	policy, err := approval.NewApprovalPolicy()
+748:	cycle, err := approval.NewCycle(taskIdentity, agentIdentity, policy, criteria, reviewer, fixer, repository)
+761:func buildCycleOutcome(j Job, result approval.CycleResult) autoReviewOutcome {
+784:func severityCounts(counts map[approval.Severity]int) map[string]int {
+795:func criteriaFromTaskFile(tasksDir, taskFileName string) ([]approval.AcceptanceCriterion, error) {
+802:	var criteria []approval.AcceptanceCriterion
+809:		criterion, err := approval.NewAcceptanceCriterion(description)

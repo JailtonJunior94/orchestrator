@@ -145,10 +145,11 @@ jobs:
           go-version-file: go.mod
 
       - name: Integration tests
-        # Inclui ./tests/integration/... (e2e claude/gemini via acpfake) — antes fora do gate,
+        # Inclui ./tests/integration/... (e2e claude/opencode via acpfake) — antes fora do gate,
         # o que dava CI verde enganoso (a regressão do spec_drift só aparecia aqui). Todos os
-        # e2e usam fakes (acpfake), são determinísticos; testes acp_live (binário real) ficam
-        # na build tag acp_live (job nightly), fora deste gate.
+        # e2e usam fakes (acpfake), são determinísticos; testes acp_live e hooks_live (binário
+        # real) ficam nas build tags acp_live/hooks_live (jobs nightly), fora deste gate — não
+        # são gate de merge.
         run: go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/...
 
       - name: Budget

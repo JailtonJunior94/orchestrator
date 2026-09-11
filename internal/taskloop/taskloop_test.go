@@ -2262,7 +2262,7 @@ func TestExecutePrioritizesInProgressBeforePending(t *testing.T) {
 }
 
 func TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -2463,7 +2463,7 @@ func TestExecuteRejectsUnexpectedTrackedTaskFileCreation(t *testing.T) {
 }
 
 func TestExecuteRejectsProtectedPRDFileMutationForAllProviders(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -2523,7 +2523,7 @@ func TestExecuteRejectsProtectedPRDFileMutationForAllProviders(t *testing.T) {
 }
 
 func TestExecuteRejectsArbitraryPRDFileMutationForAllProviders(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -3062,7 +3062,7 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 	const base = "/fake/project"
 	const prd = base + "/.specs/prd-parity"
 
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	// baseSetup inicializa arquivos obrigatorios (AGENTS.md, prd.md, techspec.md).
 	baseSetup := func(fsys *taskfs.FakeFileSystem) {
@@ -3471,7 +3471,7 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 // definido em RF-12: skipped map, contador de iteracoes, acumulador de report e releitura
 // de tasks.md. Subtarefas 4.1 e 4.4.
 func TestSessionIsolationBetweenIterationsForAllTools(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -3574,7 +3574,7 @@ func TestSessionIsolationBetweenIterationsForAllTools(t *testing.T) {
 // mutacoes legitimas do executor (propria task file e sua row em tasks.md)
 // para cada uma das 4 ferramentas. Subtarefa 4.2, modo executor.
 func TestCaptureValidateIsolationExecutorModeForAllTools(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -3639,7 +3639,7 @@ func TestCaptureValidateIsolationExecutorModeForAllTools(t *testing.T) {
 // modifica o arquivo de task de outra task (nao a atual), o snapshot e restaurado e
 // o loop e abortado para todas as 4 ferramentas. Subtarefa 4.3.
 func TestSnapshotRestorationAfterTaskFileMutationForAllTools(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -3715,7 +3715,7 @@ func TestSnapshotRestorationAfterTaskFileMutationForAllTools(t *testing.T) {
 // executor cria um arquivo de task nao listado no snapshot, o arquivo e removido e o
 // loop e abortado para todas as 4 ferramentas. Subtarefa 4.3.
 func TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -3786,7 +3786,7 @@ func TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools(t *testing.T)
 // rejeita mutacao do arquivo da task atual pelo reviewer e restaura o snapshot
 // para cada ferramenta usada como reviewer. Subtarefas 4.2 (modo reviewer) e 4.3.
 func TestReviewerModeIsolationForAllReviewerTools(t *testing.T) {
-	reviewerTools := []string{"claude", "codex", "gemini", "copilot"}
+	reviewerTools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, reviewerTool := range reviewerTools {
 		t.Run(reviewerTool, func(t *testing.T) {
@@ -4518,7 +4518,7 @@ func TestResolveACPSpec(t *testing.T) {
 		{tool: "claude", wantID: "claude", wantCommand: "claude-agent-acp"},
 		{tool: "codex", wantID: "codex", wantCommand: "codex-acp"},
 		{tool: "copilot", wantID: "copilot", wantCommand: "copilot"},
-		{tool: "gemini", wantID: "gemini", wantCommand: "gemini"},
+		{tool: "opencode", wantID: "opencode", wantCommand: "opencode"},
 	}
 	for _, tt := range known {
 		t.Run(tt.tool, func(t *testing.T) {
@@ -4697,10 +4697,9 @@ func TestT32_TaskloopRegressionSuite(t *testing.T) {
 	}
 }
 
-// TestServiceRoutesGeminiToACPRunner verifica que Service.Execute roteia Tool="gemini" com
+// TestServiceRoutesOpenCodeToACPRunner verifica que Service.Execute roteia Tool="opencode" com
 // Runtime="acp" via ACPRunner (acpInvokerFactory), espelhando o padrão Claude/Codex/Copilot.
-// RF-07 — Task 3.0.
-func TestServiceRoutesGeminiToACPRunner(t *testing.T) {
+func TestServiceRoutesOpenCodeToACPRunner(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
 	acpInvokerCalled := false
@@ -4708,11 +4707,11 @@ func TestServiceRoutesGeminiToACPRunner(t *testing.T) {
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		acpInvokerCalled = true
-		if opts.Tool != "gemini" {
-			t.Errorf("acpInvokerFactory: esperava tool=gemini, got %q", opts.Tool)
+		if opts.Tool != "opencode" {
+			t.Errorf("acpInvokerFactory: esperava tool=opencode, got %q", opts.Tool)
 		}
 		return &callbackInvoker{
-			binary: "gemini-acp",
+			binary: "opencode-acp",
 			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
 				return "done", "", 0, nil
@@ -4722,7 +4721,7 @@ func TestServiceRoutesGeminiToACPRunner(t *testing.T) {
 
 	opts := Options{
 		PRDFolder:     prd,
-		Tool:          "gemini",
+		Tool:          "opencode",
 		Runtime:       "acp",
 		MaxIterations: 1,
 		Timeout:       5 * time.Second,
@@ -4733,14 +4732,13 @@ func TestServiceRoutesGeminiToACPRunner(t *testing.T) {
 		t.Fatalf("Execute retornou erro inesperado: %v", err)
 	}
 	if !acpInvokerCalled {
-		t.Error("acpInvokerFactory não foi chamado para tool=gemini com runtime=acp")
+		t.Error("acpInvokerFactory não foi chamado para tool=opencode com runtime=acp")
 	}
 }
 
-// TestServicePropagatesAccessModeForGemini verifica que Options.AccessMode é propagado
-// ao Job via WithACPInvokerAccessMode quando Tool="gemini" e Runtime="acp".
-// RF-07 — Task 3.0, subtarefa 3.2.
-func TestServicePropagatesAccessModeForGemini(t *testing.T) {
+// TestServicePropagatesAccessModeForOpenCode verifica que Options.AccessMode é propagado
+// ao Job via WithACPInvokerAccessMode quando Tool="opencode" e Runtime="acp".
+func TestServicePropagatesAccessModeForOpenCode(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
 	var capturedOpts Options
@@ -4749,7 +4747,7 @@ func TestServicePropagatesAccessModeForGemini(t *testing.T) {
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		capturedOpts = opts
 		return &callbackInvoker{
-			binary: "gemini-acp",
+			binary: "opencode-acp",
 			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
 				return "done", "", 0, nil
@@ -4759,7 +4757,7 @@ func TestServicePropagatesAccessModeForGemini(t *testing.T) {
 
 	opts := Options{
 		PRDFolder:     prd,
-		Tool:          "gemini",
+		Tool:          "opencode",
 		Runtime:       "acp",
 		AccessMode:    "full",
 		MaxIterations: 1,

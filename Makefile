@@ -1,4 +1,4 @@
-.PHONY: check-spec-paths build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync check-scripts-sync test-hooks test-validators test-sdd-evals smoke-adapters test-portable-skills sync-acp-sdk-version test-acp-live mocks check-mocks test-check-mocks
+.PHONY: check-spec-paths build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync check-scripts-sync test-hooks test-validators test-sdd-evals smoke-adapters test-portable-skills sync-acp-sdk-version test-acp-live test-hooks-live mocks check-mocks test-check-mocks
 
 BINARY := ai-spec
 GOFLAGS := -trimpath
@@ -109,3 +109,9 @@ sync-acp-sdk-version:
 # Não incluído em make test (build tag acp_live protege compilação). Rodado pelo CI nightly.
 test-acp-live:
 	go test -tags=acp_live -v ./tests/integration/acp_live
+
+# test-hooks-live: executa a camada 3 de prova de enforcement dos hooks nativos.
+# Requer os binarios/CLIs de cada agente disponiveis no PATH (ver tests/integration/hooks_live/README.md).
+# Nao incluido em make test (build tag hooks_live protege compilacao). Rodado pelo CI nightly; nao e gate de merge.
+test-hooks-live:
+	go test -tags=hooks_live -v ./tests/integration/hooks_live

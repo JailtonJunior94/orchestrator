@@ -50,6 +50,7 @@ type acpInvoker struct {
 	retryBackoffMultiplier float64
 	retryBaseDelay         time.Duration
 	retryClassifier        airuntime.RetryClassifier
+	maxBugfixIterations    int
 	// sleepFn é injetável em testes para evitar esperas reais.
 	sleepFn func(context.Context, time.Duration) error
 }
@@ -127,6 +128,10 @@ func (c *Catalog) WithACPInvokerTasksDir(dir string) ACPInvokerOption {
 // HARD: default false; child sessions têm AutoReview=false forçado no runner.
 func (c *Catalog) WithACPInvokerAutoReview(enabled bool) ACPInvokerOption {
 	return func(a *acpInvoker) { a.autoReview = enabled }
+}
+
+func (c *Catalog) WithACPInvokerMaxBugfixIterations(n int) ACPInvokerOption {
+	return func(a *acpInvoker) { a.maxBugfixIterations = n }
 }
 
 // WithACPInvokerSkipDriftGuard desabilita SOMENTE o spec_drift hook (ADR-022, RG-01/RG-02).
@@ -221,9 +226,9 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (str
 		Prompt:      prompt,
 		WorkDir:     workDir,
 		EvidenceDir: evidenceDir,
-		// RuntimeConfig: popula Timeout a partir do ActivityTimeout calculado acima (ADR-018, RF-05).
 		RuntimeConfig: airuntime.RuntimeConfig{
-			Timeout: timeout,
+			Timeout:             timeout,
+			MaxBugfixIterations: c.maxBugfixIterations,
 		},
 		Quiet: c.quiet,
 		// Codex-specific fields (RF-15, RF-26 — ADR-013 D-02).

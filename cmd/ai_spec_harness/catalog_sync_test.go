@@ -28,7 +28,7 @@ func TestRuntimeACPCatalogInSyncWithRegistry(t *testing.T) {
 	for k, v := range runtimeACPCatalog {
 		diverging[k] = v
 	}
-	delete(diverging, "gemini")
+	delete(diverging, "opencode")
 	if err := specs.NewCatalog().VerifyCatalogSync(acpCatalogKeys(diverging)); !errors.Is(err, specs.ErrCatalogOutOfSync) {
 		t.Fatalf("sync gate did not catch artificial divergence: %v", err)
 	}

@@ -53,13 +53,13 @@ func TestNewExecutionProfile(t *testing.T) {
 			wantModel:    "",
 		},
 		{
-			name:         "executor com gemini",
+			name:         "executor com opencode",
 			role:         "executor",
-			tool:         "gemini",
+			tool:         "opencode",
 			model:        "gemini-2.5-pro",
 			wantRole:     "executor",
-			wantTool:     "gemini",
-			wantProvider: "google",
+			wantTool:     "opencode",
+			wantProvider: "opencode",
 			wantModel:    "gemini-2.5-pro",
 		},
 		{
@@ -154,7 +154,7 @@ func TestInferProvider(t *testing.T) {
 	}{
 		{"claude", "anthropic"},
 		{"codex", "openai"},
-		{"gemini", "google"},
+		{"opencode", "opencode"},
 		{"copilot", "github"},
 		{"unknown", ""},
 		{"", ""},
@@ -219,12 +219,12 @@ func TestResolveProfiles(t *testing.T) {
 		},
 		{
 			name:          "modo avancado — reviewer herda executor com model",
-			execTool:      "gemini",
+			execTool:      "opencode",
 			execModel:     "gemini-2.5-pro",
 			wantMode:      "avancado",
-			wantExecTool:  "gemini",
+			wantExecTool:  "opencode",
 			wantExecModel: "gemini-2.5-pro",
-			wantRevTool:   "gemini",         // herda
+			wantRevTool:   "opencode",       // herda
 			wantRevModel:  "gemini-2.5-pro", // herda
 		},
 		{

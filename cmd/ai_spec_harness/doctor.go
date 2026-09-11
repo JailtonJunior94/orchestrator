@@ -25,9 +25,12 @@ Exemplos:
 			mfst := manifest.NewStore(fsys)
 			gitRepo := gitpkg.NewCLIRepository()
 
+			checkCodexTrust, _ := cmd.Flags().GetBool("codex-trust")
+
 			svc := doctor.NewService(fsys, printer, mfst, gitRepo)
-			return svc.Execute(args[0])
+			return svc.ExecuteWithOptions(args[0], checkCodexTrust)
 		},
 	}
+	cmd.Flags().Bool("codex-trust", false, "Verifica trust de hooks do Codex via RPC read-only hooks/list do codex app-server (executa binario, opt-in explicito)")
 	return cmd
 }

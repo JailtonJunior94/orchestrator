@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-quatro-clis-loop-aprovacao/9.0_execution_report.md
+summary: Hooks e paridade comprovada nos quatro agentes oficiais (Claude, Codex, Copilot, OpenCode) via tres camadas de prova; chave invalida do Copilot corrigida e ativada; gate canonico de encerramento novo cobrindo uso interativo; precondicoes de enforcement com estados inert/unknown e verificacao real via RPC do Codex e parser do Copilot; gate de build de paridade com 3 testes negativos dedicados.
+timestamp: 2026-09-11T13:35:02Z

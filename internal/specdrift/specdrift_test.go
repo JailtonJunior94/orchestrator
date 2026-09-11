@@ -177,6 +177,73 @@ func TestCheckHash_WrongLabel(t *testing.T) {
 	}
 }
 
+// --- CheckTechspecPRDConsistency ---
+
+func TestCheckTechspecPRDConsistency_Match(t *testing.T) {
+	prd := []byte("# PRD\n\n- RF-01: exemplo\n")
+	prdHash := hashOf(prd)
+	techspec := []byte(fmt.Sprintf("<!-- spec-hash-prd: %s -->\n# Techspec\n", prdHash))
+
+	result := specdrift.NewCatalog().CheckTechspecPRDConsistency(prd, techspec)
+
+	if !result.Match {
+		t.Fatalf("expected Match=true, got expected=%s actual=%s", result.ExpectedHash, result.ActualHash)
+	}
+	if result.NoHashFound {
+		t.Fatal("expected NoHashFound=false when techspec has a spec-hash-prd header")
+	}
+}
+
+func TestCheckTechspecPRDConsistency_Divergent(t *testing.T) {
+	prd := []byte("# PRD\n\n- RF-01: exemplo\n")
+	staleTechspec := []byte("<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->\n# Techspec\n")
+
+	result := specdrift.NewCatalog().CheckTechspecPRDConsistency(prd, staleTechspec)
+
+	if result.Match {
+		t.Fatal("expected Match=false when embedded spec-hash-prd diverges from the current prd.md hash")
+	}
+}
+
+func TestCheckTechspecPRDConsistency_NoHeader(t *testing.T) {
+	prd := []byte("# PRD\n\n- RF-01: exemplo\n")
+	techspec := []byte("# Techspec sem cabecalho\n")
+
+	result := specdrift.NewCatalog().CheckTechspecPRDConsistency(prd, techspec)
+
+	if !result.NoHashFound {
+		t.Fatal("expected NoHashFound=true when techspec.md lacks a spec-hash-prd header")
+	}
+	if result.Match {
+		t.Fatal("expected Match=false when no header is present")
+	}
+}
+
+func TestCheckDrift_TechspecEmbeddedPRDHashDivergesFailsReport(t *testing.T) {
+	dir := t.TempDir()
+
+	prdContent := "RF-01 required"
+	prdHash := hashOf([]byte(prdContent))
+	techspecContent := fmt.Sprintf("<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->\nRF-01 covered")
+	techHash := hashOf([]byte(techspecContent))
+	tasksContent := fmt.Sprintf(
+		"RF-01 done.\n<!-- spec-hash-prd: %s -->\n<!-- spec-hash-techspec: %s -->",
+		prdHash, techHash,
+	)
+
+	writeFile(t, dir, "prd.md", prdContent)
+	writeFile(t, dir, "techspec.md", techspecContent)
+	writeFile(t, dir, "tasks.md", tasksContent)
+
+	report, err := specdrift.NewCatalog().CheckDrift(dir)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if report.Pass {
+		t.Error("expected Pass=false: techspec.md's embedded spec-hash-prd does not match prd.md")
+	}
+}
+
 // --- CheckDrift ---
 
 func writeFile(t *testing.T, dir, name, content string) {

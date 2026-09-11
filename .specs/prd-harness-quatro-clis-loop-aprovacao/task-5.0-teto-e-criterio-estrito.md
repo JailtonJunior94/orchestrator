@@ -45,34 +45,34 @@ número de rodadas passa a importar.
 
 ## Subtarefas
 
-- [ ] 5.1 Registrar a chave do teto no esquema da linha de comando (`docs/cli-schema.json`), que é
+- [x] 5.1 Registrar a chave do teto no esquema da linha de comando (`docs/cli-schema.json`), que é
       validado **bidirecionalmente** por `cmd/ai_spec_harness/cli_contract_test.go:189` — flag ausente
       do esquema e flag ausente da implementação falham igualmente.
-- [ ] 5.2 Registrar e ler a flag em `cmd/ai_spec_harness/task_loop.go`, com a **validação de presença**
+- [x] 5.2 Registrar e ler a flag em `cmd/ai_spec_harness/task_loop.go`, com a **validação de presença**
       via `cmd.Flags().Changed`: valor menor que 1 falha de forma explícita e tipada, e valor negativo
       **nunca** é normalizado em silêncio.
-- [ ] 5.3 Propagar o valor a `taskloop.Options` (`internal/taskloop/taskloop.go:37`), preenchendo pela
+- [x] 5.3 Propagar o valor a `taskloop.Options` (`internal/taskloop/taskloop.go:37`), preenchendo pela
       primeira vez o campo hoje sem escritor.
-- [ ] 5.4 Acrescentar a opção correspondente ao invoker ACP, seguindo o padrão de
+- [x] 5.4 Acrescentar a opção correspondente ao invoker ACP, seguindo o padrão de
       `WithACPInvokerAutoReview` (`internal/taskloop/acpinvoker.go:126-128`) e o repasse ao `Job` em
       `acpinvoker.go:243`.
-- [ ] 5.5 Propagar a `runtime.Job` / `RuntimeConfig` (`internal/runtime/types.go`), com o zero-value
+- [x] 5.5 Propagar a `runtime.Job` / `RuntimeConfig` (`internal/runtime/types.go`), com o zero-value
       tratado por `ApplyDefaults` (`internal/runtime/types.go:34`) de modo a preservar comportamento
       pré-mudança quando o campo não vier preenchido.
-- [ ] 5.6 Acrescentar a chave ao `config.Runtime` (`internal/config/runtime.go:20-31`, com tag `yaml`)
+- [x] 5.6 Acrescentar a chave ao `config.Runtime` (`internal/config/runtime.go:20-31`, com tag `yaml`)
       **e** a linha correspondente em `mergeInto` (`internal/config/resolver.go:166-199`). As duas
       edições são inseparáveis: a struct sem o merge produz uma chave que o resolver lê do arquivo e
       descarta silenciosamente.
-- [ ] 5.7 Documentar, junto ao campo, o **alerta de semântica**: `mergeInto` usa "não-zero vence"
+- [x] 5.7 Documentar, junto ao campo, o **alerta de semântica**: `mergeInto` usa "não-zero vence"
       (`resolver.go:164`), o que torna `0` indistinguível de ausente — razão pela qual a validação de
       teto menor que 1 vive na camada CLI, a única que sabe distinguir presença.
-- [ ] 5.8 Ligar o consumo do teto ao agregado do Ciclo (`internal/approval` (planejado), tarefa 2.0),
+- [x] 5.8 Ligar o consumo do teto ao agregado do Ciclo (`internal/approval` (planejado), tarefa 2.0),
       substituindo o teto fixo de `internal/taskloop/bugfix.go:66` pelo valor resolvido.
-- [ ] 5.9 Virar o critério: veredito com ressalvas realimenta o ciclo em vez de encerrar
+- [x] 5.9 Virar o critério: veredito com ressalvas realimenta o ciclo em vez de encerrar
       (`internal/taskloop/bugfix.go:83` e a saída em `:131`).
-- [ ] 5.10 Virar o resultado de teto esgotado para `blocked` com motivo canônico `max_rounds`, e garantir
+- [x] 5.10 Virar o resultado de teto esgotado para `blocked` com motivo canônico `max_rounds`, e garantir
       que esse estado terminal **não** aciona o caminho de retry (RF-45, já modelado em 2.0).
-- [ ] 5.11 Revisar cada teste que asserta encerramento com ressalvas ou teto 3, registrando no diff a
+- [x] 5.11 Revisar cada teste que asserta encerramento com ressalvas ou teto 3, registrando no diff a
       justificativa por requisito de cada asserção alterada.
 
 ## Detalhes de Implementação
@@ -130,13 +130,13 @@ Nenhuma além das auto-carregadas (governance + linguagem).
 
 ## Testes da Tarefa
 
-- [ ] Testes unitários
+- [x] Testes unitários
   - Validação do teto na camada CLI: `0`, negativo e ausente produzem, respectivamente, erro, erro e
     default 5.
   - `mergeInto` com a nova chave: suíte com tabela cobrindo global-only, projeto-only, ambos e nenhum.
   - `ApplyDefaults` preserva comportamento anterior para o zero-value.
   - Encerramento estrito: `APPROVED` encerra; `APPROVED_WITH_REMARKS` realimenta; teto esgotado bloqueia.
-- [ ] Testes de integração
+- [x] Testes de integração
   - Cadeia de propagação ponta a ponta (flag → `Options` → invoker ACP → `Job` → agregado) com o servidor
     ACP falso in-process, sem depender de CLI real.
   - Precedência de configuração com arquivos reais em diretório temporário (global + workspace + flag).

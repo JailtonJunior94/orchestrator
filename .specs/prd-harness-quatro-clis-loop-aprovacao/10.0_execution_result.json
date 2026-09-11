@@ -1,0 +1,176 @@
+{
+  "schema_version": 2,
+  "run_id": "task-10.0-remocao-gemini-2026-09-11",
+  "task_id": "10.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
+  "patch_sha256": "e77e50dd3337f1b69085933a733441784f1c7c7b06df819420f22e4307cb7130",
+  "patch_ref": "evidence/task-10.0/10.0.patch",
+  "final_state_sha256": "f159f46cc87d583431dd5cb4f54b55d7d0787368488848ec5d1c65f7a868f98f",
+  "coverage_regression": false,
+  "review_verdict": "approved",
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "442ee1755b9f2dc4bec25c64aea0467629bc0db6a5e490bfcb434bef49cca230"
+    },
+    {
+      "command": "bash scripts/check-skills-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "5054bfb1482b39dbba52a566c4251981af15848bf06067e8d41c2e11724c7585"
+    },
+    {
+      "command": "bash scripts/check-hooks-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "703b167362efb0d3b7208f8e6a4b1ce8395c813c8233f14c8f48202485be47d8"
+    },
+    {
+      "command": "bash scripts/check-scripts-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "c34f4247a95fc466ab45b4ec817096b3cda4752539946466f73e264aedf40066"
+    },
+    {
+      "command": "bash scripts/check-spec-paths.sh",
+      "exit_code": 0,
+      "output_sha256": "be018e44a8a6f2d8fd49a2c2cc4039c747abe493493092c372dfa9456d9fd187"
+    },
+    {
+      "command": "bash scripts/test-portable-skills.sh",
+      "exit_code": 0,
+      "output_sha256": "00a52f399c4d4f4dcee7d570d1d0ab442208217c95213d99e7f9c96cf05643e4"
+    },
+    {
+      "command": "grep -rni gemini --include=*.go internal/ cmd/",
+      "exit_code": 0,
+      "output_sha256": "94033e3f79c140a435d91a9be51bed75b7048a3258c81e2d431e86ec70e135c6"
+    },
+    {
+      "command": "grep -rni gemini docs/cli-schema.json",
+      "exit_code": 0,
+      "output_sha256": "cf205dbb8cea84897b488abcc281bf96698d5e94b1096b16657b4caba9082a22"
+    },
+    {
+      "command": "go run . install /tmp/dryrun --tools=all --dry-run",
+      "exit_code": 0,
+      "output_sha256": "fc70fa5eddc2c505e3c6e0d0c6194764f2a66502ddea926f7be4b6c1c4361666"
+    },
+    {
+      "command": "go run . task-loop --tool gemini --runtime legacy /tmp/nonexistent",
+      "exit_code": 0,
+      "output_sha256": "1e4f256708276e749c498615744ebcc93513bac380780167966e7c6bc306301d"
+    },
+    {
+      "command": "go run . task-loop --tool gemini --runtime acp /tmp/nonexistent",
+      "exit_code": 0,
+      "output_sha256": "1e4f256708276e749c498615744ebcc93513bac380780167966e7c6bc306301d"
+    },
+    {
+      "command": "go test ./internal/uninstall/... -run TestUninstall -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "45721733ad2f4ffc83accec0e56fa03cfdd36e56df1c5b2d5dc608f481537782"
+    },
+    {
+      "command": "go test ./internal/contextgen/... -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "9155da4ef90f048b6537dbd9bef9f901e36955c8a2bb875994623dead71d7bb2"
+    },
+    {
+      "command": "git diff --stat -- .specs/adr/015-gemini-cli-acp-native.md",
+      "exit_code": 0,
+      "output_sha256": "301b772b5a41b5abc130374f63e8d4e600ea928711f5fcadb68659240dd05a8e"
+    },
+    {
+      "command": "grep -rniE copilot.{0,80}(nao|nao|sem).{0,40}hook testdata/snapshots/*.agents.md",
+      "exit_code": 0,
+      "output_sha256": "bb2fa111a345b4f4db9713bff2ba3bd319640fefcaf8ff35f51df5fa5dc9ab21"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "subtasks-10.1-10.11-build-vet-test-sync-gates-green",
+      "evidence_ref": "evidence/task-10.0/go-test.log"
+    },
+    {
+      "id": "zero-gemini-in-go-production-code",
+      "evidence_ref": "evidence/task-10.0/grep-gemini-go.log"
+    },
+    {
+      "id": "zero-gemini-in-cli-schema-and-inverted-contract-gate",
+      "evidence_ref": "evidence/task-10.0/grep-gemini-schema.log"
+    },
+    {
+      "id": "tools-all-resolves-exactly-4-agents-by-count",
+      "evidence_ref": "evidence/task-10.0/install-tools-all-dryrun.log"
+    },
+    {
+      "id": "typed-removed-agent-error-distinguishable-via-errors-as",
+      "evidence_ref": "evidence/task-10.0/typed-error-acp-mode.log"
+    },
+    {
+      "id": "toolbudgetslarge-single-occupant-cell-nonempty",
+      "evidence_ref": "evidence/task-10.0/go-test.log"
+    },
+    {
+      "id": "no-gemini-dir-and-mirror-arrays-consistent",
+      "evidence_ref": "evidence/task-10.0/check-hooks-sync.log"
+    },
+    {
+      "id": "adr-015-status-substituida-single-line-diff",
+      "evidence_ref": "evidence/task-10.0/adr-015-diff.log"
+    },
+    {
+      "id": "uninstall-preserves-user-file-idempotent",
+      "evidence_ref": "evidence/task-10.0/uninstall-manifest-tests.log"
+    },
+    {
+      "id": "old-manifest-without-file-tracking-falls-back-conservative-and-announces",
+      "evidence_ref": "evidence/task-10.0/uninstall-manifest-tests.log"
+    },
+    {
+      "id": "contextgen-tests-pass-and-codex-only-snapshot-scoped",
+      "evidence_ref": "evidence/task-10.0/contextgen-snapshots.log"
+    },
+    {
+      "id": "no-golden-snapshot-claims-copilot-lacks-native-hooks",
+      "evidence_ref": "evidence/task-10.0/grep-copilot-hooks-claim.log"
+    },
+    {
+      "id": "9-golden-files-diff-reviewed-and-justified",
+      "evidence_ref": "evidence/task-10.0/snapshot-diff-stat.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-10.0/10.0.patch",
+    "evidence/task-10.0/go-build.log",
+    "evidence/task-10.0/go-vet.log",
+    "evidence/task-10.0/go-test.log",
+    "evidence/task-10.0/check-skills-sync.log",
+    "evidence/task-10.0/check-hooks-sync.log",
+    "evidence/task-10.0/check-scripts-sync.log",
+    "evidence/task-10.0/check-spec-paths.log",
+    "evidence/task-10.0/test-portable-skills.log",
+    "evidence/task-10.0/grep-gemini-go.log",
+    "evidence/task-10.0/grep-gemini-schema.log",
+    "evidence/task-10.0/typed-error-legacy-mode.log",
+    "evidence/task-10.0/typed-error-acp-mode.log",
+    "evidence/task-10.0/install-tools-all-dryrun.log",
+    "evidence/task-10.0/uninstall-manifest-tests.log",
+    "evidence/task-10.0/contextgen-snapshots.log",
+    "evidence/task-10.0/snapshot-diff-stat.log",
+    "evidence/task-10.0/review.md",
+    "evidence/task-10.0/adr-015-diff.log",
+    "evidence/task-10.0/grep-copilot-hooks-claim.log"
+  ]
+}

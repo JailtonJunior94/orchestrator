@@ -12,7 +12,7 @@ var ErrNameDirMismatch = errors.New("name no frontmatter diverge do nome do dire
 var ErrVersionInvalid = errors.New("version invalida: deve seguir SemVer (X.Y.Z)")
 
 // ErrIDEUnsupported e retornado quando o campo runtime.ide contem um valor fora do enum permitido.
-var ErrIDEUnsupported = errors.New("runtime.ide invalido: valores aceitos sao claude, codex, gemini, copilot")
+var ErrIDEUnsupported = errors.New("runtime.ide invalido: valores aceitos sao claude, codex, copilot, opencode")
 
 // ErrAgentNotFound e retornado quando um agente referenciado nao e encontrado em nenhum escopo.
 var ErrAgentNotFound = errors.New("agente nao encontrado")
