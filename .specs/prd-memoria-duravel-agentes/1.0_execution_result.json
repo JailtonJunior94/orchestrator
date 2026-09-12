@@ -1,0 +1,58 @@
+{
+  "schema_version": 2,
+  "run_id": "task-1.0-escrita-atomica-filesystem-2026-09-11",
+  "task_id": "1.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "166cb9efc0590cbf38685258ddce89908e594256",
+  "patch_sha256": "5ba7bcf701182630f071321b16c49e3264b3067ee7e4af1ce440cbbc7d93a763",
+  "patch_ref": "evidence/task-1.0-memoria-duravel-agentes/1.0.patch",
+  "final_state_sha256": "c85f8923cdc482445a4143b02106abc9bb07b19d30aa6b46234707a63d013f76",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./... && go test ./... -count=1 -race",
+      "exit_code": 0,
+      "output_sha256": "60372c4f428c65db8d82232f92256d8dbfa0aa661087b8cd89bd9d448480130a"
+    },
+    {
+      "command": "go test ./internal/fs/... -count=1 -race -v -cover",
+      "exit_code": 0,
+      "output_sha256": "822ba289544ef24260814219b26b0c0e4cc738c464205f271dc4ec5f5e7221d5"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "no-partial-file-visible-on-interrupted-atomic-write",
+      "evidence_ref": "evidence/task-1.0-memoria-duravel-agentes/fs-tests.log"
+    },
+    {
+      "id": "filesystem-interface-additive-no-signature-changed",
+      "evidence_ref": "evidence/task-1.0-memoria-duravel-agentes/1.0.patch"
+    },
+    {
+      "id": "make-check-mocks-green-after-regeneration",
+      "evidence_ref": "evidence/task-1.0-memoria-duravel-agentes/mocks.log"
+    },
+    {
+      "id": "vet-and-lint-zero-issues-baseline",
+      "evidence_ref": "evidence/task-1.0-memoria-duravel-agentes/lint.log"
+    },
+    {
+      "id": "no-error-ignored-outside-golangci-allowlist",
+      "evidence_ref": "evidence/task-1.0-memoria-duravel-agentes/lint.log"
+    },
+    {
+      "id": "fake-filesystem-embedders-continue-compiling",
+      "evidence_ref": "evidence/task-1.0-memoria-duravel-agentes/build.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-1.0-memoria-duravel-agentes/1.0.patch",
+    "evidence/task-1.0-memoria-duravel-agentes/build.log",
+    "evidence/task-1.0-memoria-duravel-agentes/fs-tests.log",
+    "evidence/task-1.0-memoria-duravel-agentes/lint.log",
+    "evidence/task-1.0-memoria-duravel-agentes/mocks.log"
+  ],
+  "review_verdict": "approved"
+}

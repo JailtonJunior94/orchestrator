@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-memoria-duravel-agentes/5.0_execution_report.md
+summary: Agregado Layer (Read/Consolidate/Archive/Promote) com Scope por camada, lock por camada reutilizando o padrão por plataforma com tratamento de órfão via lease de 4.0, escrita sempre atômica com RefuseExternalSymlink, e SearchPolicy determinística.
+timestamp: 2026-09-11T00:00:00Z

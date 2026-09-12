@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -12,17 +13,18 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
 )
 
-// _metricsSectionHeader é o cabeçalho canônico da seção de métricas unificada (ADR-021).
-// Mantém compatibilidade com o cabeçalho Claude-2026 quando só métricas Claude estão presentes.
 const _metricsSectionHeader = "## Métricas Claude-2026"
 
-// _sectionHeaderRe detecta o marcador exato da seção (início de linha).
 var _sectionHeaderRe = regexp.MustCompile(`(?m)^## Runtime ACP$`)
 
-// _nextSectionRe detecta o próximo cabeçalho de segundo nível após o marcador.
 var _nextSectionRe = regexp.MustCompile(`(?m)^## `)
 
-// _reportTemplate é o template da seção ## Runtime ACP (RF-10).
+const _memoryEvidenceSectionHeader = "## Evidência de Memória Durável"
+
+var _memoryEvidenceHeaderRe = regexp.MustCompile(`(?m)^## Evidência de Memória Durável$`)
+
+var _metricsSectionHeaderRe = regexp.MustCompile(`(?m)^## Métricas Claude-2026`)
+
 var _reportTemplate = template.Must(template.New("runtime-acp").Parse(
 	`## Runtime ACP
 
@@ -33,15 +35,11 @@ var _reportTemplate = template.Must(template.New("runtime-acp").Parse(
 - cancel_reason: {{.CancelReason}}
 `))
 
-// EnrichReport adiciona ou substitui a seção "## Runtime ACP" no execution_report.md (RF-10).
-// Quando a Summary contém métricas (ADR-021), também faz append da seção de métricas unificada.
-// A operação é idempotente: chamadas sucessivas produzem o mesmo arquivo.
 func (c *Catalog) EnrichReport(reportPath string, summary runtime.Summary, fsys fs.FileSystem) error {
 	clean := filepath.Clean(reportPath)
 
 	existing, err := fsys.ReadFile(clean)
 	if err != nil {
-		// Arquivo não existe ainda; criar com apenas a seção.
 		existing = []byte{}
 	}
 
@@ -52,8 +50,10 @@ func (c *Catalog) EnrichReport(reportPath string, summary runtime.Summary, fsys 
 
 	updated := NewCatalog().injectSection(string(existing), section)
 
-	// ★ ADR-021: seção de métricas unificada — append opcional.
-	// Omitida quando Metrics.IsZero() (evita poluição em sessões sem métricas).
+	if memorySection := NewCatalog().RenderMemoryEvidenceSection(summary); memorySection != "" {
+		updated = NewCatalog().injectBoundedSectionBefore(updated, _memoryEvidenceHeaderRe, _metricsSectionHeaderRe, memorySection)
+	}
+
 	if metricsSection := NewCatalog().RenderMetricsSection(summary.Metrics); metricsSection != "" {
 		updated = NewCatalog().injectMetricsSection(updated, metricsSection)
 	}
@@ -64,10 +64,6 @@ func (c *Catalog) EnrichReport(reportPath string, summary runtime.Summary, fsys 
 	return nil
 }
 
-// RenderMetricsSection renderiza a seção de métricas unificada (ADR-021, RP-02).
-// Retorna "" quando MetricSet.IsZero() == true (seção omitida, RP-02: nunca campos divergentes).
-// Cabeçalho mantém compatibilidade com "## Métricas Claude-2026" quando só Claude está presente.
-// Exportada para uso em testes e por internal/evidence.
 func (c *Catalog) RenderMetricsSection(m events.MetricSet) string {
 	fields := m.Fields()
 	if len(fields) == 0 {
@@ -82,31 +78,56 @@ func (c *Catalog) RenderMetricsSection(m events.MetricSet) string {
 	return sb.String()
 }
 
-// RenderClaudeMetricsSection é mantida por compatibilidade retroativa com testes e leitores.
-// Delega para RenderMetricsSection usando summary.Metrics (ADR-021).
-// Deprecated: usar RenderMetricsSection(summary.Metrics) diretamente.
 func (c *Catalog) RenderClaudeMetricsSection(summary runtime.Summary) string {
 	return NewCatalog().RenderMetricsSection(summary.Metrics)
 }
 
-// injectMetricsSection substitui ou faz append da seção de métricas.
-// Idempotente: se a seção já existir, substitui; caso contrário faz append.
-func (c *Catalog) injectMetricsSection(content, section string) string {
-	headerRe := regexp.MustCompile(`(?m)^## Métricas Claude-2026`)
-	loc := headerRe.FindStringIndex(content)
-	if loc == nil {
-		// Não existe: append.
-		if !strings.HasSuffix(content, "\n") {
-			content += "\n"
-		}
-		return content + "\n" + section
+func (c *Catalog) RenderMemoryEvidenceSection(summary runtime.Summary) string {
+	e := summary.MemoryEvidence
+	if e == nil {
+		return ""
 	}
-	// Existe: substituir até fim do arquivo (seção deve ser a última).
-	start := loc[0]
-	return content[:start] + section
+
+	var sb strings.Builder
+	sb.WriteString(_memoryEvidenceSectionHeader)
+	sb.WriteString("\n\n")
+	fmt.Fprintf(&sb, "- session: %s\n", e.SessionID)
+	fmt.Fprintf(&sb, "- cli: %s\n", e.CLI)
+	fmt.Fprintf(&sb, "- task: %s\n", e.TaskFileName)
+	fmt.Fprintf(&sb, "- read_facts_by_layer: %s\n", c.formatLayerCounts(e.FactsByLayer))
+	fmt.Fprintf(&sb, "- read_facts_omitted: %d\n", e.FactsOmitted)
+	fmt.Fprintf(&sb, "- read_facts_contradicted: %d\n", e.FactsContradicted)
+	fmt.Fprintf(&sb, "- read_pages_unreadable: %d\n", e.PagesUnreadable)
+	fmt.Fprintf(&sb, "- write_facts_by_layer: %s\n", c.formatLayerCounts(e.WritesByLayer))
+	fmt.Fprintf(&sb, "- budget_consumed_by_layer: %s\n", c.formatLayerCounts(e.BudgetByLayer))
+	fmt.Fprintf(&sb, "- compactions_executed: %d\n", e.Compactions)
+	fmt.Fprintf(&sb, "- facts_archived_by_layer: %s\n", c.formatLayerCounts(e.ArchivedByLayer))
+	fmt.Fprintf(&sb, "- redactions_applied: %d\n", e.Redactions)
+	fmt.Fprintf(&sb, "- contradictions_detected: %d\n", e.Contradictions)
+	fmt.Fprintf(&sb, "- baton_claimed: %v\n", e.BatonClaimed)
+	return sb.String()
 }
 
-// renderSection renderiza o conteúdo da seção ## Runtime ACP.
+func (c *Catalog) formatLayerCounts(byLayer map[string]int) string {
+	if len(byLayer) == 0 {
+		return "none"
+	}
+	keys := make([]string, 0, len(byLayer))
+	for k := range byLayer {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, k := range keys {
+		parts = append(parts, fmt.Sprintf("%s=%d", k, byLayer[k]))
+	}
+	return strings.Join(parts, ", ")
+}
+
+func (c *Catalog) injectMetricsSection(content, section string) string {
+	return c.injectBoundedSection(content, _metricsSectionHeaderRe, section)
+}
+
 func (c *Catalog) renderSection(summary runtime.Summary) (string, error) {
 	var sb strings.Builder
 	if err := _reportTemplate.Execute(&sb, summary); err != nil {
@@ -115,29 +136,44 @@ func (c *Catalog) renderSection(summary runtime.Summary) (string, error) {
 	return sb.String(), nil
 }
 
-// injectSection substitui ou faz append da seção no conteúdo do relatório.
 func (c *Catalog) injectSection(content, section string) string {
-	loc := _sectionHeaderRe.FindStringIndex(content)
+	return c.injectBoundedSection(content, _sectionHeaderRe, section)
+}
+
+func (c *Catalog) injectBoundedSection(content string, headerRe *regexp.Regexp, section string) string {
+	return c.injectBoundedSectionBefore(content, headerRe, nil, section)
+}
+
+func (c *Catalog) injectBoundedSectionBefore(content string, headerRe, beforeRe *regexp.Regexp, section string) string {
+	loc := headerRe.FindStringIndex(content)
 	if loc == nil {
-		// Seção não encontrada: fazer append.
-		if content != "" && !strings.HasSuffix(content, "\n") {
-			content += "\n"
-		}
-		return content + "\n" + section
+		return c.appendSection(content, beforeRe, section)
 	}
 
-	// Seção encontrada: substituir até o próximo ## ou fim do arquivo.
 	start := loc[0]
 	rest := content[loc[1]:]
 
-	// Procurar próximo cabeçalho de segundo nível após o marcador.
 	nextLoc := _nextSectionRe.FindStringIndex(rest)
 	if nextLoc == nil {
-		// Não há seção seguinte; substituir até o fim.
 		return content[:start] + section
 	}
 
-	// Há seção seguinte; substituir apenas o bloco da seção ACP.
 	nextStart := loc[1] + nextLoc[0]
 	return content[:start] + section + "\n" + content[nextStart:]
+}
+
+func (c *Catalog) appendSection(content string, beforeRe *regexp.Regexp, section string) string {
+	if beforeRe != nil {
+		if loc := beforeRe.FindStringIndex(content); loc != nil {
+			prefix := content[:loc[0]]
+			if prefix != "" && !strings.HasSuffix(prefix, "\n") {
+				prefix += "\n"
+			}
+			return prefix + section + "\n" + content[loc[0]:]
+		}
+	}
+	if content != "" && !strings.HasSuffix(content, "\n") {
+		content += "\n"
+	}
+	return content + "\n" + section
 }

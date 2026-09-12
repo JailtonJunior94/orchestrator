@@ -1,0 +1,68 @@
+{
+  "schema_version": 2,
+  "run_id": "task-6.0-golden-paridade-antissilencio-2026-09-11",
+  "task_id": "6.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "166cb9efc0590cbf38685258ddce89908e594256",
+  "patch_sha256": "1e9cca418695db1d30309b98ea24f1728bd4739669aa8aabcefbc71827e30d73",
+  "patch_ref": "evidence/task-6.0-memoria-duravel-agentes/6.0.patch",
+  "final_state_sha256": "c2a9f50707e0b4008ea4d097d0cb48ff207766f9e6a0a0f47fc409e4fc813610",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "325806deb8e6c9c0f12dc871e9cd609079b2a684e5d47150a9d6a59f0c3be9ea"
+    },
+    {
+      "command": "go test ./internal/runtime/... -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "d2242cef532ba23c6ee2dfc785aae3319ed642c7ed2e357b3be235deb4e160c7"
+    },
+    {
+      "command": "go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "278c29c8f5a8f5a6dec582219591268627586180d87af51aea0ce477b7da824b"
+    },
+    {
+      "command": "bash scripts/check-mocks.sh",
+      "exit_code": 0,
+      "output_sha256": "3109ee69012355210c33d1e884464e6a3f7407609f55eac6dd0506dc98a6b016"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "golden-fails-on-any-byte-change-in-final-prompt-four-cases",
+      "evidence_ref": "evidence/task-6.0-memoria-duravel-agentes/runtime-tests.log"
+    },
+    {
+      "id": "golden-anchored-at-hook-dispatch-not-internal-function",
+      "evidence_ref": "evidence/task-6.0-memoria-duravel-agentes/runtime-tests.log"
+    },
+    {
+      "id": "dispatch-failure-logged-and-composed-into-summary",
+      "evidence_ref": "evidence/task-6.0-memoria-duravel-agentes/runtime-tests.log"
+    },
+    {
+      "id": "session-does-not-abort-on-memory-persist-failure",
+      "evidence_ref": "evidence/task-6.0-memoria-duravel-agentes/runtime-tests.log"
+    },
+    {
+      "id": "build-memory-content-byte-identical-existing-hooks-tests-unchanged",
+      "evidence_ref": "evidence/task-6.0-memoria-duravel-agentes/runtime-tests.log"
+    },
+    {
+      "id": "existing-memory-hooks-runner-suite-green-no-expectation-change",
+      "evidence_ref": "evidence/task-6.0-memoria-duravel-agentes/full-tests.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-6.0-memoria-duravel-agentes/build.log",
+    "evidence/task-6.0-memoria-duravel-agentes/runtime-tests.log",
+    "evidence/task-6.0-memoria-duravel-agentes/full-tests.log",
+    "evidence/task-6.0-memoria-duravel-agentes/mocks.log",
+    "evidence/task-6.0-memoria-duravel-agentes/lint.log"
+  ],
+  "review_verdict": "approved"
+}

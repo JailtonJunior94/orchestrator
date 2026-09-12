@@ -418,6 +418,209 @@
         }
       },
       {
+        "name": "memory",
+        "description": "Inspeciona, busca, exporta, compacta, migra e gerencia o bastao da memoria duravel de agentes",
+        "longDescription": "Opera diretamente sobre os colaboradores do subsistema de memoria duravel (Layer, politicas e HandoffLease), sem passar pela fachada usada pelo runtime (MD-001). Nenhum comando existente tem contrato ou output alterados.",
+        "args": [],
+        "flags": {},
+        "subcommands": [
+          {
+            "name": "show",
+            "description": "Exibe fatos ativos por camada, com origem rastreada ate a sessao e contradicoes sinalizadas",
+            "args": [],
+            "flags": {
+              "project-dir": {
+                "type": "string",
+                "default": ".",
+                "required": false,
+                "description": "Diretorio raiz do repositorio (camada de projeto)"
+              },
+              "tasks-dir": {
+                "type": "string",
+                "required": false,
+                "description": "Diretorio do PRD, ex: .specs/prd-x (camadas prd e task)"
+              },
+              "task": {
+                "type": "string",
+                "required": false,
+                "description": "Nome do arquivo de task (camada task)"
+              }
+            }
+          },
+          {
+            "name": "search",
+            "description": "Busca fatos por texto ou por entidade via scan deterministico das camadas, sem rede e sem chave de API",
+            "args": [
+              {
+                "name": "termo",
+                "required": true,
+                "description": "Termo de busca"
+              }
+            ],
+            "flags": {
+              "project-dir": {
+                "type": "string",
+                "default": ".",
+                "required": false,
+                "description": "Diretorio raiz do repositorio (camada de projeto)"
+              },
+              "tasks-dir": {
+                "type": "string",
+                "required": false,
+                "description": "Diretorio do PRD, ex: .specs/prd-x (camadas prd e task)"
+              },
+              "task": {
+                "type": "string",
+                "required": false,
+                "description": "Nome do arquivo de task (camada task)"
+              },
+              "entity": {
+                "type": "bool",
+                "default": false,
+                "required": false,
+                "description": "Busca por entidade (chave, sessao, CLI, task) em vez de texto livre"
+              }
+            }
+          },
+          {
+            "name": "export",
+            "description": "Produz um artefato Markdown autocontido e portatil com a memoria ativa das camadas resolvidas",
+            "args": [],
+            "flags": {
+              "project-dir": {
+                "type": "string",
+                "default": ".",
+                "required": false,
+                "description": "Diretorio raiz do repositorio (camada de projeto)"
+              },
+              "tasks-dir": {
+                "type": "string",
+                "required": false,
+                "description": "Diretorio do PRD, ex: .specs/prd-x (camadas prd e task)"
+              },
+              "task": {
+                "type": "string",
+                "required": false,
+                "description": "Nome do arquivo de task (camada task)"
+              },
+              "out": {
+                "type": "string",
+                "default": "memory-export.md",
+                "required": false,
+                "description": "Caminho do artefato exportado"
+              }
+            }
+          },
+          {
+            "name": "compact",
+            "description": "Executa a compactacao deterministica sob demanda nas camadas resolvidas, preservando o bloco humano",
+            "args": [],
+            "flags": {
+              "project-dir": {
+                "type": "string",
+                "default": ".",
+                "required": false,
+                "description": "Diretorio raiz do repositorio (camada de projeto)"
+              },
+              "tasks-dir": {
+                "type": "string",
+                "required": false,
+                "description": "Diretorio do PRD, ex: .specs/prd-x (camadas prd e task)"
+              },
+              "task": {
+                "type": "string",
+                "required": false,
+                "description": "Nome do arquivo de task (camada task)"
+              },
+              "line-limit": {
+                "type": "int",
+                "default": 150,
+                "required": false,
+                "description": "Limite de linhas por pagina"
+              },
+              "byte-limit": {
+                "type": "int",
+                "default": 12288,
+                "required": false,
+                "description": "Limite de bytes por pagina"
+              }
+            }
+          },
+          {
+            "name": "migrate",
+            "description": "Converte o MEMORY.md legado da camada PRD para o formato de pagina duravel, com backup verificavel",
+            "args": [],
+            "flags": {
+              "tasks-dir": {
+                "type": "string",
+                "required": true,
+                "description": "Diretorio do PRD contendo memory/MEMORY.md a migrar"
+              }
+            }
+          },
+          {
+            "name": "handoff",
+            "description": "Consulta, reivindica e libera o bastao de continuidade da memoria duravel de agentes",
+            "args": [],
+            "flags": {},
+            "subcommands": [
+              {
+                "name": "status",
+                "description": "Exibe o estado atual do bastao de continuidade do PRD informado",
+                "args": [],
+                "flags": {
+                  "tasks-dir": {
+                    "type": "string",
+                    "required": true,
+                    "description": "Diretorio do PRD ao qual o bastao pertence"
+                  }
+                }
+              },
+              {
+                "name": "claim",
+                "description": "Reivindica o bastao de continuidade, recusando reivindicacao concorrente de dono vivo",
+                "args": [],
+                "flags": {
+                  "tasks-dir": {
+                    "type": "string",
+                    "required": true,
+                    "description": "Diretorio do PRD ao qual o bastao pertence"
+                  },
+                  "owner": {
+                    "type": "string",
+                    "required": false,
+                    "description": "Identificador do reivindicante (default: pid:<pid> do processo atual)"
+                  },
+                  "ttl": {
+                    "type": "duration",
+                    "default": "30m0s",
+                    "required": false,
+                    "description": "Prazo do lease (RF-23)"
+                  }
+                }
+              },
+              {
+                "name": "release",
+                "description": "Libera o bastao de continuidade detido pelo dono informado",
+                "args": [],
+                "flags": {
+                  "tasks-dir": {
+                    "type": "string",
+                    "required": true,
+                    "description": "Diretorio do PRD ao qual o bastao pertence"
+                  },
+                  "owner": {
+                    "type": "string",
+                    "required": false,
+                    "description": "Identificador do dono a liberar (default: pid:<pid> do processo atual)"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
         "name": "metrics",
         "description": "Reporta metricas de contexto para governanca",
         "longDescription": "Calcula e exibe metricas de tokens estimados por baseline, fluxo e skill.",
@@ -851,6 +1054,12 @@
             "default": 5,
             "required": false,
             "description": "Teto de rodadas do Ciclo de Aprovacao (RF-35); minimo aceito 1. Configuravel tambem via arquivo de configuracao (workspace/global), respeitando a precedencia flags > workspace > global > defaults (ADR-016). Valor 0 ou negativo falha explicitamente quando a flag e passada; nunca e normalizado em silencio."
+          },
+          "durable-memory": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Ativa o subsistema de memoria duravel (fachada + camadas project/prd/task) em vez do memory store legado (RF-28). Default false preserva o prompt byte a byte identico. Configuravel tambem via chave durable_memory_enabled na cascata de configuracao, respeitando a precedencia flags > workspace > global > defaults (ADR-016)."
           }
         }
       },

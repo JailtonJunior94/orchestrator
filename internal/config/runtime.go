@@ -1,45 +1,56 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
 
-// Runtime agrupa configuracao de runtime consumida por skills, scripts e
-// pelo orquestrador internal/taskloop. Carregada de .claude/config.yaml
-// (fonte canonica) ou .agents/config.yaml (alias) na raiz do projeto.
-//
-// Defaults usam o layout canonico atual (.specs/prd-<slug>).
-// Projetos que precisam de outro root podem sobrescrever tasks_root.
-//
-// Chaves operacionais opcionais (zero-value => default/F1):
-//   - Timeout: duracao de inatividade (string parseable por time.ParseDuration); "" = sem limite.
-//   - MaxRetries: numero maximo de retentativas; 0 = uma tentativa (F1).
-//   - RetryBackoffMultiplier: multiplicador exponencial; <=0 = sem espera.
-//   - Concurrent: grau de paralelismo; <=0 = 1 (sequencial, F1).
-//   - BatchSize: tamanho do lote; <=0 = 1 (F1).
-//   - DefaultTool: ferramenta padrao quando nao especificada; "" = sem padrao.
+	"gopkg.in/yaml.v3"
+)
+
 type Runtime struct {
-	TasksRoot              string  `yaml:"tasks_root"`
-	PRDPrefix              string  `yaml:"prd_prefix"`
-	EvidenceDir            string  `yaml:"evidence_dir"`
-	CoverageThreshold      float64 `yaml:"coverage_threshold"`
-	LanguageDefault        string  `yaml:"language_default"`
-	Timeout                string  `yaml:"timeout"`
-	MaxRetries             int     `yaml:"max_retries"`
-	RetryBackoffMultiplier float64 `yaml:"retry_backoff_multiplier"`
-	Concurrent             int     `yaml:"concurrent"`
-	BatchSize              int     `yaml:"batch_size"`
-	DefaultTool            string  `yaml:"default_tool"`
-	MaxBugfixIterations    int     `yaml:"max_bugfix_iterations"`
+	TasksRoot               string  `yaml:"tasks_root"`
+	PRDPrefix               string  `yaml:"prd_prefix"`
+	EvidenceDir             string  `yaml:"evidence_dir"`
+	CoverageThreshold       float64 `yaml:"coverage_threshold"`
+	LanguageDefault         string  `yaml:"language_default"`
+	Timeout                 string  `yaml:"timeout"`
+	MaxRetries              int     `yaml:"max_retries"`
+	RetryBackoffMultiplier  float64 `yaml:"retry_backoff_multiplier"`
+	Concurrent              int     `yaml:"concurrent"`
+	BatchSize               int     `yaml:"batch_size"`
+	DefaultTool             string  `yaml:"default_tool"`
+	MaxBugfixIterations     int     `yaml:"max_bugfix_iterations"`
+	HandoffLeaseTTL         string  `yaml:"handoff_lease_ttl"`
+	DurableMemoryEnabled    bool    `yaml:"durable_memory_enabled"`
+	DurableMemoryEnabledSet bool    `yaml:"-"`
 }
 
-// RuntimeProvider fornece configuracao de runtime stateless.
+func (r *Runtime) UnmarshalYAML(value *yaml.Node) error {
+	type alias Runtime
+	var decoded alias
+	if err := value.Decode(&decoded); err != nil {
+		return err
+	}
+	*r = Runtime(decoded)
+
+	var probe struct {
+		DurableMemoryEnabled *bool `yaml:"durable_memory_enabled"`
+	}
+	if err := value.Decode(&probe); err != nil {
+		return err
+	}
+	if probe.DurableMemoryEnabled != nil {
+		r.DurableMemoryEnabled = *probe.DurableMemoryEnabled
+		r.DurableMemoryEnabledSet = true
+	}
+	return nil
+}
+
 type RuntimeProvider struct{}
 
-// NewRuntimeProvider cria um RuntimeProvider stateless.
 func NewRuntimeProvider() *RuntimeProvider {
 	return &RuntimeProvider{}
 }
 
-// DefaultRuntime retorna a configuracao com defaults compativeis com o layout atual.
 func (p *RuntimeProvider) DefaultRuntime() Runtime {
 	return Runtime{
 		TasksRoot:         ".specs",
@@ -50,19 +61,12 @@ func (p *RuntimeProvider) DefaultRuntime() Runtime {
 	}
 }
 
-// LoadRuntime e um wrapper fino sobre DefaultResolver para compatibilidade retroativa.
-// Resolve a configuracao a partir de repoRoot como CWD, sem overrides e sem config global.
-// Quando nenhum arquivo existir, retorna DefaultRuntime sem erro.
-// Quando o arquivo existir mas estiver malformado, propaga erro descritivo.
 func (p *RuntimeProvider) LoadRuntime(repoRoot string) (Runtime, error) {
 	r := NewDefaultResolver()
-	r.HomeDir = "" // sem config global: compatibilidade F1 (RF-16)
+	r.HomeDir = ""
 	return r.Resolve(repoRoot, Runtime{})
 }
 
-// EnvVars projeta a configuracao em variaveis de ambiente exportadas pelo
-// script scripts/lib/check-invocation-depth.sh para consumo de skills e validators.
-// O caller decide se aplica via os.Setenv ou se gera linhas `export FOO=bar`.
 func (r Runtime) EnvVars() map[string]string {
 	return map[string]string{
 		"AI_TASKS_ROOT":         r.TasksRoot,

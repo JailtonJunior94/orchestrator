@@ -95,20 +95,11 @@ func TestCLI_ContractMatchesSchema(t *testing.T) {
 	schemaCmds := flattenSchemaCommands(raw.Default.Commands, "")
 	sort.Strings(schemaCmds)
 
-	// Extrair comandos do Cobra (excluindo help e completion — auto-gerados)
 	excluded := map[string]bool{"help": true, "completion": true}
-	var cobraCmds []string
-	for _, cmd := range newRootCmd().Commands() {
-		if cmd.Hidden || excluded[cmd.Name()] {
-			continue
-		}
-		cobraCmds = append(cobraCmds, cmd.Name())
-		for _, sub := range cmd.Commands() {
-			if sub.Hidden || excluded[sub.Name()] {
-				continue
-			}
-			cobraCmds = append(cobraCmds, cmd.Name()+" "+sub.Name())
-		}
+	cobraMap := cobraCommandMap(newRootCmd().Commands(), "", excluded)
+	cobraCmds := make([]string, 0, len(cobraMap))
+	for path := range cobraMap {
+		cobraCmds = append(cobraCmds, path)
 	}
 	sort.Strings(cobraCmds)
 

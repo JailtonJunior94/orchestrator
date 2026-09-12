@@ -77,6 +77,199 @@ func TestOS_WriteFile_overwritesReadOnly(t *testing.T) {
 	}
 }
 
+func TestOS_WriteFileAtomic_writeAndRead(t *testing.T) {
+	dir := t.TempDir()
+	f := fs.NewOSFileSystem()
+	p := filepath.Join(dir, "sub", "atomic.txt")
+
+	if err := f.WriteFileAtomic(p, []byte("hello")); err != nil {
+		t.Fatalf("WriteFileAtomic: %v", err)
+	}
+	data, err := f.ReadFile(p)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if string(data) != "hello" {
+		t.Errorf("ReadFile = %q, want 'hello'", data)
+	}
+}
+
+func TestOS_WriteFileAtomic_overwritesReadOnly(t *testing.T) {
+	dir := t.TempDir()
+	f := fs.NewOSFileSystem()
+	p := filepath.Join(dir, "atomic.txt")
+
+	if err := os.WriteFile(p, []byte("old"), 0o444); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	if err := f.WriteFileAtomic(p, []byte("new")); err != nil {
+		t.Fatalf("WriteFileAtomic over read-only: %v", err)
+	}
+	data, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if string(data) != "new" {
+		t.Errorf("content = %q, want 'new'", data)
+	}
+}
+
+func TestOS_WriteFileAtomic_noPartialFileOnInterruption(t *testing.T) {
+	dir := t.TempDir()
+	f := fs.NewOSFileSystem()
+	p := filepath.Join(dir, "atomic.txt")
+
+	if err := os.MkdirAll(p, 0o755); err != nil {
+		t.Fatalf("seed final path as a pre-existing non-empty directory: %v", err)
+	}
+	sentinel := filepath.Join(p, "sentinel.txt")
+	if err := os.WriteFile(sentinel, []byte("pre-existing"), 0o644); err != nil {
+		t.Fatalf("seed sentinel file: %v", err)
+	}
+
+	writeErr := f.WriteFileAtomic(p, []byte("new-content-that-must-never-land-partially"))
+	if writeErr == nil {
+		t.Fatal("WriteFileAtomic must fail when Rename cannot replace a non-empty directory at the final path — Write/Sync/Close all succeed, only Rename fails")
+	}
+
+	info, err := os.Stat(p)
+	if err != nil {
+		t.Fatalf("Stat final path after failed attempt: %v", err)
+	}
+	if !info.IsDir() {
+		t.Fatal("final path must remain the original directory after a failed Rename — never partially replaced with the new content")
+	}
+	data, err := os.ReadFile(sentinel)
+	if err != nil {
+		t.Fatalf("ReadFile sentinel after failed attempt: %v", err)
+	}
+	if string(data) != "pre-existing" {
+		t.Errorf("pre-existing content at final path changed = %q, want 'pre-existing' (byte-identical to before the failed attempt)", data)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir: %v", err)
+	}
+	for _, e := range entries {
+		if e.Name() != filepath.Base(p) {
+			t.Errorf("temp file leaked in directory after failed WriteFileAtomic: %s", e.Name())
+		}
+	}
+}
+
+func TestOS_WriteFileAtomic_cleansUpTempOnWriteFailure(t *testing.T) {
+	dir := t.TempDir()
+	f := fs.NewOSFileSystem()
+	unwritable := filepath.Join(dir, "unwritable")
+	p := filepath.Join(unwritable, "file.txt")
+
+	if err := os.MkdirAll(unwritable, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+	if err := os.Chmod(unwritable, 0o555); err != nil {
+		t.Fatalf("chmod read-only: %v", err)
+	}
+	t.Cleanup(func() { makeWritableForCleanup(unwritable) })
+
+	err := f.WriteFileAtomic(p, []byte("data"))
+	if err == nil {
+		t.Fatal("WriteFileAtomic into read-only directory should fail")
+	}
+
+	makeWritableForCleanup(unwritable)
+	entries, readErr := os.ReadDir(unwritable)
+	if readErr != nil {
+		t.Fatalf("ReadDir: %v", readErr)
+	}
+	for _, e := range entries {
+		t.Errorf("temp file leaked after failed WriteFileAtomic: %s", e.Name())
+	}
+}
+
+func TestOS_WriteFileAtomicVsWriteFile_symlinkSemantics(t *testing.T) {
+	scenarios := []struct {
+		name       string
+		write      func(f *fs.OSFileSystem, link string, data []byte) error
+		wantTarget string
+		wantLink   bool
+	}{
+		{
+			name: "WriteFileAtomic replaces the symlink itself via Rename",
+			write: func(f *fs.OSFileSystem, link string, data []byte) error {
+				return f.WriteFileAtomic(link, data)
+			},
+			wantTarget: "atomic-written",
+			wantLink:   false,
+		},
+		{
+			name: "WriteFile follows the symlink and writes through it via os.WriteFile",
+			write: func(f *fs.OSFileSystem, link string, data []byte) error {
+				return f.WriteFile(link, data)
+			},
+			wantTarget: "followed-written",
+			wantLink:   true,
+		},
+	}
+
+	for _, sc := range scenarios {
+		t.Run(sc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			f := fs.NewOSFileSystem()
+			target := filepath.Join(dir, "target.txt")
+			link := filepath.Join(dir, "link.txt")
+
+			if err := os.WriteFile(target, []byte("original"), 0o644); err != nil {
+				t.Fatalf("seed target: %v", err)
+			}
+			if err := os.Symlink(target, link); err != nil {
+				t.Fatalf("Symlink: %v", err)
+			}
+
+			var data []byte
+			if sc.wantTarget == "atomic-written" {
+				data = []byte("atomic-written")
+			} else {
+				data = []byte("followed-written")
+			}
+			if err := sc.write(f, link, data); err != nil {
+				t.Fatalf("write: %v", err)
+			}
+
+			linkInfo, err := os.Lstat(link)
+			if err != nil {
+				t.Fatalf("Lstat link: %v", err)
+			}
+			isSymlink := linkInfo.Mode()&os.ModeSymlink != 0
+			if isSymlink != sc.wantLink {
+				t.Errorf("link is symlink after write = %v, want %v", isSymlink, sc.wantLink)
+			}
+
+			linkContent, err := os.ReadFile(link)
+			if err != nil {
+				t.Fatalf("ReadFile link: %v", err)
+			}
+			if string(linkContent) != string(data) {
+				t.Errorf("link content = %q, want %q", linkContent, data)
+			}
+
+			targetContent, err := os.ReadFile(target)
+			if err != nil {
+				t.Fatalf("ReadFile target: %v", err)
+			}
+			if sc.wantLink {
+				if string(targetContent) != string(data) {
+					t.Errorf("WriteFile must follow the symlink and write through to target: target content = %q, want %q", targetContent, data)
+				}
+			} else {
+				if string(targetContent) != "original" {
+					t.Errorf("WriteFileAtomic must never write through the symlink to target: target content = %q, want 'original'", targetContent)
+				}
+			}
+		})
+	}
+}
+
 func TestOS_ReadFile_missing(t *testing.T) {
 	f := fs.NewOSFileSystem()
 	_, err := f.ReadFile("/nonexistent/path/file.txt")

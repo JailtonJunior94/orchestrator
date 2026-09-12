@@ -292,3 +292,8 @@ Ver [`docs/config-hierarchy.md`](docs/config-hierarchy.md) para referencia compl
 | [ADR-019](.specs/prd-fundacao-portatil/adr-019-instalador-portatil-detect-verify.md) | Instalador portatil: auto-deteccao de agentes, escopo global e verify file-first | Proposta |
 | [PP-001](.specs/prd-skills-production-proof/adr-001-validadores-canonicos-agents-scripts.md) | Validadores de evidencia canonicos em `.agents/scripts/` (tool-neutros, cascata) | Aceita |
 | [PP-002](.specs/prd-skills-production-proof/adr-002-hooks-nativos-paridade-cross-cli.md) | Hooks nativos de bloqueio nos 4 CLIs (paridade cross-CLI 2026) | Aceita |
+| [MD-001](.specs/prd-memoria-duravel-agentes/adr-001-fachada-porta-unica-memoria.md) | Fachada como porta unica do runtime para o subsistema de memoria duravel | Proposta |
+| [MD-002](.specs/prd-memoria-duravel-agentes/adr-002-fato-pagina-roundtrip-lossless.md) | Fato identificado por chave semantica + hash; Pagina Markdown com round-trip lossless | Proposta |
+| [MD-003](.specs/prd-memoria-duravel-agentes/adr-003-escrita-atomica-lock-camada-lease.md) | Escrita atomica, lock por camada e lease de bastao com prazo e verificacao de processo | Proposta |
+| [MD-004](.specs/prd-memoria-duravel-agentes/adr-004-optin-paridade-byte-a-byte.md) | Ativacao opt-in com paridade byte-a-byte e fim da degradacao silenciosa | Proposta |
+| [MD-005](.specs/prd-memoria-duravel-agentes/adr-005-evidencia-metricas-memoria.md) | Eventos pelo dispatcher existente, metricas pelo mapa de campos extra | Proposta |

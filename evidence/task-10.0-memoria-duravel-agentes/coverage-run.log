@@ -1,0 +1,78 @@
+	github.com/JailtonJunior94/ai-spec-harness		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	(cached)	coverage: 56.9% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/adapters	(cached)	coverage: 82.5% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/agents	(cached)	coverage: 86.4% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/agents/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/approval	(cached)	coverage: 88.8% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/approval/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/bugschema	(cached)	coverage: 74.3% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/changelog	(cached)	coverage: 83.8% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/config	(cached)	coverage: 93.7% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/config/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/contextgen	(cached)	coverage: 91.2% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/detect	(cached)	coverage: 82.4% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/detect/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/doctor	(cached)	coverage: 71.1% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/embedded	(cached)	coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/evidence	(cached)	coverage: 95.7% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/fs	(cached)	coverage: 73.3% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/fs/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/git	0.485s	coverage: 64.3% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/git/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/gitref	(cached)	coverage: 70.2% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/inspect	(cached)	coverage: 97.1% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/install	(cached)	coverage: 84.9% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/invocation	(cached)	coverage: 96.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/lint	(cached)	coverage: 75.6% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/manifest	(cached)	coverage: 86.7% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/metrics	(cached)	coverage: 87.3% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/metrics/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/output	(cached)	coverage: 100.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/parity	(cached)	coverage: 85.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/platform	(cached)	coverage: 100.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/prerequisites	(cached)	coverage: 96.6% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	(cached)	coverage: 87.8% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake	(cached)	coverage: 90.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client	(cached)	coverage: 88.2% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events	(cached)	coverage: 92.7% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/handshake	(cached)	coverage: 81.6% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks	(cached)	coverage: 89.6% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver	(cached)	coverage: 83.4% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/wire	(cached)	coverage: 87.5% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory	(cached)	coverage: 92.1% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable	(cached)	coverage: 88.5% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable/mocks		coverage: 0.0% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/mocks		coverage: 0.0% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence	(cached)	coverage: 88.2% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/precondition	(cached)	coverage: 53.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe	(cached)	coverage: 90.0% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/render	(cached)	coverage: 100.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	0.399s	coverage: 85.1% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/scaffold	(cached)	coverage: 94.8% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd	(cached)	coverage: 75.3% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd/tasks	(cached)	coverage: 88.7% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/semver	(cached)	coverage: 91.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillbump	(cached)	coverage: 81.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	(cached)	coverage: 91.2% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillscheck	(cached)	coverage: 89.8% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdigest	(cached)	coverage: 100.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdrift	(cached)	coverage: 90.3% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria	(cached)	coverage: 97.1% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	9.084s	coverage: 86.7% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/telemetry	(cached)	coverage: 87.2% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/traceability	(cached)	coverage: 94.8% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/triggers	(cached)	coverage: 100.0% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/triggers/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/uninstall	(cached)	coverage: 84.6% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/upgrade	(cached)	coverage: 83.8% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/version	(cached)	coverage: 93.5% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/wrapper	(cached)	coverage: 94.4% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	(cached)	coverage: 100.0% of statements
+exit=0

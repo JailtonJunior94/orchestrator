@@ -1,0 +1,199 @@
+=== RUN   TestBudgetPolicySuite
+=== RUN   TestBudgetPolicySuite/TestAllocateCedesSurplusBetweenLayers
+=== RUN   TestBudgetPolicySuite/TestAllocateDeclaresOmissionsWhenExceedingTotal
+=== RUN   TestBudgetPolicySuite/TestAllocateIsDeterministicAcrossRuns
+=== RUN   TestBudgetPolicySuite/TestAllocateRespectsQuotas
+=== RUN   TestBudgetPolicySuite/TestResolveAppliesQuotaShares
+=== RUN   TestBudgetPolicySuite/TestResolveWindowLargeMultipliesTotal
+=== RUN   TestBudgetPolicySuite/TestResolveZeroValueUsesDefault
+--- PASS: TestBudgetPolicySuite (0.00s)
+    --- PASS: TestBudgetPolicySuite/TestAllocateCedesSurplusBetweenLayers (0.00s)
+    --- PASS: TestBudgetPolicySuite/TestAllocateDeclaresOmissionsWhenExceedingTotal (0.00s)
+    --- PASS: TestBudgetPolicySuite/TestAllocateIsDeterministicAcrossRuns (0.00s)
+    --- PASS: TestBudgetPolicySuite/TestAllocateRespectsQuotas (0.00s)
+    --- PASS: TestBudgetPolicySuite/TestResolveAppliesQuotaShares (0.00s)
+    --- PASS: TestBudgetPolicySuite/TestResolveWindowLargeMultipliesTotal (0.00s)
+    --- PASS: TestBudgetPolicySuite/TestResolveZeroValueUsesDefault (0.00s)
+=== RUN   TestCompactionPolicySuite
+=== RUN   TestCompactionPolicySuite/TestCompactArchivesUntilWithinLimits
+=== RUN   TestCompactionPolicySuite/TestCompactIsDeterministicAcrossRuns
+=== RUN   TestCompactionPolicySuite/TestCompactPreservesHumanBlockContentVerbatim
+=== RUN   TestCompactionPolicySuite/TestCompactReportsLimitUnreachable
+=== RUN   TestCompactionPolicySuite/TestCompactReturnsRemainingWithinLimits
+--- PASS: TestCompactionPolicySuite (0.05s)
+    --- PASS: TestCompactionPolicySuite/TestCompactArchivesUntilWithinLimits (0.02s)
+    --- PASS: TestCompactionPolicySuite/TestCompactIsDeterministicAcrossRuns (0.02s)
+    --- PASS: TestCompactionPolicySuite/TestCompactPreservesHumanBlockContentVerbatim (0.01s)
+    --- PASS: TestCompactionPolicySuite/TestCompactReportsLimitUnreachable (0.00s)
+    --- PASS: TestCompactionPolicySuite/TestCompactReturnsRemainingWithinLimits (0.00s)
+=== RUN   TestFactSuite
+=== RUN   TestFactSuite/TestDeriveSemanticKeyIsDeterministicAcrossSessions
+=== RUN   TestFactSuite/TestDeriveSemanticKeyRejectsMissingFields
+=== RUN   TestFactSuite/TestDeriveSemanticKeyRejectsMissingFields/should_reject_missing_kind
+=== RUN   TestFactSuite/TestDeriveSemanticKeyRejectsMissingFields/should_reject_missing_subject
+=== RUN   TestFactSuite/TestDetectCollision
+=== RUN   TestFactSuite/TestDetectCollision/should_report_no_collision_for_different_key
+=== RUN   TestFactSuite/TestDetectCollision/should_report_idempotent_collision_for_same_key_and_hash
+=== RUN   TestFactSuite/TestDetectCollision/should_report_contradictory_collision_for_same_key_and_divergent_hash
+=== RUN   TestFactSuite/TestHashContentDiffersForDifferentContent
+=== RUN   TestFactSuite/TestHashContentIsDeterministic
+=== RUN   TestFactSuite/TestResolveLayer
+=== RUN   TestFactSuite/TestResolveLayer/should_resolve_ephemeral_to_task_layer
+=== RUN   TestFactSuite/TestResolveLayer/should_resolve_prd_durability_to_prd_layer
+=== RUN   TestFactSuite/TestResolveLayer/should_resolve_durable_to_project_layer
+=== RUN   TestFactSuite/TestResolveLayer/should_reject_zero-value_durability
+=== RUN   TestFactSuite/TestValidateFact
+=== RUN   TestFactSuite/TestValidateFact/should_reject_fact_without_semantic_key
+=== RUN   TestFactSuite/TestValidateFact/should_reject_fact_with_zero-value_durability
+=== RUN   TestFactSuite/TestValidateFact/should_accept_fact_with_key_and_durability_declared
+--- PASS: TestFactSuite (0.00s)
+    --- PASS: TestFactSuite/TestDeriveSemanticKeyIsDeterministicAcrossSessions (0.00s)
+    --- PASS: TestFactSuite/TestDeriveSemanticKeyRejectsMissingFields (0.00s)
+        --- PASS: TestFactSuite/TestDeriveSemanticKeyRejectsMissingFields/should_reject_missing_kind (0.00s)
+        --- PASS: TestFactSuite/TestDeriveSemanticKeyRejectsMissingFields/should_reject_missing_subject (0.00s)
+    --- PASS: TestFactSuite/TestDetectCollision (0.00s)
+        --- PASS: TestFactSuite/TestDetectCollision/should_report_no_collision_for_different_key (0.00s)
+        --- PASS: TestFactSuite/TestDetectCollision/should_report_idempotent_collision_for_same_key_and_hash (0.00s)
+        --- PASS: TestFactSuite/TestDetectCollision/should_report_contradictory_collision_for_same_key_and_divergent_hash (0.00s)
+    --- PASS: TestFactSuite/TestHashContentDiffersForDifferentContent (0.00s)
+    --- PASS: TestFactSuite/TestHashContentIsDeterministic (0.00s)
+    --- PASS: TestFactSuite/TestResolveLayer (0.00s)
+        --- PASS: TestFactSuite/TestResolveLayer/should_resolve_ephemeral_to_task_layer (0.00s)
+        --- PASS: TestFactSuite/TestResolveLayer/should_resolve_prd_durability_to_prd_layer (0.00s)
+        --- PASS: TestFactSuite/TestResolveLayer/should_resolve_durable_to_project_layer (0.00s)
+        --- PASS: TestFactSuite/TestResolveLayer/should_reject_zero-value_durability (0.00s)
+    --- PASS: TestFactSuite/TestValidateFact (0.00s)
+        --- PASS: TestFactSuite/TestValidateFact/should_reject_fact_without_semantic_key (0.00s)
+        --- PASS: TestFactSuite/TestValidateFact/should_reject_fact_with_zero-value_durability (0.00s)
+        --- PASS: TestFactSuite/TestValidateFact/should_accept_fact_with_key_and_durability_declared (0.00s)
+=== RUN   TestLeasePolicy_Claim_FreeLeaseGrants
+=== PAUSE TestLeasePolicy_Claim_FreeLeaseGrants
+=== RUN   TestLeasePolicy_Claim_LiveOwnerWithinDeadlineRefuses
+=== PAUSE TestLeasePolicy_Claim_LiveOwnerWithinDeadlineRefuses
+=== RUN   TestLeasePolicy_Claim_ExpiredDeadlineAllowsTakeover
+=== PAUSE TestLeasePolicy_Claim_ExpiredDeadlineAllowsTakeover
+=== RUN   TestLeasePolicy_Claim_DeadOwnerAllowsTakeover
+=== PAUSE TestLeasePolicy_Claim_DeadOwnerAllowsTakeover
+=== RUN   TestLeasePolicy_Claim_UnreliableProbeFallsBackToDeadline
+=== PAUSE TestLeasePolicy_Claim_UnreliableProbeFallsBackToDeadline
+=== RUN   TestLeasePolicy_Renew_SameOwnerExtendsDeadline
+=== PAUSE TestLeasePolicy_Renew_SameOwnerExtendsDeadline
+=== RUN   TestLeasePolicy_Renew_DifferentOwnerRefuses
+=== PAUSE TestLeasePolicy_Renew_DifferentOwnerRefuses
+=== RUN   TestContinuityHandoff_ClaimThenRenewThenTakeover
+=== PAUSE TestContinuityHandoff_ClaimThenRenewThenTakeover
+=== RUN   TestContinuityHandoff_RenewWithoutLeaseFails
+=== PAUSE TestContinuityHandoff_RenewWithoutLeaseFails
+=== RUN   TestPageSuite
+=== RUN   TestPageSuite/TestParseIsMarkdownReadableAndGrepFriendly
+=== RUN   TestPageSuite/TestParseRejectsMalformedFactMetadata
+=== RUN   TestPageSuite/TestParseRejectsMalformedFrontMatter
+=== RUN   TestPageSuite/TestRoundTripOnRealRepositoryCorpus
+=== RUN   TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../AGENTS.md
+=== RUN   TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../README.md
+=== RUN   TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../docs/config-hierarchy.md
+=== RUN   TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../docs/guia-instalacao-universal.md
+=== RUN   TestPageSuite/TestSerializeRejectsFactWithZeroValueDurability
+=== RUN   TestPageSuite/TestSerializeRejectsFactWithoutSemanticKey
+=== RUN   TestPageSuite/TestSerializeThenParseRoundTrip
+=== RUN   TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_human_content_with_no_facts
+=== RUN   TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_human_content_alongside_a_single_fact
+=== RUN   TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_human_content_ending_without_trailing_newline
+=== RUN   TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_empty_human_content_with_multiple_facts_and_links
+--- PASS: TestPageSuite (0.01s)
+    --- PASS: TestPageSuite/TestParseIsMarkdownReadableAndGrepFriendly (0.00s)
+    --- PASS: TestPageSuite/TestParseRejectsMalformedFactMetadata (0.00s)
+    --- PASS: TestPageSuite/TestParseRejectsMalformedFrontMatter (0.00s)
+    --- PASS: TestPageSuite/TestRoundTripOnRealRepositoryCorpus (0.01s)
+        --- PASS: TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../AGENTS.md (0.00s)
+        --- PASS: TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../README.md (0.00s)
+        --- PASS: TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../docs/config-hierarchy.md (0.00s)
+        --- PASS: TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../docs/guia-instalacao-universal.md (0.00s)
+    --- PASS: TestPageSuite/TestSerializeRejectsFactWithZeroValueDurability (0.00s)
+    --- PASS: TestPageSuite/TestSerializeRejectsFactWithoutSemanticKey (0.00s)
+    --- PASS: TestPageSuite/TestSerializeThenParseRoundTrip (0.00s)
+        --- PASS: TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_human_content_with_no_facts (0.00s)
+        --- PASS: TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_human_content_alongside_a_single_fact (0.00s)
+        --- PASS: TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_human_content_ending_without_trailing_newline (0.00s)
+        --- PASS: TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_empty_human_content_with_multiple_facts_and_links (0.00s)
+=== RUN   TestCheckProcessLiveness_CurrentProcessIsAlive
+=== PAUSE TestCheckProcessLiveness_CurrentProcessIsAlive
+=== RUN   TestCheckProcessLiveness_ExitedProcessIsNotAlive
+=== PAUSE TestCheckProcessLiveness_ExitedProcessIsNotAlive
+=== RUN   TestCheckProcessLiveness_DifferentHostnameIsUnreliable
+=== PAUSE TestCheckProcessLiveness_DifferentHostnameIsUnreliable
+=== RUN   TestRelevancePolicySuite
+=== RUN   TestRelevancePolicySuite/TestRankDemotesContradictedFacts
+=== RUN   TestRelevancePolicySuite/TestRankDoesNotMutateInput
+=== RUN   TestRelevancePolicySuite/TestRankIsDeterministicAcrossRuns
+=== RUN   TestRelevancePolicySuite/TestRankPrioritizesActiveTask
+--- PASS: TestRelevancePolicySuite (0.00s)
+    --- PASS: TestRelevancePolicySuite/TestRankDemotesContradictedFacts (0.00s)
+    --- PASS: TestRelevancePolicySuite/TestRankDoesNotMutateInput (0.00s)
+    --- PASS: TestRelevancePolicySuite/TestRankIsDeterministicAcrossRuns (0.00s)
+    --- PASS: TestRelevancePolicySuite/TestRankPrioritizesActiveTask (0.00s)
+=== RUN   TestSanitizationPolicySuite
+=== RUN   TestSanitizationPolicySuite/TestCatalogPatterns
+=== RUN   TestSanitizationPolicySuite/TestCatalogPatterns/should_redact_PEM_private_key
+=== RUN   TestSanitizationPolicySuite/TestCatalogPatterns/should_not_redact_plain_text_without_PEM_markers
+=== RUN   TestSanitizationPolicySuite/TestCatalogPatterns/should_redact_GitHub_token_prefix
+=== RUN   TestSanitizationPolicySuite/TestCatalogPatterns/should_not_redact_short_string_resembling_prefix
+=== RUN   TestSanitizationPolicySuite/TestCatalogPatterns/should_redact_AWS_access_key_id
+=== RUN   TestSanitizationPolicySuite/TestCatalogPatterns/should_redact_JWT
+=== RUN   TestSanitizationPolicySuite/TestCatalogPatterns/should_not_redact_plain_sentence_with_dots
+=== RUN   TestSanitizationPolicySuite/TestCatalogPatterns/should_redact_Authorization_header
+=== RUN   TestSanitizationPolicySuite/TestCatalogPatterns/should_not_redact_unrelated_header
+=== RUN   TestSanitizationPolicySuite/TestCatalogPatterns/should_redact_dotenv_secret_value
+=== RUN   TestSanitizationPolicySuite/TestCatalogPatterns/should_not_redact_unrelated_env_key
+=== RUN   TestSanitizationPolicySuite/TestCatalogPatterns/should_redact_connection_string_with_credential
+=== RUN   TestSanitizationPolicySuite/TestCatalogPatterns/should_not_redact_connection_string_without_credential
+=== RUN   TestSanitizationPolicySuite/TestSanitizeIsDeterministicAcrossRuns
+=== RUN   TestSanitizationPolicySuite/TestSanitizeIsExtensibleByConfig
+=== RUN   TestSanitizationPolicySuite/TestSanitizeRefusesWhenSecretIsNotIsolable
+--- PASS: TestSanitizationPolicySuite (0.00s)
+    --- PASS: TestSanitizationPolicySuite/TestCatalogPatterns (0.00s)
+        --- PASS: TestSanitizationPolicySuite/TestCatalogPatterns/should_redact_PEM_private_key (0.00s)
+        --- PASS: TestSanitizationPolicySuite/TestCatalogPatterns/should_not_redact_plain_text_without_PEM_markers (0.00s)
+        --- PASS: TestSanitizationPolicySuite/TestCatalogPatterns/should_redact_GitHub_token_prefix (0.00s)
+        --- PASS: TestSanitizationPolicySuite/TestCatalogPatterns/should_not_redact_short_string_resembling_prefix (0.00s)
+        --- PASS: TestSanitizationPolicySuite/TestCatalogPatterns/should_redact_AWS_access_key_id (0.00s)
+        --- PASS: TestSanitizationPolicySuite/TestCatalogPatterns/should_redact_JWT (0.00s)
+        --- PASS: TestSanitizationPolicySuite/TestCatalogPatterns/should_not_redact_plain_sentence_with_dots (0.00s)
+        --- PASS: TestSanitizationPolicySuite/TestCatalogPatterns/should_redact_Authorization_header (0.00s)
+        --- PASS: TestSanitizationPolicySuite/TestCatalogPatterns/should_not_redact_unrelated_header (0.00s)
+        --- PASS: TestSanitizationPolicySuite/TestCatalogPatterns/should_redact_dotenv_secret_value (0.00s)
+        --- PASS: TestSanitizationPolicySuite/TestCatalogPatterns/should_not_redact_unrelated_env_key (0.00s)
+        --- PASS: TestSanitizationPolicySuite/TestCatalogPatterns/should_redact_connection_string_with_credential (0.00s)
+        --- PASS: TestSanitizationPolicySuite/TestCatalogPatterns/should_not_redact_connection_string_without_credential (0.00s)
+    --- PASS: TestSanitizationPolicySuite/TestSanitizeIsDeterministicAcrossRuns (0.00s)
+    --- PASS: TestSanitizationPolicySuite/TestSanitizeIsExtensibleByConfig (0.00s)
+    --- PASS: TestSanitizationPolicySuite/TestSanitizeRefusesWhenSecretIsNotIsolable (0.00s)
+=== CONT  TestLeasePolicy_Claim_FreeLeaseGrants
+--- PASS: TestLeasePolicy_Claim_FreeLeaseGrants (0.00s)
+=== CONT  TestCheckProcessLiveness_DifferentHostnameIsUnreliable
+=== CONT  TestLeasePolicy_Renew_DifferentOwnerRefuses
+--- PASS: TestCheckProcessLiveness_DifferentHostnameIsUnreliable (0.00s)
+=== CONT  TestLeasePolicy_Renew_SameOwnerExtendsDeadline
+--- PASS: TestLeasePolicy_Renew_SameOwnerExtendsDeadline (0.00s)
+=== CONT  TestLeasePolicy_Claim_UnreliableProbeFallsBackToDeadline
+--- PASS: TestLeasePolicy_Renew_DifferentOwnerRefuses (0.00s)
+=== CONT  TestCheckProcessLiveness_ExitedProcessIsNotAlive
+--- PASS: TestLeasePolicy_Claim_UnreliableProbeFallsBackToDeadline (0.00s)
+=== CONT  TestLeasePolicy_Claim_DeadOwnerAllowsTakeover
+=== CONT  TestLeasePolicy_Claim_ExpiredDeadlineAllowsTakeover
+=== CONT  TestContinuityHandoff_ClaimThenRenewThenTakeover
+--- PASS: TestLeasePolicy_Claim_DeadOwnerAllowsTakeover (0.00s)
+--- PASS: TestContinuityHandoff_ClaimThenRenewThenTakeover (0.00s)
+=== CONT  TestCheckProcessLiveness_CurrentProcessIsAlive
+=== CONT  TestContinuityHandoff_RenewWithoutLeaseFails
+=== CONT  TestLeasePolicy_Claim_LiveOwnerWithinDeadlineRefuses
+--- PASS: TestLeasePolicy_Claim_ExpiredDeadlineAllowsTakeover (0.00s)
+--- PASS: TestCheckProcessLiveness_CurrentProcessIsAlive (0.00s)
+--- PASS: TestContinuityHandoff_RenewWithoutLeaseFails (0.00s)
+--- PASS: TestLeasePolicy_Claim_LiveOwnerWithinDeadlineRefuses (0.00s)
+--- PASS: TestCheckProcessLiveness_ExitedProcessIsNotAlive (0.00s)
+PASS
+coverage: 87.7% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable	3.328s	coverage: 87.7% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable/mocks		coverage: 0.0% of statements
+EXIT:0

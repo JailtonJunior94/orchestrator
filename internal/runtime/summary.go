@@ -52,4 +52,28 @@ type Summary struct {
 	// 0 = sessão bem-sucedida na primeira tentativa (comportamento F1 default).
 	// Incrementado pelo acpInvoker para cada reexecução após falha transitória.
 	RetryAttempts int `json:"retry_attempts,omitempty"`
+
+	HookDispatchErrors []string `json:"hook_dispatch_errors,omitempty"`
+
+	MemoryEvidence *MemoryEvidence `json:"memory_evidence,omitempty"`
+}
+
+type MemoryEvidence struct {
+	SessionID           string
+	CLI                 string
+	TaskFileName        string
+	FactsByLayer        map[string]int
+	FactsOmitted        int
+	FactsContradicted   int
+	PagesUnreadable     int
+	BudgetByLayer       map[string]int
+	WritesByLayer       map[string]int
+	ArchivedByLayer     map[string]int
+	Redactions          int
+	Compactions         int
+	Contradictions      int
+	BatonClaimed        bool
+	ContextBuildLatency int64
+	RecordLatency       int64
+	DomainEvents        []string
 }

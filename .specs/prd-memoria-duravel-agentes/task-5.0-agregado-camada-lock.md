@@ -21,15 +21,15 @@ Recebe a abstração de filesystem por construtor, corrigindo o desvio de `inter
 
 ## Subtarefas
 
-- [ ] 5.1 Definir `Camada` e `Escopo`, com o agregado recebendo `fs.FileSystem` por construtor.
-- [ ] 5.2 Implementar leitura por camada, isolando página inválida e reportando.
-- [ ] 5.3 Implementar consolidação com idempotência por identidade e marcação de contradição.
-- [ ] 5.4 Implementar arquivamento reversível e promoção entre camadas.
-- [ ] 5.5 Implementar lock por camada reutilizando o padrão por plataforma, com tratamento de órfão via lease de 4.0.
-- [ ] 5.6 Gravar sempre por escrita atômica de 1.0.
-- [ ] 5.7 Chamar `fs.RefuseExternalSymlink` antes de gravar em caminho derivado de configuração.
-- [ ] 5.8 Implementar o scan determinístico de busca por texto e por entidade.
-- [ ] 5.9 Declarar `Camada` em `mockery.yml`, rodar `make mocks`, confirmar `make check-mocks`.
+- [x] 5.1 Definir `Camada` e `Escopo`, com o agregado recebendo `fs.FileSystem` por construtor.
+- [x] 5.2 Implementar leitura por camada, isolando página inválida e reportando.
+- [x] 5.3 Implementar consolidação com idempotência por identidade e marcação de contradição.
+- [x] 5.4 Implementar arquivamento reversível e promoção entre camadas.
+- [x] 5.5 Implementar lock por camada reutilizando o padrão por plataforma, com tratamento de órfão via lease de 4.0.
+- [x] 5.6 Gravar sempre por escrita atômica de 1.0.
+- [x] 5.7 Chamar `fs.RefuseExternalSymlink` antes de gravar em caminho derivado de configuração.
+- [x] 5.8 Implementar o scan determinístico de busca por texto e por entidade.
+- [x] 5.9 Declarar `Camada` em `mockery.yml`, rodar `make mocks`, confirmar `make check-mocks`.
 
 ## Detalhes de Implementação
 
@@ -60,7 +60,7 @@ Nenhuma além das auto-carregadas (governance + linguagem).
 
 ## Testes da Tarefa
 
-- [ ] Testes unitários
+- [x] Testes unitários
 - [ ] Testes de integração
 
 <critical>SEMPRE CRIAR E EXECUTAR TESTES DA TAREFA ANTES DE CONSIDERAR A TAREFA COMO `done`</critical>

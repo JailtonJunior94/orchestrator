@@ -17,11 +17,11 @@ Esta é a base de 5.0 e não depende de nenhuma outra tarefa.
 
 ## Subtarefas
 
-- [ ] 1.1 Adicionar o método de escrita atômica à interface `FileSystem` em `internal/fs/fs.go`.
-- [ ] 1.2 Implementar em `OSFileSystem` portando o padrão de `internal/sdd/state.go:299`: temporário no mesmo diretório, `Sync`, `Close`, `Rename`, com `defer` de limpeza do temporário.
-- [ ] 1.3 Implementar em `FakeFileSystem` (`internal/fs/fake.go`) com semântica equivalente.
-- [ ] 1.4 Rodar `make mocks` e confirmar `make check-mocks` verde.
-- [ ] 1.5 Confirmar que os dublês que embutem `*fs.FakeFileSystem` continuam compilando (ex.: `internal/runtime/persistence/jsonl_test.go:18`).
+- [x] 1.1 Adicionar o método de escrita atômica à interface `FileSystem` em `internal/fs/fs.go`.
+- [x] 1.2 Implementar em `OSFileSystem` portando o padrão de `internal/sdd/state.go:299`: temporário no mesmo diretório, `Sync`, `Close`, `Rename`, com `defer` de limpeza do temporário.
+- [x] 1.3 Implementar em `FakeFileSystem` (`internal/fs/fake.go`) com semântica equivalente.
+- [x] 1.4 Rodar `make mocks` e confirmar `make check-mocks` verde.
+- [x] 1.5 Confirmar que os dublês que embutem `*fs.FakeFileSystem` continuam compilando (ex.: `internal/runtime/persistence/jsonl_test.go:18`).
 
 ## Detalhes de Implementação
 

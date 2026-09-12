@@ -8,42 +8,28 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// _projectCandidateNames lista os nomes de arquivo de config de projeto consultados, em ordem de preferencia.
-// O primeiro existente em cada diretorio candidato vence.
-var _projectCandidateNames = []string{
+var projectCandidateNames = []string{
 	filepath.Join(".aispec", "config.yaml"),
 	filepath.Join(".claude", "config.yaml"),
 	filepath.Join(".agents", "config.yaml"),
 }
 
-// _projectMarkers sao os marcadores de limite de repositorio para o upward-walk.
-// A caminhada para quando algum desses diretórios for encontrado no diretorio atual.
-var _projectMarkers = []string{".git", ".aispec", ".claude", ".agents"}
+var projectMarkers = []string{".git", ".aispec", ".claude", ".agents"}
 
-// Resolver resolve a configuracao de runtime em cascata:
-// defaults built-in < global (~/.aispec/config.yaml) < projeto (upward-walk) < overrides explícitos.
 type Resolver interface {
-	// Resolve aplica precedencia built-in < global < projeto < overrides.
-	// cwd e o diretorio de partida para o upward-walk (pode ser "").
-	// overrides contem valores de flags CLI; campos zero-value sao ignorados.
 	Resolve(cwd string, overrides Runtime) (Runtime, error)
 }
 
-// DefaultResolver e a implementacao concreta de Resolver.
-// HomeDir e o diretorio home do usuario; quando vazio, a config global e ignorada (RF-16).
 type DefaultResolver struct {
-	// HomeDir: diretorio home para resolver ~/.aispec/config.yaml.
-	// Quando vazio, config global e ignorada sem erro (RF-16).
 	HomeDir string
-	// readFile: hook para leitura de arquivo (substituivel em testes).
+
 	readFile func(path string) ([]byte, error)
-	// isDir: hook para verificar se path e diretorio (substituivel em testes).
+
 	isDir func(path string) bool
 }
 
 var _ Resolver = (*DefaultResolver)(nil)
 
-// NewDefaultResolver cria um Resolver padrao usando os.UserHomeDir e os reais.
 func NewDefaultResolver() *DefaultResolver {
 	homeDir, _ := os.UserHomeDir()
 	return &DefaultResolver{
@@ -56,12 +42,9 @@ func NewDefaultResolver() *DefaultResolver {
 	}
 }
 
-// Resolve implementa a cascata de configuracao:
-// built-in < global < projeto < overrides.
 func (r *DefaultResolver) Resolve(cwd string, overrides Runtime) (Runtime, error) {
 	result := NewRuntimeProvider().DefaultRuntime()
 
-	// Camada 2: config global (~/.aispec/config.yaml).
 	if r.HomeDir != "" {
 		globalPath := filepath.Join(r.HomeDir, ".aispec", "config.yaml")
 		globalCfg, err := r.loadFile(globalPath)
@@ -73,7 +56,6 @@ func (r *DefaultResolver) Resolve(cwd string, overrides Runtime) (Runtime, error
 		}
 	}
 
-	// Camada 3: config de projeto (upward-walk a partir do cwd).
 	if cwd != "" {
 		projPath, err := r.findProjectConfig(cwd)
 		if err != nil {
@@ -90,15 +72,11 @@ func (r *DefaultResolver) Resolve(cwd string, overrides Runtime) (Runtime, error
 		}
 	}
 
-	// Camada 4: overrides explícitos (flags CLI).
 	r.mergeInto(&result, overrides)
 
 	return result, nil
 }
 
-// loadFile le e parseia um arquivo YAML de config.
-// Retorna nil sem erro se o arquivo nao existir.
-// Retorna erro descritivo se existir mas estiver malformado ou ilegivel.
 func (r *DefaultResolver) loadFile(path string) (*Runtime, error) {
 	data, err := r.readFile(path)
 	if err != nil {
@@ -115,10 +93,6 @@ func (r *DefaultResolver) loadFile(path string) (*Runtime, error) {
 	return &cfg, nil
 }
 
-// findProjectConfig realiza upward-walk a partir de cwd procurando o arquivo de config
-// de projeto mais proximo. Para ao encontrar um marcador de projeto ou ao atingir o
-// limite do sistema de arquivos.
-// Retorna o path absoluto do arquivo encontrado, ou "" se nao houver.
 func (r *DefaultResolver) findProjectConfig(cwd string) (string, error) {
 	abs, err := filepath.Abs(cwd)
 	if err != nil {
@@ -127,12 +101,12 @@ func (r *DefaultResolver) findProjectConfig(cwd string) (string, error) {
 
 	current := abs
 	for {
-		// Verificar candidatos de arquivo de config neste diretorio.
-		for _, name := range _projectCandidateNames {
+
+		for _, name := range projectCandidateNames {
 			candidate := filepath.Join(current, name)
 			data, err := r.readFile(candidate)
 			if err == nil {
-				_ = data // existente; retornar o path
+				_ = data
 				return candidate, nil
 			}
 			if !os.IsNotExist(err) {
@@ -140,19 +114,16 @@ func (r *DefaultResolver) findProjectConfig(cwd string) (string, error) {
 			}
 		}
 
-		// Verificar marcadores de projeto: se este diretorio tem um marcador,
-		// nao subir mais (ja procuramos candidatos aqui).
-		for _, marker := range _projectMarkers {
+		for _, marker := range projectMarkers {
 			markerPath := filepath.Join(current, marker)
 			if r.isDir(markerPath) {
 				return "", nil
 			}
 		}
 
-		// Subir um nivel.
 		parent := filepath.Dir(current)
 		if parent == current {
-			// Atingiu a raiz do FS.
+
 			break
 		}
 		current = parent
@@ -161,8 +132,6 @@ func (r *DefaultResolver) findProjectConfig(cwd string) (string, error) {
 	return "", nil
 }
 
-// mergeInto aplica merge campo-a-campo: cada campo nao-zero de src sobrescreve dst.
-// Strings: sobrescreve se nao vazia. Numeros: sobrescreve se != 0.
 func (r *DefaultResolver) mergeInto(dst *Runtime, src Runtime) {
 	if src.TasksRoot != "" {
 		dst.TasksRoot = src.TasksRoot
@@ -199,5 +168,11 @@ func (r *DefaultResolver) mergeInto(dst *Runtime, src Runtime) {
 	}
 	if src.MaxBugfixIterations != 0 {
 		dst.MaxBugfixIterations = src.MaxBugfixIterations
+	}
+	if src.HandoffLeaseTTL != "" {
+		dst.HandoffLeaseTTL = src.HandoffLeaseTTL
+	}
+	if src.DurableMemoryEnabledSet {
+		dst.DurableMemoryEnabled = src.DurableMemoryEnabled
 	}
 }

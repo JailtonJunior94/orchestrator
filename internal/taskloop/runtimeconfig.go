@@ -9,11 +9,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
 )
 
-// _defaultACPActivityTimeout é o watchdog default do task-loop ACP (F1): 120s.
-// Originalmente vinha do default da flag --activity-timeout (120s). Aplicado como ultima
-// camada (built-in default) quando nem flag nem config definem timeout, preservando F1.
-// "0s" explicito (flag --activity-timeout=0 ou config timeout="0s") desabilita o watchdog.
-const _defaultACPActivityTimeout = 2 * time.Minute
+const defaultACPActivityTimeout = 2 * time.Minute
 
 // BuildRuntimeConfig converte um config.Runtime já resolvido (via config.Resolver.Resolve)
 // para um runtime.RuntimeConfig pronto para injeção em Job.
@@ -40,6 +36,15 @@ func (c *Catalog) BuildRuntimeConfig(resolved config.Runtime) (airuntime.Runtime
 		timeout = t
 	}
 
+	var leaseTTL time.Duration
+	if resolved.HandoffLeaseTTL != "" {
+		d, err := time.ParseDuration(resolved.HandoffLeaseTTL)
+		if err != nil {
+			return airuntime.RuntimeConfig{}, fmt.Errorf("invalid handoff lease ttl: %w", err)
+		}
+		leaseTTL = d
+	}
+
 	rc := airuntime.RuntimeConfig{
 		Timeout:                timeout,
 		MaxRetries:             resolved.MaxRetries,
@@ -47,6 +52,8 @@ func (c *Catalog) BuildRuntimeConfig(resolved config.Runtime) (airuntime.Runtime
 		Concurrent:             resolved.Concurrent,
 		BatchSize:              resolved.BatchSize,
 		MaxBugfixIterations:    resolved.MaxBugfixIterations,
+		HandoffLeaseTTL:        leaseTTL,
+		DurableMemoryEnabled:   resolved.DurableMemoryEnabled,
 	}
 	rc.ApplyDefaults()
 	return rc, nil
@@ -69,7 +76,7 @@ func (c *Catalog) resolveRuntimeConfig(cwd string, flagsOverrides config.Runtime
 	// F1: aplicar o watchdog default (120s) quando nenhuma camada (flag/config) define timeout.
 	// Mantém a precedência (flag/config vencem) e preserva "0s" explícito como desabilitado.
 	if resolved.Timeout == "" {
-		resolved.Timeout = _defaultACPActivityTimeout.String()
+		resolved.Timeout = defaultACPActivityTimeout.String()
 	}
 	rc, err := NewCatalog().BuildRuntimeConfig(resolved)
 	if err != nil {
@@ -99,10 +106,17 @@ func (c *Catalog) optionsToConfigOverrides(opts Options) config.Runtime {
 	if opts.MaxBugfixIterationsSet {
 		maxBugfixIterations = opts.MaxBugfixIterations
 	}
+	var handoffLeaseTTL string
+	if opts.HandoffLeaseTTLSet {
+		handoffLeaseTTL = opts.HandoffLeaseTTL.String()
+	}
 	return config.Runtime{
-		Timeout:             timeout,
-		Concurrent:          opts.Concurrent,
-		BatchSize:           opts.BatchSize,
-		MaxBugfixIterations: maxBugfixIterations,
+		Timeout:                 timeout,
+		Concurrent:              opts.Concurrent,
+		BatchSize:               opts.BatchSize,
+		MaxBugfixIterations:     maxBugfixIterations,
+		HandoffLeaseTTL:         handoffLeaseTTL,
+		DurableMemoryEnabled:    opts.DurableMemoryEnabled,
+		DurableMemoryEnabledSet: opts.DurableMemoryEnabledSet,
 	}
 }

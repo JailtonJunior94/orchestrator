@@ -39,6 +39,7 @@ packages:
     interfaces:
       Clock:
       MCPServer:
+      MemoryPort:
       Persistence:
       PersistenceFactory:
       Prober:
@@ -63,6 +64,12 @@ packages:
   github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory:
     interfaces:
       Store:
+  github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable:
+    interfaces:
+      Page:
+      LivenessProbe:
+      Layer:
+      LayerLocker:
   github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe:
     interfaces:
       LookPather:

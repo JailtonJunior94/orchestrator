@@ -24,7 +24,7 @@ test:
 	go test ./...
 
 integration:
-	go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/...
+	go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/runtime/memory/durable/... ./cmd/ai_spec_harness/...
 
 lint:
 	@echo "Running linter..."
@@ -61,7 +61,7 @@ fuzz:
 	go test -fuzz=FuzzFingerprint -fuzztime=30s ./internal/approval/
 
 bench:
-	go test -bench=. -benchmem ./internal/metrics/ ./internal/skills/ ./internal/parity/
+	go test -bench=. -benchmem ./internal/metrics/ ./internal/skills/ ./internal/parity/ ./internal/runtime/memory/durable/
 
 budget:
 	go test -tags=integration -run TestTokenBudget ./internal/integration/...

@@ -376,3 +376,93 @@ Este guia cobre os problemas mais comuns encontrados por usuarios e agentes ao t
 5. Se as mudancas nao forem esperadas, investigue a regressao antes de atualizar.
 
 **Verificacao:** `make test` — todos os testes devem passar sem mencionar `diverge do snapshot`.
+
+---
+
+## Problema: Bastao de continuidade retido — sessao recusa reivindicar a memoria
+
+**Sintoma:** Uma segunda sessao (CLI) tenta assumir o bastao de continuidade da memoria duravel de agentes e recebe um erro contendo `baton held by live process`. A evidencia da sessao anterior mostra que ela nao encerrou normalmente.
+
+**Causa:** O bastao de continuidade e um lease com dono unico, prazo padrao de 30 minutos (RF-23, MD-003). Enquanto o prazo nao vence e o processo dono ainda e detectado como vivo, uma segunda reivindicacao e recusada explicitamente — isso e o comportamento correto de exclusao mutua, nao uma falha. Em plataformas onde a deteccao de processo vivo e fragil (a assimetria e assumida e documentada em MD-003), o prazo prevalece: a segunda sessao espera o prazo inteiro mesmo que o dono anterior ja tenha morrido.
+
+**Solucao:**
+
+1. Verifique o dono e o prazo restante informados na mensagem de recusa — a tomada so e permitida apos o prazo vencer ou quando o processo dono deixa de existir.
+2. Se o processo dono realmente morreu (crash, `kill -9`), aguarde o prazo configurado (`handoff_lease_ttl`, default 30m) para que a proxima reivindicacao seja aceita automaticamente como tomada por dono inexistente.
+3. Para reduzir o tempo de espera em sessoes futuras, configure um prazo menor via cascata de configuracao (ADR-016):
+   ```yaml
+   # .claude/config.yaml ou .aispec/config.yaml
+   handoff_lease_ttl: 10m
+   ```
+   ou via flag de CLI equivalente na chamada do orquestrador.
+4. Toda tomada de bastao — por prazo vencido ou por dono inexistente — fica registrada na evidencia da sessao; nunca e silenciosa. Consulte o relatorio de execucao para confirmar a tomada mais recente.
+5. Nao remova arquivos de estado do lease manualmente enquanto o prazo nao venceu: isso quebraria a garantia de dono unico e poderia corromper a memoria sob escrita concorrente.
+
+**Verificacao:** apos o prazo vencer (ou apos confirmar que o processo dono nao existe mais), a reivindicacao seguinte deve suceder e aparecer registrada na evidencia como tomada.
+
+---
+
+## Problema: Lock de camada orfao — sessao trava indefinidamente
+
+**Sintoma:** Uma sessao fica bloqueada tentando obter o lock de uma camada de memoria (task, PRD ou projeto), e a mensagem de erro indica lock existente sem processo dono vivo. Ocorre com mais frequencia apos um crash em plataforma onde a liberacao automatica do lock nao existe.
+
+**Causa:** O lock por camada reutiliza o padrao de `internal/taskloop/orchestrator_lock_unix.go` e `orchestrator_lock_windows.go`. Em plataformas tipo Unix, o kernel libera o `flock` automaticamente quando o processo morre. Em plataformas sem essa garantia, um processo morto pode deixar o arquivo de lock orfao — e o lock nunca e sobrescrito em silencio, por desenho (MD-003): a tomada exige que o prazo do lease vença ou que a deteccao de processo vivo confirme que o dono nao existe mais.
+
+**Solucao:**
+
+1. Confirme que o processo apontado como dono do lock realmente nao existe mais (verifique o PID reportado na mensagem de erro com as ferramentas do sistema operacional).
+2. Aguarde o prazo configurado (`handoff_lease_ttl`) para que a proxima tentativa de lock seja aceita automaticamente como tomada — a mesma logica de lease do bastao de continuidade se aplica ao lock de camada.
+3. Se a espera nao for aceitavel e a confirmacao de dono morto for operacionalmente segura, reduza o prazo configurado para a proxima execucao (passo 3 do problema anterior) em vez de remover o arquivo de lock manualmente.
+4. Toda deteccao de lock orfao e toda tomada aparecem na evidencia da sessao — nunca ha sobrescrita silenciosa. Se a evidencia nao mostrar a tomada, investigue antes de prosseguir.
+
+**Verificacao:** apos o prazo vencer ou apos confirmar dono morto, a proxima sessao deve obter o lock e a tomada deve aparecer registrada na evidencia.
+
+---
+
+## Problema: `ai-spec-harness memory migrate` recusa converter `MEMORY.md`
+
+**Sintoma:** `ai-spec-harness memory migrate --tasks-dir .specs/prd-x` retorna um erro contendo `migration already applied` (RF-33, sentinela `durable.ErrMigrationAlreadyApplied`).
+
+**Causa:** A migracao e por comando explicito e nunca automatica (D-12). O comando detecta arquivo ja convertido pelo frontmatter YAML com `format_version` presente — sinal inequivoco de que o arquivo ja esta no formato de pagina duravel — e recusa reaplicar a conversao para nao arriscar duplicar ou corromper conteudo ja migrado.
+
+**Solucao:**
+
+1. Confirme que o arquivo alvo (`<tasks-dir>/memory/MEMORY.md`) realmente ja foi migrado: abra o arquivo e verifique se o cabecalho YAML no topo contem `format_version: 1`.
+2. Se a migracao anterior tiver produzido um resultado incorreto, restaure o backup gravado antes da conversao (`<tasks-dir>/memory/MEMORY.md.pre-migration.bak`) e investigue a causa antes de tentar migrar novamente.
+3. `memory migrate` nao migra nada quando o arquivo legado nao existe — nesse caso o comando imprime "Nada a migrar" e retorna sem erro; isso nao e o mesmo problema desta secao.
+
+**Verificacao:** apos restaurar o backup (se necessario) e corrigir a causa raiz, uma nova execucao de `memory migrate` sobre o arquivo legado (sem `format_version`) deve concluir e imprimir "Migracao concluida", com o backup verificado byte a byte contra o conteudo original.
+
+---
+
+## Problema: `ai-spec-harness memory handoff claim` recusa reivindicar o bastao via CLI
+
+**Sintoma:** `ai-spec-harness memory handoff claim --tasks-dir .specs/prd-x` imprime `bastao recusado: detido por <dono> ate <prazo>` e retorna codigo de saida diferente de zero.
+
+**Causa:** O subcomando `memory handoff` e a sessao orquestrada (`task-loop --durable-memory`) leem e escrevem o MESMO arquivo sidecar (`<tasks-dir>/memory/MEMORY.handoff.json`), sob a MESMA trava exclusiva (`<tasks-dir>/memory/MEMORY.handoff.lock`) e a mesma politica de lease com dono unico (RF-23) — nao sao dois mecanismos parecidos, e sim um unico estado de bastao compartilhado. Uma reivindicacao feita por qualquer um dos dois caminhos e visivel e vinculante para o outro: reivindicar via CLI bloqueia uma sessao orquestrada concorrente sobre o mesmo `tasks-dir`, e vice-versa.
+
+**Solucao:**
+
+1. Rode `ai-spec-harness memory handoff status --tasks-dir .specs/prd-x` para ver o dono atual e o prazo restante.
+2. Se o dono anterior realmente encerrou, aguarde o prazo (`--ttl` usado na reivindicacao original) vencer, ou peca ao dono atual para liberar explicitamente com `ai-spec-harness memory handoff release --tasks-dir .specs/prd-x --owner <dono>`.
+3. Apenas o dono registrado pode liberar o bastao via `memory handoff release`; uma tentativa de liberacao com `--owner` divergente e recusada.
+
+**Verificacao:** apos a liberacao ou o vencimento do prazo, `memory handoff claim` deve suceder e `memory handoff status` deve refletir o novo dono.
+
+---
+
+## Problema: Secao `## Evidencia de Memoria Duravel` nao aparece no relatorio, ou aparece apos a secao de metricas
+
+**Sintoma:** `execution_report.md` nao tem a secao `## Evidencia de Memoria Duravel`, mesmo com `--durable-memory` ativo e fatos gravados na sessao. Ou, em relatorios antigos editados manualmente, a secao aparece depois de `## Metricas Claude-2026`.
+
+**Causa mais comum:** a sessao rodou com `DurableMemoryEnabled=false` (caminho legado), ou a fachada nao gravou nenhum fato novo (`RecordSession` retornou `MemoryReport{}` zero-value porque `SessionFacts` nao tinha `TaskFileName` nem `DeclaredSection`) — `Summary.MemoryEvidence` fica `nil` e a secao e omitida por design, para nao poluir sessoes sem memoria.
+
+**Causa menos comum, mas critica:** a secao de metricas (`## Metricas Claude-2026`) **precisa continuar sendo a ultima secao do relatorio**. `internal/runtime/persistence/report.go` substitui tudo do cabecalho de metricas ate o fim do arquivo a cada `EnrichReport` — qualquer secao adicionada depois dela e apagada na proxima sessao. A secao de evidencia de memoria e injetada explicitamente **antes** da secao de metricas (`EnrichReport` chama `injectBoundedSection` para a evidencia e so depois `injectMetricsSection`), mas uma edicao manual do relatorio, ou uma secao nova adicionada por outra ferramenta apos `## Metricas Claude-2026`, quebra esse invariante.
+
+**Solucao:**
+
+1. Confirme que a sessao rodou com `--durable-memory` (ou `DurableMemoryEnabled: true` no `Job`) e que gravou pelo menos um fato: verifique os logs `runner: durable memory session recorded: writes=N ...` — `writes=0` significa `MemoryEvidence` nao populado.
+2. Se a secao aparecer fora de ordem em um relatorio editado manualmente, nao reordene a mao: rode a sessao novamente (ou chame `persistence.EnrichReport` de novo) — a proxima injecao de metricas volta a cortar tudo apos o cabecalho de metricas e reposiciona a secao corretamente, desde que a evidencia de memoria seja injetada antes.
+3. Para provar que o gate de evidencia (`.agents/scripts/validate-task-evidence.sh`) continua capturando a secao `## Comandos Executados` mesmo com a secao nova entre ela e `## Resultados de Validacao`, rode `make test-validators` — o Caso j do fixture (`scripts/test-validators.sh`) cobre exatamente este cenario, inclusive sob `LC_ALL=C`.
+
+**Verificacao:** `grep -n '^## ' evidence/<task>/execution_report.md` deve listar `## Evidencia de Memoria Duravel` antes de `## Metricas Claude-2026`, com a secao de metricas sempre por ultimo.

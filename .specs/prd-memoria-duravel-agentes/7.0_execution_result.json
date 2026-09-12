@@ -1,0 +1,93 @@
+{
+  "schema_version": 2,
+  "run_id": "task-7.0-fachada-porta-wiring-2026-09-11",
+  "task_id": "7.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "166cb9efc0590cbf38685258ddce89908e594256",
+  "patch_sha256": "65364288811f9f65185d32335ac199def5fd887e582fbc8bc9c2c52a5a14bd43",
+  "patch_ref": "evidence/task-7.0-memoria-duravel-agentes/7.0.patch",
+  "final_state_sha256": "781c606a91606756a7b5f41ed08d9fe63f6b07546e653cb54f9d21b792763bdf",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test ./... -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "e95cb0a3bfe7fa44d975994f16a4ee9ecf78a2dbce3ad332095085044fccb233"
+    },
+    {
+      "command": "go test ./internal/runtime/... -run TestPromptParityGolden -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "764284afe94d2716b2bae65bdc4a9de21dd93b873e4d90cc7b79b36661cd8dd0"
+    },
+    {
+      "command": "go test ./cmd/ai_spec_harness/... -run TestCLI -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "2dab234cbeea9825fe561ff0e3d8b5098c30ca80729469d3e8a5c86f74f72132"
+    },
+    {
+      "command": "go test ./internal/runtime/memory/durable/... -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "58b352c87a55a3e831602d30476f0fc61779849c1b2f59fcbf4a4c0a312f6826"
+    },
+    {
+      "command": "bash scripts/check-mocks.sh",
+      "exit_code": 0,
+      "output_sha256": "b1d91938e8acf29e44eedd7309466a57e2051808d29fd98cc76e0d414b83d6e2"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "golden-passes-with-zero-expectation-change",
+      "evidence_ref": "evidence/task-7.0-memoria-duravel-agentes/golden-tests.log"
+    },
+    {
+      "id": "existing-suite-green-no-expectation-change",
+      "evidence_ref": "evidence/task-7.0-memoria-duravel-agentes/full-tests.log"
+    },
+    {
+      "id": "no-collaborator-imported-by-consumer-package",
+      "evidence_ref": "evidence/task-7.0-memoria-duravel-agentes/7.0.patch"
+    },
+    {
+      "id": "test-fails-if-sanitization-runs-after-persistence",
+      "evidence_ref": "evidence/task-7.0-memoria-duravel-agentes/durable-tests.log"
+    },
+    {
+      "id": "key-propagates-both-cascade-points-flag-e2e-and-per-layer-test",
+      "evidence_ref": "evidence/task-7.0-memoria-duravel-agentes/full-tests.log"
+    },
+    {
+      "id": "cli-contract-test-passes-both-directions",
+      "evidence_ref": "evidence/task-7.0-memoria-duravel-agentes/cli-contract-tests.log"
+    },
+    {
+      "id": "activation-deactivation-logged-explicitly",
+      "evidence_ref": "evidence/task-7.0-memoria-duravel-agentes/7.0.patch"
+    },
+    {
+      "id": "check-mocks-green",
+      "evidence_ref": "evidence/task-7.0-memoria-duravel-agentes/mocks.log"
+    },
+    {
+      "id": "preliminary-benchmark-p95-below-200ms-1000-pages",
+      "evidence_ref": "evidence/task-7.0-memoria-duravel-agentes/durable-tests.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-7.0-memoria-duravel-agentes/7.0.patch",
+    "evidence/task-7.0-memoria-duravel-agentes/build.log",
+    "evidence/task-7.0-memoria-duravel-agentes/full-tests.log",
+    "evidence/task-7.0-memoria-duravel-agentes/golden-tests.log",
+    "evidence/task-7.0-memoria-duravel-agentes/cli-contract-tests.log",
+    "evidence/task-7.0-memoria-duravel-agentes/durable-tests.log",
+    "evidence/task-7.0-memoria-duravel-agentes/mocks.log",
+    "evidence/task-7.0-memoria-duravel-agentes/lint.log"
+  ],
+  "review_verdict": "approved"
+}

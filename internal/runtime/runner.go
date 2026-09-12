@@ -6,17 +6,20 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/handshake"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/render"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
@@ -94,7 +97,8 @@ type ACPRunner struct {
 	reviewOutputFn autoReviewOutputFn
 	// handshakeWaiterFactory constrói o waiter do handshake de governança do OpenCode.
 	// nil = usar defaultHandshakeWaiterFactory (produção).
-	handshakeWaiterFactory HandshakeWaiterFactory
+	handshakeWaiterFactory  HandshakeWaiterFactory
+	promptPostBuildTestHook hooks.Hook
 }
 
 // NewACPRunner cria um ACPRunner com defaults de produção.
@@ -118,10 +122,13 @@ func NewACPRunner(spec specs.Spec, opts ...Option) *ACPRunner {
 // Run executa uma sessão ACP completa para o job fornecido.
 // Orquestra: probe → memory read → hooks dispatch → open → fan-out → persistência → Summary.
 // eventLoopResult agrega os contadores do loop de eventos.
+const durableMemoryDeclaredSectionHeading = "## Memory Declared"
+
 type eventLoopResult struct {
-	eventsCount  int
-	unknownCount int
-	unknownKinds []string
+	eventsCount     int
+	unknownCount    int
+	unknownKinds    []string
+	declaredSection string
 
 	// Métricas unificadas por driver (ADR-021): substitui os 8 acumuladores paralelos.
 	// MetricSet zero-value preserva comportamento F1 (nenhum campo emitido).
@@ -151,16 +158,27 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	// Zero-value (WindowStandard) preserva comportamento F1.
 	j.WindowClass = r.spec.ResolveWindow(j.Model).Class()
 
-	// ★ F3-Claude: instanciar memory store e injetar contexto no prompt.
-	// j.TasksDir=="" → store nil → sem injeção (regressão F1/F2 preservada).
-	// ★ ADR-023: prepareMemoryStore usa WindowPolicy para ajustar limites por WindowClass.
-	memStore := NewCatalog().prepareMemoryStore(j)
-	j.Prompt = NewCatalog().prepareMemoryContext(ctx, j, memStore)
+	sessionID := NewCatalog().newSessionID(r.clock)
+
+	var memPort MemoryPort
+	var memStore memory.Store
+	var memRecorder *hooks.MemoryEvidenceRecorder
+	var memReadContext durable.MemoryContext
+	if j.DurableMemoryEnabled {
+		log.Printf("runner: durable memory enabled (RF-28)")
+		memPort = NewCatalog().prepareDurableMemoryFacade(j)
+		j.Prompt, memReadContext = NewCatalog().prepareDurableMemoryPromptContext(ctx, j, memPort)
+		memRecorder = hooks.NewMemoryEvidenceRecorder()
+	} else {
+		log.Printf("runner: durable memory disabled (RF-28); legacy path preserved")
+		memStore = NewCatalog().prepareMemoryStore(j)
+		j.Prompt = NewCatalog().prepareMemoryContext(ctx, j, memStore)
+	}
 
 	// ★ F3-Claude: instanciar hooks dispatcher e registrar hooks default.
 	// j.DisableHooks=true → dispatcher vazio (debug; sem regressão F1/F2).
 	// ★ ADR-023: WindowClass propagada da Spec para sensibilizar token_budget.
-	disp := NewCatalog().prepareHooksDispatcher(j, r.spec.ID, memStore, r.spec.ResolveWindow(j.Model).Class())
+	disp := NewCatalog().prepareHooksDispatcher(j, r.spec.ID, memStore, r.spec.ResolveWindow(j.Model).Class(), r.promptPostBuildTestHook, memRecorder)
 
 	// Fase 3: emitir runtime_init e persistir.
 	launcherCmd, launcherArgs := launcher.Command()
@@ -213,22 +231,25 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	cause := context.Cause(ctx)
 	clientErr := c.Err()
 	cancelReason := NewCatalog().mapCancelReason(cause, clientErr)
-	NewCatalog(
-
-	// Fase 8: warning de unknowns (RF-05).
-	).emitUnknownWarnings(loopResult)
+	NewCatalog().emitUnknownWarnings(loopResult)
 	if cancelReason == events.CancelReasonPermissionDenied {
 		fmt.Fprintln(os.Stderr, "agente solicitou permissão e foi negado: reexecute com --access-mode full para auto-aprovar tool calls via ACP (ou rode em ambiente que pré-aprove). Veja ADR-009/ADR-012")
 	}
 
-	// Fase 9: persistir tool_calls e enriquecer report.
 	toolCallSummaries := counters.ToolCalls()
 	summary := NewCatalog().buildSummary(launcher.Kind(), loopResult, cancelReason, toolCallSummaries, c)
-	NewCatalog().persistSummary(persist, toolCallSummaries, summary)
-	NewCatalog(
 
-	// ★ F3-Claude: hook session.post_end — memory_persist escreve MEMORY.md.
-	).dispatchSessionPostEnd(ctx, disp, j, loopResult, toolCallSummaries, cancelReason)
+	postEndErr := NewCatalog().dispatchSessionPostEnd(ctx, disp, j, loopResult, toolCallSummaries, cancelReason)
+	if postEndErr != nil {
+		log.Printf("runner: session.post_end hook dispatch failed (session continues): %v", postEndErr)
+		summary.HookDispatchErrors = append(summary.HookDispatchErrors, postEndErr.Error())
+	}
+
+	if memPort != nil {
+		NewCatalog().recordDurableMemorySession(ctx, memPort, j, loopResult, toolCallSummaries, cancelReason, &summary, sessionID, r.spec.ID, disp, memReadContext)
+	}
+
+	NewCatalog().persistSummary(persist, toolCallSummaries, summary)
 
 	if j.AutoReview {
 		reviewOutcome, reviewErr := r.performAutoReview(ctx, j)
@@ -237,10 +258,13 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 			summary.ReviewPath = reviewOutcome.path
 			summary.CycleRounds = reviewOutcome.cycleRounds
 			summary.CycleStopReason = reviewOutcome.cycleStopReason
-			_ = disp.Dispatch(ctx, hooks.PointSessionPostReview, hooks.SessionPostReviewEvent{
+			if postReviewErr := disp.Dispatch(ctx, hooks.PointSessionPostReview, hooks.SessionPostReviewEvent{
 				ReviewPath: reviewOutcome.path,
 				Blocked:    reviewOutcome.status == "blocked",
-			})
+			}); postReviewErr != nil {
+				log.Printf("runner: session.post_review hook dispatch failed (session continues): %v", postReviewErr)
+				summary.HookDispatchErrors = append(summary.HookDispatchErrors, postReviewErr.Error())
+			}
 		} else {
 			fmt.Fprintf(os.Stderr, "runner: auto-review falhou (session continua): %v\n", reviewErr)
 		}
@@ -336,6 +360,7 @@ func (r *ACPRunner) runEventLoop(
 		unknownSet             = make(map[string]struct{})
 		metrics                events.MetricSet
 		toolCallsNormalizedCnt int
+		declaredSection        string
 	)
 
 	// Selecionar extractor de métricas por driver (ADR-021, Strategy).
@@ -360,6 +385,12 @@ func (r *ACPRunner) runEventLoop(
 		}
 
 		counters.Record(evt)
+
+		if evt.Kind() == events.KindAgentMessage {
+			if msg := evt.AgentMessage(); msg != nil {
+				declaredSection = NewCatalog().extractDeclaredSection(declaredSection, msg.Text())
+			}
+		}
 
 		if evt.Kind() == events.KindUnknown {
 			unknownCount++
@@ -402,7 +433,19 @@ func (r *ACPRunner) runEventLoop(
 		unknownKinds:             unknownKinds,
 		metrics:                  metrics,
 		toolCallsNormalizedCount: toolCallsNormalizedCnt,
+		declaredSection:          declaredSection,
 	}
+}
+
+func (c *Catalog) extractDeclaredSection(existing, agentMessageText string) string {
+	if existing != "" {
+		return existing
+	}
+	idx := strings.Index(agentMessageText, durableMemoryDeclaredSectionHeading)
+	if idx < 0 {
+		return ""
+	}
+	return strings.TrimSpace(agentMessageText[idx+len(durableMemoryDeclaredSectionHeading):])
 }
 
 // buildSummary constrói o Summary com os contadores e cancel reason.
@@ -443,7 +486,6 @@ func (c *Catalog) emitUnknownWarnings(res eventLoopResult) {
 	}
 }
 
-// dispatchSessionPostEnd despacha o hook session.post_end com o summary da sessão.
 func (c *Catalog) dispatchSessionPostEnd(
 	ctx context.Context,
 	disp hooks.Dispatcher,
@@ -451,8 +493,8 @@ func (c *Catalog) dispatchSessionPostEnd(
 	res eventLoopResult,
 	toolCalls []events.ToolCallSummary,
 	cancelReason events.CancelReason,
-) {
-	_ = disp.Dispatch(ctx, hooks.PointSessionPostEnd, hooks.SessionPostEndEvent{
+) error {
+	return disp.Dispatch(ctx, hooks.PointSessionPostEnd, hooks.SessionPostEndEvent{
 		Summary: hooks.SessionSummary{
 			TaskFileName: j.TaskFileName,
 			ExitStatus:   string(cancelReason),
@@ -544,7 +586,14 @@ func (c *Catalog) injectMemoryContext(prompt string, wf, tk memory.Document, wfE
 // memory_persist em PointSessionPostEnd (conforme task spec).
 // windowClass é propagado da Spec para o TokenBudgetHook (ADR-023).
 // Zero-value (WindowStandard) preserva comportamento F1.
-func (c *Catalog) prepareHooksDispatcher(j Job, specID string, store memory.Store, windowClass specs.WindowClass) hooks.Dispatcher {
+func (c *Catalog) prepareHooksDispatcher(
+	j Job,
+	specID string,
+	store memory.Store,
+	windowClass specs.WindowClass,
+	promptPostBuildTestHook hooks.Hook,
+	memRecorder *hooks.MemoryEvidenceRecorder,
+) hooks.Dispatcher {
 	disp := hooks.New()
 
 	if j.DisableHooks {
@@ -562,9 +611,24 @@ func (c *Catalog) prepareHooksDispatcher(j Job, specID string, store memory.Stor
 	// WindowStandard ⇒ teto F1; WindowLarge ⇒ teto generoso para CLIs com janela ≥1M.
 	disp.Register(hooks.PointPromptPostBuild, hooks.NewTokenBudgetHookWithClass(specID, windowClass))
 
+	if promptPostBuildTestHook != nil {
+		disp.Register(hooks.PointPromptPostBuild, promptPostBuildTestHook)
+	}
+
 	// memory_persist: escreve MEMORY.md em session.post_end (apenas quando store disponível).
 	if store != nil {
 		disp.Register(hooks.PointSessionPostEnd, hooks.NewMemoryPersistHook(store))
+	}
+
+	if memRecorder != nil {
+		memoryEvidenceHook := hooks.NewMemoryEvidenceHook(memRecorder)
+		disp.Register(hooks.PointMemoryFactRecorded, memoryEvidenceHook)
+		disp.Register(hooks.PointMemoryFactArchived, memoryEvidenceHook)
+		disp.Register(hooks.PointMemoryFactPromoted, memoryEvidenceHook)
+		disp.Register(hooks.PointMemoryContradictionDetected, memoryEvidenceHook)
+		disp.Register(hooks.PointMemorySecretRedacted, memoryEvidenceHook)
+		disp.Register(hooks.PointMemoryCompactionExecuted, memoryEvidenceHook)
+		disp.Register(hooks.PointMemoryBatonTransferred, memoryEvidenceHook)
 	}
 
 	return disp
@@ -697,6 +761,155 @@ func (r *ACPRunner) SetRenderer(w io.Writer) {
 // Não usar em produção: helper puro sem efeitos colaterais.
 func (c *Catalog) InjectMemoryContextForTest(prompt string, wf, tk memory.Document, wfErr, tkErr error) string {
 	return NewCatalog().injectMemoryContext(prompt, wf, tk, wfErr, tkErr)
+}
+
+func (c *Catalog) prepareDurableMemoryFacade(j Job) MemoryPort {
+	return durable.NewFacade(fs.NewOSFileSystem(), durable.FacadeConfig{
+		ProjectDir: j.WorkDir,
+		TasksDir:   j.TasksDir,
+		LeaseTTL:   j.HandoffLeaseTTL,
+	})
+}
+
+func (c *Catalog) newSessionID(clock Clock) string {
+	return fmt.Sprintf("%s-%d", clock.Now().UTC().Format("20060102T150405.000000000"), os.Getpid())
+}
+
+func (c *Catalog) prepareDurableMemoryPromptContext(ctx context.Context, j Job, port MemoryPort) (string, durable.MemoryContext) {
+	memCtx, err := port.BuildContext(ctx, durable.MemoryScope{
+		TaskFileName: j.TaskFileName,
+		WindowClass:  j.WindowClass,
+	})
+	if err != nil {
+		log.Printf("runner: durable memory build context failed (session continues): %v", err)
+		return j.Prompt, durable.MemoryContext{}
+	}
+	if memCtx.Block == "" {
+		return j.Prompt, memCtx
+	}
+	return j.Prompt + "\n\n" + memCtx.Block, memCtx
+}
+
+func (c *Catalog) recordDurableMemorySession(
+	ctx context.Context,
+	port MemoryPort,
+	j Job,
+	res eventLoopResult,
+	toolCalls []events.ToolCallSummary,
+	cancelReason events.CancelReason,
+	summary *Summary,
+	sessionID string,
+	cli string,
+	disp hooks.Dispatcher,
+	readContext durable.MemoryContext,
+) {
+	report, err := port.RecordSession(ctx, durable.SessionFacts{
+		TaskFileName:    j.TaskFileName,
+		ExitStatus:      string(cancelReason),
+		EventsCount:     res.eventsCount,
+		ToolCalls:       len(toolCalls),
+		DeclaredSection: res.declaredSection,
+		SessionID:       sessionID,
+		CLI:             cli,
+	})
+	if err != nil {
+		log.Printf("runner: durable memory record session failed (session continues): %v", err)
+		summary.HookDispatchErrors = append(summary.HookDispatchErrors, fmt.Sprintf("durable memory: %v", err))
+		return
+	}
+	log.Printf("runner: durable memory session recorded: writes=%d redactions=%d archived=%d baton_claimed=%v",
+		report.Writes, report.Redactions, report.Archived, report.BatonClaimed)
+
+	c.dispatchDurableMemoryEvents(ctx, disp, sessionID, cli, j.TaskFileName, report, summary)
+
+	evidence := MemoryEvidence{
+		SessionID:           sessionID,
+		CLI:                 cli,
+		TaskFileName:        j.TaskFileName,
+		FactsByLayer:        readContext.FactsByLayer,
+		FactsOmitted:        readContext.Omitted,
+		FactsContradicted:   readContext.Contradicted,
+		PagesUnreadable:     readContext.Unreadable,
+		BudgetByLayer:       readContext.BudgetByLayer,
+		WritesByLayer:       report.WritesByLayer,
+		ArchivedByLayer:     report.ArchivedByLayer,
+		Redactions:          report.Redactions,
+		Compactions:         report.Compactions,
+		Contradictions:      report.Contradictions,
+		BatonClaimed:        report.BatonClaimed,
+		ContextBuildLatency: readContext.BuildLatencyMs,
+		RecordLatency:       report.RecordLatencyMs,
+	}
+	summary.MemoryEvidence = &evidence
+	summary.Metrics = summary.Metrics.Merge(events.NewMetricSet(0, 0, 0, c.buildDurableMemoryMetrics(evidence)))
+
+	if telemetryErr := telemetry.NewCatalog().LogDurableMemorySession(j.WorkDir, telemetry.DurableMemorySessionEvent{
+		SessionID:      sessionID,
+		CLI:            cli,
+		FactsWritten:   report.Writes,
+		FactsArchived:  report.Archived,
+		Redactions:     report.Redactions,
+		Compactions:    report.Compactions,
+		Contradictions: report.Contradictions,
+		BatonClaimed:   report.BatonClaimed,
+	}); telemetryErr != nil {
+		log.Printf("runner: durable memory telemetry logging failed (session continues): %v", telemetryErr)
+	}
+}
+
+func (c *Catalog) dispatchDurableMemoryEvents(
+	ctx context.Context,
+	disp hooks.Dispatcher,
+	sessionID, cli, taskFileName string,
+	report durable.MemoryReport,
+	summary *Summary,
+) {
+	if disp == nil {
+		return
+	}
+
+	dispatchOne := func(point string, evt hooks.Event) {
+		if err := disp.Dispatch(ctx, point, evt); err != nil {
+			log.Printf("runner: %s hook dispatch failed (session continues): %v", point, err)
+			summary.HookDispatchErrors = append(summary.HookDispatchErrors, fmt.Sprintf("%s: %v", point, err))
+		}
+	}
+
+	if report.Writes > 0 {
+		dispatchOne(hooks.PointMemoryFactRecorded, hooks.MemoryFactRecordedEvent{
+			SessionID: sessionID, CLI: cli, TaskFileName: taskFileName, Count: report.Writes,
+		})
+	}
+	if report.Archived > 0 {
+		dispatchOne(hooks.PointMemoryFactArchived, hooks.MemoryFactArchivedEvent{
+			SessionID: sessionID, CLI: cli, TaskFileName: taskFileName, Count: report.Archived,
+		})
+	}
+	if report.Promoted > 0 {
+		dispatchOne(hooks.PointMemoryFactPromoted, hooks.MemoryFactPromotedEvent{
+			SessionID: sessionID, CLI: cli, TaskFileName: taskFileName, Count: report.Promoted,
+		})
+	}
+	if report.Contradictions > 0 {
+		dispatchOne(hooks.PointMemoryContradictionDetected, hooks.MemoryContradictionDetectedEvent{
+			SessionID: sessionID, CLI: cli, TaskFileName: taskFileName, Count: report.Contradictions,
+		})
+	}
+	if report.Redactions > 0 {
+		dispatchOne(hooks.PointMemorySecretRedacted, hooks.MemorySecretRedactedEvent{
+			SessionID: sessionID, CLI: cli, TaskFileName: taskFileName, Count: report.Redactions,
+		})
+	}
+	if report.Compactions > 0 {
+		dispatchOne(hooks.PointMemoryCompactionExecuted, hooks.MemoryCompactionExecutedEvent{
+			SessionID: sessionID, CLI: cli, TaskFileName: taskFileName, Count: report.Compactions,
+		})
+	}
+	if report.BatonClaimed {
+		dispatchOne(hooks.PointMemoryBatonTransferred, hooks.MemoryBatonTransferredEvent{
+			SessionID: sessionID, CLI: cli, TaskFileName: taskFileName, Claimed: report.BatonClaimed,
+		})
+	}
 }
 
 func (c *Catalog) buildRuntimeInitRaw(launcher, command, toolID string, args []string, sdkVersion, npmVersion string) ([]byte, error) {

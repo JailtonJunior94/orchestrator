@@ -1,0 +1,32 @@
+Running linter...
+Installing golangci-lint...
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+GOGC=20 golangci-lint run --config .golangci.yml --timeout 10m --verbose
+level=info msg="golangci-lint has version 2.13.2 built with go1.27.0 from 27774aa on 2026-08-27T22:52:01Z"
+level=info msg="[config_reader] Used config file .golangci.yml"
+level=info msg="[config_reader] Module name \"github.com/JailtonJunior94/ai-spec-harness\""
+level=info msg="[goenv] Read go env for 9.328542ms: map[string]string{\"GOCACHE\":\"/Users/jailtonjunior/Library/Caches/go-build\", \"GOROOT\":\"/Users/jailtonjunior/.gvm/gos/go1.27.1\"}"
+level=info msg="[lintersdb] Active 6 linters: [errcheck gosec govet ineffassign staticcheck unused]"
+level=info msg="[loader] Go packages loading at mode 8767 (compiled_files|files|imports|name|types_sizes|deps|exports_file) took 456.165083ms"
+level=info msg="[runner/filename_unadjuster] Pre-built 0 adjustments in 51.285958ms"
+level=info msg="[linters_context/goanalysis] analyzers took 0s with no stages"
+level=info msg="[runner] Issues before processing: 52, after processing: 3"
+level=info msg="[runner] Processors filtering stat (in/out): severity-rules: 3/3, exclusion_paths: 52/52, exclusion_rules: 4/4, max_per_file_from_linter: 3/3, sort_results: 3/3, uniq_by_line: 3/3, path_absoluter: 52/52, cgo: 52/52, filename_unadjuster: 52/52, invalid_issue: 52/52, diff: 3/3, max_from_linter: 3/3, source_code: 3/3, generated_file_filter: 52/4, max_same_issues: 3/3, path_prettifier: 3/3, path_relativity: 52/52, nolint_filter: 4/3, fixer: 3/3, path_shortener: 3/3"
+level=info msg="[runner] processing took 2.213872ms with stages: generated_file_filter: 1.139416ms, nolint_filter: 963.542µs, source_code: 63.375µs, path_relativity: 35.167µs, max_same_issues: 2.417µs, cgo: 1.667µs, invalid_issue: 1.625µs, uniq_by_line: 1.166µs, max_from_linter: 959ns, sort_results: 958ns, path_shortener: 791ns, path_absoluter: 749ns, max_per_file_from_linter: 375ns, filename_unadjuster: 333ns, fixer: 333ns, path_prettifier: 292ns, exclusion_rules: 291ns, exclusion_paths: 249ns, severity-rules: 84ns, diff: 83ns"
+level=info msg="[runner] linters took 504.338666ms with stages: goanalysis_metalinter: 502.035875ms"
+internal/runtime/acp_opencode_telemetry_test.go:27:9: S1016: should convert f (type failingHandshakeWaiterFactory) to failingHandshakeWaiter instead of using struct literal (staticcheck)
+	return failingHandshakeWaiter{err: f.err}, func() error { return nil }, nil
+	       ^
+internal/specdrift/specdrift_test.go:227:21: S1039: unnecessary use of fmt.Sprintf (staticcheck)
+	techspecContent := fmt.Sprintf("<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->\nRF-01 covered")
+	                   ^
+internal/adapters/adapters.go:234:21: func (*Generator).collectSkillAssets is unused (unused)
+func (g *Generator) collectSkillAssets(skillsDir, skillName string) []string {
+                    ^
+3 issues:
+* staticcheck: 2
+* unused: 1
+level=info msg="File cache stats: 3 entries of total size 22.4KiB"
+level=info msg="Memory: 12 samples, avg is 46.3MB, max is 51.5MB"
+level=info msg="Execution took 1.02245175s"
+make: *** [lint] Error 1

@@ -95,6 +95,16 @@ ai-spec task-loop \
 
 > O dry-run no modo avancado exibe status de compatibilidade (✓/✗) para cada perfil e o preview do template resolvido para a primeira task elegivel.
 
+### Memoria duravel (opt-in)
+
+`--durable-memory` ativa o subsistema de memoria duravel (fachada + camadas project/prd/task) no lugar do memory store legado. Default `false` preserva o prompt final byte a byte identico ao caminho atual (RF-28, RF-29). Tambem configuravel via chave `durable_memory_enabled` na cascata de configuracao (`flags > workspace > global > defaults`, ADR-016) — ver [`docs/config-hierarchy.md`](config-hierarchy.md).
+
+```bash
+ai-spec task-loop --tool claude --runtime acp --durable-memory .specs/prd-minha-feature
+```
+
+Ativacao e desativacao aparecem sempre em log explicito. Com a feature desativada, nenhum comportamento muda.
+
 ## Heuristicas praticas
 
 - prefira `max-iterations` baixo no inicio de uma feature nova

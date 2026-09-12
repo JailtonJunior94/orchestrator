@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-memoria-duravel-agentes/8.0_execution_report.md
+summary: Evidencia de memoria duravel (RF-34), rastreabilidade de fato ate sessao/CLI/data (RF-32) e telemetria opt-in (RF-35) implementadas com 7 eventos de dominio via dispatcher existente.
+timestamp: 2026-09-11T20:52:45Z

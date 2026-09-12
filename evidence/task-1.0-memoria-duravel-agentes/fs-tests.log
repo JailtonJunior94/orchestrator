@@ -1,0 +1,102 @@
+=== RUN   TestFake_WriteAndRead
+--- PASS: TestFake_WriteAndRead (0.00s)
+=== RUN   TestFake_WriteFileAtomicAndRead
+--- PASS: TestFake_WriteFileAtomicAndRead (0.00s)
+=== RUN   TestFake_WriteFileAtomic_overwritesExisting
+--- PASS: TestFake_WriteFileAtomic_overwritesExisting (0.00s)
+=== RUN   TestFake_ReadFile_missing
+--- PASS: TestFake_ReadFile_missing (0.00s)
+=== RUN   TestFake_Exists
+--- PASS: TestFake_Exists (0.00s)
+=== RUN   TestFake_Exists_dir
+--- PASS: TestFake_Exists_dir (0.00s)
+=== RUN   TestFake_IsDir
+--- PASS: TestFake_IsDir (0.00s)
+=== RUN   TestFake_IsDir_file
+--- PASS: TestFake_IsDir_file (0.00s)
+=== RUN   TestFake_IsSymlink
+--- PASS: TestFake_IsSymlink (0.00s)
+=== RUN   TestFake_EvalSymlinks
+--- PASS: TestFake_EvalSymlinks (0.00s)
+=== RUN   TestFake_Remove
+--- PASS: TestFake_Remove (0.00s)
+=== RUN   TestFake_RemoveAll
+--- PASS: TestFake_RemoveAll (0.00s)
+=== RUN   TestFake_CopyFile
+--- PASS: TestFake_CopyFile (0.00s)
+=== RUN   TestFake_CopyFile_missing
+--- PASS: TestFake_CopyFile_missing (0.00s)
+=== RUN   TestFake_CopyDir
+--- PASS: TestFake_CopyDir (0.00s)
+=== RUN   TestFake_FileHash
+--- PASS: TestFake_FileHash (0.00s)
+=== RUN   TestFake_FileHash_missing
+--- PASS: TestFake_FileHash_missing (0.00s)
+=== RUN   TestFake_DirHash
+--- PASS: TestFake_DirHash (0.00s)
+=== RUN   TestFake_DirHash_notDir
+--- PASS: TestFake_DirHash_notDir (0.00s)
+=== RUN   TestFake_Writable
+--- PASS: TestFake_Writable (0.00s)
+=== RUN   TestFake_ReadDir
+--- PASS: TestFake_ReadDir (0.00s)
+=== RUN   TestFake_SeparadorNativoDoWindows
+--- PASS: TestFake_SeparadorNativoDoWindows (0.00s)
+=== RUN   TestOS_WriteAndRead
+--- PASS: TestOS_WriteAndRead (0.00s)
+=== RUN   TestOS_CopyFile_overwritesReadOnly
+--- PASS: TestOS_CopyFile_overwritesReadOnly (0.00s)
+=== RUN   TestOS_WriteFile_overwritesReadOnly
+--- PASS: TestOS_WriteFile_overwritesReadOnly (0.00s)
+=== RUN   TestOS_WriteFileAtomic_writeAndRead
+--- PASS: TestOS_WriteFileAtomic_writeAndRead (0.02s)
+=== RUN   TestOS_WriteFileAtomic_overwritesReadOnly
+--- PASS: TestOS_WriteFileAtomic_overwritesReadOnly (0.01s)
+=== RUN   TestOS_WriteFileAtomic_noPartialFileOnInterruption
+--- PASS: TestOS_WriteFileAtomic_noPartialFileOnInterruption (0.02s)
+=== RUN   TestOS_WriteFileAtomic_cleansUpTempOnWriteFailure
+--- PASS: TestOS_WriteFileAtomic_cleansUpTempOnWriteFailure (0.00s)
+=== RUN   TestOS_ReadFile_missing
+--- PASS: TestOS_ReadFile_missing (0.00s)
+=== RUN   TestOS_Exists
+--- PASS: TestOS_Exists (0.00s)
+=== RUN   TestOS_IsDir
+--- PASS: TestOS_IsDir (0.00s)
+=== RUN   TestOS_MkdirAll
+--- PASS: TestOS_MkdirAll (0.00s)
+=== RUN   TestOS_Remove
+--- PASS: TestOS_Remove (0.00s)
+=== RUN   TestOS_RemoveAll
+--- PASS: TestOS_RemoveAll (0.00s)
+=== RUN   TestOS_RemoveAll_removesReadOnlyTree
+--- PASS: TestOS_RemoveAll_removesReadOnlyTree (0.00s)
+=== RUN   TestOS_RemoveAll_doesNotFollowSymlinkOutsideTree
+--- PASS: TestOS_RemoveAll_doesNotFollowSymlinkOutsideTree (0.00s)
+=== RUN   TestOS_CopyFile
+--- PASS: TestOS_CopyFile (0.00s)
+=== RUN   TestOS_CopyFile_missing
+--- PASS: TestOS_CopyFile_missing (0.00s)
+=== RUN   TestOS_CopyDir
+--- PASS: TestOS_CopyDir (0.00s)
+=== RUN   TestOS_CopyDir_AllowsUpgradeFromReadOnlySource
+--- PASS: TestOS_CopyDir_AllowsUpgradeFromReadOnlySource (0.00s)
+=== RUN   TestOS_Symlink
+--- PASS: TestOS_Symlink (0.00s)
+=== RUN   TestOS_FileHash
+--- PASS: TestOS_FileHash (0.00s)
+=== RUN   TestOS_FileHash_missing
+--- PASS: TestOS_FileHash_missing (0.00s)
+=== RUN   TestOS_DirHash
+--- PASS: TestOS_DirHash (0.00s)
+=== RUN   TestOS_DirHash_notDir
+--- PASS: TestOS_DirHash_notDir (0.00s)
+=== RUN   TestOS_Writable
+--- PASS: TestOS_Writable (0.00s)
+=== RUN   TestOS_Writable_missing
+--- PASS: TestOS_Writable_missing (0.00s)
+=== RUN   TestOS_ReadDir
+--- PASS: TestOS_ReadDir (0.00s)
+PASS
+coverage: 73.3% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/fs	1.454s	coverage: 73.3% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/fs/mocks		coverage: 0.0% of statements

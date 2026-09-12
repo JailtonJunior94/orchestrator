@@ -1,0 +1,287 @@
+diff --git a/internal/fs/fake.go b/internal/fs/fake.go
+index 0d7398c..2424d38 100644
+--- a/internal/fs/fake.go
++++ b/internal/fs/fake.go
+@@ -142,6 +142,11 @@ func (f *FakeFileSystem) WriteFile(path string, data []byte) error {
+ 	return nil
+ }
+ 
++func (f *FakeFileSystem) WriteFileAtomic(path string, data []byte) error {
++	f.Files[f.resolvePath(path)] = append([]byte(nil), data...)
++	return nil
++}
++
+ func (f *FakeFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
+ 	resolved := f.resolvePath(path)
+ 	seen := make(map[string]bool)
+diff --git a/internal/fs/fake_test.go b/internal/fs/fake_test.go
+index b92effe..2dbdfa2 100644
+--- a/internal/fs/fake_test.go
++++ b/internal/fs/fake_test.go
+@@ -20,6 +20,35 @@ func TestFake_WriteAndRead(t *testing.T) {
+ 	}
+ }
+ 
++func TestFake_WriteFileAtomicAndRead(t *testing.T) {
++	f := fs.NewFakeFileSystem()
++	if err := f.WriteFileAtomic("/a/atomic.txt", []byte("hello")); err != nil {
++		t.Fatalf("WriteFileAtomic: %v", err)
++	}
++	data, err := f.ReadFile("/a/atomic.txt")
++	if err != nil {
++		t.Fatalf("ReadFile: %v", err)
++	}
++	if string(data) != "hello" {
++		t.Errorf("ReadFile = %q, want 'hello'", data)
++	}
++}
++
++func TestFake_WriteFileAtomic_overwritesExisting(t *testing.T) {
++	f := fs.NewFakeFileSystem()
++	_ = f.WriteFileAtomic("/a/atomic.txt", []byte("old"))
++	if err := f.WriteFileAtomic("/a/atomic.txt", []byte("new")); err != nil {
++		t.Fatalf("WriteFileAtomic overwrite: %v", err)
++	}
++	data, err := f.ReadFile("/a/atomic.txt")
++	if err != nil {
++		t.Fatalf("ReadFile: %v", err)
++	}
++	if string(data) != "new" {
++		t.Errorf("content = %q, want 'new'", data)
++	}
++}
++
+ func TestFake_ReadFile_missing(t *testing.T) {
+ 	f := fs.NewFakeFileSystem()
+ 	_, err := f.ReadFile("/no/such/file")
+diff --git a/internal/fs/fs.go b/internal/fs/fs.go
+index 18d763e..9c2877b 100644
+--- a/internal/fs/fs.go
++++ b/internal/fs/fs.go
+@@ -24,6 +24,7 @@ type FileSystem interface {
+ 	EvalSymlinks(path string) (string, error)
+ 	ReadFile(path string) ([]byte, error)
+ 	WriteFile(path string, data []byte) error
++	WriteFileAtomic(path string, data []byte) error
+ 	ReadDir(path string) ([]os.DirEntry, error)
+ 	FileHash(path string) (string, error)
+ 	DirHash(path string) (string, error)
+@@ -169,6 +170,39 @@ func (f *OSFileSystem) WriteFile(path string, data []byte) error {
+ 	return os.WriteFile(path, data, 0o644)
+ }
+ 
++func (f *OSFileSystem) WriteFileAtomic(path string, data []byte) error {
++	dir := filepath.Dir(path)
++	if err := os.MkdirAll(dir, 0o755); err != nil {
++		return fmt.Errorf("create directory %s: %w", dir, err)
++	}
++	if info, err := os.Lstat(path); err == nil && info.Mode().IsRegular() && info.Mode().Perm()&0o200 == 0 {
++		_ = os.Chmod(path, 0o644)
++	}
++	tmp, err := os.CreateTemp(dir, ".tmp-*")
++	if err != nil {
++		return fmt.Errorf("create temp file in %s: %w", dir, err)
++	}
++	tmpPath := tmp.Name()
++	defer func() {
++		_ = os.Remove(tmpPath)
++	}()
++	if _, err := tmp.Write(data); err != nil {
++		_ = tmp.Close()
++		return fmt.Errorf("write temp file %s: %w", tmpPath, err)
++	}
++	if err := tmp.Sync(); err != nil {
++		_ = tmp.Close()
++		return fmt.Errorf("sync temp file %s: %w", tmpPath, err)
++	}
++	if err := tmp.Close(); err != nil {
++		return fmt.Errorf("close temp file %s: %w", tmpPath, err)
++	}
++	if err := os.Rename(tmpPath, path); err != nil {
++		return fmt.Errorf("publish file %s: %w", path, err)
++	}
++	return nil
++}
++
+ func (f *OSFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
+ 	return os.ReadDir(path)
+ }
+diff --git a/internal/fs/mocks/file_system.go b/internal/fs/mocks/file_system.go
+index 32c6751..3e9b22e 100644
+--- a/internal/fs/mocks/file_system.go
++++ b/internal/fs/mocks/file_system.go
+@@ -925,3 +925,60 @@ func (_c *FileSystem_WriteFile_Call) RunAndReturn(run func(path string, data []b
+ 	_c.Call.Return(run)
+ 	return _c
+ }
++
++// WriteFileAtomic provides a mock function for the type FileSystem
++func (_mock *FileSystem) WriteFileAtomic(path string, data []byte) error {
++	ret := _mock.Called(path, data)
++
++	if len(ret) == 0 {
++		panic("no return value specified for WriteFileAtomic")
++	}
++
++	var r0 error
++	if returnFunc, ok := ret.Get(0).(func(string, []byte) error); ok {
++		r0 = returnFunc(path, data)
++	} else {
++		r0 = ret.Error(0)
++	}
++	return r0
++}
++
++// FileSystem_WriteFileAtomic_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WriteFileAtomic'
++type FileSystem_WriteFileAtomic_Call struct {
++	*mock.Call
++}
++
++// WriteFileAtomic is a helper method to define mock.On call
++//   - path string
++//   - data []byte
++func (_e *FileSystem_Expecter) WriteFileAtomic(path any, data any) *FileSystem_WriteFileAtomic_Call {
++	return &FileSystem_WriteFileAtomic_Call{Call: _e.mock.On("WriteFileAtomic", path, data)}
++}
++
++func (_c *FileSystem_WriteFileAtomic_Call) Run(run func(path string, data []byte)) *FileSystem_WriteFileAtomic_Call {
++	_c.Call.Run(func(args mock.Arguments) {
++		var arg0 string
++		if args[0] != nil {
++			arg0 = args[0].(string)
++		}
++		var arg1 []byte
++		if args[1] != nil {
++			arg1 = args[1].([]byte)
++		}
++		run(
++			arg0,
++			arg1,
++		)
++	})
++	return _c
++}
++
++func (_c *FileSystem_WriteFileAtomic_Call) Return(err error) *FileSystem_WriteFileAtomic_Call {
++	_c.Call.Return(err)
++	return _c
++}
++
++func (_c *FileSystem_WriteFileAtomic_Call) RunAndReturn(run func(path string, data []byte) error) *FileSystem_WriteFileAtomic_Call {
++	_c.Call.Return(run)
++	return _c
++}
+diff --git a/internal/fs/os_test.go b/internal/fs/os_test.go
+index c3a7633..891afe3 100644
+--- a/internal/fs/os_test.go
++++ b/internal/fs/os_test.go
+@@ -77,6 +77,109 @@ func TestOS_WriteFile_overwritesReadOnly(t *testing.T) {
+ 	}
+ }
+ 
++func TestOS_WriteFileAtomic_writeAndRead(t *testing.T) {
++	dir := t.TempDir()
++	f := fs.NewOSFileSystem()
++	p := filepath.Join(dir, "sub", "atomic.txt")
++
++	if err := f.WriteFileAtomic(p, []byte("hello")); err != nil {
++		t.Fatalf("WriteFileAtomic: %v", err)
++	}
++	data, err := f.ReadFile(p)
++	if err != nil {
++		t.Fatalf("ReadFile: %v", err)
++	}
++	if string(data) != "hello" {
++		t.Errorf("ReadFile = %q, want 'hello'", data)
++	}
++}
++
++func TestOS_WriteFileAtomic_overwritesReadOnly(t *testing.T) {
++	dir := t.TempDir()
++	f := fs.NewOSFileSystem()
++	p := filepath.Join(dir, "atomic.txt")
++
++	if err := os.WriteFile(p, []byte("old"), 0o444); err != nil {
++		t.Fatalf("seed: %v", err)
++	}
++	if err := f.WriteFileAtomic(p, []byte("new")); err != nil {
++		t.Fatalf("WriteFileAtomic over read-only: %v", err)
++	}
++	data, err := os.ReadFile(p)
++	if err != nil {
++		t.Fatalf("ReadFile: %v", err)
++	}
++	if string(data) != "new" {
++		t.Errorf("content = %q, want 'new'", data)
++	}
++}
++
++func TestOS_WriteFileAtomic_noPartialFileOnInterruption(t *testing.T) {
++	dir := t.TempDir()
++	f := fs.NewOSFileSystem()
++	p := filepath.Join(dir, "atomic.txt")
++
++	if err := f.WriteFileAtomic(p, []byte("original")); err != nil {
++		t.Fatalf("seed WriteFileAtomic: %v", err)
++	}
++
++	interruptedTmp := filepath.Join(dir, ".tmp-interrupted")
++	if err := os.WriteFile(interruptedTmp, []byte("partial-content"), 0o600); err != nil {
++		t.Fatalf("simulate interrupted temp: %v", err)
++	}
++	t.Cleanup(func() { _ = os.Remove(interruptedTmp) })
++
++	data, err := os.ReadFile(p)
++	if err != nil {
++		t.Fatalf("ReadFile final path: %v", err)
++	}
++	if string(data) != "original" {
++		t.Errorf("final path content = %q, want 'original' — interrupted temp must never be visible at final path", data)
++	}
++
++	entries, err := os.ReadDir(dir)
++	if err != nil {
++		t.Fatalf("ReadDir: %v", err)
++	}
++	for _, e := range entries {
++		if e.Name() == filepath.Base(p) {
++			continue
++		}
++		if e.Name() != filepath.Base(interruptedTmp) {
++			t.Errorf("unexpected leftover entry: %s", e.Name())
++		}
++	}
++}
++
++func TestOS_WriteFileAtomic_cleansUpTempOnWriteFailure(t *testing.T) {
++	dir := t.TempDir()
++	f := fs.NewOSFileSystem()
++	unwritable := filepath.Join(dir, "unwritable")
++	p := filepath.Join(unwritable, "file.txt")
++
++	if err := os.MkdirAll(unwritable, 0o755); err != nil {
++		t.Fatalf("MkdirAll: %v", err)
++	}
++	if err := os.Chmod(unwritable, 0o555); err != nil {
++		t.Fatalf("chmod read-only: %v", err)
++	}
++	t.Cleanup(func() { makeWritableForCleanup(unwritable) })
++
++	err := f.WriteFileAtomic(p, []byte("data"))
++	if err == nil {
++		t.Fatal("WriteFileAtomic into read-only directory should fail")
++	}
++
++	makeWritableForCleanup(unwritable)
++	entries, readErr := os.ReadDir(unwritable)
++	if readErr != nil {
++		t.Fatalf("ReadDir: %v", readErr)
++	}
++	for _, e := range entries {
++		t.Errorf("temp file leaked after failed WriteFileAtomic: %s", e.Name())
++	}
++}
++
+ func TestOS_ReadFile_missing(t *testing.T) {
+ 	f := fs.NewOSFileSystem()
+ 	_, err := f.ReadFile("/nonexistent/path/file.txt")

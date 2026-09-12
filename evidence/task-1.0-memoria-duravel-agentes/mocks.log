@@ -1,0 +1,7 @@
+go run github.com/vektra/mockery/v3@v3.7.4 --config mockery.yml
+bash scripts/normalize-mocks.sh
+Mocks normalizados: 43 arquivo(s)
+mocks exit=0
+bash scripts/check-mocks.sh
+Mocks: OK (sincronizados com mockery.yml)
+check-mocks exit=0

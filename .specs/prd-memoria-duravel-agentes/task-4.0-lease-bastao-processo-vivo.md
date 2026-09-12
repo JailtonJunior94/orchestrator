@@ -17,12 +17,12 @@ Não existe hoje no repositório nenhum código de detecção de processo vivo, 
 
 ## Subtarefas
 
-- [ ] 4.1 Definir `LeaseDeBastao` (dono, prazo, referência de processo) e `BastaoDeContinuidade` como agregado próprio.
-- [ ] 4.2 Implementar detecção de processo vivo em arquivo com build tag para plataformas tipo Unix.
-- [ ] 4.3 Implementar detecção de processo vivo em arquivo com build tag para Windows, com fallback explícito por prazo.
-- [ ] 4.4 Implementar a política de lease: conceder, recusar, transferir, sempre registrando o resultado.
-- [ ] 4.5 Adicionar a chave de prazo à cascata: `internal/config/runtime.go`, `mergeInto` em `internal/config/resolver.go` **e** `optionsToConfigOverrides` em `internal/taskloop/runtimeconfig.go`.
-- [ ] 4.6 Documentar em `docs/config-hierarchy.md` e em `docs/troubleshooting.md` (diagnóstico de bastão retido e lock órfão).
+- [x] 4.1 Definir `LeaseDeBastao` (dono, prazo, referência de processo) e `BastaoDeContinuidade` como agregado próprio.
+- [x] 4.2 Implementar detecção de processo vivo em arquivo com build tag para plataformas tipo Unix.
+- [x] 4.3 Implementar detecção de processo vivo em arquivo com build tag para Windows, com fallback explícito por prazo.
+- [x] 4.4 Implementar a política de lease: conceder, recusar, transferir, sempre registrando o resultado.
+- [x] 4.5 Adicionar a chave de prazo à cascata: `internal/config/runtime.go`, `mergeInto` em `internal/config/resolver.go` **e** `optionsToConfigOverrides` em `internal/taskloop/runtimeconfig.go`.
+- [x] 4.6 Documentar em `docs/config-hierarchy.md` e em `docs/troubleshooting.md` (diagnóstico de bastão retido e lock órfão).
 
 ## Detalhes de Implementação
 
@@ -49,8 +49,8 @@ Nenhuma além das auto-carregadas (governance + linguagem).
 
 ## Testes da Tarefa
 
-- [ ] Testes unitários
-- [ ] Testes de integração
+- [x] Testes unitários
+- [x] Testes de integração
 
 <critical>SEMPRE CRIAR E EXECUTAR TESTES DA TAREFA ANTES DE CONSIDERAR A TAREFA COMO `done`</critical>
 

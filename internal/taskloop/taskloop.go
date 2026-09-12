@@ -20,7 +20,6 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
-// Options agrupa as opcoes do comando task-loop.
 type Options struct {
 	PRDFolder     string
 	Tool          string
@@ -28,92 +27,66 @@ type Options struct {
 	MaxIterations int
 	Timeout       time.Duration
 	ReportPath    string
-	// Modo avancado: perfis por papel (nil = modo simples via Tool)
+
 	Profiles               *ProfileConfig
-	FallbackTool           string // ferramenta de fallback para validacao pre-loop (camada 2)
-	AllowUnknownModel      bool   // pular validacao de compatibilidade ferramenta-modelo
-	ReviewerPromptTemplate string // path do template de prompt de revisao customizado
-	ExecutorFallbackModel  string // --fallback-model nativo do executor (Claude only, camada 1)
-	ReviewerFallbackModel  string // --fallback-model nativo do reviewer (Claude only, camada 1)
-	MaxBugfixIterations    int    // limite rigido de iteracoes do BugfixLoop (RF-06, ADR-003); 0 => default 3
+	FallbackTool           string
+	AllowUnknownModel      bool
+	ReviewerPromptTemplate string
+	ExecutorFallbackModel  string
+	ReviewerFallbackModel  string
+	MaxBugfixIterations    int
 	MaxBugfixIterationsSet bool
-	NonInteractive         bool // ReservationPlanner: assume Document como default sem prompts (RF-08, ADR-003)
+	HandoffLeaseTTL        time.Duration
+	HandoffLeaseTTLSet     bool
+	NonInteractive         bool
 
-	// Runtime ACP (RF-01, RF-02, RF-07, RF-11)
-	Runtime         string        // "legacy" (default) ou "acp"
-	ActivityTimeout time.Duration // timeout de inatividade do watchdog ACP; 0 = desabilitado
-	// ActivityTimeoutSet indica que ActivityTimeout veio de flag explicita.
-	// Evita que o default do Cobra sobrescreva configs workspace/global.
+	DurableMemoryEnabled bool
+
+	DurableMemoryEnabledSet bool
+
+	Runtime         string
+	ActivityTimeout time.Duration
+
 	ActivityTimeoutSet bool
-	Quiet              bool // suprime stream humano quando true
+	Quiet              bool
 
-	// AgentName e o nome do agente declarativo (AGENT.md) a ser usado (tarefa 6.0).
-	// Quando vazio, o fluxo legado via Tool/Profiles e preservado integralmente (RF-14).
-	// Quando preenchido, o Registry resolve o agente e deriva ProfileConfig via ResolveProfileFromAgent.
 	AgentName string
 
-	// Codex-specific flags (RF-09, RF-10, RF-11, RF-13 — ADR-013 D-08).
-	// Para Claude/Copilot as flags são aceitas mas sem efeito (BootstrapArgs no-op).
-	ReasoningEffort string   // "low" | "medium" | "high" (default "medium")
-	AccessMode      string   // "restricted" | "full" (default "restricted")
-	AddDirs         []string // diretórios adicionais que o agente Codex pode acessar além do WorkDir; ignorado por Claude/Copilot (no-op)
+	ReasoningEffort string
+	AccessMode      string
+	AddDirs         []string
 
-	// F2-Claude flags (RF-01, RF-02 — ADR-014).
-	// MCPNested habilita o servidor MCP interno que expõe a tool run_agent (RF-01.1).
-	// Quando true, ACPRunner spawna mcpserver.Server em goroutine antes de c.Open.
-	// Default false preserva comportamento F1-Claude sem regressão.
 	MCPNested bool
-	// NoNormalize desabilita a normalização de tool-calls driver-aware (RF-02.4, debug).
-	// Quando true, BuildNormalizedToolCall não é chamado no loop de eventos.
-	// Default false = normalização sempre ativa.
+
 	NoNormalize bool
 
-	// F3-Claude: limites de memória (RF-01, RF-02 — F3-Claude).
-	// Zero-value em cada campo aplica o default de memory.DefaultLimits() no runner.
-	MemoryWorkflowLimitLines int // --memory-workflow-limit-lines (default 150)
-	MemoryWorkflowLimitBytes int // --memory-workflow-limit-bytes (default 12288)
-	MemoryTaskLimitLines     int // --memory-task-limit-lines (default 200)
-	MemoryTaskLimitBytes     int // --memory-task-limit-bytes (default 16384)
-	// MemoryLimitsSet indica que ao menos uma flag --memory-* foi explicitamente alterada.
-	// Usado para preservar overrides do usuario em politicas WindowLarge.
+	MemoryWorkflowLimitLines int
+	MemoryWorkflowLimitBytes int
+	MemoryTaskLimitLines     int
+	MemoryTaskLimitBytes     int
+
 	MemoryLimitsSet bool
 
-	// DisableHooks desabilita TODOS os hooks Go in-process (F3-Claude, debug).
-	// Quando true, governance, token_budget e memory_persist não são registrados.
-	// Default false = hooks ativos.
 	DisableHooks bool
 
-	// SkipDriftGuard desabilita SOMENTE o spec_drift hook (ADR-022, RG-01/RG-02).
-	// Default false = guard ativo quando há PRD rastreável; mantém governance/token_budget ativos.
 	SkipDriftGuard bool
 
-	// AutoReview habilita o auto-review opt-in (F5-Claude, RF-06).
-	// Quando true, após session end, spawna nova sessão com skill review + git diff.
-	// HARD: default false; child sessions têm AutoReview=false forçado (anti-recursão).
-	// HARD: Claude NÃO modifica internal/wrapper/ValidTools (ADR-014 §D-07).
 	AutoReview bool
 
-	// Concurrent é o grau máximo de paralelismo no RunLoop (ADR-018, RF-04).
-	// <=0 ou 1 ⇒ execução sequencial idêntica ao atual (F1 default, RF-05).
-	// Apenas tasks sem dependência pendente são executadas em paralelo.
 	Concurrent int
 
-	// BatchSize é o tamanho máximo do lote de tasks por rodada de seleção (ADR-018, RF-04).
-	// <=0 ou 1 ⇒ uma task por iteração (F1 default).
 	BatchSize int
 }
 
-// Service orquestra a execucao sequencial de tasks de um PRD folder.
 type Service struct {
 	fsys              fs.FileSystem
 	printer           *output.Printer
 	invokerFactory    func(tool string) (AgentInvoker, error)
 	acpInvokerFactory func(opts Options) AgentInvoker
-	binaryChecker     func(AgentInvoker) error // nil = usar CheckAgentBinary
-	liveOutOverride   io.Writer                // nil = usar os.Stderr; permite injecao em testes
+	binaryChecker     func(AgentInvoker) error
+	liveOutOverride   io.Writer
 }
 
-// NewService cria um novo Service de task-loop.
 func NewService(fsys fs.FileSystem, printer *output.Printer) *Service {
 	return &Service{
 		fsys:           fsys,
@@ -122,9 +95,6 @@ func NewService(fsys fs.FileSystem, printer *output.Printer) *Service {
 	}
 }
 
-// createInvokerWithFallback cria um invoker para a ferramenta com suporte a fallback nativo.
-// O fallback nativo (--fallback-model) so e suportado pelo claudeInvoker.
-// Outros invokers ignoram silenciosamente o fallbackModel.
 func (s *Service) createInvokerWithFallback(tool, fallbackModel string) (AgentInvoker, error) {
 	inv, err := s.invokerFactory(tool)
 	if err != nil {
@@ -138,9 +108,6 @@ func (s *Service) createInvokerWithFallback(tool, fallbackModel string) (AgentIn
 	return inv, nil
 }
 
-// compatibilityStatusLabel retorna o label de compatibilidade para exibicao no dry-run.
-// Verifica a tabela interna independentemente de AllowUnknownModel: o status reflete
-// o que a tabela conhece, nao se o usuario optou por ignorar a validacao.
 func (c *Catalog) compatibilityStatusLabel(table *CompatibilityTable, tool, model string) string {
 	if table.IsSupported(tool, model) {
 		return "✓ (compativel)"
@@ -148,16 +115,11 @@ func (c *Catalog) compatibilityStatusLabel(table *CompatibilityTable, tool, mode
 	return "✗ (incompativel)"
 }
 
-// printDryRunAdvancedHeader imprime o cabecalho do dry-run para modo avancado (RF-09, RF-12).
-// Exibe: modo, perfis resolvidos com status de compatibilidade, template de revisao,
-// tasks elegiveis e preview do template resolvido para a primeira task elegivel.
-// Deve ser chamado uma unica vez antes do loop principal, apenas quando DryRun=true e Profiles!=nil.
 func (s *Service) printDryRunAdvancedHeader(opts Options, absFolder, workDir string) {
 	s.printer.DryRun("modo: avancado")
 
 	table := NewCompatibilityTable()
 
-	// Executor — tool / provider / model + status de compatibilidade
 	exec := opts.Profiles.Executor
 	execModelDisplay := exec.Model()
 	if execModelDisplay == "" {
@@ -166,7 +128,6 @@ func (s *Service) printDryRunAdvancedHeader(opts Options, absFolder, workDir str
 	execStatus := NewCatalog().compatibilityStatusLabel(table, exec.Tool(), exec.Model())
 	s.printer.DryRun("executor: %s / %s / %s %s", exec.Tool(), exec.Provider(), execModelDisplay, execStatus)
 
-	// Reviewer — tool / provider / model + status de compatibilidade (quando configurado)
 	if opts.Profiles.Reviewer != nil {
 		rev := *opts.Profiles.Reviewer
 		revModelDisplay := rev.Model()
@@ -177,14 +138,12 @@ func (s *Service) printDryRunAdvancedHeader(opts Options, absFolder, workDir str
 		s.printer.DryRun("reviewer: %s / %s / %s %s", rev.Tool(), rev.Provider(), revModelDisplay, revStatus)
 	}
 
-	// Template de revisao
 	if opts.ReviewerPromptTemplate != "" {
 		s.printer.DryRun("template de revisao: %s", opts.ReviewerPromptTemplate)
 	} else {
 		s.printer.DryRun("template de revisao: default (embutido)")
 	}
 
-	// Ler tasks.md para identificar tasks elegiveis
 	tasksContent, err := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md"))
 	if err != nil {
 		return
@@ -207,7 +166,6 @@ func (s *Service) printDryRunAdvancedHeader(opts Options, absFolder, workDir str
 	}
 	s.printer.DryRun("tasks elegiveis: %s", strings.Join(ids, ", "))
 
-	// RF-12: preview do template resolvido para a primeira task elegivel
 	firstTask := eligible[0]
 	taskFile, err := NewCatalog().ResolveTaskFile(absFolder, firstTask, s.fsys)
 	if err != nil {
@@ -242,14 +200,12 @@ func (s *Service) printDryRunAdvancedHeader(opts Options, absFolder, workDir str
 	s.printer.DryRun("--- fim do preview ---")
 }
 
-// Execute roda o loop principal de execucao de tasks.
 func (s *Service) Execute(opts Options) error {
 	absFolder, err := filepath.Abs(opts.PRDFolder)
 	if err != nil {
 		return fmt.Errorf("caminho invalido %q: %w", opts.PRDFolder, err)
 	}
 
-	// Pre-flight: validar arquivos obrigatorios
 	for _, required := range []string{"tasks.md", "prd.md", "techspec.md"} {
 		path := filepath.Join(absFolder, required)
 		if !s.fsys.Exists(path) {
@@ -257,8 +213,6 @@ func (s *Service) Execute(opts Options) error {
 		}
 	}
 
-	// Pre-flight: resolver agente declarativo quando AgentName estiver preenchido (tarefa 6.0).
-	// Quando AgentName == "", o fluxo legado via Tool/Profiles e preservado integralmente (RF-14).
 	var resolvedAgent *agents.ResolvedAgent
 	var agentCatalog []agents.ResolvedAgent
 	if opts.AgentName != "" {
@@ -276,7 +230,6 @@ func (s *Service) Execute(opts Options) error {
 		}
 		resolvedAgent = &agent
 
-		// Derivar ProfileConfig do agente quando Profiles nao foi explicitamente configurado.
 		if opts.Profiles == nil {
 			override := agents.RuntimeOverride{}
 			agentProfile, profileErr := NewCatalog().ResolveProfileFromAgent(agent, override, opts.AllowUnknownModel)
@@ -285,13 +238,12 @@ func (s *Service) Execute(opts Options) error {
 			}
 			opts.Profiles = agentProfile
 		}
-		// Forcar runtime ACP para o fluxo de agente declarativo.
+
 		if opts.Runtime == "" || opts.Runtime == "legacy" {
 			opts.Runtime = "acp"
 		}
 	}
 
-	// Pre-flight: copiar perfis localmente para nao modificar o caller (fallback camada 2 pode substituir)
 	if opts.Profiles != nil {
 		profilesCopy := *opts.Profiles
 		if opts.Profiles.Reviewer != nil {
@@ -301,7 +253,6 @@ func (s *Service) Execute(opts Options) error {
 		opts.Profiles = &profilesCopy
 	}
 
-	// Pre-flight: validar compatibilidade de perfis contra a tabela (camada 2 de fallback)
 	if opts.Profiles != nil && !opts.AllowUnknownModel {
 		table := NewCompatibilityTable()
 
@@ -334,21 +285,17 @@ func (s *Service) Execute(opts Options) error {
 		}
 	}
 
-	// Determinar ferramenta do executor
 	executorTool := opts.Tool
 	if opts.Profiles != nil {
 		executorTool = opts.Profiles.Executor.Tool()
 	}
 
-	// Criar invoker: ACP quando runtime=acp, legado nos demais casos.
 	var invoker AgentInvoker
 	if opts.Runtime == "acp" {
 		if s.acpInvokerFactory != nil {
 			invoker = s.acpInvokerFactory(opts)
 		} else {
-			// Resolver config hierárquica uma vez (ADR-025, RIN-01):
-			// flags CLI > workspace > global > defaults built-in.
-			// O mesmo RuntimeConfig é injetado nos Jobs das 4 CLIs (paridade idêntica).
+
 			resolvedRC, rcErr := NewCatalog().resolveRuntimeConfig(absFolder, NewCatalog().optionsToConfigOverrides(opts))
 			if rcErr != nil {
 				return fmt.Errorf("taskloop: wiring RuntimeConfig: %w", rcErr)
@@ -364,15 +311,8 @@ func (s *Service) Execute(opts Options) error {
 				spec, airuntime.NewCatalog().
 					WithPersistenceFactory(factory),
 			)
-			// Usar o Timeout do RuntimeConfig resolvido (ADR-025).
-			// resolvedRC.Timeout já incorpora a precedência flags > workspace > global > defaults.
-			// Se Timeout estiver disabled (zero), Duration() retorna 0, equivalente a F1.
-			invoker = NewACPInvoker(runner, opts.Quiet, resolvedRC.Timeout.Duration(), NewCatalog().WithACPInvokerReasoningEffort(opts.ReasoningEffort), NewCatalog().WithACPInvokerAccessMode(specs.AccessMode(opts.AccessMode)), NewCatalog().WithACPInvokerAddDirs(opts.AddDirs), NewCatalog().WithACPInvokerMCPNested(opts.MCPNested), NewCatalog().WithACPInvokerNoNormalize(opts.NoNormalize), NewCatalog().WithACPInvokerMemoryLimitLines(opts.MemoryWorkflowLimitLines, opts.MemoryTaskLimitLines), NewCatalog().WithACPInvokerMemoryLimitBytes(opts.MemoryWorkflowLimitBytes, opts.MemoryTaskLimitBytes), NewCatalog().WithACPInvokerMemoryLimitsExplicit(opts.MemoryLimitsSet), NewCatalog().WithACPInvokerDisableHooks(opts.DisableHooks), NewCatalog().WithACPInvokerSkipDriftGuard(opts.SkipDriftGuard), NewCatalog().WithACPInvokerTasksDir(opts.PRDFolder), NewCatalog().WithACPInvokerAutoReview(opts.AutoReview), NewCatalog(
-			// RuntimeConfig hierárquico (ADR-025): MaxRetries e RetryBackoffMultiplier
-			// vêm da cascata resolvida (flags > workspace > global > defaults).
-			// Concurrent e BatchSize são consumidos pelo RunLoop via opts (ADR-018).
-			).WithACPInvokerMaxRetries(resolvedRC.MaxRetries), NewCatalog().WithACPInvokerRetryBackoffMultiplier(resolvedRC.RetryBackoffMultiplier), NewCatalog().WithACPInvokerMaxBugfixIterations(resolvedRC.MaxBugfixIterations),
-			)
+
+			invoker = NewACPInvoker(runner, opts.Quiet, resolvedRC.Timeout.Duration(), NewCatalog().WithACPInvokerReasoningEffort(opts.ReasoningEffort), NewCatalog().WithACPInvokerAccessMode(specs.AccessMode(opts.AccessMode)), NewCatalog().WithACPInvokerAddDirs(opts.AddDirs), NewCatalog().WithACPInvokerMCPNested(opts.MCPNested), NewCatalog().WithACPInvokerNoNormalize(opts.NoNormalize), NewCatalog().WithACPInvokerMemoryLimitLines(opts.MemoryWorkflowLimitLines, opts.MemoryTaskLimitLines), NewCatalog().WithACPInvokerMemoryLimitBytes(opts.MemoryWorkflowLimitBytes, opts.MemoryTaskLimitBytes), NewCatalog().WithACPInvokerMemoryLimitsExplicit(opts.MemoryLimitsSet), NewCatalog().WithACPInvokerDisableHooks(opts.DisableHooks), NewCatalog().WithACPInvokerSkipDriftGuard(opts.SkipDriftGuard), NewCatalog().WithACPInvokerTasksDir(opts.PRDFolder), NewCatalog().WithACPInvokerAutoReview(opts.AutoReview), NewCatalog().WithACPInvokerMaxRetries(resolvedRC.MaxRetries), NewCatalog().WithACPInvokerRetryBackoffMultiplier(resolvedRC.RetryBackoffMultiplier), NewCatalog().WithACPInvokerMaxBugfixIterations(resolvedRC.MaxBugfixIterations), NewCatalog().WithACPInvokerHandoffLeaseTTL(resolvedRC.HandoffLeaseTTL), NewCatalog().WithACPInvokerDurableMemory(resolvedRC.DurableMemoryEnabled))
 		}
 	} else {
 		var invokerErr error
@@ -393,17 +333,12 @@ func (s *Service) Execute(opts Options) error {
 			}
 		}
 
-		// Pre-flight: aviso antecipado de autenticacao para claude.
-		// Detecta ausencia de ANTHROPIC_API_KEY e de sessao local antes de iniciar
-		// o loop, evitando que a falha de auth so apareca na primeira iteracao.
 		if executorTool == "claude" {
 			if warn := NewCatalog().warnClaudeAuth(); warn != "" {
 				s.printer.Warn("claude auth: %s", warn)
 			}
 		}
 
-		// Configurar streaming de output do agente para o terminal.
-		// Permite ao usuario acompanhar progresso de agentes lentos.
 		if lo, ok := invoker.(LiveOutputSetter); ok {
 			liveOut := s.liveOutOverride
 			if liveOut == nil {
@@ -413,13 +348,11 @@ func (s *Service) Execute(opts Options) error {
 		}
 	}
 
-	// Resolver diretorio de trabalho (raiz do projeto — pai do prd folder ou cwd)
 	workDir, err := NewCatalog().resolveWorkDir(absFolder, s.fsys)
 	if err != nil {
 		return fmt.Errorf("erro ao resolver diretorio de trabalho: %w", err)
 	}
 
-	// Inicializar relatorio
 	report := &Report{
 		PRDFolder: opts.PRDFolder,
 		Tool:      opts.Tool,
@@ -447,13 +380,12 @@ func (s *Service) Execute(opts Options) error {
 	s.printer.Info("task-loop iniciado: folder=%s tool=%s max=%s timeout=%s",
 		opts.PRDFolder, opts.Tool, maxLabel, opts.Timeout)
 
-	// Dry-run modo avancado: imprimir cabecalho com perfis, compatibilidade e preview (RF-09, RF-12)
 	if opts.DryRun && opts.Profiles != nil {
 		s.printDryRunAdvancedHeader(opts, absFolder, workDir)
 	}
 
 	for opts.MaxIterations == 0 || iteration < opts.MaxIterations {
-		// Re-ler tasks.md a cada iteracao (agente pode ter atualizado)
+
 		tasksContent, err := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md"))
 		if err != nil {
 			return fmt.Errorf("erro ao ler tasks.md: %w", err)
@@ -477,9 +409,8 @@ func (s *Service) Execute(opts Options) error {
 		}
 
 		task := eligible[0]
-		iteration++ // RF-13: conta apenas iteracoes de executor; reviewer e sub-etapa
+		iteration++
 
-		// Resolver arquivo da task
 		taskFile, err := NewCatalog().ResolveTaskFile(absFolder, task, s.fsys)
 		if err != nil {
 			s.printer.Warn("iteracao %d: %v — pulando task %s", iteration, err, task.ID)
@@ -496,13 +427,11 @@ func (s *Service) Execute(opts Options) error {
 			continue
 		}
 
-		// Ler status pre-execucao do arquivo individual
 		preStatus := task.Status
 		if fileStatus := NewCatalog().readTaskStatus(taskFile, s.fsys); fileStatus != "" {
 			preStatus = fileStatus
 		}
 
-		// Path relativo para o prompt
 		relTaskFile, _ := filepath.Rel(workDir, taskFile)
 		if relTaskFile == "" {
 			relTaskFile = taskFile
@@ -519,14 +448,14 @@ func (s *Service) Execute(opts Options) error {
 
 		if opts.DryRun {
 			if opts.Profiles != nil {
-				// Modo avancado: exibe plano de iteracao com executor e reviewer (RF-09)
+
 				if opts.Profiles.Reviewer != nil {
 					s.printer.DryRun("iteracao %d: executaria task %s com executor, depois reviewer", iteration, task.ID)
 				} else {
 					s.printer.DryRun("iteracao %d: executaria task %s com executor", iteration, task.ID)
 				}
 			} else {
-				// Modo simples: comportamento atual preservado (regressao zero)
+
 				tool := opts.Tool
 				s.printer.DryRun("invocaria %s com prompt para task %s (%s)", tool, task.ID, task.Title)
 				s.printer.DryRun("task file: %s", relTaskFile)
@@ -544,7 +473,6 @@ func (s *Service) Execute(opts Options) error {
 			continue
 		}
 
-		// Determinar model do executor
 		executorModel := ""
 		if opts.Profiles != nil {
 			executorModel = opts.Profiles.Executor.Model()
@@ -555,7 +483,6 @@ func (s *Service) Execute(opts Options) error {
 			return fmt.Errorf("erro ao capturar snapshot de isolamento da task %s: %w", task.ID, err)
 		}
 
-		// Invocar agente com timeout
 		ctx, cancel := context.WithTimeout(context.Background(), opts.Timeout)
 		startTime := time.Now()
 		stdout, stderr, exitCode, invokeErr := invoker.Invoke(ctx, prompt, workDir, executorModel)
@@ -569,16 +496,11 @@ func (s *Service) Execute(opts Options) error {
 			}
 		}
 
-		// Ler status pos-execucao
 		postStatus := preStatus
 		if fileStatus := NewCatalog().readTaskStatus(taskFile, s.fsys); fileStatus != "" {
 			postStatus = fileStatus
 		}
 
-		// Verificar no tasks.md atualizado apenas como fallback: quando o task file
-		// nao atualizou o status (postStatus == preStatus), o agente pode ter escrito
-		// diretamente em tasks.md. Quando o task file ja tem status diferente de
-		// preStatus, ele e a fonte prioritaria — tasks.md nao deve sobrescreve-lo.
 		if postStatus == preStatus {
 			if updatedContent, readErr := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md")); readErr == nil {
 				if updatedTasks, parseErr := NewCatalog().ParseTasksFile(updatedContent); parseErr == nil {
@@ -639,8 +561,7 @@ func (s *Service) Execute(opts Options) error {
 			}
 			s.printer.Error("iteracao %d: %v", iteration, invokeErr)
 		} else if exitCode != 0 {
-			// Nota especifica por ferramenta para output vazio em SIGKILL (exit -1).
-			// Nao entra em classifyIterationOutcome porque requer o nome da ferramenta.
+
 			if exitCode == -1 && stdout == "" && stderr == "" {
 				iterResult.Note = NewCatalog().appendNote(iterResult.Note,
 					fmt.Sprintf("saida vazia — %s pode requerer TTY ou nao suportar output em pipe", executorTool))
@@ -698,10 +619,6 @@ func (s *Service) Execute(opts Options) error {
 			}
 		}
 
-		// === BUGFIX (apos reviewer com achados criticos) ===
-		// Invocado quando: reviewer executou e retornou exit != 0 (achados criticos).
-		// Reutiliza o executor para aplicar correcoes com prompt de bugfix.
-		// Nao incrementa o contador de iteracoes (sub-etapa como o reviewer).
 		if !cycleConducted && iterResult.ReviewResult != nil && iterResult.ReviewResult.ExitCode != 0 {
 			bugfixSnapshot, bfSnapErr := NewCatalog().captureTaskIsolationSnapshotWithMode(absFolder, _taskIsolationModeExecutor, s.fsys)
 			if bfSnapErr != nil {
@@ -741,7 +658,7 @@ func (s *Service) Execute(opts Options) error {
 
 	if opts.MaxIterations > 0 && iteration >= opts.MaxIterations && report.StopReason == "" {
 		report.StopReason = fmt.Sprintf("limite de iteracoes atingido (%d)", opts.MaxIterations)
-		// Ler estado final das tasks
+
 		if content, err := s.fsys.ReadFile(filepath.Join(absFolder, "tasks.md")); err == nil {
 			if tasks, err := NewCatalog().ParseTasksFile(content); err == nil {
 				report.FinalTasks = tasks
@@ -751,7 +668,6 @@ func (s *Service) Execute(opts Options) error {
 
 	report.EndTime = time.Now()
 
-	// Escrever relatorio
 	reportContent := report.Render()
 	if err := s.fsys.WriteFile(opts.ReportPath, reportContent); err != nil {
 		return fmt.Errorf("erro ao escrever relatorio: %w", err)
@@ -763,10 +679,6 @@ func (s *Service) Execute(opts Options) error {
 	return nil
 }
 
-// invokeReviewer invoca o reviewer apos execucao bem-sucedida do executor.
-// Cria contexto proprio com o mesmo timeout do executor.
-// iterations contem as iteracoes anteriores do report para popular tasks executadas.
-// Retorna ReviewResult com o resultado da revisao ou nota de erro.
 func (s *Service) invokeReviewer(opts Options, relTaskFile, relPRD, workDir, taskID string, iterations []IterationResult) *ReviewResult {
 	reviewerInvoker, err := s.createInvokerWithFallback(
 		opts.Profiles.Reviewer.Tool(),
@@ -823,9 +735,6 @@ func (s *Service) invokeReviewer(opts Options, relTaskFile, relPRD, workDir, tas
 	return reviewResult
 }
 
-// invokeBugfix invoca o executor com prompt de bugfix apos revisao com achados criticos.
-// Reutiliza o invoker do executor com o template de bugfix preenchido com os achados do reviewer.
-// Retorna BugfixResult com o resultado da correcao ou nota de erro.
 func (s *Service) invokeBugfix(opts Options, relTaskFile, relPRD, workDir, reviewFindings, diff string) *BugfixResult {
 	executorTool := opts.Tool
 	if opts.Profiles != nil {
@@ -880,25 +789,13 @@ func (s *Service) invokeBugfix(opts Options, relTaskFile, relPRD, workDir, revie
 	return bugfixResult
 }
 
-// iterationOutcome representa a decisao tomada apos uma invocacao do agente.
-// Produzida por classifyIterationOutcome — sem side effects.
 type iterationOutcome struct {
-	Skip        bool   // task deve ser ignorada nesta execucao
-	Abort       bool   // loop deve ser abortado (ex: erro de autenticacao)
-	Note        string // descricao do motivo (acumulavel via appendNote)
-	RunReviewer bool   // reviewer deve ser invocado
+	Skip        bool
+	Abort       bool
+	Note        string
+	RunReviewer bool
 }
 
-// classifyIterationOutcome determina o estado final de uma iteracao a partir
-// de dados observaveis, sem depender da ferramenta nem produzir side effects.
-//
-// Regras (em ordem de precedencia):
-//   - invokeErr != nil                       → Skip=true, Note="erro de invocacao: ..."
-//   - exitCode != 0 && isAuthError(combined) → Abort=true (retorno antecipado)
-//   - exitCode != 0 (sem auth error)         → Note="agente saiu com codigo N"
-//   - invokeErr == nil && postStatus=="done" → RunReviewer=true
-//   - postStatus == preStatus                → Skip=true, Note=appended "status inalterado..."
-//   - postStatus em {failed,blocked,needs_input} → Skip=true
 func (c *Catalog) classifyIterationOutcome(
 	preStatus, postStatus string,
 	exitCode int,
@@ -918,18 +815,15 @@ func (c *Catalog) classifyIterationOutcome(
 		outcome.Note = fmt.Sprintf("agente saiu com codigo %d", exitCode)
 	}
 
-	// RunReviewer: apenas quando invokeErr == nil e task concluida
 	if invokeErr == nil && postStatus == "done" {
 		outcome.RunReviewer = true
 	}
 
-	// Status inalterado → skip para prevenir loop infinito
 	if postStatus == preStatus {
 		outcome.Note = NewCatalog().appendNote(outcome.Note, "status inalterado apos execucao; pulando")
 		outcome.Skip = true
 	}
 
-	// Status terminal nao-done → skip
 	if postStatus == "failed" || postStatus == "blocked" || postStatus == "needs_input" {
 		outcome.Skip = true
 	}
@@ -943,8 +837,6 @@ func (c *Catalog) resolveACPSpec(tool string) (specs.Spec, error) {
 	return specs.NewCatalog().ResolveACPSpec(tool)
 }
 
-// resolveWorkDir tenta encontrar a raiz do projeto (diretorio que contem go.mod, .git, ou AGENTS.md).
-// Recebe fsys para manter testabilidade com FakeFileSystem.
 func (c *Catalog) resolveWorkDir(prdFolder string, fsys fs.FileSystem) (string, error) {
 	dir, err := filepath.Abs(prdFolder)
 	if err != nil {

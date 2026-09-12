@@ -1,0 +1,78 @@
+{
+  "schema_version": 2,
+  "run_id": "task-8.0-evidencia-metricas-telemetria-2026-09-11",
+  "task_id": "8.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "166cb9efc0590cbf38685258ddce89908e594256",
+  "patch_sha256": "6e027a2ecf3656e905e2dce2b98c640498069ae0d9d7e353fb779b9b71d2b854",
+  "patch_ref": "evidence/task-8.0-memoria-duravel-agentes/8.0.patch",
+  "final_state_sha256": "64c40b67dfdc827895bda91244c34810872c06bce48cd0a0a2a2d55ea2e1594a",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "fdda337dabd5dedf3ba3b9d18256c0f72201316c1bebf41752b87694a46c37f1"
+    },
+    {
+      "command": "go test ./internal/runtime/... ./internal/runtime/memory/... ./internal/runtime/hooks/... ./internal/runtime/persistence/... ./internal/telemetry/... -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "ce3ab0906a23a82a2f56e0bf7881ee68aaa82ab3ba605d4d5a66d8d2bec6dc94"
+    },
+    {
+      "command": "bash scripts/test-validators.sh",
+      "exit_code": 0,
+      "output_sha256": "2aad6c1252b726f7d9ab9d24b43f3fc078e6494883dea84b991f64aed014b250"
+    },
+    {
+      "command": "bash scripts/check-mocks.sh",
+      "exit_code": 0,
+      "output_sha256": "b1d91938e8acf29e44eedd7309466a57e2051808d29fd98cc76e0d414b83d6e2"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "relatorio-contem-seis-itens-rf34",
+      "evidence_ref": "evidence/task-8.0-memoria-duravel-agentes/memory-tests.log#TestEnrichReport_MemoryEvidenceSection_InjectedBeforeMetrics"
+    },
+    {
+      "id": "metricas-permanece-ultima-secao",
+      "evidence_ref": "evidence/task-8.0-memoria-duravel-agentes/memory-tests.log#TestEnrichReport_MemoryEvidenceSection_IdempotentAndLastSectionPreserved"
+    },
+    {
+      "id": "test-validators-passa-com-secao-nova",
+      "evidence_ref": "evidence/task-8.0-memoria-duravel-agentes/test-validators.log#Caso-j"
+    },
+    {
+      "id": "sem-bracket-multibyte-sob-lc-all-c",
+      "evidence_ref": "evidence/task-8.0-memoria-duravel-agentes/test-validators.log#LC_ALL=C"
+    },
+    {
+      "id": "fato-rastreavel-sessao-cli-data",
+      "evidence_ref": "evidence/task-8.0-memoria-duravel-agentes/memory-tests.log#TestRecordSessionTracesFactToSessionCLIAndDate"
+    },
+    {
+      "id": "sem-governance-telemetry-nenhuma-metrica",
+      "evidence_ref": "evidence/task-8.0-memoria-duravel-agentes/memory-tests.log#TestLogDurableMemorySession_OptOutWritesNothing"
+    },
+    {
+      "id": "falha-hook-memoria-nao-impede-fan-out",
+      "evidence_ref": "evidence/task-8.0-memoria-duravel-agentes/memory-tests.log#TestMemoryEvidenceHook_DoesNotAbortFanOutForSubsequentHooks"
+    }
+  ],
+  "evidence": [
+    "evidence/task-8.0-memoria-duravel-agentes/8.0.patch",
+    "evidence/task-8.0-memoria-duravel-agentes/build.log",
+    "evidence/task-8.0-memoria-duravel-agentes/full-tests.log",
+    "evidence/task-8.0-memoria-duravel-agentes/memory-tests.log",
+    "evidence/task-8.0-memoria-duravel-agentes/test-validators.log",
+    "evidence/task-8.0-memoria-duravel-agentes/mocks.log"
+  ],
+  "review_verdict": "approved"
+}

@@ -20,6 +20,35 @@ func TestFake_WriteAndRead(t *testing.T) {
 	}
 }
 
+func TestFake_WriteFileAtomicAndRead(t *testing.T) {
+	f := fs.NewFakeFileSystem()
+	if err := f.WriteFileAtomic("/a/atomic.txt", []byte("hello")); err != nil {
+		t.Fatalf("WriteFileAtomic: %v", err)
+	}
+	data, err := f.ReadFile("/a/atomic.txt")
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if string(data) != "hello" {
+		t.Errorf("ReadFile = %q, want 'hello'", data)
+	}
+}
+
+func TestFake_WriteFileAtomic_overwritesExisting(t *testing.T) {
+	f := fs.NewFakeFileSystem()
+	_ = f.WriteFileAtomic("/a/atomic.txt", []byte("old"))
+	if err := f.WriteFileAtomic("/a/atomic.txt", []byte("new")); err != nil {
+		t.Fatalf("WriteFileAtomic overwrite: %v", err)
+	}
+	data, err := f.ReadFile("/a/atomic.txt")
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if string(data) != "new" {
+		t.Errorf("content = %q, want 'new'", data)
+	}
+}
+
 func TestFake_ReadFile_missing(t *testing.T) {
 	f := fs.NewFakeFileSystem()
 	_, err := f.ReadFile("/no/such/file")

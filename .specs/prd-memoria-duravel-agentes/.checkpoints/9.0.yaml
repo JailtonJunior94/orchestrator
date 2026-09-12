@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-memoria-duravel-agentes/9.0_execution_report.md
+summary: Comando ai-spec memory com show/search/export/compact/migrate/handoff implementado, contrato CLI bidirecional verde, migracao com backup verificavel.
+timestamp: 2026-09-11T00:00:00Z

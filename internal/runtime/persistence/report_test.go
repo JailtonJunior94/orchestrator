@@ -318,3 +318,171 @@ func TestEnrichReport_SectionAtEndOfFile(t *testing.T) {
 		t.Errorf("## Runtime ACP aparece %d vezes, esperava 1", count)
 	}
 }
+
+func makeMemoryEvidenceSummary() runtime.Summary {
+	s := makeSummary()
+	s.Metrics = events.NewMetricSet(1, 0, 0, nil)
+	s.MemoryEvidence = &runtime.MemoryEvidence{
+		SessionID:         "20260910T101010.000000000-1234",
+		CLI:               "claude",
+		TaskFileName:      "task-8.0.md",
+		FactsByLayer:      map[string]int{"task": 2, "prd": 1},
+		FactsOmitted:      1,
+		FactsContradicted: 1,
+		PagesUnreadable:   0,
+		BudgetByLayer:     map[string]int{"task": 40, "prd": 30},
+		WritesByLayer:     map[string]int{"task": 2},
+		ArchivedByLayer:   map[string]int{"task": 1},
+		Redactions:        1,
+		Compactions:       1,
+		Contradictions:    1,
+		BatonClaimed:      true,
+	}
+	return s
+}
+
+func TestEnrichReport_MemoryEvidenceSection_InjectedBeforeMetrics(t *testing.T) {
+	fsys := fs.NewFakeFileSystem()
+	if err := fsys.WriteFile("/report/execution_report.md", []byte("# Relatório\n")); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	summary := makeMemoryEvidenceSummary()
+
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
+		t.Fatalf("EnrichReport: %v", err)
+	}
+
+	data, _ := fsys.ReadFile("/report/execution_report.md")
+	content := string(data)
+
+	if !strings.Contains(content, "## Evidência de Memória Durável") {
+		t.Fatal("seção '## Evidência de Memória Durável' não encontrada")
+	}
+	if !strings.Contains(content, "session: 20260910T101010.000000000-1234") {
+		t.Error("campo session não encontrado")
+	}
+	if !strings.Contains(content, "cli: claude") {
+		t.Error("campo cli não encontrado")
+	}
+	if !strings.Contains(content, "write_facts_by_layer: task=2") {
+		t.Error("campo write_facts_by_layer não encontrado")
+	}
+	if !strings.Contains(content, "budget_consumed_by_layer: prd=30, task=40") {
+		t.Error("campo budget_consumed_by_layer não encontrado ou fora de ordem determinística")
+	}
+	if !strings.Contains(content, "baton_claimed: true") {
+		t.Error("campo baton_claimed não encontrado")
+	}
+
+	evidenceIdx := strings.Index(content, "## Evidência de Memória Durável")
+	metricsIdx := strings.Index(content, "## Métricas Claude-2026")
+	if evidenceIdx == -1 || metricsIdx == -1 {
+		t.Fatal("seções esperadas ausentes")
+	}
+	if evidenceIdx >= metricsIdx {
+		t.Error("seção de evidência de memória deve vir antes da seção de métricas")
+	}
+	if strings.LastIndex(content, "## ") != strings.Index(content, "## Métricas Claude-2026") {
+		t.Error("seção de métricas deve permanecer a última do relatório")
+	}
+}
+
+func TestEnrichReport_MetricsThenMemoryEvidence_BothSectionsSurvive(t *testing.T) {
+	fsys := fs.NewFakeFileSystem()
+	if err := fsys.WriteFile("/report/execution_report.md", []byte("# Relatório\n")); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	metricsOnly := runtime.Summary{
+		Launcher:    "binary",
+		EventsCount: 10,
+		Metrics:     events.NewMetricSet(0, 150, 42, nil),
+	}
+
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", metricsOnly, fsys); err != nil {
+		t.Fatalf("EnrichReport (métricas): %v", err)
+	}
+
+	withEvidence := makeMemoryEvidenceSummary()
+	withEvidence.Metrics = metricsOnly.Metrics
+
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", withEvidence, fsys); err != nil {
+		t.Fatalf("EnrichReport (métricas + evidência): %v", err)
+	}
+
+	data, _ := fsys.ReadFile("/report/execution_report.md")
+	content := string(data)
+
+	if count := strings.Count(content, "## Métricas Claude-2026"); count != 1 {
+		t.Errorf("## Métricas Claude-2026 aparece %d vezes, esperava 1", count)
+	}
+	if count := strings.Count(content, "## Evidência de Memória Durável"); count != 1 {
+		t.Errorf("## Evidência de Memória Durável aparece %d vezes, esperava 1 (não deve ser apagada pela reinjeção de métricas)", count)
+	}
+	if !strings.Contains(content, "cache_read_tokens") {
+		t.Error("campo cache_read_tokens da 1ª chamada não sobreviveu à 2ª chamada")
+	}
+	if !strings.Contains(content, "session: 20260910T101010.000000000-1234") {
+		t.Error("campo session da seção de evidência não encontrado após reinjeção de métricas")
+	}
+
+	evidenceIdx := strings.Index(content, "## Evidência de Memória Durável")
+	metricsIdx := strings.Index(content, "## Métricas Claude-2026")
+	if evidenceIdx == -1 || metricsIdx == -1 {
+		t.Fatal("seções esperadas ausentes")
+	}
+	if evidenceIdx >= metricsIdx {
+		t.Error("seção de evidência de memória deve vir antes da seção de métricas")
+	}
+}
+
+func TestEnrichReport_MemoryEvidenceSection_AbsentWhenNil(t *testing.T) {
+	fsys := fs.NewFakeFileSystem()
+	if err := fsys.WriteFile("/report/execution_report.md", []byte("# Relatório\n")); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", makeSummary(), fsys); err != nil {
+		t.Fatalf("EnrichReport: %v", err)
+	}
+
+	data, _ := fsys.ReadFile("/report/execution_report.md")
+	content := string(data)
+
+	if strings.Contains(content, "Evidência de Memória Durável") {
+		t.Error("seção de evidência de memória não deve aparecer quando MemoryEvidence é nil")
+	}
+}
+
+func TestEnrichReport_MemoryEvidenceSection_IdempotentAndLastSectionPreserved(t *testing.T) {
+	fsys := fs.NewFakeFileSystem()
+	if err := fsys.WriteFile("/report/execution_report.md", []byte("# Relatório\n\n## Riscos Residuais\n\n- nenhum\n")); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	summary := makeMemoryEvidenceSummary()
+
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
+		t.Fatalf("EnrichReport (1a): %v", err)
+	}
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", summary, fsys); err != nil {
+		t.Fatalf("EnrichReport (2a): %v", err)
+	}
+
+	data, _ := fsys.ReadFile("/report/execution_report.md")
+	content := string(data)
+
+	if count := strings.Count(content, "## Evidência de Memória Durável"); count != 1 {
+		t.Errorf("## Evidência de Memória Durável aparece %d vezes, esperava 1", count)
+	}
+	if count := strings.Count(content, "## Métricas Claude-2026"); count != 1 {
+		t.Errorf("## Métricas Claude-2026 aparece %d vezes, esperava 1", count)
+	}
+	if !strings.Contains(content, "## Riscos Residuais") {
+		t.Error("seção original '## Riscos Residuais' foi removida")
+	}
+	if strings.LastIndex(content, "## ") != strings.Index(content, "## Métricas Claude-2026") {
+		t.Error("seção de métricas deve permanecer a última do relatório após reexecução idempotente")
+	}
+}

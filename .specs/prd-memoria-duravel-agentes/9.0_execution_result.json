@@ -1,0 +1,78 @@
+{
+  "schema_version": 2,
+  "run_id": "task-9.0-comando-memory-migracao-2026-09-11",
+  "task_id": "9.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "166cb9efc0590cbf38685258ddce89908e594256",
+  "patch_sha256": "28185a33fa026e506a0bea039c2970e49e7d543f283f0744e50120ec41fb447a",
+  "patch_ref": "evidence/task-9.0-memoria-duravel-agentes/9.0.patch",
+  "final_state_sha256": "a9c0254efb4577de19aa5401d5b8976fb38eddb40b784df80c6ba336362ca215",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "b6e86faed8f780822df130dc7cb8afd635d6b0a5b87dd634082f7f033b19807a"
+    },
+    {
+      "command": "go test ./cmd/ai_spec_harness/... -run TestCLI -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "b201891421c930c5b85d6957d588c1f3e985fd149454cb19707c8c1889c6a9d2"
+    },
+    {
+      "command": "go test ./cmd/ai_spec_harness/... -run TestMemoryCommandSuite -count=1 -v",
+      "exit_code": 0,
+      "output_sha256": "d2c18d405bdb839163a7156492af63f5ae895aa8e793ba4c43eb81becd801162"
+    },
+    {
+      "command": "golangci-lint run ./cmd/ai_spec_harness/... ./internal/runtime/memory/durable/...",
+      "exit_code": 0,
+      "output_sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "cli-contract-passes-both-directions",
+      "evidence_ref": "evidence/task-9.0-memoria-duravel-agentes/cli-contract-tests.log"
+    },
+    {
+      "id": "no-existing-command-contract-changed",
+      "evidence_ref": "evidence/task-9.0-memoria-duravel-agentes/full-tests.log"
+    },
+    {
+      "id": "migrate-backup-before-convert-and-refuses-reapplied",
+      "evidence_ref": "evidence/task-9.0-memoria-duravel-agentes/memory-tests.log"
+    },
+    {
+      "id": "migrate-preserves-full-content",
+      "evidence_ref": "evidence/task-9.0-memoria-duravel-agentes/memory-tests.log"
+    },
+    {
+      "id": "show-displays-origin-and-flags-contradiction",
+      "evidence_ref": "evidence/task-9.0-memoria-duravel-agentes/memory-tests.log"
+    },
+    {
+      "id": "search-works-without-network-or-api-key",
+      "evidence_ref": "evidence/task-9.0-memoria-duravel-agentes/memory-tests.log"
+    },
+    {
+      "id": "exit-code-uses-newExitError-not-osExit",
+      "evidence_ref": "evidence/task-9.0-memoria-duravel-agentes/9.0.patch"
+    }
+  ],
+  "evidence": [
+    "evidence/task-9.0-memoria-duravel-agentes/9.0.patch",
+    "evidence/task-9.0-memoria-duravel-agentes/build.log",
+    "evidence/task-9.0-memoria-duravel-agentes/full-tests.log",
+    "evidence/task-9.0-memoria-duravel-agentes/cli-contract-tests.log",
+    "evidence/task-9.0-memoria-duravel-agentes/memory-tests.log",
+    "evidence/task-9.0-memoria-duravel-agentes/lint.log"
+  ],
+  "review_verdict": "approved"
+}

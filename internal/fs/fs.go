@@ -24,6 +24,7 @@ type FileSystem interface {
 	EvalSymlinks(path string) (string, error)
 	ReadFile(path string) ([]byte, error)
 	WriteFile(path string, data []byte) error
+	WriteFileAtomic(path string, data []byte) error
 	ReadDir(path string) ([]os.DirEntry, error)
 	FileHash(path string) (string, error)
 	DirHash(path string) (string, error)
@@ -167,6 +168,39 @@ func (f *OSFileSystem) WriteFile(path string, data []byte) error {
 		_ = os.Chmod(path, 0o644)
 	}
 	return os.WriteFile(path, data, 0o644)
+}
+
+func (f *OSFileSystem) WriteFileAtomic(path string, data []byte) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("create directory %s: %w", dir, err)
+	}
+	if info, err := os.Lstat(path); err == nil && info.Mode().IsRegular() && info.Mode().Perm()&0o200 == 0 {
+		_ = os.Chmod(path, 0o644)
+	}
+	tmp, err := os.CreateTemp(dir, ".tmp-*")
+	if err != nil {
+		return fmt.Errorf("create temp file in %s: %w", dir, err)
+	}
+	tmpPath := tmp.Name()
+	defer func() {
+		_ = os.Remove(tmpPath)
+	}()
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("write temp file %s: %w", tmpPath, err)
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("sync temp file %s: %w", tmpPath, err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("close temp file %s: %w", tmpPath, err)
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		return fmt.Errorf("publish file %s: %w", path, err)
+	}
+	return nil
 }
 
 func (f *OSFileSystem) ReadDir(path string) ([]os.DirEntry, error) {

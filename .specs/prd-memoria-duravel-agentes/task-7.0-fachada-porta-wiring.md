@@ -23,16 +23,16 @@ Implementa a fachada como único ponto de contato do runtime com o subsistema, a
 
 ## Subtarefas
 
-- [ ] 7.1 Implementar a fachada orquestrando os colaboradores na ordem do workflow do modelo de domínio.
-- [ ] 7.2 Declarar a porta no pacote consumidor com `var _ MemoryPort = (*durable.Facade)(nil)`.
-- [ ] 7.3 Adicionar a chave de ativação à cascata nos **dois** pontos: `mergeInto` em `internal/config/resolver.go` e `optionsToConfigOverrides` em `internal/taskloop/runtimeconfig.go`.
-- [ ] 7.4 Adicionar a flag em `cmd/ai_spec_harness/task_loop.go`, com detecção de override explícito via `Changed`.
-- [ ] 7.5 Propagar pela cadeia: `Options` em `internal/taskloop/taskloop.go`, option de invoker em `internal/taskloop/acpinvoker.go`, campo em `internal/runtime/types.go`.
-- [ ] 7.6 Ligar a fachada ao consumidor por resolução de configuração, preservando o caminho anterior quando desativada.
-- [ ] 7.7 **Reordenar `Run()`**: mover `dispatchSessionPostEnd` para antes de `persistSummary` em `internal/runtime/runner.go:209` e `:213`.
-- [ ] 7.8 Atualizar `docs/cli-schema.json` com a flag nova.
-- [ ] 7.9 Declarar `MemoryPort` em `mockery.yml`, rodar `make mocks`, confirmar `make check-mocks`.
-- [ ] 7.10 Atualizar `docs/config-hierarchy.md`, `docs/task-loop-reference.md`, `CLAUDE.md` e o índice de ADRs do `AGENTS.md`.
+- [x] 7.1 Implementar a fachada orquestrando os colaboradores na ordem do workflow do modelo de domínio.
+- [x] 7.2 Declarar a porta no pacote consumidor com `var _ MemoryPort = (*durable.Facade)(nil)`.
+- [x] 7.3 Adicionar a chave de ativação à cascata nos **dois** pontos: `mergeInto` em `internal/config/resolver.go` e `optionsToConfigOverrides` em `internal/taskloop/runtimeconfig.go`.
+- [x] 7.4 Adicionar a flag em `cmd/ai_spec_harness/task_loop.go`, com detecção de override explícito via `Changed`.
+- [x] 7.5 Propagar pela cadeia: `Options` em `internal/taskloop/taskloop.go`, option de invoker em `internal/taskloop/acpinvoker.go`, campo em `internal/runtime/types.go`.
+- [x] 7.6 Ligar a fachada ao consumidor por resolução de configuração, preservando o caminho anterior quando desativada.
+- [x] 7.7 **Reordenar `Run()`**: mover `dispatchSessionPostEnd` para antes de `persistSummary` em `internal/runtime/runner.go:209` e `:213`.
+- [x] 7.8 Atualizar `docs/cli-schema.json` com a flag nova.
+- [x] 7.9 Declarar `MemoryPort` em `mockery.yml`, rodar `make mocks`, confirmar `make check-mocks`.
+- [x] 7.10 Atualizar `docs/config-hierarchy.md`, `docs/task-loop-reference.md`, `CLAUDE.md` e o índice de ADRs do `AGENTS.md`.
 
 ## Detalhes de Implementação
 
@@ -63,8 +63,8 @@ Ver techspec.md, seções "Interfaces Chave", "Ordem de Build" (fatia T7) e "Dep
 
 ## Testes da Tarefa
 
-- [ ] Testes unitários
-- [ ] Testes de integração
+- [x] Testes unitários
+- [x] Testes de integração
 
 <critical>SEMPRE CRIAR E EXECUTAR TESTES DA TAREFA ANTES DE CONSIDERAR A TAREFA COMO `done`</critical>
 

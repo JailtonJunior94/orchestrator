@@ -428,6 +428,57 @@ else
   passed=$((passed+1))
 fi
 
+# --- Caso j: relatório com a seção '## Evidência de Memória Durável' (task 8.0, MD-005) ---
+# Prova que a seção nova, inserida entre 'Comandos Executados' e 'Resultados de
+# Validação' (como o EnrichReport faz antes da seção de métricas), não desliga
+# a captura de nenhum gate existente — nem em locale de bytes (LC_ALL=C).
+echo "Caso j: relatório com seção de Evidência de Memória Durável não quebra gates"
+rm -f "$TMP_BASE"/review-*.md
+report_j="$TMP_BASE/report-j.md"
+{
+  report_header "$task_b"
+  cat <<'EOF'
+## Comandos Executados
+- go test ./... -> ok
+## Evidência de Memória Durável
+
+- session: 20260910T101010.000000000-1234
+- cli: claude
+- task: task-8.0.md
+- read_facts_by_layer: task=2, prd=1
+- read_facts_omitted: 0
+- read_facts_contradicted: 0
+- read_pages_unreadable: 0
+- write_facts_by_layer: task=2
+- budget_consumed_by_layer: prd=30, task=40
+- compactions_executed: 1
+- facts_archived_by_layer: task=1
+- redactions_applied: 1
+- contradictions_detected: 1
+- baton_claimed: true
+EOF
+  base_sections
+  cat <<'EOF'
+## Resultados de Validação
+- Testes: pass
+## Critérios de Aceite
+- Critério um -> comprovado: saída de go test mostra PASS
+- Critério dois -> comprovado: arquivo foo.go contém a função
+## Métricas Claude-2026
+| Métrica | Valor |
+|---|---|
+| total_tokens | 100 |
+EOF
+} > "$report_j"
+out_j=$(bash "$VALIDATOR" "$report_j" 2>&1); code_j=$?
+assert_exit "relatório com evidência de memória durável passa" 0 $code_j
+if [[ "$code_j" -ne 0 ]]; then printf '    diagnostico: %s\n' "$out_j"; fi
+
+out_j_c=$(LC_ALL=C bash "$VALIDATOR" "$report_j" 2>&1); code_j_c=$?
+rm -f "$report_j"
+assert_exit "relatório com evidência de memória durável passa sob LC_ALL=C" 0 $code_j_c
+if [[ "$code_j_c" -ne 0 ]]; then printf '    diagnostico: %s\n' "$out_j_c"; fi
+
 echo
 echo "Passaram: $passed | Falharam: $failed"
 [[ "$failed" -eq 0 ]] || exit 1

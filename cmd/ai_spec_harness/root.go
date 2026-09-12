@@ -41,6 +41,7 @@ Exemplos:
 	cmd.AddCommand(newInspectCmd())
 	cmd.AddCommand(newInstallCmd())
 	cmd.AddCommand(newLintCmd())
+	cmd.AddCommand(newMemoryCmd())
 	cmd.AddCommand(newMetricsCmd())
 	cmd.AddCommand(newPrerequisitesCmd())
 	cmd.AddCommand(newScaffoldCmd())

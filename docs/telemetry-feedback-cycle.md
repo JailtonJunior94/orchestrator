@@ -57,6 +57,46 @@ As invariantes de paridade multi-tool (ADR-008) cobrem `tool=codex` com os **mes
 (ADR-010 invariante preservada). Tool names Codex-nativos (`search_query`, `image_query`)
 sao preservados ate F2-Codex implementar aliasing canonico.
 
+### Memória Durável (MD-005, tarefa 8.0)
+
+Quando `--durable-memory` está ativo, cada sessão que grava fatos emite uma linha adicional
+`ref=durable-memory-session` em `.agents/telemetry.log`, opt-in via `GOVERNANCE_TELEMETRY` e
+append-only (ADR-006), seguindo o mesmo padrão de campo condicional de `internal/telemetry/acp.go`.
+Os campos só aparecem quando a sessão de fato gravou memória — sessões sem memória durável ou sem
+fatos novos não escrevem esta linha.
+
+- `session_id` — identificador único da sessão (rastreabilidade RF-32, junto com `cli` e a data
+  registrada em cada fato)
+- `cli` — ferramenta que executou a sessão (`claude`, `codex`, `copilot`, `opencode`)
+- `facts_written` — total de fatos gravados na sessão, somados por camada
+- `facts_archived` — total de fatos arquivados por compactação
+- `redactions` — total de segredos redigidos antes da escrita
+- `compactions` — número de camadas em que a compactação arquivou algo
+- `contradictions` — número de contradições detectadas na consolidação
+- `baton_claimed` — se a sessão reivindicou ou renovou o bastão de continuidade (RF-23)
+
+Exemplo de linha no log com memória durável:
+
+```
+2026-09-10T10:30:00Z skill=task-loop ref=durable-memory-session session_id=20260910T101010.000000000-1234 cli=claude facts_written=2 facts_archived=0 redactions=0 compactions=0 contradictions=0 baton_claimed=true
+```
+
+Os mesmos dados também aparecem, sem depender do opt-in de telemetria, na seção
+`## Evidência de Memória Durável` do `execution_report.md` de cada sessão (RF-34), injetada
+antes da seção de métricas unificada (MD-005). As métricas de memória (fatos por camada,
+orçamento consumido por camada, compactações, redações, contradições, bastão e latência de
+leitura/gravação) entram na seção `## Métricas Claude-2026` pelo mapa de campos extra de
+`events.MetricSet`, sob chaves nomeadas com prefixo `memory_` (ex.: `memory_facts_written`,
+`memory_budget_tokens_task`) — sem depender do opt-in de telemetria, pois o relatório de
+execução não é telemetria agregada.
+
+Sete eventos de domínio da memória são despachados pelo dispatcher de hooks existente
+(`internal/runtime/hooks`), sem estender o enum fechado de `internal/runtime/events/kinds.go`:
+fato registrado, arquivado, promovido, contradição detectada, segredo redigido, compactação
+executada e bastão transferido. Por não usarem o enum fechado, esses eventos **não aparecem**
+no registro de eventos da sessão (`events.jsonl`) — apenas na evidência do relatório e na
+telemetria opt-in acima.
+
 ### Gemini ACP (ADR-015) — removido (tarefa 10.0)
 
 Esta seção descrevia telemetria dedicada ao runtime Gemini ACP (`tool=gemini`,

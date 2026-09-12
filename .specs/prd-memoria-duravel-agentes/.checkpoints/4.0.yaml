@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-memoria-duravel-agentes/4.0_execution_report.md
+summary: Lease de bastão de continuidade (HandoffLease/ContinuityHandoff) com política grant/refuse/transfer, detecção de processo vivo por build tag e chave de prazo propagada nos dois pontos da cascata de config.
+timestamp: 2026-09-11T00:00:00Z

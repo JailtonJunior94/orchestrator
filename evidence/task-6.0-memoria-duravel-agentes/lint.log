@@ -1,0 +1,7 @@
+$ golangci-lint run --config .golangci.yml --timeout 5m internal/runtime/...
+internal/runtime/acp_opencode_telemetry_test.go:27:9: S1016: should convert f (type failingHandshakeWaiterFactory) to failingHandshakeWaiter instead of using struct literal (staticcheck)
+	return failingHandshakeWaiter{err: f.err}, func() error { return nil }, nil
+	       ^
+1 issues:
+* staticcheck: 1
+note: pre-existing staticcheck finding in acp_opencode_telemetry_test.go out of scope for task 6.0

@@ -1,0 +1,60 @@
+{
+  "schema_version": 2,
+  "run_id": "task-3.0-politicas-stateless-2026-09-11",
+  "task_id": "3.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "166cb9efc0590cbf38685258ddce89908e594256",
+  "patch_sha256": "44124e39bf715b4c0431c7ef55fa8e0cdc8913e4700258678ab18a5e3f98219b",
+  "patch_ref": "evidence/task-3.0-memoria-duravel-agentes/3.0.patch",
+  "final_state_sha256": "cd071646f768a3065788d95b9f497fdedee73b4c2884d37ff720bc15f7f1381c",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./... && go test ./internal/runtime/memory/durable/... -count=1 -race -v -cover",
+      "exit_code": 0,
+      "output_sha256": "f9954cd887cd9abbda7279d5db1f4dc40c848a4bcfb6848d563c9a58ee7e90e5"
+    },
+    {
+      "command": "go test ./internal/... -count=1",
+      "exit_code": 0,
+      "output_sha256": "73b481a6c5acbab2824acaac5fd848dc3fe6e0bb248f4e65576cdaf70de6f381"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "no-policy-became-interface-without-second-implementation",
+      "evidence_ref": "evidence/task-3.0-memoria-duravel-agentes/build.log"
+    },
+    {
+      "id": "same-input-same-output-proven-by-two-runs-comparison",
+      "evidence_ref": "evidence/task-3.0-memoria-duravel-agentes/build.log"
+    },
+    {
+      "id": "quotas-respected-surplus-ceded-omissions-declared",
+      "evidence_ref": "evidence/task-3.0-memoria-duravel-agentes/build.log"
+    },
+    {
+      "id": "each-minimal-catalog-pattern-has-positive-and-negative-test",
+      "evidence_ref": "evidence/task-3.0-memoria-duravel-agentes/build.log"
+    },
+    {
+      "id": "non-isolable-sensitive-excerpt-refused-with-typed-error",
+      "evidence_ref": "evidence/task-3.0-memoria-duravel-agentes/build.log"
+    },
+    {
+      "id": "compaction-preserves-human-block-and-reports-unreachable-limit",
+      "evidence_ref": "evidence/task-3.0-memoria-duravel-agentes/build.log"
+    },
+    {
+      "id": "no-policy-uses-time-randomness-or-unordered-map-iteration",
+      "evidence_ref": "evidence/task-3.0-memoria-duravel-agentes/build.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-3.0-memoria-duravel-agentes/build.log",
+    "evidence/task-3.0-memoria-duravel-agentes/internal-tests.log",
+    "evidence/task-3.0-memoria-duravel-agentes/lint.log"
+  ],
+  "review_verdict": "approved"
+}

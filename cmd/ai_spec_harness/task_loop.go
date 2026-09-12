@@ -17,8 +17,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// _accessModeFullWarnOnce garante que o warning de --access-mode=full seja emitido
-// apenas uma vez por execução do processo (ADR-013 D-08, R-03 alto).
 var _accessModeFullWarnOnce sync.Once
 
 var runtimeACPCatalog = specs.NewCatalog().ACPSpecCatalog()
@@ -95,8 +93,9 @@ Exemplos:
 			autoReview, _ := cmd.Flags().GetBool("auto-review")
 			maxBugfixIterations, _ := cmd.Flags().GetInt("max-bugfix-iterations")
 			maxBugfixIterationsSet := cmd.Flags().Changed("max-bugfix-iterations")
+			durableMemory, _ := cmd.Flags().GetBool("durable-memory")
+			durableMemorySet := cmd.Flags().Changed("durable-memory")
 
-			// Validação enum --reasoning-effort (RF-09, RF-10 — ADR-013 D-08)
 			validReasoning := map[string]bool{"low": true, "medium": true, "high": true}
 			if !validReasoning[reasoningEffort] {
 				_, _ = fmt.Fprintf(os.Stderr,
@@ -104,7 +103,6 @@ Exemplos:
 				return newExitError(2)
 			}
 
-			// Validação enum --access-mode (RF-11, RF-13 — ADR-013 D-08)
 			validAccess := map[string]bool{"restricted": true, "full": true}
 			if !validAccess[accessMode] {
 				_, _ = fmt.Fprintf(os.Stderr,
@@ -112,7 +110,6 @@ Exemplos:
 				return newExitError(2)
 			}
 
-			// Warning único para --access-mode=full via sync.Once (R-03 alto, ADR-013 D-08, PRD HU-03/Q1)
 			if accessMode == "full" {
 				_accessModeFullWarnOnce.Do(func() {
 					_, _ = fmt.Fprintln(os.Stderr,
@@ -122,7 +119,6 @@ Exemplos:
 				})
 			}
 
-			// Validacao de --runtime (RF-01, RF-02, RF-07)
 			if runtime != "legacy" && runtime != "acp" {
 				_, _ = fmt.Fprintf(os.Stderr, "runtime inválido: %q — valores aceitos: legacy, acp\n", runtime)
 				return newExitError(2)
@@ -163,13 +159,11 @@ Exemplos:
 				maxBugfixIterations = 0
 			}
 
-			// Validacao mutua exclusiva de --agent com --tool e modo avancado (D-06)
 			if agentName != "" && (tool != "" || execTool != "" || revTool != "") {
 				_, _ = fmt.Fprintf(os.Stderr, "--agent e mutuamente exclusivo com --tool, --executor-tool e --reviewer-tool\n")
 				return fmt.Errorf("%w", taskloop.ErrFlagsConflitantes)
 			}
 
-			// Validacao mutua exclusiva entre modo simples e avancado
 			if tool != "" && (execTool != "" || revTool != "") {
 				return fmt.Errorf("--tool e --executor-tool/--reviewer-tool sao mutuamente exclusivas")
 			}
@@ -190,7 +184,6 @@ Exemplos:
 				return fmt.Errorf("ferramenta invalida %q — opcoes: claude, codex, copilot", tool)
 			}
 
-			// Resolver perfis: converte flags em ProfileConfig (nil = modo simples)
 			profiles, err := taskloop.NewCatalog().ResolveProfiles(tool, execTool, execModel, revTool, revModel)
 			if err != nil {
 				return err
@@ -236,6 +229,8 @@ Exemplos:
 				AutoReview:               autoReview,
 				MaxBugfixIterations:      maxBugfixIterations,
 				MaxBugfixIterationsSet:   maxBugfixIterationsSet,
+				DurableMemoryEnabled:     durableMemory,
+				DurableMemoryEnabledSet:  durableMemorySet,
 			})
 			if errors.Is(err, airuntime.ErrLauncherUnavailable) {
 				_, _ = fmt.Fprintln(os.Stderr, err)
@@ -250,7 +245,7 @@ Exemplos:
 }
 
 func (c *taskLoopCommand) registerFlags(cmd *cobra.Command) {
-	// Flags existentes (preservadas)
+
 	cmd.Flags().String("tool", "", "Agente de IA: claude, codex, copilot, opencode (modo simples)")
 	cmd.Flags().String("agent", "", "Nome do agente declarativo (AGENT.md); mutuamente exclusivo com --tool e --executor-tool")
 	cmd.Flags().Bool("dry-run", false, "Mostra o que seria executado sem invocar o agente")
@@ -258,7 +253,6 @@ func (c *taskLoopCommand) registerFlags(cmd *cobra.Command) {
 	cmd.Flags().Duration("timeout", 30*time.Minute, "Timeout por task")
 	cmd.Flags().String("report-path", "", "Caminho do relatorio final (default: task-loop-report-<timestamp>.md)")
 
-	// Flags novas — modo avancado por papel
 	cmd.Flags().String("executor-tool", "", "Ferramenta do executor (modo avancado): claude, codex, copilot, opencode")
 	cmd.Flags().String("executor-model", "", "Modelo do executor (ex: claude-sonnet-4-6)")
 	cmd.Flags().String("reviewer-tool", "", "Ferramenta do reviewer (modo avancado): claude, codex, copilot, opencode")
@@ -269,27 +263,20 @@ func (c *taskLoopCommand) registerFlags(cmd *cobra.Command) {
 	cmd.Flags().String("executor-fallback-model", "", "Modelo de fallback nativo do executor (Claude only)")
 	cmd.Flags().String("reviewer-fallback-model", "", "Modelo de fallback nativo do reviewer (Claude only)")
 
-	// Flags ACP runtime (RF-01, RF-02, RF-07, RF-11)
 	cmd.Flags().String("runtime", "legacy", "Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, codex, copilot, opencode)")
 	cmd.Flags().Duration("activity-timeout", 120*time.Second, "Timeout de inatividade do agente ACP (0 = desabilitado); aceita time.Duration: 90s, 2m")
 	cmd.Flags().Bool("quiet", false, "Suprime stream humano (stdout); jsonl e warnings continuam")
 
-	// Flags Codex-específicas (RF-09, RF-10, RF-11, RF-13 — ADR-013 D-08).
-	// Para Claude/Copilot são aceitas mas sem efeito (BootstrapArgs no-op).
 	cmd.Flags().String("reasoning-effort", "medium",
 		"Esforço de raciocínio do Codex: low|medium|high (default: medium). Apenas Codex consome este parâmetro; ignorado por Claude/Copilot.")
 	cmd.Flags().String("access-mode", "restricted",
 		"Modo de acesso do Codex: restricted|full (default: restricted). AVISO: full ativa sandbox_mode=danger-full-access — use somente em ambientes isolados. Apenas Codex consome este parâmetro.")
 
-	// Flags F2-Claude (RF-01, RF-02 — ADR-014).
 	cmd.Flags().Bool("mcp-nested", false,
 		"Habilita servidor MCP interno que expõe tool run_agent (F2-Claude). Quando true, spawna mcpserver.Server antes de c.Open. Default false preserva comportamento F1-Claude.")
 	cmd.Flags().Bool("no-normalize", false,
 		"Desabilita normalização de tool-calls driver-aware (F2-Claude, debug). Default false = normalização ativa (raw_name e normalized_name gravados lado a lado).")
 
-	// Flags F3-Claude: limites de memória e controle de hooks (RF-01, RF-02 — F3-Claude).
-	// Defaults espelham Compozy: 150 linhas/12KB workflow; 200 linhas/16KB task.
-	// Zero-value em Job.MemoryLimits aplica os defaults de memory.DefaultLimits() (fallback no runner).
 	cmd.Flags().Int("memory-workflow-limit-lines", 150,
 		"Limite de linhas do arquivo de workflow memory antes de solicitar compactação (F3-Claude). Default 150.")
 	cmd.Flags().Int("memory-workflow-limit-bytes", 12288,
@@ -303,16 +290,11 @@ func (c *taskLoopCommand) registerFlags(cmd *cobra.Command) {
 			"AVISO: --disable-hooks desliga inclusive o hook de governance (validação AGENTS.md). "+
 			"Shell hooks em .claude/hooks/*.sh continuam ativos no modo interativo. Default false.")
 
-	// Flag de bypass do guard de governança em runtime (ADR-022, RG-01/RG-02).
-	// Desabilita SOMENTE o spec_drift; governance/token_budget permanecem ativos.
 	cmd.Flags().Bool("skip-drift-guard", false,
 		"Desabilita SOMENTE o hook spec_drift (spec-hash/PRD-first, ADR-022), mantendo governance e "+
 			"token_budget ativos. Use em CI sem PRD rastreável ou durante desenvolvimento inicial. "+
 			"Diferente de --disable-hooks (que desliga todos os hooks). Default false.")
 
-	// Flag F5-Claude: auto-review opt-in (RF-06 — ADR-014 §D-07).
-	// HARD: default false; child session de review tem AutoReview=false forçado (anti-recursão).
-	// HARD: Claude NÃO modifica internal/wrapper/ValidTools (ADR-014 §D-07).
 	cmd.Flags().Bool("auto-review", false,
 		"Habilita auto-review opt-in (F5-Claude): após session end, spawna nova sessão com skill review "+
 			"e git diff acumulado. Parseia [HARD]/BLOQUEADO/CRÍTICO → Summary.ReviewStatus=blocked. "+
@@ -324,4 +306,10 @@ func (c *taskLoopCommand) registerFlags(cmd *cobra.Command) {
 			"Configuravel tambem via arquivo de configuracao (workspace/global), respeitando a precedencia "+
 			"flags > workspace > global > defaults (ADR-016). Valor 0 ou negativo falha explicitamente "+
 			"em vez de ser normalizado em silencio.")
+
+	cmd.Flags().Bool("durable-memory", false,
+		"Ativa o subsistema de memoria duravel (fachada + camadas project/prd/task) em vez do "+
+			"memory store legado (RF-28). Default false preserva o prompt byte a byte identico. "+
+			"Configuravel tambem via chave durable_memory_enabled na cascata de configuracao, "+
+			"respeitando a precedencia flags > workspace > global > defaults (ADR-016).")
 }

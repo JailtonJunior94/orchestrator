@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-memoria-duravel-agentes/1.0_execution_report.md
+summary: Escrita atomica WriteFileAtomic adicionada a FileSystem (OSFileSystem e FakeFileSystem), aditiva, mocks regenerados, 49 testes fs verdes
+timestamp: 2026-09-11T17:47:00Z

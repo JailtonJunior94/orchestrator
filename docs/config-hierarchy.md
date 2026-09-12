@@ -132,6 +132,9 @@ Formato **YAML**. Consistente com `.claude/config.yaml` e `.agents/config.yaml` 
 | `concurrent` | int | `0` | Grau de paralelismo no runloop (0 ou 1 = sequencial) |
 | `batch_size` | int | `0` | Tamanho do lote de tasks por iteração (0 ou 1 = sem lote) |
 | `default_tool` | string | `""` | Ferramenta padrão (claude, codex, copilot, opencode) |
+| `max_bugfix_iterations` | int | `0` | Teto de rodadas do Ciclo de Aprovação (0 = default interno de 5) |
+| `handoff_lease_ttl` | string | `""` | Prazo do lease do bastão de continuidade (ex.: `30m`, `1h`); vazio aplica o default de 30 minutos no consumidor (RF-23) |
+| `durable_memory_enabled` | bool | `false` | Ativa o subsistema de memória durável (fachada + camadas project/prd/task) em vez do memory store legado (RF-28). Merge *sticky-true*: uma camada superior que não declara a chave nunca desativa uma camada inferior que a ativou — zero-value preserva o comportamento atual (F1) |
 
 ### Exemplo completo
 
@@ -148,6 +151,9 @@ retry_backoff_multiplier: 1.5
 concurrent: 2
 batch_size: 4
 default_tool: claude
+max_bugfix_iterations: 5
+handoff_lease_ttl: 30m
+durable_memory_enabled: false
 ```
 
 ---

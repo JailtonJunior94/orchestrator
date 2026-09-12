@@ -263,6 +263,183 @@ func (s *ResolverSuite) TestMergeIntoMaxBugfixIterations() {
 	s.Equal(8, dst.MaxBugfixIterations, "mergeInto nao deve sobrescrever com zero-value de src")
 }
 
+func (s *ResolverSuite) TestMergeIntoHandoffLeaseTTL() {
+	r := &DefaultResolver{}
+	dst := Runtime{HandoffLeaseTTL: "20m"}
+
+	r.mergeInto(&dst, Runtime{HandoffLeaseTTL: "45m"})
+	s.Equal("45m", dst.HandoffLeaseTTL, "mergeInto must overwrite with a non-zero src value")
+
+	r.mergeInto(&dst, Runtime{})
+	s.Equal("45m", dst.HandoffLeaseTTL, "mergeInto must not overwrite with a zero-value src")
+}
+
+func (s *ResolverSuite) TestResolveHandoffLeaseTTLCascade() {
+	scenarios := []struct {
+		name      string
+		files     map[string]string
+		dirs      map[string]bool
+		homeDir   string
+		cwd       string
+		overrides Runtime
+		want      string
+	}{
+		{
+			name: "uses workspace value when global and workspace diverge",
+			files: map[string]string{
+				"/home/user/.aispec/config.yaml": "handoff_lease_ttl: 10m\n",
+				"/project/.claude/config.yaml":   "handoff_lease_ttl: 45m\n",
+			},
+			dirs:    map[string]bool{"/project/.git": true},
+			homeDir: "/home/user",
+			cwd:     "/project",
+			want:    "45m",
+		},
+		{
+			name: "uses global value when there is no workspace config",
+			files: map[string]string{
+				"/home/user/.aispec/config.yaml": "handoff_lease_ttl: 10m\n",
+			},
+			homeDir: "/home/user",
+			cwd:     "/project",
+			want:    "10m",
+		},
+		{
+			name: "explicit flag wins over workspace and global",
+			files: map[string]string{
+				"/home/user/.aispec/config.yaml": "handoff_lease_ttl: 10m\n",
+				"/project/.claude/config.yaml":   "handoff_lease_ttl: 45m\n",
+			},
+			dirs:      map[string]bool{"/project/.git": true},
+			homeDir:   "/home/user",
+			cwd:       "/project",
+			overrides: Runtime{HandoffLeaseTTL: "1h"},
+			want:      "1h",
+		},
+		{
+			name: "empty upper layer does not erase the lower layer",
+			files: map[string]string{
+				"/project/.claude/config.yaml": "handoff_lease_ttl: 45m\n",
+			},
+			homeDir: "/home/user",
+			cwd:     "/project",
+			want:    "45m",
+		},
+		{
+			name: "zero-value preserves F1 behavior (default applied by the consumer)",
+			want: "",
+		},
+	}
+
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			r := s.resolverWithFS(scenario.files, scenario.dirs)
+			r.HomeDir = scenario.homeDir
+
+			got, err := r.Resolve(scenario.cwd, scenario.overrides)
+
+			s.NoError(err)
+			s.Equal(scenario.want, got.HandoffLeaseTTL)
+		})
+	}
+}
+
+func (s *ResolverSuite) TestMergeIntoDurableMemoryEnabled() {
+	r := &DefaultResolver{}
+	dst := Runtime{DurableMemoryEnabled: false}
+
+	r.mergeInto(&dst, Runtime{DurableMemoryEnabled: true, DurableMemoryEnabledSet: true})
+	s.True(dst.DurableMemoryEnabled, "mergeInto deve ativar quando src declara true explicitamente")
+
+	r.mergeInto(&dst, Runtime{})
+	s.True(dst.DurableMemoryEnabled, "camada superior que nao declara a chave (DurableMemoryEnabledSet=false) nunca altera a inferior")
+
+	r.mergeInto(&dst, Runtime{DurableMemoryEnabled: false, DurableMemoryEnabledSet: true})
+	s.False(dst.DurableMemoryEnabled, "src=false explicito deve poder desativar uma camada inferior que ligou (BUG-08)")
+}
+
+func (s *ResolverSuite) TestResolveDurableMemoryEnabledCascade() {
+	scenarios := []struct {
+		name      string
+		files     map[string]string
+		dirs      map[string]bool
+		homeDir   string
+		cwd       string
+		overrides Runtime
+		want      bool
+	}{
+		{
+			name: "uses workspace value when global and workspace diverge",
+			files: map[string]string{
+				"/home/user/.aispec/config.yaml": "durable_memory_enabled: false\n",
+				"/project/.claude/config.yaml":   "durable_memory_enabled: true\n",
+			},
+			dirs:    map[string]bool{"/project/.git": true},
+			homeDir: "/home/user",
+			cwd:     "/project",
+			want:    true,
+		},
+		{
+			name: "uses global value when there is no workspace config",
+			files: map[string]string{
+				"/home/user/.aispec/config.yaml": "durable_memory_enabled: true\n",
+			},
+			homeDir: "/home/user",
+			cwd:     "/project",
+			want:    true,
+		},
+		{
+			name: "explicit flag wins over workspace and global",
+			files: map[string]string{
+				"/home/user/.aispec/config.yaml": "durable_memory_enabled: false\n",
+				"/project/.claude/config.yaml":   "durable_memory_enabled: false\n",
+			},
+			dirs:      map[string]bool{"/project/.git": true},
+			homeDir:   "/home/user",
+			cwd:       "/project",
+			overrides: Runtime{DurableMemoryEnabled: true, DurableMemoryEnabledSet: true},
+			want:      true,
+		},
+		{
+			name: "explicit flag false wins over workspace and global true (BUG-08)",
+			files: map[string]string{
+				"/home/user/.aispec/config.yaml": "durable_memory_enabled: true\n",
+				"/project/.claude/config.yaml":   "durable_memory_enabled: true\n",
+			},
+			dirs:      map[string]bool{"/project/.git": true},
+			homeDir:   "/home/user",
+			cwd:       "/project",
+			overrides: Runtime{DurableMemoryEnabled: false, DurableMemoryEnabledSet: true},
+			want:      false,
+		},
+		{
+			name: "empty upper layer does not erase the lower layer",
+			files: map[string]string{
+				"/project/.claude/config.yaml": "durable_memory_enabled: true\n",
+			},
+			homeDir: "/home/user",
+			cwd:     "/project",
+			want:    true,
+		},
+		{
+			name: "zero-value preserves F1 behavior (feature stays off)",
+			want: false,
+		},
+	}
+
+	for _, scenario := range scenarios {
+		s.Run(scenario.name, func() {
+			r := s.resolverWithFS(scenario.files, scenario.dirs)
+			r.HomeDir = scenario.homeDir
+
+			got, err := r.Resolve(scenario.cwd, scenario.overrides)
+
+			s.NoError(err)
+			s.Equal(scenario.want, got.DurableMemoryEnabled)
+		})
+	}
+}
+
 func (s *ResolverSuite) TestLoadRuntime() {
 	scenarios := []struct {
 		name     string

@@ -1,0 +1,148 @@
+{
+  "schema_version": 2,
+  "run_id": "task-10.0-integracao-bench-make-2026-09-11",
+  "task_id": "10.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "166cb9efc0590cbf38685258ddce89908e594256",
+  "patch_sha256": "8e1226597485defef61d4900724b531e03ca00921d73553d77616a01cb2c71b5",
+  "patch_ref": "evidence/task-10.0-memoria-duravel-agentes/10.0.patch",
+  "final_state_sha256": "bf81d95a28509a4731d5794b1fdc502f0c727118329faf3218b26d421ad724c7",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "gofmt -l .",
+      "exit_code": 0,
+      "output_sha256": "cf87040d4b7f8224b3b0a95e9f8dd4de9e97738c56bfd1ef0afc498d25ffd762"
+    },
+    {
+      "command": "make integration",
+      "exit_code": 0,
+      "output_sha256": "1f0be187c9c3f865a0c2fedd043a631d8c7bc03cabc025a8b484673bfe729892"
+    },
+    {
+      "command": "make bench",
+      "exit_code": 0,
+      "output_sha256": "4cb556baac57a610e067ea09e53eda188843b32b534d6e1256f3ff7526096c86"
+    },
+    {
+      "command": "go test -tags=integration -count=1 -v -run 'TestTwoRealProcessesCompeteForSameLayer|TestOrphanLease|TestLiveOwnerLeaseIsNeverTakenOver|TestBootstrapOnEmptyRepositoryDoesNotFail|TestHandoffCrossCLIDeliversAtLeast90PercentOfFacts' ./internal/runtime/memory/durable/...",
+      "exit_code": 0,
+      "output_sha256": "e43aee9996e9cc2beb3136a4d5cd6a771609cb74909cbc67bf7c661bdc37cf97"
+    },
+    {
+      "command": "go test -tags=integration -count=1 -v -run TestMemoryMigrateRealFilesystem ./cmd/ai_spec_harness/...",
+      "exit_code": 0,
+      "output_sha256": "3b881d18e9ac0f1c28dcf0a83e3f410d4836fb185b3af00e1e1ee82ae86cc6e9"
+    },
+    {
+      "command": "go test -tags=integration -count=1 -v -run TestDurableMemoryCompactionSurvivesNonCollaborativeAgentE2E ./tests/integration/...",
+      "exit_code": 0,
+      "output_sha256": "5c96cbb9b0fcff1ed6b16e4ba098ef25e06f47a28bdd4f9a44c595fb61a211c5"
+    },
+    {
+      "command": "go test -count=1 -v -run TestDefaultMemoryPath ./internal/runtime/memory/durable/...",
+      "exit_code": 0,
+      "output_sha256": "42491fe00fbc4b1ea570e28908926bd1285b33e586bbc49ad942fea05913fb0c"
+    },
+    {
+      "command": "for i in 1 2 3; do go test -tags=integration -count=1 -run TestTwoRealProcessesCompeteForSameLayer -v ./internal/runtime/memory/durable/...; done",
+      "exit_code": 0,
+      "output_sha256": "d6fe4e70db29afe99916d08edad24c0527dc8e84b469c3b030ce62d55cb4862b"
+    },
+    {
+      "command": "go test ./...",
+      "exit_code": 0,
+      "output_sha256": "f1f0c12a85ce9177720a33742b33573bf1a9683be651f7305752ba28e7c0e45c"
+    },
+    {
+      "command": "go test -coverprofile=coverage.out ./...",
+      "exit_code": 0,
+      "output_sha256": "4af792ce5904d6d1250e50274499abcc127f8d6a873f5741b7987c38574eff11"
+    },
+    {
+      "command": "go tool cover -func=coverage_filtered.out",
+      "exit_code": 0,
+      "output_sha256": "ee1cf751c78b6ff4f593ea681c4337aafe441913575c3af67ee6da10fa52faf0"
+    },
+    {
+      "command": "bash scripts/check-package-coverage.sh 70",
+      "exit_code": 0,
+      "output_sha256": "2398ff5938e4aa8f356a84c2ee0b7261ef7183fee0b77ab3140ed01d4d886665"
+    },
+    {
+      "command": "go test -count=1 ./internal/parity/...",
+      "exit_code": 0,
+      "output_sha256": "ebc49727527f2ae1e82e7733827d107250ef1ab5d5a88806981360c9da81c167"
+    },
+    {
+      "command": "golangci-lint run --build-tags integration ./internal/runtime/memory/durable/... ./cmd/ai_spec_harness/... ./tests/integration/...",
+      "exit_code": 0,
+      "output_sha256": "847166fdac66cd885ad0591a6277d742dbfcdae76c0db05af93867e0db960655"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "make-integration-and-bench-include-new-package",
+      "evidence_ref": "evidence/task-10.0-memoria-duravel-agentes/integration.log"
+    },
+    {
+      "id": "two-real-processes-no-corruption-no-loss",
+      "evidence_ref": "evidence/task-10.0-memoria-duravel-agentes/multiprocess-handoff-tests.log"
+    },
+    {
+      "id": "orphan-lock-detected-and-reported",
+      "evidence_ref": "evidence/task-10.0-memoria-duravel-agentes/multiprocess-handoff-tests.log"
+    },
+    {
+      "id": "empty-repository-bootstrap-does-not-fail",
+      "evidence_ref": "evidence/task-10.0-memoria-duravel-agentes/multiprocess-handoff-tests.log"
+    },
+    {
+      "id": "non-collaborative-agent-page-within-limits",
+      "evidence_ref": "evidence/task-10.0-memoria-duravel-agentes/compaction-e2e.log"
+    },
+    {
+      "id": "cross-cli-handoff-recall-at-least-90-percent",
+      "evidence_ref": "evidence/task-10.0-memoria-duravel-agentes/multiprocess-handoff-tests.log"
+    },
+    {
+      "id": "recovery-p95-below-200ms-for-1000-pages",
+      "evidence_ref": "evidence/task-10.0-memoria-duravel-agentes/bench.log"
+    },
+    {
+      "id": "total-coverage-above-75-percent",
+      "evidence_ref": "evidence/task-10.0-memoria-duravel-agentes/coverage-func.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-10.0-memoria-duravel-agentes/build.log",
+    "evidence/task-10.0-memoria-duravel-agentes/vet.log",
+    "evidence/task-10.0-memoria-duravel-agentes/gofmt.log",
+    "evidence/task-10.0-memoria-duravel-agentes/integration.log",
+    "evidence/task-10.0-memoria-duravel-agentes/bench.log",
+    "evidence/task-10.0-memoria-duravel-agentes/multiprocess-handoff-tests.log",
+    "evidence/task-10.0-memoria-duravel-agentes/memory-migrate-integration.log",
+    "evidence/task-10.0-memoria-duravel-agentes/compaction-e2e.log",
+    "evidence/task-10.0-memoria-duravel-agentes/no-network-tests.log",
+    "evidence/task-10.0-memoria-duravel-agentes/flakiness-3x.log",
+    "evidence/task-10.0-memoria-duravel-agentes/full-tests.log",
+    "evidence/task-10.0-memoria-duravel-agentes/coverage-run.log",
+    "evidence/task-10.0-memoria-duravel-agentes/coverage_filtered.out",
+    "evidence/task-10.0-memoria-duravel-agentes/coverage-func.log",
+    "evidence/task-10.0-memoria-duravel-agentes/package-coverage.log",
+    "evidence/task-10.0-memoria-duravel-agentes/parity-gate.log",
+    "evidence/task-10.0-memoria-duravel-agentes/lint-task-scope.log"
+  ],
+  "review_verdict": "approved"
+}

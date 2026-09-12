@@ -1,0 +1,9 @@
+go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/runtime/memory/durable/... ./cmd/ai_spec_harness/...
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/integration	(cached)
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	(cached)
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	(cached)
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	(cached)
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable	(cached)
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	(cached)
+exit=0

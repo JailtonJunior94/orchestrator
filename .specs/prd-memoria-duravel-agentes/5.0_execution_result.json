@@ -1,0 +1,74 @@
+{
+    "schema_version": 2,
+    "run_id": "task-5.0-agregado-camada-lock-2026-09-11",
+    "task_id": "5.0",
+    "attempt": 1,
+    "status": "done",
+    "base_sha": "166cb9efc0590cbf38685258ddce89908e594256",
+    "patch_sha256": "e31bc5804881c94c90f6dc0fff2c1e3d742e03e7b34ed2adeee496bf580ed30f",
+    "patch_ref": "evidence/task-5.0-memoria-duravel-agentes/5.0.patch",
+    "final_state_sha256": "f92f7f305c5c81916c4a4a3a27aedf1e5c9b9cb5d02b035cbbd89f5aa46932a8",
+    "coverage_regression": false,
+    "tests": [
+        {
+            "command": "go build ./... && go vet ./... && GOOS=windows GOARCH=amd64 go build ./...",
+            "exit_code": 0,
+            "output_sha256": "696212c98cc16af58452c7f1e5d3b91e203097f36ab6e03613faa48c47ea3ff8"
+        },
+        {
+            "command": "go test ./internal/runtime/memory/durable/... -v -cover",
+            "exit_code": 0,
+            "output_sha256": "683b375a3c29c58f632fd4bb9ac8795b7329bb1513d78149472b9808ba4aef32"
+        },
+        {
+            "command": "go test ./...",
+            "exit_code": 0,
+            "output_sha256": "997450d8133270ea38e1faee28af79c350e23cdcaf8be07449e39b54caccceb2"
+        }
+    ],
+    "criteria": [
+        {
+            "id": "fact-not-mentioned-remains-active",
+            "evidence_ref": "evidence/task-5.0-memoria-duravel-agentes/durable-tests.log"
+        },
+        {
+            "id": "identical-rewrite-is-idempotent",
+            "evidence_ref": "evidence/task-5.0-memoria-duravel-agentes/durable-tests.log"
+        },
+        {
+            "id": "archive-reversible-out-of-active-set",
+            "evidence_ref": "evidence/task-5.0-memoria-duravel-agentes/durable-tests.log"
+        },
+        {
+            "id": "invalid-page-isolated-and-reported",
+            "evidence_ref": "evidence/task-5.0-memoria-duravel-agentes/durable-tests.log"
+        },
+        {
+            "id": "project-and-prd-paths-match-spec",
+            "evidence_ref": "evidence/task-5.0-memoria-duravel-agentes/durable-tests.log"
+        },
+        {
+            "id": "scope-without-tasks-dir-works-for-project-layer",
+            "evidence_ref": "evidence/task-5.0-memoria-duravel-agentes/durable-tests.log"
+        },
+        {
+            "id": "package-testable-with-fake-filesystem",
+            "evidence_ref": "evidence/task-5.0-memoria-duravel-agentes/durable-tests.log"
+        },
+        {
+            "id": "writes-are-always-atomic",
+            "evidence_ref": "evidence/task-5.0-memoria-duravel-agentes/durable-tests.log"
+        },
+        {
+            "id": "package-coverage-above-70-percent",
+            "evidence_ref": "evidence/task-5.0-memoria-duravel-agentes/durable-tests.log"
+        }
+    ],
+    "evidence": [
+        "evidence/task-5.0-memoria-duravel-agentes/build.log",
+        "evidence/task-5.0-memoria-duravel-agentes/durable-tests.log",
+        "evidence/task-5.0-memoria-duravel-agentes/full-repo-tests.log",
+        "evidence/task-5.0-memoria-duravel-agentes/lint.log"
+    ],
+    "review_verdict": "approved"
+}

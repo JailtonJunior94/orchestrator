@@ -1,0 +1,60 @@
+{
+  "schema_version": 2,
+  "run_id": "task-2.0-fato-identidade-pagina-roundtrip-2026-09-11",
+  "task_id": "2.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "166cb9efc0590cbf38685258ddce89908e594256",
+  "patch_sha256": "3842c1f8d617b8ccf4692e7ed96afd8eb434ce6268e4ea3037ab7b074f37f649",
+  "patch_ref": "evidence/task-2.0-memoria-duravel-agentes/2.0.patch",
+  "final_state_sha256": "877548cd817795edc89cce06124ebdcdc97456e9efd3d1466b35e0e309190d02",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./... && go vet ./... && go test ./internal/runtime/memory/durable/... -count=1 -race -v -cover",
+      "exit_code": 0,
+      "output_sha256": "2bc1adc2809353cd278e9bbca299e5fcce89dcf7e46061686690757e80c84844"
+    },
+    {
+      "command": "go test ./internal/... -count=1",
+      "exit_code": 0,
+      "output_sha256": "458fad807c25b46bb6e8750c4468973283840e5b3c7dd178bc1545cdffa1d2c0"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "round-trip-real-corpus-fails-on-human-block-byte-change",
+      "evidence_ref": "evidence/task-2.0-memoria-duravel-agentes/build.log"
+    },
+    {
+      "id": "zero-value-durability-rejected-typed-error",
+      "evidence_ref": "evidence/task-2.0-memoria-duravel-agentes/build.log"
+    },
+    {
+      "id": "fact-without-semantic-key-rejected-typed-error",
+      "evidence_ref": "evidence/task-2.0-memoria-duravel-agentes/build.log"
+    },
+    {
+      "id": "deterministic-semantic-key-across-two-runs",
+      "evidence_ref": "evidence/task-2.0-memoria-duravel-agentes/build.log"
+    },
+    {
+      "id": "same-key-same-hash-idempotent-same-key-diff-hash-contradiction",
+      "evidence_ref": "evidence/task-2.0-memoria-duravel-agentes/build.log"
+    },
+    {
+      "id": "generated-page-is-valid-markdown-grep-and-editor-readable",
+      "evidence_ref": "evidence/task-2.0-memoria-duravel-agentes/build.log"
+    },
+    {
+      "id": "new-package-coverage-above-70-percent",
+      "evidence_ref": "evidence/task-2.0-memoria-duravel-agentes/build.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-2.0-memoria-duravel-agentes/build.log",
+    "evidence/task-2.0-memoria-duravel-agentes/internal-tests.log",
+    "evidence/task-2.0-memoria-duravel-agentes/lint.log"
+  ],
+  "review_verdict": "approved"
+}

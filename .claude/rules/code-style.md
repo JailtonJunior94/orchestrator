@@ -22,6 +22,13 @@ Excecao unica: string que e contrato externo verificavel (saida CLI ja publicada
 protocolo, formato consumido por terceiro) permanece no idioma do contrato. A excecao exige
 justificativa explicita no relatorio de execucao.
 
+Termo de dominio em PT-BR vindo de PRD, techspec, ADR ou modelo de dominio nunca migra
+literalmente para identificador de codigo. Traduzir para ingles ao implementar, mesmo quando o
+artefato de contrato usa o termo em portugues (ex.: `Fato` → `Fact`, `Pagina` → `Page`,
+`Durabilidade` → `Durability`, `ChaveSemantica` → `SemanticKey`, `BlocoHumano` → `HumanBlock`).
+Nome de arquivo de codigo segue a mesma regra (`fato.go` → `fact.go`). A rastreabilidade
+PRD-para-codigo fica no relatorio de execucao e no mapeamento de RF, nao no nome do identificador.
+
 ## R-STYLE-001.2 — Zero comentarios no codigo
 
 Nenhum comentario em codigo criado ou editado:
