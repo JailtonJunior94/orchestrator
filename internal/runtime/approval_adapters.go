@@ -52,8 +52,12 @@ func (a *RepositoryAdapter) CheckpointAt(round int) (approval.Checkpoint, bool) 
 	return a.issued[round-1], true
 }
 
-func (a *RepositoryAdapter) FullTarget(_ context.Context) (approval.ReviewTarget, error) {
-	return approval.NewReviewTarget(a.catalog.collectGitDiff(a.workDir)), nil
+func (a *RepositoryAdapter) FullTarget(ctx context.Context) (approval.ReviewTarget, error) {
+	diff := a.catalog.collectGitDiffContext(ctx, a.workDir)
+	if diff == reviewDiffUnavailable {
+		return approval.NewReviewTarget(""), nil
+	}
+	return approval.NewReviewTarget(diff), nil
 }
 
 func (a *RepositoryAdapter) Delta(_ context.Context, since approval.Checkpoint) (approval.ReviewTarget, error) {
@@ -111,16 +115,46 @@ func (w *TaskStatusWriter) writeTaskFileStatus(status string) error {
 	path := filepath.Join(w.tasksDir, w.taskFileName)
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return nil
+		return fmt.Errorf("force task status %q at %q: %w", status, path, err)
 	}
 	if !taskStatusFieldRe.Match(content) {
-		return nil
+		return fmt.Errorf("force task status %q at %q: no status field found", status, path)
 	}
 	updated := taskStatusFieldRe.ReplaceAll(content, []byte("**Status:** "+status))
 	if err := os.WriteFile(path, updated, 0o644); err != nil {
 		return fmt.Errorf("force task status %q at %q: %w", status, path, err)
 	}
 	return nil
+}
+
+func DetectTaskTableColumns(cols []string, statusIdx, depsIdx *int) bool {
+	foundStatus := false
+	detectedStatus, detectedDeps := *statusIdx, *depsIdx
+	for i, col := range cols {
+		switch strings.ToLower(strings.TrimSpace(col)) {
+		case "status":
+			detectedStatus = i
+			foundStatus = true
+		case "dependências", "dependencias", "dependência", "dependencia", "deps":
+			detectedDeps = i
+		}
+	}
+	if !foundStatus {
+		return false
+	}
+	*statusIdx, *depsIdx = detectedStatus, detectedDeps
+	return true
+}
+
+func detectTaskStatusColumn(lines []string) int {
+	statusIdx, depsIdx := 3, 4
+	for _, line := range lines {
+		cols := strings.Split(strings.TrimSpace(line), "|")
+		if DetectTaskTableColumns(cols, &statusIdx, &depsIdx) {
+			break
+		}
+	}
+	return statusIdx
 }
 
 func (w *TaskStatusWriter) writeTasksTableStatus(status string) error {
@@ -131,10 +165,12 @@ func (w *TaskStatusWriter) writeTasksTableStatus(status string) error {
 	path := filepath.Join(w.tasksDir, "tasks.md")
 	content, err := os.ReadFile(path)
 	if err != nil {
-		return nil
+		return fmt.Errorf("force task status %q for task %s at %q: %w", status, taskID, path, err)
 	}
 
 	lines := strings.Split(string(content), "\n")
+	statusIdx := detectTaskStatusColumn(lines)
+
 	changed := false
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -142,16 +178,16 @@ func (w *TaskStatusWriter) writeTasksTableStatus(status string) error {
 			continue
 		}
 		columns := strings.Split(trimmed, "|")
-		if len(columns) <= 3 || strings.TrimSpace(columns[1]) != taskID {
+		if len(columns) <= statusIdx || strings.TrimSpace(columns[1]) != taskID {
 			continue
 		}
-		columns[3] = " " + status + " "
+		columns[statusIdx] = " " + status + " "
 		lines[i] = strings.Join(columns, "|")
 		changed = true
 		break
 	}
 	if !changed {
-		return nil
+		return fmt.Errorf("force task status %q for task %s at %q: task row not found", status, taskID, path)
 	}
 	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o644); err != nil {
 		return fmt.Errorf("force task status %q for task %s at %q: %w", status, taskID, path, err)

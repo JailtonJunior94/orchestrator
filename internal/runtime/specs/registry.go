@@ -8,11 +8,78 @@ import (
 )
 
 const (
-	scriptPreTool     = ".agents/scripts/hook-prereq-gate.sh"
+	scriptPreTool     = ".agents/hooks/validate-preload.sh"
 	scriptPostTool    = ".agents/hooks/validate-governance.sh"
 	scriptSessionEnd  = ".agents/scripts/validate-session-end.sh"
 	largeBudgetAbsent = 0
 )
+
+var cliHookKeyVocabulary = map[string]map[CanonicalPoint][]string{
+	"claude": {
+		PointPreTool:    {"PreToolUse"},
+		PointPostTool:   {"PostToolUse"},
+		PointSessionEnd: {"Stop", "SubagentStop"},
+	},
+	"codex": {
+		PointPreTool:    {"PreToolUse"},
+		PointPostTool:   {"PostToolUse"},
+		PointSessionEnd: {"Stop", "SubagentStop"},
+	},
+	"copilot": {
+		PointPreTool:    {"preToolUse"},
+		PointPostTool:   {"postToolUse"},
+		PointSessionEnd: {"agentStop"},
+	},
+	"opencode": {
+		PointPreTool:    {"tool.execute.before"},
+		PointPostTool:   {"tool.execute.after"},
+		PointSessionEnd: {"session.idle"},
+	},
+}
+
+var agentHookArtifacts = map[string]map[CanonicalPoint]string{
+	"claude": {
+		PointPreTool:    ".claude/hooks/validate-preload.sh",
+		PointPostTool:   ".claude/hooks/validate-governance.sh",
+		PointSessionEnd: ".claude/hooks/validate-session-end.sh",
+	},
+	"codex": {
+		PointPreTool:    ".codex/hooks/validate-preload.sh",
+		PointPostTool:   ".codex/hooks/validate-governance.sh",
+		PointSessionEnd: ".codex/hooks/validate-session-end.sh",
+	},
+	"copilot": {
+		PointPreTool:    ".github/hooks/validate-preload.sh",
+		PointPostTool:   ".github/hooks/validate-governance.sh",
+		PointSessionEnd: ".github/hooks/validate-session-end.sh",
+	},
+	"opencode": {
+		PointPreTool:    ".agents/hooks/validate-preload.sh",
+		PointPostTool:   ".agents/hooks/validate-governance.sh",
+		PointSessionEnd: ".agents/scripts/validate-session-end.sh",
+	},
+}
+
+func RecognizedNativeKeys(agentID string, point CanonicalPoint) ([]string, bool) {
+	byPoint, ok := cliHookKeyVocabulary[agentID]
+	if !ok {
+		return nil, false
+	}
+	keys, ok := byPoint[point]
+	if !ok {
+		return nil, false
+	}
+	return slices.Clone(keys), true
+}
+
+func InstalledArtifactPath(agentID string, point CanonicalPoint) (string, bool) {
+	byPoint, ok := agentHookArtifacts[agentID]
+	if !ok {
+		return "", false
+	}
+	path, ok := byPoint[point]
+	return path, ok
+}
 
 var ErrUnknownAgent = errors.New("agent not in registry")
 
@@ -136,14 +203,14 @@ func (c *Catalog) buildRegistry() []Agent {
 			[]string{".claude"},
 			".specs/adr/009-acp-protocol-adoption.md",
 			70000, largeBudgetAbsent,
-			c.canonicalEnforcement("PreToolUse", "PostToolUse", "Stop"),
+			c.canonicalEnforcement("claude", "PreToolUse", "PostToolUse", "Stop"),
 		),
 		c.newAgent(
 			"codex", "Codex (ACP)", "codex", "codex-acp",
 			[]string{".codex"},
 			".specs/adr/013-codex-cli-acp-native.md",
 			13000, largeBudgetAbsent,
-			c.canonicalEnforcement("PreToolUse", "PostToolUse", "Stop"),
+			c.canonicalEnforcement("codex", "PreToolUse", "PostToolUse", "Stop"),
 			c.mustPrecondition(PreconditionTrustedHash, "register the hook hash via the Codex interactive interface before orchestrating", true),
 		),
 		c.newAgent(
@@ -151,7 +218,7 @@ func (c *Catalog) buildRegistry() []Agent {
 			[]string{".copilot", ".github/copilot"},
 			".specs/adr/012-copilot-cli-acp-native.md",
 			2000, largeBudgetAbsent,
-			c.canonicalEnforcement("preToolUse", "postToolUse", "agentStop"),
+			c.canonicalEnforcement("copilot", "preToolUse", "postToolUse", "agentStop"),
 			c.mustPrecondition(PreconditionTrustedFolder, "add the project folder to the Copilot CLI trusted folders list", false),
 		),
 		c.newAgentWithEnvPolicy(
@@ -160,18 +227,18 @@ func (c *Catalog) buildRegistry() []Agent {
 			".specs/prd-harness-quatro-clis-loop-aprovacao/adr-003-opencode-acp-subcomando.md",
 			4000, 500_000,
 			c.NewEnvPolicy(OpenCodeKillSwitchVars...),
-			c.canonicalEnforcement("tool.execute.before", "tool.execute.after", "session.idle"),
+			c.canonicalEnforcement("opencode", "tool.execute.before", "tool.execute.after", "session.idle"),
 			c.mustPrecondition(PreconditionNoKillSwitch, "unset OPENCODE_PURE, OPENCODE_DISABLE_PROJECT_CONFIG, OPENCODE_DISABLE_EXTERNAL_SKILLS, OPENCODE_DISABLE_DEFAULT_PLUGINS and --pure before orchestrating", false),
 			c.mustPrecondition(PreconditionHandshake, "wait for the governance plugin load handshake before the first prompt", true),
 		),
 	}
 }
 
-func (c *Catalog) canonicalEnforcement(preKey, postKey, endKey string) Enforcement {
+func (c *Catalog) canonicalEnforcement(agentID, preKey, postKey, endKey string) Enforcement {
 	coverage := []PointCoverage{
-		c.mustCoverage(PointPreTool, preKey, scriptPreTool),
-		c.mustCoverage(PointPostTool, postKey, scriptPostTool),
-		c.mustCoverage(PointSessionEnd, endKey, scriptSessionEnd),
+		c.mustCoverage(agentID, PointPreTool, preKey, scriptPreTool),
+		c.mustCoverage(agentID, PointPostTool, postKey, scriptPostTool),
+		c.mustCoverage(agentID, PointSessionEnd, endKey, scriptSessionEnd),
 	}
 	enf, err := c.NewEnforcement(coverage)
 	if err != nil {
@@ -180,8 +247,12 @@ func (c *Catalog) canonicalEnforcement(preKey, postKey, endKey string) Enforceme
 	return enf
 }
 
-func (c *Catalog) mustCoverage(point CanonicalPoint, nativeKey, scriptPath string) PointCoverage {
-	cov, err := c.NewPointCoverage(point, nativeKey, scriptPath)
+func (c *Catalog) mustCoverage(agentID string, point CanonicalPoint, nativeKey, scriptPath string) PointCoverage {
+	artifactPath, ok := InstalledArtifactPath(agentID, point)
+	if !ok {
+		panic(fmt.Sprintf("agent registry: agent %q declares no installed artifact for point %s", agentID, point))
+	}
+	cov, err := c.NewPointCoverage(agentID, point, nativeKey, scriptPath, artifactPath)
 	if err != nil {
 		panic(fmt.Sprintf("agent registry: invalid coverage: %v", err))
 	}

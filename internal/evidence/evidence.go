@@ -46,7 +46,7 @@ func (r1 *Validator) ValidateReport(content []byte, reportPath string, kind Repo
 	case KindRefactor:
 		findings = NewValidator().validateRefactor(text)
 	case KindReview:
-		findings = NewValidator().validateReview(text)
+		findings = NewValidator().validateReview(text, reportPath)
 	}
 
 	return Result{
@@ -254,11 +254,14 @@ var (
 )
 
 func (r1 *Validator) reviewVerdict(text string) string {
-	verdict, _ := reviewverdict.ParseText(text)
+	verdict, declared := reviewverdict.ParseDocument(text)
+	if !declared {
+		return ""
+	}
 	return verdict
 }
 
-func (r1 *Validator) validateReview(text string) []Finding {
+func (r1 *Validator) validateReview(text, reportPath string) []Finding {
 	var findings []Finding
 
 	verdict := NewValidator().reviewVerdict(text)
@@ -282,7 +285,7 @@ func (r1 *Validator) validateReview(text string) []Finding {
 	}
 
 	findings = append(findings, NewValidator().validateReviewCoherence(text, verdict)...)
-	return append(findings, NewValidator().validateCriteriaMap(text, verdict)...)
+	return append(findings, NewValidator().validateCriteriaMap(text, verdict, reportPath)...)
 }
 
 func (r1 *Validator) validateReviewCoherence(text, verdict string) []Finding {
@@ -369,7 +372,7 @@ func (r1 *Validator) referencedFileIsReviewed(reviewed map[string]struct{}, evid
 	return false
 }
 
-func (r1 *Validator) validateCriteriaMap(text, verdict string) []Finding {
+func (r1 *Validator) validateCriteriaMap(text, verdict, reportPath string) []Finding {
 	lines := strings.Split(text, "\n")
 	headingAt := -1
 	for i, line := range lines {
@@ -436,6 +439,18 @@ func (r1 *Validator) validateCriteriaMap(text, verdict string) []Finding {
 
 	if criteria == 0 {
 		findings = append(findings, Finding{Label: "mapa 1:1 sem nenhuma linha de criterio"})
+	}
+
+	taskPath := resolveReviewTaskPath(text, reportPath)
+	if taskPath == "" {
+		return append(findings, Finding{Label: "task file nao resolvivel para confronto 1:1 do mapa de criterios: declare '- Task file: <caminho>' apontando para a task revisada"})
+	}
+	declared := countTaskCriteria(taskPath)
+	if declared == 0 {
+		return append(findings, Finding{Label: "task file (" + taskPath + ") nao declara nenhum criterio de aceite — mapa 1:1 nao confrontavel"})
+	}
+	if criteria < declared {
+		return append(findings, Finding{Label: "mapa 1:1 incompleto — " + strconv.Itoa(criteria) + " linha(s) de criterio no review para " + strconv.Itoa(declared) + " criterio(s) definido(s) em " + taskPath})
 	}
 	return findings
 }

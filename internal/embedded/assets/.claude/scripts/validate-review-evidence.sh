@@ -221,6 +221,46 @@ else
     echo "FALTANDO: seção 'Mapa de Criterios de Aceite' sem nenhuma linha de criterio ('- ' seguido de marcador entre colchetes)"
     missing=1
   fi
+
+  task_ref="$(grep -Eio '^-[[:space:]]*(task[[:space:]]*file|arquivo da task)[[:space:]]*:[[:space:]]*(.+)$' "$report_file" \
+    | head -1 | sed -E 's/^-[[:space:]]*[^:]+:[[:space:]]*//' | sed -E 's/[[:space:]]+$//' || true)"
+  task_path=""
+  if [[ -n "$task_ref" && "$task_ref" != *"<"* && "$task_ref" != n/a* ]]; then
+    if [[ -f "$task_ref" ]]; then
+      task_path="$task_ref"
+    elif [[ -f "$(dirname "$report_file")/$task_ref" ]]; then
+      task_path="$(dirname "$report_file")/$task_ref"
+    fi
+  fi
+
+  if [[ -z "$task_path" ]]; then
+    echo "FALTANDO: task file nao resolvivel para confronto 1:1 do mapa de criterios (RF-51):" \
+         "declare '- Task file: <caminho>' apontando para a task revisada."
+    missing=1
+  else
+    task_criteria="$(awk '
+      tolower($0) ~ /^#+[[:space:]]+(crit(e|é)rios de (sucesso|aceite)|definition of done|acceptance criteria)/ { capture=1; next }
+      /^#+/ { capture=0 }
+      capture && /^[[:space:]]*-[[:space:]]+/ {
+        item=$0
+        sub(/^[[:space:]]*-[[:space:]]+/, "", item)
+        sub(/^\[[^]]*\][[:space:]]*/, "", item)
+        sub(/^[[:space:]]+/, "", item)
+        sub(/[[:space:]]+$/, "", item)
+        if (item != "") c++
+      }
+      END { print c+0 }
+    ' "$task_path")"
+    if [[ "$task_criteria" -eq 0 ]]; then
+      echo "FALTANDO: task file ($task_path) nao declara nenhum criterio de aceite —" \
+           "mapa 1:1 nao confrontavel (RF-51)."
+      missing=1
+    elif [[ "$criteria_lines" -lt "$task_criteria" ]]; then
+      echo "FALTANDO: mapa 1:1 incompleto — $criteria_lines linha(s) de criterio no review para" \
+           "$task_criteria criterio(s) definido(s) em $task_path (RF-47/RF-51)."
+      missing=1
+    fi
+  fi
 fi
 
 if [[ $missing -ne 0 ]]; then

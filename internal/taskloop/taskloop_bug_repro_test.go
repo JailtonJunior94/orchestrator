@@ -83,7 +83,7 @@ func TestReproducaoBugStatusTasksMdOverwrite(t *testing.T) {
 				fsys, prd := setupBugReproFS(1)
 
 				invokerCalled := false
-				svc := NewService(fsys, newTestPrinter())
+				svc := newCycleTestService(fsys, newTestPrinter())
 				svc.binaryChecker = noBinaryCheck
 				svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
 					return &callbackInvoker{
@@ -179,7 +179,7 @@ func TestReproducaoBugLoopNaoAvancaComMaxIteracoes1(t *testing.T) {
 			fsys, prd := setupBugReproFS(2)
 
 			var executedTaskIDs []string
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
 				return &callbackInvoker{
@@ -325,7 +325,7 @@ func TestRegressaoExistentesNaoAfetados(t *testing.T) {
 			fsys, prd := setupBugReproFS(1)
 
 			executorCalled := false
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
 				return &callbackInvoker{

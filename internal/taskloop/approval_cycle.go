@@ -152,6 +152,7 @@ func (s *Service) runBatchCycle(
 	opts Options,
 	criteria []approval.AcceptanceCriterion,
 	rev FinalReviewResult,
+	primedTarget string,
 	deps RunLoopDeps,
 	workDir string,
 ) (approval.CycleResult, *bugfixEvidenceRecorder, error) {
@@ -169,9 +170,9 @@ func (s *Service) runBatchCycle(
 	}
 
 	recorder := newBugfixEvidenceRecorder()
-	reviewer := newPrimedReviewerPort(rev, deps.FinalReviewer, airuntime.NewRoundEvidenceWriterWithSink(filepath.Join(workDir, "evidence", "runloop"), s.fsys))
+	repository := newRepositoryPort(s.batchDiffCapturer(deps, workDir), workDir)
+	reviewer := newPrimedReviewerPort(rev, primedTarget, deps.FinalReviewer, airuntime.NewRoundEvidenceWriterWithSink(filepath.Join(workDir, "evidence", "runloop"), s.fsys), repository)
 	fixer := newFixerPort(batchBugfixInvoker(deps), recorder)
-	repository := newRepositoryPort(batchDiffCapturer(deps, workDir), workDir)
 
 	cycle, err := approval.NewCycle(taskIdentity, agentIdentity, policy, criteria, reviewer, fixer, repository)
 	if err != nil {
@@ -182,6 +183,13 @@ func (s *Service) runBatchCycle(
 	return result, recorder, runErr
 }
 
+func (s *Service) taskDiffCapturer(workDir string) DiffCapturer {
+	if s.diffCapturer != nil {
+		return s.diffCapturer
+	}
+	return &cycleDiffCapturer{workDir: workDir}
+}
+
 func batchBugfixInvoker(deps RunLoopDeps) BugfixInvoker {
 	if deps.BugfixInvoker == nil {
 		return unconfiguredBugfixInvoker{}
@@ -189,11 +197,11 @@ func batchBugfixInvoker(deps RunLoopDeps) BugfixInvoker {
 	return deps.BugfixInvoker
 }
 
-func batchDiffCapturer(deps RunLoopDeps, workDir string) DiffCapturer {
-	if deps.DiffCapturer == nil {
-		return &cycleDiffCapturer{workDir: workDir}
+func (s *Service) batchDiffCapturer(deps RunLoopDeps, workDir string) DiffCapturer {
+	if deps.DiffCapturer != nil {
+		return deps.DiffCapturer
 	}
-	return deps.DiffCapturer
+	return s.taskDiffCapturer(workDir)
 }
 
 func cycleAgentIdentity(opts Options) string {
@@ -276,14 +284,16 @@ func (s *Service) conductApprovalCycle(
 		return &ReviewResult{Note: fmt.Sprintf("invalid approval policy: %v", err)}, nil
 	}
 
+	repository := newRepositoryPort(s.taskDiffCapturer(workDir), workDir)
+
 	cycle, err := approval.NewCycle(
 		taskIdentity,
 		agentIdentity,
 		policy,
 		criteria,
-		newReviewerPort(reviewer, airuntime.NewRoundEvidenceWriterWithSink(filepath.Join(workDir, "evidence", "task-"+task.ID), s.fsys)),
+		newReviewerPort(reviewer, airuntime.NewRoundEvidenceWriterWithSink(filepath.Join(workDir, "evidence", "task-"+task.ID), s.fsys), repository),
 		newFixerPort(bugfixInvoker, recorder),
-		newRepositoryPort(&cycleDiffCapturer{workDir: workDir}, workDir),
+		repository,
 	)
 	if err != nil {
 		return &ReviewResult{Note: fmt.Sprintf("failed to build approval cycle: %v", err)}, nil

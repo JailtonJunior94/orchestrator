@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
@@ -104,6 +105,10 @@ func postToolHookInput(tool skills.Tool, filePath string) ([]byte, []string) {
 	return []byte(`{"tool_input":{"file_path":"` + filePath + `"}}`), nil
 }
 
+const preToolBlockExitCode = 2
+
+const brokenChainMarker = "validador canonico"
+
 func TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing(t *testing.T) {
 	t.Parallel()
 	projectDir := installMandatoryAgentsForDispatch(t)
@@ -112,8 +117,17 @@ func TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing(t *testing.T) {
 		t.Run(string(tool), func(t *testing.T) {
 			stdin := []byte(`{"tool_input":{"file_path":"main.go"}}`)
 			out, exitCode := runHookScript(t, projectDir, relPath, stdin, "GOVERNANCE_PRELOAD_CONFIRMED=1")
-			if exitCode == 0 {
-				t.Fatalf("tool=%s: expected non-zero exit for .go edit without go-implementation skill; output=%s", tool, out)
+			if exitCode != preToolBlockExitCode {
+				t.Fatalf("tool=%s: expected exit %d for .go edit without go-implementation skill; got exit=%d output=%s", tool, preToolBlockExitCode, exitCode, out)
+			}
+			if strings.Contains(out, brokenChainMarker) {
+				t.Fatalf("tool=%s: the wrapper refused because the canonical validator is missing, not because the gate ran; a broken delegation chain must never read as a working gate; output=%s", tool, out)
+			}
+			if !strings.Contains(out, "BLOQUEIO: tarefa toca arquivos cuja skill obrigatoria nao esta acessivel.") {
+				t.Fatalf("tool=%s: the refusal must carry the verdict of the canonical prerequisite gate, not merely a non-zero exit; output=%s", tool, out)
+			}
+			if !strings.Contains(out, "go-implementation") {
+				t.Fatalf("tool=%s: the verdict must name the missing skill for the edited target; output=%s", tool, out)
 			}
 		})
 	}

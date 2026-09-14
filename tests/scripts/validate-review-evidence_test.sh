@@ -29,11 +29,41 @@ Sem achados.
 EOF
 }
 
+task_file_for() {
+  local count="$1"
+  local path="$TMP_ROOT/task-$count-criteria.md"
+  if [[ ! -f "$path" ]]; then
+    {
+      printf '# Task de fixture com %s criterio(s) de aceite\n\n' "$count"
+      printf '## Critérios de Aceite\n\n'
+      local i=1
+      while [[ "$i" -le "$count" ]]; do
+        printf -- '- Criterio de aceite numero %s\n' "$i"
+        i=$((i+1))
+      done
+      printf '\n'
+    } > "$path"
+  fi
+  printf '%s' "$path"
+}
+
+map_criteria_count() {
+  printf '%s\n' "$1" | /usr/bin/grep -c '^-[[:space:]]*\[' || true
+}
+
+task_file_matching_map() {
+  local count
+  count="$(map_criteria_count "$1")"
+  [[ "$count" -gt 0 ]] || count=1
+  task_file_for "$count"
+}
+
 build_review() {
-  local verdict="$1" map_block="$2" out="$3"
+  local verdict="$1" map_block="$2" out="$3" task_ref="$4"
   {
     printf '# Relatório de Review\n\n'
-    printf -- '- Veredito: %s\n\n' "$verdict"
+    printf -- '- Veredito: %s\n' "$verdict"
+    printf -- '- Task file: %s\n\n' "$task_ref"
     if [[ -n "$map_block" ]]; then
       printf '## Mapa de Critérios de Aceite\n\n%s\n\n' "$map_block"
     fi
@@ -42,9 +72,12 @@ build_review() {
 }
 
 run_case() {
-  local label="$1" verdict="$2" map_block="$3" want_exit="$4" want_text="$5"
+  local label="$1" verdict="$2" map_block="$3" want_exit="$4" want_text="$5" task_ref="${6:-}"
+  if [[ -z "$task_ref" ]]; then
+    task_ref="$(task_file_matching_map "$map_block")"
+  fi
   local f="$TMP_ROOT/review_$PASS$FAIL.md"
-  build_review "$verdict" "$map_block" "$f"
+  build_review "$verdict" "$map_block" "$f" "$task_ref"
 
   local actual_exit=0 actual_out
   actual_out="$(bash "$SCRIPT" "$f" 2>&1)" || actual_exit=$?
@@ -195,7 +228,8 @@ run_empty_reviewed_case() {
   local f="$TMP_ROOT/review_empty.md"
   {
     printf '# Relatório de Review\n\n'
-    printf -- '- Veredito: APPROVED\n\n'
+    printf -- '- Veredito: APPROVED\n'
+    printf -- '- Task file: %s\n\n' "$(task_file_for 1)"
     printf '## Mapa de Critérios de Aceite\n\n'
     printf -- '- [atendido] Criterio um -> internal/inventado.go:999\n\n'
     printf '## Achados\n\nSem achados.\n\n'
@@ -247,6 +281,22 @@ run_case "A18-veredito-pt-br-bloqueado" "bloqueado" "$VALID_MAP" 0 "aprovada"
 
 run_case "A19-veredito-token-invalido" "talvez" "$VALID_MAP" 1 "veredito canonico"
 
+run_case "RC20-map-complete-matches-task" "APPROVED" "$VALID_MAP" \
+  0 "aprovada" "$(task_file_for 2)"
+
+run_case "RC21-map-incomplete-vs-task" "APPROVED" \
+  '- [atendido] Criterio um -> internal/approval/evidence.go:42' \
+  1 "mapa 1:1 incompleto" "$(task_file_for 2)"
+
+run_case "RC22-task-file-without-criteria" "APPROVED" "$VALID_MAP" \
+  1 "nao declara nenhum criterio de aceite" "$(task_file_for 0)"
+
+run_case "RC23-task-file-unresolvable" "APPROVED" "$VALID_MAP" \
+  1 "task file nao resolvivel" "$TMP_ROOT/task-inexistente.md"
+
+run_case "RC24-task-file-placeholder" "APPROVED" "$VALID_MAP" \
+  1 "task file nao resolvivel" "<caminho>"
+
 VERDICT_FIXTURE="${VERDICT_FIXTURE:-tests/fixtures/approval/verdict-tokens.tsv}"
 
 if [[ ! -f "$VERDICT_FIXTURE" ]]; then
@@ -258,7 +308,8 @@ build_review_line() {
   local verdict_line="$1" findings_block="$2" out="$3"
   {
     printf '# Relatório de Review\n\n'
-    printf '%s\n\n' "$verdict_line"
+    printf '%s\n' "$verdict_line"
+    printf -- '- Task file: %s\n\n' "$(task_file_matching_map "$VALID_MAP")"
     printf '## Mapa de Critérios de Aceite\n\n%s\n\n' "$VALID_MAP"
     printf '## Achados\n\n%s\n\n' "$findings_block"
     printf '## Arquivos Revisados\n\n- internal/approval/evidence.go (diff da branch)\n\n'

@@ -18,9 +18,14 @@ func runValidateEvidence(t *testing.T, kind, path string) int {
 
 func writeEvidenceFixture(t *testing.T, content string) string {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "report.md")
+	dir := t.TempDir()
+	path := filepath.Join(dir, "report.md")
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatalf("write fixture: %v", err)
+	}
+	task := "# Task\n\n## Criterios de Aceite\n- criterio unico da fixture\n"
+	if err := os.WriteFile(filepath.Join(dir, "task.md"), []byte(task), 0o600); err != nil {
+		t.Fatalf("write task fixture: %v", err)
 	}
 	return path
 }
@@ -28,6 +33,7 @@ func writeEvidenceFixture(t *testing.T, content string) string {
 func TestValidateEvidenceCmd_AcceptsReviewKind(t *testing.T) {
 	path := writeEvidenceFixture(t, `# Review
 Veredito: APPROVED
+- Task file: task.md
 
 ## Achados
 Sem achados
@@ -52,6 +58,7 @@ Sem achados
 func TestValidateEvidenceCmd_ReviewRejectsTrivialEvidence(t *testing.T) {
 	path := writeEvidenceFixture(t, `# Review
 Veredito: APPROVED
+- Task file: task.md
 
 ## Achados
 Sem achados

@@ -63,7 +63,7 @@ func TestReviewerPortTranslatesCallAndReturnsRawText(t *testing.T) {
 		Findings:  []Finding{{Severity: SeverityCritical, File: "a.go", Line: 10, Message: "boom"}},
 	}}}
 
-	port := newReviewerPort(reviewer, nil)
+	port := newReviewerPort(reviewer, nil, nil)
 	request := newReviewRequestForPort(t, "diff --git a/a.go b/a.go", "builds green", "tests pass")
 
 	output, err := port.Review(context.Background(), request)
@@ -89,7 +89,7 @@ func TestReviewerPortTranslatesCallAndReturnsRawText(t *testing.T) {
 
 func TestReviewerPortCriteriaMapReachesComplete(t *testing.T) {
 	reviewer := &stubFinalReviewer{results: []FinalReviewResult{{RawOutput: "Verdict: APPROVED\n\n## Mapa de Critérios de Aceite\n- [atendido] criterion one -> go test ./... -> PASS\n- [atendido] criterion two -> TestCriteria -> PASS\n"}}}
-	port := newReviewerPort(reviewer, nil)
+	port := newReviewerPort(reviewer, nil, nil)
 	request := newReviewRequestForPort(t, "diff", "criterion one", "criterion two")
 
 	output, err := port.Review(context.Background(), request)
@@ -109,7 +109,7 @@ func TestReviewerPortCriteriaMapReachesComplete(t *testing.T) {
 }
 
 func TestReviewerPortRejectsApprovedOutputWithoutCriteriaEvidence(t *testing.T) {
-	port := newReviewerPort(&stubFinalReviewer{results: []FinalReviewResult{{RawOutput: "Verdict: APPROVED\n"}}}, nil)
+	port := newReviewerPort(&stubFinalReviewer{results: []FinalReviewResult{{RawOutput: "Verdict: APPROVED\n"}}}, nil, nil)
 
 	output, err := port.Review(context.Background(), newReviewRequestForPort(t, "diff", "criterion one"))
 	if err != nil {
@@ -125,7 +125,7 @@ func TestReviewerPortDefaultsMissingFindingFile(t *testing.T) {
 		RawOutput: "Verdict: REJECTED\n",
 		Findings:  []Finding{{Severity: SeverityImportant, Message: "no file"}},
 	}}}
-	port := newReviewerPort(reviewer, nil)
+	port := newReviewerPort(reviewer, nil, nil)
 
 	output, err := port.Review(context.Background(), newReviewRequestForPort(t, "diff", "c1"))
 	if err != nil {

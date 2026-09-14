@@ -1,13 +1,13 @@
 package install
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
@@ -482,7 +482,7 @@ func (s *Service) sourceSkills(sourceDir string, langs []skills.Lang) []string {
 
 	out := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		if !entry.IsDir() || !NewHelper().shouldProcessSkill(entry.Name(), langs) {
+		if !entry.IsDir() || !NewHelper().skillSelectedForLangs(entry.Name(), langs) {
 			continue
 		}
 		// Reconcilia com upgrade.checkSkills: so e skill o diretorio que
@@ -896,19 +896,38 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 		return err
 	}
 
-	settingsFile := filepath.Join(projectDir, ".claude", "settings.local.json")
-	if !s.fs.Exists(settingsFile) {
-		if err := s.fs.WriteFile(settingsFile, []byte(NewHelper().defaultClaudeSettings())); err != nil {
-			return err
-		}
-	} else if data, err := s.fs.ReadFile(settingsFile); err == nil {
-		content := string(data)
-		if !strings.Contains(content, "validate-governance.sh") || !strings.Contains(content, "validate-preload.sh") {
-			s.printer.Warn(".claude/settings.local.json ja existe. Adicione os hooks manualmente para validate-preload e validate-governance.")
-		}
+	if err := s.writeClaudeSettings(projectDir); err != nil {
+		return err
 	}
 
 	s.adapters.GenerateClaude(sourceDir, projectDir)
+	return nil
+}
+
+func (s *Service) writeClaudeSettings(projectDir string) error {
+	settingsFile := filepath.Join(projectDir, ".claude", "settings.local.json")
+
+	var existing []byte
+	if s.fs.Exists(settingsFile) {
+		data, err := s.fs.ReadFile(settingsFile)
+		if err != nil {
+			return err
+		}
+		existing = data
+	}
+
+	if len(bytes.TrimSpace(existing)) == 0 {
+		return s.fs.WriteFile(settingsFile, []byte(NewHelper().defaultClaudeSettings()))
+	}
+
+	merged, err := NewHelper().mergeClaudeSettings(existing)
+	if err != nil {
+		return fmt.Errorf("merge .claude/settings.local.json: %w", err)
+	}
+	if err := s.fs.WriteFile(settingsFile, merged); err != nil {
+		return err
+	}
+	s.trackMerged(settingsFile)
 	return nil
 }
 
@@ -1280,29 +1299,24 @@ func decodeWrittenPermission(configBytes []byte) map[string]any {
 	return perm
 }
 
-func (r1 *Helper) shouldProcessSkill(skillName string, langFilter []skills.Lang) bool {
-	if len(langFilter) == 0 {
+var langImplementationSkills = map[string]bool{
+	"go-implementation":            true,
+	"object-calisthenics-go":       true,
+	"node-implementation":          true,
+	"python-implementation":        true,
+	"dotnet-csharp-implementation": true,
+}
+
+func (r1 *Helper) skillSelectedForLangs(skillName string, langFilter []skills.Lang) bool {
+	if !langImplementationSkills[skillName] {
 		return true
 	}
-
-	langSkills := map[string]bool{
-		"go-implementation":            true,
-		"object-calisthenics-go":       true,
-		"node-implementation":          true,
-		"python-implementation":        true,
-		"dotnet-csharp-implementation": true,
-	}
-	if !langSkills[skillName] {
-		return true
-	}
-
-	allowed := make(map[string]bool)
-	for _, lang := range langFilter {
-		for _, skill := range skills.NewCatalog().LangSkills([]skills.Lang{lang}) {
-			allowed[skill] = true
+	for _, selected := range skills.NewCatalog().LangSkills(langFilter) {
+		if selected == skillName {
+			return true
 		}
 	}
-	return allowed[skillName]
+	return false
 }
 
 func (r1 *Helper) defaultClaudeSettings() string {
@@ -1354,6 +1368,66 @@ func (r1 *Helper) defaultClaudeSettings() string {
   }
 }
 `
+}
+
+func (r1 *Helper) mergeClaudeSettings(existing []byte) ([]byte, error) {
+	settings := map[string]any{}
+	if len(existing) > 0 {
+		if err := json.Unmarshal(existing, &settings); err != nil {
+			return nil, err
+		}
+	}
+
+	var governance struct {
+		Hooks map[string][]any `json:"hooks"`
+	}
+	if err := json.Unmarshal([]byte(r1.defaultClaudeSettings()), &governance); err != nil {
+		return nil, err
+	}
+
+	original, hadHooks := settings["hooks"]
+	hooks, ok := original.(map[string]any)
+	if !ok {
+		if hadHooks {
+			return nil, fmt.Errorf("hooks must be an object")
+		}
+		hooks = map[string]any{}
+	}
+
+	merged := make(map[string]any, len(hooks)+len(governance.Hooks))
+	for event, value := range hooks {
+		merged[event] = value
+	}
+
+	for event, expected := range governance.Hooks {
+		existingHooks, exists := merged[event]
+		if !exists {
+			merged[event] = expected
+			continue
+		}
+		existingList, isList := existingHooks.([]any)
+		if !isList {
+			return nil, fmt.Errorf("hooks.%s must be an array", event)
+		}
+		for _, hook := range expected {
+			if r1.hookEntryExists(existingList, hook) {
+				continue
+			}
+			existingList = append(existingList, hook)
+		}
+		merged[event] = existingList
+	}
+	settings["hooks"] = merged
+
+	if hadHooks && reflect.DeepEqual(original, merged) {
+		return existing, nil
+	}
+
+	edited, err := specs.NewCatalog().SetJSONTopLevelKey(existing, "hooks", merged)
+	if err != nil {
+		return json.MarshalIndent(settings, "", "  ")
+	}
+	return edited, nil
 }
 
 func (r1 *Helper) defaultCopilotHooks() string {
@@ -1417,7 +1491,7 @@ func (r1 *Helper) mergeCopilotSettings(existing []byte) ([]byte, error) {
 			return nil, fmt.Errorf("hooks.%s must be an array", event)
 		}
 		for _, hook := range expected {
-			if r1.copilotHookExists(existingList, hook) {
+			if r1.hookEntryExists(existingList, hook) {
 				continue
 			}
 			existingList = append(existingList, hook)
@@ -1450,7 +1524,7 @@ func (r1 *Helper) appendCopilotHooks(existing any, extra []any) []any {
 	result := make([]any, 0, len(list)+len(extra))
 	result = append(result, list...)
 	for _, entry := range extra {
-		if r1.copilotHookExists(result, entry) {
+		if r1.hookEntryExists(result, entry) {
 			continue
 		}
 		result = append(result, entry)
@@ -1458,7 +1532,7 @@ func (r1 *Helper) appendCopilotHooks(existing any, extra []any) []any {
 	return result
 }
 
-func (r1 *Helper) copilotHookExists(hooks []any, expected any) bool {
+func (r1 *Helper) hookEntryExists(hooks []any, expected any) bool {
 	expectedJSON, err := json.Marshal(expected)
 	if err != nil {
 		return false

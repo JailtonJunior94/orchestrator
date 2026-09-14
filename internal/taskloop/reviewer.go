@@ -14,20 +14,18 @@ import (
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 )
 
-// --- FinalReviewer types ---
-
-// Severity classifica a gravidade de um achado de revisao.
 type Severity string
 
 const (
 	SeverityCritical   Severity = "Critical"
+	SeverityHigh       Severity = "High"
 	SeverityImportant  Severity = "Important"
 	SeveritySuggestion Severity = "Suggestion"
 )
 
-// Finding representa um achado individual da revisao.
 type Finding struct {
 	Severity Severity
 	File     string
@@ -35,7 +33,6 @@ type Finding struct {
 	Message  string
 }
 
-// ReviewVerdict e o veredito final emitido pelo FinalReviewer.
 type ReviewVerdict string
 
 const (
@@ -45,26 +42,21 @@ const (
 	VerdictBlocked             ReviewVerdict = "BLOCKED"
 )
 
-// FinalReviewResult agrega veredito, achados e saida bruta da revisao consolidada.
 type FinalReviewResult struct {
 	Verdict   ReviewVerdict
 	Findings  []Finding
 	RawOutput string
 }
 
-// ErrReviewRejected indica que a revisao final reprovou o diff consolidado.
 var ErrReviewRejected = errors.New("taskloop: review reprovou diff consolidado")
 
-// ErrReviewBlocked indica que a revisao nao conseguiu emitir um veredito conclusivo.
 var ErrReviewBlocked = errors.New("taskloop: review bloqueada por falta de contexto ou evidencia")
 
-// FinalReviewer invoca a skill review uma unica vez sobre o diff consolidado.
 type FinalReviewer interface {
 	ReviewConsolidated(ctx context.Context, diff string) (FinalReviewResult, error)
 }
 
-// _maxDiffPartitionSize e o limite em bytes para cada particao de diff enviada ao reviewer.
-const _maxDiffPartitionSize = 100_000
+const maxDiffPartitionSize = 100_000
 
 type defaultFinalReviewer struct {
 	invoker AgentInvoker
@@ -75,19 +67,15 @@ type defaultFinalReviewer struct {
 
 var _ FinalReviewer = (*defaultFinalReviewer)(nil)
 
-// NewFinalReviewer cria um FinalReviewer que usa o AgentInvoker fornecido.
 func NewFinalReviewer(invoker AgentInvoker, workDir, model string) FinalReviewer {
 	return &defaultFinalReviewer{
 		invoker: invoker,
 		workDir: workDir,
 		model:   model,
-		maxDiff: _maxDiffPartitionSize,
+		maxDiff: maxDiffPartitionSize,
 	}
 }
 
-// ReviewConsolidated invoca a skill review sobre o diff consolidado.
-// Quando o diff excede maxDiff, particiona por arquivo antes de enviar.
-// Agrega vereditos (o mais grave prevalece) e une os achados de todas as particoes.
 func (r *defaultFinalReviewer) ReviewConsolidated(ctx context.Context, diff string) (FinalReviewResult, error) {
 	partitions := NewCatalog().partitionDiff(diff, r.maxDiff)
 
@@ -103,8 +91,6 @@ func (r *defaultFinalReviewer) ReviewConsolidated(ctx context.Context, diff stri
 		}
 
 		result := NewCatalog().parseReviewOutput(stdout)
-		// Uma critica/alta invalida qualquer aprovacao declarada pelo runtime.
-		// O contrato SDD exige bloqueio pelo achado, nao confianca na conclusao.
 		if NewCatalog().hasBlockingFinding(result.Findings) {
 			result.Verdict = VerdictRejected
 		}
@@ -136,7 +122,6 @@ func (c *Catalog) verdictWeight(v ReviewVerdict) int {
 	}
 }
 
-// buildConsolidatedReviewPrompt constroi o prompt para revisao consolidada do diff.
 func (c *Catalog) buildConsolidatedReviewPrompt(diff string) string {
 	languages := strings.Join(NewCatalog().detectReviewLanguages(diff), ", ")
 	return fmt.Sprintf(`First, read AGENTS.md at the repository root to load governance rules and conventions.
@@ -167,8 +152,6 @@ Diff consolidado:
 `+"```", languages, diff)
 }
 
-// detectReviewLanguages roteia a revisão pelos arquivos efetivamente alterados,
-// sem inferir linguagem pelo nome do repositório.
 func (c *Catalog) detectReviewLanguages(diff string) []string {
 	seen := make(map[string]bool)
 	for _, line := range strings.Split(diff, "\n") {
@@ -206,7 +189,7 @@ func (c *Catalog) detectReviewLanguages(diff string) []string {
 
 func (c *Catalog) hasBlockingFinding(findings []Finding) bool {
 	for _, finding := range findings {
-		if finding.Severity == SeverityCritical {
+		if finding.Severity == SeverityCritical || finding.Severity == SeverityHigh {
 			return true
 		}
 	}
@@ -238,15 +221,11 @@ func (c *Catalog) parseFindings(raw string) []Finding {
 	return findings
 }
 
-// partitionDiff divide o diff em particoes que cabem em maxSize bytes.
-// Tenta manter arquivos inteiros em cada particao (divide em cabecalhos "diff --git").
 func (c *Catalog) partitionDiff(diff string, maxSize int) []string {
 	if len(diff) <= maxSize {
 		return []string{diff}
 	}
 
-	// Split diff into per-file sections at "diff --git" boundaries.
-	// Trim the trailing empty element produced by a trailing newline.
 	lines := strings.Split(diff, "\n")
 	if len(lines) > 0 && lines[len(lines)-1] == "" {
 		lines = lines[:len(lines)-1]
@@ -296,12 +275,6 @@ func (c *Catalog) partitionDiff(diff string, maxSize int) []string {
 	return partitions
 }
 
-// splitFileSection quebra uma seccao "diff --git" maior que maxSize em
-// sub-particoes alinhadas em hunks "@@". O cabecalho do arquivo (linhas ate
-// o primeiro hunk) e replicado em cada sub-particao, sinalizando truncamento
-// com o marcador "# (continuacao truncada de <arquivo>)".
-// Quando ate um unico hunk ainda excede maxSize, aplica truncamento explicito
-// apendando "\n# ... [truncado: secao excede maxDiffPartitionSize]\n".
 func (c *Catalog) splitFileSection(section string, maxSize int) []string {
 	lines := strings.Split(section, "\n")
 	headerEnd := -1
@@ -312,8 +285,6 @@ func (c *Catalog) splitFileSection(section string, maxSize int) []string {
 		}
 	}
 	if headerEnd <= 0 {
-		// Sem hunks "@@" para subdividir: nao ha granularidade segura — devolve
-		// a seccao integra preservando conteudo. Caller ciente do trade-off.
 		return []string{section}
 	}
 
@@ -379,34 +350,24 @@ func (c *Catalog) truncateOversize(s string, maxSize int) string {
 	return s[:cut] + marker
 }
 
-// ErrTemplateInvalido indica erro no parsing ou execucao do template de revisao.
 var ErrTemplateInvalido = errors.New("template de revisao invalido")
 
-// _defaultReviewTemplate e o template embutido via go:embed.
-//
 //go:embed review_template.tmpl
-var _defaultReviewTemplate string
+var defaultReviewTemplate string
 
-// _defaultBugfixTemplate e o template embutido via go:embed para o prompt de bugfix.
-//
 //go:embed bugfix_template.tmpl
-var _defaultBugfixTemplate string
+var defaultBugfixTemplate string
 
-// ReviewTemplateData agrupa os placeholders do template de revisao.
 type ReviewTemplateData struct {
 	TaskFile       string
 	PRDFolder      string
 	TechSpec       string
 	TasksFile      string
 	Diff           string
-	CompletedTasks string // Lista de tasks executadas no bundle ate o momento
-	RiskAreas      string // Areas de risco detectadas (performance, seguranca, contratos, concorrencia)
+	CompletedTasks string
+	RiskAreas      string
 }
 
-// BuildReviewPrompt constroi o prompt de revisao a partir do template.
-// Se templatePath != "", carrega template customizado do disco via fsys.
-// Se templatePath == "", usa defaultReviewTemplate embutido.
-// Retorna erro wrappado com ErrTemplateInvalido em caso de falha de parsing ou execucao.
 func (c *Catalog) BuildReviewPrompt(templatePath string, data ReviewTemplateData, fsys fs.FileSystem) (string, error) {
 	var tmplContent string
 	if templatePath != "" {
@@ -416,7 +377,7 @@ func (c *Catalog) BuildReviewPrompt(templatePath string, data ReviewTemplateData
 		}
 		tmplContent = string(raw)
 	} else {
-		tmplContent = _defaultReviewTemplate
+		tmplContent = defaultReviewTemplate
 	}
 
 	tmpl, err := template.New("review").Parse(tmplContent)
@@ -432,15 +393,20 @@ func (c *Catalog) BuildReviewPrompt(templatePath string, data ReviewTemplateData
 	return buf.String(), nil
 }
 
-// captureGitDiff agrega o diff do working tree atual: staged, unstaged e arquivos
-// untracked. Se o diretorio nao for um repo git valido ou o working tree estiver
-// limpo, retorna "(diff indisponivel)". Nao e erro bloqueante.
+const diffUnavailable = "(diff indisponivel)"
+
 func (c *Catalog) captureGitDiff(ctx context.Context, workDir string) string {
 	if !NewCatalog().isGitWorkTree(ctx, workDir) {
-		return "(diff indisponivel)"
+		return diffUnavailable
 	}
 
 	var sections []string
+
+	if base := airuntime.ResolveReviewBaseRef(ctx, workDir); base != "" {
+		if diff, ok := NewCatalog().commandDiff(ctx, workDir, false, "git", "diff", "--binary", base, "HEAD", "--"); ok {
+			sections = append(sections, diff)
+		}
+	}
 
 	if diff, ok := NewCatalog().commandDiff(ctx, workDir, false, "git", "diff", "--binary", "--cached", "--"); ok {
 		sections = append(sections, diff)
@@ -454,7 +420,7 @@ func (c *Catalog) captureGitDiff(ctx context.Context, workDir string) string {
 		if len(strings.TrimSpace(strings.Join(sections, "\n"))) > 0 {
 			return strings.Join(sections, "\n") + "\n"
 		}
-		return "(diff indisponivel)"
+		return diffUnavailable
 	}
 	for _, file := range untracked {
 		if file == "" {
@@ -467,7 +433,7 @@ func (c *Catalog) captureGitDiff(ctx context.Context, workDir string) string {
 
 	combined := strings.TrimSpace(strings.Join(sections, "\n"))
 	if combined == "" {
-		return "(diff indisponivel)"
+		return diffUnavailable
 	}
 	return combined + "\n"
 }
@@ -513,8 +479,6 @@ func (c *Catalog) commandDiff(ctx context.Context, dir string, allowExitOne bool
 	return "", false
 }
 
-// detectRiskAreas analisa o conteudo combinado de techspec e diff para detectar
-// areas de risco relevantes para a revisao.
 func (c *Catalog) detectRiskAreas(prdFolder, workDir string, diff string, fsys fs.FileSystem) string {
 	techspecPath := filepath.Join(workDir, prdFolder, "techspec.md")
 	techspec, _ := fsys.ReadFile(techspecPath)
@@ -544,23 +508,19 @@ func (c *Catalog) detectRiskAreas(prdFolder, workDir string, diff string, fsys f
 	return strings.Join(areas, ", ")
 }
 
-// BugfixTemplateData agrupa os placeholders do template de bugfix.
 type BugfixTemplateData struct {
 	TaskFile       string
 	PRDFolder      string
 	TechSpec       string
 	TasksFile      string
-	ReviewFindings string // saida bruta do reviewer (achados criticos)
-	Diff           string // diff original que disparou os achados
+	ReviewFindings string
+	Diff           string
 }
 
-// ErrBugfixTemplateInvalido indica erro no parsing ou execucao do template de bugfix.
 var ErrBugfixTemplateInvalido = errors.New("template de bugfix invalido")
 
-// BuildBugfixPrompt constroi o prompt de bugfix a partir do template embutido.
-// Retorna erro wrappado com ErrBugfixTemplateInvalido em caso de falha de parsing ou execucao.
 func (c *Catalog) BuildBugfixPrompt(data BugfixTemplateData) (string, error) {
-	tmpl, err := template.New("bugfix").Parse(_defaultBugfixTemplate)
+	tmpl, err := template.New("bugfix").Parse(defaultBugfixTemplate)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrBugfixTemplateInvalido, err)
 	}
@@ -573,8 +533,6 @@ func (c *Catalog) BuildBugfixPrompt(data BugfixTemplateData) (string, error) {
 	return buf.String(), nil
 }
 
-// formatCompletedTasks formata a lista de tasks ja executadas no bundle
-// a partir das iteracoes anteriores do report.
 func (c *Catalog) formatCompletedTasks(iterations []IterationResult, currentTaskID string) string {
 	var completed []string
 	seen := make(map[string]bool)

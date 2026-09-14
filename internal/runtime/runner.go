@@ -1004,6 +1004,17 @@ func (r *ACPRunner) performAutoReview(ctx context.Context, j Job) (autoReviewOut
 }
 
 func (r *ACPRunner) runApprovalCycle(ctx context.Context, j Job) (autoReviewOutcome, error) {
+	outcome, err := r.conductApprovalCycle(ctx, j)
+	if err == nil {
+		return outcome, nil
+	}
+	if statusErr := NewTaskStatusWriter(j.TasksDir, j.TaskFileName).Force(taskStatusBlocked); statusErr != nil {
+		return autoReviewOutcome{}, errors.Join(err, statusErr)
+	}
+	return autoReviewOutcome{}, err
+}
+
+func (r *ACPRunner) conductApprovalCycle(ctx context.Context, j Job) (autoReviewOutcome, error) {
 	criteria, err := criteriaFromTaskFile(j.TasksDir, j.TaskFileName)
 	if err != nil {
 		return autoReviewOutcome{}, fmt.Errorf("runApprovalCycle: %w", err)

@@ -8,6 +8,19 @@
 - **Total de tarefas:** 18
 - **Tarefas paralelizáveis:** 2.0 e 3.0
 
+### Estado real do gate de encerramento
+
+As tarefas **1.0, 4.6, 4.7, 6.0, 7.0, 8.0, 9.0, 10.0 e 11.0** estão em `blocked` **com relatório de
+execução escrito** e veredito `APPROVED_WITH_REMARKS` — veredito que RF-33/RF-36 não aceitam para
+fechar tarefa. Até esta entrega, `validate-session-end.sh` filtrava apenas `in_progress` e `done`,
+de modo que `blocked` funcionava como escape de uma palavra: o gate saía `0`. O gate passou a cobrar
+`blocked` com relatório escrito e agora sai `2` sobre este próprio repositório, listando as nove.
+
+Isso é o comportamento correto e **não deve ser contornado** movendo status ou reescrevendo
+veredito. O caminho de saída é executar a rodada de revisão que converta o veredito em `APPROVED`,
+ou registrar a razão pela qual a tarefa permanece bloqueada. Nenhum relatório foi reescrito para
+passar no gate (RF-56).
+
 ## Tarefas
 
 <!-- Colunas e formato canônico (MANDATÓRIO):

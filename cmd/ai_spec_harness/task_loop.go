@@ -197,9 +197,13 @@ Exemplos:
 				return fmt.Errorf("ferramenta invalida %q — opcoes: claude, codex, copilot (opencode exige --runtime acp)", tool)
 			}
 
-			profiles, err := taskloop.NewCatalog().ResolveProfiles(tool, execTool, execModel, revTool, revModel)
-			if err != nil {
-				return err
+			var profiles *taskloop.ProfileConfig
+			if agentName == "" {
+				resolved, resolveErr := taskloop.NewCatalog().ResolveProfiles(tool, execTool, execModel, revTool, revModel)
+				if resolveErr != nil {
+					return resolveErr
+				}
+				profiles = resolved
 			}
 
 			if reportPath == "" {
@@ -210,7 +214,7 @@ Exemplos:
 			fsys := fs.NewOSFileSystem()
 
 			svc := taskloop.NewService(fsys, printer)
-			err = svc.Execute(taskloop.Options{
+			err := svc.Execute(taskloop.Options{
 				PRDFolder:                prdFolder,
 				Tool:                     tool,
 				DryRun:                   dryRun,

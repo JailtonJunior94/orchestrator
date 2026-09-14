@@ -59,7 +59,9 @@ if [[ ${#gate_targets[@]} -gt 0 ]]; then
 fi
 
 case "$file_path" in
-  *.go | *.py | *.ts | *.js | *.tsx | *.jsx | *.cs | "") ;;
+  *.go | *.py | *.ts | *.js | *.tsx | *.jsx | *.cs | *.mjs | *.cjs | *.mts | *.cts \
+  | *.sh | *.bash | *.zsh | *.rb | *.java | *.kt | *.kts | *.sql | *.rs | *.swift \
+  | *.php | *.c | *.h | *.cc | *.cpp | *.hpp | *.scala | *.ex | *.exs | *.pl | *.lua | "") ;;
   *) exit 0 ;;
 esac
 
@@ -67,11 +69,26 @@ if [[ -n "$file_path" ]]; then
   echo "LEMBRETE: antes de editar codigo, confirme que AGENTS.md e agent-governance/SKILL.md foram lidos nesta sessao." >&2
 fi
 
+audit_escape() {
+  local reason="$1"
+  local target="${file_path:-<sem-alvo>}"
+  local log="${GOVERNANCE_ESCAPE_LOG:-$project_root/.aispec/governance-escapes.log}"
+  local stamp
+  stamp="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
+  echo "AUDITORIA: escape de governanca registrado ($reason) para $target" >&2
+  mkdir -p "$(dirname "$log")" 2>/dev/null || return 0
+  printf '%s\t%s\t%s\t%s\t%s\n' \
+    "$stamp" "$reason" "$target" "${AI_TOOL:-desconhecido}" "${USER:-desconhecido}" \
+    >> "$log" 2>/dev/null || true
+}
+
 if [[ "$preload_confirmed" == "1" ]]; then
+  audit_escape "GOVERNANCE_PRELOAD_CONFIRMED=1"
   exit 0
 fi
 
 if [[ "$preload_mode" == "warn" ]]; then
+  audit_escape "GOVERNANCE_PRELOAD_MODE=warn"
   echo "GOVERNANCE_PRELOAD_MODE=warn: prosseguindo sem bloqueio (opt-out explicito)." >&2
   exit 0
 fi

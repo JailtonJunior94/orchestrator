@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 )
 
 // TaskEntry representa uma linha da tabela de tasks em tasks.md.
@@ -249,23 +250,7 @@ func (c *Catalog) matchesTaskPrefix(filename, prefix, fullID string) bool {
 // A atribuicao e atomica: uma linha que cita apenas "Dependencias" nao e um
 // header valido e nao pode deixar os indices parcialmente sobrescritos.
 func (c *Catalog) detectColumnIndices(cols []string, statusIdx, depsIdx *int) bool {
-	foundStatus := false
-	detectedStatus, detectedDeps := *statusIdx, *depsIdx
-	for i, col := range cols {
-		h := strings.ToLower(strings.TrimSpace(col))
-		switch h {
-		case "status":
-			detectedStatus = i
-			foundStatus = true
-		case "dependências", "dependencias", "dependência", "dependencia", "deps":
-			detectedDeps = i
-		}
-	}
-	if !foundStatus {
-		return false
-	}
-	*statusIdx, *depsIdx = detectedStatus, detectedDeps
-	return true
+	return airuntime.DetectTaskTableColumns(cols, statusIdx, depsIdx)
 }
 
 func (c *Catalog) parseDependencies(raw string) []string {

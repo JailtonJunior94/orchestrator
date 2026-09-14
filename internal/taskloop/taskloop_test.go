@@ -143,7 +143,7 @@ func TestExecuteSimpleMode(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 	executorCalled := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		if tool != "claude" {
@@ -192,7 +192,7 @@ func TestExecuteACP_SkipsLegacyBinaryChecker(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
 	checkerCalled := false
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = func(AgentInvoker) error {
 		checkerCalled = true
 		return fmt.Errorf("binary checker nao deveria rodar no modo acp")
@@ -227,7 +227,7 @@ func TestExecuteACP_SkipsLegacyBinaryChecker(t *testing.T) {
 func TestExecuteACP_ReturnsLauncherUnavailableImmediately(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		return &callbackInvoker{
@@ -274,7 +274,7 @@ func TestExecuteMaxIterationsZeroRunsUntilAllDone(t *testing.T) {
 
 	executorCallCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -343,7 +343,7 @@ func TestExecuteAdvancedModeReviewerInvoked(t *testing.T) {
 	var reviewerCalled bool
 	var reviewerModel string
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -418,7 +418,7 @@ func TestExecuteAdvancedModeReviewerNotInvokedOnExecutorFailure(t *testing.T) {
 
 	reviewerCalled := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -482,7 +482,7 @@ func TestExecuteAdvancedModeReviewerNotInvokedWhenStatusNotDone(t *testing.T) {
 
 	reviewerCalled := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -540,7 +540,7 @@ func TestExecuteAdvancedModeReviewerInvokedOnTimeoutWithDone(t *testing.T) {
 
 	var reviewerCalled bool
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -604,7 +604,7 @@ func TestExecuteAdvancedModeReviewerInvokedOnTimeoutWithDone(t *testing.T) {
 func TestExecuteAdvancedModeReviewerFailureCapturesNote(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -675,7 +675,7 @@ func TestExecuteAdvancedModeBugfixInvokedOnReviewerFailure(t *testing.T) {
 	var bugfixPrompt string
 	claudeCallCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -761,7 +761,7 @@ func TestExecuteAdvancedModeBugfixNotInvokedOnReviewerSuccess(t *testing.T) {
 	bugfixCalled := false
 	claudeCallCount2 := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -829,7 +829,7 @@ func TestExecuteAdvancedModeBugfixFailureCapturesNote(t *testing.T) {
 
 	claudeCallCount3 := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -893,7 +893,7 @@ func TestExecuteAdvancedModeBugfixUsesExecutorModel(t *testing.T) {
 	var bugfixModel string
 	claudeCalls := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -955,7 +955,7 @@ func TestExecuteAdvancedModeBugfixNotInvokedWithoutReviewer(t *testing.T) {
 
 	claudeCalls := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -1021,7 +1021,7 @@ func TestExecuteAdvancedModeBugfixDoesNotIncrementIteration(t *testing.T) {
 	bugfixCallCount := 0
 	reviewerCallCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -1101,7 +1101,7 @@ func TestExecuteAdvancedModeBugfixInvocationError(t *testing.T) {
 
 	claudeCallsBf := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -1170,7 +1170,7 @@ func TestExecuteAdvancedModeBugfixReviewFindingsPassedVerbatim(t *testing.T) {
 	var capturedBugfixPrompt string
 	claudeCallsVb := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -1248,7 +1248,7 @@ func TestExecuteAdvancedModeBugfixOnlyForFailedReview(t *testing.T) {
 	bugfixCalls := 0
 	reviewerCalls := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -1331,7 +1331,7 @@ func TestExecuteFallbackPreLoop(t *testing.T) {
 
 	var invokedTool string
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		invokedTool = tool
@@ -1386,7 +1386,7 @@ func TestExecuteFallbackPreLoop(t *testing.T) {
 func TestExecuteAllowUnknownModelSkipsValidation(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -1429,7 +1429,7 @@ func TestExecuteAllowUnknownModelSkipsValidation(t *testing.T) {
 func TestExecuteIncompatibleModelWithoutFallbackReturnsError(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return nil, fmt.Errorf("nao deveria ser chamado")
@@ -1483,7 +1483,7 @@ func TestExecuteMaxIterationsCountsOnlyExecutor(t *testing.T) {
 	executorCallCount := 0
 	reviewerCallCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -1555,7 +1555,7 @@ func TestExecuteMaxIterationsCountsOnlyExecutor(t *testing.T) {
 func TestExecuteAdvancedModeReportContainsProfiles(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -1614,7 +1614,7 @@ func newCapturePrinter() (*output.Printer, *bytes.Buffer) {
 func TestExecuteSimpleModeReportFormat(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -1666,7 +1666,7 @@ func TestDryRunAdvancedCompatibleProfiles(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 	printer, buf := newCapturePrinter()
 
-	svc := NewService(fsys, printer)
+	svc := newCycleTestService(fsys, printer)
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{binary: tool, fn: func(_ context.Context, _, _, _ string) (string, string, int, error) {
@@ -1727,7 +1727,7 @@ func TestDryRunAdvancedIncompatibleProfile(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 	printer, buf := newCapturePrinter()
 
-	svc := NewService(fsys, printer)
+	svc := newCycleTestService(fsys, printer)
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{binary: tool, fn: func(_ context.Context, _, _, _ string) (string, string, int, error) {
@@ -1777,7 +1777,7 @@ func TestDryRunSimplePreservesCurrentFormat(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 	printer, buf := newCapturePrinter()
 
-	svc := NewService(fsys, printer)
+	svc := newCycleTestService(fsys, printer)
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{binary: tool, fn: func(_ context.Context, _, _, _ string) (string, string, int, error) {
@@ -1827,7 +1827,7 @@ func TestDryRunSimplePreservesCurrentFormat(t *testing.T) {
 func TestExecuteFallbackChainExhausted(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return nil, fmt.Errorf("nao deveria ser invocado neste cenario")
@@ -1872,7 +1872,7 @@ func TestExecuteFallbackBothRolesSubstituted(t *testing.T) {
 
 	var invokedTools []string
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		invokedTools = append(invokedTools, tool)
@@ -1950,7 +1950,7 @@ func TestDryRunAdvancedMultipleEligibleTasks(t *testing.T) {
 	)
 
 	printer, buf := newCapturePrinter()
-	svc := NewService(fsys, printer)
+	svc := newCycleTestService(fsys, printer)
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{binary: tool, fn: func(_ context.Context, _, _, _ string) (string, string, int, error) {
@@ -2020,7 +2020,7 @@ func TestExecuteAuthErrorEarlyTermination(t *testing.T) {
 
 	invokeCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2069,7 +2069,7 @@ func TestExecuteAuthErrorEarlyTermination(t *testing.T) {
 func TestExecuteEmptyOutputOnTimeoutKill(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.liveOutOverride = io.Discard
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
@@ -2125,7 +2125,7 @@ func TestExecuteNonAuthErrorContinuesLoop(t *testing.T) {
 
 	invokeCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2175,7 +2175,7 @@ func TestExecuteResumesInProgressTask(t *testing.T) {
 
 	invokeCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2235,7 +2235,7 @@ func TestExecutePrioritizesInProgressBeforePending(t *testing.T) {
 
 	var invokedTask string
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2297,7 +2297,7 @@ func TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders(t *testing.T)
 			)
 			fsys.Files[prd+"/tasks.md"] = append([]byte(nil), originalTasks...)
 
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invokerTool string) (AgentInvoker, error) {
 				if invokerTool != tool {
@@ -2371,7 +2371,7 @@ func TestExecuteRejectsUnauthorizedTaskFileMutation(t *testing.T) {
 			"| 2.0 | Task Two | pending | 1.0 | Nao |\n",
 	)
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2429,7 +2429,7 @@ func TestExecuteRejectsUnexpectedTrackedTaskFileCreation(t *testing.T) {
 	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2492,7 +2492,7 @@ func TestExecuteRejectsProtectedPRDFileMutationForAllProviders(t *testing.T) {
 			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 			fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invokerTool string) (AgentInvoker, error) {
 				if invokerTool != tool {
@@ -2553,7 +2553,7 @@ func TestExecuteRejectsArbitraryPRDFileMutationForAllProviders(t *testing.T) {
 			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 			fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invokerTool string) (AgentInvoker, error) {
 				if invokerTool != tool {
@@ -2616,7 +2616,7 @@ func TestExecuteRejectsReviewerIsolationViolation(t *testing.T) {
 	execProfile, _ := NewExecutionProfile("executor", "claude", "")
 	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2693,7 +2693,7 @@ func TestExecuteRejectsReviewerProtectedPRDMutation(t *testing.T) {
 	execProfile, _ := NewExecutionProfile("executor", "claude", "")
 	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2764,7 +2764,7 @@ func TestExecuteRejectsReviewerArbitraryPRDMutation(t *testing.T) {
 	execProfile, _ := NewExecutionProfile("executor", "claude", "")
 	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2834,7 +2834,7 @@ func TestExecuteRejectsReviewerCurrentTaskMutation(t *testing.T) {
 	execProfile, _ := NewExecutionProfile("executor", "claude", "")
 	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2908,7 +2908,7 @@ func TestExecuteRejectsReviewerCurrentTaskRowMutation(t *testing.T) {
 	execProfile, _ := NewExecutionProfile("executor", "claude", "")
 	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2981,7 +2981,7 @@ func TestExecuteDoesNotResumeTaskWhenTaskFileStatusIsTerminal(t *testing.T) {
 
 	invoked := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -3025,7 +3025,7 @@ func TestDryRunAdvancedTemplatePreview(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 	printer, buf := newCapturePrinter()
 
-	svc := NewService(fsys, printer)
+	svc := newCycleTestService(fsys, printer)
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{binary: tool, fn: func(_ context.Context, _, _, _ string) (string, string, int, error) {
@@ -3445,7 +3445,7 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 
 				fn := tt.makeInvokerFn(fsys)
 
-				svc := NewService(fsys, newTestPrinter())
+				svc := newCycleTestService(fsys, newTestPrinter())
 				svc.binaryChecker = noBinaryCheck
 				svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
 					return &callbackInvoker{
@@ -3507,7 +3507,7 @@ func TestSessionIsolationBetweenIterationsForAllTools(t *testing.T) {
 			var executionOrder []string
 			var invokePrompts []string
 
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
 				return &callbackInvoker{
@@ -3603,7 +3603,7 @@ func TestCaptureValidateIsolationExecutorModeForAllTools(t *testing.T) {
 			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 			fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
 				return &callbackInvoker{
@@ -3672,7 +3672,7 @@ func TestSnapshotRestorationAfterTaskFileMutationForAllTools(t *testing.T) {
 					"| 2.0 | Task Two | pending | 1.0 | Nao |\n",
 			)
 
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
 				return &callbackInvoker{
@@ -3744,7 +3744,7 @@ func TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools(t *testing.T)
 			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 			fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
 				return &callbackInvoker{
@@ -3821,7 +3821,7 @@ func TestReviewerModeIsolationForAllReviewerTools(t *testing.T) {
 			// factoryCallCount distingue executor (1a chamada) do reviewer (2a chamada).
 			// O executor e criado uma vez antes do loop; o reviewer e criado dentro de invokeReviewer.
 			factoryCallCount := 0
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 				factoryCallCount++
@@ -3911,7 +3911,7 @@ func TestSharedStateBetweenIterationsMatchesRF12(t *testing.T) {
 	task1InvokeCount := 0
 	task2InvokeCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -4038,7 +4038,7 @@ Detalhes aqui.
 	var reviewerPrompts []string
 	executorCallCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -4268,7 +4268,7 @@ func TestT17_LegacyFlowWhenAgentNameEmpty(t *testing.T) {
 	registryCalled := false
 	executorCalled := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		executorCalled = true
@@ -4317,7 +4317,7 @@ func TestT18_AgentFlowResolvesAndEnrichesPrompt(t *testing.T) {
 
 	promptReceived := ""
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	// Substituir acpInvokerFactory para interceptar chamada sem ACP real.
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
@@ -4360,7 +4360,7 @@ func TestT19_AgentNotFoundReturnsActionableError(t *testing.T) {
 	const existingAgent = "agente-existente"
 	fsys, prd := setupFSWithAgent(existingAgent)
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		return &callbackInvoker{
@@ -4401,7 +4401,7 @@ func TestT16_LegacyRuntimeRoutesCopilotToCopilotInvoker(t *testing.T) {
 	legacyCalled := false
 	acpCalled := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	// injeta invokerFactory legada para capturar chamada ao copilotInvoker
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
@@ -4455,7 +4455,7 @@ func TestACPRuntimeRoutesCopilotToACPRunner(t *testing.T) {
 	acpCalled := false
 	legacyCalled := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		legacyCalled = true
@@ -4546,7 +4546,7 @@ func TestT26_ClaudeRegressionWithCodexFlags(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
 	var capturedOpts Options
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		capturedOpts = opts
@@ -4597,7 +4597,7 @@ func TestT27_LegacyPathDoesNotConsumeCodexFields(t *testing.T) {
 	acpFactoryCalled := false
 	legacyInvokerCalled := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		acpFactoryCalled = true
@@ -4650,7 +4650,7 @@ func TestT27_LegacyPathDoesNotConsumeCodexFields(t *testing.T) {
 func TestT32_TaskloopRegressionSuite(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		// Campos Codex devem ter zero-value quando não especificados
@@ -4693,7 +4693,7 @@ func TestServiceRoutesOpenCodeToACPRunner(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
 	acpInvokerCalled := false
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		acpInvokerCalled = true
@@ -4732,7 +4732,7 @@ func TestServicePropagatesAccessModeForOpenCode(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
 	var capturedOpts Options
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		capturedOpts = opts

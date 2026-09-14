@@ -68,8 +68,8 @@ require_pattern "Lint[[:space:]]*:[[:space:]]*(pass|fail|blocked|n/a)" \
 
 # Veredito do revisor (obrigatorio em modo execution)
 if grep -Eiq "Modo[[:space:]]*:[[:space:]]*execution" "$report_file"; then
-  if ! grep -Eiq "Veredito do Revisor[[:space:]]*:[[:space:]]*(APPROVED|APPROVED_WITH_REMARKS|REJECTED|BLOCKED|n/a)" "$report_file"; then
-    echo "FALTANDO: veredito do revisor (obrigatorio em modo execution)"
+  if ! grep -Eiq "Veredito do Revisor[[:space:]]*:[[:space:]]*(APPROVED|REJECTED|BLOCKED|n/a)([^A-Za-z_]|$)" "$report_file"; then
+    echo "FALTANDO: veredito do revisor aceito (APPROVED|REJECTED|BLOCKED|n/a); APPROVED_WITH_REMARKS nao encerra o ciclo (RF-33)"
     missing=1
   fi
 fi

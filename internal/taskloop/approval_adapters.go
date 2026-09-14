@@ -6,9 +6,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"iter"
+	"slices"
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/invocation"
 	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 )
 
@@ -24,17 +26,35 @@ const (
 	defaultFindingRule = "review-finding"
 )
 
-type reviewerPort struct {
-	reviewer FinalReviewer
-	evidence *airuntime.RoundEvidenceWriter
+type cutPointHistory interface {
+	CheckpointAt(round int) (approval.Checkpoint, bool)
 }
 
-func newReviewerPort(reviewer FinalReviewer, evidence *airuntime.RoundEvidenceWriter) *reviewerPort {
-	return &reviewerPort{reviewer: reviewer, evidence: evidence}
+type reviewerPort struct {
+	reviewer  FinalReviewer
+	evidence  *airuntime.RoundEvidenceWriter
+	cutPoints cutPointHistory
+}
+
+func newReviewerPort(reviewer FinalReviewer, evidence *airuntime.RoundEvidenceWriter, cutPoints cutPointHistory) *reviewerPort {
+	return &reviewerPort{reviewer: reviewer, evidence: evidence, cutPoints: cutPoints}
+}
+
+func (p *reviewerPort) priorCutPoint(round int) string {
+	if round < 2 || p.cutPoints == nil {
+		return ""
+	}
+	checkpoint, ok := p.cutPoints.CheckpointAt(round - 1)
+	if !ok {
+		return ""
+	}
+	return checkpoint.String()
 }
 
 func (p *reviewerPort) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
+	restoreEnv := airuntime.ApplyRoundReviewEnv(request.Round(), p.priorCutPoint(request.Round()))
 	result, err := p.reviewer.ReviewConsolidated(ctx, request.Target().String())
+	restoreEnv()
 	if err != nil {
 		return approval.ReviewerOutput{}, err
 	}
@@ -57,13 +77,22 @@ func (p *reviewerPort) Review(ctx context.Context, request approval.ReviewReques
 }
 
 type primedReviewerPort struct {
-	primed   FinalReviewResult
-	consumed bool
-	delegate *reviewerPort
+	primed       FinalReviewResult
+	primedTarget string
+	consumed     bool
+	delegate     *reviewerPort
 }
 
-func newPrimedReviewerPort(primed FinalReviewResult, reviewer FinalReviewer, evidence *airuntime.RoundEvidenceWriter) *primedReviewerPort {
-	return &primedReviewerPort{primed: primed, delegate: newReviewerPort(reviewer, evidence)}
+func newPrimedReviewerPort(primed FinalReviewResult, primedTarget string, reviewer FinalReviewer, evidence *airuntime.RoundEvidenceWriter, cutPoints cutPointHistory) *primedReviewerPort {
+	return &primedReviewerPort{primed: primed, primedTarget: primedTarget, delegate: newReviewerPort(reviewer, evidence, cutPoints)}
+}
+
+func primedReviewRequest(request approval.ReviewRequest, primedTarget string) (approval.ReviewRequest, error) {
+	if strings.TrimSpace(primedTarget) == "" {
+		return request, nil
+	}
+	criteria := slices.Collect(request.Criteria())
+	return approval.NewReviewRequest(request.Task(), request.Agent(), request.Round(), approval.NewReviewTarget(primedTarget), criteria)
 }
 
 func (p *primedReviewerPort) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
@@ -80,7 +109,11 @@ func (p *primedReviewerPort) Review(ctx context.Context, request approval.Review
 	if err != nil {
 		return approval.ReviewerOutput{}, err
 	}
-	criteriaMap, err := approval.ParseCriteriaMap(p.primed.RawOutput, request)
+	primedRequest, err := primedReviewRequest(request, p.primedTarget)
+	if err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+	criteriaMap, err := approval.ParseCriteriaMap(p.primed.RawOutput, primedRequest)
 	if err != nil {
 		return approval.ReviewerOutput{}, err
 	}
@@ -93,6 +126,10 @@ func translateReviewFindings(in []Finding) ([]approval.Finding, error) {
 		file := strings.TrimSpace(finding.File)
 		if file == "" {
 			file = defaultFindingFile
+		}
+
+		if finding.Line > 0 {
+			file = fmt.Sprintf("%s:%d", file, finding.Line)
 		}
 
 		translated, err := approval.NewFinding(translateSeverity(finding.Severity), file, defaultFindingRule, finding.Message)
@@ -108,6 +145,8 @@ func translateSeverity(severity Severity) approval.Severity {
 	switch severity {
 	case SeverityCritical:
 		return approval.SeverityCritical
+	case SeverityHigh:
+		return approval.SeverityHigh
 	case SeverityImportant:
 		return approval.SeverityMedium
 	default:
@@ -141,6 +180,9 @@ func newFixerPort(invoker BugfixInvoker, recorder *bugfixEvidenceRecorder) *fixe
 }
 
 func (p *fixerPort) Fix(ctx context.Context, request approval.FixRequest) error {
+	restoreDepth := invocation.NewGuard().ResetDepth()
+	defer restoreDepth()
+
 	output, err := p.invoker.InvokeBugfix(ctx, reverseFindings(request), request.Target().String())
 	if err != nil {
 		return err
@@ -179,8 +221,10 @@ func reverseVerdict(verdict approval.Verdict) ReviewVerdict {
 
 func reverseSeverity(severity approval.Severity) Severity {
 	switch severity {
-	case approval.SeverityCritical, approval.SeverityHigh:
+	case approval.SeverityCritical:
 		return SeverityCritical
+	case approval.SeverityHigh:
+		return SeverityHigh
 	case approval.SeverityMedium:
 		return SeverityImportant
 	default:
@@ -192,6 +236,7 @@ type repositoryPort struct {
 	capturer       DiffCapturer
 	workDir        string
 	contentDigests map[string]bool
+	issued         []approval.Checkpoint
 }
 
 func newRepositoryPort(capturer DiffCapturer, workDir string) *repositoryPort {
@@ -201,9 +246,21 @@ func newRepositoryPort(capturer DiffCapturer, workDir string) *repositoryPort {
 func (p *repositoryPort) Checkpoint(ctx context.Context) (approval.Checkpoint, error) {
 	out, err := NewCatalog().commandOutput(ctx, p.workDir, "git", "rev-parse", "HEAD")
 	if err == nil {
-		return approval.NewCheckpoint(strings.TrimSpace(string(out)))
+		checkpoint, newErr := approval.NewCheckpoint(strings.TrimSpace(string(out)))
+		if newErr != nil {
+			return approval.Checkpoint{}, newErr
+		}
+		p.issued = append(p.issued, checkpoint)
+		return checkpoint, nil
 	}
 	return p.contentCheckpoint(ctx)
+}
+
+func (p *repositoryPort) CheckpointAt(round int) (approval.Checkpoint, bool) {
+	if round < 1 || round > len(p.issued) {
+		return approval.Checkpoint{}, false
+	}
+	return p.issued[round-1], true
 }
 
 func (p *repositoryPort) contentCheckpoint(ctx context.Context) (approval.Checkpoint, error) {
@@ -217,6 +274,7 @@ func (p *repositoryPort) contentCheckpoint(ctx context.Context) (approval.Checkp
 		return approval.Checkpoint{}, err
 	}
 	p.contentDigests[digest] = true
+	p.issued = append(p.issued, checkpoint)
 	return checkpoint, nil
 }
 
@@ -262,6 +320,9 @@ func (p *repositoryPort) captureTarget(ctx context.Context) (approval.ReviewTarg
 	diff, err := p.capturer.CaptureDiff(ctx)
 	if err != nil {
 		return approval.ReviewTarget{}, err
+	}
+	if diff == diffUnavailable {
+		return approval.NewReviewTarget(""), nil
 	}
 	return approval.NewReviewTarget(diff), nil
 }

@@ -308,7 +308,7 @@ func TestEveryMandatoryCellHasExecutionEvidence(t *testing.T) {
 }
 
 func TestParityGateHasZeroViolationsWithDispatchProofs(t *testing.T) {
-	violations := specs.ValidateParityMatrix(mandatoryParityCells(t), mandatoryParityAgents, dispatchProofFor(t))
+	violations := specs.ValidateParityMatrix(mandatoryParityCells(t), mandatoryParityAgents, dispatchProofFor(t), repoScriptResolver(t))
 	if len(violations) != 0 {
 		t.Fatalf("RF-28 parity gate must report zero violations; got %v", violations)
 	}

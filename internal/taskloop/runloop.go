@@ -226,7 +226,7 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 		NewCatalog().emitTelemetry("final_review_verdict", string(rev.Verdict))
 	}
 
-	result, recorder, cycleErr := s.runBatchCycle(ctx, opts, criteria, rev, deps, workDir)
+	result, recorder, cycleErr := s.runBatchCycle(ctx, opts, criteria, rev, reviewInput, deps, workDir)
 	if cycleErr != nil {
 		return s.finalizeReport(report, opts, "erro no ciclo de aprovacao"),
 			fmt.Errorf("taskloop: ciclo de aprovacao: %w", cycleErr)

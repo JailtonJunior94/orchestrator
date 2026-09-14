@@ -162,7 +162,7 @@ func setupRunLoopFS(taskIDs []string) (*taskfs.FakeFileSystem, string) {
 // TestRunLoopApprovedDirect — caminho feliz: aprovacao direta do reviewer.
 func TestRunLoopApprovedDirect(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0", "2.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	deps := RunLoopDeps{
 		Selector: &stubSelector{queue: []TaskEntry{
@@ -247,7 +247,7 @@ func TestRunLoopApprovedWithRemarks(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			fsys, prd := setupRunLoopFS([]string{"1.0"})
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			results := []FinalReviewResult{
 				{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
 				{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)},
@@ -303,7 +303,7 @@ func TestRunLoopApprovedWithRemarks(t *testing.T) {
 func TestRunLoopBlocksWhenCriteriaUnionEmpty(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
 	fsys.Files[prd+"/task-1.0-t.md"] = []byte("**Status:** done\n\nSem secao de criterios.\n")
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
@@ -339,7 +339,7 @@ func TestRunLoopBlocksWhenCriteriaUnionEmpty(t *testing.T) {
 // TestRunLoopRejectedThenBugfixApproves — primeira revisao reprova, bugfix faz reviewer aprovar.
 func TestRunLoopRejectedThenBugfixApproves(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
@@ -392,7 +392,7 @@ func TestRunLoopRejectedThenBugfixApproves(t *testing.T) {
 
 func TestRunLoopRejectedRemarksWithoutConvergenceEscalates(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
 	remarks := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 2, Message: "documentar follow-up"}}
@@ -431,7 +431,7 @@ func TestRunLoopRejectedRemarksWithoutConvergenceEscalates(t *testing.T) {
 
 func TestRunLoopRejectedEscalated(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	findingAt := func(file string) []Finding {
 		return []Finding{{Severity: SeverityCritical, File: file, Line: 1, Message: "bug"}}
@@ -470,7 +470,7 @@ func TestRunLoopRejectedEscalated(t *testing.T) {
 
 func TestRunLoopRejectedNoConvergence(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
@@ -509,7 +509,7 @@ func TestRunLoopRejectedNoConvergence(t *testing.T) {
 // sem gastar rodada de correcao (RF-45, achado de review da tarefa 4.6).
 func TestRunLoopRejectedBlockedInputEscalated(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
@@ -544,7 +544,7 @@ func TestRunLoopRejectedBlockedInputEscalated(t *testing.T) {
 // TestRunLoopValidatesDeps — dependencias obrigatorias ausentes geram erro descritivo.
 func TestRunLoopValidatesDeps(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	cases := []struct {
 		name string
@@ -573,7 +573,7 @@ func TestRunLoopValidatesDeps(t *testing.T) {
 // reviewer subsequente roda e LoopReport reflete os ciclos adicionais.
 func TestRunLoopApprovedWithRemarksImplementReentersBugfix(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	findings := []Finding{
 		{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "ressalva 1"},
@@ -619,7 +619,7 @@ func TestRunLoopApprovedWithRemarksImplementReentersBugfix(t *testing.T) {
 // iteracoes; ao exaurir, escalonamento humano e sinalizado.
 func TestRunLoopApprovedWithRemarksImplementExhaustsEscalates(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	findings := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "ressalva persistente"}}
 	// Cinco resultados: 1 RunLoop inicial + 3 ciclos de bugfix sem aprovar.
@@ -660,7 +660,7 @@ func TestRunLoopApprovedWithRemarksImplementExhaustsEscalates(t *testing.T) {
 
 func TestRunLoopRemarksPersistEscalates(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	initial := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "implementar ajuste"}}
 	secondRound := []Finding{{Severity: SeveritySuggestion, File: "b.go", Line: 2, Message: "documentar follow-up"}}
@@ -719,7 +719,7 @@ func TestRunLoopRemarksPersistEscalates(t *testing.T) {
 
 func TestRunLoopRemarksImplementPreservesContext(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	first := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "ajuste 1"}}
 	second := []Finding{{Severity: SeverityImportant, File: "b.go", Line: 2, Message: "ajuste 2"}}
@@ -774,7 +774,7 @@ func TestRunLoopRemarksImplementPreservesContext(t *testing.T) {
 
 func TestRunLoopApprovedWithRemarksImplementThenBlocked(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	initial := []Finding{{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "implementar ajuste"}}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
@@ -822,7 +822,7 @@ func TestRunLoopImplementEmitsTelemetry(t *testing.T) {
 	t.Setenv("GOVERNANCE_TELEMETRY", "1")
 
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	findings := []Finding{
 		{Severity: SeverityImportant, File: "a.go", Line: 10, Message: "ressalva A"},
@@ -871,7 +871,7 @@ func TestRunLoopImplementEmitsTelemetry(t *testing.T) {
 
 func TestRunLoopBlockedReviewer(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	deps := RunLoopDeps{
 		Selector:      &stubSelector{queue: []TaskEntry{{ID: "1.0", Title: "T 1.0"}}},
@@ -902,7 +902,7 @@ func TestRunLoop_DefaultsSequential(t *testing.T) {
 	gate := &stubGate{}
 	rec := &stubRecorder{}
 	rev := &stubReviewer{}
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	deps := RunLoopDeps{
 		Selector:      sel,
@@ -977,7 +977,7 @@ func TestRunLoop_Concurrent_ExecutesBatch(t *testing.T) {
 	})
 
 	rev := &stubReviewer{}
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	deps := RunLoopDeps{
 		Selector:      sel,
@@ -1023,7 +1023,7 @@ func TestRunLoop_Concurrent_Race(t *testing.T) {
 		return nil
 	})
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	deps := RunLoopDeps{
 		Selector: sel,
 		Executor: exec,

@@ -166,6 +166,9 @@ func (c *Cycle) roundTarget(ctx context.Context, number int, previousCheckpoint 
 		if err != nil {
 			return ReviewTarget{}, fmt.Errorf("full target round %d: %w", number, err)
 		}
+		if target.Empty() {
+			return ReviewTarget{}, fmt.Errorf("%w: full target round %d carries nothing to review", ErrEmptyReviewTarget, number)
+		}
 		return target, nil
 	}
 	target, err := c.repository.Delta(ctx, previousCheckpoint)

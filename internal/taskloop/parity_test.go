@@ -45,7 +45,7 @@ func driveServiceExecuteParity(t *testing.T) parityOutcome {
 	var reviewerCalls int
 	var executorCalls int
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -88,7 +88,7 @@ func driveRunLoopParity(t *testing.T) parityOutcome {
 	t.Helper()
 
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
@@ -206,6 +206,9 @@ func newParityGitRepo(t *testing.T) string {
 	}
 	run("add", ".")
 	run("commit", "-m", "base")
+	if err := os.WriteFile(filepath.Join(dir, "base.txt"), []byte("base\nwip\n"), 0o644); err != nil {
+		t.Fatalf("dirty base.txt: %v", err)
+	}
 	return dir
 }
 

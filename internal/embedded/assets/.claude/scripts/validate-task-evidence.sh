@@ -124,10 +124,11 @@ if grep -Eiq "^#+[[:space:]]+crit(e|é)rios de aceite" "$report_file"; then
 fi
 
 if [[ "$contract_version" -eq 1 ]]; then
-  echo "AVISO: contrato de evidência v1 (histórico) — mapa 1:1 de critérios de aceite não cobrado" \
-       "neste relatório (RF-04: evidência de execução é histórica e não é reescrita). A isenção cobre" \
-       "somente a forma da evidência; o desfecho (verdict=APPROVED) continua cobrado."
-elif grep -Eiq "estado[[:space:]]*:[[:space:]]*done" "$report_file" && [[ -n "$task_path" ]]; then
+  echo "AVISO: contrato de evidência v1 (histórico) — a isenção cobre somente a forma da evidência." \
+       "RF-53: o mapa 1:1 de critérios de aceite e o desfecho (verdict=APPROVED) continuam cobrados."
+fi
+
+if grep -Eiq "estado[[:space:]]*:[[:space:]]*done" "$report_file" && [[ -n "$task_path" ]]; then
   criteria_count="$(awk '
     tolower($0) ~ /^#+[[:space:]]+(crit(e|é)rios de (sucesso|aceite)|definition of done|acceptance criteria)/ { capture=1; next }
     /^#+/ { capture=0 }

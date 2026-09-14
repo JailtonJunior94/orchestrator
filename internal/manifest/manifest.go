@@ -63,6 +63,9 @@ func (s *Store) Load(projectDir string) (*Manifest, error) {
 }
 
 func (s *Store) Save(projectDir string, m *Manifest) error {
+	if previous, err := s.Load(projectDir); err == nil && !previous.CreatedAt.IsZero() {
+		m.CreatedAt = previous.CreatedAt
+	}
 	data, err := json.MarshalIndent(m, "", "  ")
 	if err != nil {
 		return err

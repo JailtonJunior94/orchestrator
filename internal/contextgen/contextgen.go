@@ -180,6 +180,18 @@ func (g *Generator) buildDirectoryTree(projectDir string) string {
 	return strings.Join(lines, "\n")
 }
 
+var harnessGeneratedPaths = map[string]bool{
+	".ai_spec_harness.json":           true,
+	"CLAUDE.md":                       true,
+	"CODEX.md":                        true,
+	"COPILOT.md":                      true,
+	".github/skills":                  true,
+	".github/agents":                  true,
+	".github/hooks":                   true,
+	".github/settings.json":           true,
+	".github/copilot-instructions.md": true,
+}
+
 func (g *Generator) walkTree(baseDir, dir string, ignoreDirs, ignoreFiles map[string]bool, lines *[]string, maxLines int) {
 	if len(*lines) >= maxLines {
 		return
@@ -204,6 +216,9 @@ func (g *Generator) walkTree(baseDir, dir string, ignoreDirs, ignoreFiles map[st
 		}
 
 		rel, _ := filepath.Rel(baseDir, filepath.Join(dir, name))
+		if harnessGeneratedPaths[filepath.ToSlash(rel)] {
+			continue
+		}
 		*lines = append(*lines, rel)
 
 		if e.IsDir() {

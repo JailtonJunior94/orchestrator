@@ -3,8 +3,10 @@ package runtime_test
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -13,9 +15,22 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake"
 )
 
+func gitRunForCycle(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, out)
+	}
+	return strings.TrimSpace(string(out))
+}
+
 func gitWorkDirWithAgentsMDForCycle(t *testing.T) string {
 	t.Helper()
 	dir := gitInitRepoForAdapter(t)
+	gitRunForCycle(t, dir, "branch", "baseline")
+
 	if err := os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Agents\n"), 0o644); err != nil {
 		t.Fatalf("write AGENTS.md: %v", err)
 	}
@@ -26,6 +41,13 @@ func gitWorkDirWithAgentsMDForCycle(t *testing.T) string {
 	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# Review Skill\n"), 0o644); err != nil {
 		t.Fatalf("write SKILL.md: %v", err)
 	}
+
+	gitRunForCycle(t, dir, "add", ".")
+	gitRunForCycle(t, dir, "commit", "-m", "task work")
+
+	branch := gitRunForCycle(t, dir, "symbolic-ref", "--short", "HEAD")
+	gitRunForCycle(t, dir, "config", "branch."+branch+".remote", ".")
+	gitRunForCycle(t, dir, "config", "branch."+branch+".merge", "refs/heads/baseline")
 	return dir
 }
 
@@ -34,7 +56,7 @@ func writeCycleTaskFile(t *testing.T, tasksDir, name string) {
 	if err := os.MkdirAll(tasksDir, 0o755); err != nil {
 		t.Fatalf("mkdir tasksDir: %v", err)
 	}
-	content := "# Task\n\n## Critérios de Sucesso\n\n- [ ] Faz X\n"
+	content := "# Task 1.0\n\n**Status:** pending\n\n## Critérios de Sucesso\n\n- [ ] Faz X\n"
 	if err := os.WriteFile(filepath.Join(tasksDir, name), []byte(content), 0o644); err != nil {
 		t.Fatalf("write task file: %v", err)
 	}

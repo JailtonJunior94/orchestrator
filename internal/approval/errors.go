@@ -33,6 +33,7 @@ var (
 	ErrCycleAlreadyStarted   = errors.New("approval: cycle already started")
 	ErrCycleNotStarted       = errors.New("approval: cycle not started")
 	ErrCycleClosed           = errors.New("approval: cycle already closed")
+	ErrEmptyReviewTarget     = errors.New("approval: empty review target")
 )
 
 func (e InvalidMaxRoundsError) Error() string {

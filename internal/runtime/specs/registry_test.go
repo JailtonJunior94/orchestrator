@@ -3,6 +3,7 @@ package specs_test
 import (
 	"errors"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
@@ -151,6 +152,15 @@ func TestMandatoryMatrixAgentsByCanonicalPoints(t *testing.T) {
 			if cov.ScriptPath() == "" {
 				t.Errorf("agent %q point %s: empty canonical script", agent.ID(), point)
 			}
+			if cov.ArtifactPath() == "" {
+				t.Errorf("agent %q point %s: empty installed artifact", agent.ID(), point)
+			}
+			recognized, known := specs.RecognizedNativeKeys(agent.ID(), point)
+			if !known {
+				t.Errorf("agent %q point %s: no declared hook vocabulary", agent.ID(), point)
+			} else if !slices.Contains(recognized, cov.NativeKey()) {
+				t.Errorf("agent %q point %s: native key %q is not recognized by the CLI (%v)", agent.ID(), point, cov.NativeKey(), recognized)
+			}
 			if prev, seen := scriptByPoint[point]; seen {
 				if prev != cov.ScriptPath() {
 					t.Errorf("point %s: canonical script diverges between agents (%q vs %q)", point, prev, cov.ScriptPath())
@@ -174,5 +184,33 @@ func TestRegistryPreconditionsCarryRemedy(t *testing.T) {
 				t.Errorf("agent %q: precondition %d has no actionable remedy", agent.ID(), pre.Kind())
 			}
 		}
+	}
+}
+
+func TestACPSpecCatalogMatchesRegistry(t *testing.T) {
+	t.Parallel()
+
+	catalog := specs.NewCatalog().ACPSpecCatalog()
+	ids := make([]string, 0, len(catalog))
+	for id := range catalog {
+		ids = append(ids, id)
+	}
+	slices.Sort(ids)
+
+	if err := specs.NewCatalog().VerifyCatalogSync(ids); err != nil {
+		t.Fatalf("ACPSpecCatalog out of sync with registry: %v", err)
+	}
+	for id, ctor := range catalog {
+		if ctor().ID != id {
+			t.Errorf("ACPSpecCatalog[%q]().ID = %q", id, ctor().ID)
+		}
+	}
+
+	diverging := ids[:len(ids)-1]
+	if err := specs.NewCatalog().VerifyCatalogSync(diverging); !errors.Is(err, specs.ErrCatalogOutOfSync) {
+		t.Fatalf("gate did not catch artificial divergence: %v", err)
+	}
+	if err := specs.NewCatalog().VerifyCatalogSync(append(slices.Clone(ids), "gemini")); !errors.Is(err, specs.ErrCatalogOutOfSync) {
+		t.Fatalf("gate did not catch a tool absent from the registry: %v", err)
 	}
 }

@@ -70,10 +70,47 @@ func (c *Catalog) extractHardIssues(reviewOutput string) []string {
 	return issues
 }
 
-// collectGitDiff coleta git diff (staged + unstaged) no workDir.
-// Limita saída a reviewDiffMaxBytes (ou AISPEC_REVIEW_DIFF_MAX env).
-// Trunca com warning prefixado quando excede o limite.
+const reviewDiffUnavailable = "(sem diff disponível)"
+
+const envReviewBaseRef = "AISPEC_REVIEW_BASE_REF"
+
+func ResolveReviewBaseRef(ctx context.Context, workDir string) string {
+	if candidate := strings.TrimSpace(os.Getenv(envReviewBaseRef)); candidate != "" {
+		if resolved, ok := verifyGitRef(ctx, workDir, candidate); ok {
+			return resolved
+		}
+	}
+	if resolved, ok := verifyGitRef(ctx, workDir, "@{upstream}"); ok {
+		return resolved
+	}
+	if base, ok := gitOutput(ctx, workDir, "merge-base", "HEAD", "origin/HEAD"); ok {
+		return base
+	}
+	return ""
+}
+
+func verifyGitRef(ctx context.Context, workDir, ref string) (string, bool) {
+	return gitOutput(ctx, workDir, "rev-parse", "--verify", "--quiet", ref+"^{commit}")
+}
+
+func gitOutput(ctx context.Context, workDir string, args ...string) (string, bool) {
+	cmd := exec.CommandContext(ctx, "git", args...)
+	cmd.Dir = workDir
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = io.Discard
+	if err := cmd.Run(); err != nil {
+		return "", false
+	}
+	value := strings.TrimSpace(out.String())
+	return value, value != ""
+}
+
 func (c *Catalog) collectGitDiff(workDir string) string {
+	return NewCatalog().collectGitDiffContext(context.Background(), workDir)
+}
+
+func (c *Catalog) collectGitDiffContext(ctx context.Context, workDir string) string {
 	maxBytes := _reviewDiffMaxBytes
 	if envVal := os.Getenv("AISPEC_REVIEW_DIFF_MAX"); envVal != "" {
 		var n int
@@ -84,13 +121,21 @@ func (c *Catalog) collectGitDiff(workDir string) string {
 
 	var sb strings.Builder
 
-	// git diff --staged (staged changes)
+	if base := ResolveReviewBaseRef(ctx, workDir); base != "" {
+		committed, err := NewCatalog().runGitDiff(workDir, base, "HEAD")
+		if err == nil && strings.TrimSpace(committed) != "" {
+			sb.WriteString(committed)
+		}
+	}
+
 	staged, err := NewCatalog().runGitDiff(workDir, "--staged")
 	if err == nil && staged != "" {
+		if sb.Len() > 0 {
+			sb.WriteString("\n")
+		}
 		sb.WriteString(staged)
 	}
 
-	// git diff (unstaged changes)
 	unstaged, err := NewCatalog().runGitDiff(workDir)
 	if err == nil && unstaged != "" {
 		if sb.Len() > 0 {
@@ -106,7 +151,7 @@ func (c *Catalog) collectGitDiff(workDir string) string {
 	}
 
 	if result == "" {
-		result = "(sem diff disponível)"
+		result = reviewDiffUnavailable
 	}
 
 	return result
@@ -201,6 +246,10 @@ func (c *Catalog) writeRoundReviewEvidence(roundDir, content string) (string, er
 		return "", fmt.Errorf("write round review evidence at %q: %w", path, err)
 	}
 	return path, nil
+}
+
+func ApplyRoundReviewEnv(round int, priorSHA string) func() {
+	return NewCatalog().applyRoundReviewEnv(round, priorSHA)
 }
 
 func (c *Catalog) applyRoundReviewEnv(round int, priorSHA string) func() {

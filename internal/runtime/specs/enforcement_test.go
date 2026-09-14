@@ -9,11 +9,56 @@ import (
 
 func coverageFixture(t *testing.T, p specs.CanonicalPoint) specs.PointCoverage {
 	t.Helper()
-	cov, err := specs.NewCatalog().NewPointCoverage(p, "NativeKey", ".agents/scripts/hook-prereq-gate.sh")
+	keys, ok := specs.RecognizedNativeKeys("claude", p)
+	if !ok || len(keys) == 0 {
+		t.Fatalf("no recognized native key for claude point %s", p)
+	}
+	artifact, ok := specs.InstalledArtifactPath("claude", p)
+	if !ok {
+		t.Fatalf("no installed artifact for claude point %s", p)
+	}
+	cov, err := specs.NewCatalog().NewPointCoverage("claude", p, keys[0], ".agents/hooks/validate-preload.sh", artifact)
 	if err != nil {
 		t.Fatalf("NewPointCoverage(%s): %v", p, err)
 	}
 	return cov
+}
+
+func TestNewPointCoverageRejectsNativeKeyTheCliDoesNotRecognize(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		agentID   string
+		point     specs.CanonicalPoint
+		nativeKey string
+	}{
+		{"copilot", specs.PointSessionEnd, "agentStop_TYPO"},
+		{"copilot", specs.PointPreTool, "PreToolUse"},
+		{"claude", specs.PointPreTool, "preToolUse"},
+		{"opencode", specs.PointSessionEnd, "Stop"},
+		{"codex", specs.PointSessionEnd, "SessionEnd"},
+	}
+
+	for _, tc := range cases {
+		artifact, ok := specs.InstalledArtifactPath(tc.agentID, tc.point)
+		if !ok {
+			t.Fatalf("no installed artifact for %s point %s", tc.agentID, tc.point)
+		}
+		_, err := specs.NewCatalog().NewPointCoverage(tc.agentID, tc.point, tc.nativeKey, ".agents/hooks/validate-preload.sh", artifact)
+		if !errors.Is(err, specs.ErrUnrecognizedNativeKey) {
+			t.Errorf("agent %s point %s key %q: err = %v; want ErrUnrecognizedNativeKey — a key no CLI recognizes is exactly how a matrix cell goes inert",
+				tc.agentID, tc.point, tc.nativeKey, err)
+		}
+	}
+}
+
+func TestNewPointCoverageRejectsUnknownAgentVocabulary(t *testing.T) {
+	t.Parallel()
+
+	_, err := specs.NewCatalog().NewPointCoverage("gemini", specs.PointPreTool, "PreToolUse", ".agents/hooks/validate-preload.sh", ".gemini/hooks/validate-preload.sh")
+	if !errors.Is(err, specs.ErrUnrecognizedNativeKey) {
+		t.Fatalf("err = %v; want ErrUnrecognizedNativeKey for an agent with no declared hook vocabulary", err)
+	}
 }
 
 func TestNewEnforcementRejectsIncompleteCoverage(t *testing.T) {

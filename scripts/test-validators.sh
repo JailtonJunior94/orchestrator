@@ -277,6 +277,15 @@ assert_exit "referência não resolvível falha por padrão" 1 $code_d3
 # --- Casos de review-evidence (RF-20) ---
 REVIEW_VALIDATOR="$REPO_ROOT/.agents/scripts/validate-review-evidence.sh"
 
+REVIEW_TASK_FILE="$TMP_ROOT/task-review.md"
+cat > "$REVIEW_TASK_FILE" <<'TASKEOF'
+# Task de fixture para review
+
+## Critérios de Aceite
+- Critério um
+- Critério dois
+TASKEOF
+
 VALID_MAP='## Mapa de Critérios de Aceite
 - [atendido] Critério um -> go test ./... -> PASS
 - [atendido] Critério dois -> internal/foo.go:42'
@@ -288,6 +297,7 @@ cat > "$review_e" <<EOF
 # Relatório de Review
 - Veredito: APPROVED
 - Alvo revisado: diff da branch feature/x
+- Task file: $REVIEW_TASK_FILE
 $VALID_MAP
 ## Achados
 Sem achados.
@@ -358,7 +368,7 @@ map_case() {
   local name="$1" expected="$2" map_block="$3"
   local f="$TMP_BASE/review-$name.md"
   {
-    printf '# Relatório de Review\n- Veredito: APPROVED\n- Alvo revisado: diff\n'
+    printf '# Relatório de Review\n- Veredito: APPROVED\n- Alvo revisado: diff\n- Task file: %s\n' "$REVIEW_TASK_FILE"
     printf '%s\n' "$map_block"
     review_body
   } > "$f"

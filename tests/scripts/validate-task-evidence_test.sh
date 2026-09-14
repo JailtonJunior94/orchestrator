@@ -365,7 +365,7 @@ git -C "$TMPDIR_BASE" add .specs >/dev/null 2>&1
 git -C "$TMPDIR_BASE" commit -qm "test: historical evidence" >/dev/null 2>&1
 historical_exit=0
 historical_out=$(bash "$SCRIPT" "$HISTORICAL" 2>&1) || historical_exit=$?
-if [[ "$historical_exit" -eq 0 ]] && grep -qi "mapa 1:1 de critérios de aceite não cobrado" <<<"$historical_out"; then
+if [[ "$historical_exit" -eq 0 ]] && grep -qi "isenção cobre somente a forma da evidência" <<<"$historical_out"; then
   echo "PASS [TC20-v1-isenta-forma]"
   PASS=$((PASS+1))
 else

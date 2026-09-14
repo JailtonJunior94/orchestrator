@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
 var literalScanAllowlist = map[string]string{
@@ -20,7 +22,14 @@ var literalScanAllowlist = map[string]string{
 	"wrapper.go":       "legacy per-tool wrapper generation; outside the ACP path",
 }
 
-var agentIDs = []string{"claude", "codex", "copilot", "opencode"}
+func registryAgentIDs(t *testing.T) []string {
+	t.Helper()
+	ids := specs.NewCatalog().CanonicalOrder()
+	if len(ids) < 3 {
+		t.Fatalf("the registry must enumerate at least 3 agents for the literal scan to mean anything; got %v", ids)
+	}
+	return ids
+}
 
 func TestNoAgentListLiteralOutsideRegistry(t *testing.T) {
 	t.Parallel()
@@ -29,6 +38,8 @@ func TestNoAgentListLiteralOutsideRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("abs repo root: %v", err)
 	}
+
+	agentIDs := registryAgentIDs(t)
 
 	var offenders []string
 	for _, sub := range []string{"internal", "cmd"} {
@@ -43,7 +54,7 @@ func TestNoAgentListLiteralOutsideRegistry(t *testing.T) {
 			if _, ok := literalScanAllowlist[filepath.Base(path)]; ok {
 				return nil
 			}
-			if literalEnumeratesAgents(t, path) {
+			if literalEnumeratesAgents(t, path, agentIDs) {
 				rel, _ := filepath.Rel(repoRoot, path)
 				offenders = append(offenders, rel)
 			}
@@ -59,7 +70,7 @@ func TestNoAgentListLiteralOutsideRegistry(t *testing.T) {
 	}
 }
 
-func literalEnumeratesAgents(t *testing.T, path string) bool {
+func literalEnumeratesAgents(t *testing.T, path string, agentIDs []string) bool {
 	t.Helper()
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, path, nil, 0)

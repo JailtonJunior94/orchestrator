@@ -53,3 +53,52 @@ func TestExecuteLegacyRuntimeReadsMaxBugfixIterationsFromConfigFile(t *testing.T
 		t.Fatalf("erro = %v, quero ErrInvalidMaxBugfixIterations no caminho legacy (RF-35)", err)
 	}
 }
+
+func TestBuildRuntimeConfigRejectsExplicitZeroMaxBugfixIterations(t *testing.T) {
+	_, err := NewCatalog().BuildRuntimeConfig(config.Runtime{MaxBugfixIterations: 0, MaxBugfixIterationsSet: true})
+	if !errors.Is(err, ErrInvalidMaxBugfixIterations) {
+		t.Fatalf("erro = %v, quero ErrInvalidMaxBugfixIterations para zero explicito (RF-35)", err)
+	}
+}
+
+func TestBuildRuntimeConfigAcceptsAbsentMaxBugfixIterations(t *testing.T) {
+	if _, err := NewCatalog().BuildRuntimeConfig(config.Runtime{}); err != nil {
+		t.Fatalf("ausencia da chave deve cair no default, obteve %v", err)
+	}
+}
+
+func TestExecuteLegacyRuntimeRejectsZeroMaxBugfixIterationsFromConfigFile(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, ".claude"), 0o755); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".claude", "config.yaml"), []byte("max_bugfix_iterations: 0\n"), 0o644); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+
+	prd := filepath.Join(root, "prd-x")
+	if err := os.MkdirAll(prd, 0o755); err != nil {
+		t.Fatalf("setup: %v", err)
+	}
+	for _, name := range []string{"tasks.md", "prd.md", "techspec.md"} {
+		if err := os.WriteFile(filepath.Join(prd, name), []byte("# doc\n"), 0o644); err != nil {
+			t.Fatalf("setup: %v", err)
+		}
+	}
+
+	svc := NewService(fs.NewOSFileSystem(), newTestPrinter())
+	svc.binaryChecker = noBinaryCheck
+
+	err := svc.Execute(Options{
+		PRDFolder:         prd,
+		Tool:              "claude",
+		Runtime:           "legacy",
+		MaxIterations:     1,
+		Timeout:           time.Second,
+		ReportPath:        filepath.Join(prd, "report.md"),
+		AllowUnknownModel: true,
+	})
+	if !errors.Is(err, ErrInvalidMaxBugfixIterations) {
+		t.Fatalf("erro = %v: max_bugfix_iterations: 0 no YAML nao pode ser ignorado silenciosamente (RF-35)", err)
+	}
+}

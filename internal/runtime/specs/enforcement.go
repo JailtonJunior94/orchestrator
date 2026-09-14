@@ -27,6 +27,8 @@ var ErrIncompleteCoverage = errors.New("enforcement does not cover the three can
 
 var ErrInvalidPrecondition = errors.New("invalid enforcement precondition")
 
+var ErrUnrecognizedNativeKey = errors.New("native key not recognized by the CLI")
+
 type PreconditionState int
 
 const (
@@ -45,9 +47,11 @@ const (
 )
 
 type PointCoverage struct {
-	point      CanonicalPoint
-	nativeKey  string
-	scriptPath string
+	agentID      string
+	point        CanonicalPoint
+	nativeKey    string
+	scriptPath   string
+	artifactPath string
 }
 
 type EnforcementPrecondition struct {
@@ -80,9 +84,12 @@ func (c *Catalog) ParseCanonicalPoint(s string) (CanonicalPoint, error) {
 	}
 }
 
-func (c *Catalog) NewPointCoverage(point CanonicalPoint, nativeKey, scriptPath string) (PointCoverage, error) {
+func (c *Catalog) NewPointCoverage(agentID string, point CanonicalPoint, nativeKey, scriptPath, artifactPath string) (PointCoverage, error) {
 	if !point.Valid() {
 		return PointCoverage{}, fmt.Errorf("%w: %d", ErrUnknownCanonicalPoint, int(point))
+	}
+	if strings.TrimSpace(agentID) == "" {
+		return PointCoverage{}, fmt.Errorf("%w: point %s missing agent id", ErrIncompleteCoverage, point)
 	}
 	if strings.TrimSpace(nativeKey) == "" {
 		return PointCoverage{}, fmt.Errorf("%w: point %s missing native key", ErrIncompleteCoverage, point)
@@ -90,7 +97,17 @@ func (c *Catalog) NewPointCoverage(point CanonicalPoint, nativeKey, scriptPath s
 	if strings.TrimSpace(scriptPath) == "" {
 		return PointCoverage{}, fmt.Errorf("%w: point %s missing canonical script", ErrIncompleteCoverage, point)
 	}
-	return PointCoverage{point: point, nativeKey: nativeKey, scriptPath: scriptPath}, nil
+	if strings.TrimSpace(artifactPath) == "" {
+		return PointCoverage{}, fmt.Errorf("%w: point %s missing installed artifact", ErrIncompleteCoverage, point)
+	}
+	recognized, known := RecognizedNativeKeys(agentID, point)
+	if !known {
+		return PointCoverage{}, fmt.Errorf("%w: agent %q has no declared hook vocabulary for point %s", ErrUnrecognizedNativeKey, agentID, point)
+	}
+	if !slices.Contains(recognized, nativeKey) {
+		return PointCoverage{}, fmt.Errorf("%w: agent %q point %s declares %q; %s recognizes only %v", ErrUnrecognizedNativeKey, agentID, point, nativeKey, agentID, recognized)
+	}
+	return PointCoverage{agentID: agentID, point: point, nativeKey: nativeKey, scriptPath: scriptPath, artifactPath: artifactPath}, nil
 }
 
 func (c *Catalog) NewEnforcementPrecondition(kind PreconditionKind, remedy string, requiresExec bool) (EnforcementPrecondition, error) {
@@ -109,8 +126,8 @@ func (c *Catalog) NewEnforcement(coverage []PointCoverage, preconditions ...Enfo
 		if !cov.point.Valid() {
 			return Enforcement{}, fmt.Errorf("%w: invalid point", ErrIncompleteCoverage)
 		}
-		if cov.nativeKey == "" || cov.scriptPath == "" {
-			return Enforcement{}, fmt.Errorf("%w: point %s missing native key or canonical script", ErrIncompleteCoverage, cov.point)
+		if cov.nativeKey == "" || cov.scriptPath == "" || cov.artifactPath == "" {
+			return Enforcement{}, fmt.Errorf("%w: point %s missing native key, canonical script or installed artifact", ErrIncompleteCoverage, cov.point)
 		}
 		if seen[cov.point] {
 			return Enforcement{}, fmt.Errorf("%w: duplicate point %s", ErrIncompleteCoverage, cov.point)
@@ -188,6 +205,10 @@ func (c PointCoverage) Point() CanonicalPoint { return c.point }
 func (c PointCoverage) NativeKey() string { return c.nativeKey }
 
 func (c PointCoverage) ScriptPath() string { return c.scriptPath }
+
+func (c PointCoverage) ArtifactPath() string { return c.artifactPath }
+
+func (c PointCoverage) AgentID() string { return c.agentID }
 
 func (p EnforcementPrecondition) Kind() PreconditionKind { return p.kind }
 

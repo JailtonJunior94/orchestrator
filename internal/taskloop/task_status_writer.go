@@ -39,10 +39,10 @@ func (c *Catalog) forceTaskStatus(prdFolder, taskFile, taskID, status string, fs
 func (c *Catalog) writeTaskFileStatus(taskFile, status string, fsys fs.FileSystem) error {
 	content, err := fsys.ReadFile(taskFile)
 	if err != nil {
-		return nil
+		return fmt.Errorf("erro ao forcar status %q em %s: %w", status, taskFile, err)
 	}
 	if !statusFieldRe.Match(content) {
-		return nil
+		return fmt.Errorf("erro ao forcar status %q em %s: campo de status ausente", status, taskFile)
 	}
 	updated := statusFieldRe.ReplaceAll(content, []byte("**Status:** "+status))
 	if err := fsys.WriteFile(taskFile, updated); err != nil {
@@ -52,9 +52,12 @@ func (c *Catalog) writeTaskFileStatus(taskFile, status string, fsys fs.FileSyste
 }
 
 func (c *Catalog) writeTasksTableStatus(tasksFile, taskID, status string, fsys fs.FileSystem) error {
+	if strings.TrimSpace(taskID) == "" {
+		return nil
+	}
 	content, err := fsys.ReadFile(tasksFile)
 	if err != nil {
-		return nil
+		return fmt.Errorf("erro ao forcar status %q da task %s em %s: %w", status, taskID, tasksFile, err)
 	}
 
 	lines := strings.Split(string(content), "\n")
@@ -82,7 +85,7 @@ func (c *Catalog) writeTasksTableStatus(tasksFile, taskID, status string, fsys f
 		break
 	}
 	if !changed {
-		return nil
+		return fmt.Errorf("erro ao forcar status %q da task %s em %s: linha da task nao encontrada", status, taskID, tasksFile)
 	}
 
 	if err := fsys.WriteFile(tasksFile, []byte(strings.Join(lines, "\n"))); err != nil {

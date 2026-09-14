@@ -446,11 +446,14 @@ citado.
   `stop` → `agentStop` declarado em "Breaking Changes": **instalações antigas são reparadas**, não
   só as novas ficam corretas.
 - **evidence (estado da árvore, não mudança de código):** o **selo de evidência** está presente em
-  **9 dos 28** resultados de execução do repositório — `ls .specs/*/*_execution_result.json` → 28;
-  `grep -l commit_patch_sha256` → 9 (tarefas 1.0, 2.0, 3.0, 4.1–4.5 e 6.0, todas deste PRD). Os 19
-  restantes trazem apenas `base_sha` + `patch_sha256`, sem `commit_sha`/`commit_patch_sha256`.
+  **27 dos 28** resultados de execução do repositório — `ls .specs/*/*_execution_result.json` → 28;
+  `grep -l commit_patch_sha256 .specs/*/*_execution_result.json | wc -l` → 27. O único sem selo é
+  `.specs/prd-harness-quatro-clis-loop-aprovacao/9.0_execution_result.json`, que está em
+  `status: blocked` e por isso não é selável (`SealEvidence` recusa status diferente de `done`).
   Declarado com a ressalva: **nenhum gate emite esse número** — é propriedade observada da árvore,
-  não saída de suíte.
+  não saída de suíte. Correção de uma afirmação anterior desta mesma seção, que dizia "9 dos 28":
+  o número estava desatualizado porque o commit `15c143b` selou os demais depois da redação.
+  Os dois comandos acima foram reexecutados e conferem com o número declarado (RF-56).
 - **specs (evidência, não mudança de código):** **evidência fabricada foi removida dos relatórios de
   execução.** A concentração está em
   `.specs/prd-harness-quatro-clis-loop-aprovacao/9.0_execution_report.md`: saiu o bloco inteiro de
@@ -500,6 +503,74 @@ citado.
   task 6.0).
 
 ### Fixes
+
+- **evidence (gate estruturalmente insatisfazível):** `Orchestrator.ValidateExecutionEvidence`
+  (`internal/taskloop/orchestrator.go`) deixa de recomputar a prova física contra um snapshot da
+  árvore de trabalho capturado **no instante da validação**. Quando o resultado está selado
+  (`commit_sha` + `commit_patch_sha256`), a validação passa a recompor o patch a partir do **ponto
+  de corte git em que a tarefa foi executada** (`VerifySealedEvidence`, range `base_sha..commit_sha`),
+  e o artefato de patch é conferido pelo digest registrado no fechamento. Efeito medido: a varredura
+  nos 28 relatórios versionados saiu de **PASS=0 / FAIL=28** para **PASS=17 / FAIL=11**, e as 11
+  reprovações remanescentes são substantivas (veredito `APPROVED_WITH_REMARKS`), não estruturais.
+  O caminho não selado preserva o comportamento anterior byte a byte.
+  Verificação adversarial: adulterar `commit_patch_sha256`, `base_sha`, `commit_sha` ou
+  `patch_sha256` faz o gate reprovar nos quatro casos.
+- **evidence (determinismo do selo):** a verificação de um resultado selado passa a usar sempre o
+  mesmo conjunto de exclusões usado na selagem, derivado do próprio resultado
+  (`<prd-dir>/<task_id>_execution_result.json`), em vez de herdar as exclusões operacionais do
+  chamador. Antes, `validate-result --verify-physical` acrescentava o relatório Markdown ao conjunto
+  de exclusões, o que mudava o patch recomposto e fazia todo selo legítimo divergir — um selo só é
+  re-auditável se o verificador não puder alterar o recorte.
+- **evidence (RF-53, escape de compatibilidade):** o escape de contrato v1 em
+  `validate-task-evidence.sh` deixa de cobrir o **mapa 1:1 de critérios de aceite**. RF-53 diz
+  explicitamente que a isenção legada não cobre o mapa 1:1; na prática os 28 relatórios do
+  repositório (100% do universo, nenhum com marcador `<!-- evidence-contract: v2 -->`) passavam com
+  o gate central de RF-47/RF-51 inerte. A isenção v1 agora cobre somente a forma da evidência.
+  Nenhum mapa foi inventado: os 28 relatórios já declaravam `## Critérios de Aceite` com task file
+  resolvível, e nenhum passou a reprovar por mapa incompleto. Verificação adversarial: remover uma
+  linha `-> comprovado:` de um relatório com 9 critérios faz o gate reprovar com
+  `critérios de aceite comprovados (8) < definidos na task (9)`.
+- **evidence (RF-33/RF-36, `blocked` como escape):** `validate-session-end.sh` filtrava apenas
+  `in_progress` e `done`, de modo que mover uma tarefa para `blocked` a removia do gate de
+  encerramento. Uma tarefa `blocked` **com relatório de execução escrito** é materialmente ativa e
+  passa a ter o desfecho cobrado; uma tarefa `blocked` sem relatório continua fora do gate, porque
+  não há nada a cobrar. Efeito medido **neste próprio repositório**: o gate saiu de `exit 0` para
+  `exit 2`, apontando as 11 tarefas `blocked` que têm relatório com veredito
+  `APPROVED_WITH_REMARKS`. Esse é o comportamento correto e não foi enfraquecido para ficar verde.
+
+- **evidence (RF-52, paridade validador↔Ciclo):** a extração de veredito dos validadores passa a usar
+  a mesma semântica do Ciclo de Aprovação. `reviewverdict.ParseDocument` (novo) ignora vereditos
+  declarados dentro de cercas de código e devolve `BLOCKED` quando há vereditos contraditórios —
+  exatamente o que `approval.Translator` já fazia. `internal/evidence` usava `ParseText`, que pegava
+  a primeira declaração e não enxergava cercas. Efeito medido nos três vetores perigosos (validador
+  aprovava, Ciclo recusava): veredito só dentro de cerca `APPROVED → sem veredito canônico`;
+  vereditos contraditórios `APPROVED → BLOCKED`; veredito fora da cerca vencendo o de dentro
+  `APPROVED → REJECTED`. Travado por `TestReviewVerdictExtractionMatchesApprovalCycle`, que confronta
+  as duas implementações em 12 casos.
+- **evidence (RF-51, mapa 1:1 inverificável):** `validate-review-evidence.sh` e `internal/evidence`
+  não liam a task file, então não conseguiam confrontar completude — um review cobrindo 1 de 2
+  critérios passava nos dois. O relatório de review passa a declarar `- Task file: <caminho>`
+  (campo novo, obrigatório) e os dois validadores confrontam a contagem de linhas do mapa contra os
+  critérios da task, fail-closed quando a task não é resolvível. Paridade Go↔shell provada nos
+  quatro casos por `TestValidateReview_ConfrontaCompletudeContraTaskFile`.
+- **governance (escapes sem auditoria):** `GOVERNANCE_PRELOAD_CONFIRMED=1` e
+  `GOVERNANCE_PRELOAD_MODE=warn` continuam desligando o gate pré-ferramenta, mas agora deixam
+  registro: cada uso anexa `timestamp / motivo / alvo / ferramenta / usuário` em
+  `.aispec/governance-escapes.log` (configurável por `GOVERNANCE_ESCAPE_LOG`) e emite `AUDITORIA:`
+  em stderr. O escape deixa de ser silencioso.
+- **governance (cobertura de extensões):** o gate pré-ferramenta cobria apenas
+  `.go .py .ts .js .tsx .jsx .cs`; `.sh`, `.rb`, `.java` e `.sql` saíam com `exit 0` — inclusive os
+  próprios hooks e validadores shell deste repositório, que ficavam fora do gate que eles mesmos
+  implementam. A lista passa a cobrir shell, Ruby, Java, SQL, Rust, Kotlin, Swift, PHP, C/C++,
+  Scala, Elixir, Perl, Lua e as variantes de módulo JS/TS. Artefato `.md` continua fora.
+- **ci (job que falhava sempre):** `scripts/test-sdd-evals.sh` exigia
+  `.specs/prd-sdd-robusto/sdd-state.json`, diretório removido no commit `91f8cb9 (chore) remove
+  docs`. O script nunca foi atualizado, então o job `sdd-evals` do workflow de testes falhava duro
+  em toda execução, nos três sistemas operacionais da matriz. O bloco de estado SDD passa a ter
+  escopo declarado (`SDD_EVALS_PRD_DIR`) e é ignorado quando o diretório não existe, com aviso
+  explícito em stderr; o corpus adversarial — o valor real do job — continua rodando
+  incondicionalmente (21 fixtures, 20 rejeitadas, 1 controle aceito). Quando o escopo existe, o gate
+  continua reprovando checkpoint legado e estado ausente.
 
 - **events:** o OpenCode passa a ter **tabela de alias própria** em `normalization-rules.yaml`,
   derivada de `MUTATING_TOOLS` do próprio plugin de governança (`bash`, `write`, `edit`,
@@ -566,26 +637,35 @@ entrega**. O universo integralmente isento não é cadeia verificada e não pode
 aprovação — é o próprio validador quem diz isso, e é por isso que ele sai 1 em vez de 0.
 O gate passa a verificar de verdade a partir da **primeira tarefa executada sob o contrato v2**.
 
-**2. Nove relatórios de execução reprovam no validador canônico por veredito inválido.**
+**2. Onze relatórios de execução reprovam no validador canônico por veredito inválido.**
 
-`bash .agents/scripts/validate-task-evidence.sh <relatório>` reprova **1.0, 4.6, 4.7, 6.0, 7.0,
-8.0, 9.0, 10.0 e 11.0** com:
+Varredura completa nos **28** relatórios versionados
+(`for f in $(git ls-files | grep _execution_report.md); do bash .agents/scripts/validate-task-evidence.sh "$f"; done`)
+com a árvore limpa: **17 aprovam, 11 reprovam**. Os 11 são **1.0, 4.6, 4.7, 6.0, 7.0, 8.0, 9.0,
+10.0 e 11.0** do PRD `prd-harness-quatro-clis-loop-aprovacao` e **7.0 e 8.0** do PRD
+`prd-memoria-duravel-agentes`, todos com:
 
 ```
 FALTANDO: veredito do reviewer não encerra o ciclo de aprovação: APPROVED_WITH_REMARKS
 (RF-53: a isenção histórica cobre a forma da evidência, nunca o desfecho; somente APPROVED encerra).
 ```
 
-Esses nove encerram com `APPROVED_WITH_REMARKS` — critério que o PRD desta release passa a declarar
+Esses onze encerram com `APPROVED_WITH_REMARKS` — critério que o PRD desta release passa a declarar
 **inválido** para fechar tarefa (ver "Breaking Changes"). A regra nova reprova retroativamente os
 relatórios produzidos sob a regra velha, **inclusive o 11.0**, que é o relatório que declara esta
 própria entrega. É dívida conhecida e assumida, não mascarada: nenhum relatório foi reescrito para
-passar no gate.
+passar no gate. O `11.0` acumula um segundo defeito real: o critério
+`changelog-breaking-changes-section-complete` não referencia evidência declarada.
 
-Observação adicional, pela mesma execução: na árvore de trabalho atual (não commitada) **os 18
-relatórios** também reprovam em `prova fisica invalida: snapshot fisico canonico invalido`, porque
-o estado final recomputado diverge do declarado enquanto a árvore está suja. Isso é ortogonal ao
-veredito e não é a mesma dívida.
+**Correção de uma afirmação falsa publicada antes nesta mesma seção.** A redação anterior dizia que
+os relatórios reprovavam também em `prova fisica invalida` "porque o estado final recomputado
+diverge do declarado **enquanto a árvore está suja**". Isso era **falso e foi verificado como
+falso**: com `git status --porcelain` vazio e tudo commitado, os 27 relatórios selados continuavam
+reprovando. A causa real era um defeito estrutural do próprio gate, corrigido nesta entrega —
+`Orchestrator.ValidateExecutionEvidence` recomputava a prova física contra um snapshot da árvore
+capturado **no instante da validação**, de modo que qualquer avanço do `HEAD` posterior à execução
+da tarefa tornava a comparação impossível de fechar. O gate era **estruturalmente insatisfazível**,
+não uma consequência de sujeira na árvore. Ver a entrada correspondente em "Bug Fixes".
 
 **3. O Ciclo de Aprovação nunca foi executado neste repositório.**
 

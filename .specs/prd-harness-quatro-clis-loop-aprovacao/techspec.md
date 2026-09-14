@@ -208,7 +208,7 @@ Cada consumidor converte `[]string` → `[]approval.AcceptanceCriterion` via `ap
 |---|---|---|
 | `Service.Execute` | `internal/taskloop/taskloop.go:480` (`taskFile` já em escopo) | `taskcriteria.Extract` do **task file da task corrente** (critérios por task — caminho canônico, migra primeiro) |
 | `ACPRunner` | `internal/runtime/runner.go:216-228` | `taskcriteria.Extract(filepath.Join(job.TasksDir, job.TaskFileName))` — ambos os campos já existem no `Job` (usados em `internal/runtime/runner_autoreview.go:173-174`). Com `TaskFileName == ""` (uso interativo de `--auto-review` sem contexto de task) mantém-se o `runAutoReview` one-shot atual, sem `Cycle` — zero regressão |
-| `RunLoop` (implementado e coberto por teste; **sem chamador de produção hoje** — ver Riscos Conhecidos) | `internal/taskloop/runloop.go:207` (`case VerdictRejected`) | **União** dos critérios de todos os task files de `report.TasksCompleted` (RunLoop já resolve cada task file via `NewCatalog().ResolveTaskFile`), deduplicada por descrição. União vazia (defensivo; os gates da F2a tornam-na não-vazia) → o lote mantém o caminho legado `FinalReviewer` sem `Cycle` |
+| `RunLoop` (implementado, coberto por teste e **em produção**: `internal/taskloop/runloop.go` chama `runBatchCycle` incondicionalmente após a revisão consolidada, para qualquer veredito) | `internal/taskloop/runloop.go` (`s.runBatchCycle(...)` após o `switch rev.Verdict`) | **União** dos critérios de todos os task files de `report.TasksCompleted` (RunLoop já resolve cada task file via `NewCatalog().ResolveTaskFile`), deduplicada por descrição. União vazia (defensivo; os gates da F2a tornam-na não-vazia) → o lote mantém o caminho legado `FinalReviewer` sem `Cycle` |
 
 #### D-B1-corolário — Como o `MapaDeCriterios` alcança `Completo()` no estágio de paridade
 
@@ -297,11 +297,13 @@ reais nos testes, mas os testes unitários de `RunLoop` usam `setupRunLoopFS` so
 
 Resolução, alinhada ao PRD ("o agregado do Ciclo não depende de protocolo, CLI ou filesystem"):
 `repositoryPort.Checkpoint` passa a **cair em fallback** quando `git rev-parse HEAD` falha —
-`approval.NewCheckpoint(hex(sha256(diff capturado)))`, um checkpoint de conteúdo. `Delta` já ignora o
-valor do checkpoint (`Delta(ctx, _ approval.Checkpoint)` re-captura o alvo), então o fallback não muda
-o comportamento de revisão por delta no estágio de paridade; `Service.Execute` continua obtendo a SHA
-git quando o repositório existe (zero regressão em 4.4). A refinação da revisão por delta no caminho
-consolidado (`AI_REVIEW_PRIOR_SHA` real) permanece fora do estágio de paridade.
+`approval.NewCheckpoint(hex(sha256(diff capturado)))`, um checkpoint de conteúdo. `Delta` **usa** o
+valor do checkpoint (`repositoryPort.Delta(ctx, since)`): quando `since` é um digest de conteúdo
+emitido pelo fallback, a comparação é por digest (`contentDelta`); quando é uma SHA git verificável,
+o delta é `git diff --binary <since>`; fora desses casos recai na captura integral. `Service.Execute`
+continua obtendo a SHA git quando o repositório existe (zero regressão em 4.4). `AI_REVIEW_PRIOR_SHA`
+é exportado por rodada N>1 nos dois caminhos (`internal/runtime/runner_autoreview.go` e
+`internal/taskloop/approval_adapters.go`, via `airuntime.ApplyRoundReviewEnv`), cumprindo RF-39.
 
 #### D-B3-G2 — RF-37 (não-convergência) vs. fixtures de escalonamento
 
@@ -577,7 +579,7 @@ acionado sem depender de ler o log do plugin.
 | Risco | Mitigação |
 |---|---|
 | **O mapa 1:1 não existe como dado.** O template de artefato de revisão não tem seção para ele e o validador não o cobra. Ligar o critério estrito sem isso transforma falso positivo em **falso negativo total** — todo ciclo terminaria bloqueado | Pré-requisito bloqueante da fase do Ciclo: seção no template, asserção no validador e propagação aos espelhos **antes** de ligar o critério estrito |
-| **O caminho de produção não é o que parecia.** O loop existente só é alcançável por uma função sem chamador de produção; o caminho real usa revisão one-shot | Os dois caminhos de produção — `Service.Execute` (via `cmd/ai_spec_harness/task_loop.go`) e `ACPRunner` — migram para o agregado, e o `RunLoop` migra junto para não divergir deles. Sem isso a paridade declarada seria falsa |
+| **O caminho de produção não é o que parecia.** (Risco resolvido: hoje os três caminhos — `Service.Execute`, `RunLoop` e `ACPRunner` — conduzem o `Cycle`.) | Os dois caminhos de produção — `Service.Execute` (via `cmd/ai_spec_harness/task_loop.go`) e `ACPRunner` — migram para o agregado, e o `RunLoop` migra junto para não divergir deles. Sem isso a paridade declarada seria falsa |
 | **Critérios de aceite não chegam ao caminho ACP.** A extração vive numa dependência do caminho legado | O campo de nome do arquivo de tarefa já existe no job e é o gancho natural para o plumbing |
 | Regeneração de golden files pode congelar regressão junto | Revisão manual do diff arquivo a arquivo; a regeneração automática é um cheque em branco |
 | Bug pré-existente na geração de governança emite a tabela de capacidades ignorando os agentes selecionados, e afirma que o Copilot não tem hooks nativos — hoje comprovadamente falso | Corrigido antes da regeneração, para que os golden files passem a refletir a verdade |

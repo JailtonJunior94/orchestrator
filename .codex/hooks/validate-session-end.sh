@@ -32,12 +32,19 @@ for tasks_file in "$REPO_ROOT/$tasks_root/${prd_prefix}"*/tasks.md; do
 
   while IFS=$'\t' read -r task_id task_status; do
     [[ -z "$task_id" ]] && continue
-    if [[ "$task_status" == "done" ]]; then
-      label="tarefa fechada como done"
-    else
-      label="tarefa ativa"
-    fi
     report="$prd_dir/${task_id}_execution_report.md"
+    case "$task_status" in
+      done)
+        label="tarefa fechada como done"
+        ;;
+      blocked)
+        [[ -f "$report" ]] || continue
+        label="tarefa blocked com relatorio de execucao escrito"
+        ;;
+      *)
+        label="tarefa ativa"
+        ;;
+    esac
     if [[ ! -f "$report" ]]; then
       echo "[session-end] $label sem relatorio de execucao: $task_id ($tasks_file)" >&2
       reasons+=("$label sem relatorio de execucao: $task_id ($tasks_file)")
@@ -56,7 +63,7 @@ for tasks_file in "$REPO_ROOT/$tasks_root/${prd_prefix}"*/tasks.md; do
       gsub(/^[ \t]+|[ \t]+$/, "", id)
       gsub(/^[ \t]+|[ \t]+$/, "", status)
     }
-    id ~ /^[0-9]+\.[0-9]+$/ && (status == "in_progress" || status == "done") { print id "\t" status }
+    id ~ /^[0-9]+\.[0-9]+$/ && (status == "in_progress" || status == "done" || status == "blocked") { print id "\t" status }
   ' "$tasks_file")
 done
 shopt -u nullglob

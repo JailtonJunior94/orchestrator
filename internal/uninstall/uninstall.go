@@ -98,6 +98,8 @@ var governanceRootDirs = []string{
 	"scripts",
 }
 
+var claudeSettingsRelPath = filepath.Join(".claude", "settings.local.json")
+
 var reverseMergeFiles = []string{
 	filepath.Join(".github", "settings.json"),
 	specs.OpenCodeConfigFileName,
@@ -193,6 +195,8 @@ func (s *Service) reverseMerge(absDir, rel string, rm *remover) {
 		s.reverseMergeOpenCodeConfig(path, rm)
 	case codexConfigRelPath:
 		s.reverseMergeCodexConfig(path, rm)
+	case claudeSettingsRelPath:
+		s.reverseMergeClaudeSettings(path, rm)
 	default:
 		if s.reverseMergeUserContentMarkdown(path, rm) {
 			return
@@ -286,6 +290,85 @@ func (s *Service) reverseMergeCopilotSettings(path string, rm *remover) {
 		return
 	}
 	s.persistOrRemove(path, doc, rm)
+}
+
+func (s *Service) reverseMergeClaudeSettings(path string, rm *remover) {
+	raw, rawOK := s.readRawFile(path)
+	doc, ok := s.readJSONObject(path)
+	if !ok {
+		return
+	}
+	hooks, hasHooks := doc["hooks"].(map[string]any)
+	if !hasHooks {
+		return
+	}
+	removed := false
+	for event, rawEntries := range hooks {
+		entries, isList := rawEntries.([]any)
+		if !isList {
+			continue
+		}
+		kept := make([]any, 0, len(entries))
+		changedEvent := false
+		for _, entry := range entries {
+			stripped, changed := s.stripClaudeGovernanceHooks(entry)
+			if changed {
+				changedEvent = true
+				removed = true
+			}
+			if stripped == nil {
+				continue
+			}
+			kept = append(kept, stripped)
+		}
+		if !changedEvent {
+			continue
+		}
+		if len(kept) == 0 {
+			delete(hooks, event)
+			continue
+		}
+		hooks[event] = kept
+	}
+	if !removed {
+		return
+	}
+	if len(hooks) == 0 {
+		delete(doc, "hooks")
+	} else {
+		doc["hooks"] = hooks
+	}
+	if rawOK && s.persistPreservingLayout(path, raw, doc, "hooks", hooks, rm) {
+		return
+	}
+	s.persistOrRemove(path, doc, rm)
+}
+
+func (s *Service) stripClaudeGovernanceHooks(entry any) (any, bool) {
+	matcher, ok := entry.(map[string]any)
+	if !ok {
+		return entry, false
+	}
+	nested, isList := matcher["hooks"].([]any)
+	if !isList {
+		return entry, false
+	}
+	kept := make([]any, 0, len(nested))
+	for _, hook := range nested {
+		command, _ := hook.(map[string]any)
+		if text, isText := command["command"].(string); isText && strings.Contains(text, ".claude/hooks/") {
+			continue
+		}
+		kept = append(kept, hook)
+	}
+	if len(kept) == len(nested) {
+		return entry, false
+	}
+	if len(kept) == 0 {
+		return nil, true
+	}
+	matcher["hooks"] = kept
+	return matcher, true
 }
 
 func (s *Service) isCopilotGovernanceHook(entry any) bool {

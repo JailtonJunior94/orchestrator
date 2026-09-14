@@ -1,6 +1,8 @@
 package specs_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -8,6 +10,16 @@ import (
 )
 
 var mandatoryParityAgents = []string{"claude", "codex", "copilot", "opencode"}
+
+func repoScriptResolver(t *testing.T) specs.ScriptResolver {
+	t.Helper()
+	root := repoRoot(t)
+	return func(relPath string) ([]byte, error) {
+		return os.ReadFile(filepath.Join(root, filepath.FromSlash(relPath)))
+	}
+}
+
+func allCellsDispatchProven(string, specs.CanonicalPoint) bool { return true }
 
 func mandatoryParityCells(t *testing.T) []specs.AgentEnforcement {
 	t.Helper()
@@ -33,7 +45,7 @@ func TestParityGateFailsWhenAgentLosesCanonicalPoint(t *testing.T) {
 		{Agent: "opencode", Enforcement: mustEnforcementFor(t, "opencode")},
 	}
 
-	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, nil)
+	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, nil, repoScriptResolver(t))
 	found := false
 	for _, v := range violations {
 		if v.Agent == "codex" && v.Reason == "invalid enforcement" {
@@ -61,7 +73,7 @@ func TestParityGateFailsWhenValidatorDiverges(t *testing.T) {
 	divergentCoverage := make([]specs.PointCoverage, 0, 3)
 	for _, cov := range codex.Enforcement().Coverage() {
 		if cov.Point() == specs.PointPreTool {
-			mutated, mkErr := catalog.NewPointCoverage(specs.PointPreTool, cov.NativeKey(), ".agents/scripts/some-other-validator.sh")
+			mutated, mkErr := catalog.NewPointCoverage("codex", specs.PointPreTool, cov.NativeKey(), ".agents/hooks/some-other-validator.sh", cov.ArtifactPath())
 			if mkErr != nil {
 				t.Fatalf("NewPointCoverage: %v", mkErr)
 			}
@@ -82,9 +94,7 @@ func TestParityGateFailsWhenValidatorDiverges(t *testing.T) {
 		{Agent: "opencode", Enforcement: mustEnforcementFor(t, "opencode")},
 	}
 
-	allCellsProven := func(string, specs.CanonicalPoint) bool { return true }
-
-	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, allCellsProven)
+	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, allCellsDispatchProven, repoScriptResolver(t))
 	found := false
 	for _, v := range violations {
 		if v.Agent == "codex" && v.Point == specs.PointPreTool && strings.Contains(v.Reason, "validator diverges") {
@@ -101,11 +111,104 @@ func TestParityGateFailsWhenValidatorDiverges(t *testing.T) {
 	}
 }
 
+func replaceCoverage(t *testing.T, agentID string, point specs.CanonicalPoint, scriptPath, artifactPath string) specs.Enforcement {
+	t.Helper()
+	catalog := specs.NewCatalog()
+	agent, err := catalog.AgentByID(agentID)
+	if err != nil {
+		t.Fatalf("AgentByID(%s): %v", agentID, err)
+	}
+	coverage := make([]specs.PointCoverage, 0, 3)
+	for _, cov := range agent.Enforcement().Coverage() {
+		if cov.Point() != point {
+			coverage = append(coverage, cov)
+			continue
+		}
+		mutated, mkErr := catalog.NewPointCoverage(agentID, point, cov.NativeKey(), scriptPath, artifactPath)
+		if mkErr != nil {
+			t.Fatalf("NewPointCoverage: %v", mkErr)
+		}
+		coverage = append(coverage, mutated)
+	}
+	enf, err := catalog.NewEnforcement(coverage, agent.Enforcement().Preconditions()...)
+	if err != nil {
+		t.Fatalf("NewEnforcement: %v", err)
+	}
+	return enf
+}
+
+func TestParityGateFailsWhenDeclaredValidatorDoesNotExistOnDisk(t *testing.T) {
+	t.Parallel()
+
+	const ghost = ".agents/scripts/NOPE.sh"
+	cells := make([]specs.AgentEnforcement, 0, len(mandatoryParityAgents))
+	for _, id := range mandatoryParityAgents {
+		cells = append(cells, specs.AgentEnforcement{
+			Agent:       id,
+			Enforcement: replaceCoverage(t, id, specs.PointPreTool, ghost, mustArtifactPath(t, id, specs.PointPreTool)),
+		})
+	}
+
+	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, allCellsDispatchProven, repoScriptResolver(t))
+	flagged := map[string]bool{}
+	for _, v := range violations {
+		if v.Point == specs.PointPreTool && strings.Contains(v.Reason, "does not exist on disk") {
+			flagged[v.Agent] = true
+		}
+	}
+	for _, id := range mandatoryParityAgents {
+		if !flagged[id] {
+			t.Fatalf("agent %q: a canonical validator path that exists nowhere on disk must be a violation, not a trivially satisfied string comparison; got %v", id, violations)
+		}
+	}
+}
+
+func TestParityGateFailsWhenArtifactNeitherMirrorsNorExecutesCanonical(t *testing.T) {
+	t.Parallel()
+
+	cells := mandatoryParityCells(t)
+	for i := range cells {
+		if cells[i].Agent != "claude" {
+			continue
+		}
+		cells[i].Enforcement = replaceCoverage(t, "claude", specs.PointPreTool, ".agents/hooks/validate-preload.sh", ".claude/hooks/validate-token-budget.sh")
+	}
+
+	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, allCellsDispatchProven, repoScriptResolver(t))
+	found := false
+	for _, v := range violations {
+		if v.Agent == "claude" && v.Point == specs.PointPreTool && strings.Contains(v.Reason, "neither mirrors nor executes") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("an installed artifact unrelated to the canonical validator must be flagged; got %v", violations)
+	}
+}
+
+func TestParityGateFailsWithoutFilesystemConfrontation(t *testing.T) {
+	t.Parallel()
+
+	violations := specs.ValidateParityMatrix(mandatoryParityCells(t), mandatoryParityAgents, allCellsDispatchProven, nil)
+	if len(violations) == 0 {
+		t.Fatal("without a script resolver the gate must refuse to certify parity: the declared chain was never confronted with disk")
+	}
+}
+
+func mustArtifactPath(t *testing.T, agentID string, point specs.CanonicalPoint) string {
+	t.Helper()
+	path, ok := specs.InstalledArtifactPath(agentID, point)
+	if !ok {
+		t.Fatalf("no installed artifact declared for %s point %s", agentID, point)
+	}
+	return path
+}
+
 func TestParityGateFailsWhenCellHasNoDispatchProof(t *testing.T) {
 	t.Parallel()
 	cells := mandatoryParityCells(t)
 
-	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, nil)
+	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, nil, repoScriptResolver(t))
 	found := false
 	for _, v := range violations {
 		if v.Agent == "opencode" && v.Point == specs.PointSessionEnd && v.Reason == "no dispatch proof test associated" {

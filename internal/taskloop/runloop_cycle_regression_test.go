@@ -49,7 +49,7 @@ func reviewRequestForRound(t *testing.T, round int, descriptions ...string) appr
 
 func TestRunLoopApprovedConfrontsCriteriaMapBeforeClosingTheBatch(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	deps := runLoopApprovedDeps("Verdict: APPROVED\n")
 	deps.BugfixInvoker = &runloopBugfixInvoker{}
@@ -75,7 +75,7 @@ func TestRunLoopApprovedConfrontsCriteriaMapBeforeClosingTheBatch(t *testing.T) 
 
 func TestRunLoopApprovedWithCompleteCriteriaMapClosesThroughTheCycle(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	report, err := svc.RunLoop(context.Background(), Options{PRDFolder: prd}, runLoopApprovedDeps(rawVerdict(VerdictApproved)))
 	if err != nil {
@@ -97,7 +97,7 @@ func TestRunLoopApprovedWithCompleteCriteriaMapClosesThroughTheCycle(t *testing.
 
 func TestRunLoopWritesNumberedRoundEvidence(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	if _, err := svc.RunLoop(context.Background(), Options{PRDFolder: prd}, runLoopApprovedDeps(rawVerdict(VerdictApproved))); err != nil {
 		t.Fatalf("erro inesperado: %v", err)
@@ -114,7 +114,7 @@ func TestRunLoopWritesNumberedRoundEvidence(t *testing.T) {
 
 func TestRunLoopRoundEvidenceAddressIsImmutable(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 
 	if _, err := svc.RunLoop(context.Background(), Options{PRDFolder: prd}, runLoopApprovedDeps(rawVerdict(VerdictApproved))); err != nil {
 		t.Fatalf("primeira execucao: %v", err)
@@ -134,7 +134,7 @@ func TestReviewerPortRoundEvidenceAddressesAreDistinctPerRound(t *testing.T) {
 		{RawOutput: "Verdict: REJECTED\n"},
 		{RawOutput: "Verdict: APPROVED\n"},
 	}}
-	port := newReviewerPort(reviewer, writer)
+	port := newReviewerPort(reviewer, writer, nil)
 
 	for round := 1; round <= 2; round++ {
 		if _, err := port.Review(context.Background(), reviewRequestForRound(t, round, "builds green")); err != nil {
@@ -151,7 +151,7 @@ func TestReviewerPortRoundEvidenceAddressesAreDistinctPerRound(t *testing.T) {
 		t.Errorf("rodada 2 = %q", fsys.Files[second])
 	}
 
-	rewrite := newReviewerPort(&stubFinalReviewer{results: []FinalReviewResult{{RawOutput: "overwrite"}}}, writer)
+	rewrite := newReviewerPort(&stubFinalReviewer{results: []FinalReviewResult{{RawOutput: "overwrite"}}}, writer, nil)
 	if _, err := rewrite.Review(context.Background(), reviewRequestForRound(t, 1, "builds green")); err == nil {
 		t.Fatal("reescrever o endereco da rodada 1 deve falhar")
 	}

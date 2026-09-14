@@ -14,6 +14,7 @@ var (
 	diffToolRe      = regexp.MustCompile(`(?m)^tool=\s*(claude|codex|copilot|opencode)\s*$`)
 	coverageDeltaRe = regexp.MustCompile(`(?m)^delta=\s*([+-]?[0-9]+(?:\.[0-9]+)?)%\s*$`)
 	taskFileRefRe   = regexp.MustCompile(`(?mi)^-\s*Arquivo\s*:\s*(.+?)\s*$`)
+	reviewTaskRefRe = regexp.MustCompile(`(?mi)^-\s*(?:task\s*file|arquivo da task)\s*:\s*(.+?)\s*$`)
 	stateDoneRe     = regexp.MustCompile(`(?i)estado\s*:\s*done`)
 	testesPassRe    = regexp.MustCompile(`(?i)testes\s*:\s*pass`)
 	testCommandRe   = regexp.MustCompile(`(?i)(go test|gotestsum|pytest|unittest|npm (run )?test|yarn test|pnpm test|jest|vitest|mocha|make test|make integration|cargo test|dotnet test|ctest|rspec|phpunit)`)
@@ -75,6 +76,28 @@ func sectionBody(text, heading string) string {
 		}
 	}
 	return strings.Join(body, "\n")
+}
+
+func resolveReviewTaskPath(text, reportPath string) string {
+	match := reviewTaskRefRe.FindStringSubmatch(text)
+	if match == nil {
+		return ""
+	}
+	reference := strings.TrimSpace(match[1])
+	if reference == "" || strings.Contains(reference, "<") || strings.HasPrefix(strings.ToLower(reference), "n/a") {
+		return ""
+	}
+	if info, err := os.Stat(reference); err == nil && !info.IsDir() {
+		return reference
+	}
+	if reportPath == "" {
+		return ""
+	}
+	candidate := filepath.Join(filepath.Dir(reportPath), reference)
+	if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+		return candidate
+	}
+	return ""
 }
 
 func resolveTaskPath(text, reportPath string) string {

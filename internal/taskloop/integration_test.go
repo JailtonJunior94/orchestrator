@@ -156,7 +156,7 @@ func installMockBinaries(t *testing.T, binDir string, names []string, script str
 func runIntegrationExecute(t *testing.T, prdDir, tool, reportPath string, timeout time.Duration) error {
 	t.Helper()
 	fsys := osfs.NewOSFileSystem()
-	svc := NewService(fsys, integrationPrinter())
+	svc := newCycleTestService(fsys, integrationPrinter())
 	svc.invokerFactory = NewAgentInvoker
 	// binaryChecker = nil → usa CheckAgentBinary real; mock esta no PATH via t.Setenv
 
@@ -424,7 +424,7 @@ func TestRunLoopIntegrationCaminhoFeliz(t *testing.T) {
 	t.Setenv("GOVERNANCE_TELEMETRY", "1")
 
 	fsys, prd := setupRunLoopFS([]string{"1.0", "2.0"})
-	svc := NewService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
+	svc := newCycleTestService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
 
 	deps := RunLoopDeps{
 		Selector: &stubSelector{queue: []TaskEntry{
@@ -475,7 +475,7 @@ func TestRunLoopIntegrationEscalonamento(t *testing.T) {
 	t.Setenv("GOVERNANCE_TELEMETRY", "1")
 
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
+	svc := newCycleTestService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
 
 	findingAt := func(file string) []Finding {
 		return []Finding{{Severity: SeverityCritical, File: file, Line: 1, Message: "bug"}}
@@ -523,7 +523,7 @@ func TestRunLoopIntegrationEscalonamento(t *testing.T) {
 // sem precisar de prompter humano.
 func TestRunLoopIntegrationApprovedWithRemarksNonInteractive(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
+	svc := newCycleTestService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
 
 	findings := []Finding{
 		{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "x"},

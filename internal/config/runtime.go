@@ -22,6 +22,7 @@ type Runtime struct {
 	HandoffLeaseTTL         string  `yaml:"handoff_lease_ttl"`
 	DurableMemoryEnabled    bool    `yaml:"durable_memory_enabled"`
 	DurableMemoryEnabledSet bool    `yaml:"-"`
+	MaxBugfixIterationsSet  bool    `yaml:"-"`
 }
 
 func (r *Runtime) UnmarshalYAML(value *yaml.Node) error {
@@ -34,6 +35,7 @@ func (r *Runtime) UnmarshalYAML(value *yaml.Node) error {
 
 	var probe struct {
 		DurableMemoryEnabled *bool `yaml:"durable_memory_enabled"`
+		MaxBugfixIterations  *int  `yaml:"max_bugfix_iterations"`
 	}
 	if err := value.Decode(&probe); err != nil {
 		return err
@@ -41,6 +43,10 @@ func (r *Runtime) UnmarshalYAML(value *yaml.Node) error {
 	if probe.DurableMemoryEnabled != nil {
 		r.DurableMemoryEnabled = *probe.DurableMemoryEnabled
 		r.DurableMemoryEnabledSet = true
+	}
+	if probe.MaxBugfixIterations != nil {
+		r.MaxBugfixIterations = *probe.MaxBugfixIterations
+		r.MaxBugfixIterationsSet = true
 	}
 	return nil
 }

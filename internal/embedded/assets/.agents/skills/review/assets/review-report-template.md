@@ -2,6 +2,7 @@
 
 - Veredito: APPROVED | APPROVED_WITH_REMARKS | REJECTED | BLOCKED
 - Alvo revisado: [diff | branch | commit | lista de arquivos]
+- Task file: [caminho da task revisada — obrigatório: o mapa 1:1 é confrontado contra os critérios dela (RF-51)]
 - Refs carregadas: [referências disparadas, ou — se nenhuma]
 
 ## Mapa de Critérios de Aceite

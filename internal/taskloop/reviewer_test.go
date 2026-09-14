@@ -779,7 +779,7 @@ Veredicto: REJECTED`,
 // para diffs pequenos.
 func TestReviewConsolidated_InvocacaoUnica(t *testing.T) {
 	inv := &stubInvoker{stdout: "Veredicto: APPROVED"}
-	fr := &defaultFinalReviewer{invoker: inv, workDir: t.TempDir(), model: "", maxDiff: _maxDiffPartitionSize}
+	fr := &defaultFinalReviewer{invoker: inv, workDir: t.TempDir(), model: "", maxDiff: maxDiffPartitionSize}
 
 	diff := "diff --git a/main.go b/main.go\n+// change\n"
 	result, err := fr.ReviewConsolidated(context.Background(), diff)
@@ -822,7 +822,7 @@ func TestReviewConsolidated_VerdictosAgregados(t *testing.T) {
 
 func TestReviewConsolidated_RoteiaLinguagensEDerrubaAprovacaoComAlta(t *testing.T) {
 	inv := &stubInvoker{stdout: "- [High] [src/api.ts:12] validacao ausente\nVeredicto: APPROVED"}
-	fr := &defaultFinalReviewer{invoker: inv, workDir: t.TempDir(), model: "", maxDiff: _maxDiffPartitionSize}
+	fr := &defaultFinalReviewer{invoker: inv, workDir: t.TempDir(), model: "", maxDiff: maxDiffPartitionSize}
 	diff := "diff --git a/internal/service.go b/internal/service.go\n+++ b/internal/service.go\n" +
 		"diff --git a/src/api.ts b/src/api.ts\n+++ b/src/api.ts\n" +
 		"diff --git a/tools/check.py b/tools/check.py\n+++ b/tools/check.py\n"
@@ -834,8 +834,8 @@ func TestReviewConsolidated_RoteiaLinguagensEDerrubaAprovacaoComAlta(t *testing.
 	if result.Verdict != VerdictRejected {
 		t.Fatalf("veredito = %q, want REJECTED para achado alto", result.Verdict)
 	}
-	if len(result.Findings) != 1 || result.Findings[0].Severity != SeverityCritical {
-		t.Fatalf("achados = %+v, want alta normalizada como critica", result.Findings)
+	if len(result.Findings) != 1 || result.Findings[0].Severity != SeverityHigh {
+		t.Fatalf("achados = %+v, want severidade alta preservada (paridade RF-43)", result.Findings)
 	}
 }
 

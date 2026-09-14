@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
 
@@ -25,7 +26,6 @@ const jsonDecisionModeEnv = "AISPEC_HOOK_DECISION_OUTPUT=json"
 type sessionEndCliContract struct {
 	BlockingEvent string
 	RefusalSignal sessionEndRefusalSignal
-	DeclaredEvent string
 	Evidence      string
 }
 
@@ -33,25 +33,21 @@ var sessionEndCliContracts2026 = map[skills.Tool]sessionEndCliContract{
 	skills.ToolClaude: {
 		BlockingEvent: "Stop",
 		RefusalSignal: refusalExitCodeStderr,
-		DeclaredEvent: "Stop",
 		Evidence:      "Claude Code hook contract: exit 2 blocks and feeds stderr back to the model; exit 1 is a non-blocking hook error",
 	},
 	skills.ToolCodex: {
 		BlockingEvent: "Stop",
 		RefusalSignal: refusalExitCodeStderr,
-		DeclaredEvent: "Stop",
 		Evidence:      "codex-cli 0.154.0 embedded schema: stop.command.output exists while session-end.command.output does not, and the exit-code-2 blocking literals enumerate PreToolUse, PostToolUse, PermissionRequest, UserPromptSubmit, SubagentStop and Stop, never SessionEnd",
 	},
 	skills.ToolCopilot: {
 		BlockingEvent: "agentStop",
 		RefusalSignal: refusalStdoutJSON,
-		DeclaredEvent: "agentStop",
 		Evidence:      "GitHub Copilot CLI 1.0.83 copilot-sdk/types.d.ts AgentStopHookOutput accepts only decision block plus reason, enqueued as a follow-up user message; a measured exit-code sweep showed exit 0 and exit 2 keep stdout parsed while any other non-zero exit discards it, so refusal must travel on stdout",
 	},
 	skills.ToolOpenCode: {
 		BlockingEvent: "session.idle",
 		RefusalSignal: refusalThrow,
-		DeclaredEvent: "session.idle",
 		Evidence:      "the governance plugin rejects an idle session by throwing from the session.idle handler; the plugin API exposes no exit code and no stdout channel",
 	},
 }
@@ -59,8 +55,9 @@ var sessionEndCliContracts2026 = map[skills.Tool]sessionEndCliContract{
 func TestSessionEndCliBlockingContractIsMeasuredNotAssumed(t *testing.T) {
 	t.Parallel()
 
-	if len(sessionEndCliContracts2026) != 4 {
-		t.Fatalf("the closing-gate contract must cover all 4 mandatory agents; got %d", len(sessionEndCliContracts2026))
+	catalog := specs.NewCatalog()
+	if len(sessionEndCliContracts2026) != len(catalog.CanonicalOrder()) {
+		t.Fatalf("the closing-gate contract must cover every agent in the registry (%v); got %d entries", catalog.CanonicalOrder(), len(sessionEndCliContracts2026))
 	}
 
 	for tool, contract := range sessionEndCliContracts2026 {
@@ -71,9 +68,17 @@ func TestSessionEndCliBlockingContractIsMeasuredNotAssumed(t *testing.T) {
 			if contract.Evidence == "" {
 				t.Fatalf("tool=%s: every contract entry must carry the measurement that produced it, never an assumption", tool)
 			}
-			if contract.DeclaredEvent != contract.BlockingEvent {
-				t.Fatalf("tool=%s: the gate is declared on %q but this CLI only blocks on %q, so the gate is inert. Evidence: %s",
-					tool, contract.DeclaredEvent, contract.BlockingEvent, contract.Evidence)
+			agent, err := catalog.AgentByID(string(tool))
+			if err != nil {
+				t.Fatalf("tool=%s: not in the agent registry: %v", tool, err)
+			}
+			cov, ok := agent.Enforcement().CoverageFor(specs.PointSessionEnd)
+			if !ok {
+				t.Fatalf("tool=%s: the registry declares no session-end coverage", tool)
+			}
+			if cov.NativeKey() != contract.BlockingEvent {
+				t.Fatalf("tool=%s: the registry declares the closing gate on %q but this CLI only blocks on %q, so the cell is inert. Evidence: %s",
+					tool, cov.NativeKey(), contract.BlockingEvent, contract.Evidence)
 			}
 		})
 	}

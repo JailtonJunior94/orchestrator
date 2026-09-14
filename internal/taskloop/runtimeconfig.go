@@ -48,7 +48,7 @@ func (c *Catalog) BuildRuntimeConfig(resolved config.Runtime) (airuntime.Runtime
 		leaseTTL = d
 	}
 
-	if resolved.MaxBugfixIterations < 0 {
+	if resolved.MaxBugfixIterations < 0 || (resolved.MaxBugfixIterationsSet && resolved.MaxBugfixIterations < 1) {
 		return airuntime.RuntimeConfig{}, fmt.Errorf("%w: %d", ErrInvalidMaxBugfixIterations, resolved.MaxBugfixIterations)
 	}
 
@@ -122,6 +122,7 @@ func (c *Catalog) optionsToConfigOverrides(opts Options) config.Runtime {
 		Concurrent:              opts.Concurrent,
 		BatchSize:               opts.BatchSize,
 		MaxBugfixIterations:     maxBugfixIterations,
+		MaxBugfixIterationsSet:  opts.MaxBugfixIterationsSet,
 		HandoffLeaseTTL:         handoffLeaseTTL,
 		DurableMemoryEnabled:    opts.DurableMemoryEnabled,
 		DurableMemoryEnabledSet: opts.DurableMemoryEnabledSet,

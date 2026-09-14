@@ -1,6 +1,9 @@
 package specs
 
-import "fmt"
+import (
+	"bytes"
+	"fmt"
+)
 
 type AgentEnforcement struct {
 	Agent       string
@@ -22,7 +25,9 @@ func (v ParityViolation) String() string {
 
 type DispatchProofFunc func(agentID string, point CanonicalPoint) bool
 
-func ValidateParityMatrix(cells []AgentEnforcement, requiredAgents []string, dispatchProven DispatchProofFunc) []ParityViolation {
+type ScriptResolver func(relPath string) ([]byte, error)
+
+func ValidateParityMatrix(cells []AgentEnforcement, requiredAgents []string, dispatchProven DispatchProofFunc, resolve ScriptResolver) []ParityViolation {
 	points := NewCatalog().CanonicalPoints()
 
 	byAgent := make(map[string]Enforcement, len(cells))
@@ -59,7 +64,29 @@ func ValidateParityMatrix(cells []AgentEnforcement, requiredAgents []string, dis
 			if dispatchProven == nil || !dispatchProven(agentID, point) {
 				violations = append(violations, ParityViolation{Agent: agentID, Point: point, Reason: "no dispatch proof test associated"})
 			}
+			violations = append(violations, confrontInstalledArtifact(agentID, point, cov, resolve)...)
 		}
 	}
 	return violations
+}
+
+func confrontInstalledArtifact(agentID string, point CanonicalPoint, cov PointCoverage, resolve ScriptResolver) []ParityViolation {
+	if resolve == nil {
+		return []ParityViolation{{Agent: agentID, Point: point, Reason: "declared validator never confronted with the installed artifact: no script resolver supplied"}}
+	}
+	canonical, err := resolve(cov.ScriptPath())
+	if err != nil {
+		return []ParityViolation{{Agent: agentID, Point: point, Reason: fmt.Sprintf("declared canonical validator %q does not exist on disk: %v", cov.ScriptPath(), err)}}
+	}
+	artifact, err := resolve(cov.ArtifactPath())
+	if err != nil {
+		return []ParityViolation{{Agent: agentID, Point: point, Reason: fmt.Sprintf("installed artifact %q does not exist on disk: %v", cov.ArtifactPath(), err)}}
+	}
+	if bytes.Equal(artifact, canonical) {
+		return nil
+	}
+	if scriptExecutesTarget(artifact, cov.ScriptPath()) {
+		return nil
+	}
+	return []ParityViolation{{Agent: agentID, Point: point, Reason: fmt.Sprintf("installed artifact %q neither mirrors nor executes the canonical validator %q", cov.ArtifactPath(), cov.ScriptPath())}}
 }

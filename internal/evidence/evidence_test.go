@@ -362,10 +362,13 @@ func TestValidateRefactor_Advisory_NoVeredito(t *testing.T) {
 
 // ── Review — mapa 1:1 criterio -> evidencia (RF-47, RF-48, RF-49, RF-51, RF-52) ──
 
+const reviewFixtureTaskFile = "testdata/task-review-fixture.md"
+
 func reviewWithMap(mapSection string) string {
 	return `# Relatorio de Review
 - Veredito: APPROVED
 - Alvo revisado: diff
+- Task file: ` + reviewFixtureTaskFile + `
 ` + mapSection + `
 ## Achados
 Sem achados.
@@ -450,6 +453,7 @@ func reviewReport(verdict, target, findingsSection, mapSection string) string {
 	return `# Relatorio de Review
 - Veredito: ` + verdict + `
 ` + target + `
+- Task file: ` + reviewFixtureTaskFile + `
 ` + mapSection + `
 ## Achados
 ` + findingsSection + `

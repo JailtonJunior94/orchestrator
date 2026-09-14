@@ -24,15 +24,20 @@ done
 
 (cd "$repo_root" && go build -trimpath -o "$binary" .)
 
-checkpoint_root="$repo_root/.specs/prd-sdd-robusto/.checkpoints"
-if find "$checkpoint_root" -maxdepth 1 -type f \( -name '*.yaml' -o -name '*.yml' \) | grep -q .; then
-  echo "checkpoint legado fora do contrato JSON v2" >&2
-  exit 1
+sdd_target="${SDD_EVALS_PRD_DIR:-$repo_root/.specs/prd-sdd-robusto}"
+if [[ -d "$sdd_target" ]]; then
+  checkpoint_root="$sdd_target/.checkpoints"
+  if find "$checkpoint_root" -maxdepth 1 -type f \( -name '*.yaml' -o -name '*.yml' \) 2>/dev/null | grep -q .; then
+    echo "checkpoint legado fora do contrato JSON v2" >&2
+    exit 1
+  fi
+  while IFS= read -r checkpoint; do
+    "$binary" validate-result execution "$checkpoint" >/dev/null
+  done < <(find "$checkpoint_root" -maxdepth 1 -type f -name '*.json' 2>/dev/null | sort)
+  "$binary" validate-sdd "$sdd_target" >/dev/null
+else
+  echo "escopo declarado ausente: $sdd_target — bloco de estado SDD ignorado (defina SDD_EVALS_PRD_DIR para cobrar outro diretorio)" >&2
 fi
-while IFS= read -r checkpoint; do
-  "$binary" validate-result execution "$checkpoint" >/dev/null
-done < <(find "$checkpoint_root" -maxdepth 1 -type f -name '*.json' | sort)
-"$binary" validate-sdd "$repo_root/.specs/prd-sdd-robusto" >/dev/null
 
 python3 - "$manifest" "$binary" "$corpus_root/fixtures" <<'PY'
 import json

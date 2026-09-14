@@ -71,7 +71,7 @@ func TestExecuteConductsApprovalCycleFromTaskCriteria(t *testing.T) {
 	var reviewerPrompt string
 	var executorCalls int
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -121,7 +121,7 @@ func TestExecuteApprovalCycleRunsReviewAndFixInFreshSessions(t *testing.T) {
 	var reviewerCalls int
 	var executorPrompts []string
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -175,7 +175,7 @@ func TestExecuteBlocksWhenTaskFileHasNoCriteria(t *testing.T) {
 	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\nSem secao de criterios.\n")
 
 	reviewerCalled := false
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -230,7 +230,7 @@ func TestExecuteApprovalCycleHonorsConfiguredMaxBugfixIterations(t *testing.T) {
 
 	var reviewerCalls, executorCalls int
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {

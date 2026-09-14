@@ -84,6 +84,7 @@ type Service struct {
 	acpInvokerFactory func(opts Options) AgentInvoker
 	binaryChecker     func(AgentInvoker) error
 	liveOutOverride   io.Writer
+	diffCapturer      DiffCapturer
 }
 
 func NewService(fsys fs.FileSystem, printer *output.Printer) *Service {
@@ -788,8 +789,6 @@ func (c *Catalog) classifyIterationOutcome(
 
 	return outcome
 }
-
-var acpSpecCatalog = specs.NewCatalog().ACPSpecCatalog()
 
 func (c *Catalog) resolveACPSpec(tool string) (specs.Spec, error) {
 	return specs.NewCatalog().ResolveACPSpec(tool)

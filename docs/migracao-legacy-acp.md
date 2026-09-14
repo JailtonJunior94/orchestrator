@@ -141,3 +141,26 @@ que o Gemini ocupava no conjunto de quatro CLIs.
 - Sessões, histórico e memória do Gemini CLI não são migrados — não é um objetivo desta remoção.
 - Documentação histórica (ADRs, changelog, PRDs anteriores, auditorias, evidências de execução) que
   cita Gemini permanece intocada; é registro histórico, não uma superfície viva do produto.
+
+## Copilot: a chave `stop` é migrada, não revertida
+
+A migração RF-59 renomeia, em `.github/copilot/governance.json`, as chaves mortas
+`stop` / `Stop` / `sessionEnd` / `SessionEnd` para a chave oficial `agentStop`
+(`internal/upgrade/copilot_governance.go`). O conteúdo das entradas e a indentação do arquivo são
+preservados; apenas o **nome da chave** muda.
+
+**`uninstall` não desfaz esse rename.** Um `governance.json` que era autoral com a chave `"stop"`
+volta do `uninstall` com a chave `"agentStop"`. Isso é **intencional**: `"stop"` não é um ponto de
+extensão reconhecido pelo Copilot CLI, então restaurar o nome antigo devolveria um arquivo com um
+hook que nunca dispara — o estado que a migração existe para corrigir.
+
+Consequências práticas:
+
+- Não espere igualdade byte a byte entre o `governance.json` anterior ao `install` e o posterior ao
+  `uninstall`. A diferença esperada é exatamente o nome da chave.
+- Se você versiona `.github/copilot/governance.json`, o primeiro `install` após a atualização produz
+  um diff de uma linha por chave migrada. Commite-o: é a correção, não ruído.
+- Para conferir o que mudou: `git diff -- .github/copilot/governance.json`.
+- Se você precisa mesmo do nome original (por exemplo, para uma ferramenta de terceiros que leia
+  esse arquivo), renomeie manualmente após o `uninstall` — o harness não tem como distinguir uma
+  chave `"stop"` autoral de uma chave `"stop"` legada que ele próprio escreveu.

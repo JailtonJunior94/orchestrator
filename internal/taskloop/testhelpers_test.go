@@ -3,6 +3,9 @@ package taskloop
 import (
 	"bytes"
 	"context"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	"io"
 	"os"
 	"sync"
@@ -42,4 +45,16 @@ func captureStderr(t *testing.T, f func()) string {
 	wg.Wait()
 	_ = r.Close()
 	return buf.String()
+}
+
+type cycleTestDiffCapturer struct{}
+
+func (cycleTestDiffCapturer) CaptureDiff(context.Context) (string, error) {
+	return "diff --git a/x.go b/x.go\n--- a/x.go\n+++ b/x.go\n@@ -1 +1 @@\n-old\n+new\n", nil
+}
+
+func newCycleTestService(fsys fs.FileSystem, printer *output.Printer) *Service {
+	s := NewService(fsys, printer)
+	s.diffCapturer = cycleTestDiffCapturer{}
+	return s
 }
