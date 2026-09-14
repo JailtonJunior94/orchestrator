@@ -63,6 +63,20 @@ assert_stderr_contains() {
   fi
 }
 
+assert_stderr_not_contains() {
+  local desc="$1"
+  local pattern="$2"
+  local stderr_file="$3"
+  if grep -qE "$pattern" "$stderr_file" 2>/dev/null; then
+    echo "  ✗ stderr contem '$pattern' (nao deveria)"
+    echo "    stderr: $(head -5 "$stderr_file" 2>/dev/null)"
+    failed=$((failed+1))
+  else
+    echo "  ✓ stderr NAO contem '$pattern'"
+    passed=$((passed+1))
+  fi
+}
+
 cleanup() {
   rm -rf "$TMP_BASE"
 }
@@ -242,9 +256,14 @@ assert_stderr_contains "FAIL F35 detectada" "FAIL F35: DiffSHA deadbeef" "$stder
 bash "$HOOKS_DIR/post-execute-task.sh" "revert" "1.0" "$yaml" 2>"$stderr"; rc=$?
 assert_exit "F35 default-on (sem env) = exit 1" 1 "$rc"
 
-# Opt-out explicito (AI_VALIDATE_GIT_HISTORY=0) deve pular F35 e passar
+# Opt-out explicito (AI_VALIDATE_GIT_HISTORY=0) deve pular F35.
+# O desfecho permanece exit 1: o fixture usa relatorio trivial e o gate RF-53
+# do ramo legado nao aceita done sem prova de aprovacao. O que este cenario
+# comprova e que a checagem F35 especificamente deixou de disparar.
 AI_VALIDATE_GIT_HISTORY=0 bash "$HOOKS_DIR/post-execute-task.sh" "revert" "1.0" "$yaml" 2>"$stderr"; rc=$?
-assert_exit "F35 opt-out (=0) = exit 0 (skip)" 0 "$rc"
+assert_exit "F35 opt-out (=0) nao dispara F35 mas RF-53 mantem exit 1" 1 "$rc"
+assert_stderr_not_contains "F35 pulado pelo opt-out" "FAIL F35" "$stderr"
+assert_stderr_contains "RF-53 cobra prova de aprovacao no ramo legado" "FAIL RF-53" "$stderr"
 rm -f "$stderr" "$yaml" "$REPO_ROOT/$revert_report"
 
 # ============================================================================
@@ -308,10 +327,12 @@ bash "$HOOKS_DIR/post-execute-task.sh" "nochkpt" "1.0" "$yaml" 2>"$stderr"; rc=$
 assert_exit "F25 sem checkpoint default = exit 1 (FAIL)" 1 "$rc"
 assert_stderr_contains "FAIL F25 detectada" "FAIL F25: checkpoint ausente" "$stderr"
 
-# Com env override = WARN
+# Com env override = WARN. O desfecho permanece exit 1 porque o relatorio do
+# fixture nao comprova aprovacao (gate RF-53 do ramo legado).
 AI_ALLOW_MISSING_CHECKPOINT=1 bash "$HOOKS_DIR/post-execute-task.sh" "nochkpt" "1.0" "$yaml" 2>"$stderr"; rc=$?
-assert_exit "F25 com AI_ALLOW_MISSING_CHECKPOINT=1 = exit 0" 0 "$rc"
+assert_exit "F25 com AI_ALLOW_MISSING_CHECKPOINT=1 rebaixa para WARN (RF-53 mantem exit 1)" 1 "$rc"
 assert_stderr_contains "WARN F25 detectado em modo back compat" "WARN F25: checkpoint ausente.*back compat" "$stderr"
+assert_stderr_not_contains "F25 nao bloqueia com override" "FAIL F25" "$stderr"
 rm -f "$stderr" "$yaml" "$REPO_ROOT/$nochkpt_report"
 
 # ============================================================================
@@ -361,6 +382,34 @@ bash "$HOOKS_DIR/post-execute-task.sh" "status_drift" "1.0" "$yaml" 2>"$stderr";
 assert_exit "status drift done vs pending = exit 1" 1 "$rc"
 assert_stderr_contains "status drift detectado" "status drift" "$stderr"
 rm -f "$yaml" "$stderr" "$REPO_ROOT/$status_drift_report"
+
+# ============================================================================
+echo
+echo "--- RF-53: AI_SDD_LEGACY_HOOK_CONTRACT nao fecha done sem prova ---"
+# ============================================================================
+# Regressao do escape: com a variavel em 1 o hook desviava de
+# `ai-spec validate-result execution` e o ramo legado nunca cobrava veredito,
+# APPROVED ou criterios. Um relatorio sem conteudo nenhum saia com exit 0.
+make_prd "legacy_escape" "| 1.0 | A | done | — | — | — |"
+mkdir -p "$TASKS_BASE/prd-legacy_escape/.checkpoints"
+echo "status: done" > "$TASKS_BASE/prd-legacy_escape/.checkpoints/1.0.yaml"
+escape_report=".test-hooks-legacy-escape-report.md"
+echo "Nada aqui. Sem mapa 1:1. Sem veredito. Sem nada." > "$REPO_ROOT/$escape_report"
+yaml=$(mktemp)
+cat > "$yaml" <<EOF
+status: done
+report_path: $escape_report
+summary: ok
+EOF
+stderr=$(mktemp)
+AI_SDD_LEGACY_HOOK_CONTRACT=1 AI_VALIDATE_GIT_HISTORY=0 bash "$HOOKS_DIR/post-execute-task.sh" "legacy_escape" "1.0" "$yaml" 2>"$stderr"; rc=$?
+assert_exit "RF-53 contrato legado com relatorio trivial = exit 1" 1 "$rc"
+assert_stderr_contains "RF-53 cobrado no ramo legado" "FAIL RF-53" "$stderr"
+
+# O caminho estrito (sem a variavel) continua cobrando o mesmo desfecho.
+env -u AI_SDD_LEGACY_HOOK_CONTRACT bash "$HOOKS_DIR/post-execute-task.sh" "legacy_escape" "1.0" "$yaml" 2>"$stderr"; rc=$?
+assert_exit "RF-53 contrato estrito com relatorio trivial = exit 1" 1 "$rc"
+rm -f "$yaml" "$stderr" "$REPO_ROOT/$escape_report"
 
 # ============================================================================
 echo

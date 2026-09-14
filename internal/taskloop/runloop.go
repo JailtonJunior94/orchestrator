@@ -28,7 +28,10 @@ type LoopReport struct {
 	ActionPlan      *ActionPlan        `json:"action_plan,omitempty"`
 	StopReason      string             `json:"stop_reason"`
 	CycleStopReason string             `json:"cycle_stop_reason,omitempty"`
+	CycleRounds     []CycleRoundReport `json:"cycle_rounds,omitempty"`
 }
+
+var ErrAcceptanceCriteriaMissing = errors.New("taskloop: criterios de aceite ausentes; mapa 1:1 nao confrontavel")
 
 // TaskExecutor abstrai a invocacao da skill execute-task em uma unica task.
 // Implementacoes devem aplicar as alteracoes da task no filesystem
@@ -186,240 +189,84 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 	}
 	report.FinalReview = &rev
 
+	var criteria []approval.AcceptanceCriterion
+	criteria, criteriaErr := acceptanceCriteriaUnion(absFolder, report.TasksCompleted, s.fsys)
+	if criteriaErr != nil {
+		return s.finalizeReport(report, opts, "erro ao extrair criterios do lote"), criteriaErr
+	}
+	if len(criteria) == 0 {
+		NewCatalog().emitTelemetry("criteria_map_missing", strings.Join(report.TasksCompleted, ","))
+		return s.finalizeReport(report, opts, "criterios de aceite ausentes: mapa 1:1 nao confrontavel"),
+			fmt.Errorf("%w: tasks %s", ErrAcceptanceCriteriaMissing, strings.Join(report.TasksCompleted, ", "))
+	}
+
 	switch rev.Verdict {
 	case VerdictApproved:
 		NewCatalog().emitTelemetry("final_review_verdict", string(rev.Verdict))
-
-	case VerdictApprovedWithRemarks:
-		plan, err := s.resolveActionPlan(ctx, absFolder, lastTaskFile, opts, deps, rev.Findings)
-		if err != nil {
-			return s.finalizeReport(report, opts, "erro no planner de ressalvas"),
-				err
-		}
-		report.ActionPlan = &plan
-		NewCatalog().emitTelemetry("final_review_verdict", string(rev.Verdict))
-		if stop, err := s.applyImplementDecisions(ctx, absFolder, lastTaskFile, plan, reviewInput, opts, deps, report); stop {
-			return s.finalizeReport(report, opts, NewCatalog().stopReasonForImplement(err, report)), err
-		}
 
 	case VerdictBlocked:
 		NewCatalog().emitTelemetry("final_review_verdict", string(rev.Verdict))
 		return s.finalizeReport(report, opts, "revisao final bloqueada"),
 			fmt.Errorf("%w: %s", ErrReviewBlocked, NewCatalog().blockedReviewReason(rev.RawOutput))
 
-	case VerdictRejected:
+	case VerdictApprovedWithRemarks, VerdictRejected:
 		if deps.BugfixInvoker == nil || deps.DiffCapturer == nil {
 			return s.finalizeReport(report, opts, "bugfix loop nao configurado"),
-				fmt.Errorf("taskloop: review reprovou mas BugfixInvoker/DiffCapturer ausentes")
+				fmt.Errorf("taskloop: review nao encerrou o ciclo mas BugfixInvoker/DiffCapturer ausentes")
 		}
 
-		criteria, criteriaErr := acceptanceCriteriaUnion(absFolder, report.TasksCompleted, s.fsys)
-		if criteriaErr != nil {
-			return s.finalizeReport(report, opts, "erro ao extrair criterios do lote"), criteriaErr
+		if rev.Verdict == VerdictApprovedWithRemarks {
+			plan, planErr := s.resolveActionPlan(ctx, absFolder, lastTaskFile, opts, deps, rev.Findings)
+			if planErr != nil {
+				return s.finalizeReport(report, opts, "erro no planner de ressalvas"), planErr
+			}
+			report.ActionPlan = &plan
+			NewCatalog().emitImplementPromoted(plan)
 		}
+		NewCatalog().emitTelemetry("final_review_verdict", string(rev.Verdict))
+	}
 
-		exhausted := false
-		if len(criteria) == 0 {
-			bf := NewBugfixLoop(deps.BugfixInvoker, deps.FinalReviewer, deps.DiffCapturer, opts.MaxBugfixIterations)
-			bfReport, bfErr := bf.Run(ctx, rev.Findings, reviewInput)
-			report.BugfixCycles = len(bfReport.Iterations)
-			report.BugfixAttempts = append(report.BugfixAttempts, bfReport.Iterations...)
-			report.Escalated = bfReport.Escalated
-			if bfReport.FinalReview != nil {
-				report.FinalReview = bfReport.FinalReview
-			}
-			for _, it := range bfReport.Iterations {
-				NewCatalog().emitTelemetry("bugfix_iteration", fmt.Sprintf("%d:%s", it.Sequence, it.ReviewVerdict))
-			}
-			if errors.Is(bfErr, ErrBugfixExhausted) {
-				exhausted = true
-			} else if bfErr != nil {
-				return s.finalizeReport(report, opts, "erro no bugfix loop"), bfErr
-			}
-		} else {
-			var result approval.CycleResult
-			var recorder *bugfixEvidenceRecorder
-			var cycleErr error
-			result, recorder, cycleErr = s.runRejectedCycle(ctx, opts, criteria, rev, deps, workDir)
-			if cycleErr != nil {
-				return s.finalizeReport(report, opts, "erro no ciclo de aprovacao"),
-					fmt.Errorf("taskloop: ciclo de aprovacao: %w", cycleErr)
-			}
-			iterations := bugfixAttemptsFromCycle(result, recorder)
-			report.BugfixCycles = len(iterations)
-			report.BugfixAttempts = append(report.BugfixAttempts, iterations...)
-			report.FinalReview = finalReviewFromCycleResult(result)
-			report.CycleStopReason = result.Reason().String()
-			for _, it := range iterations {
-				NewCatalog().emitTelemetry("bugfix_iteration", fmt.Sprintf("%d:%s", it.Sequence, it.ReviewVerdict))
-			}
-			if !result.Approved() {
-				report.Escalated = true
-				exhausted = true
-			}
-		}
-
-		if exhausted {
-			if report.FinalReview != nil {
-				NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
-			}
-			NewCatalog().emitTelemetry("escalated", "bugfix_exhausted")
-			return s.finalizeReport(report, opts, "escalonamento humano apos 3 iteracoes"), ErrBugfixExhausted
-		}
-		if report.FinalReview != nil {
-			switch report.FinalReview.Verdict {
-			case VerdictApproved:
-				NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
-			case VerdictApprovedWithRemarks:
-				plan, err := s.resolveActionPlan(ctx, absFolder, lastTaskFile, opts, deps, report.FinalReview.Findings)
-				if err != nil {
-					return s.finalizeReport(report, opts, "erro no planner de ressalvas"),
-						err
-				}
-				report.ActionPlan = &plan
-				NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
-				latestDiff := NewCatalog().buildFinalReviewInput(absFolder, lastTaskFile, report.TasksCompleted, diff)
-				if dc := deps.DiffCapturer; dc != nil {
-					if d, derr := dc.CaptureDiff(ctx); derr == nil {
-						latestDiff = NewCatalog().buildFinalReviewInput(absFolder, lastTaskFile, report.TasksCompleted, d)
-					}
-				}
-				if stop, err := s.applyImplementDecisions(ctx, absFolder, lastTaskFile, plan, latestDiff, opts, deps, report); stop {
-					return s.finalizeReport(report, opts, NewCatalog().stopReasonForImplement(err, report)), err
-				}
-			case VerdictBlocked:
-				NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
-				return s.finalizeReport(report, opts, "revisao final bloqueada"),
-					fmt.Errorf("%w: %s", ErrReviewBlocked, NewCatalog().blockedReviewReason(report.FinalReview.RawOutput))
-			}
-		}
+	result, recorder, cycleErr := s.runBatchCycle(ctx, opts, criteria, rev, deps, workDir)
+	if cycleErr != nil {
+		return s.finalizeReport(report, opts, "erro no ciclo de aprovacao"),
+			fmt.Errorf("taskloop: ciclo de aprovacao: %w", cycleErr)
+	}
+	iterations := bugfixAttemptsFromCycle(result, recorder)
+	report.BugfixCycles = len(iterations)
+	report.BugfixAttempts = append(report.BugfixAttempts, iterations...)
+	report.FinalReview = finalReviewFromCycleResult(result)
+	report.CycleStopReason = result.Reason().String()
+	report.CycleRounds = cycleRoundReports(result)
+	for _, it := range iterations {
+		NewCatalog().emitTelemetry("bugfix_iteration", fmt.Sprintf("%d:%s", it.Sequence, it.ReviewVerdict))
+	}
+	if report.FinalReview != nil {
+		NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
+	}
+	if !result.Approved() {
+		report.Escalated = true
+		NewCatalog().emitTelemetry("escalated", "bugfix_exhausted")
+		return s.finalizeReport(report, opts,
+			fmt.Sprintf("escalonamento humano: ciclo encerrado sem APPROVED (%s)", result.Reason())), ErrBugfixExhausted
 	}
 
 	return s.finalizeReport(report, opts, "concluido"), nil
 }
 
-// applyImplementDecisions reentra o BugfixLoop quando o ActionPlan possui ao
-// menos uma decisao ActionImplement (RF-08(a)). Os findings selecionados sao
-// repassados ao BugfixLoop com o mesmo limite de iteracoes; LoopReport e
-// atualizado com ciclos adicionais, escalonamento e veredito final.
-//
-// Retorna (stop, err): stop=true sinaliza que RunLoop deve encerrar
-// imediatamente — usado para ErrBugfixExhausted ou outros erros do loop.
-func (s *Service) applyImplementDecisions(
-	ctx context.Context,
-	prdFolder string,
-	taskFile string,
-	plan ActionPlan,
-	diff string,
-	opts Options,
-	deps RunLoopDeps,
-	report *LoopReport,
-) (bool, error) {
-	implFindings := NewCatalog().findingsForImplement(plan)
-	if len(implFindings) == 0 {
-		return false, nil
-	}
-	if deps.BugfixInvoker == nil || deps.DiffCapturer == nil {
-		return true, fmt.Errorf("taskloop: ActionImplement requer BugfixInvoker e DiffCapturer configurados")
-	}
-
-	for _, f := range implFindings {
-		loc := f.File
-		if f.Line > 0 {
-			loc = fmt.Sprintf("%s:%d", f.File, f.Line)
+func (c *Catalog) emitImplementPromoted(plan ActionPlan) {
+	for _, d := range plan.Decisions {
+		if d.Action != ActionImplement {
+			continue
+		}
+		loc := d.Finding.File
+		if d.Finding.Line > 0 {
+			loc = fmt.Sprintf("%s:%d", d.Finding.File, d.Finding.Line)
 		}
 		if loc == "" {
 			loc = "(sem localizacao)"
 		}
 		NewCatalog().emitTelemetry("implement_promoted", loc)
 	}
-
-	bf := NewBugfixLoop(deps.BugfixInvoker, deps.FinalReviewer, deps.DiffCapturer, opts.MaxBugfixIterations)
-	bfReport, bfErr := bf.Run(ctx, implFindings, diff)
-	report.BugfixCycles += len(bfReport.Iterations)
-	report.BugfixAttempts = append(report.BugfixAttempts, bfReport.Iterations...)
-	if bfReport.Escalated {
-		report.Escalated = true
-	}
-	if bfReport.FinalReview != nil {
-		report.FinalReview = bfReport.FinalReview
-	}
-	for _, it := range bfReport.Iterations {
-		NewCatalog().emitTelemetry("bugfix_iteration", fmt.Sprintf("%d:%s", it.Sequence, it.ReviewVerdict))
-	}
-	if errors.Is(bfErr, ErrBugfixExhausted) {
-		if report.FinalReview != nil {
-			NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
-		}
-		NewCatalog().emitTelemetry("escalated", "bugfix_exhausted")
-		return true, bfErr
-	}
-	if bfErr != nil {
-		if report.FinalReview != nil {
-			NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
-		}
-		return true, bfErr
-	}
-	if report.FinalReview != nil {
-		NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
-	}
-	if report.FinalReview == nil {
-		return false, nil
-	}
-
-	switch report.FinalReview.Verdict {
-	case VerdictApproved:
-		return false, nil
-	case VerdictApprovedWithRemarks:
-		nextPlan, err := s.resolveActionPlan(ctx, prdFolder, taskFile, opts, deps, report.FinalReview.Findings)
-		if err != nil {
-			return true, err
-		}
-		report.ActionPlan = &nextPlan
-
-		nextDiff := diff
-		capturedDiff, err := deps.DiffCapturer.CaptureDiff(ctx)
-		if err != nil {
-			return true, fmt.Errorf("taskloop: capturar diff apos ressalvas Implement: %w", err)
-		}
-		if capturedDiff != "" {
-			nextDiff = NewCatalog().buildFinalReviewInput(prdFolder, taskFile, report.TasksCompleted, capturedDiff)
-		}
-		return s.applyImplementDecisions(ctx, prdFolder, taskFile, nextPlan, nextDiff, opts, deps, report)
-	case VerdictBlocked:
-		return true, fmt.Errorf("%w: %s", ErrReviewBlocked, NewCatalog().blockedReviewReason(report.FinalReview.RawOutput))
-	default:
-		return false, nil
-	}
-}
-
-// findingsForImplement coleta os findings com decisao ActionImplement e
-// promove-os a SeverityCritical: a opcao do operador de "implementar agora"
-// expressa que o item deve ser tratado pelo BugfixLoop, que so atua sobre
-// Critical. A promocao e local — o report original nao e mutado.
-func (c *Catalog) findingsForImplement(plan ActionPlan) []Finding {
-	out := make([]Finding, 0, len(plan.Decisions))
-	for _, d := range plan.Decisions {
-		if d.Action == ActionImplement {
-			f := d.Finding
-			f.Severity = SeverityCritical
-			out = append(out, f)
-		}
-	}
-	return out
-}
-
-func (c *Catalog) stopReasonForImplement(err error, report *LoopReport) string {
-	if errors.Is(err, ErrBugfixExhausted) {
-		return "escalonamento humano apos ressalvas Implement"
-	}
-	if err != nil {
-		return "erro no bugfix loop de ressalvas Implement"
-	}
-	if report != nil && report.Escalated {
-		return "escalonamento humano apos ressalvas Implement"
-	}
-	return "concluido"
 }
 
 func (s *Service) resolveActionPlan(

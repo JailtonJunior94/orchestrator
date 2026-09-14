@@ -1,0 +1,5 @@
+{
+  "problem": "Compartilhar um cache global unico por conveniencia.",
+  "signals": ["single_process_shared_resource", "strict_test_isolation"],
+  "constraints": ["avoid_global_state", "preserve_public_contract"]
+}

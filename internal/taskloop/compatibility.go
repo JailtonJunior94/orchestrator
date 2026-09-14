@@ -3,10 +3,14 @@ package taskloop
 import (
 	"errors"
 	"fmt"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
 // ErrModeloIncompativel indica que a combinacao ferramenta+modelo nao e suportada.
 var ErrModeloIncompativel = errors.New("modelo incompativel com a ferramenta")
+
+const openCodeToolID = "opencode"
 
 // CompatibilityTable mapeia ferramentas aos modelos suportados.
 // Tipo concreto (nao interface) — conforme ADR-004.
@@ -31,14 +35,7 @@ func NewCompatibilityTable() *CompatibilityTable {
 				"gpt-5.3-codex",
 				"gpt-5.3-codex-spark",
 			},
-			"opencode": {
-				"claude-opus-4",
-				"claude-sonnet-4",
-				"claude-haiku-4",
-				"gpt-5",
-				"gemini-2.5-pro",
-				"gemini-2.5-flash",
-			},
+			openCodeToolID: specs.OpenCodeModelPrefixes(),
 			"copilot": {
 				"claude-sonnet-4.5",
 				"claude-sonnet-4.6",
@@ -66,10 +63,16 @@ func (t *CompatibilityTable) IsSupported(tool, model string) bool {
 		return false
 	}
 
+	normalized := specs.NormalizeModelID(model)
 	for _, m := range models {
-		if m == model {
+		if m == model || m == normalized {
 			return true
 		}
+	}
+
+	if tool == openCodeToolID {
+		_, matched := specs.NewCatalog().MatchOpenCodeModel(model)
+		return matched
 	}
 
 	return false

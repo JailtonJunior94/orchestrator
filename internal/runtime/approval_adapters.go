@@ -5,41 +5,16 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/invocation"
 )
-
-var cycleFileLineReference = regexp.MustCompile(`[\w./-]+\.[A-Za-z0-9]+:\d+`)
-
-const (
-	parityEvidenceCommand = "parity-stage"
-	parityEvidenceRecord  = "criteria gate deferred to task 5.0"
-	cycleFindingFile      = "unspecified"
-	cycleFindingRule      = "review-finding"
-)
-
-var cycleSeverityMarkers = []struct {
-	token    string
-	severity approval.Severity
-}{
-	{"[critical]", approval.SeverityCritical},
-	{"[crítico]", approval.SeverityCritical},
-	{"[critico]", approval.SeverityCritical},
-	{"[hard]", approval.SeverityHigh},
-	{"[high]", approval.SeverityHigh},
-	{"[alta]", approval.SeverityHigh},
-	{"[alto]", approval.SeverityHigh},
-	{"[medium]", approval.SeverityMedium},
-	{"[important]", approval.SeverityMedium},
-	{"[importante]", approval.SeverityMedium},
-	{"[low]", approval.SeverityLow},
-	{"[suggestion]", approval.SeverityLow},
-	{"[sugestão]", approval.SeverityLow},
-	{"[sugestao]", approval.SeverityLow},
-}
 
 var (
 	_ approval.Reviewer   = (*ReviewerAdapter)(nil)
@@ -50,6 +25,7 @@ var (
 type RepositoryAdapter struct {
 	catalog *Catalog
 	workDir string
+	issued  []approval.Checkpoint
 }
 
 func NewRepositoryAdapter(workDir string) *RepositoryAdapter {
@@ -61,7 +37,19 @@ func (a *RepositoryAdapter) Checkpoint(_ context.Context) (approval.Checkpoint, 
 	if err != nil {
 		return approval.Checkpoint{}, err
 	}
-	return approval.NewCheckpoint(head)
+	checkpoint, err := approval.NewCheckpoint(head)
+	if err != nil {
+		return approval.Checkpoint{}, err
+	}
+	a.issued = append(a.issued, checkpoint)
+	return checkpoint, nil
+}
+
+func (a *RepositoryAdapter) CheckpointAt(round int) (approval.Checkpoint, bool) {
+	if round < 1 || round > len(a.issued) {
+		return approval.Checkpoint{}, false
+	}
+	return a.issued[round-1], true
 }
 
 func (a *RepositoryAdapter) FullTarget(_ context.Context) (approval.ReviewTarget, error) {
@@ -88,14 +76,148 @@ func (c *Catalog) revParseHead(workDir string) (string, error) {
 	return strings.TrimSpace(out.String()), nil
 }
 
+type cutPointHistory interface {
+	CheckpointAt(round int) (approval.Checkpoint, bool)
+}
+
+const taskStatusBlocked = "blocked"
+
+var (
+	taskStatusFieldRe = regexp.MustCompile(`(?i)\*\*Status:\*\*\s*(.+)`)
+	taskTableRowRe    = regexp.MustCompile(`^\|\s*(\d+\.\d+)\s*\|`)
+	taskIDReference   = regexp.MustCompile(`\d+\.\d+`)
+)
+
+type TaskStatusWriter struct {
+	tasksDir     string
+	taskFileName string
+}
+
+func NewTaskStatusWriter(tasksDir, taskFileName string) *TaskStatusWriter {
+	return &TaskStatusWriter{tasksDir: strings.TrimSpace(tasksDir), taskFileName: strings.TrimSpace(taskFileName)}
+}
+
+func (w *TaskStatusWriter) Force(status string) error {
+	if w.tasksDir == "" || w.taskFileName == "" {
+		return nil
+	}
+	if err := w.writeTaskFileStatus(status); err != nil {
+		return err
+	}
+	return w.writeTasksTableStatus(status)
+}
+
+func (w *TaskStatusWriter) writeTaskFileStatus(status string) error {
+	path := filepath.Join(w.tasksDir, w.taskFileName)
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	if !taskStatusFieldRe.Match(content) {
+		return nil
+	}
+	updated := taskStatusFieldRe.ReplaceAll(content, []byte("**Status:** "+status))
+	if err := os.WriteFile(path, updated, 0o644); err != nil {
+		return fmt.Errorf("force task status %q at %q: %w", status, path, err)
+	}
+	return nil
+}
+
+func (w *TaskStatusWriter) writeTasksTableStatus(status string) error {
+	taskID := taskIDReference.FindString(w.taskFileName)
+	if taskID == "" {
+		return nil
+	}
+	path := filepath.Join(w.tasksDir, "tasks.md")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+
+	lines := strings.Split(string(content), "\n")
+	changed := false
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if !taskTableRowRe.MatchString(trimmed) {
+			continue
+		}
+		columns := strings.Split(trimmed, "|")
+		if len(columns) <= 3 || strings.TrimSpace(columns[1]) != taskID {
+			continue
+		}
+		columns[3] = " " + status + " "
+		lines[i] = strings.Join(columns, "|")
+		changed = true
+		break
+	}
+	if !changed {
+		return nil
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o644); err != nil {
+		return fmt.Errorf("force task status %q for task %s at %q: %w", status, taskID, path, err)
+	}
+	return nil
+}
+
+type RoundEvidenceSink interface {
+	MkdirAll(path string) error
+	Exists(path string) bool
+	WriteFile(path string, data []byte) error
+}
+
+type RoundEvidenceWriter struct {
+	baseDir string
+	sink    RoundEvidenceSink
+}
+
+func NewRoundEvidenceWriter(baseDir string) *RoundEvidenceWriter {
+	return &RoundEvidenceWriter{baseDir: strings.TrimSpace(baseDir)}
+}
+
+func NewRoundEvidenceWriterWithSink(baseDir string, sink RoundEvidenceSink) *RoundEvidenceWriter {
+	return &RoundEvidenceWriter{baseDir: strings.TrimSpace(baseDir), sink: sink}
+}
+
+func (w *RoundEvidenceWriter) Dir(round int) string {
+	if w == nil || w.baseDir == "" {
+		return ""
+	}
+	return NewCatalog().roundReviewEvidenceDir(w.baseDir, round)
+}
+
+func (w *RoundEvidenceWriter) Write(round int, content string) (string, error) {
+	dir := w.Dir(round)
+	if dir == "" {
+		return "", nil
+	}
+	if w.sink == nil {
+		return NewCatalog().writeRoundReviewEvidence(dir, content)
+	}
+	path := filepath.Join(dir, roundReviewEvidenceFile)
+	if w.sink.Exists(path) {
+		return "", fmt.Errorf("write round review evidence at %q: %w", path, fs.ErrExist)
+	}
+	if err := w.sink.MkdirAll(dir); err != nil {
+		return "", fmt.Errorf("write round review evidence at %q: %w", path, err)
+	}
+	if err := w.sink.WriteFile(path, []byte(content)); err != nil {
+		return "", fmt.Errorf("write round review evidence at %q: %w", path, err)
+	}
+	return path, nil
+}
+
 type ReviewerAdapter struct {
-	runner  *ACPRunner
-	baseJob Job
-	repo    approval.Repository
+	runner    *ACPRunner
+	baseJob   Job
+	cutPoints cutPointHistory
 }
 
 func NewReviewerAdapter(runner *ACPRunner, baseJob Job) *ReviewerAdapter {
-	return &ReviewerAdapter{runner: runner, baseJob: baseJob, repo: NewRepositoryAdapter(baseJob.WorkDir)}
+	return NewReviewerAdapterWithRepository(runner, baseJob, NewRepositoryAdapter(baseJob.WorkDir))
+}
+
+func NewReviewerAdapterWithRepository(runner *ACPRunner, baseJob Job, repository *RepositoryAdapter) *ReviewerAdapter {
+	return &ReviewerAdapter{runner: runner, baseJob: baseJob, cutPoints: repository}
 }
 
 func (a *ReviewerAdapter) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
@@ -108,18 +230,16 @@ func (a *ReviewerAdapter) Review(ctx context.Context, request approval.ReviewReq
 	}
 	job.Prompt = NewCatalog().buildReviewPrompt(skillBody, request.Target().String())
 
-	priorSHA, err := a.priorCutPoint(ctx, request.Round())
-	if err != nil {
-		return approval.ReviewerOutput{}, err
-	}
-
-	restoreEnv := NewCatalog().applyRoundReviewEnv(request.Round(), priorSHA)
+	restoreEnv := NewCatalog().applyRoundReviewEnv(request.Round(), a.priorCutPoint(request.Round()))
 	rawText, err := a.runner.spawnReviewSession(ctx, job)
 	restoreEnv()
 	if err != nil {
 		return approval.ReviewerOutput{}, err
 	}
-	criteriaMap, err := parityCriteriaMap(request)
+	if _, err := NewRoundEvidenceWriter(a.baseJob.EvidenceDir).Write(request.Round(), rawText); err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+	criteriaMap, err := approval.ParseCriteriaMap(rawText, request)
 	if err != nil {
 		return approval.ReviewerOutput{}, err
 	}
@@ -127,68 +247,18 @@ func (a *ReviewerAdapter) Review(ctx context.Context, request approval.ReviewReq
 }
 
 func parseCycleFindings(rawText string) []approval.Finding {
-	var findings []approval.Finding
-	for _, line := range strings.Split(rawText, "\n") {
-		severity, ok := severityFromLine(strings.ToLower(line))
-		if !ok {
-			continue
-		}
-		file := cycleFindingFile
-		if ref := cycleFileLineReference.FindString(line); ref != "" {
-			file = ref
-		}
-		finding, err := approval.NewFinding(severity, file, cycleFindingRule, strings.TrimSpace(line))
-		if err != nil {
-			continue
-		}
-		findings = append(findings, finding)
-	}
-	return findings
+	return approval.ParseReviewFindings(rawText)
 }
 
-func severityFromLine(lowerLine string) (approval.Severity, bool) {
-	for _, marker := range cycleSeverityMarkers {
-		if strings.Contains(lowerLine, marker.token) {
-			return marker.severity, true
-		}
+func (a *ReviewerAdapter) priorCutPoint(round int) string {
+	if round < 2 || a.cutPoints == nil {
+		return ""
 	}
-	return 0, false
-}
-
-func parityCriteriaMap(request approval.ReviewRequest) (approval.CriteriaMap, error) {
-	var criteria []approval.AcceptanceCriterion
-	for criterion := range request.Criteria() {
-		criteria = append(criteria, criterion)
+	checkpoint, ok := a.cutPoints.CheckpointAt(round - 1)
+	if !ok {
+		return ""
 	}
-
-	criteriaMap, err := approval.NewCriteriaMap(criteria)
-	if err != nil {
-		return approval.CriteriaMap{}, err
-	}
-
-	evidence, err := approval.NewCommandEvidence(parityEvidenceCommand, parityEvidenceRecord)
-	if err != nil {
-		return approval.CriteriaMap{}, err
-	}
-
-	for _, criterion := range criteria {
-		criteriaMap, err = criteriaMap.WithEvidence(criterion, evidence)
-		if err != nil {
-			return approval.CriteriaMap{}, err
-		}
-	}
-	return criteriaMap, nil
-}
-
-func (a *ReviewerAdapter) priorCutPoint(ctx context.Context, round int) (string, error) {
-	if round < 2 {
-		return "", nil
-	}
-	checkpoint, err := a.repo.Checkpoint(ctx)
-	if err != nil {
-		return "", err
-	}
-	return checkpoint.String(), nil
+	return checkpoint.String()
 }
 
 type FixerAdapter struct {
@@ -205,6 +275,9 @@ func (a *FixerAdapter) Fix(ctx context.Context, request approval.FixRequest) err
 	job.AutoReview = false
 	job.Prompt = a.buildFixPrompt(request)
 
+	restoreDepth := invocation.NewGuard().ResetDepth()
+	defer restoreDepth()
+
 	_, err := a.runner.Run(ctx, job)
 	return err
 }
@@ -213,7 +286,7 @@ func (a *FixerAdapter) buildFixPrompt(request approval.FixRequest) string {
 	var sb strings.Builder
 	sb.WriteString("## Findings to fix\n\n")
 	for finding := range request.Findings() {
-		fmt.Fprintf(&sb, "- [%s] %s (%s): %s\n", finding.Severity().String(), finding.File(), finding.Rule(), finding.Description())
+		fmt.Fprintf(&sb, "- [%s] %s (%s): %s\n", finding.Severity().String(), finding.Location(), finding.Rule(), finding.Description())
 	}
 	sb.WriteString("\n## Target\n\n```diff\n")
 	sb.WriteString(request.Target().String())

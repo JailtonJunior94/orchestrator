@@ -32,6 +32,7 @@ func TestEnvPolicyStripsKnownKillSwitches(t *testing.T) {
 		"OPENCODE_PURE=1",
 		"OPENCODE_DISABLE_PROJECT_CONFIG=1",
 		"OPENCODE_DISABLE_EXTERNAL_SKILLS=1",
+		"OPENCODE_DISABLE_DEFAULT_PLUGINS=1",
 		"HOME=/home/user",
 	}
 	out := pol.Apply(environ)
@@ -74,7 +75,7 @@ func TestEnvPolicyStripVarsReturnsClone(t *testing.T) {
 	}
 }
 
-func TestOpenCodeAgentEnvPolicyStripsExactlyTheThreeKillSwitches(t *testing.T) {
+func TestOpenCodeAgentEnvPolicyStripsExactlyTheFourKillSwitches(t *testing.T) {
 	t.Parallel()
 
 	agent, err := specs.NewCatalog().AgentByID("opencode")
@@ -88,7 +89,7 @@ func TestOpenCodeAgentEnvPolicyStripsExactlyTheThreeKillSwitches(t *testing.T) {
 	if pol.IsZero() {
 		t.Fatal("OpenCode agent must have a non-zero EnvPolicy")
 	}
-	want := []string{"OPENCODE_PURE", "OPENCODE_DISABLE_PROJECT_CONFIG", "OPENCODE_DISABLE_EXTERNAL_SKILLS"}
+	want := []string{"OPENCODE_PURE", "OPENCODE_DISABLE_PROJECT_CONFIG", "OPENCODE_DISABLE_EXTERNAL_SKILLS", "OPENCODE_DISABLE_DEFAULT_PLUGINS"}
 	got := pol.StripVars()
 	if len(got) != len(want) {
 		t.Fatalf("StripVars() = %v; want %v", got, want)

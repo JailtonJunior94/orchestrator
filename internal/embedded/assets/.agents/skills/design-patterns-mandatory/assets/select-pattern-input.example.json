@@ -1,0 +1,12 @@
+{
+  "problem": "Trocar politica de precificacao em runtime sem ifs espalhados.",
+  "signals": [
+    "runtime_algorithm_swap",
+    "prefer_composition"
+  ],
+  "constraints": [
+    "must_support_runtime_switch",
+    "preserve_public_contract"
+  ],
+  "force_reject": []
+}

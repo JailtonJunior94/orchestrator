@@ -28,3 +28,6 @@ __pycache__/
 
 # Session temp de CLIs
 .codex/tmp/
+
+# Binarios de teste compilados (go test -c)
+*.test

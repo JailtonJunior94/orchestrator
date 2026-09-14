@@ -93,7 +93,7 @@ func (s *SkillsSuite) TestBaseSkillsIncludesExecuteAllTasks() {
 }
 
 func (s *SkillsSuite) TestComplementarySkills() {
-	s.Len(ComplementarySkills, 11, "ComplementarySkills count")
+	s.Len(ComplementarySkills, 14, "ComplementarySkills count")
 }
 
 func (s *SkillsSuite) TestResolveToolRemovedAgent() {

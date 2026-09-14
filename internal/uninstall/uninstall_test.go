@@ -13,8 +13,8 @@ func TestUninstall_RemovesSkills(t *testing.T) {
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.0.0\n---\n")
 	ffs.Files["/project/.agents/skills/bugfix/SKILL.md"] = []byte("---\nversion: 1.0.0\n---\n")
-	ffs.Files["/project/AGENTS.md"] = []byte("# AGENTS")
-	ffs.Files["/project/CLAUDE.md"] = []byte("# CLAUDE")
+	ffs.Files["/project/AGENTS.md"] = []byte(generatedAgentsMarkdown)
+	ffs.Files["/project/CLAUDE.md"] = []byte(generatedToolMarkdown("Claude Code"))
 	ffs.Files["/project/.ai_spec_harness.json"] = []byte("{}")
 	ffs.Files["/project/.claude/hooks/validate-governance.sh"] = []byte("gov")
 	ffs.Files["/project/.claude/hooks/validate-preload.sh"] = []byte("pre")
@@ -25,7 +25,7 @@ func TestUninstall_RemovesSkills(t *testing.T) {
 
 	printer := output.New(false)
 	svc := NewService(ffs, printer)
-	ffs.Files["/project/.claude/settings.local.json"] = []byte(svc.defaultClaudeSettings())
+	ffs.Files["/project/.claude/settings.local.json"] = []byte(installClaudeSettingsTemplate)
 
 	err := svc.Execute("/project", false)
 	if err != nil {
@@ -76,7 +76,7 @@ func TestUninstall_RemovesLegacyGeminiResidue(t *testing.T) {
 
 	printer := output.New(false)
 	svc := NewService(ffs, printer)
-	ffs.Files["/project/.claude/settings.local.json"] = []byte(svc.defaultClaudeSettings())
+	ffs.Files["/project/.claude/settings.local.json"] = []byte(installClaudeSettingsTemplate)
 
 	err := svc.Execute("/project", false)
 	if err != nil {
@@ -95,11 +95,11 @@ func TestUninstall_DryRunDoesNotRemove(t *testing.T) {
 	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nversion: 1.0.0\n---\n")
-	ffs.Files["/project/AGENTS.md"] = []byte("# AGENTS")
+	ffs.Files["/project/AGENTS.md"] = []byte(generatedAgentsMarkdown)
 
 	printer := output.New(false)
 	svc := NewService(ffs, printer)
-	ffs.Files["/project/.claude/settings.local.json"] = []byte(svc.defaultClaudeSettings())
+	ffs.Files["/project/.claude/settings.local.json"] = []byte(installClaudeSettingsTemplate)
 
 	err := svc.Execute("/project", true)
 	if err != nil {
@@ -122,11 +122,10 @@ func TestUninstall_NoSkillsDir(t *testing.T) {
 
 	printer := output.New(false)
 	svc := NewService(ffs, printer)
-	ffs.Files["/project/.claude/settings.local.json"] = []byte(svc.defaultClaudeSettings())
+	ffs.Files["/project/.claude/settings.local.json"] = []byte(installClaudeSettingsTemplate)
 
-	err := svc.Execute("/project", false)
-	if err == nil {
-		t.Fatal("expected error for missing .agents/skills/")
+	if err := svc.Execute("/project", false); err != nil {
+		t.Fatalf("RF-05: desinstalar projeto sem governanca deve ser nao-fatal, got: %v", err)
 	}
 }
 
@@ -138,7 +137,7 @@ func TestUninstall_PreservesAgentsLocal(t *testing.T) {
 
 	printer := output.New(false)
 	svc := NewService(ffs, printer)
-	ffs.Files["/project/.claude/settings.local.json"] = []byte(svc.defaultClaudeSettings())
+	ffs.Files["/project/.claude/settings.local.json"] = []byte(installClaudeSettingsTemplate)
 
 	err := svc.Execute("/project", false)
 	if err != nil {
@@ -186,9 +185,11 @@ func TestUninstall_ManifestDriven_PreservesUserFile_Idempotent(t *testing.T) {
 		t.Error("arquivo do usuario nao rastreado pelo manifesto NAO deveria ser removido")
 	}
 
-	// Reexecucao idempotente: nada rastreado ainda existe (exceto o proprio manifesto, ja removido).
-	if err := svc.Execute("/project", false); err == nil {
-		t.Fatal("segunda execucao: esperava erro (governanca ja removida, .agents/skills ausente) — comportamento consistente, nao panic nem falha inesperada")
+	if err := svc.Execute("/project", false); err != nil {
+		t.Fatalf("segunda execucao deve ser idempotente e nao-fatal (RF-05), got: %v", err)
+	}
+	if !ffs.Exists("/project/.claude/hooks/custom-user-hook.sh") {
+		t.Error("segunda execucao nao pode remover arquivo do usuario")
 	}
 }
 

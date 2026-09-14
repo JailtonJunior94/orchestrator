@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
+	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 )
 
 var (
@@ -19,18 +20,17 @@ var (
 )
 
 const (
-	parityEvidenceCommand = "parity-stage"
-	parityEvidenceRecord  = "criteria gate deferred to task 5.0"
-	defaultFindingFile    = "unspecified"
-	defaultFindingRule    = "review-finding"
+	defaultFindingFile = "unspecified"
+	defaultFindingRule = "review-finding"
 )
 
 type reviewerPort struct {
 	reviewer FinalReviewer
+	evidence *airuntime.RoundEvidenceWriter
 }
 
-func newReviewerPort(reviewer FinalReviewer) *reviewerPort {
-	return &reviewerPort{reviewer: reviewer}
+func newReviewerPort(reviewer FinalReviewer, evidence *airuntime.RoundEvidenceWriter) *reviewerPort {
+	return &reviewerPort{reviewer: reviewer, evidence: evidence}
 }
 
 func (p *reviewerPort) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
@@ -39,12 +39,16 @@ func (p *reviewerPort) Review(ctx context.Context, request approval.ReviewReques
 		return approval.ReviewerOutput{}, err
 	}
 
+	if _, err := p.evidence.Write(request.Round(), result.RawOutput); err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+
 	findings, err := translateReviewFindings(result.Findings)
 	if err != nil {
 		return approval.ReviewerOutput{}, err
 	}
 
-	criteriaMap, err := parityCriteriaMap(request)
+	criteriaMap, err := approval.ParseCriteriaMap(result.RawOutput, request)
 	if err != nil {
 		return approval.ReviewerOutput{}, err
 	}
@@ -58,8 +62,8 @@ type primedReviewerPort struct {
 	delegate *reviewerPort
 }
 
-func newPrimedReviewerPort(primed FinalReviewResult, reviewer FinalReviewer) *primedReviewerPort {
-	return &primedReviewerPort{primed: primed, delegate: newReviewerPort(reviewer)}
+func newPrimedReviewerPort(primed FinalReviewResult, reviewer FinalReviewer, evidence *airuntime.RoundEvidenceWriter) *primedReviewerPort {
+	return &primedReviewerPort{primed: primed, delegate: newReviewerPort(reviewer, evidence)}
 }
 
 func (p *primedReviewerPort) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
@@ -68,41 +72,19 @@ func (p *primedReviewerPort) Review(ctx context.Context, request approval.Review
 	}
 	p.consumed = true
 
+	if _, err := p.delegate.evidence.Write(request.Round(), p.primed.RawOutput); err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+
 	findings, err := translateReviewFindings(p.primed.Findings)
 	if err != nil {
 		return approval.ReviewerOutput{}, err
 	}
-	criteriaMap, err := parityCriteriaMap(request)
+	criteriaMap, err := approval.ParseCriteriaMap(p.primed.RawOutput, request)
 	if err != nil {
 		return approval.ReviewerOutput{}, err
 	}
 	return approval.NewReviewerOutput(p.primed.RawOutput, findings, criteriaMap), nil
-}
-
-func parityCriteriaMap(request approval.ReviewRequest) (approval.CriteriaMap, error) {
-	var criteria []approval.AcceptanceCriterion
-	for criterion := range request.Criteria() {
-		criteria = append(criteria, criterion)
-	}
-
-	criteriaMap, err := approval.NewCriteriaMap(criteria)
-	if err != nil {
-		return approval.CriteriaMap{}, err
-	}
-
-	evidence, err := approval.NewCommandEvidence(parityEvidenceCommand, parityEvidenceRecord)
-	if err != nil {
-		return approval.CriteriaMap{}, err
-	}
-
-	for _, criterion := range criteria {
-		criteriaMap, err = criteriaMap.WithEvidence(criterion, evidence)
-		if err != nil {
-			return approval.CriteriaMap{}, err
-		}
-	}
-
-	return criteriaMap, nil
 }
 
 func translateReviewFindings(in []Finding) ([]approval.Finding, error) {
@@ -207,12 +189,13 @@ func reverseSeverity(severity approval.Severity) Severity {
 }
 
 type repositoryPort struct {
-	capturer DiffCapturer
-	workDir  string
+	capturer       DiffCapturer
+	workDir        string
+	contentDigests map[string]bool
 }
 
 func newRepositoryPort(capturer DiffCapturer, workDir string) *repositoryPort {
-	return &repositoryPort{capturer: capturer, workDir: workDir}
+	return &repositoryPort{capturer: capturer, workDir: workDir, contentDigests: make(map[string]bool)}
 }
 
 func (p *repositoryPort) Checkpoint(ctx context.Context) (approval.Checkpoint, error) {
@@ -228,16 +211,51 @@ func (p *repositoryPort) contentCheckpoint(ctx context.Context) (approval.Checkp
 	if err != nil {
 		return approval.Checkpoint{}, fmt.Errorf("taskloop: fallback checkpoint diff capture: %w", err)
 	}
+	digest := diffDigest(diff)
+	checkpoint, err := approval.NewCheckpoint(digest)
+	if err != nil {
+		return approval.Checkpoint{}, err
+	}
+	p.contentDigests[digest] = true
+	return checkpoint, nil
+}
+
+func diffDigest(diff string) string {
 	sum := sha256.Sum256([]byte(diff))
-	return approval.NewCheckpoint(hex.EncodeToString(sum[:]))
+	return hex.EncodeToString(sum[:])
 }
 
 func (p *repositoryPort) FullTarget(ctx context.Context) (approval.ReviewTarget, error) {
 	return p.captureTarget(ctx)
 }
 
-func (p *repositoryPort) Delta(ctx context.Context, _ approval.Checkpoint) (approval.ReviewTarget, error) {
-	return p.captureTarget(ctx)
+func (p *repositoryPort) Delta(ctx context.Context, since approval.Checkpoint) (approval.ReviewTarget, error) {
+	ref := strings.TrimSpace(since.String())
+	if p.contentDigests[ref] {
+		return p.contentDelta(ctx, ref)
+	}
+	if ref == "" || !NewCatalog().isGitWorkTree(ctx, p.workDir) {
+		return p.captureTarget(ctx)
+	}
+	if _, err := NewCatalog().commandOutput(ctx, p.workDir, "git", "rev-parse", "--verify", "--quiet", ref+"^{commit}"); err != nil {
+		return p.captureTarget(ctx)
+	}
+	out, err := NewCatalog().commandOutput(ctx, p.workDir, "git", "diff", "--binary", ref, "--")
+	if err != nil {
+		return p.captureTarget(ctx)
+	}
+	return approval.NewReviewTarget(string(out)), nil
+}
+
+func (p *repositoryPort) contentDelta(ctx context.Context, since string) (approval.ReviewTarget, error) {
+	diff, err := p.capturer.CaptureDiff(ctx)
+	if err != nil {
+		return approval.ReviewTarget{}, err
+	}
+	if diffDigest(diff) == since {
+		return approval.NewReviewTarget(""), nil
+	}
+	return approval.NewReviewTarget(diff), nil
 }
 
 func (p *repositoryPort) captureTarget(ctx context.Context) (approval.ReviewTarget, error) {

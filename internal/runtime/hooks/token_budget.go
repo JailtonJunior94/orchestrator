@@ -38,7 +38,9 @@ type TokenBudgetHook struct {
 	Tool string
 	// windowClass classifica a janela de contexto da CLI ativa (ADR-023).
 	// Zero-value (WindowStandard) preserva comportamento F1.
-	windowClass specs.WindowClass
+	windowClass        specs.WindowClass
+	resolvedMaxTokens  int
+	referenceMaxTokens int
 }
 
 var _ Hook = (*TokenBudgetHook)(nil)
@@ -60,6 +62,13 @@ func NewTokenBudgetHookWithClass(tool string, class specs.WindowClass) *TokenBud
 	return &TokenBudgetHook{Tool: tool, windowClass: class}
 }
 
+func NewTokenBudgetHookWithWindow(tool string, window specs.ContextWindow, referenceMaxTokens int) *TokenBudgetHook {
+	hook := NewTokenBudgetHookWithClass(tool, window.Class())
+	hook.resolvedMaxTokens = window.MaxTokens
+	hook.referenceMaxTokens = referenceMaxTokens
+	return hook
+}
+
 // Name retorna o identificador do hook.
 func (h *TokenBudgetHook) Name() string { return "token_budget" }
 
@@ -78,10 +87,18 @@ func (h *TokenBudgetHook) Run(_ context.Context, evt Event) error {
 	}
 
 	isLarge := h.windowClass == specs.WindowLarge
-	tokens, limit, ok := metrics.NewCatalog().CheckBudgetForClass(*promptEvt.Prompt, h.Tool, isLarge)
-	if !ok {
+	tokens, limit, _ := metrics.NewCatalog().CheckBudgetForClass(*promptEvt.Prompt, h.Tool, isLarge)
+	limit = h.scaleLimit(limit, isLarge)
+	if ok := limit <= 0 || tokens <= limit; !ok {
 		return fmt.Errorf("%w: %d tokens (limite %d para %q)",
 			ErrTokenBudgetExceeded, tokens, limit, h.Tool)
 	}
 	return nil
+}
+
+func (h *TokenBudgetHook) scaleLimit(limit int, isLarge bool) int {
+	if isLarge || limit <= 0 || h.resolvedMaxTokens <= 0 || h.referenceMaxTokens <= 0 {
+		return limit
+	}
+	return limit * h.resolvedMaxTokens / h.referenceMaxTokens
 }

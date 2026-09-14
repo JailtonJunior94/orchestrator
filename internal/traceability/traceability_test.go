@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/JailtonJunior94/ai-spec-harness/internal/evidence"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/traceability"
 )
 
@@ -58,8 +59,8 @@ func TestParseAcceptanceCriteria_ArrowSeparatesTextFromEvidence(t *testing.T) {
 	report := []byte(`# Report
 
 ## Critérios de Aceite
-- criterio um -> comprovado: log-1
-- criterio dois -> comprovado: log-2
+- criterio um -> go test ./... -> PASS
+- criterio dois -> TestCriterion -> PASS
   - (a) sub-item ilustrativo sem contar como critério próprio
 - criterio sem evidencia
 
@@ -72,7 +73,7 @@ func TestParseAcceptanceCriteria_ArrowSeparatesTextFromEvidence(t *testing.T) {
 	if len(got) != 3 {
 		t.Fatalf("got %d criteria, want 3: %+v", len(got), got)
 	}
-	if !got[0].HasEvidence() || got[0].Evidence != "comprovado: log-1" {
+	if !got[0].HasEvidence() || got[0].Evidence != "go test ./... -> PASS" {
 		t.Fatalf("got[0]=%+v", got[0])
 	}
 	if !got[1].HasEvidence() {
@@ -105,7 +106,7 @@ func TestBuildMapAndValidate_FullChainPasses(t *testing.T) {
 	writeTraceFixture(t, dir, "1.0_execution_report.md", `# Report
 
 ## Critérios de Aceite
-- criterio um -> comprovado: log-1
+- criterio um -> go test ./... -> PASS
 `)
 
 	m, err := traceability.NewCatalog().BuildMap(dir)
@@ -226,7 +227,8 @@ func TestValidate_CriterionWithoutEvidence(t *testing.T) {
 |---|---|
 | 1.0 | RF-01 |
 `)
-	writeTraceFixture(t, dir, "1.0_execution_report.md", `# Report
+	writeTraceFixture(t, dir, "1.0_execution_report.md", `<!-- evidence-contract: v2 -->
+# Report
 
 ## Critérios de Aceite
 - criterio sem seta de evidencia
@@ -249,6 +251,110 @@ func TestValidate_CriterionWithoutEvidence(t *testing.T) {
 	}
 }
 
+func TestValidate_BlockedTaskDoesNotClaimUnobservedEvidence(t *testing.T) {
+	dir := t.TempDir()
+
+	writeTraceFixture(t, dir, "prd.md", "RF-01 deve existir.")
+	writeTraceFixture(t, dir, "tasks.md", `# Tasks
+
+| # | Título | Status |
+|---|---|---|
+| 1.0 | Native proof | blocked |
+
+## Cobertura de Requisitos
+
+| Tarefa | Requisitos cobertos |
+|---|---|
+| 1.0 | RF-01 |
+`)
+	writeTraceFixture(t, dir, "1.0_execution_report.md", `# Report
+
+## Critérios de Aceite
+- Bloqueado aguardando execução nativa.
+`)
+
+	m, err := traceability.NewCatalog().BuildMap(dir)
+	if err != nil {
+		t.Fatalf("BuildMap: %v", err)
+	}
+	for _, v := range m.Validate() {
+		if v.Kind == traceability.ViolationCriterionWithoutEvidence {
+			t.Fatalf("blocked task must not require unobserved evidence: %v", v)
+		}
+	}
+}
+
+func TestValidate_UniverseFullyExemptIsNotVerification(t *testing.T) {
+	dir := t.TempDir()
+
+	writeTraceFixture(t, dir, "prd.md", "RF-01 deve existir.")
+	writeTraceFixture(t, dir, "tasks.md", `# Tasks
+
+## Cobertura de Requisitos
+
+| Tarefa | Requisitos cobertos |
+|---|---|
+| 1.0 | RF-01 |
+`)
+	writeTraceFixture(t, dir, "1.0_execution_report.md", `# Report
+
+## Critérios de Aceite
+- criterio -> go test ./... -> PASS
+`)
+
+	m, err := traceability.NewCatalog().BuildMap(dir)
+	if err != nil {
+		t.Fatalf("BuildMap: %v", err)
+	}
+
+	m.Contracts = map[string]evidence.Contract{"1.0": evidence.ContractV1}
+	violations := m.Validate()
+	if len(violations) != 1 || violations[0].Kind != traceability.ViolationGateVacuous {
+		t.Fatalf("universo integralmente isento deve reprovar como vacuo, got %v", violations)
+	}
+	if m.VerifiedTaskCount() != 0 {
+		t.Fatalf("nenhuma tarefa foi confrontada, VerifiedTaskCount = %d", m.VerifiedTaskCount())
+	}
+
+	m.Contracts = map[string]evidence.Contract{"1.0": evidence.ContractV2}
+	if violations := m.Validate(); len(violations) != 0 {
+		t.Fatalf("tarefa confrontada nao e gate vacuo: %v", violations)
+	}
+}
+
+func TestValidate_CriterionRejectsArbitraryEvidenceProse(t *testing.T) {
+	m := traceability.Map{TaskCoverage: map[string][]string{"1.0": {"RF-01"}}, Criteria: map[string][]traceability.Criterion{"1.0": {{Task: "1.0", Text: "criterion", Evidence: "trust me"}}}, MissingReports: map[string]bool{}}
+	violations := m.Validate()
+	if len(violations) != 1 || violations[0].Kind != traceability.ViolationCriterionWithoutEvidence {
+		t.Fatalf("violations = %v, want criterion_without_evidence", violations)
+	}
+}
+
+func TestCriterionHasEvidenceAcceptsOnlyRF48Forms(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name     string
+		evidence string
+		want     bool
+	}{
+		{name: "command with output", evidence: "go test ./... -> PASS", want: true},
+		{name: "file line", evidence: "internal/foo.go:42", want: true},
+		{name: "named test with result", evidence: "TestCriterion -> PASS", want: true},
+		{name: "prose with spaces", evidence: "trust me completely", want: false},
+		{name: "unnamed command-looking prose", evidence: "it worked -> PASS", want: false},
+		{name: "command without output", evidence: "go test ./...", want: false},
+		{name: "test without result", evidence: "TestCriterion", want: false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			criterion := traceability.Criterion{Evidence: tc.evidence}
+			if got := criterion.HasEvidence(); got != tc.want {
+				t.Errorf("HasEvidence(%q) = %t, want %t", tc.evidence, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestBuildMap_MissingPRDFile(t *testing.T) {
 	dir := t.TempDir()
 	writeTraceFixture(t, dir, "tasks.md", "# Tasks\n")
@@ -259,7 +365,7 @@ func TestBuildMap_MissingPRDFile(t *testing.T) {
 	}
 }
 
-func TestFullPRD_HarnessQuatroClisLoopAprovacao_ChainIsClosedExceptTaskUnderExecution(t *testing.T) {
+func TestFullPRD_HarnessQuatroClisLoopAprovacao_ChainIsClosed(t *testing.T) {
 	dir := "../../.specs/prd-harness-quatro-clis-loop-aprovacao"
 	if _, err := os.Stat(filepath.Join(dir, "prd.md")); err != nil {
 		t.Skip("PRD directory not present in this checkout")
@@ -275,12 +381,15 @@ func TestFullPRD_HarnessQuatroClisLoopAprovacao_ChainIsClosedExceptTaskUnderExec
 
 	violations := m.Validate()
 	for _, v := range violations {
-		if v.Kind == traceability.ViolationTaskWithoutReport && v.Subject == "11.0" {
-			continue
+		if v.Kind != traceability.ViolationGateVacuous {
+			t.Errorf("unexpected traceability violation: %s", v.String())
 		}
-		t.Errorf("unexpected traceability violation: %s", v.String())
 	}
 	if t.Failed() {
 		t.Logf("all violations: %v", violations)
+	}
+
+	if m.VerifiedTaskCount() == 0 && len(m.TaskCoverage) > 0 {
+		t.Logf("gate vacuo: %d tarefa(s) no escopo, 0 confrontada(s) — cadeia isenta, nao verificada", len(m.TaskCoverage))
 	}
 }

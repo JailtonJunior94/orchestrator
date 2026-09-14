@@ -1,0 +1,35 @@
+{
+  "status": "ok",
+  "primary_pattern": {
+    "pattern": "Strategy",
+    "group": "comportamental",
+    "score": 5,
+    "strong_hits": [
+      "runtime_algorithm_swap"
+    ],
+    "weak_hits": [
+      "must_support_runtime_switch",
+      "prefer_composition"
+    ],
+    "blockers_considered": []
+  },
+  "complementary_pattern": null,
+  "simpler_alternative": "Usar funcao parametrizada ou dispatch table",
+  "rejected_patterns": [
+    {
+      "pattern": "State",
+      "reason": "Nao ha transicoes de estado governando o comportamento."
+    }
+  ],
+  "candidate_scores": [],
+  "economy_case": [
+    "Reduz acoplamento ou branching usando os sinais fortes: runtime_algorithm_swap."
+  ],
+  "efficiency_case": [
+    "Reduz custo de manutencao ao isolar variacao e concrete classes."
+  ],
+  "robustness_case": [
+    "Permite reorganizar a estrutura preservando contrato publico."
+  ],
+  "evidence_gaps": []
+}

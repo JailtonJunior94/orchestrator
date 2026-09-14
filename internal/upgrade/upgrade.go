@@ -147,6 +147,12 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 		outdatedCount++
 	}
 
+	copilotHooksObsolete := s.copilotGovernanceNeedsRepair(projectDir)
+	if copilotHooksObsolete {
+		s.printer.Status("DESATUALIZADO", CopilotGovernanceHooksRelPath, "gate de encerramento do Copilot com chave obsoleta ou ausente")
+		outdatedCount++
+	}
+
 	s.printer.Info("")
 	s.printer.Info("Resumo: %d atualizadas, %d desatualizadas (%d refs divergentes), %d ausentes",
 		okCount, outdatedCount, refsDivCount, missingCount)
@@ -159,6 +165,15 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 			return fmt.Errorf("%d skill(s) desatualizadas ou ausentes", outdatedCount+missingCount)
 		}
 		return nil
+	}
+
+	if copilotHooksObsolete {
+		repaired, err := NewHelper().RepairCopilotGovernanceHooks(s.fs, projectDir)
+		if err != nil {
+			s.printer.Warn("Falha ao reparar %s: %v", CopilotGovernanceHooksRelPath, err)
+		} else if repaired {
+			s.printer.Info("    -> %s reparado (chave obsoleta migrada para %q)", CopilotGovernanceHooksRelPath, CopilotSessionEndHookKey)
+		}
 	}
 
 	// Aplicar atualizacoes
@@ -220,6 +235,22 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 	}
 
 	return nil
+}
+
+func (s *Service) copilotGovernanceNeedsRepair(projectDir string) bool {
+	path := NewHelper().CopilotGovernanceHooksPath(projectDir)
+	if !s.fs.Exists(path) {
+		return false
+	}
+	raw, err := s.fs.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	_, changed, err := NewHelper().repairCopilotGovernanceDocument(raw)
+	if err != nil {
+		return false
+	}
+	return changed
 }
 
 func (s *Service) printCheckVersionInfo(projectDir string) {

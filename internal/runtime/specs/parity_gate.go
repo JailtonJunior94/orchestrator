@@ -56,7 +56,7 @@ func ValidateParityMatrix(cells []AgentEnforcement, requiredAgents []string, dis
 			} else {
 				scriptByPoint[point] = cov.ScriptPath()
 			}
-			if dispatchProven != nil && !dispatchProven(agentID, point) {
+			if dispatchProven == nil || !dispatchProven(agentID, point) {
 				violations = append(violations, ParityViolation{Agent: agentID, Point: point, Reason: "no dispatch proof test associated"})
 			}
 		}

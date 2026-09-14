@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
-	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/config"
@@ -27,6 +27,14 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
+
+type E2EParitySuite struct {
+	suite.Suite
+}
+
+func TestE2EParitySuite(t *testing.T) {
+	suite.Run(t, new(E2EParitySuite))
+}
 
 // ── Helpers de integração ────────────────────────────────────────────────────
 

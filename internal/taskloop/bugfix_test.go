@@ -482,7 +482,13 @@ func TestOptions_MaxBugfixIterationsField(t *testing.T) {
 }
 
 func TestErrBugfixExhausted_Mensagem(t *testing.T) {
-	if !strings.Contains(ErrBugfixExhausted.Error(), "3 iteracoes") {
-		t.Errorf("mensagem deve mencionar limite de 3 iteracoes: %s", ErrBugfixExhausted.Error())
+	message := ErrBugfixExhausted.Error()
+	if !strings.Contains(message, "sem aprovacao") {
+		t.Errorf("mensagem deve declarar encerramento sem aprovacao: %s", message)
+	}
+	for _, forbidden := range []string{"3 iteracoes", "5 iteracoes"} {
+		if strings.Contains(message, forbidden) {
+			t.Errorf("mensagem nao deve fixar numero de iteracoes (%q): %s", forbidden, message)
+		}
 	}
 }

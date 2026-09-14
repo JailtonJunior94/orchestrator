@@ -328,3 +328,27 @@ func TestBuildCodexConfig(t *testing.T) {
 		}
 	})
 }
+
+func TestGenerateMergesAuthoredCodexConfigAtCallSite(t *testing.T) {
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	ffs.Dirs["/project/.codex"] = true
+	authored := "model = \"o3\"\n\n[mcp_servers.local]\ncommand = \"my-server\"\n"
+	ffs.Files["/project/.codex/config.toml"] = []byte(authored)
+
+	g := NewGenerator(ffs, output.New(false))
+	if err := g.Generate("/source", "/project", []skills.Tool{skills.ToolCodex}, nil, "full", false); err != nil {
+		t.Fatalf("Generate returned error: %v", err)
+	}
+
+	written := string(ffs.Files["/project/.codex/config.toml"])
+	for _, fragment := range []string{"model = \"o3\"", "[mcp_servers.local]", "command = \"my-server\""} {
+		if !strings.Contains(written, fragment) {
+			t.Fatalf("contextgen call-site dropped authored content %q; resulting config.toml:\n%s", fragment, written)
+		}
+	}
+	if !strings.Contains(written, codexGeneratedBegin) || !strings.Contains(written, codexGeneratedEnd) {
+		t.Fatalf("contextgen call-site did not delimit the generated region; resulting config.toml:\n%s", written)
+	}
+}

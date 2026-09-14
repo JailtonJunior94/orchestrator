@@ -17,10 +17,19 @@ func NewMemoryPort(t interface {
 	mock.TestingT
 	Cleanup(func())
 }) *MemoryPort {
+	if helper, ok := t.(interface{ Helper() }); ok {
+		helper.Helper()
+	}
+
 	mock := &MemoryPort{}
 	mock.Mock.Test(t)
 
-	t.Cleanup(func() { mock.AssertExpectations(t) })
+	t.Cleanup(func() {
+		if helper, ok := t.(interface{ Helper() }); ok {
+			helper.Helper()
+		}
+		mock.AssertExpectations(t)
+	})
 
 	return mock
 }
@@ -104,6 +113,57 @@ func (_c *MemoryPort_BuildContext_Call) RunAndReturn(run func(ctx context.Contex
 	return _c
 }
 
+// ClaimSession provides a mock function for the type MemoryPort
+func (_mock *MemoryPort) ClaimSession(sessionID string) error {
+	ret := _mock.Called(sessionID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ClaimSession")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(string) error); ok {
+		r0 = returnFunc(sessionID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MemoryPort_ClaimSession_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ClaimSession'
+type MemoryPort_ClaimSession_Call struct {
+	*mock.Call
+}
+
+// ClaimSession is a helper method to define mock.On call
+//   - sessionID string
+func (_e *MemoryPort_Expecter) ClaimSession(sessionID any) *MemoryPort_ClaimSession_Call {
+	return &MemoryPort_ClaimSession_Call{Call: _e.mock.On("ClaimSession", sessionID)}
+}
+
+func (_c *MemoryPort_ClaimSession_Call) Run(run func(sessionID string)) *MemoryPort_ClaimSession_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MemoryPort_ClaimSession_Call) Return(err error) *MemoryPort_ClaimSession_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MemoryPort_ClaimSession_Call) RunAndReturn(run func(sessionID string) error) *MemoryPort_ClaimSession_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RecordSession provides a mock function for the type MemoryPort
 func (_mock *MemoryPort) RecordSession(ctx context.Context, in durable.SessionFacts) (durable.MemoryReport, error) {
 	ret := _mock.Called(ctx, in)
@@ -166,6 +226,108 @@ func (_c *MemoryPort_RecordSession_Call) Return(memoryReport durable.MemoryRepor
 }
 
 func (_c *MemoryPort_RecordSession_Call) RunAndReturn(run func(ctx context.Context, in durable.SessionFacts) (durable.MemoryReport, error)) *MemoryPort_RecordSession_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReleaseSession provides a mock function for the type MemoryPort
+func (_mock *MemoryPort) ReleaseSession(sessionID string) error {
+	ret := _mock.Called(sessionID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReleaseSession")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(string) error); ok {
+		r0 = returnFunc(sessionID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MemoryPort_ReleaseSession_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReleaseSession'
+type MemoryPort_ReleaseSession_Call struct {
+	*mock.Call
+}
+
+// ReleaseSession is a helper method to define mock.On call
+//   - sessionID string
+func (_e *MemoryPort_Expecter) ReleaseSession(sessionID any) *MemoryPort_ReleaseSession_Call {
+	return &MemoryPort_ReleaseSession_Call{Call: _e.mock.On("ReleaseSession", sessionID)}
+}
+
+func (_c *MemoryPort_ReleaseSession_Call) Run(run func(sessionID string)) *MemoryPort_ReleaseSession_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MemoryPort_ReleaseSession_Call) Return(err error) *MemoryPort_ReleaseSession_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MemoryPort_ReleaseSession_Call) RunAndReturn(run func(sessionID string) error) *MemoryPort_ReleaseSession_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RenewSession provides a mock function for the type MemoryPort
+func (_mock *MemoryPort) RenewSession(sessionID string) error {
+	ret := _mock.Called(sessionID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RenewSession")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(string) error); ok {
+		r0 = returnFunc(sessionID)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MemoryPort_RenewSession_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RenewSession'
+type MemoryPort_RenewSession_Call struct {
+	*mock.Call
+}
+
+// RenewSession is a helper method to define mock.On call
+//   - sessionID string
+func (_e *MemoryPort_Expecter) RenewSession(sessionID any) *MemoryPort_RenewSession_Call {
+	return &MemoryPort_RenewSession_Call{Call: _e.mock.On("RenewSession", sessionID)}
+}
+
+func (_c *MemoryPort_RenewSession_Call) Run(run func(sessionID string)) *MemoryPort_RenewSession_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MemoryPort_RenewSession_Call) Return(err error) *MemoryPort_RenewSession_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MemoryPort_RenewSession_Call) RunAndReturn(run func(sessionID string) error) *MemoryPort_RenewSession_Call {
 	_c.Call.Return(run)
 	return _c
 }

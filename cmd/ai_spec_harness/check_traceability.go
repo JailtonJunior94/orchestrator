@@ -39,16 +39,25 @@ Exemplo:
 				return newExitError(2)
 			}
 
-			violations := traceMap.Validate()
+			violations, notices := traceMap.Report()
+
+			for _, n := range notices {
+				fmt.Printf("AVISO: %s\n", n.String())
+			}
+
+			verified := traceMap.VerifiedTaskCount()
+
 			if len(violations) == 0 {
-				fmt.Printf("OK: cadeia de rastreabilidade verificada — %d requisitos, %d tarefas.\n",
-					len(traceMap.Requirements), len(traceMap.TaskCoverage))
+				fmt.Printf("OK: cadeia de rastreabilidade verificada — %d requisitos, %d tarefas (%d verificada(s), %d isenta(s)/nao confrontada(s)).\n",
+					len(traceMap.Requirements), len(traceMap.TaskCoverage), verified, len(traceMap.TaskCoverage)-verified)
 				return nil
 			}
 
 			for _, v := range violations {
 				fmt.Printf("RUPTURA: %s\n", v.String())
 			}
+			fmt.Printf("%d ruptura(s), %d tarefa(s) verificada(s) de %d, %d isencao(oes) declarada(s).\n",
+				len(violations), verified, len(traceMap.TaskCoverage), len(notices))
 			return newExitError(1)
 		},
 	}

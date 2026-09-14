@@ -85,6 +85,7 @@ EOF
 report_header() {
   local task_ref="$1"
   cat <<EOF
+<!-- evidence-contract: v2 -->
 # Relatório de Execução de Tarefa
 ## Tarefa
 - ID: 1.0
@@ -243,15 +244,15 @@ else
   failed=$((failed+1))
 fi
 
-# --- Caso d2: opt-out explícito reabre o legado, com aviso ruidoso ---
-echo "Caso d2: AI_SDD_STRICT_EVIDENCE=0 reabre o legado"
+# --- Caso d2: opt-out explícito NAO reabre o legado (RF-53) ---
+echo "Caso d2: AI_SDD_STRICT_EVIDENCE=0 nao reabre o gate de aceite"
 out_d2=$(AI_SDD_STRICT_EVIDENCE=0 bash "$VALIDATOR" "$report_d" 2>&1); code_d2=$?
-assert_exit "opt-out explícito passa" 0 $code_d2
-if echo "$out_d2" | grep -q "NAO comprova os criterios"; then
-  echo "  ✓ opt-out avisa que a evidência não comprova critérios"
+assert_exit "opt-out explícito continua reprovando" 1 $code_d2
+if echo "$out_d2" | grep -q "fail-closed desde 0.31.0"; then
+  echo "  ✓ opt-out recebe o diagnóstico de fail-closed"
   passed=$((passed+1))
 else
-  echo "  ✗ opt-out silencioso (regressão do BUG-127)"
+  echo "  ✗ opt-out sem diagnóstico de fail-closed (RF-53)"
   failed=$((failed+1))
 fi
 rm -f "$report_d"

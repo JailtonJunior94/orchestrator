@@ -100,10 +100,13 @@ func (b *runloopBugfixInvoker) InvokeBugfix(ctx context.Context, findings []Find
 	return "applied bugfix\nFail-before: go test ./... falhou reproduzindo o achado\nPass-after: go test ./... passou apos a correcao", nil
 }
 
-type runloopDiffCapturer struct{}
+type runloopDiffCapturer struct {
+	captures int
+}
 
 func (d *runloopDiffCapturer) CaptureDiff(ctx context.Context) (string, error) {
-	return "diff-after-bugfix", nil
+	d.captures++
+	return fmt.Sprintf("diff-after-bugfix-%d", d.captures), nil
 }
 
 type runloopPrompter struct {
@@ -225,9 +228,6 @@ func TestRunLoopApprovedDirect(t *testing.T) {
 
 // TestRunLoopApprovedWithRemarks — gera ActionPlan a partir do prompter (3 decisoes).
 func TestRunLoopApprovedWithRemarks(t *testing.T) {
-	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, newTestPrinter())
-
 	findings := []Finding{
 		{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "x"},
 		{Severity: SeverityImportant, File: "b.go", Line: 2, Message: "y"},
@@ -246,9 +246,11 @@ func TestRunLoopApprovedWithRemarks(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			results := []FinalReviewResult{{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)}}
-			if tc.action == ActionImplement {
-				results = append(results, FinalReviewResult{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)})
+			fsys, prd := setupRunLoopFS([]string{"1.0"})
+			svc := NewService(fsys, newTestPrinter())
+			results := []FinalReviewResult{
+				{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
+				{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)},
 			}
 			deps := RunLoopDeps{
 				Selector:      &stubSelector{queue: []TaskEntry{{ID: "1.0", Title: "T 1.0"}}},
@@ -298,7 +300,7 @@ func TestRunLoopApprovedWithRemarks(t *testing.T) {
 	}
 }
 
-func TestRunLoopRejectedEmptyCriteriaUnionUsesLegacyPath(t *testing.T) {
+func TestRunLoopBlocksWhenCriteriaUnionEmpty(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
 	fsys.Files[prd+"/task-1.0-t.md"] = []byte("**Status:** done\n\nSem secao de criterios.\n")
 	svc := NewService(fsys, newTestPrinter())
@@ -306,8 +308,8 @@ func TestRunLoopRejectedEmptyCriteriaUnionUsesLegacyPath(t *testing.T) {
 	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
 		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
-		{Verdict: VerdictApproved, Findings: []Finding{}, RawOutput: rawVerdict(VerdictApproved)},
 	}}
+	invoker := &runloopBugfixInvoker{}
 
 	deps := RunLoopDeps{
 		Selector:      &stubSelector{queue: []TaskEntry{{ID: "1.0", Title: "T 1.0"}}},
@@ -315,25 +317,22 @@ func TestRunLoopRejectedEmptyCriteriaUnionUsesLegacyPath(t *testing.T) {
 		Gate:          &stubGate{},
 		Recorder:      &stubRecorder{},
 		FinalReviewer: reviewer,
-		BugfixInvoker: &runloopBugfixInvoker{},
+		BugfixInvoker: invoker,
 		DiffCapturer:  &runloopDiffCapturer{},
 	}
 
 	report, err := svc.RunLoop(context.Background(), Options{PRDFolder: prd, MaxBugfixIterations: 3}, deps)
-	if err != nil {
-		t.Fatalf("erro inesperado: %v", err)
+	if !errors.Is(err, ErrAcceptanceCriteriaMissing) {
+		t.Fatalf("err=%v, want ErrAcceptanceCriteriaMissing", err)
 	}
-	if report.Escalated {
-		t.Error("nao deveria escalar quando bugfix corrige pelo caminho legado")
+	if invoker.calls != 0 {
+		t.Errorf("BugfixInvoker chamado %d vezes; o caminho legado nao pode ser alcancado", invoker.calls)
 	}
-	if report.BugfixCycles != 1 {
-		t.Errorf("BugfixCycles=%d, want 1", report.BugfixCycles)
+	if report.BugfixCycles != 0 {
+		t.Errorf("BugfixCycles=%d, want 0", report.BugfixCycles)
 	}
-	if deps.BugfixInvoker.(*runloopBugfixInvoker).calls != 1 {
-		t.Errorf("bugfix invoker chamado %d vezes, want 1", deps.BugfixInvoker.(*runloopBugfixInvoker).calls)
-	}
-	if report.FinalReview == nil || report.FinalReview.Verdict != VerdictApproved {
-		t.Fatalf("verdict final do report = %+v, want APPROVED", report.FinalReview)
+	if !strings.Contains(report.StopReason, "criterios de aceite ausentes") {
+		t.Errorf("StopReason=%q nao identifica a ausencia do mapa 1:1", report.StopReason)
 	}
 }
 
@@ -461,8 +460,8 @@ func TestRunLoopRejectedEscalated(t *testing.T) {
 	if !report.Escalated {
 		t.Error("Escalated=false, want true")
 	}
-	if report.BugfixCycles != 3 {
-		t.Errorf("BugfixCycles=%d, want 3", report.BugfixCycles)
+	if report.BugfixCycles != 2 {
+		t.Errorf("BugfixCycles=%d, want 2", report.BugfixCycles)
 	}
 	if report.StopReason == "" {
 		t.Error("StopReason vazio em escalonamento")
@@ -654,12 +653,12 @@ func TestRunLoopApprovedWithRemarksImplementExhaustsEscalates(t *testing.T) {
 	if !report.Escalated {
 		t.Error("Escalated=false apos exaurir Implement, want true")
 	}
-	if report.BugfixCycles != 3 {
-		t.Errorf("BugfixCycles=%d, want 3", report.BugfixCycles)
+	if report.BugfixCycles != 2 {
+		t.Errorf("BugfixCycles=%d, want 2", report.BugfixCycles)
 	}
 }
 
-func TestRunLoopApprovedWithRemarksImplementThenRemarksNeedsNewPlan(t *testing.T) {
+func TestRunLoopRemarksPersistEscalates(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
 	svc := NewService(fsys, newTestPrinter())
 
@@ -669,6 +668,7 @@ func TestRunLoopApprovedWithRemarksImplementThenRemarksNeedsNewPlan(t *testing.T
 		{Verdict: VerdictApprovedWithRemarks, Findings: initial, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
 		{Verdict: VerdictApprovedWithRemarks, Findings: secondRound, RawOutput: rawVerdict(VerdictApprovedWithRemarks)},
 	}}
+	invoker := &runloopBugfixInvoker{}
 
 	deps := RunLoopDeps{
 		Selector:      &stubSelector{queue: []TaskEntry{{ID: "1.0", Title: "T 1.0"}}},
@@ -676,7 +676,7 @@ func TestRunLoopApprovedWithRemarksImplementThenRemarksNeedsNewPlan(t *testing.T
 		Gate:          &stubGate{},
 		Recorder:      &stubRecorder{},
 		FinalReviewer: reviewer,
-		BugfixInvoker: &runloopBugfixInvoker{},
+		BugfixInvoker: invoker,
 		DiffCapturer:  &runloopDiffCapturer{},
 		Prompter: &sequenceRunloopPrompter{responses: []runloopPromptResponse{
 			{action: ActionImplement},
@@ -685,40 +685,39 @@ func TestRunLoopApprovedWithRemarksImplementThenRemarksNeedsNewPlan(t *testing.T
 	}
 
 	report, err := svc.RunLoop(context.Background(), Options{PRDFolder: prd, MaxBugfixIterations: 3}, deps)
-	if err != nil {
-		t.Fatalf("erro inesperado: %v", err)
+	if !errors.Is(err, ErrBugfixExhausted) {
+		t.Fatalf("err=%v, want ErrBugfixExhausted", err)
 	}
-	if report.FinalReview == nil || report.FinalReview.Verdict != VerdictApprovedWithRemarks {
-		t.Fatalf("FinalReview=%+v, want APPROVED_WITH_REMARKS", report.FinalReview)
+	if !report.Escalated {
+		t.Error("Escalated=false com ressalvas persistentes, want true")
 	}
-	if report.ActionPlan == nil || len(report.ActionPlan.Decisions) != 1 {
-		t.Fatalf("ActionPlan invalido: %+v", report.ActionPlan)
+	if invoker.calls == 0 {
+		t.Error("ressalvas nao realimentaram a correcao (RF-31 lacuna 1)")
 	}
-	if report.ActionPlan.Decisions[0].Action != ActionDocument {
-		t.Fatalf("acao final = %s, want %s", report.ActionPlan.Decisions[0].Action, ActionDocument)
+	if report.CycleStopReason == "" {
+		t.Error("CycleStopReason ausente no relatorio consolidado (RF-41/RF-42)")
+	}
+	if len(report.CycleRounds) == 0 {
+		t.Fatal("relatorio consolidado sem rodadas do Ciclo (RF-42)")
+	}
+	for _, round := range report.CycleRounds {
+		if round.Fingerprint == "" {
+			t.Errorf("rodada %d sem fingerprint no relatorio consolidado (RF-42)", round.Number)
+		}
+		if round.Verdict == "" {
+			t.Errorf("rodada %d sem veredito no relatorio consolidado (RF-42)", round.Number)
+		}
 	}
 	taskContent, err := fsys.ReadFile(prd + "/task-1.0-t.md")
 	if err != nil {
 		t.Fatalf("task file: %v", err)
 	}
-	if !strings.Contains(string(taskContent), "documentar follow-up") {
-		t.Fatalf("novo plano de acao nao persistido apos Implement:\n%s", taskContent)
-	}
-	tasksContent, err := fsys.ReadFile(prd + "/tasks.md")
-	if err != nil {
-		t.Fatalf("tasks.md: %v", err)
-	}
-	if !strings.Contains(string(tasksContent), "Follow-up:") {
-		t.Fatalf("follow-up nao anexado apos segunda rodada de remarks:\n%s", tasksContent)
+	if !strings.Contains(string(taskContent), "## Plano de Ação") {
+		t.Fatalf("plano de acao nao persistido:\n%s", taskContent)
 	}
 }
 
-// TestRunLoopRemarksImplementRecursionPreservesContext — regressao: na recursao
-// de applyImplementDecisions disparada por APPROVED_WITH_REMARKS+Implement, o
-// diff recapturado deve ser reembrulhado por buildFinalReviewInput, mantendo
-// PRD/TechSpec/Tasks no payload entregue ao reviewer em todas as iteracoes.
-// Adicionalmente, o BugfixInvoker deve receber apenas o diff puro.
-func TestRunLoopRemarksImplementRecursionPreservesContext(t *testing.T) {
+func TestRunLoopRemarksImplementPreservesContext(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
 	svc := NewService(fsys, newTestPrinter())
 
@@ -752,18 +751,14 @@ func TestRunLoopRemarksImplementRecursionPreservesContext(t *testing.T) {
 		t.Fatalf("FinalReview=%+v, want APPROVED", report.FinalReview)
 	}
 
-	// Reviewer foi chamado 3x: inicial + 2 iteracoes Implement; todas devem
-	// preservar o cabecalho de contexto consolidado.
-	if len(reviewer.diffs) != 3 {
-		t.Fatalf("reviewer.diffs len = %d, want 3", len(reviewer.diffs))
+	if len(reviewer.diffs) < 1 {
+		t.Fatalf("reviewer.diffs len = %d, want >= 1", len(reviewer.diffs))
 	}
-	for i, got := range reviewer.diffs {
-		if !strings.HasPrefix(got, "Contexto da revisao consolidada:") {
-			t.Fatalf("reviewer chamada %d perdeu o contexto:\n%s", i+1, got)
-		}
-		if !strings.Contains(got, prd+"/prd.md") {
-			t.Fatalf("reviewer chamada %d sem PRD path:\n%s", i+1, got)
-		}
+	if !strings.HasPrefix(reviewer.diffs[0], "Contexto da revisao consolidada:") {
+		t.Fatalf("revisao consolidada perdeu o contexto:\n%s", reviewer.diffs[0])
+	}
+	if !strings.Contains(reviewer.diffs[0], prd+"/prd.md") {
+		t.Fatalf("revisao consolidada sem PRD path:\n%s", reviewer.diffs[0])
 	}
 
 	// Invoker deve receber diff puro em todas as chamadas (Bug 2).
@@ -799,11 +794,14 @@ func TestRunLoopApprovedWithRemarksImplementThenBlocked(t *testing.T) {
 	}
 
 	report, err := svc.RunLoop(context.Background(), Options{PRDFolder: prd, MaxBugfixIterations: 3}, deps)
-	if !errors.Is(err, ErrReviewBlocked) {
-		t.Fatalf("err=%v, want ErrReviewBlocked", err)
+	if !errors.Is(err, ErrBugfixExhausted) {
+		t.Fatalf("err=%v, want ErrBugfixExhausted", err)
 	}
 	if report.FinalReview == nil || report.FinalReview.Verdict != VerdictBlocked {
 		t.Fatalf("FinalReview=%+v, want BLOCKED", report.FinalReview)
+	}
+	if report.CycleStopReason != "blocked_input" {
+		t.Errorf("CycleStopReason=%q, want blocked_input (RF-41)", report.CycleStopReason)
 	}
 }
 

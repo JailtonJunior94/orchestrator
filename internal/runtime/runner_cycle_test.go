@@ -40,6 +40,10 @@ func writeCycleTaskFile(t *testing.T, tasksDir, name string) {
 	}
 }
 
+func approvedCycleReview() string {
+	return "Verdict: APPROVED\n\n## Mapa de Critérios de Aceite\n- [atendido] Faz X -> go test ./... -> PASS\n"
+}
+
 func TestACPRunnerConductsCycleApprovedFirstRound(t *testing.T) {
 	t.Parallel()
 
@@ -51,7 +55,7 @@ func TestACPRunnerConductsCycleApprovedFirstRound(t *testing.T) {
 		AppendSessionEnd()
 
 	reviewFn := func(_ context.Context, _ airuntime.Job) (string, error) {
-		return "Verdict: APPROVED\n", nil
+		return approvedCycleReview(), nil
 	}
 
 	runner := buildRunnerWithReviewFn(t, ctx, script, reviewFn)
@@ -109,9 +113,9 @@ func TestACPRunnerCycleFeedsRemarksBackToFix(t *testing.T) {
 		defer mu.Unlock()
 		calls++
 		if calls == 1 {
-			return "Verdict: APPROVED_WITH_REMARKS\n[HIGH] fix.go: precisa de ajuste\n", nil
+			return "Verdict: APPROVED_WITH_REMARKS\n[HIGH] fix.go: precisa de ajuste\n\n## Mapa de Critérios de Aceite\n- [atendido] Faz X -> go test ./... -> PASS\n", nil
 		}
-		return "Verdict: APPROVED\n", nil
+		return approvedCycleReview(), nil
 	}
 
 	runner := buildRunnerWithReviewFn(t, ctx, script, reviewFn)
@@ -211,7 +215,7 @@ func TestACPRunnerCycleAbortsOnEmptyDiff(t *testing.T) {
 		mu.Lock()
 		defer mu.Unlock()
 		calls++
-		return "Verdict: REJECTED\n[HIGH] fix.go:" + strconv.Itoa(calls) + " problema distinto\n", nil
+		return "Verdict: REJECTED\n[HIGH] fix" + strconv.Itoa(calls) + ".go:1 problema distinto\n", nil
 	}
 
 	runner := buildRunnerWithReviewFn(t, ctx, script, reviewFn)
@@ -317,7 +321,7 @@ func TestACPRunnerCycleDefaultMaxRoundsIsFiveWithoutConfiguration(t *testing.T) 
 		mu.Lock()
 		defer mu.Unlock()
 		calls++
-		return "Verdict: REJECTED\n[HIGH] fix.go:" + strconv.Itoa(calls) + " problema distinto\n", nil
+		return "Verdict: REJECTED\n[HIGH] fix" + strconv.Itoa(calls) + ".go:1 problema distinto\n", nil
 	}
 
 	runner := buildRunnerWithReviewFn(t, ctx, script, reviewFn)

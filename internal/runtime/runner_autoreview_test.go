@@ -1,10 +1,11 @@
 package runtime_test
 
 // runner_autoreview_test.go: testes unitários para F5-Claude (auto-review opt-in).
-// T-REV-01..T-REV-04 + testes de helpers parseReviewStatus e buildReviewPrompt.
+// T-REV-01..T-REV-04 + testes de helpers de auto-review e buildReviewPrompt.
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -316,34 +317,6 @@ func TestAutoReviewInheritsSkipDriftGuard(t *testing.T) {
 
 // ---- Testes de helpers puros ------------------------------------------------
 
-// TestParseReviewStatus_AllCases valida todos os casos de parseReviewStatus.
-func TestParseReviewStatus_AllCases(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct {
-		name   string
-		input  string
-		expect string
-	}{
-		{"[HARD] presente", "[HARD] eval() detectado", "blocked"},
-		{"BLOQUEADO presente", "BLOQUEADO por política de segurança", "blocked"},
-		{"CRÍTICO presente", "issue CRÍTICO encontrado no código", "blocked"},
-		{"sem marcadores hard", "Nenhum issue. Código limpo.", "ok"},
-		{"vazio", "", "ok"},
-		{"[HARD] minúsculo — não deve bloquear", "[hard] algo", "ok"}, // case-sensitive
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			got := airuntime.NewCatalog().ParseReviewStatusForTest(tc.input)
-			if got != tc.expect {
-				t.Errorf("parseReviewStatus(%q) = %q, quero %q", tc.input, got, tc.expect)
-			}
-		})
-	}
-}
-
 // TestBuildReviewPrompt_ContainsSkillAndDiff valida que o prompt contém skill body e diff.
 func TestBuildReviewPrompt_ContainsSkillAndDiff(t *testing.T) {
 	t.Parallel()
@@ -436,5 +409,42 @@ func TestAutoReviewFailClosedWithoutCanonicalVerdict(t *testing.T) {
 
 	if summary.ReviewStatus != "blocked" {
 		t.Errorf("RF-46: ReviewStatus = %q, want blocked (absence of canonical verdict must not infer approval)", summary.ReviewStatus)
+	}
+}
+
+func TestAutoReviewFailureIsFailClosed(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("tarefa concluida").
+		AppendSessionEnd()
+
+	reviewFn := func(_ context.Context, _ airuntime.Job) (string, error) {
+		return "", errors.New("sessao de review indisponivel")
+	}
+
+	runner := buildRunnerWithReviewFn(t, ctx, script, reviewFn)
+
+	job := airuntime.Job{
+		Prompt:      "tarefa qualquer",
+		WorkDir:     workDirWithAgentsMDForReview(t),
+		EvidenceDir: t.TempDir(),
+		Quiet:       true,
+		AutoReview:  true,
+	}
+
+	summary, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run falhou: %v", err)
+	}
+
+	if summary.ReviewStatus != "blocked" {
+		t.Errorf("ReviewStatus = %q, quero blocked (fail-closed)", summary.ReviewStatus)
+	}
+	if !strings.Contains(summary.ReviewNote, "auto-review falhou") {
+		t.Errorf("ReviewNote = %q, quero nota de falha do auto-review", summary.ReviewNote)
 	}
 }

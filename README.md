@@ -366,7 +366,10 @@ Edite `.claude/settings.local.json` no repo destino:
 }
 ```
 
-Codex e Copilot ja vem prontos via `.codex/hooks.json` e `.github/hooks/governance.json`.
+Codex e Copilot ja vem prontos via as tabelas `[[hooks.*]]` do `.codex/config.toml` e via
+`.github/hooks/governance.json`. O arquivo `.codex/hooks.json` **nao e mais escrito** a partir
+da `2.0.0` — se a sua instalacao antiga tiver um, ele esta obsoleto e o instalador nao o
+atualiza; remova-o manualmente.
 
 ### Passo 4: sessao diaria
 
@@ -1237,9 +1240,13 @@ ai-spec rollback-sdd .specs/prd-exemplo --run-id <id>        # remove só o esta
 ### Gate de critérios de aceite
 
 Fail-closed desde a `0.31.0`: um relatório cuja task file não seja resolvível pelo campo `Arquivo:`,
-ou cuja task não declare seção de critérios, **falha**. `AI_SDD_STRICT_EVIDENCE=0` reabre o legado
-apenas para migração, e avisa explicitamente que a evidência assim validada não comprova os
-critérios.
+ou cuja task não declare seção de critérios, **falha**.
+
+A partir da `2.0.0` **não existe mais opt-out**. A variável `AI_SDD_STRICT_EVIDENCE` foi removida
+dos validadores: nenhum script ou código Go a lê, e `AI_SDD_STRICT_EVIDENCE=0` não reabre nada —
+o comportamento é o mesmo com ou sem a variável definida. As únicas ocorrências restantes do nome
+estão em mensagens de erro (que dizem justamente que ela não reabre o gate) e em casos de teste
+negativos que provam isso.
 
 ---
 

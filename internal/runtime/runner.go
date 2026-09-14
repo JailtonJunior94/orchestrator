@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
@@ -92,7 +93,6 @@ type ACPRunner struct {
 	// mcpServer é o servidor MCP interno (F2-Claude).
 	// nil = MCP desabilitado (default, preserva comportamento F1-Claude).
 	mcpServer MCPServer
-	// reviewOutputFn é injetável para testes unitários (F5-Claude).
 	// nil = usar spawnReviewSession (produção).
 	reviewOutputFn autoReviewOutputFn
 	// handshakeWaiterFactory constrói o waiter do handshake de governança do OpenCode.
@@ -142,6 +142,14 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	ctx, cancelCause := context.WithCancelCause(ctx)
 	defer cancelCause(nil)
 
+	effectiveModel, modelErr := r.resolveEffectiveModel(j)
+	if modelErr != nil {
+		return Summary{}, modelErr
+	}
+	window := r.spec.ResolveWindow(effectiveModel)
+	j.WindowClass = window.Class()
+	j.WindowMaxTokens = window.MaxTokens
+
 	// Fase 1: resolver launcher.
 	launcher, err := r.prober.EnsureAvailable(ctx, r.spec)
 	if err != nil {
@@ -154,10 +162,6 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 		return Summary{}, err
 	}
 
-	// ★ ADR-023: propagar WindowClass da Spec para o Job (sem leitura de runtime/handshake).
-	// Zero-value (WindowStandard) preserva comportamento F1.
-	j.WindowClass = r.spec.ResolveWindow(j.Model).Class()
-
 	sessionID := NewCatalog().newSessionID(r.clock)
 
 	var memPort MemoryPort
@@ -167,6 +171,38 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	if j.DurableMemoryEnabled {
 		log.Printf("runner: durable memory enabled (RF-28)")
 		memPort = NewCatalog().prepareDurableMemoryFacade(j)
+		if claimErr := memPort.ClaimSession(sessionID); claimErr != nil {
+			log.Printf("runner: durable memory baton claim failed (session continues): %v", claimErr)
+		}
+		heartbeatDone := make(chan struct{})
+		leaseTTL := j.HandoffLeaseTTL
+		if leaseTTL == 0 {
+			leaseTTL = durable.DefaultLeaseTTL
+		}
+		heartbeatInterval := leaseTTL / 2
+		if heartbeatInterval <= 0 {
+			heartbeatInterval = time.Second
+		}
+		go func() {
+			ticker := time.NewTicker(heartbeatInterval)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-heartbeatDone:
+					return
+				case <-ticker.C:
+					if renewErr := memPort.RenewSession(sessionID); renewErr != nil {
+						log.Printf("runner: durable memory baton renewal failed: %v", renewErr)
+					}
+				}
+			}
+		}()
+		defer func() {
+			close(heartbeatDone)
+			if releaseErr := memPort.ReleaseSession(sessionID); releaseErr != nil {
+				log.Printf("runner: durable memory baton release failed: %v", releaseErr)
+			}
+		}()
 		j.Prompt, memReadContext = NewCatalog().prepareDurableMemoryPromptContext(ctx, j, memPort)
 		memRecorder = hooks.NewMemoryEvidenceRecorder()
 	} else {
@@ -177,8 +213,7 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 
 	// ★ F3-Claude: instanciar hooks dispatcher e registrar hooks default.
 	// j.DisableHooks=true → dispatcher vazio (debug; sem regressão F1/F2).
-	// ★ ADR-023: WindowClass propagada da Spec para sensibilizar token_budget.
-	disp := NewCatalog().prepareHooksDispatcher(j, r.spec.ID, memStore, r.spec.ResolveWindow(j.Model).Class(), r.promptPostBuildTestHook, memRecorder)
+	disp := NewCatalog().prepareHooksDispatcher(j, r.spec.ID, memStore, r.spec.ResolveWindow("").MaxTokens, r.promptPostBuildTestHook, memRecorder)
 
 	// Fase 3: emitir runtime_init e persistir.
 	launcherCmd, launcherArgs := launcher.Command()
@@ -266,8 +301,14 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 				summary.HookDispatchErrors = append(summary.HookDispatchErrors, postReviewErr.Error())
 			}
 		} else {
-			fmt.Fprintf(os.Stderr, "runner: auto-review falhou (session continua): %v\n", reviewErr)
+			summary.ReviewStatus = "blocked"
+			summary.ReviewNote = fmt.Sprintf("auto-review falhou: %v", reviewErr)
+			if statusErr := NewTaskStatusWriter(j.TasksDir, j.TaskFileName).Force(taskStatusBlocked); statusErr != nil {
+				log.Printf("runner: force blocked status after auto-review failure: %v", statusErr)
+			}
+			fmt.Fprintf(os.Stderr, "runner: auto-review falhou (session continua, review_status=blocked): %v\n", reviewErr)
 		}
+		NewCatalog().persistSummary(persist, toolCallSummaries, summary)
 	}
 
 	return summary, NewCatalog().mapRunError(cause, clientErr, c)
@@ -469,6 +510,25 @@ func (c *Catalog) buildSummary(launcher string, res eventLoopResult, cancelReaso
 }
 
 // persistSummary persiste tool_calls e enriquece o report quando persist está disponível.
+func (r *ACPRunner) resolveEffectiveModel(j Job) (string, error) {
+	if r.spec.ID != specs.OpenCodeSpecID {
+		return j.Model, nil
+	}
+	raw, err := os.ReadFile(filepath.Join(j.WorkDir, specs.OpenCodeConfigFileName))
+	if err != nil {
+		return j.Model, nil
+	}
+	configModel, parseErr := specs.NewCatalog().OpenCodeConfigModel(raw)
+	if parseErr != nil {
+		return "", fmt.Errorf("runner: %w", parseErr)
+	}
+	effective, resolveErr := specs.NewCatalog().ResolveOpenCodeEffectiveModel(configModel, j.Model)
+	if resolveErr != nil {
+		return "", fmt.Errorf("runner: %w", resolveErr)
+	}
+	return effective, nil
+}
+
 func (c *Catalog) persistSummary(persist Persistence, toolCalls []events.ToolCallSummary, summary Summary) {
 	if persist == nil {
 		return
@@ -590,7 +650,7 @@ func (c *Catalog) prepareHooksDispatcher(
 	j Job,
 	specID string,
 	store memory.Store,
-	windowClass specs.WindowClass,
+	referenceMaxTokens int,
 	promptPostBuildTestHook hooks.Hook,
 	memRecorder *hooks.MemoryEvidenceRecorder,
 ) hooks.Dispatcher {
@@ -609,7 +669,7 @@ func (c *Catalog) prepareHooksDispatcher(
 
 	// token_budget: valida tamanho do prompt em prompt.post_build, sensível à WindowClass (ADR-023).
 	// WindowStandard ⇒ teto F1; WindowLarge ⇒ teto generoso para CLIs com janela ≥1M.
-	disp.Register(hooks.PointPromptPostBuild, hooks.NewTokenBudgetHookWithClass(specID, windowClass))
+	disp.Register(hooks.PointPromptPostBuild, hooks.NewTokenBudgetHookWithWindow(specID, specs.ContextWindow{MaxTokens: j.WindowMaxTokens}, referenceMaxTokens))
 
 	if promptPostBuildTestHook != nil {
 		disp.Register(hooks.PointPromptPostBuild, promptPostBuildTestHook)
@@ -757,12 +817,6 @@ func (r *ACPRunner) SetRenderer(w io.Writer) {
 	r.renderer = render.NewHumanRenderer(w)
 }
 
-// InjectMemoryContextForTest expõe injectMemoryContext para testes (T-MEM-INJECT-01).
-// Não usar em produção: helper puro sem efeitos colaterais.
-func (c *Catalog) InjectMemoryContextForTest(prompt string, wf, tk memory.Document, wfErr, tkErr error) string {
-	return NewCatalog().injectMemoryContext(prompt, wf, tk, wfErr, tkErr)
-}
-
 func (c *Catalog) prepareDurableMemoryFacade(j Job) MemoryPort {
 	return durable.NewFacade(fs.NewOSFileSystem(), durable.FacadeConfig{
 		ProjectDir: j.WorkDir,
@@ -823,22 +877,23 @@ func (c *Catalog) recordDurableMemorySession(
 	c.dispatchDurableMemoryEvents(ctx, disp, sessionID, cli, j.TaskFileName, report, summary)
 
 	evidence := MemoryEvidence{
-		SessionID:           sessionID,
-		CLI:                 cli,
-		TaskFileName:        j.TaskFileName,
-		FactsByLayer:        readContext.FactsByLayer,
-		FactsOmitted:        readContext.Omitted,
-		FactsContradicted:   readContext.Contradicted,
-		PagesUnreadable:     readContext.Unreadable,
-		BudgetByLayer:       readContext.BudgetByLayer,
-		WritesByLayer:       report.WritesByLayer,
-		ArchivedByLayer:     report.ArchivedByLayer,
-		Redactions:          report.Redactions,
-		Compactions:         report.Compactions,
-		Contradictions:      report.Contradictions,
-		BatonClaimed:        report.BatonClaimed,
-		ContextBuildLatency: readContext.BuildLatencyMs,
-		RecordLatency:       report.RecordLatencyMs,
+		SessionID:               sessionID,
+		CLI:                     cli,
+		TaskFileName:            j.TaskFileName,
+		FactsByLayer:            readContext.FactsByLayer,
+		FactsOmitted:            readContext.Omitted,
+		FactsContradicted:       readContext.Contradicted,
+		PagesUnreadable:         readContext.Unreadable,
+		BudgetByLayer:           readContext.BudgetByLayer,
+		WritesByLayer:           report.WritesByLayer,
+		ArchivedByLayer:         report.ArchivedByLayer,
+		Redactions:              report.Redactions,
+		Compactions:             report.Compactions,
+		Contradictions:          report.Contradictions,
+		BatonClaimed:            report.BatonClaimed,
+		ContextBuildLatency:     readContext.BuildLatencyMs,
+		ContextRecoveryDegraded: readContext.RecoveryDegraded,
+		RecordLatency:           report.RecordLatencyMs,
 	}
 	summary.MemoryEvidence = &evidence
 	summary.Metrics = summary.Metrics.Merge(events.NewMetricSet(0, 0, 0, c.buildDurableMemoryMetrics(evidence)))
@@ -926,6 +981,7 @@ func (c *Catalog) buildRuntimeInitRaw(launcher, command, toolID string, args []s
 type CycleRoundSummary struct {
 	Number             int            `json:"number"`
 	Verdict            string         `json:"verdict"`
+	Fingerprint        string         `json:"fingerprint,omitempty"`
 	FindingsBySeverity map[string]int `json:"findings_by_severity,omitempty"`
 }
 
@@ -973,9 +1029,9 @@ func (r *ACPRunner) runApprovalCycle(ctx context.Context, j Job) (autoReviewOutc
 	baseJob := j
 	baseJob.AutoReview = false
 
-	reviewer := NewReviewerAdapter(r, baseJob)
-	fixer := NewFixerAdapter(r, baseJob)
 	repository := NewRepositoryAdapter(j.WorkDir)
+	reviewer := NewReviewerAdapterWithRepository(r, baseJob, repository)
+	fixer := NewFixerAdapter(r, baseJob)
 
 	cycle, err := approval.NewCycle(taskIdentity, agentIdentity, policy, criteria, reviewer, fixer, repository)
 	if err != nil {
@@ -987,6 +1043,12 @@ func (r *ACPRunner) runApprovalCycle(ctx context.Context, j Job) (autoReviewOutc
 		return autoReviewOutcome{}, fmt.Errorf("runApprovalCycle: %w", runErr)
 	}
 
+	if !result.Approved() {
+		if statusErr := NewTaskStatusWriter(j.TasksDir, j.TaskFileName).Force(taskStatusBlocked); statusErr != nil {
+			return autoReviewOutcome{}, fmt.Errorf("runApprovalCycle: %w", statusErr)
+		}
+	}
+
 	return buildCycleOutcome(j, result), nil
 }
 
@@ -996,6 +1058,7 @@ func buildCycleOutcome(j Job, result approval.CycleResult) autoReviewOutcome {
 		rounds = append(rounds, CycleRoundSummary{
 			Number:             round.Number(),
 			Verdict:            round.Verdict().String(),
+			Fingerprint:        round.Fingerprint().String(),
 			FindingsBySeverity: severityCounts(round.CountBySeverity()),
 		})
 	}

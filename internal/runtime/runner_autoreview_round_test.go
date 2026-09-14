@@ -162,22 +162,37 @@ func TestReviewPriorSHAEnvIsScopedToRoundAndRestored(t *testing.T) {
 	}
 }
 
+func commitChangeMovingHead(t *testing.T, repoDir, content string) string {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(repoDir, "moved.txt"), []byte(content), 0o644); err != nil {
+		t.Fatalf("write moved.txt: %v", err)
+	}
+	for _, args := range [][]string{{"add", "."}, {"commit", "-m", content}} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = repoDir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
+		}
+	}
+	head, err := NewRepositoryAdapter(repoDir).Checkpoint(context.Background())
+	if err != nil {
+		t.Fatalf("head after commit: %v", err)
+	}
+	return head.String()
+}
+
 func TestReviewPriorSHAValueComesFromRepositoryCutPoint(t *testing.T) {
 	os.Unsetenv(envReviewPriorSHA)
 	ctx := context.Background()
 	repoDir := gitRepoWithReviewSkill(t)
-
-	cutPoint, err := NewRepositoryAdapter(repoDir).Checkpoint(ctx)
-	if err != nil {
-		t.Fatalf("checkpoint: %v", err)
-	}
 
 	var seen string
 	runner := runnerWithReviewFn(t, func(_ context.Context, _ Job) (string, error) {
 		seen = os.Getenv(envReviewPriorSHA)
 		return "verdict: APPROVED", nil
 	})
-	adapter := NewReviewerAdapter(runner, Job{WorkDir: repoDir, EvidenceDir: t.TempDir(), Quiet: true})
+	repository := NewRepositoryAdapter(repoDir)
+	adapter := NewReviewerAdapterWithRepository(runner, Job{WorkDir: repoDir, EvidenceDir: t.TempDir(), Quiet: true}, repository)
 
 	criterion, err := approval.NewAcceptanceCriterion("builds green")
 	if err != nil {
@@ -193,6 +208,10 @@ func TestReviewPriorSHAValueComesFromRepositoryCutPoint(t *testing.T) {
 	}
 	criteria := []approval.AcceptanceCriterion{criterion}
 
+	firstCutPoint, err := repository.Checkpoint(ctx)
+	if err != nil {
+		t.Fatalf("checkpoint round 1: %v", err)
+	}
 	firstRound, err := approval.NewReviewRequest(task, agent, 1, approval.NewReviewTarget("d1"), criteria)
 	if err != nil {
 		t.Fatalf("request 1: %v", err)
@@ -204,6 +223,14 @@ func TestReviewPriorSHAValueComesFromRepositoryCutPoint(t *testing.T) {
 		t.Fatalf("round 1 exported prior SHA %q", seen)
 	}
 
+	headAfterFix := commitChangeMovingHead(t, repoDir, "fix applied between rounds")
+	if headAfterFix == firstCutPoint.String() {
+		t.Fatalf("test setup did not move HEAD: %q", headAfterFix)
+	}
+	if _, err := repository.Checkpoint(ctx); err != nil {
+		t.Fatalf("checkpoint round 2: %v", err)
+	}
+
 	secondRound, err := approval.NewReviewRequest(task, agent, 2, approval.NewReviewTarget("d2"), criteria)
 	if err != nil {
 		t.Fatalf("request 2: %v", err)
@@ -211,8 +238,11 @@ func TestReviewPriorSHAValueComesFromRepositoryCutPoint(t *testing.T) {
 	if _, err := adapter.Review(ctx, secondRound); err != nil {
 		t.Fatalf("review 2: %v", err)
 	}
-	if seen != cutPoint.String() {
-		t.Fatalf("round 2 prior SHA = %q, want %q", seen, cutPoint.String())
+	if seen == headAfterFix {
+		t.Fatalf("round 2 exported the post-fix HEAD %q; the diff against HEAD is empty and reviews nothing", seen)
+	}
+	if seen != firstCutPoint.String() {
+		t.Fatalf("round 2 prior SHA = %q, want the prior cut point %q", seen, firstCutPoint.String())
 	}
 }
 

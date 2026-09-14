@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -26,9 +27,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/version"
 )
 
-// _probeTimeout e o timeout maximo por CLI para probe de binario ACP.
-// Curto para nao violar RF-11 (bootstrap < 30s com N CLIs). ADR-024.
-const _probeTimeout = 3 * time.Second
+const probeTimeout = 3 * time.Second
 
 const codexTrustRPCTimeout = 5 * time.Second
 
@@ -210,6 +209,20 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 		return fmt.Errorf("o diretorio alvo nao pode ser o proprio repositorio de regras")
 	}
 
+	var tracker *writeTracker
+	if !opts.DryRun {
+		tracker = newWriteTracker(s.fs, projectDir)
+		previousFS, previousAdapters, previousCtxgen := s.fs, s.adapters, s.ctxgen
+		s.fs = tracker
+		s.adapters = adapters.NewGenerator(tracker, s.printer)
+		s.ctxgen = contextgen.NewGenerator(tracker, s.printer)
+		defer func() {
+			s.fs = previousFS
+			s.adapters = previousAdapters
+			s.ctxgen = previousCtxgen
+		}()
+	}
+
 	linkMode := opts.LinkMode
 	plat := platform.NewDetector().Current()
 	if !plat.SupportsSymlinks() && linkMode == skills.LinkSymlink {
@@ -247,6 +260,9 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 	if !opts.DryRun {
 		if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".agents", "hooks")); err != nil {
 			s.printer.Warn("falha ao copiar hooks canonicos: %v", err)
+		}
+		if err := s.copyToolValidationHooks(sourceDir, projectDir, filepath.Join(".agents", "hooks")); err != nil {
+			s.printer.Warn("falha ao copiar validadores canonicos: %v", err)
 		}
 	}
 
@@ -291,7 +307,8 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 			Checksums:      checksums,
 			CodexProfile:   opts.CodexProfile,
 			SkillVersions:  s.collectSkillVersions(sourceDir, allSkills),
-			InstalledFiles: s.expectedInstalledPaths(projectDir, opts.Tools),
+			InstalledFiles: tracker.createdPaths(),
+			MergedFiles:    tracker.mergedPaths(),
 		}
 		if err := s.manifest.Save(projectDir, mf); err != nil {
 			return fmt.Errorf("salvar manifesto: %w", err)
@@ -418,8 +435,12 @@ func (s *Service) Verify(opts config.InstallOptions) ([]VerifyItem, error) {
 			})
 		}
 
+		items = append(items, s.verifyGovernanceArtifacts(absSource, installDir, tool)...)
+
 		items = append(items, s.verifyPreconditions(tool, installDir, opts.CheckCodexTrust)...)
 	}
+
+	items = append(items, s.verifyCanonicalValidators(absSource, installDir)...)
 
 	// Se nenhuma tool foi determinada, verificar skills base (sem items de binary).
 	if len(tools) == 0 {
@@ -510,7 +531,7 @@ func (s *Service) probeBinaryAvailable(tool skills.Tool) VerifyState {
 	if !ok {
 		return VerifyStateMissing
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), _probeTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
 	defer cancel()
 	probe.
 		// Limpar cache entre chamadas de verify para garantir resultado fresco.
@@ -529,13 +550,19 @@ func (s *Service) verifyPreconditions(tool skills.Tool, installDir string, check
 		return nil
 	}
 
+	absInstallDir, err := filepath.Abs(installDir)
+	if err != nil {
+		absInstallDir = installDir
+	}
+
 	var codexCheck precondition.CodexTrustChecker
 	if checkCodexTrust {
-		codexCheck = func() (specs.PreconditionState, error) {
-			client := precondition.NewCodexAppServerClient("")
+		required := enforcementNativeKeys(agent.Enforcement())
+		codexCheck = func() (precondition.CodexTrustReport, error) {
+			client := precondition.NewCodexAppServerClient("", absInstallDir)
 			ctx, cancel := context.WithTimeout(context.Background(), codexTrustRPCTimeout)
 			defer cancel()
-			return precondition.EvaluateCodexTrustedHash(ctx, client, codexTrustRPCTimeout)
+			return precondition.EvaluateCodexTrustedHash(ctx, client, codexTrustRPCTimeout, required)
 		}
 	}
 
@@ -544,23 +571,51 @@ func (s *Service) verifyPreconditions(tool skills.Tool, installDir string, check
 
 	items := make([]VerifyItem, 0, len(agent.Enforcement().Preconditions()))
 	for _, pre := range agent.Enforcement().Preconditions() {
-		report := precondition.Evaluate(pre, installDir, reader, codexCheck)
-		state := VerifyStateCurrent
-		switch report.State {
-		case specs.PreconditionInert:
-			state = VerifyStateInert
-		case specs.PreconditionUnknown:
-			state = VerifyStateUnknown
-		}
-		items = append(items, VerifyItem{
+		items = append(items, preconditionItems(tool, pre, precondition.Evaluate(pre, absInstallDir, reader, codexCheck))...)
+	}
+	return items
+}
+
+func preconditionItems(tool skills.Tool, pre specs.EnforcementPrecondition, report precondition.Report) []VerifyItem {
+	if len(report.Points) == 0 {
+		return []VerifyItem{{
 			Tool:   tool,
 			Skill:  "precondition(" + pre.Kind().String() + ")",
-			State:  state,
+			State:  preconditionVerifyState(report.State),
+			Kind:   VerifyKindPrecondition,
+			Remedy: report.Remedy,
+		}}
+	}
+	items := make([]VerifyItem, 0, len(report.Points))
+	for _, point := range report.Points {
+		items = append(items, VerifyItem{
+			Tool:   tool,
+			Skill:  "precondition(" + pre.Kind().String() + ":" + point.EventName + ")",
+			State:  preconditionVerifyState(point.State),
 			Kind:   VerifyKindPrecondition,
 			Remedy: report.Remedy,
 		})
 	}
 	return items
+}
+
+func preconditionVerifyState(state specs.PreconditionState) VerifyState {
+	switch state {
+	case specs.PreconditionInert:
+		return VerifyStateInert
+	case specs.PreconditionUnknown:
+		return VerifyStateUnknown
+	default:
+		return VerifyStateCurrent
+	}
+}
+
+func enforcementNativeKeys(enf specs.Enforcement) []string {
+	keys := make([]string, 0, len(enf.Coverage()))
+	for _, cov := range enf.Coverage() {
+		keys = append(keys, cov.NativeKey())
+	}
+	return keys
 }
 
 // probeBinariesWarn executa probe por CLI e emite Warn para binarios ausentes.
@@ -571,7 +626,7 @@ func (s *Service) probeBinariesWarn(tools []skills.Tool) {
 		if !ok {
 			continue
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), _probeTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
 		probe.NewCatalog().
 			ResetCache()
 		_, err := probe.NewCatalog().EnsureAvailable(ctx, spec, s.lookPather)
@@ -815,29 +870,10 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 		}
 	}
 
-	hookDir := filepath.Join(projectDir, ".claude", "hooks")
-	govHook := filepath.Join(sourceDir, ".claude", "hooks", "validate-governance.sh")
-	if s.fs.Exists(govHook) {
-		if err := s.fs.CopyFile(govHook, filepath.Join(hookDir, "validate-governance.sh")); err != nil {
-			return err
-		}
+	if err := s.copyToolValidationHooks(sourceDir, projectDir, filepath.Join(".claude", "hooks")); err != nil {
+		return err
 	}
 
-	preloadHook := filepath.Join(sourceDir, ".claude", "hooks", "validate-preload.sh")
-	if s.fs.Exists(preloadHook) {
-		if err := s.fs.CopyFile(preloadHook, filepath.Join(hookDir, "validate-preload.sh")); err != nil {
-			return err
-		}
-	}
-
-	sessionEndHook := filepath.Join(sourceDir, ".claude", "hooks", "validate-session-end.sh")
-	if s.fs.Exists(sessionEndHook) {
-		if err := s.fs.CopyFile(sessionEndHook, filepath.Join(hookDir, "validate-session-end.sh")); err != nil {
-			return err
-		}
-	}
-
-	// Hooks de enforcement programatico do orquestrador (execute-all-tasks + execute-task).
 	if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".claude", "hooks")); err != nil {
 		return err
 	}
@@ -856,11 +892,8 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 		}
 	}
 
-	agentsMD := filepath.Join(sourceDir, "AGENTS.md")
-	if s.fs.Exists(agentsMD) {
-		if err := s.fs.CopyFile(agentsMD, filepath.Join(projectDir, "AGENTS.md")); err != nil {
-			return err
-		}
+	if err := s.writeMergedMarkdownFromSource(filepath.Join(sourceDir, "AGENTS.md"), filepath.Join(projectDir, "AGENTS.md")); err != nil {
+		return err
 	}
 
 	settingsFile := filepath.Join(projectDir, ".claude", "settings.local.json")
@@ -928,10 +961,7 @@ func (s *Service) copyAgentsScripts(sourceDir, projectDir string) error {
 	return nil
 }
 
-// _agentsLibFiles lista shell libs vendoradas em .agents/lib/ que skills e hooks
-// consomem via cascata `.agents/lib/` -> `scripts/lib/`. Distribuir o vendor
-// canonico evita dependencia exclusiva do mirror legado scripts/lib/.
-var _agentsLibFiles = []string{
+var agentsLibFiles = []string{
 	"check-invocation-depth.sh",
 	"parse-hook-input.sh",
 }
@@ -943,7 +973,7 @@ func (s *Service) copyAgentsLib(sourceDir, projectDir string) error {
 	dstDir := filepath.Join(projectDir, ".agents", "lib")
 	srcDir := filepath.Join(sourceDir, ".agents", "lib")
 
-	for _, lib := range _agentsLibFiles {
+	for _, lib := range agentsLibFiles {
 		src := filepath.Join(srcDir, lib)
 		if !s.fs.Exists(src) {
 			continue
@@ -962,10 +992,7 @@ func (s *Service) copyAgentsLib(sourceDir, projectDir string) error {
 	return nil
 }
 
-// _toolValidationHooks lista hooks de validacao por-tool (preload + governanca pos-edicao).
-// Distribuidos opcionalmente para Codex/Copilot quando presentes na fonte;
-// Claude tem caminho dedicado em installClaude por suportar PreToolUse/PostToolUse nativos.
-var _toolValidationHooks = []string{
+var toolValidationHooks = []string{
 	"validate-preload.sh",
 	"validate-governance.sh",
 	"validate-session-end.sh",
@@ -979,7 +1006,7 @@ func (s *Service) copyToolValidationHooks(sourceDir, projectDir, toolHookDir str
 	dstDir := filepath.Join(projectDir, toolHookDir)
 	srcDir := filepath.Join(sourceDir, toolHookDir)
 
-	for _, hook := range _toolValidationHooks {
+	for _, hook := range toolValidationHooks {
 		src := filepath.Join(srcDir, hook)
 		if !s.fs.Exists(src) {
 			continue
@@ -1027,7 +1054,7 @@ func (s *Service) copyOrchestratorHooks(sourceDir, projectDir, toolHookDir strin
 	return nil
 }
 
-var _codexPlanningSkills = map[string]bool{
+var codexPlanningSkills = map[string]bool{
 	"analyze-project":                true,
 	"create-prd":                     true,
 	"create-technical-specification": true,
@@ -1037,7 +1064,7 @@ var _codexPlanningSkills = map[string]bool{
 func (r1 *Helper) filterCodexSkills(skillList []string) []string {
 	out := make([]string, 0, len(skillList))
 	for _, s := range skillList {
-		if !_codexPlanningSkills[s] {
+		if !codexPlanningSkills[s] {
 			out = append(out, s)
 		}
 	}
@@ -1063,14 +1090,21 @@ func (s *Service) installCodex(sourceDir, projectDir string, skillList []string,
 		list = NewHelper().filterCodexSkills(skillList)
 	}
 
-	content := s.adapters.BuildCodexConfig(list)
-	content += NewHelper().codexGovernanceTOML()
-	if err := s.fs.WriteFile(filepath.Join(codexDir, "config.toml"), []byte(content)); err != nil {
+	helper := NewHelper()
+	content := helper.codexGovernancePreambleTOML()
+	content += s.adapters.BuildCodexConfig(list)
+	content += helper.codexGovernanceHooksTOML()
+
+	configPath := filepath.Join(codexDir, "config.toml")
+	merged := false
+	if existing, err := s.fs.ReadFile(configPath); err == nil {
+		content, merged = contextgen.MergeCodexInstallConfig(content, string(existing))
+	}
+	if err := s.fs.WriteFile(configPath, []byte(content)); err != nil {
 		return err
 	}
-
-	if err := s.fs.WriteFile(filepath.Join(codexDir, "hooks.json"), []byte(NewHelper().defaultCodexHooks())); err != nil {
-		return err
+	if merged {
+		s.trackMerged(configPath)
 	}
 
 	s.adapters.GenerateCodexAgents(sourceDir, projectDir)
@@ -1136,12 +1170,28 @@ func (s *Service) installCopilot(sourceDir, projectDir string, skillList []strin
 		if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".github", "hooks")); err != nil {
 			return err
 		}
-		governance := filepath.Join(projectDir, ".github", "hooks", "governance.json")
-		if !s.fs.Exists(governance) {
-			if err := s.fs.WriteFile(governance, []byte(NewHelper().defaultCopilotHooks())); err != nil {
+		governanceHooks := upgrade.NewHelper().CopilotGovernanceHooksPath(projectDir)
+		if _, err := upgrade.NewHelper().RepairCopilotGovernanceHooks(s.fs, projectDir); err != nil {
+			return err
+		}
+		s.trackInstalled(governanceHooks)
+		settings := filepath.Join(projectDir, ".github", "settings.json")
+		var existing []byte
+		if s.fs.Exists(settings) {
+			data, err := s.fs.ReadFile(settings)
+			if err != nil {
 				return err
 			}
+			existing = data
 		}
+		merged, err := NewHelper().mergeCopilotSettings(existing)
+		if err != nil {
+			return fmt.Errorf("merge Copilot repository settings: %w", err)
+		}
+		if err := s.fs.WriteFile(settings, merged); err != nil {
+			return err
+		}
+		s.trackMerged(settings)
 	} else {
 		s.printer.DryRun("gerar .github/agents/*.agent.md via adaptadores")
 		s.printer.DryRun("copiar .github/hooks/{validate-preload,validate-governance,post-execute-task,pre-execute-all-tasks,post-wave}.sh")
@@ -1202,7 +1252,23 @@ func (s *Service) installOpenCode(sourceDir, projectDir string, dryRun bool, mod
 	if err := specs.ValidatePermissionBlock(decodeWrittenPermission(merged), openCodeRequiredTools...); err != nil {
 		return fmt.Errorf("opencode permission block written to disk: %w", err)
 	}
-	return s.fs.WriteFile(configPath, merged)
+	if err := s.fs.WriteFile(configPath, merged); err != nil {
+		return err
+	}
+	s.trackMerged(configPath)
+	return nil
+}
+
+func (s *Service) trackInstalled(path string) {
+	if tracker, ok := s.fs.(*writeTracker); ok {
+		tracker.MarkInstalled(path)
+	}
+}
+
+func (s *Service) trackMerged(path string) {
+	if tracker, ok := s.fs.(*writeTracker); ok {
+		tracker.MarkMerged(path)
+	}
 }
 
 func decodeWrittenPermission(configBytes []byte) map[string]any {
@@ -1244,7 +1310,7 @@ func (r1 *Helper) defaultClaudeSettings() string {
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Bash|Edit|Write|NotebookEdit|apply_patch",
         "hooks": [
           {
             "type": "command",
@@ -1255,7 +1321,7 @@ func (r1 *Helper) defaultClaudeSettings() string {
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Bash|Edit|Write|NotebookEdit|apply_patch",
         "hooks": [
           {
             "type": "command",
@@ -1290,94 +1356,135 @@ func (r1 *Helper) defaultClaudeSettings() string {
 `
 }
 
-
 func (r1 *Helper) defaultCopilotHooks() string {
-	return `{
-  "version": 1,
-  "hooks": {
-    "preToolUse": [
-      {
-        "type": "command",
-        "bash": "bash .github/hooks/validate-preload.sh"
-      }
-    ],
-    "postToolUse": [
-      {
-        "type": "command",
-        "bash": "bash .github/hooks/validate-governance.sh"
-      }
-    ],
-    "agentStop": [
-      {
-        "type": "command",
-        "bash": "bash .github/hooks/subagent-stop-wrapper.sh"
-      },
-      {
-        "type": "command",
-        "bash": "bash .github/hooks/validate-session-end.sh"
-      }
-    ]
-  }
-}
-`
+	return upgrade.DefaultCopilotGovernanceHooks
 }
 
-// defaultCodexHooks devolve o conteudo de .codex/hooks.json no formato nativo do
-// Codex CLI 2026 (PreToolUse). O Codex tem lacuna documentada de route-around, por
-// isso o enforcement por hook e suplementado por sandbox_mode/approval_policy no
-// config.toml (ver codexGovernanceTOML e enforcement-matrix.md, caveat Codex).
-func (r1 *Helper) defaultCodexHooks() string {
-	return `{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash|apply_patch|edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .codex/hooks/validate-preload.sh"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "apply_patch|edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .codex/hooks/validate-governance.sh"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .codex/hooks/validate-session-end.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-`
+func (r1 *Helper) mergeCopilotSettings(existing []byte) ([]byte, error) {
+	settings := map[string]any{}
+	if len(existing) > 0 {
+		if err := json.Unmarshal(existing, &settings); err != nil {
+			return nil, err
+		}
+	}
+
+	var governance struct {
+		Hooks map[string][]any `json:"hooks"`
+	}
+	if err := json.Unmarshal([]byte(r1.defaultCopilotHooks()), &governance); err != nil {
+		return nil, err
+	}
+
+	original, hadHooks := settings["hooks"]
+	hooks, ok := original.(map[string]any)
+	if !ok {
+		if hadHooks {
+			return nil, fmt.Errorf("hooks must be an object")
+		}
+		hooks = map[string]any{}
+	}
+
+	merged := make(map[string]any, len(hooks)+len(governance.Hooks))
+	for event, value := range hooks {
+		merged[event] = value
+	}
+
+	migrated := make([]any, 0, len(upgrade.ObsoleteCopilotHookKeys))
+	for _, obsolete := range upgrade.ObsoleteCopilotHookKeys {
+		entries, present := merged[obsolete]
+		if !present {
+			continue
+		}
+		delete(merged, obsolete)
+		list, isList := entries.([]any)
+		if !isList {
+			return nil, fmt.Errorf("hooks.%s must be an array", obsolete)
+		}
+		migrated = append(migrated, list...)
+	}
+	if len(migrated) > 0 {
+		merged[upgrade.CopilotSessionEndHookKey] = r1.appendCopilotHooks(merged[upgrade.CopilotSessionEndHookKey], migrated)
+	}
+
+	for event, expected := range governance.Hooks {
+		existingHooks, exists := merged[event]
+		if !exists {
+			merged[event] = expected
+			continue
+		}
+		existingList, ok := existingHooks.([]any)
+		if !ok {
+			return nil, fmt.Errorf("hooks.%s must be an array", event)
+		}
+		for _, hook := range expected {
+			if r1.copilotHookExists(existingList, hook) {
+				continue
+			}
+			existingList = append(existingList, hook)
+		}
+		merged[event] = existingList
+	}
+	settings["hooks"] = merged
+
+	if len(existing) == 0 {
+		encoded, err := json.MarshalIndent(settings, "", "  ")
+		if err != nil {
+			return nil, err
+		}
+		return encoded, nil
+	}
+
+	if hadHooks && reflect.DeepEqual(original, merged) {
+		return existing, nil
+	}
+
+	edited, err := specs.NewCatalog().SetJSONTopLevelKey(existing, "hooks", merged)
+	if err != nil {
+		return json.MarshalIndent(settings, "", "  ")
+	}
+	return edited, nil
 }
 
-// codexGovernanceTOML devolve o bloco TOML de governanca apendado ao .codex/config.toml:
-// sandbox_mode + approval_policy fecham a lacuna de route-around dos hooks do Codex
-// (o hook sozinho nao e suficiente — ver ADR-002 e enforcement-matrix.md).
-func (r1 *Helper) codexGovernanceTOML() string {
-	return `
-# Governanca (paridade cross-CLI): o hook PreToolUse do Codex tem lacuna de
+func (r1 *Helper) appendCopilotHooks(existing any, extra []any) []any {
+	list, _ := existing.([]any)
+	result := make([]any, 0, len(list)+len(extra))
+	result = append(result, list...)
+	for _, entry := range extra {
+		if r1.copilotHookExists(result, entry) {
+			continue
+		}
+		result = append(result, entry)
+	}
+	return result
+}
+
+func (r1 *Helper) copilotHookExists(hooks []any, expected any) bool {
+	expectedJSON, err := json.Marshal(expected)
+	if err != nil {
+		return false
+	}
+	for _, hook := range hooks {
+		hookJSON, err := json.Marshal(hook)
+		if err == nil && string(hookJSON) == string(expectedJSON) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r1 *Helper) codexGovernancePreambleTOML() string {
+	return `# Governanca (paridade cross-CLI): o hook PreToolUse do Codex tem lacuna de
 # route-around documentada. sandbox_mode + approval_policy garantem que mudancas
 # de filesystem e comandos passem por aprovacao, fechando a lacuna (ADR-002).
+# Chaves de nivel raiz precisam preceder qualquer tabela TOML.
 sandbox_mode = "workspace-write"
 approval_policy = "on-request"
 
-[[hooks.PreToolUse]]
+`
+}
+
+func (r1 *Helper) codexGovernanceHooksTOML() string {
+	return `[[hooks.PreToolUse]]
 [[hooks.PreToolUse.hooks]]
 type = "command"
 command = "bash .codex/hooks/validate-preload.sh"
@@ -1449,96 +1556,130 @@ func (r1 *Helper) langNames(langs []skills.Lang) []string {
 	return out
 }
 
-// expectedInstalledPaths enumera, apos a instalacao concluida, os caminhos
-// estaticos (relativos a projectDir) que esta instalacao efetivamente criou —
-// hooks, scripts, libs e arquivos de configuracao nucleo por ferramenta.
-// Cada candidato so entra na lista se existir em disco (s.fs.Exists), evitando
-// falso-positivo quando a fonte nao tinha o arquivo correspondente.
-//
-// Skills e adaptadores gerados por skill (.claude/agents/*.md,
-// .github/agents/*.agent.md, .codex/agents/*.toml, .agents/skills/<skill>/...)
-// nao entram aqui: a desinstalacao continua removendo-os por enumeracao de
-// diretorio (jah correto hoje, pois reflete o conteudo real do disco em vez de
-// uma lista estatica que ficaria desatualizada a cada skill nova).
-func (s *Service) expectedInstalledPaths(projectDir string, tools []skills.Tool) []string {
-	toolSet := make(map[skills.Tool]bool, len(tools))
-	for _, t := range tools {
-		toolSet[t] = true
-	}
+const VerifyKindArtifact VerifyKind = "artifact"
 
-	var candidates []string
+var toolHookDirs = map[skills.Tool]string{
+	skills.ToolClaude:  filepath.Join(".claude", "hooks"),
+	skills.ToolCodex:   filepath.Join(".codex", "hooks"),
+	skills.ToolCopilot: filepath.Join(".github", "hooks"),
+}
 
-	// Tool-neutro: sempre instalado independente de quais tools foram selecionadas.
-	candidates = append(candidates,
-		filepath.Join(".agents", "hooks", "post-execute-task.sh"),
-		filepath.Join(".agents", "hooks", "pre-execute-all-tasks.sh"),
-		filepath.Join(".agents", "hooks", "post-wave.sh"),
-		filepath.Join(".agents", "hooks", "subagent-stop-wrapper.sh"),
-		filepath.Join(".agents", "lib", "check-invocation-depth.sh"),
-		filepath.Join(".agents", "lib", "parse-hook-input.sh"),
-	)
-	for _, f := range agentsScriptsFiles {
-		candidates = append(candidates, filepath.Join(".agents", "scripts", f))
-	}
+func (s *Service) verifyGovernanceArtifacts(sourceDir, installDir string, tool skills.Tool) []VerifyItem {
+	var items []VerifyItem
 
-	if toolSet[skills.ToolClaude] {
-		candidates = append(candidates,
-			filepath.Join(".claude", "rules", "governance.md"),
-			filepath.Join(".claude", "scripts", "validate-task-evidence.sh"),
-			filepath.Join(".claude", "scripts", "validate-bugfix-evidence.sh"),
-			filepath.Join(".claude", "scripts", "validate-refactor-evidence.sh"),
-			filepath.Join(".claude", "scripts", "validate-review-evidence.sh"),
-			filepath.Join(".claude", "hooks", "validate-governance.sh"),
-			filepath.Join(".claude", "hooks", "validate-preload.sh"),
-			filepath.Join(".claude", "hooks", "validate-session-end.sh"),
-			filepath.Join(".claude", "hooks", "post-execute-task.sh"),
-			filepath.Join(".claude", "hooks", "pre-execute-all-tasks.sh"),
-			filepath.Join(".claude", "hooks", "post-wave.sh"),
-			filepath.Join(".claude", "hooks", "subagent-stop-wrapper.sh"),
-			filepath.Join("scripts", "lib", "parse-hook-input.sh"),
-			filepath.Join("scripts", "lib", "check-invocation-depth.sh"),
-			"AGENTS.md",
-			"CLAUDE.md",
-		)
-	}
-
-	if toolSet[skills.ToolCodex] {
-		candidates = append(candidates,
-			filepath.Join(".codex", "config.toml"),
-			filepath.Join(".codex", "hooks.json"),
-			filepath.Join(".codex", "hooks", "validate-preload.sh"),
-			filepath.Join(".codex", "hooks", "validate-governance.sh"),
-			filepath.Join(".codex", "hooks", "validate-session-end.sh"),
-			filepath.Join(".codex", "hooks", "post-execute-task.sh"),
-			filepath.Join(".codex", "hooks", "pre-execute-all-tasks.sh"),
-			filepath.Join(".codex", "hooks", "post-wave.sh"),
-			filepath.Join(".codex", "hooks", "subagent-stop-wrapper.sh"),
-		)
-	}
-
-	if toolSet[skills.ToolCopilot] {
-		candidates = append(candidates,
-			filepath.Join(".github", "copilot-instructions.md"),
-			filepath.Join(".github", "hooks", "validate-preload.sh"),
-			filepath.Join(".github", "hooks", "validate-governance.sh"),
-			filepath.Join(".github", "hooks", "validate-session-end.sh"),
-			filepath.Join(".github", "hooks", "post-execute-task.sh"),
-			filepath.Join(".github", "hooks", "pre-execute-all-tasks.sh"),
-			filepath.Join(".github", "hooks", "post-wave.sh"),
-			filepath.Join(".github", "hooks", "subagent-stop-wrapper.sh"),
-			filepath.Join(".github", "hooks", "governance.json"),
-		)
-	}
-
-	if toolSet[skills.ToolOpenCode] {
-		candidates = append(candidates, filepath.Join(".opencode", "plugin"))
-	}
-
-	out := make([]string, 0, len(candidates))
-	for _, rel := range candidates {
-		if s.fs.Exists(filepath.Join(projectDir, rel)) || s.fs.IsDir(filepath.Join(projectDir, rel)) {
-			out = append(out, rel)
+	if hookDir, ok := toolHookDirs[tool]; ok {
+		for _, hook := range NewHelper().governanceHookFiles() {
+			src := filepath.Join(sourceDir, hookDir, hook)
+			if !s.fs.Exists(src) {
+				continue
+			}
+			items = append(items, VerifyItem{
+				Tool:   tool,
+				Skill:  filepath.ToSlash(filepath.Join(hookDir, hook)),
+				State:  s.verifyArtifactFile(src, filepath.Join(installDir, hookDir, hook)),
+				Kind:   VerifyKindArtifact,
+				Remedy: verifyArtifactRemedy,
+			})
 		}
 	}
+
+	if tool != skills.ToolOpenCode {
+		return items
+	}
+
+	pluginDir := filepath.Join(".opencode", "plugin")
+	entries, err := s.fs.ReadDir(filepath.Join(sourceDir, pluginDir))
+	if err != nil {
+		return items
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		rel := filepath.Join(pluginDir, entry.Name())
+		items = append(items, VerifyItem{
+			Tool:   tool,
+			Skill:  filepath.ToSlash(rel),
+			State:  s.verifyArtifactFile(filepath.Join(sourceDir, rel), filepath.Join(installDir, rel)),
+			Kind:   VerifyKindArtifact,
+			Remedy: verifyArtifactRemedy,
+		})
+	}
+	return items
+}
+
+var canonicalValidatorDirs = []string{
+	filepath.Join(".agents", "hooks"),
+	filepath.Join(".agents", "scripts"),
+	filepath.Join(".agents", "lib"),
+}
+
+func (s *Service) verifyCanonicalValidators(sourceDir, installDir string) []VerifyItem {
+	var items []VerifyItem
+	for _, dir := range canonicalValidatorDirs {
+		entries, err := s.fs.ReadDir(filepath.Join(sourceDir, dir))
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			rel := filepath.Join(dir, entry.Name())
+			items = append(items, VerifyItem{
+				Tool:   "",
+				Skill:  filepath.ToSlash(rel),
+				State:  s.verifyArtifactFile(filepath.Join(sourceDir, rel), filepath.Join(installDir, rel)),
+				Kind:   VerifyKindArtifact,
+				Remedy: verifyArtifactRemedy,
+			})
+		}
+	}
+	return items
+}
+
+const verifyArtifactRemedy = "execute 'ai-spec-harness install' para reinstalar o artefato de governanca"
+
+func (s *Service) verifyArtifactFile(sourcePath, installedPath string) VerifyState {
+	if !s.fs.Exists(installedPath) {
+		return VerifyStateMissing
+	}
+	sourceHash, srcErr := s.fs.FileHash(sourcePath)
+	installedHash, dstErr := s.fs.FileHash(installedPath)
+	if srcErr != nil || dstErr != nil {
+		return VerifyStateUnknown
+	}
+	if sourceHash != installedHash {
+		return VerifyStateDrifted
+	}
+	return VerifyStateCurrent
+}
+
+func (r1 *Helper) governanceHookFiles() []string {
+	out := make([]string, 0, len(toolValidationHooks)+len(orchestratorHooks))
+	out = append(out, toolValidationHooks...)
+	out = append(out, orchestratorHooks...)
 	return out
+}
+
+func (s *Service) writeMergedMarkdownFromSource(sourcePath, targetPath string) error {
+	if !s.fs.Exists(sourcePath) {
+		return nil
+	}
+	generated, err := s.fs.ReadFile(sourcePath)
+	if err != nil {
+		return err
+	}
+	content := string(generated)
+	merged := false
+	if existing, readErr := s.fs.ReadFile(targetPath); readErr == nil {
+		content, merged = contextgen.MergeUserContentMarkdown(content, string(existing))
+	}
+	if err := s.fs.WriteFile(targetPath, []byte(content)); err != nil {
+		return err
+	}
+	if merged {
+		s.trackMerged(targetPath)
+	}
+	return nil
 }

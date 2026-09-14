@@ -80,7 +80,7 @@ func TestReviewerAdapterReturnsRawReviewerText(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	const rawText = "## Review\n\nOne blocker remains.\n\nverdict: REJECTED\n"
+	const rawText = "## Review\n\nOne blocker remains.\n\nverdict: REJECTED\n\n## Mapa de Critérios de Aceite\n- [atendido] builds green -> go test ./... -> PASS\n"
 	reviewFn := func(_ context.Context, _ airuntime.Job) (string, error) {
 		return rawText, nil
 	}
@@ -123,6 +123,36 @@ func TestReviewerAdapterReturnsRawReviewerText(t *testing.T) {
 	}
 	if approval.NewTranslator().Translate(output.RawText()) != approval.VerdictRejected {
 		t.Errorf("translated verdict = %v, want REJECTED", approval.NewTranslator().Translate(output.RawText()))
+	}
+}
+
+func TestReviewerAdapterRejectsApprovedOutputWithoutCriteriaEvidence(t *testing.T) {
+	runner := airuntime.NewACPRunner(specs.NewCatalog().Claude(), airuntime.NewCatalog().WithProber(&fakeProberForReview{}), airuntime.NewCatalog().WithReviewOutputFn(func(context.Context, airuntime.Job) (string, error) {
+		return "Verdict: APPROVED\n", nil
+	}))
+	adapter := airuntime.NewReviewerAdapter(runner, airuntime.Job{WorkDir: workDirWithAgentsMDForReview(t), EvidenceDir: t.TempDir(), Quiet: true})
+	criterion, err := approval.NewAcceptanceCriterion("builds green")
+	if err != nil {
+		t.Fatalf("criterion: %v", err)
+	}
+	task, err := approval.NewTaskIdentity("task-4.1")
+	if err != nil {
+		t.Fatalf("task: %v", err)
+	}
+	agent, err := approval.NewAgentIdentity("agent-x")
+	if err != nil {
+		t.Fatalf("agent: %v", err)
+	}
+	request, err := approval.NewReviewRequest(task, agent, 1, approval.NewReviewTarget("diff"), []approval.AcceptanceCriterion{criterion})
+	if err != nil {
+		t.Fatalf("request: %v", err)
+	}
+	output, err := adapter.Review(context.Background(), request)
+	if err != nil {
+		t.Fatalf("Review: %v", err)
+	}
+	if output.CriteriaMap().Complete() {
+		t.Fatal("missing criteria evidence map must not produce an approval proof")
 	}
 }
 

@@ -249,6 +249,7 @@ func TestPortability_HookGateCrossCLI(t *testing.T) {
 		// Caminho feliz: edita .go, gate emite guidance, exit 0 (com PRELOAD_CONFIRMED).
 		{name: "claude-go-ok", hook: filepath.Join(repoRoot, ".claude/hooks/validate-preload.sh"), stdin: jsonForFile(editGo), wantOK: true, mustSee: "go-implementation/persistence"},
 		{name: "codex-go-ok", hook: filepath.Join(repoRoot, ".codex/hooks/validate-preload.sh"), stdin: jsonForFile(editGo), wantOK: true, mustSee: "go-implementation/persistence"},
+		{name: "codex-apply-patch-go-ok", hook: filepath.Join(repoRoot, ".codex/hooks/validate-preload.sh"), stdin: `{"input":{"arguments":{"patchText":"*** Add File: ` + editGo + `\n+package repository\n"}}}`, wantOK: true, mustSee: "go-implementation/persistence"},
 		{name: "copilot-go-ok", hook: filepath.Join(repoRoot, ".github/hooks/validate-preload.sh"), stdin: jsonForFile(editGo), wantOK: true, mustSee: "go-implementation/persistence"},
 		// Edita Python: guidance Python.
 		{name: "claude-py-ok", hook: filepath.Join(repoRoot, ".claude/hooks/validate-preload.sh"), stdin: jsonForFile(editPy), wantOK: true, mustSee: "python-implementation/architecture"},

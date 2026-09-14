@@ -47,11 +47,11 @@ var minimalSanitizationCatalog = []SanitizationPattern{
 	},
 	{
 		Name:    "authorization_header",
-		Pattern: regexp.MustCompile(`(?i)Authorization:\s*(?:Bearer|Basic)\s+\S+`),
+		Pattern: regexp.MustCompile(`(?i)Authorization:\s*[^\r\n]+`),
 	},
 	{
 		Name:    "dotenv_secret",
-		Pattern: regexp.MustCompile(`(?im)^[A-Z][A-Z0-9_]*(?:SECRET|TOKEN|KEY|PASSWORD|PASS|CREDENTIAL)[A-Z0-9_]*=.+$`),
+		Pattern: regexp.MustCompile(`(?im)^[A-Z][A-Z0-9_]*(?:SECRET|TOKEN|KEY|PASSWORD|PASS|CREDENTIAL|SESSION_ID)[A-Z0-9_]*=.+$|(?im)^api_key=.+$`),
 	},
 	{
 		Name:    "connection_string_credential",

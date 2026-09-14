@@ -85,7 +85,7 @@ func TestExecuteConductsApprovalCycleFromTaskCriteria(t *testing.T) {
 			return &callbackInvoker{binary: "codex", fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 				reviewerCalls++
 				reviewerPrompt = prompt
-				return "no findings\n\nVerdict: APPROVED\n", "", 0, nil
+				return "no findings\n\nVerdict: APPROVED\n\n## Mapa de Critérios de Aceite\n- [atendido] build verde -> go test ./... -> PASS\n- [atendido] testes passam -> TestSuite -> PASS\n", "", 0, nil
 			}}, nil
 		default:
 			return nil, fmt.Errorf("tool not configured in test: %s", tool)
@@ -140,7 +140,7 @@ func TestExecuteApprovalCycleRunsReviewAndFixInFreshSessions(t *testing.T) {
 				if reviewerCalls == 1 {
 					return "[Critical] [main.go:10] variavel nao inicializada\n\nVerdict: REJECTED\n", "", 1, nil
 				}
-				return "clean\n\nVerdict: APPROVED\n", "", 0, nil
+				return "clean\n\nVerdict: APPROVED\n\n## Mapa de Critérios de Aceite\n- [atendido] regra de negocio coberta -> go test ./... -> PASS\n", "", 0, nil
 			}}, nil
 		default:
 			return nil, fmt.Errorf("tool not configured in test: %s", tool)
@@ -170,10 +170,11 @@ func TestExecuteApprovalCycleRunsReviewAndFixInFreshSessions(t *testing.T) {
 	}
 }
 
-func TestExecuteFallsBackToLegacyReviewWhenTaskFileHasNoCriteria(t *testing.T) {
+func TestExecuteBlocksWhenTaskFileHasNoCriteria(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\nSem secao de criterios.\n")
 
-	var reviewerPrompt string
+	reviewerCalled := false
 	svc := NewService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
@@ -185,7 +186,7 @@ func TestExecuteFallsBackToLegacyReviewWhenTaskFileHasNoCriteria(t *testing.T) {
 			}}, nil
 		case "codex":
 			return &callbackInvoker{binary: "codex", fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-				reviewerPrompt = prompt
+				reviewerCalled = true
 				return "approved", "", 0, nil
 			}}, nil
 		default:
@@ -211,8 +212,16 @@ func TestExecuteFallsBackToLegacyReviewWhenTaskFileHasNoCriteria(t *testing.T) {
 	if err := svc.Execute(opts); err != nil {
 		t.Fatalf("Execute unexpected error: %v", err)
 	}
-	if strings.Contains(reviewerPrompt, "Diff consolidado") {
-		t.Errorf("expected legacy review prompt, got the cycle consolidated one:\n%s", reviewerPrompt)
+	if reviewerCalled {
+		t.Error("revisao legada foi invocada sem mapa 1:1 confrontavel (RF-47)")
+	}
+
+	reportStr := readFileString(t, fsys, filepath.Join(prd, "report.md"))
+	if !strings.Contains(reportStr, "mapa 1:1 nao confrontavel") {
+		t.Errorf("relatorio nao registra o resultado terminal por ausencia de criterios:\n%s", reportStr)
+	}
+	if !strings.Contains(reportStr, "| 1.0 | Test Task | needs_input |") {
+		t.Errorf("status final deveria ser needs_input (RF-51):\n%s", reportStr)
 	}
 }
 

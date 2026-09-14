@@ -164,6 +164,27 @@ func (s *CycleFlowSuite) TestAbortsOnEmptyDiff() {
 	s.Equal(approval.ReasonEmptyDiff, result.Reason())
 }
 
+func (s *CycleFlowSuite) TestMissingCriteriaMapFeedsRemediationInsteadOfBlockingInput() {
+	s.expectCheckpointAndTargets(approval.NewReviewTarget("changed"))
+	s.fixer.EXPECT().Fix(mock.Anything, mock.Anything).Return(nil).Once()
+	s.reviewer.EXPECT().Review(mock.Anything, mock.Anything).
+		RunAndReturn(func(_ context.Context, req approval.ReviewRequest) (approval.ReviewerOutput, error) {
+			raw := "Verdict: REJECTED\n\n## Achados\n\nSem achados.\n"
+			criteriaMap, err := approval.ParseCriteriaMap(raw, req)
+			s.Require().NoError(err)
+			return approval.NewReviewerOutput(raw, nil, criteriaMap), nil
+		})
+
+	result, err := s.newCycle().Run(context.Background())
+
+	s.Require().NoError(err)
+	s.False(result.Approved())
+	s.Equal(approval.ReasonNoConvergence, result.Reason(),
+		"a review without the criteria map must give the cycle remediation material instead of closing as blocked_input in round 1")
+	s.Equal(2, result.RoundCount())
+	s.fixer.AssertCalled(s.T(), "Fix", mock.Anything, mock.Anything)
+}
+
 func (s *CycleFlowSuite) TestSecondRunIsRejected() {
 	s.expectCheckpointAndTargets(approval.NewReviewTarget("later"))
 	s.reviewer.EXPECT().Review(mock.Anything, mock.Anything).

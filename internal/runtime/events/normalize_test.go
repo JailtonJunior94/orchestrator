@@ -234,33 +234,35 @@ func TestCopilotRunToBash(t *testing.T) {
 	}
 }
 
-// T-32: TestNormalizeToolCallOpenCodeInheritsCommon — OpenCode emite read_file → normalizado "read"; raw_name preservado.
-// Valida resolveInherit: opencode está em inherit_common; sem entrada explícita em aliases.
-func TestNormalizeToolCallOpenCodeInheritsCommon(t *testing.T) {
-	input := json.RawMessage(`{"path":"/tmp/README.md"}`)
-	result, err := NewCatalog().BuildNormalizedToolCall("opencode", "read_file", input, "")
+func TestNormalizeToolCallOpenCodeUsesOwnAliasTable(t *testing.T) {
+	input := json.RawMessage(`{"filePath":"/tmp/README.md"}`)
+	result, err := NewCatalog().BuildNormalizedToolCall("opencode", "multiedit", input, "")
 	if err != nil {
 		t.Fatalf("T-32: BuildNormalizedToolCall inesperado: %v", err)
 	}
-	if result.NormalizedName != "read" {
-		t.Errorf("T-32: NormalizedName: queria %q (via inherit:common), obtive %q", "read", result.NormalizedName)
+	if result.NormalizedName != "edit" {
+		t.Errorf("T-32: NormalizedName: queria %q (tabela propria do OpenCode), obtive %q", "edit", result.NormalizedName)
 	}
-	if result.RawName != "read_file" {
-		t.Errorf("T-32: RawName: queria %q, obtive %q", "read_file", result.RawName)
+	if result.RawName != "multiedit" {
+		t.Errorf("T-32: RawName: queria %q, obtive %q", "multiedit", result.RawName)
 	}
 }
 
 // T-32b: TestNormalizeOpenCodePreservesRawName — raw_name preservado lado a lado com normalized_name.
-// Cobre bash (alias para si mesmo) e str_replace_editor → edit.
 func TestNormalizeOpenCodePreservesRawName(t *testing.T) {
 	tests := []struct {
 		rawName      string
 		expectedNorm string
 	}{
 		{"bash", "bash"},
-		{"write_file", "write"},
-		{"str_replace_editor", "edit"},
-		{"unknown_tool", "unknown_tool"}, // passthrough: sem alias para ferramenta desconhecida
+		{"write", "write"},
+		{"edit", "edit"},
+		{"multiedit", "edit"},
+		{"patch", "edit"},
+		{"apply_patch", "edit"},
+		{"write_file", "write_file"},
+		{"str_replace_editor", "str_replace_editor"},
+		{"unknown_tool", "unknown_tool"},
 	}
 
 	for _, tc := range tests {
@@ -274,7 +276,6 @@ func TestNormalizeOpenCodePreservesRawName(t *testing.T) {
 			if result.RawName != tc.rawName {
 				t.Errorf("T-32b: RawName mutado: queria %q, obtive %q", tc.rawName, result.RawName)
 			}
-			// NormalizedName correto via inherit:common.
 			if result.NormalizedName != tc.expectedNorm {
 				t.Errorf("T-32b: NormalizedName(%q): queria %q, obtive %q",
 					tc.rawName, tc.expectedNorm, result.NormalizedName)

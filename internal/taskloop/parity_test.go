@@ -64,7 +64,7 @@ func driveServiceExecuteParity(t *testing.T) parityOutcome {
 				if reviewerCalls == 1 {
 					return "[Critical] [x.go:1] uninitialized variable\n\nVerdict: REJECTED\n", "", 1, nil
 				}
-				return "clean\n\nVerdict: APPROVED\n", "", 0, nil
+				return "clean\n\nVerdict: APPROVED\n\n## Mapa de Critérios de Aceite\n- [atendido] build green -> go test ./... -> PASS\n", "", 0, nil
 			}}, nil
 		default:
 			return nil, fmt.Errorf("tool not configured in test: %s", tool)
@@ -230,7 +230,7 @@ func driveACPRunnerParity(t *testing.T) parityOutcome {
 				t.Fatalf("write base.txt fix: %v", err)
 			}
 		}},
-		{script: parityReviewScript("clean\n\nVerdict: APPROVED\n")},
+		{script: parityReviewScript("clean\n\nVerdict: APPROVED\n\n## Mapa de Critérios de Aceite\n- [atendido] build green -> go test ./... -> PASS\n")},
 	}}
 
 	runner := airuntime.NewACPRunner(specs.NewCatalog().Claude(),

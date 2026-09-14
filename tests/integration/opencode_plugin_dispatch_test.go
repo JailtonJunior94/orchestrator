@@ -46,24 +46,40 @@ func detectNode(t *testing.T) string {
 	return path
 }
 
+const opencodePreToolGateRelPath = ".agents/hooks/validate-preload.sh"
+
 func writeCanonicalScripts(t *testing.T, root string) {
 	t.Helper()
-	for _, name := range []string{
-		"hook-prereq-gate.sh",
-		"validate-skill-prerequisites.sh",
-		"resolve-references.sh",
+	for _, rel := range []string{
+		".agents/scripts/hook-prereq-gate.sh",
+		".agents/scripts/validate-skill-prerequisites.sh",
+		".agents/scripts/resolve-references.sh",
+		".agents/hooks/validate-preload.sh",
+		".agents/hooks/validate-governance.sh",
+		".agents/lib/parse-hook-input.sh",
 	} {
-		data, err := embedded.Assets.ReadFile("assets/.agents/scripts/" + name)
+		data, err := embedded.Assets.ReadFile("assets/" + rel)
 		if err != nil {
-			t.Fatalf("read embedded script %s: %v", name, err)
+			t.Fatalf("read embedded script %s: %v", rel, err)
 		}
-		dst := filepath.Join(root, ".agents", "scripts", name)
+		dst := filepath.Join(root, filepath.FromSlash(rel))
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			t.Fatalf("mkdir: %v", err)
 		}
 		if err := os.WriteFile(dst, data, 0o755); err != nil {
-			t.Fatalf("write %s: %v", name, err)
+			t.Fatalf("write %s: %v", rel, err)
 		}
+	}
+}
+
+func writeStubPreToolGate(t *testing.T, root, body string) {
+	t.Helper()
+	dst := filepath.Join(root, filepath.FromSlash(opencodePreToolGateRelPath))
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(dst, []byte(body), 0o755); err != nil {
+		t.Fatalf("write stub pre-tool gate: %v", err)
 	}
 }
 
@@ -147,12 +163,61 @@ func TestOpenCodeGovernancePluginAllowsWhenPrerequisiteSatisfied(t *testing.T) {
 	writeCanonicalScripts(t, dir)
 	copyGoImplementationSkill(t, dir)
 
-	out, exitCode := runDispatchHarness(t, nodePath, pluginPath, dir, "edit", "main.go")
+	out, exitCode := runDispatchHarness(t, nodePath, pluginPath, dir, "edit", "main.go",
+		"GOVERNANCE_PRELOAD_CONFIRMED=1")
 	if exitCode != 0 {
-		t.Fatalf("expected zero exit once go-implementation skill is present; output=%s", out)
+		t.Fatalf("expected zero exit once go-implementation skill is present and preload is confirmed; output=%s", out)
 	}
 	if !strings.Contains(out, "ALLOWED") {
 		t.Fatalf("expected ALLOWED; output=%s", out)
+	}
+}
+
+func TestOpenCodeGovernancePluginBlocksUnconfirmedPreloadLikeLegacyAgents(t *testing.T) {
+	nodePath := detectNode(t)
+	pluginPath := pluginAssetPath(t)
+	dir := t.TempDir()
+	writeCanonicalScripts(t, dir)
+	copyGoImplementationSkill(t, dir)
+
+	out, exitCode := runDispatchHarness(t, nodePath, pluginPath, dir, "edit", "main.go")
+	if exitCode == 0 {
+		t.Fatalf("RF-22: OpenCode must apply the same preload confirmation layer as the legacy agents; output=%s", out)
+	}
+	if !strings.Contains(out, "GOVERNANCE_PRELOAD_CONFIRMED") {
+		t.Fatalf("denial must come from the canonical preload gate, not a plugin-local reimplementation; output=%s", out)
+	}
+}
+
+func TestOpenCodeGovernancePluginBlocksApplyPatchTextWhenPrerequisiteMissing(t *testing.T) {
+	nodePath := detectNode(t)
+	pluginPath := pluginAssetPath(t)
+	dir := t.TempDir()
+	writeCanonicalScripts(t, dir)
+	harnessPath := filepath.Join(t.TempDir(), "dispatch-harness-apply-patch.mjs")
+	harness := fmt.Sprintf(`
+import { pathToFileURL } from "node:url"
+const mod = await import(pathToFileURL(%q).href)
+const hooks = await mod.default({ directory: %q })
+try {
+  await hooks["tool.execute.before"]({ tool: "apply_patch" }, { args: { patchText: "*** Add File: main.go\n+package main\n" } })
+  console.log("ALLOWED")
+  process.exit(0)
+} catch (err) {
+  console.log("BLOCKED:" + err.message)
+  process.exit(1)
+}
+`, pluginPath, dir)
+	if err := os.WriteFile(harnessPath, []byte(harness), 0o644); err != nil {
+		t.Fatalf("write apply_patch harness: %v", err)
+	}
+	cmd := exec.Command(nodePath, harnessPath)
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatalf("apply_patch with patchText must be blocked when Go prerequisite is missing; output=%s", out)
+	}
+	if !strings.Contains(string(out), "GOVERNANCE BLOCKED") {
+		t.Fatalf("apply_patch denial must be observable; output=%s", out)
 	}
 }
 
@@ -210,14 +275,7 @@ func TestOpenCodeGovernancePluginTimeoutIsDenial(t *testing.T) {
 	pluginPath := pluginAssetPath(t)
 	dir := t.TempDir()
 
-	slowScript := "#!/usr/bin/env bash\nsleep 5\nexit 0\n"
-	dst := filepath.Join(dir, ".agents", "scripts", "hook-prereq-gate.sh")
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	if err := os.WriteFile(dst, []byte(slowScript), 0o755); err != nil {
-		t.Fatalf("write slow script: %v", err)
-	}
+	writeStubPreToolGate(t, dir, "#!/usr/bin/env bash\nsleep 5\nexit 0\n")
 
 	out, exitCode := runDispatchHarness(t, nodePath, pluginPath, dir, "edit", "main.go",
 		"AISPEC_OPENCODE_VALIDATOR_TIMEOUT_MS=200")
@@ -250,16 +308,9 @@ func TestOpenCodeGovernancePluginMemoizesByToolAndFiles(t *testing.T) {
 	dir := t.TempDir()
 
 	counterPath := filepath.Join(dir, "invocations.txt")
-	script := "#!/usr/bin/env bash\n" +
-		"echo x >> " + counterPath + "\n" +
-		"exit 0\n"
-	dst := filepath.Join(dir, ".agents", "scripts", "hook-prereq-gate.sh")
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	if err := os.WriteFile(dst, []byte(script), 0o755); err != nil {
-		t.Fatalf("write script: %v", err)
-	}
+	writeStubPreToolGate(t, dir, "#!/usr/bin/env bash\n"+
+		"echo x >> "+counterPath+"\n"+
+		"exit 0\n")
 
 	harnessPath := filepath.Join(t.TempDir(), "dispatch-harness-memo.mjs")
 	memo := fmt.Sprintf(`
@@ -312,6 +363,7 @@ console.log("DONE")
 	}
 
 	cmd := exec.Command(nodePath, harnessPath)
+	cmd.Env = append(os.Environ(), "GOVERNANCE_PRELOAD_CONFIRMED=1")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("distinct files must each be checked but never error: %v (output=%s)", err, out)

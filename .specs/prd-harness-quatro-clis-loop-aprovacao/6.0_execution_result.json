@@ -7,11 +7,13 @@
   "base_sha": "ef928122025a2288d738e2c43f237b1c877d10cf",
   "patch_sha256": "4c5d2fd65b9c675e64ba7fb9cce5e5f8c69d9e0e2017585d4de6aac0f2d37e69",
   "patch_ref": "evidence/task-6.0/6.0.patch",
+  "commit_sha": "b384634b1fe8715875168e9da5f8cf1b328b155f",
+  "commit_patch_sha256": "4e73eb7dbb4194027a50821c0fbed38134686f0e79ab0c69c5bf233ac354a2a9",
   "final_state_sha256": "6cbedd3dce95402a0f1d51058e46cca6b6ab230ff2628d2d467df010cc7a800e",
   "coverage_regression": false,
   "tests": [
     {
-      "command": "go build ./... && go vet ./... && go test ./... -count=1 && go test -tags=integration ./internal/runtime/... ./internal/detect/... -count=1",
+      "command": "go build ./... \u0026\u0026 go vet ./... \u0026\u0026 go test ./... -count=1 \u0026\u0026 go test -tags=integration ./internal/runtime/... ./internal/detect/... -count=1",
       "exit_code": 0,
       "output_sha256": "583969864002896b56130552648ee73507bbc4fe3c7b2c0130215a08daf99018"
     },
@@ -27,18 +29,54 @@
     }
   ],
   "criteria": [
-    { "id": "build-vet-test-verde", "evidence_ref": "evidence/task-6.0/build-vet-test.log" },
-    { "id": "enforcement-recusa-cobertura-incompleta-por-ponto", "evidence_ref": "evidence/task-6.0/gate-tests.log" },
-    { "id": "zero-value-agente-e-ponto-canonico-invalido", "evidence_ref": "evidence/task-6.0/gate-tests.log" },
-    { "id": "imutabilidade-agente-comparacao-por-valor", "evidence_ref": "evidence/task-6.0/gate-tests.log" },
-    { "id": "lista-ordenada-unica-gate-de-ordem-canonica", "evidence_ref": "evidence/task-6.0/gate-tests.log" },
-    { "id": "verify-e-install-mesma-ordem", "evidence_ref": "evidence/task-6.0/gate-tests.log" },
-    { "id": "tool-ausente-do-catalogo-acp-erro-tipado-nao-claude", "evidence_ref": "evidence/task-6.0/gate-tests.log" },
-    { "id": "gate-de-sincronia-vermelho-na-divergencia", "evidence_ref": "evidence/task-6.0/gate-tests.log" },
-    { "id": "matriz-obrigatoria-agentes-x-tres-pontos", "evidence_ref": "evidence/task-6.0/gate-tests.log" },
-    { "id": "nenhum-script-canonico-reimplementado-gate-espelhamento", "evidence_ref": "evidence/task-6.0/sync-gates.log" },
-    { "id": "internal-detect-nao-executa-binarios", "evidence_ref": "evidence/task-6.0/gate-tests.log" },
-    { "id": "git-diff-golden-files-governanca-vazio", "evidence_ref": "evidence/task-6.0/golden-diff.log" }
+    {
+      "id": "build-vet-test-verde",
+      "evidence_ref": "evidence/task-6.0/build-vet-test.log"
+    },
+    {
+      "id": "enforcement-recusa-cobertura-incompleta-por-ponto",
+      "evidence_ref": "evidence/task-6.0/gate-tests.log"
+    },
+    {
+      "id": "zero-value-agente-e-ponto-canonico-invalido",
+      "evidence_ref": "evidence/task-6.0/gate-tests.log"
+    },
+    {
+      "id": "imutabilidade-agente-comparacao-por-valor",
+      "evidence_ref": "evidence/task-6.0/gate-tests.log"
+    },
+    {
+      "id": "lista-ordenada-unica-gate-de-ordem-canonica",
+      "evidence_ref": "evidence/task-6.0/gate-tests.log"
+    },
+    {
+      "id": "verify-e-install-mesma-ordem",
+      "evidence_ref": "evidence/task-6.0/gate-tests.log"
+    },
+    {
+      "id": "tool-ausente-do-catalogo-acp-erro-tipado-nao-claude",
+      "evidence_ref": "evidence/task-6.0/gate-tests.log"
+    },
+    {
+      "id": "gate-de-sincronia-vermelho-na-divergencia",
+      "evidence_ref": "evidence/task-6.0/gate-tests.log"
+    },
+    {
+      "id": "matriz-obrigatoria-agentes-x-tres-pontos",
+      "evidence_ref": "evidence/task-6.0/gate-tests.log"
+    },
+    {
+      "id": "nenhum-script-canonico-reimplementado-gate-espelhamento",
+      "evidence_ref": "evidence/task-6.0/sync-gates.log"
+    },
+    {
+      "id": "internal-detect-nao-executa-binarios",
+      "evidence_ref": "evidence/task-6.0/gate-tests.log"
+    },
+    {
+      "id": "git-diff-golden-files-governanca-vazio",
+      "evidence_ref": "evidence/task-6.0/golden-diff.log"
+    }
   ],
   "evidence": [
     "evidence/task-6.0/6.0.patch",

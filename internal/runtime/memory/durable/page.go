@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -40,8 +41,6 @@ type factMetadataYAML struct {
 	Links      []Link      `yaml:"links,omitempty"`
 }
 
-var factBlockPattern = regexp.MustCompile("(?ms)^### Fact: (.+?)\n```fact-metadata\n(.*?)\n```[ \t]*\n?")
-
 var frontMatterPattern = regexp.MustCompile(`(?s)\A---\n(.*?)\n---\n`)
 
 type MarkdownPage struct{}
@@ -52,6 +51,9 @@ func NewMarkdownPage() *MarkdownPage {
 
 func (p *MarkdownPage) Parse(content []byte) ([]Fact, HumanBlock, error) {
 	text := string(content)
+	if strings.HasPrefix(text, "---\n") && frontMatterPattern.FindStringSubmatchIndex(text) == nil {
+		return nil, HumanBlock{}, ErrPageUnreadable
+	}
 
 	var header PageHeader
 	if match := frontMatterPattern.FindStringSubmatchIndex(text); match != nil {
@@ -59,27 +61,28 @@ func (p *MarkdownPage) Parse(content []byte) ([]Fact, HumanBlock, error) {
 		if err := yaml.Unmarshal([]byte(yamlBlock), &header); err != nil {
 			return nil, HumanBlock{}, fmt.Errorf("durable: invalid frontmatter: %w: %w", err, ErrPageUnreadable)
 		}
+		if err := validatePageHeader(header); err != nil {
+			return nil, HumanBlock{}, err
+		}
 		text = text[match[1]:]
 	}
 
-	matches := factBlockPattern.FindAllStringSubmatchIndex(text, -1)
-
-	facts := make([]Fact, 0, len(matches))
-	segments := make([]string, 0, len(matches)+1)
-
+	facts := make([]Fact, 0)
+	segments := make([]string, 0, 1)
 	cursor := 0
-	for _, m := range matches {
-		segments = append(segments, text[cursor:m[0]])
-
-		key := strings.TrimSpace(text[m[2]:m[3]])
-		yamlBlock := text[m[4]:m[5]]
+	for {
+		start, key, yamlBlock, end, found := p.nextFactBlock(text, cursor)
+		if !found {
+			break
+		}
+		segments = append(segments, text[cursor:start])
 
 		var metadata factMetadataYAML
 		if err := yaml.Unmarshal([]byte(yamlBlock), &metadata); err != nil {
 			return nil, HumanBlock{}, fmt.Errorf("durable: invalid fact metadata: %w: %w", err, ErrPageUnreadable)
 		}
 
-		facts = append(facts, Fact{
+		fact := Fact{
 			Identity: Identity{
 				Key:  SemanticKey(key),
 				Hash: metadata.Hash,
@@ -89,9 +92,13 @@ func (p *MarkdownPage) Parse(content []byte) ([]Fact, HumanBlock, error) {
 			Origin:     metadata.Origin,
 			State:      metadata.State,
 			Links:      metadata.Links,
-		})
+		}
+		if err := NewCatalog().ValidateFact(fact); err != nil {
+			return nil, HumanBlock{}, fmt.Errorf("durable: invalid fact metadata: %w: %w", err, ErrPageUnreadable)
+		}
+		facts = append(facts, fact)
 
-		cursor = m[1]
+		cursor = end
 	}
 	segments = append(segments, text[cursor:])
 
@@ -109,6 +116,49 @@ func (p *MarkdownPage) Parse(content []byte) ([]Fact, HumanBlock, error) {
 	}
 
 	return facts, HumanBlock{Header: header, Content: human.String(), interleaved: interleaved}, nil
+}
+
+func (p *MarkdownPage) nextFactBlock(text string, cursor int) (int, string, string, int, bool) {
+	const factPrefix = "### Fact: "
+	const metadataPrefix = "\n```fact-metadata\n"
+	const metadataSuffix = "\n```"
+
+	for offset := cursor; ; {
+		relativeStart := strings.Index(text[offset:], factPrefix)
+		if relativeStart < 0 {
+			return 0, "", "", 0, false
+		}
+		start := offset + relativeStart
+		if start > 0 && text[start-1] != '\n' {
+			offset = start + len(factPrefix)
+			continue
+		}
+		keyStart := start + len(factPrefix)
+		keyEndRelative := strings.IndexByte(text[keyStart:], '\n')
+		if keyEndRelative < 0 {
+			return 0, "", "", 0, false
+		}
+		keyEnd := keyStart + keyEndRelative
+		metadataStart := keyEnd
+		if !strings.HasPrefix(text[metadataStart:], metadataPrefix) {
+			offset = keyEnd + 1
+			continue
+		}
+		metadataStart += len(metadataPrefix)
+		metadataEndRelative := strings.Index(text[metadataStart:], metadataSuffix)
+		if metadataEndRelative < 0 {
+			return 0, "", "", 0, false
+		}
+		metadataEnd := metadataStart + metadataEndRelative
+		end := metadataEnd + len(metadataSuffix)
+		for end < len(text) && (text[end] == ' ' || text[end] == '\t') {
+			end++
+		}
+		if end < len(text) && text[end] == '\n' {
+			end++
+		}
+		return start, strings.TrimSpace(text[keyStart:keyEnd]), text[metadataStart:metadataEnd], end, true
+	}
 }
 
 func (p *MarkdownPage) Serialize(facts []Fact, human HumanBlock) ([]byte, error) {
@@ -130,8 +180,9 @@ func (p *MarkdownPage) Serialize(facts []Fact, human HumanBlock) ([]byte, error)
 	var b strings.Builder
 
 	header := human.Header
-	if header.FormatVersion == 0 {
-		header.FormatVersion = FormatVersionCurrent
+	header = completePageHeader(header, facts)
+	if err := validatePageHeader(header); err != nil {
+		return nil, err
 	}
 	headerYAML, err := yaml.Marshal(header)
 	if err != nil {
@@ -177,4 +228,45 @@ func (p *MarkdownPage) Serialize(facts []Fact, human HumanBlock) ([]byte, error)
 	}
 
 	return output, nil
+}
+
+func completePageHeader(header PageHeader, facts []Fact) PageHeader {
+	if header.Identity == "" {
+		header.Identity = "memory"
+	}
+	if header.Layer == TargetLayerUndefined {
+		header.Layer = TargetLayerPRD
+	}
+	if header.OriginSession == "" {
+		header.OriginSession = "manual"
+		for _, fact := range facts {
+			if fact.Origin.Session != "" {
+				header.OriginSession = fact.Origin.Session
+				break
+			}
+		}
+	}
+	if header.Date == "" {
+		header.Date = time.Now().UTC().Format(time.RFC3339)
+		for _, fact := range facts {
+			if fact.Origin.Date != "" {
+				header.Date = fact.Origin.Date
+				break
+			}
+		}
+	}
+	if header.FormatVersion == 0 {
+		header.FormatVersion = FormatVersionCurrent
+	}
+	return header
+}
+
+func validatePageHeader(header PageHeader) error {
+	if header.Identity == "" || header.Layer == TargetLayerUndefined || header.OriginSession == "" || header.Date == "" || header.FormatVersion != FormatVersionCurrent {
+		return ErrPageUnreadable
+	}
+	if _, err := time.Parse(time.RFC3339, header.Date); err != nil {
+		return fmt.Errorf("durable: invalid frontmatter date: %w: %w", err, ErrPageUnreadable)
+	}
+	return nil
 }

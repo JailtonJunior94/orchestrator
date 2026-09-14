@@ -35,6 +35,7 @@ type Summary struct {
 	ReviewStatus string
 	// ReviewPath é o caminho de evidence/<task>/review.md (apontador conveniente).
 	ReviewPath string
+	ReviewNote string `json:"review_note,omitempty"`
 
 	CycleRounds     []CycleRoundSummary `json:"cycle_rounds,omitempty"`
 	CycleStopReason string              `json:"cycle_stop_reason,omitempty"`
@@ -59,21 +60,22 @@ type Summary struct {
 }
 
 type MemoryEvidence struct {
-	SessionID           string
-	CLI                 string
-	TaskFileName        string
-	FactsByLayer        map[string]int
-	FactsOmitted        int
-	FactsContradicted   int
-	PagesUnreadable     int
-	BudgetByLayer       map[string]int
-	WritesByLayer       map[string]int
-	ArchivedByLayer     map[string]int
-	Redactions          int
-	Compactions         int
-	Contradictions      int
-	BatonClaimed        bool
-	ContextBuildLatency int64
-	RecordLatency       int64
-	DomainEvents        []string
+	SessionID               string
+	CLI                     string
+	TaskFileName            string
+	FactsByLayer            map[string]int
+	FactsOmitted            int
+	FactsContradicted       int
+	PagesUnreadable         int
+	BudgetByLayer           map[string]int
+	WritesByLayer           map[string]int
+	ArchivedByLayer         map[string]int
+	Redactions              int
+	Compactions             int
+	Contradictions          int
+	BatonClaimed            bool
+	ContextBuildLatency     int64
+	ContextRecoveryDegraded bool
+	RecordLatency           int64
+	DomainEvents            []string
 }

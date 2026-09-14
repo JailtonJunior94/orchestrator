@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
-# Testes table-driven para .claude/scripts/validate-task-evidence.sh (RF-05).
-# Cobertura: 6 casos — válido, sem sha, sem verdict, sem tool, delta -3.0%, delta +0.5%.
 
 set -euo pipefail
 
-SCRIPT="${1:-.claude/scripts/validate-task-evidence.sh}"
+SCRIPT="${1:-.agents/scripts/validate-task-evidence.sh}"
 TMP_ROOT=$(mktemp -d)
 TMPDIR_BASE="$TMP_ROOT/repository"
 trap 'rm -rf "$TMP_ROOT"' EXIT
@@ -44,6 +42,43 @@ cat >"$TMPDIR_BASE/result.json" <<EOF
 EOF
 VALID_RESULT="$(cat "$TMPDIR_BASE/result.json")"
 
+# run_case_raw escreve a fixture exatamente como recebida. Usar para exercitar o
+# contrato de evidencia (marcador ausente/invalido e a regra de corte).
+run_case_raw() {
+  local label="$1"
+  local content="$2"
+  local want_exit="$3"
+  local want_text="$4"
+
+  local f="$TMPDIR_BASE/report_$PASS$FAIL.md"
+  printf '%s' "$content" > "$f"
+
+  local actual_exit=0
+  local actual_out
+  actual_out=$(bash "$SCRIPT" "$f" 2>&1) || actual_exit=$?
+  rm -f "$f"
+
+  if [[ "$actual_exit" -ne "$want_exit" ]]; then
+    echo "FAIL [$label]: exit=$actual_exit, want=$want_exit"
+    echo "  output: $actual_out"
+    FAIL=$((FAIL+1))
+    return
+  fi
+
+  if [[ -n "$want_text" ]] && ! echo "$actual_out" | grep -qi "$want_text"; then
+    echo "FAIL [$label]: output não contém '$want_text'"
+    echo "  output: $actual_out"
+    FAIL=$((FAIL+1))
+    return
+  fi
+
+  echo "PASS [$label]"
+  PASS=$((PASS+1))
+}
+
+# run_case trata a fixture como relatorio novo: declara o contrato v2 e cobra as
+# regras estritas. Relatorio novo sem marcador e trabalho novo tentando passar
+# como historico, e a regra de corte reprova — coberto por TC18.
 run_case() {
   local label="$1"
   local content="$2"
@@ -51,7 +86,7 @@ run_case() {
   local want_text="$4"      # substring esperada no output
 
   local f="$TMPDIR_BASE/report_$PASS$FAIL.md"
-  printf '%s' "$content" > "$f"
+  printf '<!-- evidence-contract: v2 -->\n%s' "$content" > "$f"
 
   local actual_exit=0
   local actual_out
@@ -165,6 +200,241 @@ run_case "TC10-patch-arbitrario-autoconsistente" "$SELF_CONSISTENT_REPORT" 1 "es
 git -C "$TMPDIR_BASE" diff --binary HEAD -- . >"$TMPDIR_BASE/evidence/patch.diff"
 printf '%s\n' "${VALID_RESULT//$FINAL_STATE_SHA/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb}" >"$TMPDIR_BASE/result.json"
 run_case "TC11-estado-final-inventado" "$VALID_REPORT" 1 "estado final recomputado"
+
+BLOCKED_REPORT='## Relatório de Execução de Tarefa
+
+## Tarefa
+- ID: 5.0
+- Arquivo: .specs/prd-portability-parity/task-5.0.md
+- Estado: blocked
+
+## Contexto Carregado
+- PRD: (n/a)
+- TechSpec: (n/a)
+
+## Comandos Executados
+- go test ./... -> pass
+
+## Arquivos Alterados
+- internal/taskloop/evidence.go
+
+## Resultados de Validação
+- Testes: blocked
+- Lint: pass
+- Veredito do Revisor: APPROVED
+
+## Diff Reviewed
+
+sha=0123456789012345678901234567890123456789012345678901234567890123
+verdict=APPROVED
+tool=claude
+
+## Coverage
+
+delta=+0.5%
+
+## Critérios de Aceite
+- Bloqueado aguardando evidência externa.
+
+## Suposições
+- Nenhuma.
+
+## Riscos Residuais
+- A evidência live não foi observada.
+'
+run_case "TC12-blocked-sem-prova-fisica" "$BLOCKED_REPORT" 0 "aprovada"
+
+# ── RF-33: APPROVED_WITH_REMARKS nao encerra o ciclo (BUG-D2) ───────────────
+REMARKS_REPORT="${BLOCKED_REPORT//verdict=APPROVED/verdict=APPROVED_WITH_REMARKS}"
+REMARKS_REPORT="${REMARKS_REPORT//Veredito do Revisor: APPROVED/Veredito do Revisor: APPROVED_WITH_REMARKS}"
+run_case "TC13-approved-with-remarks-nao-encerra" "$REMARKS_REPORT" 1 "não encerra o ciclo de aprovação"
+
+# ── RF-51/RF-53: done sem task file resolvivel falha incondicionalmente (BUG-D11) ──
+NO_TASK_FILE_REPORT='# Relatório de Execução de Tarefa
+
+## Tarefa
+- ID: 5.0
+- Arquivo: (n/a)
+- Estado: done
+
+## Contexto Carregado
+- PRD: (n/a)
+- TechSpec: (n/a)
+
+## Comandos Executados
+- make test -> pass
+
+## Arquivos Alterados
+- internal/taskloop/evidence.go
+
+## Resultados de Validação
+- Testes: pass
+- Lint: pass
+- Veredito do Revisor: APPROVED
+
+## Diff Reviewed
+
+sha=0123456789012345678901234567890123456789012345678901234567890123
+verdict=APPROVED
+tool=claude
+
+## Coverage
+
+package=internal/taskloop
+delta=+0.5%
+
+## Suposições
+- Nenhuma.
+
+## Riscos Residuais
+- Nenhum.
+'
+
+run_case "TC14-done-sem-task-file-strict" "$NO_TASK_FILE_REPORT" 1 "não há task file resolvível"
+
+AI_SDD_STRICT_EVIDENCE=0 \
+  run_case "TC15-done-sem-task-file-optout" "$NO_TASK_FILE_REPORT" 1 "não há task file resolvível"
+
+printf '# Tarefa 6.0\n\n## Escopo\n\n- Sem criterios declarados.\n' \
+  >"$TMPDIR_BASE/.specs/prd-portability-parity/task-6.0.md"
+
+NO_CRITERIA_REPORT='# Relatório de Execução de Tarefa
+
+## Tarefa
+- ID: 6.0
+- Arquivo: .specs/prd-portability-parity/task-6.0.md
+- Estado: done
+
+## Contexto Carregado
+- PRD: (n/a)
+- TechSpec: (n/a)
+
+## Comandos Executados
+- make test -> pass
+
+## Arquivos Alterados
+- internal/taskloop/evidence.go
+
+## Resultados de Validação
+- Testes: pass
+- Lint: pass
+- Veredito do Revisor: APPROVED
+
+## Diff Reviewed
+
+sha=0123456789012345678901234567890123456789012345678901234567890123
+verdict=APPROVED
+tool=claude
+
+## Coverage
+
+package=internal/taskloop
+delta=+0.5%
+
+## Suposições
+- Nenhuma.
+
+## Riscos Residuais
+- Nenhum.
+'
+
+run_case "TC16-task-sem-criterios-strict" "$NO_CRITERIA_REPORT" 1 "não declara nenhum critério de aceite"
+
+AI_SDD_STRICT_EVIDENCE=0 \
+  run_case "TC17-task-sem-criterios-optout" "$NO_CRITERIA_REPORT" 1 "não declara nenhum critério de aceite"
+
+# ── Contrato de evidencia (BUG-X2 / RF-04 / RF-56) ───────────────────────────
+
+# TC18: relatorio novo (nao existe no ref de corte) sem marcador nao pode se passar
+# por historico. A isencao v1 nao e rota de fuga para trabalho novo.
+run_case_raw "TC18-v1-novo-reprova" "$VALID_REPORT" 1 "não é evidência histórica"
+
+# TC19: marcador de versao desconhecida reprova fechado.
+run_case_raw "TC19-contrato-desconhecido" "<!-- evidence-contract: v9 -->
+$VALID_REPORT" 1 "versão de contrato de evidência desconhecida"
+
+HISTORICAL="$TMPDIR_BASE/.specs/prd-portability-parity/9.9_execution_report.md"
+HISTORICAL_BODY="$BLOCKED_REPORT"
+HISTORICAL_BODY="${HISTORICAL_BODY/## Critérios de Aceite
+- Bloqueado aguardando evidência externa.
+/}"
+REMARKS_HISTORICAL="$TMPDIR_BASE/.specs/prd-portability-parity/9.8_execution_report.md"
+printf '%s' "$HISTORICAL_BODY" >"$HISTORICAL"
+printf '%s' "${HISTORICAL_BODY//verdict=APPROVED/verdict=APPROVED_WITH_REMARKS}" >"$REMARKS_HISTORICAL"
+git -C "$TMPDIR_BASE" add .specs >/dev/null 2>&1
+git -C "$TMPDIR_BASE" commit -qm "test: historical evidence" >/dev/null 2>&1
+historical_exit=0
+historical_out=$(bash "$SCRIPT" "$HISTORICAL" 2>&1) || historical_exit=$?
+if [[ "$historical_exit" -eq 0 ]] && grep -qi "mapa 1:1 de critérios de aceite não cobrado" <<<"$historical_out"; then
+  echo "PASS [TC20-v1-isenta-forma]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [TC20-v1-isenta-forma]: exit=$historical_exit"
+  echo "  output: $historical_out"
+  FAIL=$((FAIL+1))
+fi
+
+remarks_exit=0
+remarks_out=$(bash "$SCRIPT" "$REMARKS_HISTORICAL" 2>&1) || remarks_exit=$?
+if [[ "$remarks_exit" -eq 1 ]] && grep -qi "não encerra o ciclo de aprovação" <<<"$remarks_out"; then
+  echo "PASS [TC20b-v1-nao-isenta-desfecho]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [TC20b-v1-nao-isenta-desfecho]: exit=$remarks_exit"
+  echo "  output: $remarks_out"
+  FAIL=$((FAIL+1))
+fi
+rm -f "$REMARKS_HISTORICAL"
+
+# TC21: o mesmo relatorio historico, agora declarando v2, passa a ser cobrado pelas
+# regras estritas e reprova no veredito.
+printf '<!-- evidence-contract: v2 -->\n%s' "${HISTORICAL_BODY//verdict=APPROVED/verdict=APPROVED_WITH_REMARKS}" >"$HISTORICAL"
+strict_exit=0
+strict_out=$(bash "$SCRIPT" "$HISTORICAL" 2>&1) || strict_exit=$?
+if [[ "$strict_exit" -eq 1 ]] && grep -qi "não encerra o ciclo de aprovação" <<<"$strict_out"; then
+  echo "PASS [TC21-v2-estrito-cobra]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [TC21-v2-estrito-cobra]: exit=$strict_exit"
+  echo "  output: $strict_out"
+  FAIL=$((FAIL+1))
+fi
+rm -f "$HISTORICAL"
+
+NON_GIT_DIR="$TMP_ROOT/sem-git"
+mkdir -p "$NON_GIT_DIR"
+printf '%s' "$VALID_REPORT" >"$NON_GIT_DIR/report.md"
+nongit_exit=0
+nongit_out=$(bash "$SCRIPT" "$NON_GIT_DIR/report.md" 2>&1) || nongit_exit=$?
+if [[ "$nongit_exit" -eq 1 ]] && grep -qi "não é evidência histórica" <<<"$nongit_out"; then
+  echo "PASS [TC23-sem-git-nao-isenta]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [TC23-sem-git-nao-isenta]: exit=$nongit_exit"
+  echo "  output: $nongit_out"
+  FAIL=$((FAIL+1))
+fi
+
+printf '%s' "$HISTORICAL_BODY" >"$HISTORICAL"
+git -C "$TMPDIR_BASE" add .specs >/dev/null 2>&1
+git -C "$TMPDIR_BASE" commit -qm "test: cut ref fixture" >/dev/null 2>&1
+OLD_REF="$(git -C "$TMPDIR_BASE" rev-parse HEAD~1)"
+env_exit=0
+env_out=$(AI_EVIDENCE_CONTRACT_CUT_REF="$OLD_REF" bash "$SCRIPT" "$HISTORICAL" 2>&1) || env_exit=$?
+if [[ "$env_exit" -eq 0 ]] && ! grep -qi "não é evidência histórica" <<<"$env_out"; then
+  echo "PASS [TC24-cut-ref-ignora-env]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [TC24-cut-ref-ignora-env]: exit=$env_exit"
+  echo "  output: $env_out"
+  FAIL=$((FAIL+1))
+fi
+rm -f "$HISTORICAL"
+
+# ── BUG-X7: ramo fail-closed alcancavel sem a linha "- Arquivo:" ─────────────
+# Sob `set -euo pipefail` a extracao do task file matava o script, pulando este e
+# todos os gates a jusante em silencio.
+run_case "TC22-sem-linha-arquivo-alcanca-fail-closed" "${VALID_REPORT/- Arquivo: .specs\/prd-portability-parity\/task-5.0.md/}" 1 "não há task file resolvível"
 
 echo ""
 echo "Resultado: $PASS passaram, $FAIL falharam"

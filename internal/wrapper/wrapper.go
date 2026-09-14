@@ -1,6 +1,7 @@
 package wrapper
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/metrics"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/prerequisites"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
 
 // ValidTools é o conjunto de ferramentas aceitas pelo wrapper.
@@ -26,6 +28,9 @@ var ValidTools = map[string]bool{
 //  4. Budget de tokens está dentro do limite (metrics.CheckBudget)
 func (r1 *Executor) Execute(tool, skill, projectDir string, args []string, fsys fs.FileSystem) (instruction string, err error) {
 	if !ValidTools[tool] {
+		if err := NewExecutor().removedAgent(tool); err != nil {
+			return "", err
+		}
 		return "", fmt.Errorf("ferramenta invalida: %q — tools aceitos: codex, copilot", tool)
 	}
 
@@ -95,4 +100,16 @@ func (r1 *Executor) buildInstruction(tool, skill, projectDir string, args []stri
 	default:
 		return fmt.Sprintf("Run skill %q with tool %q in project %s%s", skill, tool, projectDir, extraArgs)
 	}
+}
+
+func (r1 *Executor) removedAgent(tool string) error {
+	_, err := skills.NewCatalog().ResolveTool(tool)
+	if err == nil {
+		return nil
+	}
+	var removed *skills.RemovedAgentError
+	if errors.As(err, &removed) {
+		return removed
+	}
+	return nil
 }

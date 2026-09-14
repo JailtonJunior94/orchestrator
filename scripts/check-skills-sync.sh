@@ -24,49 +24,73 @@ declare -a mirrors=(
   "$repo_root/internal/embedded/assets/.agents/skills"
 )
 
+# S1: dirs sob .agents/skills/ que NAO sao skills (sem SKILL.md) e portanto nao
+# devem ser espelhados. Allowlist EXPLICITA — ausencia de SKILL.md por si so nao
+# isenta o dir do gate.
+#   tests/ -> suite pytest (conftest.py + test_validation_scripts.py) que valida os
+#             scripts das skills; nao tem SKILL.md e nao e carregavel como skill.
+declare -a non_skill_dirs=(
+  "tests"
+)
+
+is_non_skill_dir() {
+  local candidate="$1"
+  local entry
+  for entry in "${non_skill_dirs[@]}"; do
+    [[ "$entry" == "$candidate" ]] && return 0
+  done
+  return 1
+}
+
 drift_count=0
 ok_count=0
 
 for mirror in "${mirrors[@]}"; do
   if [[ ! -d "$mirror" ]]; then
-    echo "WARN: mirror não existe: $mirror"
+    echo "DRIFT: mirror nao existe: $mirror"
+    drift_count=$((drift_count + 1))
     continue
   fi
 
-  # Verifica apenas skills que existem em ambos canonical e mirror.
-  # Mirrors são subset por design.
-  # Para o embedded mirror, replicamos a lógica de sync-skills.sh:
-  # skills sem SKILL.md no canônico são preservadas (não sincronizadas).
-  is_embedded=false
-  case "$mirror" in *internal/embedded/*) is_embedded=true ;; esac
-
-  for skill_dir in "$mirror"/*/; do
+  # S1: a fonte de verdade e o CANONICO. Skill canonica ausente no mirror e DRIFT,
+  # nao subset legitimo — antes dessa correcao uma skill nunca embarcada era
+  # invisivel ao gate (ex.: domain-modeling-production, exigida pelo tasks.md).
+  for skill_dir in "$canonical"/*/; do
     skill_name="$(basename "$skill_dir")"
-    canon_skill="$canonical/$skill_name"
 
-    if [[ ! -d "$canon_skill" ]]; then
-      echo "DRIFT: $mirror/$skill_name existe mas canonical $canon_skill não"
+    if is_non_skill_dir "$skill_name"; then
+      echo "SKIP: $skill_name (allowlist: dir nao-skill em $canonical)"
+      continue
+    fi
+
+    if [[ ! -f "$skill_dir/SKILL.md" ]]; then
+      echo "DRIFT: $skill_name existe em $canonical sem SKILL.md e nao esta na allowlist de dirs nao-skill"
       drift_count=$((drift_count + 1))
       continue
     fi
 
-    # Replicar comportamento de sync-skills.sh: para embedded mirror,
-    # se canônico não tem SKILL.md, sync é pulado — mirror permanece como está.
-    # F34: log explícito para auditoria — skill "fantasma" no embedded merece atenção.
-    if [[ "$is_embedded" == "true" && ! -f "$canon_skill/SKILL.md" ]]; then
-      echo "SKIP: $skill_name (canonical $canon_skill sem SKILL.md; embedded preservado)"
-      ok_count=$((ok_count + 1))
+    mirror_skill="$mirror/$skill_name"
+    if [[ ! -d "$mirror_skill" ]]; then
+      echo "DRIFT: $skill_name existe em $canonical mas nao em $mirror"
+      drift_count=$((drift_count + 1))
       continue
     fi
 
-    # diff -r retorna 0 se idêntico, 1 se diferente.
-    # Filtramos saída pra mostrar só nomes de arquivos divergentes.
-    if ! diff -r "$canon_skill" "$skill_dir" > /dev/null 2>&1; then
+    if ! diff -r "$skill_dir" "$mirror_skill" > /dev/null 2>&1; then
       echo "DRIFT: $skill_name diverge entre $canonical e $mirror"
-      diff -rq "$canon_skill" "$skill_dir" 2>&1 | sed 's/^/  /' || true
+      diff -rq "$skill_dir" "$mirror_skill" 2>&1 | sed 's/^/  /' || true
       drift_count=$((drift_count + 1))
     else
       ok_count=$((ok_count + 1))
+    fi
+  done
+
+  # Orfaos: presentes no mirror sem contrapartida canonica.
+  for skill_dir in "$mirror"/*/; do
+    skill_name="$(basename "$skill_dir")"
+    if [[ ! -d "$canonical/$skill_name" ]]; then
+      echo "DRIFT: $mirror/$skill_name existe mas canonical $canonical/$skill_name nao"
+      drift_count=$((drift_count + 1))
     fi
   done
 done
@@ -80,32 +104,64 @@ echo "Skills com drift: $drift_count"
 agents_lib="$repo_root/.agents/lib"
 legacy_lib="$repo_root/scripts/lib"
 embedded_lib="$repo_root/internal/embedded/assets/.agents/lib"
+
+# G1: a lista e DECLARADA, nao derivada de glob. Sem ela, apagar .agents/lib/ (ou
+# esvazia-lo) fazia o bloco inteiro nao executar nenhuma comparacao e o gate
+# aprovava por vacuidade. Ausencia do canonico e DRIFT, nunca motivo para pular.
+declare -a required_libs=(
+  "check-invocation-depth.sh"
+  "parse-hook-input.sh"
+)
+declare -a lib_mirrors=(
+  "$legacy_lib"
+  "$embedded_lib"
+)
+
 lib_drift=0
-if [[ -d "$agents_lib" ]]; then
+if [[ ! -d "$agents_lib" ]]; then
+  echo "DRIFT lib: diretorio canonico ausente: $agents_lib"
+  lib_drift=$((lib_drift + 1))
+else
+  for base in "${required_libs[@]}"; do
+    lib_file="$agents_lib/$base"
+    if [[ ! -f "$lib_file" ]]; then
+      echo "DRIFT lib: $base declarado como obrigatorio mas ausente em .agents/lib/"
+      lib_drift=$((lib_drift + 1))
+      continue
+    fi
+    for mirror in "${lib_mirrors[@]}"; do
+      if [[ ! -d "$mirror" ]]; then
+        echo "DRIFT lib: mirror nao existe: $mirror"
+        lib_drift=$((lib_drift + 1))
+        continue
+      fi
+      if [[ ! -f "$mirror/$base" ]]; then
+        echo "DRIFT lib: $base existe em .agents/lib/ mas nao em $mirror"
+        lib_drift=$((lib_drift + 1))
+      elif ! diff -q "$lib_file" "$mirror/$base" > /dev/null 2>&1; then
+        echo "DRIFT lib: $base diverge entre .agents/lib/ e $mirror"
+        lib_drift=$((lib_drift + 1))
+      fi
+    done
+  done
+
+  # Arquivo novo no canonico sem entrada na lista declarada tambem e DRIFT:
+  # caso contrario a lista envelhece em silencio.
   for lib_file in "$agents_lib"/*.sh; do
     [[ -f "$lib_file" ]] || continue
     base="$(basename "$lib_file")"
-    # mirror legado
-    if [[ -d "$legacy_lib" ]]; then
-      if [[ ! -f "$legacy_lib/$base" ]]; then
-        echo "DRIFT lib: $base existe em .agents/lib/ mas não em scripts/lib/"
-        lib_drift=$((lib_drift + 1))
-      elif ! diff -q "$lib_file" "$legacy_lib/$base" > /dev/null 2>&1; then
-        echo "DRIFT lib: $base diverge entre .agents/lib/ e scripts/lib/"
-        lib_drift=$((lib_drift + 1))
-      fi
-    fi
-    # mirror embedded (distribuído por ai-spec install)
-    if [[ ! -f "$embedded_lib/$base" ]]; then
-      echo "DRIFT lib: $base existe em .agents/lib/ mas não em internal/embedded/assets/.agents/lib/"
-      lib_drift=$((lib_drift + 1))
-    elif ! diff -q "$lib_file" "$embedded_lib/$base" > /dev/null 2>&1; then
-      echo "DRIFT lib: $base diverge entre .agents/lib/ e internal/embedded/assets/.agents/lib/"
+    declared=0
+    for entry in "${required_libs[@]}"; do
+      [[ "$entry" == "$base" ]] && { declared=1; break; }
+    done
+    if [[ "$declared" -eq 0 ]]; then
+      echo "DRIFT lib: $base existe em .agents/lib/ mas nao esta na lista declarada required_libs de $0"
       lib_drift=$((lib_drift + 1))
     fi
   done
+
   if [[ "$lib_drift" -eq 0 ]]; then
-    echo "Libs em sync: $(find "$agents_lib" -maxdepth 1 -name '*.sh' | wc -l | xargs) (legacy + embedded)"
+    echo "Libs em sync: ${#required_libs[@]} libs x ${#lib_mirrors[@]} mirrors (legacy + embedded)"
   fi
 fi
 
@@ -129,17 +185,26 @@ declare -a tool_hook_mirrors=(
   "$repo_root/internal/embedded/assets/.github/hooks"
 )
 hook_drift=0
-if [[ -d "$agents_hooks" ]]; then
-  for mirror in "${tool_hook_mirrors[@]}"; do
-    if [[ ! -d "$mirror" ]]; then
-      echo "DRIFT hook: mirror nao existe: $mirror"
+if [[ ! -d "$agents_hooks" ]]; then
+  echo "DRIFT hook: diretorio canonico ausente: $agents_hooks"
+  hook_drift=$((hook_drift + 1))
+else
+  # G1: hook canonico ausente e DRIFT. O `continue` anterior transformava a
+  # ausencia do canonico em aprovacao silenciosa de todos os mirrors.
+  for hook in "${orchestrator_hooks[@]}"; do
+    src="$agents_hooks/$hook"
+    if [[ ! -f "$src" ]]; then
+      echo "DRIFT hook: $hook declarado como canonico mas ausente em $agents_hooks"
       hook_drift=$((hook_drift + 1))
       continue
     fi
-    for hook in "${orchestrator_hooks[@]}"; do
-      src="$agents_hooks/$hook"
+    for mirror in "${tool_hook_mirrors[@]}"; do
+      if [[ ! -d "$mirror" ]]; then
+        echo "DRIFT hook: mirror nao existe: $mirror"
+        hook_drift=$((hook_drift + 1))
+        continue
+      fi
       dst="$mirror/$hook"
-      [[ -f "$src" ]] || continue
       if [[ ! -f "$dst" ]]; then
         echo "DRIFT hook: $hook ausente em $mirror"
         hook_drift=$((hook_drift + 1))
@@ -198,7 +263,10 @@ declare -a session_end_gate_dirs=(
   "$repo_root/internal/embedded/assets/.agents/scripts"
 )
 session_end_drift=0
-if [[ -f "$session_end_canonical" ]]; then
+if [[ ! -f "$session_end_canonical" ]]; then
+  echo "DRIFT session-end gate: canonico ausente: $session_end_canonical"
+  session_end_drift=$((session_end_drift + 1))
+else
   for mirror in "${session_end_gate_dirs[@]}"; do
     mirror_path="$mirror/validate-session-end.sh"
     if [[ ! -f "$mirror_path" ]]; then
@@ -218,14 +286,16 @@ fi
 
 opencode_plugin_drift=0
 opencode_plugin_embedded="$repo_root/internal/embedded/assets/.opencode/plugin/governance.js"
+opencode_plugin_root="$repo_root/.opencode/plugin/governance.js"
 if [[ ! -f "$opencode_plugin_embedded" ]]; then
   echo "DRIFT opencode plugin: governance.js ausente em internal/embedded/assets/.opencode/plugin/"
   opencode_plugin_drift=1
-elif [[ -f "$repo_root/.opencode/plugin/governance.js" ]]; then
-  if ! diff -q "$repo_root/.opencode/plugin/governance.js" "$opencode_plugin_embedded" > /dev/null 2>&1; then
-    echo "DRIFT opencode plugin: governance.js diverge entre .opencode/plugin e internal/embedded/assets/.opencode/plugin"
-    opencode_plugin_drift=1
-  fi
+elif [[ ! -f "$opencode_plugin_root" ]]; then
+  echo "DRIFT opencode plugin: governance.js ausente em .opencode/plugin/"
+  opencode_plugin_drift=1
+elif ! diff -q "$opencode_plugin_root" "$opencode_plugin_embedded" > /dev/null 2>&1; then
+  echo "DRIFT opencode plugin: governance.js diverge entre .opencode/plugin e internal/embedded/assets/.opencode/plugin"
+  opencode_plugin_drift=1
 fi
 if [[ "$opencode_plugin_drift" -eq 0 ]]; then
   echo "Plugin do OpenCode presente e em paridade: internal/embedded/assets/.opencode/plugin/governance.js"

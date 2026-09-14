@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	DefaultTotalBudgetTokens = 6000
-	largeBudgetMultiplier    = 3
+	DefaultTotalBudgetTokens = 300
+	largeBudgetMultiplier    = 2
 )
 
 type BudgetConfig struct {

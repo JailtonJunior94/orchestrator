@@ -1,4 +1,4 @@
-<!-- spec-hash-prd: 0a9ad37a14dece6109b909750abfb8ec3c61f4a66181934758687842764737ce -->
+<!-- spec-hash-prd: 37d4fed94549358c1153466d62598b491f5d2f6b3c9223ef2205cdb1ce5bdb22 -->
 <!-- MANDATÓRIO: preenchido por `create-technical-specification` Etapa 7.1 com sha256 do PRD consumido.
      Rastreabilidade: `create-tasks` e `execute-task` comparam este hash com o atual do prd.md
      para detectar drift entre techspec e PRD. NÃO remover este comentário ao editar a techspec. -->
@@ -184,7 +184,7 @@ não-convergência.
 bloqueado, fingerprint repetida, teto de rodadas. A aprovação **não** passa por ali — só a prova abre o
 estado Aprovado.
 
-### Integração do agregado nos três caminhos (Bloco D)
+### Integração do agregado nos dois caminhos de produção e no `RunLoop` (Bloco D)
 
 Esta subseção resolve as três lacunas de design que travaram a migração do loop ao agregado (fase F2b),
 com decisões ancoradas no código real. Nenhuma altera o invariante central: `Cycle.approve` continua
@@ -208,7 +208,7 @@ Cada consumidor converte `[]string` → `[]approval.AcceptanceCriterion` via `ap
 |---|---|---|
 | `Service.Execute` | `internal/taskloop/taskloop.go:480` (`taskFile` já em escopo) | `taskcriteria.Extract` do **task file da task corrente** (critérios por task — caminho canônico, migra primeiro) |
 | `ACPRunner` | `internal/runtime/runner.go:216-228` | `taskcriteria.Extract(filepath.Join(job.TasksDir, job.TaskFileName))` — ambos os campos já existem no `Job` (usados em `internal/runtime/runner_autoreview.go:173-174`). Com `TaskFileName == ""` (uso interativo de `--auto-review` sem contexto de task) mantém-se o `runAutoReview` one-shot atual, sem `Cycle` — zero regressão |
-| `RunLoop` | `internal/taskloop/runloop.go:207` (`case VerdictRejected`) | **União** dos critérios de todos os task files de `report.TasksCompleted` (RunLoop já resolve cada task file via `NewCatalog().ResolveTaskFile`), deduplicada por descrição. União vazia (defensivo; os gates da F2a tornam-na não-vazia) → o lote mantém o caminho legado `FinalReviewer` sem `Cycle` |
+| `RunLoop` (implementado e coberto por teste; **sem chamador de produção hoje** — ver Riscos Conhecidos) | `internal/taskloop/runloop.go:207` (`case VerdictRejected`) | **União** dos critérios de todos os task files de `report.TasksCompleted` (RunLoop já resolve cada task file via `NewCatalog().ResolveTaskFile`), deduplicada por descrição. União vazia (defensivo; os gates da F2a tornam-na não-vazia) → o lote mantém o caminho legado `FinalReviewer` sem `Cycle` |
 
 #### D-B1-corolário — Como o `MapaDeCriterios` alcança `Completo()` no estágio de paridade
 
@@ -336,7 +336,7 @@ muda e nenhum teste falha. Por isso a Fase 3 precede a Fase 4.
 | **F0 — Gates operáveis** | Tornar os gates capazes de rodar e de dizer a verdade: portabilidade do gate de referências de caminho para shell sem recursos de versão 4; notação de caminho planejado; desarme do gate de contrato que exige a string do agente a remover | — |
 | **F1 — Domínio** | Pacote de domínio da aprovação completo, com mocks e testes de invariante. Nenhum consumidor ainda | F0 |
 | **F2a — Mapa 1:1 (pré-requisito bloqueante)** | Seção de critérios no template de artefato de revisão, asserção nos validadores canônicos, rotina de revisão no validador em Go, restrição do escape legado, propagação aos espelhos | F0 |
-| **F2b — Ciclo** | Ordem interna fixa: (1) veredito da fonte real + adaptadores runtime (D1); (2) evidência por rodada, delta, reset de profundidade (D2); (3) extrator `internal/taskcriteria` + adaptador de portas em `internal/taskloop` (D-B1); (4) `Service.Execute` conduz o `Cycle` — critérios por task, estabelece o padrão; (5) adequação das fixtures ao contrato de texto bruto (D-B2); (6) `RunLoop` conduz o `Cycle`, `BugfixLoop` reduzido a projetor de evidência (D-B3); (7) `ACPRunner` + fiação das quatro lacunas nos três caminhos; (8) prova de paridade + E2E | F1, F2a |
+| **F2b — Ciclo** | Ordem interna fixa: (1) veredito da fonte real + adaptadores runtime (D1); (2) evidência por rodada, delta, reset de profundidade (D2); (3) extrator `internal/taskcriteria` + adaptador de portas em `internal/taskloop` (D-B1); (4) `Service.Execute` conduz o `Cycle` — critérios por task, estabelece o padrão; (5) adequação das fixtures ao contrato de texto bruto (D-B2); (6) `RunLoop` conduz o `Cycle`, `BugfixLoop` reduzido a projetor de evidência (D-B3); (7) `ACPRunner` + fiação das quatro lacunas nos dois caminhos de produção (`Service.Execute`, `ACPRunner`) e no `RunLoop`; (8) prova de paridade + E2E | F1, F2a |
 | **F2c — Critério estrito** | Cadeia de propagação do teto de rodadas e virada do critério de encerramento | F2b |
 | **F3a — Catálogo** | Registro único de agentes, ordem canônica, sincronia dos catálogos, separação entre detecção e diagnóstico | F1 |
 | **F3b — OpenCode** | Spec por subcomando, detecção, instalação de pegada mínima, janela derivada do modelo, entradas nas células de ocupante único | F3a |
@@ -360,10 +360,12 @@ Sem F0, o requisito de manter o gate verde é vazio, porque o gate não roda.
 **Sobre a ordem interna de F2b.** A migração dos três call sites não é atômica: cada um difere na fonte
 dos critérios de aceite. `Service.Execute` tem critérios por task e migra **primeiro**, estabelecendo o
 padrão do adaptador; `RunLoop` conduz revisão consolidada sem critérios em escopo e migra **por último**,
-com a união dos task files do lote como fonte. A adequação das fixtures ao contrato de texto bruto
-(D-B2) é fatia própria entre os dois, porque toca ~19 literais de teste de forma mecânica e bissectável
-que não cabe num único `go test` vermelho junto da mudança de produção. Ver
-"### Integração do agregado nos três caminhos (Bloco D)".
+com a união dos task files do lote como fonte — e migra ainda que não tenha chamador de produção hoje,
+para que o caminho implementado não divirja dos dois que estão em produção. A adequação das fixtures ao
+contrato de texto bruto (D-B2) é fatia própria entre os dois, porque toca ~19 literais de teste de
+forma mecânica e bissectável que não cabe num único `go test` vermelho junto da mudança de produção.
+Ver
+"### Integração do agregado nos dois caminhos de produção e no `RunLoop` (Bloco D)".
 
 ### Ordem de build da Fase 4 (remoção)
 
@@ -575,7 +577,7 @@ acionado sem depender de ler o log do plugin.
 | Risco | Mitigação |
 |---|---|
 | **O mapa 1:1 não existe como dado.** O template de artefato de revisão não tem seção para ele e o validador não o cobra. Ligar o critério estrito sem isso transforma falso positivo em **falso negativo total** — todo ciclo terminaria bloqueado | Pré-requisito bloqueante da fase do Ciclo: seção no template, asserção no validador e propagação aos espelhos **antes** de ligar o critério estrito |
-| **O caminho de produção não é o que parecia.** O loop existente só é alcançável por uma função sem chamador de produção; o caminho real usa revisão one-shot | Os três caminhos migram para o agregado. Sem isso a paridade declarada seria falsa |
+| **O caminho de produção não é o que parecia.** O loop existente só é alcançável por uma função sem chamador de produção; o caminho real usa revisão one-shot | Os dois caminhos de produção — `Service.Execute` (via `cmd/ai_spec_harness/task_loop.go`) e `ACPRunner` — migram para o agregado, e o `RunLoop` migra junto para não divergir deles. Sem isso a paridade declarada seria falsa |
 | **Critérios de aceite não chegam ao caminho ACP.** A extração vive numa dependência do caminho legado | O campo de nome do arquivo de tarefa já existe no job e é o gancho natural para o plumbing |
 | Regeneração de golden files pode congelar regressão junto | Revisão manual do diff arquivo a arquivo; a regeneração automática é um cheque em branco |
 | Bug pré-existente na geração de governança emite a tabela de capacidades ignorando os agentes selecionados, e afirma que o Copilot não tem hooks nativos — hoje comprovadamente falso | Corrigido antes da regeneração, para que os golden files passem a refletir a verdade |

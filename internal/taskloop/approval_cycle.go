@@ -9,6 +9,7 @@ import (
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria"
 )
 
@@ -133,13 +134,6 @@ func runLoopAgentIdentity(opts Options) string {
 	return "runloop"
 }
 
-func runLoopBugfixMaxIterations(opts Options) int {
-	if opts.MaxBugfixIterations > 0 {
-		return opts.MaxBugfixIterations
-	}
-	return DefaultMaxBugfixIterations
-}
-
 func cycleApprovalPolicy(maxRounds int) (approval.ApprovalPolicy, error) {
 	if maxRounds > 0 {
 		return approval.NewApprovalPolicy(approval.WithMaxRounds(maxRounds))
@@ -147,7 +141,13 @@ func cycleApprovalPolicy(maxRounds int) (approval.ApprovalPolicy, error) {
 	return approval.NewApprovalPolicy()
 }
 
-func (s *Service) runRejectedCycle(
+type unconfiguredBugfixInvoker struct{}
+
+func (unconfiguredBugfixInvoker) InvokeBugfix(context.Context, []Finding, string) (string, error) {
+	return "", ErrBugfixNotConfigured
+}
+
+func (s *Service) runBatchCycle(
 	ctx context.Context,
 	opts Options,
 	criteria []approval.AcceptanceCriterion,
@@ -163,15 +163,15 @@ func (s *Service) runRejectedCycle(
 	if err != nil {
 		return approval.CycleResult{}, nil, err
 	}
-	policy, err := approval.NewApprovalPolicy(approval.WithMaxRounds(runLoopBugfixMaxIterations(opts) + 1))
+	policy, err := cycleApprovalPolicy(opts.MaxBugfixIterations)
 	if err != nil {
 		return approval.CycleResult{}, nil, err
 	}
 
 	recorder := newBugfixEvidenceRecorder()
-	reviewer := newPrimedReviewerPort(rev, deps.FinalReviewer)
-	fixer := newFixerPort(deps.BugfixInvoker, recorder)
-	repository := newRepositoryPort(deps.DiffCapturer, workDir)
+	reviewer := newPrimedReviewerPort(rev, deps.FinalReviewer, airuntime.NewRoundEvidenceWriterWithSink(filepath.Join(workDir, "evidence", "runloop"), s.fsys))
+	fixer := newFixerPort(batchBugfixInvoker(deps), recorder)
+	repository := newRepositoryPort(batchDiffCapturer(deps, workDir), workDir)
 
 	cycle, err := approval.NewCycle(taskIdentity, agentIdentity, policy, criteria, reviewer, fixer, repository)
 	if err != nil {
@@ -180,6 +180,20 @@ func (s *Service) runRejectedCycle(
 
 	result, runErr := cycle.Run(ctx)
 	return result, recorder, runErr
+}
+
+func batchBugfixInvoker(deps RunLoopDeps) BugfixInvoker {
+	if deps.BugfixInvoker == nil {
+		return unconfiguredBugfixInvoker{}
+	}
+	return deps.BugfixInvoker
+}
+
+func batchDiffCapturer(deps RunLoopDeps, workDir string) DiffCapturer {
+	if deps.DiffCapturer == nil {
+		return &cycleDiffCapturer{workDir: workDir}
+	}
+	return deps.DiffCapturer
 }
 
 func cycleAgentIdentity(opts Options) string {
@@ -267,7 +281,7 @@ func (s *Service) conductApprovalCycle(
 		agentIdentity,
 		policy,
 		criteria,
-		newReviewerPort(reviewer),
+		newReviewerPort(reviewer, airuntime.NewRoundEvidenceWriterWithSink(filepath.Join(workDir, "evidence", "task-"+task.ID), s.fsys)),
 		newFixerPort(bugfixInvoker, recorder),
 		newRepositoryPort(&cycleDiffCapturer{workDir: workDir}, workDir),
 	)
@@ -287,6 +301,8 @@ func (s *Service) conductApprovalCycle(
 	}
 
 	review.CycleStopReason = result.Reason().String()
+	review.CycleRounds = cycleRoundReports(result)
+	review.CycleApproved = result.Approved()
 
 	if result.Approved() {
 		review.ExitCode = 0
@@ -296,4 +312,25 @@ func (s *Service) conductApprovalCycle(
 	}
 
 	return review, bugfixResultFromCycle(bugfixInvoker, elapsed, result.Approved(), false)
+}
+
+func cycleRoundReports(result approval.CycleResult) []CycleRoundReport {
+	rounds := make([]CycleRoundReport, 0, result.RoundCount())
+	for round := range result.Rounds() {
+		rounds = append(rounds, CycleRoundReport{
+			Number:             round.Number(),
+			Verdict:            round.Verdict().String(),
+			Fingerprint:        round.Fingerprint().String(),
+			FindingsBySeverity: cycleSeverityCounts(round.CountBySeverity()),
+		})
+	}
+	return rounds
+}
+
+func cycleSeverityCounts(counts map[approval.Severity]int) map[string]int {
+	out := make(map[string]int, len(counts))
+	for severity, total := range counts {
+		out[severity.String()] = total
+	}
+	return out
 }

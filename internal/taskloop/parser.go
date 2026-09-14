@@ -18,8 +18,8 @@ type TaskEntry struct {
 }
 
 var (
-	_tableRowRe    = regexp.MustCompile(`^\|\s*(\d+\.\d+)\s*\|`)
-	_statusFieldRe = regexp.MustCompile(`(?i)\*\*Status:\*\*\s*(.+)`)
+	tableRowRe    = regexp.MustCompile(`^\|\s*(\d+\.\d+)\s*\|`)
+	statusFieldRe = regexp.MustCompile(`(?i)\*\*Status:\*\*\s*(.+)`)
 )
 
 // ParseTasksFile extrai entradas da tabela markdown em tasks.md.
@@ -54,7 +54,7 @@ func (c *Catalog) ParseTasksFile(content []byte) ([]TaskEntry, error) {
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if !_tableRowRe.MatchString(line) {
+		if !tableRowRe.MatchString(line) {
 			continue
 		}
 
@@ -91,7 +91,7 @@ func (c *Catalog) ParseTasksFile(content []byte) ([]TaskEntry, error) {
 
 // ReadTaskFileStatus extrai o campo **Status:** de um arquivo de task individual.
 func (c *Catalog) ReadTaskFileStatus(content []byte) string {
-	matches := _statusFieldRe.FindSubmatch(content)
+	matches := statusFieldRe.FindSubmatch(content)
 	if len(matches) < 2 {
 		return ""
 	}

@@ -89,19 +89,16 @@ func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, 
 		agentsContent = g.stripCompactSections(agentsContent)
 	}
 
-	if err := g.fs.WriteFile(filepath.Join(projectDir, "AGENTS.md"), []byte(agentsContent)); err != nil {
-		return fmt.Errorf("escrever AGENTS.md: %w", err)
-	}
-
-	// Append AGENTS.local.md se presente
 	localPath := filepath.Join(projectDir, "AGENTS.local.md")
 	if g.fs.Exists(localPath) {
-		localData, err := g.fs.ReadFile(localPath)
-		if err == nil {
-			agentsData, _ := g.fs.ReadFile(filepath.Join(projectDir, "AGENTS.md"))
-			combined := string(agentsData) + "\n" + string(localData)
-			_ = g.fs.WriteFile(filepath.Join(projectDir, "AGENTS.md"), []byte(combined))
+		if localData, err := g.fs.ReadFile(localPath); err == nil {
+			agentsContent += "\n" + string(localData)
 		}
+	}
+
+	sourceAgents, _ := g.fs.ReadFile(filepath.Join(sourceDir, "AGENTS.md"))
+	if err := g.writeMergedMarkdown(filepath.Join(projectDir, "AGENTS.md"), agentsContent, string(sourceAgents)); err != nil {
+		return fmt.Errorf("escrever AGENTS.md: %w", err)
 	}
 
 	// Stack section para AI tool templates
@@ -116,7 +113,7 @@ func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, 
 			"`.claude/agents/` sao wrappers leves que delegam para a habilidade canonica.",
 			stackSection,
 		)
-		if err := g.fs.WriteFile(filepath.Join(projectDir, "CLAUDE.md"), []byte(content)); err != nil {
+		if err := g.writeMergedMarkdown(filepath.Join(projectDir, "CLAUDE.md"), content); err != nil {
 			return fmt.Errorf("escrever CLAUDE.md: %w", err)
 		}
 	}
@@ -130,10 +127,10 @@ func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, 
 			"`.github/agents/` sao wrappers leves que apontam para a habilidade correta.",
 			stackSection,
 		)
-		content += _copilotExtraGuidance
+		content += copilotExtraGuidance
 		copilotPath := filepath.Join(projectDir, ".github", "copilot-instructions.md")
 		_ = g.fs.MkdirAll(filepath.Dir(copilotPath))
-		if err := g.fs.WriteFile(copilotPath, []byte(content)); err != nil {
+		if err := g.writeMergedMarkdown(copilotPath, content); err != nil {
 			return fmt.Errorf("escrever copilot-instructions.md: %w", err)
 		}
 	}
@@ -142,9 +139,20 @@ func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, 
 	if toolSet[skills.ToolCodex] {
 		codexDir := filepath.Join(projectDir, ".codex")
 		_ = g.fs.MkdirAll(codexDir)
+		configPath := filepath.Join(codexDir, "config.toml")
 		content := g.buildCodexConfig(projectDir, codexProfile)
-		if err := g.fs.WriteFile(filepath.Join(codexDir, "config.toml"), []byte(content)); err != nil {
-			return fmt.Errorf("escrever config.toml: %w", err)
+		existing, readErr := g.fs.ReadFile(configPath)
+		if readErr != nil || !HasCodexGeneratedContent(string(existing)) {
+			merged := false
+			if readErr == nil {
+				content, merged = MergeCodexInstallConfig(content, string(existing))
+			}
+			if err := g.fs.WriteFile(configPath, []byte(content)); err != nil {
+				return fmt.Errorf("escrever config.toml: %w", err)
+			}
+			if merged {
+				g.recordMerge(configPath)
+			}
 		}
 	}
 
@@ -363,7 +371,7 @@ func (g *Generator) buildStackSection(projectDir string) string {
 	return "## Stack\n\n" + strings.Join(lines, "\n") + "\n"
 }
 
-var _planningSkills = []string{
+var planningSkills = []string{
 	"analyze-project",
 	"create-prd",
 	"create-technical-specification",
@@ -374,7 +382,7 @@ func (g *Generator) buildCodexConfig(projectDir, codexProfile string) string {
 	baseSkills := []string{"agent-governance", "bugfix", "review", "refactor", "execute-task", "execute-all-tasks"}
 
 	if codexProfile != "lean" {
-		baseSkills = append(baseSkills, _planningSkills...)
+		baseSkills = append(baseSkills, planningSkills...)
 	}
 
 	if g.fs.Exists(filepath.Join(projectDir, ".agents", "skills", "go-implementation", "SKILL.md")) {
@@ -674,7 +682,7 @@ Use `+"`"+`AGENTS.md`+"`"+` como %s deste repositorio.
 	return content
 }
 
-const _copilotExtraGuidance = `
+const copilotExtraGuidance = `
 
 ## Orientacoes Especificas para Copilot
 

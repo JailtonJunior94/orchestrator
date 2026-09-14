@@ -2,9 +2,17 @@ package taskloop
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 )
+
+type CycleRoundReport struct {
+	Number             int            `json:"number"`
+	Verdict            string         `json:"verdict"`
+	Fingerprint        string         `json:"fingerprint,omitempty"`
+	FindingsBySeverity map[string]int `json:"findings_by_severity,omitempty"`
+}
 
 // ReviewResult armazena o resultado da revisao de uma task.
 type ReviewResult struct {
@@ -13,6 +21,8 @@ type ReviewResult struct {
 	Output          string
 	Note            string
 	CycleStopReason string
+	CycleApproved   bool
+	CycleRounds     []CycleRoundReport
 }
 
 // BugfixResult armazena o resultado do bugfix invocado apos revisao com achados criticos.
@@ -323,6 +333,14 @@ func (r *Report) renderAvancado() []byte {
 				if rr.CycleStopReason != "" {
 					fmt.Fprintf(&b, "- **Cycle Stop Reason:** %s\n", rr.CycleStopReason)
 				}
+				if len(rr.CycleRounds) > 0 {
+					fmt.Fprintf(&b, "- **Cycle Rounds:** %d\n", len(rr.CycleRounds))
+					for _, round := range rr.CycleRounds {
+						fmt.Fprintf(&b, "  - Rodada %d: veredito=%s fingerprint=%s severidades=%s\n",
+							round.Number, round.Verdict, round.Fingerprint,
+							formatSeverityCounts(round.FindingsBySeverity))
+					}
+				}
 				if rr.Output != "" {
 					output := rr.Output
 					if len(output) > _maxOutputLen {
@@ -374,4 +392,20 @@ func (c *Catalog) modelOrDefault(model string) string {
 		return "default"
 	}
 	return model
+}
+
+func formatSeverityCounts(counts map[string]int) string {
+	if len(counts) == 0 {
+		return "(nenhuma)"
+	}
+	keys := make([]string, 0, len(counts))
+	for key := range counts {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		parts = append(parts, fmt.Sprintf("%s=%d", key, counts[key]))
+	}
+	return strings.Join(parts, ",")
 }

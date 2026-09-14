@@ -1,6 +1,7 @@
 package specs_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
@@ -22,14 +23,6 @@ func mandatoryParityCells(t *testing.T) []specs.AgentEnforcement {
 	return cells
 }
 
-func TestParityGatePassesForMandatoryMatrix(t *testing.T) {
-	t.Parallel()
-	violations := specs.ValidateParityMatrix(mandatoryParityCells(t), mandatoryParityAgents, specs.DispatchProven)
-	if len(violations) != 0 {
-		t.Fatalf("expected no parity violations for the mandatory 4-agent matrix; got %v", violations)
-	}
-}
-
 func TestParityGateFailsWhenAgentLosesCanonicalPoint(t *testing.T) {
 	t.Parallel()
 
@@ -40,7 +33,7 @@ func TestParityGateFailsWhenAgentLosesCanonicalPoint(t *testing.T) {
 		{Agent: "opencode", Enforcement: mustEnforcementFor(t, "opencode")},
 	}
 
-	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, specs.DispatchProven)
+	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, nil)
 	found := false
 	for _, v := range violations {
 		if v.Agent == "codex" && v.Reason == "invalid enforcement" {
@@ -89,15 +82,22 @@ func TestParityGateFailsWhenValidatorDiverges(t *testing.T) {
 		{Agent: "opencode", Enforcement: mustEnforcementFor(t, "opencode")},
 	}
 
-	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, specs.DispatchProven)
+	allCellsProven := func(string, specs.CanonicalPoint) bool { return true }
+
+	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, allCellsProven)
 	found := false
 	for _, v := range violations {
-		if v.Agent == "codex" && v.Point == specs.PointPreTool {
+		if v.Agent == "codex" && v.Point == specs.PointPreTool && strings.Contains(v.Reason, "validator diverges") {
 			found = true
 		}
 	}
 	if !found {
 		t.Fatalf("expected parity gate to flag codex pre-tool validator divergence; got %v", violations)
+	}
+	for _, v := range violations {
+		if v.Reason == "no dispatch proof test associated" {
+			t.Fatalf("dispatch proof was supplied for every cell; divergence must be the only violation: %v", violations)
+		}
 	}
 }
 
@@ -105,14 +105,7 @@ func TestParityGateFailsWhenCellHasNoDispatchProof(t *testing.T) {
 	t.Parallel()
 	cells := mandatoryParityCells(t)
 
-	noProof := func(agentID string, point specs.CanonicalPoint) bool {
-		if agentID == "opencode" && point == specs.PointSessionEnd {
-			return false
-		}
-		return specs.DispatchProven(agentID, point)
-	}
-
-	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, noProof)
+	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, nil)
 	found := false
 	for _, v := range violations {
 		if v.Agent == "opencode" && v.Point == specs.PointSessionEnd && v.Reason == "no dispatch proof test associated" {

@@ -22,14 +22,14 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT" || exit 2
 
+_SPEC_ROOT="${SPEC_PATHS_ROOT:-.specs}"
+
 # Prefixos ancorados na raiz do repositorio. Um token so e tratado como caminho
 # quando comeca por um destes: evita tratar pacote npm, flag de comando ou
 # caminho relativo a outra raiz como referencia deste repositorio.
 _PREFIXES='^(internal|cmd|scripts|docs|tests|evals|deployment|migrations|taskfiles|configs|\.agents|\.claude|\.github|\.codex|\.opencode|\.specs)/'
 
-# Caminhos documentados como opcionais por decisao de arquitetura: existem apenas
-# quando a pessoa opta por cria-los, entao ausencia nao e defeito.
-_OPTIONAL='^(\.agents/config\.yaml|\.claude/config\.yaml|\.claude/settings\.json)$'
+_OPTIONAL='^(\.agents/config\.yaml|\.claude/config\.yaml|\.claude/settings\.json|\.opencode/plugins)$'
 
 planned_paths() {
   # Caminhos citados no artefato e imediatamente seguidos do marcador
@@ -81,12 +81,14 @@ if [[ ${#prd_dirs[@]} -eq 0 ]]; then
   # inclusive caminhos com espaco.
   while IFS= read -r linha; do
     prd_dirs+=("$linha")
-  done < <(find .specs -name 'sdd-state.json' -not -path '*/.checkpoints/*' 2>/dev/null | sed 's|/sdd-state.json||' | sort)
+  done < <(find "$_SPEC_ROOT" -name 'sdd-state.json' -not -path '*/.checkpoints/*' 2>/dev/null | sed 's|/sdd-state.json||' | sort)
 fi
 
 if [[ ${#prd_dirs[@]} -eq 0 ]]; then
-  echo "Nenhum PRD sob gestao SDD encontrado; nada a verificar."
-  exit 0
+  echo "ESCOPO VAZIO: nenhum PRD ativo encontrado em '$_SPEC_ROOT'." >&2
+  echo "Um gate sem alvo aprova por vacuidade e nao protege artefato nenhum." >&2
+  echo "Informe os diretorios de PRD como argumento ou ajuste SPEC_PATHS_ROOT." >&2
+  exit 1
 fi
 
 missing=0

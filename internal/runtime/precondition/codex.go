@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
@@ -17,6 +18,8 @@ type CodexHookStatus struct {
 	EventName   string
 	Source      string
 	TrustStatus string
+	Key         string
+	CurrentHash string
 }
 
 type CodexHooksListResult struct {
@@ -28,14 +31,15 @@ type CodexRPCClient interface {
 }
 
 type CodexAppServerClient struct {
-	Binary string
+	Binary  string
+	WorkDir string
 }
 
-func NewCodexAppServerClient(binary string) CodexAppServerClient {
+func NewCodexAppServerClient(binary, workDir string) CodexAppServerClient {
 	if binary == "" {
 		binary = "codex"
 	}
-	return CodexAppServerClient{Binary: binary}
+	return CodexAppServerClient{Binary: binary, WorkDir: workDir}
 }
 
 type codexRPCEnvelope struct {
@@ -45,6 +49,7 @@ type codexRPCEnvelope struct {
 
 func (c CodexAppServerClient) HooksList(ctx context.Context) (CodexHooksListResult, error) {
 	cmd := exec.CommandContext(ctx, c.Binary, "app-server")
+	cmd.Dir = c.WorkDir
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -66,7 +71,8 @@ func (c CodexAppServerClient) HooksList(ctx context.Context) (CodexHooksListResu
 	reader := bufio.NewReader(stdout)
 
 	if err := sendCodexRPCRequest(stdin, 0, "initialize", map[string]any{
-		"clientInfo": map[string]any{"name": "ai-spec-harness", "version": "0"},
+		"clientInfo":   map[string]any{"name": "ai-spec-harness", "version": "0"},
+		"capabilities": map[string]any{"experimentalApi": true},
 	}); err != nil {
 		return CodexHooksListResult{}, err
 	}
@@ -74,7 +80,11 @@ func (c CodexAppServerClient) HooksList(ctx context.Context) (CodexHooksListResu
 		return CodexHooksListResult{}, fmt.Errorf("codex app-server initialize: %w", err)
 	}
 
-	if err := sendCodexRPCRequest(stdin, 1, "hooks/list", map[string]any{}); err != nil {
+	params := map[string]any{}
+	if c.WorkDir != "" {
+		params["cwds"] = []string{c.WorkDir}
+	}
+	if err := sendCodexRPCRequest(stdin, 1, "hooks/list", params); err != nil {
 		return CodexHooksListResult{}, err
 	}
 	body, err := readCodexRPCResponse(reader, 1)
@@ -89,6 +99,8 @@ func (c CodexAppServerClient) HooksList(ctx context.Context) (CodexHooksListResu
 					EventName   string `json:"eventName"`
 					Source      string `json:"source"`
 					TrustStatus string `json:"trustStatus"`
+					Key         string `json:"key"`
+					CurrentHash string `json:"currentHash"`
 				} `json:"hooks"`
 			} `json:"data"`
 		} `json:"result"`
@@ -110,6 +122,8 @@ func (c CodexAppServerClient) HooksList(ctx context.Context) (CodexHooksListResu
 				EventName:   h.EventName,
 				Source:      h.Source,
 				TrustStatus: h.TrustStatus,
+				Key:         h.Key,
+				CurrentHash: h.CurrentHash,
 			})
 		}
 	}
@@ -149,9 +163,33 @@ func readCodexRPCResponse(reader *bufio.Reader, wantID int) ([]byte, error) {
 	}
 }
 
-func EvaluateCodexTrustedHash(ctx context.Context, client CodexRPCClient, timeout time.Duration) (specs.PreconditionState, error) {
+type CodexTrustPoint struct {
+	EventName string
+	State     specs.PreconditionState
+}
+
+type CodexTrustReport struct {
+	Points []CodexTrustPoint
+}
+
+func (r CodexTrustReport) State() specs.PreconditionState {
+	if len(r.Points) == 0 {
+		return specs.PreconditionUnknown
+	}
+	for _, point := range r.Points {
+		if point.State != specs.PreconditionCurrent {
+			return point.State
+		}
+	}
+	return specs.PreconditionCurrent
+}
+
+func EvaluateCodexTrustedHash(ctx context.Context, client CodexRPCClient, timeout time.Duration, requiredEvents []string) (CodexTrustReport, error) {
 	if client == nil {
-		return specs.PreconditionUnknown, nil
+		return CodexTrustReport{}, nil
+	}
+	if len(requiredEvents) == 0 {
+		return CodexTrustReport{}, nil
 	}
 
 	callCtx, cancel := context.WithTimeout(ctx, timeout)
@@ -159,13 +197,32 @@ func EvaluateCodexTrustedHash(ctx context.Context, client CodexRPCClient, timeou
 
 	result, err := client.HooksList(callCtx)
 	if err != nil {
-		return specs.PreconditionUnknown, err
+		return CodexTrustReport{}, err
 	}
 
-	for _, hook := range result.Hooks {
-		if hook.Source == "project" && hook.TrustStatus == "trusted" {
-			return specs.PreconditionCurrent, nil
+	report := CodexTrustReport{Points: make([]CodexTrustPoint, 0, len(requiredEvents))}
+	for _, event := range requiredEvents {
+		report.Points = append(report.Points, CodexTrustPoint{
+			EventName: event,
+			State:     evaluateCodexEventTrust(result.Hooks, event),
+		})
+	}
+	return report, nil
+}
+
+func evaluateCodexEventTrust(hooks []CodexHookStatus, event string) specs.PreconditionState {
+	found := false
+	for _, hook := range hooks {
+		if hook.Source != "project" || !strings.EqualFold(hook.EventName, event) {
+			continue
+		}
+		found = true
+		if hook.TrustStatus != "trusted" {
+			return specs.PreconditionInert
 		}
 	}
-	return specs.PreconditionInert, nil
+	if !found {
+		return specs.PreconditionInert
+	}
+	return specs.PreconditionCurrent
 }

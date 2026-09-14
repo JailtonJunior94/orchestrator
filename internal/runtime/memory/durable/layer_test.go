@@ -332,7 +332,7 @@ func (s *LayerSuite) TestPromoteMovesFactAcrossLayers() {
 	s.Equal(durable.FactStateActive, toFacts[0].State)
 }
 
-func (s *LayerSuite) TestPromoteRejectsEphemeralFact() {
+func (s *LayerSuite) TestPromoteExplicitlyMovesEphemeralFact() {
 	filesystem := fs.NewFakeFileSystem()
 	layer := durable.NewLayerWithLocker(filesystem, newInMemoryLayerLocker())
 	from := durable.Scope{Layer: durable.TargetLayerTask, TasksDir: "/repo/.specs/prd-x", TaskFileName: "task-5.0-foo.md"}
@@ -345,7 +345,11 @@ func (s *LayerSuite) TestPromoteRejectsEphemeralFact() {
 
 	err = layer.Promote(context.Background(), from, to, fact.Identity)
 
-	s.True(errors.Is(err, durable.ErrPromotionWithoutMark))
+	s.Require().NoError(err)
+	promoted, _, readErr := layer.Read(context.Background(), to)
+	s.Require().NoError(readErr)
+	s.Len(promoted, 1)
+	s.Equal(fact.Identity, promoted[0].Identity)
 }
 
 func (s *LayerSuite) TestPromoteMissingFactReportsNotFound() {

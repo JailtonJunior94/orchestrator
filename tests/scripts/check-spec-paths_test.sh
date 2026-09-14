@@ -60,11 +60,29 @@ else
   echo "  FAIL diagnostico deveria acusar apenas internal/sdd/review"; fail=$((fail+1))
 fi
 
-# Caso 7: PRD sem sdd-state.json fica fora do escopo
+# Caso 7: PRD historico fora do escopo, com PRD ativo presente
 rm -f "$TMP/prd-fixture/sdd-state.json"
 printf '# TechSpec\n\nComponente `internal/sdd/orchestrator`.\n' > "$TMP/prd-fixture/techspec.md"
-bash "$GATE" >/dev/null 2>&1
-assert "PRD historico sem estado SDD fica fora do escopo" 0 $?
+mkdir -p "$TMP/prd-ativo"
+printf '{"schema_version":2}\n' > "$TMP/prd-ativo/sdd-state.json"
+printf '# PRD\n\nO gate vive em `scripts/check-spec-paths.sh`.\n' > "$TMP/prd-ativo/prd.md"
+out=$(SPEC_PATHS_ROOT="$TMP" bash "$GATE" 2>&1); code=$?
+assert "PRD historico sem estado SDD fica fora do escopo" 0 $code
+if echo "$out" | grep -q "1 PRD sob gestao SDD"; then
+  echo "  OK   a varredura selecionou exatamente o PRD ativo"; pass=$((pass+1))
+else
+  echo "  FAIL a varredura nao confirmou escopo nao-vazio: $out"; fail=$((fail+1))
+fi
+
+# Caso 8: escopo vazio reprova
+mkdir -p "$TMP/vazio"
+out=$(SPEC_PATHS_ROOT="$TMP/vazio" bash "$GATE" 2>&1); code=$?
+assert "escopo vazio reprova em vez de aprovar por vacuidade" 1 $code
+if echo "$out" | grep -q "ESCOPO VAZIO"; then
+  echo "  OK   diagnostico nomeia o escopo vazio"; pass=$((pass+1))
+else
+  echo "  FAIL diagnostico nao nomeia o escopo vazio"; fail=$((fail+1))
+fi
 
 echo ""
 echo "Resultado: $pass OK, $fail FAIL"

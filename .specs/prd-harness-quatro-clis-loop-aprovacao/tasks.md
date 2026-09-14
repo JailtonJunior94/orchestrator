@@ -1,5 +1,5 @@
-<!-- spec-hash-prd: 0a9ad37a14dece6109b909750abfb8ec3c61f4a66181934758687842764737ce -->
-<!-- spec-hash-techspec: ad94bddb5367b571aab9ae4b61d3df5b390f1cd1b9be2749a47bd436eabf40e8 -->
+<!-- spec-hash-prd: 37d4fed94549358c1153466d62598b491f5d2f6b3c9223ef2205cdb1ce5bdb22 -->
+<!-- spec-hash-techspec: 47df574f6332a4bef1ef323041e6eb31ff9aaa840371645a3036be8f4a835bd4 -->
 # Resumo das Tarefas de Implementação para Quatro CLIs Oficiais e Ciclo de Aprovação
 
 ## Metadados
@@ -23,7 +23,7 @@
 
 | # | Título | Status | Dependências | Paralelizável | Skills |
 |---|--------|--------|-------------|---------------|--------|
-| 1.0 | Tornar os gates capazes de rodar e de dizer a verdade | done | — | — | — |
+| 1.0 | Tornar os gates capazes de rodar e de dizer a verdade | blocked | — | — | — |
 | 2.0 | Pacote de domínio do Ciclo de Aprovação, sem consumidor | done | 1.0 | Com 3.0 | domain-modeling-production |
 | 3.0 | Mapa 1:1 critério-evidência como dado verificável | done | 1.0 | Com 2.0 | — |
 | 4.1 | Veredito da fonte real do revisor e adaptadores das portas (D1) | done | 2.0, 3.0 | Não | — |
@@ -31,16 +31,16 @@
 | 4.3 | Extrator de critérios compartilhado e adaptador de portas em taskloop | done | 4.2 | Não | — |
 | 4.4 | Service.Execute conduz o Cycle (critérios por task, estabelece o padrão) | done | 4.3 | Não | — |
 | 4.5 | Adequação das fixtures de revisão ao contrato de texto bruto | done | 4.4 | Não | — |
-| 4.6 | RunLoop conduz o Cycle; BugfixLoop reduzido a projetor de evidência | done | 4.5 | Não | — |
-| 4.7 | ACPRunner conduz o Cycle e fiação das quatro lacunas nos três caminhos | done | 4.6 | Não | — |
+| 4.6 | RunLoop conduz o Cycle; BugfixLoop reduzido a projetor de evidência | blocked | 4.5 | Não | — |
+| 4.7 | ACPRunner conduz o Cycle e fiação das quatro lacunas nos três caminhos | blocked | 4.6 | Não | — |
 | 4.8 | Prova de paridade entre os três caminhos e fluxos E2E | done | 4.7 | Não | — |
 | 5.0 | Propagação do teto de rodadas e virada do critério estrito | done | 4.8 | Não | — |
-| 6.0 | Catálogo de Agentes como registro único | done | 2.0 | Não | domain-modeling-production |
-| 7.0 | OpenCode como agente oficial de primeira classe | done | 6.0 | Não | — |
-| 8.0 | Enforcement não-desligável do OpenCode | done | 7.0 | Não | — |
-| 9.0 | Hooks e paridade comprovada nos quatro agentes | done | 8.0 | Não | — |
-| 10.0 | Remoção total do Gemini e desinstalação fiel | done | 9.0 | Não | — |
-| 11.0 | Fechamento: rastreabilidade, não-regressão e release major | done | 5.0, 10.0 | — | github-diff-changelog-publisher |
+| 6.0 | Catálogo de Agentes como registro único | blocked | 2.0 | Não | domain-modeling-production |
+| 7.0 | OpenCode como agente oficial de primeira classe | blocked | 6.0 | Não | — |
+| 8.0 | Enforcement não-desligável do OpenCode | blocked | 7.0 | Não | — |
+| 9.0 | Hooks e paridade comprovada nos quatro agentes | blocked | 8.0 | Não | — |
+| 10.0 | Remoção total do Gemini e desinstalação fiel | blocked | 9.0 | Não | — |
+| 11.0 | Fechamento: rastreabilidade, não-regressão e release major | blocked | 5.0, 10.0 | — | github-diff-changelog-publisher |
 
 ## Dependências Críticas
 

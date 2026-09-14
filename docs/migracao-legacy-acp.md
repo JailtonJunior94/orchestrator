@@ -104,6 +104,35 @@ que o Gemini ocupava no conjunto de quatro CLIs.
 - **Instalação:** rode `ai-spec install . --tools opencode` (ou `all`) para instrumentar o agente
   substituto. Rode `ai-spec uninstall .` no projeto para remover resíduos de `.gemini/` e `GEMINI.md`
   de instalações antigas — a desinstalação limpa esse resíduo legado incondicionalmente.
+
+  > **Faça backup antes de rodar `ai-spec uninstall .`** — boa prática, não contorno de defeito.
+  > O defeito antes anunciado aqui **não existe mais**: `AGENTS.md` e `CLAUDE.md` autorais
+  > preexistentes são classificados como `merged` no manifesto e **sobrevivem à desinstalação**.
+  > Roundtrip verificado nesta release em repositório limpo — `install --tools all` seguido de
+  > **duas** execuções de `uninstall .` devolve os dois arquivos **byte-idênticos** ao original
+  > (ambos os `uninstall` saem 0; `diff` contra a cópia original não acusa diferença).
+  > O backup continua recomendado porque `uninstall` edita arquivos de configuração do usuário
+  > (`.claude/settings.json`, `.github/settings.json`, `opencode.json`) e remove resíduo legado.
+  >
+  > Antes:
+  >
+  > ```bash
+  > git status --porcelain            # a árvore deve estar limpa; commite ou stashe o que faltar
+  > cp AGENTS.md AGENTS.md.bak 2>/dev/null || true
+  > cp CLAUDE.md CLAUDE.md.bak 2>/dev/null || true
+  > ai-spec uninstall . --dry-run     # confira a lista de remoção antes de executar de verdade
+  > ```
+  >
+  > Depois:
+  >
+  > ```bash
+  > git status --porcelain            # nenhum arquivo autoral deve aparecer como deletado
+  > test -s AGENTS.md && test -s CLAUDE.md
+  > ls .gemini GEMINI.md 2>/dev/null   # devem ter sumido — é o que a operação deveria fazer
+  > ```
+  >
+  > Se `AGENTS.md` ou `CLAUDE.md` sumiram ou encolheram, restaure com `git checkout -- AGENTS.md
+  > CLAUDE.md` (ou a partir dos `.bak`) e reporte a ocorrência antes de seguir.
 - **Configuração declarativa (`AGENT.md`, `runtime.ide`):** troque `ide: gemini` por um valor do
   conjunto suportado (`claude`, `codex`, `copilot`, `opencode`).
 

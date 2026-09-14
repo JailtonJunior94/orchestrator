@@ -7,11 +7,13 @@
   "base_sha": "ac56696a1e08c88bee5c45be9c44cbfb30fd1e80",
   "patch_sha256": "269238399b65028fff09f803c9eb98d5ba3ad0ecd7714eac755a0c6d747bf47a",
   "patch_ref": "evidence/task-4.2/4.2.patch",
+  "commit_sha": "c92c9a3978e398b322e6d2e684d088a45f5907f2",
+  "commit_patch_sha256": "7a5ae67238631e831a7bdd66f807adf7e94ef990f25392858b35a37eed180853",
   "final_state_sha256": "f1d4c931d77330865951e4e1246a4407b3a9e0d947f0a5fbd4750b9342f168c7",
   "coverage_regression": false,
   "tests": [
     {
-      "command": "go build ./... && go vet ./... && go test ./... -count=1",
+      "command": "go build ./... \u0026\u0026 go vet ./... \u0026\u0026 go test ./... -count=1",
       "exit_code": 0,
       "output_sha256": "c460b44ff353992b68701cb97b0e7651d5144795975e6939c313d62fdf3c328b"
     },

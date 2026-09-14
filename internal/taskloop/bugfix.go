@@ -12,7 +12,9 @@ import (
 // ErrBugfixExhausted indica que o ciclo bugfix -> review atingiu o limite de
 // iteracoes sem aprovacao. Quando este erro e retornado, BugfixLoopReport.Escalated
 // e true e cabe ao chamador disparar o relatorio de escalonamento humano.
-var ErrBugfixExhausted = errors.New("taskloop: limite de 3 iteracoes de bugfix atingido")
+var ErrBugfixExhausted = errors.New("taskloop: ciclo de bugfix encerrado sem aprovacao dentro do teto de rodadas")
+
+var ErrBugfixNotConfigured = errors.New("taskloop: ciclo de aprovacao exigiu correcao mas BugfixInvoker nao foi configurado")
 
 // ErrBugfixEvidenceIncomplete indica que o executor nao forneceu a prova minima
 // exigida para uma tentativa de correcao. Sem a reproducao que falhava e o teste

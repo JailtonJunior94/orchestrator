@@ -13,19 +13,23 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
 )
 
-const _metricsSectionHeader = "## Métricas Claude-2026"
+const metricsSectionHeader = "## Métricas Claude-2026"
 
-var _sectionHeaderRe = regexp.MustCompile(`(?m)^## Runtime ACP$`)
+var sectionHeaderRe = regexp.MustCompile(`(?m)^## Runtime ACP$`)
 
-var _nextSectionRe = regexp.MustCompile(`(?m)^## `)
+var nextSectionRe = regexp.MustCompile(`(?m)^## `)
 
-const _memoryEvidenceSectionHeader = "## Evidência de Memória Durável"
+const cycleSectionHeader = "## Ciclo de Aprovação"
 
-var _memoryEvidenceHeaderRe = regexp.MustCompile(`(?m)^## Evidência de Memória Durável$`)
+var cycleSectionHeaderRe = regexp.MustCompile(`(?m)^## Ciclo de Aprovação$`)
 
-var _metricsSectionHeaderRe = regexp.MustCompile(`(?m)^## Métricas Claude-2026`)
+const memoryEvidenceSectionHeader = "## Evidência de Memória Durável"
 
-var _reportTemplate = template.Must(template.New("runtime-acp").Parse(
+var memoryEvidenceHeaderRe = regexp.MustCompile(`(?m)^## Evidência de Memória Durável$`)
+
+var metricsSectionHeaderRe = regexp.MustCompile(`(?m)^## Métricas Claude-2026`)
+
+var reportTemplate = template.Must(template.New("runtime-acp").Parse(
 	`## Runtime ACP
 
 - runtime: acp
@@ -51,11 +55,15 @@ func (c *Catalog) EnrichReport(reportPath string, summary runtime.Summary, fsys 
 	updated := NewCatalog().injectSection(string(existing), section)
 
 	if memorySection := NewCatalog().RenderMemoryEvidenceSection(summary); memorySection != "" {
-		updated = NewCatalog().injectBoundedSectionBefore(updated, _memoryEvidenceHeaderRe, _metricsSectionHeaderRe, memorySection)
+		updated = NewCatalog().injectBoundedSectionBefore(updated, memoryEvidenceHeaderRe, metricsSectionHeaderRe, memorySection)
 	}
 
 	if metricsSection := NewCatalog().RenderMetricsSection(summary.Metrics); metricsSection != "" {
 		updated = NewCatalog().injectMetricsSection(updated, metricsSection)
+	}
+
+	if cycleSection := NewCatalog().RenderApprovalCycleSection(summary); cycleSection != "" {
+		updated = NewCatalog().injectBoundedSection(updated, cycleSectionHeaderRe, cycleSection)
 	}
 
 	if err := fsys.WriteFile(clean, []byte(updated)); err != nil {
@@ -64,13 +72,63 @@ func (c *Catalog) EnrichReport(reportPath string, summary runtime.Summary, fsys 
 	return nil
 }
 
+func (c *Catalog) RenderApprovalCycleSection(summary runtime.Summary) string {
+	if len(summary.CycleRounds) == 0 && summary.CycleStopReason == "" {
+		return ""
+	}
+	var sb strings.Builder
+	sb.WriteString(cycleSectionHeader)
+	sb.WriteString("\n\n- cycle_stop_reason: ")
+	if summary.CycleStopReason == "" {
+		sb.WriteString("unspecified")
+	} else {
+		sb.WriteString(summary.CycleStopReason)
+	}
+	fmt.Fprintf(&sb, "\n- cycle_rounds: %d\n", len(summary.CycleRounds))
+	if len(summary.CycleRounds) == 0 {
+		return sb.String()
+	}
+	sb.WriteString("\n| Rodada | Veredito | Fingerprint | Achados por severidade |\n|---|---|---|---|\n")
+	for _, round := range summary.CycleRounds {
+		fmt.Fprintf(&sb, "| %d | %s | %s | %s |\n",
+			round.Number,
+			NewCatalog().orUnspecified(round.Verdict),
+			NewCatalog().orUnspecified(round.Fingerprint),
+			NewCatalog().formatSeverityCounts(round.FindingsBySeverity))
+	}
+	return sb.String()
+}
+
+func (c *Catalog) orUnspecified(value string) string {
+	if value == "" {
+		return "unspecified"
+	}
+	return value
+}
+
+func (c *Catalog) formatSeverityCounts(counts map[string]int) string {
+	if len(counts) == 0 {
+		return "none"
+	}
+	severities := make([]string, 0, len(counts))
+	for severity := range counts {
+		severities = append(severities, severity)
+	}
+	sort.Strings(severities)
+	parts := make([]string, 0, len(severities))
+	for _, severity := range severities {
+		parts = append(parts, fmt.Sprintf("%s=%d", severity, counts[severity]))
+	}
+	return strings.Join(parts, ", ")
+}
+
 func (c *Catalog) RenderMetricsSection(m events.MetricSet) string {
 	fields := m.Fields()
 	if len(fields) == 0 {
 		return ""
 	}
 	var sb strings.Builder
-	sb.WriteString(_metricsSectionHeader)
+	sb.WriteString(metricsSectionHeader)
 	sb.WriteString("\n| Métrica | Valor |\n|---|---|\n")
 	for _, f := range fields {
 		fmt.Fprintf(&sb, "| %s | %d |\n", f.Name, f.Value)
@@ -89,7 +147,7 @@ func (c *Catalog) RenderMemoryEvidenceSection(summary runtime.Summary) string {
 	}
 
 	var sb strings.Builder
-	sb.WriteString(_memoryEvidenceSectionHeader)
+	sb.WriteString(memoryEvidenceSectionHeader)
 	sb.WriteString("\n\n")
 	fmt.Fprintf(&sb, "- session: %s\n", e.SessionID)
 	fmt.Fprintf(&sb, "- cli: %s\n", e.CLI)
@@ -105,6 +163,7 @@ func (c *Catalog) RenderMemoryEvidenceSection(summary runtime.Summary) string {
 	fmt.Fprintf(&sb, "- redactions_applied: %d\n", e.Redactions)
 	fmt.Fprintf(&sb, "- contradictions_detected: %d\n", e.Contradictions)
 	fmt.Fprintf(&sb, "- baton_claimed: %v\n", e.BatonClaimed)
+	fmt.Fprintf(&sb, "- recovery_degraded: %v\n", e.ContextRecoveryDegraded)
 	return sb.String()
 }
 
@@ -125,19 +184,19 @@ func (c *Catalog) formatLayerCounts(byLayer map[string]int) string {
 }
 
 func (c *Catalog) injectMetricsSection(content, section string) string {
-	return c.injectBoundedSection(content, _metricsSectionHeaderRe, section)
+	return c.injectBoundedSection(content, metricsSectionHeaderRe, section)
 }
 
 func (c *Catalog) renderSection(summary runtime.Summary) (string, error) {
 	var sb strings.Builder
-	if err := _reportTemplate.Execute(&sb, summary); err != nil {
+	if err := reportTemplate.Execute(&sb, summary); err != nil {
 		return "", err
 	}
 	return sb.String(), nil
 }
 
 func (c *Catalog) injectSection(content, section string) string {
-	return c.injectBoundedSection(content, _sectionHeaderRe, section)
+	return c.injectBoundedSection(content, sectionHeaderRe, section)
 }
 
 func (c *Catalog) injectBoundedSection(content string, headerRe *regexp.Regexp, section string) string {
@@ -153,7 +212,7 @@ func (c *Catalog) injectBoundedSectionBefore(content string, headerRe, beforeRe 
 	start := loc[0]
 	rest := content[loc[1]:]
 
-	nextLoc := _nextSectionRe.FindStringIndex(rest)
+	nextLoc := nextSectionRe.FindStringIndex(rest)
 	if nextLoc == nil {
 		return content[:start] + section
 	}

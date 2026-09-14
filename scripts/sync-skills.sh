@@ -24,6 +24,21 @@ declare -a platform_mirrors=(
 
 embedded_mirror="$repo_root/internal/embedded/assets/.agents/skills"
 
+# S1: dirs sob .agents/skills/ que nao sao skills (sem SKILL.md) e nao devem ser
+# espelhados. Allowlist EXPLICITA, espelhada em scripts/check-skills-sync.sh.
+declare -a non_skill_dirs=(
+  "tests"
+)
+
+is_non_skill_dir() {
+  local candidate="$1"
+  local entry
+  for entry in "${non_skill_dirs[@]}"; do
+    [[ "$entry" == "$candidate" ]] && return 0
+  done
+  return 1
+}
+
 if [[ ! -d "$canonical" ]]; then
   echo "ERRO: diretório canônico não encontrado: $canonical" >&2
   exit 1
@@ -41,14 +56,21 @@ for mirror in "${platform_mirrors[@]}"; do
     chmod -R u+w "$mirror" 2>/dev/null || true
   fi
 
-  # Iterar sobre cada skill presente no canônico e copiar apenas as que
-  # já existem no mirror (preservando o subset por plataforma).
+  # S1: o canônico é a fonte de verdade — toda skill canônica é materializada no
+  # mirror, inclusive quando ainda não existe lá. Mirror não é subset por design.
   for skill_dir in "$canonical"/*/; do
     skill_name="$(basename "$skill_dir")"
-    if [[ -d "$mirror/$skill_name" ]]; then
-      rsync -a --delete "$skill_dir" "$mirror/$skill_name/"
-      echo "synced: $skill_name -> $mirror"
+    if is_non_skill_dir "$skill_name"; then
+      echo "skipped: $skill_name (allowlist: dir não-skill) -> $mirror"
+      continue
     fi
+    if [[ ! -f "$skill_dir/SKILL.md" ]]; then
+      echo "skipped: $skill_name (sem SKILL.md no canônico) -> $mirror"
+      continue
+    fi
+    mkdir -p "$mirror/$skill_name"
+    rsync -a --delete "$skill_dir" "$mirror/$skill_name/"
+    echo "synced: $skill_name -> $mirror"
   done
 done
 
@@ -63,13 +85,15 @@ mkdir -p "$embedded_mirror"
 chmod -R u+w "$embedded_mirror" 2>/dev/null || true
 for skill_dir in "$canonical"/*/; do
   skill_name="$(basename "$skill_dir")"
-  if [[ ! -d "$embedded_mirror/$skill_name" ]]; then
+  if is_non_skill_dir "$skill_name"; then
+    echo "skipped: $skill_name (allowlist: dir não-skill) -> $embedded_mirror"
     continue
   fi
   if [[ ! -f "$skill_dir/SKILL.md" ]]; then
     echo "skipped: $skill_name (sem SKILL.md no canônico) -> $embedded_mirror"
     continue
   fi
+  mkdir -p "$embedded_mirror/$skill_name"
   rsync -a --delete "$skill_dir" "$embedded_mirror/$skill_name/"
   echo "synced: $skill_name -> $embedded_mirror"
 done
@@ -107,6 +131,7 @@ declare -a orchestrator_hooks=(
   "post-wave.sh"
   "pre-execute-all-tasks.sh"
   "subagent-stop-wrapper.sh"
+  "validate-governance.sh"
 )
 declare -a tool_hook_mirrors=(
   "$repo_root/.claude/hooks"
@@ -141,6 +166,7 @@ declare -a evidence_validators=(
   "validate-bugfix-evidence.sh"
   "validate-refactor-evidence.sh"
   "validate-review-evidence.sh"
+	"validate-session-end.sh"
   "hook-prereq-gate.sh"
   "resolve-references.sh"
   "validate-skill-prerequisites.sh"

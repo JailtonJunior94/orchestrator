@@ -1,6 +1,6 @@
 # Documento de Requisitos do Produto (PRD)
 
-<!-- spec-version: 4 -->
+<!-- spec-version: 5 -->
 
 **Slug:** `harness-quatro-clis-loop-aprovacao`
 **Data:** 2026-09-10
@@ -114,7 +114,7 @@ reconfirmá-los e registrar a data.
 | V-10 | **`AGENTS.md` é auto-carregado** com upward-walk até a raiz do worktree; `instructions` é desnecessária | Teste real com token único recuperado pelo modelo | O instalador não escreve `instructions` (RF-13) |
 | V-11 | `OPENCODE_DISABLE_EXTERNAL_SKILLS=1` mata skills **globais e de projeto** | `opencode debug skill` retornando apenas a built-in | Mais um vetor a cobrir pelo handshake (RF-21) |
 | V-12 | **Hooks de PROJETO do Copilot disparam** (`.github/hooks/*.json`), em ambas as grafias de evento — **condicionado a a pasta estar em `trustedFolders`** | **Teste de disparo real** nesta sessão: `PROOF.txt` gravado em pasta trusted; a mesma configuração falhou em pasta untrusted | Resolve o gap anterior; o pré-requisito real é *trust de pasta* (RF-25) |
-| V-13 | Hooks do Codex de projeto (`.codex/hooks.json`) são suportados, mas exigem **`trusted_hash`** concedido pela **TUI interativa** (`/hooks`); não há subcomando não-interativo | Enum `HookSource` inclui `project`; strings da TUI; ausência de `codex hooks` | Sem trust, o gate está **inerte** — e hoje não há `[hooks.state]` na config do usuário (RF-24) |
+| V-13 | Hooks de PROJETO do Codex são lidos de **ambas** as representações — `[[hooks.*]]` em `.codex/config.toml` **e** um `hooks.json` irmão no mesmo `.codex/` —, que se **somam** quando coexistem; e só ficam disponíveis com o projeto **confiado**, trust concedido pela **TUI interativa** (`/hooks`), sem subcomando não-interativo | **Teste de disparo real** nesta sessão via `codex app-server` + RPC `hooks/list` sobre fixtures controlados: só `config.toml` → 3 hooks com `source: "project"`; só `hooks.json` → 1; ambos → 5 mais o warning do próprio Codex `loading hooks from both .../.codex/hooks.json and .../.codex/config.toml; prefer a single representation for this layer`; projeto não confiado (0.154.0) → nenhum hook de projeto (`Project-local config, hooks, and exec policies are disabled ... until the project is trusted`) | O instalador, que escreve `[[hooks.*]]` no `config.toml`, está **correto** — e não deve duplicar a mesma entrada em `hooks.json`. Sem trust, o gate está **inerte** — e hoje não há `[hooks.state]` na config do usuário (RF-24) |
 | V-14 | O trust do Codex é **verificável sem conceder**, via RPC `hooks/list` do `codex app-server` (read-only), que retorna `HookTrustStatus` | Schema gerado por `codex app-server generate-json-schema` | Viabiliza RF-24 sem usar a flag de bypass |
 | V-15 | Copilot CLI expõe `--acp`; Codex e Claude mantêm seus caminhos já integrados | `copilot --help` | Nenhuma mudança nos três já integrados |
 | V-16 | O Codex expõe subcomando nativo `codex review` | `codex --help` | Decisão registrada: **não** será usado (RF-40) |
@@ -479,6 +479,13 @@ replicar os dois testes sob ACP e registrar o resultado.
 
 ## Histórico de Decisões
 
+- **v4 → v5:** correcao de fato: o V-13 afirmava que hooks de projeto do Codex vivem em
+  um `hooks.json` dentro de `.codex/`. Refutado por **teste de disparo real** com `codex app-server` + RPC
+  `hooks/list` sobre fixtures controlados: as duas representações — `[[hooks.*]]` em
+  `.codex/config.toml` e o `hooks.json` irmão — são lidas e se somam, e o próprio Codex emite warning
+  quando ambas coexistem na mesma camada. Consequência: o instalador, que escreve `[[hooks.*]]` no
+  `config.toml`, está correto e não precisa mudar. A pré-condição de trust do projeto foi
+  reconfirmada no mesmo teste e RF-24 permanece inalterado. Nenhum requisito mudou.
 - **v1 → v2:** incorporadas 11 decisões de escopo e 13 fatos verificados contra fonte primária.
 - **v3 → v4:** correcao de rastreabilidade: cinco ponteiros da tabela de Fatos Verificados
   apontavam para IDs deslocados em duas posicoes no Bloco F, efeito colateral da insercao de RF-55 e

@@ -2,6 +2,13 @@
 # validate-token-budget.sh — Hook opcional (nao bloqueante) de verificacao de budget de tokens.
 # Emite warning se o total de bytes de governance files exceder o budget estimado.
 # Uso: chamado via Claude Code hook PreToolUse (opcional).
+#
+# LOCAL-ONLY por decisao explicita (allowlist CLAUDE_LOCAL_ONLY_HOOKS em
+# scripts/check-hooks-sync.sh): este hook nao tem mirror em internal/embedded/assets/
+# e nao e distribuido por `ai-spec install`. Motivo: o caminho orquestrado
+# (--runtime acp) ja e coberto pelo hook Go equivalente
+# internal/runtime/hooks/token_budget.go (ADR-014); embarcar o shell duplicaria a
+# mesma semantica nos projetos consumidores. O gate falha se um mirror aparecer.
 
 set -euo pipefail
 

@@ -34,6 +34,27 @@ func TestMergeOpenCodeConfigPreservesSchemaAndExistingFields(t *testing.T) {
 	}
 }
 
+func TestMergeOpenCodeConfigMergesExistingPermissionBlock(t *testing.T) {
+	t.Parallel()
+
+	out, err := specs.MergeOpenCodeConfig([]byte(`{"permission":{"read":"allow","bash":{"git status*":"allow"}}}`), specs.DefaultOpenCodePermission(), "")
+	if err != nil {
+		t.Fatalf("MergeOpenCodeConfig: %v", err)
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(out, &doc); err != nil {
+		t.Fatalf("decode result: %v", err)
+	}
+	permission := doc["permission"].(map[string]any)
+	if permission["read"] != "allow" {
+		t.Fatalf("existing permission was lost: %v", permission)
+	}
+	bash := permission["bash"].(map[string]any)
+	if bash["git status*"] != "allow" || bash["rm -rf*"] != "deny" {
+		t.Fatalf("nested permissions were not merged: %v", bash)
+	}
+}
+
 func TestMergeOpenCodeConfigNeverWritesSkillsOrInstructions(t *testing.T) {
 	t.Parallel()
 

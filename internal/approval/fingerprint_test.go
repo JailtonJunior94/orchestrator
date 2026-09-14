@@ -44,12 +44,26 @@ func (s *FingerprintSuite) TestStableUnderDuplicates() {
 }
 
 func (s *FingerprintSuite) TestStableUnderLineNumberChange() {
+	before := s.calc.Compute([]Finding{s.findingWith(SeverityHigh, "a.go:10", "R1")})
+	after := s.calc.Compute([]Finding{s.findingWith(SeverityHigh, "a.go:99", "R1")})
+
+	s.Equal(10, s.findingWith(SeverityHigh, "a.go:10", "R1").Line())
+	s.Equal(99, s.findingWith(SeverityHigh, "a.go:99", "R1").Line())
+	s.True(before.Equal(after))
+}
+
+func (s *FingerprintSuite) TestStableWhenOnlyOneOccurrenceCarriesALineNumber() {
 	before := s.calc.Compute([]Finding{s.findingWith(SeverityHigh, "a.go", "R1")})
-	afterFinding, err := NewFinding(SeverityHigh, "a.go", "R1", "now reported at another line")
-	s.Require().NoError(err)
-	after := s.calc.Compute([]Finding{afterFinding})
+	after := s.calc.Compute([]Finding{s.findingWith(SeverityHigh, "a.go:42", "R1")})
 
 	s.True(before.Equal(after))
+}
+
+func (s *FingerprintSuite) TestUnstableUnderFileChangeAtTheSameLine() {
+	first := s.calc.Compute([]Finding{s.findingWith(SeverityHigh, "a.go:10", "R1")})
+	second := s.calc.Compute([]Finding{s.findingWith(SeverityHigh, "b.go:10", "R1")})
+
+	s.False(first.Equal(second))
 }
 
 func (s *FingerprintSuite) TestStableUnderAgentIdentifierChange() {

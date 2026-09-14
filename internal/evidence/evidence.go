@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/reviewverdict"
 )
 
 // ReportKind identifica o tipo de relatorio.
@@ -28,15 +30,17 @@ type Result struct {
 	Pass     bool
 }
 
-// Validate valida um relatorio Markdown conforme o tipo.
-// rfIDs e opcional — lista de RF-nn/REQ-nn para rastreabilidade (usado em bugfix).
 func (r1 *Validator) Validate(content []byte, kind ReportKind, rfIDs []string) Result {
+	return NewValidator().ValidateReport(content, "", kind, rfIDs)
+}
+
+func (r1 *Validator) ValidateReport(content []byte, reportPath string, kind ReportKind, rfIDs []string) Result {
 	text := string(content)
 	var findings []Finding
 
 	switch kind {
 	case KindTask:
-		findings = NewValidator().validateTask(text)
+		findings = NewValidator().validateTask(text, reportPath)
 	case KindBugfix:
 		findings = NewValidator().validateBugfix(text, rfIDs)
 	case KindRefactor:
@@ -53,15 +57,9 @@ func (r1 *Validator) Validate(content []byte, kind ReportKind, rfIDs []string) R
 }
 
 func (r1 *Validator) hasHeading(text, heading string) bool {
-	lines := strings.Split(text, "\n")
-	for _, line := range lines {
-		trimmed := strings.TrimLeft(line, "#")
-		trimmed = strings.TrimSpace(trimmed)
-		if strings.EqualFold(trimmed, heading) {
-			return true
-		}
-		// partial match for headings with accents/variations
-		if strings.Contains(strings.ToLower(trimmed), strings.ToLower(heading)) {
+	for _, line := range strings.Split(text, "\n") {
+		trimmed := fold(strings.TrimLeft(line, "#"))
+		if trimmed == fold(heading) || strings.Contains(trimmed, fold(heading)) {
 			return true
 		}
 	}
@@ -73,8 +71,8 @@ func (r1 *Validator) matchesRegex(text, pattern string) bool {
 	return re.MatchString(text)
 }
 
-func (r1 *Validator) validateTask(text string) []Finding {
-	var findings []Finding
+func (r1 *Validator) validateTask(text, reportPath string) []Finding {
+	contract, findings := ResolveContract(text, reportPath)
 
 	requiredHeadings := []struct {
 		label   string
@@ -112,14 +110,15 @@ func (r1 *Validator) validateTask(text string) []Finding {
 		}
 	}
 
-	// rastreabilidade condicional: se PRD mencionado, RF-nn ou REQ-nn obrigatorio
 	if NewValidator().matchesRegex(text, `PRD`) {
 		if !NewValidator().matchesRegex(text, `RF-\d+|REQ-\d+`) {
 			findings = append(findings, Finding{Label: "rastreabilidade RF-nn ou REQ-nn"})
 		}
 	}
 
-	return findings
+	findings = append(findings, NewValidator().strongTestProofFindings(text)...)
+	findings = append(findings, NewValidator().diffReviewedFindings(text)...)
+	return append(findings, NewValidator().acceptanceCriteriaFindings(text, reportPath, contract)...)
 }
 
 func (r1 *Validator) validateBugfix(text string, rfIDs []string) []Finding {
@@ -247,11 +246,23 @@ func (r1 *Validator) reconcileBugfixTotals(text string, total, fixed, tests int)
 	return findings
 }
 
+var (
+	reviewTargetRe       = regexp.MustCompile(`(?i)(diff|branch|commit|arquivos? revisad)`)
+	reviewNoFindingsRe   = regexp.MustCompile(`(?i)sem achados`)
+	reviewSeverityRe     = regexp.MustCompile(`(?i)(severidade\s*:\s*(critical|high|medium|low|cr(i|í)tico|alta|m(e|é)dia|baixa)|severity\s*:\s*(critical|high|medium|low))`)
+	reviewHighSeverityRe = regexp.MustCompile(`(?i)(severidade\s*:\s*(critical|high|cr(i|í)tico|alta)|severity\s*:\s*(critical|high))`)
+)
+
+func (r1 *Validator) reviewVerdict(text string) string {
+	verdict, _ := reviewverdict.ParseText(text)
+	return verdict
+}
+
 func (r1 *Validator) validateReview(text string) []Finding {
 	var findings []Finding
 
-	if !NewValidator().matchesRegex(text, `veredito\s*:\s*(APPROVED|APPROVED_WITH_REMARKS|REJECTED|BLOCKED)`) &&
-		!NewValidator().matchesRegex(text, `verdict\s*:\s*(APPROVED|APPROVED_WITH_REMARKS|REJECTED|BLOCKED)`) {
+	verdict := NewValidator().reviewVerdict(text)
+	if verdict == "" {
 		findings = append(findings, Finding{Label: "veredito canonico do review"})
 	}
 
@@ -270,7 +281,24 @@ func (r1 *Validator) validateReview(text string) []Finding {
 		}
 	}
 
-	return append(findings, NewValidator().validateCriteriaMap(text)...)
+	findings = append(findings, NewValidator().validateReviewCoherence(text, verdict)...)
+	return append(findings, NewValidator().validateCriteriaMap(text, verdict)...)
+}
+
+func (r1 *Validator) validateReviewCoherence(text, verdict string) []Finding {
+	var findings []Finding
+
+	if !reviewTargetRe.MatchString(text) {
+		findings = append(findings, Finding{Label: "referencia ao alvo revisado (diff/branch/commit/arquivos)"})
+	}
+	if !reviewNoFindingsRe.MatchString(text) && !reviewSeverityRe.MatchString(text) {
+		findings = append(findings, Finding{Label: "severidade canonica em ao menos um achado (critical|high|medium|low) ou declaracao 'Sem achados'"})
+	}
+	if verdict == "REJECTED" && !reviewHighSeverityRe.MatchString(text) {
+		findings = append(findings, Finding{Label: "veredito REJECTED exige ao menos um achado de severidade critical ou high comprovado"})
+	}
+
+	return findings
 }
 
 var (
@@ -278,12 +306,70 @@ var (
 	criteriaLineRe       = regexp.MustCompile(`^-\s*\[`)
 	criteriaMarkerRe     = regexp.MustCompile(`^-\s*\[([^\]]*)\]`)
 	evidenceFileLineRe   = regexp.MustCompile(`[A-Za-z0-9_./-]+:[0-9]+`)
-	evidenceTestRe       = regexp.MustCompile(`(?i)(test|teste|spec).*(pass|fail|passed|failed|\bok\b|erro|error)`)
-	evidenceCommandRe    = regexp.MustCompile(`(?i)(go (test|build|vet)|gotestsum|bash |sh |npm|pnpm|yarn|pytest|make |grep |python|cargo |dotnet |shasum|awk |sed |cat |\./)`)
-	evidenceOutcomeRe    = regexp.MustCompile(`(?i)(->|=>|exit|sa(i|í)da|output|pass|fail|\bok\b)`)
+	reviewedHeadingRe    = regexp.MustCompile(`(?i)^#+\s+arquivos revisados`)
+	pathTokenRe          = regexp.MustCompile(`[A-Za-z0-9_][A-Za-z0-9_./-]*\.[A-Za-z0-9]+`)
 )
 
-func (r1 *Validator) validateCriteriaMap(text string) []Finding {
+func (r1 *Validator) reviewedFilePaths(lines []string) map[string]struct{} {
+	paths := make(map[string]struct{})
+	capture := false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if reviewedHeadingRe.MatchString(trimmed) {
+			capture = true
+			continue
+		}
+		if strings.HasPrefix(trimmed, "#") {
+			capture = false
+			continue
+		}
+		if !capture {
+			continue
+		}
+		for _, token := range pathTokenRe.FindAllString(trimmed, -1) {
+			if normalized := normalizeReviewedPath(token); normalized != "" {
+				paths[normalized] = struct{}{}
+			}
+		}
+	}
+	return paths
+}
+
+func normalizeReviewedPath(path string) string {
+	trimmed := strings.Trim(strings.TrimSpace(path), "`\"'")
+	trimmed = strings.TrimPrefix(trimmed, "./")
+	return strings.TrimPrefix(trimmed, "/")
+}
+
+func samePathOrSuffix(declared, reference string) bool {
+	if declared == reference {
+		return true
+	}
+	return strings.HasSuffix(declared, "/"+reference) || strings.HasSuffix(reference, "/"+declared)
+}
+
+func (r1 *Validator) referencedFileIsReviewed(reviewed map[string]struct{}, evidence string) bool {
+	reference := evidenceFileLineRe.FindString(evidence)
+	if reference == "" {
+		return true
+	}
+	cut := strings.LastIndex(reference, ":")
+	if cut <= 0 {
+		return false
+	}
+	target := normalizeReviewedPath(reference[:cut])
+	if target == "" {
+		return false
+	}
+	for declared := range reviewed {
+		if samePathOrSuffix(declared, target) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r1 *Validator) validateCriteriaMap(text, verdict string) []Finding {
 	lines := strings.Split(text, "\n")
 	headingAt := -1
 	for i, line := range lines {
@@ -298,6 +384,10 @@ func (r1 *Validator) validateCriteriaMap(text string) []Finding {
 	}
 
 	var findings []Finding
+	reviewed := NewValidator().reviewedFilePaths(lines)
+	if len(reviewed) == 0 {
+		findings = append(findings, Finding{Label: "secao Arquivos Revisados sem nenhum arquivo listado"})
+	}
 	criteria := 0
 	for _, line := range lines[headingAt+1:] {
 		trimmed := strings.TrimSpace(line)
@@ -319,7 +409,11 @@ func (r1 *Validator) validateCriteriaMap(text string) []Finding {
 		}
 
 		switch marker {
-		case "atendido", "nao atendido", "não atendido":
+		case "atendido":
+		case "nao atendido", "não atendido":
+			if verdict == "APPROVED" {
+				findings = append(findings, Finding{Label: "criterio nao atendido proibe APPROVED: " + trimmed})
+			}
 		case "nao verificavel", "nao verificável", "não verificavel", "não verificável":
 			findings = append(findings, Finding{Label: "criterio nao verificavel proibe APPROVED: " + trimmed})
 		default:
@@ -331,12 +425,12 @@ func (r1 *Validator) validateCriteriaMap(text string) []Finding {
 			continue
 		}
 
-		switch {
-		case evidenceFileLineRe.MatchString(evidence):
-		case evidenceTestRe.MatchString(evidence):
-		case evidenceCommandRe.MatchString(evidence) && evidenceOutcomeRe.MatchString(evidence):
-		default:
-			findings = append(findings, Finding{Label: "linha de evidencia fora das tres formas de RF-48: " + trimmed})
+		if evidenceFileLineRe.MatchString(evidence) {
+			if !NewValidator().referencedFileIsReviewed(reviewed, evidence) {
+				findings = append(findings, Finding{Label: "evidencia arquivo:linha fora dos arquivos revisados: " + trimmed})
+			}
+		} else if problem := evidenceFormProblem(evidence); problem != "" {
+			findings = append(findings, Finding{Label: problem + ": " + trimmed})
 		}
 	}
 

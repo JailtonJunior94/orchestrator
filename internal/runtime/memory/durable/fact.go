@@ -277,6 +277,9 @@ func (c *Catalog) ValidateFact(f Fact) error {
 	if f.Durability == DurabilityInvalid {
 		return ErrDurabilityMissing
 	}
+	if f.Identity.Hash == "" {
+		return ErrContentHashMissing
+	}
 	return nil
 }
 

@@ -131,6 +131,9 @@ var BaseSkills = []string{
 // ComplementarySkills sao skills de integracao embarcadas no binario e instaladas junto com as base.
 var ComplementarySkills = []string{
 	"confluence-changelog-publisher",
+	"design-patterns-mandatory",
+	"domain-modeling-production",
+	"finalize-changelog-readme-push",
 	"github-diff-changelog-publisher",
 	"github-pr-comment-triage",
 	"github-release-publication-flow",

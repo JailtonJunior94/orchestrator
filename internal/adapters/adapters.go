@@ -231,21 +231,6 @@ enabled = true
 	g.printer.Debug("Adaptadores Codex agents gerados: %d", count)
 }
 
-func (g *Generator) collectSkillAssets(skillsDir, skillName string) []string {
-	assetsDir := filepath.Join(skillsDir, skillName, "assets")
-	entries, err := g.fs.ReadDir(assetsDir)
-	if err != nil {
-		return nil
-	}
-	var files []string
-	for _, e := range entries {
-		if !e.IsDir() && strings.HasSuffix(e.Name(), ".md") {
-			files = append(files, fmt.Sprintf(".agents/skills/%s/assets/%s", skillName, e.Name()))
-		}
-	}
-	return files
-}
-
 // BuildCodexConfig gera o conteudo do config.toml para Codex.
 func (g *Generator) BuildCodexConfig(skillList []string) string {
 	var b strings.Builder

@@ -7,6 +7,8 @@
   "base_sha": "ba80b5637bef1ff372c6e7ac15eea8437322dcc8",
   "patch_sha256": "5e2268d17a23d82b6a1b07694c060245a33d76fe89d7942ef6fd4d2be29326df",
   "patch_ref": "evidence/task-1.0/1.0.patch",
+  "commit_sha": "ef928122025a2288d738e2c43f237b1c877d10cf",
+  "commit_patch_sha256": "2095af84b25a284fc54fd975f2d8eb9722fdad4b7871f355d57e085614d7bfcd",
   "final_state_sha256": "30bb3f1254947f3b89defa4ed17a12031536c7d4966dd3dcd25d9bd7296cd3cf",
   "coverage_regression": false,
   "tests": [
@@ -21,7 +23,7 @@
       "output_sha256": "685d67be81ec8793c4f4115073b9c4712874d85825cd180eefe3dd978b8b930f"
     },
     {
-      "command": "make check-spec-paths && bash scripts/check-scripts-sync.sh && bash scripts/check-skills-sync.sh",
+      "command": "make check-spec-paths \u0026\u0026 bash scripts/check-scripts-sync.sh \u0026\u0026 bash scripts/check-skills-sync.sh",
       "exit_code": 0,
       "output_sha256": "409ecc25601ed6dbc1c4b5f1c82b2bd464b9e1e09eb87657503a436c14dff2b2"
     }

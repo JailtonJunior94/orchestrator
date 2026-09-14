@@ -9,7 +9,7 @@ import (
 
 const (
 	scriptPreTool     = ".agents/scripts/hook-prereq-gate.sh"
-	scriptPostTool    = ".agents/hooks/post-execute-task.sh"
+	scriptPostTool    = ".agents/hooks/validate-governance.sh"
 	scriptSessionEnd  = ".agents/scripts/validate-session-end.sh"
 	largeBudgetAbsent = 0
 )
@@ -161,7 +161,7 @@ func (c *Catalog) buildRegistry() []Agent {
 			4000, 500_000,
 			c.NewEnvPolicy(OpenCodeKillSwitchVars...),
 			c.canonicalEnforcement("tool.execute.before", "tool.execute.after", "session.idle"),
-			c.mustPrecondition(PreconditionNoKillSwitch, "unset OPENCODE_PURE, OPENCODE_DISABLE_PROJECT_CONFIG, OPENCODE_DISABLE_EXTERNAL_SKILLS and --pure before orchestrating", false),
+			c.mustPrecondition(PreconditionNoKillSwitch, "unset OPENCODE_PURE, OPENCODE_DISABLE_PROJECT_CONFIG, OPENCODE_DISABLE_EXTERNAL_SKILLS, OPENCODE_DISABLE_DEFAULT_PLUGINS and --pure before orchestrating", false),
 			c.mustPrecondition(PreconditionHandshake, "wait for the governance plugin load handshake before the first prompt", true),
 		),
 	}

@@ -104,7 +104,7 @@ func (s *RP03Suite) TestRP03_RawInputNeverMutated() {
 // concordam no normalized_name (mesma operação → mesmo conjunto).
 func (s *RP03Suite) TestParity_INV32_PassesWhen4CLIsAgree() {
 	snap := snapshotWith4Fixtures("bash", "bash", "bash", "bash")
-	r := _invINV32CrossCLIToolCallNameParity.Check(snap)
+	r := invINV32CrossCLIToolCallNameParity.Check(snap)
 	if !r.OK {
 		s.T().Errorf("INV-32 deveria passar quando as 4 CLIs concordam: %s", r.Reason)
 	}
@@ -113,7 +113,7 @@ func (s *RP03Suite) TestParity_INV32_PassesWhen4CLIsAgree() {
 // TestParity_INV32_FailsWhenDiverge valida que INV-32 falha quando uma CLI diverge.
 func (s *RP03Suite) TestParity_INV32_FailsWhenDiverge() {
 	snap := snapshotWith4Fixtures("bash", "bash", "execute", "bash") // copilot diverge
-	r := _invINV32CrossCLIToolCallNameParity.Check(snap)
+	r := invINV32CrossCLIToolCallNameParity.Check(snap)
 	if r.OK {
 		s.T().Error("INV-32 deveria falhar quando o normalized_name diverge entre CLIs")
 	}
@@ -132,7 +132,7 @@ func (s *RP03Suite) TestParity_INV32_SkipsWhenFixtureAbsent() {
 		Dirs:  map[string]bool{},
 		Links: map[string]string{},
 	}
-	r := _invINV32CrossCLIToolCallNameParity.Check(snap)
+	r := invINV32CrossCLIToolCallNameParity.Check(snap)
 	if !r.OK {
 		s.T().Errorf("INV-32 deveria passar (skip) quando alguma fixture está ausente: %s", r.Reason)
 	}
@@ -149,9 +149,9 @@ func snapshotWith4Fixtures(claude, codex, copilot, opencode string) Snapshot {
 		Tools:      []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolOpenCode},
 		ProjectDir: testProjectDir,
 		Files: map[string][]byte{
-			testProjectDir + "/tests/fixtures/parity/claude_bash.jsonl": fixtureLine(claude),
-			testProjectDir + "/tests/fixtures/parity/codex_shell.jsonl": fixtureLine(codex),
-			testProjectDir + "/tests/fixtures/parity/copilot_run.jsonl": fixtureLine(copilot),
+			testProjectDir + "/tests/fixtures/parity/claude_bash.jsonl":   fixtureLine(claude),
+			testProjectDir + "/tests/fixtures/parity/codex_shell.jsonl":   fixtureLine(codex),
+			testProjectDir + "/tests/fixtures/parity/copilot_run.jsonl":   fixtureLine(copilot),
 			testProjectDir + "/tests/fixtures/parity/opencode_bash.jsonl": fixtureLine(opencode),
 		},
 		Dirs:  map[string]bool{},

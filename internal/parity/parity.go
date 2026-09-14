@@ -32,8 +32,10 @@ import (
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/contextgen"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/embedded"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
 
@@ -206,6 +208,21 @@ func (r1 *Checker) Generate(projectDir string, tools []skills.Tool, langs []skil
 		}
 	}
 
+	if toolSet[skills.ToolOpenCode] {
+		plugin, err := embedded.Assets.ReadFile("assets/.opencode/plugin/governance.js")
+		if err != nil {
+			return Snapshot{}, fmt.Errorf("ler plugin embarcado do OpenCode: %w", err)
+		}
+		pluginPath := filepath.Join(projectDir, specs.OpenCodePluginDir, "governance.js")
+		_ = ffs.WriteFile(pluginPath, plugin)
+
+		config, err := specs.MergeOpenCodeConfig(nil, specs.DefaultOpenCodePermission(), "")
+		if err != nil {
+			return Snapshot{}, fmt.Errorf("gerar opencode.json canonico: %w", err)
+		}
+		_ = ffs.WriteFile(filepath.Join(projectDir, specs.OpenCodeConfigFileName), config)
+	}
+
 	// Stub para guard de profundidade (cross-tool, sempre instalado com Claude)
 	_ = ffs.WriteFile(filepath.Join(projectDir, "scripts/lib/check-invocation-depth.sh"), []byte("#!/bin/sh\n# stub"))
 
@@ -222,48 +239,50 @@ func (r1 *Checker) Generate(projectDir string, tools []skills.Tool, langs []skil
 func (r1 *Checker) Invariants() []*Invariant {
 	return []*Invariant{
 		// Comuns — aplicam a toda combinacao de ferramentas
-		_invC01AgentsMDSchemaVersion,
-		_invC02AgentsMDAgentGovernanceRef,
-		_invC03AgentsMDEnforcementMatrix,
-		_invC04AgentsMDCanonicalPath,
+		invC01AgentsMDSchemaVersion,
+		invC02AgentsMDAgentGovernanceRef,
+		invC03AgentsMDEnforcementMatrix,
+		invC04AgentsMDCanonicalPath,
 
 		// Por ferramenta — presenca e referencia canonica
-		_invCL01ClaudeMDPresent,
-		_invCL02ClaudeMDCanonicalPath,
-		_invCP01CopilotMDPresent,
-		_invCD01CodexConfigPresent,
-		_invCD02CodexConfigCanonicalPath,
+		invCL01ClaudeMDPresent,
+		invCL02ClaudeMDCanonicalPath,
+		invCP01CopilotMDPresent,
+		invCD01CodexConfigPresent,
+		invCD02CodexConfigCanonicalPath,
 
-		// Claude — hooks, rules e scripts instalados
-		_invCL03ClaudeHookGovernancePresent,
-		_invCL04ClaudeHookPreloadPresent,
-		_invCL05ClaudeRulesGovernancePresent,
-		_invCL06ClaudeScriptTaskEvidencePresent,
-		_invCL07ClaudeScriptBugfixEvidencePresent,
-		_invCL08ClaudeScriptRefactorEvidencePresent,
+		invOC01OpenCodePluginPresent,
+		invOC02OpenCodeConfigPermissionNeverAsks,
+		invOC03OpenCodeConfigNeverWritesSkillsOrInstructions,
 
+		invCL03ClaudeHookGovernancePresent,
+		invCL04ClaudeHookPreloadPresent,
+		invCL05ClaudeRulesGovernancePresent,
+		invCL06ClaudeScriptTaskEvidencePresent,
+		invCL07ClaudeScriptBugfixEvidencePresent,
+		invCL08ClaudeScriptRefactorEvidencePresent,
 
 		// Best-effort — documenta limites de enforcement
-		_invCP02CopilotMDBestEffortDoc,
+		invCP02CopilotMDBestEffortDoc,
 
 		// Cross-tool — detecta drift entre destinos
-		_invX01CrossToolCanonicalPath,
-		_invX02CompactProfileCodexOnly,
-		_invX03DepthGuardPresent,
+		invX01CrossToolCanonicalPath,
+		invX02CompactProfileCodexOnly,
+		invX03DepthGuardPresent,
 
 		// F2-Claude — invariantes de normalização e MCP nested-agent depth (ADR-008 extensão)
-		_invINV30ToolCallsNormalizedNameInvariant,
-		_invINV32CrossCLIToolCallNameParity,
-		_invINV31MCPNestedDepthNeverExceedsMax,
+		invINV30ToolCallsNormalizedNameInvariant,
+		invINV32CrossCLIToolCallNameParity,
+		invINV31MCPNestedDepthNeverExceedsMax,
 
 		// RF-19 — invariante de fallback launcher: cadeia declarada para todas as CLIs
-		_invFB01FallbackLauncherChainDeclared,
+		invFB01FallbackLauncherChainDeclared,
 	}
 }
 
 // ── Invariantes Comuns (AGENTS.md) ──────────────────────────────────────────
 
-var _invC01AgentsMDSchemaVersion = &Invariant{
+var invC01AgentsMDSchemaVersion = &Invariant{
 	ID:          "C01",
 	Description: "AGENTS.md e gerado com comentario de governance-schema version",
 	Level:       Common,
@@ -282,7 +301,7 @@ var _invC01AgentsMDSchemaVersion = &Invariant{
 	},
 }
 
-var _invC02AgentsMDAgentGovernanceRef = &Invariant{
+var invC02AgentsMDAgentGovernanceRef = &Invariant{
 	ID:          "C02",
 	Description: "AGENTS.md referencia skill agent-governance como base canonica",
 	Level:       Common,
@@ -294,7 +313,7 @@ var _invC02AgentsMDAgentGovernanceRef = &Invariant{
 	},
 }
 
-var _invC03AgentsMDEnforcementMatrix = &Invariant{
+var invC03AgentsMDEnforcementMatrix = &Invariant{
 	ID:          "C03",
 	Description: "AGENTS.md contem matriz de enforcement por ferramenta",
 	Level:       Common,
@@ -306,7 +325,7 @@ var _invC03AgentsMDEnforcementMatrix = &Invariant{
 	},
 }
 
-var _invC04AgentsMDCanonicalPath = &Invariant{
+var invC04AgentsMDCanonicalPath = &Invariant{
 	ID:          "C04",
 	Description: "AGENTS.md referencia .agents/skills/ como caminho canonico",
 	Level:       Common,
@@ -320,7 +339,7 @@ var _invC04AgentsMDCanonicalPath = &Invariant{
 
 // ── Claude ──────────────────────────────────────────────────────────────────
 
-var _invCL01ClaudeMDPresent = &Invariant{
+var invCL01ClaudeMDPresent = &Invariant{
 	ID:          "CL01",
 	Description: "CLAUDE.md e gerado e menciona AGENTS.md como fonte canonica",
 	Level:       Common,
@@ -337,7 +356,7 @@ var _invCL01ClaudeMDPresent = &Invariant{
 	},
 }
 
-var _invCL02ClaudeMDCanonicalPath = &Invariant{
+var invCL02ClaudeMDCanonicalPath = &Invariant{
 	ID:          "CL02",
 	Description: "CLAUDE.md referencia .agents/skills/ como fonte de verdade",
 	Level:       Common,
@@ -354,7 +373,7 @@ var _invCL02ClaudeMDCanonicalPath = &Invariant{
 
 // ── Copilot ─────────────────────────────────────────────────────────────────
 
-var _invCP01CopilotMDPresent = &Invariant{
+var invCP01CopilotMDPresent = &Invariant{
 	ID:          "CP01",
 	Description: "copilot-instructions.md e gerado e menciona AGENTS.md",
 	Level:       Common,
@@ -371,7 +390,7 @@ var _invCP01CopilotMDPresent = &Invariant{
 	},
 }
 
-var _invCP02CopilotMDBestEffortDoc = &Invariant{
+var invCP02CopilotMDBestEffortDoc = &Invariant{
 	ID:          "CP02",
 	Description: "copilot-instructions.md documenta a pre-condicao de pasta confiavel para os hooks nativos",
 	Level:       BestEffort,
@@ -390,7 +409,7 @@ var _invCP02CopilotMDBestEffortDoc = &Invariant{
 
 // ── Codex ────────────────────────────────────────────────────────────────────
 
-var _invCD01CodexConfigPresent = &Invariant{
+var invCD01CodexConfigPresent = &Invariant{
 	ID:          "CD01",
 	Description: ".codex/config.toml e gerado com skill agent-governance",
 	Level:       Common,
@@ -407,7 +426,7 @@ var _invCD01CodexConfigPresent = &Invariant{
 	},
 }
 
-var _invCD02CodexConfigCanonicalPath = &Invariant{
+var invCD02CodexConfigCanonicalPath = &Invariant{
 	ID:          "CD02",
 	Description: ".codex/config.toml referencia .agents/skills/ como caminho de skills",
 	Level:       Common,
@@ -422,18 +441,16 @@ var _invCD02CodexConfigCanonicalPath = &Invariant{
 
 // ── Cross-tool (deteccao de drift) ───────────────────────────────────────────
 
-// _invX01CrossToolCanonicalPath verifica que todos os artefatos de todas as ferramentas
-// selecionadas referenciam .agents/skills/ como caminho canonico.
-// Detecta drift de caminho entre destinos sem exigir conteudo identico.
-var _invX01CrossToolCanonicalPath = &Invariant{
+var invX01CrossToolCanonicalPath = &Invariant{
 	ID:          "X01",
 	Description: "Todos os artefatos de ferramenta referenciam .agents/skills/ como caminho canonico",
 	Level:       Common,
 	Check: func(s Snapshot) Result {
 		artifacts := map[skills.Tool]string{
-			skills.ToolClaude:  "CLAUDE.md",
-			skills.ToolCopilot: ".github/copilot-instructions.md",
-			skills.ToolCodex:   ".codex/config.toml",
+			skills.ToolClaude:   "CLAUDE.md",
+			skills.ToolCopilot:  ".github/copilot-instructions.md",
+			skills.ToolCodex:    ".codex/config.toml",
+			skills.ToolOpenCode: "AGENTS.md",
 		}
 		for _, tool := range s.Tools {
 			relPath, ok := artifacts[tool]
@@ -454,7 +471,7 @@ var _invX01CrossToolCanonicalPath = &Invariant{
 
 // ── Claude — hooks, rules e scripts (T12) ───────────────────────────────────
 
-var _invCL03ClaudeHookGovernancePresent = &Invariant{
+var invCL03ClaudeHookGovernancePresent = &Invariant{
 	ID:          "CL03",
 	Description: ".claude/hooks/validate-governance.sh deve existir",
 	Level:       ToolSpecific,
@@ -467,7 +484,7 @@ var _invCL03ClaudeHookGovernancePresent = &Invariant{
 	},
 }
 
-var _invCL04ClaudeHookPreloadPresent = &Invariant{
+var invCL04ClaudeHookPreloadPresent = &Invariant{
 	ID:          "CL04",
 	Description: ".claude/hooks/validate-preload.sh deve existir",
 	Level:       ToolSpecific,
@@ -480,7 +497,7 @@ var _invCL04ClaudeHookPreloadPresent = &Invariant{
 	},
 }
 
-var _invCL05ClaudeRulesGovernancePresent = &Invariant{
+var invCL05ClaudeRulesGovernancePresent = &Invariant{
 	ID:          "CL05",
 	Description: ".claude/rules/governance.md deve existir",
 	Level:       ToolSpecific,
@@ -493,7 +510,7 @@ var _invCL05ClaudeRulesGovernancePresent = &Invariant{
 	},
 }
 
-var _invCL06ClaudeScriptTaskEvidencePresent = &Invariant{
+var invCL06ClaudeScriptTaskEvidencePresent = &Invariant{
 	ID:          "CL06",
 	Description: ".claude/scripts/validate-task-evidence.sh deve existir",
 	Level:       ToolSpecific,
@@ -506,7 +523,7 @@ var _invCL06ClaudeScriptTaskEvidencePresent = &Invariant{
 	},
 }
 
-var _invCL07ClaudeScriptBugfixEvidencePresent = &Invariant{
+var invCL07ClaudeScriptBugfixEvidencePresent = &Invariant{
 	ID:          "CL07",
 	Description: ".claude/scripts/validate-bugfix-evidence.sh deve existir",
 	Level:       ToolSpecific,
@@ -519,7 +536,7 @@ var _invCL07ClaudeScriptBugfixEvidencePresent = &Invariant{
 	},
 }
 
-var _invCL08ClaudeScriptRefactorEvidencePresent = &Invariant{
+var invCL08ClaudeScriptRefactorEvidencePresent = &Invariant{
 	ID:          "CL08",
 	Description: ".claude/scripts/validate-refactor-evidence.sh deve existir",
 	Level:       ToolSpecific,
@@ -534,9 +551,7 @@ var _invCL08ClaudeScriptRefactorEvidencePresent = &Invariant{
 
 // ── Cross-tool — guard de profundidade (T12) ─────────────────────────────────
 
-// _invX03DepthGuardPresent verifica que o script de controle de profundidade de
-// invocacao esta presente. Referenciado no AGENTS.md para todas as ferramentas.
-var _invX03DepthGuardPresent = &Invariant{
+var invX03DepthGuardPresent = &Invariant{
 	ID:          "X03",
 	Description: "scripts/lib/check-invocation-depth.sh deve existir",
 	Level:       Common,
@@ -559,6 +574,23 @@ type eventsJSONLEntry struct {
 	Depth          *int   `json:"depth,omitempty"`
 }
 
+func (r1 *Checker) decodeOpenCodeDocument(content string) (map[string]any, error) {
+	doc := map[string]any{}
+	if err := json.Unmarshal([]byte(content), &doc); err != nil {
+		return nil, err
+	}
+	return doc, nil
+}
+
+func (r1 *Checker) decodeOpenCodePermission(content string) (map[string]any, error) {
+	doc, err := r1.decodeOpenCodeDocument(content)
+	if err != nil {
+		return nil, err
+	}
+	permission, _ := doc["permission"].(map[string]any)
+	return permission, nil
+}
+
 // parseEventsJSONL lê as entradas de um arquivo events.jsonl a partir de conteúdo string.
 func (r1 *Checker) parseEventsJSONL(content string) []eventsJSONLEntry {
 	var entries []eventsJSONLEntry
@@ -575,8 +607,7 @@ func (r1 *Checker) parseEventsJSONL(content string) []eventsJSONLEntry {
 	return entries
 }
 
-// _defaultMaxAgentDepth é a profundidade máxima padrão de nested-agent (ADR-014).
-const _defaultMaxAgentDepth = 3
+const defaultMaxAgentDepth = 3
 
 // maxAgentDepth retorna o limite de profundidade configurado via AISPEC_MAX_AGENT_DEPTH.
 func (r1 *Checker) maxAgentDepth() int {
@@ -585,14 +616,10 @@ func (r1 *Checker) maxAgentDepth() int {
 			return n
 		}
 	}
-	return _defaultMaxAgentDepth
+	return defaultMaxAgentDepth
 }
 
-// _invINV30ToolCallsNormalizedNameInvariant valida que a mesma operação semântica
-// em Claude e Codex produz o mesmo normalized_name em events.jsonl.
-// Fixtures: tests/fixtures/parity/claude_bash.jsonl + codex_shell.jsonl.
-// Aplicável quando as fixtures existem; skipped silenciosamente quando ausentes.
-var _invINV30ToolCallsNormalizedNameInvariant = &Invariant{
+var invINV30ToolCallsNormalizedNameInvariant = &Invariant{
 	ID:          "INV-30",
 	Description: "tool_calls_normalized_name_invariant: mesma operação semântica em Claude e Codex produz normalized_name idêntico em events.jsonl",
 	Level:       Common,
@@ -642,20 +669,17 @@ var _invINV30ToolCallsNormalizedNameInvariant = &Invariant{
 	},
 }
 
-// _invINV32CrossCLIToolCallNameParity valida RP-03: a mesma operação semântica (shell) produz
-// o MESMO conjunto de normalized_name nas CLIs com fixture de parity disponível
-// (Claude/Codex/Copilot). Skip quando alguma ausente
-// (ambientes sem fixtures de parity não devem bloquear); falha quando os conjuntos divergem.
-var _invINV32CrossCLIToolCallNameParity = &Invariant{
+var invINV32CrossCLIToolCallNameParity = &Invariant{
 	ID:          "INV-32",
 	Description: "cross_cli_tool_call_name_parity (RP-03): a mesma operação produz normalized_name idêntico nas CLIs com fixture",
 	Level:       Common,
-	AppliesTo:   []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot},
+	AppliesTo:   []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolOpenCode},
 	Check: func(s Snapshot) Result {
 		fixtures := map[string]string{
-			"claude":  "tests/fixtures/parity/claude_bash.jsonl",
-			"codex":   "tests/fixtures/parity/codex_shell.jsonl",
-			"copilot": "tests/fixtures/parity/copilot_run.jsonl",
+			"claude":   "tests/fixtures/parity/claude_bash.jsonl",
+			"codex":    "tests/fixtures/parity/codex_shell.jsonl",
+			"copilot":  "tests/fixtures/parity/copilot_run.jsonl",
+			"opencode": "tests/fixtures/parity/opencode_bash.jsonl",
 		}
 
 		perCLI := make(map[string]map[string]bool, len(fixtures))
@@ -699,10 +723,7 @@ var _invINV32CrossCLIToolCallNameParity = &Invariant{
 	},
 }
 
-// _invINV31MCPNestedDepthNeverExceedsMax valida que eventos com kind nested_agent
-// têm depth ≤ AISPEC_MAX_AGENT_DEPTH em qualquer events.jsonl do snapshot.
-// Quando nenhum evento nested_agent existe, o invariante passa (safe-default).
-var _invINV31MCPNestedDepthNeverExceedsMax = &Invariant{
+var invINV31MCPNestedDepthNeverExceedsMax = &Invariant{
 	ID:          "INV-31",
 	Description: "mcp_nested_depth_never_exceeds_max: eventos nested_agent têm depth ≤ AISPEC_MAX_AGENT_DEPTH",
 	Level:       Common,
@@ -731,14 +752,7 @@ var _invINV31MCPNestedDepthNeverExceedsMax = &Invariant{
 
 // ── RF-19 — Fallback launcher chain ──────────────────────────────────────────
 
-// _invFB01FallbackLauncherChainDeclared verifica que o AGENTS.md referencia
-// agent-governance como base da governanca de execucao — pre-requisito estrutural
-// para o mecanismo de fallback launcher (ADR-017, RF-19).
-// O AGENTS.md gerado sempre inclui "agent-governance" como skill base; sua ausencia
-// indica que o template foi corrompido ou que o instalador nao gerou o artefato corretamente.
-// Paridade de argv direto vs. fallback (RF-19) e coberta pelos testes em parity_test.go
-// e e2e_parity_test.go usando probe.EnsureAvailable com LookPather fake.
-var _invFB01FallbackLauncherChainDeclared = &Invariant{
+var invFB01FallbackLauncherChainDeclared = &Invariant{
 	ID:          "FB01",
 	Description: "AGENTS.md referencia agent-governance — pre-requisito estrutural do fallback launcher (RF-19, ADR-017)",
 	Level:       Common,
@@ -757,10 +771,7 @@ var _invFB01FallbackLauncherChainDeclared = &Invariant{
 	},
 }
 
-// _invX02CompactProfileCodexOnly verifica que o profile compact e aplicado
-// automaticamente em instalacao Codex-only, removendo secoes verbose do AGENTS.md.
-// Detecta drift entre o AGENTS.md padrao (standard) e o compacto.
-var _invX02CompactProfileCodexOnly = &Invariant{
+var invX02CompactProfileCodexOnly = &Invariant{
 	ID:          "X02",
 	Description: "Profile compact e aplicado em instalacao Codex-only (sem secoes verbose)",
 	Level:       Common,

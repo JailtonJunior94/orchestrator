@@ -9,11 +9,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
-	"strconv"
 	"strings"
 	"text/template"
 
+	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 )
 
@@ -214,7 +213,6 @@ func (c *Catalog) hasBlockingFinding(findings []Finding) bool {
 	return false
 }
 
-// parseReviewOutput extrai veredito e achados da saida bruta da skill review.
 func (c *Catalog) parseReviewOutput(raw string) FinalReviewResult {
 	return FinalReviewResult{
 		Verdict:   NewCatalog().parseVerdict(raw),
@@ -223,115 +221,21 @@ func (c *Catalog) parseReviewOutput(raw string) FinalReviewResult {
 	}
 }
 
-// _verdictLineRe casa uma linha dedicada de veredito do tipo
-// "Verdict: APPROVED_WITH_REMARKS" / "Veredito - REJECTED" / "**Veredito final:** APPROVED".
-// Ancora a deteccao em linha propria para evitar falso positivo quando o corpo
-// menciona palavras-chave (ex.: "CI was blocked earlier").
-var _verdictLineRe = regexp.MustCompile(`(?im)^\s*[*_>\s-]*(?:final\s+)?(?:verdict|veredic?to|vereditto|veredicto)(?:\s+final)?\s*[:\-–]\s*[*_` + "`" + `]*\s*(APPROVED_WITH_REMARKS|APPROVED WITH REMARKS|APPROVED|APROVADO\s+COM\s+RESSALVAS|APROVADO|REJECTED|REPROVADO|REJEITADO|BLOCKED|BLOQUEAD[OA])\b`)
-
-// parseVerdict extrai o veredito da saida bruta. Verifica do mais especifico ao mais geral.
 func (c *Catalog) parseVerdict(raw string) ReviewVerdict {
-	if m := _verdictLineRe.FindStringSubmatch(raw); len(m) > 1 {
-		token := strings.ToUpper(strings.Join(strings.Fields(m[1]), " "))
-		switch {
-		case strings.HasPrefix(token, "APPROVED_WITH_REMARKS"),
-			strings.HasPrefix(token, "APPROVED WITH REMARKS"),
-			strings.HasPrefix(token, "APROVADO COM RESSALVAS"):
-			return VerdictApprovedWithRemarks
-		case strings.HasPrefix(token, "BLOCKED"), strings.HasPrefix(token, "BLOQUEAD"):
-			return VerdictBlocked
-		case strings.HasPrefix(token, "REJECTED"), strings.HasPrefix(token, "REPROVADO"), strings.HasPrefix(token, "REJEITADO"):
-			return VerdictRejected
-		case strings.HasPrefix(token, "APPROVED"), strings.HasPrefix(token, "APROVADO"):
-			return VerdictApproved
-		}
-	}
-
-	lower := strings.ToLower(raw)
-
-	if NewCatalog().containsAnyPattern(lower,
-		"approved_with_remarks", "aprovado com ressalvas", "approved with remarks",
-		"approved_with_observations", "aprovado com observacoes", "aprovado com observações",
-		"approved with observations",
-	) {
-		return VerdictApprovedWithRemarks
-	}
-	if NewCatalog().containsAnyPattern(lower, "blocked", "bloqueado", "bloqueada") {
-		return VerdictBlocked
-	}
-	if NewCatalog().containsAnyPattern(lower, "rejected", "reprovado", "rejeitado") {
-		return VerdictRejected
-	}
-	if NewCatalog().containsAnyPattern(lower, "approved", "aprovado") {
-		return VerdictApproved
-	}
-	return VerdictBlocked
+	return ReviewVerdict(approval.NewTranslator().Translate(raw).String())
 }
 
-// parseFindings extrai achados individuais da saida bruta.
-// Reconhece marcadores [Critical], [Important], [Suggestion] e variantes PT-BR.
 func (c *Catalog) parseFindings(raw string) []Finding {
 	var findings []Finding
-	for _, line := range strings.Split(raw, "\n") {
-		sev, ok := NewCatalog().extractSeverity(line)
-		if !ok {
-			continue
-		}
-		file, lineNum := NewCatalog().extractFileLine(line)
+	for _, finding := range approval.ParseReviewFindings(raw) {
 		findings = append(findings, Finding{
-			Severity: sev,
-			File:     file,
-			Line:     lineNum,
-			Message:  strings.TrimSpace(line),
+			Severity: reverseSeverity(finding.Severity()),
+			File:     finding.File(),
+			Line:     finding.Line(),
+			Message:  finding.Description(),
 		})
 	}
 	return findings
-}
-
-// extractSeverity detecta severidade na linha. Retorna (severity, true) se encontrada.
-func (c *Catalog) extractSeverity(line string) (Severity, bool) {
-	lower := strings.ToLower(line)
-	switch {
-	case NewCatalog().containsAnyPattern(lower, "[critical]", "[critico]", "[crítico]"):
-		return SeverityCritical, true
-	case NewCatalog().containsAnyPattern(lower, "[high]", "[alta]", "[alto]"):
-		return SeverityCritical, true
-	case NewCatalog().containsAnyPattern(lower, "[important]", "[importante]"):
-		return SeverityImportant, true
-	case NewCatalog().containsAnyPattern(lower, "[suggestion]", "[sugestao]", "[sugestão]"):
-		return SeveritySuggestion, true
-	default:
-		return "", false
-	}
-}
-
-// extractFileLine tenta extrair arquivo e numero de linha de padroes como [file.go:42].
-func (c *Catalog) extractFileLine(line string) (file string, lineNum int) {
-	start := strings.Index(line, "[")
-	for start >= 0 {
-		end := strings.Index(line[start:], "]")
-		if end < 0 {
-			break
-		}
-		inner := line[start+1 : start+end]
-		if colon := strings.LastIndex(inner, ":"); colon > 0 {
-			candidate := inner[colon+1:]
-			n, err := strconv.Atoi(strings.TrimSpace(candidate))
-			if err == nil {
-				return strings.TrimSpace(inner[:colon]), n
-			}
-		}
-		start = start + end + 1
-		if start >= len(line) {
-			break
-		}
-		next := strings.Index(line[start:], "[")
-		if next < 0 {
-			break
-		}
-		start = start + next
-	}
-	return "", 0
 }
 
 // partitionDiff divide o diff em particoes que cabem em maxSize bytes.

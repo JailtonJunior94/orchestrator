@@ -251,3 +251,18 @@ func (s *FacadeSuite) TestBuildContextReportsBudgetByLayer() {
 	s.Positive(memCtx.BudgetByLayer["prd"])
 	s.GreaterOrEqual(memCtx.BuildLatencyMs, int64(0))
 }
+
+func (s *FacadeSuite) TestBuildContextReportsRecoveryLatencyDegradation() {
+	fsys := fs.NewFakeFileSystem()
+	layer := durable.NewLayerWithLocker(fsys, newInMemoryLayerLocker())
+	facade := durable.NewFacadeWithLayerAndLocker(fsys, layer, newInMemoryLayerLocker(), durable.FacadeConfig{
+		ProjectDir:           "/project",
+		TasksDir:             "/project/.specs/prd-x",
+		RecoveryLatencyLimit: time.Nanosecond,
+	})
+
+	context, err := facade.BuildContext(context.Background(), durable.MemoryScope{})
+
+	s.Require().NoError(err)
+	s.True(context.RecoveryDegraded)
+}

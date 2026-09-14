@@ -29,11 +29,12 @@ func acquireLayerLock(path string) (func() error, error) {
 			return nil, ErrLayerLocked
 		}
 	}
+	owner, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("durable: read acquired layer lock: %w", err)
+	}
 	return func() error {
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-			return fmt.Errorf("durable: release layer lock: %w", err)
-		}
-		return nil
+		return releaseLayerLockFile(path, owner)
 	}, nil
 }
 
@@ -72,6 +73,12 @@ func createLayerLockFile(path string) error {
 }
 
 func takeOverStaleLayerLock(path string) error {
+	return withLayerLockGuard(path, func() error {
+		return takeOverStaleLayerLockGuarded(path)
+	})
+}
+
+func takeOverStaleLayerLockGuarded(path string) error {
 	raw, ref, ok := readLayerLockRawWithRetry(path)
 	if !ok {
 		return removeLayerLockFileIfUnchanged(path, raw)
@@ -81,6 +88,54 @@ func takeOverStaleLayerLock(path string) error {
 		return ErrLayerLocked
 	}
 	return removeLayerLockFileIfUnchanged(path, raw)
+}
+
+func releaseLayerLockFile(path string, expected []byte) error {
+	return withLayerLockGuard(path, func() error {
+		current, err := os.ReadFile(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return fmt.Errorf("durable: read layer lock before release: %w", err)
+		}
+		if !bytes.Equal(current, expected) {
+			return ErrLayerLocked
+		}
+		tombstone, err := os.CreateTemp(filepath.Dir(path), ".lock-release-*")
+		if err != nil {
+			return fmt.Errorf("durable: create layer lock release tombstone: %w", err)
+		}
+		tombstonePath := tombstone.Name()
+		if err := tombstone.Close(); err != nil {
+			return fmt.Errorf("durable: close layer lock release tombstone: %w", err)
+		}
+		if err := os.Remove(tombstonePath); err != nil {
+			return fmt.Errorf("durable: prepare layer lock release tombstone: %w", err)
+		}
+		if err := os.Rename(path, tombstonePath); err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return fmt.Errorf("durable: move layer lock for release: %w", err)
+		}
+		if err := os.Remove(tombstonePath); err != nil {
+			return fmt.Errorf("durable: release layer lock: %w", err)
+		}
+		return nil
+	})
+}
+
+func withLayerLockGuard(path string, operation func() error) error {
+	guardPath := path + ".guard"
+	if err := createLayerLockFile(guardPath); err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return ErrLayerLocked
+		}
+		return fmt.Errorf("durable: acquire layer lock guard: %w", err)
+	}
+	defer func() { _ = os.Remove(guardPath) }()
+	return operation()
 }
 
 var readLayerLockRawHook = readLayerLockRaw

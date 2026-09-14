@@ -551,11 +551,18 @@ func TestInstallCopiesInvocationDepthGuard(t *testing.T) {
 }
 
 // completeTaskReport e um relatorio de tarefa com todas as secoes e padroes obrigatorios.
-const completeTaskReport = `# Relatorio de Execucao
+const completeTaskReport = `<!-- evidence-contract: v2 -->
+# Relatorio de Execucao
 
 PRD: docs/prd.md
 TechSpec: docs/techspec.md
 RF-01: requisito implementado
+
+## Tarefa
+
+- ID: 1.0
+- Arquivo: ARQUIVO_PLACEHOLDER
+- Estado: done
 
 ## Contexto Carregado
 
@@ -583,12 +590,34 @@ Nenhuma.
 ## Riscos Residuais
 
 Nenhum.
+
+## Criterios de Aceite
+
+- Criterio um funciona. -> comprovado: go test ./internal/service -count=1 -> ok internal/service 0.4s
+
+## Diff Reviewed
+
+sha=0000000000000000000000000000000000000000000000000000000000000000
+verdict=APPROVED
+tool=claude
+
+## Coverage
+
+package=internal/service
+delta=+1.0%
 `
 
 // TestValidateEvidenceCommand verifica a logica do subcomando validate-evidence:
 // relatorio completo → Pass=true (exit 0); relatorio incompleto → Pass=false (exit 1).
 func TestValidateEvidenceCommand(t *testing.T) {
-	result := evidence.NewValidator().Validate([]byte(completeTaskReport), evidence.KindTask, nil)
+	tmpDir := t.TempDir()
+	taskPath := filepath.Join(tmpDir, "task-1.0.md")
+	mustWriteFile(t, taskPath, "# Tarefa 1.0\n\n## Criterios de Sucesso\n\n- [ ] Criterio um funciona.\n")
+	report := strings.ReplaceAll(completeTaskReport, "ARQUIVO_PLACEHOLDER", taskPath)
+	reportPath := filepath.Join(tmpDir, "1.0_execution_report.md")
+	mustWriteFile(t, reportPath, report)
+
+	result := evidence.NewValidator().ValidateReport([]byte(report), reportPath, evidence.KindTask, nil)
 	if !result.Pass {
 		var labels []string
 		for _, f := range result.Findings {
@@ -597,8 +626,8 @@ func TestValidateEvidenceCommand(t *testing.T) {
 		t.Errorf("relatorio completo deveria ser aprovado, findings: %v", labels)
 	}
 
-	incomplete := strings.ReplaceAll(completeTaskReport, "## Riscos Residuais\n\nNenhum.\n", "")
-	result = evidence.NewValidator().Validate([]byte(incomplete), evidence.KindTask, nil)
+	incomplete := strings.ReplaceAll(report, "## Riscos Residuais\n\nNenhum.\n", "")
+	result = evidence.NewValidator().ValidateReport([]byte(incomplete), reportPath, evidence.KindTask, nil)
 	if result.Pass {
 		t.Error("relatorio incompleto deveria ser reprovado")
 	}

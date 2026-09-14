@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/agents"
-	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
@@ -290,18 +289,17 @@ func (s *Service) Execute(opts Options) error {
 		executorTool = opts.Profiles.Executor.Tool()
 	}
 
+	resolvedRC, rcErr := NewCatalog().resolveRuntimeConfig(absFolder, NewCatalog().optionsToConfigOverrides(opts))
+	if rcErr != nil {
+		return fmt.Errorf("taskloop: wiring RuntimeConfig: %w", rcErr)
+	}
+	opts = NewCatalog().applyResolvedMaxBugfixIterations(opts, resolvedRC)
+
 	var invoker AgentInvoker
 	if opts.Runtime == "acp" {
 		if s.acpInvokerFactory != nil {
 			invoker = s.acpInvokerFactory(opts)
 		} else {
-
-			resolvedRC, rcErr := NewCatalog().resolveRuntimeConfig(absFolder, NewCatalog().optionsToConfigOverrides(opts))
-			if rcErr != nil {
-				return fmt.Errorf("taskloop: wiring RuntimeConfig: %w", rcErr)
-			}
-			opts = NewCatalog().applyResolvedMaxBugfixIterations(opts, resolvedRC)
-
 			spec, specErr := NewCatalog().resolveACPSpec(executorTool)
 			if specErr != nil {
 				return fmt.Errorf("taskloop: resolver spec ACP: %w", specErr)
@@ -582,21 +580,28 @@ func (s *Service) Execute(opts Options) error {
 				return fmt.Errorf("erro ao capturar snapshot de isolamento do reviewer na task %s: %w", task.ID, err)
 			}
 
-			var cycleCriteria []approval.AcceptanceCriterion
-			if taskFileContent, readErr := s.fsys.ReadFile(taskFile); readErr == nil {
-				cycleCriteria, _ = acceptanceCriteriaFromTaskFile(taskFileContent)
+			cycleCriteria, criteriaErr := s.resolveCycleCriteria(taskFile)
+			if criteriaErr != nil {
+				iterResult.PostStatus = statusNeedsInput
+				iterResult.Note = NewCatalog().appendNote(iterResult.Note, criteriaErr.Error())
+				iterResult.ReviewResult = &ReviewResult{ExitCode: 1, Note: criteriaErr.Error()}
+				s.printer.Error("iteracao %d: %s", iteration, criteriaErr.Error())
+				if err := NewCatalog().forceTaskStatus(absFolder, taskFile, task.ID, statusNeedsInput, s.fsys); err != nil {
+					return err
+				}
+				report.Iterations = append(report.Iterations, iterResult)
+				report.StopReason = fmt.Sprintf("abortado: %s", criteriaErr.Error())
+				report.FinalTasks = NewCatalog().reloadFinalTasks(absFolder, tasks, s.fsys)
+				break
 			}
-			if len(cycleCriteria) > 0 {
-				cycleCtx, cycleCancel := context.WithTimeout(context.Background(), opts.Timeout)
-				review, bugfix := s.conductApprovalCycle(cycleCtx, opts, task, cycleCriteria, relTaskFile, relPRD, workDir)
-				cycleCancel()
-				cycleConducted = true
-				iterResult.ReviewResult = review
-				iterResult.BugfixResult = bugfix
-			}
-			if !cycleConducted {
-				iterResult.ReviewResult = s.invokeReviewer(opts, relTaskFile, relPRD, workDir, task.ID, report.Iterations)
-			}
+
+			cycleCtx, cycleCancel := context.WithTimeout(context.Background(), opts.Timeout)
+			review, bugfix := s.conductApprovalCycle(cycleCtx, opts, task, cycleCriteria, relTaskFile, relPRD, workDir)
+			cycleCancel()
+			cycleConducted = true
+			iterResult.ReviewResult = review
+			iterResult.BugfixResult = bugfix
+
 			reviewIsolationErr := NewCatalog().validateReviewerIsolation(reviewSnapshot, absFolder, task.ID, taskFile, s.fsys)
 			if reviewIsolationErr != nil {
 				if restoreErr := NewCatalog().restoreTaskIsolationSnapshotAt(reviewSnapshot, absFolder, s.fsys); restoreErr != nil {
@@ -616,6 +621,15 @@ func (s *Service) Execute(opts Options) error {
 					}
 				}
 				break
+			}
+
+			if review != nil && !review.CycleApproved {
+				iterResult.PostStatus = statusBlocked
+				iterResult.Note = NewCatalog().appendNote(iterResult.Note,
+					fmt.Sprintf("ciclo de aprovacao encerrado sem APPROVED (%s): status forcado para blocked (RF-36)", review.CycleStopReason))
+				if err := NewCatalog().forceTaskStatus(absFolder, taskFile, task.ID, statusBlocked, s.fsys); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -677,62 +691,6 @@ func (s *Service) Execute(opts Options) error {
 	s.printer.Info("relatorio salvo em: %s", opts.ReportPath)
 
 	return nil
-}
-
-func (s *Service) invokeReviewer(opts Options, relTaskFile, relPRD, workDir, taskID string, iterations []IterationResult) *ReviewResult {
-	reviewerInvoker, err := s.createInvokerWithFallback(
-		opts.Profiles.Reviewer.Tool(),
-		opts.ReviewerFallbackModel,
-	)
-	if err != nil {
-		return &ReviewResult{
-			Note: fmt.Sprintf("erro ao criar invoker do reviewer: %v", err),
-		}
-	}
-
-	diff := NewCatalog().captureGitDiff(context.Background(), workDir)
-	reviewPrompt, promptErr := NewCatalog().BuildReviewPrompt(
-		opts.ReviewerPromptTemplate,
-		ReviewTemplateData{
-			TaskFile:       relTaskFile,
-			PRDFolder:      relPRD,
-			TechSpec:       filepath.Join(relPRD, "techspec.md"),
-			TasksFile:      filepath.Join(relPRD, "tasks.md"),
-			Diff:           diff,
-			CompletedTasks: NewCatalog().formatCompletedTasks(iterations, taskID),
-			RiskAreas:      NewCatalog().detectRiskAreas(relPRD, workDir, diff, s.fsys),
-		},
-		s.fsys,
-	)
-	if promptErr != nil {
-		return &ReviewResult{
-			Note: fmt.Sprintf("erro ao construir prompt de revisao: %v", promptErr),
-		}
-	}
-
-	rctx, rcancel := context.WithTimeout(context.Background(), opts.Timeout)
-	rStart := time.Now()
-	rStdout, _, rExitCode, rErr := reviewerInvoker.Invoke(
-		rctx,
-		reviewPrompt,
-		workDir,
-		opts.Profiles.Reviewer.Model(),
-	)
-	rElapsed := time.Since(rStart)
-	rcancel()
-
-	reviewResult := &ReviewResult{
-		Duration: rElapsed,
-		ExitCode: rExitCode,
-		Output:   rStdout,
-	}
-	if rErr != nil {
-		reviewResult.Note = fmt.Sprintf("erro de invocacao do reviewer: %v", rErr)
-	} else if rExitCode != 0 {
-		reviewResult.Note = "reviewer reportou problemas criticos"
-	}
-
-	return reviewResult
 }
 
 func (s *Service) invokeBugfix(opts Options, relTaskFile, relPRD, workDir, reviewFindings, diff string) *BugfixResult {

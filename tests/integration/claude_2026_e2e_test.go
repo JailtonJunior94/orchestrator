@@ -563,7 +563,7 @@ func TestClaudeGovernanceHookBlockingE2E(t *testing.T) {
 //   - Summary.ReviewStatus == "blocked"
 //   - Summary.ReviewPath != "" (review.md criado)
 //
-// Usa reviewOutputFn injetado para simular output do review sem spawn ACP real.
+// A sessao de revisao roda de fato sobre o transporte acpfake; o veredito vem do transcript.
 func TestClaudeAutoReviewBlocksOnHardIssueE2E(t *testing.T) {
 	t.Parallel()
 
@@ -575,23 +575,13 @@ func TestClaudeAutoReviewBlocksOnHardIssueE2E(t *testing.T) {
 		AppendAgentMessage("tarefa com código suspeito").
 		AppendToolCall("tc-bash-5", "bash").
 		AppendToolCallUpdate("tc-bash-5", "completed").
-		AppendAgentMessage("tarefa concluída").
+		AppendAgentMessage("Verdict: BLOCKED").
+		AppendAgentMessage("[HARD] eval() detected — uso de eval() é proibido por segurança").
 		AppendSessionEnd()
 
 	pfact, persist := newE2EPersistenceFactory()
 
-	// Injetar reviewOutputFn que retorna output com [HARD] (simula review session).
-	reviewFn := airuntime.ReviewOutputFn(func(_ context.Context, childJob airuntime.Job) (string, error) {
-		// HARD verificado: child Job não deve ter AutoReview=true (anti-recursão).
-		if childJob.AutoReview {
-			t.Errorf("T-INT-05: child Job.AutoReview=true — recursão não bloqueada (HARD violado)")
-		}
-		return "Verdict: BLOCKED\n\n[HARD] eval() detected — uso de eval() é proibido por segurança", nil
-	})
-
-	runner := buildE2ERunner(t, ctx, script, pfact, airuntime.NewCatalog().
-		WithReviewOutputFn(reviewFn),
-	)
+	runner := buildE2ERunner(t, ctx, script, pfact)
 
 	// Criar AGENTS.md + skill de review mínima para o governance hook + readReviewSkill.
 	workDir := workDirWithAgentsMD(t)
@@ -663,7 +653,7 @@ func TestClaudeAutoReviewBlocksOnHardIssueE2E(t *testing.T) {
 //   - F4: métricas Claude-2026 acumuladas (ExtractClaudeMetrics via raw payload)
 //   - F5: auto-review executado (AutoReview=true, ReviewStatus != "")
 //
-// Usa acpfake para simular ACP sem binários externos e reviewOutputFn para simular review.
+// Usa acpfake para simular ACP sem binários externos; a revisao roda como sessao real sobre o fake.
 // Critério de sucesso: sessão completa sem erro; todos os 5 indicadores verificados.
 func TestClaudeCrossWaveSmokeE2E(t *testing.T) {
 	t.Parallel()
@@ -678,7 +668,8 @@ func TestClaudeCrossWaveSmokeE2E(t *testing.T) {
 		AppendToolCallUpdate("tc-bash-cross", "completed").
 		AppendToolCall("tc-read-cross", "read_file").
 		AppendToolCallUpdate("tc-read-cross", "completed").
-		AppendAgentMessage("sessao cross-wave concluida").
+		AppendAgentMessage("Verdict: APPROVED").
+		AppendAgentMessage("Nenhuma issue critica encontrada.").
 		AppendSessionEnd()
 
 	pfact, persist := newE2EPersistenceFactory()
@@ -686,18 +677,8 @@ func TestClaudeCrossWaveSmokeE2E(t *testing.T) {
 	// F2: MCP server mock para confirmar spawn.
 	mockMCP := &e2eMockMCPServer{}
 
-	// F5: reviewOutputFn que retorna "ok" (sem HARD issues).
-	reviewFn := airuntime.ReviewOutputFn(func(_ context.Context, childJob airuntime.Job) (string, error) {
-		// HARD: child Job nao deve ter AutoReview=true (anti-recursao F5).
-		if childJob.AutoReview {
-			t.Errorf("T-INT-06: child Job.AutoReview=true — recursao F5 nao bloqueada (HARD violado)")
-		}
-		return "Verdict: APPROVED\n\nNenhuma issue critica encontrada.", nil
-	})
-
 	runner := buildE2ERunner(t, ctx, script, pfact, airuntime.NewCatalog().
-		WithMCPServer(mockMCP), airuntime.NewCatalog().
-		WithReviewOutputFn(reviewFn),
+		WithMCPServer(mockMCP),
 	)
 
 	// F3: WorkDir com AGENTS.md (governance hook) + TasksDir com memory/.
@@ -771,9 +752,9 @@ func TestClaudeCrossWaveSmokeE2E(t *testing.T) {
 		t.Error("T-INT-06 F5: ReviewStatus vazio — auto-review nao foi executado")
 	}
 
-	// F5 — review ok pois reviewFn retornou APPROVED sem [HARD].
+	// F5 — review ok pois a sessao de revisao registrou APPROVED sem [HARD].
 	if summary.ReviewStatus != "ok" {
-		t.Errorf("T-INT-06 F5: ReviewStatus = %q, quero ok (reviewFn retornou APPROVED)", summary.ReviewStatus)
+		t.Errorf("T-INT-06 F5: ReviewStatus = %q, quero ok (sessao de revisao registrou APPROVED)", summary.ReviewStatus)
 	}
 
 	// Criterio de integracao: sessao completou com todos os campos esperados.

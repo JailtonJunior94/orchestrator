@@ -29,6 +29,8 @@ const (
 	_reviewDiffMaxBytes = 5 * 1024 * 1024
 
 	envReviewPriorSHA = "AI_REVIEW_PRIOR_SHA"
+
+	roundReviewEvidenceFile = "review.md"
 )
 
 // ReviewResult agrega o resultado do auto-review.
@@ -53,21 +55,6 @@ func (c *Catalog) buildReviewPrompt(skillBody, gitDiff string) string {
 			"Para issues `hard`/`CRÍTICO`/`BLOQUEADO`, prefixar a linha com [HARD].\n",
 		skillBody, gitDiff,
 	)
-}
-
-// parseReviewStatus analisa a saída do review e retorna "blocked" ou "ok".
-// Regras (documentadas aqui por legibilidade — não duplicar no caller):
-//   - Contém "[HARD]"    → blocked (marcador explícito de issue hard)
-//   - Contém "BLOQUEADO" → blocked (português; paridade Compozy review)
-//   - Contém "CRÍTICO"   → blocked (sinônimo de hard em PT-BR)
-//   - Caso contrário     → ok
-func (c *Catalog) parseReviewStatus(reviewOutput string) string {
-	if strings.Contains(reviewOutput, "[HARD]") ||
-		strings.Contains(reviewOutput, "BLOQUEADO") ||
-		strings.Contains(reviewOutput, "CRÍTICO") {
-		return "blocked"
-	}
-	return "ok"
 }
 
 // extractHardIssues retorna as linhas do review output que contêm marcadores críticos.
@@ -139,8 +126,6 @@ func (c *Catalog) runGitDiff(workDir string, args ...string) (string, error) {
 	return out.String(), nil
 }
 
-// autoReviewOutputFn é injetável para testes (evitar spawn real de ACPRunner em testes unitários).
-// Em produção é nil; em testes pode ser substituída via campo do runner (não exposto — testado via mock).
 type autoReviewOutputFn func(ctx context.Context, j Job) (string, error)
 
 func (r *ACPRunner) runAutoReview(ctx context.Context, j Job) (ReviewResult, error) {
@@ -160,7 +145,8 @@ func (r *ACPRunner) runAutoReviewRound(ctx context.Context, j Job, round int, pr
 	gitDiff := NewCatalog().collectGitDiff(j.WorkDir)
 	prompt := NewCatalog().buildReviewPrompt(skillBody, gitDiff)
 
-	reviewEvidenceDir := NewCatalog().roundReviewEvidenceDir(j.EvidenceDir, round)
+	evidenceWriter := NewRoundEvidenceWriter(j.EvidenceDir)
+	reviewEvidenceDir := evidenceWriter.Dir(round)
 
 	childJob := Job{
 		Prompt:      prompt,
@@ -184,7 +170,7 @@ func (r *ACPRunner) runAutoReviewRound(ctx context.Context, j Job, round int, pr
 	status := NewCatalog().translateReviewStatus(reviewOutput)
 	hardIssues := NewCatalog().extractHardIssues(reviewOutput)
 
-	evidencePath, writeErr := NewCatalog().writeRoundReviewEvidence(reviewEvidenceDir, reviewOutput)
+	evidencePath, writeErr := evidenceWriter.Write(round, reviewOutput)
 	if writeErr != nil {
 		return ReviewResult{}, writeErr
 	}
@@ -205,7 +191,7 @@ func (c *Catalog) writeRoundReviewEvidence(roundDir, content string) (string, er
 	if err := os.MkdirAll(roundDir, 0o755); err != nil {
 		return "", fmt.Errorf("write round review evidence: %w", err)
 	}
-	path := filepath.Join(roundDir, "review.md")
+	path := filepath.Join(roundDir, roundReviewEvidenceFile)
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o644)
 	if err != nil {
 		return "", fmt.Errorf("write round review evidence at %q: %w", path, err)
@@ -336,16 +322,4 @@ func (f *reviewCaptureFactory) New(evidenceDir string) (Persistence, error) {
 func (c *Catalog) mustReviewTimeout() events.ActivityTimeout {
 	t, _ := events.NewActivityTimeout(5 * time.Minute)
 	return t
-}
-
-// ParseReviewStatusForTest expõe parseReviewStatus para testes externos.
-// Não usar em produção.
-func (c *Catalog) ParseReviewStatusForTest(output string) string {
-	return NewCatalog().parseReviewStatus(output)
-}
-
-// BuildReviewPromptForTest expõe buildReviewPrompt para testes externos.
-// Não usar em produção.
-func (c *Catalog) BuildReviewPromptForTest(skillBody, gitDiff string) string {
-	return NewCatalog().buildReviewPrompt(skillBody, gitDiff)
 }

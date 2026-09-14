@@ -185,7 +185,11 @@ func TestE2E_ReadOnlyDir_InstallFails(t *testing.T) {
 	if err := os.Chmod(projectDir, 0o555); err != nil {
 		t.Fatalf("chmod 555: %v", err)
 	}
-	t.Cleanup(func() { os.Chmod(projectDir, 0o755) })
+	t.Cleanup(func() {
+		if err := os.Chmod(projectDir, 0o755); err != nil {
+			t.Errorf("restore permissions: %v", err)
+		}
+	})
 
 	fsys := fs.NewOSFileSystem()
 	err := newInstallSvc(fsys).Execute(config.InstallOptions{
@@ -241,7 +245,11 @@ func TestE2E_DoctorOnValidInstall_PassesPermissionsCheck(t *testing.T) {
 	if err := os.Chmod(projectDir, 0o555); err != nil {
 		t.Fatalf("chmod 555: %v", err)
 	}
-	t.Cleanup(func() { os.Chmod(projectDir, 0o755) })
+	t.Cleanup(func() {
+		if err := os.Chmod(projectDir, 0o755); err != nil {
+			t.Errorf("restore permissions: %v", err)
+		}
+	})
 
 	if fsys.Writable(projectDir) {
 		t.Error("projectDir nao deve ser gravavel apos chmod 555")

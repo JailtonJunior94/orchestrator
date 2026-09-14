@@ -1,10 +1,12 @@
 package aispecharness
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/wrapper"
 	"github.com/spf13/cobra"
 )
@@ -37,8 +39,14 @@ Exemplos:
 			tool := args[0]
 			skill := args[1]
 
-			// Valida ferramenta antes de qualquer coisa
 			if !wrapper.ValidTools[tool] {
+				if _, resolveErr := skills.NewCatalog().ResolveTool(tool); resolveErr != nil {
+					var removed *skills.RemovedAgentError
+					if errors.As(resolveErr, &removed) {
+						fmt.Fprintln(os.Stderr, "Erro:", removed)
+						return newExitError(2)
+					}
+				}
 				fmt.Fprintf(os.Stderr, "Erro: ferramenta invalida %q — tools aceitos: codex, copilot\n", tool)
 				return newExitError(2)
 			}

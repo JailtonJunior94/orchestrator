@@ -71,5 +71,7 @@ type Job struct {
 
 	WindowClass specs.WindowClass
 
+	WindowMaxTokens int
+
 	AutoReview bool
 }

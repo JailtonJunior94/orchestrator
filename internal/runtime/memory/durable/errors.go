@@ -4,6 +4,7 @@ import "errors"
 
 var (
 	ErrSemanticKeyMissing        = errors.New("durable: semantic key missing")
+	ErrContentHashMissing        = errors.New("durable: content hash missing")
 	ErrDurabilityMissing         = errors.New("durable: durability missing")
 	ErrSecretNotRedactable       = errors.New("durable: sensitive content not isolable")
 	ErrPromotionWithoutMark      = errors.New("durable: promotion requires explicit mark")

@@ -335,43 +335,6 @@ description: Revisa codigo.
 
 func TestDefaultHookConfigsUseOfficialSchemas(t *testing.T) {
 	t.Parallel()
-	expectedCodex := `{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash|apply_patch|edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .codex/hooks/validate-preload.sh"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "apply_patch|edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .codex/hooks/validate-governance.sh"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .codex/hooks/validate-session-end.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-`
 	expectedCopilot := `{
   "version": 1,
   "hooks": {
@@ -394,7 +357,7 @@ func TestDefaultHookConfigsUseOfficialSchemas(t *testing.T) {
       },
       {
         "type": "command",
-        "bash": "bash .github/hooks/validate-session-end.sh"
+        "bash": "AISPEC_HOOK_DECISION_OUTPUT=json bash .github/hooks/validate-session-end.sh"
       }
     ]
   }
@@ -407,7 +370,6 @@ func TestDefaultHookConfigsUseOfficialSchemas(t *testing.T) {
 		got  string
 		want string
 	}{
-		{name: "codex", got: helpers.defaultCodexHooks(), want: expectedCodex},
 		{name: "copilot", got: helpers.defaultCopilotHooks(), want: expectedCopilot},
 	}
 	for _, tc := range cases {
@@ -2203,8 +2165,6 @@ func TestSpecForTool_Unknown(t *testing.T) {
 	}
 }
 
-// TestInstall_Copilot_NativeHooks verifica que install do Copilot gera governance.json
-// no formato nativo 2026 (version:1, hooks.preToolUse/postToolUse/stop).
 func TestInstall_Copilot_NativeHooks(t *testing.T) {
 	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
@@ -2221,20 +2181,83 @@ func TestInstall_Copilot_NativeHooks(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	data, err := ffs.ReadFile("/project/.github/hooks/governance.json")
+	data, err := ffs.ReadFile("/project/.github/settings.json")
 	if err != nil {
-		t.Fatalf(".github/hooks/governance.json nao criado: %v", err)
+		t.Fatalf(".github/settings.json nao criado: %v", err)
 	}
 	content := string(data)
-	for _, want := range []string{`"version": 1`, `"hooks"`, "preToolUse", "agentStop", "validate-preload.sh"} {
+	for _, want := range []string{`"hooks"`, "preToolUse", "agentStop", "validate-preload.sh"} {
 		if !strings.Contains(content, want) {
-			t.Errorf(".github/hooks/governance.json sem %q", want)
+			t.Errorf(".github/settings.json sem %q", want)
 		}
+	}
+	if !ffs.Exists("/project/.github/hooks/governance.json") {
+		t.Error(".github/hooks/governance.json deve permanecer para compatibilidade")
 	}
 }
 
-// TestInstall_Codex_NativeHooksAndSandbox verifica que install do Codex gera hooks.json
-// e que config.toml inclui sandbox_mode/approval_policy (suplemento da lacuna de route-around).
+func TestInstall_Copilot_MergesRepositorySettings(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	ffs.Files["/project/.github/settings.json"] = []byte(`{
+  "custom": {"preserved": true},
+  "hooks": {
+    "preToolUse": [{"type": "command", "bash": "bash user-hook.sh"}]
+  }
+}`)
+	svc := setupTestService(ffs)
+
+	if err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolCopilot},
+		LinkMode:   skills.LinkCopy,
+	}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	data, err := ffs.ReadFile("/project/.github/settings.json")
+	if err != nil {
+		t.Fatalf("read settings: %v", err)
+	}
+	var settings map[string]any
+	if err := json.Unmarshal(data, &settings); err != nil {
+		t.Fatalf("parse settings: %v", err)
+	}
+	if settings["custom"] == nil {
+		t.Fatal("custom repository setting was not preserved")
+	}
+	hooks := settings["hooks"].(map[string]any)
+	preTool := hooks["preToolUse"].([]any)
+	if len(preTool) != 2 {
+		t.Fatalf("preToolUse hooks: got %d, want 2", len(preTool))
+	}
+	if _, ok := hooks["postToolUse"]; !ok {
+		t.Fatal("postToolUse hook was not added")
+	}
+	if _, ok := hooks["agentStop"]; !ok {
+		t.Fatal("agentStop hook was not added")
+	}
+
+	if err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolCopilot},
+		LinkMode:   skills.LinkCopy,
+	}); err != nil {
+		t.Fatalf("second install: %v", err)
+	}
+	data, err = ffs.ReadFile("/project/.github/settings.json")
+	if err != nil {
+		t.Fatalf("read settings after second install: %v", err)
+	}
+	if strings.Count(string(data), "validate-preload.sh") != 1 {
+		t.Fatalf("repository settings duplicated the preload hook: %s", data)
+	}
+}
+
 func TestInstall_Codex_NativeHooksAndSandbox(t *testing.T) {
 	t.Parallel()
 	ffs := fs.NewFakeFileSystem()
@@ -2252,12 +2275,8 @@ func TestInstall_Codex_NativeHooksAndSandbox(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	hooks, err := ffs.ReadFile("/project/.codex/hooks.json")
-	if err != nil {
-		t.Fatalf(".codex/hooks.json nao criado: %v", err)
-	}
-	if !strings.Contains(string(hooks), "PreToolUse") {
-		t.Error(".codex/hooks.json sem PreToolUse")
+	if ffs.Exists("/project/.codex/hooks.json") {
+		t.Fatal(".codex/hooks.json legado nao deve coexistir com config.toml")
 	}
 
 	cfg, err := ffs.ReadFile("/project/.codex/config.toml")
@@ -2265,7 +2284,7 @@ func TestInstall_Codex_NativeHooksAndSandbox(t *testing.T) {
 		t.Fatalf(".codex/config.toml nao criado: %v", err)
 	}
 	cfgStr := string(cfg)
-	for _, want := range []string{"sandbox_mode", "approval_policy", "[[hooks.PreToolUse]]", "[[hooks.PostToolUse]]"} {
+	for _, want := range []string{"sandbox_mode", "approval_policy", "[[hooks.PreToolUse]]", "[[hooks.PostToolUse]]", "[[hooks.Stop]]"} {
 		if !strings.Contains(cfgStr, want) {
 			t.Errorf(".codex/config.toml sem %q", want)
 		}

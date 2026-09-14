@@ -1,3 +1,4 @@
+<!-- evidence-contract: v2 -->
 # Relatório de Execução de Tarefa
 
 ## Tarefa

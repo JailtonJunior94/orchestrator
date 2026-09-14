@@ -63,7 +63,7 @@ func TestReviewerPortTranslatesCallAndReturnsRawText(t *testing.T) {
 		Findings:  []Finding{{Severity: SeverityCritical, File: "a.go", Line: 10, Message: "boom"}},
 	}}}
 
-	port := newReviewerPort(reviewer)
+	port := newReviewerPort(reviewer, nil)
 	request := newReviewRequestForPort(t, "diff --git a/a.go b/a.go", "builds green", "tests pass")
 
 	output, err := port.Review(context.Background(), request)
@@ -88,8 +88,8 @@ func TestReviewerPortTranslatesCallAndReturnsRawText(t *testing.T) {
 }
 
 func TestReviewerPortCriteriaMapReachesComplete(t *testing.T) {
-	reviewer := &stubFinalReviewer{results: []FinalReviewResult{{RawOutput: "Verdict: APPROVED\n"}}}
-	port := newReviewerPort(reviewer)
+	reviewer := &stubFinalReviewer{results: []FinalReviewResult{{RawOutput: "Verdict: APPROVED\n\n## Mapa de Critérios de Aceite\n- [atendido] criterion one -> go test ./... -> PASS\n- [atendido] criterion two -> TestCriteria -> PASS\n"}}}
+	port := newReviewerPort(reviewer, nil)
 	request := newReviewRequestForPort(t, "diff", "criterion one", "criterion two")
 
 	output, err := port.Review(context.Background(), request)
@@ -108,12 +108,24 @@ func TestReviewerPortCriteriaMapReachesComplete(t *testing.T) {
 	}
 }
 
+func TestReviewerPortRejectsApprovedOutputWithoutCriteriaEvidence(t *testing.T) {
+	port := newReviewerPort(&stubFinalReviewer{results: []FinalReviewResult{{RawOutput: "Verdict: APPROVED\n"}}}, nil)
+
+	output, err := port.Review(context.Background(), newReviewRequestForPort(t, "diff", "criterion one"))
+	if err != nil {
+		t.Fatalf("Review: %v", err)
+	}
+	if output.CriteriaMap().Complete() {
+		t.Fatal("missing criteria evidence map must not produce an approval proof")
+	}
+}
+
 func TestReviewerPortDefaultsMissingFindingFile(t *testing.T) {
 	reviewer := &stubFinalReviewer{results: []FinalReviewResult{{
 		RawOutput: "Verdict: REJECTED\n",
 		Findings:  []Finding{{Severity: SeverityImportant, Message: "no file"}},
 	}}}
-	port := newReviewerPort(reviewer)
+	port := newReviewerPort(reviewer, nil)
 
 	output, err := port.Review(context.Background(), newReviewRequestForPort(t, "diff", "c1"))
 	if err != nil {

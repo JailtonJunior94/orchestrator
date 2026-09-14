@@ -16,12 +16,13 @@ func newValidateEvidenceCmd() *cobra.Command {
 		Short: "Valida um relatorio de evidencia Markdown",
 		Long: `Valida um relatorio de evidencia Markdown conforme o tipo informado.
 
-Tipos validos: task, bugfix, refactor
+Tipos validos: task, bugfix, refactor, review
 
 Exemplos:
   ai-spec validate-evidence task relatorio-execucao.md
   ai-spec validate-evidence bugfix bugfix-report.md --rf RF-01 --rf RF-02
-  ai-spec validate-evidence refactor refactor-report.md`,
+  ai-spec validate-evidence refactor refactor-report.md
+  ai-spec validate-evidence review review.md`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			kindArg := args[0]
@@ -35,8 +36,10 @@ Exemplos:
 				kind = evidence.KindBugfix
 			case "refactor":
 				kind = evidence.KindRefactor
+			case "review":
+				kind = evidence.KindReview
 			default:
-				fmt.Fprintf(os.Stderr, "tipo invalido: %q. Use: task, bugfix, refactor\n", kindArg)
+				fmt.Fprintf(os.Stderr, "tipo invalido: %q. Use: task, bugfix, refactor, review\n", kindArg)
 				_ = cmd.Usage()
 				return newExitError(2)
 			}
@@ -47,7 +50,7 @@ Exemplos:
 				return newExitError(2)
 			}
 
-			result := evidence.NewValidator().Validate(content, kind, validateEvidenceRFIDs)
+			result := evidence.NewValidator().ValidateReport(content, filePath, kind, validateEvidenceRFIDs)
 
 			for _, f := range result.Findings {
 				fmt.Printf("FALTANDO: %s\n", f.Label)

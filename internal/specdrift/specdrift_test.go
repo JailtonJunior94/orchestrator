@@ -224,7 +224,7 @@ func TestCheckDrift_TechspecEmbeddedPRDHashDivergesFailsReport(t *testing.T) {
 
 	prdContent := "RF-01 required"
 	prdHash := hashOf([]byte(prdContent))
-	techspecContent := fmt.Sprintf("<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->\nRF-01 covered")
+	techspecContent := "<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->\nRF-01 covered"
 	techHash := hashOf([]byte(techspecContent))
 	tasksContent := fmt.Sprintf(
 		"RF-01 done.\n<!-- spec-hash-prd: %s -->\n<!-- spec-hash-techspec: %s -->",

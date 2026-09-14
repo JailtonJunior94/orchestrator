@@ -1,0 +1,5 @@
+{
+  "problem": "Existe uma unica variante estavel e a equipe quer evitar complexidade desnecessaria.",
+  "signals": ["prefer_direct_solution", "single_variant_only", "low_change_frequency"],
+  "constraints": ["team_needs_low_cognitive_load"]
+}

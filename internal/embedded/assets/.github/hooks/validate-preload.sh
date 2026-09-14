@@ -1,20 +1,18 @@
 #!/usr/bin/env bash
-# Hook de pre-execucao para GitHub Copilot CLI: bloqueia execucao sem preload de governanca.
-#
-# Uso: registrar em .github/copilot-instructions.md ou invocar manualmente antes
-# de cada sessao para garantir que AGENTS.md e agent-governance/SKILL.md estao
-# carregados no contexto:
-#
-#   bash .github/hooks/validate-preload.sh
-#
-# Unlock: exportar GOVERNANCE_PRELOAD_CONFIRMED=1 na sessao atual.
-# Consulte AGENTS.md para instrucoes completas de preload.
 
 set -euo pipefail
 
-if [[ "${GOVERNANCE_PRELOAD_CONFIRMED:-}" != "1" ]]; then
-  echo "ERRO: governanca nao carregada." >&2
-  echo "Execute: export GOVERNANCE_PRELOAD_CONFIRMED=1" >&2
-  echo "Consulte AGENTS.md para instrucoes completas." >&2
-  exit 1
+hook_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+project_root="${AGENTS_ROOT:-$(cd "$hook_dir/../.." && pwd)}"
+
+canonical="$project_root/.agents/hooks/validate-preload.sh"
+if [[ ! -f "$canonical" ]]; then
+  canonical="$(cd "$hook_dir/../.." && pwd)/.agents/hooks/validate-preload.sh"
 fi
+
+if [[ ! -f "$canonical" ]]; then
+  echo "ERRO: validador canonico .agents/hooks/validate-preload.sh ausente — rode 'ai-spec-harness install .'" >&2
+  exit 2
+fi
+
+exec env AGENTS_ROOT="$project_root" bash "$canonical" "$@"

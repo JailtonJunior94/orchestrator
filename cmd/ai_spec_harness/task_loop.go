@@ -177,11 +177,24 @@ Exemplos:
 				return fmt.Errorf("--reviewer-model requer --reviewer-tool")
 			}
 
+			if fallbackTool != "" {
+				if _, resolveErr := skills.NewCatalog().ResolveTool(fallbackTool); resolveErr != nil {
+					var removedErr *skills.RemovedAgentError
+					if errors.As(resolveErr, &removedErr) {
+						return removedErr
+					}
+					return fmt.Errorf("--fallback-tool invalido: %w", resolveErr)
+				}
+			}
+
 			if tool != "" && runtime == "legacy" && !taskloop.ValidTools[tool] {
 				if _, err := skills.NewCatalog().ResolveTool(tool); err != nil {
 					return err
 				}
-				return fmt.Errorf("ferramenta invalida %q — opcoes: claude, codex, copilot", tool)
+				if _, err := taskloop.NewAgentInvoker(tool); err != nil {
+					return err
+				}
+				return fmt.Errorf("ferramenta invalida %q — opcoes: claude, codex, copilot (opencode exige --runtime acp)", tool)
 			}
 
 			profiles, err := taskloop.NewCatalog().ResolveProfiles(tool, execTool, execModel, revTool, revModel)
@@ -246,7 +259,7 @@ Exemplos:
 
 func (c *taskLoopCommand) registerFlags(cmd *cobra.Command) {
 
-	cmd.Flags().String("tool", "", "Agente de IA: claude, codex, copilot, opencode (modo simples)")
+	cmd.Flags().String("tool", "", "Agente de IA: claude, codex, copilot (modo simples); opencode exige --runtime acp")
 	cmd.Flags().String("agent", "", "Nome do agente declarativo (AGENT.md); mutuamente exclusivo com --tool e --executor-tool")
 	cmd.Flags().Bool("dry-run", false, "Mostra o que seria executado sem invocar o agente")
 	cmd.Flags().Int("max-iterations", 20, "Limite maximo de iteracoes do loop")

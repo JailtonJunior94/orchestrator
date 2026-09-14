@@ -34,7 +34,7 @@ func TestCheckTraceabilityCmd(t *testing.T) {
 			prepare: func(t *testing.T, root string) {
 				writeTraceabilityFixture(t, root, "prd.md", "RF-01 deve existir.")
 				writeTraceabilityFixture(t, root, "tasks.md", "# Tasks\n\n## Cobertura de Requisitos\n\n| Tarefa | Requisitos cobertos |\n|---|---|\n| 1.0 | RF-01 |\n")
-				writeTraceabilityFixture(t, root, "1.0_execution_report.md", "# Report\n\n## Critérios de Aceite\n- criterio -> comprovado: log\n")
+				writeTraceabilityFixture(t, root, "1.0_execution_report.md", "# Report\n\n## Critérios de Aceite\n- criterio -> go test ./... -> PASS\n")
 			},
 			wantCode: 0,
 		},
@@ -43,7 +43,7 @@ func TestCheckTraceabilityCmd(t *testing.T) {
 			prepare: func(t *testing.T, root string) {
 				writeTraceabilityFixture(t, root, "prd.md", "RF-01 deve existir. RF-02 tambem.")
 				writeTraceabilityFixture(t, root, "tasks.md", "# Tasks\n\n## Cobertura de Requisitos\n\n| Tarefa | Requisitos cobertos |\n|---|---|\n| 1.0 | RF-01 |\n")
-				writeTraceabilityFixture(t, root, "1.0_execution_report.md", "# Report\n\n## Critérios de Aceite\n- criterio -> comprovado: log\n")
+				writeTraceabilityFixture(t, root, "1.0_execution_report.md", "# Report\n\n## Critérios de Aceite\n- criterio -> go test ./... -> PASS\n")
 			},
 			wantCode: 1,
 		},
@@ -52,7 +52,7 @@ func TestCheckTraceabilityCmd(t *testing.T) {
 			prepare: func(t *testing.T, root string) {
 				writeTraceabilityFixture(t, root, "prd.md", "RF-01 deve existir.")
 				writeTraceabilityFixture(t, root, "tasks.md", "# Tasks\n\n## Cobertura de Requisitos\n\n| Tarefa | Requisitos cobertos |\n|---|---|\n| 1.0 | RF-01 |\n")
-				writeTraceabilityFixture(t, root, "1.0_execution_report.md", "# Report\n\n## Critérios de Aceite\n- criterio sem seta\n")
+				writeTraceabilityFixture(t, root, "1.0_execution_report.md", "<!-- evidence-contract: v2 -->\n# Report\n\n## Critérios de Aceite\n- criterio sem seta\n")
 			},
 			wantCode: 1,
 		},

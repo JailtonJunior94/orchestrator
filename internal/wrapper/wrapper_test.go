@@ -202,4 +202,3 @@ func TestValidTools_ContainsExpected(t *testing.T) {
 		t.Error("claude should not be in ValidTools (uses hooks)")
 	}
 }
-

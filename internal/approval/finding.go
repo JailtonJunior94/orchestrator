@@ -2,8 +2,12 @@ package approval
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 )
+
+var findingLineSuffix = regexp.MustCompile(`^(.*[^:/\\]):(\d+)(?::\d+)?$`)
 
 type Severity int
 
@@ -27,8 +31,21 @@ const (
 type Finding struct {
 	severity    Severity
 	file        string
+	line        int
 	rule        string
 	description string
+}
+
+func splitFileLine(raw string) (string, int) {
+	match := findingLineSuffix.FindStringSubmatch(raw)
+	if match == nil {
+		return raw, 0
+	}
+	line, err := strconv.Atoi(match[2])
+	if err != nil || line <= 0 {
+		return raw, 0
+	}
+	return match[1], line
 }
 
 func NewFinding(severity Severity, file, rule, description string) (Finding, error) {
@@ -43,9 +60,14 @@ func NewFinding(severity Severity, file, rule, description string) (Finding, err
 	if r == "" {
 		return Finding{}, fmt.Errorf("%w: finding without rule identifier", ErrInvalidFinding)
 	}
+	path, line := splitFileLine(f)
+	if path == "" {
+		return Finding{}, fmt.Errorf("%w: finding without file", ErrInvalidFinding)
+	}
 	return Finding{
 		severity:    severity,
-		file:        f,
+		file:        path,
+		line:        line,
 		rule:        r,
 		description: strings.TrimSpace(description),
 	}, nil
@@ -106,6 +128,17 @@ func (f Finding) Severity() Severity {
 
 func (f Finding) File() string {
 	return f.file
+}
+
+func (f Finding) Line() int {
+	return f.line
+}
+
+func (f Finding) Location() string {
+	if f.line <= 0 {
+		return f.file
+	}
+	return fmt.Sprintf("%s:%d", f.file, f.line)
 }
 
 func (f Finding) Rule() string {

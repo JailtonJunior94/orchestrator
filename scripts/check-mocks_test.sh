@@ -29,7 +29,7 @@ if (
   exit 1
 fi
 
-grep -F '[HARD] mockery v3.7.4 falhou ao gerar os mocks; diagnostico:' "$output" >/dev/null
+grep -F '[HARD] mockery v3.8.0 falhou ao gerar os mocks; diagnostico:' "$output" >/dev/null
 grep -F 'erro de geracao simulado' "$output" >/dev/null
 [[ ! -s "$fixture/internal/example/mocks/mock.go" ]] || { echo "falha contaminou worktree" >&2; exit 1; }
 

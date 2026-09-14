@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 )
@@ -147,6 +148,14 @@ func (l *layer) Read(_ context.Context, scope Scope) ([]Fact, HumanBlock, error)
 	return active, human, nil
 }
 
+func (l *layer) ReadAll(_ context.Context, scope Scope) ([]Fact, HumanBlock, error) {
+	activePath, err := scope.activePath()
+	if err != nil {
+		return nil, HumanBlock{}, err
+	}
+	return l.readPage(activePath)
+}
+
 func (l *layer) Consolidate(_ context.Context, scope Scope, newFacts []Fact) (ConsolidationResult, error) {
 	for _, f := range newFacts {
 		if err := l.catalog.ValidateFact(f); err != nil {
@@ -224,6 +233,33 @@ func (l *layer) Archive(_ context.Context, scope Scope, ids []Identity) error {
 	return l.writePage(scope, activePath, existing, human)
 }
 
+func (l *layer) Restore(_ context.Context, scope Scope, id Identity) error {
+	lockPath, err := scope.lockPath()
+	if err != nil {
+		return err
+	}
+	release, err := l.locker.Lock(lockPath)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = release() }()
+	activePath, err := scope.activePath()
+	if err != nil {
+		return err
+	}
+	facts, human, err := l.readPage(activePath)
+	if err != nil {
+		return err
+	}
+	for index := range facts {
+		if facts[index].Identity == id && facts[index].State == FactStateArchived {
+			facts[index].State = FactStateActive
+			return l.writePage(scope, activePath, facts, human)
+		}
+	}
+	return fmt.Errorf("durable: restore %s: %w", id.Key, ErrFactNotFound)
+}
+
 func (l *layer) Promote(_ context.Context, from, to Scope, id Identity) error {
 	fromLockPath, err := from.lockPath()
 	if err != nil {
@@ -263,17 +299,6 @@ func (l *layer) Promote(_ context.Context, from, to Scope, id Identity) error {
 	if idx == -1 {
 		return fmt.Errorf("durable: promote %s: %w", id.Key, ErrFactNotFound)
 	}
-	if fromFacts[idx].Durability != DurabilityDurable {
-		return ErrPromotionWithoutMark
-	}
-
-	promoted := fromFacts[idx]
-	fromFacts[idx].State = FactStatePromoted
-
-	if err := l.writePage(from, fromActivePath, fromFacts, fromHuman); err != nil {
-		return err
-	}
-
 	toActivePath, err := to.activePath()
 	if err != nil {
 		return err
@@ -283,10 +308,16 @@ func (l *layer) Promote(_ context.Context, from, to Scope, id Identity) error {
 		return err
 	}
 
+	promoted := fromFacts[idx]
 	promoted.State = FactStateActive
 	merged, _ := l.mergeFacts(toFacts, []Fact{promoted})
 
-	return l.writePage(to, toActivePath, merged, toHuman)
+	if err := l.writePage(to, toActivePath, merged, toHuman); err != nil {
+		return err
+	}
+
+	fromFacts[idx].State = FactStatePromoted
+	return l.writePage(from, fromActivePath, fromFacts, fromHuman)
 }
 
 func (l *layer) lockInOrder(pathA, pathB string) ([]func() error, error) {
@@ -375,10 +406,34 @@ func (l *layer) readPage(path string) ([]Fact, HumanBlock, error) {
 	if err != nil {
 		return nil, HumanBlock{}, fmt.Errorf("durable: parse layer page %s: %w", path, err)
 	}
+	if human.Header.FormatVersion == 0 {
+		return nil, HumanBlock{}, fmt.Errorf("durable: parse layer page %s: %w", path, ErrPageUnreadable)
+	}
 	return facts, human, nil
 }
 
 func (l *layer) writePage(scope Scope, path string, facts []Fact, human HumanBlock) error {
+	if human.Header.Identity == "" {
+		human.Header.Identity = filepath.Base(path)
+	}
+	if human.Header.Layer == TargetLayerUndefined {
+		human.Header.Layer = scope.Layer
+	}
+	if human.Header.OriginSession == "" {
+		human.Header.OriginSession = "manual"
+		for _, fact := range facts {
+			if fact.Origin.Session != "" {
+				human.Header.OriginSession = fact.Origin.Session
+				break
+			}
+		}
+	}
+	if human.Header.Date == "" {
+		human.Header.Date = time.Now().UTC().Format(time.RFC3339)
+	}
+	if human.Header.FormatVersion == 0 {
+		human.Header.FormatVersion = FormatVersionCurrent
+	}
 	rendered, err := l.page.Serialize(facts, human)
 	if err != nil {
 		return err

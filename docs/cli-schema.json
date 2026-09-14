@@ -618,6 +618,16 @@
               }
             ]
           }
+          ,{
+            "name": "promote",
+            "description": "Promove explicitamente um fato de task ou PRD para projeto",
+            "args": [], "flags": {"project-dir":{"type":"string","required":false},"tasks-dir":{"type":"string","required":false},"task":{"type":"string","required":false},"key":{"type":"string","required":true},"hash":{"type":"string","required":true}}
+          },
+          {
+            "name": "restore",
+            "description": "Restaura explicitamente um fato arquivado",
+            "args": [], "flags": {"project-dir":{"type":"string","required":false},"tasks-dir":{"type":"string","required":false},"task":{"type":"string","required":false},"key":{"type":"string","required":true},"hash":{"type":"string","required":true}}
+          }
         ]
       },
       {

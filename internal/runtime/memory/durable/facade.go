@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	DefaultCompactionLineLimit = 150
-	DefaultCompactionByteLimit = 12288
+	DefaultCompactionLineLimit  = 150
+	DefaultCompactionByteLimit  = 12288
+	DefaultRecoveryLatencyLimit = 200 * time.Millisecond
 )
 
 type MemoryScope struct {
@@ -24,13 +25,14 @@ type MemoryScope struct {
 }
 
 type MemoryContext struct {
-	Block          string
-	Omitted        int
-	Contradicted   int
-	Unreadable     int
-	FactsByLayer   map[string]int
-	BudgetByLayer  map[string]int
-	BuildLatencyMs int64
+	Block            string
+	Omitted          int
+	Contradicted     int
+	Unreadable       int
+	FactsByLayer     map[string]int
+	BudgetByLayer    map[string]int
+	BuildLatencyMs   int64
+	RecoveryDegraded bool
 }
 
 type SessionFacts struct {
@@ -58,12 +60,13 @@ type MemoryReport struct {
 }
 
 type FacadeConfig struct {
-	ProjectDir   string
-	TasksDir     string
-	Budget       BudgetConfig
-	Sanitization SanitizationConfig
-	Compaction   CompactionConfig
-	LeaseTTL     time.Duration
+	ProjectDir           string
+	TasksDir             string
+	Budget               BudgetConfig
+	Sanitization         SanitizationConfig
+	Compaction           CompactionConfig
+	LeaseTTL             time.Duration
+	RecoveryLatencyLimit time.Duration
 }
 
 type Facade struct {
@@ -126,7 +129,7 @@ func (f *Facade) BuildContext(ctx context.Context, scope MemoryScope) (MemoryCon
 	factsByLayer := make(map[string]int, 3)
 
 	for _, layer := range []TargetLayer{TargetLayerTask, TargetLayerPRD, TargetLayerProject} {
-		facts, _, err := f.layer.Read(ctx, f.scopeForLayer(layer, scope.TaskFileName))
+		facts, human, err := f.layer.Read(ctx, f.scopeForLayer(layer, scope.TaskFileName))
 		if err != nil {
 			switch {
 			case errors.Is(err, ErrProjectDirMissing), errors.Is(err, ErrTasksDirMissing), errors.Is(err, ErrTaskFileNameMissing):
@@ -139,12 +142,25 @@ func (f *Facade) BuildContext(ctx context.Context, scope MemoryScope) (MemoryCon
 				return MemoryContext{}, fmt.Errorf("durable: build context: %w", err)
 			}
 		}
+		if human.Content != "" {
+			durability := DurabilityPRD
+			if layer == TargetLayerTask {
+				durability = DurabilityEphemeral
+			}
+			if layer == TargetLayerProject {
+				durability = DurabilityDurable
+			}
+			facts = append(facts, Fact{
+				Identity: Identity{Key: SemanticKey("human." + layer.String()), Hash: NewCatalog().HashContent(human.Content)},
+				Content:  human.Content, Durability: durability, State: FactStateActive,
+			})
+		}
 		factsByLayer[layer.String()] = len(facts)
 		allFacts = append(allFacts, facts...)
 	}
 
 	if len(allFacts) == 0 {
-		return MemoryContext{Unreadable: unreadable, FactsByLayer: factsByLayer, BuildLatencyMs: time.Since(start).Milliseconds()}, nil
+		return f.withRecoveryLatency(MemoryContext{Unreadable: unreadable, FactsByLayer: factsByLayer}, start), nil
 	}
 
 	budget := f.budget.Resolve(scope.WindowClass, f.cfg.Budget)
@@ -158,15 +174,28 @@ func (f *Facade) BuildContext(ctx context.Context, scope MemoryScope) (MemoryCon
 		}
 	}
 
-	return MemoryContext{
-		Block:          f.renderBlock(allocation.Selected),
-		Omitted:        len(allocation.Omitted),
-		Contradicted:   contradicted,
-		Unreadable:     unreadable,
-		FactsByLayer:   factsByLayer,
-		BudgetByLayer:  allocation.UsedByLayer,
-		BuildLatencyMs: time.Since(start).Milliseconds(),
-	}, nil
+	return f.withRecoveryLatency(MemoryContext{
+		Block:         f.renderBlock(allocation.Selected),
+		Omitted:       len(allocation.Omitted),
+		Contradicted:  contradicted,
+		Unreadable:    unreadable,
+		FactsByLayer:  factsByLayer,
+		BudgetByLayer: allocation.UsedByLayer,
+	}, start), nil
+}
+
+func (f *Facade) withRecoveryLatency(result MemoryContext, start time.Time) MemoryContext {
+	elapsed := time.Since(start)
+	result.BuildLatencyMs = elapsed.Milliseconds()
+	limit := f.cfg.RecoveryLatencyLimit
+	if limit == 0 {
+		limit = DefaultRecoveryLatencyLimit
+	}
+	if elapsed >= limit {
+		result.RecoveryDegraded = true
+		log.Printf("durable: recovery degraded: latency=%s limit=%s", elapsed.Round(time.Millisecond), limit)
+	}
+	return result
 }
 
 func (f *Facade) renderBlock(facts []Fact) string {
@@ -204,13 +233,23 @@ func (f *Facade) RecordSession(ctx context.Context, in SessionFacts) (MemoryRepo
 			return MemoryReport{}, fmt.Errorf("durable: record session: %w", sanErr)
 		}
 		fct.Content = result.Content
+		fct.Identity.Hash = NewCatalog().HashContent(fct.Content)
 		redactionCount += len(result.Redactions)
 		sanitized = append(sanitized, fct)
 	}
 
 	batonClaimed := false
 	batonRefusalReason := ""
-	record, claimErr := f.claimBaton(time.Now())
+	if f.cfg.TasksDir != "" {
+		handoffDirectory, handoffDirectoryErr := f.handoff.scope.directory()
+		if handoffDirectoryErr != nil {
+			return MemoryReport{}, fmt.Errorf("durable: record session: resolve handoff directory: %w", handoffDirectoryErr)
+		}
+		if handoffDirectoryErr := f.filesystem.MkdirAll(handoffDirectory); handoffDirectoryErr != nil {
+			return MemoryReport{}, fmt.Errorf("durable: record session: ensure handoff directory: %w", handoffDirectoryErr)
+		}
+	}
+	record, claimErr := f.claimBaton(in.SessionID, time.Now())
 	if claimErr != nil {
 		batonRefusalReason = claimErr.Error()
 		log.Printf("durable: baton claim refused, proceeding with fact consolidation (RF precedence: no-loss over single-baton-owner): %v", claimErr)
@@ -218,6 +257,11 @@ func (f *Facade) RecordSession(ctx context.Context, in SessionFacts) (MemoryRepo
 		batonClaimed = record.Outcome == LeaseOutcomeGranted ||
 			record.Outcome == LeaseOutcomeRenewed ||
 			record.Outcome == LeaseOutcomeTransferred
+		defer func() {
+			if outcome, _, releaseErr := f.handoff.store.Release(f.handoff.scope, f.leaseOwner(in.SessionID)); releaseErr != nil || outcome != ReleaseOutcomeReleased {
+				log.Printf("durable: baton release failed: outcome=%d error=%v", outcome, releaseErr)
+			}
+		}()
 	}
 
 	catalog := NewCatalog()
@@ -247,6 +291,10 @@ func (f *Facade) RecordSession(ctx context.Context, in SessionFacts) (MemoryRepo
 
 		consResult, consErr := f.layer.Consolidate(ctx, scope, layerFacts)
 		if consErr != nil {
+			if errors.Is(consErr, ErrPageUnreadable) {
+				log.Printf("durable: skip layer %s write (unreadable page isolated): %v", layer, consErr)
+				continue
+			}
 			if errors.Is(consErr, ErrProjectDirMissing) || errors.Is(consErr, ErrTasksDirMissing) || errors.Is(consErr, ErrTaskFileNameMissing) {
 				log.Printf("durable: skip layer %s write (no scope resolved): %v", layer, consErr)
 				continue
@@ -297,6 +345,40 @@ func (f *Facade) RecordSession(ctx context.Context, in SessionFacts) (MemoryRepo
 	}, nil
 }
 
+func (f *Facade) ClaimSession(sessionID string) error {
+	if f.cfg.TasksDir != "" {
+		directory, err := f.handoff.scope.directory()
+		if err != nil {
+			return fmt.Errorf("durable: claim session: resolve handoff directory: %w", err)
+		}
+		if err := f.filesystem.MkdirAll(directory); err != nil {
+			return fmt.Errorf("durable: claim session: ensure handoff directory: %w", err)
+		}
+	}
+	if _, err := f.claimBaton(sessionID, time.Now()); err != nil {
+		return fmt.Errorf("durable: claim session: %w", err)
+	}
+	return nil
+}
+
+func (f *Facade) ReleaseSession(sessionID string) error {
+	outcome, _, err := f.handoff.store.Release(f.handoff.scope, f.leaseOwner(sessionID))
+	if err != nil {
+		return fmt.Errorf("durable: release session: %w", err)
+	}
+	if outcome == ReleaseOutcomeOwnerMismatch {
+		return ErrBatonAlreadyClaimed
+	}
+	return nil
+}
+
+func (f *Facade) RenewSession(sessionID string) error {
+	if _, err := f.handoff.Renew(f.leaseOwner(sessionID), f.cfg.LeaseTTL, time.Now()); err != nil {
+		return fmt.Errorf("durable: renew session: %w", err)
+	}
+	return nil
+}
+
 func (f *Facade) resolveCompactionConfig() CompactionConfig {
 	cfg := f.cfg.Compaction
 	if cfg.LineLimit == 0 {
@@ -308,14 +390,21 @@ func (f *Facade) resolveCompactionConfig() CompactionConfig {
 	return cfg
 }
 
-func (f *Facade) claimBaton(now time.Time) (LeaseRecord, error) {
-	owner := LeaseOwner(fmt.Sprintf("pid:%d", os.Getpid()))
+func (f *Facade) claimBaton(sessionID string, now time.Time) (LeaseRecord, error) {
+	owner := f.leaseOwner(sessionID)
 	ttl := f.cfg.LeaseTTL
 
 	if current, ok := f.handoff.Current(); ok && current.Owner == owner {
 		return f.handoff.Renew(owner, ttl, now)
 	}
 	return f.handoff.Claim(owner, CurrentProcessRef(), ttl, now)
+}
+
+func (f *Facade) leaseOwner(sessionID string) LeaseOwner {
+	if sessionID != "" {
+		return LeaseOwner(fmt.Sprintf("pid:%d:session:%s", os.Getpid(), sessionID))
+	}
+	return LeaseOwner(fmt.Sprintf("pid:%d", os.Getpid()))
 }
 
 func (f *Facade) deriveFacts(in SessionFacts) ([]Fact, error) {
@@ -348,10 +437,14 @@ func (f *Facade) deriveFacts(in SessionFacts) ([]Fact, error) {
 		if err != nil {
 			return nil, err
 		}
+		durability := f.durability.Classify("declared-section")
+		if f.cfg.TasksDir == "" {
+			durability = DurabilityDurable
+		}
 		facts = append(facts, Fact{
 			Identity:   Identity{Key: sectionKey, Hash: catalog.HashContent(declared)},
 			Content:    declared,
-			Durability: f.durability.Classify("declared-section"),
+			Durability: durability,
 			Origin:     FactOrigin{Session: in.SessionID, CLI: in.CLI, Task: in.TaskFileName, Date: now},
 			State:      FactStateActive,
 		})

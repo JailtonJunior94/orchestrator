@@ -13,7 +13,7 @@ set -euo pipefail
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"
 
-mockery_version="v3.7.4"
+mockery_version="v3.8.0"
 mockery_bin="${MOCKERY_BIN:-go}"
 generation_root="$(mktemp -d)"
 output="$(mktemp)"

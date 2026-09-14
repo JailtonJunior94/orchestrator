@@ -19,6 +19,23 @@ inherit_common:
   - opencode
 
 aliases:
+  # RF-18 — tabela propria do OpenCode. Derivada de MUTATING_TOOLS do plugin de
+  # governanca (internal/embedded/assets/.opencode/plugin/governance.js), que e a
+  # unica fonte verificada dos nomes que o OpenCode realmente emite.
+  #
+  # Precedencia: esta entrada explicita VENCE inherit_common (resolveInherit nao
+  # sobrescreve driver ja presente em aliases). O opencode permanece listado em
+  # inherit_common apenas como fallback declarado; sem esta tabela o driver
+  # herdaria read_file/write_file/str_replace_editor, nomes que o OpenCode nunca
+  # emite, e normalized_name seria sempre igual a raw_name.
+  opencode:
+    bash:        bash
+    write:       write
+    edit:        edit
+    multiedit:   edit
+    patch:       edit
+    apply_patch: edit
+
   claude:
     # nome_raw : nome_normalizado
     bash:               bash
@@ -56,6 +73,12 @@ input_mappings:
     # O campo de input já usa "command" nativamente — no-op verificado.
     run:
       command: command  # no-op verificado: Copilot já usa "command" como chave canônica
+  opencode:
+    # RF-18: OpenCode ja usa "command" como chave canonica do bash — no-op
+    # declarado explicitamente para que o driver tenha entrada propria, como
+    # copilot.
+    bash:
+      command: command
   cursor:
     read_file:
       startLineNumberBaseOne: start_line

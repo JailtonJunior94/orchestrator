@@ -41,6 +41,10 @@ const (
 	// DefaultCodexModel é o modelo default quando --model não é passado.
 	// Espelha compozy/internal/core/model/constants.go:15.
 	DefaultCodexModel = "gpt-5.5"
+
+	CodexCLINpmPackage = "@openai/codex"
+
+	CodexCLINpmVersion = "0.154.0"
 )
 
 // Codex retorna a Spec do runtime Codex via codex-acp adapter.

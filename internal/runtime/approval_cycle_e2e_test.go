@@ -3,7 +3,9 @@ package runtime_test
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -57,6 +59,10 @@ func reviewScript(text string) *acpfake.Script {
 	return acpfake.NewScript().AppendAgentMessage(text).AppendSessionEnd()
 }
 
+func approvedReviewOutput() string {
+	return "no outstanding issues\n\nVerdict: APPROVED\n\n## Mapa de Critérios de Aceite\n- [atendido] Faz X -> go test ./... -> PASS\n"
+}
+
 func writeRealFileChange(t *testing.T, workDir, content string) func(string) {
 	t.Helper()
 	return func(_ string) {
@@ -97,7 +103,7 @@ func TestE2EApprovalCycle_ApprovesFirstRound(t *testing.T) {
 
 	factory := newSequencedClientFactory(t, ctx,
 		sequencedCall{script: reviewScript("main session")},
-		sequencedCall{script: reviewScript("no outstanding issues\n\nVerdict: APPROVED\n")},
+		sequencedCall{script: reviewScript(approvedReviewOutput())},
 	)
 	runner := buildSequencedRunner(t, factory)
 
@@ -140,12 +146,12 @@ func TestE2EApprovalCycle_ApprovesThirdRoundAfterTwoFixes(t *testing.T) {
 			script: reviewScript("fix round 1 applied"),
 			before: writeRealFileChange(t, workDir, "base\nround1\n"),
 		},
-		sequencedCall{script: reviewScript("[high] fix.go:2 remaining issue\n\nVerdict: REJECTED\n")},
+		sequencedCall{script: reviewScript("[high] other.go:2 remaining issue\n\nVerdict: REJECTED\n")},
 		sequencedCall{
 			script: reviewScript("fix round 2 applied"),
 			before: writeRealFileChange(t, workDir, "base\nround1\nround2\n"),
 		},
-		sequencedCall{script: reviewScript("no outstanding issues\n\nVerdict: APPROVED\n")},
+		sequencedCall{script: reviewScript(approvedReviewOutput())},
 	)
 	runner := buildSequencedRunner(t, factory)
 
@@ -218,9 +224,9 @@ func TestE2EApprovalCycle_AbortsOnEmptyDiffAfterFix(t *testing.T) {
 
 	factory := newSequencedClientFactory(t, ctx,
 		sequencedCall{script: reviewScript("main session")},
-		sequencedCall{script: reviewScript("[high] fix.go:1 issue\n\nVerdict: REJECTED\n")},
+		sequencedCall{script: reviewScript("[high] fix.go:1 issue\n\nVerdict: REJECTED\n\n## Mapa de Critérios de Aceite\n- [atendido] Faz X -> go test ./... -> PASS\n")},
 		sequencedCall{script: reviewScript("fix attempted without touching any file")},
-		sequencedCall{script: reviewScript("[high] fix.go:2 distinct issue\n\nVerdict: REJECTED\n")},
+		sequencedCall{script: reviewScript("[high] other.go:2 distinct issue\n\nVerdict: REJECTED\n\n## Mapa de Critérios de Aceite\n- [atendido] Faz X -> go test ./... -> PASS\n")},
 	)
 	runner := buildSequencedRunner(t, factory)
 
@@ -248,9 +254,9 @@ func TestE2EApprovalCycle_RemediationWithoutDiffStillProducesRoundEvidence(t *te
 
 	factory := newSequencedClientFactory(t, ctx,
 		sequencedCall{script: reviewScript("main session")},
-		sequencedCall{script: reviewScript("[high] fix.go:1 issue\n\nVerdict: REJECTED\n")},
+		sequencedCall{script: reviewScript("[high] fix.go:1 issue\n\nVerdict: REJECTED\n\n## Mapa de Critérios de Aceite\n- [atendido] Faz X -> go test ./... -> PASS\n")},
 		sequencedCall{script: reviewScript("fix attempted without touching any file")},
-		sequencedCall{script: reviewScript("[high] fix.go:2 distinct issue\n\nVerdict: REJECTED\n")},
+		sequencedCall{script: reviewScript("[high] other.go:2 distinct issue\n\nVerdict: REJECTED\n\n## Mapa de Critérios de Aceite\n- [atendido] Faz X -> go test ./... -> PASS\n")},
 	)
 	runner := buildSequencedRunner(t, factory)
 
@@ -293,12 +299,12 @@ func TestE2EApprovalCycle_ApprovedWithRemarksFeedsBackToFix(t *testing.T) {
 
 	factory := newSequencedClientFactory(t, ctx,
 		sequencedCall{script: reviewScript("main session")},
-		sequencedCall{script: reviewScript("[high] fix.go:1 remark to fix\n\nVerdict: APPROVED_WITH_REMARKS\n")},
+		sequencedCall{script: reviewScript("[high] fix.go:1 remark to fix\n\nVerdict: APPROVED_WITH_REMARKS\n\n## Mapa de Critérios de Aceite\n- [atendido] Faz X -> go test ./... -> PASS\n")},
 		sequencedCall{
 			script: reviewScript("remark addressed"),
 			before: writeRealFileChange(t, workDir, "base\nfixed\n"),
 		},
-		sequencedCall{script: reviewScript("no outstanding issues\n\nVerdict: APPROVED\n")},
+		sequencedCall{script: reviewScript(approvedReviewOutput())},
 	)
 	runner := buildSequencedRunner(t, factory)
 
@@ -323,5 +329,79 @@ func TestE2EApprovalCycle_ApprovedWithRemarksFeedsBackToFix(t *testing.T) {
 	}
 	if got := factory.callCount(); got != 4 {
 		t.Errorf("ACP sessions opened = %d, want 4 (main + review1 + remark fix + review2)", got)
+	}
+}
+
+func headSHAForCycle(t *testing.T, workDir string) string {
+	t.Helper()
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = workDir
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git rev-parse HEAD: %v\n%s", err, out)
+	}
+	return strings.TrimSpace(string(out))
+}
+
+func commitFileChangeForCycle(t *testing.T, workDir, content string) func(string) {
+	t.Helper()
+	return func(_ string) {
+		t.Helper()
+		if err := os.WriteFile(filepath.Join(workDir, "base.txt"), []byte(content), 0o644); err != nil {
+			t.Fatalf("commitFileChangeForCycle write: %v", err)
+		}
+		for _, args := range [][]string{{"add", "."}, {"commit", "-m", content}} {
+			cmd := exec.Command("git", args...)
+			cmd.Dir = workDir
+			if out, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
+			}
+		}
+	}
+}
+
+func TestE2EApprovalCycle_SecondRoundReviewsAgainstPriorCutPointAfterCommit(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	workDir := gitWorkDirWithAgentsMDForCycle(t)
+	tasksDir := t.TempDir()
+	writeCycleTaskFile(t, tasksDir, "task-x.md")
+
+	var headAtRoundOne, priorSHAAtRoundTwo string
+	factory := newSequencedClientFactory(t, ctx,
+		sequencedCall{script: reviewScript("main session")},
+		sequencedCall{
+			script: reviewScript("[high] fix.go:1 initial issue\n\nVerdict: REJECTED\n"),
+			before: func(_ string) { headAtRoundOne = headSHAForCycle(t, workDir) },
+		},
+		sequencedCall{
+			script: reviewScript("fix committed"),
+			before: commitFileChangeForCycle(t, workDir, "base\nround1\n"),
+		},
+		sequencedCall{
+			script: reviewScript(approvedReviewOutput()),
+			before: func(_ string) { priorSHAAtRoundTwo = os.Getenv("AI_REVIEW_PRIOR_SHA") },
+		},
+	)
+	runner := buildSequencedRunner(t, factory)
+
+	summary, err := runner.Run(ctx, newE2ECycleJob(workDir, tasksDir, t.TempDir()))
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+	if summary.CycleStopReason != "approved" {
+		t.Fatalf("CycleStopReason = %q, want approved", summary.CycleStopReason)
+	}
+
+	headAfterFix := headSHAForCycle(t, workDir)
+	if headAfterFix == headAtRoundOne {
+		t.Fatalf("test setup did not move HEAD between rounds: %q", headAfterFix)
+	}
+	if priorSHAAtRoundTwo == headAfterFix {
+		t.Fatalf("round 2 exported the post-fix HEAD %q; git diff PRIOR..HEAD would be empty", priorSHAAtRoundTwo)
+	}
+	if priorSHAAtRoundTwo != headAtRoundOne {
+		t.Fatalf("round 2 prior SHA = %q, want the round 1 cut point %q", priorSHAAtRoundTwo, headAtRoundOne)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -25,6 +26,25 @@ type AgentInvoker interface {
 	BinaryName() string
 }
 
+var ErrToolRequiresACP = errors.New("ferramenta exige --runtime acp")
+
+type ACPOnlyToolError struct {
+	Tool string
+}
+
+func (e *ACPOnlyToolError) Error() string {
+	return fmt.Sprintf(
+		"ferramenta %q so opera sob ACP — reexecute com --runtime acp (ex.: ai-spec task-loop --tool %s --runtime acp <dir>)",
+		e.Tool, e.Tool,
+	)
+}
+
+func (e *ACPOnlyToolError) Unwrap() error { return ErrToolRequiresACP }
+
+var ACPOnlyTools = map[string]bool{
+	"opencode": true,
+}
+
 // NewAgentInvoker cria o invoker adequado para a ferramenta especificada.
 func NewAgentInvoker(tool string) (AgentInvoker, error) {
 	switch tool {
@@ -34,9 +54,11 @@ func NewAgentInvoker(tool string) (AgentInvoker, error) {
 		return &codexInvoker{}, nil
 	case "copilot":
 		return &copilotInvoker{}, nil
-	default:
-		return nil, fmt.Errorf("ferramenta nao suportada: %q — opcoes: claude, codex, copilot", tool)
 	}
+	if ACPOnlyTools[tool] {
+		return nil, &ACPOnlyToolError{Tool: tool}
+	}
+	return nil, fmt.Errorf("ferramenta nao suportada: %q — opcoes: claude, codex, copilot (opencode exige --runtime acp)", tool)
 }
 
 // ValidTools eh o conjunto de ferramentas aceitas pelo task-loop.

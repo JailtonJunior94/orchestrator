@@ -63,6 +63,24 @@ func TestExtract(t *testing.T) {
 			wantPending: []string{"Second"},
 		},
 		{
+			name:        "criterios de aceite heading",
+			content:     "## Critérios de Aceite\n\n- [ ] Um\n- [x] Dois\n",
+			wantAll:     []string{"Um", "Dois"},
+			wantPending: []string{"Um"},
+		},
+		{
+			name:        "plain bullets count as unchecked criteria",
+			content:     "## Critérios de Aceite\n\n- Primeiro criterio\n- Segundo criterio\n",
+			wantAll:     []string{"Primeiro criterio", "Segundo criterio"},
+			wantPending: []string{"Primeiro criterio", "Segundo criterio"},
+		},
+		{
+			name:        "section ends at a deeper heading",
+			content:     "## Critérios de Aceite\n\n- Um\n\n### Detalhes\n\n- ignorado\n",
+			wantAll:     []string{"Um"},
+			wantPending: []string{"Um"},
+		},
+		{
 			name:        "blank checklist text is skipped",
 			content:     "## Definition of Done\n\n- [ ] \n- [x] Real item\n",
 			wantAll:     []string{"Real item"},

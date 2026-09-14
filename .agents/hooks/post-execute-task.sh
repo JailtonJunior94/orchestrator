@@ -259,6 +259,33 @@ if [[ "$status" == "done" ]]; then
   fi
 fi
 
+# === RF-53: prova de aprovacao obrigatoria para status=done ===
+# O contrato legado NAO e caminho legitimo para fechar tarefa sem prova. Antes
+# desta correcao AI_SDD_LEGACY_HOOK_CONTRACT=1 desviava de
+# `ai-spec validate-result execution` e o ramo legado jamais mencionava veredito,
+# APPROVED ou criterios de aceite: um relatorio sem conteudo nenhum saia com 0.
+# A variavel continua desviando apenas a FORMA do contrato (YAML vs JSON v2);
+# o DESFECHO passa pelo validador canonico de evidencia nos dois caminhos.
+if [[ "$status" == "done" ]]; then
+  evidence_validator=""
+  for candidate_dir in "$REPO_ROOT/.agents/scripts" "$REPO_ROOT/.claude/scripts" "$REPO_ROOT/scripts"; do
+    if [[ -r "$candidate_dir/validate-task-evidence.sh" ]]; then
+      evidence_validator="$candidate_dir/validate-task-evidence.sh"
+      break
+    fi
+  done
+  if [[ -z "$evidence_validator" ]]; then
+    echo "FAIL RF-53: validate-task-evidence.sh ausente em .agents/scripts, .claude/scripts e scripts — tarefa done nao pode ser fechada sem prova de aprovacao" >&2
+    errors=$((errors+1))
+  elif [[ -z "$report_path" || ! -s "$REPO_ROOT/$report_path" ]]; then
+    echo "FAIL RF-53: tarefa done sem relatorio de execucao utilizavel para comprovar aprovacao" >&2
+    errors=$((errors+1))
+  elif ! bash "$evidence_validator" "$REPO_ROOT/$report_path" >&2; then
+    echo "FAIL RF-53: relatorio de execucao nao comprova aprovacao — AI_SDD_LEGACY_HOOK_CONTRACT nao reabre este gate" >&2
+    errors=$((errors+1))
+  fi
+fi
+
 # === Resumo ===
 if [[ "$errors" -gt 0 ]]; then
   echo "post-execute-task: $errors erro(s), $warnings warning(s) para $PRD_SLUG/$TASK_ID" >&2

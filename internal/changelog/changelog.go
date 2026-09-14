@@ -25,7 +25,7 @@ type ChangelogEntry struct {
 	Breaking    bool
 }
 
-var _typeLabels = map[string]string{
+var typeLabels = map[string]string{
 	"feat":     "Features",
 	"fix":      "Bug Fixes",
 	"perf":     "Performance Improvements",
@@ -38,8 +38,7 @@ var _typeLabels = map[string]string{
 	"style":    "Style",
 }
 
-// _typeOrder defines the display order for changelog sections.
-var _typeOrder = []string{"feat", "fix", "perf", "refactor", "docs", "chore", "test", "ci", "build", "style"}
+var typeOrder = []string{"feat", "fix", "perf", "refactor", "docs", "chore", "test", "ci", "build", "style"}
 
 // GroupByType groups commits into ChangelogEntry slices keyed by commit type.
 func (g *Generator) GroupByType(commits []semver.Commit) map[string][]ChangelogEntry {
@@ -97,12 +96,12 @@ func (g *Generator) RenderSection(version, date string, groups map[string][]Chan
 	}
 
 	// Write sections in order.
-	for _, t := range _typeOrder {
+	for _, t := range typeOrder {
 		entries, ok := groups[t]
 		if !ok || len(entries) == 0 {
 			continue
 		}
-		label, ok := _typeLabels[t]
+		label, ok := typeLabels[t]
 		if !ok {
 			label = strings.ToUpper(t[:1]) + t[1:]
 		}
@@ -133,7 +132,7 @@ func (g *Generator) renderLine(e ChangelogEntry) string {
 	return fmt.Sprintf("- %s (%s)\n", e.Description, e.Hash)
 }
 
-const _changelogHeader = "# Changelog\n"
+const changelogHeader = "# Changelog\n"
 
 // UpdateChangelog inserts newSection into filePath after the `# Changelog` header.
 // If the file does not exist it is created from scratch.
@@ -146,13 +145,13 @@ func (g *Generator) UpdateChangelog(filePath, newSection string) error {
 
 	var result string
 	if existing == "" {
-		result = _changelogHeader + "\n" + newSection
-	} else if strings.HasPrefix(existing, _changelogHeader) {
-		rest := existing[len(_changelogHeader):]
-		result = _changelogHeader + "\n" + newSection + strings.TrimLeft(rest, "\n")
+		result = changelogHeader + "\n" + newSection
+	} else if strings.HasPrefix(existing, changelogHeader) {
+		rest := existing[len(changelogHeader):]
+		result = changelogHeader + "\n" + newSection + strings.TrimLeft(rest, "\n")
 	} else {
 		// File exists but has no standard header — prepend everything.
-		result = _changelogHeader + "\n" + newSection + existing
+		result = changelogHeader + "\n" + newSection + existing
 	}
 
 	return os.WriteFile(filePath, []byte(result), 0644)

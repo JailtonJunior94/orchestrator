@@ -34,7 +34,7 @@ func (s *FactSuite) TestValidateFact() {
 		{
 			name: "should reject fact with zero-value durability",
 			fact: durable.Fact{
-				Identity:   durable.Identity{Key: "topic.subject"},
+				Identity:   durable.Identity{Key: "topic.subject", Hash: "sha256:aaaa"},
 				Durability: durable.DurabilityInvalid,
 			},
 			wantErr: durable.ErrDurabilityMissing,
@@ -42,7 +42,7 @@ func (s *FactSuite) TestValidateFact() {
 		{
 			name: "should accept fact with key and durability declared",
 			fact: durable.Fact{
-				Identity:   durable.Identity{Key: "topic.subject"},
+				Identity:   durable.Identity{Key: "topic.subject", Hash: "sha256:aaaa"},
 				Durability: durable.DurabilityEphemeral,
 			},
 			wantErr: nil,

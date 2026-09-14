@@ -24,7 +24,7 @@ func (w failingHandshakeWaiter) Path() string { return "/fake/path" }
 type failingHandshakeWaiterFactory struct{ err error }
 
 func (f failingHandshakeWaiterFactory) NewWaiter() (client.HandshakeWaiter, func() error, error) {
-	return failingHandshakeWaiter{err: f.err}, func() error { return nil }, nil
+	return failingHandshakeWaiter(f), func() error { return nil }, nil
 }
 
 func TestACPIntegration_OpenCode_PreconditionRejectionMetricOnlyWithTelemetryOptIn(t *testing.T) {

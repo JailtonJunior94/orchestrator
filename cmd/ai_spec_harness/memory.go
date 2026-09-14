@@ -32,7 +32,57 @@ deliberadamente esconde (MD-001).`,
 	cmd.AddCommand(newMemoryExportCmd())
 	cmd.AddCommand(newMemoryCompactCmd())
 	cmd.AddCommand(newMemoryMigrateCmd())
+	cmd.AddCommand(newMemoryPromoteCmd())
+	cmd.AddCommand(newMemoryRestoreCmd())
 	cmd.AddCommand(newMemoryHandoffCmd())
+	return cmd
+}
+
+func newMemoryPromoteCmd() *cobra.Command {
+	var projectDir, tasksDir, taskFileName, key, hash string
+	cmd := &cobra.Command{Use: "promote", Short: "Promove explicitamente um fato de task ou PRD para projeto", RunE: func(cmd *cobra.Command, _ []string) error {
+		layer := durable.NewLayer(fs.NewOSFileSystem())
+		id := durable.Identity{Key: durable.SemanticKey(key), Hash: durable.ContentHash(hash)}
+		to := durable.Scope{Layer: durable.TargetLayerProject, ProjectDir: projectDir}
+		for _, from := range []durable.Scope{{Layer: durable.TargetLayerTask, TasksDir: tasksDir, TaskFileName: taskFileName}, {Layer: durable.TargetLayerPRD, TasksDir: tasksDir}} {
+			if err := layer.Promote(cmd.Context(), from, to, id); err == nil {
+				return nil
+			} else if !errors.Is(err, durable.ErrFactNotFound) && !errors.Is(err, durable.ErrTaskFileNameMissing) {
+				return fmt.Errorf("memory promote: %w", err)
+			}
+		}
+		return fmt.Errorf("memory promote: %w", durable.ErrFactNotFound)
+	}}
+	memoryLayerFlags(cmd, &projectDir, &tasksDir, &taskFileName)
+	cmd.Flags().StringVar(&key, "key", "", "Chave semantica do fato")
+	cmd.Flags().StringVar(&hash, "hash", "", "Hash do fato")
+	_ = cmd.MarkFlagRequired("key")
+	_ = cmd.MarkFlagRequired("hash")
+	return cmd
+}
+
+func newMemoryRestoreCmd() *cobra.Command {
+	var projectDir, tasksDir, taskFileName, key, hash string
+	cmd := &cobra.Command{Use: "restore", Short: "Restaura explicitamente um fato arquivado", RunE: func(cmd *cobra.Command, _ []string) error {
+		layer := durable.NewLayer(fs.NewOSFileSystem())
+		restorer := layer.(interface {
+			Restore(context.Context, durable.Scope, durable.Identity) error
+		})
+		id := durable.Identity{Key: durable.SemanticKey(key), Hash: durable.ContentHash(hash)}
+		for _, scope := range (&memoryCommand{}).buildScopes(projectDir, tasksDir, taskFileName) {
+			if err := restorer.Restore(cmd.Context(), scope, id); err == nil {
+				return nil
+			} else if !errors.Is(err, durable.ErrFactNotFound) {
+				return fmt.Errorf("memory restore: %w", err)
+			}
+		}
+		return fmt.Errorf("memory restore: %w", durable.ErrFactNotFound)
+	}}
+	memoryLayerFlags(cmd, &projectDir, &tasksDir, &taskFileName)
+	cmd.Flags().StringVar(&key, "key", "", "Chave semantica do fato")
+	cmd.Flags().StringVar(&hash, "hash", "", "Hash do fato")
+	_ = cmd.MarkFlagRequired("key")
+	_ = cmd.MarkFlagRequired("hash")
 	return cmd
 }
 
@@ -80,6 +130,11 @@ func (h *memoryCommand) runShow(
 	found := false
 	for _, scope := range h.buildScopes(projectDir, tasksDir, taskFileName) {
 		facts, _, err := layer.Read(ctx, scope)
+		if auditor, ok := layer.(interface {
+			ReadAll(context.Context, durable.Scope) ([]durable.Fact, durable.HumanBlock, error)
+		}); ok {
+			facts, _, err = auditor.ReadAll(ctx, scope)
+		}
 		if err != nil {
 			if h.isUnresolvedScope(err) {
 				continue
@@ -343,6 +398,10 @@ func (h *memoryCommand) runMigrate(printer *output.Printer, fsys fs.FileSystem, 
 	}
 
 	_, human, err := page.Parse(original)
+	if errors.Is(err, durable.ErrPageUnreadable) {
+		human.Content = string(original)
+		err = nil
+	}
 	if err != nil {
 		return fmt.Errorf("memory migrate: %w", err)
 	}

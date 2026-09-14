@@ -199,7 +199,7 @@ func (s *ParitySuite) TestParity_DriftDetection_MissingCanonicalPath() {
 	claudePath := filepath.Join(testProjectDir, "CLAUDE.md")
 	snap.Files[claudePath] = []byte("# Claude\nConteudo sem referencia ao caminho canonico.")
 
-	results := NewChecker().Run(snap, []*Invariant{_invX01CrossToolCanonicalPath})
+	results := NewChecker().Run(snap, []*Invariant{invX01CrossToolCanonicalPath})
 	if len(results) == 0 {
 		s.T().Fatal("Run retornou zero resultados")
 	}
@@ -228,7 +228,7 @@ func (s *ParitySuite) TestParity_DriftDetection_MissingArtifact() {
 	codexPath := filepath.Join(testProjectDir, ".codex", "config.toml")
 	delete(snap.Files, codexPath)
 
-	results := NewChecker().Run(snap, []*Invariant{_invX01CrossToolCanonicalPath})
+	results := NewChecker().Run(snap, []*Invariant{invX01CrossToolCanonicalPath})
 	if len(results) == 0 {
 		s.T().Fatal("Run retornou zero resultados")
 	}
@@ -256,7 +256,7 @@ func (s *ParitySuite) TestParity_BestEffort_DoesNotBlockOnMissingDoc() {
 		snap.Files[copilotPath] = []byte(original[:idx])
 	}
 
-	results := NewChecker().Run(snap, []*Invariant{_invCP02CopilotMDBestEffortDoc})
+	results := NewChecker().Run(snap, []*Invariant{invCP02CopilotMDBestEffortDoc})
 	if len(results) == 0 {
 		s.T().Fatal("Run retornou zero resultados")
 	}
@@ -281,12 +281,12 @@ func (s *ParitySuite) TestParity_NewArtifacts_Claude_Present() {
 		s.T().Fatalf("Generate: %v", err)
 	}
 	invariants := []*Invariant{
-		_invCL03ClaudeHookGovernancePresent,
-		_invCL04ClaudeHookPreloadPresent,
-		_invCL05ClaudeRulesGovernancePresent,
-		_invCL06ClaudeScriptTaskEvidencePresent,
-		_invCL07ClaudeScriptBugfixEvidencePresent,
-		_invCL08ClaudeScriptRefactorEvidencePresent,
+		invCL03ClaudeHookGovernancePresent,
+		invCL04ClaudeHookPreloadPresent,
+		invCL05ClaudeRulesGovernancePresent,
+		invCL06ClaudeScriptTaskEvidencePresent,
+		invCL07ClaudeScriptBugfixEvidencePresent,
+		invCL08ClaudeScriptRefactorEvidencePresent,
 	}
 	for _, inv := range invariants {
 		r := inv.Check(snap)
@@ -306,12 +306,12 @@ func (s *ParitySuite) TestParity_NewArtifacts_Claude_Absent() {
 		inv  *Invariant
 		path string
 	}{
-		{_invCL03ClaudeHookGovernancePresent, ".claude/hooks/validate-governance.sh"},
-		{_invCL04ClaudeHookPreloadPresent, ".claude/hooks/validate-preload.sh"},
-		{_invCL05ClaudeRulesGovernancePresent, ".claude/rules/governance.md"},
-		{_invCL06ClaudeScriptTaskEvidencePresent, ".claude/scripts/validate-task-evidence.sh"},
-		{_invCL07ClaudeScriptBugfixEvidencePresent, ".claude/scripts/validate-bugfix-evidence.sh"},
-		{_invCL08ClaudeScriptRefactorEvidencePresent, ".claude/scripts/validate-refactor-evidence.sh"},
+		{invCL03ClaudeHookGovernancePresent, ".claude/hooks/validate-governance.sh"},
+		{invCL04ClaudeHookPreloadPresent, ".claude/hooks/validate-preload.sh"},
+		{invCL05ClaudeRulesGovernancePresent, ".claude/rules/governance.md"},
+		{invCL06ClaudeScriptTaskEvidencePresent, ".claude/scripts/validate-task-evidence.sh"},
+		{invCL07ClaudeScriptBugfixEvidencePresent, ".claude/scripts/validate-bugfix-evidence.sh"},
+		{invCL08ClaudeScriptRefactorEvidencePresent, ".claude/scripts/validate-refactor-evidence.sh"},
 	}
 
 	for _, tc := range absenceTests {
@@ -341,15 +341,15 @@ func (s *ParitySuite) TestParity_NewArtifacts_DepthGuard_Present() {
 	if err != nil {
 		s.T().Fatalf("Generate: %v", err)
 	}
-	r := _invX03DepthGuardPresent.Check(snap)
+	r := invX03DepthGuardPresent.Check(snap)
 	if !r.OK {
 		s.T().Errorf("[X03] deveria passar com guard presente: %s", r.Reason)
 	}
-	if _invX03DepthGuardPresent.Level != Common {
-		s.T().Errorf("[X03] deveria ter nivel Common, got: %s", _invX03DepthGuardPresent.Level)
+	if invX03DepthGuardPresent.Level != Common {
+		s.T().Errorf("[X03] deveria ter nivel Common, got: %s", invX03DepthGuardPresent.Level)
 	}
-	if _invX03DepthGuardPresent.AppliesTo != nil {
-		s.T().Errorf("[X03] AppliesTo deveria ser nil (aplica a todos), got: %v", _invX03DepthGuardPresent.AppliesTo)
+	if invX03DepthGuardPresent.AppliesTo != nil {
+		s.T().Errorf("[X03] AppliesTo deveria ser nil (aplica a todos), got: %v", invX03DepthGuardPresent.AppliesTo)
 	}
 }
 
@@ -367,7 +367,7 @@ func (s *ParitySuite) TestParity_NewArtifacts_DepthGuard_Absent() {
 	}
 	delete(absent.Files, filepath.Join(testProjectDir, "scripts/lib/check-invocation-depth.sh"))
 
-	r := _invX03DepthGuardPresent.Check(absent)
+	r := invX03DepthGuardPresent.Check(absent)
 	if r.OK {
 		s.T().Error("[X03] deveria falhar quando guard esta ausente")
 	}
@@ -378,7 +378,7 @@ func (s *ParitySuite) TestParity_NewArtifacts_Copilot_Skipped_WhenClaudeOnly() {
 	if err != nil {
 		s.T().Fatalf("Generate: %v", err)
 	}
-	results := NewChecker().Run(snap, []*Invariant{_invCP02CopilotMDBestEffortDoc})
+	results := NewChecker().Run(snap, []*Invariant{invCP02CopilotMDBestEffortDoc})
 	if len(results) == 0 {
 		s.T().Fatal("Run retornou zero resultados")
 	}
@@ -406,7 +406,7 @@ func (s *ParitySuite) TestParity_INV30_PassesWithMatchingNormalizedNames() {
 		Dirs:  map[string]bool{},
 		Links: map[string]string{},
 	}
-	r := _invINV30ToolCallsNormalizedNameInvariant.Check(snap)
+	r := invINV30ToolCallsNormalizedNameInvariant.Check(snap)
 	if !r.OK {
 		s.T().Errorf("INV-30 deveria passar com normalized_name em comum: %s", r.Reason)
 	}
@@ -429,7 +429,7 @@ func (s *ParitySuite) TestParity_INV30_FailsWhenNormalizedNamesDiverge() {
 		Dirs:  map[string]bool{},
 		Links: map[string]string{},
 	}
-	r := _invINV30ToolCallsNormalizedNameInvariant.Check(snap)
+	r := invINV30ToolCallsNormalizedNameInvariant.Check(snap)
 	if r.OK {
 		s.T().Error("INV-30 deveria falhar quando normalized_names divergem entre Claude e Codex")
 	}
@@ -445,7 +445,7 @@ func (s *ParitySuite) TestParity_INV30_PassesWhenFixturesAbsent() {
 		Dirs:       map[string]bool{},
 		Links:      map[string]string{},
 	}
-	r := _invINV30ToolCallsNormalizedNameInvariant.Check(snap)
+	r := invINV30ToolCallsNormalizedNameInvariant.Check(snap)
 	if !r.OK {
 		s.T().Errorf("INV-30 deveria passar (sem bloquear) quando fixtures ausentes: %s", r.Reason)
 	}
@@ -461,7 +461,7 @@ func (s *ParitySuite) TestParity_INV30_SkippedWhenCopilotOnly() {
 		Dirs:       map[string]bool{},
 		Links:      map[string]string{},
 	}
-	results := NewChecker().Run(snap, []*Invariant{_invINV30ToolCallsNormalizedNameInvariant})
+	results := NewChecker().Run(snap, []*Invariant{invINV30ToolCallsNormalizedNameInvariant})
 	if len(results) == 0 {
 		s.T().Fatal("Run retornou zero resultados")
 	}
@@ -484,7 +484,7 @@ func (s *ParitySuite) TestParity_INV31_PassesWithNoNestedAgentEvents() {
 		Dirs:  map[string]bool{},
 		Links: map[string]string{},
 	}
-	r := _invINV31MCPNestedDepthNeverExceedsMax.Check(snap)
+	r := invINV31MCPNestedDepthNeverExceedsMax.Check(snap)
 	if !r.OK {
 		s.T().Errorf("INV-31 deveria passar sem eventos nested_agent: %s", r.Reason)
 	}
@@ -503,7 +503,7 @@ func (s *ParitySuite) TestParity_INV31_PassesWithDepthWithinLimit() {
 		Dirs:  map[string]bool{},
 		Links: map[string]string{},
 	}
-	r := _invINV31MCPNestedDepthNeverExceedsMax.Check(snap)
+	r := invINV31MCPNestedDepthNeverExceedsMax.Check(snap)
 	if !r.OK {
 		s.T().Errorf("INV-31 deveria passar com depth=%d ≤ max=3: %s", depth, r.Reason)
 	}
@@ -522,7 +522,7 @@ func (s *ParitySuite) TestParity_INV31_FailsWhenDepthExceedsMax() {
 		Dirs:  map[string]bool{},
 		Links: map[string]string{},
 	}
-	r := _invINV31MCPNestedDepthNeverExceedsMax.Check(snap)
+	r := invINV31MCPNestedDepthNeverExceedsMax.Check(snap)
 	if r.OK {
 		s.T().Errorf("INV-31 deveria falhar com depth=%d > max=3", depth)
 	}
@@ -530,9 +530,9 @@ func (s *ParitySuite) TestParity_INV31_FailsWhenDepthExceedsMax() {
 
 // TestParity_INV31_ApliesToAllTools valida que INV-31 aplica a todas as ferramentas.
 func (s *ParitySuite) TestParity_INV31_ApliesToAllTools() {
-	if _invINV31MCPNestedDepthNeverExceedsMax.AppliesTo != nil {
+	if invINV31MCPNestedDepthNeverExceedsMax.AppliesTo != nil {
 		s.T().Errorf("INV-31 AppliesTo deveria ser nil (aplica a todos), got: %v",
-			_invINV31MCPNestedDepthNeverExceedsMax.AppliesTo)
+			invINV31MCPNestedDepthNeverExceedsMax.AppliesTo)
 	}
 }
 
@@ -850,7 +850,7 @@ func (s *ParitySuite) TestParity_FB01_Invariant_PassesOnValidSnapshot() {
 			if err != nil {
 				s.T().Fatalf("Generate: %v", err)
 			}
-			r := _invFB01FallbackLauncherChainDeclared.Check(snap)
+			r := invFB01FallbackLauncherChainDeclared.Check(snap)
 			if !r.OK {
 				s.T().Errorf("[FB01] deveria passar para snapshot valido: %s", r.Reason)
 			}
@@ -870,7 +870,7 @@ func (s *ParitySuite) TestParity_FB01_Invariant_FailsOnCorruptedAgentsMD() {
 	agentsPath := filepath.Join(testProjectDir, "AGENTS.md")
 	snap.Files[agentsPath] = []byte("<!-- governance-schema: 1.0.0 -->\n# Regras\nConteudo corrompido sem skills referenciadas.")
 
-	r := _invFB01FallbackLauncherChainDeclared.Check(snap)
+	r := invFB01FallbackLauncherChainDeclared.Check(snap)
 	if r.OK {
 		s.T().Error("[FB01] deveria falhar quando AGENTS.md nao contem agent-governance")
 	}
@@ -878,10 +878,10 @@ func (s *ParitySuite) TestParity_FB01_Invariant_FailsOnCorruptedAgentsMD() {
 
 // TestParity_FB01_InvariantLevel verifica que FB01 tem nivel Common (nao BestEffort).
 func (s *ParitySuite) TestParity_FB01_InvariantLevel() {
-	if _invFB01FallbackLauncherChainDeclared.Level != Common {
-		s.T().Errorf("[FB01] Level = %q, want Common", _invFB01FallbackLauncherChainDeclared.Level)
+	if invFB01FallbackLauncherChainDeclared.Level != Common {
+		s.T().Errorf("[FB01] Level = %q, want Common", invFB01FallbackLauncherChainDeclared.Level)
 	}
-	if _invFB01FallbackLauncherChainDeclared.AppliesTo != nil {
-		s.T().Errorf("[FB01] AppliesTo deveria ser nil (aplica a todos), got %v", _invFB01FallbackLauncherChainDeclared.AppliesTo)
+	if invFB01FallbackLauncherChainDeclared.AppliesTo != nil {
+		s.T().Errorf("[FB01] AppliesTo deveria ser nil (aplica a todos), got %v", invFB01FallbackLauncherChainDeclared.AppliesTo)
 	}
 }

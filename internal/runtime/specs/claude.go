@@ -21,6 +21,10 @@ const (
 	// Mantida em sincronia por scripts/sync-acp-sdk-version.sh.
 	// Não editar manualmente — use make sync-acp-sdk-version.
 	ClaudeSDKVersion = "v0.13.0"
+
+	ClaudeCodeNpmPackage = "@anthropic-ai/claude-code"
+
+	ClaudeCodeNpmVersion = "2.1.270"
 )
 
 // Claude retorna a Spec do runtime Claude ACP.

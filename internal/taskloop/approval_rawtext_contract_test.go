@@ -7,7 +7,7 @@ import (
 )
 
 func rawVerdict(v ReviewVerdict) string {
-	return "Verdict: " + string(v)
+	return "Verdict: " + string(v) + "\n\n## Mapa de Critérios de Aceite\n- [atendido] feito -> go test ./... -> PASS"
 }
 
 func TestStubReviewerRawOutputMatchesDeclaredVerdict(t *testing.T) {

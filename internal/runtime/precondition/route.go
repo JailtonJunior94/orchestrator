@@ -8,9 +8,10 @@ type Report struct {
 	Kind   specs.PreconditionKind
 	State  specs.PreconditionState
 	Remedy string
+	Points []CodexTrustPoint
 }
 
-type CodexTrustChecker func() (specs.PreconditionState, error)
+type CodexTrustChecker func() (CodexTrustReport, error)
 
 func Evaluate(pre specs.EnforcementPrecondition, projectDir string, copilotReader CopilotConfigReader, codexCheck CodexTrustChecker) Report {
 	report := Report{Kind: pre.Kind(), Remedy: pre.Remedy(), State: specs.PreconditionUnknown}
@@ -32,12 +33,13 @@ func Evaluate(pre specs.EnforcementPrecondition, projectDir string, copilotReade
 			report.State = specs.PreconditionUnknown
 			return report
 		}
-		state, err := codexCheck()
+		trust, err := codexCheck()
 		if err != nil {
 			report.State = specs.PreconditionUnknown
 			return report
 		}
-		report.State = state
+		report.Points = trust.Points
+		report.State = trust.State()
 	}
 	return report
 }

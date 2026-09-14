@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
@@ -56,7 +57,7 @@ func (s *Service) ExecuteWithOptions(projectDir string, checkCodexTrust bool) er
 	checks := s.runChecks(absDir)
 	if checkCodexTrust {
 		s.printer.Info("Executando RPC read-only hooks/list do codex app-server (opt-in explicito)...")
-		checks = append(checks, s.checkCodexTrustedHash())
+		checks = append(checks, s.checkCodexTrustedHash(absDir))
 	}
 
 	var failCount int
@@ -193,20 +194,38 @@ func (s *Service) checkGitBinary() Check {
 	return Check{Name: "Git instalado", Status: "ok", Detail: "disponivel"}
 }
 
-func (s *Service) checkCodexTrustedHash() Check {
-	client := precondition.NewCodexAppServerClient("")
+func (s *Service) checkCodexTrustedHash(projectDir string) Check {
+	agent, err := specs.NewCatalog().AgentByID("codex")
+	if err != nil {
+		return Check{Name: "Trust de hooks do Codex", Status: "warn", Detail: "unknown — agente codex ausente no catalogo"}
+	}
+
+	required := make([]string, 0, len(agent.Enforcement().Coverage()))
+	for _, cov := range agent.Enforcement().Coverage() {
+		required = append(required, cov.NativeKey())
+	}
+
+	client := precondition.NewCodexAppServerClient("", projectDir)
 	ctx, cancel := context.WithTimeout(context.Background(), codexTrustDoctorTimeout)
 	defer cancel()
 
-	state, err := precondition.EvaluateCodexTrustedHash(ctx, client, codexTrustDoctorTimeout)
+	report, err := precondition.EvaluateCodexTrustedHash(ctx, client, codexTrustDoctorTimeout, required)
 	if err != nil {
 		return Check{Name: "Trust de hooks do Codex", Status: "warn", Detail: fmt.Sprintf("unknown — RPC hooks/list falhou: %v", err)}
 	}
-	switch state {
+
+	untrusted := make([]string, 0, len(report.Points))
+	for _, point := range report.Points {
+		if point.State != specs.PreconditionCurrent {
+			untrusted = append(untrusted, point.EventName)
+		}
+	}
+
+	switch report.State() {
 	case specs.PreconditionCurrent:
-		return Check{Name: "Trust de hooks do Codex", Status: "ok", Detail: "hook de projeto confiado (trusted_hash presente)"}
+		return Check{Name: "Trust de hooks do Codex", Status: "ok", Detail: fmt.Sprintf("todos os pontos canonicos confiados em %s (%s)", projectDir, strings.Join(required, ", "))}
 	case specs.PreconditionInert:
-		return Check{Name: "Trust de hooks do Codex", Status: "fail", Detail: "hook de projeto sem trust — conceda via TUI interativa (/hooks) antes de orquestrar"}
+		return Check{Name: "Trust de hooks do Codex", Status: "fail", Detail: fmt.Sprintf("pontos sem trust de projeto em %s: %s — conceda via TUI interativa (/hooks) antes de orquestrar", projectDir, strings.Join(untrusted, ", "))}
 	default:
 		return Check{Name: "Trust de hooks do Codex", Status: "warn", Detail: "unknown — sem informacao de trust"}
 	}

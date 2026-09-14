@@ -106,3 +106,8 @@ command = "bash .codex/hooks/validate-preload.sh"
 [[hooks.PostToolUse.hooks]]
 type = "command"
 command = "bash .codex/hooks/validate-governance.sh"
+
+[[hooks.Stop]]
+[[hooks.Stop.hooks]]
+type = "command"
+command = "bash .codex/hooks/validate-session-end.sh"

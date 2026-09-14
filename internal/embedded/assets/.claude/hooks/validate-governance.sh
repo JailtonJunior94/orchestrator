@@ -26,7 +26,9 @@ GOVERNANCE_HOOK_MODE="${GOVERNANCE_HOOK_MODE:-fail}"
 
 HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=../../scripts/lib/parse-hook-input.sh
-source "$HOOK_DIR/../../scripts/lib/parse-hook-input.sh" 2>/dev/null \
+
+source "$HOOK_DIR/../../.agents/lib/parse-hook-input.sh" 2>/dev/null \
+  || source "$HOOK_DIR/../../scripts/lib/parse-hook-input.sh" 2>/dev/null \
   || source "$(cd "$HOOK_DIR/../.." && pwd)/scripts/lib/parse-hook-input.sh" 2>/dev/null \
   || { echo "AVISO: parse-hook-input.sh nao encontrado" >&2; exit 0; }
 
@@ -36,7 +38,7 @@ file_path="$(printf '%s' "$_stdin" | parse_file_path)"
 [[ -n "$file_path" ]] || exit 0
 
 case "$file_path" in
-  */.agents/skills/*/SKILL.md|*/.agents/skills/*/references/*.md|*/AGENTS.md)
+  AGENTS.md|.agents/skills/*/SKILL.md|.agents/skills/*/references/*.md|*/.agents/skills/*/SKILL.md|*/.agents/skills/*/references/*.md|*/AGENTS.md)
     echo "AVISO: arquivo de governanca modificado: $file_path" >&2
     echo "Verifique se esta edicao e intencional e se nao quebra o contrato de upgrade." >&2
     if [[ "$GOVERNANCE_HOOK_MODE" == "fail" ]]; then

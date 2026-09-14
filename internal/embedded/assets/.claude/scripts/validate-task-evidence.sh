@@ -19,30 +19,35 @@ fi
 
 missing=0
 
-# Modo estrito (NFR-01): fail-closed nos escapes de legado do gate de aceite.
-# Default preserva o comportamento warning-only da janela de compatibilidade.
-# Modo estrito e o padrao desde 0.31.0. A janela de compatibilidade do NFR-01
-# concedia warning-only por duas versoes menores a partir de 0.29.0 (o fluxo SDD),
-# cobrindo 0.29 e 0.30; ambas ja foram publicadas.
-strict_evidence="${AI_SDD_STRICT_EVIDENCE:-1}"
-
-# legacy_escape falha por padrao. O opt-out existe para migracao, mas e ruidoso
-# de proposito: BUG-127 mostrou que o problema nunca foi o escape existir, e sim
-# ele ser silencioso — um gate que se desliga sozinho e indistinguivel de um gate
-# que aprovou. Quem optar pelo legado ve isso em toda execucao.
-legacy_escape() {
-  local reason="$1"
-  if [[ "$strict_evidence" != "0" ]]; then
-    echo "FALTANDO: $reason"
-    echo "FALTANDO: o gate de aceite e fail-closed desde 0.31.0; declare os criterios" \
-         "na task file e comprove-os no relatorio."
+contract_version=1
+contract_marker="$(grep -Eio '<!--[[:space:]]*evidence-contract[[:space:]]*:[[:space:]]*v[0-9]+[[:space:]]*-->' "$report_file" | head -1 || true)"
+if [[ -n "$contract_marker" ]]; then
+  contract_version="$(printf '%s' "$contract_marker" | grep -Eo 'v[0-9]+' | head -1 | tr -d 'v')"
+  if [[ "$contract_version" != "2" ]]; then
+    echo "FALTANDO: versão de contrato de evidência desconhecida: v$contract_version (suportado: v2, ou ausência do marcador para o histórico v1)"
     missing=1
-  else
-    echo "AVISO: $reason — gate de aceite ignorado (AI_SDD_STRICT_EVIDENCE=0)."
-    echo "AVISO: este opt-out reabre um gate fail-open e existe apenas para migracao;" \
-         "a evidencia validada assim NAO comprova os criterios de aceite."
+    contract_version=2
   fi
-}
+fi
+
+if [[ "$contract_version" -eq 1 ]]; then
+  cut_ref="HEAD"
+  report_dir="$(dirname "$report_file")"
+  historical=0
+  if git -C "$report_dir" rev-parse --git-dir >/dev/null 2>&1; then
+    tracked_path="$(git -C "$report_dir" ls-files --full-name -- "$(basename "$report_file")" 2>/dev/null | head -1 || true)"
+    if [[ -n "$tracked_path" ]] && git -C "$report_dir" cat-file -e "$cut_ref:$tracked_path" 2>/dev/null; then
+      historical=1
+    fi
+  fi
+  if [[ "$historical" -eq 0 ]]; then
+    echo "FALTANDO: relatório sem marcador de contrato não é evidência histórica — não está versionado" \
+         "em $cut_ref (ou não há repositório git para comprovar). Trabalho novo deve declarar" \
+         "'<!-- evidence-contract: v2 -->' e cumprir as regras estritas (mapa 1:1 de critérios)."
+    missing=1
+    contract_version=2
+  fi
+fi
 
 require_pattern() {
   local pattern="$1"
@@ -88,7 +93,7 @@ require_pattern "lint[[:space:]]*:[[:space:]]*(pass|fail|blocked)" "evidência d
 
 # Prova forte de testes (RF-03): "Testes: pass" exige um comando de teste correspondente
 # na seção "## Comandos Executados". Sem comando → prova fraca → falha.
-testes_value="$(grep -Eio 'testes[[:space:]]*:[[:space:]]*(pass|fail|blocked)' "$report_file" | head -1 | grep -Eio '(pass|fail|blocked)' | head -1 | tr '[:upper:]' '[:lower:]')"
+testes_value="$(grep -Eio 'testes[[:space:]]*:[[:space:]]*(pass|fail|blocked)' "$report_file" | head -1 | grep -Eio '(pass|fail|blocked)' | head -1 | tr '[:upper:]' '[:lower:]' || true)"
 if [[ "$testes_value" == "pass" ]]; then
   cmds_block="$(awk '
     /^#+[[:space:]]+Comandos Executados/ { capture=1; next }
@@ -103,7 +108,7 @@ fi
 
 # Gate de critérios de aceite (RF-01..RF-02): cada critério da task file deve ter comprovação
 # no relatório. Resolução do task file via campo "Arquivo:". Task legada sem critérios → aviso não-fatal.
-task_file_ref="$(grep -Eio '^-[[:space:]]*Arquivo[[:space:]]*:[[:space:]]*(.+)$' "$report_file" | head -1 | sed -E 's/^-[[:space:]]*Arquivo[[:space:]]*:[[:space:]]*//' | sed -E 's/[[:space:]]+$//')"
+task_file_ref="$(grep -Eio '^-[[:space:]]*Arquivo[[:space:]]*:[[:space:]]*(.+)$' "$report_file" | head -1 | sed -E 's/^-[[:space:]]*Arquivo[[:space:]]*:[[:space:]]*//' | sed -E 's/[[:space:]]+$//' || true)"
 task_path=""
 if [[ -n "$task_file_ref" && "$task_file_ref" != *"<slug>"* && "$task_file_ref" != n/a* ]]; then
   if [[ -f "$task_file_ref" ]]; then
@@ -118,11 +123,22 @@ if grep -Eiq "^#+[[:space:]]+crit(e|é)rios de aceite" "$report_file"; then
   report_has_criteria=1
 fi
 
-if [[ -n "$task_path" ]]; then
+if [[ "$contract_version" -eq 1 ]]; then
+  echo "AVISO: contrato de evidência v1 (histórico) — mapa 1:1 de critérios de aceite não cobrado" \
+       "neste relatório (RF-04: evidência de execução é histórica e não é reescrita). A isenção cobre" \
+       "somente a forma da evidência; o desfecho (verdict=APPROVED) continua cobrado."
+elif grep -Eiq "estado[[:space:]]*:[[:space:]]*done" "$report_file" && [[ -n "$task_path" ]]; then
   criteria_count="$(awk '
-    /^#+[[:space:]]+Crit(e|é)rios de (Sucesso|Aceite)/ { capture=1; next }
-    /^#+[[:space:]]/ { if (capture) capture=0 }
-    capture && /^[[:space:]]*-[[:space:]]+/ { c++ }
+    tolower($0) ~ /^#+[[:space:]]+(crit(e|é)rios de (sucesso|aceite)|definition of done|acceptance criteria)/ { capture=1; next }
+    /^#+/ { capture=0 }
+    capture && /^[[:space:]]*-[[:space:]]+/ {
+      item=$0
+      sub(/^[[:space:]]*-[[:space:]]+/, "", item)
+      sub(/^\[[^]]*\][[:space:]]*/, "", item)
+      sub(/^[[:space:]]+/, "", item)
+      sub(/[[:space:]]+$/, "", item)
+      if (item != "") c++
+    }
     END { print c+0 }
   ' "$task_path")"
 
@@ -149,19 +165,24 @@ if [[ -n "$task_path" ]]; then
          "seção de critérios — mapa 1:1 não confrontável (RF-53); AI_SDD_STRICT_EVIDENCE não reabre este gate."
     missing=1
   else
-    legacy_escape "task file ($task_path) sem seção de critérios"
+    echo "FALTANDO: task file ($task_path) não declara nenhum critério de aceite —" \
+         "mapa 1:1 não confrontável (RF-53). O gate de aceite e fail-closed desde 0.31.0;" \
+         "declare os criterios na task file e comprove-os no relatorio."
+    missing=1
   fi
-elif [[ "$report_has_criteria" -eq 1 ]]; then
+elif grep -Eiq "estado[[:space:]]*:[[:space:]]*done" "$report_file" && [[ "$report_has_criteria" -eq 1 ]]; then
   echo "FALTANDO: relatório declara '## Critérios de Aceite' mas não há task file resolvível para" \
        "confronto 1:1 (RF-53); AI_SDD_STRICT_EVIDENCE não reabre este gate."
   missing=1
-else
-  legacy_escape "relatório sem referência resolvível a task file (campo 'Arquivo:')"
+elif grep -Eiq "estado[[:space:]]*:[[:space:]]*done" "$report_file"; then
+  echo "FALTANDO: relatório declara 'done' mas não há task file resolvível (campo 'Arquivo:') para" \
+       "confronto 1:1 dos critérios (RF-51/RF-53); AI_SDD_STRICT_EVIDENCE não reabre este gate."
+  missing=1
 fi
 
 # Rastreabilidade PRD → teste: se o relatório referencia um PRD com arquivo real (não n/a),
 # verificar que pelo menos um ID de requisito (ex: RF-01, RF01, REQ-1, REQ1) aparece no relatório.
-prd_line="$(grep -Eio 'PRD[[:space:]]*:[[:space:]]*(.+)' "$report_file" | head -1 | sed 's/^PRD[[:space:]]*:[[:space:]]*//' | tr -d '[:space:]')"
+prd_line="$(grep -Eio 'PRD[[:space:]]*:[[:space:]]*(.+)' "$report_file" | head -1 | sed 's/^PRD[[:space:]]*:[[:space:]]*//' | tr -d '[:space:]' || true)"
 if [[ -n "$prd_line" && "$prd_line" != n/a* && "$prd_line" != "(n/a)"* ]]; then
   if ! grep -Eiq "(RF-?[0-9]+|REQ-?[0-9]+)" "$report_file"; then
     echo "FALTANDO: nenhum ID de requisito (RF-nn ou REQ-nn) referenciado no relatório"
@@ -173,7 +194,7 @@ fi
 prd_path="$prd_line"
 if [[ -n "$prd_path" && "$prd_path" != n/a* && "$prd_path" != "(n/a)"* && -f "$prd_path" ]]; then
   # Extrair IDs do relatório e verificar cada um no PRD
-  report_ids="$(grep -Eio '(RF-?[0-9]+|REQ-?[0-9]+)' "$report_file" | sort -u)"
+  report_ids="$(grep -Eio '(RF-?[0-9]+|REQ-?[0-9]+)' "$report_file" | sort -u || true)"
   for req_id in $report_ids; do
     if ! grep -Fiq "$req_id" "$prd_path" 2>/dev/null; then
       echo "FALTANDO: requisito $req_id citado no relatório não encontrado no PRD ($prd_path)"
@@ -184,7 +205,7 @@ elif [[ -n "$prd_path" && "$prd_path" != n/a* && "$prd_path" != "(n/a)"* ]]; the
   # PRD referenciado mas arquivo não encontrado — tentar caminho relativo ao relatório
   report_dir="$(dirname "$report_file")"
   if [[ -f "$report_dir/$prd_path" ]]; then
-    report_ids="$(grep -Eio '(RF-?[0-9]+|REQ-?[0-9]+)' "$report_file" | sort -u)"
+    report_ids="$(grep -Eio '(RF-?[0-9]+|REQ-?[0-9]+)' "$report_file" | sort -u || true)"
     for req_id in $report_ids; do
       if ! grep -Fiq "$req_id" "$report_dir/$prd_path" 2>/dev/null; then
         echo "FALTANDO: requisito $req_id citado no relatório não encontrado no PRD ($report_dir/$prd_path)"
@@ -212,8 +233,9 @@ review_verdict="$(grep -E '^verdict=[[:space:]]*(APPROVED|APPROVED_WITH_REMARKS|
 if [[ -z "$review_verdict" ]]; then
   echo "FALTANDO: veredito do reviewer no bloco Diff Reviewed"
   missing=1
-elif [[ "$review_verdict" != "APPROVED" && "$review_verdict" != "APPROVED_WITH_REMARKS" ]]; then
-  echo "FALTANDO: veredito do reviewer não aprova execução: $review_verdict"
+elif [[ "$review_verdict" != "APPROVED" ]]; then
+  echo "FALTANDO: veredito do reviewer não encerra o ciclo de aprovação: $review_verdict (RF-53: a" \
+       "isenção histórica cobre a forma da evidência, nunca o desfecho; somente APPROVED encerra)."
   missing=1
 fi
 

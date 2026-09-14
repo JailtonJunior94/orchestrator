@@ -510,7 +510,7 @@ func TestRunLoopIntegrationEscalonamento(t *testing.T) {
 	if !errors.Is(execErr, ErrBugfixExhausted) {
 		t.Fatalf("err=%v, want ErrBugfixExhausted", execErr)
 	}
-	if !report.Escalated || report.BugfixCycles != 3 {
+	if !report.Escalated || report.BugfixCycles != 2 {
 		t.Fatalf("Escalated=%v BugfixCycles=%d", report.Escalated, report.BugfixCycles)
 	}
 	if !strings.Contains(stderr, "event=escalated value=bugfix_exhausted") {
@@ -536,6 +536,8 @@ func TestRunLoopIntegrationApprovedWithRemarksNonInteractive(t *testing.T) {
 		Gate:          &stubGate{},
 		Recorder:      &stubRecorder{},
 		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)}}},
+		BugfixInvoker: &runloopBugfixInvoker{},
+		DiffCapturer:  &runloopDiffCapturer{},
 	}
 
 	report, err := svc.RunLoop(context.Background(), Options{
@@ -543,8 +545,11 @@ func TestRunLoopIntegrationApprovedWithRemarksNonInteractive(t *testing.T) {
 		NonInteractive: true,
 		ReportPath:     prd + "/loop-report.json",
 	}, deps)
-	if err != nil {
-		t.Fatalf("RunLoop: %v", err)
+	if !errors.Is(err, ErrBugfixExhausted) {
+		t.Fatalf("RunLoop: err=%v, want ErrBugfixExhausted (RF-33: remarks realimentam o ciclo e nao encerram)", err)
+	}
+	if !report.Escalated {
+		t.Fatalf("Escalated=false: ressalvas persistentes devem escalar em vez de encerrar")
 	}
 	if report.ActionPlan == nil {
 		t.Fatalf("ActionPlan ausente em modo nao-interativo")

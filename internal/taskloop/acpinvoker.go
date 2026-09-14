@@ -175,7 +175,7 @@ func (c *acpInvoker) BinaryName() string {
 	return "claude-agent-acp"
 }
 
-func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (string, string, int, error) {
+func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 	timeout, err := events.NewActivityTimeout(c.activityTimeout)
 	if err != nil {
 		return "", "", 1, err
@@ -185,6 +185,7 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, _ string) (str
 	job := airuntime.Job{
 		Prompt:      prompt,
 		WorkDir:     workDir,
+		Model:       model,
 		EvidenceDir: evidenceDir,
 		RuntimeConfig: airuntime.RuntimeConfig{
 			Timeout:              timeout,

@@ -186,7 +186,8 @@ func (c *Cycle) reviewRound(ctx context.Context, number int, target ReviewTarget
 	}
 
 	verdict := c.translator.Translate(output.RawText())
-	findings := output.FindingsList()
+	findings := append(output.FindingsList(), output.CriteriaMap().FindingsList()...)
+	verdict = downgradeOnBlockingFindings(verdict, findings)
 	fingerprint := c.calculator.Compute(findings)
 
 	round, err := NewRound(number)
@@ -198,6 +199,18 @@ func (c *Cycle) reviewRound(ctx context.Context, number int, target ReviewTarget
 		return Round{}, CriteriaMap{}, err
 	}
 	return completed, output.CriteriaMap(), nil
+}
+
+func downgradeOnBlockingFindings(verdict Verdict, findings []Finding) Verdict {
+	if verdict != VerdictApproved {
+		return verdict
+	}
+	for _, finding := range findings {
+		if finding.Severity().Blocks() {
+			return VerdictRejected
+		}
+	}
+	return verdict
 }
 
 func (c *Cycle) fixRound(ctx context.Context, number int, findings []Finding, target ReviewTarget, checkpoint Checkpoint) (bool, error) {

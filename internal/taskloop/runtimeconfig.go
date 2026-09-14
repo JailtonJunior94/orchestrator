@@ -1,6 +1,7 @@
 package taskloop
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -10,6 +11,8 @@ import (
 )
 
 const defaultACPActivityTimeout = 2 * time.Minute
+
+var ErrInvalidMaxBugfixIterations = errors.New("invalid max_bugfix_iterations: minimum accepted value is 1")
 
 // BuildRuntimeConfig converte um config.Runtime já resolvido (via config.Resolver.Resolve)
 // para um runtime.RuntimeConfig pronto para injeção em Job.
@@ -43,6 +46,10 @@ func (c *Catalog) BuildRuntimeConfig(resolved config.Runtime) (airuntime.Runtime
 			return airuntime.RuntimeConfig{}, fmt.Errorf("invalid handoff lease ttl: %w", err)
 		}
 		leaseTTL = d
+	}
+
+	if resolved.MaxBugfixIterations < 0 {
+		return airuntime.RuntimeConfig{}, fmt.Errorf("%w: %d", ErrInvalidMaxBugfixIterations, resolved.MaxBugfixIterations)
 	}
 
 	rc := airuntime.RuntimeConfig{

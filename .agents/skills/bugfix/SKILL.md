@@ -66,7 +66,7 @@ description: Corrige bugs pela causa raiz com testes de regressao obrigatorios e
 * Se uma correcao alterar comportamento publico, parar e explicitar a mudanca a menos que ela tenha sido solicitada.
 * Se `go test ./...` ou o equivalente do projeto falhar apos a correcao, analisar o log de falha antes de reexecutar.
 * Se a baseline do repositorio ja estiver quebrada, separar claramente a falha preexistente das falhas introduzidas pela correcao.
-* Respeitar o limite de profundidade de invocacao definido em `.agents/skills/agent-governance/SKILL.md`. Bugfix nao deve re-invocar review se ja estiver sendo executado dentro de um ciclo review -> bugfix.
+* Respeitar o limite de profundidade de invocacao definido em `.agents/skills/agent-governance/SKILL.md`. Bugfix **nao** reinvoca review por conta propria: quem abre a rodada seguinte de revisao e o orquestrador do Ciclo de Aprovacao (RF-38). Cada rodada abre com a profundidade de invocacao resetada, e o que limita a cadeia `review -> bugfix -> review` e o **teto de rodadas** do Ciclo (default 5, RF-35), nao a profundidade.
 
 ## Resolução de paths
 
