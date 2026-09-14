@@ -3,6 +3,7 @@ package traceability_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/evidence"
@@ -103,7 +104,15 @@ func TestBuildMapAndValidate_FullChainPasses(t *testing.T) {
 |---|---|
 | 1.0 | RF-01, RF-02 |
 `)
+	writeTraceFixture(t, dir, "task-1.0.md", `# Task 1.0
+
+## Critérios de Sucesso
+- criterio um
+`)
 	writeTraceFixture(t, dir, "1.0_execution_report.md", `# Report
+
+## Tarefa
+- Arquivo: task-1.0.md
 
 ## Critérios de Aceite
 - criterio um -> go test ./... -> PASS
@@ -116,6 +125,9 @@ func TestBuildMapAndValidate_FullChainPasses(t *testing.T) {
 	violations := m.Validate()
 	if len(violations) != 0 {
 		t.Fatalf("expected zero violations, got %v", violations)
+	}
+	if m.VerifiedTaskCount() != 1 {
+		t.Fatalf("VerifiedTaskCount = %d, want 1", m.VerifiedTaskCount())
 	}
 }
 
@@ -131,7 +143,11 @@ func TestValidate_RequirementWithoutTask(t *testing.T) {
 |---|---|
 | 1.0 | RF-01 |
 `)
+	writeTraceFixture(t, dir, "task-1.0.md", "# Task\n\n## Critérios de Sucesso\n- criterio um\n")
 	writeTraceFixture(t, dir, "1.0_execution_report.md", `# Report
+
+## Tarefa
+- Arquivo: task-1.0.md
 
 ## Critérios de Aceite
 - criterio um -> comprovado: log-1
@@ -227,8 +243,12 @@ func TestValidate_CriterionWithoutEvidence(t *testing.T) {
 |---|---|
 | 1.0 | RF-01 |
 `)
+	writeTraceFixture(t, dir, "task-1.0.md", "# Task\n\n## Critérios de Sucesso\n- criterio um\n")
 	writeTraceFixture(t, dir, "1.0_execution_report.md", `<!-- evidence-contract: v2 -->
 # Report
+
+## Tarefa
+- Arquivo: task-1.0.md
 
 ## Critérios de Aceite
 - criterio sem seta de evidencia
@@ -251,7 +271,7 @@ func TestValidate_CriterionWithoutEvidence(t *testing.T) {
 	}
 }
 
-func TestValidate_BlockedTaskDoesNotClaimUnobservedEvidence(t *testing.T) {
+func TestValidate_BlockedTaskWithWrittenReportIsStillCharged(t *testing.T) {
 	dir := t.TempDir()
 
 	writeTraceFixture(t, dir, "prd.md", "RF-01 deve existir.")
@@ -267,7 +287,12 @@ func TestValidate_BlockedTaskDoesNotClaimUnobservedEvidence(t *testing.T) {
 |---|---|
 | 1.0 | RF-01 |
 `)
-	writeTraceFixture(t, dir, "1.0_execution_report.md", `# Report
+	writeTraceFixture(t, dir, "task-1.0.md", "# Task\n\n## Critérios de Sucesso\n- criterio um\n")
+	writeTraceFixture(t, dir, "1.0_execution_report.md", `<!-- evidence-contract: v2 -->
+# Report
+
+## Tarefa
+- Arquivo: task-1.0.md
 
 ## Critérios de Aceite
 - Bloqueado aguardando execução nativa.
@@ -277,10 +302,182 @@ func TestValidate_BlockedTaskDoesNotClaimUnobservedEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatalf("BuildMap: %v", err)
 	}
-	for _, v := range m.Validate() {
+	violations, notices := m.Report()
+
+	found := false
+	for _, v := range violations {
 		if v.Kind == traceability.ViolationCriterionWithoutEvidence {
-			t.Fatalf("blocked task must not require unobserved evidence: %v", v)
+			found = true
 		}
+	}
+	if !found {
+		t.Fatalf("blocked task with a written report must still be charged for evidence, got %v", violations)
+	}
+	for _, n := range notices {
+		if n.Kind == traceability.NoticeTaskBlocked && strings.Contains(n.Detail, "fora do escopo") {
+			t.Fatalf("task_blocked must not read as an exemption: %v", n)
+		}
+	}
+	if m.VerifiedTaskCount() != 1 {
+		t.Fatalf("VerifiedTaskCount = %d, want 1 (blocked task is in the confronted universe)", m.VerifiedTaskCount())
+	}
+}
+
+func TestValidate_HistoricalContractDoesNotExemptCriteriaMap(t *testing.T) {
+	dir := t.TempDir()
+
+	writeTraceFixture(t, dir, "prd.md", "RF-01 deve existir.")
+	writeTraceFixture(t, dir, "tasks.md", `# Tasks
+
+## Cobertura de Requisitos
+
+| Tarefa | Requisitos cobertos |
+|---|---|
+| 1.0 | RF-01 |
+`)
+	writeTraceFixture(t, dir, "task-1.0.md", "# Task\n\n## Critérios de Sucesso\n- criterio um\n- criterio dois\n")
+	writeTraceFixture(t, dir, "1.0_execution_report.md", `# Report
+
+## Tarefa
+- Arquivo: task-1.0.md
+
+## Critérios de Aceite
+- criterio um -> comprovado: prosa livre aceita sob v1
+`)
+
+	m, err := traceability.NewCatalog().BuildMap(dir)
+	if err != nil {
+		t.Fatalf("BuildMap: %v", err)
+	}
+	m.Contracts = map[string]evidence.Contract{"1.0": evidence.ContractV1}
+
+	violations, notices := m.Report()
+
+	found := false
+	for _, v := range violations {
+		if v.Kind == traceability.ViolationCriteriaMapIncomplete && v.Subject == "1.0" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("v1 exemption must not cover the 1:1 criteria map, got %v", violations)
+	}
+	for _, n := range notices {
+		if n.Kind == traceability.NoticeHistoricalEvidence {
+			t.Fatalf("map breach must be a violation, not swallowed by the historical notice: %v", n)
+		}
+	}
+}
+
+func TestValidate_HistoricalContractKeepsEvidenceFormExempt(t *testing.T) {
+	dir := t.TempDir()
+
+	writeTraceFixture(t, dir, "prd.md", "RF-01 deve existir.")
+	writeTraceFixture(t, dir, "tasks.md", `# Tasks
+
+## Cobertura de Requisitos
+
+| Tarefa | Requisitos cobertos |
+|---|---|
+| 1.0 | RF-01 |
+`)
+	writeTraceFixture(t, dir, "task-1.0.md", "# Task\n\n## Critérios de Sucesso\n- criterio um\n")
+	writeTraceFixture(t, dir, "1.0_execution_report.md", `# Report
+
+## Tarefa
+- Arquivo: task-1.0.md
+
+## Critérios de Aceite
+- criterio um -> comprovado: prosa livre aceita sob v1
+`)
+
+	m, err := traceability.NewCatalog().BuildMap(dir)
+	if err != nil {
+		t.Fatalf("BuildMap: %v", err)
+	}
+	m.Contracts = map[string]evidence.Contract{"1.0": evidence.ContractV1}
+
+	violations, notices := m.Report()
+	for _, v := range violations {
+		if v.Kind == traceability.ViolationCriterionWithoutEvidence {
+			t.Fatalf("v1 exemption must still cover the strict evidence form: %v", v)
+		}
+	}
+	found := false
+	for _, n := range notices {
+		if n.Kind == traceability.NoticeHistoricalEvidence && n.Subject == "1.0" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected historical_evidence_contract notice, got %v", notices)
+	}
+	if m.VerifiedTaskCount() != 0 {
+		t.Fatalf("VerifiedTaskCount = %d, want 0 (evidence form was never confronted)", m.VerifiedTaskCount())
+	}
+}
+
+func TestValidate_UnresolvableTaskFileBreaksTheMap(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name       string
+		reference  string
+		taskFile   string
+		wantDetail string
+	}{
+		{name: "no reference at all", reference: "", wantDetail: "nao declara task file resolvivel"},
+		{name: "reference points nowhere", reference: "- Arquivo: task-inexistente.md\n", wantDetail: "nao existe"},
+		{name: "task file declares no criteria", reference: "- Arquivo: task-1.0.md\n", taskFile: "# Task\n\nSem secao de criterios.\n", wantDetail: "nao declara nenhum criterio"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			writeTraceFixture(t, dir, "prd.md", "RF-01 deve existir.")
+			writeTraceFixture(t, dir, "tasks.md", "# Tasks\n\n## Cobertura de Requisitos\n\n| Tarefa | Requisitos cobertos |\n|---|---|\n| 1.0 | RF-01 |\n")
+			if tc.taskFile != "" {
+				writeTraceFixture(t, dir, "task-1.0.md", tc.taskFile)
+			}
+			writeTraceFixture(t, dir, "1.0_execution_report.md",
+				"<!-- evidence-contract: v2 -->\n# Report\n\n## Tarefa\n"+tc.reference+"\n## Critérios de Aceite\n- criterio um -> go test ./... -> PASS\n")
+
+			m, err := traceability.NewCatalog().BuildMap(dir)
+			if err != nil {
+				t.Fatalf("BuildMap: %v", err)
+			}
+			violations := m.Validate()
+
+			found := false
+			for _, v := range violations {
+				if v.Kind == traceability.ViolationCriteriaMapIncomplete && strings.Contains(v.Detail, tc.wantDetail) {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("expected criteria_map_incomplete containing %q, got %v", tc.wantDetail, violations)
+			}
+			if m.VerifiedTaskCount() != 0 {
+				t.Fatalf("VerifiedTaskCount = %d, want 0 (map was not confrontable)", m.VerifiedTaskCount())
+			}
+			foundVacuous := false
+			for _, v := range violations {
+				if v.Kind == traceability.ViolationGateVacuous {
+					foundVacuous = true
+				}
+			}
+			if !foundVacuous {
+				t.Fatalf("a universe with no confronted task must also report gate_vacuous, got %v", violations)
+			}
+		})
+	}
+}
+
+func TestCountTaskCriteria_OnlyInsideCriteriaSection(t *testing.T) {
+	t.Parallel()
+
+	task := []byte("# Task\n\n## Contexto\n- nao e criterio\n\n## Critérios de Sucesso\n- [ ] criterio um\n- criterio dois\n  - sub-item tambem conta\n\n```\n- dentro de fence nao conta\n```\n\n## Notas\n- nao e criterio\n")
+
+	if got := traceability.NewCatalog().CountTaskCriteria(task); got != 3 {
+		t.Fatalf("CountTaskCriteria = %d, want 3", got)
 	}
 }
 
@@ -296,7 +493,11 @@ func TestValidate_UniverseFullyExemptIsNotVerification(t *testing.T) {
 |---|---|
 | 1.0 | RF-01 |
 `)
+	writeTraceFixture(t, dir, "task-1.0.md", "# Task\n\n## Critérios de Sucesso\n- criterio\n")
 	writeTraceFixture(t, dir, "1.0_execution_report.md", `# Report
+
+## Tarefa
+- Arquivo: task-1.0.md
 
 ## Critérios de Aceite
 - criterio -> go test ./... -> PASS
@@ -323,7 +524,12 @@ func TestValidate_UniverseFullyExemptIsNotVerification(t *testing.T) {
 }
 
 func TestValidate_CriterionRejectsArbitraryEvidenceProse(t *testing.T) {
-	m := traceability.Map{TaskCoverage: map[string][]string{"1.0": {"RF-01"}}, Criteria: map[string][]traceability.Criterion{"1.0": {{Task: "1.0", Text: "criterion", Evidence: "trust me"}}}, MissingReports: map[string]bool{}}
+	m := traceability.Map{
+		TaskCoverage:   map[string][]string{"1.0": {"RF-01"}},
+		Criteria:       map[string][]traceability.Criterion{"1.0": {{Task: "1.0", Text: "criterion", Evidence: "trust me"}}},
+		MissingReports: map[string]bool{},
+		TaskSources:    map[string]traceability.TaskSource{"1.0": {Reference: "task-1.0.md", Path: "task-1.0.md", CriteriaCount: 1}},
+	}
 	violations := m.Validate()
 	if len(violations) != 1 || violations[0].Kind != traceability.ViolationCriterionWithoutEvidence {
 		t.Fatalf("violations = %v, want criterion_without_evidence", violations)
@@ -365,7 +571,7 @@ func TestBuildMap_MissingPRDFile(t *testing.T) {
 	}
 }
 
-func TestFullPRD_HarnessQuatroClisLoopAprovacao_ChainIsClosed(t *testing.T) {
+func TestFullPRD_HarnessQuatroClisLoopAprovacao_ReportsRealState(t *testing.T) {
 	dir := "../../.specs/prd-harness-quatro-clis-loop-aprovacao"
 	if _, err := os.Stat(filepath.Join(dir, "prd.md")); err != nil {
 		t.Skip("PRD directory not present in this checkout")
@@ -379,17 +585,32 @@ func TestFullPRD_HarnessQuatroClisLoopAprovacao_ChainIsClosed(t *testing.T) {
 		t.Fatalf("expected 63 requirements in prd.md, got %d", len(m.Requirements))
 	}
 
+	blockedWithReport := 0
+	for task, status := range m.TaskStatuses {
+		if status == "blocked" && !m.MissingReports[task] {
+			blockedWithReport++
+		}
+	}
+	if blockedWithReport == 0 {
+		t.Fatal("fixture drift: this PRD is expected to carry blocked tasks with written reports")
+	}
+
 	violations := m.Validate()
+	kinds := make(map[traceability.ViolationKind]int)
 	for _, v := range violations {
-		if v.Kind != traceability.ViolationGateVacuous {
+		kinds[v.Kind]++
+	}
+	for _, v := range violations {
+		if v.Kind != traceability.ViolationGateVacuous && v.Kind != traceability.ViolationCriteriaMapIncomplete {
 			t.Errorf("unexpected traceability violation: %s", v.String())
 		}
 	}
-	if t.Failed() {
-		t.Logf("all violations: %v", violations)
+	if kinds[traceability.ViolationGateVacuous] != 1 {
+		t.Errorf("every report here is contract v1, so no task has its evidence form confronted: gate_vacuous = %d, want 1", kinds[traceability.ViolationGateVacuous])
 	}
-
-	if m.VerifiedTaskCount() == 0 && len(m.TaskCoverage) > 0 {
-		t.Logf("gate vacuo: %d tarefa(s) no escopo, 0 confrontada(s) — cadeia isenta, nao verificada", len(m.TaskCoverage))
+	if m.VerifiedTaskCount() != 0 {
+		t.Errorf("VerifiedTaskCount = %d, want 0 while the whole universe is contract v1", m.VerifiedTaskCount())
 	}
+	t.Logf("estado real: %d tarefa(s) no escopo, %d blocked com relatorio, %d confrontada(s), violacoes=%v",
+		len(m.TaskCoverage), blockedWithReport, m.VerifiedTaskCount(), kinds)
 }

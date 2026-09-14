@@ -314,7 +314,7 @@ func (c *taskLoopCommand) registerFlags(cmd *cobra.Command) {
 
 	cmd.Flags().Bool("auto-review", false,
 		"Habilita auto-review opt-in (F5-Claude): após session end, spawna nova sessão com skill review "+
-			"e git diff acumulado. Parseia [HARD]/BLOQUEADO/CRÍTICO → Summary.ReviewStatus=blocked. "+
+			"e git diff acumulado. Parseia [CRITICAL]/[HIGH]/BLOQUEADO/CRÍTICO → Summary.ReviewStatus=blocked. "+
 			"HARD: default false; sessões filho têm auto-review=false forçado (anti-recursão). "+
 			"Dobra custo de tokens — usar somente quando necessário. Ver ADR-014 §D-07.")
 

@@ -163,6 +163,66 @@ VALID_REPORT="${VALID_REPORT//__PATCH_SHA__/$PATCH_SHA}"
 
 run_case "TC1-valido" "$VALID_REPORT" 0 "aprovada"
 
+# ── Gate de versao do binario ai-spec ────────────────────────────────────────
+# Um ai-spec anterior ao contrato v2 reprovava a prova fisica por motivo falso
+# ("prova fisica invalida"). O validador agora exige versao minima e falha com
+# mensagem explicita sobre a toolchain.
+STALE_BIN="$TMP_ROOT/stale-ai-spec"
+cat >"$STALE_BIN" <<'STALE'
+#!/usr/bin/env bash
+if [[ "${1:-}" == "version" ]]; then
+  echo "ai-spec-harness 1.1.0 (commit: deadbeef, built: 2026-09-05T20:00:32Z)"
+  exit 0
+fi
+echo "erro: subcomando desconhecido" >&2
+exit 1
+STALE
+chmod +x "$STALE_BIN"
+
+VERSION_FIXTURE="$TMPDIR_BASE/report_version_gate.md"
+printf '<!-- evidence-contract: v2 -->\n%s' "$VALID_REPORT" >"$VERSION_FIXTURE"
+
+stale_exit=0
+stale_out=$(AI_SPEC_BIN="$STALE_BIN" bash "$SCRIPT" "$VERSION_FIXTURE" 2>&1) || stale_exit=$?
+if [[ "$stale_exit" -eq 1 ]] \
+  && grep -qi "toolchain ai-spec incompativel" <<<"$stale_out" \
+  && grep -qi "1.1.0" <<<"$stale_out" \
+  && ! grep -qi "prova fisica invalida" <<<"$stale_out"; then
+  echo "PASS [TC25-binario-obsoleto-falha-com-mensagem-de-versao]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [TC25-binario-obsoleto-falha-com-mensagem-de-versao]: exit=$stale_exit"
+  echo "  output: $stale_out"
+  FAIL=$((FAIL+1))
+fi
+
+absent_exit=0
+absent_out=$(AI_SPEC_BIN="$TMP_ROOT/inexistente-ai-spec" bash "$SCRIPT" "$VERSION_FIXTURE" 2>&1) || absent_exit=$?
+if [[ "$absent_exit" -eq 1 ]] \
+  && grep -qi "toolchain ai-spec incompativel" <<<"$absent_out" \
+  && grep -qi "ausente ou nao executavel" <<<"$absent_out" \
+  && ! grep -qi "prova fisica invalida" <<<"$absent_out"; then
+  echo "PASS [TC26-binario-ausente-falha-com-mensagem-de-versao]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [TC26-binario-ausente-falha-com-mensagem-de-versao]: exit=$absent_exit"
+  echo "  output: $absent_out"
+  FAIL=$((FAIL+1))
+fi
+
+compatible_exit=0
+compatible_out=$(bash "$SCRIPT" "$VERSION_FIXTURE" 2>&1) || compatible_exit=$?
+if [[ "$compatible_exit" -eq 0 ]] && ! grep -qi "toolchain ai-spec incompativel" <<<"$compatible_out"; then
+  echo "PASS [TC27-binario-compativel-passa]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [TC27-binario-compativel-passa]: exit=$compatible_exit"
+  echo "  output: $compatible_out"
+  FAIL=$((FAIL+1))
+fi
+rm -f "$VERSION_FIXTURE"
+
+
 # ── Sem SHA ──────────────────────────────────────────────────────────────────
 NO_SHA_REPORT="${VALID_REPORT/sha=$PATCH_SHA/sha=INVALIDO}"
 run_case "TC2-sem-sha" "$NO_SHA_REPORT" 1 "missing diff sha"

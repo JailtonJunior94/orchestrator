@@ -40,31 +40,35 @@ type ReviewResult struct {
 	// Path é o caminho de evidence/<task>/review.md.
 	Path string
 	// Output é o texto completo da sessão de review.
-	Output string
-	// HardIssues lista as linhas que contêm [HARD]/BLOQUEADO/CRÍTICO.
+	Output     string
 	HardIssues []string
 }
 
-// buildReviewPrompt constrói o prompt para a sessão de review.
-// skillBody é o conteúdo de .agents/skills/review/SKILL.md.
-// gitDiff é a saída de git diff (staged + unstaged).
 func (c *Catalog) buildReviewPrompt(skillBody, gitDiff string) string {
 	return fmt.Sprintf(
 		"%s\n\n## Diff a Revisar\n\n```diff\n%s\n```\n\n## Instrução\n"+
-			"Revise o diff acima conforme as regras da skill. Reporte issues por severidade.\n"+
-			"Para issues `hard`/`CRÍTICO`/`BLOQUEADO`, prefixar a linha com [HARD].\n",
+			"Revise o diff acima conforme as regras da skill e reporte cada achado em linha própria.\n"+
+			"Taxonomia canônica obrigatória de severidade — prefixe a linha do achado com exatamente um destes marcadores: "+
+			"[CRITICAL], [HIGH], [MEDIUM] ou [LOW].\n"+
+			"Formato de cada achado: [SEVERIDADE] arquivo:linha descrição do problema.\n"+
+			"Marcadores fora dessa taxonomia (incluindo [HARD]) não são lidos pelo orquestrador e fazem o achado ser descartado.\n"+
+			"Se não houver achado algum, escreva exatamente: Sem achados.\n"+
+			"Encerre com o veredito em linha própria: APPROVED, APPROVED_WITH_REMARKS, REJECTED ou BLOCKED.\n",
 		skillBody, gitDiff,
 	)
 }
 
-// extractHardIssues retorna as linhas do review output que contêm marcadores críticos.
+var blockingIssueMarkers = []string{"[CRITICAL]", "[HIGH]", "[HARD]", "BLOQUEADO", "CRÍTICO"}
+
 func (c *Catalog) extractHardIssues(reviewOutput string) []string {
 	var issues []string
 	for line := range strings.SplitSeq(reviewOutput, "\n") {
-		if strings.Contains(line, "[HARD]") ||
-			strings.Contains(line, "BLOQUEADO") ||
-			strings.Contains(line, "CRÍTICO") {
-			issues = append(issues, strings.TrimSpace(line))
+		upper := strings.ToUpper(line)
+		for _, marker := range blockingIssueMarkers {
+			if strings.Contains(upper, marker) {
+				issues = append(issues, strings.TrimSpace(line))
+				break
+			}
 		}
 	}
 	return issues

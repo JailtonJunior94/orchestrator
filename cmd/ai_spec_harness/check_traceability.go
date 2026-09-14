@@ -14,8 +14,12 @@ func newCheckTraceabilityCmd() *cobra.Command {
 		Short: "Verifica a cadeia requisito -> tarefa -> criterio -> evidencia",
 		Long: `Deriva o mapa de rastreabilidade a partir de prd.md, tasks.md e dos
 relatorios de execucao (<tarefa>_execution_report.md) sob o diretorio informado,
-e reprova qualquer RF sem tarefa, tarefa sem relatorio ou criterio, e criterio
-sem linha de evidencia.
+e reprova qualquer RF sem tarefa, tarefa sem relatorio ou criterio, criterio
+sem linha de evidencia e mapa 1:1 incompleto entre a task file e o relatorio.
+
+Tarefa com status blocked que ja tem relatorio de execucao escrito segue cobrada.
+A isencao de contrato de evidencia v1 (historico) cobre somente a forma estrita da
+evidencia por criterio; o mapa 1:1 continua cobrado (RF-53).
 
 Criterio reconhecido: item de lista de topo (sem indentacao) iniciado por "- " dentro da secao
 "## Criterios de Aceite". Sub-itens indentados, blocos de codigo cercados por crases triplas,

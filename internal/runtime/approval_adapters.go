@@ -266,13 +266,18 @@ func (a *ReviewerAdapter) Review(ctx context.Context, request approval.ReviewReq
 	}
 	job.Prompt = NewCatalog().buildReviewPrompt(skillBody, request.Target().String())
 
+	evidenceWriter := NewRoundEvidenceWriter(a.baseJob.EvidenceDir)
+	if roundDir := evidenceWriter.Dir(request.Round()); roundDir != "" {
+		job.EvidenceDir = roundDir
+	}
+
 	restoreEnv := NewCatalog().applyRoundReviewEnv(request.Round(), a.priorCutPoint(request.Round()))
 	rawText, err := a.runner.spawnReviewSession(ctx, job)
 	restoreEnv()
 	if err != nil {
 		return approval.ReviewerOutput{}, err
 	}
-	if _, err := NewRoundEvidenceWriter(a.baseJob.EvidenceDir).Write(request.Round(), rawText); err != nil {
+	if _, err := evidenceWriter.Write(request.Round(), rawText); err != nil {
 		return approval.ReviewerOutput{}, err
 	}
 	criteriaMap, err := approval.ParseCriteriaMap(rawText, request)

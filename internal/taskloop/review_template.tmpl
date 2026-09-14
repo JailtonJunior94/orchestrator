@@ -21,9 +21,10 @@ Focos obrigatorios da revisao:
 - divida tecnica introduzida: o que precisara de refactor futuro?
 
 Saidas esperadas:
-- lista de achados por categoria (critico, importante, sugestao)
-- para cada achado critico: arquivo, linha, descricao e correcao sugerida
-- veredicto final: aprovado / aprovado com ressalvas / reprovado
+- cada achado em linha propria, prefixado por exatamente um marcador da taxonomia canonica: [CRITICAL], [HIGH], [MEDIUM] ou [LOW]
+- formato de cada achado: [SEVERIDADE] arquivo:linha descricao e correcao sugerida
+- marcadores fora dessa taxonomia (incluindo [HARD]) nao sao lidos e fazem o achado ser descartado
+- veredicto final em linha propria: APPROVED / APPROVED_WITH_REMARKS / REJECTED / BLOCKED
 
 Do NOT modify files in the PRD folder.
 Do NOT modify any task file or any row in tasks.md.

@@ -140,8 +140,9 @@ Focos obrigatorios:
 - linguagens detectadas no patch: %s. Aplique as convencoes e riscos de cada uma.
 
 Saidas esperadas:
-- lista de achados por categoria: [Critical], [Important], [Suggestion]
-- para cada achado: [arquivo:linha] descricao e correcao sugerida
+- cada achado em linha propria, prefixado por exatamente um marcador da taxonomia canonica: [CRITICAL], [HIGH], [MEDIUM] ou [LOW]
+- formato de cada achado: [SEVERIDADE] arquivo:linha descricao e correcao sugerida
+- marcadores fora dessa taxonomia (incluindo [HARD]) nao sao lidos e fazem o achado ser descartado
 - veredicto final em linha propria: APPROVED / APPROVED_WITH_REMARKS / REJECTED / BLOCKED
 
 Do NOT modify any files. Review in read-only mode and report findings only via stdout.

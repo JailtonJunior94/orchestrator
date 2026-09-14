@@ -267,6 +267,57 @@ import re
 import subprocess
 import sys
 
+MIN_AI_SPEC_VERSION = (2, 0, 0)
+
+
+class ToolchainError(Exception):
+    pass
+
+
+def parse_semver(raw):
+    found = re.search(r"(\d+)\.(\d+)\.(\d+)", raw)
+    if not found:
+        return None
+    return (int(found.group(1)), int(found.group(2)), int(found.group(3)))
+
+
+def resolve_validator():
+    binary = os.environ.get("AI_SPEC_BIN", "ai-spec")
+    minimum = ".".join(str(part) for part in MIN_AI_SPEC_VERSION)
+    try:
+        probe = subprocess.run(
+            [binary, "version"],
+            text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            check=False,
+        )
+    except OSError as error:
+        raise ToolchainError(
+            f"binario {binary!r} ausente ou nao executavel ({error}); "
+            f"exigido ai-spec-harness >= {minimum}. "
+            "Construa a partir do HEAD (go build -o ./ai-spec .) e exporte AI_SPEC_BIN."
+        ) from error
+    output = " ".join(probe.stdout.split())
+    if probe.returncode != 0:
+        raise ToolchainError(
+            f"{binary!r} nao respondeu a 'version' (exit {probe.returncode}): {output}; "
+            f"exigido ai-spec-harness >= {minimum}."
+        )
+    version = parse_semver(output)
+    if version is None:
+        raise ToolchainError(
+            f"nao foi possivel identificar a versao de {binary!r}: {output}; "
+            f"exigido ai-spec-harness >= {minimum}."
+        )
+    if version < MIN_AI_SPEC_VERSION:
+        current = ".".join(str(part) for part in version)
+        raise ToolchainError(
+            f"{binary!r} esta na versao {current}, anterior a {minimum} exigida por este contrato "
+            "de evidencia; um binario obsoleto reprova a prova fisica por motivo falso. "
+            "Construa a partir do HEAD (go build -o ./ai-spec .) e exporte AI_SPEC_BIN."
+        )
+    return binary
+
+
 report = os.path.realpath(sys.argv[1])
 text = open(report, encoding="utf-8").read()
 match = re.search(r"(?im)^result_path\s*=\s*(\S+)\s*$", text)
@@ -293,6 +344,12 @@ def contained(reference):
     return path
 
 try:
+    validator = resolve_validator()
+except ToolchainError as error:
+    print(f"FALTANDO: toolchain ai-spec incompativel: {error}")
+    raise SystemExit(1)
+
+try:
     result_path = contained(match.group(1))
     result = json.load(open(result_path, encoding="utf-8"))
     required = {"schema_version", "run_id", "task_id", "attempt", "status", "base_sha", "patch_sha256", "patch_ref", "final_state_sha256", "tests", "criteria", "evidence", "review_verdict"}
@@ -304,7 +361,6 @@ try:
         raise ValueError("task_id diverge do relatorio")
     if not patch or patch.group(1).lower() != result["patch_sha256"].lower():
         raise ValueError("patch_sha256 diverge do Diff Reviewed")
-    validator = os.environ.get("AI_SPEC_BIN", "ai-spec")
     validation = subprocess.run(
         [validator, "validate-result", "execution", result_path,
          "--task-id", result["task_id"], "--verify-physical",

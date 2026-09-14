@@ -16,6 +16,10 @@ func (c *Catalog) BuildReviewPromptForTest(skillBody, gitDiff string) string {
 	return NewCatalog().buildReviewPrompt(skillBody, gitDiff)
 }
 
+func (c *Catalog) ExtractHardIssuesForTest(reviewOutput string) []string {
+	return NewCatalog().extractHardIssues(reviewOutput)
+}
+
 func (c *Catalog) InjectMemoryContextForTest(prompt string, wf, tk memory.Document, wfErr, tkErr error) string {
 	return NewCatalog().injectMemoryContext(prompt, wf, tk, wfErr, tkErr)
 }

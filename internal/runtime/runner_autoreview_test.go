@@ -188,6 +188,37 @@ func TestAutoReviewBlocksOnHardIssue(t *testing.T) {
 	}
 }
 
+func TestAutoReviewBlocksOnCanonicalCriticalMarker(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("tarefa com código suspeito").
+		AppendSessionEnd()
+
+	reviewFn := func(_ context.Context, _ airuntime.Job) (string, error) {
+		return "[CRITICAL] internal/x/a.go:12 eval() detectado\n[HIGH] internal/x/b.go:7 validação ausente\n", nil
+	}
+
+	runner := buildRunnerWithReviewFn(t, ctx, script, reviewFn)
+
+	summary, err := runner.Run(ctx, airuntime.Job{
+		Prompt:      "tarefa com eval()",
+		WorkDir:     workDirWithAgentsMDForReview(t),
+		EvidenceDir: t.TempDir(),
+		Quiet:       true,
+		AutoReview:  true,
+	})
+	if err != nil {
+		t.Fatalf("Run falhou: %v", err)
+	}
+	if summary.ReviewStatus != "blocked" {
+		t.Errorf("ReviewStatus = %q, quero blocked para marcadores canônicos [CRITICAL]/[HIGH]", summary.ReviewStatus)
+	}
+}
+
 // ---- T-REV-03: sem marcadores hard → ReviewStatus="ok" ---------------------
 
 // TestAutoReviewOkWhenNoHardMarkers — T-REV-03.
@@ -335,8 +366,10 @@ func TestBuildReviewPrompt_ContainsSkillAndDiff(t *testing.T) {
 	if !strings.Contains(prompt, "## Diff a Revisar") {
 		t.Error("prompt deve conter seção '## Diff a Revisar'")
 	}
-	if !strings.Contains(prompt, "[HARD]") {
-		t.Error("prompt deve mencionar marcador [HARD] na instrução")
+	for _, marker := range []string{"[CRITICAL]", "[HIGH]", "[MEDIUM]", "[LOW]"} {
+		if !strings.Contains(prompt, marker) {
+			t.Errorf("prompt deve mencionar o marcador canônico %s na instrução", marker)
+		}
 	}
 }
 

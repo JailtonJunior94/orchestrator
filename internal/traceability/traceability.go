@@ -34,6 +34,7 @@ const (
 	ViolationTaskWithoutReport        ViolationKind = "task_without_report"
 	ViolationTaskWithoutCriteria      ViolationKind = "task_without_criteria"
 	ViolationCriterionWithoutEvidence ViolationKind = "criterion_without_evidence"
+	ViolationCriteriaMapIncomplete    ViolationKind = "criteria_map_incomplete"
 	ViolationGateVacuous              ViolationKind = "gate_vacuous"
 )
 
@@ -64,6 +65,12 @@ func (v Violation) String() string {
 	return fmt.Sprintf("%s: %s — %s", v.Kind, v.Subject, v.Detail)
 }
 
+type TaskSource struct {
+	Reference     string
+	Path          string
+	CriteriaCount int
+}
+
 type Map struct {
 	Requirements   []string
 	TaskCoverage   map[string][]string
@@ -72,6 +79,7 @@ type Map struct {
 	Criteria       map[string][]Criterion
 	MissingReports map[string]bool
 	Contracts      map[string]evidence.Contract
+	TaskSources    map[string]TaskSource
 }
 
 func (c *Catalog) ParseTaskStatuses(tasksContent []byte) map[string]string {
@@ -218,6 +226,93 @@ func (c *Catalog) ParseAcceptanceCriteria(task string, reportContent []byte) []C
 	return out
 }
 
+var taskFileReferenceRegex = regexp.MustCompile(`(?im)^-[ \t]*Arquivo[ \t]*:[ \t]*(.+?)[ \t]*$`)
+
+var taskCriteriaHeadingRegex = regexp.MustCompile(`(?i)^#+\s+(crit(e|\x{00e9})rios de (sucesso|aceite)|definition of done|acceptance criteria)\s*$`)
+
+var headingRegex = regexp.MustCompile(`^#+\s`)
+
+var listItemRegex = regexp.MustCompile(`^\s*-\s+(.*)$`)
+
+var checkboxPrefixRegex = regexp.MustCompile(`^\[[^\]]*\]\s*`)
+
+func (c *Catalog) ParseTaskFileReference(reportContent []byte) string {
+	match := taskFileReferenceRegex.FindStringSubmatch(string(reportContent))
+	if match == nil {
+		return ""
+	}
+	ref := strings.TrimSpace(match[1])
+	if ref == "" || strings.Contains(ref, "<slug>") || strings.HasPrefix(strings.ToLower(ref), "n/a") {
+		return ""
+	}
+	return ref
+}
+
+func resolveTaskFilePath(dir, reference string) string {
+	if reference == "" {
+		return ""
+	}
+	for _, candidate := range []string{reference, filepath.Join(dir, reference)} {
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			return candidate
+		}
+	}
+	return ""
+}
+
+func (c *Catalog) CountTaskCriteria(taskContent []byte) int {
+	count := 0
+	capturing := false
+	inFence := false
+	for _, line := range strings.Split(string(taskContent), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, fencedCodeBlockDelimiter) {
+			inFence = !inFence
+			continue
+		}
+		if inFence {
+			continue
+		}
+		if taskCriteriaHeadingRegex.MatchString(trimmed) {
+			capturing = true
+			continue
+		}
+		if headingRegex.MatchString(trimmed) {
+			capturing = false
+			continue
+		}
+		if !capturing {
+			continue
+		}
+		match := listItemRegex.FindStringSubmatch(line)
+		if match == nil {
+			continue
+		}
+		item := strings.TrimSpace(checkboxPrefixRegex.ReplaceAllString(strings.TrimSpace(match[1]), ""))
+		if item == "" {
+			continue
+		}
+		count++
+	}
+	return count
+}
+
+func (c *Catalog) buildTaskSource(dir string, reportContent []byte) TaskSource {
+	reference := c.ParseTaskFileReference(reportContent)
+	source := TaskSource{Reference: reference}
+	source.Path = resolveTaskFilePath(dir, reference)
+	if source.Path == "" {
+		return source
+	}
+	taskContent, err := os.ReadFile(source.Path)
+	if err != nil {
+		source.Path = ""
+		return source
+	}
+	source.CriteriaCount = c.CountTaskCriteria(taskContent)
+	return source
+}
+
 func (c *Catalog) BuildMap(dir string) (Map, error) {
 	prdContent, err := os.ReadFile(filepath.Join(dir, "prd.md"))
 	if err != nil {
@@ -242,6 +337,7 @@ func (c *Catalog) BuildMap(dir string) (Map, error) {
 	criteria := make(map[string][]Criterion)
 	missingReports := make(map[string]bool)
 	contracts := make(map[string]evidence.Contract)
+	taskSources := make(map[string]TaskSource)
 	for task := range taskCoverage {
 		reportPath := filepath.Join(dir, fmt.Sprintf("%s_execution_report.md", task))
 		reportContent, err := os.ReadFile(reportPath)
@@ -251,7 +347,8 @@ func (c *Catalog) BuildMap(dir string) (Map, error) {
 		}
 		contract, _ := evidence.ResolveContract(string(reportContent), reportPath)
 		contracts[task] = contract
-		criteria[task] = NewCatalog().ParseAcceptanceCriteria(task, reportContent)
+		criteria[task] = c.ParseAcceptanceCriteria(task, reportContent)
+		taskSources[task] = c.buildTaskSource(dir, reportContent)
 	}
 
 	return Map{
@@ -262,6 +359,7 @@ func (c *Catalog) BuildMap(dir string) (Map, error) {
 		Criteria:       criteria,
 		MissingReports: missingReports,
 		Contracts:      contracts,
+		TaskSources:    taskSources,
 	}, nil
 }
 
@@ -281,13 +379,43 @@ func (m Map) VerifiedTaskCount() int {
 }
 
 func (m Map) taskIsVerifiable(task string) bool {
-	if m.MissingReports[task] || m.TaskStatuses[task] == "blocked" {
+	if m.MissingReports[task] {
 		return false
 	}
 	if len(m.Criteria[task]) == 0 {
 		return false
 	}
+	if m.criteriaMapViolation(task) != nil {
+		return false
+	}
 	return m.Contracts[task] != evidence.ContractV1
+}
+
+func (m Map) criteriaMapViolation(task string) *Violation {
+	source := m.TaskSources[task]
+	if source.Path == "" {
+		detail := "relatorio nao declara task file resolvivel no campo 'Arquivo:' — mapa 1:1 de criterios nao confrontavel (RF-51/RF-53)"
+		if source.Reference != "" {
+			detail = fmt.Sprintf("task file declarado em 'Arquivo:' nao existe (%s) — mapa 1:1 de criterios nao confrontavel (RF-51/RF-53)", source.Reference)
+		}
+		return &Violation{Kind: ViolationCriteriaMapIncomplete, Subject: task, Detail: detail}
+	}
+	if source.CriteriaCount == 0 {
+		return &Violation{
+			Kind:    ViolationCriteriaMapIncomplete,
+			Subject: task,
+			Detail:  fmt.Sprintf("task file (%s) nao declara nenhum criterio de aceite — mapa 1:1 nao confrontavel (RF-53)", source.Path),
+		}
+	}
+	if len(m.Criteria[task]) < source.CriteriaCount {
+		return &Violation{
+			Kind:    ViolationCriteriaMapIncomplete,
+			Subject: task,
+			Detail: fmt.Sprintf("criterios de aceite no relatorio (%d) < declarados na task file (%d, %s) — mapa 1:1 incompleto (RF-53)",
+				len(m.Criteria[task]), source.CriteriaCount, source.Path),
+		}
+	}
+	return nil
 }
 
 func (m Map) Report() ([]Violation, []Notice) {
@@ -322,9 +450,8 @@ func (m Map) Report() ([]Violation, []Notice) {
 			notices = append(notices, Notice{
 				Kind:    NoticeTaskBlocked,
 				Subject: task,
-				Detail:  "tarefa bloqueada — criterios de aceite fora do escopo do gate ate a execucao concluir; os RF cobertos por ela seguem sem prova",
+				Detail:  "tarefa blocked com relatorio de execucao escrito — o relatorio existe, entao criterios e mapa 1:1 seguem cobrados; blocked nao isenta (RF-53)",
 			})
-			continue
 		}
 		items := m.Criteria[task]
 		if len(items) == 0 {
@@ -335,11 +462,15 @@ func (m Map) Report() ([]Violation, []Notice) {
 			})
 			continue
 		}
+		if violation := m.criteriaMapViolation(task); violation != nil {
+			violations = append(violations, *violation)
+			continue
+		}
 		if m.Contracts[task] == evidence.ContractV1 {
 			notices = append(notices, Notice{
 				Kind:    NoticeHistoricalEvidence,
 				Subject: task,
-				Detail:  "relatorio sob contrato de evidencia v1 (historico) — forma estrita de evidencia por criterio nao cobrada (RF-04: evidencia de execucao e historica e nao e reescrita)",
+				Detail:  "relatorio sob contrato de evidencia v1 (historico) — a isencao cobre somente a forma da evidencia por criterio; o mapa 1:1 de criterios continua cobrado (RF-53)",
 			})
 			continue
 		}
@@ -359,8 +490,8 @@ func (m Map) Report() ([]Violation, []Notice) {
 			Kind:    ViolationGateVacuous,
 			Subject: fmt.Sprintf("%d tarefa(s) no escopo, 0 verificada(s)", len(m.TaskCoverage)),
 			Detail: "gate vacuo: nenhuma tarefa teve seus criterios confrontados contra a forma estrita de evidencia " +
-				"(escopo vazio, tarefa bloqueada ou isencao de contrato v1 em todo o universo). Universo integralmente " +
-				"isento nao e cadeia verificada e nao pode ser lido como aprovacao (RF-55/RF-56)",
+				"(escopo vazio, mapa 1:1 nao confrontavel ou isencao de contrato v1 em todo o universo). Universo " +
+				"integralmente isento nao e cadeia verificada e nao pode ser lido como aprovacao (RF-55/RF-56)",
 		})
 	}
 

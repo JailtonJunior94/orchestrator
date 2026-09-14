@@ -63,7 +63,8 @@ Diff: {{.Diff}}`
 				"corretude:",
 				"regressao:",
 				"divida tecnica introduzida:",
-				"aprovado / aprovado com ressalvas / reprovado",
+				"APPROVED / APPROVED_WITH_REMARKS / REJECTED / BLOCKED",
+				"[CRITICAL], [HIGH], [MEDIUM] ou [LOW]",
 			},
 		},
 		{

@@ -28,6 +28,8 @@ type AgentInvoker interface {
 
 var ErrToolRequiresACP = errors.New("ferramenta exige --runtime acp")
 
+var ErrAgentTimeout = errors.New("taskloop: agent session interrupted by timeout")
+
 type ACPOnlyToolError struct {
 	Tool string
 }
