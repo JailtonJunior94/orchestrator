@@ -7,11 +7,13 @@
   "base_sha": "166cb9efc0590cbf38685258ddce89908e594256",
   "patch_sha256": "3842c1f8d617b8ccf4692e7ed96afd8eb434ce6268e4ea3037ab7b074f37f649",
   "patch_ref": "evidence/task-2.0-memoria-duravel-agentes/2.0.patch",
+  "commit_sha": "76f65e1aaef7f009d2f7f26c6e882652938beed6",
+  "commit_patch_sha256": "2df2592c0c0e3f5ccded0260158bfcfce0a77afb22ea41c8b8a9f4c6bd502f2f",
   "final_state_sha256": "877548cd817795edc89cce06124ebdcdc97456e9efd3d1466b35e0e309190d02",
   "coverage_regression": false,
   "tests": [
     {
-      "command": "go build ./... && go vet ./... && go test ./internal/runtime/memory/durable/... -count=1 -race -v -cover",
+      "command": "go build ./... \u0026\u0026 go vet ./... \u0026\u0026 go test ./internal/runtime/memory/durable/... -count=1 -race -v -cover",
       "exit_code": 0,
       "output_sha256": "2bc1adc2809353cd278e9bbca299e5fcce89dcf7e46061686690757e80c84844"
     },

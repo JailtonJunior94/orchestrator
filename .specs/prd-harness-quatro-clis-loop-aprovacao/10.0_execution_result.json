@@ -7,9 +7,10 @@
   "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
   "patch_sha256": "e77e50dd3337f1b69085933a733441784f1c7c7b06df819420f22e4307cb7130",
   "patch_ref": "evidence/task-10.0/10.0.patch",
+  "commit_sha": "76f65e1aaef7f009d2f7f26c6e882652938beed6",
+  "commit_patch_sha256": "4cb114e808571c073f187ced3c2a7f2665b9fe1ca9d56bcad36b15704c7c5c86",
   "final_state_sha256": "f159f46cc87d583431dd5cb4f54b55d7d0787368488848ec5d1c65f7a868f98f",
   "coverage_regression": false,
-  "review_verdict": "approved",
   "tests": [
     {
       "command": "go build ./...",
@@ -172,5 +173,6 @@
     "evidence/task-10.0/review.md",
     "evidence/task-10.0/adr-015-diff.log",
     "evidence/task-10.0/grep-copilot-hooks-claim.log"
-  ]
+  ],
+  "review_verdict": "approved"
 }

@@ -7,6 +7,8 @@
   "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
   "patch_sha256": "13e624f71eb7853f62d4f91dd1d5c510cde76dd3ae0e22522e4c9abd10dd0fca",
   "patch_ref": "evidence/task-4.8/4.8.patch",
+  "commit_sha": "76f65e1aaef7f009d2f7f26c6e882652938beed6",
+  "commit_patch_sha256": "b27c1a5f6338efae3d138360e6ef034719f04cc51f3fbc55b34ace46167dd290",
   "final_state_sha256": "e00b6cfb5882538255c3396ac2b15da32ce8f31f6368cf186b873dc965f232ed",
   "coverage_regression": false,
   "tests": [
@@ -31,7 +33,7 @@
       "output_sha256": "b85fb9117457c6d7afc8ac068c177434684a58c8e83830310e31372ea44a7585"
     },
     {
-      "command": "go test ./internal/runtime -run TestE2EApprovalCycle -v -count=1 && go test ./internal/taskloop -run TestApprovalCycleParityAcrossThreeProductionPaths -v -count=1",
+      "command": "go test ./internal/runtime -run TestE2EApprovalCycle -v -count=1 \u0026\u0026 go test ./internal/taskloop -run TestApprovalCycleParityAcrossThreeProductionPaths -v -count=1",
       "exit_code": 0,
       "output_sha256": "38a32c585d117709055f0fcc63d83c160669c67a9c56ef29a456e51ba08cd190"
     },

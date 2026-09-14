@@ -7,9 +7,10 @@
   "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
   "patch_sha256": "299445210551142d727478e1154ebd8d3116d3b659d769c90b7d498514a9d964",
   "patch_ref": "evidence/task-8.0/8.0.patch",
+  "commit_sha": "76f65e1aaef7f009d2f7f26c6e882652938beed6",
+  "commit_patch_sha256": "bc7a5feb8da2a2f8f2e721ac6dbd994202df432bb2063354437bcf28d479c794",
   "final_state_sha256": "fd35210fb863d6f8974d7cf9ec4f89a05b49e26c19883e4a02db06218bf013a3",
   "coverage_regression": false,
-  "review_verdict": "approved",
   "tests": [
     {
       "command": "go build ./...",
@@ -119,5 +120,6 @@
     "evidence/task-8.0/integration-opencode.log",
     "evidence/task-8.0/acp-live-opencode.log",
     "evidence/task-8.0/unit-enforcement.log"
-  ]
+  ],
+  "review_verdict": "approved"
 }

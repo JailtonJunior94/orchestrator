@@ -7,6 +7,8 @@
   "base_sha": "166cb9efc0590cbf38685258ddce89908e594256",
   "patch_sha256": "8e1226597485defef61d4900724b531e03ca00921d73553d77616a01cb2c71b5",
   "patch_ref": "evidence/task-10.0-memoria-duravel-agentes/10.0.patch",
+  "commit_sha": "76f65e1aaef7f009d2f7f26c6e882652938beed6",
+  "commit_patch_sha256": "9981cef20b3b90e924061eaf7e8e349e13bca9fccb9933c82826f5916c38f4cf",
   "final_state_sha256": "bf81d95a28509a4731d5794b1fdc502f0c727118329faf3218b26d421ad724c7",
   "coverage_regression": false,
   "tests": [

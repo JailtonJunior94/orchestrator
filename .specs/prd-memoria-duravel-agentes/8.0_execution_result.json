@@ -7,11 +7,13 @@
   "base_sha": "166cb9efc0590cbf38685258ddce89908e594256",
   "patch_sha256": "6e027a2ecf3656e905e2dce2b98c640498069ae0d9d7e353fb779b9b71d2b854",
   "patch_ref": "evidence/task-8.0-memoria-duravel-agentes/8.0.patch",
+  "commit_sha": "76f65e1aaef7f009d2f7f26c6e882652938beed6",
+  "commit_patch_sha256": "4d404df5622ea7fbc6e08e49de80872836d999e6bea10603ce4911fff995e402",
   "final_state_sha256": "64c40b67dfdc827895bda91244c34810872c06bce48cd0a0a2a2d55ea2e1594a",
   "coverage_regression": false,
   "tests": [
     {
-      "command": "go build ./... && go vet ./...",
+      "command": "go build ./... \u0026\u0026 go vet ./...",
       "exit_code": 0,
       "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },

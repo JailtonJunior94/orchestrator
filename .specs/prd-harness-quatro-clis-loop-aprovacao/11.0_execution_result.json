@@ -7,9 +7,10 @@
   "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
   "patch_sha256": "7efaa4e33bf78e9fdba6e1e85f4e4083b2086ffd9d0550e241e483886a22154a",
   "patch_ref": "evidence/task-11.0/11.0.patch",
+  "commit_sha": "76f65e1aaef7f009d2f7f26c6e882652938beed6",
+  "commit_patch_sha256": "033f736d0b75f41d5a901afea5979513d14ea4a28e0b20213d453c5248e4b41c",
   "final_state_sha256": "1e71e0b52b3476710d518121bcd8c31dd0909c0c7e3ba07649b42e7ec22aa179",
   "coverage_regression": false,
-  "review_verdict": "approved",
   "tests": [
     {
       "command": "go build ./...",
@@ -136,5 +137,6 @@
     "evidence/task-11.0/check-scripts-sync.log",
     "evidence/task-11.0/check-skills-sync.log",
     "evidence/task-11.0/cmd-gates.log"
-  ]
+  ],
+  "review_verdict": "approved"
 }

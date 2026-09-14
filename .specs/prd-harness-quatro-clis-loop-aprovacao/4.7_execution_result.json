@@ -7,11 +7,13 @@
   "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
   "patch_sha256": "ca681a983db9025e57d0148fb0ee0670dc2aa8eb53b9c07d8d85991c5afcc283",
   "patch_ref": "evidence/task-4.7/4.7.patch",
+  "commit_sha": "76f65e1aaef7f009d2f7f26c6e882652938beed6",
+  "commit_patch_sha256": "23e54fdba7fc51011ccb0f18bedf4474aefc66fb815f66a8be5adcc77e0d1bf2",
   "final_state_sha256": "f6769443dfb413aa9e4a0099bbb1df078c1d3bad18b8d0ca68faca82ba738661",
   "coverage_regression": false,
   "tests": [
     {
-      "command": "go build ./... && go vet ./... && GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false go test ./... -count=1",
+      "command": "go build ./... \u0026\u0026 go vet ./... \u0026\u0026 GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false go test ./... -count=1",
       "exit_code": 0,
       "output_sha256": "229866e6e0b378fe3207be409212f23a46968dc6c4f407f232292f87e6a7996e"
     },

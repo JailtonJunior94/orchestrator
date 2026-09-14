@@ -7,6 +7,8 @@
   "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
   "patch_sha256": "7089312258709ce99e3e72c01bff421278ada9a00a22fcdd474ed146ba0eb6d4",
   "patch_ref": "evidence/task-5.0/5.0.patch",
+  "commit_sha": "76f65e1aaef7f009d2f7f26c6e882652938beed6",
+  "commit_patch_sha256": "4dd147a8a9a54729ba490f7f492f8d671053f29bc68a4e1d0b89e4c7aa197181",
   "final_state_sha256": "94cb4d4bc10761dee8fd5b9573bb3711419a6c659a86545106f9dc68ebad66ef",
   "coverage_regression": false,
   "tests": [
