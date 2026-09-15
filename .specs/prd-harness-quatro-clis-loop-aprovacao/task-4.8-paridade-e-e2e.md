@@ -39,8 +39,7 @@ de Implementação" item 4.
 - Teste de paridade entre os três caminhos verde.
 - Os cinco fluxos E2E verdes.
 - Teste de `APPROVED_WITH_REMARKS` realimentando verde.
-- `grep -rn 'approval\.' internal/runtime/runner.go internal/taskloop/taskloop.go
-  internal/taskloop/runloop.go` retorna ocorrências nos três arquivos.
+- `grep -rn 'approval\.' internal/runtime internal/taskloop --include='*.go'` retorna ocorrências nos dois pacotes.
 - T-REV-01/02/04 verdes e sem alteração de asserção.
 - Estilo R-STYLE-001 no código novo/tocado.
 - `make check-spec-paths check-skills-sync check-scripts-sync check-hooks-sync check-mocks budget`
