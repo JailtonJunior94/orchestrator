@@ -31,19 +31,20 @@ if [[ -n "$contract_marker" ]]; then
 fi
 
 if [[ "$contract_version" -eq 1 ]]; then
-  cut_ref="HEAD"
+  cut_commit="0d84ccd3291c5eb8b762ec7ce6ac766e311dad17"
   report_dir="$(dirname "$report_file")"
   historical=0
-  if git -C "$report_dir" rev-parse --git-dir >/dev/null 2>&1; then
+  if git -C "$report_dir" rev-parse --verify --quiet "$cut_commit^{commit}" >/dev/null 2>&1; then
     tracked_path="$(git -C "$report_dir" ls-files --full-name -- "$(basename "$report_file")" 2>/dev/null | head -1 || true)"
-    if [[ -n "$tracked_path" ]] && git -C "$report_dir" cat-file -e "$cut_ref:$tracked_path" 2>/dev/null; then
+    if [[ -n "$tracked_path" ]] && git -C "$report_dir" cat-file blob "$cut_commit:$tracked_path" 2>/dev/null | cmp -s - "$report_file"; then
       historical=1
     fi
   fi
   if [[ "$historical" -eq 0 ]]; then
-    echo "FALTANDO: relatório sem marcador de contrato não é evidência histórica — não está versionado" \
-         "em $cut_ref (ou não há repositório git para comprovar). Trabalho novo deve declarar" \
-         "'<!-- evidence-contract: v2 -->' e cumprir as regras estritas (mapa 1:1 de critérios)."
+    echo "FALTANDO: relatório sem marcador de contrato não é evidência histórica — seu conteúdo não corresponde," \
+         "byte a byte, ao blob versionado no commit de corte $cut_commit. Trabalho novo (ou relatório histórico" \
+         "editado depois do corte) deve declarar '<!-- evidence-contract: v2 -->' e cumprir as regras estritas" \
+         "(mapa 1:1 de critérios)."
     missing=1
     contract_version=2
   fi

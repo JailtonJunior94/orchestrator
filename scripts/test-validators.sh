@@ -490,6 +490,121 @@ rm -f "$report_j"
 assert_exit "relatório com evidência de memória durável passa sob LC_ALL=C" 0 $code_j_c
 if [[ "$code_j_c" -ne 0 ]]; then printf '    diagnostico: %s\n' "$out_j_c"; fi
 
+# --- Caso k: o corte do contrato de evidência é um commit fixo, não HEAD ---
+# Antes da correção, o corte era a referência móvel "HEAD": bastava commitar um
+# relatório para ele virar "evidência histórica" e ganhar a isenção v1. Agora o
+# corte é um commit específico e a isenção exige o conteúdo idêntico ao selado
+# naquele commit. Em qualquer repositório que não seja este, nenhum relatório
+# novo é histórico — nem depois de commitado.
+echo "Caso k: relatório sem marcador não vira histórico ao ser commitado"
+K_REPO="$TMP_ROOT/k-repo"
+mkdir -p "$K_REPO"
+git -C "$K_REPO" init -q
+git -C "$K_REPO" config user.email "validators-test@example.invalid"
+git -C "$K_REPO" config user.name "Validators Test"
+git -C "$K_REPO" config commit.gpgsign false
+printf 'base\n' >"$K_REPO/seed.txt"
+git -C "$K_REPO" add . >/dev/null 2>&1
+git -C "$K_REPO" commit -qm "test: baseline k" >/dev/null 2>&1
+report_k="$K_REPO/report-k.md"
+{
+  printf '# Relatório de Execução de Tarefa\n'
+  report_header "$task_b" | tail -n +2
+  cat <<'EOF'
+## Comandos Executados
+- go test ./... -> ok
+EOF
+  base_sections
+  cat <<'EOF'
+## Resultados de Validação
+- Testes: pass
+## Critérios de Aceite
+- Critério um -> comprovado: saída de go test mostra PASS
+- Critério dois -> comprovado: arquivo foo.go contém a função
+EOF
+} > "$report_k"
+
+out_k_pre=$(bash "$VALIDATOR" "$report_k" 2>&1); code_k_pre=$?
+assert_exit "relatório sem marcador e não commitado falha" 1 $code_k_pre
+
+git -C "$K_REPO" add "$(basename "$report_k")" >/dev/null 2>&1
+git -C "$K_REPO" commit -qm "test: commita relatorio sem marcador" >/dev/null 2>&1
+
+out_k=$(bash "$VALIDATOR" "$report_k" 2>&1); code_k=$?
+assert_exit "commitar NÃO concede a isenção histórica (corte fixo)" 1 $code_k
+if printf '%s' "$out_k" | grep -q "commit de corte"; then
+  echo "  ✓ a ruptura aponta o commit de corte fixo, não HEAD"
+  passed=$((passed+1))
+else
+  echo "  ✗ a ruptura deveria citar o commit de corte fixo"
+  printf '    diagnostico: %s\n' "$out_k"
+  failed=$((failed+1))
+fi
+if printf '%s' "$out_k" | grep -q "AVISO: contrato de evid"; then
+  echo "  ✗ isenção v1 concedida a trabalho novo commitado (defeito do corte móvel)"
+  failed=$((failed+1))
+else
+  echo "  ✓ nenhuma isenção v1 concedida a trabalho novo commitado"
+  passed=$((passed+1))
+fi
+rm -f "$report_k"
+
+# --- Caso l: cruzamento de estado entre relatório, execution-result e tasks.md ---
+# Este é o gate que expõe a manobra de editar tasks.md para "blocked" a fim de
+# escapar do encerramento, deixando relatório e JSON em "done". A reconciliação
+# legítima vai de tasks.md EM DIREÇÃO à evidência; o gate precisa reprovar
+# enquanto os três não concordarem, nos três pares possíveis.
+echo "Caso l: divergência de estado entre tasks.md, relatório e execution-result"
+report_l="$TMP_BASE/report-l.md"
+{
+  report_header "$task_b"
+  cat <<'EOF'
+## Comandos Executados
+- go test ./... -> ok
+EOF
+  base_sections
+  cat <<'EOF'
+## Resultados de Validação
+- Testes: pass
+## Critérios de Aceite
+- Critério um -> comprovado: saída de go test mostra PASS
+- Critério dois -> comprovado: arquivo foo.go contém a função
+EOF
+} > "$report_l"
+
+printf '| # | Título | Status |\n|---|--------|--------|\n| 1.0 | Tarefa | blocked |\n' >"$TMP_BASE/tasks.md"
+out_l1=$(bash "$VALIDATOR" "$report_l" 2>&1); code_l1=$?
+assert_exit "tasks.md=blocked com relatório/JSON=done reprova" 1 $code_l1
+if printf '%s' "$out_l1" | grep -q "divergencia de estado"; then
+  echo "  ✓ a ruptura nomeia a divergência de estado"
+  passed=$((passed+1))
+else
+  echo "  ✗ a divergência tasks.md x relatório passou despercebida"
+  printf '    diagnostico: %s\n' "$out_l1"
+  failed=$((failed+1))
+fi
+
+# Nota: escrever tasks.md no fixture altera o snapshot físico (o patch inclui
+# arquivos não rastreados), então o exit 0 ponta a ponta não é alcançável aqui.
+# A afirmação testada é exatamente a da reconciliação: alinhar tasks.md à
+# evidência faz a ruptura de divergência desaparecer.
+printf '| # | Título | Status |\n|---|--------|--------|\n| 1.0 | Tarefa | done |\n' >"$TMP_BASE/tasks.md"
+out_l2=$(bash "$VALIDATOR" "$report_l" 2>&1)
+if printf '%s' "$out_l2" | grep -q "divergencia de estado"; then
+  echo "  ✗ reconciliar tasks.md deveria eliminar a ruptura de divergência"
+  printf '    diagnostico: %s\n' "$out_l2"
+  failed=$((failed+1))
+else
+  echo "  ✓ tasks.md reconciliado com a evidência elimina a divergência"
+  passed=$((passed+1))
+fi
+
+printf '| # | Título | Status |\n|---|--------|--------|\n| 1.0 | Tarefa | failed |\n' >"$TMP_BASE/tasks.md"
+out_l3=$(bash "$VALIDATOR" "$report_l" 2>&1); code_l3=$?
+assert_exit "qualquer terceiro estado em tasks.md também reprova" 1 $code_l3
+
+rm -f "$TMP_BASE/tasks.md" "$report_l"
+
 echo
 echo "Passaram: $passed | Falharam: $failed"
 [[ "$failed" -eq 0 ]] || exit 1

@@ -423,15 +423,50 @@ printf '%s' "$HISTORICAL_BODY" >"$HISTORICAL"
 printf '%s' "${HISTORICAL_BODY//verdict=APPROVED/verdict=APPROVED_WITH_REMARKS}" >"$REMARKS_HISTORICAL"
 git -C "$TMPDIR_BASE" add .specs >/dev/null 2>&1
 git -C "$TMPDIR_BASE" commit -qm "test: historical evidence" >/dev/null 2>&1
+# TC20: o corte do contrato e um commit fixo, nao a referencia movel HEAD.
+# Antes, commitar o relatorio neste repositorio de fixture bastava para ele
+# virar "evidencia historica" — trabalho novo ganhava isencao ao ser commitado.
+# Agora nenhum relatorio de fixture alcanca o corte, nem depois do commit.
 historical_exit=0
 historical_out=$(bash "$SCRIPT" "$HISTORICAL" 2>&1) || historical_exit=$?
-if [[ "$historical_exit" -eq 0 ]] && grep -qi "isenção cobre somente a forma da evidência" <<<"$historical_out"; then
-  echo "PASS [TC20-v1-isenta-forma]"
+if [[ "$historical_exit" -eq 1 ]] \
+  && grep -qi "não é evidência histórica" <<<"$historical_out" \
+  && grep -qi "commit de corte" <<<"$historical_out" \
+  && ! grep -qi "isenção cobre somente a forma da evidência" <<<"$historical_out"; then
+  echo "PASS [TC20-corte-fixo-nao-anda-com-head]"
   PASS=$((PASS+1))
 else
-  echo "FAIL [TC20-v1-isenta-forma]: exit=$historical_exit"
+  echo "FAIL [TC20-corte-fixo-nao-anda-com-head]: exit=$historical_exit"
   echo "  output: $historical_out"
   FAIL=$((FAIL+1))
+fi
+
+# TC20c: o outro sentido do corte — a isencao continua sendo concedida a quem e
+# genuinamente historico. Roda contra os relatorios versionados deste repositorio,
+# porque o corte e um commit real e nenhuma fixture sintetica o alcanca. Em clone
+# raso (CI usa checkout sem fetch-depth) o commit de corte nao existe: o caso e
+# pulado em vez de reprovar por motivo falso.
+CUT_COMMIT="0d84ccd3291c5eb8b762ec7ce6ac766e311dad17"
+REPO_ROOT_REAL="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [[ -n "$REPO_ROOT_REAL" ]] \
+  && git -C "$REPO_ROOT_REAL" rev-parse --verify --quiet "$CUT_COMMIT^{commit}" >/dev/null 2>&1; then
+  exempt_found=0
+  while IFS= read -r sealed_report; do
+    sealed_out=$(bash "$SCRIPT" "$sealed_report" 2>&1 || true)
+    if grep -qi "isenção cobre somente a forma da evidência" <<<"$sealed_out"; then
+      exempt_found=1
+      break
+    fi
+  done < <(find "$REPO_ROOT_REAL/.specs" -name '*_execution_report.md' 2>/dev/null | sort)
+  if [[ "$exempt_found" -eq 1 ]]; then
+    echo "PASS [TC20c-corte-ainda-isenta-historico-real]"
+    PASS=$((PASS+1))
+  else
+    echo "FAIL [TC20c-corte-ainda-isenta-historico-real]: nenhum relatorio selado no corte recebeu a isencao v1"
+    FAIL=$((FAIL+1))
+  fi
+else
+  echo "SKIP [TC20c-corte-ainda-isenta-historico-real]: commit de corte ausente (clone raso)"
 fi
 
 remarks_exit=0
@@ -479,9 +514,11 @@ printf '%s' "$HISTORICAL_BODY" >"$HISTORICAL"
 git -C "$TMPDIR_BASE" add .specs >/dev/null 2>&1
 git -C "$TMPDIR_BASE" commit -qm "test: cut ref fixture" >/dev/null 2>&1
 OLD_REF="$(git -C "$TMPDIR_BASE" rev-parse HEAD~1)"
+# TC24: nenhuma variavel de ambiente alarga o corte para alcancar trabalho novo.
 env_exit=0
-env_out=$(AI_EVIDENCE_CONTRACT_CUT_REF="$OLD_REF" bash "$SCRIPT" "$HISTORICAL" 2>&1) || env_exit=$?
-if [[ "$env_exit" -eq 0 ]] && ! grep -qi "não é evidência histórica" <<<"$env_out"; then
+env_out=$(AI_EVIDENCE_CONTRACT_CUT_REF="$OLD_REF" AI_EVIDENCE_CONTRACT_CUT="$OLD_REF" \
+  AISPEC_EVIDENCE_CUT="$OLD_REF" bash "$SCRIPT" "$HISTORICAL" 2>&1) || env_exit=$?
+if [[ "$env_exit" -eq 1 ]] && grep -qi "não é evidência histórica" <<<"$env_out"; then
   echo "PASS [TC24-cut-ref-ignora-env]"
   PASS=$((PASS+1))
 else

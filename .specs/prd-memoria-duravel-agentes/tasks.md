@@ -29,8 +29,8 @@
 | 4.0 | Lease de bastão de continuidade e detecção de processo vivo | done | 2.0 | Com 3.0 | — |
 | 5.0 | Agregado de camada com lock por camada, consolidação e escrita atômica | done | 1.0, 2.0, 4.0 | Não | — |
 | 6.0 | Trava de regressão: golden byte-a-byte e fim da degradação silenciosa | done | — | Com 1.0 | — |
-| 7.0 | Fachada, porta de memória e wiring por configuração | blocked | 3.0, 5.0, 6.0 | Não | design-patterns-mandatory |
-| 8.0 | Evidência de memória, métricas e telemetria | blocked | 7.0 | Com 9.0 | — |
+| 7.0 | Fachada, porta de memória e wiring por configuração | done | 3.0, 5.0, 6.0 | Não | design-patterns-mandatory |
+| 8.0 | Evidência de memória, métricas e telemetria | done | 7.0 | Com 9.0 | — |
 | 9.0 | Comando `memory` com seis subcomandos, incluindo migração | done | 3.0, 5.0 | Com 8.0 | — |
 | 10.0 | Integração multi-processo, e2e, benchmark e alvos de Make | done | 7.0, 8.0, 9.0 | Não | — |
 

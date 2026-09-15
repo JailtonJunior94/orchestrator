@@ -68,37 +68,31 @@ func TestEvidenceFormProblem_RejectsTrivialRecords(t *testing.T) {
 }
 
 func TestResolveContract_CutRuleRejectsNewWorkPosingAsHistorical(t *testing.T) {
-	dir := t.TempDir()
-	for _, args := range [][]string{
-		{"init", "-q"}, {"config", "user.email", "t@example.invalid"}, {"config", "user.name", "T"}, {"config", "commit.gpgsign", "false"},
-	} {
-		if err := exec.Command("git", append([]string{"-C", dir}, args...)...).Run(); err != nil {
-			t.Skipf("git indisponivel: %v", err)
-		}
-	}
+	dir := newGitFixture(t)
 
 	historical := filepath.Join(dir, "historical.md")
 	if err := os.WriteFile(historical, []byte("# Report"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := exec.Command("git", "-C", dir, "add", ".").Run(); err != nil {
-		t.Fatal(err)
-	}
-	if err := exec.Command("git", "-C", dir, "commit", "-qm", "base").Run(); err != nil {
-		t.Fatal(err)
-	}
+	cut := commitAllAt(t, dir)
+	pinCut(t, cut)
 
 	if contract, findings := ResolveContract("# Report", historical); contract != ContractV1 || len(findings) != 0 {
-		t.Errorf("relatorio versionado no ref de corte e historico: %v %v", contract, findings)
+		t.Errorf("relatorio selado no commit de corte e historico: %v %v", contract, findings)
 	}
 
 	fresh := filepath.Join(dir, "fresh.md")
 	if err := os.WriteFile(fresh, []byte("# Report"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	contract, findings := ResolveContract("# Report", fresh)
-	if contract != ContractV2 || !findingsContain(findings, "nao e evidencia historica") {
-		t.Errorf("relatorio novo sem marcador deve cair em v2: %v %v", contract, findings)
+	commitAllAt(t, dir)
+
+	if contract, findings := ResolveContract("# Report", fresh); contract != ContractV2 || !findingsContain(findings, "nao e evidencia historica") {
+		t.Errorf("relatorio criado e commitado DEPOIS do corte nao vira historico: %v %v", contract, findings)
+	}
+
+	if contract, _ := ResolveContract("# Report", historical); contract != ContractV1 {
+		t.Errorf("o corte nao anda com o HEAD: o relatorio selado continua historico, got %v", contract)
 	}
 }
 
@@ -120,7 +114,7 @@ func TestValidateTask_HistoricalExemptionCoversFormNotOutcome(t *testing.T) {
 	if err := os.WriteFile(remarksPath, []byte(remarks), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	commitAll(t, dir)
+	pinCut(t, commitAllAt(t, dir))
 
 	result := NewValidator().ValidateReport([]byte(noMap), approvedPath, KindTask, nil)
 	if !result.Pass {
@@ -189,18 +183,19 @@ func TestResolveContract_AbsenceOfInformationIsNotExemption(t *testing.T) {
 }
 
 func TestResolveContract_CutRefIsNotEnvironmentControlled(t *testing.T) {
+	if contractCut != ContractCutCommit {
+		t.Fatalf("o corte de producao foi reatribuido fora de teste: %q", contractCut)
+	}
+
 	dir := newGitFixture(t)
 	baseline := filepath.Join(dir, "baseline.md")
 	if err := os.WriteFile(baseline, []byte("# Report"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	commitAll(t, dir)
+	cut := commitAllAt(t, dir)
+	pinCut(t, cut)
 
-	tagged, err := exec.Command("git", "-C", dir, "rev-parse", "HEAD").Output()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := exec.Command("git", "-C", dir, "tag", "cut-fixture", strings.TrimSpace(string(tagged))).Run(); err != nil {
+	if err := exec.Command("git", "-C", dir, "tag", "cut-fixture", cut).Run(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -208,11 +203,16 @@ func TestResolveContract_CutRefIsNotEnvironmentControlled(t *testing.T) {
 	if err := os.WriteFile(fresh, []byte("# Report"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	commitAll(t, dir)
+	commitAllAt(t, dir)
 
-	t.Setenv("AI_EVIDENCE_CONTRACT_CUT_REF", "cut-fixture")
-	if contract, _ := ResolveContract("# Report", fresh); contract != ContractV1 {
-		t.Fatalf("o ref de corte e HEAD fixo; o env nao pode estreita-lo, got %v", contract)
+	for _, key := range []string{"AI_EVIDENCE_CONTRACT_CUT_REF", "AI_EVIDENCE_CONTRACT_CUT", "AISPEC_EVIDENCE_CUT"} {
+		t.Setenv(key, "cut-fixture")
+	}
+	if contract, _ := ResolveContract("# Report", fresh); contract != ContractV2 {
+		t.Fatalf("o env nao pode alargar o corte para alcancar trabalho novo, got %v", contract)
+	}
+	if contract, _ := ResolveContract("# Report", baseline); contract != ContractV1 {
+		t.Fatalf("o env nao pode estreitar o corte e revogar isencao legitima, got %v", contract)
 	}
 
 	staged := filepath.Join(dir, "staged.md")
@@ -238,6 +238,23 @@ func newGitFixture(t *testing.T) string {
 		}
 	}
 	return dir
+}
+
+func pinCut(t *testing.T, cut string) {
+	t.Helper()
+	previous := contractCut
+	contractCut = cut
+	t.Cleanup(func() { contractCut = previous })
+}
+
+func commitAllAt(t *testing.T, dir string) string {
+	t.Helper()
+	commitAll(t, dir)
+	out, err := exec.Command("git", "-C", dir, "rev-parse", "HEAD").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return strings.TrimSpace(string(out))
 }
 
 func commitAll(t *testing.T, dir string) {

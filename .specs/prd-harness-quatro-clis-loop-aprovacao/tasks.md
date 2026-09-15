@@ -36,7 +36,7 @@ passar no gate (RF-56).
 
 | # | Título | Status | Dependências | Paralelizável | Skills |
 |---|--------|--------|-------------|---------------|--------|
-| 1.0 | Tornar os gates capazes de rodar e de dizer a verdade | blocked | — | — | — |
+| 1.0 | Tornar os gates capazes de rodar e de dizer a verdade | done | — | — | — |
 | 2.0 | Pacote de domínio do Ciclo de Aprovação, sem consumidor | done | 1.0 | Com 3.0 | domain-modeling-production |
 | 3.0 | Mapa 1:1 critério-evidência como dado verificável | done | 1.0 | Com 2.0 | — |
 | 4.1 | Veredito da fonte real do revisor e adaptadores das portas (D1) | done | 2.0, 3.0 | Não | — |
@@ -48,11 +48,11 @@ passar no gate (RF-56).
 | 4.7 | ACPRunner conduz o Cycle e fiação das quatro lacunas nos três caminhos | blocked | 4.6 | Não | — |
 | 4.8 | Prova de paridade entre os três caminhos e fluxos E2E | done | 4.7 | Não | — |
 | 5.0 | Propagação do teto de rodadas e virada do critério estrito | done | 4.8 | Não | — |
-| 6.0 | Catálogo de Agentes como registro único | blocked | 2.0 | Não | domain-modeling-production |
+| 6.0 | Catálogo de Agentes como registro único | done | 2.0 | Não | domain-modeling-production |
 | 7.0 | OpenCode como agente oficial de primeira classe | blocked | 6.0 | Não | — |
-| 8.0 | Enforcement não-desligável do OpenCode | blocked | 7.0 | Não | — |
+| 8.0 | Enforcement não-desligável do OpenCode | done | 7.0 | Não | — |
 | 9.0 | Hooks e paridade comprovada nos quatro agentes | blocked | 8.0 | Não | — |
-| 10.0 | Remoção total do Gemini e desinstalação fiel | blocked | 9.0 | Não | — |
+| 10.0 | Remoção total do Gemini e desinstalação fiel | done | 9.0 | Não | — |
 | 11.0 | Fechamento: rastreabilidade, não-regressão e release major | blocked | 5.0, 10.0 | — | github-diff-changelog-publisher |
 
 ## Dependências Críticas
