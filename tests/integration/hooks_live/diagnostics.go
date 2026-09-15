@@ -7,6 +7,8 @@ const (
 	PostToolGovernanceDiagnostic  = "AVISO: arquivo de governanca modificado"
 	OpenCodePostToolDiagnostic    = "GOVERNANCE OBSERVED at tool.execute.after"
 	SessionEndDiagnostic          = "[session-end] GATE DE ENCERRAMENTO BLOQUEADO — existe tarefa sem veredito que encerre o ciclo (APPROVED, ou APPROVED_WITH_REMARKS sem achado high/critical)."
+	CodexPostToolFailedDiagnostic = "hook: PostToolUse Failed"
+	CodexStopBlockedDiagnostic    = "hook: Stop Blocked"
 )
 
 const (
@@ -41,9 +43,15 @@ func PostToolDiagnostics(agent string) []string {
 	if agent == "opencode" {
 		return []string{OpenCodePostToolDiagnostic}
 	}
+	if agent == "codex" {
+		return []string{PostToolGovernanceDiagnostic, CodexPostToolFailedDiagnostic}
+	}
 	return []string{PostToolGovernanceDiagnostic}
 }
 
 func SessionEndDiagnostics(agent string) []string {
+	if agent == "codex" {
+		return []string{SessionEndDiagnostic, CodexStopBlockedDiagnostic}
+	}
 	return []string{SessionEndDiagnostic}
 }

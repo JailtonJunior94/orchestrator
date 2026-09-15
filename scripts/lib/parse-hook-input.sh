@@ -23,7 +23,7 @@ try:
             if isinstance(value, str) and value:
                 print(value)
                 raise SystemExit
-        patch = tool_input.get('patch', tool_input.get('patchText', ''))
+        patch = tool_input.get('patch', tool_input.get('patchText', tool_input.get('command', '')))
     else:
         patch = tool_input if isinstance(tool_input, str) else ''
     for line in patch.splitlines():
@@ -42,7 +42,7 @@ except Exception:
   fi
 
   if [[ -z "$file_path" ]]; then
-    file_path="$(printf '%s' "$input" | grep -Eo '\*\*\* (Add|Update|Delete) File: [^[:space:]]+' 2>/dev/null | head -1 | sed -E 's/^\*\*\* (Add|Update|Delete) File: //' || true)"
+    file_path="$(printf '%s' "$input" | grep -Eo '\*\*\* (Add|Update|Delete) File: [^[:space:]\\]+' 2>/dev/null | head -1 | sed -E 's/^\*\*\* (Add|Update|Delete) File: //' || true)"
   fi
 
   printf '%s' "$file_path"

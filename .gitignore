@@ -32,3 +32,6 @@ __pycache__/
 # Binarios de teste compilados (go test -c)
 *.test
 .aispec/
+
+# Fixture estavel do Codex para hooks_live (trust interativo persistente)
+.cache/

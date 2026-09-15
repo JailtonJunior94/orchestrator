@@ -33,32 +33,41 @@ func TestHooksLiveMatrixDispatchesThroughRealCLIs(t *testing.T) {
 	}
 	for _, cell := range LiveMatrix() {
 		t.Run(cell.Agent+"/"+cell.Point.String(), func(t *testing.T) {
-			projectDir := installNativeHookFixture(t)
+			projectDir := installNativeHookFixture(t, cell.Agent)
 			run := invokeNativeCLI(t, projectDir, cell)
 			assertNativeOutcome(t, projectDir, cell, run)
 		})
 	}
 }
 
-func installNativeHookFixture(t *testing.T) string {
+func installNativeHookFixture(t *testing.T, agent string) string {
 	t.Helper()
 	sourceDir, cleanup, err := embedded.NewExtractor().ExtractToTempDir()
 	if err != nil {
 		t.Fatalf("extract embedded assets: %v", err)
 	}
 	t.Cleanup(cleanup)
-	projectDir := filepath.Join(t.TempDir(), "project")
-	if err := os.MkdirAll(projectDir, 0o755); err != nil {
-		t.Fatalf("create native hook fixture: %v", err)
-	}
-	if err := exec.Command("git", "init", projectDir).Run(); err != nil {
-		t.Fatalf("initialize native hook fixture repository: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := os.RemoveAll(projectDir); err != nil {
-			t.Errorf("clean native hook fixture: %v", err)
+
+	var projectDir string
+	if agent == "codex" {
+		projectDir = codexStableFixtureDir(t)
+		if err := ensureGitRepo(projectDir); err != nil {
+			t.Fatalf("initialize stable Codex hook fixture repository: %v", err)
 		}
-	})
+	} else {
+		projectDir = filepath.Join(t.TempDir(), "project")
+		if err := os.MkdirAll(projectDir, 0o755); err != nil {
+			t.Fatalf("create native hook fixture: %v", err)
+		}
+		if err := exec.Command("git", "init", projectDir).Run(); err != nil {
+			t.Fatalf("initialize native hook fixture repository: %v", err)
+		}
+		t.Cleanup(func() {
+			if err := os.RemoveAll(projectDir); err != nil {
+				t.Errorf("clean native hook fixture: %v", err)
+			}
+		})
+	}
 	fileSystem := fs.NewOSFileSystem()
 	service := install.NewService(fileSystem, output.New(false), manifest.NewStore(fileSystem), adapters.NewGenerator(fileSystem, output.New(false)), contextgen.NewGenerator(fileSystem, output.New(false)))
 	if err := service.Execute(config.InstallOptions{
@@ -238,6 +247,33 @@ func configureNativeFixtureTrust(t *testing.T, projectDir string, cell MatrixCel
 		}
 	}
 	return env, codexProfile, sessionIdleMarker
+}
+
+func codexStableFixtureDir(t *testing.T) string {
+	t.Helper()
+	root, err := gitRepoRoot()
+	if err != nil {
+		t.Fatalf("resolve repository root for stable Codex hook fixture: %v", err)
+	}
+	return filepath.Join(root, ".cache", "hooks-live-fixtures", "codex")
+}
+
+func gitRepoRoot() (string, error) {
+	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+func ensureGitRepo(dir string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+		return nil
+	}
+	return exec.Command("git", "init", dir).Run()
 }
 
 func configureCopilotRepositorySettings(t *testing.T, projectDir string) {
