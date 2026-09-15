@@ -2,6 +2,7 @@ package durable_test
 
 import (
 	"errors"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -23,7 +24,7 @@ func (s *ScopeSuite) TestActivePathResolvesForPRDLayer() {
 	path, err := scope.ActivePath()
 
 	s.Require().NoError(err)
-	s.Equal("/project/.specs/prd-x/memory/MEMORY.md", path)
+	s.Equal(filepath.Join(scope.TasksDir, "memory", "MEMORY.md"), path)
 }
 
 func (s *ScopeSuite) TestActivePathRejectsMissingTasksDirForPRDLayer() {

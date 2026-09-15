@@ -306,15 +306,26 @@ func (s *FacadeSuite) TestBuildContextReportsBudgetByLayer() {
 
 func (s *FacadeSuite) TestBuildContextReportsRecoveryLatencyDegradation() {
 	fsys := fs.NewFakeFileSystem()
-	layer := durable.NewLayerWithLocker(fsys, newInMemoryLayerLocker())
+	baseLayer := durable.NewLayerWithLocker(fsys, newInMemoryLayerLocker())
+	layer := &slowReadLayer{Layer: baseLayer, delay: 50 * time.Millisecond}
 	facade := durable.NewFacadeWithLayerAndLocker(fsys, layer, newInMemoryLayerLocker(), durable.FacadeConfig{
 		ProjectDir:           "/project",
 		TasksDir:             "/project/.specs/prd-x",
-		RecoveryLatencyLimit: time.Nanosecond,
+		RecoveryLatencyLimit: 5 * time.Millisecond,
 	})
 
 	context, err := facade.BuildContext(context.Background(), durable.MemoryScope{})
 
 	s.Require().NoError(err)
 	s.True(context.RecoveryDegraded)
+}
+
+type slowReadLayer struct {
+	durable.Layer
+	delay time.Duration
+}
+
+func (l *slowReadLayer) Read(ctx context.Context, scope durable.Scope) ([]durable.Fact, durable.HumanBlock, error) {
+	time.Sleep(l.delay)
+	return l.Layer.Read(ctx, scope)
 }

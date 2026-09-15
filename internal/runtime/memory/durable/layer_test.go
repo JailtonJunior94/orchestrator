@@ -3,6 +3,7 @@ package durable_test
 import (
 	"context"
 	"errors"
+	"path/filepath"
 	"sync"
 	"testing"
 
@@ -377,16 +378,17 @@ func (s *LayerSuite) TestConsolidateWritesOnlyViaAtomicWrite() {
 func (s *LayerSuite) TestConsolidateSurfacesLockContentionWithoutCorruptingPage() {
 	filesystem := fs.NewFakeFileSystem()
 	locker := newInMemoryLayerLocker()
-	scope := durable.Scope{Layer: durable.TargetLayerPRD, TasksDir: "/repo/.specs/prd-x"}
+	tasksDir := "/repo/.specs/prd-x"
+	scope := durable.Scope{Layer: durable.TargetLayerPRD, TasksDir: tasksDir}
 	layer := durable.NewLayerWithLocker(filesystem, locker)
 
-	lockPath := "/repo/.specs/prd-x/memory/MEMORY.lock"
+	lockPath := filepath.Join(tasksDir, "memory", "MEMORY.lock")
 	locker.refuseOn[lockPath] = true
 
 	_, err := layer.Consolidate(context.Background(), scope, []durable.Fact{s.durableFact("payment.retry", "sha256:aaaa", "content")})
 
 	s.True(errors.Is(err, durable.ErrLayerLocked))
-	s.False(filesystem.Exists("/repo/.specs/prd-x/memory/MEMORY.md"))
+	s.False(filesystem.Exists(filepath.Join(tasksDir, "memory", "MEMORY.md")))
 }
 
 func (s *LayerSuite) TestConsolidateReleasesLockAfterWrite() {
@@ -405,16 +407,17 @@ func (s *LayerSuite) TestConsolidateReleasesLockAfterWrite() {
 func (s *LayerSuite) TestConsolidateRefusesWriteThroughExternalSymlink() {
 	filesystem := fs.NewFakeFileSystem()
 	layer := durable.NewLayerWithLocker(filesystem, newInMemoryLayerLocker())
-	scope := durable.Scope{Layer: durable.TargetLayerPRD, TasksDir: "/repo/.specs/prd-x"}
+	tasksDir := "/repo/.specs/prd-x"
+	scope := durable.Scope{Layer: durable.TargetLayerPRD, TasksDir: tasksDir}
 
-	s.Require().NoError(filesystem.Symlink("/outside/evil", "/repo/.specs/prd-x/memory"))
+	s.Require().NoError(filesystem.Symlink("/outside/evil", filepath.Join(tasksDir, "memory")))
 
 	_, err := layer.Consolidate(context.Background(), scope, []durable.Fact{s.durableFact("payment.retry", "sha256:aaaa", "content")})
 
 	s.Require().Error(err)
 	s.Contains(err.Error(), "symlink para fora do projeto")
 	s.False(filesystem.Exists("/outside/evil/MEMORY.md"))
-	s.False(filesystem.Exists("/repo/.specs/prd-x/memory/MEMORY.md"))
+	s.False(filesystem.Exists(filepath.Join(tasksDir, "memory", "MEMORY.md")))
 }
 
 func (s *LayerSuite) TestPromoteLocksBothLayersInDeterministicOrder() {
