@@ -73,14 +73,22 @@ type claudeHookSignature struct {
 }
 
 var claudeGovernanceHookSignatures = map[claudeHookSignature]bool{
-	{event: "PreToolUse", matcher: "Bash|Edit|Write|NotebookEdit|apply_patch", command: "bash .claude/hooks/validate-preload.sh"}:     true,
-	{event: "PreToolUse", matcher: "Bash|Edit|Write", command: "bash .claude/hooks/validate-preload.sh"}:                              true,
-	{event: "PreToolUse", matcher: "Edit|Write", command: "bash .claude/hooks/validate-preload.sh"}:                                   true,
-	{event: "PostToolUse", matcher: "Bash|Edit|Write|NotebookEdit|apply_patch", command: "bash .claude/hooks/validate-governance.sh"}: true,
-	{event: "PostToolUse", matcher: "Bash|Edit|Write", command: "bash .claude/hooks/validate-governance.sh"}:                          true,
-	{event: "PostToolUse", matcher: "Edit|Write", command: "bash .claude/hooks/validate-governance.sh"}:                               true,
-	{event: "SubagentStop", matcher: "task-executor", command: "bash .claude/hooks/subagent-stop-wrapper.sh"}:                         true,
-	{event: "Stop", matcher: "", command: "bash .claude/hooks/validate-session-end.sh"}:                                               true,
+	{event: "PreToolUse", matcher: "Bash|Edit|Write|NotebookEdit|apply_patch", command: "bash .claude/hooks/validate-preload.sh"}:                           true,
+	{event: "PreToolUse", matcher: "Bash|Edit|Write", command: "bash .claude/hooks/validate-preload.sh"}:                                                    true,
+	{event: "PreToolUse", matcher: "Edit|Write", command: "bash .claude/hooks/validate-preload.sh"}:                                                         true,
+	{event: "PostToolUse", matcher: "Bash|Edit|Write|NotebookEdit|apply_patch", command: "bash .claude/hooks/validate-governance.sh"}:                       true,
+	{event: "PostToolUse", matcher: "Bash|Edit|Write", command: "bash .claude/hooks/validate-governance.sh"}:                                                true,
+	{event: "PostToolUse", matcher: "Edit|Write", command: "bash .claude/hooks/validate-governance.sh"}:                                                     true,
+	{event: "SubagentStop", matcher: "task-executor", command: "bash .claude/hooks/subagent-stop-wrapper.sh"}:                                               true,
+	{event: "Stop", matcher: "", command: "bash .claude/hooks/validate-session-end.sh"}:                                                                     true,
+	{event: "PreToolUse", matcher: "Bash|Edit|Write|NotebookEdit|apply_patch", command: `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/validate-preload.sh"`}:     true,
+	{event: "PreToolUse", matcher: "Bash|Edit|Write", command: `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/validate-preload.sh"`}:                              true,
+	{event: "PreToolUse", matcher: "Edit|Write", command: `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/validate-preload.sh"`}:                                   true,
+	{event: "PostToolUse", matcher: "Bash|Edit|Write|NotebookEdit|apply_patch", command: `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/validate-governance.sh"`}: true,
+	{event: "PostToolUse", matcher: "Bash|Edit|Write", command: `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/validate-governance.sh"`}:                          true,
+	{event: "PostToolUse", matcher: "Edit|Write", command: `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/validate-governance.sh"`}:                               true,
+	{event: "SubagentStop", matcher: "task-executor", command: `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/subagent-stop-wrapper.sh"`}:                         true,
+	{event: "Stop", matcher: "", command: `bash "$CLAUDE_PROJECT_DIR/.claude/hooks/validate-session-end.sh"`}:                                               true,
 }
 
 func isClaudeGovernanceHook(event, matcher, command string) bool {

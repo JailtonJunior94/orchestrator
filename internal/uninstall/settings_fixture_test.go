@@ -8,7 +8,7 @@ const installClaudeSettingsTemplate = `{
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/validate-preload.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/validate-preload.sh\""
           }
         ]
       }
@@ -19,7 +19,7 @@ const installClaudeSettingsTemplate = `{
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/validate-governance.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/validate-governance.sh\""
           }
         ]
       }
@@ -30,7 +30,7 @@ const installClaudeSettingsTemplate = `{
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/subagent-stop-wrapper.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/subagent-stop-wrapper.sh\""
           }
         ]
       }
@@ -40,7 +40,7 @@ const installClaudeSettingsTemplate = `{
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/validate-session-end.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/validate-session-end.sh\""
           }
         ]
       }

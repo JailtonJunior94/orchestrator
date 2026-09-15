@@ -229,6 +229,7 @@ func scriptCandidatesIn(scoped []string) []string {
 	for _, s := range scoped {
 		for _, m := range shellScriptTokenPattern.FindAllString(s, -1) {
 			candidate := strings.TrimPrefix(m, "./")
+			candidate = strings.TrimPrefix(candidate, "CLAUDE_PROJECT_DIR/")
 			if seen[candidate] {
 				continue
 			}

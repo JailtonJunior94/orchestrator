@@ -226,6 +226,7 @@ func scriptCandidatesIn(scope []string) []string {
 	for _, line := range scope {
 		for _, match := range shellScriptToken.FindAllString(line, -1) {
 			candidate := strings.TrimPrefix(filepath.ToSlash(match), "./")
+			candidate = strings.TrimPrefix(candidate, "CLAUDE_PROJECT_DIR/")
 			if seen[candidate] {
 				continue
 			}

@@ -199,13 +199,19 @@ func extractScriptPath(command string) string {
 		return ""
 	}
 	parts := strings.Fields(command)
+	var raw string
 	switch {
 	case len(parts) >= 2 && (parts[0] == "bash" || parts[0] == "sh"):
-		return parts[1]
-	case len(parts) == 1 && strings.HasSuffix(parts[0], ".sh"):
-		return parts[0]
+		raw = parts[1]
+	case len(parts) == 1 && strings.HasSuffix(strings.Trim(parts[0], `"`), ".sh"):
+		raw = parts[0]
+	default:
+		return ""
 	}
-	return ""
+	raw = strings.Trim(raw, `"`)
+	raw = strings.TrimPrefix(raw, "$CLAUDE_PROJECT_DIR/")
+	raw = strings.TrimPrefix(raw, "${CLAUDE_PROJECT_DIR}/")
+	return raw
 }
 
 // ── Subtask 16.2 — Contrato 4: skills-lock.json consistente com .agents/skills/ ──
