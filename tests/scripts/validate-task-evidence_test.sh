@@ -590,6 +590,109 @@ fi
 
 printf '%s\n' "$FRESH_RESULT" >"$TMPDIR_BASE/result.json"
 
+REMARKS_BASE="${FRESH_REPORT/verdict=APPROVED/verdict=APPROVED_WITH_REMARKS}"
+REMARKS_BASE="${REMARKS_BASE/Veredito do Revisor: APPROVED/Veredito do Revisor: APPROVED_WITH_REMARKS}"
+
+remarks_with() {
+  printf '%s\n## Achados\n%s\n' "$REMARKS_BASE" "$1"
+}
+
+run_case "TC39-remarks-high-em-tabela-nao-encerra" \
+  "$(remarks_with '| [HIGH] | internal/taskloop/evidence.go:1 | corrida de dados |
+- [LOW] internal/taskloop/evidence.go:3 renomear variavel')" 1 "achado high/critical declarado"
+
+run_case "TC40-remarks-critical-em-lista-numerada-nao-encerra" \
+  "$(remarks_with '1. [CRITICAL] internal/taskloop/evidence.go:1 vazamento de segredo
+- [LOW] internal/taskloop/evidence.go:3 renomear variavel')" 1 "achado high/critical declarado"
+
+run_case "TC41-remarks-high-em-crase-nao-encerra" \
+  "$(remarks_with '- `[HIGH]` internal/taskloop/evidence.go:1 corrida de dados
+- [LOW] internal/taskloop/evidence.go:3 renomear variavel')" 1 "achado high/critical declarado"
+
+run_case "TC42-remarks-high-em-heading-nao-encerra" \
+  "$(remarks_with '### [HIGH] internal/taskloop/evidence.go:1 corrida de dados
+- [LOW] internal/taskloop/evidence.go:3 renomear variavel')" 1 "achado high/critical declarado"
+
+run_case "TC43-remarks-high-em-checkbox-nao-encerra" \
+  "$(remarks_with '- [ ] [HIGH] internal/taskloop/evidence.go:1 corrida de dados
+- [LOW] internal/taskloop/evidence.go:3 renomear variavel')" 1 "achado high/critical declarado"
+
+run_case "TC44-remarks-campo-severidade-em-negrito-nao-encerra" \
+  "$(remarks_with '- **Severidade**: high
+- [LOW] internal/taskloop/evidence.go:3 renomear variavel')" 1 "achado high/critical declarado"
+
+run_case "TC45-mencao-em-prosa-nao-bloqueia" \
+  "$(remarks_with 'Veredito `APPROVED_WITH_REMARKS`, sem tag `[CRITICAL]`/`[HIGH]` bloqueante.
+- Veredito do reviewer: APPROVED_WITH_REMARKS (sem tag `[critical]`/`[blocker]`)
+- [LOW] internal/taskloop/evidence.go:3 renomear variavel')" 0 "aprovada"
+
+run_case "TC46-achado-citado-em-cerca-nao-bloqueia" \
+  "$(remarks_with '```text
+- [CRITICAL] exemplo citado dentro de bloco de codigo
+| [HIGH] | exemplo | em tabela citada |
+```
+- [LOW] internal/taskloop/evidence.go:3 renomear variavel')" 0 "aprovada"
+
+run_case "TC47-escape-combinado-nao-encerra" \
+  "$(remarks_with '| [HIGH] | internal/taskloop/evidence.go:1 | corrida de dados |
+1. [CRITICAL] internal/taskloop/evidence.go:2 vazamento de segredo
+- `[HIGH]` internal/taskloop/evidence.go:4 leitura sem lock
+- [LOW] internal/taskloop/evidence.go:3 renomear variavel')" 1 "achado high/critical declarado"
+
+BLOCKED_PROSE_REPORT="${FRESH_REPORT/- Estado: done/- Estado: blocked}"
+
+run_case "TC48-estado-divergente-do-execution-result" "$BLOCKED_PROSE_REPORT" 1 "divergencia de estado"
+
+printf 'TAMPERED\n' >"$TMPDIR_BASE/evidence/test.log"
+tamper_exit=0
+printf '<!-- evidence-contract: v2 -->\n%s' "$BLOCKED_PROSE_REPORT" >"$TMPDIR_BASE/tamper.md"
+tamper_out=$(bash "$SCRIPT" "$TMPDIR_BASE/tamper.md" 2>&1) || tamper_exit=$?
+rm -f "$TMPDIR_BASE/tamper.md"
+if [[ "$tamper_exit" -eq 1 ]] \
+  && grep -qi "divergencia de estado" <<<"$tamper_out" \
+  && grep -qi "nao corresponde a evidencia fisica" <<<"$tamper_out"; then
+  echo "PASS [TC49-prova-fisica-nao-e-dispensada-por-edicao-de-prosa]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [TC49-prova-fisica-nao-e-dispensada-por-edicao-de-prosa]: exit=$tamper_exit"
+  echo "  output: $tamper_out"
+  FAIL=$((FAIL+1))
+fi
+printf 'PASS\n' >"$TMPDIR_BASE/evidence/test.log"
+
+TASKS_DIR="$TMPDIR_BASE/.specs/prd-tasks-md"
+mkdir -p "$TASKS_DIR"
+
+run_tasks_md_case() {
+  local label="$1"
+  local tasks_status="$2"
+  local want_exit="$3"
+  local want_text="$4"
+
+  printf '# Tasks\n\n| ID | Titulo | Status |\n|----|--------|--------|\n| 5.0 | Evidencia | %s |\n' \
+    "$tasks_status" >"$TASKS_DIR/tasks.md"
+  printf '<!-- evidence-contract: v2 -->\n%s' "$BLOCKED_REPORT" >"$TASKS_DIR/5.0_execution_report.md"
+
+  local actual_exit=0
+  local actual_out
+  actual_out=$(bash "$SCRIPT" "$TASKS_DIR/5.0_execution_report.md" 2>&1) || actual_exit=$?
+  rm -f "$TASKS_DIR/5.0_execution_report.md" "$TASKS_DIR/tasks.md"
+
+  if [[ "$actual_exit" -eq "$want_exit" ]] \
+    && { [[ -z "$want_text" ]] || grep -qi "$want_text" <<<"$actual_out"; }; then
+    echo "PASS [$label]"
+    PASS=$((PASS+1))
+  else
+    echo "FAIL [$label]: exit=$actual_exit, want=$want_exit"
+    echo "  output: $actual_out"
+    FAIL=$((FAIL+1))
+  fi
+}
+
+run_tasks_md_case "TC50-estado-divergente-de-tasks-md" done 1 "registra 'done' para a tarefa 5.0"
+run_tasks_md_case "TC51-estado-consistente-com-tasks-md" blocked 0 "aprovada"
+rm -rf "$TASKS_DIR"
+
 echo ""
 echo "Resultado: $PASS passaram, $FAIL falharam"
 if [[ $FAIL -ne 0 ]]; then

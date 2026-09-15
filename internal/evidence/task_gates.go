@@ -23,10 +23,11 @@ var (
 	provenRe        = regexp.MustCompile(`(?i)->\s*comprovado\s*:\s*\S`)
 	emptyProofRe    = regexp.MustCompile(`(?i)comprovado\s*:\s*(\[ev|\[evid|\[\]\s*$)`)
 
-	findingAnchor = `^[ \t]*(?:[-*+>][ \t]*)*(?:\*\*|__)?`
+	findingAnchor = "(?:^|\\|)[ \\t]*(?:(?:[-*+>]|[0-9]+[.)]|#+|\\[[ xX]\\])[ \\t]*)*(?:\\*\\*|__|`)?"
+	severityField = "(?:\\*\\*|__|`)?"
 
-	blockingSeverityRe = regexp.MustCompile(`(?im)` + findingAnchor + `(\[(critical|cr(?:i|í)tico|high|hard|alta|alto|blocker|security)\]|severidade[ \t]*:[ \t]*(critical|high|cr(?:i|í)tico|alta|alto)|severity[ \t]*:[ \t]*(critical|high))`)
-	anySeverityRe      = regexp.MustCompile(`(?im)` + findingAnchor + `(\[(critical|cr(?:i|í)tico|high|hard|alta|alto|blocker|security|medium|m(?:e|é)dia|important|importante|low|baixa|suggestion|sugest(?:a|ã)o)\]|severidade[ \t]*:[ \t]*(critical|high|medium|low|cr(?:i|í)tico|alta|alto|m(?:e|é)dia|baixa)|severity[ \t]*:[ \t]*(critical|high|medium|low))`)
+	blockingSeverityRe = regexp.MustCompile(`(?im)` + findingAnchor + `(\[(critical|cr(?:i|í)tico|high|hard|alta|alto|blocker|security)\]|severidade` + severityField + `[ \t]*:[ \t]*` + severityField + `(critical|high|cr(?:i|í)tico|alta|alto)|severity` + severityField + `[ \t]*:[ \t]*` + severityField + `(critical|high))`)
+	anySeverityRe      = regexp.MustCompile(`(?im)` + findingAnchor + `(\[(critical|cr(?:i|í)tico|high|hard|alta|alto|blocker|security|medium|m(?:e|é)dia|important|importante|low|baixa|suggestion|sugest(?:a|ã)o)\]|severidade` + severityField + `[ \t]*:[ \t]*` + severityField + `(critical|high|medium|low|cr(?:i|í)tico|alta|alto|m(?:e|é)dia|baixa)|severity` + severityField + `[ \t]*:[ \t]*` + severityField + `(critical|high|medium|low))`)
 	fencedBlockRe      = regexp.MustCompile("^[ \t]*```")
 )
 

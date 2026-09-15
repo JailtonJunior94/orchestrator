@@ -533,11 +533,7 @@ func (s *Service) probeBinaryAvailable(tool skills.Tool) VerifyState {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
 	defer cancel()
-	probe.
-		// Limpar cache entre chamadas de verify para garantir resultado fresco.
-		NewCatalog().
-		ResetCache()
-	_, err := probe.NewCatalog().EnsureAvailable(ctx, spec, s.lookPather)
+	_, err := probe.NewCatalog().Resolve(ctx, spec, s.lookPather)
 	if err != nil {
 		return VerifyStateMissing
 	}

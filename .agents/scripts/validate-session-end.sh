@@ -10,9 +10,66 @@ if [[ ! -t 0 ]]; then
   hook_input="$(cat)"
 fi
 
+json_top_level_true() {
+  local payload="$1"
+  local key="$2"
+  [[ -n "$payload" ]] || return 1
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$payload" \
+      | jq -e --arg k "$key" 'type == "object" and (.[$k] == true)' >/dev/null 2>&1
+    return $?
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    printf '%s' "$payload" | AISPEC_JSON_KEY="$key" python3 -c '
+import json
+import os
+import sys
+
+try:
+    payload = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+key = os.environ["AISPEC_JSON_KEY"]
+sys.exit(0 if isinstance(payload, dict) and payload.get(key) is True else 1)
+'
+    return $?
+  fi
+  return 1
+}
+
+json_top_level_string() {
+  local file="$1"
+  local key="$2"
+  [[ -f "$file" ]] || return 1
+  local value=""
+  if command -v jq >/dev/null 2>&1; then
+    value="$(jq -r --arg k "$key" \
+      'if type == "object" and ((.[$k] | type) == "string") then .[$k] else empty end' \
+      "$file" 2>/dev/null)"
+  elif command -v python3 >/dev/null 2>&1; then
+    value="$(AISPEC_JSON_KEY="$key" python3 -c '
+import json
+import os
+import sys
+
+try:
+    payload = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    sys.exit(1)
+key = os.environ["AISPEC_JSON_KEY"]
+value = payload.get(key) if isinstance(payload, dict) else None
+if not isinstance(value, str):
+    sys.exit(1)
+print(value)
+' "$file" 2>/dev/null)"
+  fi
+  [[ -n "$value" ]] || return 1
+  printf '%s' "$value"
+  return 0
+}
+
 stop_hook_active=0
-if [[ -n "$hook_input" ]] && printf '%s' "$hook_input" \
-  | grep -Eq '"stop_hook_active"[[:space:]]*:[[:space:]]*true'; then
+if json_top_level_true "$hook_input" "stop_hook_active"; then
   stop_hook_active=1
 fi
 
@@ -21,9 +78,10 @@ REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 tasks_root="${AI_TASKS_ROOT:-.specs}"
 prd_prefix="${AI_PRD_PREFIX:-prd-}"
 
-finding_anchor='^[[:space:]]*([-*+>][[:space:]]*)*(\*\*|__)?'
-blocking_severity_re="${finding_anchor}(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security)\]|severidade[[:space:]]*:[[:space:]]*(critical|high|cr(i|í)tico|alta|alto)|severity[[:space:]]*:[[:space:]]*(critical|high))"
-any_severity_re="${finding_anchor}(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security|medium|m(e|é)dia|important|importante|low|baixa|suggestion|sugest(a|ã)o)\]|severidade[[:space:]]*:[[:space:]]*(critical|high|medium|low|cr(i|í)tico|alta|alto|m(e|é)dia|baixa)|severity[[:space:]]*:[[:space:]]*(critical|high|medium|low))"
+finding_anchor='(^|[|])[[:space:]]*(([-*+>]|[0-9]+[.)]|#+|\[[ xX]\])[[:space:]]*)*'
+finding_emphasis='(\*\*|__|`)?'
+blocking_severity_re="${finding_anchor}${finding_emphasis}(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security)\]|severidade${finding_emphasis}[[:space:]]*:[[:space:]]*${finding_emphasis}(critical|high|cr(i|í)tico|alta|alto)|severity${finding_emphasis}[[:space:]]*:[[:space:]]*${finding_emphasis}(critical|high))"
+any_severity_re="${finding_anchor}${finding_emphasis}(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security|medium|m(e|é)dia|important|importante|low|baixa|suggestion|sugest(a|ã)o)\]|severidade${finding_emphasis}[[:space:]]*:[[:space:]]*${finding_emphasis}(critical|high|medium|low|cr(i|í)tico|alta|alto|m(e|é)dia|baixa)|severity${finding_emphasis}[[:space:]]*:[[:space:]]*${finding_emphasis}(critical|high|medium|low))"
 
 declares_remarks() {
   local report_file="$1"
@@ -52,14 +110,7 @@ closes_with_remarks() {
 
 structured_review_verdict() {
   local result_file="$1"
-  [[ -f "$result_file" ]] || return 1
-  local value
-  value="$(grep -Eo '"review_verdict"[[:space:]]*:[[:space:]]*"[A-Za-z_]+"' "$result_file" \
-    | head -n 1 \
-    | sed -E 's/.*:[[:space:]]*"([A-Za-z_]+)".*/\1/')"
-  [[ -n "$value" ]] || return 1
-  printf '%s' "$value"
-  return 0
+  json_top_level_string "$result_file" "review_verdict"
 }
 
 has_approved_verdict() {
@@ -107,7 +158,9 @@ for tasks_file in "$REPO_ROOT/$tasks_root/${prd_prefix}"*/tasks.md; do
       approved)
         continue
         ;;
-      changes_requested|needs_input)
+      "")
+        ;;
+      *)
         echo "[session-end] $label com decisao estruturada review_verdict=$review_verdict, que nao encerra o ciclo (dado estruturado prevalece sobre o texto do relatorio): $task_id ($result_json)" >&2
         reasons+=("$label com decisao estruturada review_verdict=$review_verdict, que nao encerra o ciclo (dado estruturado prevalece sobre o texto do relatorio): $task_id ($result_json)")
         blocked=1

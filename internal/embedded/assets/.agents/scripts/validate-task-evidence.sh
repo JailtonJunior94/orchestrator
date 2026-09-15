@@ -49,6 +49,82 @@ if [[ "$contract_version" -eq 1 ]]; then
   fi
 fi
 
+report_state="$(grep -Eio 'estado[[:space:]]*:[[:space:]]*(blocked|failed|done)' "$report_file" | head -1 | sed -E 's/.*:[[:space:]]*//' | tr '[:upper:]' '[:lower:]' || true)"
+report_task_id="$(grep -Eio '^-[[:space:]]*ID[[:space:]]*:[[:space:]]*[^[:space:]]+' "$report_file" | head -1 | sed -E 's/^-[[:space:]]*ID[[:space:]]*:[[:space:]]*//' || true)"
+result_path_ref="$(grep -Eio '^result_path[[:space:]]*=[[:space:]]*[^[:space:]]+' "$report_file" | head -1 | sed -E 's/^result_path[[:space:]]*=[[:space:]]*//' || true)"
+
+report_dir_abs="$(cd "$(dirname "$report_file")" && pwd)"
+repo_root_abs="$report_dir_abs"
+if git -C "$report_dir_abs" rev-parse --show-toplevel >/dev/null 2>&1; then
+  repo_root_abs="$(git -C "$report_dir_abs" rev-parse --show-toplevel)"
+fi
+
+result_json=""
+if [[ -n "$result_path_ref" ]]; then
+  result_candidate="${result_path_ref%%#*}"
+  if [[ -f "$repo_root_abs/$result_candidate" ]]; then
+    result_json="$repo_root_abs/$result_candidate"
+  elif [[ -f "$report_dir_abs/$result_candidate" ]]; then
+    result_json="$report_dir_abs/$result_candidate"
+  elif [[ -f "$result_candidate" ]]; then
+    result_json="$result_candidate"
+  fi
+fi
+
+result_status=""
+if [[ -n "$result_json" ]]; then
+  result_status="$(python3 -c '
+import json
+import sys
+
+try:
+    payload = json.load(open(sys.argv[1], encoding="utf-8"))
+except Exception:
+    sys.exit(1)
+status = payload.get("status") if isinstance(payload, dict) else None
+if not isinstance(status, str):
+    sys.exit(1)
+print(status)
+' "$result_json" 2>/dev/null || true)"
+fi
+
+tasks_file="$report_dir_abs/tasks.md"
+tasks_status=""
+if [[ -n "$report_task_id" && -f "$tasks_file" ]]; then
+  tasks_status="$(awk -F'|' -v want="$report_task_id" '
+    {
+      id = $2
+      status = $4
+      gsub(/^[ \t]+|[ \t]+$/, "", id)
+      gsub(/^[ \t]+|[ \t]+$/, "", status)
+    }
+    id == want && status != "" { print status; exit }
+  ' "$tasks_file" || true)"
+fi
+
+if [[ -n "$report_state" && -n "$result_status" && "$report_state" != "$result_status" ]]; then
+  echo "FALTANDO: divergencia de estado — relatorio declara 'Estado: $report_state' e o execution-result" \
+       "($result_json) declara status=\"$result_status\"; o estado terminal precisa ser o mesmo nos dois artefatos."
+  missing=1
+fi
+
+if [[ -n "$report_state" && -n "$tasks_status" && "$report_state" != "$tasks_status" ]]; then
+  echo "FALTANDO: divergencia de estado — relatorio declara 'Estado: $report_state' e tasks.md ($tasks_file)" \
+       "registra '$tasks_status' para a tarefa $report_task_id."
+  missing=1
+fi
+
+if [[ -n "$result_status" && -n "$tasks_status" && "$result_status" != "$tasks_status" ]]; then
+  echo "FALTANDO: divergencia de estado — execution-result ($result_json) declara status=\"$result_status\" e" \
+       "tasks.md ($tasks_file) registra '$tasks_status' para a tarefa $report_task_id."
+  missing=1
+fi
+
+effective_state="$report_state"
+if [[ "$result_status" == "done" ]]; then
+  effective_state="done"
+fi
+
 require_pattern() {
   local pattern="$1"
   local label="$2"
@@ -128,7 +204,7 @@ if [[ "$contract_version" -eq 1 ]]; then
        "RF-53: o mapa 1:1 de critérios de aceite e o desfecho (veredito que encerra, RF-33) continuam cobrados."
 fi
 
-if grep -Eiq "estado[[:space:]]*:[[:space:]]*done" "$report_file" && [[ -n "$task_path" ]]; then
+if [[ "$effective_state" == "done" && -n "$task_path" ]]; then
   criteria_count="$(awk '
     tolower($0) ~ /^#+[[:space:]]+(crit(e|é)rios de (sucesso|aceite)|definition of done|acceptance criteria)/ { capture=1; next }
     /^#+/ { capture=0 }
@@ -171,11 +247,11 @@ if grep -Eiq "estado[[:space:]]*:[[:space:]]*done" "$report_file" && [[ -n "$tas
          "declare os criterios na task file e comprove-os no relatorio."
     missing=1
   fi
-elif grep -Eiq "estado[[:space:]]*:[[:space:]]*done" "$report_file" && [[ "$report_has_criteria" -eq 1 ]]; then
+elif [[ "$effective_state" == "done" && "$report_has_criteria" -eq 1 ]]; then
   echo "FALTANDO: relatório declara '## Critérios de Aceite' mas não há task file resolvível para" \
        "confronto 1:1 (RF-53); AI_SDD_STRICT_EVIDENCE não reabre este gate."
   missing=1
-elif grep -Eiq "estado[[:space:]]*:[[:space:]]*done" "$report_file"; then
+elif [[ "$effective_state" == "done" ]]; then
   echo "FALTANDO: relatório declara 'done' mas não há task file resolvível (campo 'Arquivo:') para" \
        "confronto 1:1 dos critérios (RF-51/RF-53); AI_SDD_STRICT_EVIDENCE não reabre este gate."
   missing=1
@@ -216,8 +292,17 @@ elif [[ -n "$prd_path" && "$prd_path" != n/a* && "$prd_path" != "(n/a)"* ]]; the
   fi
 fi
 
-AISPEC_BLOCKING_SEVERITY_RE='(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security)\]|severidade[[:space:]]*:[[:space:]]*(critical|high|cr(i|í)tico|alta|alto)|severity[[:space:]]*:[[:space:]]*(critical|high))'
-AISPEC_ANY_SEVERITY_RE='(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security|medium|m(e|é)dia|important|importante|low|baixa|suggestion|sugest(a|ã)o)\]|severidade[[:space:]]*:[[:space:]]*(critical|high|medium|low|cr(i|í)tico|alta|alto|m(e|é)dia|baixa)|severity[[:space:]]*:[[:space:]]*(critical|high|medium|low))'
+AISPEC_FINDING_ANCHOR='(^|[|])[[:space:]]*(([-*+>]|[0-9]+[.)]|#+|\[[ xX]\])[[:space:]]*)*'
+AISPEC_FINDING_EMPHASIS='(\*\*|__|`)?'
+AISPEC_BLOCKING_SEVERITY_RE="${AISPEC_FINDING_ANCHOR}${AISPEC_FINDING_EMPHASIS}(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security)\]|severidade${AISPEC_FINDING_EMPHASIS}[[:space:]]*:[[:space:]]*${AISPEC_FINDING_EMPHASIS}(critical|high|cr(i|í)tico|alta|alto)|severity${AISPEC_FINDING_EMPHASIS}[[:space:]]*:[[:space:]]*${AISPEC_FINDING_EMPHASIS}(critical|high))"
+AISPEC_ANY_SEVERITY_RE="${AISPEC_FINDING_ANCHOR}${AISPEC_FINDING_EMPHASIS}(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security|medium|m(e|é)dia|important|importante|low|baixa|suggestion|sugest(a|ã)o)\]|severidade${AISPEC_FINDING_EMPHASIS}[[:space:]]*:[[:space:]]*${AISPEC_FINDING_EMPHASIS}(critical|high|medium|low|cr(i|í)tico|alta|alto|m(e|é)dia|baixa)|severity${AISPEC_FINDING_EMPHASIS}[[:space:]]*:[[:space:]]*${AISPEC_FINDING_EMPHASIS}(critical|high|medium|low))"
+
+findings_body_file="$(mktemp)"
+trap 'rm -f "$findings_body_file"' EXIT
+awk '
+  /^[[:space:]]*```/ { fenced = !fenced; next }
+  !fenced { print }
+' "$report_file" >"$findings_body_file"
 
 # Veredito do revisor
 if ! grep -Eiq "veredito do revisor[[:space:]]*:[[:space:]]*(APPROVED|APPROVED_WITH_REMARKS|REJECTED|BLOCKED)" "$report_file"; then
@@ -238,10 +323,10 @@ if [[ -z "$review_verdict" ]]; then
   echo "FALTANDO: veredito do reviewer no bloco Diff Reviewed"
   missing=1
 elif [[ "$review_verdict" == "APPROVED_WITH_REMARKS" ]]; then
-  if grep -Eiq "$AISPEC_BLOCKING_SEVERITY_RE" "$report_file"; then
+  if grep -Eiq "$AISPEC_BLOCKING_SEVERITY_RE" "$findings_body_file"; then
     echo "FALTANDO: veredito APPROVED_WITH_REMARKS não encerra com achado high/critical declarado (RF-33)."
     missing=1
-  elif ! grep -Eiq "$AISPEC_ANY_SEVERITY_RE" "$report_file"; then
+  elif ! grep -Eiq "$AISPEC_ANY_SEVERITY_RE" "$findings_body_file"; then
     echo "FALTANDO: veredito APPROVED_WITH_REMARKS sem achado declarado com severidade canônica:" \
          "ausência de high/critical não verificável (RF-33, fail-closed)."
     missing=1
@@ -270,7 +355,7 @@ fi
 
 # Estado done exige o resultado JSON v2 e evidências físicas contidas. O digest
 # de cada teste deve corresponder ao conteúdo de pelo menos um arquivo declarado.
-if grep -Eiq "estado[[:space:]]*:[[:space:]]*done" "$report_file"; then
+if [[ "$effective_state" == "done" ]]; then
   if ! python3 - "$report_file" <<'PY'
 import hashlib
 import json
@@ -281,19 +366,38 @@ import sys
 
 MIN_AI_SPEC_VERSION = (2, 0, 0)
 
+FINDING_ANCHOR = (
+    r"(?:^|\|)[ \t]*(?:(?:[-*+>]|[0-9]+[.)]|#+|\[[ xX]\])[ \t]*)*(?:\*\*|__|`)?"
+)
+EMPHASIS = r"(?:\*\*|__|`)?"
 BLOCKING_SEVERITY = re.compile(
-    r"(\[(critical|cr(?:i|\u00ed)tico|high|hard|alta|alto|blocker|security)\]"
-    r"|severidade\s*:\s*(critical|high|cr(?:i|\u00ed)tico|alta|alto)"
-    r"|severity\s*:\s*(critical|high))",
-    re.IGNORECASE,
+    FINDING_ANCHOR
+    + r"(\[(critical|cr(?:i|\u00ed)tico|high|hard|alta|alto|blocker|security)\]"
+    + r"|severidade" + EMPHASIS + r"\s*:\s*" + EMPHASIS + r"(critical|high|cr(?:i|\u00ed)tico|alta|alto)"
+    + r"|severity" + EMPHASIS + r"\s*:\s*" + EMPHASIS + r"(critical|high))",
+    re.IGNORECASE | re.MULTILINE,
 )
 ANY_SEVERITY = re.compile(
-    r"(\[(critical|cr(?:i|\u00ed)tico|high|hard|alta|alto|blocker|security|medium|m(?:e|\u00e9)dia"
-    r"|important|importante|low|baixa|suggestion|sugest(?:a|\u00e3)o)\]"
-    r"|severidade\s*:\s*(critical|high|medium|low|cr(?:i|\u00ed)tico|alta|alto|m(?:e|\u00e9)dia|baixa)"
-    r"|severity\s*:\s*(critical|high|medium|low))",
-    re.IGNORECASE,
+    FINDING_ANCHOR
+    + r"(\[(critical|cr(?:i|\u00ed)tico|high|hard|alta|alto|blocker|security|medium|m(?:e|\u00e9)dia"
+    + r"|important|importante|low|baixa|suggestion|sugest(?:a|\u00e3)o)\]"
+    + r"|severidade" + EMPHASIS + r"\s*:\s*" + EMPHASIS
+    + r"(critical|high|medium|low|cr(?:i|\u00ed)tico|alta|alto|m(?:e|\u00e9)dia|baixa)"
+    + r"|severity" + EMPHASIS + r"\s*:\s*" + EMPHASIS + r"(critical|high|medium|low))",
+    re.IGNORECASE | re.MULTILINE,
 )
+
+
+def findings_body(raw):
+    body = []
+    fenced = False
+    for line in raw.split("\n"):
+        if re.match(r"^[ \t]*```", line):
+            fenced = not fenced
+            continue
+        if not fenced:
+            body.append(line)
+    return "\n".join(body)
 
 
 class ToolchainError(Exception):
@@ -394,7 +498,8 @@ try:
         verdict = declared.group(1).strip().upper() if declared else ""
         closes = verdict == "APPROVED"
         if verdict == "APPROVED_WITH_REMARKS":
-            closes = bool(re.search(ANY_SEVERITY, text)) and not re.search(BLOCKING_SEVERITY, text)
+            body = findings_body(text)
+            closes = bool(ANY_SEVERITY.search(body)) and not BLOCKING_SEVERITY.search(body)
         if closes:
             print(
                 f"FALTANDO: veredito aprovador (verdict={verdict}) sobre execution-result nao-done "

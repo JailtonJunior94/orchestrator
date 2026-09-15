@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
@@ -2135,6 +2136,35 @@ func TestProbeBinaryAvailable_Current(t *testing.T) {
 	state := svc.probeBinaryAvailable(skills.ToolClaude)
 	if state != VerifyStateCurrent {
 		t.Errorf("probeBinaryAvailable com binario: got %v, want current", state)
+	}
+}
+
+func TestProbeBinaryAvailableIsIndependentOfSharedProbeCache(t *testing.T) {
+	t.Parallel()
+
+	missing := setupTestServiceFull(fs.NewFakeFileSystem(), &fakeAgentDetector{}, &fakeLangDetector{}, newFakeLookPather())
+	available := setupTestServiceFull(fs.NewFakeFileSystem(), &fakeAgentDetector{}, &fakeLangDetector{}, newFakeLookPather("claude-agent-acp"))
+
+	for i := 0; i < 200; i++ {
+		var wg sync.WaitGroup
+		results := make([]VerifyState, 2)
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			results[0] = missing.probeBinaryAvailable(skills.ToolClaude)
+		}()
+		go func() {
+			defer wg.Done()
+			results[1] = available.probeBinaryAvailable(skills.ToolClaude)
+		}()
+		wg.Wait()
+
+		if results[0] != VerifyStateMissing {
+			t.Fatalf("iteration %d: probe without binary: got %v, want missing", i, results[0])
+		}
+		if results[1] != VerifyStateCurrent {
+			t.Fatalf("iteration %d: probe with binary: got %v, want current", i, results[1])
+		}
 	}
 }
 

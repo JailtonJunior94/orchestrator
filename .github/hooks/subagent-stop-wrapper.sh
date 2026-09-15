@@ -39,7 +39,34 @@ fi
 input=$(cat)
 [[ -z "$input" ]] && exit 0
 
-if printf '%s' "$input" | grep -Eq '"stop_hook_active"[[:space:]]*:[[:space:]]*true'; then
+json_top_level_true() {
+  local payload="$1"
+  local key="$2"
+  [[ -n "$payload" ]] || return 1
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$payload" \
+      | jq -e --arg k "$key" 'type == "object" and (.[$k] == true)' >/dev/null 2>&1
+    return $?
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    printf '%s' "$payload" | AISPEC_JSON_KEY="$key" python3 -c '
+import json
+import os
+import sys
+
+try:
+    payload = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+key = os.environ["AISPEC_JSON_KEY"]
+sys.exit(0 if isinstance(payload, dict) and payload.get(key) is True else 1)
+'
+    return $?
+  fi
+  return 1
+}
+
+if json_top_level_true "$input" "stop_hook_active"; then
   echo "[subagent-stop] stop_hook_active=true — o bloqueio ja foi aplicado nesta retomada; liberando o encerramento para o agente reagir em vez de prender a sessao." >&2
   exit 0
 fi

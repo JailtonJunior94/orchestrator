@@ -13,9 +13,9 @@ const (
 
 var (
 	reviewFileLineRe     = regexp.MustCompile(`[\w./-]+\.[A-Za-z0-9]+:\d+`)
-	findingPrefixRe      = regexp.MustCompile(`^[ \t]*(?:[-*+>][ \t]*)*(?:\*\*|__)?`)
+	findingPrefixRe      = regexp.MustCompile("^[ \\t]*(?:(?:[-*+>|]|[0-9]+[.)]|#+|\\[[ xX]\\])[ \\t]*)*(?:\\*\\*|__|`)?")
 	reviewHeadingRe      = regexp.MustCompile(`^#+\s`)
-	severityFieldRe      = regexp.MustCompile(`(?i)^[-*>\s]*(?:severidade|severity)\s*:\s*(.*)$`)
+	severityFieldRe      = regexp.MustCompile("(?i)^[-*+>|\\s]*(?:[0-9]+[.)]\\s*)?(?:\\*\\*|__|`)?(?:severidade|severity)(?:\\*\\*|__|`)?\\s*:\\s*(.*)$")
 	fileFieldRe          = regexp.MustCompile(`(?i)^[-*>\s]*(?:arquivo|file)\s*:\s*(.*)$`)
 	lineFieldRe          = regexp.MustCompile(`(?i)^[-*>\s]*(?:linha|line)\s*:\s*(.*)$`)
 	impactFieldRe        = regexp.MustCompile(`(?i)^[-*>\s]*(?:impacto|impact)\s*:\s*(.*)$`)
@@ -101,15 +101,15 @@ func ParseReviewFindings(rawText string) []Finding {
 	}
 
 	for _, line := range strings.Split(rawText, "\n") {
-		if reviewHeadingRe.MatchString(strings.TrimSpace(line)) {
-			flush()
-			continue
-		}
 		if severity, ok := bracketSeverity(line); ok {
 			flush()
 			if finding, ok := bracketFinding(severity, line); ok {
 				findings = append(findings, finding)
 			}
+			continue
+		}
+		if reviewHeadingRe.MatchString(strings.TrimSpace(line)) {
+			flush()
 			continue
 		}
 		if match := severityFieldRe.FindStringSubmatch(line); match != nil {

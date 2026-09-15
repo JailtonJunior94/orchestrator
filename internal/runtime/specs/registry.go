@@ -60,6 +60,57 @@ var agentHookArtifacts = map[string]map[CanonicalPoint]string{
 	},
 }
 
+type nativeConfigFormat int
+
+const (
+	nativeConfigJSON nativeConfigFormat = iota
+	nativeConfigTOML
+	nativeConfigJS
+)
+
+type nativeConfigSource struct {
+	path     string
+	format   nativeConfigFormat
+	required bool
+}
+
+var agentNativeConfigs = map[string][]nativeConfigSource{
+	"claude": {
+		{path: ".claude/settings.json", format: nativeConfigJSON},
+		{path: ".claude/settings.local.json", format: nativeConfigJSON},
+	},
+	"codex": {
+		{path: ".codex/config.toml", format: nativeConfigTOML, required: true},
+	},
+	"copilot": {
+		{path: ".github/hooks/governance.json", format: nativeConfigJSON, required: true},
+		{path: ".github/settings.json", format: nativeConfigJSON},
+	},
+	"opencode": {
+		{path: ".opencode/plugin/governance.js", format: nativeConfigJS, required: true},
+	},
+}
+
+func NativeConfigSourcesFor(agentID string) ([]nativeConfigSource, bool) {
+	sources, ok := agentNativeConfigs[agentID]
+	if !ok {
+		return nil, false
+	}
+	return slices.Clone(sources), true
+}
+
+func NativeConfigPaths(agentID string) []string {
+	sources, ok := agentNativeConfigs[agentID]
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(sources))
+	for _, source := range sources {
+		out = append(out, source.path)
+	}
+	return out
+}
+
 func RecognizedNativeKeys(agentID string, point CanonicalPoint) ([]string, bool) {
 	byPoint, ok := cliHookKeyVocabulary[agentID]
 	if !ok {

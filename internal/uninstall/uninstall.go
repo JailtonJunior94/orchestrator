@@ -66,14 +66,29 @@ func (r *remover) rewrite(target string, data []byte) {
 	r.count++
 }
 
-var claudeGovernanceHookCommands = map[string]bool{
-	"bash .claude/hooks/validate-preload.sh":      true,
-	"bash .claude/hooks/validate-governance.sh":   true,
-	"bash .claude/hooks/validate-session-end.sh":  true,
-	"bash .claude/hooks/subagent-stop-wrapper.sh": true,
-	"bash .claude/hooks/post-execute-task.sh":     true,
-	"bash .claude/hooks/pre-execute-all-tasks.sh": true,
-	"bash .claude/hooks/post-wave.sh":             true,
+type claudeHookSignature struct {
+	event   string
+	matcher string
+	command string
+}
+
+var claudeGovernanceHookSignatures = map[claudeHookSignature]bool{
+	{event: "PreToolUse", matcher: "Bash|Edit|Write|NotebookEdit|apply_patch", command: "bash .claude/hooks/validate-preload.sh"}:     true,
+	{event: "PreToolUse", matcher: "Bash|Edit|Write", command: "bash .claude/hooks/validate-preload.sh"}:                              true,
+	{event: "PreToolUse", matcher: "Edit|Write", command: "bash .claude/hooks/validate-preload.sh"}:                                   true,
+	{event: "PostToolUse", matcher: "Bash|Edit|Write|NotebookEdit|apply_patch", command: "bash .claude/hooks/validate-governance.sh"}: true,
+	{event: "PostToolUse", matcher: "Bash|Edit|Write", command: "bash .claude/hooks/validate-governance.sh"}:                          true,
+	{event: "PostToolUse", matcher: "Edit|Write", command: "bash .claude/hooks/validate-governance.sh"}:                               true,
+	{event: "SubagentStop", matcher: "task-executor", command: "bash .claude/hooks/subagent-stop-wrapper.sh"}:                         true,
+	{event: "Stop", matcher: "", command: "bash .claude/hooks/validate-session-end.sh"}:                                               true,
+}
+
+func isClaudeGovernanceHook(event, matcher, command string) bool {
+	return claudeGovernanceHookSignatures[claudeHookSignature{
+		event:   event,
+		matcher: matcher,
+		command: strings.TrimSpace(command),
+	}]
 }
 
 const (
@@ -311,7 +326,7 @@ func (s *Service) reverseMergeClaudeSettings(path string, rm *remover) {
 		kept := make([]any, 0, len(entries))
 		changedEvent := false
 		for _, entry := range entries {
-			stripped, changed := s.stripClaudeGovernanceHooks(entry)
+			stripped, changed := s.stripClaudeGovernanceHooks(event, entry)
 			if changed {
 				changedEvent = true
 				removed = true
@@ -344,7 +359,7 @@ func (s *Service) reverseMergeClaudeSettings(path string, rm *remover) {
 	s.persistOrRemove(path, doc, rm)
 }
 
-func (s *Service) stripClaudeGovernanceHooks(entry any) (any, bool) {
+func (s *Service) stripClaudeGovernanceHooks(event string, entry any) (any, bool) {
 	matcher, ok := entry.(map[string]any)
 	if !ok {
 		return entry, false
@@ -353,10 +368,11 @@ func (s *Service) stripClaudeGovernanceHooks(entry any) (any, bool) {
 	if !isList {
 		return entry, false
 	}
+	pattern, _ := matcher["matcher"].(string)
 	kept := make([]any, 0, len(nested))
 	for _, hook := range nested {
 		command, _ := hook.(map[string]any)
-		if text, isText := command["command"].(string); isText && strings.Contains(text, ".claude/hooks/") {
+		if text, isText := command["command"].(string); isText && isClaudeGovernanceHook(event, pattern, text) {
 			continue
 		}
 		kept = append(kept, hook)
@@ -666,7 +682,7 @@ func (s *Service) isGeneratedClaudeSettings(content string) bool {
 	if !ok || len(hooks) == 0 {
 		return false
 	}
-	for _, raw := range hooks {
+	for event, raw := range hooks {
 		matchers, isList := raw.([]any)
 		if !isList {
 			return false
@@ -680,13 +696,14 @@ func (s *Service) isGeneratedClaudeSettings(content string) bool {
 			if !hasCommands {
 				return false
 			}
+			pattern, _ := matcher["matcher"].(string)
 			for _, rawCommand := range commands {
 				hook, isHook := rawCommand.(map[string]any)
 				if !isHook {
 					return false
 				}
 				command, _ := hook["command"].(string)
-				if !claudeGovernanceHookCommands[strings.TrimSpace(command)] {
+				if !isClaudeGovernanceHook(event, pattern, command) {
 					return false
 				}
 			}

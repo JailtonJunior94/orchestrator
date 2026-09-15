@@ -65,6 +65,7 @@ func ValidateParityMatrix(cells []AgentEnforcement, requiredAgents []string, dis
 				violations = append(violations, ParityViolation{Agent: agentID, Point: point, Reason: "no dispatch proof test associated"})
 			}
 			violations = append(violations, confrontInstalledArtifact(agentID, point, cov, resolve)...)
+			violations = append(violations, confrontNativeKeyDeclaration(agentID, point, cov, resolve)...)
 		}
 	}
 	return violations
@@ -89,4 +90,11 @@ func confrontInstalledArtifact(agentID string, point CanonicalPoint, cov PointCo
 		return nil
 	}
 	return []ParityViolation{{Agent: agentID, Point: point, Reason: fmt.Sprintf("installed artifact %q neither mirrors nor executes the canonical validator %q", cov.ArtifactPath(), cov.ScriptPath())}}
+}
+
+func confrontNativeKeyDeclaration(agentID string, point CanonicalPoint, cov PointCoverage, resolve ScriptResolver) []ParityViolation {
+	if resolve == nil {
+		return []ParityViolation{{Agent: agentID, Point: point, Reason: fmt.Sprintf("declared native key %q never confronted with the CLI config: no resolver supplied", cov.NativeKey())}}
+	}
+	return confrontNativeConfig(agentID, point, cov, resolve)
 }

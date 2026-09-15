@@ -144,6 +144,61 @@ report_path: $wrapper_tasks_root/prd-wrapper/2.0_execution_report.md
 summary: resultado versionado"
 printf '%b\n' "$wrapper_yaml" | env -u AI_SDD_LEGACY_HOOK_CONTRACT AI_TASKS_ROOT="$wrapper_tasks_root" STRICT_HOOK_FAILURES=1 bash "$HOOKS_DIR/subagent-stop-wrapper.sh" 2>"$stderr"; rc=$?
 assert_exit "F02b YAML e encaminhado ao checkpoint JSON v2" 0 "$rc"
+
+echo "--- F02c: stop_hook_active so libera quando e campo top-level ---"
+gate_root="$(mktemp -d "$REPO_ROOT/.tmp-test-hooks-gate.XXXXXX")"
+gate_tasks_root="${gate_root#"$REPO_ROOT"/}"
+mkdir -p "$gate_root/prd-gate"
+gate_yaml="status: done
+report_path: $gate_tasks_root/prd-gate/2.0_execution_report.md
+summary: sem checkpoint versionado"
+
+gate_envelope() {
+  AISPEC_GATE_YAML="$gate_yaml" python3 -c '
+import json
+import os
+import sys
+
+envelope = {"hook_event_name": "SubagentStop", "subagent_output": os.environ["AISPEC_GATE_YAML"]}
+mode = sys.argv[1]
+if mode == "top_level_true":
+    envelope["stop_hook_active"] = True
+elif mode == "top_level_false":
+    envelope["stop_hook_active"] = False
+elif mode == "top_level_string":
+    envelope["stop_hook_active"] = "true"
+elif mode == "top_level_number":
+    envelope["stop_hook_active"] = 1
+elif mode == "nested":
+    envelope["meta"] = {"stop_hook_active": True}
+elif mode == "inside_output":
+    envelope["subagent_output"] += chr(10) + "nota: \"stop_hook_active\": true"
+print(json.dumps(envelope))
+' "$1"
+}
+
+run_gate() {
+  printf '%s' "$(gate_envelope "$1")" \
+    | env -u AI_SDD_LEGACY_HOOK_CONTRACT AI_TASKS_ROOT="$gate_tasks_root" STRICT_HOOK_FAILURES=1 \
+      bash "$HOOKS_DIR/subagent-stop-wrapper.sh" 2>/dev/null
+}
+
+run_gate absent; rc=$?
+assert_exit "F02c envelope sem stop_hook_active bloqueia" 2 "$rc"
+run_gate inside_output; rc=$?
+assert_exit "F02c stop_hook_active no texto do subagente nao libera" 2 "$rc"
+run_gate nested; rc=$?
+assert_exit "F02c stop_hook_active aninhado nao libera" 2 "$rc"
+run_gate top_level_string; rc=$?
+assert_exit "F02c stop_hook_active string nao libera" 2 "$rc"
+run_gate top_level_number; rc=$?
+assert_exit "F02c stop_hook_active numerico nao libera" 2 "$rc"
+run_gate top_level_false; rc=$?
+assert_exit "F02c stop_hook_active false nao libera" 2 "$rc"
+run_gate top_level_true; rc=$?
+assert_exit "F02c stop_hook_active top-level true libera" 0 "$rc"
+rm -rf "$gate_root"
+
 rm -rf "$wrapper_root"
 rm -f "$stderr"
 
