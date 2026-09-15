@@ -524,7 +524,7 @@ EOF
 EOF
 } > "$report_k"
 
-out_k_pre=$(bash "$VALIDATOR" "$report_k" 2>&1); code_k_pre=$?
+bash "$VALIDATOR" "$report_k" >/dev/null 2>&1; code_k_pre=$?
 assert_exit "relatório sem marcador e não commitado falha" 1 $code_k_pre
 
 git -C "$K_REPO" add "$(basename "$report_k")" >/dev/null 2>&1
@@ -600,7 +600,7 @@ else
 fi
 
 printf '| # | Título | Status |\n|---|--------|--------|\n| 1.0 | Tarefa | failed |\n' >"$TMP_BASE/tasks.md"
-out_l3=$(bash "$VALIDATOR" "$report_l" 2>&1); code_l3=$?
+bash "$VALIDATOR" "$report_l" >/dev/null 2>&1; code_l3=$?
 assert_exit "qualquer terceiro estado em tasks.md também reprova" 1 $code_l3
 
 rm -f "$TMP_BASE/tasks.md" "$report_l"
