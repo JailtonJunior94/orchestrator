@@ -1,0 +1,6 @@
+ internal/taskcriteria/extract.go            |  71 +++++++++
+ internal/taskcriteria/extract_test.go       | 117 +++++++++++++++
+ internal/taskloop/acceptance.go             |  56 +------
+ internal/taskloop/approval_adapters.go      | 199 +++++++++++++++++++++++++
+ internal/taskloop/approval_adapters_test.go | 219 ++++++++++++++++++++++++++++
+ 5 files changed, 608 insertions(+), 54 deletions(-)

@@ -17,11 +17,11 @@ Hoje nada trava os bytes do prompt: os testes existentes usam `strings.Contains`
 
 ## Subtarefas
 
-- [ ] 6.1 Implementar hook de captura registrado em `hooks.PointPromptPostBuild` para uso exclusivo de teste.
-- [ ] 6.2 Criar o golden com os quatro casos: ausência total de memória; somente workflow; workflow e task na ordem correta; diretiva de compactação anexada.
-- [ ] 6.3 Substituir o descarte de erro em `internal/runtime/runner.go:428` (fim de sessão) por registro explícito, sem abortar a sessão.
-- [ ] 6.4 Substituir o descarte de erro em `internal/runtime/runner.go:221` (pós-revisão) da mesma forma.
-- [ ] 6.5 Tornar observável o descompasso de tipo em `internal/runtime/hooks/memory_persist.go:57`, mantendo `buildMemoryContent` e o modo de escrita byte-idênticos.
+- [x] 6.1 Implementar hook de captura registrado em `hooks.PointPromptPostBuild` para uso exclusivo de teste.
+- [x] 6.2 Criar o golden com os quatro casos: ausência total de memória; somente workflow; workflow e task na ordem correta; diretiva de compactação anexada.
+- [x] 6.3 Substituir o descarte de erro em `internal/runtime/runner.go:428` (fim de sessão) por registro explícito, sem abortar a sessão.
+- [x] 6.4 Substituir o descarte de erro em `internal/runtime/runner.go:221` (pós-revisão) da mesma forma.
+- [x] 6.5 Tornar observável o descompasso de tipo em `internal/runtime/hooks/memory_persist.go:57`, mantendo `buildMemoryContent` e o modo de escrita byte-idênticos.
 
 ## Detalhes de Implementação
 
@@ -49,7 +49,7 @@ Nenhuma além das auto-carregadas (governance + linguagem).
 
 ## Testes da Tarefa
 
-- [ ] Testes unitários
+- [x] Testes unitários
 - [ ] Testes de integração
 
 <critical>SEMPRE CRIAR E EXECUTAR TESTES DA TAREFA ANTES DE CONSIDERAR A TAREFA COMO `done`</critical>

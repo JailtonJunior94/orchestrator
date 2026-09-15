@@ -18,6 +18,3 @@ docs/prompts/
 # OS files
 .DS_Store
 
-# Nota: Gemini CLI nao suporta nativamente arquivo de ignore (.geminiignore).
-# Exclusoes para Gemini devem ser configuradas via instrucoes no GEMINI.md
-# ou por meio de context window management manual.

@@ -1,0 +1,19 @@
+internal/taskloop/integration_test.go:439:		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)}}},
+internal/taskloop/integration_test.go:483:	reviewer := &stubReviewer{results: []FinalReviewResult{
+internal/taskloop/integration_test.go:538:		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)}}},
+internal/taskloop/runloop_test.go:78:		return FinalReviewResult{}, r.err
+internal/taskloop/runloop_test.go:81:		return FinalReviewResult{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)}, nil
+internal/taskloop/runloop_test.go:170:		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)}}},
+internal/taskloop/runloop_test.go:247:			results := []FinalReviewResult{{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)}}
+internal/taskloop/runloop_test.go:249:				results = append(results, FinalReviewResult{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)})
+internal/taskloop/runloop_test.go:305:	reviewer := &stubReviewer{results: []FinalReviewResult{
+internal/taskloop/runloop_test.go:361:	reviewer := &stubReviewer{results: []FinalReviewResult{
+internal/taskloop/runloop_test.go:405:	reviewer := &stubReviewer{results: []FinalReviewResult{
+internal/taskloop/runloop_test.go:475:	reviewer := &stubReviewer{results: []FinalReviewResult{
+internal/taskloop/runloop_test.go:519:	results := []FinalReviewResult{
+internal/taskloop/runloop_test.go:523:		results = append(results, FinalReviewResult{
+internal/taskloop/runloop_test.go:560:	reviewer := &stubReviewer{results: []FinalReviewResult{
+internal/taskloop/runloop_test.go:619:	reviewer := &stubReviewer{results: []FinalReviewResult{
+internal/taskloop/runloop_test.go:677:	reviewer := &stubReviewer{results: []FinalReviewResult{
+internal/taskloop/runloop_test.go:725:	reviewer := &stubReviewer{results: []FinalReviewResult{
+internal/taskloop/runloop_test.go:775:		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictBlocked, RawOutput: "BLOCKED: faltou evidencia"}}},

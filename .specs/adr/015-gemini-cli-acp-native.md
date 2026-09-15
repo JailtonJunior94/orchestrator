@@ -1,6 +1,6 @@
 # ADR-015: Gemini CLI como runtime ACP nativo
 
-**Status:** Proposta
+**Status:** Substituída
 **Data:** 2026-05-22
 **Autores:** -
 

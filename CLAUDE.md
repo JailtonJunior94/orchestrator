@@ -34,6 +34,23 @@ Consultar antes de mudancas estruturais. Template: [`.specs/adr/000-template.md`
 - [019](.specs/prd-fundacao-portatil/adr-019-instalador-portatil-detect-verify.md) — instalador portatil: auto-deteccao, escopo global, verify
 - [PP-001](.specs/prd-skills-production-proof/adr-001-validadores-canonicos-agents-scripts.md) — validadores canonicos em `.agents/scripts/` (tool-neutros, cascata)
 - [PP-002](.specs/prd-skills-production-proof/adr-002-hooks-nativos-paridade-cross-cli.md) — hooks nativos de bloqueio nos 4 CLIs (paridade cross-CLI 2026)
+- [MD-001](.specs/prd-memoria-duravel-agentes/adr-001-fachada-porta-unica-memoria.md) — fachada como porta unica do runtime para memoria duravel
+- [MD-002](.specs/prd-memoria-duravel-agentes/adr-002-fato-pagina-roundtrip-lossless.md) — Fato por chave semantica + hash; Pagina Markdown round-trip lossless
+- [MD-003](.specs/prd-memoria-duravel-agentes/adr-003-escrita-atomica-lock-camada-lease.md) — escrita atomica, lock por camada, lease de bastao
+- [MD-004](.specs/prd-memoria-duravel-agentes/adr-004-optin-paridade-byte-a-byte.md) — opt-in + paridade byte-a-byte + fim da degradacao silenciosa
+- [MD-005](.specs/prd-memoria-duravel-agentes/adr-005-evidencia-metricas-memoria.md) — eventos pelo dispatcher existente, metricas pelo mapa de campos extra
+
+## Memoria Duravel de Agentes (opt-in, F7)
+
+```bash
+ai-spec task-loop --tool claude --runtime acp --durable-memory .specs/prd-X
+```
+
+- Fachada (`internal/runtime/memory/durable.Facade`) e o **unico ponto de contato** do runtime com o subsistema — a operacao humana (`ai-spec memory`, tarefa 9.0) acessa os colaboradores diretamente, sem passar pela fachada (MD-001).
+- Porta estreita `MemoryPort` declarada no pacote consumidor (`internal/runtime/memory_port.go`), satisfeita por `durable.Facade` (`var _ MemoryPort = (*durable.Facade)(nil)`). Nenhum colaborador do subsistema (`Layer`, `Page`, politicas) e importado pelo pacote consumidor.
+- Ativacao: flag `--durable-memory` em `task-loop` **e** chave `durable_memory_enabled` na cascata de configuracao (`flags > workspace > global > defaults`, ADR-016), propagada nos dois pontos: `internal/config/resolver.go` (`mergeInto`) e `internal/taskloop/runtimeconfig.go` (`optionsToConfigOverrides`). Zero-value (`false`) preserva o caminho legado (`memory.Store`) byte a byte — provado pelo golden de paridade (`internal/runtime/prompt_parity_golden_test.go`).
+- Precedencia de invariantes aplicada em um unico lugar, dentro da fachada: segredo, depois nao-perda de Fato, depois dono unico de bastao, depois orcamento de contexto.
+- `internal/runtime/runner.go`: `dispatchSessionPostEnd` executa **antes** de `persistSummary` (reordenado na tarefa 7.0, RF-30/RF-34).
 
 ## Fundacao Portatil (Fases 1–3)
 

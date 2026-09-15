@@ -353,7 +353,7 @@ func (c *Catalog) extractTaskRows(content []byte) (map[string]string, error) {
 
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if !_tableRowRe.MatchString(trimmed) {
+		if !tableRowRe.MatchString(trimmed) {
 			continue
 		}
 		found = true

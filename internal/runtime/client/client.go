@@ -81,6 +81,18 @@ func (c *acpClient) SetBypassPermissions(enable bool) {
 	c.bypassPermissions.Store(enable)
 }
 
+type HandshakeWaiter interface {
+	Wait(ctx context.Context) error
+}
+
+func (c *acpClient) SetChildEnv(env []string) {
+	c.childEnv = env
+}
+
+func (c *acpClient) SetHandshakeWaiter(w HandshakeWaiter) {
+	c.handshakeWaiter = w
+}
+
 // IOProvider permite injetar io.ReadWriter customizados para testes in-process.
 // Em produção, é nil e o client usa os pipes do subprocess.
 type IOProvider interface {
@@ -89,9 +101,11 @@ type IOProvider interface {
 
 // acpClient é a implementação real de Client sobre coder/acp-go-sdk.
 type acpClient struct {
-	workDir        string
-	ioProvider     IOProvider    // nil em produção; injeta pipeconn em testes
-	publishTimeout time.Duration // 0 = drop imediato (F1 default); >0 = esperar antes de descartar
+	workDir         string
+	ioProvider      IOProvider    // nil em produção; injeta pipeconn em testes
+	publishTimeout  time.Duration // 0 = drop imediato (F1 default); >0 = esperar antes de descartar
+	childEnv        []string
+	handshakeWaiter HandshakeWaiter
 
 	mu      sync.Mutex
 	cmd     *exec.Cmd
@@ -176,6 +190,15 @@ func (c *acpClient) Open(ctx context.Context, launcher specs.Launcher, prompt st
 		return err
 	}
 
+	if c.handshakeWaiter != nil {
+		if err := c.handshakeWaiter.Wait(ctx); err != nil {
+			if c.cmd != nil {
+				_ = c.killProcess()
+			}
+			return fmt.Errorf("opencode governance plugin handshake: %w", err)
+		}
+	}
+
 	promptCtx, cancel := context.WithCancel(ctx)
 	c.mu.Lock()
 	c.cancel = cancel
@@ -212,12 +235,10 @@ func (c *acpClient) startProcess(ctx context.Context, launcher specs.Launcher) (
 		c.cmd.Dir = c.workDir
 	}
 	c.cmd.Stderr = os.Stderr
-	NewCatalog(
-
-	// Grupo de processos + kill do grupo no cancelamento do ctx (mesma estratégia de agent_unix.go).
-	// Garante que ao cancelar (watchdog/cap absoluto) TODO o subtree do agente seja morto — fecha os
-	// pipes, desbloqueia a leitura do SDK e evita órfãos (ex.: codex-acp spawna um neto que orfanava).
-	).configureProcessGroup(c.cmd)
+	if c.childEnv != nil {
+		c.cmd.Env = c.childEnv
+	}
+	NewCatalog().configureProcessGroup(c.cmd)
 
 	stdinPipe, err := c.cmd.StdinPipe()
 	if err != nil {

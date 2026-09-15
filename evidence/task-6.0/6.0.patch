@@ -1,0 +1,1583 @@
+diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+index c007229..01faf0c 100644
+--- a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+@@ -28,7 +28,7 @@
+ | 3.0 | Mapa 1:1 critério-evidência como dado verificável | done | 1.0 | Com 2.0 | — |
+ | 4.0 | Promoção do loop ao agregado e correção dos defeitos de causa-raiz | pending | 2.0, 3.0 | Não | — |
+ | 5.0 | Propagação do teto de rodadas e virada do critério estrito | pending | 4.0 | Não | — |
+-| 6.0 | Catálogo de Agentes como registro único | pending | 2.0 | Não | domain-modeling-production |
++| 6.0 | Catálogo de Agentes como registro único | done | 2.0 | Não | domain-modeling-production |
+ | 7.0 | OpenCode como agente oficial de primeira classe | pending | 6.0 | Não | — |
+ | 8.0 | Enforcement não-desligável do OpenCode | pending | 7.0 | Não | — |
+ | 9.0 | Hooks e paridade comprovada nos quatro agentes | pending | 8.0 | Não | — |
+diff --git a/cmd/ai_spec_harness/catalog_sync_test.go b/cmd/ai_spec_harness/catalog_sync_test.go
+new file mode 100644
+index 0000000..96478a9
+--- /dev/null
++++ b/cmd/ai_spec_harness/catalog_sync_test.go
+@@ -0,0 +1,35 @@
++package aispecharness
++
++import (
++	"errors"
++	"sort"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
++)
++
++func acpCatalogKeys(m map[string]func() specs.Spec) []string {
++	out := make([]string, 0, len(m))
++	for k := range m {
++		out = append(out, k)
++	}
++	sort.Strings(out)
++	return out
++}
++
++func TestRuntimeACPCatalogInSyncWithRegistry(t *testing.T) {
++	t.Parallel()
++
++	if err := specs.NewCatalog().VerifyCatalogSync(acpCatalogKeys(runtimeACPCatalog)); err != nil {
++		t.Fatalf("CLI ACP catalog out of sync: %v", err)
++	}
++
++	diverging := make(map[string]func() specs.Spec, len(runtimeACPCatalog))
++	for k, v := range runtimeACPCatalog {
++		diverging[k] = v
++	}
++	delete(diverging, "gemini")
++	if err := specs.NewCatalog().VerifyCatalogSync(acpCatalogKeys(diverging)); !errors.Is(err, specs.ErrCatalogOutOfSync) {
++		t.Fatalf("sync gate did not catch artificial divergence: %v", err)
++	}
++}
+diff --git a/cmd/ai_spec_harness/cli_contract_test.go b/cmd/ai_spec_harness/cli_contract_test.go
+index 6e07cc2..c5fd6bc 100644
+--- a/cmd/ai_spec_harness/cli_contract_test.go
++++ b/cmd/ai_spec_harness/cli_contract_test.go
+@@ -173,12 +173,12 @@ func TestCLISchemaContainsAllTools(t *testing.T) {
+ 
+ 	// Guarda de vacuidade: um catálogo vazio faria o laço abaixo passar
+ 	// trivialmente sem verificar nada. Catálogo vazio é falha explícita.
+-	if len(_runtimeACPCatalog) == 0 {
+-		t.Fatal("_runtimeACPCatalog vazio — o laço de verificação passaria trivialmente sem checar o schema")
++	if len(runtimeACPCatalog) == 0 {
++		t.Fatal("runtimeACPCatalog vazio — o laço de verificação passaria trivialmente sem checar o schema")
+ 	}
+ 
+ 	// Todos os tools do runtimeACPCatalog devem aparecer no schema.
+-	for tool := range _runtimeACPCatalog {
++	for tool := range runtimeACPCatalog {
+ 		if !strings.Contains(schemaContent, tool) {
+ 			t.Errorf("cli-schema.json não menciona tool %q — atualizar descrição da flag --runtime ou --tool", tool)
+ 		}
+diff --git a/cmd/ai_spec_harness/task_loop.go b/cmd/ai_spec_harness/task_loop.go
+index f64b182..792b767 100644
+--- a/cmd/ai_spec_harness/task_loop.go
++++ b/cmd/ai_spec_harness/task_loop.go
+@@ -20,16 +20,7 @@ import (
+ // apenas uma vez por execução do processo (ADR-013 D-08, R-03 alto).
+ var _accessModeFullWarnOnce sync.Once
+ 
+-// _runtimeACPCatalog é a fonte de verdade para quais tools podem usar --runtime=acp nesta versão.
+-// Responsabilidade do CLI (ADR-012 D-04 / ADR-013 D-04): specs são unidades atômicas; a tabela de roteamento fica no CLI.
+-// Runtimes suportados nesta versão: claude (ADR-009), codex (ADR-013), copilot (ADR-012), gemini (ADR-015).
+-// Para adicionar suporte a um novo tool: registrar entrada e atualizar testes T-13/T-14/T-15/T-16.
+-var _runtimeACPCatalog = map[string]func() specs.Spec{
+-	"claude":  specs.NewCatalog().Claude,
+-	"codex":   specs.NewCatalog().Codex,
+-	"copilot": specs.NewCatalog().Copilot,
+-	"gemini":  specs.NewCatalog().Gemini,
+-}
++var runtimeACPCatalog = specs.NewCatalog().ACPSpecCatalog()
+ 
+ type taskLoopCommand struct{}
+ 
+@@ -170,9 +161,9 @@ Exemplos:
+ 				if effectiveTool == "" {
+ 					effectiveTool = execTool
+ 				}
+-				if _, ok := _runtimeACPCatalog[effectiveTool]; !ok {
+-					supported := make([]string, 0, len(_runtimeACPCatalog))
+-					for k := range _runtimeACPCatalog {
++				if _, ok := runtimeACPCatalog[effectiveTool]; !ok {
++					supported := make([]string, 0, len(runtimeACPCatalog))
++					for k := range runtimeACPCatalog {
+ 						supported = append(supported, k)
+ 					}
+ 					sort.Strings(supported)
+diff --git a/cmd/ai_spec_harness/task_loop_test.go b/cmd/ai_spec_harness/task_loop_test.go
+index e1ff351..fac55f0 100644
+--- a/cmd/ai_spec_harness/task_loop_test.go
++++ b/cmd/ai_spec_harness/task_loop_test.go
+@@ -297,9 +297,9 @@ func validateRuntimeFlags(runtime, tool string, activityTimeout time.Duration) e
+ 		return newExitError(2)
+ 	}
+ 	if runtime == "acp" {
+-		if _, ok := _runtimeACPCatalog[tool]; !ok {
+-			supported := make([]string, 0, len(_runtimeACPCatalog))
+-			for k := range _runtimeACPCatalog {
++		if _, ok := runtimeACPCatalog[tool]; !ok {
++			supported := make([]string, 0, len(runtimeACPCatalog))
++			for k := range runtimeACPCatalog {
+ 				supported = append(supported, k)
+ 			}
+ 			sort.Strings(supported)
+@@ -335,7 +335,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
+ 	t.Run("T-15: claude acp aceito (regressão)", func(t *testing.T) {
+ 		t.Parallel()
+ 
+-		if _, ok := _runtimeACPCatalog["claude"]; !ok {
++		if _, ok := runtimeACPCatalog["claude"]; !ok {
+ 			t.Error("runtimeACPCatalog não contém 'claude' — regressão")
+ 		}
+ 		err := validateRuntimeFlags("acp", "claude", 0)
+@@ -348,7 +348,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
+ 	t.Run("T-13: copilot acp aceito", func(t *testing.T) {
+ 		t.Parallel()
+ 
+-		if _, ok := _runtimeACPCatalog["copilot"]; !ok {
++		if _, ok := runtimeACPCatalog["copilot"]; !ok {
+ 			t.Error("runtimeACPCatalog não contém 'copilot'")
+ 		}
+ 		err := validateRuntimeFlags("acp", "copilot", 0)
+@@ -362,7 +362,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
+ 	t.Run("T-14: gemini acp aceito (ADR-015, RF-25)", func(t *testing.T) {
+ 		t.Parallel()
+ 
+-		if _, ok := _runtimeACPCatalog["gemini"]; !ok {
++		if _, ok := runtimeACPCatalog["gemini"]; !ok {
+ 			t.Error("runtimeACPCatalog não contém 'gemini' — tarefa 2.0 não aplicada")
+ 		}
+ 		err := validateRuntimeFlags("acp", "gemini", 0)
+@@ -375,10 +375,10 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
+ 	t.Run("TestRuntimeACPCatalogIncludesGemini: catálogo inclui gemini (T-13 ext)", func(t *testing.T) {
+ 		t.Parallel()
+ 
+-		if _, ok := _runtimeACPCatalog["gemini"]; !ok {
++		if _, ok := runtimeACPCatalog["gemini"]; !ok {
+ 			t.Error("runtimeACPCatalog não contém 'gemini' (T-13 ext — ADR-015)")
+ 		}
+-		spec := _runtimeACPCatalog["gemini"]()
++		spec := runtimeACPCatalog["gemini"]()
+ 		if spec.ID != "gemini" {
+ 			t.Errorf("runtimeACPCatalog[\"gemini\"]().ID = %q, esperava \"gemini\"", spec.ID)
+ 		}
+@@ -422,8 +422,8 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
+ 	t.Run("T-16: catálogo contém exatamente claude, codex, copilot e gemini", func(t *testing.T) {
+ 		t.Parallel()
+ 
+-		keys := make([]string, 0, len(_runtimeACPCatalog))
+-		for k := range _runtimeACPCatalog {
++		keys := make([]string, 0, len(runtimeACPCatalog))
++		for k := range runtimeACPCatalog {
+ 			keys = append(keys, k)
+ 		}
+ 		sort.Strings(keys)
+@@ -444,7 +444,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
+ 	t.Run("construtores do catálogo retornam Specs válidas", func(t *testing.T) {
+ 		t.Parallel()
+ 
+-		for tool, ctor := range _runtimeACPCatalog {
++		for tool, ctor := range runtimeACPCatalog {
+ 			spec := ctor()
+ 			if spec.ID != tool {
+ 				t.Errorf("runtimeACPCatalog[%q]().ID = %q, esperava %q", tool, spec.ID, tool)
+@@ -461,7 +461,7 @@ func TestRuntimeACPCatalog_T13_T14_T15(t *testing.T) {
+ func TestRuntimeACPCatalogIncludesGemini(t *testing.T) {
+ 	t.Parallel()
+ 
+-	ctor, ok := _runtimeACPCatalog["gemini"]
++	ctor, ok := runtimeACPCatalog["gemini"]
+ 	if !ok {
+ 		t.Fatal("runtimeACPCatalog não contém 'gemini' — task 2.0 não aplicada")
+ 	}
+@@ -1020,7 +1020,7 @@ func TestAccessModeFullWarnOnce_GeminiVsCodex(t *testing.T) {
+ func TestGeminiSpecHasCorrectCommandAndFlags(t *testing.T) {
+ 	t.Parallel()
+ 
+-	ctor, ok := _runtimeACPCatalog["gemini"]
++	ctor, ok := runtimeACPCatalog["gemini"]
+ 	if !ok {
+ 		t.Fatal("runtimeACPCatalog não contém 'gemini'")
+ 	}
+@@ -1038,7 +1038,7 @@ func TestGeminiSpecHasCorrectCommandAndFlags(t *testing.T) {
+ func TestGeminiFallbackResolvesViaNpx(t *testing.T) {
+ 	t.Parallel()
+ 
+-	ctor, ok := _runtimeACPCatalog["gemini"]
++	ctor, ok := runtimeACPCatalog["gemini"]
+ 	if !ok {
+ 		t.Fatal("runtimeACPCatalog não contém 'gemini'")
+ 	}
+diff --git a/cmd/ai_spec_harness/verify.go b/cmd/ai_spec_harness/verify.go
+index cfc67f8..75f9fdb 100644
+--- a/cmd/ai_spec_harness/verify.go
++++ b/cmd/ai_spec_harness/verify.go
+@@ -151,8 +151,7 @@ func (c *verifyCommand) run(cmd *cobra.Command, args []string) error {
+ 			}
+ 			counts[item.Tool] = c
+ 		}
+-		// Ordem fixa: claude, codex, copilot, gemini, depois quaisquer outros.
+-		ordered := []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolGemini}
++		ordered := skills.AllTools
+ 		seen := make(map[skills.Tool]bool, len(ordered))
+ 		emit := func(tool skills.Tool) {
+ 			if _, ok := counts[tool]; !ok {
+diff --git a/internal/detect/agent.go b/internal/detect/agent.go
+index 7d11781..a12bb98 100644
+--- a/internal/detect/agent.go
++++ b/internal/detect/agent.go
+@@ -60,31 +60,22 @@ type agentEntry struct {
+ 	homeDirs []string // subdirs em $HOME que indicam presenca do agente
+ }
+ 
+-// allEntries constroi as entradas a partir das Specs canonicas (ADR-019: reusar nomes
+-// de comando das specs, sem duplicar literais).
+ func (r1 *Catalog) allEntries() []agentEntry {
+-	return []agentEntry{
+-		{
+-			tool:     skills.ToolClaude,
+-			command:  specs.NewCatalog().Claude().Command,
+-			homeDirs: []string{".claude"},
+-		},
+-		{
+-			tool:     skills.ToolCodex,
+-			command:  specs.NewCatalog().Codex().Command,
+-			homeDirs: []string{".codex"},
+-		},
+-		{
+-			tool:     skills.ToolGemini,
+-			command:  specs.NewCatalog().Gemini().Command,
+-			homeDirs: []string{".gemini"},
+-		},
+-		{
+-			tool:     skills.ToolCopilot,
+-			command:  specs.NewCatalog().Copilot().Command,
+-			homeDirs: []string{".copilot", filepath.Join(".github", "copilot")},
+-		},
++	registry := specs.NewCatalog().Registry()
++	out := make([]agentEntry, 0, len(registry))
++	for _, agent := range registry {
++		homeDirs := agent.Signals().HomeDirs()
++		normalized := make([]string, 0, len(homeDirs))
++		for _, d := range homeDirs {
++			normalized = append(normalized, filepath.FromSlash(d))
++		}
++		out = append(out, agentEntry{
++			tool:     skills.Tool(agent.ID()),
++			command:  agent.Signals().Command(),
++			homeDirs: normalized,
++		})
+ 	}
++	return out
+ }
+ 
+ // isDirOnDisk verifica se o path existe e e um diretorio no filesystem real.
+diff --git a/internal/detect/no_exec_test.go b/internal/detect/no_exec_test.go
+new file mode 100644
+index 0000000..902f34d
+--- /dev/null
++++ b/internal/detect/no_exec_test.go
+@@ -0,0 +1,34 @@
++package detect
++
++import (
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++)
++
++func TestDetectionNeverExecutesBinaries(t *testing.T) {
++	t.Parallel()
++
++	entries, err := os.ReadDir(".")
++	if err != nil {
++		t.Fatalf("ReadDir: %v", err)
++	}
++	forbidden := []string{"exec.Command", "exec.CommandContext", "cmd.Run(", "cmd.Start(", "cmd.Output(", "cmd.CombinedOutput("}
++	for _, e := range entries {
++		name := e.Name()
++		if e.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
++			continue
++		}
++		data, err := os.ReadFile(filepath.Clean(name))
++		if err != nil {
++			t.Fatalf("ReadFile %s: %v", name, err)
++		}
++		src := string(data)
++		for _, bad := range forbidden {
++			if strings.Contains(src, bad) {
++				t.Errorf("%s contains %q — detection must not execute binaries (RF-26)", name, bad)
++			}
++		}
++	}
++}
+diff --git a/internal/install/install.go b/internal/install/install.go
+index de6cac7..948075d 100644
+--- a/internal/install/install.go
++++ b/internal/install/install.go
+@@ -470,18 +470,11 @@ func (s *Service) verifyToolSkills(sourceDir, installDir string, tool skills.Too
+ // specForTool retorna a Spec do runtime ACP para a ferramenta, ou zero-value e false.
+ // ADR-024: mapeamento canonico Tool -> Spec para probe de binario.
+ func (r1 *Helper) specForTool(tool skills.Tool) (specs.Spec, bool) {
+-	switch tool {
+-	case skills.ToolClaude:
+-		return specs.NewCatalog().Claude(), true
+-	case skills.ToolCodex:
+-		return specs.NewCatalog().Codex(), true
+-	case skills.ToolGemini:
+-		return specs.NewCatalog().Gemini(), true
+-	case skills.ToolCopilot:
+-		return specs.NewCatalog().Copilot(), true
+-	default:
++	spec, err := specs.NewCatalog().ResolveACPSpec(string(tool))
++	if err != nil {
+ 		return specs.Spec{}, false
+ 	}
++	return spec, true
+ }
+ 
+ // probeBinaryAvailable testa se o binario ACP de uma tool esta disponivel.
+diff --git a/internal/metrics/metrics.go b/internal/metrics/metrics.go
+index ae73e50..089f686 100644
+--- a/internal/metrics/metrics.go
++++ b/internal/metrics/metrics.go
+@@ -9,6 +9,7 @@ import (
+ 
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
+ )
+ 
+ // FileMetric descreve metricas de um unico arquivo.
+@@ -200,18 +201,28 @@ func (c *Catalog) estimateTokens(text string) int {
+ 	return int(math.Round(float64(len(text)) / 3.5))
+ }
+ 
+-// ToolBudgets define o limite maximo de tokens estimados por ferramenta (WindowStandard/default).
+-var ToolBudgets = map[string]int{
+-	"claude":  70000,
+-	"gemini":  4000,
+-	"codex":   13000,
+-	"copilot": 2000,
++var ToolBudgets = NewCatalog().toolBudgets()
++
++var ToolBudgetsLarge = NewCatalog().toolBudgetsLarge()
++
++func (c *Catalog) toolBudgets() map[string]int {
++	registry := specs.NewCatalog().Registry()
++	out := make(map[string]int, len(registry))
++	for _, agent := range registry {
++		out[agent.ID()] = agent.StandardBudget()
++	}
++	return out
+ }
+ 
+-// ToolBudgetsLarge define o limite generoso de tokens por ferramenta para WindowLarge (ADR-023).
+-// Aplicado quando ContextWindow.Class() == WindowLarge; driver sem entrada cai em ToolBudgets (sem regressão).
+-var ToolBudgetsLarge = map[string]int{
+-	"gemini": 500_000, // 500k tokens — janela de 1M; teto generoso para prompts grandes
++func (c *Catalog) toolBudgetsLarge() map[string]int {
++	registry := specs.NewCatalog().Registry()
++	out := make(map[string]int, len(registry))
++	for _, agent := range registry {
++		if agent.LargeBudget() > 0 {
++			out[agent.ID()] = agent.LargeBudget()
++		}
++	}
++	return out
+ }
+ 
+ // CheckBudgetForClass verifica o budget levando em conta a WindowClass (ADR-023).
+diff --git a/internal/runtime/mcpserver/engine.go b/internal/runtime/mcpserver/engine.go
+index b002761..90501b7 100644
+--- a/internal/runtime/mcpserver/engine.go
++++ b/internal/runtime/mcpserver/engine.go
+@@ -110,15 +110,11 @@ func (c *Catalog) spawnNestedSession(ctx context.Context, p SpawnParams) (RunAge
+ // resolveAgentSpec retorna o Spec adequado para o agente, baseado em Runtime.IDE declarado.
+ // Fallback para Claude quando IDE não especificado.
+ func (c *Catalog) resolveAgentSpec(agent agents.ResolvedAgent) specs.Spec {
+-	switch agent.Runtime.IDE {
+-	case "codex":
+-		return specs.NewCatalog().Codex()
+-	case "copilot":
+-		return specs.NewCatalog().Copilot()
+-	default:
+-		// claude ou vazio → usar Claude (RFC-01.1)
++	spec, err := specs.NewCatalog().ResolveACPSpec(agent.Runtime.IDE)
++	if err != nil {
+ 		return specs.NewCatalog().Claude()
+ 	}
++	return spec
+ }
+ 
+ // generateSessionID gera um identificador de sessão único baseado no nome do agente,
+diff --git a/internal/runtime/probe/probe.go b/internal/runtime/probe/probe.go
+index ed1c00d..36b078f 100644
+--- a/internal/runtime/probe/probe.go
++++ b/internal/runtime/probe/probe.go
+@@ -16,15 +16,12 @@ import (
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
+ )
+ 
+-// _adrByID mapeia spec.ID para o path do ADR correspondente.
+-// Decisão D-09 (ADR-012): mapping vive no package probe, não em specs/.
+-// Evita acoplamento entre specs/ e a estrutura de docs ADRs.
+-// Para IDs desconhecidos, use o fallback ".specs/adr/" documentado em resolve().
+-var _adrByID = map[string]string{
+-	"claude":  ".specs/adr/009-acp-protocol-adoption.md",
+-	"codex":   ".specs/adr/013-codex-cli-acp-native.md",
+-	"copilot": ".specs/adr/012-copilot-cli-acp-native.md",
+-	"gemini":  ".specs/adr/015-gemini-cli-acp-native.md",
++func (c *Catalog) adrByID(id string) (string, bool) {
++	agent, err := specs.NewCatalog().AgentByID(id)
++	if err != nil {
++		return "", false
++	}
++	return agent.ADRPath(), true
+ }
+ 
+ // formatLauncherUnavailable formata a mensagem de erro quando nenhum launcher está disponível.
+@@ -95,7 +92,7 @@ func (c *Catalog) resolve(spec specs.Spec, look LookPather) (specs.Launcher, err
+ 
+ 	// Passo 3: falhar com mensagem com três remédios (RF-03, RF-05).
+ 	// Lookup do ADR pelo spec.ID; fallback para path raiz quando ID desconhecido.
+-	adrPath, ok := _adrByID[spec.ID]
++	adrPath, ok := NewCatalog().adrByID(spec.ID)
+ 	if !ok {
+ 		adrPath = ".specs/adr/"
+ 	}
+diff --git a/internal/runtime/specs/driver.go b/internal/runtime/specs/driver.go
+index 5bb4f83..30e101f 100644
+--- a/internal/runtime/specs/driver.go
++++ b/internal/runtime/specs/driver.go
+@@ -18,12 +18,12 @@ type DriverID struct{ value string }
+ // e retorna o DriverID correspondente.
+ // Retorna ErrUnknownDriver (envolvido) quando s não pertence ao conjunto.
+ func (c *Catalog) ParseDriverID(s string) (DriverID, error) {
+-	switch s {
+-	case "claude", "codex", "copilot", "gemini":
+-		return DriverID{value: s}, nil
+-	default:
+-		return DriverID{}, fmt.Errorf("%w: %q", ErrUnknownDriver, s)
++	for _, id := range c.CanonicalOrder() {
++		if id == s {
++			return DriverID{value: s}, nil
++		}
+ 	}
++	return DriverID{}, fmt.Errorf("%w: %q", ErrUnknownDriver, s)
+ }
+ 
+ // String retorna a representação canônica do driver (ex: "claude").
+diff --git a/internal/runtime/specs/enforcement.go b/internal/runtime/specs/enforcement.go
+new file mode 100644
+index 0000000..80864a1
+--- /dev/null
++++ b/internal/runtime/specs/enforcement.go
+@@ -0,0 +1,198 @@
++package specs
++
++import (
++	"errors"
++	"fmt"
++	"slices"
++	"strings"
++)
++
++type CanonicalPoint int
++
++const (
++	PointPreTool CanonicalPoint = iota + 1
++	PointPostTool
++	PointSessionEnd
++)
++
++var canonicalPoints = []CanonicalPoint{
++	PointPreTool,
++	PointPostTool,
++	PointSessionEnd,
++}
++
++var ErrUnknownCanonicalPoint = errors.New("unknown canonical point")
++
++var ErrIncompleteCoverage = errors.New("enforcement does not cover the three canonical points")
++
++var ErrInvalidPrecondition = errors.New("invalid enforcement precondition")
++
++type PreconditionState int
++
++const (
++	PreconditionCurrent PreconditionState = iota + 1
++	PreconditionInert
++	PreconditionUnknown
++)
++
++type PreconditionKind int
++
++const (
++	PreconditionTrustedFolder PreconditionKind = iota + 1
++	PreconditionNoKillSwitch
++	PreconditionHandshake
++	PreconditionTrustedHash
++)
++
++type PointCoverage struct {
++	point      CanonicalPoint
++	nativeKey  string
++	scriptPath string
++}
++
++type EnforcementPrecondition struct {
++	kind         PreconditionKind
++	remedy       string
++	requiresExec bool
++	valid        bool
++}
++
++type Enforcement struct {
++	coverage      []PointCoverage
++	preconditions []EnforcementPrecondition
++	valid         bool
++}
++
++func (c *Catalog) CanonicalPoints() []CanonicalPoint {
++	return slices.Clone(canonicalPoints)
++}
++
++func (c *Catalog) ParseCanonicalPoint(s string) (CanonicalPoint, error) {
++	switch strings.TrimSpace(s) {
++	case "pre-tool":
++		return PointPreTool, nil
++	case "post-tool":
++		return PointPostTool, nil
++	case "session-end":
++		return PointSessionEnd, nil
++	default:
++		return 0, fmt.Errorf("%w: %q", ErrUnknownCanonicalPoint, s)
++	}
++}
++
++func (c *Catalog) NewPointCoverage(point CanonicalPoint, nativeKey, scriptPath string) (PointCoverage, error) {
++	if !point.Valid() {
++		return PointCoverage{}, fmt.Errorf("%w: %d", ErrUnknownCanonicalPoint, int(point))
++	}
++	if strings.TrimSpace(nativeKey) == "" {
++		return PointCoverage{}, fmt.Errorf("%w: point %s missing native key", ErrIncompleteCoverage, point)
++	}
++	if strings.TrimSpace(scriptPath) == "" {
++		return PointCoverage{}, fmt.Errorf("%w: point %s missing canonical script", ErrIncompleteCoverage, point)
++	}
++	return PointCoverage{point: point, nativeKey: nativeKey, scriptPath: scriptPath}, nil
++}
++
++func (c *Catalog) NewEnforcementPrecondition(kind PreconditionKind, remedy string, requiresExec bool) (EnforcementPrecondition, error) {
++	if kind < PreconditionTrustedFolder || kind > PreconditionTrustedHash {
++		return EnforcementPrecondition{}, fmt.Errorf("%w: kind %d", ErrInvalidPrecondition, int(kind))
++	}
++	if strings.TrimSpace(remedy) == "" {
++		return EnforcementPrecondition{}, fmt.Errorf("%w: empty actionable remedy", ErrInvalidPrecondition)
++	}
++	return EnforcementPrecondition{kind: kind, remedy: remedy, requiresExec: requiresExec, valid: true}, nil
++}
++
++func (c *Catalog) NewEnforcement(coverage []PointCoverage, preconditions ...EnforcementPrecondition) (Enforcement, error) {
++	seen := make(map[CanonicalPoint]bool, len(canonicalPoints))
++	for _, cov := range coverage {
++		if !cov.point.Valid() {
++			return Enforcement{}, fmt.Errorf("%w: invalid point", ErrIncompleteCoverage)
++		}
++		if cov.nativeKey == "" || cov.scriptPath == "" {
++			return Enforcement{}, fmt.Errorf("%w: point %s missing native key or canonical script", ErrIncompleteCoverage, cov.point)
++		}
++		if seen[cov.point] {
++			return Enforcement{}, fmt.Errorf("%w: duplicate point %s", ErrIncompleteCoverage, cov.point)
++		}
++		seen[cov.point] = true
++	}
++	for _, p := range canonicalPoints {
++		if !seen[p] {
++			return Enforcement{}, fmt.Errorf("%w: missing point %s", ErrIncompleteCoverage, p)
++		}
++	}
++	for _, pre := range preconditions {
++		if !pre.valid {
++			return Enforcement{}, fmt.Errorf("%w: not built via NewEnforcementPrecondition", ErrInvalidPrecondition)
++		}
++	}
++	return Enforcement{
++		coverage:      slices.Clone(coverage),
++		preconditions: slices.Clone(preconditions),
++		valid:         true,
++	}, nil
++}
++
++func (p CanonicalPoint) Valid() bool {
++	return p >= PointPreTool && p <= PointSessionEnd
++}
++
++func (p CanonicalPoint) String() string {
++	switch p {
++	case PointPreTool:
++		return "pre-tool"
++	case PointPostTool:
++		return "post-tool"
++	case PointSessionEnd:
++		return "session-end"
++	default:
++		return "unknown"
++	}
++}
++
++func (s PreconditionState) IsFailure() bool {
++	return s == PreconditionInert
++}
++
++func (s PreconditionState) String() string {
++	switch s {
++	case PreconditionCurrent:
++		return "current"
++	case PreconditionInert:
++		return "inert"
++	case PreconditionUnknown:
++		return "unknown"
++	default:
++		return "invalid"
++	}
++}
++
++func (c PointCoverage) Point() CanonicalPoint { return c.point }
++
++func (c PointCoverage) NativeKey() string { return c.nativeKey }
++
++func (c PointCoverage) ScriptPath() string { return c.scriptPath }
++
++func (p EnforcementPrecondition) Kind() PreconditionKind { return p.kind }
++
++func (p EnforcementPrecondition) Remedy() string { return p.remedy }
++
++func (p EnforcementPrecondition) RequiresExec() bool { return p.requiresExec }
++
++func (p EnforcementPrecondition) Valid() bool { return p.valid }
++
++func (e Enforcement) Valid() bool { return e.valid }
++
++func (e Enforcement) Coverage() []PointCoverage { return slices.Clone(e.coverage) }
++
++func (e Enforcement) Preconditions() []EnforcementPrecondition { return slices.Clone(e.preconditions) }
++
++func (e Enforcement) CoverageFor(point CanonicalPoint) (PointCoverage, bool) {
++	for _, cov := range e.coverage {
++		if cov.point == point {
++			return cov, true
++		}
++	}
++	return PointCoverage{}, false
++}
+diff --git a/internal/runtime/specs/enforcement_test.go b/internal/runtime/specs/enforcement_test.go
+new file mode 100644
+index 0000000..955475d
+--- /dev/null
++++ b/internal/runtime/specs/enforcement_test.go
+@@ -0,0 +1,102 @@
++package specs_test
++
++import (
++	"errors"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
++)
++
++func coverageFixture(t *testing.T, p specs.CanonicalPoint) specs.PointCoverage {
++	t.Helper()
++	cov, err := specs.NewCatalog().NewPointCoverage(p, "NativeKey", ".agents/scripts/hook-prereq-gate.sh")
++	if err != nil {
++		t.Fatalf("NewPointCoverage(%s): %v", p, err)
++	}
++	return cov
++}
++
++func TestNewEnforcementRejectsIncompleteCoverage(t *testing.T) {
++	t.Parallel()
++
++	all := []specs.CanonicalPoint{
++		specs.PointPreTool,
++		specs.PointPostTool,
++		specs.PointSessionEnd,
++	}
++
++	for _, missing := range all {
++		var coverage []specs.PointCoverage
++		for _, p := range all {
++			if p == missing {
++				continue
++			}
++			coverage = append(coverage, coverageFixture(t, p))
++		}
++		_, err := specs.NewCatalog().NewEnforcement(coverage)
++		if !errors.Is(err, specs.ErrIncompleteCoverage) {
++			t.Errorf("missing %s: err = %v; want ErrIncompleteCoverage", missing, err)
++		}
++	}
++
++	complete := []specs.PointCoverage{
++		coverageFixture(t, specs.PointPreTool),
++		coverageFixture(t, specs.PointPostTool),
++		coverageFixture(t, specs.PointSessionEnd),
++	}
++	enf, err := specs.NewCatalog().NewEnforcement(complete)
++	if err != nil {
++		t.Fatalf("complete coverage rejected: %v", err)
++	}
++	if !enf.Valid() {
++		t.Fatal("complete enforcement reported invalid")
++	}
++}
++
++func TestCanonicalPointIsClosedSet(t *testing.T) {
++	t.Parallel()
++
++	if specs.CanonicalPoint(0).Valid() {
++		t.Fatal("zero-value CanonicalPoint reported valid")
++	}
++	if specs.CanonicalPoint(99).Valid() {
++		t.Fatal("out-of-set value reported valid")
++	}
++	if _, err := specs.NewCatalog().ParseCanonicalPoint("bogus"); !errors.Is(err, specs.ErrUnknownCanonicalPoint) {
++		t.Fatalf("ParseCanonicalPoint(bogus) err = %v; want ErrUnknownCanonicalPoint", err)
++	}
++	for _, name := range []string{"pre-tool", "post-tool", "session-end"} {
++		p, err := specs.NewCatalog().ParseCanonicalPoint(name)
++		if err != nil || !p.Valid() {
++			t.Errorf("ParseCanonicalPoint(%q) = %v, %v", name, p, err)
++		}
++	}
++}
++
++func TestEnforcementPreconditionRemedyAndStates(t *testing.T) {
++	t.Parallel()
++
++	if _, err := specs.NewCatalog().NewEnforcementPrecondition(specs.PreconditionTrustedFolder, "   ", false); !errors.Is(err, specs.ErrInvalidPrecondition) {
++		t.Fatalf("empty remedy accepted: %v", err)
++	}
++	if _, err := specs.NewCatalog().NewEnforcementPrecondition(specs.PreconditionKind(0), "x", false); !errors.Is(err, specs.ErrInvalidPrecondition) {
++		t.Fatalf("zero kind accepted: %v", err)
++	}
++	pre, err := specs.NewCatalog().NewEnforcementPrecondition(specs.PreconditionTrustedHash, "do X", true)
++	if err != nil {
++		t.Fatalf("valid construction failed: %v", err)
++	}
++	if pre.Remedy() != "do X" || !pre.RequiresExec() {
++		t.Fatalf("precondition did not preserve fields: %+v", pre)
++	}
++
++	if !specs.PreconditionInert.IsFailure() {
++		t.Error("inert must count as failure")
++	}
++	if specs.PreconditionCurrent.IsFailure() || specs.PreconditionUnknown.IsFailure() {
++		t.Error("current/unknown must not count as failure")
++	}
++	if specs.PreconditionUnknown.String() != "unknown" || specs.PreconditionInert.String() != "inert" || specs.PreconditionCurrent.String() != "current" {
++		t.Errorf("state names diverge: %s/%s/%s", specs.PreconditionCurrent, specs.PreconditionInert, specs.PreconditionUnknown)
++	}
++}
+diff --git a/internal/runtime/specs/literal_scan_test.go b/internal/runtime/specs/literal_scan_test.go
+new file mode 100644
+index 0000000..57f2708
+--- /dev/null
++++ b/internal/runtime/specs/literal_scan_test.go
+@@ -0,0 +1,102 @@
++package specs_test
++
++import (
++	"go/ast"
++	"go/parser"
++	"go/token"
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++)
++
++var literalScanAllowlist = map[string]string{
++	"registry.go":      "defines the single agent registry (RF-07) — source of truth",
++	"flow.go":          "fine-grained per-flow budget matrix (tool x governance x skill x flow); not one of the per-window budget maps migrated in 6.0",
++	"parity.go":        "parity test fixture path map, not a runtime enumeration",
++	"agent.go":         "legacy --tool dispatch (deprecated invokers, ADR-013); outside the ACP path",
++	"compatibility.go": "CompatibilityTable tool x model — compatibility concern, not the agent catalog",
++	"profile.go":       "provider-by-IDE map and the mapIDEToSpec phase gate (claude-only in ACP for this phase)",
++	"wrapper.go":       "legacy per-tool wrapper generation; outside the ACP path",
++}
++
++var agentIDs = []string{"claude", "codex", "copilot", "gemini"}
++
++func TestNoAgentListLiteralOutsideRegistry(t *testing.T) {
++	t.Parallel()
++
++	repoRoot, err := filepath.Abs(filepath.Join("..", "..", ".."))
++	if err != nil {
++		t.Fatalf("abs repo root: %v", err)
++	}
++
++	var offenders []string
++	for _, sub := range []string{"internal", "cmd"} {
++		root := filepath.Join(repoRoot, sub)
++		walkErr := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
++			if err != nil {
++				return err
++			}
++			if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
++				return nil
++			}
++			if _, ok := literalScanAllowlist[filepath.Base(path)]; ok {
++				return nil
++			}
++			if literalEnumeratesAgents(t, path) {
++				rel, _ := filepath.Rel(repoRoot, path)
++				offenders = append(offenders, rel)
++			}
++			return nil
++		})
++		if walkErr != nil {
++			t.Fatalf("walk %s: %v", sub, walkErr)
++		}
++	}
++
++	if len(offenders) > 0 {
++		t.Fatalf("agent-list literals outside the registry: %v — derive from the registry or justify in literalScanAllowlist", offenders)
++	}
++}
++
++func literalEnumeratesAgents(t *testing.T, path string) bool {
++	t.Helper()
++	fset := token.NewFileSet()
++	file, err := parser.ParseFile(fset, path, nil, 0)
++	if err != nil {
++		t.Fatalf("parse %s: %v", path, err)
++	}
++	found := false
++	ast.Inspect(file, func(n ast.Node) bool {
++		lit, ok := n.(*ast.CompositeLit)
++		if !ok {
++			return true
++		}
++		seen := make(map[string]bool)
++		for _, elt := range lit.Elts {
++			for _, s := range stringLiterals(elt) {
++				for _, id := range agentIDs {
++					if s == id {
++						seen[id] = true
++					}
++				}
++			}
++		}
++		if len(seen) >= 3 {
++			found = true
++		}
++		return true
++	})
++	return found
++}
++
++func stringLiterals(n ast.Node) []string {
++	var out []string
++	ast.Inspect(n, func(x ast.Node) bool {
++		if bl, ok := x.(*ast.BasicLit); ok && bl.Kind == token.STRING {
++			out = append(out, strings.Trim(bl.Value, "`\""))
++		}
++		return true
++	})
++	return out
++}
+diff --git a/internal/runtime/specs/registry.go b/internal/runtime/specs/registry.go
+new file mode 100644
+index 0000000..87a694b
+--- /dev/null
++++ b/internal/runtime/specs/registry.go
+@@ -0,0 +1,276 @@
++package specs
++
++import (
++	"errors"
++	"fmt"
++	"slices"
++	"strings"
++)
++
++const (
++	scriptPreTool     = ".agents/scripts/hook-prereq-gate.sh"
++	scriptPostTool    = ".agents/hooks/post-execute-task.sh"
++	scriptSessionEnd  = ".agents/hooks/subagent-stop-wrapper.sh"
++	largeBudgetAbsent = 0
++)
++
++var ErrUnknownAgent = errors.New("agent not in registry")
++
++var ErrToolNotInCatalog = errors.New("tool not in ACP catalog")
++
++var ErrCatalogOutOfSync = errors.New("ACP catalog out of sync with agent registry")
++
++var agentRegistry = NewCatalog().buildRegistry()
++
++type AgentIdentity struct {
++	id          string
++	displayName string
++	valid       bool
++}
++
++type DetectionSignals struct {
++	command  string
++	homeDirs []string
++}
++
++type Agent struct {
++	identity       AgentIdentity
++	specID         string
++	enforcement    Enforcement
++	signals        DetectionSignals
++	inheritsEnv    bool
++	adrPath        string
++	standardBudget int
++	largeBudget    int
++	valid          bool
++}
++
++func (c *Catalog) NewAgentIdentity(id, displayName string) (AgentIdentity, error) {
++	if strings.TrimSpace(id) == "" {
++		return AgentIdentity{}, errors.New("agent identity requires non-empty id")
++	}
++	if strings.TrimSpace(displayName) == "" {
++		return AgentIdentity{}, fmt.Errorf("agent identity %q requires non-empty displayName", id)
++	}
++	return AgentIdentity{id: id, displayName: displayName, valid: true}, nil
++}
++
++func (c *Catalog) Registry() []Agent {
++	return slices.Clone(agentRegistry)
++}
++
++func (c *Catalog) CanonicalOrder() []string {
++	out := make([]string, 0, len(agentRegistry))
++	for _, a := range agentRegistry {
++		out = append(out, a.identity.id)
++	}
++	return out
++}
++
++func (c *Catalog) AgentByID(id string) (Agent, error) {
++	for _, a := range agentRegistry {
++		if a.identity.id == id {
++			return a, nil
++		}
++	}
++	return Agent{}, fmt.Errorf("%w: %q", ErrUnknownAgent, id)
++}
++
++func (c *Catalog) ACPSpecCatalog() map[string]func() Spec {
++	out := make(map[string]func() Spec, len(agentRegistry))
++	for _, a := range agentRegistry {
++		spec, err := c.SpecOf(a)
++		if err != nil {
++			panic(fmt.Sprintf("ACP catalog: %v", err))
++		}
++		resolved := spec
++		out[a.identity.id] = func() Spec { return resolved }
++	}
++	return out
++}
++
++func (c *Catalog) VerifyCatalogSync(externalIDs []string) error {
++	order := c.CanonicalOrder()
++	if len(externalIDs) != len(order) {
++		return fmt.Errorf("%w: catalog has %d tools, registry has %d", ErrCatalogOutOfSync, len(externalIDs), len(order))
++	}
++	expected := make(map[string]bool, len(order))
++	for _, id := range order {
++		expected[id] = true
++	}
++	for _, id := range externalIDs {
++		if !expected[id] {
++			return fmt.Errorf("%w: tool %q not in registry", ErrCatalogOutOfSync, id)
++		}
++	}
++	return nil
++}
++
++func (c *Catalog) ResolveACPSpec(tool string) (Spec, error) {
++	agent, err := c.AgentByID(tool)
++	if err != nil {
++		return Spec{}, fmt.Errorf("%w: %q", ErrToolNotInCatalog, tool)
++	}
++	return c.SpecOf(agent)
++}
++
++func (c *Catalog) SpecOf(a Agent) (Spec, error) {
++	switch a.specID {
++	case "claude":
++		return NewCatalog().Claude(), nil
++	case "gemini":
++		return NewCatalog().Gemini(), nil
++	case "codex":
++		return NewCatalog().Codex(), nil
++	case "copilot":
++		return NewCatalog().Copilot(), nil
++	default:
++		return Spec{}, fmt.Errorf("%w: specID %q", ErrUnknownAgent, a.specID)
++	}
++}
++
++func (c *Catalog) buildRegistry() []Agent {
++	return []Agent{
++		c.newAgent(
++			"claude", "Claude (ACP)", "claude", "claude-agent-acp",
++			[]string{".claude"},
++			".specs/adr/009-acp-protocol-adoption.md",
++			70000, largeBudgetAbsent,
++			c.canonicalEnforcement("PreToolUse", "PostToolUse", "Stop"),
++		),
++		c.newAgent(
++			"gemini", "Gemini (ACP)", "gemini", "gemini",
++			[]string{".gemini"},
++			".specs/adr/015-gemini-cli-acp-native.md",
++			4000, 500_000,
++			c.canonicalEnforcement("PreToolUse", "PostToolUse", "Stop"),
++		),
++		c.newAgent(
++			"codex", "Codex (ACP)", "codex", "codex-acp",
++			[]string{".codex"},
++			".specs/adr/013-codex-cli-acp-native.md",
++			13000, largeBudgetAbsent,
++			c.canonicalEnforcement("pre_tool_use", "post_tool_use", "stop"),
++			c.mustPrecondition(PreconditionTrustedHash, "register the hook hash via the Codex interactive interface before orchestrating", true),
++		),
++		c.newAgent(
++			"copilot", "GitHub Copilot CLI (ACP)", "copilot", "copilot",
++			[]string{".copilot", ".github/copilot"},
++			".specs/adr/012-copilot-cli-acp-native.md",
++			2000, largeBudgetAbsent,
++			c.canonicalEnforcement("preToolUse", "postToolUse", "stop"),
++			c.mustPrecondition(PreconditionTrustedFolder, "add the project folder to the Copilot CLI trusted folders list", false),
++		),
++	}
++}
++
++func (c *Catalog) canonicalEnforcement(preKey, postKey, endKey string) Enforcement {
++	coverage := []PointCoverage{
++		c.mustCoverage(PointPreTool, preKey, scriptPreTool),
++		c.mustCoverage(PointPostTool, postKey, scriptPostTool),
++		c.mustCoverage(PointSessionEnd, endKey, scriptSessionEnd),
++	}
++	enf, err := c.NewEnforcement(coverage)
++	if err != nil {
++		panic(fmt.Sprintf("agent registry: invalid enforcement: %v", err))
++	}
++	return enf
++}
++
++func (c *Catalog) mustCoverage(point CanonicalPoint, nativeKey, scriptPath string) PointCoverage {
++	cov, err := c.NewPointCoverage(point, nativeKey, scriptPath)
++	if err != nil {
++		panic(fmt.Sprintf("agent registry: invalid coverage: %v", err))
++	}
++	return cov
++}
++
++func (c *Catalog) mustPrecondition(kind PreconditionKind, remedy string, requiresExec bool) EnforcementPrecondition {
++	pre, err := c.NewEnforcementPrecondition(kind, remedy, requiresExec)
++	if err != nil {
++		panic(fmt.Sprintf("agent registry: invalid precondition: %v", err))
++	}
++	return pre
++}
++
++func (c *Catalog) newAgent(
++	id, displayName, specID, command string,
++	homeDirs []string,
++	adrPath string,
++	standardBudget, largeBudget int,
++	enf Enforcement,
++	preconditions ...EnforcementPrecondition,
++) Agent {
++	identity, err := c.NewAgentIdentity(id, displayName)
++	if err != nil {
++		panic(fmt.Sprintf("agent registry: invalid identity: %v", err))
++	}
++	if len(preconditions) > 0 {
++		enf, err = c.NewEnforcement(enf.Coverage(), preconditions...)
++		if err != nil {
++			panic(fmt.Sprintf("agent registry: invalid enforcement with preconditions: %v", err))
++		}
++	}
++	return Agent{
++		identity:       identity,
++		specID:         specID,
++		enforcement:    enf,
++		signals:        DetectionSignals{command: command, homeDirs: slices.Clone(homeDirs)},
++		inheritsEnv:    true,
++		adrPath:        adrPath,
++		standardBudget: standardBudget,
++		largeBudget:    largeBudget,
++		valid:          true,
++	}
++}
++
++func (i AgentIdentity) ID() string { return i.id }
++
++func (i AgentIdentity) DisplayName() string { return i.displayName }
++
++func (i AgentIdentity) Valid() bool { return i.valid }
++
++func (i AgentIdentity) String() string { return i.id }
++
++func (s DetectionSignals) Command() string { return s.command }
++
++func (s DetectionSignals) HomeDirs() []string { return slices.Clone(s.homeDirs) }
++
++func (a Agent) Identity() AgentIdentity { return a.identity }
++
++func (a Agent) ID() string { return a.identity.id }
++
++func (a Agent) SpecID() string { return a.specID }
++
++func (a Agent) Enforcement() Enforcement { return a.enforcement }
++
++func (a Agent) Signals() DetectionSignals { return a.signals }
++
++func (a Agent) InheritsEnv() bool { return a.inheritsEnv }
++
++func (a Agent) ADRPath() string { return a.adrPath }
++
++func (a Agent) StandardBudget() int { return a.standardBudget }
++
++func (a Agent) LargeBudget() int { return a.largeBudget }
++
++func (a Agent) Valid() bool { return a.valid }
++
++func (a Agent) Equal(other Agent) bool {
++	if a.valid != other.valid ||
++		a.identity != other.identity ||
++		a.specID != other.specID ||
++		a.inheritsEnv != other.inheritsEnv ||
++		a.adrPath != other.adrPath ||
++		a.standardBudget != other.standardBudget ||
++		a.largeBudget != other.largeBudget ||
++		a.signals.command != other.signals.command {
++		return false
++	}
++	if !slices.Equal(a.signals.homeDirs, other.signals.homeDirs) {
++		return false
++	}
++	return slices.EqualFunc(a.enforcement.coverage, other.enforcement.coverage, func(x, y PointCoverage) bool {
++		return x == y
++	})
++}
+diff --git a/internal/runtime/specs/registry_test.go b/internal/runtime/specs/registry_test.go
+new file mode 100644
+index 0000000..cf28f06
+--- /dev/null
++++ b/internal/runtime/specs/registry_test.go
+@@ -0,0 +1,170 @@
++package specs_test
++
++import (
++	"errors"
++	"reflect"
++	"slices"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
++)
++
++func TestAgentIsImmutableValueObject(t *testing.T) {
++	t.Parallel()
++
++	ptr := reflect.TypeOf(&specs.Agent{})
++	for i := 0; i < ptr.NumMethod(); i++ {
++		m := ptr.Method(i)
++		if _, ok := reflect.TypeOf(specs.Agent{}).MethodByName(m.Name); !ok {
++			t.Errorf("Agent exposes pointer-receiver method %q — value object must be immutable", m.Name)
++		}
++	}
++
++	agent, err := specs.NewCatalog().AgentByID("copilot")
++	if err != nil {
++		t.Fatalf("AgentByID(copilot): %v", err)
++	}
++	if agent.ID() != "copilot" || agent.SpecID() != "copilot" {
++		t.Fatalf("identity mismatch: %q / %q", agent.ID(), agent.SpecID())
++	}
++	if agent.Identity().DisplayName() == "" || agent.Identity().String() != "copilot" {
++		t.Fatal("incomplete identity accessors")
++	}
++	if !agent.InheritsEnv() {
++		t.Fatal("current agents inherit the environment (zero F1 regression)")
++	}
++	if agent.ADRPath() == "" {
++		t.Fatal("agent has no ADR reference")
++	}
++	if agent.StandardBudget() != 2000 || agent.LargeBudget() != 0 {
++		t.Fatalf("unexpected copilot budgets: %d / %d", agent.StandardBudget(), agent.LargeBudget())
++	}
++	if agent.Signals().Command() != "copilot" || len(agent.Signals().HomeDirs()) != 2 {
++		t.Fatalf("unexpected detection signals: %+v", agent.Signals())
++	}
++}
++
++func TestCanonicalOrderIsSingleSource(t *testing.T) {
++	t.Parallel()
++
++	got := specs.NewCatalog().CanonicalOrder()
++	want := []string{"claude", "gemini", "codex", "copilot"}
++	if !slices.Equal(got, want) {
++		t.Fatalf("CanonicalOrder() = %v; want %v", got, want)
++	}
++
++	catalog := specs.NewCatalog().ACPSpecCatalog()
++	if len(catalog) != len(want) {
++		t.Fatalf("ACPSpecCatalog has %d entries; registry has %d", len(catalog), len(want))
++	}
++	for _, id := range want {
++		ctor, ok := catalog[id]
++		if !ok {
++			t.Errorf("ACPSpecCatalog missing %q", id)
++			continue
++		}
++		if ctor().ID != id {
++			t.Errorf("ACPSpecCatalog[%q]().ID = %q", id, ctor().ID)
++		}
++	}
++}
++
++func TestRegistryIsImmutable(t *testing.T) {
++	t.Parallel()
++
++	first := specs.NewCatalog().Registry()
++	first[0] = specs.Agent{}
++	second := specs.NewCatalog().Registry()
++	if second[0].ID() != "claude" {
++		t.Fatalf("mutation of returned slice leaked into registry: %q", second[0].ID())
++	}
++
++	a, err := specs.NewCatalog().AgentByID("codex")
++	if err != nil {
++		t.Fatalf("AgentByID(codex): %v", err)
++	}
++	b, _ := specs.NewCatalog().AgentByID("codex")
++	if !a.Equal(b) {
++		t.Fatal("two resolutions of the same agent are not value-equal")
++	}
++	c, _ := specs.NewCatalog().AgentByID("claude")
++	if a.Equal(c) {
++		t.Fatal("distinct agents compare equal")
++	}
++}
++
++func TestAgentZeroValueIsInvalid(t *testing.T) {
++	t.Parallel()
++
++	var zero specs.Agent
++	if zero.Valid() {
++		t.Fatal("zero-value Agent reported valid")
++	}
++	var zeroID specs.AgentIdentity
++	if zeroID.Valid() {
++		t.Fatal("zero-value AgentIdentity reported valid")
++	}
++	if _, err := specs.NewCatalog().NewAgentIdentity("", "x"); err == nil {
++		t.Fatal("NewAgentIdentity accepted empty id")
++	}
++	if _, err := specs.NewCatalog().NewAgentIdentity("x", ""); err == nil {
++		t.Fatal("NewAgentIdentity accepted empty displayName")
++	}
++	if _, err := specs.NewCatalog().AgentByID("nope"); !errors.Is(err, specs.ErrUnknownAgent) {
++		t.Fatalf("AgentByID(nope) err = %v; want ErrUnknownAgent", err)
++	}
++}
++
++func TestMandatoryMatrixAgentsByCanonicalPoints(t *testing.T) {
++	t.Parallel()
++
++	points := specs.NewCatalog().CanonicalPoints()
++	if len(points) != 3 {
++		t.Fatalf("expected 3 canonical points; got %d", len(points))
++	}
++
++	scriptByPoint := make(map[specs.CanonicalPoint]string)
++	for _, agent := range specs.NewCatalog().Registry() {
++		enf := agent.Enforcement()
++		if !enf.Valid() {
++			t.Fatalf("agent %q: invalid enforcement", agent.ID())
++		}
++		if len(enf.Coverage()) != len(points) {
++			t.Fatalf("agent %q: coverage smaller than matrix (%d/%d)", agent.ID(), len(enf.Coverage()), len(points))
++		}
++		for _, point := range points {
++			cov, ok := enf.CoverageFor(point)
++			if !ok {
++				t.Fatalf("agent %q: point %s not covered", agent.ID(), point)
++			}
++			if cov.NativeKey() == "" {
++				t.Errorf("agent %q point %s: empty native key", agent.ID(), point)
++			}
++			if cov.ScriptPath() == "" {
++				t.Errorf("agent %q point %s: empty canonical script", agent.ID(), point)
++			}
++			if prev, seen := scriptByPoint[point]; seen {
++				if prev != cov.ScriptPath() {
++					t.Errorf("point %s: canonical script diverges between agents (%q vs %q)", point, prev, cov.ScriptPath())
++				}
++			} else {
++				scriptByPoint[point] = cov.ScriptPath()
++			}
++		}
++	}
++}
++
++func TestRegistryPreconditionsCarryRemedy(t *testing.T) {
++	t.Parallel()
++
++	for _, agent := range specs.NewCatalog().Registry() {
++		for _, pre := range agent.Enforcement().Preconditions() {
++			if !pre.Valid() {
++				t.Errorf("agent %q: precondition not built via constructor", agent.ID())
++			}
++			if pre.Remedy() == "" {
++				t.Errorf("agent %q: precondition %d has no actionable remedy", agent.ID(), pre.Kind())
++			}
++		}
++	}
++}
+diff --git a/internal/skills/order_gate_test.go b/internal/skills/order_gate_test.go
+new file mode 100644
+index 0000000..9971035
+--- /dev/null
++++ b/internal/skills/order_gate_test.go
+@@ -0,0 +1,31 @@
++package skills_test
++
++import (
++	"slices"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
++)
++
++func TestAllToolsDerivesFromRegistry(t *testing.T) {
++	t.Parallel()
++
++	order := specs.NewCatalog().CanonicalOrder()
++	got := make([]string, 0, len(skills.AllTools))
++	for _, tool := range skills.AllTools {
++		got = append(got, string(tool))
++	}
++	if !slices.Equal(got, order) {
++		t.Fatalf("skills.AllTools = %v; registry canonical order = %v", got, order)
++	}
++
++	for _, id := range order {
++		if _, ok := skills.NewCatalog().ParseTool(id); !ok {
++			t.Errorf("ParseTool(%q) rejected a registry id", id)
++		}
++	}
++	if _, ok := skills.NewCatalog().ParseTool("nonexistent"); ok {
++		t.Error("ParseTool accepted a tool outside the registry")
++	}
++}
+diff --git a/internal/skills/skills.go b/internal/skills/skills.go
+index 3e7c7d1..2b0028b 100644
+--- a/internal/skills/skills.go
++++ b/internal/skills/skills.go
+@@ -1,5 +1,7 @@
+ package skills
+ 
++import "github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
++
+ // Tool representa uma ferramenta de IA suportada.
+ type Tool string
+ 
+@@ -10,12 +12,22 @@ const (
+ 	ToolCopilot Tool = "copilot"
+ )
+ 
+-var AllTools = []Tool{ToolClaude, ToolGemini, ToolCodex, ToolCopilot}
++var AllTools = NewCatalog().canonicalTools()
++
++func (catalog *Catalog) canonicalTools() []Tool {
++	ids := specs.NewCatalog().CanonicalOrder()
++	out := make([]Tool, 0, len(ids))
++	for _, id := range ids {
++		out = append(out, Tool(id))
++	}
++	return out
++}
+ 
+ func (catalog *Catalog) ParseTool(s string) (Tool, bool) {
+-	switch Tool(s) {
+-	case ToolClaude, ToolGemini, ToolCodex, ToolCopilot:
+-		return Tool(s), true
++	for _, t := range NewCatalog().canonicalTools() {
++		if string(t) == s {
++			return t, true
++		}
+ 	}
+ 	return "", false
+ }
+diff --git a/internal/taskloop/acp_catalog_sync_test.go b/internal/taskloop/acp_catalog_sync_test.go
+new file mode 100644
+index 0000000..8cdb5ef
+--- /dev/null
++++ b/internal/taskloop/acp_catalog_sync_test.go
+@@ -0,0 +1,35 @@
++package taskloop
++
++import (
++	"errors"
++	"sort"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
++)
++
++func TestACPSpecCatalogInSyncWithRegistry(t *testing.T) {
++	t.Parallel()
++
++	ids := make([]string, 0, len(acpSpecCatalog))
++	for k := range acpSpecCatalog {
++		ids = append(ids, k)
++	}
++	sort.Strings(ids)
++
++	if err := specs.NewCatalog().VerifyCatalogSync(ids); err != nil {
++		t.Fatalf("acpSpecCatalog out of sync with registry: %v", err)
++	}
++
++	diverging := append([]string{}, ids...)
++	diverging = diverging[:len(diverging)-1]
++	if err := specs.NewCatalog().VerifyCatalogSync(diverging); !errors.Is(err, specs.ErrCatalogOutOfSync) {
++		t.Fatalf("gate did not catch artificial divergence: %v", err)
++	}
++
++	for id, ctor := range acpSpecCatalog {
++		if ctor().ID != id {
++			t.Errorf("acpSpecCatalog[%q]().ID = %q", id, ctor().ID)
++		}
++	}
++}
+diff --git a/internal/taskloop/taskloop.go b/internal/taskloop/taskloop.go
+index 9e0d31c..8080f9c 100644
+--- a/internal/taskloop/taskloop.go
++++ b/internal/taskloop/taskloop.go
+@@ -352,7 +352,10 @@ func (s *Service) Execute(opts Options) error {
+ 				return fmt.Errorf("taskloop: wiring RuntimeConfig: %w", rcErr)
+ 			}
+ 
+-			spec := NewCatalog().resolveACPSpec(executorTool)
++			spec, specErr := NewCatalog().resolveACPSpec(executorTool)
++			if specErr != nil {
++				return fmt.Errorf("taskloop: resolver spec ACP: %w", specErr)
++			}
+ 			factory := persistence.NewSessionPersistenceFactory(fs.NewOSFileSystem())
+ 			runner := airuntime.NewACPRunner(
+ 				spec, airuntime.NewCatalog().
+@@ -921,26 +924,10 @@ func (c *Catalog) classifyIterationOutcome(
+ 	return outcome
+ }
+ 
+-// _acpSpecCatalog mapeia tool name → construtor de Spec ACP.
+-// Espelha runtimeACPCatalog em cmd/ai_spec_harness/task_loop.go (D-04):
+-// a tabela CLI é o gate de validação de --runtime=acp; este mapa é o resolvedor
+-// interno do Service.Execute para o caminho padrão (acpInvokerFactory == nil).
+-// Adicionar nova entrada aqui ao registrar novo tool ACP no catálogo CLI.
+-var _acpSpecCatalog = map[string]func() specs.Spec{
+-	"claude":  specs.NewCatalog().Claude,
+-	"codex":   specs.NewCatalog().Codex,
+-	"copilot": specs.NewCatalog().Copilot,
+-	"gemini":  specs.NewCatalog().Gemini,
+-}
++var acpSpecCatalog = specs.NewCatalog().ACPSpecCatalog()
+ 
+-// resolveACPSpec retorna a Spec ACP correspondente ao tool informado.
+-// Quando o tool não está no catálogo (ex: tool vazio ou não-ACP), retorna specs.Claude()
+-// como fallback seguro — a validação no CLI já bloqueou tools inválidos antes de chegar aqui.
+-func (c *Catalog) resolveACPSpec(tool string) specs.Spec {
+-	if ctor, ok := _acpSpecCatalog[tool]; ok {
+-		return ctor()
+-	}
+-	return specs.NewCatalog().Claude()
++func (c *Catalog) resolveACPSpec(tool string) (specs.Spec, error) {
++	return specs.NewCatalog().ResolveACPSpec(tool)
+ }
+ 
+ // resolveWorkDir tenta encontrar a raiz do projeto (diretorio que contem go.mod, .git, ou AGENTS.md).
+diff --git a/internal/taskloop/taskloop_test.go b/internal/taskloop/taskloop_test.go
+index 52875e1..8554e91 100644
+--- a/internal/taskloop/taskloop_test.go
++++ b/internal/taskloop/taskloop_test.go
+@@ -14,6 +14,7 @@ import (
+ 	taskfs "github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
+ 	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
+ )
+ 
+ // TestResolveWorkDir valida a logica de busca da raiz do projeto via marcadores.
+@@ -4508,29 +4509,23 @@ func TestACPRuntimeRoutesCopilotToACPRunner(t *testing.T) {
+ 	}
+ }
+ 
+-// TestResolveACPSpec valida o resolvedor interno de specs para o Service.Execute.
+-// Garante que cada tool do catalogo retorna a Spec correta e que tools desconhecidos
+-// retornam specs.Claude() como fallback seguro.
+ func TestResolveACPSpec(t *testing.T) {
+-	tests := []struct {
++	known := []struct {
+ 		tool        string
+ 		wantID      string
+ 		wantCommand string
+ 	}{
+-		// Claude: command e "claude-agent-acp" (binario canonico do SDK ACP)
+ 		{tool: "claude", wantID: "claude", wantCommand: "claude-agent-acp"},
+-		// Codex: command e "codex-acp" (binario canonico do codex-acp adapter — ADR-013 D-01)
+ 		{tool: "codex", wantID: "codex", wantCommand: "codex-acp"},
+-		// Copilot: command e "copilot" (binario canonico do Copilot CLI)
+ 		{tool: "copilot", wantID: "copilot", wantCommand: "copilot"},
+-		// Fallback: tool desconhecido → specs.Claude()
+-		{tool: "unknown-tool", wantID: "claude", wantCommand: "claude-agent-acp"},
+-		{tool: "", wantID: "claude", wantCommand: "claude-agent-acp"},
++		{tool: "gemini", wantID: "gemini", wantCommand: "gemini"},
+ 	}
+-
+-	for _, tt := range tests {
++	for _, tt := range known {
+ 		t.Run(tt.tool, func(t *testing.T) {
+-			spec := NewCatalog().resolveACPSpec(tt.tool)
++			spec, err := NewCatalog().resolveACPSpec(tt.tool)
++			if err != nil {
++				t.Fatalf("resolveACPSpec(%q) unexpected error: %v", tt.tool, err)
++			}
+ 			if spec.ID != tt.wantID {
+ 				t.Errorf("resolveACPSpec(%q).ID = %q, want %q", tt.tool, spec.ID, tt.wantID)
+ 			}
+@@ -4539,6 +4534,18 @@ func TestResolveACPSpec(t *testing.T) {
+ 			}
+ 		})
+ 	}
++
++	for _, unknown := range []string{"unknown-tool", ""} {
++		t.Run("missing/"+unknown, func(t *testing.T) {
++			spec, err := NewCatalog().resolveACPSpec(unknown)
++			if !errors.Is(err, specs.ErrToolNotInCatalog) {
++				t.Fatalf("resolveACPSpec(%q) err = %v, want specs.ErrToolNotInCatalog", unknown, err)
++			}
++			if spec.ID != "" {
++				t.Errorf("resolveACPSpec(%q) returned non-zero Spec %q — silent fallback reintroduced", unknown, spec.ID)
++			}
++		})
++	}
+ }
+ 
+ // TestT26_ClaudeRegressionWithCodexFlags (T-26 — RF-15): Options com Tool="claude",

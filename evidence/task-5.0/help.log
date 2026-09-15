@@ -1,0 +1,64 @@
+Executa em loop todas as tasks elegiveis de uma pasta PRD, invocando
+um agente de IA (Claude Code, Codex, Gemini ou Copilot) para cada task.
+
+Cada iteracao:
+  1. Parseia tasks.md para identificar a proxima task elegivel
+  2. Invoca o agente selecionado com a skill execute-task
+  3. Verifica o status resultante da task
+  4. Continua ate nao haver mais tasks elegiveis
+
+Modo simples:  use --tool para invocar um unico agente (comportamento atual).
+Modo avancado: use --executor-tool e opcionalmente --reviewer-tool para
+               configurar executor e reviewer independentes com modelos distintos.
+
+Gera um relatorio consolidado em Markdown ao final da execucao.
+
+Exit codes:
+  0 — loop completado (com ou sem tasks restantes)
+  1 — erro de pre-flight ou execucao
+  2 — uso incorreto
+
+Exemplos:
+  ai-spec task-loop --tool claude .specs/prd-minha-feature
+  ai-spec task-loop --tool codex --dry-run .specs/prd-minha-feature
+  ai-spec task-loop --executor-tool claude --executor-model claude-sonnet-4-6 \
+    --reviewer-tool claude --reviewer-model claude-opus-4-6 .specs/prd-minha-feature
+
+Usage:
+  ai-spec-harness task-loop <prd-folder> [flags]
+
+Flags:
+      --access-mode string                Modo de acesso do Codex: restricted|full (default: restricted). AVISO: full ativa sandbox_mode=danger-full-access — use somente em ambientes isolados. Apenas Codex consome este parâmetro. (default "restricted")
+      --activity-timeout duration         Timeout de inatividade do agente ACP (0 = desabilitado); aceita time.Duration: 90s, 2m (default 2m0s)
+      --agent string                      Nome do agente declarativo (AGENT.md); mutuamente exclusivo com --tool e --executor-tool
+      --allow-unknown-model               Aceitar combinacoes ferramenta-modelo nao catalogadas
+      --auto-review                       Habilita auto-review opt-in (F5-Claude): após session end, spawna nova sessão com skill review e git diff acumulado. Parseia [HARD]/BLOQUEADO/CRÍTICO → Summary.ReviewStatus=blocked. HARD: default false; sessões filho têm auto-review=false forçado (anti-recursão). Dobra custo de tokens — usar somente quando necessário. Ver ADR-014 §D-07.
+      --disable-hooks                     Desabilita TODOS os hooks Go in-process: governance, token_budget e memory_persist (F3-Claude, debug). AVISO: --disable-hooks desliga inclusive o hook de governance (validação AGENTS.md). Shell hooks em .claude/hooks/*.sh continuam ativos no modo interativo. Default false.
+      --dry-run                           Mostra o que seria executado sem invocar o agente
+      --executor-fallback-model string    Modelo de fallback nativo do executor (Claude only)
+      --executor-model string             Modelo do executor (ex: claude-sonnet-4-6)
+      --executor-tool string              Ferramenta do executor (modo avancado): claude, codex, gemini, copilot
+      --fallback-tool string              Ferramenta de fallback para validacao pre-loop
+  -h, --help                              help for task-loop
+      --max-bugfix-iterations int         Teto de rodadas do Ciclo de Aprovacao (RF-35); minimo aceito 1; default 5. Configuravel tambem via arquivo de configuracao (workspace/global), respeitando a precedencia flags > workspace > global > defaults (ADR-016). Valor 0 ou negativo falha explicitamente em vez de ser normalizado em silencio. (default 5)
+      --max-iterations int                Limite maximo de iteracoes do loop (default 20)
+      --mcp-nested                        Habilita servidor MCP interno que expõe tool run_agent (F2-Claude). Quando true, spawna mcpserver.Server antes de c.Open. Default false preserva comportamento F1-Claude.
+      --memory-task-limit-bytes int       Limite de bytes do arquivo de task memory antes de solicitar compactação (F3-Claude). Default 16384 (16KB). (default 16384)
+      --memory-task-limit-lines int       Limite de linhas do arquivo de task memory antes de solicitar compactação (F3-Claude). Default 200. (default 200)
+      --memory-workflow-limit-bytes int   Limite de bytes do arquivo de workflow memory antes de solicitar compactação (F3-Claude). Default 12288 (12KB). (default 12288)
+      --memory-workflow-limit-lines int   Limite de linhas do arquivo de workflow memory antes de solicitar compactação (F3-Claude). Default 150. (default 150)
+      --no-normalize                      Desabilita normalização de tool-calls driver-aware (F2-Claude, debug). Default false = normalização ativa (raw_name e normalized_name gravados lado a lado).
+      --quiet                             Suprime stream humano (stdout); jsonl e warnings continuam
+      --reasoning-effort string           Esforço de raciocínio do Codex: low|medium|high (default: medium). Apenas Codex consome este parâmetro; ignorado por Claude/Copilot. (default "medium")
+      --report-path string                Caminho do relatorio final (default: task-loop-report-<timestamp>.md)
+      --reviewer-fallback-model string    Modelo de fallback nativo do reviewer (Claude only)
+      --reviewer-model string             Modelo do reviewer (ex: claude-opus-4-6)
+      --reviewer-prompt-template string   Caminho do template de prompt de revisao customizado
+      --reviewer-tool string              Ferramenta do reviewer (modo avancado): claude, codex, gemini, copilot
+      --runtime string                    Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, codex, copilot, gemini) (default "legacy")
+      --skip-drift-guard                  Desabilita SOMENTE o hook spec_drift (spec-hash/PRD-first, ADR-022), mantendo governance e token_budget ativos. Use em CI sem PRD rastreável ou durante desenvolvimento inicial. Diferente de --disable-hooks (que desliga todos os hooks). Default false.
+      --timeout duration                  Timeout por task (default 30m0s)
+      --tool string                       Agente de IA: claude, codex, gemini, copilot (modo simples)
+
+Global Flags:
+  -v, --verbose   Exibir logs detalhados

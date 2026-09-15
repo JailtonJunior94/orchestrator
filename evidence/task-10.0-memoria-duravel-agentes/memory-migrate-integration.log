@@ -1,0 +1,5 @@
+=== RUN   TestMemoryMigrateRealFilesystemBackupVerifiedAndRefusesReapplication
+--- PASS: TestMemoryMigrateRealFilesystemBackupVerifiedAndRefusesReapplication (0.01s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	0.475s
+exit=0

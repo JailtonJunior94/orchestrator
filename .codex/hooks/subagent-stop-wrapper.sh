@@ -21,7 +21,7 @@ set -uo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 HOOKS_DIR=""
-for d in "$REPO_ROOT/.claude/hooks" "$REPO_ROOT/.agents/hooks" "$REPO_ROOT/.gemini/hooks" "$REPO_ROOT/.codex/hooks" "$REPO_ROOT/.github/hooks"; do
+for d in "$REPO_ROOT/.claude/hooks" "$REPO_ROOT/.agents/hooks" "$REPO_ROOT/.codex/hooks" "$REPO_ROOT/.github/hooks"; do
   if [[ -d "$d" ]]; then
     HOOKS_DIR="$d"
     break
@@ -38,6 +38,38 @@ fi
 # Ler input do Claude Code (JSON via stdin)
 input=$(cat)
 [[ -z "$input" ]] && exit 0
+
+json_top_level_true() {
+  local payload="$1"
+  local key="$2"
+  [[ -n "$payload" ]] || return 1
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$payload" \
+      | jq -e --arg k "$key" 'type == "object" and (.[$k] == true)' >/dev/null 2>&1
+    return $?
+  fi
+  if command -v python3 >/dev/null 2>&1; then
+    printf '%s' "$payload" | AISPEC_JSON_KEY="$key" python3 -c '
+import json
+import os
+import sys
+
+try:
+    payload = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+key = os.environ["AISPEC_JSON_KEY"]
+sys.exit(0 if isinstance(payload, dict) and payload.get(key) is True else 1)
+'
+    return $?
+  fi
+  return 1
+}
+
+if json_top_level_true "$input" "stop_hook_active"; then
+  echo "[subagent-stop] stop_hook_active=true — o bloqueio ja foi aplicado nesta retomada; liberando o encerramento para o agente reagir em vez de prender a sessao." >&2
+  exit 0
+fi
 
 # Extrair subagent_output (assumindo Claude Code JSON shape)
 # Defensivo: tenta jq, fallback para grep+sed

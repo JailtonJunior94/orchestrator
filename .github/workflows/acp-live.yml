@@ -28,6 +28,10 @@ jobs:
         # (0.1.0 nunca foi publicada no npm — causava ETARGET; versoes reais >= 0.24.0.)
         run: npm install -g @agentclientprotocol/claude-agent-acp@0.37.0
 
+      - name: Install opencode-ai via npm
+        # Versao deve acompanhar OpenCodeNpmVersion em internal/runtime/specs/opencode.go.
+        run: npm install -g opencode-ai@1.18.30
+
       - name: Run ACP live tests
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

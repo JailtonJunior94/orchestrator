@@ -1,0 +1,14 @@
+$ grep -rn 'approval\.' internal/runtime internal/taskloop --include='*.go' | grep -v _test.go
+--- contagem por pacote ---
+internal/runtime: 40
+internal/taskloop: 91
+--- arquivos de producao ---
+internal/runtime/approval_adapters.go
+internal/runtime/runner.go
+internal/runtime/runner_autoreview.go
+internal/taskloop/approval_adapters.go
+internal/taskloop/approval_cycle.go
+internal/taskloop/bugfix.go
+internal/taskloop/reviewer.go
+internal/taskloop/runloop.go
+internal/taskloop/task_status_writer.go

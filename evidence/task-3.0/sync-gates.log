@@ -1,0 +1,27 @@
+bash scripts/check-skills-sync.sh
+
+Skills em sync: 80
+Skills com drift: 0
+Libs em sync: 2 (legacy + embedded)
+Hooks do orquestrador em sync: 4 hooks x 9 mirrors
+Hooks de validacao por-tool em paridade: 2 hooks x 8 tools
+Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
+bash scripts/check-scripts-sync.sh
+
+Validadores em sync: 24
+Drift / missing: 0
+Todos os validadores de evidencia sincronizados.
+bash scripts/check-spec-paths.sh
+Nenhum PRD sob gestao SDD encontrado; nada a verificar.
+bash tests/scripts/check-spec-paths_test.sh
+  OK   caminho existente aprova (exit=0)
+  OK   caminho inexistente reprova (exit=1)
+  OK   diagnostico nomeia o caminho invalido
+  OK   simbolo, comando e placeholder nao viram caminho (exit=0)
+  OK   caminho opcional documentado nao reprova (exit=0)
+  OK   caminho inexistente com marcador (planejado) aprova (exit=0)
+  OK   marcador (planejado) nao mascara caminho quebrado vizinho (exit=1)
+  OK   diagnostico acusa so o caminho sem marcador
+  OK   PRD historico sem estado SDD fica fora do escopo (exit=0)
+
+Resultado: 9 OK, 0 FAIL

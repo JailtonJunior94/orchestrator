@@ -332,13 +332,18 @@ func (o *Orchestrator) finishLocked(prdDir string, result sdd.ExecutionResult) (
 	return state, nil
 }
 
-// ValidateExecutionEvidence recompõe o patch Git canônico e o estado final,
-// além de confrontá-los com o artefato e as evidências físicas declaradas.
-// Exclusões adicionais destinam-se somente ao envelope operacional que chama
-// o validador, como o próprio JSON de resultado e o relatório Markdown.
 func (o *Orchestrator) ValidateExecutionEvidence(prdDir string, result sdd.ExecutionResult, additionalExclusions ...string) error {
 	if err := o.store.ValidateExecutionResult(result); err != nil {
 		return fmt.Errorf("taskloop: validar contrato do resultado: %w", err)
+	}
+	if result.CommitSHA != "" {
+		if err := o.VerifySealedEvidence(prdDir, result, o.sealEnvelope(prdDir, result)); err != nil {
+			return err
+		}
+		if err := o.validatePatchArtifactDigest(prdDir, result.PatchRef, result.PatchSHA256); err != nil {
+			return err
+		}
+		return o.validatePhysicalEvidence(prdDir, result)
 	}
 	finalSnapshot, patch, err := o.captureFinalSnapshot(prdDir, result, additionalExclusions...)
 	if err != nil {
@@ -351,10 +356,7 @@ func (o *Orchestrator) ValidateExecutionEvidence(prdDir string, result sdd.Execu
 	if err := o.validatePatchArtifact(prdDir, result.PatchRef, patch, result.PatchSHA256); err != nil {
 		return err
 	}
-	if err := o.validatePhysicalEvidence(prdDir, result); err != nil {
-		return err
-	}
-	return nil
+	return o.validatePhysicalEvidence(prdDir, result)
 }
 
 // snapshotExclusions devolve o conjunto canonico de exclusoes usado tanto no
@@ -620,6 +622,39 @@ func (o *Orchestrator) validatePatchArtifact(prdDir, reference string, patch []b
 	digest := sha256.Sum256(content)
 	if hex.EncodeToString(digest[:]) != expectedDigest || string(content) != string(patch) {
 		return fmt.Errorf("taskloop: artefato do patch diverge do patch semantico")
+	}
+	return nil
+}
+
+func (o *Orchestrator) sealEnvelope(prdDir string, result sdd.ExecutionResult) string {
+	name := result.TaskID + "_execution_result.json"
+	absolute, err := filepath.Abs(prdDir)
+	if err != nil {
+		return filepath.Join(prdDir, name)
+	}
+	resolved, err := filepath.EvalSymlinks(absolute)
+	if err != nil {
+		return filepath.Join(absolute, name)
+	}
+	return filepath.Join(resolved, name)
+}
+
+func (o *Orchestrator) validatePatchArtifactDigest(prdDir, reference, expectedDigest string) error {
+	root, err := o.repositoryRoot(prdDir)
+	if err != nil {
+		return err
+	}
+	path, err := o.resolveEvidence(root, reference)
+	if err != nil {
+		return fmt.Errorf("taskloop: artefato do patch invalido: %w", err)
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("taskloop: ler artefato do patch: %w", err)
+	}
+	digest := sha256.Sum256(content)
+	if hex.EncodeToString(digest[:]) != strings.ToLower(expectedDigest) {
+		return fmt.Errorf("taskloop: artefato do patch diverge do digest registrado no fechamento")
 	}
 	return nil
 }

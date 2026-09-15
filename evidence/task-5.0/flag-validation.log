@@ -1,0 +1,16 @@
+=== RUN   TestTaskLoopFlags_MaxBugfixIterationsDefault
+=== PAUSE TestTaskLoopFlags_MaxBugfixIterationsDefault
+=== RUN   TestTaskLoopFlags_MaxBugfixIterationsInvalido
+=== RUN   TestTaskLoopFlags_MaxBugfixIterationsInvalido/ausente_preserva_comportamento_pre-mudanca
+=== RUN   TestTaskLoopFlags_MaxBugfixIterationsInvalido/zero_e_invalido
+=== RUN   TestTaskLoopFlags_MaxBugfixIterationsInvalido/negativo_e_invalido
+=== RUN   TestTaskLoopFlags_MaxBugfixIterationsInvalido/positivo_explicito_e_valido
+--- PASS: TestTaskLoopFlags_MaxBugfixIterationsInvalido (0.00s)
+    --- PASS: TestTaskLoopFlags_MaxBugfixIterationsInvalido/ausente_preserva_comportamento_pre-mudanca (0.00s)
+    --- PASS: TestTaskLoopFlags_MaxBugfixIterationsInvalido/zero_e_invalido (0.00s)
+    --- PASS: TestTaskLoopFlags_MaxBugfixIterationsInvalido/negativo_e_invalido (0.00s)
+    --- PASS: TestTaskLoopFlags_MaxBugfixIterationsInvalido/positivo_explicito_e_valido (0.00s)
+=== CONT  TestTaskLoopFlags_MaxBugfixIterationsDefault
+--- PASS: TestTaskLoopFlags_MaxBugfixIterationsDefault (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	0.316s

@@ -839,33 +839,6 @@ func TestUpgrade_RecopiesT02Artifacts(t *testing.T) {
 	}
 }
 
-func TestUpgrade_RecopiesGeminiHook(t *testing.T) {
-	t.Parallel()
-	ffs := fs.NewFakeFileSystem()
-	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 2.0.0\ndescription: Review.\n---\n")
-	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
-	ffs.Files["/source/.gemini/hooks/validate-preload.sh"] = []byte("#!/usr/bin/env bash\n# new gemini hook")
-	ffs.Files["/project/.gemini/hooks/validate-preload.sh"] = []byte("#!/usr/bin/env bash\n# old gemini hook")
-	ffs.Dirs["/project/.gemini"] = true
-
-	svc := setupTestService(ffs)
-	err := svc.Execute(config.UpgradeOptions{
-		ProjectDir: "/project",
-		SourceDir:  "/source",
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-
-	data, err := ffs.ReadFile("/project/.gemini/hooks/validate-preload.sh")
-	if err != nil {
-		t.Fatalf("gemini hook should exist after upgrade: %v", err)
-	}
-	if !strings.Contains(string(data), "# new gemini hook") {
-		t.Fatalf("expected gemini hook to be re-copied, got %q", string(data))
-	}
-}
-
 func TestUpgrade_RegeneratesAdaptersAndSupportFiles(t *testing.T) {
 	t.Parallel()
 	ffs := fs.NewFakeFileSystem()

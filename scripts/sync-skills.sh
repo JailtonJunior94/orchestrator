@@ -4,7 +4,6 @@
 # e para o bundle embedded (internal/embedded/assets/.agents/skills) usado pelo
 # binário ai-spec via go:embed e distribuído via `ai-spec upgrade`.
 #
-# Gemini consome o canônico via .gemini/commands/<skill>.toml e não exige cópia.
 # Codex não usa skills neste formato.
 #
 # Estratégia: rsync com --delete para garantir que mirrors sejam idênticos ao canônico.
@@ -25,6 +24,21 @@ declare -a platform_mirrors=(
 
 embedded_mirror="$repo_root/internal/embedded/assets/.agents/skills"
 
+# S1: dirs sob .agents/skills/ que nao sao skills (sem SKILL.md) e nao devem ser
+# espelhados. Allowlist EXPLICITA, espelhada em scripts/check-skills-sync.sh.
+declare -a non_skill_dirs=(
+  "tests"
+)
+
+is_non_skill_dir() {
+  local candidate="$1"
+  local entry
+  for entry in "${non_skill_dirs[@]}"; do
+    [[ "$entry" == "$candidate" ]] && return 0
+  done
+  return 1
+}
+
 if [[ ! -d "$canonical" ]]; then
   echo "ERRO: diretório canônico não encontrado: $canonical" >&2
   exit 1
@@ -42,14 +56,21 @@ for mirror in "${platform_mirrors[@]}"; do
     chmod -R u+w "$mirror" 2>/dev/null || true
   fi
 
-  # Iterar sobre cada skill presente no canônico e copiar apenas as que
-  # já existem no mirror (preservando o subset por plataforma).
+  # S1: o canônico é a fonte de verdade — toda skill canônica é materializada no
+  # mirror, inclusive quando ainda não existe lá. Mirror não é subset por design.
   for skill_dir in "$canonical"/*/; do
     skill_name="$(basename "$skill_dir")"
-    if [[ -d "$mirror/$skill_name" ]]; then
-      rsync -a --delete "$skill_dir" "$mirror/$skill_name/"
-      echo "synced: $skill_name -> $mirror"
+    if is_non_skill_dir "$skill_name"; then
+      echo "skipped: $skill_name (allowlist: dir não-skill) -> $mirror"
+      continue
     fi
+    if [[ ! -f "$skill_dir/SKILL.md" ]]; then
+      echo "skipped: $skill_name (sem SKILL.md no canônico) -> $mirror"
+      continue
+    fi
+    mkdir -p "$mirror/$skill_name"
+    rsync -a --delete "$skill_dir" "$mirror/$skill_name/"
+    echo "synced: $skill_name -> $mirror"
   done
 done
 
@@ -64,13 +85,15 @@ mkdir -p "$embedded_mirror"
 chmod -R u+w "$embedded_mirror" 2>/dev/null || true
 for skill_dir in "$canonical"/*/; do
   skill_name="$(basename "$skill_dir")"
-  if [[ ! -d "$embedded_mirror/$skill_name" ]]; then
+  if is_non_skill_dir "$skill_name"; then
+    echo "skipped: $skill_name (allowlist: dir não-skill) -> $embedded_mirror"
     continue
   fi
   if [[ ! -f "$skill_dir/SKILL.md" ]]; then
     echo "skipped: $skill_name (sem SKILL.md no canônico) -> $embedded_mirror"
     continue
   fi
+  mkdir -p "$embedded_mirror/$skill_name"
   rsync -a --delete "$skill_dir" "$embedded_mirror/$skill_name/"
   echo "synced: $skill_name -> $embedded_mirror"
 done
@@ -99,7 +122,7 @@ if [[ -d "$agents_lib" ]]; then
 fi
 
 # Sincroniza hooks canônicos do orquestrador (.agents/hooks/) para todos os mirrors
-# por-tool (.claude/.codex/.gemini/.github e internal/embedded/assets/<tool>/).
+# por-tool (.claude/.codex/.github e internal/embedded/assets/<tool>/).
 # Os 4 hooks abaixo são idênticos em todos os tools por design (executados via
 # `bash .<tool>/hooks/<hook>.sh` pelo próprio skill).
 agents_hooks="$repo_root/.agents/hooks"
@@ -108,16 +131,15 @@ declare -a orchestrator_hooks=(
   "post-wave.sh"
   "pre-execute-all-tasks.sh"
   "subagent-stop-wrapper.sh"
+  "validate-governance.sh"
 )
 declare -a tool_hook_mirrors=(
   "$repo_root/.claude/hooks"
   "$repo_root/.codex/hooks"
-  "$repo_root/.gemini/hooks"
   "$repo_root/.github/hooks"
   "$repo_root/internal/embedded/assets/.agents/hooks"
   "$repo_root/internal/embedded/assets/.claude/hooks"
   "$repo_root/internal/embedded/assets/.codex/hooks"
-  "$repo_root/internal/embedded/assets/.gemini/hooks"
   "$repo_root/internal/embedded/assets/.github/hooks"
 )
 if [[ -d "$agents_hooks" ]]; then
@@ -144,6 +166,7 @@ declare -a evidence_validators=(
   "validate-bugfix-evidence.sh"
   "validate-refactor-evidence.sh"
   "validate-review-evidence.sh"
+	"validate-session-end.sh"
   "hook-prereq-gate.sh"
   "resolve-references.sh"
   "validate-skill-prerequisites.sh"

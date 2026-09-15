@@ -14,7 +14,7 @@ func newScaffoldCmd() *cobra.Command {
 		Use:   "scaffold <language>",
 		Short: "Gera scaffold de uma nova skill de linguagem",
 		Long: `Cria a estrutura de uma nova skill de linguagem com SKILL.md,
-reference stubs e comando Gemini.
+reference stubs e comando OpenCode.
 
 Exemplos:
   ai-spec-harness scaffold rust

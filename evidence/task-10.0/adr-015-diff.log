@@ -1,0 +1,17 @@
+### git diff --stat sobre a ADR do runtime removido
+ .specs/adr/015-gemini-cli-acp-native.md | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+### git diff completo
+diff --git a/.specs/adr/015-gemini-cli-acp-native.md b/.specs/adr/015-gemini-cli-acp-native.md
+index ed3b283..115e495 100644
+--- a/.specs/adr/015-gemini-cli-acp-native.md
++++ b/.specs/adr/015-gemini-cli-acp-native.md
+@@ -1,6 +1,6 @@
+ # ADR-015: Gemini CLI como runtime ACP nativo
+ 
+-**Status:** Proposta
++**Status:** Substituída
+ **Data:** 2026-05-22
+ **Autores:** -
+ 

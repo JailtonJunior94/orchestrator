@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-quatro-clis-loop-aprovacao/9.0_execution_report.md
+summary: "Reavaliacao 2026-09-14 criterio-a-criterio; os 12 criterios de sucesso da 9.0 estao atendidos com evidencia (comando + saida ou arquivo:linha), registrada na secao 'Reavaliacao 2026-09-14' do relatorio. O bloqueio anterior exigia 12/12 na camada 3 (disparo real por CLIs autenticados), exigencia que os criterios nao fazem; eles pedem apenas que o alvo nightly exista, que o job falhe se uma celula for pulada e que a camada 3 seja declarada nao-gate-de-merge, as tres satisfeitas. Camada 3 permanece informativa."
+timestamp: 2026-09-14T00:00:00Z

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Gera governanca contextual (AGENTS.md, CLAUDE.md, GEMINI.md, etc.) para um projeto alvo.
+# Gera governanca contextual (AGENTS.md, CLAUDE.md, .codex/config.toml, etc.) para um projeto alvo.
 # Uso: bash generate-governance.sh [--dry-run] [diretorio-alvo]
 # --dry-run: mostra o que seria gerado sem escrever arquivos.
 
@@ -51,7 +51,6 @@ PROJECT_DIR="${1:-.}"
 PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 
 INSTALL_CLAUDE="${INSTALL_CLAUDE:-0}"
-INSTALL_GEMINI="${INSTALL_GEMINI:-0}"
 INSTALL_CODEX="${INSTALL_CODEX:-0}"
 INSTALL_COPILOT="${INSTALL_COPILOT:-0}"
 
@@ -290,7 +289,7 @@ detect_primary_stack() {
 build_directory_tree() {
   local tree
   tree="$(cd "$PROJECT_DIR" && find . \
-    \( -path './.git' -o -path './.agents' -o -path './.claude' -o -path './.codex' -o -path './.gemini' -o -path './node_modules' -o -path './vendor' -o -path './dist' -o -path './build' -o -path './bin' -o -path './target' -o -path './__pycache__' \) -prune \
+    \( -path './.git' -o -path './.agents' -o -path './.claude' -o -path './.codex' -o -path './.opencode' -o -path './node_modules' -o -path './vendor' -o -path './dist' -o -path './build' -o -path './bin' -o -path './target' -o -path './__pycache__' \) -prune \
     -o \( -name '.gitkeep' -prune \) \
     -o -print | sed 's#^\./##' | LC_ALL=C sort | awk 'NR <= 80 { print }')"
 
@@ -729,7 +728,7 @@ STACK_SECTION="$(build_stack_section)"
 # GOVERNANCE_PROFILE: compact strips verbose sections for smaller context windows (Haiku, Codex).
 # Default: standard (full output). Auto-detect compact when only Codex is installed.
 if [[ -z "${GOVERNANCE_PROFILE:-}" ]]; then
-  if [[ "${INSTALL_CODEX:-0}" == "1" && "${INSTALL_CLAUDE:-0}" == "0" && "${INSTALL_GEMINI:-0}" == "0" && "${INSTALL_COPILOT:-0}" == "0" ]]; then
+  if [[ "${INSTALL_CODEX:-0}" == "1" && "${INSTALL_CLAUDE:-0}" == "0" && "${INSTALL_COPILOT:-0}" == "0" ]]; then
     GOVERNANCE_PROFILE="compact"
   else
     GOVERNANCE_PROFILE="standard"
@@ -755,7 +754,6 @@ _agents_content="$(render_template \
 if [[ "$DRY_RUN" -eq 1 ]]; then
   echo "[dry-run] Geraria AGENTS.md (schema $GOVERNANCE_SCHEMA_VERSION, profile $GOVERNANCE_PROFILE)"
   [[ "$INSTALL_CLAUDE" == "1" ]]  && echo "[dry-run] Geraria CLAUDE.md"
-  [[ "$INSTALL_GEMINI" == "1" ]]  && echo "[dry-run] Geraria GEMINI.md"
   [[ "$INSTALL_CODEX" == "1" ]]   && echo "[dry-run] Geraria .codex/config.toml"
   [[ "$INSTALL_COPILOT" == "1" ]] && echo "[dry-run] Geraria .github/copilot-instructions.md"
 else
@@ -800,29 +798,6 @@ else
       "CONFIG_LINE_3" "\`.claude/agents/\` sao wrappers leves que delegam para a habilidade canonica." \
       "SECAO_STACK" "$STACK_SECTION")"
     merge_write "$PROJECT_DIR/CLAUDE.md" "$TOOL_OPEN_MD" "$TOOL_CLOSE_MD" "$_claude_content"
-  fi
-
-  if [[ "$INSTALL_GEMINI" == "1" ]]; then
-    render_template "$AI_TOOL_TEMPLATE" \
-      "TOOL_NAME" "Gemini CLI" \
-      "TOOL_INSTRUCTION" "fonte canonica das regras" \
-      "CONFIG_LINE_2" "\`.agents/skills/\` e a fonte de verdade dos fluxos procedurais." \
-      "CONFIG_LINE_3" "\`.gemini/commands/\` sao adaptadores finos que apontam para a habilidade correta." \
-      "SECAO_STACK" "$STACK_SECTION" \
-      > "$PROJECT_DIR/GEMINI.md"
-    # Append Gemini-specific guidance (no hooks/agents support)
-    cat >> "$PROJECT_DIR/GEMINI.md" <<'GEMINI_EXTRA'
-
-## Orientacoes Especificas para Gemini
-
-O Gemini CLI nao suporta hooks, agents ou rules nativos. Para modelar o fluxo de governanca:
-
-1. Ao iniciar uma tarefa, ler `AGENTS.md` e `.agents/skills/agent-governance/SKILL.md` como contexto base antes de editar codigo.
-2. Usar `@<command>` para invocar o comando TOML correspondente a skill desejada.
-3. Seguir as etapas procedurais do SKILL.md carregado pelo comando como se fossem instrucoes sequenciais.
-4. Ao final da tarefa, executar os comandos de validacao descritos na secao Validacao do `AGENTS.md`.
-5. Nao confiar em enforcement automatico — a compliance depende de seguir as instrucoes procedurais manualmente.
-GEMINI_EXTRA
   fi
 
   if [[ "$INSTALL_CODEX" == "1" ]]; then

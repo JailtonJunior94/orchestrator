@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-memoria-duravel-agentes/7.0_execution_report.md
+summary: Fachada durable.Facade como unico ponto de contato do runtime (MemoryPort), wiring opt-in via --durable-memory + durable_memory_enabled propagado nos dois pontos da cascata, Run() reordenado (dispatchSessionPostEnd antes de persistSummary), golden de 6.0 e suite completa verdes sem alteracao de expectativa
+timestamp: 2026-09-11T19:56:37Z

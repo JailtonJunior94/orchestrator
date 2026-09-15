@@ -40,6 +40,8 @@ type InstallOptions struct {
 	CodexProfile           string
 	FocusPaths             []string
 	FollowExternalSymlinks bool
+	Model                  string
+	CheckCodexTrust        bool
 }
 
 // UpgradeOptions agrupa opcoes para o comando upgrade.

@@ -1,0 +1,22 @@
+=== RUN   TestExtractRequirementIDs_UniqueOrdered
+--- PASS: TestExtractRequirementIDs_UniqueOrdered (0.00s)
+=== RUN   TestParseCoverageTable_MapsTaskToRequirements
+--- PASS: TestParseCoverageTable_MapsTaskToRequirements (0.00s)
+=== RUN   TestParseAcceptanceCriteria_ArrowSeparatesTextFromEvidence
+--- PASS: TestParseAcceptanceCriteria_ArrowSeparatesTextFromEvidence (0.00s)
+=== RUN   TestBuildMapAndValidate_FullChainPasses
+--- PASS: TestBuildMapAndValidate_FullChainPasses (0.00s)
+=== RUN   TestValidate_RequirementWithoutTask
+--- PASS: TestValidate_RequirementWithoutTask (0.00s)
+=== RUN   TestValidate_TaskWithoutReport
+--- PASS: TestValidate_TaskWithoutReport (0.00s)
+=== RUN   TestValidate_TaskWithoutCriteria
+--- PASS: TestValidate_TaskWithoutCriteria (0.00s)
+=== RUN   TestValidate_CriterionWithoutEvidence
+--- PASS: TestValidate_CriterionWithoutEvidence (0.00s)
+=== RUN   TestBuildMap_MissingPRDFile
+--- PASS: TestBuildMap_MissingPRDFile (0.00s)
+=== RUN   TestFullPRD_HarnessQuatroClisLoopAprovacao_ChainIsClosedExceptTaskUnderExecution
+--- PASS: TestFullPRD_HarnessQuatroClisLoopAprovacao_ChainIsClosedExceptTaskUnderExecution (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/traceability	0.201s

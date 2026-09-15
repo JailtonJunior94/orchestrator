@@ -22,14 +22,30 @@ set -uo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT" || exit 2
 
+_SPEC_ROOT="${SPEC_PATHS_ROOT:-.specs}"
+
 # Prefixos ancorados na raiz do repositorio. Um token so e tratado como caminho
 # quando comeca por um destes: evita tratar pacote npm, flag de comando ou
 # caminho relativo a outra raiz como referencia deste repositorio.
-_PREFIXES='^(internal|cmd|scripts|docs|tests|evals|deployment|migrations|taskfiles|configs|\.agents|\.claude|\.github|\.codex|\.gemini|\.specs)/'
+_PREFIXES='^(internal|cmd|scripts|docs|tests|evals|deployment|migrations|taskfiles|configs|\.agents|\.claude|\.github|\.codex|\.opencode|\.specs)/'
 
-# Caminhos documentados como opcionais por decisao de arquitetura: existem apenas
-# quando a pessoa opta por cria-los, entao ausencia nao e defeito.
-_OPTIONAL='^(\.agents/config\.yaml|\.claude/config\.yaml|\.claude/settings\.json)$'
+_OPTIONAL='^(\.agents/config\.yaml|\.claude/config\.yaml|\.claude/settings\.json|\.opencode/plugins)$'
+
+planned_paths() {
+  # Caminhos citados no artefato e imediatamente seguidos do marcador
+  # `(planejado)` sao referencias futuras deliberadas: aceitas sem resolver no
+  # repositorio, ao contrario de referencia quebrada por erro.
+  local file="$1"
+  grep -ohE '`[^`]+`[[:space:]]*\(planejado\)' "$file" 2>/dev/null \
+    | sed -E 's/`([^`]*)`[[:space:]]*\(planejado\)/\1/' \
+    | while read -r token; do
+        token="${token%%::*}"
+        token="${token%%:*}"
+        token="${token%/}"
+        [[ -n "$token" ]] || continue
+        printf '%s\n' "$token"
+      done
+}
 
 extract_paths() {
   local file="$1"
@@ -51,14 +67,28 @@ extract_paths() {
   done
 }
 
-prd_dirs=("$@")
+# Array inicializado explicitamente antes de qualquer expansao: bash 3.2 sob
+# `set -u` recusa expansao de array nao inicializado.
+prd_dirs=()
+for _arg in "$@"; do
+  prd_dirs+=("$_arg")
+done
 if [[ ${#prd_dirs[@]} -eq 0 ]]; then
-  mapfile -t prd_dirs < <(find .specs -name 'sdd-state.json' -not -path '*/.checkpoints/*' 2>/dev/null | sed 's|/sdd-state.json||' | sort)
+  # Leitura linha a linha em vez do builtin de bash 4+ para popular array: no
+  # macOS bash 3.2 esse builtin nao existe e, como este script roda sob
+  # `set -uo pipefail` sem `-e`, o erro nao abortava e o gate saia 0 sem
+  # verificar nada. O laco `read` e portavel e preserva conteudo byte-identico,
+  # inclusive caminhos com espaco.
+  while IFS= read -r linha; do
+    prd_dirs+=("$linha")
+  done < <(find "$_SPEC_ROOT" -name 'sdd-state.json' -not -path '*/.checkpoints/*' 2>/dev/null | sed 's|/sdd-state.json||' | sort)
 fi
 
 if [[ ${#prd_dirs[@]} -eq 0 ]]; then
-  echo "Nenhum PRD sob gestao SDD encontrado; nada a verificar."
-  exit 0
+  echo "ESCOPO VAZIO: nenhum PRD ativo encontrado em '$_SPEC_ROOT'." >&2
+  echo "Um gate sem alvo aprova por vacuidade e nao protege artefato nenhum." >&2
+  echo "Informe os diretorios de PRD como argumento ou ajuste SPEC_PATHS_ROOT." >&2
+  exit 1
 fi
 
 missing=0
@@ -67,8 +97,16 @@ for prd in "${prd_dirs[@]}"; do
   for artifact in prd.md techspec.md tasks.md; do
     file="$prd/$artifact"
     [[ -f "$file" ]] || continue
+    planned="
+$(planned_paths "$file")
+"
     while read -r path; do
       [[ -n "$path" ]] || continue
+      case "$planned" in
+        *"
+$path
+"*) continue ;;
+      esac
       checked=$((checked+1))
       if [[ ! -e "$path" ]]; then
         echo "FALTANDO: $file cita caminho inexistente: $path"

@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-quatro-clis-loop-aprovacao/4.4_execution_report.md
+summary: Service.Execute deriva criterios do task file corrente e conduz o approval.Cycle via adaptadores de producao (recordingFinalReviewer/cycleBugfixInvoker/cycleDiffCapturer); task file sem criterios mantem caminho legado; taskloop_test.go/reviewer_test.go intocados
+timestamp: 2026-09-10T22:24:40Z

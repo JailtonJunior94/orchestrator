@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -73,6 +74,16 @@ func (c *Catalog) ValidateAgentFrontmatter(content []byte, dirName string) (Reso
 			Model:           fields["runtime.model"],
 			ReasoningEffort: fields["runtime.reasoning_effort"],
 			AccessMode:      fields["runtime.access_mode"],
+		}
+	}
+
+	if doc.Runtime != nil && doc.Runtime.IDE != "" {
+		if _, resolveErr := skills.NewCatalog().ResolveTool(doc.Runtime.IDE); resolveErr != nil {
+			var removed *skills.RemovedAgentError
+			if errors.As(resolveErr, &removed) {
+				return ResolvedAgent{}, removed
+			}
+			return ResolvedAgent{}, fmt.Errorf("%w: %w: %q", ErrFrontmatterInvalid, ErrIDEUnsupported, doc.Runtime.IDE)
 		}
 	}
 

@@ -23,15 +23,15 @@ Não depende de 1.0: a interface opera sobre `[]byte` nas duas direções e não
 
 ## Subtarefas
 
-- [ ] 2.1 Criar o pacote com `r1_catalog.go` (`type Catalog struct{}` e `func NewCatalog() *Catalog`), conforme a regra R1.
-- [ ] 2.2 Definir `Fato`, `Identidade`, `ChaveSemantica`, `HashConteudo`, `Durabilidade`, `OrigemDeFato`, `Ligacao`, `EstadoFato`, `BlocoHumano`.
-- [ ] 2.3 Declarar as dez sentinelas de erro em arquivo próprio, com `errors.New` e prefixo de pacote.
-- [ ] 2.4 Implementar derivação determinística de chave semântica a partir do sinal estruturado.
-- [ ] 2.5 Implementar `Parse` e `Serializar` com frontmatter via `gopkg.in/yaml.v3`, já dependência direta.
-- [ ] 2.6 Implementar a resolução de camada a partir da durabilidade.
-- [ ] 2.7 Implementar detecção de contradição por colisão de chave com divergência de hash.
-- [ ] 2.8 Declarar `Pagina` em `mockery.yml`, rodar `make mocks`, confirmar `make check-mocks`.
-- [ ] 2.9 Escrever o documento do formato de Página, para que a edição manual seja segura e informada.
+- [x] 2.1 Criar o pacote com `r1_catalog.go` (`type Catalog struct{}` e `func NewCatalog() *Catalog`), conforme a regra R1.
+- [x] 2.2 Definir `Fato`, `Identidade`, `ChaveSemantica`, `HashConteudo`, `Durabilidade`, `OrigemDeFato`, `Ligacao`, `EstadoFato`, `BlocoHumano`.
+- [x] 2.3 Declarar as dez sentinelas de erro em arquivo próprio, com `errors.New` e prefixo de pacote.
+- [x] 2.4 Implementar derivação determinística de chave semântica a partir do sinal estruturado.
+- [x] 2.5 Implementar `Parse` e `Serializar` com frontmatter via `gopkg.in/yaml.v3`, já dependência direta.
+- [x] 2.6 Implementar a resolução de camada a partir da durabilidade.
+- [x] 2.7 Implementar detecção de contradição por colisão de chave com divergência de hash.
+- [x] 2.8 Declarar `Pagina` em `mockery.yml`, rodar `make mocks`, confirmar `make check-mocks`.
+- [x] 2.9 Escrever o documento do formato de Página, para que a edição manual seja segura e informada.
 
 ## Detalhes de Implementação
 
@@ -60,8 +60,8 @@ Nenhuma além das auto-carregadas (governance + linguagem).
 
 ## Testes da Tarefa
 
-- [ ] Testes unitários
-- [ ] Testes de integração
+- [x] Testes unitários
+- [x] Testes de integração
 
 <critical>SEMPRE CRIAR E EXECUTAR TESTES DA TAREFA ANTES DE CONSIDERAR A TAREFA COMO `done`</critical>
 

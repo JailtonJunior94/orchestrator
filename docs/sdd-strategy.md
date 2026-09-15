@@ -6,7 +6,7 @@
 
 ## Premissa
 
-O `ai-spec-harness` é portátil: `ai-spec install <projeto-alvo>` replica o SDD em qualquer repositório suportado, distribuindo skills por symlink ou cópia e gerando adaptadores por ferramenta (Claude, Gemini, Codex, Copilot). O mesmo conjunto de invariantes (`spec-hash`, `execution_report.md`, regex canônicos de `tasks.md`) passa a valer no projeto alvo sem reescrita.
+O `ai-spec-harness` é portátil: `ai-spec install <projeto-alvo>` replica o SDD em qualquer repositório suportado, distribuindo skills por symlink ou cópia e gerando adaptadores por ferramenta (Claude, Codex, Copilot, OpenCode). O mesmo conjunto de invariantes (`spec-hash`, `execution_report.md`, regex canônicos de `tasks.md`) passa a valer no projeto alvo sem reescrita.
 
 ## Por que adotar este SDD em outros projetos
 
@@ -15,7 +15,7 @@ O `ai-spec-harness` é portátil: `ai-spec install <projeto-alvo>` replica o SDD
 | Determinismo procedural | Elimina "requisito esquecido" e "implementação obsoleta" | `spec-hash` SHA-256 ligando PRD → TechSpec → Tasks |
 | Defesa em profundidade | Código não só funciona — segue convenções do projeto | Loop mandatório `Implementação → Validação → Review → Bugfix` |
 | Isolamento de contexto | Reduz alucinações e custo de tokens | Subagentes em `execute-all-tasks` carregam só governance + linguagem |
-| Escalabilidade agnóstica de modelo | Mesmo fluxo em Claude, Gemini, Codex, Copilot | Adaptadores finos; lógica procedural mora nas `SKILL.md` |
+| Escalabilidade agnóstica de modelo | Mesmo fluxo em Claude, Codex, Copilot, OpenCode | Adaptadores finos; lógica procedural mora nas `SKILL.md` |
 | Auditoria nativa | Provar o que foi planejado, executado e validado | `execution_report.md` + `_orchestration_report.md` + `DiffSHA` |
 
 ## Matriz de adoção mínima por tipo de projeto
@@ -25,9 +25,9 @@ Comandos copy-paste por arquétipo de projeto. Ajuste `--tools` conforme as ferr
 | Arquétipo | Comando de instalação | Skills carregadas por execute-task | Observações |
 | :--- | :--- | :--- | :--- |
 | **Monolito Go** | `ai-spec install <path> --source . --tools claude,codex --langs go` | `agent-governance` + `go-implementation` | Caso canônico deste repositório |
-| **Monorepo Node/TS** | `ai-spec install <path> --source . --tools claude,gemini --langs node` | `agent-governance` + `node-implementation` | Carrega `node-implementation` para `.ts/.tsx/.js/.jsx/.mjs` |
+| **Monorepo Node/TS** | `ai-spec install <path> --source . --tools claude,opencode --langs node` | `agent-governance` + `node-implementation` | Carrega `node-implementation` para `.ts/.tsx/.js/.jsx/.mjs` |
 | **Microserviço Python** | `ai-spec install <path> --source . --tools claude --langs python` | `agent-governance` + `python-implementation` | Skill detecta `*.py` no diff |
-| **Repositório poliglota** | `ai-spec install <path> --source . --tools claude,codex,gemini --langs go,node,python` | Skill por linguagem inferida do diff | `execute-task` resolve por arquivos relevantes da task |
+| **Repositório poliglota** | `ai-spec install <path> --source . --tools claude,codex,opencode --langs go,node,python` | Skill por linguagem inferida do diff | `execute-task` resolve por arquivos relevantes da task |
 | **Projeto novo sem stack** | `ai-spec install <path> --source .` + rodar `analyze-project` | Detectado pela skill `analyze-project` | Gera `AGENTS.md` e governança a partir da análise |
 
 > **Pré-requisito comum:** binário `ai-spec` no `PATH` do executor. Sem ele, os gates B2 (`execute-task` e `execute-all-tasks`) param com `needs_input` — comportamento por design, não bug.
@@ -96,7 +96,7 @@ Consulte a [Matriz de Confiabilidade por Ferramenta](tool-reliability-matrix.md)
 | :--- | :--- | :--- |
 | Planejamento conversacional | Claude | Melhor rastreamento de invariantes longas |
 | Execução em lote autônoma | Codex / Claude | Maturidade em loop não interativo |
-| Revisão e segunda opinião | Gemini | Boa diversidade de viés do modelo |
+| Revisão e segunda opinião | OpenCode | Boa diversidade de viés do modelo/provider configurado |
 | Sugestão inline no editor | Copilot | Latência baixa para refactors pontuais |
 
 ## Como ativar o ciclo de feedback contínuo

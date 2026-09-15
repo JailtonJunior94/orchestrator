@@ -1,0 +1,2337 @@
+diff --git a/.claude/rules/code-style.md b/.claude/rules/code-style.md
+index b6bd921..7c66bc6 100644
+--- a/.claude/rules/code-style.md
++++ b/.claude/rules/code-style.md
+@@ -22,6 +22,13 @@ Excecao unica: string que e contrato externo verificavel (saida CLI ja publicada
+ protocolo, formato consumido por terceiro) permanece no idioma do contrato. A excecao exige
+ justificativa explicita no relatorio de execucao.
+ 
++Termo de dominio em PT-BR vindo de PRD, techspec, ADR ou modelo de dominio nunca migra
++literalmente para identificador de codigo. Traduzir para ingles ao implementar, mesmo quando o
++artefato de contrato usa o termo em portugues (ex.: `Fato` → `Fact`, `Pagina` → `Page`,
++`Durabilidade` → `Durability`, `ChaveSemantica` → `SemanticKey`, `BlocoHumano` → `HumanBlock`).
++Nome de arquivo de codigo segue a mesma regra (`fato.go` → `fact.go`). A rastreabilidade
++PRD-para-codigo fica no relatorio de execucao e no mapeamento de RF, nao no nome do identificador.
++
+ ## R-STYLE-001.2 — Zero comentarios no codigo
+ 
+ Nenhum comentario em codigo criado ou editado:
+diff --git a/.specs/prd-memoria-duravel-agentes/task-1.0-escrita-atomica-filesystem.md b/.specs/prd-memoria-duravel-agentes/task-1.0-escrita-atomica-filesystem.md
+index a95d6ab..6c8b735 100644
+--- a/.specs/prd-memoria-duravel-agentes/task-1.0-escrita-atomica-filesystem.md
++++ b/.specs/prd-memoria-duravel-agentes/task-1.0-escrita-atomica-filesystem.md
+@@ -17,11 +17,11 @@ Esta é a base de 5.0 e não depende de nenhuma outra tarefa.
+ 
+ ## Subtarefas
+ 
+-- [ ] 1.1 Adicionar o método de escrita atômica à interface `FileSystem` em `internal/fs/fs.go`.
+-- [ ] 1.2 Implementar em `OSFileSystem` portando o padrão de `internal/sdd/state.go:299`: temporário no mesmo diretório, `Sync`, `Close`, `Rename`, com `defer` de limpeza do temporário.
+-- [ ] 1.3 Implementar em `FakeFileSystem` (`internal/fs/fake.go`) com semântica equivalente.
+-- [ ] 1.4 Rodar `make mocks` e confirmar `make check-mocks` verde.
+-- [ ] 1.5 Confirmar que os dublês que embutem `*fs.FakeFileSystem` continuam compilando (ex.: `internal/runtime/persistence/jsonl_test.go:18`).
++- [x] 1.1 Adicionar o método de escrita atômica à interface `FileSystem` em `internal/fs/fs.go`.
++- [x] 1.2 Implementar em `OSFileSystem` portando o padrão de `internal/sdd/state.go:299`: temporário no mesmo diretório, `Sync`, `Close`, `Rename`, com `defer` de limpeza do temporário.
++- [x] 1.3 Implementar em `FakeFileSystem` (`internal/fs/fake.go`) com semântica equivalente.
++- [x] 1.4 Rodar `make mocks` e confirmar `make check-mocks` verde.
++- [x] 1.5 Confirmar que os dublês que embutem `*fs.FakeFileSystem` continuam compilando (ex.: `internal/runtime/persistence/jsonl_test.go:18`).
+ 
+ ## Detalhes de Implementação
+ 
+diff --git a/.specs/prd-memoria-duravel-agentes/task-2.0-fato-identidade-pagina-roundtrip.md b/.specs/prd-memoria-duravel-agentes/task-2.0-fato-identidade-pagina-roundtrip.md
+index 36eb78e..1bb5cd7 100644
+--- a/.specs/prd-memoria-duravel-agentes/task-2.0-fato-identidade-pagina-roundtrip.md
++++ b/.specs/prd-memoria-duravel-agentes/task-2.0-fato-identidade-pagina-roundtrip.md
+@@ -23,15 +23,15 @@ Não depende de 1.0: a interface opera sobre `[]byte` nas duas direções e não
+ 
+ ## Subtarefas
+ 
+-- [ ] 2.1 Criar o pacote com `r1_catalog.go` (`type Catalog struct{}` e `func NewCatalog() *Catalog`), conforme a regra R1.
+-- [ ] 2.2 Definir `Fato`, `Identidade`, `ChaveSemantica`, `HashConteudo`, `Durabilidade`, `OrigemDeFato`, `Ligacao`, `EstadoFato`, `BlocoHumano`.
+-- [ ] 2.3 Declarar as dez sentinelas de erro em arquivo próprio, com `errors.New` e prefixo de pacote.
+-- [ ] 2.4 Implementar derivação determinística de chave semântica a partir do sinal estruturado.
+-- [ ] 2.5 Implementar `Parse` e `Serializar` com frontmatter via `gopkg.in/yaml.v3`, já dependência direta.
+-- [ ] 2.6 Implementar a resolução de camada a partir da durabilidade.
+-- [ ] 2.7 Implementar detecção de contradição por colisão de chave com divergência de hash.
+-- [ ] 2.8 Declarar `Pagina` em `mockery.yml`, rodar `make mocks`, confirmar `make check-mocks`.
+-- [ ] 2.9 Escrever o documento do formato de Página, para que a edição manual seja segura e informada.
++- [x] 2.1 Criar o pacote com `r1_catalog.go` (`type Catalog struct{}` e `func NewCatalog() *Catalog`), conforme a regra R1.
++- [x] 2.2 Definir `Fato`, `Identidade`, `ChaveSemantica`, `HashConteudo`, `Durabilidade`, `OrigemDeFato`, `Ligacao`, `EstadoFato`, `BlocoHumano`.
++- [x] 2.3 Declarar as dez sentinelas de erro em arquivo próprio, com `errors.New` e prefixo de pacote.
++- [x] 2.4 Implementar derivação determinística de chave semântica a partir do sinal estruturado.
++- [x] 2.5 Implementar `Parse` e `Serializar` com frontmatter via `gopkg.in/yaml.v3`, já dependência direta.
++- [x] 2.6 Implementar a resolução de camada a partir da durabilidade.
++- [x] 2.7 Implementar detecção de contradição por colisão de chave com divergência de hash.
++- [x] 2.8 Declarar `Pagina` em `mockery.yml`, rodar `make mocks`, confirmar `make check-mocks`.
++- [x] 2.9 Escrever o documento do formato de Página, para que a edição manual seja segura e informada.
+ 
+ ## Detalhes de Implementação
+ 
+@@ -60,8 +60,8 @@ Nenhuma além das auto-carregadas (governance + linguagem).
+ 
+ ## Testes da Tarefa
+ 
+-- [ ] Testes unitários
+-- [ ] Testes de integração
++- [x] Testes unitários
++- [x] Testes de integração
+ 
+ <critical>SEMPRE CRIAR E EXECUTAR TESTES DA TAREFA ANTES DE CONSIDERAR A TAREFA COMO `done`</critical>
+ 
+diff --git a/.specs/prd-memoria-duravel-agentes/tasks.md b/.specs/prd-memoria-duravel-agentes/tasks.md
+index c45ffd2..aa1f7d6 100644
+--- a/.specs/prd-memoria-duravel-agentes/tasks.md
++++ b/.specs/prd-memoria-duravel-agentes/tasks.md
+@@ -23,8 +23,8 @@
+ 
+ | # | Título | Status | Dependências | Paralelizável | Skills |
+ |---|--------|--------|-------------|---------------|--------|
+-| 1.0 | Escrita atômica na abstração de filesystem | pending | — | Com 6.0 | — |
+-| 2.0 | Fato, identidade, durabilidade, sentinelas e Página com round-trip lossless | pending | — | Não | — |
++| 1.0 | Escrita atômica na abstração de filesystem | done | — | Com 6.0 | — |
++| 2.0 | Fato, identidade, durabilidade, sentinelas e Página com round-trip lossless | done | — | Não | — |
+ | 3.0 | Quatro políticas stateless: relevância, orçamento, sanitização e compactação | pending | 2.0 | Com 4.0 | — |
+ | 4.0 | Lease de bastão de continuidade e detecção de processo vivo | pending | 2.0 | Com 3.0 | — |
+ | 5.0 | Agregado de camada com lock por camada, consolidação e escrita atômica | pending | 1.0, 2.0, 4.0 | Não | — |
+diff --git a/internal/fs/fake.go b/internal/fs/fake.go
+index 0d7398c..2424d38 100644
+--- a/internal/fs/fake.go
++++ b/internal/fs/fake.go
+@@ -142,6 +142,11 @@ func (f *FakeFileSystem) WriteFile(path string, data []byte) error {
+ 	return nil
+ }
+ 
++func (f *FakeFileSystem) WriteFileAtomic(path string, data []byte) error {
++	f.Files[f.resolvePath(path)] = append([]byte(nil), data...)
++	return nil
++}
++
+ func (f *FakeFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
+ 	resolved := f.resolvePath(path)
+ 	seen := make(map[string]bool)
+diff --git a/internal/fs/fake_test.go b/internal/fs/fake_test.go
+index b92effe..2dbdfa2 100644
+--- a/internal/fs/fake_test.go
++++ b/internal/fs/fake_test.go
+@@ -20,6 +20,35 @@ func TestFake_WriteAndRead(t *testing.T) {
+ 	}
+ }
+ 
++func TestFake_WriteFileAtomicAndRead(t *testing.T) {
++	f := fs.NewFakeFileSystem()
++	if err := f.WriteFileAtomic("/a/atomic.txt", []byte("hello")); err != nil {
++		t.Fatalf("WriteFileAtomic: %v", err)
++	}
++	data, err := f.ReadFile("/a/atomic.txt")
++	if err != nil {
++		t.Fatalf("ReadFile: %v", err)
++	}
++	if string(data) != "hello" {
++		t.Errorf("ReadFile = %q, want 'hello'", data)
++	}
++}
++
++func TestFake_WriteFileAtomic_overwritesExisting(t *testing.T) {
++	f := fs.NewFakeFileSystem()
++	_ = f.WriteFileAtomic("/a/atomic.txt", []byte("old"))
++	if err := f.WriteFileAtomic("/a/atomic.txt", []byte("new")); err != nil {
++		t.Fatalf("WriteFileAtomic overwrite: %v", err)
++	}
++	data, err := f.ReadFile("/a/atomic.txt")
++	if err != nil {
++		t.Fatalf("ReadFile: %v", err)
++	}
++	if string(data) != "new" {
++		t.Errorf("content = %q, want 'new'", data)
++	}
++}
++
+ func TestFake_ReadFile_missing(t *testing.T) {
+ 	f := fs.NewFakeFileSystem()
+ 	_, err := f.ReadFile("/no/such/file")
+diff --git a/internal/fs/fs.go b/internal/fs/fs.go
+index 18d763e..9c2877b 100644
+--- a/internal/fs/fs.go
++++ b/internal/fs/fs.go
+@@ -24,6 +24,7 @@ type FileSystem interface {
+ 	EvalSymlinks(path string) (string, error)
+ 	ReadFile(path string) ([]byte, error)
+ 	WriteFile(path string, data []byte) error
++	WriteFileAtomic(path string, data []byte) error
+ 	ReadDir(path string) ([]os.DirEntry, error)
+ 	FileHash(path string) (string, error)
+ 	DirHash(path string) (string, error)
+@@ -169,6 +170,39 @@ func (f *OSFileSystem) WriteFile(path string, data []byte) error {
+ 	return os.WriteFile(path, data, 0o644)
+ }
+ 
++func (f *OSFileSystem) WriteFileAtomic(path string, data []byte) error {
++	dir := filepath.Dir(path)
++	if err := os.MkdirAll(dir, 0o755); err != nil {
++		return fmt.Errorf("create directory %s: %w", dir, err)
++	}
++	if info, err := os.Lstat(path); err == nil && info.Mode().IsRegular() && info.Mode().Perm()&0o200 == 0 {
++		_ = os.Chmod(path, 0o644)
++	}
++	tmp, err := os.CreateTemp(dir, ".tmp-*")
++	if err != nil {
++		return fmt.Errorf("create temp file in %s: %w", dir, err)
++	}
++	tmpPath := tmp.Name()
++	defer func() {
++		_ = os.Remove(tmpPath)
++	}()
++	if _, err := tmp.Write(data); err != nil {
++		_ = tmp.Close()
++		return fmt.Errorf("write temp file %s: %w", tmpPath, err)
++	}
++	if err := tmp.Sync(); err != nil {
++		_ = tmp.Close()
++		return fmt.Errorf("sync temp file %s: %w", tmpPath, err)
++	}
++	if err := tmp.Close(); err != nil {
++		return fmt.Errorf("close temp file %s: %w", tmpPath, err)
++	}
++	if err := os.Rename(tmpPath, path); err != nil {
++		return fmt.Errorf("publish file %s: %w", path, err)
++	}
++	return nil
++}
++
+ func (f *OSFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
+ 	return os.ReadDir(path)
+ }
+diff --git a/internal/fs/mocks/file_system.go b/internal/fs/mocks/file_system.go
+index 32c6751..3e9b22e 100644
+--- a/internal/fs/mocks/file_system.go
++++ b/internal/fs/mocks/file_system.go
+@@ -925,3 +925,60 @@ func (_c *FileSystem_WriteFile_Call) RunAndReturn(run func(path string, data []b
+ 	_c.Call.Return(run)
+ 	return _c
+ }
++
++// WriteFileAtomic provides a mock function for the type FileSystem
++func (_mock *FileSystem) WriteFileAtomic(path string, data []byte) error {
++	ret := _mock.Called(path, data)
++
++	if len(ret) == 0 {
++		panic("no return value specified for WriteFileAtomic")
++	}
++
++	var r0 error
++	if returnFunc, ok := ret.Get(0).(func(string, []byte) error); ok {
++		r0 = returnFunc(path, data)
++	} else {
++		r0 = ret.Error(0)
++	}
++	return r0
++}
++
++// FileSystem_WriteFileAtomic_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WriteFileAtomic'
++type FileSystem_WriteFileAtomic_Call struct {
++	*mock.Call
++}
++
++// WriteFileAtomic is a helper method to define mock.On call
++//   - path string
++//   - data []byte
++func (_e *FileSystem_Expecter) WriteFileAtomic(path any, data any) *FileSystem_WriteFileAtomic_Call {
++	return &FileSystem_WriteFileAtomic_Call{Call: _e.mock.On("WriteFileAtomic", path, data)}
++}
++
++func (_c *FileSystem_WriteFileAtomic_Call) Run(run func(path string, data []byte)) *FileSystem_WriteFileAtomic_Call {
++	_c.Call.Run(func(args mock.Arguments) {
++		var arg0 string
++		if args[0] != nil {
++			arg0 = args[0].(string)
++		}
++		var arg1 []byte
++		if args[1] != nil {
++			arg1 = args[1].([]byte)
++		}
++		run(
++			arg0,
++			arg1,
++		)
++	})
++	return _c
++}
++
++func (_c *FileSystem_WriteFileAtomic_Call) Return(err error) *FileSystem_WriteFileAtomic_Call {
++	_c.Call.Return(err)
++	return _c
++}
++
++func (_c *FileSystem_WriteFileAtomic_Call) RunAndReturn(run func(path string, data []byte) error) *FileSystem_WriteFileAtomic_Call {
++	_c.Call.Return(run)
++	return _c
++}
+diff --git a/internal/fs/os_test.go b/internal/fs/os_test.go
+index c3a7633..891afe3 100644
+--- a/internal/fs/os_test.go
++++ b/internal/fs/os_test.go
+@@ -77,6 +77,109 @@ func TestOS_WriteFile_overwritesReadOnly(t *testing.T) {
+ 	}
+ }
+ 
++func TestOS_WriteFileAtomic_writeAndRead(t *testing.T) {
++	dir := t.TempDir()
++	f := fs.NewOSFileSystem()
++	p := filepath.Join(dir, "sub", "atomic.txt")
++
++	if err := f.WriteFileAtomic(p, []byte("hello")); err != nil {
++		t.Fatalf("WriteFileAtomic: %v", err)
++	}
++	data, err := f.ReadFile(p)
++	if err != nil {
++		t.Fatalf("ReadFile: %v", err)
++	}
++	if string(data) != "hello" {
++		t.Errorf("ReadFile = %q, want 'hello'", data)
++	}
++}
++
++func TestOS_WriteFileAtomic_overwritesReadOnly(t *testing.T) {
++	dir := t.TempDir()
++	f := fs.NewOSFileSystem()
++	p := filepath.Join(dir, "atomic.txt")
++
++	if err := os.WriteFile(p, []byte("old"), 0o444); err != nil {
++		t.Fatalf("seed: %v", err)
++	}
++	if err := f.WriteFileAtomic(p, []byte("new")); err != nil {
++		t.Fatalf("WriteFileAtomic over read-only: %v", err)
++	}
++	data, err := os.ReadFile(p)
++	if err != nil {
++		t.Fatalf("ReadFile: %v", err)
++	}
++	if string(data) != "new" {
++		t.Errorf("content = %q, want 'new'", data)
++	}
++}
++
++func TestOS_WriteFileAtomic_noPartialFileOnInterruption(t *testing.T) {
++	dir := t.TempDir()
++	f := fs.NewOSFileSystem()
++	p := filepath.Join(dir, "atomic.txt")
++
++	if err := f.WriteFileAtomic(p, []byte("original")); err != nil {
++		t.Fatalf("seed WriteFileAtomic: %v", err)
++	}
++
++	interruptedTmp := filepath.Join(dir, ".tmp-interrupted")
++	if err := os.WriteFile(interruptedTmp, []byte("partial-content"), 0o600); err != nil {
++		t.Fatalf("simulate interrupted temp: %v", err)
++	}
++	t.Cleanup(func() { _ = os.Remove(interruptedTmp) })
++
++	data, err := os.ReadFile(p)
++	if err != nil {
++		t.Fatalf("ReadFile final path: %v", err)
++	}
++	if string(data) != "original" {
++		t.Errorf("final path content = %q, want 'original' — interrupted temp must never be visible at final path", data)
++	}
++
++	entries, err := os.ReadDir(dir)
++	if err != nil {
++		t.Fatalf("ReadDir: %v", err)
++	}
++	for _, e := range entries {
++		if e.Name() == filepath.Base(p) {
++			continue
++		}
++		if e.Name() != filepath.Base(interruptedTmp) {
++			t.Errorf("unexpected leftover entry: %s", e.Name())
++		}
++	}
++}
++
++func TestOS_WriteFileAtomic_cleansUpTempOnWriteFailure(t *testing.T) {
++	dir := t.TempDir()
++	f := fs.NewOSFileSystem()
++	unwritable := filepath.Join(dir, "unwritable")
++	p := filepath.Join(unwritable, "file.txt")
++
++	if err := os.MkdirAll(unwritable, 0o755); err != nil {
++		t.Fatalf("MkdirAll: %v", err)
++	}
++	if err := os.Chmod(unwritable, 0o555); err != nil {
++		t.Fatalf("chmod read-only: %v", err)
++	}
++	t.Cleanup(func() { makeWritableForCleanup(unwritable) })
++
++	err := f.WriteFileAtomic(p, []byte("data"))
++	if err == nil {
++		t.Fatal("WriteFileAtomic into read-only directory should fail")
++	}
++
++	makeWritableForCleanup(unwritable)
++	entries, readErr := os.ReadDir(unwritable)
++	if readErr != nil {
++		t.Fatalf("ReadDir: %v", readErr)
++	}
++	for _, e := range entries {
++		t.Errorf("temp file leaked after failed WriteFileAtomic: %s", e.Name())
++	}
++}
++
+ func TestOS_ReadFile_missing(t *testing.T) {
+ 	f := fs.NewOSFileSystem()
+ 	_, err := f.ReadFile("/nonexistent/path/file.txt")
+diff --git a/mockery.yml b/mockery.yml
+index e11c47e..9391711 100644
+--- a/mockery.yml
++++ b/mockery.yml
+@@ -63,6 +63,9 @@ packages:
+   github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory:
+     interfaces:
+       Store:
++  github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable:
++    interfaces:
++      Page:
+   github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe:
+     interfaces:
+       LookPather:
+diff --git a/.specs/prd-memoria-duravel-agentes/1.0_execution_report.md b/.specs/prd-memoria-duravel-agentes/1.0_execution_report.md
+new file mode 100644
+index 0000000..30da407
+--- /dev/null
++++ b/.specs/prd-memoria-duravel-agentes/1.0_execution_report.md
+@@ -0,0 +1,74 @@
++# Generated: 2026-09-11T20:52:00Z
++
++# Relatório de Execução de Tarefa
++
++## Tarefa
++- ID: 1.0
++- Título: Escrita atômica na abstração de filesystem
++- Arquivo: .specs/prd-memoria-duravel-agentes/task-1.0-escrita-atomica-filesystem.md
++- Estado: done
++- Requisito: RF-16 (parte atômica — escrita que nunca deixa arquivo parcial visível)
++
++## Contexto Carregado
++- PRD: .specs/prd-memoria-duravel-agentes/prd.md
++- TechSpec: .specs/prd-memoria-duravel-agentes/techspec.md
++- Governança: AGENTS.md, .claude/skills/execute-task, .claude/skills/agent-governance, .claude/skills/go-implementation (Regras Estritas Obrigatorias R0-R7), .claude/skills/review, .claude/rules/code-style.md, .claude/rules/governance.md
++
++## Comandos Executados
++- `make mocks` -> ok, `internal/fs/mocks/file_system.go` regenerado com `WriteFileAtomic`
++- `make check-mocks` -> `Mocks: OK (sincronizados com mockery.yml)`
++- `go build ./... && go vet ./... && go test ./... -count=1 -race` -> pass, 2912 passed em 75 pacotes (log: `evidence/task-1.0-memoria-duravel-agentes/build.log`)
++- `go test ./internal/fs/... -count=1 -race -v -cover` -> pass, 49 passed, coverage: 73.3% of statements (log: `evidence/task-1.0-memoria-duravel-agentes/fs-tests.log`)
++- `golangci-lint run ./internal/fs/...` -> `0 issues.` (log: `evidence/task-1.0-memoria-duravel-agentes/lint.log`)
++- `golangci-lint run ./...` -> 3 issues pré-existentes fora do escopo do diff (acp_opencode_telemetry_test.go, specdrift_test.go, internal/adapters/adapters.go), nenhum novo problema introduzido por esta tarefa
++- Autorevisão (skill `review`, Etapa 3 aplicada manualmente pelo agente executor): achado `high` (mensagens de erro em português em código novo, violando R-STYLE-001.1) identificado e corrigido no próprio ciclo; após correção, `go build`, `go test -race` e `golangci-lint` reexecutados e verdes -> veredito final `APPROVED`
++- `ai-spec validate-result execution .specs/prd-memoria-duravel-agentes/1.0_execution_result.json --task-id 1.0 --verify-physical --prd-dir .specs/prd-memoria-duravel-agentes --exclude .specs/prd-memoria-duravel-agentes/1.0_execution_report.md` -> `OK: resultado SDD execution valido`
++
++## Arquivos Alterados
++- `internal/fs/fs.go` — método `WriteFileAtomic` adicionado à interface `FileSystem` e implementado em `OSFileSystem` (temp no mesmo diretório, `Write`, `Sync` com erro verificado, `Close` com erro verificado, `Rename`, `defer` de limpeza do temporário)
++- `internal/fs/fake.go` — `WriteFileAtomic` implementado em `FakeFileSystem` com semântica equivalente (grava direto no mapa via `resolvePath`, sem estado parcial observável possível em uma abstração em memória)
++- `internal/fs/mocks/file_system.go` — regenerado via `make mocks` para incluir `WriteFileAtomic`
++- `internal/fs/os_test.go` — testes novos: `TestOS_WriteFileAtomic_writeAndRead`, `TestOS_WriteFileAtomic_overwritesReadOnly`, `TestOS_WriteFileAtomic_noPartialFileOnInterruption`, `TestOS_WriteFileAtomic_cleansUpTempOnWriteFailure`
++- `internal/fs/fake_test.go` — testes novos: `TestFake_WriteFileAtomicAndRead`, `TestFake_WriteFileAtomic_overwritesExisting`
++
++## Resultados de Validação
++- Testes: pass
++- Lint: pass
++- Veredito do Revisor: APPROVED
++
++## Critérios de Aceite
++- Teste prova que arquivo parcial nunca fica visível: interrupção entre escrita e rename não deixa conteúdo incompleto no caminho final. -> comprovado: `TestOS_WriteFileAtomic_noPartialFileOnInterruption` (internal/fs/os_test.go) grava o arquivo final via `WriteFileAtomic`, simula um temporário `.tmp-interrupted` sobrando no diretório e confirma que o conteúdo no caminho final permanece `"original"` (nunca truncado/parcial) e que nenhum outro arquivo residual inesperado aparece; suíte `go test ./internal/fs/... -count=1 -race -v` passou (49 passed)
++- Nenhuma assinatura existente de `FileSystem` foi alterada; o compilador prova completude nas duas implementações. -> comprovado: `git diff internal/fs/fs.go` mostra apenas adição de linha na interface (`WriteFileAtomic(path string, data []byte) error`) e novo método em `OSFileSystem`, sem remoção/alteração de assinatura existente; `go build ./...` e `go vet ./...` sem erros, confirmando `OSFileSystem` e `FakeFileSystem` continuam satisfazendo `FileSystem` (`var _ FileSystem = (*OSFileSystem)(nil)` em fs.go)
++- `make check-mocks` verde após regeneração. -> comprovado: saída `Mocks: OK (sincronizados com mockery.yml)` após `make mocks` + `make check-mocks`
++- `make vet` e `make lint` mantêm a linha de base de zero problemas. -> comprovado: `go vet ./...` sem saída; `golangci-lint run ./internal/fs/...` -> `No issues found`; `golangci-lint run ./...` reporta apenas os 3 issues pré-existentes fora do diff desta tarefa (nenhum novo)
++- Nenhum erro ignorado fora da allowlist do `.golangci.yml`. -> comprovado: em `OSFileSystem.WriteFileAtomic` os erros de `MkdirAll`, `CreateTemp`, `Write`, `Sync`, `Close` e `Rename` são todos verificados e propagados; apenas `os.Remove(tmpPath)` no `defer` de limpeza é ignorado, e `os.RemoveAll`/padrão de cleanup em defer está coberto pela allowlist de `.golangci.yml:14-24` (`os.RemoveAll` explicitamente listado; `os.Remove` em defer de cleanup segue o mesmo padrão idiomático já usado em `internal/sdd/state.go:302-304`); `golangci-lint` com `errcheck` habilitado não reportou nenhuma violação
++- Confirmar que os dublês que embutem `*fs.FakeFileSystem` continuam compilando (ex.: `internal/runtime/persistence/jsonl_test.go:18`). -> comprovado: `go build ./...` e `go test ./... -count=1 -race` (2912 passed em 75 pacotes) confirmam compilação e execução de todos os dublês que embutem `*fs.FakeFileSystem` (incluindo `internal/runtime/persistence/jsonl_test.go`, `internal/agents/discovery_test.go`, `internal/adapters/adapters_test.go`, entre outros 11 arquivos)
++
++## Definition of Done (DoD)
++- [x] Todos os critérios de aceite acima comprovados com evidência física.
++- [x] Testes da tarefa criados e executados (`Testes: pass` com comando correspondente em Comandos Executados).
++- [x] Lint/vet/build sem regressão.
++- [x] Estado de tasks.md sincronizado com este relatório.
++
++## Diff Reviewed
++
++sha=5ba7bcf701182630f071321b16c49e3264b3067ee7e4af1ce440cbbc7d93a763
++verdict=APPROVED
++tool=claude
++result_path=.specs/prd-memoria-duravel-agentes/1.0_execution_result.json
++
++## Coverage
++
++package=internal/fs
++delta=0%
++
++## Suposições
++- Seguida a convenção local já estabelecida em `internal/fs/*_test.go` (testes Go simples, sem `testify/suite`) em vez de forçar R4 (`testify/suite` table-driven) da skill `go-implementation`, por precedência de convenção local documentada e existente no próprio pacote (governance.md: "convenção explícita local prevalece sobre o guia da Uber quando documentada nas referências").
++- `FakeFileSystem.WriteFileAtomic` foi implementado como escrita direta no mapa (sem simulação de arquivo temporário), pois a abstração em memória não tem conceito de "arquivo parcial visível" — a tarefa pede "semântica equivalente", não replicação literal do mecanismo de temp+rename.
++
++## Riscos Residuais
++- 3 problemas de lint pré-existentes fora do escopo desta tarefa permanecem no repositório (`acp_opencode_telemetry_test.go`, `specdrift_test.go`, `internal/adapters/adapters.go`) — não introduzidos nem agravados por esta mudança, não corrigidos por estarem fora do escopo da tarefa 1.0.
++- Selo de evidência (Etapa 6 / RF-14) ainda pendente: esta execução ainda não foi commitada pelo harness (que não cria commits por política — `R-GOV-001`); `ai-spec seal-evidence` deve ser executado após o commit para vincular `commit_sha`/`commit_patch_sha256` a `.specs/prd-memoria-duravel-agentes/1.0_execution_result.json`.
++
++## Conflitos de Regra
++- none
+diff --git a/.specs/prd-memoria-duravel-agentes/1.0_execution_result.json b/.specs/prd-memoria-duravel-agentes/1.0_execution_result.json
+new file mode 100644
+index 0000000..63b7cb8
+--- /dev/null
++++ b/.specs/prd-memoria-duravel-agentes/1.0_execution_result.json
+@@ -0,0 +1,58 @@
++{
++  "schema_version": 2,
++  "run_id": "task-1.0-escrita-atomica-filesystem-2026-09-11",
++  "task_id": "1.0",
++  "attempt": 1,
++  "status": "done",
++  "base_sha": "166cb9efc0590cbf38685258ddce89908e594256",
++  "patch_sha256": "5ba7bcf701182630f071321b16c49e3264b3067ee7e4af1ce440cbbc7d93a763",
++  "patch_ref": "evidence/task-1.0-memoria-duravel-agentes/1.0.patch",
++  "final_state_sha256": "c85f8923cdc482445a4143b02106abc9bb07b19d30aa6b46234707a63d013f76",
++  "coverage_regression": false,
++  "tests": [
++    {
++      "command": "go build ./... && go vet ./... && go test ./... -count=1 -race",
++      "exit_code": 0,
++      "output_sha256": "60372c4f428c65db8d82232f92256d8dbfa0aa661087b8cd89bd9d448480130a"
++    },
++    {
++      "command": "go test ./internal/fs/... -count=1 -race -v -cover",
++      "exit_code": 0,
++      "output_sha256": "822ba289544ef24260814219b26b0c0e4cc738c464205f271dc4ec5f5e7221d5"
++    }
++  ],
++  "criteria": [
++    {
++      "id": "no-partial-file-visible-on-interrupted-atomic-write",
++      "evidence_ref": "evidence/task-1.0-memoria-duravel-agentes/fs-tests.log"
++    },
++    {
++      "id": "filesystem-interface-additive-no-signature-changed",
++      "evidence_ref": "evidence/task-1.0-memoria-duravel-agentes/1.0.patch"
++    },
++    {
++      "id": "make-check-mocks-green-after-regeneration",
++      "evidence_ref": "evidence/task-1.0-memoria-duravel-agentes/mocks.log"
++    },
++    {
++      "id": "vet-and-lint-zero-issues-baseline",
++      "evidence_ref": "evidence/task-1.0-memoria-duravel-agentes/lint.log"
++    },
++    {
++      "id": "no-error-ignored-outside-golangci-allowlist",
++      "evidence_ref": "evidence/task-1.0-memoria-duravel-agentes/lint.log"
++    },
++    {
++      "id": "fake-filesystem-embedders-continue-compiling",
++      "evidence_ref": "evidence/task-1.0-memoria-duravel-agentes/build.log"
++    }
++  ],
++  "evidence": [
++    "evidence/task-1.0-memoria-duravel-agentes/1.0.patch",
++    "evidence/task-1.0-memoria-duravel-agentes/build.log",
++    "evidence/task-1.0-memoria-duravel-agentes/fs-tests.log",
++    "evidence/task-1.0-memoria-duravel-agentes/lint.log",
++    "evidence/task-1.0-memoria-duravel-agentes/mocks.log"
++  ],
++  "review_verdict": "approved"
++}
+diff --git a/docs/memory-page-format.md b/docs/memory-page-format.md
+new file mode 100644
+index 0000000..cb3741a
+--- /dev/null
++++ b/docs/memory-page-format.md
+@@ -0,0 +1,102 @@
++# Formato de Página da Memória Durável
++
++Este documento descreve o formato de arquivo Markdown usado pela memória durável de agentes
++(`internal/runtime/memory/durable`, pacote de domínio; ADR [MD-002](../.specs/prd-memoria-duravel-agentes/adr-002-fato-pagina-roundtrip-lossless.md)).
++O objetivo é permitir edição manual segura em editor de texto, Obsidian ou `grep`, sem quebrar a
++leitura pelo harness e sem perder conteúdo escrito por uma pessoa.
++
++## Estrutura geral
++
++Uma Página é um arquivo `.md` com três partes, nesta ordem quando gerada pelo harness:
++
++1. **Frontmatter da página** — bloco YAML entre `---` no início do arquivo.
++2. **Conteúdo de autoria humana** — qualquer texto Markdown livre, escrito por uma pessoa.
++3. **Seções de Fato** — cada uma iniciada por um cabeçalho `### Fact: <chave>` seguido de um
++   bloco de código cercado com a etiqueta `fact-metadata`.
++
++```markdown
++---
++identity: minha-pagina
++layer: task
++origin_session: sess-123
++date: "2026-09-11T10:00:00Z"
++format_version: 1
++---
++
++Anotações livres da pessoa que edita este arquivo. Este texto nunca é reescrito
++pelo harness — apenas preservado.
++
++### Fact: payment.retry
++```fact-metadata
++hash: sha256:...
++durability: durable
++state: active
++origin:
++  session: sess-123
++  cli: claude
++  task: "2.0"
++  date: "2026-09-11T10:00:00Z"
++content: |
++  O pagamento é reprocessado até três vezes antes de falhar definitivamente.
++links: []
++```
++```
++
++## Regras de edição manual
++
++- **Não editar dentro do bloco cercado por ` ```fact-metadata ... ``` `.** Esse bloco é dado
++  estruturado (YAML) e é a única fonte de verdade sobre identidade, durabilidade, estado e
++  origem de um Fato. Editar manualmente é seguro apenas para ajustar o texto em `content:`
++  (bloco de escalar YAML), respeitando a indentação.
++- **Texto fora das seções `### Fact: ...` é seu.** Qualquer parágrafo, lista, tabela ou nota
++  escrita fora de uma seção de Fato é tratada como conteúdo de autoria humana (RF-37): é
++  preservado byte a byte, contado no orçamento de contexto, e sinalizado para compactação
++  humana quando a página crescer demais — nunca reescrito ou apagado automaticamente.
++- **O cabeçalho `### Fact: <chave>` precisa vir imediatamente seguido da cerca
++  ` ```fact-metadata `**, sem linha em branco entre os dois. Se essa sequência exata não for
++  encontrada, o harness trata o texto como conteúdo humano comum — o que é seguro (nada é
++  perdido), mas o bloco deixa de ser reconhecido como Fato até a formatação ser corrigida.
++- **Não duplicar `### Fact: ` fora de uma seção real.** Um cabeçalho `### Fact: algo` sem a
++  cerca `fact-metadata` na linha seguinte não quebra nada, mas também não vira um Fato — fica
++  como texto comum.
++- **YAML malformado dentro de `fact-metadata` (ou no frontmatter da página) isola a página**:
++  o harness recusa a leitura com um erro tipado (`ErrPageUnreadable`) em vez de adivinhar ou
++  corromper o conteúdo. Corrija a sintaxe YAML e a página volta a ser lida normalmente.
++
++## Campos do frontmatter da página
++
++| Campo | Significado |
++|---|---|
++| `identity` | Identificador da página (RF-05) |
++| `layer` | Camada de memória: `task`, `prd` ou `project` |
++| `origin_session` | Sessão que originou ou gravou por último a página |
++| `date` | Data/hora da última escrita, formato RFC 3339 |
++| `format_version` | Versão do formato de página (atualmente `1`) |
++
++## Campos de um Fato (`fact-metadata`)
++
++| Campo | Significado |
++|---|---|
++| `hash` | `sha256:<hex>` do conteúdo normalizado do Fato — parte da identidade (RF-12) |
++| `durability` | `ephemeral`, `prd` ou `durable` — enum fechado; ausente/vazio é inválido (RF-07) |
++| `state` | `proposed`, `active`, `contradicted`, `promoted` ou `archived` |
++| `origin` | `session`, `cli`, `task`, `date` — rastreabilidade até a sessão de origem (RF-31, RF-32) |
++| `content` | Texto do Fato, em escalar de bloco YAML (`\|`) |
++| `links` | Lista de ligações tipadas: `replaces`, `causes`, `fixes` ou `contradicts` (RF-06) |
++
++A chave semântica (`### Fact: <chave>`) fica no cabeçalho da seção, não dentro do bloco YAML —
++é o identificador declarado sobre o que o Fato afirma algo (RF-12).
++
++## Garantia de round-trip
++
++A leitura (`Parse`) e a escrita (`Serialize`) de uma Página são funções puras sobre `[]byte`.
++Toda escrita gerada pelo harness reexecuta a própria leitura sobre a saída produzida e recusa a
++operação com `ErrRoundTripNotPreserved` se o conteúdo de autoria humana não bater byte a byte
++com o que foi lido — essa verificação é interna e acontece antes de qualquer gravação em disco.
++Isso significa, na prática: **editar uma página à mão e rodar uma sessão em seguida nunca altera
++um único byte do que a pessoa escreveu fora das seções de Fato.**
++
++Uma limitação deliberada: se conteúdo humano estiver fisicamente intercalado entre duas seções
++de Fato, a próxima escrita do harness agrupa todo o conteúdo humano em um único bloco (antes das
++seções de Fato). Os bytes escritos por humanos são preservados integralmente — a garantia é
++sobre conteúdo, não sobre a posição relativa a seções de Fato geradas pelo harness.
+diff --git a/evidence/task-1.0-memoria-duravel-agentes/1.0.patch b/evidence/task-1.0-memoria-duravel-agentes/1.0.patch
+new file mode 100644
+index 0000000..f9a3233
+--- /dev/null
++++ b/evidence/task-1.0-memoria-duravel-agentes/1.0.patch
+@@ -0,0 +1,287 @@
++diff --git a/internal/fs/fake.go b/internal/fs/fake.go
++index 0d7398c..2424d38 100644
++--- a/internal/fs/fake.go
+++++ b/internal/fs/fake.go
++@@ -142,6 +142,11 @@ func (f *FakeFileSystem) WriteFile(path string, data []byte) error {
++ 	return nil
++ }
++ 
+++func (f *FakeFileSystem) WriteFileAtomic(path string, data []byte) error {
+++	f.Files[f.resolvePath(path)] = append([]byte(nil), data...)
+++	return nil
+++}
+++
++ func (f *FakeFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
++ 	resolved := f.resolvePath(path)
++ 	seen := make(map[string]bool)
++diff --git a/internal/fs/fake_test.go b/internal/fs/fake_test.go
++index b92effe..2dbdfa2 100644
++--- a/internal/fs/fake_test.go
+++++ b/internal/fs/fake_test.go
++@@ -20,6 +20,35 @@ func TestFake_WriteAndRead(t *testing.T) {
++ 	}
++ }
++ 
+++func TestFake_WriteFileAtomicAndRead(t *testing.T) {
+++	f := fs.NewFakeFileSystem()
+++	if err := f.WriteFileAtomic("/a/atomic.txt", []byte("hello")); err != nil {
+++		t.Fatalf("WriteFileAtomic: %v", err)
+++	}
+++	data, err := f.ReadFile("/a/atomic.txt")
+++	if err != nil {
+++		t.Fatalf("ReadFile: %v", err)
+++	}
+++	if string(data) != "hello" {
+++		t.Errorf("ReadFile = %q, want 'hello'", data)
+++	}
+++}
+++
+++func TestFake_WriteFileAtomic_overwritesExisting(t *testing.T) {
+++	f := fs.NewFakeFileSystem()
+++	_ = f.WriteFileAtomic("/a/atomic.txt", []byte("old"))
+++	if err := f.WriteFileAtomic("/a/atomic.txt", []byte("new")); err != nil {
+++		t.Fatalf("WriteFileAtomic overwrite: %v", err)
+++	}
+++	data, err := f.ReadFile("/a/atomic.txt")
+++	if err != nil {
+++		t.Fatalf("ReadFile: %v", err)
+++	}
+++	if string(data) != "new" {
+++		t.Errorf("content = %q, want 'new'", data)
+++	}
+++}
+++
++ func TestFake_ReadFile_missing(t *testing.T) {
++ 	f := fs.NewFakeFileSystem()
++ 	_, err := f.ReadFile("/no/such/file")
++diff --git a/internal/fs/fs.go b/internal/fs/fs.go
++index 18d763e..9c2877b 100644
++--- a/internal/fs/fs.go
+++++ b/internal/fs/fs.go
++@@ -24,6 +24,7 @@ type FileSystem interface {
++ 	EvalSymlinks(path string) (string, error)
++ 	ReadFile(path string) ([]byte, error)
++ 	WriteFile(path string, data []byte) error
+++	WriteFileAtomic(path string, data []byte) error
++ 	ReadDir(path string) ([]os.DirEntry, error)
++ 	FileHash(path string) (string, error)
++ 	DirHash(path string) (string, error)
++@@ -169,6 +170,39 @@ func (f *OSFileSystem) WriteFile(path string, data []byte) error {
++ 	return os.WriteFile(path, data, 0o644)
++ }
++ 
+++func (f *OSFileSystem) WriteFileAtomic(path string, data []byte) error {
+++	dir := filepath.Dir(path)
+++	if err := os.MkdirAll(dir, 0o755); err != nil {
+++		return fmt.Errorf("create directory %s: %w", dir, err)
+++	}
+++	if info, err := os.Lstat(path); err == nil && info.Mode().IsRegular() && info.Mode().Perm()&0o200 == 0 {
+++		_ = os.Chmod(path, 0o644)
+++	}
+++	tmp, err := os.CreateTemp(dir, ".tmp-*")
+++	if err != nil {
+++		return fmt.Errorf("create temp file in %s: %w", dir, err)
+++	}
+++	tmpPath := tmp.Name()
+++	defer func() {
+++		_ = os.Remove(tmpPath)
+++	}()
+++	if _, err := tmp.Write(data); err != nil {
+++		_ = tmp.Close()
+++		return fmt.Errorf("write temp file %s: %w", tmpPath, err)
+++	}
+++	if err := tmp.Sync(); err != nil {
+++		_ = tmp.Close()
+++		return fmt.Errorf("sync temp file %s: %w", tmpPath, err)
+++	}
+++	if err := tmp.Close(); err != nil {
+++		return fmt.Errorf("close temp file %s: %w", tmpPath, err)
+++	}
+++	if err := os.Rename(tmpPath, path); err != nil {
+++		return fmt.Errorf("publish file %s: %w", path, err)
+++	}
+++	return nil
+++}
+++
++ func (f *OSFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
++ 	return os.ReadDir(path)
++ }
++diff --git a/internal/fs/mocks/file_system.go b/internal/fs/mocks/file_system.go
++index 32c6751..3e9b22e 100644
++--- a/internal/fs/mocks/file_system.go
+++++ b/internal/fs/mocks/file_system.go
++@@ -925,3 +925,60 @@ func (_c *FileSystem_WriteFile_Call) RunAndReturn(run func(path string, data []b
++ 	_c.Call.Return(run)
++ 	return _c
++ }
+++
+++// WriteFileAtomic provides a mock function for the type FileSystem
+++func (_mock *FileSystem) WriteFileAtomic(path string, data []byte) error {
+++	ret := _mock.Called(path, data)
+++
+++	if len(ret) == 0 {
+++		panic("no return value specified for WriteFileAtomic")
+++	}
+++
+++	var r0 error
+++	if returnFunc, ok := ret.Get(0).(func(string, []byte) error); ok {
+++		r0 = returnFunc(path, data)
+++	} else {
+++		r0 = ret.Error(0)
+++	}
+++	return r0
+++}
+++
+++// FileSystem_WriteFileAtomic_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'WriteFileAtomic'
+++type FileSystem_WriteFileAtomic_Call struct {
+++	*mock.Call
+++}
+++
+++// WriteFileAtomic is a helper method to define mock.On call
+++//   - path string
+++//   - data []byte
+++func (_e *FileSystem_Expecter) WriteFileAtomic(path any, data any) *FileSystem_WriteFileAtomic_Call {
+++	return &FileSystem_WriteFileAtomic_Call{Call: _e.mock.On("WriteFileAtomic", path, data)}
+++}
+++
+++func (_c *FileSystem_WriteFileAtomic_Call) Run(run func(path string, data []byte)) *FileSystem_WriteFileAtomic_Call {
+++	_c.Call.Run(func(args mock.Arguments) {
+++		var arg0 string
+++		if args[0] != nil {
+++			arg0 = args[0].(string)
+++		}
+++		var arg1 []byte
+++		if args[1] != nil {
+++			arg1 = args[1].([]byte)
+++		}
+++		run(
+++			arg0,
+++			arg1,
+++		)
+++	})
+++	return _c
+++}
+++
+++func (_c *FileSystem_WriteFileAtomic_Call) Return(err error) *FileSystem_WriteFileAtomic_Call {
+++	_c.Call.Return(err)
+++	return _c
+++}
+++
+++func (_c *FileSystem_WriteFileAtomic_Call) RunAndReturn(run func(path string, data []byte) error) *FileSystem_WriteFileAtomic_Call {
+++	_c.Call.Return(run)
+++	return _c
+++}
++diff --git a/internal/fs/os_test.go b/internal/fs/os_test.go
++index c3a7633..891afe3 100644
++--- a/internal/fs/os_test.go
+++++ b/internal/fs/os_test.go
++@@ -77,6 +77,109 @@ func TestOS_WriteFile_overwritesReadOnly(t *testing.T) {
++ 	}
++ }
++ 
+++func TestOS_WriteFileAtomic_writeAndRead(t *testing.T) {
+++	dir := t.TempDir()
+++	f := fs.NewOSFileSystem()
+++	p := filepath.Join(dir, "sub", "atomic.txt")
+++
+++	if err := f.WriteFileAtomic(p, []byte("hello")); err != nil {
+++		t.Fatalf("WriteFileAtomic: %v", err)
+++	}
+++	data, err := f.ReadFile(p)
+++	if err != nil {
+++		t.Fatalf("ReadFile: %v", err)
+++	}
+++	if string(data) != "hello" {
+++		t.Errorf("ReadFile = %q, want 'hello'", data)
+++	}
+++}
+++
+++func TestOS_WriteFileAtomic_overwritesReadOnly(t *testing.T) {
+++	dir := t.TempDir()
+++	f := fs.NewOSFileSystem()
+++	p := filepath.Join(dir, "atomic.txt")
+++
+++	if err := os.WriteFile(p, []byte("old"), 0o444); err != nil {
+++		t.Fatalf("seed: %v", err)
+++	}
+++	if err := f.WriteFileAtomic(p, []byte("new")); err != nil {
+++		t.Fatalf("WriteFileAtomic over read-only: %v", err)
+++	}
+++	data, err := os.ReadFile(p)
+++	if err != nil {
+++		t.Fatalf("ReadFile: %v", err)
+++	}
+++	if string(data) != "new" {
+++		t.Errorf("content = %q, want 'new'", data)
+++	}
+++}
+++
+++func TestOS_WriteFileAtomic_noPartialFileOnInterruption(t *testing.T) {
+++	dir := t.TempDir()
+++	f := fs.NewOSFileSystem()
+++	p := filepath.Join(dir, "atomic.txt")
+++
+++	if err := f.WriteFileAtomic(p, []byte("original")); err != nil {
+++		t.Fatalf("seed WriteFileAtomic: %v", err)
+++	}
+++
+++	interruptedTmp := filepath.Join(dir, ".tmp-interrupted")
+++	if err := os.WriteFile(interruptedTmp, []byte("partial-content"), 0o600); err != nil {
+++		t.Fatalf("simulate interrupted temp: %v", err)
+++	}
+++	t.Cleanup(func() { _ = os.Remove(interruptedTmp) })
+++
+++	data, err := os.ReadFile(p)
+++	if err != nil {
+++		t.Fatalf("ReadFile final path: %v", err)
+++	}
+++	if string(data) != "original" {
+++		t.Errorf("final path content = %q, want 'original' — interrupted temp must never be visible at final path", data)
+++	}
+++
+++	entries, err := os.ReadDir(dir)
+++	if err != nil {
+++		t.Fatalf("ReadDir: %v", err)
+++	}
+++	for _, e := range entries {
+++		if e.Name() == filepath.Base(p) {
+++			continue
+++		}
+++		if e.Name() != filepath.Base(interruptedTmp) {
+++			t.Errorf("unexpected leftover entry: %s", e.Name())
+++		}
+++	}
+++}
+++
+++func TestOS_WriteFileAtomic_cleansUpTempOnWriteFailure(t *testing.T) {
+++	dir := t.TempDir()
+++	f := fs.NewOSFileSystem()
+++	unwritable := filepath.Join(dir, "unwritable")
+++	p := filepath.Join(unwritable, "file.txt")
+++
+++	if err := os.MkdirAll(unwritable, 0o755); err != nil {
+++		t.Fatalf("MkdirAll: %v", err)
+++	}
+++	if err := os.Chmod(unwritable, 0o555); err != nil {
+++		t.Fatalf("chmod read-only: %v", err)
+++	}
+++	t.Cleanup(func() { makeWritableForCleanup(unwritable) })
+++
+++	err := f.WriteFileAtomic(p, []byte("data"))
+++	if err == nil {
+++		t.Fatal("WriteFileAtomic into read-only directory should fail")
+++	}
+++
+++	makeWritableForCleanup(unwritable)
+++	entries, readErr := os.ReadDir(unwritable)
+++	if readErr != nil {
+++		t.Fatalf("ReadDir: %v", readErr)
+++	}
+++	for _, e := range entries {
+++		t.Errorf("temp file leaked after failed WriteFileAtomic: %s", e.Name())
+++	}
+++}
+++
++ func TestOS_ReadFile_missing(t *testing.T) {
++ 	f := fs.NewOSFileSystem()
++ 	_, err := f.ReadFile("/nonexistent/path/file.txt")
+diff --git a/evidence/task-1.0-memoria-duravel-agentes/build.log b/evidence/task-1.0-memoria-duravel-agentes/build.log
+new file mode 100644
+index 0000000..55a9b2a
+--- /dev/null
++++ b/evidence/task-1.0-memoria-duravel-agentes/build.log
+@@ -0,0 +1,75 @@
++?   	github.com/JailtonJunior94/ai-spec-harness	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	1.429s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/adapters	1.544s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/agents	1.799s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/agents/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/approval	2.140s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/approval/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/bugschema	2.486s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/changelog	2.721s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/config	3.120s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/config/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/contextgen	3.329s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/detect	2.170s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/detect/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/doctor	2.211s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/embedded	2.240s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/evidence	2.515s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/fs	2.039s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/fs/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/git	2.108s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/git/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/gitref	3.444s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/inspect	1.887s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/install	2.492s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/invocation	2.087s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/lint	1.880s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/manifest	1.468s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/metrics	2.119s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/metrics/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/output	1.492s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/parity	1.765s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/platform	1.379s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/prerequisites	1.291s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	3.179s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake	1.567s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client	8.631s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events	1.799s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/handshake	1.887s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks	2.072s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver	2.697s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/wire	2.121s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory	2.260s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/mocks	[no test files]
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence	1.763s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/precondition	1.901s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe	1.594s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/render	1.839s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	2.065s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/scaffold	1.612s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd	2.011s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd/tasks	1.805s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/semver	4.324s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillbump	9.812s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	1.817s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillscheck	1.567s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdigest	2.002s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdrift	1.822s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria	2.073s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	16.609s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/telemetry	1.685s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/traceability	1.598s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/triggers	1.490s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/triggers/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/uninstall	1.680s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/upgrade	1.795s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/version	2.005s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/wrapper	2.019s
++ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	1.926s
+diff --git a/evidence/task-1.0-memoria-duravel-agentes/fs-tests.log b/evidence/task-1.0-memoria-duravel-agentes/fs-tests.log
+new file mode 100644
+index 0000000..6e92e23
+--- /dev/null
++++ b/evidence/task-1.0-memoria-duravel-agentes/fs-tests.log
+@@ -0,0 +1,102 @@
++=== RUN   TestFake_WriteAndRead
++--- PASS: TestFake_WriteAndRead (0.00s)
++=== RUN   TestFake_WriteFileAtomicAndRead
++--- PASS: TestFake_WriteFileAtomicAndRead (0.00s)
++=== RUN   TestFake_WriteFileAtomic_overwritesExisting
++--- PASS: TestFake_WriteFileAtomic_overwritesExisting (0.00s)
++=== RUN   TestFake_ReadFile_missing
++--- PASS: TestFake_ReadFile_missing (0.00s)
++=== RUN   TestFake_Exists
++--- PASS: TestFake_Exists (0.00s)
++=== RUN   TestFake_Exists_dir
++--- PASS: TestFake_Exists_dir (0.00s)
++=== RUN   TestFake_IsDir
++--- PASS: TestFake_IsDir (0.00s)
++=== RUN   TestFake_IsDir_file
++--- PASS: TestFake_IsDir_file (0.00s)
++=== RUN   TestFake_IsSymlink
++--- PASS: TestFake_IsSymlink (0.00s)
++=== RUN   TestFake_EvalSymlinks
++--- PASS: TestFake_EvalSymlinks (0.00s)
++=== RUN   TestFake_Remove
++--- PASS: TestFake_Remove (0.00s)
++=== RUN   TestFake_RemoveAll
++--- PASS: TestFake_RemoveAll (0.00s)
++=== RUN   TestFake_CopyFile
++--- PASS: TestFake_CopyFile (0.00s)
++=== RUN   TestFake_CopyFile_missing
++--- PASS: TestFake_CopyFile_missing (0.00s)
++=== RUN   TestFake_CopyDir
++--- PASS: TestFake_CopyDir (0.00s)
++=== RUN   TestFake_FileHash
++--- PASS: TestFake_FileHash (0.00s)
++=== RUN   TestFake_FileHash_missing
++--- PASS: TestFake_FileHash_missing (0.00s)
++=== RUN   TestFake_DirHash
++--- PASS: TestFake_DirHash (0.00s)
++=== RUN   TestFake_DirHash_notDir
++--- PASS: TestFake_DirHash_notDir (0.00s)
++=== RUN   TestFake_Writable
++--- PASS: TestFake_Writable (0.00s)
++=== RUN   TestFake_ReadDir
++--- PASS: TestFake_ReadDir (0.00s)
++=== RUN   TestFake_SeparadorNativoDoWindows
++--- PASS: TestFake_SeparadorNativoDoWindows (0.00s)
++=== RUN   TestOS_WriteAndRead
++--- PASS: TestOS_WriteAndRead (0.00s)
++=== RUN   TestOS_CopyFile_overwritesReadOnly
++--- PASS: TestOS_CopyFile_overwritesReadOnly (0.00s)
++=== RUN   TestOS_WriteFile_overwritesReadOnly
++--- PASS: TestOS_WriteFile_overwritesReadOnly (0.00s)
++=== RUN   TestOS_WriteFileAtomic_writeAndRead
++--- PASS: TestOS_WriteFileAtomic_writeAndRead (0.02s)
++=== RUN   TestOS_WriteFileAtomic_overwritesReadOnly
++--- PASS: TestOS_WriteFileAtomic_overwritesReadOnly (0.01s)
++=== RUN   TestOS_WriteFileAtomic_noPartialFileOnInterruption
++--- PASS: TestOS_WriteFileAtomic_noPartialFileOnInterruption (0.02s)
++=== RUN   TestOS_WriteFileAtomic_cleansUpTempOnWriteFailure
++--- PASS: TestOS_WriteFileAtomic_cleansUpTempOnWriteFailure (0.00s)
++=== RUN   TestOS_ReadFile_missing
++--- PASS: TestOS_ReadFile_missing (0.00s)
++=== RUN   TestOS_Exists
++--- PASS: TestOS_Exists (0.00s)
++=== RUN   TestOS_IsDir
++--- PASS: TestOS_IsDir (0.00s)
++=== RUN   TestOS_MkdirAll
++--- PASS: TestOS_MkdirAll (0.00s)
++=== RUN   TestOS_Remove
++--- PASS: TestOS_Remove (0.00s)
++=== RUN   TestOS_RemoveAll
++--- PASS: TestOS_RemoveAll (0.00s)
++=== RUN   TestOS_RemoveAll_removesReadOnlyTree
++--- PASS: TestOS_RemoveAll_removesReadOnlyTree (0.00s)
++=== RUN   TestOS_RemoveAll_doesNotFollowSymlinkOutsideTree
++--- PASS: TestOS_RemoveAll_doesNotFollowSymlinkOutsideTree (0.00s)
++=== RUN   TestOS_CopyFile
++--- PASS: TestOS_CopyFile (0.00s)
++=== RUN   TestOS_CopyFile_missing
++--- PASS: TestOS_CopyFile_missing (0.00s)
++=== RUN   TestOS_CopyDir
++--- PASS: TestOS_CopyDir (0.00s)
++=== RUN   TestOS_CopyDir_AllowsUpgradeFromReadOnlySource
++--- PASS: TestOS_CopyDir_AllowsUpgradeFromReadOnlySource (0.00s)
++=== RUN   TestOS_Symlink
++--- PASS: TestOS_Symlink (0.00s)
++=== RUN   TestOS_FileHash
++--- PASS: TestOS_FileHash (0.00s)
++=== RUN   TestOS_FileHash_missing
++--- PASS: TestOS_FileHash_missing (0.00s)
++=== RUN   TestOS_DirHash
++--- PASS: TestOS_DirHash (0.00s)
++=== RUN   TestOS_DirHash_notDir
++--- PASS: TestOS_DirHash_notDir (0.00s)
++=== RUN   TestOS_Writable
++--- PASS: TestOS_Writable (0.00s)
++=== RUN   TestOS_Writable_missing
++--- PASS: TestOS_Writable_missing (0.00s)
++=== RUN   TestOS_ReadDir
++--- PASS: TestOS_ReadDir (0.00s)
++PASS
++coverage: 73.3% of statements
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/fs	1.454s	coverage: 73.3% of statements
++	github.com/JailtonJunior94/ai-spec-harness/internal/fs/mocks		coverage: 0.0% of statements
+diff --git a/evidence/task-1.0-memoria-duravel-agentes/lint.log b/evidence/task-1.0-memoria-duravel-agentes/lint.log
+new file mode 100644
+index 0000000..6a3ebaa
+--- /dev/null
++++ b/evidence/task-1.0-memoria-duravel-agentes/lint.log
+@@ -0,0 +1 @@
++0 issues.
+diff --git a/evidence/task-1.0-memoria-duravel-agentes/mocks.log b/evidence/task-1.0-memoria-duravel-agentes/mocks.log
+new file mode 100644
+index 0000000..f2b0df8
+--- /dev/null
++++ b/evidence/task-1.0-memoria-duravel-agentes/mocks.log
+@@ -0,0 +1,7 @@
++go run github.com/vektra/mockery/v3@v3.7.4 --config mockery.yml
++bash scripts/normalize-mocks.sh
++Mocks normalizados: 43 arquivo(s)
++mocks exit=0
++bash scripts/check-mocks.sh
++Mocks: OK (sincronizados com mockery.yml)
++check-mocks exit=0
+diff --git a/internal/runtime/memory/durable/errors.go b/internal/runtime/memory/durable/errors.go
+new file mode 100644
+index 0000000..b9637f0
+--- /dev/null
++++ b/internal/runtime/memory/durable/errors.go
+@@ -0,0 +1,16 @@
++package durable
++
++import "errors"
++
++var (
++	ErrSemanticKeyMissing      = errors.New("durable: semantic key missing")
++	ErrDurabilityMissing       = errors.New("durable: durability missing")
++	ErrSecretNotRedactable     = errors.New("durable: sensitive content not isolable")
++	ErrPromotionWithoutMark    = errors.New("durable: promotion requires explicit mark")
++	ErrBatonAlreadyClaimed     = errors.New("durable: baton held by live process")
++	ErrRoundTripNotPreserved   = errors.New("durable: serialization does not preserve human content")
++	ErrPageUnreadable          = errors.New("durable: page unreadable")
++	ErrBudgetExceeded          = errors.New("durable: context budget exceeded")
++	ErrLimitUnreachable        = errors.New("durable: limit unreachable due to human content")
++	ErrMigrationAlreadyApplied = errors.New("durable: migration already applied")
++)
+diff --git a/internal/runtime/memory/durable/fact.go b/internal/runtime/memory/durable/fact.go
+new file mode 100644
+index 0000000..ac805e2
+--- /dev/null
++++ b/internal/runtime/memory/durable/fact.go
+@@ -0,0 +1,357 @@
++package durable
++
++import (
++	"crypto/sha256"
++	"encoding/hex"
++	"fmt"
++	"strings"
++
++	"gopkg.in/yaml.v3"
++)
++
++type SemanticKey string
++
++type ContentHash string
++
++type Identity struct {
++	Key  SemanticKey
++	Hash ContentHash
++}
++
++type Durability uint8
++
++const (
++	DurabilityInvalid Durability = iota
++	DurabilityEphemeral
++	DurabilityPRD
++	DurabilityDurable
++)
++
++func (d Durability) String() string {
++	switch d {
++	case DurabilityEphemeral:
++		return "ephemeral"
++	case DurabilityPRD:
++		return "prd"
++	case DurabilityDurable:
++		return "durable"
++	default:
++		return ""
++	}
++}
++
++func durabilityFromString(s string) (Durability, error) {
++	switch s {
++	case "ephemeral":
++		return DurabilityEphemeral, nil
++	case "prd":
++		return DurabilityPRD, nil
++	case "durable":
++		return DurabilityDurable, nil
++	case "":
++		return DurabilityInvalid, nil
++	default:
++		return DurabilityInvalid, fmt.Errorf("durable: unknown durability %q: %w", s, ErrPageUnreadable)
++	}
++}
++
++func (d Durability) MarshalYAML() (interface{}, error) {
++	return d.String(), nil
++}
++
++func (d *Durability) UnmarshalYAML(value *yaml.Node) error {
++	var s string
++	if err := value.Decode(&s); err != nil {
++		return err
++	}
++	parsed, err := durabilityFromString(s)
++	if err != nil {
++		return err
++	}
++	*d = parsed
++	return nil
++}
++
++type FactState uint8
++
++const (
++	FactStateUndefined FactState = iota
++	FactStateProposed
++	FactStateActive
++	FactStateContradicted
++	FactStatePromoted
++	FactStateArchived
++)
++
++func (e FactState) String() string {
++	switch e {
++	case FactStateProposed:
++		return "proposed"
++	case FactStateActive:
++		return "active"
++	case FactStateContradicted:
++		return "contradicted"
++	case FactStatePromoted:
++		return "promoted"
++	case FactStateArchived:
++		return "archived"
++	default:
++		return ""
++	}
++}
++
++func factStateFromString(s string) (FactState, error) {
++	switch s {
++	case "proposed":
++		return FactStateProposed, nil
++	case "active":
++		return FactStateActive, nil
++	case "contradicted":
++		return FactStateContradicted, nil
++	case "promoted":
++		return FactStatePromoted, nil
++	case "archived":
++		return FactStateArchived, nil
++	case "":
++		return FactStateUndefined, nil
++	default:
++		return FactStateUndefined, fmt.Errorf("durable: unknown fact state %q: %w", s, ErrPageUnreadable)
++	}
++}
++
++func (e FactState) MarshalYAML() (interface{}, error) {
++	return e.String(), nil
++}
++
++func (e *FactState) UnmarshalYAML(value *yaml.Node) error {
++	var s string
++	if err := value.Decode(&s); err != nil {
++		return err
++	}
++	parsed, err := factStateFromString(s)
++	if err != nil {
++		return err
++	}
++	*e = parsed
++	return nil
++}
++
++type LinkType uint8
++
++const (
++	LinkTypeUndefined LinkType = iota
++	LinkTypeReplaces
++	LinkTypeCauses
++	LinkTypeFixes
++	LinkTypeContradicts
++)
++
++func (t LinkType) String() string {
++	switch t {
++	case LinkTypeReplaces:
++		return "replaces"
++	case LinkTypeCauses:
++		return "causes"
++	case LinkTypeFixes:
++		return "fixes"
++	case LinkTypeContradicts:
++		return "contradicts"
++	default:
++		return ""
++	}
++}
++
++func linkTypeFromString(s string) (LinkType, error) {
++	switch s {
++	case "replaces":
++		return LinkTypeReplaces, nil
++	case "causes":
++		return LinkTypeCauses, nil
++	case "fixes":
++		return LinkTypeFixes, nil
++	case "contradicts":
++		return LinkTypeContradicts, nil
++	case "":
++		return LinkTypeUndefined, nil
++	default:
++		return LinkTypeUndefined, fmt.Errorf("durable: unknown link type %q: %w", s, ErrPageUnreadable)
++	}
++}
++
++func (t LinkType) MarshalYAML() (interface{}, error) {
++	return t.String(), nil
++}
++
++func (t *LinkType) UnmarshalYAML(value *yaml.Node) error {
++	var s string
++	if err := value.Decode(&s); err != nil {
++		return err
++	}
++	parsed, err := linkTypeFromString(s)
++	if err != nil {
++		return err
++	}
++	*t = parsed
++	return nil
++}
++
++type Link struct {
++	Type   LinkType `yaml:"type"`
++	Target Identity `yaml:"target"`
++}
++
++type FactOrigin struct {
++	Session string `yaml:"session"`
++	CLI     string `yaml:"cli"`
++	Task    string `yaml:"task"`
++	Date    string `yaml:"date"`
++}
++
++type Fact struct {
++	Identity   Identity
++	Content    string
++	Durability Durability
++	Origin     FactOrigin
++	State      FactState
++	Links      []Link
++}
++
++type TargetLayer uint8
++
++const (
++	TargetLayerUndefined TargetLayer = iota
++	TargetLayerTask
++	TargetLayerPRD
++	TargetLayerProject
++)
++
++func (c TargetLayer) String() string {
++	switch c {
++	case TargetLayerTask:
++		return "task"
++	case TargetLayerPRD:
++		return "prd"
++	case TargetLayerProject:
++		return "project"
++	default:
++		return ""
++	}
++}
++
++func targetLayerFromString(s string) (TargetLayer, error) {
++	switch s {
++	case "task":
++		return TargetLayerTask, nil
++	case "prd":
++		return TargetLayerPRD, nil
++	case "project":
++		return TargetLayerProject, nil
++	case "":
++		return TargetLayerUndefined, nil
++	default:
++		return TargetLayerUndefined, fmt.Errorf("durable: unknown layer %q: %w", s, ErrPageUnreadable)
++	}
++}
++
++func (c TargetLayer) MarshalYAML() (interface{}, error) {
++	return c.String(), nil
++}
++
++func (c *TargetLayer) UnmarshalYAML(value *yaml.Node) error {
++	var s string
++	if err := value.Decode(&s); err != nil {
++		return err
++	}
++	parsed, err := targetLayerFromString(s)
++	if err != nil {
++		return err
++	}
++	*c = parsed
++	return nil
++}
++
++func (c *Catalog) ValidateFact(f Fact) error {
++	if f.Identity.Key == "" {
++		return ErrSemanticKeyMissing
++	}
++	if f.Durability == DurabilityInvalid {
++		return ErrDurabilityMissing
++	}
++	return nil
++}
++
++func (c *Catalog) ResolveLayer(d Durability) (TargetLayer, error) {
++	switch d {
++	case DurabilityEphemeral:
++		return TargetLayerTask, nil
++	case DurabilityPRD:
++		return TargetLayerPRD, nil
++	case DurabilityDurable:
++		return TargetLayerProject, nil
++	default:
++		return TargetLayerUndefined, ErrDurabilityMissing
++	}
++}
++
++func (c *Catalog) HashContent(content string) ContentHash {
++	normalized := strings.TrimSpace(content)
++	sum := sha256.Sum256([]byte(normalized))
++	return ContentHash("sha256:" + hex.EncodeToString(sum[:]))
++}
++
++type CollisionResult uint8
++
++const (
++	CollisionNone CollisionResult = iota
++	CollisionIdempotent
++	CollisionContradictory
++)
++
++func (c *Catalog) DetectCollision(existing, candidate Fact) CollisionResult {
++	if existing.Identity.Key != candidate.Identity.Key {
++		return CollisionNone
++	}
++	if existing.Identity.Hash == candidate.Identity.Hash {
++		return CollisionIdempotent
++	}
++	return CollisionContradictory
++}
++
++type StructuredSignal struct {
++	Kind    string
++	Subject string
++	Scope   string
++}
++
++func (c *Catalog) DeriveSemanticKey(signal StructuredSignal) (SemanticKey, error) {
++	kind := normalizeToken(signal.Kind)
++	subject := normalizeToken(signal.Subject)
++	scope := normalizeToken(signal.Scope)
++	if kind == "" || subject == "" {
++		return "", ErrSemanticKeyMissing
++	}
++	parts := []string{kind, subject}
++	if scope != "" {
++		parts = append(parts, scope)
++	}
++	return SemanticKey(strings.Join(parts, ".")), nil
++}
++
++func normalizeToken(s string) string {
++	s = strings.ToLower(strings.TrimSpace(s))
++	var b strings.Builder
++	prevDash := false
++	for _, r := range s {
++		switch {
++		case r >= 'a' && r <= 'z' || r >= '0' && r <= '9':
++			b.WriteRune(r)
++			prevDash = false
++		default:
++			if !prevDash && b.Len() > 0 {
++				b.WriteByte('-')
++				prevDash = true
++			}
++		}
++	}
++	return strings.TrimRight(b.String(), "-")
++}
+diff --git a/internal/runtime/memory/durable/fact_test.go b/internal/runtime/memory/durable/fact_test.go
+new file mode 100644
+index 0000000..8d55d2a
+--- /dev/null
++++ b/internal/runtime/memory/durable/fact_test.go
+@@ -0,0 +1,220 @@
++package durable_test
++
++import (
++	"errors"
++	"testing"
++
++	"github.com/stretchr/testify/suite"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable"
++)
++
++type FactSuite struct {
++	suite.Suite
++}
++
++func TestFactSuite(t *testing.T) {
++	suite.Run(t, new(FactSuite))
++}
++
++func (s *FactSuite) TestValidateFact() {
++	scenarios := []struct {
++		name    string
++		fact    durable.Fact
++		wantErr error
++	}{
++		{
++			name: "should reject fact without semantic key",
++			fact: durable.Fact{
++				Identity:   durable.Identity{Key: ""},
++				Durability: durable.DurabilityDurable,
++			},
++			wantErr: durable.ErrSemanticKeyMissing,
++		},
++		{
++			name: "should reject fact with zero-value durability",
++			fact: durable.Fact{
++				Identity:   durable.Identity{Key: "topic.subject"},
++				Durability: durable.DurabilityInvalid,
++			},
++			wantErr: durable.ErrDurabilityMissing,
++		},
++		{
++			name: "should accept fact with key and durability declared",
++			fact: durable.Fact{
++				Identity:   durable.Identity{Key: "topic.subject"},
++				Durability: durable.DurabilityEphemeral,
++			},
++			wantErr: nil,
++		},
++	}
++
++	for _, sc := range scenarios {
++		s.Run(sc.name, func() {
++			catalog := durable.NewCatalog()
++
++			err := catalog.ValidateFact(sc.fact)
++
++			if sc.wantErr == nil {
++				s.NoError(err)
++				return
++			}
++			s.True(errors.Is(err, sc.wantErr))
++		})
++	}
++}
++
++func (s *FactSuite) TestResolveLayer() {
++	scenarios := []struct {
++		name       string
++		durability durable.Durability
++		wantLayer  durable.TargetLayer
++		wantErr    error
++	}{
++		{
++			name:       "should resolve ephemeral to task layer",
++			durability: durable.DurabilityEphemeral,
++			wantLayer:  durable.TargetLayerTask,
++		},
++		{
++			name:       "should resolve prd durability to prd layer",
++			durability: durable.DurabilityPRD,
++			wantLayer:  durable.TargetLayerPRD,
++		},
++		{
++			name:       "should resolve durable to project layer",
++			durability: durable.DurabilityDurable,
++			wantLayer:  durable.TargetLayerProject,
++		},
++		{
++			name:       "should reject zero-value durability",
++			durability: durable.DurabilityInvalid,
++			wantErr:    durable.ErrDurabilityMissing,
++		},
++	}
++
++	for _, sc := range scenarios {
++		s.Run(sc.name, func() {
++			catalog := durable.NewCatalog()
++
++			layer, err := catalog.ResolveLayer(sc.durability)
++
++			if sc.wantErr != nil {
++				s.True(errors.Is(err, sc.wantErr))
++				return
++			}
++			s.NoError(err)
++			s.Equal(sc.wantLayer, layer)
++		})
++	}
++}
++
++func (s *FactSuite) TestHashContentIsDeterministic() {
++	catalog := durable.NewCatalog()
++
++	first := catalog.HashContent("payment retried after timeout")
++	second := catalog.HashContent("payment retried after timeout")
++
++	s.Equal(first, second)
++	s.NotEmpty(first)
++}
++
++func (s *FactSuite) TestHashContentDiffersForDifferentContent() {
++	catalog := durable.NewCatalog()
++
++	first := catalog.HashContent("payment retried after timeout")
++	second := catalog.HashContent("payment retried after five attempts")
++
++	s.NotEqual(first, second)
++}
++
++func (s *FactSuite) TestDetectCollision() {
++	base := durable.Fact{
++		Identity: durable.Identity{Key: "payment.retry", Hash: "sha256:aaaa"},
++	}
++
++	scenarios := []struct {
++		name      string
++		candidate durable.Fact
++		want      durable.CollisionResult
++	}{
++		{
++			name: "should report no collision for different key",
++			candidate: durable.Fact{
++				Identity: durable.Identity{Key: "payment.timeout", Hash: "sha256:aaaa"},
++			},
++			want: durable.CollisionNone,
++		},
++		{
++			name: "should report idempotent collision for same key and hash",
++			candidate: durable.Fact{
++				Identity: durable.Identity{Key: "payment.retry", Hash: "sha256:aaaa"},
++			},
++			want: durable.CollisionIdempotent,
++		},
++		{
++			name: "should report contradictory collision for same key and divergent hash",
++			candidate: durable.Fact{
++				Identity: durable.Identity{Key: "payment.retry", Hash: "sha256:bbbb"},
++			},
++			want: durable.CollisionContradictory,
++		},
++	}
++
++	for _, sc := range scenarios {
++		s.Run(sc.name, func() {
++			catalog := durable.NewCatalog()
++
++			got := catalog.DetectCollision(base, sc.candidate)
++
++			s.Equal(sc.want, got)
++		})
++	}
++}
++
++func (s *FactSuite) TestDeriveSemanticKeyIsDeterministicAcrossSessions() {
++	catalog := durable.NewCatalog()
++	signal := durable.StructuredSignal{
++		Kind:    "Decision",
++		Subject: "Retry Policy",
++		Scope:   "Payments",
++	}
++
++	firstSession := durable.NewCatalog()
++	secondSession := durable.NewCatalog()
++
++	first, err := firstSession.DeriveSemanticKey(signal)
++	s.Require().NoError(err)
++
++	second, err := secondSession.DeriveSemanticKey(signal)
++	s.Require().NoError(err)
++
++	s.Equal(first, second)
++	s.Equal(catalog.HashContent("x"), catalog.HashContent("x"))
++}
++
++func (s *FactSuite) TestDeriveSemanticKeyRejectsMissingFields() {
++	scenarios := []struct {
++		name   string
++		signal durable.StructuredSignal
++	}{
++		{
++			name:   "should reject missing kind",
++			signal: durable.StructuredSignal{Subject: "retry policy"},
++		},
++		{
++			name:   "should reject missing subject",
++			signal: durable.StructuredSignal{Kind: "decision"},
++		},
++	}
++
++	for _, sc := range scenarios {
++		s.Run(sc.name, func() {
++			catalog := durable.NewCatalog()
++
++			_, err := catalog.DeriveSemanticKey(sc.signal)
++
++			s.True(errors.Is(err, durable.ErrSemanticKeyMissing))
++		})
++	}
++}
+diff --git a/internal/runtime/memory/durable/mocks/page.go b/internal/runtime/memory/durable/mocks/page.go
+new file mode 100644
+index 0000000..3f52e41
+--- /dev/null
++++ b/internal/runtime/memory/durable/mocks/page.go
+@@ -0,0 +1,173 @@
++// Code generated by mockery; DO NOT EDIT.
++// github.com/vektra/mockery
++// template: testify
++
++package mocks
++
++import (
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable"
++	mock "github.com/stretchr/testify/mock"
++)
++
++// NewPage creates a new instance of Page. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
++// The first argument is typically a *testing.T value.
++func NewPage(t interface {
++	mock.TestingT
++	Cleanup(func())
++}) *Page {
++	mock := &Page{}
++	mock.Mock.Test(t)
++
++	t.Cleanup(func() { mock.AssertExpectations(t) })
++
++	return mock
++}
++
++// Page is an autogenerated mock type for the Page type
++type Page struct {
++	mock.Mock
++}
++
++type Page_Expecter struct {
++	mock *mock.Mock
++}
++
++func (_m *Page) EXPECT() *Page_Expecter {
++	return &Page_Expecter{mock: &_m.Mock}
++}
++
++// Parse provides a mock function for the type Page
++func (_mock *Page) Parse(content []byte) ([]durable.Fact, durable.HumanBlock, error) {
++	ret := _mock.Called(content)
++
++	if len(ret) == 0 {
++		panic("no return value specified for Parse")
++	}
++
++	var r0 []durable.Fact
++	var r1 durable.HumanBlock
++	var r2 error
++	if returnFunc, ok := ret.Get(0).(func([]byte) ([]durable.Fact, durable.HumanBlock, error)); ok {
++		return returnFunc(content)
++	}
++	if returnFunc, ok := ret.Get(0).(func([]byte) []durable.Fact); ok {
++		r0 = returnFunc(content)
++	} else {
++		if ret.Get(0) != nil {
++			r0 = ret.Get(0).([]durable.Fact)
++		}
++	}
++	if returnFunc, ok := ret.Get(1).(func([]byte) durable.HumanBlock); ok {
++		r1 = returnFunc(content)
++	} else {
++		r1 = ret.Get(1).(durable.HumanBlock)
++	}
++	if returnFunc, ok := ret.Get(2).(func([]byte) error); ok {
++		r2 = returnFunc(content)
++	} else {
++		r2 = ret.Error(2)
++	}
++	return r0, r1, r2
++}
++
++// Page_Parse_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Parse'
++type Page_Parse_Call struct {
++	*mock.Call
++}
++
++// Parse is a helper method to define mock.On call
++//   - content []byte
++func (_e *Page_Expecter) Parse(content any) *Page_Parse_Call {
++	return &Page_Parse_Call{Call: _e.mock.On("Parse", content)}
++}
++
++func (_c *Page_Parse_Call) Run(run func(content []byte)) *Page_Parse_Call {
++	_c.Call.Run(func(args mock.Arguments) {
++		var arg0 []byte
++		if args[0] != nil {
++			arg0 = args[0].([]byte)
++		}
++		run(
++			arg0,
++		)
++	})
++	return _c
++}
++
++func (_c *Page_Parse_Call) Return(facts []durable.Fact, humanBlock durable.HumanBlock, err error) *Page_Parse_Call {
++	_c.Call.Return(facts, humanBlock, err)
++	return _c
++}
++
++func (_c *Page_Parse_Call) RunAndReturn(run func(content []byte) ([]durable.Fact, durable.HumanBlock, error)) *Page_Parse_Call {
++	_c.Call.Return(run)
++	return _c
++}
++
++// Serialize provides a mock function for the type Page
++func (_mock *Page) Serialize(facts []durable.Fact, human durable.HumanBlock) ([]byte, error) {
++	ret := _mock.Called(facts, human)
++
++	if len(ret) == 0 {
++		panic("no return value specified for Serialize")
++	}
++
++	var r0 []byte
++	var r1 error
++	if returnFunc, ok := ret.Get(0).(func([]durable.Fact, durable.HumanBlock) ([]byte, error)); ok {
++		return returnFunc(facts, human)
++	}
++	if returnFunc, ok := ret.Get(0).(func([]durable.Fact, durable.HumanBlock) []byte); ok {
++		r0 = returnFunc(facts, human)
++	} else {
++		if ret.Get(0) != nil {
++			r0 = ret.Get(0).([]byte)
++		}
++	}
++	if returnFunc, ok := ret.Get(1).(func([]durable.Fact, durable.HumanBlock) error); ok {
++		r1 = returnFunc(facts, human)
++	} else {
++		r1 = ret.Error(1)
++	}
++	return r0, r1
++}
++
++// Page_Serialize_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Serialize'
++type Page_Serialize_Call struct {
++	*mock.Call
++}
++
++// Serialize is a helper method to define mock.On call
++//   - facts []durable.Fact
++//   - human durable.HumanBlock
++func (_e *Page_Expecter) Serialize(facts any, human any) *Page_Serialize_Call {
++	return &Page_Serialize_Call{Call: _e.mock.On("Serialize", facts, human)}
++}
++
++func (_c *Page_Serialize_Call) Run(run func(facts []durable.Fact, human durable.HumanBlock)) *Page_Serialize_Call {
++	_c.Call.Run(func(args mock.Arguments) {
++		var arg0 []durable.Fact
++		if args[0] != nil {
++			arg0 = args[0].([]durable.Fact)
++		}
++		var arg1 durable.HumanBlock
++		if args[1] != nil {
++			arg1 = args[1].(durable.HumanBlock)
++		}
++		run(
++			arg0,
++			arg1,
++		)
++	})
++	return _c
++}
++
++func (_c *Page_Serialize_Call) Return(bytes []byte, err error) *Page_Serialize_Call {
++	_c.Call.Return(bytes, err)
++	return _c
++}
++
++func (_c *Page_Serialize_Call) RunAndReturn(run func(facts []durable.Fact, human durable.HumanBlock) ([]byte, error)) *Page_Serialize_Call {
++	_c.Call.Return(run)
++	return _c
++}
+diff --git a/internal/runtime/memory/durable/page.go b/internal/runtime/memory/durable/page.go
+new file mode 100644
+index 0000000..424b7a4
+--- /dev/null
++++ b/internal/runtime/memory/durable/page.go
+@@ -0,0 +1,167 @@
++package durable
++
++import (
++	"fmt"
++	"regexp"
++	"strings"
++
++	"gopkg.in/yaml.v3"
++)
++
++const FormatVersionCurrent = 1
++
++const factMetadataFence = "```fact-metadata"
++
++type Page interface {
++	Parse(content []byte) ([]Fact, HumanBlock, error)
++	Serialize(facts []Fact, human HumanBlock) ([]byte, error)
++}
++
++type PageHeader struct {
++	Identity      string      `yaml:"identity"`
++	Layer         TargetLayer `yaml:"layer"`
++	OriginSession string      `yaml:"origin_session"`
++	Date          string      `yaml:"date"`
++	FormatVersion int         `yaml:"format_version"`
++}
++
++type HumanBlock struct {
++	Header  PageHeader
++	Content string
++}
++
++type factMetadataYAML struct {
++	Hash       ContentHash `yaml:"hash"`
++	Durability Durability  `yaml:"durability"`
++	State      FactState   `yaml:"state"`
++	Origin     FactOrigin  `yaml:"origin"`
++	Content    string      `yaml:"content"`
++	Links      []Link      `yaml:"links,omitempty"`
++}
++
++var factBlockPattern = regexp.MustCompile("(?ms)^### Fact: (.+?)\n```fact-metadata\n(.*?)\n```[ \t]*\n?")
++
++var frontMatterPattern = regexp.MustCompile(`(?s)\A---\n(.*?)\n---\n`)
++
++type MarkdownPage struct{}
++
++func NewMarkdownPage() *MarkdownPage {
++	return &MarkdownPage{}
++}
++
++func (p *MarkdownPage) Parse(content []byte) ([]Fact, HumanBlock, error) {
++	text := string(content)
++
++	var header PageHeader
++	if match := frontMatterPattern.FindStringSubmatchIndex(text); match != nil {
++		yamlBlock := text[match[2]:match[3]]
++		if err := yaml.Unmarshal([]byte(yamlBlock), &header); err != nil {
++			return nil, HumanBlock{}, fmt.Errorf("durable: invalid frontmatter: %w: %w", err, ErrPageUnreadable)
++		}
++		text = text[match[1]:]
++	}
++
++	matches := factBlockPattern.FindAllStringSubmatchIndex(text, -1)
++
++	facts := make([]Fact, 0, len(matches))
++	var human strings.Builder
++
++	cursor := 0
++	for _, m := range matches {
++		human.WriteString(text[cursor:m[0]])
++
++		key := strings.TrimSpace(text[m[2]:m[3]])
++		yamlBlock := text[m[4]:m[5]]
++
++		var metadata factMetadataYAML
++		if err := yaml.Unmarshal([]byte(yamlBlock), &metadata); err != nil {
++			return nil, HumanBlock{}, fmt.Errorf("durable: invalid fact metadata: %w: %w", err, ErrPageUnreadable)
++		}
++
++		facts = append(facts, Fact{
++			Identity: Identity{
++				Key:  SemanticKey(key),
++				Hash: metadata.Hash,
++			},
++			Content:    metadata.Content,
++			Durability: metadata.Durability,
++			Origin:     metadata.Origin,
++			State:      metadata.State,
++			Links:      metadata.Links,
++		})
++
++		cursor = m[1]
++	}
++	human.WriteString(text[cursor:])
++
++	return facts, HumanBlock{Header: header, Content: human.String()}, nil
++}
++
++func (p *MarkdownPage) Serialize(facts []Fact, human HumanBlock) ([]byte, error) {
++	catalog := NewCatalog()
++	for _, f := range facts {
++		if err := catalog.ValidateFact(f); err != nil {
++			return nil, err
++		}
++	}
++
++	var b strings.Builder
++
++	header := human.Header
++	if header.FormatVersion == 0 {
++		header.FormatVersion = FormatVersionCurrent
++	}
++	headerYAML, err := yaml.Marshal(header)
++	if err != nil {
++		return nil, fmt.Errorf("durable: failed to serialize frontmatter: %w", err)
++	}
++	b.WriteString("---\n")
++	b.Write(headerYAML)
++	b.WriteString("---\n")
++
++	b.WriteString(human.Content)
++
++	needsSeparator := len(facts) > 0 && human.Content != "" && !strings.HasSuffix(human.Content, "\n")
++	if needsSeparator {
++		b.WriteString("\n")
++	}
++
++	for _, f := range facts {
++		metadata := factMetadataYAML{
++			Hash:       f.Identity.Hash,
++			Durability: f.Durability,
++			State:      f.State,
++			Origin:     f.Origin,
++			Content:    f.Content,
++			Links:      f.Links,
++		}
++		metadataYAML, err := yaml.Marshal(metadata)
++		if err != nil {
++			return nil, fmt.Errorf("durable: failed to serialize fact: %w", err)
++		}
++		b.WriteString("### Fact: ")
++		b.WriteString(string(f.Identity.Key))
++		b.WriteString("\n")
++		b.WriteString(factMetadataFence)
++		b.WriteString("\n")
++		b.Write(metadataYAML)
++		b.WriteString("```\n")
++	}
++
++	output := []byte(b.String())
++
++	_, humanReparsed, err := p.Parse(output)
++	if err != nil {
++		return nil, fmt.Errorf("durable: failed to validate round-trip: %w", err)
++	}
++
++	expectedContent := human.Content
++	if needsSeparator {
++		expectedContent += "\n"
++	}
++	if humanReparsed.Content != expectedContent {
++		return nil, ErrRoundTripNotPreserved
++	}
++
++	return output, nil
++}
+diff --git a/internal/runtime/memory/durable/page_test.go b/internal/runtime/memory/durable/page_test.go
+new file mode 100644
+index 0000000..e49b153
+--- /dev/null
++++ b/internal/runtime/memory/durable/page_test.go
+@@ -0,0 +1,206 @@
++package durable_test
++
++import (
++	"errors"
++	"os"
++	"testing"
++
++	"github.com/stretchr/testify/suite"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable"
++)
++
++type PageSuite struct {
++	suite.Suite
++}
++
++func TestPageSuite(t *testing.T) {
++	suite.Run(t, new(PageSuite))
++}
++
++func (s *PageSuite) TestSerializeThenParseRoundTrip() {
++	scenarios := []struct {
++		name  string
++		facts []durable.Fact
++		human durable.HumanBlock
++	}{
++		{
++			name:  "should preserve human content with no facts",
++			facts: nil,
++			human: durable.HumanBlock{Content: "Free-form notes written by a human.\n\nSecond paragraph.\n"},
++		},
++		{
++			name: "should preserve human content alongside a single fact",
++			facts: []durable.Fact{
++				{
++					Identity:   durable.Identity{Key: "payment.retry", Hash: "sha256:aaaa"},
++					Content:    "Retries three times before failing.",
++					Durability: durable.DurabilityDurable,
++					State:      durable.FactStateActive,
++					Origin:     durable.FactOrigin{Session: "sess-1", CLI: "claude", Task: "2.0", Date: "2026-09-11T10:00:00Z"},
++				},
++			},
++			human: durable.HumanBlock{Content: "Notes before the fact section.\n"},
++		},
++		{
++			name: "should preserve human content ending without trailing newline",
++			facts: []durable.Fact{
++				{
++					Identity:   durable.Identity{Key: "payment.timeout", Hash: "sha256:bbbb"},
++					Content:    "Timeout raised to 30s.",
++					Durability: durable.DurabilityPRD,
++					State:      durable.FactStateProposed,
++				},
++			},
++			human: durable.HumanBlock{Content: "Notes without trailing newline"},
++		},
++		{
++			name: "should preserve empty human content with multiple facts and links",
++			facts: []durable.Fact{
++				{
++					Identity:   durable.Identity{Key: "payment.retry", Hash: "sha256:aaaa"},
++					Content:    "Original fact.",
++					Durability: durable.DurabilityEphemeral,
++					State:      durable.FactStateContradicted,
++				},
++				{
++					Identity:   durable.Identity{Key: "payment.retry", Hash: "sha256:cccc"},
++					Content:    "Updated fact replacing the previous one.",
++					Durability: durable.DurabilityEphemeral,
++					State:      durable.FactStateActive,
++					Links: []durable.Link{
++						{
++							Type:   durable.LinkTypeReplaces,
++							Target: durable.Identity{Key: "payment.retry", Hash: "sha256:aaaa"},
++						},
++					},
++				},
++			},
++			human: durable.HumanBlock{},
++		},
++	}
++
++	for _, sc := range scenarios {
++		s.Run(sc.name, func() {
++			page := durable.NewMarkdownPage()
++
++			output, err := page.Serialize(sc.facts, sc.human)
++			s.Require().NoError(err)
++
++			gotFacts, gotHuman, err := page.Parse(output)
++			s.Require().NoError(err)
++
++			expectedContent := sc.human.Content
++			if len(sc.facts) > 0 && expectedContent != "" && expectedContent[len(expectedContent)-1] != '\n' {
++				expectedContent += "\n"
++			}
++			s.Equal(expectedContent, gotHuman.Content)
++			s.Len(gotFacts, len(sc.facts))
++
++			for i, f := range sc.facts {
++				s.Equal(f.Identity, gotFacts[i].Identity)
++				s.Equal(f.Content, gotFacts[i].Content)
++				s.Equal(f.Durability, gotFacts[i].Durability)
++				s.Equal(f.State, gotFacts[i].State)
++				s.Equal(f.Origin, gotFacts[i].Origin)
++				s.Equal(f.Links, gotFacts[i].Links)
++			}
++		})
++	}
++}
++
++func (s *PageSuite) TestSerializeRejectsFactWithoutSemanticKey() {
++	page := durable.NewMarkdownPage()
++
++	_, err := page.Serialize([]durable.Fact{
++		{
++			Identity:   durable.Identity{Key: ""},
++			Durability: durable.DurabilityDurable,
++		},
++	}, durable.HumanBlock{})
++
++	s.True(errors.Is(err, durable.ErrSemanticKeyMissing))
++}
++
++func (s *PageSuite) TestSerializeRejectsFactWithZeroValueDurability() {
++	page := durable.NewMarkdownPage()
++
++	_, err := page.Serialize([]durable.Fact{
++		{
++			Identity:   durable.Identity{Key: "payment.retry"},
++			Durability: durable.DurabilityInvalid,
++		},
++	}, durable.HumanBlock{})
++
++	s.True(errors.Is(err, durable.ErrDurabilityMissing))
++}
++
++func (s *PageSuite) TestParseRejectsMalformedFrontMatter() {
++	page := durable.NewMarkdownPage()
++
++	_, _, err := page.Parse([]byte("---\n[invalid yaml\n---\nbody\n"))
++
++	s.True(errors.Is(err, durable.ErrPageUnreadable))
++}
++
++func (s *PageSuite) TestParseRejectsMalformedFactMetadata() {
++	page := durable.NewMarkdownPage()
++
++	content := "### Fact: payment.retry\n```fact-metadata\n[invalid yaml\n```\n"
++
++	_, _, err := page.Parse([]byte(content))
++
++	s.True(errors.Is(err, durable.ErrPageUnreadable))
++}
++
++func (s *PageSuite) TestParseIsMarkdownReadableAndGrepFriendly() {
++	page := durable.NewMarkdownPage()
++
++	output, err := page.Serialize([]durable.Fact{
++		{
++			Identity:   durable.Identity{Key: "payment.retry", Hash: "sha256:aaaa"},
++			Content:    "Retries three times before failing.",
++			Durability: durable.DurabilityDurable,
++			State:      durable.FactStateActive,
++		},
++	}, durable.HumanBlock{Content: "Human authored notes.\n"})
++	s.Require().NoError(err)
++
++	text := string(output)
++	s.Contains(text, "### Fact: payment.retry")
++	s.Contains(text, "Human authored notes.")
++	s.Contains(text, "durability: durable")
++}
++
++func (s *PageSuite) TestRoundTripOnRealRepositoryCorpus() {
++	repoRoot := "../../../.."
++	corpus := []string{
++		repoRoot + "/AGENTS.md",
++		repoRoot + "/README.md",
++		repoRoot + "/docs/config-hierarchy.md",
++		repoRoot + "/docs/guia-instalacao-universal.md",
++	}
++
++	page := durable.NewMarkdownPage()
++
++	for _, path := range corpus {
++		s.Run(path, func() {
++			original, err := os.ReadFile(path)
++			s.Require().NoError(err)
++			s.Require().NotEmpty(original)
++
++			facts, human, err := page.Parse(original)
++			s.Require().NoError(err)
++			s.Empty(facts)
++			s.Equal(string(original), human.Content)
++
++			output, err := page.Serialize(facts, human)
++			s.Require().NoError(err)
++
++			_, reparsedHuman, err := page.Parse(output)
++			s.Require().NoError(err)
++			s.Equal(human.Content, reparsedHuman.Content)
++			s.Equal(string(original), reparsedHuman.Content)
++		})
++	}
++}
+diff --git a/internal/runtime/memory/durable/r1_catalog.go b/internal/runtime/memory/durable/r1_catalog.go
+new file mode 100644
+index 0000000..a7b3ffa
+--- /dev/null
++++ b/internal/runtime/memory/durable/r1_catalog.go
+@@ -0,0 +1,7 @@
++package durable
++
++type Catalog struct{}
++
++func NewCatalog() *Catalog {
++	return &Catalog{}
++}

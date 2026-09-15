@@ -50,7 +50,7 @@ func TestSpecAccessorsNonEmpty(t *testing.T) {
 func TestBootstrapArgsNoOpClaude(t *testing.T) {
 	t.Parallel()
 
-	got := specs.NewCatalog().Claude().BootstrapArgs("any", "any", nil, specs.AccessModeFull)
+	got := specs.NewCatalog().Claude().BootstrapArgs("any", "any", nil, specs.AccessModeFull, "")
 	if got != nil {
 		t.Errorf("Claude().BootstrapArgs() = %v; want nil (no-op)", got)
 	}
@@ -61,7 +61,7 @@ func TestBootstrapArgsNoOpClaude(t *testing.T) {
 func TestBootstrapArgsNoOpCopilot(t *testing.T) {
 	t.Parallel()
 
-	got := specs.NewCatalog().Copilot().BootstrapArgs("any", "any", nil, specs.AccessModeFull)
+	got := specs.NewCatalog().Copilot().BootstrapArgs("any", "any", nil, specs.AccessModeFull, "")
 	if got != nil {
 		t.Errorf("Copilot().BootstrapArgs() = %v; want nil (no-op)", got)
 	}
@@ -80,7 +80,6 @@ func TestSpec_ContextWindow_Catalog(t *testing.T) {
 		{"claude", specs.NewCatalog().Claude(), specs.WindowStandard, true},
 		{"codex", specs.NewCatalog().Codex(), specs.WindowStandard, true},
 		{"copilot", specs.NewCatalog().Copilot(), specs.WindowStandard, true},
-		{"gemini", specs.NewCatalog().Gemini(), specs.WindowLarge, true},
 	}
 
 	for _, tc := range tests {
@@ -98,22 +97,6 @@ func TestSpec_ContextWindow_Catalog(t *testing.T) {
 				t.Errorf("%s: Class() = %v; want %v", tc.name, got, tc.wantClass)
 			}
 		})
-	}
-}
-
-// TestSpec_Gemini_IsWindowLarge garante que Gemini retorna WindowLarge (invariante ADR-023).
-func TestSpec_Gemini_IsWindowLarge(t *testing.T) {
-	t.Parallel()
-
-	spec := specs.NewCatalog().Gemini()
-	cw := spec.ContextWindow()
-
-	if cw.Class() != specs.WindowLarge {
-		t.Errorf("Gemini ContextWindow.Class() = %v; want WindowLarge (janela ≥1M)", cw.Class())
-	}
-
-	if cw.MaxTokens < 1_000_000 {
-		t.Errorf("Gemini MaxTokens = %d; deve ser ≥1_000_000", cw.MaxTokens)
 	}
 }
 
@@ -151,7 +134,6 @@ func TestSpec_DriverID_Catalog(t *testing.T) {
 		{"claude", specs.NewCatalog().Claude(), "claude"},
 		{"codex", specs.NewCatalog().Codex(), "codex"},
 		{"copilot", specs.NewCatalog().Copilot(), "copilot"},
-		{"gemini", specs.NewCatalog().Gemini(), "gemini"},
 	}
 
 	for _, tc := range tests {

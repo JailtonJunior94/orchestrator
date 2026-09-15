@@ -89,7 +89,7 @@ func TestDryRun(t *testing.T) {
 	printer := &output.Printer{Out: &buf, Verbose: false}
 	g := NewGenerator(ffs, printer)
 
-	tools := []skills.Tool{skills.ToolClaude, skills.ToolGemini, skills.ToolCopilot, skills.ToolCodex}
+	tools := []skills.Tool{skills.ToolClaude, skills.ToolOpenCode, skills.ToolCopilot, skills.ToolCodex}
 	err := g.Generate("/source", "/project", tools, nil, "full", true)
 	if err != nil {
 		t.Fatalf("Generate dry-run returned error: %v", err)
@@ -101,7 +101,7 @@ func TestDryRun(t *testing.T) {
 	}
 
 	outStr := buf.String()
-	for _, expected := range []string{"AGENTS.md", "CLAUDE.md", "GEMINI.md", "copilot-instructions.md", "config.toml"} {
+	for _, expected := range []string{"AGENTS.md", "CLAUDE.md", "copilot-instructions.md", "config.toml"} {
 		if !strings.Contains(outStr, expected) {
 			t.Errorf("dry-run output deve mencionar %q, got:\n%s", expected, outStr)
 		}
@@ -246,11 +246,11 @@ func TestContextgen_Snapshots(t *testing.T) {
 		{"go-microservice", filepath.Join("..", "..", "testdata", "go-microservice"), []skills.Tool{skills.ToolClaude}},
 		{"go-modular", filepath.Join("..", "..", "testdata", "go-modular"), []skills.Tool{skills.ToolClaude}},
 		{"go-monolith", filepath.Join("..", "..", "testdata", "go-monolith"), []skills.Tool{skills.ToolClaude}},
-		{"node-monorepo", filepath.Join("..", "..", "testdata", "node-monorepo"), []skills.Tool{skills.ToolGemini}},
+		{"node-monorepo", filepath.Join("..", "..", "testdata", "node-monorepo"), []skills.Tool{skills.ToolCopilot}},
 		{"node-api", filepath.Join("..", "..", "testdata", "node-api"), []skills.Tool{skills.ToolClaude}},
 		{"python-api", filepath.Join("..", "..", "testdata", "python-api"), []skills.Tool{skills.ToolClaude}},
 		{"python-monorepo", filepath.Join("..", "..", "testdata", "python-monorepo"), []skills.Tool{skills.ToolClaude}},
-		{"polyglot-monorepo", filepath.Join("..", "..", "testdata", "polyglot-monorepo"), []skills.Tool{skills.ToolClaude, skills.ToolGemini}},
+		{"polyglot-monorepo", filepath.Join("..", "..", "testdata", "polyglot-monorepo"), []skills.Tool{skills.ToolClaude, skills.ToolCopilot}},
 	}
 
 	for _, tc := range fixtures {
@@ -327,4 +327,28 @@ func TestBuildCodexConfig(t *testing.T) {
 			t.Errorf("full config should contain create-tasks, got:\n%s", content)
 		}
 	})
+}
+
+func TestGenerateMergesAuthoredCodexConfigAtCallSite(t *testing.T) {
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	ffs.Dirs["/project/.codex"] = true
+	authored := "model = \"o3\"\n\n[mcp_servers.local]\ncommand = \"my-server\"\n"
+	ffs.Files["/project/.codex/config.toml"] = []byte(authored)
+
+	g := NewGenerator(ffs, output.New(false))
+	if err := g.Generate("/source", "/project", []skills.Tool{skills.ToolCodex}, nil, "full", false); err != nil {
+		t.Fatalf("Generate returned error: %v", err)
+	}
+
+	written := string(ffs.Files["/project/.codex/config.toml"])
+	for _, fragment := range []string{"model = \"o3\"", "[mcp_servers.local]", "command = \"my-server\""} {
+		if !strings.Contains(written, fragment) {
+			t.Fatalf("contextgen call-site dropped authored content %q; resulting config.toml:\n%s", fragment, written)
+		}
+	}
+	if !strings.Contains(written, codexGeneratedBegin) || !strings.Contains(written, codexGeneratedEnd) {
+		t.Fatalf("contextgen call-site did not delimit the generated region; resulting config.toml:\n%s", written)
+	}
 }

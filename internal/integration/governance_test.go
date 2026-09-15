@@ -13,7 +13,7 @@ package integration
 //  2. Toda referencia citada em SKILL.md existe no caminho esperado.
 //  3. Hooks referenciados em settings.local.json existem e sao executaveis.
 //  4. skills-lock.json e consistente com o diretorio .agents/skills/.
-//  5. Paridade semantica entre artefatos Claude / Gemini / Codex passa os invariantes.
+//  5. Paridade semantica entre artefatos Claude / Codex / Copilot / OpenCode passa os invariantes.
 
 import (
 	"encoding/json"
@@ -315,7 +315,7 @@ func TestGov16_SkillsLock_ExternalSkillsHaveLockEntry(t *testing.T) {
 // ── Subtask 16.3 — Paridade entre agentes ─────────────────────────────────────
 
 // TestGov16_Parity_InvariantsPass_AllTools executa o conjunto completo de invariantes
-// de paridade para a combinacao Claude + Gemini + Codex + Copilot.
+// de paridade para a combinacao Claude + Codex + Copilot + OpenCode.
 // Falhas Common ou ToolSpecific bloqueiam; BestEffort sao registradas como aviso.
 func TestGov16_Parity_InvariantsPass_AllTools(t *testing.T) {
 	runGovParity(t, skills.AllTools, "full")
@@ -327,10 +327,10 @@ func TestGov16_Parity_InvariantsPass_ClaudeOnly(t *testing.T) {
 	runGovParity(t, []skills.Tool{skills.ToolClaude}, "full")
 }
 
-// TestGov16_Parity_InvariantsPass_ClaudeGemini executa invariantes para Claude + Gemini.
-// Verifica paridade de caminho canonico e documentacao de best-effort no Gemini.
-func TestGov16_Parity_InvariantsPass_ClaudeGemini(t *testing.T) {
-	runGovParity(t, []skills.Tool{skills.ToolClaude, skills.ToolGemini}, "full")
+// TestGov16_Parity_InvariantsPass_ClaudeOpenCode executa invariantes para Claude + OpenCode.
+// Verifica paridade de caminho canonico entre Claude e OpenCode.
+func TestGov16_Parity_InvariantsPass_ClaudeOpenCode(t *testing.T) {
+	runGovParity(t, []skills.Tool{skills.ToolClaude, skills.ToolOpenCode}, "full")
 }
 
 // TestGov16_Parity_InvariantsPass_CodexOnly executa invariantes para Codex isolado.

@@ -1,0 +1,542 @@
+diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+index 29c96a8..92e5ed5 100644
+--- a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+@@ -27,7 +27,7 @@
+ | 2.0 | Pacote de domínio do Ciclo de Aprovação, sem consumidor | done | 1.0 | Com 3.0 | domain-modeling-production |
+ | 3.0 | Mapa 1:1 critério-evidência como dado verificável | done | 1.0 | Com 2.0 | — |
+ | 4.1 | Veredito da fonte real do revisor e adaptadores das portas (D1) | done | 2.0, 3.0 | Não | — |
+-| 4.2 | Evidência por rodada, revisão por delta e reset de profundidade (D2) | pending | 4.1 | Não | — |
++| 4.2 | Evidência por rodada, revisão por delta e reset de profundidade (D2) | done | 4.1 | Não | — |
+ | 4.3 | Promoção do loop nos três caminhos de produção e as quatro lacunas | pending | 4.2 | Não | — |
+ | 5.0 | Propagação do teto de rodadas e virada do critério estrito | pending | 4.3 | Não | — |
+ | 6.0 | Catálogo de Agentes como registro único | done | 2.0 | Não | domain-modeling-production |
+diff --git a/internal/invocation/invocation.go b/internal/invocation/invocation.go
+index a814d4d..98504e5 100644
+--- a/internal/invocation/invocation.go
++++ b/internal/invocation/invocation.go
+@@ -38,6 +38,18 @@ func (g *Guard) IncrementDepth() {
+ 	_ = os.Setenv(_envDepth, strconv.Itoa(depth+1))
+ }
+ 
++func (g *Guard) ResetDepth() func() {
++	previous, had := os.LookupEnv(_envDepth)
++	_ = os.Setenv(_envDepth, "0")
++	return func() {
++		if had {
++			_ = os.Setenv(_envDepth, previous)
++			return
++		}
++		_ = os.Unsetenv(_envDepth)
++	}
++}
++
+ func (g *Guard) readInt(key string, defaultValue int) int {
+ 	raw := os.Getenv(key)
+ 	if raw == "" {
+diff --git a/internal/invocation/invocation_test.go b/internal/invocation/invocation_test.go
+index ae9749e..48bc5c1 100644
+--- a/internal/invocation/invocation_test.go
++++ b/internal/invocation/invocation_test.go
+@@ -85,3 +85,37 @@ func TestIncrementDepth_FromZero(t *testing.T) {
+ 		t.Errorf("expected AI_INVOCATION_DEPTH=1, got %s", got)
+ 	}
+ }
++
++func TestResetDepthRestoresPreviousValue(t *testing.T) {
++	resetEnv()
++	os.Setenv(_envDepth, "1")
++	defer resetEnv()
++
++	restore := NewGuard().ResetDepth()
++	if got := os.Getenv(_envDepth); got != "0" {
++		t.Fatalf("expected AI_INVOCATION_DEPTH=0 during round, got %s", got)
++	}
++
++	restore()
++	if got := os.Getenv(_envDepth); got != "1" {
++		t.Fatalf("expected AI_INVOCATION_DEPTH restored to 1, got %s", got)
++	}
++}
++
++func TestResetDepthUnsetsWhenAbsent(t *testing.T) {
++	resetEnv()
++	defer resetEnv()
++
++	restore := NewGuard().ResetDepth()
++	restore()
++
++	if _, ok := os.LookupEnv(_envDepth); ok {
++		t.Fatal("expected AI_INVOCATION_DEPTH to be unset after restore")
++	}
++}
++
++func TestResetDepthDoesNotChangeDefaultMax(t *testing.T) {
++	if _defaultMax != 2 {
++		t.Fatalf("_defaultMax = %d, want 2 (reset must not raise the ceiling)", _defaultMax)
++	}
++}
+diff --git a/internal/runtime/approval_adapters.go b/internal/runtime/approval_adapters.go
+index 187493c..b268bbc 100644
+--- a/internal/runtime/approval_adapters.go
++++ b/internal/runtime/approval_adapters.go
+@@ -61,10 +61,11 @@ func (c *Catalog) revParseHead(workDir string) (string, error) {
+ type ReviewerAdapter struct {
+ 	runner  *ACPRunner
+ 	baseJob Job
++	repo    approval.Repository
+ }
+ 
+ func NewReviewerAdapter(runner *ACPRunner, baseJob Job) *ReviewerAdapter {
+-	return &ReviewerAdapter{runner: runner, baseJob: baseJob}
++	return &ReviewerAdapter{runner: runner, baseJob: baseJob, repo: NewRepositoryAdapter(baseJob.WorkDir)}
+ }
+ 
+ func (a *ReviewerAdapter) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
+@@ -77,13 +78,31 @@ func (a *ReviewerAdapter) Review(ctx context.Context, request approval.ReviewReq
+ 	}
+ 	job.Prompt = NewCatalog().buildReviewPrompt(skillBody, request.Target().String())
+ 
++	priorSHA, err := a.priorCutPoint(ctx, request.Round())
++	if err != nil {
++		return approval.ReviewerOutput{}, err
++	}
++
++	restoreEnv := NewCatalog().applyRoundReviewEnv(request.Round(), priorSHA)
+ 	rawText, err := a.runner.spawnReviewSession(ctx, job)
++	restoreEnv()
+ 	if err != nil {
+ 		return approval.ReviewerOutput{}, err
+ 	}
+ 	return approval.NewReviewerOutput(rawText, nil, approval.CriteriaMap{}), nil
+ }
+ 
++func (a *ReviewerAdapter) priorCutPoint(ctx context.Context, round int) (string, error) {
++	if round < 2 {
++		return "", nil
++	}
++	checkpoint, err := a.repo.Checkpoint(ctx)
++	if err != nil {
++		return "", err
++	}
++	return checkpoint.String(), nil
++}
++
+ type FixerAdapter struct {
+ 	runner  *ACPRunner
+ 	baseJob Job
+diff --git a/internal/runtime/runner_autoreview.go b/internal/runtime/runner_autoreview.go
+index b235eb6..108dd22 100644
+--- a/internal/runtime/runner_autoreview.go
++++ b/internal/runtime/runner_autoreview.go
+@@ -15,6 +15,7 @@ import (
+ 	"time"
+ 
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/invocation"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
+ )
+ 
+@@ -26,6 +27,8 @@ const (
+ 	// _reviewDiffMaxBytes é o limite default de bytes do diff (5 MB).
+ 	// Configurável via env AISPEC_REVIEW_DIFF_MAX.
+ 	_reviewDiffMaxBytes = 5 * 1024 * 1024
++
++	envReviewPriorSHA = "AI_REVIEW_PRIOR_SHA"
+ )
+ 
+ // ReviewResult agrega o resultado do auto-review.
+@@ -140,28 +143,29 @@ func (c *Catalog) runGitDiff(workDir string, args ...string) (string, error) {
+ // Em produção é nil; em testes pode ser substituída via campo do runner (não exposto — testado via mock).
+ type autoReviewOutputFn func(ctx context.Context, j Job) (string, error)
+ 
+-// runAutoReview spawna nova ACPRunner com prompt de review e retorna ReviewResult.
+-// HARD: child Job tem AutoReview=false forçado (anti-recursão — T-REV-04 valida).
+-// HARD: falha de leitura da skill → erro claro, não spawna review.
+ func (r *ACPRunner) runAutoReview(ctx context.Context, j Job) (ReviewResult, error) {
+-	// Ler skill de review em runtime (não embutir inline).
++	return r.runAutoReviewRound(ctx, j, 1, "")
++}
++
++func (r *ACPRunner) runAutoReviewRound(ctx context.Context, j Job, round int, priorSHA string) (ReviewResult, error) {
++	if round < 1 {
++		return ReviewResult{}, fmt.Errorf("runAutoReviewRound: round %d below one", round)
++	}
++
+ 	skillBody, err := r.readReviewSkill(j.WorkDir)
+ 	if err != nil {
+-		return ReviewResult{}, fmt.Errorf("runAutoReview: %w", err)
++		return ReviewResult{}, fmt.Errorf("runAutoReviewRound: %w", err)
+ 	}
+ 
+ 	gitDiff := NewCatalog().collectGitDiff(j.WorkDir)
+ 	prompt := NewCatalog().buildReviewPrompt(skillBody, gitDiff)
+ 
+-	reviewEvidenceDir := filepath.Join(j.EvidenceDir, "review")
+-	reviewPath := filepath.Join(j.EvidenceDir, "review.md")
++	reviewEvidenceDir := NewCatalog().roundReviewEvidenceDir(j.EvidenceDir, round)
+ 
+-	// HARD: child Job tem AutoReview=false (anti-recursão).
+ 	childJob := Job{
+ 		Prompt:      prompt,
+ 		WorkDir:     j.WorkDir,
+ 		EvidenceDir: reviewEvidenceDir,
+-		// RuntimeConfig: apenas Timeout para o review; demais campos inertes (F1).
+ 		RuntimeConfig: RuntimeConfig{
+ 			Timeout: NewCatalog().mustReviewTimeout(),
+ 		},
+@@ -169,25 +173,73 @@ func (r *ACPRunner) runAutoReview(ctx context.Context, j Job) (ReviewResult, err
+ 		TasksDir:       j.TasksDir,
+ 		TaskFileName:   j.TaskFileName,
+ 		DisableHooks:   j.DisableHooks,
+-		SkipDriftGuard: j.SkipDriftGuard, // herdar bypass do parent (consistência do guard)
+-		AutoReview:     false,            // HARD: recursão bloqueada
++		SkipDriftGuard: j.SkipDriftGuard,
++		AutoReview:     false,
+ 	}
+ 
+-	reviewOutput, err := r.spawnReviewSession(ctx, childJob)
++	restoreEnv := NewCatalog().applyRoundReviewEnv(round, priorSHA)
++	reviewOutput, runErr := r.spawnReviewSession(ctx, childJob)
++	restoreEnv()
+ 
+ 	status := NewCatalog().translateReviewStatus(reviewOutput)
+ 	hardIssues := NewCatalog().extractHardIssues(reviewOutput)
+ 
+-	reviewPointerContent := NewCatalog().buildReviewPointer(reviewEvidenceDir, status)
+-	_ = os.MkdirAll(filepath.Dir(reviewPath), 0o755)
+-	_ = os.WriteFile(reviewPath, []byte(reviewPointerContent), 0o644)
++	evidencePath, writeErr := NewCatalog().writeRoundReviewEvidence(reviewEvidenceDir, reviewOutput)
++	if writeErr != nil {
++		return ReviewResult{}, writeErr
++	}
+ 
+ 	return ReviewResult{
+ 		Status:     status,
+-		Path:       reviewPath,
++		Path:       evidencePath,
+ 		Output:     reviewOutput,
+ 		HardIssues: hardIssues,
+-	}, err
++	}, runErr
++}
++
++func (c *Catalog) roundReviewEvidenceDir(evidenceDir string, round int) string {
++	return filepath.Join(evidenceDir, "review", fmt.Sprintf("round-%d", round))
++}
++
++func (c *Catalog) writeRoundReviewEvidence(roundDir, content string) (string, error) {
++	if err := os.MkdirAll(roundDir, 0o755); err != nil {
++		return "", fmt.Errorf("write round review evidence: %w", err)
++	}
++	path := filepath.Join(roundDir, "review.md")
++	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_EXCL, 0o644)
++	if err != nil {
++		return "", fmt.Errorf("write round review evidence at %q: %w", path, err)
++	}
++	defer func() { _ = file.Close() }()
++	if _, err := file.WriteString(content); err != nil {
++		return "", fmt.Errorf("write round review evidence at %q: %w", path, err)
++	}
++	return path, nil
++}
++
++func (c *Catalog) applyRoundReviewEnv(round int, priorSHA string) func() {
++	restoreDepth := invocation.NewGuard().ResetDepth()
++	restorePrior := c.applyPriorReviewSHA(round, priorSHA)
++	return func() {
++		restorePrior()
++		restoreDepth()
++	}
++}
++
++func (c *Catalog) applyPriorReviewSHA(round int, priorSHA string) func() {
++	previous, had := os.LookupEnv(envReviewPriorSHA)
++	if round > 1 && priorSHA != "" {
++		_ = os.Setenv(envReviewPriorSHA, priorSHA)
++	} else {
++		_ = os.Unsetenv(envReviewPriorSHA)
++	}
++	return func() {
++		if had {
++			_ = os.Setenv(envReviewPriorSHA, previous)
++			return
++		}
++		_ = os.Unsetenv(envReviewPriorSHA)
++	}
+ }
+ 
+ // readReviewSkill lê .agents/skills/review/SKILL.md relativo ao workDir ou ao cwd.
+@@ -279,12 +331,6 @@ func (f *reviewCaptureFactory) New(evidenceDir string) (Persistence, error) {
+ 	return f.capture, nil
+ }
+ 
+-// buildReviewPointer cria o conteúdo do arquivo review.md (apontador conveniente ~3 linhas).
+-func (c *Catalog) buildReviewPointer(evidenceDir, status string) string {
+-	return fmt.Sprintf("# Auto-Review\n\nReviewStatus: %s\n\nRelatório completo: %s/execution_report.md\n",
+-		status, evidenceDir)
+-}
+-
+ // mustReviewTimeout retorna 5*time.Minute como ActivityTimeout para sessões de review.
+ // Timeout reduzido vs sessões normais (review é tipicamente rápido; evita hang longo).
+ func (c *Catalog) mustReviewTimeout() events.ActivityTimeout {
+diff --git a/internal/runtime/runner_autoreview_round_test.go b/internal/runtime/runner_autoreview_round_test.go
+new file mode 100644
+index 0000000..fc12aeb
+--- /dev/null
++++ b/internal/runtime/runner_autoreview_round_test.go
+@@ -0,0 +1,254 @@
++package runtime
++
++import (
++	"context"
++	"os"
++	"os/exec"
++	"path/filepath"
++	"strings"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
++)
++
++func workDirWithReviewSkill(t *testing.T) string {
++	t.Helper()
++	dir := t.TempDir()
++	skillDir := filepath.Join(dir, ".agents", "skills", "review")
++	if err := os.MkdirAll(skillDir, 0o755); err != nil {
++		t.Fatalf("mkdir skill: %v", err)
++	}
++	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# Review\n"), 0o644); err != nil {
++		t.Fatalf("write skill: %v", err)
++	}
++	if err := os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte("# Agents\n"), 0o644); err != nil {
++		t.Fatalf("write agents: %v", err)
++	}
++	return dir
++}
++
++func gitRepoWithReviewSkill(t *testing.T) string {
++	t.Helper()
++	dir := workDirWithReviewSkill(t)
++	run := func(args ...string) {
++		t.Helper()
++		cmd := exec.Command("git", args...)
++		cmd.Dir = dir
++		if out, err := cmd.CombinedOutput(); err != nil {
++			t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
++		}
++	}
++	run("init")
++	run("config", "user.email", "test@example.com")
++	run("config", "user.name", "Test")
++	run("add", ".")
++	run("commit", "-m", "base")
++	return dir
++}
++
++func runnerWithReviewFn(t *testing.T, fn ReviewOutputFn) *ACPRunner {
++	t.Helper()
++	return NewACPRunner(specs.NewCatalog().Claude(), NewCatalog().WithReviewOutputFn(fn))
++}
++
++func TestEvidenceRoundAddressesAreDistinctAndImmutable(t *testing.T) {
++	dir := t.TempDir()
++	catalog := NewCatalog()
++
++	first := catalog.roundReviewEvidenceDir(dir, 1)
++	second := catalog.roundReviewEvidenceDir(dir, 2)
++	if first == second {
++		t.Fatalf("round addresses collide: %q", first)
++	}
++
++	pathOne, err := catalog.writeRoundReviewEvidence(first, "round one output")
++	if err != nil {
++		t.Fatalf("write round 1: %v", err)
++	}
++	pathTwo, err := catalog.writeRoundReviewEvidence(second, "round two output")
++	if err != nil {
++		t.Fatalf("write round 2: %v", err)
++	}
++	if pathOne == pathTwo {
++		t.Fatalf("evidence files collide: %q", pathOne)
++	}
++
++	for want, path := range map[string]string{"round one output": pathOne, "round two output": pathTwo} {
++		data, readErr := os.ReadFile(path)
++		if readErr != nil {
++			t.Fatalf("read %q: %v", path, readErr)
++		}
++		if string(data) != want {
++			t.Fatalf("content of %q = %q, want %q", path, data, want)
++		}
++	}
++
++	if _, err := catalog.writeRoundReviewEvidence(first, "overwrite attempt"); err == nil {
++		t.Fatal("rewriting an existing round address must be an error")
++	}
++	data, _ := os.ReadFile(pathOne)
++	if string(data) != "round one output" {
++		t.Fatalf("round 1 evidence was mutated: %q", data)
++	}
++}
++
++func TestEvidenceRunAutoReviewRoundIsNumberedAndExclusive(t *testing.T) {
++	ctx := context.Background()
++	workDir := workDirWithReviewSkill(t)
++	job := Job{WorkDir: workDir, EvidenceDir: t.TempDir(), Quiet: true}
++
++	runner := runnerWithReviewFn(t, func(_ context.Context, _ Job) (string, error) {
++		return "## Review\n\nverdict: APPROVED\n", nil
++	})
++
++	roundOne, err := runner.runAutoReviewRound(ctx, job, 1, "")
++	if err != nil {
++		t.Fatalf("round 1: %v", err)
++	}
++	roundTwo, err := runner.runAutoReviewRound(ctx, job, 2, "sha-prev")
++	if err != nil {
++		t.Fatalf("round 2: %v", err)
++	}
++	if roundOne.Path == roundTwo.Path {
++		t.Fatalf("round evidence addresses collide: %q", roundOne.Path)
++	}
++	for _, path := range []string{roundOne.Path, roundTwo.Path} {
++		data, readErr := os.ReadFile(path)
++		if readErr != nil {
++			t.Fatalf("read %q: %v", path, readErr)
++		}
++		if !strings.Contains(string(data), "verdict: APPROVED") {
++			t.Fatalf("evidence %q missing reviewer output: %q", path, data)
++		}
++	}
++
++	if _, err := runner.runAutoReviewRound(ctx, job, 1, ""); err == nil {
++		t.Fatal("second write to round 1 address must fail")
++	}
++}
++
++func TestReviewPriorSHAEnvIsScopedToRoundAndRestored(t *testing.T) {
++	os.Unsetenv(envReviewPriorSHA)
++	ctx := context.Background()
++	workDir := workDirWithReviewSkill(t)
++	job := Job{WorkDir: workDir, EvidenceDir: t.TempDir(), Quiet: true}
++
++	var seen string
++	var present bool
++	capture := func(_ context.Context, _ Job) (string, error) {
++		seen, present = os.LookupEnv(envReviewPriorSHA)
++		return "verdict: APPROVED", nil
++	}
++	runner := runnerWithReviewFn(t, capture)
++
++	if _, err := runner.runAutoReviewRound(ctx, job, 1, "sha-ignored"); err != nil {
++		t.Fatalf("round 1: %v", err)
++	}
++	if present {
++		t.Fatalf("round 1 must not export %s, got %q", envReviewPriorSHA, seen)
++	}
++
++	if _, err := runner.runAutoReviewRound(ctx, job, 2, "sha-cutpoint"); err != nil {
++		t.Fatalf("round 2: %v", err)
++	}
++	if !present || seen != "sha-cutpoint" {
++		t.Fatalf("round 2 env = (%q, %v), want (\"sha-cutpoint\", true)", seen, present)
++	}
++
++	if _, ok := os.LookupEnv(envReviewPriorSHA); ok {
++		t.Fatal("prior SHA env leaked past the review session")
++	}
++}
++
++func TestReviewPriorSHAValueComesFromRepositoryCutPoint(t *testing.T) {
++	os.Unsetenv(envReviewPriorSHA)
++	ctx := context.Background()
++	repoDir := gitRepoWithReviewSkill(t)
++
++	cutPoint, err := NewRepositoryAdapter(repoDir).Checkpoint(ctx)
++	if err != nil {
++		t.Fatalf("checkpoint: %v", err)
++	}
++
++	var seen string
++	runner := runnerWithReviewFn(t, func(_ context.Context, _ Job) (string, error) {
++		seen = os.Getenv(envReviewPriorSHA)
++		return "verdict: APPROVED", nil
++	})
++	adapter := NewReviewerAdapter(runner, Job{WorkDir: repoDir, EvidenceDir: t.TempDir(), Quiet: true})
++
++	criterion, err := approval.NewAcceptanceCriterion("builds green")
++	if err != nil {
++		t.Fatalf("criterion: %v", err)
++	}
++	task, err := approval.NewTaskIdentity("task-4.2")
++	if err != nil {
++		t.Fatalf("task: %v", err)
++	}
++	agent, err := approval.NewAgentIdentity("agent-x")
++	if err != nil {
++		t.Fatalf("agent: %v", err)
++	}
++	criteria := []approval.AcceptanceCriterion{criterion}
++
++	firstRound, err := approval.NewReviewRequest(task, agent, 1, approval.NewReviewTarget("d1"), criteria)
++	if err != nil {
++		t.Fatalf("request 1: %v", err)
++	}
++	if _, err := adapter.Review(ctx, firstRound); err != nil {
++		t.Fatalf("review 1: %v", err)
++	}
++	if seen != "" {
++		t.Fatalf("round 1 exported prior SHA %q", seen)
++	}
++
++	secondRound, err := approval.NewReviewRequest(task, agent, 2, approval.NewReviewTarget("d2"), criteria)
++	if err != nil {
++		t.Fatalf("request 2: %v", err)
++	}
++	if _, err := adapter.Review(ctx, secondRound); err != nil {
++		t.Fatalf("review 2: %v", err)
++	}
++	if seen != cutPoint.String() {
++		t.Fatalf("round 2 prior SHA = %q, want %q", seen, cutPoint.String())
++	}
++}
++
++func TestReviewRoundResetsInvocationDepthWithoutRaisingLimit(t *testing.T) {
++	os.Setenv(invocationDepthEnvKey, "1")
++	defer os.Unsetenv(invocationDepthEnvKey)
++	ctx := context.Background()
++	workDir := workDirWithReviewSkill(t)
++	job := Job{WorkDir: workDir, EvidenceDir: t.TempDir(), Quiet: true}
++
++	var depthDuringRound string
++	var childAutoReview bool
++	runner := runnerWithReviewFn(t, func(_ context.Context, child Job) (string, error) {
++		depthDuringRound = os.Getenv(invocationDepthEnvKey)
++		childAutoReview = child.AutoReview
++		return "verdict: APPROVED", nil
++	})
++
++	for round := 1; round <= 3; round++ {
++		prior := ""
++		if round > 1 {
++			prior = "sha-prev"
++		}
++		if _, err := runner.runAutoReviewRound(ctx, job, round, prior); err != nil {
++			t.Fatalf("round %d: %v", round, err)
++		}
++		if depthDuringRound != "0" {
++			t.Fatalf("round %d opened with depth %q, want reset to 0", round, depthDuringRound)
++		}
++		if childAutoReview {
++			t.Fatalf("round %d child session has AutoReview enabled (RF-44)", round)
++		}
++	}
++
++	if got := os.Getenv(invocationDepthEnvKey); got != "1" {
++		t.Fatalf("invocation depth not restored after rounds: %q", got)
++	}
++}
++
++const invocationDepthEnvKey = "AI_INVOCATION_DEPTH"

@@ -1,0 +1,1583 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 67b0d78..fc9ad8d 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -1,5 +1,108 @@
+ # Changelog
+ 
++## 2.0.0 (2026-09-11)
++
++Release major: consolida os quatro CLIs oficiais (Claude Code, Codex, GitHub Copilot CLI,
++OpenCode), remove o Gemini e substitui a rodada única de revisão por um Ciclo de Aprovação
++determinístico. Nenhum default muda para Claude, Codex e Copilot além dos listados explicitamente
++abaixo (O-06); todos os demais fluxos permanecem byte-idênticos (RF-62), comprovado pela suíte de
++não-regressão e pelos vetores 1 (ambiente do processo filho) e 2 (janela de contexto estática).
++
++### Breaking Changes
++
++- **agents:** remove totalmente o Gemini CLI do conjunto suportado — diretório `.gemini/`,
++  `GEMINI.md`, invoker legado com aviso de depreciação, geradores de adaptador dedicados, extrator
++  de métricas próprio, testes/fixtures de integração e de paridade dedicados (RF-01, RF-02, task
++  10.0). Invocar `--tool gemini` produz erro tipado e explicativo (`skills.RemovedAgentError`,
++  distinguível via `errors.As`) citando o conjunto suportado `{claude, codex, copilot, opencode}`
++  e apontando para o guia de migração (`docs/migracao-legacy-acp.md#gemini-removido`) — nunca mais
++  o erro genérico de valor inválido (RF-03).
++- **agents:** adiciona o OpenCode como quarto agente oficial de 1ª classe (ACP nativo via
++  subcomando `opencode acp`, versão pinada, sem `@latest`), preenchendo antes da remoção do Gemini
++  as duas células de "ocupante único" que ficariam vazias — `ToolBudgetsLarge` em
++  `internal/metrics/metrics.go` e `inherit_common` das regras de normalização — cada uma agora
++  coberta por gate de não-vacuidade (RF-06, RF-10..RF-18, tasks 6.0/7.0/8.0).
++- **approval:** `APPROVED_WITH_REMARKS` **deixa de fechar tarefa como `done`** — a regra antiga que
++  permitia isso é removida; os achados da ressalva realimentam a correção. O Ciclo só encerra como
++  aprovado com veredito `APPROVED` **e** mapa 1:1 completo de critério de aceite → evidência
++  verificável; esgotado o teto de rodadas sem aprovação, o resultado é **sempre `blocked`**, nunca
++  `done` (RF-33, RF-36, task 5.0). Quem dependia do comportamento antigo (ressalva não-crítica
++  fechando a tarefa) passa a ver `blocked` com histórico de rodadas.
++- **cli:** nova flag `--max-bugfix-iterations` (default **5**) expõe pela primeira vez o teto de
++  rodadas do Ciclo de Aprovação, antes fixo em código sem nenhum escritor (RF-35, task 5.0). O
++  Ciclo continua **desligado por default** no modo orquestrado (mesma flag opt-in que já ativava a
++  auto-revisão) — ativá-lo agora faz o ciclo **iterar** em vez de rodar uma única vez.
++- **install/uninstall:** a desinstalação passa a ser **dirigida pelo manifesto** (campo aditivo
++  `InstalledFiles`), removendo todos os arquivos que a instalação de fato criou — antes, 6 arquivos
++  escapavam da limpeza (RF-05, RF-60, task 10.0). Manifesto antigo, gravado antes deste campo
++  existir, cai em caminho conservador **anunciado explicitamente na saída**, preservando arquivos
++  do usuário; nenhuma remoção silenciosa.
++- **copilot:** corrige a chave do hook de encerramento de sessão do Copilot (`stop` → `agentStop`,
++  o nome oficial do evento) — o gate de encerramento do Copilot, que **nunca disparava** por causa
++  da chave inválida, passa a disparar de fato (RF-59, task 9.0). Quem dependia do gate
++  silenciosamente inativo no Copilot passa a vê-lo bloquear encerramento de sessão com tarefa ativa
++  sem veredito `APPROVED`.
++- **runtime:** o veredito de revisão em produção deixa de ser derivado de texto **sintético**
++  (`buildReviewOutputFromSummary`) e passa a consumir a **saída real do revisor**; a escrita do
++  relatório de revisão pelo Go deixa de sobrescrever o artefato produzido pela skill (RF-57,
++  RF-58, tasks 4.1/4.2). Sessões com `--auto-review`/Ciclo ativado que hoje aprovavam sempre podem
++  passar a bloquear — é a correção do falso positivo que motivou esta entrega, não uma regressão.
++- **runtime:** o guarda de profundidade de invocação, que impedia qualquer ciclo de correção de
++  passar da 1ª rodada, agora reseta a profundidade a cada rodada do Ciclo (RF-38, tasks 4.2/5.0) —
++  efeito observável apenas com o Ciclo ativado (opt-in).
++- **contextgen:** o `AGENTS.md` gerado por `install`/`analyze-project` deixa de citar os quatro
++  agentes incondicionalmente nas seções "Notas por Ferramenta" e "Matrix de Enforcement" — passa a
++  citar **apenas** os agentes efetivamente selecionados (`--tools`), corrigindo também a afirmação
++  falsa de que o Copilot não tem hooks nativos (RF-09, task 10.0, subtarefas 10.12/10.13). Projetos
++  que selecionam um subconjunto de agentes (ex.: `--tools claude`) verão um `AGENTS.md` menor e
++  correto na próxima geração — nenhum agente fora do conjunto selecionado aparece mais.
++
++### Features
++
++- **domain:** novo pacote `internal/approval` — agregado do Ciclo de Aprovação sem dependência de
++  protocolo ACP, CLI ou filesystem; dono da contagem de rodadas, veredito corrente e critério de
++  parada; consumido por `Service.Execute`, `RunLoop` e `ACPRunner` (RF-30, RF-31, RF-34, RF-41,
++  RF-42, RF-43, RF-44, RF-45, tasks 2.0, 4.1–4.8).
++- **domain:** mapa 1:1 critério de aceite → evidência como dado verificável e fail-closed; critério
++  "não verificável pelo diff" proíbe `APPROVED` (RF-46..RF-54, task 3.0).
++- **opencode:** enforcement não-desligável — hook de pré-ferramenta por exceção, permissões
++  declarativas, sanitização do ambiente do processo filho contra os interruptores conhecidos
++  (`OPENCODE_PURE`, `OPENCODE_DISABLE_PROJECT_CONFIG`, `OPENCODE_DISABLE_EXTERNAL_SKILLS`) e
++  handshake ativo do plugin de governança antes do primeiro prompt (RF-19..RF-21, task 8.0).
++- **opencode:** janela de contexto derivada do modelo por tabela versionada (casamento exato e por
++  maior prefixo), com fallback conservador declarado e testado para modelo não resolvível — sem
++  efeito para Claude/Codex/Copilot, cuja janela permanece estática (RF-17, task 7.0).
++- **hooks:** gate canônico de encerramento de sessão presente nos quatro agentes, bloqueando
++  encerramento com tarefa ativa sem veredito `APPROVED` (RF-27, task 9.0).
++- **traceability:** `ai-spec check-traceability <diretorio-prd>` deriva e verifica a cadeia
++  requisito → tarefa → critério → evidência a partir dos próprios artefatos (RF-55, task 11.0).
++- **catalog:** registro único de agentes (`internal/runtime/specs.Registry`) — elimina as duas
++  ordens canônicas divergentes e os dois catálogos ACP espelhados que hoje coexistiam (RF-07,
++  task 6.0).
++
++### Fixes
++
++- **install:** chave de evento do hook de encerramento do Copilot corrigida (ver Breaking Changes).
++- **uninstall:** desinstalação incompleta corrigida via manifesto por arquivo (ver Breaking
++  Changes).
++- **runtime:** veredito sintético e sobrescrita do artefato de revisão corrigidos (ver Breaking
++  Changes).
++
++### Documentation
++
++- **migration:** guia de migração do Gemini removido em
++  `docs/migracao-legacy-acp.md#gemini-removido`, referenciado pelo erro tipado de invocação.
++- **sdd:** rastreabilidade requisito → tarefa → critério → evidência ancorada por hash
++  (`spec-hash-prd`/`spec-hash-techspec` em `tasks.md`), verificável via `ai-spec check-spec-drift`
++  e `ai-spec check-traceability` (RF-55, task 11.0).
++
++> **Nota de proveniência:** as entradas acima foram compiladas a partir dos relatórios de execução
++> de cada tarefa (`.specs/prd-harness-quatro-clis-loop-aprovacao/*_execution_report.md`) e da
++> especificação técnica, não apenas do histórico `git log` — a maior parte do trabalho desta
++> release estava presente na árvore de trabalho, ainda não commitada, no momento da preparação
++> deste changelog. Nenhum hash de commit é citado onde a mudança correspondente ainda não foi
++> commitada.
++
+ ## 1.1.0 (2026-09-05)
+ 
+ ### Features
+diff --git a/VERSION b/VERSION
+index 9084fa2..227cea2 100644
+--- a/VERSION
++++ b/VERSION
+@@ -1 +1 @@
+-1.1.0
++2.0.0
+diff --git a/cmd/ai_spec_harness/check_traceability.go b/cmd/ai_spec_harness/check_traceability.go
+new file mode 100644
+index 0000000..f57083b
+--- /dev/null
++++ b/cmd/ai_spec_harness/check_traceability.go
+@@ -0,0 +1,52 @@
++package aispecharness
++
++import (
++	"fmt"
++	"os"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/traceability"
++	"github.com/spf13/cobra"
++)
++
++func newCheckTraceabilityCmd() *cobra.Command {
++	cmd := &cobra.Command{
++		Use:   "check-traceability <diretorio-prd>",
++		Short: "Verifica a cadeia requisito -> tarefa -> criterio -> evidencia",
++		Long: `Deriva o mapa de rastreabilidade a partir de prd.md, tasks.md e dos
++relatorios de execucao (<tarefa>_execution_report.md) sob o diretorio informado,
++e reprova qualquer RF sem tarefa, tarefa sem relatorio ou criterio, e criterio
++sem linha de evidencia.
++
++Exemplo:
++  ai-spec check-traceability .specs/prd-minha-feature`,
++		Args: cobra.ExactArgs(1),
++		RunE: func(cmd *cobra.Command, args []string) error {
++			dir := args[0]
++
++			info, err := os.Stat(dir)
++			if err != nil || !info.IsDir() {
++				fmt.Fprintf(os.Stderr, "erro: diretorio nao encontrado: %s\n", dir)
++				return newExitError(2)
++			}
++
++			traceMap, err := traceability.NewCatalog().BuildMap(dir)
++			if err != nil {
++				fmt.Fprintf(os.Stderr, "erro: %s\n", err)
++				return newExitError(2)
++			}
++
++			violations := traceMap.Validate()
++			if len(violations) == 0 {
++				fmt.Printf("OK: cadeia de rastreabilidade verificada — %d requisitos, %d tarefas.\n",
++					len(traceMap.Requirements), len(traceMap.TaskCoverage))
++				return nil
++			}
++
++			for _, v := range violations {
++				fmt.Printf("RUPTURA: %s\n", v.String())
++			}
++			return newExitError(1)
++		},
++	}
++	return cmd
++}
+diff --git a/cmd/ai_spec_harness/check_traceability_test.go b/cmd/ai_spec_harness/check_traceability_test.go
+new file mode 100644
+index 0000000..ad765ad
+--- /dev/null
++++ b/cmd/ai_spec_harness/check_traceability_test.go
+@@ -0,0 +1,82 @@
++package aispecharness
++
++import (
++	"os"
++	"path/filepath"
++	"testing"
++)
++
++func writeTraceabilityFixture(t *testing.T, dir, name, content string) {
++	t.Helper()
++	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
++		t.Fatalf("write fixture %s: %v", name, err)
++	}
++}
++
++func runCheckTraceability(t *testing.T, arg string) int {
++	t.Helper()
++	cmd := newCheckTraceabilityCmd()
++	err := cmd.RunE(cmd, []string{arg})
++	if err == nil {
++		return 0
++	}
++	return NewExitResolver().CodeFor(err)
++}
++
++func TestCheckTraceabilityCmd(t *testing.T) {
++	cases := []struct {
++		name     string
++		prepare  func(t *testing.T, root string)
++		wantCode int
++	}{
++		{
++			name: "cadeia fechada retorna zero",
++			prepare: func(t *testing.T, root string) {
++				writeTraceabilityFixture(t, root, "prd.md", "RF-01 deve existir.")
++				writeTraceabilityFixture(t, root, "tasks.md", "# Tasks\n\n## Cobertura de Requisitos\n\n| Tarefa | Requisitos cobertos |\n|---|---|\n| 1.0 | RF-01 |\n")
++				writeTraceabilityFixture(t, root, "1.0_execution_report.md", "# Report\n\n## Critérios de Aceite\n- criterio -> comprovado: log\n")
++			},
++			wantCode: 0,
++		},
++		{
++			name: "requisito sem tarefa retorna um",
++			prepare: func(t *testing.T, root string) {
++				writeTraceabilityFixture(t, root, "prd.md", "RF-01 deve existir. RF-02 tambem.")
++				writeTraceabilityFixture(t, root, "tasks.md", "# Tasks\n\n## Cobertura de Requisitos\n\n| Tarefa | Requisitos cobertos |\n|---|---|\n| 1.0 | RF-01 |\n")
++				writeTraceabilityFixture(t, root, "1.0_execution_report.md", "# Report\n\n## Critérios de Aceite\n- criterio -> comprovado: log\n")
++			},
++			wantCode: 1,
++		},
++		{
++			name: "criterio sem evidencia retorna um",
++			prepare: func(t *testing.T, root string) {
++				writeTraceabilityFixture(t, root, "prd.md", "RF-01 deve existir.")
++				writeTraceabilityFixture(t, root, "tasks.md", "# Tasks\n\n## Cobertura de Requisitos\n\n| Tarefa | Requisitos cobertos |\n|---|---|\n| 1.0 | RF-01 |\n")
++				writeTraceabilityFixture(t, root, "1.0_execution_report.md", "# Report\n\n## Critérios de Aceite\n- criterio sem seta\n")
++			},
++			wantCode: 1,
++		},
++		{
++			name:     "diretorio inexistente retorna erro de uso",
++			prepare:  func(t *testing.T, root string) {},
++			wantCode: 2,
++		},
++	}
++
++	for _, tc := range cases {
++		t.Run(tc.name, func(t *testing.T) {
++			root := t.TempDir()
++			tc.prepare(t, root)
++
++			arg := root
++			if tc.name == "diretorio inexistente retorna erro de uso" {
++				arg = filepath.Join(root, "inexistente")
++			}
++
++			gotCode := runCheckTraceability(t, arg)
++			if gotCode != tc.wantCode {
++				t.Fatalf("codigo de saida = %d, quer %d", gotCode, tc.wantCode)
++			}
++		})
++	}
++}
+diff --git a/cmd/ai_spec_harness/root.go b/cmd/ai_spec_harness/root.go
+index b52203a..2681410 100644
+--- a/cmd/ai_spec_harness/root.go
++++ b/cmd/ai_spec_harness/root.go
+@@ -16,10 +16,10 @@ func newRootCmd() *cobra.Command {
+ 		Use:   "ai-spec-harness",
+ 		Short: "Ferramenta CLI para governanca de IA em projetos de software",
+ 		Long: `ai-spec-harness instala, inspeciona e atualiza pacotes de governanca para ferramentas
+-de IA (Claude, Gemini, Codex, Copilot) em repositorios de software.
++de IA (Claude, Codex, Copilot, OpenCode) em repositorios de software.
+ 
+ Exemplos:
+-  ai-spec-harness install ./meu-projeto --tools claude,gemini --langs go,python
++  ai-spec-harness install ./meu-projeto --tools claude,opencode --langs go,python
+   ai-spec-harness upgrade ./meu-projeto
+   ai-spec-harness inspect ./meu-projeto
+   ai-spec-harness doctor ./meu-projeto`,
+@@ -48,6 +48,7 @@ Exemplos:
+ 	cmd.AddCommand(newSkillBumpCmd())
+ 	cmd.AddCommand(newSkillsCmd())
+ 	cmd.AddCommand(newCheckSpecDriftCmd())
++	cmd.AddCommand(newCheckTraceabilityCmd())
+ 	cmd.AddCommand(newSyncSpecHashCmd())
+ 	cmd.AddCommand(newTaskLoopCmd())
+ 	cmd.AddCommand(newTelemetryCmd())
+diff --git a/docs/cli-schema.json b/docs/cli-schema.json
+index 8b172ad..b57e33a 100644
+--- a/docs/cli-schema.json
++++ b/docs/cli-schema.json
+@@ -223,6 +223,19 @@
+         ],
+         "flags": {}
+       },
++      {
++        "name": "check-traceability",
++        "description": "Verifica a cadeia requisito -> tarefa -> criterio -> evidencia",
++        "longDescription": "Deriva o mapa de rastreabilidade a partir de prd.md, tasks.md e dos relatorios de execucao sob o diretorio informado, e reprova RF sem tarefa, tarefa sem relatorio ou criterio, e criterio sem linha de evidencia.",
++        "args": [
++          {
++            "name": "diretorio-prd",
++            "required": true,
++            "description": "Caminho do diretorio do PRD sob gestao SDD"
++          }
++        ],
++        "flags": {}
++      },
+       {
+         "name": "doctor",
+         "description": "Diagnostica problemas na instalacao de governanca",
+@@ -234,7 +247,14 @@
+             "description": "Caminho do projeto alvo"
+           }
+         ],
+-        "flags": {}
++        "flags": {
++          "codex-trust": {
++            "type": "bool",
++            "default": false,
++            "required": false,
++            "description": "Verifica trust de hooks do Codex via RPC read-only hooks/list do codex app-server (executa binario, opt-in explicito)"
++          }
++        }
+       },
+       {
+         "name": "hash",
+@@ -295,7 +315,7 @@
+           "tools": {
+             "type": "string",
+             "required": false,
+-            "description": "Ferramentas de IA a instalar (ex: claude,copilot,codex); auto-detectado quando omitido"
++            "description": "Ferramentas de IA a instalar (ex: claude,copilot,codex,opencode); auto-detectado quando omitido"
+           },
+           "global": {
+             "type": "bool",
+@@ -352,6 +372,11 @@
+             "default": false,
+             "required": false,
+             "description": "Permite escrever em .agents/skills quando symlink aponta para fora do projeto"
++          },
++          "model": {
++            "type": "string",
++            "required": false,
++            "description": "Modelo default do agente (OpenCode: mapeado para a chave 'model' do opencode.json)"
+           }
+         }
+       },
+@@ -656,7 +681,7 @@
+           "tool": {
+             "type": "string",
+             "required": false,
+-            "description": "Agente de IA: claude, codex, gemini, copilot (modo simples — mutuamente exclusivo com --executor-tool)"
++            "description": "Agente de IA: claude, codex, copilot, opencode (modo simples — mutuamente exclusivo com --executor-tool)"
+           },
+           "dry-run": {
+             "type": "bool",
+@@ -684,7 +709,7 @@
+           "executor-tool": {
+             "type": "string",
+             "required": false,
+-            "description": "Ferramenta do executor (modo avancado): claude, codex, gemini, copilot"
++            "description": "Ferramenta do executor (modo avancado): claude, codex, copilot, opencode"
+           },
+           "executor-model": {
+             "type": "string",
+@@ -694,7 +719,7 @@
+           "reviewer-tool": {
+             "type": "string",
+             "required": false,
+-            "description": "Ferramenta do reviewer (modo avancado): claude, codex, gemini, copilot"
++            "description": "Ferramenta do reviewer (modo avancado): claude, codex, copilot, opencode"
+           },
+           "reviewer-model": {
+             "type": "string",
+@@ -731,7 +756,7 @@
+             "type": "string",
+             "default": "legacy",
+             "required": false,
+-            "description": "Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, codex, copilot, gemini)"
++            "description": "Runtime de invocacao: legacy (default) ou acp (tools suportados: claude, codex, copilot, opencode)"
+           },
+           "activity-timeout": {
+             "type": "duration",
+@@ -820,6 +845,12 @@
+             "default": false,
+             "required": false,
+             "description": "Habilita auto-review opt-in (F5-Claude): após session end, spawna sessão de review com skill local + git diff. Parseia [HARD]/BLOQUEADO/CRÍTICO → ReviewStatus=blocked. HARD: default false; sessões filho têm auto-review=false forçado (anti-recursão). ADR-014 §D-07."
++          },
++          "max-bugfix-iterations": {
++            "type": "int",
++            "default": 5,
++            "required": false,
++            "description": "Teto de rodadas do Ciclo de Aprovacao (RF-35); minimo aceito 1. Configuravel tambem via arquivo de configuracao (workspace/global), respeitando a precedencia flags > workspace > global > defaults (ADR-016). Valor 0 ou negativo falha explicitamente quando a flag e passada; nunca e normalizado em silencio."
+           }
+         }
+       },
+@@ -1088,7 +1119,7 @@
+           "tools": {
+             "type": "string",
+             "required": false,
+-            "description": "Ferramentas a verificar: claude,gemini,codex,copilot ou all"
++            "description": "Ferramentas a verificar: claude,codex,copilot,opencode ou all"
+           },
+           "langs": {
+             "type": "string",
+@@ -1111,6 +1142,12 @@
+             "default": false,
+             "required": false,
+             "description": "Adiciona resumo por-CLI (claude/codex/copilot) ao output"
++          },
++          "check-codex-trust": {
++            "type": "bool",
++            "default": false,
++            "required": false,
++            "description": "Verifica trust de hooks do Codex via RPC read-only hooks/list do codex app-server (executa binario, opt-in explicito)"
+           }
+         }
+       },
+@@ -1127,13 +1164,13 @@
+       },
+       {
+         "name": "wrapper",
+-        "description": "Valida governanca e emite instrucao de invocacao para Codex/Gemini/Copilot",
++        "description": "Valida governanca e emite instrucao de invocacao para Codex/Copilot",
+         "longDescription": "Verifica as condicoes de governanca antes de emitir instrucoes de invocacao.",
+         "args": [
+           {
+             "name": "tool",
+             "required": true,
+-            "description": "Ferramenta de IA alvo (codex, gemini, copilot)"
++            "description": "Ferramenta de IA alvo (codex, copilot)"
+           },
+           {
+             "name": "skill",
+diff --git a/docs/migracao-legacy-acp.md b/docs/migracao-legacy-acp.md
+index d56ca9e..8752da6 100644
+--- a/docs/migracao-legacy-acp.md
++++ b/docs/migracao-legacy-acp.md
+@@ -2,11 +2,14 @@
+ 
+ > Relacionado: [ADR-012](../.specs/adr/012-copilot-cli-acp-native.md) (Copilot ACP),
+ > [ADR-013](../.specs/adr/013-codex-cli-acp-native.md) (Codex ACP),
+-> [ADR-015](../.specs/adr/015-gemini-cli-acp-native.md) (Gemini ACP),
++> [ADR-003 do PRD quatro-clis](../.specs/prd-harness-quatro-clis-loop-aprovacao/adr-003-opencode-acp-subcomando.md) (OpenCode ACP),
+ > ADR-022 (guard de governança) e ADR-026 (sunset do legacy mode) — ambos na pasta do PRD
+ > `.specs/prd-paridade-cross-cli/`.
++>
++> [ADR-015](../.specs/adr/015-gemini-cli-acp-native.md) (Gemini ACP) foi **substituída**: o agente
++> Gemini foi removido do conjunto suportado (tarefa 10.0). Ver [§Gemini removido](#gemini-removido).
+ 
+-Os entrypoints legados (`codex exec`, Copilot sem ACP, wrapper `gemini run --skill`) coexistem com os
++Os entrypoints legados (`codex exec`, Copilot sem ACP) coexistem com os
+ runtimes ACP nativos apenas durante a janela de depreciação. Eles **dobram a superfície de divergência**
+ e não recebem novas features de paridade — só o runtime ACP recebe. Este guia descreve como migrar.
+ 
+@@ -27,8 +30,8 @@ e cai para o fallback `npx` quando necessário (ADR-017).
+ |---|---|---|---|
+ | Codex | `codex exec --yolo` | `task-loop --tool codex --runtime acp` | `codex-acp` · `npx @zed-industries/codex-acp` |
+ | Copilot | Copilot sem ACP | `task-loop --tool copilot --runtime acp` | `copilot --acp` · `npx @github/copilot --acp` |
+-| Gemini | `gemini run --skill` (wrapper) | `task-loop --tool gemini --runtime acp` | `gemini --acp` · `npx @google/gemini-cli --acp` |
+ | Claude | — (já é ACP nativo) | `task-loop --tool claude --runtime acp` | `claude-agent-acp` · `npx @agentclientprotocol/claude-agent-acp` |
++| OpenCode | — (ACP nativo desde a adoção, sem invoker legado) | `task-loop --tool opencode --runtime acp` | `opencode acp` · `npx opencode-ai@<pin> acp` |
+ 
+ ### Exemplo
+ 
+@@ -47,8 +50,8 @@ ai-spec task-loop --tool codex --runtime acp .specs/prd-minha-feature
+   rode `ai-spec sync-spec-hash` ou use `--skip-drift-guard` (desabilita apenas esse guard).
+ - **Watchdog:** o timeout de inatividade default permanece 120s; configure via `--activity-timeout`
+   ou `config.yaml` (`runtime.timeout`). `--activity-timeout=0` desabilita.
+-- **Memória / janela:** CLIs de janela grande (ex.: Gemini ≥ 1M) usam limites ampliados
+-  automaticamente; flags `--memory-*` explícitas continuam prevalecendo.
++- **Memória / janela:** CLIs com janela derivada do modelo (ex.: OpenCode com modelo ≥ 1M tokens)
++  usam limites ampliados automaticamente; flags `--memory-*` explícitas continuam prevalecendo.
+ 
+ ## Critério de remoção do legacy (ADR-026)
+ 
+@@ -75,3 +78,37 @@ fixada na tarefa de remoção, não antecipada aqui — ADR-026).
+ - **Escopo:** remover os invokers legados e o wrapper; remover suas flags/mensagens de depreciação;
+   manter apenas o caminho `--runtime acp`. Atualizar testes e docs.
+ - **Fora de escopo deste ciclo:** nenhum código legado é removido agora (ADR-026 §1).
++
++## Gemini removido
++
++O Gemini CLI foi **removido** do conjunto de agentes suportados pelo `ai-spec-harness` (tarefa 10.0,
++release major). O conjunto canônico atual é `{claude, codex, copilot, opencode}`. Invocar `--tool gemini`
++produz um erro tipado (`skills.RemovedAgentError`, distinguível via `errors.As`) citando o conjunto
++suportado e apontando para esta seção.
++
++### Por que foi removido
++
++O Gemini era o único agente com uma política de detecção *opt-in* exclusiva, um invoker legado com
++aviso de depreciação, assets dedicados (`.gemini/`, `GEMINI.md`) e uma trilha própria de exceções
++espalhada pelo código, testes e snapshots. O OpenCode consolidou-se como o agente de terminal oficial
++com servidor ACP nativo, sistema de plugins e modelo de permissões declarativo — substituindo o papel
++que o Gemini ocupava no conjunto de quatro CLIs.
++
++### Como migrar
++
++- **Sessões orquestradas (`task-loop`):** troque `--tool gemini` por `--tool opencode` (ou outro agente
++  do conjunto suportado). Ver a tabela acima para binário e fallback.
++- **Wrapper legado (`ai-spec wrapper gemini <skill>`):** não existe substituto direto — o wrapper
++  aceita apenas `codex` e `copilot`. Para Claude e OpenCode, use os hooks/plugins nativos instalados
++  por `ai-spec install`.
++- **Instalação:** rode `ai-spec install . --tools opencode` (ou `all`) para instrumentar o agente
++  substituto. Rode `ai-spec uninstall .` no projeto para remover resíduos de `.gemini/` e `GEMINI.md`
++  de instalações antigas — a desinstalação limpa esse resíduo legado incondicionalmente.
++- **Configuração declarativa (`AGENT.md`, `runtime.ide`):** troque `ide: gemini` por um valor do
++  conjunto suportado (`claude`, `codex`, `copilot`, `opencode`).
++
++### O que não migra automaticamente
++
++- Sessões, histórico e memória do Gemini CLI não são migrados — não é um objetivo desta remoção.
++- Documentação histórica (ADRs, changelog, PRDs anteriores, auditorias, evidências de execução) que
++  cita Gemini permanece intocada; é registro histórico, não uma superfície viva do produto.
+diff --git a/internal/runtime/client/client_test.go b/internal/runtime/client/client_test.go
+index aa7b916..8ad5ed4 100644
+--- a/internal/runtime/client/client_test.go
++++ b/internal/runtime/client/client_test.go
+@@ -3,6 +3,9 @@ package client_test
+ import (
+ 	"context"
+ 	"errors"
++	"os"
++	"path/filepath"
++	"strings"
+ 	"testing"
+ 	"time"
+ 
+@@ -347,6 +350,230 @@ func TestLauncher_CommandNotFound(t *testing.T) {
+ 	}
+ }
+ 
++type fakeHandshakeWaiter struct {
++	err error
++}
++
++func (w fakeHandshakeWaiter) Wait(_ context.Context) error { return w.err }
++
++func TestAcpClient_HandshakeAbortsSessionBeforeFirstPrompt(t *testing.T) {
++	t.Parallel()
++
++	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
++	defer cancel()
++
++	script := acpfake.NewScript().
++		AppendAgentMessage("nunca deveria chegar ao modelo").
++		AppendSessionEnd()
++
++	c := buildClientWithFake(t, ctx, script)
++	defer func() { _ = c.Close() }()
++
++	hw, ok := c.(interface {
++		SetHandshakeWaiter(client.HandshakeWaiter)
++	})
++	if !ok {
++		t.Fatal("client não expõe SetHandshakeWaiter")
++	}
++	wantErr := errors.New("sentinel not received")
++	hw.SetHandshakeWaiter(fakeHandshakeWaiter{err: wantErr})
++
++	err := c.Open(ctx, specs.NewBinaryLauncher("unused"), "prompt")
++	if err == nil {
++		t.Fatal("Open() com handshake falho deveria retornar erro; sessão não pode prosseguir")
++	}
++	if !errors.Is(err, wantErr) {
++		t.Fatalf("Open() erro = %v; want wrap de %v", err, wantErr)
++	}
++
++	evts := collectEvents(t, c.Updates(), 2*time.Second)
++	for _, evt := range evts {
++		t.Errorf("nenhum evento deveria ser emitido — handshake abortou antes do primeiro prompt; evt=%+v", evt)
++	}
++}
++
++func TestAcpClient_HandshakeSuccessAllowsSessionToProceed(t *testing.T) {
++	t.Parallel()
++
++	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
++	defer cancel()
++
++	script := acpfake.NewScript().
++		AppendAgentMessage("olá após handshake").
++		AppendSessionEnd()
++
++	c := buildClientWithFake(t, ctx, script)
++	defer func() { _ = c.Close() }()
++
++	hw, ok := c.(interface {
++		SetHandshakeWaiter(client.HandshakeWaiter)
++	})
++	if !ok {
++		t.Fatal("client não expõe SetHandshakeWaiter")
++	}
++	hw.SetHandshakeWaiter(fakeHandshakeWaiter{err: nil})
++
++	if err := c.Open(ctx, specs.NewBinaryLauncher("unused"), "prompt"); err != nil {
++		t.Fatalf("Open() com handshake bem-sucedido: %v", err)
++	}
++
++	evts := collectEvents(t, c.Updates(), 5*time.Second)
++	var sawSessionEnd bool
++	for _, evt := range evts {
++		if evt.Kind() == events.KindSessionEnd {
++			sawSessionEnd = true
++		}
++	}
++	if !sawSessionEnd {
++		t.Fatal("esperava session_end após handshake bem-sucedido")
++	}
++}
++
++func TestAcpClient_ChildEnvSanitizationAppliesToSpawnedProcessOnly(t *testing.T) {
++	dir := t.TempDir()
++	envDumpPath := filepath.Join(dir, "envdump.txt")
++	scriptPath := filepath.Join(dir, "dump-env.sh")
++	scriptBody := "#!/bin/sh\n" +
++		"{ echo \"AISPEC_TEST_MARKER=$AISPEC_TEST_MARKER\"; echo \"OPENCODE_PURE=$OPENCODE_PURE\"; } > " + envDumpPath + "\n" +
++		"exit 1\n"
++	if err := os.WriteFile(scriptPath, []byte(scriptBody), 0o755); err != nil {
++		t.Fatalf("write script: %v", err)
++	}
++
++	t.Setenv("OPENCODE_PURE", "1")
++
++	sanitized := make([]string, 0, len(os.Environ()))
++	for _, kv := range os.Environ() {
++		if strings.HasPrefix(kv, "OPENCODE_PURE=") {
++			continue
++		}
++		sanitized = append(sanitized, kv)
++	}
++	sanitized = append(sanitized, "AISPEC_TEST_MARKER=present")
++
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++
++	factory := client.NewDefaultClientFactory()
++	c := factory.New(dir)
++	defer func() { _ = c.Close() }()
++
++	ce, ok := c.(interface{ SetChildEnv([]string) })
++	if !ok {
++		t.Fatal("client não expõe SetChildEnv")
++	}
++	ce.SetChildEnv(sanitized)
++
++	_ = c.Open(ctx, specs.NewBinaryLauncher(scriptPath), "prompt")
++
++	deadline := time.Now().Add(10 * time.Second)
++	var data []byte
++	for time.Now().Before(deadline) {
++		var readErr error
++		data, readErr = os.ReadFile(envDumpPath)
++		if readErr == nil && len(data) > 0 {
++			break
++		}
++		time.Sleep(20 * time.Millisecond)
++	}
++
++	if os.Getenv("OPENCODE_PURE") != "1" {
++		t.Fatal("sanitização vazou para o ambiente do processo pai (teste) — RF-21 violado")
++	}
++	if !strings.Contains(string(data), "AISPEC_TEST_MARKER=present") {
++		t.Fatalf("processo filho não recebeu childEnv sanitizado; dump=%q", data)
++	}
++	if strings.Contains(string(data), "OPENCODE_PURE=1") {
++		t.Fatalf("processo filho ainda contém o interruptor OPENCODE_PURE; dump=%q", data)
++	}
++}
++
++func parseEnvDump(t *testing.T, data []byte) map[string]string {
++	t.Helper()
++	out := make(map[string]string)
++	for _, line := range strings.Split(strings.TrimRight(string(data), "\n"), "\n") {
++		if line == "" {
++			continue
++		}
++		name, value, ok := strings.Cut(line, "=")
++		if !ok {
++			t.Fatalf("linha de dump sem '=': %q", line)
++		}
++		out[name] = value
++	}
++	return out
++}
++
++func TestAcpClient_NilChildEnvInheritsFullEnvironByteIdentical(t *testing.T) {
++	dir := t.TempDir()
++	envDumpPath := filepath.Join(dir, "envdump.txt")
++	scriptPath := filepath.Join(dir, "dump-full-env.sh")
++	scriptBody := "#!/bin/sh\nenv > " + envDumpPath + "\nexit 1\n"
++	if err := os.WriteFile(scriptPath, []byte(scriptBody), 0o755); err != nil {
++		t.Fatalf("write script: %v", err)
++	}
++
++	t.Setenv("AISPEC_VETOR1_MARKER", "present-in-parent")
++
++	shellBootstrapArtifacts := map[string]bool{"SHLVL": true, "OLDPWD": true, "PWD": true, "_": true}
++
++	want := make(map[string]string, len(os.Environ()))
++	for _, kv := range os.Environ() {
++		name, value, ok := strings.Cut(kv, "=")
++		if !ok || shellBootstrapArtifacts[name] {
++			continue
++		}
++		want[name] = value
++	}
++
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++
++	factory := client.NewDefaultClientFactory()
++	c := factory.New(dir)
++	defer func() { _ = c.Close() }()
++
++	_ = c.Open(ctx, specs.NewBinaryLauncher(scriptPath), "prompt")
++
++	deadline := time.Now().Add(10 * time.Second)
++	var data []byte
++	for time.Now().Before(deadline) {
++		var readErr error
++		data, readErr = os.ReadFile(envDumpPath)
++		if readErr == nil && len(data) > 0 {
++			break
++		}
++		time.Sleep(20 * time.Millisecond)
++	}
++	if len(data) == 0 {
++		t.Fatal("processo filho não produziu dump de ambiente")
++	}
++
++	got := parseEnvDump(t, data)
++	for name := range shellBootstrapArtifacts {
++		delete(got, name)
++	}
++
++	if len(got) != len(want) {
++		t.Fatalf("ambiente do filho tem %d variáveis; pai tem %d (não é byte-idêntico)", len(got), len(want))
++	}
++	for name, wantValue := range want {
++		gotValue, ok := got[name]
++		if !ok {
++			t.Errorf("variável %q ausente no ambiente do filho — herança não é byte-idêntica", name)
++			continue
++		}
++		if gotValue != wantValue {
++			t.Errorf("variável %q = %q no filho; pai tinha %q", name, gotValue, wantValue)
++		}
++	}
++	for name := range got {
++		if _, ok := want[name]; !ok {
++			t.Errorf("variável %q presente no filho mas ausente no pai — ambiente foi alterado", name)
++		}
++	}
++}
++
+ func kindsOf(evts []events.Event) []events.EventKind {
+ 	kinds := make([]events.EventKind, len(evts))
+ 	for i, e := range evts {
+diff --git a/internal/runtime/non_regression_test.go b/internal/runtime/non_regression_test.go
+new file mode 100644
+index 0000000..c7f19dd
+--- /dev/null
++++ b/internal/runtime/non_regression_test.go
+@@ -0,0 +1,97 @@
++package runtime_test
++
++import (
++	"context"
++	"testing"
++	"time"
++
++	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
++)
++
++func TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue(t *testing.T) {
++	cases := []struct {
++		name   string
++		spec   specs.Spec
++		prober airuntime.Prober
++	}{
++		{name: "claude", spec: specs.NewCatalog().Claude(), prober: proberBinary()},
++		{name: "codex", spec: specs.NewCatalog().Codex(), prober: proberCodexBinary()},
++		{name: "copilot", spec: specs.NewCatalog().Copilot(), prober: proberCopilotBinary()},
++	}
++
++	for _, tc := range cases {
++		t.Run(tc.name, func(t *testing.T) {
++			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++			defer cancel()
++
++			script := acpfake.NewScript().
++				AppendAgentMessage("nao-regressao " + tc.name).
++				AppendSessionEnd()
++
++			pfact, _ := newFakePersistenceFactory()
++			runner := buildRunnerWithSpec(t, ctx, tc.spec, tc.prober, script, pfact)
++
++			job := airuntime.Job{
++				Prompt:      "non-regression default job",
++				WorkDir:     workDirWithAgentsMD(t),
++				EvidenceDir: t.TempDir(),
++				Quiet:       true,
++			}
++
++			summary, err := runner.Run(ctx, job)
++			if err != nil {
++				t.Fatalf("Run: unexpected error: %v", err)
++			}
++			if summary.CancelReason != events.CancelReasonNone {
++				t.Errorf("CancelReason = %q, want none", summary.CancelReason)
++			}
++			if summary.Launcher != "binary" {
++				t.Errorf("Launcher = %q, want binary", summary.Launcher)
++			}
++			if summary.CycleRounds != nil {
++				t.Errorf("CycleRounds = %v; want nil", summary.CycleRounds)
++			}
++			if summary.CycleStopReason != "" {
++				t.Errorf("CycleStopReason = %q, want empty", summary.CycleStopReason)
++			}
++			if summary.ReviewStatus != "" {
++				t.Errorf("ReviewStatus = %q, want empty", summary.ReviewStatus)
++			}
++			if summary.ReviewPath != "" {
++				t.Errorf("ReviewPath = %q, want empty", summary.ReviewPath)
++			}
++			if summary.RetryAttempts != 0 {
++				t.Errorf("RetryAttempts = %d, want 0", summary.RetryAttempts)
++			}
++			if summary.SlowPublishes != 0 {
++				t.Errorf("SlowPublishes = %d, want 0", summary.SlowPublishes)
++			}
++			if summary.DroppedUpdates != 0 {
++				t.Errorf("DroppedUpdates = %d, want 0", summary.DroppedUpdates)
++			}
++			if !summary.Metrics.IsZero() {
++				t.Errorf("Metrics = %+v, want zero-value", summary.Metrics)
++			}
++
++			agent, err := specs.NewCatalog().AgentByID(tc.spec.ID)
++			if err != nil {
++				t.Fatalf("AgentByID(%s): %v", tc.spec.ID, err)
++			}
++			if !agent.InheritsEnv() {
++				t.Errorf("agent %q does not inherit env intact (EnvPolicy is not zero-value)", tc.spec.ID)
++			}
++			if agent.EnvPolicy().IsZero() == false {
++				t.Errorf("agent %q: EnvPolicy is not zero-value", tc.spec.ID)
++			}
++			if agent.RequiresHandshake() {
++				t.Errorf("agent %q now requires governance handshake", tc.spec.ID)
++			}
++			if got, want := tc.spec.ResolveWindow("qualquer-modelo"), tc.spec.ContextWindow(); got != want {
++				t.Errorf("agent %q: ResolveWindow() = %+v; want static window %+v", tc.spec.ID, got, want)
++			}
++		})
++	}
++}
+diff --git a/internal/specdrift/specdrift.go b/internal/specdrift/specdrift.go
+index 7e5afc6..553ed49 100644
+--- a/internal/specdrift/specdrift.go
++++ b/internal/specdrift/specdrift.go
+@@ -128,6 +128,35 @@ func (c *Catalog) CheckHash(specContent, tasksContent []byte, label string) Hash
+ 	}
+ }
+ 
++// CheckTechspecPRDConsistency verifies that techspec.md's own embedded
++// spec-hash-prd header matches prd.md's canonical hash. Distinct from
++// CheckHash, which compares tasks.md's declared hash to the spec file: this
++// anchors the techspec to the exact PRD version it was authored against,
++// independent of what tasks.md separately tracks.
++func (c *Catalog) CheckTechspecPRDConsistency(prdContent, techspecContent []byte) HashResult {
++	actualHash := specdigest.Canonical(prdContent)
++
++	re := regexp.MustCompile(`<!--\s*spec-hash-prd:\s*([0-9a-f]+)\s*-->`)
++	match := re.FindSubmatch(techspecContent)
++	if match == nil {
++		return HashResult{
++			File:        "techspec.md",
++			ActualHash:  actualHash,
++			NoHashFound: true,
++			Match:       false,
++		}
++	}
++
++	embeddedHash := string(match[1])
++	return HashResult{
++		File:         "techspec.md",
++		ExpectedHash: embeddedHash,
++		ActualHash:   actualHash,
++		Match:        embeddedHash == actualHash,
++		NoHashFound:  false,
++	}
++}
++
+ // CheckDrift runs both coverage and hash checks for a directory.
+ // It expects to find prd.md, techspec.md (optional), and tasks.md.
+ func (c *Catalog) CheckDrift(dir string) (DriftReport, error) {
+@@ -147,6 +176,7 @@ func (c *Catalog) CheckDrift(dir string) (DriftReport, error) {
+ 		{"techspec.md", "techspec"},
+ 	}
+ 
++	var prdContent []byte
+ 	for _, spec := range specs {
+ 		specPath := filepath.Join(dir, spec.filename)
+ 		specContent, err := os.ReadFile(specPath)
+@@ -154,6 +184,9 @@ func (c *Catalog) CheckDrift(dir string) (DriftReport, error) {
+ 			// spec file is optional
+ 			continue
+ 		}
++		if spec.label == "prd" {
++			prdContent = specContent
++		}
+ 
+ 		cov := NewCatalog().CheckStructuralCoverage(specContent, tasksContent)
+ 		cov.SourceFile = spec.filename
+@@ -169,6 +202,19 @@ func (c *Catalog) CheckDrift(dir string) (DriftReport, error) {
+ 		if !hash.Match {
+ 			report.Pass = false
+ 		}
++
++		if spec.label == "techspec" && prdContent != nil {
++			embedded := NewCatalog().CheckTechspecPRDConsistency(prdContent, specContent)
++			embedded.File = "techspec.md:spec-hash-prd"
++			report.Hashes = append(report.Hashes, embedded)
++			// A techspec sem cabecalho spec-hash-prd (formato legado ou
++			// artefato de teste) e informativa, nao um drift: so uma
++			// divergencia real entre um cabecalho presente e o prd.md atual
++			// reprova o gate.
++			if !embedded.Match && !embedded.NoHashFound {
++				report.Pass = false
++			}
++		}
+ 	}
+ 
+ 	return report, nil
+diff --git a/internal/specdrift/specdrift_test.go b/internal/specdrift/specdrift_test.go
+index 5e3ad2a..39a6a4e 100644
+--- a/internal/specdrift/specdrift_test.go
++++ b/internal/specdrift/specdrift_test.go
+@@ -177,6 +177,73 @@ func TestCheckHash_WrongLabel(t *testing.T) {
+ 	}
+ }
+ 
++// --- CheckTechspecPRDConsistency ---
++
++func TestCheckTechspecPRDConsistency_Match(t *testing.T) {
++	prd := []byte("# PRD\n\n- RF-01: exemplo\n")
++	prdHash := hashOf(prd)
++	techspec := []byte(fmt.Sprintf("<!-- spec-hash-prd: %s -->\n# Techspec\n", prdHash))
++
++	result := specdrift.NewCatalog().CheckTechspecPRDConsistency(prd, techspec)
++
++	if !result.Match {
++		t.Fatalf("expected Match=true, got expected=%s actual=%s", result.ExpectedHash, result.ActualHash)
++	}
++	if result.NoHashFound {
++		t.Fatal("expected NoHashFound=false when techspec has a spec-hash-prd header")
++	}
++}
++
++func TestCheckTechspecPRDConsistency_Divergent(t *testing.T) {
++	prd := []byte("# PRD\n\n- RF-01: exemplo\n")
++	staleTechspec := []byte("<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->\n# Techspec\n")
++
++	result := specdrift.NewCatalog().CheckTechspecPRDConsistency(prd, staleTechspec)
++
++	if result.Match {
++		t.Fatal("expected Match=false when embedded spec-hash-prd diverges from the current prd.md hash")
++	}
++}
++
++func TestCheckTechspecPRDConsistency_NoHeader(t *testing.T) {
++	prd := []byte("# PRD\n\n- RF-01: exemplo\n")
++	techspec := []byte("# Techspec sem cabecalho\n")
++
++	result := specdrift.NewCatalog().CheckTechspecPRDConsistency(prd, techspec)
++
++	if !result.NoHashFound {
++		t.Fatal("expected NoHashFound=true when techspec.md lacks a spec-hash-prd header")
++	}
++	if result.Match {
++		t.Fatal("expected Match=false when no header is present")
++	}
++}
++
++func TestCheckDrift_TechspecEmbeddedPRDHashDivergesFailsReport(t *testing.T) {
++	dir := t.TempDir()
++
++	prdContent := "RF-01 required"
++	prdHash := hashOf([]byte(prdContent))
++	techspecContent := fmt.Sprintf("<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->\nRF-01 covered")
++	techHash := hashOf([]byte(techspecContent))
++	tasksContent := fmt.Sprintf(
++		"RF-01 done.\n<!-- spec-hash-prd: %s -->\n<!-- spec-hash-techspec: %s -->",
++		prdHash, techHash,
++	)
++
++	writeFile(t, dir, "prd.md", prdContent)
++	writeFile(t, dir, "techspec.md", techspecContent)
++	writeFile(t, dir, "tasks.md", tasksContent)
++
++	report, err := specdrift.NewCatalog().CheckDrift(dir)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if report.Pass {
++		t.Error("expected Pass=false: techspec.md's embedded spec-hash-prd does not match prd.md")
++	}
++}
++
+ // --- CheckDrift ---
+ 
+ func writeFile(t *testing.T, dir, name, content string) {
+diff --git a/internal/traceability/traceability.go b/internal/traceability/traceability.go
+new file mode 100644
+index 0000000..21e3905
+--- /dev/null
++++ b/internal/traceability/traceability.go
+@@ -0,0 +1,262 @@
++package traceability
++
++import (
++	"fmt"
++	"os"
++	"path/filepath"
++	"regexp"
++	"strings"
++)
++
++type Catalog struct{}
++
++func NewCatalog() *Catalog {
++	return &Catalog{}
++}
++
++type Criterion struct {
++	Task     string
++	Text     string
++	Evidence string
++}
++
++func (c Criterion) HasEvidence() bool {
++	return strings.TrimSpace(c.Evidence) != ""
++}
++
++type ViolationKind string
++
++const (
++	ViolationRequirementWithoutTask   ViolationKind = "requirement_without_task"
++	ViolationTaskWithoutReport        ViolationKind = "task_without_report"
++	ViolationTaskWithoutCriteria      ViolationKind = "task_without_criteria"
++	ViolationCriterionWithoutEvidence ViolationKind = "criterion_without_evidence"
++)
++
++type Violation struct {
++	Kind    ViolationKind
++	Subject string
++	Detail  string
++}
++
++func (v Violation) String() string {
++	return fmt.Sprintf("%s: %s — %s", v.Kind, v.Subject, v.Detail)
++}
++
++type Map struct {
++	Requirements   []string
++	TaskCoverage   map[string][]string
++	RequirementMap map[string][]string
++	Criteria       map[string][]Criterion
++	MissingReports map[string]bool
++}
++
++var requirementIDRegex = regexp.MustCompile(`(?i)RF-\d+`)
++
++func (c *Catalog) ExtractRequirementIDs(prdContent []byte) []string {
++	matches := requirementIDRegex.FindAllString(string(prdContent), -1)
++	seen := make(map[string]struct{})
++	var out []string
++	for _, m := range matches {
++		upper := strings.ToUpper(m)
++		if _, ok := seen[upper]; ok {
++			continue
++		}
++		seen[upper] = struct{}{}
++		out = append(out, upper)
++	}
++	return out
++}
++
++func splitTableRow(row string) []string {
++	trimmed := strings.Trim(row, "|")
++	parts := strings.Split(trimmed, "|")
++	out := make([]string, len(parts))
++	for i, p := range parts {
++		out[i] = strings.TrimSpace(p)
++	}
++	return out
++}
++
++func isSeparatorRow(cols []string) bool {
++	for _, c := range cols {
++		stripped := strings.Trim(c, "-: ")
++		if stripped != "" {
++			return false
++		}
++	}
++	return true
++}
++
++func (c *Catalog) ParseCoverageTable(tasksContent []byte) map[string][]string {
++	lines := strings.Split(string(tasksContent), "\n")
++	inSection := false
++	headerSeen := false
++	result := make(map[string][]string)
++
++	for _, line := range lines {
++		trimmed := strings.TrimSpace(line)
++		if strings.HasPrefix(trimmed, "## ") {
++			if inSection {
++				break
++			}
++			inSection = strings.EqualFold(strings.TrimSpace(strings.TrimPrefix(trimmed, "## ")), "Cobertura de Requisitos")
++			headerSeen = false
++			continue
++		}
++		if !inSection || !strings.HasPrefix(trimmed, "|") {
++			continue
++		}
++		cols := splitTableRow(trimmed)
++		if len(cols) < 2 {
++			continue
++		}
++		if !headerSeen {
++			headerSeen = true
++			continue
++		}
++		if isSeparatorRow(cols) {
++			continue
++		}
++		task := cols[0]
++		if task == "" {
++			continue
++		}
++		rfs := requirementIDRegex.FindAllString(cols[1], -1)
++		for _, rf := range rfs {
++			result[task] = append(result[task], strings.ToUpper(rf))
++		}
++	}
++	return result
++}
++
++var acceptanceCriteriaHeading = "Critérios de Aceite"
++
++var fencedCodeBlockDelimiter = "```"
++
++func (c *Catalog) ParseAcceptanceCriteria(task string, reportContent []byte) []Criterion {
++	lines := strings.Split(string(reportContent), "\n")
++	inSection := false
++	inFence := false
++	var out []Criterion
++
++	for _, line := range lines {
++		trimmed := strings.TrimSpace(line)
++		if strings.HasPrefix(trimmed, fencedCodeBlockDelimiter) {
++			inFence = !inFence
++			continue
++		}
++		if inFence {
++			continue
++		}
++		if strings.HasPrefix(trimmed, "## ") {
++			if inSection {
++				break
++			}
++			inSection = strings.EqualFold(strings.TrimSpace(strings.TrimPrefix(trimmed, "## ")), acceptanceCriteriaHeading)
++			continue
++		}
++		if !inSection || !strings.HasPrefix(line, "- ") {
++			continue
++		}
++		item := strings.TrimPrefix(trimmed, "- ")
++		criterionText, evidenceText, hasArrow := strings.Cut(item, "->")
++		crit := Criterion{Task: task, Text: strings.TrimSpace(criterionText)}
++		if hasArrow {
++			crit.Evidence = strings.TrimSpace(evidenceText)
++		}
++		out = append(out, crit)
++	}
++	return out
++}
++
++func (c *Catalog) BuildMap(dir string) (Map, error) {
++	prdContent, err := os.ReadFile(filepath.Join(dir, "prd.md"))
++	if err != nil {
++		return Map{}, fmt.Errorf("ler prd.md: %w", err)
++	}
++	tasksContent, err := os.ReadFile(filepath.Join(dir, "tasks.md"))
++	if err != nil {
++		return Map{}, fmt.Errorf("ler tasks.md: %w", err)
++	}
++
++	requirements := c.ExtractRequirementIDs(prdContent)
++	taskCoverage := c.ParseCoverageTable(tasksContent)
++
++	requirementMap := make(map[string][]string)
++	for task, rfs := range taskCoverage {
++		for _, rf := range rfs {
++			requirementMap[rf] = append(requirementMap[rf], task)
++		}
++	}
++
++	criteria := make(map[string][]Criterion)
++	missingReports := make(map[string]bool)
++	for task := range taskCoverage {
++		reportPath := filepath.Join(dir, fmt.Sprintf("%s_execution_report.md", task))
++		reportContent, err := os.ReadFile(reportPath)
++		if err != nil {
++			missingReports[task] = true
++			continue
++		}
++		criteria[task] = NewCatalog().ParseAcceptanceCriteria(task, reportContent)
++	}
++
++	return Map{
++		Requirements:   requirements,
++		TaskCoverage:   taskCoverage,
++		RequirementMap: requirementMap,
++		Criteria:       criteria,
++		MissingReports: missingReports,
++	}, nil
++}
++
++func (m Map) Validate() []Violation {
++	var violations []Violation
++
++	for _, rf := range m.Requirements {
++		if len(m.RequirementMap[rf]) == 0 {
++			violations = append(violations, Violation{
++				Kind:    ViolationRequirementWithoutTask,
++				Subject: rf,
++				Detail:  "nenhuma tarefa na tabela de Cobertura de Requisitos cobre este RF",
++			})
++		}
++	}
++
++	tasks := make([]string, 0, len(m.TaskCoverage))
++	for task := range m.TaskCoverage {
++		tasks = append(tasks, task)
++	}
++
++	for _, task := range tasks {
++		if m.MissingReports[task] {
++			violations = append(violations, Violation{
++				Kind:    ViolationTaskWithoutReport,
++				Subject: task,
++				Detail:  "relatorio de execucao ausente (<tarefa>_execution_report.md)",
++			})
++			continue
++		}
++		items := m.Criteria[task]
++		if len(items) == 0 {
++			violations = append(violations, Violation{
++				Kind:    ViolationTaskWithoutCriteria,
++				Subject: task,
++				Detail:  "secao '## Criterios de Aceite' ausente ou vazia no relatorio de execucao",
++			})
++			continue
++		}
++		for _, item := range items {
++			if !item.HasEvidence() {
++				violations = append(violations, Violation{
++					Kind:    ViolationCriterionWithoutEvidence,
++					Subject: fmt.Sprintf("%s: %s", task, item.Text),
++					Detail:  "criterio sem linha de evidencia apos o separador '->'",
++				})
++			}
++		}
++	}
++
++	return violations
++}
+diff --git a/internal/traceability/traceability_test.go b/internal/traceability/traceability_test.go
+new file mode 100644
+index 0000000..471db93
+--- /dev/null
++++ b/internal/traceability/traceability_test.go
+@@ -0,0 +1,286 @@
++package traceability_test
++
++import (
++	"os"
++	"path/filepath"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/traceability"
++)
++
++func TestExtractRequirementIDs_UniqueOrdered(t *testing.T) {
++	prd := []byte("RF-01 e RF-02 devem existir. RF-01 aparece de novo. rf-03 em minusculas.")
++
++	got := traceability.NewCatalog().ExtractRequirementIDs(prd)
++
++	want := []string{"RF-01", "RF-02", "RF-03"}
++	if len(got) != len(want) {
++		t.Fatalf("got %v, want %v", got, want)
++	}
++	for i, w := range want {
++		if got[i] != w {
++			t.Fatalf("got[%d]=%s, want %s", i, got[i], w)
++		}
++	}
++}
++
++func TestParseCoverageTable_MapsTaskToRequirements(t *testing.T) {
++	tasks := []byte(`# Tasks
++
++## Cobertura de Requisitos
++
++| Tarefa | Requisitos cobertos |
++|--------|-------------------|
++| 1.0 | RF-01, RF-02 |
++| 2.0 | RF-03 |
++
++## Outra Secao
++
++| Tarefa | Ignorado |
++|---|---|
++| 9.9 | RF-99 |
++`)
++
++	got := traceability.NewCatalog().ParseCoverageTable(tasks)
++
++	if len(got["1.0"]) != 2 {
++		t.Fatalf("task 1.0 = %v, want 2 RFs", got["1.0"])
++	}
++	if len(got["2.0"]) != 1 || got["2.0"][0] != "RF-03" {
++		t.Fatalf("task 2.0 = %v, want [RF-03]", got["2.0"])
++	}
++	if _, ok := got["9.9"]; ok {
++		t.Fatal("table outside 'Cobertura de Requisitos' must not be parsed")
++	}
++}
++
++func TestParseAcceptanceCriteria_ArrowSeparatesTextFromEvidence(t *testing.T) {
++	report := []byte(`# Report
++
++## Critérios de Aceite
++- criterio um -> comprovado: log-1
++- criterio dois -> comprovado: log-2
++  - (a) sub-item ilustrativo sem contar como critério próprio
++- criterio sem evidencia
++
++## Outra Secao
++- item fora da secao -> nao deve ser contado
++`)
++
++	got := traceability.NewCatalog().ParseAcceptanceCriteria("1.0", report)
++
++	if len(got) != 3 {
++		t.Fatalf("got %d criteria, want 3: %+v", len(got), got)
++	}
++	if !got[0].HasEvidence() || got[0].Evidence != "comprovado: log-1" {
++		t.Fatalf("got[0]=%+v", got[0])
++	}
++	if !got[1].HasEvidence() {
++		t.Fatalf("got[1]=%+v, want evidence", got[1])
++	}
++	if got[2].HasEvidence() {
++		t.Fatalf("got[2]=%+v, want no evidence (no '->')", got[2])
++	}
++}
++
++func writeTraceFixture(t *testing.T, dir, name, content string) {
++	t.Helper()
++	if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
++		t.Fatalf("write %s: %v", name, err)
++	}
++}
++
++func TestBuildMapAndValidate_FullChainPasses(t *testing.T) {
++	dir := t.TempDir()
++
++	writeTraceFixture(t, dir, "prd.md", "RF-01 deve existir. RF-02 deve existir.")
++	writeTraceFixture(t, dir, "tasks.md", `# Tasks
++
++## Cobertura de Requisitos
++
++| Tarefa | Requisitos cobertos |
++|---|---|
++| 1.0 | RF-01, RF-02 |
++`)
++	writeTraceFixture(t, dir, "1.0_execution_report.md", `# Report
++
++## Critérios de Aceite
++- criterio um -> comprovado: log-1
++`)
++
++	m, err := traceability.NewCatalog().BuildMap(dir)
++	if err != nil {
++		t.Fatalf("BuildMap: %v", err)
++	}
++	violations := m.Validate()
++	if len(violations) != 0 {
++		t.Fatalf("expected zero violations, got %v", violations)
++	}
++}
++
++func TestValidate_RequirementWithoutTask(t *testing.T) {
++	dir := t.TempDir()
++
++	writeTraceFixture(t, dir, "prd.md", "RF-01 deve existir. RF-02 deve existir mas nenhuma tarefa cobre.")
++	writeTraceFixture(t, dir, "tasks.md", `# Tasks
++
++## Cobertura de Requisitos
++
++| Tarefa | Requisitos cobertos |
++|---|---|
++| 1.0 | RF-01 |
++`)
++	writeTraceFixture(t, dir, "1.0_execution_report.md", `# Report
++
++## Critérios de Aceite
++- criterio um -> comprovado: log-1
++`)
++
++	m, err := traceability.NewCatalog().BuildMap(dir)
++	if err != nil {
++		t.Fatalf("BuildMap: %v", err)
++	}
++	violations := m.Validate()
++
++	found := false
++	for _, v := range violations {
++		if v.Kind == traceability.ViolationRequirementWithoutTask && v.Subject == "RF-02" {
++			found = true
++		}
++	}
++	if !found {
++		t.Fatalf("expected requirement_without_task for RF-02, got %v", violations)
++	}
++}
++
++func TestValidate_TaskWithoutReport(t *testing.T) {
++	dir := t.TempDir()
++
++	writeTraceFixture(t, dir, "prd.md", "RF-01 deve existir.")
++	writeTraceFixture(t, dir, "tasks.md", `# Tasks
++
++## Cobertura de Requisitos
++
++| Tarefa | Requisitos cobertos |
++|---|---|
++| 1.0 | RF-01 |
++`)
++
++	m, err := traceability.NewCatalog().BuildMap(dir)
++	if err != nil {
++		t.Fatalf("BuildMap: %v", err)
++	}
++	violations := m.Validate()
++
++	found := false
++	for _, v := range violations {
++		if v.Kind == traceability.ViolationTaskWithoutReport && v.Subject == "1.0" {
++			found = true
++		}
++	}
++	if !found {
++		t.Fatalf("expected task_without_report for 1.0, got %v", violations)
++	}
++}
++
++func TestValidate_TaskWithoutCriteria(t *testing.T) {
++	dir := t.TempDir()
++
++	writeTraceFixture(t, dir, "prd.md", "RF-01 deve existir.")
++	writeTraceFixture(t, dir, "tasks.md", `# Tasks
++
++## Cobertura de Requisitos
++
++| Tarefa | Requisitos cobertos |
++|---|---|
++| 1.0 | RF-01 |
++`)
++	writeTraceFixture(t, dir, "1.0_execution_report.md", "# Report sem a secao de criterios\n")
++
++	m, err := traceability.NewCatalog().BuildMap(dir)
++	if err != nil {
++		t.Fatalf("BuildMap: %v", err)
++	}
++	violations := m.Validate()
++
++	found := false
++	for _, v := range violations {
++		if v.Kind == traceability.ViolationTaskWithoutCriteria && v.Subject == "1.0" {
++			found = true
++		}
++	}
++	if !found {
++		t.Fatalf("expected task_without_criteria for 1.0, got %v", violations)
++	}
++}
++
++func TestValidate_CriterionWithoutEvidence(t *testing.T) {
++	dir := t.TempDir()
++
++	writeTraceFixture(t, dir, "prd.md", "RF-01 deve existir.")
++	writeTraceFixture(t, dir, "tasks.md", `# Tasks
++
++## Cobertura de Requisitos
++
++| Tarefa | Requisitos cobertos |
++|---|---|
++| 1.0 | RF-01 |
++`)
++	writeTraceFixture(t, dir, "1.0_execution_report.md", `# Report
++
++## Critérios de Aceite
++- criterio sem seta de evidencia
++`)
++
++	m, err := traceability.NewCatalog().BuildMap(dir)
++	if err != nil {
++		t.Fatalf("BuildMap: %v", err)
++	}
++	violations := m.Validate()
++
++	found := false
++	for _, v := range violations {
++		if v.Kind == traceability.ViolationCriterionWithoutEvidence {
++			found = true
++		}
++	}
++	if !found {
++		t.Fatalf("expected criterion_without_evidence, got %v", violations)
++	}
++}
++
++func TestBuildMap_MissingPRDFile(t *testing.T) {
++	dir := t.TempDir()
++	writeTraceFixture(t, dir, "tasks.md", "# Tasks\n")
++
++	_, err := traceability.NewCatalog().BuildMap(dir)
++	if err == nil {
++		t.Fatal("expected error when prd.md is absent")
++	}
++}
++
++func TestFullPRD_HarnessQuatroClisLoopAprovacao_ChainIsClosedExceptTaskUnderExecution(t *testing.T) {
++	dir := "../../.specs/prd-harness-quatro-clis-loop-aprovacao"
++	if _, err := os.Stat(filepath.Join(dir, "prd.md")); err != nil {
++		t.Skip("PRD directory not present in this checkout")
++	}
++
++	m, err := traceability.NewCatalog().BuildMap(dir)
++	if err != nil {
++		t.Fatalf("BuildMap: %v", err)
++	}
++	if len(m.Requirements) != 63 {
++		t.Fatalf("expected 63 requirements in prd.md, got %d", len(m.Requirements))
++	}
++
++	violations := m.Validate()
++	for _, v := range violations {
++		if v.Kind == traceability.ViolationTaskWithoutReport && v.Subject == "11.0" {
++			continue
++		}
++		t.Errorf("unexpected traceability violation: %s", v.String())
++	}
++	if t.Failed() {
++		t.Logf("all violations: %v", violations)
++	}
++}

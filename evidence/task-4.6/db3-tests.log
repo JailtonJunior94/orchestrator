@@ -1,0 +1,23 @@
+=== RUN   TestRepositoryPortCheckpointFallsBackToDiffHashWithoutGit
+--- PASS: TestRepositoryPortCheckpointFallsBackToDiffHashWithoutGit (0.02s)
+=== RUN   TestBugfixAttemptsFromCycle
+--- PASS: TestBugfixAttemptsFromCycle (0.00s)
+=== RUN   TestFinalReviewFromCycleResult
+--- PASS: TestFinalReviewFromCycleResult (0.00s)
+=== RUN   TestRunLoopRejectedEmptyCriteriaUnionUsesLegacyPath
+--- PASS: TestRunLoopRejectedEmptyCriteriaUnionUsesLegacyPath (0.00s)
+=== RUN   TestRunLoopRejectedThenBugfixApproves
+--- PASS: TestRunLoopRejectedThenBugfixApproves (0.00s)
+=== RUN   TestRunLoopRejectedRemarksWithoutConvergenceEscalates
+--- PASS: TestRunLoopRejectedRemarksWithoutConvergenceEscalates (0.00s)
+=== RUN   TestRunLoopRejectedEscalated
+--- PASS: TestRunLoopRejectedEscalated (0.00s)
+=== RUN   TestRunLoopRejectedNoConvergence
+--- PASS: TestRunLoopRejectedNoConvergence (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	0.275s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/approval	0.453s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/approval/mocks	[no test files]

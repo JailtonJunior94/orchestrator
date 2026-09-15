@@ -24,7 +24,7 @@ if git diff --cached --name-only | grep -qE "^(\.agents/skills|\.claude/skills|\
 fi
 
 # Hooks sync gate
-if git diff --cached --name-only | grep -qE "^(\.claude|\.agents|\.gemini|\.codex|\.github|internal/embedded/assets/.+)/hooks/"; then
+if git diff --cached --name-only | grep -qE "^(\.claude|\.agents|\.codex|\.github|internal/embedded/assets/.+)/hooks/"; then
   echo "[pre-commit] mudanças em hooks detectadas; verificando sync..."
   if ! bash scripts/check-hooks-sync.sh > /tmp/hooks-sync.log 2>&1; then
     echo

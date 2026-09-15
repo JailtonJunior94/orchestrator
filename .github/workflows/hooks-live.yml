@@ -1,0 +1,64 @@
+name: Hooks Live Tests (not a merge gate)
+
+on:
+  schedule:
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  hooks-live:
+    name: Hooks Live Dispatch (nightly, not a merge gate)
+    runs-on: ubuntu-24.04
+    environment: hooks-live
+    permissions:
+      contents: read
+    env:
+      AISPEC_HOOKS_LIVE: "1"
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Install all native CLIs
+        # Versoes pinadas (RF-11): @latest e proibido — o CI precisa provar o enforcement
+        # contra versoes estaveis, nao contra alvos moveis.
+        # @github/copilot acompanha CopilotNpmVersion em internal/runtime/specs/copilot.go.
+        # opencode-ai acompanha OpenCodeNpmVersion em internal/runtime/specs/opencode.go.
+        # @anthropic-ai/claude-code e @openai/codex sao os CLIs nativos (nao os adaptadores ACP)
+        # e ainda nao possuem constante correspondente no registro — ver pendencia do gate de
+        # sincronia em internal/runtime/specs/.
+        run: |
+          npm install --global \
+            @anthropic-ai/claude-code@2.1.270 \
+            @openai/codex@0.154.0 \
+            @github/copilot@1.0.51 \
+            opencode-ai@1.18.30
+
+      - name: Verify native CLI credentials
+        run: |
+          test -n "$ANTHROPIC_API_KEY"
+          test -n "$OPENAI_API_KEY"
+          test -n "$GH_TOKEN"
+
+      - name: Run native CLI hook dispatch tests
+        run: make test-hooks-live
+
+      - name: Upload evidence artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: hooks-live-evidence-${{ github.run_id }}
+          path: evidence/
+          if-no-files-found: ignore
+          retention-days: 7

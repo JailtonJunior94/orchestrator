@@ -101,7 +101,7 @@ func TestE2EAgent_PromptContainsAgentBlocks(t *testing.T) {
 	var promptReceived string
 	var invokerCalled bool
 
-	svc := NewService(fsys, newE2EPrinter())
+	svc := newCycleTestService(fsys, newE2EPrinter())
 	svc.binaryChecker = noBinaryCheck
 
 	// runnerStub: acpInvokerFactory injeta callbackInvoker sem ACP real.
@@ -170,7 +170,7 @@ func TestE2EAgent_ForensicArtifactStructureIdentical(t *testing.T) {
 	t.Run("legado", func(t *testing.T) {
 		fsys, prd := buildLegacyFS(t)
 
-		svc := NewService(fsys, newE2EPrinter())
+		svc := newCycleTestService(fsys, newE2EPrinter())
 		svc.binaryChecker = noBinaryCheck
 		svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 			return &callbackInvoker{
@@ -214,7 +214,7 @@ func TestE2EAgent_ForensicArtifactStructureIdentical(t *testing.T) {
 		const agentName = "agente-baseline"
 		fsys, prd := buildE2EFS(t, agentName)
 
-		svc := NewService(fsys, newE2EPrinter())
+		svc := newCycleTestService(fsys, newE2EPrinter())
 		svc.binaryChecker = noBinaryCheck
 		svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 			return &callbackInvoker{
@@ -265,7 +265,7 @@ func TestE2EAgent_ReportProduced(t *testing.T) {
 	const agentName = "agente-report"
 	fsys, prd := buildE2EFS(t, agentName)
 
-	svc := NewService(fsys, newE2EPrinter())
+	svc := newCycleTestService(fsys, newE2EPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		return &callbackInvoker{
@@ -308,7 +308,7 @@ func TestE2EAgent_LegacyFlowDoesNotUseRegistry(t *testing.T) {
 
 	legacyCalled := false
 
-	svc := NewService(fsys, newE2EPrinter())
+	svc := newCycleTestService(fsys, newE2EPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{

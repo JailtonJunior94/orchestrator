@@ -33,7 +33,7 @@ type Metadata struct {
 // Todos os campos sao opcionais; valores vazios indicam que o harness deve usar seus proprios defaults.
 // E um value object imutavel (R-DDD-001).
 type RuntimeDefaults struct {
-	// IDE e a ferramenta alvo: claude | codex | gemini | copilot.
+	// IDE e a ferramenta alvo: claude | codex | copilot | opencode.
 	IDE string
 	// Model e o modelo desejado (ex.: claude-opus-4-7). Validado em tarefa 8.0.
 	Model string

@@ -35,9 +35,13 @@ type Summary struct {
 	ReviewStatus string
 	// ReviewPath é o caminho de evidence/<task>/review.md (apontador conveniente).
 	ReviewPath string
+	ReviewNote string `json:"review_note,omitempty"`
+
+	CycleRounds     []CycleRoundSummary `json:"cycle_rounds,omitempty"`
+	CycleStopReason string              `json:"cycle_stop_reason,omitempty"`
 
 	// Metrics é o conjunto unificado de métricas da sessão (ADR-021).
-	// Substitui os campos planos Claude/Gemini por um único MetricSet por driver.
+	// Substitui os campos planos por driver por um único MetricSet por driver.
 	// Zero-value (IsZero()==true) preserva comportamento F1 — nenhuma seção de métricas emitida.
 	Metrics events.MetricSet
 
@@ -49,4 +53,28 @@ type Summary struct {
 	// 0 = sessão bem-sucedida na primeira tentativa (comportamento F1 default).
 	// Incrementado pelo acpInvoker para cada reexecução após falha transitória.
 	RetryAttempts int `json:"retry_attempts,omitempty"`
+
+	HookDispatchErrors []string `json:"hook_dispatch_errors,omitempty"`
+
+	MemoryEvidence *MemoryEvidence `json:"memory_evidence,omitempty"`
+}
+
+type MemoryEvidence struct {
+	SessionID               string
+	CLI                     string
+	TaskFileName            string
+	FactsByLayer            map[string]int
+	FactsOmitted            int
+	FactsContradicted       int
+	PagesUnreadable         int
+	BudgetByLayer           map[string]int
+	WritesByLayer           map[string]int
+	ArchivedByLayer         map[string]int
+	Redactions              int
+	Compactions             int
+	Contradictions          int
+	BatonClaimed            bool
+	ContextBuildLatency     int64
+	ContextRecoveryDegraded bool
+	RecordLatency           int64
 }

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 )
 
 // TaskEntry representa uma linha da tabela de tasks em tasks.md.
@@ -18,8 +19,8 @@ type TaskEntry struct {
 }
 
 var (
-	_tableRowRe    = regexp.MustCompile(`^\|\s*(\d+\.\d+)\s*\|`)
-	_statusFieldRe = regexp.MustCompile(`(?i)\*\*Status:\*\*\s*(.+)`)
+	tableRowRe    = regexp.MustCompile(`^\|\s*(\d+\.\d+)\s*\|`)
+	statusFieldRe = regexp.MustCompile(`(?i)\*\*Status:\*\*\s*(.+)`)
 )
 
 // ParseTasksFile extrai entradas da tabela markdown em tasks.md.
@@ -54,7 +55,7 @@ func (c *Catalog) ParseTasksFile(content []byte) ([]TaskEntry, error) {
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		if !_tableRowRe.MatchString(line) {
+		if !tableRowRe.MatchString(line) {
 			continue
 		}
 
@@ -91,7 +92,7 @@ func (c *Catalog) ParseTasksFile(content []byte) ([]TaskEntry, error) {
 
 // ReadTaskFileStatus extrai o campo **Status:** de um arquivo de task individual.
 func (c *Catalog) ReadTaskFileStatus(content []byte) string {
-	matches := _statusFieldRe.FindSubmatch(content)
+	matches := statusFieldRe.FindSubmatch(content)
 	if len(matches) < 2 {
 		return ""
 	}
@@ -249,23 +250,7 @@ func (c *Catalog) matchesTaskPrefix(filename, prefix, fullID string) bool {
 // A atribuicao e atomica: uma linha que cita apenas "Dependencias" nao e um
 // header valido e nao pode deixar os indices parcialmente sobrescritos.
 func (c *Catalog) detectColumnIndices(cols []string, statusIdx, depsIdx *int) bool {
-	foundStatus := false
-	detectedStatus, detectedDeps := *statusIdx, *depsIdx
-	for i, col := range cols {
-		h := strings.ToLower(strings.TrimSpace(col))
-		switch h {
-		case "status":
-			detectedStatus = i
-			foundStatus = true
-		case "dependências", "dependencias", "dependência", "dependencia", "deps":
-			detectedDeps = i
-		}
-	}
-	if !foundStatus {
-		return false
-	}
-	*statusIdx, *depsIdx = detectedStatus, detectedDeps
-	return true
+	return airuntime.DetectTaskTableColumns(cols, statusIdx, depsIdx)
 }
 
 func (c *Catalog) parseDependencies(raw string) []string {

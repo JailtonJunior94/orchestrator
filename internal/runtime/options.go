@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks"
 )
 
 // Option é uma opção funcional para ACPRunner.
@@ -50,14 +51,20 @@ func (c *Catalog) WithMCPServer(s MCPServer) Option {
 	}
 }
 
-// WithReviewOutputFn injeta uma função de saída de review para testes unitários (F5-Claude).
-// Em produção usar nil (default) → spawnReviewSession executa o runner real.
-// Em testes: injetar função que retorna output canned sem spawnar sessão ACP real.
-func (c *Catalog) WithReviewOutputFn(fn autoReviewOutputFn) Option {
+func (c *Catalog) WithHandshakeWaiterFactory(f HandshakeWaiterFactory) Option {
 	return func(r *ACPRunner) {
-		r.reviewOutputFn = fn
+		r.handshakeWaiterFactory = f
 	}
 }
 
-// ReviewOutputFn é o tipo exportado de autoReviewOutputFn para uso em testes externos.
-type ReviewOutputFn = autoReviewOutputFn
+func (c *Catalog) WithPromptPostBuildTestHook(hook hooks.Hook) Option {
+	return func(r *ACPRunner) {
+		r.promptPostBuildTestHook = hook
+	}
+}
+
+func (c *Catalog) WithSessionPostReviewTestHook(hook hooks.Hook) Option {
+	return func(r *ACPRunner) {
+		r.sessionPostReviewTestHook = hook
+	}
+}

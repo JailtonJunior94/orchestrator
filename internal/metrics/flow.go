@@ -65,7 +65,7 @@ type flowBudgetKey struct {
 //   - referencias: ~2.000 chars (~570 tokens est.) por referencia
 //
 // Limites definidos como ~4-8x a soma esperada dos artefatos para margem operacional segura.
-// Ferramentas com janela de contexto maior (claude, gemini) recebem limites mais generosos.
+// Ferramentas com janela de contexto maior (claude, opencode) recebem limites mais generosos.
 // Planning nao e definido para lean — o perfil lean exclui skills de planejamento por design.
 var _flowBudgets = map[flowBudgetKey]int{
 	// claude — janela de contexto grande; standard/full
@@ -88,11 +88,11 @@ var _flowBudgets = map[flowBudgetKey]int{
 	{Tool: "codex", GovernanceProfile: GovernanceProfileCompact, SkillProfile: SkillProfileLean, Flow: FlowReview}:    5000,
 	{Tool: "codex", GovernanceProfile: GovernanceProfileCompact, SkillProfile: SkillProfileLean, Flow: FlowBugfix}:    5000,
 
-	// gemini — janela grande; standard/full
-	{Tool: "gemini", GovernanceProfile: GovernanceProfileStandard, SkillProfile: SkillProfileFull, Flow: FlowExecution}: 15000,
-	{Tool: "gemini", GovernanceProfile: GovernanceProfileStandard, SkillProfile: SkillProfileFull, Flow: FlowPlanning}:  30000,
-	{Tool: "gemini", GovernanceProfile: GovernanceProfileStandard, SkillProfile: SkillProfileFull, Flow: FlowReview}:    15000,
-	{Tool: "gemini", GovernanceProfile: GovernanceProfileStandard, SkillProfile: SkillProfileFull, Flow: FlowBugfix}:    15000,
+	// opencode — janela derivada do modelo; standard/full
+	{Tool: "opencode", GovernanceProfile: GovernanceProfileStandard, SkillProfile: SkillProfileFull, Flow: FlowExecution}: 15000,
+	{Tool: "opencode", GovernanceProfile: GovernanceProfileStandard, SkillProfile: SkillProfileFull, Flow: FlowPlanning}:  30000,
+	{Tool: "opencode", GovernanceProfile: GovernanceProfileStandard, SkillProfile: SkillProfileFull, Flow: FlowReview}:    15000,
+	{Tool: "opencode", GovernanceProfile: GovernanceProfileStandard, SkillProfile: SkillProfileFull, Flow: FlowBugfix}:    15000,
 
 	// copilot — contexto intermediario; standard/full
 	{Tool: "copilot", GovernanceProfile: GovernanceProfileStandard, SkillProfile: SkillProfileFull, Flow: FlowExecution}: 8000,

@@ -1,12 +1,30 @@
-<!-- spec-hash-prd: 0a9ad37a14dece6109b909750abfb8ec3c61f4a66181934758687842764737ce -->
-<!-- spec-hash-techspec: a75b561d9d03651ec0453900a8c796027ca114d75268c112ece45fc4f6750862 -->
+<!-- spec-hash-prd: 4583496d103cfa0126a9fa0826999b4285f3b3ffe1f412c8a878d36b92122112 -->
+<!-- spec-hash-techspec: 1fd62c41e2d7cf23605a41708e7a54600cc46330bc2ff3cc215e67ac112c6dec -->
 # Resumo das Tarefas de Implementação para Quatro CLIs Oficiais e Ciclo de Aprovação
 
 ## Metadados
 - **PRD:** `.specs/prd-harness-quatro-clis-loop-aprovacao/prd.md`
 - **Especificação Técnica:** `.specs/prd-harness-quatro-clis-loop-aprovacao/techspec.md`
-- **Total de tarefas:** 11
+- **Total de tarefas:** 18
 - **Tarefas paralelizáveis:** 2.0 e 3.0
+
+### Estado real do gate de encerramento
+
+Atualização 2026-09-15: 1.0, 4.6, 4.7, 6.0, 7.0, 8.0, 9.0 e 10.0 já convergiram para `done`/`review_verdict:
+approved` em rodadas de revisão subsequentes a este parágrafo original — ver os respectivos
+`*_execution_result.json`, que são o dado estruturado canônico (RF-56). A tarefa 9.0 fechou depois de
+uma correção real de bug de governança no Codex (bug de parsing em `.agents/lib/parse-hook-input.sh`
+que fazia o gate de `PreToolUse` ser pulado em silêncio para edições via `apply_patch`), verificada por
+rodada de revisão independente. Resta **11.0** em `blocked` **com relatório de execução escrito** e
+veredito estruturado que RF-33/RF-36 não aceita para fechar tarefa (`changes_requested`). Até a entrega
+original desta tarefa, `validate-session-end.sh` filtrava apenas `in_progress` e `done`, de modo que
+`blocked` funcionava como escape de uma palavra: o gate saía `0`. O gate passou a cobrar `blocked` com
+relatório escrito e hoje sai `2` sobre este próprio repositório, listando a tarefa restante.
+
+Isso é o comportamento correto e **não deve ser contornado** movendo status ou reescrevendo
+veredito. O caminho de saída é executar a rodada de revisão que converta o veredito em `APPROVED`,
+ou registrar a razão pela qual a tarefa permanece bloqueada. Nenhum relatório foi reescrito para
+passar no gate (RF-56).
 
 ## Tarefas
 
@@ -23,17 +41,24 @@
 
 | # | Título | Status | Dependências | Paralelizável | Skills |
 |---|--------|--------|-------------|---------------|--------|
-| 1.0 | Tornar os gates capazes de rodar e de dizer a verdade | pending | — | — | — |
-| 2.0 | Pacote de domínio do Ciclo de Aprovação, sem consumidor | pending | 1.0 | Com 3.0 | domain-modeling-production |
-| 3.0 | Mapa 1:1 critério-evidência como dado verificável | pending | 1.0 | Com 2.0 | — |
-| 4.0 | Promoção do loop ao agregado e correção dos defeitos de causa-raiz | pending | 2.0, 3.0 | Não | — |
-| 5.0 | Propagação do teto de rodadas e virada do critério estrito | pending | 4.0 | Não | — |
-| 6.0 | Catálogo de Agentes como registro único | pending | 2.0 | Não | domain-modeling-production |
-| 7.0 | OpenCode como agente oficial de primeira classe | pending | 6.0 | Não | — |
-| 8.0 | Enforcement não-desligável do OpenCode | pending | 7.0 | Não | — |
-| 9.0 | Hooks e paridade comprovada nos quatro agentes | pending | 8.0 | Não | — |
-| 10.0 | Remoção total do Gemini e desinstalação fiel | pending | 9.0 | Não | — |
-| 11.0 | Fechamento: rastreabilidade, não-regressão e release major | pending | 5.0, 10.0 | — | github-diff-changelog-publisher |
+| 1.0 | Tornar os gates capazes de rodar e de dizer a verdade | done | — | — | — |
+| 2.0 | Pacote de domínio do Ciclo de Aprovação, sem consumidor | done | 1.0 | Com 3.0 | domain-modeling-production |
+| 3.0 | Mapa 1:1 critério-evidência como dado verificável | done | 1.0 | Com 2.0 | — |
+| 4.1 | Veredito da fonte real do revisor e adaptadores das portas (D1) | done | 2.0, 3.0 | Não | — |
+| 4.2 | Evidência por rodada, revisão por delta e reset de profundidade (D2) | done | 4.1 | Não | — |
+| 4.3 | Extrator de critérios compartilhado e adaptador de portas em taskloop | done | 4.2 | Não | — |
+| 4.4 | Service.Execute conduz o Cycle (critérios por task, estabelece o padrão) | done | 4.3 | Não | — |
+| 4.5 | Adequação das fixtures de revisão ao contrato de texto bruto | done | 4.4 | Não | — |
+| 4.6 | RunLoop conduz o Cycle; BugfixLoop reduzido a projetor de evidência | done | 4.5 | Não | — |
+| 4.7 | ACPRunner conduz o Cycle e fiação das quatro lacunas nos três caminhos | done | 4.6 | Não | — |
+| 4.8 | Prova de paridade entre os três caminhos e fluxos E2E | done | 4.7 | Não | — |
+| 5.0 | Propagação do teto de rodadas e virada do critério estrito | done | 4.8 | Não | — |
+| 6.0 | Catálogo de Agentes como registro único | done | 2.0 | Não | domain-modeling-production |
+| 7.0 | OpenCode como agente oficial de primeira classe | done | 6.0 | Não | — |
+| 8.0 | Enforcement não-desligável do OpenCode | done | 7.0 | Não | — |
+| 9.0 | Hooks e paridade comprovada nos quatro agentes | done | 8.0 | Não | — |
+| 10.0 | Remoção total do Gemini e desinstalação fiel | done | 9.0 | Não | — |
+| 11.0 | Fechamento: rastreabilidade, não-regressão e release major | blocked | 5.0, 10.0 | — | github-diff-changelog-publisher |
 
 ## Dependências Críticas
 
@@ -45,28 +70,65 @@
 - **3.0 bloqueia 5.0.** O mapa 1:1 não existe como dado hoje: o template de artefato de revisão não tem
   seção para ele e o validador não o cobra. Ligar o critério estrito de aprovação antes disso converte o
   falso positivo atual em **falso negativo total** — todo ciclo terminaria bloqueado.
-- **2.0 precede 4.0 e 6.0.** O agregado precede seus dois consumidores.
+- **2.0 precede 4.1 e 6.0.** O agregado precede seus dois consumidores.
 - **7.0 precede 10.0.** Nas células de ocupante único — a tabela de orçamento de janela grande e a lista
   de herança comum das regras de normalização — o OpenCode precisa assumir a entrada **antes** de o
   Gemini sair. Esvaziá-las muda o comportamento sem que nenhum teste falhe.
 - **9.0 precede 10.0.** Os gates de paridade são escritos com as células ainda completas, para que
   fiquem vermelhos exatamente se a remoção degradar a cobertura. Inverter elimina o único sinal.
-- **4.0 e 5.0 são sequenciais entre si.** A virada do critério estrito só é segura depois que o veredito
-  passa a vir da saída real do revisor.
+- **4.1 → 4.2 → 4.3 → 4.4 → 4.5 → 4.6 → 4.7 → 4.8 → 5.0 são estritamente sequenciais.** A antiga tarefa
+  4.0 foi decomposta durante a execução (ver `## Riscos de Integração`): 4.1 faz o veredito vir da saída
+  real do revisor (D1); 4.2 corrige a evidência por rodada, o delta e o reset de profundidade (D2 +
+  contratos órfãos); 4.3–4.8 promovem o loop ao agregado nos três caminhos de produção, na ordem
+  ditada pela fonte dos critérios de aceite — 4.3 (extrator `internal/taskcriteria` + adaptador de
+  portas em `internal/taskloop`), 4.4 (`Service.Execute` — critérios por task, estabelece o padrão),
+  4.5 (adequação das fixtures ao contrato de texto bruto — fatia própria, só teste), 4.6 (`RunLoop` —
+  critérios pela união dos task files do lote; `BugfixLoop` vira projetor de evidência), 4.7
+  (`ACPRunner` + fiação das quatro lacunas), 4.8 (prova de paridade + E2E). A virada do critério
+  estrito (5.0) só é segura depois de 4.8. A terceira decomposição está registrada na techspec,
+  subseção "Integração do agregado nos três caminhos (Bloco D)" (B1/B2/B3).
 
 ## Riscos de Integração
 
-**Excesso deliberado do teto default de 10 tarefas: este PRD é decomposto em 11.**
+**Excesso deliberado do teto default de 10 tarefas: este PRD é decomposto em 18.**
 
 O teto existe para forçar consolidação de PRDs grandes em fatias coerentes. A consolidação foi aplicada
-até o limite do que é seguro, e o décimo primeiro item não é fragmentação — é uma dependência dura que
-nenhuma outra fatia pode absorver. Três restrições impedem chegar a dez:
+até o limite do que é seguro. Os itens além de dez não são fragmentação — são dependências duras que
+nenhuma outra fatia pode absorver.
+
+**Decomposição da tarefa 4.0 (aplicada durante a execução, em dois passos).** A tarefa 4.0 original foi
+`failed`: migrar `Summary.ReviewStatus` dos três caminhos de produção ao agregado fail-closed toca ~81
+asserções de veredito em `internal/taskloop/*_test.go` e `runEventLoop` não captura o transcript real do
+revisor (RF-57). Primeira decomposição: 4.1 (D1 — veredito da fonte real, caminho runtime), 4.2 (D2 —
+evidência por rodada, delta, reset de profundidade), 4.3 (promoção aos três caminhos). Na execução, a
+4.3 revelou-se ainda grande demais para um passo verde-verificável — três call sites de produção
+(`runner.go` 25 KB, `taskloop.go` 36 KB, `runloop.go` 20 KB), um adaptador novo em `internal/taskloop`,
+~230 KB de testes com asserções lenientes a ajustar cirurgicamente, quatro lacunas × três caminhos, mais
+prova de paridade e cinco fluxos E2E. Segunda decomposição: 4.3 (adaptador de taskloop + `RunLoop`),
+4.4 (`Service.Execute` — caminho real de produção), 4.5 (`ACPRunner` + fiação das quatro lacunas nos
+três caminhos), 4.6 (prova de paridade entre os três caminhos + fluxos E2E).
+
+**Terceira decomposição da tarefa 4.3 (aplicada após 3 travas de design).** A execução de 4.3 travou
+três vezes por lacunas de design não resolvíveis pelo executor: B1 — `Cycle.Run` só aprova por
+`CriteriaMap` completo e o caminho `RunLoop` não tem critérios em escopo; B2 — o `Translator` lê texto
+bruto e os stubs vivos devolvem `RawOutput` vazio, fechando tudo como `blocked`; B3 — a fronteira
+`Cycle` ↔ `BugfixLoop` não estava especificada. As três foram resolvidas com decisões concretas na
+techspec (subseção "Integração do agregado nos três caminhos (Bloco D)"). O re-fatiamento
+resultante: 4.3 (extrator `internal/taskcriteria` + adaptador de portas em `internal/taskloop`, sem
+migrar call site), 4.4 (`Service.Execute` — tem critérios por task, migra primeiro e fixa o padrão),
+4.5 (adequação das fixtures ao contrato de texto bruto — fatia própria, só teste, ~19 literais),
+4.6 (`RunLoop` — critérios pela união dos task files do lote; `BugfixLoop` vira projetor de evidência
+a partir dos eventos do `Cycle`; `bugfix.go` entra no escopo), 4.7 (`ACPRunner` + fiação das quatro
+lacunas), 4.8 (prova de paridade + E2E). Cobertura de RF preservada integralmente (ver tabela). A
+virada do critério estrito permanece em 5.0.
+
+Três restrições impediam chegar a dez já no plano original:
 
 1. **Uma fase que a especificação técnica não previa.** As tarefas 1.0 e 2.0 não podem ser fundidas: o
    que a 1.0 conserta é a *própria capacidade de validar* as demais tarefas. Fundi-las significaria criar
    o pacote de domínio sob um gate que não roda.
 2. **Uma dependência bloqueante que estava sequenciada tarde demais.** A tarefa 3.0 não cabe em 2.0, que
-   é domínio puro sem consumidor, nem em 4.0, que já carrega os dois defeitos de causa-raiz do falso
+   é domínio puro sem consumidor, nem na fatia 4.x, que já carrega os defeitos de causa-raiz do falso
    positivo. É fatia obrigatória entre as duas.
 3. **O raio de explosão da introdução do novo agente.** Fundir 6.0 com 7.0 produziria um commit que altera
    o catálogo **e** seu conteúdo simultaneamente, impedindo bissecção exatamente no ponto onde está a
@@ -78,9 +140,9 @@ custo de dissolver a verificação de não-regressão dentro da tarefa de maior 
 
 **Outros pontos de integração com risco de retrabalho:**
 
-- **O veredito de produção hoje aprova sempre.** A correção em 4.0 muda isso para uma fração
-  desconhecida de bloqueios. Sem linha de base gravada antes da mudança, não se distingue "gate
-  funcionando" de "gate quebrado".
+- **O veredito de produção hoje aprova sempre.** A correção em 4.1 muda isso para uma fração
+  desconhecida de bloqueios. Sem linha de base gravada antes da mudança (subtarefa 4.1.1), não se
+  distingue "gate funcionando" de "gate quebrado".
 - **A desinstalação passa a apagar mais arquivos**, guiada por manifesto por arquivo. Manifestos antigos
   no disco não têm o campo e precisam cair em caminho conservador anunciado, sob risco de apagar arquivo
   do usuário.
@@ -99,7 +161,14 @@ custo de dissolver a verificação de não-regressão dentro da tarefa de maior 
 | 1.0 | RF-08, RF-63 |
 | 2.0 | RF-30, RF-33, RF-37, RF-41, RF-45, RF-46, RF-48, RF-49, RF-50 |
 | 3.0 | RF-47, RF-51, RF-52, RF-53, RF-54 |
-| 4.0 | RF-31, RF-34, RF-38, RF-39, RF-40, RF-42, RF-44, RF-57, RF-58 |
+| 4.1 | RF-40, RF-57 |
+| 4.2 | RF-38, RF-39, RF-42, RF-44, RF-58 |
+| 4.3 | RF-34 |
+| 4.4 | RF-34 |
+| 4.5 | RF-34 |
+| 4.6 | RF-34 |
+| 4.7 | RF-31 |
+| 4.8 | RF-31, RF-34 |
 | 5.0 | RF-32, RF-35, RF-36, RF-56 |
 | 6.0 | RF-07, RF-22, RF-26 |
 | 7.0 | RF-06, RF-10, RF-11, RF-12, RF-13, RF-14, RF-15, RF-16, RF-17, RF-18 |
@@ -115,7 +184,14 @@ graph TD
     T1["1.0 — Gates capazes de rodar"]
     T2["2.0 — Pacote de dominio"]
     T3["3.0 — Mapa 1:1 como dado"]
-    T4["4.0 — Promocao do loop e defeitos"]
+    T41["4.1 — Veredito da fonte real (D1)"]
+    T42["4.2 — Evidencia por rodada, delta, profundidade (D2)"]
+    T43["4.3 — Extrator de criterios + adaptador taskloop"]
+    T44["4.4 — Service.Execute conduz o Cycle"]
+    T45["4.5 — Fixtures ao contrato de texto bruto"]
+    T46["4.6 — RunLoop conduz o Cycle"]
+    T47["4.7 — ACPRunner + 4 lacunas fiadas"]
+    T48["4.8 — Paridade 3 caminhos + E2E"]
     T5["5.0 — Teto e criterio estrito"]
     T6["6.0 — Catalogo como registro unico"]
     T7["7.0 — OpenCode oficial"]
@@ -125,9 +201,16 @@ graph TD
     T11["11.0 — Rastreabilidade e release"]
     T1 --> T2
     T1 --> T3
-    T2 --> T4
-    T3 --> T4
-    T4 --> T5
+    T2 --> T41
+    T3 --> T41
+    T41 --> T42
+    T42 --> T43
+    T43 --> T44
+    T44 --> T45
+    T45 --> T46
+    T46 --> T47
+    T47 --> T48
+    T48 --> T5
     T2 --> T6
     T6 --> T7
     T7 --> T8

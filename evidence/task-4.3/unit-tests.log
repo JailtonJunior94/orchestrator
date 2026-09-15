@@ -1,0 +1,1972 @@
+=== RUN   TestExtract
+=== RUN   TestExtract/definition_of_done_all_checked
+=== RUN   TestExtract/definition_of_done_none_checked
+=== RUN   TestExtract/mixed_checked_and_unchecked
+=== RUN   TestExtract/no_relevant_section
+=== RUN   TestExtract/section_ends_at_next_heading
+=== RUN   TestExtract/portuguese_criterios_de_sucesso
+=== RUN   TestExtract/acceptance_criteria_heading
+=== RUN   TestExtract/multiple_equivalent_sections_accumulate
+=== RUN   TestExtract/blank_checklist_text_is_skipped
+--- PASS: TestExtract (0.00s)
+    --- PASS: TestExtract/definition_of_done_all_checked (0.00s)
+    --- PASS: TestExtract/definition_of_done_none_checked (0.00s)
+    --- PASS: TestExtract/mixed_checked_and_unchecked (0.00s)
+    --- PASS: TestExtract/no_relevant_section (0.00s)
+    --- PASS: TestExtract/section_ends_at_next_heading (0.00s)
+    --- PASS: TestExtract/portuguese_criterios_de_sucesso (0.00s)
+    --- PASS: TestExtract/acceptance_criteria_heading (0.00s)
+    --- PASS: TestExtract/multiple_equivalent_sections_accumulate (0.00s)
+    --- PASS: TestExtract/blank_checklist_text_is_skipped (0.00s)
+=== RUN   TestExtractIgnoresChecklistOutsideSection
+--- PASS: TestExtractIgnoresChecklistOutsideSection (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria	0.001s
+=== RUN   TestAcceptanceGate_Verify
+=== RUN   TestAcceptanceGate_Verify/sucesso_pleno_—_todos_criterios_marcados_e_subprocessos_ok
+=== RUN   TestAcceptanceGate_Verify/criterios_incompletos_—_retorna_ErrAcceptanceFailed
+=== RUN   TestAcceptanceGate_Verify/go_test_falha_—_retorna_ErrAcceptanceFailed
+=== RUN   TestAcceptanceGate_Verify/go_vet_falha_—_retorna_ErrAcceptanceFailed
+=== RUN   TestAcceptanceGate_Verify/lint_falha_—_retorna_ErrAcceptanceFailed
+=== RUN   TestAcceptanceGate_Verify/sem_criterios_de_checklist_—_passa_se_subprocessos_ok
+=== RUN   TestAcceptanceGate_Verify/secao_em_PT-BR_Criterios_de_Sucesso
+--- PASS: TestAcceptanceGate_Verify (0.00s)
+    --- PASS: TestAcceptanceGate_Verify/sucesso_pleno_—_todos_criterios_marcados_e_subprocessos_ok (0.00s)
+    --- PASS: TestAcceptanceGate_Verify/criterios_incompletos_—_retorna_ErrAcceptanceFailed (0.00s)
+    --- PASS: TestAcceptanceGate_Verify/go_test_falha_—_retorna_ErrAcceptanceFailed (0.00s)
+    --- PASS: TestAcceptanceGate_Verify/go_vet_falha_—_retorna_ErrAcceptanceFailed (0.00s)
+    --- PASS: TestAcceptanceGate_Verify/lint_falha_—_retorna_ErrAcceptanceFailed (0.00s)
+    --- PASS: TestAcceptanceGate_Verify/sem_criterios_de_checklist_—_passa_se_subprocessos_ok (0.00s)
+    --- PASS: TestAcceptanceGate_Verify/secao_em_PT-BR_Criterios_de_Sucesso (0.00s)
+=== RUN   TestParseCriteriaFromTaskFile
+=== RUN   TestParseCriteriaFromTaskFile/todos_marcados
+=== RUN   TestParseCriteriaFromTaskFile/nenhum_marcado
+=== RUN   TestParseCriteriaFromTaskFile/sem_secao_relevante
+=== RUN   TestParseCriteriaFromTaskFile/secao_encerrada_por_proxima_secao
+--- PASS: TestParseCriteriaFromTaskFile (0.00s)
+    --- PASS: TestParseCriteriaFromTaskFile/todos_marcados (0.00s)
+    --- PASS: TestParseCriteriaFromTaskFile/nenhum_marcado (0.00s)
+    --- PASS: TestParseCriteriaFromTaskFile/sem_secao_relevante (0.00s)
+    --- PASS: TestParseCriteriaFromTaskFile/secao_encerrada_por_proxima_secao (0.00s)
+=== RUN   TestACPSpecCatalogInSyncWithRegistry
+=== PAUSE TestACPSpecCatalogInSyncWithRegistry
+=== RUN   TestRunCmdStreamsStderrToLiveOut
+--- PASS: TestRunCmdStreamsStderrToLiveOut (0.00s)
+=== RUN   TestRunCmdNoLiveOutDoesNotPanic
+--- PASS: TestRunCmdNoLiveOutDoesNotPanic (0.00s)
+=== RUN   TestNewAgentInvoker
+=== RUN   TestNewAgentInvoker/claude
+=== RUN   TestNewAgentInvoker/codex
+=== RUN   TestNewAgentInvoker/gemini
+=== RUN   TestNewAgentInvoker/copilot
+=== RUN   TestNewAgentInvoker/ferramenta_invalida
+=== RUN   TestNewAgentInvoker/string_vazia
+--- PASS: TestNewAgentInvoker (0.00s)
+    --- PASS: TestNewAgentInvoker/claude (0.00s)
+    --- PASS: TestNewAgentInvoker/codex (0.00s)
+    --- PASS: TestNewAgentInvoker/gemini (0.00s)
+    --- PASS: TestNewAgentInvoker/copilot (0.00s)
+    --- PASS: TestNewAgentInvoker/ferramenta_invalida (0.00s)
+    --- PASS: TestNewAgentInvoker/string_vazia (0.00s)
+=== RUN   TestBuildPromptContainsAgentsMd
+--- PASS: TestBuildPromptContainsAgentsMd (0.00s)
+=== RUN   TestInvokerArgs
+=== RUN   TestInvokerArgs/claudeInvoker_sem_model_—_flags_sem_--bare_quando_claudiney_disponivel
+=== RUN   TestInvokerArgs/codexInvoker_sem_model_—_prompt_como_argumento_posicional
+WARNING: Codex CLI legado (codex exec --yolo) em uso. Migrar para --runtime=acp (binário codex-acp, pacote @zed-industries/codex-acp). O modo legado será removido em 2 versões minor. Ver ADR-013. Guia de migração: docs/migracao-legacy-acp.md.
+=== RUN   TestInvokerArgs/geminiInvoker_sem_model_—_usa_--approval-mode=yolo_(correcao_de_--yolo_deprecated)
+=== RUN   TestInvokerArgs/copilotInvoker_sem_model_—_flags_identicas_ao_anterior
+WARNING: Copilot CLI em modo legado (sem ACP). Migrar para --runtime=acp. O modo legado será removido em vX.Y.Z. Ver ADR-012. Guia de migração: docs/migracao-legacy-acp.md.
+=== RUN   TestInvokerArgs/claudeInvoker_com_model_—_--model_antes_de_--dangerously-skip-permissions
+=== RUN   TestInvokerArgs/codexInvoker_com_model_—_exec_+_--model_antes_de_--yolo
+=== RUN   TestInvokerArgs/geminiInvoker_com_model_—_--model_antes_de_--approval-mode=yolo
+=== RUN   TestInvokerArgs/copilotInvoker_com_model_—_--model_antes_de_--autopilot
+WARNING: Copilot CLI em modo legado (sem ACP). Migrar para --runtime=acp. O modo legado será removido em vX.Y.Z. Ver ADR-012. Guia de migração: docs/migracao-legacy-acp.md.
+--- PASS: TestInvokerArgs (0.00s)
+    --- PASS: TestInvokerArgs/claudeInvoker_sem_model_—_flags_sem_--bare_quando_claudiney_disponivel (0.00s)
+    --- PASS: TestInvokerArgs/codexInvoker_sem_model_—_prompt_como_argumento_posicional (0.00s)
+    --- PASS: TestInvokerArgs/geminiInvoker_sem_model_—_usa_--approval-mode=yolo_(correcao_de_--yolo_deprecated) (0.00s)
+    --- PASS: TestInvokerArgs/copilotInvoker_sem_model_—_flags_identicas_ao_anterior (0.00s)
+    --- PASS: TestInvokerArgs/claudeInvoker_com_model_—_--model_antes_de_--dangerously-skip-permissions (0.00s)
+    --- PASS: TestInvokerArgs/codexInvoker_com_model_—_exec_+_--model_antes_de_--yolo (0.00s)
+    --- PASS: TestInvokerArgs/geminiInvoker_com_model_—_--model_antes_de_--approval-mode=yolo (0.00s)
+    --- PASS: TestInvokerArgs/copilotInvoker_com_model_—_--model_antes_de_--autopilot (0.00s)
+=== RUN   TestIsAuthError
+=== RUN   TestIsAuthError/claude_not_logged_in
+=== RUN   TestIsAuthError/not_authenticated
+=== RUN   TestIsAuthError/authentication_required
+=== RUN   TestIsAuthError/unauthorized
+=== RUN   TestIsAuthError/login_required
+=== RUN   TestIsAuthError/api_key_missing
+=== RUN   TestIsAuthError/normal_error_—_not_auth
+=== RUN   TestIsAuthError/empty_output
+=== RUN   TestIsAuthError/task_output_—_not_auth
+--- PASS: TestIsAuthError (0.00s)
+    --- PASS: TestIsAuthError/claude_not_logged_in (0.00s)
+    --- PASS: TestIsAuthError/not_authenticated (0.00s)
+    --- PASS: TestIsAuthError/authentication_required (0.00s)
+    --- PASS: TestIsAuthError/unauthorized (0.00s)
+    --- PASS: TestIsAuthError/login_required (0.00s)
+    --- PASS: TestIsAuthError/api_key_missing (0.00s)
+    --- PASS: TestIsAuthError/normal_error_—_not_auth (0.00s)
+    --- PASS: TestIsAuthError/empty_output (0.00s)
+    --- PASS: TestIsAuthError/task_output_—_not_auth (0.00s)
+=== RUN   TestAuthGuidance
+--- PASS: TestAuthGuidance (0.00s)
+=== RUN   TestAuthGuidanceClaudeAnthropicKey
+--- PASS: TestAuthGuidanceClaudeAnthropicKey (0.00s)
+=== RUN   TestWarnClaudeAuthWithAPIKey
+--- PASS: TestWarnClaudeAuthWithAPIKey (0.00s)
+=== RUN   TestLiveOutputSetterInterface
+--- PASS: TestLiveOutputSetterInterface (0.00s)
+=== RUN   TestCleanEnvResetsAIInvocationDepth
+--- PASS: TestCleanEnvResetsAIInvocationDepth (0.00s)
+=== RUN   TestAgentEnvironmentIsolation
+--- PASS: TestAgentEnvironmentIsolation (0.00s)
+=== RUN   TestClaudeInvokerFallbackModel
+=== RUN   TestClaudeInvokerFallbackModel/sem_model_sem_fallback_—_sem_--bare_quando_claudiney_disponivel
+=== RUN   TestClaudeInvokerFallbackModel/com_model_e_com_fallback_—_--model_antes_de_--fallback-model
+=== RUN   TestClaudeInvokerFallbackModel/sem_model_mas_com_fallback_—_apenas_--fallback-model
+--- PASS: TestClaudeInvokerFallbackModel (0.00s)
+    --- PASS: TestClaudeInvokerFallbackModel/sem_model_sem_fallback_—_sem_--bare_quando_claudiney_disponivel (0.00s)
+    --- PASS: TestClaudeInvokerFallbackModel/com_model_e_com_fallback_—_--model_antes_de_--fallback-model (0.00s)
+    --- PASS: TestClaudeInvokerFallbackModel/sem_model_mas_com_fallback_—_apenas_--fallback-model (0.00s)
+=== RUN   TestExtractArchitecture
+=== RUN   TestExtractArchitecture/extrai_secao_Arquitetura_do_Sistema
+=== RUN   TestExtractArchitecture/extrai_secao_Arquitetura_generica
+=== RUN   TestExtractArchitecture/fallback_quando_nao_ha_secao_de_arquitetura
+=== RUN   TestExtractArchitecture/fallback_para_Resumo_Executivo
+=== RUN   TestExtractArchitecture/techspec_vazia
+=== RUN   TestExtractArchitecture/secao_arquitetura_sem_conteudo
+--- PASS: TestExtractArchitecture (0.00s)
+    --- PASS: TestExtractArchitecture/extrai_secao_Arquitetura_do_Sistema (0.00s)
+    --- PASS: TestExtractArchitecture/extrai_secao_Arquitetura_generica (0.00s)
+    --- PASS: TestExtractArchitecture/fallback_quando_nao_ha_secao_de_arquitetura (0.00s)
+    --- PASS: TestExtractArchitecture/fallback_para_Resumo_Executivo (0.00s)
+    --- PASS: TestExtractArchitecture/techspec_vazia (0.00s)
+    --- PASS: TestExtractArchitecture/secao_arquitetura_sem_conteudo (0.00s)
+=== RUN   TestExtractArchitectureTruncation
+--- PASS: TestExtractArchitectureTruncation (0.00s)
+=== RUN   TestDetectReferences
+=== RUN   TestDetectReferences/projeto_Go_puro
+=== RUN   TestDetectReferences/projeto_Node
+=== RUN   TestDetectReferences/projeto_Python
+=== RUN   TestDetectReferences/Go_com_DDD_e_security
+=== RUN   TestDetectReferences/conteudo_generico_sem_linguagem
+=== RUN   TestDetectReferences/pipeline_em_projeto_Go_nao_detecta_Python
+--- PASS: TestDetectReferences (0.00s)
+    --- PASS: TestDetectReferences/projeto_Go_puro (0.00s)
+    --- PASS: TestDetectReferences/projeto_Node (0.00s)
+    --- PASS: TestDetectReferences/projeto_Python (0.00s)
+    --- PASS: TestDetectReferences/Go_com_DDD_e_security (0.00s)
+    --- PASS: TestDetectReferences/conteudo_generico_sem_linguagem (0.00s)
+    --- PASS: TestDetectReferences/pipeline_em_projeto_Go_nao_detecta_Python (0.00s)
+=== RUN   TestContainsAnyPattern
+=== RUN   TestContainsAnyPattern/match_primeiro
+=== RUN   TestContainsAnyPattern/match_segundo
+=== RUN   TestContainsAnyPattern/nenhum_match
+=== RUN   TestContainsAnyPattern/string_vazia
+=== RUN   TestContainsAnyPattern/patterns_vazios
+--- PASS: TestContainsAnyPattern (0.00s)
+    --- PASS: TestContainsAnyPattern/match_primeiro (0.00s)
+    --- PASS: TestContainsAnyPattern/match_segundo (0.00s)
+    --- PASS: TestContainsAnyPattern/nenhum_match (0.00s)
+    --- PASS: TestContainsAnyPattern/string_vazia (0.00s)
+    --- PASS: TestContainsAnyPattern/patterns_vazios (0.00s)
+=== RUN   TestBuildPromptContext
+--- PASS: TestBuildPromptContext (0.00s)
+=== RUN   TestBuildPromptContextArquivosAusentes
+--- PASS: TestBuildPromptContextArquivosAusentes (0.00s)
+=== RUN   TestCopilotInvokerDeprecationWarning
+=== RUN   TestCopilotInvokerDeprecationWarning/warns_once
+--- PASS: TestCopilotInvokerDeprecationWarning (0.00s)
+    --- PASS: TestCopilotInvokerDeprecationWarning/warns_once (0.00s)
+=== RUN   TestCodexInvokerDeprecationWarning_Helper
+    agent_test.go:736: subprocesso helper; ative com GO_TEST_CODEX_WARN_HELPER=1
+--- SKIP: TestCodexInvokerDeprecationWarning_Helper (0.00s)
+=== RUN   TestCodexInvokerDeprecationWarning
+--- PASS: TestCodexInvokerDeprecationWarning (0.01s)
+=== RUN   TestCopilotInvokerArgsUnchanged
+--- PASS: TestCopilotInvokerArgsUnchanged (0.00s)
+=== RUN   TestReviewerPortTranslatesCallAndReturnsRawText
+--- PASS: TestReviewerPortTranslatesCallAndReturnsRawText (0.00s)
+=== RUN   TestReviewerPortCriteriaMapReachesComplete
+--- PASS: TestReviewerPortCriteriaMapReachesComplete (0.00s)
+=== RUN   TestReviewerPortDefaultsMissingFindingFile
+--- PASS: TestReviewerPortDefaultsMissingFindingFile (0.00s)
+=== RUN   TestFixerPortRecordsEvidenceSideChannel
+--- PASS: TestFixerPortRecordsEvidenceSideChannel (0.00s)
+=== RUN   TestFixerPortFailsClosedWithoutEvidenceMarkers
+--- PASS: TestFixerPortFailsClosedWithoutEvidenceMarkers (0.00s)
+=== RUN   TestRepositoryPortCaptureTargets
+--- PASS: TestRepositoryPortCaptureTargets (0.00s)
+=== RUN   TestRepositoryPortCheckpointFromGitRevParse
+--- PASS: TestRepositoryPortCheckpointFromGitRevParse (0.01s)
+=== RUN   TestBugfixLoop_Run
+=== RUN   TestBugfixLoop_Run/sem_findings_criticos_retorna_aprovado_sem_invocar_bugfix
+=== RUN   TestBugfixLoop_Run/aprovado_na_1a_iteracao
+=== RUN   TestBugfixLoop_Run/aprovado_com_ressalvas_na_1a_iteracao
+=== RUN   TestBugfixLoop_Run/aprovado_na_2a_iteracao
+=== RUN   TestBugfixLoop_Run/aprovado_na_3a_iteracao
+=== RUN   TestBugfixLoop_Run/exaurido_apos_3_iteracoes
+=== RUN   TestBugfixLoop_Run/respeita_maxIters_customizado
+--- PASS: TestBugfixLoop_Run (0.00s)
+    --- PASS: TestBugfixLoop_Run/sem_findings_criticos_retorna_aprovado_sem_invocar_bugfix (0.00s)
+    --- PASS: TestBugfixLoop_Run/aprovado_na_1a_iteracao (0.00s)
+    --- PASS: TestBugfixLoop_Run/aprovado_com_ressalvas_na_1a_iteracao (0.00s)
+    --- PASS: TestBugfixLoop_Run/aprovado_na_2a_iteracao (0.00s)
+    --- PASS: TestBugfixLoop_Run/aprovado_na_3a_iteracao (0.00s)
+    --- PASS: TestBugfixLoop_Run/exaurido_apos_3_iteracoes (0.00s)
+    --- PASS: TestBugfixLoop_Run/respeita_maxIters_customizado (0.00s)
+=== RUN   TestBugfixLoop_DefaultMaxIterations
+--- PASS: TestBugfixLoop_DefaultMaxIterations (0.00s)
+=== RUN   TestBugfixLoop_PreserveReviewContextAcrossIterations
+--- PASS: TestBugfixLoop_PreserveReviewContextAcrossIterations (0.00s)
+=== RUN   TestBugfixLoop_InvokerReceivesPureDiffAcrossIterations
+--- PASS: TestBugfixLoop_InvokerReceivesPureDiffAcrossIterations (0.00s)
+=== RUN   TestBugfixLoop_PropagaErroDoBugfix
+--- PASS: TestBugfixLoop_PropagaErroDoBugfix (0.00s)
+=== RUN   TestBugfixLoop_PropagaErroDoReviewer
+--- PASS: TestBugfixLoop_PropagaErroDoReviewer (0.00s)
+=== RUN   TestBugfixLoop_RespeitaCancelamentoDeContexto
+--- PASS: TestBugfixLoop_RespeitaCancelamentoDeContexto (0.00s)
+=== RUN   TestBugfixLoop_RejeitaEvidenciaIncompleta
+--- PASS: TestBugfixLoop_RejeitaEvidenciaIncompleta (0.00s)
+=== RUN   TestBugfixLoop_PersisteOrigemEProvasPorTentativa
+--- PASS: TestBugfixLoop_PersisteOrigemEProvasPorTentativa (0.00s)
+=== RUN   TestExtractRootCause
+=== RUN   TestExtractRootCause/ausente
+=== RUN   TestExtractRootCause/causa_raiz_pt-br
+=== RUN   TestExtractRootCause/root_cause_en
+--- PASS: TestExtractRootCause (0.00s)
+    --- PASS: TestExtractRootCause/ausente (0.00s)
+    --- PASS: TestExtractRootCause/causa_raiz_pt-br (0.00s)
+    --- PASS: TestExtractRootCause/root_cause_en (0.00s)
+=== RUN   TestFilterCritical
+--- PASS: TestFilterCritical (0.00s)
+=== RUN   TestOptions_MaxBugfixIterationsField
+--- PASS: TestOptions_MaxBugfixIterationsField (0.00s)
+=== RUN   TestErrBugfixExhausted_Mensagem
+--- PASS: TestErrBugfixExhausted_Mensagem (0.00s)
+=== RUN   TestClassifyIterationOutcome
+=== RUN   TestClassifyIterationOutcome/invokeErr:_skip,_sem_revisao
+=== RUN   TestClassifyIterationOutcome/invokeErr_com_postStatus_done:_skip_prevalece,_sem_revisao
+=== RUN   TestClassifyIterationOutcome/invokeErr_com_postStatus_inalterado:_skip_+_status_inalterado_acumulado
+=== RUN   TestClassifyIterationOutcome/auth_error_em_stdout:_abort
+=== RUN   TestClassifyIterationOutcome/auth_error_em_stderr:_abort
+=== RUN   TestClassifyIterationOutcome/auth_error_com_exitCode_zero:_nao_detectado_(isAuthError_so_verifica_exitCode!=0)
+=== RUN   TestClassifyIterationOutcome/exitCode_!=_0_sem_auth,_postStatus_inalterado:_note_+_skip
+=== RUN   TestClassifyIterationOutcome/exitCode_!=_0_sem_auth,_postStatus_done:_note_+_runReviewer
+=== RUN   TestClassifyIterationOutcome/exitCode_-1_(timeout),_postStatus_done:_runReviewer_(exit_code_irrelevante)
+=== RUN   TestClassifyIterationOutcome/sucesso:_exit_0,_done,_sem_nota_de_erro
+=== RUN   TestClassifyIterationOutcome/status_inalterado:_exit_0,_skip
+=== RUN   TestClassifyIterationOutcome/status_inalterado_in_progress:_exit_0,_skip
+=== RUN   TestClassifyIterationOutcome/postStatus_failed:_skip,_sem_revisao
+=== RUN   TestClassifyIterationOutcome/postStatus_blocked:_skip
+=== RUN   TestClassifyIterationOutcome/postStatus_needs_input:_skip
+=== RUN   TestClassifyIterationOutcome/postStatus_failed_com_exitCode_!=_0:_note_+_skip
+=== RUN   TestClassifyIterationOutcome/postStatus_in_progress:_sem_skip,_sem_revisao
+=== RUN   TestClassifyIterationOutcome/exitCode_-1_saida_vazia:_note_basica_sem_nome_de_ferramenta
+--- PASS: TestClassifyIterationOutcome (0.00s)
+    --- PASS: TestClassifyIterationOutcome/invokeErr:_skip,_sem_revisao (0.00s)
+    --- PASS: TestClassifyIterationOutcome/invokeErr_com_postStatus_done:_skip_prevalece,_sem_revisao (0.00s)
+    --- PASS: TestClassifyIterationOutcome/invokeErr_com_postStatus_inalterado:_skip_+_status_inalterado_acumulado (0.00s)
+    --- PASS: TestClassifyIterationOutcome/auth_error_em_stdout:_abort (0.00s)
+    --- PASS: TestClassifyIterationOutcome/auth_error_em_stderr:_abort (0.00s)
+    --- PASS: TestClassifyIterationOutcome/auth_error_com_exitCode_zero:_nao_detectado_(isAuthError_so_verifica_exitCode!=0) (0.00s)
+    --- PASS: TestClassifyIterationOutcome/exitCode_!=_0_sem_auth,_postStatus_inalterado:_note_+_skip (0.00s)
+    --- PASS: TestClassifyIterationOutcome/exitCode_!=_0_sem_auth,_postStatus_done:_note_+_runReviewer (0.00s)
+    --- PASS: TestClassifyIterationOutcome/exitCode_-1_(timeout),_postStatus_done:_runReviewer_(exit_code_irrelevante) (0.00s)
+    --- PASS: TestClassifyIterationOutcome/sucesso:_exit_0,_done,_sem_nota_de_erro (0.00s)
+    --- PASS: TestClassifyIterationOutcome/status_inalterado:_exit_0,_skip (0.00s)
+    --- PASS: TestClassifyIterationOutcome/status_inalterado_in_progress:_exit_0,_skip (0.00s)
+    --- PASS: TestClassifyIterationOutcome/postStatus_failed:_skip,_sem_revisao (0.00s)
+    --- PASS: TestClassifyIterationOutcome/postStatus_blocked:_skip (0.00s)
+    --- PASS: TestClassifyIterationOutcome/postStatus_needs_input:_skip (0.00s)
+    --- PASS: TestClassifyIterationOutcome/postStatus_failed_com_exitCode_!=_0:_note_+_skip (0.00s)
+    --- PASS: TestClassifyIterationOutcome/postStatus_in_progress:_sem_skip,_sem_revisao (0.00s)
+    --- PASS: TestClassifyIterationOutcome/exitCode_-1_saida_vazia:_note_basica_sem_nome_de_ferramenta (0.00s)
+=== RUN   TestClassifyIterationOutcomeNoteFormat
+=== RUN   TestClassifyIterationOutcomeNoteFormat/exit_code_nota_exata
+=== RUN   TestClassifyIterationOutcomeNoteFormat/auth_error_nota_exata
+=== RUN   TestClassifyIterationOutcomeNoteFormat/status_inalterado_nota_exata
+=== RUN   TestClassifyIterationOutcomeNoteFormat/invokeErr_nota_contem_mensagem_de_erro
+--- PASS: TestClassifyIterationOutcomeNoteFormat (0.00s)
+    --- PASS: TestClassifyIterationOutcomeNoteFormat/exit_code_nota_exata (0.00s)
+    --- PASS: TestClassifyIterationOutcomeNoteFormat/auth_error_nota_exata (0.00s)
+    --- PASS: TestClassifyIterationOutcomeNoteFormat/status_inalterado_nota_exata (0.00s)
+    --- PASS: TestClassifyIterationOutcomeNoteFormat/invokeErr_nota_contem_mensagem_de_erro (0.00s)
+=== RUN   TestCompatibilityTable_IsSupported
+=== PAUSE TestCompatibilityTable_IsSupported
+=== RUN   TestCompatibilityTable_Models
+=== PAUSE TestCompatibilityTable_Models
+=== RUN   TestCompatibilityTable_ValidateCombination
+=== PAUSE TestCompatibilityTable_ValidateCombination
+=== RUN   TestErrModeloIncompativel_Sentinela
+=== PAUSE TestErrModeloIncompativel_Sentinela
+=== RUN   TestValidateModelForIDE
+=== PAUSE TestValidateModelForIDE
+=== RUN   TestCodexCompatibilityTable_T34_T35
+=== PAUSE TestCodexCompatibilityTable_T34_T35
+=== RUN   TestCompatibilityTableContainsGemini
+=== PAUSE TestCompatibilityTableContainsGemini
+=== RUN   TestBuildPromptDeterminismo
+=== RUN   TestBuildPromptDeterminismo/task_e_prd_folder_canonicos
+=== RUN   TestBuildPromptDeterminismo/task_de_outro_prd
+=== RUN   TestBuildPromptDeterminismo/task_em_subpasta_profunda
+=== RUN   TestBuildPromptDeterminismo/paths_com_espacos
+--- PASS: TestBuildPromptDeterminismo (0.00s)
+    --- PASS: TestBuildPromptDeterminismo/task_e_prd_folder_canonicos (0.00s)
+    --- PASS: TestBuildPromptDeterminismo/task_de_outro_prd (0.00s)
+    --- PASS: TestBuildPromptDeterminismo/task_em_subpasta_profunda (0.00s)
+    --- PASS: TestBuildPromptDeterminismo/paths_com_espacos (0.00s)
+=== RUN   TestBuildPromptInputsDiferentesProduzemOutputsDiferentes
+=== RUN   TestBuildPromptInputsDiferentesProduzemOutputsDiferentes/task_file_diferente_mesmo_prd
+=== RUN   TestBuildPromptInputsDiferentesProduzemOutputsDiferentes/prd_folder_diferente
+=== RUN   TestBuildPromptInputsDiferentesProduzemOutputsDiferentes/ambos_diferentes
+--- PASS: TestBuildPromptInputsDiferentesProduzemOutputsDiferentes (0.00s)
+    --- PASS: TestBuildPromptInputsDiferentesProduzemOutputsDiferentes/task_file_diferente_mesmo_prd (0.00s)
+    --- PASS: TestBuildPromptInputsDiferentesProduzemOutputsDiferentes/prd_folder_diferente (0.00s)
+    --- PASS: TestBuildPromptInputsDiferentesProduzemOutputsDiferentes/ambos_diferentes (0.00s)
+=== RUN   TestBuildReviewPromptDeterminismo
+=== RUN   TestBuildReviewPromptDeterminismo/template_default_com_dados_completos
+=== RUN   TestBuildReviewPromptDeterminismo/template_default_com_diff_indisponivel
+=== RUN   TestBuildReviewPromptDeterminismo/template_custom_com_dados_completos
+=== RUN   TestBuildReviewPromptDeterminismo/template_default_dados_vazios
+--- PASS: TestBuildReviewPromptDeterminismo (0.00s)
+    --- PASS: TestBuildReviewPromptDeterminismo/template_default_com_dados_completos (0.00s)
+    --- PASS: TestBuildReviewPromptDeterminismo/template_default_com_diff_indisponivel (0.00s)
+    --- PASS: TestBuildReviewPromptDeterminismo/template_custom_com_dados_completos (0.00s)
+    --- PASS: TestBuildReviewPromptDeterminismo/template_default_dados_vazios (0.00s)
+=== RUN   TestBuildBugfixPromptDeterminismo
+=== RUN   TestBuildBugfixPromptDeterminismo/dados_completos
+=== RUN   TestBuildBugfixPromptDeterminismo/review_findings_vazio
+=== RUN   TestBuildBugfixPromptDeterminismo/dados_vazios
+--- PASS: TestBuildBugfixPromptDeterminismo (0.00s)
+    --- PASS: TestBuildBugfixPromptDeterminismo/dados_completos (0.00s)
+    --- PASS: TestBuildBugfixPromptDeterminismo/review_findings_vazio (0.00s)
+    --- PASS: TestBuildBugfixPromptDeterminismo/dados_vazios (0.00s)
+=== RUN   TestBuildBugfixPromptInputsDiferentesProduzemOutputsDiferentes
+=== RUN   TestBuildBugfixPromptInputsDiferentesProduzemOutputsDiferentes/task_file_diferente
+=== RUN   TestBuildBugfixPromptInputsDiferentesProduzemOutputsDiferentes/review_findings_diferente
+=== RUN   TestBuildBugfixPromptInputsDiferentesProduzemOutputsDiferentes/diff_diferente
+--- PASS: TestBuildBugfixPromptInputsDiferentesProduzemOutputsDiferentes (0.00s)
+    --- PASS: TestBuildBugfixPromptInputsDiferentesProduzemOutputsDiferentes/task_file_diferente (0.00s)
+    --- PASS: TestBuildBugfixPromptInputsDiferentesProduzemOutputsDiferentes/review_findings_diferente (0.00s)
+    --- PASS: TestBuildBugfixPromptInputsDiferentesProduzemOutputsDiferentes/diff_diferente (0.00s)
+=== RUN   TestBuildReviewPromptInputsDiferentesProduzemOutputsDiferentes
+=== RUN   TestBuildReviewPromptInputsDiferentesProduzemOutputsDiferentes/task_file_diferente
+=== RUN   TestBuildReviewPromptInputsDiferentesProduzemOutputsDiferentes/prd_folder_diferente
+=== RUN   TestBuildReviewPromptInputsDiferentesProduzemOutputsDiferentes/diff_diferente
+--- PASS: TestBuildReviewPromptInputsDiferentesProduzemOutputsDiferentes (0.00s)
+    --- PASS: TestBuildReviewPromptInputsDiferentesProduzemOutputsDiferentes/task_file_diferente (0.00s)
+    --- PASS: TestBuildReviewPromptInputsDiferentesProduzemOutputsDiferentes/prd_folder_diferente (0.00s)
+    --- PASS: TestBuildReviewPromptInputsDiferentesProduzemOutputsDiferentes/diff_diferente (0.00s)
+=== RUN   TestE2EAgent_PromptContainsAgentBlocks
+--- PASS: TestE2EAgent_PromptContainsAgentBlocks (0.00s)
+=== RUN   TestE2EAgent_ForensicArtifactStructureIdentical
+=== RUN   TestE2EAgent_ForensicArtifactStructureIdentical/legado
+=== RUN   TestE2EAgent_ForensicArtifactStructureIdentical/agent
+    e2e_agent_test.go:254: aviso: secao "task-loop" nao encontrada no relatorio agent (pode ser nome alternativo)
+    e2e_agent_test.go:254: aviso: secao "iteracoes" nao encontrada no relatorio agent (pode ser nome alternativo)
+--- PASS: TestE2EAgent_ForensicArtifactStructureIdentical (0.00s)
+    --- PASS: TestE2EAgent_ForensicArtifactStructureIdentical/legado (0.00s)
+    --- PASS: TestE2EAgent_ForensicArtifactStructureIdentical/agent (0.00s)
+=== RUN   TestE2EAgent_ReportProduced
+--- PASS: TestE2EAgent_ReportProduced (0.00s)
+=== RUN   TestE2EAgent_LegacyFlowDoesNotUseRegistry
+--- PASS: TestE2EAgent_LegacyFlowDoesNotUseRegistry (0.00s)
+=== RUN   TestEvidenceRecorder_Append
+=== RUN   TestEvidenceRecorder_Append/cria_bloco_quando_ausente
+=== RUN   TestEvidenceRecorder_Append/substitui_bloco_existente
+=== RUN   TestEvidenceRecorder_Append/preserva_conteudo_apos_o_bloco
+--- PASS: TestEvidenceRecorder_Append (0.00s)
+    --- PASS: TestEvidenceRecorder_Append/cria_bloco_quando_ausente (0.00s)
+    --- PASS: TestEvidenceRecorder_Append/substitui_bloco_existente (0.00s)
+    --- PASS: TestEvidenceRecorder_Append/preserva_conteudo_apos_o_bloco (0.00s)
+=== RUN   TestEvidenceRecorder_Idempotency
+--- PASS: TestEvidenceRecorder_Idempotency (0.00s)
+=== RUN   TestEvidenceRecorder_FileNotFound
+--- PASS: TestEvidenceRecorder_FileNotFound (0.00s)
+=== RUN   TestRestoreTaskIsolationSnapshotAtRemovesUnexpectedTrackedFiles
+--- PASS: TestRestoreTaskIsolationSnapshotAtRemovesUnexpectedTrackedFiles (0.00s)
+=== RUN   TestValidateTaskFileIsolationRejectsUnexpectedTrackedFile
+--- PASS: TestValidateTaskFileIsolationRejectsUnexpectedTrackedFile (0.00s)
+=== RUN   TestValidateReviewerIsolationRejectsCurrentTaskMutation
+--- PASS: TestValidateReviewerIsolationRejectsCurrentTaskMutation (0.00s)
+=== RUN   TestValidateReviewerIsolationRejectsCurrentTaskRowMutation
+--- PASS: TestValidateReviewerIsolationRejectsCurrentTaskRowMutation (0.00s)
+=== RUN   TestValidateProtectedPRDFileIsolationRejectsMutation
+--- PASS: TestValidateProtectedPRDFileIsolationRejectsMutation (0.00s)
+=== RUN   TestRestoreTaskIsolationSnapshotAtRestoresProtectedPRDFiles
+--- PASS: TestRestoreTaskIsolationSnapshotAtRestoresProtectedPRDFiles (0.00s)
+=== RUN   TestValidateTaskIsolationRejectsArbitraryPRDFileMutation
+--- PASS: TestValidateTaskIsolationRejectsArbitraryPRDFileMutation (0.00s)
+=== RUN   TestValidateReviewerIsolationRejectsArbitraryNestedPRDFileCreation
+--- PASS: TestValidateReviewerIsolationRejectsArbitraryNestedPRDFileCreation (0.00s)
+=== RUN   TestValidateTaskIsolationAllowsMemoryDir
+--- PASS: TestValidateTaskIsolationAllowsMemoryDir (0.00s)
+=== RUN   TestIsProtectedPRDFile_HarnessManagedDirsExcluded
+--- PASS: TestIsProtectedPRDFile_HarnessManagedDirsExcluded (0.00s)
+=== RUN   TestRestoreTaskIsolationSnapshotAtRemovesUnexpectedProtectedPRDFiles
+--- PASS: TestRestoreTaskIsolationSnapshotAtRemovesUnexpectedProtectedPRDFiles (0.00s)
+=== RUN   TestIsTrackedTaskFile
+=== RUN   TestIsTrackedTaskFile/task_com_prefixo_simples
+=== RUN   TestIsTrackedTaskFile/task_com_id_completo
+=== RUN   TestIsTrackedTaskFile/task_com_prefixo_task
+=== RUN   TestIsTrackedTaskFile/task_zero_padded
+=== RUN   TestIsTrackedTaskFile/arquivo_arbitrario_do_prd
+=== RUN   TestIsTrackedTaskFile/arquivo_protegido_prd
+=== RUN   TestIsTrackedTaskFile/execution_report
+--- PASS: TestIsTrackedTaskFile (0.00s)
+    --- PASS: TestIsTrackedTaskFile/task_com_prefixo_simples (0.00s)
+    --- PASS: TestIsTrackedTaskFile/task_com_id_completo (0.00s)
+    --- PASS: TestIsTrackedTaskFile/task_com_prefixo_task (0.00s)
+    --- PASS: TestIsTrackedTaskFile/task_zero_padded (0.00s)
+    --- PASS: TestIsTrackedTaskFile/arquivo_arbitrario_do_prd (0.00s)
+    --- PASS: TestIsTrackedTaskFile/arquivo_protegido_prd (0.00s)
+    --- PASS: TestIsTrackedTaskFile/execution_report (0.00s)
+=== RUN   TestExecutionPlanRejectsOverlappingOwnership
+--- PASS: TestExecutionPlanRejectsOverlappingOwnership (0.00s)
+=== RUN   TestExecutionPlanRejectsNestedOverlappingOwnership
+--- PASS: TestExecutionPlanRejectsNestedOverlappingOwnership (0.00s)
+=== RUN   TestExecutionPlanRejectsCapabilitiesWithoutIsolation
+--- PASS: TestExecutionPlanRejectsCapabilitiesWithoutIsolation (0.00s)
+=== RUN   TestDetectRuntimeCapabilitiesNeverClaimsIsolationWithoutIsolator
+--- PASS: TestDetectRuntimeCapabilitiesNeverClaimsIsolationWithoutIsolator (0.00s)
+=== RUN   TestCaptureSnapshotFromGitIncludesCumulativePatch
+--- PASS: TestCaptureSnapshotFromGitIncludesCumulativePatch (0.01s)
+=== RUN   TestCaptureFinalSnapshotExcludesOperationalCheckpoints
+--- PASS: TestCaptureFinalSnapshotExcludesOperationalCheckpoints (0.03s)
+=== RUN   TestOrchestratorFinishesUsingRelativePRDDirectory
+--- PASS: TestOrchestratorFinishesUsingRelativePRDDirectory (0.03s)
+=== RUN   TestResolveEvidenceRejectsCrossPlatformUnsafePaths
+--- PASS: TestResolveEvidenceRejectsCrossPlatformUnsafePaths (0.00s)
+=== RUN   TestNewSnapshotBindsBasePatchAndFinalState
+--- PASS: TestNewSnapshotBindsBasePatchAndFinalState (0.00s)
+=== RUN   TestOrchestratorStartsAttemptIdempotentlyAfterCrash
+--- PASS: TestOrchestratorStartsAttemptIdempotentlyAfterCrash (0.00s)
+=== RUN   TestOrchestratorStartNextSelectsReadyTaskDeterministically
+--- PASS: TestOrchestratorStartNextSelectsReadyTaskDeterministically (0.01s)
+=== RUN   TestOrchestratorSerializesConcurrentStarts
+--- PASS: TestOrchestratorSerializesConcurrentStarts (0.01s)
+=== RUN   TestOrchestratorRejectsSecondWriter
+--- PASS: TestOrchestratorRejectsSecondWriter (0.01s)
+=== RUN   TestOrchestratorFinishesAttemptIdempotently
+--- PASS: TestOrchestratorFinishesAttemptIdempotently (0.03s)
+=== RUN   TestOrchestratorFinishRejectsSnapshotAndPhysicalEvidenceDivergence
+=== RUN   TestOrchestratorFinishRejectsSnapshotAndPhysicalEvidenceDivergence/patch_artificial
+=== RUN   TestOrchestratorFinishRejectsSnapshotAndPhysicalEvidenceDivergence/evidencia_inexistente
+=== RUN   TestOrchestratorFinishRejectsSnapshotAndPhysicalEvidenceDivergence/digest_de_teste_artificial
+--- PASS: TestOrchestratorFinishRejectsSnapshotAndPhysicalEvidenceDivergence (0.07s)
+    --- PASS: TestOrchestratorFinishRejectsSnapshotAndPhysicalEvidenceDivergence/patch_artificial (0.02s)
+    --- PASS: TestOrchestratorFinishRejectsSnapshotAndPhysicalEvidenceDivergence/evidencia_inexistente (0.02s)
+    --- PASS: TestOrchestratorFinishRejectsSnapshotAndPhysicalEvidenceDivergence/digest_de_teste_artificial (0.02s)
+=== RUN   TestParseTasksFile
+=== RUN   TestParseTasksFile/tabela_valida_com_3_tasks
+=== RUN   TestParseTasksFile/tabela_com_status_em_portugues
+=== RUN   TestParseTasksFile/sem_tabela
+=== RUN   TestParseTasksFile/conteudo_vazio
+--- PASS: TestParseTasksFile (0.00s)
+    --- PASS: TestParseTasksFile/tabela_valida_com_3_tasks (0.00s)
+    --- PASS: TestParseTasksFile/tabela_com_status_em_portugues (0.00s)
+    --- PASS: TestParseTasksFile/sem_tabela (0.00s)
+    --- PASS: TestParseTasksFile/conteudo_vazio (0.00s)
+=== RUN   TestParseTasksFile_Fields
+--- PASS: TestParseTasksFile_Fields (0.00s)
+=== RUN   TestParseTasksFile_WithArquivoColumn
+--- PASS: TestParseTasksFile_WithArquivoColumn (0.00s)
+=== RUN   TestParseTasksFile_WithoutArquivoColumn
+--- PASS: TestParseTasksFile_WithoutArquivoColumn (0.00s)
+=== RUN   TestReadTaskFileStatus
+=== RUN   TestReadTaskFileStatus/status_pending
+=== RUN   TestReadTaskFileStatus/status_done_em_portugues
+=== RUN   TestReadTaskFileStatus/status_simples
+=== RUN   TestReadTaskFileStatus/sem_status
+=== RUN   TestReadTaskFileStatus/status_com_whitespace_apos_dois-pontos_retorna_vazio
+=== RUN   TestReadTaskFileStatus/status_vazio_apos_dois-pontos_retorna_vazio
+=== RUN   TestReadTaskFileStatus/status_com_CRLF_aciona_guard_clause_fields_vazio
+--- PASS: TestReadTaskFileStatus (0.00s)
+    --- PASS: TestReadTaskFileStatus/status_pending (0.00s)
+    --- PASS: TestReadTaskFileStatus/status_done_em_portugues (0.00s)
+    --- PASS: TestReadTaskFileStatus/status_simples (0.00s)
+    --- PASS: TestReadTaskFileStatus/sem_status (0.00s)
+    --- PASS: TestReadTaskFileStatus/status_com_whitespace_apos_dois-pontos_retorna_vazio (0.00s)
+    --- PASS: TestReadTaskFileStatus/status_vazio_apos_dois-pontos_retorna_vazio (0.00s)
+    --- PASS: TestReadTaskFileStatus/status_com_CRLF_aciona_guard_clause_fields_vazio (0.00s)
+=== RUN   TestFindEligible
+=== RUN   TestFindEligible/sem_skipped
+=== RUN   TestFindEligible/com_skipped
+=== RUN   TestFindEligible/deps_nao_satisfeitas
+--- PASS: TestFindEligible (0.00s)
+    --- PASS: TestFindEligible/sem_skipped (0.00s)
+    --- PASS: TestFindEligible/com_skipped (0.00s)
+    --- PASS: TestFindEligible/deps_nao_satisfeitas (0.00s)
+=== RUN   TestFindEligible_InProgressRetomavel
+--- PASS: TestFindEligible_InProgressRetomavel (0.00s)
+=== RUN   TestFindEligible_PrioritizesInProgressOverPending
+--- PASS: TestFindEligible_PrioritizesInProgressOverPending (0.00s)
+=== RUN   TestReconcileTaskStatusesUsesTaskFileStatus
+--- PASS: TestReconcileTaskStatusesUsesTaskFileStatus (0.00s)
+=== RUN   TestAllTerminal
+=== RUN   TestAllTerminal/todas_terminal
+=== RUN   TestAllTerminal/nem_todas_terminal
+--- PASS: TestAllTerminal (0.00s)
+    --- PASS: TestAllTerminal/todas_terminal (0.00s)
+    --- PASS: TestAllTerminal/nem_todas_terminal (0.00s)
+=== RUN   TestNormalizeStatus
+=== RUN   TestNormalizeStatus/Concluido
+=== RUN   TestNormalizeStatus/Concluído
+=== RUN   TestNormalizeStatus/pendente
+=== RUN   TestNormalizeStatus/bloqueado
+=== RUN   TestNormalizeStatus/em_execução
+=== RUN   TestNormalizeStatus/falhou
+=== RUN   TestNormalizeStatus/done
+=== RUN   TestNormalizeStatus/PENDING
+--- PASS: TestNormalizeStatus (0.00s)
+    --- PASS: TestNormalizeStatus/Concluido (0.00s)
+    --- PASS: TestNormalizeStatus/Concluído (0.00s)
+    --- PASS: TestNormalizeStatus/pendente (0.00s)
+    --- PASS: TestNormalizeStatus/bloqueado (0.00s)
+    --- PASS: TestNormalizeStatus/em_execução (0.00s)
+    --- PASS: TestNormalizeStatus/falhou (0.00s)
+    --- PASS: TestNormalizeStatus/done (0.00s)
+    --- PASS: TestNormalizeStatus/PENDING (0.00s)
+=== RUN   TestResolveTaskFile
+=== RUN   TestResolveTaskFile/convencao_prefixo_simples:_1-desc.md
+=== RUN   TestResolveTaskFile/convencao_ID_completo:_1.0-desc.md
+=== RUN   TestResolveTaskFile/convencao_task-ID:_task-1.0-desc.md
+=== RUN   TestResolveTaskFile/convencao_task-ID_com_underscore:_task-1.0_desc.md
+=== RUN   TestResolveTaskFile/nenhum_arquivo_corresponde
+=== RUN   TestResolveTaskFile/relatorio_de_execucao_e_ignorado
+--- PASS: TestResolveTaskFile (0.00s)
+    --- PASS: TestResolveTaskFile/convencao_prefixo_simples:_1-desc.md (0.00s)
+    --- PASS: TestResolveTaskFile/convencao_ID_completo:_1.0-desc.md (0.00s)
+    --- PASS: TestResolveTaskFile/convencao_task-ID:_task-1.0-desc.md (0.00s)
+    --- PASS: TestResolveTaskFile/convencao_task-ID_com_underscore:_task-1.0_desc.md (0.00s)
+    --- PASS: TestResolveTaskFile/nenhum_arquivo_corresponde (0.00s)
+    --- PASS: TestResolveTaskFile/relatorio_de_execucao_e_ignorado (0.00s)
+=== RUN   TestReadTaskStatus
+=== RUN   TestReadTaskStatus/arquivo_existente_com_status_valido
+=== RUN   TestReadTaskStatus/arquivo_existente_com_status_done_em_portugues
+=== RUN   TestReadTaskStatus/arquivo_inexistente_retorna_string_vazia
+=== RUN   TestReadTaskStatus/arquivo_sem_campo_Status_retorna_string_vazia
+--- PASS: TestReadTaskStatus (0.00s)
+    --- PASS: TestReadTaskStatus/arquivo_existente_com_status_valido (0.00s)
+    --- PASS: TestReadTaskStatus/arquivo_existente_com_status_done_em_portugues (0.00s)
+    --- PASS: TestReadTaskStatus/arquivo_inexistente_retorna_string_vazia (0.00s)
+    --- PASS: TestReadTaskStatus/arquivo_sem_campo_Status_retorna_string_vazia (0.00s)
+=== RUN   TestMatchesTaskPrefix
+=== RUN   TestMatchesTaskPrefix/1-setup.md
+=== RUN   TestMatchesTaskPrefix/1_setup.md
+=== RUN   TestMatchesTaskPrefix/2-impl.md
+=== RUN   TestMatchesTaskPrefix/1.0-setup.md
+=== RUN   TestMatchesTaskPrefix/1.0_setup.md
+=== RUN   TestMatchesTaskPrefix/2.0-impl.md
+=== RUN   TestMatchesTaskPrefix/task-1.0-setup.md
+=== RUN   TestMatchesTaskPrefix/task-1.0_setup.md
+=== RUN   TestMatchesTaskPrefix/task-2.0-impl.md
+=== RUN   TestMatchesTaskPrefix/TASK-001-quick-reference.md
+=== RUN   TestMatchesTaskPrefix/TASK-013-dedup.md
+=== RUN   TestMatchesTaskPrefix/TASK-020-propagacao.md
+=== RUN   TestMatchesTaskPrefix/TASK-001-foo.md
+=== RUN   TestMatchesTaskPrefix/TASK-010-bar.md
+=== RUN   TestMatchesTaskPrefix/Task-003-test.md
+=== RUN   TestMatchesTaskPrefix/task-005-schema.md
+=== RUN   TestMatchesTaskPrefix/README.md
+=== RUN   TestMatchesTaskPrefix/prd.md
+--- PASS: TestMatchesTaskPrefix (0.00s)
+    --- PASS: TestMatchesTaskPrefix/1-setup.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/1_setup.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/2-impl.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/1.0-setup.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/1.0_setup.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/2.0-impl.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/task-1.0-setup.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/task-1.0_setup.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/task-2.0-impl.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/TASK-001-quick-reference.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/TASK-013-dedup.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/TASK-020-propagacao.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/TASK-001-foo.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/TASK-010-bar.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/Task-003-test.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/task-005-schema.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/README.md (0.00s)
+    --- PASS: TestMatchesTaskPrefix/prd.md (0.00s)
+=== RUN   TestParseTasksFile_DuplicateIDsFromAuxTable
+--- PASS: TestParseTasksFile_DuplicateIDsFromAuxTable (0.00s)
+=== RUN   TestParseTasksFile_LinhaSemHeaderNaoCorrompeIndices
+--- PASS: TestParseTasksFile_LinhaSemHeaderNaoCorrompeIndices (0.00s)
+=== RUN   TestParseTasksFile_HeaderComDepsAntesDeStatus
+--- PASS: TestParseTasksFile_HeaderComDepsAntesDeStatus (0.00s)
+=== RUN   TestNewExecutionProfile
+=== PAUSE TestNewExecutionProfile
+=== RUN   TestInferProvider
+=== PAUSE TestInferProvider
+=== RUN   TestResolveProfiles
+=== PAUSE TestResolveProfiles
+=== RUN   TestResolveProfileFromAgent_CompatibilityValidation
+=== PAUSE TestResolveProfileFromAgent_CompatibilityValidation
+=== RUN   TestSentinelErrors
+=== PAUSE TestSentinelErrors
+=== RUN   TestReportRender
+--- PASS: TestReportRender (0.00s)
+=== RUN   TestReportRenderEmpty
+--- PASS: TestReportRenderEmpty (0.00s)
+=== RUN   TestReportRenderResumoSection
+=== RUN   TestReportRenderResumoSection/mix_de_sucesso,_falha_e_skip
+=== RUN   TestReportRenderResumoSection/sem_iteracoes_—_secao_Resumo_nao_aparece
+=== RUN   TestReportRenderResumoSection/todas_com_sucesso_—_falhadas_e_puladas_zero
+=== RUN   TestReportRenderResumoSection/exit_code_-1_e_post_status_done_—_conta_como_sucesso_(regressao_BUG-2)
+=== RUN   TestReportRenderResumoSection/exit_code_nao_zero_e_post_status_done_—_conta_como_sucesso
+=== RUN   TestReportRenderResumoSection/exit_code_nao_zero_e_post_status_in_progress_—_conta_como_falhada
+=== RUN   TestReportRenderResumoSection/exit_code_zero_mas_post_status_failed_—_conta_como_falhada
+--- PASS: TestReportRenderResumoSection (0.00s)
+    --- PASS: TestReportRenderResumoSection/mix_de_sucesso,_falha_e_skip (0.00s)
+    --- PASS: TestReportRenderResumoSection/sem_iteracoes_—_secao_Resumo_nao_aparece (0.00s)
+    --- PASS: TestReportRenderResumoSection/todas_com_sucesso_—_falhadas_e_puladas_zero (0.00s)
+    --- PASS: TestReportRenderResumoSection/exit_code_-1_e_post_status_done_—_conta_como_sucesso_(regressao_BUG-2) (0.00s)
+    --- PASS: TestReportRenderResumoSection/exit_code_nao_zero_e_post_status_done_—_conta_como_sucesso (0.00s)
+    --- PASS: TestReportRenderResumoSection/exit_code_nao_zero_e_post_status_in_progress_—_conta_como_falhada (0.00s)
+    --- PASS: TestReportRenderResumoSection/exit_code_zero_mas_post_status_failed_—_conta_como_falhada (0.00s)
+=== RUN   TestReportRenderResumoOrdem
+--- PASS: TestReportRenderResumoOrdem (0.00s)
+=== RUN   TestReportTruncatesOutput
+--- PASS: TestReportTruncatesOutput (0.00s)
+=== RUN   TestReportRenderSimples
+=== RUN   TestReportRenderSimples/modo_simples_—_cabecalho_com_Modo_e_Tool
+=== RUN   TestReportRenderSimples/modo_simples_—_tabela_nao_tem_coluna_Papel
+=== RUN   TestReportRenderSimples/modo_vazio_(backward_compat)_—_sem_linha_Modo_no_cabecalho
+=== RUN   TestReportRenderSimples/modo_simples_—_ReviewResult_em_IterationResult_nao_gera_sub-linha_na_tabela
+--- PASS: TestReportRenderSimples (0.00s)
+    --- PASS: TestReportRenderSimples/modo_simples_—_cabecalho_com_Modo_e_Tool (0.00s)
+    --- PASS: TestReportRenderSimples/modo_simples_—_tabela_nao_tem_coluna_Papel (0.00s)
+    --- PASS: TestReportRenderSimples/modo_vazio_(backward_compat)_—_sem_linha_Modo_no_cabecalho (0.00s)
+    --- PASS: TestReportRenderSimples/modo_simples_—_ReviewResult_em_IterationResult_nao_gera_sub-linha_na_tabela (0.00s)
+=== RUN   TestReportRenderAvancado
+=== RUN   TestReportRenderAvancado/modo_avancado_—_cabecalho_com_perfis_executor_e_reviewer
+=== RUN   TestReportRenderAvancado/modo_avancado_—_tabela_com_coluna_Papel
+=== RUN   TestReportRenderAvancado/modo_avancado_—_Role_vazio_assume_executor
+=== RUN   TestReportRenderAvancado/modo_avancado_—_reviewer_nil_mostra_'nao_configurado'
+=== RUN   TestReportRenderAvancado/modo_avancado_—_modelo_vazio_exibe_'default'
+=== RUN   TestReportRenderAvancado/modo_avancado_—_sub-linha_reviewer_presente_quando_ReviewResult_!=_nil
+=== RUN   TestReportRenderAvancado/modo_avancado_—_sub-linha_reviewer_ausente_quando_ReviewResult_==_nil
+=== RUN   TestReportRenderAvancado/modo_avancado_—_ReviewResult_com_exit_code_!=_0_e_note
+=== RUN   TestReportRenderAvancado/modo_avancado_—_multiplas_iteracoes_com_RF-13:_iteracao_conta_apenas_executor
+=== RUN   TestReportRenderAvancado/modo_avancado_—_secao_Results_nao_aparece_sem_iteracoes
+--- PASS: TestReportRenderAvancado (0.00s)
+    --- PASS: TestReportRenderAvancado/modo_avancado_—_cabecalho_com_perfis_executor_e_reviewer (0.00s)
+    --- PASS: TestReportRenderAvancado/modo_avancado_—_tabela_com_coluna_Papel (0.00s)
+    --- PASS: TestReportRenderAvancado/modo_avancado_—_Role_vazio_assume_executor (0.00s)
+    --- PASS: TestReportRenderAvancado/modo_avancado_—_reviewer_nil_mostra_'nao_configurado' (0.00s)
+    --- PASS: TestReportRenderAvancado/modo_avancado_—_modelo_vazio_exibe_'default' (0.00s)
+    --- PASS: TestReportRenderAvancado/modo_avancado_—_sub-linha_reviewer_presente_quando_ReviewResult_!=_nil (0.00s)
+    --- PASS: TestReportRenderAvancado/modo_avancado_—_sub-linha_reviewer_ausente_quando_ReviewResult_==_nil (0.00s)
+    --- PASS: TestReportRenderAvancado/modo_avancado_—_ReviewResult_com_exit_code_!=_0_e_note (0.00s)
+    --- PASS: TestReportRenderAvancado/modo_avancado_—_multiplas_iteracoes_com_RF-13:_iteracao_conta_apenas_executor (0.00s)
+    --- PASS: TestReportRenderAvancado/modo_avancado_—_secao_Results_nao_aparece_sem_iteracoes (0.00s)
+=== RUN   TestReportRenderBugfixOutputTruncation
+--- PASS: TestReportRenderBugfixOutputTruncation (0.00s)
+=== RUN   TestReportRenderSimplesModeIgnoresBugfixResult
+--- PASS: TestReportRenderSimplesModeIgnoresBugfixResult (0.00s)
+=== RUN   TestReportRenderAvancadoBugfix
+=== RUN   TestReportRenderAvancadoBugfix/bugfix_presente_apos_reviewer_com_exit_!=_0
+=== RUN   TestReportRenderAvancadoBugfix/bugfix_com_exit_!=_0_captura_note
+=== RUN   TestReportRenderAvancadoBugfix/sem_bugfix_—_secao_Bugfix_Result_ausente
+--- PASS: TestReportRenderAvancadoBugfix (0.00s)
+    --- PASS: TestReportRenderAvancadoBugfix/bugfix_presente_apos_reviewer_com_exit_!=_0 (0.00s)
+    --- PASS: TestReportRenderAvancadoBugfix/bugfix_com_exit_!=_0_captura_note (0.00s)
+    --- PASS: TestReportRenderAvancadoBugfix/sem_bugfix_—_secao_Bugfix_Result_ausente (0.00s)
+=== RUN   TestReservationPlanner_Resolve
+=== RUN   TestReservationPlanner_Resolve/implement_document_discard_validos
+=== RUN   TestReservationPlanner_Resolve/modo_nao_interativo_assume_document
+=== RUN   TestReservationPlanner_Resolve/discard_sem_rationale_retorna_erro
+=== RUN   TestReservationPlanner_Resolve/acao_desconhecida_retorna_erro
+=== RUN   TestReservationPlanner_Resolve/lista_vazia_retorna_plano_vazio
+--- PASS: TestReservationPlanner_Resolve (0.00s)
+    --- PASS: TestReservationPlanner_Resolve/implement_document_discard_validos (0.00s)
+    --- PASS: TestReservationPlanner_Resolve/modo_nao_interativo_assume_document (0.00s)
+    --- PASS: TestReservationPlanner_Resolve/discard_sem_rationale_retorna_erro (0.00s)
+    --- PASS: TestReservationPlanner_Resolve/acao_desconhecida_retorna_erro (0.00s)
+    --- PASS: TestReservationPlanner_Resolve/lista_vazia_retorna_plano_vazio (0.00s)
+=== RUN   TestReservationPlanner_PromptErrorPropaga
+--- PASS: TestReservationPlanner_PromptErrorPropaga (0.00s)
+=== RUN   TestReservationPlanner_ContextoCancelado
+--- PASS: TestReservationPlanner_ContextoCancelado (0.00s)
+=== RUN   TestReservationPlanner_InterativoSemPrompter
+--- PASS: TestReservationPlanner_InterativoSemPrompter (0.00s)
+=== RUN   TestWriteActionPlanToTaskFile_Idempotente
+--- PASS: TestWriteActionPlanToTaskFile_Idempotente (0.00s)
+=== RUN   TestAppendFollowUpTasks_DocumentCriaLinha
+--- PASS: TestAppendFollowUpTasks_DocumentCriaLinha (0.00s)
+=== RUN   TestAppendFollowUpTasks_SemDocumentNaoModifica
+--- PASS: TestAppendFollowUpTasks_SemDocumentNaoModifica (0.00s)
+=== RUN   TestOptions_NonInteractiveField
+--- PASS: TestOptions_NonInteractiveField (0.00s)
+=== RUN   TestACPInvoker_Retry_TransientError
+=== PAUSE TestACPInvoker_Retry_TransientError
+=== RUN   TestACPInvoker_Retry_FatalError
+=== PAUSE TestACPInvoker_Retry_FatalError
+=== RUN   TestACPInvoker_Retry_DefaultsSequential
+=== PAUSE TestACPInvoker_Retry_DefaultsSequential
+=== RUN   TestACPInvoker_Retry_BackoffCalled
+=== PAUSE TestACPInvoker_Retry_BackoffCalled
+=== RUN   TestACPInvoker_Retry_LogsRetryAttempts
+[acpinvoker] retry 1/3 após falha transitória
+[acpinvoker] retry 2/3 após falha transitória
+2026/09/10 19:01:24 INFO connection closed cause="peer connection closed"
+2026/09/10 19:01:24 INFO connection closed cause="io: read/write on closed pipe"
+--- PASS: TestACPInvoker_Retry_LogsRetryAttempts (0.00s)
+=== RUN   TestACPInvoker_NoRetry_OmitsRetryAttempts
+2026/09/10 19:01:24 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/10 19:01:24 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPInvoker_NoRetry_OmitsRetryAttempts (0.00s)
+=== RUN   TestReviewBuildPrompt
+=== RUN   TestReviewBuildPrompt/template_default_resolve_todos_os_placeholders
+=== RUN   TestReviewBuildPrompt/template_custom_valido_carregado_do_filesystem
+=== RUN   TestReviewBuildPrompt/template_com_sintaxe_invalida_retorna_ErrTemplateInvalido
+=== RUN   TestReviewBuildPrompt/arquivo_de_template_inexistente_retorna_ErrTemplateInvalido
+=== RUN   TestReviewBuildPrompt/template_default_com_diff_vazio_ainda_resolve_placeholders
+--- PASS: TestReviewBuildPrompt (0.00s)
+    --- PASS: TestReviewBuildPrompt/template_default_resolve_todos_os_placeholders (0.00s)
+    --- PASS: TestReviewBuildPrompt/template_custom_valido_carregado_do_filesystem (0.00s)
+    --- PASS: TestReviewBuildPrompt/template_com_sintaxe_invalida_retorna_ErrTemplateInvalido (0.00s)
+    --- PASS: TestReviewBuildPrompt/arquivo_de_template_inexistente_retorna_ErrTemplateInvalido (0.00s)
+    --- PASS: TestReviewBuildPrompt/template_default_com_diff_vazio_ainda_resolve_placeholders (0.00s)
+=== RUN   TestReviewErrTemplateInvalidoSentinel
+--- PASS: TestReviewErrTemplateInvalidoSentinel (0.00s)
+=== RUN   TestReviewCaptureGitDiff
+=== RUN   TestReviewCaptureGitDiff/dir_sem_git_retorna_fallback
+=== RUN   TestReviewCaptureGitDiff/repo_git_com_working_tree_alterado_retorna_diff_real
+=== RUN   TestReviewCaptureGitDiff/repo_git_inclui_arquivo_untracked_no_diff_consolidado
+=== RUN   TestReviewCaptureGitDiff/repo_git_com_apenas_um_commit_retorna_fallback
+--- PASS: TestReviewCaptureGitDiff (0.04s)
+    --- PASS: TestReviewCaptureGitDiff/dir_sem_git_retorna_fallback (0.00s)
+    --- PASS: TestReviewCaptureGitDiff/repo_git_com_working_tree_alterado_retorna_diff_real (0.01s)
+    --- PASS: TestReviewCaptureGitDiff/repo_git_inclui_arquivo_untracked_no_diff_consolidado (0.01s)
+    --- PASS: TestReviewCaptureGitDiff/repo_git_com_apenas_um_commit_retorna_fallback (0.01s)
+=== RUN   TestDetectRiskAreas
+=== RUN   TestDetectRiskAreas/detecta_performance_e_concorrencia
+=== RUN   TestDetectRiskAreas/detecta_seguranca_no_diff
+=== RUN   TestDetectRiskAreas/detecta_contratos
+=== RUN   TestDetectRiskAreas/detecta_persistencia
+=== RUN   TestDetectRiskAreas/fallback_quando_nenhuma_area_detectada
+=== RUN   TestDetectRiskAreas/techspec_e_diff_vazios_retorna_fallback
+--- PASS: TestDetectRiskAreas (0.00s)
+    --- PASS: TestDetectRiskAreas/detecta_performance_e_concorrencia (0.00s)
+    --- PASS: TestDetectRiskAreas/detecta_seguranca_no_diff (0.00s)
+    --- PASS: TestDetectRiskAreas/detecta_contratos (0.00s)
+    --- PASS: TestDetectRiskAreas/detecta_persistencia (0.00s)
+    --- PASS: TestDetectRiskAreas/fallback_quando_nenhuma_area_detectada (0.00s)
+    --- PASS: TestDetectRiskAreas/techspec_e_diff_vazios_retorna_fallback (0.00s)
+=== RUN   TestBugfixBuildPrompt
+=== RUN   TestBugfixBuildPrompt/template_default_resolve_todos_os_placeholders
+=== RUN   TestBugfixBuildPrompt/template_com_review_findings_vazio
+--- PASS: TestBugfixBuildPrompt (0.00s)
+    --- PASS: TestBugfixBuildPrompt/template_default_resolve_todos_os_placeholders (0.00s)
+    --- PASS: TestBugfixBuildPrompt/template_com_review_findings_vazio (0.00s)
+=== RUN   TestBugfixErrBugfixTemplateInvalidoSentinel
+--- PASS: TestBugfixErrBugfixTemplateInvalidoSentinel (0.00s)
+=== RUN   TestBugfixPromptAgentsMdBeforeSkillMd
+--- PASS: TestBugfixPromptAgentsMdBeforeSkillMd (0.00s)
+=== RUN   TestBugfixPromptAllMandatorySections
+--- PASS: TestBugfixPromptAllMandatorySections (0.00s)
+=== RUN   TestBugfixPromptPreservesMultilineFindings
+--- PASS: TestBugfixPromptPreservesMultilineFindings (0.00s)
+=== RUN   TestParseVerdict
+=== RUN   TestParseVerdict/APPROVED_literal
+=== RUN   TestParseVerdict/aprovado_PT-BR
+=== RUN   TestParseVerdict/APPROVED_WITH_REMARKS_literal
+=== RUN   TestParseVerdict/aprovado_com_ressalvas_PT-BR
+=== RUN   TestParseVerdict/approved_with_remarks_EN
+=== RUN   TestParseVerdict/BLOCKED_literal
+=== RUN   TestParseVerdict/bloqueado_PT-BR
+=== RUN   TestParseVerdict/REJECTED_literal
+=== RUN   TestParseVerdict/reprovado_PT-BR
+=== RUN   TestParseVerdict/rejeitado_PT-BR
+=== RUN   TestParseVerdict/ressalvas_antes_de_aprovado_prioridade_correta
+=== RUN   TestParseVerdict/sem_palavra_chave_padrao_blocked
+=== RUN   TestParseVerdict/linha_dedicada_APPROVED_ignora_'blocked'_no_corpo
+=== RUN   TestParseVerdict/linha_dedicada_APPROVED_WITH_REMARKS_ignora_'rejected'_no_corpo
+=== RUN   TestParseVerdict/linha_dedicada_PT-BR_ignora_'reprovado'_incidental
+=== RUN   TestParseVerdict/linha_dedicada_com_markdown_bold
+--- PASS: TestParseVerdict (0.00s)
+    --- PASS: TestParseVerdict/APPROVED_literal (0.00s)
+    --- PASS: TestParseVerdict/aprovado_PT-BR (0.00s)
+    --- PASS: TestParseVerdict/APPROVED_WITH_REMARKS_literal (0.00s)
+    --- PASS: TestParseVerdict/aprovado_com_ressalvas_PT-BR (0.00s)
+    --- PASS: TestParseVerdict/approved_with_remarks_EN (0.00s)
+    --- PASS: TestParseVerdict/BLOCKED_literal (0.00s)
+    --- PASS: TestParseVerdict/bloqueado_PT-BR (0.00s)
+    --- PASS: TestParseVerdict/REJECTED_literal (0.00s)
+    --- PASS: TestParseVerdict/reprovado_PT-BR (0.00s)
+    --- PASS: TestParseVerdict/rejeitado_PT-BR (0.00s)
+    --- PASS: TestParseVerdict/ressalvas_antes_de_aprovado_prioridade_correta (0.00s)
+    --- PASS: TestParseVerdict/sem_palavra_chave_padrao_blocked (0.00s)
+    --- PASS: TestParseVerdict/linha_dedicada_APPROVED_ignora_'blocked'_no_corpo (0.00s)
+    --- PASS: TestParseVerdict/linha_dedicada_APPROVED_WITH_REMARKS_ignora_'rejected'_no_corpo (0.00s)
+    --- PASS: TestParseVerdict/linha_dedicada_PT-BR_ignora_'reprovado'_incidental (0.00s)
+    --- PASS: TestParseVerdict/linha_dedicada_com_markdown_bold (0.00s)
+=== RUN   TestParseFindings
+=== RUN   TestParseFindings/achado_critical_com_arquivo_e_linha
+=== RUN   TestParseFindings/achado_important_sem_arquivo
+=== RUN   TestParseFindings/achado_suggestion
+=== RUN   TestParseFindings/variante_PT-BR_critico
+=== RUN   TestParseFindings/linha_sem_marcador_ignorada
+=== RUN   TestParseFindings/multiplos_achados_em_texto_misto
+--- PASS: TestParseFindings (0.00s)
+    --- PASS: TestParseFindings/achado_critical_com_arquivo_e_linha (0.00s)
+    --- PASS: TestParseFindings/achado_important_sem_arquivo (0.00s)
+    --- PASS: TestParseFindings/achado_suggestion (0.00s)
+    --- PASS: TestParseFindings/variante_PT-BR_critico (0.00s)
+    --- PASS: TestParseFindings/linha_sem_marcador_ignorada (0.00s)
+    --- PASS: TestParseFindings/multiplos_achados_em_texto_misto (0.00s)
+=== RUN   TestParseReviewOutput
+=== RUN   TestParseReviewOutput/APPROVED_WITH_REMARKS
+=== RUN   TestParseReviewOutput/REJECTED
+=== RUN   TestParseReviewOutput/APPROVED
+--- PASS: TestParseReviewOutput (0.00s)
+    --- PASS: TestParseReviewOutput/APPROVED_WITH_REMARKS (0.00s)
+    --- PASS: TestParseReviewOutput/REJECTED (0.00s)
+    --- PASS: TestParseReviewOutput/APPROVED (0.00s)
+=== RUN   TestReviewConsolidated_InvocacaoUnica
+--- PASS: TestReviewConsolidated_InvocacaoUnica (0.00s)
+=== RUN   TestReviewConsolidated_VerdictosAgregados
+--- PASS: TestReviewConsolidated_VerdictosAgregados (0.00s)
+=== RUN   TestReviewConsolidated_RoteiaLinguagensEDerrubaAprovacaoComAlta
+--- PASS: TestReviewConsolidated_RoteiaLinguagensEDerrubaAprovacaoComAlta (0.00s)
+=== RUN   TestDetectReviewLanguages_OrdenaSemDuplicar
+--- PASS: TestDetectReviewLanguages_OrdenaSemDuplicar (0.00s)
+=== RUN   TestPartitionDiff
+=== RUN   TestPartitionDiff/diff_pequeno_retorna_uma_particao
+=== RUN   TestPartitionDiff/diff_vazio_retorna_uma_particao
+=== RUN   TestPartitionDiff/diff_com_dois_arquivos_grande_particionado
+--- PASS: TestPartitionDiff (0.00s)
+    --- PASS: TestPartitionDiff/diff_pequeno_retorna_uma_particao (0.00s)
+    --- PASS: TestPartitionDiff/diff_vazio_retorna_uma_particao (0.00s)
+    --- PASS: TestPartitionDiff/diff_com_dois_arquivos_grande_particionado (0.00s)
+=== RUN   TestPartitionDiffSingleFileOversize
+--- PASS: TestPartitionDiffSingleFileOversize (0.00s)
+=== RUN   TestPartitionDiffOversizeHunkTruncates
+--- PASS: TestPartitionDiffOversizeHunkTruncates (0.00s)
+=== RUN   TestVerdictConstants
+--- PASS: TestVerdictConstants (0.00s)
+=== RUN   TestNewFinalReviewer
+--- PASS: TestNewFinalReviewer (0.00s)
+=== RUN   TestErrReviewRejected
+--- PASS: TestErrReviewRejected (0.00s)
+=== RUN   TestErrReviewBlocked
+--- PASS: TestErrReviewBlocked (0.00s)
+=== RUN   TestFormatCompletedTasks
+=== RUN   TestFormatCompletedTasks/sem_iteracoes_anteriores
+=== RUN   TestFormatCompletedTasks/com_tasks_concluidas_anteriormente
+=== RUN   TestFormatCompletedTasks/ignora_tasks_nao_concluidas
+=== RUN   TestFormatCompletedTasks/task_atual_ja_concluida_nao_duplica
+=== RUN   TestFormatCompletedTasks/deduplica_iteracoes_repetidas_da_mesma_task
+--- PASS: TestFormatCompletedTasks (0.00s)
+    --- PASS: TestFormatCompletedTasks/sem_iteracoes_anteriores (0.00s)
+    --- PASS: TestFormatCompletedTasks/com_tasks_concluidas_anteriormente (0.00s)
+    --- PASS: TestFormatCompletedTasks/ignora_tasks_nao_concluidas (0.00s)
+    --- PASS: TestFormatCompletedTasks/task_atual_ja_concluida_nao_duplica (0.00s)
+    --- PASS: TestFormatCompletedTasks/deduplica_iteracoes_repetidas_da_mesma_task (0.00s)
+=== RUN   TestRunLoopApprovedDirect
+--- PASS: TestRunLoopApprovedDirect (0.00s)
+=== RUN   TestRunLoopApprovedWithRemarks
+=== RUN   TestRunLoopApprovedWithRemarks/implement
+=== RUN   TestRunLoopApprovedWithRemarks/document
+=== RUN   TestRunLoopApprovedWithRemarks/discard
+--- PASS: TestRunLoopApprovedWithRemarks (0.00s)
+    --- PASS: TestRunLoopApprovedWithRemarks/implement (0.00s)
+    --- PASS: TestRunLoopApprovedWithRemarks/document (0.00s)
+    --- PASS: TestRunLoopApprovedWithRemarks/discard (0.00s)
+=== RUN   TestRunLoopRejectedThenBugfixApproves
+--- PASS: TestRunLoopRejectedThenBugfixApproves (0.00s)
+=== RUN   TestRunLoopRejectedThenBugfixWithRemarks
+--- PASS: TestRunLoopRejectedThenBugfixWithRemarks (0.00s)
+=== RUN   TestRunLoopRejectedEscalated
+--- PASS: TestRunLoopRejectedEscalated (0.00s)
+=== RUN   TestRunLoopValidatesDeps
+=== RUN   TestRunLoopValidatesDeps/sem_selector
+=== RUN   TestRunLoopValidatesDeps/sem_executor
+=== RUN   TestRunLoopValidatesDeps/sem_gate
+=== RUN   TestRunLoopValidatesDeps/sem_recorder
+=== RUN   TestRunLoopValidatesDeps/sem_reviewer
+--- PASS: TestRunLoopValidatesDeps (0.00s)
+    --- PASS: TestRunLoopValidatesDeps/sem_selector (0.00s)
+    --- PASS: TestRunLoopValidatesDeps/sem_executor (0.00s)
+    --- PASS: TestRunLoopValidatesDeps/sem_gate (0.00s)
+    --- PASS: TestRunLoopValidatesDeps/sem_recorder (0.00s)
+    --- PASS: TestRunLoopValidatesDeps/sem_reviewer (0.00s)
+=== RUN   TestRunLoopApprovedWithRemarksImplementReentersBugfix
+--- PASS: TestRunLoopApprovedWithRemarksImplementReentersBugfix (0.00s)
+=== RUN   TestRunLoopApprovedWithRemarksImplementExhaustsEscalates
+--- PASS: TestRunLoopApprovedWithRemarksImplementExhaustsEscalates (0.00s)
+=== RUN   TestRunLoopApprovedWithRemarksImplementThenRemarksNeedsNewPlan
+--- PASS: TestRunLoopApprovedWithRemarksImplementThenRemarksNeedsNewPlan (0.00s)
+=== RUN   TestRunLoopRemarksImplementRecursionPreservesContext
+--- PASS: TestRunLoopRemarksImplementRecursionPreservesContext (0.00s)
+=== RUN   TestRunLoopApprovedWithRemarksImplementThenBlocked
+--- PASS: TestRunLoopApprovedWithRemarksImplementThenBlocked (0.00s)
+=== RUN   TestRunLoopImplementEmitsTelemetry
+--- PASS: TestRunLoopImplementEmitsTelemetry (0.00s)
+=== RUN   TestRunLoopBlockedReviewer
+--- PASS: TestRunLoopBlockedReviewer (0.00s)
+=== RUN   TestRunLoop_DefaultsSequential
+=== PAUSE TestRunLoop_DefaultsSequential
+=== RUN   TestRunLoop_Concurrent_ExecutesBatch
+=== PAUSE TestRunLoop_Concurrent_ExecutesBatch
+=== RUN   TestRunLoop_Concurrent_Race
+=== PAUSE TestRunLoop_Concurrent_Race
+=== RUN   TestOptionsToConfigOverrides_ActivityTimeoutDefaultDoesNotOverrideConfig
+=== PAUSE TestOptionsToConfigOverrides_ActivityTimeoutDefaultDoesNotOverrideConfig
+=== RUN   TestOptionsToConfigOverrides_ActivityTimeoutExplicitOverridesConfig
+=== PAUSE TestOptionsToConfigOverrides_ActivityTimeoutExplicitOverridesConfig
+=== RUN   TestOptionsToConfigOverrides_ActivityTimeoutExplicitZeroOverrides
+=== PAUSE TestOptionsToConfigOverrides_ActivityTimeoutExplicitZeroOverrides
+=== RUN   TestResolveRuntimeConfig_DefaultWatchdogIs120s
+=== PAUSE TestResolveRuntimeConfig_DefaultWatchdogIs120s
+=== RUN   TestResolveRuntimeConfig_ExplicitZeroDisablesWatchdog
+=== PAUSE TestResolveRuntimeConfig_ExplicitZeroDisablesWatchdog
+=== RUN   TestResolveRuntimeConfig_ExplicitValueWins
+=== PAUSE TestResolveRuntimeConfig_ExplicitValueWins
+=== RUN   TestSealEvidenceSobreviveAoAvancoDoRepositorio
+--- PASS: TestSealEvidenceSobreviveAoAvancoDoRepositorio (0.02s)
+=== RUN   TestSealEvidenceRejeitaDigestAdulterado
+--- PASS: TestSealEvidenceRejeitaDigestAdulterado (0.02s)
+=== RUN   TestSealEvidenceRejeitaCommitForaDaLinhaDaBase
+--- PASS: TestSealEvidenceRejeitaCommitForaDaLinhaDaBase (0.02s)
+=== RUN   TestSealEvidenceRecusaReselagemEStatusNaoDone
+--- PASS: TestSealEvidenceRecusaReselagemEStatusNaoDone (0.02s)
+=== RUN   TestVerifySealedEvidenceExigeSelo
+--- PASS: TestVerifySealedEvidenceExigeSelo (0.01s)
+=== RUN   TestTaskSelectorNext
+=== RUN   TestTaskSelectorNext/lista_vazia_retorna_ErrNoEligibleTask
+=== RUN   TestTaskSelectorNext/unica_task_pending_sem_deps_retorna_ela
+=== RUN   TestTaskSelectorNext/deps_nao_satisfeitas_—_nenhuma_elegivel
+=== RUN   TestTaskSelectorNext/deps_satisfeitas_—_retorna_a_dependente
+=== RUN   TestTaskSelectorNext/task_in_progress_retomada_antes_de_pending
+=== RUN   TestTaskSelectorNext/task_done_ignorada
+=== RUN   TestTaskSelectorNext/ordem_estavel_—_menor_ID_retornado_primeiro
+=== RUN   TestTaskSelectorNext/ciclo_de_dependencias_retorna_ErrDependencyCycle
+=== RUN   TestTaskSelectorNext/multiplas_deps,_todas_done_—_elegivel
+=== RUN   TestTaskSelectorNext/dep_parcialmente_done_—_nao_elegivel
+=== RUN   TestTaskSelectorNext/tasks.md_sem_tabela_retorna_erro_de_parse
+--- PASS: TestTaskSelectorNext (0.00s)
+    --- PASS: TestTaskSelectorNext/lista_vazia_retorna_ErrNoEligibleTask (0.00s)
+    --- PASS: TestTaskSelectorNext/unica_task_pending_sem_deps_retorna_ela (0.00s)
+    --- PASS: TestTaskSelectorNext/deps_nao_satisfeitas_—_nenhuma_elegivel (0.00s)
+    --- PASS: TestTaskSelectorNext/deps_satisfeitas_—_retorna_a_dependente (0.00s)
+    --- PASS: TestTaskSelectorNext/task_in_progress_retomada_antes_de_pending (0.00s)
+    --- PASS: TestTaskSelectorNext/task_done_ignorada (0.00s)
+    --- PASS: TestTaskSelectorNext/ordem_estavel_—_menor_ID_retornado_primeiro (0.00s)
+    --- PASS: TestTaskSelectorNext/ciclo_de_dependencias_retorna_ErrDependencyCycle (0.00s)
+    --- PASS: TestTaskSelectorNext/multiplas_deps,_todas_done_—_elegivel (0.00s)
+    --- PASS: TestTaskSelectorNext/dep_parcialmente_done_—_nao_elegivel (0.00s)
+    --- PASS: TestTaskSelectorNext/tasks.md_sem_tabela_retorna_erro_de_parse (0.00s)
+=== RUN   TestTaskSelectorNextDeterminism
+--- PASS: TestTaskSelectorNextDeterminism (0.00s)
+=== RUN   TestTaskSelectorNextContextCancelled
+--- PASS: TestTaskSelectorNextContextCancelled (0.00s)
+=== RUN   TestReproducaoBugStatusTasksMdOverwrite
+=== RUN   TestReproducaoBugStatusTasksMdOverwrite/task_file_atualizado_para_done_mas_tasks.md_nao_atualizado/claude
+=== RUN   TestReproducaoBugStatusTasksMdOverwrite/task_file_atualizado_para_done_mas_tasks.md_nao_atualizado/codex
+=== RUN   TestReproducaoBugStatusTasksMdOverwrite/task_file_atualizado_para_done_mas_tasks.md_nao_atualizado/gemini
+=== RUN   TestReproducaoBugStatusTasksMdOverwrite/task_file_atualizado_para_done_mas_tasks.md_nao_atualizado/copilot
+--- PASS: TestReproducaoBugStatusTasksMdOverwrite (0.00s)
+    --- PASS: TestReproducaoBugStatusTasksMdOverwrite/task_file_atualizado_para_done_mas_tasks.md_nao_atualizado/claude (0.00s)
+    --- PASS: TestReproducaoBugStatusTasksMdOverwrite/task_file_atualizado_para_done_mas_tasks.md_nao_atualizado/codex (0.00s)
+    --- PASS: TestReproducaoBugStatusTasksMdOverwrite/task_file_atualizado_para_done_mas_tasks.md_nao_atualizado/gemini (0.00s)
+    --- PASS: TestReproducaoBugStatusTasksMdOverwrite/task_file_atualizado_para_done_mas_tasks.md_nao_atualizado/copilot (0.00s)
+=== RUN   TestReproducaoBugLoopNaoAvancaComMaxIteracoes1
+=== RUN   TestReproducaoBugLoopNaoAvancaComMaxIteracoes1/claude
+=== RUN   TestReproducaoBugLoopNaoAvancaComMaxIteracoes1/codex
+=== RUN   TestReproducaoBugLoopNaoAvancaComMaxIteracoes1/gemini
+=== RUN   TestReproducaoBugLoopNaoAvancaComMaxIteracoes1/copilot
+--- PASS: TestReproducaoBugLoopNaoAvancaComMaxIteracoes1 (0.00s)
+    --- PASS: TestReproducaoBugLoopNaoAvancaComMaxIteracoes1/claude (0.00s)
+    --- PASS: TestReproducaoBugLoopNaoAvancaComMaxIteracoes1/codex (0.00s)
+    --- PASS: TestReproducaoBugLoopNaoAvancaComMaxIteracoes1/gemini (0.00s)
+    --- PASS: TestReproducaoBugLoopNaoAvancaComMaxIteracoes1/copilot (0.00s)
+=== RUN   TestReproducaoBugPostStatusDeterminationPath
+--- PASS: TestReproducaoBugPostStatusDeterminationPath (0.00s)
+=== RUN   TestRegressaoExistentesNaoAfetados
+=== RUN   TestRegressaoExistentesNaoAfetados/claude
+=== RUN   TestRegressaoExistentesNaoAfetados/codex
+=== RUN   TestRegressaoExistentesNaoAfetados/gemini
+=== RUN   TestRegressaoExistentesNaoAfetados/copilot
+--- PASS: TestRegressaoExistentesNaoAfetados (0.00s)
+    --- PASS: TestRegressaoExistentesNaoAfetados/claude (0.00s)
+    --- PASS: TestRegressaoExistentesNaoAfetados/codex (0.00s)
+    --- PASS: TestRegressaoExistentesNaoAfetados/gemini (0.00s)
+    --- PASS: TestRegressaoExistentesNaoAfetados/copilot (0.00s)
+=== RUN   TestResolveWorkDir
+=== RUN   TestResolveWorkDir/.git_presente_no_diretorio_pai
+=== RUN   TestResolveWorkDir/go.mod_presente_no_diretorio_corrente
+=== RUN   TestResolveWorkDir/AGENTS.md_presente_em_diretorio_ancestral
+=== RUN   TestResolveWorkDir/nenhum_marker_encontrado_—_fallback_para_prdFolder
+--- PASS: TestResolveWorkDir (0.00s)
+    --- PASS: TestResolveWorkDir/.git_presente_no_diretorio_pai (0.00s)
+    --- PASS: TestResolveWorkDir/go.mod_presente_no_diretorio_corrente (0.00s)
+    --- PASS: TestResolveWorkDir/AGENTS.md_presente_em_diretorio_ancestral (0.00s)
+    --- PASS: TestResolveWorkDir/nenhum_marker_encontrado_—_fallback_para_prdFolder (0.00s)
+=== RUN   TestExecuteSimpleMode
+--- PASS: TestExecuteSimpleMode (0.00s)
+=== RUN   TestExecuteACP_SkipsLegacyBinaryChecker
+--- PASS: TestExecuteACP_SkipsLegacyBinaryChecker (0.00s)
+=== RUN   TestExecuteACP_ReturnsLauncherUnavailableImmediately
+--- PASS: TestExecuteACP_ReturnsLauncherUnavailableImmediately (0.00s)
+=== RUN   TestExecuteMaxIterationsZeroRunsUntilAllDone
+--- PASS: TestExecuteMaxIterationsZeroRunsUntilAllDone (0.00s)
+=== RUN   TestExecuteAdvancedModeReviewerInvoked
+--- PASS: TestExecuteAdvancedModeReviewerInvoked (0.00s)
+=== RUN   TestExecuteAdvancedModeReviewerNotInvokedOnExecutorFailure
+--- PASS: TestExecuteAdvancedModeReviewerNotInvokedOnExecutorFailure (0.00s)
+=== RUN   TestExecuteAdvancedModeReviewerNotInvokedWhenStatusNotDone
+--- PASS: TestExecuteAdvancedModeReviewerNotInvokedWhenStatusNotDone (0.00s)
+=== RUN   TestExecuteAdvancedModeReviewerInvokedOnTimeoutWithDone
+--- PASS: TestExecuteAdvancedModeReviewerInvokedOnTimeoutWithDone (0.00s)
+=== RUN   TestExecuteAdvancedModeReviewerFailureCapturesNote
+--- PASS: TestExecuteAdvancedModeReviewerFailureCapturesNote (0.00s)
+=== RUN   TestExecuteAdvancedModeBugfixInvokedOnReviewerFailure
+--- PASS: TestExecuteAdvancedModeBugfixInvokedOnReviewerFailure (0.00s)
+=== RUN   TestExecuteAdvancedModeBugfixNotInvokedOnReviewerSuccess
+--- PASS: TestExecuteAdvancedModeBugfixNotInvokedOnReviewerSuccess (0.00s)
+=== RUN   TestExecuteAdvancedModeBugfixFailureCapturesNote
+--- PASS: TestExecuteAdvancedModeBugfixFailureCapturesNote (0.00s)
+=== RUN   TestExecuteAdvancedModeBugfixUsesExecutorModel
+--- PASS: TestExecuteAdvancedModeBugfixUsesExecutorModel (0.00s)
+=== RUN   TestExecuteAdvancedModeBugfixNotInvokedWithoutReviewer
+--- PASS: TestExecuteAdvancedModeBugfixNotInvokedWithoutReviewer (0.00s)
+=== RUN   TestExecuteAdvancedModeBugfixDoesNotIncrementIteration
+--- PASS: TestExecuteAdvancedModeBugfixDoesNotIncrementIteration (0.00s)
+=== RUN   TestExecuteAdvancedModeBugfixInvocationError
+--- PASS: TestExecuteAdvancedModeBugfixInvocationError (0.00s)
+=== RUN   TestExecuteAdvancedModeBugfixReviewFindingsPassedVerbatim
+--- PASS: TestExecuteAdvancedModeBugfixReviewFindingsPassedVerbatim (0.00s)
+=== RUN   TestExecuteAdvancedModeBugfixOnlyForFailedReview
+--- PASS: TestExecuteAdvancedModeBugfixOnlyForFailedReview (0.00s)
+=== RUN   TestExecuteFallbackPreLoop
+--- PASS: TestExecuteFallbackPreLoop (0.00s)
+=== RUN   TestExecuteAllowUnknownModelSkipsValidation
+--- PASS: TestExecuteAllowUnknownModelSkipsValidation (0.00s)
+=== RUN   TestExecuteIncompatibleModelWithoutFallbackReturnsError
+--- PASS: TestExecuteIncompatibleModelWithoutFallbackReturnsError (0.00s)
+=== RUN   TestExecuteMaxIterationsCountsOnlyExecutor
+--- PASS: TestExecuteMaxIterationsCountsOnlyExecutor (0.00s)
+=== RUN   TestExecuteAdvancedModeReportContainsProfiles
+--- PASS: TestExecuteAdvancedModeReportContainsProfiles (0.00s)
+=== RUN   TestExecuteSimpleModeReportFormat
+--- PASS: TestExecuteSimpleModeReportFormat (0.00s)
+=== RUN   TestDryRunAdvancedCompatibleProfiles
+--- PASS: TestDryRunAdvancedCompatibleProfiles (0.00s)
+=== RUN   TestDryRunAdvancedIncompatibleProfile
+--- PASS: TestDryRunAdvancedIncompatibleProfile (0.00s)
+=== RUN   TestDryRunSimplePreservesCurrentFormat
+--- PASS: TestDryRunSimplePreservesCurrentFormat (0.00s)
+=== RUN   TestExecuteFallbackChainExhausted
+--- PASS: TestExecuteFallbackChainExhausted (0.00s)
+=== RUN   TestExecuteFallbackBothRolesSubstituted
+--- PASS: TestExecuteFallbackBothRolesSubstituted (0.00s)
+=== RUN   TestDryRunAdvancedMultipleEligibleTasks
+--- PASS: TestDryRunAdvancedMultipleEligibleTasks (0.00s)
+=== RUN   TestExecuteAuthErrorEarlyTermination
+--- PASS: TestExecuteAuthErrorEarlyTermination (0.00s)
+=== RUN   TestExecuteEmptyOutputOnTimeoutKill
+--- PASS: TestExecuteEmptyOutputOnTimeoutKill (0.00s)
+=== RUN   TestExecuteNonAuthErrorContinuesLoop
+--- PASS: TestExecuteNonAuthErrorContinuesLoop (0.00s)
+=== RUN   TestExecuteResumesInProgressTask
+--- PASS: TestExecuteResumesInProgressTask (0.00s)
+=== RUN   TestExecutePrioritizesInProgressBeforePending
+--- PASS: TestExecutePrioritizesInProgressBeforePending (0.00s)
+=== RUN   TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders
+=== RUN   TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders/claude
+=== RUN   TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders/codex
+=== RUN   TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders/gemini
+=== RUN   TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders/copilot
+--- PASS: TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders (0.00s)
+    --- PASS: TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders/claude (0.00s)
+    --- PASS: TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders/codex (0.00s)
+    --- PASS: TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders/gemini (0.00s)
+    --- PASS: TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders/copilot (0.00s)
+=== RUN   TestExecuteRejectsUnauthorizedTaskFileMutation
+--- PASS: TestExecuteRejectsUnauthorizedTaskFileMutation (0.00s)
+=== RUN   TestExecuteRejectsUnexpectedTrackedTaskFileCreation
+--- PASS: TestExecuteRejectsUnexpectedTrackedTaskFileCreation (0.00s)
+=== RUN   TestExecuteRejectsProtectedPRDFileMutationForAllProviders
+=== RUN   TestExecuteRejectsProtectedPRDFileMutationForAllProviders/claude
+=== RUN   TestExecuteRejectsProtectedPRDFileMutationForAllProviders/codex
+=== RUN   TestExecuteRejectsProtectedPRDFileMutationForAllProviders/gemini
+=== RUN   TestExecuteRejectsProtectedPRDFileMutationForAllProviders/copilot
+--- PASS: TestExecuteRejectsProtectedPRDFileMutationForAllProviders (0.00s)
+    --- PASS: TestExecuteRejectsProtectedPRDFileMutationForAllProviders/claude (0.00s)
+    --- PASS: TestExecuteRejectsProtectedPRDFileMutationForAllProviders/codex (0.00s)
+    --- PASS: TestExecuteRejectsProtectedPRDFileMutationForAllProviders/gemini (0.00s)
+    --- PASS: TestExecuteRejectsProtectedPRDFileMutationForAllProviders/copilot (0.00s)
+=== RUN   TestExecuteRejectsArbitraryPRDFileMutationForAllProviders
+=== RUN   TestExecuteRejectsArbitraryPRDFileMutationForAllProviders/claude
+=== RUN   TestExecuteRejectsArbitraryPRDFileMutationForAllProviders/codex
+=== RUN   TestExecuteRejectsArbitraryPRDFileMutationForAllProviders/gemini
+=== RUN   TestExecuteRejectsArbitraryPRDFileMutationForAllProviders/copilot
+--- PASS: TestExecuteRejectsArbitraryPRDFileMutationForAllProviders (0.00s)
+    --- PASS: TestExecuteRejectsArbitraryPRDFileMutationForAllProviders/claude (0.00s)
+    --- PASS: TestExecuteRejectsArbitraryPRDFileMutationForAllProviders/codex (0.00s)
+    --- PASS: TestExecuteRejectsArbitraryPRDFileMutationForAllProviders/gemini (0.00s)
+    --- PASS: TestExecuteRejectsArbitraryPRDFileMutationForAllProviders/copilot (0.00s)
+=== RUN   TestExecuteRejectsReviewerIsolationViolation
+--- PASS: TestExecuteRejectsReviewerIsolationViolation (0.00s)
+=== RUN   TestExecuteRejectsReviewerProtectedPRDMutation
+--- PASS: TestExecuteRejectsReviewerProtectedPRDMutation (0.00s)
+=== RUN   TestExecuteRejectsReviewerArbitraryPRDMutation
+--- PASS: TestExecuteRejectsReviewerArbitraryPRDMutation (0.00s)
+=== RUN   TestExecuteRejectsReviewerCurrentTaskMutation
+--- PASS: TestExecuteRejectsReviewerCurrentTaskMutation (0.00s)
+=== RUN   TestExecuteRejectsReviewerCurrentTaskRowMutation
+--- PASS: TestExecuteRejectsReviewerCurrentTaskRowMutation (0.00s)
+=== RUN   TestExecuteDoesNotResumeTaskWhenTaskFileStatusIsTerminal
+--- PASS: TestExecuteDoesNotResumeTaskWhenTaskFileStatusIsTerminal (0.00s)
+=== RUN   TestDryRunAdvancedTemplatePreview
+--- PASS: TestDryRunAdvancedTemplatePreview (0.00s)
+=== RUN   TestParidadeSemanticaCicloDeVida
+=== RUN   TestParidadeSemanticaCicloDeVida/P1/sucesso_exit_0/claude
+=== RUN   TestParidadeSemanticaCicloDeVida/P1/sucesso_exit_0/codex
+=== RUN   TestParidadeSemanticaCicloDeVida/P1/sucesso_exit_0/gemini
+=== RUN   TestParidadeSemanticaCicloDeVida/P1/sucesso_exit_0/copilot
+=== RUN   TestParidadeSemanticaCicloDeVida/P2/timeout_exit_minus1_status_done/claude
+=== RUN   TestParidadeSemanticaCicloDeVida/P2/timeout_exit_minus1_status_done/codex
+=== RUN   TestParidadeSemanticaCicloDeVida/P2/timeout_exit_minus1_status_done/gemini
+=== RUN   TestParidadeSemanticaCicloDeVida/P2/timeout_exit_minus1_status_done/copilot
+=== RUN   TestParidadeSemanticaCicloDeVida/P3/falha_exit_1_status_inalterado/claude
+=== RUN   TestParidadeSemanticaCicloDeVida/P3/falha_exit_1_status_inalterado/codex
+=== RUN   TestParidadeSemanticaCicloDeVida/P3/falha_exit_1_status_inalterado/gemini
+=== RUN   TestParidadeSemanticaCicloDeVida/P3/falha_exit_1_status_inalterado/copilot
+=== RUN   TestParidadeSemanticaCicloDeVida/P4/erro_autenticacao/claude
+=== RUN   TestParidadeSemanticaCicloDeVida/P4/erro_autenticacao/codex
+=== RUN   TestParidadeSemanticaCicloDeVida/P4/erro_autenticacao/gemini
+=== RUN   TestParidadeSemanticaCicloDeVida/P4/erro_autenticacao/copilot
+=== RUN   TestParidadeSemanticaCicloDeVida/P5/status_inalterado_exit_0/claude
+=== RUN   TestParidadeSemanticaCicloDeVida/P5/status_inalterado_exit_0/codex
+=== RUN   TestParidadeSemanticaCicloDeVida/P5/status_inalterado_exit_0/gemini
+=== RUN   TestParidadeSemanticaCicloDeVida/P5/status_inalterado_exit_0/copilot
+=== RUN   TestParidadeSemanticaCicloDeVida/P6/violacao_isolamento/claude
+=== RUN   TestParidadeSemanticaCicloDeVida/P6/violacao_isolamento/codex
+=== RUN   TestParidadeSemanticaCicloDeVida/P6/violacao_isolamento/gemini
+=== RUN   TestParidadeSemanticaCicloDeVida/P6/violacao_isolamento/copilot
+=== RUN   TestParidadeSemanticaCicloDeVida/P7/erro_invocacao/claude
+=== RUN   TestParidadeSemanticaCicloDeVida/P7/erro_invocacao/codex
+=== RUN   TestParidadeSemanticaCicloDeVida/P7/erro_invocacao/gemini
+=== RUN   TestParidadeSemanticaCicloDeVida/P7/erro_invocacao/copilot
+=== RUN   TestParidadeSemanticaCicloDeVida/P8/multiplas_tasks_todas_done/claude
+=== RUN   TestParidadeSemanticaCicloDeVida/P8/multiplas_tasks_todas_done/codex
+=== RUN   TestParidadeSemanticaCicloDeVida/P8/multiplas_tasks_todas_done/gemini
+=== RUN   TestParidadeSemanticaCicloDeVida/P8/multiplas_tasks_todas_done/copilot
+=== RUN   TestParidadeSemanticaCicloDeVida/P9/dependencias_bloqueiam_task/claude
+=== RUN   TestParidadeSemanticaCicloDeVida/P9/dependencias_bloqueiam_task/codex
+=== RUN   TestParidadeSemanticaCicloDeVida/P9/dependencias_bloqueiam_task/gemini
+=== RUN   TestParidadeSemanticaCicloDeVida/P9/dependencias_bloqueiam_task/copilot
+=== RUN   TestParidadeSemanticaCicloDeVida/P10/retomada_in_progress_prioridade/claude
+=== RUN   TestParidadeSemanticaCicloDeVida/P10/retomada_in_progress_prioridade/codex
+=== RUN   TestParidadeSemanticaCicloDeVida/P10/retomada_in_progress_prioridade/gemini
+=== RUN   TestParidadeSemanticaCicloDeVida/P10/retomada_in_progress_prioridade/copilot
+--- PASS: TestParidadeSemanticaCicloDeVida (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P1/sucesso_exit_0/claude (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P1/sucesso_exit_0/codex (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P1/sucesso_exit_0/gemini (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P1/sucesso_exit_0/copilot (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P2/timeout_exit_minus1_status_done/claude (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P2/timeout_exit_minus1_status_done/codex (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P2/timeout_exit_minus1_status_done/gemini (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P2/timeout_exit_minus1_status_done/copilot (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P3/falha_exit_1_status_inalterado/claude (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P3/falha_exit_1_status_inalterado/codex (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P3/falha_exit_1_status_inalterado/gemini (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P3/falha_exit_1_status_inalterado/copilot (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P4/erro_autenticacao/claude (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P4/erro_autenticacao/codex (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P4/erro_autenticacao/gemini (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P4/erro_autenticacao/copilot (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P5/status_inalterado_exit_0/claude (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P5/status_inalterado_exit_0/codex (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P5/status_inalterado_exit_0/gemini (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P5/status_inalterado_exit_0/copilot (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P6/violacao_isolamento/claude (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P6/violacao_isolamento/codex (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P6/violacao_isolamento/gemini (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P6/violacao_isolamento/copilot (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P7/erro_invocacao/claude (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P7/erro_invocacao/codex (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P7/erro_invocacao/gemini (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P7/erro_invocacao/copilot (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P8/multiplas_tasks_todas_done/claude (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P8/multiplas_tasks_todas_done/codex (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P8/multiplas_tasks_todas_done/gemini (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P8/multiplas_tasks_todas_done/copilot (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P9/dependencias_bloqueiam_task/claude (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P9/dependencias_bloqueiam_task/codex (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P9/dependencias_bloqueiam_task/gemini (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P9/dependencias_bloqueiam_task/copilot (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P10/retomada_in_progress_prioridade/claude (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P10/retomada_in_progress_prioridade/codex (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P10/retomada_in_progress_prioridade/gemini (0.00s)
+    --- PASS: TestParidadeSemanticaCicloDeVida/P10/retomada_in_progress_prioridade/copilot (0.00s)
+=== RUN   TestSessionIsolationBetweenIterationsForAllTools
+=== RUN   TestSessionIsolationBetweenIterationsForAllTools/claude
+=== RUN   TestSessionIsolationBetweenIterationsForAllTools/codex
+=== RUN   TestSessionIsolationBetweenIterationsForAllTools/gemini
+=== RUN   TestSessionIsolationBetweenIterationsForAllTools/copilot
+--- PASS: TestSessionIsolationBetweenIterationsForAllTools (0.00s)
+    --- PASS: TestSessionIsolationBetweenIterationsForAllTools/claude (0.00s)
+    --- PASS: TestSessionIsolationBetweenIterationsForAllTools/codex (0.00s)
+    --- PASS: TestSessionIsolationBetweenIterationsForAllTools/gemini (0.00s)
+    --- PASS: TestSessionIsolationBetweenIterationsForAllTools/copilot (0.00s)
+=== RUN   TestCaptureValidateIsolationExecutorModeForAllTools
+=== RUN   TestCaptureValidateIsolationExecutorModeForAllTools/claude
+=== RUN   TestCaptureValidateIsolationExecutorModeForAllTools/codex
+=== RUN   TestCaptureValidateIsolationExecutorModeForAllTools/gemini
+=== RUN   TestCaptureValidateIsolationExecutorModeForAllTools/copilot
+--- PASS: TestCaptureValidateIsolationExecutorModeForAllTools (0.00s)
+    --- PASS: TestCaptureValidateIsolationExecutorModeForAllTools/claude (0.00s)
+    --- PASS: TestCaptureValidateIsolationExecutorModeForAllTools/codex (0.00s)
+    --- PASS: TestCaptureValidateIsolationExecutorModeForAllTools/gemini (0.00s)
+    --- PASS: TestCaptureValidateIsolationExecutorModeForAllTools/copilot (0.00s)
+=== RUN   TestSnapshotRestorationAfterTaskFileMutationForAllTools
+=== RUN   TestSnapshotRestorationAfterTaskFileMutationForAllTools/claude
+=== RUN   TestSnapshotRestorationAfterTaskFileMutationForAllTools/codex
+=== RUN   TestSnapshotRestorationAfterTaskFileMutationForAllTools/gemini
+=== RUN   TestSnapshotRestorationAfterTaskFileMutationForAllTools/copilot
+--- PASS: TestSnapshotRestorationAfterTaskFileMutationForAllTools (0.00s)
+    --- PASS: TestSnapshotRestorationAfterTaskFileMutationForAllTools/claude (0.00s)
+    --- PASS: TestSnapshotRestorationAfterTaskFileMutationForAllTools/codex (0.00s)
+    --- PASS: TestSnapshotRestorationAfterTaskFileMutationForAllTools/gemini (0.00s)
+    --- PASS: TestSnapshotRestorationAfterTaskFileMutationForAllTools/copilot (0.00s)
+=== RUN   TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools
+=== RUN   TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools/claude
+=== RUN   TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools/codex
+=== RUN   TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools/gemini
+=== RUN   TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools/copilot
+--- PASS: TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools (0.00s)
+    --- PASS: TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools/claude (0.00s)
+    --- PASS: TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools/codex (0.00s)
+    --- PASS: TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools/gemini (0.00s)
+    --- PASS: TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools/copilot (0.00s)
+=== RUN   TestReviewerModeIsolationForAllReviewerTools
+=== RUN   TestReviewerModeIsolationForAllReviewerTools/claude
+=== RUN   TestReviewerModeIsolationForAllReviewerTools/codex
+=== RUN   TestReviewerModeIsolationForAllReviewerTools/gemini
+=== RUN   TestReviewerModeIsolationForAllReviewerTools/copilot
+--- PASS: TestReviewerModeIsolationForAllReviewerTools (0.00s)
+    --- PASS: TestReviewerModeIsolationForAllReviewerTools/claude (0.00s)
+    --- PASS: TestReviewerModeIsolationForAllReviewerTools/codex (0.00s)
+    --- PASS: TestReviewerModeIsolationForAllReviewerTools/gemini (0.00s)
+    --- PASS: TestReviewerModeIsolationForAllReviewerTools/copilot (0.00s)
+=== RUN   TestSharedStateBetweenIterationsMatchesRF12
+--- PASS: TestSharedStateBetweenIterationsMatchesRF12 (0.00s)
+=== RUN   TestEnrichedPromptsAndUnlimitedFlow
+--- PASS: TestEnrichedPromptsAndUnlimitedFlow (0.00s)
+=== RUN   TestT17_LegacyFlowWhenAgentNameEmpty
+--- PASS: TestT17_LegacyFlowWhenAgentNameEmpty (0.00s)
+=== RUN   TestT18_AgentFlowResolvesAndEnrichesPrompt
+--- PASS: TestT18_AgentFlowResolvesAndEnrichesPrompt (0.00s)
+=== RUN   TestT19_AgentNotFoundReturnsActionableError
+--- PASS: TestT19_AgentNotFoundReturnsActionableError (0.00s)
+=== RUN   TestT16_LegacyRuntimeRoutesCopilotToCopilotInvoker
+--- PASS: TestT16_LegacyRuntimeRoutesCopilotToCopilotInvoker (0.00s)
+=== RUN   TestACPRuntimeRoutesCopilotToACPRunner
+--- PASS: TestACPRuntimeRoutesCopilotToACPRunner (0.00s)
+=== RUN   TestResolveACPSpec
+=== RUN   TestResolveACPSpec/claude
+=== RUN   TestResolveACPSpec/codex
+=== RUN   TestResolveACPSpec/copilot
+=== RUN   TestResolveACPSpec/gemini
+=== RUN   TestResolveACPSpec/missing/unknown-tool
+=== RUN   TestResolveACPSpec/missing/
+--- PASS: TestResolveACPSpec (0.00s)
+    --- PASS: TestResolveACPSpec/claude (0.00s)
+    --- PASS: TestResolveACPSpec/codex (0.00s)
+    --- PASS: TestResolveACPSpec/copilot (0.00s)
+    --- PASS: TestResolveACPSpec/gemini (0.00s)
+    --- PASS: TestResolveACPSpec/missing/unknown-tool (0.00s)
+    --- PASS: TestResolveACPSpec/missing/ (0.00s)
+=== RUN   TestT26_ClaudeRegressionWithCodexFlags
+--- PASS: TestT26_ClaudeRegressionWithCodexFlags (0.00s)
+=== RUN   TestT27_LegacyPathDoesNotConsumeCodexFields
+--- PASS: TestT27_LegacyPathDoesNotConsumeCodexFields (0.00s)
+=== RUN   TestT32_TaskloopRegressionSuite
+--- PASS: TestT32_TaskloopRegressionSuite (0.00s)
+=== RUN   TestServiceRoutesGeminiToACPRunner
+--- PASS: TestServiceRoutesGeminiToACPRunner (0.00s)
+=== RUN   TestServicePropagatesAccessModeForGemini
+--- PASS: TestServicePropagatesAccessModeForGemini (0.00s)
+=== RUN   TestNewACPInvoker_ImplementsAgentInvoker
+=== PAUSE TestNewACPInvoker_ImplementsAgentInvoker
+=== RUN   TestACPInvoker_BinaryName
+=== PAUSE TestACPInvoker_BinaryName
+=== RUN   TestACPInvoker_Invoke_HappyPath
+=== PAUSE TestACPInvoker_Invoke_HappyPath
+=== RUN   TestACPInvoker_Invoke_ExitCodes
+=== PAUSE TestACPInvoker_Invoke_ExitCodes
+=== RUN   TestACPInvoker_SetLiveOutput
+=== PAUSE TestACPInvoker_SetLiveOutput
+=== RUN   TestACPInvoker_Invoke_QuietMode
+=== PAUSE TestACPInvoker_Invoke_QuietMode
+=== RUN   TestACPInvoker_Invoke_DerivesTaskEvidenceDir
+=== PAUSE TestACPInvoker_Invoke_DerivesTaskEvidenceDir
+=== RUN   TestACPInvoker_Invoke_LogsTelemetry
+2026/09/10 19:01:24 INFO connection closed cause="peer connection closed"
+2026/09/10 19:01:24 INFO connection closed cause="io: read/write on closed pipe"
+--- PASS: TestACPInvoker_Invoke_LogsTelemetry (0.00s)
+=== RUN   TestACPInvoker_SkipDriftGuard_BypassesDrift
+2026/09/10 19:01:24 [memory_persist] Memory Compaction Requested: false
+2026/09/10 19:01:24 [memory_persist] Memory Workflow Bytes: 238
+2026/09/10 19:01:24 [memory_persist] Task:  | Events: 2 | Tool Calls: 0
+2026/09/10 19:01:24 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/10 19:01:24 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPInvoker_SkipDriftGuard_BypassesDrift (0.00s)
+=== RUN   TestACPInvoker_ImplementsAgentInvokerInterface
+=== PAUSE TestACPInvoker_ImplementsAgentInvokerInterface
+=== RUN   TestBuildRuntimeConfig_TimeoutVazio
+=== PAUSE TestBuildRuntimeConfig_TimeoutVazio
+=== RUN   TestBuildRuntimeConfig_TimeoutValido
+=== PAUSE TestBuildRuntimeConfig_TimeoutValido
+=== RUN   TestBuildRuntimeConfig_TimeoutMalformado
+=== PAUSE TestBuildRuntimeConfig_TimeoutMalformado
+=== RUN   TestBuildRuntimeConfig_NumericosMapeados1a1
+=== PAUSE TestBuildRuntimeConfig_NumericosMapeados1a1
+=== RUN   TestBuildRuntimeConfig_RegressaoF1
+=== PAUSE TestBuildRuntimeConfig_RegressaoF1
+=== RUN   TestBuildRuntimeConfig_ApplyDefaultsNormalization
+=== PAUSE TestBuildRuntimeConfig_ApplyDefaultsNormalization
+=== RUN   TestBuildRuntimeConfig_TimeoutVariedades
+=== PAUSE TestBuildRuntimeConfig_TimeoutVariedades
+=== RUN   TestBuildRuntimeConfig_ParidadeCLIs
+=== PAUSE TestBuildRuntimeConfig_ParidadeCLIs
+=== CONT  TestACPSpecCatalogInSyncWithRegistry
+=== CONT  TestOptionsToConfigOverrides_ActivityTimeoutExplicitOverridesConfig
+=== CONT  TestACPInvoker_Invoke_DerivesTaskEvidenceDir
+=== CONT  TestACPInvoker_Invoke_QuietMode
+--- PASS: TestACPSpecCatalogInSyncWithRegistry (0.00s)
+=== CONT  TestOptionsToConfigOverrides_ActivityTimeoutDefaultDoesNotOverrideConfig
+--- PASS: TestOptionsToConfigOverrides_ActivityTimeoutExplicitOverridesConfig (0.00s)
+--- PASS: TestOptionsToConfigOverrides_ActivityTimeoutDefaultDoesNotOverrideConfig (0.00s)
+=== CONT  TestNewACPInvoker_ImplementsAgentInvoker
+--- PASS: TestNewACPInvoker_ImplementsAgentInvoker (0.00s)
+=== CONT  TestACPInvoker_Retry_DefaultsSequential
+=== CONT  TestACPInvoker_Retry_BackoffCalled
+=== CONT  TestRunLoop_Concurrent_ExecutesBatch
+[acpinvoker] retry 1/3 após falha transitória
+[acpinvoker] retry 2/3 após falha transitória
+=== CONT  TestACPInvoker_BinaryName
+=== CONT  TestRunLoop_DefaultsSequential
+=== CONT  TestRunLoop_Concurrent_Race
+--- PASS: TestRunLoop_Concurrent_ExecutesBatch (0.00s)
+--- PASS: TestACPInvoker_BinaryName (0.00s)
+=== CONT  TestACPInvoker_Retry_TransientError
+=== CONT  TestACPInvoker_Retry_FatalError
+--- PASS: TestRunLoop_DefaultsSequential (0.00s)
+=== CONT  TestResolveRuntimeConfig_ExplicitValueWins
+--- PASS: TestRunLoop_Concurrent_Race (0.00s)
+=== CONT  TestResolveRuntimeConfig_ExplicitZeroDisablesWatchdog
+[acpinvoker] retry 1/3 após falha transitória
+[acpinvoker] retry 2/3 após falha transitória
+--- PASS: TestACPInvoker_Retry_FatalError (0.00s)
+=== CONT  TestResolveRuntimeConfig_DefaultWatchdogIs120s
+--- PASS: TestResolveRuntimeConfig_ExplicitValueWins (0.00s)
+=== CONT  TestOptionsToConfigOverrides_ActivityTimeoutExplicitZeroOverrides
+--- PASS: TestOptionsToConfigOverrides_ActivityTimeoutExplicitZeroOverrides (0.00s)
+=== CONT  TestSentinelErrors
+=== RUN   TestSentinelErrors/ErrToolInvalida_via_NewExecutionProfile
+=== PAUSE TestSentinelErrors/ErrToolInvalida_via_NewExecutionProfile
+=== RUN   TestSentinelErrors/ErrRoleInvalido_via_NewExecutionProfile
+=== PAUSE TestSentinelErrors/ErrRoleInvalido_via_NewExecutionProfile
+=== RUN   TestSentinelErrors/ErrFlagsConflitantes_via_resolveProfiles
+=== PAUSE TestSentinelErrors/ErrFlagsConflitantes_via_resolveProfiles
+=== RUN   TestSentinelErrors/ErrToolInvalida_via_resolveProfiles_executor-tool_invalida
+=== PAUSE TestSentinelErrors/ErrToolInvalida_via_resolveProfiles_executor-tool_invalida
+=== CONT  TestBuildRuntimeConfig_TimeoutValido
+--- PASS: TestBuildRuntimeConfig_TimeoutValido (0.00s)
+=== CONT  TestBuildRuntimeConfig_TimeoutMalformado
+--- PASS: TestBuildRuntimeConfig_TimeoutMalformado (0.00s)
+=== CONT  TestBuildRuntimeConfig_TimeoutVariedades
+--- PASS: TestResolveRuntimeConfig_ExplicitZeroDisablesWatchdog (0.00s)
+=== RUN   TestBuildRuntimeConfig_TimeoutVariedades/vazio
+=== CONT  TestBuildRuntimeConfig_NumericosMapeados1a1
+=== PAUSE TestBuildRuntimeConfig_TimeoutVariedades/vazio
+=== CONT  TestBuildRuntimeConfig_ParidadeCLIs
+=== RUN   TestBuildRuntimeConfig_TimeoutVariedades/30s
+=== PAUSE TestBuildRuntimeConfig_TimeoutVariedades/30s
+=== RUN   TestBuildRuntimeConfig_TimeoutVariedades/2m
+=== PAUSE TestBuildRuntimeConfig_TimeoutVariedades/2m
+=== RUN   TestBuildRuntimeConfig_TimeoutVariedades/1h30m
+=== PAUSE TestBuildRuntimeConfig_TimeoutVariedades/1h30m
+=== RUN   TestBuildRuntimeConfig_TimeoutVariedades/malformado-10x
+=== PAUSE TestBuildRuntimeConfig_TimeoutVariedades/malformado-10x
+=== RUN   TestBuildRuntimeConfig_ParidadeCLIs/claude
+=== RUN   TestBuildRuntimeConfig_TimeoutVariedades/malformado-abc
+=== PAUSE TestBuildRuntimeConfig_TimeoutVariedades/malformado-abc
+=== PAUSE TestBuildRuntimeConfig_ParidadeCLIs/claude
+=== CONT  TestBuildRuntimeConfig_TimeoutVazio
+=== CONT  TestBuildRuntimeConfig_RegressaoF1
+--- PASS: TestBuildRuntimeConfig_NumericosMapeados1a1 (0.00s)
+--- PASS: TestBuildRuntimeConfig_RegressaoF1 (0.00s)
+=== CONT  TestBuildRuntimeConfig_ApplyDefaultsNormalization
+--- PASS: TestBuildRuntimeConfig_TimeoutVazio (0.00s)
+--- PASS: TestResolveRuntimeConfig_DefaultWatchdogIs120s (0.00s)
+2026/09/10 19:01:24 INFO connection closed cause="io: read/write on closed pipe"
+=== RUN   TestBuildRuntimeConfig_ApplyDefaultsNormalization/negativo_normalizado_para_1
+=== CONT  TestResolveProfileFromAgent_CompatibilityValidation
+=== PAUSE TestBuildRuntimeConfig_ApplyDefaultsNormalization/negativo_normalizado_para_1
+=== RUN   TestResolveProfileFromAgent_CompatibilityValidation/T-13_positivo:_claude_+_claude-opus-4-7_—_aceito
+=== RUN   TestBuildRuntimeConfig_ApplyDefaultsNormalization/zero_normalizado_para_1
+=== PAUSE TestBuildRuntimeConfig_ApplyDefaultsNormalization/zero_normalizado_para_1
+=== PAUSE TestResolveProfileFromAgent_CompatibilityValidation/T-13_positivo:_claude_+_claude-opus-4-7_—_aceito
+2026/09/10 19:01:24 INFO connection closed cause="peer connection closed"
+=== RUN   TestBuildRuntimeConfig_ApplyDefaultsNormalization/positivos_preservados
+--- PASS: TestACPInvoker_Retry_BackoffCalled (0.00s)
+=== RUN   TestResolveProfileFromAgent_CompatibilityValidation/T-13_negativo:_claude_+_gpt-5.4_—_erro_acionavel
+=== PAUSE TestBuildRuntimeConfig_ApplyDefaultsNormalization/positivos_preservados
+=== CONT  TestACPInvoker_Invoke_HappyPath
+=== CONT  TestResolveProfiles
+=== RUN   TestBuildRuntimeConfig_ParidadeCLIs/codex
+=== PAUSE TestBuildRuntimeConfig_ParidadeCLIs/codex
+=== PAUSE TestResolveProfileFromAgent_CompatibilityValidation/T-13_negativo:_claude_+_gpt-5.4_—_erro_acionavel
+=== RUN   TestBuildRuntimeConfig_ParidadeCLIs/copilot
+=== PAUSE TestBuildRuntimeConfig_ParidadeCLIs/copilot
+=== RUN   TestBuildRuntimeConfig_ParidadeCLIs/gemini
+2026/09/10 19:01:24 INFO connection closed cause="io: read/write on closed pipe"
+=== PAUSE TestBuildRuntimeConfig_ParidadeCLIs/gemini
+=== CONT  TestValidateModelForIDE
+--- PASS: TestACPInvoker_Invoke_DerivesTaskEvidenceDir (0.00s)
+2026/09/10 19:01:24 INFO connection closed cause="peer connection closed"
+=== RUN   TestResolveProfiles/modo_simples_—_apenas_tool
+=== RUN   TestValidateModelForIDE/T-13_positivo:_claude_+_claude-opus-4-7_—_aceito
+=== PAUSE TestResolveProfiles/modo_simples_—_apenas_tool
+2026/09/10 19:01:24 INFO connection closed cause="peer connection closed"
+=== PAUSE TestValidateModelForIDE/T-13_positivo:_claude_+_claude-opus-4-7_—_aceito
+2026/09/10 19:01:24 INFO connection closed cause="io: read/write on closed pipe"
+=== RUN   TestResolveProfiles/modo_avancado_—_apenas_executor-tool
+=== RUN   TestResolveProfileFromAgent_CompatibilityValidation/T-13_bypass:_claude_+_modelo-novo_+_allowUnknownModel=true_—_aceito
+=== RUN   TestValidateModelForIDE/T-13_negativo:_claude_+_gpt-5.4_—_erro_citando_modelos_validos
+=== PAUSE TestResolveProfiles/modo_avancado_—_apenas_executor-tool
+=== PAUSE TestResolveProfileFromAgent_CompatibilityValidation/T-13_bypass:_claude_+_modelo-novo_+_allowUnknownModel=true_—_aceito
+=== RUN   TestResolveProfiles/modo_avancado_—_executor_e_reviewer_distintos
+=== RUN   TestResolveProfileFromAgent_CompatibilityValidation/modelo_vazio_—_sem_validacao,_sem_erro
+=== PAUSE TestResolveProfiles/modo_avancado_—_executor_e_reviewer_distintos
+=== PAUSE TestResolveProfileFromAgent_CompatibilityValidation/modelo_vazio_—_sem_validacao,_sem_erro
+2026/09/10 19:01:24 INFO connection closed cause="io: read/write on closed pipe"
+=== RUN   TestResolveProfiles/modo_avancado_—_reviewer_herda_executor_com_model
+=== RUN   TestResolveProfileFromAgent_CompatibilityValidation/override_CLI_model_compativel_prevalece_sobre_agent_incompativel
+=== PAUSE TestResolveProfiles/modo_avancado_—_reviewer_herda_executor_com_model
+2026/09/10 19:01:24 INFO connection closed cause="peer connection closed"
+=== PAUSE TestResolveProfileFromAgent_CompatibilityValidation/override_CLI_model_compativel_prevalece_sobre_agent_incompativel
+=== RUN   TestResolveProfiles/flags_conflitantes_—_tool_+_executor-tool
+=== CONT  TestInferProvider
+=== PAUSE TestResolveProfiles/flags_conflitantes_—_tool_+_executor-tool
+=== RUN   TestResolveProfiles/flags_conflitantes_—_tool_+_reviewer-tool
+=== PAUSE TestResolveProfiles/flags_conflitantes_—_tool_+_reviewer-tool
+=== RUN   TestResolveProfiles/executor-model_sem_executor-tool
+=== PAUSE TestResolveProfiles/executor-model_sem_executor-tool
+=== CONT  TestErrModeloIncompativel_Sentinela
+=== RUN   TestResolveProfiles/reviewer-model_sem_reviewer-tool
+=== PAUSE TestResolveProfiles/reviewer-model_sem_reviewer-tool
+=== RUN   TestErrModeloIncompativel_Sentinela/wrapping_contextual_e_verificavel_via_errors.Is
+=== RUN   TestResolveProfiles/executor-tool_invalida
+=== PAUSE TestErrModeloIncompativel_Sentinela/wrapping_contextual_e_verificavel_via_errors.Is
+=== PAUSE TestResolveProfiles/executor-tool_invalida
+=== RUN   TestErrModeloIncompativel_Sentinela/ferramenta_desconhecida_model_vazio_gera_ErrModeloIncompativel
+--- PASS: TestACPInvoker_Invoke_QuietMode (0.00s)
+=== PAUSE TestErrModeloIncompativel_Sentinela/ferramenta_desconhecida_model_vazio_gera_ErrModeloIncompativel
+=== RUN   TestResolveProfiles/reviewer-tool_invalida
+=== CONT  TestCompatibilityTable_ValidateCombination
+=== PAUSE TestResolveProfiles/reviewer-tool_invalida
+=== RUN   TestCompatibilityTable_ValidateCombination/combinacao_valida_—_claude_+_claude-sonnet-4-6
+2026/09/10 19:01:24 INFO connection closed cause="peer connection closed"
+=== CONT  TestCompatibilityTable_Models
+2026/09/10 19:01:24 INFO connection closed cause="io: read/write on closed pipe"
+=== PAUSE TestCompatibilityTable_ValidateCombination/combinacao_valida_—_claude_+_claude-sonnet-4-6
+=== RUN   TestCompatibilityTable_Models/claude
+=== RUN   TestCompatibilityTable_ValidateCombination/model_vazio_em_ferramenta_conhecida_—_valido
+=== CONT  TestCompatibilityTableContainsGemini
+=== PAUSE TestCompatibilityTable_ValidateCombination/model_vazio_em_ferramenta_conhecida_—_valido
+=== PAUSE TestCompatibilityTable_Models/claude
+=== RUN   TestCompatibilityTable_ValidateCombination/modelo_invalido_para_ferramenta_conhecida
+=== RUN   TestCompatibilityTable_Models/codex
+=== CONT  TestNewExecutionProfile
+=== PAUSE TestCompatibilityTable_Models/codex
+=== CONT  TestCompatibilityTable_IsSupported
+=== RUN   TestInferProvider/claude
+=== PAUSE TestCompatibilityTable_ValidateCombination/modelo_invalido_para_ferramenta_conhecida
+=== RUN   TestCompatibilityTable_IsSupported/claude_+_claude-opus-4-7
+=== PAUSE TestInferProvider/claude
+=== PAUSE TestCompatibilityTable_IsSupported/claude_+_claude-opus-4-7
+=== RUN   TestInferProvider/codex
+=== RUN   TestCompatibilityTable_IsSupported/claude_+_claude-opus-4-6
+=== PAUSE TestInferProvider/codex
+=== PAUSE TestCompatibilityTable_IsSupported/claude_+_claude-opus-4-6
+=== RUN   TestInferProvider/gemini
+=== RUN   TestCompatibilityTable_IsSupported/claude_+_claude-sonnet-4-6
+=== RUN   TestNewExecutionProfile/executor_com_claude_sem_model
+=== PAUSE TestInferProvider/gemini
+=== PAUSE TestCompatibilityTable_IsSupported/claude_+_claude-sonnet-4-6
+=== RUN   TestInferProvider/copilot
+=== RUN   TestCompatibilityTable_IsSupported/claude_+_claude-haiku-4-5
+=== PAUSE TestInferProvider/copilot
+=== RUN   TestInferProvider/unknown
+=== PAUSE TestInferProvider/unknown
+=== RUN   TestInferProvider/#00
+=== PAUSE TestInferProvider/#00
+=== PAUSE TestCompatibilityTable_IsSupported/claude_+_claude-haiku-4-5
+=== RUN   TestCompatibilityTable_IsSupported/codex_+_gpt-5.5
+=== PAUSE TestCompatibilityTable_IsSupported/codex_+_gpt-5.5
+=== CONT  TestACPInvoker_Invoke_ExitCodes
+=== RUN   TestCompatibilityTable_IsSupported/codex_+_gpt-5.4
+=== RUN   TestACPInvoker_Invoke_ExitCodes/none
+=== PAUSE TestCompatibilityTable_IsSupported/codex_+_gpt-5.4
+=== PAUSE TestACPInvoker_Invoke_ExitCodes/none
+=== RUN   TestCompatibilityTable_IsSupported/codex_+_gpt-5.4-mini
+=== RUN   TestACPInvoker_Invoke_ExitCodes/permission_denied
+=== PAUSE TestACPInvoker_Invoke_ExitCodes/permission_denied
+=== PAUSE TestCompatibilityTable_IsSupported/codex_+_gpt-5.4-mini
+=== RUN   TestACPInvoker_Invoke_ExitCodes/activity_timeout
+=== RUN   TestCompatibilityTable_IsSupported/codex_+_gpt-5.3-codex
+=== PAUSE TestCompatibilityTable_IsSupported/codex_+_gpt-5.3-codex
+=== RUN   TestCompatibilityTable_IsSupported/codex_+_gpt-5.3-codex-spark
+=== PAUSE TestCompatibilityTable_IsSupported/codex_+_gpt-5.3-codex-spark
+=== RUN   TestCompatibilityTable_IsSupported/gemini_+_auto
+=== PAUSE TestCompatibilityTable_IsSupported/gemini_+_auto
+=== RUN   TestCompatibilityTable_IsSupported/gemini_+_pro
+=== PAUSE TestCompatibilityTable_IsSupported/gemini_+_pro
+=== PAUSE TestACPInvoker_Invoke_ExitCodes/activity_timeout
+=== PAUSE TestNewExecutionProfile/executor_com_claude_sem_model
+=== RUN   TestACPInvoker_Invoke_ExitCodes/context_canceled
+=== RUN   TestNewExecutionProfile/executor_com_claude_com_model
+=== PAUSE TestACPInvoker_Invoke_ExitCodes/context_canceled
+=== PAUSE TestNewExecutionProfile/executor_com_claude_com_model
+=== RUN   TestACPInvoker_Invoke_ExitCodes/tool_error
+=== RUN   TestNewExecutionProfile/reviewer_com_codex
+=== PAUSE TestNewExecutionProfile/reviewer_com_codex
+=== RUN   TestNewExecutionProfile/executor_com_gemini
+=== PAUSE TestNewExecutionProfile/executor_com_gemini
+=== RUN   TestNewExecutionProfile/executor_com_copilot
+2026/09/10 19:01:24 INFO connection closed cause="io: read/write on closed pipe"
+=== PAUSE TestNewExecutionProfile/executor_com_copilot
+=== RUN   TestNewExecutionProfile/role_invalido
+=== CONT  TestACPInvoker_SetLiveOutput
+2026/09/10 19:01:24 INFO connection closed cause="peer connection closed"
+=== CONT  TestACPInvoker_ImplementsAgentInvokerInterface
+=== PAUSE TestACPInvoker_Invoke_ExitCodes/tool_error
+=== CONT  TestCodexCompatibilityTable_T34_T35
+=== CONT  TestSentinelErrors/ErrToolInvalida_via_NewExecutionProfile
+=== RUN   TestCodexCompatibilityTable_T34_T35/T-34:_codex_+_gpt-5.5_aceito_sem_allow-unknown-model
+=== PAUSE TestCodexCompatibilityTable_T34_T35/T-34:_codex_+_gpt-5.5_aceito_sem_allow-unknown-model
+=== RUN   TestCodexCompatibilityTable_T34_T35/T-35:_codex_+_gpt-4_rejeitado_sem_allow-unknown-model
+=== PAUSE TestCodexCompatibilityTable_T34_T35/T-35:_codex_+_gpt-4_rejeitado_sem_allow-unknown-model
+=== RUN   TestCodexCompatibilityTable_T34_T35/T-35:_codex_+_gpt-4_aceito_com_allow-unknown-model=true
+=== PAUSE TestCodexCompatibilityTable_T34_T35/T-35:_codex_+_gpt-4_aceito_com_allow-unknown-model=true
+=== PAUSE TestNewExecutionProfile/role_invalido
+=== RUN   TestNewExecutionProfile/role_vazio
+=== PAUSE TestNewExecutionProfile/role_vazio
+=== RUN   TestNewExecutionProfile/tool_invalida
+=== PAUSE TestNewExecutionProfile/tool_invalida
+=== CONT  TestSentinelErrors/ErrFlagsConflitantes_via_resolveProfiles
+=== RUN   TestNewExecutionProfile/tool_vazia
+=== PAUSE TestNewExecutionProfile/tool_vazia
+=== CONT  TestSentinelErrors/ErrRoleInvalido_via_NewExecutionProfile
+=== RUN   TestNewExecutionProfile/role_e_tool_invalidos_—_role_verificado_primeiro
+=== RUN   TestCompatibilityTableContainsGemini/gemini+gemini-2.5-pro
+=== PAUSE TestNewExecutionProfile/role_e_tool_invalidos_—_role_verificado_primeiro
+=== PAUSE TestCompatibilityTableContainsGemini/gemini+gemini-2.5-pro
+=== CONT  TestBuildRuntimeConfig_TimeoutVariedades/malformado-abc
+=== RUN   TestCompatibilityTableContainsGemini/gemini+pro
+=== CONT  TestBuildRuntimeConfig_TimeoutVariedades/malformado-10x
+=== PAUSE TestCompatibilityTableContainsGemini/gemini+pro
+=== CONT  TestBuildRuntimeConfig_TimeoutVariedades/1h30m
+=== RUN   TestCompatibilityTableContainsGemini/gemini+flash
+=== RUN   TestCompatibilityTable_ValidateCombination/ferramenta_desconhecida_com_model
+=== PAUSE TestCompatibilityTableContainsGemini/gemini+flash
+=== CONT  TestBuildRuntimeConfig_TimeoutVariedades/2m
+=== CONT  TestBuildRuntimeConfig_TimeoutVariedades/30s
+=== CONT  TestBuildRuntimeConfig_ApplyDefaultsNormalization/negativo_normalizado_para_1
+=== RUN   TestCompatibilityTableContainsGemini/gemini+flash-lite
+=== CONT  TestBuildRuntimeConfig_ApplyDefaultsNormalization/positivos_preservados
+=== PAUSE TestCompatibilityTableContainsGemini/gemini+flash-lite
+=== RUN   TestCompatibilityTableContainsGemini/gemini+gemini-2.5-flash
+=== PAUSE TestCompatibilityTableContainsGemini/gemini+gemini-2.5-flash
+=== RUN   TestCompatibilityTableContainsGemini/gemini+gemini-2.5-flash-lite
+=== PAUSE TestCompatibilityTableContainsGemini/gemini+gemini-2.5-flash-lite
+=== RUN   TestCompatibilityTableContainsGemini/gemini+gemini-3-pro-preview
+=== PAUSE TestCompatibilityTableContainsGemini/gemini+gemini-3-pro-preview
+=== RUN   TestCompatibilityTableContainsGemini/gemini+auto
+=== PAUSE TestCompatibilityTableContainsGemini/gemini+auto
+=== RUN   TestCompatibilityTableContainsGemini/gemini_rejeita_modelo_de_outra_ferramenta
+=== PAUSE TestCompatibilityTableContainsGemini/gemini_rejeita_modelo_de_outra_ferramenta
+=== PAUSE TestCompatibilityTable_ValidateCombination/ferramenta_desconhecida_com_model
+=== RUN   TestCompatibilityTableContainsGemini/gemini_tem_pelo_menos_6_modelos_catalogados
+=== PAUSE TestCompatibilityTableContainsGemini/gemini_tem_pelo_menos_6_modelos_catalogados
+=== RUN   TestCompatibilityTable_ValidateCombination/ferramenta_desconhecida_model_vazio
+=== CONT  TestBuildRuntimeConfig_ApplyDefaultsNormalization/zero_normalizado_para_1
+=== PAUSE TestCompatibilityTable_ValidateCombination/ferramenta_desconhecida_model_vazio
+=== CONT  TestBuildRuntimeConfig_ParidadeCLIs/gemini
+=== CONT  TestBuildRuntimeConfig_ParidadeCLIs/claude
+=== CONT  TestBuildRuntimeConfig_ParidadeCLIs/codex
+=== CONT  TestResolveProfileFromAgent_CompatibilityValidation/T-13_positivo:_claude_+_claude-opus-4-7_—_aceito
+=== CONT  TestResolveProfileFromAgent_CompatibilityValidation/override_CLI_model_compativel_prevalece_sobre_agent_incompativel
+=== CONT  TestResolveProfileFromAgent_CompatibilityValidation/modelo_vazio_—_sem_validacao,_sem_erro
+=== CONT  TestResolveProfileFromAgent_CompatibilityValidation/T-13_negativo:_claude_+_gpt-5.4_—_erro_acionavel
+=== CONT  TestBuildRuntimeConfig_ParidadeCLIs/copilot
+=== CONT  TestErrModeloIncompativel_Sentinela/wrapping_contextual_e_verificavel_via_errors.Is
+=== CONT  TestErrModeloIncompativel_Sentinela/ferramenta_desconhecida_model_vazio_gera_ErrModeloIncompativel
+=== CONT  TestResolveProfiles/modo_simples_—_apenas_tool
+=== CONT  TestResolveProfiles/flags_conflitantes_—_tool_+_reviewer-tool
+=== CONT  TestResolveProfiles/reviewer-tool_invalida
+=== CONT  TestResolveProfiles/executor-tool_invalida
+=== CONT  TestResolveProfileFromAgent_CompatibilityValidation/T-13_bypass:_claude_+_modelo-novo_+_allowUnknownModel=true_—_aceito
+=== CONT  TestResolveProfiles/modo_avancado_—_reviewer_herda_executor_com_model
+=== CONT  TestResolveProfiles/modo_avancado_—_executor_e_reviewer_distintos
+=== CONT  TestResolveProfiles/modo_avancado_—_apenas_executor-tool
+=== CONT  TestResolveProfiles/flags_conflitantes_—_tool_+_executor-tool
+=== CONT  TestResolveProfiles/executor-model_sem_executor-tool
+=== CONT  TestInferProvider/claude
+=== CONT  TestInferProvider/copilot
+=== CONT  TestBuildRuntimeConfig_TimeoutVariedades/vazio
+=== CONT  TestInferProvider/codex
+=== CONT  TestInferProvider/gemini
+=== CONT  TestInferProvider/unknown
+=== CONT  TestACPInvoker_Invoke_ExitCodes/none
+=== CONT  TestACPInvoker_Invoke_ExitCodes/tool_error
+=== CONT  TestResolveProfiles/reviewer-model_sem_reviewer-tool
+=== CONT  TestACPInvoker_Invoke_ExitCodes/activity_timeout
+=== CONT  TestCodexCompatibilityTable_T34_T35/T-34:_codex_+_gpt-5.5_aceito_sem_allow-unknown-model
+=== CONT  TestCodexCompatibilityTable_T34_T35/T-35:_codex_+_gpt-4_aceito_com_allow-unknown-model=true
+=== CONT  TestCodexCompatibilityTable_T34_T35/T-35:_codex_+_gpt-4_rejeitado_sem_allow-unknown-model
+=== CONT  TestNewExecutionProfile/executor_com_claude_sem_model
+=== CONT  TestNewExecutionProfile/role_e_tool_invalidos_—_role_verificado_primeiro
+=== CONT  TestNewExecutionProfile/tool_vazia
+=== CONT  TestNewExecutionProfile/tool_invalida
+=== CONT  TestNewExecutionProfile/role_vazio
+=== CONT  TestNewExecutionProfile/role_invalido
+=== CONT  TestNewExecutionProfile/executor_com_copilot
+=== CONT  TestNewExecutionProfile/executor_com_gemini
+=== CONT  TestNewExecutionProfile/reviewer_com_codex
+=== CONT  TestNewExecutionProfile/executor_com_claude_com_model
+=== CONT  TestCompatibilityTableContainsGemini/gemini+gemini-2.5-pro
+=== CONT  TestCompatibilityTableContainsGemini/gemini+gemini-3-pro-preview
+=== CONT  TestCompatibilityTableContainsGemini/gemini+gemini-2.5-flash-lite
+=== CONT  TestCompatibilityTableContainsGemini/gemini+gemini-2.5-flash
+=== CONT  TestInferProvider/#00
+=== CONT  TestCompatibilityTableContainsGemini/gemini+flash-lite
+=== CONT  TestCompatibilityTableContainsGemini/gemini+auto
+=== CONT  TestCompatibilityTableContainsGemini/gemini+pro
+=== CONT  TestCompatibilityTableContainsGemini/gemini_tem_pelo_menos_6_modelos_catalogados
+=== CONT  TestCompatibilityTableContainsGemini/gemini_rejeita_modelo_de_outra_ferramenta
+=== CONT  TestCompatibilityTable_ValidateCombination/combinacao_valida_—_claude_+_claude-sonnet-4-6
+=== CONT  TestCompatibilityTable_ValidateCombination/ferramenta_desconhecida_model_vazio
+=== CONT  TestCompatibilityTable_ValidateCombination/ferramenta_desconhecida_com_model
+=== CONT  TestCompatibilityTable_ValidateCombination/modelo_invalido_para_ferramenta_conhecida
+=== CONT  TestCompatibilityTable_ValidateCombination/model_vazio_em_ferramenta_conhecida_—_valido
+=== CONT  TestACPInvoker_Invoke_ExitCodes/permission_denied
+=== CONT  TestCompatibilityTableContainsGemini/gemini+flash
+--- PASS: TestACPInvoker_Retry_DefaultsSequential (0.00s)
+--- PASS: TestACPInvoker_Retry_TransientError (0.00s)
+--- PASS: TestACPInvoker_Invoke_HappyPath (0.00s)
+--- PASS: TestACPInvoker_SetLiveOutput (0.00s)
+--- PASS: TestACPInvoker_ImplementsAgentInvokerInterface (0.00s)
+=== CONT  TestSentinelErrors/ErrToolInvalida_via_resolveProfiles_executor-tool_invalida
+=== PAUSE TestValidateModelForIDE/T-13_negativo:_claude_+_gpt-5.4_—_erro_citando_modelos_validos
+=== RUN   TestValidateModelForIDE/T-13_bypass:_claude_+_modelo-novo_+_allowUnknown=true_—_aceito
+=== PAUSE TestValidateModelForIDE/T-13_bypass:_claude_+_modelo-novo_+_allowUnknown=true_—_aceito
+=== CONT  TestACPInvoker_Invoke_ExitCodes/context_canceled
+=== RUN   TestValidateModelForIDE/modelo_vazio_—_sem_validacao,_sem_erro
+=== RUN   TestCompatibilityTable_Models/gemini
+=== PAUSE TestValidateModelForIDE/modelo_vazio_—_sem_validacao,_sem_erro
+=== PAUSE TestCompatibilityTable_Models/gemini
+=== RUN   TestValidateModelForIDE/ide_desconhecido_com_modelo_—_sem_erro_(IDE_nao_mapeado,_deixa_mapIDEToSpec_capturar)
+=== PAUSE TestValidateModelForIDE/ide_desconhecido_com_modelo_—_sem_erro_(IDE_nao_mapeado,_deixa_mapIDEToSpec_capturar)
+=== RUN   TestCompatibilityTable_Models/copilot
+=== RUN   TestValidateModelForIDE/gemini_+_gemini-2.5-pro_—_aceito
+=== PAUSE TestValidateModelForIDE/gemini_+_gemini-2.5-pro_—_aceito
+=== RUN   TestValidateModelForIDE/codex_+_claude-opus-4-7_—_incompativel,_cita_modelos_validos
+=== PAUSE TestValidateModelForIDE/codex_+_claude-opus-4-7_—_incompativel,_cita_modelos_validos
+=== CONT  TestValidateModelForIDE/T-13_positivo:_claude_+_claude-opus-4-7_—_aceito
+=== PAUSE TestCompatibilityTable_Models/copilot
+=== RUN   TestCompatibilityTable_Models/ferramenta_desconhecida_retorna_nil
+=== PAUSE TestCompatibilityTable_Models/ferramenta_desconhecida_retorna_nil
+=== RUN   TestCompatibilityTable_Models/ferramenta_vazia_retorna_nil
+=== PAUSE TestCompatibilityTable_Models/ferramenta_vazia_retorna_nil
+=== CONT  TestCompatibilityTable_Models/claude
+=== CONT  TestValidateModelForIDE/codex_+_claude-opus-4-7_—_incompativel,_cita_modelos_validos
+--- PASS: TestSentinelErrors (0.00s)
+    --- PASS: TestSentinelErrors/ErrToolInvalida_via_NewExecutionProfile (0.00s)
+    --- PASS: TestSentinelErrors/ErrFlagsConflitantes_via_resolveProfiles (0.00s)
+    --- PASS: TestSentinelErrors/ErrRoleInvalido_via_NewExecutionProfile (0.00s)
+    --- PASS: TestSentinelErrors/ErrToolInvalida_via_resolveProfiles_executor-tool_invalida (0.00s)
+=== CONT  TestCompatibilityTable_Models/codex
+=== RUN   TestCompatibilityTable_IsSupported/gemini_+_flash
+=== CONT  TestValidateModelForIDE/gemini_+_gemini-2.5-pro_—_aceito
+=== PAUSE TestCompatibilityTable_IsSupported/gemini_+_flash
+=== CONT  TestValidateModelForIDE/ide_desconhecido_com_modelo_—_sem_erro_(IDE_nao_mapeado,_deixa_mapIDEToSpec_capturar)
+=== RUN   TestCompatibilityTable_IsSupported/gemini_+_flash-lite
+=== CONT  TestValidateModelForIDE/modelo_vazio_—_sem_validacao,_sem_erro
+=== PAUSE TestCompatibilityTable_IsSupported/gemini_+_flash-lite
+=== CONT  TestValidateModelForIDE/T-13_bypass:_claude_+_modelo-novo_+_allowUnknown=true_—_aceito
+=== CONT  TestValidateModelForIDE/T-13_negativo:_claude_+_gpt-5.4_—_erro_citando_modelos_validos
+--- PASS: TestBuildRuntimeConfig_ApplyDefaultsNormalization (0.00s)
+    --- PASS: TestBuildRuntimeConfig_ApplyDefaultsNormalization/negativo_normalizado_para_1 (0.00s)
+    --- PASS: TestBuildRuntimeConfig_ApplyDefaultsNormalization/positivos_preservados (0.00s)
+    --- PASS: TestBuildRuntimeConfig_ApplyDefaultsNormalization/zero_normalizado_para_1 (0.00s)
+=== RUN   TestCompatibilityTable_IsSupported/gemini_+_gemini-2.5-pro
+=== PAUSE TestCompatibilityTable_IsSupported/gemini_+_gemini-2.5-pro
+--- PASS: TestErrModeloIncompativel_Sentinela (0.00s)
+    --- PASS: TestErrModeloIncompativel_Sentinela/wrapping_contextual_e_verificavel_via_errors.Is (0.00s)
+    --- PASS: TestErrModeloIncompativel_Sentinela/ferramenta_desconhecida_model_vazio_gera_ErrModeloIncompativel (0.00s)
+=== RUN   TestCompatibilityTable_IsSupported/gemini_+_gemini-2.5-flash
+=== PAUSE TestCompatibilityTable_IsSupported/gemini_+_gemini-2.5-flash
+=== RUN   TestCompatibilityTable_IsSupported/gemini_+_gemini-2.5-flash-lite
+--- PASS: TestResolveProfileFromAgent_CompatibilityValidation (0.00s)
+    --- PASS: TestResolveProfileFromAgent_CompatibilityValidation/T-13_positivo:_claude_+_claude-opus-4-7_—_aceito (0.00s)
+    --- PASS: TestResolveProfileFromAgent_CompatibilityValidation/modelo_vazio_—_sem_validacao,_sem_erro (0.00s)
+    --- PASS: TestResolveProfileFromAgent_CompatibilityValidation/override_CLI_model_compativel_prevalece_sobre_agent_incompativel (0.00s)
+    --- PASS: TestResolveProfileFromAgent_CompatibilityValidation/T-13_negativo:_claude_+_gpt-5.4_—_erro_acionavel (0.00s)
+    --- PASS: TestResolveProfileFromAgent_CompatibilityValidation/T-13_bypass:_claude_+_modelo-novo_+_allowUnknownModel=true_—_aceito (0.00s)
+=== PAUSE TestCompatibilityTable_IsSupported/gemini_+_gemini-2.5-flash-lite
+=== CONT  TestCompatibilityTable_Models/copilot
+=== CONT  TestCompatibilityTable_Models/gemini
+=== CONT  TestCompatibilityTable_Models/ferramenta_desconhecida_retorna_nil
+=== RUN   TestCompatibilityTable_IsSupported/gemini_+_gemini-3-pro-preview
+=== CONT  TestCompatibilityTable_Models/ferramenta_vazia_retorna_nil
+=== PAUSE TestCompatibilityTable_IsSupported/gemini_+_gemini-3-pro-preview
+=== RUN   TestCompatibilityTable_IsSupported/copilot_+_claude-sonnet-4.5
+--- PASS: TestBuildRuntimeConfig_TimeoutVariedades (0.00s)
+    --- PASS: TestBuildRuntimeConfig_TimeoutVariedades/malformado-abc (0.00s)
+    --- PASS: TestBuildRuntimeConfig_TimeoutVariedades/malformado-10x (0.00s)
+    --- PASS: TestBuildRuntimeConfig_TimeoutVariedades/1h30m (0.00s)
+    --- PASS: TestBuildRuntimeConfig_TimeoutVariedades/2m (0.00s)
+    --- PASS: TestBuildRuntimeConfig_TimeoutVariedades/30s (0.00s)
+    --- PASS: TestBuildRuntimeConfig_TimeoutVariedades/vazio (0.00s)
+=== PAUSE TestCompatibilityTable_IsSupported/copilot_+_claude-sonnet-4.5
+=== RUN   TestCompatibilityTable_IsSupported/copilot_+_claude-sonnet-4.6
+=== PAUSE TestCompatibilityTable_IsSupported/copilot_+_claude-sonnet-4.6
+=== RUN   TestCompatibilityTable_IsSupported/copilot_+_gpt-5.4
+=== PAUSE TestCompatibilityTable_IsSupported/copilot_+_gpt-5.4
+--- PASS: TestResolveProfiles (0.00s)
+    --- PASS: TestResolveProfiles/modo_simples_—_apenas_tool (0.00s)
+    --- PASS: TestResolveProfiles/flags_conflitantes_—_tool_+_reviewer-tool (0.00s)
+    --- PASS: TestResolveProfiles/reviewer-tool_invalida (0.00s)
+    --- PASS: TestResolveProfiles/executor-tool_invalida (0.00s)
+    --- PASS: TestResolveProfiles/modo_avancado_—_reviewer_herda_executor_com_model (0.00s)
+    --- PASS: TestResolveProfiles/modo_avancado_—_executor_e_reviewer_distintos (0.00s)
+    --- PASS: TestResolveProfiles/modo_avancado_—_apenas_executor-tool (0.00s)
+    --- PASS: TestResolveProfiles/flags_conflitantes_—_tool_+_executor-tool (0.00s)
+    --- PASS: TestResolveProfiles/executor-model_sem_executor-tool (0.00s)
+    --- PASS: TestResolveProfiles/reviewer-model_sem_reviewer-tool (0.00s)
+=== RUN   TestCompatibilityTable_IsSupported/copilot_+_gpt-5.4-mini
+--- PASS: TestCodexCompatibilityTable_T34_T35 (0.00s)
+    --- PASS: TestCodexCompatibilityTable_T34_T35/T-34:_codex_+_gpt-5.5_aceito_sem_allow-unknown-model (0.00s)
+    --- PASS: TestCodexCompatibilityTable_T34_T35/T-35:_codex_+_gpt-4_aceito_com_allow-unknown-model=true (0.00s)
+    --- PASS: TestCodexCompatibilityTable_T34_T35/T-35:_codex_+_gpt-4_rejeitado_sem_allow-unknown-model (0.00s)
+=== PAUSE TestCompatibilityTable_IsSupported/copilot_+_gpt-5.4-mini
+=== RUN   TestCompatibilityTable_IsSupported/copilot_+_haiku-4.5
+=== PAUSE TestCompatibilityTable_IsSupported/copilot_+_haiku-4.5
+--- PASS: TestNewExecutionProfile (0.00s)
+    --- PASS: TestNewExecutionProfile/executor_com_claude_sem_model (0.00s)
+    --- PASS: TestNewExecutionProfile/role_e_tool_invalidos_—_role_verificado_primeiro (0.00s)
+    --- PASS: TestNewExecutionProfile/tool_vazia (0.00s)
+    --- PASS: TestNewExecutionProfile/tool_invalida (0.00s)
+    --- PASS: TestNewExecutionProfile/role_vazio (0.00s)
+    --- PASS: TestNewExecutionProfile/role_invalido (0.00s)
+    --- PASS: TestNewExecutionProfile/executor_com_copilot (0.00s)
+    --- PASS: TestNewExecutionProfile/executor_com_gemini (0.00s)
+    --- PASS: TestNewExecutionProfile/reviewer_com_codex (0.00s)
+    --- PASS: TestNewExecutionProfile/executor_com_claude_com_model (0.00s)
+=== RUN   TestCompatibilityTable_IsSupported/copilot_+_auto
+=== PAUSE TestCompatibilityTable_IsSupported/copilot_+_auto
+=== RUN   TestCompatibilityTable_IsSupported/claude_+_model_vazio
+=== PAUSE TestCompatibilityTable_IsSupported/claude_+_model_vazio
+--- PASS: TestCompatibilityTable_ValidateCombination (0.00s)
+    --- PASS: TestCompatibilityTable_ValidateCombination/combinacao_valida_—_claude_+_claude-sonnet-4-6 (0.00s)
+    --- PASS: TestCompatibilityTable_ValidateCombination/ferramenta_desconhecida_model_vazio (0.00s)
+    --- PASS: TestCompatibilityTable_ValidateCombination/ferramenta_desconhecida_com_model (0.00s)
+    --- PASS: TestCompatibilityTable_ValidateCombination/modelo_invalido_para_ferramenta_conhecida (0.00s)
+    --- PASS: TestCompatibilityTable_ValidateCombination/model_vazio_em_ferramenta_conhecida_—_valido (0.00s)
+=== RUN   TestCompatibilityTable_IsSupported/codex_+_model_vazio
+=== PAUSE TestCompatibilityTable_IsSupported/codex_+_model_vazio
+--- PASS: TestACPInvoker_Invoke_ExitCodes (0.00s)
+    --- PASS: TestACPInvoker_Invoke_ExitCodes/none (0.00s)
+    --- PASS: TestACPInvoker_Invoke_ExitCodes/tool_error (0.00s)
+    --- PASS: TestACPInvoker_Invoke_ExitCodes/activity_timeout (0.00s)
+    --- PASS: TestACPInvoker_Invoke_ExitCodes/permission_denied (0.00s)
+    --- PASS: TestACPInvoker_Invoke_ExitCodes/context_canceled (0.00s)
+=== RUN   TestCompatibilityTable_IsSupported/gemini_+_model_vazio
+--- PASS: TestCompatibilityTableContainsGemini (0.00s)
+    --- PASS: TestCompatibilityTableContainsGemini/gemini+gemini-2.5-pro (0.00s)
+    --- PASS: TestCompatibilityTableContainsGemini/gemini+gemini-3-pro-preview (0.00s)
+    --- PASS: TestCompatibilityTableContainsGemini/gemini+gemini-2.5-flash-lite (0.00s)
+    --- PASS: TestCompatibilityTableContainsGemini/gemini+gemini-2.5-flash (0.00s)
+    --- PASS: TestCompatibilityTableContainsGemini/gemini+flash-lite (0.00s)
+    --- PASS: TestCompatibilityTableContainsGemini/gemini+auto (0.00s)
+    --- PASS: TestCompatibilityTableContainsGemini/gemini+pro (0.00s)
+    --- PASS: TestCompatibilityTableContainsGemini/gemini_tem_pelo_menos_6_modelos_catalogados (0.00s)
+    --- PASS: TestCompatibilityTableContainsGemini/gemini_rejeita_modelo_de_outra_ferramenta (0.00s)
+    --- PASS: TestCompatibilityTableContainsGemini/gemini+flash (0.00s)
+=== PAUSE TestCompatibilityTable_IsSupported/gemini_+_model_vazio
+=== RUN   TestCompatibilityTable_IsSupported/copilot_+_model_vazio
+=== PAUSE TestCompatibilityTable_IsSupported/copilot_+_model_vazio
+=== RUN   TestCompatibilityTable_IsSupported/claude_+_modelo_desconhecido
+=== PAUSE TestCompatibilityTable_IsSupported/claude_+_modelo_desconhecido
+=== RUN   TestCompatibilityTable_IsSupported/codex_+_modelo_desconhecido
+=== PAUSE TestCompatibilityTable_IsSupported/codex_+_modelo_desconhecido
+--- PASS: TestBuildRuntimeConfig_ParidadeCLIs (0.00s)
+    --- PASS: TestBuildRuntimeConfig_ParidadeCLIs/gemini (0.00s)
+    --- PASS: TestBuildRuntimeConfig_ParidadeCLIs/claude (0.00s)
+    --- PASS: TestBuildRuntimeConfig_ParidadeCLIs/codex (0.00s)
+    --- PASS: TestBuildRuntimeConfig_ParidadeCLIs/copilot (0.00s)
+=== RUN   TestCompatibilityTable_IsSupported/gemini_+_modelo_desconhecido
+--- PASS: TestInferProvider (0.00s)
+    --- PASS: TestInferProvider/claude (0.00s)
+    --- PASS: TestInferProvider/copilot (0.00s)
+    --- PASS: TestInferProvider/codex (0.00s)
+    --- PASS: TestInferProvider/gemini (0.00s)
+    --- PASS: TestInferProvider/unknown (0.00s)
+    --- PASS: TestInferProvider/#00 (0.00s)
+=== PAUSE TestCompatibilityTable_IsSupported/gemini_+_modelo_desconhecido
+--- PASS: TestCompatibilityTable_Models (0.00s)
+    --- PASS: TestCompatibilityTable_Models/claude (0.00s)
+    --- PASS: TestCompatibilityTable_Models/codex (0.00s)
+    --- PASS: TestCompatibilityTable_Models/copilot (0.00s)
+    --- PASS: TestCompatibilityTable_Models/ferramenta_desconhecida_retorna_nil (0.00s)
+    --- PASS: TestCompatibilityTable_Models/gemini (0.00s)
+    --- PASS: TestCompatibilityTable_Models/ferramenta_vazia_retorna_nil (0.00s)
+=== RUN   TestCompatibilityTable_IsSupported/copilot_+_modelo_desconhecido
+--- PASS: TestValidateModelForIDE (0.00s)
+    --- PASS: TestValidateModelForIDE/T-13_positivo:_claude_+_claude-opus-4-7_—_aceito (0.00s)
+    --- PASS: TestValidateModelForIDE/codex_+_claude-opus-4-7_—_incompativel,_cita_modelos_validos (0.00s)
+    --- PASS: TestValidateModelForIDE/gemini_+_gemini-2.5-pro_—_aceito (0.00s)
+    --- PASS: TestValidateModelForIDE/ide_desconhecido_com_modelo_—_sem_erro_(IDE_nao_mapeado,_deixa_mapIDEToSpec_capturar) (0.00s)
+    --- PASS: TestValidateModelForIDE/modelo_vazio_—_sem_validacao,_sem_erro (0.00s)
+    --- PASS: TestValidateModelForIDE/T-13_bypass:_claude_+_modelo-novo_+_allowUnknown=true_—_aceito (0.00s)
+    --- PASS: TestValidateModelForIDE/T-13_negativo:_claude_+_gpt-5.4_—_erro_citando_modelos_validos (0.00s)
+=== PAUSE TestCompatibilityTable_IsSupported/copilot_+_modelo_desconhecido
+=== RUN   TestCompatibilityTable_IsSupported/ferramenta_desconhecida_com_model
+=== PAUSE TestCompatibilityTable_IsSupported/ferramenta_desconhecida_com_model
+=== RUN   TestCompatibilityTable_IsSupported/ferramenta_desconhecida_model_vazio
+=== PAUSE TestCompatibilityTable_IsSupported/ferramenta_desconhecida_model_vazio
+=== RUN   TestCompatibilityTable_IsSupported/ferramenta_vazia
+=== PAUSE TestCompatibilityTable_IsSupported/ferramenta_vazia
+=== RUN   TestCompatibilityTable_IsSupported/ferramenta_vazia_model_vazio
+=== PAUSE TestCompatibilityTable_IsSupported/ferramenta_vazia_model_vazio
+=== CONT  TestCompatibilityTable_IsSupported/claude_+_claude-opus-4-7
+=== CONT  TestCompatibilityTable_IsSupported/ferramenta_vazia_model_vazio
+=== CONT  TestCompatibilityTable_IsSupported/gemini_+_pro
+=== CONT  TestCompatibilityTable_IsSupported/ferramenta_desconhecida_com_model
+=== CONT  TestCompatibilityTable_IsSupported/claude_+_claude-haiku-4-5
+=== CONT  TestCompatibilityTable_IsSupported/codex_+_gpt-5.3-codex-spark
+=== CONT  TestCompatibilityTable_IsSupported/copilot_+_gpt-5.4
+=== CONT  TestCompatibilityTable_IsSupported/ferramenta_vazia
+=== CONT  TestCompatibilityTable_IsSupported/codex_+_gpt-5.5
+=== CONT  TestCompatibilityTable_IsSupported/copilot_+_claude-sonnet-4.5
+=== CONT  TestCompatibilityTable_IsSupported/gemini_+_gemini-2.5-flash-lite
+=== CONT  TestCompatibilityTable_IsSupported/gemini_+_modelo_desconhecido
+=== CONT  TestCompatibilityTable_IsSupported/gemini_+_gemini-2.5-flash
+=== CONT  TestCompatibilityTable_IsSupported/gemini_+_auto
+=== CONT  TestCompatibilityTable_IsSupported/copilot_+_auto
+=== CONT  TestCompatibilityTable_IsSupported/gemini_+_flash-lite
+=== CONT  TestCompatibilityTable_IsSupported/claude_+_model_vazio
+=== CONT  TestCompatibilityTable_IsSupported/copilot_+_haiku-4.5
+=== CONT  TestCompatibilityTable_IsSupported/gemini_+_gemini-2.5-pro
+=== CONT  TestCompatibilityTable_IsSupported/codex_+_model_vazio
+=== CONT  TestCompatibilityTable_IsSupported/gemini_+_flash
+=== CONT  TestCompatibilityTable_IsSupported/claude_+_claude-sonnet-4-6
+=== CONT  TestCompatibilityTable_IsSupported/codex_+_gpt-5.4-mini
+=== CONT  TestCompatibilityTable_IsSupported/codex_+_modelo_desconhecido
+=== CONT  TestCompatibilityTable_IsSupported/claude_+_modelo_desconhecido
+=== CONT  TestCompatibilityTable_IsSupported/codex_+_gpt-5.3-codex
+=== CONT  TestCompatibilityTable_IsSupported/codex_+_gpt-5.4
+=== CONT  TestCompatibilityTable_IsSupported/gemini_+_model_vazio
+=== CONT  TestCompatibilityTable_IsSupported/copilot_+_model_vazio
+=== CONT  TestCompatibilityTable_IsSupported/claude_+_claude-opus-4-6
+=== CONT  TestCompatibilityTable_IsSupported/copilot_+_gpt-5.4-mini
+=== CONT  TestCompatibilityTable_IsSupported/copilot_+_claude-sonnet-4.6
+=== CONT  TestCompatibilityTable_IsSupported/gemini_+_gemini-3-pro-preview
+=== CONT  TestCompatibilityTable_IsSupported/copilot_+_modelo_desconhecido
+=== CONT  TestCompatibilityTable_IsSupported/ferramenta_desconhecida_model_vazio
+--- PASS: TestCompatibilityTable_IsSupported (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/claude_+_claude-opus-4-7 (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/gemini_+_pro (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/ferramenta_desconhecida_com_model (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/claude_+_claude-haiku-4-5 (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/codex_+_gpt-5.3-codex-spark (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/codex_+_gpt-5.5 (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/copilot_+_gpt-5.4 (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/gemini_+_gemini-2.5-flash-lite (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/gemini_+_modelo_desconhecido (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/copilot_+_auto (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/copilot_+_claude-sonnet-4.5 (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/ferramenta_vazia (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/copilot_+_haiku-4.5 (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/ferramenta_vazia_model_vazio (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/gemini_+_gemini-2.5-pro (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/gemini_+_auto (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/codex_+_gpt-5.4-mini (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/codex_+_modelo_desconhecido (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/claude_+_modelo_desconhecido (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/gemini_+_gemini-2.5-flash (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/codex_+_gpt-5.4 (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/gemini_+_model_vazio (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/copilot_+_model_vazio (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/copilot_+_gpt-5.4-mini (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/claude_+_claude-opus-4-6 (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/codex_+_gpt-5.3-codex (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/claude_+_model_vazio (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/codex_+_model_vazio (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/gemini_+_gemini-3-pro-preview (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/gemini_+_flash (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/claude_+_claude-sonnet-4-6 (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/gemini_+_flash-lite (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/copilot_+_modelo_desconhecido (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/ferramenta_desconhecida_model_vazio (0.00s)
+    --- PASS: TestCompatibilityTable_IsSupported/copilot_+_claude-sonnet-4.6 (0.00s)
+=== RUN   FuzzParseTaskFile
+=== RUN   FuzzParseTaskFile/seed#0
+=== RUN   FuzzParseTaskFile/seed#1
+=== RUN   FuzzParseTaskFile/seed#2
+=== RUN   FuzzParseTaskFile/seed#3
+=== RUN   FuzzParseTaskFile/seed#4
+=== RUN   FuzzParseTaskFile/seed#5
+=== RUN   FuzzParseTaskFile/seed#6
+=== RUN   FuzzParseTaskFile/seed#7
+=== RUN   FuzzParseTaskFile/be0b4c6bfbfa4441
+--- PASS: FuzzParseTaskFile (0.00s)
+    --- PASS: FuzzParseTaskFile/seed#0 (0.00s)
+    --- PASS: FuzzParseTaskFile/seed#1 (0.00s)
+    --- PASS: FuzzParseTaskFile/seed#2 (0.00s)
+    --- PASS: FuzzParseTaskFile/seed#3 (0.00s)
+    --- PASS: FuzzParseTaskFile/seed#4 (0.00s)
+    --- PASS: FuzzParseTaskFile/seed#5 (0.00s)
+    --- PASS: FuzzParseTaskFile/seed#6 (0.00s)
+    --- PASS: FuzzParseTaskFile/seed#7 (0.00s)
+    --- PASS: FuzzParseTaskFile/be0b4c6bfbfa4441 (0.00s)
+=== RUN   FuzzReadTaskFileStatus
+=== RUN   FuzzReadTaskFileStatus/seed#0
+=== RUN   FuzzReadTaskFileStatus/seed#1
+=== RUN   FuzzReadTaskFileStatus/seed#2
+=== RUN   FuzzReadTaskFileStatus/seed#3
+=== RUN   FuzzReadTaskFileStatus/seed#4
+=== RUN   FuzzReadTaskFileStatus/seed#5
+=== RUN   FuzzReadTaskFileStatus/seed#6
+=== RUN   FuzzReadTaskFileStatus/seed#7
+=== RUN   FuzzReadTaskFileStatus/seed#8
+=== RUN   FuzzReadTaskFileStatus/seed#9
+--- PASS: FuzzReadTaskFileStatus (0.00s)
+    --- PASS: FuzzReadTaskFileStatus/seed#0 (0.00s)
+    --- PASS: FuzzReadTaskFileStatus/seed#1 (0.00s)
+    --- PASS: FuzzReadTaskFileStatus/seed#2 (0.00s)
+    --- PASS: FuzzReadTaskFileStatus/seed#3 (0.00s)
+    --- PASS: FuzzReadTaskFileStatus/seed#4 (0.00s)
+    --- PASS: FuzzReadTaskFileStatus/seed#5 (0.00s)
+    --- PASS: FuzzReadTaskFileStatus/seed#6 (0.00s)
+    --- PASS: FuzzReadTaskFileStatus/seed#7 (0.00s)
+    --- PASS: FuzzReadTaskFileStatus/seed#8 (0.00s)
+    --- PASS: FuzzReadTaskFileStatus/seed#9 (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	0.386s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks	[no test files]

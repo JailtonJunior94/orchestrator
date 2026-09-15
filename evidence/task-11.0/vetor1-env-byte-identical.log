@@ -1,0 +1,6 @@
+=== RUN   TestAcpClient_NilChildEnvInheritsFullEnvironByteIdentical
+2026/09/11 12:20:58 INFO connection closed cause="peer connection closed"
+--- PASS: TestAcpClient_NilChildEnvInheritsFullEnvironByteIdentical (0.28s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client	1.080s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client/mocks	[no test files]

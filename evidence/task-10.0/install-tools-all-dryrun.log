@@ -1,0 +1,107 @@
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+  [dry-run] mkdir -p /tmp/aispec-dryrun-evidence/.agents/skills
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/create-prd -> /tmp/aispec-dryrun-evidence/.agents/skills/create-prd
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/create-technical-specification -> /tmp/aispec-dryrun-evidence/.agents/skills/create-technical-specification
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/create-tasks -> /tmp/aispec-dryrun-evidence/.agents/skills/create-tasks
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/execute-task -> /tmp/aispec-dryrun-evidence/.agents/skills/execute-task
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/execute-all-tasks -> /tmp/aispec-dryrun-evidence/.agents/skills/execute-all-tasks
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/refactor -> /tmp/aispec-dryrun-evidence/.agents/skills/refactor
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/review -> /tmp/aispec-dryrun-evidence/.agents/skills/review
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/analyze-project -> /tmp/aispec-dryrun-evidence/.agents/skills/analyze-project
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/agent-governance -> /tmp/aispec-dryrun-evidence/.agents/skills/agent-governance
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/bugfix -> /tmp/aispec-dryrun-evidence/.agents/skills/bugfix
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/confluence-changelog-publisher -> /tmp/aispec-dryrun-evidence/.agents/skills/confluence-changelog-publisher
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/github-diff-changelog-publisher -> /tmp/aispec-dryrun-evidence/.agents/skills/github-diff-changelog-publisher
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/github-pr-comment-triage -> /tmp/aispec-dryrun-evidence/.agents/skills/github-pr-comment-triage
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/github-release-publication-flow -> /tmp/aispec-dryrun-evidence/.agents/skills/github-release-publication-flow
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/jira-tasks -> /tmp/aispec-dryrun-evidence/.agents/skills/jira-tasks
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/otel-grafana-dashboards -> /tmp/aispec-dryrun-evidence/.agents/skills/otel-grafana-dashboards
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/postman-collection-generator -> /tmp/aispec-dryrun-evidence/.agents/skills/postman-collection-generator
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/prompt-enricher -> /tmp/aispec-dryrun-evidence/.agents/skills/prompt-enricher
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/pull-request -> /tmp/aispec-dryrun-evidence/.agents/skills/pull-request
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/semantic-commit -> /tmp/aispec-dryrun-evidence/.agents/skills/semantic-commit
+  [dry-run] link_or_copy /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3735652253/.agents/skills/us-to-prd -> /tmp/aispec-dryrun-evidence/.agents/skills/us-to-prd
+-> Instalando claude...
+  [dry-run] mkdir -p /tmp/aispec-dryrun-evidence/.claude/skills
+  [dry-run] mkdir -p /tmp/aispec-dryrun-evidence/.claude/agents
+  [dry-run] mkdir -p /tmp/aispec-dryrun-evidence/.claude/rules
+  [dry-run] mkdir -p /tmp/aispec-dryrun-evidence/.claude/scripts
+  [dry-run] mkdir -p /tmp/aispec-dryrun-evidence/.claude/hooks
+  [dry-run] mkdir -p /tmp/aispec-dryrun-evidence/scripts/lib
+  [dry-run] link ../../.agents/skills/create-prd -> /tmp/aispec-dryrun-evidence/.claude/skills/create-prd
+  [dry-run] link ../../.agents/skills/create-technical-specification -> /tmp/aispec-dryrun-evidence/.claude/skills/create-technical-specification
+  [dry-run] link ../../.agents/skills/create-tasks -> /tmp/aispec-dryrun-evidence/.claude/skills/create-tasks
+  [dry-run] link ../../.agents/skills/execute-task -> /tmp/aispec-dryrun-evidence/.claude/skills/execute-task
+  [dry-run] link ../../.agents/skills/execute-all-tasks -> /tmp/aispec-dryrun-evidence/.claude/skills/execute-all-tasks
+  [dry-run] link ../../.agents/skills/refactor -> /tmp/aispec-dryrun-evidence/.claude/skills/refactor
+  [dry-run] link ../../.agents/skills/review -> /tmp/aispec-dryrun-evidence/.claude/skills/review
+  [dry-run] link ../../.agents/skills/analyze-project -> /tmp/aispec-dryrun-evidence/.claude/skills/analyze-project
+  [dry-run] link ../../.agents/skills/agent-governance -> /tmp/aispec-dryrun-evidence/.claude/skills/agent-governance
+  [dry-run] link ../../.agents/skills/bugfix -> /tmp/aispec-dryrun-evidence/.claude/skills/bugfix
+  [dry-run] link ../../.agents/skills/confluence-changelog-publisher -> /tmp/aispec-dryrun-evidence/.claude/skills/confluence-changelog-publisher
+  [dry-run] link ../../.agents/skills/github-diff-changelog-publisher -> /tmp/aispec-dryrun-evidence/.claude/skills/github-diff-changelog-publisher
+  [dry-run] link ../../.agents/skills/github-pr-comment-triage -> /tmp/aispec-dryrun-evidence/.claude/skills/github-pr-comment-triage
+  [dry-run] link ../../.agents/skills/github-release-publication-flow -> /tmp/aispec-dryrun-evidence/.claude/skills/github-release-publication-flow
+  [dry-run] link ../../.agents/skills/jira-tasks -> /tmp/aispec-dryrun-evidence/.claude/skills/jira-tasks
+  [dry-run] link ../../.agents/skills/otel-grafana-dashboards -> /tmp/aispec-dryrun-evidence/.claude/skills/otel-grafana-dashboards
+  [dry-run] link ../../.agents/skills/postman-collection-generator -> /tmp/aispec-dryrun-evidence/.claude/skills/postman-collection-generator
+  [dry-run] link ../../.agents/skills/prompt-enricher -> /tmp/aispec-dryrun-evidence/.claude/skills/prompt-enricher
+  [dry-run] link ../../.agents/skills/pull-request -> /tmp/aispec-dryrun-evidence/.claude/skills/pull-request
+  [dry-run] link ../../.agents/skills/semantic-commit -> /tmp/aispec-dryrun-evidence/.claude/skills/semantic-commit
+  [dry-run] link ../../.agents/skills/us-to-prd -> /tmp/aispec-dryrun-evidence/.claude/skills/us-to-prd
+  [dry-run] copiar .claude/rules/governance.md
+  [dry-run] copiar .claude/scripts/validate-task-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-bugfix-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-refactor-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-review-evidence.sh
+  [dry-run] copiar .claude/hooks/validate-governance.sh
+  [dry-run] copiar .claude/hooks/validate-preload.sh
+  [dry-run] copiar .claude/hooks/validate-session-end.sh
+  [dry-run] copiar scripts/lib/parse-hook-input.sh
+  [dry-run] copiar scripts/lib/check-invocation-depth.sh
+  [dry-run] configurar hooks PreToolUse e PostToolUse em .claude/settings.local.json
+  [dry-run] gerar .claude/agents/*.md via adaptadores
+-> Instalando codex...
+  [dry-run] mkdir -p /tmp/aispec-dryrun-evidence/.codex
+  [dry-run] gerar .codex/config.toml
+  [dry-run] gerar .codex/agents/*.toml via adaptadores
+  [dry-run] copiar .codex/hooks/validate-preload.sh
+-> Instalando copilot...
+  [dry-run] mkdir -p /tmp/aispec-dryrun-evidence/.github/skills
+  [dry-run] mkdir -p /tmp/aispec-dryrun-evidence/.github/agents
+  [dry-run] link ../../.agents/skills/create-prd -> /tmp/aispec-dryrun-evidence/.github/skills/create-prd
+  [dry-run] link ../../.agents/skills/create-technical-specification -> /tmp/aispec-dryrun-evidence/.github/skills/create-technical-specification
+  [dry-run] link ../../.agents/skills/create-tasks -> /tmp/aispec-dryrun-evidence/.github/skills/create-tasks
+  [dry-run] link ../../.agents/skills/execute-task -> /tmp/aispec-dryrun-evidence/.github/skills/execute-task
+  [dry-run] link ../../.agents/skills/execute-all-tasks -> /tmp/aispec-dryrun-evidence/.github/skills/execute-all-tasks
+  [dry-run] link ../../.agents/skills/refactor -> /tmp/aispec-dryrun-evidence/.github/skills/refactor
+  [dry-run] link ../../.agents/skills/review -> /tmp/aispec-dryrun-evidence/.github/skills/review
+  [dry-run] link ../../.agents/skills/analyze-project -> /tmp/aispec-dryrun-evidence/.github/skills/analyze-project
+  [dry-run] link ../../.agents/skills/agent-governance -> /tmp/aispec-dryrun-evidence/.github/skills/agent-governance
+  [dry-run] link ../../.agents/skills/bugfix -> /tmp/aispec-dryrun-evidence/.github/skills/bugfix
+  [dry-run] link ../../.agents/skills/confluence-changelog-publisher -> /tmp/aispec-dryrun-evidence/.github/skills/confluence-changelog-publisher
+  [dry-run] link ../../.agents/skills/github-diff-changelog-publisher -> /tmp/aispec-dryrun-evidence/.github/skills/github-diff-changelog-publisher
+  [dry-run] link ../../.agents/skills/github-pr-comment-triage -> /tmp/aispec-dryrun-evidence/.github/skills/github-pr-comment-triage
+  [dry-run] link ../../.agents/skills/github-release-publication-flow -> /tmp/aispec-dryrun-evidence/.github/skills/github-release-publication-flow
+  [dry-run] link ../../.agents/skills/jira-tasks -> /tmp/aispec-dryrun-evidence/.github/skills/jira-tasks
+  [dry-run] link ../../.agents/skills/otel-grafana-dashboards -> /tmp/aispec-dryrun-evidence/.github/skills/otel-grafana-dashboards
+  [dry-run] link ../../.agents/skills/postman-collection-generator -> /tmp/aispec-dryrun-evidence/.github/skills/postman-collection-generator
+  [dry-run] link ../../.agents/skills/prompt-enricher -> /tmp/aispec-dryrun-evidence/.github/skills/prompt-enricher
+  [dry-run] link ../../.agents/skills/pull-request -> /tmp/aispec-dryrun-evidence/.github/skills/pull-request
+  [dry-run] link ../../.agents/skills/semantic-commit -> /tmp/aispec-dryrun-evidence/.github/skills/semantic-commit
+  [dry-run] link ../../.agents/skills/us-to-prd -> /tmp/aispec-dryrun-evidence/.github/skills/us-to-prd
+  [dry-run] gerar .github/agents/*.agent.md via adaptadores
+  [dry-run] copiar .github/hooks/{validate-preload,validate-governance,post-execute-task,pre-execute-all-tasks,post-wave}.sh
+-> Instalando opencode...
+  [dry-run] mkdir -p /tmp/aispec-dryrun-evidence/.opencode/plugin
+  [dry-run] merge permission block into /tmp/aispec-dryrun-evidence/opencode.json
+-> Gerando governanca contextual...
+  [dry-run] Geraria AGENTS.md (schema 1.0.0, profile standard)
+  [dry-run] Geraria CLAUDE.md
+  [dry-run] Geraria .github/copilot-instructions.md
+  [dry-run] Geraria .codex/config.toml
+
+[dry-run] Nenhum arquivo foi alterado.

@@ -1,0 +1,2 @@
+agente "gemini" foi removido — conjunto suportado: {claude, codex, copilot, opencode}; guia de migracao: docs/migracao-legacy-acp.md#gemini-removido
+exit status 1

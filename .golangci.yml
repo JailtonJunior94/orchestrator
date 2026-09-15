@@ -49,6 +49,12 @@ linters:
         # G703: path traversal via taint — padrão esperado em CLI (changelog.go escreve em path
         # fornecido pelo usuário) e em testes que escrevem em t.TempDir() via filepath.Join
         - G703
+        # G122: operação de filesystem dentro de callback de filepath.Walk — helpers de teste
+        # copiam árvores em t.TempDir(), onde não há superfície de TOCTOU por symlink
+        - G122
+        # G702: command injection via taint — padrão canônico de self-exec de helper de teste
+        # (exec.Command(os.Args[0], ...)), com argumentos constantes do próprio pacote
+        - G702
 
 issues:
   exclude-dirs:

@@ -2,11 +2,13 @@ package agents
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
 
 // Registry descreve o contrato de descoberta e resolucao de agentes declarativos.
@@ -60,6 +62,9 @@ func (r *defaultRegistry) load() {
 				parts = append(parts, errW.Error())
 			}
 			r.cachedErr = fmt.Errorf("descoberta parcial: %s", strings.Join(parts, "; "))
+			if typed := firstRemovedAgentError(errW, errG); typed != nil {
+				r.cachedErr = typed
+			}
 		}
 
 		merged, _ := NewCatalog().mergeWithShadowing(global, workspace)
@@ -80,6 +85,16 @@ func (r *defaultRegistry) Discover(_ context.Context) ([]ResolvedAgent, error) {
 
 // Resolve retorna um agente pelo nome consumindo o cache.
 // Retorna ErrAgentNotFound com mensagem acionavel listando candidatos (RF-17).
+func firstRemovedAgentError(errs ...error) *skills.RemovedAgentError {
+	for _, err := range errs {
+		var removed *skills.RemovedAgentError
+		if errors.As(err, &removed) {
+			return removed
+		}
+	}
+	return nil
+}
+
 func (r *defaultRegistry) Resolve(name string) (ResolvedAgent, error) {
 	r.load()
 
@@ -87,6 +102,10 @@ func (r *defaultRegistry) Resolve(name string) (ResolvedAgent, error) {
 		if a.Name == name {
 			return a, nil
 		}
+	}
+
+	if removed := firstRemovedAgentError(r.cachedErr); removed != nil {
+		return ResolvedAgent{}, removed
 	}
 
 	// Construir mensagem acionavel com candidatos descobertos (RF-17).

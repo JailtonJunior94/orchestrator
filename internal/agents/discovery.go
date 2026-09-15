@@ -1,12 +1,14 @@
 package agents
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"path/filepath"
 	"sort"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
 
 const (
@@ -34,6 +36,7 @@ func (c *Catalog) discoverAgents(fsys fs.FileSystem, scope Scope, root string) (
 
 	var agents []ResolvedAgent
 	var errs []error
+	var removedAgentErr *skills.RemovedAgentError
 
 	for _, entry := range entries {
 		if !entry.IsDir() {
@@ -57,7 +60,10 @@ func (c *Catalog) discoverAgents(fsys fs.FileSystem, scope Scope, root string) (
 
 		agent, err := NewCatalog().ValidateAgentFrontmatter(content, dirName)
 		if err != nil {
-			// Frontmatter invalido: registra e continua.
+			var removed *skills.RemovedAgentError
+			if errors.As(err, &removed) && removedAgentErr == nil {
+				removedAgentErr = removed
+			}
 			log.Printf("info: agente %q ignorado: frontmatter invalido em %q: %v", dirName, agentPath, err)
 			errs = append(errs, fmt.Errorf("validar agente %q: %w", agentPath, err))
 			continue
@@ -72,6 +78,10 @@ func (c *Catalog) discoverAgents(fsys fs.FileSystem, scope Scope, root string) (
 	sort.Slice(agents, func(i, j int) bool {
 		return agents[i].Name < agents[j].Name
 	})
+
+	if removedAgentErr != nil {
+		return agents, removedAgentErr
+	}
 
 	// Retornar erro agregado se houver falhas parciais (sem interromper os agentes validos).
 	if len(errs) > 0 {

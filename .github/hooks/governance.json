@@ -1,22 +1,26 @@
 {
   "version": 1,
   "hooks": {
-    "preToolUse": [
+    "agentStop": [
       {
-        "type": "command",
-        "bash": "bash .github/hooks/validate-preload.sh"
+        "bash": "bash .github/hooks/subagent-stop-wrapper.sh",
+        "type": "command"
+      },
+      {
+        "bash": "AISPEC_HOOK_DECISION_OUTPUT=json bash .github/hooks/validate-session-end.sh",
+        "type": "command"
       }
     ],
     "postToolUse": [
       {
-        "type": "command",
-        "bash": "bash .github/hooks/validate-governance.sh"
+        "bash": "bash .github/hooks/validate-governance.sh",
+        "type": "command"
       }
     ],
-    "stop": [
+    "preToolUse": [
       {
-        "type": "command",
-        "bash": "bash .github/hooks/subagent-stop-wrapper.sh"
+        "bash": "bash .github/hooks/validate-preload.sh",
+        "type": "command"
       }
     ]
   }

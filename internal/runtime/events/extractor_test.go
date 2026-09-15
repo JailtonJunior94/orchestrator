@@ -41,21 +41,24 @@ func TestExtractorFor_ReturnsNullExtractor_ForCopilot(t *testing.T) {
 	}
 }
 
-func TestExtractorFor_ReturnsDifferentExtractors_ForClaudeAndGemini(t *testing.T) {
+func TestExtractorFor_ReturnsNullExtractor_ForOpenCode(t *testing.T) {
+	d := mustParseDriver(t, "opencode")
+	ext := events.NewCatalog().ExtractorFor(d)
+	payload := json.RawMessage(`{"usage":{"cache_read_input_tokens":100}}`)
+	m := ext.Extract(payload)
+	if !m.IsZero() {
+		t.Errorf("opencode deve retornar MetricSet zero; got fields: %v", m.Fields())
+	}
+}
+
+func TestExtractorFor_ReturnsDifferentExtractor_ForClaude(t *testing.T) {
 	claude := events.NewCatalog().ExtractorFor(mustParseDriver(t, "claude"))
-	gemini := events.NewCatalog().ExtractorFor(mustParseDriver(t, "gemini"))
-	// Simplesmente garantir que são tipos distintos verificando comportamento diferente.
 	claudePayload := json.RawMessage(`{"usage":{"cache_read_input_tokens":50,"thoughtTokens":10}}`)
-	geminiPayload := json.RawMessage(`{"usage":{"cache_read_tokens":50,"thoughts_tokens":10}}`)
 
 	cm := claude.Extract(claudePayload)
-	gm := gemini.Extract(geminiPayload)
 
 	if cm.IsZero() {
 		t.Error("claude extractor deve extrair métricas do payload Claude")
-	}
-	if gm.IsZero() {
-		t.Error("gemini extractor deve extrair métricas do payload Gemini")
 	}
 }
 
@@ -134,61 +137,6 @@ func TestClaudeExtractor_InvalidJSON_ReturnsZero(t *testing.T) {
 	m := ext.Extract(json.RawMessage(`{invalid json}`))
 	if !m.IsZero() {
 		t.Errorf("JSON inválido deve retornar MetricSet zero; got: %v", m.Fields())
-	}
-}
-
-// ── geminiExtractor ───────────────────────────────────────────────────────────
-
-func TestGeminiExtractor_FullPayload(t *testing.T) {
-	d := mustParseDriver(t, "gemini")
-	ext := events.NewCatalog().ExtractorFor(d)
-
-	payload := json.RawMessage(`{
-		"usage": {
-			"cache_read_tokens": 100,
-			"effective_context_tokens": 200,
-			"prompt_tokens_billed": 300,
-			"thoughts_tokens": 40
-		}
-	}`)
-
-	m := ext.Extract(payload)
-
-	if m.IsZero() {
-		t.Fatal("MetricSet não deve ser zero para payload Gemini com métricas")
-	}
-	if got := m.CacheReadTokens(); got != 100 {
-		t.Errorf("CacheReadTokens: got %d, want 100", got)
-	}
-	if got := m.ThinkingTokens(); got != 40 {
-		t.Errorf("ThinkingTokens (thoughts_tokens): got %d, want 40", got)
-	}
-	extra := m.Extra()
-	if got := extra["effective_context_tokens"]; got != 200 {
-		t.Errorf("extra[effective_context_tokens]: got %d, want 200", got)
-	}
-	if got := extra["prompt_tokens_billed"]; got != 300 {
-		t.Errorf("extra[prompt_tokens_billed]: got %d, want 300", got)
-	}
-}
-
-func TestGeminiExtractor_AbsentUsage_ReturnsZero(t *testing.T) {
-	d := mustParseDriver(t, "gemini")
-	ext := events.NewCatalog().ExtractorFor(d)
-
-	m := ext.Extract(json.RawMessage(`{"sessionUpdate":"agent_message"}`))
-	if !m.IsZero() {
-		t.Errorf("payload sem usage deve retornar MetricSet zero; got: %v", m.Fields())
-	}
-}
-
-func TestGeminiExtractor_NilPayload_ReturnsZero(t *testing.T) {
-	d := mustParseDriver(t, "gemini")
-	ext := events.NewCatalog().ExtractorFor(d)
-
-	m := ext.Extract(nil)
-	if !m.IsZero() {
-		t.Errorf("payload nil deve retornar MetricSet zero; got: %v", m.Fields())
 	}
 }
 

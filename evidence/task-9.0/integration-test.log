@@ -1,0 +1,363 @@
+=== RUN   TestClaudeMCPNestedAgentE2E
+=== PAUSE TestClaudeMCPNestedAgentE2E
+=== RUN   TestClaudeNormalizationCrossToolE2E
+=== PAUSE TestClaudeNormalizationCrossToolE2E
+=== RUN   TestClaudeMemoryCompactionDirectiveE2E
+=== PAUSE TestClaudeMemoryCompactionDirectiveE2E
+=== RUN   TestClaudeGovernanceHookBlockingE2E
+=== PAUSE TestClaudeGovernanceHookBlockingE2E
+=== RUN   TestClaudeAutoReviewBlocksOnHardIssueE2E
+=== PAUSE TestClaudeAutoReviewBlocksOnHardIssueE2E
+=== RUN   TestClaudeCrossWaveSmokeE2E
+=== PAUSE TestClaudeCrossWaveSmokeE2E
+=== RUN   TestGeminiACPSmoke
+    gemini_acp_smoke_test.go:49: TestGeminiACPSmoke: gemini não disponível no PATH — usando fake ACP server (acpfake)
+=== PAUSE TestGeminiACPSmoke
+=== RUN   TestAutoReviewWithGeminiDriver
+=== PAUSE TestAutoReviewWithGeminiDriver
+=== RUN   TestAutoReviewBlocksOnHardIssuesWithGemini
+=== PAUSE TestAutoReviewBlocksOnHardIssuesWithGemini
+=== RUN   TestAutoReviewInfoMessageEmittedOncePerSession
+=== PAUSE TestAutoReviewInfoMessageEmittedOncePerSession
+=== RUN   TestGeminiHooksDispatch
+=== PAUSE TestGeminiHooksDispatch
+=== RUN   TestMCPNestedAgentSpawnsGeminiSession
+=== PAUSE TestMCPNestedAgentSpawnsGeminiSession
+=== RUN   TestMCPDepthLimitAppliesToGemini
+    gemini_mcp_nested_test.go:273: T-33b: OK — depth limit aplicado corretamente para Gemini: profundidade de aninhamento 4 excede máximo 3
+--- PASS: TestMCPDepthLimitAppliesToGemini (0.15s)
+=== RUN   TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing
+=== PAUSE TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing
+=== RUN   TestPreToolHookDispatchAllowsNonCodeFiles
+=== PAUSE TestPreToolHookDispatchAllowsNonCodeFiles
+=== RUN   TestPostToolHookDispatchBlocksGovernanceFileEdit
+=== PAUSE TestPostToolHookDispatchBlocksGovernanceFileEdit
+=== RUN   TestPostToolHookDispatchAllowsRegularFileEdit
+=== PAUSE TestPostToolHookDispatchAllowsRegularFileEdit
+=== RUN   TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing
+--- PASS: TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing (0.45s)
+=== RUN   TestOpenCodeGovernancePluginAllowsWhenPrerequisiteSatisfied
+--- PASS: TestOpenCodeGovernancePluginAllowsWhenPrerequisiteSatisfied (0.20s)
+=== RUN   TestOpenCodeGovernancePluginIgnoresNonMutatingTools
+--- PASS: TestOpenCodeGovernancePluginIgnoresNonMutatingTools (0.04s)
+=== RUN   TestOpenCodeGovernancePluginTimeoutIsDenial
+--- PASS: TestOpenCodeGovernancePluginTimeoutIsDenial (0.25s)
+=== RUN   TestOpenCodeGovernancePluginOrchestratedFailsClosedWithoutValidator
+--- PASS: TestOpenCodeGovernancePluginOrchestratedFailsClosedWithoutValidator (0.05s)
+=== RUN   TestOpenCodeGovernancePluginMemoizesByToolAndFiles
+--- PASS: TestOpenCodeGovernancePluginMemoizesByToolAndFiles (0.05s)
+=== RUN   TestOpenCodeGovernancePluginStatsValidatorOnceAcrossMultipleTools
+--- PASS: TestOpenCodeGovernancePluginStatsValidatorOnceAcrossMultipleTools (0.34s)
+=== RUN   TestOpenCodeGovernancePluginInteractiveWarnsOnceWithoutValidator
+--- PASS: TestOpenCodeGovernancePluginInteractiveWarnsOnceWithoutValidator (0.04s)
+=== RUN   TestOpenCodeGovernancePluginSessionIdleBlocksActiveTaskWithoutApprovedVerdict
+--- PASS: TestOpenCodeGovernancePluginSessionIdleBlocksActiveTaskWithoutApprovedVerdict (0.07s)
+=== RUN   TestOpenCodeGovernancePluginSessionIdleAllowsWhenNoActiveTask
+--- PASS: TestOpenCodeGovernancePluginSessionIdleAllowsWhenNoActiveTask (0.06s)
+=== RUN   TestOpenCodeGovernancePluginToolExecuteAfterIsSafeNoOp
+--- PASS: TestOpenCodeGovernancePluginToolExecuteAfterIsSafeNoOp (0.04s)
+=== RUN   TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict
+=== PAUSE TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved
+=== RUN   TestPortability_GenerateGovernance
+=== RUN   TestPortability_GenerateGovernance/go-monolith
+=== RUN   TestPortability_GenerateGovernance/node-api
+=== RUN   TestPortability_GenerateGovernance/polyglot-monorepo
+--- PASS: TestPortability_GenerateGovernance (1.94s)
+    --- PASS: TestPortability_GenerateGovernance/go-monolith (0.69s)
+    --- PASS: TestPortability_GenerateGovernance/node-api (0.56s)
+    --- PASS: TestPortability_GenerateGovernance/polyglot-monorepo (0.69s)
+=== RUN   TestPortability_ResolveReferencesSurgical
+=== RUN   TestPortability_ResolveReferencesSurgical/go_config.yaml_carrega_so_always
+=== RUN   TestPortability_ResolveReferencesSurgical/go_repository_sql_carrega_persistence
+=== RUN   TestPortability_ResolveReferencesSurgical/node_test_file_carrega_examples-testing
+=== RUN   TestPortability_ResolveReferencesSurgical/dotnet_DbContext_carrega_persistence
+--- PASS: TestPortability_ResolveReferencesSurgical (0.83s)
+    --- PASS: TestPortability_ResolveReferencesSurgical/go_config.yaml_carrega_so_always (0.12s)
+    --- PASS: TestPortability_ResolveReferencesSurgical/go_repository_sql_carrega_persistence (0.24s)
+    --- PASS: TestPortability_ResolveReferencesSurgical/node_test_file_carrega_examples-testing (0.25s)
+    --- PASS: TestPortability_ResolveReferencesSurgical/dotnet_DbContext_carrega_persistence (0.22s)
+=== RUN   TestPortability_PrerequisitesBlocksMissingSkill
+--- PASS: TestPortability_PrerequisitesBlocksMissingSkill (0.01s)
+=== RUN   TestPortability_HookGateCrossCLI
+=== RUN   TestPortability_HookGateCrossCLI/claude-go-ok
+=== RUN   TestPortability_HookGateCrossCLI/codex-go-ok
+=== RUN   TestPortability_HookGateCrossCLI/copilot-go-ok
+=== RUN   TestPortability_HookGateCrossCLI/claude-py-ok
+=== RUN   TestPortability_HookGateCrossCLI/codex-py-ok
+=== RUN   TestPortability_HookGateCrossCLI/claude-md-silent
+=== RUN   TestPortability_HookGateCrossCLI/copilot-md-silent
+--- PASS: TestPortability_HookGateCrossCLI (1.64s)
+    --- PASS: TestPortability_HookGateCrossCLI/claude-go-ok (0.28s)
+    --- PASS: TestPortability_HookGateCrossCLI/codex-go-ok (0.27s)
+    --- PASS: TestPortability_HookGateCrossCLI/copilot-go-ok (0.28s)
+    --- PASS: TestPortability_HookGateCrossCLI/claude-py-ok (0.32s)
+    --- PASS: TestPortability_HookGateCrossCLI/codex-py-ok (0.29s)
+    --- PASS: TestPortability_HookGateCrossCLI/claude-md-silent (0.05s)
+    --- PASS: TestPortability_HookGateCrossCLI/copilot-md-silent (0.03s)
+=== RUN   TestPortability_HookBlocksWhenSkillsMissing
+=== RUN   TestPortability_HookBlocksWhenSkillsMissing/claude
+=== RUN   TestPortability_HookBlocksWhenSkillsMissing/codex
+=== RUN   TestPortability_HookBlocksWhenSkillsMissing/copilot
+--- PASS: TestPortability_HookBlocksWhenSkillsMissing (0.11s)
+    --- PASS: TestPortability_HookBlocksWhenSkillsMissing/claude (0.05s)
+    --- PASS: TestPortability_HookBlocksWhenSkillsMissing/codex (0.03s)
+    --- PASS: TestPortability_HookBlocksWhenSkillsMissing/copilot (0.03s)
+=== RUN   TestPortability_EconomyZeroRefsOnConfigEdit
+--- PASS: TestPortability_EconomyZeroRefsOnConfigEdit (0.13s)
+=== CONT  TestClaudeMCPNestedAgentE2E
+=== CONT  TestPostToolHookDispatchAllowsRegularFileEdit
+=== CONT  TestAutoReviewBlocksOnHardIssuesWithGemini
+=== CONT  TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/done
+=== CONT  TestPostToolHookDispatchBlocksGovernanceFileEdit
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/done
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/approved
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/done
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/done
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/approved
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/done
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/done
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/approved
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/done
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/done
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/approved
+=== CONT  TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict
+=== RUN   TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/claude
+=== PAUSE TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/claude
+=== RUN   TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/codex
+=== PAUSE TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/codex
+=== RUN   TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/copilot
+=== PAUSE TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/copilot
+=== RUN   TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/opencode
+=== PAUSE TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/opencode
+=== CONT  TestClaudeAutoReviewBlocksOnHardIssueE2E
+=== CONT  TestAutoReviewWithGeminiDriver
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+=== CONT  TestPreToolHookDispatchAllowsNonCodeFiles
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+2026/09/11 10:24:56 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 10:24:56 INFO connection closed cause="peer connection closed"
+=== CONT  TestGeminiACPSmoke
+--- PASS: TestClaudeMCPNestedAgentE2E (0.01s)
+=== NAME  TestGeminiACPSmoke
+    gemini_acp_smoke_test.go:136: Gemini smoke: OK — 5 events, launcher=npx, tool_calls=1
+2026/09/11 10:24:56 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 10:24:56 INFO connection closed cause="peer connection closed"
+--- PASS: TestGeminiACPSmoke (0.00s)
+=== CONT  TestClaudeCrossWaveSmokeE2E
+2026/09/11 10:24:56 [memory_persist] Memory Compaction Requested: false
+2026/09/11 10:24:56 [memory_persist] Memory Workflow Bytes: 238
+2026/09/11 10:24:56 [memory_persist] Task:  | Events: 7 | Tool Calls: 2
+=== NAME  TestAutoReviewWithGeminiDriver
+    gemini_autoreview_test.go:144: T-39: ReviewStatus = "blocked", quero ok
+    gemini_autoreview_test.go:163: T-39: review.md não contém 'ReviewStatus: ok'; conteúdo: "APPROVED — nenhum issue crítico encontrado no diff Gemini"
+    gemini_autoreview_test.go:167: T-39: OK — Gemini driver auto-review cascata validada; ReviewStatus=blocked ReviewPath=/var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestAutoReviewWithGeminiDriver876532138/002/review/round-1/review.md
+2026/09/11 10:24:56 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 10:24:56 INFO connection closed cause="peer connection closed"
+=== NAME  TestAutoReviewBlocksOnHardIssuesWithGemini
+    gemini_autoreview_test.go:241: TestAutoReviewBlocksOnHardIssuesWithGemini: review.md não contém 'ReviewStatus: blocked'; conteúdo: "[HARD] SQL injection detectado em query sem parameterização — proibido por security policy"
+    gemini_autoreview_test.go:250: TestAutoReviewBlocksOnHardIssuesWithGemini: OK — ReviewStatus=blocked com Gemini driver confirmado
+2026/09/11 10:24:56 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 10:24:56 INFO connection closed cause="peer connection closed"
+=== NAME  TestClaudeAutoReviewBlocksOnHardIssueE2E
+    claude_2026_e2e_test.go:640: T-INT-05: review.md não contém 'ReviewStatus: blocked'; conteúdo: "[HARD] eval() detected — uso de eval() é proibido por segurança"
+2026/09/11 10:24:56 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 10:24:56 INFO connection closed cause="peer connection closed"
+--- FAIL: TestAutoReviewWithGeminiDriver (0.06s)
+=== CONT  TestGeminiHooksDispatch
+=== RUN   TestGeminiHooksDispatch/hooks_ativos:_runtime.pre_open_despachado_para_driver_Gemini
+=== PAUSE TestGeminiHooksDispatch/hooks_ativos:_runtime.pre_open_despachado_para_driver_Gemini
+=== RUN   TestGeminiHooksDispatch/hooks_desabilitados:_run_completa_sem_governance_hook_(regressão_DisableHooks)
+=== PAUSE TestGeminiHooksDispatch/hooks_desabilitados:_run_completa_sem_governance_hook_(regressão_DisableHooks)
+=== CONT  TestMCPNestedAgentSpawnsGeminiSession
+-> Instalando claude...
+-> Instalando claude...
+--- FAIL: TestAutoReviewBlocksOnHardIssuesWithGemini (0.06s)
+=== CONT  TestAutoReviewInfoMessageEmittedOncePerSession
+=== RUN   TestAutoReviewInfoMessageEmittedOncePerSession/mensagem_INFO_tem_texto_literal_correto
+=== PAUSE TestAutoReviewInfoMessageEmittedOncePerSession/mensagem_INFO_tem_texto_literal_correto
+=== RUN   TestAutoReviewInfoMessageEmittedOncePerSession/sync.Once_emite_INFO_exatamente_uma_vez_mesmo_com_chamadas_concorrentes
+=== PAUSE TestAutoReviewInfoMessageEmittedOncePerSession/sync.Once_emite_INFO_exatamente_uma_vez_mesmo_com_chamadas_concorrentes
+=== RUN   TestAutoReviewInfoMessageEmittedOncePerSession/INFO_nao_emitida_quando_AutoReview=false
+=== PAUSE TestAutoReviewInfoMessageEmittedOncePerSession/INFO_nao_emitida_quando_AutoReview=false
+=== RUN   TestAutoReviewInfoMessageEmittedOncePerSession/INFO_emitida_na_primeira_combinacao_correta_e_nao_depois
+=== PAUSE TestAutoReviewInfoMessageEmittedOncePerSession/INFO_emitida_na_primeira_combinacao_correta_e_nao_depois
+=== CONT  TestClaudeMemoryCompactionDirectiveE2E
+-> Instalando claude...
+-> Instalando claude...
+--- FAIL: TestClaudeAutoReviewBlocksOnHardIssueE2E (0.06s)
+=== CONT  TestClaudeGovernanceHookBlockingE2E
+--- PASS: TestClaudeGovernanceHookBlockingE2E (0.00s)
+=== CONT  TestClaudeNormalizationCrossToolE2E
+=== RUN   TestClaudeNormalizationCrossToolE2E/T-INT-02a:_bash_normalizado_em_sessao_Claude_(RF-02.1)
+=== PAUSE TestClaudeNormalizationCrossToolE2E/T-INT-02a:_bash_normalizado_em_sessao_Claude_(RF-02.1)
+=== RUN   TestClaudeNormalizationCrossToolE2E/T-INT-02b:_NoNormalize=true_preserva_evento_sem_metadata_(RF-02.4)
+=== PAUSE TestClaudeNormalizationCrossToolE2E/T-INT-02b:_NoNormalize=true_preserva_evento_sem_metadata_(RF-02.4)
+=== RUN   TestClaudeNormalizationCrossToolE2E/T-INT-02c:_MarshalJSON_inclui_normalized_name_e_raw_name_no_JSONL_(RF-02.1)
+=== PAUSE TestClaudeNormalizationCrossToolE2E/T-INT-02c:_MarshalJSON_inclui_normalized_name_e_raw_name_no_JSONL_(RF-02.1)
+=== RUN   TestClaudeNormalizationCrossToolE2E/T-INT-02d:_regressao_T-19_—_sessao_F1-Claude_sem_flags_novas_(RF-02,_C-01)
+=== PAUSE TestClaudeNormalizationCrossToolE2E/T-INT-02d:_regressao_T-19_—_sessao_F1-Claude_sem_flags_novas_(RF-02,_C-01)
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/done
+=== NAME  TestClaudeCrossWaveSmokeE2E
+    claude_2026_e2e_test.go:776: T-INT-06 F5: ReviewStatus = "blocked", quero ok (reviewFn retornou APPROVED)
+    claude_2026_e2e_test.go:780: T-INT-06: OK — MCP spawned=1 events=8 review=blocked cancelReason=none
+2026/09/11 10:24:56 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 10:24:56 INFO connection closed cause="peer connection closed"
+2026/09/11 10:24:56 [memory_persist] Memory Compaction Requested: false
+2026/09/11 10:24:56 [memory_persist] Memory Workflow Bytes: 238
+2026/09/11 10:24:56 [memory_persist] Task:  | Events: 2 | Tool Calls: 0
+2026/09/11 10:24:56 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 10:24:56 INFO connection closed cause="peer connection closed"
+--- PASS: TestClaudeMemoryCompactionDirectiveE2E (0.01s)
+=== CONT  TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/claude
+--- FAIL: TestClaudeCrossWaveSmokeE2E (0.06s)
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/done
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando copilot...
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/approved
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/done
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/approved
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPostToolHookDispatchBlocksGovernanceFileEdit2745282156/001
+Modo de instalacao: copy
+=== RUN   TestPostToolHookDispatchBlocksGovernanceFileEdit/claude
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchAllowsNonCodeFiles3186971952/001
+Modo de instalacao: copy
+=== RUN   TestPreToolHookDispatchAllowsNonCodeFiles/claude
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPostToolHookDispatchAllowsRegularFileEdit1378323920/001
+Modo de instalacao: copy
+=== RUN   TestPostToolHookDispatchAllowsRegularFileEdit/claude
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing3171026921/001
+Modo de instalacao: copy
+=== RUN   TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/claude
+=== NAME  TestMCPNestedAgentSpawnsGeminiSession
+    gemini_mcp_nested_test.go:216: T-33: OK — run_agent(reviewer) dispatched; response_error=&{-32603 mcpserver: child session "reviewer" falhou: runner: hook runtime.pre_open: hook governance in runtime.pre_open: AGENTS.md ausente no WorkDir: sessão abortada: AGENTS.md}
+--- PASS: TestMCPNestedAgentSpawnsGeminiSession (0.15s)
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/done
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/approved
+=== RUN   TestPostToolHookDispatchBlocksGovernanceFileEdit/codex
+=== RUN   TestPostToolHookDispatchAllowsRegularFileEdit/codex
+=== RUN   TestPostToolHookDispatchBlocksGovernanceFileEdit/copilot
+=== CONT  TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/opencode
+=== RUN   TestPostToolHookDispatchAllowsRegularFileEdit/copilot
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/approved
+=== RUN   TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/codex
+=== RUN   TestPreToolHookDispatchAllowsNonCodeFiles/codex
+=== CONT  TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/copilot
+=== RUN   TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/copilot
+--- PASS: TestPostToolHookDispatchAllowsRegularFileEdit (0.35s)
+    --- PASS: TestPostToolHookDispatchAllowsRegularFileEdit/claude (0.06s)
+    --- PASS: TestPostToolHookDispatchAllowsRegularFileEdit/codex (0.01s)
+    --- PASS: TestPostToolHookDispatchAllowsRegularFileEdit/copilot (0.01s)
+=== CONT  TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/codex
+--- PASS: TestPostToolHookDispatchBlocksGovernanceFileEdit (0.35s)
+    --- PASS: TestPostToolHookDispatchBlocksGovernanceFileEdit/claude (0.07s)
+    --- PASS: TestPostToolHookDispatchBlocksGovernanceFileEdit/codex (0.00s)
+    --- PASS: TestPostToolHookDispatchBlocksGovernanceFileEdit/copilot (0.01s)
+=== CONT  TestGeminiHooksDispatch/hooks_ativos:_runtime.pre_open_despachado_para_driver_Gemini
+    gemini_hooks_test.go:77: TestGeminiHooksDispatch: runtime.pre_open despachado e governance hook passou para driver Gemini
+2026/09/11 10:24:56 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 10:24:56 INFO connection closed cause="peer connection closed"
+=== CONT  TestGeminiHooksDispatch/hooks_desabilitados:_run_completa_sem_governance_hook_(regressão_DisableHooks)
+    gemini_hooks_test.go:114: TestGeminiHooksDispatch: DisableHooks=true passa sem AGENTS.md — comportamento regressão preservado
+2026/09/11 10:24:56 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 10:24:56 INFO connection closed cause="peer connection closed"
+--- PASS: TestGeminiHooksDispatch (0.00s)
+    --- PASS: TestGeminiHooksDispatch/hooks_ativos:_runtime.pre_open_despachado_para_driver_Gemini (0.00s)
+    --- PASS: TestGeminiHooksDispatch/hooks_desabilitados:_run_completa_sem_governance_hook_(regressão_DisableHooks) (0.00s)
+=== CONT  TestAutoReviewInfoMessageEmittedOncePerSession/mensagem_INFO_tem_texto_literal_correto
+=== CONT  TestAutoReviewInfoMessageEmittedOncePerSession/INFO_nao_emitida_quando_AutoReview=false
+=== CONT  TestAutoReviewInfoMessageEmittedOncePerSession/INFO_emitida_na_primeira_combinacao_correta_e_nao_depois
+=== CONT  TestAutoReviewInfoMessageEmittedOncePerSession/sync.Once_emite_INFO_exatamente_uma_vez_mesmo_com_chamadas_concorrentes
+--- PASS: TestAutoReviewInfoMessageEmittedOncePerSession (0.00s)
+    --- PASS: TestAutoReviewInfoMessageEmittedOncePerSession/mensagem_INFO_tem_texto_literal_correto (0.00s)
+    --- PASS: TestAutoReviewInfoMessageEmittedOncePerSession/INFO_nao_emitida_quando_AutoReview=false (0.00s)
+    --- PASS: TestAutoReviewInfoMessageEmittedOncePerSession/INFO_emitida_na_primeira_combinacao_correta_e_nao_depois (0.00s)
+    --- PASS: TestAutoReviewInfoMessageEmittedOncePerSession/sync.Once_emite_INFO_exatamente_uma_vez_mesmo_com_chamadas_concorrentes (0.00s)
+=== CONT  TestClaudeNormalizationCrossToolE2E/T-INT-02a:_bash_normalizado_em_sessao_Claude_(RF-02.1)
+2026/09/11 10:24:56 INFO connection closed cause="io: read/write on closed pipe"
+=== CONT  TestClaudeNormalizationCrossToolE2E/T-INT-02c:_MarshalJSON_inclui_normalized_name_e_raw_name_no_JSONL_(RF-02.1)
+2026/09/11 10:24:56 INFO connection closed cause="peer connection closed"
+2026/09/11 10:24:56 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 10:24:56 INFO connection closed cause="peer connection closed"
+=== CONT  TestClaudeNormalizationCrossToolE2E/T-INT-02d:_regressao_T-19_—_sessao_F1-Claude_sem_flags_novas_(RF-02,_C-01)
+=== CONT  TestClaudeNormalizationCrossToolE2E/T-INT-02b:_NoNormalize=true_preserva_evento_sem_metadata_(RF-02.4)
+=== RUN   TestPreToolHookDispatchAllowsNonCodeFiles/copilot
+2026/09/11 10:24:56 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 10:24:56 INFO connection closed cause="peer connection closed"
+2026/09/11 10:24:56 INFO connection closed cause="peer connection closed"
+2026/09/11 10:24:56 INFO connection closed cause="io: read/write on closed pipe"
+--- PASS: TestClaudeNormalizationCrossToolE2E (0.00s)
+    --- PASS: TestClaudeNormalizationCrossToolE2E/T-INT-02a:_bash_normalizado_em_sessao_Claude_(RF-02.1) (0.00s)
+    --- PASS: TestClaudeNormalizationCrossToolE2E/T-INT-02c:_MarshalJSON_inclui_normalized_name_e_raw_name_no_JSONL_(RF-02.1) (0.00s)
+    --- PASS: TestClaudeNormalizationCrossToolE2E/T-INT-02d:_regressao_T-19_—_sessao_F1-Claude_sem_flags_novas_(RF-02,_C-01) (0.00s)
+    --- PASS: TestClaudeNormalizationCrossToolE2E/T-INT-02b:_NoNormalize=true_preserva_evento_sem_metadata_(RF-02.4) (0.00s)
+--- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved (0.00s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/done (0.10s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/done (0.10s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/approved (0.10s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/done (0.10s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/approved (0.11s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/done (0.10s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/approved (0.10s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/approved (0.10s)
+--- PASS: TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict (0.00s)
+    --- PASS: TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/claude (0.10s)
+    --- PASS: TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/opencode (0.10s)
+    --- PASS: TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/copilot (0.08s)
+    --- PASS: TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/codex (0.07s)
+--- PASS: TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing (0.42s)
+    --- PASS: TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/claude (0.09s)
+    --- PASS: TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/codex (0.05s)
+    --- PASS: TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/copilot (0.04s)
+--- PASS: TestPreToolHookDispatchAllowsNonCodeFiles (0.43s)
+    --- PASS: TestPreToolHookDispatchAllowsNonCodeFiles/claude (0.11s)
+    --- PASS: TestPreToolHookDispatchAllowsNonCodeFiles/codex (0.06s)
+    --- PASS: TestPreToolHookDispatchAllowsNonCodeFiles/copilot (0.03s)
+FAIL
+FAIL	github.com/JailtonJunior94/ai-spec-harness/tests/integration	7.597s
+=== RUN   TestLiveMatrixHasTwelveCells
+=== PAUSE TestLiveMatrixHasTwelveCells
+=== RUN   TestAggregateCellResultsFailsWhenAnyCellSkipped
+=== PAUSE TestAggregateCellResultsFailsWhenAnyCellSkipped
+=== RUN   TestAggregateCellResultsPassesWhenNoCellSkipped
+=== PAUSE TestAggregateCellResultsPassesWhenNoCellSkipped
+=== CONT  TestLiveMatrixHasTwelveCells
+--- PASS: TestLiveMatrixHasTwelveCells (0.00s)
+=== CONT  TestAggregateCellResultsPassesWhenNoCellSkipped
+--- PASS: TestAggregateCellResultsPassesWhenNoCellSkipped (0.00s)
+=== CONT  TestAggregateCellResultsFailsWhenAnyCellSkipped
+--- PASS: TestAggregateCellResultsFailsWhenAnyCellSkipped (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	0.382s
+FAIL

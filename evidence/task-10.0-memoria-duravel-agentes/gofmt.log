@@ -1,0 +1,5 @@
+internal/install/install.go
+internal/parity/parity.go
+internal/parity/rp03_test.go
+internal/wrapper/wrapper_test.go
+exit=0

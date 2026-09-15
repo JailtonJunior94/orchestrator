@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -25,6 +26,27 @@ type AgentInvoker interface {
 	BinaryName() string
 }
 
+var ErrToolRequiresACP = errors.New("ferramenta exige --runtime acp")
+
+var ErrAgentTimeout = errors.New("taskloop: agent session interrupted by timeout")
+
+type ACPOnlyToolError struct {
+	Tool string
+}
+
+func (e *ACPOnlyToolError) Error() string {
+	return fmt.Sprintf(
+		"ferramenta %q so opera sob ACP — reexecute com --runtime acp (ex.: ai-spec task-loop --tool %s --runtime acp <dir>)",
+		e.Tool, e.Tool,
+	)
+}
+
+func (e *ACPOnlyToolError) Unwrap() error { return ErrToolRequiresACP }
+
+var ACPOnlyTools = map[string]bool{
+	"opencode": true,
+}
+
 // NewAgentInvoker cria o invoker adequado para a ferramenta especificada.
 func NewAgentInvoker(tool string) (AgentInvoker, error) {
 	switch tool {
@@ -32,20 +54,19 @@ func NewAgentInvoker(tool string) (AgentInvoker, error) {
 		return &claudeInvoker{}, nil
 	case "codex":
 		return &codexInvoker{}, nil
-	case "gemini":
-		return &geminiInvoker{}, nil
 	case "copilot":
 		return &copilotInvoker{}, nil
-	default:
-		return nil, fmt.Errorf("ferramenta nao suportada: %q — opcoes: claude, codex, gemini, copilot", tool)
 	}
+	if ACPOnlyTools[tool] {
+		return nil, &ACPOnlyToolError{Tool: tool}
+	}
+	return nil, fmt.Errorf("ferramenta nao suportada: %q — opcoes: claude, codex, copilot (opencode exige --runtime acp)", tool)
 }
 
 // ValidTools eh o conjunto de ferramentas aceitas pelo task-loop.
 var ValidTools = map[string]bool{
 	"claude":  true,
 	"codex":   true,
-	"gemini":  true,
 	"copilot": true,
 }
 
@@ -252,8 +273,6 @@ func (c *Catalog) authGuidance(tool string) string {
 		return "execute 'claude' em um terminal separado e faca login com '/login', ou defina ANTHROPIC_API_KEY no ambiente para uso nao-interativo"
 	case "copilot":
 		return "execute 'gh auth login' para autenticar o GitHub Copilot"
-	case "gemini":
-		return "execute 'gemini' em um terminal separado e siga o fluxo de autenticacao"
 	case "codex":
 		return "configure OPENAI_API_KEY ou execute 'codex auth' para autenticar"
 	default:
@@ -370,25 +389,6 @@ func (c *codexInvoker) Invoke(ctx context.Context, prompt, workDir, model string
 	}
 	args = append(args, "--yolo", prompt)
 	return NewCatalog().runCmd(ctx, workDir, c.liveOut, "codex", args...)
-}
-
-// --- Gemini ---
-
-type geminiInvoker struct {
-	liveOut io.Writer
-}
-
-func (g *geminiInvoker) BinaryName() string { return "gemini" }
-
-func (g *geminiInvoker) SetLiveOutput(w io.Writer) { g.liveOut = w }
-
-func (g *geminiInvoker) Invoke(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-	args := make([]string, 0, 5)
-	if model != "" {
-		args = append(args, "--model", model)
-	}
-	args = append(args, "--approval-mode=yolo", "-p", prompt)
-	return NewCatalog().runCmd(ctx, workDir, g.liveOut, "gemini", args...)
 }
 
 // --- Copilot ---

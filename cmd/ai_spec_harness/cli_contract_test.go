@@ -95,20 +95,11 @@ func TestCLI_ContractMatchesSchema(t *testing.T) {
 	schemaCmds := flattenSchemaCommands(raw.Default.Commands, "")
 	sort.Strings(schemaCmds)
 
-	// Extrair comandos do Cobra (excluindo help e completion — auto-gerados)
 	excluded := map[string]bool{"help": true, "completion": true}
-	var cobraCmds []string
-	for _, cmd := range newRootCmd().Commands() {
-		if cmd.Hidden || excluded[cmd.Name()] {
-			continue
-		}
-		cobraCmds = append(cobraCmds, cmd.Name())
-		for _, sub := range cmd.Commands() {
-			if sub.Hidden || excluded[sub.Name()] {
-				continue
-			}
-			cobraCmds = append(cobraCmds, cmd.Name()+" "+sub.Name())
-		}
+	cobraMap := cobraCommandMap(newRootCmd().Commands(), "", excluded)
+	cobraCmds := make([]string, 0, len(cobraMap))
+	for path := range cobraMap {
+		cobraCmds = append(cobraCmds, path)
 	}
 	sort.Strings(cobraCmds)
 
@@ -171,16 +162,41 @@ func TestCLISchemaContainsAllTools(t *testing.T) {
 
 	schemaContent := string(data)
 
+	// Guarda de vacuidade: um catálogo vazio faria o laço abaixo passar
+	// trivialmente sem verificar nada. Catálogo vazio é falha explícita.
+	if len(runtimeACPCatalog) == 0 {
+		t.Fatal("runtimeACPCatalog vazio — o laço de verificação passaria trivialmente sem checar o schema")
+	}
+
 	// Todos os tools do runtimeACPCatalog devem aparecer no schema.
-	for tool := range _runtimeACPCatalog {
+	for tool := range runtimeACPCatalog {
 		if !strings.Contains(schemaContent, tool) {
 			t.Errorf("cli-schema.json não menciona tool %q — atualizar descrição da flag --runtime ou --tool", tool)
 		}
 	}
+}
 
-	// Verificar especificamente que "gemini" está presente (RF-25 ADR-015).
-	if !strings.Contains(schemaContent, "gemini") {
-		t.Error("cli-schema.json não contém 'gemini' — atualizar flag --runtime description (RF-25)")
+// TestCLISchemaDoesNotContainRetiredAgents (task 10.0, direção inversa de
+// TestCLISchemaContainsAllTools) valida que nenhum agente aposentado do
+// conjunto canônico aparece em docs/cli-schema.json. Teste negativo: garante
+// que a remoção física de um agente (ex.: Gemini) não deixa resíduo textual no
+// contrato do CLI documentado.
+func TestCLISchemaDoesNotContainRetiredAgents(t *testing.T) {
+	t.Parallel()
+
+	schemaPath := filepath.Join("..", "..", "docs", "cli-schema.json")
+	data, err := os.ReadFile(schemaPath)
+	if err != nil {
+		t.Fatalf("ler cli-schema.json: %v", err)
+	}
+
+	schemaContent := strings.ToLower(string(data))
+
+	retiredAgents := []string{"gemini"}
+	for _, agent := range retiredAgents {
+		if strings.Contains(schemaContent, agent) {
+			t.Errorf("cli-schema.json cita agente aposentado %q — remover residuo textual (RF-08, tarefa 10.0)", agent)
+		}
 	}
 }
 

@@ -234,39 +234,41 @@ func TestCopilotRunToBash(t *testing.T) {
 	}
 }
 
-// T-32: TestNormalizeToolCallGeminiInheritsCommon — Gemini emite read_file → normalizado "read"; raw_name preservado.
-// Valida resolveInherit: gemini está em inherit_common; sem entrada explícita em aliases.
-func TestNormalizeToolCallGeminiInheritsCommon(t *testing.T) {
-	input := json.RawMessage(`{"path":"/tmp/README.md"}`)
-	result, err := NewCatalog().BuildNormalizedToolCall("gemini", "read_file", input, "")
+func TestNormalizeToolCallOpenCodeUsesOwnAliasTable(t *testing.T) {
+	input := json.RawMessage(`{"filePath":"/tmp/README.md"}`)
+	result, err := NewCatalog().BuildNormalizedToolCall("opencode", "multiedit", input, "")
 	if err != nil {
 		t.Fatalf("T-32: BuildNormalizedToolCall inesperado: %v", err)
 	}
-	if result.NormalizedName != "read" {
-		t.Errorf("T-32: NormalizedName: queria %q (via inherit:common), obtive %q", "read", result.NormalizedName)
+	if result.NormalizedName != "edit" {
+		t.Errorf("T-32: NormalizedName: queria %q (tabela propria do OpenCode), obtive %q", "edit", result.NormalizedName)
 	}
-	if result.RawName != "read_file" {
-		t.Errorf("T-32: RawName: queria %q, obtive %q", "read_file", result.RawName)
+	if result.RawName != "multiedit" {
+		t.Errorf("T-32: RawName: queria %q, obtive %q", "multiedit", result.RawName)
 	}
 }
 
-// T-32b: TestNormalizeGeminiPreservesRawName — raw_name preservado lado a lado com normalized_name.
-// Cobre bash (alias para si mesmo) e str_replace_editor → edit.
-func TestNormalizeGeminiPreservesRawName(t *testing.T) {
+// T-32b: TestNormalizeOpenCodePreservesRawName — raw_name preservado lado a lado com normalized_name.
+func TestNormalizeOpenCodePreservesRawName(t *testing.T) {
 	tests := []struct {
 		rawName      string
 		expectedNorm string
 	}{
 		{"bash", "bash"},
-		{"write_file", "write"},
-		{"str_replace_editor", "edit"},
-		{"unknown_tool", "unknown_tool"}, // passthrough: sem alias para ferramenta desconhecida
+		{"write", "write"},
+		{"edit", "edit"},
+		{"multiedit", "edit"},
+		{"patch", "edit"},
+		{"apply_patch", "edit"},
+		{"write_file", "write_file"},
+		{"str_replace_editor", "str_replace_editor"},
+		{"unknown_tool", "unknown_tool"},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.rawName, func(t *testing.T) {
 			input := json.RawMessage(`{}`)
-			result, err := NewCatalog().BuildNormalizedToolCall("gemini", tc.rawName, input, "")
+			result, err := NewCatalog().BuildNormalizedToolCall("opencode", tc.rawName, input, "")
 			if err != nil {
 				t.Fatalf("T-32b: BuildNormalizedToolCall inesperado para %q: %v", tc.rawName, err)
 			}
@@ -274,7 +276,6 @@ func TestNormalizeGeminiPreservesRawName(t *testing.T) {
 			if result.RawName != tc.rawName {
 				t.Errorf("T-32b: RawName mutado: queria %q, obtive %q", tc.rawName, result.RawName)
 			}
-			// NormalizedName correto via inherit:common.
 			if result.NormalizedName != tc.expectedNorm {
 				t.Errorf("T-32b: NormalizedName(%q): queria %q, obtive %q",
 					tc.rawName, tc.expectedNorm, result.NormalizedName)
@@ -292,14 +293,14 @@ func TestResolveInheritDoesNotOverrideExplicit(t *testing.T) {
 		t.Fatalf("criar .agents dir: %v", err)
 	}
 
-	// YAML com gemini em inherit_common E em aliases explícito — aliases explícito deve prevalecer.
+	// YAML com customdriver em inherit_common E em aliases explícito — aliases explícito deve prevalecer.
 	customYAML := `version: 1
 common_aliases:
   read_file: read
 inherit_common:
-  - gemini
+  - customdriver
 aliases:
-  gemini:
+  customdriver:
     read_file: raw_passthrough
 input_mappings: {}
 `
@@ -309,7 +310,7 @@ input_mappings: {}
 	}
 
 	input := json.RawMessage(`{}`)
-	result, err := NewCatalog().BuildNormalizedToolCall("gemini", "read_file", input, workDir)
+	result, err := NewCatalog().BuildNormalizedToolCall("customdriver", "read_file", input, workDir)
 	if err != nil {
 		t.Fatalf("BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -353,10 +354,10 @@ func TestInputMappingCopilotRunCommandCanonical(t *testing.T) {
 	}
 }
 
-// T-33-02: Golden — Gemini bash com campo "command" produz campo canônico "command" (no-op verificado).
-func TestInputMappingGeminiBashCommandCanonical(t *testing.T) {
+// T-33-02: Golden — OpenCode bash com campo "command" produz campo canônico "command" (no-op verificado).
+func TestInputMappingOpenCodeBashCommandCanonical(t *testing.T) {
 	input := json.RawMessage(`{"command":"ls -la","cwd":"/tmp"}`)
-	result, err := NewCatalog().BuildNormalizedToolCall("gemini", "bash", input, "")
+	result, err := NewCatalog().BuildNormalizedToolCall("opencode", "bash", input, "")
 	if err != nil {
 		t.Fatalf("T-33-02: BuildNormalizedToolCall inesperado: %v", err)
 	}
@@ -384,7 +385,7 @@ func TestInputMappingGeminiBashCommandCanonical(t *testing.T) {
 	}
 }
 
-// T-33-03: Paridade cross-driver — campo canônico "command" idêntico entre Claude, Copilot e Gemini.
+// T-33-03: Paridade cross-driver — campo canônico "command" idêntico entre Claude, Copilot e OpenCode.
 // A mesma tool-call (bash equivalente) deve produzir NormalizedInput com "command" em todos os drivers.
 func TestInputMappingCrossDriverCommandCanonical(t *testing.T) {
 	type driverCase struct {
@@ -395,7 +396,7 @@ func TestInputMappingCrossDriverCommandCanonical(t *testing.T) {
 	cases := []driverCase{
 		{driver: "claude", rawName: "bash", input: json.RawMessage(`{"command":"echo hi"}`)},
 		{driver: "copilot", rawName: "run", input: json.RawMessage(`{"command":"echo hi"}`)},
-		{driver: "gemini", rawName: "bash", input: json.RawMessage(`{"command":"echo hi"}`)},
+		{driver: "opencode", rawName: "bash", input: json.RawMessage(`{"command":"echo hi"}`)},
 	}
 
 	for _, tc := range cases {
@@ -419,18 +420,18 @@ func TestInputMappingCrossDriverCommandCanonical(t *testing.T) {
 	}
 }
 
-// ─── Subtarefa 3.4: Herança — tabela explícita Gemini vence inherit_common ────
+// ─── Subtarefa 3.4: Herança — tabela explícita vence inherit_common ────────────
 
-// T-34-01: Gemini com tabela explícita em aliases (embedded default) deve usar a tabela explícita.
-// Remover gemini de inherit_common não deve mudar o resultado — tabela explícita é autossuficiente.
-func TestGeminiExplicitAliasWinsOverInheritCommon(t *testing.T) {
+// T-34-01: driver com tabela explícita em aliases (project override) deve usar a tabela
+// explícita mesmo quando ausente de inherit_common — tabela explícita é autossuficiente.
+func TestExplicitAliasWinsOverInheritCommon(t *testing.T) {
 	workDir := t.TempDir()
 	agentsDir := filepath.Join(workDir, ".agents")
 	if err := os.MkdirAll(agentsDir, 0o755); err != nil {
 		t.Fatalf("T-34-01: criar .agents dir: %v", err)
 	}
 
-	// YAML sem inherit_common, com aliases.gemini explícito — resultado deve ser idêntico ao default.
+	// YAML sem inherit_common, com aliases.customdriver explícito.
 	withoutInherit := `version: 1
 common_aliases:
   bash: bash
@@ -438,13 +439,13 @@ common_aliases:
   write_file: write
   str_replace_editor: edit
 aliases:
-  gemini:
+  customdriver:
     bash: bash
     read_file: read
     write_file: write
     str_replace_editor: edit
 input_mappings:
-  gemini:
+  customdriver:
     bash:
       command: command
 `
@@ -466,7 +467,7 @@ input_mappings:
 
 	for _, tc := range tests {
 		t.Run(tc.rawName, func(t *testing.T) {
-			result, err := NewCatalog().BuildNormalizedToolCall("gemini", tc.rawName, json.RawMessage(`{}`), workDir)
+			result, err := NewCatalog().BuildNormalizedToolCall("customdriver", tc.rawName, json.RawMessage(`{}`), workDir)
 			if err != nil {
 				t.Fatalf("T-34-01: BuildNormalizedToolCall inesperado para %q: %v", tc.rawName, err)
 			}
@@ -478,43 +479,11 @@ input_mappings:
 	}
 }
 
-// T-34-02: Default embedded — aliases.gemini explícito (RP-04) produz mesmos resultados
-// que o comportamento pré-RP-04 via inherit_common (regressão zero).
-func TestGeminiExplicitAliasDefaultEmbeddedNoRegression(t *testing.T) {
-	// Usando regras embedded (workDir=""), gemini deve normalizar conforme aliases explícito.
-	tests := []struct {
-		rawName      string
-		expectedNorm string
-	}{
-		{"bash", "bash"},
-		{"read_file", "read"},
-		{"write_file", "write"},
-		{"str_replace_editor", "edit"},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.rawName, func(t *testing.T) {
-			result, err := NewCatalog().BuildNormalizedToolCall("gemini", tc.rawName, json.RawMessage(`{}`), "")
-			if err != nil {
-				t.Fatalf("T-34-02: BuildNormalizedToolCall inesperado para %q: %v", tc.rawName, err)
-			}
-			if result.NormalizedName != tc.expectedNorm {
-				t.Errorf("T-34-02: NormalizedName(%q): queria %q, obtive %q",
-					tc.rawName, tc.expectedNorm, result.NormalizedName)
-			}
-			// RawName nunca mutado.
-			if result.RawName != tc.rawName {
-				t.Errorf("T-34-02: RawName mutado: queria %q, obtive %q", tc.rawName, result.RawName)
-			}
-		})
-	}
-}
-
 // ─── BuildNormalizedToolCallByDriver (ADR-020, Tarefa 3.0) ────────────────────
 
 // T-35-01: BuildNormalizedToolCallByDriver com DriverID válido — normaliza corretamente.
 func TestBuildNormalizedToolCallByDriver_ValidDriver(t *testing.T) {
-	drvID, err := specs.NewCatalog().ParseDriverID("gemini")
+	drvID, err := specs.NewCatalog().ParseDriverID("opencode")
 	if err != nil {
 		t.Fatalf("T-35-01: ParseDriverID inesperado: %v", err)
 	}

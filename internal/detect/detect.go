@@ -124,14 +124,14 @@ func (d *FileDetector) DetectTools(projectDir string) []skills.Tool {
 	if d.fs.Exists(filepath.Join(projectDir, "CLAUDE.md")) || d.fs.IsDir(filepath.Join(projectDir, ".claude")) {
 		tools = append(tools, skills.ToolClaude)
 	}
-	if d.fs.Exists(filepath.Join(projectDir, "GEMINI.md")) || d.fs.IsDir(filepath.Join(projectDir, ".gemini")) {
-		tools = append(tools, skills.ToolGemini)
-	}
 	if d.fs.IsDir(filepath.Join(projectDir, ".codex")) {
 		tools = append(tools, skills.ToolCodex)
 	}
 	if d.fs.Exists(filepath.Join(projectDir, ".github", "copilot-instructions.md")) {
 		tools = append(tools, skills.ToolCopilot)
+	}
+	if d.fs.Exists(filepath.Join(projectDir, "opencode.json")) || d.fs.IsDir(filepath.Join(projectDir, ".opencode")) {
+		tools = append(tools, skills.ToolOpenCode)
 	}
 
 	return tools

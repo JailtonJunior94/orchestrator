@@ -108,7 +108,7 @@ func TestCodexVersionPinned(t *testing.T) {
 func TestCodexBootstrapArgsEmptyModelRestricted(t *testing.T) {
 	t.Parallel()
 
-	got := specs.NewCatalog().Codex().BootstrapArgs("", "", nil, specs.AccessModeRestricted)
+	got := specs.NewCatalog().Codex().BootstrapArgs("", "", nil, specs.AccessModeRestricted, "")
 	want := []string{
 		"-c", "features.code_mode=false",
 		"-c", "features.code_mode_only=false",
@@ -124,7 +124,7 @@ func TestCodexBootstrapArgsEmptyModelRestricted(t *testing.T) {
 func TestCodexBootstrapArgsModelReasoningRestricted(t *testing.T) {
 	t.Parallel()
 
-	got := specs.NewCatalog().Codex().BootstrapArgs("gpt-5.5", "medium", nil, specs.AccessModeRestricted)
+	got := specs.NewCatalog().Codex().BootstrapArgs("gpt-5.5", "medium", nil, specs.AccessModeRestricted, "")
 
 	assertContainsPair(t, "T-07", got, "-c", `model="gpt-5.5"`)
 	assertContainsPair(t, "T-07", got, "-c", `model_reasoning_effort="medium"`)
@@ -140,7 +140,7 @@ func TestCodexBootstrapArgsModelReasoningRestricted(t *testing.T) {
 func TestCodexBootstrapArgsFullAccess(t *testing.T) {
 	t.Parallel()
 
-	got := specs.NewCatalog().Codex().BootstrapArgs("gpt-5.5", "high", nil, specs.AccessModeFull)
+	got := specs.NewCatalog().Codex().BootstrapArgs("gpt-5.5", "high", nil, specs.AccessModeFull, "")
 
 	assertContainsPair(t, "T-08", got, "-c", `model="gpt-5.5"`)
 	assertContainsPair(t, "T-08", got, "-c", `model_reasoning_effort="high"`)
@@ -155,7 +155,7 @@ func TestCodexBootstrapArgsFullAccess(t *testing.T) {
 func TestCodexBootstrapArgsReasoningLow(t *testing.T) {
 	t.Parallel()
 
-	got := specs.NewCatalog().Codex().BootstrapArgs("gpt-5.5", "low", nil, specs.AccessModeRestricted)
+	got := specs.NewCatalog().Codex().BootstrapArgs("gpt-5.5", "low", nil, specs.AccessModeRestricted, "")
 	assertContainsPair(t, "T-09", got, "-c", `model_reasoning_effort="low"`)
 }
 
@@ -180,9 +180,9 @@ func TestCodexBootstrapArgsDelegates(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			// Resultado via Spec.BootstrapArgs
-			viaSpec := specs.NewCatalog().Codex().BootstrapArgs(tc.model, tc.reasoning, nil, tc.mode)
+			viaSpec := specs.NewCatalog().Codex().BootstrapArgs(tc.model, tc.reasoning, nil, tc.mode, "")
 			// Resultado via segundo Codex() — deve ser idêntico
-			viaSpec2 := specs.NewCatalog().Codex().BootstrapArgs(tc.model, tc.reasoning, nil, tc.mode)
+			viaSpec2 := specs.NewCatalog().Codex().BootstrapArgs(tc.model, tc.reasoning, nil, tc.mode, "")
 			assertSliceEqual(t, "T-12/"+tc.name, viaSpec, viaSpec2)
 		})
 	}

@@ -68,8 +68,18 @@ require_pattern "Lint[[:space:]]*:[[:space:]]*(pass|fail|blocked|n/a)" \
 
 # Veredito do revisor (obrigatorio em modo execution)
 if grep -Eiq "Modo[[:space:]]*:[[:space:]]*execution" "$report_file"; then
-  if ! grep -Eiq "Veredito do Revisor[[:space:]]*:[[:space:]]*(APPROVED|APPROVED_WITH_REMARKS|REJECTED|BLOCKED|n/a)" "$report_file"; then
-    echo "FALTANDO: veredito do revisor (obrigatorio em modo execution)"
+  refactor_blocking_re='(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security)\]|severidade[[:space:]]*:[[:space:]]*(critical|high|cr(i|í)tico|alta|alto)|severity[[:space:]]*:[[:space:]]*(critical|high))'
+  refactor_any_re='(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security|medium|m(e|é)dia|important|importante|low|baixa|suggestion|sugest(a|ã)o)\]|severidade[[:space:]]*:[[:space:]]*(critical|high|medium|low|cr(i|í)tico|alta|alto|m(e|é)dia|baixa)|severity[[:space:]]*:[[:space:]]*(critical|high|medium|low))'
+  if grep -Eiq "Veredito do Revisor[[:space:]]*:[[:space:]]*APPROVED_WITH_REMARKS([^A-Za-z_]|$)" "$report_file"; then
+    if grep -Eiq "$refactor_blocking_re" "$report_file"; then
+      echo "FALTANDO: APPROVED_WITH_REMARKS nao encerra com achado high/critical declarado (RF-33)"
+      missing=1
+    elif ! grep -Eiq "$refactor_any_re" "$report_file"; then
+      echo "FALTANDO: APPROVED_WITH_REMARKS sem achado declarado com severidade canonica: ausencia de high/critical nao verificavel (RF-33, fail-closed)"
+      missing=1
+    fi
+  elif ! grep -Eiq "Veredito do Revisor[[:space:]]*:[[:space:]]*(APPROVED|REJECTED|BLOCKED|n/a)([^A-Za-z_]|$)" "$report_file"; then
+    echo "FALTANDO: veredito do revisor aceito (APPROVED|APPROVED_WITH_REMARKS sem high/critical|REJECTED|BLOCKED|n/a) (RF-33)"
     missing=1
   fi
 fi

@@ -1,0 +1,24 @@
+# Contrato canonico de declaracao de veredito (RF-31/RF-41).
+# Consumido por: internal/approval/translator.go, internal/evidence (reviewVerdict)
+# e .agents/scripts/validate-review-evidence.sh. Colunas: linha<TAB>veredito canonico.
+# NONE = nenhuma declaracao canonica reconhecida.
+- Verdict: APPROVED	APPROVED
+- Veredito: aprovado	APPROVED
+- **Veredito:** APPROVED	APPROVED
+- **Veredito**: aprovado	APPROVED
+- `Veredito`: APROVADO	APPROVED
+- Verdict: APPROVED_WITH_REMARKS	APPROVED_WITH_REMARKS
+- Veredito: aprovado com ressalvas	APPROVED_WITH_REMARKS
+- Veredito: APROVADO_COM_RESSALVAS	APPROVED_WITH_REMARKS
+- **Veredito:** aprovado com ressalvas	APPROVED_WITH_REMARKS
+- Verdict: REJECTED	REJECTED
+- Veredito: reprovado	REJECTED
+- Veredicto: reprovado	REJECTED
+- Veredito final: reprovado	REJECTED
+- **Veredito**: REPROVADO	REJECTED
+- Verdict: BLOCKED	BLOCKED
+- Veredito: bloqueado	BLOCKED
+- **Veredito**: BLOQUEADO	BLOCKED
+- Veredito: talvez	NONE
+- Veredito: aprovado parcialmente	NONE
+Sem nenhuma declaracao de veredito nesta linha	NONE

@@ -1,0 +1,29 @@
+=== RUN   TestExecuteApprovalCycleHonorsConfiguredMaxBugfixIterations
+--- PASS: TestExecuteApprovalCycleHonorsConfiguredMaxBugfixIterations (0.21s)
+=== RUN   TestOptionsToConfigOverrides_MaxBugfixIterationsDefaultDoesNotOverrideConfig
+=== PAUSE TestOptionsToConfigOverrides_MaxBugfixIterationsDefaultDoesNotOverrideConfig
+=== RUN   TestOptionsToConfigOverrides_MaxBugfixIterationsExplicitOverridesConfig
+=== PAUSE TestOptionsToConfigOverrides_MaxBugfixIterationsExplicitOverridesConfig
+=== RUN   TestResolveRuntimeConfig_MaxBugfixIterationsFromWorkspaceConfigOnly
+=== PAUSE TestResolveRuntimeConfig_MaxBugfixIterationsFromWorkspaceConfigOnly
+=== RUN   TestApplyResolvedMaxBugfixIterations_ZeroValuePreservesOptions
+=== PAUSE TestApplyResolvedMaxBugfixIterations_ZeroValuePreservesOptions
+=== RUN   TestBuildRuntimeConfig_MaxBugfixIterationsMapeado1a1
+=== PAUSE TestBuildRuntimeConfig_MaxBugfixIterationsMapeado1a1
+=== RUN   TestBuildRuntimeConfig_MaxBugfixIterationsZeroValuePreservaF1
+=== PAUSE TestBuildRuntimeConfig_MaxBugfixIterationsZeroValuePreservaF1
+=== CONT  TestOptionsToConfigOverrides_MaxBugfixIterationsDefaultDoesNotOverrideConfig
+--- PASS: TestOptionsToConfigOverrides_MaxBugfixIterationsDefaultDoesNotOverrideConfig (0.00s)
+=== CONT  TestBuildRuntimeConfig_MaxBugfixIterationsZeroValuePreservaF1
+--- PASS: TestBuildRuntimeConfig_MaxBugfixIterationsZeroValuePreservaF1 (0.00s)
+=== CONT  TestBuildRuntimeConfig_MaxBugfixIterationsMapeado1a1
+--- PASS: TestBuildRuntimeConfig_MaxBugfixIterationsMapeado1a1 (0.00s)
+=== CONT  TestApplyResolvedMaxBugfixIterations_ZeroValuePreservesOptions
+--- PASS: TestApplyResolvedMaxBugfixIterations_ZeroValuePreservesOptions (0.00s)
+=== CONT  TestResolveRuntimeConfig_MaxBugfixIterationsFromWorkspaceConfigOnly
+=== CONT  TestOptionsToConfigOverrides_MaxBugfixIterationsExplicitOverridesConfig
+--- PASS: TestOptionsToConfigOverrides_MaxBugfixIterationsExplicitOverridesConfig (0.00s)
+--- PASS: TestResolveRuntimeConfig_MaxBugfixIterationsFromWorkspaceConfigOnly (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	0.489s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks	[no test files]

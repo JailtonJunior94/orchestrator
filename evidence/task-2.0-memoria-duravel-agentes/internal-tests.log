@@ -1,0 +1,74 @@
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/adapters	0.215s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/agents	0.236s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/agents/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/approval	0.437s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/approval/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/bugschema	0.593s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/changelog	0.709s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/config	0.897s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/config/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/contextgen	1.111s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/detect	1.235s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/detect/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/doctor	1.375s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/embedded	1.439s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/evidence	1.639s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/fs	1.349s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/fs/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/git	1.404s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/git/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/gitref	2.641s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/inspect	1.221s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/install	1.676s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/invocation	1.251s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/lint	1.168s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/manifest	1.009s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/metrics	1.128s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/metrics/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/output	1.053s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/parity	1.239s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/platform	0.950s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/prerequisites	0.954s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	2.400s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake	1.086s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client	8.682s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events	1.114s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/handshake	1.198s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks	1.222s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver	1.850s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/wire	1.321s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory	1.087s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable	0.951s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable/mocks	[no test files]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/mocks	[no test files]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence	0.929s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/precondition	0.957s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe	0.970s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/render	1.029s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	1.146s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/scaffold	1.336s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd	1.586s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd/tasks	1.309s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/semver	3.662s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillbump	8.420s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	1.272s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillscheck	1.307s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdigest	1.141s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdrift	0.945s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria	1.026s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	13.653s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/telemetry	0.999s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/traceability	1.027s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/triggers	0.981s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/triggers/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/uninstall	0.991s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/upgrade	0.978s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/version	0.921s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/wrapper	0.901s

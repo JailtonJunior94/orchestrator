@@ -1,0 +1,531 @@
+diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+index f9837e7..29c96a8 100644
+--- a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+@@ -26,7 +26,7 @@
+ | 1.0 | Tornar os gates capazes de rodar e de dizer a verdade | done | — | — | — |
+ | 2.0 | Pacote de domínio do Ciclo de Aprovação, sem consumidor | done | 1.0 | Com 3.0 | domain-modeling-production |
+ | 3.0 | Mapa 1:1 critério-evidência como dado verificável | done | 1.0 | Com 2.0 | — |
+-| 4.1 | Veredito da fonte real do revisor e adaptadores das portas (D1) | pending | 2.0, 3.0 | Não | — |
++| 4.1 | Veredito da fonte real do revisor e adaptadores das portas (D1) | done | 2.0, 3.0 | Não | — |
+ | 4.2 | Evidência por rodada, revisão por delta e reset de profundidade (D2) | pending | 4.1 | Não | — |
+ | 4.3 | Promoção do loop nos três caminhos de produção e as quatro lacunas | pending | 4.2 | Não | — |
+ | 5.0 | Propagação do teto de rodadas e virada do critério estrito | pending | 4.3 | Não | — |
+diff --git a/internal/runtime/runner_autoreview.go b/internal/runtime/runner_autoreview.go
+index f8f57ed..b235eb6 100644
+--- a/internal/runtime/runner_autoreview.go
++++ b/internal/runtime/runner_autoreview.go
+@@ -14,6 +14,7 @@ import (
+ 	"strings"
+ 	"time"
+ 
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
+ )
+ 
+@@ -172,18 +173,11 @@ func (r *ACPRunner) runAutoReview(ctx context.Context, j Job) (ReviewResult, err
+ 		AutoReview:     false,            // HARD: recursão bloqueada
+ 	}
+ 
+-	// Usar reviewOutputFn injetável quando disponível (facilita testes unitários).
+-	var reviewOutput string
+-	if r.reviewOutputFn != nil {
+-		reviewOutput, err = r.reviewOutputFn(ctx, childJob)
+-	} else {
+-		reviewOutput, err = r.spawnReviewSession(ctx, childJob)
+-	}
++	reviewOutput, err := r.spawnReviewSession(ctx, childJob)
+ 
+-	status := NewCatalog().parseReviewStatus(reviewOutput)
++	status := NewCatalog().translateReviewStatus(reviewOutput)
+ 	hardIssues := NewCatalog().extractHardIssues(reviewOutput)
+ 
+-	// Persistir apontador review.md (arquivo pequeno com resumo).
+ 	reviewPointerContent := NewCatalog().buildReviewPointer(reviewEvidenceDir, status)
+ 	_ = os.MkdirAll(filepath.Dir(reviewPath), 0o755)
+ 	_ = os.WriteFile(reviewPath, []byte(reviewPointerContent), 0o644)
+@@ -212,32 +206,77 @@ func (r *ACPRunner) readReviewSkill(workDir string) (string, error) {
+ 	return string(body), nil
+ }
+ 
+-// spawnReviewSession cria um runner filho e retorna o output textual.
+-// Reutiliza spec, factory e clock do runner pai.
+ func (r *ACPRunner) spawnReviewSession(ctx context.Context, childJob Job) (string, error) {
+-	reviewRunner := NewACPRunner(r.spec, NewCatalog().WithClock(r.clock), NewCatalog().WithProber(r.prober), NewCatalog().WithClientFactory(r.factory), NewCatalog().WithPersistenceFactory(r.persistenceFactory))
++	if r.reviewOutputFn != nil {
++		return r.reviewOutputFn(ctx, childJob)
++	}
++
++	capture := &reviewOutputCapture{}
++	reviewRunner := NewACPRunner(r.spec, NewCatalog().WithClock(r.clock), NewCatalog().WithProber(r.prober), NewCatalog().WithClientFactory(r.factory), NewCatalog().WithPersistenceFactory(&reviewCaptureFactory{inner: r.persistenceFactory, capture: capture}))
++
++	_, runErr := reviewRunner.Run(ctx, childJob)
++	return capture.String(), runErr
++}
++
++func (c *Catalog) translateReviewStatus(reviewOutput string) string {
++	if approval.NewTranslator().Translate(reviewOutput).Approves() {
++		return "ok"
++	}
++	return "blocked"
++}
++
++type reviewOutputCapture struct {
++	inner Persistence
++	buf   strings.Builder
++}
+ 
+-	reviewSummary, runErr := reviewRunner.Run(ctx, childJob)
++func (r *reviewOutputCapture) AppendEvent(evt events.Event) error {
++	if evt.Kind() == events.KindAgentMessage {
++		if msg := evt.AgentMessage(); msg != nil {
++			if r.buf.Len() > 0 {
++				r.buf.WriteByte('\n')
++			}
++			r.buf.WriteString(msg.Text())
++		}
++	}
++	if r.inner != nil {
++		return r.inner.AppendEvent(evt)
++	}
++	return nil
++}
+ 
+-	// Construir output textual a partir do Summary para parseReviewStatus.
+-	// Em produção, o output real vem dos eventos persistidos no evidence dir.
+-	// parseReviewStatus opera sobre o texto; aqui mapeamos CancelReason.
+-	output := NewCatalog().buildReviewOutputFromSummary(reviewSummary, runErr)
+-	return output, runErr
++func (r *reviewOutputCapture) WriteToolCalls(summary []events.ToolCallSummary) error {
++	if r.inner != nil {
++		return r.inner.WriteToolCalls(summary)
++	}
++	return nil
+ }
+ 
+-// buildReviewOutputFromSummary constrói representação textual do resultado do review.
+-// Em produção o output real vem dos eventos persistidos; aqui construímos a representação
+-// baseada no CancelReason para que parseReviewStatus e extractHardIssues possam operar.
+-// Testes injetam comportamento via reviewOutputFn.
+-func (c *Catalog) buildReviewOutputFromSummary(s Summary, runErr error) string {
+-	if runErr != nil {
+-		return fmt.Sprintf("erro na sessão de review: %v", runErr)
++func (r *reviewOutputCapture) EnrichReport(summary Summary) error {
++	if r.inner != nil {
++		return r.inner.EnrichReport(summary)
+ 	}
+-	if s.CancelReason != events.CancelReasonNone {
+-		return fmt.Sprintf("sessão de review encerrada com: %s", s.CancelReason)
++	return nil
++}
++
++func (r *reviewOutputCapture) String() string {
++	return r.buf.String()
++}
++
++type reviewCaptureFactory struct {
++	inner   PersistenceFactory
++	capture *reviewOutputCapture
++}
++
++func (f *reviewCaptureFactory) New(evidenceDir string) (Persistence, error) {
++	if f.inner != nil {
++		inner, err := f.inner.New(evidenceDir)
++		if err != nil {
++			return nil, err
++		}
++		f.capture.inner = inner
+ 	}
+-	return "review concluído sem marcadores hard"
++	return f.capture, nil
+ }
+ 
+ // buildReviewPointer cria o conteúdo do arquivo review.md (apontador conveniente ~3 linhas).
+diff --git a/internal/runtime/runner_autoreview_test.go b/internal/runtime/runner_autoreview_test.go
+index 2367c39..0588442 100644
+--- a/internal/runtime/runner_autoreview_test.go
++++ b/internal/runtime/runner_autoreview_test.go
+@@ -202,7 +202,7 @@ func TestAutoReviewOkWhenNoHardMarkers(t *testing.T) {
+ 		AppendSessionEnd()
+ 
+ 	reviewFn := func(_ context.Context, _ airuntime.Job) (string, error) {
+-		return "Nenhum issue encontrado. Código aprovado.", nil
++		return "## Review\n\nNo blocking issues found.\n\nverdict: APPROVED\n", nil
+ 	}
+ 
+ 	runner := buildRunnerWithReviewFn(t, ctx, script, reviewFn)
+@@ -366,3 +366,75 @@ func TestBuildReviewPrompt_ContainsSkillAndDiff(t *testing.T) {
+ 		t.Error("prompt deve mencionar marcador [HARD] na instrução")
+ 	}
+ }
++
++func TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason(t *testing.T) {
++	t.Parallel()
++
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++
++	script := acpfake.NewScript().
++		AppendAgentMessage("## Review\n\nCritical defect in handler.\n\nverdict: BLOCKED\n").
++		AppendSessionEnd()
++
++	runner := airuntime.NewACPRunner(specs.NewCatalog().Claude(),
++		airuntime.NewCatalog().WithProber(&fakeProberForReview{}),
++		airuntime.NewCatalog().WithClientFactory(&fakeClientFactoryForReview{script: script, ctx: ctx, t: t}),
++		airuntime.NewCatalog().WithPersistenceFactory(&fakePersistenceFactoryForReview{}),
++		airuntime.NewCatalog().WithRenderer(&fakeRendererForReview{}),
++	)
++
++	job := airuntime.Job{
++		Prompt:      "task under review",
++		WorkDir:     workDirWithAgentsMDForReview(t),
++		EvidenceDir: t.TempDir(),
++		Quiet:       true,
++		AutoReview:  true,
++	}
++
++	summary, err := runner.Run(ctx, job)
++	if err != nil {
++		t.Fatalf("Run failed: %v", err)
++	}
++
++	if summary.CancelReason != events.CancelReasonNone {
++		t.Fatalf("precondition: CancelReason = %q, want none", summary.CancelReason)
++	}
++	if summary.ReviewStatus != "blocked" {
++		t.Errorf("D1: ReviewStatus = %q, want blocked (real reviewer verdict must win over synthetic text)", summary.ReviewStatus)
++	}
++}
++
++func TestAutoReviewFailClosedWithoutCanonicalVerdict(t *testing.T) {
++	t.Parallel()
++
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++
++	script := acpfake.NewScript().
++		AppendAgentMessage("main task done").
++		AppendSessionEnd()
++
++	reviewFn := func(_ context.Context, _ airuntime.Job) (string, error) {
++		return "Review complete. No negative markers, looks fine to me.", nil
++	}
++
++	runner := buildRunnerWithReviewFn(t, ctx, script, reviewFn)
++
++	job := airuntime.Job{
++		Prompt:      "clean task without verdict line",
++		WorkDir:     workDirWithAgentsMDForReview(t),
++		EvidenceDir: t.TempDir(),
++		Quiet:       true,
++		AutoReview:  true,
++	}
++
++	summary, err := runner.Run(ctx, job)
++	if err != nil {
++		t.Fatalf("Run failed: %v", err)
++	}
++
++	if summary.ReviewStatus != "blocked" {
++		t.Errorf("RF-46: ReviewStatus = %q, want blocked (absence of canonical verdict must not infer approval)", summary.ReviewStatus)
++	}
++}
+diff --git a/internal/runtime/approval_adapters.go b/internal/runtime/approval_adapters.go
+new file mode 100644
+index 0000000..187493c
+--- /dev/null
++++ b/internal/runtime/approval_adapters.go
+@@ -0,0 +1,115 @@
++package runtime
++
++import (
++	"bytes"
++	"context"
++	"fmt"
++	"io"
++	"os/exec"
++	"strings"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
++)
++
++var (
++	_ approval.Reviewer   = (*ReviewerAdapter)(nil)
++	_ approval.Fixer      = (*FixerAdapter)(nil)
++	_ approval.Repository = (*RepositoryAdapter)(nil)
++)
++
++type RepositoryAdapter struct {
++	catalog *Catalog
++	workDir string
++}
++
++func NewRepositoryAdapter(workDir string) *RepositoryAdapter {
++	return &RepositoryAdapter{catalog: NewCatalog(), workDir: workDir}
++}
++
++func (a *RepositoryAdapter) Checkpoint(_ context.Context) (approval.Checkpoint, error) {
++	head, err := a.catalog.revParseHead(a.workDir)
++	if err != nil {
++		return approval.Checkpoint{}, err
++	}
++	return approval.NewCheckpoint(head)
++}
++
++func (a *RepositoryAdapter) FullTarget(_ context.Context) (approval.ReviewTarget, error) {
++	return approval.NewReviewTarget(a.catalog.collectGitDiff(a.workDir)), nil
++}
++
++func (a *RepositoryAdapter) Delta(_ context.Context, since approval.Checkpoint) (approval.ReviewTarget, error) {
++	diff, err := a.catalog.runGitDiff(a.workDir, since.String())
++	if err != nil {
++		return approval.ReviewTarget{}, err
++	}
++	return approval.NewReviewTarget(diff), nil
++}
++
++func (c *Catalog) revParseHead(workDir string) (string, error) {
++	cmd := exec.Command("git", "rev-parse", "HEAD")
++	cmd.Dir = workDir
++	var out bytes.Buffer
++	cmd.Stdout = &out
++	cmd.Stderr = io.Discard
++	if err := cmd.Run(); err != nil {
++		return "", fmt.Errorf("git rev-parse HEAD: %w", err)
++	}
++	return strings.TrimSpace(out.String()), nil
++}
++
++type ReviewerAdapter struct {
++	runner  *ACPRunner
++	baseJob Job
++}
++
++func NewReviewerAdapter(runner *ACPRunner, baseJob Job) *ReviewerAdapter {
++	return &ReviewerAdapter{runner: runner, baseJob: baseJob}
++}
++
++func (a *ReviewerAdapter) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
++	job := a.baseJob
++	job.AutoReview = false
++
++	skillBody, err := a.runner.readReviewSkill(job.WorkDir)
++	if err != nil {
++		return approval.ReviewerOutput{}, err
++	}
++	job.Prompt = NewCatalog().buildReviewPrompt(skillBody, request.Target().String())
++
++	rawText, err := a.runner.spawnReviewSession(ctx, job)
++	if err != nil {
++		return approval.ReviewerOutput{}, err
++	}
++	return approval.NewReviewerOutput(rawText, nil, approval.CriteriaMap{}), nil
++}
++
++type FixerAdapter struct {
++	runner  *ACPRunner
++	baseJob Job
++}
++
++func NewFixerAdapter(runner *ACPRunner, baseJob Job) *FixerAdapter {
++	return &FixerAdapter{runner: runner, baseJob: baseJob}
++}
++
++func (a *FixerAdapter) Fix(ctx context.Context, request approval.FixRequest) error {
++	job := a.baseJob
++	job.AutoReview = false
++	job.Prompt = a.buildFixPrompt(request)
++
++	_, err := a.runner.Run(ctx, job)
++	return err
++}
++
++func (a *FixerAdapter) buildFixPrompt(request approval.FixRequest) string {
++	var sb strings.Builder
++	sb.WriteString("## Findings to fix\n\n")
++	for finding := range request.Findings() {
++		fmt.Fprintf(&sb, "- [%s] %s (%s): %s\n", finding.Severity().String(), finding.File(), finding.Rule(), finding.Description())
++	}
++	sb.WriteString("\n## Target\n\n```diff\n")
++	sb.WriteString(request.Target().String())
++	sb.WriteString("\n```\n")
++	return sb.String()
++}
+diff --git a/internal/runtime/approval_adapters_test.go b/internal/runtime/approval_adapters_test.go
+new file mode 100644
+index 0000000..4ee61a6
+--- /dev/null
++++ b/internal/runtime/approval_adapters_test.go
+@@ -0,0 +1,172 @@
++package runtime_test
++
++import (
++	"context"
++	"os"
++	"os/exec"
++	"path/filepath"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
++	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
++)
++
++func gitInitRepoForAdapter(t *testing.T) string {
++	t.Helper()
++	dir := t.TempDir()
++	run := func(args ...string) {
++		t.Helper()
++		cmd := exec.Command("git", args...)
++		cmd.Dir = dir
++		if out, err := cmd.CombinedOutput(); err != nil {
++			t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
++		}
++	}
++	run("init")
++	run("config", "user.email", "test@example.com")
++	run("config", "user.name", "Test")
++	if err := os.WriteFile(filepath.Join(dir, "base.txt"), []byte("base\n"), 0o644); err != nil {
++		t.Fatalf("write base: %v", err)
++	}
++	run("add", ".")
++	run("commit", "-m", "base")
++	return dir
++}
++
++func TestRepositoryAdapterCheckpointAndTargets(t *testing.T) {
++	t.Parallel()
++
++	dir := gitInitRepoForAdapter(t)
++	adapter := airuntime.NewRepositoryAdapter(dir)
++	ctx := context.Background()
++
++	checkpoint, err := adapter.Checkpoint(ctx)
++	if err != nil {
++		t.Fatalf("Checkpoint: %v", err)
++	}
++	if checkpoint.Zero() || len(checkpoint.String()) < 7 {
++		t.Fatalf("Checkpoint returned %q", checkpoint.String())
++	}
++
++	if err := os.WriteFile(filepath.Join(dir, "base.txt"), []byte("base\nchanged\n"), 0o644); err != nil {
++		t.Fatalf("mutate: %v", err)
++	}
++
++	full, err := adapter.FullTarget(ctx)
++	if err != nil {
++		t.Fatalf("FullTarget: %v", err)
++	}
++	if !strings.Contains(full.String(), "changed") {
++		t.Errorf("FullTarget = %q, want diff containing 'changed'", full.String())
++	}
++
++	delta, err := adapter.Delta(ctx, checkpoint)
++	if err != nil {
++		t.Fatalf("Delta: %v", err)
++	}
++	if !strings.Contains(delta.String(), "changed") {
++		t.Errorf("Delta = %q, want diff containing 'changed'", delta.String())
++	}
++}
++
++func TestReviewerAdapterReturnsRawReviewerText(t *testing.T) {
++	t.Parallel()
++
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++
++	const rawText = "## Review\n\nOne blocker remains.\n\nverdict: REJECTED\n"
++	reviewFn := func(_ context.Context, _ airuntime.Job) (string, error) {
++		return rawText, nil
++	}
++
++	runner := airuntime.NewACPRunner(specs.NewCatalog().Claude(),
++		airuntime.NewCatalog().WithProber(&fakeProberForReview{}),
++		airuntime.NewCatalog().WithReviewOutputFn(reviewFn),
++	)
++
++	baseJob := airuntime.Job{
++		WorkDir:     workDirWithAgentsMDForReview(t),
++		EvidenceDir: t.TempDir(),
++		Quiet:       true,
++	}
++	adapter := airuntime.NewReviewerAdapter(runner, baseJob)
++
++	criterion, err := approval.NewAcceptanceCriterion("builds green")
++	if err != nil {
++		t.Fatalf("criterion: %v", err)
++	}
++	task, err := approval.NewTaskIdentity("task-4.1")
++	if err != nil {
++		t.Fatalf("task: %v", err)
++	}
++	agent, err := approval.NewAgentIdentity("agent-x")
++	if err != nil {
++		t.Fatalf("agent: %v", err)
++	}
++	request, err := approval.NewReviewRequest(task, agent, 1, approval.NewReviewTarget("diff --git a/x b/x"), []approval.AcceptanceCriterion{criterion})
++	if err != nil {
++		t.Fatalf("request: %v", err)
++	}
++
++	output, err := adapter.Review(ctx, request)
++	if err != nil {
++		t.Fatalf("Review: %v", err)
++	}
++	if output.RawText() != rawText {
++		t.Errorf("RawText() = %q, want %q", output.RawText(), rawText)
++	}
++	if approval.NewTranslator().Translate(output.RawText()) != approval.VerdictRejected {
++		t.Errorf("translated verdict = %v, want REJECTED", approval.NewTranslator().Translate(output.RawText()))
++	}
++}
++
++func TestFixerAdapterRunsSessionWithFindings(t *testing.T) {
++	t.Parallel()
++
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++
++	script := acpfake.NewScript().
++		AppendAgentMessage("applied fix").
++		AppendSessionEnd()
++
++	runner := airuntime.NewACPRunner(specs.NewCatalog().Claude(),
++		airuntime.NewCatalog().WithProber(&fakeProberForReview{}),
++		airuntime.NewCatalog().WithClientFactory(&fakeClientFactoryForReview{script: script, ctx: ctx, t: t}),
++		airuntime.NewCatalog().WithPersistenceFactory(&fakePersistenceFactoryForReview{}),
++		airuntime.NewCatalog().WithRenderer(&fakeRendererForReview{}),
++	)
++
++	baseJob := airuntime.Job{
++		WorkDir:     workDirWithAgentsMDForReview(t),
++		EvidenceDir: t.TempDir(),
++		Quiet:       true,
++	}
++	adapter := airuntime.NewFixerAdapter(runner, baseJob)
++
++	finding, err := approval.NewFinding(approval.SeverityHigh, "internal/x/y.go", "R-STYLE-001", "comment on new line")
++	if err != nil {
++		t.Fatalf("finding: %v", err)
++	}
++	task, err := approval.NewTaskIdentity("task-4.1")
++	if err != nil {
++		t.Fatalf("task: %v", err)
++	}
++	agent, err := approval.NewAgentIdentity("agent-x")
++	if err != nil {
++		t.Fatalf("agent: %v", err)
++	}
++	request, err := approval.NewFixRequest(task, agent, 1, []approval.Finding{finding}, approval.NewReviewTarget("diff"))
++	if err != nil {
++		t.Fatalf("request: %v", err)
++	}
++
++	if err := adapter.Fix(ctx, request); err != nil {
++		t.Fatalf("Fix: %v", err)
++	}
++}

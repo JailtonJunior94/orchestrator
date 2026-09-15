@@ -1,0 +1,346 @@
+package taskloop
+
+import (
+	"context"
+	"fmt"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria"
+)
+
+type recordingFinalReviewer struct {
+	inner FinalReviewer
+	last  FinalReviewResult
+	calls int
+}
+
+func (r *recordingFinalReviewer) ReviewConsolidated(ctx context.Context, diff string) (FinalReviewResult, error) {
+	result, err := r.inner.ReviewConsolidated(ctx, diff)
+	if err != nil {
+		return FinalReviewResult{}, err
+	}
+	r.last = result
+	r.calls++
+	return result, nil
+}
+
+type cycleBugfixInvoker struct {
+	invoker    AgentInvoker
+	workDir    string
+	model      string
+	data       BugfixTemplateData
+	lastOutput string
+	calls      int
+}
+
+func (b *cycleBugfixInvoker) InvokeBugfix(ctx context.Context, findings []Finding, diff string) (string, error) {
+	data := b.data
+	data.ReviewFindings = formatCycleFindings(findings)
+	data.Diff = diff
+
+	prompt, err := NewCatalog().BuildBugfixPrompt(data)
+	if err != nil {
+		return "", err
+	}
+
+	stdout, _, _, invokeErr := b.invoker.Invoke(ctx, prompt, b.workDir, b.model)
+	b.calls++
+	b.lastOutput = stdout
+	if invokeErr != nil {
+		return "", invokeErr
+	}
+	return stdout, nil
+}
+
+func formatCycleFindings(findings []Finding) string {
+	lines := make([]string, 0, len(findings))
+	for _, finding := range findings {
+		location := strings.TrimSpace(finding.File)
+		if finding.Line > 0 {
+			location = fmt.Sprintf("%s:%d", location, finding.Line)
+		}
+		if location == "" {
+			lines = append(lines, fmt.Sprintf("- [%s] %s", finding.Severity, finding.Message))
+			continue
+		}
+		lines = append(lines, fmt.Sprintf("- [%s] [%s] %s", finding.Severity, location, finding.Message))
+	}
+	return strings.Join(lines, "\n")
+}
+
+type cycleDiffCapturer struct {
+	workDir string
+}
+
+func (d *cycleDiffCapturer) CaptureDiff(ctx context.Context) (string, error) {
+	return NewCatalog().captureGitDiff(ctx, d.workDir), nil
+}
+
+func acceptanceCriteriaFromTaskFile(content []byte) ([]approval.AcceptanceCriterion, error) {
+	seen := make(map[string]bool)
+	var criteria []approval.AcceptanceCriterion
+	for _, description := range taskcriteria.Extract(content) {
+		key := strings.TrimSpace(description)
+		if key == "" || seen[key] {
+			continue
+		}
+		seen[key] = true
+		criterion, err := approval.NewAcceptanceCriterion(description)
+		if err != nil {
+			return nil, err
+		}
+		criteria = append(criteria, criterion)
+	}
+	return criteria, nil
+}
+
+func acceptanceCriteriaUnion(prdFolder string, taskIDs []string, fsys fs.FileSystem) ([]approval.AcceptanceCriterion, error) {
+	seen := make(map[string]bool)
+	var criteria []approval.AcceptanceCriterion
+	for _, id := range taskIDs {
+		taskFile, err := NewCatalog().ResolveTaskFile(prdFolder, TaskEntry{ID: id}, fsys)
+		if err != nil {
+			continue
+		}
+		content, err := fsys.ReadFile(taskFile)
+		if err != nil {
+			continue
+		}
+		for _, description := range taskcriteria.Extract(content) {
+			key := strings.TrimSpace(description)
+			if key == "" || seen[key] {
+				continue
+			}
+			seen[key] = true
+			criterion, err := approval.NewAcceptanceCriterion(description)
+			if err != nil {
+				return nil, err
+			}
+			criteria = append(criteria, criterion)
+		}
+	}
+	return criteria, nil
+}
+
+func runLoopAgentIdentity(opts Options) string {
+	if identity := strings.TrimSpace(cycleAgentIdentity(opts)); identity != "" {
+		return identity
+	}
+	return "runloop"
+}
+
+func cycleApprovalPolicy(maxRounds int) (approval.ApprovalPolicy, error) {
+	if maxRounds > 0 {
+		return approval.NewApprovalPolicy(approval.WithMaxRounds(maxRounds))
+	}
+	return approval.NewApprovalPolicy()
+}
+
+type unconfiguredBugfixInvoker struct{}
+
+func (unconfiguredBugfixInvoker) InvokeBugfix(context.Context, []Finding, string) (string, error) {
+	return "", ErrBugfixNotConfigured
+}
+
+func (s *Service) runBatchCycle(
+	ctx context.Context,
+	opts Options,
+	criteria []approval.AcceptanceCriterion,
+	rev FinalReviewResult,
+	primedTarget string,
+	deps RunLoopDeps,
+	workDir string,
+) (approval.CycleResult, *bugfixEvidenceRecorder, error) {
+	taskIdentity, err := approval.NewTaskIdentity("runloop:" + strings.TrimSpace(opts.PRDFolder))
+	if err != nil {
+		return approval.CycleResult{}, nil, err
+	}
+	agentIdentity, err := approval.NewAgentIdentity(runLoopAgentIdentity(opts))
+	if err != nil {
+		return approval.CycleResult{}, nil, err
+	}
+	policy, err := cycleApprovalPolicy(opts.MaxBugfixIterations)
+	if err != nil {
+		return approval.CycleResult{}, nil, err
+	}
+
+	recorder := newBugfixEvidenceRecorder()
+	repository := newRepositoryPort(s.batchDiffCapturer(deps, workDir), workDir)
+	reviewer := newPrimedReviewerPort(rev, primedTarget, deps.FinalReviewer, airuntime.NewRoundEvidenceWriterWithSink(filepath.Join(workDir, "evidence", "runloop"), s.fsys), repository)
+	fixer := newFixerPort(batchBugfixInvoker(deps), recorder)
+
+	cycle, err := approval.NewCycle(taskIdentity, agentIdentity, policy, criteria, reviewer, fixer, repository)
+	if err != nil {
+		return approval.CycleResult{}, nil, err
+	}
+
+	result, runErr := cycle.Run(ctx)
+	return result, recorder, runErr
+}
+
+func (s *Service) taskDiffCapturer(workDir string) DiffCapturer {
+	if s.diffCapturer != nil {
+		return s.diffCapturer
+	}
+	return &cycleDiffCapturer{workDir: workDir}
+}
+
+func batchBugfixInvoker(deps RunLoopDeps) BugfixInvoker {
+	if deps.BugfixInvoker == nil {
+		return unconfiguredBugfixInvoker{}
+	}
+	return deps.BugfixInvoker
+}
+
+func (s *Service) batchDiffCapturer(deps RunLoopDeps, workDir string) DiffCapturer {
+	if deps.DiffCapturer != nil {
+		return deps.DiffCapturer
+	}
+	return s.taskDiffCapturer(workDir)
+}
+
+func cycleAgentIdentity(opts Options) string {
+	if strings.TrimSpace(opts.AgentName) != "" {
+		return opts.AgentName
+	}
+	if opts.Profiles != nil {
+		return opts.Profiles.Executor.Tool()
+	}
+	return opts.Tool
+}
+
+func bugfixResultFromCycle(invoker *cycleBugfixInvoker, elapsed time.Duration, approved, interrupted bool) *BugfixResult {
+	if invoker.calls == 0 {
+		return nil
+	}
+	result := &BugfixResult{Duration: elapsed, Output: invoker.lastOutput}
+	switch {
+	case interrupted:
+		result.ExitCode = 1
+		result.Note = "approval cycle interrupted during fix"
+	case approved:
+		result.ExitCode = 0
+	default:
+		result.ExitCode = 1
+		result.Note = "applied fixes did not reach approval"
+	}
+	return result
+}
+
+func (s *Service) conductApprovalCycle(
+	ctx context.Context,
+	opts Options,
+	task TaskEntry,
+	criteria []approval.AcceptanceCriterion,
+	relTaskFile, relPRD, workDir string,
+) (*ReviewResult, *BugfixResult) {
+	reviewerInvoker, err := s.createInvokerWithFallback(opts.Profiles.Reviewer.Tool(), opts.ReviewerFallbackModel)
+	if err != nil {
+		return &ReviewResult{Note: fmt.Sprintf("failed to create reviewer invoker: %v", err)}, nil
+	}
+
+	executorTool := opts.Tool
+	executorModel := ""
+	if opts.Profiles != nil {
+		executorTool = opts.Profiles.Executor.Tool()
+		executorModel = opts.Profiles.Executor.Model()
+	}
+	executorInvoker, err := s.createInvokerWithFallback(executorTool, opts.ExecutorFallbackModel)
+	if err != nil {
+		return &ReviewResult{Note: fmt.Sprintf("failed to create executor invoker: %v", err)}, nil
+	}
+
+	reviewer := &recordingFinalReviewer{
+		inner: NewFinalReviewer(reviewerInvoker, workDir, opts.Profiles.Reviewer.Model()),
+	}
+	bugfixInvoker := &cycleBugfixInvoker{
+		invoker: executorInvoker,
+		workDir: workDir,
+		model:   executorModel,
+		data: BugfixTemplateData{
+			TaskFile:  relTaskFile,
+			PRDFolder: relPRD,
+			TechSpec:  filepath.Join(relPRD, "techspec.md"),
+			TasksFile: filepath.Join(relPRD, "tasks.md"),
+		},
+	}
+	recorder := newBugfixEvidenceRecorder()
+
+	taskIdentity, err := approval.NewTaskIdentity("task-" + task.ID)
+	if err != nil {
+		return &ReviewResult{Note: fmt.Sprintf("invalid task identity: %v", err)}, nil
+	}
+	agentIdentity, err := approval.NewAgentIdentity(cycleAgentIdentity(opts))
+	if err != nil {
+		return &ReviewResult{Note: fmt.Sprintf("invalid agent identity: %v", err)}, nil
+	}
+	policy, err := cycleApprovalPolicy(opts.MaxBugfixIterations)
+	if err != nil {
+		return &ReviewResult{Note: fmt.Sprintf("invalid approval policy: %v", err)}, nil
+	}
+
+	repository := newRepositoryPort(s.taskDiffCapturer(workDir), workDir)
+
+	cycle, err := approval.NewCycle(
+		taskIdentity,
+		agentIdentity,
+		policy,
+		criteria,
+		newReviewerPort(reviewer, airuntime.NewRoundEvidenceWriterWithSink(filepath.Join(workDir, "evidence", "task-"+task.ID), s.fsys), repository),
+		newFixerPort(bugfixInvoker, recorder),
+		repository,
+	)
+	if err != nil {
+		return &ReviewResult{Note: fmt.Sprintf("failed to build approval cycle: %v", err)}, nil
+	}
+
+	start := time.Now()
+	result, runErr := cycle.Run(ctx)
+	elapsed := time.Since(start)
+
+	review := &ReviewResult{Duration: elapsed, Output: reviewer.last.RawOutput}
+	if runErr != nil {
+		review.ExitCode = 1
+		review.Note = fmt.Sprintf("approval cycle error: %v", runErr)
+		return review, bugfixResultFromCycle(bugfixInvoker, elapsed, false, true)
+	}
+
+	review.CycleStopReason = result.Reason().String()
+	review.CycleRounds = cycleRoundReports(result)
+	review.CycleApproved = result.Approved()
+
+	if result.Approved() {
+		review.ExitCode = 0
+	} else {
+		review.ExitCode = 1
+		review.Note = fmt.Sprintf("approval cycle closed without approval: %s", result.Reason())
+	}
+
+	return review, bugfixResultFromCycle(bugfixInvoker, elapsed, result.Approved(), false)
+}
+
+func cycleRoundReports(result approval.CycleResult) []CycleRoundReport {
+	rounds := make([]CycleRoundReport, 0, result.RoundCount())
+	for round := range result.Rounds() {
+		rounds = append(rounds, CycleRoundReport{
+			Number:             round.Number(),
+			Verdict:            round.Verdict().String(),
+			Fingerprint:        round.Fingerprint().String(),
+			FindingsBySeverity: cycleSeverityCounts(round.CountBySeverity()),
+		})
+	}
+	return rounds
+}
+
+func cycleSeverityCounts(counts map[approval.Severity]int) map[string]int {
+	out := make(map[string]int, len(counts))
+	for severity, total := range counts {
+		out[severity.String()] = total
+	}
+	return out
+}

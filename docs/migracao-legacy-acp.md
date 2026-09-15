@@ -2,11 +2,14 @@
 
 > Relacionado: [ADR-012](../.specs/adr/012-copilot-cli-acp-native.md) (Copilot ACP),
 > [ADR-013](../.specs/adr/013-codex-cli-acp-native.md) (Codex ACP),
-> [ADR-015](../.specs/adr/015-gemini-cli-acp-native.md) (Gemini ACP),
+> [ADR-020 (PRD quatro-clis)](../.specs/adr/020-opencode-acp-subcomando.md) (OpenCode ACP),
 > ADR-022 (guard de governança) e ADR-026 (sunset do legacy mode) — ambos na pasta do PRD
 > `.specs/prd-paridade-cross-cli/`.
+>
+> [ADR-015](../.specs/adr/015-gemini-cli-acp-native.md) (Gemini ACP) foi **substituída**: o agente
+> Gemini foi removido do conjunto suportado (tarefa 10.0). Ver [§Gemini removido](#gemini-removido).
 
-Os entrypoints legados (`codex exec`, Copilot sem ACP, wrapper `gemini run --skill`) coexistem com os
+Os entrypoints legados (`codex exec`, Copilot sem ACP) coexistem com os
 runtimes ACP nativos apenas durante a janela de depreciação. Eles **dobram a superfície de divergência**
 e não recebem novas features de paridade — só o runtime ACP recebe. Este guia descreve como migrar.
 
@@ -27,8 +30,8 @@ e cai para o fallback `npx` quando necessário (ADR-017).
 |---|---|---|---|
 | Codex | `codex exec --yolo` | `task-loop --tool codex --runtime acp` | `codex-acp` · `npx @zed-industries/codex-acp` |
 | Copilot | Copilot sem ACP | `task-loop --tool copilot --runtime acp` | `copilot --acp` · `npx @github/copilot --acp` |
-| Gemini | `gemini run --skill` (wrapper) | `task-loop --tool gemini --runtime acp` | `gemini --acp` · `npx @google/gemini-cli --acp` |
 | Claude | — (já é ACP nativo) | `task-loop --tool claude --runtime acp` | `claude-agent-acp` · `npx @agentclientprotocol/claude-agent-acp` |
+| OpenCode | — (ACP nativo desde a adoção, sem invoker legado) | `task-loop --tool opencode --runtime acp` | `opencode acp` · `npx opencode-ai@<pin> acp` |
 
 ### Exemplo
 
@@ -47,8 +50,8 @@ ai-spec task-loop --tool codex --runtime acp .specs/prd-minha-feature
   rode `ai-spec sync-spec-hash` ou use `--skip-drift-guard` (desabilita apenas esse guard).
 - **Watchdog:** o timeout de inatividade default permanece 120s; configure via `--activity-timeout`
   ou `config.yaml` (`runtime.timeout`). `--activity-timeout=0` desabilita.
-- **Memória / janela:** CLIs de janela grande (ex.: Gemini ≥ 1M) usam limites ampliados
-  automaticamente; flags `--memory-*` explícitas continuam prevalecendo.
+- **Memória / janela:** CLIs com janela derivada do modelo (ex.: OpenCode com modelo ≥ 1M tokens)
+  usam limites ampliados automaticamente; flags `--memory-*` explícitas continuam prevalecendo.
 
 ## Critério de remoção do legacy (ADR-026)
 
@@ -75,3 +78,89 @@ fixada na tarefa de remoção, não antecipada aqui — ADR-026).
 - **Escopo:** remover os invokers legados e o wrapper; remover suas flags/mensagens de depreciação;
   manter apenas o caminho `--runtime acp`. Atualizar testes e docs.
 - **Fora de escopo deste ciclo:** nenhum código legado é removido agora (ADR-026 §1).
+
+## Gemini removido
+
+O Gemini CLI foi **removido** do conjunto de agentes suportados pelo `ai-spec-harness` (tarefa 10.0,
+release major). O conjunto canônico atual é `{claude, codex, copilot, opencode}`. Invocar `--tool gemini`
+produz um erro tipado (`skills.RemovedAgentError`, distinguível via `errors.As`) citando o conjunto
+suportado e apontando para esta seção.
+
+### Por que foi removido
+
+O Gemini era o único agente com uma política de detecção *opt-in* exclusiva, um invoker legado com
+aviso de depreciação, assets dedicados (`.gemini/`, `GEMINI.md`) e uma trilha própria de exceções
+espalhada pelo código, testes e snapshots. O OpenCode consolidou-se como o agente de terminal oficial
+com servidor ACP nativo, sistema de plugins e modelo de permissões declarativo — substituindo o papel
+que o Gemini ocupava no conjunto de quatro CLIs.
+
+### Como migrar
+
+- **Sessões orquestradas (`task-loop`):** troque `--tool gemini` por `--tool opencode` (ou outro agente
+  do conjunto suportado). Ver a tabela acima para binário e fallback.
+- **Wrapper legado (`ai-spec wrapper gemini <skill>`):** não existe substituto direto — o wrapper
+  aceita apenas `codex` e `copilot`. Para Claude e OpenCode, use os hooks/plugins nativos instalados
+  por `ai-spec install`.
+- **Instalação:** rode `ai-spec install . --tools opencode` (ou `all`) para instrumentar o agente
+  substituto. Rode `ai-spec uninstall .` no projeto para remover resíduos de `.gemini/` e `GEMINI.md`
+  de instalações antigas — a desinstalação limpa esse resíduo legado incondicionalmente.
+
+  > **Faça backup antes de rodar `ai-spec uninstall .`** — boa prática, não contorno de defeito.
+  > O defeito antes anunciado aqui **não existe mais**: `AGENTS.md` e `CLAUDE.md` autorais
+  > preexistentes são classificados como `merged` no manifesto e **sobrevivem à desinstalação**.
+  > Roundtrip verificado nesta release em repositório limpo — `install --tools all` seguido de
+  > **duas** execuções de `uninstall .` devolve os dois arquivos **byte-idênticos** ao original
+  > (ambos os `uninstall` saem 0; `diff` contra a cópia original não acusa diferença).
+  > O backup continua recomendado porque `uninstall` edita arquivos de configuração do usuário
+  > (`.claude/settings.json`, `.github/settings.json`, `opencode.json`) e remove resíduo legado.
+  >
+  > Antes:
+  >
+  > ```bash
+  > git status --porcelain            # a árvore deve estar limpa; commite ou stashe o que faltar
+  > cp AGENTS.md AGENTS.md.bak 2>/dev/null || true
+  > cp CLAUDE.md CLAUDE.md.bak 2>/dev/null || true
+  > ai-spec uninstall . --dry-run     # confira a lista de remoção antes de executar de verdade
+  > ```
+  >
+  > Depois:
+  >
+  > ```bash
+  > git status --porcelain            # nenhum arquivo autoral deve aparecer como deletado
+  > test -s AGENTS.md && test -s CLAUDE.md
+  > ls .gemini GEMINI.md 2>/dev/null   # devem ter sumido — é o que a operação deveria fazer
+  > ```
+  >
+  > Se `AGENTS.md` ou `CLAUDE.md` sumiram ou encolheram, restaure com `git checkout -- AGENTS.md
+  > CLAUDE.md` (ou a partir dos `.bak`) e reporte a ocorrência antes de seguir.
+- **Configuração declarativa (`AGENT.md`, `runtime.ide`):** troque `ide: gemini` por um valor do
+  conjunto suportado (`claude`, `codex`, `copilot`, `opencode`).
+
+### O que não migra automaticamente
+
+- Sessões, histórico e memória do Gemini CLI não são migrados — não é um objetivo desta remoção.
+- Documentação histórica (ADRs, changelog, PRDs anteriores, auditorias, evidências de execução) que
+  cita Gemini permanece intocada; é registro histórico, não uma superfície viva do produto.
+
+## Copilot: a chave `stop` é migrada, não revertida
+
+A migração RF-59 renomeia, em `.github/copilot/governance.json`, as chaves mortas
+`stop` / `Stop` / `sessionEnd` / `SessionEnd` para a chave oficial `agentStop`
+(`internal/upgrade/copilot_governance.go`). O conteúdo das entradas e a indentação do arquivo são
+preservados; apenas o **nome da chave** muda.
+
+**`uninstall` não desfaz esse rename.** Um `governance.json` que era autoral com a chave `"stop"`
+volta do `uninstall` com a chave `"agentStop"`. Isso é **intencional**: `"stop"` não é um ponto de
+extensão reconhecido pelo Copilot CLI, então restaurar o nome antigo devolveria um arquivo com um
+hook que nunca dispara — o estado que a migração existe para corrigir.
+
+Consequências práticas:
+
+- Não espere igualdade byte a byte entre o `governance.json` anterior ao `install` e o posterior ao
+  `uninstall`. A diferença esperada é exatamente o nome da chave.
+- Se você versiona `.github/copilot/governance.json`, o primeiro `install` após a atualização produz
+  um diff de uma linha por chave migrada. Commite-o: é a correção, não ruído.
+- Para conferir o que mudou: `git diff -- .github/copilot/governance.json`.
+- Se você precisa mesmo do nome original (por exemplo, para uma ferramenta de terceiros que leia
+  esse arquivo), renomeie manualmente após o `uninstall` — o harness não tem como distinguir uma
+  chave `"stop"` autoral de uma chave `"stop"` legada que ele próprio escreveu.

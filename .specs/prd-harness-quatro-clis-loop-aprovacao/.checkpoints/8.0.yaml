@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-quatro-clis-loop-aprovacao/8.0_execution_report.md
+summary: Enforcement nao-desligavel do OpenCode via plugin de governanca (hook pre-tool bloqueando por excecao), sanitizacao de ambiente do processo filho e handshake ativo do sentinela, validado com testes reais contra o binario opencode instalado.
+timestamp: 2026-09-11T12:14:32Z

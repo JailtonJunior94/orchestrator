@@ -286,7 +286,7 @@ O harness não tem interface de usuário. O papel de ponta a ponta é cumprido p
 
 - `tests/integration/` com o servidor ACP falso de `internal/runtime/acpfake/`, exercitando sessão completa com memória ativada e agente que **ignora toda diretiva textual** — é assim que RF-13 e o objetivo O-5 se provam.
 - **Extensão obrigatória do teste de validadores de evidência** (`make test-validators`): um relatório contendo a seção de memória, provando que os gates de `.agents/scripts/` continuam capturando corretamente. Sem isso, a seção nova pode fechar prematuramente a captura de uma seção anterior e desligar um gate em silêncio — o padrão de defeito que o `AGENTS.md` documenta. Nenhuma expressão nova pode usar classe de bracket com caractere multibyte.
-- Benchmark de recuperação com 1.000 páginas, sob `make bench`, para RF-20.
+- Benchmark de recuperação sob `make bench`, para RF-20: `Facade.BuildContext` mede-se sobre um volume real de 1.000 Fatos ativos consolidados numa única página (via `Layer.Consolidate` direto, contornando deliberadamente a compactação real de RF-13, que limitaria qualquer página a poucas dezenas de fatos ativos pelo caminho normal de escrita). É a única interpretação estruturalmente honesta de "1.000 páginas de memória" dado que `Facade.BuildContext`/`Layer.Read` resolvem por chave exata (no máximo 3 arquivos por chamada — task, PRD, projeto), sem varredura de diretório: medir a leitura de uma página entre N páginas irmãs teria custo O(1) independente de N e não provaria nada sobre RF-20.
 
 ## Sequenciamento de Desenvolvimento
 
@@ -429,7 +429,7 @@ Cada decisão material tem ADR própria:
 | RF-17 | Seleção por relevância, não injeção integral | Unit: seleção menor que o conjunto ativo |
 | RF-18 | Teto por classe de janela com cotas e cessão (MD-001) | Unit: cotas, cessão, omissões declaradas |
 | RF-19 | Scan determinístico, sem índice (MD-002) | Unit: busca textual e por entidade |
-| RF-20 | Alvo de p95 com degradação reportada | Bench: 1.000 páginas |
+| RF-20 | Alvo de p95 com degradação reportada | Bench: 1.000 fatos ativos numa única página |
 | RF-21 | Ausência de memória não falha | Unit e Integração: repositório vazio |
 | RF-22 | Página inválida isolada e reportada | Unit: sessão prossegue; `ErrPaginaIlegivel` reportado |
 | RF-23 | Lease com prazo de 30 min mais processo vivo (MD-003) | Unit: quatro casos; Integração: dono morto |

@@ -20,6 +20,7 @@ EVIDENCE_VALIDATORS=(
   "validate-bugfix-evidence.sh"
   "validate-refactor-evidence.sh"
   "validate-review-evidence.sh"
+  "validate-session-end.sh"
   "hook-prereq-gate.sh"
   "resolve-references.sh"
   "validate-skill-prerequisites.sh"
@@ -38,7 +39,8 @@ ok_count=0
 for validator in "${EVIDENCE_VALIDATORS[@]}"; do
   canon_path="$canonical/$validator"
   if [[ ! -f "$canon_path" ]]; then
-    # validate-review-evidence.sh pode nao existir ate a Tarefa 7.0 — pular quando ausente no canonico.
+    echo "MISSING: $canon_path (validador canonico ausente)"
+    drift_count=$((drift_count + 1))
     continue
   fi
 
@@ -57,6 +59,34 @@ for validator in "${EVIDENCE_VALIDATORS[@]}"; do
     fi
   done
 done
+
+# G2: validate-session-end.sh tambem e distribuido nos diretorios de hooks
+# tool-neutros. Antes desta correcao nenhum gate comparava essas duas copias e o
+# drift do gate de encerramento era invisivel.
+declare -a session_end_extra_mirrors=(
+  "$repo_root/.agents/hooks"
+  "$repo_root/internal/embedded/assets/.agents/hooks"
+)
+session_end_canonical="$canonical/validate-session-end.sh"
+if [[ ! -f "$session_end_canonical" ]]; then
+  echo "MISSING: $session_end_canonical (gate de encerramento canonico)"
+  drift_count=$((drift_count + 1))
+else
+  for mirror in "${session_end_extra_mirrors[@]}"; do
+    mirror_path="$mirror/validate-session-end.sh"
+    if [[ ! -f "$mirror_path" ]]; then
+      echo "MISSING: $mirror_path"
+      drift_count=$((drift_count + 1))
+      continue
+    fi
+    if ! diff -q "$session_end_canonical" "$mirror_path" >/dev/null 2>&1; then
+      echo "DRIFT: validate-session-end.sh diverge entre $canonical e $mirror"
+      drift_count=$((drift_count + 1))
+    else
+      ok_count=$((ok_count + 1))
+    fi
+  done
+fi
 
 echo
 echo "Validadores em sync: $ok_count"

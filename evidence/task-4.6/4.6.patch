@@ -1,0 +1,708 @@
+diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/task-4.6-runloop-ao-agregado.md b/.specs/prd-harness-quatro-clis-loop-aprovacao/task-4.6-runloop-ao-agregado.md
+index 3022b38..0831a88 100644
+--- a/.specs/prd-harness-quatro-clis-loop-aprovacao/task-4.6-runloop-ao-agregado.md
++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/task-4.6-runloop-ao-agregado.md
+@@ -39,13 +39,13 @@ eventos e rodadas do `Cycle`.
+ 
+ ## Subtarefas
+ 
+-- [ ] 4.6.1 Coletar a união de critérios dos task files de `report.TasksCompleted` e construir o
++- [x] 4.6.1 Coletar a união de critérios dos task files de `report.TasksCompleted` e construir o
+       `Cycle`.
+-- [ ] 4.6.2 Substituir `NewBugfixLoop(...).Run(...)` no `case VerdictRejected` pela construção e
++- [x] 4.6.2 Substituir `NewBugfixLoop(...).Run(...)` no `case VerdictRejected` pela construção e
+       `Run` do `Cycle`; ler o side-channel `*bugfixEvidenceRecorder` do adaptador após `Cycle.Run`.
+-- [ ] 4.6.3 Implementar `bugfixAttemptsFromCycle` em `bugfix.go` e mapear estados terminais para
++- [x] 4.6.3 Implementar `bugfixAttemptsFromCycle` em `bugfix.go` e mapear estados terminais para
+       `Escalated` / `ErrBugfixExhausted`.
+-- [ ] 4.6.4 Ajustar cirurgicamente asserções incompatíveis em `runloop_test.go`; cada ajuste
++- [x] 4.6.4 Ajustar cirurgicamente asserções incompatíveis em `runloop_test.go`; cada ajuste
+       justificado por requisito.
+ 
+ ## Detalhes de Implementação
+diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+index 1750573..a3d278c 100644
+--- a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+@@ -31,7 +31,7 @@
+ | 4.3 | Extrator de critérios compartilhado e adaptador de portas em taskloop | done | 4.2 | Não | — |
+ | 4.4 | Service.Execute conduz o Cycle (critérios por task, estabelece o padrão) | done | 4.3 | Não | — |
+ | 4.5 | Adequação das fixtures de revisão ao contrato de texto bruto | done | 4.4 | Não | — |
+-| 4.6 | RunLoop conduz o Cycle; BugfixLoop reduzido a projetor de evidência | pending | 4.5 | Não | — |
++| 4.6 | RunLoop conduz o Cycle; BugfixLoop reduzido a projetor de evidência | done | 4.5 | Não | — |
+ | 4.7 | ACPRunner conduz o Cycle e fiação das quatro lacunas nos três caminhos | pending | 4.6 | Não | — |
+ | 4.8 | Prova de paridade entre os três caminhos e fluxos E2E | pending | 4.7 | Não | — |
+ | 5.0 | Propagação do teto de rodadas e virada do critério estrito | pending | 4.8 | Não | — |
+diff --git a/internal/taskloop/approval_adapters.go b/internal/taskloop/approval_adapters.go
+index 99de287..5867ba7 100644
+--- a/internal/taskloop/approval_adapters.go
++++ b/internal/taskloop/approval_adapters.go
+@@ -2,7 +2,10 @@ package taskloop
+ 
+ import (
+ 	"context"
++	"crypto/sha256"
++	"encoding/hex"
+ 	"fmt"
++	"iter"
+ 	"strings"
+ 
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
+@@ -10,6 +13,7 @@ import (
+ 
+ var (
+ 	_ approval.Reviewer   = (*reviewerPort)(nil)
++	_ approval.Reviewer   = (*primedReviewerPort)(nil)
+ 	_ approval.Fixer      = (*fixerPort)(nil)
+ 	_ approval.Repository = (*repositoryPort)(nil)
+ )
+@@ -48,6 +52,33 @@ func (p *reviewerPort) Review(ctx context.Context, request approval.ReviewReques
+ 	return approval.NewReviewerOutput(result.RawOutput, findings, criteriaMap), nil
+ }
+ 
++type primedReviewerPort struct {
++	primed   FinalReviewResult
++	consumed bool
++	delegate *reviewerPort
++}
++
++func newPrimedReviewerPort(primed FinalReviewResult, reviewer FinalReviewer) *primedReviewerPort {
++	return &primedReviewerPort{primed: primed, delegate: newReviewerPort(reviewer)}
++}
++
++func (p *primedReviewerPort) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
++	if p.consumed {
++		return p.delegate.Review(ctx, request)
++	}
++	p.consumed = true
++
++	findings, err := translateReviewFindings(p.primed.Findings)
++	if err != nil {
++		return approval.ReviewerOutput{}, err
++	}
++	criteriaMap, err := parityCriteriaMap(request)
++	if err != nil {
++		return approval.ReviewerOutput{}, err
++	}
++	return approval.NewReviewerOutput(p.primed.RawOutput, findings, criteriaMap), nil
++}
++
+ func parityCriteriaMap(request approval.ReviewRequest) (approval.CriteriaMap, error) {
+ 	var criteria []approval.AcceptanceCriterion
+ 	for criterion := range request.Criteria() {
+@@ -137,14 +168,20 @@ func (p *fixerPort) Fix(ctx context.Context, request approval.FixRequest) error
+ 	if err != nil {
+ 		return err
+ 	}
++	evidence.Output = output
++	evidence.RootCause = NewCatalog().extractRootCause(output)
+ 
+ 	p.recorder.record(evidence)
+ 	return nil
+ }
+ 
+ func reverseFindings(request approval.FixRequest) []Finding {
++	return reverseApprovalFindings(request.Findings())
++}
++
++func reverseApprovalFindings(findings iter.Seq[approval.Finding]) []Finding {
+ 	var out []Finding
+-	for finding := range request.Findings() {
++	for finding := range findings {
+ 		out = append(out, Finding{
+ 			Severity: reverseSeverity(finding.Severity()),
+ 			File:     finding.File(),
+@@ -154,6 +191,10 @@ func reverseFindings(request approval.FixRequest) []Finding {
+ 	return out
+ }
+ 
++func reverseVerdict(verdict approval.Verdict) ReviewVerdict {
++	return ReviewVerdict(verdict.String())
++}
++
+ func reverseSeverity(severity approval.Severity) Severity {
+ 	switch severity {
+ 	case approval.SeverityCritical, approval.SeverityHigh:
+@@ -176,10 +217,19 @@ func newRepositoryPort(capturer DiffCapturer, workDir string) *repositoryPort {
+ 
+ func (p *repositoryPort) Checkpoint(ctx context.Context) (approval.Checkpoint, error) {
+ 	out, err := NewCatalog().commandOutput(ctx, p.workDir, "git", "rev-parse", "HEAD")
++	if err == nil {
++		return approval.NewCheckpoint(strings.TrimSpace(string(out)))
++	}
++	return p.contentCheckpoint(ctx)
++}
++
++func (p *repositoryPort) contentCheckpoint(ctx context.Context) (approval.Checkpoint, error) {
++	diff, err := p.capturer.CaptureDiff(ctx)
+ 	if err != nil {
+-		return approval.Checkpoint{}, fmt.Errorf("taskloop: git rev-parse HEAD: %w", err)
++		return approval.Checkpoint{}, fmt.Errorf("taskloop: fallback checkpoint diff capture: %w", err)
+ 	}
+-	return approval.NewCheckpoint(strings.TrimSpace(string(out)))
++	sum := sha256.Sum256([]byte(diff))
++	return approval.NewCheckpoint(hex.EncodeToString(sum[:]))
+ }
+ 
+ func (p *repositoryPort) FullTarget(ctx context.Context) (approval.ReviewTarget, error) {
+diff --git a/internal/taskloop/approval_adapters_test.go b/internal/taskloop/approval_adapters_test.go
+index aa11234..713145e 100644
+--- a/internal/taskloop/approval_adapters_test.go
++++ b/internal/taskloop/approval_adapters_test.go
+@@ -2,6 +2,8 @@ package taskloop
+ 
+ import (
+ 	"context"
++	"crypto/sha256"
++	"encoding/hex"
+ 	"os"
+ 	"os/exec"
+ 	"path/filepath"
+@@ -189,6 +191,25 @@ func TestRepositoryPortCaptureTargets(t *testing.T) {
+ 	}
+ }
+ 
++func TestRepositoryPortCheckpointFallsBackToDiffHashWithoutGit(t *testing.T) {
++	dir := t.TempDir()
++	capturer := &stubDiffCapturer{diffs: []string{"diff without a git repository"}}
++
++	port := newRepositoryPort(capturer, dir)
++	checkpoint, err := port.Checkpoint(context.Background())
++	if err != nil {
++		t.Fatalf("Checkpoint: %v", err)
++	}
++	if checkpoint.Zero() {
++		t.Fatal("checkpoint should not be zero-valued in the fallback path")
++	}
++
++	want := sha256.Sum256([]byte("diff without a git repository"))
++	if got := checkpoint.String(); got != hex.EncodeToString(want[:]) {
++		t.Errorf("checkpoint = %q, want sha256 of the captured diff", got)
++	}
++}
++
+ func TestRepositoryPortCheckpointFromGitRevParse(t *testing.T) {
+ 	dir := t.TempDir()
+ 	run := func(args ...string) {
+diff --git a/internal/taskloop/approval_cycle.go b/internal/taskloop/approval_cycle.go
+index 5be18a2..02d19ed 100644
+--- a/internal/taskloop/approval_cycle.go
++++ b/internal/taskloop/approval_cycle.go
+@@ -8,6 +8,7 @@ import (
+ 	"time"
+ 
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria"
+ )
+ 
+@@ -97,6 +98,83 @@ func acceptanceCriteriaFromTaskFile(content []byte) ([]approval.AcceptanceCriter
+ 	return criteria, nil
+ }
+ 
++func acceptanceCriteriaUnion(prdFolder string, taskIDs []string, fsys fs.FileSystem) ([]approval.AcceptanceCriterion, error) {
++	seen := make(map[string]bool)
++	var criteria []approval.AcceptanceCriterion
++	for _, id := range taskIDs {
++		taskFile, err := NewCatalog().ResolveTaskFile(prdFolder, TaskEntry{ID: id}, fsys)
++		if err != nil {
++			continue
++		}
++		content, err := fsys.ReadFile(taskFile)
++		if err != nil {
++			continue
++		}
++		for _, description := range taskcriteria.Extract(content) {
++			key := strings.TrimSpace(description)
++			if key == "" || seen[key] {
++				continue
++			}
++			seen[key] = true
++			criterion, err := approval.NewAcceptanceCriterion(description)
++			if err != nil {
++				return nil, err
++			}
++			criteria = append(criteria, criterion)
++		}
++	}
++	return criteria, nil
++}
++
++func runLoopAgentIdentity(opts Options) string {
++	if identity := strings.TrimSpace(cycleAgentIdentity(opts)); identity != "" {
++		return identity
++	}
++	return "runloop"
++}
++
++func runLoopBugfixMaxIterations(opts Options) int {
++	if opts.MaxBugfixIterations > 0 {
++		return opts.MaxBugfixIterations
++	}
++	return DefaultMaxBugfixIterations
++}
++
++func (s *Service) runRejectedCycle(
++	ctx context.Context,
++	opts Options,
++	criteria []approval.AcceptanceCriterion,
++	rev FinalReviewResult,
++	deps RunLoopDeps,
++	workDir string,
++) (approval.CycleResult, *bugfixEvidenceRecorder, error) {
++	taskIdentity, err := approval.NewTaskIdentity("runloop:" + strings.TrimSpace(opts.PRDFolder))
++	if err != nil {
++		return approval.CycleResult{}, nil, err
++	}
++	agentIdentity, err := approval.NewAgentIdentity(runLoopAgentIdentity(opts))
++	if err != nil {
++		return approval.CycleResult{}, nil, err
++	}
++	policy, err := approval.NewApprovalPolicy(approval.WithMaxRounds(runLoopBugfixMaxIterations(opts) + 1))
++	if err != nil {
++		return approval.CycleResult{}, nil, err
++	}
++
++	recorder := newBugfixEvidenceRecorder()
++	reviewer := newPrimedReviewerPort(rev, deps.FinalReviewer)
++	fixer := newFixerPort(deps.BugfixInvoker, recorder)
++	repository := newRepositoryPort(deps.DiffCapturer, workDir)
++
++	cycle, err := approval.NewCycle(taskIdentity, agentIdentity, policy, criteria, reviewer, fixer, repository)
++	if err != nil {
++		return approval.CycleResult{}, nil, err
++	}
++
++	result, runErr := cycle.Run(ctx)
++	return result, recorder, runErr
++}
++
+ func cycleAgentIdentity(opts Options) string {
+ 	if strings.TrimSpace(opts.AgentName) != "" {
+ 		return opts.AgentName
+diff --git a/internal/taskloop/bugfix.go b/internal/taskloop/bugfix.go
+index 7dd1210..2cde907 100644
+--- a/internal/taskloop/bugfix.go
++++ b/internal/taskloop/bugfix.go
+@@ -5,6 +5,8 @@ import (
+ 	"errors"
+ 	"fmt"
+ 	"strings"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
+ )
+ 
+ // ErrBugfixExhausted indica que o ciclo bugfix -> review atingiu o limite de
+@@ -151,6 +153,57 @@ func (b *BugfixLoop) Run(ctx context.Context, initialFindings []Finding, initial
+ type bugfixEvidence struct {
+ 	FailBefore string
+ 	PassAfter  string
++	Output     string
++	RootCause  string
++}
++
++func bugfixAttemptsFromCycle(result approval.CycleResult, recorder *bugfixEvidenceRecorder) []BugfixIteration {
++	var rounds []approval.Round
++	for round := range result.Rounds() {
++		rounds = append(rounds, round)
++	}
++	entries := recorder.Entries()
++	total := len(entries)
++	if len(rounds)-1 < total {
++		total = len(rounds) - 1
++	}
++	if total < 0 {
++		total = 0
++	}
++
++	iterations := make([]BugfixIteration, 0, total)
++	for i := 0; i < total; i++ {
++		origin := NewCatalog().filterCritical(reverseApprovalFindings(rounds[i].Findings()))
++		review := rounds[i+1]
++		entry := entries[i]
++		iterations = append(iterations, BugfixIteration{
++			Sequence:         i + 1,
++			Origin:           NewCatalog().formatBugfixOrigin(origin),
++			RootCause:        entry.RootCause,
++			FailBefore:       entry.FailBefore,
++			PassAfter:        entry.PassAfter,
++			BugfixOutput:     entry.Output,
++			ReviewVerdict:    reverseVerdict(review.Verdict()),
++			CriticalFindings: NewCatalog().filterCritical(reverseApprovalFindings(review.Findings())),
++		})
++	}
++	return iterations
++}
++
++func finalReviewFromCycleResult(result approval.CycleResult) *FinalReviewResult {
++	var last approval.Round
++	found := false
++	for round := range result.Rounds() {
++		last = round
++		found = true
++	}
++	if !found {
++		return nil
++	}
++	return &FinalReviewResult{
++		Verdict:  reverseVerdict(last.Verdict()),
++		Findings: NewCatalog().filterCritical(reverseApprovalFindings(last.Findings())),
++	}
+ }
+ 
+ // extractBugfixEvidence exige marcadores explicitos no retorno do executor.
+diff --git a/internal/taskloop/bugfix_test.go b/internal/taskloop/bugfix_test.go
+index 99eef6e..d5011e4 100644
+--- a/internal/taskloop/bugfix_test.go
++++ b/internal/taskloop/bugfix_test.go
+@@ -5,6 +5,8 @@ import (
+ 	"errors"
+ 	"strings"
+ 	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
+ )
+ 
+ // stubBugfixInvoker simula a invocacao da skill bugfix.
+@@ -361,6 +363,80 @@ func TestBugfixLoop_PersisteOrigemEProvasPorTentativa(t *testing.T) {
+ 	}
+ }
+ 
++func mustCompletedRound(t *testing.T, number int, verdict approval.Verdict, findings []approval.Finding) approval.Round {
++	t.Helper()
++	round, err := approval.NewRound(number)
++	if err != nil {
++		t.Fatalf("NewRound(%d): %v", number, err)
++	}
++	fingerprint := approval.NewFingerprintCalculator().Compute(findings)
++	completed, err := round.Complete(verdict, findings, fingerprint)
++	if err != nil {
++		t.Fatalf("Complete round %d: %v", number, err)
++	}
++	return completed
++}
++
++func TestBugfixAttemptsFromCycle(t *testing.T) {
++	findingA, err := approval.NewFinding(approval.SeverityCritical, "a.go", "R-1", "bug a")
++	if err != nil {
++		t.Fatalf("finding a: %v", err)
++	}
++	findingB, err := approval.NewFinding(approval.SeverityCritical, "b.go", "R-1", "bug b")
++	if err != nil {
++		t.Fatalf("finding b: %v", err)
++	}
++
++	round1 := mustCompletedRound(t, 1, approval.VerdictRejected, []approval.Finding{findingA})
++	round2 := mustCompletedRound(t, 2, approval.VerdictRejected, []approval.Finding{findingB})
++	round3 := mustCompletedRound(t, 3, approval.VerdictApproved, nil)
++
++	result, err := approval.NewClosedResult(approval.ReasonMaxRounds, []approval.Round{round1, round2, round3})
++	if err != nil {
++		t.Fatalf("NewClosedResult: %v", err)
++	}
++
++	recorder := newBugfixEvidenceRecorder()
++	recorder.record(bugfixEvidence{FailBefore: "fail1", PassAfter: "pass1", Output: "out1", RootCause: "cause1"})
++	recorder.record(bugfixEvidence{FailBefore: "fail2", PassAfter: "pass2", Output: "out2", RootCause: "cause2"})
++
++	iterations := bugfixAttemptsFromCycle(result, recorder)
++	if len(iterations) != 2 {
++		t.Fatalf("iteracoes = %d, want 2", len(iterations))
++	}
++
++	first := iterations[0]
++	if first.Sequence != 1 || first.Origin != "finding de review: a.go" || first.ReviewVerdict != VerdictRejected ||
++		first.FailBefore != "fail1" || first.PassAfter != "pass1" || first.BugfixOutput != "out1" || first.RootCause != "cause1" {
++		t.Errorf("primeira iteracao inesperada: %+v", first)
++	}
++	if len(first.CriticalFindings) != 1 || first.CriticalFindings[0].File != "b.go" {
++		t.Errorf("CriticalFindings da primeira iteracao = %+v, want b.go", first.CriticalFindings)
++	}
++
++	second := iterations[1]
++	if second.Sequence != 2 || second.Origin != "finding de review: b.go" || second.ReviewVerdict != VerdictApproved ||
++		second.FailBefore != "fail2" || second.PassAfter != "pass2" {
++		t.Errorf("segunda iteracao inesperada: %+v", second)
++	}
++	if len(second.CriticalFindings) != 0 {
++		t.Errorf("CriticalFindings da segunda iteracao = %+v, want vazio", second.CriticalFindings)
++	}
++}
++
++func TestFinalReviewFromCycleResult(t *testing.T) {
++	round1 := mustCompletedRound(t, 1, approval.VerdictRejected, nil)
++	result, err := approval.NewClosedResult(approval.ReasonEmptyDiff, []approval.Round{round1})
++	if err != nil {
++		t.Fatalf("NewClosedResult: %v", err)
++	}
++
++	got := finalReviewFromCycleResult(result)
++	if got == nil || got.Verdict != VerdictRejected {
++		t.Fatalf("finalReviewFromCycleResult = %+v, want VerdictRejected", got)
++	}
++}
++
+ func TestExtractRootCause(t *testing.T) {
+ 	tests := []struct {
+ 		name string
+diff --git a/internal/taskloop/integration_test.go b/internal/taskloop/integration_test.go
+index 1eff805..2daa8dc 100644
+--- a/internal/taskloop/integration_test.go
++++ b/internal/taskloop/integration_test.go
+@@ -479,12 +479,14 @@ func TestRunLoopIntegrationEscalonamento(t *testing.T) {
+ 	fsys, prd := setupRunLoopFS([]string{"1.0"})
+ 	svc := NewService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
+ 
+-	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
++	findingAt := func(file string) []Finding {
++		return []Finding{{Severity: SeverityCritical, File: file, Line: 1, Message: "bug"}}
++	}
+ 	reviewer := &stubReviewer{results: []FinalReviewResult{
+-		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+-		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+-		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+-		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictRejected, Findings: findingAt("a.go"), RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictRejected, Findings: findingAt("b.go"), RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictRejected, Findings: findingAt("c.go"), RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictRejected, Findings: findingAt("d.go"), RawOutput: rawVerdict(VerdictRejected)},
+ 	}}
+ 
+ 	deps := RunLoopDeps{
+diff --git a/internal/taskloop/runloop.go b/internal/taskloop/runloop.go
+index f0e458e..6d6657e 100644
+--- a/internal/taskloop/runloop.go
++++ b/internal/taskloop/runloop.go
+@@ -209,26 +209,55 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
+ 			return s.finalizeReport(report, opts, "bugfix loop nao configurado"),
+ 				fmt.Errorf("taskloop: review reprovou mas BugfixInvoker/DiffCapturer ausentes")
+ 		}
+-		bf := NewBugfixLoop(deps.BugfixInvoker, deps.FinalReviewer, deps.DiffCapturer, opts.MaxBugfixIterations)
+-		bfReport, bfErr := bf.Run(ctx, rev.Findings, reviewInput)
+-		report.BugfixCycles = len(bfReport.Iterations)
+-		report.BugfixAttempts = append(report.BugfixAttempts, bfReport.Iterations...)
+-		report.Escalated = bfReport.Escalated
+-		if bfReport.FinalReview != nil {
+-			report.FinalReview = bfReport.FinalReview
++
++		criteria, criteriaErr := acceptanceCriteriaUnion(absFolder, report.TasksCompleted, s.fsys)
++		if criteriaErr != nil {
++			return s.finalizeReport(report, opts, "erro ao extrair criterios do lote"), criteriaErr
+ 		}
+-		for _, it := range bfReport.Iterations {
+-			NewCatalog().emitTelemetry("bugfix_iteration", fmt.Sprintf("%d:%s", it.Sequence, it.ReviewVerdict))
++
++		exhausted := false
++		if len(criteria) == 0 {
++			bf := NewBugfixLoop(deps.BugfixInvoker, deps.FinalReviewer, deps.DiffCapturer, opts.MaxBugfixIterations)
++			bfReport, bfErr := bf.Run(ctx, rev.Findings, reviewInput)
++			report.BugfixCycles = len(bfReport.Iterations)
++			report.BugfixAttempts = append(report.BugfixAttempts, bfReport.Iterations...)
++			report.Escalated = bfReport.Escalated
++			if bfReport.FinalReview != nil {
++				report.FinalReview = bfReport.FinalReview
++			}
++			for _, it := range bfReport.Iterations {
++				NewCatalog().emitTelemetry("bugfix_iteration", fmt.Sprintf("%d:%s", it.Sequence, it.ReviewVerdict))
++			}
++			if errors.Is(bfErr, ErrBugfixExhausted) {
++				exhausted = true
++			} else if bfErr != nil {
++				return s.finalizeReport(report, opts, "erro no bugfix loop"), bfErr
++			}
++		} else {
++			result, recorder, cycleErr := s.runRejectedCycle(ctx, opts, criteria, rev, deps, workDir)
++			if cycleErr != nil {
++				return s.finalizeReport(report, opts, "erro no ciclo de aprovacao"),
++					fmt.Errorf("taskloop: ciclo de aprovacao: %w", cycleErr)
++			}
++			iterations := bugfixAttemptsFromCycle(result, recorder)
++			report.BugfixCycles = len(iterations)
++			report.BugfixAttempts = append(report.BugfixAttempts, iterations...)
++			report.FinalReview = finalReviewFromCycleResult(result)
++			for _, it := range iterations {
++				NewCatalog().emitTelemetry("bugfix_iteration", fmt.Sprintf("%d:%s", it.Sequence, it.ReviewVerdict))
++			}
++			if !result.Approved() {
++				report.Escalated = true
++				exhausted = true
++			}
+ 		}
+-		if errors.Is(bfErr, ErrBugfixExhausted) {
++
++		if exhausted {
+ 			if report.FinalReview != nil {
+ 				NewCatalog().emitTelemetry("final_review_verdict", string(report.FinalReview.Verdict))
+ 			}
+ 			NewCatalog().emitTelemetry("escalated", "bugfix_exhausted")
+-			return s.finalizeReport(report, opts, "escalonamento humano apos 3 iteracoes"), bfErr
+-		}
+-		if bfErr != nil {
+-			return s.finalizeReport(report, opts, "erro no bugfix loop"), bfErr
++			return s.finalizeReport(report, opts, "escalonamento humano apos 3 iteracoes"), ErrBugfixExhausted
+ 		}
+ 		if report.FinalReview != nil {
+ 			switch report.FinalReview.Verdict {
+diff --git a/internal/taskloop/runloop_test.go b/internal/taskloop/runloop_test.go
+index b4206bb..6676cb5 100644
+--- a/internal/taskloop/runloop_test.go
++++ b/internal/taskloop/runloop_test.go
+@@ -296,6 +296,45 @@ func TestRunLoopApprovedWithRemarks(t *testing.T) {
+ 	}
+ }
+ 
++func TestRunLoopRejectedEmptyCriteriaUnionUsesLegacyPath(t *testing.T) {
++	fsys, prd := setupRunLoopFS([]string{"1.0"})
++	fsys.Files[prd+"/task-1.0-t.md"] = []byte("**Status:** done\n\nSem secao de criterios.\n")
++	svc := NewService(fsys, newTestPrinter())
++
++	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
++	reviewer := &stubReviewer{results: []FinalReviewResult{
++		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictApproved, Findings: []Finding{}, RawOutput: rawVerdict(VerdictApproved)},
++	}}
++
++	deps := RunLoopDeps{
++		Selector:      &stubSelector{queue: []TaskEntry{{ID: "1.0", Title: "T 1.0"}}},
++		Executor:      &stubExecutor{},
++		Gate:          &stubGate{},
++		Recorder:      &stubRecorder{},
++		FinalReviewer: reviewer,
++		BugfixInvoker: &runloopBugfixInvoker{},
++		DiffCapturer:  &runloopDiffCapturer{},
++	}
++
++	report, err := svc.RunLoop(context.Background(), Options{PRDFolder: prd, MaxBugfixIterations: 3}, deps)
++	if err != nil {
++		t.Fatalf("erro inesperado: %v", err)
++	}
++	if report.Escalated {
++		t.Error("nao deveria escalar quando bugfix corrige pelo caminho legado")
++	}
++	if report.BugfixCycles != 1 {
++		t.Errorf("BugfixCycles=%d, want 1", report.BugfixCycles)
++	}
++	if deps.BugfixInvoker.(*runloopBugfixInvoker).calls != 1 {
++		t.Errorf("bugfix invoker chamado %d vezes, want 1", deps.BugfixInvoker.(*runloopBugfixInvoker).calls)
++	}
++	if report.FinalReview == nil || report.FinalReview.Verdict != VerdictApproved {
++		t.Fatalf("verdict final do report = %+v, want APPROVED", report.FinalReview)
++	}
++}
++
+ // TestRunLoopRejectedThenBugfixApproves — primeira revisao reprova, bugfix faz reviewer aprovar.
+ func TestRunLoopRejectedThenBugfixApproves(t *testing.T) {
+ 	fsys, prd := setupRunLoopFS([]string{"1.0"})
+@@ -338,7 +377,7 @@ func TestRunLoopRejectedThenBugfixApproves(t *testing.T) {
+ 		t.Fatalf("BugfixAttempts = %d, want 1", len(report.BugfixAttempts))
+ 	}
+ 	attempt := report.BugfixAttempts[0]
+-	if attempt.Origin != "finding de review: x.go:1" || attempt.FailBefore == "" || attempt.PassAfter == "" {
++	if attempt.Origin != "finding de review: x.go" || attempt.FailBefore == "" || attempt.PassAfter == "" {
+ 		t.Fatalf("evidencia da tentativa incompleta: %+v", attempt)
+ 	}
+ 	persisted, err := fsys.ReadFile(reportPath)
+@@ -350,9 +389,7 @@ func TestRunLoopRejectedThenBugfixApproves(t *testing.T) {
+ 	}
+ }
+ 
+-// TestRunLoopRejectedThenBugfixWithRemarks — correcao elimina criticos, mas
+-// ressalvas remanescentes ainda precisam virar ActionPlan persistido.
+-func TestRunLoopRejectedThenBugfixWithRemarks(t *testing.T) {
++func TestRunLoopRejectedRemarksWithoutConvergenceEscalates(t *testing.T) {
+ 	fsys, prd := setupRunLoopFS([]string{"1.0"})
+ 	svc := NewService(fsys, newTestPrinter())
+ 
+@@ -377,36 +414,32 @@ func TestRunLoopRejectedThenBugfixWithRemarks(t *testing.T) {
+ 		PRDFolder:      prd,
+ 		NonInteractive: true,
+ 	}, deps)
+-	if err != nil {
+-		t.Fatalf("erro inesperado: %v", err)
++	if !errors.Is(err, ErrBugfixExhausted) {
++		t.Fatalf("err=%v, want ErrBugfixExhausted", err)
++	}
++	if !report.Escalated {
++		t.Error("Escalated=false, want true")
+ 	}
+ 	if report.FinalReview == nil || report.FinalReview.Verdict != VerdictApprovedWithRemarks {
+ 		t.Fatalf("verdict final = %+v, want APPROVED_WITH_REMARKS", report.FinalReview)
+ 	}
+-	if report.ActionPlan == nil || len(report.ActionPlan.Decisions) != 1 {
+-		t.Fatalf("ActionPlan invalido: %+v", report.ActionPlan)
+-	}
+-	taskContent, err := fsys.ReadFile(prd + "/task-1.0-t.md")
+-	if err != nil {
+-		t.Fatalf("task file: %v", err)
+-	}
+-	if !strings.Contains(string(taskContent), "## Plano de Ação") {
+-		t.Fatalf("plano de acao nao persistido apos bugfix:\n%s", taskContent)
++	if report.ActionPlan != nil {
++		t.Fatalf("ActionPlan nao deveria ser gerado em escalonamento: %+v", report.ActionPlan)
+ 	}
+ }
+ 
+-// TestRunLoopRejectedEscalated — bugfix exausto apos 3 iteracoes.
+ func TestRunLoopRejectedEscalated(t *testing.T) {
+ 	fsys, prd := setupRunLoopFS([]string{"1.0"})
+ 	svc := NewService(fsys, newTestPrinter())
+ 
+-	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
+-	// Reviewer sempre retorna criticos.
++	findingAt := func(file string) []Finding {
++		return []Finding{{Severity: SeverityCritical, File: file, Line: 1, Message: "bug"}}
++	}
+ 	reviewer := &stubReviewer{results: []FinalReviewResult{
+-		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+-		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+-		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
+-		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictRejected, Findings: findingAt("a.go"), RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictRejected, Findings: findingAt("b.go"), RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictRejected, Findings: findingAt("c.go"), RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictRejected, Findings: findingAt("d.go"), RawOutput: rawVerdict(VerdictRejected)},
+ 	}}
+ 
+ 	deps := RunLoopDeps{
+@@ -434,6 +467,41 @@ func TestRunLoopRejectedEscalated(t *testing.T) {
+ 	}
+ }
+ 
++func TestRunLoopRejectedNoConvergence(t *testing.T) {
++	fsys, prd := setupRunLoopFS([]string{"1.0"})
++	svc := NewService(fsys, newTestPrinter())
++
++	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
++	reviewer := &stubReviewer{results: []FinalReviewResult{
++		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
++		{Verdict: VerdictRejected, Findings: critical, RawOutput: rawVerdict(VerdictRejected)},
++	}}
++
++	deps := RunLoopDeps{
++		Selector:      &stubSelector{queue: []TaskEntry{{ID: "1.0", Title: "T 1.0"}}},
++		Executor:      &stubExecutor{},
++		Gate:          &stubGate{},
++		Recorder:      &stubRecorder{},
++		FinalReviewer: reviewer,
++		BugfixInvoker: &runloopBugfixInvoker{},
++		DiffCapturer:  &runloopDiffCapturer{},
++	}
++
++	report, err := svc.RunLoop(context.Background(), Options{PRDFolder: prd, MaxBugfixIterations: 3}, deps)
++	if !errors.Is(err, ErrBugfixExhausted) {
++		t.Fatalf("err=%v, want ErrBugfixExhausted", err)
++	}
++	if !report.Escalated {
++		t.Error("Escalated=false, want true")
++	}
++	if report.BugfixCycles != 1 {
++		t.Errorf("BugfixCycles=%d, want 1 (no-convergence aborta apos uma unica correcao)", report.BugfixCycles)
++	}
++	if got := deps.BugfixInvoker.(*runloopBugfixInvoker).calls; got != 1 {
++		t.Errorf("bugfix invoker chamado %d vezes, want 1", got)
++	}
++}
++
+ // TestRunLoopValidatesDeps — dependencias obrigatorias ausentes geram erro descritivo.
+ func TestRunLoopValidatesDeps(t *testing.T) {
+ 	fsys, prd := setupRunLoopFS([]string{"1.0"})

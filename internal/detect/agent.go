@@ -45,7 +45,7 @@ type DetectOptions struct {
 
 // AgentDetector detecta quais agentes/CLIs de IA estao presentes no ambiente.
 // Combina tres sinais: binario ACP no PATH, diretorios de configuracao conhecidos
-// (~/.claude, ~/.codex, ~/.gemini) e arquivos de projeto (via FileDetector).
+// (~/.claude, ~/.codex, ~/.config/opencode) e arquivos de projeto (via FileDetector).
 // ADR-019.
 type AgentDetector interface {
 	// Detect retorna os agentes presentes. Nunca executa binarios — LookPath apenas.
@@ -60,31 +60,22 @@ type agentEntry struct {
 	homeDirs []string // subdirs em $HOME que indicam presenca do agente
 }
 
-// allEntries constroi as entradas a partir das Specs canonicas (ADR-019: reusar nomes
-// de comando das specs, sem duplicar literais).
 func (r1 *Catalog) allEntries() []agentEntry {
-	return []agentEntry{
-		{
-			tool:     skills.ToolClaude,
-			command:  specs.NewCatalog().Claude().Command,
-			homeDirs: []string{".claude"},
-		},
-		{
-			tool:     skills.ToolCodex,
-			command:  specs.NewCatalog().Codex().Command,
-			homeDirs: []string{".codex"},
-		},
-		{
-			tool:     skills.ToolGemini,
-			command:  specs.NewCatalog().Gemini().Command,
-			homeDirs: []string{".gemini"},
-		},
-		{
-			tool:     skills.ToolCopilot,
-			command:  specs.NewCatalog().Copilot().Command,
-			homeDirs: []string{".copilot", filepath.Join(".github", "copilot")},
-		},
+	registry := specs.NewCatalog().Registry()
+	out := make([]agentEntry, 0, len(registry))
+	for _, agent := range registry {
+		homeDirs := agent.Signals().HomeDirs()
+		normalized := make([]string, 0, len(homeDirs))
+		for _, d := range homeDirs {
+			normalized = append(normalized, filepath.FromSlash(d))
+		}
+		out = append(out, agentEntry{
+			tool:     skills.Tool(agent.ID()),
+			command:  agent.Signals().Command(),
+			homeDirs: normalized,
+		})
 	}
+	return out
 }
 
 // isDirOnDisk verifica se o path existe e e um diretorio no filesystem real.
@@ -121,12 +112,6 @@ func NewBinaryAgentDetector(lp LookPather, hd HomeDir, fd *FileDetector) *Binary
 //
 // Basta qualquer sinal para incluir o Tool. Duplicatas sao eliminadas.
 // Nunca executa binarios — LookPath apenas (R-SEC-001).
-//
-// Politica Gemini (opt-in por projeto): Gemini so e incluido se houver sinal
-// explicito no proprio projectDir (`.gemini/` ou `GEMINI.md`). Binario no PATH
-// ou ~/.gemini sozinhos NAO bastam — evita instalar governanca Gemini em
-// projetos novos so porque o usuario tem o CLI instalado globalmente. Para
-// forcar Gemini sem o sinal de projeto, use `--tools=gemini` ou `--tools=all`.
 func (d *BinaryAgentDetector) Detect(ctx context.Context, opts DetectOptions) ([]skills.Tool, error) {
 	homeRoot, homeErr := d.homeDir.UserHomeDir()
 	// homeErr nao aborta — global e opt-in; sem $HOME degrada sem erro fatal.
@@ -176,20 +161,6 @@ func (d *BinaryAgentDetector) Detect(ctx context.Context, opts DetectOptions) ([
 			seen[entry.tool] = true
 			result = append(result, entry.tool)
 		}
-	}
-
-	// Politica Gemini opt-in: remove Gemini se ele entrou apenas por sinais
-	// de ambiente (PATH/HOME) sem sinal explicito no projeto. Reduz superficie
-	// de instalacao em repos novos, focando paridade nos 3 CLIs inegociaveis
-	// (Claude/Codex/Copilot). Documentado no godoc de Detect acima.
-	if seen[skills.ToolGemini] && !fileToolSet[skills.ToolGemini] {
-		filtered := result[:0]
-		for _, t := range result {
-			if t != skills.ToolGemini {
-				filtered = append(filtered, t)
-			}
-		}
-		result = filtered
 	}
 
 	return result, nil

@@ -1,0 +1,13 @@
+internal/runtime/acp_opencode_telemetry_test.go:27:9: S1016: should convert f (type failingHandshakeWaiterFactory) to failingHandshakeWaiter instead of using struct literal (staticcheck)
+	return failingHandshakeWaiter{err: f.err}, func() error { return nil }, nil
+	       ^
+internal/specdrift/specdrift_test.go:227:21: S1039: unnecessary use of fmt.Sprintf (staticcheck)
+	techspecContent := fmt.Sprintf("<!-- spec-hash-prd: 0000000000000000000000000000000000000000000000000000000000000000 -->\nRF-01 covered")
+	                   ^
+internal/adapters/adapters.go:234:21: func (*Generator).collectSkillAssets is unused (unused)
+func (g *Generator) collectSkillAssets(skillsDir, skillName string) []string {
+                    ^
+3 issues:
+* staticcheck: 2
+* unused: 1
+EXIT:1

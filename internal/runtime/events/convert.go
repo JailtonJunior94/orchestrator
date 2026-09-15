@@ -196,20 +196,6 @@ func (c *Catalog) FromACPUpdate(driverID string, update acp.SessionUpdate) (Even
 	return NewUnknown(now, rawKind, raw)
 }
 
-// ExtractGeminiMetricsForDriver extrai métricas Gemini-2026 do raw payload
-// apenas quando driverID == "gemini". Retorna GeminiMetrics{} zero-value para
-// qualquer outro driver (defensivo, sem erro).
-//
-// Esta é a função canônica chamada pelo runner.go no loop de eventos para
-// acumular métricas Gemini apenas para sessões Gemini (RF-20).
-func (c *Catalog) ExtractGeminiMetricsForDriver(driverID string, raw json.RawMessage) GeminiMetrics {
-	if driverID != "gemini" {
-		return GeminiMetrics{}
-	}
-	m, _ := NewCatalog().ExtractGeminiMetrics(raw)
-	return m
-}
-
 // claudeUsagePayload é o shape JSON do campo "usage" presente em updates ACP Claude-2026.
 // Campos são todos opcionais — ausência mantém zero value (comportamento defensivo F4-Claude).
 //

@@ -18,12 +18,12 @@ A política de lease **não** entra aqui: é estado persistido com arquivo, praz
 
 ## Subtarefas
 
-- [ ] 3.1 Política de relevância: ordenação determinística a partir de camada, durabilidade, chave, task ativa e marcação de contradição.
-- [ ] 3.2 Política de orçamento: teto por `specs.WindowClass`, cotas por camada (projeto 50%, PRD 30%, task 20%) e cessão de sobra.
-- [ ] 3.3 Política de sanitização com o catálogo mínimo de RF-15: chave privada PEM, tokens com prefixo reconhecível, JWT, cabeçalho de autorização, valores de `.env` e string de conexão com credencial.
-- [ ] 3.4 Extensibilidade do catálogo por configuração.
-- [ ] 3.5 Política de compactação: conjunto determinístico a arquivar, preservando bloco humano e reportando limite inalcançável.
-- [ ] 3.6 Instância compartilhada exportada por política, com receiver por valor, seguindo `window_policy.go:20`.
+- [x] 3.1 Política de relevância: ordenação determinística a partir de camada, durabilidade, chave, task ativa e marcação de contradição.
+- [x] 3.2 Política de orçamento: teto por `specs.WindowClass`, cotas por camada (projeto 50%, PRD 30%, task 20%) e cessão de sobra.
+- [x] 3.3 Política de sanitização com o catálogo mínimo de RF-15: chave privada PEM, tokens com prefixo reconhecível, JWT, cabeçalho de autorização, valores de `.env` e string de conexão com credencial.
+- [x] 3.4 Extensibilidade do catálogo por configuração.
+- [x] 3.5 Política de compactação: conjunto determinístico a arquivar, preservando bloco humano e reportando limite inalcançável.
+- [x] 3.6 Instância compartilhada exportada por política, com receiver por valor, seguindo `window_policy.go:20`.
 
 ## Detalhes de Implementação
 
@@ -52,8 +52,8 @@ Nenhuma além das auto-carregadas (governance + linguagem).
 
 ## Testes da Tarefa
 
-- [ ] Testes unitários
-- [ ] Testes de integração
+- [x] Testes unitários
+- [x] Testes de integração
 
 <critical>SEMPRE CRIAR E EXECUTAR TESTES DA TAREFA ANTES DE CONSIDERAR A TAREFA COMO `done`</critical>
 

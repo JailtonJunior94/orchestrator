@@ -70,7 +70,7 @@ done
 source "$_depth_lib" || { echo "failed: depth limit exceeded"; exit 1; }
 ```
 
-Se `AI_INVOCATION_DEPTH` exceder 2 (o limite padrao de `AI_INVOCATION_MAX`), parar a cadeia e retornar `failed` com diagnostico: "limite de profundidade de invocacao atingido". Isso previne loops entre review e bugfix.
+Se `AI_INVOCATION_DEPTH` exceder 2 (o limite padrao de `AI_INVOCATION_MAX`), parar a cadeia e retornar `failed` com diagnostico: "limite de profundidade de invocacao atingido". Esse guarda cobre cadeias aninhadas de skills. Ele **nao** e o limitador do ciclo `review -> bugfix -> review`: o Ciclo de Aprovacao e iterativo no mesmo nivel de invocacao, cada rodada abre com a profundidade resetada e o limite aplicavel e o **teto de rodadas** (default 5, RF-35/RF-38).
 
 O script `check-invocation-depth.sh` (vendor canônico em `.agents/lib/`, mirror legado em `scripts/lib/`) gerencia o contador automaticamente quando sourced ou chamado como subprocesso.
 

@@ -1,0 +1,147 @@
+package specs_test
+
+import (
+	"errors"
+	"testing"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
+)
+
+func coverageFixture(t *testing.T, p specs.CanonicalPoint) specs.PointCoverage {
+	t.Helper()
+	keys, ok := specs.RecognizedNativeKeys("claude", p)
+	if !ok || len(keys) == 0 {
+		t.Fatalf("no recognized native key for claude point %s", p)
+	}
+	artifact, ok := specs.InstalledArtifactPath("claude", p)
+	if !ok {
+		t.Fatalf("no installed artifact for claude point %s", p)
+	}
+	cov, err := specs.NewCatalog().NewPointCoverage("claude", p, keys[0], ".agents/hooks/validate-preload.sh", artifact)
+	if err != nil {
+		t.Fatalf("NewPointCoverage(%s): %v", p, err)
+	}
+	return cov
+}
+
+func TestNewPointCoverageRejectsNativeKeyTheCliDoesNotRecognize(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		agentID   string
+		point     specs.CanonicalPoint
+		nativeKey string
+	}{
+		{"copilot", specs.PointSessionEnd, "agentStop_TYPO"},
+		{"copilot", specs.PointPreTool, "PreToolUse"},
+		{"claude", specs.PointPreTool, "preToolUse"},
+		{"opencode", specs.PointSessionEnd, "Stop"},
+		{"codex", specs.PointSessionEnd, "SessionEnd"},
+	}
+
+	for _, tc := range cases {
+		artifact, ok := specs.InstalledArtifactPath(tc.agentID, tc.point)
+		if !ok {
+			t.Fatalf("no installed artifact for %s point %s", tc.agentID, tc.point)
+		}
+		_, err := specs.NewCatalog().NewPointCoverage(tc.agentID, tc.point, tc.nativeKey, ".agents/hooks/validate-preload.sh", artifact)
+		if !errors.Is(err, specs.ErrUnrecognizedNativeKey) {
+			t.Errorf("agent %s point %s key %q: err = %v; want ErrUnrecognizedNativeKey — a key no CLI recognizes is exactly how a matrix cell goes inert",
+				tc.agentID, tc.point, tc.nativeKey, err)
+		}
+	}
+}
+
+func TestNewPointCoverageRejectsUnknownAgentVocabulary(t *testing.T) {
+	t.Parallel()
+
+	_, err := specs.NewCatalog().NewPointCoverage("gemini", specs.PointPreTool, "PreToolUse", ".agents/hooks/validate-preload.sh", ".gemini/hooks/validate-preload.sh")
+	if !errors.Is(err, specs.ErrUnrecognizedNativeKey) {
+		t.Fatalf("err = %v; want ErrUnrecognizedNativeKey for an agent with no declared hook vocabulary", err)
+	}
+}
+
+func TestNewEnforcementRejectsIncompleteCoverage(t *testing.T) {
+	t.Parallel()
+
+	all := []specs.CanonicalPoint{
+		specs.PointPreTool,
+		specs.PointPostTool,
+		specs.PointSessionEnd,
+	}
+
+	for _, missing := range all {
+		var coverage []specs.PointCoverage
+		for _, p := range all {
+			if p == missing {
+				continue
+			}
+			coverage = append(coverage, coverageFixture(t, p))
+		}
+		_, err := specs.NewCatalog().NewEnforcement(coverage)
+		if !errors.Is(err, specs.ErrIncompleteCoverage) {
+			t.Errorf("missing %s: err = %v; want ErrIncompleteCoverage", missing, err)
+		}
+	}
+
+	complete := []specs.PointCoverage{
+		coverageFixture(t, specs.PointPreTool),
+		coverageFixture(t, specs.PointPostTool),
+		coverageFixture(t, specs.PointSessionEnd),
+	}
+	enf, err := specs.NewCatalog().NewEnforcement(complete)
+	if err != nil {
+		t.Fatalf("complete coverage rejected: %v", err)
+	}
+	if !enf.Valid() {
+		t.Fatal("complete enforcement reported invalid")
+	}
+}
+
+func TestCanonicalPointIsClosedSet(t *testing.T) {
+	t.Parallel()
+
+	if specs.CanonicalPoint(0).Valid() {
+		t.Fatal("zero-value CanonicalPoint reported valid")
+	}
+	if specs.CanonicalPoint(99).Valid() {
+		t.Fatal("out-of-set value reported valid")
+	}
+	if _, err := specs.NewCatalog().ParseCanonicalPoint("bogus"); !errors.Is(err, specs.ErrUnknownCanonicalPoint) {
+		t.Fatalf("ParseCanonicalPoint(bogus) err = %v; want ErrUnknownCanonicalPoint", err)
+	}
+	for _, name := range []string{"pre-tool", "post-tool", "session-end"} {
+		p, err := specs.NewCatalog().ParseCanonicalPoint(name)
+		if err != nil || !p.Valid() {
+			t.Errorf("ParseCanonicalPoint(%q) = %v, %v", name, p, err)
+		}
+	}
+}
+
+func TestEnforcementPreconditionRemedyAndStates(t *testing.T) {
+	t.Parallel()
+
+	if _, err := specs.NewCatalog().NewEnforcementPrecondition(specs.PreconditionTrustedFolder, "   ", false); !errors.Is(err, specs.ErrInvalidPrecondition) {
+		t.Fatalf("empty remedy accepted: %v", err)
+	}
+	if _, err := specs.NewCatalog().NewEnforcementPrecondition(specs.PreconditionKind(0), "x", false); !errors.Is(err, specs.ErrInvalidPrecondition) {
+		t.Fatalf("zero kind accepted: %v", err)
+	}
+	pre, err := specs.NewCatalog().NewEnforcementPrecondition(specs.PreconditionTrustedHash, "do X", true)
+	if err != nil {
+		t.Fatalf("valid construction failed: %v", err)
+	}
+	if pre.Remedy() != "do X" || !pre.RequiresExec() {
+		t.Fatalf("precondition did not preserve fields: %+v", pre)
+	}
+
+	if !specs.PreconditionInert.IsFailure() {
+		t.Error("inert must count as failure")
+	}
+	if specs.PreconditionCurrent.IsFailure() || specs.PreconditionUnknown.IsFailure() {
+		t.Error("current/unknown must not count as failure")
+	}
+	if specs.PreconditionUnknown.String() != "unknown" || specs.PreconditionInert.String() != "inert" || specs.PreconditionCurrent.String() != "current" {
+		t.Errorf("state names diverge: %s/%s/%s", specs.PreconditionCurrent, specs.PreconditionInert, specs.PreconditionUnknown)
+	}
+}

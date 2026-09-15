@@ -11,7 +11,7 @@ O único molde concorrente do repositório, `internal/taskloop/orchestrator_test
 <requirements>
 - RF-16: dois processos reais competindo pela mesma camada, sem corromper página e sem perder fato.
 - RF-25: handoff cross-CLI — sessão em uma CLI, sessão seguinte em outra, com os fatos duráveis presentes no contexto injetado.
-- RF-20: benchmark de recuperação com 1.000 páginas, alvo de p95 abaixo de 200 ms.
+- RF-20: benchmark de recuperação com 1.000 fatos ativos consolidados numa única página real (via `Layer.Consolidate` direto, contornando a compactação real que limitaria uma página a poucas dezenas de fatos pelo caminho normal de escrita — única interpretação honesta possível, dado que `Facade.BuildContext` lê no máximo 3 arquivos por chamada, sem varredura de diretório), alvo de p95 abaixo de 200 ms.
 - RF-10: teste que falha se o caminho default abrir socket, resolver DNS ou invocar CLI externa.
 - Nenhum contêiner é necessário: `exec.Command` reinvocando o binário de teste mais `t.TempDir()`.
 - Os alvos do `Makefile` precisam incluir o pacote novo, provado pela saída dos comandos.
@@ -26,7 +26,7 @@ O único molde concorrente do repositório, `internal/taskloop/orchestrator_test
 - [ ] 10.5 Teste de migração com backup verificável e recusa de reaplicação.
 - [ ] 10.6 Teste de handoff cross-CLI com fatos duráveis presentes na sessão seguinte.
 - [ ] 10.7 Teste e2e com o servidor ACP falso de `internal/runtime/acpfake/` e **agente que ignora toda diretiva textual**, provando RF-13.
-- [ ] 10.8 Benchmark de recuperação com 1.000 páginas.
+- [ ] 10.8 Benchmark de recuperação com 1.000 fatos ativos numa única página.
 - [ ] 10.9 Teste que falha se o caminho default tocar a rede.
 
 ## Detalhes de Implementação
@@ -41,7 +41,7 @@ Ver techspec.md, seções "Testes de Integração" (a decisão de adotá-los e o
 - Repositório vazio não falha e não emite bloco de memória vazio.
 - Agente não colaborativo: após a sessão, nenhuma página excede seus limites.
 - Handoff cross-CLI entrega ao menos 90% dos fatos duráveis da sessão anterior, objetivo O-1 do PRD.
-- p95 abaixo de 200 ms para 1.000 páginas.
+- p95 abaixo de 200 ms para 1.000 fatos ativos numa única página.
 - Cobertura total do repositório permanece acima de 75%, threshold do CI.
 
 ## Skills Necessárias

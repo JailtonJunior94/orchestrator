@@ -1,0 +1,65 @@
+=== RUN   TestACPRunnerCycleHonorsConfiguredMaxRounds
+=== PAUSE TestACPRunnerCycleHonorsConfiguredMaxRounds
+=== RUN   TestACPRunnerCycleDefaultMaxRoundsIsFiveWithoutConfiguration
+=== PAUSE TestACPRunnerCycleDefaultMaxRoundsIsFiveWithoutConfiguration
+=== CONT  TestACPRunnerCycleHonorsConfiguredMaxRounds
+=== CONT  TestACPRunnerCycleDefaultMaxRoundsIsFiveWithoutConfiguration
+2026/09/11 07:35:42 [memory_persist] Memory Compaction Requested: false
+2026/09/11 07:35:42 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 07:35:42 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 07:35:42 [memory_persist] Memory Compaction Requested: false
+2026/09/11 07:35:42 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 07:35:42 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 07:35:42 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 07:35:42 INFO connection closed cause="peer connection closed"
+2026/09/11 07:35:42 [memory_persist] Memory Compaction Requested: false
+2026/09/11 07:35:42 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 07:35:42 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+--- PASS: TestACPRunnerCycleHonorsConfiguredMaxRounds (0.25s)
+2026/09/11 07:35:42 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 07:35:42 INFO connection closed cause="peer connection closed"
+2026/09/11 07:35:42 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 07:35:42 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunnerCycleDefaultMaxRoundsIsFiveWithoutConfiguration (0.32s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	0.741s
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake	0.609s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client	0.204s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events	0.950s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks	0.787s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver	1.135s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/wire	1.247s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory	1.361s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/mocks	[no test files]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence	1.529s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe	1.302s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/render	1.325s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	1.454s [no tests to run]

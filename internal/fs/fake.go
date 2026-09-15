@@ -142,6 +142,11 @@ func (f *FakeFileSystem) WriteFile(path string, data []byte) error {
 	return nil
 }
 
+func (f *FakeFileSystem) WriteFileAtomic(path string, data []byte) error {
+	f.Files[f.resolvePath(path)] = append([]byte(nil), data...)
+	return nil
+}
+
 func (f *FakeFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
 	resolved := f.resolvePath(path)
 	seen := make(map[string]bool)

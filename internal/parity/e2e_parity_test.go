@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
-	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/config"
@@ -27,6 +27,14 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
+
+type E2EParitySuite struct {
+	suite.Suite
+}
+
+func TestE2EParitySuite(t *testing.T) {
+	suite.Run(t, new(E2EParitySuite))
+}
 
 // ── Helpers de integração ────────────────────────────────────────────────────
 
@@ -137,7 +145,7 @@ func (s *E2EParitySuite) TestE2EParity_CrossProject_AllTools() {
 	// Validar invariantes para cada subconjunto de ferramentas.
 	toolGroups := [][]skills.Tool{
 		{skills.ToolClaude},
-		{skills.ToolGemini},
+		{skills.ToolOpenCode},
 		{skills.ToolCodex},
 		{skills.ToolCopilot},
 		skills.AllTools,
@@ -231,10 +239,10 @@ func (s *E2EParitySuite) TestE2EParity_FallbackLauncher_ArgvIdentical() {
 			wantArgs: []string{"--yes", specs.CodexNpmPackage + "@" + specs.CodexNpmVersion},
 		},
 		{
-			name:     "gemini_rf19",
-			spec:     specs.NewCatalog().Gemini(),
+			name:     "opencode_rf19",
+			spec:     specs.NewCatalog().OpenCode(),
 			wantCmd:  npxPath,
-			wantArgs: []string{"--yes", specs.GeminiNpmPackage + "@" + specs.GeminiNpmVersion, "--acp"},
+			wantArgs: []string{"--yes", specs.OpenCodeNpmPackage + "@" + specs.OpenCodeNpmVersion, "acp"},
 		},
 		{
 			name:     "copilot_rf19",
@@ -310,14 +318,14 @@ func (s *E2EParitySuite) TestE2EParity_FallbackLauncher_ResultIdenticalToDirectB
 			fallbackFixedArgs: specs.NewCatalog().Codex().Fallbacks[0].FixedArgs,
 		},
 		{
-			name:              "gemini",
-			spec:              specs.NewCatalog().Gemini(),
-			directBinary:      "gemini",
-			directPath:        "/usr/local/bin/gemini",
+			name:              "opencode",
+			spec:              specs.NewCatalog().OpenCode(),
+			directBinary:      "opencode",
+			directPath:        "/usr/local/bin/opencode",
 			fallbackCmd:       "npx",
 			fallbackPath:      "/usr/local/bin/npx",
-			directFixedArgs:   specs.NewCatalog().Gemini().FixedArgs,
-			fallbackFixedArgs: specs.NewCatalog().Gemini().Fallbacks[0].FixedArgs,
+			directFixedArgs:   specs.NewCatalog().OpenCode().FixedArgs,
+			fallbackFixedArgs: specs.NewCatalog().OpenCode().Fallbacks[0].FixedArgs,
 		},
 		{
 			name:              "copilot",
@@ -393,7 +401,7 @@ func (s *E2EParitySuite) TestE2EParity_FallbackLauncher_BothUnavailable() {
 	allSpecs := []specs.Spec{specs.NewCatalog().
 		Claude(), specs.NewCatalog().
 		Codex(), specs.NewCatalog().
-		Gemini(), specs.NewCatalog().
+		OpenCode(), specs.NewCatalog().
 		Copilot(),
 	}
 

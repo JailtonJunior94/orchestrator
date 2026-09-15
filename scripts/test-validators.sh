@@ -85,6 +85,7 @@ EOF
 report_header() {
   local task_ref="$1"
   cat <<EOF
+<!-- evidence-contract: v2 -->
 # Relatório de Execução de Tarefa
 ## Tarefa
 - ID: 1.0
@@ -243,15 +244,15 @@ else
   failed=$((failed+1))
 fi
 
-# --- Caso d2: opt-out explícito reabre o legado, com aviso ruidoso ---
-echo "Caso d2: AI_SDD_STRICT_EVIDENCE=0 reabre o legado"
+# --- Caso d2: opt-out explícito NAO reabre o legado (RF-53) ---
+echo "Caso d2: AI_SDD_STRICT_EVIDENCE=0 nao reabre o gate de aceite"
 out_d2=$(AI_SDD_STRICT_EVIDENCE=0 bash "$VALIDATOR" "$report_d" 2>&1); code_d2=$?
-assert_exit "opt-out explícito passa" 0 $code_d2
-if echo "$out_d2" | grep -q "NAO comprova os criterios"; then
-  echo "  ✓ opt-out avisa que a evidência não comprova critérios"
+assert_exit "opt-out explícito continua reprovando" 1 $code_d2
+if echo "$out_d2" | grep -q "fail-closed desde 0.31.0"; then
+  echo "  ✓ opt-out recebe o diagnóstico de fail-closed"
   passed=$((passed+1))
 else
-  echo "  ✗ opt-out silencioso (regressão do BUG-127)"
+  echo "  ✗ opt-out sem diagnóstico de fail-closed (RF-53)"
   failed=$((failed+1))
 fi
 rm -f "$report_d"
@@ -276,13 +277,28 @@ assert_exit "referência não resolvível falha por padrão" 1 $code_d3
 # --- Casos de review-evidence (RF-20) ---
 REVIEW_VALIDATOR="$REPO_ROOT/.agents/scripts/validate-review-evidence.sh"
 
-# Caso e: review.md válido (APPROVED, sem achados) -> exit 0
+REVIEW_TASK_FILE="$TMP_ROOT/task-review.md"
+cat > "$REVIEW_TASK_FILE" <<'TASKEOF'
+# Task de fixture para review
+
+## Critérios de Aceite
+- Critério um
+- Critério dois
+TASKEOF
+
+VALID_MAP='## Mapa de Critérios de Aceite
+- [atendido] Critério um -> go test ./... -> PASS
+- [atendido] Critério dois -> internal/foo.go:42'
+
+# Caso e: review.md válido (APPROVED, sem achados, mapa 1:1 completo) -> exit 0
 echo "Caso e: review.md válido sem achados"
 review_e="$TMP_BASE/review-e.md"
-cat > "$review_e" <<'EOF'
+cat > "$review_e" <<EOF
 # Relatório de Review
 - Veredito: APPROVED
 - Alvo revisado: diff da branch feature/x
+- Task file: $REVIEW_TASK_FILE
+$VALID_MAP
 ## Achados
 Sem achados.
 ## Arquivos Revisados
@@ -293,14 +309,16 @@ Sem achados.
 - go test ./... -> ok
 EOF
 bash "$REVIEW_VALIDATOR" "$review_e" >/dev/null 2>&1; assert_exit "review válido passa" 0 $?
+LC_ALL=C bash "$REVIEW_VALIDATOR" "$review_e" >/dev/null 2>&1; assert_exit "review válido passa sob LC_ALL=C" 0 $?
 
 # Caso f: review.md REJECTED sem achado high/critical -> exit 1
 echo "Caso f: review REJECTED sem achado bloqueante"
 review_f="$TMP_BASE/review-f.md"
-cat > "$review_f" <<'EOF'
+cat > "$review_f" <<EOF
 # Relatório de Review
 - Veredito: REJECTED
 - Alvo revisado: diff
+$VALID_MAP
 ## Achados
 - Severidade: low
 - Arquivo: foo.go
@@ -317,10 +335,11 @@ bash "$REVIEW_VALIDATOR" "$review_f" >/dev/null 2>&1; assert_exit "REJECTED sem 
 # Caso g: review.md sem seção de validações -> exit 1
 echo "Caso g: review sem seção de validações"
 review_g="$TMP_BASE/review-g.md"
-cat > "$review_g" <<'EOF'
+cat > "$review_g" <<EOF
 # Relatório de Review
 - Veredito: APPROVED
 - Alvo revisado: diff
+$VALID_MAP
 ## Achados
 Sem achados.
 ## Arquivos Revisados
@@ -329,6 +348,262 @@ Sem achados.
 - nenhum
 EOF
 bash "$REVIEW_VALIDATOR" "$review_g" >/dev/null 2>&1; assert_exit "review sem validações falha" 1 $?
+
+# --- Casos do mapa 1:1 critério -> evidência (RF-47, RF-48, RF-49, RF-51, RF-53, RF-54) ---
+review_body() {
+  cat <<EOF
+## Achados
+Sem achados.
+## Arquivos Revisados
+- foo.go
+## Riscos Residuais
+- nenhum
+## Validações Executadas
+- go test ./... -> ok
+EOF
+}
+
+MAP_CASE_FILE=""
+map_case() {
+  local name="$1" expected="$2" map_block="$3"
+  local f="$TMP_BASE/review-$name.md"
+  {
+    printf '# Relatório de Review\n- Veredito: APPROVED\n- Alvo revisado: diff\n- Task file: %s\n' "$REVIEW_TASK_FILE"
+    printf '%s\n' "$map_block"
+    review_body
+  } > "$f"
+  local c1 c2
+  bash "$REVIEW_VALIDATOR" "$f" >/dev/null 2>&1; c1=$?
+  LC_ALL=C bash "$REVIEW_VALIDATOR" "$f" >/dev/null 2>&1; c2=$?
+  assert_exit "mapa $name espera exit $expected" "$expected" "$c1"
+  assert_exit "mapa $name espera exit $expected sob LC_ALL=C" "$expected" "$c2"
+  MAP_CASE_FILE="$f"
+}
+
+echo "Caso h1: mapa 1:1 ausente falha"
+map_case "h1-ausente" 1 ""
+
+echo "Caso h2: mapa 1:1 incompleto (critério sem evidência) falha"
+map_case "h2-incompleto" 1 '## Mapa de Critérios de Aceite
+- [atendido] Critério um -> internal/foo.go:1
+- [atendido] Critério dois'
+map_missing_ev="$MAP_CASE_FILE"
+
+echo "Caso h3: critério não verificável falha"
+map_case "h3-nverif" 1 '## Mapa de Critérios de Aceite
+- [não verificável] Critério um -> internal/foo.go:1'
+
+echo "Caso h4: linha de evidência fora das três formas de RF-48 falha"
+map_case "h4-badev" 1 '## Mapa de Critérios de Aceite
+- [atendido] Critério um -> porque confio no autor da mudança'
+
+echo "Caso h5: mapa 1:1 completo e válido passa"
+map_case "h5-ok" 0 "$VALID_MAP"
+
+echo "Caso h6: AI_SDD_STRICT_EVIDENCE=0 NÃO reabre o mapa 1:1"
+out_h6=$(AI_SDD_STRICT_EVIDENCE=0 bash "$REVIEW_VALIDATOR" "$map_missing_ev" 2>&1); code_h6=$?
+assert_exit "opt-out legado não faz o mapa incompleto passar" 1 $code_h6
+if echo "$out_h6" | grep -q "gate de aceite ignorado"; then
+  echo "  ✗ mapa 1:1 desligado por AI_SDD_STRICT_EVIDENCE=0 (regressão de RF-53)"
+  failed=$((failed+1))
+else
+  echo "  ✓ mapa 1:1 permanece fail-closed sob AI_SDD_STRICT_EVIDENCE=0"
+  passed=$((passed+1))
+fi
+
+# --- Caso i: RF-53 no validador de tarefa — relatório com critérios sem task file resolvível ---
+echo "Caso i: relatório declara critérios sem task file resolvível é fail-closed mesmo com opt-out"
+report_i="$TMP_BASE/report-i.md"
+{
+  report_header "$TMP_BASE/task-inexistente.md"
+  cat <<'EOF'
+## Comandos Executados
+- go test ./... -> ok
+EOF
+  base_sections
+  cat <<'EOF'
+## Resultados de Validação
+- Testes: pass
+## Critérios de Aceite
+- Critério um -> comprovado: ok
+EOF
+} > "$report_i"
+out_i=$(AI_SDD_STRICT_EVIDENCE=0 bash "$VALIDATOR" "$report_i" 2>&1); code_i=$?
+rm -f "$report_i"
+assert_exit "critérios sem task file falha mesmo com opt-out" 1 $code_i
+if echo "$out_i" | grep -q "gate de aceite ignorado"; then
+  echo "  ✗ opt-out reabriu o confronto 1:1 (regressão de RF-53)"
+  failed=$((failed+1))
+else
+  echo "  ✓ opt-out não alcança o confronto 1:1 (RF-53)"
+  passed=$((passed+1))
+fi
+
+# --- Caso j: relatório com a seção '## Evidência de Memória Durável' (task 8.0, MD-005) ---
+# Prova que a seção nova, inserida entre 'Comandos Executados' e 'Resultados de
+# Validação' (como o EnrichReport faz antes da seção de métricas), não desliga
+# a captura de nenhum gate existente — nem em locale de bytes (LC_ALL=C).
+echo "Caso j: relatório com seção de Evidência de Memória Durável não quebra gates"
+rm -f "$TMP_BASE"/review-*.md
+report_j="$TMP_BASE/report-j.md"
+{
+  report_header "$task_b"
+  cat <<'EOF'
+## Comandos Executados
+- go test ./... -> ok
+## Evidência de Memória Durável
+
+- session: 20260910T101010.000000000-1234
+- cli: claude
+- task: task-8.0.md
+- read_facts_by_layer: task=2, prd=1
+- read_facts_omitted: 0
+- read_facts_contradicted: 0
+- read_pages_unreadable: 0
+- write_facts_by_layer: task=2
+- budget_consumed_by_layer: prd=30, task=40
+- compactions_executed: 1
+- facts_archived_by_layer: task=1
+- redactions_applied: 1
+- contradictions_detected: 1
+- baton_claimed: true
+EOF
+  base_sections
+  cat <<'EOF'
+## Resultados de Validação
+- Testes: pass
+## Critérios de Aceite
+- Critério um -> comprovado: saída de go test mostra PASS
+- Critério dois -> comprovado: arquivo foo.go contém a função
+## Métricas Claude-2026
+| Métrica | Valor |
+|---|---|
+| total_tokens | 100 |
+EOF
+} > "$report_j"
+out_j=$(bash "$VALIDATOR" "$report_j" 2>&1); code_j=$?
+assert_exit "relatório com evidência de memória durável passa" 0 $code_j
+if [[ "$code_j" -ne 0 ]]; then printf '    diagnostico: %s\n' "$out_j"; fi
+
+out_j_c=$(LC_ALL=C bash "$VALIDATOR" "$report_j" 2>&1); code_j_c=$?
+rm -f "$report_j"
+assert_exit "relatório com evidência de memória durável passa sob LC_ALL=C" 0 $code_j_c
+if [[ "$code_j_c" -ne 0 ]]; then printf '    diagnostico: %s\n' "$out_j_c"; fi
+
+# --- Caso k: o corte do contrato de evidência é um commit fixo, não HEAD ---
+# Antes da correção, o corte era a referência móvel "HEAD": bastava commitar um
+# relatório para ele virar "evidência histórica" e ganhar a isenção v1. Agora o
+# corte é um commit específico e a isenção exige o conteúdo idêntico ao selado
+# naquele commit. Em qualquer repositório que não seja este, nenhum relatório
+# novo é histórico — nem depois de commitado.
+echo "Caso k: relatório sem marcador não vira histórico ao ser commitado"
+K_REPO="$TMP_ROOT/k-repo"
+mkdir -p "$K_REPO"
+git -C "$K_REPO" init -q
+git -C "$K_REPO" config user.email "validators-test@example.invalid"
+git -C "$K_REPO" config user.name "Validators Test"
+git -C "$K_REPO" config commit.gpgsign false
+printf 'base\n' >"$K_REPO/seed.txt"
+git -C "$K_REPO" add . >/dev/null 2>&1
+git -C "$K_REPO" commit -qm "test: baseline k" >/dev/null 2>&1
+report_k="$K_REPO/report-k.md"
+{
+  printf '# Relatório de Execução de Tarefa\n'
+  report_header "$task_b" | tail -n +2
+  cat <<'EOF'
+## Comandos Executados
+- go test ./... -> ok
+EOF
+  base_sections
+  cat <<'EOF'
+## Resultados de Validação
+- Testes: pass
+## Critérios de Aceite
+- Critério um -> comprovado: saída de go test mostra PASS
+- Critério dois -> comprovado: arquivo foo.go contém a função
+EOF
+} > "$report_k"
+
+bash "$VALIDATOR" "$report_k" >/dev/null 2>&1; code_k_pre=$?
+assert_exit "relatório sem marcador e não commitado falha" 1 $code_k_pre
+
+git -C "$K_REPO" add "$(basename "$report_k")" >/dev/null 2>&1
+git -C "$K_REPO" commit -qm "test: commita relatorio sem marcador" >/dev/null 2>&1
+
+out_k=$(bash "$VALIDATOR" "$report_k" 2>&1); code_k=$?
+assert_exit "commitar NÃO concede a isenção histórica (corte fixo)" 1 $code_k
+if printf '%s' "$out_k" | grep -q "commit de corte"; then
+  echo "  ✓ a ruptura aponta o commit de corte fixo, não HEAD"
+  passed=$((passed+1))
+else
+  echo "  ✗ a ruptura deveria citar o commit de corte fixo"
+  printf '    diagnostico: %s\n' "$out_k"
+  failed=$((failed+1))
+fi
+if printf '%s' "$out_k" | grep -q "AVISO: contrato de evid"; then
+  echo "  ✗ isenção v1 concedida a trabalho novo commitado (defeito do corte móvel)"
+  failed=$((failed+1))
+else
+  echo "  ✓ nenhuma isenção v1 concedida a trabalho novo commitado"
+  passed=$((passed+1))
+fi
+rm -f "$report_k"
+
+# --- Caso l: cruzamento de estado entre relatório, execution-result e tasks.md ---
+# Este é o gate que expõe a manobra de editar tasks.md para "blocked" a fim de
+# escapar do encerramento, deixando relatório e JSON em "done". A reconciliação
+# legítima vai de tasks.md EM DIREÇÃO à evidência; o gate precisa reprovar
+# enquanto os três não concordarem, nos três pares possíveis.
+echo "Caso l: divergência de estado entre tasks.md, relatório e execution-result"
+report_l="$TMP_BASE/report-l.md"
+{
+  report_header "$task_b"
+  cat <<'EOF'
+## Comandos Executados
+- go test ./... -> ok
+EOF
+  base_sections
+  cat <<'EOF'
+## Resultados de Validação
+- Testes: pass
+## Critérios de Aceite
+- Critério um -> comprovado: saída de go test mostra PASS
+- Critério dois -> comprovado: arquivo foo.go contém a função
+EOF
+} > "$report_l"
+
+printf '| # | Título | Status |\n|---|--------|--------|\n| 1.0 | Tarefa | blocked |\n' >"$TMP_BASE/tasks.md"
+out_l1=$(bash "$VALIDATOR" "$report_l" 2>&1); code_l1=$?
+assert_exit "tasks.md=blocked com relatório/JSON=done reprova" 1 $code_l1
+if printf '%s' "$out_l1" | grep -q "divergencia de estado"; then
+  echo "  ✓ a ruptura nomeia a divergência de estado"
+  passed=$((passed+1))
+else
+  echo "  ✗ a divergência tasks.md x relatório passou despercebida"
+  printf '    diagnostico: %s\n' "$out_l1"
+  failed=$((failed+1))
+fi
+
+# Nota: escrever tasks.md no fixture altera o snapshot físico (o patch inclui
+# arquivos não rastreados), então o exit 0 ponta a ponta não é alcançável aqui.
+# A afirmação testada é exatamente a da reconciliação: alinhar tasks.md à
+# evidência faz a ruptura de divergência desaparecer.
+printf '| # | Título | Status |\n|---|--------|--------|\n| 1.0 | Tarefa | done |\n' >"$TMP_BASE/tasks.md"
+out_l2=$(bash "$VALIDATOR" "$report_l" 2>&1)
+if printf '%s' "$out_l2" | grep -q "divergencia de estado"; then
+  echo "  ✗ reconciliar tasks.md deveria eliminar a ruptura de divergência"
+  printf '    diagnostico: %s\n' "$out_l2"
+  failed=$((failed+1))
+else
+  echo "  ✓ tasks.md reconciliado com a evidência elimina a divergência"
+  passed=$((passed+1))
+fi
+
+printf '| # | Título | Status |\n|---|--------|--------|\n| 1.0 | Tarefa | failed |\n' >"$TMP_BASE/tasks.md"
+bash "$VALIDATOR" "$report_l" >/dev/null 2>&1; code_l3=$?
+assert_exit "qualquer terceiro estado em tasks.md também reprova" 1 $code_l3
+
+rm -f "$TMP_BASE/tasks.md" "$report_l"
 
 echo
 echo "Passaram: $passed | Falharam: $failed"

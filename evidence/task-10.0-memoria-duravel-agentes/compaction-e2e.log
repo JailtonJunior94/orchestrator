@@ -1,0 +1,14 @@
+=== RUN   TestDurableMemoryCompactionSurvivesNonCollaborativeAgentE2E
+=== PAUSE TestDurableMemoryCompactionSurvivesNonCollaborativeAgentE2E
+=== CONT  TestDurableMemoryCompactionSurvivesNonCollaborativeAgentE2E
+2026/09/11 20:54:47 runner: durable memory ativada (RF-28)
+2026/09/11 20:54:48 runner: durable memory session recorded: writes=1 redactions=0 archived=110 baton_claimed=true
+2026/09/11 20:54:48 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 20:54:48 INFO connection closed cause="peer connection closed"
+--- PASS: TestDurableMemoryCompactionSurvivesNonCollaborativeAgentE2E (0.47s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	0.902s
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	0.698s [no tests to run]
+exit=0

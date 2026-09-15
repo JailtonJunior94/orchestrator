@@ -1,0 +1,9 @@
+PASS: ./internal/parity/... — 85.0%
+PASS: ./internal/specdrift/... — 90.3%
+PASS: ./internal/evidence/... — 95.7%
+PASS: ./internal/taskloop/... — 86.7%
+PASS: ./internal/bugschema/... — 74.3%
+PASS: ./internal/skills/... — 91.2%
+PASS: ./internal/metrics/... — 87.3%
+PASS: ./internal/detect/... — 82.4%
+exit=0

@@ -1,8 +1,8 @@
-.PHONY: check-spec-paths build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync check-scripts-sync test-hooks test-validators test-sdd-evals smoke-adapters test-portable-skills sync-acp-sdk-version test-acp-live mocks check-mocks test-check-mocks
+.PHONY: check-spec-paths build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync check-scripts-sync test-hooks test-validators test-sdd-evals smoke-adapters test-portable-skills sync-acp-sdk-version test-acp-live test-hooks-live mocks check-mocks test-check-mocks
 
 BINARY := ai-spec
 GOFLAGS := -trimpath
-MOCKERY_VERSION := v3.7.4
+MOCKERY_VERSION := v3.8.0
 
 build:
 	CGO_ENABLED=0 go build $(GOFLAGS) -o $(BINARY) .
@@ -24,7 +24,7 @@ test:
 	go test ./...
 
 integration:
-	go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/...
+	go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/runtime/memory/durable/... ./cmd/ai_spec_harness/...
 
 lint:
 	@echo "Running linter..."
@@ -57,9 +57,11 @@ fuzz:
 	go test -fuzz=FuzzParseManifest -fuzztime=30s ./internal/manifest/
 	go test -fuzz=FuzzDetectLanguages -fuzztime=30s ./internal/detect/
 	go test -fuzz=FuzzDetectToolchain -fuzztime=30s ./internal/detect/
+	go test -fuzz=FuzzTranslator -fuzztime=30s ./internal/approval/
+	go test -fuzz=FuzzFingerprint -fuzztime=30s ./internal/approval/
 
 bench:
-	go test -bench=. -benchmem ./internal/metrics/ ./internal/skills/ ./internal/parity/
+	go test -bench=. -benchmem ./internal/metrics/ ./internal/skills/ ./internal/parity/ ./internal/runtime/memory/durable/
 
 budget:
 	go test -tags=integration -run TestTokenBudget ./internal/integration/...
@@ -78,14 +80,29 @@ test-hooks:
 
 # check-spec-paths: falha se artefato de contrato sob gestao SDD citar caminho
 # que nao existe. Provado nos dois sentidos por tests/scripts/.
+#
+# SPEC_PATH_TARGETS declara explicitamente os PRDs ativos desta entrega. Sem a
+# declaracao o script varreria apenas PRDs com sdd-state.json — conjunto vazio
+# neste repositorio — e o gate aprovaria por vacuidade, sem proteger artefato
+# nenhum. PRD concluido sai da lista; PRD novo entra.
+SPEC_PATH_TARGETS ?= .specs/prd-harness-quatro-clis-loop-aprovacao
+
 check-spec-paths:
-	bash scripts/check-spec-paths.sh
+	bash scripts/check-spec-paths.sh $(SPEC_PATH_TARGETS)
 	bash tests/scripts/check-spec-paths_test.sh
 
+# test-validators: TODA suite de tests/scripts/ que valida um validador de
+# evidencia roda aqui. Suite orfa (existente, verde, e nao referenciada) e
+# gate inativo: tests/scripts/validate-review-evidence_test.sh ficou fora desta
+# lista e por isso desligar as rejeicoes do validate-review-evidence.sh nao
+# quebrava nada. O inventario e verificado por
+# tests/integration/sync_gates_guard_test.go (TestNoOrphanValidatorTestSuites).
 test-validators:
 	bash scripts/test-validators.sh
 	bash tests/scripts/validate-task-evidence_test.sh .agents/scripts/validate-task-evidence.sh
 	bash tests/scripts/validate-bugfix-evidence_test.sh .agents/scripts/validate-bugfix-evidence.sh
+	bash tests/scripts/validate-review-evidence_test.sh .agents/scripts/validate-review-evidence.sh
+	bash tests/scripts/validate-session-end_test.sh .agents/scripts/validate-session-end.sh
 
 test-sdd-evals:
 	bash scripts/test-sdd-evals.sh
@@ -107,3 +124,11 @@ sync-acp-sdk-version:
 # Não incluído em make test (build tag acp_live protege compilação). Rodado pelo CI nightly.
 test-acp-live:
 	go test -tags=acp_live -v ./tests/integration/acp_live
+
+# test-hooks-live: executa a prova de disparo pelos CLIs reais instalados e autenticados.
+# Requer AISPEC_HOOKS_LIVE=1, Claude, Codex, Copilot e OpenCode configurados.
+# Nao incluido em make test (build tag hooks_live protege compilacao).
+# NAO e gate de merge: roda como job nightly no ambiente protegido hooks-live
+# (.github/workflows/hooks-live.yml), fora do gate de PR (.github/workflows/test.yml).
+test-hooks-live:
+	go test -tags=hooks_live -v -timeout 60m ./tests/integration/hooks_live

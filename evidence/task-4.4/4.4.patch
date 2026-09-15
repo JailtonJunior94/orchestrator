@@ -1,0 +1,548 @@
+diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/task-4.4-service-execute-ao-agregado.md b/.specs/prd-harness-quatro-clis-loop-aprovacao/task-4.4-service-execute-ao-agregado.md
+index 16e0400..53a8a69 100644
+--- a/.specs/prd-harness-quatro-clis-loop-aprovacao/task-4.4-service-execute-ao-agregado.md
++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/task-4.4-service-execute-ao-agregado.md
+@@ -27,12 +27,12 @@ que `RunLoop` e `ACPRunner` seguem depois.
+ 
+ ## Subtarefas
+ 
+-- [ ] 4.4.1 Construir o `Cycle` no ponto de revisão de `Service.Execute` com identidade da task,
++- [x] 4.4.1 Construir o `Cycle` no ponto de revisão de `Service.Execute` com identidade da task,
+       identidade do agente, política a partir de `opts`, critérios do task file e as três portas do
+       adaptador de 4.3.
+-- [ ] 4.4.2 Traduzir `CycleResult` para `IterationResult.ReviewResult` / `BugfixResult` preservando
++- [x] 4.4.2 Traduzir `CycleResult` para `IterationResult.ReviewResult` / `BugfixResult` preservando
+       os campos observáveis hoje (status, saída, notas).
+-- [ ] 4.4.3 Ajustar cirurgicamente asserções incompatíveis em `taskloop_test.go` /
++- [x] 4.4.3 Ajustar cirurgicamente asserções incompatíveis em `taskloop_test.go` /
+       `reviewer_test.go`, cada ajuste justificado por requisito.
+ 
+ ## Detalhes de Implementação
+@@ -61,7 +61,7 @@ Nenhuma além das auto-carregadas (governance + linguagem).
+ 
+ ## Testes da Tarefa
+ 
+-- [ ] Testes unitários
++- [x] Testes unitários
+ - [ ] Testes de integração
+ 
+ Cobertura obrigatória:
+diff --git a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+index 3fc9b0b..cbcb32a 100644
+--- a/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
++++ b/.specs/prd-harness-quatro-clis-loop-aprovacao/tasks.md
+@@ -29,7 +29,7 @@
+ | 4.1 | Veredito da fonte real do revisor e adaptadores das portas (D1) | done | 2.0, 3.0 | Não | — |
+ | 4.2 | Evidência por rodada, revisão por delta e reset de profundidade (D2) | done | 4.1 | Não | — |
+ | 4.3 | Extrator de critérios compartilhado e adaptador de portas em taskloop | done | 4.2 | Não | — |
+-| 4.4 | Service.Execute conduz o Cycle (critérios por task, estabelece o padrão) | pending | 4.3 | Não | — |
++| 4.4 | Service.Execute conduz o Cycle (critérios por task, estabelece o padrão) | done | 4.3 | Não | — |
+ | 4.5 | Adequação das fixtures de revisão ao contrato de texto bruto | pending | 4.4 | Não | — |
+ | 4.6 | RunLoop conduz o Cycle; BugfixLoop reduzido a projetor de evidência | pending | 4.5 | Não | — |
+ | 4.7 | ACPRunner conduz o Cycle e fiação das quatro lacunas nos três caminhos | pending | 4.6 | Não | — |
+diff --git a/internal/taskloop/taskloop.go b/internal/taskloop/taskloop.go
+index 8080f9c..8022780 100644
+--- a/internal/taskloop/taskloop.go
++++ b/internal/taskloop/taskloop.go
+@@ -12,6 +12,7 @@ import (
+ 	"time"
+ 
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/agents"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
+ 	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
+@@ -651,18 +652,28 @@ func (s *Service) Execute(opts Options) error {
+ 			skipped[task.ID] = true
+ 		}
+ 
+-		// === REVIEWER (RF-05, RF-06, RF-07) ===
+-		// Invocado quando: modo avancado com reviewer configurado, sem erro de invocacao
+-		// e status da task e "done". O exit code do executor nao e verificado: o agente
+-		// pode ter sido morto por timeout (exit -1) depois de marcar a task como done,
+-		// e o reviewer deve operar sobre o estado observavel da task.
+-		// RF-13: reviewer e sub-etapa e nao incrementa o contador de iteracoes.
++		cycleConducted := false
+ 		if opts.Profiles != nil && opts.Profiles.Reviewer != nil && outcome.RunReviewer {
+ 			reviewSnapshot, err := NewCatalog().captureTaskIsolationSnapshotWithMode(absFolder, _taskIsolationModeReviewer, s.fsys)
+ 			if err != nil {
+ 				return fmt.Errorf("erro ao capturar snapshot de isolamento do reviewer na task %s: %w", task.ID, err)
+ 			}
+-			iterResult.ReviewResult = s.invokeReviewer(opts, relTaskFile, relPRD, workDir, task.ID, report.Iterations)
++
++			var cycleCriteria []approval.AcceptanceCriterion
++			if taskFileContent, readErr := s.fsys.ReadFile(taskFile); readErr == nil {
++				cycleCriteria, _ = acceptanceCriteriaFromTaskFile(taskFileContent)
++			}
++			if len(cycleCriteria) > 0 {
++				cycleCtx, cycleCancel := context.WithTimeout(context.Background(), opts.Timeout)
++				review, bugfix := s.conductApprovalCycle(cycleCtx, opts, task, cycleCriteria, relTaskFile, relPRD, workDir)
++				cycleCancel()
++				cycleConducted = true
++				iterResult.ReviewResult = review
++				iterResult.BugfixResult = bugfix
++			}
++			if !cycleConducted {
++				iterResult.ReviewResult = s.invokeReviewer(opts, relTaskFile, relPRD, workDir, task.ID, report.Iterations)
++			}
+ 			reviewIsolationErr := NewCatalog().validateReviewerIsolation(reviewSnapshot, absFolder, task.ID, taskFile, s.fsys)
+ 			if reviewIsolationErr != nil {
+ 				if restoreErr := NewCatalog().restoreTaskIsolationSnapshotAt(reviewSnapshot, absFolder, s.fsys); restoreErr != nil {
+@@ -689,7 +700,7 @@ func (s *Service) Execute(opts Options) error {
+ 		// Invocado quando: reviewer executou e retornou exit != 0 (achados criticos).
+ 		// Reutiliza o executor para aplicar correcoes com prompt de bugfix.
+ 		// Nao incrementa o contador de iteracoes (sub-etapa como o reviewer).
+-		if iterResult.ReviewResult != nil && iterResult.ReviewResult.ExitCode != 0 {
++		if !cycleConducted && iterResult.ReviewResult != nil && iterResult.ReviewResult.ExitCode != 0 {
+ 			bugfixSnapshot, bfSnapErr := NewCatalog().captureTaskIsolationSnapshotWithMode(absFolder, _taskIsolationModeExecutor, s.fsys)
+ 			if bfSnapErr != nil {
+ 				return fmt.Errorf("erro ao capturar snapshot de isolamento do bugfix na task %s: %w", task.ID, bfSnapErr)
+diff --git a/internal/taskloop/approval_cycle.go b/internal/taskloop/approval_cycle.go
+new file mode 100644
+index 0000000..5be18a2
+--- /dev/null
++++ b/internal/taskloop/approval_cycle.go
+@@ -0,0 +1,212 @@
++package taskloop
++
++import (
++	"context"
++	"fmt"
++	"path/filepath"
++	"strings"
++	"time"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria"
++)
++
++type recordingFinalReviewer struct {
++	inner FinalReviewer
++	last  FinalReviewResult
++	calls int
++}
++
++func (r *recordingFinalReviewer) ReviewConsolidated(ctx context.Context, diff string) (FinalReviewResult, error) {
++	result, err := r.inner.ReviewConsolidated(ctx, diff)
++	if err != nil {
++		return FinalReviewResult{}, err
++	}
++	r.last = result
++	r.calls++
++	return result, nil
++}
++
++type cycleBugfixInvoker struct {
++	invoker    AgentInvoker
++	workDir    string
++	model      string
++	data       BugfixTemplateData
++	lastOutput string
++	calls      int
++}
++
++func (b *cycleBugfixInvoker) InvokeBugfix(ctx context.Context, findings []Finding, diff string) (string, error) {
++	data := b.data
++	data.ReviewFindings = formatCycleFindings(findings)
++	data.Diff = diff
++
++	prompt, err := NewCatalog().BuildBugfixPrompt(data)
++	if err != nil {
++		return "", err
++	}
++
++	stdout, _, _, invokeErr := b.invoker.Invoke(ctx, prompt, b.workDir, b.model)
++	b.calls++
++	b.lastOutput = stdout
++	if invokeErr != nil {
++		return "", invokeErr
++	}
++	return stdout, nil
++}
++
++func formatCycleFindings(findings []Finding) string {
++	lines := make([]string, 0, len(findings))
++	for _, finding := range findings {
++		location := strings.TrimSpace(finding.File)
++		if finding.Line > 0 {
++			location = fmt.Sprintf("%s:%d", location, finding.Line)
++		}
++		if location == "" {
++			lines = append(lines, fmt.Sprintf("- [%s] %s", finding.Severity, finding.Message))
++			continue
++		}
++		lines = append(lines, fmt.Sprintf("- [%s] [%s] %s", finding.Severity, location, finding.Message))
++	}
++	return strings.Join(lines, "\n")
++}
++
++type cycleDiffCapturer struct {
++	workDir string
++}
++
++func (d *cycleDiffCapturer) CaptureDiff(ctx context.Context) (string, error) {
++	return NewCatalog().captureGitDiff(ctx, d.workDir), nil
++}
++
++func acceptanceCriteriaFromTaskFile(content []byte) ([]approval.AcceptanceCriterion, error) {
++	seen := make(map[string]bool)
++	var criteria []approval.AcceptanceCriterion
++	for _, description := range taskcriteria.Extract(content) {
++		key := strings.TrimSpace(description)
++		if key == "" || seen[key] {
++			continue
++		}
++		seen[key] = true
++		criterion, err := approval.NewAcceptanceCriterion(description)
++		if err != nil {
++			return nil, err
++		}
++		criteria = append(criteria, criterion)
++	}
++	return criteria, nil
++}
++
++func cycleAgentIdentity(opts Options) string {
++	if strings.TrimSpace(opts.AgentName) != "" {
++		return opts.AgentName
++	}
++	if opts.Profiles != nil {
++		return opts.Profiles.Executor.Tool()
++	}
++	return opts.Tool
++}
++
++func bugfixResultFromCycle(invoker *cycleBugfixInvoker, elapsed time.Duration, approved, interrupted bool) *BugfixResult {
++	if invoker.calls == 0 {
++		return nil
++	}
++	result := &BugfixResult{Duration: elapsed, Output: invoker.lastOutput}
++	switch {
++	case interrupted:
++		result.ExitCode = 1
++		result.Note = "approval cycle interrupted during fix"
++	case approved:
++		result.ExitCode = 0
++	default:
++		result.ExitCode = 1
++		result.Note = "applied fixes did not reach approval"
++	}
++	return result
++}
++
++func (s *Service) conductApprovalCycle(
++	ctx context.Context,
++	opts Options,
++	task TaskEntry,
++	criteria []approval.AcceptanceCriterion,
++	relTaskFile, relPRD, workDir string,
++) (*ReviewResult, *BugfixResult) {
++	reviewerInvoker, err := s.createInvokerWithFallback(opts.Profiles.Reviewer.Tool(), opts.ReviewerFallbackModel)
++	if err != nil {
++		return &ReviewResult{Note: fmt.Sprintf("failed to create reviewer invoker: %v", err)}, nil
++	}
++
++	executorTool := opts.Tool
++	executorModel := ""
++	if opts.Profiles != nil {
++		executorTool = opts.Profiles.Executor.Tool()
++		executorModel = opts.Profiles.Executor.Model()
++	}
++	executorInvoker, err := s.createInvokerWithFallback(executorTool, opts.ExecutorFallbackModel)
++	if err != nil {
++		return &ReviewResult{Note: fmt.Sprintf("failed to create executor invoker: %v", err)}, nil
++	}
++
++	reviewer := &recordingFinalReviewer{
++		inner: NewFinalReviewer(reviewerInvoker, workDir, opts.Profiles.Reviewer.Model()),
++	}
++	bugfixInvoker := &cycleBugfixInvoker{
++		invoker: executorInvoker,
++		workDir: workDir,
++		model:   executorModel,
++		data: BugfixTemplateData{
++			TaskFile:  relTaskFile,
++			PRDFolder: relPRD,
++			TechSpec:  filepath.Join(relPRD, "techspec.md"),
++			TasksFile: filepath.Join(relPRD, "tasks.md"),
++		},
++	}
++	recorder := newBugfixEvidenceRecorder()
++
++	taskIdentity, err := approval.NewTaskIdentity("task-" + task.ID)
++	if err != nil {
++		return &ReviewResult{Note: fmt.Sprintf("invalid task identity: %v", err)}, nil
++	}
++	agentIdentity, err := approval.NewAgentIdentity(cycleAgentIdentity(opts))
++	if err != nil {
++		return &ReviewResult{Note: fmt.Sprintf("invalid agent identity: %v", err)}, nil
++	}
++	policy, err := approval.NewApprovalPolicy()
++	if err != nil {
++		return &ReviewResult{Note: fmt.Sprintf("invalid approval policy: %v", err)}, nil
++	}
++
++	cycle, err := approval.NewCycle(
++		taskIdentity,
++		agentIdentity,
++		policy,
++		criteria,
++		newReviewerPort(reviewer),
++		newFixerPort(bugfixInvoker, recorder),
++		newRepositoryPort(&cycleDiffCapturer{workDir: workDir}, workDir),
++	)
++	if err != nil {
++		return &ReviewResult{Note: fmt.Sprintf("failed to build approval cycle: %v", err)}, nil
++	}
++
++	start := time.Now()
++	result, runErr := cycle.Run(ctx)
++	elapsed := time.Since(start)
++
++	review := &ReviewResult{Duration: elapsed, Output: reviewer.last.RawOutput}
++	if runErr != nil {
++		review.ExitCode = 1
++		review.Note = fmt.Sprintf("approval cycle error: %v", runErr)
++		return review, bugfixResultFromCycle(bugfixInvoker, elapsed, false, true)
++	}
++
++	if result.Approved() {
++		review.ExitCode = 0
++	} else {
++		review.ExitCode = 1
++		review.Note = fmt.Sprintf("approval cycle closed without approval: %s", result.Reason())
++	}
++
++	return review, bugfixResultFromCycle(bugfixInvoker, elapsed, result.Approved(), false)
++}
+diff --git a/internal/taskloop/approval_cycle_test.go b/internal/taskloop/approval_cycle_test.go
+new file mode 100644
+index 0000000..3d7a812
+--- /dev/null
++++ b/internal/taskloop/approval_cycle_test.go
+@@ -0,0 +1,225 @@
++package taskloop
++
++import (
++	"context"
++	"fmt"
++	"os/exec"
++	"path/filepath"
++	"strings"
++	"testing"
++	"time"
++
++	taskfs "github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++)
++
++func newGitRepoDir(t *testing.T) string {
++	t.Helper()
++	dir := t.TempDir()
++	run := func(args ...string) {
++		t.Helper()
++		cmd := exec.Command("git", args...)
++		cmd.Dir = dir
++		if out, err := cmd.CombinedOutput(); err != nil {
++			t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
++		}
++	}
++	run("init")
++	run("config", "user.email", "cycle@example.com")
++	run("config", "user.name", "Cycle")
++	run("commit", "--allow-empty", "-m", "base")
++	return dir
++}
++
++func setupCycleFS(t *testing.T, criteria string) (*taskfs.FakeFileSystem, string, string) {
++	t.Helper()
++	repo := newGitRepoDir(t)
++	prd := filepath.Join(repo, ".specs", "prd-cycle")
++
++	fsys := taskfs.NewFakeFileSystem()
++	fsys.Files[filepath.Join(repo, "AGENTS.md")] = []byte("# Agents\n")
++	fsys.Files[filepath.Join(prd, "prd.md")] = []byte("# PRD\n")
++	fsys.Files[filepath.Join(prd, "techspec.md")] = []byte("# TechSpec\n")
++	fsys.Files[filepath.Join(prd, "task-1.0-test.md")] = fmt.Appendf(nil,
++		"**Status:** pending\n\n## Critérios de Sucesso\n\n%s\n", criteria)
++	fsys.Files[filepath.Join(prd, "tasks.md")] = tasksContent("1.0", "Cycle Task", "pending")
++
++	return fsys, prd, repo
++}
++
++func cycleOptions(prd string) Options {
++	execProfile, _ := NewExecutionProfile("executor", "claude", "")
++	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
++	return Options{
++		PRDFolder:     prd,
++		MaxIterations: 5,
++		Timeout:       10 * time.Second,
++		ReportPath:    filepath.Join(prd, "report.md"),
++		Profiles: &ProfileConfig{
++			Mode:     "avancado",
++			Executor: execProfile,
++			Reviewer: &revProfile,
++		},
++		AllowUnknownModel: true,
++	}
++}
++
++func TestExecuteConductsApprovalCycleFromTaskCriteria(t *testing.T) {
++	fsys, prd, _ := setupCycleFS(t, "- [ ] build verde\n- [ ] testes passam")
++
++	var reviewerCalls int
++	var reviewerPrompt string
++	var executorCalls int
++
++	svc := NewService(fsys, newTestPrinter())
++	svc.binaryChecker = noBinaryCheck
++	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
++		switch tool {
++		case "claude":
++			return &callbackInvoker{binary: "claude", fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
++				executorCalls++
++				fsys.Files[filepath.Join(prd, "tasks.md")] = tasksContent("1.0", "Cycle Task", "done")
++				return "executor output", "", 0, nil
++			}}, nil
++		case "codex":
++			return &callbackInvoker{binary: "codex", fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
++				reviewerCalls++
++				reviewerPrompt = prompt
++				return "no findings\n\nVerdict: APPROVED\n", "", 0, nil
++			}}, nil
++		default:
++			return nil, fmt.Errorf("tool not configured in test: %s", tool)
++		}
++	}
++
++	if err := svc.Execute(cycleOptions(prd)); err != nil {
++		t.Fatalf("Execute unexpected error: %v", err)
++	}
++
++	if reviewerCalls != 1 {
++		t.Fatalf("reviewer called %d times, want 1", reviewerCalls)
++	}
++	if executorCalls != 1 {
++		t.Fatalf("executor called %d times, want 1 (no bugfix on approved path)", executorCalls)
++	}
++	if !strings.Contains(reviewerPrompt, "Diff consolidado") {
++		t.Errorf("reviewer did not receive the cycle consolidated prompt:\n%s", reviewerPrompt)
++	}
++
++	reportStr := readFileString(t, fsys, filepath.Join(prd, "report.md"))
++	if !strings.Contains(reportStr, "reviewer") {
++		t.Errorf("report missing reviewer row:\n%s", reportStr)
++	}
++	if strings.Contains(reportStr, "| bugfix |") {
++		t.Errorf("report should not contain a bugfix row on the approved path:\n%s", reportStr)
++	}
++}
++
++func TestExecuteApprovalCycleRunsReviewAndFixInFreshSessions(t *testing.T) {
++	fsys, prd, _ := setupCycleFS(t, "- [ ] regra de negocio coberta")
++
++	var reviewerCalls int
++	var executorPrompts []string
++
++	svc := NewService(fsys, newTestPrinter())
++	svc.binaryChecker = noBinaryCheck
++	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
++		switch tool {
++		case "claude":
++			return &callbackInvoker{binary: "claude", fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
++				executorPrompts = append(executorPrompts, prompt)
++				if len(executorPrompts) == 1 {
++					fsys.Files[filepath.Join(prd, "tasks.md")] = tasksContent("1.0", "Cycle Task", "done")
++					return "executor output", "", 0, nil
++				}
++				return "root cause: nil deref\nFail-before: go test ./... FAIL\nPass-after: go test ./... ok\n", "", 0, nil
++			}}, nil
++		case "codex":
++			return &callbackInvoker{binary: "codex", fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
++				reviewerCalls++
++				if reviewerCalls == 1 {
++					return "[Critical] [main.go:10] variavel nao inicializada\n\nVerdict: REJECTED\n", "", 1, nil
++				}
++				return "clean\n\nVerdict: APPROVED\n", "", 0, nil
++			}}, nil
++		default:
++			return nil, fmt.Errorf("tool not configured in test: %s", tool)
++		}
++	}
++
++	if err := svc.Execute(cycleOptions(prd)); err != nil {
++		t.Fatalf("Execute unexpected error: %v", err)
++	}
++
++	if reviewerCalls != 2 {
++		t.Fatalf("reviewer called %d times, want 2 (round + re-review in a fresh session)", reviewerCalls)
++	}
++	if len(executorPrompts) != 2 {
++		t.Fatalf("executor called %d times, want 2 (execution + fix in a fresh session)", len(executorPrompts))
++	}
++	if !strings.Contains(executorPrompts[1], "skill bugfix") {
++		t.Errorf("fix prompt does not reference the bugfix skill:\n%s", executorPrompts[1])
++	}
++	if !strings.Contains(executorPrompts[1], "variavel nao inicializada") {
++		t.Errorf("fix prompt did not receive the review findings:\n%s", executorPrompts[1])
++	}
++
++	reportStr := readFileString(t, fsys, filepath.Join(prd, "report.md"))
++	if !strings.Contains(reportStr, "| bugfix |") {
++		t.Errorf("report missing bugfix row after fix:\n%s", reportStr)
++	}
++}
++
++func TestExecuteFallsBackToLegacyReviewWhenTaskFileHasNoCriteria(t *testing.T) {
++	fsys, prd := setupBaseFS("pending")
++
++	var reviewerPrompt string
++	svc := NewService(fsys, newTestPrinter())
++	svc.binaryChecker = noBinaryCheck
++	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
++		switch tool {
++		case "claude":
++			return &callbackInvoker{binary: "claude", fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
++				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
++				return "executor output", "", 0, nil
++			}}, nil
++		case "codex":
++			return &callbackInvoker{binary: "codex", fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
++				reviewerPrompt = prompt
++				return "approved", "", 0, nil
++			}}, nil
++		default:
++			return nil, fmt.Errorf("tool not configured in test: %s", tool)
++		}
++	}
++
++	execProfile, _ := NewExecutionProfile("executor", "claude", "")
++	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
++	opts := Options{
++		PRDFolder:     prd,
++		MaxIterations: 5,
++		Timeout:       5 * time.Second,
++		ReportPath:    prd + "/report.md",
++		Profiles: &ProfileConfig{
++			Mode:     "avancado",
++			Executor: execProfile,
++			Reviewer: &revProfile,
++		},
++		AllowUnknownModel: true,
++	}
++
++	if err := svc.Execute(opts); err != nil {
++		t.Fatalf("Execute unexpected error: %v", err)
++	}
++	if strings.Contains(reviewerPrompt, "Diff consolidado") {
++		t.Errorf("expected legacy review prompt, got the cycle consolidated one:\n%s", reviewerPrompt)
++	}
++}
++
++func readFileString(t *testing.T, fsys *taskfs.FakeFileSystem, path string) string {
++	t.Helper()
++	data, err := fsys.ReadFile(path)
++	if err != nil {
++		t.Fatalf("read %s: %v", path, err)
++	}
++	return string(data)
++}

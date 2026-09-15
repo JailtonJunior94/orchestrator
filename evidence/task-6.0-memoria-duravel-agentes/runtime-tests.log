@@ -1,0 +1,2843 @@
+$ go test ./internal/runtime/... -count=1 -v
+=== RUN   TestEvidenceRoundAddressesAreDistinctAndImmutable
+--- PASS: TestEvidenceRoundAddressesAreDistinctAndImmutable (0.00s)
+=== RUN   TestEvidenceRunAutoReviewRoundIsNumberedAndExclusive
+--- PASS: TestEvidenceRunAutoReviewRoundIsNumberedAndExclusive (0.10s)
+=== RUN   TestReviewPriorSHAEnvIsScopedToRoundAndRestored
+--- PASS: TestReviewPriorSHAEnvIsScopedToRoundAndRestored (0.06s)
+=== RUN   TestReviewPriorSHAValueComesFromRepositoryCutPoint
+--- PASS: TestReviewPriorSHAValueComesFromRepositoryCutPoint (0.15s)
+=== RUN   TestReviewRoundResetsInvocationDepthWithoutRaisingLimit
+--- PASS: TestReviewRoundResetsInvocationDepthWithoutRaisingLimit (0.09s)
+=== RUN   TestApplyEnforcement_OpenCodeSetsChildEnvAndHandshakeWaiter
+--- PASS: TestApplyEnforcement_OpenCodeSetsChildEnvAndHandshakeWaiter (0.00s)
+=== RUN   TestApplyEnforcement_OtherAgentsAreByteIdenticalNoop
+--- PASS: TestApplyEnforcement_OtherAgentsAreByteIdenticalNoop (0.00s)
+=== RUN   TestApplyEnforcement_HandshakeConstructionFailurePropagates
+--- PASS: TestApplyEnforcement_HandshakeConstructionFailurePropagates (0.00s)
+=== RUN   TestApplyEnforcement_UnknownAgentIsNoop
+--- PASS: TestApplyEnforcement_UnknownAgentIsNoop (0.00s)
+=== RUN   TestOpenCodeArgvNeverContainsPureFlag
+--- PASS: TestOpenCodeArgvNeverContainsPureFlag (0.00s)
+=== RUN   TestOpenCodeAgentEnvPolicyZeroValueWouldInheritIntact
+--- PASS: TestOpenCodeAgentEnvPolicyZeroValueWouldInheritIntact (0.00s)
+=== RUN   TestACPRunner_HappyPath
+=== PAUSE TestACPRunner_HappyPath
+=== RUN   TestACPRunner_ActivityTimeout
+=== PAUSE TestACPRunner_ActivityTimeout
+=== RUN   TestACPRunner_PermissionDenied
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_PermissionDenied (0.00s)
+=== RUN   TestACPRunner_UnknownDrift
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+--- PASS: TestACPRunner_UnknownDrift (0.00s)
+=== RUN   TestACPRunner_NpxFallback
+=== PAUSE TestACPRunner_NpxFallback
+=== RUN   TestACPRunner_LauncherUnavailable
+=== PAUSE TestACPRunner_LauncherUnavailable
+=== RUN   TestACPRunner_WithRealPersistence
+=== PAUSE TestACPRunner_WithRealPersistence
+=== RUN   TestACPRunner_HumanRenderer
+=== PAUSE TestACPRunner_HumanRenderer
+=== RUN   TestACPRunner_RuntimeInit_CopilotVersions
+=== PAUSE TestACPRunner_RuntimeInit_CopilotVersions
+=== RUN   TestACPRunner_RuntimeInit_ClaudeVersions
+=== PAUSE TestACPRunner_RuntimeInit_ClaudeVersions
+=== RUN   TestACPIntegration_Copilot_T10
+=== PAUSE TestACPIntegration_Copilot_T10
+=== RUN   TestACPIntegration_Copilot_T11
+=== PAUSE TestACPIntegration_Copilot_T11
+=== RUN   TestACPIntegration_Copilot_T12
+=== PAUSE TestACPIntegration_Copilot_T12
+=== RUN   TestJob_ZeroValue_AccessMode
+=== PAUSE TestJob_ZeroValue_AccessMode
+=== RUN   TestJob_FullConstruction
+=== PAUSE TestJob_FullConstruction
+=== RUN   TestACPRunner_JobZeroValue_ClaudeRegression
+=== PAUSE TestACPRunner_JobZeroValue_ClaudeRegression
+=== RUN   TestACPRunner_Codex_T17_BootstrapArgs_Restricted
+=== PAUSE TestACPRunner_Codex_T17_BootstrapArgs_Restricted
+=== RUN   TestACPRunner_Codex_T18_BootstrapArgs_Full
+=== PAUSE TestACPRunner_Codex_T18_BootstrapArgs_Full
+=== RUN   TestACPRunner_Claude_T19_NoCodexFlags
+=== PAUSE TestACPRunner_Claude_T19_NoCodexFlags
+=== RUN   TestACPRunner_Copilot_T19_NoCodexFlags
+=== PAUSE TestACPRunner_Copilot_T19_NoCodexFlags
+=== RUN   TestACPRunner_Codex_T20_ToolCallsAndReport
+=== PAUSE TestACPRunner_Codex_T20_ToolCallsAndReport
+=== RUN   TestACPRunner_Codex_T21_ActivityWatchdog
+=== PAUSE TestACPRunner_Codex_T21_ActivityWatchdog
+=== RUN   TestACPIntegration_OpenCode_GovernanceBlockSurvivesConsecutiveExceptions
+=== PAUSE TestACPIntegration_OpenCode_GovernanceBlockSurvivesConsecutiveExceptions
+=== RUN   TestACPIntegration_OpenCode_GovernanceBlockInsideSubagentTask
+=== PAUSE TestACPIntegration_OpenCode_GovernanceBlockInsideSubagentTask
+=== RUN   TestACPIntegration_OpenCode_PreconditionRejectionMetricOnlyWithTelemetryOptIn
+=== RUN   TestACPIntegration_OpenCode_PreconditionRejectionMetricOnlyWithTelemetryOptIn/without_opt-in
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+=== RUN   TestACPIntegration_OpenCode_PreconditionRejectionMetricOnlyWithTelemetryOptIn/with_opt-in
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPIntegration_OpenCode_PreconditionRejectionMetricOnlyWithTelemetryOptIn (0.00s)
+    --- PASS: TestACPIntegration_OpenCode_PreconditionRejectionMetricOnlyWithTelemetryOptIn/without_opt-in (0.00s)
+    --- PASS: TestACPIntegration_OpenCode_PreconditionRejectionMetricOnlyWithTelemetryOptIn/with_opt-in (0.00s)
+=== RUN   TestACPIntegration_OpenCode_ToolCallsAndReport
+=== PAUSE TestACPIntegration_OpenCode_ToolCallsAndReport
+=== RUN   TestACPIntegration_OpenCode_ArgvIncludesSubcommandAndCwd
+=== PAUSE TestACPIntegration_OpenCode_ArgvIncludesSubcommandAndCwd
+=== RUN   TestACPIntegration_OpenCode_ActivityWatchdog
+=== PAUSE TestACPIntegration_OpenCode_ActivityWatchdog
+=== RUN   TestRepositoryAdapterCheckpointAndTargets
+=== PAUSE TestRepositoryAdapterCheckpointAndTargets
+=== RUN   TestReviewerAdapterReturnsRawReviewerText
+=== PAUSE TestReviewerAdapterReturnsRawReviewerText
+=== RUN   TestFixerAdapterRunsSessionWithFindings
+=== PAUSE TestFixerAdapterRunsSessionWithFindings
+=== RUN   TestE2EApprovalCycle_ApprovesFirstRound
+=== PAUSE TestE2EApprovalCycle_ApprovesFirstRound
+=== RUN   TestE2EApprovalCycle_ApprovesThirdRoundAfterTwoFixes
+=== PAUSE TestE2EApprovalCycle_ApprovesThirdRoundAfterTwoFixes
+=== RUN   TestE2EApprovalCycle_AbortsOnRepeatedFingerprintWithoutSpendingNextRound
+=== PAUSE TestE2EApprovalCycle_AbortsOnRepeatedFingerprintWithoutSpendingNextRound
+=== RUN   TestE2EApprovalCycle_AbortsOnEmptyDiffAfterFix
+=== PAUSE TestE2EApprovalCycle_AbortsOnEmptyDiffAfterFix
+=== RUN   TestE2EApprovalCycle_RemediationWithoutDiffStillProducesRoundEvidence
+=== PAUSE TestE2EApprovalCycle_RemediationWithoutDiffStillProducesRoundEvidence
+=== RUN   TestE2EApprovalCycle_ApprovedWithRemarksFeedsBackToFix
+=== PAUSE TestE2EApprovalCycle_ApprovedWithRemarksFeedsBackToFix
+=== RUN   TestACPRunner_SessionPostEndDispatchFailure
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_SessionPostEndDispatchFailure (0.00s)
+=== RUN   TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue
+=== RUN   TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue/claude
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+=== RUN   TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue/codex
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+=== RUN   TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue/copilot
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue (0.00s)
+    --- PASS: TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue/claude (0.00s)
+    --- PASS: TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue/codex (0.00s)
+    --- PASS: TestNonRegression_ThreeRemainingAgents_DefaultJobZeroValue/copilot (0.00s)
+=== RUN   TestPromptParityGolden
+=== PAUSE TestPromptParityGolden
+=== RUN   TestPromptParityGolden_AnchoredAtHookDispatch
+=== PAUSE TestPromptParityGolden_AnchoredAtHookDispatch
+=== RUN   TestRetryClassifier_IsTransient
+=== PAUSE TestRetryClassifier_IsTransient
+=== RUN   TestBackoffDuration
+=== PAUSE TestBackoffDuration
+=== RUN   TestRetryClassifier_FatalWrapped
+=== PAUSE TestRetryClassifier_FatalWrapped
+=== RUN   TestAutoReviewSkipsWhenFlagFalse
+=== PAUSE TestAutoReviewSkipsWhenFlagFalse
+=== RUN   TestAutoReviewBlocksOnHardIssue
+=== PAUSE TestAutoReviewBlocksOnHardIssue
+=== RUN   TestAutoReviewOkWhenNoHardMarkers
+=== PAUSE TestAutoReviewOkWhenNoHardMarkers
+=== RUN   TestAutoReviewDoesntRecurse
+=== PAUSE TestAutoReviewDoesntRecurse
+=== RUN   TestAutoReviewInheritsSkipDriftGuard
+=== PAUSE TestAutoReviewInheritsSkipDriftGuard
+=== RUN   TestParseReviewStatus_AllCases
+=== PAUSE TestParseReviewStatus_AllCases
+=== RUN   TestBuildReviewPrompt_ContainsSkillAndDiff
+=== PAUSE TestBuildReviewPrompt_ContainsSkillAndDiff
+=== RUN   TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason
+=== PAUSE TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason
+=== RUN   TestAutoReviewFailClosedWithoutCanonicalVerdict
+=== PAUSE TestAutoReviewFailClosedWithoutCanonicalVerdict
+=== RUN   TestACPRunnerConductsCycleApprovedFirstRound
+=== PAUSE TestACPRunnerConductsCycleApprovedFirstRound
+=== RUN   TestACPRunnerCycleFeedsRemarksBackToFix
+=== PAUSE TestACPRunnerCycleFeedsRemarksBackToFix
+=== RUN   TestACPRunnerCycleAbortsOnNoConvergenceWithoutSpendingNextRound
+=== PAUSE TestACPRunnerCycleAbortsOnNoConvergenceWithoutSpendingNextRound
+=== RUN   TestACPRunnerCycleAbortsOnEmptyDiff
+=== PAUSE TestACPRunnerCycleAbortsOnEmptyDiff
+=== RUN   TestACPRunnerCycleHonorsConfiguredMaxRounds
+=== PAUSE TestACPRunnerCycleHonorsConfiguredMaxRounds
+=== RUN   TestACPRunnerCycleDefaultMaxRoundsIsFiveWithoutConfiguration
+=== PAUSE TestACPRunnerCycleDefaultMaxRoundsIsFiveWithoutConfiguration
+=== RUN   TestACPRunnerFallsBackToOneShotWithoutTaskFile
+=== PAUSE TestACPRunnerFallsBackToOneShotWithoutTaskFile
+=== RUN   TestInjectMemoryContext_T_MEM_INJECT_01
+=== PAUSE TestInjectMemoryContext_T_MEM_INJECT_01
+=== RUN   TestRuntimeConfig_ApplyDefaults
+=== PAUSE TestRuntimeConfig_ApplyDefaults
+=== RUN   TestRuntimeConfig_TimeoutMapping
+=== PAUSE TestRuntimeConfig_TimeoutMapping
+=== RUN   TestJob_RuntimeConfigEmbedded
+=== PAUSE TestJob_RuntimeConfigEmbedded
+=== RUN   TestActivityWatchdog_Disabled
+--- PASS: TestActivityWatchdog_Disabled (0.00s)
+=== RUN   TestActivityWatchdog_KeptAlive
+=== PAUSE TestActivityWatchdog_KeptAlive
+=== RUN   TestActivityWatchdog_AbsoluteCapFiresDespiteTouch
+=== PAUSE TestActivityWatchdog_AbsoluteCapFiresDespiteTouch
+=== RUN   TestActivityWatchdog_Fires
+=== PAUSE TestActivityWatchdog_Fires
+=== RUN   TestActivityWatchdog_StopIdempotent
+=== PAUSE TestActivityWatchdog_StopIdempotent
+=== RUN   TestActivityWatchdog_NoGoroutineLeak
+--- PASS: TestActivityWatchdog_NoGoroutineLeak (0.00s)
+=== RUN   TestActivityWatchdog_LargeTimeout
+=== PAUSE TestActivityWatchdog_LargeTimeout
+=== RUN   TestActivityWatchdog_TinyTimeout
+=== PAUSE TestActivityWatchdog_TinyTimeout
+=== RUN   TestActivityWatchdog_ContextCanceled
+=== PAUSE TestActivityWatchdog_ContextCanceled
+=== RUN   TestActivityWatchdog_TouchResetsTimer
+=== PAUSE TestActivityWatchdog_TouchResetsTimer
+=== RUN   TestSentinels
+=== PAUSE TestSentinels
+=== CONT  TestACPRunner_HappyPath
+=== CONT  TestPromptParityGolden
+=== CONT  TestE2EApprovalCycle_ApprovedWithRemarksFeedsBackToFix
+=== CONT  TestACPIntegration_Copilot_T11
+=== CONT  TestACPRunner_Claude_T19_NoCodexFlags
+=== CONT  TestACPRunner_Codex_T18_BootstrapArgs_Full
+=== CONT  TestACPRunner_Codex_T17_BootstrapArgs_Restricted
+=== RUN   TestPromptParityGolden/case_1:_total_memory_absence
+=== PAUSE TestPromptParityGolden/case_1:_total_memory_absence
+=== RUN   TestPromptParityGolden/case_2:_workflow_only
+=== PAUSE TestPromptParityGolden/case_2:_workflow_only
+=== RUN   TestPromptParityGolden/case_3:_workflow_and_task_in_correct_order
+=== PAUSE TestPromptParityGolden/case_3:_workflow_and_task_in_correct_order
+=== RUN   TestPromptParityGolden/case_4:_compaction_directive_appended
+=== PAUSE TestPromptParityGolden/case_4:_compaction_directive_appended
+=== CONT  TestACPRunner_Copilot_T19_NoCodexFlags
+=== CONT  TestACPRunner_JobZeroValue_ClaudeRegression
+--- PASS: TestACPIntegration_Copilot_T11 (0.00s)
+=== CONT  TestJob_FullConstruction
+--- PASS: TestJob_FullConstruction (0.00s)
+=== CONT  TestJob_ZeroValue_AccessMode
+--- PASS: TestJob_ZeroValue_AccessMode (0.00s)
+=== CONT  TestACPIntegration_Copilot_T12
+--- PASS: TestACPRunner_Codex_T17_BootstrapArgs_Restricted (0.00s)
+=== CONT  TestSentinels
+=== RUN   TestSentinels/launcher_unavailable
+=== PAUSE TestSentinels/launcher_unavailable
+=== RUN   TestSentinels/activity_timeout
+=== PAUSE TestSentinels/activity_timeout
+=== RUN   TestSentinels/permission_denied
+=== PAUSE TestSentinels/permission_denied
+=== RUN   TestSentinels/session_aborted
+=== PAUSE TestSentinels/session_aborted
+=== RUN   TestSentinels/unsupported_tool
+=== PAUSE TestSentinels/unsupported_tool
+=== RUN   TestSentinels/invalid_event
+=== PAUSE TestSentinels/invalid_event
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+=== CONT  TestACPRunnerCycleAbortsOnEmptyDiff
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_Copilot_T19_NoCodexFlags (0.00s)
+=== CONT  TestACPRunnerCycleAbortsOnNoConvergenceWithoutSpendingNextRound
+--- PASS: TestACPRunner_HappyPath (0.01s)
+--- PASS: TestACPRunner_Claude_T19_NoCodexFlags (0.00s)
+=== CONT  TestACPRunnerCycleFeedsRemarksBackToFix
+=== CONT  TestActivityWatchdog_TouchResetsTimer
+--- PASS: TestACPRunner_Codex_T18_BootstrapArgs_Full (0.00s)
+=== CONT  TestActivityWatchdog_ContextCanceled
+--- PASS: TestACPRunner_JobZeroValue_ClaudeRegression (0.00s)
+=== CONT  TestACPRunnerConductsCycleApprovedFirstRound
+--- PASS: TestActivityWatchdog_TouchResetsTimer (0.05s)
+=== CONT  TestActivityWatchdog_TinyTimeout
+--- PASS: TestActivityWatchdog_TinyTimeout (0.00s)
+=== CONT  TestAutoReviewFailClosedWithoutCanonicalVerdict
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPIntegration_Copilot_T12 (0.08s)
+=== CONT  TestActivityWatchdog_LargeTimeout
+--- PASS: TestActivityWatchdog_LargeTimeout (0.00s)
+=== CONT  TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason
+--- PASS: TestAutoReviewFailClosedWithoutCanonicalVerdict (0.06s)
+=== CONT  TestActivityWatchdog_StopIdempotent
+--- PASS: TestActivityWatchdog_StopIdempotent (0.00s)
+=== CONT  TestBuildReviewPrompt_ContainsSkillAndDiff
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+--- PASS: TestBuildReviewPrompt_ContainsSkillAndDiff (0.00s)
+=== CONT  TestActivityWatchdog_Fires
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestActivityWatchdog_Fires (0.01s)
+=== CONT  TestParseReviewStatus_AllCases
+=== RUN   TestParseReviewStatus_AllCases/[HARD]_presente
+=== PAUSE TestParseReviewStatus_AllCases/[HARD]_presente
+=== RUN   TestParseReviewStatus_AllCases/BLOQUEADO_presente
+=== PAUSE TestParseReviewStatus_AllCases/BLOQUEADO_presente
+=== RUN   TestParseReviewStatus_AllCases/CRÍTICO_presente
+=== PAUSE TestParseReviewStatus_AllCases/CRÍTICO_presente
+=== RUN   TestParseReviewStatus_AllCases/sem_marcadores_hard
+=== PAUSE TestParseReviewStatus_AllCases/sem_marcadores_hard
+=== RUN   TestParseReviewStatus_AllCases/vazio
+=== PAUSE TestParseReviewStatus_AllCases/vazio
+=== RUN   TestParseReviewStatus_AllCases/[HARD]_minúsculo_—_não_deve_bloquear
+=== PAUSE TestParseReviewStatus_AllCases/[HARD]_minúsculo_—_não_deve_bloquear
+=== CONT  TestActivityWatchdog_AbsoluteCapFiresDespiteTouch
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason (0.08s)
+=== CONT  TestAutoReviewInheritsSkipDriftGuard
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+--- PASS: TestActivityWatchdog_ContextCanceled (0.20s)
+=== CONT  TestActivityWatchdog_KeptAlive
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestAutoReviewInheritsSkipDriftGuard (0.06s)
+=== CONT  TestAutoReviewDoesntRecurse
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestAutoReviewDoesntRecurse (0.05s)
+=== CONT  TestJob_RuntimeConfigEmbedded
+--- PASS: TestJob_RuntimeConfigEmbedded (0.00s)
+=== CONT  TestAutoReviewOkWhenNoHardMarkers
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunnerConductsCycleApprovedFirstRound (0.28s)
+=== CONT  TestRuntimeConfig_TimeoutMapping
+=== RUN   TestRuntimeConfig_TimeoutMapping/zero-value_Timeout_=_disabled
+=== PAUSE TestRuntimeConfig_TimeoutMapping/zero-value_Timeout_=_disabled
+=== RUN   TestRuntimeConfig_TimeoutMapping/Timeout_>_0_preservado_no_Job_embutido
+=== PAUSE TestRuntimeConfig_TimeoutMapping/Timeout_>_0_preservado_no_Job_embutido
+=== CONT  TestAutoReviewBlocksOnHardIssue
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+--- PASS: TestActivityWatchdog_KeptAlive (0.14s)
+=== CONT  TestRuntimeConfig_ApplyDefaults
+=== RUN   TestRuntimeConfig_ApplyDefaults/zero-value:_Concurrent_e_BatchSize_normalizados_para_1
+=== PAUSE TestRuntimeConfig_ApplyDefaults/zero-value:_Concurrent_e_BatchSize_normalizados_para_1
+=== RUN   TestRuntimeConfig_ApplyDefaults/valores_positivos:_preservados_sem_alteração
+=== PAUSE TestRuntimeConfig_ApplyDefaults/valores_positivos:_preservados_sem_alteração
+=== RUN   TestRuntimeConfig_ApplyDefaults/Concurrent_negativo_normalizado_para_1
+=== PAUSE TestRuntimeConfig_ApplyDefaults/Concurrent_negativo_normalizado_para_1
+=== RUN   TestRuntimeConfig_ApplyDefaults/BatchSize_negativo_normalizado_para_1
+=== PAUSE TestRuntimeConfig_ApplyDefaults/BatchSize_negativo_normalizado_para_1
+=== CONT  TestAutoReviewSkipsWhenFlagFalse
+--- PASS: TestAutoReviewSkipsWhenFlagFalse (0.00s)
+=== CONT  TestInjectMemoryContext_T_MEM_INJECT_01
+=== RUN   TestInjectMemoryContext_T_MEM_INJECT_01/sem_documentos:_prompt_original_preservado
+=== PAUSE TestInjectMemoryContext_T_MEM_INJECT_01/sem_documentos:_prompt_original_preservado
+=== RUN   TestInjectMemoryContext_T_MEM_INJECT_01/workflow_existente:_##_Memory_Context_injetado
+=== PAUSE TestInjectMemoryContext_T_MEM_INJECT_01/workflow_existente:_##_Memory_Context_injetado
+=== RUN   TestInjectMemoryContext_T_MEM_INJECT_01/task_existente:_##_Task_Memory_injetado
+=== PAUSE TestInjectMemoryContext_T_MEM_INJECT_01/task_existente:_##_Task_Memory_injetado
+=== RUN   TestInjectMemoryContext_T_MEM_INJECT_01/NeedsCompaction=true:_diretiva_de_compactação_anexada
+=== PAUSE TestInjectMemoryContext_T_MEM_INJECT_01/NeedsCompaction=true:_diretiva_de_compactação_anexada
+=== RUN   TestInjectMemoryContext_T_MEM_INJECT_01/erro_de_leitura:_documento_ignorado_silenciosamente
+=== PAUSE TestInjectMemoryContext_T_MEM_INJECT_01/erro_de_leitura:_documento_ignorado_silenciosamente
+=== RUN   TestInjectMemoryContext_T_MEM_INJECT_01/workflow_+_task:_ambos_injetados_na_ordem_correta
+=== PAUSE TestInjectMemoryContext_T_MEM_INJECT_01/workflow_+_task:_ambos_injetados_na_ordem_correta
+=== RUN   TestInjectMemoryContext_T_MEM_INJECT_01/Regressão_F2:_prompt_sem_TasksDir_permanece_idêntico
+=== PAUSE TestInjectMemoryContext_T_MEM_INJECT_01/Regressão_F2:_prompt_sem_TasksDir_permanece_idêntico
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+=== CONT  TestRetryClassifier_FatalWrapped
+=== RUN   TestRetryClassifier_FatalWrapped/permission_denied
+=== PAUSE TestRetryClassifier_FatalWrapped/permission_denied
+=== RUN   TestRetryClassifier_FatalWrapped/unsupported_tool
+=== PAUSE TestRetryClassifier_FatalWrapped/unsupported_tool
+=== RUN   TestRetryClassifier_FatalWrapped/session_aborted
+=== PAUSE TestRetryClassifier_FatalWrapped/session_aborted
+=== RUN   TestRetryClassifier_FatalWrapped/launcher_unavailable
+=== PAUSE TestRetryClassifier_FatalWrapped/launcher_unavailable
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+=== CONT  TestACPRunnerFallsBackToOneShotWithoutTaskFile
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestAutoReviewOkWhenNoHardMarkers (0.12s)
+=== CONT  TestBackoffDuration
+=== RUN   TestBackoffDuration/zero_base_retorna_zero
+=== PAUSE TestBackoffDuration/zero_base_retorna_zero
+=== RUN   TestBackoffDuration/multiplier_zero_retorna_zero
+=== PAUSE TestBackoffDuration/multiplier_zero_retorna_zero
+=== RUN   TestBackoffDuration/multiplier_negativo_retorna_zero
+=== PAUSE TestBackoffDuration/multiplier_negativo_retorna_zero
+=== RUN   TestBackoffDuration/attempt_zero_retorna_zero
+=== PAUSE TestBackoffDuration/attempt_zero_retorna_zero
+=== RUN   TestBackoffDuration/attempt_1_retorna_base*multiplier
+=== PAUSE TestBackoffDuration/attempt_1_retorna_base*multiplier
+=== RUN   TestBackoffDuration/attempt_2_retorna_base*multiplier^2
+=== PAUSE TestBackoffDuration/attempt_2_retorna_base*multiplier^2
+=== CONT  TestRetryClassifier_IsTransient
+=== RUN   TestRetryClassifier_IsTransient/nil
+=== PAUSE TestRetryClassifier_IsTransient/nil
+=== RUN   TestRetryClassifier_IsTransient/ErrPermissionDenied
+=== PAUSE TestRetryClassifier_IsTransient/ErrPermissionDenied
+=== RUN   TestRetryClassifier_IsTransient/ErrUnsupportedTool
+=== PAUSE TestRetryClassifier_IsTransient/ErrUnsupportedTool
+=== RUN   TestRetryClassifier_IsTransient/ErrSessionAborted
+=== PAUSE TestRetryClassifier_IsTransient/ErrSessionAborted
+=== RUN   TestRetryClassifier_IsTransient/ErrLauncherUnavailable
+=== PAUSE TestRetryClassifier_IsTransient/ErrLauncherUnavailable
+=== RUN   TestRetryClassifier_IsTransient/wrapped_ErrPermissionDenied
+=== PAUSE TestRetryClassifier_IsTransient/wrapped_ErrPermissionDenied
+=== RUN   TestRetryClassifier_IsTransient/io_error
+=== PAUSE TestRetryClassifier_IsTransient/io_error
+=== RUN   TestRetryClassifier_IsTransient/timeout_error
+=== PAUSE TestRetryClassifier_IsTransient/timeout_error
+=== RUN   TestRetryClassifier_IsTransient/generic_error
+=== PAUSE TestRetryClassifier_IsTransient/generic_error
+=== RUN   TestRetryClassifier_IsTransient/ErrActivityTimeout
+=== PAUSE TestRetryClassifier_IsTransient/ErrActivityTimeout
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+=== CONT  TestACPRunnerCycleDefaultMaxRoundsIsFiveWithoutConfiguration
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestAutoReviewBlocksOnHardIssue (0.11s)
+=== CONT  TestPromptParityGolden_AnchoredAtHookDispatch
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 249
+2026/09/11 15:25:30 [memory_persist] Task: task-1.0.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestPromptParityGolden_AnchoredAtHookDispatch (0.01s)
+=== CONT  TestACPRunnerCycleHonorsConfiguredMaxRounds
+--- PASS: TestActivityWatchdog_AbsoluteCapFiresDespiteTouch (0.27s)
+=== CONT  TestACPRunner_HumanRenderer
+--- PASS: TestACPRunner_HumanRenderer (0.00s)
+=== CONT  TestACPRunner_LauncherUnavailable
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_LauncherUnavailable (0.00s)
+=== CONT  TestACPIntegration_Copilot_T10
+--- PASS: TestACPIntegration_Copilot_T10 (0.00s)
+=== CONT  TestACPRunner_WithRealPersistence
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_WithRealPersistence (0.01s)
+=== CONT  TestACPRunner_RuntimeInit_ClaudeVersions
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+--- PASS: TestACPRunnerFallsBackToOneShotWithoutTaskFile (0.07s)
+=== CONT  TestACPRunner_NpxFallback
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_NpxFallback (0.00s)
+=== CONT  TestACPRunner_RuntimeInit_CopilotVersions
+--- PASS: TestACPRunner_RuntimeInit_ClaudeVersions (0.01s)
+=== CONT  TestRepositoryAdapterCheckpointAndTargets
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_RuntimeInit_CopilotVersions (0.00s)
+=== CONT  TestACPRunner_ActivityTimeout
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestE2EApprovalCycle_ApprovedWithRemarksFeedsBackToFix (0.46s)
+=== CONT  TestE2EApprovalCycle_RemediationWithoutDiffStillProducesRoundEvidence
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+--- PASS: TestACPRunner_ActivityTimeout (0.06s)
+=== CONT  TestACPIntegration_OpenCode_GovernanceBlockInsideSubagentTask
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPIntegration_OpenCode_GovernanceBlockInsideSubagentTask (0.00s)
+=== CONT  TestE2EApprovalCycle_AbortsOnEmptyDiffAfterFix
+--- PASS: TestACPRunnerCycleAbortsOnNoConvergenceWithoutSpendingNextRound (0.47s)
+=== CONT  TestACPIntegration_OpenCode_ActivityWatchdog
+--- PASS: TestACPRunnerCycleAbortsOnEmptyDiff (0.48s)
+=== CONT  TestE2EApprovalCycle_AbortsOnRepeatedFingerprintWithoutSpendingNextRound
+--- PASS: TestACPRunnerCycleFeedsRemarksBackToFix (0.48s)
+=== CONT  TestACPIntegration_OpenCode_ArgvIncludesSubcommandAndCwd
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPIntegration_OpenCode_ArgvIncludesSubcommandAndCwd (0.00s)
+=== CONT  TestE2EApprovalCycle_ApprovesThirdRoundAfterTwoFixes
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPIntegration_OpenCode_ActivityWatchdog (0.05s)
+=== CONT  TestACPIntegration_OpenCode_ToolCallsAndReport
+--- PASS: TestACPIntegration_OpenCode_ToolCallsAndReport (0.00s)
+=== CONT  TestE2EApprovalCycle_ApprovesFirstRound
+2026/09/11 15:25:30 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:30 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:30 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunnerCycleHonorsConfiguredMaxRounds (0.32s)
+=== CONT  TestReviewerAdapterReturnsRawReviewerText
+--- PASS: TestReviewerAdapterReturnsRawReviewerText (0.00s)
+=== CONT  TestFixerAdapterRunsSessionWithFindings
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+--- PASS: TestFixerAdapterRunsSessionWithFindings (0.01s)
+=== CONT  TestACPIntegration_OpenCode_GovernanceBlockSurvivesConsecutiveExceptions
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPIntegration_OpenCode_GovernanceBlockSurvivesConsecutiveExceptions (0.00s)
+=== CONT  TestACPRunner_Codex_T21_ActivityWatchdog
+--- PASS: TestRepositoryAdapterCheckpointAndTargets (0.31s)
+=== CONT  TestACPRunner_Codex_T20_ToolCallsAndReport
+--- PASS: TestACPRunner_Codex_T20_ToolCallsAndReport (0.00s)
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+=== CONT  TestPromptParityGolden/case_1:_total_memory_absence
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 249
+2026/09/11 15:25:31 [memory_persist] Task: task-1.0.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+=== CONT  TestPromptParityGolden/case_3:_workflow_and_task_in_correct_order
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 249
+2026/09/11 15:25:31 [memory_persist] Task: task-1.0.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+=== CONT  TestPromptParityGolden/case_4:_compaction_directive_appended
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 249
+2026/09/11 15:25:31 [memory_persist] Task: task-1.0.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+=== CONT  TestPromptParityGolden/case_2:_workflow_only
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 249
+2026/09/11 15:25:31 [memory_persist] Task: task-1.0.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+--- PASS: TestPromptParityGolden (0.00s)
+    --- PASS: TestPromptParityGolden/case_1:_total_memory_absence (0.01s)
+    --- PASS: TestPromptParityGolden/case_3:_workflow_and_task_in_correct_order (0.00s)
+    --- PASS: TestPromptParityGolden/case_4:_compaction_directive_appended (0.00s)
+    --- PASS: TestPromptParityGolden/case_2:_workflow_only (0.00s)
+=== CONT  TestSentinels/launcher_unavailable
+=== CONT  TestSentinels/activity_timeout
+=== CONT  TestSentinels/invalid_event
+=== CONT  TestSentinels/unsupported_tool
+=== CONT  TestSentinels/session_aborted
+=== CONT  TestSentinels/permission_denied
+--- PASS: TestSentinels (0.00s)
+    --- PASS: TestSentinels/launcher_unavailable (0.00s)
+    --- PASS: TestSentinels/activity_timeout (0.00s)
+    --- PASS: TestSentinels/invalid_event (0.00s)
+    --- PASS: TestSentinels/unsupported_tool (0.00s)
+    --- PASS: TestSentinels/session_aborted (0.00s)
+    --- PASS: TestSentinels/permission_denied (0.00s)
+=== CONT  TestParseReviewStatus_AllCases/[HARD]_presente
+=== CONT  TestParseReviewStatus_AllCases/[HARD]_minúsculo_—_não_deve_bloquear
+=== CONT  TestParseReviewStatus_AllCases/vazio
+=== CONT  TestParseReviewStatus_AllCases/sem_marcadores_hard
+=== CONT  TestParseReviewStatus_AllCases/CRÍTICO_presente
+=== CONT  TestParseReviewStatus_AllCases/BLOQUEADO_presente
+--- PASS: TestParseReviewStatus_AllCases (0.00s)
+    --- PASS: TestParseReviewStatus_AllCases/[HARD]_presente (0.00s)
+    --- PASS: TestParseReviewStatus_AllCases/[HARD]_minúsculo_—_não_deve_bloquear (0.00s)
+    --- PASS: TestParseReviewStatus_AllCases/vazio (0.00s)
+    --- PASS: TestParseReviewStatus_AllCases/sem_marcadores_hard (0.00s)
+    --- PASS: TestParseReviewStatus_AllCases/CRÍTICO_presente (0.00s)
+    --- PASS: TestParseReviewStatus_AllCases/BLOQUEADO_presente (0.00s)
+=== CONT  TestRuntimeConfig_TimeoutMapping/zero-value_Timeout_=_disabled
+=== CONT  TestRuntimeConfig_TimeoutMapping/Timeout_>_0_preservado_no_Job_embutido
+--- PASS: TestRuntimeConfig_TimeoutMapping (0.00s)
+    --- PASS: TestRuntimeConfig_TimeoutMapping/zero-value_Timeout_=_disabled (0.00s)
+    --- PASS: TestRuntimeConfig_TimeoutMapping/Timeout_>_0_preservado_no_Job_embutido (0.00s)
+=== CONT  TestRuntimeConfig_ApplyDefaults/zero-value:_Concurrent_e_BatchSize_normalizados_para_1
+=== CONT  TestRuntimeConfig_ApplyDefaults/Concurrent_negativo_normalizado_para_1
+=== CONT  TestRuntimeConfig_ApplyDefaults/BatchSize_negativo_normalizado_para_1
+=== CONT  TestRuntimeConfig_ApplyDefaults/valores_positivos:_preservados_sem_alteração
+--- PASS: TestRuntimeConfig_ApplyDefaults (0.00s)
+    --- PASS: TestRuntimeConfig_ApplyDefaults/zero-value:_Concurrent_e_BatchSize_normalizados_para_1 (0.00s)
+    --- PASS: TestRuntimeConfig_ApplyDefaults/Concurrent_negativo_normalizado_para_1 (0.00s)
+    --- PASS: TestRuntimeConfig_ApplyDefaults/BatchSize_negativo_normalizado_para_1 (0.00s)
+    --- PASS: TestRuntimeConfig_ApplyDefaults/valores_positivos:_preservados_sem_alteração (0.00s)
+=== CONT  TestInjectMemoryContext_T_MEM_INJECT_01/sem_documentos:_prompt_original_preservado
+=== CONT  TestRetryClassifier_FatalWrapped/permission_denied
+=== CONT  TestInjectMemoryContext_T_MEM_INJECT_01/Regressão_F2:_prompt_sem_TasksDir_permanece_idêntico
+=== CONT  TestInjectMemoryContext_T_MEM_INJECT_01/workflow_+_task:_ambos_injetados_na_ordem_correta
+=== CONT  TestInjectMemoryContext_T_MEM_INJECT_01/erro_de_leitura:_documento_ignorado_silenciosamente
+=== CONT  TestInjectMemoryContext_T_MEM_INJECT_01/NeedsCompaction=true:_diretiva_de_compactação_anexada
+=== CONT  TestInjectMemoryContext_T_MEM_INJECT_01/task_existente:_##_Task_Memory_injetado
+=== CONT  TestInjectMemoryContext_T_MEM_INJECT_01/workflow_existente:_##_Memory_Context_injetado
+--- PASS: TestInjectMemoryContext_T_MEM_INJECT_01 (0.00s)
+    --- PASS: TestInjectMemoryContext_T_MEM_INJECT_01/sem_documentos:_prompt_original_preservado (0.00s)
+    --- PASS: TestInjectMemoryContext_T_MEM_INJECT_01/Regressão_F2:_prompt_sem_TasksDir_permanece_idêntico (0.00s)
+    --- PASS: TestInjectMemoryContext_T_MEM_INJECT_01/workflow_+_task:_ambos_injetados_na_ordem_correta (0.00s)
+    --- PASS: TestInjectMemoryContext_T_MEM_INJECT_01/erro_de_leitura:_documento_ignorado_silenciosamente (0.00s)
+    --- PASS: TestInjectMemoryContext_T_MEM_INJECT_01/NeedsCompaction=true:_diretiva_de_compactação_anexada (0.00s)
+    --- PASS: TestInjectMemoryContext_T_MEM_INJECT_01/task_existente:_##_Task_Memory_injetado (0.00s)
+    --- PASS: TestInjectMemoryContext_T_MEM_INJECT_01/workflow_existente:_##_Memory_Context_injetado (0.00s)
+=== CONT  TestRetryClassifier_FatalWrapped/unsupported_tool
+=== CONT  TestRetryClassifier_FatalWrapped/launcher_unavailable
+=== CONT  TestRetryClassifier_FatalWrapped/session_aborted
+--- PASS: TestRetryClassifier_FatalWrapped (0.00s)
+    --- PASS: TestRetryClassifier_FatalWrapped/permission_denied (0.00s)
+    --- PASS: TestRetryClassifier_FatalWrapped/unsupported_tool (0.00s)
+    --- PASS: TestRetryClassifier_FatalWrapped/launcher_unavailable (0.00s)
+    --- PASS: TestRetryClassifier_FatalWrapped/session_aborted (0.00s)
+=== CONT  TestBackoffDuration/zero_base_retorna_zero
+=== CONT  TestBackoffDuration/attempt_zero_retorna_zero
+=== CONT  TestBackoffDuration/attempt_2_retorna_base*multiplier^2
+=== CONT  TestBackoffDuration/attempt_1_retorna_base*multiplier
+=== CONT  TestBackoffDuration/multiplier_negativo_retorna_zero
+=== CONT  TestBackoffDuration/multiplier_zero_retorna_zero
+--- PASS: TestBackoffDuration (0.00s)
+    --- PASS: TestBackoffDuration/zero_base_retorna_zero (0.00s)
+    --- PASS: TestBackoffDuration/attempt_zero_retorna_zero (0.00s)
+    --- PASS: TestBackoffDuration/attempt_2_retorna_base*multiplier^2 (0.00s)
+    --- PASS: TestBackoffDuration/attempt_1_retorna_base*multiplier (0.00s)
+    --- PASS: TestBackoffDuration/multiplier_negativo_retorna_zero (0.00s)
+    --- PASS: TestBackoffDuration/multiplier_zero_retorna_zero (0.00s)
+=== CONT  TestRetryClassifier_IsTransient/nil
+=== CONT  TestRetryClassifier_IsTransient/wrapped_ErrPermissionDenied
+=== CONT  TestRetryClassifier_IsTransient/ErrActivityTimeout
+=== CONT  TestRetryClassifier_IsTransient/generic_error
+=== CONT  TestRetryClassifier_IsTransient/timeout_error
+=== CONT  TestRetryClassifier_IsTransient/io_error
+=== CONT  TestRetryClassifier_IsTransient/ErrSessionAborted
+=== CONT  TestRetryClassifier_IsTransient/ErrLauncherUnavailable
+=== CONT  TestRetryClassifier_IsTransient/ErrUnsupportedTool
+=== CONT  TestRetryClassifier_IsTransient/ErrPermissionDenied
+--- PASS: TestRetryClassifier_IsTransient (0.00s)
+    --- PASS: TestRetryClassifier_IsTransient/nil (0.00s)
+    --- PASS: TestRetryClassifier_IsTransient/wrapped_ErrPermissionDenied (0.00s)
+    --- PASS: TestRetryClassifier_IsTransient/ErrActivityTimeout (0.00s)
+    --- PASS: TestRetryClassifier_IsTransient/generic_error (0.00s)
+    --- PASS: TestRetryClassifier_IsTransient/timeout_error (0.00s)
+    --- PASS: TestRetryClassifier_IsTransient/io_error (0.00s)
+    --- PASS: TestRetryClassifier_IsTransient/ErrSessionAborted (0.00s)
+    --- PASS: TestRetryClassifier_IsTransient/ErrLauncherUnavailable (0.00s)
+    --- PASS: TestRetryClassifier_IsTransient/ErrUnsupportedTool (0.00s)
+    --- PASS: TestRetryClassifier_IsTransient/ErrPermissionDenied (0.00s)
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_Codex_T21_ActivityWatchdog (0.05s)
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunnerCycleDefaultMaxRoundsIsFiveWithoutConfiguration (0.40s)
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+--- PASS: TestE2EApprovalCycle_ApprovesFirstRound (0.31s)
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+--- PASS: TestE2EApprovalCycle_RemediationWithoutDiffStillProducesRoundEvidence (0.40s)
+--- PASS: TestE2EApprovalCycle_AbortsOnEmptyDiffAfterFix (0.38s)
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+--- PASS: TestE2EApprovalCycle_AbortsOnRepeatedFingerprintWithoutSpendingNextRound (0.39s)
+2026/09/11 15:25:31 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:31 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 15:25:31 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+--- PASS: TestE2EApprovalCycle_ApprovesThirdRoundAfterTwoFixes (0.44s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	2.707s
+=== RUN   TestRoundTrip_HappyPath
+=== PAUSE TestRoundTrip_HappyPath
+=== RUN   TestRoundTrip_UnknownUpdate
+=== PAUSE TestRoundTrip_UnknownUpdate
+=== RUN   TestRoundTrip_RequestPermission
+=== PAUSE TestRoundTrip_RequestPermission
+=== RUN   TestRoundTrip_DelayedMessage
+=== PAUSE TestRoundTrip_DelayedMessage
+=== RUN   TestRoundTrip_EmptyScript
+=== PAUSE TestRoundTrip_EmptyScript
+=== RUN   TestRoundTrip_ContextCanceled
+=== PAUSE TestRoundTrip_ContextCanceled
+=== RUN   TestAcpfake_AppendToolCallUpdate_Failed
+=== PAUSE TestAcpfake_AppendToolCallUpdate_Failed
+=== RUN   TestAcpfake_AppendToolCallUpdate_Custom
+=== PAUSE TestAcpfake_AppendToolCallUpdate_Custom
+=== RUN   TestAcpfake_Scripted
+=== PAUSE TestAcpfake_Scripted
+=== RUN   TestAcpfake_ScriptUnknown
+=== PAUSE TestAcpfake_ScriptUnknown
+=== RUN   TestAcpfake_ScriptRequestPermission
+=== PAUSE TestAcpfake_ScriptRequestPermission
+=== RUN   TestAcpfake_ServerStart
+=== PAUSE TestAcpfake_ServerStart
+=== RUN   TestAcpfake_ScriptAgentMessageDelay
+=== PAUSE TestAcpfake_ScriptAgentMessageDelay
+=== CONT  TestRoundTrip_HappyPath
+=== CONT  TestAcpfake_AppendToolCallUpdate_Custom
+=== CONT  TestRoundTrip_EmptyScript
+=== CONT  TestRoundTrip_RequestPermission
+=== CONT  TestAcpfake_ScriptAgentMessageDelay
+--- PASS: TestAcpfake_ScriptAgentMessageDelay (0.00s)
+=== CONT  TestAcpfake_ServerStart
+=== CONT  TestRoundTrip_DelayedMessage
+--- PASS: TestAcpfake_ServerStart (0.00s)
+=== CONT  TestAcpfake_ScriptRequestPermission
+--- PASS: TestAcpfake_ScriptRequestPermission (0.00s)
+=== CONT  TestAcpfake_ScriptUnknown
+--- PASS: TestAcpfake_ScriptUnknown (0.00s)
+=== CONT  TestRoundTrip_UnknownUpdate
+=== CONT  TestAcpfake_Scripted
+--- PASS: TestAcpfake_Scripted (0.00s)
+=== CONT  TestAcpfake_AppendToolCallUpdate_Failed
+=== CONT  TestRoundTrip_ContextCanceled
+2026/09/11 15:25:29 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:29 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:29 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:29 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:29 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:29 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:29 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:29 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:29 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:29 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:29 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:29 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:29 INFO connection closed cause="peer connection closed"
+--- PASS: TestRoundTrip_EmptyScript (0.01s)
+--- PASS: TestRoundTrip_HappyPath (0.01s)
+--- PASS: TestAcpfake_AppendToolCallUpdate_Custom (0.01s)
+--- PASS: TestAcpfake_AppendToolCallUpdate_Failed (0.00s)
+--- PASS: TestRoundTrip_UnknownUpdate (0.01s)
+--- PASS: TestRoundTrip_RequestPermission (0.01s)
+2026/09/11 15:25:29 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:29 INFO connection closed cause="peer connection closed"
+--- PASS: TestRoundTrip_DelayedMessage (0.03s)
+2026/09/11 15:25:29 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:29 INFO connection closed cause="peer connection closed"
+--- PASS: TestRoundTrip_ContextCanceled (0.06s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake	1.069s
+=== RUN   TestAcpClient_SlowPublishes_DroppedUpdates_DefaultZero
+=== PAUSE TestAcpClient_SlowPublishes_DroppedUpdates_DefaultZero
+=== RUN   TestAcpClient_DropImmediate_WhenChannelFull
+=== PAUSE TestAcpClient_DropImmediate_WhenChannelFull
+=== RUN   TestAcpClient_SlowPublishes_WhenTimeoutPositive
+=== PAUSE TestAcpClient_SlowPublishes_WhenTimeoutPositive
+=== RUN   TestAcpClient_CountersBeforeOpen
+=== PAUSE TestAcpClient_CountersBeforeOpen
+=== RUN   TestAcpClient_Regression_EventCount
+=== PAUSE TestAcpClient_Regression_EventCount
+=== RUN   TestAcpClient_HappyPath
+=== PAUSE TestAcpClient_HappyPath
+=== RUN   TestAcpClient_FakeMute
+=== PAUSE TestAcpClient_FakeMute
+=== RUN   TestAcpClient_UnknownDrift
+=== PAUSE TestAcpClient_UnknownDrift
+=== RUN   TestAcpClient_AbruptClose
+=== PAUSE TestAcpClient_AbruptClose
+=== RUN   TestAcpClient_RequestPermissionCancelsPrompt
+=== PAUSE TestAcpClient_RequestPermissionCancelsPrompt
+=== RUN   TestAcpClient_RequestPermissionBypassAutoApproves
+=== PAUSE TestAcpClient_RequestPermissionBypassAutoApproves
+=== RUN   TestAcpClient_CloseIdempotent
+=== PAUSE TestAcpClient_CloseIdempotent
+=== RUN   TestAcpClient_Updates_BeforeOpen
+=== PAUSE TestAcpClient_Updates_BeforeOpen
+=== RUN   TestAcpClient_Err_BeforeOpen
+=== PAUSE TestAcpClient_Err_BeforeOpen
+=== RUN   TestClientFactory_New
+=== PAUSE TestClientFactory_New
+=== RUN   TestNoGoroutineLeak
+=== PAUSE TestNoGoroutineLeak
+=== RUN   TestLauncher_CommandNotFound
+=== PAUSE TestLauncher_CommandNotFound
+=== RUN   TestAcpClient_HandshakeAbortsSessionBeforeFirstPrompt
+=== PAUSE TestAcpClient_HandshakeAbortsSessionBeforeFirstPrompt
+=== RUN   TestAcpClient_HandshakeSuccessAllowsSessionToProceed
+=== PAUSE TestAcpClient_HandshakeSuccessAllowsSessionToProceed
+=== RUN   TestAcpClient_ChildEnvSanitizationAppliesToSpawnedProcessOnly
+2026/09/11 15:25:31 INFO connection closed cause="peer connection closed"
+--- PASS: TestAcpClient_ChildEnvSanitizationAppliesToSpawnedProcessOnly (2.47s)
+=== RUN   TestAcpClient_NilChildEnvInheritsFullEnvironByteIdentical
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+--- PASS: TestAcpClient_NilChildEnvInheritsFullEnvironByteIdentical (2.18s)
+=== RUN   TestClientImpl_FSMethodsReturnError
+=== PAUSE TestClientImpl_FSMethodsReturnError
+=== RUN   TestClientImpl_TerminalMethodsReturnError
+=== PAUSE TestClientImpl_TerminalMethodsReturnError
+=== RUN   TestAcpClient_OpenTwice
+=== PAUSE TestAcpClient_OpenTwice
+=== RUN   TestAcpClient_Open_RealProcess
+=== PAUSE TestAcpClient_Open_RealProcess
+=== RUN   TestAcpClient_Close_WithRunningProcess
+=== PAUSE TestAcpClient_Close_WithRunningProcess
+=== CONT  TestAcpClient_SlowPublishes_DroppedUpdates_DefaultZero
+=== CONT  TestAcpClient_Updates_BeforeOpen
+=== CONT  TestAcpClient_HandshakeSuccessAllowsSessionToProceed
+=== CONT  TestAcpClient_OpenTwice
+=== CONT  TestAcpClient_HandshakeAbortsSessionBeforeFirstPrompt
+=== CONT  TestLauncher_CommandNotFound
+=== CONT  TestNoGoroutineLeak
+=== CONT  TestClientFactory_New
+--- PASS: TestClientFactory_New (0.00s)
+=== CONT  TestAcpClient_Err_BeforeOpen
+--- PASS: TestAcpClient_Updates_BeforeOpen (0.00s)
+=== CONT  TestClientImpl_TerminalMethodsReturnError
+--- PASS: TestLauncher_CommandNotFound (0.00s)
+=== CONT  TestClientImpl_FSMethodsReturnError
+2026/09/11 15:25:33 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:33 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:33 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+--- PASS: TestAcpClient_HandshakeSuccessAllowsSessionToProceed (0.00s)
+2026/09/11 15:25:33 INFO connection closed cause="io: read/write on closed pipe"
+=== CONT  TestAcpClient_CloseIdempotent
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+=== CONT  TestAcpClient_Regression_EventCount
+--- PASS: TestClientImpl_TerminalMethodsReturnError (0.00s)
+--- PASS: TestAcpClient_Err_BeforeOpen (0.00s)
+=== CONT  TestAcpClient_RequestPermissionBypassAutoApproves
+2026/09/11 15:25:33 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:33 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+--- PASS: TestAcpClient_OpenTwice (0.00s)
+=== CONT  TestAcpClient_RequestPermissionCancelsPrompt
+2026/09/11 15:25:33 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+--- PASS: TestAcpClient_SlowPublishes_DroppedUpdates_DefaultZero (0.01s)
+=== CONT  TestAcpClient_AbruptClose
+2026/09/11 15:25:33 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+--- PASS: TestClientImpl_FSMethodsReturnError (0.00s)
+=== CONT  TestAcpClient_UnknownDrift
+--- PASS: TestAcpClient_CloseIdempotent (0.00s)
+=== CONT  TestAcpClient_FakeMute
+--- PASS: TestAcpClient_Regression_EventCount (0.00s)
+=== CONT  TestAcpClient_HappyPath
+--- PASS: TestAcpClient_RequestPermissionBypassAutoApproves (0.00s)
+=== CONT  TestAcpClient_Open_RealProcess
+--- PASS: TestNoGoroutineLeak (0.01s)
+=== CONT  TestAcpClient_SlowPublishes_WhenTimeoutPositive
+2026/09/11 15:25:33 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:33 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:33 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:33 INFO connection closed cause="io: read/write on closed pipe"
+    backpressure_test.go:143: SlowPublishes() = 0 (esperado 0 em sessão tranquila)
+2026/09/11 15:25:33 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:33 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+--- PASS: TestAcpClient_SlowPublishes_WhenTimeoutPositive (0.00s)
+=== CONT  TestAcpClient_CountersBeforeOpen
+--- PASS: TestAcpClient_UnknownDrift (0.00s)
+=== CONT  TestAcpClient_Close_WithRunningProcess
+--- PASS: TestAcpClient_RequestPermissionCancelsPrompt (0.01s)
+--- PASS: TestAcpClient_FakeMute (0.00s)
+=== CONT  TestAcpClient_DropImmediate_WhenChannelFull
+--- PASS: TestAcpClient_HappyPath (0.00s)
+--- PASS: TestAcpClient_AbruptClose (0.01s)
+--- PASS: TestAcpClient_CountersBeforeOpen (0.00s)
+=== NAME  TestAcpClient_DropImmediate_WhenChannelFull
+    backpressure_test.go:102: AVISO: DroppedUpdates() = 0 com cap=1 e 10 eventos — consumidor pode ter drenado antes de saturar
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+2026/09/11 15:25:33 INFO connection closed cause="io: read/write on closed pipe"
+--- PASS: TestAcpClient_DropImmediate_WhenChannelFull (0.00s)
+2026/09/11 15:25:33 INFO connection closed cause="peer connection closed"
+=== NAME  TestAcpClient_Open_RealProcess
+    subprocess_test.go:40: Open retornou erro esperado: inicializar protocolo ACP: {"code":-32601,"message":"Method not found","data":{"method":"initialize"}}
+--- PASS: TestAcpClient_Open_RealProcess (0.01s)
+=== NAME  TestAcpClient_HandshakeAbortsSessionBeforeFirstPrompt
+    client_test.go:389: collectEvents: timeout atingido
+2026/09/11 15:25:35 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 15:25:35 INFO connection closed cause="peer connection closed"
+--- PASS: TestAcpClient_HandshakeAbortsSessionBeforeFirstPrompt (2.01s)
+2026/09/11 15:25:38 INFO connection closed cause="peer connection closed"
+=== NAME  TestAcpClient_Close_WithRunningProcess
+    subprocess_test.go:64: Open retornou erro esperado: inicializar protocolo ACP: {"code":-32603,"message":"Internal error","data":{"error":"context deadline exceeded"}}
+--- PASS: TestAcpClient_Close_WithRunningProcess (5.01s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client	10.066s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client/mocks	[no test files]
+=== RUN   TestMetricSet_ZeroValue
+=== PAUSE TestMetricSet_ZeroValue
+=== RUN   TestMetricSet_IsZero
+=== PAUSE TestMetricSet_IsZero
+=== RUN   TestMetricSet_Merge_SumsFields
+=== PAUSE TestMetricSet_Merge_SumsFields
+=== RUN   TestMetricSet_Merge_Associative
+=== PAUSE TestMetricSet_Merge_Associative
+=== RUN   TestMetricSet_Merge_WithZero
+=== PAUSE TestMetricSet_Merge_WithZero
+=== RUN   TestMetricSet_Merge_Immutability
+=== PAUSE TestMetricSet_Merge_Immutability
+=== RUN   TestMetricSet_Fields_OrderedNonZero
+=== PAUSE TestMetricSet_Fields_OrderedNonZero
+=== RUN   TestMetricSet_Fields_NilWhenZero
+=== PAUSE TestMetricSet_Fields_NilWhenZero
+=== RUN   TestNewMetricSet_NegativeValuesClampedToZero
+=== PAUSE TestNewMetricSet_NegativeValuesClampedToZero
+=== RUN   TestNormalizeOpenCodeInheritsCommonAliases
+=== PAUSE TestNormalizeOpenCodeInheritsCommonAliases
+=== RUN   TestInheritCommonMirrorsBetweenSourceAndEmbedded
+=== PAUSE TestInheritCommonMirrorsBetweenSourceAndEmbedded
+=== RUN   TestNormalizeClaudeBash
+--- PASS: TestNormalizeClaudeBash (0.00s)
+=== RUN   TestNormalizeCodexShellToBash
+--- PASS: TestNormalizeCodexShellToBash (0.00s)
+=== RUN   TestNormalizeCodexSearchQueryToWebSearch
+--- PASS: TestNormalizeCodexSearchQueryToWebSearch (0.00s)
+=== RUN   TestNormalizationPreservesRawInput
+--- PASS: TestNormalizationPreservesRawInput (0.00s)
+=== RUN   TestNormalizationCanonicalizesFields
+--- PASS: TestNormalizationCanonicalizesFields (0.00s)
+=== RUN   TestUnknownDriverFallsBack
+--- PASS: TestUnknownDriverFallsBack (0.00s)
+=== RUN   TestProjectOverrideWinsOverEmbedded
+--- PASS: TestProjectOverrideWinsOverEmbedded (0.00s)
+=== RUN   TestBuildNormalizedToolCall_EmptyInput
+--- PASS: TestBuildNormalizedToolCall_EmptyInput (0.00s)
+=== RUN   TestBuildNormalizedToolCall_NonObjectInput
+--- PASS: TestBuildNormalizedToolCall_NonObjectInput (0.00s)
+=== RUN   TestLoadRules_InvalidVersion
+--- PASS: TestLoadRules_InvalidVersion (0.00s)
+=== RUN   TestNormalizationPreservesValuesOnRename
+--- PASS: TestNormalizationPreservesValuesOnRename (0.00s)
+=== RUN   TestCopilotRunToBash
+--- PASS: TestCopilotRunToBash (0.00s)
+=== RUN   TestNormalizeToolCallOpenCodeInheritsCommon
+--- PASS: TestNormalizeToolCallOpenCodeInheritsCommon (0.00s)
+=== RUN   TestNormalizeOpenCodePreservesRawName
+=== RUN   TestNormalizeOpenCodePreservesRawName/bash
+=== RUN   TestNormalizeOpenCodePreservesRawName/write_file
+=== RUN   TestNormalizeOpenCodePreservesRawName/str_replace_editor
+=== RUN   TestNormalizeOpenCodePreservesRawName/unknown_tool
+--- PASS: TestNormalizeOpenCodePreservesRawName (0.00s)
+    --- PASS: TestNormalizeOpenCodePreservesRawName/bash (0.00s)
+    --- PASS: TestNormalizeOpenCodePreservesRawName/write_file (0.00s)
+    --- PASS: TestNormalizeOpenCodePreservesRawName/str_replace_editor (0.00s)
+    --- PASS: TestNormalizeOpenCodePreservesRawName/unknown_tool (0.00s)
+=== RUN   TestResolveInheritDoesNotOverrideExplicit
+--- PASS: TestResolveInheritDoesNotOverrideExplicit (0.00s)
+=== RUN   TestInputMappingCopilotRunCommandCanonical
+--- PASS: TestInputMappingCopilotRunCommandCanonical (0.00s)
+=== RUN   TestInputMappingOpenCodeBashCommandCanonical
+--- PASS: TestInputMappingOpenCodeBashCommandCanonical (0.00s)
+=== RUN   TestInputMappingCrossDriverCommandCanonical
+=== RUN   TestInputMappingCrossDriverCommandCanonical/claude
+=== RUN   TestInputMappingCrossDriverCommandCanonical/copilot
+=== RUN   TestInputMappingCrossDriverCommandCanonical/opencode
+--- PASS: TestInputMappingCrossDriverCommandCanonical (0.00s)
+    --- PASS: TestInputMappingCrossDriverCommandCanonical/claude (0.00s)
+    --- PASS: TestInputMappingCrossDriverCommandCanonical/copilot (0.00s)
+    --- PASS: TestInputMappingCrossDriverCommandCanonical/opencode (0.00s)
+=== RUN   TestExplicitAliasWinsOverInheritCommon
+=== RUN   TestExplicitAliasWinsOverInheritCommon/bash
+=== RUN   TestExplicitAliasWinsOverInheritCommon/read_file
+=== RUN   TestExplicitAliasWinsOverInheritCommon/write_file
+=== RUN   TestExplicitAliasWinsOverInheritCommon/str_replace_editor
+=== RUN   TestExplicitAliasWinsOverInheritCommon/unknown_tool
+--- PASS: TestExplicitAliasWinsOverInheritCommon (0.00s)
+    --- PASS: TestExplicitAliasWinsOverInheritCommon/bash (0.00s)
+    --- PASS: TestExplicitAliasWinsOverInheritCommon/read_file (0.00s)
+    --- PASS: TestExplicitAliasWinsOverInheritCommon/write_file (0.00s)
+    --- PASS: TestExplicitAliasWinsOverInheritCommon/str_replace_editor (0.00s)
+    --- PASS: TestExplicitAliasWinsOverInheritCommon/unknown_tool (0.00s)
+=== RUN   TestBuildNormalizedToolCallByDriver_ValidDriver
+--- PASS: TestBuildNormalizedToolCallByDriver_ValidDriver (0.00s)
+=== RUN   TestBuildNormalizedToolCallByDriver_ZeroValue
+--- PASS: TestBuildNormalizedToolCallByDriver_ZeroValue (0.00s)
+=== RUN   TestBuildNormalizedToolCallByDriver_CopilotRun
+--- PASS: TestBuildNormalizedToolCallByDriver_CopilotRun (0.00s)
+=== RUN   TestParseCancelReason
+=== PAUSE TestParseCancelReason
+=== RUN   TestFromACPUpdate
+=== PAUSE TestFromACPUpdate
+=== RUN   TestFromACPUpdateEdgeCases
+=== PAUSE TestFromACPUpdateEdgeCases
+=== RUN   TestFromACPRaw
+=== PAUSE TestFromACPRaw
+=== RUN   TestFromACPRawFixtures
+=== PAUSE TestFromACPRawFixtures
+=== RUN   TestFromACPUpdateEnvelopeGolden
+=== PAUSE TestFromACPUpdateEnvelopeGolden
+=== RUN   TestExtractClaudeMetrics
+=== PAUSE TestExtractClaudeMetrics
+=== RUN   TestToolCallCounters
+=== PAUSE TestToolCallCounters
+=== RUN   TestNewAgentMessage
+=== PAUSE TestNewAgentMessage
+=== RUN   TestNewAgentThought
+=== PAUSE TestNewAgentThought
+=== RUN   TestNewToolCallStart
+=== PAUSE TestNewToolCallStart
+=== RUN   TestNewToolCallUpdate
+=== PAUSE TestNewToolCallUpdate
+=== RUN   TestNewSessionEnd
+=== PAUSE TestNewSessionEnd
+=== RUN   TestNewRuntimeInit
+=== PAUSE TestNewRuntimeInit
+=== RUN   TestNewUnknown
+=== PAUSE TestNewUnknown
+=== RUN   TestEventMarshalJSONGolden
+=== PAUSE TestEventMarshalJSONGolden
+=== RUN   TestExtractorFor_ReturnsNullExtractor_ForCodex
+--- PASS: TestExtractorFor_ReturnsNullExtractor_ForCodex (0.00s)
+=== RUN   TestExtractorFor_ReturnsNullExtractor_ForCopilot
+--- PASS: TestExtractorFor_ReturnsNullExtractor_ForCopilot (0.00s)
+=== RUN   TestExtractorFor_ReturnsNullExtractor_ForOpenCode
+--- PASS: TestExtractorFor_ReturnsNullExtractor_ForOpenCode (0.00s)
+=== RUN   TestExtractorFor_ReturnsDifferentExtractor_ForClaude
+--- PASS: TestExtractorFor_ReturnsDifferentExtractor_ForClaude (0.00s)
+=== RUN   TestClaudeExtractor_FullPayload
+--- PASS: TestClaudeExtractor_FullPayload (0.00s)
+=== RUN   TestClaudeExtractor_PartialPayload_OnlyCacheRead
+--- PASS: TestClaudeExtractor_PartialPayload_OnlyCacheRead (0.00s)
+=== RUN   TestClaudeExtractor_AbsentUsage_ReturnsZero
+--- PASS: TestClaudeExtractor_AbsentUsage_ReturnsZero (0.00s)
+=== RUN   TestClaudeExtractor_NilPayload_ReturnsZero
+--- PASS: TestClaudeExtractor_NilPayload_ReturnsZero (0.00s)
+=== RUN   TestClaudeExtractor_InvalidJSON_ReturnsZero
+--- PASS: TestClaudeExtractor_InvalidJSON_ReturnsZero (0.00s)
+=== RUN   TestNullExtractor_AlwaysReturnsZero
+--- PASS: TestNullExtractor_AlwaysReturnsZero (0.00s)
+=== RUN   TestExtractor_ZeroIsZero
+--- PASS: TestExtractor_ZeroIsZero (0.00s)
+=== RUN   TestExtractor_MergeAssociative
+--- PASS: TestExtractor_MergeAssociative (0.00s)
+=== RUN   TestParseEventKind
+=== PAUSE TestParseEventKind
+=== RUN   TestPayloadsGetters
+=== PAUSE TestPayloadsGetters
+=== RUN   TestSessionStateTransitionUnknownState
+=== PAUSE TestSessionStateTransitionUnknownState
+=== RUN   TestCountersRecordIgnoresUnknownWithoutRawKind
+=== PAUSE TestCountersRecordIgnoresUnknownWithoutRawKind
+=== RUN   TestSessionStateTransition
+=== PAUSE TestSessionStateTransition
+=== RUN   TestNewActivityTimeout
+=== PAUSE TestNewActivityTimeout
+=== RUN   TestToolCallID
+=== PAUSE TestToolCallID
+=== CONT  TestMetricSet_ZeroValue
+--- PASS: TestMetricSet_ZeroValue (0.00s)
+=== CONT  TestToolCallID
+=== RUN   TestToolCallID/zero_value_IsZero_true
+=== CONT  TestExtractClaudeMetrics
+=== PAUSE TestToolCallID/zero_value_IsZero_true
+=== CONT  TestNewMetricSet_NegativeValuesClampedToZero
+--- PASS: TestNewMetricSet_NegativeValuesClampedToZero (0.00s)
+=== CONT  TestMetricSet_Fields_NilWhenZero
+--- PASS: TestMetricSet_Fields_NilWhenZero (0.00s)
+=== CONT  TestMetricSet_Fields_OrderedNonZero
+=== RUN   TestExtractClaudeMetrics/T-CONV-CR-01_all_usage_fields_present
+=== CONT  TestMetricSet_Merge_SumsFields
+=== CONT  TestMetricSet_IsZero
+=== PAUSE TestExtractClaudeMetrics/T-CONV-CR-01_all_usage_fields_present
+=== CONT  TestFromACPUpdateEdgeCases
+=== CONT  TestFromACPUpdateEnvelopeGolden
+=== RUN   TestExtractClaudeMetrics/T-CONV-CR-02_usage_present_optional_fields_absent
+=== PAUSE TestExtractClaudeMetrics/T-CONV-CR-02_usage_present_optional_fields_absent
+=== RUN   TestFromACPUpdateEdgeCases/agent_message_chunk_empty_text_produces_unknown
+=== RUN   TestExtractClaudeMetrics/T-CONV-CR-03_no_usage_field_stays_zero
+=== PAUSE TestFromACPUpdateEdgeCases/agent_message_chunk_empty_text_produces_unknown
+=== RUN   TestFromACPUpdateEdgeCases/agent_thought_chunk_empty_text_produces_unknown
+=== PAUSE TestFromACPUpdateEdgeCases/agent_thought_chunk_empty_text_produces_unknown
+=== RUN   TestFromACPUpdateEdgeCases/tool_call_empty_id
+=== CONT  TestMetricSet_Merge_Immutability
+=== CONT  TestFromACPRawFixtures
+=== RUN   TestFromACPUpdateEnvelopeGolden/agent_message
+=== RUN   TestFromACPRawFixtures/agent_message.json
+=== PAUSE TestFromACPUpdateEnvelopeGolden/agent_message
+=== PAUSE TestFromACPRawFixtures/agent_message.json
+=== RUN   TestFromACPUpdateEnvelopeGolden/agent_thought
+=== RUN   TestFromACPRawFixtures/agent_thought.json
+=== PAUSE TestFromACPUpdateEnvelopeGolden/agent_thought
+=== RUN   TestFromACPUpdateEnvelopeGolden/tool_call_start
+=== PAUSE TestExtractClaudeMetrics/T-CONV-CR-03_no_usage_field_stays_zero
+=== PAUSE TestFromACPUpdateEnvelopeGolden/tool_call_start
+=== RUN   TestFromACPUpdateEnvelopeGolden/tool_call_update
+=== PAUSE TestFromACPUpdateEnvelopeGolden/tool_call_update
+=== RUN   TestMetricSet_IsZero/zero_value
+=== RUN   TestToolCallID/NewToolCallID_vazio_é_zero
+=== PAUSE TestToolCallID/NewToolCallID_vazio_é_zero
+=== PAUSE TestMetricSet_IsZero/zero_value
+=== RUN   TestToolCallID/NewToolCallID_não-vazio_não_é_zero
+=== RUN   TestMetricSet_IsZero/only_total
+=== PAUSE TestMetricSet_IsZero/only_total
+=== RUN   TestMetricSet_IsZero/only_cache_read
+=== PAUSE TestToolCallID/NewToolCallID_não-vazio_não_é_zero
+=== CONT  TestMetricSet_Merge_WithZero
+=== RUN   TestToolCallID/MarshalJSON_zero_produz_null
+=== PAUSE TestToolCallID/MarshalJSON_zero_produz_null
+=== RUN   TestToolCallID/MarshalJSON_não-zero_produz_string
+=== CONT  TestFromACPUpdate
+=== PAUSE TestToolCallID/MarshalJSON_não-zero_produz_string
+=== RUN   TestFromACPUpdate/agent_message_chunk
+=== CONT  TestInheritCommonMirrorsBetweenSourceAndEmbedded
+=== PAUSE TestFromACPUpdate/agent_message_chunk
+=== RUN   TestFromACPUpdate/agent_thought_chunk
+=== PAUSE TestFromACPUpdate/agent_thought_chunk
+=== CONT  TestFromACPRaw
+=== RUN   TestFromACPUpdate/tool_call_start
+=== RUN   TestFromACPRaw/session_end_success
+=== PAUSE TestFromACPRaw/session_end_success
+=== RUN   TestFromACPRaw/session_end_error
+=== PAUSE TestFromACPRaw/session_end_error
+=== PAUSE TestFromACPUpdate/tool_call_start
+=== RUN   TestFromACPUpdate/tool_call_update_in_progress
+=== PAUSE TestFromACPUpdate/tool_call_update_in_progress
+=== CONT  TestParseCancelReason
+=== RUN   TestParseCancelReason/valid/none
+=== PAUSE TestParseCancelReason/valid/none
+--- PASS: TestMetricSet_Fields_OrderedNonZero (0.00s)
+--- PASS: TestMetricSet_Merge_SumsFields (0.00s)
+--- PASS: TestMetricSet_Merge_Immutability (0.00s)
+--- PASS: TestMetricSet_Merge_WithZero (0.00s)
+=== PAUSE TestFromACPUpdateEdgeCases/tool_call_empty_id
+=== RUN   TestFromACPUpdateEdgeCases/tool_call_update_nil_status
+=== PAUSE TestFromACPUpdateEdgeCases/tool_call_update_nil_status
+=== RUN   TestFromACPUpdateEdgeCases/tool_call_nil_raw_input
+=== PAUSE TestMetricSet_IsZero/only_cache_read
+=== PAUSE TestFromACPUpdateEdgeCases/tool_call_nil_raw_input
+=== RUN   TestMetricSet_IsZero/only_thinking
+=== CONT  TestMetricSet_Merge_Associative
+=== PAUSE TestMetricSet_IsZero/only_thinking
+=== RUN   TestMetricSet_IsZero/extra_nonzero
+=== PAUSE TestMetricSet_IsZero/extra_nonzero
+=== RUN   TestMetricSet_IsZero/all_zero_explicit
+=== RUN   TestFromACPRaw/unknown_drift
+=== PAUSE TestMetricSet_IsZero/all_zero_explicit
+=== RUN   TestParseCancelReason/valid/activity_timeout
+=== PAUSE TestParseCancelReason/valid/activity_timeout
+=== RUN   TestParseCancelReason/valid/context_canceled
+=== PAUSE TestParseCancelReason/valid/context_canceled
+=== RUN   TestMetricSet_IsZero/extra_all_zero
+=== RUN   TestParseCancelReason/valid/tool_error
+=== PAUSE TestMetricSet_IsZero/extra_all_zero
+=== PAUSE TestParseCancelReason/valid/tool_error
+=== CONT  TestNewRuntimeInit
+=== RUN   TestNewRuntimeInit/launcher_binary
+=== CONT  TestNewActivityTimeout
+=== RUN   TestNewActivityTimeout/zero_é_válido_e_desabilitado
+=== PAUSE TestNewRuntimeInit/launcher_binary
+=== RUN   TestNewRuntimeInit/launcher_npx
+=== PAUSE TestFromACPRaw/unknown_drift
+=== PAUSE TestNewRuntimeInit/launcher_npx
+=== RUN   TestNewRuntimeInit/launcher_inválido_retorna_erro
+=== RUN   TestFromACPUpdate/tool_call_update_completed
+=== PAUSE TestNewRuntimeInit/launcher_inválido_retorna_erro
+=== RUN   TestFromACPRaw/no_discriminator
+=== CONT  TestCountersRecordIgnoresUnknownWithoutRawKind
+=== CONT  TestSessionStateTransitionUnknownState
+=== CONT  TestPayloadsGetters
+=== PAUSE TestFromACPRaw/no_discriminator
+=== CONT  TestSessionStateTransition
+=== CONT  TestParseEventKind
+=== RUN   TestParseEventKind/valid/agent_message
+=== CONT  TestEventMarshalJSONGolden
+=== PAUSE TestParseEventKind/valid/agent_message
+=== RUN   TestParseEventKind/valid/agent_thought
+=== PAUSE TestParseEventKind/valid/agent_thought
+=== RUN   TestSessionStateTransition/valid/init->running
+=== RUN   TestParseEventKind/valid/tool_call_start
+=== PAUSE TestSessionStateTransition/valid/init->running
+=== RUN   TestSessionStateTransition/valid/init->canceled
+=== PAUSE TestSessionStateTransition/valid/init->canceled
+=== RUN   TestParseCancelReason/valid/permission_denied
+=== RUN   TestSessionStateTransition/valid/running->awaiting
+=== PAUSE TestParseCancelReason/valid/permission_denied
+=== RUN   TestParseCancelReason/invalid/
+=== PAUSE TestParseCancelReason/invalid/
+=== RUN   TestPayloadsGetters/ToolCallStartPayload.Input
+=== PAUSE TestSessionStateTransition/valid/running->awaiting
+=== PAUSE TestPayloadsGetters/ToolCallStartPayload.Input
+=== RUN   TestSessionStateTransition/valid/running->closed
+=== PAUSE TestSessionStateTransition/valid/running->closed
+=== PAUSE TestFromACPRawFixtures/agent_thought.json
+=== RUN   TestSessionStateTransition/valid/running->canceled
+=== RUN   TestPayloadsGetters/SessionEndPayload.Reason
+=== PAUSE TestSessionStateTransition/valid/running->canceled
+=== RUN   TestSessionStateTransition/valid/awaiting->canceled
+=== PAUSE TestSessionStateTransition/valid/awaiting->canceled
+=== PAUSE TestPayloadsGetters/SessionEndPayload.Reason
+=== PAUSE TestFromACPUpdate/tool_call_update_completed
+=== RUN   TestSessionStateTransition/invalid/init->init
+=== PAUSE TestSessionStateTransition/invalid/init->init
+=== RUN   TestSessionStateTransition/invalid/init->awaiting
+=== RUN   TestFromACPUpdate/tool_call_update_failed
+=== PAUSE TestSessionStateTransition/invalid/init->awaiting
+=== PAUSE TestParseEventKind/valid/tool_call_start
+=== RUN   TestParseCancelReason/invalid/timeout
+=== RUN   TestSessionStateTransition/invalid/init->closed
+=== RUN   TestParseEventKind/valid/tool_call_update
+=== PAUSE TestParseEventKind/valid/tool_call_update
+=== RUN   TestParseEventKind/valid/session_end
+=== PAUSE TestSessionStateTransition/invalid/init->closed
+=== RUN   TestFromACPRawFixtures/tool_call_start.json
+=== RUN   TestSessionStateTransition/invalid/running->init
+=== PAUSE TestFromACPRawFixtures/tool_call_start.json
+=== PAUSE TestParseEventKind/valid/session_end
+=== RUN   TestFromACPRawFixtures/tool_call_update_in_progress.json
+=== PAUSE TestSessionStateTransition/invalid/running->init
+=== RUN   TestSessionStateTransition/invalid/running->running
+=== RUN   TestPayloadsGetters/RuntimeInitPayload_getters
+=== PAUSE TestFromACPRawFixtures/tool_call_update_in_progress.json
+=== PAUSE TestFromACPUpdate/tool_call_update_failed
+=== RUN   TestFromACPRawFixtures/tool_call_update_final.json
+=== PAUSE TestFromACPRawFixtures/tool_call_update_final.json
+=== RUN   TestFromACPRawFixtures/session_end_success.json
+=== PAUSE TestPayloadsGetters/RuntimeInitPayload_getters
+=== RUN   TestFromACPUpdate/plan_update_unknown
+=== PAUSE TestSessionStateTransition/invalid/running->running
+=== PAUSE TestParseCancelReason/invalid/timeout
+=== RUN   TestParseCancelReason/invalid/NONE
+=== PAUSE TestNewActivityTimeout/zero_é_válido_e_desabilitado
+=== PAUSE TestParseCancelReason/invalid/NONE
+=== RUN   TestParseCancelReason/invalid/cancelled
+=== RUN   TestEventMarshalJSONGolden/agent_message
+=== PAUSE TestEventMarshalJSONGolden/agent_message
+=== RUN   TestParseEventKind/valid/runtime_init
+=== PAUSE TestParseEventKind/valid/runtime_init
+=== RUN   TestParseEventKind/valid/unknown
+=== PAUSE TestParseEventKind/valid/unknown
+--- PASS: TestMetricSet_Merge_Associative (0.00s)
+--- PASS: TestCountersRecordIgnoresUnknownWithoutRawKind (0.00s)
+--- PASS: TestSessionStateTransitionUnknownState (0.00s)
+--- PASS: TestInheritCommonMirrorsBetweenSourceAndEmbedded (0.00s)
+=== PAUSE TestFromACPRawFixtures/session_end_success.json
+=== RUN   TestFromACPRawFixtures/session_end_error.json
+=== PAUSE TestFromACPRawFixtures/session_end_error.json
+=== RUN   TestFromACPRawFixtures/unknown_drift.json
+=== PAUSE TestFromACPUpdate/plan_update_unknown
+=== RUN   TestFromACPUpdate/user_message_chunk_unknown
+=== PAUSE TestFromACPUpdate/user_message_chunk_unknown
+=== CONT  TestNewUnknown
+=== CONT  TestToolCallCounters
+--- PASS: TestNewUnknown (0.00s)
+=== RUN   TestToolCallCounters/zero_eventos
+=== PAUSE TestToolCallCounters/zero_eventos
+=== RUN   TestToolCallCounters/vários_tool_calls_ordenados_por_startedAt
+=== CONT  TestNewSessionEnd
+--- PASS: TestNewSessionEnd (0.00s)
+=== RUN   TestNewActivityTimeout/positivo_é_válido_e_habilitado
+=== PAUSE TestNewActivityTimeout/positivo_é_válido_e_habilitado
+=== RUN   TestNewActivityTimeout/negativo_retorna_erro
+=== PAUSE TestNewActivityTimeout/negativo_retorna_erro
+=== PAUSE TestParseCancelReason/invalid/cancelled
+=== RUN   TestParseCancelReason/invalid/permission
+=== PAUSE TestParseCancelReason/invalid/permission
+=== RUN   TestEventMarshalJSONGolden/agent_thought
+=== PAUSE TestEventMarshalJSONGolden/agent_thought
+=== CONT  TestNewAgentThought
+=== RUN   TestNewAgentThought/válido
+=== PAUSE TestNewAgentThought/válido
+=== RUN   TestNewAgentThought/texto_vazio_retorna_erro
+=== PAUSE TestNewAgentThought/texto_vazio_retorna_erro
+=== CONT  TestNewAgentMessage
+=== RUN   TestNewAgentMessage/válido
+=== RUN   TestEventMarshalJSONGolden/tool_call_start
+=== PAUSE TestNewAgentMessage/válido
+=== RUN   TestNewAgentMessage/texto_vazio_retorna_erro
+=== PAUSE TestNewAgentMessage/texto_vazio_retorna_erro
+=== PAUSE TestEventMarshalJSONGolden/tool_call_start
+=== CONT  TestNormalizeOpenCodeInheritsCommonAliases
+=== RUN   TestEventMarshalJSONGolden/tool_call_update
+=== PAUSE TestEventMarshalJSONGolden/tool_call_update
+=== RUN   TestEventMarshalJSONGolden/session_end
+=== PAUSE TestEventMarshalJSONGolden/session_end
+=== PAUSE TestToolCallCounters/vários_tool_calls_ordenados_por_startedAt
+=== RUN   TestEventMarshalJSONGolden/runtime_init_binary
+=== RUN   TestToolCallCounters/eventos_unknown_acumulam_kinds_únicos
+=== CONT  TestNewToolCallUpdate
+=== PAUSE TestToolCallCounters/eventos_unknown_acumulam_kinds_únicos
+=== PAUSE TestEventMarshalJSONGolden/runtime_init_binary
+=== RUN   TestEventMarshalJSONGolden/runtime_init_npx
+--- PASS: TestNewToolCallUpdate (0.00s)
+=== RUN   TestParseEventKind/invalid/
+=== PAUSE TestEventMarshalJSONGolden/runtime_init_npx
+=== RUN   TestEventMarshalJSONGolden/unknown
+=== PAUSE TestFromACPRawFixtures/unknown_drift.json
+=== RUN   TestSessionStateTransition/invalid/awaiting->running
+=== PAUSE TestSessionStateTransition/invalid/awaiting->running
+--- PASS: TestNormalizeOpenCodeInheritsCommonAliases (0.00s)
+=== CONT  TestExtractClaudeMetrics/T-CONV-CR-02_usage_present_optional_fields_absent
+=== CONT  TestExtractClaudeMetrics/T-CONV-CR-03_no_usage_field_stays_zero
+=== CONT  TestFromACPUpdateEnvelopeGolden/agent_message
+=== RUN   TestSessionStateTransition/invalid/awaiting->closed
+=== PAUSE TestSessionStateTransition/invalid/awaiting->closed
+=== CONT  TestExtractClaudeMetrics/T-CONV-CR-01_all_usage_fields_present
+=== RUN   TestSessionStateTransition/invalid/awaiting->init
+=== PAUSE TestSessionStateTransition/invalid/awaiting->init
+--- PASS: TestExtractClaudeMetrics (0.00s)
+    --- PASS: TestExtractClaudeMetrics/T-CONV-CR-02_usage_present_optional_fields_absent (0.00s)
+    --- PASS: TestExtractClaudeMetrics/T-CONV-CR-03_no_usage_field_stays_zero (0.00s)
+    --- PASS: TestExtractClaudeMetrics/T-CONV-CR-01_all_usage_fields_present (0.00s)
+=== CONT  TestFromACPUpdateEnvelopeGolden/tool_call_update
+=== CONT  TestNewToolCallStart
+=== RUN   TestNewToolCallStart/válido
+=== PAUSE TestNewToolCallStart/válido
+=== RUN   TestSessionStateTransition/invalid/closed->running
+=== CONT  TestToolCallID/zero_value_IsZero_true
+=== CONT  TestFromACPUpdateEnvelopeGolden/agent_thought
+=== PAUSE TestParseEventKind/invalid/
+=== RUN   TestParseEventKind/invalid/message
+=== PAUSE TestParseEventKind/invalid/message
+=== RUN   TestToolCallCounters/tool_call_update_sem_start_cria_registro_parcial
+=== RUN   TestParseEventKind/invalid/AGENT_MESSAGE
+=== PAUSE TestParseEventKind/invalid/AGENT_MESSAGE
+=== RUN   TestParseEventKind/invalid/session_start
+=== PAUSE TestParseEventKind/invalid/session_start
+=== RUN   TestParseEventKind/invalid/__agent_message
+=== PAUSE TestParseEventKind/invalid/__agent_message
+=== PAUSE TestEventMarshalJSONGolden/unknown
+=== RUN   TestNewToolCallStart/nome_vazio_retorna_erro
+=== CONT  TestToolCallID/MarshalJSON_não-zero_produz_string
+=== PAUSE TestNewToolCallStart/nome_vazio_retorna_erro
+=== CONT  TestToolCallID/MarshalJSON_zero_produz_null
+=== CONT  TestFromACPUpdateEnvelopeGolden/tool_call_start
+=== CONT  TestFromACPUpdateEdgeCases/tool_call_empty_id
+=== PAUSE TestSessionStateTransition/invalid/closed->running
+=== PAUSE TestToolCallCounters/tool_call_update_sem_start_cria_registro_parcial
+=== CONT  TestToolCallID/NewToolCallID_vazio_é_zero
+=== RUN   TestToolCallCounters/tool_call_start_com_ID_zero_ignorado
+=== PAUSE TestToolCallCounters/tool_call_start_com_ID_zero_ignorado
+=== CONT  TestFromACPUpdateEdgeCases/agent_message_chunk_empty_text_produces_unknown
+=== CONT  TestFromACPUpdateEdgeCases/tool_call_update_nil_status
+=== CONT  TestMetricSet_IsZero/extra_all_zero
+=== CONT  TestMetricSet_IsZero/all_zero_explicit
+=== RUN   TestSessionStateTransition/invalid/closed->canceled
+=== CONT  TestMetricSet_IsZero/extra_nonzero
+=== PAUSE TestSessionStateTransition/invalid/closed->canceled
+=== RUN   TestSessionStateTransition/invalid/canceled->running
+=== CONT  TestMetricSet_IsZero/only_total
+=== CONT  TestMetricSet_IsZero/zero_value
+=== CONT  TestNewRuntimeInit/launcher_binary
+=== CONT  TestNewRuntimeInit/launcher_inválido_retorna_erro
+=== PAUSE TestSessionStateTransition/invalid/canceled->running
+=== RUN   TestSessionStateTransition/invalid/canceled->closed
+=== PAUSE TestSessionStateTransition/invalid/canceled->closed
+=== CONT  TestFromACPRaw/session_end_success
+=== CONT  TestMetricSet_IsZero/only_cache_read
+=== CONT  TestFromACPRaw/no_discriminator
+=== CONT  TestFromACPRaw/unknown_drift
+=== CONT  TestPayloadsGetters/ToolCallStartPayload.Input
+=== CONT  TestPayloadsGetters/RuntimeInitPayload_getters
+=== CONT  TestPayloadsGetters/SessionEndPayload.Reason
+=== CONT  TestFromACPUpdate/tool_call_update_completed
+=== CONT  TestFromACPUpdateEdgeCases/tool_call_nil_raw_input
+=== CONT  TestFromACPUpdateEdgeCases/agent_thought_chunk_empty_text_produces_unknown
+=== CONT  TestFromACPUpdate/tool_call_update_failed
+--- PASS: TestFromACPUpdateEnvelopeGolden (0.00s)
+    --- PASS: TestFromACPUpdateEnvelopeGolden/tool_call_update (0.00s)
+    --- PASS: TestFromACPUpdateEnvelopeGolden/agent_message (0.00s)
+    --- PASS: TestFromACPUpdateEnvelopeGolden/agent_thought (0.00s)
+    --- PASS: TestFromACPUpdateEnvelopeGolden/tool_call_start (0.00s)
+=== CONT  TestFromACPUpdate/tool_call_start
+=== CONT  TestFromACPUpdate/user_message_chunk_unknown
+=== CONT  TestFromACPUpdate/tool_call_update_in_progress
+=== CONT  TestMetricSet_IsZero/only_thinking
+--- PASS: TestPayloadsGetters (0.00s)
+    --- PASS: TestPayloadsGetters/ToolCallStartPayload.Input (0.00s)
+    --- PASS: TestPayloadsGetters/RuntimeInitPayload_getters (0.00s)
+    --- PASS: TestPayloadsGetters/SessionEndPayload.Reason (0.00s)
+=== CONT  TestNewActivityTimeout/zero_é_válido_e_desabilitado
+--- PASS: TestMetricSet_IsZero (0.00s)
+    --- PASS: TestMetricSet_IsZero/extra_all_zero (0.00s)
+    --- PASS: TestMetricSet_IsZero/all_zero_explicit (0.00s)
+    --- PASS: TestMetricSet_IsZero/extra_nonzero (0.00s)
+    --- PASS: TestMetricSet_IsZero/zero_value (0.00s)
+    --- PASS: TestMetricSet_IsZero/only_total (0.00s)
+    --- PASS: TestMetricSet_IsZero/only_cache_read (0.00s)
+    --- PASS: TestMetricSet_IsZero/only_thinking (0.00s)
+=== CONT  TestToolCallID/NewToolCallID_não-vazio_não_é_zero
+=== CONT  TestNewActivityTimeout/negativo_retorna_erro
+=== CONT  TestFromACPRaw/session_end_error
+=== CONT  TestParseCancelReason/valid/none
+=== CONT  TestParseCancelReason/invalid/
+=== CONT  TestParseCancelReason/invalid/permission
+=== CONT  TestFromACPUpdate/agent_message_chunk
+=== CONT  TestParseCancelReason/invalid/cancelled
+=== CONT  TestParseCancelReason/valid/tool_error
+=== CONT  TestParseCancelReason/valid/permission_denied
+=== CONT  TestParseCancelReason/valid/activity_timeout
+=== CONT  TestNewAgentThought/válido
+=== CONT  TestNewAgentThought/texto_vazio_retorna_erro
+=== CONT  TestParseCancelReason/valid/context_canceled
+=== CONT  TestNewAgentMessage/válido
+=== CONT  TestNewAgentMessage/texto_vazio_retorna_erro
+=== CONT  TestFromACPRawFixtures/tool_call_update_final.json
+=== CONT  TestFromACPRawFixtures/agent_message.json
+--- PASS: TestToolCallID (0.00s)
+    --- PASS: TestToolCallID/zero_value_IsZero_true (0.00s)
+    --- PASS: TestToolCallID/MarshalJSON_não-zero_produz_string (0.00s)
+    --- PASS: TestToolCallID/MarshalJSON_zero_produz_null (0.00s)
+    --- PASS: TestToolCallID/NewToolCallID_vazio_é_zero (0.00s)
+    --- PASS: TestToolCallID/NewToolCallID_não-vazio_não_é_zero (0.00s)
+=== CONT  TestNewRuntimeInit/launcher_npx
+--- PASS: TestNewRuntimeInit (0.00s)
+    --- PASS: TestNewRuntimeInit/launcher_binary (0.00s)
+    --- PASS: TestNewRuntimeInit/launcher_inválido_retorna_erro (0.00s)
+    --- PASS: TestNewRuntimeInit/launcher_npx (0.00s)
+=== CONT  TestNewActivityTimeout/positivo_é_válido_e_habilitado
+--- PASS: TestFromACPUpdateEdgeCases (0.00s)
+    --- PASS: TestFromACPUpdateEdgeCases/tool_call_empty_id (0.00s)
+    --- PASS: TestFromACPUpdateEdgeCases/agent_message_chunk_empty_text_produces_unknown (0.00s)
+    --- PASS: TestFromACPUpdateEdgeCases/tool_call_update_nil_status (0.00s)
+    --- PASS: TestFromACPUpdateEdgeCases/tool_call_nil_raw_input (0.00s)
+    --- PASS: TestFromACPUpdateEdgeCases/agent_thought_chunk_empty_text_produces_unknown (0.00s)
+=== CONT  TestFromACPRawFixtures/tool_call_update_in_progress.json
+--- PASS: TestFromACPRaw (0.00s)
+    --- PASS: TestFromACPRaw/unknown_drift (0.00s)
+    --- PASS: TestFromACPRaw/no_discriminator (0.00s)
+    --- PASS: TestFromACPRaw/session_end_success (0.00s)
+    --- PASS: TestFromACPRaw/session_end_error (0.00s)
+=== CONT  TestParseCancelReason/invalid/timeout
+--- PASS: TestNewAgentThought (0.00s)
+    --- PASS: TestNewAgentThought/válido (0.00s)
+    --- PASS: TestNewAgentThought/texto_vazio_retorna_erro (0.00s)
+=== CONT  TestFromACPRawFixtures/unknown_drift.json
+--- PASS: TestNewAgentMessage (0.00s)
+    --- PASS: TestNewAgentMessage/válido (0.00s)
+    --- PASS: TestNewAgentMessage/texto_vazio_retorna_erro (0.00s)
+--- PASS: TestNewActivityTimeout (0.00s)
+    --- PASS: TestNewActivityTimeout/zero_é_válido_e_desabilitado (0.00s)
+    --- PASS: TestNewActivityTimeout/negativo_retorna_erro (0.00s)
+    --- PASS: TestNewActivityTimeout/positivo_é_válido_e_habilitado (0.00s)
+=== CONT  TestFromACPUpdate/plan_update_unknown
+=== CONT  TestFromACPUpdate/agent_thought_chunk
+=== CONT  TestFromACPRawFixtures/session_end_error.json
+=== CONT  TestParseCancelReason/invalid/NONE
+--- PASS: TestParseCancelReason (0.00s)
+    --- PASS: TestParseCancelReason/valid/none (0.00s)
+    --- PASS: TestParseCancelReason/invalid/ (0.00s)
+    --- PASS: TestParseCancelReason/invalid/permission (0.00s)
+    --- PASS: TestParseCancelReason/invalid/cancelled (0.00s)
+    --- PASS: TestParseCancelReason/valid/tool_error (0.00s)
+    --- PASS: TestParseCancelReason/valid/permission_denied (0.00s)
+    --- PASS: TestParseCancelReason/valid/activity_timeout (0.00s)
+    --- PASS: TestParseCancelReason/valid/context_canceled (0.00s)
+    --- PASS: TestParseCancelReason/invalid/timeout (0.00s)
+    --- PASS: TestParseCancelReason/invalid/NONE (0.00s)
+=== CONT  TestFromACPRawFixtures/session_end_success.json
+=== CONT  TestFromACPRawFixtures/tool_call_start.json
+=== CONT  TestFromACPRawFixtures/agent_thought.json
+=== CONT  TestEventMarshalJSONGolden/runtime_init_binary
+=== CONT  TestEventMarshalJSONGolden/agent_message
+--- PASS: TestFromACPUpdate (0.00s)
+    --- PASS: TestFromACPUpdate/tool_call_update_completed (0.00s)
+    --- PASS: TestFromACPUpdate/tool_call_update_failed (0.00s)
+    --- PASS: TestFromACPUpdate/tool_call_start (0.00s)
+    --- PASS: TestFromACPUpdate/tool_call_update_in_progress (0.00s)
+    --- PASS: TestFromACPUpdate/user_message_chunk_unknown (0.00s)
+    --- PASS: TestFromACPUpdate/agent_message_chunk (0.00s)
+    --- PASS: TestFromACPUpdate/agent_thought_chunk (0.00s)
+    --- PASS: TestFromACPUpdate/plan_update_unknown (0.00s)
+=== CONT  TestParseEventKind/valid/agent_message
+=== CONT  TestParseEventKind/invalid/__agent_message
+=== CONT  TestParseEventKind/invalid/AGENT_MESSAGE
+=== CONT  TestParseEventKind/invalid/
+=== CONT  TestParseEventKind/valid/unknown
+=== CONT  TestEventMarshalJSONGolden/runtime_init_npx
+=== CONT  TestParseEventKind/valid/agent_thought
+=== CONT  TestEventMarshalJSONGolden/unknown
+=== CONT  TestParseEventKind/valid/runtime_init
+=== CONT  TestParseEventKind/valid/session_end
+=== CONT  TestEventMarshalJSONGolden/tool_call_update
+=== CONT  TestParseEventKind/invalid/message
+=== CONT  TestNewToolCallStart/válido
+=== CONT  TestEventMarshalJSONGolden/tool_call_start
+=== CONT  TestParseEventKind/invalid/session_start
+=== CONT  TestNewToolCallStart/nome_vazio_retorna_erro
+=== CONT  TestParseEventKind/valid/tool_call_start
+=== CONT  TestParseEventKind/valid/tool_call_update
+=== CONT  TestToolCallCounters/zero_eventos
+=== CONT  TestToolCallCounters/tool_call_update_sem_start_cria_registro_parcial
+=== CONT  TestEventMarshalJSONGolden/session_end
+=== CONT  TestToolCallCounters/eventos_unknown_acumulam_kinds_únicos
+=== CONT  TestToolCallCounters/vários_tool_calls_ordenados_por_startedAt
+=== CONT  TestSessionStateTransition/valid/init->running
+=== CONT  TestSessionStateTransition/invalid/canceled->closed
+--- PASS: TestFromACPRawFixtures (0.00s)
+    --- PASS: TestFromACPRawFixtures/tool_call_update_final.json (0.00s)
+    --- PASS: TestFromACPRawFixtures/agent_message.json (0.00s)
+    --- PASS: TestFromACPRawFixtures/tool_call_update_in_progress.json (0.00s)
+    --- PASS: TestFromACPRawFixtures/unknown_drift.json (0.00s)
+    --- PASS: TestFromACPRawFixtures/agent_thought.json (0.00s)
+    --- PASS: TestFromACPRawFixtures/session_end_error.json (0.00s)
+    --- PASS: TestFromACPRawFixtures/session_end_success.json (0.00s)
+    --- PASS: TestFromACPRawFixtures/tool_call_start.json (0.00s)
+=== CONT  TestEventMarshalJSONGolden/agent_thought
+--- PASS: TestNewToolCallStart (0.00s)
+    --- PASS: TestNewToolCallStart/válido (0.00s)
+    --- PASS: TestNewToolCallStart/nome_vazio_retorna_erro (0.00s)
+=== CONT  TestSessionStateTransition/invalid/closed->running
+=== CONT  TestSessionStateTransition/invalid/closed->canceled
+=== CONT  TestSessionStateTransition/invalid/awaiting->closed
+=== CONT  TestSessionStateTransition/invalid/awaiting->running
+=== CONT  TestSessionStateTransition/invalid/running->init
+--- PASS: TestParseEventKind (0.00s)
+    --- PASS: TestParseEventKind/valid/agent_message (0.00s)
+    --- PASS: TestParseEventKind/invalid/__agent_message (0.00s)
+    --- PASS: TestParseEventKind/invalid/AGENT_MESSAGE (0.00s)
+    --- PASS: TestParseEventKind/invalid/ (0.00s)
+    --- PASS: TestParseEventKind/valid/unknown (0.00s)
+    --- PASS: TestParseEventKind/valid/agent_thought (0.00s)
+    --- PASS: TestParseEventKind/valid/runtime_init (0.00s)
+    --- PASS: TestParseEventKind/valid/session_end (0.00s)
+    --- PASS: TestParseEventKind/invalid/message (0.00s)
+    --- PASS: TestParseEventKind/invalid/session_start (0.00s)
+    --- PASS: TestParseEventKind/valid/tool_call_start (0.00s)
+    --- PASS: TestParseEventKind/valid/tool_call_update (0.00s)
+=== CONT  TestSessionStateTransition/valid/awaiting->canceled
+=== CONT  TestSessionStateTransition/invalid/init->closed
+=== CONT  TestSessionStateTransition/valid/running->closed
+=== CONT  TestSessionStateTransition/valid/running->awaiting
+=== CONT  TestToolCallCounters/tool_call_start_com_ID_zero_ignorado
+=== CONT  TestSessionStateTransition/invalid/init->awaiting
+--- PASS: TestToolCallCounters (0.00s)
+    --- PASS: TestToolCallCounters/zero_eventos (0.00s)
+    --- PASS: TestToolCallCounters/tool_call_update_sem_start_cria_registro_parcial (0.00s)
+    --- PASS: TestToolCallCounters/eventos_unknown_acumulam_kinds_únicos (0.00s)
+    --- PASS: TestToolCallCounters/vários_tool_calls_ordenados_por_startedAt (0.00s)
+    --- PASS: TestToolCallCounters/tool_call_start_com_ID_zero_ignorado (0.00s)
+=== CONT  TestSessionStateTransition/invalid/running->running
+=== CONT  TestSessionStateTransition/invalid/canceled->running
+=== CONT  TestSessionStateTransition/valid/running->canceled
+=== CONT  TestSessionStateTransition/invalid/awaiting->init
+=== CONT  TestSessionStateTransition/valid/init->canceled
+=== CONT  TestSessionStateTransition/invalid/init->init
+--- PASS: TestSessionStateTransition (0.00s)
+    --- PASS: TestSessionStateTransition/valid/init->running (0.00s)
+    --- PASS: TestSessionStateTransition/invalid/canceled->closed (0.00s)
+    --- PASS: TestSessionStateTransition/invalid/closed->running (0.00s)
+    --- PASS: TestSessionStateTransition/invalid/closed->canceled (0.00s)
+    --- PASS: TestSessionStateTransition/invalid/awaiting->closed (0.00s)
+    --- PASS: TestSessionStateTransition/invalid/awaiting->running (0.00s)
+    --- PASS: TestSessionStateTransition/invalid/running->init (0.00s)
+    --- PASS: TestSessionStateTransition/valid/awaiting->canceled (0.00s)
+    --- PASS: TestSessionStateTransition/invalid/init->closed (0.00s)
+    --- PASS: TestSessionStateTransition/valid/running->closed (0.00s)
+    --- PASS: TestSessionStateTransition/valid/running->awaiting (0.00s)
+    --- PASS: TestSessionStateTransition/invalid/init->awaiting (0.00s)
+    --- PASS: TestSessionStateTransition/invalid/running->running (0.00s)
+    --- PASS: TestSessionStateTransition/invalid/canceled->running (0.00s)
+    --- PASS: TestSessionStateTransition/valid/running->canceled (0.00s)
+    --- PASS: TestSessionStateTransition/invalid/awaiting->init (0.00s)
+    --- PASS: TestSessionStateTransition/valid/init->canceled (0.00s)
+    --- PASS: TestSessionStateTransition/invalid/init->init (0.00s)
+--- PASS: TestEventMarshalJSONGolden (0.00s)
+    --- PASS: TestEventMarshalJSONGolden/agent_message (0.00s)
+    --- PASS: TestEventMarshalJSONGolden/runtime_init_binary (0.00s)
+    --- PASS: TestEventMarshalJSONGolden/runtime_init_npx (0.00s)
+    --- PASS: TestEventMarshalJSONGolden/unknown (0.00s)
+    --- PASS: TestEventMarshalJSONGolden/tool_call_start (0.00s)
+    --- PASS: TestEventMarshalJSONGolden/tool_call_update (0.00s)
+    --- PASS: TestEventMarshalJSONGolden/session_end (0.00s)
+    --- PASS: TestEventMarshalJSONGolden/agent_thought (0.00s)
+=== RUN   FuzzFromACPUpdate
+=== RUN   FuzzFromACPUpdate/seed#0
+=== RUN   FuzzFromACPUpdate/seed#1
+=== RUN   FuzzFromACPUpdate/seed#2
+=== RUN   FuzzFromACPUpdate/seed#3
+=== RUN   FuzzFromACPUpdate/seed#4
+--- PASS: FuzzFromACPUpdate (0.00s)
+    --- PASS: FuzzFromACPUpdate/seed#0 (0.00s)
+    --- PASS: FuzzFromACPUpdate/seed#1 (0.00s)
+    --- PASS: FuzzFromACPUpdate/seed#2 (0.00s)
+    --- PASS: FuzzFromACPUpdate/seed#3 (0.00s)
+    --- PASS: FuzzFromACPUpdate/seed#4 (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events	0.716s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events/mocks	[no test files]
+=== RUN   TestNewWaiterEmptySessionDirCreatesOwnUniqueDir
+=== PAUSE TestNewWaiterEmptySessionDirCreatesOwnUniqueDir
+=== RUN   TestNewWaiterPathIsUniquePerSessionDir
+=== PAUSE TestNewWaiterPathIsUniquePerSessionDir
+=== RUN   TestNewWaiterRemovesStaleSentinelBeforeSpawn
+=== PAUSE TestNewWaiterRemovesStaleSentinelBeforeSpawn
+=== RUN   TestWaiterSucceedsWhenSignalArrives
+=== PAUSE TestWaiterSucceedsWhenSignalArrives
+=== RUN   TestWaiterAbortsWithoutSignalBeforeTimeout
+=== PAUSE TestWaiterAbortsWithoutSignalBeforeTimeout
+=== RUN   TestWaiterHonorsContextCancellation
+=== PAUSE TestWaiterHonorsContextCancellation
+=== CONT  TestNewWaiterEmptySessionDirCreatesOwnUniqueDir
+--- PASS: TestNewWaiterEmptySessionDirCreatesOwnUniqueDir (0.00s)
+=== CONT  TestWaiterHonorsContextCancellation
+=== CONT  TestWaiterSucceedsWhenSignalArrives
+=== CONT  TestNewWaiterRemovesStaleSentinelBeforeSpawn
+=== CONT  TestNewWaiterPathIsUniquePerSessionDir
+=== CONT  TestWaiterAbortsWithoutSignalBeforeTimeout
+--- PASS: TestNewWaiterPathIsUniquePerSessionDir (0.00s)
+--- PASS: TestWaiterHonorsContextCancellation (0.02s)
+--- PASS: TestWaiterAbortsWithoutSignalBeforeTimeout (0.05s)
+--- PASS: TestWaiterSucceedsWhenSignalArrives (0.05s)
+--- PASS: TestNewWaiterRemovesStaleSentinelBeforeSpawn (0.05s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/handshake	1.991s
+=== RUN   TestDispatcher_OrderPreserved
+--- PASS: TestDispatcher_OrderPreserved (0.00s)
+=== RUN   TestDispatcher_AbortOnFirstError
+--- PASS: TestDispatcher_AbortOnFirstError (0.00s)
+=== RUN   TestDispatcher_UnknownPointReturnsNil
+--- PASS: TestDispatcher_UnknownPointReturnsNil (0.00s)
+=== RUN   TestDispatcher_ErrorWrapping
+--- PASS: TestDispatcher_ErrorWrapping (0.00s)
+=== RUN   TestDispatcher_IndependentPoints
+--- PASS: TestDispatcher_IndependentPoints (0.00s)
+=== RUN   TestDispatcher_ConcurrentSafe
+--- PASS: TestDispatcher_ConcurrentSafe (0.00s)
+=== RUN   TestGovernanceHook_AgentsMDAbsent
+--- PASS: TestGovernanceHook_AgentsMDAbsent (0.00s)
+=== RUN   TestGovernanceHook_AgentsMDPresent
+--- PASS: TestGovernanceHook_AgentsMDPresent (0.00s)
+=== RUN   TestGovernanceHook_WrongEventType
+--- PASS: TestGovernanceHook_WrongEventType (0.00s)
+=== RUN   TestGovernanceHook_ViaDispatcher_Absent
+--- PASS: TestGovernanceHook_ViaDispatcher_Absent (0.00s)
+=== RUN   TestGovernanceHook_ViaDispatcher_Present
+--- PASS: TestGovernanceHook_ViaDispatcher_Present (0.00s)
+=== RUN   TestMemoryPersistHook_Name
+=== PAUSE TestMemoryPersistHook_Name
+=== RUN   TestMemoryPersistHook_WritesMEMORYMD
+=== PAUSE TestMemoryPersistHook_WritesMEMORYMD
+=== RUN   TestMemoryPersistHook_IgnoresWrongEventType
+=== PAUSE TestMemoryPersistHook_IgnoresWrongEventType
+=== RUN   TestMemoryPersistHook_IgnoresNilSummary
+=== PAUSE TestMemoryPersistHook_IgnoresNilSummary
+=== RUN   TestMemoryPersistHook_ViaDispatcher
+=== PAUSE TestMemoryPersistHook_ViaDispatcher
+=== RUN   TestMemoryPersistHook_OverwritesPreviousContent
+=== PAUSE TestMemoryPersistHook_OverwritesPreviousContent
+=== RUN   TestMemoryPersistHook_TypeMismatchIsObservable
+--- PASS: TestMemoryPersistHook_TypeMismatchIsObservable (0.00s)
+=== RUN   TestSpecDriftHook_WrongEventType
+--- PASS: TestSpecDriftHook_WrongEventType (0.00s)
+=== RUN   TestSpecDriftHook_TasksDirEmpty_NoOp
+--- PASS: TestSpecDriftHook_TasksDirEmpty_NoOp (0.00s)
+=== RUN   TestSpecDriftHook_SkipDriftGuard_NoOp
+--- PASS: TestSpecDriftHook_SkipDriftGuard_NoOp (0.00s)
+=== RUN   TestSpecDriftHook_NoHashFound_ErrPRDUntracked
+--- PASS: TestSpecDriftHook_NoHashFound_ErrPRDUntracked (0.00s)
+=== RUN   TestSpecDriftHook_HashDiverged_ErrSpecDrift
+--- PASS: TestSpecDriftHook_HashDiverged_ErrSpecDrift (0.00s)
+=== RUN   TestSpecDriftHook_HashMatch_Pass
+--- PASS: TestSpecDriftHook_HashMatch_Pass (0.00s)
+=== RUN   TestSpecDriftHook_TasksMissing_NoOp
+--- PASS: TestSpecDriftHook_TasksMissing_NoOp (0.00s)
+=== RUN   TestSpecDriftHook_TasksUnreadable_InfraError
+--- PASS: TestSpecDriftHook_TasksUnreadable_InfraError (0.00s)
+=== RUN   TestSpecDriftHook_NoPRDFile_NoHashCheck
+--- PASS: TestSpecDriftHook_NoPRDFile_NoHashCheck (0.00s)
+=== RUN   TestTokenBudgetHook_WithinBudget
+--- PASS: TestTokenBudgetHook_WithinBudget (0.00s)
+=== RUN   TestTokenBudgetHook_ExceedsBudget
+--- PASS: TestTokenBudgetHook_ExceedsBudget (0.00s)
+=== RUN   TestTokenBudgetHook_NilPrompt
+--- PASS: TestTokenBudgetHook_NilPrompt (0.00s)
+=== RUN   TestTokenBudgetHook_UnknownTool
+--- PASS: TestTokenBudgetHook_UnknownTool (0.00s)
+=== RUN   TestTokenBudgetHook_WrongEventType
+--- PASS: TestTokenBudgetHook_WrongEventType (0.00s)
+=== RUN   TestTokenBudgetHook_DefaultTool
+--- PASS: TestTokenBudgetHook_DefaultTool (0.00s)
+=== RUN   TestTokenBudgetHook_WindowLarge_GenerousBudget
+--- PASS: TestTokenBudgetHook_WindowLarge_GenerousBudget (0.00s)
+=== RUN   TestTokenBudgetHook_WindowStandard_ConservativeBudget
+--- PASS: TestTokenBudgetHook_WindowStandard_ConservativeBudget (0.00s)
+=== RUN   TestTokenBudgetHook_ZeroValue_WindowClass_IsF1
+--- PASS: TestTokenBudgetHook_ZeroValue_WindowClass_IsF1 (0.00s)
+=== RUN   TestTokenBudgetHook_ViaDispatcher
+--- PASS: TestTokenBudgetHook_ViaDispatcher (0.00s)
+=== CONT  TestMemoryPersistHook_Name
+=== CONT  TestMemoryPersistHook_IgnoresNilSummary
+=== CONT  TestMemoryPersistHook_IgnoresWrongEventType
+=== CONT  TestMemoryPersistHook_OverwritesPreviousContent
+=== CONT  TestMemoryPersistHook_ViaDispatcher
+=== CONT  TestMemoryPersistHook_WritesMEMORYMD
+2026/09/11 15:25:30 [memory_persist] unexpected SessionPostEndEvent.Summary type: string
+--- PASS: TestMemoryPersistHook_Name (0.00s)
+--- PASS: TestMemoryPersistHook_IgnoresNilSummary (0.00s)
+--- PASS: TestMemoryPersistHook_IgnoresWrongEventType (0.00s)
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 250
+2026/09/11 15:25:30 [memory_persist] Task: task-1.0.md | Events: 10 | Tool Calls: 3
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 249
+2026/09/11 15:25:30 [memory_persist] Task: task-1.0.md | Events: 5 | Tool Calls: 2
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 268
+2026/09/11 15:25:30 [memory_persist] Task: task-6.0-runner-integrate-f3.md | Events: 42 | Tool Calls: 7
+2026/09/11 15:25:30 [memory_persist] Memory Compaction Requested: false
+2026/09/11 15:25:30 [memory_persist] Memory Workflow Bytes: 250
+2026/09/11 15:25:30 [memory_persist] Task: task-2.0.md | Events: 20 | Tool Calls: 8
+--- PASS: TestMemoryPersistHook_ViaDispatcher (0.00s)
+--- PASS: TestMemoryPersistHook_WritesMEMORYMD (0.00s)
+--- PASS: TestMemoryPersistHook_OverwritesPreviousContent (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks	1.656s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks/mocks	[no test files]
+=== RUN   TestBuildChildPromptWithAgentPrompt
+--- PASS: TestBuildChildPromptWithAgentPrompt (0.00s)
+=== RUN   TestBuildChildPromptWithoutAgentPrompt
+--- PASS: TestBuildChildPromptWithoutAgentPrompt (0.00s)
+=== RUN   TestResolveAgentSpecClaude
+--- PASS: TestResolveAgentSpecClaude (0.00s)
+=== RUN   TestResolveAgentSpecCodex
+--- PASS: TestResolveAgentSpecCodex (0.00s)
+=== RUN   TestResolveAgentSpecCopilot
+--- PASS: TestResolveAgentSpecCopilot (0.00s)
+=== RUN   TestGenerateSessionIDIsUnique
+--- PASS: TestGenerateSessionIDIsUnique (0.00s)
+=== RUN   TestGenerateSessionIDContainsAgentName
+--- PASS: TestGenerateSessionIDContainsAgentName (0.00s)
+=== RUN   TestResolveParentEvidenceDirWithRoot
+--- PASS: TestResolveParentEvidenceDirWithRoot (0.00s)
+=== RUN   TestResolveParentEvidenceDirFallback
+--- PASS: TestResolveParentEvidenceDirFallback (0.00s)
+=== RUN   TestBuildSummaryText
+    engine_test.go:117: buildSummaryText não exposta externamente; validado indiretamente via T-MCP-06
+--- PASS: TestBuildSummaryText (0.00s)
+=== RUN   TestSpawnNestedSessionEvidenceDirCreated
+--- PASS: TestSpawnNestedSessionEvidenceDirCreated (0.00s)
+=== RUN   TestSpawnNestedSessionEnvVarRestored
+--- PASS: TestSpawnNestedSessionEnvVarRestored (0.00s)
+=== RUN   TestServerExposesRunAgentOnly
+--- PASS: TestServerExposesRunAgentOnly (0.10s)
+=== RUN   TestRunAgentUnknownAgentReturnsError
+--- PASS: TestRunAgentUnknownAgentReturnsError (0.10s)
+=== RUN   TestRunAgentDepthLimit
+--- PASS: TestRunAgentDepthLimit (0.10s)
+=== RUN   TestRunAgentTimeoutHonored
+--- PASS: TestRunAgentTimeoutHonored (0.00s)
+=== RUN   TestRunAgentResolvesViaRegistry
+--- PASS: TestRunAgentResolvesViaRegistry (0.00s)
+=== RUN   TestServerInitializeHandshake
+--- PASS: TestServerInitializeHandshake (0.10s)
+=== RUN   TestServerUnknownMethodReturnsMethodNotFound
+--- PASS: TestServerUnknownMethodReturnsMethodNotFound (0.10s)
+=== RUN   TestRunAgentRequiresAgentName
+--- PASS: TestRunAgentRequiresAgentName (0.10s)
+=== RUN   TestNewServerDefaultMaxDepth
+--- PASS: TestNewServerDefaultMaxDepth (0.00s)
+=== RUN   TestNewServerCustomMaxDepth
+--- PASS: TestNewServerCustomMaxDepth (0.00s)
+=== RUN   TestLoadNestedContextEmpty
+--- PASS: TestLoadNestedContextEmpty (0.00s)
+=== RUN   TestLoadNestedContextValid
+--- PASS: TestLoadNestedContextValid (0.00s)
+=== RUN   TestLoadNestedContextInvalidJSON
+--- PASS: TestLoadNestedContextInvalidJSON (0.00s)
+=== RUN   TestServerEOFClosesLoop
+--- PASS: TestServerEOFClosesLoop (0.00s)
+=== RUN   TestServerContextCancelClosesLoop
+--- PASS: TestServerContextCancelClosesLoop (0.00s)
+=== RUN   TestPersistenceFactoryInjected
+--- PASS: TestPersistenceFactoryInjected (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver	3.223s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/mocks	[no test files]
+=== RUN   TestCodecReadRequestSuccess
+--- PASS: TestCodecReadRequestSuccess (0.00s)
+=== RUN   TestCodecReadRequestEOF
+--- PASS: TestCodecReadRequestEOF (0.00s)
+=== RUN   TestCodecReadRequestInvalidJSON
+--- PASS: TestCodecReadRequestInvalidJSON (0.00s)
+=== RUN   TestCodecWriteResult
+--- PASS: TestCodecWriteResult (0.00s)
+=== RUN   TestCodecWriteError
+--- PASS: TestCodecWriteError (0.00s)
+=== RUN   TestCodecWriteErrorNilID
+--- PASS: TestCodecWriteErrorNilID (0.00s)
+=== RUN   TestCodecWriteResponse
+--- PASS: TestCodecWriteResponse (0.00s)
+=== RUN   TestErrorCodes
+--- PASS: TestErrorCodes (0.00s)
+=== RUN   TestMCPVersion
+--- PASS: TestMCPVersion (0.00s)
+=== RUN   TestReadMultipleRequests
+--- PASS: TestReadMultipleRequests (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/wire	2.261s
+=== RUN   TestTMEM01_WriteReadWorkflow
+=== PAUSE TestTMEM01_WriteReadWorkflow
+=== RUN   TestTMEM02_WorkflowLineCompaction
+=== PAUSE TestTMEM02_WorkflowLineCompaction
+=== RUN   TestTMEM03_WorkflowByteCompaction
+=== PAUSE TestTMEM03_WorkflowByteCompaction
+=== RUN   TestTMEM04_ReadWorkflowNotFound
+=== PAUSE TestTMEM04_ReadWorkflowNotFound
+=== RUN   TestTMEM05_AppendMode
+=== PAUSE TestTMEM05_AppendMode
+=== RUN   TestReadTaskNotFound
+=== PAUSE TestReadTaskNotFound
+=== RUN   TestWriteReadTask
+=== PAUSE TestWriteReadTask
+=== RUN   TestTaskLineCompaction
+=== PAUSE TestTaskLineCompaction
+=== RUN   TestTaskAppendMode
+=== PAUSE TestTaskAppendMode
+=== RUN   TestTaskPathTraversalPrevention
+=== PAUSE TestTaskPathTraversalPrevention
+=== RUN   TestWriteModeInvalid
+=== PAUSE TestWriteModeInvalid
+=== RUN   TestDefaultLimits
+=== PAUSE TestDefaultLimits
+=== RUN   TestWindowPolicy_Standard
+=== PAUSE TestWindowPolicy_Standard
+=== RUN   TestWindowPolicy_Large
+=== PAUSE TestWindowPolicy_Large
+=== RUN   TestWindowPolicy_LargeExceedsStandard
+=== PAUSE TestWindowPolicy_LargeExceedsStandard
+=== RUN   TestWindowPolicy_ZeroValueIsStandard
+=== PAUSE TestWindowPolicy_ZeroValueIsStandard
+=== RUN   TestWindowPolicy_TableDriven
+=== PAUSE TestWindowPolicy_TableDriven
+=== RUN   TestWindowPolicy_BasePreservedForStandard
+=== PAUSE TestWindowPolicy_BasePreservedForStandard
+=== RUN   TestWindowPolicy_LargePreservesExplicitBase
+=== PAUSE TestWindowPolicy_LargePreservesExplicitBase
+=== CONT  TestTMEM01_WriteReadWorkflow
+=== CONT  TestWriteModeInvalid
+=== CONT  TestReadTaskNotFound
+=== CONT  TestTaskAppendMode
+=== CONT  TestTMEM05_AppendMode
+=== CONT  TestTMEM04_ReadWorkflowNotFound
+=== CONT  TestTMEM03_WorkflowByteCompaction
+=== CONT  TestTMEM02_WorkflowLineCompaction
+--- PASS: TestReadTaskNotFound (0.00s)
+=== CONT  TestWindowPolicy_ZeroValueIsStandard
+--- PASS: TestWindowPolicy_ZeroValueIsStandard (0.00s)
+=== CONT  TestWindowPolicy_LargePreservesExplicitBase
+--- PASS: TestWindowPolicy_LargePreservesExplicitBase (0.00s)
+=== CONT  TestWindowPolicy_BasePreservedForStandard
+--- PASS: TestWindowPolicy_BasePreservedForStandard (0.00s)
+=== CONT  TestWindowPolicy_TableDriven
+=== RUN   TestWindowPolicy_TableDriven/standard_zero
+=== PAUSE TestWindowPolicy_TableDriven/standard_zero
+=== RUN   TestWindowPolicy_TableDriven/large
+=== PAUSE TestWindowPolicy_TableDriven/large
+=== RUN   TestWindowPolicy_TableDriven/zero_value
+=== PAUSE TestWindowPolicy_TableDriven/zero_value
+=== CONT  TestTaskLineCompaction
+--- PASS: TestTMEM04_ReadWorkflowNotFound (0.00s)
+=== CONT  TestWriteReadTask
+--- PASS: TestTMEM01_WriteReadWorkflow (0.00s)
+=== CONT  TestWindowPolicy_Large
+--- PASS: TestWindowPolicy_Large (0.00s)
+=== CONT  TestWindowPolicy_LargeExceedsStandard
+--- PASS: TestWindowPolicy_LargeExceedsStandard (0.00s)
+=== CONT  TestWindowPolicy_Standard
+--- PASS: TestWindowPolicy_Standard (0.00s)
+=== CONT  TestDefaultLimits
+--- PASS: TestDefaultLimits (0.00s)
+=== CONT  TestTaskPathTraversalPrevention
+--- PASS: TestTaskAppendMode (0.00s)
+=== CONT  TestWindowPolicy_TableDriven/standard_zero
+=== CONT  TestWindowPolicy_TableDriven/zero_value
+=== CONT  TestWindowPolicy_TableDriven/large
+--- PASS: TestWindowPolicy_TableDriven (0.00s)
+    --- PASS: TestWindowPolicy_TableDriven/standard_zero (0.00s)
+    --- PASS: TestWindowPolicy_TableDriven/zero_value (0.00s)
+    --- PASS: TestWindowPolicy_TableDriven/large (0.00s)
+--- PASS: TestWriteModeInvalid (0.00s)
+--- PASS: TestTMEM02_WorkflowLineCompaction (0.00s)
+--- PASS: TestTMEM05_AppendMode (0.00s)
+--- PASS: TestTaskLineCompaction (0.00s)
+--- PASS: TestWriteReadTask (0.00s)
+--- PASS: TestTMEM03_WorkflowByteCompaction (0.01s)
+--- PASS: TestTaskPathTraversalPrevention (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory	2.456s
+=== RUN   TestFactSuite
+=== RUN   TestFactSuite/TestDeriveSemanticKeyIsDeterministicAcrossSessions
+=== RUN   TestFactSuite/TestDeriveSemanticKeyRejectsMissingFields
+=== RUN   TestFactSuite/TestDeriveSemanticKeyRejectsMissingFields/should_reject_missing_kind
+=== RUN   TestFactSuite/TestDeriveSemanticKeyRejectsMissingFields/should_reject_missing_subject
+=== RUN   TestFactSuite/TestDetectCollision
+=== RUN   TestFactSuite/TestDetectCollision/should_report_no_collision_for_different_key
+=== RUN   TestFactSuite/TestDetectCollision/should_report_idempotent_collision_for_same_key_and_hash
+=== RUN   TestFactSuite/TestDetectCollision/should_report_contradictory_collision_for_same_key_and_divergent_hash
+=== RUN   TestFactSuite/TestHashContentDiffersForDifferentContent
+=== RUN   TestFactSuite/TestHashContentIsDeterministic
+=== RUN   TestFactSuite/TestResolveLayer
+=== RUN   TestFactSuite/TestResolveLayer/should_resolve_ephemeral_to_task_layer
+=== RUN   TestFactSuite/TestResolveLayer/should_resolve_prd_durability_to_prd_layer
+=== RUN   TestFactSuite/TestResolveLayer/should_resolve_durable_to_project_layer
+=== RUN   TestFactSuite/TestResolveLayer/should_reject_zero-value_durability
+=== RUN   TestFactSuite/TestValidateFact
+=== RUN   TestFactSuite/TestValidateFact/should_reject_fact_without_semantic_key
+=== RUN   TestFactSuite/TestValidateFact/should_reject_fact_with_zero-value_durability
+=== RUN   TestFactSuite/TestValidateFact/should_accept_fact_with_key_and_durability_declared
+--- PASS: TestFactSuite (0.00s)
+    --- PASS: TestFactSuite/TestDeriveSemanticKeyIsDeterministicAcrossSessions (0.00s)
+    --- PASS: TestFactSuite/TestDeriveSemanticKeyRejectsMissingFields (0.00s)
+        --- PASS: TestFactSuite/TestDeriveSemanticKeyRejectsMissingFields/should_reject_missing_kind (0.00s)
+        --- PASS: TestFactSuite/TestDeriveSemanticKeyRejectsMissingFields/should_reject_missing_subject (0.00s)
+    --- PASS: TestFactSuite/TestDetectCollision (0.00s)
+        --- PASS: TestFactSuite/TestDetectCollision/should_report_no_collision_for_different_key (0.00s)
+        --- PASS: TestFactSuite/TestDetectCollision/should_report_idempotent_collision_for_same_key_and_hash (0.00s)
+        --- PASS: TestFactSuite/TestDetectCollision/should_report_contradictory_collision_for_same_key_and_divergent_hash (0.00s)
+    --- PASS: TestFactSuite/TestHashContentDiffersForDifferentContent (0.00s)
+    --- PASS: TestFactSuite/TestHashContentIsDeterministic (0.00s)
+    --- PASS: TestFactSuite/TestResolveLayer (0.00s)
+        --- PASS: TestFactSuite/TestResolveLayer/should_resolve_ephemeral_to_task_layer (0.00s)
+        --- PASS: TestFactSuite/TestResolveLayer/should_resolve_prd_durability_to_prd_layer (0.00s)
+        --- PASS: TestFactSuite/TestResolveLayer/should_resolve_durable_to_project_layer (0.00s)
+        --- PASS: TestFactSuite/TestResolveLayer/should_reject_zero-value_durability (0.00s)
+    --- PASS: TestFactSuite/TestValidateFact (0.00s)
+        --- PASS: TestFactSuite/TestValidateFact/should_reject_fact_without_semantic_key (0.00s)
+        --- PASS: TestFactSuite/TestValidateFact/should_reject_fact_with_zero-value_durability (0.00s)
+        --- PASS: TestFactSuite/TestValidateFact/should_accept_fact_with_key_and_durability_declared (0.00s)
+=== RUN   TestPageSuite
+=== RUN   TestPageSuite/TestParseIsMarkdownReadableAndGrepFriendly
+=== RUN   TestPageSuite/TestParseRejectsMalformedFactMetadata
+=== RUN   TestPageSuite/TestParseRejectsMalformedFrontMatter
+=== RUN   TestPageSuite/TestRoundTripOnRealRepositoryCorpus
+=== RUN   TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../AGENTS.md
+=== RUN   TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../README.md
+=== RUN   TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../docs/config-hierarchy.md
+=== RUN   TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../docs/guia-instalacao-universal.md
+=== RUN   TestPageSuite/TestSerializeRejectsFactWithZeroValueDurability
+=== RUN   TestPageSuite/TestSerializeRejectsFactWithoutSemanticKey
+=== RUN   TestPageSuite/TestSerializeThenParseRoundTrip
+=== RUN   TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_human_content_with_no_facts
+=== RUN   TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_human_content_alongside_a_single_fact
+=== RUN   TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_human_content_ending_without_trailing_newline
+=== RUN   TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_empty_human_content_with_multiple_facts_and_links
+--- PASS: TestPageSuite (0.01s)
+    --- PASS: TestPageSuite/TestParseIsMarkdownReadableAndGrepFriendly (0.00s)
+    --- PASS: TestPageSuite/TestParseRejectsMalformedFactMetadata (0.00s)
+    --- PASS: TestPageSuite/TestParseRejectsMalformedFrontMatter (0.00s)
+    --- PASS: TestPageSuite/TestRoundTripOnRealRepositoryCorpus (0.01s)
+        --- PASS: TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../AGENTS.md (0.00s)
+        --- PASS: TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../README.md (0.00s)
+        --- PASS: TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../docs/config-hierarchy.md (0.00s)
+        --- PASS: TestPageSuite/TestRoundTripOnRealRepositoryCorpus/../../../../docs/guia-instalacao-universal.md (0.00s)
+    --- PASS: TestPageSuite/TestSerializeRejectsFactWithZeroValueDurability (0.00s)
+    --- PASS: TestPageSuite/TestSerializeRejectsFactWithoutSemanticKey (0.00s)
+    --- PASS: TestPageSuite/TestSerializeThenParseRoundTrip (0.00s)
+        --- PASS: TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_human_content_with_no_facts (0.00s)
+        --- PASS: TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_human_content_alongside_a_single_fact (0.00s)
+        --- PASS: TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_human_content_ending_without_trailing_newline (0.00s)
+        --- PASS: TestPageSuite/TestSerializeThenParseRoundTrip/should_preserve_empty_human_content_with_multiple_facts_and_links (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable	2.459s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable/mocks	[no test files]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/mocks	[no test files]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mocks	[no test files]
+=== RUN   TestNewJSONLWriter_InvalidPath
+--- PASS: TestNewJSONLWriter_InvalidPath (0.00s)
+=== RUN   TestJSONLWriter_Append
+--- PASS: TestJSONLWriter_Append (0.00s)
+=== RUN   TestJSONLWriter_AppendConcurrent
+--- PASS: TestJSONLWriter_AppendConcurrent (0.00s)
+=== RUN   TestNewJSONLWriter_MkdirError
+--- PASS: TestNewJSONLWriter_MkdirError (0.00s)
+=== RUN   TestJSONLWriter_AppendWriteError
+--- PASS: TestJSONLWriter_AppendWriteError (0.00s)
+=== RUN   TestJSONLWriter_ReusesExistingContent
+--- PASS: TestJSONLWriter_ReusesExistingContent (0.00s)
+=== RUN   TestEnrichReport_FreshAppend
+--- PASS: TestEnrichReport_FreshAppend (0.00s)
+=== RUN   TestEnrichReport_EmptyFile
+--- PASS: TestEnrichReport_EmptyFile (0.00s)
+=== RUN   TestEnrichReport_ReplaceExisting
+--- PASS: TestEnrichReport_ReplaceExisting (0.00s)
+=== RUN   TestEnrichReport_Idempotency
+--- PASS: TestEnrichReport_Idempotency (0.00s)
+=== RUN   TestEnrichReport_WriteError
+--- PASS: TestEnrichReport_WriteError (0.00s)
+=== RUN   TestRenderClaudeMetricsSection_AllZero_ReturnsEmpty
+--- PASS: TestRenderClaudeMetricsSection_AllZero_ReturnsEmpty (0.00s)
+=== RUN   TestRenderClaudeMetricsSection_WithValues_ContainsAllFields
+--- PASS: TestRenderClaudeMetricsSection_WithValues_ContainsAllFields (0.00s)
+=== RUN   TestEnrichReport_ClaudeMetricsAppended_WhenNonZero
+--- PASS: TestEnrichReport_ClaudeMetricsAppended_WhenNonZero (0.00s)
+=== RUN   TestEnrichReport_ClaudeMetrics_NotPresent_WhenAllZero
+--- PASS: TestEnrichReport_ClaudeMetrics_NotPresent_WhenAllZero (0.00s)
+=== RUN   TestRenderMetricsSection_AllZero
+--- PASS: TestRenderMetricsSection_AllZero (0.00s)
+=== RUN   TestRenderMetricsSection_ExtraFields
+--- PASS: TestRenderMetricsSection_ExtraFields (0.00s)
+=== RUN   TestEnrichReport_MetricsSection_Codex
+--- PASS: TestEnrichReport_MetricsSection_Codex (0.00s)
+=== RUN   TestEnrichReport_SectionAtEndOfFile
+--- PASS: TestEnrichReport_SectionAtEndOfFile (0.00s)
+=== RUN   TestWriteToolCalls_Empty
+--- PASS: TestWriteToolCalls_Empty (0.00s)
+=== RUN   TestWriteToolCalls_WithEvents
+--- PASS: TestWriteToolCalls_WithEvents (0.00s)
+=== RUN   TestWriteToolCalls_MkdirError
+--- PASS: TestWriteToolCalls_MkdirError (0.00s)
+=== RUN   TestWriteToolCalls_WriteError
+--- PASS: TestWriteToolCalls_WriteError (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence	2.206s
+=== RUN   TestEvaluateNoKillSwitch
+=== PAUSE TestEvaluateNoKillSwitch
+=== RUN   TestEvaluateHandshakeIsAlwaysUnknown
+=== PAUSE TestEvaluateHandshakeIsAlwaysUnknown
+=== RUN   TestEvaluateCopilotTrustedFolder
+=== PAUSE TestEvaluateCopilotTrustedFolder
+=== RUN   TestEvaluateCodexTrustedHash
+=== PAUSE TestEvaluateCodexTrustedHash
+=== RUN   TestEvaluateRoutesByKind
+=== PAUSE TestEvaluateRoutesByKind
+=== CONT  TestEvaluateNoKillSwitch
+=== RUN   TestEvaluateNoKillSwitch/current_when_no_kill_switch_set
+=== CONT  TestEvaluateCodexTrustedHash
+=== CONT  TestEvaluateCopilotTrustedFolder
+=== RUN   TestEvaluateCodexTrustedHash/unknown_when_no_client_provided
+=== PAUSE TestEvaluateCodexTrustedHash/unknown_when_no_client_provided
+=== CONT  TestEvaluateHandshakeIsAlwaysUnknown
+--- PASS: TestEvaluateHandshakeIsAlwaysUnknown (0.00s)
+=== CONT  TestEvaluateRoutesByKind
+=== PAUSE TestEvaluateNoKillSwitch/current_when_no_kill_switch_set
+=== RUN   TestEvaluateNoKillSwitch/inert_when_any_kill_switch_set
+=== PAUSE TestEvaluateNoKillSwitch/inert_when_any_kill_switch_set
+=== CONT  TestEvaluateNoKillSwitch/current_when_no_kill_switch_set
+=== CONT  TestEvaluateNoKillSwitch/inert_when_any_kill_switch_set
+--- PASS: TestEvaluateNoKillSwitch (0.00s)
+    --- PASS: TestEvaluateNoKillSwitch/current_when_no_kill_switch_set (0.00s)
+    --- PASS: TestEvaluateNoKillSwitch/inert_when_any_kill_switch_set (0.00s)
+=== RUN   TestEvaluateCodexTrustedHash/current_when_a_trusted_project_hook_exists
+=== PAUSE TestEvaluateCodexTrustedHash/current_when_a_trusted_project_hook_exists
+=== RUN   TestEvaluateCodexTrustedHash/inert_when_project_hook_is_not_trusted
+=== PAUSE TestEvaluateCodexTrustedHash/inert_when_project_hook_is_not_trusted
+=== RUN   TestEvaluateCodexTrustedHash/unknown_on_RPC_failure
+=== PAUSE TestEvaluateCodexTrustedHash/unknown_on_RPC_failure
+=== CONT  TestEvaluateCodexTrustedHash/unknown_when_no_client_provided
+=== CONT  TestEvaluateCodexTrustedHash/unknown_on_RPC_failure
+=== CONT  TestEvaluateCodexTrustedHash/current_when_a_trusted_project_hook_exists
+=== CONT  TestEvaluateCodexTrustedHash/inert_when_project_hook_is_not_trusted
+--- PASS: TestEvaluateCodexTrustedHash (0.00s)
+    --- PASS: TestEvaluateCodexTrustedHash/unknown_when_no_client_provided (0.00s)
+    --- PASS: TestEvaluateCodexTrustedHash/unknown_on_RPC_failure (0.00s)
+    --- PASS: TestEvaluateCodexTrustedHash/current_when_a_trusted_project_hook_exists (0.00s)
+    --- PASS: TestEvaluateCodexTrustedHash/inert_when_project_hook_is_not_trusted (0.00s)
+=== RUN   TestEvaluateCopilotTrustedFolder/current_when_project_dir_listed
+=== PAUSE TestEvaluateCopilotTrustedFolder/current_when_project_dir_listed
+=== RUN   TestEvaluateCopilotTrustedFolder/current_when_project_dir_is_subdirectory_of_trusted_entry
+=== PAUSE TestEvaluateCopilotTrustedFolder/current_when_project_dir_is_subdirectory_of_trusted_entry
+=== RUN   TestEvaluateCopilotTrustedFolder/inert_when_project_dir_absent_from_list
+=== PAUSE TestEvaluateCopilotTrustedFolder/inert_when_project_dir_absent_from_list
+=== RUN   TestEvaluateCopilotTrustedFolder/inert_when_config_file_does_not_exist
+=== PAUSE TestEvaluateCopilotTrustedFolder/inert_when_config_file_does_not_exist
+=== RUN   TestEvaluateCopilotTrustedFolder/unknown_on_unexpected_read_error
+=== PAUSE TestEvaluateCopilotTrustedFolder/unknown_on_unexpected_read_error
+=== RUN   TestEvaluateCopilotTrustedFolder/strips_line_comments_outside_strings_without_regex
+=== PAUSE TestEvaluateCopilotTrustedFolder/strips_line_comments_outside_strings_without_regex
+=== RUN   TestEvaluateCopilotTrustedFolder/does_not_corrupt_a_value_containing_a_URL_with_double_slash
+=== PAUSE TestEvaluateCopilotTrustedFolder/does_not_corrupt_a_value_containing_a_URL_with_double_slash
+=== CONT  TestEvaluateCopilotTrustedFolder/current_when_project_dir_listed
+=== CONT  TestEvaluateCopilotTrustedFolder/unknown_on_unexpected_read_error
+=== CONT  TestEvaluateCopilotTrustedFolder/inert_when_project_dir_absent_from_list
+=== CONT  TestEvaluateCopilotTrustedFolder/strips_line_comments_outside_strings_without_regex
+=== CONT  TestEvaluateCopilotTrustedFolder/inert_when_config_file_does_not_exist
+=== CONT  TestEvaluateCopilotTrustedFolder/current_when_project_dir_is_subdirectory_of_trusted_entry
+=== CONT  TestEvaluateCopilotTrustedFolder/does_not_corrupt_a_value_containing_a_URL_with_double_slash
+--- PASS: TestEvaluateCopilotTrustedFolder (0.00s)
+    --- PASS: TestEvaluateCopilotTrustedFolder/unknown_on_unexpected_read_error (0.00s)
+    --- PASS: TestEvaluateCopilotTrustedFolder/inert_when_config_file_does_not_exist (0.00s)
+    --- PASS: TestEvaluateCopilotTrustedFolder/current_when_project_dir_listed (0.00s)
+    --- PASS: TestEvaluateCopilotTrustedFolder/inert_when_project_dir_absent_from_list (0.00s)
+    --- PASS: TestEvaluateCopilotTrustedFolder/strips_line_comments_outside_strings_without_regex (0.00s)
+    --- PASS: TestEvaluateCopilotTrustedFolder/does_not_corrupt_a_value_containing_a_URL_with_double_slash (0.00s)
+    --- PASS: TestEvaluateCopilotTrustedFolder/current_when_project_dir_is_subdirectory_of_trusted_entry (0.00s)
+--- PASS: TestEvaluateRoutesByKind (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/precondition	2.157s
+=== RUN   TestEnsureAvailable
+=== PAUSE TestEnsureAvailable
+=== RUN   TestEnsureAvailable_Cache
+=== PAUSE TestEnsureAvailable_Cache
+=== RUN   TestEnsureAvailable_ContextCanceled
+=== PAUSE TestEnsureAvailable_ContextCanceled
+=== RUN   TestEnsureAvailable_ErrorMessageExact
+=== PAUSE TestEnsureAvailable_ErrorMessageExact
+=== RUN   TestEnsureAvailable_BinaryLauncherCommand
+=== PAUSE TestEnsureAvailable_BinaryLauncherCommand
+=== RUN   TestEnsureAvailable_FallbackWithoutAt
+=== PAUSE TestEnsureAvailable_FallbackWithoutAt
+=== RUN   TestEnsureAvailable_FallbackWithEmptyArgs
+=== PAUSE TestEnsureAvailable_FallbackWithEmptyArgs
+=== RUN   TestEnsureAvailable_FallbackLauncherArgs
+=== PAUSE TestEnsureAvailable_FallbackLauncherArgs
+=== RUN   TestEnsureAvailable_T06_CopilotNoBinaryNoNpx
+=== PAUSE TestEnsureAvailable_T06_CopilotNoBinaryNoNpx
+=== RUN   TestEnsureAvailable_T07_CopilotBinaryPresent
+=== PAUSE TestEnsureAvailable_T07_CopilotBinaryPresent
+=== RUN   TestEnsureAvailable_T08_CopilotFallbackNpx
+=== PAUSE TestEnsureAvailable_T08_CopilotFallbackNpx
+=== RUN   TestAdrByID_T20_KnownIDs
+=== RUN   TestAdrByID_T20_KnownIDs/claude_adr009
+=== RUN   TestAdrByID_T20_KnownIDs/codex_adr013
+=== RUN   TestAdrByID_T20_KnownIDs/copilot_adr012
+--- PASS: TestAdrByID_T20_KnownIDs (0.00s)
+    --- PASS: TestAdrByID_T20_KnownIDs/claude_adr009 (0.00s)
+    --- PASS: TestAdrByID_T20_KnownIDs/codex_adr013 (0.00s)
+    --- PASS: TestAdrByID_T20_KnownIDs/copilot_adr012 (0.00s)
+=== RUN   TestAdrByID_T21_UnknownIDFallback
+=== PAUSE TestAdrByID_T21_UnknownIDFallback
+=== RUN   TestProbeReferencesADR_OpenCode
+--- PASS: TestProbeReferencesADR_OpenCode (0.00s)
+=== RUN   TestProbeCacheKey_OpenCode
+=== PAUSE TestProbeCacheKey_OpenCode
+=== RUN   TestEnsureAvailable_ClaudeRegressionErrorMessage
+--- PASS: TestEnsureAvailable_ClaudeRegressionErrorMessage (0.00s)
+=== RUN   TestFallbackChain_GenericLauncher
+=== PAUSE TestFallbackChain_GenericLauncher
+=== RUN   TestFallbackChain_MultipleOrder
+=== PAUSE TestFallbackChain_MultipleOrder
+=== RUN   TestFallbackChain_CanonicalFirst
+=== PAUSE TestFallbackChain_CanonicalFirst
+=== RUN   TestFallbackChain_ArgvParityPerSpec
+=== PAUSE TestFallbackChain_ArgvParityPerSpec
+=== RUN   TestEnsureAvailable_OpenCode_DirectBinaryArgvHasSubcommandFirst
+=== PAUSE TestEnsureAvailable_OpenCode_DirectBinaryArgvHasSubcommandFirst
+=== RUN   TestEnsureAvailable_OpenCode_FallbackArgvIsPinnedAndSubcommandFirst
+=== PAUSE TestEnsureAvailable_OpenCode_FallbackArgvIsPinnedAndSubcommandFirst
+=== CONT  TestEnsureAvailable
+=== RUN   TestEnsureAvailable/binary_canonico_encontrado
+=== PAUSE TestEnsureAvailable/binary_canonico_encontrado
+=== RUN   TestEnsureAvailable/so_npx_disponivel
+=== PAUSE TestEnsureAvailable/so_npx_disponivel
+=== RUN   TestEnsureAvailable/nenhum_launcher_disponivel
+=== PAUSE TestEnsureAvailable/nenhum_launcher_disponivel
+=== CONT  TestEnsureAvailable_T08_CopilotFallbackNpx
+--- PASS: TestEnsureAvailable_T08_CopilotFallbackNpx (0.00s)
+=== CONT  TestEnsureAvailable_ErrorMessageExact
+=== RUN   TestEnsureAvailable/mensagem_contem_tres_remedios
+--- PASS: TestEnsureAvailable_ErrorMessageExact (0.00s)
+=== CONT  TestEnsureAvailable_ContextCanceled
+--- PASS: TestEnsureAvailable_ContextCanceled (0.00s)
+=== CONT  TestEnsureAvailable_Cache
+--- PASS: TestEnsureAvailable_Cache (0.00s)
+=== CONT  TestFallbackChain_GenericLauncher
+--- PASS: TestFallbackChain_GenericLauncher (0.00s)
+=== CONT  TestFallbackChain_MultipleOrder
+=== PAUSE TestEnsureAvailable/mensagem_contem_tres_remedios
+=== CONT  TestEnsureAvailable_T06_CopilotNoBinaryNoNpx
+=== CONT  TestEnsureAvailable_FallbackLauncherArgs
+=== CONT  TestAdrByID_T21_UnknownIDFallback
+=== RUN   TestEnsureAvailable/mensagem_contem_referencia_adr
+=== CONT  TestEnsureAvailable_OpenCode_DirectBinaryArgvHasSubcommandFirst
+=== CONT  TestEnsureAvailable_OpenCode_FallbackArgvIsPinnedAndSubcommandFirst
+=== CONT  TestFallbackChain_ArgvParityPerSpec
+=== CONT  TestEnsureAvailable_FallbackWithoutAt
+=== CONT  TestFallbackChain_CanonicalFirst
+=== RUN   TestFallbackChain_ArgvParityPerSpec/claude_fallback_argv
+=== PAUSE TestFallbackChain_ArgvParityPerSpec/claude_fallback_argv
+=== RUN   TestFallbackChain_ArgvParityPerSpec/codex_fallback_argv
+=== PAUSE TestFallbackChain_ArgvParityPerSpec/codex_fallback_argv
+=== RUN   TestFallbackChain_ArgvParityPerSpec/opencode_fallback_argv
+=== PAUSE TestFallbackChain_ArgvParityPerSpec/opencode_fallback_argv
+=== RUN   TestFallbackChain_ArgvParityPerSpec/copilot_fallback_argv
+=== PAUSE TestEnsureAvailable/mensagem_contem_referencia_adr
+=== CONT  TestEnsureAvailable_BinaryLauncherCommand
+=== CONT  TestEnsureAvailable/nenhum_launcher_disponivel
+=== CONT  TestEnsureAvailable_T07_CopilotBinaryPresent
+=== CONT  TestEnsureAvailable/mensagem_contem_tres_remedios
+--- PASS: TestFallbackChain_MultipleOrder (0.00s)
+--- PASS: TestEnsureAvailable_T06_CopilotNoBinaryNoNpx (0.00s)
+=== CONT  TestProbeCacheKey_OpenCode
+=== CONT  TestEnsureAvailable_FallbackWithEmptyArgs
+=== PAUSE TestFallbackChain_ArgvParityPerSpec/copilot_fallback_argv
+=== CONT  TestFallbackChain_ArgvParityPerSpec/claude_fallback_argv
+=== CONT  TestEnsureAvailable/binary_canonico_encontrado
+=== CONT  TestFallbackChain_ArgvParityPerSpec/opencode_fallback_argv
+=== CONT  TestEnsureAvailable/mensagem_contem_referencia_adr
+=== CONT  TestEnsureAvailable/so_npx_disponivel
+--- PASS: TestAdrByID_T21_UnknownIDFallback (0.00s)
+--- PASS: TestEnsureAvailable_FallbackLauncherArgs (0.00s)
+--- PASS: TestEnsureAvailable_OpenCode_DirectBinaryArgvHasSubcommandFirst (0.00s)
+--- PASS: TestEnsureAvailable_FallbackWithoutAt (0.00s)
+--- PASS: TestFallbackChain_CanonicalFirst (0.00s)
+--- PASS: TestEnsureAvailable_OpenCode_FallbackArgvIsPinnedAndSubcommandFirst (0.00s)
+=== CONT  TestFallbackChain_ArgvParityPerSpec/codex_fallback_argv
+=== CONT  TestFallbackChain_ArgvParityPerSpec/copilot_fallback_argv
+--- PASS: TestEnsureAvailable_BinaryLauncherCommand (0.00s)
+--- PASS: TestEnsureAvailable_T07_CopilotBinaryPresent (0.00s)
+--- PASS: TestProbeCacheKey_OpenCode (0.00s)
+--- PASS: TestEnsureAvailable_FallbackWithEmptyArgs (0.00s)
+--- PASS: TestEnsureAvailable (0.00s)
+    --- PASS: TestEnsureAvailable/mensagem_contem_tres_remedios (0.00s)
+    --- PASS: TestEnsureAvailable/nenhum_launcher_disponivel (0.00s)
+    --- PASS: TestEnsureAvailable/binary_canonico_encontrado (0.00s)
+    --- PASS: TestEnsureAvailable/mensagem_contem_referencia_adr (0.00s)
+    --- PASS: TestEnsureAvailable/so_npx_disponivel (0.00s)
+--- PASS: TestFallbackChain_ArgvParityPerSpec (0.00s)
+    --- PASS: TestFallbackChain_ArgvParityPerSpec/claude_fallback_argv (0.00s)
+    --- PASS: TestFallbackChain_ArgvParityPerSpec/opencode_fallback_argv (0.00s)
+    --- PASS: TestFallbackChain_ArgvParityPerSpec/codex_fallback_argv (0.00s)
+    --- PASS: TestFallbackChain_ArgvParityPerSpec/copilot_fallback_argv (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe	2.214s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe/mocks	[no test files]
+=== RUN   TestHumanRenderer_PerKind
+=== PAUSE TestHumanRenderer_PerKind
+=== RUN   TestHumanRenderer_QuietBehavior
+=== PAUSE TestHumanRenderer_QuietBehavior
+=== RUN   TestHumanRenderer_NilWriter_NoOutput
+=== PAUSE TestHumanRenderer_NilWriter_NoOutput
+=== CONT  TestHumanRenderer_PerKind
+=== CONT  TestHumanRenderer_NilWriter_NoOutput
+=== CONT  TestHumanRenderer_QuietBehavior
+--- PASS: TestHumanRenderer_NilWriter_NoOutput (0.00s)
+--- PASS: TestHumanRenderer_QuietBehavior (0.00s)
+=== RUN   TestHumanRenderer_PerKind/agent_message
+=== PAUSE TestHumanRenderer_PerKind/agent_message
+=== RUN   TestHumanRenderer_PerKind/agent_thought
+=== PAUSE TestHumanRenderer_PerKind/agent_thought
+=== RUN   TestHumanRenderer_PerKind/tool_call_start
+=== PAUSE TestHumanRenderer_PerKind/tool_call_start
+=== RUN   TestHumanRenderer_PerKind/tool_call_update_final
+=== PAUSE TestHumanRenderer_PerKind/tool_call_update_final
+=== RUN   TestHumanRenderer_PerKind/tool_call_update_not_final
+=== PAUSE TestHumanRenderer_PerKind/tool_call_update_not_final
+=== RUN   TestHumanRenderer_PerKind/session_end
+=== PAUSE TestHumanRenderer_PerKind/session_end
+=== RUN   TestHumanRenderer_PerKind/runtime_init
+=== PAUSE TestHumanRenderer_PerKind/runtime_init
+=== RUN   TestHumanRenderer_PerKind/unknown
+=== PAUSE TestHumanRenderer_PerKind/unknown
+=== CONT  TestHumanRenderer_PerKind/agent_message
+=== CONT  TestHumanRenderer_PerKind/tool_call_update_final
+=== CONT  TestHumanRenderer_PerKind/tool_call_update_not_final
+=== CONT  TestHumanRenderer_PerKind/agent_thought
+=== CONT  TestHumanRenderer_PerKind/session_end
+=== CONT  TestHumanRenderer_PerKind/runtime_init
+=== CONT  TestHumanRenderer_PerKind/unknown
+=== CONT  TestHumanRenderer_PerKind/tool_call_start
+--- PASS: TestHumanRenderer_PerKind (0.00s)
+    --- PASS: TestHumanRenderer_PerKind/agent_message (0.00s)
+    --- PASS: TestHumanRenderer_PerKind/tool_call_update_final (0.00s)
+    --- PASS: TestHumanRenderer_PerKind/agent_thought (0.00s)
+    --- PASS: TestHumanRenderer_PerKind/tool_call_update_not_final (0.00s)
+    --- PASS: TestHumanRenderer_PerKind/session_end (0.00s)
+    --- PASS: TestHumanRenderer_PerKind/runtime_init (0.00s)
+    --- PASS: TestHumanRenderer_PerKind/unknown (0.00s)
+    --- PASS: TestHumanRenderer_PerKind/tool_call_start (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/render	2.071s
+=== RUN   TestParseDriverID
+=== PAUSE TestParseDriverID
+=== RUN   TestDriverID_String_Idempotent
+=== PAUSE TestDriverID_String_Idempotent
+=== RUN   TestDriverID_ZeroValue_NotValid
+=== PAUSE TestDriverID_ZeroValue_NotValid
+=== RUN   TestNewSpecPanicsOnInvalidFixedArgsFormat
+=== PAUSE TestNewSpecPanicsOnInvalidFixedArgsFormat
+=== RUN   TestNewSpecPanicsOnInvalidFallbackFixedArgsFormat
+=== PAUSE TestNewSpecPanicsOnInvalidFallbackFixedArgsFormat
+=== RUN   TestValidateFallbackFixedArgsFormatAcceptsNpxPrefixConvention
+=== PAUSE TestValidateFallbackFixedArgsFormatAcceptsNpxPrefixConvention
+=== RUN   TestContextWindow_Class
+=== PAUSE TestContextWindow_Class
+=== RUN   TestContextWindow_ZeroValue_IsWindowStandard
+=== PAUSE TestContextWindow_ZeroValue_IsWindowStandard
+=== RUN   TestWindowClass_ClosedSet
+=== PAUSE TestWindowClass_ClosedSet
+=== RUN   TestClaudeSnapshot
+=== PAUSE TestClaudeSnapshot
+=== RUN   TestClaudeStability
+=== PAUSE TestClaudeStability
+=== RUN   TestLauncherKind
+=== PAUSE TestLauncherKind
+=== RUN   TestLauncherCommand
+=== PAUSE TestLauncherCommand
+=== RUN   TestClaudeNpmFallbackFormat
+=== PAUSE TestClaudeNpmFallbackFormat
+=== RUN   TestCodexDefaults
+=== PAUSE TestCodexDefaults
+=== RUN   TestCodexMetadata
+=== PAUSE TestCodexMetadata
+=== RUN   TestCodexFallback
+=== PAUSE TestCodexFallback
+=== RUN   TestCodexVersionPinned
+=== PAUSE TestCodexVersionPinned
+=== RUN   TestCodexBootstrapArgsEmptyModelRestricted
+=== PAUSE TestCodexBootstrapArgsEmptyModelRestricted
+=== RUN   TestCodexBootstrapArgsModelReasoningRestricted
+=== PAUSE TestCodexBootstrapArgsModelReasoningRestricted
+=== RUN   TestCodexBootstrapArgsFullAccess
+=== PAUSE TestCodexBootstrapArgsFullAccess
+=== RUN   TestCodexBootstrapArgsReasoningLow
+=== PAUSE TestCodexBootstrapArgsReasoningLow
+=== RUN   TestCodexBootstrapArgsDelegates
+=== PAUSE TestCodexBootstrapArgsDelegates
+=== RUN   TestCopilotSpecDefaults
+=== PAUSE TestCopilotSpecDefaults
+=== RUN   TestCopilotSpecMetadata
+=== PAUSE TestCopilotSpecMetadata
+=== RUN   TestCopilotSpecFallback
+=== PAUSE TestCopilotSpecFallback
+=== RUN   TestCopilotConstantsPinned
+=== PAUSE TestCopilotConstantsPinned
+=== RUN   TestCopilotAccessModeFlag
+=== PAUSE TestCopilotAccessModeFlag
+=== RUN   TestCopilotDisplayName
+=== PAUSE TestCopilotDisplayName
+=== RUN   TestCopilotStability
+=== PAUSE TestCopilotStability
+=== RUN   TestNewEnforcementRejectsIncompleteCoverage
+=== PAUSE TestNewEnforcementRejectsIncompleteCoverage
+=== RUN   TestCanonicalPointIsClosedSet
+=== PAUSE TestCanonicalPointIsClosedSet
+=== RUN   TestEnforcementPreconditionRemedyAndStates
+=== PAUSE TestEnforcementPreconditionRemedyAndStates
+=== RUN   TestEnvPolicyZeroValueAppliesNil
+=== PAUSE TestEnvPolicyZeroValueAppliesNil
+=== RUN   TestEnvPolicyStripsKnownKillSwitches
+=== PAUSE TestEnvPolicyStripsKnownKillSwitches
+=== RUN   TestEnvPolicyApplyNeverMutatesInputSlice
+=== PAUSE TestEnvPolicyApplyNeverMutatesInputSlice
+=== RUN   TestEnvPolicyStripVarsReturnsClone
+=== PAUSE TestEnvPolicyStripVarsReturnsClone
+=== RUN   TestOpenCodeAgentEnvPolicyStripsExactlyTheThreeKillSwitches
+=== PAUSE TestOpenCodeAgentEnvPolicyStripsExactlyTheThreeKillSwitches
+=== RUN   TestOpenCodeAgentRequiresHandshake
+=== PAUSE TestOpenCodeAgentRequiresHandshake
+=== RUN   TestOtherAgentsDoNotRequireHandshakeAndInheritEnvByDefault
+=== PAUSE TestOtherAgentsDoNotRequireHandshakeAndInheritEnvByDefault
+=== RUN   TestEnvPolicyAppliedToRealEnvironProducesSameLengthMinusStripped
+=== PAUSE TestEnvPolicyAppliedToRealEnvironProducesSameLengthMinusStripped
+=== RUN   TestNoAgentListLiteralOutsideRegistry
+=== PAUSE TestNoAgentListLiteralOutsideRegistry
+=== RUN   TestMergeOpenCodeConfigPreservesSchemaAndExistingFields
+=== PAUSE TestMergeOpenCodeConfigPreservesSchemaAndExistingFields
+=== RUN   TestMergeOpenCodeConfigNeverWritesSkillsOrInstructions
+=== PAUSE TestMergeOpenCodeConfigNeverWritesSkillsOrInstructions
+=== RUN   TestMergeOpenCodeConfigPreservesExistingSkillsAndInstructions
+=== PAUSE TestMergeOpenCodeConfigPreservesExistingSkillsAndInstructions
+=== RUN   TestMergeOpenCodeConfigIsIdempotent
+=== PAUSE TestMergeOpenCodeConfigIsIdempotent
+=== RUN   TestMergeOpenCodeConfigWritesModelKey
+=== PAUSE TestMergeOpenCodeConfigWritesModelKey
+=== RUN   TestDefaultOpenCodePermissionForbidsWildcardDenyAndAsk
+=== PAUSE TestDefaultOpenCodePermissionForbidsWildcardDenyAndAsk
+=== RUN   TestValidatePermissionBlockRejectsAsk
+=== PAUSE TestValidatePermissionBlockRejectsAsk
+=== RUN   TestValidatePermissionBlockRejectsNestedAsk
+=== PAUSE TestValidatePermissionBlockRejectsNestedAsk
+=== RUN   TestValidatePermissionBlockRejectsWildcardDenyOnRequiredTool
+=== PAUSE TestValidatePermissionBlockRejectsWildcardDenyOnRequiredTool
+=== RUN   TestValidatePermissionBlockAllowsWildcardDenyOnToolNotRequired
+=== PAUSE TestValidatePermissionBlockAllowsWildcardDenyOnToolNotRequired
+=== RUN   TestValidatePermissionBlockAcceptsDefaultOpenCodePermission
+=== PAUSE TestValidatePermissionBlockAcceptsDefaultOpenCodePermission
+=== RUN   TestValidatePermissionBlockAcceptsDefaultOpenCodePermissionWithRequiredTools
+=== PAUSE TestValidatePermissionBlockAcceptsDefaultOpenCodePermissionWithRequiredTools
+=== RUN   TestOpenCodeArgvSubcommandBeforeFlags
+=== PAUSE TestOpenCodeArgvSubcommandBeforeFlags
+=== RUN   TestOpenCodeFallbackPinnedVersion
+=== PAUSE TestOpenCodeFallbackPinnedVersion
+=== RUN   TestValidateFixedArgsFormatAcceptsSubcommandPrefix
+=== PAUSE TestValidateFixedArgsFormatAcceptsSubcommandPrefix
+=== RUN   TestValidateFixedArgsFormatRejectsPositionalAfterFlag
+=== PAUSE TestValidateFixedArgsFormatRejectsPositionalAfterFlag
+=== RUN   TestResolveOpenCodeWindowExactMatch
+=== PAUSE TestResolveOpenCodeWindowExactMatch
+=== RUN   TestResolveOpenCodeWindowLongestPrefixMatch
+=== PAUSE TestResolveOpenCodeWindowLongestPrefixMatch
+=== RUN   TestResolveOpenCodeWindowUnknownModelFallsBackConservative
+=== PAUSE TestResolveOpenCodeWindowUnknownModelFallsBackConservative
+=== RUN   TestResolveOpenCodeWindowEmptyModelFallsBackConservative
+=== PAUSE TestResolveOpenCodeWindowEmptyModelFallsBackConservative
+=== RUN   TestResolveOpenCodeWindowNeverExceedsTableEntry
+=== PAUSE TestResolveOpenCodeWindowNeverExceedsTableEntry
+=== RUN   TestResolveWindowNilResolverIsByteIdenticalForExistingAgents
+=== PAUSE TestResolveWindowNilResolverIsByteIdenticalForExistingAgents
+=== RUN   TestParityGatePassesForMandatoryMatrix
+=== PAUSE TestParityGatePassesForMandatoryMatrix
+=== RUN   TestParityGateFailsWhenAgentLosesCanonicalPoint
+=== PAUSE TestParityGateFailsWhenAgentLosesCanonicalPoint
+=== RUN   TestParityGateFailsWhenValidatorDiverges
+=== PAUSE TestParityGateFailsWhenValidatorDiverges
+=== RUN   TestParityGateFailsWhenCellHasNoDispatchProof
+=== PAUSE TestParityGateFailsWhenCellHasNoDispatchProof
+=== RUN   TestNoLauncherUsesLatestVersion
+=== PAUSE TestNoLauncherUsesLatestVersion
+=== RUN   TestAgentIsImmutableValueObject
+=== PAUSE TestAgentIsImmutableValueObject
+=== RUN   TestCanonicalOrderIsSingleSource
+=== PAUSE TestCanonicalOrderIsSingleSource
+=== RUN   TestRegistryIsImmutable
+=== PAUSE TestRegistryIsImmutable
+=== RUN   TestAgentZeroValueIsInvalid
+=== PAUSE TestAgentZeroValueIsInvalid
+=== RUN   TestMandatoryMatrixAgentsByCanonicalPoints
+=== PAUSE TestMandatoryMatrixAgentsByCanonicalPoints
+=== RUN   TestRegistryPreconditionsCarryRemedy
+=== PAUSE TestRegistryPreconditionsCarryRemedy
+=== RUN   TestSpecAccessors
+=== PAUSE TestSpecAccessors
+=== RUN   TestSpecAccessorsNonEmpty
+=== PAUSE TestSpecAccessorsNonEmpty
+=== RUN   TestBootstrapArgsNoOpClaude
+=== PAUSE TestBootstrapArgsNoOpClaude
+=== RUN   TestBootstrapArgsNoOpCopilot
+=== PAUSE TestBootstrapArgsNoOpCopilot
+=== RUN   TestSpec_ContextWindow_Catalog
+=== PAUSE TestSpec_ContextWindow_Catalog
+=== RUN   TestSpec_ClaudeCodexCopilot_IsWindowStandard
+=== PAUSE TestSpec_ClaudeCodexCopilot_IsWindowStandard
+=== RUN   TestSpec_DriverID_Catalog
+=== PAUSE TestSpec_DriverID_Catalog
+=== CONT  TestParseDriverID
+=== RUN   TestParseDriverID/valid/claude
+=== PAUSE TestParseDriverID/valid/claude
+=== RUN   TestParseDriverID/valid/codex
+=== PAUSE TestParseDriverID/valid/codex
+=== CONT  TestNoAgentListLiteralOutsideRegistry
+=== RUN   TestParseDriverID/valid/copilot
+=== PAUSE TestParseDriverID/valid/copilot
+=== CONT  TestEnvPolicyAppliedToRealEnvironProducesSameLengthMinusStripped
+--- PASS: TestEnvPolicyAppliedToRealEnvironProducesSameLengthMinusStripped (0.00s)
+=== CONT  TestOtherAgentsDoNotRequireHandshakeAndInheritEnvByDefault
+--- PASS: TestOtherAgentsDoNotRequireHandshakeAndInheritEnvByDefault (0.00s)
+=== CONT  TestEnvPolicyStripsKnownKillSwitches
+--- PASS: TestEnvPolicyStripsKnownKillSwitches (0.00s)
+=== CONT  TestEnforcementPreconditionRemedyAndStates
+--- PASS: TestEnforcementPreconditionRemedyAndStates (0.00s)
+=== CONT  TestOpenCodeAgentEnvPolicyStripsExactlyTheThreeKillSwitches
+--- PASS: TestOpenCodeAgentEnvPolicyStripsExactlyTheThreeKillSwitches (0.00s)
+=== CONT  TestNewEnforcementRejectsIncompleteCoverage
+=== CONT  TestEnvPolicyZeroValueAppliesNil
+=== CONT  TestCopilotDisplayName
+=== CONT  TestCopilotAccessModeFlag
+=== CONT  TestCopilotConstantsPinned
+=== CONT  TestEnvPolicyStripVarsReturnsClone
+=== CONT  TestCopilotSpecMetadata
+=== CONT  TestEnvPolicyApplyNeverMutatesInputSlice
+=== CONT  TestCodexBootstrapArgsDelegates
+=== RUN   TestCodexBootstrapArgsDelegates/empty-restricted
+=== RUN   TestParseDriverID/valid/opencode
+=== PAUSE TestCodexBootstrapArgsDelegates/empty-restricted
+=== RUN   TestCodexBootstrapArgsDelegates/model-medium-restricted
+=== PAUSE TestCodexBootstrapArgsDelegates/model-medium-restricted
+=== RUN   TestCodexBootstrapArgsDelegates/model-high-full
+=== PAUSE TestParseDriverID/valid/opencode
+=== CONT  TestOpenCodeAgentRequiresHandshake
+=== CONT  TestCodexBootstrapArgsReasoningLow
+=== RUN   TestParseDriverID/invalid/
+=== PAUSE TestParseDriverID/invalid/
+=== CONT  TestCanonicalPointIsClosedSet
+=== CONT  TestCodexBootstrapArgsModelReasoningRestricted
+=== CONT  TestCopilotStability
+=== CONT  TestCodexBootstrapArgsEmptyModelRestricted
+=== CONT  TestCodexFallback
+=== CONT  TestCodexMetadata
+=== CONT  TestCodexDefaults
+=== CONT  TestClaudeNpmFallbackFormat
+=== CONT  TestLauncherCommand
+=== CONT  TestCodexVersionPinned
+=== RUN   TestLauncherCommand/binary_launcher_sem_args
+=== PAUSE TestLauncherCommand/binary_launcher_sem_args
+=== RUN   TestLauncherCommand/binary_launcher_com_args
+=== CONT  TestLauncherKind
+=== PAUSE TestLauncherCommand/binary_launcher_com_args
+=== RUN   TestLauncherCommand/npx_launcher
+--- PASS: TestNewEnforcementRejectsIncompleteCoverage (0.00s)
+--- PASS: TestEnvPolicyZeroValueAppliesNil (0.00s)
+--- PASS: TestCopilotDisplayName (0.00s)
+=== RUN   TestLauncherKind/binary_launcher
+=== CONT  TestCodexBootstrapArgsFullAccess
+=== PAUSE TestLauncherKind/binary_launcher
+=== RUN   TestLauncherKind/npx_launcher
+=== CONT  TestClaudeStability
+=== CONT  TestClaudeSnapshot
+=== CONT  TestWindowClass_ClosedSet
+=== CONT  TestContextWindow_ZeroValue_IsWindowStandard
+=== CONT  TestContextWindow_Class
+--- PASS: TestCopilotAccessModeFlag (0.00s)
+--- PASS: TestCopilotConstantsPinned (0.00s)
+--- PASS: TestEnvPolicyStripVarsReturnsClone (0.00s)
+--- PASS: TestCopilotSpecMetadata (0.00s)
+--- PASS: TestEnvPolicyApplyNeverMutatesInputSlice (0.00s)
+=== RUN   TestContextWindow_Class/zero_value_F1
+=== PAUSE TestContextWindow_Class/zero_value_F1
+=== PAUSE TestLauncherKind/npx_launcher
+=== CONT  TestCopilotSpecFallback
+=== CONT  TestNewSpecPanicsOnInvalidFallbackFixedArgsFormat
+=== CONT  TestValidateFallbackFixedArgsFormatAcceptsNpxPrefixConvention
+=== CONT  TestNewSpecPanicsOnInvalidFixedArgsFormat
+=== CONT  TestDriverID_ZeroValue_NotValid
+=== CONT  TestCopilotSpecDefaults
+=== CONT  TestDriverID_String_Idempotent
+=== CONT  TestSpec_ClaudeCodexCopilot_IsWindowStandard
+=== PAUSE TestCodexBootstrapArgsDelegates/model-high-full
+=== CONT  TestSpec_ContextWindow_Catalog
+=== PAUSE TestLauncherCommand/npx_launcher
+=== RUN   TestSpec_ClaudeCodexCopilot_IsWindowStandard/claude
+=== CONT  TestBootstrapArgsNoOpCopilot
+=== RUN   TestSpec_ContextWindow_Catalog/claude
+=== CONT  TestBootstrapArgsNoOpClaude
+=== CONT  TestSpecAccessorsNonEmpty
+=== CONT  TestSpecAccessors
+=== CONT  TestRegistryPreconditionsCarryRemedy
+=== PAUSE TestSpec_ContextWindow_Catalog/claude
+=== CONT  TestMandatoryMatrixAgentsByCanonicalPoints
+=== RUN   TestParseDriverID/invalid/CLAUDE
+=== CONT  TestValidatePermissionBlockAcceptsDefaultOpenCodePermission
+=== PAUSE TestParseDriverID/invalid/CLAUDE
+=== RUN   TestSpec_ContextWindow_Catalog/codex
+=== RUN   TestParseDriverID/invalid/Claude
+=== PAUSE TestSpec_ClaudeCodexCopilot_IsWindowStandard/claude
+=== RUN   TestSpec_ClaudeCodexCopilot_IsWindowStandard/codex
+=== PAUSE TestSpec_ClaudeCodexCopilot_IsWindowStandard/codex
+=== RUN   TestSpec_ClaudeCodexCopilot_IsWindowStandard/copilot
+=== PAUSE TestSpec_ContextWindow_Catalog/codex
+=== CONT  TestResolveOpenCodeWindowEmptyModelFallsBackConservative
+=== CONT  TestResolveOpenCodeWindowUnknownModelFallsBackConservative
+=== CONT  TestResolveOpenCodeWindowLongestPrefixMatch
+=== CONT  TestResolveOpenCodeWindowExactMatch
+=== CONT  TestValidateFixedArgsFormatRejectsPositionalAfterFlag
+=== CONT  TestValidateFixedArgsFormatAcceptsSubcommandPrefix
+--- PASS: TestOpenCodeAgentRequiresHandshake (0.00s)
+--- PASS: TestCodexBootstrapArgsReasoningLow (0.00s)
+--- PASS: TestCanonicalPointIsClosedSet (0.00s)
+--- PASS: TestCopilotStability (0.00s)
+--- PASS: TestCodexBootstrapArgsModelReasoningRestricted (0.00s)
+--- PASS: TestCodexBootstrapArgsEmptyModelRestricted (0.00s)
+--- PASS: TestCodexFallback (0.00s)
+--- PASS: TestCodexMetadata (0.00s)
+--- PASS: TestCodexDefaults (0.00s)
+=== RUN   TestContextWindow_Class/below_threshold
+=== PAUSE TestContextWindow_Class/below_threshold
+=== CONT  TestAgentZeroValueIsInvalid
+=== CONT  TestOpenCodeArgvSubcommandBeforeFlags
+=== CONT  TestValidatePermissionBlockAcceptsDefaultOpenCodePermissionWithRequiredTools
+=== CONT  TestDefaultOpenCodePermissionForbidsWildcardDenyAndAsk
+=== CONT  TestSpec_DriverID_Catalog
+=== RUN   TestSpec_DriverID_Catalog/claude
+=== PAUSE TestSpec_DriverID_Catalog/claude
+=== RUN   TestSpec_DriverID_Catalog/codex
+=== PAUSE TestSpec_DriverID_Catalog/codex
+=== RUN   TestSpec_DriverID_Catalog/copilot
+=== PAUSE TestSpec_DriverID_Catalog/copilot
+=== PAUSE TestParseDriverID/invalid/Claude
+=== CONT  TestValidatePermissionBlockRejectsWildcardDenyOnRequiredTool
+=== CONT  TestValidatePermissionBlockRejectsNestedAsk
+=== RUN   TestParseDriverID/invalid/gpt-4
+=== PAUSE TestParseDriverID/invalid/gpt-4
+=== RUN   TestSpec_ContextWindow_Catalog/copilot
+=== PAUSE TestSpec_ContextWindow_Catalog/copilot
+=== CONT  TestOpenCodeFallbackPinnedVersion
+=== CONT  TestParityGateFailsWhenCellHasNoDispatchProof
+--- PASS: TestClaudeNpmFallbackFormat (0.00s)
+--- PASS: TestCodexVersionPinned (0.00s)
+--- PASS: TestCodexBootstrapArgsFullAccess (0.00s)
+--- PASS: TestClaudeStability (0.00s)
+=== CONT  TestCanonicalOrderIsSingleSource
+=== CONT  TestRegistryIsImmutable
+=== CONT  TestAgentIsImmutableValueObject
+=== CONT  TestNoLauncherUsesLatestVersion
+=== PAUSE TestSpec_ClaudeCodexCopilot_IsWindowStandard/copilot
+=== CONT  TestValidatePermissionBlockRejectsAsk
+=== CONT  TestMergeOpenCodeConfigPreservesExistingSkillsAndInstructions
+=== RUN   TestParseDriverID/invalid/unknown
+=== PAUSE TestParseDriverID/invalid/unknown
+=== RUN   TestParseDriverID/invalid/_claude
+=== PAUSE TestParseDriverID/invalid/_claude
+=== RUN   TestParseDriverID/invalid/claude_
+=== PAUSE TestParseDriverID/invalid/claude_
+=== CONT  TestMergeOpenCodeConfigWritesModelKey
+--- PASS: TestClaudeSnapshot (0.00s)
+--- PASS: TestWindowClass_ClosedSet (0.00s)
+--- PASS: TestContextWindow_ZeroValue_IsWindowStandard (0.00s)
+--- PASS: TestCopilotSpecFallback (0.00s)
+=== RUN   TestContextWindow_Class/at_threshold_1M
+=== PAUSE TestContextWindow_Class/at_threshold_1M
+=== CONT  TestParityGateFailsWhenValidatorDiverges
+=== RUN   TestContextWindow_Class/above_threshold
+=== PAUSE TestContextWindow_Class/above_threshold
+=== RUN   TestContextWindow_Class/small_positive
+=== PAUSE TestContextWindow_Class/small_positive
+=== RUN   TestContextWindow_Class/standard_200k
+=== PAUSE TestContextWindow_Class/standard_200k
+=== CONT  TestParityGatePassesForMandatoryMatrix
+=== CONT  TestMergeOpenCodeConfigIsIdempotent
+=== CONT  TestMergeOpenCodeConfigPreservesSchemaAndExistingFields
+=== CONT  TestMergeOpenCodeConfigNeverWritesSkillsOrInstructions
+=== CONT  TestResolveWindowNilResolverIsByteIdenticalForExistingAgents
+=== CONT  TestParityGateFailsWhenAgentLosesCanonicalPoint
+=== CONT  TestResolveOpenCodeWindowNeverExceedsTableEntry
+=== CONT  TestLauncherKind/binary_launcher
+=== CONT  TestLauncherKind/npx_launcher
+=== CONT  TestCodexBootstrapArgsDelegates/model-high-full
+=== CONT  TestCodexBootstrapArgsDelegates/model-medium-restricted
+=== CONT  TestLauncherCommand/binary_launcher_sem_args
+=== CONT  TestLauncherCommand/binary_launcher_com_args
+=== CONT  TestLauncherCommand/npx_launcher
+=== CONT  TestSpec_DriverID_Catalog/claude
+=== CONT  TestSpec_DriverID_Catalog/copilot
+--- PASS: TestNewSpecPanicsOnInvalidFallbackFixedArgsFormat (0.00s)
+--- PASS: TestMergeOpenCodeConfigPreservesExistingSkillsAndInstructions (0.00s)
+=== CONT  TestSpec_DriverID_Catalog/codex
+=== CONT  TestSpec_ContextWindow_Catalog/codex
+=== CONT  TestSpec_ClaudeCodexCopilot_IsWindowStandard/claude
+=== CONT  TestCodexBootstrapArgsDelegates/empty-restricted
+=== CONT  TestParseDriverID/valid/claude
+=== CONT  TestParseDriverID/invalid/Claude
+=== CONT  TestSpec_ContextWindow_Catalog/claude
+=== CONT  TestParseDriverID/invalid/_claude
+=== CONT  TestParseDriverID/invalid/unknown
+=== CONT  TestParseDriverID/invalid/gpt-4
+=== CONT  TestParseDriverID/invalid/CLAUDE
+--- PASS: TestMergeOpenCodeConfigPreservesSchemaAndExistingFields (0.00s)
+--- PASS: TestValidateFallbackFixedArgsFormatAcceptsNpxPrefixConvention (0.00s)
+--- PASS: TestNewSpecPanicsOnInvalidFixedArgsFormat (0.00s)
+=== CONT  TestParseDriverID/valid/opencode
+=== CONT  TestParseDriverID/valid/copilot
+=== CONT  TestParseDriverID/valid/codex
+=== CONT  TestValidatePermissionBlockAllowsWildcardDenyOnToolNotRequired
+=== CONT  TestContextWindow_Class/small_positive
+=== CONT  TestSpec_ContextWindow_Catalog/copilot
+=== CONT  TestContextWindow_Class/at_threshold_1M
+=== CONT  TestSpec_ClaudeCodexCopilot_IsWindowStandard/copilot
+=== CONT  TestContextWindow_Class/below_threshold
+=== CONT  TestSpec_ClaudeCodexCopilot_IsWindowStandard/codex
+=== CONT  TestParseDriverID/invalid/claude_
+=== CONT  TestParseDriverID/invalid/
+--- PASS: TestDriverID_ZeroValue_NotValid (0.00s)
+--- PASS: TestCopilotSpecDefaults (0.00s)
+--- PASS: TestDriverID_String_Idempotent (0.00s)
+--- PASS: TestBootstrapArgsNoOpCopilot (0.00s)
+--- PASS: TestBootstrapArgsNoOpClaude (0.00s)
+--- PASS: TestSpecAccessorsNonEmpty (0.00s)
+=== CONT  TestContextWindow_Class/zero_value_F1
+=== CONT  TestContextWindow_Class/standard_200k
+--- PASS: TestSpecAccessors (0.00s)
+--- PASS: TestRegistryPreconditionsCarryRemedy (0.00s)
+--- PASS: TestMandatoryMatrixAgentsByCanonicalPoints (0.00s)
+--- PASS: TestValidatePermissionBlockAcceptsDefaultOpenCodePermission (0.00s)
+--- PASS: TestResolveOpenCodeWindowEmptyModelFallsBackConservative (0.00s)
+--- PASS: TestResolveOpenCodeWindowUnknownModelFallsBackConservative (0.00s)
+--- PASS: TestResolveOpenCodeWindowLongestPrefixMatch (0.00s)
+--- PASS: TestResolveOpenCodeWindowExactMatch (0.00s)
+--- PASS: TestValidateFixedArgsFormatAcceptsSubcommandPrefix (0.00s)
+--- PASS: TestAgentZeroValueIsInvalid (0.00s)
+--- PASS: TestOpenCodeArgvSubcommandBeforeFlags (0.00s)
+--- PASS: TestValidatePermissionBlockAcceptsDefaultOpenCodePermissionWithRequiredTools (0.00s)
+--- PASS: TestDefaultOpenCodePermissionForbidsWildcardDenyAndAsk (0.00s)
+--- PASS: TestValidatePermissionBlockRejectsWildcardDenyOnRequiredTool (0.00s)
+--- PASS: TestValidatePermissionBlockRejectsNestedAsk (0.00s)
+--- PASS: TestOpenCodeFallbackPinnedVersion (0.00s)
+=== CONT  TestContextWindow_Class/above_threshold
+--- PASS: TestParityGateFailsWhenCellHasNoDispatchProof (0.00s)
+--- PASS: TestCanonicalOrderIsSingleSource (0.00s)
+--- PASS: TestRegistryIsImmutable (0.00s)
+--- PASS: TestNoLauncherUsesLatestVersion (0.00s)
+--- PASS: TestValidatePermissionBlockRejectsAsk (0.00s)
+--- PASS: TestParityGateFailsWhenValidatorDiverges (0.00s)
+--- PASS: TestAgentIsImmutableValueObject (0.00s)
+--- PASS: TestParityGatePassesForMandatoryMatrix (0.00s)
+--- PASS: TestMergeOpenCodeConfigWritesModelKey (0.00s)
+--- PASS: TestResolveWindowNilResolverIsByteIdenticalForExistingAgents (0.00s)
+--- PASS: TestResolveOpenCodeWindowNeverExceedsTableEntry (0.00s)
+--- PASS: TestParityGateFailsWhenAgentLosesCanonicalPoint (0.00s)
+--- PASS: TestLauncherKind (0.00s)
+    --- PASS: TestLauncherKind/binary_launcher (0.00s)
+    --- PASS: TestLauncherKind/npx_launcher (0.00s)
+--- PASS: TestLauncherCommand (0.00s)
+    --- PASS: TestLauncherCommand/binary_launcher_sem_args (0.00s)
+    --- PASS: TestLauncherCommand/binary_launcher_com_args (0.00s)
+    --- PASS: TestLauncherCommand/npx_launcher (0.00s)
+--- PASS: TestSpec_DriverID_Catalog (0.00s)
+    --- PASS: TestSpec_DriverID_Catalog/claude (0.00s)
+    --- PASS: TestSpec_DriverID_Catalog/copilot (0.00s)
+    --- PASS: TestSpec_DriverID_Catalog/codex (0.00s)
+--- PASS: TestMergeOpenCodeConfigIsIdempotent (0.00s)
+--- PASS: TestMergeOpenCodeConfigNeverWritesSkillsOrInstructions (0.00s)
+--- PASS: TestCodexBootstrapArgsDelegates (0.00s)
+    --- PASS: TestCodexBootstrapArgsDelegates/model-high-full (0.00s)
+    --- PASS: TestCodexBootstrapArgsDelegates/model-medium-restricted (0.00s)
+    --- PASS: TestCodexBootstrapArgsDelegates/empty-restricted (0.00s)
+--- PASS: TestValidatePermissionBlockAllowsWildcardDenyOnToolNotRequired (0.00s)
+--- PASS: TestSpec_ContextWindow_Catalog (0.00s)
+    --- PASS: TestSpec_ContextWindow_Catalog/codex (0.00s)
+    --- PASS: TestSpec_ContextWindow_Catalog/claude (0.00s)
+    --- PASS: TestSpec_ContextWindow_Catalog/copilot (0.00s)
+--- PASS: TestSpec_ClaudeCodexCopilot_IsWindowStandard (0.00s)
+    --- PASS: TestSpec_ClaudeCodexCopilot_IsWindowStandard/claude (0.00s)
+    --- PASS: TestSpec_ClaudeCodexCopilot_IsWindowStandard/copilot (0.00s)
+    --- PASS: TestSpec_ClaudeCodexCopilot_IsWindowStandard/codex (0.00s)
+--- PASS: TestParseDriverID (0.00s)
+    --- PASS: TestParseDriverID/valid/claude (0.00s)
+    --- PASS: TestParseDriverID/invalid/Claude (0.00s)
+    --- PASS: TestParseDriverID/invalid/_claude (0.00s)
+    --- PASS: TestParseDriverID/invalid/unknown (0.00s)
+    --- PASS: TestParseDriverID/invalid/gpt-4 (0.00s)
+    --- PASS: TestParseDriverID/invalid/CLAUDE (0.00s)
+    --- PASS: TestParseDriverID/valid/opencode (0.00s)
+    --- PASS: TestParseDriverID/valid/copilot (0.00s)
+    --- PASS: TestParseDriverID/valid/codex (0.00s)
+    --- PASS: TestParseDriverID/invalid/claude_ (0.00s)
+    --- PASS: TestParseDriverID/invalid/ (0.00s)
+--- PASS: TestValidateFixedArgsFormatRejectsPositionalAfterFlag (0.00s)
+--- PASS: TestContextWindow_Class (0.00s)
+    --- PASS: TestContextWindow_Class/small_positive (0.00s)
+    --- PASS: TestContextWindow_Class/at_threshold_1M (0.00s)
+    --- PASS: TestContextWindow_Class/below_threshold (0.00s)
+    --- PASS: TestContextWindow_Class/zero_value_F1 (0.00s)
+    --- PASS: TestContextWindow_Class/standard_200k (0.00s)
+    --- PASS: TestContextWindow_Class/above_threshold (0.00s)
+--- PASS: TestNoAgentListLiteralOutsideRegistry (0.05s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	2.245s
+exit_code=0

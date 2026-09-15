@@ -24,7 +24,7 @@ CI/CD sem acesso interativo ao agente.
 
 ## Quando usar CLI vs skill
 
-- **Skill `execute-task`**: agente IA com contexto persistente (Claude Code, Gemini CLI); acesso
+- **Skill `execute-task`**: agente IA com contexto persistente (Claude Code, OpenCode); acesso
   direto ao filesystem e git. Preferido quando disponível.
 - **CLI `ai-spec task-loop`**: ambientes restritos sem contexto persistente (Copilot stateless,
   CI/CD, scripts), ou quando for necessário rotacionar executor e reviewer com modelos distintos

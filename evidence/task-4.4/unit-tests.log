@@ -1,0 +1,3 @@
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria	0.002s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	0.477s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks	[no test files]

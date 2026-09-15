@@ -31,7 +31,6 @@ func TestNewAgentInvoker(t *testing.T) {
 	}{
 		{name: "claude", tool: "claude", wantBinary: claudeBinary(), wantErr: false},
 		{name: "codex", tool: "codex", wantBinary: "codex", wantErr: false},
-		{name: "gemini", tool: "gemini", wantBinary: "gemini", wantErr: false},
 		{name: "copilot", tool: "copilot", wantBinary: "copilot", wantErr: false},
 		{name: "ferramenta invalida", tool: "invalid-tool", wantBinary: "", wantErr: true},
 		{name: "string vazia", tool: "", wantBinary: "", wantErr: true},
@@ -117,7 +116,7 @@ func TestInvokerArgs(t *testing.T) {
 		model    string
 		wantArgs []string // argumentos esperados apos o binario, em ordem
 	}{
-		// --- model vazio (regressao — comportamento anterior preservado, exceto gemini) ---
+		// --- model vazio (regressao — comportamento anterior preservado) ---
 		{
 			name:   "claudeInvoker sem model — flags sem --bare quando claudiney disponivel",
 			tool:   "claude",
@@ -134,15 +133,6 @@ func TestInvokerArgs(t *testing.T) {
 			model:  "",
 			wantArgs: []string{
 				"exec", "--yolo", "execute task",
-			},
-		},
-		{
-			name:   "geminiInvoker sem model — usa --approval-mode=yolo (correcao de --yolo deprecated)",
-			tool:   "gemini",
-			prompt: "execute task",
-			model:  "",
-			wantArgs: []string{
-				"--approval-mode=yolo", "-p", "execute task",
 			},
 		},
 		{
@@ -172,16 +162,6 @@ func TestInvokerArgs(t *testing.T) {
 			model:  "gpt-5.4",
 			wantArgs: []string{
 				"exec", "--model", "gpt-5.4", "--yolo", "execute task",
-			},
-		},
-		{
-			name:   "geminiInvoker com model — --model antes de --approval-mode=yolo",
-			tool:   "gemini",
-			prompt: "execute task",
-			model:  "gemini-2.5-pro",
-			wantArgs: []string{
-				"--model", "gemini-2.5-pro",
-				"--approval-mode=yolo", "-p", "execute task",
 			},
 		},
 		{
@@ -269,7 +249,7 @@ func TestIsAuthError(t *testing.T) {
 
 // TestAuthGuidance valida que authGuidance retorna orientacao especifica por ferramenta.
 func TestAuthGuidance(t *testing.T) {
-	for _, tool := range []string{"claude", "copilot", "gemini", "codex"} {
+	for _, tool := range []string{"claude", "copilot", "codex"} {
 		guidance := NewCatalog().authGuidance(tool)
 		if guidance == "" {
 			t.Errorf("authGuidance(%q) retornou string vazia", tool)
@@ -305,7 +285,7 @@ func TestWarnClaudeAuthWithAPIKey(t *testing.T) {
 
 // TestLiveOutputSetterInterface valida que todos os invokers concretos implementam LiveOutputSetter.
 func TestLiveOutputSetterInterface(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "copilot"}
 	for _, tool := range tools {
 		invoker, err := NewAgentInvoker(tool)
 		if err != nil {

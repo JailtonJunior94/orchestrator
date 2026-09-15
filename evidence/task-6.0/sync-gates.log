@@ -1,0 +1,22 @@
+== check-skills-sync ==
+
+Skills em sync: 80
+Skills com drift: 0
+Libs em sync: 2 (legacy + embedded)
+Hooks do orquestrador em sync: 4 hooks x 9 mirrors
+Hooks de validacao por-tool em paridade: 2 hooks x 8 tools
+Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
+== check-scripts-sync ==
+
+Validadores em sync: 24
+Drift / missing: 0
+Todos os validadores de evidencia sincronizados.
+== check-hooks-sync ==
+
+Hooks em sync: 36
+Drift / missing: 0
+Todos os hooks orquestrador sincronizados.
+== check-mocks ==
+Mocks: OK (sincronizados com mockery.yml)
+== check-spec-paths ==
+Nenhum PRD sob gestao SDD encontrado; nada a verificar.

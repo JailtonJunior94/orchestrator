@@ -6,6 +6,7 @@ import (
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/agents"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
 
 // Erros sentinela do dominio de perfil de execucao.
@@ -20,25 +21,24 @@ var (
 	ErrFlagsConflitantes = errors.New("flags de modo simples e avancado sao mutuamente exclusivas")
 )
 
-// _toolProviderMap mapeia ferramenta para seu provider.
-var _toolProviderMap = map[string]string{
-	"claude":  "anthropic",
-	"codex":   "openai",
-	"gemini":  "google",
-	"copilot": "github",
+var toolProviderMap = map[string]string{
+	"claude":   "anthropic",
+	"codex":    "openai",
+	"copilot":  "github",
+	"opencode": "opencode",
 }
 
 // inferProvider retorna o provider para a ferramenta informada.
 // Retorna string vazia se a ferramenta nao for reconhecida.
 func (c *Catalog) inferProvider(tool string) string {
-	return _toolProviderMap[tool]
+	return toolProviderMap[tool]
 }
 
 // ExecutionProfile representa a configuracao completa de um papel no task-loop.
 // Value Object: imutavel, auto-validante, fail fast no construtor.
 type ExecutionProfile struct {
 	role     string // "executor" ou "reviewer"
-	tool     string // claude, codex, gemini, copilot
+	tool     string // claude, codex, copilot, opencode
 	provider string // anthropic, openai, google, github (inferido)
 	model    string // modelo especifico ou "" (default da ferramenta)
 }
@@ -51,9 +51,17 @@ func NewExecutionProfile(role, tool, model string) (ExecutionProfile, error) {
 		return ExecutionProfile{}, fmt.Errorf("%w: %q", ErrRoleInvalido, role)
 	}
 
-	provider, ok := _toolProviderMap[tool]
+	if _, resolveErr := skills.NewCatalog().ResolveTool(tool); resolveErr != nil {
+		var removed *skills.RemovedAgentError
+		if errors.As(resolveErr, &removed) {
+			return ExecutionProfile{}, removed
+		}
+		return ExecutionProfile{}, fmt.Errorf("%w: %q — opcoes: claude, codex, copilot, opencode", ErrToolInvalida, tool)
+	}
+
+	provider, ok := toolProviderMap[tool]
 	if !ok {
-		return ExecutionProfile{}, fmt.Errorf("%w: %q — opcoes: claude, codex, gemini, copilot", ErrToolInvalida, tool)
+		return ExecutionProfile{}, fmt.Errorf("%w: %q — opcoes: claude, codex, copilot, opencode", ErrToolInvalida, tool)
 	}
 
 	return ExecutionProfile{

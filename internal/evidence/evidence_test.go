@@ -1,13 +1,20 @@
 package evidence
 
 import (
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
 // ── Task ─────────────────────────────────────────────────────────────────────
 
-const taskComplete = `# Contexto Carregado
+const taskComplete = `# Tarefa
+- ID: 1.0
+- Arquivo: task-1.0.md
+
+# Contexto Carregado
 PRD: sim
 TechSpec: sim
 RF-01, REQ-02
@@ -29,7 +36,40 @@ nenhuma
 
 # Riscos Residuais
 nenhum
+
+# Criterios de Aceite
+- Criterio unico -> comprovado: internal/foo.go:1
+
+# Diff Reviewed
+sha=5e2268d17a23d82b6a1b07694c060245a33d76fe89d7942ef6fd4d2be29326df
+verdict=APPROVED
+tool=claude
+
+# Coverage
+delta=+0.5%
 `
+
+const taskFileOneCriterion = `# Tarefa 1.0
+
+## Criterios de Sucesso
+
+- Criterio unico.
+`
+
+func validateTaskReport(t *testing.T, body string) Result {
+	t.Helper()
+	dir := t.TempDir()
+	taskPath := filepath.Join(dir, "task-1.0.md")
+	if err := os.WriteFile(taskPath, []byte(taskFileOneCriterion), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	reportPath := filepath.Join(dir, "1.0_execution_report.md")
+	content := []byte(ContractMarkerV2 + "\n" + body)
+	if err := os.WriteFile(reportPath, content, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return NewValidator().ValidateReport(content, reportPath, KindTask, nil)
+}
 
 const taskEmpty = ``
 
@@ -41,7 +81,7 @@ RF-01
 `
 
 func TestValidateTask_Complete(t *testing.T) {
-	r := NewValidator().Validate([]byte(taskComplete), KindTask, nil)
+	r := validateTaskReport(t, taskComplete)
 	if !r.Pass {
 		t.Errorf("esperado Pass=true, findings: %v", r.Findings)
 	}
@@ -320,6 +360,310 @@ func TestValidateRefactor_Advisory_NoVeredito(t *testing.T) {
 	_ = r
 }
 
+// ── Review — mapa 1:1 criterio -> evidencia (RF-47, RF-48, RF-49, RF-51, RF-52) ──
+
+const reviewFixtureTaskFile = "testdata/task-review-fixture.md"
+
+func reviewWithMap(mapSection string) string {
+	return `# Relatorio de Review
+- Veredito: APPROVED
+- Alvo revisado: diff
+- Task file: ` + reviewFixtureTaskFile + `
+` + mapSection + `
+## Achados
+Sem achados.
+## Arquivos Revisados
+- foo.go
+## Riscos Residuais
+- nenhum
+## Validacoes Executadas
+- go test ./... -> ok
+`
+}
+
+func hasFindingContaining(findings []Finding, needle string) bool {
+	for _, f := range findings {
+		if strings.Contains(f.Label, needle) {
+			return true
+		}
+	}
+	return false
+}
+
+func TestValidateReview_CriteriaMap(t *testing.T) {
+	validMap := `## Mapa de Criterios de Aceite
+- [atendido] Criterio um -> go test ./... -> PASS
+- [atendido] Criterio dois -> internal/foo.go:42`
+
+	cases := []struct {
+		name    string
+		content string
+		want    bool
+		needle  string
+	}{
+		{
+			name:    "mapa ausente",
+			content: reviewWithMap(""),
+			want:    false,
+			needle:  "secao Mapa de Criterios de Aceite",
+		},
+		{
+			name: "mapa incompleto criterio sem evidencia",
+			content: reviewWithMap(`## Mapa de Criterios de Aceite
+- [atendido] Criterio um -> internal/foo.go:1
+- [atendido] Criterio dois`),
+			want:   false,
+			needle: "criterio sem linha de evidencia",
+		},
+		{
+			name: "criterio nao verificavel",
+			content: reviewWithMap(`## Mapa de Criterios de Aceite
+- [nao verificavel] Criterio um -> internal/foo.go:1`),
+			want:   false,
+			needle: "nao verificavel proibe APPROVED",
+		},
+		{
+			name: "linha de evidencia invalida",
+			content: reviewWithMap(`## Mapa de Criterios de Aceite
+- [atendido] Criterio um -> porque confio no autor da mudanca`),
+			want:   false,
+			needle: "fora das tres formas de RF-48",
+		},
+		{
+			name:    "mapa completo e valido",
+			content: reviewWithMap(validMap),
+			want:    true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := NewValidator().Validate([]byte(tc.content), KindReview, nil)
+			if r.Pass != tc.want {
+				t.Fatalf("Pass=%v, esperado %v; findings: %v", r.Pass, tc.want, r.Findings)
+			}
+			if tc.needle != "" && !hasFindingContaining(r.Findings, tc.needle) {
+				t.Fatalf("esperado finding contendo %q; findings: %v", tc.needle, r.Findings)
+			}
+		})
+	}
+}
+
+func reviewReport(verdict, target, findingsSection, mapSection string) string {
+	return `# Relatorio de Review
+- Veredito: ` + verdict + `
+` + target + `
+- Task file: ` + reviewFixtureTaskFile + `
+` + mapSection + `
+## Achados
+` + findingsSection + `
+## Arquivos Revisados
+- foo.go
+## Riscos Residuais
+- nenhum
+## Validacoes Executadas
+- go test ./... -> ok
+`
+}
+
+func TestValidateReview_ApprovedWithUnmetCriterion(t *testing.T) {
+	cases := []struct {
+		name    string
+		verdict string
+		marker  string
+		want    bool
+	}{
+		{"APPROVED com criterio nao atendido", "APPROVED", "nao atendido", false},
+		{"APPROVED com criterio nao atendido acentuado", "APPROVED", "não atendido", false},
+		{"APPROVED com criterio nao verificavel", "APPROVED", "nao verificavel", false},
+		{"APPROVED com criterio atendido", "APPROVED", "atendido", true},
+		{"REJECTED com criterio nao atendido", "REJECTED", "nao atendido", true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			findingsSection := "Sem achados."
+			if tc.verdict == "REJECTED" {
+				findingsSection = "- Severidade: high\n- criterio um nao coberto"
+			}
+			content := reviewReport(
+				tc.verdict,
+				"- Alvo revisado: diff",
+				findingsSection,
+				"## Mapa de Criterios de Aceite\n- ["+tc.marker+"] Criterio um -> internal/foo.go:42",
+			)
+			r := NewValidator().Validate([]byte(content), KindReview, nil)
+			if r.Pass != tc.want {
+				t.Fatalf("Pass=%v, esperado %v; findings: %v", r.Pass, tc.want, r.Findings)
+			}
+		})
+	}
+}
+
+func TestValidateReview_CoherenceRules(t *testing.T) {
+	validMap := "## Mapa de Criterios de Aceite\n- [atendido] Criterio um -> internal/foo.go:42"
+
+	cases := []struct {
+		name    string
+		content string
+		want    bool
+		needle  string
+	}{
+		{
+			name:    "sem referencia ao alvo revisado",
+			content: "# Relatorio de Review\n- Veredito: APPROVED\n" + validMap + "\n## Achados\nSem achados.\n## Riscos Residuais\n- nenhum\n## Validacoes Executadas\n- go test -> ok\n",
+			want:    false,
+			needle:  "referencia ao alvo revisado",
+		},
+		{
+			name:    "achados sem severidade canonica",
+			content: reviewReport("APPROVED", "- Alvo revisado: diff", "- algo estranho no handler", validMap),
+			want:    false,
+			needle:  "severidade canonica",
+		},
+		{
+			name:    "achados com severidade canonica",
+			content: reviewReport("APPROVED", "- Alvo revisado: diff", "- Severidade: low\n- nota menor", validMap),
+			want:    true,
+		},
+		{
+			name:    "REJECTED sem achado critical ou high",
+			content: reviewReport("REJECTED", "- Alvo revisado: diff", "- Severidade: low\n- nota menor", validMap),
+			want:    false,
+			needle:  "REJECTED exige ao menos um achado",
+		},
+		{
+			name:    "REJECTED com achado high",
+			content: reviewReport("REJECTED", "- Alvo revisado: diff", "- Severidade: high\n- bug real", validMap),
+			want:    true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := NewValidator().Validate([]byte(tc.content), KindReview, nil)
+			if r.Pass != tc.want {
+				t.Fatalf("Pass=%v, esperado %v; findings: %v", r.Pass, tc.want, r.Findings)
+			}
+			if tc.needle != "" && !hasFindingContaining(r.Findings, tc.needle) {
+				t.Fatalf("esperado finding contendo %q; findings: %v", tc.needle, r.Findings)
+			}
+		})
+	}
+}
+
+func TestValidateReview_ParityWithShellValidator(t *testing.T) {
+	shell, err := exec.LookPath("bash")
+	if err != nil {
+		t.Skip("bash indisponivel")
+	}
+	validator := filepath.Join("..", "..", ".agents", "scripts", "validate-review-evidence.sh")
+	if _, err := os.Stat(validator); err != nil {
+		t.Skipf("validador shell ausente: %v", err)
+	}
+
+	validMap := `## Mapa de Criterios de Aceite
+- [atendido] Criterio um -> go test ./... -> PASS
+- [atendido] Criterio dois -> internal/foo.go:42`
+
+	scenarios := []struct {
+		name          string
+		content       string
+		wantGo        bool
+		shellKnownGap bool
+	}{
+		{
+			name:    "mapa ausente",
+			content: reviewReport("APPROVED", "- Alvo revisado: diff", "Sem achados.", ""),
+			wantGo:  false,
+		},
+		{
+			name:    "mapa incompleto",
+			content: reviewReport("APPROVED", "- Alvo revisado: diff", "Sem achados.", "## Mapa de Criterios de Aceite\n- [atendido] Criterio um -> internal/foo.go:1\n- [atendido] Criterio dois"),
+			wantGo:  false,
+		},
+		{
+			name:    "criterio nao verificavel",
+			content: reviewReport("APPROVED", "- Alvo revisado: diff", "Sem achados.", "## Mapa de Criterios de Aceite\n- [nao verificavel] Criterio um -> internal/foo.go:1"),
+			wantGo:  false,
+		},
+		{
+			name:    "evidencia invalida",
+			content: reviewReport("APPROVED", "- Alvo revisado: diff", "Sem achados.", "## Mapa de Criterios de Aceite\n- [atendido] Criterio um -> porque confio no autor"),
+			wantGo:  false,
+		},
+		{
+			name:    "mapa valido com veredito APPROVED",
+			content: reviewReport("APPROVED", "- Alvo revisado: diff", "Sem achados.", validMap),
+			wantGo:  true,
+		},
+		{
+			name:    "achados sem severidade canonica",
+			content: reviewReport("APPROVED", "- Alvo revisado: diff", "- algo estranho no handler", validMap),
+			wantGo:  false,
+		},
+		{
+			name:    "REJECTED sem achado critical ou high",
+			content: reviewReport("REJECTED", "- Alvo revisado: diff", "- Severidade: low\n- nota menor", validMap),
+			wantGo:  false,
+		},
+		{
+			name:    "REJECTED com achado high",
+			content: reviewReport("REJECTED", "- Alvo revisado: diff", "- Severidade: high\n- bug real", validMap),
+			wantGo:  true,
+		},
+		{
+			name:    "APPROVED_WITH_REMARKS com achado medium",
+			content: reviewReport("APPROVED_WITH_REMARKS", "- Alvo revisado: branch feat/x", "- Severidade: medium\n- nota", validMap),
+			wantGo:  true,
+		},
+		{
+			name:    "sem veredito canonico",
+			content: reviewReport("talvez", "- Alvo revisado: diff", "Sem achados.", validMap),
+			wantGo:  false,
+		},
+		{
+			name:          "APPROVED com criterio nao atendido (gap conhecido do espelho shell)",
+			content:       reviewReport("APPROVED", "- Alvo revisado: diff", "Sem achados.", "## Mapa de Criterios de Aceite\n- [nao atendido] Criterio um -> internal/foo.go:42"),
+			wantGo:        false,
+			shellKnownGap: true,
+		},
+	}
+
+	dir := t.TempDir()
+	for _, sc := range scenarios {
+		t.Run(sc.name, func(t *testing.T) {
+			path := filepath.Join(dir, "review.md")
+			if err := os.WriteFile(path, []byte(sc.content), 0o644); err != nil {
+				t.Fatal(err)
+			}
+
+			result := NewValidator().Validate([]byte(sc.content), KindReview, nil)
+			if result.Pass != sc.wantGo {
+				t.Fatalf("validador Go pass=%v, esperado %v; findings: %v", result.Pass, sc.wantGo, result.Findings)
+			}
+
+			cmd := exec.Command(shell, validator, path)
+			cmd.Env = append(os.Environ(), "LC_ALL=C")
+			shellPass := cmd.Run() == nil
+
+			if result.Pass && !shellPass {
+				t.Fatalf("paridade quebrada: go aceita relatorio que o shell reprova")
+			}
+			if !sc.shellKnownGap && result.Pass != shellPass {
+				t.Fatalf("paridade quebrada: go pass=%v, shell pass=%v", result.Pass, shellPass)
+			}
+		})
+	}
+}
+
+func TestValidateReview_KindPreserved(t *testing.T) {
+	r := NewValidator().Validate([]byte(reviewWithMap("## Mapa de Criterios de Aceite\n- [atendido] C -> internal/foo.go:1")), KindReview, nil)
+	if r.Kind != KindReview {
+		t.Errorf("esperado Kind=%s, got %s", KindReview, r.Kind)
+	}
+}
+
 // ── Kind check ────────────────────────────────────────────────────────────────
 
 func TestValidate_KindPreserved(t *testing.T) {
@@ -334,15 +678,13 @@ func TestValidate_KindPreserved(t *testing.T) {
 // Presença ou ausência não deve alterar o resultado de Pass=true para relatório completo.
 
 func TestValidateTask_ClaudeMetricsSection_Absent_DoesNotBlock(t *testing.T) {
-	// Relatório completo SEM a seção de métricas → deve passar (ausência não bloqueia).
-	r := NewValidator().Validate([]byte(taskComplete), KindTask, nil)
+	r := validateTaskReport(t, taskComplete)
 	if !r.Pass {
 		t.Errorf("Pass deve ser true sem seção Métricas Claude-2026; findings: %v", r.Findings)
 	}
 }
 
 func TestValidateTask_ClaudeMetricsSection_Present_DoesNotBlock(t *testing.T) {
-	// Relatório completo COM a seção de métricas → deve continuar passando.
 	withMetrics := taskComplete + `
 ## Métricas Claude-2026
 | Métrica | Valor |
@@ -352,45 +694,33 @@ func TestValidateTask_ClaudeMetricsSection_Present_DoesNotBlock(t *testing.T) {
 | thinking_tokens | 42 |
 | tool_calls_normalized | 5 |
 `
-	r := NewValidator().Validate([]byte(withMetrics), KindTask, nil)
+	r := validateTaskReport(t, withMetrics)
 	if !r.Pass {
 		t.Errorf("Pass deve ser true com seção Métricas Claude-2026; findings: %v", r.Findings)
 	}
 }
 
-// ── Métricas Gemini-2026 — validador permissivo (F4-Gemini, RF-20) ────────────
-// A seção "Métricas Gemini-2026" é OPCIONAL no execution_report.md.
-// Presença ou ausência não deve alterar o resultado de Pass=true para relatório completo.
+// ── Métricas por driver — validador permissivo ────────────────────────────────
+// Uma seção extra de métricas por driver (ex: "Métricas OpenCode") é OPCIONAL no
+// execution_report.md. Presença ou ausência não deve alterar o resultado de
+// Pass=true para relatório completo.
 
-// T-37: TestEvidenceRendersGeminiMetricsSection — relatório com Gemini* não-zero renderiza tabela
-func TestEvidenceRendersGeminiMetricsSection_Present_DoesNotBlock(t *testing.T) {
-	// Relatório completo COM a seção de métricas Gemini → deve continuar passando.
-	withGeminiMetrics := taskComplete + `
-## Métricas Gemini-2026
+func TestEvidenceRendersDriverMetricsSection_Present_DoesNotBlock(t *testing.T) {
+	withDriverMetrics := taskComplete + `
+## Métricas OpenCode
 | Métrica | Valor |
 |---|---|
 | cache_read_tokens | 100 |
-| effective_context_tokens | 200 |
-| prompt_tokens_billed | 300 |
-| thoughts_tokens | 0 |
 `
-	r := NewValidator().Validate([]byte(withGeminiMetrics), KindTask, nil)
+	r := validateTaskReport(t, withDriverMetrics)
 	if !r.Pass {
-		t.Errorf("Pass deve ser true com seção Métricas Gemini-2026; findings: %v", r.Findings)
+		t.Errorf("Pass deve ser true com seção de métricas extra; findings: %v", r.Findings)
 	}
 }
 
-// T-38: TestEvidenceMissingGeminiMetricsDoesNotBlock — ausência da seção Gemini não bloqueia
-func TestEvidenceMissingGeminiMetricsDoesNotBlock(t *testing.T) {
-	// Relatório completo SEM a seção de métricas Gemini → deve passar (ausência não bloqueia).
-	r := NewValidator().Validate([]byte(taskComplete), KindTask, nil)
+func TestEvidenceMissingDriverMetricsDoesNotBlock(t *testing.T) {
+	r := validateTaskReport(t, taskComplete)
 	if !r.Pass {
-		t.Errorf("Pass deve ser true sem seção Métricas Gemini-2026; findings: %v", r.Findings)
-	}
-	// Garantir que nenhum finding menciona Gemini.
-	for _, f := range r.Findings {
-		if f.Label == "secao Métricas Gemini-2026" {
-			t.Error("nao esperado finding de 'secao Métricas Gemini-2026' — seção é opcional (RF-20)")
-		}
+		t.Errorf("Pass deve ser true sem seção de métricas extra; findings: %v", r.Findings)
 	}
 }

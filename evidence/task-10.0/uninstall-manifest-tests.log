@@ -1,0 +1,14 @@
+=== RUN   TestUninstall_ManifestDriven_PreservesUserFile_Idempotent
+=== PAUSE TestUninstall_ManifestDriven_PreservesUserFile_Idempotent
+=== RUN   TestUninstall_OldManifestWithoutFileTracking_FallsBackConservative
+=== PAUSE TestUninstall_OldManifestWithoutFileTracking_FallsBackConservative
+=== CONT  TestUninstall_ManifestDriven_PreservesUserFile_Idempotent
+=== CONT  TestUninstall_OldManifestWithoutFileTracking_FallsBackConservative
+Removendo governanca de: /project
+
+
+Governanca removida: 4 arquivo(s).
+--- PASS: TestUninstall_ManifestDriven_PreservesUserFile_Idempotent (0.00s)
+--- PASS: TestUninstall_OldManifestWithoutFileTracking_FallsBackConservative (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/uninstall	0.402s

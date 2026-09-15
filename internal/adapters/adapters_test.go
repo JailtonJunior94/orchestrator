@@ -105,185 +105,6 @@ func TestGenerateGitHub_withSkill(t *testing.T) {
 	}
 }
 
-func TestGenerateGemini_withSkill(t *testing.T) {
-	g, fsys := newTestGenerator()
-	src := "/source"
-	proj := "/project"
-
-	// Seed a non-agent-governance skill directory
-	seedSkill(fsys, src, "custom-skill", "Does something useful.")
-
-	g.GenerateGemini(src, proj)
-
-	tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace.custom-skill.toml")
-	if !fsys.Exists(tomlFile) {
-		t.Errorf("GenerateGemini should create %s", tomlFile)
-	}
-	data, _ := fsys.ReadFile(tomlFile)
-	if !strings.Contains(string(data), "Does something useful") {
-		t.Errorf("Gemini toml should contain description, got: %s", data)
-	}
-}
-
-func TestGenerateGemini_skipsAgentGovernance(t *testing.T) {
-	g, fsys := newTestGenerator()
-	src := "/source"
-	proj := "/project"
-
-	seedSkill(fsys, src, "agent-governance", "Governance skill.")
-
-	g.GenerateGemini(src, proj)
-
-	tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace.agent-governance.toml")
-	if fsys.Exists(tomlFile) {
-		t.Error("GenerateGemini should skip agent-governance skill")
-	}
-}
-
-func TestGenerateGemini_noSkillsDir(t *testing.T) {
-	g, _ := newTestGenerator()
-	// No skills directory — should not panic
-	g.GenerateGemini("/source", "/project")
-}
-
-func TestGenerateGemini_removesLegacyCommandName(t *testing.T) {
-	g, fsys := newTestGenerator()
-	src := "/source"
-	proj := "/project"
-
-	seedSkill(fsys, src, "review", "Revisa codigo.")
-	_ = fsys.WriteFile(filepath.Join(proj, ".gemini", "commands", "review.toml"), []byte("legacy"))
-
-	g.GenerateGemini(src, proj)
-
-	if fsys.Exists(filepath.Join(proj, ".gemini", "commands", "review.toml")) {
-		t.Fatalf("GenerateGemini should remove legacy review.toml to avoid Gemini command conflicts")
-	}
-	if !fsys.Exists(filepath.Join(proj, ".gemini", "commands", "workspace.review.toml")) {
-		t.Fatalf("GenerateGemini should create workspace.review.toml")
-	}
-}
-
-func TestGenerateGemini_processualSkill(t *testing.T) {
-	g, fsys := newTestGenerator()
-	src := "/source"
-	proj := "/project"
-
-	seedSkill(fsys, src, "bugfix", "Corrige bugs automaticamente.")
-
-	g.GenerateGemini(src, proj)
-
-	tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace.bugfix.toml")
-	if !fsys.Exists(tomlFile) {
-		t.Fatalf("GenerateGemini should create %s for processual skill", tomlFile)
-	}
-	data, _ := fsys.ReadFile(tomlFile)
-	content := string(data)
-	if !strings.Contains(content, "bugfix") {
-		t.Errorf("Gemini toml should reference skill name, got: %s", content)
-	}
-	if !strings.Contains(content, "SKILL.md") {
-		t.Errorf("Gemini toml should reference SKILL.md, got: %s", content)
-	}
-	if !strings.Contains(content, "{{args}}") {
-		t.Errorf("Gemini toml should contain {{args}} placeholder, got: %s", content)
-	}
-}
-
-func TestGenerateGemini_languageSkill(t *testing.T) {
-	g, fsys := newTestGenerator()
-	src := "/source"
-	proj := "/project"
-
-	seedSkill(fsys, src, "go-implementation", "Implementa features em Go seguindo Object Calisthenics.")
-
-	g.GenerateGemini(src, proj)
-
-	tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace.go-implementation.toml")
-	if !fsys.Exists(tomlFile) {
-		t.Fatalf("GenerateGemini should create %s for language skill", tomlFile)
-	}
-	data, _ := fsys.ReadFile(tomlFile)
-	if !strings.Contains(string(data), "go-implementation") {
-		t.Errorf("Gemini toml for language skill should reference skill name, got: %s", string(data))
-	}
-}
-
-func TestGenerateGemini_withAssets(t *testing.T) {
-	g, fsys := newTestGenerator()
-	src := "/source"
-	proj := "/project"
-
-	seedSkill(fsys, src, "bugfix", "Corrige bugs.")
-	_ = fsys.WriteFile(filepath.Join(src, ".agents", "skills", "bugfix", "assets", "context.md"), []byte("# Context\n"))
-
-	g.GenerateGemini(src, proj)
-
-	tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace.bugfix.toml")
-	data, _ := fsys.ReadFile(tomlFile)
-	content := string(data)
-	if !strings.Contains(content, "context.md") {
-		t.Errorf("Gemini toml should reference asset file when assets exist, got: %s", content)
-	}
-	if !strings.Contains(content, "Carregue") {
-		t.Errorf("Gemini toml should contain load instruction for assets, got: %s", content)
-	}
-}
-
-func TestGenerateGemini_withoutAssets(t *testing.T) {
-	g, fsys := newTestGenerator()
-	src := "/source"
-	proj := "/project"
-
-	seedSkill(fsys, src, "review", "Revisa codigo.")
-
-	g.GenerateGemini(src, proj)
-
-	tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace.review.toml")
-	data, _ := fsys.ReadFile(tomlFile)
-	content := string(data)
-	if strings.Contains(content, "Carregue") {
-		t.Errorf("Gemini toml without assets should not have load instructions, got: %s", content)
-	}
-}
-
-func TestGenerateGemini_reviewSkillHasValidationInstruction(t *testing.T) {
-	g, fsys := newTestGenerator()
-	src := "/source"
-	proj := "/project"
-
-	seedSkill(fsys, src, "execute-task", "Executa uma tarefa elegivel.")
-	seedSkill(fsys, src, "refactor", "Refatora codigo preservando comportamento.")
-
-	g.GenerateGemini(src, proj)
-
-	for _, skill := range []string{"execute-task", "refactor"} {
-		tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace."+skill+".toml")
-		data, _ := fsys.ReadFile(tomlFile)
-		content := string(data)
-		if !strings.Contains(content, "validacao") {
-			t.Errorf("Gemini toml for %s should contain validation instruction, got: %s", skill, content)
-		}
-	}
-}
-
-func TestGenerateGemini_nonReviewSkillNoValidation(t *testing.T) {
-	g, fsys := newTestGenerator()
-	src := "/source"
-	proj := "/project"
-
-	seedSkill(fsys, src, "create-prd", "Cria um PRD.")
-
-	g.GenerateGemini(src, proj)
-
-	tomlFile := filepath.Join(proj, ".gemini", "commands", "workspace.create-prd.toml")
-	data, _ := fsys.ReadFile(tomlFile)
-	content := string(data)
-	if strings.Contains(content, "validacao proporcional") {
-		t.Errorf("Gemini toml for create-prd should not have validation instruction, got: %s", content)
-	}
-}
-
 func TestGenerateGitHub_allEightAgents(t *testing.T) {
 	g, fsys := newTestGenerator()
 	src := "/source"
@@ -347,39 +168,6 @@ func TestGenerateGitHub_noSkillFiles(t *testing.T) {
 	}
 }
 
-func TestGenerateGeminiAgents_withSkill(t *testing.T) {
-	g, fsys := newTestGenerator()
-	src := "/source"
-	proj := "/project"
-
-	seedSkill(fsys, src, "execute-task", "Executa tarefa aprovada.")
-
-	g.GenerateGeminiAgents(src, proj)
-
-	agentFile := filepath.Join(proj, ".gemini", "agents", "task-executor.md")
-	if !fsys.Exists(agentFile) {
-		t.Fatalf("GenerateGeminiAgents should create %s", agentFile)
-	}
-	data, _ := fsys.ReadFile(agentFile)
-	body := string(data)
-	if !strings.Contains(body, "name: task-executor") {
-		t.Errorf("agent should declare name task-executor, got: %s", body)
-	}
-	if !strings.Contains(body, ".agents/skills/execute-task/SKILL.md") {
-		t.Errorf("agent should reference canonical SKILL.md path, got: %s", body)
-	}
-}
-
-func TestGenerateGeminiAgents_noSkillFiles(t *testing.T) {
-	g, fsys := newTestGenerator()
-	g.GenerateGeminiAgents("/source", "/project")
-
-	entries, _ := fsys.ReadDir(filepath.Join("/project", ".gemini", "agents"))
-	if len(entries) != 0 {
-		t.Errorf("GenerateGeminiAgents without skill files should produce no agents, got %d", len(entries))
-	}
-}
-
 func TestGenerateCodexAgents_withSkill(t *testing.T) {
 	g, fsys := newTestGenerator()
 	src := "/source"
@@ -416,8 +204,8 @@ func TestGenerateCodexAgents_noSkillFiles(t *testing.T) {
 	}
 }
 
-// TestGenerate_executeTaskYAMLContract_allTools verifica que TODOS os 4 adapters
-// (Claude/GitHub/Gemini/Codex) emitem o bloco YAML literal do contrato de retorno
+// TestGenerate_executeTaskYAMLContract_allTools verifica que TODOS os 3 adapters
+// (Claude/GitHub/Codex) emitem o bloco YAML literal do contrato de retorno
 // para o subagent `task-executor`. Regressao guard contra A02 (Copilot anteriormente
 // descrevia o retorno em prosa, divergindo dos demais tools e quebrando a cadeia
 // de validacao em 4 passos de execute-all-tasks).
@@ -437,8 +225,6 @@ func TestGenerate_executeTaskYAMLContract_allTools(t *testing.T) {
 			filepath.Join(".claude", "agents", "task-executor.md")},
 		{"github", func(g *adapters.Generator, src, proj string) { g.GenerateGitHub(src, proj) },
 			filepath.Join(".github", "agents", "task-executor.agent.md")},
-		{"gemini", func(g *adapters.Generator, src, proj string) { g.GenerateGeminiAgents(src, proj) },
-			filepath.Join(".gemini", "agents", "task-executor.md")},
 		{"codex", func(g *adapters.Generator, src, proj string) { g.GenerateCodexAgents(src, proj) },
 			filepath.Join(".codex", "agents", "task-executor.toml")},
 	}

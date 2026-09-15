@@ -1,0 +1,8 @@
+=== RUN   TestResetDepthRestoresPreviousValue
+--- PASS: TestResetDepthRestoresPreviousValue (0.00s)
+=== RUN   TestResetDepthUnsetsWhenAbsent
+--- PASS: TestResetDepthUnsetsWhenAbsent (0.00s)
+=== RUN   TestResetDepthDoesNotChangeDefaultMax
+--- PASS: TestResetDepthDoesNotChangeDefaultMax (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/invocation	0.001s

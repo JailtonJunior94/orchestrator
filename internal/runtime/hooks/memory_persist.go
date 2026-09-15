@@ -45,9 +45,6 @@ func NewMemoryPersistHook(store memory.Store) *MemoryPersistHook {
 // Name retorna o identificador do hook.
 func (h *MemoryPersistHook) Name() string { return "memory_persist" }
 
-// Run persiste o resumo da sessão em MEMORY.md.
-// Evento esperado: SessionPostEndEvent com Summary do tipo SessionSummary.
-// Evento inesperado: ignorado silenciosamente (ponto errado ou tipo errado).
 func (h *MemoryPersistHook) Run(ctx context.Context, evt Event) error {
 	postEnd, ok := evt.(SessionPostEndEvent)
 	if !ok {
@@ -56,7 +53,7 @@ func (h *MemoryPersistHook) Run(ctx context.Context, evt Event) error {
 
 	summary, ok := postEnd.Summary.(SessionSummary)
 	if !ok {
-		// Summary ainda não tipado (pré-wiring): ignorar silenciosamente.
+		log.Printf("[memory_persist] unexpected SessionPostEndEvent.Summary type: %T", postEnd.Summary)
 		return nil
 	}
 

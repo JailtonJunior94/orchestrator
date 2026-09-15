@@ -128,6 +128,35 @@ func (c *Catalog) CheckHash(specContent, tasksContent []byte, label string) Hash
 	}
 }
 
+// CheckTechspecPRDConsistency verifies that techspec.md's own embedded
+// spec-hash-prd header matches prd.md's canonical hash. Distinct from
+// CheckHash, which compares tasks.md's declared hash to the spec file: this
+// anchors the techspec to the exact PRD version it was authored against,
+// independent of what tasks.md separately tracks.
+func (c *Catalog) CheckTechspecPRDConsistency(prdContent, techspecContent []byte) HashResult {
+	actualHash := specdigest.Canonical(prdContent)
+
+	re := regexp.MustCompile(`<!--\s*spec-hash-prd:\s*([0-9a-f]+)\s*-->`)
+	match := re.FindSubmatch(techspecContent)
+	if match == nil {
+		return HashResult{
+			File:        "techspec.md",
+			ActualHash:  actualHash,
+			NoHashFound: true,
+			Match:       false,
+		}
+	}
+
+	embeddedHash := string(match[1])
+	return HashResult{
+		File:         "techspec.md",
+		ExpectedHash: embeddedHash,
+		ActualHash:   actualHash,
+		Match:        embeddedHash == actualHash,
+		NoHashFound:  false,
+	}
+}
+
 // CheckDrift runs both coverage and hash checks for a directory.
 // It expects to find prd.md, techspec.md (optional), and tasks.md.
 func (c *Catalog) CheckDrift(dir string) (DriftReport, error) {
@@ -147,12 +176,16 @@ func (c *Catalog) CheckDrift(dir string) (DriftReport, error) {
 		{"techspec.md", "techspec"},
 	}
 
+	var prdContent []byte
 	for _, spec := range specs {
 		specPath := filepath.Join(dir, spec.filename)
 		specContent, err := os.ReadFile(specPath)
 		if err != nil {
 			// spec file is optional
 			continue
+		}
+		if spec.label == "prd" {
+			prdContent = specContent
 		}
 
 		cov := NewCatalog().CheckStructuralCoverage(specContent, tasksContent)
@@ -168,6 +201,19 @@ func (c *Catalog) CheckDrift(dir string) (DriftReport, error) {
 		report.Hashes = append(report.Hashes, hash)
 		if !hash.Match {
 			report.Pass = false
+		}
+
+		if spec.label == "techspec" && prdContent != nil {
+			embedded := NewCatalog().CheckTechspecPRDConsistency(prdContent, specContent)
+			embedded.File = "techspec.md:spec-hash-prd"
+			report.Hashes = append(report.Hashes, embedded)
+			// A techspec sem cabecalho spec-hash-prd (formato legado ou
+			// artefato de teste) e informativa, nao um drift: so uma
+			// divergencia real entre um cabecalho presente e o prd.md atual
+			// reprova o gate.
+			if !embedded.Match && !embedded.NoHashFound {
+				report.Pass = false
+			}
 		}
 	}
 

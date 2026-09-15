@@ -1,7 +1,7 @@
 ---
 name: analyze-project
 version: 1.3.0
-description: Analisa a arquitetura de um projeto (monolito, monolito modular, monorepo, microservico), detecta stack e ferramentas de IA instaladas, e gera arquivos de governanca (CLAUDE.md, AGENTS.md, GEMINI.md, etc.) personalizados. Use quando precisar configurar ou atualizar a governanca orientada a IA em um projeto existente. Nao use para criar codigo de aplicacao ou alterar logica de negocio.
+description: Analisa a arquitetura de um projeto (monolito, monolito modular, monorepo, microservico), detecta stack e ferramentas de IA instaladas, e gera arquivos de governanca (CLAUDE.md, AGENTS.md, .codex/config.toml, etc.) personalizados. Use quando precisar configurar ou atualizar a governanca orientada a IA em um projeto existente. Nao use para criar codigo de aplicacao ou alterar logica de negocio.
 ---
 
 # Analisar Projeto
@@ -10,7 +10,7 @@ description: Analisa a arquitetura de um projeto (monolito, monolito modular, mo
 
 **Etapa 1: Descobrir a raiz e o tipo de projeto**
 1. Confirmar o diretorio alvo (parametro ou diretorio atual).
-2. Verificar se ja existe governanca instalada (presenca de `AGENTS.md`, `.agents/`, `CLAUDE.md`, `GEMINI.md`, `.codex/`, `.github/copilot-instructions.md`).
+2. Verificar se ja existe governanca instalada (presenca de `AGENTS.md`, `.agents/`, `CLAUDE.md`, `.codex/`, `.github/copilot-instructions.md`, `.opencode/`).
 3. Se ja existir, ler os arquivos existentes para preservar personalizacoes antes de evoluir.
 
 **Etapa 2: Identificar arquitetura do projeto**
@@ -39,7 +39,7 @@ description: Analisa a arquitetura de um projeto (monolito, monolito modular, mo
 **Etapa 4: Detectar ferramentas de IA instaladas**
 1. Verificar presenca de cada ferramenta:
    - Claude Code: `.claude/` ou `CLAUDE.md`
-   - Gemini CLI: `.gemini/` ou `GEMINI.md`
+   - OpenCode: `.opencode/` ou `opencode.json`
    - Codex: `.codex/`
    - GitHub Copilot: `.github/copilot-instructions.md`
 2. Registrar quais ferramentas estao presentes para gerar apenas os arquivos relevantes.
@@ -76,7 +76,7 @@ description: Analisa a arquitetura de um projeto (monolito, monolito modular, mo
 **Etapa 7: Gerar arquivos por ferramenta**
 1. Para cada ferramenta detectada na Etapa 4, gerar o arquivo correspondente:
    - **CLAUDE.md**: seguir o padrao de delegar para `AGENTS.md`, listar skills disponiveis em `.claude/skills/`, referenciar agents em `.claude/agents/`.
-   - **GEMINI.md**: seguir o padrao de delegar para `AGENTS.md`, referenciar commands em `.gemini/commands/`.
+   - **OpenCode**: nao gera arquivo dedicado — carrega `AGENTS.md` e `.agents/skills/` nativamente (RF-13).
    - **.codex/config.toml**: listar skills disponiveis como `[[skills.config]]`.
    - **.github/copilot-instructions.md**: seguir o padrao de delegar para `AGENTS.md`, referenciar agents em `.github/agents/`.
 2. Cada arquivo deve:

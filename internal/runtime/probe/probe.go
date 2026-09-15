@@ -16,15 +16,12 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
-// _adrByID mapeia spec.ID para o path do ADR correspondente.
-// Decisão D-09 (ADR-012): mapping vive no package probe, não em specs/.
-// Evita acoplamento entre specs/ e a estrutura de docs ADRs.
-// Para IDs desconhecidos, use o fallback ".specs/adr/" documentado em resolve().
-var _adrByID = map[string]string{
-	"claude":  ".specs/adr/009-acp-protocol-adoption.md",
-	"codex":   ".specs/adr/013-codex-cli-acp-native.md",
-	"copilot": ".specs/adr/012-copilot-cli-acp-native.md",
-	"gemini":  ".specs/adr/015-gemini-cli-acp-native.md",
+func (c *Catalog) adrByID(id string) (string, bool) {
+	agent, err := specs.NewCatalog().AgentByID(id)
+	if err != nil {
+		return "", false
+	}
+	return agent.ADRPath(), true
 }
 
 // formatLauncherUnavailable formata a mensagem de erro quando nenhum launcher está disponível.
@@ -44,8 +41,7 @@ type cacheEntry struct {
 	err      error
 }
 
-// _cache armazena os resultados de probe por spec ID para evitar re-probing.
-var _cache sync.Map // map[string]*cacheEntry
+var cache sync.Map
 
 // EnsureAvailable resolve o launcher do agente ACP seguindo RF-03.
 // Primeira chamada para cada spec.ID resolve e armazena o resultado em cache;
@@ -60,7 +56,7 @@ func (c *Catalog) EnsureAvailable(ctx context.Context, spec specs.Spec, look Loo
 		return specs.Launcher{}, err
 	}
 
-	entry, _ := _cache.LoadOrStore(spec.ID, &cacheEntry{})
+	entry, _ := cache.LoadOrStore(spec.ID, &cacheEntry{})
 	e, ok := entry.(*cacheEntry)
 	if !ok {
 		return specs.Launcher{}, fmt.Errorf("cache de launcher corrompido para %q: tipo inesperado %T", spec.ID, entry)
@@ -78,7 +74,7 @@ func (c *Catalog) EnsureAvailable(ctx context.Context, spec specs.Spec, look Loo
 // materializado via NewBinaryLauncher(path, fb.FixedArgs...) sem semântica npx-only.
 func (c *Catalog) resolve(spec specs.Spec, look LookPather) (specs.Launcher, error) {
 	// Passo 1: binário canônico no PATH.
-	// FixedArgs do Spec (ex: ["--acp"] para Copilot/Gemini) são passados ao BinaryLauncher para
+	// FixedArgs do Spec (ex: ["--acp"] para Copilot, ["acp"] para OpenCode) são passados ao BinaryLauncher para
 	// garantir que o binário seja invocado com os flags corretos.
 	if path, err := look.LookPath(spec.Command); err == nil {
 		return specs.NewBinaryLauncher(path, spec.FixedArgs...), nil
@@ -95,7 +91,7 @@ func (c *Catalog) resolve(spec specs.Spec, look LookPather) (specs.Launcher, err
 
 	// Passo 3: falhar com mensagem com três remédios (RF-03, RF-05).
 	// Lookup do ADR pelo spec.ID; fallback para path raiz quando ID desconhecido.
-	adrPath, ok := _adrByID[spec.ID]
+	adrPath, ok := NewCatalog().adrByID(spec.ID)
 	if !ok {
 		adrPath = ".specs/adr/"
 	}
@@ -103,11 +99,18 @@ func (c *Catalog) resolve(spec specs.Spec, look LookPather) (specs.Launcher, err
 	return specs.Launcher{}, fmt.Errorf("%s: %w", msg, ErrLauncherUnavailable)
 }
 
+func (c *Catalog) Resolve(ctx context.Context, spec specs.Spec, look LookPather) (specs.Launcher, error) {
+	if err := ctx.Err(); err != nil {
+		return specs.Launcher{}, err
+	}
+	return NewCatalog().resolve(spec, look)
+}
+
 // ResetCache limpa o cache interno. Utilizado apenas em testes.
 // Exportado para permitir reset entre testes que precisam testar o caching.
 func (c *Catalog) ResetCache() {
-	_cache.Range(func(key, _ any) bool {
-		_cache.Delete(key)
+	cache.Range(func(key, _ any) bool {
+		cache.Delete(key)
 		return true
 	})
 }

@@ -1,0 +1,155 @@
+=== RUN   TestACPRunner_HappyPath
+=== PAUSE TestACPRunner_HappyPath
+=== RUN   TestACPRunner_ActivityTimeout
+=== PAUSE TestACPRunner_ActivityTimeout
+=== RUN   TestACPRunner_PermissionDenied
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_PermissionDenied (0.00s)
+=== RUN   TestACPRunner_UnknownDrift
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_UnknownDrift (0.00s)
+=== RUN   TestACPRunner_NpxFallback
+=== PAUSE TestACPRunner_NpxFallback
+=== RUN   TestACPRunner_LauncherUnavailable
+=== PAUSE TestACPRunner_LauncherUnavailable
+=== RUN   TestACPRunner_WithRealPersistence
+=== PAUSE TestACPRunner_WithRealPersistence
+=== RUN   TestACPRunner_HumanRenderer
+=== PAUSE TestACPRunner_HumanRenderer
+=== RUN   TestACPRunner_RuntimeInit_CopilotVersions
+=== PAUSE TestACPRunner_RuntimeInit_CopilotVersions
+=== RUN   TestACPRunner_RuntimeInit_ClaudeVersions
+=== PAUSE TestACPRunner_RuntimeInit_ClaudeVersions
+=== RUN   TestACPRunner_JobZeroValue_ClaudeRegression
+=== PAUSE TestACPRunner_JobZeroValue_ClaudeRegression
+=== RUN   TestACPRunner_Codex_T17_BootstrapArgs_Restricted
+=== PAUSE TestACPRunner_Codex_T17_BootstrapArgs_Restricted
+=== RUN   TestACPRunner_Codex_T18_BootstrapArgs_Full
+=== PAUSE TestACPRunner_Codex_T18_BootstrapArgs_Full
+=== RUN   TestACPRunner_Claude_T19_NoCodexFlags
+=== PAUSE TestACPRunner_Claude_T19_NoCodexFlags
+=== RUN   TestACPRunner_Copilot_T19_NoCodexFlags
+=== PAUSE TestACPRunner_Copilot_T19_NoCodexFlags
+=== RUN   TestACPRunner_Codex_T20_ToolCallsAndReport
+=== PAUSE TestACPRunner_Codex_T20_ToolCallsAndReport
+=== RUN   TestACPRunner_Codex_T21_ActivityWatchdog
+=== PAUSE TestACPRunner_Codex_T21_ActivityWatchdog
+=== RUN   TestACPRunnerConductsCycleApprovedFirstRound
+=== PAUSE TestACPRunnerConductsCycleApprovedFirstRound
+=== RUN   TestACPRunnerCycleFeedsRemarksBackToFix
+=== PAUSE TestACPRunnerCycleFeedsRemarksBackToFix
+=== RUN   TestACPRunnerCycleAbortsOnNoConvergenceWithoutSpendingNextRound
+=== PAUSE TestACPRunnerCycleAbortsOnNoConvergenceWithoutSpendingNextRound
+=== RUN   TestACPRunnerCycleAbortsOnEmptyDiff
+=== PAUSE TestACPRunnerCycleAbortsOnEmptyDiff
+=== RUN   TestACPRunnerFallsBackToOneShotWithoutTaskFile
+=== PAUSE TestACPRunnerFallsBackToOneShotWithoutTaskFile
+=== CONT  TestACPRunner_HappyPath
+=== CONT  TestACPRunner_Codex_T18_BootstrapArgs_Full
+=== CONT  TestACPRunner_RuntimeInit_CopilotVersions
+=== CONT  TestACPRunner_HumanRenderer
+=== CONT  TestACPRunner_Codex_T17_BootstrapArgs_Restricted
+=== CONT  TestACPRunner_JobZeroValue_ClaudeRegression
+=== CONT  TestACPRunner_RuntimeInit_ClaudeVersions
+=== CONT  TestACPRunnerConductsCycleApprovedFirstRound
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_JobZeroValue_ClaudeRegression (0.01s)
+--- PASS: TestACPRunner_HumanRenderer (0.01s)
+=== CONT  TestACPRunnerCycleAbortsOnEmptyDiff
+=== CONT  TestACPRunnerFallsBackToOneShotWithoutTaskFile
+--- PASS: TestACPRunner_RuntimeInit_CopilotVersions (0.01s)
+=== CONT  TestACPRunnerCycleAbortsOnNoConvergenceWithoutSpendingNextRound
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_Codex_T18_BootstrapArgs_Full (0.01s)
+=== CONT  TestACPRunnerCycleFeedsRemarksBackToFix
+--- PASS: TestACPRunner_RuntimeInit_ClaudeVersions (0.01s)
+=== CONT  TestACPRunner_LauncherUnavailable
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_Codex_T17_BootstrapArgs_Restricted (0.01s)
+=== CONT  TestACPRunner_WithRealPersistence
+--- PASS: TestACPRunner_HappyPath (0.01s)
+=== CONT  TestACPRunner_NpxFallback
+--- PASS: TestACPRunner_LauncherUnavailable (0.01s)
+=== CONT  TestACPRunner_Codex_T20_ToolCallsAndReport
+--- PASS: TestACPRunner_WithRealPersistence (0.01s)
+=== CONT  TestACPRunner_Codex_T21_ActivityWatchdog
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_NpxFallback (0.01s)
+=== CONT  TestACPRunner_ActivityTimeout
+--- PASS: TestACPRunner_Codex_T20_ToolCallsAndReport (0.01s)
+=== CONT  TestACPRunner_Copilot_T19_NoCodexFlags
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_Copilot_T19_NoCodexFlags (0.00s)
+=== CONT  TestACPRunner_Claude_T19_NoCodexFlags
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_Claude_T19_NoCodexFlags (0.00s)
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunnerFallsBackToOneShotWithoutTaskFile (0.05s)
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_Codex_T21_ActivityWatchdog (0.05s)
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunner_ActivityTimeout (0.08s)
+2026/09/11 06:14:39 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:14:39 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:14:39 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:14:39 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:14:39 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:14:39 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:14:39 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:14:39 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:14:39 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:14:39 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:14:39 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:14:39 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunnerConductsCycleApprovedFirstRound (0.20s)
+2026/09/11 06:14:39 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:14:39 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:14:39 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:14:39 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:14:39 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:14:39 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:14:39 [memory_persist] Memory Compaction Requested: false
+2026/09/11 06:14:39 [memory_persist] Memory Workflow Bytes: 247
+2026/09/11 06:14:39 [memory_persist] Task: task-x.md | Events: 2 | Tool Calls: 0
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+2026/09/11 06:14:39 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPRunnerCycleAbortsOnEmptyDiff (0.28s)
+--- PASS: TestACPRunnerCycleFeedsRemarksBackToFix (0.28s)
+--- PASS: TestACPRunnerCycleAbortsOnNoConvergenceWithoutSpendingNextRound (0.28s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	0.548s

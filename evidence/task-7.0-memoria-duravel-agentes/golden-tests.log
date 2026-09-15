@@ -1,0 +1,106 @@
+=== RUN   TestPromptParityGolden
+=== PAUSE TestPromptParityGolden
+=== RUN   TestPromptParityGolden_AnchoredAtHookDispatch
+=== PAUSE TestPromptParityGolden_AnchoredAtHookDispatch
+=== CONT  TestPromptParityGolden
+=== RUN   TestPromptParityGolden/case_1:_total_memory_absence
+=== PAUSE TestPromptParityGolden/case_1:_total_memory_absence
+=== RUN   TestPromptParityGolden/case_2:_workflow_only
+=== CONT  TestPromptParityGolden_AnchoredAtHookDispatch
+=== PAUSE TestPromptParityGolden/case_2:_workflow_only
+=== RUN   TestPromptParityGolden/case_3:_workflow_and_task_in_correct_order
+=== PAUSE TestPromptParityGolden/case_3:_workflow_and_task_in_correct_order
+=== RUN   TestPromptParityGolden/case_4:_compaction_directive_appended
+=== PAUSE TestPromptParityGolden/case_4:_compaction_directive_appended
+=== CONT  TestPromptParityGolden/case_1:_total_memory_absence
+=== CONT  TestPromptParityGolden/case_3:_workflow_and_task_in_correct_order
+=== CONT  TestPromptParityGolden/case_2:_workflow_only
+=== CONT  TestPromptParityGolden/case_4:_compaction_directive_appended
+2026/09/11 16:50:59 runner: durable memory desativada (RF-28); caminho legado preservado
+2026/09/11 16:50:59 runner: durable memory desativada (RF-28); caminho legado preservado
+2026/09/11 16:50:59 runner: durable memory desativada (RF-28); caminho legado preservado
+2026/09/11 16:50:59 runner: durable memory desativada (RF-28); caminho legado preservado
+2026/09/11 16:50:59 runner: durable memory desativada (RF-28); caminho legado preservado
+2026/09/11 16:50:59 [memory_persist] Memory Compaction Requested: false
+2026/09/11 16:50:59 [memory_persist] Memory Workflow Bytes: 249
+2026/09/11 16:50:59 [memory_persist] Task: task-1.0.md | Events: 2 | Tool Calls: 0
+2026/09/11 16:50:59 [memory_persist] Memory Compaction Requested: false
+2026/09/11 16:50:59 [memory_persist] Memory Workflow Bytes: 249
+2026/09/11 16:50:59 [memory_persist] Task: task-1.0.md | Events: 2 | Tool Calls: 0
+2026/09/11 16:50:59 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 16:50:59 INFO connection closed cause="peer connection closed"
+2026/09/11 16:50:59 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 16:50:59 [memory_persist] Memory Compaction Requested: false
+2026/09/11 16:50:59 [memory_persist] Memory Workflow Bytes: 249
+2026/09/11 16:50:59 INFO connection closed cause="peer connection closed"
+2026/09/11 16:50:59 [memory_persist] Task: task-1.0.md | Events: 2 | Tool Calls: 0
+2026/09/11 16:50:59 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 16:50:59 INFO connection closed cause="peer connection closed"
+2026/09/11 16:50:59 [memory_persist] Memory Compaction Requested: false
+2026/09/11 16:50:59 [memory_persist] Memory Workflow Bytes: 249
+2026/09/11 16:50:59 [memory_persist] Task: task-1.0.md | Events: 2 | Tool Calls: 0
+2026/09/11 16:50:59 [memory_persist] Memory Compaction Requested: false
+2026/09/11 16:50:59 [memory_persist] Memory Workflow Bytes: 249
+2026/09/11 16:50:59 [memory_persist] Task: task-1.0.md | Events: 2 | Tool Calls: 0
+2026/09/11 16:50:59 INFO connection closed cause="peer connection closed"
+2026/09/11 16:50:59 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 16:50:59 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/11 16:50:59 INFO connection closed cause="peer connection closed"
+--- PASS: TestPromptParityGolden_AnchoredAtHookDispatch (0.01s)
+--- PASS: TestPromptParityGolden (0.00s)
+    --- PASS: TestPromptParityGolden/case_2:_workflow_only (0.01s)
+    --- PASS: TestPromptParityGolden/case_4:_compaction_directive_appended (0.01s)
+    --- PASS: TestPromptParityGolden/case_1:_total_memory_absence (0.01s)
+    --- PASS: TestPromptParityGolden/case_3:_workflow_and_task_in_correct_order (0.01s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	0.612s
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake	0.203s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client	0.374s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events	0.721s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/handshake	0.837s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks	1.014s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver	1.175s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/wire	1.261s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory	1.371s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable	1.409s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable/mocks	[no test files]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/mocks	[no test files]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence	1.364s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/precondition	1.351s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe	1.389s [no tests to run]
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe/mocks	[no test files]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/render	1.353s [no tests to run]
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	1.362s [no tests to run]

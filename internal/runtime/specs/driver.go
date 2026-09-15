@@ -9,21 +9,21 @@ import (
 // Usar errors.Is para comparação.
 var ErrUnknownDriver = errors.New("driver desconhecido")
 
-// DriverID é um Value Object que representa um dos 4 drivers canônicos do ai-spec-harness.
+// DriverID é um Value Object que representa um dos drivers canônicos do ai-spec-harness.
 // Imutável; campo interno não exportado (R-DDD-001 §Entidades).
 // Construtor: ParseDriverID. Zero-value não é válido — use apenas valores criados pelo construtor.
 type DriverID struct{ value string }
 
-// ParseDriverID valida s contra o conjunto canônico {claude, codex, copilot, gemini}
+// ParseDriverID valida s contra o conjunto canônico {claude, codex, copilot, opencode}
 // e retorna o DriverID correspondente.
 // Retorna ErrUnknownDriver (envolvido) quando s não pertence ao conjunto.
 func (c *Catalog) ParseDriverID(s string) (DriverID, error) {
-	switch s {
-	case "claude", "codex", "copilot", "gemini":
-		return DriverID{value: s}, nil
-	default:
-		return DriverID{}, fmt.Errorf("%w: %q", ErrUnknownDriver, s)
+	for _, id := range c.CanonicalOrder() {
+		if id == s {
+			return DriverID{value: s}, nil
+		}
 	}
+	return DriverID{}, fmt.Errorf("%w: %q", ErrUnknownDriver, s)
 }
 
 // String retorna a representação canônica do driver (ex: "claude").

@@ -1,5 +1,5 @@
 <!-- spec-hash-prd: 223b55df6ca415d48c7af39dcc748d59746d9543cd76739ea21ad31d1dc59a27 -->
-<!-- spec-hash-techspec: 33d48c5881a256b0e47b76f62befff9bacbad1f81721125a450312f83929c560 -->
+<!-- spec-hash-techspec: 978640c7d42bb642ef390e12208c9ebdf6d34086e2c4758b92f51e5ed792fc64 -->
 # Resumo das Tarefas de Implementação para Memória Durável de Agentes
 
 ## Metadados
@@ -23,16 +23,16 @@
 
 | # | Título | Status | Dependências | Paralelizável | Skills |
 |---|--------|--------|-------------|---------------|--------|
-| 1.0 | Escrita atômica na abstração de filesystem | pending | — | Com 6.0 | — |
-| 2.0 | Fato, identidade, durabilidade, sentinelas e Página com round-trip lossless | pending | — | Não | — |
-| 3.0 | Quatro políticas stateless: relevância, orçamento, sanitização e compactação | pending | 2.0 | Com 4.0 | — |
-| 4.0 | Lease de bastão de continuidade e detecção de processo vivo | pending | 2.0 | Com 3.0 | — |
-| 5.0 | Agregado de camada com lock por camada, consolidação e escrita atômica | pending | 1.0, 2.0, 4.0 | Não | — |
-| 6.0 | Trava de regressão: golden byte-a-byte e fim da degradação silenciosa | pending | — | Com 1.0 | — |
-| 7.0 | Fachada, porta de memória e wiring por configuração | pending | 3.0, 5.0, 6.0 | Não | design-patterns-mandatory |
-| 8.0 | Evidência de memória, métricas e telemetria | pending | 7.0 | Com 9.0 | — |
-| 9.0 | Comando `memory` com seis subcomandos, incluindo migração | pending | 3.0, 5.0 | Com 8.0 | — |
-| 10.0 | Integração multi-processo, e2e, benchmark e alvos de Make | pending | 7.0, 8.0, 9.0 | Não | — |
+| 1.0 | Escrita atômica na abstração de filesystem | done | — | Com 6.0 | — |
+| 2.0 | Fato, identidade, durabilidade, sentinelas e Página com round-trip lossless | done | — | Não | — |
+| 3.0 | Quatro políticas stateless: relevância, orçamento, sanitização e compactação | done | 2.0 | Com 4.0 | — |
+| 4.0 | Lease de bastão de continuidade e detecção de processo vivo | done | 2.0 | Com 3.0 | — |
+| 5.0 | Agregado de camada com lock por camada, consolidação e escrita atômica | done | 1.0, 2.0, 4.0 | Não | — |
+| 6.0 | Trava de regressão: golden byte-a-byte e fim da degradação silenciosa | done | — | Com 1.0 | — |
+| 7.0 | Fachada, porta de memória e wiring por configuração | done | 3.0, 5.0, 6.0 | Não | design-patterns-mandatory |
+| 8.0 | Evidência de memória, métricas e telemetria | done | 7.0 | Com 9.0 | — |
+| 9.0 | Comando `memory` com seis subcomandos, incluindo migração | done | 3.0, 5.0 | Com 8.0 | — |
+| 10.0 | Integração multi-processo, e2e, benchmark e alvos de Make | done | 7.0, 8.0, 9.0 | Não | — |
 
 ## Dependências Críticas
 

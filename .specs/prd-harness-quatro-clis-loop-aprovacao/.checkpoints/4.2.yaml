@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-quatro-clis-loop-aprovacao/4.2_execution_report.md
+summary: D2 corrigido — evidencia de review numerada por rodada com escrita O_EXCL, AI_REVIEW_PRIOR_SHA por rodada e reset de profundidade sem elevar _defaultMax
+timestamp: 2026-09-10T21:30:24Z

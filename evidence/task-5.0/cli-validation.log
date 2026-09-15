@@ -1,0 +1,6 @@
+=== max-bugfix-iterations 0 ===
+--max-bugfix-iterations inválido: 0 — minimo aceito: 1
+exit=2
+=== max-bugfix-iterations -2 ===
+--max-bugfix-iterations inválido: -2 — minimo aceito: 1
+exit=2

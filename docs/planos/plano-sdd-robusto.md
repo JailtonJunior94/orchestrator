@@ -149,7 +149,7 @@ A direção segue as recomendações oficiais: prompts enxutos, contratos explí
   - projetos Go, Node, Python, .NET e multi-language;
   - runtime sem suporte a subagent;
   - revisão e bugfix cumulativos.
-- Matriz CI em Ubuntu, macOS e Windows, com smoke tests dos adaptadores Codex, Claude, Gemini e Copilot.
+- Matriz CI em Ubuntu, macOS e Windows, com smoke tests dos adaptadores Codex, Claude, Copilot e OpenCode.
 - Critérios de saída:
   - 100% de rastreabilidade estrutural RF/NFR→decisão→task→teste→evidência;
   - zero path escape, lost update e falso `done` no corpus adversarial;

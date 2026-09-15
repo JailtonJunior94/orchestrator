@@ -1,0 +1,4 @@
+ internal/taskloop/bugfix_test.go      |  76 +++++++++++++++++++++++
+ internal/taskloop/integration_test.go |  12 ++--
+ internal/taskloop/runloop_test.go     | 112 +++++++++++++++++++++++++++-------
+ 3 files changed, 173 insertions(+), 27 deletions(-)

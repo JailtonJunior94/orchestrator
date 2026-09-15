@@ -1,0 +1,328 @@
+package taskloop
+
+import (
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"iter"
+	"slices"
+	"strings"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/invocation"
+	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
+)
+
+var (
+	_ approval.Reviewer   = (*reviewerPort)(nil)
+	_ approval.Reviewer   = (*primedReviewerPort)(nil)
+	_ approval.Fixer      = (*fixerPort)(nil)
+	_ approval.Repository = (*repositoryPort)(nil)
+)
+
+const (
+	defaultFindingFile = "unspecified"
+	defaultFindingRule = "review-finding"
+)
+
+type cutPointHistory interface {
+	CheckpointAt(round int) (approval.Checkpoint, bool)
+}
+
+type reviewerPort struct {
+	reviewer  FinalReviewer
+	evidence  *airuntime.RoundEvidenceWriter
+	cutPoints cutPointHistory
+}
+
+func newReviewerPort(reviewer FinalReviewer, evidence *airuntime.RoundEvidenceWriter, cutPoints cutPointHistory) *reviewerPort {
+	return &reviewerPort{reviewer: reviewer, evidence: evidence, cutPoints: cutPoints}
+}
+
+func (p *reviewerPort) priorCutPoint(round int) string {
+	if round < 2 || p.cutPoints == nil {
+		return ""
+	}
+	checkpoint, ok := p.cutPoints.CheckpointAt(round - 1)
+	if !ok {
+		return ""
+	}
+	return checkpoint.String()
+}
+
+func (p *reviewerPort) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
+	restoreEnv := airuntime.ApplyRoundReviewEnv(request.Round(), p.priorCutPoint(request.Round()))
+	result, err := p.reviewer.ReviewConsolidated(ctx, request.Target().String())
+	restoreEnv()
+	if err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+
+	if _, err := p.evidence.Write(request.Round(), result.RawOutput); err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+
+	findings, err := translateReviewFindings(result.Findings)
+	if err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+
+	criteriaMap, err := approval.ParseCriteriaMap(result.RawOutput, request)
+	if err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+
+	return approval.NewReviewerOutput(result.RawOutput, findings, criteriaMap), nil
+}
+
+type primedReviewerPort struct {
+	primed       FinalReviewResult
+	primedTarget string
+	consumed     bool
+	delegate     *reviewerPort
+}
+
+func newPrimedReviewerPort(primed FinalReviewResult, primedTarget string, reviewer FinalReviewer, evidence *airuntime.RoundEvidenceWriter, cutPoints cutPointHistory) *primedReviewerPort {
+	return &primedReviewerPort{primed: primed, primedTarget: primedTarget, delegate: newReviewerPort(reviewer, evidence, cutPoints)}
+}
+
+func primedReviewRequest(request approval.ReviewRequest, primedTarget string) (approval.ReviewRequest, error) {
+	if strings.TrimSpace(primedTarget) == "" {
+		return request, nil
+	}
+	criteria := slices.Collect(request.Criteria())
+	return approval.NewReviewRequest(request.Task(), request.Agent(), request.Round(), approval.NewReviewTarget(primedTarget), criteria)
+}
+
+func (p *primedReviewerPort) Review(ctx context.Context, request approval.ReviewRequest) (approval.ReviewerOutput, error) {
+	if p.consumed {
+		return p.delegate.Review(ctx, request)
+	}
+	p.consumed = true
+
+	if _, err := p.delegate.evidence.Write(request.Round(), p.primed.RawOutput); err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+
+	findings, err := translateReviewFindings(p.primed.Findings)
+	if err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+	primedRequest, err := primedReviewRequest(request, p.primedTarget)
+	if err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+	criteriaMap, err := approval.ParseCriteriaMap(p.primed.RawOutput, primedRequest)
+	if err != nil {
+		return approval.ReviewerOutput{}, err
+	}
+	return approval.NewReviewerOutput(p.primed.RawOutput, findings, criteriaMap), nil
+}
+
+func translateReviewFindings(in []Finding) ([]approval.Finding, error) {
+	out := make([]approval.Finding, 0, len(in))
+	for _, finding := range in {
+		file := strings.TrimSpace(finding.File)
+		if file == "" {
+			file = defaultFindingFile
+		}
+
+		if finding.Line > 0 {
+			file = fmt.Sprintf("%s:%d", file, finding.Line)
+		}
+
+		translated, err := approval.NewFinding(translateSeverity(finding.Severity), file, defaultFindingRule, finding.Message)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, translated)
+	}
+	return out, nil
+}
+
+func translateSeverity(severity Severity) approval.Severity {
+	switch severity {
+	case SeverityCritical:
+		return approval.SeverityCritical
+	case SeverityHigh:
+		return approval.SeverityHigh
+	case SeverityImportant:
+		return approval.SeverityMedium
+	default:
+		return approval.SeverityLow
+	}
+}
+
+type bugfixEvidenceRecorder struct {
+	entries []bugfixEvidence
+}
+
+func newBugfixEvidenceRecorder() *bugfixEvidenceRecorder {
+	return &bugfixEvidenceRecorder{}
+}
+
+func (r *bugfixEvidenceRecorder) record(entry bugfixEvidence) {
+	r.entries = append(r.entries, entry)
+}
+
+func (r *bugfixEvidenceRecorder) Entries() []bugfixEvidence {
+	return append([]bugfixEvidence(nil), r.entries...)
+}
+
+type fixerPort struct {
+	invoker  BugfixInvoker
+	recorder *bugfixEvidenceRecorder
+}
+
+func newFixerPort(invoker BugfixInvoker, recorder *bugfixEvidenceRecorder) *fixerPort {
+	return &fixerPort{invoker: invoker, recorder: recorder}
+}
+
+func (p *fixerPort) Fix(ctx context.Context, request approval.FixRequest) error {
+	restoreDepth := invocation.NewGuard().ResetDepth()
+	defer restoreDepth()
+
+	output, err := p.invoker.InvokeBugfix(ctx, reverseFindings(request), request.Target().String())
+	if err != nil {
+		return err
+	}
+
+	evidence, err := NewCatalog().extractBugfixEvidence(output)
+	if err != nil {
+		return err
+	}
+	evidence.Output = output
+	evidence.RootCause = NewCatalog().extractRootCause(output)
+
+	p.recorder.record(evidence)
+	return nil
+}
+
+func reverseFindings(request approval.FixRequest) []Finding {
+	return reverseApprovalFindings(request.Findings())
+}
+
+func reverseApprovalFindings(findings iter.Seq[approval.Finding]) []Finding {
+	var out []Finding
+	for finding := range findings {
+		out = append(out, Finding{
+			Severity: reverseSeverity(finding.Severity()),
+			File:     finding.File(),
+			Message:  finding.Description(),
+		})
+	}
+	return out
+}
+
+func reverseVerdict(verdict approval.Verdict) ReviewVerdict {
+	return ReviewVerdict(verdict.String())
+}
+
+func reverseSeverity(severity approval.Severity) Severity {
+	switch severity {
+	case approval.SeverityCritical:
+		return SeverityCritical
+	case approval.SeverityHigh:
+		return SeverityHigh
+	case approval.SeverityMedium:
+		return SeverityImportant
+	default:
+		return SeveritySuggestion
+	}
+}
+
+type repositoryPort struct {
+	capturer       DiffCapturer
+	workDir        string
+	contentDigests map[string]bool
+	issued         []approval.Checkpoint
+}
+
+func newRepositoryPort(capturer DiffCapturer, workDir string) *repositoryPort {
+	return &repositoryPort{capturer: capturer, workDir: workDir, contentDigests: make(map[string]bool)}
+}
+
+func (p *repositoryPort) Checkpoint(ctx context.Context) (approval.Checkpoint, error) {
+	out, err := NewCatalog().commandOutput(ctx, p.workDir, "git", "rev-parse", "HEAD")
+	if err == nil {
+		checkpoint, newErr := approval.NewCheckpoint(strings.TrimSpace(string(out)))
+		if newErr != nil {
+			return approval.Checkpoint{}, newErr
+		}
+		p.issued = append(p.issued, checkpoint)
+		return checkpoint, nil
+	}
+	return p.contentCheckpoint(ctx)
+}
+
+func (p *repositoryPort) CheckpointAt(round int) (approval.Checkpoint, bool) {
+	if round < 1 || round > len(p.issued) {
+		return approval.Checkpoint{}, false
+	}
+	return p.issued[round-1], true
+}
+
+func (p *repositoryPort) contentCheckpoint(ctx context.Context) (approval.Checkpoint, error) {
+	diff, err := p.capturer.CaptureDiff(ctx)
+	if err != nil {
+		return approval.Checkpoint{}, fmt.Errorf("taskloop: fallback checkpoint diff capture: %w", err)
+	}
+	digest := diffDigest(diff)
+	checkpoint, err := approval.NewCheckpoint(digest)
+	if err != nil {
+		return approval.Checkpoint{}, err
+	}
+	p.contentDigests[digest] = true
+	p.issued = append(p.issued, checkpoint)
+	return checkpoint, nil
+}
+
+func diffDigest(diff string) string {
+	sum := sha256.Sum256([]byte(diff))
+	return hex.EncodeToString(sum[:])
+}
+
+func (p *repositoryPort) FullTarget(ctx context.Context) (approval.ReviewTarget, error) {
+	return p.captureTarget(ctx)
+}
+
+func (p *repositoryPort) Delta(ctx context.Context, since approval.Checkpoint) (approval.ReviewTarget, error) {
+	ref := strings.TrimSpace(since.String())
+	if p.contentDigests[ref] {
+		return p.contentDelta(ctx, ref)
+	}
+	if ref == "" || !NewCatalog().isGitWorkTree(ctx, p.workDir) {
+		return p.captureTarget(ctx)
+	}
+	if _, err := NewCatalog().commandOutput(ctx, p.workDir, "git", "rev-parse", "--verify", "--quiet", ref+"^{commit}"); err != nil {
+		return p.captureTarget(ctx)
+	}
+	out, err := NewCatalog().commandOutput(ctx, p.workDir, "git", "diff", "--binary", ref, "--")
+	if err != nil {
+		return p.captureTarget(ctx)
+	}
+	return approval.NewReviewTarget(string(out)), nil
+}
+
+func (p *repositoryPort) contentDelta(ctx context.Context, since string) (approval.ReviewTarget, error) {
+	diff, err := p.capturer.CaptureDiff(ctx)
+	if err != nil {
+		return approval.ReviewTarget{}, err
+	}
+	if diffDigest(diff) == since {
+		return approval.NewReviewTarget(""), nil
+	}
+	return approval.NewReviewTarget(diff), nil
+}
+
+func (p *repositoryPort) captureTarget(ctx context.Context) (approval.ReviewTarget, error) {
+	diff, err := p.capturer.CaptureDiff(ctx)
+	if err != nil {
+		return approval.ReviewTarget{}, err
+	}
+	if diff == diffUnavailable {
+		return approval.NewReviewTarget(""), nil
+	}
+	return approval.NewReviewTarget(diff), nil
+}

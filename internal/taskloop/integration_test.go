@@ -55,7 +55,7 @@ import (
 // 2. Substitui "**Status:** <status>" por "**Status:** done" no task file
 // 3. Retorna exit 0
 //
-// Funciona com todos os adapters: claude (-p <prompt>), codex (posicional), gemini (-p), copilot (-p).
+// Funciona com todos os adapters: claude (-p <prompt>), codex (posicional), copilot (-p).
 const successMockScript = `#!/usr/bin/env python3
 import sys, re, os
 
@@ -156,7 +156,7 @@ func installMockBinaries(t *testing.T, binDir string, names []string, script str
 func runIntegrationExecute(t *testing.T, prdDir, tool, reportPath string, timeout time.Duration) error {
 	t.Helper()
 	fsys := osfs.NewOSFileSystem()
-	svc := NewService(fsys, integrationPrinter())
+	svc := newCycleTestService(fsys, integrationPrinter())
 	svc.invokerFactory = NewAgentInvoker
 	// binaryChecker = nil → usa CheckAgentBinary real; mock esta no PATH via t.Setenv
 
@@ -181,7 +181,7 @@ func runIntegrationExecute(t *testing.T, prdDir, tool, reportPath string, timeou
 //     Verificacoes: loop abortado, stop reason contem "autenticado".
 //
 // Para cada cenario, o mesmo comportamento e esperado para todas as ferramentas:
-// claude (binary claude), claude (binary claudiney), codex, gemini, copilot.
+// claude (binary claude), claude (binary claudiney), codex, copilot.
 func TestParidadeIntegration(t *testing.T) {
 	type toolCase struct {
 		tool     string   // ferramenta para Options.Tool
@@ -193,7 +193,6 @@ func TestParidadeIntegration(t *testing.T) {
 		{tool: "claude", binaries: []string{"claude"}, label: "claude"},
 		{tool: "claude", binaries: []string{"claudiney"}, label: "claude-claudiney"},
 		{tool: "codex", binaries: []string{"codex"}, label: "codex"},
-		{tool: "gemini", binaries: []string{"gemini"}, label: "gemini"},
 		{tool: "copilot", binaries: []string{"copilot"}, label: "copilot"},
 	}
 
@@ -371,7 +370,6 @@ func TestParidadeIntegrationTimeout(t *testing.T) {
 	}{
 		{"claude", "claude", "claude"},
 		{"codex", "codex", "codex"},
-		{"gemini", "gemini", "gemini"},
 		{"copilot", "copilot", "copilot"},
 	}
 
@@ -426,7 +424,7 @@ func TestRunLoopIntegrationCaminhoFeliz(t *testing.T) {
 	t.Setenv("GOVERNANCE_TELEMETRY", "1")
 
 	fsys, prd := setupRunLoopFS([]string{"1.0", "2.0"})
-	svc := NewService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
+	svc := newCycleTestService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
 
 	deps := RunLoopDeps{
 		Selector: &stubSelector{queue: []TaskEntry{
@@ -436,7 +434,7 @@ func TestRunLoopIntegrationCaminhoFeliz(t *testing.T) {
 		Executor:      &stubExecutor{},
 		Gate:          &stubGate{},
 		Recorder:      &stubRecorder{},
-		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved}}},
+		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApproved, RawOutput: rawVerdict(VerdictApproved)}}},
 	}
 
 	var report *LoopReport
@@ -477,14 +475,16 @@ func TestRunLoopIntegrationEscalonamento(t *testing.T) {
 	t.Setenv("GOVERNANCE_TELEMETRY", "1")
 
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
+	svc := newCycleTestService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
 
-	critical := []Finding{{Severity: SeverityCritical, File: "x.go", Line: 1, Message: "bug"}}
+	findingAt := func(file string) []Finding {
+		return []Finding{{Severity: SeverityCritical, File: file, Line: 1, Message: "bug"}}
+	}
 	reviewer := &stubReviewer{results: []FinalReviewResult{
-		{Verdict: VerdictRejected, Findings: critical},
-		{Verdict: VerdictRejected, Findings: critical},
-		{Verdict: VerdictRejected, Findings: critical},
-		{Verdict: VerdictRejected, Findings: critical},
+		{Verdict: VerdictRejected, Findings: findingAt("a.go"), RawOutput: rawVerdict(VerdictRejected)},
+		{Verdict: VerdictRejected, Findings: findingAt("b.go"), RawOutput: rawVerdict(VerdictRejected)},
+		{Verdict: VerdictRejected, Findings: findingAt("c.go"), RawOutput: rawVerdict(VerdictRejected)},
+		{Verdict: VerdictRejected, Findings: findingAt("d.go"), RawOutput: rawVerdict(VerdictRejected)},
 	}}
 
 	deps := RunLoopDeps{
@@ -510,7 +510,7 @@ func TestRunLoopIntegrationEscalonamento(t *testing.T) {
 	if !errors.Is(execErr, ErrBugfixExhausted) {
 		t.Fatalf("err=%v, want ErrBugfixExhausted", execErr)
 	}
-	if !report.Escalated || report.BugfixCycles != 3 {
+	if !report.Escalated || report.BugfixCycles != 2 {
 		t.Fatalf("Escalated=%v BugfixCycles=%d", report.Escalated, report.BugfixCycles)
 	}
 	if !strings.Contains(stderr, "event=escalated value=bugfix_exhausted") {
@@ -523,7 +523,7 @@ func TestRunLoopIntegrationEscalonamento(t *testing.T) {
 // sem precisar de prompter humano.
 func TestRunLoopIntegrationApprovedWithRemarksNonInteractive(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
-	svc := NewService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
+	svc := newCycleTestService(fsys, &output.Printer{Out: io.Discard, Err: io.Discard})
 
 	findings := []Finding{
 		{Severity: SeverityImportant, File: "a.go", Line: 1, Message: "x"},
@@ -535,7 +535,9 @@ func TestRunLoopIntegrationApprovedWithRemarksNonInteractive(t *testing.T) {
 		Executor:      &stubExecutor{},
 		Gate:          &stubGate{},
 		Recorder:      &stubRecorder{},
-		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApprovedWithRemarks, Findings: findings}}},
+		FinalReviewer: &stubReviewer{results: []FinalReviewResult{{Verdict: VerdictApprovedWithRemarks, Findings: findings, RawOutput: rawVerdict(VerdictApprovedWithRemarks)}}},
+		BugfixInvoker: &runloopBugfixInvoker{},
+		DiffCapturer:  &runloopDiffCapturer{},
 	}
 
 	report, err := svc.RunLoop(context.Background(), Options{
@@ -544,7 +546,10 @@ func TestRunLoopIntegrationApprovedWithRemarksNonInteractive(t *testing.T) {
 		ReportPath:     prd + "/loop-report.json",
 	}, deps)
 	if err != nil {
-		t.Fatalf("RunLoop: %v", err)
+		t.Fatalf("RunLoop: err=%v, want nil (RF-33: remarks sem achado high/critical encerram)", err)
+	}
+	if report.Escalated {
+		t.Fatalf("Escalated=true: ressalvas medium/low encerram como divida declarada, sem escalonamento")
 	}
 	if report.ActionPlan == nil {
 		t.Fatalf("ActionPlan ausente em modo nao-interativo")

@@ -1,0 +1,13 @@
+internal/runtime/runner.go:479://   - WindowLarge ⇒ limites ampliados para CLIs com janela ≥1M (ex: OpenCode com modelo Gemini).
+internal/runtime/specs/opencode.go:149:	{prefix: "gemini-2.5-pro", window: ContextWindow{MaxTokens: 1_000_000}},
+internal/runtime/specs/opencode.go:150:	{prefix: "gemini-2.5-flash", window: ContextWindow{MaxTokens: 1_000_000}},
+internal/parity/parity.go:353:// ── Gemini removido: invariantes GM01/GM02/GM03 descontinuadas (RF-02) ──────
+internal/uninstall/uninstall.go:185:	// Residuo legado de projetos que instalaram o agente removido (Gemini,
+internal/uninstall/uninstall.go:188:	safeRm(filepath.Join(absDir, "GEMINI.md"))
+internal/uninstall/uninstall.go:189:	geminiDir := filepath.Join(absDir, ".gemini")
+internal/uninstall/uninstall.go:190:	if s.fs.IsDir(geminiDir) {
+internal/uninstall/uninstall.go:192:			s.printer.DryRun("rm -r %s (residuo legado do agente removido)", geminiDir)
+internal/uninstall/uninstall.go:195:			_ = s.fs.RemoveAll(geminiDir)
+internal/skills/skills.go:44:	"gemini": "docs/migracao-legacy-acp.md#gemini-removido",
+internal/taskloop/compatibility.go:39:				"gemini-2.5-pro",
+internal/taskloop/compatibility.go:40:				"gemini-2.5-flash",

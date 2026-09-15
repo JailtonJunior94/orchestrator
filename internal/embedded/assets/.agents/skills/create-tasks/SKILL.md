@@ -122,4 +122,4 @@ Antes de reportar `done`, validar que **a coluna `Skills` em `tasks.md` e a seç
 
 ## Resolução de paths
 
-Todo caminho `.specs/prd-<slug>/` referenciado neste documento resolve para `${AI_TASKS_ROOT:-.specs}/${AI_PRD_PREFIX:-prd-}<slug>/`. Defaults preservam o layout histórico. Customização via `.claude/config.yaml` ou `.agents/config.yaml` (chaves `tasks_root`, `prd_prefix`). `check-invocation-depth.sh` exporta `AI_TASKS_ROOT` e `AI_PRD_PREFIX` para garantir paridade entre Claude Code, Codex, Gemini e Copilot — resolução em cascata `.agents/lib/` → `scripts/lib/` (vendor canônico em `.agents/lib/`).
+Todo caminho `.specs/prd-<slug>/` referenciado neste documento resolve para `${AI_TASKS_ROOT:-.specs}/${AI_PRD_PREFIX:-prd-}<slug>/`. Defaults preservam o layout histórico. Customização via `.claude/config.yaml` ou `.agents/config.yaml` (chaves `tasks_root`, `prd_prefix`). `check-invocation-depth.sh` exporta `AI_TASKS_ROOT` e `AI_PRD_PREFIX` para garantir paridade entre Claude Code, Codex, Copilot e OpenCode — resolução em cascata `.agents/lib/` → `scripts/lib/` (vendor canônico em `.agents/lib/`).

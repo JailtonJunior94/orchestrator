@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-quatro-clis-loop-aprovacao/4.8_execution_report.md
+summary: Prova de paridade entre Service.Execute/RunLoop/ACPRunner e cinco fluxos E2E via servidor ACP falso in-process, mais teste de APPROVED_WITH_REMARKS
+timestamp: 2026-09-11T10:01:45Z

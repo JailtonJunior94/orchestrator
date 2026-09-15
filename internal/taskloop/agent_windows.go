@@ -5,6 +5,7 @@ package taskloop
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"os/exec"
 	"time"
@@ -36,6 +37,9 @@ func (c *Catalog) runCmd(ctx context.Context, workDir string, liveOut io.Writer,
 	}
 
 	err := cmd.Run()
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return stdoutBuf.String(), stderrBuf.String(), -1, fmt.Errorf("%w: %s: %w", ErrAgentTimeout, name, ctxErr)
+	}
 	exitCode := 0
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {

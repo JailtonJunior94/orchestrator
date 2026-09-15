@@ -26,7 +26,7 @@ func FuzzParseConfig(f *testing.F) {
 	f.Add([]byte(`{
 		"project_dir": "/tmp/myproject",
 		"source_dir": "/home/user/.agents",
-		"tools": ["claude", "gemini"],
+		"tools": ["claude", "opencode"],
 		"langs": ["go"],
 		"link_mode": "symlink",
 		"dry_run": false,
@@ -40,7 +40,7 @@ func FuzzParseConfig(f *testing.F) {
 	f.Add([]byte(`{}`))
 
 	// Corpus: array no lugar de objeto
-	f.Add([]byte(`["claude","gemini"]`))
+	f.Add([]byte(`["claude","opencode"]`))
 
 	// Corpus: string arbitraria
 	f.Add([]byte(`"nao e json de config"`))

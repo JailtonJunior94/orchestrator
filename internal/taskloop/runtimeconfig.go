@@ -1,6 +1,7 @@
 package taskloop
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -9,11 +10,9 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
 )
 
-// _defaultACPActivityTimeout é o watchdog default do task-loop ACP (F1): 120s.
-// Originalmente vinha do default da flag --activity-timeout (120s). Aplicado como ultima
-// camada (built-in default) quando nem flag nem config definem timeout, preservando F1.
-// "0s" explicito (flag --activity-timeout=0 ou config timeout="0s") desabilita o watchdog.
-const _defaultACPActivityTimeout = 2 * time.Minute
+const defaultACPActivityTimeout = 2 * time.Minute
+
+var ErrInvalidMaxBugfixIterations = errors.New("invalid max_bugfix_iterations: minimum accepted value is 1")
 
 // BuildRuntimeConfig converte um config.Runtime já resolvido (via config.Resolver.Resolve)
 // para um runtime.RuntimeConfig pronto para injeção em Job.
@@ -40,12 +39,28 @@ func (c *Catalog) BuildRuntimeConfig(resolved config.Runtime) (airuntime.Runtime
 		timeout = t
 	}
 
+	var leaseTTL time.Duration
+	if resolved.HandoffLeaseTTL != "" {
+		d, err := time.ParseDuration(resolved.HandoffLeaseTTL)
+		if err != nil {
+			return airuntime.RuntimeConfig{}, fmt.Errorf("invalid handoff lease ttl: %w", err)
+		}
+		leaseTTL = d
+	}
+
+	if resolved.MaxBugfixIterations < 0 || (resolved.MaxBugfixIterationsSet && resolved.MaxBugfixIterations < 1) {
+		return airuntime.RuntimeConfig{}, fmt.Errorf("%w: %d", ErrInvalidMaxBugfixIterations, resolved.MaxBugfixIterations)
+	}
+
 	rc := airuntime.RuntimeConfig{
 		Timeout:                timeout,
 		MaxRetries:             resolved.MaxRetries,
 		RetryBackoffMultiplier: resolved.RetryBackoffMultiplier,
 		Concurrent:             resolved.Concurrent,
 		BatchSize:              resolved.BatchSize,
+		MaxBugfixIterations:    resolved.MaxBugfixIterations,
+		HandoffLeaseTTL:        leaseTTL,
+		DurableMemoryEnabled:   resolved.DurableMemoryEnabled,
 	}
 	rc.ApplyDefaults()
 	return rc, nil
@@ -68,13 +83,20 @@ func (c *Catalog) resolveRuntimeConfig(cwd string, flagsOverrides config.Runtime
 	// F1: aplicar o watchdog default (120s) quando nenhuma camada (flag/config) define timeout.
 	// Mantém a precedência (flag/config vencem) e preserva "0s" explícito como desabilitado.
 	if resolved.Timeout == "" {
-		resolved.Timeout = _defaultACPActivityTimeout.String()
+		resolved.Timeout = defaultACPActivityTimeout.String()
 	}
 	rc, err := NewCatalog().BuildRuntimeConfig(resolved)
 	if err != nil {
 		return airuntime.RuntimeConfig{}, fmt.Errorf("taskloop: construir RuntimeConfig: %w", err)
 	}
 	return rc, nil
+}
+
+func (c *Catalog) applyResolvedMaxBugfixIterations(opts Options, resolved airuntime.RuntimeConfig) Options {
+	if resolved.MaxBugfixIterations > 0 {
+		opts.MaxBugfixIterations = resolved.MaxBugfixIterations
+	}
+	return opts
 }
 
 // optionsToConfigOverrides mapeia os campos de Options relevantes para config.Runtime,
@@ -87,9 +109,22 @@ func (c *Catalog) optionsToConfigOverrides(opts Options) config.Runtime {
 	if opts.ActivityTimeoutSet && opts.ActivityTimeout >= 0 {
 		timeout = opts.ActivityTimeout.String()
 	}
+	var maxBugfixIterations int
+	if opts.MaxBugfixIterationsSet {
+		maxBugfixIterations = opts.MaxBugfixIterations
+	}
+	var handoffLeaseTTL string
+	if opts.HandoffLeaseTTLSet {
+		handoffLeaseTTL = opts.HandoffLeaseTTL.String()
+	}
 	return config.Runtime{
-		Timeout:    timeout,
-		Concurrent: opts.Concurrent,
-		BatchSize:  opts.BatchSize,
+		Timeout:                 timeout,
+		Concurrent:              opts.Concurrent,
+		BatchSize:               opts.BatchSize,
+		MaxBugfixIterations:     maxBugfixIterations,
+		MaxBugfixIterationsSet:  opts.MaxBugfixIterationsSet,
+		HandoffLeaseTTL:         handoffLeaseTTL,
+		DurableMemoryEnabled:    opts.DurableMemoryEnabled,
+		DurableMemoryEnabledSet: opts.DurableMemoryEnabledSet,
 	}
 }

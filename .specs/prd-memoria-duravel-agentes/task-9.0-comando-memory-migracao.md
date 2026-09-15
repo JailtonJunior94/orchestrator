@@ -18,15 +18,15 @@ A migração é um dos seis subcomandos e vem na mesma fatia porque compartilha 
 
 ## Subtarefas
 
-- [ ] 9.1 Criar o comando pai e registrá-lo em `cmd/ai_spec_harness/root.go`.
-- [ ] 9.2 Implementar `show`: fatos ativos por camada, com origem e contradições sinalizadas.
-- [ ] 9.3 Implementar `search` sobre o scan determinístico de 5.0.
-- [ ] 9.4 Implementar `export` produzindo artefato autocontido e portátil.
-- [ ] 9.5 Implementar `compact` invocando a política determinística de 3.0.
-- [ ] 9.6 Implementar `handoff`: estado, reivindicação e liberação do bastão de 4.0.
-- [ ] 9.7 Implementar `migrate` com backup verificável e recusa de reaplicação.
-- [ ] 9.8 Atualizar `docs/cli-schema.json` com o comando e todos os subcomandos e flags.
-- [ ] 9.9 Atualizar `docs/troubleshooting.md`.
+- [x] 9.1 Criar o comando pai e registrá-lo em `cmd/ai_spec_harness/root.go`.
+- [x] 9.2 Implementar `show`: fatos ativos por camada, com origem e contradições sinalizadas.
+- [x] 9.3 Implementar `search` sobre o scan determinístico de 5.0.
+- [x] 9.4 Implementar `export` produzindo artefato autocontido e portátil.
+- [x] 9.5 Implementar `compact` invocando a política determinística de 3.0.
+- [x] 9.6 Implementar `handoff`: estado, reivindicação e liberação do bastão de 4.0.
+- [x] 9.7 Implementar `migrate` com backup verificável e recusa de reaplicação.
+- [x] 9.8 Atualizar `docs/cli-schema.json` com o comando e todos os subcomandos e flags.
+- [x] 9.9 Atualizar `docs/troubleshooting.md`.
 
 ## Detalhes de Implementação
 
@@ -55,8 +55,8 @@ Nenhuma além das auto-carregadas (governance + linguagem).
 
 ## Testes da Tarefa
 
-- [ ] Testes unitários
-- [ ] Testes de integração
+- [x] Testes unitários
+- [ ] Testes de integração (nao aplicavel nesta fatia; integracao multi-processo e e2e sao escopo de 10.0 por techspec)
 
 <critical>SEMPRE CRIAR E EXECUTAR TESTES DA TAREFA ANTES DE CONSIDERAR A TAREFA COMO `done`</critical>
 

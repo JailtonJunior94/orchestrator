@@ -53,43 +53,43 @@ desconhecidos.
 
 ## Subtarefas
 
-- [ ] 8.1 Implementar o plugin de governança do OpenCode com o hook de **pré-ferramenta**, bloqueando
+- [x] 8.1 Implementar o plugin de governança do OpenCode com o hook de **pré-ferramenta**, bloqueando
       por **exceção** e delegando a decisão aos scripts canônicos — sem reimplementar lógica de gate.
-- [ ] 8.2 Redigir a mensagem da exceção como **instrução corretiva** (o que fazer em seguida), não como
+- [x] 8.2 Redigir a mensagem da exceção como **instrução corretiva** (o que fazer em seguida), não como
       log de erro: o modelo lê o texto e se adapta a ele.
-- [ ] 8.3 **Proibir explicitamente** o hook de permissão: nenhum registro dele no plugin, e gate de
+- [x] 8.3 **Proibir explicitamente** o hook de permissão: nenhum registro dele no plugin, e gate de
       varredura que reprova sua reintrodução, com comentário citando V-06.
-- [ ] 8.4 Implementar as **três camadas de custo** do plugin: filtro por ferramentas que mutam o
+- [x] 8.4 Implementar as **três camadas de custo** do plugin: filtro por ferramentas que mutam o
       repositório; um único `stat` por sessão para resolver a existência do validador; memoização por
       `(ferramenta, arquivos)`. O custo assintótico fica em um shell-out por arquivo distinto tocado,
       não por chamada de ferramenta.
-- [ ] 8.5 Implementar **timeout do validador como negação**, com teste dedicado que injeta um validador
+- [x] 8.5 Implementar **timeout do validador como negação**, com teste dedicado que injeta um validador
       lento e asserta bloqueio.
-- [ ] 8.6 Implementar a **bifurcação por modo** para validador ausente: orquestrado falha fechado;
+- [x] 8.6 Implementar a **bifurcação por modo** para validador ausente: orquestrado falha fechado;
       interativo avisa uma vez (e apenas uma vez) e segue.
-- [ ] 8.7 Cobrir os três pontos canônicos no plugin, com **apenas o de pré-ferramenta bloqueando**.
-- [ ] 8.8 Escrever o bloco `permission` no `opencode.json` com **padrões finos**, e gate que reprova
+- [x] 8.7 Cobrir os três pontos canônicos no plugin, com **apenas o de pré-ferramenta bloqueando**.
+- [x] 8.8 Escrever o bloco `permission` no `opencode.json` com **padrões finos**, e gate que reprova
       padrão total em ferramenta que precisa existir.
-- [ ] 8.9 **Proibir o valor "perguntar"** no bloco `permission` gerado, com gate de varredura sobre o
+- [x] 8.9 **Proibir o valor "perguntar"** no bloco `permission` gerado, com gate de varredura sobre o
       asset e sobre a saída do instalador.
-- [ ] 8.10 Implementar a **política de ambiente** no registro (`EnvPolicy`), sanitizando o ambiente do
+- [x] 8.10 Implementar a **política de ambiente** no registro (`EnvPolicy`), sanitizando o ambiente do
       **processo filho criado pelo harness** contra os interruptores conhecidos — flag de modo puro
       nunca passada, e as variáveis de desligamento removidas do ambiente do filho.
-- [ ] 8.11 Garantir que a sanitização **não toca no ambiente do usuário** e que o agente com `EnvPolicy`
+- [x] 8.11 Garantir que a sanitização **não toca no ambiente do usuário** e que o agente com `EnvPolicy`
       zero-value herda o ambiente **byte-idêntico** ao de hoje.
-- [ ] 8.12 Implementar o **waiter do sentinela** como componente próprio: caminho **único por sessão**,
+- [x] 8.12 Implementar o **waiter do sentinela** como componente próprio: caminho **único por sessão**,
       **removido antes do spawn** — sentinela de execução anterior faria o handshake passar com o plugin
       desligado.
-- [ ] 8.13 Encaixar o handshake no **único ponto correto do ciclo de vida**: **depois** da negociação do
+- [x] 8.13 Encaixar o handshake no **único ponto correto do ciclo de vida**: **depois** da negociação do
       protocolo, quando o subprocesso já carregou plugins, e **antes** do primeiro prompt. Falhar ali
       mata o processo sem que o modelo veja uma única palavra.
-- [ ] 8.14 Implementar o ponto de extensão no cliente de protocolo seguindo o precedente já existente no
+- [x] 8.14 Implementar o ponto de extensão no cliente de protocolo seguindo o precedente já existente no
       runner, para não churnar os fakes de teste.
-- [ ] 8.15 Fazer **instalação e verificação falharem ruidosamente** quando o runtime necessário ao plugin
+- [x] 8.15 Fazer **instalação e verificação falharem ruidosamente** quando o runtime necessário ao plugin
       estiver ausente (RF-23), com mensagem citando a dependência exata.
-- [ ] 8.16 Replicar sob o runtime ACP os **dois testes de interruptor** executados apenas no modo direto,
+- [x] 8.16 Replicar sob o runtime ACP os **dois testes de interruptor** executados apenas no modo direto,
       e **registrar o resultado** — obrigação declarada no PRD §Suposições e no `adr-004` §Riscos.
-- [ ] 8.17 Registrar a métrica de **sessões recusadas por pré-condição** na telemetria opt-in existente,
+- [x] 8.17 Registrar a métrica de **sessões recusadas por pré-condição** na telemetria opt-in existente,
       sem novo mecanismo de consentimento.
 
 ## Detalhes de Implementação
@@ -166,7 +166,7 @@ Nenhuma além das auto-carregadas (governance + linguagem).
 
 ## Testes da Tarefa
 
-- [ ] Testes unitários
+- [x] Testes unitários
   - Política de ambiente: sanitização remove cada interruptor conhecido; zero-value herda intacto;
     ambiente do pai inalterado.
   - Waiter do sentinela: caminho único por sessão; remoção antes do spawn; ausência de sinal aborta.
@@ -174,7 +174,7 @@ Nenhuma além das auto-carregadas (governance + linguagem).
   - Memoização por `(ferramenta, arquivos)` e filtro por ferramentas que mutam o repositório.
   - Timeout como negação; validador ausente por modo.
   - Falha ruidosa por runtime do plugin ausente (instalação e verificação).
-- [ ] Testes de integração
+- [x] Testes de integração
   - **Disparo simulado** (roda no CI, sem CLI instalado): o script instalado, executado com o contrato
     de entrada documentado, produz saída não-zero para entrada que viola governança.
   - **Disparo real sob ACP** com cliente de protocolo mínimo: bloqueio no nível superior e dentro de

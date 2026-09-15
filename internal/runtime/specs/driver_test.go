@@ -8,7 +8,7 @@ import (
 func TestParseDriverID(t *testing.T) {
 	t.Parallel()
 
-	validDrivers := []string{"claude", "codex", "copilot", "gemini"}
+	validDrivers := []string{"claude", "codex", "copilot", "opencode"}
 
 	for _, name := range validDrivers {
 		t.Run("valid/"+name, func(t *testing.T) {

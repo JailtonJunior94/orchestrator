@@ -110,15 +110,11 @@ func (c *Catalog) spawnNestedSession(ctx context.Context, p SpawnParams) (RunAge
 // resolveAgentSpec retorna o Spec adequado para o agente, baseado em Runtime.IDE declarado.
 // Fallback para Claude quando IDE não especificado.
 func (c *Catalog) resolveAgentSpec(agent agents.ResolvedAgent) specs.Spec {
-	switch agent.Runtime.IDE {
-	case "codex":
-		return specs.NewCatalog().Codex()
-	case "copilot":
-		return specs.NewCatalog().Copilot()
-	default:
-		// claude ou vazio → usar Claude (RFC-01.1)
+	spec, err := specs.NewCatalog().ResolveACPSpec(agent.Runtime.IDE)
+	if err != nil {
 		return specs.NewCatalog().Claude()
 	}
+	return spec
 }
 
 // generateSessionID gera um identificador de sessão único baseado no nome do agente,

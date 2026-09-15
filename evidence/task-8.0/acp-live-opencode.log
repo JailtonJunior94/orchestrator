@@ -1,0 +1,40 @@
+=== RUN   TestACPLive_OpenCode_PureKillSwitchHasNoEffectOnOrchestratedSession
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestACPLive_OpenCode_PureKillSwitchHasNoEffectOnOrchestratedSess3291528430/001
+Modo de instalacao: copy
+2 unknown ACP events skipped (kinds: available_commands_update, usage_update)
+    opencode_live_test.go:94: kill switch OPENCODE_PURE neutralized: events=21 cancel=none
+2026/09/11 09:13:23 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPLive_OpenCode_PureKillSwitchHasNoEffectOnOrchestratedSession (32.45s)
+=== RUN   TestACPLive_OpenCode_DisableProjectConfigKillSwitchHasNoEffectOnOrchestratedSession
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestACPLive_OpenCode_DisableProjectConfigKillSwitchHasNoEffectOn2470468890/001
+Modo de instalacao: copy
+2 unknown ACP events skipped (kinds: available_commands_update, usage_update)
+    opencode_live_test.go:98: kill switch OPENCODE_DISABLE_PROJECT_CONFIG neutralized: events=21 cancel=none
+2026/09/11 09:14:00 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPLive_OpenCode_DisableProjectConfigKillSwitchHasNoEffectOnOrchestratedSession (37.36s)
+=== RUN   TestACPLive_OpenCode_HandshakeSucceedsWithRealPlugin
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestACPLive_OpenCode_HandshakeSucceedsWithRealPlugin3052094348/001
+Modo de instalacao: copy
+2 unknown ACP events skipped (kinds: available_commands_update, usage_update)
+2026/09/11 09:14:21 INFO connection closed cause="peer connection closed"
+--- PASS: TestACPLive_OpenCode_HandshakeSucceedsWithRealPlugin (20.47s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/acp_live	90.843s

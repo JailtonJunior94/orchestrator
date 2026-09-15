@@ -19,13 +19,13 @@ Os sete eventos de domínio usam o dispatcher existente, não o enum fechado de 
 
 ## Subtarefas
 
-- [ ] 8.1 Definir os sete eventos de domínio satisfazendo `hooks.Event`: fato registrado, arquivado, promovido, contradição detectada, segredo redigido, compactação executada, bastão transferido.
-- [ ] 8.2 Definir constantes nomeadas para as chaves de métrica, para que erro de digitação não produza métrica separada.
-- [ ] 8.3 Emitir as métricas pelo mapa de campos extra de `events.MetricSet`.
-- [ ] 8.4 Injetar a seção de evidência antes da seção de métricas, com função de injeção seguindo o padrão existente de `report.go`.
-- [ ] 8.5 Estender `make test-validators` com um relatório contendo a seção nova, provando que os gates de `.agents/scripts/` continuam capturando corretamente.
-- [ ] 8.6 Adicionar campos de telemetria condicionalmente, seguindo o padrão de `internal/telemetry/acp.go`.
-- [ ] 8.7 Atualizar `docs/telemetry-feedback-cycle.md` e `docs/troubleshooting.md`.
+- [x] 8.1 Definir os sete eventos de domínio satisfazendo `hooks.Event`: fato registrado, arquivado, promovido, contradição detectada, segredo redigido, compactação executada, bastão transferido.
+- [x] 8.2 Definir constantes nomeadas para as chaves de métrica, para que erro de digitação não produza métrica separada.
+- [x] 8.3 Emitir as métricas pelo mapa de campos extra de `events.MetricSet`.
+- [x] 8.4 Injetar a seção de evidência antes da seção de métricas, com função de injeção seguindo o padrão existente de `report.go`.
+- [x] 8.5 Estender `make test-validators` com um relatório contendo a seção nova, provando que os gates de `.agents/scripts/` continuam capturando corretamente.
+- [x] 8.6 Adicionar campos de telemetria condicionalmente, seguindo o padrão de `internal/telemetry/acp.go`.
+- [x] 8.7 Atualizar `docs/telemetry-feedback-cycle.md` e `docs/troubleshooting.md`.
 
 ## Detalhes de Implementação
 
@@ -54,8 +54,8 @@ Nenhuma além das auto-carregadas (governance + linguagem).
 
 ## Testes da Tarefa
 
-- [ ] Testes unitários
-- [ ] Testes de integração
+- [x] Testes unitários
+- [x] Testes de integração
 
 <critical>SEMPRE CRIAR E EXECUTAR TESTES DA TAREFA ANTES DE CONSIDERAR A TAREFA COMO `done`</critical>
 

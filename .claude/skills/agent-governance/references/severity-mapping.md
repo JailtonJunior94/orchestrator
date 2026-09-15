@@ -22,14 +22,20 @@ diverge entre execuções. Esta referência fixa o mapeamento.
 |---|---|---|
 | `critical` | `critical` | `REJECTED` (bloqueante) |
 | `high`     | `major`    | `REJECTED` (bloqueante) |
-| `medium`   | `minor`    | `APPROVED_WITH_REMARKS` |
-| `low`      | `minor`    | `APPROVED_WITH_REMARKS` |
+| `medium`   | `minor`    | `APPROVED_WITH_REMARKS` (encerra o ciclo, RF-33) |
+| `low`      | `minor`    | `APPROVED_WITH_REMARKS` (encerra o ciclo, RF-33) |
 
 ## Regras
 
 1. `review` atribui a severidade de 4 níveis ao achado e, ao emitir o bug no formato
    `bug-schema.json`, traduz para o nível de 3 usando a tabela acima.
 2. `critical` e `high` são bloqueantes (`REJECTED`); `medium` e `low` viram remarks.
+   Remarks **encerram** o Ciclo de Aprovação (RF-33) quando nenhum achado é `high` ou `critical`:
+   `APPROVED_WITH_REMARKS` fecha a tarefa e os achados `medium`/`low` ficam registrados no relatório
+   como dívida declarada, visíveis e nunca apagados. Basta um achado `high` ou `critical` para o
+   veredito não encerrar e os achados realimentarem a rodada de correção. `APPROVED_WITH_REMARKS`
+   sem nenhum achado declarado **não encerra** (fail-closed): ausência de marcador pode ser prosa
+   não parseada, não prova de ausência de problema.
 3. `medium` e `low` colapsam ambos em `minor` no schema — preservar o nível original de 4 no campo
    de descrição/impacto do bug para não perder granularidade.
 4. `bugfix` interpreta `critical`/`major` como correção obrigatória no escopo; `minor` pode ser

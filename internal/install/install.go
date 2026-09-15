@@ -1,11 +1,13 @@
 package install
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
+	"reflect"
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
@@ -17,6 +19,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/platform"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/precondition"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
@@ -24,9 +27,9 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/version"
 )
 
-// _probeTimeout e o timeout maximo por CLI para probe de binario ACP.
-// Curto para nao violar RF-11 (bootstrap < 30s com N CLIs). ADR-024.
-const _probeTimeout = 3 * time.Second
+const probeTimeout = 3 * time.Second
+
+const codexTrustRPCTimeout = 5 * time.Second
 
 // VerifyState representa o estado de uma skill/agente apos verificacao.
 // ADR-019: file-first (le hash do disco, nao recalcula da fonte).
@@ -39,6 +42,8 @@ const (
 	VerifyStateMissing VerifyState = "missing"
 	// VerifyStateDrifted indica que o arquivo instalado diverge do esperado.
 	VerifyStateDrifted VerifyState = "drifted"
+	VerifyStateInert   VerifyState = "inert"
+	VerifyStateUnknown VerifyState = "unknown"
 )
 
 // VerifyKind classifica o tipo de item verificado.
@@ -49,16 +54,19 @@ const (
 	// VerifyKindSkill indica verificacao de uma skill de governanca.
 	VerifyKindSkill VerifyKind = "skill"
 	// VerifyKindBinary indica verificacao de disponibilidade do binario ACP por CLI.
-	VerifyKindBinary VerifyKind = "binary"
+	VerifyKindBinary       VerifyKind = "binary"
+	VerifyKindRuntime      VerifyKind = "runtime"
+	VerifyKindPrecondition VerifyKind = "precondition"
 )
 
 // VerifyItem representa o resultado de verificacao de uma skill ou binario para um agente.
 // ADR-024: campo Kind distingue skill vs binario ACP.
 type VerifyItem struct {
-	Tool  skills.Tool
-	Skill string
-	State VerifyState
-	Kind  VerifyKind // "skill" (default) ou "binary" (ADR-024 RI-04)
+	Tool   skills.Tool
+	Skill  string
+	State  VerifyState
+	Kind   VerifyKind
+	Remedy string
 }
 
 // Service orquestra o fluxo de instalacao de governanca.
@@ -201,6 +209,20 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 		return fmt.Errorf("o diretorio alvo nao pode ser o proprio repositorio de regras")
 	}
 
+	var tracker *writeTracker
+	if !opts.DryRun {
+		tracker = newWriteTracker(s.fs, projectDir)
+		previousFS, previousAdapters, previousCtxgen := s.fs, s.adapters, s.ctxgen
+		s.fs = tracker
+		s.adapters = adapters.NewGenerator(tracker, s.printer)
+		s.ctxgen = contextgen.NewGenerator(tracker, s.printer)
+		defer func() {
+			s.fs = previousFS
+			s.adapters = previousAdapters
+			s.ctxgen = previousCtxgen
+		}()
+	}
+
 	linkMode := opts.LinkMode
 	plat := platform.NewDetector().Current()
 	if !plat.SupportsSymlinks() && linkMode == skills.LinkSymlink {
@@ -221,7 +243,7 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 
 	// 2. Instalar adaptadores por ferramenta
 	for _, tool := range opts.Tools {
-		if err := s.installTool(sourceDir, projectDir, tool, allSkills, linkMode, opts.DryRun, opts.CodexProfile); err != nil {
+		if err := s.installTool(sourceDir, projectDir, tool, allSkills, linkMode, opts.DryRun, opts.CodexProfile, opts.Model); err != nil {
 			return fmt.Errorf("instalar %s: %w", tool, err)
 		}
 	}
@@ -239,6 +261,9 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 		if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".agents", "hooks")); err != nil {
 			s.printer.Warn("falha ao copiar hooks canonicos: %v", err)
 		}
+		if err := s.copyToolValidationHooks(sourceDir, projectDir, filepath.Join(".agents", "hooks")); err != nil {
+			s.printer.Warn("falha ao copiar validadores canonicos: %v", err)
+		}
 	}
 
 	// 2.6 Instalar vendor canonico .agents/lib/ (libs shell consumidas pelos
@@ -252,7 +277,7 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 
 	// 2.7 Instalar validadores de evidencia canonicos em .agents/scripts/ (tool-neutro,
 	// SEMPRE). Garante paridade cross-CLI: a cascata `.agents/scripts/` -> `.claude/scripts/`
-	// -> `scripts/` resolve os gates mesmo em projetos sem Claude (so Gemini/Codex/Copilot).
+	// -> `scripts/` resolve os gates mesmo em projetos sem Claude (so Codex/Copilot/OpenCode).
 	if !opts.DryRun {
 		if err := s.copyAgentsScripts(sourceDir, projectDir); err != nil {
 			s.printer.Warn("falha ao copiar .agents/scripts/: %v", err)
@@ -271,17 +296,19 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 	if !opts.DryRun {
 		checksums := s.computeChecksums(sourceDir, allSkills)
 		mf := &manifest.Manifest{
-			Version:       version.NewProvider().ResolveFromExecutable(),
-			CreatedAt:     time.Now(),
-			UpdatedAt:     time.Now(),
-			SourceDir:     sourceDir,
-			LinkMode:      linkMode,
-			Tools:         opts.Tools,
-			Langs:         opts.Langs,
-			Skills:        allSkills,
-			Checksums:     checksums,
-			CodexProfile:  opts.CodexProfile,
-			SkillVersions: s.collectSkillVersions(sourceDir, allSkills),
+			Version:        version.NewProvider().ResolveFromExecutable(),
+			CreatedAt:      time.Now(),
+			UpdatedAt:      time.Now(),
+			SourceDir:      sourceDir,
+			LinkMode:       linkMode,
+			Tools:          opts.Tools,
+			Langs:          opts.Langs,
+			Skills:         allSkills,
+			Checksums:      checksums,
+			CodexProfile:   opts.CodexProfile,
+			SkillVersions:  s.collectSkillVersions(sourceDir, allSkills),
+			InstalledFiles: tracker.createdPaths(),
+			MergedFiles:    tracker.mergedPaths(),
 		}
 		if err := s.manifest.Save(projectDir, mf); err != nil {
 			return fmt.Errorf("salvar manifesto: %w", err)
@@ -394,7 +421,26 @@ func (s *Service) Verify(opts config.InstallOptions) ([]VerifyItem, error) {
 			State: binaryState,
 			Kind:  VerifyKindBinary,
 		})
+
+		if tool == skills.ToolOpenCode {
+			runtimeState := VerifyStateCurrent
+			if _, lookErr := s.lookPather.LookPath(specs.OpenCodePluginRuntime); lookErr != nil {
+				runtimeState = VerifyStateMissing
+			}
+			items = append(items, VerifyItem{
+				Tool:  tool,
+				Skill: "governance-plugin-runtime(" + specs.OpenCodePluginRuntime + ")",
+				State: runtimeState,
+				Kind:  VerifyKindRuntime,
+			})
+		}
+
+		items = append(items, s.verifyGovernanceArtifacts(absSource, installDir, tool)...)
+
+		items = append(items, s.verifyPreconditions(tool, installDir, opts.CheckCodexTrust)...)
 	}
+
+	items = append(items, s.verifyCanonicalValidators(absSource, installDir)...)
 
 	// Se nenhuma tool foi determinada, verificar skills base (sem items de binary).
 	if len(tools) == 0 {
@@ -436,7 +482,7 @@ func (s *Service) sourceSkills(sourceDir string, langs []skills.Lang) []string {
 
 	out := make([]string, 0, len(entries))
 	for _, entry := range entries {
-		if !entry.IsDir() || !NewHelper().shouldProcessSkill(entry.Name(), langs) {
+		if !entry.IsDir() || !NewHelper().skillSelectedForLangs(entry.Name(), langs) {
 			continue
 		}
 		// Reconcilia com upgrade.checkSkills: so e skill o diretorio que
@@ -470,18 +516,11 @@ func (s *Service) verifyToolSkills(sourceDir, installDir string, tool skills.Too
 // specForTool retorna a Spec do runtime ACP para a ferramenta, ou zero-value e false.
 // ADR-024: mapeamento canonico Tool -> Spec para probe de binario.
 func (r1 *Helper) specForTool(tool skills.Tool) (specs.Spec, bool) {
-	switch tool {
-	case skills.ToolClaude:
-		return specs.NewCatalog().Claude(), true
-	case skills.ToolCodex:
-		return specs.NewCatalog().Codex(), true
-	case skills.ToolGemini:
-		return specs.NewCatalog().Gemini(), true
-	case skills.ToolCopilot:
-		return specs.NewCatalog().Copilot(), true
-	default:
+	spec, err := specs.NewCatalog().ResolveACPSpec(string(tool))
+	if err != nil {
 		return specs.Spec{}, false
 	}
+	return spec, true
 }
 
 // probeBinaryAvailable testa se o binario ACP de uma tool esta disponivel.
@@ -492,17 +531,87 @@ func (s *Service) probeBinaryAvailable(tool skills.Tool) VerifyState {
 	if !ok {
 		return VerifyStateMissing
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), _probeTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
 	defer cancel()
-	probe.
-		// Limpar cache entre chamadas de verify para garantir resultado fresco.
-		NewCatalog().
-		ResetCache()
-	_, err := probe.NewCatalog().EnsureAvailable(ctx, spec, s.lookPather)
+	_, err := probe.NewCatalog().Resolve(ctx, spec, s.lookPather)
 	if err != nil {
 		return VerifyStateMissing
 	}
 	return VerifyStateCurrent
+}
+
+func (s *Service) verifyPreconditions(tool skills.Tool, installDir string, checkCodexTrust bool) []VerifyItem {
+	agent, err := specs.NewCatalog().AgentByID(string(tool))
+	if err != nil {
+		return nil
+	}
+
+	absInstallDir, err := filepath.Abs(installDir)
+	if err != nil {
+		absInstallDir = installDir
+	}
+
+	var codexCheck precondition.CodexTrustChecker
+	if checkCodexTrust {
+		required := enforcementNativeKeys(agent.Enforcement())
+		codexCheck = func() (precondition.CodexTrustReport, error) {
+			client := precondition.NewCodexAppServerClient("", absInstallDir)
+			ctx, cancel := context.WithTimeout(context.Background(), codexTrustRPCTimeout)
+			defer cancel()
+			return precondition.EvaluateCodexTrustedHash(ctx, client, codexTrustRPCTimeout, required)
+		}
+	}
+
+	configPath, _ := precondition.DefaultCopilotConfigPath()
+	reader := precondition.NewFileCopilotConfigReader(configPath)
+
+	items := make([]VerifyItem, 0, len(agent.Enforcement().Preconditions()))
+	for _, pre := range agent.Enforcement().Preconditions() {
+		items = append(items, preconditionItems(tool, pre, precondition.Evaluate(pre, absInstallDir, reader, codexCheck))...)
+	}
+	return items
+}
+
+func preconditionItems(tool skills.Tool, pre specs.EnforcementPrecondition, report precondition.Report) []VerifyItem {
+	if len(report.Points) == 0 {
+		return []VerifyItem{{
+			Tool:   tool,
+			Skill:  "precondition(" + pre.Kind().String() + ")",
+			State:  preconditionVerifyState(report.State),
+			Kind:   VerifyKindPrecondition,
+			Remedy: report.Remedy,
+		}}
+	}
+	items := make([]VerifyItem, 0, len(report.Points))
+	for _, point := range report.Points {
+		items = append(items, VerifyItem{
+			Tool:   tool,
+			Skill:  "precondition(" + pre.Kind().String() + ":" + point.EventName + ")",
+			State:  preconditionVerifyState(point.State),
+			Kind:   VerifyKindPrecondition,
+			Remedy: report.Remedy,
+		})
+	}
+	return items
+}
+
+func preconditionVerifyState(state specs.PreconditionState) VerifyState {
+	switch state {
+	case specs.PreconditionInert:
+		return VerifyStateInert
+	case specs.PreconditionUnknown:
+		return VerifyStateUnknown
+	default:
+		return VerifyStateCurrent
+	}
+}
+
+func enforcementNativeKeys(enf specs.Enforcement) []string {
+	keys := make([]string, 0, len(enf.Coverage()))
+	for _, cov := range enf.Coverage() {
+		keys = append(keys, cov.NativeKey())
+	}
+	return keys
 }
 
 // probeBinariesWarn executa probe por CLI e emite Warn para binarios ausentes.
@@ -513,7 +622,7 @@ func (s *Service) probeBinariesWarn(tools []skills.Tool) {
 		if !ok {
 			continue
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), _probeTimeout)
+		ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
 		probe.NewCatalog().
 			ResetCache()
 		_, err := probe.NewCatalog().EnsureAvailable(ctx, spec, s.lookPather)
@@ -643,18 +752,18 @@ func (s *Service) installBaseSkills(sourceDir, projectDir string, skillList []st
 	return nil
 }
 
-func (s *Service) installTool(sourceDir, projectDir string, tool skills.Tool, skillList []string, mode skills.LinkMode, dryRun bool, codexProfile string) error {
+func (s *Service) installTool(sourceDir, projectDir string, tool skills.Tool, skillList []string, mode skills.LinkMode, dryRun bool, codexProfile, model string) error {
 	s.printer.Step("Instalando %s...", tool)
 
 	switch tool {
 	case skills.ToolClaude:
 		return s.installClaude(sourceDir, projectDir, skillList, mode, dryRun)
-	case skills.ToolGemini:
-		return s.installGemini(sourceDir, projectDir, dryRun)
 	case skills.ToolCodex:
 		return s.installCodex(sourceDir, projectDir, skillList, codexProfile, dryRun)
 	case skills.ToolCopilot:
 		return s.installCopilot(sourceDir, projectDir, skillList, mode, dryRun)
+	case skills.ToolOpenCode:
+		return s.installOpenCode(sourceDir, projectDir, dryRun, model)
 	}
 	return nil
 }
@@ -714,6 +823,7 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 		s.printer.DryRun("copiar .claude/scripts/validate-review-evidence.sh")
 		s.printer.DryRun("copiar .claude/hooks/validate-governance.sh")
 		s.printer.DryRun("copiar .claude/hooks/validate-preload.sh")
+		s.printer.DryRun("copiar .claude/hooks/validate-session-end.sh")
 		s.printer.DryRun("copiar scripts/lib/parse-hook-input.sh")
 		s.printer.DryRun("copiar scripts/lib/check-invocation-depth.sh")
 		s.printer.DryRun("configurar hooks PreToolUse e PostToolUse em .claude/settings.local.json")
@@ -756,22 +866,10 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 		}
 	}
 
-	hookDir := filepath.Join(projectDir, ".claude", "hooks")
-	govHook := filepath.Join(sourceDir, ".claude", "hooks", "validate-governance.sh")
-	if s.fs.Exists(govHook) {
-		if err := s.fs.CopyFile(govHook, filepath.Join(hookDir, "validate-governance.sh")); err != nil {
-			return err
-		}
+	if err := s.copyToolValidationHooks(sourceDir, projectDir, filepath.Join(".claude", "hooks")); err != nil {
+		return err
 	}
 
-	preloadHook := filepath.Join(sourceDir, ".claude", "hooks", "validate-preload.sh")
-	if s.fs.Exists(preloadHook) {
-		if err := s.fs.CopyFile(preloadHook, filepath.Join(hookDir, "validate-preload.sh")); err != nil {
-			return err
-		}
-	}
-
-	// Hooks de enforcement programatico do orquestrador (execute-all-tasks + execute-task).
 	if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".claude", "hooks")); err != nil {
 		return err
 	}
@@ -790,126 +888,62 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 		}
 	}
 
-	agentsMD := filepath.Join(sourceDir, "AGENTS.md")
-	if s.fs.Exists(agentsMD) {
-		if err := s.fs.CopyFile(agentsMD, filepath.Join(projectDir, "AGENTS.md")); err != nil {
-			return err
-		}
+	if err := s.writeMergedMarkdownFromSource(filepath.Join(sourceDir, "AGENTS.md"), filepath.Join(projectDir, "AGENTS.md")); err != nil {
+		return err
 	}
 
-	settingsFile := filepath.Join(projectDir, ".claude", "settings.local.json")
-	if !s.fs.Exists(settingsFile) {
-		if err := s.fs.WriteFile(settingsFile, []byte(NewHelper().defaultClaudeSettings())); err != nil {
-			return err
-		}
-	} else if data, err := s.fs.ReadFile(settingsFile); err == nil {
-		content := string(data)
-		if !strings.Contains(content, "validate-governance.sh") || !strings.Contains(content, "validate-preload.sh") {
-			s.printer.Warn(".claude/settings.local.json ja existe. Adicione os hooks manualmente para validate-preload e validate-governance.")
-		}
+	if err := s.writeClaudeSettings(projectDir); err != nil {
+		return err
 	}
 
 	s.adapters.GenerateClaude(sourceDir, projectDir)
 	return nil
 }
 
-func (s *Service) installGemini(sourceDir, projectDir string, dryRun bool) error {
-	cmdDir := filepath.Join(projectDir, ".gemini", "commands")
-	if dryRun {
-		s.printer.DryRun("mkdir -p %s", cmdDir)
-		s.printer.DryRun("gerar .gemini/commands/*.toml via adaptadores")
-		s.printer.DryRun("gerar .gemini/agents/*.md via adaptadores")
-		s.printer.DryRun("copiar .gemini/hooks/validate-preload.sh")
-		s.printer.DryRun("copiar .gemini/hooks/validate-governance.sh")
-		s.printer.DryRun("copiar GEMINI.md")
-		return nil
+func (s *Service) writeClaudeSettings(projectDir string) error {
+	settingsFile := filepath.Join(projectDir, ".claude", "settings.local.json")
+
+	var existing []byte
+	if s.fs.Exists(settingsFile) {
+		data, err := s.fs.ReadFile(settingsFile)
+		if err != nil {
+			return err
+		}
+		existing = data
 	}
 
-	if err := s.fs.MkdirAll(cmdDir); err != nil {
+	if len(bytes.TrimSpace(existing)) == 0 {
+		return s.fs.WriteFile(settingsFile, []byte(NewHelper().defaultClaudeSettings()))
+	}
+
+	merged, err := NewHelper().mergeClaudeSettings(existing)
+	if err != nil {
+		return fmt.Errorf("merge .claude/settings.local.json: %w", err)
+	}
+	if err := s.fs.WriteFile(settingsFile, merged); err != nil {
 		return err
 	}
-	s.adapters.GenerateGemini(sourceDir, projectDir)
-	s.adapters.GenerateGeminiAgents(sourceDir, projectDir)
-
-	hookDir := filepath.Join(projectDir, ".gemini", "hooks")
-	geminiPreload := filepath.Join(sourceDir, ".gemini", "hooks", "validate-preload.sh")
-	if s.fs.Exists(geminiPreload) {
-		if err := s.fs.MkdirAll(hookDir); err != nil {
-			return err
-		}
-		if err := s.fs.CopyFile(geminiPreload, filepath.Join(hookDir, "validate-preload.sh")); err != nil {
-			return err
-		}
-	}
-
-	geminiGovernance := filepath.Join(sourceDir, ".gemini", "hooks", "validate-governance.sh")
-	if s.fs.Exists(geminiGovernance) {
-		if err := s.fs.MkdirAll(hookDir); err != nil {
-			return err
-		}
-		if err := s.fs.CopyFile(geminiGovernance, filepath.Join(hookDir, "validate-governance.sh")); err != nil {
-			return err
-		}
-	}
-
-	if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".gemini", "hooks")); err != nil {
-		return err
-	}
-
-	geminiSettings := filepath.Join(projectDir, ".gemini", "settings.json")
-	if !s.fs.Exists(geminiSettings) {
-		if err := s.fs.WriteFile(geminiSettings, []byte(NewHelper().defaultGeminiSettings())); err != nil {
-			return err
-		}
-	} else if data, err := s.fs.ReadFile(geminiSettings); err == nil {
-		if !strings.Contains(string(data), "validate-preload.sh") {
-			s.printer.Warn(".gemini/settings.json ja existe. Adicione os hooks BeforeTool/AfterAgent manualmente (validate-preload, validate-governance).")
-		}
-	}
-
-	geminiMD := filepath.Join(sourceDir, "GEMINI.md")
-	if s.fs.Exists(geminiMD) {
-		if err := s.fs.CopyFile(geminiMD, filepath.Join(projectDir, "GEMINI.md")); err != nil {
-			return err
-		}
-	}
-
+	s.trackMerged(settingsFile)
 	return nil
 }
 
-// _orchestratorHooks lista hooks de enforcement programatico do execute-all-tasks/execute-task.
-// Distribuidos para todos os tools (.claude, .gemini, .codex, .github) para permitir
-// invocacao consistente independente de qual CLI o usuario esteja rodando.
-//
-// O subagent-stop-wrapper.sh eh especifico do Claude Code (registrado em
-// settings.local.json como SubagentStop hook) mas distribuido para todos os
-// tools como utilitario invocavel.
-var _orchestratorHooks = []string{
+var orchestratorHooks = []string{
 	"post-execute-task.sh",
 	"pre-execute-all-tasks.sh",
 	"post-wave.sh",
 	"subagent-stop-wrapper.sh",
 }
 
-// _agentsScriptsFiles lista validadores e gates canonicos em .agents/scripts/.
-// Sao tool-neutros e instalados SEMPRE (independente dos tools selecionados), pois a
-// cascata de resolucao das skills e `.agents/scripts/` -> `.claude/scripts/` -> `scripts/`.
-// Instalar em .agents/scripts/ garante paridade: um projeto so-Gemini/Codex/Copilot tem os
-// mesmos gates de evidencia E de descoberta cirurgica que um projeto Claude.
-var _agentsScriptsFiles = []string{
-	// Validadores de evidencia (legados).
+var agentsScriptsFiles = []string{
 	"validate-task-evidence.sh",
 	"validate-bugfix-evidence.sh",
 	"validate-refactor-evidence.sh",
 	"validate-review-evidence.sh",
-	// Gates de descoberta cirurgica (production-proof inegociavel).
-	// hook-prereq-gate.sh e chamado pelos hooks PreToolUse dos 3 CLIs e orquestra
-	// validate-skill-prerequisites + resolve-references para emitir guidance
-	// cirurgica e bloquear quando a skill da stack tocada nao esta presente.
 	"hook-prereq-gate.sh",
 	"resolve-references.sh",
 	"validate-skill-prerequisites.sh",
 	"validate-governance-references.sh",
+	"validate-session-end.sh",
 }
 
 // copyAgentsScripts copia os validadores canonicos de evidencia para .agents/scripts/ do
@@ -920,7 +954,7 @@ func (s *Service) copyAgentsScripts(sourceDir, projectDir string) error {
 	primarySrc := filepath.Join(sourceDir, ".agents", "scripts")
 	fallbackSrc := filepath.Join(sourceDir, ".claude", "scripts")
 
-	for _, name := range _agentsScriptsFiles {
+	for _, name := range agentsScriptsFiles {
 		src := filepath.Join(primarySrc, name)
 		if !s.fs.Exists(src) {
 			src = filepath.Join(fallbackSrc, name)
@@ -942,10 +976,7 @@ func (s *Service) copyAgentsScripts(sourceDir, projectDir string) error {
 	return nil
 }
 
-// _agentsLibFiles lista shell libs vendoradas em .agents/lib/ que skills e hooks
-// consomem via cascata `.agents/lib/` -> `scripts/lib/`. Distribuir o vendor
-// canonico evita dependencia exclusiva do mirror legado scripts/lib/.
-var _agentsLibFiles = []string{
+var agentsLibFiles = []string{
 	"check-invocation-depth.sh",
 	"parse-hook-input.sh",
 }
@@ -957,7 +988,7 @@ func (s *Service) copyAgentsLib(sourceDir, projectDir string) error {
 	dstDir := filepath.Join(projectDir, ".agents", "lib")
 	srcDir := filepath.Join(sourceDir, ".agents", "lib")
 
-	for _, lib := range _agentsLibFiles {
+	for _, lib := range agentsLibFiles {
 		src := filepath.Join(srcDir, lib)
 		if !s.fs.Exists(src) {
 			continue
@@ -976,23 +1007,21 @@ func (s *Service) copyAgentsLib(sourceDir, projectDir string) error {
 	return nil
 }
 
-// _toolValidationHooks lista hooks de validacao por-tool (preload + governanca pos-edicao).
-// Distribuidos opcionalmente para Codex/Gemini/Copilot quando presentes na fonte;
-// Claude tem caminho dedicado em installClaude por suportar PreToolUse/PostToolUse nativos.
-var _toolValidationHooks = []string{
+var toolValidationHooks = []string{
 	"validate-preload.sh",
 	"validate-governance.sh",
+	"validate-session-end.sh",
 }
 
 // copyToolValidationHooks copia hooks de validacao especificos do tool (preload e
-// governanca) quando existirem na fonte. Mantem paridade entre Claude/Codex/Gemini/Copilot.
+// governanca) quando existirem na fonte. Mantem paridade entre Claude/Codex/Copilot.
 // Falha silenciosamente para hooks ausentes — cada tool pode adotar apenas o subset
 // que faz sentido para sua mecanica de invocacao.
 func (s *Service) copyToolValidationHooks(sourceDir, projectDir, toolHookDir string) error {
 	dstDir := filepath.Join(projectDir, toolHookDir)
 	srcDir := filepath.Join(sourceDir, toolHookDir)
 
-	for _, hook := range _toolValidationHooks {
+	for _, hook := range toolValidationHooks {
 		src := filepath.Join(srcDir, hook)
 		if !s.fs.Exists(src) {
 			continue
@@ -1018,7 +1047,7 @@ func (s *Service) copyOrchestratorHooks(sourceDir, projectDir, toolHookDir strin
 	dstDir := filepath.Join(projectDir, toolHookDir)
 	srcDir := filepath.Join(sourceDir, toolHookDir)
 
-	for _, hook := range _orchestratorHooks {
+	for _, hook := range orchestratorHooks {
 		src := filepath.Join(srcDir, hook)
 		if !s.fs.Exists(src) {
 			continue
@@ -1040,7 +1069,7 @@ func (s *Service) copyOrchestratorHooks(sourceDir, projectDir, toolHookDir strin
 	return nil
 }
 
-var _codexPlanningSkills = map[string]bool{
+var codexPlanningSkills = map[string]bool{
 	"analyze-project":                true,
 	"create-prd":                     true,
 	"create-technical-specification": true,
@@ -1050,7 +1079,7 @@ var _codexPlanningSkills = map[string]bool{
 func (r1 *Helper) filterCodexSkills(skillList []string) []string {
 	out := make([]string, 0, len(skillList))
 	for _, s := range skillList {
-		if !_codexPlanningSkills[s] {
+		if !codexPlanningSkills[s] {
 			out = append(out, s)
 		}
 	}
@@ -1076,14 +1105,21 @@ func (s *Service) installCodex(sourceDir, projectDir string, skillList []string,
 		list = NewHelper().filterCodexSkills(skillList)
 	}
 
-	content := s.adapters.BuildCodexConfig(list)
-	content += NewHelper().codexGovernanceTOML()
-	if err := s.fs.WriteFile(filepath.Join(codexDir, "config.toml"), []byte(content)); err != nil {
+	helper := NewHelper()
+	content := helper.codexGovernancePreambleTOML()
+	content += s.adapters.BuildCodexConfig(list)
+	content += helper.codexGovernanceHooksTOML()
+
+	configPath := filepath.Join(codexDir, "config.toml")
+	merged := false
+	if existing, err := s.fs.ReadFile(configPath); err == nil {
+		content, merged = contextgen.MergeCodexInstallConfig(content, string(existing))
+	}
+	if err := s.fs.WriteFile(configPath, []byte(content)); err != nil {
 		return err
 	}
-
-	if err := s.fs.WriteFile(filepath.Join(codexDir, "hooks.json"), []byte(NewHelper().defaultCodexHooks())); err != nil {
-		return err
+	if merged {
+		s.trackMerged(configPath)
 	}
 
 	s.adapters.GenerateCodexAgents(sourceDir, projectDir)
@@ -1149,12 +1185,28 @@ func (s *Service) installCopilot(sourceDir, projectDir string, skillList []strin
 		if err := s.copyOrchestratorHooks(sourceDir, projectDir, filepath.Join(".github", "hooks")); err != nil {
 			return err
 		}
-		governance := filepath.Join(projectDir, ".github", "hooks", "governance.json")
-		if !s.fs.Exists(governance) {
-			if err := s.fs.WriteFile(governance, []byte(NewHelper().defaultCopilotHooks())); err != nil {
+		governanceHooks := upgrade.NewHelper().CopilotGovernanceHooksPath(projectDir)
+		if _, err := upgrade.NewHelper().RepairCopilotGovernanceHooks(s.fs, projectDir); err != nil {
+			return err
+		}
+		s.trackInstalled(governanceHooks)
+		settings := filepath.Join(projectDir, ".github", "settings.json")
+		var existing []byte
+		if s.fs.Exists(settings) {
+			data, err := s.fs.ReadFile(settings)
+			if err != nil {
 				return err
 			}
+			existing = data
 		}
+		merged, err := NewHelper().mergeCopilotSettings(existing)
+		if err != nil {
+			return fmt.Errorf("merge Copilot repository settings: %w", err)
+		}
+		if err := s.fs.WriteFile(settings, merged); err != nil {
+			return err
+		}
+		s.trackMerged(settings)
 	} else {
 		s.printer.DryRun("gerar .github/agents/*.agent.md via adaptadores")
 		s.printer.DryRun("copiar .github/hooks/{validate-preload,validate-governance,post-execute-task,pre-execute-all-tasks,post-wave}.sh")
@@ -1163,29 +1215,104 @@ func (s *Service) installCopilot(sourceDir, projectDir string, skillList []strin
 	return nil
 }
 
-func (r1 *Helper) shouldProcessSkill(skillName string, langFilter []skills.Lang) bool {
-	if len(langFilter) == 0 {
-		return true
+var ErrOpenCodePluginRuntimeMissing = fmt.Errorf("opencode governance plugin runtime %q not found on PATH — install it before installing/verifying the opencode agent", specs.OpenCodePluginRuntime)
+
+var openCodeRequiredTools = []string{"bash", "edit", "write", "multiedit", "patch"}
+
+var openCodePermissionFactory = specs.DefaultOpenCodePermission
+
+func (s *Service) installOpenCode(sourceDir, projectDir string, dryRun bool, model string) error {
+	if _, err := s.lookPather.LookPath(specs.OpenCodePluginRuntime); err != nil {
+		return ErrOpenCodePluginRuntimeMissing
 	}
 
-	langSkills := map[string]bool{
-		"go-implementation":            true,
-		"object-calisthenics-go":       true,
-		"node-implementation":          true,
-		"python-implementation":        true,
-		"dotnet-csharp-implementation": true,
-	}
-	if !langSkills[skillName] {
-		return true
+	pluginDir := filepath.Join(projectDir, ".opencode", "plugin")
+	configPath := filepath.Join(projectDir, specs.OpenCodeConfigFileName)
+
+	if dryRun {
+		s.printer.DryRun("mkdir -p %s", pluginDir)
+		s.printer.DryRun("merge permission block into %s", configPath)
+		return nil
 	}
 
-	allowed := make(map[string]bool)
-	for _, lang := range langFilter {
-		for _, skill := range skills.NewCatalog().LangSkills([]skills.Lang{lang}) {
-			allowed[skill] = true
+	if err := s.fs.MkdirAll(pluginDir); err != nil {
+		return err
+	}
+
+	sourcePluginDir := filepath.Join(sourceDir, ".opencode", "plugin")
+	if s.fs.IsDir(sourcePluginDir) {
+		if err := s.fs.CopyDir(sourcePluginDir, pluginDir); err != nil {
+			return err
 		}
 	}
-	return allowed[skillName]
+
+	var existing []byte
+	if s.fs.Exists(configPath) {
+		data, err := s.fs.ReadFile(configPath)
+		if err != nil {
+			return err
+		}
+		existing = data
+	}
+
+	permission := openCodePermissionFactory()
+	if err := specs.ValidatePermissionBlock(permission, openCodeRequiredTools...); err != nil {
+		return fmt.Errorf("opencode permission block: %w", err)
+	}
+
+	merged, err := specs.MergeOpenCodeConfig(existing, permission, model)
+	if err != nil {
+		return err
+	}
+	if err := specs.ValidatePermissionBlock(decodeWrittenPermission(merged), openCodeRequiredTools...); err != nil {
+		return fmt.Errorf("opencode permission block written to disk: %w", err)
+	}
+	if err := s.fs.WriteFile(configPath, merged); err != nil {
+		return err
+	}
+	s.trackMerged(configPath)
+	return nil
+}
+
+func (s *Service) trackInstalled(path string) {
+	if tracker, ok := s.fs.(*writeTracker); ok {
+		tracker.MarkInstalled(path)
+	}
+}
+
+func (s *Service) trackMerged(path string) {
+	if tracker, ok := s.fs.(*writeTracker); ok {
+		tracker.MarkMerged(path)
+	}
+}
+
+func decodeWrittenPermission(configBytes []byte) map[string]any {
+	var doc map[string]any
+	if err := json.Unmarshal(configBytes, &doc); err != nil {
+		return nil
+	}
+	perm, _ := doc["permission"].(map[string]any)
+	return perm
+}
+
+var langImplementationSkills = map[string]bool{
+	"go-implementation":            true,
+	"object-calisthenics-go":       true,
+	"node-implementation":          true,
+	"python-implementation":        true,
+	"dotnet-csharp-implementation": true,
+}
+
+func (r1 *Helper) skillSelectedForLangs(skillName string, langFilter []skills.Lang) bool {
+	if !langImplementationSkills[skillName] {
+		return true
+	}
+	for _, selected := range skills.NewCatalog().LangSkills(langFilter) {
+		if selected == skillName {
+			return true
+		}
+	}
+	return false
 }
 
 func (r1 *Helper) defaultClaudeSettings() string {
@@ -1193,7 +1320,7 @@ func (r1 *Helper) defaultClaudeSettings() string {
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Bash|Edit|Write|NotebookEdit|apply_patch",
         "hooks": [
           {
             "type": "command",
@@ -1204,7 +1331,7 @@ func (r1 *Helper) defaultClaudeSettings() string {
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
+        "matcher": "Bash|Edit|Write|NotebookEdit|apply_patch",
         "hooks": [
           {
             "type": "command",
@@ -1223,46 +1350,13 @@ func (r1 *Helper) defaultClaudeSettings() string {
           }
         ]
       }
-    ]
-  }
-}
-`
-}
-
-// defaultGeminiSettings devolve o conteudo de .gemini/settings.json com hooks nativos
-// 2026 (BeforeTool/AfterAgent) apontando para os validadores compartilhados. Paridade
-// com Claude: preload de governanca antes de editar, validacao apos editar.
-func (r1 *Helper) defaultGeminiSettings() string {
-	return `{
-  "hooks": {
-    "BeforeTool": [
-      {
-        "matcher": "write_file|replace|run_shell_command",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .gemini/hooks/validate-preload.sh"
-          }
-        ]
-      }
     ],
-    "AfterTool": [
-      {
-        "matcher": "write_file|replace",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .gemini/hooks/validate-governance.sh"
-          }
-        ]
-      }
-    ],
-    "AfterAgent": [
+    "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bash .gemini/hooks/subagent-stop-wrapper.sh"
+            "command": "bash .claude/hooks/validate-session-end.sh"
           }
         ]
       }
@@ -1272,82 +1366,195 @@ func (r1 *Helper) defaultGeminiSettings() string {
 `
 }
 
-// defaultCopilotHooks devolve o conteudo de .github/hooks/governance.json no formato
-// nativo do Copilot CLI 2026 (version:1, hooks.preToolUse/postToolUse/stop) apontando
-// para os validadores compartilhados. Paridade com Claude/Gemini.
+func (r1 *Helper) mergeClaudeSettings(existing []byte) ([]byte, error) {
+	settings := map[string]any{}
+	if len(existing) > 0 {
+		if err := json.Unmarshal(existing, &settings); err != nil {
+			return nil, err
+		}
+	}
+
+	var governance struct {
+		Hooks map[string][]any `json:"hooks"`
+	}
+	if err := json.Unmarshal([]byte(r1.defaultClaudeSettings()), &governance); err != nil {
+		return nil, err
+	}
+
+	original, hadHooks := settings["hooks"]
+	hooks, ok := original.(map[string]any)
+	if !ok {
+		if hadHooks {
+			return nil, fmt.Errorf("hooks must be an object")
+		}
+		hooks = map[string]any{}
+	}
+
+	merged := make(map[string]any, len(hooks)+len(governance.Hooks))
+	for event, value := range hooks {
+		merged[event] = value
+	}
+
+	for event, expected := range governance.Hooks {
+		existingHooks, exists := merged[event]
+		if !exists {
+			merged[event] = expected
+			continue
+		}
+		existingList, isList := existingHooks.([]any)
+		if !isList {
+			return nil, fmt.Errorf("hooks.%s must be an array", event)
+		}
+		for _, hook := range expected {
+			if r1.hookEntryExists(existingList, hook) {
+				continue
+			}
+			existingList = append(existingList, hook)
+		}
+		merged[event] = existingList
+	}
+	settings["hooks"] = merged
+
+	if hadHooks && reflect.DeepEqual(original, merged) {
+		return existing, nil
+	}
+
+	edited, err := specs.NewCatalog().SetJSONTopLevelKey(existing, "hooks", merged)
+	if err != nil {
+		return json.MarshalIndent(settings, "", "  ")
+	}
+	return edited, nil
+}
+
 func (r1 *Helper) defaultCopilotHooks() string {
-	return `{
-  "version": 1,
-  "hooks": {
-    "preToolUse": [
-      {
-        "type": "command",
-        "bash": "bash .github/hooks/validate-preload.sh"
-      }
-    ],
-    "postToolUse": [
-      {
-        "type": "command",
-        "bash": "bash .github/hooks/validate-governance.sh"
-      }
-    ],
-    "stop": [
-      {
-        "type": "command",
-        "bash": "bash .github/hooks/subagent-stop-wrapper.sh"
-      }
-    ]
-  }
-}
-`
+	return upgrade.DefaultCopilotGovernanceHooks
 }
 
-// defaultCodexHooks devolve o conteudo de .codex/hooks.json no formato nativo do
-// Codex CLI 2026 (PreToolUse). O Codex tem lacuna documentada de route-around, por
-// isso o enforcement por hook e suplementado por sandbox_mode/approval_policy no
-// config.toml (ver codexGovernanceTOML e enforcement-matrix.md, caveat Codex).
-func (r1 *Helper) defaultCodexHooks() string {
-	return `{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash|apply_patch|edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .codex/hooks/validate-preload.sh"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "apply_patch|edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .codex/hooks/validate-governance.sh"
-          }
-        ]
-      }
-    ]
-  }
-}
-`
+func (r1 *Helper) mergeCopilotSettings(existing []byte) ([]byte, error) {
+	settings := map[string]any{}
+	if len(existing) > 0 {
+		if err := json.Unmarshal(existing, &settings); err != nil {
+			return nil, err
+		}
+	}
+
+	var governance struct {
+		Hooks map[string][]any `json:"hooks"`
+	}
+	if err := json.Unmarshal([]byte(r1.defaultCopilotHooks()), &governance); err != nil {
+		return nil, err
+	}
+
+	original, hadHooks := settings["hooks"]
+	hooks, ok := original.(map[string]any)
+	if !ok {
+		if hadHooks {
+			return nil, fmt.Errorf("hooks must be an object")
+		}
+		hooks = map[string]any{}
+	}
+
+	merged := make(map[string]any, len(hooks)+len(governance.Hooks))
+	for event, value := range hooks {
+		merged[event] = value
+	}
+
+	migrated := make([]any, 0, len(upgrade.ObsoleteCopilotHookKeys))
+	for _, obsolete := range upgrade.ObsoleteCopilotHookKeys {
+		entries, present := merged[obsolete]
+		if !present {
+			continue
+		}
+		delete(merged, obsolete)
+		list, isList := entries.([]any)
+		if !isList {
+			return nil, fmt.Errorf("hooks.%s must be an array", obsolete)
+		}
+		migrated = append(migrated, list...)
+	}
+	if len(migrated) > 0 {
+		merged[upgrade.CopilotSessionEndHookKey] = r1.appendCopilotHooks(merged[upgrade.CopilotSessionEndHookKey], migrated)
+	}
+
+	for event, expected := range governance.Hooks {
+		existingHooks, exists := merged[event]
+		if !exists {
+			merged[event] = expected
+			continue
+		}
+		existingList, ok := existingHooks.([]any)
+		if !ok {
+			return nil, fmt.Errorf("hooks.%s must be an array", event)
+		}
+		for _, hook := range expected {
+			if r1.hookEntryExists(existingList, hook) {
+				continue
+			}
+			existingList = append(existingList, hook)
+		}
+		merged[event] = existingList
+	}
+	settings["hooks"] = merged
+
+	if len(existing) == 0 {
+		encoded, err := json.MarshalIndent(settings, "", "  ")
+		if err != nil {
+			return nil, err
+		}
+		return encoded, nil
+	}
+
+	if hadHooks && reflect.DeepEqual(original, merged) {
+		return existing, nil
+	}
+
+	edited, err := specs.NewCatalog().SetJSONTopLevelKey(existing, "hooks", merged)
+	if err != nil {
+		return json.MarshalIndent(settings, "", "  ")
+	}
+	return edited, nil
 }
 
-// codexGovernanceTOML devolve o bloco TOML de governanca apendado ao .codex/config.toml:
-// sandbox_mode + approval_policy fecham a lacuna de route-around dos hooks do Codex
-// (o hook sozinho nao e suficiente — ver ADR-002 e enforcement-matrix.md).
-func (r1 *Helper) codexGovernanceTOML() string {
-	return `
-# Governanca (paridade cross-CLI): o hook PreToolUse do Codex tem lacuna de
+func (r1 *Helper) appendCopilotHooks(existing any, extra []any) []any {
+	list, _ := existing.([]any)
+	result := make([]any, 0, len(list)+len(extra))
+	result = append(result, list...)
+	for _, entry := range extra {
+		if r1.hookEntryExists(result, entry) {
+			continue
+		}
+		result = append(result, entry)
+	}
+	return result
+}
+
+func (r1 *Helper) hookEntryExists(hooks []any, expected any) bool {
+	expectedJSON, err := json.Marshal(expected)
+	if err != nil {
+		return false
+	}
+	for _, hook := range hooks {
+		hookJSON, err := json.Marshal(hook)
+		if err == nil && string(hookJSON) == string(expectedJSON) {
+			return true
+		}
+	}
+	return false
+}
+
+func (r1 *Helper) codexGovernancePreambleTOML() string {
+	return `# Governanca (paridade cross-CLI): o hook PreToolUse do Codex tem lacuna de
 # route-around documentada. sandbox_mode + approval_policy garantem que mudancas
 # de filesystem e comandos passem por aprovacao, fechando a lacuna (ADR-002).
+# Chaves de nivel raiz precisam preceder qualquer tabela TOML.
 sandbox_mode = "workspace-write"
 approval_policy = "on-request"
 
-[[hooks.PreToolUse]]
+`
+}
+
+func (r1 *Helper) codexGovernanceHooksTOML() string {
+	return `[[hooks.PreToolUse]]
 [[hooks.PreToolUse.hooks]]
 type = "command"
 command = "bash .codex/hooks/validate-preload.sh"
@@ -1356,6 +1563,11 @@ command = "bash .codex/hooks/validate-preload.sh"
 [[hooks.PostToolUse.hooks]]
 type = "command"
 command = "bash .codex/hooks/validate-governance.sh"
+
+[[hooks.Stop]]
+[[hooks.Stop.hooks]]
+type = "command"
+command = "bash .codex/hooks/validate-session-end.sh"
 `
 }
 
@@ -1412,4 +1624,132 @@ func (r1 *Helper) langNames(langs []skills.Lang) []string {
 		out[i] = string(l)
 	}
 	return out
+}
+
+const VerifyKindArtifact VerifyKind = "artifact"
+
+var toolHookDirs = map[skills.Tool]string{
+	skills.ToolClaude:  filepath.Join(".claude", "hooks"),
+	skills.ToolCodex:   filepath.Join(".codex", "hooks"),
+	skills.ToolCopilot: filepath.Join(".github", "hooks"),
+}
+
+func (s *Service) verifyGovernanceArtifacts(sourceDir, installDir string, tool skills.Tool) []VerifyItem {
+	var items []VerifyItem
+
+	if hookDir, ok := toolHookDirs[tool]; ok {
+		for _, hook := range NewHelper().governanceHookFiles() {
+			src := filepath.Join(sourceDir, hookDir, hook)
+			if !s.fs.Exists(src) {
+				continue
+			}
+			items = append(items, VerifyItem{
+				Tool:   tool,
+				Skill:  filepath.ToSlash(filepath.Join(hookDir, hook)),
+				State:  s.verifyArtifactFile(src, filepath.Join(installDir, hookDir, hook)),
+				Kind:   VerifyKindArtifact,
+				Remedy: verifyArtifactRemedy,
+			})
+		}
+	}
+
+	if tool != skills.ToolOpenCode {
+		return items
+	}
+
+	pluginDir := filepath.Join(".opencode", "plugin")
+	entries, err := s.fs.ReadDir(filepath.Join(sourceDir, pluginDir))
+	if err != nil {
+		return items
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		rel := filepath.Join(pluginDir, entry.Name())
+		items = append(items, VerifyItem{
+			Tool:   tool,
+			Skill:  filepath.ToSlash(rel),
+			State:  s.verifyArtifactFile(filepath.Join(sourceDir, rel), filepath.Join(installDir, rel)),
+			Kind:   VerifyKindArtifact,
+			Remedy: verifyArtifactRemedy,
+		})
+	}
+	return items
+}
+
+var canonicalValidatorDirs = []string{
+	filepath.Join(".agents", "hooks"),
+	filepath.Join(".agents", "scripts"),
+	filepath.Join(".agents", "lib"),
+}
+
+func (s *Service) verifyCanonicalValidators(sourceDir, installDir string) []VerifyItem {
+	var items []VerifyItem
+	for _, dir := range canonicalValidatorDirs {
+		entries, err := s.fs.ReadDir(filepath.Join(sourceDir, dir))
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			rel := filepath.Join(dir, entry.Name())
+			items = append(items, VerifyItem{
+				Tool:   "",
+				Skill:  filepath.ToSlash(rel),
+				State:  s.verifyArtifactFile(filepath.Join(sourceDir, rel), filepath.Join(installDir, rel)),
+				Kind:   VerifyKindArtifact,
+				Remedy: verifyArtifactRemedy,
+			})
+		}
+	}
+	return items
+}
+
+const verifyArtifactRemedy = "execute 'ai-spec-harness install' para reinstalar o artefato de governanca"
+
+func (s *Service) verifyArtifactFile(sourcePath, installedPath string) VerifyState {
+	if !s.fs.Exists(installedPath) {
+		return VerifyStateMissing
+	}
+	sourceHash, srcErr := s.fs.FileHash(sourcePath)
+	installedHash, dstErr := s.fs.FileHash(installedPath)
+	if srcErr != nil || dstErr != nil {
+		return VerifyStateUnknown
+	}
+	if sourceHash != installedHash {
+		return VerifyStateDrifted
+	}
+	return VerifyStateCurrent
+}
+
+func (r1 *Helper) governanceHookFiles() []string {
+	out := make([]string, 0, len(toolValidationHooks)+len(orchestratorHooks))
+	out = append(out, toolValidationHooks...)
+	out = append(out, orchestratorHooks...)
+	return out
+}
+
+func (s *Service) writeMergedMarkdownFromSource(sourcePath, targetPath string) error {
+	if !s.fs.Exists(sourcePath) {
+		return nil
+	}
+	generated, err := s.fs.ReadFile(sourcePath)
+	if err != nil {
+		return err
+	}
+	content := string(generated)
+	merged := false
+	if existing, readErr := s.fs.ReadFile(targetPath); readErr == nil {
+		content, merged = contextgen.MergeUserContentMarkdown(content, string(existing))
+	}
+	if err := s.fs.WriteFile(targetPath, []byte(content)); err != nil {
+		return err
+	}
+	if merged {
+		s.trackMerged(targetPath)
+	}
+	return nil
 }

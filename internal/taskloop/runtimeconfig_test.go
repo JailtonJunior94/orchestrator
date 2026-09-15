@@ -82,6 +82,87 @@ func TestBuildRuntimeConfig_NumericosMapeados1a1(t *testing.T) {
 	}
 }
 
+func TestBuildRuntimeConfig_MaxBugfixIterationsMapeado1a1(t *testing.T) {
+	t.Parallel()
+
+	rc, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{MaxBugfixIterations: 7})
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+	if rc.MaxBugfixIterations != 7 {
+		t.Errorf("MaxBugfixIterations = %d, want 7", rc.MaxBugfixIterations)
+	}
+}
+
+func TestBuildRuntimeConfig_HandoffLeaseTTLMapped(t *testing.T) {
+	t.Parallel()
+
+	rc, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{HandoffLeaseTTL: "45m"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rc.HandoffLeaseTTL != 45*time.Minute {
+		t.Errorf("HandoffLeaseTTL = %v, want 45m", rc.HandoffLeaseTTL)
+	}
+}
+
+func TestBuildRuntimeConfig_HandoffLeaseTTLZeroValuePreservesF1(t *testing.T) {
+	t.Parallel()
+
+	rc, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rc.HandoffLeaseTTL != 0 {
+		t.Errorf("HandoffLeaseTTL zero-value = %v, want 0 (F1 — default applied by the consumer)", rc.HandoffLeaseTTL)
+	}
+}
+
+func TestBuildRuntimeConfig_HandoffLeaseTTLMalformed(t *testing.T) {
+	t.Parallel()
+
+	_, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{HandoffLeaseTTL: "10x"})
+	if err == nil {
+		t.Fatal("expected error with malformed handoff lease ttl, got nil")
+	}
+}
+
+func TestBuildRuntimeConfig_DurableMemoryEnabledMapped(t *testing.T) {
+	t.Parallel()
+
+	rc, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{DurableMemoryEnabled: true})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !rc.DurableMemoryEnabled {
+		t.Errorf("DurableMemoryEnabled = %v, want true", rc.DurableMemoryEnabled)
+	}
+}
+
+func TestBuildRuntimeConfig_DurableMemoryEnabledZeroValuePreservesF1(t *testing.T) {
+	t.Parallel()
+
+	rc, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rc.DurableMemoryEnabled {
+		t.Errorf("DurableMemoryEnabled zero-value = %v, want false (F1)", rc.DurableMemoryEnabled)
+	}
+}
+
+func TestBuildRuntimeConfig_MaxBugfixIterationsZeroValuePreservaF1(t *testing.T) {
+	t.Parallel()
+
+	rc, err := taskloop.NewCatalog().BuildRuntimeConfig(config.Runtime{})
+	if err != nil {
+		t.Fatalf("erro inesperado: %v", err)
+	}
+	if rc.MaxBugfixIterations != 0 {
+		t.Errorf("MaxBugfixIterations zero-value = %d, want 0 (F1 — sem normalização silenciosa)", rc.MaxBugfixIterations)
+	}
+}
+
 // TestBuildRuntimeConfig_RegressaoF1 verifica que zero-value preserva comportamento F1.
 // Concurrent e BatchSize são normalizados para 1 por ApplyDefaults (mínimo funcional).
 func TestBuildRuntimeConfig_RegressaoF1(t *testing.T) {
@@ -223,7 +304,7 @@ func TestBuildRuntimeConfig_ParidadeCLIs(t *testing.T) {
 	}
 
 	// Simula construção para cada uma das 4 CLIs a partir da mesma config resolvida.
-	drivers := []string{"claude", "codex", "copilot", "gemini"}
+	drivers := []string{"claude", "codex", "copilot", "opencode"}
 	for _, driver := range drivers {
 		t.Run(driver, func(t *testing.T) {
 			t.Parallel()

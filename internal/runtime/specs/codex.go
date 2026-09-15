@@ -41,6 +41,10 @@ const (
 	// DefaultCodexModel é o modelo default quando --model não é passado.
 	// Espelha compozy/internal/core/model/constants.go:15.
 	DefaultCodexModel = "gpt-5.5"
+
+	CodexCLINpmPackage = "@openai/codex"
+
+	CodexCLINpmVersion = "0.154.0"
 )
 
 // Codex retorna a Spec do runtime Codex via codex-acp adapter.
@@ -71,6 +75,7 @@ func (c *Catalog) Codex() Spec {
 		CodexNpmPackage,
 		NewCatalog().codexBootstrapArgs,
 		ContextWindow{MaxTokens: CodexMaxTokens},
+		nil,
 	)
 }
 
@@ -86,7 +91,7 @@ func (c *Catalog) Codex() Spec {
 //
 // strconv.Quote escapa os values de model e reasoning — proteção contra injeção (R-SEC-001).
 // Os overrides de sandbox/approval/web_search usam literais com aspas já corretas.
-func (c *Catalog) codexBootstrapArgs(model, reasoning string, _ []string, mode AccessMode) []string {
+func (c *Catalog) codexBootstrapArgs(model, reasoning string, _ []string, mode AccessMode, _ string) []string {
 	args := make([]string, 0, 14)
 	if model != "" {
 		args = NewCatalog().appendCodexOverrides(args, "model="+strconv.Quote(model))

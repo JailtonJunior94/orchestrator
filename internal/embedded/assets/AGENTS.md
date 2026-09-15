@@ -80,7 +80,7 @@ qualquer projeto independente do CLI). As skills os resolvem em cascata
 - `validate-refactor-evidence.sh` — evidência de não-regressão.
 - `validate-review-evidence.sh` — evidência do modo `--auto-review` (veredito + severidade).
 
-Esse comportamento é idêntico em Claude, Codex, Copilot e Gemini e em qualquer tipo de projeto
+Esse comportamento é idêntico em Claude, Codex, Copilot e OpenCode e em qualquer tipo de projeto
 (pequeno/médio/grande, novo/existente).
 
 ## Restrições

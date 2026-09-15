@@ -1,10 +1,11 @@
 package runtime_test
 
 // runner_autoreview_test.go: testes unitários para F5-Claude (auto-review opt-in).
-// T-REV-01..T-REV-04 + testes de helpers parseReviewStatus e buildReviewPrompt.
+// T-REV-01..T-REV-04 + testes de helpers de auto-review e buildReviewPrompt.
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -187,6 +188,37 @@ func TestAutoReviewBlocksOnHardIssue(t *testing.T) {
 	}
 }
 
+func TestAutoReviewBlocksOnCanonicalCriticalMarker(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("tarefa com código suspeito").
+		AppendSessionEnd()
+
+	reviewFn := func(_ context.Context, _ airuntime.Job) (string, error) {
+		return "[CRITICAL] internal/x/a.go:12 eval() detectado\n[HIGH] internal/x/b.go:7 validação ausente\n", nil
+	}
+
+	runner := buildRunnerWithReviewFn(t, ctx, script, reviewFn)
+
+	summary, err := runner.Run(ctx, airuntime.Job{
+		Prompt:      "tarefa com eval()",
+		WorkDir:     workDirWithAgentsMDForReview(t),
+		EvidenceDir: t.TempDir(),
+		Quiet:       true,
+		AutoReview:  true,
+	})
+	if err != nil {
+		t.Fatalf("Run falhou: %v", err)
+	}
+	if summary.ReviewStatus != "blocked" {
+		t.Errorf("ReviewStatus = %q, quero blocked para marcadores canônicos [CRITICAL]/[HIGH]", summary.ReviewStatus)
+	}
+}
+
 // ---- T-REV-03: sem marcadores hard → ReviewStatus="ok" ---------------------
 
 // TestAutoReviewOkWhenNoHardMarkers — T-REV-03.
@@ -202,7 +234,7 @@ func TestAutoReviewOkWhenNoHardMarkers(t *testing.T) {
 		AppendSessionEnd()
 
 	reviewFn := func(_ context.Context, _ airuntime.Job) (string, error) {
-		return "Nenhum issue encontrado. Código aprovado.", nil
+		return "## Review\n\nNo blocking issues found.\n\nverdict: APPROVED\n", nil
 	}
 
 	runner := buildRunnerWithReviewFn(t, ctx, script, reviewFn)
@@ -316,34 +348,6 @@ func TestAutoReviewInheritsSkipDriftGuard(t *testing.T) {
 
 // ---- Testes de helpers puros ------------------------------------------------
 
-// TestParseReviewStatus_AllCases valida todos os casos de parseReviewStatus.
-func TestParseReviewStatus_AllCases(t *testing.T) {
-	t.Parallel()
-
-	cases := []struct {
-		name   string
-		input  string
-		expect string
-	}{
-		{"[HARD] presente", "[HARD] eval() detectado", "blocked"},
-		{"BLOQUEADO presente", "BLOQUEADO por política de segurança", "blocked"},
-		{"CRÍTICO presente", "issue CRÍTICO encontrado no código", "blocked"},
-		{"sem marcadores hard", "Nenhum issue. Código limpo.", "ok"},
-		{"vazio", "", "ok"},
-		{"[HARD] minúsculo — não deve bloquear", "[hard] algo", "ok"}, // case-sensitive
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			got := airuntime.NewCatalog().ParseReviewStatusForTest(tc.input)
-			if got != tc.expect {
-				t.Errorf("parseReviewStatus(%q) = %q, quero %q", tc.input, got, tc.expect)
-			}
-		})
-	}
-}
-
 // TestBuildReviewPrompt_ContainsSkillAndDiff valida que o prompt contém skill body e diff.
 func TestBuildReviewPrompt_ContainsSkillAndDiff(t *testing.T) {
 	t.Parallel()
@@ -362,7 +366,118 @@ func TestBuildReviewPrompt_ContainsSkillAndDiff(t *testing.T) {
 	if !strings.Contains(prompt, "## Diff a Revisar") {
 		t.Error("prompt deve conter seção '## Diff a Revisar'")
 	}
-	if !strings.Contains(prompt, "[HARD]") {
-		t.Error("prompt deve mencionar marcador [HARD] na instrução")
+	for _, marker := range []string{"[CRITICAL]", "[HIGH]", "[MEDIUM]", "[LOW]"} {
+		if !strings.Contains(prompt, marker) {
+			t.Errorf("prompt deve mencionar o marcador canônico %s na instrução", marker)
+		}
+	}
+}
+
+func TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("## Review\n\nCritical defect in handler.\n\nverdict: BLOCKED\n").
+		AppendSessionEnd()
+
+	runner := airuntime.NewACPRunner(specs.NewCatalog().Claude(),
+		airuntime.NewCatalog().WithProber(&fakeProberForReview{}),
+		airuntime.NewCatalog().WithClientFactory(&fakeClientFactoryForReview{script: script, ctx: ctx, t: t}),
+		airuntime.NewCatalog().WithPersistenceFactory(&fakePersistenceFactoryForReview{}),
+		airuntime.NewCatalog().WithRenderer(&fakeRendererForReview{}),
+	)
+
+	job := airuntime.Job{
+		Prompt:      "task under review",
+		WorkDir:     workDirWithAgentsMDForReview(t),
+		EvidenceDir: t.TempDir(),
+		Quiet:       true,
+		AutoReview:  true,
+	}
+
+	summary, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+
+	if summary.CancelReason != events.CancelReasonNone {
+		t.Fatalf("precondition: CancelReason = %q, want none", summary.CancelReason)
+	}
+	if summary.ReviewStatus != "blocked" {
+		t.Errorf("D1: ReviewStatus = %q, want blocked (real reviewer verdict must win over synthetic text)", summary.ReviewStatus)
+	}
+}
+
+func TestAutoReviewFailClosedWithoutCanonicalVerdict(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("main task done").
+		AppendSessionEnd()
+
+	reviewFn := func(_ context.Context, _ airuntime.Job) (string, error) {
+		return "Review complete. No negative markers, looks fine to me.", nil
+	}
+
+	runner := buildRunnerWithReviewFn(t, ctx, script, reviewFn)
+
+	job := airuntime.Job{
+		Prompt:      "clean task without verdict line",
+		WorkDir:     workDirWithAgentsMDForReview(t),
+		EvidenceDir: t.TempDir(),
+		Quiet:       true,
+		AutoReview:  true,
+	}
+
+	summary, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run failed: %v", err)
+	}
+
+	if summary.ReviewStatus != "blocked" {
+		t.Errorf("RF-46: ReviewStatus = %q, want blocked (absence of canonical verdict must not infer approval)", summary.ReviewStatus)
+	}
+}
+
+func TestAutoReviewFailureIsFailClosed(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	script := acpfake.NewScript().
+		AppendAgentMessage("tarefa concluida").
+		AppendSessionEnd()
+
+	reviewFn := func(_ context.Context, _ airuntime.Job) (string, error) {
+		return "", errors.New("sessao de review indisponivel")
+	}
+
+	runner := buildRunnerWithReviewFn(t, ctx, script, reviewFn)
+
+	job := airuntime.Job{
+		Prompt:      "tarefa qualquer",
+		WorkDir:     workDirWithAgentsMDForReview(t),
+		EvidenceDir: t.TempDir(),
+		Quiet:       true,
+		AutoReview:  true,
+	}
+
+	summary, err := runner.Run(ctx, job)
+	if err != nil {
+		t.Fatalf("Run falhou: %v", err)
+	}
+
+	if summary.ReviewStatus != "blocked" {
+		t.Errorf("ReviewStatus = %q, quero blocked (fail-closed)", summary.ReviewStatus)
+	}
+	if !strings.Contains(summary.ReviewNote, "auto-review falhou") {
+		t.Errorf("ReviewNote = %q, quero nota de falha do auto-review", summary.ReviewNote)
 	}
 }

@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-memoria-duravel-agentes/6.0_execution_report.md
+summary: Golden byte-a-byte ancorado em hooks.PointPromptPostBuild (4 casos) e fim do descarte silencioso de erro em session.post_end/session.post_review, com Summary.HookDispatchErrors e tipo observavel em memory_persist.go
+timestamp: 2026-09-11T18:18:45Z

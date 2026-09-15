@@ -1,0 +1,5 @@
+internal/taskloop/runloop.go:239:			var result approval.CycleResult
+internal/taskloop/bugfix.go:160:func bugfixAttemptsFromCycle(result approval.CycleResult, recorder *bugfixEvidenceRecorder) []BugfixIteration {
+internal/taskloop/bugfix.go:161:	var rounds []approval.Round
+internal/taskloop/bugfix.go:193:func finalReviewFromCycleResult(result approval.CycleResult) *FinalReviewResult {
+internal/taskloop/bugfix.go:194:	var last approval.Round

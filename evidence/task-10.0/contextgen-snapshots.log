@@ -1,0 +1,20 @@
+=== RUN   TestContextgen_Snapshots
+=== RUN   TestContextgen_Snapshots/go-microservice
+=== RUN   TestContextgen_Snapshots/go-modular
+=== RUN   TestContextgen_Snapshots/go-monolith
+=== RUN   TestContextgen_Snapshots/node-monorepo
+=== RUN   TestContextgen_Snapshots/node-api
+=== RUN   TestContextgen_Snapshots/python-api
+=== RUN   TestContextgen_Snapshots/python-monorepo
+=== RUN   TestContextgen_Snapshots/polyglot-monorepo
+--- PASS: TestContextgen_Snapshots (0.06s)
+    --- PASS: TestContextgen_Snapshots/go-microservice (0.01s)
+    --- PASS: TestContextgen_Snapshots/go-modular (0.01s)
+    --- PASS: TestContextgen_Snapshots/go-monolith (0.01s)
+    --- PASS: TestContextgen_Snapshots/node-monorepo (0.01s)
+    --- PASS: TestContextgen_Snapshots/node-api (0.01s)
+    --- PASS: TestContextgen_Snapshots/python-api (0.01s)
+    --- PASS: TestContextgen_Snapshots/python-monorepo (0.01s)
+    --- PASS: TestContextgen_Snapshots/polyglot-monorepo (0.01s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/contextgen	0.412s

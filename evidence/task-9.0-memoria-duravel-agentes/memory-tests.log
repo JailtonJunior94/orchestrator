@@ -1,0 +1,46 @@
+=== RUN   TestMemoryCommandSuite
+=== RUN   TestMemoryCommandSuite/TestBuildScopesResolvesLayersFromInputs
+=== RUN   TestMemoryCommandSuite/TestHandoffClaimAllowsTakeoverAfterDeadlineExpires
+=== RUN   TestMemoryCommandSuite/TestHandoffClaimStatusRelease
+=== RUN   TestMemoryCommandSuite/TestIsUnresolvedScopeClassifiesSentinelErrors
+=== RUN   TestMemoryCommandSuite/TestIsUnresolvedScopeClassifiesSentinelErrors/diretorio_de_projeto_ausente
+=== RUN   TestMemoryCommandSuite/TestIsUnresolvedScopeClassifiesSentinelErrors/diretorio_de_tasks_ausente
+=== RUN   TestMemoryCommandSuite/TestIsUnresolvedScopeClassifiesSentinelErrors/nome_de_arquivo_de_task_ausente
+=== RUN   TestMemoryCommandSuite/TestIsUnresolvedScopeClassifiesSentinelErrors/camada_indefinida
+=== RUN   TestMemoryCommandSuite/TestIsUnresolvedScopeClassifiesSentinelErrors/erro_nao_relacionado_a_resolucao_de_escopo
+=== RUN   TestMemoryCommandSuite/TestRunCompactArchivesExcessFactsAndPreservesHumanBlock
+=== RUN   TestMemoryCommandSuite/TestRunExportWritesSelfContainedArtifact
+=== RUN   TestMemoryCommandSuite/TestRunMigrateConvertsLegacyContentAndRefusesReapplication
+=== RUN   TestMemoryCommandSuite/TestRunMigrateWithoutLegacyFileIsANoop
+=== RUN   TestMemoryCommandSuite/TestRunSearchFindsByTextAndByEntity
+=== RUN   TestMemoryCommandSuite/TestRunSearchFindsByTextAndByEntity/busca_por_texto_encontra_conteudo
+=== RUN   TestMemoryCommandSuite/TestRunSearchFindsByTextAndByEntity/busca_por_entidade_encontra_chave
+=== RUN   TestMemoryCommandSuite/TestRunSearchWithoutMatchReportsEmpty
+=== RUN   TestMemoryCommandSuite/TestRunShowPrintsFactsWithOriginAndFlagsContradiction
+=== RUN   TestMemoryCommandSuite/TestRunShowPrintsFactsWithOriginAndFlagsContradiction/fato_simples_sem_contradicao
+=== RUN   TestMemoryCommandSuite/TestRunShowPrintsFactsWithOriginAndFlagsContradiction/fato_contraditorio_sinalizado
+=== RUN   TestMemoryCommandSuite/TestRunShowWithNoMemoryPrintsEmptyMessage
+--- PASS: TestMemoryCommandSuite (0.01s)
+    --- PASS: TestMemoryCommandSuite/TestBuildScopesResolvesLayersFromInputs (0.00s)
+    --- PASS: TestMemoryCommandSuite/TestHandoffClaimAllowsTakeoverAfterDeadlineExpires (0.01s)
+    --- PASS: TestMemoryCommandSuite/TestHandoffClaimStatusRelease (0.00s)
+    --- PASS: TestMemoryCommandSuite/TestIsUnresolvedScopeClassifiesSentinelErrors (0.00s)
+        --- PASS: TestMemoryCommandSuite/TestIsUnresolvedScopeClassifiesSentinelErrors/diretorio_de_projeto_ausente (0.00s)
+        --- PASS: TestMemoryCommandSuite/TestIsUnresolvedScopeClassifiesSentinelErrors/diretorio_de_tasks_ausente (0.00s)
+        --- PASS: TestMemoryCommandSuite/TestIsUnresolvedScopeClassifiesSentinelErrors/nome_de_arquivo_de_task_ausente (0.00s)
+        --- PASS: TestMemoryCommandSuite/TestIsUnresolvedScopeClassifiesSentinelErrors/camada_indefinida (0.00s)
+        --- PASS: TestMemoryCommandSuite/TestIsUnresolvedScopeClassifiesSentinelErrors/erro_nao_relacionado_a_resolucao_de_escopo (0.00s)
+    --- PASS: TestMemoryCommandSuite/TestRunCompactArchivesExcessFactsAndPreservesHumanBlock (0.00s)
+    --- PASS: TestMemoryCommandSuite/TestRunExportWritesSelfContainedArtifact (0.00s)
+    --- PASS: TestMemoryCommandSuite/TestRunMigrateConvertsLegacyContentAndRefusesReapplication (0.00s)
+    --- PASS: TestMemoryCommandSuite/TestRunMigrateWithoutLegacyFileIsANoop (0.00s)
+    --- PASS: TestMemoryCommandSuite/TestRunSearchFindsByTextAndByEntity (0.00s)
+        --- PASS: TestMemoryCommandSuite/TestRunSearchFindsByTextAndByEntity/busca_por_texto_encontra_conteudo (0.00s)
+        --- PASS: TestMemoryCommandSuite/TestRunSearchFindsByTextAndByEntity/busca_por_entidade_encontra_chave (0.00s)
+    --- PASS: TestMemoryCommandSuite/TestRunSearchWithoutMatchReportsEmpty (0.00s)
+    --- PASS: TestMemoryCommandSuite/TestRunShowPrintsFactsWithOriginAndFlagsContradiction (0.00s)
+        --- PASS: TestMemoryCommandSuite/TestRunShowPrintsFactsWithOriginAndFlagsContradiction/fato_simples_sem_contradicao (0.00s)
+        --- PASS: TestMemoryCommandSuite/TestRunShowPrintsFactsWithOriginAndFlagsContradiction/fato_contraditorio_sinalizado (0.00s)
+    --- PASS: TestMemoryCommandSuite/TestRunShowWithNoMemoryPrintsEmptyMessage (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	0.388s

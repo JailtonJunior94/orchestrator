@@ -44,7 +44,7 @@ func (s *ConfigTypesSuite) TestInstallOptionsFields() {
 	opts := InstallOptions{
 		ProjectDir:   "/project",
 		SourceDir:    "/source",
-		Tools:        []skills.Tool{skills.ToolClaude, skills.ToolGemini},
+		Tools:        []skills.Tool{skills.ToolClaude, skills.ToolOpenCode},
 		Langs:        []skills.Lang{skills.LangGo},
 		LinkMode:     skills.LinkSymlink,
 		DryRun:       true,

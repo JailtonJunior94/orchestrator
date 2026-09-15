@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-quatro-clis-loop-aprovacao/4.3_execution_report.md
+summary: extrator internal/taskcriteria (Extract/Pending) + acceptance.go delega; adaptador das 3 portas approval em internal/taskloop com evidencia-sentinela de paridade confinada; nenhum call site migrado
+timestamp: 2026-09-10T22:06:20Z

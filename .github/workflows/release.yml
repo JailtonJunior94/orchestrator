@@ -54,7 +54,7 @@ jobs:
       - name: Stage skill bumps
         run: |
           git add -A .agents/skills .agents/lib .agents/hooks \
-            .claude/skills .claude/hooks .codex/hooks .gemini/hooks \
+            .claude/skills .claude/hooks .codex/hooks .opencode/plugin \
             .github/skills .github/hooks scripts/lib internal/embedded/assets
 
       - name: Compute next version (semver-next)
@@ -107,7 +107,7 @@ jobs:
             echo "CHANGELOG.md and VERSION unchanged, skipping commit"
           else
             git add -A CHANGELOG.md VERSION .agents/skills .agents/lib .agents/hooks \
-              .claude/skills .claude/hooks .codex/hooks .gemini/hooks \
+              .claude/skills .claude/hooks .codex/hooks .opencode/plugin \
               .github/skills .github/hooks scripts/lib internal/embedded/assets
             git commit -m "chore(release): update CHANGELOG.md and VERSION for v${{ steps.semver.outputs.target_version }} [skip ci]"
           fi

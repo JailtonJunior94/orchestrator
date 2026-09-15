@@ -1,10 +1,12 @@
 package aispecharness
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/wrapper"
 	"github.com/spf13/cobra"
 )
@@ -12,7 +14,7 @@ import (
 func newWrapperCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "wrapper <tool> <skill> [path] [args...]",
-		Short: "Valida governanca e emite instrucao de invocacao para Codex/Gemini/Copilot",
+		Short: "Valida governanca e emite instrucao de invocacao para Codex/Copilot",
 		Long: `Verifica as condicoes de governanca antes de emitir instrucoes de invocacao.
 
 Verificacoes realizadas (em ordem):
@@ -26,21 +28,26 @@ Exit codes:
   1 — uma ou mais verificacoes falharam
   2 — uso incorreto (tool invalido ou argumentos insuficientes)
 
-Tools aceitos: codex, gemini, copilot
+Tools aceitos: codex, copilot
   (Claude usa hooks de governanca proprios e nao precisa deste wrapper)
 
 Exemplos:
   ai-spec wrapper codex go-implementation .
-  ai-spec wrapper gemini create-tasks ./meu-projeto
   ai-spec wrapper copilot execute-task . --verbose`,
 		Args: cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tool := args[0]
 			skill := args[1]
 
-			// Valida ferramenta antes de qualquer coisa
 			if !wrapper.ValidTools[tool] {
-				fmt.Fprintf(os.Stderr, "Erro: ferramenta invalida %q — tools aceitos: codex, gemini, copilot\n", tool)
+				if _, resolveErr := skills.NewCatalog().ResolveTool(tool); resolveErr != nil {
+					var removed *skills.RemovedAgentError
+					if errors.As(resolveErr, &removed) {
+						fmt.Fprintln(os.Stderr, "Erro:", removed)
+						return newExitError(2)
+					}
+				}
+				fmt.Fprintf(os.Stderr, "Erro: ferramenta invalida %q — tools aceitos: codex, copilot\n", tool)
 				return newExitError(2)
 			}
 

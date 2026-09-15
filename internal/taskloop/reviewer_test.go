@@ -63,7 +63,8 @@ Diff: {{.Diff}}`
 				"corretude:",
 				"regressao:",
 				"divida tecnica introduzida:",
-				"aprovado / aprovado com ressalvas / reprovado",
+				"APPROVED / APPROVED_WITH_REMARKS / REJECTED / BLOCKED",
+				"[CRITICAL], [HIGH], [MEDIUM] ou [LOW]",
 			},
 		},
 		{
@@ -586,27 +587,28 @@ func (s *stubInvoker) Invoke(_ context.Context, _, _, _ string) (string, string,
 }
 func (s *stubInvoker) BinaryName() string { return "stub" }
 
-// TestParseVerdict valida extracao de veredito a partir de saida bruta.
 func TestParseVerdict(t *testing.T) {
 	tests := []struct {
 		name string
 		raw  string
 		want ReviewVerdict
 	}{
-		{"APPROVED literal", "APPROVED", VerdictApproved},
-		{"aprovado PT-BR", "Veredicto: aprovado", VerdictApproved},
-		{"APPROVED_WITH_REMARKS literal", "APPROVED_WITH_REMARKS", VerdictApprovedWithRemarks},
-		{"aprovado com ressalvas PT-BR", "veredicto: aprovado com ressalvas", VerdictApprovedWithRemarks},
-		{"approved with remarks EN", "approved with remarks: some issues", VerdictApprovedWithRemarks},
-		{"BLOCKED literal", "BLOCKED", VerdictBlocked},
-		{"bloqueado PT-BR", "veredicto final: bloqueado por falta de evidencias", VerdictBlocked},
-		{"REJECTED literal", "REJECTED", VerdictRejected},
-		{"reprovado PT-BR", "veredicto final: reprovado", VerdictRejected},
-		{"rejeitado PT-BR", "resultado: rejeitado", VerdictRejected},
-		{"ressalvas antes de aprovado prioridade correta", "aprovado com ressalvas — veja achados", VerdictApprovedWithRemarks},
-		{"sem palavra chave padrao blocked", "sem informacao", VerdictBlocked},
-		// Regressao Bug 2: ancora de linha dedicada evita falso positivo de
-		// BLOCKED/REJECTED quando a palavra-chave aparece em texto livre.
+		{"linha canonica APPROVED", "Verdict: APPROVED", VerdictApproved},
+		{"linha canonica aprovado PT-BR", "Veredicto: aprovado", VerdictApproved},
+		{"linha canonica do template com bullet", "- Veredito: APPROVED", VerdictApproved},
+		{"linha canonica APPROVED_WITH_REMARKS", "Verdict: APPROVED_WITH_REMARKS", VerdictApprovedWithRemarks},
+		{"linha canonica aprovado com ressalvas PT-BR", "veredicto: aprovado com ressalvas", VerdictApprovedWithRemarks},
+		{"linha canonica BLOCKED", "Verdict: BLOCKED", VerdictBlocked},
+		{"linha canonica bloqueado PT-BR", "veredicto final: bloqueado", VerdictBlocked},
+		{"linha canonica REJECTED", "Verdict: REJECTED", VerdictRejected},
+		{"linha canonica reprovado PT-BR", "veredicto final: reprovado", VerdictRejected},
+		{"RF-46 APPROVED solto sem linha canonica nao aprova", "APPROVED", VerdictBlocked},
+		{"RF-46 aprovado em prosa sem linha canonica nao aprova", "aprovado com ressalvas — veja achados", VerdictBlocked},
+		{"RF-46 approved with remarks em prosa nao aprova", "approved with remarks: some issues", VerdictBlocked},
+		{"RF-46 substring approved no corpo nao aprova", "Findings:\n- the approach was approved in design review\n- nothing else", VerdictBlocked},
+		{"RF-46 rejeitado em prosa sem linha canonica", "resultado: rejeitado", VerdictBlocked},
+		{"RF-46 sem palavra chave padrao blocked", "sem informacao", VerdictBlocked},
+		{"RF-46 texto vazio padrao blocked", "", VerdictBlocked},
 		{
 			"linha dedicada APPROVED ignora 'blocked' no corpo",
 			"Findings:\n- the CI was blocked earlier but recovered\n- nothing else\n\nVerdict: APPROVED",
@@ -778,7 +780,7 @@ Veredicto: REJECTED`,
 // para diffs pequenos.
 func TestReviewConsolidated_InvocacaoUnica(t *testing.T) {
 	inv := &stubInvoker{stdout: "Veredicto: APPROVED"}
-	fr := &defaultFinalReviewer{invoker: inv, workDir: t.TempDir(), model: "", maxDiff: _maxDiffPartitionSize}
+	fr := &defaultFinalReviewer{invoker: inv, workDir: t.TempDir(), model: "", maxDiff: maxDiffPartitionSize}
 
 	diff := "diff --git a/main.go b/main.go\n+// change\n"
 	result, err := fr.ReviewConsolidated(context.Background(), diff)
@@ -821,7 +823,7 @@ func TestReviewConsolidated_VerdictosAgregados(t *testing.T) {
 
 func TestReviewConsolidated_RoteiaLinguagensEDerrubaAprovacaoComAlta(t *testing.T) {
 	inv := &stubInvoker{stdout: "- [High] [src/api.ts:12] validacao ausente\nVeredicto: APPROVED"}
-	fr := &defaultFinalReviewer{invoker: inv, workDir: t.TempDir(), model: "", maxDiff: _maxDiffPartitionSize}
+	fr := &defaultFinalReviewer{invoker: inv, workDir: t.TempDir(), model: "", maxDiff: maxDiffPartitionSize}
 	diff := "diff --git a/internal/service.go b/internal/service.go\n+++ b/internal/service.go\n" +
 		"diff --git a/src/api.ts b/src/api.ts\n+++ b/src/api.ts\n" +
 		"diff --git a/tools/check.py b/tools/check.py\n+++ b/tools/check.py\n"
@@ -833,8 +835,8 @@ func TestReviewConsolidated_RoteiaLinguagensEDerrubaAprovacaoComAlta(t *testing.
 	if result.Verdict != VerdictRejected {
 		t.Fatalf("veredito = %q, want REJECTED para achado alto", result.Verdict)
 	}
-	if len(result.Findings) != 1 || result.Findings[0].Severity != SeverityCritical {
-		t.Fatalf("achados = %+v, want alta normalizada como critica", result.Findings)
+	if len(result.Findings) != 1 || result.Findings[0].Severity != SeverityHigh {
+		t.Fatalf("achados = %+v, want severidade alta preservada (paridade RF-43)", result.Findings)
 	}
 }
 

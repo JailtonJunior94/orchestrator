@@ -10,7 +10,7 @@ import (
 )
 
 // MetricsExtractor extrai um MetricSet de um payload bruto ACP.
-// Implementações: claudeExtractor, geminiExtractor, nullExtractor.
+// Implementações: claudeExtractor, nullExtractor.
 // Contratos:
 //   - Extract nunca retorna erro; payload inválido → MetricSet{} zero-value.
 //   - Extract não muta o slice raw recebido.
@@ -24,8 +24,6 @@ func (c *Catalog) ExtractorFor(d specs.DriverID) MetricsExtractor {
 	switch d.String() {
 	case "claude":
 		return claudeExtractor{}
-	case "gemini":
-		return geminiExtractor{}
 	default:
 		// codex, copilot e qualquer driver futuro → nullExtractor (conjunto mínimo zero).
 		return nullExtractor{}
@@ -49,27 +47,6 @@ func (claudeExtractor) Extract(raw json.RawMessage) MetricSet {
 		"cache_creation_tokens": m.CacheCreationTokens,
 	}
 	return NewMetricSet(0, m.CacheReadTokens, m.ThinkingTokens, extra)
-}
-
-// ── geminiExtractor ──────────────────────────────────────────────────────────
-
-// geminiExtractor extrai métricas Gemini-2026 de um payload ACP bruto.
-// Reutiliza ExtractGeminiMetrics preservando o contrato defensivo (RF-18/RF-20).
-type geminiExtractor struct{}
-
-var _ MetricsExtractor = geminiExtractor{}
-
-func (geminiExtractor) Extract(raw json.RawMessage) MetricSet {
-	m, _ := NewCatalog().ExtractGeminiMetrics(raw)
-	if m.CacheReadTokens == 0 && m.EffectiveContextTokens == 0 &&
-		m.PromptTokensBilled == 0 && m.ThoughtsTokens == 0 {
-		return MetricSet{}
-	}
-	extra := map[string]int{
-		"effective_context_tokens": m.EffectiveContextTokens,
-		"prompt_tokens_billed":     m.PromptTokensBilled,
-	}
-	return NewMetricSet(0, m.CacheReadTokens, m.ThoughtsTokens, extra)
 }
 
 // ── nullExtractor ─────────────────────────────────────────────────────────────

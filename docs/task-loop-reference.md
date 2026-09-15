@@ -44,7 +44,7 @@ ai-spec task-loop \
 
 | Flag | Quando usar |
 | --- | --- |
-| `--tool` | escolher o agente unico (claude, codex, gemini, copilot) — modo simples |
+| `--tool` | escolher o agente unico (claude, codex, copilot, opencode) — modo simples |
 | `--dry-run` | validar ordem e elegibilidade das tasks antes de gastar ciclo de agente |
 | `--max-iterations` | controlar lote inicial, reduzir risco e evitar rodar tasks demais de uma vez; `0` executa sem limite de iteracoes ate nao restar tasks pendentes |
 | `--timeout` | dar mais tempo para tasks grandes ou com validacoes demoradas |
@@ -75,7 +75,7 @@ ai-spec task-loop \
 
 # Dry-run avancado: exibe perfis, compatibilidade e preview do prompt de revisao
 ai-spec task-loop \
-  --executor-tool gemini \
+  --executor-tool opencode \
   --reviewer-tool claude \
   --dry-run \
   .specs/prd-payments-list
@@ -94,6 +94,16 @@ ai-spec task-loop \
 | `--allow-unknown-model` | aceitar combinacoes ferramenta+modelo fora do catalogo interno sem erro |
 
 > O dry-run no modo avancado exibe status de compatibilidade (✓/✗) para cada perfil e o preview do template resolvido para a primeira task elegivel.
+
+### Memoria duravel (opt-in)
+
+`--durable-memory` ativa o subsistema de memoria duravel (fachada + camadas project/prd/task) no lugar do memory store legado. Default `false` preserva o prompt final byte a byte identico ao caminho atual (RF-28, RF-29). Tambem configuravel via chave `durable_memory_enabled` na cascata de configuracao (`flags > workspace > global > defaults`, ADR-016) — ver [`docs/config-hierarchy.md`](config-hierarchy.md).
+
+```bash
+ai-spec task-loop --tool claude --runtime acp --durable-memory .specs/prd-minha-feature
+```
+
+Ativacao e desativacao aparecem sempre em log explicito. Com a feature desativada, nenhum comportamento muda.
 
 ## Heuristicas praticas
 
@@ -191,12 +201,12 @@ claude --dangerously-skip-permissions --print --bare -p "<prompt>"
 # Codex
 codex exec --dangerously-bypass-approvals-and-sandbox -p "<prompt>"
 
-# Gemini
-gemini --yolo -p "<prompt>"
-
 # Copilot
 copilot --autopilot --yolo -p "<prompt>"
 ```
+
+OpenCode nao tem invocacao legada equivalente — e ACP-only desde a adocao (sem `geminiInvoker`/
+`copilotInvoker` legado); use sempre `--runtime acp --tool opencode`.
 
 ### Quando preferir o ciclo manual
 
@@ -244,15 +254,14 @@ Execute ONLY this task. Follow all skill steps:
 Update **Status:** in .specs/prd-payments-list/01_repository.md and the corresponding row in .specs/prd-payments-list/tasks.md to reflect the final state."
 ```
 
-Para Codex ou Gemini, substitua o binario e as flags:
+Para Codex, substitua o binario e as flags:
 
 ```bash
 # Codex
 codex exec --dangerously-bypass-approvals-and-sandbox -p "<mesmo prompt>"
-
-# Gemini
-gemini --yolo -p "<mesmo prompt>"
 ```
+
+OpenCode nao tem invocacao legada equivalente — use `--runtime acp --tool opencode`.
 
 ### Alternativa 2 — Script shell iterando tasks.md
 
@@ -298,8 +307,8 @@ Update **Status:** in ${TASK_FILE} and the corresponding row in ${PRD_FOLDER}/ta
   case "$TOOL" in
     claude)  claude --dangerously-skip-permissions --print --bare -p "$PROMPT" ;;
     codex)   codex exec --dangerously-bypass-approvals-and-sandbox -p "$PROMPT" ;;
-    gemini)  gemini --yolo -p "$PROMPT" ;;
     copilot) copilot --autopilot --yolo -p "$PROMPT" ;;
+    # opencode nao tem invocacao legada equivalente — use task-loop --runtime acp --tool opencode
   esac
 
   count=$((count + 1))

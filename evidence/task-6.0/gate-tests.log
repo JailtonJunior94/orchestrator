@@ -1,0 +1,102 @@
+=== RUN   TestNewEnforcementRejectsIncompleteCoverage
+=== RUN   TestCanonicalPointIsClosedSet
+=== RUN   TestEnforcementPreconditionRemedyAndStates
+=== RUN   TestNoAgentListLiteralOutsideRegistry
+=== RUN   TestAgentIsImmutableValueObject
+=== RUN   TestCanonicalOrderIsSingleSource
+=== RUN   TestRegistryIsImmutable
+=== RUN   TestAgentZeroValueIsInvalid
+=== RUN   TestMandatoryMatrixAgentsByCanonicalPoints
+=== RUN   TestRegistryPreconditionsCarryRemedy
+--- PASS: TestNewEnforcementRejectsIncompleteCoverage (0.00s)
+--- PASS: TestAgentZeroValueIsInvalid (0.00s)
+--- PASS: TestRegistryIsImmutable (0.00s)
+--- PASS: TestCanonicalOrderIsSingleSource (0.00s)
+--- PASS: TestEnforcementPreconditionRemedyAndStates (0.00s)
+--- PASS: TestCanonicalPointIsClosedSet (0.00s)
+--- PASS: TestMandatoryMatrixAgentsByCanonicalPoints (0.00s)
+--- PASS: TestRegistryPreconditionsCarryRemedy (0.00s)
+--- PASS: TestAgentIsImmutableValueObject (0.00s)
+--- PASS: TestNoAgentListLiteralOutsideRegistry (0.05s)
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	0.057s
+=== RUN   TestRuntimeACPCatalogInSyncWithRegistry
+=== RUN   TestTaskLoopFlags_AgentExclusivity
+=== RUN   TestTaskLoopFlags_AgentFlagRegistered
+--- PASS: TestRuntimeACPCatalogInSyncWithRegistry (0.00s)
+--- PASS: TestTaskLoopFlags_AgentFlagRegistered (0.00s)
+=== RUN   TestTaskLoopFlags_AgentExclusivity/T-20:_agent_+_tool_gera_conflito
+=== RUN   TestTaskLoopFlags_AgentExclusivity/T-21:_agent_+_executor-tool_gera_conflito
+=== RUN   TestTaskLoopFlags_AgentExclusivity/agent_+_reviewer-tool_gera_conflito
+=== RUN   TestTaskLoopFlags_AgentExclusivity/agent_sozinho:_sem_conflito_de_exclusividade
+=== RUN   TestTaskLoopFlags_AgentExclusivity/agent_+_sem_tool/execTool/revTool:_aceito
+--- PASS: TestTaskLoopFlags_AgentExclusivity (0.00s)
+ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	0.011s
+=== RUN   TestAllToolsDerivesFromRegistry
+--- PASS: TestAllToolsDerivesFromRegistry (0.00s)
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	0.009s
+=== RUN   TestACPSpecCatalogInSyncWithRegistry
+=== RUN   TestNewAgentInvoker
+=== RUN   TestNewAgentInvoker/claude
+=== RUN   TestNewAgentInvoker/codex
+=== RUN   TestNewAgentInvoker/gemini
+=== RUN   TestNewAgentInvoker/copilot
+=== RUN   TestNewAgentInvoker/ferramenta_invalida
+=== RUN   TestNewAgentInvoker/string_vazia
+--- PASS: TestNewAgentInvoker (0.00s)
+=== RUN   TestBuildPromptContainsAgentsMd
+--- PASS: TestBuildPromptContainsAgentsMd (0.00s)
+=== RUN   TestAgentEnvironmentIsolation
+--- PASS: TestAgentEnvironmentIsolation (0.00s)
+=== RUN   TestE2EAgent_PromptContainsAgentBlocks
+--- PASS: TestE2EAgent_PromptContainsAgentBlocks (0.00s)
+=== RUN   TestE2EAgent_ForensicArtifactStructureIdentical
+=== RUN   TestE2EAgent_ForensicArtifactStructureIdentical/legado
+=== RUN   TestE2EAgent_ForensicArtifactStructureIdentical/agent
+--- PASS: TestE2EAgent_ForensicArtifactStructureIdentical (0.00s)
+=== RUN   TestE2EAgent_ReportProduced
+--- PASS: TestE2EAgent_ReportProduced (0.00s)
+=== RUN   TestE2EAgent_LegacyFlowDoesNotUseRegistry
+--- PASS: TestE2EAgent_LegacyFlowDoesNotUseRegistry (0.00s)
+=== RUN   TestResolveProfileFromAgent_CompatibilityValidation
+=== RUN   TestBugfixPromptAgentsMdBeforeSkillMd
+--- PASS: TestBugfixPromptAgentsMdBeforeSkillMd (0.00s)
+=== RUN   TestT17_LegacyFlowWhenAgentNameEmpty
+--- PASS: TestT17_LegacyFlowWhenAgentNameEmpty (0.00s)
+=== RUN   TestT18_AgentFlowResolvesAndEnrichesPrompt
+--- PASS: TestT18_AgentFlowResolvesAndEnrichesPrompt (0.00s)
+=== RUN   TestT19_AgentNotFoundReturnsActionableError
+--- PASS: TestT19_AgentNotFoundReturnsActionableError (0.00s)
+=== RUN   TestResolveACPSpec
+=== RUN   TestResolveACPSpec/claude
+=== RUN   TestResolveACPSpec/codex
+=== RUN   TestResolveACPSpec/copilot
+=== RUN   TestResolveACPSpec/gemini
+=== RUN   TestResolveACPSpec/missing/unknown-tool
+=== RUN   TestResolveACPSpec/missing/
+--- PASS: TestResolveACPSpec (0.00s)
+=== RUN   TestNewACPInvoker_ImplementsAgentInvoker
+=== RUN   TestACPInvoker_ImplementsAgentInvokerInterface
+--- PASS: TestACPSpecCatalogInSyncWithRegistry (0.00s)
+--- PASS: TestACPInvoker_ImplementsAgentInvokerInterface (0.00s)
+--- PASS: TestNewACPInvoker_ImplementsAgentInvoker (0.00s)
+=== RUN   TestResolveProfileFromAgent_CompatibilityValidation/T-13_positivo:_claude_+_claude-opus-4-7_—_aceito
+=== RUN   TestResolveProfileFromAgent_CompatibilityValidation/T-13_negativo:_claude_+_gpt-5.4_—_erro_acionavel
+=== RUN   TestResolveProfileFromAgent_CompatibilityValidation/T-13_bypass:_claude_+_modelo-novo_+_allowUnknownModel=true_—_aceito
+=== RUN   TestResolveProfileFromAgent_CompatibilityValidation/modelo_vazio_—_sem_validacao,_sem_erro
+=== RUN   TestResolveProfileFromAgent_CompatibilityValidation/override_CLI_model_compativel_prevalece_sobre_agent_incompativel
+--- PASS: TestResolveProfileFromAgent_CompatibilityValidation (0.00s)
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	0.019s
+=== RUN   TestAgentSuite
+=== RUN   TestAgentSuite/TestAllEntriesCommandsMatchSpecs
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect/deve_detectar_agentes_por_binarios_no_path
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect/deve_detectar_agente_por_arquivo_do_projeto
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect/deve_retornar_vazio_para_repositorio_sem_sinais
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect/deve_degradar_graciosamente_quando_home_dir_retorna_erro
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect/deve_detectar_3_CLIs_inegociaveis_sem_incluir_Gemini_(opt-in_por_projeto)
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect/deve_incluir_Gemini_quando_ha_sinal_de_projeto_(.gemini/_ou_GEMINI.md)
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect/deve_evitar_duplicidade_quando_agente_aparece_em_binario_e_arquivo
+--- PASS: TestAgentSuite (0.00s)
+=== RUN   TestDetectionNeverExecutesBinaries
+--- PASS: TestDetectionNeverExecutesBinaries (0.00s)
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/detect	0.007s

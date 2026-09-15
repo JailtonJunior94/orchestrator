@@ -1,0 +1,18 @@
+=== RUN   TestTwoRealProcessesCompeteForSameLayer
+--- PASS: TestTwoRealProcessesCompeteForSameLayer (0.03s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable	0.273s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable/mocks	[no test files]
+exit=0
+=== RUN   TestTwoRealProcessesCompeteForSameLayer
+--- PASS: TestTwoRealProcessesCompeteForSameLayer (0.02s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable	0.282s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable/mocks	[no test files]
+exit=0
+=== RUN   TestTwoRealProcessesCompeteForSameLayer
+--- PASS: TestTwoRealProcessesCompeteForSameLayer (0.03s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable	0.293s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable/mocks	[no test files]
+exit=0

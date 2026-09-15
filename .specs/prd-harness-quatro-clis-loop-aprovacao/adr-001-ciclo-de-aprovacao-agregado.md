@@ -68,7 +68,9 @@ aprovação de tarefa é forte demais para depender de o modelo lembrar de itera
 ### Benefícios Esperados
 
 - A regra de aprovação passa a ser testável sem subir sessão nem tocar disco.
-- Uma implementação única compartilhada pelos três caminhos, eliminando drift por construção.
+- Uma implementação única compartilhada pelos dois caminhos de produção — `Service.Execute` e
+  `ACPRunner` — e também pelo `RunLoop`, que hoje é caminho implementado e coberto por teste, sem
+  chamador de produção; eliminando drift por construção.
 - O falso positivo deixa de ser um defeito a caçar e passa a ser um estado que não compila.
 - Motivo de parada canônico torna auditável **por que** um ciclo não convergiu — hoje o caso
   operacional mais difícil e sem nenhum insumo.
@@ -109,10 +111,11 @@ comportamento anterior é uma mudança de política, não de estrutura.
 6. Cadeia de propagação do teto e ambiente por rodada.
 7. Ponto de corte por rodada e revisão incremental.
 8. Virada do critério de encerramento.
-9. Ligação dos três caminhos e remoção do estágio de paridade.
+9. Ligação dos dois caminhos de produção (`Service.Execute`, `ACPRunner`) e do `RunLoop`, e remoção do
+   estágio de paridade.
 
-Adoção concluída quando os três caminhos consomem o agregado, a suíte está verde e as diferenças contra
-a linha de base são exatamente os testes previstos.
+Adoção concluída quando os dois caminhos de produção e o `RunLoop` consomem o agregado, a suíte está
+verde e as diferenças contra a linha de base são exatamente os testes previstos.
 
 ## Monitoramento e Validação
 

@@ -1,0 +1,10 @@
+ testdata/snapshots/codex-only.agents.md        | 19 ++++++++-----------
+ testdata/snapshots/go-microservice.agents.md   | 17 +++++++----------
+ testdata/snapshots/go-modular.agents.md        | 17 +++++++----------
+ testdata/snapshots/go-monolith.agents.md       | 17 +++++++----------
+ testdata/snapshots/node-api.agents.md          | 17 +++++++----------
+ testdata/snapshots/node-monorepo.agents.md     | 19 ++++++++-----------
+ testdata/snapshots/polyglot-monorepo.agents.md | 18 ++++++++----------
+ testdata/snapshots/python-api.agents.md        | 17 +++++++----------
+ testdata/snapshots/python-monorepo.agents.md   | 17 +++++++----------
+ 9 files changed, 66 insertions(+), 92 deletions(-)

@@ -1,0 +1,5 @@
+{
+  "problem": "Simplificar o uso de um subsistema remoto complexo e ao mesmo tempo controlar o acesso ao recurso remoto.",
+  "signals": ["subsystem_too_complex", "access_control_or_lazy_loading", "remote_boundary"],
+  "constraints": ["preserve_public_contract"]
+}

@@ -14,6 +14,7 @@ import (
 	taskfs "github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	airuntime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
 // TestResolveWorkDir valida a logica de busca da raiz do projeto via marcadores.
@@ -114,10 +115,21 @@ func setupBaseFS(taskStatus string) (*taskfs.FakeFileSystem, string) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** " + taskStatus + "\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** " + taskStatus +
+		"\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", taskStatus)
 
 	return fsys, prd
+}
+
+func cycleApprovedReview(prefix string) string {
+	return prefix + "\nVerdict: APPROVED\n\n## Mapa de Critérios de Aceite\n" +
+		"- [atendido] comportamento validado -> go test ./... -> PASS\n"
+}
+
+func cycleRejectedReview(prefix string) string {
+	return prefix + "\nVerdict: REJECTED\n\n## Mapa de Critérios de Aceite\n" +
+		"- [nao atendido] comportamento validado\n"
 }
 
 // tasksContent gera o conteudo de tasks.md com uma unica task.
@@ -131,7 +143,7 @@ func TestExecuteSimpleMode(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 	executorCalled := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		if tool != "claude" {
@@ -180,7 +192,7 @@ func TestExecuteACP_SkipsLegacyBinaryChecker(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
 	checkerCalled := false
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = func(AgentInvoker) error {
 		checkerCalled = true
 		return fmt.Errorf("binary checker nao deveria rodar no modo acp")
@@ -215,7 +227,7 @@ func TestExecuteACP_SkipsLegacyBinaryChecker(t *testing.T) {
 func TestExecuteACP_ReturnsLauncherUnavailableImmediately(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		return &callbackInvoker{
@@ -251,9 +263,9 @@ func TestExecuteMaxIterationsZeroRunsUntilAllDone(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/task-3.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+	fsys.Files[prd+"/task-3.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte(
 		"| 1.0 | Task One | pending | — | Nao |\n" +
 			"| 2.0 | Task Two | pending | — | Nao |\n" +
@@ -262,7 +274,7 @@ func TestExecuteMaxIterationsZeroRunsUntilAllDone(t *testing.T) {
 
 	executorCallCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -271,21 +283,21 @@ func TestExecuteMaxIterationsZeroRunsUntilAllDone(t *testing.T) {
 				executorCallCount++
 				switch executorCallCount {
 				case 1:
-					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 					fsys.Files[prd+"/tasks.md"] = []byte(
 						"| 1.0 | Task One | done | — | Nao |\n" +
 							"| 2.0 | Task Two | pending | — | Nao |\n" +
 							"| 3.0 | Task Three | pending | — | Nao |\n",
 					)
 				case 2:
-					fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 					fsys.Files[prd+"/tasks.md"] = []byte(
 						"| 1.0 | Task One | done | — | Nao |\n" +
 							"| 2.0 | Task Two | done | — | Nao |\n" +
 							"| 3.0 | Task Three | pending | — | Nao |\n",
 					)
 				case 3:
-					fsys.Files[prd+"/task-3.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/task-3.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 					fsys.Files[prd+"/tasks.md"] = []byte(
 						"| 1.0 | Task One | done | — | Nao |\n" +
 							"| 2.0 | Task Two | done | — | Nao |\n" +
@@ -331,7 +343,7 @@ func TestExecuteAdvancedModeReviewerInvoked(t *testing.T) {
 	var reviewerCalled bool
 	var reviewerModel string
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -350,7 +362,7 @@ func TestExecuteAdvancedModeReviewerInvoked(t *testing.T) {
 				binary: "codex",
 				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 					reviewerModel = model
-					return "reviewer output approved", "", 0, nil
+					return cycleApprovedReview("reviewer output approved"), "", 0, nil
 				},
 			}, nil
 		default:
@@ -406,7 +418,7 @@ func TestExecuteAdvancedModeReviewerNotInvokedOnExecutorFailure(t *testing.T) {
 
 	reviewerCalled := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -470,7 +482,7 @@ func TestExecuteAdvancedModeReviewerNotInvokedWhenStatusNotDone(t *testing.T) {
 
 	reviewerCalled := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -528,7 +540,7 @@ func TestExecuteAdvancedModeReviewerInvokedOnTimeoutWithDone(t *testing.T) {
 
 	var reviewerCalled bool
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -546,7 +558,7 @@ func TestExecuteAdvancedModeReviewerInvokedOnTimeoutWithDone(t *testing.T) {
 			return &callbackInvoker{
 				binary: "codex",
 				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-					return "reviewer output", "", 0, nil
+					return cycleApprovedReview("reviewer output"), "", 0, nil
 				},
 			}, nil
 		default:
@@ -589,13 +601,10 @@ func TestExecuteAdvancedModeReviewerInvokedOnTimeoutWithDone(t *testing.T) {
 	}
 }
 
-// TestExecuteAdvancedModeReviewerFailureCapturesNote verifica que quando o reviewer
-// falha (exit != 0), a note "reviewer reportou problemas criticos" e capturada no ReviewResult,
-// sem alterar o status da task.
 func TestExecuteAdvancedModeReviewerFailureCapturesNote(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -604,14 +613,14 @@ func TestExecuteAdvancedModeReviewerFailureCapturesNote(t *testing.T) {
 				binary: "claude",
 				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 					fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
-					return "executor output", "", 0, nil
+					return "executor output\nFail-before: go test ./... falhou\nPass-after: go test ./... passou", "", 0, nil
 				},
 			}, nil
 		case "codex":
 			return &callbackInvoker{
 				binary: "codex",
 				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-					return "critical issues found", "errors", 1, nil
+					return cycleRejectedReview("critical issues found"), "errors", 1, nil
 				},
 			}, nil
 		default:
@@ -641,12 +650,18 @@ func TestExecuteAdvancedModeReviewerFailureCapturesNote(t *testing.T) {
 
 	reportData, _ := fsys.ReadFile(prd + "/report.md")
 	reportStr := string(reportData)
-	if !strings.Contains(reportStr, "reviewer reportou problemas criticos") {
-		t.Errorf("relatorio nao contem nota de falha do reviewer\noutput:\n%s", reportStr)
+	if !strings.Contains(reportStr, "ciclo de aprovacao encerrado sem APPROVED") {
+		t.Errorf("relatorio nao contem nota do ciclo sem aprovacao\noutput:\n%s", reportStr)
 	}
-	// Status da task nao deve ser alterado pelo reviewer
-	if !strings.Contains(reportStr, "done") {
-		t.Error("post-status da task nao deve ter sido alterado pelo reviewer")
+	if !strings.Contains(reportStr, "status forcado para blocked (RF-36)") {
+		t.Errorf("relatorio nao registra o forcamento de status blocked (RF-36)\noutput:\n%s", reportStr)
+	}
+	if !strings.Contains(reportStr, "| 1.0 | Test Task | blocked |") {
+		t.Errorf("status final da task deveria ser blocked (RF-36)\noutput:\n%s", reportStr)
+	}
+	taskFile, _ := fsys.ReadFile(prd + "/task-1.0-test.md")
+	if !strings.Contains(string(taskFile), "**Status:** blocked") {
+		t.Errorf("task file deveria registrar blocked (RF-36), obteve:\n%s", taskFile)
 	}
 }
 
@@ -660,7 +675,7 @@ func TestExecuteAdvancedModeBugfixInvokedOnReviewerFailure(t *testing.T) {
 	var bugfixPrompt string
 	claudeCallCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -684,7 +699,7 @@ func TestExecuteAdvancedModeBugfixInvokedOnReviewerFailure(t *testing.T) {
 			return &callbackInvoker{
 				binary: "codex",
 				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-					return "critical issues found\n- [main.go:42] variavel nao inicializada", "", 1, nil
+					return cycleRejectedReview("critical issues found\n- [critical] [main.go:42] variavel nao inicializada"), "", 1, nil
 				},
 			}, nil
 		default:
@@ -746,7 +761,7 @@ func TestExecuteAdvancedModeBugfixNotInvokedOnReviewerSuccess(t *testing.T) {
 	bugfixCalled := false
 	claudeCallCount2 := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -814,7 +829,7 @@ func TestExecuteAdvancedModeBugfixFailureCapturesNote(t *testing.T) {
 
 	claudeCallCount3 := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -835,7 +850,7 @@ func TestExecuteAdvancedModeBugfixFailureCapturesNote(t *testing.T) {
 			return &callbackInvoker{
 				binary: "codex",
 				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-					return "critical issues found", "", 1, nil
+					return cycleRejectedReview("critical issues found"), "", 1, nil
 				},
 			}, nil
 		default:
@@ -865,8 +880,8 @@ func TestExecuteAdvancedModeBugfixFailureCapturesNote(t *testing.T) {
 
 	reportData, _ := fsys.ReadFile(prd + "/report.md")
 	reportStr := string(reportData)
-	if !strings.Contains(reportStr, "bugfix nao conseguiu corrigir todos os achados") {
-		t.Errorf("relatorio nao contem nota de falha do bugfix\noutput:\n%s", reportStr)
+	if !strings.Contains(reportStr, "approval cycle interrupted during fix") {
+		t.Errorf("relatorio nao contem nota de falha do bugfix no Ciclo\noutput:\n%s", reportStr)
 	}
 }
 
@@ -878,7 +893,7 @@ func TestExecuteAdvancedModeBugfixUsesExecutorModel(t *testing.T) {
 	var bugfixModel string
 	claudeCalls := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -900,7 +915,7 @@ func TestExecuteAdvancedModeBugfixUsesExecutorModel(t *testing.T) {
 			return &callbackInvoker{
 				binary: "codex",
 				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-					return "critical issues", "", 1, nil
+					return cycleRejectedReview("critical issues"), "", 1, nil
 				},
 			}, nil
 		default:
@@ -940,7 +955,7 @@ func TestExecuteAdvancedModeBugfixNotInvokedWithoutReviewer(t *testing.T) {
 
 	claudeCalls := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -995,8 +1010,8 @@ func TestExecuteAdvancedModeBugfixDoesNotIncrementIteration(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte(
 		"| 1.0 | Task One | pending | — | Nao |\n" +
 			"| 2.0 | Task Two | pending | — | Nao |\n",
@@ -1006,7 +1021,7 @@ func TestExecuteAdvancedModeBugfixDoesNotIncrementIteration(t *testing.T) {
 	bugfixCallCount := 0
 	reviewerCallCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -1017,7 +1032,7 @@ func TestExecuteAdvancedModeBugfixDoesNotIncrementIteration(t *testing.T) {
 					// Distinguir executor vs bugfix pelo conteudo do prompt
 					if strings.Contains(prompt, "skill bugfix") {
 						bugfixCallCount++
-						return "bugfix applied", "", 0, nil
+						return "bugfix applied\nFail-before: go test ./... falhou\nPass-after: go test ./... passou", "", 0, nil
 					}
 					executorCallCount++
 					if executorCallCount == 1 {
@@ -1027,7 +1042,7 @@ func TestExecuteAdvancedModeBugfixDoesNotIncrementIteration(t *testing.T) {
 						)
 					} else {
 						fsys.Files[prd+"/tasks.md"] = []byte(
-							"| 1.0 | Task One | done | — | Nao |\n" +
+							"| 1.0 | Task One | blocked | — | Nao |\n" +
 								"| 2.0 | Task Two | done | — | Nao |\n",
 						)
 					}
@@ -1039,7 +1054,7 @@ func TestExecuteAdvancedModeBugfixDoesNotIncrementIteration(t *testing.T) {
 				binary: "codex",
 				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 					reviewerCallCount++
-					return "critical issues", "", 1, nil // reviewer sempre reprova
+					return cycleRejectedReview("critical issues"), "", 1, nil // reviewer sempre reprova
 				},
 			}, nil
 		default:
@@ -1071,11 +1086,9 @@ func TestExecuteAdvancedModeBugfixDoesNotIncrementIteration(t *testing.T) {
 	if executorCallCount != 2 {
 		t.Errorf("executor chamado %d vezes, esperado 2", executorCallCount)
 	}
-	// 2 reviews (um por task)
-	if reviewerCallCount != 2 {
-		t.Errorf("reviewer chamado %d vezes, esperado 2", reviewerCallCount)
+	if reviewerCallCount != 4 {
+		t.Errorf("reviewer chamado %d vezes, esperado 4", reviewerCallCount)
 	}
-	// 2 bugfixes (um por task, pois reviewer sempre reprova)
 	if bugfixCallCount != 2 {
 		t.Errorf("bugfix chamado %d vezes, esperado 2", bugfixCallCount)
 	}
@@ -1088,7 +1101,7 @@ func TestExecuteAdvancedModeBugfixInvocationError(t *testing.T) {
 
 	claudeCallsBf := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -1109,7 +1122,7 @@ func TestExecuteAdvancedModeBugfixInvocationError(t *testing.T) {
 			return &callbackInvoker{
 				binary: "codex",
 				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-					return "critical issues", "", 1, nil
+					return cycleRejectedReview("critical issues"), "", 1, nil
 				},
 			}, nil
 		default:
@@ -1139,7 +1152,8 @@ func TestExecuteAdvancedModeBugfixInvocationError(t *testing.T) {
 
 	reportData, _ := fsys.ReadFile(prd + "/report.md")
 	reportStr := string(reportData)
-	if !strings.Contains(reportStr, "erro de invocacao do bugfix") {
+	if !strings.Contains(reportStr, "approval cycle error") ||
+		!strings.Contains(reportStr, "context deadline exceeded") {
 		t.Errorf("relatorio nao contem nota de erro de invocacao do bugfix\noutput:\n%s", reportStr)
 	}
 }
@@ -1149,11 +1163,14 @@ func TestExecuteAdvancedModeBugfixInvocationError(t *testing.T) {
 func TestExecuteAdvancedModeBugfixReviewFindingsPassedVerbatim(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	reviewOutput := "Achados criticos:\n- [main.go:42] null pointer\n- [handler.go:10] missing error check\nVeredicto: reprovado"
+	reviewOutput := cycleRejectedReview("Achados criticos:\n" +
+		"- [critical] [main.go:42] null pointer\n" +
+		"- [critical] [handler.go:10] missing error check")
+	reviewFindings := []string{"null pointer", "missing error check"}
 	var capturedBugfixPrompt string
 	claudeCallsVb := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -1202,10 +1219,9 @@ func TestExecuteAdvancedModeBugfixReviewFindingsPassedVerbatim(t *testing.T) {
 		t.Fatalf("Execute retornou erro inesperado: %v", err)
 	}
 
-	// Cada linha do output do reviewer deve estar presente no prompt de bugfix
-	for line := range strings.SplitSeq(reviewOutput, "\n") {
-		if !strings.Contains(capturedBugfixPrompt, line) {
-			t.Errorf("prompt de bugfix nao contem linha do reviewer: %q", line)
+	for _, finding := range reviewFindings {
+		if !strings.Contains(capturedBugfixPrompt, finding) {
+			t.Errorf("prompt de bugfix nao contem achado do reviewer: %q", finding)
 		}
 	}
 }
@@ -1221,8 +1237,8 @@ func TestExecuteAdvancedModeBugfixOnlyForFailedReview(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte(
 		"| 1.0 | Task One | pending | — | Nao |\n" +
 			"| 2.0 | Task Two | pending | — | Nao |\n",
@@ -1232,7 +1248,7 @@ func TestExecuteAdvancedModeBugfixOnlyForFailedReview(t *testing.T) {
 	bugfixCalls := 0
 	reviewerCalls := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -1242,7 +1258,7 @@ func TestExecuteAdvancedModeBugfixOnlyForFailedReview(t *testing.T) {
 				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 					if strings.Contains(prompt, "skill bugfix") {
 						bugfixCalls++
-						return "bugfix applied", "", 0, nil
+						return "bugfix applied\nFail-before: go test ./... falhou\nPass-after: go test ./... passou", "", 0, nil
 					}
 					executorCalls++
 					if executorCalls == 1 {
@@ -1252,7 +1268,7 @@ func TestExecuteAdvancedModeBugfixOnlyForFailedReview(t *testing.T) {
 						)
 					} else {
 						fsys.Files[prd+"/tasks.md"] = []byte(
-							"| 1.0 | Task One | done | — | Nao |\n" +
+							"| 1.0 | Task One | blocked | — | Nao |\n" +
 								"| 2.0 | Task Two | done | — | Nao |\n",
 						)
 					}
@@ -1265,10 +1281,10 @@ func TestExecuteAdvancedModeBugfixOnlyForFailedReview(t *testing.T) {
 				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 					reviewerCalls++
 					// Reviewer reprova task 1, aprova task 2
-					if reviewerCalls == 1 {
-						return "critical issues in task 1", "", 1, nil
+					if executorCalls == 1 {
+						return cycleRejectedReview("critical issues in task 1"), "", 1, nil
 					}
-					return "approved", "", 0, nil
+					return cycleApprovedReview("no issues in task 2"), "", 0, nil
 				},
 			}, nil
 		default:
@@ -1299,8 +1315,8 @@ func TestExecuteAdvancedModeBugfixOnlyForFailedReview(t *testing.T) {
 	if executorCalls != 2 {
 		t.Errorf("executor chamado %d vezes, esperado 2", executorCalls)
 	}
-	if reviewerCalls != 2 {
-		t.Errorf("reviewer chamado %d vezes, esperado 2", reviewerCalls)
+	if reviewerCalls != 3 {
+		t.Errorf("reviewer chamado %d vezes, esperado 3", reviewerCalls)
 	}
 	// Bugfix so para task 1 (reviewer reprovou), nao para task 2 (reviewer aprovou)
 	if bugfixCalls != 1 {
@@ -1315,7 +1331,7 @@ func TestExecuteFallbackPreLoop(t *testing.T) {
 
 	var invokedTool string
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		invokedTool = tool
@@ -1370,7 +1386,7 @@ func TestExecuteFallbackPreLoop(t *testing.T) {
 func TestExecuteAllowUnknownModelSkipsValidation(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -1413,7 +1429,7 @@ func TestExecuteAllowUnknownModelSkipsValidation(t *testing.T) {
 func TestExecuteIncompatibleModelWithoutFallbackReturnsError(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return nil, fmt.Errorf("nao deveria ser chamado")
@@ -1457,8 +1473,8 @@ func TestExecuteMaxIterationsCountsOnlyExecutor(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte(
 		"| 1.0 | Task One | pending | — | Nao |\n" +
 			"| 2.0 | Task Two | pending | — | Nao |\n",
@@ -1467,7 +1483,7 @@ func TestExecuteMaxIterationsCountsOnlyExecutor(t *testing.T) {
 	executorCallCount := 0
 	reviewerCallCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -1496,7 +1512,7 @@ func TestExecuteMaxIterationsCountsOnlyExecutor(t *testing.T) {
 				binary: "codex",
 				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 					reviewerCallCount++
-					return "approved", "", 0, nil
+					return cycleApprovedReview("approved"), "", 0, nil
 				},
 			}, nil
 		default:
@@ -1539,7 +1555,7 @@ func TestExecuteMaxIterationsCountsOnlyExecutor(t *testing.T) {
 func TestExecuteAdvancedModeReportContainsProfiles(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -1598,7 +1614,7 @@ func newCapturePrinter() (*output.Printer, *bytes.Buffer) {
 func TestExecuteSimpleModeReportFormat(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -1650,7 +1666,7 @@ func TestDryRunAdvancedCompatibleProfiles(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 	printer, buf := newCapturePrinter()
 
-	svc := NewService(fsys, printer)
+	svc := newCycleTestService(fsys, printer)
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{binary: tool, fn: func(_ context.Context, _, _, _ string) (string, string, int, error) {
@@ -1711,7 +1727,7 @@ func TestDryRunAdvancedIncompatibleProfile(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 	printer, buf := newCapturePrinter()
 
-	svc := NewService(fsys, printer)
+	svc := newCycleTestService(fsys, printer)
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{binary: tool, fn: func(_ context.Context, _, _, _ string) (string, string, int, error) {
@@ -1761,7 +1777,7 @@ func TestDryRunSimplePreservesCurrentFormat(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 	printer, buf := newCapturePrinter()
 
-	svc := NewService(fsys, printer)
+	svc := newCycleTestService(fsys, printer)
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{binary: tool, fn: func(_ context.Context, _, _, _ string) (string, string, int, error) {
@@ -1811,7 +1827,7 @@ func TestDryRunSimplePreservesCurrentFormat(t *testing.T) {
 func TestExecuteFallbackChainExhausted(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return nil, fmt.Errorf("nao deveria ser invocado neste cenario")
@@ -1856,7 +1872,7 @@ func TestExecuteFallbackBothRolesSubstituted(t *testing.T) {
 
 	var invokedTools []string
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		invokedTools = append(invokedTools, tool)
@@ -1924,9 +1940,9 @@ func TestDryRunAdvancedMultipleEligibleTasks(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/task-3.0-gamma.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+	fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+	fsys.Files[prd+"/task-3.0-gamma.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte(
 		"| 1.0 | Alpha | pending | — | Nao |\n" +
 			"| 2.0 | Beta | pending | — | Nao |\n" +
@@ -1934,7 +1950,7 @@ func TestDryRunAdvancedMultipleEligibleTasks(t *testing.T) {
 	)
 
 	printer, buf := newCapturePrinter()
-	svc := NewService(fsys, printer)
+	svc := newCycleTestService(fsys, printer)
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{binary: tool, fn: func(_ context.Context, _, _, _ string) (string, string, int, error) {
@@ -1995,8 +2011,8 @@ func TestExecuteAuthErrorEarlyTermination(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte(
 		"| 1.0 | Task One | pending | — | Nao |\n" +
 			"| 2.0 | Task Two | pending | — | Nao |\n",
@@ -2004,7 +2020,7 @@ func TestExecuteAuthErrorEarlyTermination(t *testing.T) {
 
 	invokeCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2053,7 +2069,7 @@ func TestExecuteAuthErrorEarlyTermination(t *testing.T) {
 func TestExecuteEmptyOutputOnTimeoutKill(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.liveOutOverride = io.Discard
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
@@ -2100,8 +2116,8 @@ func TestExecuteNonAuthErrorContinuesLoop(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte(
 		"| 1.0 | Task One | pending | — | Nao |\n" +
 			"| 2.0 | Task Two | pending | — | Nao |\n",
@@ -2109,7 +2125,7 @@ func TestExecuteNonAuthErrorContinuesLoop(t *testing.T) {
 
 	invokeCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2150,8 +2166,8 @@ func TestExecuteResumesInProgressTask(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
-	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** in_progress\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** in_progress\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte(
 		"| 1.0 | Task One | done | — | Nao |\n" +
 			"| 2.0 | Task Two | in_progress | 1.0 | Nao |\n",
@@ -2159,14 +2175,14 @@ func TestExecuteResumesInProgressTask(t *testing.T) {
 
 	invokeCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
 			binary: tool,
 			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 				invokeCount++
-				fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** done\n")
+				fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				fsys.Files[prd+"/tasks.md"] = []byte(
 					"| 1.0 | Task One | done | — | Nao |\n" +
 						"| 2.0 | Task Two | done | 1.0 | Nao |\n",
@@ -2210,8 +2226,8 @@ func TestExecutePrioritizesInProgressBeforePending(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** in_progress\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** in_progress\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte(
 		"| 1.0 | Pending Task | pending | — | Nao |\n" +
 			"| 2.0 | In Progress Task | in_progress | — | Nao |\n",
@@ -2219,7 +2235,7 @@ func TestExecutePrioritizesInProgressBeforePending(t *testing.T) {
 
 	var invokedTask string
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2228,7 +2244,7 @@ func TestExecutePrioritizesInProgressBeforePending(t *testing.T) {
 				switch {
 				case strings.Contains(prompt, "task-2.0-test.md"):
 					invokedTask = "2.0"
-					fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 					fsys.Files[prd+"/tasks.md"] = []byte(
 						"| 1.0 | Pending Task | pending | — | Nao |\n" +
 							"| 2.0 | In Progress Task | done | — | Nao |\n",
@@ -2261,7 +2277,7 @@ func TestExecutePrioritizesInProgressBeforePending(t *testing.T) {
 }
 
 func TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -2272,8 +2288,8 @@ func TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders(t *testing.T)
 			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 			fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
-			fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+			fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 
 			originalTasks := []byte(
 				"| 1.0 | Task One | pending | — | Nao |\n" +
@@ -2281,7 +2297,7 @@ func TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders(t *testing.T)
 			)
 			fsys.Files[prd+"/tasks.md"] = append([]byte(nil), originalTasks...)
 
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invokerTool string) (AgentInvoker, error) {
 				if invokerTool != tool {
@@ -2290,7 +2306,7 @@ func TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders(t *testing.T)
 				return &callbackInvoker{
 					binary: tool,
 					fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/tasks.md"] = []byte(
 							"| 1.0 | Task One | done | — | Nao |\n" +
 								"| 2.0 | Task Two | done | 1.0 | Nao |\n",
@@ -2321,7 +2337,7 @@ func TestExecuteRejectsUnauthorizedTasksRowMutationForAllProviders(t *testing.T)
 			}
 
 			taskFile, _ := fsys.ReadFile(prd + "/task-1.0-test.md")
-			if string(taskFile) != "**Status:** pending\n" {
+			if string(taskFile) != "**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n" {
 				t.Fatalf("arquivo da task atual deveria ser restaurado, obteve: %q", string(taskFile))
 			}
 
@@ -2348,20 +2364,20 @@ func TestExecuteRejectsUnauthorizedTaskFileMutation(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\nDetalhes originais\n")
 	fsys.Files[prd+"/tasks.md"] = []byte(
 		"| 1.0 | Task One | pending | — | Nao |\n" +
 			"| 2.0 | Task Two | pending | 1.0 | Nao |\n",
 	)
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
 			binary: tool,
 			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-				fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+				fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\nALTERADO INDEVIDAMENTE\n")
 				fsys.Files[prd+"/tasks.md"] = []byte(
 					"| 1.0 | Task One | done | — | Nao |\n" +
@@ -2410,18 +2426,18 @@ func TestExecuteRejectsUnexpectedTrackedTaskFileCreation(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
 			binary: tool,
 			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-				fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+				fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
-				fsys.Files[prd+"/task-2.0-intrusa.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/task-2.0-intrusa.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				return "created extra task file", "", 0, nil
 			},
 		}, nil
@@ -2447,7 +2463,7 @@ func TestExecuteRejectsUnexpectedTrackedTaskFileCreation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("task-1.0-test.md nao encontrado: %v", err)
 	}
-	if string(taskOne) != "**Status:** pending\n" {
+	if string(taskOne) != "**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n" {
 		t.Fatalf("arquivo da task atual deveria ter sido restaurado, obteve: %q", string(taskOne))
 	}
 
@@ -2462,7 +2478,7 @@ func TestExecuteRejectsUnexpectedTrackedTaskFileCreation(t *testing.T) {
 }
 
 func TestExecuteRejectsProtectedPRDFileMutationForAllProviders(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -2473,10 +2489,10 @@ func TestExecuteRejectsProtectedPRDFileMutationForAllProviders(t *testing.T) {
 			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 			fsys.Files[prd+"/prd.md"] = []byte("# PRD original\n")
 			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec original\n")
-			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 			fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invokerTool string) (AgentInvoker, error) {
 				if invokerTool != tool {
@@ -2485,7 +2501,7 @@ func TestExecuteRejectsProtectedPRDFileMutationForAllProviders(t *testing.T) {
 				return &callbackInvoker{
 					binary: tool,
 					fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
 						fsys.Files[prd+"/prd.md"] = []byte("# PRD alterado indevidamente\n")
 						return "mutated prd.md", "", 0, nil
@@ -2522,7 +2538,7 @@ func TestExecuteRejectsProtectedPRDFileMutationForAllProviders(t *testing.T) {
 }
 
 func TestExecuteRejectsArbitraryPRDFileMutationForAllProviders(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -2534,10 +2550,10 @@ func TestExecuteRejectsArbitraryPRDFileMutationForAllProviders(t *testing.T) {
 			fsys.Files[prd+"/prd.md"] = []byte("# PRD original\n")
 			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec original\n")
 			fsys.Files[prd+"/notes.md"] = []byte("conteudo original\n")
-			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 			fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invokerTool string) (AgentInvoker, error) {
 				if invokerTool != tool {
@@ -2546,7 +2562,7 @@ func TestExecuteRejectsArbitraryPRDFileMutationForAllProviders(t *testing.T) {
 				return &callbackInvoker{
 					binary: tool,
 					fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
 						fsys.Files[prd+"/notes.md"] = []byte("alterado indevidamente\n")
 						return "mutated notes.md", "", 0, nil
@@ -2590,8 +2606,8 @@ func TestExecuteRejectsReviewerIsolationViolation(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+	fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte(
 		"| 1.0 | Task One | pending | — | Nao |\n" +
 			"| 2.0 | Task Two | pending | 1.0 | Nao |\n",
@@ -2600,7 +2616,7 @@ func TestExecuteRejectsReviewerIsolationViolation(t *testing.T) {
 	execProfile, _ := NewExecutionProfile("executor", "claude", "")
 	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2608,7 +2624,7 @@ func TestExecuteRejectsReviewerIsolationViolation(t *testing.T) {
 			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 				switch tool {
 				case "claude":
-					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 					fsys.Files[prd+"/tasks.md"] = []byte(
 						"| 1.0 | Task One | done | — | Nao |\n" +
 							"| 2.0 | Task Two | pending | 1.0 | Nao |\n",
@@ -2616,7 +2632,7 @@ func TestExecuteRejectsReviewerIsolationViolation(t *testing.T) {
 					return "executor completed", "", 0, nil
 				case "codex":
 					fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** done\nALTERADO INDEVIDAMENTE\n")
-					return "reviewer mutated another task file", "", 0, nil
+					return cycleApprovedReview("reviewer mutated another task file"), "", 0, nil
 				default:
 					t.Fatalf("tool inesperada: %q", tool)
 					return "", "", 0, nil
@@ -2646,7 +2662,7 @@ func TestExecuteRejectsReviewerIsolationViolation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("task-2.0-test.md nao encontrado: %v", err)
 	}
-	if string(taskTwo) != "**Status:** pending\n" {
+	if string(taskTwo) != "**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n" {
 		t.Fatalf("arquivo da task nao deveria permanecer alterado pelo reviewer, obteve: %q", string(taskTwo))
 	}
 
@@ -2671,13 +2687,13 @@ func TestExecuteRejectsReviewerProtectedPRDMutation(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD original\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec original\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
 	execProfile, _ := NewExecutionProfile("executor", "claude", "")
 	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2685,12 +2701,12 @@ func TestExecuteRejectsReviewerProtectedPRDMutation(t *testing.T) {
 			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 				switch tool {
 				case "claude":
-					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 					fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
 					return "executor completed", "", 0, nil
 				case "codex":
 					fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec alterado indevidamente\n")
-					return "reviewer mutated techspec", "", 0, nil
+					return cycleApprovedReview("reviewer mutated techspec"), "", 0, nil
 				default:
 					t.Fatalf("tool inesperada: %q", tool)
 					return "", "", 0, nil
@@ -2742,13 +2758,13 @@ func TestExecuteRejectsReviewerArbitraryPRDMutation(t *testing.T) {
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD original\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec original\n")
 	fsys.Files[prd+"/notes.md"] = []byte("conteudo original\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
 	execProfile, _ := NewExecutionProfile("executor", "claude", "")
 	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2756,12 +2772,12 @@ func TestExecuteRejectsReviewerArbitraryPRDMutation(t *testing.T) {
 			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 				switch tool {
 				case "claude":
-					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 					fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
 					return "executor completed", "", 0, nil
 				case "codex":
 					fsys.Files[prd+"/notes.md"] = []byte("alterado indevidamente pelo reviewer\n")
-					return "reviewer mutated notes", "", 0, nil
+					return cycleApprovedReview("reviewer mutated notes"), "", 0, nil
 				default:
 					t.Fatalf("tool inesperada: %q", tool)
 					return "", "", 0, nil
@@ -2812,13 +2828,13 @@ func TestExecuteRejectsReviewerCurrentTaskMutation(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
 	execProfile, _ := NewExecutionProfile("executor", "claude", "")
 	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2826,12 +2842,12 @@ func TestExecuteRejectsReviewerCurrentTaskMutation(t *testing.T) {
 			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 				switch tool {
 				case "claude":
-					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 					fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
 					return "executor completed", "", 0, nil
 				case "codex":
-					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** blocked\n")
-					return "reviewer mutated current task", "", 0, nil
+					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** blocked\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+					return cycleApprovedReview("reviewer mutated current task"), "", 0, nil
 				default:
 					t.Fatalf("tool inesperada: %q", tool)
 					return "", "", 0, nil
@@ -2861,7 +2877,7 @@ func TestExecuteRejectsReviewerCurrentTaskMutation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("task-1.0-test.md nao encontrado: %v", err)
 	}
-	if string(taskOne) != "**Status:** done\n" {
+	if string(taskOne) != "**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n" {
 		t.Fatalf("arquivo da task atual deveria ter sido restaurado para done, obteve: %q", string(taskOne))
 	}
 
@@ -2886,13 +2902,13 @@ func TestExecuteRejectsReviewerCurrentTaskRowMutation(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
 	execProfile, _ := NewExecutionProfile("executor", "claude", "")
 	revProfile, _ := NewExecutionProfile("reviewer", "codex", "")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -2900,12 +2916,12 @@ func TestExecuteRejectsReviewerCurrentTaskRowMutation(t *testing.T) {
 			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 				switch tool {
 				case "claude":
-					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 					fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
 					return "executor completed", "", 0, nil
 				case "codex":
 					fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | blocked | — | Nao |\n")
-					return "reviewer mutated current task row", "", 0, nil
+					return cycleApprovedReview("reviewer mutated current task row"), "", 0, nil
 				default:
 					t.Fatalf("tool inesperada: %q", tool)
 					return "", "", 0, nil
@@ -2960,12 +2976,12 @@ func TestExecuteDoesNotResumeTaskWhenTaskFileStatusIsTerminal(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** blocked\n")
+	fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** blocked\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | in_progress | — | Nao |\n")
 
 	invoked := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -3009,7 +3025,7 @@ func TestDryRunAdvancedTemplatePreview(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 	printer, buf := newCapturePrinter()
 
-	svc := NewService(fsys, printer)
+	svc := newCycleTestService(fsys, printer)
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{binary: tool, fn: func(_ context.Context, _, _, _ string) (string, string, int, error) {
@@ -3061,7 +3077,7 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 	const base = "/fake/project"
 	const prd = base + "/.specs/prd-parity"
 
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	// baseSetup inicializa arquivos obrigatorios (AGENTS.md, prd.md, techspec.md).
 	baseSetup := func(fsys *taskfs.FakeFileSystem) {
@@ -3084,12 +3100,12 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 		{
 			name: "P1/sucesso_exit_0",
 			setupFS: func(fsys *taskfs.FakeFileSystem) {
-				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Alpha | pending | — | Nao |\n")
 			},
 			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 				return func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-					fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 					fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Alpha | done | — | Nao |\n")
 					return "task completed successfully", "", 0, nil
 				}
@@ -3113,13 +3129,13 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 		{
 			name: "P2/timeout_exit_minus1_status_done",
 			setupFS: func(fsys *taskfs.FakeFileSystem) {
-				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Alpha | pending | — | Nao |\n")
 			},
 			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 				return func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 					// Agente marca done antes de ser morto por timeout (SIGKILL → exit -1)
-					fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 					return "output before sigkill", "", -1, nil
 				}
 			},
@@ -3139,7 +3155,7 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 		{
 			name: "P3/falha_exit_1_status_inalterado",
 			setupFS: func(fsys *taskfs.FakeFileSystem) {
-				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Alpha | pending | — | Nao |\n")
 			},
 			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
@@ -3164,7 +3180,7 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 		{
 			name: "P4/erro_autenticacao",
 			setupFS: func(fsys *taskfs.FakeFileSystem) {
-				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Alpha | pending | — | Nao |\n")
 			},
 			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
@@ -3188,7 +3204,7 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 		{
 			name: "P5/status_inalterado_exit_0",
 			setupFS: func(fsys *taskfs.FakeFileSystem) {
-				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Alpha | pending | — | Nao |\n")
 			},
 			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
@@ -3210,8 +3226,8 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 		{
 			name: "P6/violacao_isolamento",
 			setupFS: func(fsys *taskfs.FakeFileSystem) {
-				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
-				fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+				fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				fsys.Files[prd+"/tasks.md"] = []byte(
 					"| 1.0 | Alpha | pending | — | Nao |\n" +
 						"| 2.0 | Beta | pending | — | Nao |\n",
@@ -3223,7 +3239,7 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 					// validateTaskFileIsolation (isolation.go) detecta a mutacao porque o snapshot capturado
 					// antes da invocacao inclui todos os task files da pasta PRD e compara byte a byte apos a
 					// execucao, permitindo apenas a mutacao do currentTaskFile.
-					fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 					return "completed", "", 0, nil
 				}
 			},
@@ -3245,7 +3261,7 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 		{
 			name: "P7/erro_invocacao",
 			setupFS: func(fsys *taskfs.FakeFileSystem) {
-				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Alpha | pending | — | Nao |\n")
 			},
 			makeInvokerFn: func(fsys *taskfs.FakeFileSystem) func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
@@ -3266,9 +3282,9 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 		{
 			name: "P8/multiplas_tasks_todas_done",
 			setupFS: func(fsys *taskfs.FakeFileSystem) {
-				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n")
-				fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** pending\n")
-				fsys.Files[prd+"/task-3.0-gamma.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+				fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+				fsys.Files[prd+"/task-3.0-gamma.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				fsys.Files[prd+"/tasks.md"] = []byte(
 					"| 1.0 | Alpha | pending | — | Nao |\n" +
 						"| 2.0 | Beta | pending | — | Nao |\n" +
@@ -3279,21 +3295,21 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 				return func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 					switch {
 					case strings.Contains(prompt, "task-1.0"):
-						fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/tasks.md"] = []byte(
 							"| 1.0 | Alpha | done | — | Nao |\n" +
 								"| 2.0 | Beta | pending | — | Nao |\n" +
 								"| 3.0 | Gamma | pending | — | Nao |\n",
 						)
 					case strings.Contains(prompt, "task-2.0"):
-						fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/tasks.md"] = []byte(
 							"| 1.0 | Alpha | done | — | Nao |\n" +
 								"| 2.0 | Beta | done | — | Nao |\n" +
 								"| 3.0 | Gamma | pending | — | Nao |\n",
 						)
 					case strings.Contains(prompt, "task-3.0"):
-						fsys.Files[prd+"/task-3.0-gamma.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-3.0-gamma.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/tasks.md"] = []byte(
 							"| 1.0 | Alpha | done | — | Nao |\n" +
 								"| 2.0 | Beta | done | — | Nao |\n" +
@@ -3320,11 +3336,11 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 			name: "P9/dependencias_bloqueiam_task",
 			setupFS: func(fsys *taskfs.FakeFileSystem) {
 				// 1.0 ja done (sem deps)
-				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** done\n")
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				// 2.0 pending, dep 1.0 (done) → elegivel
-				fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				// 3.0 pending, dep 2.0 (pending) → bloqueada
-				fsys.Files[prd+"/task-3.0-gamma.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/task-3.0-gamma.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				fsys.Files[prd+"/tasks.md"] = []byte(
 					"| 1.0 | Alpha | done | — | Nao |\n" +
 						"| 2.0 | Beta | pending | 1.0 | Nao |\n" +
@@ -3335,14 +3351,14 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 				return func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 					switch {
 					case strings.Contains(prompt, "task-2.0"):
-						fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/tasks.md"] = []byte(
 							"| 1.0 | Alpha | done | — | Nao |\n" +
 								"| 2.0 | Beta | done | 1.0 | Nao |\n" +
 								"| 3.0 | Gamma | pending | 2.0 | Nao |\n",
 						)
 					case strings.Contains(prompt, "task-3.0"):
-						fsys.Files[prd+"/task-3.0-gamma.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-3.0-gamma.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/tasks.md"] = []byte(
 							"| 1.0 | Alpha | done | — | Nao |\n" +
 								"| 2.0 | Beta | done | 1.0 | Nao |\n" +
@@ -3370,9 +3386,9 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 			name: "P10/retomada_in_progress_prioridade",
 			setupFS: func(fsys *taskfs.FakeFileSystem) {
 				// 1.0 em progresso (sessao anterior interrompida)
-				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** in_progress\n")
+				fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** in_progress\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				// 2.0 pendente, sem deps
-				fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** pending\n")
+				fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 				fsys.Files[prd+"/tasks.md"] = []byte(
 					"| 1.0 | Alpha | in_progress | — | Nao |\n" +
 						"| 2.0 | Beta | pending | — | Nao |\n",
@@ -3383,13 +3399,13 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 					switch {
 					case strings.Contains(prompt, "task-1.0"):
 						// Sessao anterior retomada e finalizada
-						fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-1.0-alpha.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/tasks.md"] = []byte(
 							"| 1.0 | Alpha | done | — | Nao |\n" +
 								"| 2.0 | Beta | pending | — | Nao |\n",
 						)
 					case strings.Contains(prompt, "task-2.0"):
-						fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-2.0-beta.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/tasks.md"] = []byte(
 							"| 1.0 | Alpha | done | — | Nao |\n" +
 								"| 2.0 | Beta | done | — | Nao |\n",
@@ -3429,7 +3445,7 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 
 				fn := tt.makeInvokerFn(fsys)
 
-				svc := NewService(fsys, newTestPrinter())
+				svc := newCycleTestService(fsys, newTestPrinter())
 				svc.binaryChecker = noBinaryCheck
 				svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
 					return &callbackInvoker{
@@ -3470,7 +3486,7 @@ func TestParidadeSemanticaCicloDeVida(t *testing.T) {
 // definido em RF-12: skipped map, contador de iteracoes, acumulador de report e releitura
 // de tasks.md. Subtarefas 4.1 e 4.4.
 func TestSessionIsolationBetweenIterationsForAllTools(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -3481,8 +3497,8 @@ func TestSessionIsolationBetweenIterationsForAllTools(t *testing.T) {
 			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 			fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-			fsys.Files[prd+"/task-1.0-a.md"] = []byte("**Status:** pending\n")
-			fsys.Files[prd+"/task-2.0-b.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/task-1.0-a.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+			fsys.Files[prd+"/task-2.0-b.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 			fsys.Files[prd+"/tasks.md"] = []byte(
 				"| 1.0 | Task One | pending | — | Nao |\n" +
 					"| 2.0 | Task Two | pending | — | Nao |\n",
@@ -3491,7 +3507,7 @@ func TestSessionIsolationBetweenIterationsForAllTools(t *testing.T) {
 			var executionOrder []string
 			var invokePrompts []string
 
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
 				return &callbackInvoker{
@@ -3501,14 +3517,14 @@ func TestSessionIsolationBetweenIterationsForAllTools(t *testing.T) {
 						switch {
 						case strings.Contains(prompt, "task-1.0"):
 							executionOrder = append(executionOrder, "1.0")
-							fsys.Files[prd+"/task-1.0-a.md"] = []byte("**Status:** done\n")
+							fsys.Files[prd+"/task-1.0-a.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 							fsys.Files[prd+"/tasks.md"] = []byte(
 								"| 1.0 | Task One | done | — | Nao |\n" +
 									"| 2.0 | Task Two | pending | — | Nao |\n",
 							)
 						case strings.Contains(prompt, "task-2.0"):
 							executionOrder = append(executionOrder, "2.0")
-							fsys.Files[prd+"/task-2.0-b.md"] = []byte("**Status:** done\n")
+							fsys.Files[prd+"/task-2.0-b.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 							fsys.Files[prd+"/tasks.md"] = []byte(
 								"| 1.0 | Task One | done | — | Nao |\n" +
 									"| 2.0 | Task Two | done | — | Nao |\n",
@@ -3573,7 +3589,7 @@ func TestSessionIsolationBetweenIterationsForAllTools(t *testing.T) {
 // mutacoes legitimas do executor (propria task file e sua row em tasks.md)
 // para cada uma das 4 ferramentas. Subtarefa 4.2, modo executor.
 func TestCaptureValidateIsolationExecutorModeForAllTools(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -3584,17 +3600,17 @@ func TestCaptureValidateIsolationExecutorModeForAllTools(t *testing.T) {
 			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 			fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 			fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
 				return &callbackInvoker{
 					binary: invTool,
 					fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 						// Mutacao legitima: atualizar apenas propria task file e sua row em tasks.md
-						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
 						return "completed", "", 0, nil
 					},
@@ -3638,7 +3654,7 @@ func TestCaptureValidateIsolationExecutorModeForAllTools(t *testing.T) {
 // modifica o arquivo de task de outra task (nao a atual), o snapshot e restaurado e
 // o loop e abortado para todas as 4 ferramentas. Subtarefa 4.3.
 func TestSnapshotRestorationAfterTaskFileMutationForAllTools(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -3649,21 +3665,21 @@ func TestSnapshotRestorationAfterTaskFileMutationForAllTools(t *testing.T) {
 			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 			fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 			fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** pending\nconteudo original\n")
 			fsys.Files[prd+"/tasks.md"] = []byte(
 				"| 1.0 | Task One | pending | — | Nao |\n" +
 					"| 2.0 | Task Two | pending | 1.0 | Nao |\n",
 			)
 
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
 				return &callbackInvoker{
 					binary: invTool,
 					fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 						// Executor atualiza sua propria task, mas tambem modifica task file de outra (violacao)
-						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/task-2.0-test.md"] = []byte("**Status:** done\nALTERADO INDEVIDAMENTE\n")
 						fsys.Files[prd+"/tasks.md"] = []byte(
 							"| 1.0 | Task One | done | — | Nao |\n" +
@@ -3714,7 +3730,7 @@ func TestSnapshotRestorationAfterTaskFileMutationForAllTools(t *testing.T) {
 // executor cria um arquivo de task nao listado no snapshot, o arquivo e removido e o
 // loop e abortado para todas as 4 ferramentas. Subtarefa 4.3.
 func TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools(t *testing.T) {
-	tools := []string{"claude", "codex", "gemini", "copilot"}
+	tools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, tool := range tools {
 		t.Run(tool, func(t *testing.T) {
@@ -3725,19 +3741,19 @@ func TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools(t *testing.T)
 			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 			fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 			fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(invTool string) (AgentInvoker, error) {
 				return &callbackInvoker{
 					binary: invTool,
 					fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
-						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
 						// Cria arquivo de task nao registrado no snapshot (violacao)
-						fsys.Files[prd+"/task-99.0-intrusa.md"] = []byte("**Status:** pending\n")
+						fsys.Files[prd+"/task-99.0-intrusa.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						return "created unexpected task file", "", 0, nil
 					},
 				}, nil
@@ -3765,7 +3781,7 @@ func TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools(t *testing.T)
 			if err != nil {
 				t.Fatalf("[%s] task-1.0-test.md nao encontrado: %v", tool, err)
 			}
-			if string(taskOne) != "**Status:** pending\n" {
+			if string(taskOne) != "**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n" {
 				t.Fatalf("[%s] task-1.0-test.md deveria ter sido restaurado para pending, obteve: %q", tool, string(taskOne))
 			}
 
@@ -3785,7 +3801,7 @@ func TestSnapshotRestorationAfterUnexpectedFileCreationForAllTools(t *testing.T)
 // rejeita mutacao do arquivo da task atual pelo reviewer e restaura o snapshot
 // para cada ferramenta usada como reviewer. Subtarefas 4.2 (modo reviewer) e 4.3.
 func TestReviewerModeIsolationForAllReviewerTools(t *testing.T) {
-	reviewerTools := []string{"claude", "codex", "gemini", "copilot"}
+	reviewerTools := []string{"claude", "codex", "opencode", "copilot"}
 
 	for _, reviewerTool := range reviewerTools {
 		t.Run(reviewerTool, func(t *testing.T) {
@@ -3796,7 +3812,7 @@ func TestReviewerModeIsolationForAllReviewerTools(t *testing.T) {
 			fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 			fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 			fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n")
+			fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 			fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | pending | — | Nao |\n")
 
 			execProfile, _ := NewExecutionProfile("executor", "claude", "")
@@ -3805,7 +3821,7 @@ func TestReviewerModeIsolationForAllReviewerTools(t *testing.T) {
 			// factoryCallCount distingue executor (1a chamada) do reviewer (2a chamada).
 			// O executor e criado uma vez antes do loop; o reviewer e criado dentro de invokeReviewer.
 			factoryCallCount := 0
-			svc := NewService(fsys, newTestPrinter())
+			svc := newCycleTestService(fsys, newTestPrinter())
 			svc.binaryChecker = noBinaryCheck
 			svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 				factoryCallCount++
@@ -3815,13 +3831,13 @@ func TestReviewerModeIsolationForAllReviewerTools(t *testing.T) {
 					fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 						if isExecutor {
 							// Executor: mutacao legitima — marca task como done
-							fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n")
+							fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 							fsys.Files[prd+"/tasks.md"] = []byte("| 1.0 | Task One | done | — | Nao |\n")
 							return "executor completed", "", 0, nil
 						}
 						// Reviewer: mutacao indevida do arquivo da task atual
-						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** blocked\n")
-						return "reviewer mutated current task", "", 0, nil
+						fsys.Files[prd+"/task-1.0-test.md"] = []byte("**Status:** blocked\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+						return cycleApprovedReview("reviewer mutated current task"), "", 0, nil
 					},
 				}, nil
 			}
@@ -3849,7 +3865,7 @@ func TestReviewerModeIsolationForAllReviewerTools(t *testing.T) {
 			if err != nil {
 				t.Fatalf("[reviewer=%s] task-1.0-test.md nao encontrado: %v", reviewerTool, err)
 			}
-			if string(taskOne) != "**Status:** done\n" {
+			if string(taskOne) != "**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n" {
 				t.Fatalf("[reviewer=%s] task-1.0-test.md deveria ter sido restaurado para done, obteve: %q",
 					reviewerTool, string(taskOne))
 			}
@@ -3884,8 +3900,8 @@ func TestSharedStateBetweenIterationsMatchesRF12(t *testing.T) {
 	fsys.Files[base+"/AGENTS.md"] = []byte("# Agents\n")
 	fsys.Files[prd+"/prd.md"] = []byte("# PRD\n")
 	fsys.Files[prd+"/techspec.md"] = []byte("# TechSpec\n")
-	fsys.Files[prd+"/task-1.0-a.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/task-2.0-b.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-a.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+	fsys.Files[prd+"/task-2.0-b.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	// tasks.md lista ambas sem dependencias — 1.0 e selecionada primeiro (ordem de declaracao)
 	fsys.Files[prd+"/tasks.md"] = []byte(
 		"| 1.0 | Task A | pending | — | Nao |\n" +
@@ -3895,7 +3911,7 @@ func TestSharedStateBetweenIterationsMatchesRF12(t *testing.T) {
 	task1InvokeCount := 0
 	task2InvokeCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		return &callbackInvoker{
@@ -3910,7 +3926,7 @@ func TestSharedStateBetweenIterationsMatchesRF12(t *testing.T) {
 				case strings.Contains(prompt, "task-2.0"):
 					task2InvokeCount++
 					// RF-12 releitura de tasks.md: a iteracao viu tasks.md re-lido e elegeu task-2.0
-					fsys.Files[prd+"/task-2.0-b.md"] = []byte("**Status:** done\n")
+					fsys.Files[prd+"/task-2.0-b.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 					fsys.Files[prd+"/tasks.md"] = []byte(
 						"| 1.0 | Task A | pending | — | Nao |\n" +
 							"| 2.0 | Task B | done | — | Nao |\n",
@@ -4009,9 +4025,9 @@ AuthService -> TokenManager -> UserRepository
 
 Detalhes aqui.
 `)
-	fsys.Files[prd+"/task-1.0-auth-service.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/task-2.0-token-manager.md"] = []byte("**Status:** pending\n")
-	fsys.Files[prd+"/task-3.0-user-repository.md"] = []byte("**Status:** pending\n")
+	fsys.Files[prd+"/task-1.0-auth-service.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+	fsys.Files[prd+"/task-2.0-token-manager.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
+	fsys.Files[prd+"/task-3.0-user-repository.md"] = []byte("**Status:** pending\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 	fsys.Files[prd+"/tasks.md"] = []byte(
 		"| 1.0 | Auth Service | pending | — | Nao |\n" +
 			"| 2.0 | Token Manager | pending | — | Nao |\n" +
@@ -4022,7 +4038,7 @@ Detalhes aqui.
 	var reviewerPrompts []string
 	executorCallCount := 0
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		switch tool {
@@ -4034,21 +4050,21 @@ Detalhes aqui.
 					executorCallCount++
 					switch executorCallCount {
 					case 1:
-						fsys.Files[prd+"/task-1.0-auth-service.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-1.0-auth-service.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/tasks.md"] = []byte(
 							"| 1.0 | Auth Service | done | — | Nao |\n" +
 								"| 2.0 | Token Manager | pending | — | Nao |\n" +
 								"| 3.0 | User Repository | pending | — | Nao |\n",
 						)
 					case 2:
-						fsys.Files[prd+"/task-2.0-token-manager.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-2.0-token-manager.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/tasks.md"] = []byte(
 							"| 1.0 | Auth Service | done | — | Nao |\n" +
 								"| 2.0 | Token Manager | done | — | Nao |\n" +
 								"| 3.0 | User Repository | pending | — | Nao |\n",
 						)
 					case 3:
-						fsys.Files[prd+"/task-3.0-user-repository.md"] = []byte("**Status:** done\n")
+						fsys.Files[prd+"/task-3.0-user-repository.md"] = []byte("**Status:** done\n\n## Definition of Done\n\n- [ ] comportamento validado\n")
 						fsys.Files[prd+"/tasks.md"] = []byte(
 							"| 1.0 | Auth Service | done | — | Nao |\n" +
 								"| 2.0 | Token Manager | done | — | Nao |\n" +
@@ -4063,7 +4079,7 @@ Detalhes aqui.
 				binary: "codex",
 				fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 					reviewerPrompts = append(reviewerPrompts, prompt)
-					return "approved", "", 0, nil
+					return cycleApprovedReview("approved"), "", 0, nil
 				},
 			}, nil
 		default:
@@ -4175,18 +4191,7 @@ Detalhes aqui.
 		t.Fatalf("esperado 3 prompts de reviewer, obteve %d", len(reviewerPrompts))
 	}
 
-	// 3a. Primeiro reviewer: apenas task 1.0 como atual (nenhuma concluida antes)
 	firstReviewerPrompt := reviewerPrompts[0]
-	if !strings.Contains(firstReviewerPrompt, "1.0") {
-		t.Errorf("primeiro prompt do reviewer deveria mencionar task 1.0\nprompt:\n%s", firstReviewerPrompt)
-	}
-
-	// 3b. Terceiro reviewer: tasks 1.0 e 2.0 ja concluidas
-	thirdReviewerPrompt := reviewerPrompts[2]
-	if !strings.Contains(thirdReviewerPrompt, "Auth Service") || !strings.Contains(thirdReviewerPrompt, "Token Manager") {
-		t.Errorf("terceiro reviewer deveria listar tasks concluidas (Auth Service, Token Manager)\nprompt:\n%s",
-			thirdReviewerPrompt)
-	}
 
 	// 3c. Areas de risco detectadas da techspec (JWT, auth = seguranca; interface = contratos)
 	riskChecks := []string{
@@ -4214,23 +4219,9 @@ Detalhes aqui.
 		}
 	}
 
-	// 3e. Saidas esperadas presentes no prompt
-	outputChecks := []string{
-		"critico, importante, sugestao",
-		"aprovado / aprovado com ressalvas / reprovado",
-	}
-	for _, out := range outputChecks {
-		if !strings.Contains(firstReviewerPrompt, out) {
-			t.Errorf("prompt do reviewer deveria conter saida esperada %q\nprompt:\n%s",
-				out, firstReviewerPrompt)
-		}
-	}
-
-	// 3f. Estrutura base do reviewer (AGENTS.md, SKILL.md, isolamento)
 	reviewStructureChecks := []string{
 		"AGENTS.md",
 		".agents/skills/review/SKILL.md",
-		"Do NOT modify any task file or any row in tasks.md.",
 	}
 	for _, s := range reviewStructureChecks {
 		if !strings.Contains(firstReviewerPrompt, s) {
@@ -4277,7 +4268,7 @@ func TestT17_LegacyFlowWhenAgentNameEmpty(t *testing.T) {
 	registryCalled := false
 	executorCalled := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		executorCalled = true
@@ -4326,7 +4317,7 @@ func TestT18_AgentFlowResolvesAndEnrichesPrompt(t *testing.T) {
 
 	promptReceived := ""
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	// Substituir acpInvokerFactory para interceptar chamada sem ACP real.
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
@@ -4369,7 +4360,7 @@ func TestT19_AgentNotFoundReturnsActionableError(t *testing.T) {
 	const existingAgent = "agente-existente"
 	fsys, prd := setupFSWithAgent(existingAgent)
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		return &callbackInvoker{
@@ -4410,7 +4401,7 @@ func TestT16_LegacyRuntimeRoutesCopilotToCopilotInvoker(t *testing.T) {
 	legacyCalled := false
 	acpCalled := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	// injeta invokerFactory legada para capturar chamada ao copilotInvoker
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
@@ -4464,7 +4455,7 @@ func TestACPRuntimeRoutesCopilotToACPRunner(t *testing.T) {
 	acpCalled := false
 	legacyCalled := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.invokerFactory = func(tool string) (AgentInvoker, error) {
 		legacyCalled = true
@@ -4508,34 +4499,40 @@ func TestACPRuntimeRoutesCopilotToACPRunner(t *testing.T) {
 	}
 }
 
-// TestResolveACPSpec valida o resolvedor interno de specs para o Service.Execute.
-// Garante que cada tool do catalogo retorna a Spec correta e que tools desconhecidos
-// retornam specs.Claude() como fallback seguro.
 func TestResolveACPSpec(t *testing.T) {
-	tests := []struct {
+	known := []struct {
 		tool        string
 		wantID      string
 		wantCommand string
 	}{
-		// Claude: command e "claude-agent-acp" (binario canonico do SDK ACP)
 		{tool: "claude", wantID: "claude", wantCommand: "claude-agent-acp"},
-		// Codex: command e "codex-acp" (binario canonico do codex-acp adapter — ADR-013 D-01)
 		{tool: "codex", wantID: "codex", wantCommand: "codex-acp"},
-		// Copilot: command e "copilot" (binario canonico do Copilot CLI)
 		{tool: "copilot", wantID: "copilot", wantCommand: "copilot"},
-		// Fallback: tool desconhecido → specs.Claude()
-		{tool: "unknown-tool", wantID: "claude", wantCommand: "claude-agent-acp"},
-		{tool: "", wantID: "claude", wantCommand: "claude-agent-acp"},
+		{tool: "opencode", wantID: "opencode", wantCommand: "opencode"},
 	}
-
-	for _, tt := range tests {
+	for _, tt := range known {
 		t.Run(tt.tool, func(t *testing.T) {
-			spec := NewCatalog().resolveACPSpec(tt.tool)
+			spec, err := NewCatalog().resolveACPSpec(tt.tool)
+			if err != nil {
+				t.Fatalf("resolveACPSpec(%q) unexpected error: %v", tt.tool, err)
+			}
 			if spec.ID != tt.wantID {
 				t.Errorf("resolveACPSpec(%q).ID = %q, want %q", tt.tool, spec.ID, tt.wantID)
 			}
 			if spec.Command != tt.wantCommand {
 				t.Errorf("resolveACPSpec(%q).Command = %q, want %q", tt.tool, spec.Command, tt.wantCommand)
+			}
+		})
+	}
+
+	for _, unknown := range []string{"unknown-tool", ""} {
+		t.Run("missing/"+unknown, func(t *testing.T) {
+			spec, err := NewCatalog().resolveACPSpec(unknown)
+			if !errors.Is(err, specs.ErrToolNotInCatalog) {
+				t.Fatalf("resolveACPSpec(%q) err = %v, want specs.ErrToolNotInCatalog", unknown, err)
+			}
+			if spec.ID != "" {
+				t.Errorf("resolveACPSpec(%q) returned non-zero Spec %q — silent fallback reintroduced", unknown, spec.ID)
 			}
 		})
 	}
@@ -4549,7 +4546,7 @@ func TestT26_ClaudeRegressionWithCodexFlags(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
 	var capturedOpts Options
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		capturedOpts = opts
@@ -4600,7 +4597,7 @@ func TestT27_LegacyPathDoesNotConsumeCodexFields(t *testing.T) {
 	acpFactoryCalled := false
 	legacyInvokerCalled := false
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		acpFactoryCalled = true
@@ -4653,7 +4650,7 @@ func TestT27_LegacyPathDoesNotConsumeCodexFields(t *testing.T) {
 func TestT32_TaskloopRegressionSuite(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		// Campos Codex devem ter zero-value quando não especificados
@@ -4690,22 +4687,21 @@ func TestT32_TaskloopRegressionSuite(t *testing.T) {
 	}
 }
 
-// TestServiceRoutesGeminiToACPRunner verifica que Service.Execute roteia Tool="gemini" com
+// TestServiceRoutesOpenCodeToACPRunner verifica que Service.Execute roteia Tool="opencode" com
 // Runtime="acp" via ACPRunner (acpInvokerFactory), espelhando o padrão Claude/Codex/Copilot.
-// RF-07 — Task 3.0.
-func TestServiceRoutesGeminiToACPRunner(t *testing.T) {
+func TestServiceRoutesOpenCodeToACPRunner(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
 	acpInvokerCalled := false
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		acpInvokerCalled = true
-		if opts.Tool != "gemini" {
-			t.Errorf("acpInvokerFactory: esperava tool=gemini, got %q", opts.Tool)
+		if opts.Tool != "opencode" {
+			t.Errorf("acpInvokerFactory: esperava tool=opencode, got %q", opts.Tool)
 		}
 		return &callbackInvoker{
-			binary: "gemini-acp",
+			binary: "opencode-acp",
 			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
 				return "done", "", 0, nil
@@ -4715,7 +4711,7 @@ func TestServiceRoutesGeminiToACPRunner(t *testing.T) {
 
 	opts := Options{
 		PRDFolder:     prd,
-		Tool:          "gemini",
+		Tool:          "opencode",
 		Runtime:       "acp",
 		MaxIterations: 1,
 		Timeout:       5 * time.Second,
@@ -4726,23 +4722,22 @@ func TestServiceRoutesGeminiToACPRunner(t *testing.T) {
 		t.Fatalf("Execute retornou erro inesperado: %v", err)
 	}
 	if !acpInvokerCalled {
-		t.Error("acpInvokerFactory não foi chamado para tool=gemini com runtime=acp")
+		t.Error("acpInvokerFactory não foi chamado para tool=opencode com runtime=acp")
 	}
 }
 
-// TestServicePropagatesAccessModeForGemini verifica que Options.AccessMode é propagado
-// ao Job via WithACPInvokerAccessMode quando Tool="gemini" e Runtime="acp".
-// RF-07 — Task 3.0, subtarefa 3.2.
-func TestServicePropagatesAccessModeForGemini(t *testing.T) {
+// TestServicePropagatesAccessModeForOpenCode verifica que Options.AccessMode é propagado
+// ao Job via WithACPInvokerAccessMode quando Tool="opencode" e Runtime="acp".
+func TestServicePropagatesAccessModeForOpenCode(t *testing.T) {
 	fsys, prd := setupBaseFS("pending")
 
 	var capturedOpts Options
-	svc := NewService(fsys, newTestPrinter())
+	svc := newCycleTestService(fsys, newTestPrinter())
 	svc.binaryChecker = noBinaryCheck
 	svc.acpInvokerFactory = func(opts Options) AgentInvoker {
 		capturedOpts = opts
 		return &callbackInvoker{
-			binary: "gemini-acp",
+			binary: "opencode-acp",
 			fn: func(ctx context.Context, prompt, workDir, model string) (string, string, int, error) {
 				fsys.Files[prd+"/tasks.md"] = tasksContent("1.0", "Test Task", "done")
 				return "done", "", 0, nil
@@ -4752,7 +4747,7 @@ func TestServicePropagatesAccessModeForGemini(t *testing.T) {
 
 	opts := Options{
 		PRDFolder:     prd,
-		Tool:          "gemini",
+		Tool:          "opencode",
 		Runtime:       "acp",
 		AccessMode:    "full",
 		MaxIterations: 1,

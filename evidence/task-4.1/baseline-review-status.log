@@ -1,0 +1,56 @@
+Baseline da distribuicao de ReviewStatus ANTES da correcao do defeito D1 (subtarefa 4.1.1)
+=========================================================================================
+
+Contexto
+--------
+Branch: feat/harness-quatro-clis-loop-aprovacao
+HEAD:   fc56ff3 (working tree limpo antes da fatia 4.1)
+Data:   2026-09-10
+
+Estado do codigo pre-mudanca
+----------------------------
+internal/runtime/runner_autoreview.go possui buildReviewOutputFromSummary (D1):
+  - runAutoReview -> spawnReviewSession -> reviewRunner.Run devolve Summary
+  - buildReviewOutputFromSummary(Summary, err) sintetiza a string de review a partir do CancelReason:
+      err != nil                         -> "erro na sessao de review: <err>"
+      CancelReason != CancelReasonNone   -> "sessao de review encerrada com: <reason>"
+      caso contrario                     -> "review concluido sem marcadores hard"
+  - parseReviewStatus(<texto sintetico>) -> "blocked" apenas se contiver [HARD]/BLOQUEADO/CRITICO
+  - a saida REAL do revisor (agent_message da sessao) nunca alcanca parseReviewStatus
+
+Distribuicao de ReviewStatus observada (producao)
+------------------------------------------------
+Para toda sessao de auto-review que encerra normalmente (CancelReason == none, sem erro de runner):
+  ReviewStatus == "ok"   -- 100% dos casos, independentemente do veredito real do revisor
+
+O texto sintetico "review concluido sem marcadores hard" nunca contem [HARD]/BLOQUEADO/CRITICO,
+logo parseReviewStatus sempre devolve "ok". So um cancelamento/erro da propria sessao de review
+(nao um veredito de bloqueio do revisor) poderia produzir "blocked".
+
+=> O gate de auto-review, no estado pre-4.1, APROVA SEMPRE. Nao ha como distinguir
+   "gate funcionando" de "gate quebrado" sem esta linha de base (risco registrado em tasks.md,
+   secao "Riscos de Integracao").
+
+Distribuicao de ReviewStatus na suite unitaria (pre-fix)
+-------------------------------------------------------
+go test ./internal/runtime/ -run 'TestAutoReview|TestParseReviewStatus' -count=1  => 12 passed (pre-fix)
+
+  T-REV-01 TestAutoReviewSkipsWhenFlagFalse        ReviewStatus == ""        (auto-review nao dispara)
+  T-REV-02 TestAutoReviewBlocksOnHardIssue         ReviewStatus == "blocked" (reviewFn injeta "[HARD] ...")
+  T-REV-03 TestAutoReviewOkWhenNoHardMarkers       ReviewStatus == "ok"      (texto limpo, SEM linha de veredito canonica)
+  T-REV-04 TestAutoReviewDoesntRecurse             (nao assere status; internamente "blocked"/"ok" irrelevante)
+           TestAutoReviewInheritsSkipDriftGuard    (nao assere status)
+
+  Observacao: T-REV-03 pre-fix devolve "ok" para "texto limpo sem linha de veredito" — exatamente
+  o comportamento que RF-46 proibe (inferir aprovacao pela ausencia de marcador negativo).
+
+Testes novos (D1 / fail-closed) executados contra o codigo PRE-FIX
+-----------------------------------------------------------------
+Ver evidence/task-4.1/d1-baseline-failure.log:
+  TestAutoReviewBlocksOnRealVerdictWithEmptyCancelReason -> FAIL: ReviewStatus = "ok", want "blocked"
+  TestAutoReviewFailClosedWithoutCanonicalVerdict        -> FAIL: ReviewStatus = "ok", want "blocked"
+  TestAutoReviewOkWhenNoHardMarkers (fixture migrado)     -> PASS (mascara documentada: ADR-001)
+
+Pos-fix a distribuicao muda para: veredito real do revisor traduzido fail-closed pelo agregado
+(internal/approval Translator): so a linha canonica "verdict: APPROVED" resolve para "ok";
+qualquer outra saida (incl. ausencia de linha de veredito) resolve para "blocked".

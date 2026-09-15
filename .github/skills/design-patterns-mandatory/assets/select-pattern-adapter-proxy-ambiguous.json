@@ -1,0 +1,5 @@
+{
+  "problem": "Integrar um cliente remoto cujo contrato precisa ser traduzido e cujo acesso tambem precisa de controle e lazy load.",
+  "signals": ["external_interface_mismatch", "access_control_or_lazy_loading", "remote_boundary"],
+  "constraints": ["preserve_public_contract"]
+}

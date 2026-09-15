@@ -70,11 +70,11 @@ description: Executa uma tarefa de implementação aprovada via codificação, v
 4. Invocar `review` com prd.md + techspec.md como contexto.
 5. **Mapear veredito**:
    - `APPROVED` → Etapa 5.
-   - `APPROVED_WITH_REMARKS` → **inspecionar severidade (F24)**: parsear remarks procurando `[critical]`, `[security]`, `[blocker]`, `[high]` (case-insensitive). Tag crítica → escalar para `blocked: APPROVED_WITH_REMARKS contém remark crítico — <remark>`; NÃO seguir Etapa 5; NÃO bugfix; devolver ao humano. Sem tag crítica → Etapa 5; remarks vão para "Riscos Residuais".
+   - `APPROVED_WITH_REMARKS` → **encerra somente sem achado `[HIGH]`/`[CRITICAL]` (RF-33)**. Com pelo menos um achado high/critical, não encerra: tratar como entrada de `bugfix` no escopo, rerodar validações e abrir nova rodada de review. Sem achado high/critical, encerra e os achados `[MEDIUM]`/`[LOW]` ficam registrados no relatório como dívida declarada — visíveis, nunca apagados. Sem nenhum achado declarado, não encerra (fail-closed: prosa não parseada não é prova de ausência).
    - `REJECTED` com bugs canônicos → `bugfix` no escopo, rerodar validações + nova review.
    - `REJECTED` sem formato canônico → `failed`.
    - `BLOCKED` → `blocked`; **não** invocar `bugfix`.
-6. Final aceito apenas: `APPROVED`, OU `APPROVED_WITH_REMARKS` confirmado sem remarks críticos.
+6. Final aceito com `APPROVED`, ou com `APPROVED_WITH_REMARKS` sem achado `[HIGH]`/`[CRITICAL]`, **e** mapa 1:1 completo entre cada critério de aceite e uma linha de evidência verificável (RF-33/RF-47). Qualquer outro veredito não encerra.
 
 **Etapa 5: Persistir evidências (F25 checkpoint)**
 1. Salvar `.specs/prd-<slug>/[num]_execution_report.md` (overwrite com `# Generated: <ISO-8601 UTC>` no header — F36) a partir de `assets/task-execution-report-template.md`.
@@ -114,8 +114,8 @@ Aplicação: Etapa 2 (refs grandes multi-linguagem), Etapa 3 (subtarefas em paco
 
 * Task file desatualizado vs código/spec → parar e expor antes de editar.
 * Validação falha → uma remediação limitada; falha mais profunda → `failed` com comando bloqueante + diagnóstico.
-* Respeitar depth limit de `agent-governance`. Cadeia review → bugfix → review é máxima.
+* Respeitar depth limit de `agent-governance`. O Ciclo é iterativo no mesmo nível de invocação: cada rodada abre com a profundidade resetada e o que limita a cadeia `review → bugfix → review` é o **teto de rodadas** (default 5, RF-35/RF-38), não a profundidade.
 
 ## Resolução de paths
 
-`.specs/prd-<slug>/` resolve para `${AI_TASKS_ROOT:-.specs}/${AI_PRD_PREFIX:-prd-}<slug>/`. Configurar em `.claude/config.yaml`/`.agents/config.yaml` (`tasks_root`, `prd_prefix`, `evidence_dir`, `coverage_threshold`, `language_default`). Vars exportadas por `check-invocation-depth.sh`, resolvido em cascata `.agents/lib/` → `scripts/lib/` (vendor canônico em `.agents/lib/`, mirror legado em `scripts/lib/`). `AI_TOOL` validado contra `{claude, codex, gemini, copilot}`; inválido → unset (modo agnóstico).
+`.specs/prd-<slug>/` resolve para `${AI_TASKS_ROOT:-.specs}/${AI_PRD_PREFIX:-prd-}<slug>/`. Configurar em `.claude/config.yaml`/`.agents/config.yaml` (`tasks_root`, `prd_prefix`, `evidence_dir`, `coverage_threshold`, `language_default`). Vars exportadas por `check-invocation-depth.sh`, resolvido em cascata `.agents/lib/` → `scripts/lib/` (vendor canônico em `.agents/lib/`, mirror legado em `scripts/lib/`). `AI_TOOL` validado contra `{claude, codex, copilot, opencode}`; inválido → unset (modo agnóstico).

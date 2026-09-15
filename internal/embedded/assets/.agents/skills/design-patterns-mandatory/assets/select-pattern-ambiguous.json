@@ -1,0 +1,5 @@
+{
+  "problem": "Um objeto muda de comportamento ao longo do ciclo e tambem parece trocar algoritmos dependendo do momento.",
+  "signals": ["runtime_algorithm_swap", "state_transition_driven_behavior", "prefer_composition"],
+  "constraints": ["preserve_public_contract", "must_support_runtime_switch"]
+}

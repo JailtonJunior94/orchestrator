@@ -5,7 +5,7 @@ package agents
 // distinguindo "nao setado" de "setado vazio". Espelha applyRuntimePrecedence do Compozy
 // (internal/core/agents/execution.go) para paridade semantica (D-05).
 type RuntimeOverride struct {
-	// IDE e a ferramenta alvo (ex.: claude, codex, gemini, copilot).
+	// IDE e a ferramenta alvo (ex.: claude, codex, copilot, opencode).
 	IDE string
 	// Model e o modelo desejado (ex.: claude-opus-4-7).
 	Model string
