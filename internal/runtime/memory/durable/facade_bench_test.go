@@ -62,7 +62,7 @@ func TestBuildContextP95PreliminaryBenchmark_1000ActiveFactsInSinglePage(t *test
 		}
 	}
 
-	if worst > 200*time.Millisecond {
-		t.Errorf("BuildContext p95 preliminary with %d active facts in a single page = %v, want < 200ms (RF-20)", factCount, worst)
+	if worst > buildContextP95Budget {
+		t.Errorf("BuildContext p95 preliminary with %d active facts in a single page = %v, want < %v (RF-20)", factCount, worst, buildContextP95Budget)
 	}
 }

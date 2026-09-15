@@ -62,3 +62,9 @@ func (c *Catalog) WithPromptPostBuildTestHook(hook hooks.Hook) Option {
 		r.promptPostBuildTestHook = hook
 	}
 }
+
+func (c *Catalog) WithSessionPostReviewTestHook(hook hooks.Hook) Option {
+	return func(r *ACPRunner) {
+		r.sessionPostReviewTestHook = hook
+	}
+}

@@ -13,6 +13,7 @@ CRITICAL_PACKAGES=(
     "./internal/skills/..."
     "./internal/metrics/..."
     "./internal/detect/..."
+    "./internal/runtime/memory/durable/..."
 )
 
 for pkg in "${CRITICAL_PACKAGES[@]}"; do

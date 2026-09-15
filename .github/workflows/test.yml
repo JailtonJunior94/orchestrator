@@ -176,3 +176,8 @@ jobs:
       - name: Smoke dos adaptadores sem credenciais
         shell: bash
         run: go test -count=1 ./internal/adapters/... ./internal/taskloop/... -run 'TestGenerate_executeTaskYAMLContract_allTools|TestE2EAgent_PromptContainsAgentBlocks'
+
+      - name: Durable memory lease/lock tests (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: go test -count=1 ./internal/runtime/memory/durable/...

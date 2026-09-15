@@ -139,6 +139,72 @@ func (s *PageSuite) TestParseRejectsMalformedFrontMatter() {
 	s.True(errors.Is(err, durable.ErrPageUnreadable))
 }
 
+func (s *PageSuite) TestParseRejectsFrontMatterWithUnknownLayer() {
+	page := durable.NewMarkdownPage()
+
+	content := "---\n" +
+		"identity: x\n" +
+		"layer: bogus\n" +
+		"origin_session: s\n" +
+		"date: \"2026-01-01T00:00:00Z\"\n" +
+		"format_version: 1\n" +
+		"---\n" +
+		"body\n"
+
+	_, _, err := page.Parse([]byte(content))
+
+	s.True(errors.Is(err, durable.ErrPageUnreadable))
+}
+
+func (s *PageSuite) TestParseRejectsFrontMatterMissingRequiredField() {
+	page := durable.NewMarkdownPage()
+
+	content := "---\n" +
+		"identity: x\n" +
+		"layer: task\n" +
+		"origin_session: \"\"\n" +
+		"date: \"2026-01-01T00:00:00Z\"\n" +
+		"format_version: 1\n" +
+		"---\n" +
+		"body\n"
+
+	_, _, err := page.Parse([]byte(content))
+
+	s.True(errors.Is(err, durable.ErrPageUnreadable))
+}
+
+func (s *PageSuite) TestParseRejectsFrontMatterWithUnparsableDate() {
+	page := durable.NewMarkdownPage()
+
+	content := "---\n" +
+		"identity: x\n" +
+		"layer: task\n" +
+		"origin_session: s\n" +
+		"date: \"not-a-date\"\n" +
+		"format_version: 1\n" +
+		"---\n" +
+		"body\n"
+
+	_, _, err := page.Parse([]byte(content))
+
+	s.True(errors.Is(err, durable.ErrPageUnreadable))
+}
+
+func (s *PageSuite) TestParseRejectsFactMetadataWithUnknownDurability() {
+	page := durable.NewMarkdownPage()
+
+	content := "### Fact: payment.retry\n" +
+		"```fact-metadata\n" +
+		"hash: sha256:aaaa\n" +
+		"durability: bogus\n" +
+		"state: active\n" +
+		"```\n"
+
+	_, _, err := page.Parse([]byte(content))
+
+	s.True(errors.Is(err, durable.ErrPageUnreadable))
+}
+
 func (s *PageSuite) TestParseRejectsMalformedFactMetadata() {
 	page := durable.NewMarkdownPage()
 

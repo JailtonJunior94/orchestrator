@@ -25,13 +25,13 @@ func (c *Catalog) LogDurableMemorySession(rootDir string, evt DurableMemorySessi
 
 	logDir := filepath.Join(rootDir, ".agents")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
-		return fmt.Errorf("criar diretorio de telemetria: %w", err)
+		return fmt.Errorf("create telemetry directory: %w", err)
 	}
 
 	logPath := filepath.Join(logDir, "telemetry.log")
 	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return fmt.Errorf("abrir log de telemetria: %w", err)
+		return fmt.Errorf("open telemetry log: %w", err)
 	}
 	defer f.Close()
 

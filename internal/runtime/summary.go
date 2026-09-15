@@ -77,5 +77,4 @@ type MemoryEvidence struct {
 	ContextBuildLatency     int64
 	ContextRecoveryDegraded bool
 	RecordLatency           int64
-	DomainEvents            []string
 }

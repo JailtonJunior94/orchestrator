@@ -174,6 +174,25 @@ func (s *MemoryCommandSuite) TestRunExportWritesSelfContainedArtifact() {
 	s.Contains(string(content), "use exponential backoff")
 }
 
+func (s *MemoryCommandSuite) TestRunExportRefusesExternalSymlink() {
+	fsys := fs.NewFakeFileSystem()
+	layer := s.newLayer(fsys)
+	handler := &memoryCommand{}
+	scope := durable.Scope{Layer: durable.TargetLayerPRD, TasksDir: "/project/.specs/prd-x"}
+	s.seedFact(fsys, layer, scope, "decision.retry", "use exponential backoff", durable.DurabilityPRD)
+
+	s.Require().NoError(fsys.MkdirAll("/outside"))
+	s.Require().NoError(fsys.MkdirAll("/project"))
+	s.Require().NoError(fsys.Symlink("/outside", "/project/out-link"))
+
+	printer, _, _ := newTestPrinter()
+	err := handler.runExport(context.Background(), printer, fsys, layer, "/project", "/project/.specs/prd-x", "", "/project/out-link/export.md")
+	s.Require().Error(err, "writing the export through a symlink pointing outside the project must be refused (BUG-04)")
+	s.Contains(err.Error(), "symlink")
+	s.False(fsys.Exists("/outside/export.md"), "no artifact should be written when the symlink is refused")
+	s.False(fsys.Exists("/project/out-link/export.md"), "no artifact should be written through the refused symlink")
+}
+
 func (s *MemoryCommandSuite) TestRunCompactArchivesExcessFactsAndPreservesHumanBlock() {
 	fsys := fs.NewFakeFileSystem()
 	layer := s.newLayer(fsys)
@@ -256,7 +275,7 @@ func (s *MemoryCommandSuite) TestRunMigrateRefusesExternalSymlink() {
 
 	printer, _, _ := newTestPrinter()
 	err := handler.runMigrate(printer, fsys, tasksDir)
-	s.Require().Error(err, "escrever atraves de symlink para fora do PRD deve ser recusado (BUG-12)")
+	s.Require().Error(err, "writing through a symlink pointing outside the PRD must be refused (BUG-12)")
 	s.Contains(err.Error(), "symlink")
 }
 
@@ -271,7 +290,7 @@ func (s *MemoryCommandSuite) TestHandoffClaimRefusesExternalSymlink() {
 
 	printer, _, _ := newTestPrinter()
 	err := handler.runHandoffClaim(printer, fsys, tasksDir, "owner-a", time.Minute)
-	s.Require().Error(err, "gravar o lease de bastao atraves de symlink para fora do PRD deve ser recusado (BUG-12)")
+	s.Require().Error(err, "writing the baton lease through a symlink pointing outside the PRD must be refused (BUG-12)")
 	s.Contains(err.Error(), "symlink")
 }
 
@@ -292,12 +311,12 @@ func (s *MemoryCommandSuite) TestHandoffClaimStatusRelease() {
 
 	concurrentPrinter, _, concurrentErrOut := newTestPrinter()
 	err = handler.runHandoffClaim(concurrentPrinter, fsys, tasksDir, "owner-b", time.Minute)
-	s.Require().Error(err, "uma segunda reivindicacao com dono ainda vivo e dentro do prazo deve ser recusada")
+	s.Require().Error(err, "a second claim while the owner is still alive and within the deadline must be refused")
 	s.Contains(concurrentErrOut.String(), "bastao recusado")
 
 	releaseWrongOwnerPrinter, _, releaseWrongErrOut := newTestPrinter()
 	err = handler.runHandoffRelease(releaseWrongOwnerPrinter, fsys, tasksDir, "owner-b")
-	s.Require().Error(err, "apenas o dono atual pode liberar o bastao")
+	s.Require().Error(err, "only the current owner can release the baton")
 	s.Contains(releaseWrongErrOut.String(), "apenas o dono")
 
 	releasePrinter, releaseOut, _ := newTestPrinter()

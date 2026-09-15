@@ -402,6 +402,21 @@ func (s *LayerSuite) TestConsolidateReleasesLockAfterWrite() {
 	s.Require().NoError(err)
 }
 
+func (s *LayerSuite) TestConsolidateRefusesWriteThroughExternalSymlink() {
+	filesystem := fs.NewFakeFileSystem()
+	layer := durable.NewLayerWithLocker(filesystem, newInMemoryLayerLocker())
+	scope := durable.Scope{Layer: durable.TargetLayerPRD, TasksDir: "/repo/.specs/prd-x"}
+
+	s.Require().NoError(filesystem.Symlink("/outside/evil", "/repo/.specs/prd-x/memory"))
+
+	_, err := layer.Consolidate(context.Background(), scope, []durable.Fact{s.durableFact("payment.retry", "sha256:aaaa", "content")})
+
+	s.Require().Error(err)
+	s.Contains(err.Error(), "symlink para fora do projeto")
+	s.False(filesystem.Exists("/outside/evil/MEMORY.md"))
+	s.False(filesystem.Exists("/repo/.specs/prd-x/memory/MEMORY.md"))
+}
+
 func (s *LayerSuite) TestPromoteLocksBothLayersInDeterministicOrder() {
 	filesystem := fs.NewFakeFileSystem()
 	locker := newInMemoryLayerLocker()

@@ -112,6 +112,58 @@ func (s *FacadeSuite) TestRecordSessionClaimsBatonAndRenewsWithinSameProcess() {
 	s.True(second.BatonClaimed)
 }
 
+func (s *FacadeSuite) TestClaimSessionClaimsBaton() {
+	fsys := fs.NewFakeFileSystem()
+	facade := s.newFacade(fsys, "/project", "/project/.specs/prd-x")
+
+	err := facade.ClaimSession("sess-1")
+
+	s.Require().NoError(err)
+}
+
+func (s *FacadeSuite) TestReleaseSessionReleasesOwnedBaton() {
+	fsys := fs.NewFakeFileSystem()
+	facade := s.newFacade(fsys, "/project", "/project/.specs/prd-x")
+	s.Require().NoError(facade.ClaimSession("sess-1"))
+
+	err := facade.ReleaseSession("sess-1")
+
+	s.Require().NoError(err)
+}
+
+func (s *FacadeSuite) TestReleaseSessionReturnsErrorWhenBatonOwnedByAnotherSession() {
+	fsys := fs.NewFakeFileSystem()
+	scope := durable.Scope{Layer: durable.TargetLayerPRD, TasksDir: "/project/.specs/prd-x"}
+	store := durable.NewHandoffLeaseStore(fsys, newInMemoryLayerLocker(), "/project/.specs/prd-x")
+	_, seedErr := store.Claim(scope, durable.DefaultLeasePolicy, durable.LeaseOwner("pid:other-session"), durable.CurrentProcessRef(), durable.DefaultLeaseTTL, time.Now())
+	s.Require().NoError(seedErr)
+
+	facade := s.newFacade(fsys, "/project", "/project/.specs/prd-x")
+
+	err := facade.ReleaseSession("sess-1")
+
+	s.True(errors.Is(err, durable.ErrBatonAlreadyClaimed))
+}
+
+func (s *FacadeSuite) TestRenewSessionRenewsClaimedBaton() {
+	fsys := fs.NewFakeFileSystem()
+	facade := s.newFacade(fsys, "/project", "/project/.specs/prd-x")
+	s.Require().NoError(facade.ClaimSession("sess-1"))
+
+	err := facade.RenewSession("sess-1")
+
+	s.Require().NoError(err)
+}
+
+func (s *FacadeSuite) TestRenewSessionReturnsErrorWhenNoBatonClaimed() {
+	fsys := fs.NewFakeFileSystem()
+	facade := s.newFacade(fsys, "/project", "/project/.specs/prd-x")
+
+	err := facade.RenewSession("sess-1")
+
+	s.Error(err)
+}
+
 func (s *FacadeSuite) TestRecordSessionWritesFactsEvenWhenBatonClaimRefused() {
 	fsys := fs.NewFakeFileSystem()
 	scope := durable.Scope{Layer: durable.TargetLayerPRD, TasksDir: "/project/.specs/prd-x"}

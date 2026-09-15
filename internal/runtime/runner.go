@@ -97,8 +97,9 @@ type ACPRunner struct {
 	reviewOutputFn autoReviewOutputFn
 	// handshakeWaiterFactory constrói o waiter do handshake de governança do OpenCode.
 	// nil = usar defaultHandshakeWaiterFactory (produção).
-	handshakeWaiterFactory  HandshakeWaiterFactory
-	promptPostBuildTestHook hooks.Hook
+	handshakeWaiterFactory    HandshakeWaiterFactory
+	promptPostBuildTestHook   hooks.Hook
+	sessionPostReviewTestHook hooks.Hook
 }
 
 // NewACPRunner cria um ACPRunner com defaults de produção.
@@ -213,7 +214,7 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 
 	// ★ F3-Claude: instanciar hooks dispatcher e registrar hooks default.
 	// j.DisableHooks=true → dispatcher vazio (debug; sem regressão F1/F2).
-	disp := NewCatalog().prepareHooksDispatcher(j, r.spec.ID, memStore, r.spec.ResolveWindow("").MaxTokens, r.promptPostBuildTestHook, memRecorder)
+	disp := NewCatalog().prepareHooksDispatcher(j, r.spec.ID, memStore, r.spec.ResolveWindow("").MaxTokens, r.promptPostBuildTestHook, r.sessionPostReviewTestHook, memRecorder)
 
 	// Fase 3: emitir runtime_init e persistir.
 	launcherCmd, launcherArgs := launcher.Command()
@@ -652,6 +653,7 @@ func (c *Catalog) prepareHooksDispatcher(
 	store memory.Store,
 	referenceMaxTokens int,
 	promptPostBuildTestHook hooks.Hook,
+	sessionPostReviewTestHook hooks.Hook,
 	memRecorder *hooks.MemoryEvidenceRecorder,
 ) hooks.Dispatcher {
 	disp := hooks.New()
@@ -673,6 +675,10 @@ func (c *Catalog) prepareHooksDispatcher(
 
 	if promptPostBuildTestHook != nil {
 		disp.Register(hooks.PointPromptPostBuild, promptPostBuildTestHook)
+	}
+
+	if sessionPostReviewTestHook != nil {
+		disp.Register(hooks.PointSessionPostReview, sessionPostReviewTestHook)
 	}
 
 	// memory_persist: escreve MEMORY.md em session.post_end (apenas quando store disponível).

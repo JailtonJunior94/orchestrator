@@ -239,36 +239,6 @@ func (l *layer) Archive(_ context.Context, scope Scope, ids []Identity) error {
 	return l.writePage(scope, activePath, existing, human)
 }
 
-func (l *layer) Restore(_ context.Context, scope Scope, id Identity) error {
-	lockPath, err := scope.lockPath()
-	if err != nil {
-		return err
-	}
-	if err := l.ensureScopeDirectory(scope); err != nil {
-		return err
-	}
-	release, err := l.locker.Lock(lockPath)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = release() }()
-	activePath, err := scope.activePath()
-	if err != nil {
-		return err
-	}
-	facts, human, err := l.readPage(activePath)
-	if err != nil {
-		return err
-	}
-	for index := range facts {
-		if facts[index].Identity == id && facts[index].State == FactStateArchived {
-			facts[index].State = FactStateActive
-			return l.writePage(scope, activePath, facts, human)
-		}
-	}
-	return fmt.Errorf("durable: restore %s: %w", id.Key, ErrFactNotFound)
-}
-
 func (l *layer) Promote(_ context.Context, from, to Scope, id Identity) error {
 	fromLockPath, err := from.lockPath()
 	if err != nil {
@@ -379,12 +349,16 @@ func (l *layer) mergeFacts(existing []Fact, candidates []Fact) ([]Fact, Consolid
 		exactIdx := -1
 		activeKeyIdx := -1
 		for i, e := range merged {
-			if e.Identity == candidate.Identity {
+			switch l.catalog.DetectCollision(e, candidate) {
+			case CollisionIdempotent:
 				exactIdx = i
-				break
+			case CollisionContradictory:
+				if e.State == FactStateActive {
+					activeKeyIdx = i
+				}
 			}
-			if e.State == FactStateActive && e.Identity.Key == candidate.Identity.Key {
-				activeKeyIdx = i
+			if exactIdx != -1 {
+				break
 			}
 		}
 

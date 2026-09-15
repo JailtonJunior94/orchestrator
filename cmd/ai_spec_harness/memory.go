@@ -32,57 +32,7 @@ deliberadamente esconde (MD-001).`,
 	cmd.AddCommand(newMemoryExportCmd())
 	cmd.AddCommand(newMemoryCompactCmd())
 	cmd.AddCommand(newMemoryMigrateCmd())
-	cmd.AddCommand(newMemoryPromoteCmd())
-	cmd.AddCommand(newMemoryRestoreCmd())
 	cmd.AddCommand(newMemoryHandoffCmd())
-	return cmd
-}
-
-func newMemoryPromoteCmd() *cobra.Command {
-	var projectDir, tasksDir, taskFileName, key, hash string
-	cmd := &cobra.Command{Use: "promote", Short: "Promove explicitamente um fato de task ou PRD para projeto", RunE: func(cmd *cobra.Command, _ []string) error {
-		layer := durable.NewLayer(fs.NewOSFileSystem())
-		id := durable.Identity{Key: durable.SemanticKey(key), Hash: durable.ContentHash(hash)}
-		to := durable.Scope{Layer: durable.TargetLayerProject, ProjectDir: projectDir}
-		for _, from := range []durable.Scope{{Layer: durable.TargetLayerTask, TasksDir: tasksDir, TaskFileName: taskFileName}, {Layer: durable.TargetLayerPRD, TasksDir: tasksDir}} {
-			if err := layer.Promote(cmd.Context(), from, to, id); err == nil {
-				return nil
-			} else if !errors.Is(err, durable.ErrFactNotFound) && !errors.Is(err, durable.ErrTaskFileNameMissing) {
-				return fmt.Errorf("memory promote: %w", err)
-			}
-		}
-		return fmt.Errorf("memory promote: %w", durable.ErrFactNotFound)
-	}}
-	memoryLayerFlags(cmd, &projectDir, &tasksDir, &taskFileName)
-	cmd.Flags().StringVar(&key, "key", "", "Chave semantica do fato")
-	cmd.Flags().StringVar(&hash, "hash", "", "Hash do fato")
-	_ = cmd.MarkFlagRequired("key")
-	_ = cmd.MarkFlagRequired("hash")
-	return cmd
-}
-
-func newMemoryRestoreCmd() *cobra.Command {
-	var projectDir, tasksDir, taskFileName, key, hash string
-	cmd := &cobra.Command{Use: "restore", Short: "Restaura explicitamente um fato arquivado", RunE: func(cmd *cobra.Command, _ []string) error {
-		layer := durable.NewLayer(fs.NewOSFileSystem())
-		restorer := layer.(interface {
-			Restore(context.Context, durable.Scope, durable.Identity) error
-		})
-		id := durable.Identity{Key: durable.SemanticKey(key), Hash: durable.ContentHash(hash)}
-		for _, scope := range (&memoryCommand{}).buildScopes(projectDir, tasksDir, taskFileName) {
-			if err := restorer.Restore(cmd.Context(), scope, id); err == nil {
-				return nil
-			} else if !errors.Is(err, durable.ErrFactNotFound) {
-				return fmt.Errorf("memory restore: %w", err)
-			}
-		}
-		return fmt.Errorf("memory restore: %w", durable.ErrFactNotFound)
-	}}
-	memoryLayerFlags(cmd, &projectDir, &tasksDir, &taskFileName)
-	cmd.Flags().StringVar(&key, "key", "", "Chave semantica do fato")
-	cmd.Flags().StringVar(&hash, "hash", "", "Hash do fato")
-	_ = cmd.MarkFlagRequired("key")
-	_ = cmd.MarkFlagRequired("hash")
 	return cmd
 }
 
@@ -281,6 +231,9 @@ func (h *memoryCommand) runExport(
 		b.WriteString("Nenhum fato de memoria encontrado nas camadas resolvidas.\n")
 	}
 
+	if err := fs.RefuseExternalSymlink(fsys, projectDir, out, false); err != nil {
+		return fmt.Errorf("memory export: %w", err)
+	}
 	if err := fsys.WriteFileAtomic(out, []byte(b.String())); err != nil {
 		return fmt.Errorf("memory export: gravar %s: %w", out, err)
 	}

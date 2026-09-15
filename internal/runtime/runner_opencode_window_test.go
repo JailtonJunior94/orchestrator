@@ -104,14 +104,14 @@ func TestPrepareHooksDispatcherScalesBudgetFromJobWindow(t *testing.T) {
 
 	conservative := NewCatalog().prepareHooksDispatcher(
 		Job{WindowMaxTokens: specs.OpenCodeConservativeWindow, WorkDir: t.TempDir()},
-		specs.OpenCodeSpecID, nil, specs.OpenCodeConservativeWindow, nil, nil)
+		specs.OpenCodeSpecID, nil, specs.OpenCodeConservativeWindow, nil, nil, nil)
 	if err := conservative.Dispatch(context.Background(), hooks.PointPromptPostBuild, evt); !errors.Is(err, hooks.ErrTokenBudgetExceeded) {
 		t.Fatalf("janela conservadora no Job deveria estourar o teto; got: %v", err)
 	}
 
 	wide := NewCatalog().prepareHooksDispatcher(
 		Job{WindowMaxTokens: 400_000, WorkDir: t.TempDir()},
-		specs.OpenCodeSpecID, nil, specs.OpenCodeConservativeWindow, nil, nil)
+		specs.OpenCodeSpecID, nil, specs.OpenCodeConservativeWindow, nil, nil, nil)
 	if err := wide.Dispatch(context.Background(), hooks.PointPromptPostBuild, evt); err != nil {
 		t.Fatalf("Job com janela de 400k deveria acomodar o mesmo prompt (RF-17); got: %v", err)
 	}

@@ -17,7 +17,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var _accessModeFullWarnOnce sync.Once
+var accessModeFullWarnOnce sync.Once
 
 var runtimeACPCatalog = specs.NewCatalog().ACPSpecCatalog()
 
@@ -111,7 +111,7 @@ Exemplos:
 			}
 
 			if accessMode == "full" {
-				_accessModeFullWarnOnce.Do(func() {
+				accessModeFullWarnOnce.Do(func() {
 					_, _ = fmt.Fprintln(os.Stderr,
 						"WARNING: --access-mode=full ativa sandbox_mode=danger-full-access no codex-acp. "+
 							"Pré-condição: consentimento operacional. Codex terá acesso pleno ao filesystem e à rede. "+

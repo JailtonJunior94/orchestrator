@@ -827,7 +827,7 @@ func TestTaskLoopFlags_T30_WarningSyncOnce_Global(t *testing.T) {
 
 	// Referência explícita ao ponteiro confirma existência e tipo; compilação falha se ausente.
 	// Usando ponteiro para evitar cópia de sync.Once (go vet: assignment copies lock value).
-	_ = &_accessModeFullWarnOnce
+	_ = &accessModeFullWarnOnce
 }
 
 // TestTaskLoopFlags_T15_MCPNestedNoNormalize valida as flags F2-Claude --mcp-nested e --no-normalize (T-15).
