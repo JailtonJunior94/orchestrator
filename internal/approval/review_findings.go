@@ -13,6 +13,7 @@ const (
 
 var (
 	reviewFileLineRe     = regexp.MustCompile(`[\w./-]+\.[A-Za-z0-9]+:\d+`)
+	findingPrefixRe      = regexp.MustCompile(`^[ \t]*(?:[-*+>][ \t]*)*(?:\*\*|__)?`)
 	reviewHeadingRe      = regexp.MustCompile(`^#+\s`)
 	severityFieldRe      = regexp.MustCompile(`(?i)^[-*>\s]*(?:severidade|severity)\s*:\s*(.*)$`)
 	fileFieldRe          = regexp.MustCompile(`(?i)^[-*>\s]*(?:arquivo|file)\s*:\s*(.*)$`)
@@ -141,8 +142,9 @@ func ParseReviewFindings(rawText string) []Finding {
 
 func bracketSeverity(line string) (Severity, bool) {
 	lower := strings.ToLower(line)
+	lower = lower[len(findingPrefixRe.FindString(lower)):]
 	for _, mark := range bracketSeverityMarks {
-		if strings.Contains(lower, mark.token) {
+		if strings.HasPrefix(lower, mark.token) {
 			return mark.severity, true
 		}
 	}

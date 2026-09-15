@@ -23,8 +23,11 @@ var (
 	provenRe        = regexp.MustCompile(`(?i)->\s*comprovado\s*:\s*\S`)
 	emptyProofRe    = regexp.MustCompile(`(?i)comprovado\s*:\s*(\[ev|\[evid|\[\]\s*$)`)
 
-	blockingSeverityRe = regexp.MustCompile(`(?i)(\[(critical|cr(?:i|í)tico|high|hard|alta|alto|blocker|security)\]|severidade\s*:\s*(critical|high|cr(?:i|í)tico|alta|alto)|severity\s*:\s*(critical|high))`)
-	anySeverityRe      = regexp.MustCompile(`(?i)(\[(critical|cr(?:i|í)tico|high|hard|alta|alto|blocker|security|medium|m(?:e|é)dia|important|importante|low|baixa|suggestion|sugest(?:a|ã)o)\]|severidade\s*:\s*(critical|high|medium|low|cr(?:i|í)tico|alta|alto|m(?:e|é)dia|baixa)|severity\s*:\s*(critical|high|medium|low))`)
+	findingAnchor = `^[ \t]*(?:[-*+>][ \t]*)*(?:\*\*|__)?`
+
+	blockingSeverityRe = regexp.MustCompile(`(?im)` + findingAnchor + `(\[(critical|cr(?:i|í)tico|high|hard|alta|alto|blocker|security)\]|severidade[ \t]*:[ \t]*(critical|high|cr(?:i|í)tico|alta|alto)|severity[ \t]*:[ \t]*(critical|high))`)
+	anySeverityRe      = regexp.MustCompile(`(?im)` + findingAnchor + `(\[(critical|cr(?:i|í)tico|high|hard|alta|alto|blocker|security|medium|m(?:e|é)dia|important|importante|low|baixa|suggestion|sugest(?:a|ã)o)\]|severidade[ \t]*:[ \t]*(critical|high|medium|low|cr(?:i|í)tico|alta|alto|m(?:e|é)dia|baixa)|severity[ \t]*:[ \t]*(critical|high|medium|low))`)
+	fencedBlockRe      = regexp.MustCompile("^[ \t]*```")
 )
 
 func (r1 *Validator) diffReviewedFindings(text string) []Finding {
@@ -58,7 +61,23 @@ func (r1 *Validator) diffReviewedFindings(text string) []Finding {
 	return findings
 }
 
-func remarksClosureFindings(text string) []Finding {
+func findingsBody(text string) string {
+	var body []string
+	fenced := false
+	for _, line := range strings.Split(text, "\n") {
+		if fencedBlockRe.MatchString(line) {
+			fenced = !fenced
+			continue
+		}
+		if !fenced {
+			body = append(body, line)
+		}
+	}
+	return strings.Join(body, "\n")
+}
+
+func remarksClosureFindings(fullText string) []Finding {
+	text := findingsBody(fullText)
 	if blockingSeverityRe.MatchString(text) {
 		return []Finding{{Label: "veredito APPROVED_WITH_REMARKS nao encerra com achado high/critical declarado (RF-33)"}}
 	}

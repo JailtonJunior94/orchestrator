@@ -21,8 +21,9 @@ REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 tasks_root="${AI_TASKS_ROOT:-.specs}"
 prd_prefix="${AI_PRD_PREFIX:-prd-}"
 
-blocking_severity_re='(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security)\]|severidade[[:space:]]*:[[:space:]]*(critical|high|cr(i|í)tico|alta|alto)|severity[[:space:]]*:[[:space:]]*(critical|high))'
-any_severity_re='(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security|medium|m(e|é)dia|important|importante|low|baixa|suggestion|sugest(a|ã)o)\]|severidade[[:space:]]*:[[:space:]]*(critical|high|medium|low|cr(i|í)tico|alta|alto|m(e|é)dia|baixa)|severity[[:space:]]*:[[:space:]]*(critical|high|medium|low))'
+finding_anchor='^[[:space:]]*([-*+>][[:space:]]*)*(\*\*|__)?'
+blocking_severity_re="${finding_anchor}(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security)\]|severidade[[:space:]]*:[[:space:]]*(critical|high|cr(i|í)tico|alta|alto)|severity[[:space:]]*:[[:space:]]*(critical|high))"
+any_severity_re="${finding_anchor}(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security|medium|m(e|é)dia|important|importante|low|baixa|suggestion|sugest(a|ã)o)\]|severidade[[:space:]]*:[[:space:]]*(critical|high|medium|low|cr(i|í)tico|alta|alto|m(e|é)dia|baixa)|severity[[:space:]]*:[[:space:]]*(critical|high|medium|low))"
 
 declares_remarks() {
   local report_file="$1"
@@ -32,11 +33,32 @@ declares_remarks() {
   return 1
 }
 
+findings_body() {
+  awk '
+    /^[[:space:]]*```/ { fenced = !fenced; next }
+    !fenced { print }
+  ' "$1"
+}
+
 closes_with_remarks() {
   local report_file="$1"
   declares_remarks "$report_file" || return 1
-  grep -Eiq "$blocking_severity_re" "$report_file" && return 1
-  grep -Eiq "$any_severity_re" "$report_file" || return 1
+  local body
+  body="$(findings_body "$report_file")"
+  printf '%s\n' "$body" | grep -Eiq "$blocking_severity_re" && return 1
+  printf '%s\n' "$body" | grep -Eiq "$any_severity_re" || return 1
+  return 0
+}
+
+structured_review_verdict() {
+  local result_file="$1"
+  [[ -f "$result_file" ]] || return 1
+  local value
+  value="$(grep -Eo '"review_verdict"[[:space:]]*:[[:space:]]*"[A-Za-z_]+"' "$result_file" \
+    | head -n 1 \
+    | sed -E 's/.*:[[:space:]]*"([A-Za-z_]+)".*/\1/')"
+  [[ -n "$value" ]] || return 1
+  printf '%s' "$value"
   return 0
 }
 
@@ -78,6 +100,20 @@ for tasks_file in "$REPO_ROOT/$tasks_root/${prd_prefix}"*/tasks.md; do
       blocked=1
       continue
     fi
+    result_json="$prd_dir/${task_id}_execution_result.json"
+    review_verdict=""
+    review_verdict="$(structured_review_verdict "$result_json" || true)"
+    case "$review_verdict" in
+      approved)
+        continue
+        ;;
+      changes_requested|needs_input)
+        echo "[session-end] $label com decisao estruturada review_verdict=$review_verdict, que nao encerra o ciclo (dado estruturado prevalece sobre o texto do relatorio): $task_id ($result_json)" >&2
+        reasons+=("$label com decisao estruturada review_verdict=$review_verdict, que nao encerra o ciclo (dado estruturado prevalece sobre o texto do relatorio): $task_id ($result_json)")
+        blocked=1
+        continue
+        ;;
+    esac
     if ! has_approved_verdict "$report"; then
       echo "[session-end] $label sem veredito que encerre o ciclo (APPROVED, ou APPROVED_WITH_REMARKS sem achado high/critical): $task_id ($report)" >&2
       reasons+=("$label sem veredito que encerre o ciclo (APPROVED, ou APPROVED_WITH_REMARKS sem achado high/critical): $task_id ($report)")

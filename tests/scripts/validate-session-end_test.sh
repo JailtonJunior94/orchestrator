@@ -209,6 +209,102 @@ EOF
 rc=0; run_validator exit || rc=$?
 expect_exit 2 "$rc" "RF-33: remarks without declared severity fail closed"
 
+cat >"$prd/1.0_execution_report.md" <<'EOF'
+# Report 1.0
+
+```
+verdict=APPROVED_WITH_REMARKS
+tool=claude
+```
+
+## Achados
+- **[MEDIUM]** internal/foo.go:1 nomenclatura inconsistente
+EOF
+rc=0; run_validator exit || rc=$?
+expect_exit 0 "$rc" "bold list finding with only medium severity closes the cycle"
+
+cat >"$prd/1.0_execution_report.md" <<'EOF'
+# Report 1.0
+
+```
+verdict=APPROVED_WITH_REMARKS
+tool=claude
+```
+
+## Achados
+- [HIGH] internal/foo.go:10 corrida de dados
+EOF
+rc=0; run_validator exit || rc=$?
+expect_exit 2 "$rc" "high severity in finding position does not close the cycle"
+
+cat >"$prd/1.0_execution_report.md" <<'EOF'
+# Report 1.0
+
+```
+verdict=APPROVED_WITH_REMARKS
+tool=claude
+```
+
+## Revisao
+Veredito `APPROVED_WITH_REMARKS`, sem tag `[CRITICAL]`/`[HIGH]` bloqueante.
+- Veredito do Revisor: APPROVED_WITH_REMARKS (sem tag `[critical]`/`[blocker]`)
+
+```text
+- [CRITICAL] exemplo citado dentro de bloco de codigo
+```
+
+## Achados
+- [LOW] internal/foo.go:3 renomear variavel
+EOF
+rc=0; run_validator exit || rc=$?
+expect_exit 0 "$rc" "severity mentioned only in prose, backticks or fenced block closes the cycle"
+
+cat >"$prd/1.0_execution_result.json" <<'EOF'
+{
+  "task_id": "1.0",
+  "status": "blocked",
+  "review_verdict": "changes_requested"
+}
+EOF
+rc=0; run_validator exit || rc=$?
+expect_exit 2 "$rc" "structured review_verdict changes_requested overrides approving prose"
+grep -F 'review_verdict=changes_requested' "$fixture/stderr" >/dev/null
+
+cat >"$prd/1.0_execution_result.json" <<'EOF'
+{
+  "task_id": "1.0",
+  "status": "blocked",
+  "review_verdict": "needs_input"
+}
+EOF
+rc=0; run_validator exit || rc=$?
+expect_exit 2 "$rc" "structured review_verdict needs_input overrides approving prose"
+
+cat >"$prd/1.0_execution_report.md" <<'EOF'
+# Report 1.0
+
+```
+verdict=APPROVED_WITH_REMARKS
+tool=claude
+```
+
+## Achados
+- [CRITICAL] internal/foo.go:1 vazamento de segredo
+EOF
+cat >"$prd/1.0_execution_result.json" <<'EOF'
+{
+  "task_id": "1.0",
+  "status": "done",
+  "review_verdict": "approved"
+}
+EOF
+rc=0; run_validator exit || rc=$?
+expect_exit 0 "$rc" "structured review_verdict approved overrides blocking prose"
+
+rm -f "$prd/1.0_execution_result.json"
+rc=0; run_validator exit || rc=$?
+expect_exit 2 "$rc" "without the result json the textual behaviour is preserved"
+
 sed -i.bak 's/| 1.0 | Active task | done |/| 1.0 | Active task | pending |/' "$prd/tasks.md"
 rm -f "$prd/1.0_execution_report.md" "$prd/tasks.md.bak"
 
