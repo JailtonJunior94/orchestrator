@@ -1,5 +1,54 @@
 # Changelog
 
+## 2.0.0 (2026-09-15)
+
+### Features
+- **harness:** permite encerramento com ressalvas sem achado high/critical (9f8f6fa)
+- **memory:** implementa memoria duravel de agentes multi-camada (PRD memoria-duravel-agentes) (0d84ccd)
+- **taskloop:** Service.Execute conduz o approval.Cycle (task 4.4) (f86b0ce)
+- **taskloop:** extrator de criterios compartilhado e adaptador das portas do agregado (task 4.3) (767b81c)
+- **runtime:** evidencia de review por rodada, delta e reset de profundidade (task 4.2) (c92c9a3)
+- **runtime:** elimina veredito sintetico e traduz saida real do revisor (task 4.1) (ac56696)
+- **specs:** registro unico de agentes e catalogo ACP unificado (task 6.0) (b384634)
+- **harness:** checkpoint tarefas 1.0-3.0 do PRD quatro-clis-loop-aprovacao (ef92812)
+- **skills:** adiciona skills de design patterns e domain modeling (ba80b56)
+
+### Bug Fixes
+- **durable:** corrige testes com path separator hardcoded, quebravam no Windows (008e40c)
+- **ci:** corrige shallow clone quebrando isenção histórica e warning do shellcheck (c8b4728)
+- **codex:** corrige bypass silencioso de governança em apply_patch (6de7d36)
+- **memory:** fecha achados de revisão em memoria-duravel-agentes (113ef8d)
+- **harness:** fixa o corte da isencao historica e reconcilia estado das tarefas (77b76c3)
+- **harness:** fecha escapes da rodada 7 e confronta configs reais dos CLIs (b098f5d)
+- **harness:** distingue mencao de declaracao de severidade no gate de encerramento (a5824c7)
+- **harness:** alinha taxonomia de review e fecha isencoes da rastreabilidade (e72602d)
+- **harness:** torna gates efetivos e fecha escapes de aprovacao remanescentes (5fc4e8d)
+- **skills:** adiciona version ao frontmatter de design-patterns-mandatory e domain-modeling-production (fda71f1)
+
+### Documentation
+- **harness:** fecha 9.0, sincroniza tasks.md e corrige critério de check-spec-paths (5b1dba4)
+- **memoria-duravel-agentes:** registra evidência formal das 10 tarefas revisadas (1aba174)
+- **4.8:** ancora o criterio do grep no pacote em vez do arquivo (70181d7)
+- **evidencia:** completa evidencia executada dos criterios e assume 3 lacunas (c34c8c5)
+- **techspec:** resolve G1/G2 da migracao de RunLoop ao Cycle (D-B3) (a69a31b)
+- **techspec:** resolve lacunas de design do Bloco D e re-fatia 4.3-4.8 (f8c23fb)
+
+### Chores
+- **evidence:** sela 18 resultados de execucao contra o commit da entrega (15c143b)
+- **tasks:** sub-decompoe 4.3 em 4.3/4.4/4.5/4.6 (raio de explosao residual) (beced21)
+- **tasks:** decompoe tarefa 4.0 em 4.1/4.2/4.3 (raio de explosao) (fc56ff3)
+
+### Tests
+- **acp_live:** adiciona prova real de bloqueio de governança do OpenCode via ACP (a23477e)
+- **taskloop:** adequa fixtures de revisao ao contrato de texto bruto (task 4.5) (b5d6254)
+
+### CI
+- **test:** remove windows-2025 do matrix do sdd-evals por ora (d56ccf5)
+
+### Breaking Changes
+- **harness:** fecha escapes de aprovacao e gates inertes nos 4 CLIs (76f65e1)
+- **harness:** conclui loop de aprovacao nos 3 caminhos, OpenCode oficial e remove Gemini (v2.0.0) (166cb9e)
+
 ## Não publicado
 
 ### Mudanças de Regra
