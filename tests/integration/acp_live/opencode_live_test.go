@@ -77,6 +77,7 @@ func runOpenCodeKillSwitchScenario(t *testing.T, killSwitchEnvVar string) {
 		Prompt:      "echo OK",
 		WorkDir:     workDir,
 		EvidenceDir: t.TempDir(),
+		AccessMode:  specs.AccessModeFull,
 		RuntimeConfig: airuntime.RuntimeConfig{
 			Timeout: timeout,
 		},
@@ -118,6 +119,7 @@ func TestACPLive_OpenCode_HandshakeSucceedsWithRealPlugin(t *testing.T) {
 		Prompt:      "echo OK",
 		WorkDir:     workDir,
 		EvidenceDir: t.TempDir(),
+		AccessMode:  specs.AccessModeFull,
 		RuntimeConfig: airuntime.RuntimeConfig{
 			Timeout: timeout,
 		},
