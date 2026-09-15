@@ -103,7 +103,7 @@ func TestReviewerPortCriteriaMapReachesComplete(t *testing.T) {
 	}
 
 	verdict := approval.NewTranslator().Translate(output.RawText())
-	if _, proofErr := approval.NewApprovalProof(verdict, criteriaMap); proofErr != nil {
+	if _, proofErr := approval.NewApprovalProof(verdict, criteriaMap, nil); proofErr != nil {
 		t.Fatalf("approval proof from parity output: %v", proofErr)
 	}
 }

@@ -545,11 +545,11 @@ func TestRunLoopIntegrationApprovedWithRemarksNonInteractive(t *testing.T) {
 		NonInteractive: true,
 		ReportPath:     prd + "/loop-report.json",
 	}, deps)
-	if !errors.Is(err, ErrBugfixExhausted) {
-		t.Fatalf("RunLoop: err=%v, want ErrBugfixExhausted (RF-33: remarks realimentam o ciclo e nao encerram)", err)
+	if err != nil {
+		t.Fatalf("RunLoop: err=%v, want nil (RF-33: remarks sem achado high/critical encerram)", err)
 	}
-	if !report.Escalated {
-		t.Fatalf("Escalated=false: ressalvas persistentes devem escalar em vez de encerrar")
+	if report.Escalated {
+		t.Fatalf("Escalated=true: ressalvas medium/low encerram como divida declarada, sem escalonamento")
 	}
 	if report.ActionPlan == nil {
 		t.Fatalf("ActionPlan ausente em modo nao-interativo")

@@ -22,6 +22,9 @@ var (
 	taskCriteriaRe  = regexp.MustCompile(`(?i)^#+\s+(?:crit(?:e|é)rios de (?:sucesso|aceite)|definition of done|acceptance criteria)`)
 	provenRe        = regexp.MustCompile(`(?i)->\s*comprovado\s*:\s*\S`)
 	emptyProofRe    = regexp.MustCompile(`(?i)comprovado\s*:\s*(\[ev|\[evid|\[\]\s*$)`)
+
+	blockingSeverityRe = regexp.MustCompile(`(?i)(\[(critical|cr(?:i|í)tico|high|hard|alta|alto|blocker|security)\]|severidade\s*:\s*(critical|high|cr(?:i|í)tico|alta|alto)|severity\s*:\s*(critical|high))`)
+	anySeverityRe      = regexp.MustCompile(`(?i)(\[(critical|cr(?:i|í)tico|high|hard|alta|alto|blocker|security|medium|m(?:e|é)dia|important|importante|low|baixa|suggestion|sugest(?:a|ã)o)\]|severidade\s*:\s*(critical|high|medium|low|cr(?:i|í)tico|alta|alto|m(?:e|é)dia|baixa)|severity\s*:\s*(critical|high|medium|low))`)
 )
 
 func (r1 *Validator) diffReviewedFindings(text string) []Finding {
@@ -34,8 +37,11 @@ func (r1 *Validator) diffReviewedFindings(text string) []Finding {
 	switch verdict := diffVerdictRe.FindStringSubmatch(text); {
 	case verdict == nil:
 		findings = append(findings, Finding{Label: "veredito do reviewer no bloco Diff Reviewed"})
-	case verdict[1] != "APPROVED":
-		findings = append(findings, Finding{Label: "veredito do reviewer nao encerra o ciclo de aprovacao: " + verdict[1] + " (RF-53: a isencao historica cobre a forma da evidencia, nunca o desfecho; somente APPROVED encerra)"})
+	case verdict[1] == "APPROVED":
+	case verdict[1] == "APPROVED_WITH_REMARKS":
+		findings = append(findings, remarksClosureFindings(text)...)
+	default:
+		findings = append(findings, Finding{Label: "veredito do reviewer nao encerra o ciclo de aprovacao: " + verdict[1] + " (RF-33: encerram APPROVED, ou APPROVED_WITH_REMARKS sem achado high/critical)"})
 	}
 
 	if diffToolRe.FindStringSubmatch(text) == nil {
@@ -50,6 +56,16 @@ func (r1 *Validator) diffReviewedFindings(text string) []Finding {
 		findings = append(findings, Finding{Label: "coverage regression detectada (delta=" + delta[1] + "%)"})
 	}
 	return findings
+}
+
+func remarksClosureFindings(text string) []Finding {
+	if blockingSeverityRe.MatchString(text) {
+		return []Finding{{Label: "veredito APPROVED_WITH_REMARKS nao encerra com achado high/critical declarado (RF-33)"}}
+	}
+	if !anySeverityRe.MatchString(text) {
+		return []Finding{{Label: "veredito APPROVED_WITH_REMARKS sem achado declarado com severidade canonica: ausencia de high/critical nao verificavel (RF-33, fail-closed)"}}
+	}
+	return nil
 }
 
 func (r1 *Validator) strongTestProofFindings(text string) []Finding {

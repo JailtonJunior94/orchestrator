@@ -116,7 +116,7 @@ Ver `techspec.md`:
 - §Sequenciamento de Desenvolvimento → Fases — **F3b — OpenCode**, dependente de F3a.
 - §Considerações Técnicas → Conformidade com Padrões — "ADR-023 (classe de janela): estendida, não
   violada — a janela estática permanece o caminho dos agentes atuais".
-- `adr-003-opencode-acp-subcomando.md` — decisão completa, alternativas rejeitadas (integração
+- `.specs/adr/020-opencode-acp-subcomando.md` — decisão completa, alternativas rejeitadas (integração
   não-interativa, cópia de skills, constante estática de janela) e os riscos com mitigação.
 - `prd.md` §Fatos Verificados, Bloco 1 — V-01, V-02, V-03, V-09, V-10 sustentam cada proibição desta
   tarefa; nenhuma delas é preferência de estilo.
@@ -206,5 +206,5 @@ Nenhuma além das auto-carregadas (governance + linguagem).
 - `.opencode/plugin/` (planejado) — diretório auto-descoberto onde o plugin de governança é depositado.
 - `.specs/prd-harness-quatro-clis-loop-aprovacao/techspec.md` — §ACP por flag e por subcomando,
   §Janela derivada do modelo, §Restrição de ordem descoberta na análise.
-- `.specs/prd-harness-quatro-clis-loop-aprovacao/adr-003-opencode-acp-subcomando.md`
+- `.specs/adr/020-opencode-acp-subcomando.md`
 - `.specs/prd-harness-quatro-clis-loop-aprovacao/adr-002-catalogo-de-agentes-registro-unico.md`

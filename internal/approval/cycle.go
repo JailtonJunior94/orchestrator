@@ -99,7 +99,9 @@ func (c *Cycle) Run(ctx context.Context) (CycleResult, error) {
 		c.rounds = append(c.rounds, round)
 		c.emit(RoundCompleted{Number: number, Verdict: round.Verdict(), Fingerprint: round.Fingerprint()})
 
-		proof, proofErr := NewApprovalProof(round.Verdict(), criteriaMap)
+		findings := slices.Collect(round.Findings())
+
+		proof, proofErr := NewApprovalProof(round.Verdict(), criteriaMap, findings)
 		if proofErr == nil {
 			return c.approve(proof)
 		}
@@ -116,7 +118,6 @@ func (c *Cycle) Run(ctx context.Context) (CycleResult, error) {
 			return c.closeBlocked(reason)
 		}
 
-		findings := slices.Collect(round.Findings())
 		if len(findings) == 0 {
 			return c.closeBlocked(ReasonBlockedInput)
 		}

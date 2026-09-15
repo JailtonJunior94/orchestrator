@@ -39,6 +39,11 @@ fi
 input=$(cat)
 [[ -z "$input" ]] && exit 0
 
+if printf '%s' "$input" | grep -Eq '"stop_hook_active"[[:space:]]*:[[:space:]]*true'; then
+  echo "[subagent-stop] stop_hook_active=true — o bloqueio ja foi aplicado nesta retomada; liberando o encerramento para o agente reagir em vez de prender a sessao." >&2
+  exit 0
+fi
+
 # Extrair subagent_output (assumindo Claude Code JSON shape)
 # Defensivo: tenta jq, fallback para grep+sed
 yaml_output=""

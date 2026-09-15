@@ -852,7 +852,7 @@ sem processos orfaos).
 - ADRs relacionadas: [ADR-009 (ACP via coder/acp-go-sdk)](.specs/adr/009-acp-protocol-adoption.md),
   [ADR-012 (Copilot ACP)](.specs/adr/012-copilot-cli-acp-native.md),
   [ADR-013 (Codex ACP)](.specs/adr/013-codex-cli-acp-native.md),
-  [ADR-003 (OpenCode ACP)](.specs/prd-harness-quatro-clis-loop-aprovacao/adr-003-opencode-acp-subcomando.md).
+  [ADR-020 (OpenCode ACP)](.specs/adr/020-opencode-acp-subcomando.md).
 - Para migrar do modo legado, ver o [Guia de migracao legacy -> ACP](docs/migracao-legacy-acp.md).
 
 ## Fluxo completo recomendado

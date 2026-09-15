@@ -46,7 +46,7 @@ EOF
 
 rc=0; run_validator exit || rc=$?
 expect_exit 2 "$rc" "report without APPROVED verdict"
-grep -F 'tarefa ativa sem veredito APPROVED registrado: 1.0' "$fixture/stderr" >/dev/null
+grep -F 'tarefa ativa sem veredito que encerre o ciclo' "$fixture/stderr" >/dev/null
 
 rc=0; run_validator json || rc=$?
 expect_exit 2 "$rc" "block decision with json output"
@@ -83,7 +83,7 @@ tool=claude
 EOF
 rc=0; run_validator exit || rc=$?
 expect_exit 2 "$rc" "done with APPROVED_WITH_REMARKS does not close the approval cycle"
-grep -F 'tarefa fechada como done sem veredito APPROVED registrado: 1.0' "$fixture/stderr" >/dev/null
+grep -F 'tarefa fechada como done sem veredito que encerre o ciclo' "$fixture/stderr" >/dev/null
 
 cat >"$prd/1.0_execution_report.md" <<'EOF'
 # Report 1.0
@@ -108,5 +108,108 @@ sed -i.bak 's/| 1.0 | Active task | done |/| 1.0 | Active task | pending |/' "$p
 rm -f "$prd/1.0_execution_report.md" "$prd/tasks.md.bak"
 rc=0; run_validator exit || rc=$?
 expect_exit 0 "$rc" "task never started without report"
+
+run_validator_with_input() {
+  local output_mode="$1"
+  local payload="$2"
+  ( cd "$project" && AISPEC_HOOK_DECISION_OUTPUT="$output_mode" bash "$validator" <<<"$payload" >"$fixture/stdout" 2>"$fixture/stderr" )
+}
+
+sed -i.bak 's/| 1.0 | Active task | pending |/| 1.0 | Active task | blocked |/' "$prd/tasks.md"
+rm -f "$prd/tasks.md.bak"
+cat >"$prd/1.0_execution_report.md" <<'EOF'
+# Report 1.0
+
+```
+verdict=CHANGES_REQUESTED
+tool=claude
+```
+EOF
+
+rc=0; run_validator_with_input exit '{"hook_event_name":"Stop","stop_hook_active":false}' || rc=$?
+expect_exit 2 "$rc" "blocked task without approving verdict still blocks when stop_hook_active is false"
+grep -F 'GATE DE ENCERRAMENTO BLOQUEADO' "$fixture/stderr" >/dev/null
+grep -F 'tarefa blocked com relatorio de execucao escrito sem veredito que encerre o ciclo' "$fixture/stderr" >/dev/null
+
+rc=0; run_validator exit || rc=$?
+expect_exit 2 "$rc" "blocked task without approving verdict still blocks when stop_hook_active is absent"
+grep -F 'GATE DE ENCERRAMENTO BLOQUEADO' "$fixture/stderr" >/dev/null
+
+rc=0; run_validator_with_input exit '{"hook_event_name":"Stop","stop_hook_active":true}' || rc=$?
+expect_exit 0 "$rc" "stop_hook_active true releases the turn instead of looping forever"
+grep -F 'stop_hook_active=true' "$fixture/stderr" >/dev/null
+grep -F 'tarefa blocked com relatorio de execucao escrito sem veredito que encerre o ciclo' "$fixture/stderr" >/dev/null
+
+rc=0; run_validator_with_input json '{"hook_event_name":"Stop","stop_hook_active":true}' || rc=$?
+expect_exit 0 "$rc" "stop_hook_active true releases the turn under json decision output"
+if grep -F '"decision":"block"' "$fixture/stdout" >/dev/null 2>&1; then
+  echo "validate-session-end: stop_hook_active release emitted a block decision" >&2
+  exit 1
+fi
+
+sed -i.bak 's/| 1.0 | Active task | blocked |/| 1.0 | Active task | pending |/' "$prd/tasks.md"
+rm -f "$prd/1.0_execution_report.md" "$prd/tasks.md.bak"
+rc=0; run_validator_with_input exit '{"hook_event_name":"Stop","stop_hook_active":true}' || rc=$?
+expect_exit 0 "$rc" "clean tree with stop_hook_active true exits zero"
+
+sed -i.bak 's/| 1.0 | Active task | pending |/| 1.0 | Active task | done |/' "$prd/tasks.md"
+rm -f "$prd/tasks.md.bak"
+
+cat >"$prd/1.0_execution_report.md" <<'EOF'
+# Report 1.0
+
+```
+verdict=APPROVED_WITH_REMARKS
+tool=claude
+```
+
+## Achados
+- [MEDIUM] internal/foo.go:1 nomenclatura inconsistente
+EOF
+rc=0; run_validator exit || rc=$?
+expect_exit 0 "$rc" "RF-33: remarks with only medium findings close the cycle"
+
+cat >"$prd/1.0_execution_report.md" <<'EOF'
+# Report 1.0
+
+```
+verdict=APPROVED_WITH_REMARKS
+tool=claude
+```
+
+## Achados
+- [HIGH] internal/foo.go:1 corrida de dados
+EOF
+rc=0; run_validator exit || rc=$?
+expect_exit 2 "$rc" "RF-33: remarks with a high finding do not close the cycle"
+grep -F 'GATE DE ENCERRAMENTO BLOQUEADO' "$fixture/stderr" >/dev/null
+
+cat >"$prd/1.0_execution_report.md" <<'EOF'
+# Report 1.0
+
+```
+verdict=APPROVED_WITH_REMARKS
+tool=claude
+```
+
+## Achados
+- [CRITICAL] internal/foo.go:1 vazamento de segredo
+EOF
+rc=0; run_validator exit || rc=$?
+expect_exit 2 "$rc" "RF-33: remarks with a critical finding do not close the cycle"
+
+cat >"$prd/1.0_execution_report.md" <<'EOF'
+# Report 1.0
+
+```
+verdict=APPROVED_WITH_REMARKS
+tool=claude
+```
+EOF
+rc=0; run_validator exit || rc=$?
+expect_exit 2 "$rc" "RF-33: remarks without declared severity fail closed"
+
+sed -i.bak 's/| 1.0 | Active task | done |/| 1.0 | Active task | pending |/' "$prd/tasks.md"
+rm -f "$prd/1.0_execution_report.md" "$prd/tasks.md.bak"
 
 echo "validate-session-end: block and release OK"

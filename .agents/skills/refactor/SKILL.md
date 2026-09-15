@@ -40,7 +40,7 @@ description: Planeja ou executa refatorações incrementais seguras preservando 
 1. No modo `execution`, invocar a skill `review` sobre o diff produzido.
 2. Se `review` retornar `REJECTED` com bugs no formato canônico, invocar a skill `bugfix` para corrigir apenas esses itens dentro do escopo acordado.
 3. Após `bugfix`, rerodar as validações proporcionais e uma nova revisão antes de concluir.
-4. Aceitar apenas `APPROVED` como veredito aprovador final (RF-33): `APPROVED_WITH_REMARKS` nao encerra o ciclo — seus achados realimentam a correcao.
+4. Aceitar como veredito aprovador final (RF-33): `APPROVED`, ou `APPROVED_WITH_REMARKS` desde que nenhum achado seja `[HIGH]` ou `[CRITICAL]`. Qualquer achado high/critical impede o encerramento e realimenta a correcao; achados `[MEDIUM]`/`[LOW]` permanecem registrados no relatorio como divida declarada. `APPROVED_WITH_REMARKS` sem nenhum achado declarado nao encerra (fail-closed).
 5. Ler `assets/refactor-report-template.md`.
 6. Salvar o relatório em `.specs/prd-<feature-slug>/refactor_report.md` quando estiver em contexto de tarefa; caso contrário, em `./refactor_report.md`.
 7. Validar o relatório com o validador resolvido em cascata portátil (`.agents/scripts/validate-refactor-evidence.sh` → `.claude/scripts/validate-refactor-evidence.sh` → `scripts/validate-refactor-evidence.sh`): `bash "<primeiro-existente>" <caminho-do-relatorio>`; corrigir seções faltantes antes de encerrar.

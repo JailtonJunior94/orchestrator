@@ -6,7 +6,7 @@ const (
 	OpenCodePreToolDiagnostic     = "GOVERNANCE BLOCKED for tool"
 	PostToolGovernanceDiagnostic  = "AVISO: arquivo de governanca modificado"
 	OpenCodePostToolDiagnostic    = "GOVERNANCE OBSERVED at tool.execute.after"
-	SessionEndDiagnostic          = "[session-end] GATE DE ENCERRAMENTO BLOQUEADO — existe tarefa sem veredito APPROVED registrado."
+	SessionEndDiagnostic          = "[session-end] GATE DE ENCERRAMENTO BLOQUEADO — existe tarefa sem veredito que encerre o ciclo (APPROVED, ou APPROVED_WITH_REMARKS sem achado high/critical)."
 )
 
 const (

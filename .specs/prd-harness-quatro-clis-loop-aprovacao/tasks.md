@@ -1,5 +1,5 @@
-<!-- spec-hash-prd: 37d4fed94549358c1153466d62598b491f5d2f6b3c9223ef2205cdb1ce5bdb22 -->
-<!-- spec-hash-techspec: 47df574f6332a4bef1ef323041e6eb31ff9aaa840371645a3036be8f4a835bd4 -->
+<!-- spec-hash-prd: 4583496d103cfa0126a9fa0826999b4285f3b3ffe1f412c8a878d36b92122112 -->
+<!-- spec-hash-techspec: 1fd62c41e2d7cf23605a41708e7a54600cc46330bc2ff3cc215e67ac112c6dec -->
 # Resumo das Tarefas de Implementação para Quatro CLIs Oficiais e Ciclo de Aprovação
 
 ## Metadados

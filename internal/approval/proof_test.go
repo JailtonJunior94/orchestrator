@@ -15,38 +15,38 @@ func TestApprovalProofSuite(t *testing.T) {
 }
 
 func (s *ApprovalProofSuite) TestRejectsApprovedWithRemarks() {
-	_, err := NewApprovalProof(VerdictApprovedWithRemarks, completeCriteriaMap(s.T()))
+	_, err := NewApprovalProof(VerdictApprovedWithRemarks, completeCriteriaMap(s.T()), nil)
 	s.Require().ErrorIs(err, ErrInsufficientProof)
 }
 
 func (s *ApprovalProofSuite) TestRejectsRejected() {
-	_, err := NewApprovalProof(VerdictRejected, completeCriteriaMap(s.T()))
+	_, err := NewApprovalProof(VerdictRejected, completeCriteriaMap(s.T()), nil)
 	s.Require().ErrorIs(err, ErrInsufficientProof)
 }
 
 func (s *ApprovalProofSuite) TestRejectsBlocked() {
-	_, err := NewApprovalProof(VerdictBlocked, completeCriteriaMap(s.T()))
+	_, err := NewApprovalProof(VerdictBlocked, completeCriteriaMap(s.T()), nil)
 	s.Require().ErrorIs(err, ErrInsufficientProof)
 }
 
 func (s *ApprovalProofSuite) TestRejectsZeroValueVerdict() {
 	var zero Verdict
-	_, err := NewApprovalProof(zero, completeCriteriaMap(s.T()))
+	_, err := NewApprovalProof(zero, completeCriteriaMap(s.T()), nil)
 	s.Require().ErrorIs(err, ErrInsufficientProof)
 }
 
 func (s *ApprovalProofSuite) TestRejectsIncompleteMap() {
-	_, err := NewApprovalProof(VerdictApproved, incompleteCriteriaMap(s.T()))
+	_, err := NewApprovalProof(VerdictApproved, incompleteCriteriaMap(s.T()), nil)
 	s.Require().ErrorIs(err, ErrInsufficientProof)
 }
 
 func (s *ApprovalProofSuite) TestRejectsUnverifiableCriterion() {
-	_, err := NewApprovalProof(VerdictApproved, unverifiableCriteriaMap(s.T()))
+	_, err := NewApprovalProof(VerdictApproved, unverifiableCriteriaMap(s.T()), nil)
 	s.Require().ErrorIs(err, ErrInsufficientProof)
 }
 
 func (s *ApprovalProofSuite) TestRejectsEmptyMap() {
-	_, err := NewApprovalProof(VerdictApproved, CriteriaMap{})
+	_, err := NewApprovalProof(VerdictApproved, CriteriaMap{}, nil)
 	s.Require().ErrorIs(err, ErrInsufficientProof)
 }
 
@@ -63,7 +63,7 @@ func (s *ApprovalProofSuite) TestApprovedResultRejectsZeroValueProof() {
 }
 
 func (s *ApprovalProofSuite) TestValidProofOpensApproval() {
-	proof, err := NewApprovalProof(VerdictApproved, completeCriteriaMap(s.T()))
+	proof, err := NewApprovalProof(VerdictApproved, completeCriteriaMap(s.T()), nil)
 	s.Require().NoError(err)
 	s.True(proof.Valid())
 	s.Equal(VerdictApproved, proof.Verdict())

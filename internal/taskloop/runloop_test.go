@@ -390,7 +390,7 @@ func TestRunLoopRejectedThenBugfixApproves(t *testing.T) {
 	}
 }
 
-func TestRunLoopRejectedRemarksWithoutConvergenceEscalates(t *testing.T) {
+func TestRunLoopRejectedThenNonBlockingRemarksCloses(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
 	svc := newCycleTestService(fsys, newTestPrinter())
 
@@ -415,14 +415,14 @@ func TestRunLoopRejectedRemarksWithoutConvergenceEscalates(t *testing.T) {
 		PRDFolder:      prd,
 		NonInteractive: true,
 	}, deps)
-	if !errors.Is(err, ErrBugfixExhausted) {
-		t.Fatalf("err=%v, want ErrBugfixExhausted", err)
+	if err != nil {
+		t.Fatalf("err=%v, want nil (RF-33: remarks nao bloqueantes encerram)", err)
 	}
-	if !report.Escalated {
-		t.Error("Escalated=false, want true")
+	if report.Escalated {
+		t.Error("Escalated=true, want false (RF-33: sem achado high/critical)")
 	}
 	if report.FinalReview == nil || report.FinalReview.Verdict != VerdictApprovedWithRemarks {
-		t.Fatalf("verdict final = %+v, want APPROVED_WITH_REMARKS", report.FinalReview)
+		t.Fatalf("verdict final = %+v, want APPROVED_WITH_REMARKS preservado", report.FinalReview)
 	}
 	if report.ActionPlan != nil {
 		t.Fatalf("ActionPlan nao deveria ser gerado em escalonamento: %+v", report.ActionPlan)
@@ -653,12 +653,12 @@ func TestRunLoopApprovedWithRemarksImplementExhaustsEscalates(t *testing.T) {
 	if !report.Escalated {
 		t.Error("Escalated=false apos exaurir Implement, want true")
 	}
-	if report.BugfixCycles != 2 {
-		t.Errorf("BugfixCycles=%d, want 2", report.BugfixCycles)
+	if report.BugfixCycles != 1 {
+		t.Errorf("BugfixCycles=%d, want 1", report.BugfixCycles)
 	}
 }
 
-func TestRunLoopRemarksPersistEscalates(t *testing.T) {
+func TestRunLoopRemarksPersistCloseAsDeclaredDebt(t *testing.T) {
 	fsys, prd := setupRunLoopFS([]string{"1.0"})
 	svc := newCycleTestService(fsys, newTestPrinter())
 
@@ -685,11 +685,11 @@ func TestRunLoopRemarksPersistEscalates(t *testing.T) {
 	}
 
 	report, err := svc.RunLoop(context.Background(), Options{PRDFolder: prd, MaxBugfixIterations: 3}, deps)
-	if !errors.Is(err, ErrBugfixExhausted) {
-		t.Fatalf("err=%v, want ErrBugfixExhausted", err)
+	if err != nil {
+		t.Fatalf("err=%v, want nil (RF-33: ressalva low encerra como divida declarada)", err)
 	}
-	if !report.Escalated {
-		t.Error("Escalated=false com ressalvas persistentes, want true")
+	if report.Escalated {
+		t.Error("Escalated=true, want false (RF-33: nenhum achado high/critical)")
 	}
 	if invoker.calls == 0 {
 		t.Error("ressalvas nao realimentaram a correcao (RF-31 lacuna 1)")
@@ -747,8 +747,8 @@ func TestRunLoopRemarksImplementPreservesContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("erro inesperado: %v", err)
 	}
-	if report.FinalReview == nil || report.FinalReview.Verdict != VerdictApproved {
-		t.Fatalf("FinalReview=%+v, want APPROVED", report.FinalReview)
+	if report.FinalReview == nil || report.FinalReview.Verdict != VerdictApprovedWithRemarks {
+		t.Fatalf("FinalReview=%+v, want APPROVED_WITH_REMARKS (RF-33: encerra preservando a ressalva)", report.FinalReview)
 	}
 
 	if len(reviewer.diffs) < 1 {

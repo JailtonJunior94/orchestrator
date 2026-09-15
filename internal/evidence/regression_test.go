@@ -128,8 +128,49 @@ func TestValidateTask_HistoricalExemptionCoversFormNotOutcome(t *testing.T) {
 	}
 
 	result = NewValidator().ValidateReport([]byte(remarks), remarksPath, KindTask, nil)
-	if result.Pass || !findingsContain(result.Findings, "nao encerra o ciclo") {
-		t.Errorf("v1 NAO isenta o desfecho: APPROVED_WITH_REMARKS deve reprovar (RF-53): %v", result.Findings)
+	if result.Pass || !findingsContain(result.Findings, "RF-33") {
+		t.Errorf("v1 NAO isenta o desfecho: APPROVED_WITH_REMARKS sem severidade declarada deve reprovar (RF-33 fail-closed): %v", result.Findings)
+	}
+}
+
+func TestValidateTask_RemarksCloseOnlyWithoutBlockingSeverity(t *testing.T) {
+	dir := newGitFixture(t)
+	taskPath := filepath.Join(dir, "task-1.0.md")
+	if err := os.WriteFile(taskPath, []byte(taskFileOneCriterion), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	remarks := "<!-- evidence-contract: v2 -->\n" + strings.Replace(taskComplete, "verdict=APPROVED", "verdict=APPROVED_WITH_REMARKS", 1)
+	withMedium := remarks + "\n# Achados\n- [MEDIUM] internal/foo.go:1 nomenclatura\n"
+	withHigh := remarks + "\n# Achados\n- [HIGH] internal/foo.go:1 corrida de dados\n"
+	withCritical := remarks + "\n# Achados\n- [CRITICAL] internal/foo.go:1 vazamento de segredo\n"
+
+	cases := []struct {
+		name string
+		body string
+		pass bool
+		want string
+	}{
+		{"medium only closes", withMedium, true, ""},
+		{"high blocks", withHigh, false, "high/critical"},
+		{"critical blocks", withCritical, false, "high/critical"},
+		{"no declared severity fails closed", remarks, false, "fail-closed"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(dir, "1.0_execution_report.md")
+			if err := os.WriteFile(path, []byte(tc.body), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			result := NewValidator().ValidateReport([]byte(tc.body), path, KindTask, nil)
+			if result.Pass != tc.pass {
+				t.Fatalf("Pass=%v, want %v: %v", result.Pass, tc.pass, result.Findings)
+			}
+			if tc.want != "" && !findingsContain(result.Findings, tc.want) {
+				t.Fatalf("achados %v nao contem %q", result.Findings, tc.want)
+			}
+		})
 	}
 }
 

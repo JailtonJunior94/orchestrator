@@ -23,6 +23,21 @@ func (v Verdict) Approves() bool {
 	return v == VerdictApproved
 }
 
+func (v Verdict) Closes(findings []Finding) bool {
+	if v != VerdictApproved && v != VerdictApprovedWithRemarks {
+		return false
+	}
+	if v == VerdictApprovedWithRemarks && len(findings) == 0 {
+		return false
+	}
+	for _, finding := range findings {
+		if finding.Severity().Blocks() {
+			return false
+		}
+	}
+	return true
+}
+
 func (v Verdict) String() string {
 	switch v {
 	case VerdictApproved:

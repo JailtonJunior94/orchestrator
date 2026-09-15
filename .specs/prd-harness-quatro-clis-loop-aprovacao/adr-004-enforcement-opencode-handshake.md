@@ -6,7 +6,7 @@
 - **Data:** 2026-09-10
 - **Status:** Aceita
 - **Decisores:** Solicitante do PRD
-- **Relacionados:** `prd.md` (RF-19 a RF-21), `techspec.md`, `adr-003-opencode-acp-subcomando.md`
+- **Relacionados:** `prd.md` (RF-19 a RF-21), `techspec.md`, `.specs/adr/020-opencode-acp-subcomando.md`
 
 ## Contexto
 

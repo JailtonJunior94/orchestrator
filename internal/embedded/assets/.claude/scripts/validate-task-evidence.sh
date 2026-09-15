@@ -125,7 +125,7 @@ fi
 
 if [[ "$contract_version" -eq 1 ]]; then
   echo "AVISO: contrato de evidência v1 (histórico) — a isenção cobre somente a forma da evidência." \
-       "RF-53: o mapa 1:1 de critérios de aceite e o desfecho (verdict=APPROVED) continuam cobrados."
+       "RF-53: o mapa 1:1 de critérios de aceite e o desfecho (veredito que encerra, RF-33) continuam cobrados."
 fi
 
 if grep -Eiq "estado[[:space:]]*:[[:space:]]*done" "$report_file" && [[ -n "$task_path" ]]; then
@@ -216,6 +216,9 @@ elif [[ -n "$prd_path" && "$prd_path" != n/a* && "$prd_path" != "(n/a)"* ]]; the
   fi
 fi
 
+AISPEC_BLOCKING_SEVERITY_RE='(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security)\]|severidade[[:space:]]*:[[:space:]]*(critical|high|cr(i|í)tico|alta|alto)|severity[[:space:]]*:[[:space:]]*(critical|high))'
+AISPEC_ANY_SEVERITY_RE='(\[(critical|cr(i|í)tico|high|hard|alta|alto|blocker|security|medium|m(e|é)dia|important|importante|low|baixa|suggestion|sugest(a|ã)o)\]|severidade[[:space:]]*:[[:space:]]*(critical|high|medium|low|cr(i|í)tico|alta|alto|m(e|é)dia|baixa)|severity[[:space:]]*:[[:space:]]*(critical|high|medium|low))'
+
 # Veredito do revisor
 if ! grep -Eiq "veredito do revisor[[:space:]]*:[[:space:]]*(APPROVED|APPROVED_WITH_REMARKS|REJECTED|BLOCKED)" "$report_file"; then
   echo "FALTANDO: veredito do revisor com valor canônico"
@@ -234,9 +237,18 @@ review_verdict="$(grep -E '^verdict=[[:space:]]*(APPROVED|APPROVED_WITH_REMARKS|
 if [[ -z "$review_verdict" ]]; then
   echo "FALTANDO: veredito do reviewer no bloco Diff Reviewed"
   missing=1
+elif [[ "$review_verdict" == "APPROVED_WITH_REMARKS" ]]; then
+  if grep -Eiq "$AISPEC_BLOCKING_SEVERITY_RE" "$report_file"; then
+    echo "FALTANDO: veredito APPROVED_WITH_REMARKS não encerra com achado high/critical declarado (RF-33)."
+    missing=1
+  elif ! grep -Eiq "$AISPEC_ANY_SEVERITY_RE" "$report_file"; then
+    echo "FALTANDO: veredito APPROVED_WITH_REMARKS sem achado declarado com severidade canônica:" \
+         "ausência de high/critical não verificável (RF-33, fail-closed)."
+    missing=1
+  fi
 elif [[ "$review_verdict" != "APPROVED" ]]; then
-  echo "FALTANDO: veredito do reviewer não encerra o ciclo de aprovação: $review_verdict (RF-53: a" \
-       "isenção histórica cobre a forma da evidência, nunca o desfecho; somente APPROVED encerra)."
+  echo "FALTANDO: veredito do reviewer não encerra o ciclo de aprovação: $review_verdict (RF-33:" \
+       "encerram APPROVED, ou APPROVED_WITH_REMARKS sem achado high/critical)."
   missing=1
 fi
 
@@ -268,6 +280,20 @@ import subprocess
 import sys
 
 MIN_AI_SPEC_VERSION = (2, 0, 0)
+
+BLOCKING_SEVERITY = re.compile(
+    r"(\[(critical|cr(?:i|\u00ed)tico|high|hard|alta|alto|blocker|security)\]"
+    r"|severidade\s*:\s*(critical|high|cr(?:i|\u00ed)tico|alta|alto)"
+    r"|severity\s*:\s*(critical|high))",
+    re.IGNORECASE,
+)
+ANY_SEVERITY = re.compile(
+    r"(\[(critical|cr(?:i|\u00ed)tico|high|hard|alta|alto|blocker|security|medium|m(?:e|\u00e9)dia"
+    r"|important|importante|low|baixa|suggestion|sugest(?:a|\u00e3)o)\]"
+    r"|severidade\s*:\s*(critical|high|medium|low|cr(?:i|\u00ed)tico|alta|alto|m(?:e|\u00e9)dia|baixa)"
+    r"|severity\s*:\s*(critical|high|medium|low))",
+    re.IGNORECASE,
+)
 
 
 class ToolchainError(Exception):
@@ -353,8 +379,34 @@ try:
     result_path = contained(match.group(1))
     result = json.load(open(result_path, encoding="utf-8"))
     required = {"schema_version", "run_id", "task_id", "attempt", "status", "base_sha", "patch_sha256", "patch_ref", "final_state_sha256", "tests", "criteria", "evidence", "review_verdict"}
-    if result.get("schema_version") != 2 or result.get("status") != "done" or not required.issubset(result):
-        raise ValueError("execution-result v2 done incompleto")
+    if result.get("schema_version") != 2:
+        raise ValueError(
+            f"execution-result malformado: schema_version {result.get('schema_version')!r} diferente de 2"
+        )
+    absent = sorted(required - set(result))
+    if absent:
+        raise ValueError(
+            f"execution-result v2 malformado: campos obrigatorios ausentes: {', '.join(absent)}"
+        )
+    status = result.get("status")
+    if status != "done":
+        declared = re.search(r"(?im)^verdict\s*=\s*(\S+)\s*$", text)
+        verdict = declared.group(1).strip().upper() if declared else ""
+        closes = verdict == "APPROVED"
+        if verdict == "APPROVED_WITH_REMARKS":
+            closes = bool(re.search(ANY_SEVERITY, text)) and not re.search(BLOCKING_SEVERITY, text)
+        if closes:
+            print(
+                f"FALTANDO: veredito aprovador (verdict={verdict}) sobre execution-result nao-done "
+                f"(status={status!r}): resultado nao concluido nao pode acompanhar veredito aprovador; "
+                "prova fisica so se aplica a resultado done"
+            )
+            raise SystemExit(1)
+        print(
+            f"NAO APLICAVEL: prova fisica dispensada — execution-result status={status!r} (nao-done) "
+            f"com veredito {verdict or 'ausente'} nao aprovador; a reprovacao cabe ao gate de veredito"
+        )
+        raise SystemExit(0)
     task = re.search(r"(?im)^-\s*ID\s*:\s*(\S+)\s*$", text)
     patch = re.search(r"(?im)^sha\s*=\s*([0-9a-f]{64})\s*$", text)
     if not task or task.group(1) != result["task_id"]:

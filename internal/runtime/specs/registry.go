@@ -224,7 +224,7 @@ func (c *Catalog) buildRegistry() []Agent {
 		c.newAgentWithEnvPolicy(
 			"opencode", "OpenCode (ACP)", "opencode", "opencode",
 			[]string{".config/opencode"},
-			".specs/prd-harness-quatro-clis-loop-aprovacao/adr-003-opencode-acp-subcomando.md",
+			".specs/adr/020-opencode-acp-subcomando.md",
 			4000, 500_000,
 			c.NewEnvPolicy(OpenCodeKillSwitchVars...),
 			c.canonicalEnforcement("opencode", "tool.execute.before", "tool.execute.after", "session.idle"),

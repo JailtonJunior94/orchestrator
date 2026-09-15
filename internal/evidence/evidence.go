@@ -414,8 +414,8 @@ func (r1 *Validator) validateCriteriaMap(text, verdict, reportPath string) []Fin
 		switch marker {
 		case "atendido":
 		case "nao atendido", "não atendido":
-			if verdict == "APPROVED" {
-				findings = append(findings, Finding{Label: "criterio nao atendido proibe APPROVED: " + trimmed})
+			if verdict == "APPROVED" || verdict == "APPROVED_WITH_REMARKS" {
+				findings = append(findings, Finding{Label: "criterio nao atendido proibe veredito aprovador: " + trimmed})
 			}
 		case "nao verificavel", "nao verificável", "não verificavel", "não verificável":
 			findings = append(findings, Finding{Label: "criterio nao verificavel proibe APPROVED: " + trimmed})

@@ -575,7 +575,7 @@ func TestProbeReferencesADR_OpenCode(t *testing.T) {
 	if err == nil {
 		t.Fatal("esperava erro, mas não houve")
 	}
-	if !strings.Contains(err.Error(), "adr-003-opencode-acp-subcomando.md") {
+	if !strings.Contains(err.Error(), ".specs/adr/020-opencode-acp-subcomando.md") {
 		t.Errorf("adrByID[\"opencode\"] deve apontar para o ADR do OpenCode\nmensagem: %q", err.Error())
 	}
 }

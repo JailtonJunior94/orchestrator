@@ -46,9 +46,8 @@ for root in "$repo_root/.agents/skills" "$repo_root/.claude/skills" "$repo_root/
   execute_task_skill="$root/execute-task/SKILL.md"
   if [[ -f "$execute_task_skill" ]]; then
     assert_absent "$execute_task_skill" 'Sem tag crítica → Etapa 5'
-    assert_absent "$execute_task_skill" 'OU `APPROVED_WITH_REMARKS` confirmado sem remarks críticos'
     assert_absent "$execute_task_skill" 'Cadeia review → bugfix → review é máxima'
-    assert_contains "$execute_task_skill" '`APPROVED_WITH_REMARKS` → **não encerra (RF-33)**'
+    assert_contains "$execute_task_skill" '`APPROVED_WITH_REMARKS` → **encerra somente sem achado `[HIGH]`/`[CRITICAL]` (RF-33)**'
   fi
   bugfix_skill="$root/bugfix/SKILL.md"
   if [[ -f "$bugfix_skill" ]]; then

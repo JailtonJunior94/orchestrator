@@ -6,7 +6,11 @@
 - **Data:** 2026-09-10
 - **Status:** Aceita
 - **Decisores:** Solicitante do PRD
-- **Relacionados:** `prd.md` (RF-10 a RF-18), `techspec.md`, ADR do runtime descontinuado (marcada como Substituída)
+- **Relacionados:**
+  - PRD: `.specs/prd-harness-quatro-clis-loop-aprovacao/prd.md` (RF-10 a RF-18)
+  - TechSpec: `.specs/prd-harness-quatro-clis-loop-aprovacao/techspec.md`
+  - ADR do runtime descontinuado (marcada como Substituída)
+  - Numeração: esta ADR nasceu como `adr-003` dentro do diretório do PRD e foi realocada para a sequência canônica `.specs/adr/0NN-*.md` (task 7.0, ressalva de convenção de caminho)
 
 ## Contexto
 

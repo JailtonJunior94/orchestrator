@@ -49,7 +49,7 @@ func TestParseCriteriaMapRejectsFabricatedEvidence(t *testing.T) {
 			require.Len(t, findings, 1)
 			require.True(t, findings[0].Severity().Blocks())
 
-			proof, proofErr := NewApprovalProof(VerdictApproved, criteriaMap)
+			proof, proofErr := NewApprovalProof(VerdictApproved, criteriaMap, nil)
 			require.ErrorIs(t, proofErr, ErrInsufficientProof)
 			require.False(t, proof.Valid())
 		})
@@ -80,7 +80,7 @@ func TestParseCriteriaMapAcceptsCanonicalEvidenceForms(t *testing.T) {
 			require.True(t, criteriaMap.Complete())
 			require.Empty(t, criteriaMap.FindingsList())
 
-			proof, proofErr := NewApprovalProof(VerdictApproved, criteriaMap)
+			proof, proofErr := NewApprovalProof(VerdictApproved, criteriaMap, nil)
 			require.NoError(t, proofErr)
 			require.True(t, proof.Valid())
 		})
@@ -99,7 +99,7 @@ func TestParseCriteriaMapUnmetCriterionIsNotAnInfrastructureError(t *testing.T) 
 	require.Equal(t, SeverityHigh, findings[0].Severity())
 	require.True(t, findings[0].Severity().Blocks())
 
-	_, proofErr := NewApprovalProof(VerdictApproved, criteriaMap)
+	_, proofErr := NewApprovalProof(VerdictApproved, criteriaMap, nil)
 	require.ErrorIs(t, proofErr, ErrInsufficientProof)
 }
 
@@ -119,7 +119,7 @@ func TestParseCriteriaMapUnverifiableCriterionIsNotAnInfrastructureError(t *test
 	require.Len(t, findings, 1)
 	require.Equal(t, SeverityHigh, findings[0].Severity())
 
-	_, proofErr := NewApprovalProof(VerdictApproved, criteriaMap)
+	_, proofErr := NewApprovalProof(VerdictApproved, criteriaMap, nil)
 	require.ErrorIs(t, proofErr, ErrInsufficientProof)
 }
 
@@ -147,7 +147,7 @@ func TestParseCriteriaMapReportsUnknownMarkerAsFinding(t *testing.T) {
 		require.True(t, finding.Severity().Blocks())
 	}
 
-	_, proofErr := NewApprovalProof(VerdictApproved, criteriaMap)
+	_, proofErr := NewApprovalProof(VerdictApproved, criteriaMap, nil)
 	require.ErrorIs(t, proofErr, ErrInsufficientProof)
 }
 

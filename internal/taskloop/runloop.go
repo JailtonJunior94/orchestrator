@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -210,11 +211,6 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 			fmt.Errorf("%w: %s", ErrReviewBlocked, NewCatalog().blockedReviewReason(rev.RawOutput))
 
 	case VerdictApprovedWithRemarks, VerdictRejected:
-		if deps.BugfixInvoker == nil || deps.DiffCapturer == nil {
-			return s.finalizeReport(report, opts, "bugfix loop nao configurado"),
-				fmt.Errorf("taskloop: review nao encerrou o ciclo mas BugfixInvoker/DiffCapturer ausentes")
-		}
-
 		if rev.Verdict == VerdictApprovedWithRemarks {
 			plan, planErr := s.resolveActionPlan(ctx, absFolder, lastTaskFile, opts, deps, rev.Findings)
 			if planErr != nil {
@@ -222,6 +218,12 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 			}
 			report.ActionPlan = &plan
 			NewCatalog().emitImplementPromoted(plan)
+			rev.Findings = promoteImplementedRemarks(rev.Findings, plan)
+			report.FinalReview = &rev
+		}
+		if !remarksClose(rev) && (deps.BugfixInvoker == nil || deps.DiffCapturer == nil) {
+			return s.finalizeReport(report, opts, "bugfix loop nao configurado"),
+				fmt.Errorf("taskloop: review nao encerrou o ciclo mas BugfixInvoker/DiffCapturer ausentes")
 		}
 		NewCatalog().emitTelemetry("final_review_verdict", string(rev.Verdict))
 	}
@@ -247,10 +249,40 @@ func (s *Service) RunLoop(ctx context.Context, opts Options, deps RunLoopDeps) (
 		report.Escalated = true
 		NewCatalog().emitTelemetry("escalated", "bugfix_exhausted")
 		return s.finalizeReport(report, opts,
-			fmt.Sprintf("escalonamento humano: ciclo encerrado sem APPROVED (%s)", result.Reason())), ErrBugfixExhausted
+			fmt.Sprintf("escalonamento humano: ciclo encerrado sem veredito que encerra (%s)", result.Reason())), ErrBugfixExhausted
 	}
 
 	return s.finalizeReport(report, opts, "concluido"), nil
+}
+
+func promoteImplementedRemarks(findings []Finding, plan ActionPlan) []Finding {
+	promoted := make(map[Finding]bool, len(plan.Decisions))
+	for _, decision := range plan.Decisions {
+		if decision.Action == ActionImplement {
+			promoted[decision.Finding] = true
+		}
+	}
+	if len(promoted) == 0 {
+		return findings
+	}
+	elevated := slices.Clone(findings)
+	for i, finding := range elevated {
+		if promoted[finding] {
+			elevated[i].Severity = SeverityCritical
+		}
+	}
+	return elevated
+}
+
+func remarksClose(rev FinalReviewResult) bool {
+	if rev.Verdict != VerdictApprovedWithRemarks {
+		return false
+	}
+	translated, err := translateReviewFindings(rev.Findings)
+	if err != nil {
+		return false
+	}
+	return approval.VerdictApprovedWithRemarks.Closes(translated)
 }
 
 func (c *Catalog) emitImplementPromoted(plan ActionPlan) {

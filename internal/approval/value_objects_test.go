@@ -208,7 +208,7 @@ func (s *ValueObjectsSuite) TestResult() {
 	s.Equal(ReasonMaxRounds, closed.Reason())
 	s.Equal(0, closed.RoundCount())
 
-	proof, err := NewApprovalProof(VerdictApproved, completeCriteriaMap(s.T()))
+	proof, err := NewApprovalProof(VerdictApproved, completeCriteriaMap(s.T()), nil)
 	s.Require().NoError(err)
 	approved, err := NewApprovedResult(proof, nil)
 	s.Require().NoError(err)

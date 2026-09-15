@@ -2,7 +2,7 @@
 
 > Relacionado: [ADR-012](../.specs/adr/012-copilot-cli-acp-native.md) (Copilot ACP),
 > [ADR-013](../.specs/adr/013-codex-cli-acp-native.md) (Codex ACP),
-> [ADR-003 do PRD quatro-clis](../.specs/prd-harness-quatro-clis-loop-aprovacao/adr-003-opencode-acp-subcomando.md) (OpenCode ACP),
+> [ADR-020 (PRD quatro-clis)](../.specs/adr/020-opencode-acp-subcomando.md) (OpenCode ACP),
 > ADR-022 (guard de governança) e ADR-026 (sunset do legacy mode) — ambos na pasta do PRD
 > `.specs/prd-paridade-cross-cli/`.
 >

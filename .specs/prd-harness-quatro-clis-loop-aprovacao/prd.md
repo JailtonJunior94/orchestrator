@@ -307,9 +307,19 @@ código continuaria não tendo.
 - **RF-32:** No modo orquestrado, o Ciclo é ativado pela mesma flag opt-in que hoje ativa a auto-revisão
   (default desligado, preservando não-regressão). O que muda é que, ativado, ele **itera**. No fluxo de
   skill, onde a revisão já é obrigatória, o Ciclo vale sempre.
-- **RF-33:** O Ciclo encerra como aprovado **exclusivamente** com veredito `APPROVED` **e** mapa 1:1
-  completo. `APPROVED_WITH_REMARKS` **não** encerra: seus achados realimentam a correção. A regra atual
-  que fecha tarefa com remarks não-críticos é **removida**.
+- **RF-33:** O Ciclo encerra como aprovado com mapa 1:1 completo **e** um veredito que encerra:
+  `APPROVED`, ou `APPROVED_WITH_REMARKS` **se e somente se nenhum achado for `[HIGH]` ou `[CRITICAL]`**.
+  Basta um achado high/critical para o veredito não encerrar — os achados realimentam a correção,
+  exatamente como antes. Achados `[MEDIUM]`/`[LOW]` ficam registrados no relatório como dívida
+  declarada: visíveis, rastreáveis, nunca apagados. `APPROVED_WITH_REMARKS` **sem nenhum achado
+  declarado não encerra** (fail-closed): zero achados pode significar prosa não parseada em vez de
+  ausência real de problema, e tratar esse caso como encerramento abriria escape por prosa.
+
+  *Justificativa da flexibilização (mudança de especificação, decidida pelo dono do repositório):* a
+  redação anterior exigia `APPROVED` estrito e reprovava a entrega inteira por uma ressalva de
+  formatação tanto quanto por um defeito real. A severidade do achado é o critério verificável;
+  "ressalva pequena" não é. A regra passa a discriminar pelo que é mensurável — severidade — mantendo
+  o bloqueio integral para high/critical.
 - **RF-34:** Cada rodada de revisão e de correção executa em **sessão/subagente novo**, recebendo apenas
   os achados e o delta, cumprindo a invariante de isolamento de contexto. Contexto acumulado através de
   rodadas é proibido: é o vetor direto de aprovação alucinada.
@@ -364,8 +374,8 @@ código continuaria não tendo.
   resolvível, ausência de seção de critérios ou mapa incompleto **falham**.
 - **RF-52:** O validador Go de evidência ganha a rotina de revisão hoje inexistente (V-27), restaurando
   a paridade entre a verificação em Go e a verificação em shell.
-- **RF-53:** O escape de compatibilidade legado **não** cobre o mapa 1:1 nem o critério `APPROVED`
-  estrito. Não existe caminho legítimo para fechar tarefa sem prova de aprovação.
+- **RF-53:** O escape de compatibilidade legado **não** cobre o mapa 1:1 nem o critério de veredito
+  que encerra (RF-33). Não existe caminho legítimo para fechar tarefa sem prova de aprovação.
 - **RF-54:** As expressões de validação não podem usar classes de colchetes com caracteres multibyte;
   devem usar alternação. A invariante é travada por caso de teste sob locale de bytes.
 - **RF-55:** A cadeia requisito → tarefa → critério → evidência é verificável de ponta a ponta, e a

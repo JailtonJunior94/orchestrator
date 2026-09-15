@@ -307,7 +307,7 @@ run_case "TC12-blocked-sem-prova-fisica" "$BLOCKED_REPORT" 0 "aprovada"
 # ── RF-33: APPROVED_WITH_REMARKS nao encerra o ciclo (BUG-D2) ───────────────
 REMARKS_REPORT="${BLOCKED_REPORT//verdict=APPROVED/verdict=APPROVED_WITH_REMARKS}"
 REMARKS_REPORT="${REMARKS_REPORT//Veredito do Revisor: APPROVED/Veredito do Revisor: APPROVED_WITH_REMARKS}"
-run_case "TC13-approved-with-remarks-nao-encerra" "$REMARKS_REPORT" 1 "não encerra o ciclo de aprovação"
+run_case "TC13-remarks-without-declared-severity-fails-closed" "$REMARKS_REPORT" 1 "RF-33, fail-closed"
 
 # ── RF-51/RF-53: done sem task file resolvivel falha incondicionalmente (BUG-D11) ──
 NO_TASK_FILE_REPORT='# Relatório de Execução de Tarefa
@@ -436,7 +436,7 @@ fi
 
 remarks_exit=0
 remarks_out=$(bash "$SCRIPT" "$REMARKS_HISTORICAL" 2>&1) || remarks_exit=$?
-if [[ "$remarks_exit" -eq 1 ]] && grep -qi "não encerra o ciclo de aprovação" <<<"$remarks_out"; then
+if [[ "$remarks_exit" -eq 1 ]] && grep -qi "RF-33" <<<"$remarks_out"; then
   echo "PASS [TC20b-v1-nao-isenta-desfecho]"
   PASS=$((PASS+1))
 else
@@ -451,7 +451,7 @@ rm -f "$REMARKS_HISTORICAL"
 printf '<!-- evidence-contract: v2 -->\n%s' "${HISTORICAL_BODY//verdict=APPROVED/verdict=APPROVED_WITH_REMARKS}" >"$HISTORICAL"
 strict_exit=0
 strict_out=$(bash "$SCRIPT" "$HISTORICAL" 2>&1) || strict_exit=$?
-if [[ "$strict_exit" -eq 1 ]] && grep -qi "não encerra o ciclo de aprovação" <<<"$strict_out"; then
+if [[ "$strict_exit" -eq 1 ]] && grep -qi "RF-33" <<<"$strict_out"; then
   echo "PASS [TC21-v2-estrito-cobra]"
   PASS=$((PASS+1))
 else
@@ -495,6 +495,100 @@ rm -f "$HISTORICAL"
 # Sob `set -euo pipefail` a extracao do task file matava o script, pulando este e
 # todos os gates a jusante em silencio.
 run_case "TC22-sem-linha-arquivo-alcanca-fail-closed" "${VALID_REPORT/- Arquivo: .specs\/prd-portability-parity\/task-5.0.md/}" 1 "não há task file resolvível"
+
+printf 'PASS\n' >"$TMPDIR_BASE/evidence/test.log"
+git -C "$TMPDIR_BASE" diff --binary HEAD -- . >"$TMPDIR_BASE/evidence/patch.diff"
+FRESH_BASE_SHA="$(git -C "$TMPDIR_BASE" rev-parse HEAD)"
+FRESH_PATCH_SHA="$(shasum -a 256 "$TMPDIR_BASE/evidence/patch.diff" | awk '{print $1}')"
+FRESH_FINAL_SHA="$( { printf '%s\n' "$FRESH_BASE_SHA"; cat "$TMPDIR_BASE/evidence/patch.diff"; } | shasum -a 256 | awk '{print $1}')"
+FRESH_RESULT="${VALID_RESULT//$BASE_SHA/$FRESH_BASE_SHA}"
+FRESH_RESULT="${FRESH_RESULT//$PATCH_SHA/$FRESH_PATCH_SHA}"
+FRESH_RESULT="${FRESH_RESULT//$FINAL_STATE_SHA/$FRESH_FINAL_SHA}"
+FRESH_REPORT="${VALID_REPORT//$PATCH_SHA/$FRESH_PATCH_SHA}"
+
+printf '%s\n' "$FRESH_RESULT" >"$TMPDIR_BASE/result.json"
+run_case "TC28-done-with-honest-evidence-passes" "$FRESH_REPORT" 0 "aprovada"
+
+printf 'TAMPERED\n' >"$TMPDIR_BASE/evidence/test.log"
+run_case "TC29-done-with-tampered-hash-fails-physical-proof" "$FRESH_REPORT" 1 "nao corresponde a evidencia fisica"
+printf 'PASS\n' >"$TMPDIR_BASE/evidence/test.log"
+
+NOT_DONE_RESULT="${FRESH_RESULT/\"status\":\"done\"/\"status\":\"blocked\"}"
+NOT_DONE_RESULT="${NOT_DONE_RESULT/\"review_verdict\":\"approved\"/\"review_verdict\":\"changes_requested\"}"
+printf '%s\n' "$NOT_DONE_RESULT" >"$TMPDIR_BASE/result.json"
+
+escape_exit=0
+escape_out=$(printf '<!-- evidence-contract: v2 -->\n%s' "$FRESH_REPORT" >"$TMPDIR_BASE/escape.md" && bash "$SCRIPT" "$TMPDIR_BASE/escape.md" 2>&1) || escape_exit=$?
+rm -f "$TMPDIR_BASE/escape.md"
+if [[ "$escape_exit" -eq 1 ]] \
+  && grep -qi "veredito aprovador (verdict=APPROVED) sobre execution-result nao-done" <<<"$escape_out" \
+  && ! grep -qi "done incompleto" <<<"$escape_out"; then
+  echo "PASS [TC30-not-done-with-approving-verdict-fails-as-escape]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [TC30-not-done-with-approving-verdict-fails-as-escape]: exit=$escape_exit"
+  echo "  output: $escape_out"
+  FAIL=$((FAIL+1))
+fi
+
+REMARKS_REPORT="${FRESH_REPORT/verdict=APPROVED/verdict=REJECTED}"
+remarks_exit=0
+remarks_out=$(printf '<!-- evidence-contract: v2 -->\n%s' "$REMARKS_REPORT" >"$TMPDIR_BASE/remarks.md" && bash "$SCRIPT" "$TMPDIR_BASE/remarks.md" 2>&1) || remarks_exit=$?
+rm -f "$TMPDIR_BASE/remarks.md"
+if [[ "$remarks_exit" -eq 1 ]] \
+  && grep -qi "NAO APLICAVEL: prova fisica dispensada" <<<"$remarks_out" \
+  && grep -qi "veredito do reviewer não encerra o ciclo de aprovação" <<<"$remarks_out" \
+  && grep -qi "status='blocked'" <<<"$remarks_out" \
+  && ! grep -qi "prova fisica invalida" <<<"$remarks_out"; then
+  echo "PASS [TC31-not-done-with-non-approving-verdict-skips-physical-proof]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [TC31-not-done-with-non-approving-verdict-skips-physical-proof]: exit=$remarks_exit"
+  echo "  output: $remarks_out"
+  FAIL=$((FAIL+1))
+fi
+
+printf '%s\n' "${FRESH_RESULT/\"schema_version\":2/\"schema_version\":1}" >"$TMPDIR_BASE/result.json"
+run_case "TC32-wrong-schema-version-reports-malformed" "$FRESH_REPORT" 1 "schema_version 1 diferente de 2"
+
+printf '%s\n' "${FRESH_RESULT/,\"base_sha\":\"$FRESH_BASE_SHA\"/}" >"$TMPDIR_BASE/result.json"
+run_case "TC33-missing-required-field-reports-malformed" "$FRESH_REPORT" 1 "campos obrigatorios ausentes: base_sha"
+
+printf '%s\n' "$FRESH_RESULT" >"$TMPDIR_BASE/result.json"
+
+MEDIUM_REPORT="${FRESH_REPORT/verdict=APPROVED/verdict=APPROVED_WITH_REMARKS}"
+MEDIUM_REPORT="${MEDIUM_REPORT/Veredito do Revisor: APPROVED/Veredito do Revisor: APPROVED_WITH_REMARKS}"
+MEDIUM_REPORT="$MEDIUM_REPORT
+
+## Achados
+- [MEDIUM] internal/taskloop/evidence.go:1 nomenclatura inconsistente
+"
+run_case "TC34-remarks-with-medium-only-closes" "$MEDIUM_REPORT" 0 "aprovada"
+
+HIGH_REPORT="${MEDIUM_REPORT/\[MEDIUM\]/[HIGH]}"
+run_case "TC35-remarks-with-high-does-not-close" "$HIGH_REPORT" 1 "achado high/critical declarado"
+
+CRITICAL_REPORT="${MEDIUM_REPORT/\[MEDIUM\]/[CRITICAL]}"
+run_case "TC36-remarks-with-critical-does-not-close" "$CRITICAL_REPORT" 1 "achado high/critical declarado"
+
+BLOCKER_REPORT="${MEDIUM_REPORT/\[MEDIUM\]/[blocker]}"
+run_case "TC37-remarks-with-blocker-does-not-close" "$BLOCKER_REPORT" 1 "achado high/critical declarado"
+
+printf '%s\n' "$NOT_DONE_RESULT" >"$TMPDIR_BASE/result.json"
+escape_remarks_exit=0
+escape_remarks_out=$(printf '<!-- evidence-contract: v2 -->\n%s' "$MEDIUM_REPORT" >"$TMPDIR_BASE/escape2.md" && bash "$SCRIPT" "$TMPDIR_BASE/escape2.md" 2>&1) || escape_remarks_exit=$?
+rm -f "$TMPDIR_BASE/escape2.md"
+if [[ "$escape_remarks_exit" -eq 1 ]] \
+  && grep -qi "veredito aprovador (verdict=APPROVED_WITH_REMARKS) sobre execution-result nao-done" <<<"$escape_remarks_out"; then
+  echo "PASS [TC38-not-done-with-closing-remarks-fails-as-escape]"
+  PASS=$((PASS+1))
+else
+  echo "FAIL [TC38-not-done-with-closing-remarks-fails-as-escape]: exit=$escape_remarks_exit"
+  echo "  output: $escape_remarks_out"
+  FAIL=$((FAIL+1))
+fi
+
+printf '%s\n' "$FRESH_RESULT" >"$TMPDIR_BASE/result.json"
 
 echo ""
 echo "Resultado: $PASS passaram, $FAIL falharam"

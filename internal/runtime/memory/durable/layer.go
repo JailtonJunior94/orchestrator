@@ -167,6 +167,9 @@ func (l *layer) Consolidate(_ context.Context, scope Scope, newFacts []Fact) (Co
 	if err != nil {
 		return ConsolidationResult{}, err
 	}
+	if err := l.ensureScopeDirectory(scope); err != nil {
+		return ConsolidationResult{}, err
+	}
 	release, err := l.locker.Lock(lockPath)
 	if err != nil {
 		return ConsolidationResult{}, err
@@ -195,6 +198,9 @@ func (l *layer) Consolidate(_ context.Context, scope Scope, newFacts []Fact) (Co
 func (l *layer) Archive(_ context.Context, scope Scope, ids []Identity) error {
 	lockPath, err := scope.lockPath()
 	if err != nil {
+		return err
+	}
+	if err := l.ensureScopeDirectory(scope); err != nil {
 		return err
 	}
 	release, err := l.locker.Lock(lockPath)
@@ -238,6 +244,9 @@ func (l *layer) Restore(_ context.Context, scope Scope, id Identity) error {
 	if err != nil {
 		return err
 	}
+	if err := l.ensureScopeDirectory(scope); err != nil {
+		return err
+	}
 	release, err := l.locker.Lock(lockPath)
 	if err != nil {
 		return err
@@ -267,6 +276,13 @@ func (l *layer) Promote(_ context.Context, from, to Scope, id Identity) error {
 	}
 	toLockPath, err := to.lockPath()
 	if err != nil {
+		return err
+	}
+
+	if err := l.ensureScopeDirectory(from); err != nil {
+		return err
+	}
+	if err := l.ensureScopeDirectory(to); err != nil {
 		return err
 	}
 
@@ -318,6 +334,17 @@ func (l *layer) Promote(_ context.Context, from, to Scope, id Identity) error {
 
 	fromFacts[idx].State = FactStatePromoted
 	return l.writePage(from, fromActivePath, fromFacts, fromHuman)
+}
+
+func (l *layer) ensureScopeDirectory(scope Scope) error {
+	directory, err := scope.directory()
+	if err != nil {
+		return err
+	}
+	if err := l.filesystem.MkdirAll(directory); err != nil {
+		return fmt.Errorf("durable: ensure layer directory %s: %w", directory, err)
+	}
+	return nil
 }
 
 func (l *layer) lockInOrder(pathA, pathB string) ([]func() error, error) {

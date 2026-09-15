@@ -218,7 +218,7 @@ func TestPrimedReviewerValidatesCriteriaAgainstItsOwnTarget(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Review: %v", err)
 	}
-	if _, err := approval.NewApprovalProof(approval.VerdictApproved, output.CriteriaMap()); err != nil {
+	if _, err := approval.NewApprovalProof(approval.VerdictApproved, output.CriteriaMap(), nil); err != nil {
 		t.Fatalf("RF-48(b) avaliado contra o alvo errado: %v", err)
 	}
 }

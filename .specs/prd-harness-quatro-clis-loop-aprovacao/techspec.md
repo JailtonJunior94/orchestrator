@@ -1,4 +1,4 @@
-<!-- spec-hash-prd: 37d4fed94549358c1153466d62598b491f5d2f6b3c9223ef2205cdb1ce5bdb22 -->
+<!-- spec-hash-prd: 4583496d103cfa0126a9fa0826999b4285f3b3ffe1f412c8a878d36b92122112 -->
 <!-- MANDATÓRIO: preenchido por `create-technical-specification` Etapa 7.1 com sha256 do PRD consumido.
      Rastreabilidade: `create-tasks` e `execute-task` comparam este hash com o atual do prd.md
      para detectar drift entre techspec e PRD. NÃO remover este comentário ao editar a techspec. -->
@@ -18,7 +18,7 @@ prova. A estratégia técnica tem três eixos.
 **Primeiro**, um pacote de domínio novo e isolado — `internal/approval` — passa a ser a autoridade única
 sobre a regra de parada. Ele não importa ACP, CLI nem filesystem, e torna o falso positivo
 *inconstruível por tipo*: o estado Aprovado só é alcançável mediante um valor `ProvaDeAprovacao`, cujo
-único construtor exige simultaneamente veredito `APPROVED` e mapa 1:1 completo. Hoje o repositório tem
+único construtor exige simultaneamente um veredito que encerra (RF-33) e mapa 1:1 completo. Hoje o repositório tem
 duas implementações divergentes do mesmo ciclo — um loop em `internal/taskloop/bugfix.go:83` e uma
 revisão one-shot em `internal/runtime/runner.go:216-228` — e ambas passam a consumir o mesmo agregado.
 
@@ -154,8 +154,10 @@ func NewProvaDeAprovacao(veredito Veredito, mapa MapaDeCriterios) (ProvaDeAprova
 ```
 
 `aprovar` só aceita `ProvaDeAprovacao` e recusa o zero-value. Não existe sobrecarga sem prova.
-`Veredito.Aprova()` é verdadeiro **apenas** para `APPROVED` (RF-33), e `MapaDeCriterios.Completo()` é
-falso quando qualquer critério está sem evidência **ou** declarado não verificável (RF-49).
+`Veredito.Encerra(achados)` é verdadeiro para `APPROVED`, e para `APPROVED_WITH_REMARKS` quando há
+pelo menos um achado declarado e nenhum deles é `high`/`critical` (RF-33). A decisão é tomada por quem
+tem os achados em mãos — o veredito registrado pelo revisor nunca é reescrito. `MapaDeCriterios.Completo()`
+é falso quando qualquer critério está sem evidência **ou** declarado não verificável (RF-49).
 
 ### Tabela de transições
 
@@ -569,7 +571,7 @@ acionado sem depender de ler o log do plugin.
 |---|---|---|
 | 1 | Ciclo de Aprovação como agregado em pacote de domínio isolado, com a aprovação garantida por tipo | `adr-001-ciclo-de-aprovacao-agregado.md` |
 | 2 | Catálogo de Agentes como registro único, com Agente como Value Object e enforcement com cobertura validada | `adr-002-catalogo-de-agentes-registro-unico.md` |
-| 3 | OpenCode via ACP por subcomando, com janela derivada do modelo | `adr-003-opencode-acp-subcomando.md` |
+| 3 | OpenCode via ACP por subcomando, com janela derivada do modelo | `.specs/adr/020-opencode-acp-subcomando.md` |
 | 4 | Enforcement do OpenCode por exceção no hook de pré-ferramenta, com sanitização de ambiente e handshake ativo | `adr-004-enforcement-opencode-handshake.md` |
 | 5 | Pré-condições de enforcement como conceito de primeira classe, com estados `inert` e `unknown` | `adr-005-precondicoes-de-enforcement.md` |
 | 6 | Máquina de estados por tabela de transição, sem padrão formal | `pattern-decisions/ciclo-de-aprovacao-maquina-de-estados/` |

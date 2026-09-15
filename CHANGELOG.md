@@ -1,5 +1,41 @@
 # Changelog
 
+## Não publicado
+
+### Mudanças de Regra
+
+- **approval (RF-33, mudança de especificação):** `APPROVED_WITH_REMARKS` volta a encerrar tarefa,
+  agora **somente quando nenhum achado é `[HIGH]` ou `[CRITICAL]`**. Basta um achado high/critical
+  para o veredito não encerrar e os achados realimentarem a correção — comportamento idêntico ao
+  anterior nesse caso. Achados `[MEDIUM]`/`[LOW]` passam a ser **dívida declarada**: a tarefa fecha
+  e os achados permanecem registrados no relatório, visíveis e nunca apagados. `APPROVED_WITH_REMARKS`
+  **sem nenhum achado declarado não encerra** (fail-closed), porque zero achados pode ser prosa não
+  parseada em vez de ausência real de problema. Motivação do dono do repositório: a regra anterior
+  reprovava a entrega inteira por uma ressalva de formatação tanto quanto por um defeito real, e a
+  severidade é o critério verificável — "ressalva pequena" não é. A decisão passou a ser tomada por
+  quem tem os achados em mãos (`Verdict.Closes(findings)` + `NewApprovalProof(verdict, criteriaMap,
+  findings)`); o veredito registrado pelo revisor **nunca é reescrito**. Aplicado em paridade no Go
+  (`internal/approval`, `internal/evidence`, `internal/taskloop`) e no shell
+  (`validate-task-evidence.sh`, `validate-session-end.sh`, `validate-refactor-evidence.sh` e todos os
+  espelhos), com o mesmo vocabulário de severidade dos dois lados.
+
+### Correções
+
+- **evidence:** `validate-task-evidence.sh` deixa de reportar `execution-result v2 done incompleto`
+  para resultado que apenas **não está concluído**. A prova física agora tem três ramos explícitos:
+  `status: done` cobra a prova integralmente; `status` não-done com veredito aprovador **falha duro**
+  como tentativa de escape; `status` não-done com veredito não aprovador declara a prova física
+  **não aplicável** em linha visível na saída, deixando a reprovação para o gate de veredito.
+  "Malformado de verdade" (`schema_version` diferente de 2, campo obrigatório ausente) passou a ter
+  mensagens próprias, distintas de "não-done". Alinha o shell ao Go, que já tratava resultado
+  não-done como prova física não aplicável (`internal/sdd/state.go`).
+- **hooks:** o gate de encerramento (`validate-session-end.sh`) passa a honrar `stop_hook_active` do
+  JSON de entrada — antes o stdin era lido e descartado (`cat >/dev/null`), e o gate bloqueava
+  indefinidamente, exigindo que o harness passasse por cima após 9 bloqueios consecutivos. Com
+  `stop_hook_active: true` o gate sai 0 sem prender a sessão, continuando a imprimir o diagnóstico;
+  ausente ou `false`, o comportamento de bloqueio é preservado integralmente. Mesmo tratamento
+  aplicado ao `subagent-stop-wrapper.sh` (ponto `SubagentStop`).
+
 ## 2.0.0 (2026-09-11)
 
 Release major: consolida os quatro CLIs oficiais (Claude Code, Codex, GitHub Copilot CLI,
