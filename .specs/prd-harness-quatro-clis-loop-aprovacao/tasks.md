@@ -10,11 +10,16 @@
 
 ### Estado real do gate de encerramento
 
-As tarefas **1.0, 4.6, 4.7, 6.0, 7.0, 8.0, 9.0, 10.0 e 11.0** estão em `blocked` **com relatório de
-execução escrito** e veredito `APPROVED_WITH_REMARKS` — veredito que RF-33/RF-36 não aceitam para
-fechar tarefa. Até esta entrega, `validate-session-end.sh` filtrava apenas `in_progress` e `done`,
-de modo que `blocked` funcionava como escape de uma palavra: o gate saía `0`. O gate passou a cobrar
-`blocked` com relatório escrito e agora sai `2` sobre este próprio repositório, listando as nove.
+Atualização 2026-09-15: 1.0, 4.6, 4.7, 6.0, 7.0, 8.0, 9.0 e 10.0 já convergiram para `done`/`review_verdict:
+approved` em rodadas de revisão subsequentes a este parágrafo original — ver os respectivos
+`*_execution_result.json`, que são o dado estruturado canônico (RF-56). A tarefa 9.0 fechou depois de
+uma correção real de bug de governança no Codex (bug de parsing em `.agents/lib/parse-hook-input.sh`
+que fazia o gate de `PreToolUse` ser pulado em silêncio para edições via `apply_patch`), verificada por
+rodada de revisão independente. Resta **11.0** em `blocked` **com relatório de execução escrito** e
+veredito estruturado que RF-33/RF-36 não aceita para fechar tarefa (`changes_requested`). Até a entrega
+original desta tarefa, `validate-session-end.sh` filtrava apenas `in_progress` e `done`, de modo que
+`blocked` funcionava como escape de uma palavra: o gate saía `0`. O gate passou a cobrar `blocked` com
+relatório escrito e hoje sai `2` sobre este próprio repositório, listando a tarefa restante.
 
 Isso é o comportamento correto e **não deve ser contornado** movendo status ou reescrevendo
 veredito. O caminho de saída é executar a rodada de revisão que converta o veredito em `APPROVED`,
@@ -44,14 +49,14 @@ passar no gate (RF-56).
 | 4.3 | Extrator de critérios compartilhado e adaptador de portas em taskloop | done | 4.2 | Não | — |
 | 4.4 | Service.Execute conduz o Cycle (critérios por task, estabelece o padrão) | done | 4.3 | Não | — |
 | 4.5 | Adequação das fixtures de revisão ao contrato de texto bruto | done | 4.4 | Não | — |
-| 4.6 | RunLoop conduz o Cycle; BugfixLoop reduzido a projetor de evidência | blocked | 4.5 | Não | — |
-| 4.7 | ACPRunner conduz o Cycle e fiação das quatro lacunas nos três caminhos | blocked | 4.6 | Não | — |
+| 4.6 | RunLoop conduz o Cycle; BugfixLoop reduzido a projetor de evidência | done | 4.5 | Não | — |
+| 4.7 | ACPRunner conduz o Cycle e fiação das quatro lacunas nos três caminhos | done | 4.6 | Não | — |
 | 4.8 | Prova de paridade entre os três caminhos e fluxos E2E | done | 4.7 | Não | — |
 | 5.0 | Propagação do teto de rodadas e virada do critério estrito | done | 4.8 | Não | — |
 | 6.0 | Catálogo de Agentes como registro único | done | 2.0 | Não | domain-modeling-production |
-| 7.0 | OpenCode como agente oficial de primeira classe | blocked | 6.0 | Não | — |
+| 7.0 | OpenCode como agente oficial de primeira classe | done | 6.0 | Não | — |
 | 8.0 | Enforcement não-desligável do OpenCode | done | 7.0 | Não | — |
-| 9.0 | Hooks e paridade comprovada nos quatro agentes | blocked | 8.0 | Não | — |
+| 9.0 | Hooks e paridade comprovada nos quatro agentes | done | 8.0 | Não | — |
 | 10.0 | Remoção total do Gemini e desinstalação fiel | done | 9.0 | Não | — |
 | 11.0 | Fechamento: rastreabilidade, não-regressão e release major | blocked | 5.0, 10.0 | — | github-diff-changelog-publisher |
 

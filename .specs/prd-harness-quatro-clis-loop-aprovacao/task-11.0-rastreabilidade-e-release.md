@@ -98,11 +98,13 @@ remanescentes**.
 - `CHANGELOG.md` contém seção de mudanças incompatíveis nomeando a remoção do agente e **cada** default
   alterado; nenhum default alterado fica fora dela.
 - `docs/` contém o guia de migração, e o erro tipado de invocação do agente removido aponta para ele — o
-  caminho citado existe (`bash scripts/check-spec-paths.sh` sai 0).
+  caminho citado existe (`bash scripts/check-spec-paths.sh .specs/prd-harness-quatro-clis-loop-aprovacao` sai 0).
 - `VERSION` reflete a versão major; `git tag --list` **não** contém tag nova e nenhum workflow de
   publicação foi disparado.
-- `go build ./... && go vet ./... && go test ./... -count=1` verde; `bash scripts/check-spec-paths.sh`
-  sai 0 (RF-63 permanece verde após a entrega).
+- `go build ./... && go vet ./... && go test ./... -count=1` verde; `bash scripts/check-spec-paths.sh <dir-do-prd>`
+  sai 0 (RF-63 permanece verde após a entrega). A invocação sem argumento passou a exigir `sdd-state.json`
+  no PRD (endurecida após esta tarefa); sem esse marcador ela reporta `ESCOPO VAZIO` (exit 1) por design —
+  não é regressão, é a forma correta de invocar o gate quando o PRD não está sob gestão SDD formal.
 
 ## Skills Necessárias
 
