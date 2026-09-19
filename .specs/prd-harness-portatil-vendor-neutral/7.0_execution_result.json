@@ -7,6 +7,8 @@
   "base_sha": "a8b77217cd713b4ef629d324e63934e05e589864",
   "patch_sha256": "ee4dd644f7528c218c46f9ff796f48e114871494d14ea729e95ba9b1b4a757d8",
   "patch_ref": "evidence/task-7.0-harness-portatil-vendor-neutral/7.0.patch",
+  "commit_sha": "73592f3f28ba6297c20343cc105823a1c8ff2fb4",
+  "commit_patch_sha256": "64136db249a8f667470fa0b11cf6ac0907c994c955e114ea380559a550951191",
   "final_state_sha256": "a7b73477c365e4c66ea867ce0397872e427d93fc4f48b12f36fa449722a9634d",
   "coverage_regression": false,
   "tests": [

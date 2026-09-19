@@ -7,9 +7,10 @@
   "base_sha": "a8b77217cd713b4ef629d324e63934e05e589864",
   "patch_sha256": "8163b73b8d345b3f0d77f240244794117299e0e2e2c28a54ab968cca71212858",
   "patch_ref": "evidence/task-11.0-harness-portatil-vendor-neutral/11.0.patch",
+  "commit_sha": "73592f3f28ba6297c20343cc105823a1c8ff2fb4",
+  "commit_patch_sha256": "943b373923cf4746bdf5b904bdd3bbbe485ab4f66e818d73ddb47069537c77c7",
   "final_state_sha256": "1b41192fe822172e5bdbefe49f97c803f8dc473392b8daf245b928231af92c41",
   "coverage_regression": false,
-  "review_verdict": "approved",
   "tests": [
     {
       "command": "go build ./...",
@@ -110,5 +111,6 @@
     "evidence/task-11.0-harness-portatil-vendor-neutral/doctor-smoke.log",
     "evidence/task-11.0-harness-portatil-vendor-neutral/doctor-codex-trust-smoke.log",
     "evidence/task-11.0-harness-portatil-vendor-neutral/11.0.patch"
-  ]
+  ],
+  "review_verdict": "approved"
 }

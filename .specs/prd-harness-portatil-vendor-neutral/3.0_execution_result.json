@@ -7,9 +7,10 @@
   "base_sha": "a8b77217cd713b4ef629d324e63934e05e589864",
   "patch_sha256": "bc3b32877b994b56dc41d163e761cb8e12aae032d6f6db5a98d17f2c484d40f5",
   "patch_ref": "evidence/task-3.0-harness-portatil-vendor-neutral/3.0.patch",
+  "commit_sha": "73592f3f28ba6297c20343cc105823a1c8ff2fb4",
+  "commit_patch_sha256": "12165e70daeeb179e554d88873acd5da8bbbd56499e87d96d4189391486f0eea",
   "final_state_sha256": "9ad4f071594c1a8650d298a3995cca30ea17fdbbed74472a2e83ebff939b74e9",
   "coverage_regression": false,
-  "review_verdict": "approved",
   "tests": [
     {
       "command": "make test",
@@ -89,5 +90,6 @@
     "evidence/task-3.0-harness-portatil-vendor-neutral/config-tests.log",
     "evidence/task-3.0-harness-portatil-vendor-neutral/fuzz.log",
     "evidence/task-3.0-harness-portatil-vendor-neutral/check-mocks.log"
-  ]
+  ],
+  "review_verdict": "approved"
 }

@@ -7,9 +7,10 @@
   "base_sha": "a8b77217cd713b4ef629d324e63934e05e589864",
   "patch_sha256": "bf313b7393c8cd92b6d971b2e0c89d7322794a23bcbd8237c74452b97c4d12e3",
   "patch_ref": "evidence/task-10.0-harness-portatil-vendor-neutral/10.0.patch",
+  "commit_sha": "73592f3f28ba6297c20343cc105823a1c8ff2fb4",
+  "commit_patch_sha256": "6697ea5bc754517be6a789595e508f7d52c476fc2c97c57248ec1f4f731c6eb8",
   "final_state_sha256": "2b654fae1493ec8c75f9701c9b45778fa252ec6d737f404765f6af796dbfc9eb",
   "coverage_regression": false,
-  "review_verdict": "approved",
   "tests": [
     {
       "command": "go build ./...",
@@ -150,5 +151,6 @@
     "evidence/task-10.0-harness-portatil-vendor-neutral/conformance-suite-tests.log",
     "evidence/task-10.0-harness-portatil-vendor-neutral/conformance-manifest-tests.log",
     "evidence/task-10.0-harness-portatil-vendor-neutral/git-operation-live-wiring.log"
-  ]
+  ],
+  "review_verdict": "approved"
 }
