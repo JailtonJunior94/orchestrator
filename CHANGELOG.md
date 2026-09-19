@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased (proxima minor, PRD harness-portatil-vendor-neutral)
+
+### Features
+- **install:** projetos que instalam o harness passam a receber `R-STYLE-001` (`code-style.md`, regra de idioma-em-ingles e zero-comentarios) junto com `R-GOV-001`, e nao apenas `governance.md` como ate a v2.0.1. A distribuicao e incondicional (nao e opt-in). Nota de migracao: nenhum comportamento do binario muda e nenhum default existente e alterado; se o projeto consumidor nao quiser aplicar `R-STYLE-001` localmente, remova `.claude/rules/code-style.md` (e os espelhos equivalentes em `.codex/`, `.github/`, `.opencode/` quando presentes) apos a instalacao — a remocao manual e local e nao e revertida por `verify`/`doctor`, que continuam reportando os demais artefatos normalmente.
+- **harness:** adiciona `.agents/harness.yaml` (contrato declarativo v1, opcional) e `.agents/policies/` (origem canonica vendor-neutral de `R-GOV-001`/`R-STYLE-001`); ausencia de qualquer um dos dois preserva integralmente o comportamento anterior (default embutido aplicado, sem quebra).
+- **install:** manifesto (`.ai_spec_harness.json`) passa a rastrear `file_checksums` (path -> checksum) alem do rastreamento previamente existente por skill; projetos instalados antes desta entrega sao migrados automaticamente no proximo `upgrade`, sem nenhuma acao manual.
+- **git:** gate canonico de operacao Git nega `git commit`/`git push` nao solicitados nos quatro provedores; comportamento aditivo de seguranca, nao removia nenhuma capacidade previamente suportada.
+- **cli:** `ai-spec install` e `ai-spec upgrade` ganham aliases `ai-spec init` e `ai-spec sync` respectivamente (mesmo comando, mesmo comportamento, apenas nome alternativo mais familiar para quem vem de outras ferramentas).
+- **install/upgrade:** lote de instalacao/atualizacao passa a abortar por padrao quando detecta arquivo gerenciado com checksum divergente do manifesto (conflito), listando cada arquivo em conflito; nova flag `--overwrite-conflicts` forca a sobrescrita e restaura o comportamento anterior. Nota de migracao: antes desta entrega, um arquivo gerenciado editado manualmente pelo usuario era sobrescrito silenciosamente em todo `install`/`upgrade`; agora o lote inteiro aborta com a lista de conflitos, e o usuario precisa decidir explicitamente — descartar a edicao local (`--overwrite-conflicts`) ou preservar o arquivo e resolver o conflito manualmente antes de reexecutar.
+
+### Breaking Changes
+- Nenhuma. Toda API, flag e fluxo publicamente documentado permanece identico ao da v2.0.1 (RF-49).
+
 ## 2.0.1 (2026-09-15)
 
 ### Bug Fixes

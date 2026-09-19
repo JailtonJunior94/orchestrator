@@ -52,7 +52,7 @@ jobs:
 
       - name: Verificar snapshots atualizados
         run: |
-          go test ./internal/contextgen/... -run TestSnapshot 2>&1 || {
+          go test -v ./internal/contextgen/... -run TestContextgen_Snapshots 2>&1 || {
             echo "Snapshots desatualizados. Execute: UPDATE_SNAPSHOTS=1 make test"
             exit 1
           }
@@ -69,6 +69,7 @@ jobs:
           go test -fuzz=FuzzReadTaskFileStatus -fuzztime=10s ./internal/taskloop/
           go test -fuzz=FuzzValidateBugReport -fuzztime=10s ./internal/bugschema/
           go test -fuzz=FuzzParseConfig -fuzztime=10s ./internal/config/
+          go test -fuzz=FuzzParseHarnessContract -fuzztime=10s ./internal/harness/
           go test -fuzz=FuzzParseManifest -fuzztime=10s ./internal/manifest/
           go test -fuzz=FuzzDetectLanguages -fuzztime=10s ./internal/detect/
           go test -fuzz=FuzzDetectToolchain -fuzztime=10s ./internal/detect/
@@ -97,6 +98,9 @@ jobs:
       - name: Skills sync drift gate
         run: make check-skills-sync
 
+      - name: Skills lock integrity gate
+        run: make check-skills-lock
+
       - name: Mocks drift gate
         run: make check-mocks
 
@@ -108,6 +112,12 @@ jobs:
 
       - name: Scripts sync drift gate
         run: make check-scripts-sync
+
+      - name: Policies sync drift gate
+        run: make check-policies-sync
+
+      - name: Capability matrix sync gate
+        run: make check-capability-matrix-sync
 
       - name: Hook smoke tests
         run: make test-hooks
@@ -156,7 +166,11 @@ jobs:
         # e2e usam fakes (acpfake), são determinísticos; testes acp_live e hooks_live (binário
         # real) ficam nas build tags acp_live/hooks_live (jobs nightly), fora deste gate — não
         # são gate de merge.
-        run: go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/...
+        # Inclui ./internal/parity/... (RF-20.1/V-24): os E2E de paridade cross-project existiam,
+        # passavam a mao e nenhum job os executava — um teste que nao roda nao e evidencia. O -v
+        # garante que o nome de cada teste aparece nominalmente no log do job, nao so o resultado
+        # agregado.
+        run: go test -v -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/parity/...
 
       - name: Budget
         run: make budget

@@ -58,6 +58,16 @@ if [[ ${#gate_targets[@]} -gt 0 ]]; then
   fi
 fi
 
+git_operation_gate="$project_root/.agents/scripts/git-operation-gate.sh"
+if [[ ! -f "$git_operation_gate" ]]; then
+  git_operation_gate="$hook_dir/../scripts/git-operation-gate.sh"
+fi
+if [[ -f "$git_operation_gate" ]]; then
+  if ! printf '%s' "$payload" | AGENTS_ROOT="$project_root" bash "$git_operation_gate"; then
+    exit "$PRELOAD_BLOCK_EXIT"
+  fi
+fi
+
 case "$file_path" in
   *.go | *.py | *.ts | *.js | *.tsx | *.jsx | *.cs | *.mjs | *.cjs | *.mts | *.cts \
   | *.sh | *.bash | *.zsh | *.rb | *.java | *.kt | *.kts | *.sql | *.rs | *.swift \

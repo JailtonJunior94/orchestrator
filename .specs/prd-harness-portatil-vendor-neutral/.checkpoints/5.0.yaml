@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-portatil-vendor-neutral/5.0_execution_report.md
+summary: R-STYLE-001 (code-style.md) agora e distribuido pelo install/upgrade via fonte unica skills.UniversalRuleFiles (RF-61), que tambem fecha os quatro pontos hardcoded no mesmo lote (install CopyFile, upgrade syncFileIfPresent, uninstall lista fixa/V-35, invariante CL05 da paridade); asset embarcado code-style.md fecha V-01; round-trip real e testes unitarios cobrem instalacao, sincronizacao e remocao com prune limpo dos dois arquivos.
+timestamp: 2026-09-18T19:45:52Z

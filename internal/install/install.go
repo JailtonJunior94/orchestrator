@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/batchreport"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/config"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/contextgen"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
@@ -23,6 +24,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/tracking"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/upgrade"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/version"
 )
@@ -209,9 +211,16 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 		return fmt.Errorf("o diretorio alvo nao pode ser o proprio repositorio de regras")
 	}
 
-	var tracker *writeTracker
+	var expectedChecksums map[string]string
+	if s.manifest.Exists(projectDir) {
+		if previous, err := s.manifest.Load(projectDir); err == nil {
+			expectedChecksums = previous.FileChecksums
+		}
+	}
+
+	var tracker *tracking.Tracker
 	if !opts.DryRun {
-		tracker = newWriteTracker(s.fs, projectDir)
+		tracker = tracking.NewTransactional(s.fs, projectDir, manifest.ManifestFile, expectedChecksums)
 		previousFS, previousAdapters, previousCtxgen := s.fs, s.adapters, s.ctxgen
 		s.fs = tracker
 		s.adapters = adapters.NewGenerator(tracker, s.printer)
@@ -292,8 +301,24 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 		}
 	}
 
-	// 4. Persistir manifesto
 	if !opts.DryRun {
+		if len(tracker.Conflicts()) > 0 && !opts.OverwriteConflicts {
+			return batchreport.ConflictError(tracker.Conflicts(), sourceDir)
+		}
+		if opts.OverwriteConflicts {
+			tracker.AllowOverwrite()
+		}
+		if err := tracker.Commit(); err != nil {
+			return fmt.Errorf("apply installation batch: %w", err)
+		}
+		for _, path := range tracker.ExecutablePaths() {
+			if err := os.Chmod(path, 0o755); err != nil {
+				s.printer.Warn("nao foi possivel preservar +x em %s: %v", path, err)
+			}
+		}
+
+		batchreport.Print(s.printer, "install", batchreport.Build(tracker))
+
 		checksums := s.computeChecksums(sourceDir, allSkills)
 		mf := &manifest.Manifest{
 			Version:        version.NewProvider().ResolveFromExecutable(),
@@ -307,8 +332,9 @@ func (s *Service) Execute(opts config.InstallOptions) error {
 			Checksums:      checksums,
 			CodexProfile:   opts.CodexProfile,
 			SkillVersions:  s.collectSkillVersions(sourceDir, allSkills),
-			InstalledFiles: tracker.createdPaths(),
-			MergedFiles:    tracker.mergedPaths(),
+			InstalledFiles: tracker.CreatedPaths(),
+			MergedFiles:    tracker.MergedPaths(),
+			FileChecksums:  tracker.Checksums(),
 		}
 		if err := s.manifest.Save(projectDir, mf); err != nil {
 			return fmt.Errorf("salvar manifesto: %w", err)
@@ -816,7 +842,9 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 	}
 
 	if dryRun {
-		s.printer.DryRun("copiar .claude/rules/governance.md")
+		for _, ruleFile := range skills.UniversalRuleFiles {
+			s.printer.DryRun("copiar .claude/rules/%s", ruleFile)
+		}
 		s.printer.DryRun("copiar .claude/scripts/validate-task-evidence.sh")
 		s.printer.DryRun("copiar .claude/scripts/validate-bugfix-evidence.sh")
 		s.printer.DryRun("copiar .claude/scripts/validate-refactor-evidence.sh")
@@ -831,9 +859,12 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 		return nil
 	}
 
-	rulesGov := filepath.Join(sourceDir, ".claude", "rules", "governance.md")
-	if s.fs.Exists(rulesGov) {
-		if err := s.fs.CopyFile(rulesGov, filepath.Join(projectDir, ".claude", "rules", "governance.md")); err != nil {
+	for _, ruleFile := range skills.UniversalRuleFiles {
+		src := filepath.Join(sourceDir, ".claude", "rules", ruleFile)
+		if !s.fs.Exists(src) {
+			continue
+		}
+		if err := s.fs.CopyFile(src, filepath.Join(projectDir, ".claude", "rules", ruleFile)); err != nil {
 			return err
 		}
 	}
@@ -923,7 +954,9 @@ func (s *Service) writeClaudeSettings(projectDir string) error {
 	if err := s.fs.WriteFile(settingsFile, merged); err != nil {
 		return err
 	}
-	s.trackMerged(settingsFile)
+	if err := s.trackMerged(settingsFile); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -944,6 +977,7 @@ var agentsScriptsFiles = []string{
 	"validate-skill-prerequisites.sh",
 	"validate-governance-references.sh",
 	"validate-session-end.sh",
+	"git-operation-gate.sh",
 }
 
 // copyAgentsScripts copia os validadores canonicos de evidencia para .agents/scripts/ do
@@ -969,9 +1003,7 @@ func (s *Service) copyAgentsScripts(sourceDir, projectDir string) error {
 		if err := s.fs.CopyFile(src, dst); err != nil {
 			return err
 		}
-		if err := os.Chmod(dst, 0o755); err != nil {
-			s.printer.Warn("nao foi possivel preservar +x em %s: %v", dst, err)
-		}
+		s.markExecutable(dst)
 	}
 	return nil
 }
@@ -1000,9 +1032,7 @@ func (s *Service) copyAgentsLib(sourceDir, projectDir string) error {
 		if err := s.fs.CopyFile(src, dst); err != nil {
 			return err
 		}
-		if err := os.Chmod(dst, 0o755); err != nil {
-			s.printer.Warn("nao foi possivel preservar +x em %s: %v", dst, err)
-		}
+		s.markExecutable(dst)
 	}
 	return nil
 }
@@ -1033,9 +1063,7 @@ func (s *Service) copyToolValidationHooks(sourceDir, projectDir, toolHookDir str
 		if err := s.fs.CopyFile(src, dst); err != nil {
 			return err
 		}
-		if err := os.Chmod(dst, 0o755); err != nil {
-			s.printer.Warn("nao foi possivel preservar +x em %s: %v", dst, err)
-		}
+		s.markExecutable(dst)
 	}
 	return nil
 }
@@ -1059,12 +1087,7 @@ func (s *Service) copyOrchestratorHooks(sourceDir, projectDir, toolHookDir strin
 		if err := s.fs.CopyFile(src, dst); err != nil {
 			return err
 		}
-		// Preservar permissao executavel (CopyFile do harness nao preserva mode bits).
-		// Usar os.Chmod direto ao filesystem real porque s.fs.Chmod pode nao existir.
-		if err := os.Chmod(dst, 0o755); err != nil {
-			// Nao bloqueante: hook ainda funciona via `bash hook.sh`. Apenas log.
-			s.printer.Warn("nao foi possivel preservar +x em %s: %v", dst, err)
-		}
+		s.markExecutable(dst)
 	}
 	return nil
 }
@@ -1119,7 +1142,9 @@ func (s *Service) installCodex(sourceDir, projectDir string, skillList []string,
 		return err
 	}
 	if merged {
-		s.trackMerged(configPath)
+		if err := s.trackMerged(configPath); err != nil {
+			return err
+		}
 	}
 
 	s.adapters.GenerateCodexAgents(sourceDir, projectDir)
@@ -1189,7 +1214,9 @@ func (s *Service) installCopilot(sourceDir, projectDir string, skillList []strin
 		if _, err := upgrade.NewHelper().RepairCopilotGovernanceHooks(s.fs, projectDir); err != nil {
 			return err
 		}
-		s.trackInstalled(governanceHooks)
+		if err := s.trackInstalled(governanceHooks); err != nil {
+			return err
+		}
 		settings := filepath.Join(projectDir, ".github", "settings.json")
 		var existing []byte
 		if s.fs.Exists(settings) {
@@ -1206,7 +1233,9 @@ func (s *Service) installCopilot(sourceDir, projectDir string, skillList []strin
 		if err := s.fs.WriteFile(settings, merged); err != nil {
 			return err
 		}
-		s.trackMerged(settings)
+		if err := s.trackMerged(settings); err != nil {
+			return err
+		}
 	} else {
 		s.printer.DryRun("gerar .github/agents/*.agent.md via adaptadores")
 		s.printer.DryRun("copiar .github/hooks/{validate-preload,validate-governance,post-execute-task,pre-execute-all-tasks,post-wave}.sh")
@@ -1270,19 +1299,29 @@ func (s *Service) installOpenCode(sourceDir, projectDir string, dryRun bool, mod
 	if err := s.fs.WriteFile(configPath, merged); err != nil {
 		return err
 	}
-	s.trackMerged(configPath)
+	if err := s.trackMerged(configPath); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (s *Service) trackInstalled(path string) {
-	if tracker, ok := s.fs.(*writeTracker); ok {
-		tracker.MarkInstalled(path)
+func (s *Service) trackInstalled(path string) error {
+	if tracker, ok := s.fs.(*tracking.Tracker); ok {
+		return tracker.MarkInstalled(path)
 	}
+	return nil
 }
 
-func (s *Service) trackMerged(path string) {
-	if tracker, ok := s.fs.(*writeTracker); ok {
-		tracker.MarkMerged(path)
+func (s *Service) trackMerged(path string) error {
+	if tracker, ok := s.fs.(*tracking.Tracker); ok {
+		return tracker.MarkMerged(path)
+	}
+	return nil
+}
+
+func (s *Service) markExecutable(path string) {
+	if tracker, ok := s.fs.(*tracking.Tracker); ok {
+		tracker.MarkExecutable(path)
 	}
 }
 
@@ -1749,7 +1788,9 @@ func (s *Service) writeMergedMarkdownFromSource(sourcePath, targetPath string) e
 		return err
 	}
 	if merged {
-		s.trackMerged(targetPath)
+		if err := s.trackMerged(targetPath); err != nil {
+			return err
+		}
 	}
 	return nil
 }

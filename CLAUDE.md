@@ -1,169 +1,33 @@
-# ai-spec-harness — Claude Code
+@AGENTS.md
 
-> Use `AGENTS.md` como fonte canonica das regras deste repositorio. Stack, comandos, convencoes, estrutura, CI e padroes estao documentados em `AGENTS.md` — nao duplicados aqui.
+# Claude Code — ai-spec-harness
 
-## Instrucoes
+`AGENTS.md` (importado acima) e a fonte canonica: stack, comandos, convencoes, estrutura, CI e ADRs
+vivem la. Este arquivo contem apenas o que e especifico do Claude Code.
 
-1. Ler `AGENTS.md` no inicio da sessao.
-2. `.agents/skills/` e a fonte de verdade dos fluxos procedurais.
-3. Em tarefas de execucao: carregar `AGENTS.md` + `agent-governance` + skill da linguagem afetada.
-4. Skills de planejamento entram apenas quando a tarefa pedir explicitamente.
-5. Referencias adicionais apenas quando a tarefa exigir.
-6. Preservar estilo, arquitetura e fronteiras existentes.
-7. Validar mudancas com comandos proporcionais ao risco.
+## Carga de contexto
 
-## Telemetria e Auditoria
+- Regras transversais em `.claude/rules/` carregam em toda sessao: `code-style.md` (R-STYLE-001, hard: codigo em ingles, zero comentarios) e `governance.md` (R-GOV-001).
+- Em tarefa de execucao, carregar `.agents/skills/agent-governance/SKILL.md` e a skill da linguagem afetada. Skills de planejamento (`create-prd`, `create-technical-specification`, `create-tasks`) so quando a tarefa pedir.
+- `references/` de cada skill sao carregadas sob demanda conforme o gatilho declarado no SKILL.md, nunca em bloco.
 
-- Telemetria: `GOVERNANCE_TELEMETRY=1`; ver [`docs/telemetry-feedback-cycle.md`](docs/telemetry-feedback-cycle.md); relatorio: `ai-spec-harness telemetry report`
+## Skills, subagentes e hooks
 
-## ADRs
+- `.claude/skills/` e espelho de `.agents/skills/` (gate `make check-skills-sync`); editar sempre em `.agents/skills/` e rodar `scripts/sync-skills.sh`.
+- `.agents/policies/` e a origem canonica de `R-GOV-001`/`R-STYLE-001`; `.claude/rules/` (e equivalentes) sao espelhos derivados. Editar sempre em `.agents/policies/` e rodar `scripts/sync-policies.sh` (gate `make check-policies-sync`, ver tabela "Area tocada | Gate" em `AGENTS.md`).
+- `.claude/agents/` define 8 subagentes (`task-executor`, `reviewer`, `bugfixer`, `refactorer`, `prd-writer`, `technical-specification-writer`, `task-planner`, `project-analyzer`). Use-os para execucao isolada; a sessao principal nao deve acumular contexto de implementacao.
+- Hooks shell em `.claude/hooks/` **nao** estao ativos por default: `ai-spec install .` os registra em `.claude/settings.local.json` (nao versionado). Confirmar com `/hooks`.
+- Com hooks ativos, `validate-governance.sh` bloqueia edicao de `AGENTS.md` e de `SKILL.md`; exportar `GOVERNANCE_HOOK_MODE=warn` quando a tarefa exigir editar esses arquivos.
 
-Consultar antes de mudancas estruturais. Template: [`.specs/adr/000-template.md`](.specs/adr/000-template.md)
+## Runtime orquestrado (`ai-spec task-loop --tool claude --runtime acp`)
 
-- [001](.specs/adr/001-go-embed-baseline.md) — assets via `go:embed`
-- [002](.specs/adr/002-fake-filesystem-testes.md) — FakeFileSystem vs afero
-- [003](.specs/adr/003-paridade-semantica.md) — invariantes semanticas vs diff textual
-- [004](.specs/adr/004-lazy-loading-referencias.md) — references sob demanda
-- [005](.specs/adr/005-skills-lock-sha256.md) — lock file SHA-256
-- [006](docs/adr/006-telemetria-feedback-cycle.md) — telemetria opt-in append-only
-- [007](docs/adr/007-copilot-cli-stateless-workaround.md) — Copilot injecao manual
-- [008](docs/adr/008-parity-multi-tool-invariants.md) — 29 invariantes 3 niveis
-- [016](.specs/prd-fundacao-portatil/adr-016-config-hierarquico-universal.md) — config hierarquico universal (global+projeto, upward-walk, precedencia)
-- [017](.specs/prd-fundacao-portatil/adr-017-fallback-launcher-chain.md) — fallback launchers genericos ordenados
-- [018](.specs/prd-fundacao-portatil/adr-018-runtimeconfig-retry-backpressure.md) — RuntimeConfig + retry/backoff + backpressure observavel
-- [019](.specs/prd-fundacao-portatil/adr-019-instalador-portatil-detect-verify.md) — instalador portatil: auto-deteccao, escopo global, verify
-- [PP-001](.specs/prd-skills-production-proof/adr-001-validadores-canonicos-agents-scripts.md) — validadores canonicos em `.agents/scripts/` (tool-neutros, cascata)
-- [PP-002](.specs/prd-skills-production-proof/adr-002-hooks-nativos-paridade-cross-cli.md) — hooks nativos de bloqueio nos 4 CLIs (paridade cross-CLI 2026)
-- [MD-001](.specs/prd-memoria-duravel-agentes/adr-001-fachada-porta-unica-memoria.md) — fachada como porta unica do runtime para memoria duravel
-- [MD-002](.specs/prd-memoria-duravel-agentes/adr-002-fato-pagina-roundtrip-lossless.md) — Fato por chave semantica + hash; Pagina Markdown round-trip lossless
-- [MD-003](.specs/prd-memoria-duravel-agentes/adr-003-escrita-atomica-lock-camada-lease.md) — escrita atomica, lock por camada, lease de bastao
-- [MD-004](.specs/prd-memoria-duravel-agentes/adr-004-optin-paridade-byte-a-byte.md) — opt-in + paridade byte-a-byte + fim da degradacao silenciosa
-- [MD-005](.specs/prd-memoria-duravel-agentes/adr-005-evidencia-metricas-memoria.md) — eventos pelo dispatcher existente, metricas pelo mapa de campos extra
+- Flags Claude-especificas: `--mcp-nested`, `--auto-review`, `--no-normalize`, `--disable-hooks`, `--durable-memory`, `--memory-workflow-limit-lines`. Defaults preservam o comportamento F1. Detalhes em [`docs/runtime-claude-capabilities.md`](docs/runtime-claude-capabilities.md).
+- Hooks Go (`internal/runtime/hooks/`) servem o modo orquestrado; hooks shell servem o modo interativo. Nao se sobrepoem e o harness nunca altera `.claude/hooks/*.sh`.
+- `runtime.pre_open` aborta a sessao se `AGENTS.md` nao existir no WorkDir.
+- Quando `.specs/<prd>/memory/` existe, a memoria do harness vence a auto-memory do Claude Code.
+- Telemetria opt-in: `GOVERNANCE_TELEMETRY=1`; relatorio com `ai-spec telemetry report`.
 
-## Memoria Duravel de Agentes (opt-in, F7)
+## Ao compactar
 
-```bash
-ai-spec task-loop --tool claude --runtime acp --durable-memory .specs/prd-X
-```
-
-- Fachada (`internal/runtime/memory/durable.Facade`) e o **unico ponto de contato** do runtime com o subsistema — a operacao humana (`ai-spec memory`, tarefa 9.0) acessa os colaboradores diretamente, sem passar pela fachada (MD-001).
-- Porta estreita `MemoryPort` declarada no pacote consumidor (`internal/runtime/memory_port.go`), satisfeita por `durable.Facade` (`var _ MemoryPort = (*durable.Facade)(nil)`). Nenhum colaborador do subsistema (`Layer`, `Page`, politicas) e importado pelo pacote consumidor.
-- Ativacao: flag `--durable-memory` em `task-loop` **e** chave `durable_memory_enabled` na cascata de configuracao (`flags > workspace > global > defaults`, ADR-016), propagada nos dois pontos: `internal/config/resolver.go` (`mergeInto`) e `internal/taskloop/runtimeconfig.go` (`optionsToConfigOverrides`). Zero-value (`false`) preserva o caminho legado (`memory.Store`) byte a byte — provado pelo golden de paridade (`internal/runtime/prompt_parity_golden_test.go`).
-- Precedencia de invariantes aplicada em um unico lugar, dentro da fachada: segredo, depois nao-perda de Fato, depois dono unico de bastao, depois orcamento de contexto.
-- `internal/runtime/runner.go`: `dispatchSessionPostEnd` executa **antes** de `persistSummary` (reordenado na tarefa 7.0, RF-30/RF-34).
-
-## Fundacao Portatil (Fases 1–3)
-
-Comportamento implementado (ver [`docs/guia-instalacao-universal.md`](docs/guia-instalacao-universal.md) e [`docs/config-hierarchy.md`](docs/config-hierarchy.md)):
-
-### Instalacao e Verificacao
-
-```bash
-ai-spec-harness install .              # auto-detecta agentes, instala assets
-ai-spec-harness install . --global     # escopo global em ~/.aispec
-ai-spec-harness verify .               # reporta current/missing/drifted por skill/agente
-ai-spec-harness verify --global        # verificacao global
-```
-
-- `--tools` e opcional: sem a flag, detecta automaticamente via binario no PATH + dirs de config.
-- Idempotente: reexecutar converge para o mesmo estado (100% `current`).
-- Bootstrap em repo vazio < 30s (RF-11).
-
-### Hierarquia de Config
-
-Precedencia deterministica (ADR-016):
-
-```
-flags CLI  >  workspace (.claude/config.yaml)  >  global (~/.aispec/config.yaml)  >  defaults built-in
-```
-
-- Config global: `~/.aispec/config.yaml` (opt-in; ausencia nao-fatal).
-- Config de projeto: upward-walk a partir do CWD (marcadores: `.git/`, `.aispec/`, `.claude/`, `.agents/`).
-- Merge campo a campo: cada camada so sobrescreve campos nao-zero.
-
-### Fallback Launchers (ADR-017)
-
-Quando o binario ACP direto nao esta no PATH, o harness tenta os launchers alternativos da cadeia
-(ex.: `npx @zed-industries/codex-acp`). O fallback e transparente — resultado identico ao binario
-direto.
-
-### RuntimeConfig Unificado (ADR-018)
-
-`RuntimeConfig` embute em `Job`: `Timeout`, `MaxRetries`, `RetryBackoffMultiplier`, `Concurrent`,
-`BatchSize`. Zero-value de cada campo preserva comportamento F1 (sem regressao). Configuravel via
-`config.yaml` ou flags CLI.
-
-## Runtime Capabilities (F2-Claude+)
-
-Wave F2-Claude ativa quando `--runtime acp` e flags especificas. Defaults preservam comportamento F1-Claude.
-
-### MCP Nested Agent (`--mcp-nested`, RF-01)
-
-```bash
-ai-spec task-loop --tool claude --runtime acp --mcp-nested .specs/prd-X
-```
-
-- Spawna `internal/runtime/mcpserver.Server` em goroutine antes de `c.Open`.
-- Expoe tool `run_agent(agent_name, prompt, model?, timeout?)` via protocolo MCP stdio.
-- Profundidade maxima: `AISPEC_MAX_AGENT_DEPTH` (default 3); exceder retorna erro MCP tipado.
-- Child sessions produzem `events.jsonl` e `execution_report.md` em sub-dir proprio.
-- Eventos do child espelhados no parent com kind `nested_agent`.
-- **Nao modifica `.claude/hooks/*.sh`** — shell hooks coexistem para modo interativo.
-
-### Normalizacao de Tool-Calls (`--no-normalize`, RF-02)
-
-- Sempre ativa por default; `--no-normalize` desabilita (debug).
-- `events.jsonl` ganha campos `normalized_name` e `raw_name` lado a lado.
-- Tabela de alias em `.agents/normalization-rules.yaml` (embedded via `go:embed`).
-  - Claude: `bash→bash`, `read_file→read`, `write_file→write`, `str_replace_editor→edit`
-  - Codex: `shell→bash`, `search_query→web_search`, `image_query→image_search`
-- `RawInput` nunca mutado — `--no-normalize` recupera comportamento pre-F2 byte-identical.
-- `tool_calls.md` renderiza nome normalizado quando presente.
-
-### Memory Store 2-tier + Hooks Dispatcher (F3-Claude, RF-03 + RF-04)
-
-```bash
-ai-spec task-loop --tool claude --runtime acp \
-  --memory-workflow-limit-lines 100 .specs/prd-X
-```
-
-- `internal/runtime/memory/` implementa store 2-tier: workflow (150 linhas / 12 KB) + task (200 linhas / 16 KB).
-- Memory injetada como `## Memory Context` no prompt antes de `c.Open`.
-- `NeedsCompaction=true` anexa diretiva textual de compactacao ao prompt.
-- `internal/runtime/hooks/` dispatcher registra 6 pontos canonicos:
-  - `runtime.pre_open` — governance hook (valida AGENTS.md)
-  - `prompt.pre_build` / `prompt.post_build` — token_budget hook
-  - `tool_call.pre_dispatch` / `tool_call.post_complete` — extensivel
-  - `session.post_end` — memory_persist hook escreve MEMORY.md
-- `--disable-hooks` desabilita todos os hooks (debug; sem regressao F1/F2).
-
-### Precedencia Memoria (F3-Claude)
-
-Quando `.specs/<prd>/memory/` existe, memoria do harness vence sobre auto-memory de Claude Code.
-Fallback: sem o diretorio, auto-memory de Claude Code permanece sem alteracao.
-
-### Hooks: Shell vs Go
-
-Shell hooks em `.claude/hooks/*.sh` continuam servindo o **modo interativo** (uso direto de Claude Code CLI pelo usuario).
-Go hooks em `internal/runtime/hooks/` servem o **modo orquestrado** (ACPRunner via `--runtime acp`).
-Os dois conjuntos coexistem sem conflito; `.claude/hooks/*.sh` nao sao modificados pelo harness.
-
-### Metricas Claude-2026 (F4-Claude, RF-05)
-
-- `internal/runtime/events/metrics.go` exporta `ExtractClaudeMetrics(raw)` e `LogClaudeMetrics`.
-- Campos acumulados em `Summary`: `cache_read_tokens`, `cache_creation_tokens`, `thinking_tokens`.
-- Telemetria opt-in via `GOVERNANCE_TELEMETRY=1` — campos aparecem no relatorio final.
-- Nenhum dado enviado sem consentimento explcito (ADR-006).
-
-### Auto-review Opt-in (F5-Claude, RF-06)
-
-```bash
-ai-spec task-loop --tool claude --runtime acp --auto-review .specs/prd-X
-```
-
-- Desabilitado por default (`--auto-review` necessario para ativar).
-- Apos sessao principal: spawna nova `ACPRunner` com skill `review` + git diff como prompt.
-- Resultado persistido em `evidence/<task>/review.md`.
-- Issues com tag `[HARD]` → `Summary.ReviewStatus="blocked"`.
-- Recursao hard-bloqueada: child Job tem `AutoReview=false` forcado.
-- Hook `session.post_review` disparado apos review (extensivel).
+Preservar a lista de arquivos alterados, os comandos de validacao ja executados com resultado e o
+PRD/tarefa ativa.

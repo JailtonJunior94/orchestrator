@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-portatil-vendor-neutral/6.0_execution_report.md
+summary: Saneamento RF-18.1 (escopo por AppliesTo, invariantes auto-satisfeitos marcados) e capability matrix gerada (RF-18..RF-21) com dois emissores, gate de sincronia e gate de evidencia.
+timestamp: 2026-09-18T18:13:09Z

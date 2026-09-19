@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "harness-contract.schema.json",
+  "title": "Harness Contract v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "git",
+    "approval",
+    "quality",
+    "evidence",
+    "skills"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "git": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "auto_commit",
+        "auto_push"
+      ],
+      "properties": {
+        "auto_commit": {
+          "type": "boolean"
+        },
+        "auto_push": {
+          "type": "boolean"
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "require_for_destructive_operations"
+      ],
+      "properties": {
+        "require_for_destructive_operations": {
+          "type": "boolean"
+        }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "require_tests",
+        "require_lint"
+      ],
+      "properties": {
+        "require_tests": {
+          "type": "boolean"
+        },
+        "require_lint": {
+          "type": "boolean"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "require_execution_report"
+      ],
+      "properties": {
+        "require_execution_report": {
+          "type": "boolean"
+        }
+      }
+    },
+    "skills": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "discovery_mode"
+      ],
+      "properties": {
+        "discovery_mode": {
+          "enum": [
+            "declared",
+            "auto"
+          ]
+        }
+      }
+    }
+  }
+}

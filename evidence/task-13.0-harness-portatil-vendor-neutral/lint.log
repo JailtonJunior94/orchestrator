@@ -1,0 +1,21 @@
+Running linter...
+Installing golangci-lint...
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+GOGC=20 golangci-lint run --config .golangci.yml --timeout 10m --verbose
+level=info msg="golangci-lint has version 2.13.2 built with go1.27.0 from 27774aa on 2026-08-27T22:52:01Z"
+level=info msg="[config_reader] Used config file .golangci.yml"
+level=info msg="[config_reader] Module name \"github.com/JailtonJunior94/ai-spec-harness\""
+level=info msg="[goenv] Read go env for 9.850916ms: map[string]string{\"GOCACHE\":\"/Users/jailtonjunior/Library/Caches/go-build\", \"GOROOT\":\"/Users/jailtonjunior/.gvm/gos/go1.27.1\"}"
+level=info msg="[lintersdb] Active 6 linters: [errcheck gosec govet ineffassign staticcheck unused]"
+level=info msg="[loader] Go packages loading at mode 8767 (compiled_files|deps|files|types_sizes|exports_file|imports|name) took 535.476083ms"
+level=info msg="[runner/filename_unadjuster] Pre-built 0 adjustments in 70.410708ms"
+level=info msg="[linters_context/goanalysis] analyzers took 0s with no stages"
+level=info msg="[runner] Issues before processing: 50, after processing: 0"
+level=info msg="[runner] Processors filtering stat (in/out): path_absoluter: 50/50, invalid_issue: 50/50, path_relativity: 50/50, exclusion_paths: 50/50, generated_file_filter: 50/0, filename_unadjuster: 50/50, cgo: 50/50"
+level=info msg="[runner] processing took 2.108875ms with stages: generated_file_filter: 2.051667ms, path_relativity: 41.833µs, filename_unadjuster: 4.292µs, fixer: 1.917µs, invalid_issue: 1.834µs, cgo: 1.667µs, path_absoluter: 1.375µs, sort_results: 1.166µs, max_same_issues: 959ns, nolint_filter: 750ns, exclusion_rules: 333ns, exclusion_paths: 250ns, path_prettifier: 167ns, diff: 166ns, max_from_linter: 126ns, severity-rules: 84ns, source_code: 83ns, max_per_file_from_linter: 83ns, path_shortener: 82ns, uniq_by_line: 41ns"
+level=info msg="[runner] linters took 521.991458ms with stages: goanalysis_metalinter: 519.774458ms"
+0 issues.
+level=info msg="File cache stats: 0 entries of total size 0B"
+level=info msg="Memory: 13 samples, avg is 46.1MB, max is 51.8MB"
+level=info msg="Execution took 1.139600417s"
+lint_exit=0

@@ -1,0 +1,7 @@
+=== RUN   TestCanonicalDiagnosticsStayInSyncWithTheirEmittingScript
+=== PAUSE TestCanonicalDiagnosticsStayInSyncWithTheirEmittingScript
+=== CONT  TestCanonicalDiagnosticsStayInSyncWithTheirEmittingScript
+--- PASS: TestCanonicalDiagnosticsStayInSyncWithTheirEmittingScript (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	0.062s
+exit=0

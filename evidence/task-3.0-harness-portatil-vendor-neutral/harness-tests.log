@@ -1,0 +1,69 @@
+=== RUN   TestContractSuite
+=== RUN   TestContractSuite/TestDecodeAndValidateContract
+=== RUN   TestContractSuite/TestDecodeAndValidateContract/accepts_a_minimal_valid_contract
+=== RUN   TestContractSuite/TestDecodeAndValidateContract/rejects_an_unknown_field_with_a_typed_error
+=== RUN   TestContractSuite/TestDecodeAndValidateContract/rejects_an_invalid_field_type_with_a_typed_error
+=== RUN   TestContractSuite/TestDecodeAndValidateContract/rejects_a_missing_version_with_a_typed_error_naming_the_supported_version
+=== RUN   TestContractSuite/TestDecodeAndValidateContract/rejects_an_incompatible_version_naming_found_and_supported
+=== RUN   TestContractSuite/TestDefaultContractIsValidAndReportsSensibleDefaults
+=== RUN   TestContractSuite/TestPreservingBridgeIsTheOnlyReasonUnknownFieldsAreRejected
+=== RUN   TestContractSuite/TestStaticValidationOnlyNoNetworkNoProcessNoLLM
+--- PASS: TestContractSuite (0.00s)
+    --- PASS: TestContractSuite/TestDecodeAndValidateContract (0.00s)
+        --- PASS: TestContractSuite/TestDecodeAndValidateContract/accepts_a_minimal_valid_contract (0.00s)
+        --- PASS: TestContractSuite/TestDecodeAndValidateContract/rejects_an_unknown_field_with_a_typed_error (0.00s)
+        --- PASS: TestContractSuite/TestDecodeAndValidateContract/rejects_an_invalid_field_type_with_a_typed_error (0.00s)
+        --- PASS: TestContractSuite/TestDecodeAndValidateContract/rejects_a_missing_version_with_a_typed_error_naming_the_supported_version (0.00s)
+        --- PASS: TestContractSuite/TestDecodeAndValidateContract/rejects_an_incompatible_version_naming_found_and_supported (0.00s)
+    --- PASS: TestContractSuite/TestDefaultContractIsValidAndReportsSensibleDefaults (0.00s)
+    --- PASS: TestContractSuite/TestPreservingBridgeIsTheOnlyReasonUnknownFieldsAreRejected (0.00s)
+    --- PASS: TestContractSuite/TestStaticValidationOnlyNoNetworkNoProcessNoLLM (0.00s)
+=== RUN   TestDuplicateKeysSuite
+=== RUN   TestDuplicateKeysSuite/TestCheckNoDuplicateKeysPassesForTheCurrentSchema
+=== RUN   TestDuplicateKeysSuite/TestFindDuplicateKeysDetectsOverlap
+=== RUN   TestDuplicateKeysSuite/TestFindDuplicateKeysDetectsOverlap/no_overlap
+=== RUN   TestDuplicateKeysSuite/TestFindDuplicateKeysDetectsOverlap/one_colliding_key
+=== RUN   TestDuplicateKeysSuite/TestFindDuplicateKeysDetectsOverlap/multiple_colliding_keys_sorted
+=== RUN   TestDuplicateKeysSuite/TestOperationalKeyNamesReflectsConfigRuntime
+=== RUN   TestDuplicateKeysSuite/TestSchemaKeyNamesCoversAllContractFields
+--- PASS: TestDuplicateKeysSuite (0.00s)
+    --- PASS: TestDuplicateKeysSuite/TestCheckNoDuplicateKeysPassesForTheCurrentSchema (0.00s)
+    --- PASS: TestDuplicateKeysSuite/TestFindDuplicateKeysDetectsOverlap (0.00s)
+        --- PASS: TestDuplicateKeysSuite/TestFindDuplicateKeysDetectsOverlap/no_overlap (0.00s)
+        --- PASS: TestDuplicateKeysSuite/TestFindDuplicateKeysDetectsOverlap/one_colliding_key (0.00s)
+        --- PASS: TestDuplicateKeysSuite/TestFindDuplicateKeysDetectsOverlap/multiple_colliding_keys_sorted (0.00s)
+    --- PASS: TestDuplicateKeysSuite/TestOperationalKeyNamesReflectsConfigRuntime (0.00s)
+    --- PASS: TestDuplicateKeysSuite/TestSchemaKeyNamesCoversAllContractFields (0.00s)
+=== RUN   TestLoaderSuite
+=== RUN   TestLoaderSuite/TestLoadAppliesEmbeddedDefaultWhenProjectHasNoContractFile
+=== RUN   TestLoaderSuite/TestLoadReadsProjectDeclaredContract
+=== RUN   TestLoaderSuite/TestLoadRejectsIncompatibleVersion
+=== RUN   TestLoaderSuite/TestLoadRejectsProjectDeclaredContractWithUnknownField
+--- PASS: TestLoaderSuite (0.00s)
+    --- PASS: TestLoaderSuite/TestLoadAppliesEmbeddedDefaultWhenProjectHasNoContractFile (0.00s)
+    --- PASS: TestLoaderSuite/TestLoadReadsProjectDeclaredContract (0.00s)
+    --- PASS: TestLoaderSuite/TestLoadRejectsIncompatibleVersion (0.00s)
+    --- PASS: TestLoaderSuite/TestLoadRejectsProjectDeclaredContractWithUnknownField (0.00s)
+=== RUN   FuzzParseHarnessContract
+=== RUN   FuzzParseHarnessContract/seed#0
+=== RUN   FuzzParseHarnessContract/seed#1
+=== RUN   FuzzParseHarnessContract/seed#2
+=== RUN   FuzzParseHarnessContract/seed#3
+=== RUN   FuzzParseHarnessContract/seed#4
+=== RUN   FuzzParseHarnessContract/seed#5
+=== RUN   FuzzParseHarnessContract/seed#6
+=== RUN   FuzzParseHarnessContract/seed#7
+=== RUN   FuzzParseHarnessContract/seed#8
+--- PASS: FuzzParseHarnessContract (0.00s)
+    --- PASS: FuzzParseHarnessContract/seed#0 (0.00s)
+    --- PASS: FuzzParseHarnessContract/seed#1 (0.00s)
+    --- PASS: FuzzParseHarnessContract/seed#2 (0.00s)
+    --- PASS: FuzzParseHarnessContract/seed#3 (0.00s)
+    --- PASS: FuzzParseHarnessContract/seed#4 (0.00s)
+    --- PASS: FuzzParseHarnessContract/seed#5 (0.00s)
+    --- PASS: FuzzParseHarnessContract/seed#6 (0.00s)
+    --- PASS: FuzzParseHarnessContract/seed#7 (0.00s)
+    --- PASS: FuzzParseHarnessContract/seed#8 (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/harness	(cached)
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/harness/mocks	[no test files]

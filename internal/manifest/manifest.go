@@ -32,6 +32,8 @@ type Manifest struct {
 	InstalledFiles []string `json:"installed_files,omitempty"`
 
 	MergedFiles []string `json:"merged_files,omitempty"`
+
+	FileChecksums map[string]string `json:"file_checksums,omitempty"`
 }
 
 // HasFileTracking reporta se o manifesto rastreia arquivos individualmente

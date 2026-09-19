@@ -197,7 +197,7 @@ func (f *FakeFileSystem) FileHash(path string) (string, error) {
 
 func (f *FakeFileSystem) DirHash(path string) (string, error) {
 	if !f.IsDir(path) {
-		return "", nil
+		return "", fmt.Errorf("directory not found: %s: %w", path, os.ErrNotExist)
 	}
 	resolved := f.resolvePath(path)
 	var entries []string

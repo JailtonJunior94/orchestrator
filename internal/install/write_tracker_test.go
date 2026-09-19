@@ -1,6 +1,8 @@
 package install
 
 import (
+	"crypto/sha256"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -127,5 +129,56 @@ func TestManifestNeverTracksUntouchedUserFiles(t *testing.T) {
 	}
 	if len(mf.MergedFiles) == 0 {
 		t.Error("opencode.json/.github/settings.json deveriam ser rastreados como merged")
+	}
+}
+
+func TestManifestFileChecksumsMatchRealDiskContent(t *testing.T) {
+	harness := trackerHarness{}
+	root := t.TempDir()
+	mf := harness.install(t, root, []skills.Tool{skills.ToolClaude, skills.ToolCodex})
+
+	if len(mf.FileChecksums) == 0 {
+		t.Fatal("install deveria gravar checksum por path (RF-24 e pre-requisito duro)")
+	}
+
+	tracked := append([]string{}, mf.InstalledFiles...)
+	tracked = append(tracked, mf.MergedFiles...)
+	if len(tracked) == 0 {
+		t.Fatal("nenhum arquivo rastreado para validar checksum")
+	}
+
+	for _, rel := range tracked {
+		hash, ok := mf.FileChecksums[rel]
+		if !ok {
+			t.Errorf("path rastreado sem checksum correspondente: %s", rel)
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(root, rel))
+		if err != nil {
+			t.Errorf("ler %s do disco: %v", rel, err)
+			continue
+		}
+		sum := sha256.Sum256(data)
+		want := fmt.Sprintf("%x", sum[:])
+		if hash != want {
+			t.Errorf("checksum divergente para %s: manifesto=%s, disco=%s", rel, hash, want)
+		}
+	}
+}
+
+func TestManifestLegacyWithoutFileChecksumsNeverDiverges(t *testing.T) {
+	legacy := &manifest.Manifest{
+		Version:        "1.5.0",
+		InstalledFiles: []string{"AGENTS.md"},
+	}
+
+	if !legacy.HasFileTracking() {
+		t.Fatal("manifesto com installed_files deve reportar HasFileTracking() == true")
+	}
+	if legacy.FileChecksums != nil {
+		t.Error("manifesto legado (v2.0.1 e anteriores) nunca deve ter file_checksums preenchido")
+	}
+	if _, ok := legacy.FileChecksums["AGENTS.md"]; ok {
+		t.Error("ausencia de file_checksums deve significar ausencia de rastreio, nunca divergencia")
 	}
 }

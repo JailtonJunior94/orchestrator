@@ -4,7 +4,15 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
+
+func delegationScriptResolver(dir string) specs.ScriptResolver {
+	return func(relPath string) ([]byte, error) {
+		return os.ReadFile(filepath.Join(dir, filepath.FromSlash(relPath)))
+	}
+}
 
 const delegationCanonical = ".agents/scripts/hook-prereq-gate.sh"
 
@@ -39,7 +47,7 @@ func TestTextualMentionIsNotProofOfDelegation(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			dir := delegationFixture(t, body)
-			if resolvesToCanonicalValidator(t, dir, ".claude/hooks/wrapper.sh", delegationCanonical) {
+			if specs.ScriptDelegatesTo(delegationScriptResolver(dir), ".claude/hooks/wrapper.sh", delegationCanonical) {
 				t.Fatalf("a mera mencao textual (%s) nao pode contar como delegacao ao validador canonico", name)
 			}
 		})
@@ -60,7 +68,7 @@ func TestExecutionPositionIsProofOfDelegation(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			dir := delegationFixture(t, body)
-			if !resolvesToCanonicalValidator(t, dir, ".claude/hooks/wrapper.sh", delegationCanonical) {
+			if !specs.ScriptDelegatesTo(delegationScriptResolver(dir), ".claude/hooks/wrapper.sh", delegationCanonical) {
 				t.Fatalf("invocacao real (%s) deve contar como delegacao ao validador canonico", name)
 			}
 		})

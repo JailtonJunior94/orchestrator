@@ -10,7 +10,7 @@ const (
 )
 
 type mergeRecorder interface {
-	MarkMerged(path string)
+	MarkMerged(path string) error
 }
 
 func MergeUserContentMarkdown(generated, existing string, priorGenerated ...string) (string, bool) {
@@ -71,7 +71,9 @@ func (g *Generator) writeMergedMarkdown(path, generated string, priorGenerated .
 		return err
 	}
 	if merged {
-		g.recordMerge(path)
+		if err := g.recordMerge(path); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -96,8 +98,9 @@ func stripGeneratedPrefix(generated, existing string) string {
 	return existing
 }
 
-func (g *Generator) recordMerge(path string) {
+func (g *Generator) recordMerge(path string) error {
 	if recorder, ok := g.fs.(mergeRecorder); ok {
-		recorder.MarkMerged(path)
+		return recorder.MarkMerged(path)
 	}
+	return nil
 }

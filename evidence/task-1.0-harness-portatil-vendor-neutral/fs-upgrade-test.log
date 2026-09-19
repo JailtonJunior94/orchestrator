@@ -1,0 +1,515 @@
+=== RUN   TestFailingFileSystem_PropagatesErrorMidSequence
+--- PASS: TestFailingFileSystem_PropagatesErrorMidSequence (0.00s)
+=== RUN   TestFailingFileSystem_FailsAtSpecificPath
+--- PASS: TestFailingFileSystem_FailsAtSpecificPath (0.00s)
+=== RUN   TestFailingFileSystem_DefaultFakeStillNeverFails
+--- PASS: TestFailingFileSystem_DefaultFakeStillNeverFails (0.00s)
+=== RUN   TestFake_WriteAndRead
+--- PASS: TestFake_WriteAndRead (0.00s)
+=== RUN   TestFake_WriteFileAtomicAndRead
+--- PASS: TestFake_WriteFileAtomicAndRead (0.00s)
+=== RUN   TestFake_WriteFileAtomic_overwritesExisting
+--- PASS: TestFake_WriteFileAtomic_overwritesExisting (0.00s)
+=== RUN   TestFake_ReadFile_missing
+--- PASS: TestFake_ReadFile_missing (0.00s)
+=== RUN   TestFake_Exists
+--- PASS: TestFake_Exists (0.00s)
+=== RUN   TestFake_Exists_dir
+--- PASS: TestFake_Exists_dir (0.00s)
+=== RUN   TestFake_IsDir
+--- PASS: TestFake_IsDir (0.00s)
+=== RUN   TestFake_IsDir_file
+--- PASS: TestFake_IsDir_file (0.00s)
+=== RUN   TestFake_IsSymlink
+--- PASS: TestFake_IsSymlink (0.00s)
+=== RUN   TestFake_EvalSymlinks
+--- PASS: TestFake_EvalSymlinks (0.00s)
+=== RUN   TestFake_Remove
+--- PASS: TestFake_Remove (0.00s)
+=== RUN   TestFake_RemoveAll
+--- PASS: TestFake_RemoveAll (0.00s)
+=== RUN   TestFake_CopyFile
+--- PASS: TestFake_CopyFile (0.00s)
+=== RUN   TestFake_CopyFile_missing
+--- PASS: TestFake_CopyFile_missing (0.00s)
+=== RUN   TestFake_CopyDir
+--- PASS: TestFake_CopyDir (0.00s)
+=== RUN   TestFake_FileHash
+--- PASS: TestFake_FileHash (0.00s)
+=== RUN   TestFake_FileHash_missing
+--- PASS: TestFake_FileHash_missing (0.00s)
+=== RUN   TestFake_DirHash
+--- PASS: TestFake_DirHash (0.00s)
+=== RUN   TestFake_DirHash_notDir
+--- PASS: TestFake_DirHash_notDir (0.00s)
+=== RUN   TestFake_DirHash_file
+--- PASS: TestFake_DirHash_file (0.00s)
+=== RUN   TestFake_DirHash_emptyDirDiffersFromMissing
+--- PASS: TestFake_DirHash_emptyDirDiffersFromMissing (0.00s)
+=== RUN   TestFake_Writable
+--- PASS: TestFake_Writable (0.00s)
+=== RUN   TestFake_ReadDir
+--- PASS: TestFake_ReadDir (0.00s)
+=== RUN   TestFake_SeparadorNativoDoWindows
+--- PASS: TestFake_SeparadorNativoDoWindows (0.00s)
+=== RUN   TestOS_WriteAndRead
+--- PASS: TestOS_WriteAndRead (0.00s)
+=== RUN   TestOS_CopyFile_overwritesReadOnly
+--- PASS: TestOS_CopyFile_overwritesReadOnly (0.00s)
+=== RUN   TestOS_WriteFile_overwritesReadOnly
+--- PASS: TestOS_WriteFile_overwritesReadOnly (0.00s)
+=== RUN   TestOS_WriteFileAtomic_writeAndRead
+--- PASS: TestOS_WriteFileAtomic_writeAndRead (0.01s)
+=== RUN   TestOS_WriteFileAtomic_overwritesReadOnly
+--- PASS: TestOS_WriteFileAtomic_overwritesReadOnly (0.01s)
+=== RUN   TestOS_WriteFileAtomic_noPartialFileOnInterruption
+--- PASS: TestOS_WriteFileAtomic_noPartialFileOnInterruption (0.00s)
+=== RUN   TestOS_WriteFileAtomic_cleansUpTempOnWriteFailure
+--- PASS: TestOS_WriteFileAtomic_cleansUpTempOnWriteFailure (0.00s)
+=== RUN   TestOS_WriteFileAtomicVsWriteFile_symlinkSemantics
+=== RUN   TestOS_WriteFileAtomicVsWriteFile_symlinkSemantics/WriteFileAtomic_replaces_the_symlink_itself_via_Rename
+=== RUN   TestOS_WriteFileAtomicVsWriteFile_symlinkSemantics/WriteFile_follows_the_symlink_and_writes_through_it_via_os.WriteFile
+--- PASS: TestOS_WriteFileAtomicVsWriteFile_symlinkSemantics (0.01s)
+    --- PASS: TestOS_WriteFileAtomicVsWriteFile_symlinkSemantics/WriteFileAtomic_replaces_the_symlink_itself_via_Rename (0.01s)
+    --- PASS: TestOS_WriteFileAtomicVsWriteFile_symlinkSemantics/WriteFile_follows_the_symlink_and_writes_through_it_via_os.WriteFile (0.00s)
+=== RUN   TestOS_ReadFile_missing
+--- PASS: TestOS_ReadFile_missing (0.00s)
+=== RUN   TestOS_Exists
+--- PASS: TestOS_Exists (0.00s)
+=== RUN   TestOS_IsDir
+--- PASS: TestOS_IsDir (0.00s)
+=== RUN   TestOS_MkdirAll
+--- PASS: TestOS_MkdirAll (0.00s)
+=== RUN   TestOS_Remove
+--- PASS: TestOS_Remove (0.00s)
+=== RUN   TestOS_RemoveAll
+--- PASS: TestOS_RemoveAll (0.00s)
+=== RUN   TestOS_RemoveAll_removesReadOnlyTree
+--- PASS: TestOS_RemoveAll_removesReadOnlyTree (0.00s)
+=== RUN   TestOS_RemoveAll_doesNotFollowSymlinkOutsideTree
+--- PASS: TestOS_RemoveAll_doesNotFollowSymlinkOutsideTree (0.00s)
+=== RUN   TestOS_CopyFile
+--- PASS: TestOS_CopyFile (0.00s)
+=== RUN   TestOS_CopyFile_missing
+--- PASS: TestOS_CopyFile_missing (0.00s)
+=== RUN   TestOS_CopyDir
+--- PASS: TestOS_CopyDir (0.00s)
+=== RUN   TestOS_CopyDir_AllowsUpgradeFromReadOnlySource
+--- PASS: TestOS_CopyDir_AllowsUpgradeFromReadOnlySource (0.00s)
+=== RUN   TestOS_Symlink
+--- PASS: TestOS_Symlink (0.00s)
+=== RUN   TestOS_FileHash
+--- PASS: TestOS_FileHash (0.00s)
+=== RUN   TestOS_FileHash_missing
+--- PASS: TestOS_FileHash_missing (0.00s)
+=== RUN   TestOS_DirHash
+--- PASS: TestOS_DirHash (0.00s)
+=== RUN   TestOS_DirHash_notDir
+--- PASS: TestOS_DirHash_notDir (0.00s)
+=== RUN   TestOS_DirHash_file
+--- PASS: TestOS_DirHash_file (0.00s)
+=== RUN   TestOS_DirHash_emptyDirDiffersFromMissing
+--- PASS: TestOS_DirHash_emptyDirDiffersFromMissing (0.00s)
+=== RUN   TestOS_Writable
+--- PASS: TestOS_Writable (0.00s)
+=== RUN   TestOS_Writable_missing
+--- PASS: TestOS_Writable_missing (0.00s)
+=== RUN   TestOS_ReadDir
+--- PASS: TestOS_ReadDir (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/fs	0.100s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/fs/mocks	[no test files]
+=== RUN   TestRepairCopilotGovernanceHooksMigratesObsoleteStopKey
+--- PASS: TestRepairCopilotGovernanceHooksMigratesObsoleteStopKey (0.00s)
+=== RUN   TestRepairCopilotGovernanceHooksPreservesUnrelatedContent
+--- PASS: TestRepairCopilotGovernanceHooksPreservesUnrelatedContent (0.00s)
+=== RUN   TestRepairCopilotGovernanceHooksIsIdempotent
+--- PASS: TestRepairCopilotGovernanceHooksIsIdempotent (0.00s)
+=== RUN   TestRepairCopilotGovernanceHooksLeavesCurrentFileUntouched
+--- PASS: TestRepairCopilotGovernanceHooksLeavesCurrentFileUntouched (0.00s)
+=== RUN   TestRepairCopilotGovernanceHooksCreatesMissingFile
+--- PASS: TestRepairCopilotGovernanceHooksCreatesMissingFile (0.00s)
+=== RUN   TestRepairCopilotGovernanceHooksRejectsMalformedDocument
+--- PASS: TestRepairCopilotGovernanceHooksRejectsMalformedDocument (0.00s)
+=== RUN   TestDefaultCopilotGovernanceHooksDeclaresSessionEndGate
+--- PASS: TestDefaultCopilotGovernanceHooksDeclaresSessionEndGate (0.00s)
+=== RUN   TestUpgrade_NoSkillsDir
+=== PAUSE TestUpgrade_NoSkillsDir
+=== RUN   TestUpgrade_CheckOnly_Outdated
+=== PAUSE TestUpgrade_CheckOnly_Outdated
+=== RUN   TestUpgrade_CheckOnly_UpToDate
+=== PAUSE TestUpgrade_CheckOnly_UpToDate
+=== RUN   TestUpgradeCheck_PrintsInformativeVersionLineWhenManifestDiffers
+=== PAUSE TestUpgradeCheck_PrintsInformativeVersionLineWhenManifestDiffers
+=== RUN   TestUpgradeCheck_OmitsInformativeVersionLineWhenVersionsMatch
+=== PAUSE TestUpgradeCheck_OmitsInformativeVersionLineWhenVersionsMatch
+=== RUN   TestUpgradeCheck_OmitsInformativeVersionLineForNonSemverManifest
+=== PAUSE TestUpgradeCheck_OmitsInformativeVersionLineForNonSemverManifest
+=== RUN   TestUpgradeCheck_OmitsInformativeVersionLineForIncompleteSemverManifest
+=== PAUSE TestUpgradeCheck_OmitsInformativeVersionLineForIncompleteSemverManifest
+=== RUN   TestUpgradeCheck_OmitsInformativeVersionLineForMalformedPrereleaseManifest
+=== PAUSE TestUpgradeCheck_OmitsInformativeVersionLineForMalformedPrereleaseManifest
+=== RUN   TestUpgrade_UsesResolvedExecutableVersionInOutput
+=== PAUSE TestUpgrade_UsesResolvedExecutableVersionInOutput
+=== RUN   TestUpgrade_UpdatesManifestVersionAfterSuccessfulUpgrade
+=== PAUSE TestUpgrade_UpdatesManifestVersionAfterSuccessfulUpgrade
+=== RUN   TestUpgrade_RewritesManifestWhenVersionChangesWithoutSkillChanges
+=== PAUSE TestUpgrade_RewritesManifestWhenVersionChangesWithoutSkillChanges
+=== RUN   TestUpgrade_DoesNotRewriteManifestWhenVersionAndSkillsAreUnchanged
+=== PAUSE TestUpgrade_DoesNotRewriteManifestWhenVersionAndSkillsAreUnchanged
+=== RUN   TestUpgrade_ReconcilesSkillVersionsAfterSkillUpdate
+=== PAUSE TestUpgrade_ReconcilesSkillVersionsAfterSkillUpdate
+=== RUN   TestUpgrade_PopulatesSkillVersionsForLegacyManifest
+=== PAUSE TestUpgrade_PopulatesSkillVersionsForLegacyManifest
+=== RUN   TestUpgrade_InstallsMissingSkillFromSource
+=== PAUSE TestUpgrade_InstallsMissingSkillFromSource
+=== RUN   TestUpgrade_RefusesExternalSkillsSymlinkByDefault
+=== PAUSE TestUpgrade_RefusesExternalSkillsSymlinkByDefault
+=== RUN   TestUpgrade_FollowsExternalSkillsSymlinkWhenAllowed
+=== PAUSE TestUpgrade_FollowsExternalSkillsSymlinkWhenAllowed
+=== RUN   TestUpgrade_AllowsRealSkillsDir
+=== PAUSE TestUpgrade_AllowsRealSkillsDir
+=== RUN   TestUpgrade_RefsChangedFiles
+=== PAUSE TestUpgrade_RefsChangedFiles
+=== RUN   TestUpgrade_CheckSkills_SourceRefsIOErrorNeverYieldsOK
+=== PAUSE TestUpgrade_CheckSkills_SourceRefsIOErrorNeverYieldsOK
+=== RUN   TestUpgrade_RegeneratesGovernanceOnSchemaDivergence
+=== PAUSE TestUpgrade_RegeneratesGovernanceOnSchemaDivergence
+=== RUN   TestUpgrade_AdaptersRegeneratedAfterSkillChange
+=== PAUSE TestUpgrade_AdaptersRegeneratedAfterSkillChange
+=== RUN   TestUpgrade_CodexRegeneratedAfterSkillChange
+=== PAUSE TestUpgrade_CodexRegeneratedAfterSkillChange
+=== RUN   TestUpgrade_PreservesCustomClaudeSettings
+=== PAUSE TestUpgrade_PreservesCustomClaudeSettings
+=== RUN   TestUpgrade_CrossVersionSchemaChange
+=== PAUSE TestUpgrade_CrossVersionSchemaChange
+=== RUN   TestUpgrade_PreservesAgentsLocal
+=== PAUSE TestUpgrade_PreservesAgentsLocal
+=== RUN   TestUpgrade_RecopiesT02Artifacts
+=== PAUSE TestUpgrade_RecopiesT02Artifacts
+=== RUN   TestUpgrade_RegeneratesAdaptersAndSupportFiles
+=== PAUSE TestUpgrade_RegeneratesAdaptersAndSupportFiles
+=== RUN   TestUpgrade_EmbeddedSource_NoSourceFlag
+=== PAUSE TestUpgrade_EmbeddedSource_NoSourceFlag
+=== RUN   TestUpgrade_EmbeddedSource_UpdatesSkills
+=== PAUSE TestUpgrade_EmbeddedSource_UpdatesSkills
+=== RUN   TestCheckSchemaDivergence_FallsBackToConstantWhenTemplateHoldsPlaceholder
+--- PASS: TestCheckSchemaDivergence_FallsBackToConstantWhenTemplateHoldsPlaceholder (0.00s)
+=== RUN   TestCheckSchemaDivergence_DetectsRealDivergenceAgainstConstant
+--- PASS: TestCheckSchemaDivergence_DetectsRealDivergenceAgainstConstant (0.00s)
+=== CONT  TestUpgrade_NoSkillsDir
+--- PASS: TestUpgrade_NoSkillsDir (0.00s)
+=== CONT  TestUpgrade_EmbeddedSource_UpdatesSkills
+=== CONT  TestUpgrade_RefusesExternalSkillsSymlinkByDefault
+=== CONT  TestUpgrade_UsesResolvedExecutableVersionInOutput
+--- PASS: TestUpgrade_RefusesExternalSkillsSymlinkByDefault (0.00s)
+=== CONT  TestUpgrade_AdaptersRegeneratedAfterSkillChange
+Verificando skills em: /project
+Fonte: /source
+ai-spec 1.2.3
+
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+--- PASS: TestUpgrade_UsesResolvedExecutableVersionInOutput (0.00s)
+=== CONT  TestUpgrade_EmbeddedSource_NoSourceFlag
+=== CONT  TestUpgrade_CodexRegeneratedAfterSkillChange
+Verificando skills em: /project
+Fonte: /source
+=== CONT  TestUpgrade_InstallsMissingSkillFromSource
+Verificando skills em: /project
+Fonte: /source
+ai-spec dev
+
+=== CONT  TestUpgrade_PopulatesSkillVersionsForLegacyManifest
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+ai-spec dev
+
+  OK                   review (1.4.0)
+
+Resumo: 1 atualizadas, 0 desatualizadas (0 refs divergentes), 0 ausentes
+  AUSENTE              review (fonte: 1.0.0)
+
+Resumo: 0 atualizadas, 0 desatualizadas (0 refs divergentes), 1 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+=== CONT  TestUpgrade_UpdatesManifestVersionAfterSuccessfulUpgrade
+=== CONT  TestUpgrade_ReconcilesSkillVersionsAfterSkillUpdate
+=== CONT  TestUpgrade_DoesNotRewriteManifestWhenVersionAndSkillsAreUnchanged
+--- PASS: TestUpgrade_AdaptersRegeneratedAfterSkillChange (0.00s)
+--- PASS: TestUpgrade_CodexRegeneratedAfterSkillChange (0.00s)
+--- PASS: TestUpgrade_InstallsMissingSkillFromSource (0.00s)
+=== CONT  TestUpgrade_RewritesManifestWhenVersionChangesWithoutSkillChanges
+=== CONT  TestUpgradeCheck_OmitsInformativeVersionLineWhenVersionsMatch
+--- PASS: TestUpgrade_PopulatesSkillVersionsForLegacyManifest (0.00s)
+=== CONT  TestUpgradeCheck_OmitsInformativeVersionLineForMalformedPrereleaseManifest
+--- PASS: TestUpgradeCheck_OmitsInformativeVersionLineForMalformedPrereleaseManifest (0.00s)
+=== CONT  TestUpgradeCheck_OmitsInformativeVersionLineForIncompleteSemverManifest
+--- PASS: TestUpgradeCheck_OmitsInformativeVersionLineForIncompleteSemverManifest (0.00s)
+=== CONT  TestUpgradeCheck_OmitsInformativeVersionLineForNonSemverManifest
+--- PASS: TestUpgradeCheck_OmitsInformativeVersionLineForNonSemverManifest (0.00s)
+=== CONT  TestUpgrade_CheckOnly_UpToDate
+Verificando skills em: /project
+Fonte: /source
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+ai-spec dev
+
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+  OK                   review (1.0.0)
+
+Resumo: 1 atualizadas, 0 desatualizadas (0 refs divergentes), 0 ausentes
+--- PASS: TestUpgrade_CheckOnly_UpToDate (0.00s)
+=== CONT  TestUpgrade_AllowsRealSkillsDir
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  OK                   review (1.0.0)
+
+Resumo: 1 atualizadas, 0 desatualizadas (0 refs divergentes), 0 ausentes
+--- PASS: TestUpgrade_AllowsRealSkillsDir (0.00s)
+=== CONT  TestUpgradeCheck_PrintsInformativeVersionLineWhenManifestDiffers
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+--- PASS: TestUpgrade_UpdatesManifestVersionAfterSuccessfulUpgrade (0.00s)
+=== CONT  TestUpgrade_FollowsExternalSkillsSymlinkWhenAllowed
+Verificando skills em: /project
+Fonte: /source
+ai-spec dev
+
+  AUSENTE              review (fonte: 1.0.0)
+
+Resumo: 0 atualizadas, 0 desatualizadas (0 refs divergentes), 1 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+--- PASS: TestUpgrade_FollowsExternalSkillsSymlinkWhenAllowed (0.00s)
+=== CONT  TestUpgrade_CheckOnly_Outdated
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+
+Execute sem --check para atualizar: ai-spec-harness upgrade /project --source /source
+--- PASS: TestUpgrade_CheckOnly_Outdated (0.00s)
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  DESATUALIZADA        review (fonte: 2.1.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+=== CONT  TestUpgrade_RegeneratesGovernanceOnSchemaDivergence
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+--- PASS: TestUpgrade_ReconcilesSkillVersionsAfterSkillUpdate (0.00s)
+=== CONT  TestUpgrade_PreservesAgentsLocal
+  OK                   review (1.0.0)
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  SCHEMA DIVERGENTE    AGENTS.md (projeto: 0.9.0, fonte: 1.0.0)
+
+Resumo: 1 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+-> Re-gerando governanca contextual apos atualizacao de skills...
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  OK                   review (1.0.0)
+  SCHEMA DIVERGENTE    AGENTS.md (projeto: 0.9.0, fonte: 1.0.0)
+
+Resumo: 1 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+-> Re-gerando governanca contextual apos atualizacao de skills...
+  OK                   review (1.4.0)
+
+Resumo: 1 atualizadas, 0 desatualizadas (0 refs divergentes), 0 ausentes
+--- PASS: TestUpgrade_DoesNotRewriteManifestWhenVersionAndSkillsAreUnchanged (0.00s)
+=== CONT  TestUpgrade_RegeneratesAdaptersAndSupportFiles
+Verificando skills em: /project
+Fonte: /source
+ai-spec dev
+
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+--- PASS: TestUpgrade_PreservesAgentsLocal (0.00s)
+=== CONT  TestUpgrade_CrossVersionSchemaChange
+--- PASS: TestUpgrade_RegeneratesGovernanceOnSchemaDivergence (0.00s)
+=== CONT  TestUpgrade_CheckSkills_SourceRefsIOErrorNeverYieldsOK
+Verificando skills em: /project
+Fonte: /source
+--- PASS: TestUpgrade_RegeneratesAdaptersAndSupportFiles (0.00s)
+=== CONT  TestUpgrade_PreservesCustomClaudeSettings
+--- PASS: TestUpgrade_CheckSkills_SourceRefsIOErrorNeverYieldsOK (0.00s)
+=== CONT  TestUpgrade_RecopiesT02Artifacts
+Verificando skills em: /project
+Fonte: /source
+Verificando skills em: /project
+Fonte: /source
+ai-spec dev
+
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+Verificando skills em: /project
+Fonte: /source
+ai-spec dev
+ai-spec dev
+
+
+  OK                   review (1.0.0)
+  SCHEMA DIVERGENTE    AGENTS.md (projeto: 0.1.0, fonte: 1.0.0)
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+    -> review atualizado
+-> Re-gerando adaptadores...
+ai-spec 0.12.0
+
+-> Re-gerando adaptadores...
+  OK                   review (1.4.0)
+
+Resumo: 1 atualizadas, 0 desatualizadas (0 refs divergentes), 0 ausentes
+--- PASS: TestUpgrade_PreservesCustomClaudeSettings (0.00s)
+=== CONT  TestUpgrade_RefsChangedFiles
+--- PASS: TestUpgrade_RefsChangedFiles (0.00s)
+
+Resumo: 1 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+-> Re-gerando governanca contextual apos atualizacao de skills...
+--- PASS: TestUpgrade_RecopiesT02Artifacts (0.00s)
+--- PASS: TestUpgrade_RewritesManifestWhenVersionChangesWithoutSkillChanges (0.00s)
+--- PASS: TestUpgradeCheck_OmitsInformativeVersionLineWhenVersionsMatch (0.00s)
+--- PASS: TestUpgrade_CrossVersionSchemaChange (0.00s)
+--- PASS: TestUpgradeCheck_PrintsInformativeVersionLineWhenManifestDiffers (0.00s)
+Verificando skills em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgrade_EmbeddedSource_NoSourceFlag947468644/001
+Fonte: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-4236994918
+ai-spec dev
+
+Verificando skills em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgrade_EmbeddedSource_UpdatesSkills2416383831/001
+Fonte: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-3000012303
+ai-spec dev
+
+  AUSENTE              agent-governance (fonte: 2.0.0)
+  AUSENTE              analyze-project (fonte: 2.0.0)
+  AUSENTE              bugfix (fonte: 2.0.0)
+  AUSENTE              confluence-changelog-publisher (fonte: 1.0.0)
+  AUSENTE              create-prd (fonte: 2.0.0)
+  AUSENTE              create-tasks (fonte: 2.0.0)
+  AUSENTE              create-technical-specification (fonte: 2.0.0)
+  AUSENTE              design-patterns-mandatory (fonte: 1.1.0)
+  AUSENTE              domain-modeling-production (fonte: 2.0.0)
+  AUSENTE              dotnet-csharp-implementation (fonte: 1.4.0)
+  AUSENTE              execute-all-tasks (fonte: 2.0.0)
+  AUSENTE              execute-task (fonte: 2.0.0)
+  AUSENTE              finalize-changelog-readme-push (fonte: 1.1.0)
+  AUSENTE              github-diff-changelog-publisher (fonte: 1.0.0)
+  AUSENTE              github-pr-comment-triage (fonte: 1.0.0)
+  AUSENTE              github-release-publication-flow (fonte: 1.0.0)
+  AUSENTE              go-implementation (fonte: 1.4.0)
+  AUSENTE              jira-tasks (fonte: 1.0.0)
+  AUSENTE              node-implementation (fonte: 1.4.0)
+  AUSENTE              object-calisthenics-go (fonte: 1.1.0)
+  AUSENTE              otel-grafana-dashboards (fonte: 1.0.0)
+  AUSENTE              postman-collection-generator (fonte: 1.0.0)
+  AUSENTE              prompt-enricher (fonte: 1.0.0)
+  AUSENTE              pull-request (fonte: 1.0.0)
+  AUSENTE              python-implementation (fonte: 1.4.0)
+  AUSENTE              refactor (fonte: 1.2.0)
+  DESATUALIZADA        review (fonte: 1.4.0, alvo: 0.0.1)
+  AUSENTE              semantic-commit (fonte: 1.1.0)
+  AUSENTE              us-to-prd (fonte: 1.0.1)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 28 ausentes
+
+Execute sem --check para atualizar: ai-spec-harness upgrade /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgrade_EmbeddedSource_NoSourceFlag947468644/001 --source /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-4236994918
+  AUSENTE              agent-governance (fonte: 2.0.0)
+  AUSENTE              analyze-project (fonte: 2.0.0)
+  AUSENTE              bugfix (fonte: 2.0.0)
+  AUSENTE              confluence-changelog-publisher (fonte: 1.0.0)
+  AUSENTE              create-prd (fonte: 2.0.0)
+  AUSENTE              create-tasks (fonte: 2.0.0)
+  AUSENTE              create-technical-specification (fonte: 2.0.0)
+  AUSENTE              design-patterns-mandatory (fonte: 1.1.0)
+  AUSENTE              domain-modeling-production (fonte: 2.0.0)
+  AUSENTE              dotnet-csharp-implementation (fonte: 1.4.0)
+  AUSENTE              execute-all-tasks (fonte: 2.0.0)
+  AUSENTE              execute-task (fonte: 2.0.0)
+  AUSENTE              finalize-changelog-readme-push (fonte: 1.1.0)
+  AUSENTE              github-diff-changelog-publisher (fonte: 1.0.0)
+  AUSENTE              github-pr-comment-triage (fonte: 1.0.0)
+  AUSENTE              github-release-publication-flow (fonte: 1.0.0)
+  AUSENTE              go-implementation (fonte: 1.4.0)
+  AUSENTE              jira-tasks (fonte: 1.0.0)
+  AUSENTE              node-implementation (fonte: 1.4.0)
+  AUSENTE              object-calisthenics-go (fonte: 1.1.0)
+  AUSENTE              otel-grafana-dashboards (fonte: 1.0.0)
+  AUSENTE              postman-collection-generator (fonte: 1.0.0)
+  AUSENTE              prompt-enricher (fonte: 1.0.0)
+  AUSENTE              pull-request (fonte: 1.0.0)
+  AUSENTE              python-implementation (fonte: 1.4.0)
+  AUSENTE              refactor (fonte: 1.2.0)
+  DESATUALIZADA        review (fonte: 1.4.0, alvo: 0.0.1)
+  AUSENTE              semantic-commit (fonte: 1.1.0)
+  AUSENTE              us-to-prd (fonte: 1.0.1)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 28 ausentes
+    -> agent-governance atualizado
+    -> analyze-project atualizado
+    -> bugfix atualizado
+    -> confluence-changelog-publisher atualizado
+    -> create-prd atualizado
+    -> create-tasks atualizado
+    -> create-technical-specification atualizado
+    -> design-patterns-mandatory atualizado
+    -> domain-modeling-production atualizado
+--- PASS: TestUpgrade_EmbeddedSource_NoSourceFlag (0.07s)
+    -> dotnet-csharp-implementation atualizado
+    -> execute-all-tasks atualizado
+    -> execute-task atualizado
+    -> finalize-changelog-readme-push atualizado
+    -> github-diff-changelog-publisher atualizado
+    -> github-pr-comment-triage atualizado
+    -> github-release-publication-flow atualizado
+    -> go-implementation atualizado
+    -> jira-tasks atualizado
+    -> node-implementation atualizado
+    -> object-calisthenics-go atualizado
+    -> otel-grafana-dashboards atualizado
+    -> postman-collection-generator atualizado
+    -> prompt-enricher atualizado
+    -> pull-request atualizado
+    -> python-implementation atualizado
+    -> refactor atualizado
+    -> review atualizado
+    -> semantic-commit atualizado
+    -> us-to-prd atualizado
+-> Re-gerando adaptadores...
+--- PASS: TestUpgrade_EmbeddedSource_UpdatesSkills (0.13s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/upgrade	0.202s

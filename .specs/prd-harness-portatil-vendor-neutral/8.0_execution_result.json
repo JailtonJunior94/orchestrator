@@ -1,0 +1,74 @@
+{
+  "schema_version": 2,
+  "run_id": "task-8.0-harness-portatil-vendor-neutral-2026-09-18",
+  "task_id": "8.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a8b77217cd713b4ef629d324e63934e05e589864",
+  "patch_sha256": "4351c28083cb8793873a36fdd492fb5e8fba677ffdb9272df45fa8fe34db9b5c",
+  "patch_ref": "evidence/task-8.0-harness-portatil-vendor-neutral/8.0.patch",
+  "final_state_sha256": "062e3ae2ee9b1802ee5471e2d58f82cf2922fbebb972b3ef5da6a670203d429a",
+  "coverage_regression": false,
+  "review_verdict": "approved",
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test ./...",
+      "exit_code": 0,
+      "output_sha256": "d4226b9f41f446cf4ee1c5913b3bdd231251bdbd4ae7a3d487fc038c35d23a7c"
+    },
+    {
+      "command": "go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/runtime/memory/durable/... ./cmd/ai_spec_harness/...",
+      "exit_code": 0,
+      "output_sha256": "87bd2052dab91aa03a3b9099ea5e265795a01b22161f0e36d693bcd9976e3961"
+    },
+    {
+      "command": "golangci-lint run --config .golangci.yml",
+      "exit_code": 0,
+      "output_sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "batch-failure-leaves-tree-byte-identical",
+      "evidence_ref": "evidence/task-8.0-harness-portatil-vendor-neutral/test.log"
+    },
+    {
+      "id": "failure-varied-across-first-middle-last-file",
+      "evidence_ref": "evidence/task-8.0-harness-portatil-vendor-neutral/test.log"
+    },
+    {
+      "id": "no-leftover-temp-file-after-failure",
+      "evidence_ref": "evidence/task-8.0-harness-portatil-vendor-neutral/test.log"
+    },
+    {
+      "id": "unmanaged-file-never-touched-or-removed",
+      "evidence_ref": "evidence/task-8.0-harness-portatil-vendor-neutral/test.log"
+    },
+    {
+      "id": "conflict-aborts-batch-and-names-canonical-origin",
+      "evidence_ref": "evidence/task-8.0-harness-portatil-vendor-neutral/integration-test.log"
+    },
+    {
+      "id": "sync-deterministic-no-existing-flag-or-output-changed",
+      "evidence_ref": "evidence/task-8.0-harness-portatil-vendor-neutral/integration-test.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-8.0-harness-portatil-vendor-neutral/8.0.patch",
+    "evidence/task-8.0-harness-portatil-vendor-neutral/build.log",
+    "evidence/task-8.0-harness-portatil-vendor-neutral/vet.log",
+    "evidence/task-8.0-harness-portatil-vendor-neutral/test.log",
+    "evidence/task-8.0-harness-portatil-vendor-neutral/integration-test.log",
+    "evidence/task-8.0-harness-portatil-vendor-neutral/lint.log"
+  ]
+}

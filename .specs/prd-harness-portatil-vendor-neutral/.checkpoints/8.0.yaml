@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-portatil-vendor-neutral/8.0_execution_report.md
+summary: Transacao em lote (Command+Memento+Unit-of-Work) com categoria conflito de precedencia explicita, RemoveAll+CopyDir reversivel, abort-on-conflict com --overwrite-conflicts, e aliases init/sync.
+timestamp: 2026-09-18T19:10:37Z

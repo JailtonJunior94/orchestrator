@@ -1,0 +1,3 @@
+bash scripts/test-sdd-evals.sh
+escopo declarado ausente: /Users/jailtonjunior/Git/orchestrator/.specs/prd-sdd-robusto — bloco de estado SDD ignorado (defina SDD_EVALS_PRD_DIR para cobrar outro diretorio)
+sdd evals: {"accepted":1,"escape_rate":0.0,"false_negative_rate":0.0,"false_positive_rate":0.0,"fixtures":21,"latency_ms":{"max":367.696,"mean":30.022,"total":630.467},"quality_rate":1.0,"rejected":20}

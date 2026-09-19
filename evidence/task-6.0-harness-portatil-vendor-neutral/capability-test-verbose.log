@@ -1,0 +1,32 @@
+=== RUN   TestCapabilityMatrix_GateFailsOnEmptyMatrix
+--- PASS: TestCapabilityMatrix_GateFailsOnEmptyMatrix (0.00s)
+=== RUN   TestCapabilityMatrix_GateFailsOnSupportedCellWithoutTest
+--- PASS: TestCapabilityMatrix_GateFailsOnSupportedCellWithoutTest (0.00s)
+=== RUN   TestCapabilityMatrix_GatePassesWhenDispatchProven
+--- PASS: TestCapabilityMatrix_GatePassesWhenDispatchProven (0.00s)
+=== RUN   TestCapabilityMatrix_GateIgnoresUnsupportedCells
+--- PASS: TestCapabilityMatrix_GateIgnoresUnsupportedCells (0.00s)
+=== RUN   TestCapabilityMatrix_RealMatrixEvidenceGateIsClean
+--- PASS: TestCapabilityMatrix_RealMatrixEvidenceGateIsClean (0.00s)
+=== RUN   TestCapabilityMatrix_GoldenGateDetectsJSONOnlyDrift
+--- PASS: TestCapabilityMatrix_GoldenGateDetectsJSONOnlyDrift (0.00s)
+=== RUN   TestCapabilityMatrix_GoldenGateDetectsMarkdownOnlyDrift
+--- PASS: TestCapabilityMatrix_GoldenGateDetectsMarkdownOnlyDrift (0.00s)
+=== RUN   TestCapabilityMatrix_GoldenGateApprovesExactMatch
+--- PASS: TestCapabilityMatrix_GoldenGateApprovesExactMatch (0.00s)
+=== RUN   TestCapabilityMatrix_GoldenJSONAndMarkdownFromSameGeneration
+=== RUN   TestCapabilityMatrix_GoldenJSONAndMarkdownFromSameGeneration/json
+=== RUN   TestCapabilityMatrix_GoldenJSONAndMarkdownFromSameGeneration/markdown
+--- PASS: TestCapabilityMatrix_GoldenJSONAndMarkdownFromSameGeneration (0.00s)
+    --- PASS: TestCapabilityMatrix_GoldenJSONAndMarkdownFromSameGeneration/json (0.00s)
+    --- PASS: TestCapabilityMatrix_GoldenJSONAndMarkdownFromSameGeneration/markdown (0.00s)
+=== RUN   TestCapabilityMatrix_DeterministicGeneration
+--- PASS: TestCapabilityMatrix_DeterministicGeneration (0.00s)
+=== RUN   TestCapabilityMatrix_NoSupportedCellWithoutResolvedTest
+--- PASS: TestCapabilityMatrix_NoSupportedCellWithoutResolvedTest (0.00s)
+=== RUN   TestCapabilityMatrix_UnsupportedCellsCarryReason
+--- PASS: TestCapabilityMatrix_UnsupportedCellsCarryReason (0.00s)
+=== RUN   TestCapabilityMatrix_UnknownCellsAreJustified
+--- PASS: TestCapabilityMatrix_UnknownCellsAreJustified (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/capability	0.117s

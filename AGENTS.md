@@ -1,32 +1,32 @@
 # Regras para Agentes de IA
 
-Este diretório centraliza regras para uso com agentes de IA em tarefas reais de análise, alteração e validação de código.
-
-## Objetivo
-
-Use estas instruções para manter consistência, segurança e qualidade ao trabalhar com código, configuração, validação e evolução de sistemas.
+`ai-spec-harness` e uma CLI em Go que instala, valida, inspeciona e atualiza governanca operacional
+para ferramentas de IA (Claude Code, Codex, GitHub Copilot, OpenCode) em repositorios de software.
+O modulo Go chama-se `ai-spec-harness`; o binario publicado chama-se **`ai-spec`**. Este arquivo e a
+fonte canonica para todos os agentes; `CLAUDE.md`, `CODEX.md` e `COPILOT.md` sao suplementos.
 
 ## Modo de trabalho
 
 1. Entender o contexto antes de editar qualquer arquivo.
-2. Preferir a menor mudança segura que resolva a causa raiz.
-3. Preservar arquitetura, convenções e fronteiras existentes.
-4. Não introduzir abstrações ou dependências sem demanda concreta.
-5. Atualizar testes quando houver mudança de comportamento.
-6. Rodar validações proporcionais à mudança.
-7. Registrar bloqueios e suposições quando o contexto estiver incompleto.
-8. Evitar reescritas amplas e overengineering; risco de regressão é restrição principal.
+2. Preferir a menor mudanca segura que resolva a causa raiz.
+3. Preservar arquitetura, convencoes e fronteiras existentes.
+4. Nao introduzir abstracoes ou dependencias sem demanda concreta.
+5. Atualizar testes quando houver mudanca de comportamento.
+6. Rodar validacoes proporcionais a mudanca.
+7. Registrar bloqueios e suposicoes quando o contexto estiver incompleto.
+8. Evitar reescritas amplas e overengineering; risco de regressao e restricao principal.
 
 ## Contrato de carga base
 
-Toda skill que altera código deve carregar, como primeiro passo, a seguinte base obrigatória — essa instrução é reforçada em cada SKILL.md como medida defensiva:
+Toda skill que altera codigo deve carregar, como primeiro passo, a seguinte base obrigatoria — essa
+instrucao e reforcada em cada SKILL.md como medida defensiva:
 
 1. Ler este `AGENTS.md`.
 2. Ler `.agents/skills/agent-governance/SKILL.md`.
 
-Essa base define governança para análise, alteração e validação, carregamento sob demanda de regras de DDD, erros, segurança e testes, e critérios mínimos de preservação arquitetural, risco e validação proporcional.
-
-Skills individuais devem declarar apenas cargas adicionais específicas ao seu contexto.
+Essa base define governanca para analise, alteracao e validacao, carregamento sob demanda de regras
+de DDD, erros, seguranca e testes, e criterios minimos de preservacao arquitetural, risco e validacao
+proporcional. Skills individuais declaram apenas cargas adicionais especificas ao seu contexto.
 
 ## Regras por Linguagem
 
@@ -36,264 +36,171 @@ Skills individuais devem declarar apenas cargas adicionais específicas ao seu c
 | Node/TypeScript | `.agents/skills/node-implementation/SKILL.md` |
 | Python | `.agents/skills/python-implementation/SKILL.md` |
 | .NET/C# | `.agents/skills/dotnet-csharp-implementation/SKILL.md` |
-| Revisão/refatoração Go (OC) | `.agents/skills/object-calisthenics-go/SKILL.md` |
-| Correção de bugs | `.agents/skills/bugfix/SKILL.md` |
+| Revisao/refatoracao Go (OC) | `.agents/skills/object-calisthenics-go/SKILL.md` |
+| Correcao de bugs | `.agents/skills/bugfix/SKILL.md` |
 
-## Invariantes de Governança (Obrigatórias)
+## Invariantes de Governanca (obrigatorias)
 
-Para garantir a confiabilidade em qualquer projeto instrumentado por este harness, as seguintes regras são **mandatórias** e não admitem desvios:
+1. **Protocolo PRD-First:** toda alteracao de comportamento ou nova funcionalidade inicia com criacao ou atualizacao de um PRD (`create-prd`). Proibido implementar codigo sem requisito funcional (RF) mapeado.
+2. **Ancora de confianca (spec-hash):** a integridade Requisito -> Arquitetura -> Implementacao e garantida por SHA-256. Ao editar um PRD, rodar `ai-spec sync-spec-hash`. `execute-task` e `execute-all-tasks` validam drift via `ai-spec check-spec-drift` e interrompem em caso de inconsistencia.
+3. **Isolamento de contexto:** operar com o minimo de contexto necessario. Subagentes sao obrigatorios para tarefas de execucao.
+4. **Evidencia obrigatoria:** tarefa so e `done` apos persistir `execution_report.md` com evidencias fisicas (logs, testes, outputs) da validacao.
 
-1. **Protocolo PRD-First:** Toda e qualquer alteração de comportamento ou nova funcionalidade deve obrigatoriamente iniciar com a criação ou atualização de um PRD (`create-prd`). É proibido implementar código sem um requisito funcional (RF) mapeado.
-2. **Âncora de Confiança (Spec-Hash):** A integridade entre Requisito -> Arquitetura -> Implementação é garantida por hashes SHA-256. 
-   - Ao editar um PRD, você deve sincronizar os hashes rodando `ai-spec sync-spec-hash`.
-   - As skills de execução (`execute-task`, `execute-all-tasks`) devem validar o drift via `ai-spec check-spec-drift` e interromper a execução em caso de inconsistência.
-3. **Isolamento de Contexto:** Agentes devem operar com o mínimo de contexto necessário. O uso de subagentes para tarefas de execução é obrigatório para evitar a poluição da sessão principal e minimizar alucinações.
-4. **Evidência Obrigatória:** Uma tarefa só é considerada concluída (`done`) após a persistência de um relatório de execução (`execution_report.md`) que contenha evidências físicas (logs, testes, outputs) da validação.
-
-## Governança por Ferramenta
+## Governanca por Ferramenta
 
 | Arquivo | Ferramenta |
 |---------|-----------|
-| `CLAUDE.md` | Claude Code (hooks, rules, agents) |
-| `CODEX.md` | Codex (config.toml, instrução de sessão) |
-| `COPILOT.md` | GitHub Copilot (Chat e gh copilot CLI); contexto via `.github/copilot-instructions.md` |
-| — | OpenCode carrega `AGENTS.md` e `.agents/skills/` nativamente; nenhum arquivo dedicado (RF-13) |
+| `CLAUDE.md` | Claude Code — importa este arquivo via `@AGENTS.md`; hooks, rules, agents em `.claude/` |
+| `CODEX.md` | Codex — `.codex/config.toml`, instrucao de sessao |
+| `COPILOT.md` | GitHub Copilot — contexto via `.github/copilot-instructions.md` |
+| — | OpenCode carrega `AGENTS.md` e `.agents/skills/` nativamente; plugin de governanca em `.opencode/plugin/` (RF-13) |
 
-Esses arquivos são suplementares a este `AGENTS.md`. A fonte de verdade dos fluxos procedurais permanece em `.agents/skills/`.
-
-## Referências
-
-Cada skill lista suas próprias referências em `references/` com gatilhos de carregamento no respectivo `SKILL.md`. Não duplicar a listagem aqui — consultar o SKILL.md da skill ativa para saber quais referências carregar e em que condição.
-
-## Validação
-
-Antes de concluir uma alteração, seguir Etapa 4 de `.agents/skills/agent-governance/SKILL.md`.
-
-## Upgrades de Skills Externas
-
-Toda atualização de hash em `skills-lock.json` deve ser acompanhada de um registro
-de decisão salvo em `audit/`. Use o template em `.specs/templates/skill-upgrade-decision.md`.
-
-Campos obrigatórios: skill, versão anterior, versão nova, motivador, critério de aceitação, data.
-
-Sem registro de motivador: upgrade não aprovado para merge.
+A fonte de verdade dos fluxos procedurais permanece em `.agents/skills/`. Cada skill lista suas
+`references/` com gatilhos de carregamento no proprio `SKILL.md`; nao duplicar aqui.
 
 ## Stack
 
-- **Linguagem:** Go 1.26+
-- **CLI framework:** spf13/cobra
-- **Testes:** go test (unit com FakeFileSystem, integration com build tag `integration`)
-- **Release:** GoReleaser + GitHub Actions + Homebrew Cask
-- **Dependencias diretas:** cobra, jsonschema/v6
+- **Linguagem:** Go 1.27 (`go.mod`: `go 1.27.1`)
+- **CLI:** spf13/cobra + pflag
+- **Dependencias diretas:** coder/acp-go-sdk (runtime ACP), pkoukk/tiktoken-go, santhosh-tekuri/jsonschema/v6, gopkg.in/yaml.v3, stretchr/testify (testes)
+- **Testes:** `go test` — unit com FakeFileSystem, integration com build tag `integration`
+- **Release:** GoReleaser + GitHub Actions + Homebrew Formula (`brews:` em `.goreleaser.yaml`)
 
 ## Comandos
 
 ```bash
 make test            # testes unitarios
-make integration     # testes de integracao
+make integration     # testes de integracao (build tag integration)
 make lint            # golangci-lint
-make build           # compila binario
 make vet             # go vet
-make coverage        # relatorio de cobertura
+make build           # compila ./ai-spec
+make coverage        # cobertura total (gate 75%) + por pacote critico (gate 70%)
 make bench           # benchmarks
 ```
 
-### Instalacao e Verificacao (Fundacao Portatil)
+Gates que um agente deve rodar quando tocar a area correspondente:
+
+| Area tocada | Gate |
+|-------------|------|
+| `.agents/skills/`, `.agents/lib/`, `.agents/hooks/` | `make check-skills-sync check-hooks-sync` (espelhos em `.claude/`, `.github/`, `internal/embedded/`) |
+| `.agents/scripts/` (validadores) | `make check-scripts-sync test-validators` |
+| `.agents/policies/` | `make check-policies-sync` (espelhos em `.claude/rules/` e equivalentes) |
+| `.claude/hooks/`, `.agents/hooks/` | `make test-hooks` |
+| `prd.md`, `techspec.md`, `tasks.md` de PRD sob SDD | `make check-spec-paths` |
+| Mocks (`mockery.yml`) | `make check-mocks` |
+
+Comandos `ai-spec` do fluxo SDD (todos registrados em `cmd/ai_spec_harness/root.go`):
 
 ```bash
-# Instalar em um projeto (auto-deteccao de agentes)
-ai-spec-harness install .
-
-# Instalar selecionando ferramentas manualmente
-ai-spec-harness install . --tools claude,opencode
-
-# Instalar globalmente em ~/.aispec (escopo global, opt-in)
-ai-spec-harness install --global
-
-# Verificar estado dos assets instalados (current/missing/drifted)
-ai-spec-harness verify .
-ai-spec-harness verify --global
-
-# Instalar em modo copy (sem symlinks)
-ai-spec-harness install . --mode copy
-
-# Simular sem executar
-ai-spec-harness install . --dry-run
+ai-spec install . [--tools claude,codex,copilot,opencode] [--global] [--mode copy] [--dry-run]
+ai-spec verify . | ai-spec verify --global      # current/missing/drifted por skill/agente
+ai-spec sync-spec-hash | ai-spec check-spec-drift | ai-spec validate-sdd
+ai-spec task-loop --tool <claude|codex|copilot|opencode> --runtime acp .specs/prd-X
+ai-spec seal-evidence .specs/prd-X/result.json --prd-dir .specs/prd-X [--verify]
+ai-spec telemetry report | ai-spec memory status | ai-spec lint .
 ```
 
 ## Convencoes
 
 | Aspecto | Regra |
 |---------|-------|
-| Idioma (codigo) | **Ingles obrigatorio** em todo o codigo-fonte: identificadores, pacotes, mensagens de erro, nomes de teste e de arquivo. Ver `.claude/rules/code-style.md` (R-STYLE-001, hard) |
-| Comentarios | **Zero comentarios no codigo** (linha, bloco e doc-comments). Regra hard, inegociavel. Ver `.claude/rules/code-style.md` |
+| Idioma (codigo) | **Ingles obrigatorio** em identificadores, pacotes, mensagens de erro, nomes de teste e de arquivo. Ver `.claude/rules/code-style.md` (R-STYLE-001, hard) |
+| Comentarios | **Zero comentarios no codigo** (linha, bloco e doc-comments). Regra hard, inegociavel |
 | Idioma (docs) | PT-BR em artefatos `.md`, relatorios, ADRs, PRDs, changelog |
 | Commits | Conventional Commits: tipo em ingles, corpo em portugues |
-| Testes | table-driven; FakeFileSystem (unit); t.TempDir() (integration) |
+| Testes | table-driven; FakeFileSystem (unit); `t.TempDir()` (integration) |
 | DI | injetar via construtor; zero estado global |
-| Erros | `fmt.Errorf("context: %w", err)` — texto em ingles, sem comentario |
-| Pacotes | um por responsabilidade em `internal/` |
-| Interfaces | definir no pacote consumidor quando possivel |
+| Erros | `fmt.Errorf("context: %w", err)` — texto em ingles |
+| Pacotes | um por responsabilidade em `internal/`; interfaces no pacote consumidor |
 
 ## Estrutura
 
 ```
-cmd/ai_spec_harness/
-internal/
-  fs/
-  output/
-  config/
-  skills/
-  install/
-  upgrade/
-  detect/
-  metrics/
-  parity/
-  specdrift/
-  evidence/
-  taskloop/
-testdata/
-.agents/skills/
-.agents/scripts/   # validadores de evidencia canonicos (tool-neutros)
-.agents/hooks/     # hooks do orquestrador (canonico)
-.agents/lib/       # shell libs vendoradas
-internal/embedded/
+main.go, cmd/ai_spec_harness/   comandos Cobra, um arquivo por subcomando
+internal/                        um pacote por responsabilidade; pontos de entrada:
+  fs/, output/                   FakeFileSystem e Printer — injetados em todo Service
+  config/                        cascata de configuracao (resolver.go)
+  install/, uninstall/, upgrade/, detect/, contextgen/ (gera AGENTS.md/CLAUDE.md alvo)
+  embedded/assets/               assets distribuidos via go:embed (ADR-001)
+  runtime/                       ACP runner, hooks Go, memory, mcpserver, events
+  taskloop/, sdd/, specdrift/, evidence/, traceability/, approval/, parity/, lint/, telemetry/
+.agents/skills|scripts|hooks|lib fonte canonica (espelhada em .claude/, .github/, internal/embedded/)
+.specs/                          PRDs, techspecs, tasks; .specs/adr/ ADRs 009+
+docs/                            guias; docs/adr/ ADRs 000-008
+testdata/, tests/, evals/        fixtures, snapshots, integracao, evals SDD
 ```
 
-### Validadores de evidencia (paridade cross-CLI)
+## Validadores de evidencia
 
-Os validadores canonicos vivem em `.agents/scripts/` (tool-neutros) e sao espelhados para
-`.claude/scripts/` e `internal/embedded/assets/{.claude,.agents}/scripts/` via `scripts/sync-skills.sh`
-(gate: `make check-scripts-sync`). O instalador copia-os para `.agents/scripts/` do projeto destino
-**sempre** (independente dos tools), garantindo que projetos so-Codex/Copilot/OpenCode tenham os
-mesmos gates que Claude. As skills resolvem em cascata `.agents/scripts/` -> `.claude/scripts/` -> `scripts/`.
-
-- `validate-task-evidence.sh` — gate anti-falso-positivo (DoD + cada criterio de aceite + prova forte de testes).
-- `validate-bugfix-evidence.sh` — rastreabilidade de origem default-on (`--no-rf` para opt-out).
-- `validate-refactor-evidence.sh` — evidencia de nao-regressao.
-- `validate-review-evidence.sh` — evidencia do modo `--auto-review` (veredito + severidade).
-
-### Gate de referencias de caminho
-
-`make check-spec-paths` falha quando um artefato de contrato (`prd.md`, `techspec.md`, `tasks.md`)
-de um PRD **sob gestao SDD** cita um caminho que nao existe no repositorio.
-
-O gate nasceu de um defeito real: a techspec de `prd-sdd-robusto` declarou por meses dois pacotes
-que nunca existiram, e a divergencia sobreviveu a auditoria completa dos requisitos porque
-`validate-sdd` compara hashes e vinculos RF->tarefa, nao a prosa que descreve componentes.
-
-O escopo e deliberadamente restrito a PRDs com `sdd-state.json`: specs historicas citam caminhos ja
-removidos e arquivos de projetos externos analisados na epoca, e reescreve-las seria errado. Um PRD
-entra no escopo quando entra em gestao SDD.
-
-Notacao de simbolo (`arquivo.go::Func`), pacote Go (`internal/fs.FileSystem`), comando, placeholder
-e caminho opcional por decisao de arquitetura nao sao tratados como referencia de caminho.
-
-### Selo de evidencia (RF-14)
-
-A prova de fechamento e verificada contra a arvore de trabalho viva, que deixa de existir quando o
-trabalho e commitado — por isso ela nao e re-auditavel depois. `ai-spec seal-evidence` fecha essa
-lacuna gravando `commit_sha` e `commit_patch_sha256` (o patch recomputado em `base..commit` com as
-mesmas exclusoes do fechamento):
-
-```bash
-ai-spec seal-evidence .specs/prd-x/result.json --prd-dir .specs/prd-x   # selar apos commitar
-ai-spec seal-evidence .specs/prd-x/result.json --prd-dir .specs/prd-x --verify
-```
-
-O selo exige que o commit descenda da base registrada e recusa reselagem. A verificacao nao toca a
-arvore de trabalho, entao permanece valida indefinidamente. Limite: o selo torna a evidencia
-imutavel e reverificavel dali em diante, mas nao prova que o commit e byte-identico a arvore do
-fechamento — essa arvore ja nao existe quando o selo e aplicado.
-
-O gate de criterios de aceite e **fail-closed desde a 0.31.0**: um relatorio cuja task file nao seja
-resolvivel pelo campo `Arquivo:`, ou cuja task nao declare secao de criterios, falha. A janela de
-compatibilidade do NFR-01 concedia warning-only por duas versoes menores a partir de `0.29.0`, e
-cobriu `0.29` e `0.30`.
-
-`AI_SDD_STRICT_EVIDENCE=0` reabre o comportamento legado apenas para migracao. O opt-out e ruidoso
-de proposito: BUG-127 mostrou que o problema nunca foi o escape existir, e sim ele ser silencioso —
-um gate que se desliga sozinho e indistinguivel de um gate que aprovou.
-
-As expressoes regulares desses validadores nao podem usar classes de bracket com caracteres
-multibyte (`Crit[eé]rios`): em `awk` byte-oriented (mawk, padrao nos runners Linux) elas nunca
-casam e o gate se desliga silenciosamente. Usar alternacao (`Crit(e|é)rios`). O caso "a2" de
-`scripts/test-validators.sh` trava essa invariante executando o gate sob `LC_ALL=C`.
-
-### Metadado `category` no frontmatter
-
-Cada SKILL.md pode declarar `category: governance|language|processual`. `governance`/`language` sao
-auto-carregadas em runtime; `processual` (ou ausente) e declarada por tarefa. `create-tasks` deriva a
-lista de skills auto-carregadas desse metadado, nao de prosa hardcoded.
+- Canonicos em `.agents/scripts/`, espelhados em `.claude/scripts/` e `internal/embedded/assets/` via `scripts/sync-skills.sh`. Skills resolvem em cascata `.agents/scripts/` -> `.claude/scripts/` -> `scripts/`.
+- `validate-task-evidence.sh` (DoD + criterios de aceite + prova de testes), `validate-bugfix-evidence.sh` (`--no-rf` para opt-out), `validate-refactor-evidence.sh`, `validate-review-evidence.sh`.
+- Gate de criterios de aceite e **fail-closed** desde 0.31.0. `AI_SDD_STRICT_EVIDENCE=0` reabre o legado apenas para migracao e e ruidoso de proposito.
+- Regex nos validadores: nunca `Crit[eé]rios` (falha silenciosa em mawk); usar `Crit(e|é)rios`. `scripts/test-validators.sh` caso "a2" trava isso sob `LC_ALL=C`.
+- `SKILL.md` pode declarar `category: governance|language|processual`; `governance`/`language` sao auto-carregadas.
+- Racional, historico (BUG-127, `check-spec-paths`) e selo de evidencia: [`docs/evidence-gates.md`](docs/evidence-gates.md).
 
 ## CI
 
-- **test.yml:** unit + integration + golangci-lint em ubuntu-24.04 e macos-15
-- **release.yml:** semver-next automatico, GoReleaser multi-plataforma
-- **release-dry-run.yml:** validacao de release sem side-effects
-- **Cobertura:** threshold minimo de 75%; gerar local: `make coverage`
-
-## Padroes Importantes
-
-- `internal/fs/fake.go` — FakeFileSystem em testes unitarios, nunca OS real
-- `internal/output.Printer` — injetar em todo Service; `io.Discard` em testes
-- Build tag `integration` para testes que tocam o filesystem real
-- Skills externas rastreadas em `skills-lock.json` com hash SHA-256
-- Harness auto-instalado neste repo (self-dogfooding)
-
-## Restrições
-
-Nao inventar contexto ausente. Nao assumir versao sem verificar. Nao alterar comportamento publico sem registrar. Adaptar exemplos ao contexto real.
+| Workflow | Gatilho | Conteudo |
+|----------|---------|----------|
+| `test.yml` | push/PR | jobs `unit` + `lint` (matriz ubuntu-24.04, macos-15), `integration`, `sdd-evals`; cobertura 75% total e 70% por pacote critico (`scripts/check-package-coverage.sh`) |
+| `codeql.yml` | push main / PR | analise CodeQL |
+| `release.yml` | apos `Tests` concluir em `main` | semver-next automatico, GoReleaser multi-plataforma |
+| `release-dry-run.yml` | manual (`workflow_dispatch`) | validacao de release sem side-effects |
+| `acp-live.yml`, `hooks-live.yml` | nightly / manual | testes ao vivo contra CLIs reais; nao sao gate de merge |
+| `test-setup-action.yml` | PR em `.github/actions/setup-ai-spec/` | smoke da action |
 
 ## Configuracao
 
-O harness usa hierarquia de config em cascata com precedência determinística:
+Precedencia deterministica: `flags CLI > workspace (.aispec/config.yaml > .claude/config.yaml > .agents/config.yaml, upward-walk) > global (~/.aispec/config.yaml) > defaults`.
+Chaves: `timeout`, `max_retries`, `retry_backoff_multiplier`, `concurrent`, `batch_size`, `default_tool`, `durable_memory_enabled`. Zero-value preserva o comportamento F1. Ver [`docs/config-hierarchy.md`](docs/config-hierarchy.md).
 
-```
-flags CLI  >  workspace (.claude/config.yaml)  >  global (~/.aispec/config.yaml)  >  defaults built-in
-```
+## Padroes Importantes
 
-- **Config global:** `~/.aispec/config.yaml` — defaults reutilizaveis entre projetos (opt-in).
-- **Config de projeto:** descoberta por upward-walk a partir do CWD; candidatos: `.aispec/config.yaml` > `.claude/config.yaml` > `.agents/config.yaml`.
-- **Compatibilidade:** sem config global e a partir da raiz do repo, comportamento identico ao atual (F1, zero regressao).
+- `internal/fs/fake.go` — FakeFileSystem em testes unitarios, nunca OS real (ADR-002)
+- `internal/output.Printer` — injetar em todo Service; `io.Discard` em testes
+- Skills externas rastreadas em `skills-lock.json` com hash SHA-256 (ADR-005); todo bump exige registro em `audit/` pelo template `.specs/templates/skill-upgrade-decision.md` (skill, versao anterior, versao nova, motivador, criterio de aceitacao, data)
+- Harness auto-instalado neste repo (self-dogfooding); manifesto em `.ai_spec_harness.json`
 
-Chaves operacionais aceitas (zero-value preserva comportamento F1):
-`timeout`, `max_retries`, `retry_backoff_multiplier`, `concurrent`, `batch_size`, `default_tool`.
+## Restricoes
 
-Ver [`docs/config-hierarchy.md`](docs/config-hierarchy.md) para referencia completa.
+Nao inventar contexto ausente. Nao assumir versao sem verificar. Nao alterar comportamento publico
+sem registrar. Nao executar git destrutivo nem publicar remoto sem pedido explicito. Adaptar
+exemplos ao contexto real.
 
 ## Documentacao
 
-- [Guia de Instalacao Universal](docs/guia-instalacao-universal.md) — bootstrap portatil em qualquer codebase, deteccao automatica, escopo global, verify
-- [Hierarquia de Configuracao](docs/config-hierarchy.md) — precedencia flags > workspace > global > built-in, upward-walk, chaves disponíveis
-- [Guia de troubleshooting](docs/troubleshooting.md) — problemas comuns com sintoma, causa, solucao e verificacao
-- [Ciclo de telemetria](docs/telemetry-feedback-cycle.md) — feedback loop com GOVERNANCE_TELEMETRY
+- [Guia de Instalacao Universal](docs/guia-instalacao-universal.md) · [Hierarquia de Configuracao](docs/config-hierarchy.md) · [Troubleshooting](docs/troubleshooting.md)
+- [Referencia do task-loop](docs/task-loop-reference.md) · [Capacidades do runtime Claude](docs/runtime-claude-capabilities.md) · [Gates de evidencia](docs/evidence-gates.md)
+- [Ciclo de telemetria](docs/telemetry-feedback-cycle.md) · [Matriz de degradacao](docs/degradation-matrix.md)
 
 ## ADRs
 
+Template: [`docs/adr/000-template.md`](docs/adr/000-template.md). Consultar antes de mudancas estruturais.
+
 | ADR | Titulo | Status |
 |-----|--------|--------|
-| [001](.specs/adr/001-go-embed-baseline.md) | Assets via go:embed | Aceita |
-| [002](.specs/adr/002-fake-filesystem-testes.md) | FakeFileSystem vs afero | Aceita |
-| [003](.specs/adr/003-paridade-semantica.md) | Invariantes semanticas vs diff textual | Aceita |
-| [004](.specs/adr/004-lazy-loading-referencias.md) | References sob demanda | Aceita |
-| [005](.specs/adr/005-skills-lock-sha256.md) | Lock file SHA-256 | Aceita |
+| [001](docs/adr/001-go-embed-baseline.md) | Assets via go:embed | Aceita |
+| [002](docs/adr/002-fake-filesystem-testes.md) | FakeFileSystem vs afero | Aceita |
+| [003](docs/adr/003-paridade-semantica.md) | Invariantes semanticas vs diff textual | Aceita |
+| [004](docs/adr/004-lazy-loading-referencias.md) | References sob demanda | Aceita |
+| [005](docs/adr/005-skills-lock-sha256.md) | Lock file SHA-256 | Aceita |
 | [006](docs/adr/006-telemetria-feedback-cycle.md) | Telemetria opt-in append-only | Aceita |
-| [007](docs/adr/007-copilot-cli-stateless-workaround.md) | Copilot injecao manual | Substituida por ADR-012 |
+| [007](docs/adr/007-copilot-cli-stateless-workaround.md) | Copilot injecao manual | Substituida por 012 |
 | [008](docs/adr/008-parity-multi-tool-invariants.md) | 29 invariantes 3 niveis | Aceita |
-| [ADR-009](.specs/adr/009-acp-protocol-adoption.md) | Adocao do ACP via coder/acp-go-sdk para invocacao de agentes | Aceita |
-| [ADR-010](.specs/prd-acp-runtime-claude/adr-010-event-tagged-union.md) | runtime.Event como struct tagged union | Aceita |
-| [ADR-012](.specs/adr/012-copilot-cli-acp-native.md) | Copilot CLI como runtime ACP nativo | Aceita |
-| [ADR-013](.specs/adr/013-codex-cli-acp-native.md) | Codex CLI como runtime ACP nativo | Aceita |
-| [ADR-015](.specs/adr/015-gemini-cli-acp-native.md) | Gemini CLI ACP nativo — agente removido (tarefa 10.0) | Substituida |
-| [ADR-016](.specs/prd-fundacao-portatil/adr-016-config-hierarquico-universal.md) | Config hierarquico universal (global+projeto, upward-walk, precedencia) | Proposta |
-| [ADR-017](.specs/prd-fundacao-portatil/adr-017-fallback-launcher-chain.md) | Generalizacao de fallback launchers (cadeia generica ordenada) | Proposta |
-| [ADR-018](.specs/prd-fundacao-portatil/adr-018-runtimeconfig-retry-backpressure.md) | RuntimeConfig unificado, retry com backoff e sessao ACP com backpressure observavel | Proposta |
-| [ADR-019](.specs/prd-fundacao-portatil/adr-019-instalador-portatil-detect-verify.md) | Instalador portatil: auto-deteccao de agentes, escopo global e verify file-first | Proposta |
-| [PP-001](.specs/prd-skills-production-proof/adr-001-validadores-canonicos-agents-scripts.md) | Validadores de evidencia canonicos em `.agents/scripts/` (tool-neutros, cascata) | Aceita |
-| [PP-002](.specs/prd-skills-production-proof/adr-002-hooks-nativos-paridade-cross-cli.md) | Hooks nativos de bloqueio nos 4 CLIs (paridade cross-CLI 2026) | Aceita |
-| [MD-001](.specs/prd-memoria-duravel-agentes/adr-001-fachada-porta-unica-memoria.md) | Fachada como porta unica do runtime para o subsistema de memoria duravel | Proposta |
-| [MD-002](.specs/prd-memoria-duravel-agentes/adr-002-fato-pagina-roundtrip-lossless.md) | Fato identificado por chave semantica + hash; Pagina Markdown com round-trip lossless | Proposta |
-| [MD-003](.specs/prd-memoria-duravel-agentes/adr-003-escrita-atomica-lock-camada-lease.md) | Escrita atomica, lock por camada e lease de bastao com prazo e verificacao de processo | Proposta |
-| [MD-004](.specs/prd-memoria-duravel-agentes/adr-004-optin-paridade-byte-a-byte.md) | Ativacao opt-in com paridade byte-a-byte e fim da degradacao silenciosa | Proposta |
+| [009](.specs/adr/009-acp-protocol-adoption.md) | Adocao do ACP via coder/acp-go-sdk | Aceita |
+| [011](.specs/adr/011-agent-registry-declarativo.md) | Agent registry declarativo | Proposta |
+| [012](.specs/adr/012-copilot-cli-acp-native.md) | Copilot CLI como runtime ACP nativo | Aceita |
+| [013](.specs/adr/013-codex-cli-acp-native.md) | Codex CLI como runtime ACP nativo | Proposta |
+| [014](.specs/adr/014-claude-cli-acp-native.md) | Claude CLI como runtime ACP nativo | Proposta |
+| [015](.specs/adr/015-gemini-cli-acp-native.md) | Gemini CLI ACP nativo — agente removido | Substituida |
+| [020](.specs/adr/020-opencode-acp-subcomando.md) | OpenCode ACP via subcomando | Aceita |
+| [MD-001](.specs/prd-memoria-duravel-agentes/adr-001-fachada-porta-unica-memoria.md) | Fachada como porta unica do runtime para memoria duravel | Proposta |
+| [MD-002](.specs/prd-memoria-duravel-agentes/adr-002-fato-pagina-roundtrip-lossless.md) | Fato por chave semantica + hash; Pagina Markdown round-trip lossless | Proposta |
+| [MD-003](.specs/prd-memoria-duravel-agentes/adr-003-escrita-atomica-lock-camada-lease.md) | Escrita atomica, lock por camada, lease de bastao | Proposta |
+| [MD-004](.specs/prd-memoria-duravel-agentes/adr-004-optin-paridade-byte-a-byte.md) | Opt-in + paridade byte-a-byte + fim da degradacao silenciosa | Proposta |
 | [MD-005](.specs/prd-memoria-duravel-agentes/adr-005-evidencia-metricas-memoria.md) | Eventos pelo dispatcher existente, metricas pelo mapa de campos extra | Proposta |
+
+ADR-010, 016-019, PP-001 e PP-002 foram removidos do repositorio no commit `91f8cb9`
+(diretorios `.specs/prd-acp-runtime-claude/`, `.specs/prd-fundacao-portatil/`,
+`.specs/prd-skills-production-proof/`); o conteudo sobrevive apenas no historico git.

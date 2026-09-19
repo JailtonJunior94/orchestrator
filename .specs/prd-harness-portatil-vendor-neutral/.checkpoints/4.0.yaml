@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-portatil-vendor-neutral/4.0_execution_report.md
+summary: Origem canonica .agents/policies/ criada com governance.md e code-style.md byte-a-byte identicos; .claude/rules/ vira espelho gerado; par dedicado sync-policies.sh/check-policies-sync.sh com lista declarada; registro anti-gate-orfao completo (Makefile, test.yml, duas listas do guardiao) e quatro testes de mutacao novos, todos verdes.
+timestamp: 2026-09-18T00:00:00Z

@@ -25,6 +25,7 @@ EVIDENCE_VALIDATORS=(
   "resolve-references.sh"
   "validate-skill-prerequisites.sh"
   "validate-governance-references.sh"
+  "git-operation-gate.sh"
 )
 
 declare -a mirror_dirs=(

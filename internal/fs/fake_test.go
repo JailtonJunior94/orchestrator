@@ -218,11 +218,44 @@ func TestFake_DirHash(t *testing.T) {
 func TestFake_DirHash_notDir(t *testing.T) {
 	f := fs.NewFakeFileSystem()
 	h, err := f.DirHash("/nonexistent")
-	if err != nil {
-		t.Fatalf("DirHash on non-dir should not error: %v", err)
+	if err == nil {
+		t.Fatal("DirHash on non-dir should error, so absence and failure stay distinguishable")
 	}
 	if h != "" {
-		t.Errorf("DirHash on non-dir should return empty, got %q", h)
+		t.Errorf("DirHash on non-dir should return empty hash, got %q", h)
+	}
+}
+
+func TestFake_DirHash_file(t *testing.T) {
+	f := fs.NewFakeFileSystem()
+	_ = f.WriteFile("/file.txt", []byte("a"))
+	h, err := f.DirHash("/file.txt")
+	if err == nil {
+		t.Fatal("DirHash on a regular file should error")
+	}
+	if h != "" {
+		t.Errorf("DirHash on a regular file should return empty hash, got %q", h)
+	}
+}
+
+func TestFake_DirHash_emptyDirDiffersFromMissing(t *testing.T) {
+	f := fs.NewFakeFileSystem()
+	_ = f.MkdirAll("/empty")
+
+	hEmpty, errEmpty := f.DirHash("/empty")
+	if errEmpty != nil {
+		t.Fatalf("DirHash on an existing empty dir must not error: %v", errEmpty)
+	}
+	if hEmpty == "" {
+		t.Error("DirHash on an existing empty dir must return the hash of zero entries, not an empty string")
+	}
+
+	hMissing, errMissing := f.DirHash("/missing")
+	if errMissing == nil {
+		t.Fatal("DirHash on a missing dir must error, distinguishing it from an existing empty dir")
+	}
+	if hMissing != "" {
+		t.Errorf("DirHash on a missing dir must return empty hash, got %q", hMissing)
 	}
 }
 

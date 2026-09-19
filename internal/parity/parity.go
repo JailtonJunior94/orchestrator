@@ -58,14 +58,43 @@ const (
 
 // Invariant define um requisito semantico minimo verificavel.
 type Invariant struct {
-	ID          string
-	Description string
-	Level       EnforcementLevel
-	// AppliesTo lista as ferramentas relevantes.
-	// Nil significa que o invariante se aplica a todas as ferramentas selecionadas.
-	AppliesTo []skills.Tool
-	// Check executa a verificacao sobre o snapshot de artefatos gerados.
-	Check func(s Snapshot) Result
+	ID                     string
+	Description            string
+	Level                  EnforcementLevel
+	AppliesTo              []skills.Tool
+	SelfSatisfiedStubPaths []string
+	Check                  func(s Snapshot) Result
+}
+
+type InvariantScope string
+
+const (
+	ScopeUniversal        InvariantScope = "universal"
+	ScopeProviderSpecific InvariantScope = "provider-specific"
+)
+
+func CanonicalProviders() []skills.Tool {
+	return []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolOpenCode}
+}
+
+func (inv *Invariant) Scope() InvariantScope {
+	if len(inv.AppliesTo) == 0 {
+		return ScopeUniversal
+	}
+	covered := make(map[skills.Tool]bool, len(inv.AppliesTo))
+	for _, t := range inv.AppliesTo {
+		covered[t] = true
+	}
+	for _, t := range CanonicalProviders() {
+		if !covered[t] {
+			return ScopeProviderSpecific
+		}
+	}
+	return ScopeUniversal
+}
+
+func (inv *Invariant) EvidenceInvalid() bool {
+	return len(inv.SelfSatisfiedStubPaths) > 0
 }
 
 // Snapshot contem os artefatos gerados para um conjunto de ferramentas.
@@ -193,19 +222,8 @@ func (r1 *Checker) Generate(projectDir string, tools []skills.Tool, langs []skil
 		toolSet[t] = true
 	}
 
-	// Stubs para artefatos Claude instalados pelo install.Service
-	if toolSet[skills.ToolClaude] {
-		claudeStubs := []string{
-			".claude/hooks/validate-governance.sh",
-			".claude/hooks/validate-preload.sh",
-			".claude/rules/governance.md",
-			".claude/scripts/validate-task-evidence.sh",
-			".claude/scripts/validate-bugfix-evidence.sh",
-			".claude/scripts/validate-refactor-evidence.sh",
-		}
-		for _, p := range claudeStubs {
-			_ = ffs.WriteFile(filepath.Join(projectDir, p), []byte("#!/bin/sh\n# stub"))
-		}
+	for _, p := range r1.selfSatisfiedInvariantStubPaths(toolSet) {
+		_ = ffs.WriteFile(filepath.Join(projectDir, p), []byte("#!/bin/sh\nstub"))
 	}
 
 	if toolSet[skills.ToolOpenCode] {
@@ -223,9 +241,6 @@ func (r1 *Checker) Generate(projectDir string, tools []skills.Tool, langs []skil
 		_ = ffs.WriteFile(filepath.Join(projectDir, specs.OpenCodeConfigFileName), config)
 	}
 
-	// Stub para guard de profundidade (cross-tool, sempre instalado com Claude)
-	_ = ffs.WriteFile(filepath.Join(projectDir, "scripts/lib/check-invocation-depth.sh"), []byte("#!/bin/sh\n# stub"))
-
 	return Snapshot{
 		Tools:      tools,
 		ProjectDir: projectDir,
@@ -233,6 +248,22 @@ func (r1 *Checker) Generate(projectDir string, tools []skills.Tool, langs []skil
 		Dirs:       ffs.Dirs,
 		Links:      ffs.Links,
 	}, nil
+}
+
+func (r1 *Checker) selfSatisfiedInvariantStubPaths(toolSet map[skills.Tool]bool) []string {
+	var paths []string
+	if toolSet[skills.ToolClaude] {
+		paths = append(paths,
+			".claude/hooks/validate-governance.sh",
+			".claude/hooks/validate-preload.sh",
+			".claude/scripts/validate-task-evidence.sh",
+			".claude/scripts/validate-bugfix-evidence.sh",
+			".claude/scripts/validate-refactor-evidence.sh",
+		)
+		paths = append(paths, universalRuleStubPaths()...)
+	}
+	paths = append(paths, "scripts/lib/check-invocation-depth.sh")
+	return paths
 }
 
 // Invariants retorna o conjunto canonico de invariantes semanticos minimos.
@@ -472,10 +503,11 @@ var invX01CrossToolCanonicalPath = &Invariant{
 // ── Claude — hooks, rules e scripts (T12) ───────────────────────────────────
 
 var invCL03ClaudeHookGovernancePresent = &Invariant{
-	ID:          "CL03",
-	Description: ".claude/hooks/validate-governance.sh deve existir",
-	Level:       ToolSpecific,
-	AppliesTo:   []skills.Tool{skills.ToolClaude},
+	ID:                     "CL03",
+	Description:            ".claude/hooks/validate-governance.sh deve existir",
+	Level:                  ToolSpecific,
+	AppliesTo:              []skills.Tool{skills.ToolClaude},
+	SelfSatisfiedStubPaths: []string{".claude/hooks/validate-governance.sh"},
 	Check: func(s Snapshot) Result {
 		if s.File(".claude/hooks/validate-governance.sh") == "" {
 			return NewChecker().fail("hook validate-governance.sh ausente")
@@ -485,10 +517,11 @@ var invCL03ClaudeHookGovernancePresent = &Invariant{
 }
 
 var invCL04ClaudeHookPreloadPresent = &Invariant{
-	ID:          "CL04",
-	Description: ".claude/hooks/validate-preload.sh deve existir",
-	Level:       ToolSpecific,
-	AppliesTo:   []skills.Tool{skills.ToolClaude},
+	ID:                     "CL04",
+	Description:            ".claude/hooks/validate-preload.sh deve existir",
+	Level:                  ToolSpecific,
+	AppliesTo:              []skills.Tool{skills.ToolClaude},
+	SelfSatisfiedStubPaths: []string{".claude/hooks/validate-preload.sh"},
 	Check: func(s Snapshot) Result {
 		if s.File(".claude/hooks/validate-preload.sh") == "" {
 			return NewChecker().fail("hook validate-preload.sh ausente")
@@ -498,23 +531,28 @@ var invCL04ClaudeHookPreloadPresent = &Invariant{
 }
 
 var invCL05ClaudeRulesGovernancePresent = &Invariant{
-	ID:          "CL05",
-	Description: ".claude/rules/governance.md deve existir",
-	Level:       ToolSpecific,
-	AppliesTo:   []skills.Tool{skills.ToolClaude},
+	ID:                     "CL05",
+	Description:            ".claude/rules/governance.md e .claude/rules/code-style.md devem existir",
+	Level:                  ToolSpecific,
+	AppliesTo:              []skills.Tool{skills.ToolClaude},
+	SelfSatisfiedStubPaths: universalRuleStubPaths(),
 	Check: func(s Snapshot) Result {
-		if s.File(".claude/rules/governance.md") == "" {
-			return NewChecker().fail("rules governance.md ausente")
+		for _, ruleFile := range skills.UniversalRuleFiles {
+			relPath := fmt.Sprintf(".claude/rules/%s", ruleFile)
+			if s.File(relPath) == "" {
+				return NewChecker().failf("rules %s ausente", ruleFile)
+			}
 		}
 		return NewChecker().pass()
 	},
 }
 
 var invCL06ClaudeScriptTaskEvidencePresent = &Invariant{
-	ID:          "CL06",
-	Description: ".claude/scripts/validate-task-evidence.sh deve existir",
-	Level:       ToolSpecific,
-	AppliesTo:   []skills.Tool{skills.ToolClaude},
+	ID:                     "CL06",
+	Description:            ".claude/scripts/validate-task-evidence.sh deve existir",
+	Level:                  ToolSpecific,
+	AppliesTo:              []skills.Tool{skills.ToolClaude},
+	SelfSatisfiedStubPaths: []string{".claude/scripts/validate-task-evidence.sh"},
 	Check: func(s Snapshot) Result {
 		if s.File(".claude/scripts/validate-task-evidence.sh") == "" {
 			return NewChecker().fail("script validate-task-evidence.sh ausente")
@@ -524,10 +562,11 @@ var invCL06ClaudeScriptTaskEvidencePresent = &Invariant{
 }
 
 var invCL07ClaudeScriptBugfixEvidencePresent = &Invariant{
-	ID:          "CL07",
-	Description: ".claude/scripts/validate-bugfix-evidence.sh deve existir",
-	Level:       ToolSpecific,
-	AppliesTo:   []skills.Tool{skills.ToolClaude},
+	ID:                     "CL07",
+	Description:            ".claude/scripts/validate-bugfix-evidence.sh deve existir",
+	Level:                  ToolSpecific,
+	AppliesTo:              []skills.Tool{skills.ToolClaude},
+	SelfSatisfiedStubPaths: []string{".claude/scripts/validate-bugfix-evidence.sh"},
 	Check: func(s Snapshot) Result {
 		if s.File(".claude/scripts/validate-bugfix-evidence.sh") == "" {
 			return NewChecker().fail("script validate-bugfix-evidence.sh ausente")
@@ -537,10 +576,11 @@ var invCL07ClaudeScriptBugfixEvidencePresent = &Invariant{
 }
 
 var invCL08ClaudeScriptRefactorEvidencePresent = &Invariant{
-	ID:          "CL08",
-	Description: ".claude/scripts/validate-refactor-evidence.sh deve existir",
-	Level:       ToolSpecific,
-	AppliesTo:   []skills.Tool{skills.ToolClaude},
+	ID:                     "CL08",
+	Description:            ".claude/scripts/validate-refactor-evidence.sh deve existir",
+	Level:                  ToolSpecific,
+	AppliesTo:              []skills.Tool{skills.ToolClaude},
+	SelfSatisfiedStubPaths: []string{".claude/scripts/validate-refactor-evidence.sh"},
 	Check: func(s Snapshot) Result {
 		if s.File(".claude/scripts/validate-refactor-evidence.sh") == "" {
 			return NewChecker().fail("script validate-refactor-evidence.sh ausente")
@@ -549,19 +589,26 @@ var invCL08ClaudeScriptRefactorEvidencePresent = &Invariant{
 	},
 }
 
-// ── Cross-tool — guard de profundidade (T12) ─────────────────────────────────
-
 var invX03DepthGuardPresent = &Invariant{
-	ID:          "X03",
-	Description: "scripts/lib/check-invocation-depth.sh deve existir",
-	Level:       Common,
-	AppliesTo:   nil, // aplica a todos
+	ID:                     "X03",
+	Description:            "scripts/lib/check-invocation-depth.sh deve existir",
+	Level:                  Common,
+	AppliesTo:              nil,
+	SelfSatisfiedStubPaths: []string{"scripts/lib/check-invocation-depth.sh"},
 	Check: func(s Snapshot) Result {
 		if s.File("scripts/lib/check-invocation-depth.sh") == "" {
 			return NewChecker().fail("guard de profundidade ausente")
 		}
 		return NewChecker().pass()
 	},
+}
+
+func universalRuleStubPaths() []string {
+	paths := make([]string, 0, len(skills.UniversalRuleFiles))
+	for _, ruleFile := range skills.UniversalRuleFiles {
+		paths = append(paths, fmt.Sprintf(".claude/rules/%s", ruleFile))
+	}
+	return paths
 }
 
 // ── F2-Claude — Invariantes de normalização cross-tool e MCP nested-agent (ADR-008 extensão) ──

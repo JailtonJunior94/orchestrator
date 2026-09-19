@@ -29,6 +29,10 @@ packages:
   github.com/JailtonJunior94/ai-spec-harness/internal/git:
     interfaces:
       Repository:
+  github.com/JailtonJunior94/ai-spec-harness/internal/harness:
+    interfaces:
+      Loader:
+      Validator:
   github.com/JailtonJunior94/ai-spec-harness/internal/metrics:
     interfaces:
       Tokenizer:

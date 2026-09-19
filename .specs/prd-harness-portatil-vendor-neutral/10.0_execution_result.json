@@ -1,0 +1,154 @@
+{
+  "schema_version": 2,
+  "run_id": "task-10.0-harness-portatil-vendor-neutral-2026-09-18",
+  "task_id": "10.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a8b77217cd713b4ef629d324e63934e05e589864",
+  "patch_sha256": "bf313b7393c8cd92b6d971b2e0c89d7322794a23bcbd8237c74452b97c4d12e3",
+  "patch_ref": "evidence/task-10.0-harness-portatil-vendor-neutral/10.0.patch",
+  "final_state_sha256": "2b654fae1493ec8c75f9701c9b45778fa252ec6d737f404765f6af796dbfc9eb",
+  "coverage_regression": false,
+  "review_verdict": "approved",
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "go test ./...",
+      "exit_code": 0,
+      "output_sha256": "bbbb13729bcc33242632b4b621c5e8ab162aa1bd679ad21686766156cc7c7ebc"
+    },
+    {
+      "command": "go build -tags integration ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "go build -tags hooks_live ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/parity/...",
+      "exit_code": 0,
+      "output_sha256": "77034a5103085e4404894aeaba4d6b9744574b17f677b7c420cc5792662c13c6"
+    },
+    {
+      "command": "GOGC=20 golangci-lint run --config .golangci.yml --timeout 5m ./...",
+      "exit_code": 0,
+      "output_sha256": "847166fdac66cd885ad0591a6277d742dbfcdae76c0db05af93867e0db960655"
+    },
+    {
+      "command": "bash scripts/check-scripts-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "54a51375b68f6e12bc0bff8084f36bb3910820986e3e3c0d78565a9fe4e025e9"
+    },
+    {
+      "command": "bash scripts/check-hooks-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "66dda08abe9a564a6375743a0ffa1da779a1a57fe6e21335208cb1caef9443f8"
+    },
+    {
+      "command": "bash scripts/check-policies-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "128480c86cbdd1ac23eabb4726b52ecbf0ffef6fbe9746966e3394f2b022c48f"
+    },
+    {
+      "command": "bash scripts/check-skills-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "234430702293de5a5ac9b577dbfd8e8de8d715fea8cce41e8662afc54563f4cc"
+    },
+    {
+      "command": "go test ./internal/capability/...",
+      "exit_code": 0,
+      "output_sha256": "2cb9430e4a31ea8364364b79e7ea9e3bb787f3566013c1c44e64f5fb1ba57e17"
+    },
+    {
+      "command": "bash scripts/check-mocks.sh",
+      "exit_code": 0,
+      "output_sha256": "74b6654aa5590423cf8db10f086aae57a6ee22004509734364102196800c1eed"
+    },
+    {
+      "command": "go run . skills --verify .",
+      "exit_code": 0,
+      "output_sha256": "4f6c54395b5604cbcedc386b07dd56168f4133d70649c8de6f6bf51bbf66fffa"
+    },
+    {
+      "command": "bash scripts/test-hooks.sh",
+      "exit_code": 0,
+      "output_sha256": "37760739c866496494562ec92b9214b740724a3d465e49005911bfde8190ff40"
+    },
+    {
+      "command": "bash scripts/check-package-coverage.sh 70",
+      "exit_code": 0,
+      "output_sha256": "9451151a64660a040be8f68f8383394be96c20aa54a2d01dfd41a0699e5bdb62"
+    },
+    {
+      "command": "go test -tags=integration -run TestTokenBudget_InputContext -v ./internal/integration/...",
+      "exit_code": 0,
+      "output_sha256": "b0b857ea3e8f78b02e40faed89d19b28d9204150300d7797c5dca089f5f62a87"
+    },
+    {
+      "command": "go test -tags=integration -run TestConformanceSuite -v ./tests/integration/...",
+      "exit_code": 0,
+      "output_sha256": "27a45aa97ad826b5e9cf987023a6f3faf7e42fe423396667cf7276e1a4fe5359"
+    },
+    {
+      "command": "go test -v ./internal/conformance/...",
+      "exit_code": 0,
+      "output_sha256": "302a47bb4cebafbfa1840ea8896f406c795e0f6e95626a2b5dfb6ca1be457076"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "suite-fails-when-canonical-gate-removed",
+      "evidence_ref": "evidence/task-10.0-harness-portatil-vendor-neutral/conformance-suite-tests.log"
+    },
+    {
+      "id": "four-providers-return-same-exit-code-for-same-input",
+      "evidence_ref": "evidence/task-10.0-harness-portatil-vendor-neutral/conformance-suite-tests.log"
+    },
+    {
+      "id": "numerator-not-identical-across-four-providers",
+      "evidence_ref": "evidence/task-10.0-harness-portatil-vendor-neutral/input-context-budget-tests.log"
+    },
+    {
+      "id": "every-failure-attributed-to-core-adapter-provider-or-declared-indeterminate",
+      "evidence_ref": "evidence/task-10.0-harness-portatil-vendor-neutral/conformance-suite-tests.log"
+    },
+    {
+      "id": "100-percent-deterministic-scenarios-run-in-ci",
+      "evidence_ref": "evidence/task-10.0-harness-portatil-vendor-neutral/integration-test.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-10.0-harness-portatil-vendor-neutral/build.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/vet.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/test.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/build-integration.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/build-hooks-live.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/integration-test.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/lint.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/check-scripts-sync.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/check-hooks-sync.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/check-policies-sync.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/check-skills-sync.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/check-capability-matrix-sync.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/check-mocks.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/check-skills-lock.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/test-hooks.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/check-package-coverage.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/input-context-budget-tests.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/conformance-suite-tests.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/conformance-manifest-tests.log",
+    "evidence/task-10.0-harness-portatil-vendor-neutral/git-operation-live-wiring.log"
+  ]
+}

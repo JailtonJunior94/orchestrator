@@ -1,0 +1,8 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/JailtonJunior94/ai-spec-harness/internal/tracking
+cpu: Apple M1 Pro
+BenchmarkFakeFileSystem_WriteFile_Baseline-8   	 3036280	       418.8 ns/op	     244 B/op	       3 allocs/op
+BenchmarkTracker_WriteFile_WithChecksum-8      	 1000000	      1172 ns/op	     712 B/op	       6 allocs/op
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/tracking	2.952s

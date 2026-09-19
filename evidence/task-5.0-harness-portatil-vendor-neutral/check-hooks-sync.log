@@ -1,0 +1,7 @@
+
+Hooks em sync: 28
+Drift / missing: 0
+Gate de encerramento em sync: 7/7 mirrors
+Validadores por ferramenta com drift: 0
+LOCAL-ONLY: .claude/hooks/validate-token-budget.sh fora dos mirrors por decisao explicita (ver allowlist neste script)
+Todos os hooks orquestrador sincronizados.

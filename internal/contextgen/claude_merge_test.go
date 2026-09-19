@@ -24,8 +24,9 @@ type recordingFakeFS struct {
 	merged []string
 }
 
-func (r *recordingFakeFS) MarkMerged(path string) {
+func (r *recordingFakeFS) MarkMerged(path string) error {
 	r.merged = append(r.merged, path)
+	return nil
 }
 
 func newRecordingFS() *recordingFakeFS {

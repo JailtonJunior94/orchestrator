@@ -52,6 +52,7 @@ func writeCanonicalScripts(t *testing.T, root string) {
 	t.Helper()
 	for _, rel := range []string{
 		".agents/scripts/hook-prereq-gate.sh",
+		".agents/scripts/git-operation-gate.sh",
 		".agents/scripts/validate-skill-prerequisites.sh",
 		".agents/scripts/resolve-references.sh",
 		".agents/hooks/validate-preload.sh",

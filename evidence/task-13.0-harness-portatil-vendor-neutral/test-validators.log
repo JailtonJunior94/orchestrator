@@ -1,0 +1,185 @@
+bash scripts/test-validators.sh
+Caso a: critério de aceite não comprovado
+  ✓ critério não comprovado falha (exit=1)
+Caso a2: critério não comprovado sob LC_ALL=C
+  ✓ critério não comprovado falha sob LC_ALL=C (exit=1)
+  ✓ gate de aceite permanece ativo sob LC_ALL=C
+Caso b: todos os critérios comprovados
+  ✓ todos comprovados passa (exit=0)
+Caso c: Testes: pass sem comando de teste
+  ✓ Testes pass sem comando falha (exit=1)
+Caso d: task legada sem seção de critérios
+  ✓ task legada falha por padrão (exit=1)
+  ✓ diagnóstico de fail-closed presente
+Caso d2: AI_SDD_STRICT_EVIDENCE=0 nao reabre o gate de aceite
+  ✓ opt-out explícito continua reprovando (exit=1)
+  ✓ opt-out recebe o diagnóstico de fail-closed
+Caso d3: referência de task file inexistente
+  ✓ referência não resolvível falha por padrão (exit=1)
+Caso e: review.md válido sem achados
+  ✓ review válido passa (exit=0)
+  ✓ review válido passa sob LC_ALL=C (exit=0)
+Caso f: review REJECTED sem achado bloqueante
+  ✓ REJECTED sem high/critical falha (exit=1)
+Caso g: review sem seção de validações
+  ✓ review sem validações falha (exit=1)
+Caso h1: mapa 1:1 ausente falha
+  ✓ mapa h1-ausente espera exit 1 (exit=1)
+  ✓ mapa h1-ausente espera exit 1 sob LC_ALL=C (exit=1)
+Caso h2: mapa 1:1 incompleto (critério sem evidência) falha
+  ✓ mapa h2-incompleto espera exit 1 (exit=1)
+  ✓ mapa h2-incompleto espera exit 1 sob LC_ALL=C (exit=1)
+Caso h3: critério não verificável falha
+  ✓ mapa h3-nverif espera exit 1 (exit=1)
+  ✓ mapa h3-nverif espera exit 1 sob LC_ALL=C (exit=1)
+Caso h4: linha de evidência fora das três formas de RF-48 falha
+  ✓ mapa h4-badev espera exit 1 (exit=1)
+  ✓ mapa h4-badev espera exit 1 sob LC_ALL=C (exit=1)
+Caso h5: mapa 1:1 completo e válido passa
+  ✓ mapa h5-ok espera exit 0 (exit=0)
+  ✓ mapa h5-ok espera exit 0 sob LC_ALL=C (exit=0)
+Caso h6: AI_SDD_STRICT_EVIDENCE=0 NÃO reabre o mapa 1:1
+  ✓ opt-out legado não faz o mapa incompleto passar (exit=1)
+  ✓ mapa 1:1 permanece fail-closed sob AI_SDD_STRICT_EVIDENCE=0
+Caso i: relatório declara critérios sem task file resolvível é fail-closed mesmo com opt-out
+  ✓ critérios sem task file falha mesmo com opt-out (exit=1)
+  ✓ opt-out não alcança o confronto 1:1 (RF-53)
+Caso j: relatório com seção de Evidência de Memória Durável não quebra gates
+  ✓ relatório com evidência de memória durável passa (exit=0)
+  ✓ relatório com evidência de memória durável passa sob LC_ALL=C (exit=0)
+Caso k: relatório sem marcador não vira histórico ao ser commitado
+  ✓ relatório sem marcador e não commitado falha (exit=1)
+  ✓ commitar NÃO concede a isenção histórica (corte fixo) (exit=1)
+  ✓ a ruptura aponta o commit de corte fixo, não HEAD
+  ✓ nenhuma isenção v1 concedida a trabalho novo commitado
+Caso l: divergência de estado entre tasks.md, relatório e execution-result
+  ✓ tasks.md=blocked com relatório/JSON=done reprova (exit=1)
+  ✓ a ruptura nomeia a divergência de estado
+  ✓ tasks.md reconciliado com a evidência elimina a divergência
+  ✓ qualquer terceiro estado em tasks.md também reprova (exit=1)
+
+Passaram: 38 | Falharam: 0
+Todos os testes de validador passaram.
+bash tests/scripts/validate-task-evidence_test.sh .agents/scripts/validate-task-evidence.sh
+PASS [TC1-valido]
+PASS [TC25-binario-obsoleto-falha-com-mensagem-de-versao]
+PASS [TC26-binario-ausente-falha-com-mensagem-de-versao]
+PASS [TC27-binario-compativel-passa]
+PASS [TC2-sem-sha]
+PASS [TC3-sem-verdict]
+PASS [TC4-tool-invalida]
+PASS [TC5-delta-regressao]
+PASS [TC6-delta-ok]
+PASS [TC7-result-ausente]
+PASS [TC8-patch-divergente]
+PASS [TC9-patch-fisico-divergente]
+PASS [TC10-patch-arbitrario-autoconsistente]
+PASS [TC11-estado-final-inventado]
+PASS [TC12-blocked-sem-prova-fisica]
+PASS [TC13-remarks-without-declared-severity-fails-closed]
+PASS [TC14-done-sem-task-file-strict]
+PASS [TC15-done-sem-task-file-optout]
+PASS [TC16-task-sem-criterios-strict]
+PASS [TC17-task-sem-criterios-optout]
+PASS [TC18-v1-novo-reprova]
+PASS [TC19-contrato-desconhecido]
+PASS [TC20-corte-fixo-nao-anda-com-head]
+PASS [TC20c-corte-ainda-isenta-historico-real]
+PASS [TC20b-v1-nao-isenta-desfecho]
+PASS [TC21-v2-estrito-cobra]
+PASS [TC23-sem-git-nao-isenta]
+PASS [TC24-cut-ref-ignora-env]
+PASS [TC22-sem-linha-arquivo-alcanca-fail-closed]
+PASS [TC28-done-with-honest-evidence-passes]
+PASS [TC29-done-with-tampered-hash-fails-physical-proof]
+PASS [TC30-not-done-with-approving-verdict-fails-as-escape]
+PASS [TC31-not-done-with-non-approving-verdict-skips-physical-proof]
+PASS [TC32-wrong-schema-version-reports-malformed]
+PASS [TC33-missing-required-field-reports-malformed]
+PASS [TC34-remarks-with-medium-only-closes]
+PASS [TC35-remarks-with-high-does-not-close]
+PASS [TC36-remarks-with-critical-does-not-close]
+PASS [TC37-remarks-with-blocker-does-not-close]
+PASS [TC38-not-done-with-closing-remarks-fails-as-escape]
+PASS [TC39-remarks-high-em-tabela-nao-encerra]
+PASS [TC40-remarks-critical-em-lista-numerada-nao-encerra]
+PASS [TC41-remarks-high-em-crase-nao-encerra]
+PASS [TC42-remarks-high-em-heading-nao-encerra]
+PASS [TC43-remarks-high-em-checkbox-nao-encerra]
+PASS [TC44-remarks-campo-severidade-em-negrito-nao-encerra]
+PASS [TC45-mencao-em-prosa-nao-bloqueia]
+PASS [TC46-achado-citado-em-cerca-nao-bloqueia]
+PASS [TC47-escape-combinado-nao-encerra]
+PASS [TC48-estado-divergente-do-execution-result]
+PASS [TC49-prova-fisica-nao-e-dispensada-por-edicao-de-prosa]
+PASS [TC50-estado-divergente-de-tasks-md]
+PASS [TC51-estado-consistente-com-tasks-md]
+
+Resultado: 53 passaram, 0 falharam
+bash tests/scripts/validate-bugfix-evidence_test.sh .agents/scripts/validate-bugfix-evidence.sh
+validate-bugfix-evidence: blocos e totalizadores OK
+bash tests/scripts/validate-review-evidence_test.sh .agents/scripts/validate-review-evidence.sh
+PASS [RC1-approved-criterio-nao-atendido]
+PASS [RC2-approved-criterio-nao-verificavel]
+PASS [RC3-approved-evidencia-em-prosa]
+PASS [RC4-approved-arquivo-linha-fora-do-diff]
+PASS [RC5-approved-teste-sem-resultado]
+PASS [RC6-approved-with-remarks-mapa-ok]
+PASS [RC7-sem-secao-de-mapa]
+PASS [RC8-mapa-valido]
+PASS [RC9-criterio-acentuado]
+PASS [RC10-registro-trivial-done]
+PASS [RC11-registro-trivial-ok]
+PASS [RC12-registro-na]
+PASS [RC13-nao-e-comando]
+PASS [RC14-teste-sem-resultado-canonico]
+PASS [RC15-comando-com-saida-real]
+PASS [RC16-teste-com-resultado]
+PASS [A1-git-diff-sem-saida-verificavel]
+PASS [A2-lint-com-saida-generica]
+PASS [A3-pytest-sem-alvo]
+PASS [A4-contagem-nua-sem-contexto]
+PASS [A5-script-com-prosa]
+PASS [A6-go-test-com-pacote-e-duracao]
+PASS [A7-go-vet-com-exit-code]
+PASS [A8-teste-com-resultado-canonico]
+PASS [A9-arquivo-linha-revisado]
+PASS [A10-pytest-com-alvo-e-contagem]
+PASS [A11-lint-com-contagem-de-issues]
+PASS [A13-mesmo-basename-diretorio-diferente]
+PASS [A12-secao-arquivos-revisados-vazia]
+PASS [A14-veredito-pt-br-aprovado]
+PASS [A15-veredito-pt-br-aprovado-com-ressalvas]
+PASS [A16-veredito-pt-br-reprovado-sem-achado-alto]
+PASS [A17-veredito-pt-br-aprovado-com-criterio-nao-atendido]
+PASS [A18-veredito-pt-br-bloqueado]
+PASS [A19-veredito-token-invalido]
+PASS [RC20-map-complete-matches-task]
+PASS [RC21-map-incomplete-vs-task]
+PASS [RC22-task-file-without-criteria]
+PASS [RC23-task-file-unresolvable]
+PASS [RC24-task-file-placeholder]
+PASS [A20-paridade[- Verdict: APPROVED]]
+PASS [A20-paridade[- Veredito: aprovado]]
+PASS [A20-paridade[- **Veredito:** APPROVED]]
+PASS [A20-paridade[- **Veredito**: aprovado]]
+PASS [A20-paridade[- `Veredito`: APROVADO]]
+PASS [A20-paridade[- Verdict: APPROVED_WITH_REMARKS]]
+PASS [A20-paridade[- Veredito: aprovado com ressalvas]]
+PASS [A20-paridade[- Veredito: APROVADO_COM_RESSALVAS]]
+PASS [A20-paridade[- **Veredito:** aprovado com ressalvas]]
+PASS [A20-paridade[- Verdict: REJECTED]]
+PASS [A20-paridade[- Veredito: reprovado]]
+PASS [A20-paridade[- Veredicto: reprovado]]
+PASS [A20-paridade[- Veredito final: reprovado]]
+PASS [A20-paridade[- **Veredito**: REPROVADO]]
+PASS [A20-paridade[- Verdict: BLOCKED]]
+PASS [A20-paridade[- Veredito: bloqueado]]
+PASS [A20-paridade[- **Veredito**: BLOQUEADO]]
+PASS [A20-paridade[- Veredito: talvez]]
+PASS [A20-paridade[- Veredito: aprovado parcialmente]]
+PASS [A20-paridade[Sem nenhuma declaracao de veredito nesta linha]]
+
+Resultado: 60 passaram, 0 falharam
+bash tests/scripts/validate-session-end_test.sh .agents/scripts/validate-session-end.sh
+validate-session-end: block and release OK

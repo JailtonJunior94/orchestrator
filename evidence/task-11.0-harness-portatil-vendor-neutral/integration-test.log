@@ -1,0 +1,5 @@
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/integration	2.651s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	0.118s
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	50.120s
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	0.050s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/parity	0.258s

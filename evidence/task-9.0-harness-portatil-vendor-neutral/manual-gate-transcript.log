@@ -1,0 +1,34 @@
+=== git commit unsolicited (no escape) ===
+GOVERNANCE BLOQUEIO: operacao git nao solicitada (git commit e git push) negada pelo gate canonico de operacao git.
+Comando: git commit -m x
+Para prosseguir com pedido explicito do usuario: export GOVERNANCE_GIT_OPERATION_CONFIRMED=1
+exit=2
+
+=== git commit with GOVERNANCE_PRELOAD_CONFIRMED=1 alone (must stay blocked) ===
+GOVERNANCE BLOQUEIO: operacao git nao solicitada (git commit e git push) negada pelo gate canonico de operacao git.
+Comando: git commit -m x
+Para prosseguir com pedido explicito do usuario: export GOVERNANCE_GIT_OPERATION_CONFIRMED=1
+exit=2
+
+=== git commit with both escapes confirmed (must be allowed) ===
+AUDITORIA: escape de operacao git registrado (GOVERNANCE_GIT_OPERATION_CONFIRMED=1) para comando: git commit -m x
+AUDITORIA: escape de governanca registrado (GOVERNANCE_PRELOAD_CONFIRMED=1) para <sem-alvo>
+exit=0
+
+=== rm -rf / with GOVERNANCE_PRELOAD_CONFIRMED=1 alone (must stay blocked) ===
+GOVERNANCE BLOQUEIO: comando destrutivo detectado (remocao recursiva e forcada) negado independentemente do estado de preload.
+Comando: rm -rf /
+Para prosseguir com pedido explicito do usuario: export GOVERNANCE_DESTRUCTIVE_OPERATION_CONFIRMED=1
+exit=2
+
+=== rm -rf / with dedicated destructive escape + preload confirmed (must be allowed) ===
+AUDITORIA: escape de operacao destrutiva registrado (GOVERNANCE_DESTRUCTIVE_OPERATION_CONFIRMED=1) para comando: rm -rf /
+AUDITORIA: escape de governanca registrado (GOVERNANCE_PRELOAD_CONFIRMED=1) para <sem-alvo>
+exit=0
+
+=== git status (read-only) with preload confirmed (must be allowed) ===
+AUDITORIA: escape de governanca registrado (GOVERNANCE_PRELOAD_CONFIRMED=1) para <sem-alvo>
+exit=0
+
+=== grep for git commit / git push literal strings in canonical scripts (must be non-empty; was empty before this task per V-23) ===
+.agents/scripts/git-operation-gate.sh:6:readonly GIT_OPERATION_GATED_SUBCOMMANDS="git commit e git push"

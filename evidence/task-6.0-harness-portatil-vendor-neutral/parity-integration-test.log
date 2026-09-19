@@ -1,0 +1,338 @@
+=== RUN   TestE2EParitySuite
+=== RUN   TestE2EParitySuite/TestE2EParity_CrossProject_AllTools
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestE2EParitySuiteTestE2EParity_CrossProject_AllTools4198334505/001
+Modo de instalacao: copy
+=== RUN   TestE2EParitySuite/TestE2EParity_CrossProject_AllTools/claude
+=== RUN   TestE2EParitySuite/TestE2EParity_CrossProject_AllTools/opencode
+=== RUN   TestE2EParitySuite/TestE2EParity_CrossProject_AllTools/codex
+=== RUN   TestE2EParitySuite/TestE2EParity_CrossProject_AllTools/copilot
+=== RUN   TestE2EParitySuite/TestE2EParity_CrossProject_AllTools/claude+codex+copilot+opencode
+=== RUN   TestE2EParitySuite/TestE2EParity_CrossProject_Idempotency
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestE2EParitySuiteTestE2EParity_CrossProject_Idempotency3082190422/001
+Modo de instalacao: copy
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestE2EParitySuiteTestE2EParity_CrossProject_Idempotency3082190422/001
+Modo de instalacao: copy
+=== RUN   TestE2EParitySuite/TestE2EParity_CrossProject_InstallAndValidateInvariants
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestE2EParitySuiteTestE2EParity_CrossProject_InstallAndValidate613142994/001
+Modo de instalacao: copy
+    e2e_parity_test.go:96: cross-project install concluido em 4.736834ms
+    e2e_parity_test.go:119: cross-project parity: 26 invariantes verificados, 0 falhas, 0 avisos
+=== RUN   TestE2EParitySuite/TestE2EParity_FallbackLauncher_ArgvIdentical
+=== RUN   TestE2EParitySuite/TestE2EParity_FallbackLauncher_ArgvIdentical/claude_rf19
+=== RUN   TestE2EParitySuite/TestE2EParity_FallbackLauncher_ArgvIdentical/codex_rf19
+=== RUN   TestE2EParitySuite/TestE2EParity_FallbackLauncher_ArgvIdentical/opencode_rf19
+=== RUN   TestE2EParitySuite/TestE2EParity_FallbackLauncher_ArgvIdentical/copilot_rf19
+=== RUN   TestE2EParitySuite/TestE2EParity_FallbackLauncher_BothUnavailable
+=== RUN   TestE2EParitySuite/TestE2EParity_FallbackLauncher_BothUnavailable/claude_unavailable
+=== RUN   TestE2EParitySuite/TestE2EParity_FallbackLauncher_BothUnavailable/codex_unavailable
+=== RUN   TestE2EParitySuite/TestE2EParity_FallbackLauncher_BothUnavailable/opencode_unavailable
+=== RUN   TestE2EParitySuite/TestE2EParity_FallbackLauncher_BothUnavailable/copilot_unavailable
+=== RUN   TestE2EParitySuite/TestE2EParity_FallbackLauncher_ResultIdenticalToDirectBinary
+=== RUN   TestE2EParitySuite/TestE2EParity_FallbackLauncher_ResultIdenticalToDirectBinary/claude
+    e2e_parity_test.go:392: RF-19 [claude]: direto("/usr/local/bin/claude-agent-acp", []) | fallback("/usr/local/bin/npx", [--yes @agentclientprotocol/claude-agent-acp@0.37.0])
+=== RUN   TestE2EParitySuite/TestE2EParity_FallbackLauncher_ResultIdenticalToDirectBinary/codex
+    e2e_parity_test.go:392: RF-19 [codex]: direto("/usr/local/bin/codex-acp", []) | fallback("/usr/local/bin/npx", [--yes @zed-industries/codex-acp@0.14.0])
+=== RUN   TestE2EParitySuite/TestE2EParity_FallbackLauncher_ResultIdenticalToDirectBinary/opencode
+    e2e_parity_test.go:392: RF-19 [opencode]: direto("/usr/local/bin/opencode", [acp]) | fallback("/usr/local/bin/npx", [--yes opencode-ai@1.18.30 acp])
+=== RUN   TestE2EParitySuite/TestE2EParity_FallbackLauncher_ResultIdenticalToDirectBinary/copilot
+    e2e_parity_test.go:392: RF-19 [copilot]: direto("/usr/local/bin/copilot", [--acp]) | fallback("/usr/local/bin/npx", [--yes @github/copilot@1.0.51 --acp])
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestE2EParitySuiteTestE2EParity_Matrix4x4_AllSubsets_CrossProje3809919165/001
+Modo de instalacao: copy
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/codex
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude+codex
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/copilot
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude+copilot
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/codex+copilot
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude+codex+copilot
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/opencode
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude+opencode
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/codex+opencode
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude+codex+opencode
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/copilot+opencode
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude+copilot+opencode
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/codex+copilot+opencode
+=== RUN   TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude+codex+copilot+opencode
+--- PASS: TestE2EParitySuite (0.06s)
+    --- PASS: TestE2EParitySuite/TestE2EParity_CrossProject_AllTools (0.02s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_CrossProject_AllTools/claude (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_CrossProject_AllTools/opencode (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_CrossProject_AllTools/codex (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_CrossProject_AllTools/copilot (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_CrossProject_AllTools/claude+codex+copilot+opencode (0.00s)
+    --- PASS: TestE2EParitySuite/TestE2EParity_CrossProject_Idempotency (0.01s)
+    --- PASS: TestE2EParitySuite/TestE2EParity_CrossProject_InstallAndValidateInvariants (0.01s)
+    --- PASS: TestE2EParitySuite/TestE2EParity_FallbackLauncher_ArgvIdentical (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_FallbackLauncher_ArgvIdentical/claude_rf19 (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_FallbackLauncher_ArgvIdentical/codex_rf19 (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_FallbackLauncher_ArgvIdentical/opencode_rf19 (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_FallbackLauncher_ArgvIdentical/copilot_rf19 (0.00s)
+    --- PASS: TestE2EParitySuite/TestE2EParity_FallbackLauncher_BothUnavailable (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_FallbackLauncher_BothUnavailable/claude_unavailable (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_FallbackLauncher_BothUnavailable/codex_unavailable (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_FallbackLauncher_BothUnavailable/opencode_unavailable (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_FallbackLauncher_BothUnavailable/copilot_unavailable (0.00s)
+    --- PASS: TestE2EParitySuite/TestE2EParity_FallbackLauncher_ResultIdenticalToDirectBinary (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_FallbackLauncher_ResultIdenticalToDirectBinary/claude (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_FallbackLauncher_ResultIdenticalToDirectBinary/codex (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_FallbackLauncher_ResultIdenticalToDirectBinary/opencode (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_FallbackLauncher_ResultIdenticalToDirectBinary/copilot (0.00s)
+    --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject (0.02s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/codex (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude+codex (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/copilot (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude+copilot (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/codex+copilot (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude+codex+copilot (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/opencode (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude+opencode (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/codex+opencode (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude+codex+opencode (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/copilot+opencode (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude+copilot+opencode (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/codex+copilot+opencode (0.00s)
+        --- PASS: TestE2EParitySuite/TestE2EParity_Matrix4x4_AllSubsets_CrossProject/claude+codex+copilot+opencode (0.00s)
+=== RUN   TestOpenCodeParitySuite
+=== RUN   TestOpenCodeParitySuite/TestINV32ReadsTheOpenCodeFixture
+=== RUN   TestOpenCodeParitySuite/TestOC01FailsWhenPluginDropsTheGate
+=== RUN   TestOpenCodeParitySuite/TestOC01FailsWhenPluginMissing
+=== RUN   TestOpenCodeParitySuite/TestOC01FailsWhenPluginReintroducesPermissionHandler
+=== RUN   TestOpenCodeParitySuite/TestOC01PassesOnRealPlugin
+=== RUN   TestOpenCodeParitySuite/TestOC02FailsWhenPermissionAsks
+=== RUN   TestOpenCodeParitySuite/TestOC02FailsWhenPermissionBlockAbsent
+=== RUN   TestOpenCodeParitySuite/TestOC02FailsWhenRequiredToolIsDeniedWholesale
+=== RUN   TestOpenCodeParitySuite/TestOC02PassesOnCanonicalConfig
+=== RUN   TestOpenCodeParitySuite/TestOC03FailsWhenConfigWritesSkillsOrInstructions
+=== RUN   TestOpenCodeParitySuite/TestOC03PassesOnCanonicalConfig
+=== RUN   TestOpenCodeParitySuite/TestOpenCodeHasNonVacuousInvariantCoverage
+=== RUN   TestOpenCodeParitySuite/TestX01CoversOpenCodeThroughAgentsMD
+--- PASS: TestOpenCodeParitySuite (0.00s)
+    --- PASS: TestOpenCodeParitySuite/TestINV32ReadsTheOpenCodeFixture (0.00s)
+    --- PASS: TestOpenCodeParitySuite/TestOC01FailsWhenPluginDropsTheGate (0.00s)
+    --- PASS: TestOpenCodeParitySuite/TestOC01FailsWhenPluginMissing (0.00s)
+    --- PASS: TestOpenCodeParitySuite/TestOC01FailsWhenPluginReintroducesPermissionHandler (0.00s)
+    --- PASS: TestOpenCodeParitySuite/TestOC01PassesOnRealPlugin (0.00s)
+    --- PASS: TestOpenCodeParitySuite/TestOC02FailsWhenPermissionAsks (0.00s)
+    --- PASS: TestOpenCodeParitySuite/TestOC02FailsWhenPermissionBlockAbsent (0.00s)
+    --- PASS: TestOpenCodeParitySuite/TestOC02FailsWhenRequiredToolIsDeniedWholesale (0.00s)
+    --- PASS: TestOpenCodeParitySuite/TestOC02PassesOnCanonicalConfig (0.00s)
+    --- PASS: TestOpenCodeParitySuite/TestOC03FailsWhenConfigWritesSkillsOrInstructions (0.00s)
+    --- PASS: TestOpenCodeParitySuite/TestOC03PassesOnCanonicalConfig (0.00s)
+    --- PASS: TestOpenCodeParitySuite/TestOpenCodeHasNonVacuousInvariantCoverage (0.00s)
+    --- PASS: TestOpenCodeParitySuite/TestX01CoversOpenCodeThroughAgentsMD (0.00s)
+=== RUN   TestParitySuite
+=== RUN   TestParitySuite/TestParity_AgentsMD_Compact_StripsVerboseSections
+=== RUN   TestParitySuite/TestParity_AgentsMD_Standard_ContainsVerboseSections
+=== RUN   TestParitySuite/TestParity_AllTools
+=== RUN   TestParitySuite/TestParity_BestEffort_DoesNotBlockOnMissingDoc
+=== RUN   TestParitySuite/TestParity_ClaudeAndCodex
+=== RUN   TestParitySuite/TestParity_ClaudeAndOpenCode
+=== RUN   TestParitySuite/TestParity_ClaudeOnly
+=== RUN   TestParitySuite/TestParity_CodexFull_IncludesPlanningSkills
+=== RUN   TestParitySuite/TestParity_CodexLean_ExcludesPlanningSkills
+=== RUN   TestParitySuite/TestParity_CodexOnly
+=== RUN   TestParitySuite/TestParity_CopilotOnly
+=== RUN   TestParitySuite/TestParity_DriftDetection_MissingArtifact
+=== RUN   TestParitySuite/TestParity_DriftDetection_MissingCanonicalPath
+=== RUN   TestParitySuite/TestParity_FB01_InvariantLevel
+=== RUN   TestParitySuite/TestParity_FB01_Invariant_FailsOnCorruptedAgentsMD
+=== RUN   TestParitySuite/TestParity_FB01_Invariant_PassesOnValidSnapshot
+=== RUN   TestParitySuite/TestParity_FB01_Invariant_PassesOnValidSnapshot/claude
+=== RUN   TestParitySuite/TestParity_FB01_Invariant_PassesOnValidSnapshot/codex
+=== RUN   TestParitySuite/TestParity_FB01_Invariant_PassesOnValidSnapshot/claude+codex+copilot+opencode
+=== RUN   TestParitySuite/TestParity_FallbackArgvParity_AllSpecs
+=== RUN   TestParitySuite/TestParity_FallbackArgvParity_AllSpecs/claude_fallback_parity
+=== RUN   TestParitySuite/TestParity_FallbackArgvParity_AllSpecs/codex_fallback_parity
+=== RUN   TestParitySuite/TestParity_FallbackArgvParity_AllSpecs/opencode_fallback_parity
+=== RUN   TestParitySuite/TestParity_FallbackArgvParity_AllSpecs/copilot_fallback_parity
+=== RUN   TestParitySuite/TestParity_FallbackArgvParity_DirectBinaryWins
+=== RUN   TestParitySuite/TestParity_FallbackArgvParity_DirectBinaryWins/claude_direct
+=== RUN   TestParitySuite/TestParity_FallbackArgvParity_DirectBinaryWins/codex_direct
+=== RUN   TestParitySuite/TestParity_FallbackArgvParity_DirectBinaryWins/opencode_direct
+=== RUN   TestParitySuite/TestParity_FallbackArgvParity_DirectBinaryWins/copilot_direct
+=== RUN   TestParitySuite/TestParity_FallbackArgvParity_NoBinaryNoFallback
+=== RUN   TestParitySuite/TestParity_FallbackArgvParity_NoBinaryNoFallback/claude_no_binary_no_fallback
+=== RUN   TestParitySuite/TestParity_FallbackArgvParity_NoBinaryNoFallback/codex_no_binary_no_fallback
+=== RUN   TestParitySuite/TestParity_FallbackArgvParity_NoBinaryNoFallback/opencode_no_binary_no_fallback
+=== RUN   TestParitySuite/TestParity_FallbackArgvParity_NoBinaryNoFallback/copilot_no_binary_no_fallback
+=== RUN   TestParitySuite/TestParity_INV30_FailsWhenNormalizedNamesDiverge
+=== RUN   TestParitySuite/TestParity_INV30_PassesWhenFixturesAbsent
+=== RUN   TestParitySuite/TestParity_INV30_PassesWithMatchingNormalizedNames
+=== RUN   TestParitySuite/TestParity_INV30_SkippedWhenCopilotOnly
+=== RUN   TestParitySuite/TestParity_INV31_ApliesToAllTools
+=== RUN   TestParitySuite/TestParity_INV31_FailsWhenDepthExceedsMax
+=== RUN   TestParitySuite/TestParity_INV31_PassesWithDepthWithinLimit
+=== RUN   TestParitySuite/TestParity_INV31_PassesWithNoNestedAgentEvents
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets/codex
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude+codex
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets/copilot
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude+copilot
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets/codex+copilot
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude+codex+copilot
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets/opencode
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude+opencode
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets/codex+opencode
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude+codex+opencode
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets/copilot+opencode
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude+copilot+opencode
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets/codex+copilot+opencode
+=== RUN   TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude+codex+copilot+opencode
+=== RUN   TestParitySuite/TestParity_Matrix4x4_CodexSubsets_CompactProfile
+=== RUN   TestParitySuite/TestParity_Matrix4x4_CodexSubsets_CompactProfile/codex_only_compact
+=== RUN   TestParitySuite/TestParity_Matrix4x4_CodexSubsets_CompactProfile/codex_only_lean
+=== RUN   TestParitySuite/TestParity_Matrix4x4_CodexSubsets_CompactProfile/claude_codex_full
+=== RUN   TestParitySuite/TestParity_Matrix4x4_CodexSubsets_CompactProfile/all_tools_full
+=== RUN   TestParitySuite/TestParity_Matrix4x4_InvariantCoverage
+=== RUN   TestParitySuite/TestParity_NewArtifacts_Claude_Absent
+=== RUN   TestParitySuite/TestParity_NewArtifacts_Claude_Absent/CL03
+=== RUN   TestParitySuite/TestParity_NewArtifacts_Claude_Absent/CL04
+=== RUN   TestParitySuite/TestParity_NewArtifacts_Claude_Absent/CL05
+=== RUN   TestParitySuite/TestParity_NewArtifacts_Claude_Absent/CL06
+=== RUN   TestParitySuite/TestParity_NewArtifacts_Claude_Absent/CL07
+=== RUN   TestParitySuite/TestParity_NewArtifacts_Claude_Absent/CL08
+=== RUN   TestParitySuite/TestParity_NewArtifacts_Claude_Present
+=== RUN   TestParitySuite/TestParity_NewArtifacts_Copilot_Skipped_WhenClaudeOnly
+=== RUN   TestParitySuite/TestParity_NewArtifacts_DepthGuard_Absent
+=== RUN   TestParitySuite/TestParity_NewArtifacts_DepthGuard_Present
+=== RUN   TestParitySuite/TestParity_OpenCodeOnly
+=== RUN   TestParitySuite/TestParity_SkippedInvariants_ClaudeOnly
+--- PASS: TestParitySuite (0.01s)
+    --- PASS: TestParitySuite/TestParity_AgentsMD_Compact_StripsVerboseSections (0.00s)
+    --- PASS: TestParitySuite/TestParity_AgentsMD_Standard_ContainsVerboseSections (0.00s)
+    --- PASS: TestParitySuite/TestParity_AllTools (0.00s)
+    --- PASS: TestParitySuite/TestParity_BestEffort_DoesNotBlockOnMissingDoc (0.00s)
+    --- PASS: TestParitySuite/TestParity_ClaudeAndCodex (0.00s)
+    --- PASS: TestParitySuite/TestParity_ClaudeAndOpenCode (0.00s)
+    --- PASS: TestParitySuite/TestParity_ClaudeOnly (0.00s)
+    --- PASS: TestParitySuite/TestParity_CodexFull_IncludesPlanningSkills (0.00s)
+    --- PASS: TestParitySuite/TestParity_CodexLean_ExcludesPlanningSkills (0.00s)
+    --- PASS: TestParitySuite/TestParity_CodexOnly (0.00s)
+    --- PASS: TestParitySuite/TestParity_CopilotOnly (0.00s)
+    --- PASS: TestParitySuite/TestParity_DriftDetection_MissingArtifact (0.00s)
+    --- PASS: TestParitySuite/TestParity_DriftDetection_MissingCanonicalPath (0.00s)
+    --- PASS: TestParitySuite/TestParity_FB01_InvariantLevel (0.00s)
+    --- PASS: TestParitySuite/TestParity_FB01_Invariant_FailsOnCorruptedAgentsMD (0.00s)
+    --- PASS: TestParitySuite/TestParity_FB01_Invariant_PassesOnValidSnapshot (0.00s)
+        --- PASS: TestParitySuite/TestParity_FB01_Invariant_PassesOnValidSnapshot/claude (0.00s)
+        --- PASS: TestParitySuite/TestParity_FB01_Invariant_PassesOnValidSnapshot/codex (0.00s)
+        --- PASS: TestParitySuite/TestParity_FB01_Invariant_PassesOnValidSnapshot/claude+codex+copilot+opencode (0.00s)
+    --- PASS: TestParitySuite/TestParity_FallbackArgvParity_AllSpecs (0.00s)
+        --- PASS: TestParitySuite/TestParity_FallbackArgvParity_AllSpecs/claude_fallback_parity (0.00s)
+        --- PASS: TestParitySuite/TestParity_FallbackArgvParity_AllSpecs/codex_fallback_parity (0.00s)
+        --- PASS: TestParitySuite/TestParity_FallbackArgvParity_AllSpecs/opencode_fallback_parity (0.00s)
+        --- PASS: TestParitySuite/TestParity_FallbackArgvParity_AllSpecs/copilot_fallback_parity (0.00s)
+    --- PASS: TestParitySuite/TestParity_FallbackArgvParity_DirectBinaryWins (0.00s)
+        --- PASS: TestParitySuite/TestParity_FallbackArgvParity_DirectBinaryWins/claude_direct (0.00s)
+        --- PASS: TestParitySuite/TestParity_FallbackArgvParity_DirectBinaryWins/codex_direct (0.00s)
+        --- PASS: TestParitySuite/TestParity_FallbackArgvParity_DirectBinaryWins/opencode_direct (0.00s)
+        --- PASS: TestParitySuite/TestParity_FallbackArgvParity_DirectBinaryWins/copilot_direct (0.00s)
+    --- PASS: TestParitySuite/TestParity_FallbackArgvParity_NoBinaryNoFallback (0.00s)
+        --- PASS: TestParitySuite/TestParity_FallbackArgvParity_NoBinaryNoFallback/claude_no_binary_no_fallback (0.00s)
+        --- PASS: TestParitySuite/TestParity_FallbackArgvParity_NoBinaryNoFallback/codex_no_binary_no_fallback (0.00s)
+        --- PASS: TestParitySuite/TestParity_FallbackArgvParity_NoBinaryNoFallback/opencode_no_binary_no_fallback (0.00s)
+        --- PASS: TestParitySuite/TestParity_FallbackArgvParity_NoBinaryNoFallback/copilot_no_binary_no_fallback (0.00s)
+    --- PASS: TestParitySuite/TestParity_INV30_FailsWhenNormalizedNamesDiverge (0.00s)
+    --- PASS: TestParitySuite/TestParity_INV30_PassesWhenFixturesAbsent (0.00s)
+    --- PASS: TestParitySuite/TestParity_INV30_PassesWithMatchingNormalizedNames (0.00s)
+    --- PASS: TestParitySuite/TestParity_INV30_SkippedWhenCopilotOnly (0.00s)
+    --- PASS: TestParitySuite/TestParity_INV31_ApliesToAllTools (0.00s)
+    --- PASS: TestParitySuite/TestParity_INV31_FailsWhenDepthExceedsMax (0.00s)
+    --- PASS: TestParitySuite/TestParity_INV31_PassesWithDepthWithinLimit (0.00s)
+    --- PASS: TestParitySuite/TestParity_INV31_PassesWithNoNestedAgentEvents (0.00s)
+    --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets/codex (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude+codex (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets/copilot (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude+copilot (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets/codex+copilot (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude+codex+copilot (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets/opencode (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude+opencode (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets/codex+opencode (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude+codex+opencode (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets/copilot+opencode (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude+copilot+opencode (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets/codex+copilot+opencode (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_AllSubsets/claude+codex+copilot+opencode (0.00s)
+    --- PASS: TestParitySuite/TestParity_Matrix4x4_CodexSubsets_CompactProfile (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_CodexSubsets_CompactProfile/codex_only_compact (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_CodexSubsets_CompactProfile/codex_only_lean (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_CodexSubsets_CompactProfile/claude_codex_full (0.00s)
+        --- PASS: TestParitySuite/TestParity_Matrix4x4_CodexSubsets_CompactProfile/all_tools_full (0.00s)
+    --- PASS: TestParitySuite/TestParity_Matrix4x4_InvariantCoverage (0.00s)
+    --- PASS: TestParitySuite/TestParity_NewArtifacts_Claude_Absent (0.00s)
+        --- PASS: TestParitySuite/TestParity_NewArtifacts_Claude_Absent/CL03 (0.00s)
+        --- PASS: TestParitySuite/TestParity_NewArtifacts_Claude_Absent/CL04 (0.00s)
+        --- PASS: TestParitySuite/TestParity_NewArtifacts_Claude_Absent/CL05 (0.00s)
+        --- PASS: TestParitySuite/TestParity_NewArtifacts_Claude_Absent/CL06 (0.00s)
+        --- PASS: TestParitySuite/TestParity_NewArtifacts_Claude_Absent/CL07 (0.00s)
+        --- PASS: TestParitySuite/TestParity_NewArtifacts_Claude_Absent/CL08 (0.00s)
+    --- PASS: TestParitySuite/TestParity_NewArtifacts_Claude_Present (0.00s)
+    --- PASS: TestParitySuite/TestParity_NewArtifacts_Copilot_Skipped_WhenClaudeOnly (0.00s)
+    --- PASS: TestParitySuite/TestParity_NewArtifacts_DepthGuard_Absent (0.00s)
+    --- PASS: TestParitySuite/TestParity_NewArtifacts_DepthGuard_Present (0.00s)
+    --- PASS: TestParitySuite/TestParity_OpenCodeOnly (0.00s)
+    --- PASS: TestParitySuite/TestParity_SkippedInvariants_ClaudeOnly (0.00s)
+=== RUN   TestRP03Suite
+=== RUN   TestRP03Suite/TestParity_INV32_FailsWhenDiverge
+=== RUN   TestRP03Suite/TestParity_INV32_PassesWhen4CLIsAgree
+=== RUN   TestRP03Suite/TestParity_INV32_SkipsWhenFixtureAbsent
+=== RUN   TestRP03Suite/TestRP03_CrossCLI_ShellOpNormalizationParity
+=== RUN   TestRP03Suite/TestRP03_RawInputNeverMutated
+--- PASS: TestRP03Suite (0.00s)
+    --- PASS: TestRP03Suite/TestParity_INV32_FailsWhenDiverge (0.00s)
+    --- PASS: TestRP03Suite/TestParity_INV32_PassesWhen4CLIsAgree (0.00s)
+    --- PASS: TestRP03Suite/TestParity_INV32_SkipsWhenFixtureAbsent (0.00s)
+    --- PASS: TestRP03Suite/TestRP03_CrossCLI_ShellOpNormalizationParity (0.00s)
+    --- PASS: TestRP03Suite/TestRP03_RawInputNeverMutated (0.00s)
+=== RUN   TestSelfSatisfiedInvariantsMatchInjectedStubs
+--- PASS: TestSelfSatisfiedInvariantsMatchInjectedStubs (0.00s)
+=== RUN   TestSelfSatisfiedInvariantIDs
+--- PASS: TestSelfSatisfiedInvariantIDs (0.00s)
+=== RUN   TestScopeDerivesFromAppliesToNotLevel
+--- PASS: TestScopeDerivesFromAppliesToNotLevel (0.00s)
+=== RUN   TestScopeUniversalWhenAppliesToNilOrCoversAllProviders
+--- PASS: TestScopeUniversalWhenAppliesToNilOrCoversAllProviders (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/parity	0.362s

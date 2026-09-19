@@ -30,7 +30,7 @@ Ver: [ADR-013](.specs/adr/013-codex-cli-acp-native.md) — Codex CLI como runtim
 ### Uso
 
 ```bash
-ai-spec-harness task-loop \
+ai-spec task-loop \
   --tool codex \
   --runtime acp \
   --reasoning-effort medium \
@@ -64,7 +64,7 @@ O `ActivityWatchdog` cancela sessoes Codex inativas com o mesmo timeout configur
 que cancela sessoes Claude/Copilot (default: `120s`):
 
 ```bash
-ai-spec-harness task-loop \
+ai-spec task-loop \
   --tool codex \
   --runtime acp \
   --activity-timeout 90s \
@@ -92,7 +92,7 @@ codex-acp nao encontrado.
 > Migrar para `--runtime=acp` conforme secao acima.
 
 ```bash
-ai-spec-harness task-loop \
+ai-spec task-loop \
   --tool codex \
   .specs/prd-minha-feature
 ```
@@ -151,7 +151,7 @@ contexto via protocolo JSON-RPC sobre stdio. O template de prompt e
 ### `.codex/config.toml` — skills habilitadas
 
 O arquivo `.codex/config.toml` lista as skills habilitadas para resolucao e upgrade via harness.
-O instalador (`ai-spec-harness install --tool codex`) distribui hooks de validacao em
+O instalador (`ai-spec install . --tools codex`) distribui hooks de validacao em
 `$CODEX_HOME/hooks/` (default `~/.codex/hooks/`) e skills em `$CODEX_HOME/skills/`.
 
 ---

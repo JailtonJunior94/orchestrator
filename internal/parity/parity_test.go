@@ -309,6 +309,7 @@ func (s *ParitySuite) TestParity_NewArtifacts_Claude_Absent() {
 		{invCL03ClaudeHookGovernancePresent, ".claude/hooks/validate-governance.sh"},
 		{invCL04ClaudeHookPreloadPresent, ".claude/hooks/validate-preload.sh"},
 		{invCL05ClaudeRulesGovernancePresent, ".claude/rules/governance.md"},
+		{invCL05ClaudeRulesGovernancePresent, ".claude/rules/code-style.md"},
 		{invCL06ClaudeScriptTaskEvidencePresent, ".claude/scripts/validate-task-evidence.sh"},
 		{invCL07ClaudeScriptBugfixEvidencePresent, ".claude/scripts/validate-bugfix-evidence.sh"},
 		{invCL08ClaudeScriptRefactorEvidencePresent, ".claude/scripts/validate-refactor-evidence.sh"},

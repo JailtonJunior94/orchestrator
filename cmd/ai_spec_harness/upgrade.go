@@ -20,8 +20,9 @@ type upgradeCommand struct{}
 func newUpgradeCmd() *cobra.Command {
 	handler := &upgradeCommand{}
 	cmd := &cobra.Command{
-		Use:   "upgrade <path>",
-		Short: "Atualiza skills de governanca em um projeto",
+		Use:     "upgrade <path>",
+		Aliases: []string{"sync"},
+		Short:   "Atualiza skills de governanca em um projeto",
 		Long: `Verifica ou atualiza skills de governanca comparando versoes e checksums.
 
 Sem --source, compara com as skills canonicas embutidas no binario.
@@ -32,7 +33,8 @@ Exemplos:
   ai-spec-harness upgrade ./meu-projeto --source ~/ai-governance
   ai-spec-harness upgrade ./meu-projeto --source ~/ai-governance --langs go,node
   ai-spec-harness upgrade ./meu-projeto --ref v1.1.0 --check
-  ai-spec-harness upgrade ./meu-projeto --ref v1.1.0`,
+  ai-spec-harness upgrade ./meu-projeto --ref v1.1.0
+  ai-spec-harness sync ./meu-projeto`,
 		Args: cobra.ExactArgs(1),
 		RunE: handler.run,
 	}
@@ -42,6 +44,7 @@ Exemplos:
 	cmd.Flags().String("source", "", "Diretorio fonte do repositorio de governanca (opcional; usa embutido se omitido)")
 	cmd.Flags().String("ref", "", "Referencia git (tag, branch, SHA) para usar como fonte (mutualmente exclusivo com --source)")
 	cmd.Flags().Bool("follow-external-symlinks", false, "Permite escrever em .agents/skills quando symlink aponta para fora do projeto")
+	cmd.Flags().Bool("overwrite-conflicts", false, "Sobrescreve arquivos gerenciados em conflito (checksum divergente do manifesto), nomeando cada um; sem esta flag o lote inteiro e abortado (RF-27)")
 	return cmd
 }
 
@@ -51,6 +54,7 @@ func (c *upgradeCommand) run(cmd *cobra.Command, args []string) error {
 	upgradeSource, _ := cmd.Flags().GetString("source")
 	upgradeRef, _ := cmd.Flags().GetString("ref")
 	upgradeFollowExternalSymlinks, _ := cmd.Flags().GetBool("follow-external-symlinks")
+	upgradeOverwriteConflicts, _ := cmd.Flags().GetBool("overwrite-conflicts")
 
 	if upgradeRef != "" && upgradeSource != "" {
 		return fmt.Errorf("--ref e --source sao mutuamente exclusivos")
@@ -90,5 +94,6 @@ func (c *upgradeCommand) run(cmd *cobra.Command, args []string) error {
 		CheckOnly:              upgradeCheckOnly,
 		Langs:                  langs,
 		FollowExternalSymlinks: upgradeFollowExternalSymlinks,
+		OverwriteConflicts:     upgradeOverwriteConflicts,
 	})
 }

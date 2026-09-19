@@ -1,0 +1,74 @@
+=== RUN   TestTextualMentionIsNotProofOfDelegation
+=== PAUSE TestTextualMentionIsNotProofOfDelegation
+=== RUN   TestExecutionPositionIsProofOfDelegation
+=== PAUSE TestExecutionPositionIsProofOfDelegation
+=== RUN   TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator
+=== PAUSE TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator
+=== CONT  TestTextualMentionIsNotProofOfDelegation
+=== CONT  TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator
+=== CONT  TestExecutionPositionIsProofOfDelegation
+=== RUN   TestTextualMentionIsNotProofOfDelegation/variavel-atribuida-sem-uso
+=== PAUSE TestTextualMentionIsNotProofOfDelegation/variavel-atribuida-sem-uso
+=== RUN   TestTextualMentionIsNotProofOfDelegation/comentario
+=== PAUSE TestTextualMentionIsNotProofOfDelegation/comentario
+=== RUN   TestTextualMentionIsNotProofOfDelegation/mensagem
+=== PAUSE TestTextualMentionIsNotProofOfDelegation/mensagem
+=== CONT  TestTextualMentionIsNotProofOfDelegation/variavel-atribuida-sem-uso
+=== RUN   TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=false
+=== CONT  TestTextualMentionIsNotProofOfDelegation/comentario
+=== RUN   TestExecutionPositionIsProofOfDelegation/source
+=== CONT  TestTextualMentionIsNotProofOfDelegation/mensagem
+=== PAUSE TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=false
+=== PAUSE TestExecutionPositionIsProofOfDelegation/source
+=== RUN   TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=true
+=== PAUSE TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=true
+=== CONT  TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=false
+=== RUN   TestExecutionPositionIsProofOfDelegation/exec-direto
+=== CONT  TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=true
+=== PAUSE TestExecutionPositionIsProofOfDelegation/exec-direto
+=== RUN   TestExecutionPositionIsProofOfDelegation/variavel-executada
+=== PAUSE TestExecutionPositionIsProofOfDelegation/variavel-executada
+=== RUN   TestExecutionPositionIsProofOfDelegation/pipeline
+=== PAUSE TestExecutionPositionIsProofOfDelegation/pipeline
+=== CONT  TestExecutionPositionIsProofOfDelegation/source
+=== CONT  TestExecutionPositionIsProofOfDelegation/variavel-executada
+=== CONT  TestExecutionPositionIsProofOfDelegation/exec-direto
+=== CONT  TestExecutionPositionIsProofOfDelegation/pipeline
+--- PASS: TestTextualMentionIsNotProofOfDelegation (0.00s)
+    --- PASS: TestTextualMentionIsNotProofOfDelegation/variavel-atribuida-sem-uso (0.01s)
+    --- PASS: TestTextualMentionIsNotProofOfDelegation/mensagem (0.01s)
+    --- PASS: TestTextualMentionIsNotProofOfDelegation/comentario (0.01s)
+--- PASS: TestExecutionPositionIsProofOfDelegation (0.00s)
+    --- PASS: TestExecutionPositionIsProofOfDelegation/source (0.01s)
+    --- PASS: TestExecutionPositionIsProofOfDelegation/exec-direto (0.01s)
+    --- PASS: TestExecutionPositionIsProofOfDelegation/variavel-executada (0.01s)
+    --- PASS: TestExecutionPositionIsProofOfDelegation/pipeline (0.00s)
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidatorGe2682730143/001
+Modo de instalacao: copy
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidatorGe274244904/001
+Modo de instalacao: copy
+--- PASS: TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator (0.00s)
+    --- PASS: TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=false (0.27s)
+    --- PASS: TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=true (0.35s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/install	0.448s
+exit=0

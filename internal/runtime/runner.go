@@ -120,6 +120,8 @@ func NewACPRunner(spec specs.Spec, opts ...Option) *ACPRunner {
 	return r
 }
 
+func (r *ACPRunner) SpecID() string { return r.spec.ID }
+
 // Run executa uma sessão ACP completa para o job fornecido.
 // Orquestra: probe → memory read → hooks dispatch → open → fan-out → persistência → Summary.
 // eventLoopResult agrega os contadores do loop de eventos.

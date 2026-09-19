@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-portatil-vendor-neutral/7.0_execution_report.md
+summary: Campo aditivo FileChecksums no manifesto, tracker de checksum por path fail-closed reutilizado por install e upgrade, e fix de fail-open em refsChangedFiles.
+timestamp: 2026-09-18T00:00:00Z

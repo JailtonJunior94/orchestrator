@@ -217,6 +217,8 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, model string) 
 		retryAttempts int
 	)
 
+	sessionStart := time.Now()
+
 	for attempt := 0; attempt <= c.maxRetries; attempt++ {
 		if attempt > 0 {
 
@@ -250,6 +252,12 @@ func (c *acpInvoker) Invoke(ctx context.Context, prompt, workDir, model string) 
 		SlowPublishes:      summary.SlowPublishes,
 		DroppedUpdates:     summary.DroppedUpdates,
 		RetryAttempts:      summary.RetryAttempts,
+		Provider:           c.runner.SpecID(),
+		Model:              model,
+		Duration:           time.Since(sessionStart),
+		ToolCallsTotal:     len(summary.ToolCalls),
+		HasToolCallsTotal:  true,
+		FinalStatus:        NewCatalog().finalStatus(runErr, summary.CancelReason),
 	})
 
 	stdout := c.humanBuffer.String()
@@ -270,6 +278,16 @@ func (c *Catalog) MapExitCode(reason events.CancelReason) int {
 	default:
 		return 1
 	}
+}
+
+func (c *Catalog) finalStatus(runErr error, cancelReason events.CancelReason) string {
+	if runErr != nil {
+		return "error"
+	}
+	if cancelReason != events.CancelReasonNone && cancelReason != "" {
+		return "cancelled"
+	}
+	return "completed"
 }
 
 func (c *Catalog) deriveEvidenceDir(workDir, prompt string) string {

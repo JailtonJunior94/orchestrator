@@ -1,0 +1,14 @@
+version: 1
+git:
+  auto_commit: false
+  auto_push: false
+approval:
+  require_for_destructive_operations: true
+quality:
+  require_tests: true
+  require_lint: true
+evidence:
+  require_execution_report: true
+skills:
+  discovery_mode: declared
+typo_field: true

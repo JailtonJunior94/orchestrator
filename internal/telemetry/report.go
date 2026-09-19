@@ -13,13 +13,14 @@ const _maxTopN = 5
 
 // ReportData contém as métricas acionáveis derivadas do log de telemetria.
 type ReportData struct {
-	Period            string        `json:"period"`
-	TotalInvocations  int           `json:"total_invocations"`
-	Skills            []SkillMetric `json:"skills"`
-	Refs              []RefMetric   `json:"refs"`
-	EstimatedTokens   int           `json:"estimated_tokens"`
-	RefsPerInvocation float64       `json:"refs_per_invocation"`
-	Alerts            []string      `json:"alerts"`
+	Period            string          `json:"period"`
+	TotalInvocations  int             `json:"total_invocations"`
+	Skills            []SkillMetric   `json:"skills"`
+	Refs              []RefMetric     `json:"refs"`
+	EstimatedTokens   int             `json:"estimated_tokens"`
+	RefsPerInvocation float64         `json:"refs_per_invocation"`
+	Alerts            []string        `json:"alerts"`
+	Metrics           []MetricSummary `json:"metrics,omitempty"`
 }
 
 // SkillMetric representa uma skill com contagem e percentual de uso.
@@ -39,7 +40,7 @@ type RefMetric struct {
 // Linhas malformadas são ignoradas sem erro. Log ausente retorna ReportData zero-value com err=nil.
 func (c *Catalog) Report(rootDir string, since time.Duration) (ReportData, error) {
 	logPath := filepath.Join(rootDir, ".agents", "telemetry.log")
-	entries, err := NewCatalog().parseLogEntries(logPath, since)
+	entries, err := c.parseLogEntries(logPath, since)
 	if err != nil {
 		return ReportData{}, err
 	}
@@ -72,9 +73,9 @@ func (c *Catalog) Report(rootDir string, since time.Duration) (ReportData, error
 		return ReportData{}, nil
 	}
 
-	skills := NewCatalog().topSkills(skillCounts, total)
-	refs := NewCatalog().topRefs(refCounts)
-	alerts := NewCatalog().buildAlerts(skillCounts, skillRefs)
+	skills := c.topSkills(skillCounts, total)
+	refs := c.topRefs(refCounts)
+	alerts := c.buildAlerts(skillCounts, skillRefs)
 
 	var refsPerInv float64
 	if total > 0 {
@@ -94,6 +95,7 @@ func (c *Catalog) Report(rootDir string, since time.Duration) (ReportData, error
 		EstimatedTokens:   totalRefLoads * _tokensPerRefLoad,
 		RefsPerInvocation: refsPerInv,
 		Alerts:            alerts,
+		Metrics:           c.summarizeRF44Metrics(entries),
 	}, nil
 }
 
@@ -124,7 +126,7 @@ func (c *Catalog) FormatText(data ReportData) string {
 	fmt.Fprintf(&sb, "\nMétricas:\n")
 	fmt.Fprintf(&sb, "  Refs por invocação (média): %.1f\n", data.RefsPerInvocation)
 	fmt.Fprintf(&sb, "  Tokens estimados:           %d (%d refs × %d tok/ref)\n",
-		data.EstimatedTokens, data.EstimatedTokens/NewCatalog().max1(_tokensPerRefLoad), _tokensPerRefLoad)
+		data.EstimatedTokens, data.EstimatedTokens/c.max1(_tokensPerRefLoad), _tokensPerRefLoad)
 
 	if len(data.Alerts) > 0 {
 		fmt.Fprintf(&sb, "\nAlertas:\n")
@@ -133,7 +135,32 @@ func (c *Catalog) FormatText(data ReportData) string {
 		}
 	}
 
+	if len(data.Metrics) > 0 {
+		fmt.Fprintf(&sb, "\nMétricas RF-44 (observadas no período — ausente ≠ zero):\n")
+		for _, m := range data.Metrics {
+			switch {
+			case len(m.Values) > 0:
+				fmt.Fprintf(&sb, "  %-15s count=%d %s\n", m.Metric, m.Count, formatMetricValues(m.Values))
+			default:
+				fmt.Fprintf(&sb, "  %-15s count=%d avg=%.2f sum=%.2f\n", m.Metric, m.Count, m.Avg, m.Sum)
+			}
+		}
+	}
+
 	return sb.String()
+}
+
+func formatMetricValues(values map[string]int) string {
+	keys := make([]string, 0, len(values))
+	for k := range values {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, k := range keys {
+		parts = append(parts, fmt.Sprintf("%s=%d", k, values[k]))
+	}
+	return strings.Join(parts, " ")
 }
 
 // FormatJSON serializa ReportData como JSON.

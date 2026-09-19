@@ -222,12 +222,16 @@ func (f *OSFileSystem) FileHash(path string) (string, error) {
 }
 
 func (f *OSFileSystem) DirHash(path string) (string, error) {
-	if !f.IsDir(path) {
-		return "", nil
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", fmt.Errorf("stat %s: %w", path, err)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("%s is not a directory", path)
 	}
 
 	var entries []string
-	err := filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
+	err = filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return err
 		}

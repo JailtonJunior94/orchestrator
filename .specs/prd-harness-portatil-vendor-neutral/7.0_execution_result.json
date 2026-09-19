@@ -1,0 +1,77 @@
+{
+  "schema_version": 2,
+  "run_id": "task-7.0-harness-portatil-vendor-neutral-2026-09-18",
+  "task_id": "7.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a8b77217cd713b4ef629d324e63934e05e589864",
+  "patch_sha256": "ee4dd644f7528c218c46f9ff796f48e114871494d14ea729e95ba9b1b4a757d8",
+  "patch_ref": "evidence/task-7.0-harness-portatil-vendor-neutral/7.0.patch",
+  "final_state_sha256": "a7b73477c365e4c66ea867ce0397872e427d93fc4f48b12f36fa449722a9634d",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test ./...",
+      "exit_code": 0,
+      "output_sha256": "ab22a95dd594fe210fb686b9ce166615e90c7c6c45a43b71b7c2222df19471a2"
+    },
+    {
+      "command": "go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/runtime/memory/durable/... ./cmd/ai_spec_harness/...",
+      "exit_code": 0,
+      "output_sha256": "c00bcef0630361d5adf9faabebe11de18c0238cbb21a1360eca9983920587787"
+    },
+    {
+      "command": "golangci-lint run --config .golangci.yml ./internal/tracking/... ./internal/install/... ./internal/upgrade/... ./internal/manifest/... ./internal/contextgen/...",
+      "exit_code": 0,
+      "output_sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "command": "bash scripts/check-mocks.sh",
+      "exit_code": 0,
+      "output_sha256": "b1d91938e8acf29e44eedd7309466a57e2051808d29fd98cc76e0d414b83d6e2"
+    },
+    {
+      "command": "go test -bench=. -benchmem -run '^$' ./internal/tracking/...",
+      "exit_code": 0,
+      "output_sha256": "0c05e2e2cddc68b84a71e672c0c5b14033b28c8a5b019d55ca35d410f109cc27"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "legacy-manifest-coexists-via-has-file-tracking",
+      "evidence_ref": "evidence/task-7.0-harness-portatil-vendor-neutral/test.log"
+    },
+    {
+      "id": "legacy-manifest-absence-never-divergence",
+      "evidence_ref": "evidence/task-7.0-harness-portatil-vendor-neutral/test.log"
+    },
+    {
+      "id": "no-hash-read-failure-yields-success",
+      "evidence_ref": "evidence/task-7.0-harness-portatil-vendor-neutral/test.log"
+    },
+    {
+      "id": "benchmark-no-relevant-regression",
+      "evidence_ref": "evidence/task-7.0-harness-portatil-vendor-neutral/bench.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-7.0-harness-portatil-vendor-neutral/build.log",
+    "evidence/task-7.0-harness-portatil-vendor-neutral/vet.log",
+    "evidence/task-7.0-harness-portatil-vendor-neutral/test.log",
+    "evidence/task-7.0-harness-portatil-vendor-neutral/integration-test.log",
+    "evidence/task-7.0-harness-portatil-vendor-neutral/lint.log",
+    "evidence/task-7.0-harness-portatil-vendor-neutral/check-mocks.log",
+    "evidence/task-7.0-harness-portatil-vendor-neutral/bench.log"
+  ],
+  "review_verdict": "approved"
+}

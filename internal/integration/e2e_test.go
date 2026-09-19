@@ -111,13 +111,24 @@ func TestE2E_InstallUpgradeSchemaChange(t *testing.T) {
 		t.Fatalf("write AGENTS.md: %v", err)
 	}
 
-	// Upgrade
 	err = newUpgradeSvc(fsys).Execute(config.UpgradeOptions{
 		ProjectDir: projectDir,
 		SourceDir:  sourceDir,
 	})
+	if err == nil {
+		t.Fatal("upgrade deveria abortar por conflito de arquivo gerenciado (AGENTS.md divergente do manifesto)")
+	}
+	if !strings.Contains(err.Error(), "AGENTS.md") {
+		t.Fatalf("erro de conflito deveria nomear AGENTS.md, got: %v", err)
+	}
+
+	err = newUpgradeSvc(fsys).Execute(config.UpgradeOptions{
+		ProjectDir:         projectDir,
+		SourceDir:          sourceDir,
+		OverwriteConflicts: true,
+	})
 	if err != nil {
-		t.Fatalf("upgrade: %v", err)
+		t.Fatalf("upgrade com overwrite: %v", err)
 	}
 
 	data, err = os.ReadFile(agentsPath)
@@ -921,11 +932,23 @@ func TestUpgradeRecopiesNewArtifacts(t *testing.T) {
 	mustWriteFile(t, filepath.Join(sourceDir, ".agents/skills/review/SKILL.md"),
 		"---\nname: review\nversion: 2.0.0\ndescription: Revisa codigo.\n---\n")
 
-	if err := newUpgradeSvc(fsys).Execute(config.UpgradeOptions{
+	err := newUpgradeSvc(fsys).Execute(config.UpgradeOptions{
 		ProjectDir: projectDir,
 		SourceDir:  sourceDir,
+	})
+	if err == nil {
+		t.Fatal("upgrade deveria abortar por conflito de arquivo gerenciado (validate-bugfix-evidence.sh divergente)")
+	}
+	if !strings.Contains(err.Error(), "validate-bugfix-evidence.sh") {
+		t.Fatalf("erro de conflito deveria nomear validate-bugfix-evidence.sh, got: %v", err)
+	}
+
+	if err := newUpgradeSvc(fsys).Execute(config.UpgradeOptions{
+		ProjectDir:         projectDir,
+		SourceDir:          sourceDir,
+		OverwriteConflicts: true,
 	}); err != nil {
-		t.Fatalf("upgrade: %v", err)
+		t.Fatalf("upgrade com overwrite: %v", err)
 	}
 
 	// validate-bugfix-evidence.sh deve ser restaurado pela re-sincronizacao de adaptadores

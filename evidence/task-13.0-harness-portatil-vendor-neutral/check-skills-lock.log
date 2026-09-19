@@ -1,0 +1,2 @@
+go run . skills --verify .
+Integridade das skills OK (versao + hash SHA-256).

@@ -1,0 +1,210 @@
+=== RUN   TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed
+=== RUN   TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed/git_commit_-m_x
+=== RUN   TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed/git_push_origin_main
+--- PASS: TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed (0.80s)
+    --- PASS: TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed/git_commit_-m_x (0.52s)
+    --- PASS: TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed/git_push_origin_main (0.28s)
+=== RUN   TestLegacyV201Project_DoctorWorksWithoutAnyUserAction
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Resumo do lote (install): criado=246 atualizado=0 preservado=0 mesclado=0 conflito=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestLegacyV201Project_DoctorWorksWithoutAnyUserAction2119372023/001
+Modo de instalacao: copy
+Diagnosticando: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestLegacyV201Project_DoctorWorksWithoutAnyUserAction2119372023/001
+
+Core:
+  [AVISO] Repositorio git                          nao e um repositorio git (camada: core)
+  [OK   ] Diretorio de skills                      24 skills encontradas (camada: core)
+  [OK   ] Manifesto                                versao 2.0.1 (camada: core)
+  [OK   ] Symlinks de skills                       todos os links validos (camada: core)
+  [OK   ] Permissoes de escrita                    diretorio gravavel (camada: core)
+  [OK   ] Git instalado                            disponivel (camada: core)
+  [AVISO] Contrato do harness                      .agents/harness.yaml nao declarado; usando default embutido (versao 1) (camada: core)
+  [AVISO] Integridade de skills (lock)             skills-lock.json indisponivel: ler skills-lock.json: open /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestLegacyV201Project_DoctorWorksWithoutAnyUserAction2119372023/001/skills-lock.json: no such file or directory (camada: validação)
+  [OK   ] Sincronia canonica/derivados             51 item(ns) verificados, nenhuma divergencia (camada: core)
+
+Claude (ACP):
+  [AVISO] Instrucoes descobriveis                  parcialmente descobrivel: presente=.claude/settings.local.json ausente=.claude/settings.json (camada: adapter)
+  [OK   ] Skills disponiveis                       24 skill(s) atuais (camada: core)
+  [OK   ] Politicas aplicadas                      7 artefato(s) de politica aplicados (camada: adapter)
+  [OK   ] Validadores de evidencia instalados      19 validador(es) canonico(s) atuais (camada: validação)
+  [OK   ] Pre-condicoes de enforcement             nenhuma pre-condicao pendente conhecida (camada: provider)
+
+Resultado: tudo ok
+--- PASS: TestLegacyV201Project_DoctorWorksWithoutAnyUserAction (0.27s)
+=== RUN   TestLegacyV201Project_UpgradeSucceedsWithZeroFlags
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Resumo do lote (install): criado=246 atualizado=0 preservado=0 mesclado=0 conflito=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestLegacyV201Project_UpgradeSucceedsWithZeroFlags3412582815/001
+Modo de instalacao: copy
+Verificando skills em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestLegacyV201Project_UpgradeSucceedsWithZeroFlags3412582815/001
+Fonte: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-4133420706
+ai-spec dev
+
+  OK                   agent-governance (2.0.0)
+  OK                   analyze-project (2.0.0)
+  OK                   bugfix (2.0.0)
+  OK                   confluence-changelog-publisher (1.0.0)
+  OK                   create-prd (2.0.0)
+  OK                   create-tasks (2.0.0)
+  OK                   create-technical-specification (2.0.0)
+  OK                   design-patterns-mandatory (1.1.0)
+  OK                   domain-modeling-production (2.0.0)
+  AUSENTE              dotnet-csharp-implementation (fonte: 1.4.0)
+  OK                   execute-all-tasks (2.0.0)
+  OK                   execute-task (2.0.0)
+  OK                   finalize-changelog-readme-push (1.1.0)
+  OK                   github-diff-changelog-publisher (1.0.0)
+  OK                   github-pr-comment-triage (1.0.0)
+  OK                   github-release-publication-flow (1.0.0)
+  AUSENTE              go-implementation (fonte: 1.4.0)
+  OK                   jira-tasks (1.0.0)
+  AUSENTE              node-implementation (fonte: 1.4.0)
+  AUSENTE              object-calisthenics-go (fonte: 1.1.0)
+  OK                   otel-grafana-dashboards (1.0.0)
+  OK                   postman-collection-generator (1.0.0)
+  OK                   prompt-enricher (1.0.0)
+  OK                   pull-request (1.0.0)
+  AUSENTE              python-implementation (fonte: 1.4.0)
+  OK                   refactor (1.2.0)
+  OK                   review (1.4.0)
+  OK                   semantic-commit (1.1.0)
+  OK                   us-to-prd (1.0.1)
+
+Resumo: 24 atualizadas, 0 desatualizadas (0 refs divergentes), 5 ausentes
+    -> dotnet-csharp-implementation atualizado
+    -> go-implementation atualizado
+    -> node-implementation atualizado
+    -> object-calisthenics-go atualizado
+    -> python-implementation atualizado
+-> Re-gerando adaptadores...
+-> Re-gerando governanca contextual apos atualizacao de skills...
+
+Resumo do lote (upgrade): criado=85 atualizado=1 preservado=17 mesclado=0 conflito=0
+--- PASS: TestLegacyV201Project_UpgradeSucceedsWithZeroFlags (0.36s)
+=== RUN   TestNoImplicitGitOperations_InstallUpgradeDoctor
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Resumo do lote (install): criado=246 atualizado=0 preservado=0 mesclado=0 conflito=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestNoImplicitGitOperations_InstallUpgradeDoctor719754083/001
+Modo de instalacao: copy
+Verificando skills em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestNoImplicitGitOperations_InstallUpgradeDoctor719754083/001
+Fonte: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-2186480308
+ai-spec dev
+
+  OK                   agent-governance (2.0.0)
+  OK                   analyze-project (2.0.0)
+  OK                   bugfix (2.0.0)
+  OK                   confluence-changelog-publisher (1.0.0)
+  OK                   create-prd (2.0.0)
+  OK                   create-tasks (2.0.0)
+  OK                   create-technical-specification (2.0.0)
+  OK                   design-patterns-mandatory (1.1.0)
+  OK                   domain-modeling-production (2.0.0)
+  AUSENTE              dotnet-csharp-implementation (fonte: 1.4.0)
+  OK                   execute-all-tasks (2.0.0)
+  OK                   execute-task (2.0.0)
+  OK                   finalize-changelog-readme-push (1.1.0)
+  OK                   github-diff-changelog-publisher (1.0.0)
+  OK                   github-pr-comment-triage (1.0.0)
+  OK                   github-release-publication-flow (1.0.0)
+  AUSENTE              go-implementation (fonte: 1.4.0)
+  OK                   jira-tasks (1.0.0)
+  AUSENTE              node-implementation (fonte: 1.4.0)
+  AUSENTE              object-calisthenics-go (fonte: 1.1.0)
+  OK                   otel-grafana-dashboards (1.0.0)
+  OK                   postman-collection-generator (1.0.0)
+  OK                   prompt-enricher (1.0.0)
+  OK                   pull-request (1.0.0)
+  AUSENTE              python-implementation (fonte: 1.4.0)
+  OK                   refactor (1.2.0)
+  OK                   review (1.4.0)
+  OK                   semantic-commit (1.1.0)
+  OK                   us-to-prd (1.0.1)
+
+Resumo: 24 atualizadas, 0 desatualizadas (0 refs divergentes), 5 ausentes
+    -> dotnet-csharp-implementation atualizado
+    -> go-implementation atualizado
+    -> node-implementation atualizado
+    -> object-calisthenics-go atualizado
+    -> python-implementation atualizado
+-> Re-gerando adaptadores...
+-> Re-gerando governanca contextual apos atualizacao de skills...
+
+Resumo do lote (upgrade): criado=85 atualizado=1 preservado=17 mesclado=0 conflito=0
+Diagnosticando: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestNoImplicitGitOperations_InstallUpgradeDoctor719754083/001
+
+Core:
+  [OK   ] Repositorio git                          valido (camada: core)
+  [OK   ] Diretorio de skills                      29 skills encontradas (camada: core)
+  [OK   ] Manifesto                                versao dev (camada: core)
+  [OK   ] Symlinks de skills                       todos os links validos (camada: core)
+  [OK   ] Permissoes de escrita                    diretorio gravavel (camada: core)
+  [OK   ] Git instalado                            disponivel (camada: core)
+  [AVISO] Contrato do harness                      .agents/harness.yaml nao declarado; usando default embutido (versao 1) (camada: core)
+  [AVISO] Integridade de skills (lock)             skills-lock.json indisponivel: ler skills-lock.json: open /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestNoImplicitGitOperations_InstallUpgradeDoctor719754083/001/skills-lock.json: no such file or directory (camada: validação)
+  [OK   ] Sincronia canonica/derivados             51 item(ns) verificados, nenhuma divergencia (camada: core)
+
+Claude (ACP):
+  [AVISO] Instrucoes descobriveis                  parcialmente descobrivel: presente=.claude/settings.local.json ausente=.claude/settings.json (camada: adapter)
+  [OK   ] Skills disponiveis                       24 skill(s) atuais (camada: core)
+  [OK   ] Politicas aplicadas                      7 artefato(s) de politica aplicados (camada: adapter)
+  [OK   ] Validadores de evidencia instalados      19 validador(es) canonico(s) atuais (camada: validação)
+  [OK   ] Pre-condicoes de enforcement             nenhuma pre-condicao pendente conhecida (camada: provider)
+
+Resultado: tudo ok
+--- PASS: TestNoImplicitGitOperations_InstallUpgradeDoctor (0.64s)
+=== RUN   TestPortability_CLISwitchWithoutReinstall
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Resumo do lote (install): criado=464 atualizado=0 preservado=0 mesclado=2 conflito=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPortability_CLISwitchWithoutReinstall900655793/001
+Modo de instalacao: copy
+--- PASS: TestPortability_CLISwitchWithoutReinstall (1.82s)
+=== RUN   TestPortability_NoDaemonRequired
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Resumo do lote (install): criado=380 atualizado=0 preservado=0 mesclado=2 conflito=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPortability_NoDaemonRequired1512931084/001
+Modo de instalacao: copy
+    portability_test.go:514: 61 scripts instalados, todos one-shot via shebang, nenhum artefato de daemon
+--- PASS: TestPortability_NoDaemonRequired (0.35s)
+=== RUN   TestReleasePolicy_DeterministicScenariosGateMergeLiveScenariosDoNot
+--- PASS: TestReleasePolicy_DeterministicScenariosGateMergeLiveScenariosDoNot (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	4.562s
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	0.255s [no tests to run]

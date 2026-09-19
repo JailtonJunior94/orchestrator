@@ -42,6 +42,7 @@ type InstallOptions struct {
 	FollowExternalSymlinks bool
 	Model                  string
 	CheckCodexTrust        bool
+	OverwriteConflicts     bool
 }
 
 // UpgradeOptions agrupa opcoes para o comando upgrade.
@@ -52,4 +53,5 @@ type UpgradeOptions struct {
 	Langs                  []skills.Lang
 	CodexProfile           string
 	FollowExternalSymlinks bool
+	OverwriteConflicts     bool
 }

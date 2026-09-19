@@ -22,7 +22,7 @@ Ver: [ADR-012](.specs/adr/012-copilot-cli-acp-native.md) — Copilot CLI como ru
 ### Uso
 
 ```bash
-ai-spec-harness task-loop \
+ai-spec task-loop \
   --tool copilot \
   --runtime acp \
   .specs/prd-minha-feature
@@ -43,7 +43,7 @@ O `ActivityWatchdog` cancela sessoes Copilot inativas com o mesmo timeout config
 que cancela sessoes Claude (default: `120s`):
 
 ```bash
-ai-spec-harness task-loop \
+ai-spec task-loop \
   --tool copilot \
   --runtime acp \
   --activity-timeout 90s \
@@ -70,7 +70,7 @@ copilot nao encontrado.
 > Migrar para `--runtime=acp` conforme secao acima.
 
 ```bash
-ai-spec-harness task-loop \
+ai-spec task-loop \
   --tool copilot \
   .specs/prd-minha-feature
 ```

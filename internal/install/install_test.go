@@ -254,6 +254,7 @@ description: Revisa codigo.
 	ffs.Files["/source/AGENTS.md"] = []byte("# AGENTS")
 	ffs.Files["/source/CLAUDE.md"] = []byte("# CLAUDE")
 	ffs.Files["/source/.claude/rules/governance.md"] = []byte("# governance")
+	ffs.Files["/source/.claude/rules/code-style.md"] = []byte("# code style")
 	ffs.Files["/source/.claude/scripts/validate-task-evidence.sh"] = []byte("#!/usr/bin/env bash")
 	ffs.Files["/source/.claude/scripts/validate-bugfix-evidence.sh"] = []byte("#!/usr/bin/env bash")
 	ffs.Files["/source/.claude/scripts/validate-refactor-evidence.sh"] = []byte("#!/usr/bin/env bash")
@@ -291,6 +292,12 @@ description: Revisa codigo.
 	// Verificar AGENTS.md copiado
 	if !ffs.Exists("/project/AGENTS.md") {
 		t.Error("AGENTS.md nao copiado")
+	}
+	if !ffs.Exists("/project/.claude/rules/governance.md") {
+		t.Error("rules governance.md nao copiado")
+	}
+	if !ffs.Exists("/project/.claude/rules/code-style.md") {
+		t.Error("rules code-style.md nao copiado (RF-12)")
 	}
 	if !ffs.Exists("/project/.claude/hooks/validate-governance.sh") {
 		t.Error("hook validate-governance nao copiado")

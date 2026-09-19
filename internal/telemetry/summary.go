@@ -22,7 +22,7 @@ func (c *Catalog) Summary(rootDir string, since time.Duration) (string, error) {
 		return "Sem dados de telemetria.", nil
 	}
 
-	entries, err := NewCatalog().parseLogEntries(logPath, since)
+	entries, err := c.parseLogEntries(logPath, since)
 	if err != nil {
 		return "", err
 	}
@@ -49,13 +49,13 @@ func (c *Catalog) Summary(rootDir string, since time.Duration) (string, error) {
 	fmt.Fprintf(&sb, "Telemetria (%d entradas)\n\n", totalLines)
 
 	fmt.Fprintf(&sb, "Skills:\n")
-	skillKeys := NewCatalog().sortedKeys(skillCounts)
+	skillKeys := c.sortedKeys(skillCounts)
 	for _, skill := range skillKeys {
 		fmt.Fprintf(&sb, "  %s: %d\n", skill, skillCounts[skill])
 	}
 
 	fmt.Fprintf(&sb, "\nReferencias:\n")
-	refKeys := NewCatalog().sortedKeys(refCounts)
+	refKeys := c.sortedKeys(refCounts)
 	for _, ref := range refKeys {
 		fmt.Fprintf(&sb, "  %s: %d\n", ref, refCounts[ref])
 	}
@@ -75,6 +75,18 @@ func (c *Catalog) Summary(rootDir string, since time.Duration) (string, error) {
 		uniqueRefsLoaded, _tokensPerRefLoad, uniqueRefsLoaded*_tokensPerRefLoad)
 	fmt.Fprintf(&sb, "  incremental-ref: %d loads totais x ~%d tokens = %d tokens est.\n",
 		totalRefLoads, _tokensPerRefLoad, totalRefLoads*_tokensPerRefLoad)
+
+	metrics := c.summarizeRF44Metrics(entries)
+	if len(metrics) > 0 {
+		fmt.Fprintf(&sb, "\nMetricas RF-44 (observadas no periodo — ausente != zero):\n")
+		for _, m := range metrics {
+			if len(m.Values) > 0 {
+				fmt.Fprintf(&sb, "  %s: count=%d %s\n", m.Metric, m.Count, formatMetricValues(m.Values))
+				continue
+			}
+			fmt.Fprintf(&sb, "  %s: count=%d avg=%.2f\n", m.Metric, m.Count, m.Avg)
+		}
+	}
 
 	return sb.String(), nil
 }

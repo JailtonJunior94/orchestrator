@@ -1,0 +1,382 @@
+{
+  "cells": [
+    {
+      "provider": "claude",
+      "capability": "C01",
+      "description": "AGENTS.md e gerado com comentario de governance-schema version",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "codex",
+      "capability": "C01",
+      "description": "AGENTS.md e gerado com comentario de governance-schema version",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "copilot",
+      "capability": "C01",
+      "description": "AGENTS.md e gerado com comentario de governance-schema version",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "opencode",
+      "capability": "C01",
+      "description": "AGENTS.md e gerado com comentario de governance-schema version",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "claude",
+      "capability": "C02",
+      "description": "AGENTS.md referencia skill agent-governance como base canonica",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "codex",
+      "capability": "C02",
+      "description": "AGENTS.md referencia skill agent-governance como base canonica",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "copilot",
+      "capability": "C02",
+      "description": "AGENTS.md referencia skill agent-governance como base canonica",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "opencode",
+      "capability": "C02",
+      "description": "AGENTS.md referencia skill agent-governance como base canonica",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "claude",
+      "capability": "C03",
+      "description": "AGENTS.md contem matriz de enforcement por ferramenta",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "codex",
+      "capability": "C03",
+      "description": "AGENTS.md contem matriz de enforcement por ferramenta",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "copilot",
+      "capability": "C03",
+      "description": "AGENTS.md contem matriz de enforcement por ferramenta",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "opencode",
+      "capability": "C03",
+      "description": "AGENTS.md contem matriz de enforcement por ferramenta",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "claude",
+      "capability": "C04",
+      "description": "AGENTS.md referencia .agents/skills/ como caminho canonico",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "codex",
+      "capability": "C04",
+      "description": "AGENTS.md referencia .agents/skills/ como caminho canonico",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "copilot",
+      "capability": "C04",
+      "description": "AGENTS.md referencia .agents/skills/ como caminho canonico",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "opencode",
+      "capability": "C04",
+      "description": "AGENTS.md referencia .agents/skills/ como caminho canonico",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "codex",
+      "capability": "CD01",
+      "description": ".codex/config.toml e gerado com skill agent-governance",
+      "state": "provider capability",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "codex",
+      "capability": "CD02",
+      "description": ".codex/config.toml referencia .agents/skills/ como caminho de skills",
+      "state": "provider capability",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "claude",
+      "capability": "CL01",
+      "description": "CLAUDE.md e gerado e menciona AGENTS.md como fonte canonica",
+      "state": "provider capability",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "claude",
+      "capability": "CL02",
+      "description": "CLAUDE.md referencia .agents/skills/ como fonte de verdade",
+      "state": "provider capability",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "claude",
+      "capability": "CL03",
+      "description": ".claude/hooks/validate-governance.sh deve existir",
+      "state": "unknown",
+      "reason": "invariant satisfied by generator-injected stub \".claude/hooks/validate-governance.sh\"; auto-satisfied by construction and never sustains a supported cell (V-25)"
+    },
+    {
+      "provider": "claude",
+      "capability": "CL04",
+      "description": ".claude/hooks/validate-preload.sh deve existir",
+      "state": "unknown",
+      "reason": "invariant satisfied by generator-injected stub \".claude/hooks/validate-preload.sh\"; auto-satisfied by construction and never sustains a supported cell (V-25)"
+    },
+    {
+      "provider": "claude",
+      "capability": "CL05",
+      "description": ".claude/rules/governance.md e .claude/rules/code-style.md devem existir",
+      "state": "unknown",
+      "reason": "invariant satisfied by generator-injected stub \".claude/rules/governance.md, .claude/rules/code-style.md\"; auto-satisfied by construction and never sustains a supported cell (V-25)"
+    },
+    {
+      "provider": "claude",
+      "capability": "CL06",
+      "description": ".claude/scripts/validate-task-evidence.sh deve existir",
+      "state": "unknown",
+      "reason": "invariant satisfied by generator-injected stub \".claude/scripts/validate-task-evidence.sh\"; auto-satisfied by construction and never sustains a supported cell (V-25)"
+    },
+    {
+      "provider": "claude",
+      "capability": "CL07",
+      "description": ".claude/scripts/validate-bugfix-evidence.sh deve existir",
+      "state": "unknown",
+      "reason": "invariant satisfied by generator-injected stub \".claude/scripts/validate-bugfix-evidence.sh\"; auto-satisfied by construction and never sustains a supported cell (V-25)"
+    },
+    {
+      "provider": "claude",
+      "capability": "CL08",
+      "description": ".claude/scripts/validate-refactor-evidence.sh deve existir",
+      "state": "unknown",
+      "reason": "invariant satisfied by generator-injected stub \".claude/scripts/validate-refactor-evidence.sh\"; auto-satisfied by construction and never sustains a supported cell (V-25)"
+    },
+    {
+      "provider": "copilot",
+      "capability": "CP01",
+      "description": "copilot-instructions.md e gerado e menciona AGENTS.md",
+      "state": "provider capability",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "copilot",
+      "capability": "CP02",
+      "description": "copilot-instructions.md documenta a pre-condicao de pasta confiavel para os hooks nativos",
+      "state": "provider capability",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "claude",
+      "capability": "FB01",
+      "description": "AGENTS.md referencia agent-governance — pre-requisito estrutural do fallback launcher (RF-19, ADR-017)",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "codex",
+      "capability": "FB01",
+      "description": "AGENTS.md referencia agent-governance — pre-requisito estrutural do fallback launcher (RF-19, ADR-017)",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "copilot",
+      "capability": "FB01",
+      "description": "AGENTS.md referencia agent-governance — pre-requisito estrutural do fallback launcher (RF-19, ADR-017)",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "opencode",
+      "capability": "FB01",
+      "description": "AGENTS.md referencia agent-governance — pre-requisito estrutural do fallback launcher (RF-19, ADR-017)",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "claude",
+      "capability": "INV-30",
+      "description": "tool_calls_normalized_name_invariant: mesma operação semântica em Claude e Codex produz normalized_name idêntico em events.jsonl",
+      "state": "provider capability",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "codex",
+      "capability": "INV-30",
+      "description": "tool_calls_normalized_name_invariant: mesma operação semântica em Claude e Codex produz normalized_name idêntico em events.jsonl",
+      "state": "provider capability",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "claude",
+      "capability": "INV-31",
+      "description": "mcp_nested_depth_never_exceeds_max: eventos nested_agent têm depth ≤ AISPEC_MAX_AGENT_DEPTH",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "codex",
+      "capability": "INV-31",
+      "description": "mcp_nested_depth_never_exceeds_max: eventos nested_agent têm depth ≤ AISPEC_MAX_AGENT_DEPTH",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "copilot",
+      "capability": "INV-31",
+      "description": "mcp_nested_depth_never_exceeds_max: eventos nested_agent têm depth ≤ AISPEC_MAX_AGENT_DEPTH",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "opencode",
+      "capability": "INV-31",
+      "description": "mcp_nested_depth_never_exceeds_max: eventos nested_agent têm depth ≤ AISPEC_MAX_AGENT_DEPTH",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "claude",
+      "capability": "INV-32",
+      "description": "cross_cli_tool_call_name_parity (RP-03): a mesma operação produz normalized_name idêntico nas CLIs com fixture",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "codex",
+      "capability": "INV-32",
+      "description": "cross_cli_tool_call_name_parity (RP-03): a mesma operação produz normalized_name idêntico nas CLIs com fixture",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "copilot",
+      "capability": "INV-32",
+      "description": "cross_cli_tool_call_name_parity (RP-03): a mesma operação produz normalized_name idêntico nas CLIs com fixture",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "opencode",
+      "capability": "INV-32",
+      "description": "cross_cli_tool_call_name_parity (RP-03): a mesma operação produz normalized_name idêntico nas CLIs com fixture",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "opencode",
+      "capability": "OC01",
+      "description": ".opencode/plugin/governance.js instalado, declara o gate tool.execute.before e nunca usa handler de permissao",
+      "state": "provider capability",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "opencode",
+      "capability": "OC02",
+      "description": "opencode.json tem bloco permission sem \"ask\" e preserva as ferramentas exigidas",
+      "state": "provider capability",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "opencode",
+      "capability": "OC03",
+      "description": "opencode.json nao escreve skills.paths nem instructions (RF-13: auto-carregamento nativo)",
+      "state": "provider capability",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "claude",
+      "capability": "X01",
+      "description": "Todos os artefatos de ferramenta referenciam .agents/skills/ como caminho canonico",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "codex",
+      "capability": "X01",
+      "description": "Todos os artefatos de ferramenta referenciam .agents/skills/ como caminho canonico",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "copilot",
+      "capability": "X01",
+      "description": "Todos os artefatos de ferramenta referenciam .agents/skills/ como caminho canonico",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "opencode",
+      "capability": "X01",
+      "description": "Todos os artefatos de ferramenta referenciam .agents/skills/ como caminho canonico",
+      "state": "supported",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "codex",
+      "capability": "X02",
+      "description": "Profile compact e aplicado em instalacao Codex-only (sem secoes verbose)",
+      "state": "provider capability",
+      "test": "TestParitySuite/TestParity_AllTools"
+    },
+    {
+      "provider": "claude",
+      "capability": "X03",
+      "description": "scripts/lib/check-invocation-depth.sh deve existir",
+      "state": "unknown",
+      "reason": "invariant satisfied by generator-injected stub \"scripts/lib/check-invocation-depth.sh\"; auto-satisfied by construction and never sustains a supported cell (V-25)"
+    },
+    {
+      "provider": "codex",
+      "capability": "X03",
+      "description": "scripts/lib/check-invocation-depth.sh deve existir",
+      "state": "unknown",
+      "reason": "invariant satisfied by generator-injected stub \"scripts/lib/check-invocation-depth.sh\"; auto-satisfied by construction and never sustains a supported cell (V-25)"
+    },
+    {
+      "provider": "copilot",
+      "capability": "X03",
+      "description": "scripts/lib/check-invocation-depth.sh deve existir",
+      "state": "unknown",
+      "reason": "invariant satisfied by generator-injected stub \"scripts/lib/check-invocation-depth.sh\"; auto-satisfied by construction and never sustains a supported cell (V-25)"
+    },
+    {
+      "provider": "opencode",
+      "capability": "X03",
+      "description": "scripts/lib/check-invocation-depth.sh deve existir",
+      "state": "unknown",
+      "reason": "invariant satisfied by generator-injected stub \"scripts/lib/check-invocation-depth.sh\"; auto-satisfied by construction and never sustains a supported cell (V-25)"
+    }
+  ]
+}

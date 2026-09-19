@@ -151,7 +151,9 @@ func (g *Generator) Generate(sourceDir, projectDir string, tools []skills.Tool, 
 				return fmt.Errorf("escrever config.toml: %w", err)
 			}
 			if merged {
-				g.recordMerge(configPath)
+				if err := g.recordMerge(configPath); err != nil {
+					return err
+				}
 			}
 		}
 	}

@@ -1,0 +1,10 @@
+=== RUN   TestHooksLiveGitOperationGateConfirmsRoutingAcrossAgents
+    git_operation_live_test.go:18: AISPEC_HOOKS_LIVE=1 is required: this suite confirms the real CLI routes through the canonical git-operation gate created in task 9.0 (RF-40.1) and must not fall back to a contract harness
+--- FAIL: TestHooksLiveGitOperationGateConfirmsRoutingAcrossAgents (0.00s)
+=== RUN   TestHooksLiveDestructiveOperationGateConfirmsRoutingAcrossAgents
+    git_operation_live_test.go:29: AISPEC_HOOKS_LIVE=1 is required: this suite confirms the real CLI routes through the canonical destructive-operation criterion created in task 9.0 (RF-40.2) and must not fall back to a contract harness
+--- FAIL: TestHooksLiveDestructiveOperationGateConfirmsRoutingAcrossAgents (0.00s)
+FAIL
+FAIL	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	0.245s
+FAIL
+exit=1

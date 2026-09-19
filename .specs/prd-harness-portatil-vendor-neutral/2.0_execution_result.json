@@ -1,0 +1,67 @@
+{
+  "schema_version": 2,
+  "run_id": "task-2.0-harness-portatil-vendor-neutral-2026-09-18",
+  "task_id": "2.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a8b77217cd713b4ef629d324e63934e05e589864",
+  "patch_sha256": "91b01d7a220c7a297d75dacca7781de5f17e31d29694f69323ed084a58a1e8f5",
+  "patch_ref": "evidence/task-2.0-harness-portatil-vendor-neutral/2.0.patch",
+  "final_state_sha256": "1509f31b13c80c2be1759155545f7ac544ee2418eb667e4f3bd2a62fc047811d",
+  "coverage_regression": false,
+  "review_verdict": "approved",
+  "tests": [
+    {
+      "command": "make test",
+      "exit_code": 0,
+      "output_sha256": "46e5e2cb5f88f62e9bb85fab5484af429d4a550fca87756e310d5ec6447d9d82"
+    },
+    {
+      "command": "make lint",
+      "exit_code": 0,
+      "output_sha256": "2d2e0fa3ffc670261a4b3a4990ea533de4091dc201ca41acb8cfb68b208f650c"
+    },
+    {
+      "command": "bash scripts/check-skills-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "a520cbac6ce5b745fdd21ca989715a207e9f63feb554edf4f69ab9f591d14d05"
+    },
+    {
+      "command": "bash scripts/check-hooks-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "59b44ee6a5cd043812e4ce004461f2a2de9d3bb71201114beedfbff877252e3f"
+    },
+    {
+      "command": "bash scripts/check-scripts-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "2898ab428fdf0ea01ae7703694a05d1630ed1e8d8bf0acac9f498f014c53fbf9"
+    },
+    {
+      "command": "grep -Ec '^\\| [0-9]+ \\|' inventario-regras.md",
+      "exit_code": 0,
+      "output_sha256": "2efd64c7620fca79c32c3556a9555e832541dbda41874d8e0c1669ed9f7017df"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "inventory-committed-no-undefined",
+      "evidence_ref": "evidence/task-2.0-harness-portatil-vendor-neutral/inventory-scan.log"
+    },
+    {
+      "id": "universal-subset-closed-entry-4.0",
+      "evidence_ref": "evidence/task-2.0-harness-portatil-vendor-neutral/inventory-scan.log"
+    },
+    {
+      "id": "no-file-moved",
+      "evidence_ref": "evidence/task-2.0-harness-portatil-vendor-neutral/check-skills-sync.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-2.0-harness-portatil-vendor-neutral/test.log",
+    "evidence/task-2.0-harness-portatil-vendor-neutral/lint.log",
+    "evidence/task-2.0-harness-portatil-vendor-neutral/check-skills-sync.log",
+    "evidence/task-2.0-harness-portatil-vendor-neutral/check-hooks-sync.log",
+    "evidence/task-2.0-harness-portatil-vendor-neutral/check-scripts-sync.log",
+    "evidence/task-2.0-harness-portatil-vendor-neutral/inventory-scan.log"
+  ]
+}

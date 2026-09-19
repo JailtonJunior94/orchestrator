@@ -20,6 +20,7 @@ type schemaDefault struct {
 
 type schemaCommand struct {
 	Name        string                `json:"name"`
+	Aliases     []string              `json:"aliases,omitempty"`
 	Flags       map[string]schemaFlag `json:"flags,omitempty"`
 	Subcommands []schemaCommand       `json:"subcommands,omitempty"`
 }
@@ -197,6 +198,54 @@ func TestCLISchemaDoesNotContainRetiredAgents(t *testing.T) {
 		if strings.Contains(schemaContent, agent) {
 			t.Errorf("cli-schema.json cita agente aposentado %q — remover residuo textual (RF-08, tarefa 10.0)", agent)
 		}
+	}
+}
+
+func TestCLI_AliasesMatchSchema(t *testing.T) {
+	schemaPath := filepath.Join("..", "..", "docs", "cli-schema.json")
+	data, err := os.ReadFile(schemaPath)
+	if err != nil {
+		t.Fatalf("ler cli-schema.json: %v", err)
+	}
+
+	var raw struct {
+		Default schemaDefault `json:"default"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("parsear cli-schema.json: %v", err)
+	}
+
+	excluded := map[string]bool{"help": true, "completion": true}
+	schemaMap := flattenSchemaCommandMap(raw.Default.Commands, "")
+	cobraMap := cobraCommandMap(newRootCmd().Commands(), "", excluded)
+
+	for cmdPath, sCmd := range schemaMap {
+		cobraCmd, ok := cobraMap[cmdPath]
+		if !ok {
+			continue
+		}
+
+		t.Run(cmdPath, func(t *testing.T) {
+			schemaAliases := make(map[string]bool, len(sCmd.Aliases))
+			for _, a := range sCmd.Aliases {
+				schemaAliases[a] = true
+			}
+			cobraAliases := make(map[string]bool, len(cobraCmd.Aliases))
+			for _, a := range cobraCmd.Aliases {
+				cobraAliases[a] = true
+			}
+
+			for alias := range schemaAliases {
+				if !cobraAliases[alias] {
+					t.Errorf("alias %q declarado no schema para %q mas ausente em Cobra Command.Aliases", alias, cmdPath)
+				}
+			}
+			for alias := range cobraAliases {
+				if !schemaAliases[alias] {
+					t.Errorf("alias %q implementado em Cobra para %q mas ausente no schema", alias, cmdPath)
+				}
+			}
+		})
 	}
 }
 

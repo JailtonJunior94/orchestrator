@@ -1,4 +1,4 @@
-.PHONY: check-spec-paths build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-sync check-hooks-sync check-scripts-sync test-hooks test-validators test-sdd-evals smoke-adapters test-portable-skills sync-acp-sdk-version test-acp-live test-hooks-live mocks check-mocks test-check-mocks
+.PHONY: check-spec-paths build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-lock check-skills-sync check-hooks-sync check-scripts-sync check-policies-sync check-capability-matrix-sync test-hooks test-validators test-sdd-evals smoke-adapters test-portable-skills sync-acp-sdk-version test-acp-live test-hooks-live mocks check-mocks test-check-mocks
 
 BINARY := ai-spec
 GOFLAGS := -trimpath
@@ -54,6 +54,7 @@ fuzz:
 	go test -fuzz=FuzzReadTaskFileStatus -fuzztime=30s ./internal/taskloop/
 	go test -fuzz=FuzzValidateBugReport -fuzztime=30s ./internal/bugschema/
 	go test -fuzz=FuzzParseConfig -fuzztime=30s ./internal/config/
+	go test -fuzz=FuzzParseHarnessContract -fuzztime=30s ./internal/harness/
 	go test -fuzz=FuzzParseManifest -fuzztime=30s ./internal/manifest/
 	go test -fuzz=FuzzDetectLanguages -fuzztime=30s ./internal/detect/
 	go test -fuzz=FuzzDetectToolchain -fuzztime=30s ./internal/detect/
@@ -66,6 +67,14 @@ bench:
 budget:
 	go test -tags=integration -run TestTokenBudget ./internal/integration/...
 
+# check-skills-lock: recomputa o SHA-256 de cada SKILL.md instalado e compara
+# com skills-lock.json (ADR-005). O mecanismo (internal/skillscheck, comando
+# `skills --verify`) ja existia e ninguem o executava em Makefile ou CI (V-34):
+# um SKILL.md editado sem atualizar o lock passava em make test, go test ./...
+# e na CI inteira. Roda contra este proprio repositorio (self-dogfooding).
+check-skills-lock:
+	go run . skills --verify .
+
 check-skills-sync:
 	bash scripts/check-skills-sync.sh
 
@@ -74,6 +83,12 @@ check-hooks-sync:
 
 check-scripts-sync:
 	bash scripts/check-scripts-sync.sh
+
+check-policies-sync:
+	bash scripts/check-policies-sync.sh
+
+check-capability-matrix-sync:
+	go test ./internal/capability/...
 
 test-hooks:
 	bash scripts/test-hooks.sh
@@ -85,7 +100,7 @@ test-hooks:
 # declaracao o script varreria apenas PRDs com sdd-state.json — conjunto vazio
 # neste repositorio — e o gate aprovaria por vacuidade, sem proteger artefato
 # nenhum. PRD concluido sai da lista; PRD novo entra.
-SPEC_PATH_TARGETS ?= .specs/prd-harness-quatro-clis-loop-aprovacao
+SPEC_PATH_TARGETS ?= .specs/prd-harness-quatro-clis-loop-aprovacao .specs/prd-harness-portatil-vendor-neutral
 
 check-spec-paths:
 	bash scripts/check-spec-paths.sh $(SPEC_PATH_TARGETS)

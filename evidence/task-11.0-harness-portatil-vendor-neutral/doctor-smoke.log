@@ -1,0 +1,37 @@
+Diagnosticando: /Users/jailtonjunior/Git/orchestrator
+
+Core:
+  [OK   ] Repositorio git                          valido (camada: core)
+  [OK   ] Diretorio de skills                      30 skills encontradas (camada: core)
+  [OK   ] Manifesto                                versao dev (camada: core)
+  [OK   ] Symlinks de skills                       todos os links validos (camada: core)
+  [OK   ] Permissoes de escrita                    diretorio gravavel (camada: core)
+  [OK   ] Git instalado                            disponivel (camada: core)
+  [AVISO] Contrato do harness                      .agents/harness.yaml nao declarado; usando default embutido (versao 1) (camada: core)
+  [OK   ] Integridade de skills (lock)             versao + hash SHA-256 conferem com skills-lock.json (camada: validação)
+  [OK   ] Sincronia canonica/derivados             123 item(ns) verificados, nenhuma divergencia (camada: core)
+
+Claude (ACP):
+  [FALHA] Instrucoes descobriveis                  nenhuma configuracao nativa encontrada (esperado: .claude/settings.json, .claude/settings.local.json) (camada: instalação)
+  [OK   ] Skills disponiveis                       26 skill(s) atuais (camada: core)
+  [OK   ] Politicas aplicadas                      7 artefato(s) de politica aplicados (camada: adapter)
+  [OK   ] Validadores de evidencia instalados      19 validador(es) canonico(s) atuais (camada: validação)
+  [OK   ] Pre-condicoes de enforcement             nenhuma pre-condicao pendente conhecida (camada: provider)
+
+Codex (ACP):
+  [OK   ] Instrucoes descobriveis                  1 configuracao(oes) nativa(s) presente(s) (camada: adapter)
+  [OK   ] Skills disponiveis                       26 skill(s) atuais (camada: core)
+  [OK   ] Politicas aplicadas                      7 artefato(s) de politica aplicados (camada: adapter)
+  [OK   ] Validadores de evidencia instalados      19 validador(es) canonico(s) atuais (camada: validação)
+  [OK   ] Pre-condicoes de enforcement             nenhuma pre-condicao pendente conhecida (camada: provider)
+
+GitHub Copilot CLI (ACP):
+  [AVISO] Instrucoes descobriveis                  parcialmente descobrivel: presente=.github/hooks/governance.json ausente=.github/settings.json (camada: adapter)
+  [OK   ] Skills disponiveis                       26 skill(s) atuais (camada: core)
+  [OK   ] Politicas aplicadas                      7 artefato(s) de politica aplicados (camada: adapter)
+  [OK   ] Validadores de evidencia instalados      19 validador(es) canonico(s) atuais (camada: validação)
+  [OK   ] Pre-condicoes de enforcement             nenhuma pre-condicao pendente conhecida (camada: provider)
+
+Resultado: 1 problema(s) encontrado(s)
+1 problema(s) detectado(s)
+exit status 1

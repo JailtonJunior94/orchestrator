@@ -122,8 +122,17 @@ func TestUpgradeRepairsPreexistingObsoleteCopilotGovernance(t *testing.T) {
 		ProjectDir: projectDir,
 		SourceDir:  sourceDir,
 		Langs:      []skills.Lang{skills.LangNode},
+	}); err == nil {
+		t.Fatal("upgrade deveria abortar por conflito: governance.json diverge do manifesto (RF-24/RF-27)")
+	}
+
+	if err := upgradeSvc.Execute(config.UpgradeOptions{
+		ProjectDir:         projectDir,
+		SourceDir:          sourceDir,
+		Langs:              []skills.Lang{skills.LangNode},
+		OverwriteConflicts: true,
 	}); err != nil {
-		t.Fatalf("upgrade: %v", err)
+		t.Fatalf("upgrade com overwrite: %v", err)
 	}
 
 	commands, obsolete := readCopilotSessionEndCommands(t, path)

@@ -18,6 +18,8 @@ func TestUninstall_RemovesSkills(t *testing.T) {
 	ffs.Files["/project/.ai_spec_harness.json"] = []byte("{}")
 	ffs.Files["/project/.claude/hooks/validate-governance.sh"] = []byte("gov")
 	ffs.Files["/project/.claude/hooks/validate-preload.sh"] = []byte("pre")
+	ffs.Files["/project/.claude/rules/governance.md"] = []byte("governance")
+	ffs.Files["/project/.claude/rules/code-style.md"] = []byte("code style")
 	ffs.Files["/project/.claude/scripts/validate-bugfix-evidence.sh"] = []byte("bugfix")
 	ffs.Files["/project/.claude/scripts/validate-refactor-evidence.sh"] = []byte("refactor")
 	ffs.Files["/project/scripts/lib/parse-hook-input.sh"] = []byte("helper")
@@ -46,6 +48,15 @@ func TestUninstall_RemovesSkills(t *testing.T) {
 	}
 	if ffs.Exists("/project/.claude/hooks/validate-preload.sh") {
 		t.Error("validate-preload hook should be removed")
+	}
+	if ffs.Exists("/project/.claude/rules/governance.md") {
+		t.Error("rules governance.md should be removed")
+	}
+	if ffs.Exists("/project/.claude/rules/code-style.md") {
+		t.Error("rules code-style.md should be removed (RF-12/RF-61)")
+	}
+	if ffs.IsDir("/project/.claude/rules") {
+		t.Error(".claude/rules should be pruned once both rule files are removed (V-35)")
 	}
 	if ffs.Exists("/project/.claude/settings.local.json") {
 		t.Error("generated settings.local.json should be removed")

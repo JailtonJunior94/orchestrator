@@ -1,12 +1,17 @@
 package upgrade
 
 import (
+	"errors"
 	"fmt"
+	"maps"
+	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/batchreport"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/config"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/contextgen"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/embedded"
@@ -14,6 +19,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/tracking"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/version"
 )
 
@@ -167,6 +173,24 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 		return nil
 	}
 
+	var expectedChecksums map[string]string
+	if s.manifest.Exists(projectDir) {
+		if previous, err := s.manifest.Load(projectDir); err == nil {
+			expectedChecksums = previous.FileChecksums
+		}
+	}
+
+	tracker := tracking.NewTransactional(s.fs, projectDir, manifest.ManifestFile, expectedChecksums)
+	previousFS, previousAdapters, previousCtxgen := s.fs, s.adapters, s.ctxgen
+	s.fs = tracker
+	s.adapters = adapters.NewGenerator(tracker, s.printer)
+	s.ctxgen = contextgen.NewGenerator(tracker, s.printer)
+	defer func() {
+		s.fs = previousFS
+		s.adapters = previousAdapters
+		s.ctxgen = previousCtxgen
+	}()
+
 	if copilotHooksObsolete {
 		repaired, err := NewHelper().RepairCopilotGovernanceHooks(s.fs, projectDir)
 		if err != nil {
@@ -215,21 +239,29 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 		s.regenerateGovernance(sourceDir, projectDir, codexProfile)
 	}
 
-	// Atualizar manifesto
+	if len(tracker.Conflicts()) > 0 && !opts.OverwriteConflicts {
+		return batchreport.ConflictError(tracker.Conflicts(), sourceDir)
+	}
+	if opts.OverwriteConflicts {
+		tracker.AllowOverwrite()
+	}
+	if err := tracker.Commit(); err != nil {
+		return fmt.Errorf("apply synchronization batch: %w", err)
+	}
+
+	batchreport.Print(s.printer, "upgrade", batchreport.Build(tracker))
+
 	if s.manifest.Exists(projectDir) {
 		mf, err := s.manifest.Load(projectDir)
 		if err == nil {
 			currentVersion := version.NewProvider().ResolveFromExecutable()
-			versionChanged := mf.Version != currentVersion
-			if updated == 0 && !versionChanged {
-				return nil
-			}
 
 			mf.UpdatedAt = time.Now()
 			mf.Version = currentVersion
 			allSkills := skills.NewCatalog().AllSkills(mf.Langs)
 			mf.Checksums = s.computeChecksums(sourceDir, allSkills)
 			mf.SkillVersions = s.collectSkillVersions(sourceDir, allSkills)
+			mergeFileTracking(mf, tracker, projectDir)
 			_ = s.manifest.Save(projectDir, mf)
 		}
 	}
@@ -335,10 +367,9 @@ func (s *Service) checkSkills(sourceDir, projectDir string, langFilter []skills.
 			continue
 		}
 
-		// Mesma versao — verificar checksum do SKILL.md
-		sourceHash, _ := s.fs.FileHash(sourceSkillMD)
-		targetHash, _ := s.fs.FileHash(targetSkillMD)
-		if sourceHash != targetHash {
+		sourceHash, sourceHashErr := s.fs.FileHash(sourceSkillMD)
+		targetHash, targetHashErr := s.fs.FileHash(targetSkillMD)
+		if sourceHashErr != nil || targetHashErr != nil || sourceHash != targetHash {
 			checks = append(checks, SkillCheck{
 				Name:          skillName,
 				Status:        StatusContentDivergent,
@@ -348,18 +379,30 @@ func (s *Service) checkSkills(sourceDir, projectDir string, langFilter []skills.
 			continue
 		}
 
-		// SKILL.md identico — verificar references/
-		sourceRefsHash, _ := s.fs.DirHash(filepath.Join(sourceDir, ".agents", "skills", skillName, "references"))
-		targetRefsHash, _ := s.fs.DirHash(filepath.Join(projectDir, ".agents", "skills", skillName, "references"))
-		if sourceRefsHash != "" && sourceRefsHash != targetRefsHash {
+		sourceRefsDir := filepath.Join(sourceDir, ".agents", "skills", skillName, "references")
+		targetRefsDir := filepath.Join(projectDir, ".agents", "skills", skillName, "references")
+		sourceRefsHash, sourceRefsErr := s.fs.DirHash(sourceRefsDir)
+		if sourceRefsErr != nil && !errors.Is(sourceRefsErr, os.ErrNotExist) {
 			checks = append(checks, SkillCheck{
 				Name:          skillName,
 				Status:        StatusRefsDivergent,
 				SourceVersion: sourceFM.Version,
 				TargetVersion: targetFM.Version,
-				ChangedRefs:   s.refsChangedFiles(filepath.Join(sourceDir, ".agents", "skills", skillName, "references"), filepath.Join(projectDir, ".agents", "skills", skillName, "references")),
 			})
 			continue
+		}
+		if sourceRefsErr == nil {
+			targetRefsHash, targetRefsErr := s.fs.DirHash(targetRefsDir)
+			if targetRefsErr != nil || sourceRefsHash != targetRefsHash {
+				checks = append(checks, SkillCheck{
+					Name:          skillName,
+					Status:        StatusRefsDivergent,
+					SourceVersion: sourceFM.Version,
+					TargetVersion: targetFM.Version,
+					ChangedRefs:   s.refsChangedFiles(sourceRefsDir, targetRefsDir),
+				})
+				continue
+			}
 		}
 
 		checks = append(checks, SkillCheck{
@@ -391,15 +434,111 @@ func (s *Service) collectSkillVersions(sourceDir string, skillNames []string) ma
 	return versions
 }
 
+func mergeFileTracking(mf *manifest.Manifest, tracker *tracking.Tracker, projectDir string) {
+	legacyManifest := !mf.HasFileTracking()
+	trackedInstalled := mf.InstalledFiles != nil
+	trackedMerged := mf.MergedFiles != nil
+
+	created := toPathSet(mf.InstalledFiles)
+	merged := toPathSet(mf.MergedFiles)
+
+	for _, path := range tracker.MergedPaths() {
+		delete(created, path)
+		merged[path] = true
+		trackedMerged = true
+	}
+	for _, path := range tracker.CreatedPaths() {
+		if !merged[path] {
+			created[path] = true
+			trackedInstalled = true
+		}
+	}
+
+	if trackedInstalled {
+		mf.InstalledFiles = sortedPathSet(created)
+	}
+	if trackedMerged {
+		mf.MergedFiles = sortedPathSet(merged)
+	}
+
+	newChecksums := tracker.Checksums()
+	checksums := make(map[string]string, len(mf.FileChecksums)+len(newChecksums))
+	maps.Copy(checksums, mf.FileChecksums)
+	maps.Copy(checksums, newChecksums)
+
+	managedPaths := make([]string, 0, len(mf.InstalledFiles)+len(mf.MergedFiles))
+	managedPaths = append(managedPaths, mf.InstalledFiles...)
+	managedPaths = append(managedPaths, mf.MergedFiles...)
+	if legacyManifest {
+		managedPaths = append(managedPaths, legacyManagedPathCandidates(tracker, projectDir)...)
+	}
+	mf.FileChecksums = tracking.BackfillChecksums(tracker, projectDir, managedPaths, checksums)
+}
+
+func legacyManagedPathCandidates(fsys fs.FileSystem, projectDir string) []string {
+	var out []string
+	for _, dir := range legacyManagedRootDirs {
+		abs := filepath.Join(projectDir, dir)
+		if fsys.IsDir(abs) {
+			out = append(out, tracking.WalkManagedPaths(fsys, projectDir, dir)...)
+		}
+	}
+	for _, name := range legacyManagedRootFiles {
+		if fsys.Exists(filepath.Join(projectDir, name)) {
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
+var legacyManagedRootDirs = []string{
+	filepath.Join(".agents", "skills"),
+	filepath.Join(".agents", "hooks"),
+	filepath.Join(".agents", "scripts"),
+	filepath.Join(".agents", "lib"),
+	filepath.Join(".agents", "policies"),
+	".claude",
+	".codex",
+	".github",
+	".opencode",
+	filepath.Join("scripts", "lib"),
+}
+
+var legacyManagedRootFiles = []string{
+	"AGENTS.md",
+	"CLAUDE.md",
+	"CODEX.md",
+	"COPILOT.md",
+}
+
+func toPathSet(paths []string) map[string]bool {
+	set := make(map[string]bool, len(paths))
+	for _, path := range paths {
+		set[path] = true
+	}
+	return set
+}
+
+func sortedPathSet(set map[string]bool) []string {
+	out := make([]string, 0, len(set))
+	for path := range set {
+		out = append(out, path)
+	}
+	sort.Strings(out)
+	return out
+}
+
 func (s *Service) regenerateAdapters(sourceDir, projectDir, codexProfile string) {
 	s.printer.Step("Re-gerando adaptadores...")
 
 	if s.fs.IsDir(filepath.Join(projectDir, ".claude")) {
 		s.adapters.GenerateClaude(sourceDir, projectDir)
-		s.syncFileIfPresent(
-			filepath.Join(sourceDir, ".claude", "rules", "governance.md"),
-			filepath.Join(projectDir, ".claude", "rules", "governance.md"),
-		)
+		for _, ruleFile := range skills.UniversalRuleFiles {
+			s.syncFileIfPresent(
+				filepath.Join(sourceDir, ".claude", "rules", ruleFile),
+				filepath.Join(projectDir, ".claude", "rules", ruleFile),
+			)
+		}
 		s.syncFileIfPresent(
 			filepath.Join(sourceDir, ".claude", "scripts", "validate-task-evidence.sh"),
 			filepath.Join(projectDir, ".claude", "scripts", "validate-task-evidence.sh"),
@@ -549,7 +688,7 @@ func (s *Service) refsChangedFiles(sourceRefs, targetRefs string) []string {
 
 		sourceHash, err1 := s.fs.FileHash(sourcePath)
 		targetHash, err2 := s.fs.FileHash(targetPath)
-		if err1 == nil && err2 == nil && sourceHash != targetHash {
+		if err1 != nil || err2 != nil || sourceHash != targetHash {
 			changed = append(changed, "~ "+rel+" (modificado)")
 		}
 	}

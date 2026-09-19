@@ -1,0 +1,117 @@
+{
+  "schema_version": 2,
+  "run_id": "task-9.0-harness-portatil-vendor-neutral-2026-09-18",
+  "task_id": "9.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a8b77217cd713b4ef629d324e63934e05e589864",
+  "patch_sha256": "67aeb708cd6ea542bc856c2eed3d164109c5d0041329d46f83495c578ca39425",
+  "patch_ref": "evidence/task-9.0-harness-portatil-vendor-neutral/9.0.patch",
+  "final_state_sha256": "7598b30f47062d9bf092caf075a6ea5fe7e511d603a0d8ee34f4ac401b9dff1b",
+  "coverage_regression": false,
+  "review_verdict": "approved",
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "eebaab80b1d5a43142ef55ac3a918ad91ffaa8b3b15f9616382c64d9d405499a"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "48fd88df22060d6516fab1e0a2e2938c71592e75bbee8a613f49521bffbae4ae"
+    },
+    {
+      "command": "go test ./...",
+      "exit_code": 0,
+      "output_sha256": "0d726e1e69fb1802e6bc8f26ca4157086d711b0aec087e17683b40e2824a92f5"
+    },
+    {
+      "command": "go build -tags integration ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "go test -tags integration ./tests/integration/...",
+      "exit_code": 0,
+      "output_sha256": "2f475ecb36a60e09074f410465ca47bdbaa8693652dd46276723062c6a14e563"
+    },
+    {
+      "command": "GOGC=20 golangci-lint run --config .golangci.yml --timeout 5m ./...",
+      "exit_code": 0,
+      "output_sha256": "847166fdac66cd885ad0591a6277d742dbfcdae76c0db05af93867e0db960655"
+    },
+    {
+      "command": "bash scripts/check-scripts-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "54a51375b68f6e12bc0bff8084f36bb3910820986e3e3c0d78565a9fe4e025e9"
+    },
+    {
+      "command": "bash scripts/check-hooks-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "66dda08abe9a564a6375743a0ffa1da779a1a57fe6e21335208cb1caef9443f8"
+    },
+    {
+      "command": "bash scripts/check-skills-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "234430702293de5a5ac9b577dbfd8e8de8d715fea8cce41e8662afc54563f4cc"
+    },
+    {
+      "command": "bash scripts/check-mocks.sh",
+      "exit_code": 0,
+      "output_sha256": "74b6654aa5590423cf8db10f086aae57a6ee22004509734364102196800c1eed"
+    },
+    {
+      "command": "go test -tags integration ./tests/integration/... -run 'TestOpenCodeGovernancePlugin.*|TestPreToolHookDispatch.*|TestPreToolHooksDelegateToCanonicalScript|TestPreToolDecisionIsIdenticalAcrossAllFourAgents' -v",
+      "exit_code": 0,
+      "output_sha256": "1a719e9bded3c79dd3a94df8e7be062923cbdafd040e367fd34743beb9de7974"
+    },
+    {
+      "command": "go test ./tests/integration/hooks_live/... -run TestCanonicalDiagnosticsStayInSyncWithTheirEmittingScript -v",
+      "exit_code": 0,
+      "output_sha256": "4d8847f30ee9ef128cb4da1abc0a0d83aca3f7df08076783e533b134cb3d5505"
+    },
+    {
+      "command": "manual gate transcript: git commit/push unsolicited, both escapes, destructive rm, read-only git status, and literal grep for 'git commit'/'git push' in .agents/scripts/",
+      "exit_code": 0,
+      "output_sha256": "642ef8e9b8b50151f357920de1497e79e96f285e952593ed90cf81bfb58a1d5c"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "git-commit-push-found-in-canonical-scripts",
+      "evidence_ref": "evidence/task-9.0-harness-portatil-vendor-neutral/manual-gate-transcript.log"
+    },
+    {
+      "id": "unsolicited-git-operation-blocked-under-preload-confirmed",
+      "evidence_ref": "evidence/task-9.0-harness-portatil-vendor-neutral/manual-gate-transcript.log"
+    },
+    {
+      "id": "destructive-operation-blocked-under-preload-confirmed",
+      "evidence_ref": "evidence/task-9.0-harness-portatil-vendor-neutral/manual-gate-transcript.log"
+    },
+    {
+      "id": "read-only-git-commands-remain-allowed",
+      "evidence_ref": "evidence/task-9.0-harness-portatil-vendor-neutral/manual-gate-transcript.log"
+    },
+    {
+      "id": "mirror-and-guard-registrations-present",
+      "evidence_ref": "evidence/task-9.0-harness-portatil-vendor-neutral/check-scripts-sync.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-9.0-harness-portatil-vendor-neutral/build.log",
+    "evidence/task-9.0-harness-portatil-vendor-neutral/vet.log",
+    "evidence/task-9.0-harness-portatil-vendor-neutral/test.log",
+    "evidence/task-9.0-harness-portatil-vendor-neutral/build-integration.log",
+    "evidence/task-9.0-harness-portatil-vendor-neutral/integration-test.log",
+    "evidence/task-9.0-harness-portatil-vendor-neutral/lint.log",
+    "evidence/task-9.0-harness-portatil-vendor-neutral/check-scripts-sync.log",
+    "evidence/task-9.0-harness-portatil-vendor-neutral/check-hooks-sync.log",
+    "evidence/task-9.0-harness-portatil-vendor-neutral/check-skills-sync.log",
+    "evidence/task-9.0-harness-portatil-vendor-neutral/check-mocks.log",
+    "evidence/task-9.0-harness-portatil-vendor-neutral/git-operation-gate-tests.log",
+    "evidence/task-9.0-harness-portatil-vendor-neutral/diagnostics-sync-test.log",
+    "evidence/task-9.0-harness-portatil-vendor-neutral/manual-gate-transcript.log"
+  ]
+}

@@ -12,8 +12,9 @@ const _weeksForTrend = 4
 
 // WeeklyBucket agrupa invocacoes de uma semana.
 type WeeklyBucket struct {
-	Week        string `json:"week"`        // "2026-W15"
-	Invocations int    `json:"invocations"` // total de invocacoes na semana
+	Week            string `json:"week"`
+	Invocations     int    `json:"invocations"`
+	MetricsObserved int    `json:"metrics_observed"`
 }
 
 // TrendData contem a evolucao semanal de invocacoes.
@@ -24,17 +25,21 @@ type TrendData struct {
 // Trend calcula a evolucao de invocacoes por semana nas ultimas weeksForTrend semanas.
 func (c *Catalog) Trend(rootDir string) (TrendData, error) {
 	logPath := filepath.Join(rootDir, ".agents", "telemetry.log")
-	entries, err := NewCatalog().parseLogEntries(logPath, time.Duration(_weeksForTrend)*7*24*time.Hour)
+	entries, err := c.parseLogEntries(logPath, time.Duration(_weeksForTrend)*7*24*time.Hour)
 	if err != nil {
 		return TrendData{}, err
 	}
 
 	// Agrupar por semana ISO (yyyy-Www)
 	buckets := make(map[string]int)
+	metricBuckets := make(map[string]int)
 	for _, e := range entries {
 		year, week := e.Timestamp.ISOWeek()
 		key := fmt.Sprintf("%d-W%02d", year, week)
 		buckets[key]++
+		if entryHasAnyRF44Metric(e) {
+			metricBuckets[key]++
+		}
 	}
 
 	// Gerar as ultimas weeksForTrend semanas (mesmo sem dados)
@@ -45,8 +50,9 @@ func (c *Catalog) Trend(rootDir string) (TrendData, error) {
 		year, week := t.ISOWeek()
 		key := fmt.Sprintf("%d-W%02d", year, week)
 		weeks[_weeksForTrend-1-i] = WeeklyBucket{
-			Week:        key,
-			Invocations: buckets[key],
+			Week:            key,
+			Invocations:     buckets[key],
+			MetricsObserved: metricBuckets[key],
 		}
 	}
 
@@ -68,8 +74,8 @@ func (c *Catalog) FormatTrend(data TrendData) string {
 
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "Tendencia de Invocacoes (ultimas %d semanas):\n", _weeksForTrend)
-	fmt.Fprintf(&sb, "%-12s  %-5s  %s\n", "Semana", "Count", "Barra")
-	fmt.Fprintf(&sb, "%s\n", strings.Repeat("-", 50))
+	fmt.Fprintf(&sb, "%-12s  %-5s  %-14s  %s\n", "Semana", "Count", "Metricas RF-44", "Barra")
+	fmt.Fprintf(&sb, "%s\n", strings.Repeat("-", 65))
 
 	barWidth := 30
 	for _, w := range data.Weeks {
@@ -77,7 +83,7 @@ func (c *Catalog) FormatTrend(data TrendData) string {
 		if maxVal > 0 {
 			bar = w.Invocations * barWidth / maxVal
 		}
-		fmt.Fprintf(&sb, "%-12s  %-5d  %s\n", w.Week, w.Invocations, strings.Repeat("█", bar))
+		fmt.Fprintf(&sb, "%-12s  %-5d  %-14d  %s\n", w.Week, w.Invocations, w.MetricsObserved, strings.Repeat("█", bar))
 	}
 	return sb.String()
 }
@@ -113,7 +119,7 @@ var _defaultSkillBudgetInvocations = map[string]int{
 // BudgetCheck verifica se alguma skill excedeu o budget de invocacoes esperado.
 func (c *Catalog) BudgetCheck(rootDir string, since time.Duration) (BudgetCheckData, error) {
 	logPath := filepath.Join(rootDir, ".agents", "telemetry.log")
-	entries, err := NewCatalog().parseLogEntries(logPath, since)
+	entries, err := c.parseLogEntries(logPath, since)
 	if err != nil {
 		return BudgetCheckData{}, err
 	}

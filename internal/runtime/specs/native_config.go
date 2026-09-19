@@ -237,6 +237,10 @@ func scriptCandidatesIn(scope []string) []string {
 	return out
 }
 
+func ScriptDelegatesTo(resolve ScriptResolver, candidate, canonical string) bool {
+	return candidateResolvesToValidator(candidate, canonical, resolve, map[string]bool{})
+}
+
 func candidateResolvesToValidator(candidate, canonical string, resolve ScriptResolver, seen map[string]bool) bool {
 	candidate = filepath.ToSlash(candidate)
 	if candidate == filepath.ToSlash(canonical) {
@@ -261,7 +265,7 @@ func candidateResolvesToValidator(candidate, canonical string, resolve ScriptRes
 	if scriptExecutesTarget(candidateData, canonical) {
 		return true
 	}
-	for _, delegate := range scriptCandidatesIn([]string{string(candidateData)}) {
+	for _, delegate := range executedScriptTargets(candidateData) {
 		if candidateResolvesToValidator(delegate, canonical, resolve, seen) {
 			return true
 		}

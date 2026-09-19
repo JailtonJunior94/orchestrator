@@ -21,8 +21,9 @@ type installCommand struct{}
 func newInstallCmd() *cobra.Command {
 	handler := &installCommand{}
 	cmd := &cobra.Command{
-		Use:   "install <path>",
-		Short: "Instala governanca de IA em um projeto",
+		Use:     "install <path>",
+		Aliases: []string{"init"},
+		Short:   "Instala governanca de IA em um projeto",
 		Long: `Instala o pacote de governanca para ferramentas de IA em um projeto alvo.
 
 Sem --source, usa as skills canonicas embutidas no binario.
@@ -32,7 +33,8 @@ Exemplos:
   ai-spec-harness install ./meu-projeto --tools all --langs all --mode copy
   ai-spec-harness install ./meu-projeto --tools claude --dry-run
   ai-spec-harness install ./meu-projeto --tools all --langs all --source ~/ai-governance
-  ai-spec-harness install ./meu-projeto --tools all --ref v1.0.0`,
+  ai-spec-harness install ./meu-projeto --tools all --ref v1.0.0
+  ai-spec-harness init ./meu-projeto --tools claude,opencode --langs go,python`,
 		Args: cobra.ExactArgs(1),
 		RunE: handler.run,
 	}
@@ -49,6 +51,7 @@ Exemplos:
 	cmd.Flags().Bool("global", false, "Instala globalmente em ~/.aispec (ADR-019 RF-07)")
 	cmd.Flags().Bool("follow-external-symlinks", false, "Permite escrever em .agents/skills quando symlink aponta para fora do projeto")
 	cmd.Flags().String("model", "", "Modelo default do agente (OpenCode: mapeado para a chave 'model' do opencode.json)")
+	cmd.Flags().Bool("overwrite-conflicts", false, "Sobrescreve arquivos gerenciados em conflito (checksum divergente do manifesto), nomeando cada um; sem esta flag o lote inteiro e abortado (RF-27)")
 	return cmd
 }
 
@@ -66,6 +69,7 @@ func (c *installCommand) run(cmd *cobra.Command, args []string) error {
 	installGlobal, _ := cmd.Flags().GetBool("global")
 	installFollowExternalSymlinks, _ := cmd.Flags().GetBool("follow-external-symlinks")
 	installModel, _ := cmd.Flags().GetString("model")
+	installOverwriteConflicts, _ := cmd.Flags().GetBool("overwrite-conflicts")
 
 	if installRef != "" && installSource != "" {
 		return fmt.Errorf("--ref e --source sao mutuamente exclusivos")
@@ -133,5 +137,6 @@ func (c *installCommand) run(cmd *cobra.Command, args []string) error {
 		Scope:                  scope,
 		FollowExternalSymlinks: installFollowExternalSymlinks,
 		Model:                  installModel,
+		OverwriteConflicts:     installOverwriteConflicts,
 	})
 }

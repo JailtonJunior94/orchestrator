@@ -1,0 +1,17 @@
+bash scripts/check-spec-paths.sh .specs/prd-harness-quatro-clis-loop-aprovacao
+Referencias de caminho: 16 verificadas, todas resolvem (1 PRD sob gestao SDD).
+bash tests/scripts/check-spec-paths_test.sh
+  OK   caminho existente aprova (exit=0)
+  OK   caminho inexistente reprova (exit=1)
+  OK   diagnostico nomeia o caminho invalido
+  OK   simbolo, comando e placeholder nao viram caminho (exit=0)
+  OK   caminho opcional documentado nao reprova (exit=0)
+  OK   caminho inexistente com marcador (planejado) aprova (exit=0)
+  OK   marcador (planejado) nao mascara caminho quebrado vizinho (exit=1)
+  OK   diagnostico acusa so o caminho sem marcador
+  OK   PRD historico sem estado SDD fica fora do escopo (exit=0)
+  OK   a varredura selecionou exatamente o PRD ativo
+  OK   escopo vazio reprova em vez de aprovar por vacuidade (exit=1)
+  OK   diagnostico nomeia o escopo vazio
+
+Resultado: 12 OK, 0 FAIL

@@ -1,0 +1,114 @@
+{
+  "schema_version": 2,
+  "run_id": "task-11.0-harness-portatil-vendor-neutral-2026-09-18",
+  "task_id": "11.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a8b77217cd713b4ef629d324e63934e05e589864",
+  "patch_sha256": "8163b73b8d345b3f0d77f240244794117299e0e2e2c28a54ab968cca71212858",
+  "patch_ref": "evidence/task-11.0-harness-portatil-vendor-neutral/11.0.patch",
+  "final_state_sha256": "1b41192fe822172e5bdbefe49f97c803f8dc473392b8daf245b928231af92c41",
+  "coverage_regression": false,
+  "review_verdict": "approved",
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test -count=1 ./...",
+      "exit_code": 0,
+      "output_sha256": "ece66813f4d9a170b2d0bf8d16ab09e0fdf13eac7b53e67cac33e207a1c39386"
+    },
+    {
+      "command": "GOGC=20 golangci-lint run --config .golangci.yml --timeout 10m",
+      "exit_code": 0,
+      "output_sha256": "9398b834c8accab1aa5879db5c1a9cd324d3df0d87c7d17ff98e8aa95b3434b1"
+    },
+    {
+      "command": "go test -tags=integration -count=1 ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/parity/...",
+      "exit_code": 0,
+      "output_sha256": "d15ef153c66abb51a2e596272ced4b0081f65e81f8861ad7e427005949fb2095"
+    },
+    {
+      "command": "bash scripts/check-scripts-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "112e3721eaa7f35a2d8ce4ca2848789110d5c034cd25d48305d74a8eab3ee9cf"
+    },
+    {
+      "command": "bash scripts/check-hooks-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "59b44ee6a5cd043812e4ce004461f2a2de9d3bb71201114beedfbff877252e3f"
+    },
+    {
+      "command": "bash scripts/check-skills-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "a520cbac6ce5b745fdd21ca989715a207e9f63feb554edf4f69ab9f591d14d05"
+    },
+    {
+      "command": "bash scripts/check-mocks.sh",
+      "exit_code": 0,
+      "output_sha256": "b1d91938e8acf29e44eedd7309466a57e2051808d29fd98cc76e0d414b83d6e2"
+    },
+    {
+      "command": "go run . skills --verify . (RF-60, consumido por internal/doctor.checkSkillIntegrity, subtarefa 11.8)",
+      "exit_code": 0,
+      "output_sha256": "6433d468b6d153fbc67d4b5838a719a881fecc9a8326e59417ca0ca743217623"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "chave-rf44-nova-aparece-em-report-summary-trend",
+      "evidence_ref": "internal/telemetry/rf44_test.go#TestRF44_ReportSummaryTrendSurfaceNewKey"
+    },
+    {
+      "id": "leitor-existente-nao-quebra-chave-desconhecida-ignorada",
+      "evidence_ref": "internal/telemetry/rf44_test.go#TestRF44_UnknownRawKeyNeverResolvesAsMetric"
+    },
+    {
+      "id": "zero-metrica-inventada-inferida-ou-zero",
+      "evidence_ref": "internal/telemetry/rf44_test.go#TestRF44_AbsentMetricIsNeverZero"
+    },
+    {
+      "id": "doctor-reporta-quatro-provedores-somente-estatico-sem-llm",
+      "evidence_ref": "internal/doctor/multiprovider_test.go#TestBuildProviderBlocks_AllFourProvidersWhenInstalled"
+    },
+    {
+      "id": "ablation-mecanismo-nunca-inclui-metrica-sem-escritor",
+      "evidence_ref": "internal/telemetry/ablation_test.go#TestBuildAblationBaseline_NeverIncludesMetricWithoutWriter"
+    },
+    {
+      "id": "sensitive-fields-gate-mutation-proof",
+      "evidence_ref": "internal/telemetry/sensitive_test.go#TestFindSensitiveField_Mutation"
+    },
+    {
+      "id": "doctor-consome-rf60-nao-reimplementa",
+      "evidence_ref": "internal/doctor/multiprovider_test.go#TestCheckSkillIntegrity_ConsumesRF60LockMismatch"
+    },
+    {
+      "id": "verify-contrato-preservado-integralmente",
+      "evidence_ref": "cmd/ai_spec_harness/verify_contract_test.go#TestVerifyCommand_ContractPreserved"
+    }
+  ],
+  "evidence": [
+    "evidence/task-11.0-harness-portatil-vendor-neutral/build.log",
+    "evidence/task-11.0-harness-portatil-vendor-neutral/vet.log",
+    "evidence/task-11.0-harness-portatil-vendor-neutral/test.log",
+    "evidence/task-11.0-harness-portatil-vendor-neutral/lint.log",
+    "evidence/task-11.0-harness-portatil-vendor-neutral/integration-test.log",
+    "evidence/task-11.0-harness-portatil-vendor-neutral/check-scripts-sync.log",
+    "evidence/task-11.0-harness-portatil-vendor-neutral/check-hooks-sync.log",
+    "evidence/task-11.0-harness-portatil-vendor-neutral/check-skills-sync.log",
+    "evidence/task-11.0-harness-portatil-vendor-neutral/check-mocks.log",
+    "evidence/task-11.0-harness-portatil-vendor-neutral/skills-lock.log",
+    "evidence/task-11.0-harness-portatil-vendor-neutral/doctor-smoke.log",
+    "evidence/task-11.0-harness-portatil-vendor-neutral/doctor-codex-trust-smoke.log",
+    "evidence/task-11.0-harness-portatil-vendor-neutral/11.0.patch"
+  ]
+}

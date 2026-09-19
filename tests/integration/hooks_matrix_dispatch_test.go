@@ -393,3 +393,80 @@ func TestPreToolHookDispatchAllowsShellCommandWithoutSourceTargets(t *testing.T)
 		})
 	}
 }
+
+func TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWithPreloadConfirmed(t *testing.T) {
+	t.Parallel()
+	projectDir := installMandatoryAgentsForDispatch(t)
+
+	for _, command := range []string{"git commit -m x", "git push origin main"} {
+		for tool, relPath := range preToolHookRelPath {
+			t.Run(string(tool)+"/"+command, func(t *testing.T) {
+				stdin := []byte(`{"tool_input":{"command":"` + command + `"}}`)
+				out, exitCode := runHookScript(t, projectDir, relPath, stdin, "GOVERNANCE_PRELOAD_CONFIRMED=1")
+				if exitCode != preToolBlockExitCode {
+					t.Fatalf("tool=%s: RF-40.1 requires exit %d for unsolicited %q even with preload confirmed; got exit=%d output=%s", tool, preToolBlockExitCode, command, exitCode, out)
+				}
+				if strings.Contains(out, brokenChainMarker) {
+					t.Fatalf("tool=%s: the wrapper refused because the canonical validator is missing, not because the gate ran; output=%s", tool, out)
+				}
+				if !strings.Contains(out, "operacao git nao solicitada") {
+					t.Fatalf("tool=%s: the refusal must carry the verdict of the canonical git-operation gate; output=%s", tool, out)
+				}
+			})
+		}
+	}
+}
+
+func TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed(t *testing.T) {
+	t.Parallel()
+	projectDir := installMandatoryAgentsForDispatch(t)
+
+	for tool, relPath := range preToolHookRelPath {
+		t.Run(string(tool), func(t *testing.T) {
+			stdin := []byte(`{"tool_input":{"command":"git commit -m x"}}`)
+			out, exitCode := runHookScript(t, projectDir, relPath, stdin,
+				"GOVERNANCE_PRELOAD_CONFIRMED=1", "GOVERNANCE_GIT_OPERATION_CONFIRMED=1")
+			if exitCode != 0 {
+				t.Fatalf("tool=%s: a git commit explicitly confirmed via its own dedicated escape must be released; output=%s", tool, out)
+			}
+		})
+	}
+}
+
+func TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfirmed(t *testing.T) {
+	t.Parallel()
+	projectDir := installMandatoryAgentsForDispatch(t)
+
+	for _, command := range []string{"git status", "git diff", "git log --oneline -5"} {
+		for tool, relPath := range preToolHookRelPath {
+			t.Run(string(tool)+"/"+command, func(t *testing.T) {
+				stdin := []byte(`{"tool_input":{"command":"` + command + `"}}`)
+				out, exitCode := runHookScript(t, projectDir, relPath, stdin, "GOVERNANCE_PRELOAD_CONFIRMED=1")
+				if exitCode != 0 {
+					t.Fatalf("tool=%s: the git-operation gate must never turn into a blind block of read-only git commands; output=%s", tool, out)
+				}
+			})
+		}
+	}
+}
+
+func TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadConfirmed(t *testing.T) {
+	t.Parallel()
+	projectDir := installMandatoryAgentsForDispatch(t)
+
+	for tool, relPath := range preToolHookRelPath {
+		t.Run(string(tool), func(t *testing.T) {
+			stdin := []byte(`{"tool_input":{"command":"rm -rf /"}}`)
+			out, exitCode := runHookScript(t, projectDir, relPath, stdin, "GOVERNANCE_PRELOAD_CONFIRMED=1")
+			if exitCode != preToolBlockExitCode {
+				t.Fatalf("tool=%s: RF-40.2 requires destructiveness to be evaluated independently of preload; got exit=%d output=%s", tool, exitCode, out)
+			}
+			if strings.Contains(out, brokenChainMarker) {
+				t.Fatalf("tool=%s: the wrapper refused because the canonical validator is missing, not because the gate ran; output=%s", tool, out)
+			}
+			if !strings.Contains(out, "comando destrutivo detectado") {
+				t.Fatalf("tool=%s: the refusal must carry the verdict of the canonical destructive-operation criterion; output=%s", tool, out)
+			}
+		})
+	}
+}

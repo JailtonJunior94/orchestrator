@@ -9,6 +9,15 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/config"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/contextgen"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/install"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
 
 // TestPortability_GenerateGovernance valida o caminho critico que o usuario final
@@ -352,6 +361,157 @@ func TestPortability_EconomyZeroRefsOnConfigEdit(t *testing.T) {
 	if !strings.Contains(string(out), "architecture") {
 		t.Errorf("esperava architecture (always); got:\n%s", out)
 	}
+}
+
+func TestPortability_CLISwitchWithoutReinstall(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("hooks shell-only")
+	}
+	repoRoot := findRepoRoot(t)
+	projectDir := t.TempDir()
+
+	fsys := fs.NewOSFileSystem()
+	printer := output.New(false)
+	mfst := manifest.NewStore(fsys)
+	adpt := adapters.NewGenerator(fsys, printer)
+	ctxg := contextgen.NewGenerator(fsys, printer)
+	installSvc := install.NewService(fsys, printer, mfst, adpt, ctxg)
+
+	allTools := []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolOpenCode}
+
+	if err := installSvc.Execute(config.InstallOptions{
+		ProjectDir:  projectDir,
+		Tools:       allTools,
+		Langs:       []skills.Lang{skills.LangGo},
+		LinkMode:    skills.LinkCopy,
+		GenerateCtx: false,
+	}); err != nil {
+		t.Fatalf("instalacao unica com 4 CLIs falhou: %v", err)
+	}
+
+	items, err := installSvc.Verify(config.InstallOptions{ProjectDir: projectDir})
+	if err != nil {
+		t.Fatalf("verify pos-instalacao unica falhou: %v", err)
+	}
+	seenByTool := map[skills.Tool]bool{}
+	for _, it := range items {
+		if it.Tool == "" {
+			continue
+		}
+		seenByTool[it.Tool] = true
+		if it.State == install.VerifyStateDrifted {
+			t.Errorf("item %s/%s drifted logo apos instalacao unica com 4 CLIs", it.Tool, it.Skill)
+		}
+	}
+	for _, tool := range allTools {
+		if !seenByTool[tool] {
+			t.Errorf("nenhum item verificado para %s; instalacao unica nao serviu os 4 provedores", tool)
+		}
+	}
+
+	editGo := filepath.Join(projectDir, "internal", "repository", "user.go")
+	stdin := `{"tool_input":{"file_path":"` + editGo + `"}}`
+	hooks := []struct {
+		cli  string
+		path string
+	}{
+		{"claude", filepath.Join(repoRoot, ".claude/hooks/validate-preload.sh")},
+		{"codex", filepath.Join(repoRoot, ".codex/hooks/validate-preload.sh")},
+		{"copilot", filepath.Join(repoRoot, ".github/hooks/validate-preload.sh")},
+	}
+	for _, h := range hooks {
+		cmd := exec.Command("bash", h.path)
+		cmd.Stdin = strings.NewReader(stdin)
+		cmd.Env = append(os.Environ(),
+			"GOVERNANCE_PRELOAD_CONFIRMED=1",
+			"AGENTS_ROOT="+projectDir,
+		)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("%s: gate de descoberta falhou na MESMA instalacao (RF-53); err=%v out=%s", h.cli, err, out)
+		}
+		if !strings.Contains(string(out), "go-implementation") {
+			t.Errorf("%s: esperava guidance go-implementation na mesma instalacao; out=%s", h.cli, out)
+		}
+	}
+
+	pluginPath := filepath.Join(projectDir, ".opencode", "plugin", "governance.js")
+	info, err := os.Stat(pluginPath)
+	if err != nil {
+		t.Fatalf("opencode: plugin de governanca ausente na mesma instalacao: %v", err)
+	}
+	if info.Size() == 0 {
+		t.Fatalf("opencode: plugin de governanca vazio na mesma instalacao")
+	}
+}
+
+func TestPortability_NoDaemonRequired(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("shebang/systemd sao conceitos POSIX")
+	}
+	projectDir := t.TempDir()
+
+	fsys := fs.NewOSFileSystem()
+	printer := output.New(false)
+	mfst := manifest.NewStore(fsys)
+	adpt := adapters.NewGenerator(fsys, printer)
+	ctxg := contextgen.NewGenerator(fsys, printer)
+	installSvc := install.NewService(fsys, printer, mfst, adpt, ctxg)
+
+	allTools := []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolOpenCode}
+	if err := installSvc.Execute(config.InstallOptions{
+		ProjectDir:  projectDir,
+		Tools:       allTools,
+		LinkMode:    skills.LinkCopy,
+		GenerateCtx: false,
+	}); err != nil {
+		t.Fatalf("instalacao para checagem de daemon falhou: %v", err)
+	}
+
+	forbiddenSuffixes := []string{".service", ".plist", ".pid", ".sock"}
+	forbiddenNameSubstrings := []string{"daemon", "supervisor", "systemd", "launchd"}
+	var scriptCount int
+	err := filepath.Walk(projectDir, func(path string, fi os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if fi.IsDir() {
+			return nil
+		}
+		name := strings.ToLower(fi.Name())
+		for _, suf := range forbiddenSuffixes {
+			if strings.HasSuffix(name, suf) {
+				t.Errorf("artefato instalado com extensao de processo permanente: %s", path)
+			}
+		}
+		for _, sub := range forbiddenNameSubstrings {
+			if strings.Contains(name, sub) {
+				t.Errorf("artefato instalado sugere daemon/supervisor: %s", path)
+			}
+		}
+		if strings.HasSuffix(name, ".sh") {
+			scriptCount++
+			data, readErr := os.ReadFile(path)
+			if readErr != nil {
+				t.Fatalf("ler script instalado %s: %v", path, readErr)
+			}
+			firstLine := strings.SplitN(string(data), "\n", 2)[0]
+			if !strings.HasPrefix(firstLine, "#!/") {
+				t.Errorf("script instalado sem shebang one-shot: %s (primeira linha: %q)", path, firstLine)
+			}
+			if strings.Contains(firstLine, "systemd-run") {
+				t.Errorf("script instalado invoca supervisor via shebang: %s", path)
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("varredura do diretorio instalado falhou: %v", err)
+	}
+	if scriptCount == 0 {
+		t.Fatalf("nenhum script .sh encontrado na instalacao; fixture nao exerce a asserção")
+	}
+	t.Logf("%d scripts instalados, todos one-shot via shebang, nenhum artefato de daemon", scriptCount)
 }
 
 // --- helpers ---

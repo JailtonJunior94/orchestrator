@@ -1,0 +1,75 @@
+=== RUN   TestTokenBudget_InputContextPerProvider
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Resumo do lote (install): criado=466 atualizado=0 preservado=0 mesclado=2 conflito=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestTokenBudget_InputContextPerProvider3285766779/001
+Modo de instalacao: copy
+=== RUN   TestTokenBudget_InputContextPerProvider/claude
+=== PAUSE TestTokenBudget_InputContextPerProvider/claude
+=== RUN   TestTokenBudget_InputContextPerProvider/codex
+=== PAUSE TestTokenBudget_InputContextPerProvider/codex
+=== RUN   TestTokenBudget_InputContextPerProvider/copilot
+=== PAUSE TestTokenBudget_InputContextPerProvider/copilot
+=== RUN   TestTokenBudget_InputContextPerProvider/opencode
+=== PAUSE TestTokenBudget_InputContextPerProvider/opencode
+=== CONT  TestTokenBudget_InputContextPerProvider/claude
+=== CONT  TestTokenBudget_InputContextPerProvider/copilot
+=== CONT  TestTokenBudget_InputContextPerProvider/opencode
+=== CONT  TestTokenBudget_InputContextPerProvider/codex
+=== NAME  TestTokenBudget_InputContextPerProvider/copilot
+    input_context_budget_test.go:123: provider=copilot files=[.github/copilot-instructions.md] total=507 ceiling=558
+=== NAME  TestTokenBudget_InputContextPerProvider/codex
+    input_context_budget_test.go:123: provider=codex files=[AGENTS.md .codex/config.toml] total=2570 ceiling=2827
+=== NAME  TestTokenBudget_InputContextPerProvider/opencode
+    input_context_budget_test.go:123: provider=opencode files=[AGENTS.md] total=1793 ceiling=1972
+=== NAME  TestTokenBudget_InputContextPerProvider/claude
+    input_context_budget_test.go:123: provider=claude files=[CLAUDE.md AGENTS.md .claude/rules/governance.md .claude/rules/code-style.md] total=3719 ceiling=4091
+--- PASS: TestTokenBudget_InputContextPerProvider (0.40s)
+    --- PASS: TestTokenBudget_InputContextPerProvider/copilot (0.00s)
+    --- PASS: TestTokenBudget_InputContextPerProvider/codex (0.00s)
+    --- PASS: TestTokenBudget_InputContextPerProvider/opencode (0.00s)
+    --- PASS: TestTokenBudget_InputContextPerProvider/claude (0.00s)
+=== RUN   TestTokenBudget_InputContextNumeratorDiffersAcrossProviders
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Resumo do lote (install): criado=466 atualizado=0 preservado=0 mesclado=2 conflito=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestTokenBudget_InputContextNumeratorDiffersAcrossProviders2787325385/001
+Modo de instalacao: copy
+--- PASS: TestTokenBudget_InputContextNumeratorDiffersAcrossProviders (0.39s)
+=== RUN   TestTokenBudget_InputContextNumeratorIncludesNativelyLoadedFilesForOpenCodeAndCodex
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Resumo do lote (install): criado=466 atualizado=0 preservado=0 mesclado=2 conflito=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestTokenBudget_InputContextNumeratorIncludesNativelyLoadedFiles1527305176/001
+Modo de instalacao: copy
+--- PASS: TestTokenBudget_InputContextNumeratorIncludesNativelyLoadedFilesForOpenCodeAndCodex (0.38s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/integration	1.292s
+exit=0

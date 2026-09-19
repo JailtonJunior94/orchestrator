@@ -30,6 +30,13 @@ type ACPSessionEvent struct {
 	// RetryAttempts é o número de reexecuções após falha transitória (ADR-018, RF-04).
 	// 0 = sessão concluída na primeira tentativa; incluído apenas quando > 0 (F1 preservado).
 	RetryAttempts int
+
+	Provider          string
+	Model             string
+	Duration          time.Duration
+	ToolCallsTotal    int
+	HasToolCallsTotal bool
+	FinalStatus       string
 }
 
 // LogACPSession registra campos de sessão ACP em .agents/telemetry.log apenas quando
@@ -73,6 +80,21 @@ func (c *Catalog) LogACPSession(rootDir string, evt ACPSessionEvent) error {
 	// Tentativas de retry (ADR-018, RF-04, ADR-006 opt-in): incluído apenas quando > 0.
 	if evt.RetryAttempts > 0 {
 		line += fmt.Sprintf(" retry_attempts=%d", evt.RetryAttempts)
+	}
+	if evt.Provider != "" {
+		line += fmt.Sprintf(" provider=%s", evt.Provider)
+	}
+	if evt.Model != "" {
+		line += fmt.Sprintf(" model=%s", evt.Model)
+	}
+	if evt.Duration > 0 {
+		line += fmt.Sprintf(" duration_ms=%d", evt.Duration.Milliseconds())
+	}
+	if evt.HasToolCallsTotal {
+		line += fmt.Sprintf(" tool_calls=%d", evt.ToolCallsTotal)
+	}
+	if evt.FinalStatus != "" {
+		line += fmt.Sprintf(" final_status=%s", evt.FinalStatus)
 	}
 	line += "\n"
 	_, err = f.WriteString(line)

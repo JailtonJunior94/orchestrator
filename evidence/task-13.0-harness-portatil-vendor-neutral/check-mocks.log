@@ -1,0 +1,2 @@
+bash scripts/check-mocks.sh
+Mocks: OK (sincronizados com mockery.yml)

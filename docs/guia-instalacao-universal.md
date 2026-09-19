@@ -185,6 +185,68 @@ ai-spec-harness verify .
 Itens `drifted` indicam que o arquivo instalado divergiu do asset embarcado. Reinstale para
 convergir.
 
+Se algum arquivo gerenciado tiver sido editado manualmente no projeto (checksum diverge do
+manifesto), `install`/`upgrade` (aliases `init`/`sync`) abortam o lote inteiro por padrao e listam
+cada arquivo em conflito, em vez de sobrescrever silenciosamente. Para forcar a sobrescrita e
+descartar a edicao local, use `--overwrite-conflicts`:
+
+```bash
+ai-spec-harness install . --overwrite-conflicts
+# ou, no fluxo de atualizacao de skills:
+ai-spec-harness upgrade . --overwrite-conflicts
+```
+
+Sem a flag, resolva o conflito manualmente (preserve ou descarte a edicao local) e reexecute.
+
+---
+
+## Uso Multi-CLI Simultâneo
+
+Uma única instalação com `--tools claude,codex,copilot,opencode` serve os quatro provedores ao
+mesmo tempo, a partir do mesmo diretório `.agents/`, `.claude/`, `.codex/`, `.github/` e
+`.opencode/`. Trocar de CLI durante o trabalho não exige reinstalar nem converter o projeto: cada
+ferramenta lê seus próprios artefatos derivados (hooks, agentes, regras espelhadas) da mesma árvore
+instalada.
+
+```bash
+ai-spec-harness install . --tools claude,codex,copilot,opencode
+# a partir daqui, claude, codex, copilot e opencode funcionam no mesmo diretório sem nenhum passo intermediário
+```
+
+## Contrato do Harness (`.agents/harness.yaml`)
+
+Arquivo declarativo opcional com `version: 1`, expressando política de Git (`auto_commit`,
+`auto_push`), política de aprovação, requisitos de qualidade, política de evidência e política de
+descoberta de skills. Sua ausência **não quebra nenhum fluxo**: o binário aplica o contrato v1
+default embutido e reporta a fonte (`default` ou `file`) no diagnóstico (`ai-spec-harness doctor`).
+Campo desconhecido no arquivo é erro, não aviso — configuração inválida nunca é ignorada
+silenciosamente.
+
+## Políticas Canônicas (`.agents/policies/`)
+
+`R-GOV-001` e `R-STYLE-001` residem em `.agents/policies/` como origem única. `.claude/rules/` (e
+os diretórios equivalentes dos demais provedores) são **derivados**, gerados pelo mesmo mecanismo
+de espelhamento usado para skills e hooks; divergência entre a origem canônica e qualquer derivado
+falha o build (`make check-policies-sync`).
+
+## Capability Matrix
+
+A matriz de capacidades por provedor é gerada a partir dos invariantes de paridade e versionada em
+[`docs/capability-matrix.md`](capability-matrix.md). Não é editada manualmente — regenerar com
+`UPDATE_SNAPSHOTS=1 go test ./internal/capability/...` após qualquer mudança de invariante.
+
+## Diagnóstico Multi-Provedor (`doctor`)
+
+```bash
+ai-spec-harness doctor .
+```
+
+Separa verificações em blocos: `Core` (git, manifesto, contrato do harness, integridade de
+skills-lock, sincronia canônico/derivados) e um bloco por provedor instalado (instruções
+descobríveis, skills disponíveis, políticas aplicadas, validadores de evidência, pré-condições de
+enforcement). Falha (`FALHA`) bloqueia o diagnóstico; ausência de configuração opcional (como
+`.agents/harness.yaml`) aparece como aviso (`AVISO`), nunca como falha.
+
 ---
 
 ## Estados de Verificação

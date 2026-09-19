@@ -1,0 +1,174 @@
+{
+  "schema_version": 2,
+  "run_id": "task-13.0-harness-portatil-vendor-neutral-2026-09-18",
+  "task_id": "13.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a8b77217cd713b4ef629d324e63934e05e589864",
+  "patch_sha256": "0440e07b2e8829e6ad3fac94a08f0bc91d1876820711da2d87165cb4250fc9c4",
+  "patch_ref": "evidence/task-13.0-harness-portatil-vendor-neutral/13.0.patch",
+  "final_state_sha256": "e69dc8d15ade6bd09e0d86ad3bb034e4e762e73a064aa5135204beb512ff5635",
+  "coverage_regression": false,
+  "review_verdict": "approved",
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "gofmt -l . (excluindo vendor/)",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "make test (go test ./...)",
+      "exit_code": 0,
+      "output_sha256": "dc1d29da56ad7d8198bb735334ded0bd03adddfcf010b1a5ec3588d56a39c61d"
+    },
+    {
+      "command": "make integration",
+      "exit_code": 0,
+      "output_sha256": "fb329e33e37d06eff0114770734d795d62953d178a6a0a8b44f3f4e6b21b810e"
+    },
+    {
+      "command": "make lint",
+      "exit_code": 0,
+      "output_sha256": "046984c2c4834347375a358fcf19c49c04b0260ede9d67bd918f7de251209bab"
+    },
+    {
+      "command": "make coverage",
+      "exit_code": 0,
+      "output_sha256": "f2f1e5b2f31c611df995d66b05d4bb65e116ea884de1134633c9ba16f62ca783"
+    },
+    {
+      "command": "make coverage-packages",
+      "exit_code": 0,
+      "output_sha256": "80e4fc95aec060efcb87b4b172af2ae5f0cc9617a1fb7912fe2649bb5d0f3702"
+    },
+    {
+      "command": "make check-skills-sync",
+      "exit_code": 0,
+      "output_sha256": "b1b902dc08b0114ffb34fe842b1bd831699dd40ce88bce4d8b4fdc9e1a2e151a"
+    },
+    {
+      "command": "make check-hooks-sync",
+      "exit_code": 0,
+      "output_sha256": "519fb65beea0be9bb5dc3583ac45861ea104e95890a15d79bf6a8ea9c562f1da"
+    },
+    {
+      "command": "make check-scripts-sync",
+      "exit_code": 0,
+      "output_sha256": "64a9ca83811aa311dbb96cf14add8712f6cbeebf2b34e724925f85023d41231f"
+    },
+    {
+      "command": "make check-mocks",
+      "exit_code": 0,
+      "output_sha256": "d79d709adc7b9b73fb9f8d30fce5afc8317a9036c3d7438874f9f6fd5feb9496"
+    },
+    {
+      "command": "make test-hooks",
+      "exit_code": 0,
+      "output_sha256": "0fb009aeba36248a71ecd7b2a3ab0d4ba7b0f41fabffc312f0a78b8c6dfebafc"
+    },
+    {
+      "command": "make check-spec-paths (com SPEC_PATH_TARGETS incluindo prd-harness-portatil-vendor-neutral)",
+      "exit_code": 0,
+      "output_sha256": "038a2adab8cc114af86009599c865126fafc8086618557152c1f43f784d6392e"
+    },
+    {
+      "command": "make test-validators",
+      "exit_code": 0,
+      "output_sha256": "e03d8c1605427af5f72f1673ab503ffbfb41a6f5371507aadd612328bd471f0f"
+    },
+    {
+      "command": "make test-portable-skills",
+      "exit_code": 0,
+      "output_sha256": "6f4bc40e58cf8552ac2ee7dfd8082e9394630fb4c06a1e0d06e92a82fcdfc30f"
+    },
+    {
+      "command": "make budget",
+      "exit_code": 0,
+      "output_sha256": "7fe439610f93c92d56314918799270a1b680e80d7f1cbf9e64b36855f7aaa770"
+    },
+    {
+      "command": "make test-sdd-evals",
+      "exit_code": 0,
+      "output_sha256": "8e3008bd767b53559fed5f805300c30c4b76f6c04883fcffaf528c59eec6055e"
+    },
+    {
+      "command": "make check-capability-matrix-sync",
+      "exit_code": 0,
+      "output_sha256": "47be664d66d7688ba08580f8f6bf29cb4e8241b5f13ef7197c68bb75ab42c788"
+    },
+    {
+      "command": "make check-policies-sync",
+      "exit_code": 0,
+      "output_sha256": "23d27893be19883c5ef2a5bf5b787ce6f36441946c73ce58283c1aafa97f6172"
+    },
+    {
+      "command": "make check-skills-lock",
+      "exit_code": 0,
+      "output_sha256": "0570889921de2afd557227b7d55705c3337892aa76bd8c32ebc13f14b7059533"
+    },
+    {
+      "command": "go test -tags=integration -run 'TestLegacyV201Project|TestPortability_CLISwitchWithoutReinstall|TestPortability_NoDaemonRequired|TestNoImplicitGitOperations_InstallUpgradeDoctor|TestReleasePolicy_DeterministicScenariosGateMergeLiveScenariosDoNot|TestOpenCodeGovernancePluginBlocksUnsolicitedGitCommitAndPushEvenWhenPreloadConfirmed' -v ./tests/integration/...",
+      "exit_code": 0,
+      "output_sha256": "0889934029b51d44d464e3656636a13558cf7c024b3186625e2940086e8b4f95"
+    },
+    {
+      "command": "sed -n '/^## Unreleased/,/^## 2.0.1/p' CHANGELOG.md (excluindo a última linha) -> evidence/task-13.0-harness-portatil-vendor-neutral/changelog-unreleased-section.txt",
+      "exit_code": 0,
+      "output_sha256": "899b2beb0cf58045faeebc2d6ce6bd27809bc2803f434d7550ed09738cb4a641"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "todos-os-gates-do-baseline-verdes-numeros-v40-preservados",
+      "evidence_ref": "evidence/task-13.0-harness-portatil-vendor-neutral/build.log"
+    },
+    {
+      "id": "zero-mudanca-de-default-nao-declarada-no-changelog",
+      "evidence_ref": "evidence/task-13.0-harness-portatil-vendor-neutral/changelog-unreleased-section.txt"
+    },
+    {
+      "id": "projeto-instalado-versao-anterior-funciona-sem-acao-do-usuario",
+      "evidence_ref": "evidence/task-13.0-harness-portatil-vendor-neutral/rf50-rf52-rf53-rf55-rf56-new-tests.log"
+    },
+    {
+      "id": "evidencias-persistidas-por-tarefa-conforme-padrao-vigente",
+      "evidence_ref": "evidence/task-13.0-harness-portatil-vendor-neutral/test-validators.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-13.0-harness-portatil-vendor-neutral/build.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/vet.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/gofmt-check.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/test.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/integration.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/lint.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/coverage.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/coverage-packages.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/check-skills-sync.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/check-hooks-sync.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/check-scripts-sync.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/check-mocks.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/test-hooks.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/check-spec-paths.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/test-validators.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/test-portable-skills.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/budget.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/test-sdd-evals.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/check-capability-matrix-sync.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/check-policies-sync.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/check-skills-lock.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/rf50-rf52-rf53-rf55-rf56-new-tests.log",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/13.0.patch",
+    "evidence/task-13.0-harness-portatil-vendor-neutral/changelog-unreleased-section.txt"
+  ]
+}

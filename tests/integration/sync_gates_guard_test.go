@@ -27,6 +27,7 @@ var syncGateMirrorDirs = []string{
 // primeiro gate que falha, entao rodar check-skills-sync.sh (o unico com custo
 // de segundos) por ultimo corta a carga total da suite sem enfraquecer a prova.
 var syncGateScripts = []string{
+	filepath.Join("scripts", "check-policies-sync.sh"),
 	filepath.Join("scripts", "check-hooks-sync.sh"),
 	filepath.Join("scripts", "check-scripts-sync.sh"),
 	filepath.Join("scripts", "check-skills-sync.sh"),
@@ -163,6 +164,7 @@ func TestSyncGatesFailWhenCentralArtifactIsDeleted(t *testing.T) {
 		filepath.Join("internal", "embedded", "assets", ".opencode", "plugin", "governance.js"),
 		filepath.Join(".agents", "hooks", "validate-preload.sh"),
 		filepath.Join(".agents", "scripts", "hook-prereq-gate.sh"),
+		filepath.Join(".agents", "scripts", "git-operation-gate.sh"),
 		filepath.Join(".agents", "scripts", "validate-task-evidence.sh"),
 		filepath.Join(".agents", "scripts", "resolve-references.sh"),
 		filepath.Join(".agents", "scripts", "validate-skill-prerequisites.sh"),
@@ -172,6 +174,8 @@ func TestSyncGatesFailWhenCentralArtifactIsDeleted(t *testing.T) {
 		filepath.Join(".agents", "hooks", "subagent-stop-wrapper.sh"),
 		filepath.Join(".agents", "hooks", "validate-session-end.sh"),
 		filepath.Join(".claude", "scripts", "validate-session-end.sh"),
+		filepath.Join(".agents", "policies", "governance.md"),
+		filepath.Join(".agents", "policies", "code-style.md"),
 	}
 
 	for _, artifact := range artifacts {
@@ -307,6 +311,7 @@ func TestSyncGatesFailWhenCanonicalDirectoryIsDeleted(t *testing.T) {
 		filepath.Join(".agents", "hooks"),
 		filepath.Join(".agents", "scripts"),
 		filepath.Join(".agents", "skills"),
+		filepath.Join(".agents", "policies"),
 	}
 
 	for _, dir := range dirs {
@@ -429,9 +434,116 @@ func TestValidatorSuitesRunInCI(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read test.yml: %v", err)
 	}
-	for _, target := range []string{"make test-validators", "make check-spec-paths", "make test-hooks"} {
+	for _, target := range []string{"make test-validators", "make check-spec-paths", "make test-hooks", "make check-policies-sync", "make check-capability-matrix-sync"} {
 		if !strings.Contains(string(workflow), target) {
 			t.Errorf("%q precisa rodar no gate de PR (.github/workflows/test.yml)", target)
 		}
+	}
+}
+
+func TestPoliciesSyncGateFailsOnMirrorOnlyDeletion(t *testing.T) {
+	t.Parallel()
+
+	mirrors := []string{
+		filepath.Join(".claude", "rules", "governance.md"),
+		filepath.Join(".claude", "rules", "code-style.md"),
+	}
+
+	for _, mirror := range mirrors {
+		t.Run(mirror, func(t *testing.T) {
+			t.Parallel()
+			clone := cloneRepoForSyncGate(t)
+			if err := os.Remove(filepath.Join(clone, mirror)); err != nil {
+				t.Fatalf("remove %s: %v", mirror, err)
+			}
+
+			out, exitCode := runSyncGate(t, clone, filepath.Join("scripts", "check-policies-sync.sh"))
+			if exitCode == 0 {
+				t.Fatalf("check-policies-sync.sh stayed green after deleting only the mirror %s; output=%s", mirror, out)
+			}
+		})
+	}
+}
+
+func TestPoliciesSyncGateFailsOnMirrorOnlyEdit(t *testing.T) {
+	t.Parallel()
+
+	mirrors := []string{
+		filepath.Join(".claude", "rules", "governance.md"),
+		filepath.Join(".claude", "rules", "code-style.md"),
+	}
+
+	for _, mirror := range mirrors {
+		t.Run(mirror, func(t *testing.T) {
+			t.Parallel()
+			clone := cloneRepoForSyncGate(t)
+			original, err := os.ReadFile(filepath.Join(clone, mirror))
+			if err != nil {
+				t.Fatalf("read %s: %v", mirror, err)
+			}
+			replaceInClone(t, clone, mirror, append(original, []byte("\nedited-mirror-only\n")...))
+
+			out, exitCode := runSyncGate(t, clone, filepath.Join("scripts", "check-policies-sync.sh"))
+			if exitCode == 0 {
+				t.Fatalf("check-policies-sync.sh stayed green after editing only the mirror %s; output=%s", mirror, out)
+			}
+		})
+	}
+}
+
+func TestPoliciesSyncGateFailsOnCanonicalOnlyEdit(t *testing.T) {
+	t.Parallel()
+
+	canonicals := []string{
+		filepath.Join(".agents", "policies", "governance.md"),
+		filepath.Join(".agents", "policies", "code-style.md"),
+	}
+
+	for _, canonical := range canonicals {
+		t.Run(canonical, func(t *testing.T) {
+			t.Parallel()
+			clone := cloneRepoForSyncGate(t)
+			original, err := os.ReadFile(filepath.Join(clone, canonical))
+			if err != nil {
+				t.Fatalf("read %s: %v", canonical, err)
+			}
+			replaceInClone(t, clone, canonical, append(original, []byte("\nedited-canonical-only\n")...))
+
+			out, exitCode := runSyncGate(t, clone, filepath.Join("scripts", "check-policies-sync.sh"))
+			if exitCode == 0 {
+				t.Fatalf("check-policies-sync.sh stayed green after editing only the canonical origin %s; output=%s", canonical, out)
+			}
+		})
+	}
+}
+
+func TestClaudeRulesMirrorMatchesPreMigrationBaseline(t *testing.T) {
+	t.Parallel()
+
+	repo := repoRootForDispatch(t)
+	files := []string{
+		filepath.Join(".claude", "rules", "governance.md"),
+		filepath.Join(".claude", "rules", "code-style.md"),
+	}
+
+	for _, rel := range files {
+		t.Run(rel, func(t *testing.T) {
+			t.Parallel()
+			current, err := os.ReadFile(filepath.Join(repo, rel))
+			if err != nil {
+				t.Fatalf("read current %s: %v", rel, err)
+			}
+
+			cmd := exec.Command("git", "show", "v2.0.1:"+filepath.ToSlash(rel))
+			cmd.Dir = repo
+			baseline, err := cmd.Output()
+			if err != nil {
+				t.Fatalf("git show v2.0.1:%s: %v", rel, err)
+			}
+
+			if !bytes.Equal(current, baseline) {
+				t.Fatalf("%s must remain byte-identical to the v2.0.1 baseline after the P3 migration to .agents/policies/; the change must be invisible to Claude Code", rel)
+			}
+		})
 	}
 }

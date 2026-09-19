@@ -3,6 +3,7 @@ package upgrade
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -414,7 +415,96 @@ func TestUpgrade_RewritesManifestWhenVersionChangesWithoutSkillChanges(t *testin
 	}
 }
 
-func TestUpgrade_DoesNotRewriteManifestWhenVersionAndSkillsAreUnchanged(t *testing.T) {
+func TestUpgrade_BackfillsFileChecksumsEvenWhenVersionAndSkillsAreUnchanged(t *testing.T) {
+	t.Parallel()
+
+	ffs := fs.NewFakeFileSystem()
+	content := []byte("---\nname: review\nversion: 1.4.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = content
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = content
+
+	setVersionForTest(t, "0.12.0")
+
+	store := manifest.NewStore(ffs)
+	if err := store.Save("/project", &manifest.Manifest{
+		Version:        "0.12.0",
+		CreatedAt:      time.Unix(1690000000, 0),
+		UpdatedAt:      time.Unix(1700000000, 0),
+		Langs:          []skills.Lang{},
+		SkillVersions:  map[string]string{"review": "1.4.0"},
+		InstalledFiles: []string{".agents/skills/review/SKILL.md"},
+	}); err != nil {
+		t.Fatalf("falha ao salvar manifesto inicial: %v", err)
+	}
+
+	svc := setupTestService(ffs)
+	if err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+	}); err != nil {
+		t.Fatalf("upgrade falhou: %v", err)
+	}
+
+	after := readManifestFromFakeFS(t, ffs, "/project/.ai_spec_harness.json")
+	if after.Version != "0.12.0" {
+		t.Errorf("version nao deveria ter mudado: got %s", after.Version)
+	}
+	if after.SkillVersions["review"] != "1.4.0" {
+		t.Errorf("skill version nao deveria ter mudado: got %v", after.SkillVersions)
+	}
+	if after.UpdatedAt.Before(time.Unix(1700000000, 0)) || after.UpdatedAt.Equal(time.Unix(1700000000, 0)) {
+		t.Error("manifesto deveria ter sido regravado (o atalho que pula a escrita foi removido — RF-24)")
+	}
+	wantHash, err := ffs.FileHash("/project/.agents/skills/review/SKILL.md")
+	if err != nil {
+		t.Fatalf("falha ao calcular hash esperado: %v", err)
+	}
+	gotHash, ok := after.FileChecksums[".agents/skills/review/SKILL.md"]
+	if !ok {
+		t.Fatal("FileChecksums deveria ter sido preenchido por backfill mesmo sem nenhuma escrita nesta execucao (RF-24)")
+	}
+	if gotHash != wantHash {
+		t.Errorf("checksum de backfill incorreto: got %s, want %s", gotHash, wantHash)
+	}
+}
+
+func TestUpgrade_BackfilledChecksumDetectsConflictOnNextRun(t *testing.T) {
+	t.Parallel()
+
+	ffs := fs.NewFakeFileSystem()
+	content := []byte("---\nname: review\nversion: 1.4.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = content
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = content
+
+	setVersionForTest(t, "0.12.0")
+
+	store := manifest.NewStore(ffs)
+	if err := store.Save("/project", &manifest.Manifest{
+		Version:        "0.12.0",
+		Langs:          []skills.Lang{},
+		SkillVersions:  map[string]string{"review": "1.4.0"},
+		InstalledFiles: []string{".agents/skills/review/SKILL.md"},
+	}); err != nil {
+		t.Fatalf("falha ao salvar manifesto inicial: %v", err)
+	}
+
+	svc := setupTestService(ffs)
+	if err := svc.Execute(config.UpgradeOptions{ProjectDir: "/project", SourceDir: "/source"}); err != nil {
+		t.Fatalf("primeiro upgrade (backfill) falhou: %v", err)
+	}
+
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("edicao manual do usuario, diverge do source")
+
+	err := svc.Execute(config.UpgradeOptions{ProjectDir: "/project", SourceDir: "/source"})
+	if err == nil {
+		t.Fatal("upgrade deveria abortar por conflito apos backfill detectar divergencia (RF-22/RF-24/RF-27) — sem isso, o backfill nao protege nada")
+	}
+	if !strings.Contains(err.Error(), "conflict") {
+		t.Errorf("erro deveria indicar conflito, got: %v", err)
+	}
+}
+
+func TestUpgrade_LegacyManifestWithoutFileTrackingStillDetectsConflictAfterBackfill(t *testing.T) {
 	t.Parallel()
 
 	ffs := fs.NewFakeFileSystem()
@@ -427,33 +517,41 @@ func TestUpgrade_DoesNotRewriteManifestWhenVersionAndSkillsAreUnchanged(t *testi
 	store := manifest.NewStore(ffs)
 	if err := store.Save("/project", &manifest.Manifest{
 		Version:       "0.12.0",
-		CreatedAt:     time.Unix(1690000000, 0),
-		UpdatedAt:     time.Unix(1700000000, 0),
 		Langs:         []skills.Lang{},
 		SkillVersions: map[string]string{"review": "1.4.0"},
 	}); err != nil {
-		t.Fatalf("falha ao salvar manifesto inicial: %v", err)
-	}
-
-	before, err := ffs.ReadFile("/project/.ai_spec_harness.json")
-	if err != nil {
-		t.Fatalf("falha ao ler manifesto antes do upgrade: %v", err)
+		t.Fatalf("falha ao salvar manifesto legado inicial: %v", err)
 	}
 
 	svc := setupTestService(ffs)
-	if err := svc.Execute(config.UpgradeOptions{
-		ProjectDir: "/project",
-		SourceDir:  "/source",
-	}); err != nil {
-		t.Fatalf("upgrade falhou: %v", err)
+	if err := svc.Execute(config.UpgradeOptions{ProjectDir: "/project", SourceDir: "/source"}); err != nil {
+		t.Fatalf("primeiro upgrade (backfill via varredura legada) falhou: %v", err)
 	}
 
-	after, err := ffs.ReadFile("/project/.ai_spec_harness.json")
+	after := readManifestFromFakeFS(t, ffs, "/project/.ai_spec_harness.json")
+	wantHash, err := ffs.FileHash("/project/.agents/skills/review/SKILL.md")
 	if err != nil {
-		t.Fatalf("falha ao ler manifesto apos upgrade: %v", err)
+		t.Fatalf("falha ao calcular hash esperado: %v", err)
 	}
-	if string(after) != string(before) {
-		t.Fatalf("manifesto nao deveria ter sido regravado\nantes: %s\ndepois: %s", string(before), string(after))
+	gotHash, ok := after.FileChecksums[".agents/skills/review/SKILL.md"]
+	if !ok {
+		t.Fatal("manifesto legado (InstalledFiles==nil) deveria ter backfill de FileChecksums via varredura de .agents/skills/")
+	}
+	if gotHash != wantHash {
+		t.Errorf("checksum de backfill legado incorreto: got %s, want %s", gotHash, wantHash)
+	}
+
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.4.0\ndescription: Review.\n---\nedicao manual do usuario preservando a mesma versao")
+
+	err = svc.Execute(config.UpgradeOptions{ProjectDir: "/project", SourceDir: "/source"})
+	if err == nil {
+		t.Fatal("upgrade a partir de manifesto legado deveria abortar por conflito apos o backfill via varredura — sem isso a edicao manual e sobrescrita silenciosamente")
+	}
+	if !strings.Contains(err.Error(), "conflict") {
+		t.Errorf("erro deveria indicar conflito, got: %v", err)
+	}
+	if got := string(ffs.Files["/project/.agents/skills/review/SKILL.md"]); !strings.Contains(got, "edicao manual do usuario") {
+		t.Errorf("edicao manual deveria ter sido preservada apos abort, got: %s", got)
 	}
 }
 
@@ -629,6 +727,44 @@ func TestUpgrade_RefsChangedFiles(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("changed refs missing %q in %q", want, got)
 		}
+	}
+}
+
+type refsHashFailingFS struct {
+	fs.FileSystem
+	failPath string
+}
+
+func (f *refsHashFailingFS) DirHash(path string) (string, error) {
+	if path == f.failPath {
+		return "", errors.New("permission denied")
+	}
+	return f.FileSystem.DirHash(path)
+}
+
+func TestUpgrade_CheckSkills_SourceRefsIOErrorNeverYieldsOK(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	content := []byte("---\nversion: 1.0.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = content
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = content
+	ffs.Dirs["/source/.agents/skills/review/references"] = true
+	ffs.Dirs["/project/.agents/skills/review/references"] = true
+
+	refsDir := "/source/.agents/skills/review/references"
+	decorated := &refsHashFailingFS{FileSystem: ffs, failPath: refsDir}
+	printer := output.New(false)
+	svc := NewService(decorated, printer, manifest.NewStore(decorated), adapters.NewGenerator(decorated, printer), contextgen.NewGenerator(decorated, printer))
+
+	checks := svc.checkSkills("/source", "/project", nil)
+	if len(checks) != 1 {
+		t.Fatalf("expected exactly one check, got %d", len(checks))
+	}
+	if checks[0].Status == StatusOK {
+		t.Fatalf("a genuine IO error reading source references/ must never yield StatusOK, got %+v", checks[0])
+	}
+	if checks[0].Status != StatusRefsDivergent {
+		t.Fatalf("expected StatusRefsDivergent, got %v", checks[0].Status)
 	}
 }
 
@@ -845,8 +981,10 @@ func TestUpgrade_RegeneratesAdaptersAndSupportFiles(t *testing.T) {
 	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 2.0.0\ndescription: Review.\n---\n")
 	ffs.Files["/project/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
 	ffs.Files["/source/.claude/rules/governance.md"] = []byte("# new governance")
+	ffs.Files["/source/.claude/rules/code-style.md"] = []byte("# new code style")
 	ffs.Files["/source/.claude/scripts/validate-task-evidence.sh"] = []byte("#!/usr/bin/env bash\n# new")
 	ffs.Files["/project/.claude/rules/governance.md"] = []byte("# old governance")
+	ffs.Files["/project/.claude/rules/code-style.md"] = []byte("# old code style")
 	ffs.Files["/project/.claude/scripts/validate-task-evidence.sh"] = []byte("#!/usr/bin/env bash\n# old")
 	ffs.Files["/project/.codex/config.toml"] = []byte("stale")
 	ffs.Dirs["/project/.claude"] = true
@@ -863,6 +1001,11 @@ func TestUpgrade_RegeneratesAdaptersAndSupportFiles(t *testing.T) {
 	rules, err := ffs.ReadFile("/project/.claude/rules/governance.md")
 	if err != nil || string(rules) != "# new governance" {
 		t.Fatalf("expected governance.md synced, got %q err=%v", string(rules), err)
+	}
+
+	codeStyle, err := ffs.ReadFile("/project/.claude/rules/code-style.md")
+	if err != nil || string(codeStyle) != "# new code style" {
+		t.Fatalf("expected code-style.md synced (RF-12/RF-61), got %q err=%v", string(codeStyle), err)
 	}
 
 	script, err := ffs.ReadFile("/project/.claude/scripts/validate-task-evidence.sh")
@@ -1013,5 +1156,119 @@ func TestCheckSchemaDivergence_DetectsRealDivergenceAgainstConstant(t *testing.T
 
 	if got := svc.checkSchemaDivergence(sourceDir, projectDir); !got {
 		t.Fatalf("checkSchemaDivergence retornou nao-divergente; esperava divergencia real. stdout=%q", out.String())
+	}
+}
+
+func TestUpgrade_LegacyManifestFirstSyncEstablishesBaselineThenProtectsFromSecondSyncOnward(t *testing.T) {
+	t.Parallel()
+
+	ffs := fs.NewFakeFileSystem()
+
+	bugfixContent := []byte("---\nname: bugfix\nversion: 1.0.0\ndescription: Bugfix.\n---\n")
+	ffs.Files["/source/.agents/skills/bugfix/SKILL.md"] = bugfixContent
+	ffs.Files["/project/.agents/skills/bugfix/SKILL.md"] = bugfixContent
+
+	reviewContent := []byte("---\nname: review\nversion: 1.4.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = reviewContent
+
+	ffs.Files["/source/.claude/hooks/validate-preload.sh"] = []byte("#!/usr/bin/env bash\necho canonical\n")
+	ffs.Files["/project/.claude/hooks/validate-preload.sh"] = []byte("#!/usr/bin/env bash\necho EDICAO MANUAL DO USUARIO PREEXISTENTE\n")
+
+	ffs.Files["/project/AGENTS.md"] = []byte("# AGENTS\n")
+
+	setVersionForTest(t, "0.12.0")
+
+	store := manifest.NewStore(ffs)
+	if err := store.Save("/project", &manifest.Manifest{
+		Version: "0.11.2",
+		Langs:   []skills.Lang{},
+	}); err != nil {
+		t.Fatalf("falha ao salvar manifesto legado inicial: %v", err)
+	}
+
+	svc := setupTestService(ffs)
+
+	if err := svc.Execute(config.UpgradeOptions{ProjectDir: "/project", SourceDir: "/source"}); err != nil {
+		t.Fatalf("primeira sync (estabelece baseline) nao deveria falhar: %v", err)
+	}
+
+	after := readManifestFromFakeFS(t, ffs, "/project/.ai_spec_harness.json")
+	if _, ok := after.FileChecksums[".claude/hooks/validate-preload.sh"]; !ok {
+		t.Fatal("primeira sync deveria estabelecer baseline para .claude/hooks/validate-preload.sh, mesmo tendo sobrescrito a customizacao preexistente")
+	}
+
+	ffs.Files["/project/.claude/hooks/validate-preload.sh"] = []byte("#!/usr/bin/env bash\necho NOVA EDICAO MANUAL POS-ADOCAO\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.5.0\ndescription: Review.\n---\n")
+
+	err := svc.Execute(config.UpgradeOptions{ProjectDir: "/project", SourceDir: "/source"})
+	if err == nil {
+		t.Fatal("segunda sync deveria abortar por conflito: customizacao feita DEPOIS do baseline estabelecido deve ser protegida")
+	}
+	if !strings.Contains(err.Error(), "conflict") {
+		t.Errorf("erro deveria indicar conflito, got: %v", err)
+	}
+	if got := string(ffs.Files["/project/.claude/hooks/validate-preload.sh"]); !strings.Contains(got, "NOVA EDICAO MANUAL POS-ADOCAO") {
+		t.Errorf("customizacao pos-adocao deveria ter sido preservada apos abort, got: %s", got)
+	}
+}
+
+func TestUpgrade_LegacyManifestBackfillCoversAdapterFilesTouchedByRegenerateAdapters(t *testing.T) {
+	t.Parallel()
+
+	ffs := fs.NewFakeFileSystem()
+
+	bugfixContent := []byte("---\nname: bugfix\nversion: 1.0.0\ndescription: Bugfix.\n---\n")
+	ffs.Files["/source/.agents/skills/bugfix/SKILL.md"] = bugfixContent
+	ffs.Files["/project/.agents/skills/bugfix/SKILL.md"] = bugfixContent
+
+	reviewContent := []byte("---\nname: review\nversion: 1.4.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = reviewContent
+
+	hookContent := []byte("#!/usr/bin/env bash\necho canonical\n")
+	ffs.Files["/source/.claude/hooks/validate-preload.sh"] = hookContent
+	ffs.Files["/project/.claude/hooks/validate-preload.sh"] = hookContent
+
+	ffs.Files["/project/AGENTS.md"] = []byte("# AGENTS\n")
+
+	setVersionForTest(t, "0.12.0")
+
+	store := manifest.NewStore(ffs)
+	if err := store.Save("/project", &manifest.Manifest{
+		Version: "0.11.2",
+		Langs:   []skills.Lang{},
+	}); err != nil {
+		t.Fatalf("falha ao salvar manifesto legado inicial: %v", err)
+	}
+
+	svc := setupTestService(ffs)
+	if err := svc.Execute(config.UpgradeOptions{ProjectDir: "/project", SourceDir: "/source"}); err != nil {
+		t.Fatalf("primeiro upgrade (backfill legado) falhou: %v", err)
+	}
+
+	after := readManifestFromFakeFS(t, ffs, "/project/.ai_spec_harness.json")
+	wantHash, err := ffs.FileHash("/project/.claude/hooks/validate-preload.sh")
+	if err != nil {
+		t.Fatalf("falha ao calcular hash esperado: %v", err)
+	}
+	gotHash, ok := after.FileChecksums[".claude/hooks/validate-preload.sh"]
+	if !ok {
+		t.Fatal("backfill legado deveria cobrir .claude/hooks/validate-preload.sh (tocado por regenerateAdapters via syncFileIfPresent), nao apenas .agents/skills/")
+	}
+	if gotHash != wantHash {
+		t.Errorf("checksum de backfill incorreto para .claude/hooks/validate-preload.sh: got %s, want %s", gotHash, wantHash)
+	}
+
+	ffs.Files["/project/.claude/hooks/validate-preload.sh"] = []byte("#!/usr/bin/env bash\necho EDICAO MANUAL DO USUARIO\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = []byte("---\nname: review\nversion: 1.5.0\ndescription: Review.\n---\n")
+
+	err = svc.Execute(config.UpgradeOptions{ProjectDir: "/project", SourceDir: "/source"})
+	if err == nil {
+		t.Fatal("upgrade deveria abortar por conflito em .claude/hooks/validate-preload.sh apos o backfill legado — sem isso, regenerateAdapters sobrescreve a edicao manual do usuario silenciosamente")
+	}
+	if !strings.Contains(err.Error(), "conflict") {
+		t.Errorf("erro deveria indicar conflito, got: %v", err)
+	}
+	if got := string(ffs.Files["/project/.claude/hooks/validate-preload.sh"]); !strings.Contains(got, "EDICAO MANUAL DO USUARIO") {
+		t.Errorf("edicao manual deveria ter sido preservada apos abort, got: %s", got)
 	}
 }

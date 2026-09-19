@@ -171,6 +171,7 @@ declare -a evidence_validators=(
   "resolve-references.sh"
   "validate-skill-prerequisites.sh"
   "validate-governance-references.sh"
+  "git-operation-gate.sh"
 )
 declare -a script_mirrors=(
   "$repo_root/.claude/scripts"

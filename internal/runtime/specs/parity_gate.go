@@ -98,3 +98,28 @@ func confrontNativeKeyDeclaration(agentID string, point CanonicalPoint, cov Poin
 	}
 	return confrontNativeConfig(agentID, point, cov, resolve)
 }
+
+type CapabilityCell struct {
+	Provider   string
+	Capability string
+	Supported  bool
+}
+
+type CapabilityDispatchProofFunc func(provider, capability string) bool
+
+func ValidateCapabilityMatrixEvidence(cells []CapabilityCell, dispatchProven CapabilityDispatchProofFunc) []ParityViolation {
+	if len(cells) == 0 {
+		return []ParityViolation{{Reason: "capability matrix has zero cells"}}
+	}
+
+	var violations []ParityViolation
+	for _, cell := range cells {
+		if !cell.Supported {
+			continue
+		}
+		if dispatchProven == nil || !dispatchProven(cell.Provider, cell.Capability) {
+			violations = append(violations, ParityViolation{Agent: cell.Provider, Reason: "no dispatch proof test associated"})
+		}
+	}
+	return violations
+}

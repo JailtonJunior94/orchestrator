@@ -1,0 +1,90 @@
+{
+  "schema_version": 2,
+  "run_id": "task-5.0-harness-portatil-vendor-neutral-2026-09-18",
+  "task_id": "5.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a8b77217cd713b4ef629d324e63934e05e589864",
+  "patch_sha256": "818b9969125b77ddd7bd0406cc5741ab1826e04a86dca6fcc6ed03ec3a6a2b8a",
+  "patch_ref": "evidence/task-5.0-harness-portatil-vendor-neutral/5.0.patch",
+  "final_state_sha256": "7c92077d01241653a1722f29a7fe793dd00b281c592aa45a61758e7a41179291",
+  "coverage_regression": false,
+  "review_verdict": "approved",
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test ./...",
+      "exit_code": 0,
+      "output_sha256": "b4ac79b95809775fad14b108d94b04c28e129e664fb057a2a7b42a0e474082a0"
+    },
+    {
+      "command": "go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/runtime/memory/durable/... ./cmd/ai_spec_harness/...",
+      "exit_code": 0,
+      "output_sha256": "00c51bd737fb537b8b086cf6924fdcbf83be143365a123a41d65ad0343d0bda5"
+    },
+    {
+      "command": "make lint",
+      "exit_code": 0,
+      "output_sha256": "80ca1378da6459cc1cb8132ea4f77374bbc1b95741bb5e2fc291fad088fc63eb"
+    },
+    {
+      "command": "bash scripts/check-policies-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "15c888d0640e560fe9ef9bf65a72be1857cba9d9b5cc02815ae764048035d03d"
+    },
+    {
+      "command": "bash scripts/check-skills-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "a520cbac6ce5b745fdd21ca989715a207e9f63feb554edf4f69ab9f591d14d05"
+    },
+    {
+      "command": "bash scripts/check-hooks-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "59b44ee6a5cd043812e4ce004461f2a2de9d3bb71201114beedfbff877252e3f"
+    },
+    {
+      "command": "go test ./internal/capability/...",
+      "exit_code": 0,
+      "output_sha256": "c293f4aecba0e30c8eab8111d4ace1e1d1eabcc52a57f08b518e530f4ac57059"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "install-and-upgrade-deliver-both-governance-and-code-style",
+      "evidence_ref": "evidence/task-5.0-harness-portatil-vendor-neutral/unit-tests.log"
+    },
+    {
+      "id": "roundtrip-install-uninstall-leaves-clean-tree-no-orphan-prunes-dir",
+      "evidence_ref": "evidence/task-5.0-harness-portatil-vendor-neutral/unit-tests.log"
+    },
+    {
+      "id": "cl05-invariant-covers-both-universal-rules",
+      "evidence_ref": "evidence/task-5.0-harness-portatil-vendor-neutral/unit-tests.log"
+    },
+    {
+      "id": "no-call-site-treats-claude-rules-as-editable-origin",
+      "evidence_ref": "evidence/task-5.0-harness-portatil-vendor-neutral/check-policies-sync.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-5.0-harness-portatil-vendor-neutral/build.log",
+    "evidence/task-5.0-harness-portatil-vendor-neutral/vet.log",
+    "evidence/task-5.0-harness-portatil-vendor-neutral/unit-tests.log",
+    "evidence/task-5.0-harness-portatil-vendor-neutral/integration-tests.log",
+    "evidence/task-5.0-harness-portatil-vendor-neutral/lint.log",
+    "evidence/task-5.0-harness-portatil-vendor-neutral/check-policies-sync.log",
+    "evidence/task-5.0-harness-portatil-vendor-neutral/check-skills-sync.log",
+    "evidence/task-5.0-harness-portatil-vendor-neutral/check-hooks-sync.log",
+    "evidence/task-5.0-harness-portatil-vendor-neutral/capability-matrix-sync.log",
+    "evidence/task-5.0-harness-portatil-vendor-neutral/5.0.patch"
+  ]
+}

@@ -1,0 +1,20 @@
+Running linter...
+Installing golangci-lint...
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+GOGC=20 golangci-lint run --config .golangci.yml --timeout 10m --verbose
+level=info msg="golangci-lint has version 2.13.2 built with go1.27.0 from 27774aa on 2026-08-27T22:52:01Z"
+level=info msg="[config_reader] Used config file .golangci.yml"
+level=info msg="[config_reader] Module name \"github.com/JailtonJunior94/ai-spec-harness\""
+level=info msg="[goenv] Read go env for 9.763416ms: map[string]string{\"GOCACHE\":\"/Users/jailtonjunior/Library/Caches/go-build\", \"GOROOT\":\"/Users/jailtonjunior/.gvm/gos/go1.27.1\"}"
+level=info msg="[lintersdb] Active 6 linters: [errcheck gosec govet ineffassign staticcheck unused]"
+level=info msg="[loader] Go packages loading at mode 8767 (deps|exports_file|imports|name|types_sizes|compiled_files|files) took 474.193792ms"
+level=info msg="[runner/filename_unadjuster] Pre-built 0 adjustments in 69.185208ms"
+level=info msg="[linters_context/goanalysis] analyzers took 21.815467774s with top 10 stages: gosec: 2.089967666s, buildir: 1.062878007s, S1038: 593.647917ms, unused: 567.538377ms, nilness: 399.984215ms, typeindex: 326.524911ms, S1008: 297.081957ms, SA4014: 264.75375ms, QF1010: 238.218833ms, QF1012: 237.981956ms"
+level=info msg="[runner] Issues before processing: 50, after processing: 0"
+level=info msg="[runner] Processors filtering stat (in/out): path_relativity: 50/50, path_absoluter: 50/50, filename_unadjuster: 50/50, cgo: 50/50, invalid_issue: 50/50, exclusion_paths: 50/50, generated_file_filter: 50/0"
+level=info msg="[runner] processing took 1.234208ms with stages: generated_file_filter: 1.153ms, path_relativity: 72.292µs, invalid_issue: 1.667µs, cgo: 1.583µs, path_absoluter: 1.375µs, sort_results: 958ns, nolint_filter: 542ns, filename_unadjuster: 542ns, exclusion_rules: 375ns, fixer: 375ns, exclusion_paths: 374ns, path_shortener: 250ns, max_same_issues: 208ns, source_code: 167ns, path_prettifier: 125ns, max_per_file_from_linter: 84ns, max_from_linter: 84ns, diff: 83ns, severity-rules: 82ns, uniq_by_line: 42ns"
+level=info msg="[runner] linters took 1.703418084s with stages: goanalysis_metalinter: 1.702095084s"
+0 issues.
+level=info msg="File cache stats: 0 entries of total size 0B"
+level=info msg="Memory: 24 samples, avg is 110.1MB, max is 223.9MB"
+level=info msg="Execution took 2.257733375s"

@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-portatil-vendor-neutral/1.0_execution_report.md
+summary: Job integration roda internal/parity com -tags=integration, filtro de snapshot corrigido, check-skills-lock adicionado ao CI, DirHash desambiguado e checkSkills fail-closed, com decorador de falha e mutation tests provando os gates por execucao.
+timestamp: 2026-09-18T14:56:00Z

@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-portatil-vendor-neutral/12.0_execution_report.md
+summary: Endurecimento de delegacao (V-36/RF-62) promovido de teste para producao; testes viram consumidores de specs.ValidateParityMatrix/ScriptDelegatesTo.
+timestamp: 2026-09-18T00:00:00Z

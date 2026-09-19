@@ -1,0 +1,93 @@
+{
+  "schema_version": 2,
+  "run_id": "task-3.0-harness-portatil-vendor-neutral-2026-09-18",
+  "task_id": "3.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a8b77217cd713b4ef629d324e63934e05e589864",
+  "patch_sha256": "bc3b32877b994b56dc41d163e761cb8e12aae032d6f6db5a98d17f2c484d40f5",
+  "patch_ref": "evidence/task-3.0-harness-portatil-vendor-neutral/3.0.patch",
+  "final_state_sha256": "9ad4f071594c1a8650d298a3995cca30ea17fdbbed74472a2e83ebff939b74e9",
+  "coverage_regression": false,
+  "review_verdict": "approved",
+  "tests": [
+    {
+      "command": "make test",
+      "exit_code": 0,
+      "output_sha256": "9f41b3b628d62ef6e7056a85c07a2c5225fbea41dfc0bb3f0f65b7e2210212bd"
+    },
+    {
+      "command": "make lint",
+      "exit_code": 0,
+      "output_sha256": "eb1980e1f6ceeb7535f5cb624884568fe6d2f5bb1b0812b88fe6f5d4a28ff994"
+    },
+    {
+      "command": "make vet",
+      "exit_code": 0,
+      "output_sha256": "685d158f951e3eb11749d2e519a64eba4f57dcc93cd562eaee2cc9457f72846e"
+    },
+    {
+      "command": "go test ./internal/harness/... -v",
+      "exit_code": 0,
+      "output_sha256": "2899dfd42259662c6fb4051d28ea46cb6f58a3ad21eb9c5c9cc63209e86875d0"
+    },
+    {
+      "command": "go test ./internal/config/... -v",
+      "exit_code": 0,
+      "output_sha256": "dcac5016d39ea71f559317babede6808053e7122756b56abd3e57fc0c32072d8"
+    },
+    {
+      "command": "go test -fuzz=FuzzParseHarnessContract -fuzztime=10s ./internal/harness/",
+      "exit_code": 0,
+      "output_sha256": "7808e99d2c598babe0914ec35574f8ed692a7a229baec512daa54876a514997a"
+    },
+    {
+      "command": "bash scripts/check-mocks.sh",
+      "exit_code": 0,
+      "output_sha256": "b1d91938e8acf29e44eedd7309466a57e2051808d29fd98cc76e0d414b83d6e2"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "unknown-field-typed-error",
+      "evidence_ref": "evidence/task-3.0-harness-portatil-vendor-neutral/harness-tests.log"
+    },
+    {
+      "id": "preserving-bridge-guardian",
+      "evidence_ref": "evidence/task-3.0-harness-portatil-vendor-neutral/harness-tests.log"
+    },
+    {
+      "id": "config-yaml-unknown-field-still-accepted",
+      "evidence_ref": "evidence/task-3.0-harness-portatil-vendor-neutral/config-tests.log"
+    },
+    {
+      "id": "default-embedded-contract-when-file-absent",
+      "evidence_ref": "evidence/task-3.0-harness-portatil-vendor-neutral/harness-tests.log"
+    },
+    {
+      "id": "static-validation-no-network-no-process-no-llm",
+      "evidence_ref": "evidence/task-3.0-harness-portatil-vendor-neutral/harness-tests.log"
+    },
+    {
+      "id": "no-duplicate-keys-gate-rf05",
+      "evidence_ref": "evidence/task-3.0-harness-portatil-vendor-neutral/harness-tests.log"
+    },
+    {
+      "id": "fuzz-target-registered-makefile-and-ci",
+      "evidence_ref": "evidence/task-3.0-harness-portatil-vendor-neutral/fuzz.log"
+    },
+    {
+      "id": "new-interfaces-declared-in-mockery-yml",
+      "evidence_ref": "evidence/task-3.0-harness-portatil-vendor-neutral/check-mocks.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-3.0-harness-portatil-vendor-neutral/test.log",
+    "evidence/task-3.0-harness-portatil-vendor-neutral/lint.log",
+    "evidence/task-3.0-harness-portatil-vendor-neutral/vet.log",
+    "evidence/task-3.0-harness-portatil-vendor-neutral/harness-tests.log",
+    "evidence/task-3.0-harness-portatil-vendor-neutral/config-tests.log",
+    "evidence/task-3.0-harness-portatil-vendor-neutral/fuzz.log",
+    "evidence/task-3.0-harness-portatil-vendor-neutral/check-mocks.log"
+  ]
+}

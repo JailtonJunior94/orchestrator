@@ -11,15 +11,15 @@
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
       "skillPath": "skills/design-patterns-mandatory/SKILL.md",
-      "version": "1.0.0",
-      "computedHash": "23765fd14638cece494170ba1e957a44bd54d4c5ba464d01fc6239c8c534b2da"
+      "version": "1.1.0",
+      "computedHash": "f07361a8054e71f281ef1c555ddeeb9fb1c491fbf2f9056f58c0c8f0cb902846"
     },
     "domain-modeling-production": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
       "skillPath": "skills/domain-modeling-production/SKILL.md",
-      "version": "1.0.0",
-      "computedHash": "86da99bee0b2c0d8e741c3f9ebc8517159a61223906b9966d904222dcd9aec02"
+      "version": "2.0.0",
+      "computedHash": "b4b067ee2d9fd055b43d059077b60ebee301c842d63ae63981db0caf9bdfdeb8"
     },
     "finalize-changelog-readme-push": {
       "source": "JailtonJunior94/skills",

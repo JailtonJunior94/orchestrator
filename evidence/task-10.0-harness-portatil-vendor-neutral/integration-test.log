@@ -1,0 +1,6 @@
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/integration	2.505s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	(cached)
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	55.178s
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	(cached)
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/parity	(cached)
+exit=0

@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-portatil-vendor-neutral/9.0_execution_report.md
+summary: Gate canonico de operacao git e separacao do criterio de destrutividade do preload, implementados e testados nos quatro provedores.
+timestamp: 2026-09-18T00:00:00Z

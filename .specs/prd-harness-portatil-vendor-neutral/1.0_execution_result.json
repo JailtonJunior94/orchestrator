@@ -1,0 +1,118 @@
+{
+  "schema_version": 2,
+  "run_id": "task-1.0-harness-portatil-vendor-neutral-2026-09-18",
+  "task_id": "1.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a8b77217cd713b4ef629d324e63934e05e589864",
+  "patch_sha256": "61ed21593ff35709b7e93a69f876be0e5af0633b54003234fbc8ff398d24c897",
+  "patch_ref": "evidence/task-1.0-harness-portatil-vendor-neutral/1.0.patch",
+  "final_state_sha256": "e2c50d2450e5ec03a153f78f1d0368ab1204ab50313506aa850f41671b9e5b34",
+  "coverage_regression": false,
+  "review_verdict": "approved",
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test ./... -count=1",
+      "exit_code": 0,
+      "output_sha256": "746f6539ad2e93e906d4c078f9957ffb75de47ff92f41edc562a0ce28dae73a1"
+    },
+    {
+      "command": "go test -v -count=1 ./internal/fs/... ./internal/upgrade/...",
+      "exit_code": 0,
+      "output_sha256": "5232003b3beee6f40fa63fb729c154fc3af47e7f09fc2e4faf99c7c01626cd8c"
+    },
+    {
+      "command": "go test -v -tags=integration -count=1 ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/parity/...",
+      "exit_code": 0,
+      "output_sha256": "7f80a48d036d913028f682bc005de36081fbaf205a7540e02f1a0a5313c9e186"
+    },
+    {
+      "command": "go test -v ./internal/contextgen/... -run TestContextgen_Snapshots -count=1",
+      "exit_code": 0,
+      "output_sha256": "cb2d39f9e39217aae342a7da3f70404610622d079fa37c1e2a351069078a288f"
+    },
+    {
+      "command": "go run . skills --verify .",
+      "exit_code": 0,
+      "output_sha256": "6433d468b6d153fbc67d4b5838a719a881fecc9a8326e59417ca0ca743217623"
+    },
+    {
+      "command": "bash scripts/check-skills-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "a520cbac6ce5b745fdd21ca989715a207e9f63feb554edf4f69ab9f591d14d05"
+    },
+    {
+      "command": "bash scripts/check-hooks-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "59b44ee6a5cd043812e4ce004461f2a2de9d3bb71201114beedfbff877252e3f"
+    },
+    {
+      "command": "bash scripts/check-scripts-sync.sh",
+      "exit_code": 0,
+      "output_sha256": "2898ab428fdf0ea01ae7703694a05d1630ed1e8d8bf0acac9f498f014c53fbf9"
+    },
+    {
+      "command": "golangci-lint run --config .golangci.yml --timeout 5m ./internal/fs/... ./internal/upgrade/...",
+      "exit_code": 0,
+      "output_sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "command": "bash scripts/check-package-coverage.sh 70",
+      "exit_code": 0,
+      "output_sha256": "98d2b04d56060fc031324e01a68a51b7c1b2ec5db84461cbc2b1b23c73e7905f"
+    },
+    {
+      "command": "bash scripts/check-mocks.sh",
+      "exit_code": 0,
+      "output_sha256": "b1d91938e8acf29e44eedd7309466a57e2051808d29fd98cc76e0d414b83d6e2"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "parity-tests-nominal-in-ci-log",
+      "evidence_ref": "evidence/task-1.0-harness-portatil-vendor-neutral/integration-test.log"
+    },
+    {
+      "id": "repaired-gates-fail-under-injected-divergence",
+      "evidence_ref": "evidence/task-1.0-harness-portatil-vendor-neutral/integration-test.log"
+    },
+    {
+      "id": "skill-edit-without-lock-update-fails-ci",
+      "evidence_ref": "evidence/task-1.0-harness-portatil-vendor-neutral/integration-test.log"
+    },
+    {
+      "id": "write-sequence-failure-propagates",
+      "evidence_ref": "evidence/task-1.0-harness-portatil-vendor-neutral/fs-upgrade-test.log"
+    },
+    {
+      "id": "no-success-from-two-failed-hash-reads",
+      "evidence_ref": "evidence/task-1.0-harness-portatil-vendor-neutral/fs-upgrade-test.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-1.0-harness-portatil-vendor-neutral/build.log",
+    "evidence/task-1.0-harness-portatil-vendor-neutral/vet.log",
+    "evidence/task-1.0-harness-portatil-vendor-neutral/test.log",
+    "evidence/task-1.0-harness-portatil-vendor-neutral/fs-upgrade-test.log",
+    "evidence/task-1.0-harness-portatil-vendor-neutral/integration-test.log",
+    "evidence/task-1.0-harness-portatil-vendor-neutral/snapshot-gate.log",
+    "evidence/task-1.0-harness-portatil-vendor-neutral/skills-lock.log",
+    "evidence/task-1.0-harness-portatil-vendor-neutral/check-skills-sync.log",
+    "evidence/task-1.0-harness-portatil-vendor-neutral/check-hooks-sync.log",
+    "evidence/task-1.0-harness-portatil-vendor-neutral/check-scripts-sync.log",
+    "evidence/task-1.0-harness-portatil-vendor-neutral/lint.log",
+    "evidence/task-1.0-harness-portatil-vendor-neutral/coverage.log",
+    "evidence/task-1.0-harness-portatil-vendor-neutral/package-coverage.log",
+    "evidence/task-1.0-harness-portatil-vendor-neutral/check-mocks.log"
+  ]
+}

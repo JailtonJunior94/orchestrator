@@ -1,0 +1,7 @@
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/integration	0.999s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	0.245s
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	32.901s
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	0.175s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable	0.774s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	0.520s

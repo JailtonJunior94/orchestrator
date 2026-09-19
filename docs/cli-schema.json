@@ -302,6 +302,7 @@
       },
       {
         "name": "install",
+        "aliases": ["init"],
         "description": "Instala governanca de IA em um projeto",
         "longDescription": "Instala o pacote de governanca para ferramentas de IA em um projeto alvo.",
         "args": [
@@ -377,6 +378,12 @@
             "type": "string",
             "required": false,
             "description": "Modelo default do agente (OpenCode: mapeado para a chave 'model' do opencode.json)"
+          },
+          "overwrite-conflicts": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Sobrescreve arquivos gerenciados em conflito (checksum divergente do manifesto), nomeando cada um"
           }
         }
       },
@@ -1178,6 +1185,7 @@
       },
       {
         "name": "upgrade",
+        "aliases": ["sync"],
         "description": "Atualiza skills de governanca em um projeto",
         "longDescription": "Verifica ou atualiza skills de governanca comparando versoes e checksums.",
         "args": [
@@ -1214,6 +1222,12 @@
             "default": false,
             "required": false,
             "description": "Permite escrever em .agents/skills quando symlink aponta para fora do projeto"
+          },
+          "overwrite-conflicts": {
+            "type": "bool",
+            "default": false,
+            "required": false,
+            "description": "Sobrescreve arquivos gerenciados em conflito (checksum divergente do manifesto), nomeando cada um"
           }
         }
       },

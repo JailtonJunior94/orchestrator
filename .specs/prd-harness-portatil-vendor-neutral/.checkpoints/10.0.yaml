@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-portatil-vendor-neutral/10.0_execution_report.md
+summary: Budget de contexto de entrada por provedor e suite de conformidade cross-provider com runner unico, asercao tripla, manifesto e caso live implementados e validados.
+timestamp: 2026-09-18T00:00:00Z

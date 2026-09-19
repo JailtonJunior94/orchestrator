@@ -12,6 +12,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
 
 type Service struct {
@@ -590,8 +591,10 @@ func (s *Service) pruneEmptyTree(dir string) bool {
 
 func (s *Service) legacyStaticRemoval(absDir string, rm *remover) {
 	s.legacyGeneratedSweep(absDir, rm)
+	for _, ruleFile := range skills.UniversalRuleFiles {
+		rm.remove(filepath.Join(absDir, ".claude", "rules", ruleFile))
+	}
 	for _, rel := range []string{
-		filepath.Join(".claude", "rules", "governance.md"),
 		filepath.Join(".claude", "scripts", "validate-task-evidence.sh"),
 		filepath.Join(".claude", "scripts", "validate-bugfix-evidence.sh"),
 		filepath.Join(".claude", "scripts", "validate-refactor-evidence.sh"),

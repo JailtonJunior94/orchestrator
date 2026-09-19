@@ -1,0 +1,43 @@
+package main
+
+import (
+	"fmt"
+	"regexp"
+	"strings"
+)
+
+var oldShellScriptToken = regexp.MustCompile(`[A-Za-z0-9_./-]+\.sh`)
+
+func oldScriptCandidatesIn(scope []string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, s := range scope {
+		for _, m := range oldShellScriptToken.FindAllString(s, -1) {
+			candidate := strings.TrimPrefix(m, "./")
+			candidate = strings.TrimPrefix(candidate, "CLAUDE_PROJECT_DIR/")
+			if seen[candidate] {
+				continue
+			}
+			seen[candidate] = true
+			out = append(out, candidate)
+		}
+	}
+	return out
+}
+
+func main() {
+	canonical := ".agents/scripts/hook-prereq-gate.sh"
+	comentario := "#!/usr/bin/env bash\nset -euo pipefail\n# delega para .agents/scripts/hook-prereq-gate.sh\nexit 0\n"
+	mensagem := "#!/usr/bin/env bash\nset -euo pipefail\necho \"ERRO: rode .agents/scripts/hook-prereq-gate.sh\" >&2\nexit 0\n"
+
+	for name, body := range map[string]string{"comentario": comentario, "mensagem": mensagem} {
+		candidates := oldScriptCandidatesIn([]string{body})
+		accepted := false
+		for _, c := range candidates {
+			if c == canonical {
+				accepted = true
+			}
+		}
+		fmt.Printf("PRE-HARDENING (removed fallback) case=%s candidates=%v wouldAcceptAsDelegation=%v\n", name, candidates, accepted)
+	}
+}

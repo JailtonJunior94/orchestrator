@@ -1,0 +1,94 @@
+{
+  "schema_version": 2,
+  "run_id": "task-12.0-harness-portatil-vendor-neutral-2026-09-18",
+  "task_id": "12.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "a8b77217cd713b4ef629d324e63934e05e589864",
+  "patch_sha256": "a0d396569419c8108bf1e1bb66461473a6dce077fd54c4fe9ee6f794899c1744",
+  "patch_ref": "evidence/task-12.0-harness-portatil-vendor-neutral/12.0.patch",
+  "final_state_sha256": "da37e35ab955cab4076060280651d7ded74c23afdd8d0d15a2b8552bb072b961",
+  "coverage_regression": false,
+  "review_verdict": "approved",
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "go test ./internal/runtime/specs/... ./internal/install/... -count=1",
+      "exit_code": 0,
+      "output_sha256": "ccb58536cb9b561c7874edb02a17e82d48da5247d1e5e2a9b38e0d16bf4c22e2"
+    },
+    {
+      "command": "go test ./internal/install/... -run \"TestTextualMentionIsNotProofOfDelegation|TestExecutionPositionIsProofOfDelegation|TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator\" -v -count=1",
+      "exit_code": 0,
+      "output_sha256": "8cf9dc4fd39480d72b2b376d7e7ee5888738fd6d2849133837d7a3d98806d056"
+    },
+    {
+      "command": "GOGC=20 golangci-lint run --config .golangci.yml --timeout 5m ./internal/runtime/specs/... ./internal/install/...",
+      "exit_code": 0,
+      "output_sha256": "847166fdac66cd885ad0591a6277d742dbfcdae76c0db05af93867e0db960655"
+    },
+    {
+      "command": "go build -tags=integration ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "go test -tags=integration ./tests/integration/...",
+      "exit_code": 0,
+      "output_sha256": "99ca29eeaa84897ae4192cd1bc79cf5f1e9dc98bfab08e4dfae4ee4c46a3d069"
+    },
+    {
+      "command": "make test",
+      "exit_code": 0,
+      "output_sha256": "b7b347c96ba4790956f520a44f2a5d784eca653990d073dd3ed78401131f0640"
+    },
+    {
+      "command": "make integration",
+      "exit_code": 0,
+      "output_sha256": "9ab7231bfa99f9bc73205d946afe86b20c28db99906b2e10d69305fa40e70a25"
+    },
+    {
+      "command": "go run g6_proof.go (reproducao isolada do fallback removido de candidateResolvesToValidator contra as fixtures G6)",
+      "exit_code": 0,
+      "output_sha256": "2e7d4df9b8b5ed79c0fe4c49f67d1b1d5b1737ebbc2860b57ecc528b0a7e6f22"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "textual-mention-no-longer-proves-delegation",
+      "evidence_ref": "evidence/task-12.0-harness-portatil-vendor-neutral/delegation-tests.log"
+    },
+    {
+      "id": "revealed-violations-fixed-or-explicitly-registered",
+      "evidence_ref": "evidence/task-12.0-harness-portatil-vendor-neutral/test.log"
+    },
+    {
+      "id": "hardening-expected-to-redden-gate-before-greening",
+      "evidence_ref": "evidence/task-12.0-harness-portatil-vendor-neutral/g6-vulnerability-proof.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-12.0-harness-portatil-vendor-neutral/build.log",
+    "evidence/task-12.0-harness-portatil-vendor-neutral/vet.log",
+    "evidence/task-12.0-harness-portatil-vendor-neutral/build-integration.log",
+    "evidence/task-12.0-harness-portatil-vendor-neutral/test.log",
+    "evidence/task-12.0-harness-portatil-vendor-neutral/delegation-tests.log",
+    "evidence/task-12.0-harness-portatil-vendor-neutral/lint.log",
+    "evidence/task-12.0-harness-portatil-vendor-neutral/integration-test.log",
+    "evidence/task-12.0-harness-portatil-vendor-neutral/make-test.log",
+    "evidence/task-12.0-harness-portatil-vendor-neutral/make-integration.log",
+    "evidence/task-12.0-harness-portatil-vendor-neutral/g6-vulnerability-proof.log",
+    "evidence/task-12.0-harness-portatil-vendor-neutral/g6_proof_source.go.txt",
+    "evidence/task-12.0-harness-portatil-vendor-neutral/12.0.patch",
+    "evidence/task-12.0-harness-portatil-vendor-neutral/12.0-scoped.patch"
+  ]
+}

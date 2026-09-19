@@ -1,0 +1,21 @@
+Running linter...
+Installing golangci-lint...
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+GOGC=20 golangci-lint run --config .golangci.yml --timeout 10m --verbose
+level=info msg="golangci-lint has version 2.13.2 built with go1.27.0 from 27774aa on 2026-08-27T22:52:01Z"
+level=info msg="[config_reader] Used config file .golangci.yml"
+level=info msg="[config_reader] Module name \"github.com/JailtonJunior94/ai-spec-harness\""
+level=info msg="[goenv] Read go env for 12.485416ms: map[string]string{\"GOCACHE\":\"/Users/jailtonjunior/Library/Caches/go-build\", \"GOROOT\":\"/Users/jailtonjunior/.gvm/gos/go1.27.1\"}"
+level=info msg="[lintersdb] Active 6 linters: [errcheck gosec govet ineffassign staticcheck unused]"
+level=info msg="[loader] Go packages loading at mode 8767 (compiled_files|exports_file|files|types_sizes|deps|imports|name) took 860.626834ms"
+level=info msg="[runner/filename_unadjuster] Pre-built 0 adjustments in 91.026417ms"
+level=info msg="[linters_context/goanalysis] analyzers took 0s with no stages"
+level=info msg="[runner] Issues before processing: 50, after processing: 0"
+level=info msg="[runner] Processors filtering stat (in/out): cgo: 50/50, filename_unadjuster: 50/50, invalid_issue: 50/50, path_relativity: 50/50, exclusion_paths: 50/50, generated_file_filter: 50/0, path_absoluter: 50/50"
+level=info msg="[runner] processing took 1.24971ms with stages: generated_file_filter: 1.204459ms, path_relativity: 34.042µs, invalid_issue: 2.25µs, cgo: 2.126µs, path_absoluter: 1.583µs, filename_unadjuster: 1.333µs, max_same_issues: 833ns, sort_results: 792ns, nolint_filter: 750ns, fixer: 292ns, exclusion_paths: 209ns, path_shortener: 209ns, exclusion_rules: 208ns, source_code: 167ns, max_per_file_from_linter: 166ns, max_from_linter: 124ns, severity-rules: 84ns, uniq_by_line: 83ns, path_prettifier: 0s, diff: 0s"
+level=info msg="[runner] linters took 674.60775ms with stages: goanalysis_metalinter: 673.272125ms"
+0 issues.
+level=info msg="File cache stats: 0 entries of total size 0B"
+level=info msg="Memory: 18 samples, avg is 47.5MB, max is 55.7MB"
+level=info msg="Execution took 1.639967917s"
+exit=0

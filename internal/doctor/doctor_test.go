@@ -172,7 +172,7 @@ func TestRunChecks_FullPass(t *testing.T) {
 	}`)
 
 	svc := setupService(fake, true)
-	checks := svc.runChecks("/project")
+	checks := svc.runCoreChecks("/project", nil, nil)
 
 	for _, c := range checks {
 		if c.Status == "fail" {

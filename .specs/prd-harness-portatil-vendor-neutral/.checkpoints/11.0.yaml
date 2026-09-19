@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-portatil-vendor-neutral/11.0_execution_report.md
+summary: Telemetria comparavel RF-44 (6 metricas com escritor de producao identificado), mecanismo de ablation KEEP/ON-DEMAND/REMOVE, gate de campos sensiveis e doctor multi-provider (Core + blocos por provedor instalado, atribuicao tipada de camada) implementados e testados.
+timestamp: 2026-09-18T22:35:59Z

@@ -1,0 +1,137 @@
+=== RUN   TestConfigTypesSuite
+=== RUN   TestConfigTypesSuite/TestInstallOptionsFields
+=== RUN   TestConfigTypesSuite/TestLocalSourceImplementsSourceProvider
+=== RUN   TestConfigTypesSuite/TestLocalSourceSourceDir
+=== RUN   TestConfigTypesSuite/TestLocalSourceSourceDir/deve_retornar_path_absoluto
+=== RUN   TestConfigTypesSuite/TestLocalSourceSourceDir/deve_retornar_path_relativo
+=== RUN   TestConfigTypesSuite/TestLocalSourceSourceDir/deve_retornar_string_vazia
+=== RUN   TestConfigTypesSuite/TestUpgradeOptionsFields
+--- PASS: TestConfigTypesSuite (0.00s)
+    --- PASS: TestConfigTypesSuite/TestInstallOptionsFields (0.00s)
+    --- PASS: TestConfigTypesSuite/TestLocalSourceImplementsSourceProvider (0.00s)
+    --- PASS: TestConfigTypesSuite/TestLocalSourceSourceDir (0.00s)
+        --- PASS: TestConfigTypesSuite/TestLocalSourceSourceDir/deve_retornar_path_absoluto (0.00s)
+        --- PASS: TestConfigTypesSuite/TestLocalSourceSourceDir/deve_retornar_path_relativo (0.00s)
+        --- PASS: TestConfigTypesSuite/TestLocalSourceSourceDir/deve_retornar_string_vazia (0.00s)
+    --- PASS: TestConfigTypesSuite/TestUpgradeOptionsFields (0.00s)
+=== RUN   TestResolverSuite
+=== RUN   TestResolverSuite/TestLoadRuntime
+=== RUN   TestResolverSuite/TestLoadRuntime/deve_retornar_DefaultRuntime_quando_nao_ha_config
+=== RUN   TestResolverSuite/TestLoadRuntime/deve_mesclar_config_de_projeto_com_defaults
+=== RUN   TestResolverSuite/TestMergeIntoDurableMemoryEnabled
+=== RUN   TestResolverSuite/TestMergeIntoHandoffLeaseTTL
+=== RUN   TestResolverSuite/TestMergeIntoMaxBugfixIterations
+=== RUN   TestResolverSuite/TestResolve
+=== RUN   TestResolverSuite/TestResolve/deve_retornar_DefaultRuntime_quando_nao_ha_config_global_nem_projeto
+=== RUN   TestResolverSuite/TestResolve/deve_respeitar_precedencia_flags_>_projeto_>_global_>_built-in
+=== RUN   TestResolverSuite/TestResolve/deve_encontrar_config_de_projeto_via_upward-walk_a_partir_de_subdir_profundo
+=== RUN   TestResolverSuite/TestResolve/deve_tratar_ausencia_de_config_global_como_nao-fatal
+=== RUN   TestResolverSuite/TestResolve/deve_retornar_erro_ao_parsear_config_global_malformada
+=== RUN   TestResolverSuite/TestResolve/deve_retornar_erro_ao_parsear_config_de_projeto_malformada
+=== RUN   TestResolverSuite/TestResolve/deve_parar_o_upward-walk_ao_encontrar_marcador_.git
+=== RUN   TestResolverSuite/TestResolve/deve_priorizar_.aispec_sobre_.claude_no_mesmo_diretorio
+=== RUN   TestResolverSuite/TestResolve/deve_ler_e_mesclar_as_novas_chaves_operacionais
+=== RUN   TestResolverSuite/TestResolve/deve_respeitar_precedencia_completa_flags_>_workspace_>_global_>_built-in_para_max_bugfix_iterations
+=== RUN   TestResolverSuite/TestResolve/deve_usar_max_bugfix_iterations_do_workspace_quando_a_flag_nao_sobrescreve
+=== RUN   TestResolverSuite/TestResolve/deve_usar_max_bugfix_iterations_do_global_quando_nao_ha_config_de_workspace
+=== RUN   TestResolverSuite/TestResolve/deve_preservar_comportamento_F1_quando_campos_operacionais_sao_zero-value
+=== RUN   TestResolverSuite/TestResolve/deve_ignorar_config_global_quando_HomeDir_e_vazio
+=== RUN   TestResolverSuite/TestResolve/deve_mesclar_campo_a_campo_sem_sobrescrever_campos_nao_declarados
+=== RUN   TestResolverSuite/TestResolveDurableMemoryEnabledCascade
+=== RUN   TestResolverSuite/TestResolveDurableMemoryEnabledCascade/uses_workspace_value_when_global_and_workspace_diverge
+=== RUN   TestResolverSuite/TestResolveDurableMemoryEnabledCascade/uses_global_value_when_there_is_no_workspace_config
+=== RUN   TestResolverSuite/TestResolveDurableMemoryEnabledCascade/explicit_flag_wins_over_workspace_and_global
+=== RUN   TestResolverSuite/TestResolveDurableMemoryEnabledCascade/explicit_flag_false_wins_over_workspace_and_global_true_(BUG-08)
+=== RUN   TestResolverSuite/TestResolveDurableMemoryEnabledCascade/empty_upper_layer_does_not_erase_the_lower_layer
+=== RUN   TestResolverSuite/TestResolveDurableMemoryEnabledCascade/zero-value_preserves_F1_behavior_(feature_stays_off)
+=== RUN   TestResolverSuite/TestResolveHandoffLeaseTTLCascade
+=== RUN   TestResolverSuite/TestResolveHandoffLeaseTTLCascade/uses_workspace_value_when_global_and_workspace_diverge
+=== RUN   TestResolverSuite/TestResolveHandoffLeaseTTLCascade/uses_global_value_when_there_is_no_workspace_config
+=== RUN   TestResolverSuite/TestResolveHandoffLeaseTTLCascade/explicit_flag_wins_over_workspace_and_global
+=== RUN   TestResolverSuite/TestResolveHandoffLeaseTTLCascade/empty_upper_layer_does_not_erase_the_lower_layer
+=== RUN   TestResolverSuite/TestResolveHandoffLeaseTTLCascade/zero-value_preserves_F1_behavior_(default_applied_by_the_consumer)
+--- PASS: TestResolverSuite (0.00s)
+    --- PASS: TestResolverSuite/TestLoadRuntime (0.00s)
+        --- PASS: TestResolverSuite/TestLoadRuntime/deve_retornar_DefaultRuntime_quando_nao_ha_config (0.00s)
+        --- PASS: TestResolverSuite/TestLoadRuntime/deve_mesclar_config_de_projeto_com_defaults (0.00s)
+    --- PASS: TestResolverSuite/TestMergeIntoDurableMemoryEnabled (0.00s)
+    --- PASS: TestResolverSuite/TestMergeIntoHandoffLeaseTTL (0.00s)
+    --- PASS: TestResolverSuite/TestMergeIntoMaxBugfixIterations (0.00s)
+    --- PASS: TestResolverSuite/TestResolve (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_retornar_DefaultRuntime_quando_nao_ha_config_global_nem_projeto (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_respeitar_precedencia_flags_>_projeto_>_global_>_built-in (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_encontrar_config_de_projeto_via_upward-walk_a_partir_de_subdir_profundo (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_tratar_ausencia_de_config_global_como_nao-fatal (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_retornar_erro_ao_parsear_config_global_malformada (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_retornar_erro_ao_parsear_config_de_projeto_malformada (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_parar_o_upward-walk_ao_encontrar_marcador_.git (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_priorizar_.aispec_sobre_.claude_no_mesmo_diretorio (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_ler_e_mesclar_as_novas_chaves_operacionais (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_respeitar_precedencia_completa_flags_>_workspace_>_global_>_built-in_para_max_bugfix_iterations (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_usar_max_bugfix_iterations_do_workspace_quando_a_flag_nao_sobrescreve (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_usar_max_bugfix_iterations_do_global_quando_nao_ha_config_de_workspace (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_preservar_comportamento_F1_quando_campos_operacionais_sao_zero-value (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_ignorar_config_global_quando_HomeDir_e_vazio (0.00s)
+        --- PASS: TestResolverSuite/TestResolve/deve_mesclar_campo_a_campo_sem_sobrescrever_campos_nao_declarados (0.00s)
+    --- PASS: TestResolverSuite/TestResolveDurableMemoryEnabledCascade (0.00s)
+        --- PASS: TestResolverSuite/TestResolveDurableMemoryEnabledCascade/uses_workspace_value_when_global_and_workspace_diverge (0.00s)
+        --- PASS: TestResolverSuite/TestResolveDurableMemoryEnabledCascade/uses_global_value_when_there_is_no_workspace_config (0.00s)
+        --- PASS: TestResolverSuite/TestResolveDurableMemoryEnabledCascade/explicit_flag_wins_over_workspace_and_global (0.00s)
+        --- PASS: TestResolverSuite/TestResolveDurableMemoryEnabledCascade/explicit_flag_false_wins_over_workspace_and_global_true_(BUG-08) (0.00s)
+        --- PASS: TestResolverSuite/TestResolveDurableMemoryEnabledCascade/empty_upper_layer_does_not_erase_the_lower_layer (0.00s)
+        --- PASS: TestResolverSuite/TestResolveDurableMemoryEnabledCascade/zero-value_preserves_F1_behavior_(feature_stays_off) (0.00s)
+    --- PASS: TestResolverSuite/TestResolveHandoffLeaseTTLCascade (0.00s)
+        --- PASS: TestResolverSuite/TestResolveHandoffLeaseTTLCascade/uses_workspace_value_when_global_and_workspace_diverge (0.00s)
+        --- PASS: TestResolverSuite/TestResolveHandoffLeaseTTLCascade/uses_global_value_when_there_is_no_workspace_config (0.00s)
+        --- PASS: TestResolverSuite/TestResolveHandoffLeaseTTLCascade/explicit_flag_wins_over_workspace_and_global (0.00s)
+        --- PASS: TestResolverSuite/TestResolveHandoffLeaseTTLCascade/empty_upper_layer_does_not_erase_the_lower_layer (0.00s)
+        --- PASS: TestResolverSuite/TestResolveHandoffLeaseTTLCascade/zero-value_preserves_F1_behavior_(default_applied_by_the_consumer) (0.00s)
+=== RUN   TestRuntimeSuite
+=== RUN   TestRuntimeSuite/TestDefaultRuntime
+=== RUN   TestRuntimeSuite/TestEnvVarsProjectsAllKeys
+=== RUN   TestRuntimeSuite/TestLoadRuntime
+=== RUN   TestRuntimeSuite/TestLoadRuntime/deve_retornar_defaults_quando_nao_ha_arquivo
+=== RUN   TestRuntimeSuite/TestLoadRuntime/deve_preferir_.claude_sobre_.agents
+=== RUN   TestRuntimeSuite/TestLoadRuntime/deve_usar_.agents_quando_.claude_esta_ausente
+=== RUN   TestRuntimeSuite/TestLoadRuntime/deve_preencher_campos_ausentes_com_defaults
+=== RUN   TestRuntimeSuite/TestLoadRuntime/deve_retornar_erro_para_YAML_malformado
+=== RUN   TestRuntimeSuite/TestLoadRuntime/deve_retornar_defaults_quando_repoRoot_e_vazio
+--- PASS: TestRuntimeSuite (0.00s)
+    --- PASS: TestRuntimeSuite/TestDefaultRuntime (0.00s)
+    --- PASS: TestRuntimeSuite/TestEnvVarsProjectsAllKeys (0.00s)
+    --- PASS: TestRuntimeSuite/TestLoadRuntime (0.00s)
+        --- PASS: TestRuntimeSuite/TestLoadRuntime/deve_retornar_defaults_quando_nao_ha_arquivo (0.00s)
+        --- PASS: TestRuntimeSuite/TestLoadRuntime/deve_preferir_.claude_sobre_.agents (0.00s)
+        --- PASS: TestRuntimeSuite/TestLoadRuntime/deve_usar_.agents_quando_.claude_esta_ausente (0.00s)
+        --- PASS: TestRuntimeSuite/TestLoadRuntime/deve_preencher_campos_ausentes_com_defaults (0.00s)
+        --- PASS: TestRuntimeSuite/TestLoadRuntime/deve_retornar_erro_para_YAML_malformado (0.00s)
+        --- PASS: TestRuntimeSuite/TestLoadRuntime/deve_retornar_defaults_quando_repoRoot_e_vazio (0.00s)
+=== RUN   TestUnknownFieldRegressionSuite
+=== RUN   TestUnknownFieldRegressionSuite/TestConfigYAMLWithUnknownFieldIsStillAccepted
+=== RUN   TestUnknownFieldRegressionSuite/TestResolverAcceptsProjectConfigWithUnknownField
+--- PASS: TestUnknownFieldRegressionSuite (0.00s)
+    --- PASS: TestUnknownFieldRegressionSuite/TestConfigYAMLWithUnknownFieldIsStillAccepted (0.00s)
+    --- PASS: TestUnknownFieldRegressionSuite/TestResolverAcceptsProjectConfigWithUnknownField (0.00s)
+=== RUN   FuzzParseConfig
+=== RUN   FuzzParseConfig/seed#0
+=== RUN   FuzzParseConfig/seed#1
+=== RUN   FuzzParseConfig/seed#2
+=== RUN   FuzzParseConfig/seed#3
+=== RUN   FuzzParseConfig/seed#4
+=== RUN   FuzzParseConfig/seed#5
+=== RUN   FuzzParseConfig/seed#6
+=== RUN   FuzzParseConfig/seed#7
+=== RUN   FuzzParseConfig/seed#8
+--- PASS: FuzzParseConfig (0.00s)
+    --- PASS: FuzzParseConfig/seed#0 (0.00s)
+    --- PASS: FuzzParseConfig/seed#1 (0.00s)
+    --- PASS: FuzzParseConfig/seed#2 (0.00s)
+    --- PASS: FuzzParseConfig/seed#3 (0.00s)
+    --- PASS: FuzzParseConfig/seed#4 (0.00s)
+    --- PASS: FuzzParseConfig/seed#5 (0.00s)
+    --- PASS: FuzzParseConfig/seed#6 (0.00s)
+    --- PASS: FuzzParseConfig/seed#7 (0.00s)
+    --- PASS: FuzzParseConfig/seed#8 (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/config	0.148s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/config/mocks	[no test files]

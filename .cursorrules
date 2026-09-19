@@ -2,7 +2,7 @@ Voce esta trabalhando no ai-spec-harness, uma CLI Go para governanca operacional
 
 ## Regras
 
-- Codigo em Go 1.26+, comentarios e mensagens em PT-BR.
+- Codigo em Go 1.27, todo em ingles e sem comentarios (R-STYLE-001, hard — ver `.claude/rules/code-style.md`).
 - Commits: Conventional Commits (tipo ingles, corpo portugues).
 - Testes: table-driven, FakeFileSystem para unitarios, t.TempDir() para integracao.
 - DI via construtor, zero estado global.
@@ -13,7 +13,7 @@ Voce esta trabalhando no ai-spec-harness, uma CLI Go para governanca operacional
 ## Estrutura
 
 - `cmd/ai_spec_harness/` — comandos Cobra
-- `internal/` — 34 pacotes de logica de negocio
+- `internal/` — logica de negocio, um pacote por responsabilidade
 - `internal/fs/` — abstracao de filesystem (FakeFileSystem para testes)
 - `internal/output/` — printer estruturado
 - `testdata/` — fixtures e snapshots

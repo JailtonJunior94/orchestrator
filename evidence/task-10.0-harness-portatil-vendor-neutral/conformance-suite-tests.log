@@ -1,0 +1,102 @@
+=== RUN   TestConformanceSuite_ScenariosSixAndSevenAreDeterministicPerManifest
+--- PASS: TestConformanceSuite_ScenariosSixAndSevenAreDeterministicPerManifest (0.00s)
+=== RUN   TestConformanceSuite_GitOperationGateBlocksAcrossFourProvidersWithSingleRunner
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Resumo do lote (install): criado=437 atualizado=0 preservado=0 mesclado=2 conflito=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_GitOperationGateBlocksAcrossFourProvidersWi3948293007/001
+Modo de instalacao: copy
+=== RUN   TestConformanceSuite_GitOperationGateBlocksAcrossFourProvidersWithSingleRunner/claude
+=== RUN   TestConformanceSuite_GitOperationGateBlocksAcrossFourProvidersWithSingleRunner/codex
+=== RUN   TestConformanceSuite_GitOperationGateBlocksAcrossFourProvidersWithSingleRunner/copilot
+=== RUN   TestConformanceSuite_GitOperationGateBlocksAcrossFourProvidersWithSingleRunner/opencode
+--- PASS: TestConformanceSuite_GitOperationGateBlocksAcrossFourProvidersWithSingleRunner (1.68s)
+    --- PASS: TestConformanceSuite_GitOperationGateBlocksAcrossFourProvidersWithSingleRunner/claude (0.37s)
+    --- PASS: TestConformanceSuite_GitOperationGateBlocksAcrossFourProvidersWithSingleRunner/codex (0.16s)
+    --- PASS: TestConformanceSuite_GitOperationGateBlocksAcrossFourProvidersWithSingleRunner/copilot (0.17s)
+    --- PASS: TestConformanceSuite_GitOperationGateBlocksAcrossFourProvidersWithSingleRunner/opencode (0.40s)
+=== RUN   TestConformanceSuite_DestructiveOperationGateBlocksAcrossFourProvidersWithSingleRunner
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Resumo do lote (install): criado=437 atualizado=0 preservado=0 mesclado=2 conflito=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_DestructiveOperationGateBlocksAcrossFourPro1655116570/001
+Modo de instalacao: copy
+=== RUN   TestConformanceSuite_DestructiveOperationGateBlocksAcrossFourProvidersWithSingleRunner/claude
+=== RUN   TestConformanceSuite_DestructiveOperationGateBlocksAcrossFourProvidersWithSingleRunner/codex
+=== RUN   TestConformanceSuite_DestructiveOperationGateBlocksAcrossFourProvidersWithSingleRunner/copilot
+=== RUN   TestConformanceSuite_DestructiveOperationGateBlocksAcrossFourProvidersWithSingleRunner/opencode
+--- PASS: TestConformanceSuite_DestructiveOperationGateBlocksAcrossFourProvidersWithSingleRunner (1.05s)
+    --- PASS: TestConformanceSuite_DestructiveOperationGateBlocksAcrossFourProvidersWithSingleRunner/claude (0.17s)
+    --- PASS: TestConformanceSuite_DestructiveOperationGateBlocksAcrossFourProvidersWithSingleRunner/codex (0.16s)
+    --- PASS: TestConformanceSuite_DestructiveOperationGateBlocksAcrossFourProvidersWithSingleRunner/copilot (0.17s)
+    --- PASS: TestConformanceSuite_DestructiveOperationGateBlocksAcrossFourProvidersWithSingleRunner/opencode (0.27s)
+=== RUN   TestConformanceSuite_SuiteFailsWhenCanonicalGitOperationGateIsRemoved
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Resumo do lote (install): criado=437 atualizado=0 preservado=0 mesclado=2 conflito=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_SuiteFailsWhenCanonicalGitOperationGateIsRe1919935252/001
+Modo de instalacao: copy
+=== RUN   TestConformanceSuite_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/claude
+=== RUN   TestConformanceSuite_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/codex
+=== RUN   TestConformanceSuite_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/copilot
+=== RUN   TestConformanceSuite_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/opencode
+--- PASS: TestConformanceSuite_SuiteFailsWhenCanonicalGitOperationGateIsRemoved (0.86s)
+    --- PASS: TestConformanceSuite_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/claude (0.12s)
+    --- PASS: TestConformanceSuite_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/codex (0.11s)
+    --- PASS: TestConformanceSuite_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/copilot (0.11s)
+    --- PASS: TestConformanceSuite_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/opencode (0.22s)
+=== RUN   TestConformanceSuite_FourProvidersReturnSameExitCodeForSameInput
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Resumo do lote (install): criado=437 atualizado=0 preservado=0 mesclado=2 conflito=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_FourProvidersReturnSameExitCodeForSameInput1802507470/001
+Modo de instalacao: copy
+=== RUN   TestConformanceSuite_FourProvidersReturnSameExitCodeForSameInput/unsolicited-commit
+=== RUN   TestConformanceSuite_FourProvidersReturnSameExitCodeForSameInput/unsolicited-push
+=== RUN   TestConformanceSuite_FourProvidersReturnSameExitCodeForSameInput/destructive-removal
+=== RUN   TestConformanceSuite_FourProvidersReturnSameExitCodeForSameInput/read-only-status
+=== RUN   TestConformanceSuite_FourProvidersReturnSameExitCodeForSameInput/confirmed-commit
+--- PASS: TestConformanceSuite_FourProvidersReturnSameExitCodeForSameInput (4.12s)
+    --- PASS: TestConformanceSuite_FourProvidersReturnSameExitCodeForSameInput/unsolicited-commit (0.74s)
+    --- PASS: TestConformanceSuite_FourProvidersReturnSameExitCodeForSameInput/unsolicited-push (0.74s)
+    --- PASS: TestConformanceSuite_FourProvidersReturnSameExitCodeForSameInput/destructive-removal (0.78s)
+    --- PASS: TestConformanceSuite_FourProvidersReturnSameExitCodeForSameInput/read-only-status (0.70s)
+    --- PASS: TestConformanceSuite_FourProvidersReturnSameExitCodeForSameInput/confirmed-commit (0.85s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	7.840s
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	(cached) [no tests to run]
+exit=0

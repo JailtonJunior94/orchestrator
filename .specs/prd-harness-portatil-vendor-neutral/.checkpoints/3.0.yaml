@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-harness-portatil-vendor-neutral/3.0_execution_report.md
+summary: Harness Contract v1 implementado em internal/harness com schema JSON estrito, ponte YAML->JSON preservadora, erros tipados, default embarcado e gate de nao-duplicacao de chaves contra config.Runtime; fuzz registrado e mockery.yml atualizado.
+timestamp: 2026-09-18T15:22:40Z
