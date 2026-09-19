@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.1.0 (2026-09-19)
+
+### Features
+- **harness:** entrega completa do PRD harness portatil e vendor-neutral (73592f3)
+
+### Bug Fixes
+- **specs:** corrige bug de locale no gate check-spec-paths (556ed0a)
+
+### Chores
+- **evidencia:** sela evidencia SDD das 13 tarefas no commit anterior (8c353d4)
+
 ## Unreleased (proxima minor, PRD harness-portatil-vendor-neutral)
 
 ### Features
