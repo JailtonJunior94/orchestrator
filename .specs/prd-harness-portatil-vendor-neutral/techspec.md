@@ -88,7 +88,7 @@ Dois pontos merecem destaque porque são onde a arquitetura atual falha hoje:
    `internal/upgrade/upgrade.go:399-402` e na lista fixa de `internal/uninstall/uninstall.go:594`.
 2. **A escrita não tem transação.** A atomicidade existe por arquivo, em `WriteFileAtomic`
    (`internal/fs/fs.go:173-203`), mas `WriteFile`, `CopyFile` e `CopyDir` escrevem direto
-   (`internal/install/write_tracker.go:104-134`). O pior caso observável é
+   (`internal/install/write_tracker.go:104-134 (baseline pre-Tarefa 8.0, consolidado em internal/tracking/tracker.go)`). O pior caso observável é
    `internal/upgrade/upgrade.go:193-194`: `RemoveAll` seguido de `CopyDir`, onde a falha do copy deixa a
    skill **destruída**, emite apenas `Warn` e o laço continua, podendo terminar com exit 0.
 
@@ -200,7 +200,7 @@ const (
 
 A precedência entre categorias é explícita, não implícita: `conflict` vence todas; `merged` vence
 `created`. Isso corrige a precedência implícita atual de `writeTracker.record`
-(`internal/install/write_tracker.go:49-58`), onde `MarkMerged` remove o path de `created` sem que a
+(`internal/install/write_tracker.go:49-58 (baseline pre-Tarefa 8.0, consolidado em internal/tracking/tracker.go)`), onde `MarkMerged` remove o path de `created` sem que a
 regra esteja declarada.
 
 ### Endpoints de API

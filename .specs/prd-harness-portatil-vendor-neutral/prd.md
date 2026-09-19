@@ -114,10 +114,10 @@ Levantados neste repositório antes da redação. São a base factual dos requis
 | **V-04** | `.agents/` contém `hooks/`, `lib/`, `scripts/`, `skills/`. Não existem `policies/`, `workflows/` nem `harness.yaml` | `.agents/` |
 | **V-05** | 38 subcomandos registrados; **não** existem `init` nem `sync` | `cmd/ai_spec_harness/root.go` |
 | **V-06** | `upgrade` suporta `--check`, `--source`, `--ref`, comparando versões e checksums | `cmd/ai_spec_harness/upgrade.go` |
-| **V-07** | Escrita é atômica **por arquivo**; não há transação de lote nem rollback de lote | `internal/install/write_tracker.go` |
+| **V-07** | Escrita é atômica **por arquivo**; não há transação de lote nem rollback de lote | `internal/install/write_tracker.go (baseline pre-Tarefa 8.0)`, consolidado em `internal/tracking/tracker.go` |
 | **V-08** | Manifesto rastreia paths individuais em `installed_files`/`merged_files` (RF-05 do PRD anterior), **sem hash associado**. O campo `checksums` é por-skill e **write-only**: escrito na instalação e no upgrade, lido por nenhum código de produção. **Não existe `path → checksum`** | `internal/manifest/manifest.go:14-35`, `internal/install/install.go:1582-1593`, `internal/upgrade/upgrade.go:638` |
 | **V-08b** | Drift hoje é detectado por recomputação ao vivo contra a fonte, não por comparação com o manifesto | `internal/upgrade/upgrade.go:339-341`, `internal/install/install.go:678-689` |
-| **V-08c** | Não existe a categoria **conflito** em install/upgrade/uninstall; nenhum write compara o destino antes de sobrescrever | `internal/install/write_tracker.go:104-134` |
+| **V-08c** | Não existe a categoria **conflito** em install/upgrade/uninstall; nenhum write compara o destino antes de sobrescrever | `internal/install/write_tracker.go:104-134 (baseline pre-Tarefa 8.0)`, consolidado em `internal/tracking/tracker.go` |
 | **V-09** | `doctor` verifica git, diretório de skills e manifesto; não separa core de adapters nem reporta por provedor | `internal/doctor/doctor.go` |
 | **V-10** | `verify` reporta `current`/`missing`/`drifted`, com `--by-cli`, `--global`, `--check-codex-trust` | `cmd/ai_spec_harness/verify.go` |
 | **V-11** | Invariantes de paridade existem em Go com três níveis de enforcement; nenhum artefato de matriz é gerado ou commitado | `internal/parity/parity.go` |
