@@ -1,6 +1,6 @@
 //go:build !windows
 
-package durable
+package procref
 
 import (
 	"errors"

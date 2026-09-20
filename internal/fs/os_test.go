@@ -682,3 +682,83 @@ func makeRootWritable(root *os.Root, name string) {
 		makeRootWritable(root, path.Join(name, entry.Name()))
 	}
 }
+
+func TestOS_WriteFileAtomic_BreaksHardLink(t *testing.T) {
+	dir := t.TempDir()
+	f := fs.NewOSFileSystem()
+	original := filepath.Join(dir, "original.txt")
+	linked := filepath.Join(dir, "linked.txt")
+
+	if err := f.WriteFile(original, []byte("shared inode")); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.Link(original, linked); err != nil {
+		t.Skipf("hard links unsupported on this filesystem: %v", err)
+	}
+
+	originalInfoBefore, err := os.Stat(original)
+	if err != nil {
+		t.Fatalf("Stat(original): %v", err)
+	}
+	linkedInfoBefore, err := os.Stat(linked)
+	if err != nil {
+		t.Fatalf("Stat(linked): %v", err)
+	}
+	if !os.SameFile(originalInfoBefore, linkedInfoBefore) {
+		t.Fatalf("os.Link did not produce a shared inode; test setup invalid")
+	}
+
+	if err := f.WriteFileAtomic(linked, []byte("new content")); err != nil {
+		t.Fatalf("WriteFileAtomic: %v", err)
+	}
+
+	originalInfoAfter, err := os.Stat(original)
+	if err != nil {
+		t.Fatalf("Stat(original) after: %v", err)
+	}
+	linkedInfoAfter, err := os.Stat(linked)
+	if err != nil {
+		t.Fatalf("Stat(linked) after: %v", err)
+	}
+	if os.SameFile(originalInfoAfter, linkedInfoAfter) {
+		t.Fatalf("expected WriteFileAtomic to break the hard link (ADR-006 risk R-01), but the inode is still shared")
+	}
+
+	originalContent, err := f.ReadFile(original)
+	if err != nil {
+		t.Fatalf("ReadFile(original): %v", err)
+	}
+	if string(originalContent) != "shared inode" {
+		t.Fatalf("original hard-linked file content changed unexpectedly: %q", originalContent)
+	}
+}
+
+func TestOS_WriteFileAtomic_ReplacesSymlinkInsteadOfWritingThrough(t *testing.T) {
+	dir := t.TempDir()
+	f := fs.NewOSFileSystem()
+	target := filepath.Join(dir, "target.txt")
+	link := filepath.Join(dir, "link.txt")
+
+	if err := f.WriteFile(target, []byte("original")); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := os.Symlink(target, link); err != nil {
+		t.Fatalf("Symlink: %v", err)
+	}
+
+	if err := f.WriteFileAtomic(link, []byte("through the link")); err != nil {
+		t.Fatalf("WriteFileAtomic: %v", err)
+	}
+
+	if f.IsSymlink(link) {
+		t.Fatalf("expected WriteFileAtomic to replace the symlink itself (ADR-006 risk R-01), but it is still a symlink")
+	}
+
+	targetContent, err := f.ReadFile(target)
+	if err != nil {
+		t.Fatalf("ReadFile(target): %v", err)
+	}
+	if string(targetContent) != "original" {
+		t.Fatalf("expected the symlink target to remain untouched when WriteFileAtomic replaces the link, got %q", targetContent)
+	}
+}

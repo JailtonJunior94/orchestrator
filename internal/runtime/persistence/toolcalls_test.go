@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -94,4 +95,22 @@ func loadGolden(t *testing.T, name string) string {
 		t.Fatalf("loadGolden(%q): %v", name, err)
 	}
 	return string(data)
+}
+
+func TestWriteToolCalls_RedactsSecretsInToolName(t *testing.T) {
+	fsys := fs.NewFakeFileSystem()
+	summaries := []events.ToolCallSummary{
+		{ID: events.NewToolCallID("call-1"), Name: "curl-with-token-ghp_1234567890abcdef1234567890", Final: true},
+	}
+	if err := persistence.NewCatalog().WriteToolCalls("/evidence/task/tool_calls.md", summaries, fsys); err != nil {
+		t.Fatalf("WriteToolCalls: %v", err)
+	}
+
+	data, err := fsys.ReadFile("/evidence/task/tool_calls.md")
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if strings.Contains(string(data), "ghp_1234567890abcdef1234567890") {
+		t.Fatalf("secret leaked into tool_calls.md: %s", data)
+	}
 }

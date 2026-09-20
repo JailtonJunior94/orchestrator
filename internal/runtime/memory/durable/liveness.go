@@ -1,38 +1,13 @@
 package durable
 
-import (
-	"os"
-	"time"
-)
+import "github.com/JailtonJunior94/ai-spec-harness/internal/procref"
 
-type ProcessRef struct {
-	PID       int
-	Hostname  string
-	StartedAt time.Time
-}
+type ProcessRef = procref.ProcessRef
 
-func CurrentProcessRef() ProcessRef {
-	hostname, _ := os.Hostname()
-	return ProcessRef{
-		PID:       os.Getpid(),
-		Hostname:  hostname,
-		StartedAt: time.Now(),
-	}
-}
+type LivenessResult = procref.LivenessResult
 
-type LivenessResult struct {
-	Reliable bool
-	Alive    bool
-}
+type LivenessProbe = procref.LivenessProbe
 
-type LivenessProbe interface {
-	Probe(ref ProcessRef) LivenessResult
-}
+var CurrentProcessRef = procref.CurrentProcessRef
 
-type processLivenessProbe struct{}
-
-func (processLivenessProbe) Probe(ref ProcessRef) LivenessResult {
-	return checkProcessLiveness(ref)
-}
-
-var DefaultLivenessProbe LivenessProbe = processLivenessProbe{}
+var DefaultLivenessProbe = procref.DefaultLivenessProbe

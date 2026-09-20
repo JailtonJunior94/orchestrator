@@ -1,0 +1,3352 @@
+diff --git a/.agents/hooks/post-execute-task.sh b/.agents/hooks/post-execute-task.sh
+index 2ba58be..421a851 100755
+--- a/.agents/hooks/post-execute-task.sh
++++ b/.agents/hooks/post-execute-task.sh
+@@ -218,13 +218,13 @@ fi
+ # === F25: checkpoint deve existir se status=done ===
+ # Default: FAIL bloqueante. Override via AI_ALLOW_MISSING_CHECKPOINT=1 (back compat com execute-task <v1.4)
+ if [[ "$status" == "done" ]]; then
+-  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.yaml"
++  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.json"
+   if [[ ! -s "$checkpoint" ]]; then
+     if [[ "${AI_ALLOW_MISSING_CHECKPOINT:-0}" == "1" ]]; then
+       echo "WARN F25: checkpoint ausente em $checkpoint (back compat: AI_ALLOW_MISSING_CHECKPOINT=1)" >&2
+       warnings=$((warnings+1))
+     else
+-      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu YAML antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
++      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu JSON antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
+       errors=$((errors+1))
+     fi
+   fi
+diff --git a/.agents/hooks/post-wave.sh b/.agents/hooks/post-wave.sh
+index 90528e1..1ca362c 100755
+--- a/.agents/hooks/post-wave.sh
++++ b/.agents/hooks/post-wave.sh
+@@ -8,12 +8,15 @@
+ #
+ # Comportamento:
+ #   - Cria/atualiza .specs/prd-<slug>/_orchestration_report.partial.md
+-#   - Append-only: cada chamada adiciona uma seção da wave
++#   - Idempotente: reexecutar com o mesmo <wave-id> nao duplica a secao
++#   - Atomico: escrita completa via temporario + rename, sob flock
++#   - Sanitiza segredos do YAML de resultados antes de embutir no relatorio
+ #   - Quando o orquestrador concluir todas as waves, fica responsavel por
+ #     renomear .partial.md -> _orchestration_report.md (rename atomico)
+ #
+ # Exit:
+-#   0 — checkpoint escrito
++#   0 — checkpoint escrito (ou wave ja registrada, idempotente)
++#   1 — falha de IO
+ #   2 — argumentos invalidos
+ 
+ set -euo pipefail
+@@ -32,17 +35,42 @@ TASKS_ROOT="${AI_TASKS_ROOT:-.specs}"
+ PRD_PREFIX="${AI_PRD_PREFIX:-prd-}"
+ PRD_DIR="$REPO_ROOT/$TASKS_ROOT/$PRD_PREFIX$PRD_SLUG"
+ PARTIAL_MD="$PRD_DIR/_orchestration_report.partial.md"
++LOCK_FILE="$PARTIAL_MD.lock"
+ 
+ if [[ ! -d "$PRD_DIR" ]]; then
+   echo "FAIL: PRD dir nao existe: $PRD_DIR" >&2
+   exit 1
+ fi
+ 
++if [[ "${POST_WAVE_LOCK_HELD:-0}" != "1" ]]; then
++  if ! command -v flock >/dev/null 2>&1; then
++    echo "FAIL: flock ausente no PATH; instale util-linux/flock para post-wave.sh" >&2
++    exit 1
++  fi
++  exec env POST_WAVE_LOCK_HELD=1 flock -x -w 30 "$LOCK_FILE" "$0" "$@"
++fi
++
++sanitize_stream() {
++  sed -E \
++    -e 's/-----BEGIN [A-Z ]*PRIVATE KEY-----.*-----END [A-Z ]*PRIVATE KEY-----/[REDACTED:pem_private_key]/g' \
++    -e 's/(gh[po]_|sk-|AKIA)[A-Za-z0-9_-]{10,}/[REDACTED:provider_token]/g' \
++    -e 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[REDACTED:jwt]/g' \
++    -e 's/([Aa]uthorization:[[:space:]]*).+/\1[REDACTED:authorization_header]/g' \
++    -e 's/^([A-Z][A-Z0-9_]*(SECRET|TOKEN|KEY|PASSWORD|PASS|CREDENTIAL)[A-Z0-9_]*=).+/\1[REDACTED:dotenv_secret]/g'
++}
++
++atomic_write() {
++  local target="$1"
++  local tmp
++  tmp="$(mktemp "$PRD_DIR/.tmp-post-wave.XXXXXX")"
++  cat > "$tmp"
++  mv "$tmp" "$target"
++}
++
+ ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+ 
+-# Header inicial se ainda nao existe
+ if [[ ! -f "$PARTIAL_MD" ]]; then
+-  cat > "$PARTIAL_MD.tmp" <<EOF
++  atomic_write "$PARTIAL_MD" <<EOF
+ # Relatorio de Orquestracao (parcial)
+ 
+ PRD: $PRD_SLUG
+@@ -51,23 +79,28 @@ Iniciado: $ts
+ ## Waves Executadas
+ 
+ EOF
+-  mv "$PARTIAL_MD.tmp" "$PARTIAL_MD"
+ fi
+ 
+-# Append entry da wave
++WAVE_MARKER="### Wave $WAVE_ID —"
++if grep -qF "$WAVE_MARKER" "$PARTIAL_MD" 2>/dev/null; then
++  echo "post-wave: wave $WAVE_ID ja registrada em $PARTIAL_MD, ignorando (idempotente)" >&2
++  exit 0
++fi
++
+ {
++  cat "$PARTIAL_MD"
+   echo
+   echo "### Wave $WAVE_ID — $ts"
+   echo
+   if [[ -n "$RESULTS_FILE" && -s "$RESULTS_FILE" ]]; then
+     echo '```yaml'
+-    cat "$RESULTS_FILE"
++    sanitize_stream < "$RESULTS_FILE"
+     echo
+     echo '```'
+   else
+     echo "(sem resultados anexados)"
+   fi
+-} >> "$PARTIAL_MD"
++} | atomic_write "$PARTIAL_MD"
+ 
+ echo "post-wave: checkpoint atualizado em $PARTIAL_MD" >&2
+ exit 0
+diff --git a/.agents/skills/execute-task/SKILL.md b/.agents/skills/execute-task/SKILL.md
+index 1f75d14..f625491 100644
+--- a/.agents/skills/execute-task/SKILL.md
++++ b/.agents/skills/execute-task/SKILL.md
+@@ -79,10 +79,10 @@ description: Executa uma tarefa de implementação aprovada via codificação, v
+ **Etapa 5: Persistir evidências (F25 checkpoint)**
+ 1. Salvar `.specs/prd-<slug>/[num]_execution_report.md` (overwrite com `# Generated: <ISO-8601 UTC>` no header — F36) a partir de `assets/task-execution-report-template.md`.
+ 2. Rodar validador de evidências (resolver em cascata portátil: `.agents/scripts/...` → `.claude/scripts/...` → `scripts/...`). Nenhum → `failed`. Falha → `blocked`; não mutar tasks.md.
+-3. **Checkpoint YAML antes de mutar tasks.md (F25)**:
++3. **Checkpoint JSON antes de mutar tasks.md (F25)**:
+    - `mkdir -p .specs/prd-<slug>/.checkpoints/`.
+-   - Escrever `.checkpoints/<num>.yaml.tmp` com `status`, `report_path`, `summary`, `timestamp` (ISO-8601 UTC).
+-   - `mv -n .yaml.tmp .yaml` atômico. Completo ou inexistente, nunca parcial.
++   - Escrever `.checkpoints/<num>.json.tmp` com `status`, `report_path`, `summary`, `timestamp` (ISO-8601 UTC).
++   - `mv -n .json.tmp .json` atômico. Completo ou inexistente, nunca parcial.
+ 4. **Só após checkpoint persistido**, mutar tasks.md para `done`.
+ 5. **Lock atômico em tasks.md (F3+F32)** quando invocador é `execute-all-tasks` em wave paralela:
+    - POSIX: `flock -x -w 30 .specs/prd-<slug>/tasks.md.lock -c '<edit>'`.
+diff --git a/.claude/hooks/post-execute-task.sh b/.claude/hooks/post-execute-task.sh
+index 2ba58be..421a851 100755
+--- a/.claude/hooks/post-execute-task.sh
++++ b/.claude/hooks/post-execute-task.sh
+@@ -218,13 +218,13 @@ fi
+ # === F25: checkpoint deve existir se status=done ===
+ # Default: FAIL bloqueante. Override via AI_ALLOW_MISSING_CHECKPOINT=1 (back compat com execute-task <v1.4)
+ if [[ "$status" == "done" ]]; then
+-  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.yaml"
++  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.json"
+   if [[ ! -s "$checkpoint" ]]; then
+     if [[ "${AI_ALLOW_MISSING_CHECKPOINT:-0}" == "1" ]]; then
+       echo "WARN F25: checkpoint ausente em $checkpoint (back compat: AI_ALLOW_MISSING_CHECKPOINT=1)" >&2
+       warnings=$((warnings+1))
+     else
+-      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu YAML antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
++      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu JSON antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
+       errors=$((errors+1))
+     fi
+   fi
+diff --git a/.claude/hooks/post-wave.sh b/.claude/hooks/post-wave.sh
+index 90528e1..1ca362c 100755
+--- a/.claude/hooks/post-wave.sh
++++ b/.claude/hooks/post-wave.sh
+@@ -8,12 +8,15 @@
+ #
+ # Comportamento:
+ #   - Cria/atualiza .specs/prd-<slug>/_orchestration_report.partial.md
+-#   - Append-only: cada chamada adiciona uma seção da wave
++#   - Idempotente: reexecutar com o mesmo <wave-id> nao duplica a secao
++#   - Atomico: escrita completa via temporario + rename, sob flock
++#   - Sanitiza segredos do YAML de resultados antes de embutir no relatorio
+ #   - Quando o orquestrador concluir todas as waves, fica responsavel por
+ #     renomear .partial.md -> _orchestration_report.md (rename atomico)
+ #
+ # Exit:
+-#   0 — checkpoint escrito
++#   0 — checkpoint escrito (ou wave ja registrada, idempotente)
++#   1 — falha de IO
+ #   2 — argumentos invalidos
+ 
+ set -euo pipefail
+@@ -32,17 +35,42 @@ TASKS_ROOT="${AI_TASKS_ROOT:-.specs}"
+ PRD_PREFIX="${AI_PRD_PREFIX:-prd-}"
+ PRD_DIR="$REPO_ROOT/$TASKS_ROOT/$PRD_PREFIX$PRD_SLUG"
+ PARTIAL_MD="$PRD_DIR/_orchestration_report.partial.md"
++LOCK_FILE="$PARTIAL_MD.lock"
+ 
+ if [[ ! -d "$PRD_DIR" ]]; then
+   echo "FAIL: PRD dir nao existe: $PRD_DIR" >&2
+   exit 1
+ fi
+ 
++if [[ "${POST_WAVE_LOCK_HELD:-0}" != "1" ]]; then
++  if ! command -v flock >/dev/null 2>&1; then
++    echo "FAIL: flock ausente no PATH; instale util-linux/flock para post-wave.sh" >&2
++    exit 1
++  fi
++  exec env POST_WAVE_LOCK_HELD=1 flock -x -w 30 "$LOCK_FILE" "$0" "$@"
++fi
++
++sanitize_stream() {
++  sed -E \
++    -e 's/-----BEGIN [A-Z ]*PRIVATE KEY-----.*-----END [A-Z ]*PRIVATE KEY-----/[REDACTED:pem_private_key]/g' \
++    -e 's/(gh[po]_|sk-|AKIA)[A-Za-z0-9_-]{10,}/[REDACTED:provider_token]/g' \
++    -e 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[REDACTED:jwt]/g' \
++    -e 's/([Aa]uthorization:[[:space:]]*).+/\1[REDACTED:authorization_header]/g' \
++    -e 's/^([A-Z][A-Z0-9_]*(SECRET|TOKEN|KEY|PASSWORD|PASS|CREDENTIAL)[A-Z0-9_]*=).+/\1[REDACTED:dotenv_secret]/g'
++}
++
++atomic_write() {
++  local target="$1"
++  local tmp
++  tmp="$(mktemp "$PRD_DIR/.tmp-post-wave.XXXXXX")"
++  cat > "$tmp"
++  mv "$tmp" "$target"
++}
++
+ ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+ 
+-# Header inicial se ainda nao existe
+ if [[ ! -f "$PARTIAL_MD" ]]; then
+-  cat > "$PARTIAL_MD.tmp" <<EOF
++  atomic_write "$PARTIAL_MD" <<EOF
+ # Relatorio de Orquestracao (parcial)
+ 
+ PRD: $PRD_SLUG
+@@ -51,23 +79,28 @@ Iniciado: $ts
+ ## Waves Executadas
+ 
+ EOF
+-  mv "$PARTIAL_MD.tmp" "$PARTIAL_MD"
+ fi
+ 
+-# Append entry da wave
++WAVE_MARKER="### Wave $WAVE_ID —"
++if grep -qF "$WAVE_MARKER" "$PARTIAL_MD" 2>/dev/null; then
++  echo "post-wave: wave $WAVE_ID ja registrada em $PARTIAL_MD, ignorando (idempotente)" >&2
++  exit 0
++fi
++
+ {
++  cat "$PARTIAL_MD"
+   echo
+   echo "### Wave $WAVE_ID — $ts"
+   echo
+   if [[ -n "$RESULTS_FILE" && -s "$RESULTS_FILE" ]]; then
+     echo '```yaml'
+-    cat "$RESULTS_FILE"
++    sanitize_stream < "$RESULTS_FILE"
+     echo
+     echo '```'
+   else
+     echo "(sem resultados anexados)"
+   fi
+-} >> "$PARTIAL_MD"
++} | atomic_write "$PARTIAL_MD"
+ 
+ echo "post-wave: checkpoint atualizado em $PARTIAL_MD" >&2
+ exit 0
+diff --git a/.claude/skills/execute-task/SKILL.md b/.claude/skills/execute-task/SKILL.md
+index 1f75d14..f625491 100644
+--- a/.claude/skills/execute-task/SKILL.md
++++ b/.claude/skills/execute-task/SKILL.md
+@@ -79,10 +79,10 @@ description: Executa uma tarefa de implementação aprovada via codificação, v
+ **Etapa 5: Persistir evidências (F25 checkpoint)**
+ 1. Salvar `.specs/prd-<slug>/[num]_execution_report.md` (overwrite com `# Generated: <ISO-8601 UTC>` no header — F36) a partir de `assets/task-execution-report-template.md`.
+ 2. Rodar validador de evidências (resolver em cascata portátil: `.agents/scripts/...` → `.claude/scripts/...` → `scripts/...`). Nenhum → `failed`. Falha → `blocked`; não mutar tasks.md.
+-3. **Checkpoint YAML antes de mutar tasks.md (F25)**:
++3. **Checkpoint JSON antes de mutar tasks.md (F25)**:
+    - `mkdir -p .specs/prd-<slug>/.checkpoints/`.
+-   - Escrever `.checkpoints/<num>.yaml.tmp` com `status`, `report_path`, `summary`, `timestamp` (ISO-8601 UTC).
+-   - `mv -n .yaml.tmp .yaml` atômico. Completo ou inexistente, nunca parcial.
++   - Escrever `.checkpoints/<num>.json.tmp` com `status`, `report_path`, `summary`, `timestamp` (ISO-8601 UTC).
++   - `mv -n .json.tmp .json` atômico. Completo ou inexistente, nunca parcial.
+ 4. **Só após checkpoint persistido**, mutar tasks.md para `done`.
+ 5. **Lock atômico em tasks.md (F3+F32)** quando invocador é `execute-all-tasks` em wave paralela:
+    - POSIX: `flock -x -w 30 .specs/prd-<slug>/tasks.md.lock -c '<edit>'`.
+diff --git a/.codex/hooks/post-execute-task.sh b/.codex/hooks/post-execute-task.sh
+index 2ba58be..421a851 100755
+--- a/.codex/hooks/post-execute-task.sh
++++ b/.codex/hooks/post-execute-task.sh
+@@ -218,13 +218,13 @@ fi
+ # === F25: checkpoint deve existir se status=done ===
+ # Default: FAIL bloqueante. Override via AI_ALLOW_MISSING_CHECKPOINT=1 (back compat com execute-task <v1.4)
+ if [[ "$status" == "done" ]]; then
+-  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.yaml"
++  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.json"
+   if [[ ! -s "$checkpoint" ]]; then
+     if [[ "${AI_ALLOW_MISSING_CHECKPOINT:-0}" == "1" ]]; then
+       echo "WARN F25: checkpoint ausente em $checkpoint (back compat: AI_ALLOW_MISSING_CHECKPOINT=1)" >&2
+       warnings=$((warnings+1))
+     else
+-      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu YAML antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
++      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu JSON antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
+       errors=$((errors+1))
+     fi
+   fi
+diff --git a/.codex/hooks/post-wave.sh b/.codex/hooks/post-wave.sh
+index 90528e1..1ca362c 100755
+--- a/.codex/hooks/post-wave.sh
++++ b/.codex/hooks/post-wave.sh
+@@ -8,12 +8,15 @@
+ #
+ # Comportamento:
+ #   - Cria/atualiza .specs/prd-<slug>/_orchestration_report.partial.md
+-#   - Append-only: cada chamada adiciona uma seção da wave
++#   - Idempotente: reexecutar com o mesmo <wave-id> nao duplica a secao
++#   - Atomico: escrita completa via temporario + rename, sob flock
++#   - Sanitiza segredos do YAML de resultados antes de embutir no relatorio
+ #   - Quando o orquestrador concluir todas as waves, fica responsavel por
+ #     renomear .partial.md -> _orchestration_report.md (rename atomico)
+ #
+ # Exit:
+-#   0 — checkpoint escrito
++#   0 — checkpoint escrito (ou wave ja registrada, idempotente)
++#   1 — falha de IO
+ #   2 — argumentos invalidos
+ 
+ set -euo pipefail
+@@ -32,17 +35,42 @@ TASKS_ROOT="${AI_TASKS_ROOT:-.specs}"
+ PRD_PREFIX="${AI_PRD_PREFIX:-prd-}"
+ PRD_DIR="$REPO_ROOT/$TASKS_ROOT/$PRD_PREFIX$PRD_SLUG"
+ PARTIAL_MD="$PRD_DIR/_orchestration_report.partial.md"
++LOCK_FILE="$PARTIAL_MD.lock"
+ 
+ if [[ ! -d "$PRD_DIR" ]]; then
+   echo "FAIL: PRD dir nao existe: $PRD_DIR" >&2
+   exit 1
+ fi
+ 
++if [[ "${POST_WAVE_LOCK_HELD:-0}" != "1" ]]; then
++  if ! command -v flock >/dev/null 2>&1; then
++    echo "FAIL: flock ausente no PATH; instale util-linux/flock para post-wave.sh" >&2
++    exit 1
++  fi
++  exec env POST_WAVE_LOCK_HELD=1 flock -x -w 30 "$LOCK_FILE" "$0" "$@"
++fi
++
++sanitize_stream() {
++  sed -E \
++    -e 's/-----BEGIN [A-Z ]*PRIVATE KEY-----.*-----END [A-Z ]*PRIVATE KEY-----/[REDACTED:pem_private_key]/g' \
++    -e 's/(gh[po]_|sk-|AKIA)[A-Za-z0-9_-]{10,}/[REDACTED:provider_token]/g' \
++    -e 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[REDACTED:jwt]/g' \
++    -e 's/([Aa]uthorization:[[:space:]]*).+/\1[REDACTED:authorization_header]/g' \
++    -e 's/^([A-Z][A-Z0-9_]*(SECRET|TOKEN|KEY|PASSWORD|PASS|CREDENTIAL)[A-Z0-9_]*=).+/\1[REDACTED:dotenv_secret]/g'
++}
++
++atomic_write() {
++  local target="$1"
++  local tmp
++  tmp="$(mktemp "$PRD_DIR/.tmp-post-wave.XXXXXX")"
++  cat > "$tmp"
++  mv "$tmp" "$target"
++}
++
+ ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+ 
+-# Header inicial se ainda nao existe
+ if [[ ! -f "$PARTIAL_MD" ]]; then
+-  cat > "$PARTIAL_MD.tmp" <<EOF
++  atomic_write "$PARTIAL_MD" <<EOF
+ # Relatorio de Orquestracao (parcial)
+ 
+ PRD: $PRD_SLUG
+@@ -51,23 +79,28 @@ Iniciado: $ts
+ ## Waves Executadas
+ 
+ EOF
+-  mv "$PARTIAL_MD.tmp" "$PARTIAL_MD"
+ fi
+ 
+-# Append entry da wave
++WAVE_MARKER="### Wave $WAVE_ID —"
++if grep -qF "$WAVE_MARKER" "$PARTIAL_MD" 2>/dev/null; then
++  echo "post-wave: wave $WAVE_ID ja registrada em $PARTIAL_MD, ignorando (idempotente)" >&2
++  exit 0
++fi
++
+ {
++  cat "$PARTIAL_MD"
+   echo
+   echo "### Wave $WAVE_ID — $ts"
+   echo
+   if [[ -n "$RESULTS_FILE" && -s "$RESULTS_FILE" ]]; then
+     echo '```yaml'
+-    cat "$RESULTS_FILE"
++    sanitize_stream < "$RESULTS_FILE"
+     echo
+     echo '```'
+   else
+     echo "(sem resultados anexados)"
+   fi
+-} >> "$PARTIAL_MD"
++} | atomic_write "$PARTIAL_MD"
+ 
+ echo "post-wave: checkpoint atualizado em $PARTIAL_MD" >&2
+ exit 0
+diff --git a/.github/hooks/post-execute-task.sh b/.github/hooks/post-execute-task.sh
+index 2ba58be..421a851 100755
+--- a/.github/hooks/post-execute-task.sh
++++ b/.github/hooks/post-execute-task.sh
+@@ -218,13 +218,13 @@ fi
+ # === F25: checkpoint deve existir se status=done ===
+ # Default: FAIL bloqueante. Override via AI_ALLOW_MISSING_CHECKPOINT=1 (back compat com execute-task <v1.4)
+ if [[ "$status" == "done" ]]; then
+-  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.yaml"
++  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.json"
+   if [[ ! -s "$checkpoint" ]]; then
+     if [[ "${AI_ALLOW_MISSING_CHECKPOINT:-0}" == "1" ]]; then
+       echo "WARN F25: checkpoint ausente em $checkpoint (back compat: AI_ALLOW_MISSING_CHECKPOINT=1)" >&2
+       warnings=$((warnings+1))
+     else
+-      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu YAML antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
++      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu JSON antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
+       errors=$((errors+1))
+     fi
+   fi
+diff --git a/.github/hooks/post-wave.sh b/.github/hooks/post-wave.sh
+index 90528e1..1ca362c 100755
+--- a/.github/hooks/post-wave.sh
++++ b/.github/hooks/post-wave.sh
+@@ -8,12 +8,15 @@
+ #
+ # Comportamento:
+ #   - Cria/atualiza .specs/prd-<slug>/_orchestration_report.partial.md
+-#   - Append-only: cada chamada adiciona uma seção da wave
++#   - Idempotente: reexecutar com o mesmo <wave-id> nao duplica a secao
++#   - Atomico: escrita completa via temporario + rename, sob flock
++#   - Sanitiza segredos do YAML de resultados antes de embutir no relatorio
+ #   - Quando o orquestrador concluir todas as waves, fica responsavel por
+ #     renomear .partial.md -> _orchestration_report.md (rename atomico)
+ #
+ # Exit:
+-#   0 — checkpoint escrito
++#   0 — checkpoint escrito (ou wave ja registrada, idempotente)
++#   1 — falha de IO
+ #   2 — argumentos invalidos
+ 
+ set -euo pipefail
+@@ -32,17 +35,42 @@ TASKS_ROOT="${AI_TASKS_ROOT:-.specs}"
+ PRD_PREFIX="${AI_PRD_PREFIX:-prd-}"
+ PRD_DIR="$REPO_ROOT/$TASKS_ROOT/$PRD_PREFIX$PRD_SLUG"
+ PARTIAL_MD="$PRD_DIR/_orchestration_report.partial.md"
++LOCK_FILE="$PARTIAL_MD.lock"
+ 
+ if [[ ! -d "$PRD_DIR" ]]; then
+   echo "FAIL: PRD dir nao existe: $PRD_DIR" >&2
+   exit 1
+ fi
+ 
++if [[ "${POST_WAVE_LOCK_HELD:-0}" != "1" ]]; then
++  if ! command -v flock >/dev/null 2>&1; then
++    echo "FAIL: flock ausente no PATH; instale util-linux/flock para post-wave.sh" >&2
++    exit 1
++  fi
++  exec env POST_WAVE_LOCK_HELD=1 flock -x -w 30 "$LOCK_FILE" "$0" "$@"
++fi
++
++sanitize_stream() {
++  sed -E \
++    -e 's/-----BEGIN [A-Z ]*PRIVATE KEY-----.*-----END [A-Z ]*PRIVATE KEY-----/[REDACTED:pem_private_key]/g' \
++    -e 's/(gh[po]_|sk-|AKIA)[A-Za-z0-9_-]{10,}/[REDACTED:provider_token]/g' \
++    -e 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[REDACTED:jwt]/g' \
++    -e 's/([Aa]uthorization:[[:space:]]*).+/\1[REDACTED:authorization_header]/g' \
++    -e 's/^([A-Z][A-Z0-9_]*(SECRET|TOKEN|KEY|PASSWORD|PASS|CREDENTIAL)[A-Z0-9_]*=).+/\1[REDACTED:dotenv_secret]/g'
++}
++
++atomic_write() {
++  local target="$1"
++  local tmp
++  tmp="$(mktemp "$PRD_DIR/.tmp-post-wave.XXXXXX")"
++  cat > "$tmp"
++  mv "$tmp" "$target"
++}
++
+ ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+ 
+-# Header inicial se ainda nao existe
+ if [[ ! -f "$PARTIAL_MD" ]]; then
+-  cat > "$PARTIAL_MD.tmp" <<EOF
++  atomic_write "$PARTIAL_MD" <<EOF
+ # Relatorio de Orquestracao (parcial)
+ 
+ PRD: $PRD_SLUG
+@@ -51,23 +79,28 @@ Iniciado: $ts
+ ## Waves Executadas
+ 
+ EOF
+-  mv "$PARTIAL_MD.tmp" "$PARTIAL_MD"
+ fi
+ 
+-# Append entry da wave
++WAVE_MARKER="### Wave $WAVE_ID —"
++if grep -qF "$WAVE_MARKER" "$PARTIAL_MD" 2>/dev/null; then
++  echo "post-wave: wave $WAVE_ID ja registrada em $PARTIAL_MD, ignorando (idempotente)" >&2
++  exit 0
++fi
++
+ {
++  cat "$PARTIAL_MD"
+   echo
+   echo "### Wave $WAVE_ID — $ts"
+   echo
+   if [[ -n "$RESULTS_FILE" && -s "$RESULTS_FILE" ]]; then
+     echo '```yaml'
+-    cat "$RESULTS_FILE"
++    sanitize_stream < "$RESULTS_FILE"
+     echo
+     echo '```'
+   else
+     echo "(sem resultados anexados)"
+   fi
+-} >> "$PARTIAL_MD"
++} | atomic_write "$PARTIAL_MD"
+ 
+ echo "post-wave: checkpoint atualizado em $PARTIAL_MD" >&2
+ exit 0
+diff --git a/.github/skills/execute-task/SKILL.md b/.github/skills/execute-task/SKILL.md
+index 1f75d14..f625491 100644
+--- a/.github/skills/execute-task/SKILL.md
++++ b/.github/skills/execute-task/SKILL.md
+@@ -79,10 +79,10 @@ description: Executa uma tarefa de implementação aprovada via codificação, v
+ **Etapa 5: Persistir evidências (F25 checkpoint)**
+ 1. Salvar `.specs/prd-<slug>/[num]_execution_report.md` (overwrite com `# Generated: <ISO-8601 UTC>` no header — F36) a partir de `assets/task-execution-report-template.md`.
+ 2. Rodar validador de evidências (resolver em cascata portátil: `.agents/scripts/...` → `.claude/scripts/...` → `scripts/...`). Nenhum → `failed`. Falha → `blocked`; não mutar tasks.md.
+-3. **Checkpoint YAML antes de mutar tasks.md (F25)**:
++3. **Checkpoint JSON antes de mutar tasks.md (F25)**:
+    - `mkdir -p .specs/prd-<slug>/.checkpoints/`.
+-   - Escrever `.checkpoints/<num>.yaml.tmp` com `status`, `report_path`, `summary`, `timestamp` (ISO-8601 UTC).
+-   - `mv -n .yaml.tmp .yaml` atômico. Completo ou inexistente, nunca parcial.
++   - Escrever `.checkpoints/<num>.json.tmp` com `status`, `report_path`, `summary`, `timestamp` (ISO-8601 UTC).
++   - `mv -n .json.tmp .json` atômico. Completo ou inexistente, nunca parcial.
+ 4. **Só após checkpoint persistido**, mutar tasks.md para `done`.
+ 5. **Lock atômico em tasks.md (F3+F32)** quando invocador é `execute-all-tasks` em wave paralela:
+    - POSIX: `flock -x -w 30 .specs/prd-<slug>/tasks.md.lock -c '<edit>'`.
+diff --git a/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md b/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md
+index 9e5801e..1f412c0 100644
+--- a/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md
++++ b/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md
+@@ -33,7 +33,7 @@
+ | 8.0 | Adapters dos quatro provedores com SessionStart e SessionEnd reais | done | 5.0 | Com 10.0 | — |
+ | 9.0 | Matriz de capabilities por evento e familia com doctor de hooks | pending | 3.0, 8.0 | Com 12.0 | — |
+ | 10.0 | Quality gate disparado por evento com selecao por risco e deduplicacao | done | 4.0, 7.0 | Com 8.0, 11.0 | — |
+-| 11.0 | Evidence gate, checkpoint atomico, deteccao de corrupcao e sanitizacao | pending | 3.0, 4.0 | Com 10.0 | — |
++| 11.0 | Evidence gate, checkpoint atomico, deteccao de corrupcao e sanitizacao | done | 3.0, 4.0 | Com 10.0 | — |
+ | 12.0 | Telemetria comum, ablation, timeout e guarda de recursao | pending | 4.0, 8.0 | Com 9.0 | — |
+ | 13.0 | Conformidade cross-provider, nao-regressao e documentacao | pending | 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0 | Não | — |
+ 
+diff --git a/cmd/ai_spec_harness/seal_evidence.go b/cmd/ai_spec_harness/seal_evidence.go
+index 2d4b067..5225263 100644
+--- a/cmd/ai_spec_harness/seal_evidence.go
++++ b/cmd/ai_spec_harness/seal_evidence.go
+@@ -8,6 +8,7 @@ import (
+ 
+ 	"github.com/spf13/cobra"
+ 
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/sdd"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/taskloop"
+ )
+@@ -69,7 +70,7 @@ Exemplos:
+ 			if err != nil {
+ 				return fmt.Errorf("serializar resultado selado: %w", err)
+ 			}
+-			if err := os.WriteFile(resultPath, append(encoded, '\n'), 0o644); err != nil {
++			if err := fs.NewOSFileSystem().WriteFileAtomic(resultPath, append(encoded, '\n')); err != nil {
+ 				return fmt.Errorf("gravar resultado selado: %w", err)
+ 			}
+ 			fmt.Fprintf(cmd.OutOrStdout(), "OK: evidencia da tarefa %s selada no commit %s (patch %s)\n",
+diff --git a/docs/hook-inventory.md b/docs/hook-inventory.md
+index 655f391..9b4647c 100644
+--- a/docs/hook-inventory.md
++++ b/docs/hook-inventory.md
+@@ -14,16 +14,16 @@ validate-session-end.sh | .agents/hooks/validate-session-end.sh | lifecycle | Ve
+ check-invocation-depth.sh | .agents/lib/check-invocation-depth.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
+ hook-payload.sh | .agents/lib/hook-payload.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
+ parse-hook-input.sh | .agents/lib/parse-hook-input.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
+-git-operation-gate.sh | .agents/scripts/git-operation-gate.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-OPEN (.agents/scripts/git-operation-gate.sh:39-41) | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 878eb8b8bd98d32b97766ca76a32c924a57b05e622107a83acdd3ff8154864b4
++git-operation-gate.sh | .agents/scripts/git-operation-gate.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-OPEN (.agents/scripts/git-operation-gate.sh:39-41) | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | fc28df0732a4c45bd5a653a411a7e0dab8d146acdc0c0139a5fbe52d9b8b3251
+ hook-prereq-gate.sh | .agents/scripts/hook-prereq-gate.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-OPEN (.agents/scripts/hook-prereq-gate.sh:50,60) | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 4cbac9dc702377666d89de10da4631e7db76ba10f46006c0a3a5a3af5f3dc07e
+ resolve-references.sh | .agents/scripts/resolve-references.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
+ validate-bugfix-evidence.sh | .agents/scripts/validate-bugfix-evidence.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 7ce4468dbec8e2edcc9686158686e1aa7ace2f24ea0888fc8a0fa78b827217a3
+ validate-governance-references.sh | .agents/scripts/validate-governance-references.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | SEM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | ON-DEMAND | Orfao de invocacao: nao possui call-site executavel no repositorio. | fae7c9e655fc386bd7557347203b69c7a46d800ed20e85845b098a5ab0aa2aba
+ validate-refactor-evidence.sh | .agents/scripts/validate-refactor-evidence.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 5afec7f2ff94bed0d2445c84062a3e6e3a322fc801485da73cbc97c90862de65
+-validate-review-evidence.sh | .agents/scripts/validate-review-evidence.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 1de471051b63dede02081bf528439b81e568e743b7d01ef609260a448e280343
++validate-review-evidence.sh | .agents/scripts/validate-review-evidence.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | cffe4095d5a6f1cd461ebf2b74c10be87fd21fa44bdded263307955258194de1
+ validate-session-end.sh | .agents/scripts/validate-session-end.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 2ead6a2105c5aa8cbbb8d26acb72ae94e8eaf9ea7d93b263ff4074beacf8ba64
+ validate-skill-prerequisites.sh | .agents/scripts/validate-skill-prerequisites.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 74db2341d628473572a03248e279bf5d4deb489e5cddb25804760e55f5e6d613
+-validate-task-evidence.sh | .agents/scripts/validate-task-evidence.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | ecdec54d106319de6cf58c7fd9c9cb66e354fb3072ad76a3c3df4756554d6ced
++validate-task-evidence.sh | .agents/scripts/validate-task-evidence.sh | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 4aa752f5165e8954442d521c3939cf744ff2d3b2fadd584c914301f73f029133
+ post-execute-task.sh | .claude/hooks/post-execute-task.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
+ post-wave.sh | .claude/hooks/post-wave.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | SEM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
+ pre-execute-all-tasks.sh | .claude/hooks/pre-execute-all-tasks.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
+@@ -32,16 +32,16 @@ validate-governance.sh | .claude/hooks/validate-governance.sh | lifecycle | Clau
+ validate-preload.sh | .claude/hooks/validate-preload.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | fc654ab8f045233dd5eb5bb204d003b65064171704baa89b982ff03d5ee291e5
+ validate-session-end.sh | .claude/hooks/validate-session-end.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 2ead6a2105c5aa8cbbb8d26acb72ae94e8eaf9ea7d93b263ff4074beacf8ba64
+ validate-token-budget.sh | .claude/hooks/validate-token-budget.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | ON-DEMAND | LOCAL-ONLY inerte: allowlist CLAUDE_LOCAL_ONLY_HOOKS impede espelhamento e nao ha registro em settings. | 1aa27010b20b72f8e4991565fa90b82d9bb39a8c8018de5bc77a1ddfa632593f
+-git-operation-gate.sh | .claude/scripts/git-operation-gate.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 878eb8b8bd98d32b97766ca76a32c924a57b05e622107a83acdd3ff8154864b4
++git-operation-gate.sh | .claude/scripts/git-operation-gate.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | fc28df0732a4c45bd5a653a411a7e0dab8d146acdc0c0139a5fbe52d9b8b3251
+ hook-prereq-gate.sh | .claude/scripts/hook-prereq-gate.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 4cbac9dc702377666d89de10da4631e7db76ba10f46006c0a3a5a3af5f3dc07e
+ resolve-references.sh | .claude/scripts/resolve-references.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
+ validate-bugfix-evidence.sh | .claude/scripts/validate-bugfix-evidence.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 7ce4468dbec8e2edcc9686158686e1aa7ace2f24ea0888fc8a0fa78b827217a3
+ validate-governance-references.sh | .claude/scripts/validate-governance-references.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | fae7c9e655fc386bd7557347203b69c7a46d800ed20e85845b098a5ab0aa2aba
+ validate-refactor-evidence.sh | .claude/scripts/validate-refactor-evidence.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 5afec7f2ff94bed0d2445c84062a3e6e3a322fc801485da73cbc97c90862de65
+-validate-review-evidence.sh | .claude/scripts/validate-review-evidence.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 1de471051b63dede02081bf528439b81e568e743b7d01ef609260a448e280343
++validate-review-evidence.sh | .claude/scripts/validate-review-evidence.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | cffe4095d5a6f1cd461ebf2b74c10be87fd21fa44bdded263307955258194de1
+ validate-session-end.sh | .claude/scripts/validate-session-end.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 2ead6a2105c5aa8cbbb8d26acb72ae94e8eaf9ea7d93b263ff4074beacf8ba64
+ validate-skill-prerequisites.sh | .claude/scripts/validate-skill-prerequisites.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 74db2341d628473572a03248e279bf5d4deb489e5cddb25804760e55f5e6d613
+-validate-task-evidence.sh | .claude/scripts/validate-task-evidence.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | ecdec54d106319de6cf58c7fd9c9cb66e354fb3072ad76a3c3df4756554d6ced
++validate-task-evidence.sh | .claude/scripts/validate-task-evidence.sh | lifecycle | Claude | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Possui espelhos por provedor ou distribuicao embarcada. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 4aa752f5165e8954442d521c3939cf744ff2d3b2fadd584c914301f73f029133
+ post-execute-task.sh | .codex/hooks/post-execute-task.sh | lifecycle | Codex | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Sem espelho equivalente inventariado. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
+ post-wave.sh | .codex/hooks/post-wave.sh | lifecycle | Codex | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Sem espelho equivalente inventariado. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
+ pre-execute-all-tasks.sh | .codex/hooks/pre-execute-all-tasks.sh | lifecycle | Codex | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Sem espelho equivalente inventariado. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
+@@ -62,6 +62,8 @@ governance.go | internal/runtime/hooks/governance.go | lifecycle | Runtime ACP |
+ memory_events.go | internal/runtime/hooks/memory_events.go | lifecycle | Runtime ACP | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Sem espelho equivalente inventariado. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
+ memory_evidence.go | internal/runtime/hooks/memory_evidence.go | lifecycle | Runtime ACP | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Sem espelho equivalente inventariado. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
+ memory_persist.go | internal/runtime/hooks/memory_persist.go | lifecycle | Runtime ACP | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Sem espelho equivalente inventariado. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
++projection.go | internal/runtime/hooks/projection.go | lifecycle | Runtime ACP | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Sem espelho equivalente inventariado. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
++quality_gate.go | internal/runtime/hooks/quality_gate.go | lifecycle | Runtime ACP | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Sem espelho equivalente inventariado. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | e0db7ee84233494fbf39ef739f01de4970132c4d5fb47f65dc739401254f9ff0
+ spec_drift.go | internal/runtime/hooks/spec_drift.go | lifecycle | Runtime ACP | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Sem espelho equivalente inventariado. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
+ token_budget.go | internal/runtime/hooks/token_budget.go | lifecycle | Runtime ACP | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-CLOSED | COM TESTE | Sem espelho equivalente inventariado. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 
+ pre-commit | scripts/git-hooks/pre-commit | lifecycle | Vendor-neutral | Aplica governanca operacional no ponto de hook declarado. | Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido. | NAO BLOQUEANTE | baixo | FAIL-OPEN (permissivo; linhas 41,54,58,61,66) | COM TESTE (parcial: apenas bloco 3; scripts/test-hooks.sh:538) | Sem espelho equivalente inventariado. | KEEP | Mantido por proteger governanca ativa ou por ser espelho distribuido. | 959a4bebda410cb585dcc4c34898fb0e6c8a2f2a0b0548cb6922729ca151872b
+diff --git a/internal/embedded/assets/.agents/hooks/post-execute-task.sh b/internal/embedded/assets/.agents/hooks/post-execute-task.sh
+index 2ba58be..421a851 100755
+--- a/internal/embedded/assets/.agents/hooks/post-execute-task.sh
++++ b/internal/embedded/assets/.agents/hooks/post-execute-task.sh
+@@ -218,13 +218,13 @@ fi
+ # === F25: checkpoint deve existir se status=done ===
+ # Default: FAIL bloqueante. Override via AI_ALLOW_MISSING_CHECKPOINT=1 (back compat com execute-task <v1.4)
+ if [[ "$status" == "done" ]]; then
+-  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.yaml"
++  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.json"
+   if [[ ! -s "$checkpoint" ]]; then
+     if [[ "${AI_ALLOW_MISSING_CHECKPOINT:-0}" == "1" ]]; then
+       echo "WARN F25: checkpoint ausente em $checkpoint (back compat: AI_ALLOW_MISSING_CHECKPOINT=1)" >&2
+       warnings=$((warnings+1))
+     else
+-      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu YAML antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
++      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu JSON antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
+       errors=$((errors+1))
+     fi
+   fi
+diff --git a/internal/embedded/assets/.agents/hooks/post-wave.sh b/internal/embedded/assets/.agents/hooks/post-wave.sh
+index 90528e1..1ca362c 100755
+--- a/internal/embedded/assets/.agents/hooks/post-wave.sh
++++ b/internal/embedded/assets/.agents/hooks/post-wave.sh
+@@ -8,12 +8,15 @@
+ #
+ # Comportamento:
+ #   - Cria/atualiza .specs/prd-<slug>/_orchestration_report.partial.md
+-#   - Append-only: cada chamada adiciona uma seção da wave
++#   - Idempotente: reexecutar com o mesmo <wave-id> nao duplica a secao
++#   - Atomico: escrita completa via temporario + rename, sob flock
++#   - Sanitiza segredos do YAML de resultados antes de embutir no relatorio
+ #   - Quando o orquestrador concluir todas as waves, fica responsavel por
+ #     renomear .partial.md -> _orchestration_report.md (rename atomico)
+ #
+ # Exit:
+-#   0 — checkpoint escrito
++#   0 — checkpoint escrito (ou wave ja registrada, idempotente)
++#   1 — falha de IO
+ #   2 — argumentos invalidos
+ 
+ set -euo pipefail
+@@ -32,17 +35,42 @@ TASKS_ROOT="${AI_TASKS_ROOT:-.specs}"
+ PRD_PREFIX="${AI_PRD_PREFIX:-prd-}"
+ PRD_DIR="$REPO_ROOT/$TASKS_ROOT/$PRD_PREFIX$PRD_SLUG"
+ PARTIAL_MD="$PRD_DIR/_orchestration_report.partial.md"
++LOCK_FILE="$PARTIAL_MD.lock"
+ 
+ if [[ ! -d "$PRD_DIR" ]]; then
+   echo "FAIL: PRD dir nao existe: $PRD_DIR" >&2
+   exit 1
+ fi
+ 
++if [[ "${POST_WAVE_LOCK_HELD:-0}" != "1" ]]; then
++  if ! command -v flock >/dev/null 2>&1; then
++    echo "FAIL: flock ausente no PATH; instale util-linux/flock para post-wave.sh" >&2
++    exit 1
++  fi
++  exec env POST_WAVE_LOCK_HELD=1 flock -x -w 30 "$LOCK_FILE" "$0" "$@"
++fi
++
++sanitize_stream() {
++  sed -E \
++    -e 's/-----BEGIN [A-Z ]*PRIVATE KEY-----.*-----END [A-Z ]*PRIVATE KEY-----/[REDACTED:pem_private_key]/g' \
++    -e 's/(gh[po]_|sk-|AKIA)[A-Za-z0-9_-]{10,}/[REDACTED:provider_token]/g' \
++    -e 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[REDACTED:jwt]/g' \
++    -e 's/([Aa]uthorization:[[:space:]]*).+/\1[REDACTED:authorization_header]/g' \
++    -e 's/^([A-Z][A-Z0-9_]*(SECRET|TOKEN|KEY|PASSWORD|PASS|CREDENTIAL)[A-Z0-9_]*=).+/\1[REDACTED:dotenv_secret]/g'
++}
++
++atomic_write() {
++  local target="$1"
++  local tmp
++  tmp="$(mktemp "$PRD_DIR/.tmp-post-wave.XXXXXX")"
++  cat > "$tmp"
++  mv "$tmp" "$target"
++}
++
+ ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+ 
+-# Header inicial se ainda nao existe
+ if [[ ! -f "$PARTIAL_MD" ]]; then
+-  cat > "$PARTIAL_MD.tmp" <<EOF
++  atomic_write "$PARTIAL_MD" <<EOF
+ # Relatorio de Orquestracao (parcial)
+ 
+ PRD: $PRD_SLUG
+@@ -51,23 +79,28 @@ Iniciado: $ts
+ ## Waves Executadas
+ 
+ EOF
+-  mv "$PARTIAL_MD.tmp" "$PARTIAL_MD"
+ fi
+ 
+-# Append entry da wave
++WAVE_MARKER="### Wave $WAVE_ID —"
++if grep -qF "$WAVE_MARKER" "$PARTIAL_MD" 2>/dev/null; then
++  echo "post-wave: wave $WAVE_ID ja registrada em $PARTIAL_MD, ignorando (idempotente)" >&2
++  exit 0
++fi
++
+ {
++  cat "$PARTIAL_MD"
+   echo
+   echo "### Wave $WAVE_ID — $ts"
+   echo
+   if [[ -n "$RESULTS_FILE" && -s "$RESULTS_FILE" ]]; then
+     echo '```yaml'
+-    cat "$RESULTS_FILE"
++    sanitize_stream < "$RESULTS_FILE"
+     echo
+     echo '```'
+   else
+     echo "(sem resultados anexados)"
+   fi
+-} >> "$PARTIAL_MD"
++} | atomic_write "$PARTIAL_MD"
+ 
+ echo "post-wave: checkpoint atualizado em $PARTIAL_MD" >&2
+ exit 0
+diff --git a/internal/embedded/assets/.agents/skills/execute-task/SKILL.md b/internal/embedded/assets/.agents/skills/execute-task/SKILL.md
+index 1f75d14..f625491 100644
+--- a/internal/embedded/assets/.agents/skills/execute-task/SKILL.md
++++ b/internal/embedded/assets/.agents/skills/execute-task/SKILL.md
+@@ -79,10 +79,10 @@ description: Executa uma tarefa de implementação aprovada via codificação, v
+ **Etapa 5: Persistir evidências (F25 checkpoint)**
+ 1. Salvar `.specs/prd-<slug>/[num]_execution_report.md` (overwrite com `# Generated: <ISO-8601 UTC>` no header — F36) a partir de `assets/task-execution-report-template.md`.
+ 2. Rodar validador de evidências (resolver em cascata portátil: `.agents/scripts/...` → `.claude/scripts/...` → `scripts/...`). Nenhum → `failed`. Falha → `blocked`; não mutar tasks.md.
+-3. **Checkpoint YAML antes de mutar tasks.md (F25)**:
++3. **Checkpoint JSON antes de mutar tasks.md (F25)**:
+    - `mkdir -p .specs/prd-<slug>/.checkpoints/`.
+-   - Escrever `.checkpoints/<num>.yaml.tmp` com `status`, `report_path`, `summary`, `timestamp` (ISO-8601 UTC).
+-   - `mv -n .yaml.tmp .yaml` atômico. Completo ou inexistente, nunca parcial.
++   - Escrever `.checkpoints/<num>.json.tmp` com `status`, `report_path`, `summary`, `timestamp` (ISO-8601 UTC).
++   - `mv -n .json.tmp .json` atômico. Completo ou inexistente, nunca parcial.
+ 4. **Só após checkpoint persistido**, mutar tasks.md para `done`.
+ 5. **Lock atômico em tasks.md (F3+F32)** quando invocador é `execute-all-tasks` em wave paralela:
+    - POSIX: `flock -x -w 30 .specs/prd-<slug>/tasks.md.lock -c '<edit>'`.
+diff --git a/internal/embedded/assets/.claude/hooks/post-execute-task.sh b/internal/embedded/assets/.claude/hooks/post-execute-task.sh
+index 2ba58be..421a851 100755
+--- a/internal/embedded/assets/.claude/hooks/post-execute-task.sh
++++ b/internal/embedded/assets/.claude/hooks/post-execute-task.sh
+@@ -218,13 +218,13 @@ fi
+ # === F25: checkpoint deve existir se status=done ===
+ # Default: FAIL bloqueante. Override via AI_ALLOW_MISSING_CHECKPOINT=1 (back compat com execute-task <v1.4)
+ if [[ "$status" == "done" ]]; then
+-  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.yaml"
++  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.json"
+   if [[ ! -s "$checkpoint" ]]; then
+     if [[ "${AI_ALLOW_MISSING_CHECKPOINT:-0}" == "1" ]]; then
+       echo "WARN F25: checkpoint ausente em $checkpoint (back compat: AI_ALLOW_MISSING_CHECKPOINT=1)" >&2
+       warnings=$((warnings+1))
+     else
+-      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu YAML antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
++      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu JSON antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
+       errors=$((errors+1))
+     fi
+   fi
+diff --git a/internal/embedded/assets/.claude/hooks/post-wave.sh b/internal/embedded/assets/.claude/hooks/post-wave.sh
+index 90528e1..1ca362c 100755
+--- a/internal/embedded/assets/.claude/hooks/post-wave.sh
++++ b/internal/embedded/assets/.claude/hooks/post-wave.sh
+@@ -8,12 +8,15 @@
+ #
+ # Comportamento:
+ #   - Cria/atualiza .specs/prd-<slug>/_orchestration_report.partial.md
+-#   - Append-only: cada chamada adiciona uma seção da wave
++#   - Idempotente: reexecutar com o mesmo <wave-id> nao duplica a secao
++#   - Atomico: escrita completa via temporario + rename, sob flock
++#   - Sanitiza segredos do YAML de resultados antes de embutir no relatorio
+ #   - Quando o orquestrador concluir todas as waves, fica responsavel por
+ #     renomear .partial.md -> _orchestration_report.md (rename atomico)
+ #
+ # Exit:
+-#   0 — checkpoint escrito
++#   0 — checkpoint escrito (ou wave ja registrada, idempotente)
++#   1 — falha de IO
+ #   2 — argumentos invalidos
+ 
+ set -euo pipefail
+@@ -32,17 +35,42 @@ TASKS_ROOT="${AI_TASKS_ROOT:-.specs}"
+ PRD_PREFIX="${AI_PRD_PREFIX:-prd-}"
+ PRD_DIR="$REPO_ROOT/$TASKS_ROOT/$PRD_PREFIX$PRD_SLUG"
+ PARTIAL_MD="$PRD_DIR/_orchestration_report.partial.md"
++LOCK_FILE="$PARTIAL_MD.lock"
+ 
+ if [[ ! -d "$PRD_DIR" ]]; then
+   echo "FAIL: PRD dir nao existe: $PRD_DIR" >&2
+   exit 1
+ fi
+ 
++if [[ "${POST_WAVE_LOCK_HELD:-0}" != "1" ]]; then
++  if ! command -v flock >/dev/null 2>&1; then
++    echo "FAIL: flock ausente no PATH; instale util-linux/flock para post-wave.sh" >&2
++    exit 1
++  fi
++  exec env POST_WAVE_LOCK_HELD=1 flock -x -w 30 "$LOCK_FILE" "$0" "$@"
++fi
++
++sanitize_stream() {
++  sed -E \
++    -e 's/-----BEGIN [A-Z ]*PRIVATE KEY-----.*-----END [A-Z ]*PRIVATE KEY-----/[REDACTED:pem_private_key]/g' \
++    -e 's/(gh[po]_|sk-|AKIA)[A-Za-z0-9_-]{10,}/[REDACTED:provider_token]/g' \
++    -e 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[REDACTED:jwt]/g' \
++    -e 's/([Aa]uthorization:[[:space:]]*).+/\1[REDACTED:authorization_header]/g' \
++    -e 's/^([A-Z][A-Z0-9_]*(SECRET|TOKEN|KEY|PASSWORD|PASS|CREDENTIAL)[A-Z0-9_]*=).+/\1[REDACTED:dotenv_secret]/g'
++}
++
++atomic_write() {
++  local target="$1"
++  local tmp
++  tmp="$(mktemp "$PRD_DIR/.tmp-post-wave.XXXXXX")"
++  cat > "$tmp"
++  mv "$tmp" "$target"
++}
++
+ ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+ 
+-# Header inicial se ainda nao existe
+ if [[ ! -f "$PARTIAL_MD" ]]; then
+-  cat > "$PARTIAL_MD.tmp" <<EOF
++  atomic_write "$PARTIAL_MD" <<EOF
+ # Relatorio de Orquestracao (parcial)
+ 
+ PRD: $PRD_SLUG
+@@ -51,23 +79,28 @@ Iniciado: $ts
+ ## Waves Executadas
+ 
+ EOF
+-  mv "$PARTIAL_MD.tmp" "$PARTIAL_MD"
+ fi
+ 
+-# Append entry da wave
++WAVE_MARKER="### Wave $WAVE_ID —"
++if grep -qF "$WAVE_MARKER" "$PARTIAL_MD" 2>/dev/null; then
++  echo "post-wave: wave $WAVE_ID ja registrada em $PARTIAL_MD, ignorando (idempotente)" >&2
++  exit 0
++fi
++
+ {
++  cat "$PARTIAL_MD"
+   echo
+   echo "### Wave $WAVE_ID — $ts"
+   echo
+   if [[ -n "$RESULTS_FILE" && -s "$RESULTS_FILE" ]]; then
+     echo '```yaml'
+-    cat "$RESULTS_FILE"
++    sanitize_stream < "$RESULTS_FILE"
+     echo
+     echo '```'
+   else
+     echo "(sem resultados anexados)"
+   fi
+-} >> "$PARTIAL_MD"
++} | atomic_write "$PARTIAL_MD"
+ 
+ echo "post-wave: checkpoint atualizado em $PARTIAL_MD" >&2
+ exit 0
+diff --git a/internal/embedded/assets/.codex/hooks/post-execute-task.sh b/internal/embedded/assets/.codex/hooks/post-execute-task.sh
+index 2ba58be..421a851 100755
+--- a/internal/embedded/assets/.codex/hooks/post-execute-task.sh
++++ b/internal/embedded/assets/.codex/hooks/post-execute-task.sh
+@@ -218,13 +218,13 @@ fi
+ # === F25: checkpoint deve existir se status=done ===
+ # Default: FAIL bloqueante. Override via AI_ALLOW_MISSING_CHECKPOINT=1 (back compat com execute-task <v1.4)
+ if [[ "$status" == "done" ]]; then
+-  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.yaml"
++  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.json"
+   if [[ ! -s "$checkpoint" ]]; then
+     if [[ "${AI_ALLOW_MISSING_CHECKPOINT:-0}" == "1" ]]; then
+       echo "WARN F25: checkpoint ausente em $checkpoint (back compat: AI_ALLOW_MISSING_CHECKPOINT=1)" >&2
+       warnings=$((warnings+1))
+     else
+-      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu YAML antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
++      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu JSON antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
+       errors=$((errors+1))
+     fi
+   fi
+diff --git a/internal/embedded/assets/.codex/hooks/post-wave.sh b/internal/embedded/assets/.codex/hooks/post-wave.sh
+index 90528e1..1ca362c 100755
+--- a/internal/embedded/assets/.codex/hooks/post-wave.sh
++++ b/internal/embedded/assets/.codex/hooks/post-wave.sh
+@@ -8,12 +8,15 @@
+ #
+ # Comportamento:
+ #   - Cria/atualiza .specs/prd-<slug>/_orchestration_report.partial.md
+-#   - Append-only: cada chamada adiciona uma seção da wave
++#   - Idempotente: reexecutar com o mesmo <wave-id> nao duplica a secao
++#   - Atomico: escrita completa via temporario + rename, sob flock
++#   - Sanitiza segredos do YAML de resultados antes de embutir no relatorio
+ #   - Quando o orquestrador concluir todas as waves, fica responsavel por
+ #     renomear .partial.md -> _orchestration_report.md (rename atomico)
+ #
+ # Exit:
+-#   0 — checkpoint escrito
++#   0 — checkpoint escrito (ou wave ja registrada, idempotente)
++#   1 — falha de IO
+ #   2 — argumentos invalidos
+ 
+ set -euo pipefail
+@@ -32,17 +35,42 @@ TASKS_ROOT="${AI_TASKS_ROOT:-.specs}"
+ PRD_PREFIX="${AI_PRD_PREFIX:-prd-}"
+ PRD_DIR="$REPO_ROOT/$TASKS_ROOT/$PRD_PREFIX$PRD_SLUG"
+ PARTIAL_MD="$PRD_DIR/_orchestration_report.partial.md"
++LOCK_FILE="$PARTIAL_MD.lock"
+ 
+ if [[ ! -d "$PRD_DIR" ]]; then
+   echo "FAIL: PRD dir nao existe: $PRD_DIR" >&2
+   exit 1
+ fi
+ 
++if [[ "${POST_WAVE_LOCK_HELD:-0}" != "1" ]]; then
++  if ! command -v flock >/dev/null 2>&1; then
++    echo "FAIL: flock ausente no PATH; instale util-linux/flock para post-wave.sh" >&2
++    exit 1
++  fi
++  exec env POST_WAVE_LOCK_HELD=1 flock -x -w 30 "$LOCK_FILE" "$0" "$@"
++fi
++
++sanitize_stream() {
++  sed -E \
++    -e 's/-----BEGIN [A-Z ]*PRIVATE KEY-----.*-----END [A-Z ]*PRIVATE KEY-----/[REDACTED:pem_private_key]/g' \
++    -e 's/(gh[po]_|sk-|AKIA)[A-Za-z0-9_-]{10,}/[REDACTED:provider_token]/g' \
++    -e 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[REDACTED:jwt]/g' \
++    -e 's/([Aa]uthorization:[[:space:]]*).+/\1[REDACTED:authorization_header]/g' \
++    -e 's/^([A-Z][A-Z0-9_]*(SECRET|TOKEN|KEY|PASSWORD|PASS|CREDENTIAL)[A-Z0-9_]*=).+/\1[REDACTED:dotenv_secret]/g'
++}
++
++atomic_write() {
++  local target="$1"
++  local tmp
++  tmp="$(mktemp "$PRD_DIR/.tmp-post-wave.XXXXXX")"
++  cat > "$tmp"
++  mv "$tmp" "$target"
++}
++
+ ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+ 
+-# Header inicial se ainda nao existe
+ if [[ ! -f "$PARTIAL_MD" ]]; then
+-  cat > "$PARTIAL_MD.tmp" <<EOF
++  atomic_write "$PARTIAL_MD" <<EOF
+ # Relatorio de Orquestracao (parcial)
+ 
+ PRD: $PRD_SLUG
+@@ -51,23 +79,28 @@ Iniciado: $ts
+ ## Waves Executadas
+ 
+ EOF
+-  mv "$PARTIAL_MD.tmp" "$PARTIAL_MD"
+ fi
+ 
+-# Append entry da wave
++WAVE_MARKER="### Wave $WAVE_ID —"
++if grep -qF "$WAVE_MARKER" "$PARTIAL_MD" 2>/dev/null; then
++  echo "post-wave: wave $WAVE_ID ja registrada em $PARTIAL_MD, ignorando (idempotente)" >&2
++  exit 0
++fi
++
+ {
++  cat "$PARTIAL_MD"
+   echo
+   echo "### Wave $WAVE_ID — $ts"
+   echo
+   if [[ -n "$RESULTS_FILE" && -s "$RESULTS_FILE" ]]; then
+     echo '```yaml'
+-    cat "$RESULTS_FILE"
++    sanitize_stream < "$RESULTS_FILE"
+     echo
+     echo '```'
+   else
+     echo "(sem resultados anexados)"
+   fi
+-} >> "$PARTIAL_MD"
++} | atomic_write "$PARTIAL_MD"
+ 
+ echo "post-wave: checkpoint atualizado em $PARTIAL_MD" >&2
+ exit 0
+diff --git a/internal/embedded/assets/.github/hooks/post-execute-task.sh b/internal/embedded/assets/.github/hooks/post-execute-task.sh
+index 2ba58be..421a851 100755
+--- a/internal/embedded/assets/.github/hooks/post-execute-task.sh
++++ b/internal/embedded/assets/.github/hooks/post-execute-task.sh
+@@ -218,13 +218,13 @@ fi
+ # === F25: checkpoint deve existir se status=done ===
+ # Default: FAIL bloqueante. Override via AI_ALLOW_MISSING_CHECKPOINT=1 (back compat com execute-task <v1.4)
+ if [[ "$status" == "done" ]]; then
+-  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.yaml"
++  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.json"
+   if [[ ! -s "$checkpoint" ]]; then
+     if [[ "${AI_ALLOW_MISSING_CHECKPOINT:-0}" == "1" ]]; then
+       echo "WARN F25: checkpoint ausente em $checkpoint (back compat: AI_ALLOW_MISSING_CHECKPOINT=1)" >&2
+       warnings=$((warnings+1))
+     else
+-      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu YAML antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
++      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu JSON antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
+       errors=$((errors+1))
+     fi
+   fi
+diff --git a/internal/embedded/assets/.github/hooks/post-wave.sh b/internal/embedded/assets/.github/hooks/post-wave.sh
+index 90528e1..1ca362c 100755
+--- a/internal/embedded/assets/.github/hooks/post-wave.sh
++++ b/internal/embedded/assets/.github/hooks/post-wave.sh
+@@ -8,12 +8,15 @@
+ #
+ # Comportamento:
+ #   - Cria/atualiza .specs/prd-<slug>/_orchestration_report.partial.md
+-#   - Append-only: cada chamada adiciona uma seção da wave
++#   - Idempotente: reexecutar com o mesmo <wave-id> nao duplica a secao
++#   - Atomico: escrita completa via temporario + rename, sob flock
++#   - Sanitiza segredos do YAML de resultados antes de embutir no relatorio
+ #   - Quando o orquestrador concluir todas as waves, fica responsavel por
+ #     renomear .partial.md -> _orchestration_report.md (rename atomico)
+ #
+ # Exit:
+-#   0 — checkpoint escrito
++#   0 — checkpoint escrito (ou wave ja registrada, idempotente)
++#   1 — falha de IO
+ #   2 — argumentos invalidos
+ 
+ set -euo pipefail
+@@ -32,17 +35,42 @@ TASKS_ROOT="${AI_TASKS_ROOT:-.specs}"
+ PRD_PREFIX="${AI_PRD_PREFIX:-prd-}"
+ PRD_DIR="$REPO_ROOT/$TASKS_ROOT/$PRD_PREFIX$PRD_SLUG"
+ PARTIAL_MD="$PRD_DIR/_orchestration_report.partial.md"
++LOCK_FILE="$PARTIAL_MD.lock"
+ 
+ if [[ ! -d "$PRD_DIR" ]]; then
+   echo "FAIL: PRD dir nao existe: $PRD_DIR" >&2
+   exit 1
+ fi
+ 
++if [[ "${POST_WAVE_LOCK_HELD:-0}" != "1" ]]; then
++  if ! command -v flock >/dev/null 2>&1; then
++    echo "FAIL: flock ausente no PATH; instale util-linux/flock para post-wave.sh" >&2
++    exit 1
++  fi
++  exec env POST_WAVE_LOCK_HELD=1 flock -x -w 30 "$LOCK_FILE" "$0" "$@"
++fi
++
++sanitize_stream() {
++  sed -E \
++    -e 's/-----BEGIN [A-Z ]*PRIVATE KEY-----.*-----END [A-Z ]*PRIVATE KEY-----/[REDACTED:pem_private_key]/g' \
++    -e 's/(gh[po]_|sk-|AKIA)[A-Za-z0-9_-]{10,}/[REDACTED:provider_token]/g' \
++    -e 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[REDACTED:jwt]/g' \
++    -e 's/([Aa]uthorization:[[:space:]]*).+/\1[REDACTED:authorization_header]/g' \
++    -e 's/^([A-Z][A-Z0-9_]*(SECRET|TOKEN|KEY|PASSWORD|PASS|CREDENTIAL)[A-Z0-9_]*=).+/\1[REDACTED:dotenv_secret]/g'
++}
++
++atomic_write() {
++  local target="$1"
++  local tmp
++  tmp="$(mktemp "$PRD_DIR/.tmp-post-wave.XXXXXX")"
++  cat > "$tmp"
++  mv "$tmp" "$target"
++}
++
+ ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+ 
+-# Header inicial se ainda nao existe
+ if [[ ! -f "$PARTIAL_MD" ]]; then
+-  cat > "$PARTIAL_MD.tmp" <<EOF
++  atomic_write "$PARTIAL_MD" <<EOF
+ # Relatorio de Orquestracao (parcial)
+ 
+ PRD: $PRD_SLUG
+@@ -51,23 +79,28 @@ Iniciado: $ts
+ ## Waves Executadas
+ 
+ EOF
+-  mv "$PARTIAL_MD.tmp" "$PARTIAL_MD"
+ fi
+ 
+-# Append entry da wave
++WAVE_MARKER="### Wave $WAVE_ID —"
++if grep -qF "$WAVE_MARKER" "$PARTIAL_MD" 2>/dev/null; then
++  echo "post-wave: wave $WAVE_ID ja registrada em $PARTIAL_MD, ignorando (idempotente)" >&2
++  exit 0
++fi
++
+ {
++  cat "$PARTIAL_MD"
+   echo
+   echo "### Wave $WAVE_ID — $ts"
+   echo
+   if [[ -n "$RESULTS_FILE" && -s "$RESULTS_FILE" ]]; then
+     echo '```yaml'
+-    cat "$RESULTS_FILE"
++    sanitize_stream < "$RESULTS_FILE"
+     echo
+     echo '```'
+   else
+     echo "(sem resultados anexados)"
+   fi
+-} >> "$PARTIAL_MD"
++} | atomic_write "$PARTIAL_MD"
+ 
+ echo "post-wave: checkpoint atualizado em $PARTIAL_MD" >&2
+ exit 0
+diff --git a/internal/fs/fake.go b/internal/fs/fake.go
+index 95a4114..916749b 100644
+--- a/internal/fs/fake.go
++++ b/internal/fs/fake.go
+@@ -147,6 +147,15 @@ func (f *FakeFileSystem) WriteFileAtomic(path string, data []byte) error {
+ 	return nil
+ }
+ 
++func (f *FakeFileSystem) AppendFile(path string, data []byte) error {
++	resolved := f.resolvePath(path)
++	combined := make([]byte, 0, len(f.Files[resolved])+len(data))
++	combined = append(combined, f.Files[resolved]...)
++	combined = append(combined, data...)
++	f.Files[resolved] = combined
++	return nil
++}
++
+ func (f *FakeFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
+ 	resolved := f.resolvePath(path)
+ 	seen := make(map[string]bool)
+diff --git a/internal/fs/fs.go b/internal/fs/fs.go
+index 5817771..d882655 100644
+--- a/internal/fs/fs.go
++++ b/internal/fs/fs.go
+@@ -25,6 +25,7 @@ type FileSystem interface {
+ 	ReadFile(path string) ([]byte, error)
+ 	WriteFile(path string, data []byte) error
+ 	WriteFileAtomic(path string, data []byte) error
++	AppendFile(path string, data []byte) error
+ 	ReadDir(path string) ([]os.DirEntry, error)
+ 	FileHash(path string) (string, error)
+ 	DirHash(path string) (string, error)
+@@ -203,6 +204,29 @@ func (f *OSFileSystem) WriteFileAtomic(path string, data []byte) error {
+ 	return nil
+ }
+ 
++func (f *OSFileSystem) AppendFile(path string, data []byte) error {
++	dir := filepath.Dir(path)
++	if err := os.MkdirAll(dir, 0o755); err != nil {
++		return fmt.Errorf("create directory %s: %w", dir, err)
++	}
++	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
++	if err != nil {
++		return fmt.Errorf("open file for append %s: %w", path, err)
++	}
++	if _, err := file.Write(data); err != nil {
++		_ = file.Close()
++		return fmt.Errorf("append to file %s: %w", path, err)
++	}
++	if err := file.Sync(); err != nil {
++		_ = file.Close()
++		return fmt.Errorf("sync file %s: %w", path, err)
++	}
++	if err := file.Close(); err != nil {
++		return fmt.Errorf("close file %s: %w", path, err)
++	}
++	return nil
++}
++
+ func (f *OSFileSystem) ReadDir(path string) ([]os.DirEntry, error) {
+ 	return os.ReadDir(path)
+ }
+diff --git a/internal/fs/mocks/file_system.go b/internal/fs/mocks/file_system.go
+index 9763739..9abb7a5 100644
+--- a/internal/fs/mocks/file_system.go
++++ b/internal/fs/mocks/file_system.go
+@@ -46,6 +46,63 @@ func (_m *FileSystem) EXPECT() *FileSystem_Expecter {
+ 	return &FileSystem_Expecter{mock: &_m.Mock}
+ }
+ 
++// AppendFile provides a mock function for the type FileSystem
++func (_mock *FileSystem) AppendFile(path string, data []byte) error {
++	ret := _mock.Called(path, data)
++
++	if len(ret) == 0 {
++		panic("no return value specified for AppendFile")
++	}
++
++	var r0 error
++	if returnFunc, ok := ret.Get(0).(func(string, []byte) error); ok {
++		r0 = returnFunc(path, data)
++	} else {
++		r0 = ret.Error(0)
++	}
++	return r0
++}
++
++// FileSystem_AppendFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AppendFile'
++type FileSystem_AppendFile_Call struct {
++	*mock.Call
++}
++
++// AppendFile is a helper method to define mock.On call
++//   - path string
++//   - data []byte
++func (_e *FileSystem_Expecter) AppendFile(path any, data any) *FileSystem_AppendFile_Call {
++	return &FileSystem_AppendFile_Call{Call: _e.mock.On("AppendFile", path, data)}
++}
++
++func (_c *FileSystem_AppendFile_Call) Run(run func(path string, data []byte)) *FileSystem_AppendFile_Call {
++	_c.Call.Run(func(args mock.Arguments) {
++		var arg0 string
++		if args[0] != nil {
++			arg0 = args[0].(string)
++		}
++		var arg1 []byte
++		if args[1] != nil {
++			arg1 = args[1].([]byte)
++		}
++		run(
++			arg0,
++			arg1,
++		)
++	})
++	return _c
++}
++
++func (_c *FileSystem_AppendFile_Call) Return(err error) *FileSystem_AppendFile_Call {
++	_c.Call.Return(err)
++	return _c
++}
++
++func (_c *FileSystem_AppendFile_Call) RunAndReturn(run func(path string, data []byte) error) *FileSystem_AppendFile_Call {
++	_c.Call.Return(run)
++	return _c
++}
++
+ // CopyDir provides a mock function for the type FileSystem
+ func (_mock *FileSystem) CopyDir(src string, dst string) error {
+ 	ret := _mock.Called(src, dst)
+diff --git a/internal/fs/os_test.go b/internal/fs/os_test.go
+index 41f5265..897ea87 100644
+--- a/internal/fs/os_test.go
++++ b/internal/fs/os_test.go
+@@ -682,3 +682,83 @@ func makeRootWritable(root *os.Root, name string) {
+ 		makeRootWritable(root, path.Join(name, entry.Name()))
+ 	}
+ }
++
++func TestOS_WriteFileAtomic_BreaksHardLink(t *testing.T) {
++	dir := t.TempDir()
++	f := fs.NewOSFileSystem()
++	original := filepath.Join(dir, "original.txt")
++	linked := filepath.Join(dir, "linked.txt")
++
++	if err := f.WriteFile(original, []byte("shared inode")); err != nil {
++		t.Fatalf("WriteFile: %v", err)
++	}
++	if err := os.Link(original, linked); err != nil {
++		t.Skipf("hard links unsupported on this filesystem: %v", err)
++	}
++
++	originalInfoBefore, err := os.Stat(original)
++	if err != nil {
++		t.Fatalf("Stat(original): %v", err)
++	}
++	linkedInfoBefore, err := os.Stat(linked)
++	if err != nil {
++		t.Fatalf("Stat(linked): %v", err)
++	}
++	if !os.SameFile(originalInfoBefore, linkedInfoBefore) {
++		t.Fatalf("os.Link did not produce a shared inode; test setup invalid")
++	}
++
++	if err := f.WriteFileAtomic(linked, []byte("new content")); err != nil {
++		t.Fatalf("WriteFileAtomic: %v", err)
++	}
++
++	originalInfoAfter, err := os.Stat(original)
++	if err != nil {
++		t.Fatalf("Stat(original) after: %v", err)
++	}
++	linkedInfoAfter, err := os.Stat(linked)
++	if err != nil {
++		t.Fatalf("Stat(linked) after: %v", err)
++	}
++	if os.SameFile(originalInfoAfter, linkedInfoAfter) {
++		t.Fatalf("expected WriteFileAtomic to break the hard link (ADR-006 risk R-01), but the inode is still shared")
++	}
++
++	originalContent, err := f.ReadFile(original)
++	if err != nil {
++		t.Fatalf("ReadFile(original): %v", err)
++	}
++	if string(originalContent) != "shared inode" {
++		t.Fatalf("original hard-linked file content changed unexpectedly: %q", originalContent)
++	}
++}
++
++func TestOS_WriteFileAtomic_ReplacesSymlinkInsteadOfWritingThrough(t *testing.T) {
++	dir := t.TempDir()
++	f := fs.NewOSFileSystem()
++	target := filepath.Join(dir, "target.txt")
++	link := filepath.Join(dir, "link.txt")
++
++	if err := f.WriteFile(target, []byte("original")); err != nil {
++		t.Fatalf("WriteFile: %v", err)
++	}
++	if err := os.Symlink(target, link); err != nil {
++		t.Fatalf("Symlink: %v", err)
++	}
++
++	if err := f.WriteFileAtomic(link, []byte("through the link")); err != nil {
++		t.Fatalf("WriteFileAtomic: %v", err)
++	}
++
++	if f.IsSymlink(link) {
++		t.Fatalf("expected WriteFileAtomic to replace the symlink itself (ADR-006 risk R-01), but it is still a symlink")
++	}
++
++	targetContent, err := f.ReadFile(target)
++	if err != nil {
++		t.Fatalf("ReadFile(target): %v", err)
++	}
++	if string(targetContent) != "original" {
++		t.Fatalf("expected the symlink target to remain untouched when WriteFileAtomic replaces the link, got %q", targetContent)
++	}
++}
+diff --git a/internal/runtime/memory/durable/liveness.go b/internal/runtime/memory/durable/liveness.go
+index ecd3f05..44eaab8 100644
+--- a/internal/runtime/memory/durable/liveness.go
++++ b/internal/runtime/memory/durable/liveness.go
+@@ -1,38 +1,13 @@
+ package durable
+ 
+-import (
+-	"os"
+-	"time"
+-)
++import "github.com/JailtonJunior94/ai-spec-harness/internal/procref"
+ 
+-type ProcessRef struct {
+-	PID       int
+-	Hostname  string
+-	StartedAt time.Time
+-}
++type ProcessRef = procref.ProcessRef
+ 
+-func CurrentProcessRef() ProcessRef {
+-	hostname, _ := os.Hostname()
+-	return ProcessRef{
+-		PID:       os.Getpid(),
+-		Hostname:  hostname,
+-		StartedAt: time.Now(),
+-	}
+-}
++type LivenessResult = procref.LivenessResult
+ 
+-type LivenessResult struct {
+-	Reliable bool
+-	Alive    bool
+-}
++type LivenessProbe = procref.LivenessProbe
+ 
+-type LivenessProbe interface {
+-	Probe(ref ProcessRef) LivenessResult
+-}
++var CurrentProcessRef = procref.CurrentProcessRef
+ 
+-type processLivenessProbe struct{}
+-
+-func (processLivenessProbe) Probe(ref ProcessRef) LivenessResult {
+-	return checkProcessLiveness(ref)
+-}
+-
+-var DefaultLivenessProbe LivenessProbe = processLivenessProbe{}
++var DefaultLivenessProbe = procref.DefaultLivenessProbe
+diff --git a/internal/runtime/memory/durable/mocks/liveness_probe.go b/internal/runtime/memory/durable/mocks/liveness_probe.go
+index 3fd9ea6..cfb7a8c 100644
+--- a/internal/runtime/memory/durable/mocks/liveness_probe.go
++++ b/internal/runtime/memory/durable/mocks/liveness_probe.go
+@@ -5,7 +5,7 @@
+ package mocks
+ 
+ import (
+-	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/procref"
+ 	mock "github.com/stretchr/testify/mock"
+ )
+ 
+@@ -46,18 +46,18 @@ func (_m *LivenessProbe) EXPECT() *LivenessProbe_Expecter {
+ }
+ 
+ // Probe provides a mock function for the type LivenessProbe
+-func (_mock *LivenessProbe) Probe(ref durable.ProcessRef) durable.LivenessResult {
++func (_mock *LivenessProbe) Probe(ref procref.ProcessRef) procref.LivenessResult {
+ 	ret := _mock.Called(ref)
+ 
+ 	if len(ret) == 0 {
+ 		panic("no return value specified for Probe")
+ 	}
+ 
+-	var r0 durable.LivenessResult
+-	if returnFunc, ok := ret.Get(0).(func(durable.ProcessRef) durable.LivenessResult); ok {
++	var r0 procref.LivenessResult
++	if returnFunc, ok := ret.Get(0).(func(procref.ProcessRef) procref.LivenessResult); ok {
+ 		r0 = returnFunc(ref)
+ 	} else {
+-		r0 = ret.Get(0).(durable.LivenessResult)
++		r0 = ret.Get(0).(procref.LivenessResult)
+ 	}
+ 	return r0
+ }
+@@ -68,16 +68,16 @@ type LivenessProbe_Probe_Call struct {
+ }
+ 
+ // Probe is a helper method to define mock.On call
+-//   - ref durable.ProcessRef
++//   - ref procref.ProcessRef
+ func (_e *LivenessProbe_Expecter) Probe(ref any) *LivenessProbe_Probe_Call {
+ 	return &LivenessProbe_Probe_Call{Call: _e.mock.On("Probe", ref)}
+ }
+ 
+-func (_c *LivenessProbe_Probe_Call) Run(run func(ref durable.ProcessRef)) *LivenessProbe_Probe_Call {
++func (_c *LivenessProbe_Probe_Call) Run(run func(ref procref.ProcessRef)) *LivenessProbe_Probe_Call {
+ 	_c.Call.Run(func(args mock.Arguments) {
+-		var arg0 durable.ProcessRef
++		var arg0 procref.ProcessRef
+ 		if args[0] != nil {
+-			arg0 = args[0].(durable.ProcessRef)
++			arg0 = args[0].(procref.ProcessRef)
+ 		}
+ 		run(
+ 			arg0,
+@@ -86,12 +86,12 @@ func (_c *LivenessProbe_Probe_Call) Run(run func(ref durable.ProcessRef)) *Liven
+ 	return _c
+ }
+ 
+-func (_c *LivenessProbe_Probe_Call) Return(livenessResult durable.LivenessResult) *LivenessProbe_Probe_Call {
++func (_c *LivenessProbe_Probe_Call) Return(livenessResult procref.LivenessResult) *LivenessProbe_Probe_Call {
+ 	_c.Call.Return(livenessResult)
+ 	return _c
+ }
+ 
+-func (_c *LivenessProbe_Probe_Call) RunAndReturn(run func(ref durable.ProcessRef) durable.LivenessResult) *LivenessProbe_Probe_Call {
++func (_c *LivenessProbe_Probe_Call) RunAndReturn(run func(ref procref.ProcessRef) procref.LivenessResult) *LivenessProbe_Probe_Call {
+ 	_c.Call.Return(run)
+ 	return _c
+ }
+diff --git a/internal/runtime/memory/durable/process_unix.go b/internal/runtime/memory/durable/process_unix.go
+deleted file mode 100644
+index 459153c..0000000
+--- a/internal/runtime/memory/durable/process_unix.go
++++ /dev/null
+@@ -1,32 +0,0 @@
+-//go:build !windows
+-
+-package durable
+-
+-import (
+-	"errors"
+-	"os"
+-	"syscall"
+-)
+-
+-func checkProcessLiveness(ref ProcessRef) LivenessResult {
+-	if ref.PID <= 0 {
+-		return LivenessResult{Reliable: true, Alive: false}
+-	}
+-
+-	hostname, err := os.Hostname()
+-	if err != nil || (ref.Hostname != "" && ref.Hostname != hostname) {
+-		return LivenessResult{Reliable: false, Alive: false}
+-	}
+-
+-	killErr := syscall.Kill(ref.PID, 0)
+-	switch {
+-	case killErr == nil:
+-		return LivenessResult{Reliable: true, Alive: true}
+-	case errors.Is(killErr, syscall.EPERM):
+-		return LivenessResult{Reliable: true, Alive: true}
+-	case errors.Is(killErr, syscall.ESRCH):
+-		return LivenessResult{Reliable: true, Alive: false}
+-	default:
+-		return LivenessResult{Reliable: false, Alive: false}
+-	}
+-}
+diff --git a/internal/runtime/memory/durable/process_windows.go b/internal/runtime/memory/durable/process_windows.go
+deleted file mode 100644
+index cde7ca9..0000000
+--- a/internal/runtime/memory/durable/process_windows.go
++++ /dev/null
+@@ -1,7 +0,0 @@
+-//go:build windows
+-
+-package durable
+-
+-func checkProcessLiveness(ref ProcessRef) LivenessResult {
+-	return LivenessResult{Reliable: false, Alive: false}
+-}
+diff --git a/internal/runtime/memory/store.go b/internal/runtime/memory/store.go
+index d0fdeaa..e82b1d1 100644
+--- a/internal/runtime/memory/store.go
++++ b/internal/runtime/memory/store.go
+@@ -5,6 +5,8 @@ import (
+ 	"fmt"
+ 	"os"
+ 	"path/filepath"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable"
+ )
+ 
+ // Constantes de limite default para os dois tiers do memory store.
+@@ -150,7 +152,11 @@ func (c *Catalog) readFile(path string, lineLimit, byteLimit int) (Document, err
+ func (c *Catalog) writeFile(path, content string, mode WriteMode) error {
+ 	switch mode {
+ 	case WriteModeReplace:
+-		return os.WriteFile(path, []byte(content), 0o644)
++		sanitized, err := durable.DefaultSanitizationPolicy.Sanitize(content, durable.SanitizationConfig{})
++		if err != nil {
++			return fmt.Errorf("memory: sanitize %s: %w", path, err)
++		}
++		return os.WriteFile(path, []byte(sanitized.Content), 0o644)
+ 	case WriteModeAppend:
+ 		f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+ 		if err != nil {
+diff --git a/internal/runtime/memory/store_test.go b/internal/runtime/memory/store_test.go
+index 2e6f6cd..ce3c750 100644
+--- a/internal/runtime/memory/store_test.go
++++ b/internal/runtime/memory/store_test.go
+@@ -325,3 +325,25 @@ func TestDefaultLimits(t *testing.T) {
+ 		t.Errorf("TaskBytes: got=%d want=%d", l.TaskBytes, memory.DefaultTaskByteLimit)
+ 	}
+ }
++
++func TestWriteWorkflow_RedactsSecretsInReplaceMode(t *testing.T) {
++	t.Parallel()
++
++	dir := t.TempDir()
++	limits := memory.NewCatalog().DefaultLimits()
++	s := memory.New(dir, limits)
++	ctx := context.Background()
++
++	content := "# Workflow\nAuthorization: Bearer sk-abcdefghijklmnopqrstuvwxyz\n"
++	if err := s.WriteWorkflow(ctx, content, memory.WriteModeReplace); err != nil {
++		t.Fatalf("WriteWorkflow: %v", err)
++	}
++
++	doc, err := s.ReadWorkflow(ctx)
++	if err != nil {
++		t.Fatalf("ReadWorkflow: %v", err)
++	}
++	if strings.Contains(doc.Content, "sk-abcdefghijklmnopqrstuvwxyz") {
++		t.Fatalf("secret leaked into MEMORY.md: %s", doc.Content)
++	}
++}
+diff --git a/internal/runtime/persistence/jsonl.go b/internal/runtime/persistence/jsonl.go
+index 328b62e..da4260c 100644
+--- a/internal/runtime/persistence/jsonl.go
++++ b/internal/runtime/persistence/jsonl.go
+@@ -1,63 +1,80 @@
+-// Package persistence implementa a camada de IO do runtime ACP.
+-// Responsabilidades: writer JSONL append-only, renderer de tool_calls.md e
+-// enriquecimento idempotente do execution_report.md.
+ package persistence
+ 
+ import (
++	"bytes"
++	"encoding/json"
++	"errors"
+ 	"fmt"
+ 	"path/filepath"
+ 	"sync"
+ 
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable"
+ )
+ 
+-// JSONLWriter escreve eventos em um arquivo JSONL append-only (RF-08).
+-// É seguro para uso concorrente por múltiplas goroutines.
++var ErrCorruptedJSONL = errors.New("persistence: corrupted jsonl content")
++
+ type JSONLWriter struct {
+ 	path string
+ 	fsys fs.FileSystem
+ 	mu   sync.Mutex
+-	// buf acumula o conteúdo do arquivo em memória (necessário pois FakeFileSystem
+-	// não suporta append; OSFileSystem recebe dados completos via WriteFile).
+-	buf []byte
+ }
+ 
+-// NewJSONLWriter cria um JSONLWriter validando o path e criando o diretório pai.
+-// Retorna erro se o path estiver vazio após normalização.
+ func NewJSONLWriter(path string, fsys fs.FileSystem) (*JSONLWriter, error) {
+ 	clean := filepath.Clean(path)
+ 	if clean == "" || clean == "." {
+-		return nil, fmt.Errorf("persistence: path inválido para JSONLWriter: %q", path)
++		return nil, fmt.Errorf("persistence: invalid path for JSONLWriter: %q", path)
+ 	}
+ 	dir := filepath.Dir(clean)
+ 	if err := fsys.MkdirAll(dir); err != nil {
+-		return nil, fmt.Errorf("persistence: criar diretório %s: %w", dir, err)
++		return nil, fmt.Errorf("persistence: create directory %s: %w", dir, err)
+ 	}
+-	// Carregar conteúdo existente, se houver.
+-	existing, err := fsys.ReadFile(clean)
+-	if err == nil {
+-		return &JSONLWriter{path: clean, fsys: fsys, buf: existing}, nil
++	if existing, err := fsys.ReadFile(clean); err == nil {
++		if verifyErr := VerifyJSONLIntegrity(existing); verifyErr != nil {
++			return nil, fmt.Errorf("persistence: %s: %w", clean, verifyErr)
++		}
+ 	}
+ 	return &JSONLWriter{path: clean, fsys: fsys}, nil
+ }
+ 
+-// Append serializa evt e anexa uma linha ao arquivo JSONL.
+-// Falha de escrita propaga erro sem corromper o conteúdo anterior.
+ func (w *JSONLWriter) Append(evt events.Event) error {
+ 	data, err := evt.MarshalJSON()
+ 	if err != nil {
+ 		return fmt.Errorf("appending event to %s: %w", w.path, err)
+ 	}
+-	line := append(data, '\n')
++	sanitized, err := durable.DefaultSanitizationPolicy.Sanitize(string(data), durable.SanitizationConfig{})
++	if err != nil {
++		return fmt.Errorf("appending event to %s: %w", w.path, err)
++	}
++	line := append([]byte(sanitized.Content), '\n')
+ 
+ 	w.mu.Lock()
+ 	defer w.mu.Unlock()
+ 
+-	newBuf := append(w.buf, line...)
+-	if err := w.fsys.WriteFile(w.path, newBuf); err != nil {
++	if err := w.fsys.AppendFile(w.path, line); err != nil {
+ 		return fmt.Errorf("appending event to %s: %w", w.path, err)
+ 	}
+-	w.buf = newBuf
++	return nil
++}
++
++func VerifyJSONLIntegrity(content []byte) error {
++	if len(content) == 0 {
++		return nil
++	}
++	if content[len(content)-1] != '\n' {
++		return fmt.Errorf("%w: last line has no terminator (truncated mid-write)", ErrCorruptedJSONL)
++	}
++	trimmed := bytes.TrimSuffix(content, []byte("\n"))
++	lines := bytes.Split(trimmed, []byte("\n"))
++	for i, line := range lines {
++		if len(bytes.TrimSpace(line)) == 0 {
++			return fmt.Errorf("%w: empty line at position %d", ErrCorruptedJSONL, i+1)
++		}
++		var probe json.RawMessage
++		if err := json.Unmarshal(line, &probe); err != nil {
++			return fmt.Errorf("%w: invalid json at line %d: %w", ErrCorruptedJSONL, i+1, err)
++		}
++	}
+ 	return nil
+ }
+diff --git a/internal/runtime/persistence/jsonl_test.go b/internal/runtime/persistence/jsonl_test.go
+index aaf89bf..eb859e9 100644
+--- a/internal/runtime/persistence/jsonl_test.go
++++ b/internal/runtime/persistence/jsonl_test.go
+@@ -13,18 +13,24 @@ import (
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence"
+ )
+ 
+-// errFS é um FileSystem que falha em operações de escrita para testar caminhos de erro.
+ type errFS struct {
+ 	*fs.FakeFileSystem
+ 	writeErr error
+ 	mkdirErr error
+ }
+ 
+-func (e *errFS) WriteFile(path string, data []byte) error {
++func (e *errFS) AppendFile(path string, data []byte) error {
+ 	if e.writeErr != nil {
+ 		return e.writeErr
+ 	}
+-	return e.FakeFileSystem.WriteFile(path, data)
++	return e.FakeFileSystem.AppendFile(path, data)
++}
++
++func (e *errFS) WriteFileAtomic(path string, data []byte) error {
++	if e.writeErr != nil {
++		return e.writeErr
++	}
++	return e.FakeFileSystem.WriteFileAtomic(path, data)
+ }
+ 
+ func (e *errFS) MkdirAll(path string) error {
+@@ -178,3 +184,31 @@ func TestJSONLWriter_ReusesExistingContent(t *testing.T) {
+ 		t.Fatalf("esperava 2 linhas, obteve %d", len(lines))
+ 	}
+ }
++
++func TestJSONLWriter_Append_RedactsSecrets(t *testing.T) {
++	fsys := fs.NewFakeFileSystem()
++	w, err := persistence.NewJSONLWriter("/evidence/task-secret/events.jsonl", fsys)
++	if err != nil {
++		t.Fatalf("NewJSONLWriter: %v", err)
++	}
++
++	rawWithSecret := "{\"type\":\"agent_message\",\"token\":\"ghp_1234567890abcdef1234567890\"}" //nolint:gosec
++	evt, err := events.NewAgentMessage(time.Now(), "mensagem", json.RawMessage(rawWithSecret))
++	if err != nil {
++		t.Fatalf("NewAgentMessage: %v", err)
++	}
++	if err := w.Append(evt); err != nil {
++		t.Fatalf("Append: %v", err)
++	}
++
++	data, err := fsys.ReadFile("/evidence/task-secret/events.jsonl")
++	if err != nil {
++		t.Fatalf("ReadFile: %v", err)
++	}
++	if strings.Contains(string(data), "ghp_1234567890abcdef1234567890") {
++		t.Fatalf("secret leaked into events.jsonl: %s", data)
++	}
++	if !strings.Contains(string(data), "[REDACTED:provider_token]") {
++		t.Fatalf("expected redaction marker in events.jsonl: %s", data)
++	}
++}
+diff --git a/internal/runtime/persistence/report.go b/internal/runtime/persistence/report.go
+index 9e0510a..a28c391 100644
+--- a/internal/runtime/persistence/report.go
++++ b/internal/runtime/persistence/report.go
+@@ -11,6 +11,7 @@ import (
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+ 	runtime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable"
+ )
+ 
+ const metricsSectionHeader = "## Métricas Claude-2026"
+@@ -66,7 +67,12 @@ func (c *Catalog) EnrichReport(reportPath string, summary runtime.Summary, fsys
+ 		updated = NewCatalog().injectBoundedSection(updated, cycleSectionHeaderRe, cycleSection)
+ 	}
+ 
+-	if err := fsys.WriteFile(clean, []byte(updated)); err != nil {
++	sanitized, err := durable.DefaultSanitizationPolicy.Sanitize(updated, durable.SanitizationConfig{})
++	if err != nil {
++		return fmt.Errorf("persistence: sanitizar %s: %w", clean, err)
++	}
++
++	if err := fsys.WriteFileAtomic(clean, []byte(sanitized.Content)); err != nil {
+ 		return fmt.Errorf("persistence: escrever %s: %w", clean, err)
+ 	}
+ 	return nil
+diff --git a/internal/runtime/persistence/report_test.go b/internal/runtime/persistence/report_test.go
+index 96a57fa..2ac712a 100644
+--- a/internal/runtime/persistence/report_test.go
++++ b/internal/runtime/persistence/report_test.go
+@@ -486,3 +486,23 @@ func TestEnrichReport_MemoryEvidenceSection_IdempotentAndLastSectionPreserved(t
+ 		t.Error("seção de métricas deve permanecer a última do relatório após reexecução idempotente")
+ 	}
+ }
++
++func TestEnrichReport_RedactsSecretsInPreExistingContent(t *testing.T) {
++	fsys := fs.NewFakeFileSystem()
++	preexisting := "# Relatorio\n\nAuthorization: Bearer sk-abcdefghijklmnopqrstuvwxyz\n"
++	if err := fsys.WriteFile("/report/execution_report.md", []byte(preexisting)); err != nil {
++		t.Fatalf("WriteFile: %v", err)
++	}
++
++	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", makeSummary(), fsys); err != nil {
++		t.Fatalf("EnrichReport: %v", err)
++	}
++
++	data, err := fsys.ReadFile("/report/execution_report.md")
++	if err != nil {
++		t.Fatalf("ReadFile: %v", err)
++	}
++	if strings.Contains(string(data), "sk-abcdefghijklmnopqrstuvwxyz") {
++		t.Fatalf("secret leaked into execution_report.md: %s", data)
++	}
++}
+diff --git a/internal/runtime/persistence/toolcalls.go b/internal/runtime/persistence/toolcalls.go
+index 60931cc..b7b9d0d 100644
+--- a/internal/runtime/persistence/toolcalls.go
++++ b/internal/runtime/persistence/toolcalls.go
+@@ -7,6 +7,7 @@ import (
+ 
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable"
+ )
+ 
+ // WriteToolCalls gera o arquivo tool_calls.md (RF-09).
+@@ -20,7 +21,11 @@ func (c *Catalog) WriteToolCalls(path string, summaries []events.ToolCallSummary
+ 	}
+ 
+ 	content := NewCatalog().buildToolCallsContent(summaries)
+-	if err := fsys.WriteFile(clean, []byte(content)); err != nil {
++	sanitized, err := durable.DefaultSanitizationPolicy.Sanitize(content, durable.SanitizationConfig{})
++	if err != nil {
++		return fmt.Errorf("persistence: sanitizar %s: %w", clean, err)
++	}
++	if err := fsys.WriteFileAtomic(clean, []byte(sanitized.Content)); err != nil {
+ 		return fmt.Errorf("persistence: escrever %s: %w", clean, err)
+ 	}
+ 	return nil
+diff --git a/internal/runtime/persistence/toolcalls_test.go b/internal/runtime/persistence/toolcalls_test.go
+index a0add78..782d4b9 100644
+--- a/internal/runtime/persistence/toolcalls_test.go
++++ b/internal/runtime/persistence/toolcalls_test.go
+@@ -4,6 +4,7 @@ import (
+ 	"errors"
+ 	"os"
+ 	"path/filepath"
++	"strings"
+ 	"testing"
+ 	"time"
+ 
+@@ -95,3 +96,21 @@ func loadGolden(t *testing.T, name string) string {
+ 	}
+ 	return string(data)
+ }
++
++func TestWriteToolCalls_RedactsSecretsInToolName(t *testing.T) {
++	fsys := fs.NewFakeFileSystem()
++	summaries := []events.ToolCallSummary{
++		{ID: events.NewToolCallID("call-1"), Name: "curl-with-token-ghp_1234567890abcdef1234567890", Final: true},
++	}
++	if err := persistence.NewCatalog().WriteToolCalls("/evidence/task/tool_calls.md", summaries, fsys); err != nil {
++		t.Fatalf("WriteToolCalls: %v", err)
++	}
++
++	data, err := fsys.ReadFile("/evidence/task/tool_calls.md")
++	if err != nil {
++		t.Fatalf("ReadFile: %v", err)
++	}
++	if strings.Contains(string(data), "ghp_1234567890abcdef1234567890") {
++		t.Fatalf("secret leaked into tool_calls.md: %s", data)
++	}
++}
+diff --git a/internal/specdrift/sync.go b/internal/specdrift/sync.go
+index ae7d8a9..7f11437 100644
+--- a/internal/specdrift/sync.go
++++ b/internal/specdrift/sync.go
+@@ -57,7 +57,32 @@ func (c *Catalog) SyncSpecHash(tasksPath string) error {
+ 		return nil
+ 	}
+ 
+-	return os.WriteFile(tasksPath, []byte(updated), 0o644)
++	return c.writeTasksFileAtomic(tasksPath, []byte(updated))
++}
++
++func (c *Catalog) writeTasksFileAtomic(path string, data []byte) error {
++	dir := filepath.Dir(path)
++	tmp, err := os.CreateTemp(dir, ".tmp-*")
++	if err != nil {
++		return fmt.Errorf("criar arquivo temporario em %s: %w", dir, err)
++	}
++	tmpPath := tmp.Name()
++	defer func() { _ = os.Remove(tmpPath) }()
++	if _, err := tmp.Write(data); err != nil {
++		_ = tmp.Close()
++		return fmt.Errorf("escrever arquivo temporario %s: %w", tmpPath, err)
++	}
++	if err := tmp.Sync(); err != nil {
++		_ = tmp.Close()
++		return fmt.Errorf("sincronizar arquivo temporario %s: %w", tmpPath, err)
++	}
++	if err := tmp.Close(); err != nil {
++		return fmt.Errorf("fechar arquivo temporario %s: %w", tmpPath, err)
++	}
++	if err := os.Rename(tmpPath, path); err != nil {
++		return fmt.Errorf("publicar %s: %w", path, err)
++	}
++	return nil
+ }
+ 
+ func (c *Catalog) guardApprovedState(dir string) error {
+diff --git a/internal/specdrift/sync_test.go b/internal/specdrift/sync_test.go
+index 4519280..7d931b8 100644
+--- a/internal/specdrift/sync_test.go
++++ b/internal/specdrift/sync_test.go
+@@ -270,3 +270,30 @@ func TestSyncSpecHash_RoundTrip(t *testing.T) {
+ 		t.Error("expected CheckDrift to pass after SyncSpecHash")
+ 	}
+ }
++
++func TestSyncSpecHash_BreaksHardLinkOnTasksFile(t *testing.T) {
++	dir := t.TempDir()
++	tasksPath := writeFileSync(t, dir, "tasks.md", "no hash comments here\n")
++	writeFileSync(t, dir, "prd.md", "# PRD\n")
++
++	hardLinked := filepath.Join(dir, "tasks-hardlink.md")
++	if err := os.Link(tasksPath, hardLinked); err != nil {
++		t.Skipf("hard links unsupported on this filesystem: %v", err)
++	}
++
++	if err := specdrift.NewCatalog().SyncSpecHash(hardLinked); err != nil {
++		t.Fatalf("SyncSpecHash: %v", err)
++	}
++
++	infoA, err := os.Stat(tasksPath)
++	if err != nil {
++		t.Fatalf("stat original: %v", err)
++	}
++	infoB, err := os.Stat(hardLinked)
++	if err != nil {
++		t.Fatalf("stat linked: %v", err)
++	}
++	if os.SameFile(infoA, infoB) {
++		t.Fatalf("expected the hard link to be broken by the atomic rename, but the inode is still shared")
++	}
++}
+diff --git a/internal/taskloop/isolation.go b/internal/taskloop/isolation.go
+index 99c88b7..f41342f 100644
+--- a/internal/taskloop/isolation.go
++++ b/internal/taskloop/isolation.go
+@@ -304,7 +304,6 @@ func (c *Catalog) isProtectedPRDFile(prdFolder, fullPath string, mode taskIsolat
+ 	// Sem isso, artefatos gravados pela própria stack disparam falso-positivo de isolamento e
+ 	// abortam a task-loop ACP:
+ 	//   - memory/      → hook memory_persist (F3) grava MEMORY.md.
+-	//   - .checkpoints/ → execute-task (F25) grava <num>.yaml antes de mutar tasks.md.
+ 	//   - .partials/    → execute-task (F32) grava tasks.md.<num>.partial em wave paralela.
+ 	if NewCatalog().isHarnessManagedPRDDir(relPath) {
+ 		return false
+@@ -319,7 +318,7 @@ func (c *Catalog) isProtectedPRDFile(prdFolder, fullPath string, mode taskIsolat
+ // stack (não pelo agente): memory/, .checkpoints/, .partials/. Esses artefatos são legítimos e não
+ // devem disparar violação de isolamento. Literais espelham memory.DirName e os paths de execute-task.
+ func (c *Catalog) isHarnessManagedPRDDir(relPath string) bool {
+-	for _, entry := range []string{"memory", ".checkpoints", ".partials", ".tmp-*"} {
++	for _, entry := range []string{"memory", ".checkpoints", ".partials", ".tmp-*", "tasks.md.lock"} {
+ 		if strings.HasSuffix(entry, "*") {
+ 			if matched, matchErr := filepath.Match(entry, filepath.Base(relPath)); matchErr == nil && matched {
+ 				return true
+diff --git a/internal/taskloop/orchestrator.go b/internal/taskloop/orchestrator.go
+index c3ba0ed..9cc8ed9 100644
+--- a/internal/taskloop/orchestrator.go
++++ b/internal/taskloop/orchestrator.go
+@@ -492,7 +492,7 @@ func (o *Orchestrator) buildExclusions(prdDir string, result sdd.ExecutionResult
+ 	if err != nil {
+ 		return "", nil, fmt.Errorf("taskloop: resolver diretorio do PRD: %w", err)
+ 	}
+-	for _, name := range []string{"sdd-state.json", ".sdd-orchestrate.lock"} {
++	for _, name := range []string{"sdd-state.json", ".sdd-orchestrate.lock", "tasks.md.lock"} {
+ 		path, relativeErr := filepath.Rel(root, filepath.Join(resolvedPRDDir, name))
+ 		if relativeErr != nil {
+ 			return "", nil, fmt.Errorf("taskloop: resolver artefato operacional: %w", relativeErr)
+diff --git a/internal/taskloop/orchestrator_lock_unix.go b/internal/taskloop/orchestrator_lock_unix.go
+index ccb1a65..8cf3d44 100644
+--- a/internal/taskloop/orchestrator_lock_unix.go
++++ b/internal/taskloop/orchestrator_lock_unix.go
+@@ -5,6 +5,7 @@ package taskloop
+ import (
+ 	"errors"
+ 	"fmt"
++	"io"
+ 	"os"
+ 	"syscall"
+ )
+@@ -15,12 +16,18 @@ func acquireOrchestratorLock(path string) (func() error, error) {
+ 		return nil, fmt.Errorf("taskloop: abrir lock do escritor: %w", err)
+ 	}
+ 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
++		owner, _ := io.ReadAll(f)
+ 		_ = f.Close()
+ 		if errors.Is(err, syscall.EWOULDBLOCK) || errors.Is(err, syscall.EAGAIN) {
+-			return nil, ErrWriterLocked
++			return nil, fmt.Errorf("%w: %s", ErrWriterLocked, describeOrchestratorLockOwner(owner))
+ 		}
+ 		return nil, fmt.Errorf("taskloop: obter lock do escritor: %w", err)
+ 	}
++	if err := writeOrchestratorLockIdentity(f); err != nil {
++		_ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
++		_ = f.Close()
++		return nil, err
++	}
+ 	return func() error {
+ 		if err := syscall.Flock(int(f.Fd()), syscall.LOCK_UN); err != nil {
+ 			_ = f.Close()
+@@ -32,3 +39,16 @@ func acquireOrchestratorLock(path string) (func() error, error) {
+ 		return nil
+ 	}, nil
+ }
++
++func writeOrchestratorLockIdentity(f *os.File) error {
++	if err := f.Truncate(0); err != nil {
++		return fmt.Errorf("taskloop: truncar lock do escritor: %w", err)
++	}
++	if _, err := f.Seek(0, 0); err != nil {
++		return fmt.Errorf("taskloop: posicionar lock do escritor: %w", err)
++	}
++	if _, err := f.Write(currentOrchestratorLockIdentity().marshal()); err != nil {
++		return fmt.Errorf("taskloop: gravar identidade do lock: %w", err)
++	}
++	return f.Sync()
++}
+diff --git a/internal/taskloop/orchestrator_lock_windows.go b/internal/taskloop/orchestrator_lock_windows.go
+index 564f99c..20790b6 100644
+--- a/internal/taskloop/orchestrator_lock_windows.go
++++ b/internal/taskloop/orchestrator_lock_windows.go
+@@ -6,18 +6,22 @@ import (
+ 	"errors"
+ 	"fmt"
+ 	"os"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/procref"
+ )
+ 
+-// Windows nao oferece flock no pacote syscall. O Create exclusivo mantém o
+-// mesmo fail-closed: uma retomada requer remover explicitamente um lock órfão
+-// após confirmação operacional, nunca sobrescrevê-lo silenciosamente.
+ func acquireOrchestratorLock(path string) (func() error, error) {
+-	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0o600)
++	f, err := tryCreateOrchestratorLockFile(path)
+ 	if err != nil {
+-		if errors.Is(err, os.ErrExist) {
+-			return nil, ErrWriterLocked
+-		}
+-		return nil, fmt.Errorf("taskloop: obter lock do escritor: %w", err)
++		return nil, err
++	}
++	if _, err := f.Write(currentOrchestratorLockIdentity().marshal()); err != nil {
++		_ = f.Close()
++		return nil, fmt.Errorf("taskloop: gravar identidade do lock: %w", err)
++	}
++	if err := f.Sync(); err != nil {
++		_ = f.Close()
++		return nil, fmt.Errorf("taskloop: sincronizar lock do escritor: %w", err)
+ 	}
+ 	return func() error {
+ 		if err := f.Close(); err != nil {
+@@ -29,3 +33,44 @@ func acquireOrchestratorLock(path string) (func() error, error) {
+ 		return nil
+ 	}, nil
+ }
++
++func tryCreateOrchestratorLockFile(path string) (*os.File, error) {
++	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0o600)
++	if err == nil {
++		return f, nil
++	}
++	if !errors.Is(err, os.ErrExist) {
++		return nil, fmt.Errorf("taskloop: obter lock do escritor: %w", err)
++	}
++	if breakErr := breakOrphanedOrchestratorLock(path); breakErr != nil {
++		return nil, breakErr
++	}
++	f, err = os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0o600)
++	if err != nil {
++		if errors.Is(err, os.ErrExist) {
++			owner, _ := os.ReadFile(path)
++			return nil, fmt.Errorf("%w: %s", ErrWriterLocked, describeOrchestratorLockOwner(owner))
++		}
++		return nil, fmt.Errorf("taskloop: obter lock do escritor: %w", err)
++	}
++	return f, nil
++}
++
++func breakOrphanedOrchestratorLock(path string) error {
++	owner, readErr := os.ReadFile(path)
++	if readErr != nil {
++		return nil
++	}
++	id, ok := parseOrchestratorLockIdentity(owner)
++	if !ok {
++		return nil
++	}
++	result := procref.DefaultLivenessProbe.Probe(procref.ProcessRef{PID: id.PID, Hostname: id.Hostname})
++	if !result.Reliable || result.Alive {
++		return nil
++	}
++	if removeErr := os.Remove(path); removeErr != nil && !errors.Is(removeErr, os.ErrNotExist) {
++		return fmt.Errorf("taskloop: remover lock orfao do escritor: %w", removeErr)
++	}
++	return nil
++}
+diff --git a/internal/taskloop/orchestrator_test.go b/internal/taskloop/orchestrator_test.go
+index 4f6e14a..872fe90 100644
+--- a/internal/taskloop/orchestrator_test.go
++++ b/internal/taskloop/orchestrator_test.go
+@@ -427,3 +427,26 @@ func newDoneResult(t *testing.T, dir string, orchestrator *Orchestrator, startSn
+ func testSnapshot() Snapshot {
+ 	return NewSnapshot(strings.Repeat("a", 40), "patch", "state")
+ }
++
++func TestSemanticPatch_ExcludesTasksMdLock(t *testing.T) {
++	dir := newOrchestratorStateDir(t)
++	if err := os.WriteFile(filepath.Join(dir, "tasks.md.lock"), nil, 0o600); err != nil {
++		t.Fatalf("seed tasks.md.lock: %v", err)
++	}
++	if err := os.WriteFile(filepath.Join(dir, "real-change.go"), []byte("package change\n"), 0o644); err != nil {
++		t.Fatalf("seed real change: %v", err)
++	}
++
++	o := NewOrchestrator(sdd.NewStore())
++	result := sdd.ExecutionResult{PatchRef: "evidence/whatever.patch"}
++	_, patch, err := o.captureFinalSnapshot(dir, result)
++	if err != nil {
++		t.Fatalf("captureFinalSnapshot: %v", err)
++	}
++	if strings.Contains(string(patch), "tasks.md.lock") {
++		t.Fatalf("expected tasks.md.lock to be excluded from the semantic patch, got:\n%s", patch)
++	}
++	if !strings.Contains(string(patch), "real-change.go") {
++		t.Fatalf("expected real-change.go to be present in the semantic patch, got:\n%s", patch)
++	}
++}
+diff --git a/internal/taskloop/reservations.go b/internal/taskloop/reservations.go
+index e68acd0..6e2d41d 100644
+--- a/internal/taskloop/reservations.go
++++ b/internal/taskloop/reservations.go
+@@ -135,7 +135,7 @@ func (c *Catalog) WriteActionPlanToTaskFile(fsys fs.FileSystem, taskFile string,
+ 	block := NewCatalog().buildActionPlanBlock(plan)
+ 	updated := NewCatalog().replaceActionPlanBlock(data, block)
+ 
+-	if err := fsys.WriteFile(taskFile, updated); err != nil {
++	if err := fsys.WriteFileAtomic(taskFile, updated); err != nil {
+ 		return fmt.Errorf("taskloop: erro ao escrever plano de acao em %s: %w", taskFile, err)
+ 	}
+ 	return nil
+@@ -207,14 +207,24 @@ func (c *Catalog) AppendFollowUpTasks(fsys fs.FileSystem, tasksFile string, plan
+ 		return nil
+ 	}
+ 
++	lockErr := withTasksFileLock(fsys, tasksFile, func() error {
++		return NewCatalog().appendFollowUpTaskRows(fsys, tasksFile, docs)
++	})
++	if lockErr != nil {
++		return fmt.Errorf("taskloop: erro ao escrever %s: %w", tasksFile, lockErr)
++	}
++	return nil
++}
++
++func (c *Catalog) appendFollowUpTaskRows(fsys fs.FileSystem, tasksFile string, docs []ReservationDecision) error {
+ 	data, err := fsys.ReadFile(tasksFile)
+ 	if err != nil {
+-		return fmt.Errorf("taskloop: erro ao ler %s: %w", tasksFile, err)
++		return fmt.Errorf("erro ao ler %s: %w", tasksFile, err)
+ 	}
+ 
+ 	existing, err := NewCatalog().ParseTasksFile(data)
+ 	if err != nil {
+-		return fmt.Errorf("taskloop: erro ao parsear %s: %w", tasksFile, err)
++		return fmt.Errorf("erro ao parsear %s: %w", tasksFile, err)
+ 	}
+ 	nextID := NewCatalog().nextFollowUpID(existing)
+ 
+@@ -225,10 +235,7 @@ func (c *Catalog) AppendFollowUpTasks(fsys fs.FileSystem, tasksFile string, plan
+ 	}
+ 
+ 	updated := NewCatalog().appendRowsAfterTable(data, rows.Bytes())
+-	if err := fsys.WriteFile(tasksFile, updated); err != nil {
+-		return fmt.Errorf("taskloop: erro ao escrever %s: %w", tasksFile, err)
+-	}
+-	return nil
++	return fsys.WriteFileAtomic(tasksFile, updated)
+ }
+ 
+ func (c *Catalog) filterDocumentDecisions(plan ActionPlan) []ReservationDecision {
+diff --git a/internal/taskloop/task_status_writer.go b/internal/taskloop/task_status_writer.go
+index 192b6fb..a13c4da 100644
+--- a/internal/taskloop/task_status_writer.go
++++ b/internal/taskloop/task_status_writer.go
+@@ -45,7 +45,7 @@ func (c *Catalog) writeTaskFileStatus(taskFile, status string, fsys fs.FileSyste
+ 		return fmt.Errorf("erro ao forcar status %q em %s: campo de status ausente", status, taskFile)
+ 	}
+ 	updated := statusFieldRe.ReplaceAll(content, []byte("**Status:** "+status))
+-	if err := fsys.WriteFile(taskFile, updated); err != nil {
++	if err := fsys.WriteFileAtomic(taskFile, updated); err != nil {
+ 		return fmt.Errorf("erro ao forcar status %q em %s: %w", status, taskFile, err)
+ 	}
+ 	return nil
+@@ -55,9 +55,19 @@ func (c *Catalog) writeTasksTableStatus(tasksFile, taskID, status string, fsys f
+ 	if strings.TrimSpace(taskID) == "" {
+ 		return nil
+ 	}
++	lockErr := withTasksFileLock(fsys, tasksFile, func() error {
++		return NewCatalog().replaceTaskStatusLine(fsys, tasksFile, taskID, status)
++	})
++	if lockErr != nil {
++		return fmt.Errorf("erro ao forcar status %q da task %s em %s: %w", status, taskID, tasksFile, lockErr)
++	}
++	return nil
++}
++
++func (c *Catalog) replaceTaskStatusLine(fsys fs.FileSystem, tasksFile, taskID, status string) error {
+ 	content, err := fsys.ReadFile(tasksFile)
+ 	if err != nil {
+-		return fmt.Errorf("erro ao forcar status %q da task %s em %s: %w", status, taskID, tasksFile, err)
++		return err
+ 	}
+ 
+ 	lines := strings.Split(string(content), "\n")
+@@ -85,13 +95,10 @@ func (c *Catalog) writeTasksTableStatus(tasksFile, taskID, status string, fsys f
+ 		break
+ 	}
+ 	if !changed {
+-		return fmt.Errorf("erro ao forcar status %q da task %s em %s: linha da task nao encontrada", status, taskID, tasksFile)
++		return fmt.Errorf("linha da task nao encontrada")
+ 	}
+ 
+-	if err := fsys.WriteFile(tasksFile, []byte(strings.Join(lines, "\n"))); err != nil {
+-		return fmt.Errorf("erro ao forcar status %q da task %s em %s: %w", status, taskID, tasksFile, err)
+-	}
+-	return nil
++	return fsys.WriteFileAtomic(tasksFile, []byte(strings.Join(lines, "\n")))
+ }
+ 
+ func (c *Catalog) reloadFinalTasks(prdFolder string, fallback []TaskEntry, fsys fs.FileSystem) []TaskEntry {
+diff --git a/internal/txn/transaction.go b/internal/txn/transaction.go
+index 52a08ff..6d77a54 100644
+--- a/internal/txn/transaction.go
++++ b/internal/txn/transaction.go
+@@ -443,6 +443,17 @@ func (t *FileTransaction) WriteFileAtomic(path string, data []byte) error {
+ 	return t.stage(path, data)
+ }
+ 
++func (t *FileTransaction) AppendFile(path string, data []byte) error {
++	existing, err := t.ReadFile(path)
++	if err != nil && !errors.Is(err, os.ErrNotExist) {
++		return fmt.Errorf("read %s before append: %w", path, err)
++	}
++	combined := make([]byte, 0, len(existing)+len(data))
++	combined = append(combined, existing...)
++	combined = append(combined, data...)
++	return t.stage(path, combined)
++}
++
+ func (t *FileTransaction) ReadDir(path string) ([]os.DirEntry, error) {
+ 	return t.fs.ReadDir(path)
+ }
+diff --git a/scripts/test-hooks.sh b/scripts/test-hooks.sh
+index 94db51f..215339a 100755
+--- a/scripts/test-hooks.sh
++++ b/scripts/test-hooks.sh
+@@ -673,6 +673,126 @@ assert_exit "G4-6: JSON invalido bloqueia" 2 $?
+ 
+ rm -rf "$GIT_GATE_TMP"
+ 
++# ============================================================================
++# Bloco 5: post-wave.sh — RF-40 (atomicidade), RF-41 (idempotencia) e RF-49
++# (sanitizacao do YAML embutido no checkpoint parcial).
++# ============================================================================
++echo
++echo "Bloco 5: post-wave.sh"
++
++# Bloco 3 exporta PATH="$TMP_BASE/bin:$PATH" com um shim de `git` que responde
++# `rev-parse --show-toplevel` com o TMP_REPO_ROOT (ja removido) daquele bloco,
++# independente do cwd real. post-wave.sh depende de `git rev-parse
++# --show-toplevel` real; usar um PATH limpo aqui evita herdar esse shim.
++REAL_BIN_PATH="/usr/bin:/bin:/opt/homebrew/bin:/usr/local/bin"
++
++POST_WAVE_HOOK="$REPO_ROOT/.agents/hooks/post-wave.sh"
++POST_WAVE_TMP=$(mktemp -d "$TMP_BASE/post-wave.XXXXXX" 2>/dev/null || mktemp -d /tmp/post-wave.XXXXXX)
++mkdir -p "$POST_WAVE_TMP/.specs/prd-postwave"
++(cd "$POST_WAVE_TMP" && PATH="$REAL_BIN_PATH" git init -q .)
++printf 'status: done\ntoken: ghp_1234567890abcdef1234567890\n' >"$POST_WAVE_TMP/results.yaml"
++PARTIAL_MD_PW="$POST_WAVE_TMP/.specs/prd-postwave/_orchestration_report.partial.md"
++
++echo
++echo "  H5-1: primeira wave cria o parcial (exit 0)"
++(cd "$POST_WAVE_TMP" && AI_TASKS_ROOT=.specs PATH="$REAL_BIN_PATH" bash "$POST_WAVE_HOOK" postwave 1.0 results.yaml >/dev/null 2>&1)
++assert_exit "H5-1: primeira wave, exit 0" 0 $?
++
++echo
++echo "  H5-2: reexecutar a mesma wave nao duplica a secao (RF-41)"
++(cd "$POST_WAVE_TMP" && AI_TASKS_ROOT=.specs PATH="$REAL_BIN_PATH" bash "$POST_WAVE_HOOK" postwave 1.0 results.yaml >/dev/null 2>&1)
++assert_exit "H5-2: reexecucao idempotente, exit 0" 0 $?
++wave_count=$(grep -c "### Wave 1.0" "$PARTIAL_MD_PW" 2>/dev/null || echo 0)
++if [[ "$wave_count" -eq 1 ]]; then
++  echo "  ✓ H5-2: secao da wave 1.0 aparece exatamente 1 vez"
++  passed=$((passed+1))
++else
++  echo "  ✗ H5-2: secao da wave 1.0 aparece $wave_count vezes (esperado 1)"
++  failed=$((failed+1))
++fi
++
++echo
++echo "  H5-3: segredo do YAML anexado nunca aparece em claro (RF-49)"
++if grep -q "ghp_1234567890abcdef1234567890" "$PARTIAL_MD_PW" 2>/dev/null; then
++  echo "  ✗ H5-3: segredo vazou para o relatorio parcial"
++  failed=$((failed+1))
++else
++  echo "  ✓ H5-3: segredo nao vazou"
++  passed=$((passed+1))
++fi
++if grep -q "REDACTED:provider_token" "$PARTIAL_MD_PW" 2>/dev/null; then
++  echo "  ✓ H5-3: marcador de redacao presente"
++  passed=$((passed+1))
++else
++  echo "  ✗ H5-3: marcador de redacao ausente"
++  failed=$((failed+1))
++fi
++
++echo
++echo "  H5-4: nao sobra temporario .tmp-post-wave apos as execucoes"
++leftover_tmp=$(find "$POST_WAVE_TMP/.specs/prd-postwave" -maxdepth 1 -name ".tmp-post-wave.*" 2>/dev/null | wc -l | tr -d ' ')
++if [[ "$leftover_tmp" -eq 0 ]]; then
++  echo "  ✓ H5-4: nenhum temporario remanescente"
++  passed=$((passed+1))
++else
++  echo "  ✗ H5-4: $leftover_tmp temporario(s) remanescente(s)"
++  failed=$((failed+1))
++fi
++
++rm -rf "$POST_WAVE_TMP"
++
++# ============================================================================
++# Bloco 6: extensao unica do checkpoint entre os quatro consumidores (RF-39,
++# RF-43). Falha se qualquer um divergir de ".json".
++# ============================================================================
++echo
++echo "Bloco 6: extensao do checkpoint (.checkpoints/<id>.EXT)"
++
++CKPT_SKILL="$REPO_ROOT/.agents/skills/execute-task/SKILL.md"
++CKPT_STATE_GO="$REPO_ROOT/internal/sdd/state.go"
++CKPT_WRAPPER="$REPO_ROOT/.agents/hooks/subagent-stop-wrapper.sh"
++CKPT_GATE="$REPO_ROOT/.agents/hooks/post-execute-task.sh"
++
++echo
++echo "  K6-1: execute-task/SKILL.md declara extensao .json"
++if grep -qE '\.checkpoints/<num>\.json' "$CKPT_SKILL" && ! grep -qE '\.checkpoints/<num>\.yaml' "$CKPT_SKILL"; then
++  echo "  ✓ K6-1: SKILL.md usa .json"
++  passed=$((passed+1))
++else
++  echo "  ✗ K6-1: SKILL.md nao usa .json exclusivamente"
++  failed=$((failed+1))
++fi
++
++echo
++echo "  K6-2: internal/sdd/state.go le .checkpoints/<taskID>.json"
++if grep -qE '\.checkpoints",\s*taskID\+"\.json"' "$CKPT_STATE_GO"; then
++  echo "  ✓ K6-2: state.go le .json"
++  passed=$((passed+1))
++else
++  echo "  ✗ K6-2: state.go nao le .json"
++  failed=$((failed+1))
++fi
++
++echo
++echo "  K6-3: subagent-stop-wrapper.sh procura .checkpoints/\${task_id}.json"
++if grep -qE '\.checkpoints/\$\{task_id\}\.json' "$CKPT_WRAPPER"; then
++  echo "  ✓ K6-3: wrapper procura .json"
++  passed=$((passed+1))
++else
++  echo "  ✗ K6-3: wrapper nao procura .json"
++  failed=$((failed+1))
++fi
++
++echo
++echo "  K6-4: post-execute-task.sh (gate F25) checa .checkpoints/\${TASK_ID}.json"
++if grep -qE '\.checkpoints/\$\{TASK_ID\}\.json' "$CKPT_GATE" && ! grep -qE '\.checkpoints/\$\{TASK_ID\}\.yaml' "$CKPT_GATE"; then
++  echo "  ✓ K6-4: gate F25 checa .json exclusivamente"
++  passed=$((passed+1))
++else
++  echo "  ✗ K6-4: gate F25 nao checa .json exclusivamente"
++  failed=$((failed+1))
++fi
++
+ # ============================================================================
+ echo
+ echo "==============================================="
+diff --git a/testdata/hook-inventory.json b/testdata/hook-inventory.json
+index 49657b0..ee1c6a8 100644
+--- a/testdata/hook-inventory.json
++++ b/testdata/hook-inventory.json
+@@ -166,7 +166,7 @@
+     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
+     "classification": "KEEP",
+     "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido.",
+-    "integrity_hash": "878eb8b8bd98d32b97766ca76a32c924a57b05e622107a83acdd3ff8154864b4"
++    "integrity_hash": "fc28df0732a4c45bd5a653a411a7e0dab8d146acdc0c0139a5fbe52d9b8b3251"
+   },
+   {
+     "name": "hook-prereq-gate.sh",
+@@ -261,7 +261,7 @@
+     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
+     "classification": "KEEP",
+     "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido.",
+-    "integrity_hash": "1de471051b63dede02081bf528439b81e568e743b7d01ef609260a448e280343"
++    "integrity_hash": "cffe4095d5a6f1cd461ebf2b74c10be87fd21fa44bdded263307955258194de1"
+   },
+   {
+     "name": "validate-session-end.sh",
+@@ -309,7 +309,7 @@
+     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
+     "classification": "KEEP",
+     "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido.",
+-    "integrity_hash": "ecdec54d106319de6cf58c7fd9c9cb66e354fb3072ad76a3c3df4756554d6ced"
++    "integrity_hash": "4aa752f5165e8954442d521c3939cf744ff2d3b2fadd584c914301f73f029133"
+   },
+   {
+     "name": "post-execute-task.sh",
+@@ -449,7 +449,7 @@
+     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
+     "classification": "KEEP",
+     "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido.",
+-    "integrity_hash": "878eb8b8bd98d32b97766ca76a32c924a57b05e622107a83acdd3ff8154864b4"
++    "integrity_hash": "fc28df0732a4c45bd5a653a411a7e0dab8d146acdc0c0139a5fbe52d9b8b3251"
+   },
+   {
+     "name": "hook-prereq-gate.sh",
+@@ -544,7 +544,7 @@
+     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
+     "classification": "KEEP",
+     "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido.",
+-    "integrity_hash": "1de471051b63dede02081bf528439b81e568e743b7d01ef609260a448e280343"
++    "integrity_hash": "cffe4095d5a6f1cd461ebf2b74c10be87fd21fa44bdded263307955258194de1"
+   },
+   {
+     "name": "validate-session-end.sh",
+@@ -592,7 +592,7 @@
+     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
+     "classification": "KEEP",
+     "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido.",
+-    "integrity_hash": "ecdec54d106319de6cf58c7fd9c9cb66e354fb3072ad76a3c3df4756554d6ced"
++    "integrity_hash": "4aa752f5165e8954442d521c3939cf744ff2d3b2fadd584c914301f73f029133"
+   },
+   {
+     "name": "post-execute-task.sh",
+@@ -900,6 +900,37 @@
+     "classification": "KEEP",
+     "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido."
+   },
++  {
++    "name": "projection.go",
++    "location": "internal/runtime/hooks/projection.go",
++    "event": "lifecycle",
++    "provider": "Runtime ACP",
++    "purpose": "Aplica governanca operacional no ponto de hook declarado.",
++    "policy_gate": "Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido.",
++    "blocking": "NAO BLOQUEANTE",
++    "cost": "baixo",
++    "failure_mode": "FAIL-CLOSED",
++    "test_coverage": "COM TESTE",
++    "duplication": "Sem espelho equivalente inventariado.",
++    "classification": "KEEP",
++    "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido."
++  },
++  {
++    "name": "quality_gate.go",
++    "location": "internal/runtime/hooks/quality_gate.go",
++    "event": "lifecycle",
++    "provider": "Runtime ACP",
++    "purpose": "Aplica governanca operacional no ponto de hook declarado.",
++    "policy_gate": "Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido.",
++    "blocking": "NAO BLOQUEANTE",
++    "cost": "baixo",
++    "failure_mode": "FAIL-CLOSED",
++    "test_coverage": "COM TESTE",
++    "duplication": "Sem espelho equivalente inventariado.",
++    "classification": "KEEP",
++    "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido.",
++    "integrity_hash": "e0db7ee84233494fbf39ef739f01de4970132c4d5fb47f65dc739401254f9ff0"
++  },
+   {
+     "name": "spec_drift.go",
+     "location": "internal/runtime/hooks/spec_drift.go",
+diff --git a/internal/procref/liveness.go b/internal/procref/liveness.go
+new file mode 100644
+index 0000000..18878aa
+--- /dev/null
++++ b/internal/procref/liveness.go
+@@ -0,0 +1,38 @@
++package procref
++
++import (
++	"os"
++	"time"
++)
++
++type ProcessRef struct {
++	PID       int
++	Hostname  string
++	StartedAt time.Time
++}
++
++func CurrentProcessRef() ProcessRef {
++	hostname, _ := os.Hostname()
++	return ProcessRef{
++		PID:       os.Getpid(),
++		Hostname:  hostname,
++		StartedAt: time.Now(),
++	}
++}
++
++type LivenessResult struct {
++	Reliable bool
++	Alive    bool
++}
++
++type LivenessProbe interface {
++	Probe(ref ProcessRef) LivenessResult
++}
++
++type processLivenessProbe struct{}
++
++func (processLivenessProbe) Probe(ref ProcessRef) LivenessResult {
++	return checkProcessLiveness(ref)
++}
++
++var DefaultLivenessProbe LivenessProbe = processLivenessProbe{}
+diff --git a/internal/procref/liveness_test.go b/internal/procref/liveness_test.go
+new file mode 100644
+index 0000000..0b64dd3
+--- /dev/null
++++ b/internal/procref/liveness_test.go
+@@ -0,0 +1,46 @@
++package procref_test
++
++import (
++	"os"
++	"os/exec"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/procref"
++)
++
++func TestCurrentProcessRefIsAlive(t *testing.T) {
++	ref := procref.CurrentProcessRef()
++	result := procref.DefaultLivenessProbe.Probe(ref)
++	if !result.Reliable || !result.Alive {
++		t.Fatalf("expected the current process to be reliably alive, got %+v", result)
++	}
++}
++
++func TestExitedProcessIsNotAlive(t *testing.T) {
++	cmd := exec.Command("true")
++	if err := cmd.Run(); err != nil {
++		t.Fatalf("run throwaway process: %v", err)
++	}
++	pid := cmd.Process.Pid
++	hostname, _ := os.Hostname()
++
++	result := procref.DefaultLivenessProbe.Probe(procref.ProcessRef{PID: pid, Hostname: hostname})
++	if !result.Reliable || result.Alive {
++		t.Fatalf("expected exited process to be reliably dead, got %+v", result)
++	}
++}
++
++func TestDifferentHostnameIsUnreliable(t *testing.T) {
++	ref := procref.ProcessRef{PID: os.Getpid(), Hostname: "unreachable-host-xyz"}
++	result := procref.DefaultLivenessProbe.Probe(ref)
++	if result.Reliable {
++		t.Fatalf("expected an unreachable hostname to be unreliable, got %+v", result)
++	}
++}
++
++func TestNonPositivePIDIsReliablyDead(t *testing.T) {
++	result := procref.DefaultLivenessProbe.Probe(procref.ProcessRef{PID: 0})
++	if !result.Reliable || result.Alive {
++		t.Fatalf("expected pid<=0 to be reliably dead, got %+v", result)
++	}
++}
+diff --git a/internal/procref/process_unix.go b/internal/procref/process_unix.go
+new file mode 100644
+index 0000000..d5edf2f
+--- /dev/null
++++ b/internal/procref/process_unix.go
+@@ -0,0 +1,32 @@
++//go:build !windows
++
++package procref
++
++import (
++	"errors"
++	"os"
++	"syscall"
++)
++
++func checkProcessLiveness(ref ProcessRef) LivenessResult {
++	if ref.PID <= 0 {
++		return LivenessResult{Reliable: true, Alive: false}
++	}
++
++	hostname, err := os.Hostname()
++	if err != nil || (ref.Hostname != "" && ref.Hostname != hostname) {
++		return LivenessResult{Reliable: false, Alive: false}
++	}
++
++	killErr := syscall.Kill(ref.PID, 0)
++	switch {
++	case killErr == nil:
++		return LivenessResult{Reliable: true, Alive: true}
++	case errors.Is(killErr, syscall.EPERM):
++		return LivenessResult{Reliable: true, Alive: true}
++	case errors.Is(killErr, syscall.ESRCH):
++		return LivenessResult{Reliable: true, Alive: false}
++	default:
++		return LivenessResult{Reliable: false, Alive: false}
++	}
++}
+diff --git a/internal/procref/process_windows.go b/internal/procref/process_windows.go
+new file mode 100644
+index 0000000..65d7817
+--- /dev/null
++++ b/internal/procref/process_windows.go
+@@ -0,0 +1,48 @@
++//go:build windows
++
++package procref
++
++import (
++	"os"
++	"syscall"
++)
++
++const (
++	processQueryLimitedInformation = 0x1000
++	errnoAccessDenied              = syscall.Errno(5)
++	errnoInvalidParameter          = syscall.Errno(87)
++)
++
++func checkProcessLiveness(ref ProcessRef) LivenessResult {
++	if ref.PID <= 0 {
++		return LivenessResult{Reliable: true, Alive: false}
++	}
++
++	hostname, err := os.Hostname()
++	if err != nil || (ref.Hostname != "" && ref.Hostname != hostname) {
++		return LivenessResult{Reliable: false, Alive: false}
++	}
++
++	handle, openErr := syscall.OpenProcess(processQueryLimitedInformation, false, uint32(ref.PID))
++	if openErr != nil {
++		if errno, ok := openErr.(syscall.Errno); ok {
++			switch errno {
++			case errnoInvalidParameter:
++				return LivenessResult{Reliable: true, Alive: false}
++			case errnoAccessDenied:
++				return LivenessResult{Reliable: true, Alive: true}
++			}
++		}
++		return LivenessResult{Reliable: false, Alive: false}
++	}
++	defer syscall.CloseHandle(handle)
++
++	var exitCode uint32
++	if exitErr := syscall.GetExitCodeProcess(handle, &exitCode); exitErr != nil {
++		return LivenessResult{Reliable: false, Alive: false}
++	}
++	if exitCode == 259 {
++		return LivenessResult{Reliable: true, Alive: true}
++	}
++	return LivenessResult{Reliable: true, Alive: false}
++}
+diff --git a/internal/procref/process_windows_test.go b/internal/procref/process_windows_test.go
+new file mode 100644
+index 0000000..fe84df4
+--- /dev/null
++++ b/internal/procref/process_windows_test.go
+@@ -0,0 +1,33 @@
++//go:build windows
++
++package procref_test
++
++import (
++	"os"
++	"os/exec"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/procref"
++)
++
++func TestWindowsCurrentProcessIsAlive(t *testing.T) {
++	ref := procref.CurrentProcessRef()
++	result := procref.DefaultLivenessProbe.Probe(ref)
++	if !result.Reliable || !result.Alive {
++		t.Fatalf("expected the current process to be reliably alive, got %+v", result)
++	}
++}
++
++func TestWindowsExitedProcessIsNotAlive(t *testing.T) {
++	cmd := exec.Command("cmd", "/c", "exit", "0")
++	if err := cmd.Run(); err != nil {
++		t.Fatalf("run throwaway process: %v", err)
++	}
++	pid := cmd.Process.Pid
++	hostname, _ := os.Hostname()
++
++	result := procref.DefaultLivenessProbe.Probe(procref.ProcessRef{PID: pid, Hostname: hostname})
++	if !result.Reliable || result.Alive {
++		t.Fatalf("expected exited process to be reliably dead, got %+v", result)
++	}
++}
+diff --git a/internal/runtime/persistence/jsonl_crash_recovery_test.go b/internal/runtime/persistence/jsonl_crash_recovery_test.go
+new file mode 100644
+index 0000000..58fbec8
+--- /dev/null
++++ b/internal/runtime/persistence/jsonl_crash_recovery_test.go
+@@ -0,0 +1,115 @@
++package persistence_test
++
++import (
++	"errors"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence"
++)
++
++func TestNewJSONLWriter_RejectsTruncatedMidLine(t *testing.T) {
++	fsys := fs.NewFakeFileSystem()
++	path := "/evidence/task-crash/events.jsonl"
++
++	w, err := persistence.NewJSONLWriter(path, fsys)
++	if err != nil {
++		t.Fatalf("NewJSONLWriter: %v", err)
++	}
++	if err := w.Append(makeAgentMessageEvent(t, "primeiro")); err != nil {
++		t.Fatalf("Append: %v", err)
++	}
++	if err := w.Append(makeAgentMessageEvent(t, "segundo")); err != nil {
++		t.Fatalf("Append: %v", err)
++	}
++
++	full, err := fsys.ReadFile(path)
++	if err != nil {
++		t.Fatalf("ReadFile: %v", err)
++	}
++	truncated := full[:len(full)-5]
++	if err := fsys.WriteFile(path, truncated); err != nil {
++		t.Fatalf("WriteFile(truncated): %v", err)
++	}
++
++	_, err = persistence.NewJSONLWriter(path, fsys)
++	if err == nil {
++		t.Fatal("expected error reopening a jsonl file truncated mid-line, got nil")
++	}
++	if !errors.Is(err, persistence.ErrCorruptedJSONL) {
++		t.Fatalf("expected ErrCorruptedJSONL, got %v", err)
++	}
++}
++
++func TestNewJSONLWriter_RejectsInvalidJSONLine(t *testing.T) {
++	fsys := fs.NewFakeFileSystem()
++	path := "/evidence/task-crash-2/events.jsonl"
++
++	if err := fsys.WriteFile(path, []byte("{\"a\":1}\nnot json\n")); err != nil {
++		t.Fatalf("WriteFile: %v", err)
++	}
++
++	_, err := persistence.NewJSONLWriter(path, fsys)
++	if err == nil {
++		t.Fatal("expected error opening a jsonl file with an invalid line, got nil")
++	}
++	if !errors.Is(err, persistence.ErrCorruptedJSONL) {
++		t.Fatalf("expected ErrCorruptedJSONL, got %v", err)
++	}
++}
++
++func TestNewJSONLWriter_OnlyLastRecordIsLostOnCrash(t *testing.T) {
++	fsys := fs.NewFakeFileSystem()
++	path := "/evidence/task-crash-3/events.jsonl"
++
++	w, err := persistence.NewJSONLWriter(path, fsys)
++	if err != nil {
++		t.Fatalf("NewJSONLWriter: %v", err)
++	}
++	for _, msg := range []string{"um", "dois", "tres"} {
++		if err := w.Append(makeAgentMessageEvent(t, msg)); err != nil {
++			t.Fatalf("Append(%q): %v", msg, err)
++		}
++	}
++
++	beforeCrash, err := fsys.ReadFile(path)
++	if err != nil {
++		t.Fatalf("ReadFile: %v", err)
++	}
++
++	w2, err := persistence.NewJSONLWriter(path, fsys)
++	if err != nil {
++		t.Fatalf("NewJSONLWriter (reopen): %v", err)
++	}
++	if err := w2.Append(makeAgentMessageEvent(t, "quatro-parcial")); err != nil {
++		t.Fatalf("Append: %v", err)
++	}
++
++	afterCrash, err := fsys.ReadFile(path)
++	if err != nil {
++		t.Fatalf("ReadFile: %v", err)
++	}
++	partial := afterCrash[:len(beforeCrash)+3]
++	if err := fsys.WriteFile(path, partial); err != nil {
++		t.Fatalf("WriteFile(partial): %v", err)
++	}
++
++	_, err = persistence.NewJSONLWriter(path, fsys)
++	if err == nil {
++		t.Fatal("expected error reopening after simulated crash mid-append")
++	}
++	if !errors.Is(err, persistence.ErrCorruptedJSONL) {
++		t.Fatalf("expected ErrCorruptedJSONL, got %v", err)
++	}
++
++	if err := fsys.WriteFile(path, beforeCrash); err != nil {
++		t.Fatalf("WriteFile(beforeCrash): %v", err)
++	}
++	w3, err := persistence.NewJSONLWriter(path, fsys)
++	if err != nil {
++		t.Fatalf("session data before the crash must remain readable: %v", err)
++	}
++	if w3 == nil {
++		t.Fatal("expected a usable writer after recovering the pre-crash state")
++	}
++}
+diff --git a/internal/taskloop/hardlink_symlink_test.go b/internal/taskloop/hardlink_symlink_test.go
+new file mode 100644
+index 0000000..d393b44
+--- /dev/null
++++ b/internal/taskloop/hardlink_symlink_test.go
+@@ -0,0 +1,69 @@
++package taskloop
++
++import (
++	"os"
++	"path/filepath"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++)
++
++func TestWriteTasksTableStatus_BreaksHardLinkOnTasksFile(t *testing.T) {
++	dir := t.TempDir()
++	original := filepath.Join(dir, "tasks.md")
++	content := "| # | Título | Status | Dependências |\n|---|---|---|---|\n| 1.0 | Uma | pending | — |\n"
++	if err := os.WriteFile(original, []byte(content), 0o644); err != nil {
++		t.Fatalf("seed: %v", err)
++	}
++
++	hardLinked := filepath.Join(dir, "tasks-hardlink.md")
++	if err := os.Link(original, hardLinked); err != nil {
++		t.Skipf("hard links unsupported on this filesystem: %v", err)
++	}
++
++	fsys := fs.NewOSFileSystem()
++	if err := NewCatalog().writeTasksTableStatus(hardLinked, "1.0", "done", fsys); err != nil {
++		t.Fatalf("writeTasksTableStatus: %v", err)
++	}
++
++	infoA, err := os.Stat(original)
++	if err != nil {
++		t.Fatalf("stat original: %v", err)
++	}
++	infoB, err := os.Stat(hardLinked)
++	if err != nil {
++		t.Fatalf("stat linked: %v", err)
++	}
++	if os.SameFile(infoA, infoB) {
++		t.Fatalf("expected the hard link to be broken by the atomic rename, but the inode is still shared")
++	}
++}
++
++func TestWriteTaskFileStatus_BreaksSymlink(t *testing.T) {
++	dir := t.TempDir()
++	target := filepath.Join(dir, "task-1.0-real.md")
++	link := filepath.Join(dir, "task-1.0.md")
++	content := "# Task\n\n**Status:** pending\n"
++	if err := os.WriteFile(target, []byte(content), 0o644); err != nil {
++		t.Fatalf("seed: %v", err)
++	}
++	if err := os.Symlink(target, link); err != nil {
++		t.Fatalf("symlink: %v", err)
++	}
++
++	fsys := fs.NewOSFileSystem()
++	if err := NewCatalog().writeTaskFileStatus(link, "done", fsys); err != nil {
++		t.Fatalf("writeTaskFileStatus: %v", err)
++	}
++
++	if fsys.IsSymlink(link) {
++		t.Fatalf("expected the symlink to be replaced by the atomic write, but it is still a symlink")
++	}
++	targetContent, err := os.ReadFile(target)
++	if err != nil {
++		t.Fatalf("read target: %v", err)
++	}
++	if string(targetContent) != content {
++		t.Fatalf("expected the symlink target to remain untouched, got %q", targetContent)
++	}
++}
+diff --git a/internal/taskloop/orchestrator_lock_identity.go b/internal/taskloop/orchestrator_lock_identity.go
+new file mode 100644
+index 0000000..076a6c0
+--- /dev/null
++++ b/internal/taskloop/orchestrator_lock_identity.go
+@@ -0,0 +1,53 @@
++package taskloop
++
++import (
++	"encoding/json"
++	"strconv"
++	"time"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/procref"
++)
++
++type orchestratorLockIdentity struct {
++	PID       int
++	Hostname  string
++	CLI       string
++	Timestamp time.Time
++}
++
++func currentOrchestratorLockIdentity() orchestratorLockIdentity {
++	ref := procref.CurrentProcessRef()
++	return orchestratorLockIdentity{
++		PID:       ref.PID,
++		Hostname:  ref.Hostname,
++		CLI:       "ai-spec",
++		Timestamp: time.Now().UTC(),
++	}
++}
++
++func (id orchestratorLockIdentity) marshal() []byte {
++	encoded, err := json.Marshal(id)
++	if err != nil {
++		return []byte("{}")
++	}
++	return encoded
++}
++
++func parseOrchestratorLockIdentity(data []byte) (orchestratorLockIdentity, bool) {
++	var id orchestratorLockIdentity
++	if err := json.Unmarshal(data, &id); err != nil {
++		return orchestratorLockIdentity{}, false
++	}
++	if id.PID <= 0 {
++		return orchestratorLockIdentity{}, false
++	}
++	return id, true
++}
++
++func describeOrchestratorLockOwner(data []byte) string {
++	id, ok := parseOrchestratorLockIdentity(data)
++	if !ok {
++		return "unknown owner (unidentified lock)"
++	}
++	return "pid=" + strconv.Itoa(id.PID) + " host=" + id.Hostname + " cli=" + id.CLI
++}
+diff --git a/internal/taskloop/orchestrator_lock_identity_test.go b/internal/taskloop/orchestrator_lock_identity_test.go
+new file mode 100644
+index 0000000..6a34360
+--- /dev/null
++++ b/internal/taskloop/orchestrator_lock_identity_test.go
+@@ -0,0 +1,49 @@
++package taskloop
++
++import (
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++)
++
++func TestAcquireOrchestratorLock_WritesIdentity(t *testing.T) {
++	dir := t.TempDir()
++	lockPath := filepath.Join(dir, ".sdd-orchestrate.lock")
++
++	release, err := acquireOrchestratorLock(lockPath)
++	if err != nil {
++		t.Fatalf("acquireOrchestratorLock: %v", err)
++	}
++	defer func() { _ = release() }()
++
++	data, err := os.ReadFile(lockPath)
++	if err != nil {
++		t.Fatalf("read lock file: %v", err)
++	}
++	id, ok := parseOrchestratorLockIdentity(data)
++	if !ok {
++		t.Fatalf("lock file does not carry a parseable identity: %s", data)
++	}
++	if id.PID <= 0 {
++		t.Fatalf("expected a positive pid, got %d", id.PID)
++	}
++	if id.CLI != "ai-spec" {
++		t.Fatalf("expected cli=ai-spec, got %q", id.CLI)
++	}
++}
++
++func TestDescribeOrchestratorLockOwner_UnidentifiedContent(t *testing.T) {
++	desc := describeOrchestratorLockOwner([]byte("not json"))
++	if !strings.Contains(desc, "unknown owner") {
++		t.Fatalf("expected unknown owner description, got %q", desc)
++	}
++}
++
++func TestDescribeOrchestratorLockOwner_ParsesIdentity(t *testing.T) {
++	id := currentOrchestratorLockIdentity()
++	desc := describeOrchestratorLockOwner(id.marshal())
++	if !strings.Contains(desc, "cli=ai-spec") {
++		t.Fatalf("expected owner description to name the cli, got %q", desc)
++	}
++}
+diff --git a/internal/taskloop/orchestrator_lock_windows_test.go b/internal/taskloop/orchestrator_lock_windows_test.go
+new file mode 100644
+index 0000000..a7761bd
+--- /dev/null
++++ b/internal/taskloop/orchestrator_lock_windows_test.go
+@@ -0,0 +1,43 @@
++//go:build windows
++
++package taskloop
++
++import (
++	"errors"
++	"os"
++	"path/filepath"
++	"testing"
++)
++
++func TestAcquireOrchestratorLock_BreaksOrphanedLockFromDeadProcess(t *testing.T) {
++	dir := t.TempDir()
++	lockPath := filepath.Join(dir, ".sdd-orchestrate.lock")
++
++	staleID := orchestratorLockIdentity{PID: 999999, Hostname: "this-host-does-not-matter", CLI: "ai-spec"}
++	hostname, _ := os.Hostname()
++	staleID.Hostname = hostname
++	if err := os.WriteFile(lockPath, staleID.marshal(), 0o600); err != nil {
++		t.Fatalf("seed stale lock: %v", err)
++	}
++
++	release, err := acquireOrchestratorLock(lockPath)
++	if err != nil {
++		t.Fatalf("acquireOrchestratorLock should break the orphaned lock and succeed: %v", err)
++	}
++	defer func() { _ = release() }()
++}
++
++func TestAcquireOrchestratorLock_KeepsFailClosedForAliveOwner(t *testing.T) {
++	dir := t.TempDir()
++	lockPath := filepath.Join(dir, ".sdd-orchestrate.lock")
++
++	aliveID := currentOrchestratorLockIdentity()
++	if err := os.WriteFile(lockPath, aliveID.marshal(), 0o600); err != nil {
++		t.Fatalf("seed alive lock: %v", err)
++	}
++
++	_, err := acquireOrchestratorLock(lockPath)
++	if !errors.Is(err, ErrWriterLocked) {
++		t.Fatalf("expected ErrWriterLocked for a lock owned by a live process, got %v", err)
++	}
++}
+diff --git a/internal/taskloop/tasks_file_lock.go b/internal/taskloop/tasks_file_lock.go
+new file mode 100644
+index 0000000..86f9b92
+--- /dev/null
++++ b/internal/taskloop/tasks_file_lock.go
+@@ -0,0 +1,21 @@
++package taskloop
++
++import (
++	"errors"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++)
++
++var ErrTasksFileLockTimeout = errors.New("taskloop: tasks.md lock timeout")
++
++func withTasksFileLock(fsys fs.FileSystem, tasksFile string, fn func() error) error {
++	if _, ok := fsys.(*fs.OSFileSystem); !ok {
++		return fn()
++	}
++	release, err := acquireTasksFileLock(tasksFile)
++	if err != nil {
++		return err
++	}
++	defer func() { _ = release() }()
++	return fn()
++}
+diff --git a/internal/taskloop/tasks_file_lock_test.go b/internal/taskloop/tasks_file_lock_test.go
+new file mode 100644
+index 0000000..a004f5d
+--- /dev/null
++++ b/internal/taskloop/tasks_file_lock_test.go
+@@ -0,0 +1,78 @@
++package taskloop
++
++import (
++	"fmt"
++	"os"
++	"path/filepath"
++	"sync"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++)
++
++func TestWithTasksFileLock_SkipsRealLockForFakeFileSystem(t *testing.T) {
++	fsys := fs.NewFakeFileSystem()
++	calls := 0
++	err := withTasksFileLock(fsys, "/fake/tasks.md", func() error {
++		calls++
++		return nil
++	})
++	if err != nil {
++		t.Fatalf("withTasksFileLock: %v", err)
++	}
++	if calls != 1 {
++		t.Fatalf("expected fn called once, got %d", calls)
++	}
++	if _, err := os.Stat("/fake/tasks.md.lock"); err == nil {
++		t.Fatal("withTasksFileLock must not create a real lock file for FakeFileSystem")
++	}
++}
++
++func TestWithTasksFileLock_SerializesConcurrentWritersOnRealFilesystem(t *testing.T) {
++	dir := t.TempDir()
++	tasksPath := filepath.Join(dir, "tasks.md")
++	if err := os.WriteFile(tasksPath, []byte("start\n"), 0o644); err != nil {
++		t.Fatalf("seed tasks.md: %v", err)
++	}
++
++	fsys := fs.NewOSFileSystem()
++	const writers = 20
++	var wg sync.WaitGroup
++	wg.Add(writers)
++	errs := make(chan error, writers)
++	for i := 0; i < writers; i++ {
++		go func(i int) {
++			defer wg.Done()
++			err := withTasksFileLock(fsys, tasksPath, func() error {
++				content, readErr := fsys.ReadFile(tasksPath)
++				if readErr != nil {
++					return readErr
++				}
++				updated := append(content, []byte(fmt.Sprintf("writer-%d\n", i))...)
++				return fsys.WriteFileAtomic(tasksPath, updated)
++			})
++			errs <- err
++		}(i)
++	}
++	wg.Wait()
++	close(errs)
++	for err := range errs {
++		if err != nil {
++			t.Fatalf("concurrent withTasksFileLock: %v", err)
++		}
++	}
++
++	final, err := os.ReadFile(tasksPath)
++	if err != nil {
++		t.Fatalf("read final tasks.md: %v", err)
++	}
++	lineCount := 0
++	for _, b := range final {
++		if b == '\n' {
++			lineCount++
++		}
++	}
++	if lineCount != writers+1 {
++		t.Fatalf("expected %d lines (lost update under concurrency), got %d:\n%s", writers+1, lineCount, final)
++	}
++}
+diff --git a/internal/taskloop/tasks_file_lock_unix.go b/internal/taskloop/tasks_file_lock_unix.go
+new file mode 100644
+index 0000000..17b1831
+--- /dev/null
++++ b/internal/taskloop/tasks_file_lock_unix.go
+@@ -0,0 +1,42 @@
++//go:build !windows
++
++package taskloop
++
++import (
++	"errors"
++	"fmt"
++	"os"
++	"syscall"
++	"time"
++)
++
++func acquireTasksFileLock(tasksFile string) (func() error, error) {
++	lockPath := tasksFile + ".lock"
++	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0o600)
++	if err != nil {
++		return nil, fmt.Errorf("taskloop: open tasks.md lock: %w", err)
++	}
++	deadline := time.Now().Add(30 * time.Second)
++	for {
++		flockErr := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
++		if flockErr == nil {
++			break
++		}
++		if !errors.Is(flockErr, syscall.EWOULDBLOCK) && !errors.Is(flockErr, syscall.EAGAIN) {
++			_ = f.Close()
++			return nil, fmt.Errorf("taskloop: acquire tasks.md lock: %w", flockErr)
++		}
++		if time.Now().After(deadline) {
++			_ = f.Close()
++			return nil, ErrTasksFileLockTimeout
++		}
++		time.Sleep(50 * time.Millisecond)
++	}
++	return func() error {
++		if err := syscall.Flock(int(f.Fd()), syscall.LOCK_UN); err != nil {
++			_ = f.Close()
++			return fmt.Errorf("taskloop: release tasks.md lock: %w", err)
++		}
++		return f.Close()
++	}, nil
++}
+diff --git a/internal/taskloop/tasks_file_lock_windows.go b/internal/taskloop/tasks_file_lock_windows.go
+new file mode 100644
+index 0000000..f0ee865
+--- /dev/null
++++ b/internal/taskloop/tasks_file_lock_windows.go
+@@ -0,0 +1,83 @@
++//go:build windows
++
++package taskloop
++
++import (
++	"errors"
++	"fmt"
++	"os"
++	"time"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/procref"
++)
++
++func acquireTasksFileLock(tasksFile string) (func() error, error) {
++	lockPath := tasksFile + ".lock"
++	deadline := time.Now().Add(30 * time.Second)
++	for {
++		f, err := tryCreateTasksFileLock(lockPath)
++		if err == nil {
++			return func() error {
++				if closeErr := f.Close(); closeErr != nil {
++					return fmt.Errorf("taskloop: close tasks.md lock: %w", closeErr)
++				}
++				return os.Remove(lockPath)
++			}, nil
++		}
++		if !errors.Is(err, ErrWriterLocked) {
++			return nil, err
++		}
++		if time.Now().After(deadline) {
++			return nil, ErrTasksFileLockTimeout
++		}
++		time.Sleep(50 * time.Millisecond)
++	}
++}
++
++func tryCreateTasksFileLock(lockPath string) (*os.File, error) {
++	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0o600)
++	if err == nil {
++		if _, writeErr := f.Write(currentOrchestratorLockIdentity().marshal()); writeErr != nil {
++			_ = f.Close()
++			return nil, fmt.Errorf("taskloop: gravar identidade do lock de tasks.md: %w", writeErr)
++		}
++		if syncErr := f.Sync(); syncErr != nil {
++			_ = f.Close()
++			return nil, fmt.Errorf("taskloop: sincronizar lock de tasks.md: %w", syncErr)
++		}
++		return f, nil
++	}
++	if !errors.Is(err, os.ErrExist) {
++		return nil, fmt.Errorf("taskloop: acquire tasks.md lock: %w", err)
++	}
++	breakOrphanedTasksFileLock(lockPath)
++	f, err = os.OpenFile(lockPath, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0o600)
++	if err != nil {
++		if errors.Is(err, os.ErrExist) {
++			owner, _ := os.ReadFile(lockPath)
++			return nil, fmt.Errorf("%w: %s", ErrWriterLocked, describeOrchestratorLockOwner(owner))
++		}
++		return nil, fmt.Errorf("taskloop: acquire tasks.md lock: %w", err)
++	}
++	if _, writeErr := f.Write(currentOrchestratorLockIdentity().marshal()); writeErr != nil {
++		_ = f.Close()
++		return nil, fmt.Errorf("taskloop: gravar identidade do lock de tasks.md: %w", writeErr)
++	}
++	return f, nil
++}
++
++func breakOrphanedTasksFileLock(lockPath string) {
++	owner, readErr := os.ReadFile(lockPath)
++	if readErr != nil {
++		return
++	}
++	id, ok := parseOrchestratorLockIdentity(owner)
++	if !ok {
++		return
++	}
++	result := procref.DefaultLivenessProbe.Probe(procref.ProcessRef{PID: id.PID, Hostname: id.Hostname})
++	if !result.Reliable || result.Alive {
++		return
++	}
++	_ = os.Remove(lockPath)
++}
+diff --git a/internal/taskloop/tasks_file_lock_windows_test.go b/internal/taskloop/tasks_file_lock_windows_test.go
+new file mode 100644
+index 0000000..cda68de
+--- /dev/null
++++ b/internal/taskloop/tasks_file_lock_windows_test.go
+@@ -0,0 +1,45 @@
++//go:build windows
++
++package taskloop
++
++import (
++	"errors"
++	"os"
++	"path/filepath"
++	"testing"
++)
++
++func TestAcquireTasksFileLock_BreaksOrphanedLockFromDeadProcess(t *testing.T) {
++	dir := t.TempDir()
++	tasksPath := filepath.Join(dir, "tasks.md")
++	lockPath := tasksPath + ".lock"
++
++	staleID := orchestratorLockIdentity{PID: 999999, CLI: "ai-spec"}
++	hostname, _ := os.Hostname()
++	staleID.Hostname = hostname
++	if err := os.WriteFile(lockPath, staleID.marshal(), 0o600); err != nil {
++		t.Fatalf("seed stale lock: %v", err)
++	}
++
++	release, err := acquireTasksFileLock(tasksPath)
++	if err != nil {
++		t.Fatalf("acquireTasksFileLock should break the orphaned lock and succeed: %v", err)
++	}
++	defer func() { _ = release() }()
++}
++
++func TestAcquireTasksFileLock_KeepsFailClosedForAliveOwner(t *testing.T) {
++	dir := t.TempDir()
++	tasksPath := filepath.Join(dir, "tasks.md")
++	lockPath := tasksPath + ".lock"
++
++	aliveID := currentOrchestratorLockIdentity()
++	if err := os.WriteFile(lockPath, aliveID.marshal(), 0o600); err != nil {
++		t.Fatalf("seed alive lock: %v", err)
++	}
++
++	_, err := tryCreateTasksFileLock(lockPath)
++	if !errors.Is(err, ErrWriterLocked) {
++		t.Fatalf("expected ErrWriterLocked for a lock owned by a live process, got %v", err)
++	}
++}

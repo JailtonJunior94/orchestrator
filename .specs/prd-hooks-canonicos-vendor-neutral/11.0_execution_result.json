@@ -1,0 +1,45 @@
+{
+  "schema_version": 2,
+  "run_id": "task-11.0-hooks-canonicos-vendor-neutral-2026-09-20",
+  "task_id": "11.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "fd2f65c0e1dcae73a3eb88121ef9bbd7a6a30c50",
+  "patch_sha256": "cf8981e48ee69c8749d964f351b25600fa03dc3fd48626092d88a9c3a052eb47",
+  "patch_ref": "evidence/task-11.0/11.0_execution_result.patch",
+  "final_state_sha256": "e47bdf184e517bf61eb450ebb8d40e1549ae7fa622b73a0f15224d4132656b02",
+  "coverage_regression": false,
+  "tests": [
+    {"command": "go build ./...", "exit_code": 0, "output_sha256": "37c7fe5a130a38fb71dbc8e2add2badb51a8daff505cffb23532f7a8a71bd54e"},
+    {"command": "go vet ./... && GOOS=windows go build ./... && GOOS=windows go vet ./...", "exit_code": 0, "output_sha256": "37c7fe5a130a38fb71dbc8e2add2badb51a8daff505cffb23532f7a8a71bd54e"},
+    {"command": "go test ./...", "exit_code": 0, "output_sha256": "37c7fe5a130a38fb71dbc8e2add2badb51a8daff505cffb23532f7a8a71bd54e"},
+    {"command": "golangci-lint run --config .golangci.yml --timeout 10m", "exit_code": 0, "output_sha256": "37c7fe5a130a38fb71dbc8e2add2badb51a8daff505cffb23532f7a8a71bd54e"},
+    {"command": "bash scripts/check-mocks.sh", "exit_code": 0, "output_sha256": "37c7fe5a130a38fb71dbc8e2add2badb51a8daff505cffb23532f7a8a71bd54e"},
+    {"command": "bash scripts/check-hooks-sync.sh", "exit_code": 0, "output_sha256": "37c7fe5a130a38fb71dbc8e2add2badb51a8daff505cffb23532f7a8a71bd54e"},
+    {"command": "bash scripts/check-scripts-sync.sh", "exit_code": 0, "output_sha256": "37c7fe5a130a38fb71dbc8e2add2badb51a8daff505cffb23532f7a8a71bd54e"},
+    {"command": "bash scripts/check-skills-sync.sh", "exit_code": 0, "output_sha256": "37c7fe5a130a38fb71dbc8e2add2badb51a8daff505cffb23532f7a8a71bd54e"},
+    {"command": "bash scripts/test-hooks.sh", "exit_code": 0, "output_sha256": "37c7fe5a130a38fb71dbc8e2add2badb51a8daff505cffb23532f7a8a71bd54e"},
+    {"command": "go run . hooks inventory . && bash scripts/check-hooks-inventory.sh", "exit_code": 0, "output_sha256": "37c7fe5a130a38fb71dbc8e2add2badb51a8daff505cffb23532f7a8a71bd54e"},
+    {"command": "go test -coverprofile=coverage.out ./... && bash scripts/check-package-coverage.sh 70", "exit_code": 0, "output_sha256": "37c7fe5a130a38fb71dbc8e2add2badb51a8daff505cffb23532f7a8a71bd54e"},
+    {"command": "go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/runtime/memory/durable/... ./cmd/ai_spec_harness/... ./internal/qualitygate/...", "exit_code": 0, "output_sha256": "37c7fe5a130a38fb71dbc8e2add2badb51a8daff505cffb23532f7a8a71bd54e"}
+  ],
+  "criteria": [
+    {"id": "atomic-writes-no-truncating-writefile", "evidence_ref": "evidence/task-11.0/validation.log"},
+    {"id": "jsonl-no-buf-crash-recovery-test", "evidence_ref": "evidence/task-11.0/validation.log"},
+    {"id": "filesystem-append-real-parity", "evidence_ref": "evidence/task-11.0/validation.log"},
+    {"id": "checkpoint-single-extension-four-consumers", "evidence_ref": "evidence/task-11.0/validation.log"},
+    {"id": "orchestrator-lock-processref-liveness-orphan-test", "evidence_ref": "evidence/task-11.0/validation.log"},
+    {"id": "sanitization-five-rf49-paths-synthetic-secret", "evidence_ref": "evidence/task-11.0/validation.log"},
+    {"id": "post-wave-idempotent-no-fixed-tmp", "evidence_ref": "evidence/task-11.0/validation.log"},
+    {"id": "memory-store-append-not-migrated-decision-recorded", "evidence_ref": "evidence/task-11.0/validation.log"},
+    {"id": "non-regression-test-lint-vet", "evidence_ref": "evidence/task-11.0/validation.log"},
+    {"id": "check-scripts-sync-green", "evidence_ref": "evidence/task-11.0/validation.log"},
+    {"id": "check-mocks-green", "evidence_ref": "evidence/task-11.0/validation.log"},
+    {"id": "integration-and-coverage-gates-green", "evidence_ref": "evidence/task-11.0/validation.log"},
+    {"id": "hardlink-symlink-verification-per-migrated-path", "evidence_ref": "evidence/task-11.0/validation.log"}
+  ],
+  "evidence": [
+    "evidence/task-11.0/validation.log"
+  ],
+  "review_verdict": "approved"
+}

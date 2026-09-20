@@ -57,7 +57,32 @@ func (c *Catalog) SyncSpecHash(tasksPath string) error {
 		return nil
 	}
 
-	return os.WriteFile(tasksPath, []byte(updated), 0o644)
+	return c.writeTasksFileAtomic(tasksPath, []byte(updated))
+}
+
+func (c *Catalog) writeTasksFileAtomic(path string, data []byte) error {
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, ".tmp-*")
+	if err != nil {
+		return fmt.Errorf("criar arquivo temporario em %s: %w", dir, err)
+	}
+	tmpPath := tmp.Name()
+	defer func() { _ = os.Remove(tmpPath) }()
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("escrever arquivo temporario %s: %w", tmpPath, err)
+	}
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		return fmt.Errorf("sincronizar arquivo temporario %s: %w", tmpPath, err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("fechar arquivo temporario %s: %w", tmpPath, err)
+	}
+	if err := os.Rename(tmpPath, path); err != nil {
+		return fmt.Errorf("publicar %s: %w", path, err)
+	}
+	return nil
 }
 
 func (c *Catalog) guardApprovedState(dir string) error {

@@ -427,3 +427,26 @@ func newDoneResult(t *testing.T, dir string, orchestrator *Orchestrator, startSn
 func testSnapshot() Snapshot {
 	return NewSnapshot(strings.Repeat("a", 40), "patch", "state")
 }
+
+func TestSemanticPatch_ExcludesTasksMdLock(t *testing.T) {
+	dir := newOrchestratorStateDir(t)
+	if err := os.WriteFile(filepath.Join(dir, "tasks.md.lock"), nil, 0o600); err != nil {
+		t.Fatalf("seed tasks.md.lock: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "real-change.go"), []byte("package change\n"), 0o644); err != nil {
+		t.Fatalf("seed real change: %v", err)
+	}
+
+	o := NewOrchestrator(sdd.NewStore())
+	result := sdd.ExecutionResult{PatchRef: "evidence/whatever.patch"}
+	_, patch, err := o.captureFinalSnapshot(dir, result)
+	if err != nil {
+		t.Fatalf("captureFinalSnapshot: %v", err)
+	}
+	if strings.Contains(string(patch), "tasks.md.lock") {
+		t.Fatalf("expected tasks.md.lock to be excluded from the semantic patch, got:\n%s", patch)
+	}
+	if !strings.Contains(string(patch), "real-change.go") {
+		t.Fatalf("expected real-change.go to be present in the semantic patch, got:\n%s", patch)
+	}
+}

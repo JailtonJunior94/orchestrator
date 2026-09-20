@@ -46,6 +46,63 @@ func (_m *FileSystem) EXPECT() *FileSystem_Expecter {
 	return &FileSystem_Expecter{mock: &_m.Mock}
 }
 
+// AppendFile provides a mock function for the type FileSystem
+func (_mock *FileSystem) AppendFile(path string, data []byte) error {
+	ret := _mock.Called(path, data)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AppendFile")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(string, []byte) error); ok {
+		r0 = returnFunc(path, data)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// FileSystem_AppendFile_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AppendFile'
+type FileSystem_AppendFile_Call struct {
+	*mock.Call
+}
+
+// AppendFile is a helper method to define mock.On call
+//   - path string
+//   - data []byte
+func (_e *FileSystem_Expecter) AppendFile(path any, data any) *FileSystem_AppendFile_Call {
+	return &FileSystem_AppendFile_Call{Call: _e.mock.On("AppendFile", path, data)}
+}
+
+func (_c *FileSystem_AppendFile_Call) Run(run func(path string, data []byte)) *FileSystem_AppendFile_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 []byte
+		if args[1] != nil {
+			arg1 = args[1].([]byte)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *FileSystem_AppendFile_Call) Return(err error) *FileSystem_AppendFile_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *FileSystem_AppendFile_Call) RunAndReturn(run func(path string, data []byte) error) *FileSystem_AppendFile_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CopyDir provides a mock function for the type FileSystem
 func (_mock *FileSystem) CopyDir(src string, dst string) error {
 	ret := _mock.Called(src, dst)

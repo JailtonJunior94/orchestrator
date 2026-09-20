@@ -443,6 +443,17 @@ func (t *FileTransaction) WriteFileAtomic(path string, data []byte) error {
 	return t.stage(path, data)
 }
 
+func (t *FileTransaction) AppendFile(path string, data []byte) error {
+	existing, err := t.ReadFile(path)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("read %s before append: %w", path, err)
+	}
+	combined := make([]byte, 0, len(existing)+len(data))
+	combined = append(combined, existing...)
+	combined = append(combined, data...)
+	return t.stage(path, combined)
+}
+
 func (t *FileTransaction) ReadDir(path string) ([]os.DirEntry, error) {
 	return t.fs.ReadDir(path)
 }

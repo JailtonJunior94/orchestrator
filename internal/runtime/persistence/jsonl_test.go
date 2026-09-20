@@ -13,18 +13,24 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence"
 )
 
-// errFS é um FileSystem que falha em operações de escrita para testar caminhos de erro.
 type errFS struct {
 	*fs.FakeFileSystem
 	writeErr error
 	mkdirErr error
 }
 
-func (e *errFS) WriteFile(path string, data []byte) error {
+func (e *errFS) AppendFile(path string, data []byte) error {
 	if e.writeErr != nil {
 		return e.writeErr
 	}
-	return e.FakeFileSystem.WriteFile(path, data)
+	return e.FakeFileSystem.AppendFile(path, data)
+}
+
+func (e *errFS) WriteFileAtomic(path string, data []byte) error {
+	if e.writeErr != nil {
+		return e.writeErr
+	}
+	return e.FakeFileSystem.WriteFileAtomic(path, data)
 }
 
 func (e *errFS) MkdirAll(path string) error {
@@ -176,5 +182,33 @@ func TestJSONLWriter_ReusesExistingContent(t *testing.T) {
 	lines := strings.Split(strings.TrimRight(string(data), "\n"), "\n")
 	if len(lines) != 2 {
 		t.Fatalf("esperava 2 linhas, obteve %d", len(lines))
+	}
+}
+
+func TestJSONLWriter_Append_RedactsSecrets(t *testing.T) {
+	fsys := fs.NewFakeFileSystem()
+	w, err := persistence.NewJSONLWriter("/evidence/task-secret/events.jsonl", fsys)
+	if err != nil {
+		t.Fatalf("NewJSONLWriter: %v", err)
+	}
+
+	rawWithSecret := "{\"type\":\"agent_message\",\"token\":\"ghp_1234567890abcdef1234567890\"}" //nolint:gosec
+	evt, err := events.NewAgentMessage(time.Now(), "mensagem", json.RawMessage(rawWithSecret))
+	if err != nil {
+		t.Fatalf("NewAgentMessage: %v", err)
+	}
+	if err := w.Append(evt); err != nil {
+		t.Fatalf("Append: %v", err)
+	}
+
+	data, err := fsys.ReadFile("/evidence/task-secret/events.jsonl")
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if strings.Contains(string(data), "ghp_1234567890abcdef1234567890") {
+		t.Fatalf("secret leaked into events.jsonl: %s", data)
+	}
+	if !strings.Contains(string(data), "[REDACTED:provider_token]") {
+		t.Fatalf("expected redaction marker in events.jsonl: %s", data)
 	}
 }

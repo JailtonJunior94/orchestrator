@@ -492,7 +492,7 @@ func (o *Orchestrator) buildExclusions(prdDir string, result sdd.ExecutionResult
 	if err != nil {
 		return "", nil, fmt.Errorf("taskloop: resolver diretorio do PRD: %w", err)
 	}
-	for _, name := range []string{"sdd-state.json", ".sdd-orchestrate.lock"} {
+	for _, name := range []string{"sdd-state.json", ".sdd-orchestrate.lock", "tasks.md.lock"} {
 		path, relativeErr := filepath.Rel(root, filepath.Join(resolvedPRDDir, name))
 		if relativeErr != nil {
 			return "", nil, fmt.Errorf("taskloop: resolver artefato operacional: %w", relativeErr)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable"
 )
 
 // WriteToolCalls gera o arquivo tool_calls.md (RF-09).
@@ -20,7 +21,11 @@ func (c *Catalog) WriteToolCalls(path string, summaries []events.ToolCallSummary
 	}
 
 	content := NewCatalog().buildToolCallsContent(summaries)
-	if err := fsys.WriteFile(clean, []byte(content)); err != nil {
+	sanitized, err := durable.DefaultSanitizationPolicy.Sanitize(content, durable.SanitizationConfig{})
+	if err != nil {
+		return fmt.Errorf("persistence: sanitizar %s: %w", clean, err)
+	}
+	if err := fsys.WriteFileAtomic(clean, []byte(sanitized.Content)); err != nil {
 		return fmt.Errorf("persistence: escrever %s: %w", clean, err)
 	}
 	return nil

@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/procref"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -46,18 +46,18 @@ func (_m *LivenessProbe) EXPECT() *LivenessProbe_Expecter {
 }
 
 // Probe provides a mock function for the type LivenessProbe
-func (_mock *LivenessProbe) Probe(ref durable.ProcessRef) durable.LivenessResult {
+func (_mock *LivenessProbe) Probe(ref procref.ProcessRef) procref.LivenessResult {
 	ret := _mock.Called(ref)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Probe")
 	}
 
-	var r0 durable.LivenessResult
-	if returnFunc, ok := ret.Get(0).(func(durable.ProcessRef) durable.LivenessResult); ok {
+	var r0 procref.LivenessResult
+	if returnFunc, ok := ret.Get(0).(func(procref.ProcessRef) procref.LivenessResult); ok {
 		r0 = returnFunc(ref)
 	} else {
-		r0 = ret.Get(0).(durable.LivenessResult)
+		r0 = ret.Get(0).(procref.LivenessResult)
 	}
 	return r0
 }
@@ -68,16 +68,16 @@ type LivenessProbe_Probe_Call struct {
 }
 
 // Probe is a helper method to define mock.On call
-//   - ref durable.ProcessRef
+//   - ref procref.ProcessRef
 func (_e *LivenessProbe_Expecter) Probe(ref any) *LivenessProbe_Probe_Call {
 	return &LivenessProbe_Probe_Call{Call: _e.mock.On("Probe", ref)}
 }
 
-func (_c *LivenessProbe_Probe_Call) Run(run func(ref durable.ProcessRef)) *LivenessProbe_Probe_Call {
+func (_c *LivenessProbe_Probe_Call) Run(run func(ref procref.ProcessRef)) *LivenessProbe_Probe_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 durable.ProcessRef
+		var arg0 procref.ProcessRef
 		if args[0] != nil {
-			arg0 = args[0].(durable.ProcessRef)
+			arg0 = args[0].(procref.ProcessRef)
 		}
 		run(
 			arg0,
@@ -86,12 +86,12 @@ func (_c *LivenessProbe_Probe_Call) Run(run func(ref durable.ProcessRef)) *Liven
 	return _c
 }
 
-func (_c *LivenessProbe_Probe_Call) Return(livenessResult durable.LivenessResult) *LivenessProbe_Probe_Call {
+func (_c *LivenessProbe_Probe_Call) Return(livenessResult procref.LivenessResult) *LivenessProbe_Probe_Call {
 	_c.Call.Return(livenessResult)
 	return _c
 }
 
-func (_c *LivenessProbe_Probe_Call) RunAndReturn(run func(ref durable.ProcessRef) durable.LivenessResult) *LivenessProbe_Probe_Call {
+func (_c *LivenessProbe_Probe_Call) RunAndReturn(run func(ref procref.ProcessRef) procref.LivenessResult) *LivenessProbe_Probe_Call {
 	_c.Call.Return(run)
 	return _c
 }

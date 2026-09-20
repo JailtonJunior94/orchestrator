@@ -218,13 +218,13 @@ fi
 # === F25: checkpoint deve existir se status=done ===
 # Default: FAIL bloqueante. Override via AI_ALLOW_MISSING_CHECKPOINT=1 (back compat com execute-task <v1.4)
 if [[ "$status" == "done" ]]; then
-  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.yaml"
+  checkpoint="$PRD_DIR/.checkpoints/${TASK_ID}.json"
   if [[ ! -s "$checkpoint" ]]; then
     if [[ "${AI_ALLOW_MISSING_CHECKPOINT:-0}" == "1" ]]; then
       echo "WARN F25: checkpoint ausente em $checkpoint (back compat: AI_ALLOW_MISSING_CHECKPOINT=1)" >&2
       warnings=$((warnings+1))
     else
-      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu YAML antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
+      echo "FAIL F25: checkpoint ausente em $checkpoint — execute-task Stage 5.3 nao escreveu JSON antes de mutar tasks.md. Re-execute a tarefa ou exporte AI_ALLOW_MISSING_CHECKPOINT=1 (nao recomendado)." >&2
       errors=$((errors+1))
     fi
   fi

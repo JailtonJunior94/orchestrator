@@ -135,7 +135,7 @@ func (c *Catalog) WriteActionPlanToTaskFile(fsys fs.FileSystem, taskFile string,
 	block := NewCatalog().buildActionPlanBlock(plan)
 	updated := NewCatalog().replaceActionPlanBlock(data, block)
 
-	if err := fsys.WriteFile(taskFile, updated); err != nil {
+	if err := fsys.WriteFileAtomic(taskFile, updated); err != nil {
 		return fmt.Errorf("taskloop: erro ao escrever plano de acao em %s: %w", taskFile, err)
 	}
 	return nil
@@ -207,14 +207,24 @@ func (c *Catalog) AppendFollowUpTasks(fsys fs.FileSystem, tasksFile string, plan
 		return nil
 	}
 
+	lockErr := withTasksFileLock(fsys, tasksFile, func() error {
+		return NewCatalog().appendFollowUpTaskRows(fsys, tasksFile, docs)
+	})
+	if lockErr != nil {
+		return fmt.Errorf("taskloop: erro ao escrever %s: %w", tasksFile, lockErr)
+	}
+	return nil
+}
+
+func (c *Catalog) appendFollowUpTaskRows(fsys fs.FileSystem, tasksFile string, docs []ReservationDecision) error {
 	data, err := fsys.ReadFile(tasksFile)
 	if err != nil {
-		return fmt.Errorf("taskloop: erro ao ler %s: %w", tasksFile, err)
+		return fmt.Errorf("erro ao ler %s: %w", tasksFile, err)
 	}
 
 	existing, err := NewCatalog().ParseTasksFile(data)
 	if err != nil {
-		return fmt.Errorf("taskloop: erro ao parsear %s: %w", tasksFile, err)
+		return fmt.Errorf("erro ao parsear %s: %w", tasksFile, err)
 	}
 	nextID := NewCatalog().nextFollowUpID(existing)
 
@@ -225,10 +235,7 @@ func (c *Catalog) AppendFollowUpTasks(fsys fs.FileSystem, tasksFile string, plan
 	}
 
 	updated := NewCatalog().appendRowsAfterTable(data, rows.Bytes())
-	if err := fsys.WriteFile(tasksFile, updated); err != nil {
-		return fmt.Errorf("taskloop: erro ao escrever %s: %w", tasksFile, err)
-	}
-	return nil
+	return fsys.WriteFileAtomic(tasksFile, updated)
 }
 
 func (c *Catalog) filterDocumentDecisions(plan ActionPlan) []ReservationDecision {

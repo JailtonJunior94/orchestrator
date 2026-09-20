@@ -304,7 +304,6 @@ func (c *Catalog) isProtectedPRDFile(prdFolder, fullPath string, mode taskIsolat
 	// Sem isso, artefatos gravados pela própria stack disparam falso-positivo de isolamento e
 	// abortam a task-loop ACP:
 	//   - memory/      → hook memory_persist (F3) grava MEMORY.md.
-	//   - .checkpoints/ → execute-task (F25) grava <num>.yaml antes de mutar tasks.md.
 	//   - .partials/    → execute-task (F32) grava tasks.md.<num>.partial em wave paralela.
 	if NewCatalog().isHarnessManagedPRDDir(relPath) {
 		return false
@@ -319,7 +318,7 @@ func (c *Catalog) isProtectedPRDFile(prdFolder, fullPath string, mode taskIsolat
 // stack (não pelo agente): memory/, .checkpoints/, .partials/. Esses artefatos são legítimos e não
 // devem disparar violação de isolamento. Literais espelham memory.DirName e os paths de execute-task.
 func (c *Catalog) isHarnessManagedPRDDir(relPath string) bool {
-	for _, entry := range []string{"memory", ".checkpoints", ".partials", ".tmp-*"} {
+	for _, entry := range []string{"memory", ".checkpoints", ".partials", ".tmp-*", "tasks.md.lock"} {
 		if strings.HasSuffix(entry, "*") {
 			if matched, matchErr := filepath.Match(entry, filepath.Base(relPath)); matchErr == nil && matched {
 				return true

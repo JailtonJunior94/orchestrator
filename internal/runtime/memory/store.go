@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable"
 )
 
 // Constantes de limite default para os dois tiers do memory store.
@@ -150,7 +152,11 @@ func (c *Catalog) readFile(path string, lineLimit, byteLimit int) (Document, err
 func (c *Catalog) writeFile(path, content string, mode WriteMode) error {
 	switch mode {
 	case WriteModeReplace:
-		return os.WriteFile(path, []byte(content), 0o644)
+		sanitized, err := durable.DefaultSanitizationPolicy.Sanitize(content, durable.SanitizationConfig{})
+		if err != nil {
+			return fmt.Errorf("memory: sanitize %s: %w", path, err)
+		}
+		return os.WriteFile(path, []byte(sanitized.Content), 0o644)
 	case WriteModeAppend:
 		f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if err != nil {

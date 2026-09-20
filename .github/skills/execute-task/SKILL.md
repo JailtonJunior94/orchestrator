@@ -79,10 +79,10 @@ description: Executa uma tarefa de implementação aprovada via codificação, v
 **Etapa 5: Persistir evidências (F25 checkpoint)**
 1. Salvar `.specs/prd-<slug>/[num]_execution_report.md` (overwrite com `# Generated: <ISO-8601 UTC>` no header — F36) a partir de `assets/task-execution-report-template.md`.
 2. Rodar validador de evidências (resolver em cascata portátil: `.agents/scripts/...` → `.claude/scripts/...` → `scripts/...`). Nenhum → `failed`. Falha → `blocked`; não mutar tasks.md.
-3. **Checkpoint YAML antes de mutar tasks.md (F25)**:
+3. **Checkpoint JSON antes de mutar tasks.md (F25)**:
    - `mkdir -p .specs/prd-<slug>/.checkpoints/`.
-   - Escrever `.checkpoints/<num>.yaml.tmp` com `status`, `report_path`, `summary`, `timestamp` (ISO-8601 UTC).
-   - `mv -n .yaml.tmp .yaml` atômico. Completo ou inexistente, nunca parcial.
+   - Escrever `.checkpoints/<num>.json.tmp` com `status`, `report_path`, `summary`, `timestamp` (ISO-8601 UTC).
+   - `mv -n .json.tmp .json` atômico. Completo ou inexistente, nunca parcial.
 4. **Só após checkpoint persistido**, mutar tasks.md para `done`.
 5. **Lock atômico em tasks.md (F3+F32)** quando invocador é `execute-all-tasks` em wave paralela:
    - POSIX: `flock -x -w 30 .specs/prd-<slug>/tasks.md.lock -c '<edit>'`.

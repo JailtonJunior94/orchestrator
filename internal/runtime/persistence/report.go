@@ -11,6 +11,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	runtime "github.com/JailtonJunior94/ai-spec-harness/internal/runtime"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable"
 )
 
 const metricsSectionHeader = "## Métricas Claude-2026"
@@ -66,7 +67,12 @@ func (c *Catalog) EnrichReport(reportPath string, summary runtime.Summary, fsys 
 		updated = NewCatalog().injectBoundedSection(updated, cycleSectionHeaderRe, cycleSection)
 	}
 
-	if err := fsys.WriteFile(clean, []byte(updated)); err != nil {
+	sanitized, err := durable.DefaultSanitizationPolicy.Sanitize(updated, durable.SanitizationConfig{})
+	if err != nil {
+		return fmt.Errorf("persistence: sanitizar %s: %w", clean, err)
+	}
+
+	if err := fsys.WriteFileAtomic(clean, []byte(sanitized.Content)); err != nil {
 		return fmt.Errorf("persistence: escrever %s: %w", clean, err)
 	}
 	return nil

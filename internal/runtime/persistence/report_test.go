@@ -486,3 +486,23 @@ func TestEnrichReport_MemoryEvidenceSection_IdempotentAndLastSectionPreserved(t 
 		t.Error("seção de métricas deve permanecer a última do relatório após reexecução idempotente")
 	}
 }
+
+func TestEnrichReport_RedactsSecretsInPreExistingContent(t *testing.T) {
+	fsys := fs.NewFakeFileSystem()
+	preexisting := "# Relatorio\n\nAuthorization: Bearer sk-abcdefghijklmnopqrstuvwxyz\n"
+	if err := fsys.WriteFile("/report/execution_report.md", []byte(preexisting)); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	if err := persistence.NewCatalog().EnrichReport("/report/execution_report.md", makeSummary(), fsys); err != nil {
+		t.Fatalf("EnrichReport: %v", err)
+	}
+
+	data, err := fsys.ReadFile("/report/execution_report.md")
+	if err != nil {
+		t.Fatalf("ReadFile: %v", err)
+	}
+	if strings.Contains(string(data), "sk-abcdefghijklmnopqrstuvwxyz") {
+		t.Fatalf("secret leaked into execution_report.md: %s", data)
+	}
+}

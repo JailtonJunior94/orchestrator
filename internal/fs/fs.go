@@ -25,6 +25,7 @@ type FileSystem interface {
 	ReadFile(path string) ([]byte, error)
 	WriteFile(path string, data []byte) error
 	WriteFileAtomic(path string, data []byte) error
+	AppendFile(path string, data []byte) error
 	ReadDir(path string) ([]os.DirEntry, error)
 	FileHash(path string) (string, error)
 	DirHash(path string) (string, error)
@@ -199,6 +200,29 @@ func (f *OSFileSystem) WriteFileAtomic(path string, data []byte) error {
 	}
 	if err := os.Rename(tmpPath, path); err != nil {
 		return fmt.Errorf("publish file %s: %w", path, err)
+	}
+	return nil
+}
+
+func (f *OSFileSystem) AppendFile(path string, data []byte) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("create directory %s: %w", dir, err)
+	}
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return fmt.Errorf("open file for append %s: %w", path, err)
+	}
+	if _, err := file.Write(data); err != nil {
+		_ = file.Close()
+		return fmt.Errorf("append to file %s: %w", path, err)
+	}
+	if err := file.Sync(); err != nil {
+		_ = file.Close()
+		return fmt.Errorf("sync file %s: %w", path, err)
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("close file %s: %w", path, err)
 	}
 	return nil
 }

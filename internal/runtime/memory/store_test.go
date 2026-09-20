@@ -325,3 +325,25 @@ func TestDefaultLimits(t *testing.T) {
 		t.Errorf("TaskBytes: got=%d want=%d", l.TaskBytes, memory.DefaultTaskByteLimit)
 	}
 }
+
+func TestWriteWorkflow_RedactsSecretsInReplaceMode(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	limits := memory.NewCatalog().DefaultLimits()
+	s := memory.New(dir, limits)
+	ctx := context.Background()
+
+	content := "# Workflow\nAuthorization: Bearer sk-abcdefghijklmnopqrstuvwxyz\n"
+	if err := s.WriteWorkflow(ctx, content, memory.WriteModeReplace); err != nil {
+		t.Fatalf("WriteWorkflow: %v", err)
+	}
+
+	doc, err := s.ReadWorkflow(ctx)
+	if err != nil {
+		t.Fatalf("ReadWorkflow: %v", err)
+	}
+	if strings.Contains(doc.Content, "sk-abcdefghijklmnopqrstuvwxyz") {
+		t.Fatalf("secret leaked into MEMORY.md: %s", doc.Content)
+	}
+}

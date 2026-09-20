@@ -166,7 +166,7 @@
     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
     "classification": "KEEP",
     "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido.",
-    "integrity_hash": "878eb8b8bd98d32b97766ca76a32c924a57b05e622107a83acdd3ff8154864b4"
+    "integrity_hash": "fc28df0732a4c45bd5a653a411a7e0dab8d146acdc0c0139a5fbe52d9b8b3251"
   },
   {
     "name": "hook-prereq-gate.sh",
@@ -261,7 +261,7 @@
     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
     "classification": "KEEP",
     "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido.",
-    "integrity_hash": "1de471051b63dede02081bf528439b81e568e743b7d01ef609260a448e280343"
+    "integrity_hash": "cffe4095d5a6f1cd461ebf2b74c10be87fd21fa44bdded263307955258194de1"
   },
   {
     "name": "validate-session-end.sh",
@@ -309,7 +309,7 @@
     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
     "classification": "KEEP",
     "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido.",
-    "integrity_hash": "ecdec54d106319de6cf58c7fd9c9cb66e354fb3072ad76a3c3df4756554d6ced"
+    "integrity_hash": "4aa752f5165e8954442d521c3939cf744ff2d3b2fadd584c914301f73f029133"
   },
   {
     "name": "post-execute-task.sh",
@@ -449,7 +449,7 @@
     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
     "classification": "KEEP",
     "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido.",
-    "integrity_hash": "878eb8b8bd98d32b97766ca76a32c924a57b05e622107a83acdd3ff8154864b4"
+    "integrity_hash": "fc28df0732a4c45bd5a653a411a7e0dab8d146acdc0c0139a5fbe52d9b8b3251"
   },
   {
     "name": "hook-prereq-gate.sh",
@@ -544,7 +544,7 @@
     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
     "classification": "KEEP",
     "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido.",
-    "integrity_hash": "1de471051b63dede02081bf528439b81e568e743b7d01ef609260a448e280343"
+    "integrity_hash": "cffe4095d5a6f1cd461ebf2b74c10be87fd21fa44bdded263307955258194de1"
   },
   {
     "name": "validate-session-end.sh",
@@ -592,7 +592,7 @@
     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
     "classification": "KEEP",
     "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido.",
-    "integrity_hash": "ecdec54d106319de6cf58c7fd9c9cb66e354fb3072ad76a3c3df4756554d6ced"
+    "integrity_hash": "4aa752f5165e8954442d521c3939cf744ff2d3b2fadd584c914301f73f029133"
   },
   {
     "name": "post-execute-task.sh",
@@ -899,6 +899,37 @@
     "duplication": "Sem espelho equivalente inventariado.",
     "classification": "KEEP",
     "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido."
+  },
+  {
+    "name": "projection.go",
+    "location": "internal/runtime/hooks/projection.go",
+    "event": "lifecycle",
+    "provider": "Runtime ACP",
+    "purpose": "Aplica governanca operacional no ponto de hook declarado.",
+    "policy_gate": "Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido.",
+    "blocking": "NAO BLOQUEANTE",
+    "cost": "baixo",
+    "failure_mode": "FAIL-CLOSED",
+    "test_coverage": "COM TESTE",
+    "duplication": "Sem espelho equivalente inventariado.",
+    "classification": "KEEP",
+    "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido."
+  },
+  {
+    "name": "quality_gate.go",
+    "location": "internal/runtime/hooks/quality_gate.go",
+    "event": "lifecycle",
+    "provider": "Runtime ACP",
+    "purpose": "Aplica governanca operacional no ponto de hook declarado.",
+    "policy_gate": "Politicas em .agents/policies/ nao sao lidas diretamente; gate auto-contido.",
+    "blocking": "NAO BLOQUEANTE",
+    "cost": "baixo",
+    "failure_mode": "FAIL-CLOSED",
+    "test_coverage": "COM TESTE",
+    "duplication": "Sem espelho equivalente inventariado.",
+    "classification": "KEEP",
+    "justification": "Mantido por proteger governanca ativa ou por ser espelho distribuido.",
+    "integrity_hash": "e0db7ee84233494fbf39ef739f01de4970132c4d5fb47f65dc739401254f9ff0"
   },
   {
     "name": "spec_drift.go",

@@ -1,0 +1,140 @@
+Tarefa 11.0 — Evidence gate, checkpoint atomico, deteccao de corrupcao e sanitizacao
+PRD: hooks-canonicos-vendor-neutral
+Data: 2026-09-20T22:45:00Z (rodada final, apos ciclo de revisao)
+
+$ go build ./...
+(sem saida — sucesso)
+
+$ go vet ./...
+(sem saida — sucesso)
+
+$ GOOS=windows go vet ./...
+(sem saida — sucesso)
+
+$ GOOS=windows go build ./internal/taskloop/...
+(sem saida — sucesso)
+
+$ go test ./...
+Go test: 4235 passed in 92 packages
+
+$ gofmt -l .
+(vazio — nenhum arquivo divergente)
+
+$ GOGC=20 golangci-lint run --config .golangci.yml --timeout 10m
+golangci-lint: No issues found
+
+$ make mocks && bash scripts/check-mocks.sh
+Mocks: OK (sincronizados com mockery.yml)
+
+$ bash scripts/check-hooks-sync.sh
+Hooks em sync: 28
+Drift / missing: 0
+Gate de encerramento em sync: 7/7 mirrors
+Todos os hooks orquestrador sincronizados.
+
+$ bash scripts/check-scripts-sync.sh
+Validadores em sync: 32
+Drift / missing: 0
+Todos os validadores de evidencia sincronizados.
+
+$ bash scripts/check-skills-sync.sh
+Skills em sync: 87
+Skills com drift: 0
+Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
+
+$ bash scripts/test-hooks.sh
+Resultado: 73 asserts OK, 0 asserts FAIL
+
+$ go test -coverprofile=coverage.out ./... && go tool cover -func=coverage_filtered.out
+total: 82.1% (gate 75%)
+
+$ bash scripts/check-package-coverage.sh 70
+PASS em todos os 9 pacotes criticos listados (internal/taskloop 86.0%, internal/runtime/memory/durable 88.2%, entre outros)
+
+$ go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/runtime/memory/durable/... ./cmd/ai_spec_harness/... ./internal/qualitygate/...
+1349 passed in 8 packages
+
+$ go test ./internal/fs/... -run TestOS_WriteFileAtomic -v
+TestOS_WriteFileAtomic_BreaksHardLink: PASS
+TestOS_WriteFileAtomic_ReplacesSymlinkInsteadOfWritingThrough: PASS
+TestOS_WriteFileAtomicVsWriteFile_symlinkSemantics: PASS
+
+$ go test ./internal/runtime/persistence/... -run TestNewJSONLWriter -v
+TestNewJSONLWriter_RejectsTruncatedMidLine: PASS
+TestNewJSONLWriter_RejectsInvalidJSONLine: PASS
+TestNewJSONLWriter_OnlyLastRecordIsLostOnCrash: PASS
+
+$ go test ./internal/runtime/persistence/... -run RedactsSecrets -v
+TestJSONLWriter_Append_RedactsSecrets: PASS
+TestEnrichReport_RedactsSecretsInPreExistingContent: PASS
+TestWriteToolCalls_RedactsSecretsInToolName: PASS
+
+$ go test ./internal/runtime/memory/... -run TestWriteWorkflow_RedactsSecretsInReplaceMode -v
+TestWriteWorkflow_RedactsSecretsInReplaceMode: PASS
+
+$ go test ./internal/taskloop/... -run TestWithTasksFileLock -v
+TestWithTasksFileLock_SkipsRealLockForFakeFileSystem: PASS
+TestWithTasksFileLock_SerializesConcurrentWritersOnRealFilesystem: PASS
+
+$ go test ./internal/taskloop/... -run "TestAcquireOrchestratorLock_WritesIdentity|TestDescribeOrchestratorLockOwner" -v
+TestAcquireOrchestratorLock_WritesIdentity: PASS
+TestDescribeOrchestratorLockOwner_UnidentifiedContent: PASS
+TestDescribeOrchestratorLockOwner_ParsesIdentity: PASS
+
+$ GOOS=windows go vet ./internal/taskloop/...
+(sem saida — sucesso; cobre orchestrator_lock_windows_test.go)
+
+$ go test ./internal/procref/... -v
+TestCurrentProcessRefIsAlive: PASS
+TestExitedProcessIsNotAlive: PASS
+TestDifferentHostnameIsUnreliable: PASS
+TestNonPositivePIDIsReliablyDead: PASS
+
+--- Ciclo de revisao ---
+
+Rodada 1 (subagent reviewer): REJECTED
+  [HIGH] internal/procref/process_windows.go: checkProcessLiveness stub permanente
+  [MEDIUM] internal/taskloop/tasks_file_lock_windows.go: sem identidade/liveness
+  [MEDIUM] verificacao de hard link/symlink incompleta para os caminhos de 11.4
+
+Correcoes aplicadas:
+  - internal/procref/process_windows.go: sonda real via syscall.OpenProcess/GetExitCodeProcess
+  - internal/taskloop/tasks_file_lock_windows.go: identidade + liveness + quebra de lock orfao
+  - internal/taskloop/hardlink_symlink_test.go, internal/specdrift/sync_test.go: testes novos
+
+$ GOOS=windows go build ./... && GOOS=windows go vet ./...
+(sem saida — sucesso, build completo, nao so internal/taskloop)
+
+$ go test ./internal/taskloop/... ./internal/specdrift/... ./internal/procref/... ./internal/fs/...
+988 passed in 6 packages
+
+Rodada 2 (subagent reviewer, escopo restrito aos 6 arquivos da correcao): APPROVED
+  Confirma os 3 achados fechados; nenhum achado novo.
+
+--- Correcao adicional descoberta ao fechar a propria tarefa ---
+
+tasks.md.lock (criado por tasks_file_lock_unix.go/tasks_file_lock_windows.go) nao estava excluido do
+patch semantico (internal/taskloop/orchestrator.go:buildExclusions) nem tolerado por
+internal/taskloop/isolation.go:isHarnessManagedPRDDir. Corrigido nos dois pontos; teste novo
+internal/taskloop/orchestrator_test.go:TestSemanticPatch_ExcludesTasksMdLock.
+
+--- Gates finais, apos todas as correcoes ---
+
+$ go build ./... && go vet ./... && GOOS=windows go build ./... && GOOS=windows go vet ./...
+(sem saida — sucesso)
+
+$ go test ./...
+Go test: 4239 passed in 92 packages
+
+$ GOGC=20 golangci-lint run --config .golangci.yml --timeout 10m
+golangci-lint: No issues found
+
+$ bash scripts/check-hooks-sync.sh && bash scripts/check-scripts-sync.sh && bash scripts/check-skills-sync.sh && bash scripts/check-mocks.sh
+Hooks em sync: 28, drift 0. Validadores em sync: 32, drift 0. Skills em sync: 87, drift 0.
+Mocks: OK (sincronizados com mockery.yml).
+
+$ go run . hooks inventory . && bash scripts/check-hooks-inventory.sh
+Inventario de hooks gerado: 63 entradas. Gate silencioso (sucesso).
+
+$ go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/runtime/memory/durable/... ./cmd/ai_spec_harness/... ./internal/qualitygate/...
+1349 passed in 8 packages

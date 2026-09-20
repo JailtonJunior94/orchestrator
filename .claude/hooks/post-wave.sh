@@ -8,12 +8,15 @@
 #
 # Comportamento:
 #   - Cria/atualiza .specs/prd-<slug>/_orchestration_report.partial.md
-#   - Append-only: cada chamada adiciona uma seção da wave
+#   - Idempotente: reexecutar com o mesmo <wave-id> nao duplica a secao
+#   - Atomico: escrita completa via temporario + rename, sob flock
+#   - Sanitiza segredos do YAML de resultados antes de embutir no relatorio
 #   - Quando o orquestrador concluir todas as waves, fica responsavel por
 #     renomear .partial.md -> _orchestration_report.md (rename atomico)
 #
 # Exit:
-#   0 — checkpoint escrito
+#   0 — checkpoint escrito (ou wave ja registrada, idempotente)
+#   1 — falha de IO
 #   2 — argumentos invalidos
 
 set -euo pipefail
@@ -32,17 +35,42 @@ TASKS_ROOT="${AI_TASKS_ROOT:-.specs}"
 PRD_PREFIX="${AI_PRD_PREFIX:-prd-}"
 PRD_DIR="$REPO_ROOT/$TASKS_ROOT/$PRD_PREFIX$PRD_SLUG"
 PARTIAL_MD="$PRD_DIR/_orchestration_report.partial.md"
+LOCK_FILE="$PARTIAL_MD.lock"
 
 if [[ ! -d "$PRD_DIR" ]]; then
   echo "FAIL: PRD dir nao existe: $PRD_DIR" >&2
   exit 1
 fi
 
+if [[ "${POST_WAVE_LOCK_HELD:-0}" != "1" ]]; then
+  if ! command -v flock >/dev/null 2>&1; then
+    echo "FAIL: flock ausente no PATH; instale util-linux/flock para post-wave.sh" >&2
+    exit 1
+  fi
+  exec env POST_WAVE_LOCK_HELD=1 flock -x -w 30 "$LOCK_FILE" "$0" "$@"
+fi
+
+sanitize_stream() {
+  sed -E \
+    -e 's/-----BEGIN [A-Z ]*PRIVATE KEY-----.*-----END [A-Z ]*PRIVATE KEY-----/[REDACTED:pem_private_key]/g' \
+    -e 's/(gh[po]_|sk-|AKIA)[A-Za-z0-9_-]{10,}/[REDACTED:provider_token]/g' \
+    -e 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[REDACTED:jwt]/g' \
+    -e 's/([Aa]uthorization:[[:space:]]*).+/\1[REDACTED:authorization_header]/g' \
+    -e 's/^([A-Z][A-Z0-9_]*(SECRET|TOKEN|KEY|PASSWORD|PASS|CREDENTIAL)[A-Z0-9_]*=).+/\1[REDACTED:dotenv_secret]/g'
+}
+
+atomic_write() {
+  local target="$1"
+  local tmp
+  tmp="$(mktemp "$PRD_DIR/.tmp-post-wave.XXXXXX")"
+  cat > "$tmp"
+  mv "$tmp" "$target"
+}
+
 ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-# Header inicial se ainda nao existe
 if [[ ! -f "$PARTIAL_MD" ]]; then
-  cat > "$PARTIAL_MD.tmp" <<EOF
+  atomic_write "$PARTIAL_MD" <<EOF
 # Relatorio de Orquestracao (parcial)
 
 PRD: $PRD_SLUG
@@ -51,23 +79,28 @@ Iniciado: $ts
 ## Waves Executadas
 
 EOF
-  mv "$PARTIAL_MD.tmp" "$PARTIAL_MD"
 fi
 
-# Append entry da wave
+WAVE_MARKER="### Wave $WAVE_ID —"
+if grep -qF "$WAVE_MARKER" "$PARTIAL_MD" 2>/dev/null; then
+  echo "post-wave: wave $WAVE_ID ja registrada em $PARTIAL_MD, ignorando (idempotente)" >&2
+  exit 0
+fi
+
 {
+  cat "$PARTIAL_MD"
   echo
   echo "### Wave $WAVE_ID — $ts"
   echo
   if [[ -n "$RESULTS_FILE" && -s "$RESULTS_FILE" ]]; then
     echo '```yaml'
-    cat "$RESULTS_FILE"
+    sanitize_stream < "$RESULTS_FILE"
     echo
     echo '```'
   else
     echo "(sem resultados anexados)"
   fi
-} >> "$PARTIAL_MD"
+} | atomic_write "$PARTIAL_MD"
 
 echo "post-wave: checkpoint atualizado em $PARTIAL_MD" >&2
 exit 0

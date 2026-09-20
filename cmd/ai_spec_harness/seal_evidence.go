@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/sdd"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/taskloop"
 )
@@ -69,7 +70,7 @@ Exemplos:
 			if err != nil {
 				return fmt.Errorf("serializar resultado selado: %w", err)
 			}
-			if err := os.WriteFile(resultPath, append(encoded, '\n'), 0o644); err != nil {
+			if err := fs.NewOSFileSystem().WriteFileAtomic(resultPath, append(encoded, '\n')); err != nil {
 				return fmt.Errorf("gravar resultado selado: %w", err)
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "OK: evidencia da tarefa %s selada no commit %s (patch %s)\n",

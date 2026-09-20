@@ -674,6 +674,126 @@ assert_exit "G4-6: JSON invalido bloqueia" 2 $?
 rm -rf "$GIT_GATE_TMP"
 
 # ============================================================================
+# Bloco 5: post-wave.sh — RF-40 (atomicidade), RF-41 (idempotencia) e RF-49
+# (sanitizacao do YAML embutido no checkpoint parcial).
+# ============================================================================
+echo
+echo "Bloco 5: post-wave.sh"
+
+# Bloco 3 exporta PATH="$TMP_BASE/bin:$PATH" com um shim de `git` que responde
+# `rev-parse --show-toplevel` com o TMP_REPO_ROOT (ja removido) daquele bloco,
+# independente do cwd real. post-wave.sh depende de `git rev-parse
+# --show-toplevel` real; usar um PATH limpo aqui evita herdar esse shim.
+REAL_BIN_PATH="/usr/bin:/bin:/opt/homebrew/bin:/usr/local/bin"
+
+POST_WAVE_HOOK="$REPO_ROOT/.agents/hooks/post-wave.sh"
+POST_WAVE_TMP=$(mktemp -d "$TMP_BASE/post-wave.XXXXXX" 2>/dev/null || mktemp -d /tmp/post-wave.XXXXXX)
+mkdir -p "$POST_WAVE_TMP/.specs/prd-postwave"
+(cd "$POST_WAVE_TMP" && PATH="$REAL_BIN_PATH" git init -q .)
+printf 'status: done\ntoken: ghp_1234567890abcdef1234567890\n' >"$POST_WAVE_TMP/results.yaml"
+PARTIAL_MD_PW="$POST_WAVE_TMP/.specs/prd-postwave/_orchestration_report.partial.md"
+
+echo
+echo "  H5-1: primeira wave cria o parcial (exit 0)"
+(cd "$POST_WAVE_TMP" && AI_TASKS_ROOT=.specs PATH="$REAL_BIN_PATH" bash "$POST_WAVE_HOOK" postwave 1.0 results.yaml >/dev/null 2>&1)
+assert_exit "H5-1: primeira wave, exit 0" 0 $?
+
+echo
+echo "  H5-2: reexecutar a mesma wave nao duplica a secao (RF-41)"
+(cd "$POST_WAVE_TMP" && AI_TASKS_ROOT=.specs PATH="$REAL_BIN_PATH" bash "$POST_WAVE_HOOK" postwave 1.0 results.yaml >/dev/null 2>&1)
+assert_exit "H5-2: reexecucao idempotente, exit 0" 0 $?
+wave_count=$(grep -c "### Wave 1.0" "$PARTIAL_MD_PW" 2>/dev/null || echo 0)
+if [[ "$wave_count" -eq 1 ]]; then
+  echo "  ✓ H5-2: secao da wave 1.0 aparece exatamente 1 vez"
+  passed=$((passed+1))
+else
+  echo "  ✗ H5-2: secao da wave 1.0 aparece $wave_count vezes (esperado 1)"
+  failed=$((failed+1))
+fi
+
+echo
+echo "  H5-3: segredo do YAML anexado nunca aparece em claro (RF-49)"
+if grep -q "ghp_1234567890abcdef1234567890" "$PARTIAL_MD_PW" 2>/dev/null; then
+  echo "  ✗ H5-3: segredo vazou para o relatorio parcial"
+  failed=$((failed+1))
+else
+  echo "  ✓ H5-3: segredo nao vazou"
+  passed=$((passed+1))
+fi
+if grep -q "REDACTED:provider_token" "$PARTIAL_MD_PW" 2>/dev/null; then
+  echo "  ✓ H5-3: marcador de redacao presente"
+  passed=$((passed+1))
+else
+  echo "  ✗ H5-3: marcador de redacao ausente"
+  failed=$((failed+1))
+fi
+
+echo
+echo "  H5-4: nao sobra temporario .tmp-post-wave apos as execucoes"
+leftover_tmp=$(find "$POST_WAVE_TMP/.specs/prd-postwave" -maxdepth 1 -name ".tmp-post-wave.*" 2>/dev/null | wc -l | tr -d ' ')
+if [[ "$leftover_tmp" -eq 0 ]]; then
+  echo "  ✓ H5-4: nenhum temporario remanescente"
+  passed=$((passed+1))
+else
+  echo "  ✗ H5-4: $leftover_tmp temporario(s) remanescente(s)"
+  failed=$((failed+1))
+fi
+
+rm -rf "$POST_WAVE_TMP"
+
+# ============================================================================
+# Bloco 6: extensao unica do checkpoint entre os quatro consumidores (RF-39,
+# RF-43). Falha se qualquer um divergir de ".json".
+# ============================================================================
+echo
+echo "Bloco 6: extensao do checkpoint (.checkpoints/<id>.EXT)"
+
+CKPT_SKILL="$REPO_ROOT/.agents/skills/execute-task/SKILL.md"
+CKPT_STATE_GO="$REPO_ROOT/internal/sdd/state.go"
+CKPT_WRAPPER="$REPO_ROOT/.agents/hooks/subagent-stop-wrapper.sh"
+CKPT_GATE="$REPO_ROOT/.agents/hooks/post-execute-task.sh"
+
+echo
+echo "  K6-1: execute-task/SKILL.md declara extensao .json"
+if grep -qE '\.checkpoints/<num>\.json' "$CKPT_SKILL" && ! grep -qE '\.checkpoints/<num>\.yaml' "$CKPT_SKILL"; then
+  echo "  ✓ K6-1: SKILL.md usa .json"
+  passed=$((passed+1))
+else
+  echo "  ✗ K6-1: SKILL.md nao usa .json exclusivamente"
+  failed=$((failed+1))
+fi
+
+echo
+echo "  K6-2: internal/sdd/state.go le .checkpoints/<taskID>.json"
+if grep -qE '\.checkpoints",\s*taskID\+"\.json"' "$CKPT_STATE_GO"; then
+  echo "  ✓ K6-2: state.go le .json"
+  passed=$((passed+1))
+else
+  echo "  ✗ K6-2: state.go nao le .json"
+  failed=$((failed+1))
+fi
+
+echo
+echo "  K6-3: subagent-stop-wrapper.sh procura .checkpoints/\${task_id}.json"
+if grep -qE '\.checkpoints/\$\{task_id\}\.json' "$CKPT_WRAPPER"; then
+  echo "  ✓ K6-3: wrapper procura .json"
+  passed=$((passed+1))
+else
+  echo "  ✗ K6-3: wrapper nao procura .json"
+  failed=$((failed+1))
+fi
+
+echo
+echo "  K6-4: post-execute-task.sh (gate F25) checa .checkpoints/\${TASK_ID}.json"
+if grep -qE '\.checkpoints/\$\{TASK_ID\}\.json' "$CKPT_GATE" && ! grep -qE '\.checkpoints/\$\{TASK_ID\}\.yaml' "$CKPT_GATE"; then
+  echo "  ✓ K6-4: gate F25 checa .json exclusivamente"
+  passed=$((passed+1))
+else
+  echo "  ✗ K6-4: gate F25 nao checa .json exclusivamente"
+  failed=$((failed+1))
+fi
+
+# ============================================================================
 echo
 echo "==============================================="
 echo "Resultado: $passed asserts OK, $failed asserts FAIL"

@@ -270,3 +270,30 @@ func TestSyncSpecHash_RoundTrip(t *testing.T) {
 		t.Error("expected CheckDrift to pass after SyncSpecHash")
 	}
 }
+
+func TestSyncSpecHash_BreaksHardLinkOnTasksFile(t *testing.T) {
+	dir := t.TempDir()
+	tasksPath := writeFileSync(t, dir, "tasks.md", "no hash comments here\n")
+	writeFileSync(t, dir, "prd.md", "# PRD\n")
+
+	hardLinked := filepath.Join(dir, "tasks-hardlink.md")
+	if err := os.Link(tasksPath, hardLinked); err != nil {
+		t.Skipf("hard links unsupported on this filesystem: %v", err)
+	}
+
+	if err := specdrift.NewCatalog().SyncSpecHash(hardLinked); err != nil {
+		t.Fatalf("SyncSpecHash: %v", err)
+	}
+
+	infoA, err := os.Stat(tasksPath)
+	if err != nil {
+		t.Fatalf("stat original: %v", err)
+	}
+	infoB, err := os.Stat(hardLinked)
+	if err != nil {
+		t.Fatalf("stat linked: %v", err)
+	}
+	if os.SameFile(infoA, infoB) {
+		t.Fatalf("expected the hard link to be broken by the atomic rename, but the inode is still shared")
+	}
+}
