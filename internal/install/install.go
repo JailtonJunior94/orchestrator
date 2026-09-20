@@ -853,6 +853,7 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 		s.printer.DryRun("copiar .claude/hooks/validate-preload.sh")
 		s.printer.DryRun("copiar .claude/hooks/validate-session-end.sh")
 		s.printer.DryRun("copiar scripts/lib/parse-hook-input.sh")
+		s.printer.DryRun("copiar scripts/lib/hook-payload.sh")
 		s.printer.DryRun("copiar scripts/lib/check-invocation-depth.sh")
 		s.printer.DryRun("configurar hooks PreToolUse e PostToolUse em .claude/settings.local.json")
 		s.printer.DryRun("gerar .claude/agents/*.md via adaptadores")
@@ -908,6 +909,13 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 	parseHookInput := filepath.Join(sourceDir, "scripts", "lib", "parse-hook-input.sh")
 	if s.fs.Exists(parseHookInput) {
 		if err := s.fs.CopyFile(parseHookInput, filepath.Join(projectDir, "scripts", "lib", "parse-hook-input.sh")); err != nil {
+			return err
+		}
+	}
+
+	hookPayload := filepath.Join(sourceDir, "scripts", "lib", "hook-payload.sh")
+	if s.fs.Exists(hookPayload) {
+		if err := s.fs.CopyFile(hookPayload, filepath.Join(projectDir, "scripts", "lib", "hook-payload.sh")); err != nil {
 			return err
 		}
 	}
@@ -1011,6 +1019,7 @@ func (s *Service) copyAgentsScripts(sourceDir, projectDir string) error {
 var agentsLibFiles = []string{
 	"check-invocation-depth.sh",
 	"parse-hook-input.sh",
+	"hook-payload.sh",
 }
 
 // copyAgentsLib copia shell libs canonicas de .agents/lib/ da fonte para o

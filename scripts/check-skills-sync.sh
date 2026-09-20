@@ -104,6 +104,7 @@ echo "Skills com drift: $drift_count"
 agents_lib="$repo_root/.agents/lib"
 legacy_lib="$repo_root/scripts/lib"
 embedded_lib="$repo_root/internal/embedded/assets/.agents/lib"
+embedded_legacy_lib="$repo_root/internal/embedded/assets/scripts/lib"
 
 # G1: a lista e DECLARADA, nao derivada de glob. Sem ela, apagar .agents/lib/ (ou
 # esvazia-lo) fazia o bloco inteiro nao executar nenhuma comparacao e o gate
@@ -111,10 +112,12 @@ embedded_lib="$repo_root/internal/embedded/assets/.agents/lib"
 declare -a required_libs=(
   "check-invocation-depth.sh"
   "parse-hook-input.sh"
+  "hook-payload.sh"
 )
 declare -a lib_mirrors=(
   "$legacy_lib"
   "$embedded_lib"
+  "$embedded_legacy_lib"
 )
 
 lib_drift=0

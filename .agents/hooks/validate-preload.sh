@@ -12,10 +12,10 @@ project_root="${AGENTS_ROOT:-$(cd "$hook_dir/../.." && pwd)}"
 
 parse_lib=""
 for candidate in \
-  "$project_root/.agents/lib/parse-hook-input.sh" \
-  "$project_root/scripts/lib/parse-hook-input.sh" \
-  "$hook_dir/../lib/parse-hook-input.sh" \
-  "$hook_dir/../../scripts/lib/parse-hook-input.sh"; do
+  "$project_root/.agents/lib/hook-payload.sh" \
+  "$project_root/scripts/lib/hook-payload.sh" \
+  "$hook_dir/../lib/hook-payload.sh" \
+  "$hook_dir/../../scripts/lib/hook-payload.sh"; do
   if [[ -f "$candidate" ]]; then
     parse_lib="$candidate"
     break
@@ -23,7 +23,7 @@ for candidate in \
 done
 
 if [[ -z "$parse_lib" ]]; then
-  echo "ERRO: parse-hook-input.sh ausente em .agents/lib/ e scripts/lib/ — rode 'ai-spec-harness install .'" >&2
+  echo "ERRO: hook-payload.sh ausente em .agents/lib/ e scripts/lib/ — rode 'ai-spec-harness install .'" >&2
   exit "$PRELOAD_BLOCK_EXIT"
 fi
 
@@ -34,8 +34,14 @@ if [[ ! -t 0 ]]; then
   payload="$(cat)"
 fi
 
-file_path="$(printf '%s' "$payload" | parse_file_path)"
-command_text="$(printf '%s' "$payload" | parse_command_text)"
+if ! file_path="$(printf '%s' "$payload" | parse_file_path)"; then
+  echo "ERRO: payload de hook invalido; governanca negada." >&2
+  exit "$PRELOAD_BLOCK_EXIT"
+fi
+if ! command_text="$(printf '%s' "$payload" | parse_command_text)"; then
+  echo "ERRO: payload de hook invalido; governanca negada." >&2
+  exit "$PRELOAD_BLOCK_EXIT"
+fi
 
 gate_targets=()
 if [[ -n "$file_path" ]]; then
@@ -58,13 +64,15 @@ if [[ ${#gate_targets[@]} -gt 0 ]]; then
   fi
 fi
 
-git_operation_gate="$project_root/.agents/scripts/git-operation-gate.sh"
-if [[ ! -f "$git_operation_gate" ]]; then
-  git_operation_gate="$hook_dir/../scripts/git-operation-gate.sh"
-fi
-if [[ -f "$git_operation_gate" ]]; then
-  if ! printf '%s' "$payload" | AGENTS_ROOT="$project_root" bash "$git_operation_gate"; then
-    exit "$PRELOAD_BLOCK_EXIT"
+if [[ -n "$command_text" ]]; then
+  git_operation_gate="$project_root/.agents/scripts/git-operation-gate.sh"
+  if [[ ! -f "$git_operation_gate" ]]; then
+    git_operation_gate="$hook_dir/../scripts/git-operation-gate.sh"
+  fi
+  if [[ -f "$git_operation_gate" ]]; then
+    if ! printf '%s' "$payload" | AGENTS_ROOT="$project_root" bash "$git_operation_gate"; then
+      exit "$PRELOAD_BLOCK_EXIT"
+    fi
   fi
 fi
 

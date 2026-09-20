@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"fmt"
 	"io"
 	"testing"
 
@@ -24,7 +25,22 @@ func silentPrinter() *output.Printer {
 func setupService(fake *fs.FakeFileSystem, isRepo bool) *Service {
 	mfst := manifest.NewStore(fake)
 	gitRepo := &fakeGitRepo{isRepo: isRepo}
-	return NewService(fake, silentPrinter(), mfst, gitRepo)
+	svc := NewService(fake, silentPrinter(), mfst, gitRepo)
+	svc.lookPath = func(name string) (string, error) { return "/usr/bin/" + name, nil }
+	return svc
+}
+
+func lookPathOnly(available ...string) func(string) (string, error) {
+	allowed := make(map[string]bool, len(available))
+	for _, name := range available {
+		allowed[name] = true
+	}
+	return func(name string) (string, error) {
+		if allowed[name] {
+			return "/usr/bin/" + name, nil
+		}
+		return "", fmt.Errorf("%s: executable file not found in $PATH", name)
+	}
 }
 
 func TestCheckGit_ValidRepo(t *testing.T) {
@@ -178,6 +194,30 @@ func TestRunChecks_FullPass(t *testing.T) {
 		if c.Status == "fail" {
 			t.Errorf("check %q failed: %s", c.Name, c.Detail)
 		}
+	}
+}
+
+func TestCheckHookInterpreter(t *testing.T) {
+	tests := []struct {
+		name       string
+		available  []string
+		wantStatus string
+	}{
+		{name: "python3 available", available: []string{"python3"}, wantStatus: "ok"},
+		{name: "jq available without python3", available: []string{"jq"}, wantStatus: "ok"},
+		{name: "both available", available: []string{"python3", "jq"}, wantStatus: "ok"},
+		{name: "neither available", available: []string{}, wantStatus: "fail"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			svc := setupService(fs.NewFakeFileSystem(), true)
+			svc.lookPath = lookPathOnly(tt.available...)
+			check := svc.checkHookInterpreter()
+			if check.Status != tt.wantStatus {
+				t.Errorf("checkHookInterpreter status = %q, want %q (detail=%s)", check.Status, tt.wantStatus, check.Detail)
+			}
+		})
 	}
 }
 

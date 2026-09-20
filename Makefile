@@ -81,6 +81,9 @@ check-skills-sync:
 check-hooks-sync:
 	bash scripts/check-hooks-sync.sh
 
+check-hooks-inventory:
+	go run . hooks inventory --check .
+
 check-scripts-sync:
 	bash scripts/check-scripts-sync.sh
 

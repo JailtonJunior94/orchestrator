@@ -509,6 +509,7 @@ func (o *Orchestrator) buildExclusions(prdDir string, result sdd.ExecutionResult
 		return "", nil, fmt.Errorf("taskloop: resolver checkpoints operacionais: %w", relativeErr)
 	}
 	excluded[filepath.ToSlash(checkpointsPath)+"/**"] = true
+	excluded[tmpFileExclusionPattern] = true
 	return root, excluded, nil
 }
 
@@ -534,6 +535,10 @@ func appendExclusions(args []string, excluded map[string]bool) []string {
 	}
 	sort.Strings(keys)
 	for _, path := range keys {
+		if path == tmpFileExclusionPattern {
+			args = append(args, ":(glob,exclude)"+path)
+			continue
+		}
 		args = append(args, ":(exclude)"+path)
 	}
 	return args
@@ -572,6 +577,8 @@ func (o *Orchestrator) semanticPatch(root string, excluded map[string]bool) ([]b
 	return patch, nil
 }
 
+const tmpFileExclusionPattern = "**/.tmp-*"
+
 func (o *Orchestrator) isExcluded(path string, excluded map[string]bool) bool {
 	if excluded[path] {
 		return true
@@ -584,6 +591,9 @@ func (o *Orchestrator) isExcluded(path string, excluded map[string]bool) bool {
 		if strings.HasSuffix(excludedPath, "*.legacy.json") &&
 			strings.HasPrefix(path, strings.TrimSuffix(excludedPath, "*.legacy.json")) &&
 			strings.HasSuffix(path, ".legacy.json") {
+			return true
+		}
+		if excludedPath == tmpFileExclusionPattern && strings.HasPrefix(filepath.Base(path), ".tmp-") {
 			return true
 		}
 	}

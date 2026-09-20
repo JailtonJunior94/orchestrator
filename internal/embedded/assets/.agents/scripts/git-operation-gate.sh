@@ -12,10 +12,10 @@ project_root="${AGENTS_ROOT:-$(cd "$script_dir/../.." && pwd)}"
 
 parse_lib=""
 for candidate in \
-  "$project_root/.agents/lib/parse-hook-input.sh" \
-  "$project_root/scripts/lib/parse-hook-input.sh" \
-  "$script_dir/../lib/parse-hook-input.sh" \
-  "$script_dir/../../scripts/lib/parse-hook-input.sh"; do
+  "$project_root/.agents/lib/hook-payload.sh" \
+  "$project_root/scripts/lib/hook-payload.sh" \
+  "$script_dir/../lib/hook-payload.sh" \
+  "$script_dir/../../scripts/lib/hook-payload.sh"; do
   if [[ -f "$candidate" ]]; then
     parse_lib="$candidate"
     break
@@ -23,7 +23,7 @@ for candidate in \
 done
 
 if [[ -z "$parse_lib" ]]; then
-  echo "ERRO: parse-hook-input.sh ausente em .agents/lib/ e scripts/lib/ — rode 'ai-spec-harness install .'" >&2
+  echo "ERRO: hook-payload.sh ausente em .agents/lib/ e scripts/lib/ — rode 'ai-spec-harness install .'" >&2
   exit "$GIT_OPERATION_BLOCK_EXIT"
 fi
 
@@ -34,10 +34,14 @@ if [[ ! -t 0 ]]; then
   payload="$(cat)"
 fi
 
-command_text="$(printf '%s' "$payload" | parse_command_text)"
+if ! command_text="$(printf '%s' "$payload" | parse_command_text)"; then
+  echo "GOVERNANCE BLOQUEIO: payload de hook invalido; operacao git negada." >&2
+  exit "$GIT_OPERATION_BLOCK_EXIT"
+fi
 
 if [[ -z "$command_text" ]]; then
-  exit 0
+  echo "GOVERNANCE BLOQUEIO: comando ausente ou nao extraivel; operacao git negada." >&2
+  exit "$GIT_OPERATION_BLOCK_EXIT"
 fi
 
 audit_git_operation_escape() {

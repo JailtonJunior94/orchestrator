@@ -58,6 +58,7 @@ func writeCanonicalScripts(t *testing.T, root string) {
 		".agents/hooks/validate-preload.sh",
 		".agents/hooks/validate-governance.sh",
 		".agents/lib/parse-hook-input.sh",
+		".agents/lib/hook-payload.sh",
 	} {
 		data, err := embedded.Assets.ReadFile("assets/" + rel)
 		if err != nil {

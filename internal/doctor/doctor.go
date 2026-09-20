@@ -57,6 +57,7 @@ type Service struct {
 	install       *install.Service
 	skillcheck    *skillscheck.Service
 	harnessLoader harness.Loader
+	lookPath      func(name string) (string, error)
 }
 
 func NewService(fsys fs.FileSystem, printer *output.Printer, mfst *manifest.Store, gitRepo git.Repository) *Service {
@@ -70,6 +71,7 @@ func NewService(fsys fs.FileSystem, printer *output.Printer, mfst *manifest.Stor
 		install:       install.NewService(fsys, printer, mfst, adpt, ctxg),
 		skillcheck:    skillscheck.NewService(fsys, printer),
 		harnessLoader: harness.NewDefaultLoader(fsys),
+		lookPath:      exec.LookPath,
 	}
 }
 
@@ -142,6 +144,7 @@ func (s *Service) runCoreChecks(projectDir string, items []install.VerifyItem, v
 	checks = append(checks, s.checkSymlinks(projectDir)...)
 	checks = append(checks, s.checkPermissions(projectDir))
 	checks = append(checks, s.checkGitBinary())
+	checks = append(checks, s.checkHookInterpreter())
 	checks = append(checks, s.checkContract(projectDir))
 	checks = append(checks, s.checkSkillIntegrity(projectDir))
 	checks = append(checks, s.checkCanonicalSync(items, verifyErr))
@@ -236,6 +239,23 @@ func (s *Service) checkGitBinary() Check {
 		return Check{Name: "Git instalado", Status: "fail", Detail: "git nao encontrado no PATH", Layer: LayerInstallation}
 	}
 	return Check{Name: "Git instalado", Status: "ok", Detail: "disponivel", Layer: LayerCore}
+}
+
+func (s *Service) checkHookInterpreter() Check {
+	_, python3Err := s.lookPath("python3")
+	if python3Err == nil {
+		return Check{Name: "Interpretador de payload de hook", Status: "ok", Detail: "python3 disponivel", Layer: LayerInstallation}
+	}
+	_, jqErr := s.lookPath("jq")
+	if jqErr == nil {
+		return Check{Name: "Interpretador de payload de hook", Status: "ok", Detail: "jq disponivel (python3 ausente)", Layer: LayerInstallation}
+	}
+	return Check{
+		Name:   "Interpretador de payload de hook",
+		Status: "fail",
+		Detail: "python3 e jq ausentes no PATH — hook-payload.sh falha fechado (bloqueia) em toda operacao git e validacao de governanca",
+		Layer:  LayerInstallation,
+	}
 }
 
 func (s *Service) checkContract(projectDir string) Check {

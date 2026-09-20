@@ -319,8 +319,14 @@ func (c *Catalog) isProtectedPRDFile(prdFolder, fullPath string, mode taskIsolat
 // stack (não pelo agente): memory/, .checkpoints/, .partials/. Esses artefatos são legítimos e não
 // devem disparar violação de isolamento. Literais espelham memory.DirName e os paths de execute-task.
 func (c *Catalog) isHarnessManagedPRDDir(relPath string) bool {
-	for _, dir := range []string{"memory", ".checkpoints", ".partials"} {
-		if relPath == dir || strings.HasPrefix(relPath, dir+string(filepath.Separator)) {
+	for _, entry := range []string{"memory", ".checkpoints", ".partials", ".tmp-*"} {
+		if strings.HasSuffix(entry, "*") {
+			if matched, matchErr := filepath.Match(entry, filepath.Base(relPath)); matchErr == nil && matched {
+				return true
+			}
+			continue
+		}
+		if relPath == entry || strings.HasPrefix(relPath, entry+string(filepath.Separator)) {
 			return true
 		}
 	}

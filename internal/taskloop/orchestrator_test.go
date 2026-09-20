@@ -107,6 +107,39 @@ func TestCaptureFinalSnapshotExcludesOperationalCheckpoints(t *testing.T) {
 	}
 }
 
+func TestCaptureFinalSnapshotExcludesNestedAtomicWriteTempFiles(t *testing.T) {
+	dir := newOrchestratorStateDir(t)
+	o := NewOrchestrator(sdd.NewStore())
+	startSnapshot, err := o.CaptureSnapshotFromGit(t.Context(), dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := o.Start(dir, "run", "1.0", 1, startSnapshot); err != nil {
+		t.Fatal(err)
+	}
+	nested := filepath.Join(dir, "sub", "dir")
+	if err := os.MkdirAll(nested, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(nested, ".tmp-atomic123"), []byte(`{"race":true}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, ".tmp-root456"), []byte(`{"race":true}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	result := newDoneResult(t, dir, o, startSnapshot)
+	patch, err := os.ReadFile(filepath.Join(dir, result.PatchRef))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(patch), ".tmp-atomic123") || strings.Contains(string(patch), ".tmp-root456") {
+		t.Fatal("snapshot nao deve incluir temporario de escrita atomica")
+	}
+	if _, err := o.Finish(dir, result); err != nil {
+		t.Fatalf("resultado com temporario de escrita atomica deveria finalizar: %v", err)
+	}
+}
+
 func TestOrchestratorFinishesUsingRelativePRDDirectory(t *testing.T) {
 	dir := newOrchestratorStateDir(t)
 	original, err := os.Getwd()

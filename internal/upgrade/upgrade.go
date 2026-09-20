@@ -567,6 +567,10 @@ func (s *Service) regenerateAdapters(sourceDir, projectDir, codexProfile string)
 			filepath.Join(sourceDir, "scripts", "lib", "parse-hook-input.sh"),
 			filepath.Join(projectDir, "scripts", "lib", "parse-hook-input.sh"),
 		)
+		s.syncFileIfPresent(
+			filepath.Join(sourceDir, "scripts", "lib", "hook-payload.sh"),
+			filepath.Join(projectDir, "scripts", "lib", "hook-payload.sh"),
+		)
 	}
 	if s.fs.IsDir(filepath.Join(projectDir, ".github")) {
 		s.adapters.GenerateGitHub(sourceDir, projectDir)

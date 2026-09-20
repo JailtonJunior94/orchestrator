@@ -1,8 +1,11 @@
+//go:build !race
+
 package durable_test
 
 import (
 	"context"
 	"fmt"
+	"sort"
 	"testing"
 	"time"
 
@@ -49,20 +52,20 @@ func TestBuildContextP95PreliminaryBenchmark_1000ActiveFactsInSinglePage(t *test
 		t.Fatalf("expected %d facts recovered from the single prd page, got %d (FactsByLayer=%v)", factCount, seeded.FactsByLayer["prd"], seeded.FactsByLayer)
 	}
 
-	const samples = 5
-	var worst time.Duration
+	const samples = 20
+	durations := make([]time.Duration, 0, samples)
 	for i := 0; i < samples; i++ {
 		start := time.Now()
 		if _, err := facade.BuildContext(ctx, durable.MemoryScope{}); err != nil {
 			t.Fatalf("BuildContext: %v", err)
 		}
-		elapsed := time.Since(start)
-		if elapsed > worst {
-			worst = elapsed
-		}
+		durations = append(durations, time.Since(start))
 	}
 
-	if worst > buildContextP95Budget {
-		t.Errorf("BuildContext p95 preliminary with %d active facts in a single page = %v, want < %v (RF-20)", factCount, worst, buildContextP95Budget)
+	sort.Slice(durations, func(i, j int) bool { return durations[i] < durations[j] })
+	p95Index := (samples*95+99)/100 - 1
+	p95 := durations[p95Index]
+	if p95 > buildContextP95Budget {
+		t.Errorf("BuildContext p95 preliminary with %d active facts in a single page = %v, want < %v (RF-20)", factCount, p95, buildContextP95Budget)
 	}
 }

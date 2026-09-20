@@ -1,0 +1,111 @@
+{
+  "schema_version": 2,
+  "run_id": "regularization-task-3.0-2026-09-20",
+  "task_id": "3.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "556ed0a22d749c7a645e1a54a7298207c94feff6",
+  "patch_sha256": "ae0212b2e93c7479302dc4a173c86c494cddcfaa868c7b42650b447a301ea816",
+  "patch_ref": "evidence/task-3.0-hooks-canonicos-vendor-neutral/3.0_execution_result.patch",
+  "final_state_sha256": "8b26e8e8ac461bc7a73e0fdd7c1543cde3ae3dbd1d59337fc08684bafb8cd49b",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "8b4679bc9537a653f2f20d217c3c524a220e245e85e87468dbec2b29d25453b2"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "8b4679bc9537a653f2f20d217c3c524a220e245e85e87468dbec2b29d25453b2"
+    },
+    {
+      "command": "go test ./internal/taskloop/...",
+      "exit_code": 0,
+      "output_sha256": "8b4679bc9537a653f2f20d217c3c524a220e245e85e87468dbec2b29d25453b2"
+    },
+    {
+      "command": "go test -tags=integration -run TestAtomicWriteUnderPRDDoesNotAlterPatchSHA256 -count=1 ./tests/integration/...",
+      "exit_code": 0,
+      "output_sha256": "8b4679bc9537a653f2f20d217c3c524a220e245e85e87468dbec2b29d25453b2"
+    },
+    {
+      "command": "go test ./internal/skills/... -run TestAllLangsAreExhaustivelyWired/go -v",
+      "exit_code": 0,
+      "output_sha256": "8b4679bc9537a653f2f20d217c3c524a220e245e85e87468dbec2b29d25453b2"
+    },
+    {
+      "command": "go test ./internal/triggers/... ./internal/detect/... ./internal/contextgen/...",
+      "exit_code": 0,
+      "output_sha256": "8b4679bc9537a653f2f20d217c3c524a220e245e85e87468dbec2b29d25453b2"
+    },
+    {
+      "command": "go test ./internal/capability/... -v",
+      "exit_code": 0,
+      "output_sha256": "8b4679bc9537a653f2f20d217c3c524a220e245e85e87468dbec2b29d25453b2"
+    },
+    {
+      "command": "make check-capability-matrix-sync",
+      "exit_code": 0,
+      "output_sha256": "8b4679bc9537a653f2f20d217c3c524a220e245e85e87468dbec2b29d25453b2"
+    },
+    {
+      "command": "make vet",
+      "exit_code": 0,
+      "output_sha256": "8b4679bc9537a653f2f20d217c3c524a220e245e85e87468dbec2b29d25453b2"
+    },
+    {
+      "command": "make lint",
+      "exit_code": 0,
+      "output_sha256": "8b4679bc9537a653f2f20d217c3c524a220e245e85e87468dbec2b29d25453b2"
+    },
+    {
+      "command": "bash scripts/check-package-coverage.sh 70",
+      "exit_code": 0,
+      "output_sha256": "8b4679bc9537a653f2f20d217c3c524a220e245e85e87468dbec2b29d25453b2"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "front1-tmp-glob-excluded-both-points",
+      "evidence_ref": "evidence/task-3.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "front2-exhaustive-wiring-red-for-dotnet",
+      "evidence_ref": "evidence/task-3.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "front2-default-cases-installed",
+      "evidence_ref": "evidence/task-3.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "front3-dispatch-proof-red-for-declared-reasons",
+      "evidence_ref": "evidence/task-3.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "front3-existing-proof-not-weakened",
+      "evidence_ref": "evidence/task-3.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "capability-matrix-44-cells-still-green",
+      "evidence_ref": "evidence/task-3.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "non-regression-test-lint-vet",
+      "evidence_ref": "evidence/task-3.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "capability-matrix-sync-gate",
+      "evidence_ref": "evidence/task-3.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "coverage-gate",
+      "evidence_ref": "evidence/task-3.0-hooks-canonicos-vendor-neutral/validation.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-3.0-hooks-canonicos-vendor-neutral/validation.log"
+  ],
+  "review_verdict": "approved"
+}

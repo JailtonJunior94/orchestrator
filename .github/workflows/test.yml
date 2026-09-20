@@ -110,6 +110,9 @@ jobs:
       - name: Hooks sync drift gate
         run: make check-hooks-sync
 
+      - name: Hooks inventory gate
+        run: make check-hooks-inventory
+
       - name: Scripts sync drift gate
         run: make check-scripts-sync
 

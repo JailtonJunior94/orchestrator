@@ -241,6 +241,7 @@ func TestIsProtectedPRDFile_HarnessManagedDirsExcluded(t *testing.T) {
 		prd + "/memory/MEMORY.md",
 		prd + "/.checkpoints/1.0.yaml",
 		prd + "/.partials/tasks.md.1.0.partial",
+		prd + "/.tmp-atomic123",
 	}
 	for _, mode := range []taskIsolationMode{_taskIsolationModeExecutor, _taskIsolationModeReviewer} {
 		for _, p := range managed {

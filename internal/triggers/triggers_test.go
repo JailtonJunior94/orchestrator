@@ -128,20 +128,30 @@ func TestLoad_PythonPatterns(t *testing.T) {
 	}
 }
 
-// TestLoad_Fallback verifica que linguagens desconhecidas e string vazia usam go.yaml.
-func TestLoad_Fallback(t *testing.T) {
-	cases := []string{"rust", "java", "", "cpp", "kotlin"}
+func TestLoad_EmptyLangFallsBackToGo(t *testing.T) {
 	loader, _ := newFakeLoader()
-	goTriggers, _ := loader.Load("go")
+	goTriggers, err := loader.Load("go")
+	if err != nil {
+		t.Fatalf("Load(go) erro: %v", err)
+	}
+
+	got, err := loader.Load("")
+	if err != nil {
+		t.Fatalf(`Load("") nao deve retornar erro no fallback: %v`, err)
+	}
+	if len(got) != len(goTriggers) {
+		t.Errorf(`Load("") retornou %d triggers, fallback go esperava %d`, len(got), len(goTriggers))
+	}
+}
+
+func TestLoad_UnknownLangFailsExplicitly(t *testing.T) {
+	cases := []string{"rust", "java", "cpp", "kotlin"}
+	loader, _ := newFakeLoader()
 
 	for _, lang := range cases {
 		t.Run(lang, func(t *testing.T) {
-			got, err := loader.Load(lang)
-			if err != nil {
-				t.Fatalf("Load(%q) nao deve retornar erro no fallback: %v", lang, err)
-			}
-			if len(got) != len(goTriggers) {
-				t.Errorf("Load(%q) retornou %d triggers, fallback go esperava %d", lang, len(got), len(goTriggers))
+			if _, err := loader.Load(lang); err == nil {
+				t.Fatalf("Load(%q) deveria falhar explicitamente, sem fallback silencioso para go", lang)
 			}
 		})
 	}

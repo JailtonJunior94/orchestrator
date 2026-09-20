@@ -28,17 +28,15 @@ type embeddedLoader struct {
 
 var _ Loader = (*embeddedLoader)(nil)
 
-// NewLoader retorna um Loader que le YAMLs a partir de baseDir usando fsys.
-// Linguagens suportadas: "go", "node", "python". Qualquer outra (inclusive "")
-// usa fallback para "go".
 func NewLoader(fsys fs.FileSystem, baseDir string) Loader {
 	return &embeddedLoader{fs: fsys, baseDir: baseDir}
 }
 
-// Load retorna os gatilhos para a linguagem indicada.
-// Linguagem desconhecida ou vazia faz fallback para go.yaml.
 func (l *embeddedLoader) Load(lang string) ([]Trigger, error) {
-	normalized := l.normalizeLang(lang)
+	normalized, ok := l.normalizeLang(lang)
+	if !ok {
+		return nil, fmt.Errorf("carregar gatilhos: linguagem desconhecida %q sem trigger.yaml correspondente", lang)
+	}
 	path := filepath.Join(l.baseDir, normalized+".yaml")
 
 	data, err := l.fs.ReadFile(path)
@@ -55,13 +53,14 @@ func (l *embeddedLoader) Load(lang string) ([]Trigger, error) {
 	return doc.Triggers, nil
 }
 
-// normalizeLang mapeia a linguagem para o nome de arquivo suportado; fallback go.
-func (l *embeddedLoader) normalizeLang(lang string) string {
+func (l *embeddedLoader) normalizeLang(lang string) (string, bool) {
 	switch lang {
 	case "go", "node", "python":
-		return lang
+		return lang, true
+	case "":
+		return "go", true
 	default:
-		return "go"
+		return "", false
 	}
 }
 

@@ -17,7 +17,7 @@ CRITICAL_PACKAGES=(
 )
 
 for pkg in "${CRITICAL_PACKAGES[@]}"; do
-    COV=$(go test -coverprofile=/dev/null "$pkg" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+%' | head -1 | tr -d '%')
+    COV=$(go test -coverprofile=/dev/null "$pkg" 2>/dev/null | grep -oE '[0-9]+\.[0-9]+%' | head -1 | tr -d '%' || true)
     if [ -z "$COV" ]; then
         echo "SKIP: $pkg (sem testes ou erro)"
         continue

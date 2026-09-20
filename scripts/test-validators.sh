@@ -605,6 +605,109 @@ assert_exit "qualquer terceiro estado em tasks.md também reprova" 1 $code_l3
 
 rm -f "$TMP_BASE/tasks.md" "$report_l"
 
+# --- Casos de fronteira do gate de operação Git (RF-57, RF-68) ---
+# Prova de bypass verificado end-to-end: head -c 65536 truncava JSON acima de
+# 64 KiB, json.load lançava, o except engolia a exceção, command_text voltava
+# vazio e git-operation-gate.sh:39-41 respondia com exit 0. A matriz cobre as
+# quatro fronteiras de tamanho (1 KiB, 64 KiB, 65 KiB, 1 MiB) em duas variantes
+# cada (benigna -> exit 0; git push -> exit 2), mais os cenários de falha
+# fechada (JSON inválido, comando ausente, campo command homônimo aninhado).
+GIT_GATE="$REPO_ROOT/.agents/scripts/git-operation-gate.sh"
+
+gate_payload() {
+  local size_bytes="$1" mode="$2"
+  python3 -c "
+import json
+import sys
+
+size = int(sys.argv[1])
+mode = sys.argv[2]
+padding = 'A' * size
+if mode == 'malicious':
+    command = padding + '; git push origin main'
+else:
+    command = 'echo ' + padding
+print(json.dumps({'tool_input': {'command': command}}))
+" "$size_bytes" "$mode"
+}
+
+assert_gate_exit() {
+  local desc="$1" expected="$2" payload_file="$3"
+  local actual
+  bash "$GIT_GATE" <"$payload_file" >/dev/null 2>&1
+  actual=$?
+  assert_exit "$desc" "$expected" "$actual"
+}
+
+echo "Matriz de fronteira do gate de operação Git (RF-57)"
+declare -a boundary_sizes=(1024 65536 66560 1048576)
+declare -a boundary_labels=("1 KiB" "64 KiB" "65 KiB" "1 MiB")
+for idx in "${!boundary_sizes[@]}"; do
+  size="${boundary_sizes[$idx]}"
+  label="${boundary_labels[$idx]}"
+
+  payload_benign="$TMP_BASE/git-gate-${label// /}-benign.json"
+  gate_payload "$size" benign >"$payload_benign"
+  assert_gate_exit "fronteira $label benigna passa" 0 "$payload_benign"
+  rm -f "$payload_benign"
+
+  payload_malicious="$TMP_BASE/git-gate-${label// /}-malicious.json"
+  gate_payload "$size" malicious >"$payload_malicious"
+  assert_gate_exit "fronteira $label com git push bloqueia" 2 "$payload_malicious"
+  rm -f "$payload_malicious"
+done
+
+# --- Reprodução exata do bypass documentado no ADR-003: ~70 KB de padding
+# seguido de "; echo hi ; git push origin main". Antes da correção: exit 0.
+echo "Reprodução da prova de exploração do ADR-003 (payload de ~70 KB)"
+exploit_payload="$TMP_BASE/git-gate-exploit.json"
+python3 -c "
+import json
+padding = 'A' * 70000
+command = padding + '; echo hi ; git push origin main'
+print(json.dumps({'tool_input': {'command': command}}))
+" >"$exploit_payload"
+assert_gate_exit "payload de exploração (~70KB) bloqueia" 2 "$exploit_payload"
+
+control_payload="$TMP_BASE/git-gate-control.json"
+printf '%s' '{"tool_input":{"command":"git push origin main"}}' >"$control_payload"
+assert_gate_exit "controle sem padding bloqueia" 2 "$control_payload"
+rm -f "$exploit_payload" "$control_payload"
+
+# --- Falha fechada: JSON inválido nunca produz exit 0 (RF-57) ---
+echo "Falha fechada: JSON inválido bloqueia"
+invalid_payload="$TMP_BASE/git-gate-invalid.json"
+printf 'isto nao e json' >"$invalid_payload"
+assert_gate_exit "JSON inválido bloqueia" 2 "$invalid_payload"
+rm -f "$invalid_payload"
+
+# --- Negação por ausência de alvo (RF-68): comando vazio/ausente bloqueia,
+# nunca aprova. Alinhado com validate-preload.sh:109.
+echo "Negação por ausência de alvo (RF-68)"
+empty_payload="$TMP_BASE/git-gate-empty.json"
+printf '%s' '{}' >"$empty_payload"
+assert_gate_exit "payload sem comando extraível bloqueia" 2 "$empty_payload"
+rm -f "$empty_payload"
+
+empty_stdin="$TMP_BASE/git-gate-empty-stdin.json"
+printf '' >"$empty_stdin"
+assert_gate_exit "stdin vazio bloqueia" 2 "$empty_stdin"
+rm -f "$empty_stdin"
+
+# --- Regressão do fallback por grep removido: campo "command" homônimo
+# aninhado em outra estrutura não deve ser extraído (nem aprovado nem
+# bloqueado por conteúdo alheio); a ausência de extração é negação (RF-68).
+echo "Campo command homônimo aninhado não é extraído (regressão do fallback grep)"
+nested_payload="$TMP_BASE/git-gate-nested.json"
+printf '%s' '{"tool_input":{"nested":{"tool_input":{"command":"git push origin main"}}}}' >"$nested_payload"
+assert_gate_exit "comando homônimo aninhado não vaza para aprovação" 2 "$nested_payload"
+rm -f "$nested_payload"
+
+benign_nested_payload="$TMP_BASE/git-gate-nested-benign.json"
+printf '%s' '{"tool_input":{"command":"echo hi","metadata":{"command":"git push origin main"}}}' >"$benign_nested_payload"
+assert_gate_exit "comando direto benigno com metadata homônima passa" 0 "$benign_nested_payload"
+rm -f "$benign_nested_payload"
+
 echo
 echo "Passaram: $passed | Falharam: $failed"
 [[ "$failed" -eq 0 ]] || exit 1

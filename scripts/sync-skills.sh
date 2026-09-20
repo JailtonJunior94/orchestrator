@@ -106,11 +106,13 @@ done
 agents_lib="$repo_root/.agents/lib"
 legacy_lib="$repo_root/scripts/lib"
 embedded_lib="$repo_root/internal/embedded/assets/.agents/lib"
+embedded_legacy_lib="$repo_root/internal/embedded/assets/scripts/lib"
 if [[ -d "$agents_lib" ]]; then
   chmod -R u+w "$agents_lib" 2>/dev/null || true
   chmod -R u+w "$legacy_lib" 2>/dev/null || true
   chmod -R u+w "$embedded_lib" 2>/dev/null || true
-  mkdir -p "$embedded_lib"
+  chmod -R u+w "$embedded_legacy_lib" 2>/dev/null || true
+  mkdir -p "$embedded_lib" "$embedded_legacy_lib"
   for lib_file in "$agents_lib"/*.sh; do
     [[ -f "$lib_file" ]] || continue
     base="$(basename "$lib_file")"
@@ -118,6 +120,8 @@ if [[ -d "$agents_lib" ]]; then
     echo "synced: lib/$base -> $legacy_lib"
     cp -p "$lib_file" "$embedded_lib/$base"
     echo "synced: lib/$base -> $embedded_lib"
+    cp -p "$lib_file" "$embedded_legacy_lib/$base"
+    echo "synced: lib/$base -> $embedded_legacy_lib"
   done
 fi
 

@@ -1,0 +1,241 @@
+=== go build ./... ===
+exit=0
+
+=== go vet ./... ===
+exit=0
+
+=== go test ./internal/taskloop/... ===
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	(cached)
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks	[no test files]
+exit=0
+
+=== go test -tags=integration -run TestAtomicWriteUnderPRDDoesNotAlterPatchSHA256 -count=1 ./tests/integration/... ===
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	1.815s
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	0.095s [no tests to run]
+exit=0
+
+=== go test ./internal/skills/... -run TestAllLangsAreExhaustivelyWired -v ===
+=== RUN   TestAllLangsAreExhaustivelyWired
+=== RUN   TestAllLangsAreExhaustivelyWired/go
+=== RUN   TestAllLangsAreExhaustivelyWired/node
+=== RUN   TestAllLangsAreExhaustivelyWired/python
+=== RUN   TestAllLangsAreExhaustivelyWired/dotnet
+    lang_exhaustive_wiring_test.go:66: wiring 3/5 (contextgen loop): dotnet ausente em contextgen.ValidationLangOrder (internal/contextgen/contextgen.go:339-340)
+    lang_exhaustive_wiring_test.go:69: wiring 3/5 (contextgen labels): dotnet sem label em contextgen.ValidationLangLabels (internal/contextgen/contextgen.go:339-340)
+    lang_exhaustive_wiring_test.go:74: wiring 4/5 (trigger yaml): dotnet sem arquivo de trigger em /Users/jailtonjunior/Git/orchestrator/.agents/skills/agent-governance/triggers/dotnet.yaml
+    lang_exhaustive_wiring_test.go:78: wiring 5/5 (toolchain switch): dotnet sem case no switch de internal/detect/toolchain.go:148-163
+--- FAIL: TestAllLangsAreExhaustivelyWired (0.00s)
+    --- PASS: TestAllLangsAreExhaustivelyWired/go (0.00s)
+    --- PASS: TestAllLangsAreExhaustivelyWired/node (0.00s)
+    --- PASS: TestAllLangsAreExhaustivelyWired/python (0.00s)
+    --- FAIL: TestAllLangsAreExhaustivelyWired/dotnet (0.00s)
+FAIL
+FAIL	github.com/JailtonJunior94/ai-spec-harness/internal/skills	0.296s
+FAIL
+exit(expected non-zero, dotnet red by design)=1
+
+=== go test ./internal/triggers/... ./internal/detect/... ./internal/contextgen/... ===
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/triggers	(cached)
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/triggers/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/detect	(cached)
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/detect/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/contextgen	(cached)
+exit=0
+
+=== go test ./internal/capability/... -v (must be all green, no instrumentation tag) ===
+=== RUN   TestDispatchProvenFromParityTests_SkippedTestNeverSatisfiesGate
+--- PASS: TestDispatchProvenFromParityTests_SkippedTestNeverSatisfiesGate (0.97s)
+=== RUN   TestDispatchProvenFromParityTests_FailedTestNeverSatisfiesGate
+--- PASS: TestDispatchProvenFromParityTests_FailedTestNeverSatisfiesGate (0.99s)
+=== RUN   TestDispatchProvenFromParityTests_PassingTestSatisfiesGate
+--- PASS: TestDispatchProvenFromParityTests_PassingTestSatisfiesGate (0.90s)
+=== RUN   TestCapabilityMatrix_GateFailsOnEmptyMatrix
+--- PASS: TestCapabilityMatrix_GateFailsOnEmptyMatrix (0.00s)
+=== RUN   TestCapabilityMatrix_GateFailsOnSupportedCellWithoutTest
+--- PASS: TestCapabilityMatrix_GateFailsOnSupportedCellWithoutTest (0.00s)
+=== RUN   TestCapabilityMatrix_GatePassesWhenDispatchProven
+--- PASS: TestCapabilityMatrix_GatePassesWhenDispatchProven (0.00s)
+=== RUN   TestCapabilityMatrix_GateIgnoresUnsupportedCells
+--- PASS: TestCapabilityMatrix_GateIgnoresUnsupportedCells (0.00s)
+=== RUN   TestCapabilityMatrix_RealMatrixEvidenceGateIsClean
+--- PASS: TestCapabilityMatrix_RealMatrixEvidenceGateIsClean (1.25s)
+=== RUN   TestCapabilityMatrix_GoldenGateDetectsJSONOnlyDrift
+--- PASS: TestCapabilityMatrix_GoldenGateDetectsJSONOnlyDrift (0.00s)
+=== RUN   TestCapabilityMatrix_GoldenGateDetectsMarkdownOnlyDrift
+--- PASS: TestCapabilityMatrix_GoldenGateDetectsMarkdownOnlyDrift (0.00s)
+=== RUN   TestCapabilityMatrix_GoldenGateApprovesExactMatch
+--- PASS: TestCapabilityMatrix_GoldenGateApprovesExactMatch (0.00s)
+=== RUN   TestCapabilityMatrix_GoldenJSONAndMarkdownFromSameGeneration
+=== RUN   TestCapabilityMatrix_GoldenJSONAndMarkdownFromSameGeneration/json
+=== RUN   TestCapabilityMatrix_GoldenJSONAndMarkdownFromSameGeneration/markdown
+--- PASS: TestCapabilityMatrix_GoldenJSONAndMarkdownFromSameGeneration (0.00s)
+    --- PASS: TestCapabilityMatrix_GoldenJSONAndMarkdownFromSameGeneration/json (0.00s)
+    --- PASS: TestCapabilityMatrix_GoldenJSONAndMarkdownFromSameGeneration/markdown (0.00s)
+=== RUN   TestCapabilityMatrix_DeterministicGeneration
+--- PASS: TestCapabilityMatrix_DeterministicGeneration (0.00s)
+=== RUN   TestCapabilityMatrix_NoSupportedCellWithoutResolvedTest
+--- PASS: TestCapabilityMatrix_NoSupportedCellWithoutResolvedTest (0.00s)
+=== RUN   TestCapabilityMatrix_UnsupportedCellsCarryReason
+--- PASS: TestCapabilityMatrix_UnsupportedCellsCarryReason (0.00s)
+=== RUN   TestCapabilityMatrix_UnknownCellsAreJustified
+--- PASS: TestCapabilityMatrix_UnknownCellsAreJustified (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/capability	4.351s
+exit=0
+
+=== go test -tags=capability_instrumentation ./internal/capability/... -run TestDispatchProof_ -v (expected red by design) ===
+=== RUN   TestDispatchProof_DiscriminatesByCell
+    dispatch_proof_cell_test.go:23: evidence.go:147-149 devolve uma closure que ignora provider e capabilityID: a celula nao relacionada ("nonexistent-provider", "CAPABILITY-WITHOUT-ANY-ASSOCIATED-TEST"), sem nenhum teste proprio, foi declarada provada (true) apenas porque um teste diferente e nao relacionado passou; a prova ainda nao discrimina por celula. Sucessor: tarefa 9.0
+--- FAIL: TestDispatchProof_DiscriminatesByCell (0.93s)
+=== RUN   TestDispatchProof_ReportsEnvironmentFailure
+    dispatch_proof_cell_test.go:61: falha de resolucao da raiz do repositorio (evidence.go:169-173, repoRootFromWorkingDir sem go.mod ancestral) colapsa para o mesmo booleano (false) que a ausencia legitima de prova de uma celula; DispatchProvenFromParityTests precisa reportar falha de ambiente distintamente de celula nao provada, nao apenas devolver false silenciosamente. Sucessor: tarefa 9.0
+--- FAIL: TestDispatchProof_ReportsEnvironmentFailure (0.01s)
+FAIL
+FAIL	github.com/JailtonJunior94/ai-spec-harness/internal/capability	1.169s
+FAIL
+exit(expected non-zero)=1
+
+=== make check-capability-matrix-sync ===
+go test ./internal/capability/...
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/capability	5.254s
+exit=0
+
+=== make vet ===
+go vet ./...
+exit=0
+
+=== make lint ===
+Running linter...
+Installing golangci-lint...
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+GOGC=20 golangci-lint run --config .golangci.yml --timeout 10m --verbose
+level=info msg="golangci-lint has version 2.13.2 built with go1.27.0 from 27774aa on 2026-08-27T22:52:01Z"
+level=info msg="[config_reader] Used config file .golangci.yml"
+level=info msg="[config_reader] Module name \"github.com/JailtonJunior94/ai-spec-harness\""
+level=info msg="[goenv] Read go env for 9.044083ms: map[string]string{\"GOCACHE\":\"/Users/jailtonjunior/Library/Caches/go-build\", \"GOROOT\":\"/Users/jailtonjunior/.gvm/gos/go1.27.1\"}"
+level=info msg="[lintersdb] Active 6 linters: [errcheck gosec govet ineffassign staticcheck unused]"
+level=info msg="[loader] Go packages loading at mode 8767 (types_sizes|compiled_files|deps|files|imports|exports_file|name) took 585.933167ms"
+level=info msg="[runner/filename_unadjuster] Pre-built 0 adjustments in 77.379416ms"
+level=info msg="[linters_context/goanalysis] analyzers took 0s with no stages"
+level=info msg="[runner] Issues before processing: 50, after processing: 0"
+level=info msg="[runner] Processors filtering stat (in/out): cgo: 50/50, filename_unadjuster: 50/50, exclusion_paths: 50/50, path_absoluter: 50/50, invalid_issue: 50/50, path_relativity: 50/50, generated_file_filter: 50/0"
+level=info msg="[runner] processing took 1.446917ms with stages: generated_file_filter: 1.404917ms, path_relativity: 33.583µs, invalid_issue: 1.75µs, cgo: 1.624µs, max_same_issues: 875ns, sort_results: 750ns, nolint_filter: 667ns, path_absoluter: 666ns, exclusion_rules: 334ns, fixer: 292ns, filename_unadjuster: 291ns, exclusion_paths: 250ns, path_prettifier: 209ns, path_shortener: 167ns, source_code: 167ns, uniq_by_line: 124ns, max_per_file_from_linter: 84ns, max_from_linter: 83ns, severity-rules: 42ns, diff: 42ns"
+level=info msg="[runner] linters took 532.725459ms with stages: goanalysis_metalinter: 531.187458ms"
+0 issues.
+level=info msg="File cache stats: 0 entries of total size 0B"
+level=info msg="Memory: 14 samples, avg is 47.9MB, max is 55.8MB"
+level=info msg="Execution took 1.206508375s"
+exit=0
+
+=== make coverage ===
+go test -coverprofile=coverage.out ./...
+	github.com/JailtonJunior94/ai-spec-harness		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	0.442s	coverage: 59.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/adapters	(cached)	coverage: 89.5% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/agents	(cached)	coverage: 90.3% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/agents/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/approval	(cached)	coverage: 88.0% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/approval/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/batchreport	(cached)	coverage: 100.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/bugschema	(cached)	coverage: 74.3% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/capability	(cached)	coverage: 86.8% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/changelog	(cached)	coverage: 83.8% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/config	(cached)	coverage: 93.2% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/config/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/conformance	(cached)	coverage: 100.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/contextgen	(cached)	coverage: 90.7% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/detect	(cached)	coverage: 82.4% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/detect/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/doctor	(cached)	coverage: 61.4% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/embedded	(cached)	coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/evidence	(cached)	coverage: 93.8% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/fs	(cached)	coverage: 73.8% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/fs/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/git	0.171s	coverage: 64.3% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/git/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/gitref	(cached)	coverage: 70.2% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/harness	(cached)	coverage: 85.3% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/harness/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/hookinventory	(cached)	coverage: 84.9% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/inspect	(cached)	coverage: 97.1% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/install	(cached)	coverage: 85.1% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/invocation	(cached)	coverage: 96.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/lint	(cached)	coverage: 75.6% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/manifest	(cached)	coverage: 94.1% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/metrics	(cached)	coverage: 87.3% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/metrics/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/output	(cached)	coverage: 100.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/parity	(cached)	coverage: 85.2% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/platform	(cached)	coverage: 100.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/prerequisites	(cached)	coverage: 96.6% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/reviewverdict	(cached)	coverage: 13.2% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	(cached)	coverage: 87.8% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake	(cached)	coverage: 90.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client	(cached)	coverage: 88.2% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events	(cached)	coverage: 91.9% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/handshake	(cached)	coverage: 81.6% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks	(cached)	coverage: 90.2% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver	(cached)	coverage: 83.4% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/wire	(cached)	coverage: 87.5% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory	(cached)	coverage: 92.1% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable	(cached)	coverage: 88.1% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable/mocks		coverage: 0.0% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/mocks		coverage: 0.0% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence	(cached)	coverage: 75.5% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/precondition	(cached)	coverage: 57.3% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe	(cached)	coverage: 81.8% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/render	(cached)	coverage: 100.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	2.608s	coverage: 86.3% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/scaffold	(cached)	coverage: 94.8% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd	(cached)	coverage: 75.3% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd/tasks	(cached)	coverage: 88.7% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/semver	(cached)	coverage: 91.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillbump	(cached)	coverage: 81.0% of statements
+--- FAIL: TestAllLangsAreExhaustivelyWired (0.00s)
+    --- FAIL: TestAllLangsAreExhaustivelyWired/dotnet (0.00s)
+        lang_exhaustive_wiring_test.go:66: wiring 3/5 (contextgen loop): dotnet ausente em contextgen.ValidationLangOrder (internal/contextgen/contextgen.go:339-340)
+        lang_exhaustive_wiring_test.go:69: wiring 3/5 (contextgen labels): dotnet sem label em contextgen.ValidationLangLabels (internal/contextgen/contextgen.go:339-340)
+        lang_exhaustive_wiring_test.go:74: wiring 4/5 (trigger yaml): dotnet sem arquivo de trigger em /Users/jailtonjunior/Git/orchestrator/.agents/skills/agent-governance/triggers/dotnet.yaml
+        lang_exhaustive_wiring_test.go:78: wiring 5/5 (toolchain switch): dotnet sem case no switch de internal/detect/toolchain.go:148-163
+FAIL
+coverage: 91.2% of statements
+FAIL	github.com/JailtonJunior94/ai-spec-harness/internal/skills	0.222s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillscheck	(cached)	coverage: 89.8% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdigest	(cached)	coverage: 100.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdrift	(cached)	coverage: 90.3% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria	(cached)	coverage: 97.7% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	(cached)	coverage: 86.2% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/telemetry	(cached)	coverage: 93.1% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/traceability	(cached)	coverage: 95.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/tracking	(cached)	coverage: 58.8% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/triggers	(cached)	coverage: 100.0% of statements
+	github.com/JailtonJunior94/ai-spec-harness/internal/triggers/mocks		coverage: 0.0% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/txn	(cached)	coverage: 66.2% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/uninstall	(cached)	coverage: 84.7% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/upgrade	(cached)	coverage: 85.3% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/version	(cached)	coverage: 93.5% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/wrapper	(cached)	coverage: 95.6% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	(cached)	coverage: 100.0% of statements
+FAIL
+make: *** [coverage] Error 1
+exit(expected non-zero, only dotnet-red package)=2
+
+=== scripts/check-package-coverage.sh: fixed set -e abort on failing critical package (internal/skills has a declared red-by-design test) ===
+=== bash scripts/check-package-coverage.sh 70 ===
+PASS: ./internal/parity/... — 85.2%
+PASS: ./internal/specdrift/... — 90.3%
+PASS: ./internal/evidence/... — 93.8%
+PASS: ./internal/taskloop/... — 86.2%
+PASS: ./internal/bugschema/... — 74.3%
+PASS: ./internal/skills/... — 91.2%
+PASS: ./internal/metrics/... — 87.3%
+PASS: ./internal/detect/... — 82.4%
+PASS: ./internal/runtime/memory/durable/... — 88.1%
+exit=0

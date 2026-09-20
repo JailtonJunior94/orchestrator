@@ -332,18 +332,21 @@ func (g *Generator) hasDotNet(projectDir string) bool {
 	return false
 }
 
+var ValidationLangOrder = []string{"go", "node", "python"}
+
+var ValidationLangLabels = map[string]string{"go": "Go", "node": "Node", "python": "Python"}
+
 func (g *Generator) buildValidationCommands(toolchain detect.ToolchainResult) string {
 	var lines []string
 	lines = append(lines, "Seguir Etapa 4 de `.agents/skills/agent-governance/SKILL.md` como base canonica.")
 	lines = append(lines, "")
 
-	labels := map[string]string{"go": "Go", "node": "Node", "python": "Python"}
-	for _, lang := range []string{"go", "node", "python"} {
+	for _, lang := range ValidationLangOrder {
 		entry, ok := toolchain[lang]
 		if !ok {
 			continue
 		}
-		label := labels[lang]
+		label := ValidationLangLabels[lang]
 		lines = append(lines, fmt.Sprintf("Comandos detectados no projeto (%s):", label))
 		idx := 1
 		if entry.Fmt != "" {

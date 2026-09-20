@@ -601,6 +601,7 @@ func (s *Service) legacyStaticRemoval(absDir string, rm *remover) {
 		filepath.Join(".claude", "hooks", "validate-governance.sh"),
 		filepath.Join(".claude", "hooks", "validate-preload.sh"),
 		filepath.Join("scripts", "lib", "parse-hook-input.sh"),
+		filepath.Join("scripts", "lib", "hook-payload.sh"),
 		filepath.Join("scripts", "lib", "check-invocation-depth.sh"),
 	} {
 		rm.remove(filepath.Join(absDir, rel))

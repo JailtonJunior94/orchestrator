@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-hooks-canonicos-vendor-neutral/3.0_execution_report.md
+summary: Tres frentes de instrumentacao entregues (tmp glob verde; exaustividade de linguagens vermelha para dotnet; prova de dispatch por celula vermelha e isolada por build tag), sem regressao em test/lint/vet/coverage/capability-matrix-sync.
+timestamp: 2026-09-20T19:05:55Z

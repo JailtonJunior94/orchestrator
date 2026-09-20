@@ -14,7 +14,7 @@ de 54 células sobre quatro provedores, `internal/fs/fs.go:173-204` já tem escr
 ponto que o repositório chama de `session-end` cobre de fato a semântica `BeforeComplete` — o evento
 mais difícil dos cinco. Mais frágil: existe um **bypass determinístico e verificado** do gate Git, os
 erros de hook nos pontos de tool-call são **descartados com `_ =`**, a prova de dispatch da matriz de
-capabilities perde a capacidade de distinguir erro de ambiente de ausência de prova, e
+capabilities ainda resolve **um booleano global** aplicado a todas as células afirmativas, e
 `events.jsonl` — o artefato que sustenta toda a evidência — faz
 rewrite completo sobre `os.WriteFile` com `O_TRUNC`, de modo que um crash não perde o último evento e
 sim **a sessão inteira**.
@@ -31,8 +31,7 @@ produção, todos em `registry.go`.
 A entrega é sequenciada por **pré-requisitos duros de segurança e de instrumentação**, não por
 conveniência. Quatro correções precedem qualquer funcionalidade nova, porque cada uma delas, se
 deixada para depois, transforma trabalho correto em regressão silenciosa: fechar o truncamento de
-payload, isentar `.tmp-*` nos gates de patch, tornar reportável o erro de ambiente na prova de
-dispatch, e instalar
+payload, isentar `.tmp-*` nos gates de patch, indexar a prova de dispatch por célula, e instalar
 um teste de exaustividade de linguagens que converte os cinco `switch` sem `default` em falha de
 compilação.
 
@@ -66,7 +65,7 @@ compilação.
 | `internal/runtime/specs/registry.go` | `cliHookKeyVocabulary` ganha `SessionStart` e o `SessionEnd` real; `agentNativeConfigs` corrige caminhos do Copilot e completa os do Codex | `registry.go:17-38`, `:77-89` |
 | `internal/runtime/hooks/dispatcher.go` | `Kind()` passa a refletir o ponto real de despacho; pontos mapeiam para `hookcontract.EventKind` | `dispatcher.go:77,85` retornam o ponto errado em `post_build`/`post_complete` |
 | `internal/runtime/runner.go` | Erros de hook em tool-call deixam de ser descartados | `runner.go:428,466` — `_ = ` |
-| `internal/capability/evidence.go` | O fallback do caminho de erro deixa de devolver `false` mudo e passa a reportar erro tipado | `evidence.go:169-174` — a discriminação por célula já está correta; só o caminho de erro é mudo |
+| `internal/capability/evidence.go` | Indexar a prova por `(provider, capability)` e trocar o fallback mudo por erro tipado | `evidence.go:146` — `resolved` é um booleano global e o closure em `:147-149` ignora os dois argumentos; `evidence.go:169-173` devolve `false` sem distinguir erro de ambiente |
 | `internal/runtime/persistence/jsonl.go` | Append real + detecção de corrupção | `jsonl.go:23,57-58` rewrite completo |
 | `internal/detect/toolchain.go` | `manifestTypes` ganha Java e .NET **no fim**; `switch` ganha `default` que falha. .NET não participa da varredura recursiva de profundidade 4 que vive aqui e em `framework.go` — em `detect.go` as quatro linguagens usam verificação rasa, então a assimetria é entre camadas, não dentro de `detect.go` | `toolchain.go:99-108,148-163,423-464` |
 | `internal/contextgen/contextgen.go` | Allow-list de 3 strings passa a derivar de `skills.AllLangs` | `contextgen.go:339-340` |
@@ -341,10 +340,11 @@ mecanismo de **prova de dispatch por célula** com coleta por subprocesso real
 
 **`internal/capability`**:
 
-- `TestDispatchProof_ReportsEnvironmentFailure` — prova que a falha de `repoRootFromWorkingDir`
-  produz erro reportado, e não um veredito de "nenhuma prova" indistinguível
-  (`evidence.go:169-174`). A discriminação por célula em si já está correta e é coberta por
-  `evidence_regression_test.go` (RF-59).
+- `TestDispatchProof_DiscriminatesByCell` — prova que duas células com provas distintas recebem
+  veredito distinto. Hoje `evidence.go:146-149` devolve o mesmo booleano para todas; nasce
+  vermelho (RF-59).
+- `TestDispatchProof_ReportsEnvironmentFailure` — a falha de `repoRootFromWorkingDir` produz erro
+  reportado, não um veredito de "nenhuma prova" indistinguível (`evidence.go:169-173`).
 
 **`internal/skills`**:
 
@@ -467,12 +467,15 @@ telemetria.
    verificado end-to-end.
 3. **`TestAllLangsAreExhaustivelyWired`.** Nasce vermelho para `LangDotNet`. Sem ele, adicionar
    `LangJava` compila, passa toda a suíte atual e produz comportamento errado em silêncio.
-4. **Erro tipado no fallback de `DispatchProvenFromParityTests`.** A prova por célula **já foi
-   corrigida** e hoje discrimina corretamente (`internal/capability/evidence.go:169-174` delega a
-   `dispatchProvenFromTests` com os argumentos reais). Resta o caminho de erro: quando
-   `repoRootFromWorkingDir` falha, o closure devolve `false` para tudo — fail-closed e seguro, porém
-   indistinguível de "nenhuma prova existe". O operador não sabe se o gate reprovou por ausência de
-   evidência ou por erro de ambiente. A correção é trocar o fallback por erro reportado.
+4. **Prova de dispatch indexada por célula.** A prova ficou mais forte desde a primeira redação
+   deste documento — `dispatchProvenFromTests` agora exige execução real (`go test -json -count=1`,
+   `evidence.go:128-137`) além da declaração por AST, e `skip`/`fail` revogam o `pass`
+   (`evidence.go:114-117`), travado por `evidence_regression_test.go`. Mas continua **não
+   discriminando por célula**: `resolved` é um booleano único (`evidence.go:146`) e o closure ignora
+   `provider` e `capabilityID` (`evidence.go:147-149`). As 44 células afirmativas seguem provadas em
+   bloco. Sem indexar antes, toda célula do eixo novo herdaria a mesma prova global.
+   Complemento: o fallback de `repoRootFromWorkingDir` (`evidence.go:169-173`) devolve `false` mudo —
+   fail-closed e seguro, porém indistinguível de "nenhuma prova existe".
 
 **Fase 1 — Contrato canônico (RF-06 a RF-17).** `internal/hookcontract` é aditivo: nada o consome
 ainda. Baixo risco, alto desbloqueio.
@@ -634,7 +637,7 @@ fornecedor, e um pacote que já os contém não pode provar isso.
 
 **A modificar, com a linha exata:** `internal/runtime/specs/enforcement.go:13-22,139-143`;
 `registry.go:17-38,77-89,288-299`; `internal/runtime/hooks/dispatcher.go:19-27,77,85`;
-`internal/runtime/runner.go:428,466`; `internal/capability/evidence.go:169-174`;
+`internal/runtime/runner.go:428,466`; `internal/capability/evidence.go:146-149,169-173`;
 `internal/runtime/persistence/jsonl.go:23,57-58`; `internal/detect/toolchain.go:99-108,148-163`;
 `internal/detect/detect.go:88,108-118`; `internal/detect/framework.go:125-166`;
 `internal/contextgen/contextgen.go:275-310,339-340,364-386,397-417`;

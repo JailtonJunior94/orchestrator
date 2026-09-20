@@ -160,6 +160,7 @@ func (d *ToolchainDetector) detectWithFocusPaths(projectDir string) ToolchainRes
 		if entry, ok := d.detectPython(projectDir); ok {
 			result["python"] = entry
 		}
+	default:
 	}
 
 	if d.strict {

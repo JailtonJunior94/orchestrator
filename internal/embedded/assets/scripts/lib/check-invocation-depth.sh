@@ -41,7 +41,8 @@ current="${AI_INVOCATION_DEPTH:-0}"
 
 if [[ "$current" -ge "$AI_INVOCATION_MAX" ]]; then
   echo "ERRO: limite de profundidade de invocacao atingido (atual=${current}, max=${AI_INVOCATION_MAX})." >&2
-  echo "Cadeia detectada: execute-task -> review -> bugfix -> (bloqueado)." >&2
+  echo "Cadeia aninhada de skills detectada: execute-task -> review -> bugfix -> (bloqueado)." >&2
+  echo "O ciclo review -> bugfix -> review nao e limitado por este guarda: o Ciclo de Aprovacao itera no mesmo nivel, reseta a profundidade a cada rodada e para pelo teto de rodadas (RF-38)." >&2
   echo "Retornando estado 'failed: depth limit exceeded'." >&2
   exit 1
 fi

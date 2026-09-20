@@ -1,0 +1,45 @@
+{
+  "schema_version": 2,
+  "run_id": "regularization-task-1.0-2026-09-19",
+  "task_id": "1.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "556ed0a22d749c7a645e1a54a7298207c94feff6",
+  "patch_sha256": "1044fbb082f5574eae055b0b87716790f6b938a543fba77e18f217a0c0e856f1",
+  "patch_ref": "evidence/task-1.0/1.0_execution_result.patch",
+  "final_state_sha256": "285e75d1da491d33c6e4406ec6fa61f2b36ccf789657d66aabd4af103718783c",
+  "coverage_regression": false,
+  "tests": [
+    {"command": "go run . hooks inventory .", "exit_code": 0, "output_sha256": "92f95aa9568a19a9cc9566ec2f3eab8c0374959fb0fe4b00fbc4f7382c456b89"},
+    {"command": "bash scripts/check-hooks-inventory.sh", "exit_code": 0, "output_sha256": "92f95aa9568a19a9cc9566ec2f3eab8c0374959fb0fe4b00fbc4f7382c456b89"},
+    {"command": "go test ./internal/hookinventory ./cmd/ai_spec_harness", "exit_code": 0, "output_sha256": "92f95aa9568a19a9cc9566ec2f3eab8c0374959fb0fe4b00fbc4f7382c456b89"},
+    {"command": "go test -tags=integration ./tests/integration -run TestHookInventoryGate -count=1", "exit_code": 0, "output_sha256": "92f95aa9568a19a9cc9566ec2f3eab8c0374959fb0fe4b00fbc4f7382c456b89"},
+    {"command": "make test", "exit_code": 0, "output_sha256": "92f95aa9568a19a9cc9566ec2f3eab8c0374959fb0fe4b00fbc4f7382c456b89"},
+    {"command": "make lint", "exit_code": 0, "output_sha256": "92f95aa9568a19a9cc9566ec2f3eab8c0374959fb0fe4b00fbc4f7382c456b89"},
+    {"command": "make vet", "exit_code": 0, "output_sha256": "92f95aa9568a19a9cc9566ec2f3eab8c0374959fb0fe4b00fbc4f7382c456b89"},
+    {"command": "make check-hooks-sync", "exit_code": 0, "output_sha256": "92f95aa9568a19a9cc9566ec2f3eab8c0374959fb0fe4b00fbc4f7382c456b89"},
+    {"command": "make check-scripts-sync", "exit_code": 0, "output_sha256": "92f95aa9568a19a9cc9566ec2f3eab8c0374959fb0fe4b00fbc4f7382c456b89"},
+    {"command": "make test-hooks", "exit_code": 0, "output_sha256": "92f95aa9568a19a9cc9566ec2f3eab8c0374959fb0fe4b00fbc4f7382c456b89"},
+    {"command": "make coverage", "exit_code": 0, "output_sha256": "92f95aa9568a19a9cc9566ec2f3eab8c0374959fb0fe4b00fbc4f7382c456b89"}
+  ],
+  "criteria": [
+    {"id": "generated-projections-round-trip", "evidence_ref": "evidence/task-1.0/regularization-validation.log"},
+    {"id": "required-fields-and-classification", "evidence_ref": "evidence/task-1.0/regularization-validation.log"},
+    {"id": "nine-hook-sources-covered", "evidence_ref": "evidence/task-1.0/regularization-validation.log"},
+    {"id": "fail-open-and-test-coverage-markers", "evidence_ref": "evidence/task-1.0/regularization-validation.log"},
+    {"id": "orphan-gate-fails-bidirectionally", "evidence_ref": "evidence/task-1.0/regularization-validation.log"},
+    {"id": "gate-wired-to-make-and-ci", "evidence_ref": "evidence/task-1.0/regularization-validation.log"},
+    {"id": "inventory-command-is-deterministic", "evidence_ref": "evidence/task-1.0/regularization-validation.log"},
+    {"id": "no-remove-classified-hook-deleted", "evidence_ref": "evidence/task-1.0/regularization-validation.log"},
+    {"id": "non-regression-suite", "evidence_ref": "evidence/task-1.0/regularization-validation.log"},
+    {"id": "transversal-test-lint-vet", "evidence_ref": "evidence/task-1.0/regularization-validation.log"},
+    {"id": "hooks-sync", "evidence_ref": "evidence/task-1.0/regularization-validation.log"},
+    {"id": "scripts-sync", "evidence_ref": "evidence/task-1.0/regularization-validation.log"},
+    {"id": "hooks-regression", "evidence_ref": "evidence/task-1.0/regularization-validation.log"},
+    {"id": "coverage-gate", "evidence_ref": "evidence/task-1.0/regularization-validation.log"}
+  ],
+  "evidence": [
+    "evidence/task-1.0/regularization-validation.log"
+  ],
+  "review_verdict": "approved"
+}

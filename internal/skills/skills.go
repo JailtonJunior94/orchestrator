@@ -94,8 +94,9 @@ func (catalog *Catalog) ParseLang(s string) (Lang, bool) {
 	switch Lang(s) {
 	case LangGo, LangNode, LangPython, LangDotNet:
 		return Lang(s), true
+	default:
+		return "", false
 	}
-	return "", false
 }
 
 // LinkMode define como skills canonicas sao instaladas no projeto alvo.
@@ -159,6 +160,8 @@ func (catalog *Catalog) LangSkills(langs []Lang) []string {
 			out = append(out, "python-implementation")
 		case LangDotNet:
 			out = append(out, "dotnet-csharp-implementation")
+		default:
+			continue
 		}
 	}
 	return out

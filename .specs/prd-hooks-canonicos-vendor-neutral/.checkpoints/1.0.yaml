@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-hooks-canonicos-vendor-neutral/1.0_execution_report.md
+summary: "COVERAGE-1 corrigido; make coverage e todos os gates da tarefa passaram."
+timestamp: 2026-09-19T13:19:45Z

@@ -622,6 +622,58 @@ rm -f "$stderr_b35"
 rm -rf "$TMP_REPO_ROOT" "$STAGED_FILES" "$AISPEC_EXIT_FILE" "$AISPEC_VERSION_FILE" "$NOSPEC_BIN"
 
 # ============================================================================
+# Bloco 4: git-operation-gate.sh — RF-57 (parsing sem truncamento) e RF-68
+# (negacao por ausencia de alvo). Cobre a prova de bypass do ADR-003 e a
+# postura correta de comando vazio (alinhada a validate-preload.sh:109).
+# ============================================================================
+echo
+echo "Bloco 4: git-operation-gate.sh"
+
+GIT_GATE_HOOK="$REPO_ROOT/.agents/scripts/git-operation-gate.sh"
+GIT_GATE_TMP=$(mktemp -d "$TMP_BASE/git-gate.XXXXXX" 2>/dev/null || mktemp -d /tmp/git-gate.XXXXXX)
+
+echo
+echo "  G4-1: comando benigno passa (exit 0)"
+printf '%s' '{"tool_input":{"command":"echo hello"}}' | bash "$GIT_GATE_HOOK" >/dev/null 2>&1
+assert_exit "G4-1: comando benigno" 0 $?
+
+echo
+echo "  G4-2: git push nao solicitado bloqueia (exit 2)"
+printf '%s' '{"tool_input":{"command":"git push origin main"}}' | bash "$GIT_GATE_HOOK" >/dev/null 2>&1
+assert_exit "G4-2: git push bloqueia" 2 $?
+
+echo
+echo "  G4-3: git push com GOVERNANCE_GIT_OPERATION_CONFIRMED=1 passa (exit 0)"
+printf '%s' '{"tool_input":{"command":"git push origin main"}}' \
+  | GOVERNANCE_GIT_OPERATION_CONFIRMED=1 bash "$GIT_GATE_HOOK" >/dev/null 2>&1
+assert_exit "G4-3: opt-out explicito passa" 0 $?
+
+echo
+echo "  G4-4: comando vazio nega (RF-68) — regressao do exit 0 antigo"
+printf '%s' '{}' | bash "$GIT_GATE_HOOK" >/dev/null 2>&1
+assert_exit "G4-4: comando ausente bloqueia" 2 $?
+
+echo
+echo "  G4-5: payload truncavel (~70KB de padding + git push) bloqueia (ADR-003)"
+git_gate_exploit="$GIT_GATE_TMP/exploit.json"
+python3 -c "
+import json
+padding = 'A' * 70000
+command = padding + '; echo hi ; git push origin main'
+print(json.dumps({'tool_input': {'command': command}}))
+" >"$git_gate_exploit"
+bash "$GIT_GATE_HOOK" <"$git_gate_exploit" >/dev/null 2>&1
+assert_exit "G4-5: payload grande com git push bloqueia" 2 $?
+rm -f "$git_gate_exploit"
+
+echo
+echo "  G4-6: JSON invalido bloqueia (falha fechada, sem fallback grep)"
+printf 'nao e json' | bash "$GIT_GATE_HOOK" >/dev/null 2>&1
+assert_exit "G4-6: JSON invalido bloqueia" 2 $?
+
+rm -rf "$GIT_GATE_TMP"
+
+# ============================================================================
 echo
 echo "==============================================="
 echo "Resultado: $passed asserts OK, $failed asserts FAIL"

@@ -25,15 +25,18 @@ set -euo pipefail
 GOVERNANCE_HOOK_MODE="${GOVERNANCE_HOOK_MODE:-fail}"
 
 HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=../../scripts/lib/parse-hook-input.sh
+# shellcheck source=../../scripts/lib/hook-payload.sh
 
-source "$HOOK_DIR/../../.agents/lib/parse-hook-input.sh" 2>/dev/null \
-  || source "$HOOK_DIR/../../scripts/lib/parse-hook-input.sh" 2>/dev/null \
-  || source "$(cd "$HOOK_DIR/../.." && pwd)/scripts/lib/parse-hook-input.sh" 2>/dev/null \
-  || { echo "AVISO: parse-hook-input.sh nao encontrado" >&2; exit 0; }
+source "$HOOK_DIR/../../.agents/lib/hook-payload.sh" 2>/dev/null \
+  || source "$HOOK_DIR/../../scripts/lib/hook-payload.sh" 2>/dev/null \
+  || source "$(cd "$HOOK_DIR/../.." && pwd)/scripts/lib/hook-payload.sh" 2>/dev/null \
+  || { echo "AVISO: hook-payload.sh nao encontrado" >&2; exit 0; }
 
 _stdin="$(cat)"
-file_path="$(printf '%s' "$_stdin" | parse_file_path)"
+if ! file_path="$(printf '%s' "$_stdin" | parse_file_path)"; then
+  echo "AVISO: payload de hook invalido; validacao de governanca negada." >&2
+  exit 1
+fi
 
 [[ -n "$file_path" ]] || exit 0
 

@@ -43,7 +43,10 @@ por não estarem na alternação, escapam integralmente `git reset --hard`, `git
 
 **Os falsos positivos são simétricos ao problema.** Como não há noção de palavra-de-comando versus
 argumento, `echo git commit` e `man git commit` **bloqueiam** com EXIT=2. E como a segmentação em
-`:100` é `tr ';|&' '\n'`, que ignora aspas, `echo "a|git push"` também bloqueia.
+`:100` é `tr ';|&' '\n'`, que ignora aspas, `echo "a|git commit -m x"` também bloqueia (exit 2
+verificado). O caso `echo "a|git push"` devolve exit 0 — a aspa de fechamento cai imediatamente
+após `push` e derrota a âncora `([[:space:]]|$)` da regex, o que mostra que o falso positivo depende
+do que vem depois do subcomando e não de uma regra compreensível pelo usuário.
 
 **A policy declarada é decorativa.** `internal/harness/contract.go:12-15` define
 `GitPolicy{AutoCommit, AutoPush}`. Uma busca por esses campos em `internal/` e `cmd/` retorna
@@ -111,8 +114,15 @@ e não de blacklist mantida à parte" — seria uma afirmação não verificáve
 afirmação equivalente que já existe hoje e é falsa.
 
 O escopo passa a incluir, além de `commit` e `push`: `reset --hard`, `clean` com remoção efetiva,
-`checkout` e `restore` destrutivos, e force push em todas as variantes, incluindo `--force`,
-`--force-with-lease`, `-f` e refspec com `+`.
+`checkout` e `restore` destrutivos.
+
+Force push **já é interceptado hoje** pela alternação `push` — `git push --force`, `-f`,
+`--force-with-lease` e refspec com `+` todos retornam exit 2, verificado por execução. O que RF-21
+acrescenta não é interceptação e sim **classificação de risco**: force push passa a carregar
+`policy_id` próprio e a exigir aprovação distinta da de um push comum. A cobertura genuinamente nova
+está nas formas combinadas que hoje escapam por causa do grupo de flags — `git -C /repo push --force`
+e `/usr/bin/git push -f`. Pelo mesmo motivo, `env git push` e `command git push` já bloqueiam (exit 2
+verificado) e entram na matriz como guardas de **não-regressão**, não como ampliação de escopo.
 
 **Complemento — auditoria com leitor.** O TSV é substituído por `.aispec/hook-decisions.jsonl`, com
 uma decisão por linha, campos escapados por serialização JSON e um leitor em `internal/hookaudit`.

@@ -270,6 +270,30 @@
         "flags": {}
       },
       {
+        "name": "hooks",
+        "description": "Inspeciona hooks de governanca",
+        "args": [],
+        "flags": {},
+        "subcommands": [
+          {
+            "name": "inventory",
+            "description": "Gera ou verifica o inventario de hooks",
+            "args": [
+              {
+                "name": "path",
+                "required": false
+              }
+            ],
+            "flags": {
+              "check": {
+                "type": "bool",
+                "required": false
+              }
+            }
+          }
+        ]
+      },
+      {
         "name": "inspect",
         "description": "Inspeciona o estado da instalacao de governanca",
         "longDescription": "Exibe detalhes sobre skills instaladas, ferramentas detectadas, e estado do manifesto.",
