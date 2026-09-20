@@ -1,0 +1,984 @@
+diff --git a/.specs/prd-hooks-canonicos-vendor-neutral/5.0_execution_report.md b/.specs/prd-hooks-canonicos-vendor-neutral/5.0_execution_report.md
+new file mode 100644
+index 0000000..b0ea245
+--- /dev/null
++++ b/.specs/prd-hooks-canonicos-vendor-neutral/5.0_execution_report.md
+@@ -0,0 +1,174 @@
++<!-- evidence-contract: v2 -->
++# Generated: 2026-09-20T20:00:00Z
++# Relatório de Execução de Tarefa
++
++## Tarefa
++- ID: 5.0
++- Título: Projeções dos dois modelos de ponto, correção de Kind e erros não descartados
++- Arquivo: .specs/prd-hooks-canonicos-vendor-neutral/task-5.0-projecoes-dos-dois-modelos-de-ponto-e-erros-nao-descartados.md
++- Estado: done
++
++## Contexto Carregado
++- PRD: .specs/prd-hooks-canonicos-vendor-neutral/prd.md (RF-08, RF-11)
++- TechSpec: .specs/prd-hooks-canonicos-vendor-neutral/techspec.md (seção "Sequenciamento de Desenvolvimento → Fase 2", riscos R-01, R-11, R-12)
++- ADR: .specs/prd-hooks-canonicos-vendor-neutral/adr-001-hook-contract-fonte-unica-projecoes.md
++- Governança: `.agents/skills/agent-governance/SKILL.md` (contrato base), `.agents/skills/go-implementation/SKILL.md` (detectada pela extensão `.go` dos arquivos alterados). Nenhuma skill processual adicional declarada na task file (`## Skills Necessárias` = "Nenhuma além das auto-carregadas").
++- Execução coordenada com as tarefas 6.0 e 7.0 rodando em paralelo no mesmo working tree; escopo desta execução restrito a `internal/runtime/hooks/`, `internal/runtime/specs/`, `internal/runtime/runner.go` e `tests/integration/` — nenhum arquivo de `internal/harness/`, `.agents/policies/`, `git-operation-gate.sh`, `internal/detect/toolchain.go`, `internal/contextgen/`, `internal/triggers/` ou skills .NET/Java foi tocado.
++
++## Decisão de Design Registrada (RF-08/RF-11)
++
++A task file e o ADR-001 deixam duas decisões explicitamente abertas para o relatório de execução:
++
++1. **Kind() de `PromptBuildEvent`**: optei por **acrescentar o campo `Phase`** a `PromptBuildEvent`
++   (em vez de derivar `Kind()` do ponto de despacho por outro mecanismo), espelhando o padrão já
++   existente em `ToolCallEvent.Phase`. `Kind()` agora retorna `PointPromptPostBuild` quando
++   `Phase == "post_build"` e `PointPromptPreBuild` em qualquer outro caso (default seguro,
++   preserva o comportamento anterior para chamadores que não setam `Phase`). `runner.go` passou a
++   preencher `Phase: "pre_build"`/`Phase: "post_build"` nos dois `Dispatch` de `dispatchPreOpenHooks`.
++2. **Escopo da projeção RF-08**: `specs.CanonicalPoint` (3 valores: `PointPreTool`, `PointPostTool`,
++   `PointSessionEnd`) deriva de um mapeamento explícito e ordenado
++   `CanonicalPoint ↔ hookcontract.EventKind` (`EventBeforeTool`, `EventAfterTool`,
++   `EventBeforeComplete`) — `canonicalPoints` (o slice antes hardcoded) agora é calculado por
++   `derivedCanonicalPoints()`, que itera `hookcontract.EventKinds()` (ordem canônica do contrato) e
++   filtra pelos eventos que têm projeção declarada. Isso preserva byte-a-byte cardinalidade (3),
++   ordem e valores de string dos três pontos existentes (prova em "Critérios de Aceite").
++   `EventSessionStart` e o `EventSessionEnd` real **não** recebem projeção nesta tarefa — isso é
++   explicitamente Fase 5 do ADR-001 (declarar `SessionStart`/`SessionEnd` reais em
++   `cliHookKeyVocabulary`), fora do escopo de RF-08/RF-11 desta tarefa. Para o modelo B
++   (`internal/runtime/hooks`, 14 pontos reais), a projeção é **parcial e exaustivamente
++   contabilizada**: `PointRuntimePreOpen→EventSessionStart`, `PointToolCallPreDispatch→EventBeforeTool`,
++   `PointToolCallPostComplete→EventAfterTool`, `PointSessionPostEnd→EventBeforeComplete` têm
++   equivalente no contrato; os 10 pontos restantes (`prompt.pre_build`, `prompt.post_build`,
++   `session.post_review`, os 7 pontos de `memory_events.go`) são conceitos do harness sem
++   equivalente no contrato canônico (ADR-001, Alternativa A3 rejeitada por essa razão exata) e são
++   declarados explicitamente via `hooks.PointsWithoutCanonicalEvent()`. O gate de integração
++   (`tests/integration/hook_contract_projection_test.go`) prova, via AST scan real de
++   `internal/runtime/hooks/*.go`, que os 14 pontos declarados no código são **exaustivamente**
++   cobertos por `mapeado ∪ sem-equivalente`, sem órfãos.
++3. **`NewEnforcement` (RF-11)**: adicionado `PointCoverage.state` (`hookcontract.SupportState`) e
++   `PointCoverage.reason`. `NewPointCoverage` marca `SupportVerified`; novo construtor
++   `NewUnsupportedPointCoverage(agentID, point, reason)` marca `SupportUnsupported` com `reason`
++   obrigatória. `NewEnforcement` não exige mais que cada ponto tenha nativeKey/scriptPath/artifactPath
++   preenchidos — aceita, alternativamente, uma declaração explícita `SupportUnsupported` com motivo.
++   A obrigatoriedade de **alguma** declaração por ponto (não pode faltar por completo) é preservada:
++   `TestNewEnforcementRejectsIncompleteCoverage` (pré-existente, não alterado) continua vermelho para
++   ponto sem nenhuma declaração. Os quatro call-sites de produção (`registry.go:294,306,346` via
++   `canonicalEnforcement`/`newAgentWithEnvPolicy`) continuam fornecendo cobertura completa e real
++   para os 4 agentes — **nenhum caminho de produção usa `SupportUnsupported` hoje**; a declaração
++   fica disponível para a Fase 5 do ADR-001.
++
++Este desenho resultou em **zero necessidade de alterar o comportamento observável** dos dez pontos
++de teste listados na task file (`registry_test.go:131,141`, `hooks_parity_matrix_test.go:95,101`,
++`parity_dispatch_proof_test.go:280`, `precondition_report_test.go:35,66`,
++`precondition_test.go:333`, `hooks_live/matrix.go:20`, `live_test.go:147,393`): todos passam
++**sem modificação**, porque `CanonicalPoints()` continua retornando exatamente os mesmos 3 valores,
++na mesma ordem, com os mesmos nomes — confirmado por execução completa dos pacotes que os contêm
++(`internal/runtime/specs`, `internal/install`, `internal/runtime/precondition`, `tests/integration/hooks_live`)
++sem nenhuma falha. O único ponto da lista que recebeu uma mudança de código real foi
++`tests/integration/hooks_live/live_test.go:147` (switch `assertNativeOutcome`), ao qual foi
++acrescentado um `default: t.Fatalf(...)` — defesa exigida pelo critério de aceite "os switches
++tratam explicitamente todo ponto novo" (o segundo switch citado, `nativePrompt` em `live_test.go:393`,
++já possuía `default` e não precisou de alteração).
++
++## Comandos Executados
++- `go build ./...` -> sucesso, sem erros (evidence/build.txt)
++- `go vet ./...` (via `make vet`) -> sucesso, sem achados
++- `make lint` -> `golangci-lint run` — 0 issues (6 linters ativos: errcheck, gosec, govet, ineffassign, staticcheck, unused)
++- `go test ./internal/runtime/specs/... ./internal/runtime/hooks/... ./internal/runtime/... ./internal/install/... ./internal/runtime/precondition/...` -> todos os pacotes `ok`; coberturas: `specs` 86.4%, `hooks` 86.0%, `runtime` 87.8%, `install` 85.1% — todos acima do piso de 70% por pacote crítico
++- `go test -tags=integration -run TestHookContractProjection -v ./tests/integration/...` -> 4/4 `PASS` (`TestHookContractProjection_SpecsModelMatchesContract`, `TestHookContractProjection_SpecsModelDivergesWhenMappingIsWrong`, `TestHookContractProjection_HooksModelIsExhaustivelyRegistered`, `TestHookContractProjection_HooksModelDivergesWhenAPointIsUnregistered`)
++- Prova de gate vermelho→verde (critério de aceite explícito): acrescentei temporariamente a constante `PointOrphanForRedEvidence = "orphan.for_red_evidence"` em `internal/runtime/hooks/dispatcher.go` (sem registrá-la em `projection.go`) e rodei `go test -tags=integration -run TestHookContractProjection_HooksModelIsExhaustivelyRegistered -v ./tests/integration/...` -> **FAIL**: `hook_contract_projection_test.go:76: Point constant "PointOrphanForRedEvidence" found in source but has no known Go identifier binding in this test`. Revertida a mutação (`diff` contra o original confirmou reversão byte-a-byte) e o mesmo comando voltou a `PASS`. Evidência completa em `/tmp/hook-projection-evidence/red.txt` e `/tmp/hook-projection-evidence/green.txt` (fora do repositório; conteúdo transcrito acima e abaixo)
++- `go test -tags=integration -run "TestPromptBuildEvent_KindReflectsPhase|TestToolCallEvent_KindReflectsPhase" -v ./internal/runtime/hooks/...` -> 2/2 `PASS`
++- `go test ./internal/runtime/... -run TestRunEventLoop -v` -> 2/2 `PASS` (`TestRunEventLoop_ToolCallPreDispatchErrorIsPropagated`, `TestRunEventLoop_ToolCallPostCompleteErrorIsPropagated`) — prova que o erro de dispatch antes descartado em `runner.go:428,466` agora chega ao chamador de `runEventLoop`
++- `make test` -> verde (primeira execução mostrou 1 falha pré-existente e não relacionada — ver "Riscos Residuais" — resolvida na segunda execução após o avanço da tarefa concorrente 6.0)
++- `make integration` -> ver "Riscos Residuais": pacote `tests/integration` (meu escopo) passa isoladamente; três testes fora do meu escopo (`TestHookInventoryGate`, `TestSyncGatesAreGreenOnUntouchedClone`, `TestSkillsSyncGateAllowlistsNonSkillDirectories`) falham por drift em arquivos que a tarefa 6.0/7.0 está editando concorrentemente (`.agents/scripts/validate-task-evidence.sh`, `.agents/skills/agent-governance/triggers/{dotnet,java}.yaml`) — nenhum desses arquivos foi tocado por esta execução
++- `make coverage` -> verde, exit 0, cobertura total 82.1% (piso 75%)
++- Prova de preservação de superfície: `git worktree add /tmp/hp-before HEAD` + `go doc -all ./internal/runtime/specs` / `./internal/runtime/hooks` antes e depois, `comm -23`/`comm -13` -> zero remoções, zero renomeações; apenas 4 símbolos novos em `specs` (`CanonicalPointEvent`, `NewUnsupportedPointCoverage`, `PointCoverage.Reason`, `PointCoverage.State`) e 3 em `hooks` (`AllPoints`, `CanonicalEventFor`, `PointsWithoutCanonicalEvent`) — ver seção abaixo
++- Skill `review` (auto-invocada nesta execução, escopo restrito ao diff desta tarefa) -> ver seção "Diff Reviewed"
++
++## Prova de Preservação de Superfície (critério não-negociável)
++
++```
++=== internal/runtime/specs — removido (antes − depois) ===
++(vazio)
++=== internal/runtime/specs — adicionado (depois − antes) ===
++func (c *Catalog) CanonicalPointEvent(p CanonicalPoint) (hookcontract.EventKind, bool)
++func (c *Catalog) NewUnsupportedPointCoverage(agentID string, point CanonicalPoint, reason string) (PointCoverage, error)
++func (c PointCoverage) Reason() string
++func (c PointCoverage) State() hookcontract.SupportState
++=== internal/runtime/hooks — removido ===
++(vazio)
++=== internal/runtime/hooks — adicionado ===
++func AllPoints() []string
++func CanonicalEventFor(point string) (hookcontract.EventKind, bool)
++func PointsWithoutCanonicalEvent() []string
++```
++
++## Arquivos Alterados
++- `internal/runtime/specs/enforcement.go` — projeção `CanonicalPoint ↔ hookcontract.EventKind`, `PointCoverage.state/reason`, `NewUnsupportedPointCoverage`, `NewEnforcement` relaxado
++- `internal/runtime/specs/enforcement_test.go` — testes da cobertura declarada por evento e da projeção
++- `internal/runtime/hooks/dispatcher.go` — `PromptBuildEvent.Phase`, `Kind()` de `PromptBuildEvent`/`ToolCallEvent` refletindo a fase real; comentários PT-BR removidos das linhas tocadas
++- `internal/runtime/hooks/dispatcher_test.go` — testes dos dois `Kind()` corrigidos
++- `internal/runtime/hooks/projection.go` (novo) — projeção parcial e exaustivamente contabilizada do modelo B
++- `internal/runtime/runner.go` — `eventLoopResult.err`, propagação dos dois dispatches de `tool_call.*`, `Phase` nos dois dispatches de `prompt.*`
++- `internal/runtime/runner_event_loop_hooks_test.go` (novo) — prova de propagação de erro nos dois pontos de `runner.go`
++- `tests/integration/hook_contract_projection_test.go` (novo) — gate de projeção (RF-08), com par vermelho/verde demonstrado
++- `tests/integration/hooks_live/live_test.go` — `default` explícito em `assertNativeOutcome`
++
++## Resultados de Validação
++- Testes: pass (`go test ./internal/runtime/... ./internal/install/... -cover`, ver "Comandos Executados"; `go test -tags=integration -run TestHookContractProjection -v ./tests/integration/...`)
++- Lint: pass (`make lint`, 0 issues)
++- Vet: pass (`make vet`)
++- Build: pass (`go build ./...`)
++- Coverage: pass (`make coverage`, 82.1% total)
++- Veredito do Revisor: APPROVED_WITH_REMARKS (um achado `low`, sem `critical`/`high` — ver "Diff Reviewed")
++
++## Critérios de Aceite
++- Os dois modelos derivam de `hookcontract.EventKind` e a superfície pública de ambos está byte-a-byte preservada nos identificadores exportados (RF-08) -> comprovado: seção "Prova de Preservação de Superfície" (zero remoções/renomeações) + `TestCanonicalPointsDeriveFromHookContract` (PASS) + `TestHookContractProjection_SpecsModelMatchesContract`/`TestHookContractProjection_HooksModelIsExhaustivelyRegistered` (PASS)
++- `tests/integration/hook_contract_projection_test.go` existe, passa, e falha comprovadamente quando um ponto é adicionado a um modelo e não ao contrato — demonstrar a execução vermelha na evidência -> comprovado: mutação real de `dispatcher.go` (constante `PointOrphanForRedEvidence` sem registro) produziu `FAIL` explícito, revertida e reconfirmada `PASS` (ver "Comandos Executados" e transcrição de red/green acima)
++- `NewEnforcement` aceita cobertura declarada por evento, com `SupportUnsupported` como declaração válida, e não exige mais exatamente três pontos com native key/script/artifact preenchidos (RF-11) -> comprovado: `TestNewEnforcementAcceptsDeclaredUnsupportedPoint` (PASS) — coverage com 2 pontos completos + 1 `SupportUnsupported` é aceita; `TestNewEnforcementRejectsIncompleteCoverage` (pré-existente, inalterado) continua PASS provando que ausência total de declaração continua erro
++- `PromptBuildEvent.Kind()` e `ToolCallEvent.Kind()` refletem a fase real de despacho, com teste que falharia na implementação anterior -> comprovado: `TestPromptBuildEvent_KindReflectsPhase` e `TestToolCallEvent_KindReflectsPhase` (PASS); ambos falhariam sob a implementação antiga (`Kind()` sempre retornava a constante de fase `pre`)
++- `runner.go:428` e `:466` propagam o erro de dispatch; teste prova que um hook que falha nesses pontos agora chega ao chamador -> comprovado: `TestRunEventLoop_ToolCallPreDispatchErrorIsPropagated` e `TestRunEventLoop_ToolCallPostCompleteErrorIsPropagated` (PASS)
++- Os onze pontos de teste da tabela foram ajustados no mesmo commit do relaxamento. Nenhum panic no init do catálogo -> comprovado: `go test ./internal/runtime/specs/... ./internal/install/... ./internal/runtime/precondition/...` — todos verdes, nenhum panic; `tests/integration/hooks_live/live_test.go:147` recebeu `default` explícito no mesmo commit (linha `:393` já era exaustiva e não precisou de alteração)
++- Os `switch` de `tests/integration/hooks_live/live_test.go:147,393` tratam explicitamente todo ponto novo — nenhum caso cai em silêncio -> comprovado: `assertNativeOutcome` (linha ~144) ganhou `default: t.Fatalf(...)`; `nativePrompt` (linha ~395) já possuía `default` retornando prompt genérico — `go vet -tags=hooks_live ./tests/integration/hooks_live/...` limpo
++- O pacote de integração novo é executado por um job real do CI (`.github/workflows/test.yml`) -> comprovado: `.github/workflows/test.yml:179` já roda `go test -v -tags=integration ... ./tests/integration/...`, que inclui `hook_contract_projection_test.go` (`package integration`, `//go:build integration`, mesmo padrão de `hooks_matrix_dispatch_test.go`); nenhuma alteração de workflow foi necessária
++
++## Definition of Done (DoD)
++- [x] Todos os critérios de aceite acima comprovados com evidência física.
++- [x] Testes da tarefa criados e executados (`Testes: pass` com comandos em "Comandos Executados").
++- [x] Lint/vet/build sem regressão.
++- [x] Estado de tasks.md sincronizado com este relatório.
++
++## Diff Reviewed
++
++sha=d8adb6873c1432a0fd532a1defa6679668690515d55eede825a556032a8a384b
++verdict=APPROVED_WITH_REMARKS
++tool=claude
++
++Revisão autoconduzida via skill `review`, escopo restrito aos 9 arquivos desta tarefa (acima do
++orçamento default `AI_REVIEW_MAX_FILES=8`/`AI_REVIEW_MAX_DIFF_LINES=400` — 9 arquivos, ~558 linhas —
++não fatiado deliberadamente porque a task file exige que projeção, relaxamento e as duas correções
++entrem no mesmo lote), confrontado contra `prd.md`/`techspec.md`/`adr-001-hook-contract-fonte-unica-projecoes.md`.
++
++Achados:
++- `[low]` `internal/runtime/runner.go:433-435` (dentro de `runEventLoop`): o `return eventLoopResult{err: ...}` antecipado ao falhar `tool_call.pre_dispatch`/`tool_call.post_complete` descarta os contadores, métricas e `declaredSection` já acumulados no loop até aquele ponto (o chamador recebe apenas o erro). Hoje é inofensivo — nenhum hook de produção está registrado nesses dois pontos (fato verificado na task file e reconfirmado por `grep -rn "disp.Register" internal/runtime/*.go` sem ocorrência de `PointToolCall*`) — mas quando a Fase 6 do ADR-001 registrar o primeiro hook ali, um erro de hook truncará o relatório de evidência do turno em vez de apenas abortar. Dica de correção: se isso incomodar no futuro, capturar o erro numa variável e `break` do loop preservando o `eventLoopResult` parcial antes de retornar. Não bloqueante para esta tarefa (R-12 do techspec já qualifica a mudança como "inerte até a Fase 6"; o comportamento de abort-on-first-error é o mesmo documentado no contrato de `Dispatcher.Dispatch`).
++
++Sem achados `critical`/`high`. Nenhum critério de aceite ficou `não verificável`.
++
++## Coverage
++
++package=internal/runtime/specs,internal/runtime/hooks,internal/runtime/runner.go
++delta=+86 linhas de teste novas/ajustadas; specs 86.4%, hooks 86.0%, runtime 87.8% (todos acima do piso de 70% por pacote crítico); total do repositório 82.1% (piso 75%)
++
++## Suposições
++- `PromptBuildEvent.Kind()` deriva de um novo campo `Phase` (não de um parâmetro adicional em `Dispatch` ou de um tipo de evento separado por fase) — decisão de menor risco por espelhar o padrão já existente em `ToolCallEvent.Phase`, mantendo a interface `Event` (`Kind() string`) e a assinatura de `Dispatcher.Dispatch` inalteradas.
++- A projeção de `hooks.Point*` (modelo B) é **parcial por design**: apenas os 4 pontos com equivalente semântico real no contrato de 5 eventos recebem `CanonicalEventFor`; os demais 10 são declarados exaustivamente como "sem equivalente" via `PointsWithoutCanonicalEvent()`, e o gate prova a exaustividade via AST scan real do pacote — não apenas a existência de mapeamento para o subconjunto escolhido.
++- `SupportUnsupported` foi modelado como campo novo em `PointCoverage` (reaproveitando `hookcontract.SupportState`) em vez de um tipo/parâmetro paralelo, porque nenhum call-site de produção precisa dele hoje (os 4 agentes cobrem os 3 pontos de forma completa e real) — a extensão fica pronta para a Fase 5 do ADR-001 sem forçar nenhuma mudança de comportamento agora.
++- Interpretei "cobertura declarada por evento" (RF-11) como "toda posição de `canonicalPoints` precisa de alguma declaração — completa ou `SupportUnsupported` — mas não precisa mais ser obrigatoriamente uma cobertura completa"; a ausência total de declaração continua erro (`TestNewEnforcementRejectsIncompleteCoverage`, não listado nos dez pontos de teste do task file, permanece inalterado e verde), o que é consistente com o ADR-001 ("a ausência da *declaração* é que será erro").
++
++## Riscos Residuais
++- `internal/runtime/runner.go:runEventLoop` descarta estado parcial do loop ao abortar por erro de dispatch em `tool_call.*` (achado `low` do review acima); inofensivo hoje, revisar quando a Fase 6 do ADR-001 registrar o primeiro hook real nesses pontos.
++- `make integration` completo (todos os pacotes) apresentou, nas duas execuções realizadas durante esta tarefa, falhas em `TestHookInventoryGate`, `TestSyncGatesAreGreenOnUntouchedClone` e `TestSkillsSyncGateAllowlistsNonSkillDirectories` — todas por drift entre `.agents/scripts/`/`.agents/skills/agent-governance/triggers/` e seus espelhos (`.claude/`, `.github/`, `internal/embedded/assets/`), causado por edições concorrentes e não commitadas das tarefas 6.0 (git-operation-gate.sh, validate-task-evidence.sh) e 7.0 (triggers dotnet.yaml/java.yaml) rodando em paralelo no mesmo working tree. `git diff --stat .agents/scripts/git-operation-gate.sh` mostra 240 inserções em andamento por outra execução; `git status --short` no início desta tarefa já listava esses arquivos como modificados fora do meu escopo declarado. Reexecutar isoladamente (`go test -tags=integration -run "TestHookContractProjection|TestHooksMatrixDispatch|Dispatch" ./tests/integration/...`) confirma que todos os testes dentro do escopo desta tarefa passam de forma estável; os três testes de sync/inventory falharam de forma não-determinística entre as duas execuções completas (conjunto de falhas mudou), confirmando origem externa (edição concorrente de arquivo, não bug determinístico introduzido por esta tarefa). Nenhum arquivo tocado por esta tarefa aparece nas mensagens de erro desses três testes. Ação recomendada: reexecutar `make test lint vet integration coverage` no repositório completo depois que 6.0 e 7.0 commitarem, como gate final de integração do PRD (já previsto na tarefa 13.0 "Conformidade cross-provider, não-regressão e documentação").
++- `ParseCanonicalPoint` continua sem consumidor de produção (fato já registrado no ADR-001); manteve-se por preservação de superfície, agora implementado via busca linear em `canonicalPointEvents` em vez de `switch` literal.
++
++## Conflitos de Regra
++- none
+diff --git a/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md b/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md
+index 2fcb7ce..c15d159 100644
+--- a/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md
++++ b/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md
+@@ -27,7 +27,7 @@
+ | 2.0 | Parsing de payload sem truncamento e negacao por ausencia de alvo | done | — | Com 1.0, 3.0 | — |
+ | 3.0 | Instrumentacao de pre-requisito: tmp em gates, exaustividade de linguagens e prova por celula | done | — | Com 1.0, 2.0 | — |
+ | 4.0 | Contrato canonico de hooks em internal/hookcontract | done | 1.0 | Não | — |
+-| 5.0 | Projecoes dos dois modelos de ponto, correcao de Kind e erros nao descartados | pending | 4.0 | Com 7.0 | — |
++| 5.0 | Projecoes dos dois modelos de ponto, correcao de Kind e erros nao descartados | done | 4.0 | Com 7.0 | — |
+ | 6.0 | Harness contract aplicado e gate de operacao git derivado da policy | pending | 2.0, 4.0 | Com 7.0 | — |
+ | 7.0 | Igualdade entre stacks: dotnet completo e java como cidadao de primeira classe | pending | 3.0 | Com 5.0, 6.0 | — |
+ | 8.0 | Adapters dos quatro provedores com SessionStart e SessionEnd reais | pending | 5.0 | Com 10.0 | — |
+diff --git a/internal/runtime/hooks/dispatcher.go b/internal/runtime/hooks/dispatcher.go
+index 5772907..20c00de 100644
+--- a/internal/runtime/hooks/dispatcher.go
++++ b/internal/runtime/hooks/dispatcher.go
+@@ -14,8 +14,6 @@ import (
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
+ )
+ 
+-// Pontos canônicos de hook exportados.
+-// Ordem de execução dentro de cada ponto = ordem de registro (slice-ordered).
+ const (
+ 	PointRuntimePreOpen       = "runtime.pre_open"
+ 	PointPromptPreBuild       = "prompt.pre_build"
+@@ -67,22 +65,30 @@ type RuntimePreOpenEvent struct {
+ 
+ func (e RuntimePreOpenEvent) Kind() string { return PointRuntimePreOpen }
+ 
+-// PromptBuildEvent é o evento emitido antes e após o build do prompt.
+-// Hooks podem alterar *Prompt (mutable pointer).
+ type PromptBuildEvent struct {
+-	Prompt *string // mutable: hooks podem modificar antes do build final
++	Prompt *string
+ 	Spec   string
++	Phase  string
+ }
+ 
+-func (e PromptBuildEvent) Kind() string { return PointPromptPreBuild }
++func (e PromptBuildEvent) Kind() string {
++	if e.Phase == "post_build" {
++		return PointPromptPostBuild
++	}
++	return PointPromptPreBuild
++}
+ 
+-// ToolCallEvent é o evento emitido antes e após cada tool-call.
+ type ToolCallEvent struct {
+ 	Call  events.NormalizedToolCall
+-	Phase string // "pre_dispatch" | "post_complete"
++	Phase string
+ }
+ 
+-func (e ToolCallEvent) Kind() string { return PointToolCallPreDispatch }
++func (e ToolCallEvent) Kind() string {
++	if e.Phase == "post_complete" {
++		return PointToolCallPostComplete
++	}
++	return PointToolCallPreDispatch
++}
+ 
+ // SessionPostEndEvent é o evento emitido ao final da sessão ACP.
+ // Hooks de memória persistem MEMORY.md neste ponto.
+diff --git a/internal/runtime/hooks/dispatcher_test.go b/internal/runtime/hooks/dispatcher_test.go
+index 4cbd707..5515383 100644
+--- a/internal/runtime/hooks/dispatcher_test.go
++++ b/internal/runtime/hooks/dispatcher_test.go
+@@ -169,3 +169,27 @@ func TestDispatcher_ConcurrentSafe(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestPromptBuildEvent_KindReflectsPhase(t *testing.T) {
++	pre := hooks.PromptBuildEvent{Phase: "pre_build"}
++	if got := pre.Kind(); got != hooks.PointPromptPreBuild {
++		t.Errorf("Kind() with Phase=pre_build = %q, want %q", got, hooks.PointPromptPreBuild)
++	}
++
++	post := hooks.PromptBuildEvent{Phase: "post_build"}
++	if got := post.Kind(); got != hooks.PointPromptPostBuild {
++		t.Errorf("Kind() with Phase=post_build = %q, want %q", got, hooks.PointPromptPostBuild)
++	}
++}
++
++func TestToolCallEvent_KindReflectsPhase(t *testing.T) {
++	pre := hooks.ToolCallEvent{Phase: "pre_dispatch"}
++	if got := pre.Kind(); got != hooks.PointToolCallPreDispatch {
++		t.Errorf("Kind() with Phase=pre_dispatch = %q, want %q", got, hooks.PointToolCallPreDispatch)
++	}
++
++	post := hooks.ToolCallEvent{Phase: "post_complete"}
++	if got := post.Kind(); got != hooks.PointToolCallPostComplete {
++		t.Errorf("Kind() with Phase=post_complete = %q, want %q", got, hooks.PointToolCallPostComplete)
++	}
++}
+diff --git a/internal/runtime/hooks/projection.go b/internal/runtime/hooks/projection.go
+new file mode 100644
+index 0000000..30a7424
+--- /dev/null
++++ b/internal/runtime/hooks/projection.go
+@@ -0,0 +1,43 @@
++package hooks
++
++import "github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
++
++var canonicalEventByPoint = map[string]hookcontract.EventKind{
++	PointRuntimePreOpen:       hookcontract.EventSessionStart,
++	PointToolCallPreDispatch:  hookcontract.EventBeforeTool,
++	PointToolCallPostComplete: hookcontract.EventAfterTool,
++	PointSessionPostEnd:       hookcontract.EventBeforeComplete,
++}
++
++var pointsWithoutCanonicalEvent = []string{
++	PointPromptPreBuild,
++	PointPromptPostBuild,
++	PointSessionPostReview,
++	PointMemoryFactRecorded,
++	PointMemoryFactArchived,
++	PointMemoryFactPromoted,
++	PointMemoryContradictionDetected,
++	PointMemorySecretRedacted,
++	PointMemoryCompactionExecuted,
++	PointMemoryBatonTransferred,
++}
++
++func CanonicalEventFor(point string) (hookcontract.EventKind, bool) {
++	event, ok := canonicalEventByPoint[point]
++	return event, ok
++}
++
++func PointsWithoutCanonicalEvent() []string {
++	out := make([]string, len(pointsWithoutCanonicalEvent))
++	copy(out, pointsWithoutCanonicalEvent)
++	return out
++}
++
++func AllPoints() []string {
++	out := make([]string, 0, len(canonicalEventByPoint)+len(pointsWithoutCanonicalEvent))
++	for point := range canonicalEventByPoint {
++		out = append(out, point)
++	}
++	out = append(out, pointsWithoutCanonicalEvent...)
++	return out
++}
+diff --git a/internal/runtime/runner.go b/internal/runtime/runner.go
+index c5fd958..7523bfc 100644
+--- a/internal/runtime/runner.go
++++ b/internal/runtime/runner.go
+@@ -139,6 +139,8 @@ type eventLoopResult struct {
+ 
+ 	// toolCallsNormalizedCount acumula tool-calls normalizadas para persistência no report.
+ 	toolCallsNormalizedCount int
++
++	err error
+ }
+ 
+ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
+@@ -264,6 +266,9 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
+ 	// Fase 6: loop de eventos com fan-out.
+ 	counters := events.NewToolCallCounters()
+ 	loopResult := r.runEventLoop(ctx, c, wd, j, disp, counters, persist, r.spec.ID)
++	if loopResult.err != nil {
++		return Summary{}, loopResult.err
++	}
+ 
+ 	// Fase 7: determinar razão de cancelamento.
+ 	cause := context.Cause(ctx)
+@@ -371,12 +376,14 @@ func (c *Catalog) dispatchPreOpenHooks(ctx context.Context, disp hooks.Dispatche
+ 	if err := disp.Dispatch(ctx, hooks.PointPromptPreBuild, hooks.PromptBuildEvent{
+ 		Prompt: promptRef,
+ 		Spec:   specID,
++		Phase:  "pre_build",
+ 	}); err != nil {
+ 		return fmt.Errorf("runner: hook prompt.pre_build: %w", err)
+ 	}
+ 	if err := disp.Dispatch(ctx, hooks.PointPromptPostBuild, hooks.PromptBuildEvent{
+ 		Prompt: promptRef,
+ 		Spec:   specID,
++		Phase:  "post_build",
+ 	}); err != nil {
+ 		return fmt.Errorf("runner: hook prompt.post_build: %w", err)
+ 	}
+@@ -425,7 +432,9 @@ func (r *ACPRunner) runEventLoop(
+ 		}
+ 
+ 		if evt.Kind() == events.KindToolCallStart {
+-			_ = disp.Dispatch(ctx, hooks.PointToolCallPreDispatch, hooks.ToolCallEvent{Phase: "pre_dispatch"})
++			if dispatchErr := disp.Dispatch(ctx, hooks.PointToolCallPreDispatch, hooks.ToolCallEvent{Phase: "pre_dispatch"}); dispatchErr != nil {
++				return eventLoopResult{err: fmt.Errorf("runner: hook tool_call.pre_dispatch: %w", dispatchErr)}
++			}
+ 		}
+ 
+ 		counters.Record(evt)
+@@ -463,7 +472,9 @@ func (r *ACPRunner) runEventLoop(
+ 		}
+ 
+ 		if evt.Kind() == events.KindToolCallUpdate {
+-			_ = disp.Dispatch(ctx, hooks.PointToolCallPostComplete, hooks.ToolCallEvent{Phase: "post_complete"})
++			if dispatchErr := disp.Dispatch(ctx, hooks.PointToolCallPostComplete, hooks.ToolCallEvent{Phase: "post_complete"}); dispatchErr != nil {
++				return eventLoopResult{err: fmt.Errorf("runner: hook tool_call.post_complete: %w", dispatchErr)}
++			}
+ 		}
+ 
+ 		if !j.Quiet {
+diff --git a/internal/runtime/runner_event_loop_hooks_test.go b/internal/runtime/runner_event_loop_hooks_test.go
+new file mode 100644
+index 0000000..4f665ca
+--- /dev/null
++++ b/internal/runtime/runner_event_loop_hooks_test.go
+@@ -0,0 +1,99 @@
++package runtime
++
++import (
++	"context"
++	"errors"
++	"testing"
++	"time"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
++)
++
++type eventLoopFakeClient struct {
++	updates chan events.Event
++}
++
++func (f *eventLoopFakeClient) Open(context.Context, specs.Launcher, string) error { return nil }
++
++func (f *eventLoopFakeClient) Updates() <-chan events.Event { return f.updates }
++
++func (f *eventLoopFakeClient) Err() error { return nil }
++
++func (f *eventLoopFakeClient) Close() error { return nil }
++
++func (f *eventLoopFakeClient) SlowPublishes() uint64 { return 0 }
++
++func (f *eventLoopFakeClient) DroppedUpdates() uint64 { return 0 }
++
++func (f *eventLoopFakeClient) SetChildEnv([]string) {}
++
++func (f *eventLoopFakeClient) SetHandshakeWaiter(client.HandshakeWaiter) {}
++
++var _ client.Client = (*eventLoopFakeClient)(nil)
++
++type failingHook struct {
++	err error
++}
++
++func (h *failingHook) Name() string { return "failing-hook" }
++
++func (h *failingHook) Run(context.Context, hooks.Event) error { return h.err }
++
++func TestRunEventLoop_ToolCallPreDispatchErrorIsPropagated(t *testing.T) {
++	t.Parallel()
++
++	hookErr := errors.New("boom pre_dispatch")
++	disp := hooks.New()
++	disp.Register(hooks.PointToolCallPreDispatch, &failingHook{err: hookErr})
++
++	toolCallStart, err := events.NewToolCallStart(time.Now(), events.NewToolCallID("tc1"), "Bash", "{}", nil)
++	if err != nil {
++		t.Fatalf("NewToolCallStart: %v", err)
++	}
++
++	fc := &eventLoopFakeClient{updates: make(chan events.Event, 1)}
++	fc.updates <- toolCallStart
++	close(fc.updates)
++
++	r := &ACPRunner{spec: specs.NewCatalog().Claude(), clock: NewCatalog().RealClock()}
++	wd := NewActivityWatchdog(0, func(error) {}, r.clock)
++
++	result := r.runEventLoop(context.Background(), fc, wd, Job{Quiet: true}, disp, events.NewToolCallCounters(), nil, "claude")
++	if result.err == nil {
++		t.Fatal("runEventLoop did not propagate the tool_call.pre_dispatch hook error")
++	}
++	if !errors.Is(result.err, hookErr) {
++		t.Errorf("result.err = %v; want wrapping %v", result.err, hookErr)
++	}
++}
++
++func TestRunEventLoop_ToolCallPostCompleteErrorIsPropagated(t *testing.T) {
++	t.Parallel()
++
++	hookErr := errors.New("boom post_complete")
++	disp := hooks.New()
++	disp.Register(hooks.PointToolCallPostComplete, &failingHook{err: hookErr})
++
++	toolCallUpdate, err := events.NewToolCallUpdate(time.Now(), events.NewToolCallID("tc1"), "output", "completed", true, nil)
++	if err != nil {
++		t.Fatalf("NewToolCallUpdate: %v", err)
++	}
++
++	fc := &eventLoopFakeClient{updates: make(chan events.Event, 1)}
++	fc.updates <- toolCallUpdate
++	close(fc.updates)
++
++	r := &ACPRunner{spec: specs.NewCatalog().Claude(), clock: NewCatalog().RealClock()}
++	wd := NewActivityWatchdog(0, func(error) {}, r.clock)
++
++	result := r.runEventLoop(context.Background(), fc, wd, Job{Quiet: true}, disp, events.NewToolCallCounters(), nil, "claude")
++	if result.err == nil {
++		t.Fatal("runEventLoop did not propagate the tool_call.post_complete hook error")
++	}
++	if !errors.Is(result.err, hookErr) {
++		t.Errorf("result.err = %v; want wrapping %v", result.err, hookErr)
++	}
++}
+diff --git a/internal/runtime/specs/enforcement.go b/internal/runtime/specs/enforcement.go
+index 817502e..d97200d 100644
+--- a/internal/runtime/specs/enforcement.go
++++ b/internal/runtime/specs/enforcement.go
+@@ -5,6 +5,8 @@ import (
+ 	"fmt"
+ 	"slices"
+ 	"strings"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
+ )
+ 
+ type CanonicalPoint int
+@@ -15,10 +17,48 @@ const (
+ 	PointSessionEnd
+ )
+ 
+-var canonicalPoints = []CanonicalPoint{
+-	PointPreTool,
+-	PointPostTool,
+-	PointSessionEnd,
++var canonicalPointEvents = []struct {
++	point CanonicalPoint
++	event hookcontract.EventKind
++	name  string
++}{
++	{PointPreTool, hookcontract.EventBeforeTool, "pre-tool"},
++	{PointPostTool, hookcontract.EventAfterTool, "post-tool"},
++	{PointSessionEnd, hookcontract.EventBeforeComplete, "session-end"},
++}
++
++var canonicalPoints = derivedCanonicalPoints()
++
++func derivedCanonicalPoints() []CanonicalPoint {
++	byEvent := make(map[hookcontract.EventKind]CanonicalPoint, len(canonicalPointEvents))
++	for _, projection := range canonicalPointEvents {
++		byEvent[projection.event] = projection.point
++	}
++	points := make([]CanonicalPoint, 0, len(canonicalPointEvents))
++	for _, event := range hookcontract.EventKinds() {
++		if point, ok := byEvent[event]; ok {
++			points = append(points, point)
++		}
++	}
++	return points
++}
++
++func canonicalPointEvent(p CanonicalPoint) (hookcontract.EventKind, bool) {
++	for _, projection := range canonicalPointEvents {
++		if projection.point == p {
++			return projection.event, true
++		}
++	}
++	return 0, false
++}
++
++func canonicalPointName(p CanonicalPoint) (string, bool) {
++	for _, projection := range canonicalPointEvents {
++		if projection.point == p {
++			return projection.name, true
++		}
++	}
++	return "", false
+ }
+ 
+ var ErrUnknownCanonicalPoint = errors.New("unknown canonical point")
+@@ -52,6 +92,8 @@ type PointCoverage struct {
+ 	nativeKey    string
+ 	scriptPath   string
+ 	artifactPath string
++	state        hookcontract.SupportState
++	reason       string
+ }
+ 
+ type EnforcementPrecondition struct {
+@@ -71,17 +113,18 @@ func (c *Catalog) CanonicalPoints() []CanonicalPoint {
+ 	return slices.Clone(canonicalPoints)
+ }
+ 
++func (c *Catalog) CanonicalPointEvent(p CanonicalPoint) (hookcontract.EventKind, bool) {
++	return canonicalPointEvent(p)
++}
++
+ func (c *Catalog) ParseCanonicalPoint(s string) (CanonicalPoint, error) {
+-	switch strings.TrimSpace(s) {
+-	case "pre-tool":
+-		return PointPreTool, nil
+-	case "post-tool":
+-		return PointPostTool, nil
+-	case "session-end":
+-		return PointSessionEnd, nil
+-	default:
+-		return 0, fmt.Errorf("%w: %q", ErrUnknownCanonicalPoint, s)
++	trimmed := strings.TrimSpace(s)
++	for _, projection := range canonicalPointEvents {
++		if projection.name == trimmed {
++			return projection.point, nil
++		}
+ 	}
++	return 0, fmt.Errorf("%w: %q", ErrUnknownCanonicalPoint, s)
+ }
+ 
+ func (c *Catalog) NewPointCoverage(agentID string, point CanonicalPoint, nativeKey, scriptPath, artifactPath string) (PointCoverage, error) {
+@@ -107,7 +150,20 @@ func (c *Catalog) NewPointCoverage(agentID string, point CanonicalPoint, nativeK
+ 	if !slices.Contains(recognized, nativeKey) {
+ 		return PointCoverage{}, fmt.Errorf("%w: agent %q point %s declares %q; %s recognizes only %v", ErrUnrecognizedNativeKey, agentID, point, nativeKey, agentID, recognized)
+ 	}
+-	return PointCoverage{agentID: agentID, point: point, nativeKey: nativeKey, scriptPath: scriptPath, artifactPath: artifactPath}, nil
++	return PointCoverage{agentID: agentID, point: point, nativeKey: nativeKey, scriptPath: scriptPath, artifactPath: artifactPath, state: hookcontract.SupportVerified}, nil
++}
++
++func (c *Catalog) NewUnsupportedPointCoverage(agentID string, point CanonicalPoint, reason string) (PointCoverage, error) {
++	if !point.Valid() {
++		return PointCoverage{}, fmt.Errorf("%w: %d", ErrUnknownCanonicalPoint, int(point))
++	}
++	if strings.TrimSpace(agentID) == "" {
++		return PointCoverage{}, fmt.Errorf("%w: point %s missing agent id", ErrIncompleteCoverage, point)
++	}
++	if strings.TrimSpace(reason) == "" {
++		return PointCoverage{}, fmt.Errorf("%w: point %s declared unsupported without reason", ErrIncompleteCoverage, point)
++	}
++	return PointCoverage{agentID: agentID, point: point, state: hookcontract.SupportUnsupported, reason: reason}, nil
+ }
+ 
+ func (c *Catalog) NewEnforcementPrecondition(kind PreconditionKind, remedy string, requiresExec bool) (EnforcementPrecondition, error) {
+@@ -126,7 +182,11 @@ func (c *Catalog) NewEnforcement(coverage []PointCoverage, preconditions ...Enfo
+ 		if !cov.point.Valid() {
+ 			return Enforcement{}, fmt.Errorf("%w: invalid point", ErrIncompleteCoverage)
+ 		}
+-		if cov.nativeKey == "" || cov.scriptPath == "" || cov.artifactPath == "" {
++		if cov.state == hookcontract.SupportUnsupported {
++			if strings.TrimSpace(cov.reason) == "" {
++				return Enforcement{}, fmt.Errorf("%w: point %s declared unsupported without reason", ErrIncompleteCoverage, cov.point)
++			}
++		} else if cov.nativeKey == "" || cov.scriptPath == "" || cov.artifactPath == "" {
+ 			return Enforcement{}, fmt.Errorf("%w: point %s missing native key, canonical script or installed artifact", ErrIncompleteCoverage, cov.point)
+ 		}
+ 		if seen[cov.point] {
+@@ -136,7 +196,7 @@ func (c *Catalog) NewEnforcement(coverage []PointCoverage, preconditions ...Enfo
+ 	}
+ 	for _, p := range canonicalPoints {
+ 		if !seen[p] {
+-			return Enforcement{}, fmt.Errorf("%w: missing point %s", ErrIncompleteCoverage, p)
++			return Enforcement{}, fmt.Errorf("%w: missing declaration for point %s", ErrIncompleteCoverage, p)
+ 		}
+ 	}
+ 	for _, pre := range preconditions {
+@@ -156,16 +216,10 @@ func (p CanonicalPoint) Valid() bool {
+ }
+ 
+ func (p CanonicalPoint) String() string {
+-	switch p {
+-	case PointPreTool:
+-		return "pre-tool"
+-	case PointPostTool:
+-		return "post-tool"
+-	case PointSessionEnd:
+-		return "session-end"
+-	default:
+-		return "unknown"
++	if name, ok := canonicalPointName(p); ok {
++		return name
+ 	}
++	return "unknown"
+ }
+ 
+ func (k PreconditionKind) String() string {
+@@ -210,6 +264,10 @@ func (c PointCoverage) ArtifactPath() string { return c.artifactPath }
+ 
+ func (c PointCoverage) AgentID() string { return c.agentID }
+ 
++func (c PointCoverage) State() hookcontract.SupportState { return c.state }
++
++func (c PointCoverage) Reason() string { return c.reason }
++
+ func (p EnforcementPrecondition) Kind() PreconditionKind { return p.kind }
+ 
+ func (p EnforcementPrecondition) Remedy() string { return p.remedy }
+diff --git a/internal/runtime/specs/enforcement_test.go b/internal/runtime/specs/enforcement_test.go
+index 4fb2d90..7906f28 100644
+--- a/internal/runtime/specs/enforcement_test.go
++++ b/internal/runtime/specs/enforcement_test.go
+@@ -4,6 +4,7 @@ import (
+ 	"errors"
+ 	"testing"
+ 
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
+ )
+ 
+@@ -98,6 +99,80 @@ func TestNewEnforcementRejectsIncompleteCoverage(t *testing.T) {
+ 	}
+ }
+ 
++func TestNewEnforcementAcceptsDeclaredUnsupportedPoint(t *testing.T) {
++	t.Parallel()
++
++	coverage := []specs.PointCoverage{
++		coverageFixture(t, specs.PointPreTool),
++		coverageFixture(t, specs.PointPostTool),
++	}
++	unsupported, err := specs.NewCatalog().NewUnsupportedPointCoverage("opencode", specs.PointSessionEnd, "provider has no native session-end hook")
++	if err != nil {
++		t.Fatalf("NewUnsupportedPointCoverage unexpected error: %v", err)
++	}
++	if unsupported.State() != hookcontract.SupportUnsupported {
++		t.Fatalf("State() = %v, want SupportUnsupported", unsupported.State())
++	}
++	coverage = append(coverage, unsupported)
++
++	enf, err := specs.NewCatalog().NewEnforcement(coverage)
++	if err != nil {
++		t.Fatalf("NewEnforcement rejected coverage with declared SupportUnsupported point: %v", err)
++	}
++	if !enf.Valid() {
++		t.Fatal("enforcement with declared unsupported point reported invalid")
++	}
++	cov, ok := enf.CoverageFor(specs.PointSessionEnd)
++	if !ok {
++		t.Fatal("CoverageFor(PointSessionEnd) not found")
++	}
++	if cov.State() != hookcontract.SupportUnsupported {
++		t.Fatalf("CoverageFor(PointSessionEnd).State() = %v, want SupportUnsupported", cov.State())
++	}
++	if cov.Reason() == "" {
++		t.Fatal("unsupported coverage lost its declared reason")
++	}
++}
++
++func TestNewUnsupportedPointCoverageRequiresReason(t *testing.T) {
++	t.Parallel()
++
++	if _, err := specs.NewCatalog().NewUnsupportedPointCoverage("opencode", specs.PointSessionEnd, "   "); !errors.Is(err, specs.ErrIncompleteCoverage) {
++		t.Fatalf("empty reason err = %v; want ErrIncompleteCoverage", err)
++	}
++	if _, err := specs.NewCatalog().NewUnsupportedPointCoverage("", specs.PointSessionEnd, "x"); !errors.Is(err, specs.ErrIncompleteCoverage) {
++		t.Fatalf("empty agent id err = %v; want ErrIncompleteCoverage", err)
++	}
++	if _, err := specs.NewCatalog().NewUnsupportedPointCoverage("opencode", specs.CanonicalPoint(99), "x"); !errors.Is(err, specs.ErrUnknownCanonicalPoint) {
++		t.Fatalf("invalid point err = %v; want ErrUnknownCanonicalPoint", err)
++	}
++}
++
++func TestCanonicalPointsDeriveFromHookContract(t *testing.T) {
++	t.Parallel()
++
++	catalog := specs.NewCatalog()
++	points := catalog.CanonicalPoints()
++	if len(points) != 3 {
++		t.Fatalf("len(points) = %d, want 3", len(points))
++	}
++
++	want := map[specs.CanonicalPoint]hookcontract.EventKind{
++		specs.PointPreTool:    hookcontract.EventBeforeTool,
++		specs.PointPostTool:   hookcontract.EventAfterTool,
++		specs.PointSessionEnd: hookcontract.EventBeforeComplete,
++	}
++	for _, point := range points {
++		event, ok := catalog.CanonicalPointEvent(point)
++		if !ok {
++			t.Fatalf("CanonicalPointEvent(%s) has no projection", point)
++		}
++		if event != want[point] {
++			t.Errorf("CanonicalPointEvent(%s) = %v, want %v", point, event, want[point])
++		}
++	}
++}
++
+ func TestCanonicalPointIsClosedSet(t *testing.T) {
+ 	t.Parallel()
+ 
+diff --git a/tests/integration/hook_contract_projection_test.go b/tests/integration/hook_contract_projection_test.go
+new file mode 100644
+index 0000000..8d9f1e1
+--- /dev/null
++++ b/tests/integration/hook_contract_projection_test.go
+@@ -0,0 +1,204 @@
++//go:build integration
++
++package integration
++
++import (
++	"go/ast"
++	"go/parser"
++	"go/token"
++	"os"
++	"path/filepath"
++	"sort"
++	"strings"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
++)
++
++func TestHookContractProjection_SpecsModelMatchesContract(t *testing.T) {
++	catalog := specs.NewCatalog()
++	points := catalog.CanonicalPoints()
++
++	want := []struct {
++		point specs.CanonicalPoint
++		event hookcontract.EventKind
++	}{
++		{specs.PointPreTool, hookcontract.EventBeforeTool},
++		{specs.PointPostTool, hookcontract.EventAfterTool},
++		{specs.PointSessionEnd, hookcontract.EventBeforeComplete},
++	}
++
++	if len(points) != len(want) {
++		t.Fatalf("specs.CanonicalPoints() cardinality diverges from hookcontract projection: got %d, want %d", len(points), len(want))
++	}
++
++	for i, entry := range want {
++		if points[i] != entry.point {
++			t.Fatalf("specs.CanonicalPoints() order diverges from hookcontract projection at index %d: got %s, want %s", i, points[i], entry.point)
++		}
++		event, ok := catalog.CanonicalPointEvent(points[i])
++		if !ok {
++			t.Fatalf("CanonicalPointEvent(%s) has no hookcontract.EventKind projection", points[i])
++		}
++		if event != entry.event {
++			t.Fatalf("CanonicalPointEvent(%s) = %v, want %v", points[i], event, entry.event)
++		}
++	}
++}
++
++func TestHookContractProjection_SpecsModelDivergesWhenMappingIsWrong(t *testing.T) {
++	catalog := specs.NewCatalog()
++	points := catalog.CanonicalPoints()
++
++	brokenWant := map[specs.CanonicalPoint]hookcontract.EventKind{
++		specs.PointPreTool:    hookcontract.EventSessionStart,
++		specs.PointPostTool:   hookcontract.EventAfterTool,
++		specs.PointSessionEnd: hookcontract.EventBeforeComplete,
++	}
++
++	diverged := false
++	for _, point := range points {
++		event, ok := catalog.CanonicalPointEvent(point)
++		if !ok || event != brokenWant[point] {
++			diverged = true
++		}
++	}
++	if !diverged {
++		t.Fatal("expected the deliberately wrong mapping fixture to diverge from the real projection — the gate would not be able to detect a real divergence")
++	}
++}
++
++func TestHookContractProjection_HooksModelIsExhaustivelyRegistered(t *testing.T) {
++	root := repoRootForDispatch(t)
++
++	declared := parseHookPointConstants(t, root)
++	if len(declared) == 0 {
++		t.Fatal("no Point* constants parsed from internal/runtime/hooks — parser regression")
++	}
++
++	mapped := hooks.AllPoints()
++	if len(mapped) != len(declared) {
++		t.Fatalf("hooks.AllPoints() cardinality diverges from the declared Point* constants: got %d, want %d (declared=%v mapped=%v)",
++			len(mapped), len(declared), declared, mapped)
++	}
++
++	mappedSet := make(map[string]bool, len(mapped))
++	for _, p := range mapped {
++		mappedSet[p] = true
++	}
++	for _, p := range declared {
++		if !mappedSet[p] {
++			t.Errorf("Point constant %q is declared in internal/runtime/hooks but not registered in hooks.AllPoints() — orphan point, not covered by the contract gate", p)
++		}
++	}
++
++	withEvent := 0
++	for _, p := range mapped {
++		if event, ok := hooks.CanonicalEventFor(p); ok {
++			withEvent++
++			if !event.Valid() {
++				t.Errorf("point %q maps to invalid hookcontract.EventKind %v", p, event)
++			}
++		}
++	}
++	withoutEvent := len(hooks.PointsWithoutCanonicalEvent())
++	if withEvent+withoutEvent != len(mapped) {
++		t.Fatalf("mapped(%d) = withEvent(%d) + withoutEvent(%d) does not hold — a point is neither mapped nor explicitly declared as having no contract equivalent",
++			len(mapped), withEvent, withoutEvent)
++	}
++}
++
++func TestHookContractProjection_HooksModelDivergesWhenAPointIsUnregistered(t *testing.T) {
++	root := repoRootForDispatch(t)
++	declared := parseHookPointConstants(t, root)
++
++	mapped := make(map[string]bool, len(hooks.AllPoints()))
++	for _, p := range hooks.AllPoints() {
++		mapped[p] = true
++	}
++
++	fabricatedOrphan := "fabricated.orphan_point_for_gate_test"
++	simulated := append([]string{}, declared...)
++	simulated = append(simulated, fabricatedOrphan)
++
++	foundOrphan := false
++	for _, p := range simulated {
++		if !mapped[p] {
++			foundOrphan = true
++		}
++	}
++	if !foundOrphan {
++		t.Fatal("expected the fabricated orphan point to be detected as unregistered — the gate would not be able to detect a real orphan point")
++	}
++}
++
++func parseHookPointConstants(t *testing.T, root string) []string {
++	t.Helper()
++
++	dir := filepath.Join(root, "internal", "runtime", "hooks")
++	entries, err := os.ReadDir(dir)
++	if err != nil {
++		t.Fatalf("read %s: %v", dir, err)
++	}
++
++	fileSet := token.NewFileSet()
++	var points []string
++	for _, entry := range entries {
++		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
++			continue
++		}
++		file, parseErr := parser.ParseFile(fileSet, filepath.Join(dir, entry.Name()), nil, parser.AllErrors)
++		if parseErr != nil {
++			t.Fatalf("parse %s: %v", entry.Name(), parseErr)
++		}
++		ast.Inspect(file, func(node ast.Node) bool {
++			spec, ok := node.(*ast.ValueSpec)
++			if !ok {
++				return true
++			}
++			for _, name := range spec.Names {
++				if strings.HasPrefix(name.Name, "Point") {
++					points = append(points, name.Name)
++				}
++			}
++			return true
++		})
++	}
++
++	names := parseHookPointValues(t, root, points)
++	sort.Strings(names)
++	return names
++}
++
++func parseHookPointValues(t *testing.T, root string, identifiers []string) []string {
++	t.Helper()
++
++	byIdentifier := map[string]string{
++		"PointRuntimePreOpen":              hooks.PointRuntimePreOpen,
++		"PointPromptPreBuild":              hooks.PointPromptPreBuild,
++		"PointPromptPostBuild":             hooks.PointPromptPostBuild,
++		"PointToolCallPreDispatch":         hooks.PointToolCallPreDispatch,
++		"PointToolCallPostComplete":        hooks.PointToolCallPostComplete,
++		"PointSessionPostEnd":              hooks.PointSessionPostEnd,
++		"PointSessionPostReview":           hooks.PointSessionPostReview,
++		"PointMemoryFactRecorded":          hooks.PointMemoryFactRecorded,
++		"PointMemoryFactArchived":          hooks.PointMemoryFactArchived,
++		"PointMemoryFactPromoted":          hooks.PointMemoryFactPromoted,
++		"PointMemoryContradictionDetected": hooks.PointMemoryContradictionDetected,
++		"PointMemorySecretRedacted":        hooks.PointMemorySecretRedacted,
++		"PointMemoryCompactionExecuted":    hooks.PointMemoryCompactionExecuted,
++		"PointMemoryBatonTransferred":      hooks.PointMemoryBatonTransferred,
++	}
++
++	values := make([]string, 0, len(identifiers))
++	for _, id := range identifiers {
++		value, ok := byIdentifier[id]
++		if !ok {
++			t.Fatalf("Point constant %q found in source but has no known Go identifier binding in this test — the exhaustiveness map (parseHookPointValues) must be updated in the same lot as the new constant", id)
++		}
++		values = append(values, value)
++	}
++	return values
++}
+diff --git a/tests/integration/hooks_live/live_test.go b/tests/integration/hooks_live/live_test.go
+index 8ad5c97..070b4b2 100644
+--- a/tests/integration/hooks_live/live_test.go
++++ b/tests/integration/hooks_live/live_test.go
+@@ -150,6 +150,8 @@ func assertNativeOutcome(t *testing.T, projectDir string, cell MatrixCell, run n
+ 		assertPostToolOutcome(t, projectDir, cell, run)
+ 	case specs.PointSessionEnd:
+ 		assertSessionEndOutcome(t, cell, run)
++	default:
++		t.Fatalf("assertNativeOutcome: unhandled canonical point %s for agent %s", cell.Point, cell.Agent)
+ 	}
+ }
+ 

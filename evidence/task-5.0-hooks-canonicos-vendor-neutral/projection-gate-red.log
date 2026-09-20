@@ -1,0 +1,9 @@
+=== RUN   TestHookContractProjection_HooksModelIsExhaustivelyRegistered
+    hook_contract_projection_test.go:76: Point constant "PointOrphanForRedEvidence" found in source but has no known Go identifier binding in this test — the exhaustiveness map (parseHookPointValues) must be updated in the same lot as the new constant
+--- FAIL: TestHookContractProjection_HooksModelIsExhaustivelyRegistered (0.00s)
+FAIL
+FAIL	github.com/JailtonJunior94/ai-spec-harness/tests/integration	0.310s
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	0.064s [no tests to run]
+FAIL

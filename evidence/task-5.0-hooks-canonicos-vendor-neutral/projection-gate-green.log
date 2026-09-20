@@ -1,0 +1,13 @@
+=== RUN   TestHookContractProjection_SpecsModelMatchesContract
+--- PASS: TestHookContractProjection_SpecsModelMatchesContract (0.00s)
+=== RUN   TestHookContractProjection_SpecsModelDivergesWhenMappingIsWrong
+--- PASS: TestHookContractProjection_SpecsModelDivergesWhenMappingIsWrong (0.00s)
+=== RUN   TestHookContractProjection_HooksModelIsExhaustivelyRegistered
+--- PASS: TestHookContractProjection_HooksModelIsExhaustivelyRegistered (0.00s)
+=== RUN   TestHookContractProjection_HooksModelDivergesWhenAPointIsUnregistered
+--- PASS: TestHookContractProjection_HooksModelDivergesWhenAPointIsUnregistered (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	0.142s
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	(cached) [no tests to run]

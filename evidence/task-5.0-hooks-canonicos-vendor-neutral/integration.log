@@ -1,0 +1,782 @@
+go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/runtime/memory/durable/... ./cmd/ai_spec_harness/...
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/integration	3.261s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	(cached)
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Batch summary (install): created=445 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_GitOperationGateBlocksAcrossFourProvidersWi3827211074/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Batch summary (install): created=445 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_DestructiveOperationGateBlocksAcrossFourPro1269962127/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Batch summary (install): created=445 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_SuiteFailsWhenCanonicalGitOperationGateIsRe958327681/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Batch summary (install): created=445 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_FourProvidersReturnSameExitCodeForSameInput772453706/001
+Modo de instalacao: copy
+--- FAIL: TestHookInventoryGate (0.68s)
+    hook_inventory_gate_test.go:16: run hook inventory gate: exit status 1: hook inventory drift: /Users/jailtonjunior/Git/orchestrator/docs/hook-inventory.md
+        exit status 1
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=248 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestLegacyV201Project_DoctorWorksWithoutAnyUserAction383094715/001
+Modo de instalacao: copy
+Diagnosticando: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestLegacyV201Project_DoctorWorksWithoutAnyUserAction383094715/001
+
+Core:
+  [AVISO] Repositorio git                          nao e um repositorio git (camada: core)
+  [OK   ] Diretorio de skills                      24 skills encontradas (camada: core)
+  [OK   ] Manifesto                                versao 2.0.1 (camada: core)
+  [OK   ] Symlinks de skills                       todos os links validos (camada: core)
+  [OK   ] Permissoes de escrita                    diretorio gravavel (camada: core)
+  [OK   ] Git instalado                            disponivel (camada: core)
+  [OK   ] Interpretador de payload de hook         python3 disponivel (camada: installation)
+  [AVISO] Contrato do harness                      .agents/harness.yaml nao declarado; usando default embutido (versao 1) (camada: core)
+  [AVISO] Integridade de skills (lock)             skills-lock.json indisponivel: ler skills-lock.json: open /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestLegacyV201Project_DoctorWorksWithoutAnyUserAction383094715/001/skills-lock.json: no such file or directory (camada: validation)
+  [OK   ] Sincronia canonica/derivados             52 item(ns) verificados, nenhuma divergencia (camada: core)
+
+Claude (ACP):
+  [AVISO] Instrucoes descobriveis                  parcialmente descobrivel: presente=.claude/settings.local.json ausente=.claude/settings.json (camada: adapter)
+  [OK   ] Skills disponiveis                       24 skill(s) atuais (camada: core)
+  [OK   ] Politicas aplicadas                      7 artefato(s) de politica aplicados (camada: adapter)
+  [OK   ] Validadores de evidencia instalados      20 validador(es) canonico(s) atuais (camada: validation)
+  [OK   ] Pre-condicoes de enforcement             nenhuma pre-condicao pendente conhecida (camada: provider)
+
+Resultado: tudo ok
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=248 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestLegacyV201Project_UpgradeSucceedsWithZeroFlags953863158/001
+Modo de instalacao: copy
+Verificando skills em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestLegacyV201Project_UpgradeSucceedsWithZeroFlags953863158/001
+Fonte: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-1772371699
+ai-spec dev
+
+  OK                   agent-governance (2.0.0)
+  OK                   analyze-project (2.0.0)
+  OK                   bugfix (2.0.0)
+  OK                   confluence-changelog-publisher (1.0.0)
+  OK                   create-prd (2.0.0)
+  OK                   create-tasks (2.0.0)
+  OK                   create-technical-specification (2.0.0)
+  OK                   design-patterns-mandatory (1.1.0)
+  OK                   domain-modeling-production (2.0.0)
+  AUSENTE              dotnet-csharp-implementation (fonte: 1.4.0)
+  OK                   execute-all-tasks (2.0.0)
+  OK                   execute-task (2.0.0)
+  OK                   finalize-changelog-readme-push (1.1.0)
+  OK                   github-diff-changelog-publisher (1.0.0)
+  OK                   github-pr-comment-triage (1.0.0)
+  OK                   github-release-publication-flow (1.0.0)
+  AUSENTE              go-implementation (fonte: 1.4.0)
+  OK                   jira-tasks (1.0.0)
+  AUSENTE              node-implementation (fonte: 1.4.0)
+  AUSENTE              object-calisthenics-go (fonte: 1.1.0)
+  OK                   otel-grafana-dashboards (1.0.0)
+  OK                   postman-collection-generator (1.0.0)
+  OK                   prompt-enricher (1.0.0)
+  OK                   pull-request (1.0.0)
+  AUSENTE              python-implementation (fonte: 1.4.0)
+  OK                   refactor (1.2.0)
+  OK                   review (1.4.0)
+  OK                   semantic-commit (1.1.0)
+  OK                   us-to-prd (1.0.1)
+
+Resumo: 24 atualizadas, 0 desatualizadas (0 refs divergentes), 5 ausentes
+    -> dotnet-csharp-implementation atualizado
+    -> go-implementation atualizado
+    -> node-implementation atualizado
+    -> object-calisthenics-go atualizado
+    -> python-implementation atualizado
+-> Re-gerando adaptadores...
+-> Re-gerando governanca contextual apos atualizacao de skills...
+
+Batch summary (upgrade): created=85 updated=1 preserved=18 merged=0 conflict=0
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=248 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestNoImplicitGitOperations_InstallUpgradeDoctor648818678/001
+Modo de instalacao: copy
+Verificando skills em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestNoImplicitGitOperations_InstallUpgradeDoctor648818678/001
+Fonte: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-1862250919
+ai-spec dev
+
+  OK                   agent-governance (2.0.0)
+  OK                   analyze-project (2.0.0)
+  OK                   bugfix (2.0.0)
+  OK                   confluence-changelog-publisher (1.0.0)
+  OK                   create-prd (2.0.0)
+  OK                   create-tasks (2.0.0)
+  OK                   create-technical-specification (2.0.0)
+  OK                   design-patterns-mandatory (1.1.0)
+  OK                   domain-modeling-production (2.0.0)
+  AUSENTE              dotnet-csharp-implementation (fonte: 1.4.0)
+  OK                   execute-all-tasks (2.0.0)
+  OK                   execute-task (2.0.0)
+  OK                   finalize-changelog-readme-push (1.1.0)
+  OK                   github-diff-changelog-publisher (1.0.0)
+  OK                   github-pr-comment-triage (1.0.0)
+  OK                   github-release-publication-flow (1.0.0)
+  AUSENTE              go-implementation (fonte: 1.4.0)
+  OK                   jira-tasks (1.0.0)
+  AUSENTE              node-implementation (fonte: 1.4.0)
+  AUSENTE              object-calisthenics-go (fonte: 1.1.0)
+  OK                   otel-grafana-dashboards (1.0.0)
+  OK                   postman-collection-generator (1.0.0)
+  OK                   prompt-enricher (1.0.0)
+  OK                   pull-request (1.0.0)
+  AUSENTE              python-implementation (fonte: 1.4.0)
+  OK                   refactor (1.2.0)
+  OK                   review (1.4.0)
+  OK                   semantic-commit (1.1.0)
+  OK                   us-to-prd (1.0.1)
+
+Resumo: 24 atualizadas, 0 desatualizadas (0 refs divergentes), 5 ausentes
+    -> dotnet-csharp-implementation atualizado
+    -> go-implementation atualizado
+    -> node-implementation atualizado
+    -> object-calisthenics-go atualizado
+    -> python-implementation atualizado
+-> Re-gerando adaptadores...
+-> Re-gerando governanca contextual apos atualizacao de skills...
+
+Batch summary (upgrade): created=85 updated=1 preserved=18 merged=0 conflict=0
+Diagnosticando: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestNoImplicitGitOperations_InstallUpgradeDoctor648818678/001
+
+Core:
+  [OK   ] Repositorio git                          valido (camada: core)
+  [OK   ] Diretorio de skills                      29 skills encontradas (camada: core)
+  [OK   ] Manifesto                                versao dev (camada: core)
+  [OK   ] Symlinks de skills                       todos os links validos (camada: core)
+  [OK   ] Permissoes de escrita                    diretorio gravavel (camada: core)
+  [OK   ] Git instalado                            disponivel (camada: core)
+  [OK   ] Interpretador de payload de hook         python3 disponivel (camada: installation)
+  [AVISO] Contrato do harness                      .agents/harness.yaml nao declarado; usando default embutido (versao 1) (camada: core)
+  [AVISO] Integridade de skills (lock)             skills-lock.json indisponivel: ler skills-lock.json: open /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestNoImplicitGitOperations_InstallUpgradeDoctor648818678/001/skills-lock.json: no such file or directory (camada: validation)
+  [OK   ] Sincronia canonica/derivados             52 item(ns) verificados, nenhuma divergencia (camada: core)
+
+Claude (ACP):
+  [AVISO] Instrucoes descobriveis                  parcialmente descobrivel: presente=.claude/settings.local.json ausente=.claude/settings.json (camada: adapter)
+  [OK   ] Skills disponiveis                       24 skill(s) atuais (camada: core)
+  [OK   ] Politicas aplicadas                      7 artefato(s) de politica aplicados (camada: adapter)
+  [OK   ] Validadores de evidencia instalados      20 validador(es) canonico(s) atuais (camada: validation)
+  [OK   ] Pre-condicoes de enforcement             nenhuma pre-condicao pendente conhecida (camada: provider)
+
+Resultado: tudo ok
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Batch summary (install): created=466 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPortability_CLISwitchWithoutReinstall708326455/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Batch summary (install): created=382 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPortability_NoDaemonRequired1558700298/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+2026/09/20 17:45:04 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/20 17:45:04 runner: durable memory disabled (RF-28); legacy path preserved
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+2026/09/20 17:45:04 [memory_persist] Memory Compaction Requested: false
+2026/09/20 17:45:04 [memory_persist] Memory Workflow Bytes: 238
+2026/09/20 17:45:04 [memory_persist] Task:  | Events: 8 | Tool Calls: 2
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+2026/09/20 17:45:04 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/20 17:45:04 INFO connection closed cause="peer connection closed"
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando codex...
+-> Instalando copilot...
+2026/09/20 17:45:04 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/20 17:45:04 [memory_persist] Memory Compaction Requested: false
+2026/09/20 17:45:04 [memory_persist] Memory Workflow Bytes: 238
+2026/09/20 17:45:04 [memory_persist] Task:  | Events: 8 | Tool Calls: 2
+2026/09/20 17:45:04 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/20 17:45:04 INFO connection closed cause="peer connection closed"
+2026/09/20 17:45:04 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/20 17:45:04 INFO connection closed cause="peer connection closed"
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHooksDelegateToCanonicalScript1247046179/001
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchBlocksUnsolicitedGitCommitAndPushEvenWith3030515930/001
+Modo de instalacao: copy
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchAllowsGitCommitWithBothEscapesConfirmed4039621334/001
+Modo de instalacao: copy
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchAllowsReadOnlyGitCommandsWithPreloadConfi903098380/001
+Modo de instalacao: copy
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestCodexAndCopilotToolHooksDeclareNoMatcher501158653/001
+Modo de instalacao: copy
+2026/09/20 17:45:08 runner: durable memory enabled (RF-28)
+2026/09/20 17:45:08 runner: durable memory session recorded: writes=1 redactions=0 archived=110 baton_claimed=true
+2026/09/20 17:45:08 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/20 17:45:08 INFO connection closed cause="peer connection closed"
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolDecisionIsIdenticalAcrossAllFourAgents1686528523/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestClaudeToolHooksCoverEveryMutatingTool2385125048/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestClaudeToolHooksCoverShellTool3647623149/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgradeCheckOnlyReportsObsoleteCopilotGovernance3896060942/001
+Modo de instalacao: copy
+Verificando skills em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgradeCheckOnlyReportsObsoleteCopilotGovernance3896060942/001
+Fonte: /Users/jailtonjunior/Git/orchestrator
+ai-spec dev
+
+  OK                   agent-governance (2.0.0)
+  OK                   analyze-project (2.0.0)
+  OK                   bugfix (2.0.0)
+  OK                   confluence-changelog-publisher (1.0.0)
+  OK                   create-prd (2.0.0)
+  OK                   create-tasks (2.0.0)
+  OK                   create-technical-specification (2.0.0)
+  OK                   design-patterns-mandatory (1.1.0)
+  OK                   domain-modeling-production (2.0.0)
+  OK                   execute-all-tasks (2.0.0)
+  OK                   execute-task (2.0.0)
+  OK                   finalize-changelog-readme-push (1.1.0)
+  OK                   github-diff-changelog-publisher (1.0.0)
+  OK                   github-pr-comment-triage (1.0.0)
+  OK                   github-release-publication-flow (1.0.0)
+  OK                   jira-tasks (1.0.0)
+  OK                   node-implementation (1.4.0)
+  OK                   otel-grafana-dashboards (1.0.0)
+  OK                   postman-collection-generator (1.0.0)
+  OK                   prompt-enricher (1.0.0)
+  OK                   pull-request (1.0.0)
+  OK                   refactor (1.2.0)
+  OK                   review (1.4.0)
+  OK                   semantic-commit (1.1.0)
+  OK                   us-to-prd (1.0.1)
+  DESATUALIZADO        .github/hooks/governance.json (gate de encerramento do Copilot com chave obsoleta ou ausente)
+
+Resumo: 25 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+
+Execute sem --check para atualizar: ai-spec-harness upgrade /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgradeCheckOnlyReportsObsoleteCopilotGovernance3896060942/001 --source /Users/jailtonjunior/Git/orchestrator
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchAllowsShellCommandWithoutSourceTargets1750976778/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgradeRepairsPreexistingObsoleteCopilotGovernance276450904/001
+Modo de instalacao: copy
+Verificando skills em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgradeRepairsPreexistingObsoleteCopilotGovernance276450904/001
+Fonte: /Users/jailtonjunior/Git/orchestrator
+ai-spec dev
+
+  OK                   agent-governance (2.0.0)
+  OK                   analyze-project (2.0.0)
+  OK                   bugfix (2.0.0)
+  OK                   confluence-changelog-publisher (1.0.0)
+  OK                   create-prd (2.0.0)
+  OK                   create-tasks (2.0.0)
+  OK                   create-technical-specification (2.0.0)
+  OK                   design-patterns-mandatory (1.1.0)
+  OK                   domain-modeling-production (2.0.0)
+  OK                   execute-all-tasks (2.0.0)
+  OK                   execute-task (2.0.0)
+  OK                   finalize-changelog-readme-push (1.1.0)
+  OK                   github-diff-changelog-publisher (1.0.0)
+  OK                   github-pr-comment-triage (1.0.0)
+  OK                   github-release-publication-flow (1.0.0)
+  OK                   jira-tasks (1.0.0)
+  OK                   node-implementation (1.4.0)
+  OK                   otel-grafana-dashboards (1.0.0)
+  OK                   postman-collection-generator (1.0.0)
+  OK                   prompt-enricher (1.0.0)
+  OK                   pull-request (1.0.0)
+  OK                   refactor (1.2.0)
+  OK                   review (1.4.0)
+  OK                   semantic-commit (1.1.0)
+  OK                   us-to-prd (1.0.1)
+  DESATUALIZADO        .github/hooks/governance.json (gate de encerramento do Copilot com chave obsoleta ou ausente)
+
+Resumo: 25 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> .github/hooks/governance.json reparado (chave obsoleta migrada para "agentStop")
+Verificando skills em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgradeRepairsPreexistingObsoleteCopilotGovernance276450904/001
+Fonte: /Users/jailtonjunior/Git/orchestrator
+ai-spec dev
+
+  OK                   agent-governance (2.0.0)
+  OK                   analyze-project (2.0.0)
+  OK                   bugfix (2.0.0)
+  OK                   confluence-changelog-publisher (1.0.0)
+  OK                   create-prd (2.0.0)
+  OK                   create-tasks (2.0.0)
+  OK                   create-technical-specification (2.0.0)
+  OK                   design-patterns-mandatory (1.1.0)
+  OK                   domain-modeling-production (2.0.0)
+  OK                   execute-all-tasks (2.0.0)
+  OK                   execute-task (2.0.0)
+  OK                   finalize-changelog-readme-push (1.1.0)
+  OK                   github-diff-changelog-publisher (1.0.0)
+  OK                   github-pr-comment-triage (1.0.0)
+  OK                   github-release-publication-flow (1.0.0)
+  OK                   jira-tasks (1.0.0)
+  OK                   node-implementation (1.4.0)
+  OK                   otel-grafana-dashboards (1.0.0)
+  OK                   postman-collection-generator (1.0.0)
+  OK                   prompt-enricher (1.0.0)
+  OK                   pull-request (1.0.0)
+  OK                   refactor (1.2.0)
+  OK                   review (1.4.0)
+  OK                   semantic-commit (1.1.0)
+  OK                   us-to-prd (1.0.1)
+  DESATUALIZADO        .github/hooks/governance.json (gate de encerramento do Copilot com chave obsoleta ou ausente)
+
+Resumo: 25 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> .github/hooks/governance.json reparado (chave obsoleta migrada para "agentStop")
+
+Batch summary (upgrade): created=0 updated=0 preserved=0 merged=0 conflict=1
+AVISO:   overwritten (conflict, --overwrite-conflicts): .github/hooks/governance.json
+2026/09/20 17:45:13 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/20 17:45:13 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/20 17:45:13 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/20 17:45:13 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/20 17:45:13 INFO connection closed cause="peer connection closed"
+2026/09/20 17:45:13 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/20 17:45:13 INFO connection closed cause="peer connection closed"
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPostToolHookDispatchAllowsRegularFileEdit1587085233/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDecisionIsIdenticalAcrossAgents541330116/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestToolHooksDispatchNativeApplyPatchPayload4294864746/001
+Modo de instalacao: copy
+2026/09/20 17:45:16 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/20 17:45:16 [memory_persist] Memory Compaction Requested: false
+2026/09/20 17:45:16 [memory_persist] Memory Workflow Bytes: 238
+2026/09/20 17:45:16 [memory_persist] Task:  | Events: 2 | Tool Calls: 0
+2026/09/20 17:45:16 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/20 17:45:16 INFO connection closed cause="peer connection closed"
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchAllowsNonCodeFiles3736545130/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPostToolHookDispatchBlocksGovernanceFileEdit1408582839/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing22951551/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+--- FAIL: TestSyncGatesAreGreenOnUntouchedClone (13.56s)
+    sync_gates_guard_test.go:153: scripts/check-scripts-sync.sh must be green on an untouched clone; exit=1 output=DRIFT: validate-task-evidence.sh diverge entre /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesAreGreenOnUntouchedClone2659680525/001/.agents/scripts e /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesAreGreenOnUntouchedClone2659680525/001/.claude/scripts
+        DRIFT: validate-task-evidence.sh diverge entre /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesAreGreenOnUntouchedClone2659680525/001/.agents/scripts e /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesAreGreenOnUntouchedClone2659680525/001/internal/embedded/assets/.claude/scripts
+        DRIFT: validate-task-evidence.sh diverge entre /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesAreGreenOnUntouchedClone2659680525/001/.agents/scripts e /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesAreGreenOnUntouchedClone2659680525/001/internal/embedded/assets/.agents/scripts
+        DRIFT: validate-review-evidence.sh diverge entre /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesAreGreenOnUntouchedClone2659680525/001/.agents/scripts e /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesAreGreenOnUntouchedClone2659680525/001/.claude/scripts
+        DRIFT: validate-review-evidence.sh diverge entre /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesAreGreenOnUntouchedClone2659680525/001/.agents/scripts e /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesAreGreenOnUntouchedClone2659680525/001/internal/embedded/assets/.claude/scripts
+        DRIFT: validate-review-evidence.sh diverge entre /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesAreGreenOnUntouchedClone2659680525/001/.agents/scripts e /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSyncGatesAreGreenOnUntouchedClone2659680525/001/internal/embedded/assets/.agents/scripts
+        
+        Validadores em sync: 26
+        Drift / missing: 6
+        
+        Para corrigir: ./scripts/sync-skills.sh
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestCopilotSessionEndGateSignalsRefusalOnStdout1706599069/001
+Modo de instalacao: copy
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestClaudeSessionEndGateIsWiredToItsBlockingEvent3220328702/001
+Modo de instalacao: copy
+Ferramentas: [copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestCodexSessionEndGateIsWiredToItsBlockingEvent1861922715/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+
+-> Instalando claude...
+Batch summary (install): created=279 updated=1 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstallRepairsPreexistingObsoleteCopilotGovernance2443312913/001
+Modo de instalacao: copy
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchValidatesShellCommandTargetsWithPreloadCo4243744876/001
+Modo de instalacao: copy
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestPreToolHookDispatchBlocksDestructiveRemovalEvenWithPreloadCo1764027621/001
+Modo de instalacao: copy
+--- FAIL: TestSkillsSyncGateAllowlistsNonSkillDirectories (15.94s)
+    sync_gates_guard_test.go:247: check-skills-sync.sh must stay green with the allowlisted non-skill dir; exit=1 output=DRIFT: agent-governance diverge entre /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSkillsSyncGateAllowlistsNonSkillDirectories3833677483/001/.agents/skills e /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSkillsSyncGateAllowlistsNonSkillDirectories3833677483/001/.claude/skills
+          Only in /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSkillsSyncGateAllowlistsNonSkillDirectories3833677483/001/.agents/skills/agent-governance/triggers: dotnet.yaml
+          Only in /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSkillsSyncGateAllowlistsNonSkillDirectories3833677483/001/.agents/skills/agent-governance/triggers: java.yaml
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSkillsSyncGateAllowlistsNonSkillDirectories3833677483/001/.agents/skills)
+        DRIFT: agent-governance diverge entre /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSkillsSyncGateAllowlistsNonSkillDirectories3833677483/001/.agents/skills e /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSkillsSyncGateAllowlistsNonSkillDirectories3833677483/001/.github/skills
+          Only in /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSkillsSyncGateAllowlistsNonSkillDirectories3833677483/001/.agents/skills/agent-governance/triggers: dotnet.yaml
+          Only in /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSkillsSyncGateAllowlistsNonSkillDirectories3833677483/001/.agents/skills/agent-governance/triggers: java.yaml
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSkillsSyncGateAllowlistsNonSkillDirectories3833677483/001/.agents/skills)
+        DRIFT: agent-governance diverge entre /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSkillsSyncGateAllowlistsNonSkillDirectories3833677483/001/.agents/skills e /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSkillsSyncGateAllowlistsNonSkillDirectories3833677483/001/internal/embedded/assets/.agents/skills
+          Only in /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSkillsSyncGateAllowlistsNonSkillDirectories3833677483/001/.agents/skills/agent-governance/triggers: dotnet.yaml
+          Only in /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSkillsSyncGateAllowlistsNonSkillDirectories3833677483/001/.agents/skills/agent-governance/triggers: java.yaml
+        SKIP: tests (allowlist: dir nao-skill em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSkillsSyncGateAllowlistsNonSkillDirectories3833677483/001/.agents/skills)
+        
+        Skills em sync: 84
+        Skills com drift: 3
+        Libs em sync: 3 libs x 3 mirrors (legacy + embedded)
+        Hooks do orquestrador em sync: 4 hooks x 7 mirrors
+        Hooks de validacao por-tool em paridade: 2 hooks x 6 tools
+        Gate de encerramento em paridade nos 4 agentes oficiais: 7 mirrors
+        Plugin do OpenCode presente e em paridade: internal/embedded/assets/.opencode/plugin/governance.js
+        
+        Para corrigir: ./scripts/sync-skills.sh
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSessionEndHookDispatchAllowsApprovedVerdictclaude1718855154/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSessionEndHookDispatchAllowsApprovedVerdictcodex4086549811/001
+Modo de instalacao: copy
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSessionEndHookDispatchAllowsApprovedVerdictcopilot100045314/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+2026/09/20 17:46:23 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/20 17:46:23 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/20 17:46:23 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/20 17:46:23 INFO connection closed cause="peer connection closed"
+2026/09/20 17:46:23 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/20 17:46:23 INFO connection closed cause="peer connection closed"
+-> Instalando codex...
+-> Instalando copilot...
+2026/09/20 17:46:23 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/20 17:46:23 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/20 17:46:23 INFO connection closed cause="peer connection closed"
+2026/09/20 17:46:23 runner: durable memory disabled (RF-28); legacy path preserved
+2026/09/20 17:46:23 INFO connection closed cause="io: read/write on closed pipe"
+2026/09/20 17:46:23 INFO connection closed cause="peer connection closed"
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict2322780309/001
+Modo de instalacao: copy
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict3581444076/001
+Modo de instalacao: copy
+
+Batch summary (install): created=444 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict387839237/001
+Modo de instalacao: copy
+FAIL
+FAIL	github.com/JailtonJunior94/ai-spec-harness/tests/integration	122.918s
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	0.178s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable	0.859s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable/mocks	[no test files]
+ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	0.630s
+FAIL
+make: *** [integration] Error 1

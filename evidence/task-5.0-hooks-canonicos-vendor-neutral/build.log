@@ -1,0 +1,1 @@
+go build ./... exit_code=0 (no diagnostic output; all packages compiled)

@@ -1,0 +1,96 @@
+{
+  "schema_version": 2,
+  "run_id": "manual-task-5.0-2026-09-20",
+  "task_id": "5.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "86b991a98c0567debfaa68950fc2d416ced09546",
+  "patch_sha256": "990b355f48d78414a3f7ccaf1c94e7ba5f8cd8810c28c88f56865a3b90f6bb0f",
+  "patch_ref": "evidence/task-5.0-hooks-canonicos-vendor-neutral/5.0_execution_result.patch",
+  "commit_sha": "ed8ebd890777372fbba5796da62cedd408043440",
+  "commit_patch_sha256": "990b355f48d78414a3f7ccaf1c94e7ba5f8cd8810c28c88f56865a3b90f6bb0f",
+  "final_state_sha256": "bdd6718914f0bb46365b34dc2c99b0b1d0d3c69761d5bdcb915e8147f5c618e1",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "392a25b5525c5eb0e4e82f5befa80daf71d52bd75ebc84106465aac51828ab87"
+    },
+    {
+      "command": "make vet",
+      "exit_code": 0,
+      "output_sha256": "685d158f951e3eb11749d2e519a64eba4f57dcc93cd562eaee2cc9457f72846e"
+    },
+    {
+      "command": "make lint",
+      "exit_code": 0,
+      "output_sha256": "c56408ff451cd11574b94f26557e3871854eb5ffb37575492f6a656d68e9aa41"
+    },
+    {
+      "command": "make test",
+      "exit_code": 0,
+      "output_sha256": "e55662a70f9954e44f08fd1a0fabc551c95f1683a3255b34ddb4fc2bea5e3d44"
+    },
+    {
+      "command": "make coverage",
+      "exit_code": 0,
+      "output_sha256": "b59ab36db7bcb30e204a8f9b70a7870948b19dc102c17e014c3bfd729ba51e3f"
+    },
+    {
+      "command": "go test -tags=integration -run TestHookContractProjection -v ./tests/integration/...",
+      "exit_code": 0,
+      "output_sha256": "69a9114a3bdd8b0a53c6b1e1f87ae382a95933ccfba56844043df45d33b0983c"
+    },
+    {
+      "command": "revert the dispatcher.go orphan-point mutation and rerun TestHookContractProjection (post red-evidence confirmation)",
+      "exit_code": 0,
+      "output_sha256": "c41847fbd0236994e64f543d52aea809e2589e162fa93682b044b27099b5c345"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "specs-hooks-derive-from-eventkind-surface-preserved",
+      "evidence_ref": "evidence/task-5.0-hooks-canonicos-vendor-neutral/test.log"
+    },
+    {
+      "id": "projection-gate-exists-passes-fails-on-divergence",
+      "evidence_ref": "evidence/task-5.0-hooks-canonicos-vendor-neutral/projection-gate-red.log"
+    },
+    {
+      "id": "newenforcement-accepts-declared-coverage-supportunsupported",
+      "evidence_ref": "evidence/task-5.0-hooks-canonicos-vendor-neutral/test.log"
+    },
+    {
+      "id": "kind-reflects-real-dispatch-phase",
+      "evidence_ref": "evidence/task-5.0-hooks-canonicos-vendor-neutral/test.log"
+    },
+    {
+      "id": "runner-toolcall-dispatch-errors-propagated",
+      "evidence_ref": "evidence/task-5.0-hooks-canonicos-vendor-neutral/test.log"
+    },
+    {
+      "id": "ten-plus-one-test-points-adjusted-no-panic",
+      "evidence_ref": "evidence/task-5.0-hooks-canonicos-vendor-neutral/test.log"
+    },
+    {
+      "id": "hooks-live-switches-exhaustive",
+      "evidence_ref": "evidence/task-5.0-hooks-canonicos-vendor-neutral/build.log"
+    },
+    {
+      "id": "projection-package-wired-to-ci",
+      "evidence_ref": "evidence/task-5.0-hooks-canonicos-vendor-neutral/integration.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-5.0-hooks-canonicos-vendor-neutral/test.log",
+    "evidence/task-5.0-hooks-canonicos-vendor-neutral/lint.log",
+    "evidence/task-5.0-hooks-canonicos-vendor-neutral/vet.log",
+    "evidence/task-5.0-hooks-canonicos-vendor-neutral/coverage.log",
+    "evidence/task-5.0-hooks-canonicos-vendor-neutral/integration.log",
+    "evidence/task-5.0-hooks-canonicos-vendor-neutral/projection-gate-red.log",
+    "evidence/task-5.0-hooks-canonicos-vendor-neutral/projection-gate-green.log",
+    "evidence/task-5.0-hooks-canonicos-vendor-neutral/build.log"
+  ],
+  "review_verdict": "approved"
+}
