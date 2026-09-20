@@ -1,0 +1,38 @@
+=== RUN   TestArtifactService_GenerateWritesDeterministicJSON
+--- PASS: TestArtifactService_GenerateWritesDeterministicJSON (0.00s)
+=== RUN   TestArtifactService_GenerateFallsBackToEmbeddedDefault
+--- PASS: TestArtifactService_GenerateFallsBackToEmbeddedDefault (0.00s)
+=== RUN   TestArtifactService_CheckPassesAfterGenerate
+--- PASS: TestArtifactService_CheckPassesAfterGenerate (0.00s)
+=== RUN   TestArtifactService_CheckFailsWhenArtifactMissing
+--- PASS: TestArtifactService_CheckFailsWhenArtifactMissing (0.00s)
+=== RUN   TestArtifactService_CheckFailsWhenArtifactHandEdited
+--- PASS: TestArtifactService_CheckFailsWhenArtifactHandEdited (0.00s)
+=== RUN   TestArtifactService_CheckDetectsPolicyDrift
+--- PASS: TestArtifactService_CheckDetectsPolicyDrift (0.00s)
+=== RUN   TestGitScope_DerivesFromContract
+=== RUN   TestGitScope_DerivesFromContract/auto_commit_false_keeps_commit_gated
+=== RUN   TestGitScope_DerivesFromContract/auto_commit_true_removes_commit_from_scope
+=== RUN   TestGitScope_DerivesFromContract/auto_push_true_removes_push_and_push_force_from_scope
+--- PASS: TestGitScope_DerivesFromContract (0.00s)
+    --- PASS: TestGitScope_DerivesFromContract/auto_commit_false_keeps_commit_gated (0.00s)
+    --- PASS: TestGitScope_DerivesFromContract/auto_commit_true_removes_commit_from_scope (0.00s)
+    --- PASS: TestGitScope_DerivesFromContract/auto_push_true_removes_push_and_push_force_from_scope (0.00s)
+=== RUN   TestGitScope_AlwaysIncludesDestructiveOperations
+--- PASS: TestGitScope_AlwaysIncludesDestructiveOperations (0.00s)
+=== RUN   TestGitScope_DestructiveOperationsAreMarkedDestructiveAndApprovable
+--- PASS: TestGitScope_DestructiveOperationsAreMarkedDestructiveAndApprovable (0.00s)
+=== RUN   TestGitScope_FingerprintChangesWithPolicy
+--- PASS: TestGitScope_FingerprintChangesWithPolicy (0.00s)
+=== RUN   TestGitScope_FingerprintIsDeterministic
+--- PASS: TestGitScope_FingerprintIsDeterministic (0.00s)
+=== RUN   TestGitScope_FingerprintIsStableAcrossOperationOrder
+--- PASS: TestGitScope_FingerprintIsStableAcrossOperationOrder (0.00s)
+=== RUN   TestNewGitOperation_RejectsEmptySubcommand
+--- PASS: TestNewGitOperation_RejectsEmptySubcommand (0.00s)
+=== RUN   TestNewGitScope_RejectsUnsupportedVersion
+--- PASS: TestNewGitScope_RejectsUnsupportedVersion (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/hookpolicy	(cached)
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/hookpolicy/mocks	[no test files]
+exit=0

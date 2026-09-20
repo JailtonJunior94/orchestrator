@@ -13,6 +13,7 @@ func newHooksCmd() *cobra.Command {
 	command := &hooksInventoryCommand{}
 	cmd := &cobra.Command{Use: "hooks", Short: "Inspeciona hooks de governanca"}
 	cmd.AddCommand(command.newInventoryCmd())
+	cmd.AddCommand(newGitScopeCmd())
 	return cmd
 }
 

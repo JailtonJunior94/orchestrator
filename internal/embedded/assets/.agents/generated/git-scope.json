@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "fingerprint": "018c60eecfe4dd4b8052fc2cc8e96ed896e3c061cdb10f309c3277037b46583d",
+  "operations": [
+    {
+      "subcommand": "checkout --",
+      "destructive": true,
+      "requires_approval": true
+    },
+    {
+      "subcommand": "clean",
+      "destructive": true,
+      "requires_approval": true
+    },
+    {
+      "subcommand": "commit",
+      "destructive": false,
+      "requires_approval": true
+    },
+    {
+      "subcommand": "push",
+      "destructive": false,
+      "requires_approval": true
+    },
+    {
+      "subcommand": "push --force",
+      "destructive": true,
+      "requires_approval": true
+    },
+    {
+      "subcommand": "reset --hard",
+      "destructive": true,
+      "requires_approval": true
+    },
+    {
+      "subcommand": "restore",
+      "destructive": true,
+      "requires_approval": true
+    }
+  ]
+}

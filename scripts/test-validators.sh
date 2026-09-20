@@ -277,6 +277,8 @@ bash "$VALIDATOR" "$report_c2_gradlew" >/dev/null 2>&1; code_c2_gradlew=$?
 rm -f "$report_c2_gradlew"
 assert_exit "./gradlew test no fim da linha passa" 0 $code_c2_gradlew
 
+# Controle: "mvn test -q" já passava antes da correção (espaço depois de "test"
+# satisfaz o catch-all antigo); precisa continuar passando depois dela também.
 report_c2_mvn_q="$TMP_BASE/report-c2-mvn-q.md"
 {
   report_header "$task_c2"
@@ -826,6 +828,121 @@ benign_nested_payload="$TMP_BASE/git-gate-nested-benign.json"
 printf '%s' '{"tool_input":{"command":"echo hi","metadata":{"command":"git push origin main"}}}' >"$benign_nested_payload"
 assert_gate_exit "comando direto benigno com metadata homônima passa" 0 "$benign_nested_payload"
 rm -f "$benign_nested_payload"
+
+
+git_gate_command_payload() {
+  python3 -c "
+import json
+import sys
+print(json.dumps({'tool_input': {'command': sys.argv[1]}}))
+" "$1"
+}
+
+assert_git_gate_command() {
+  local desc="$1" expected="$2" command="$3"
+  local payload_file="$TMP_BASE/git-gate-cmd.json"
+  git_gate_command_payload "$command" >"$payload_file"
+  local actual
+  bash "$GIT_GATE" <"$payload_file" >/dev/null 2>&1
+  actual=$?
+  assert_exit "$desc" "$expected" "$actual"
+  rm -f "$payload_file"
+}
+
+echo "Matriz adversarial do gate de operação Git (RF-20, RF-21, RF-24)"
+declare -a adversarial_commands=(
+  "git -C /repo push"
+  "git -c user.name=x commit -m y"
+  '$(echo git) push'
+  'eval "git push"'
+  'sh -c "git push"'
+  "/usr/bin/git push"
+  "git.exe push"
+  "git reset --hard"
+  "git clean -fd"
+  "git checkout -- ."
+  "git restore ."
+)
+for command in "${adversarial_commands[@]}"; do
+  assert_git_gate_command "escapa hoje via regex, deve bloquear/exigir aprovação: $command" 2 "$command"
+done
+
+echo "Guarda de regressão: separadores compostos && e || antes de operação git"
+declare -a chained_separator_commands=(
+  "echo ok && git push"
+  "git status && git push --force"
+  "true || git clean -fdx"
+  "echo ok ; git reset --hard"
+  "echo ok &(git push)"
+  "echo ok ;(git push)"
+  "echo ok )&git push"
+  "echo ok )|git push"
+)
+for command in "${chained_separator_commands[@]}"; do
+  assert_git_gate_command "encadeamento não pode escapar do gate: $command" 2 "$command"
+done
+
+echo "Matriz de falso positivo do gate de operação Git (RF-22)"
+declare -a false_positive_commands=(
+  "echo git commit"
+  "man git commit"
+  'echo "a|git commit -m x"'
+  'echo "a|git push origin main"'
+)
+for command in "${false_positive_commands[@]}"; do
+  assert_git_gate_command "bloqueia hoje por menção textual, deve permitir: $command" 0 "$command"
+done
+
+echo "Guarda de não-regressão do gate de operação Git"
+declare -a non_regression_block_commands=(
+  "env git push"
+  "command git push"
+  "git push --force"
+  "git push --force-with-lease"
+  "git push -f origin main"
+  "git push origin +main"
+  "git push"
+)
+for command in "${non_regression_block_commands[@]}"; do
+  assert_git_gate_command "já bloqueia hoje, deve continuar bloqueando: $command" 2 "$command"
+done
+
+assert_git_gate_command 'menção textual em grep não bloqueia (não-regressão)' 0 'grep -r "git push" docs/'
+assert_git_gate_command 'nome de usuário "git" como valor de flag de wrapper não bloqueia' 0 'sudo -u git whoami'
+
+echo "Falha fechada do classificador em comando com aspa não fechada"
+assert_git_gate_command 'aspa não fechada com git bloqueia (falha fechada)' 2 'git push "unterminated'
+assert_git_gate_command 'aspa não fechada sem git bloqueia (falha fechada)' 2 'echo "unterminated'
+
+echo "Ofuscação por expansão de variável não pode escapar do gate"
+assert_git_gate_command 'expansão de IFS não escapa: git${IFS}push${IFS}--force' 2 'git${IFS}push${IFS}origin${IFS}main${IFS}--force'
+assert_git_gate_command 'expansão de variável arbitrária não escapa: $G $P' 2 'G=git; P=push; $G $P --force'
+
+echo "Wrappers transparentes de execução não podem escapar do gate"
+declare -a wrapper_commands=(
+  "exec git push --force"
+  "time git push --force"
+  "nohup git push --force"
+  "sudo git push --force"
+  "nice git push --force"
+  "timeout 5 git push --force"
+  "sudo nohup git push --force"
+  "timeout -k 5 30 git push --force"
+  "sudo -u git -- git push --force"
+)
+for command in "${wrapper_commands[@]}"; do
+  assert_git_gate_command "wrapper transparente não pode escapar: $command" 2 "$command"
+done
+
+echo "Continuação de linha não pode escapar do gate"
+line_cont_payload="$TMP_BASE/git-gate-line-continuation.json"
+python3 -c "
+import json
+cmd = 'git \\\\\npush --force'
+print(json.dumps({'tool_input': {'command': cmd}}))
+" >"$line_cont_payload"
+assert_gate_exit "continuação de linha antes do subcomando não escapa" 2 "$line_cont_payload"
+rm -f "$line_cont_payload"
 
 echo
 echo "Passaram: $passed | Falharam: $failed"

@@ -1,0 +1,144 @@
+Caso a: critério de aceite não comprovado
+  ✓ critério não comprovado falha (exit=1)
+Caso a2: critério não comprovado sob LC_ALL=C
+  ✓ critério não comprovado falha sob LC_ALL=C (exit=1)
+  ✓ gate de aceite permanece ativo sob LC_ALL=C
+Caso b: todos os critérios comprovados
+  ✓ todos comprovados passa (exit=0)
+Caso c: Testes: pass sem comando de teste
+  ✓ Testes pass sem comando falha (exit=1)
+Caso c2: prova de teste mvn/gradle no fim de linha
+  ✓ mvn test no fim da linha passa (exit=0)
+  ✓ gradle test no fim da linha passa (exit=0)
+  ✓ ./gradlew test no fim da linha passa (exit=0)
+  ✓ mvn test -q continua passando (exit=0)
+Caso d: task legada sem seção de critérios
+  ✓ task legada falha por padrão (exit=1)
+  ✓ diagnóstico de fail-closed presente
+Caso d2: AI_SDD_STRICT_EVIDENCE=0 nao reabre o gate de aceite
+  ✓ opt-out explícito continua reprovando (exit=1)
+  ✓ opt-out recebe o diagnóstico de fail-closed
+Caso d3: referência de task file inexistente
+  ✓ referência não resolvível falha por padrão (exit=1)
+Caso e: review.md válido sem achados
+  ✓ review válido passa (exit=0)
+  ✓ review válido passa sob LC_ALL=C (exit=0)
+Caso f: review REJECTED sem achado bloqueante
+  ✓ REJECTED sem high/critical falha (exit=1)
+Caso f2: TEST_NAME_RE aceita nome de teste Java quando stack detectada e Java
+  ✓ review Java com nome de teste JUnit passa (exit=0)
+Caso f3: stack Go rejeita nome de teste não-Go (não-afrouxamento)
+  ✓ review Go com nome de teste não-Go falha (não-afrouxamento) (exit=1)
+Caso g: review sem seção de validações
+  ✓ review sem validações falha (exit=1)
+Caso h1: mapa 1:1 ausente falha
+  ✓ mapa h1-ausente espera exit 1 (exit=1)
+  ✓ mapa h1-ausente espera exit 1 sob LC_ALL=C (exit=1)
+Caso h2: mapa 1:1 incompleto (critério sem evidência) falha
+  ✓ mapa h2-incompleto espera exit 1 (exit=1)
+  ✓ mapa h2-incompleto espera exit 1 sob LC_ALL=C (exit=1)
+Caso h3: critério não verificável falha
+  ✓ mapa h3-nverif espera exit 1 (exit=1)
+  ✓ mapa h3-nverif espera exit 1 sob LC_ALL=C (exit=1)
+Caso h4: linha de evidência fora das três formas de RF-48 falha
+  ✓ mapa h4-badev espera exit 1 (exit=1)
+  ✓ mapa h4-badev espera exit 1 sob LC_ALL=C (exit=1)
+Caso h5: mapa 1:1 completo e válido passa
+  ✓ mapa h5-ok espera exit 0 (exit=0)
+  ✓ mapa h5-ok espera exit 0 sob LC_ALL=C (exit=0)
+Caso h6: AI_SDD_STRICT_EVIDENCE=0 NÃO reabre o mapa 1:1
+  ✓ opt-out legado não faz o mapa incompleto passar (exit=1)
+  ✓ mapa 1:1 permanece fail-closed sob AI_SDD_STRICT_EVIDENCE=0
+Caso i: relatório declara critérios sem task file resolvível é fail-closed mesmo com opt-out
+  ✓ critérios sem task file falha mesmo com opt-out (exit=1)
+  ✓ opt-out não alcança o confronto 1:1 (RF-53)
+Caso j: relatório com seção de Evidência de Memória Durável não quebra gates
+  ✓ relatório com evidência de memória durável passa (exit=0)
+  ✓ relatório com evidência de memória durável passa sob LC_ALL=C (exit=0)
+Caso k: relatório sem marcador não vira histórico ao ser commitado
+  ✓ relatório sem marcador e não commitado falha (exit=1)
+  ✓ commitar NÃO concede a isenção histórica (corte fixo) (exit=1)
+  ✓ a ruptura aponta o commit de corte fixo, não HEAD
+  ✓ nenhuma isenção v1 concedida a trabalho novo commitado
+Caso l: divergência de estado entre tasks.md, relatório e execution-result
+  ✓ tasks.md=blocked com relatório/JSON=done reprova (exit=1)
+  ✓ a ruptura nomeia a divergência de estado
+  ✓ tasks.md reconciliado com a evidência elimina a divergência
+  ✓ qualquer terceiro estado em tasks.md também reprova (exit=1)
+Matriz de fronteira do gate de operação Git (RF-57)
+  ✓ fronteira 1 KiB benigna passa (exit=0)
+  ✓ fronteira 1 KiB com git push bloqueia (exit=2)
+  ✓ fronteira 64 KiB benigna passa (exit=0)
+  ✓ fronteira 64 KiB com git push bloqueia (exit=2)
+  ✓ fronteira 65 KiB benigna passa (exit=0)
+  ✓ fronteira 65 KiB com git push bloqueia (exit=2)
+  ✓ fronteira 1 MiB benigna passa (exit=0)
+  ✓ fronteira 1 MiB com git push bloqueia (exit=2)
+Reprodução da prova de exploração do ADR-003 (payload de ~70 KB)
+  ✓ payload de exploração (~70KB) bloqueia (exit=2)
+  ✓ controle sem padding bloqueia (exit=2)
+Falha fechada: JSON inválido bloqueia
+  ✓ JSON inválido bloqueia (exit=2)
+Negação por ausência de alvo (RF-68)
+  ✓ payload sem comando extraível bloqueia (exit=2)
+  ✓ stdin vazio bloqueia (exit=2)
+Campo command homônimo aninhado não é extraído (regressão do fallback grep)
+  ✓ comando homônimo aninhado não vaza para aprovação (exit=2)
+  ✓ comando direto benigno com metadata homônima passa (exit=0)
+Matriz adversarial do gate de operação Git (RF-20, RF-21, RF-24)
+  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: git -C /repo push (exit=2)
+  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: git -c user.name=x commit -m y (exit=2)
+  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: $(echo git) push (exit=2)
+  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: eval "git push" (exit=2)
+  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: sh -c "git push" (exit=2)
+  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: /usr/bin/git push (exit=2)
+  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: git.exe push (exit=2)
+  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: git reset --hard (exit=2)
+  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: git clean -fd (exit=2)
+  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: git checkout -- . (exit=2)
+  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: git restore . (exit=2)
+Guarda de regressão: separadores compostos && e || antes de operação git
+  ✓ encadeamento não pode escapar do gate: echo ok && git push (exit=2)
+  ✓ encadeamento não pode escapar do gate: git status && git push --force (exit=2)
+  ✓ encadeamento não pode escapar do gate: true || git clean -fdx (exit=2)
+  ✓ encadeamento não pode escapar do gate: echo ok ; git reset --hard (exit=2)
+  ✓ encadeamento não pode escapar do gate: echo ok &(git push) (exit=2)
+  ✓ encadeamento não pode escapar do gate: echo ok ;(git push) (exit=2)
+  ✓ encadeamento não pode escapar do gate: echo ok )&git push (exit=2)
+  ✓ encadeamento não pode escapar do gate: echo ok )|git push (exit=2)
+Matriz de falso positivo do gate de operação Git (RF-22)
+  ✓ bloqueia hoje por menção textual, deve permitir: echo git commit (exit=0)
+  ✓ bloqueia hoje por menção textual, deve permitir: man git commit (exit=0)
+  ✓ bloqueia hoje por menção textual, deve permitir: echo "a|git commit -m x" (exit=0)
+  ✓ bloqueia hoje por menção textual, deve permitir: echo "a|git push origin main" (exit=0)
+Guarda de não-regressão do gate de operação Git
+  ✓ já bloqueia hoje, deve continuar bloqueando: env git push (exit=2)
+  ✓ já bloqueia hoje, deve continuar bloqueando: command git push (exit=2)
+  ✓ já bloqueia hoje, deve continuar bloqueando: git push --force (exit=2)
+  ✓ já bloqueia hoje, deve continuar bloqueando: git push --force-with-lease (exit=2)
+  ✓ já bloqueia hoje, deve continuar bloqueando: git push -f origin main (exit=2)
+  ✓ já bloqueia hoje, deve continuar bloqueando: git push origin +main (exit=2)
+  ✓ já bloqueia hoje, deve continuar bloqueando: git push (exit=2)
+  ✓ menção textual em grep não bloqueia (não-regressão) (exit=0)
+  ✓ nome de usuário "git" como valor de flag de wrapper não bloqueia (exit=0)
+Falha fechada do classificador em comando com aspa não fechada
+  ✓ aspa não fechada com git bloqueia (falha fechada) (exit=2)
+  ✓ aspa não fechada sem git bloqueia (falha fechada) (exit=2)
+Ofuscação por expansão de variável não pode escapar do gate
+  ✓ expansão de IFS não escapa: git${IFS}push${IFS}--force (exit=2)
+  ✓ expansão de variável arbitrária não escapa: $G $P (exit=2)
+Wrappers transparentes de execução não podem escapar do gate
+  ✓ wrapper transparente não pode escapar: exec git push --force (exit=2)
+  ✓ wrapper transparente não pode escapar: time git push --force (exit=2)
+  ✓ wrapper transparente não pode escapar: nohup git push --force (exit=2)
+  ✓ wrapper transparente não pode escapar: sudo git push --force (exit=2)
+  ✓ wrapper transparente não pode escapar: nice git push --force (exit=2)
+  ✓ wrapper transparente não pode escapar: timeout 5 git push --force (exit=2)
+  ✓ wrapper transparente não pode escapar: sudo nohup git push --force (exit=2)
+  ✓ wrapper transparente não pode escapar: timeout -k 5 30 git push --force (exit=2)
+  ✓ wrapper transparente não pode escapar: sudo -u git -- git push --force (exit=2)
+Continuação de linha não pode escapar do gate
+  ✓ continuação de linha antes do subcomando não escapa (exit=2)
+
+Passaram: 105 | Falharam: 0
+Todos os testes de validador passaram.

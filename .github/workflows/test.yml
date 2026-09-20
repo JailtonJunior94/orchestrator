@@ -119,6 +119,9 @@ jobs:
       - name: Policies sync drift gate
         run: make check-policies-sync
 
+      - name: Git scope fingerprint gate
+        run: go run . hooks git-scope --check .
+
       - name: Capability matrix sync gate
         run: make check-capability-matrix-sync
 

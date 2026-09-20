@@ -270,6 +270,57 @@
         "flags": {}
       },
       {
+        "name": "hookaudit",
+        "description": "Registro canonico de decisoes de hooks de governanca",
+        "args": [],
+        "flags": {},
+        "subcommands": [
+          {
+            "name": "append",
+            "description": "Acrescenta uma decisao ao registro canonico de auditoria de hooks",
+            "args": [],
+            "flags": {
+              "path": {
+                "type": "string",
+                "required": false
+              },
+              "event": {
+                "type": "string",
+                "required": false
+              },
+              "provider": {
+                "type": "string",
+                "required": false
+              },
+              "hook": {
+                "type": "string",
+                "required": false
+              },
+              "decision": {
+                "type": "string",
+                "required": false
+              },
+              "reason": {
+                "type": "string",
+                "required": false
+              },
+              "policy-id": {
+                "type": "string",
+                "required": false
+              },
+              "gate-id": {
+                "type": "string",
+                "required": false
+              },
+              "duration-ms": {
+                "type": "int",
+                "required": false
+              }
+            }
+          }
+        ]
+      },
+      {
         "name": "hooks",
         "description": "Inspeciona hooks de governanca",
         "args": [],
@@ -278,6 +329,22 @@
           {
             "name": "inventory",
             "description": "Gera ou verifica o inventario de hooks",
+            "args": [
+              {
+                "name": "path",
+                "required": false
+              }
+            ],
+            "flags": {
+              "check": {
+                "type": "bool",
+                "required": false
+              }
+            }
+          },
+          {
+            "name": "git-scope",
+            "description": "Gera ou verifica o escopo de operacoes git derivado do contrato do harness",
             "args": [
               {
                 "name": "path",
@@ -326,7 +393,9 @@
       },
       {
         "name": "install",
-        "aliases": ["init"],
+        "aliases": [
+          "init"
+        ],
         "description": "Instala governanca de IA em um projeto",
         "longDescription": "Instala o pacote de governanca para ferramentas de IA em um projeto alvo.",
         "args": [
@@ -1209,7 +1278,9 @@
       },
       {
         "name": "upgrade",
-        "aliases": ["sync"],
+        "aliases": [
+          "sync"
+        ],
         "description": "Atualiza skills de governanca em um projeto",
         "longDescription": "Verifica ou atualiza skills de governanca comparando versoes e checksums.",
         "args": [

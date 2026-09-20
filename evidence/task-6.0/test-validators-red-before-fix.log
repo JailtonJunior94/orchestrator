@@ -1,0 +1,117 @@
+Caso a: critério de aceite não comprovado
+  ✓ critério não comprovado falha (exit=1)
+Caso a2: critério não comprovado sob LC_ALL=C
+  ✓ critério não comprovado falha sob LC_ALL=C (exit=1)
+  ✓ gate de aceite permanece ativo sob LC_ALL=C
+Caso b: todos os critérios comprovados
+  ✓ todos comprovados passa (exit=0)
+Caso c: Testes: pass sem comando de teste
+  ✓ Testes pass sem comando falha (exit=1)
+Caso c2: prova de teste mvn/gradle no fim de linha
+  ✗ mvn test no fim da linha passa (esperado=0, obtido=1)
+  ✗ gradle test no fim da linha passa (esperado=0, obtido=1)
+  ✗ ./gradlew test no fim da linha passa (esperado=0, obtido=1)
+  ✗ mvn test -q continua passando (esperado=0, obtido=1)
+Caso d: task legada sem seção de critérios
+  ✓ task legada falha por padrão (exit=1)
+  ✓ diagnóstico de fail-closed presente
+Caso d2: AI_SDD_STRICT_EVIDENCE=0 nao reabre o gate de aceite
+  ✓ opt-out explícito continua reprovando (exit=1)
+  ✓ opt-out recebe o diagnóstico de fail-closed
+Caso d3: referência de task file inexistente
+  ✓ referência não resolvível falha por padrão (exit=1)
+Caso e: review.md válido sem achados
+  ✓ review válido passa (exit=0)
+  ✓ review válido passa sob LC_ALL=C (exit=0)
+Caso f: review REJECTED sem achado bloqueante
+  ✓ REJECTED sem high/critical falha (exit=1)
+Caso g: review sem seção de validações
+  ✓ review sem validações falha (exit=1)
+Caso h1: mapa 1:1 ausente falha
+  ✓ mapa h1-ausente espera exit 1 (exit=1)
+  ✓ mapa h1-ausente espera exit 1 sob LC_ALL=C (exit=1)
+Caso h2: mapa 1:1 incompleto (critério sem evidência) falha
+  ✓ mapa h2-incompleto espera exit 1 (exit=1)
+  ✓ mapa h2-incompleto espera exit 1 sob LC_ALL=C (exit=1)
+Caso h3: critério não verificável falha
+  ✓ mapa h3-nverif espera exit 1 (exit=1)
+  ✓ mapa h3-nverif espera exit 1 sob LC_ALL=C (exit=1)
+Caso h4: linha de evidência fora das três formas de RF-48 falha
+  ✓ mapa h4-badev espera exit 1 (exit=1)
+  ✓ mapa h4-badev espera exit 1 sob LC_ALL=C (exit=1)
+Caso h5: mapa 1:1 completo e válido passa
+  ✓ mapa h5-ok espera exit 0 (exit=0)
+  ✓ mapa h5-ok espera exit 0 sob LC_ALL=C (exit=0)
+Caso h6: AI_SDD_STRICT_EVIDENCE=0 NÃO reabre o mapa 1:1
+  ✓ opt-out legado não faz o mapa incompleto passar (exit=1)
+  ✓ mapa 1:1 permanece fail-closed sob AI_SDD_STRICT_EVIDENCE=0
+Caso i: relatório declara critérios sem task file resolvível é fail-closed mesmo com opt-out
+  ✓ critérios sem task file falha mesmo com opt-out (exit=1)
+  ✓ opt-out não alcança o confronto 1:1 (RF-53)
+Caso j: relatório com seção de Evidência de Memória Durável não quebra gates
+  ✗ relatório com evidência de memória durável passa (esperado=0, obtido=1)
+    diagnostico: FALTANDO: prova fisica invalida: snapshot fisico canonico invalido: validar provas fisicas do resultado: taskloop: resultado diverge do estado final recomputado
+
+Validação do pacote de evidências falhou: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T//test-validators.Iiw9lJ/repository/report-j.md
+  ✗ relatório com evidência de memória durável passa sob LC_ALL=C (esperado=0, obtido=1)
+    diagnostico: FALTANDO: prova fisica invalida: snapshot fisico canonico invalido: validar provas fisicas do resultado: taskloop: resultado diverge do estado final recomputado
+
+Validação do pacote de evidências falhou: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T//test-validators.Iiw9lJ/repository/report-j.md
+Caso k: relatório sem marcador não vira histórico ao ser commitado
+  ✓ relatório sem marcador e não commitado falha (exit=1)
+  ✓ commitar NÃO concede a isenção histórica (corte fixo) (exit=1)
+  ✓ a ruptura aponta o commit de corte fixo, não HEAD
+  ✓ nenhuma isenção v1 concedida a trabalho novo commitado
+Caso l: divergência de estado entre tasks.md, relatório e execution-result
+  ✓ tasks.md=blocked com relatório/JSON=done reprova (exit=1)
+  ✓ a ruptura nomeia a divergência de estado
+  ✓ tasks.md reconciliado com a evidência elimina a divergência
+  ✓ qualquer terceiro estado em tasks.md também reprova (exit=1)
+Matriz de fronteira do gate de operação Git (RF-57)
+  ✓ fronteira 1 KiB benigna passa (exit=0)
+  ✓ fronteira 1 KiB com git push bloqueia (exit=2)
+  ✓ fronteira 64 KiB benigna passa (exit=0)
+  ✓ fronteira 64 KiB com git push bloqueia (exit=2)
+  ✓ fronteira 65 KiB benigna passa (exit=0)
+  ✓ fronteira 65 KiB com git push bloqueia (exit=2)
+  ✓ fronteira 1 MiB benigna passa (exit=0)
+  ✓ fronteira 1 MiB com git push bloqueia (exit=2)
+Reprodução da prova de exploração do ADR-003 (payload de ~70 KB)
+  ✓ payload de exploração (~70KB) bloqueia (exit=2)
+  ✓ controle sem padding bloqueia (exit=2)
+Falha fechada: JSON inválido bloqueia
+  ✓ JSON inválido bloqueia (exit=2)
+Negação por ausência de alvo (RF-68)
+  ✓ payload sem comando extraível bloqueia (exit=2)
+  ✓ stdin vazio bloqueia (exit=2)
+Campo command homônimo aninhado não é extraído (regressão do fallback grep)
+  ✓ comando homônimo aninhado não vaza para aprovação (exit=2)
+  ✓ comando direto benigno com metadata homônima passa (exit=0)
+Matriz adversarial do gate de operação Git (RF-20, RF-21, RF-24)
+  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: git -C /repo push (esperado=2, obtido=0)
+  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: git -c user.name=x commit -m y (esperado=2, obtido=0)
+  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: $(echo git) push (esperado=2, obtido=0)
+  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: eval "git push" (esperado=2, obtido=0)
+  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: sh -c "git push" (esperado=2, obtido=0)
+  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: /usr/bin/git push (esperado=2, obtido=0)
+  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: git.exe push (esperado=2, obtido=0)
+  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: git reset --hard (esperado=2, obtido=0)
+  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: git clean -fd (esperado=2, obtido=0)
+  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: git checkout -- . (esperado=2, obtido=0)
+  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: git restore . (esperado=2, obtido=0)
+Matriz de falso positivo do gate de operação Git (RF-22)
+  ✗ bloqueia hoje por menção textual, deve permitir: echo git commit (esperado=0, obtido=2)
+  ✗ bloqueia hoje por menção textual, deve permitir: man git commit (esperado=0, obtido=2)
+  ✗ bloqueia hoje por menção textual, deve permitir: echo "a|git commit -m x" (esperado=0, obtido=2)
+  ✗ bloqueia hoje por menção textual, deve permitir: echo "a|git push origin main" (esperado=0, obtido=2)
+Guarda de não-regressão do gate de operação Git
+  ✓ já bloqueia hoje, deve continuar bloqueando: env git push (exit=2)
+  ✓ já bloqueia hoje, deve continuar bloqueando: command git push (exit=2)
+  ✓ já bloqueia hoje, deve continuar bloqueando: git push --force (exit=2)
+  ✓ já bloqueia hoje, deve continuar bloqueando: git push --force-with-lease (exit=2)
+  ✓ já bloqueia hoje, deve continuar bloqueando: git push -f origin main (exit=2)
+  ✓ já bloqueia hoje, deve continuar bloqueando: git push origin +main (exit=2)
+  ✓ já bloqueia hoje, deve continuar bloqueando: git push (exit=2)
+  ✓ menção textual em grep não bloqueia (não-regressão) (exit=0)
+
+Passaram: 59 | Falharam: 21

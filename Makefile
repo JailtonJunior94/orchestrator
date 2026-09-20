@@ -89,6 +89,7 @@ check-scripts-sync:
 
 check-policies-sync:
 	bash scripts/check-policies-sync.sh
+	go run . hooks git-scope --check .
 
 check-capability-matrix-sync:
 	go test ./internal/capability/...

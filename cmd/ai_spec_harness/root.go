@@ -38,6 +38,7 @@ Exemplos:
 	cmd.AddCommand(newChangelogCmd())
 	cmd.AddCommand(newDoctorCmd())
 	cmd.AddCommand(newHashCmd())
+	cmd.AddCommand(newHookAuditCmd())
 	cmd.AddCommand(newHooksCmd())
 	cmd.AddCommand(newInspectCmd())
 	cmd.AddCommand(newInstallCmd())
