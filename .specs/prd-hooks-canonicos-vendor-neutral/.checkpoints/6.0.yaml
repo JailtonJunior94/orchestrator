@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-hooks-canonicos-vendor-neutral/6.0_execution_report.md
+summary: "Harness contract aplicado (internal/hookpolicy) e gate git reescrito por palavra-de-comando; 6 rodadas de revisao adversarial fecharam bypasses reais (separadores compostos, aspa nao fechada, expansao de variavel, wrappers de execucao, resolucao prematura em wrapper)."
+timestamp: 2026-09-20T21:00:00Z

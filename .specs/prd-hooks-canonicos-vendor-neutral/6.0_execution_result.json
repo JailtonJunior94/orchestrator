@@ -1,0 +1,110 @@
+{
+  "schema_version": 2,
+  "run_id": "interactive-task-6.0-2026-09-20",
+  "task_id": "6.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "591eb346f5d110039f14032c921acb8e2ba8891c",
+  "patch_sha256": "b76b5558cab15da311e515cea78902d9aa8149e14bba5a686ae0f46e67dcc4f8",
+  "patch_ref": "evidence/task-6.0/6.0_execution_result.patch",
+  "commit_sha": "6abf11153fd9171929cb6ed5e550efdd326a3132",
+  "commit_patch_sha256": "d8a1f63023beee1954906f7da8b970d78974a27d5ed17d13a8bca56118bfb707",
+  "final_state_sha256": "e84447b2f1f25cae5e0b9361e63994fc0597add732a44ce3a5f7323dc7f044c2",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "go test ./internal/hookpolicy/... -v",
+      "exit_code": 0,
+      "output_sha256": "6fd4cb1dc8176d4844754571a2eee20d83772f2c314adcfb71aca318fb9bf5c8"
+    },
+    {
+      "command": "go test ./...",
+      "exit_code": 0,
+      "output_sha256": "6abef704a29a4e799323c45ab82292f992571b96945fde023f862c6622ae4d20"
+    },
+    {
+      "command": "golangci-lint run --config .golangci.yml --timeout 10m ./...",
+      "exit_code": 0,
+      "output_sha256": "847166fdac66cd885ad0591a6277d742dbfcdae76c0db05af93867e0db960655"
+    },
+    {
+      "command": "bash scripts/test-validators.sh",
+      "exit_code": 0,
+      "output_sha256": "a543b9be99d213296cefe8aa915568bcd5924c11329fb53add104b241acf4e76"
+    },
+    {
+      "command": "bash scripts/test-hooks.sh",
+      "exit_code": 0,
+      "output_sha256": "50f41cbca72d25201375828c8f6ed940caa0fd2cd68b4b9cca7831d045d19cf6"
+    },
+    {
+      "command": "make check-mocks",
+      "exit_code": 0,
+      "output_sha256": "14135b57400c78f1bd2eba2d8d0e2ed1763e9e95655a0463d32b12655a673e02"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "AC-harness-yaml-carregado",
+      "evidence_ref": "evidence/task-6.0/go-build.log#doctor-source-file"
+    },
+    {
+      "id": "AC-gitpolicy-callsite",
+      "evidence_ref": "evidence/task-6.0/go-test-hookpolicy.log#TestGitScope_DerivesFromContract"
+    },
+    {
+      "id": "AC-fingerprint-ci-gate",
+      "evidence_ref": "evidence/task-6.0/go-test-hookpolicy.log#TestGitScope_FingerprintIsDeterministic"
+    },
+    {
+      "id": "AC-matriz-adversarial-11",
+      "evidence_ref": "evidence/task-6.0/test-validators-red-before-fix.log#matriz-adversarial"
+    },
+    {
+      "id": "AC-matriz-falso-positivo-4",
+      "evidence_ref": "evidence/task-6.0/test-validators-green-after-fix.log#falso-positivo"
+    },
+    {
+      "id": "AC-nao-regressao",
+      "evidence_ref": "evidence/task-6.0/test-validators-green-after-fix.log#nao-regressao"
+    },
+    {
+      "id": "AC-interpretador-policy-id",
+      "evidence_ref": "evidence/task-6.0/test-hooks.log#P-GIT-INTERP-DYNAMIC"
+    },
+    {
+      "id": "AC-auditoria-6.9",
+      "evidence_ref": "evidence/task-6.0/test-hooks.log#auditoria-69"
+    },
+    {
+      "id": "AC-hookaudit-rf23",
+      "evidence_ref": "evidence/task-6.0/check-mocks.log#hookaudit-append"
+    },
+    {
+      "id": "AC-evidencia-vermelha",
+      "evidence_ref": "evidence/task-6.0/test-validators-red-before-fix.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-6.0/test-validators-red-before-fix.log",
+    "evidence/task-6.0/test-validators-green-after-fix.log",
+    "evidence/task-6.0/go-build.log",
+    "evidence/task-6.0/go-vet.log",
+    "evidence/task-6.0/go-test-hookpolicy.log",
+    "evidence/task-6.0/go-test-all.log",
+    "evidence/task-6.0/lint.log",
+    "evidence/task-6.0/test-hooks.log",
+    "evidence/task-6.0/check-mocks.log"
+  ],
+  "review_verdict": "approved"
+}

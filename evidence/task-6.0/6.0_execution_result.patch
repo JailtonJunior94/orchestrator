@@ -1,0 +1,3412 @@
+diff --git a/.agents/generated/git-scope.json b/.agents/generated/git-scope.json
+new file mode 100644
+index 0000000..d2d25fb
+--- /dev/null
++++ b/.agents/generated/git-scope.json
+@@ -0,0 +1,41 @@
++{
++  "version": 1,
++  "fingerprint": "018c60eecfe4dd4b8052fc2cc8e96ed896e3c061cdb10f309c3277037b46583d",
++  "operations": [
++    {
++      "subcommand": "checkout --",
++      "destructive": true,
++      "requires_approval": true
++    },
++    {
++      "subcommand": "clean",
++      "destructive": true,
++      "requires_approval": true
++    },
++    {
++      "subcommand": "commit",
++      "destructive": false,
++      "requires_approval": true
++    },
++    {
++      "subcommand": "push",
++      "destructive": false,
++      "requires_approval": true
++    },
++    {
++      "subcommand": "push --force",
++      "destructive": true,
++      "requires_approval": true
++    },
++    {
++      "subcommand": "reset --hard",
++      "destructive": true,
++      "requires_approval": true
++    },
++    {
++      "subcommand": "restore",
++      "destructive": true,
++      "requires_approval": true
++    }
++  ]
++}
+diff --git a/.agents/harness.yaml b/.agents/harness.yaml
+new file mode 100644
+index 0000000..04a8b57
+--- /dev/null
++++ b/.agents/harness.yaml
+@@ -0,0 +1,13 @@
++version: 1
++git:
++  auto_commit: false
++  auto_push: false
++approval:
++  require_for_destructive_operations: true
++quality:
++  require_tests: true
++  require_lint: true
++evidence:
++  require_execution_report: true
++skills:
++  discovery_mode: declared
+diff --git a/.agents/scripts/git-operation-gate.sh b/.agents/scripts/git-operation-gate.sh
+index 6a92e7f..02a2ccc 100755
+--- a/.agents/scripts/git-operation-gate.sh
++++ b/.agents/scripts/git-operation-gate.sh
+@@ -3,9 +3,6 @@
+ set -euo pipefail
+ 
+ readonly GIT_OPERATION_BLOCK_EXIT=2
+-readonly GIT_OPERATION_GATED_SUBCOMMANDS="git commit e git push"
+-readonly GIT_OPERATION_BLOCKED_MESSAGE="GOVERNANCE BLOQUEIO: operacao git nao solicitada ($GIT_OPERATION_GATED_SUBCOMMANDS) negada pelo gate canonico de operacao git."
+-readonly DESTRUCTIVE_OPERATION_BLOCKED_MESSAGE="GOVERNANCE BLOQUEIO: comando destrutivo detectado (remocao recursiva e forcada) negado independentemente do estado de preload."
+ 
+ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ project_root="${AGENTS_ROOT:-$(cd "$script_dir/../.." && pwd)}"
+@@ -29,6 +26,16 @@ fi
+ 
+ source "$parse_lib"
+ 
++git_scope_path=""
++for candidate in \
++  "$project_root/.agents/generated/git-scope.json" \
++  "$project_root/internal/embedded/assets/.agents/generated/git-scope.json"; do
++  if [[ -f "$candidate" ]]; then
++    git_scope_path="$candidate"
++    break
++  fi
++done
++
+ payload=""
+ if [[ ! -t 0 ]]; then
+   payload="$(cat)"
+@@ -44,34 +51,53 @@ if [[ -z "$command_text" ]]; then
+   exit "$GIT_OPERATION_BLOCK_EXIT"
+ fi
+ 
+-audit_git_operation_escape() {
+-  local reason="$1"
++audit_log_line() {
++  local reason="$1" command="$2"
+   local log="${GOVERNANCE_ESCAPE_LOG:-$project_root/.aispec/governance-escapes.log}"
+   local stamp
+   stamp="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
+-  echo "AUDITORIA: escape de operacao git registrado ($reason) para comando: $command_text" >&2
+   mkdir -p "$(dirname "$log")" 2>/dev/null || return 0
+   printf '%s\t%s\t%s\t%s\t%s\n' \
+-    "$stamp" "$reason" "$command_text" "${AI_TOOL:-desconhecido}" "${USER:-desconhecido}" \
++    "$stamp" "$reason" "$command" "${AI_TOOL:-desconhecido}" "${USER:-desconhecido}" \
+     >> "$log" 2>/dev/null || true
+ }
+ 
++audit_canonical_decision() {
++  local decision="$1" reason="$2" policy_id="$3" gate_id="$4"
++  command -v ai-spec >/dev/null 2>&1 || return 0
++  local canonical_log="${GOVERNANCE_HOOKAUDIT_LOG:-$project_root/.aispec/hook-decisions.jsonl}"
++  ai-spec hookaudit append \
++    --path "$canonical_log" \
++    --event before_tool \
++    --provider "${AI_TOOL:-desconhecido}" \
++    --hook git-operation-gate \
++    --decision "$decision" \
++    --reason "$reason" \
++    --policy-id "$policy_id" \
++    --gate-id "$gate_id" \
++    --duration-ms 0 \
++    >/dev/null 2>&1 || true
++}
++
++audit_git_operation_escape() {
++  local reason="$1" policy_id="$2" gate_id="$3"
++  echo "AUDITORIA: escape de operacao git registrado ($reason) para comando: $command_text" >&2
++  audit_log_line "$reason" "$command_text"
++  audit_canonical_decision "ALLOW" "$reason" "$policy_id" "$gate_id"
++}
++
+ audit_destructive_operation_escape() {
+   local reason="$1"
+-  local log="${GOVERNANCE_ESCAPE_LOG:-$project_root/.aispec/governance-escapes.log}"
+-  local stamp
+-  stamp="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
+   echo "AUDITORIA: escape de operacao destrutiva registrado ($reason) para comando: $command_text" >&2
+-  mkdir -p "$(dirname "$log")" 2>/dev/null || return 0
+-  printf '%s\t%s\t%s\t%s\t%s\n' \
+-    "$stamp" "$reason" "$command_text" "${AI_TOOL:-desconhecido}" "${USER:-desconhecido}" \
+-    >> "$log" 2>/dev/null || true
++  audit_log_line "$reason" "$command_text"
++  audit_canonical_decision "ALLOW" "$reason" "P-RM-DESTRUCTIVE" "G-RM-DESTRUCTIVE"
+ }
+ 
+-is_unsolicited_git_write_segment() {
+-  local segment="$1"
+-  printf '%s' "$segment" \
+-    | grep -Eq '(^|[[:space:]])git([[:space:]]+-[^[:space:]]+)*[[:space:]]+(commit|push)([[:space:]]|$)'
++audit_interpreter_operation_escape() {
++  local reason="$1"
++  echo "AUDITORIA: escape de operacao com interpretador dinamico registrado ($reason) para comando: $command_text" >&2
++  audit_log_line "$reason" "$command_text"
++  audit_canonical_decision "ALLOW" "$reason" "P-GIT-INTERP-DYNAMIC" "G-GIT-INTERP-DYNAMIC"
+ }
+ 
+ is_destructive_removal_segment() {
+@@ -90,14 +116,9 @@ is_destructive_removal_segment() {
+   return 1
+ }
+ 
+-git_write_detected=0
+ destructive_detected=0
+-
+ while IFS= read -r segment || [[ -n "$segment" ]]; do
+   [[ -n "$segment" ]] || continue
+-  if is_unsolicited_git_write_segment "$segment"; then
+-    git_write_detected=1
+-  fi
+   if is_destructive_removal_segment "$segment"; then
+     destructive_detected=1
+   fi
+@@ -108,27 +129,244 @@ if [[ "$destructive_detected" -eq 1 ]]; then
+   if [[ "$destructive_confirmed" == "1" ]]; then
+     audit_destructive_operation_escape "GOVERNANCE_DESTRUCTIVE_OPERATION_CONFIRMED=1"
+   else
+-    echo "$DESTRUCTIVE_OPERATION_BLOCKED_MESSAGE" >&2
++    echo "GOVERNANCE BLOQUEIO: comando destrutivo detectado (remocao recursiva e forcada) negado independentemente do estado de preload." >&2
+     echo "Comando: $command_text" >&2
+     echo "Para prosseguir com pedido explicito do usuario: export GOVERNANCE_DESTRUCTIVE_OPERATION_CONFIRMED=1" >&2
+     exit "$GIT_OPERATION_BLOCK_EXIT"
+   fi
+ fi
+ 
++classify_git_command_structurally() {
++  python3 -c '
++import json
++import re
++import shlex
++import sys
++
++command_text = sys.stdin.read()
++scope_path = sys.argv[1] if len(sys.argv) > 1 else ""
++
++scope_names = set()
++if scope_path:
++    try:
++        with open(scope_path, "r", encoding="utf-8") as handle:
++            scope = json.load(handle)
++        scope_names = {op.get("subcommand", "") for op in scope.get("operations", [])}
++    except Exception:
++        scope_names = set()
++
++TRANSPARENT_WRAPPERS = {
++    "env", "command", "exec", "time", "nohup", "nice", "ionice", "setsid",
++    "timeout", "stdbuf", "sudo", "doas",
++}
++GIT_ARG_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--super-prefix"}
++INTERPRETER_SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
++FORCE_FLAGS = {"--force", "--force-with-lease", "-f"}
++ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
++LINE_CONTINUATION_RE = re.compile(r"\\\r?\n")
++
++
++class TokenizeError(Exception):
++    pass
++
++
++def tokenize(text):
++    normalized = LINE_CONTINUATION_RE.sub(" ", text)
++    lexer = shlex.shlex(normalized, posix=True, punctuation_chars=True)
++    lexer.whitespace_split = True
++    try:
++        return list(lexer)
++    except ValueError as err:
++        raise TokenizeError(str(err)) from err
++
++
++PUNCTUATION_CHARS = set("();<>|&")
++
++
++def is_pure_punctuation_token(token):
++    return len(token) > 0 and all(char in PUNCTUATION_CHARS for char in token)
++
++
++def split_segments(tokens):
++    segments = []
++    current = []
++    for token in tokens:
++        if is_pure_punctuation_token(token):
++            if current:
++                segments.append(current)
++                current = []
++            continue
++        current.append(token)
++    if current:
++        segments.append(current)
++    return segments
++
++
++def normalize_base(token):
++    base = token.rsplit("/", 1)[-1]
++    if base.endswith(".exe"):
++        base = base[:-4]
++    return base
++
++
++def resolve_command_word(segment):
++    idx = 0
++    while idx < len(segment) and ASSIGNMENT_RE.match(segment[idx]):
++        idx += 1
++    if idx >= len(segment):
++        return None, idx
++    return normalize_base(segment[idx]), idx
++
++
++def resolve_candidate_positions(segment, head_word, head_idx):
++    if head_word in TRANSPARENT_WRAPPERS:
++        return list(range(head_idx, len(segment)))
++    return [head_idx]
++
++
++def resolve_git_subcommand(segment, start_idx):
++    idx = start_idx + 1
++    while idx < len(segment):
++        token = segment[idx]
++        if token.startswith("-"):
++            if token in GIT_ARG_FLAGS:
++                idx += 2
++                continue
++            idx += 1
++            continue
++        return token, idx
++    return None, idx
++
++
++def has_flag_char(rest, char):
++    for token in rest:
++        if token.startswith("--"):
++            continue
++        if token.startswith("-") and char in token[1:]:
++            return True
++    return False
++
++
++def classify_git(segment, start_idx):
++    subcommand, sub_idx = resolve_git_subcommand(segment, start_idx)
++    if subcommand is None:
++        return None
++    rest = segment[sub_idx + 1:]
++    if subcommand == "commit":
++        return {"subcommand": "commit", "policy_id": "P-GIT-COMMIT"}
++    if subcommand == "push":
++        is_force = any(token in FORCE_FLAGS for token in rest) or any(
++            token.startswith("+") for token in rest if not token.startswith("-")
++        )
++        if is_force:
++            return {"subcommand": "push --force", "policy_id": "P-GIT-PUSH-FORCE"}
++        return {"subcommand": "push", "policy_id": "P-GIT-PUSH"}
++    if subcommand == "reset":
++        if "--hard" in rest:
++            return {"subcommand": "reset --hard", "policy_id": "P-GIT-RESET-HARD"}
++        return None
++    if subcommand == "clean":
++        if (has_flag_char(rest, "f") or "--force" in rest) and (
++            has_flag_char(rest, "d") or has_flag_char(rest, "x")
++        ):
++            return {"subcommand": "clean", "policy_id": "P-GIT-CLEAN"}
++        return None
++    if subcommand == "checkout":
++        if "--" in rest or "-f" in rest or "--force" in rest:
++            return {"subcommand": "checkout --", "policy_id": "P-GIT-CHECKOUT-RESTORE"}
++        return None
++    if subcommand == "restore":
++        return {"subcommand": "restore", "policy_id": "P-GIT-CHECKOUT-RESTORE"}
++    return None
++
++
++matches = []
++interpreter_hits = []
++
++try:
++    tokens = tokenize(command_text)
++except TokenizeError as err:
++    print("tokenize failed: %s" % err, file=sys.stderr)
++    sys.exit(1)
++
++for segment in split_segments(tokens):
++    if not segment:
++        continue
++    head_word, head_idx = resolve_command_word(segment)
++    if head_word is None:
++        continue
++    for pos in resolve_candidate_positions(segment, head_word, head_idx):
++        candidate = normalize_base(segment[pos])
++        if candidate == "git":
++            result = classify_git(segment, pos)
++            if result and (not scope_names or result["subcommand"] in scope_names):
++                matches.append(result)
++        if candidate == "eval":
++            interpreter_hits.append("eval")
++        if candidate in INTERPRETER_SHELLS and "-c" in segment[pos:]:
++            interpreter_hits.append(candidate + "_-c")
++
++if "$(" in command_text or "`" in command_text:
++    interpreter_hits.append("command_substitution")
++elif "$" in command_text:
++    interpreter_hits.append("variable_expansion")
++
++for match in matches:
++    print("GIT_MATCH policy_id=%s subcommand=%s" % (match["policy_id"], match["subcommand"]))
++for hit in interpreter_hits:
++    print("INTERPRETER_MATCH reason=%s" % hit)
++' "$1"
++}
++
++git_matches=()
++interpreter_matches=()
++if command -v python3 >/dev/null 2>&1; then
++  classification=""
++  if ! classification="$(printf '%s' "$command_text" | classify_git_command_structurally "${git_scope_path:-}" 2>/dev/null)"; then
++    interpreter_matches+=("INTERPRETER_MATCH reason=classifier_error_fail_closed")
++  fi
++  while IFS= read -r line; do
++    [[ -n "$line" ]] || continue
++    case "$line" in
++      GIT_MATCH*) git_matches+=("$line") ;;
++      INTERPRETER_MATCH*) interpreter_matches+=("$line") ;;
++    esac
++  done <<< "$classification"
++else
++  interpreter_matches+=("INTERPRETER_MATCH reason=python3_unavailable_fail_closed")
++fi
++
++interpreter_operation_confirmed="${GOVERNANCE_INTERPRETER_OPERATION_CONFIRMED:-0}"
++if [[ "${#interpreter_matches[@]}" -gt 0 ]]; then
++  reason="${interpreter_matches[0]#*reason=}"
++  if [[ "$interpreter_operation_confirmed" == "1" ]]; then
++    audit_interpreter_operation_escape "GOVERNANCE_INTERPRETER_OPERATION_CONFIRMED=1"
++  else
++    echo "GOVERNANCE BLOQUEIO: invocacao de interpretador com conteudo dinamico detectada ($reason); nao e resolvivel por analise estatica e exige aprovacao explicita." >&2
++    echo "Comando: $command_text" >&2
++    echo "Para prosseguir com pedido explicito do usuario: export GOVERNANCE_INTERPRETER_OPERATION_CONFIRMED=1" >&2
++    exit "$GIT_OPERATION_BLOCK_EXIT"
++  fi
++fi
++
+ git_operation_confirmed="${GOVERNANCE_GIT_OPERATION_CONFIRMED:-0}"
+ git_operation_mode="${GOVERNANCE_GIT_OPERATION_MODE:-fail}"
+ 
+-if [[ "$git_write_detected" -eq 1 ]]; then
++if [[ "${#git_matches[@]}" -gt 0 ]]; then
++  first_match="${git_matches[0]}"
++  policy_id="$(printf '%s' "$first_match" | sed -n 's/.*policy_id=\([^ ]*\).*/\1/p')"
++  subcommand="$(printf '%s' "$first_match" | sed -n 's/.*subcommand=\(.*\)$/\1/p')"
++
+   if [[ "$git_operation_confirmed" == "1" ]]; then
+-    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_CONFIRMED=1"
++    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_CONFIRMED=1" "$policy_id" "G-GIT-${subcommand// /-}"
+     exit 0
+   fi
+   if [[ "$git_operation_mode" == "warn" ]]; then
+-    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_MODE=warn"
++    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_MODE=warn" "$policy_id" "G-GIT-${subcommand// /-}"
+     echo "GOVERNANCE_GIT_OPERATION_MODE=warn: prosseguindo sem bloqueio (opt-out explicito)." >&2
+     exit 0
+   fi
+-  echo "$GIT_OPERATION_BLOCKED_MESSAGE" >&2
++  echo "GOVERNANCE BLOQUEIO: operacao git nao solicitada (git $subcommand, $policy_id) negada pelo gate canonico de operacao git." >&2
+   echo "Comando: $command_text" >&2
+   echo "Para prosseguir com pedido explicito do usuario: export GOVERNANCE_GIT_OPERATION_CONFIRMED=1" >&2
+   exit "$GIT_OPERATION_BLOCK_EXIT"
+diff --git a/.claude/scripts/git-operation-gate.sh b/.claude/scripts/git-operation-gate.sh
+index 6a92e7f..02a2ccc 100755
+--- a/.claude/scripts/git-operation-gate.sh
++++ b/.claude/scripts/git-operation-gate.sh
+@@ -3,9 +3,6 @@
+ set -euo pipefail
+ 
+ readonly GIT_OPERATION_BLOCK_EXIT=2
+-readonly GIT_OPERATION_GATED_SUBCOMMANDS="git commit e git push"
+-readonly GIT_OPERATION_BLOCKED_MESSAGE="GOVERNANCE BLOQUEIO: operacao git nao solicitada ($GIT_OPERATION_GATED_SUBCOMMANDS) negada pelo gate canonico de operacao git."
+-readonly DESTRUCTIVE_OPERATION_BLOCKED_MESSAGE="GOVERNANCE BLOQUEIO: comando destrutivo detectado (remocao recursiva e forcada) negado independentemente do estado de preload."
+ 
+ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ project_root="${AGENTS_ROOT:-$(cd "$script_dir/../.." && pwd)}"
+@@ -29,6 +26,16 @@ fi
+ 
+ source "$parse_lib"
+ 
++git_scope_path=""
++for candidate in \
++  "$project_root/.agents/generated/git-scope.json" \
++  "$project_root/internal/embedded/assets/.agents/generated/git-scope.json"; do
++  if [[ -f "$candidate" ]]; then
++    git_scope_path="$candidate"
++    break
++  fi
++done
++
+ payload=""
+ if [[ ! -t 0 ]]; then
+   payload="$(cat)"
+@@ -44,34 +51,53 @@ if [[ -z "$command_text" ]]; then
+   exit "$GIT_OPERATION_BLOCK_EXIT"
+ fi
+ 
+-audit_git_operation_escape() {
+-  local reason="$1"
++audit_log_line() {
++  local reason="$1" command="$2"
+   local log="${GOVERNANCE_ESCAPE_LOG:-$project_root/.aispec/governance-escapes.log}"
+   local stamp
+   stamp="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
+-  echo "AUDITORIA: escape de operacao git registrado ($reason) para comando: $command_text" >&2
+   mkdir -p "$(dirname "$log")" 2>/dev/null || return 0
+   printf '%s\t%s\t%s\t%s\t%s\n' \
+-    "$stamp" "$reason" "$command_text" "${AI_TOOL:-desconhecido}" "${USER:-desconhecido}" \
++    "$stamp" "$reason" "$command" "${AI_TOOL:-desconhecido}" "${USER:-desconhecido}" \
+     >> "$log" 2>/dev/null || true
+ }
+ 
++audit_canonical_decision() {
++  local decision="$1" reason="$2" policy_id="$3" gate_id="$4"
++  command -v ai-spec >/dev/null 2>&1 || return 0
++  local canonical_log="${GOVERNANCE_HOOKAUDIT_LOG:-$project_root/.aispec/hook-decisions.jsonl}"
++  ai-spec hookaudit append \
++    --path "$canonical_log" \
++    --event before_tool \
++    --provider "${AI_TOOL:-desconhecido}" \
++    --hook git-operation-gate \
++    --decision "$decision" \
++    --reason "$reason" \
++    --policy-id "$policy_id" \
++    --gate-id "$gate_id" \
++    --duration-ms 0 \
++    >/dev/null 2>&1 || true
++}
++
++audit_git_operation_escape() {
++  local reason="$1" policy_id="$2" gate_id="$3"
++  echo "AUDITORIA: escape de operacao git registrado ($reason) para comando: $command_text" >&2
++  audit_log_line "$reason" "$command_text"
++  audit_canonical_decision "ALLOW" "$reason" "$policy_id" "$gate_id"
++}
++
+ audit_destructive_operation_escape() {
+   local reason="$1"
+-  local log="${GOVERNANCE_ESCAPE_LOG:-$project_root/.aispec/governance-escapes.log}"
+-  local stamp
+-  stamp="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
+   echo "AUDITORIA: escape de operacao destrutiva registrado ($reason) para comando: $command_text" >&2
+-  mkdir -p "$(dirname "$log")" 2>/dev/null || return 0
+-  printf '%s\t%s\t%s\t%s\t%s\n' \
+-    "$stamp" "$reason" "$command_text" "${AI_TOOL:-desconhecido}" "${USER:-desconhecido}" \
+-    >> "$log" 2>/dev/null || true
++  audit_log_line "$reason" "$command_text"
++  audit_canonical_decision "ALLOW" "$reason" "P-RM-DESTRUCTIVE" "G-RM-DESTRUCTIVE"
+ }
+ 
+-is_unsolicited_git_write_segment() {
+-  local segment="$1"
+-  printf '%s' "$segment" \
+-    | grep -Eq '(^|[[:space:]])git([[:space:]]+-[^[:space:]]+)*[[:space:]]+(commit|push)([[:space:]]|$)'
++audit_interpreter_operation_escape() {
++  local reason="$1"
++  echo "AUDITORIA: escape de operacao com interpretador dinamico registrado ($reason) para comando: $command_text" >&2
++  audit_log_line "$reason" "$command_text"
++  audit_canonical_decision "ALLOW" "$reason" "P-GIT-INTERP-DYNAMIC" "G-GIT-INTERP-DYNAMIC"
+ }
+ 
+ is_destructive_removal_segment() {
+@@ -90,14 +116,9 @@ is_destructive_removal_segment() {
+   return 1
+ }
+ 
+-git_write_detected=0
+ destructive_detected=0
+-
+ while IFS= read -r segment || [[ -n "$segment" ]]; do
+   [[ -n "$segment" ]] || continue
+-  if is_unsolicited_git_write_segment "$segment"; then
+-    git_write_detected=1
+-  fi
+   if is_destructive_removal_segment "$segment"; then
+     destructive_detected=1
+   fi
+@@ -108,27 +129,244 @@ if [[ "$destructive_detected" -eq 1 ]]; then
+   if [[ "$destructive_confirmed" == "1" ]]; then
+     audit_destructive_operation_escape "GOVERNANCE_DESTRUCTIVE_OPERATION_CONFIRMED=1"
+   else
+-    echo "$DESTRUCTIVE_OPERATION_BLOCKED_MESSAGE" >&2
++    echo "GOVERNANCE BLOQUEIO: comando destrutivo detectado (remocao recursiva e forcada) negado independentemente do estado de preload." >&2
+     echo "Comando: $command_text" >&2
+     echo "Para prosseguir com pedido explicito do usuario: export GOVERNANCE_DESTRUCTIVE_OPERATION_CONFIRMED=1" >&2
+     exit "$GIT_OPERATION_BLOCK_EXIT"
+   fi
+ fi
+ 
++classify_git_command_structurally() {
++  python3 -c '
++import json
++import re
++import shlex
++import sys
++
++command_text = sys.stdin.read()
++scope_path = sys.argv[1] if len(sys.argv) > 1 else ""
++
++scope_names = set()
++if scope_path:
++    try:
++        with open(scope_path, "r", encoding="utf-8") as handle:
++            scope = json.load(handle)
++        scope_names = {op.get("subcommand", "") for op in scope.get("operations", [])}
++    except Exception:
++        scope_names = set()
++
++TRANSPARENT_WRAPPERS = {
++    "env", "command", "exec", "time", "nohup", "nice", "ionice", "setsid",
++    "timeout", "stdbuf", "sudo", "doas",
++}
++GIT_ARG_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--super-prefix"}
++INTERPRETER_SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
++FORCE_FLAGS = {"--force", "--force-with-lease", "-f"}
++ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
++LINE_CONTINUATION_RE = re.compile(r"\\\r?\n")
++
++
++class TokenizeError(Exception):
++    pass
++
++
++def tokenize(text):
++    normalized = LINE_CONTINUATION_RE.sub(" ", text)
++    lexer = shlex.shlex(normalized, posix=True, punctuation_chars=True)
++    lexer.whitespace_split = True
++    try:
++        return list(lexer)
++    except ValueError as err:
++        raise TokenizeError(str(err)) from err
++
++
++PUNCTUATION_CHARS = set("();<>|&")
++
++
++def is_pure_punctuation_token(token):
++    return len(token) > 0 and all(char in PUNCTUATION_CHARS for char in token)
++
++
++def split_segments(tokens):
++    segments = []
++    current = []
++    for token in tokens:
++        if is_pure_punctuation_token(token):
++            if current:
++                segments.append(current)
++                current = []
++            continue
++        current.append(token)
++    if current:
++        segments.append(current)
++    return segments
++
++
++def normalize_base(token):
++    base = token.rsplit("/", 1)[-1]
++    if base.endswith(".exe"):
++        base = base[:-4]
++    return base
++
++
++def resolve_command_word(segment):
++    idx = 0
++    while idx < len(segment) and ASSIGNMENT_RE.match(segment[idx]):
++        idx += 1
++    if idx >= len(segment):
++        return None, idx
++    return normalize_base(segment[idx]), idx
++
++
++def resolve_candidate_positions(segment, head_word, head_idx):
++    if head_word in TRANSPARENT_WRAPPERS:
++        return list(range(head_idx, len(segment)))
++    return [head_idx]
++
++
++def resolve_git_subcommand(segment, start_idx):
++    idx = start_idx + 1
++    while idx < len(segment):
++        token = segment[idx]
++        if token.startswith("-"):
++            if token in GIT_ARG_FLAGS:
++                idx += 2
++                continue
++            idx += 1
++            continue
++        return token, idx
++    return None, idx
++
++
++def has_flag_char(rest, char):
++    for token in rest:
++        if token.startswith("--"):
++            continue
++        if token.startswith("-") and char in token[1:]:
++            return True
++    return False
++
++
++def classify_git(segment, start_idx):
++    subcommand, sub_idx = resolve_git_subcommand(segment, start_idx)
++    if subcommand is None:
++        return None
++    rest = segment[sub_idx + 1:]
++    if subcommand == "commit":
++        return {"subcommand": "commit", "policy_id": "P-GIT-COMMIT"}
++    if subcommand == "push":
++        is_force = any(token in FORCE_FLAGS for token in rest) or any(
++            token.startswith("+") for token in rest if not token.startswith("-")
++        )
++        if is_force:
++            return {"subcommand": "push --force", "policy_id": "P-GIT-PUSH-FORCE"}
++        return {"subcommand": "push", "policy_id": "P-GIT-PUSH"}
++    if subcommand == "reset":
++        if "--hard" in rest:
++            return {"subcommand": "reset --hard", "policy_id": "P-GIT-RESET-HARD"}
++        return None
++    if subcommand == "clean":
++        if (has_flag_char(rest, "f") or "--force" in rest) and (
++            has_flag_char(rest, "d") or has_flag_char(rest, "x")
++        ):
++            return {"subcommand": "clean", "policy_id": "P-GIT-CLEAN"}
++        return None
++    if subcommand == "checkout":
++        if "--" in rest or "-f" in rest or "--force" in rest:
++            return {"subcommand": "checkout --", "policy_id": "P-GIT-CHECKOUT-RESTORE"}
++        return None
++    if subcommand == "restore":
++        return {"subcommand": "restore", "policy_id": "P-GIT-CHECKOUT-RESTORE"}
++    return None
++
++
++matches = []
++interpreter_hits = []
++
++try:
++    tokens = tokenize(command_text)
++except TokenizeError as err:
++    print("tokenize failed: %s" % err, file=sys.stderr)
++    sys.exit(1)
++
++for segment in split_segments(tokens):
++    if not segment:
++        continue
++    head_word, head_idx = resolve_command_word(segment)
++    if head_word is None:
++        continue
++    for pos in resolve_candidate_positions(segment, head_word, head_idx):
++        candidate = normalize_base(segment[pos])
++        if candidate == "git":
++            result = classify_git(segment, pos)
++            if result and (not scope_names or result["subcommand"] in scope_names):
++                matches.append(result)
++        if candidate == "eval":
++            interpreter_hits.append("eval")
++        if candidate in INTERPRETER_SHELLS and "-c" in segment[pos:]:
++            interpreter_hits.append(candidate + "_-c")
++
++if "$(" in command_text or "`" in command_text:
++    interpreter_hits.append("command_substitution")
++elif "$" in command_text:
++    interpreter_hits.append("variable_expansion")
++
++for match in matches:
++    print("GIT_MATCH policy_id=%s subcommand=%s" % (match["policy_id"], match["subcommand"]))
++for hit in interpreter_hits:
++    print("INTERPRETER_MATCH reason=%s" % hit)
++' "$1"
++}
++
++git_matches=()
++interpreter_matches=()
++if command -v python3 >/dev/null 2>&1; then
++  classification=""
++  if ! classification="$(printf '%s' "$command_text" | classify_git_command_structurally "${git_scope_path:-}" 2>/dev/null)"; then
++    interpreter_matches+=("INTERPRETER_MATCH reason=classifier_error_fail_closed")
++  fi
++  while IFS= read -r line; do
++    [[ -n "$line" ]] || continue
++    case "$line" in
++      GIT_MATCH*) git_matches+=("$line") ;;
++      INTERPRETER_MATCH*) interpreter_matches+=("$line") ;;
++    esac
++  done <<< "$classification"
++else
++  interpreter_matches+=("INTERPRETER_MATCH reason=python3_unavailable_fail_closed")
++fi
++
++interpreter_operation_confirmed="${GOVERNANCE_INTERPRETER_OPERATION_CONFIRMED:-0}"
++if [[ "${#interpreter_matches[@]}" -gt 0 ]]; then
++  reason="${interpreter_matches[0]#*reason=}"
++  if [[ "$interpreter_operation_confirmed" == "1" ]]; then
++    audit_interpreter_operation_escape "GOVERNANCE_INTERPRETER_OPERATION_CONFIRMED=1"
++  else
++    echo "GOVERNANCE BLOQUEIO: invocacao de interpretador com conteudo dinamico detectada ($reason); nao e resolvivel por analise estatica e exige aprovacao explicita." >&2
++    echo "Comando: $command_text" >&2
++    echo "Para prosseguir com pedido explicito do usuario: export GOVERNANCE_INTERPRETER_OPERATION_CONFIRMED=1" >&2
++    exit "$GIT_OPERATION_BLOCK_EXIT"
++  fi
++fi
++
+ git_operation_confirmed="${GOVERNANCE_GIT_OPERATION_CONFIRMED:-0}"
+ git_operation_mode="${GOVERNANCE_GIT_OPERATION_MODE:-fail}"
+ 
+-if [[ "$git_write_detected" -eq 1 ]]; then
++if [[ "${#git_matches[@]}" -gt 0 ]]; then
++  first_match="${git_matches[0]}"
++  policy_id="$(printf '%s' "$first_match" | sed -n 's/.*policy_id=\([^ ]*\).*/\1/p')"
++  subcommand="$(printf '%s' "$first_match" | sed -n 's/.*subcommand=\(.*\)$/\1/p')"
++
+   if [[ "$git_operation_confirmed" == "1" ]]; then
+-    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_CONFIRMED=1"
++    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_CONFIRMED=1" "$policy_id" "G-GIT-${subcommand// /-}"
+     exit 0
+   fi
+   if [[ "$git_operation_mode" == "warn" ]]; then
+-    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_MODE=warn"
++    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_MODE=warn" "$policy_id" "G-GIT-${subcommand// /-}"
+     echo "GOVERNANCE_GIT_OPERATION_MODE=warn: prosseguindo sem bloqueio (opt-out explicito)." >&2
+     exit 0
+   fi
+-  echo "$GIT_OPERATION_BLOCKED_MESSAGE" >&2
++  echo "GOVERNANCE BLOQUEIO: operacao git nao solicitada (git $subcommand, $policy_id) negada pelo gate canonico de operacao git." >&2
+   echo "Comando: $command_text" >&2
+   echo "Para prosseguir com pedido explicito do usuario: export GOVERNANCE_GIT_OPERATION_CONFIRMED=1" >&2
+   exit "$GIT_OPERATION_BLOCK_EXIT"
+diff --git a/.github/workflows/test.yml b/.github/workflows/test.yml
+index d7f077d..3614c6f 100644
+--- a/.github/workflows/test.yml
++++ b/.github/workflows/test.yml
+@@ -119,6 +119,9 @@ jobs:
+       - name: Policies sync drift gate
+         run: make check-policies-sync
+ 
++      - name: Git scope fingerprint gate
++        run: go run . hooks git-scope --check .
++
+       - name: Capability matrix sync gate
+         run: make check-capability-matrix-sync
+ 
+diff --git a/.specs/prd-hooks-canonicos-vendor-neutral/6.0_execution_report.md b/.specs/prd-hooks-canonicos-vendor-neutral/6.0_execution_report.md
+new file mode 100644
+index 0000000..4a4c66e
+--- /dev/null
++++ b/.specs/prd-hooks-canonicos-vendor-neutral/6.0_execution_report.md
+@@ -0,0 +1,126 @@
++<!-- evidence-contract: v2 -->
++# Relatório de Execução de Tarefa
++
++## Tarefa
++- ID: 6.0
++- Título: Harness contract aplicado e gate de operacao git derivado da policy
++- Arquivo: .specs/prd-hooks-canonicos-vendor-neutral/task-6.0-harness-contract-aplicado-e-gate-de-operacao-git-derivado.md
++- Estado: done
++
++## Contexto Carregado
++- PRD: .specs/prd-hooks-canonicos-vendor-neutral/prd.md (RF-18 a RF-24)
++- TechSpec: .specs/prd-hooks-canonicos-vendor-neutral/techspec.md (Interfaces Chave, Fase 3, risco R-02)
++- ADR: .specs/prd-hooks-canonicos-vendor-neutral/adr-003-parsing-estrutural-sem-truncamento.md
++- Governança: AGENTS.md, `.agents/skills/agent-governance/SKILL.md`, `.agents/skills/go-implementation/SKILL.md`, skill `execute-task`
++
++## Comandos Executados
++- `go build ./...` -> ok (`evidence/task-6.0/go-build.log`)
++- `go vet ./...` -> ok (`evidence/task-6.0/go-vet.log`)
++- `go test ./...` -> ok, todos os pacotes (`evidence/task-6.0/go-test-all.log`)
++- `go test ./internal/hookpolicy/... -v` -> ok, 17 testes (`evidence/task-6.0/go-test-hookpolicy.log`)
++- `golangci-lint run --config .golangci.yml --timeout 10m ./...` -> "0 issues" (`evidence/task-6.0/lint.log`)
++- `bash scripts/test-validators.sh` (ANTES da correção do gate, só com a matriz nova adicionada) -> falha em 21 casos (15 da matriz nova + 6 pré-existentes de tarefas concorrentes, não relacionados); evidência em `evidence/task-6.0/test-validators-red-before-fix.log`
++- `bash scripts/test-validators.sh` (DEPOIS de todas as correções, 6 rodadas de revisão adversarial) -> `Passaram: 105 | Falharam: 0`; evidência em `evidence/task-6.0/test-validators-green-after-fix.log`
++- `bash scripts/test-hooks.sh` -> `Resultado: 63 asserts OK, 0 asserts FAIL` (inclui bloco G4 do gate git) (`evidence/task-6.0/test-hooks.log`)
++- `make check-hooks-sync` -> ok, 0 drift
++- `make check-policies-sync` (inclui `go run . hooks git-scope --check .`) -> ok
++- `make check-mocks` -> "Mocks: OK (sincronizados com mockery.yml)" (`evidence/task-6.0/check-mocks.log`)
++- `bash scripts/check-package-coverage.sh 70` -> todos os 9 pacotes críticos preservados (74.3%–93.8%)
++- `go test -coverprofile=coverage.out ./... && go tool cover -func` -> total 82.2% (gate 75%)
++- `go run . hooks git-scope .` -> gera `.agents/generated/git-scope.json` (7 operações, fingerprint `018c60ee...`)
++- Prova de falha do gate de fingerprint (RF-19): artefato editado à mão -> `make check-policies-sync` falha com `hookpolicy: git scope artifact ... diverge do contrato do harness`; regenerado -> volta a passar
++- `bash scripts/check-scripts-sync.sh` -> isolado para o arquivo desta tarefa: `bash scripts/check-scripts-sync.sh | grep git-operation-gate` sem saída (0 drift); o comando completo reporta drift em `validate-task-evidence.sh`/`validate-review-evidence.sh`, edições em andamento de tarefas concorrentes (5.0/7.0) no mesmo working tree, confirmado via `git status --short` como não tocado por esta tarefa
++- 6 rodadas de revisão adversarial via subagente `reviewer`, cada uma encontrando e corrigindo um bypass real (ver seção "Histórico de Revisão Adversarial" abaixo)
++
++## Arquivos Alterados
++- `.agents/harness.yaml` (novo) — contrato do harness declarado
++- `internal/embedded/assets/.agents/harness.yaml` (espelho, ADR-001)
++- `internal/hookpolicy/git.go` (novo) — VO `GitOperation`, interface `GitScope`, `NewGitScope(harness.Contract)`
++- `internal/hookpolicy/artifact.go` (novo) — `ArtifactService.Generate/Check`, serialização determinística
++- `internal/hookpolicy/git_test.go`, `internal/hookpolicy/artifact_test.go` (novos)
++- `internal/hookpolicy/mocks/git_scope.go` (gerado por `make mocks`)
++- `cmd/ai_spec_harness/hooks_git_scope.go` (novo) — `ai-spec hooks git-scope [path] [--check]`
++- `cmd/ai_spec_harness/hookaudit_append.go` (novo) — `ai-spec hookaudit append` (RF-23)
++- `cmd/ai_spec_harness/hooks_inventory.go` — registra `git-scope` sob `hooks`
++- `cmd/ai_spec_harness/root.go` — registra `hookaudit`
++- `.agents/generated/git-scope.json` (novo, gerado) + `internal/embedded/assets/.agents/generated/git-scope.json` (espelho)
++- `Makefile` — `check-policies-sync` ganha `go run . hooks git-scope --check .` (RF-19)
++- `.github/workflows/test.yml` — step "Git scope fingerprint gate"
++- `.agents/scripts/git-operation-gate.sh` — reescrito: decisão por palavra-de-comando (classificador Python embutido com `shlex`, tokenização quote-aware, resolução recursiva de wrappers transparentes de execução, normalização de continuação de linha), leitura do escopo em `.agents/generated/git-scope.json`, classe própria para interpretador dinâmico/expansão de variável (RF-24), auditoria dupla (TSV legado + `internal/hookaudit` via `ai-spec hookaudit append`, best-effort)
++- Espelhos: `.claude/scripts/git-operation-gate.sh`, `internal/embedded/assets/.agents/scripts/git-operation-gate.sh`, `internal/embedded/assets/.claude/scripts/git-operation-gate.sh` (idênticos ao canônico, byte a byte)
++- `scripts/test-validators.sh` — matriz adversarial (11 casos ADR-003), matriz de falso positivo (4 casos), guarda de não-regressão (9 casos), mais as 5 matrizes de regressão nascidas das rodadas de revisão adversarial (separadores compostos, aspa não fechada, expansão de variável, wrappers de execução, continuação de linha) — 105 asserções no total nesta seção
++- `docs/cli-schema.json` — registra `hooks git-scope` e `hookaudit append`
++- `mockery.yml` — registra `internal/hookpolicy.GitScope`
++
++## Resultados de Validação
++- Testes: pass
++- Lint: pass
++- Veredito do Revisor: APPROVED (6ª rodada, após 5 rodadas de bugfix adversarial no mesmo diff)
++
++## Histórico de Revisão Adversarial
++
++A tarefa pediu invocação de `review`. Dado o caráter de segurança do componente (gate que decide bloqueio de `git push`/`reset --hard`/etc.), cada rodada de review recebeu instrução explícita para tentar ativamente quebrar o classificador, e cada rodada encontrou um bypass real, corrigido antes da rodada seguinte:
++
++1. **REJECTED** — separadores compostos `&&`/`||` não reconhecidos (`shlex` com `punctuation_chars=True` funde runs de pontuação contígua em um único token, que não batia com o conjunto fixo `{";", "&", "|", "(", ")"}`). Corrigido com regex `^[;&|]+$`.
++2. **REJECTED** — a regex do item 1 não cobria tokens que fundem separador a parênteses (`&(`, `;(`, `)&`, `)|`). Corrigido generalizando: qualquer token 100% composto de caracteres do próprio conjunto de pontuação do `shlex` (`();<>|&`) é separador.
++3. **REJECTED** — (a) aspa não fechada fazia o tokenizer engolir a exceção e devolver lista vazia -> `exit 0` silencioso; corrigido propagando a exceção como falha do classificador, tratada como fail-closed no wrapper bash. (b) Expansão de variável (`${IFS}`, `$VAR`) não coberta pelo guard de conteúdo dinâmico (que só olhava `$(`/crase); corrigido ampliando para qualquer `$` na string do comando.
++4. **REJECTED** — (a) só `env`/`command` eram reconhecidos como wrapper transparente; `exec`, `time`, `nohup`, `sudo`, `nice`, `timeout` etc. escapavam por completo. (b) Continuação de linha `\<newline>` quebrava o casamento literal do subcomando (`git \<newline>push` virava token `"\npush"`). Corrigido: lista de wrappers transparentes ampliada + normalização de `\<newline>` antes de tokenizar.
++5. **REJECTED** — a correção do item 4a parava no PRIMEIRO token "git" encontrado dentro do segmento do wrapper; `sudo -u git -- git push --force` escapava porque o primeiro "git" era o valor do argumento `-u` (nome de usuário), não o comando real, e o classificador desistia ali. Corrigido: para segmentos que começam com wrapper, TODAS as posições do segmento são candidatas, não só a primeira ocorrência textual de "git".
++6. **APPROVED** — revisão adversarial focada (múltiplos candidatos "git" falsos antes do real, wrapper aninhado, assignments + wrapper + git real) não encontrou bypass residual. Achado `[LOW]` registrado como risco residual aceitável (ver "Riscos Residuais").
++
++Cada rodada gerou caso(s) de regressão correspondente(s) em `scripts/test-validators.sh`, hoje 105 asserções verdes nesta seção do arquivo.
++
++## Critérios de Aceite
++- `.agents/harness.yaml` existe, é carregado, e `doctor` deixa de reportar `warn` de contrato não declarado -> comprovado: arquivo criado em `.agents/harness.yaml` (idêntico a `internal/harness/default-contract.yaml`, coerente com `harness-contract.schema.json`); `internal/doctor/doctor.go:266` só reporta `warn` quando `source == harness.SourceDefault`, e `harness.DefaultLoader.Load` retorna `SourceFile` sempre que `.agents/harness.yaml` existe — não há mudança de código necessária em doctor.go, apenas a presença do arquivo.
++- `GitPolicy.AutoCommit`/`AutoPush` têm call-site de produção real em `internal/hookpolicy` (RF-18) -> comprovado: `internal/hookpolicy/git.go` (`if !contract.Git.AutoCommit`, `if !contract.Git.AutoPush`); `TestGitScope_DerivesFromContract` prova a derivação nos três cenários.
++- `Fingerprint()` é determinístico, gravado em `.agents/generated/git-scope.json`, espelhado em `internal/embedded/assets/`, e o gate de CI falha comprovadamente quando o artefato é editado à mão (RF-19) -> comprovado: `TestGitScope_FingerprintIsDeterministic`/`TestGitScope_FingerprintIsStableAcrossOperationOrder` (unit); execução real: fingerprint editado à mão -> `make check-policies-sync` falha (exit 1) com mensagem explícita; regenerado -> volta a passar (exit 0). Mirrors idênticos confirmados por `diff`.
++- Os onze casos da matriz adversarial passam de `exit 0` para bloqueio ou aprovação explícita (RF-20, RF-21, RF-24) -> comprovado: `evidence/task-6.0/test-validators-red-before-fix.log` (todos os 11 em `exit 0` antes) e `evidence/task-6.0/test-validators-green-after-fix.log` (todos os 11 em `exit 2` depois).
++- Os quatro casos da matriz de falso positivo passam de `exit 2` para `exit 0` (RF-22) -> comprovado: mesmos dois logs, seção "Matriz de falso positivo do gate de operação Git".
++- Os casos de guarda de não-regressão mantêm o comportamento atual -> comprovado: seção correspondente nos dois logs, incluindo `grep -r "git push" docs/` (permitido) e `sudo -u git whoami` (permitido, achado da rodada 5/6).
++- Invocação de interpretador com conteúdo dinâmico tem `policy_id` próprio, distinto do de `git push` (RF-24) -> comprovado: `GOVERNANCE_INTERPRETER_OPERATION_CONFIRMED` (variável de aprovação distinta) e `policy_id=P-GIT-INTERP-DYNAMIC`/`gate_id=G-GIT-INTERP-DYNAMIC`; a classe cobre `eval`, `sh -c`/`bash -c`/etc., `$(...)`/crase e, desde a rodada 3, qualquer expansão de variável (`$VAR`).
++- O veredito individual de cada invocador interno de `bash` está no `execution_report.md` (6.9) -> comprovado: ver seção "Auditoria 6.9" abaixo.
++- A auditoria de bypass alcança `internal/hookaudit` sem perda do TSV legado (RF-23) -> comprovado: `cmd/ai_spec_harness/hookaudit_append.go` expõe `ai-spec hookaudit append` sobre `internal/hookaudit.Writer`; `audit_canonical_decision()` no gate chama esse comando (best-effort, `|| true`) em paralelo a `audit_log_line()` (TSV legado, inalterado); testado com binário local reconstruído: bypass gravou simultaneamente em `.aispec/governance-escapes.log` (TSV) e `.aispec/hook-decisions.jsonl` (JSONL).
++- A evidência inclui a execução vermelha das duas matrizes anterior à correção -> comprovado: `evidence/task-6.0/test-validators-red-before-fix.log`, gerado ANTES de qualquer edição em `.agents/scripts/git-operation-gate.sh` (a matriz foi acrescentada primeiro, subtarefa 6.1, e rodada contra o script ainda com a regex antiga).
++
++## Definition of Done (DoD)
++- [x] Todos os critérios de aceite acima comprovados com evidência física.
++- [x] Testes da tarefa criados e executados (`Testes: pass` com comando correspondente em Comandos Executados).
++- [x] Lint/vet/build sem regressão.
++- [x] Estado de tasks.md sincronizado com este relatório.
++
++## Auditoria 6.9 — invocadores internos de `bash`
++
++Verificados caso a caso, exigido pela subtarefa 6.9 (nenhum modificado, apenas auditado):
++
++- `.agents/hooks/subagent-stop-wrapper.sh:127` — `bash "$POST_EXECUTE_HOOK" "$prd_slug" "$task_id" "$result_json" 2>"$stderr_tmp"`. `POST_EXECUTE_HOOK` é caminho fixo resolvido em variável (não há `-c`, `eval`, `$()`, crase nem `$VAR` arbitrário no comando executado — o único `$` presente são variáveis próprias já resolvidas pelo shell antes de chegar ao payload do gate). **Veredito: NÃO capturado pela nova classe de interpretador dinâmico.** Confirmado por execução direta contra o classificador: payload com esse texto literal produz `exit 0` no gate (nenhum `GIT_MATCH`/`INTERPRETER_MATCH`).
++- `.agents/hooks/post-execute-task.sh:283` — `bash "$evidence_validator" "$REPO_ROOT/$report_path" >&2`. Mesmo padrão: `evidence_validator` é caminho fixo em variável. **Veredito: NÃO capturado.** Confirmado pela mesma execução direta (`exit 0`).
++
++## Diff Reviewed
++
++sha={{PATCH_SHA_PLACEHOLDER}}
++verdict=APPROVED
++tool=claude
++result_path=.specs/prd-hooks-canonicos-vendor-neutral/6.0_execution_result.json
++
++## Coverage
++
++package=internal/hookpolicy
++delta=+100.0% (pacote novo, cobertura agregada do repositório 82.2%, gate 75%)
++
++## Suposições
++- `auto_push: true` remove tanto `push` quanto `push --force` do escopo (o contrato só tem um campo `AutoPush`, sem distinção de force); risco residual documentado abaixo.
++- A classe de interpretador dinâmico (RF-24) se aplica a qualquer comando que contenha `eval`, `sh -c`/`bash -c`/`zsh -c`/`dash -c`/`ksh -c`, `$(...)`, crase ou qualquer `$` — não apenas quando "git" é textualmente visível — porque o ADR argumenta que esse conteúdo não é resolúvel por análise estática em nenhum caso.
++- Ausência de `python3` no host faz o gate falhar fechado (todo comando exige `GOVERNANCE_INTERPRETER_OPERATION_CONFIRMED=1`), coerente com a postura fail-closed do ADR-003, mas mais restritivo que o "ok" que `doctor.checkHookInterpreter` reporta hoje para ambientes só-`jq` — risco residual documentado abaixo.
++- Para segmentos que começam com um wrapper transparente de execução (`sudo`, `exec`, `time`, `nohup`, `nice`, `timeout`, ...), o classificador testa TODAS as posições do segmento em busca de um "git" real, em vez de tentar reconstruir a gramática exata de flags de cada wrapper (tarefa sem limite, avaliada e descartada durante a rodada 5 de revisão). Isso fecha o bypass por posição de argumento, mas introduz um trade-off documentado abaixo.
++- `.agents/scripts/validate-task-evidence.sh` e `.agents/scripts/validate-review-evidence.sh` estão sendo editados por tarefas concorrentes (5.0/7.0) no mesmo working tree; o drift reportado por `check-scripts-sync` referente a esses dois arquivos não pertence a esta tarefa e não foi tocado.
++
++## Riscos Residuais
++- `git clean` só é classificado como destrutivo quando há `-f` (ou `--force`) combinado com `-d` ou `-x` em qualquer token de flag curta — `git clean --force --dry-run` sem `-d`/`-x` não é interceptado; não coberto pela matriz de testes desta tarefa (risco menor: sem `-d`/`-x` o `clean` não remove diretórios nem arquivos ignorados).
++- `git restore --staged <arquivo>` é classificado como destrutivo do mesmo jeito que `git restore <arquivo>` — simplificação deliberada, já que o escopo mínimo da User Story só exige interceptar `git restore .`.
++- Em host sem `python3`, o gate git passa a tratar **todo** comando como pertencente à classe de interpretador dinâmico (fail-closed total), postura mais restritiva que o "ok (jq disponível)" hoje reportado por `internal/doctor/doctor.go:checkHookInterpreter` — nenhuma alteração foi feita em `doctor.go` porque o comportamento fail-closed é correto pela ADR, mas fora do escopo declarado desta tarefa para alterar o texto do check.
++- `make check-scripts-sync` pode reportar drift em `validate-task-evidence.sh`/`validate-review-evidence.sh` enquanto tarefas concorrentes (5.0/7.0) não commitarem seu próprio trabalho no mesmo working tree — não pertence a esta tarefa.
++- `ai-spec hookaudit append` depende do binário `ai-spec` atualizado estar no PATH; a chamada é best-effort (`|| true`) e não bloqueia o gate — verificado com binário local reconstruído.
++- **[LOW], achado da rodada 6 de revisão, aceito como dívida não bloqueante**: dentro de um segmento que começa com wrapper transparente, o classificador testa TODAS as posições do segmento como candidatas a "git" — isso corrige o bypass por posição de argumento (`sudo -u git -- git push`), mas pode gerar falso positivo quando "git" aparece como dado textual dentro do comando real do wrapper (ex.: `sudo -u alice -- echo git commit message` seria bloqueado, mesmo sendo um `echo` inofensivo). Esse comportamento é herdado do desenho heurístico do classificador (que já tratava "menção textual" como permitida SOMENTE fora de contexto de wrapper) e é uma troca deliberada de fail-closed sobre fail-open dentro da classe de wrapper, consistente com a postura geral da ADR-003. Não há caso de teste cobrindo esse FP específico nesta entrega; registrado para eventual refinamento futuro (ex.: restringir a varredura ao primeiro segmento não-flag após o wrapper mais próximo, com fallback fail-closed só quando a posição não puder ser determinada).
++
++## Conflitos de Regra
++- none
+diff --git a/Makefile b/Makefile
+index 163a512..8737833 100644
+--- a/Makefile
++++ b/Makefile
+@@ -89,6 +89,7 @@ check-scripts-sync:
+ 
+ check-policies-sync:
+ 	bash scripts/check-policies-sync.sh
++	go run . hooks git-scope --check .
+ 
+ check-capability-matrix-sync:
+ 	go test ./internal/capability/...
+diff --git a/cmd/ai_spec_harness/hookaudit_append.go b/cmd/ai_spec_harness/hookaudit_append.go
+new file mode 100644
+index 0000000..4494b48
+--- /dev/null
++++ b/cmd/ai_spec_harness/hookaudit_append.go
+@@ -0,0 +1,57 @@
++package aispecharness
++
++import (
++	"time"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookaudit"
++	"github.com/spf13/cobra"
++)
++
++const hookAuditDefaultPath = ".aispec/hook-decisions.jsonl"
++
++func newHookAuditCmd() *cobra.Command {
++	cmd := &cobra.Command{Use: "hookaudit", Short: "Registro canonico de decisoes de hooks de governanca"}
++	cmd.AddCommand(newHookAuditAppendCmd())
++	return cmd
++}
++
++func newHookAuditAppendCmd() *cobra.Command {
++	var (
++		path       string
++		event      string
++		provider   string
++		hook       string
++		decision   string
++		reason     string
++		policyID   string
++		gateID     string
++		durationMS int64
++	)
++	cmd := &cobra.Command{
++		Use:   "append",
++		Short: "Acrescenta uma decisao ao registro canonico de auditoria de hooks",
++		RunE: func(cmd *cobra.Command, args []string) error {
++			entry, err := hookaudit.NewEntry(time.Now().UTC(), event, provider, hook, decision, durationMS)
++			if err != nil {
++				return err
++			}
++			entry = entry.WithReason(reason, policyID, gateID)
++
++			writer, err := hookaudit.NewWriter(path)
++			if err != nil {
++				return err
++			}
++			return writer.Append(entry)
++		},
++	}
++	cmd.Flags().StringVar(&path, "path", hookAuditDefaultPath, "Caminho do arquivo JSONL de auditoria")
++	cmd.Flags().StringVar(&event, "event", "", "Evento canonico (ex.: before_tool)")
++	cmd.Flags().StringVar(&provider, "provider", "", "Provedor de CLI (claude, codex, copilot, opencode)")
++	cmd.Flags().StringVar(&hook, "hook", "", "Nome do hook que produziu a decisao")
++	cmd.Flags().StringVar(&decision, "decision", "", "Decisao tomada (ex.: BLOCK, ALLOW)")
++	cmd.Flags().StringVar(&reason, "reason", "", "Motivo legivel da decisao")
++	cmd.Flags().StringVar(&policyID, "policy-id", "", "Identificador da politica aplicada")
++	cmd.Flags().StringVar(&gateID, "gate-id", "", "Identificador do gate que decidiu")
++	cmd.Flags().Int64Var(&durationMS, "duration-ms", 0, "Duracao da avaliacao em milissegundos")
++	return cmd
++}
+diff --git a/cmd/ai_spec_harness/hooks_git_scope.go b/cmd/ai_spec_harness/hooks_git_scope.go
+new file mode 100644
+index 0000000..f3e6a37
+--- /dev/null
++++ b/cmd/ai_spec_harness/hooks_git_scope.go
+@@ -0,0 +1,35 @@
++package aispecharness
++
++import (
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/harness"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookpolicy"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
++	"github.com/spf13/cobra"
++)
++
++func newGitScopeCmd() *cobra.Command {
++	var check bool
++	cmd := &cobra.Command{
++		Use:   "git-scope [path]",
++		Short: "Gera ou verifica o escopo de operacoes git derivado do contrato do harness",
++		Args:  cobra.MaximumNArgs(1),
++		RunE: func(cmd *cobra.Command, args []string) error {
++			root := "."
++			if len(args) == 1 {
++				root = args[0]
++			}
++			filesystem := fs.NewOSFileSystem()
++			loader := harness.NewDefaultLoader(filesystem)
++			printer := output.New(newCommandEnv().verbose(cmd))
++			service := hookpolicy.NewArtifactService(filesystem, loader, printer)
++			if check {
++				return service.Check(root)
++			}
++			_, err := service.Generate(root)
++			return err
++		},
++	}
++	cmd.Flags().BoolVar(&check, "check", false, "Falha se o escopo git gerado divergir do contrato do harness")
++	return cmd
++}
+diff --git a/cmd/ai_spec_harness/hooks_inventory.go b/cmd/ai_spec_harness/hooks_inventory.go
+index 17c965c..596bd11 100644
+--- a/cmd/ai_spec_harness/hooks_inventory.go
++++ b/cmd/ai_spec_harness/hooks_inventory.go
+@@ -13,6 +13,7 @@ func newHooksCmd() *cobra.Command {
+ 	command := &hooksInventoryCommand{}
+ 	cmd := &cobra.Command{Use: "hooks", Short: "Inspeciona hooks de governanca"}
+ 	cmd.AddCommand(command.newInventoryCmd())
++	cmd.AddCommand(newGitScopeCmd())
+ 	return cmd
+ }
+ 
+diff --git a/cmd/ai_spec_harness/root.go b/cmd/ai_spec_harness/root.go
+index 218645b..70e6a27 100644
+--- a/cmd/ai_spec_harness/root.go
++++ b/cmd/ai_spec_harness/root.go
+@@ -38,6 +38,7 @@ Exemplos:
+ 	cmd.AddCommand(newChangelogCmd())
+ 	cmd.AddCommand(newDoctorCmd())
+ 	cmd.AddCommand(newHashCmd())
++	cmd.AddCommand(newHookAuditCmd())
+ 	cmd.AddCommand(newHooksCmd())
+ 	cmd.AddCommand(newInspectCmd())
+ 	cmd.AddCommand(newInstallCmd())
+diff --git a/docs/cli-schema.json b/docs/cli-schema.json
+index d6c0c92..001ec13 100644
+--- a/docs/cli-schema.json
++++ b/docs/cli-schema.json
+@@ -269,6 +269,57 @@
+         ],
+         "flags": {}
+       },
++      {
++        "name": "hookaudit",
++        "description": "Registro canonico de decisoes de hooks de governanca",
++        "args": [],
++        "flags": {},
++        "subcommands": [
++          {
++            "name": "append",
++            "description": "Acrescenta uma decisao ao registro canonico de auditoria de hooks",
++            "args": [],
++            "flags": {
++              "path": {
++                "type": "string",
++                "required": false
++              },
++              "event": {
++                "type": "string",
++                "required": false
++              },
++              "provider": {
++                "type": "string",
++                "required": false
++              },
++              "hook": {
++                "type": "string",
++                "required": false
++              },
++              "decision": {
++                "type": "string",
++                "required": false
++              },
++              "reason": {
++                "type": "string",
++                "required": false
++              },
++              "policy-id": {
++                "type": "string",
++                "required": false
++              },
++              "gate-id": {
++                "type": "string",
++                "required": false
++              },
++              "duration-ms": {
++                "type": "int",
++                "required": false
++              }
++            }
++          }
++        ]
++      },
+       {
+         "name": "hooks",
+         "description": "Inspeciona hooks de governanca",
+@@ -290,6 +341,22 @@
+                 "required": false
+               }
+             }
++          },
++          {
++            "name": "git-scope",
++            "description": "Gera ou verifica o escopo de operacoes git derivado do contrato do harness",
++            "args": [
++              {
++                "name": "path",
++                "required": false
++              }
++            ],
++            "flags": {
++              "check": {
++                "type": "bool",
++                "required": false
++              }
++            }
+           }
+         ]
+       },
+@@ -326,7 +393,9 @@
+       },
+       {
+         "name": "install",
+-        "aliases": ["init"],
++        "aliases": [
++          "init"
++        ],
+         "description": "Instala governanca de IA em um projeto",
+         "longDescription": "Instala o pacote de governanca para ferramentas de IA em um projeto alvo.",
+         "args": [
+@@ -1209,7 +1278,9 @@
+       },
+       {
+         "name": "upgrade",
+-        "aliases": ["sync"],
++        "aliases": [
++          "sync"
++        ],
+         "description": "Atualiza skills de governanca em um projeto",
+         "longDescription": "Verifica ou atualiza skills de governanca comparando versoes e checksums.",
+         "args": [
+diff --git a/evidence/task-6.0/check-mocks.log b/evidence/task-6.0/check-mocks.log
+new file mode 100644
+index 0000000..68ab7e3
+--- /dev/null
++++ b/evidence/task-6.0/check-mocks.log
+@@ -0,0 +1,3 @@
++bash scripts/check-mocks.sh
++Mocks: OK (sincronizados com mockery.yml)
++exit=0
+diff --git a/evidence/task-6.0/go-build.log b/evidence/task-6.0/go-build.log
+new file mode 100644
+index 0000000..9200c2a
+--- /dev/null
++++ b/evidence/task-6.0/go-build.log
+@@ -0,0 +1 @@
++exit=0
+diff --git a/evidence/task-6.0/go-test-all.log b/evidence/task-6.0/go-test-all.log
+new file mode 100644
+index 0000000..f8255d1
+--- /dev/null
++++ b/evidence/task-6.0/go-test-all.log
+@@ -0,0 +1,91 @@
++?   	github.com/JailtonJunior94/ai-spec-harness	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/cmd/ai_spec_harness	0.335s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/adapters	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/agents	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/agents/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/approval	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/approval/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/batchreport	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/bugschema	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/capability	1.797s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/changelog	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/config	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/config/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/conformance	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/contextgen	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/detect	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/detect/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/doctor	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/embedded	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/evidence	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/fs	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/fs/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/git	0.151s
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/git/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/gitref	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/harness	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/harness/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/hookaudit	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/hookinventory	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/hookpolicy	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/hookpolicy/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/inspect	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/install	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/invocation	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/lint	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/manifest	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/metrics	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/metrics/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/output	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/parity	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/platform	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/prerequisites	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/reviewverdict	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/acpfake	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/handshake	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mcpserver/wire	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/durable/mocks	[no test files]
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/memory/mocks	[no test files]
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/persistence	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/precondition	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/probe/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/render	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	2.286s
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/scaffold	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/sdd/tasks	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/semver	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillbump	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skillscheck	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdigest	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/specdrift	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskcriteria	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/taskloop/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/telemetry	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/traceability	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/tracking	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/triggers	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/triggers/mocks	[no test files]
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/txn	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/uninstall	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/upgrade	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/version	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/wrapper	(cached)
++ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	(cached)
++exit=0
+diff --git a/evidence/task-6.0/go-test-hookpolicy.log b/evidence/task-6.0/go-test-hookpolicy.log
+new file mode 100644
+index 0000000..6cdc7db
+--- /dev/null
++++ b/evidence/task-6.0/go-test-hookpolicy.log
+@@ -0,0 +1,38 @@
++=== RUN   TestArtifactService_GenerateWritesDeterministicJSON
++--- PASS: TestArtifactService_GenerateWritesDeterministicJSON (0.00s)
++=== RUN   TestArtifactService_GenerateFallsBackToEmbeddedDefault
++--- PASS: TestArtifactService_GenerateFallsBackToEmbeddedDefault (0.00s)
++=== RUN   TestArtifactService_CheckPassesAfterGenerate
++--- PASS: TestArtifactService_CheckPassesAfterGenerate (0.00s)
++=== RUN   TestArtifactService_CheckFailsWhenArtifactMissing
++--- PASS: TestArtifactService_CheckFailsWhenArtifactMissing (0.00s)
++=== RUN   TestArtifactService_CheckFailsWhenArtifactHandEdited
++--- PASS: TestArtifactService_CheckFailsWhenArtifactHandEdited (0.00s)
++=== RUN   TestArtifactService_CheckDetectsPolicyDrift
++--- PASS: TestArtifactService_CheckDetectsPolicyDrift (0.00s)
++=== RUN   TestGitScope_DerivesFromContract
++=== RUN   TestGitScope_DerivesFromContract/auto_commit_false_keeps_commit_gated
++=== RUN   TestGitScope_DerivesFromContract/auto_commit_true_removes_commit_from_scope
++=== RUN   TestGitScope_DerivesFromContract/auto_push_true_removes_push_and_push_force_from_scope
++--- PASS: TestGitScope_DerivesFromContract (0.00s)
++    --- PASS: TestGitScope_DerivesFromContract/auto_commit_false_keeps_commit_gated (0.00s)
++    --- PASS: TestGitScope_DerivesFromContract/auto_commit_true_removes_commit_from_scope (0.00s)
++    --- PASS: TestGitScope_DerivesFromContract/auto_push_true_removes_push_and_push_force_from_scope (0.00s)
++=== RUN   TestGitScope_AlwaysIncludesDestructiveOperations
++--- PASS: TestGitScope_AlwaysIncludesDestructiveOperations (0.00s)
++=== RUN   TestGitScope_DestructiveOperationsAreMarkedDestructiveAndApprovable
++--- PASS: TestGitScope_DestructiveOperationsAreMarkedDestructiveAndApprovable (0.00s)
++=== RUN   TestGitScope_FingerprintChangesWithPolicy
++--- PASS: TestGitScope_FingerprintChangesWithPolicy (0.00s)
++=== RUN   TestGitScope_FingerprintIsDeterministic
++--- PASS: TestGitScope_FingerprintIsDeterministic (0.00s)
++=== RUN   TestGitScope_FingerprintIsStableAcrossOperationOrder
++--- PASS: TestGitScope_FingerprintIsStableAcrossOperationOrder (0.00s)
++=== RUN   TestNewGitOperation_RejectsEmptySubcommand
++--- PASS: TestNewGitOperation_RejectsEmptySubcommand (0.00s)
++=== RUN   TestNewGitScope_RejectsUnsupportedVersion
++--- PASS: TestNewGitScope_RejectsUnsupportedVersion (0.00s)
++PASS
++ok  	github.com/JailtonJunior94/ai-spec-harness/internal/hookpolicy	(cached)
++?   	github.com/JailtonJunior94/ai-spec-harness/internal/hookpolicy/mocks	[no test files]
++exit=0
+diff --git a/evidence/task-6.0/go-vet.log b/evidence/task-6.0/go-vet.log
+new file mode 100644
+index 0000000..9200c2a
+--- /dev/null
++++ b/evidence/task-6.0/go-vet.log
+@@ -0,0 +1 @@
++exit=0
+diff --git a/evidence/task-6.0/lint.log b/evidence/task-6.0/lint.log
+new file mode 100644
+index 0000000..c2451d8
+--- /dev/null
++++ b/evidence/task-6.0/lint.log
+@@ -0,0 +1,2 @@
++0 issues.
++exit=0
+diff --git a/evidence/task-6.0/test-hooks.log b/evidence/task-6.0/test-hooks.log
+new file mode 100644
+index 0000000..8726645
+--- /dev/null
++++ b/evidence/task-6.0/test-hooks.log
+@@ -0,0 +1,124 @@
++--- F02: adaptador JSON estrito ---
++OK: resultado SDD execution valido
++  ✓ F02 resultado JSON completo = exit 0 (exit=0)
++  ✓ F02 resultado JSON incompleto = exit 1 (exit=1)
++--- F02b: wrapper encaminha checkpoint JSON v2 ---
++OK: resultado SDD execution valido
++  ✓ F02b YAML e encaminhado ao checkpoint JSON v2 (exit=0)
++--- F02c: stop_hook_active so libera quando e campo top-level ---
++  ✓ F02c envelope sem stop_hook_active bloqueia (exit=2)
++  ✓ F02c stop_hook_active no texto do subagente nao libera (exit=2)
++  ✓ F02c stop_hook_active aninhado nao libera (exit=2)
++  ✓ F02c stop_hook_active string nao libera (exit=2)
++  ✓ F02c stop_hook_active numerico nao libera (exit=2)
++  ✓ F02c stop_hook_active false nao libera (exit=2)
++  ✓ F02c stop_hook_active top-level true libera (exit=0)
++
++===============================================
++TEST HARNESS — hooks do orquestrador
++===============================================
++
++--- F18: cross-PRD spec-hash drift ---
++  ✓ F18 sem drift = exit 0 (exit=0)
++  ✓ F18 com drift = exit 1 (exit=1)
++  ✓ stderr contem 'FAIL F18: cross-PRD 'extb_v1' tem spec drift'
++
++--- F18: cross-PRD task ausente / nao done ---
++  ✓ F18 task externa nao done = exit 1 (exit=1)
++  ✓ stderr contem 'FAIL F18: cross-PRD task not done: ext_status/1.0'
++  ✓ F18 task externa ausente = exit 1 (exit=1)
++  ✓ stderr contem 'FAIL F18: cross-PRD task not found: ext_status/2.0'
++
++--- F27: cross-PRD circular dependency ---
++  ✓ F27 ciclo detectado = exit 1 (exit=1)
++  ✓ stderr contem 'FAIL F27: ciclo cross-PRD detectado'
++
++--- F29: gaps numericos ---
++  ✓ F29 gaps sem confirmacao = exit 1 (exit=1)
++  ✓ stderr contem 'FAIL F29: gaps na numeracao'
++  ✓ F29 gaps com confirmacao explicita = exit 0 (exit=0)
++  ✓ stderr contem 'WARN F29: gaps aceitos por AI_ALLOW_TASK_ID_GAPS=1'
++
++--- F35: git revert (DiffSHA inexistente) ---
++  ✓ F35 com SHA fake = exit 1 (exit=1)
++  ✓ stderr contem 'FAIL F35: DiffSHA deadbeef'
++  ✓ F35 default-on (sem env) = exit 1 (exit=1)
++  ✓ F35 opt-out (=0) nao dispara F35 mas RF-53 mantem exit 1 (exit=1)
++  ✓ stderr NAO contem 'FAIL F35'
++  ✓ stderr contem 'FAIL RF-53'
++
++--- F13: containment de report_path ---
++  ✓ F13 path absoluto = exit 1 (exit=1)
++  ✓ stderr contem 'FAIL F13: report_path'
++  ✓ F13 traversal = exit 1 (exit=1)
++  ✓ stderr contem 'path absoluto ou traversal'
++  ✓ F13 symlink externo = exit 1 (exit=1)
++  ✓ stderr contem 'resolve fora do repositório'
++
++--- F25: checkpoint ausente bloqueia (default FAIL) ---
++  ✓ F25 sem checkpoint default = exit 1 (FAIL) (exit=1)
++  ✓ stderr contem 'FAIL F25: checkpoint ausente'
++  ✓ F25 com AI_ALLOW_MISSING_CHECKPOINT=1 rebaixa para WARN (RF-53 mantem exit 1) (exit=1)
++  ✓ stderr contem 'WARN F25: checkpoint ausente.*back compat'
++  ✓ stderr NAO contem 'FAIL F25'
++
++--- Contrato YAML e status drift ---
++  ✓ YAML com campo extra = exit 1 (exit=1)
++  ✓ stderr contem 'contract violation'
++  ✓ YAML sem summary = exit 1 (exit=1)
++  ✓ stderr contem 'summary'
++  ✓ status drift done vs pending = exit 1 (exit=1)
++  ✓ stderr contem 'status drift'
++
++--- RF-53: AI_SDD_LEGACY_HOOK_CONTRACT nao fecha done sem prova ---
++  ✓ RF-53 contrato legado com relatorio trivial = exit 1 (exit=1)
++  ✓ stderr contem 'FAIL RF-53'
++  ✓ RF-53 contrato estrito com relatorio trivial = exit 1 (exit=1)
++
++--- Bloco 3: spec-drift gate no pre-commit hook ---
++
++  B3-1: staged apenas README.md → bloco 3 não dispara, exit 0
++  ✓ B3-1: staged=README exit 0 (exit=0)
++
++  B3-2: prd.md staged, sem drift → exit 0 + msg 'spec-drift OK'
++  ✓ B3-2: sem drift, exit 0 (exit=0)
++
++  B3-3: prd.md staged, drift detectado → exit 1 + comando de remediação
++[pre-commit] mudanças em PRD/techspec detectadas; verificando spec-drift...
++  ✓ B3-3: drift, exit 1 (exit=1)
++  ✓ stderr contem 'ai-spec sync-spec-hash'
++
++  B3-4: ai-spec ausente no PATH → warn + exit 0
++[pre-commit] mudanças em PRD/techspec detectadas; verificando spec-drift...
++  ✓ B3-4: sem ai-spec, exit 0 (exit=0)
++  ✓ stderr contem 'ai-spec não encontrado'
++
++  B3-5: ai-spec versão antiga v0.10.0 → warn + exit 0
++[pre-commit] mudanças em PRD/techspec detectadas; verificando spec-drift...
++  ✓ B3-5: versão antiga, exit 0 (exit=0)
++  ✓ stderr contem 'v0.10.0'
++
++Bloco 4: git-operation-gate.sh
++
++  G4-1: comando benigno passa (exit 0)
++  ✓ G4-1: comando benigno (exit=0)
++
++  G4-2: git push nao solicitado bloqueia (exit 2)
++  ✓ G4-2: git push bloqueia (exit=2)
++
++  G4-3: git push com GOVERNANCE_GIT_OPERATION_CONFIRMED=1 passa (exit 0)
++  ✓ G4-3: opt-out explicito passa (exit=0)
++
++  G4-4: comando vazio nega (RF-68) — regressao do exit 0 antigo
++  ✓ G4-4: comando ausente bloqueia (exit=2)
++
++  G4-5: payload truncavel (~70KB de padding + git push) bloqueia (ADR-003)
++  ✓ G4-5: payload grande com git push bloqueia (exit=2)
++
++  G4-6: JSON invalido bloqueia (falha fechada, sem fallback grep)
++  ✓ G4-6: JSON invalido bloqueia (exit=2)
++
++===============================================
++Resultado: 63 asserts OK, 0 asserts FAIL
++===============================================
++exit=0
+diff --git a/evidence/task-6.0/test-validators-green-after-fix.log b/evidence/task-6.0/test-validators-green-after-fix.log
+new file mode 100644
+index 0000000..8fb4181
+--- /dev/null
++++ b/evidence/task-6.0/test-validators-green-after-fix.log
+@@ -0,0 +1,144 @@
++Caso a: critério de aceite não comprovado
++  ✓ critério não comprovado falha (exit=1)
++Caso a2: critério não comprovado sob LC_ALL=C
++  ✓ critério não comprovado falha sob LC_ALL=C (exit=1)
++  ✓ gate de aceite permanece ativo sob LC_ALL=C
++Caso b: todos os critérios comprovados
++  ✓ todos comprovados passa (exit=0)
++Caso c: Testes: pass sem comando de teste
++  ✓ Testes pass sem comando falha (exit=1)
++Caso c2: prova de teste mvn/gradle no fim de linha
++  ✓ mvn test no fim da linha passa (exit=0)
++  ✓ gradle test no fim da linha passa (exit=0)
++  ✓ ./gradlew test no fim da linha passa (exit=0)
++  ✓ mvn test -q continua passando (exit=0)
++Caso d: task legada sem seção de critérios
++  ✓ task legada falha por padrão (exit=1)
++  ✓ diagnóstico de fail-closed presente
++Caso d2: AI_SDD_STRICT_EVIDENCE=0 nao reabre o gate de aceite
++  ✓ opt-out explícito continua reprovando (exit=1)
++  ✓ opt-out recebe o diagnóstico de fail-closed
++Caso d3: referência de task file inexistente
++  ✓ referência não resolvível falha por padrão (exit=1)
++Caso e: review.md válido sem achados
++  ✓ review válido passa (exit=0)
++  ✓ review válido passa sob LC_ALL=C (exit=0)
++Caso f: review REJECTED sem achado bloqueante
++  ✓ REJECTED sem high/critical falha (exit=1)
++Caso f2: TEST_NAME_RE aceita nome de teste Java quando stack detectada e Java
++  ✓ review Java com nome de teste JUnit passa (exit=0)
++Caso f3: stack Go rejeita nome de teste não-Go (não-afrouxamento)
++  ✓ review Go com nome de teste não-Go falha (não-afrouxamento) (exit=1)
++Caso g: review sem seção de validações
++  ✓ review sem validações falha (exit=1)
++Caso h1: mapa 1:1 ausente falha
++  ✓ mapa h1-ausente espera exit 1 (exit=1)
++  ✓ mapa h1-ausente espera exit 1 sob LC_ALL=C (exit=1)
++Caso h2: mapa 1:1 incompleto (critério sem evidência) falha
++  ✓ mapa h2-incompleto espera exit 1 (exit=1)
++  ✓ mapa h2-incompleto espera exit 1 sob LC_ALL=C (exit=1)
++Caso h3: critério não verificável falha
++  ✓ mapa h3-nverif espera exit 1 (exit=1)
++  ✓ mapa h3-nverif espera exit 1 sob LC_ALL=C (exit=1)
++Caso h4: linha de evidência fora das três formas de RF-48 falha
++  ✓ mapa h4-badev espera exit 1 (exit=1)
++  ✓ mapa h4-badev espera exit 1 sob LC_ALL=C (exit=1)
++Caso h5: mapa 1:1 completo e válido passa
++  ✓ mapa h5-ok espera exit 0 (exit=0)
++  ✓ mapa h5-ok espera exit 0 sob LC_ALL=C (exit=0)
++Caso h6: AI_SDD_STRICT_EVIDENCE=0 NÃO reabre o mapa 1:1
++  ✓ opt-out legado não faz o mapa incompleto passar (exit=1)
++  ✓ mapa 1:1 permanece fail-closed sob AI_SDD_STRICT_EVIDENCE=0
++Caso i: relatório declara critérios sem task file resolvível é fail-closed mesmo com opt-out
++  ✓ critérios sem task file falha mesmo com opt-out (exit=1)
++  ✓ opt-out não alcança o confronto 1:1 (RF-53)
++Caso j: relatório com seção de Evidência de Memória Durável não quebra gates
++  ✓ relatório com evidência de memória durável passa (exit=0)
++  ✓ relatório com evidência de memória durável passa sob LC_ALL=C (exit=0)
++Caso k: relatório sem marcador não vira histórico ao ser commitado
++  ✓ relatório sem marcador e não commitado falha (exit=1)
++  ✓ commitar NÃO concede a isenção histórica (corte fixo) (exit=1)
++  ✓ a ruptura aponta o commit de corte fixo, não HEAD
++  ✓ nenhuma isenção v1 concedida a trabalho novo commitado
++Caso l: divergência de estado entre tasks.md, relatório e execution-result
++  ✓ tasks.md=blocked com relatório/JSON=done reprova (exit=1)
++  ✓ a ruptura nomeia a divergência de estado
++  ✓ tasks.md reconciliado com a evidência elimina a divergência
++  ✓ qualquer terceiro estado em tasks.md também reprova (exit=1)
++Matriz de fronteira do gate de operação Git (RF-57)
++  ✓ fronteira 1 KiB benigna passa (exit=0)
++  ✓ fronteira 1 KiB com git push bloqueia (exit=2)
++  ✓ fronteira 64 KiB benigna passa (exit=0)
++  ✓ fronteira 64 KiB com git push bloqueia (exit=2)
++  ✓ fronteira 65 KiB benigna passa (exit=0)
++  ✓ fronteira 65 KiB com git push bloqueia (exit=2)
++  ✓ fronteira 1 MiB benigna passa (exit=0)
++  ✓ fronteira 1 MiB com git push bloqueia (exit=2)
++Reprodução da prova de exploração do ADR-003 (payload de ~70 KB)
++  ✓ payload de exploração (~70KB) bloqueia (exit=2)
++  ✓ controle sem padding bloqueia (exit=2)
++Falha fechada: JSON inválido bloqueia
++  ✓ JSON inválido bloqueia (exit=2)
++Negação por ausência de alvo (RF-68)
++  ✓ payload sem comando extraível bloqueia (exit=2)
++  ✓ stdin vazio bloqueia (exit=2)
++Campo command homônimo aninhado não é extraído (regressão do fallback grep)
++  ✓ comando homônimo aninhado não vaza para aprovação (exit=2)
++  ✓ comando direto benigno com metadata homônima passa (exit=0)
++Matriz adversarial do gate de operação Git (RF-20, RF-21, RF-24)
++  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: git -C /repo push (exit=2)
++  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: git -c user.name=x commit -m y (exit=2)
++  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: $(echo git) push (exit=2)
++  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: eval "git push" (exit=2)
++  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: sh -c "git push" (exit=2)
++  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: /usr/bin/git push (exit=2)
++  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: git.exe push (exit=2)
++  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: git reset --hard (exit=2)
++  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: git clean -fd (exit=2)
++  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: git checkout -- . (exit=2)
++  ✓ escapa hoje via regex, deve bloquear/exigir aprovação: git restore . (exit=2)
++Guarda de regressão: separadores compostos && e || antes de operação git
++  ✓ encadeamento não pode escapar do gate: echo ok && git push (exit=2)
++  ✓ encadeamento não pode escapar do gate: git status && git push --force (exit=2)
++  ✓ encadeamento não pode escapar do gate: true || git clean -fdx (exit=2)
++  ✓ encadeamento não pode escapar do gate: echo ok ; git reset --hard (exit=2)
++  ✓ encadeamento não pode escapar do gate: echo ok &(git push) (exit=2)
++  ✓ encadeamento não pode escapar do gate: echo ok ;(git push) (exit=2)
++  ✓ encadeamento não pode escapar do gate: echo ok )&git push (exit=2)
++  ✓ encadeamento não pode escapar do gate: echo ok )|git push (exit=2)
++Matriz de falso positivo do gate de operação Git (RF-22)
++  ✓ bloqueia hoje por menção textual, deve permitir: echo git commit (exit=0)
++  ✓ bloqueia hoje por menção textual, deve permitir: man git commit (exit=0)
++  ✓ bloqueia hoje por menção textual, deve permitir: echo "a|git commit -m x" (exit=0)
++  ✓ bloqueia hoje por menção textual, deve permitir: echo "a|git push origin main" (exit=0)
++Guarda de não-regressão do gate de operação Git
++  ✓ já bloqueia hoje, deve continuar bloqueando: env git push (exit=2)
++  ✓ já bloqueia hoje, deve continuar bloqueando: command git push (exit=2)
++  ✓ já bloqueia hoje, deve continuar bloqueando: git push --force (exit=2)
++  ✓ já bloqueia hoje, deve continuar bloqueando: git push --force-with-lease (exit=2)
++  ✓ já bloqueia hoje, deve continuar bloqueando: git push -f origin main (exit=2)
++  ✓ já bloqueia hoje, deve continuar bloqueando: git push origin +main (exit=2)
++  ✓ já bloqueia hoje, deve continuar bloqueando: git push (exit=2)
++  ✓ menção textual em grep não bloqueia (não-regressão) (exit=0)
++  ✓ nome de usuário "git" como valor de flag de wrapper não bloqueia (exit=0)
++Falha fechada do classificador em comando com aspa não fechada
++  ✓ aspa não fechada com git bloqueia (falha fechada) (exit=2)
++  ✓ aspa não fechada sem git bloqueia (falha fechada) (exit=2)
++Ofuscação por expansão de variável não pode escapar do gate
++  ✓ expansão de IFS não escapa: git${IFS}push${IFS}--force (exit=2)
++  ✓ expansão de variável arbitrária não escapa: $G $P (exit=2)
++Wrappers transparentes de execução não podem escapar do gate
++  ✓ wrapper transparente não pode escapar: exec git push --force (exit=2)
++  ✓ wrapper transparente não pode escapar: time git push --force (exit=2)
++  ✓ wrapper transparente não pode escapar: nohup git push --force (exit=2)
++  ✓ wrapper transparente não pode escapar: sudo git push --force (exit=2)
++  ✓ wrapper transparente não pode escapar: nice git push --force (exit=2)
++  ✓ wrapper transparente não pode escapar: timeout 5 git push --force (exit=2)
++  ✓ wrapper transparente não pode escapar: sudo nohup git push --force (exit=2)
++  ✓ wrapper transparente não pode escapar: timeout -k 5 30 git push --force (exit=2)
++  ✓ wrapper transparente não pode escapar: sudo -u git -- git push --force (exit=2)
++Continuação de linha não pode escapar do gate
++  ✓ continuação de linha antes do subcomando não escapa (exit=2)
++
++Passaram: 105 | Falharam: 0
++Todos os testes de validador passaram.
+diff --git a/evidence/task-6.0/test-validators-red-before-fix.log b/evidence/task-6.0/test-validators-red-before-fix.log
+new file mode 100644
+index 0000000..777c7aa
+--- /dev/null
++++ b/evidence/task-6.0/test-validators-red-before-fix.log
+@@ -0,0 +1,117 @@
++Caso a: critério de aceite não comprovado
++  ✓ critério não comprovado falha (exit=1)
++Caso a2: critério não comprovado sob LC_ALL=C
++  ✓ critério não comprovado falha sob LC_ALL=C (exit=1)
++  ✓ gate de aceite permanece ativo sob LC_ALL=C
++Caso b: todos os critérios comprovados
++  ✓ todos comprovados passa (exit=0)
++Caso c: Testes: pass sem comando de teste
++  ✓ Testes pass sem comando falha (exit=1)
++Caso c2: prova de teste mvn/gradle no fim de linha
++  ✗ mvn test no fim da linha passa (esperado=0, obtido=1)
++  ✗ gradle test no fim da linha passa (esperado=0, obtido=1)
++  ✗ ./gradlew test no fim da linha passa (esperado=0, obtido=1)
++  ✗ mvn test -q continua passando (esperado=0, obtido=1)
++Caso d: task legada sem seção de critérios
++  ✓ task legada falha por padrão (exit=1)
++  ✓ diagnóstico de fail-closed presente
++Caso d2: AI_SDD_STRICT_EVIDENCE=0 nao reabre o gate de aceite
++  ✓ opt-out explícito continua reprovando (exit=1)
++  ✓ opt-out recebe o diagnóstico de fail-closed
++Caso d3: referência de task file inexistente
++  ✓ referência não resolvível falha por padrão (exit=1)
++Caso e: review.md válido sem achados
++  ✓ review válido passa (exit=0)
++  ✓ review válido passa sob LC_ALL=C (exit=0)
++Caso f: review REJECTED sem achado bloqueante
++  ✓ REJECTED sem high/critical falha (exit=1)
++Caso g: review sem seção de validações
++  ✓ review sem validações falha (exit=1)
++Caso h1: mapa 1:1 ausente falha
++  ✓ mapa h1-ausente espera exit 1 (exit=1)
++  ✓ mapa h1-ausente espera exit 1 sob LC_ALL=C (exit=1)
++Caso h2: mapa 1:1 incompleto (critério sem evidência) falha
++  ✓ mapa h2-incompleto espera exit 1 (exit=1)
++  ✓ mapa h2-incompleto espera exit 1 sob LC_ALL=C (exit=1)
++Caso h3: critério não verificável falha
++  ✓ mapa h3-nverif espera exit 1 (exit=1)
++  ✓ mapa h3-nverif espera exit 1 sob LC_ALL=C (exit=1)
++Caso h4: linha de evidência fora das três formas de RF-48 falha
++  ✓ mapa h4-badev espera exit 1 (exit=1)
++  ✓ mapa h4-badev espera exit 1 sob LC_ALL=C (exit=1)
++Caso h5: mapa 1:1 completo e válido passa
++  ✓ mapa h5-ok espera exit 0 (exit=0)
++  ✓ mapa h5-ok espera exit 0 sob LC_ALL=C (exit=0)
++Caso h6: AI_SDD_STRICT_EVIDENCE=0 NÃO reabre o mapa 1:1
++  ✓ opt-out legado não faz o mapa incompleto passar (exit=1)
++  ✓ mapa 1:1 permanece fail-closed sob AI_SDD_STRICT_EVIDENCE=0
++Caso i: relatório declara critérios sem task file resolvível é fail-closed mesmo com opt-out
++  ✓ critérios sem task file falha mesmo com opt-out (exit=1)
++  ✓ opt-out não alcança o confronto 1:1 (RF-53)
++Caso j: relatório com seção de Evidência de Memória Durável não quebra gates
++  ✗ relatório com evidência de memória durável passa (esperado=0, obtido=1)
++    diagnostico: FALTANDO: prova fisica invalida: snapshot fisico canonico invalido: validar provas fisicas do resultado: taskloop: resultado diverge do estado final recomputado
++
++Validação do pacote de evidências falhou: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T//test-validators.Iiw9lJ/repository/report-j.md
++  ✗ relatório com evidência de memória durável passa sob LC_ALL=C (esperado=0, obtido=1)
++    diagnostico: FALTANDO: prova fisica invalida: snapshot fisico canonico invalido: validar provas fisicas do resultado: taskloop: resultado diverge do estado final recomputado
++
++Validação do pacote de evidências falhou: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T//test-validators.Iiw9lJ/repository/report-j.md
++Caso k: relatório sem marcador não vira histórico ao ser commitado
++  ✓ relatório sem marcador e não commitado falha (exit=1)
++  ✓ commitar NÃO concede a isenção histórica (corte fixo) (exit=1)
++  ✓ a ruptura aponta o commit de corte fixo, não HEAD
++  ✓ nenhuma isenção v1 concedida a trabalho novo commitado
++Caso l: divergência de estado entre tasks.md, relatório e execution-result
++  ✓ tasks.md=blocked com relatório/JSON=done reprova (exit=1)
++  ✓ a ruptura nomeia a divergência de estado
++  ✓ tasks.md reconciliado com a evidência elimina a divergência
++  ✓ qualquer terceiro estado em tasks.md também reprova (exit=1)
++Matriz de fronteira do gate de operação Git (RF-57)
++  ✓ fronteira 1 KiB benigna passa (exit=0)
++  ✓ fronteira 1 KiB com git push bloqueia (exit=2)
++  ✓ fronteira 64 KiB benigna passa (exit=0)
++  ✓ fronteira 64 KiB com git push bloqueia (exit=2)
++  ✓ fronteira 65 KiB benigna passa (exit=0)
++  ✓ fronteira 65 KiB com git push bloqueia (exit=2)
++  ✓ fronteira 1 MiB benigna passa (exit=0)
++  ✓ fronteira 1 MiB com git push bloqueia (exit=2)
++Reprodução da prova de exploração do ADR-003 (payload de ~70 KB)
++  ✓ payload de exploração (~70KB) bloqueia (exit=2)
++  ✓ controle sem padding bloqueia (exit=2)
++Falha fechada: JSON inválido bloqueia
++  ✓ JSON inválido bloqueia (exit=2)
++Negação por ausência de alvo (RF-68)
++  ✓ payload sem comando extraível bloqueia (exit=2)
++  ✓ stdin vazio bloqueia (exit=2)
++Campo command homônimo aninhado não é extraído (regressão do fallback grep)
++  ✓ comando homônimo aninhado não vaza para aprovação (exit=2)
++  ✓ comando direto benigno com metadata homônima passa (exit=0)
++Matriz adversarial do gate de operação Git (RF-20, RF-21, RF-24)
++  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: git -C /repo push (esperado=2, obtido=0)
++  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: git -c user.name=x commit -m y (esperado=2, obtido=0)
++  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: $(echo git) push (esperado=2, obtido=0)
++  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: eval "git push" (esperado=2, obtido=0)
++  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: sh -c "git push" (esperado=2, obtido=0)
++  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: /usr/bin/git push (esperado=2, obtido=0)
++  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: git.exe push (esperado=2, obtido=0)
++  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: git reset --hard (esperado=2, obtido=0)
++  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: git clean -fd (esperado=2, obtido=0)
++  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: git checkout -- . (esperado=2, obtido=0)
++  ✗ escapa hoje via regex, deve bloquear/exigir aprovação: git restore . (esperado=2, obtido=0)
++Matriz de falso positivo do gate de operação Git (RF-22)
++  ✗ bloqueia hoje por menção textual, deve permitir: echo git commit (esperado=0, obtido=2)
++  ✗ bloqueia hoje por menção textual, deve permitir: man git commit (esperado=0, obtido=2)
++  ✗ bloqueia hoje por menção textual, deve permitir: echo "a|git commit -m x" (esperado=0, obtido=2)
++  ✗ bloqueia hoje por menção textual, deve permitir: echo "a|git push origin main" (esperado=0, obtido=2)
++Guarda de não-regressão do gate de operação Git
++  ✓ já bloqueia hoje, deve continuar bloqueando: env git push (exit=2)
++  ✓ já bloqueia hoje, deve continuar bloqueando: command git push (exit=2)
++  ✓ já bloqueia hoje, deve continuar bloqueando: git push --force (exit=2)
++  ✓ já bloqueia hoje, deve continuar bloqueando: git push --force-with-lease (exit=2)
++  ✓ já bloqueia hoje, deve continuar bloqueando: git push -f origin main (exit=2)
++  ✓ já bloqueia hoje, deve continuar bloqueando: git push origin +main (exit=2)
++  ✓ já bloqueia hoje, deve continuar bloqueando: git push (exit=2)
++  ✓ menção textual em grep não bloqueia (não-regressão) (exit=0)
++
++Passaram: 59 | Falharam: 21
+diff --git a/internal/embedded/assets/.agents/generated/git-scope.json b/internal/embedded/assets/.agents/generated/git-scope.json
+new file mode 100644
+index 0000000..d2d25fb
+--- /dev/null
++++ b/internal/embedded/assets/.agents/generated/git-scope.json
+@@ -0,0 +1,41 @@
++{
++  "version": 1,
++  "fingerprint": "018c60eecfe4dd4b8052fc2cc8e96ed896e3c061cdb10f309c3277037b46583d",
++  "operations": [
++    {
++      "subcommand": "checkout --",
++      "destructive": true,
++      "requires_approval": true
++    },
++    {
++      "subcommand": "clean",
++      "destructive": true,
++      "requires_approval": true
++    },
++    {
++      "subcommand": "commit",
++      "destructive": false,
++      "requires_approval": true
++    },
++    {
++      "subcommand": "push",
++      "destructive": false,
++      "requires_approval": true
++    },
++    {
++      "subcommand": "push --force",
++      "destructive": true,
++      "requires_approval": true
++    },
++    {
++      "subcommand": "reset --hard",
++      "destructive": true,
++      "requires_approval": true
++    },
++    {
++      "subcommand": "restore",
++      "destructive": true,
++      "requires_approval": true
++    }
++  ]
++}
+diff --git a/internal/embedded/assets/.agents/harness.yaml b/internal/embedded/assets/.agents/harness.yaml
+new file mode 100644
+index 0000000..04a8b57
+--- /dev/null
++++ b/internal/embedded/assets/.agents/harness.yaml
+@@ -0,0 +1,13 @@
++version: 1
++git:
++  auto_commit: false
++  auto_push: false
++approval:
++  require_for_destructive_operations: true
++quality:
++  require_tests: true
++  require_lint: true
++evidence:
++  require_execution_report: true
++skills:
++  discovery_mode: declared
+diff --git a/internal/embedded/assets/.agents/scripts/git-operation-gate.sh b/internal/embedded/assets/.agents/scripts/git-operation-gate.sh
+index 6a92e7f..02a2ccc 100755
+--- a/internal/embedded/assets/.agents/scripts/git-operation-gate.sh
++++ b/internal/embedded/assets/.agents/scripts/git-operation-gate.sh
+@@ -3,9 +3,6 @@
+ set -euo pipefail
+ 
+ readonly GIT_OPERATION_BLOCK_EXIT=2
+-readonly GIT_OPERATION_GATED_SUBCOMMANDS="git commit e git push"
+-readonly GIT_OPERATION_BLOCKED_MESSAGE="GOVERNANCE BLOQUEIO: operacao git nao solicitada ($GIT_OPERATION_GATED_SUBCOMMANDS) negada pelo gate canonico de operacao git."
+-readonly DESTRUCTIVE_OPERATION_BLOCKED_MESSAGE="GOVERNANCE BLOQUEIO: comando destrutivo detectado (remocao recursiva e forcada) negado independentemente do estado de preload."
+ 
+ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ project_root="${AGENTS_ROOT:-$(cd "$script_dir/../.." && pwd)}"
+@@ -29,6 +26,16 @@ fi
+ 
+ source "$parse_lib"
+ 
++git_scope_path=""
++for candidate in \
++  "$project_root/.agents/generated/git-scope.json" \
++  "$project_root/internal/embedded/assets/.agents/generated/git-scope.json"; do
++  if [[ -f "$candidate" ]]; then
++    git_scope_path="$candidate"
++    break
++  fi
++done
++
+ payload=""
+ if [[ ! -t 0 ]]; then
+   payload="$(cat)"
+@@ -44,34 +51,53 @@ if [[ -z "$command_text" ]]; then
+   exit "$GIT_OPERATION_BLOCK_EXIT"
+ fi
+ 
+-audit_git_operation_escape() {
+-  local reason="$1"
++audit_log_line() {
++  local reason="$1" command="$2"
+   local log="${GOVERNANCE_ESCAPE_LOG:-$project_root/.aispec/governance-escapes.log}"
+   local stamp
+   stamp="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
+-  echo "AUDITORIA: escape de operacao git registrado ($reason) para comando: $command_text" >&2
+   mkdir -p "$(dirname "$log")" 2>/dev/null || return 0
+   printf '%s\t%s\t%s\t%s\t%s\n' \
+-    "$stamp" "$reason" "$command_text" "${AI_TOOL:-desconhecido}" "${USER:-desconhecido}" \
++    "$stamp" "$reason" "$command" "${AI_TOOL:-desconhecido}" "${USER:-desconhecido}" \
+     >> "$log" 2>/dev/null || true
+ }
+ 
++audit_canonical_decision() {
++  local decision="$1" reason="$2" policy_id="$3" gate_id="$4"
++  command -v ai-spec >/dev/null 2>&1 || return 0
++  local canonical_log="${GOVERNANCE_HOOKAUDIT_LOG:-$project_root/.aispec/hook-decisions.jsonl}"
++  ai-spec hookaudit append \
++    --path "$canonical_log" \
++    --event before_tool \
++    --provider "${AI_TOOL:-desconhecido}" \
++    --hook git-operation-gate \
++    --decision "$decision" \
++    --reason "$reason" \
++    --policy-id "$policy_id" \
++    --gate-id "$gate_id" \
++    --duration-ms 0 \
++    >/dev/null 2>&1 || true
++}
++
++audit_git_operation_escape() {
++  local reason="$1" policy_id="$2" gate_id="$3"
++  echo "AUDITORIA: escape de operacao git registrado ($reason) para comando: $command_text" >&2
++  audit_log_line "$reason" "$command_text"
++  audit_canonical_decision "ALLOW" "$reason" "$policy_id" "$gate_id"
++}
++
+ audit_destructive_operation_escape() {
+   local reason="$1"
+-  local log="${GOVERNANCE_ESCAPE_LOG:-$project_root/.aispec/governance-escapes.log}"
+-  local stamp
+-  stamp="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
+   echo "AUDITORIA: escape de operacao destrutiva registrado ($reason) para comando: $command_text" >&2
+-  mkdir -p "$(dirname "$log")" 2>/dev/null || return 0
+-  printf '%s\t%s\t%s\t%s\t%s\n' \
+-    "$stamp" "$reason" "$command_text" "${AI_TOOL:-desconhecido}" "${USER:-desconhecido}" \
+-    >> "$log" 2>/dev/null || true
++  audit_log_line "$reason" "$command_text"
++  audit_canonical_decision "ALLOW" "$reason" "P-RM-DESTRUCTIVE" "G-RM-DESTRUCTIVE"
+ }
+ 
+-is_unsolicited_git_write_segment() {
+-  local segment="$1"
+-  printf '%s' "$segment" \
+-    | grep -Eq '(^|[[:space:]])git([[:space:]]+-[^[:space:]]+)*[[:space:]]+(commit|push)([[:space:]]|$)'
++audit_interpreter_operation_escape() {
++  local reason="$1"
++  echo "AUDITORIA: escape de operacao com interpretador dinamico registrado ($reason) para comando: $command_text" >&2
++  audit_log_line "$reason" "$command_text"
++  audit_canonical_decision "ALLOW" "$reason" "P-GIT-INTERP-DYNAMIC" "G-GIT-INTERP-DYNAMIC"
+ }
+ 
+ is_destructive_removal_segment() {
+@@ -90,14 +116,9 @@ is_destructive_removal_segment() {
+   return 1
+ }
+ 
+-git_write_detected=0
+ destructive_detected=0
+-
+ while IFS= read -r segment || [[ -n "$segment" ]]; do
+   [[ -n "$segment" ]] || continue
+-  if is_unsolicited_git_write_segment "$segment"; then
+-    git_write_detected=1
+-  fi
+   if is_destructive_removal_segment "$segment"; then
+     destructive_detected=1
+   fi
+@@ -108,27 +129,244 @@ if [[ "$destructive_detected" -eq 1 ]]; then
+   if [[ "$destructive_confirmed" == "1" ]]; then
+     audit_destructive_operation_escape "GOVERNANCE_DESTRUCTIVE_OPERATION_CONFIRMED=1"
+   else
+-    echo "$DESTRUCTIVE_OPERATION_BLOCKED_MESSAGE" >&2
++    echo "GOVERNANCE BLOQUEIO: comando destrutivo detectado (remocao recursiva e forcada) negado independentemente do estado de preload." >&2
+     echo "Comando: $command_text" >&2
+     echo "Para prosseguir com pedido explicito do usuario: export GOVERNANCE_DESTRUCTIVE_OPERATION_CONFIRMED=1" >&2
+     exit "$GIT_OPERATION_BLOCK_EXIT"
+   fi
+ fi
+ 
++classify_git_command_structurally() {
++  python3 -c '
++import json
++import re
++import shlex
++import sys
++
++command_text = sys.stdin.read()
++scope_path = sys.argv[1] if len(sys.argv) > 1 else ""
++
++scope_names = set()
++if scope_path:
++    try:
++        with open(scope_path, "r", encoding="utf-8") as handle:
++            scope = json.load(handle)
++        scope_names = {op.get("subcommand", "") for op in scope.get("operations", [])}
++    except Exception:
++        scope_names = set()
++
++TRANSPARENT_WRAPPERS = {
++    "env", "command", "exec", "time", "nohup", "nice", "ionice", "setsid",
++    "timeout", "stdbuf", "sudo", "doas",
++}
++GIT_ARG_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--super-prefix"}
++INTERPRETER_SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
++FORCE_FLAGS = {"--force", "--force-with-lease", "-f"}
++ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
++LINE_CONTINUATION_RE = re.compile(r"\\\r?\n")
++
++
++class TokenizeError(Exception):
++    pass
++
++
++def tokenize(text):
++    normalized = LINE_CONTINUATION_RE.sub(" ", text)
++    lexer = shlex.shlex(normalized, posix=True, punctuation_chars=True)
++    lexer.whitespace_split = True
++    try:
++        return list(lexer)
++    except ValueError as err:
++        raise TokenizeError(str(err)) from err
++
++
++PUNCTUATION_CHARS = set("();<>|&")
++
++
++def is_pure_punctuation_token(token):
++    return len(token) > 0 and all(char in PUNCTUATION_CHARS for char in token)
++
++
++def split_segments(tokens):
++    segments = []
++    current = []
++    for token in tokens:
++        if is_pure_punctuation_token(token):
++            if current:
++                segments.append(current)
++                current = []
++            continue
++        current.append(token)
++    if current:
++        segments.append(current)
++    return segments
++
++
++def normalize_base(token):
++    base = token.rsplit("/", 1)[-1]
++    if base.endswith(".exe"):
++        base = base[:-4]
++    return base
++
++
++def resolve_command_word(segment):
++    idx = 0
++    while idx < len(segment) and ASSIGNMENT_RE.match(segment[idx]):
++        idx += 1
++    if idx >= len(segment):
++        return None, idx
++    return normalize_base(segment[idx]), idx
++
++
++def resolve_candidate_positions(segment, head_word, head_idx):
++    if head_word in TRANSPARENT_WRAPPERS:
++        return list(range(head_idx, len(segment)))
++    return [head_idx]
++
++
++def resolve_git_subcommand(segment, start_idx):
++    idx = start_idx + 1
++    while idx < len(segment):
++        token = segment[idx]
++        if token.startswith("-"):
++            if token in GIT_ARG_FLAGS:
++                idx += 2
++                continue
++            idx += 1
++            continue
++        return token, idx
++    return None, idx
++
++
++def has_flag_char(rest, char):
++    for token in rest:
++        if token.startswith("--"):
++            continue
++        if token.startswith("-") and char in token[1:]:
++            return True
++    return False
++
++
++def classify_git(segment, start_idx):
++    subcommand, sub_idx = resolve_git_subcommand(segment, start_idx)
++    if subcommand is None:
++        return None
++    rest = segment[sub_idx + 1:]
++    if subcommand == "commit":
++        return {"subcommand": "commit", "policy_id": "P-GIT-COMMIT"}
++    if subcommand == "push":
++        is_force = any(token in FORCE_FLAGS for token in rest) or any(
++            token.startswith("+") for token in rest if not token.startswith("-")
++        )
++        if is_force:
++            return {"subcommand": "push --force", "policy_id": "P-GIT-PUSH-FORCE"}
++        return {"subcommand": "push", "policy_id": "P-GIT-PUSH"}
++    if subcommand == "reset":
++        if "--hard" in rest:
++            return {"subcommand": "reset --hard", "policy_id": "P-GIT-RESET-HARD"}
++        return None
++    if subcommand == "clean":
++        if (has_flag_char(rest, "f") or "--force" in rest) and (
++            has_flag_char(rest, "d") or has_flag_char(rest, "x")
++        ):
++            return {"subcommand": "clean", "policy_id": "P-GIT-CLEAN"}
++        return None
++    if subcommand == "checkout":
++        if "--" in rest or "-f" in rest or "--force" in rest:
++            return {"subcommand": "checkout --", "policy_id": "P-GIT-CHECKOUT-RESTORE"}
++        return None
++    if subcommand == "restore":
++        return {"subcommand": "restore", "policy_id": "P-GIT-CHECKOUT-RESTORE"}
++    return None
++
++
++matches = []
++interpreter_hits = []
++
++try:
++    tokens = tokenize(command_text)
++except TokenizeError as err:
++    print("tokenize failed: %s" % err, file=sys.stderr)
++    sys.exit(1)
++
++for segment in split_segments(tokens):
++    if not segment:
++        continue
++    head_word, head_idx = resolve_command_word(segment)
++    if head_word is None:
++        continue
++    for pos in resolve_candidate_positions(segment, head_word, head_idx):
++        candidate = normalize_base(segment[pos])
++        if candidate == "git":
++            result = classify_git(segment, pos)
++            if result and (not scope_names or result["subcommand"] in scope_names):
++                matches.append(result)
++        if candidate == "eval":
++            interpreter_hits.append("eval")
++        if candidate in INTERPRETER_SHELLS and "-c" in segment[pos:]:
++            interpreter_hits.append(candidate + "_-c")
++
++if "$(" in command_text or "`" in command_text:
++    interpreter_hits.append("command_substitution")
++elif "$" in command_text:
++    interpreter_hits.append("variable_expansion")
++
++for match in matches:
++    print("GIT_MATCH policy_id=%s subcommand=%s" % (match["policy_id"], match["subcommand"]))
++for hit in interpreter_hits:
++    print("INTERPRETER_MATCH reason=%s" % hit)
++' "$1"
++}
++
++git_matches=()
++interpreter_matches=()
++if command -v python3 >/dev/null 2>&1; then
++  classification=""
++  if ! classification="$(printf '%s' "$command_text" | classify_git_command_structurally "${git_scope_path:-}" 2>/dev/null)"; then
++    interpreter_matches+=("INTERPRETER_MATCH reason=classifier_error_fail_closed")
++  fi
++  while IFS= read -r line; do
++    [[ -n "$line" ]] || continue
++    case "$line" in
++      GIT_MATCH*) git_matches+=("$line") ;;
++      INTERPRETER_MATCH*) interpreter_matches+=("$line") ;;
++    esac
++  done <<< "$classification"
++else
++  interpreter_matches+=("INTERPRETER_MATCH reason=python3_unavailable_fail_closed")
++fi
++
++interpreter_operation_confirmed="${GOVERNANCE_INTERPRETER_OPERATION_CONFIRMED:-0}"
++if [[ "${#interpreter_matches[@]}" -gt 0 ]]; then
++  reason="${interpreter_matches[0]#*reason=}"
++  if [[ "$interpreter_operation_confirmed" == "1" ]]; then
++    audit_interpreter_operation_escape "GOVERNANCE_INTERPRETER_OPERATION_CONFIRMED=1"
++  else
++    echo "GOVERNANCE BLOQUEIO: invocacao de interpretador com conteudo dinamico detectada ($reason); nao e resolvivel por analise estatica e exige aprovacao explicita." >&2
++    echo "Comando: $command_text" >&2
++    echo "Para prosseguir com pedido explicito do usuario: export GOVERNANCE_INTERPRETER_OPERATION_CONFIRMED=1" >&2
++    exit "$GIT_OPERATION_BLOCK_EXIT"
++  fi
++fi
++
+ git_operation_confirmed="${GOVERNANCE_GIT_OPERATION_CONFIRMED:-0}"
+ git_operation_mode="${GOVERNANCE_GIT_OPERATION_MODE:-fail}"
+ 
+-if [[ "$git_write_detected" -eq 1 ]]; then
++if [[ "${#git_matches[@]}" -gt 0 ]]; then
++  first_match="${git_matches[0]}"
++  policy_id="$(printf '%s' "$first_match" | sed -n 's/.*policy_id=\([^ ]*\).*/\1/p')"
++  subcommand="$(printf '%s' "$first_match" | sed -n 's/.*subcommand=\(.*\)$/\1/p')"
++
+   if [[ "$git_operation_confirmed" == "1" ]]; then
+-    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_CONFIRMED=1"
++    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_CONFIRMED=1" "$policy_id" "G-GIT-${subcommand// /-}"
+     exit 0
+   fi
+   if [[ "$git_operation_mode" == "warn" ]]; then
+-    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_MODE=warn"
++    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_MODE=warn" "$policy_id" "G-GIT-${subcommand// /-}"
+     echo "GOVERNANCE_GIT_OPERATION_MODE=warn: prosseguindo sem bloqueio (opt-out explicito)." >&2
+     exit 0
+   fi
+-  echo "$GIT_OPERATION_BLOCKED_MESSAGE" >&2
++  echo "GOVERNANCE BLOQUEIO: operacao git nao solicitada (git $subcommand, $policy_id) negada pelo gate canonico de operacao git." >&2
+   echo "Comando: $command_text" >&2
+   echo "Para prosseguir com pedido explicito do usuario: export GOVERNANCE_GIT_OPERATION_CONFIRMED=1" >&2
+   exit "$GIT_OPERATION_BLOCK_EXIT"
+diff --git a/internal/embedded/assets/.claude/scripts/git-operation-gate.sh b/internal/embedded/assets/.claude/scripts/git-operation-gate.sh
+index 6a92e7f..02a2ccc 100755
+--- a/internal/embedded/assets/.claude/scripts/git-operation-gate.sh
++++ b/internal/embedded/assets/.claude/scripts/git-operation-gate.sh
+@@ -3,9 +3,6 @@
+ set -euo pipefail
+ 
+ readonly GIT_OPERATION_BLOCK_EXIT=2
+-readonly GIT_OPERATION_GATED_SUBCOMMANDS="git commit e git push"
+-readonly GIT_OPERATION_BLOCKED_MESSAGE="GOVERNANCE BLOQUEIO: operacao git nao solicitada ($GIT_OPERATION_GATED_SUBCOMMANDS) negada pelo gate canonico de operacao git."
+-readonly DESTRUCTIVE_OPERATION_BLOCKED_MESSAGE="GOVERNANCE BLOQUEIO: comando destrutivo detectado (remocao recursiva e forcada) negado independentemente do estado de preload."
+ 
+ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ project_root="${AGENTS_ROOT:-$(cd "$script_dir/../.." && pwd)}"
+@@ -29,6 +26,16 @@ fi
+ 
+ source "$parse_lib"
+ 
++git_scope_path=""
++for candidate in \
++  "$project_root/.agents/generated/git-scope.json" \
++  "$project_root/internal/embedded/assets/.agents/generated/git-scope.json"; do
++  if [[ -f "$candidate" ]]; then
++    git_scope_path="$candidate"
++    break
++  fi
++done
++
+ payload=""
+ if [[ ! -t 0 ]]; then
+   payload="$(cat)"
+@@ -44,34 +51,53 @@ if [[ -z "$command_text" ]]; then
+   exit "$GIT_OPERATION_BLOCK_EXIT"
+ fi
+ 
+-audit_git_operation_escape() {
+-  local reason="$1"
++audit_log_line() {
++  local reason="$1" command="$2"
+   local log="${GOVERNANCE_ESCAPE_LOG:-$project_root/.aispec/governance-escapes.log}"
+   local stamp
+   stamp="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
+-  echo "AUDITORIA: escape de operacao git registrado ($reason) para comando: $command_text" >&2
+   mkdir -p "$(dirname "$log")" 2>/dev/null || return 0
+   printf '%s\t%s\t%s\t%s\t%s\n' \
+-    "$stamp" "$reason" "$command_text" "${AI_TOOL:-desconhecido}" "${USER:-desconhecido}" \
++    "$stamp" "$reason" "$command" "${AI_TOOL:-desconhecido}" "${USER:-desconhecido}" \
+     >> "$log" 2>/dev/null || true
+ }
+ 
++audit_canonical_decision() {
++  local decision="$1" reason="$2" policy_id="$3" gate_id="$4"
++  command -v ai-spec >/dev/null 2>&1 || return 0
++  local canonical_log="${GOVERNANCE_HOOKAUDIT_LOG:-$project_root/.aispec/hook-decisions.jsonl}"
++  ai-spec hookaudit append \
++    --path "$canonical_log" \
++    --event before_tool \
++    --provider "${AI_TOOL:-desconhecido}" \
++    --hook git-operation-gate \
++    --decision "$decision" \
++    --reason "$reason" \
++    --policy-id "$policy_id" \
++    --gate-id "$gate_id" \
++    --duration-ms 0 \
++    >/dev/null 2>&1 || true
++}
++
++audit_git_operation_escape() {
++  local reason="$1" policy_id="$2" gate_id="$3"
++  echo "AUDITORIA: escape de operacao git registrado ($reason) para comando: $command_text" >&2
++  audit_log_line "$reason" "$command_text"
++  audit_canonical_decision "ALLOW" "$reason" "$policy_id" "$gate_id"
++}
++
+ audit_destructive_operation_escape() {
+   local reason="$1"
+-  local log="${GOVERNANCE_ESCAPE_LOG:-$project_root/.aispec/governance-escapes.log}"
+-  local stamp
+-  stamp="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
+   echo "AUDITORIA: escape de operacao destrutiva registrado ($reason) para comando: $command_text" >&2
+-  mkdir -p "$(dirname "$log")" 2>/dev/null || return 0
+-  printf '%s\t%s\t%s\t%s\t%s\n' \
+-    "$stamp" "$reason" "$command_text" "${AI_TOOL:-desconhecido}" "${USER:-desconhecido}" \
+-    >> "$log" 2>/dev/null || true
++  audit_log_line "$reason" "$command_text"
++  audit_canonical_decision "ALLOW" "$reason" "P-RM-DESTRUCTIVE" "G-RM-DESTRUCTIVE"
+ }
+ 
+-is_unsolicited_git_write_segment() {
+-  local segment="$1"
+-  printf '%s' "$segment" \
+-    | grep -Eq '(^|[[:space:]])git([[:space:]]+-[^[:space:]]+)*[[:space:]]+(commit|push)([[:space:]]|$)'
++audit_interpreter_operation_escape() {
++  local reason="$1"
++  echo "AUDITORIA: escape de operacao com interpretador dinamico registrado ($reason) para comando: $command_text" >&2
++  audit_log_line "$reason" "$command_text"
++  audit_canonical_decision "ALLOW" "$reason" "P-GIT-INTERP-DYNAMIC" "G-GIT-INTERP-DYNAMIC"
+ }
+ 
+ is_destructive_removal_segment() {
+@@ -90,14 +116,9 @@ is_destructive_removal_segment() {
+   return 1
+ }
+ 
+-git_write_detected=0
+ destructive_detected=0
+-
+ while IFS= read -r segment || [[ -n "$segment" ]]; do
+   [[ -n "$segment" ]] || continue
+-  if is_unsolicited_git_write_segment "$segment"; then
+-    git_write_detected=1
+-  fi
+   if is_destructive_removal_segment "$segment"; then
+     destructive_detected=1
+   fi
+@@ -108,27 +129,244 @@ if [[ "$destructive_detected" -eq 1 ]]; then
+   if [[ "$destructive_confirmed" == "1" ]]; then
+     audit_destructive_operation_escape "GOVERNANCE_DESTRUCTIVE_OPERATION_CONFIRMED=1"
+   else
+-    echo "$DESTRUCTIVE_OPERATION_BLOCKED_MESSAGE" >&2
++    echo "GOVERNANCE BLOQUEIO: comando destrutivo detectado (remocao recursiva e forcada) negado independentemente do estado de preload." >&2
+     echo "Comando: $command_text" >&2
+     echo "Para prosseguir com pedido explicito do usuario: export GOVERNANCE_DESTRUCTIVE_OPERATION_CONFIRMED=1" >&2
+     exit "$GIT_OPERATION_BLOCK_EXIT"
+   fi
+ fi
+ 
++classify_git_command_structurally() {
++  python3 -c '
++import json
++import re
++import shlex
++import sys
++
++command_text = sys.stdin.read()
++scope_path = sys.argv[1] if len(sys.argv) > 1 else ""
++
++scope_names = set()
++if scope_path:
++    try:
++        with open(scope_path, "r", encoding="utf-8") as handle:
++            scope = json.load(handle)
++        scope_names = {op.get("subcommand", "") for op in scope.get("operations", [])}
++    except Exception:
++        scope_names = set()
++
++TRANSPARENT_WRAPPERS = {
++    "env", "command", "exec", "time", "nohup", "nice", "ionice", "setsid",
++    "timeout", "stdbuf", "sudo", "doas",
++}
++GIT_ARG_FLAGS = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--super-prefix"}
++INTERPRETER_SHELLS = {"sh", "bash", "zsh", "dash", "ksh"}
++FORCE_FLAGS = {"--force", "--force-with-lease", "-f"}
++ASSIGNMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
++LINE_CONTINUATION_RE = re.compile(r"\\\r?\n")
++
++
++class TokenizeError(Exception):
++    pass
++
++
++def tokenize(text):
++    normalized = LINE_CONTINUATION_RE.sub(" ", text)
++    lexer = shlex.shlex(normalized, posix=True, punctuation_chars=True)
++    lexer.whitespace_split = True
++    try:
++        return list(lexer)
++    except ValueError as err:
++        raise TokenizeError(str(err)) from err
++
++
++PUNCTUATION_CHARS = set("();<>|&")
++
++
++def is_pure_punctuation_token(token):
++    return len(token) > 0 and all(char in PUNCTUATION_CHARS for char in token)
++
++
++def split_segments(tokens):
++    segments = []
++    current = []
++    for token in tokens:
++        if is_pure_punctuation_token(token):
++            if current:
++                segments.append(current)
++                current = []
++            continue
++        current.append(token)
++    if current:
++        segments.append(current)
++    return segments
++
++
++def normalize_base(token):
++    base = token.rsplit("/", 1)[-1]
++    if base.endswith(".exe"):
++        base = base[:-4]
++    return base
++
++
++def resolve_command_word(segment):
++    idx = 0
++    while idx < len(segment) and ASSIGNMENT_RE.match(segment[idx]):
++        idx += 1
++    if idx >= len(segment):
++        return None, idx
++    return normalize_base(segment[idx]), idx
++
++
++def resolve_candidate_positions(segment, head_word, head_idx):
++    if head_word in TRANSPARENT_WRAPPERS:
++        return list(range(head_idx, len(segment)))
++    return [head_idx]
++
++
++def resolve_git_subcommand(segment, start_idx):
++    idx = start_idx + 1
++    while idx < len(segment):
++        token = segment[idx]
++        if token.startswith("-"):
++            if token in GIT_ARG_FLAGS:
++                idx += 2
++                continue
++            idx += 1
++            continue
++        return token, idx
++    return None, idx
++
++
++def has_flag_char(rest, char):
++    for token in rest:
++        if token.startswith("--"):
++            continue
++        if token.startswith("-") and char in token[1:]:
++            return True
++    return False
++
++
++def classify_git(segment, start_idx):
++    subcommand, sub_idx = resolve_git_subcommand(segment, start_idx)
++    if subcommand is None:
++        return None
++    rest = segment[sub_idx + 1:]
++    if subcommand == "commit":
++        return {"subcommand": "commit", "policy_id": "P-GIT-COMMIT"}
++    if subcommand == "push":
++        is_force = any(token in FORCE_FLAGS for token in rest) or any(
++            token.startswith("+") for token in rest if not token.startswith("-")
++        )
++        if is_force:
++            return {"subcommand": "push --force", "policy_id": "P-GIT-PUSH-FORCE"}
++        return {"subcommand": "push", "policy_id": "P-GIT-PUSH"}
++    if subcommand == "reset":
++        if "--hard" in rest:
++            return {"subcommand": "reset --hard", "policy_id": "P-GIT-RESET-HARD"}
++        return None
++    if subcommand == "clean":
++        if (has_flag_char(rest, "f") or "--force" in rest) and (
++            has_flag_char(rest, "d") or has_flag_char(rest, "x")
++        ):
++            return {"subcommand": "clean", "policy_id": "P-GIT-CLEAN"}
++        return None
++    if subcommand == "checkout":
++        if "--" in rest or "-f" in rest or "--force" in rest:
++            return {"subcommand": "checkout --", "policy_id": "P-GIT-CHECKOUT-RESTORE"}
++        return None
++    if subcommand == "restore":
++        return {"subcommand": "restore", "policy_id": "P-GIT-CHECKOUT-RESTORE"}
++    return None
++
++
++matches = []
++interpreter_hits = []
++
++try:
++    tokens = tokenize(command_text)
++except TokenizeError as err:
++    print("tokenize failed: %s" % err, file=sys.stderr)
++    sys.exit(1)
++
++for segment in split_segments(tokens):
++    if not segment:
++        continue
++    head_word, head_idx = resolve_command_word(segment)
++    if head_word is None:
++        continue
++    for pos in resolve_candidate_positions(segment, head_word, head_idx):
++        candidate = normalize_base(segment[pos])
++        if candidate == "git":
++            result = classify_git(segment, pos)
++            if result and (not scope_names or result["subcommand"] in scope_names):
++                matches.append(result)
++        if candidate == "eval":
++            interpreter_hits.append("eval")
++        if candidate in INTERPRETER_SHELLS and "-c" in segment[pos:]:
++            interpreter_hits.append(candidate + "_-c")
++
++if "$(" in command_text or "`" in command_text:
++    interpreter_hits.append("command_substitution")
++elif "$" in command_text:
++    interpreter_hits.append("variable_expansion")
++
++for match in matches:
++    print("GIT_MATCH policy_id=%s subcommand=%s" % (match["policy_id"], match["subcommand"]))
++for hit in interpreter_hits:
++    print("INTERPRETER_MATCH reason=%s" % hit)
++' "$1"
++}
++
++git_matches=()
++interpreter_matches=()
++if command -v python3 >/dev/null 2>&1; then
++  classification=""
++  if ! classification="$(printf '%s' "$command_text" | classify_git_command_structurally "${git_scope_path:-}" 2>/dev/null)"; then
++    interpreter_matches+=("INTERPRETER_MATCH reason=classifier_error_fail_closed")
++  fi
++  while IFS= read -r line; do
++    [[ -n "$line" ]] || continue
++    case "$line" in
++      GIT_MATCH*) git_matches+=("$line") ;;
++      INTERPRETER_MATCH*) interpreter_matches+=("$line") ;;
++    esac
++  done <<< "$classification"
++else
++  interpreter_matches+=("INTERPRETER_MATCH reason=python3_unavailable_fail_closed")
++fi
++
++interpreter_operation_confirmed="${GOVERNANCE_INTERPRETER_OPERATION_CONFIRMED:-0}"
++if [[ "${#interpreter_matches[@]}" -gt 0 ]]; then
++  reason="${interpreter_matches[0]#*reason=}"
++  if [[ "$interpreter_operation_confirmed" == "1" ]]; then
++    audit_interpreter_operation_escape "GOVERNANCE_INTERPRETER_OPERATION_CONFIRMED=1"
++  else
++    echo "GOVERNANCE BLOQUEIO: invocacao de interpretador com conteudo dinamico detectada ($reason); nao e resolvivel por analise estatica e exige aprovacao explicita." >&2
++    echo "Comando: $command_text" >&2
++    echo "Para prosseguir com pedido explicito do usuario: export GOVERNANCE_INTERPRETER_OPERATION_CONFIRMED=1" >&2
++    exit "$GIT_OPERATION_BLOCK_EXIT"
++  fi
++fi
++
+ git_operation_confirmed="${GOVERNANCE_GIT_OPERATION_CONFIRMED:-0}"
+ git_operation_mode="${GOVERNANCE_GIT_OPERATION_MODE:-fail}"
+ 
+-if [[ "$git_write_detected" -eq 1 ]]; then
++if [[ "${#git_matches[@]}" -gt 0 ]]; then
++  first_match="${git_matches[0]}"
++  policy_id="$(printf '%s' "$first_match" | sed -n 's/.*policy_id=\([^ ]*\).*/\1/p')"
++  subcommand="$(printf '%s' "$first_match" | sed -n 's/.*subcommand=\(.*\)$/\1/p')"
++
+   if [[ "$git_operation_confirmed" == "1" ]]; then
+-    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_CONFIRMED=1"
++    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_CONFIRMED=1" "$policy_id" "G-GIT-${subcommand// /-}"
+     exit 0
+   fi
+   if [[ "$git_operation_mode" == "warn" ]]; then
+-    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_MODE=warn"
++    audit_git_operation_escape "GOVERNANCE_GIT_OPERATION_MODE=warn" "$policy_id" "G-GIT-${subcommand// /-}"
+     echo "GOVERNANCE_GIT_OPERATION_MODE=warn: prosseguindo sem bloqueio (opt-out explicito)." >&2
+     exit 0
+   fi
+-  echo "$GIT_OPERATION_BLOCKED_MESSAGE" >&2
++  echo "GOVERNANCE BLOQUEIO: operacao git nao solicitada (git $subcommand, $policy_id) negada pelo gate canonico de operacao git." >&2
+   echo "Comando: $command_text" >&2
+   echo "Para prosseguir com pedido explicito do usuario: export GOVERNANCE_GIT_OPERATION_CONFIRMED=1" >&2
+   exit "$GIT_OPERATION_BLOCK_EXIT"
+diff --git a/internal/hookpolicy/artifact.go b/internal/hookpolicy/artifact.go
+new file mode 100644
+index 0000000..c5d8444
+--- /dev/null
++++ b/internal/hookpolicy/artifact.go
+@@ -0,0 +1,118 @@
++package hookpolicy
++
++import (
++	"bytes"
++	"encoding/json"
++	"fmt"
++	"path/filepath"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/harness"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
++)
++
++const GitScopeArtifactRelativePath = ".agents/generated/git-scope.json"
++
++type GitOperationArtifact struct {
++	Subcommand       string `json:"subcommand"`
++	Destructive      bool   `json:"destructive"`
++	RequiresApproval bool   `json:"requires_approval"`
++}
++
++type GitScopeArtifact struct {
++	Version     int                    `json:"version"`
++	Fingerprint string                 `json:"fingerprint"`
++	Operations  []GitOperationArtifact `json:"operations"`
++}
++
++func BuildGitScopeArtifact(scope GitScope) GitScopeArtifact {
++	operations := scope.Operations()
++	items := make([]GitOperationArtifact, 0, len(operations))
++	for _, operation := range operations {
++		items = append(items, GitOperationArtifact{
++			Subcommand:       operation.Subcommand(),
++			Destructive:      operation.Destructive(),
++			RequiresApproval: operation.RequiresApproval(),
++		})
++	}
++	return GitScopeArtifact{
++		Version:     harness.SupportedVersion,
++		Fingerprint: scope.Fingerprint(),
++		Operations:  items,
++	}
++}
++
++func encodeGitScopeArtifact(artifact GitScopeArtifact) ([]byte, error) {
++	encoded, err := json.MarshalIndent(artifact, "", "  ")
++	if err != nil {
++		return nil, fmt.Errorf("hookpolicy: encode git scope artifact: %w", err)
++	}
++	return append(encoded, '\n'), nil
++}
++
++type ArtifactService struct {
++	fs      fs.FileSystem
++	loader  harness.Loader
++	printer *output.Printer
++}
++
++func NewArtifactService(filesystem fs.FileSystem, loader harness.Loader, printer *output.Printer) *ArtifactService {
++	return &ArtifactService{fs: filesystem, loader: loader, printer: printer}
++}
++
++func (s *ArtifactService) buildArtifact(root string) (GitScopeArtifact, error) {
++	contract, _, err := s.loader.Load(root)
++	if err != nil {
++		return GitScopeArtifact{}, fmt.Errorf("hookpolicy: load harness contract: %w", err)
++	}
++	scope, err := NewGitScope(contract)
++	if err != nil {
++		return GitScopeArtifact{}, err
++	}
++	return BuildGitScopeArtifact(scope), nil
++}
++
++func (s *ArtifactService) Generate(root string) (GitScopeArtifact, error) {
++	artifact, err := s.buildArtifact(root)
++	if err != nil {
++		return GitScopeArtifact{}, err
++	}
++
++	encoded, err := encodeGitScopeArtifact(artifact)
++	if err != nil {
++		return GitScopeArtifact{}, err
++	}
++
++	path := filepath.Join(root, filepath.FromSlash(GitScopeArtifactRelativePath))
++	if err := s.fs.WriteFileAtomic(path, encoded); err != nil {
++		return GitScopeArtifact{}, fmt.Errorf("hookpolicy: write git scope artifact %s: %w", path, err)
++	}
++
++	if s.printer != nil {
++		s.printer.Info("Escopo Git gerado: %d operacoes, fingerprint %s", len(artifact.Operations), artifact.Fingerprint)
++	}
++	return artifact, nil
++}
++
++func (s *ArtifactService) Check(root string) error {
++	artifact, err := s.buildArtifact(root)
++	if err != nil {
++		return err
++	}
++
++	wantEncoded, err := encodeGitScopeArtifact(artifact)
++	if err != nil {
++		return err
++	}
++
++	path := filepath.Join(root, filepath.FromSlash(GitScopeArtifactRelativePath))
++	got, err := s.fs.ReadFile(path)
++	if err != nil {
++		return fmt.Errorf("hookpolicy: read git scope artifact %s: %w (rode 'ai-spec hooks git-scope %s' para gerar)", path, err, root)
++	}
++
++	if !bytes.Equal(got, wantEncoded) {
++		return fmt.Errorf("hookpolicy: git scope artifact %s diverge do contrato do harness; rode 'ai-spec hooks git-scope %s' para regenerar", path, root)
++	}
++	return nil
++}
+diff --git a/internal/hookpolicy/artifact_test.go b/internal/hookpolicy/artifact_test.go
+new file mode 100644
+index 0000000..a015fc2
+--- /dev/null
++++ b/internal/hookpolicy/artifact_test.go
+@@ -0,0 +1,123 @@
++package hookpolicy_test
++
++import (
++	"encoding/json"
++	"io"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/harness"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookpolicy"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
++	"github.com/stretchr/testify/require"
++)
++
++const fixtureContract = `version: 1
++git:
++  auto_commit: false
++  auto_push: false
++approval:
++  require_for_destructive_operations: true
++quality:
++  require_tests: true
++  require_lint: true
++evidence:
++  require_execution_report: true
++skills:
++  discovery_mode: declared
++`
++
++func newArtifactService(filesystem fs.FileSystem) *hookpolicy.ArtifactService {
++	loader := harness.NewDefaultLoader(filesystem)
++	printer := &output.Printer{Out: io.Discard, Err: io.Discard}
++	return hookpolicy.NewArtifactService(filesystem, loader, printer)
++}
++
++func TestArtifactService_GenerateWritesDeterministicJSON(t *testing.T) {
++	filesystem := fs.NewFakeFileSystem()
++	filesystem.Files["repo/.agents/harness.yaml"] = []byte(fixtureContract)
++	service := newArtifactService(filesystem)
++
++	artifact, err := service.Generate("repo")
++	require.NoError(t, err)
++	require.NotEmpty(t, artifact.Fingerprint)
++	require.NotEmpty(t, artifact.Operations)
++
++	written, ok := filesystem.Files["repo/.agents/generated/git-scope.json"]
++	require.True(t, ok, "expected git-scope.json to be written")
++
++	var decoded hookpolicy.GitScopeArtifact
++	require.NoError(t, json.Unmarshal(written, &decoded))
++	require.Equal(t, artifact.Fingerprint, decoded.Fingerprint)
++}
++
++func TestArtifactService_GenerateFallsBackToEmbeddedDefault(t *testing.T) {
++	filesystem := fs.NewFakeFileSystem()
++	service := newArtifactService(filesystem)
++
++	artifact, err := service.Generate("repo")
++	require.NoError(t, err)
++	require.NotEmpty(t, artifact.Operations)
++}
++
++func TestArtifactService_CheckPassesAfterGenerate(t *testing.T) {
++	filesystem := fs.NewFakeFileSystem()
++	filesystem.Files["repo/.agents/harness.yaml"] = []byte(fixtureContract)
++	service := newArtifactService(filesystem)
++
++	_, err := service.Generate("repo")
++	require.NoError(t, err)
++
++	require.NoError(t, service.Check("repo"))
++}
++
++func TestArtifactService_CheckFailsWhenArtifactMissing(t *testing.T) {
++	filesystem := fs.NewFakeFileSystem()
++	filesystem.Files["repo/.agents/harness.yaml"] = []byte(fixtureContract)
++	service := newArtifactService(filesystem)
++
++	err := service.Check("repo")
++	require.Error(t, err)
++}
++
++func TestArtifactService_CheckFailsWhenArtifactHandEdited(t *testing.T) {
++	filesystem := fs.NewFakeFileSystem()
++	filesystem.Files["repo/.agents/harness.yaml"] = []byte(fixtureContract)
++	service := newArtifactService(filesystem)
++
++	_, err := service.Generate("repo")
++	require.NoError(t, err)
++
++	filesystem.Files["repo/.agents/generated/git-scope.json"] = []byte(`{"version":1,"fingerprint":"tampered","operations":[]}`)
++
++	err = service.Check("repo")
++	require.Error(t, err)
++	require.Contains(t, err.Error(), "diverge do contrato")
++}
++
++func TestArtifactService_CheckDetectsPolicyDrift(t *testing.T) {
++	filesystem := fs.NewFakeFileSystem()
++	filesystem.Files["repo/.agents/harness.yaml"] = []byte(fixtureContract)
++	service := newArtifactService(filesystem)
++
++	_, err := service.Generate("repo")
++	require.NoError(t, err)
++
++	filesystem.Files["repo/.agents/harness.yaml"] = []byte(`version: 1
++git:
++  auto_commit: true
++  auto_push: false
++approval:
++  require_for_destructive_operations: true
++quality:
++  require_tests: true
++  require_lint: true
++evidence:
++  require_execution_report: true
++skills:
++  discovery_mode: declared
++`)
++
++	err = service.Check("repo")
++	require.Error(t, err)
++}
+diff --git a/internal/hookpolicy/git.go b/internal/hookpolicy/git.go
+new file mode 100644
+index 0000000..b24e355
+--- /dev/null
++++ b/internal/hookpolicy/git.go
+@@ -0,0 +1,125 @@
++package hookpolicy
++
++import (
++	"crypto/sha256"
++	"encoding/hex"
++	"encoding/json"
++	"fmt"
++	"sort"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/harness"
++)
++
++type GitOperation struct {
++	subcommand       string
++	destructive      bool
++	requiresApproval bool
++}
++
++func NewGitOperation(subcommand string, destructive, requiresApproval bool) (GitOperation, error) {
++	if subcommand == "" {
++		return GitOperation{}, fmt.Errorf("hookpolicy: git operation requires a non-empty subcommand")
++	}
++	return GitOperation{
++		subcommand:       subcommand,
++		destructive:      destructive,
++		requiresApproval: requiresApproval,
++	}, nil
++}
++
++func (o GitOperation) Subcommand() string {
++	return o.subcommand
++}
++
++func (o GitOperation) Destructive() bool {
++	return o.destructive
++}
++
++func (o GitOperation) RequiresApproval() bool {
++	return o.requiresApproval
++}
++
++type GitScope interface {
++	Operations() []GitOperation
++	Fingerprint() string
++}
++
++type gitScope struct {
++	operations []GitOperation
++}
++
++var _ GitScope = (*gitScope)(nil)
++
++func NewGitScope(contract harness.Contract) (GitScope, error) {
++	if contract.Version != harness.SupportedVersion {
++		return nil, fmt.Errorf("hookpolicy: unsupported harness contract version %d", contract.Version)
++	}
++
++	operations := make([]GitOperation, 0, 6)
++
++	if !contract.Git.AutoCommit {
++		operation, err := NewGitOperation("commit", false, true)
++		if err != nil {
++			return nil, err
++		}
++		operations = append(operations, operation)
++	}
++
++	if !contract.Git.AutoPush {
++		push, err := NewGitOperation("push", false, true)
++		if err != nil {
++			return nil, err
++		}
++		forcePush, err := NewGitOperation("push --force", true, true)
++		if err != nil {
++			return nil, err
++		}
++		operations = append(operations, push, forcePush)
++	}
++
++	destructive := []string{"reset --hard", "clean", "checkout --", "restore"}
++	for _, subcommand := range destructive {
++		operation, err := NewGitOperation(subcommand, true, true)
++		if err != nil {
++			return nil, err
++		}
++		operations = append(operations, operation)
++	}
++
++	sort.Slice(operations, func(i, j int) bool {
++		return operations[i].subcommand < operations[j].subcommand
++	})
++
++	return &gitScope{operations: operations}, nil
++}
++
++func (s *gitScope) Operations() []GitOperation {
++	cloned := make([]GitOperation, len(s.operations))
++	copy(cloned, s.operations)
++	return cloned
++}
++
++func (s *gitScope) Fingerprint() string {
++	type fingerprintOperation struct {
++		Subcommand       string `json:"subcommand"`
++		Destructive      bool   `json:"destructive"`
++		RequiresApproval bool   `json:"requires_approval"`
++	}
++
++	payload := make([]fingerprintOperation, 0, len(s.operations))
++	for _, operation := range s.operations {
++		payload = append(payload, fingerprintOperation{
++			Subcommand:       operation.subcommand,
++			Destructive:      operation.destructive,
++			RequiresApproval: operation.requiresApproval,
++		})
++	}
++
++	encoded, err := json.Marshal(payload)
++	if err != nil {
++		panic(fmt.Errorf("hookpolicy: encode git scope for fingerprint: %w", err))
++	}
++
++	sum := sha256.Sum256(encoded)
++	return hex.EncodeToString(sum[:])
++}
+diff --git a/internal/hookpolicy/git_test.go b/internal/hookpolicy/git_test.go
+new file mode 100644
+index 0000000..394a063
+--- /dev/null
++++ b/internal/hookpolicy/git_test.go
+@@ -0,0 +1,169 @@
++package hookpolicy_test
++
++import (
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/harness"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookpolicy"
++	"github.com/stretchr/testify/require"
++)
++
++func baseContract() harness.Contract {
++	return harness.Contract{
++		Version: harness.SupportedVersion,
++		Git: harness.GitPolicy{
++			AutoCommit: false,
++			AutoPush:   false,
++		},
++		Approval: harness.ApprovalPolicy{RequireForDestructiveOperations: true},
++		Quality:  harness.QualityPolicy{RequireTests: true, RequireLint: true},
++		Evidence: harness.EvidencePolicy{RequireExecutionReport: true},
++		Skills:   harness.SkillsPolicy{DiscoveryMode: "declared"},
++	}
++}
++
++func subcommands(t *testing.T, scope hookpolicy.GitScope) []string {
++	t.Helper()
++	operations := scope.Operations()
++	found := make([]string, 0, len(operations))
++	for _, operation := range operations {
++		found = append(found, operation.Subcommand())
++	}
++	return found
++}
++
++func TestGitScope_DerivesFromContract(t *testing.T) {
++	scenarios := []struct {
++		name          string
++		mutate        func(contract *harness.Contract)
++		wantCommit    bool
++		wantPush      bool
++		wantForcePush bool
++	}{
++		{
++			name:          "auto_commit false keeps commit gated",
++			mutate:        func(contract *harness.Contract) { contract.Git.AutoCommit = false },
++			wantCommit:    true,
++			wantPush:      true,
++			wantForcePush: true,
++		},
++		{
++			name:          "auto_commit true removes commit from scope",
++			mutate:        func(contract *harness.Contract) { contract.Git.AutoCommit = true },
++			wantCommit:    false,
++			wantPush:      true,
++			wantForcePush: true,
++		},
++		{
++			name:          "auto_push true removes push and push force from scope",
++			mutate:        func(contract *harness.Contract) { contract.Git.AutoPush = true },
++			wantCommit:    true,
++			wantPush:      false,
++			wantForcePush: false,
++		},
++	}
++
++	for _, scenario := range scenarios {
++		t.Run(scenario.name, func(t *testing.T) {
++			contract := baseContract()
++			scenario.mutate(&contract)
++
++			scope, err := hookpolicy.NewGitScope(contract)
++			require.NoError(t, err)
++
++			found := subcommands(t, scope)
++			require.Equal(t, scenario.wantCommit, contains(found, "commit"))
++			require.Equal(t, scenario.wantPush, contains(found, "push"))
++			require.Equal(t, scenario.wantForcePush, contains(found, "push --force"))
++		})
++	}
++}
++
++func TestGitScope_AlwaysIncludesDestructiveOperations(t *testing.T) {
++	contract := baseContract()
++	contract.Git.AutoCommit = true
++	contract.Git.AutoPush = true
++
++	scope, err := hookpolicy.NewGitScope(contract)
++	require.NoError(t, err)
++
++	found := subcommands(t, scope)
++	for _, want := range []string{"reset --hard", "clean", "checkout --", "restore"} {
++		require.True(t, contains(found, want), "expected %q in destructive scope, got %v", want, found)
++	}
++}
++
++func TestGitScope_DestructiveOperationsAreMarkedDestructiveAndApprovable(t *testing.T) {
++	scope, err := hookpolicy.NewGitScope(baseContract())
++	require.NoError(t, err)
++
++	for _, operation := range scope.Operations() {
++		switch operation.Subcommand() {
++		case "reset --hard", "clean", "checkout --", "restore", "push --force":
++			require.True(t, operation.Destructive(), "%s should be destructive", operation.Subcommand())
++		case "commit", "push":
++			require.False(t, operation.Destructive(), "%s should not be destructive", operation.Subcommand())
++		}
++		require.True(t, operation.RequiresApproval(), "%s should require approval", operation.Subcommand())
++	}
++}
++
++func TestGitScope_FingerprintChangesWithPolicy(t *testing.T) {
++	baseScope, err := hookpolicy.NewGitScope(baseContract())
++	require.NoError(t, err)
++	baseFingerprint := baseScope.Fingerprint()
++	require.NotEmpty(t, baseFingerprint)
++
++	changed := baseContract()
++	changed.Git.AutoCommit = true
++	changedScope, err := hookpolicy.NewGitScope(changed)
++	require.NoError(t, err)
++
++	require.NotEqual(t, baseFingerprint, changedScope.Fingerprint())
++}
++
++func TestGitScope_FingerprintIsDeterministic(t *testing.T) {
++	contract := baseContract()
++
++	first, err := hookpolicy.NewGitScope(contract)
++	require.NoError(t, err)
++	second, err := hookpolicy.NewGitScope(contract)
++	require.NoError(t, err)
++
++	require.Equal(t, first.Fingerprint(), second.Fingerprint())
++}
++
++func TestGitScope_FingerprintIsStableAcrossOperationOrder(t *testing.T) {
++	contract := baseContract()
++
++	scope, err := hookpolicy.NewGitScope(contract)
++	require.NoError(t, err)
++
++	operations := scope.Operations()
++	require.True(t, len(operations) > 1)
++	for i := 1; i < len(operations); i++ {
++		require.LessOrEqual(t, operations[i-1].Subcommand(), operations[i].Subcommand())
++	}
++}
++
++func TestNewGitOperation_RejectsEmptySubcommand(t *testing.T) {
++	_, err := hookpolicy.NewGitOperation("", false, true)
++	require.Error(t, err)
++}
++
++func TestNewGitScope_RejectsUnsupportedVersion(t *testing.T) {
++	contract := baseContract()
++	contract.Version = harness.SupportedVersion + 1
++
++	_, err := hookpolicy.NewGitScope(contract)
++	require.Error(t, err)
++}
++
++func contains(haystack []string, needle string) bool {
++	for _, item := range haystack {
++		if item == needle {
++			return true
++		}
++	}
++	return false
++}
+diff --git a/internal/hookpolicy/mocks/git_scope.go b/internal/hookpolicy/mocks/git_scope.go
+new file mode 100644
+index 0000000..477b1c8
+--- /dev/null
++++ b/internal/hookpolicy/mocks/git_scope.go
+@@ -0,0 +1,136 @@
++// Code generated by mockery; DO NOT EDIT.
++// github.com/vektra/mockery
++// template: testify
++
++package mocks
++
++import (
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookpolicy"
++	mock "github.com/stretchr/testify/mock"
++)
++
++// NewGitScope creates a new instance of GitScope. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
++// The first argument is typically a *testing.T value.
++func NewGitScope(t interface {
++	mock.TestingT
++	Cleanup(func())
++}) *GitScope {
++	if helper, ok := t.(interface{ Helper() }); ok {
++		helper.Helper()
++	}
++
++	mock := &GitScope{}
++	mock.Mock.Test(t)
++
++	t.Cleanup(func() {
++		if helper, ok := t.(interface{ Helper() }); ok {
++			helper.Helper()
++		}
++		mock.AssertExpectations(t)
++	})
++
++	return mock
++}
++
++// GitScope is an autogenerated mock type for the GitScope type
++type GitScope struct {
++	mock.Mock
++}
++
++type GitScope_Expecter struct {
++	mock *mock.Mock
++}
++
++func (_m *GitScope) EXPECT() *GitScope_Expecter {
++	return &GitScope_Expecter{mock: &_m.Mock}
++}
++
++// Fingerprint provides a mock function for the type GitScope
++func (_mock *GitScope) Fingerprint() string {
++	ret := _mock.Called()
++
++	if len(ret) == 0 {
++		panic("no return value specified for Fingerprint")
++	}
++
++	var r0 string
++	if returnFunc, ok := ret.Get(0).(func() string); ok {
++		r0 = returnFunc()
++	} else {
++		r0 = ret.Get(0).(string)
++	}
++	return r0
++}
++
++// GitScope_Fingerprint_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Fingerprint'
++type GitScope_Fingerprint_Call struct {
++	*mock.Call
++}
++
++// Fingerprint is a helper method to define mock.On call
++func (_e *GitScope_Expecter) Fingerprint() *GitScope_Fingerprint_Call {
++	return &GitScope_Fingerprint_Call{Call: _e.mock.On("Fingerprint")}
++}
++
++func (_c *GitScope_Fingerprint_Call) Run(run func()) *GitScope_Fingerprint_Call {
++	_c.Call.Run(func(args mock.Arguments) {
++		run()
++	})
++	return _c
++}
++
++func (_c *GitScope_Fingerprint_Call) Return(s string) *GitScope_Fingerprint_Call {
++	_c.Call.Return(s)
++	return _c
++}
++
++func (_c *GitScope_Fingerprint_Call) RunAndReturn(run func() string) *GitScope_Fingerprint_Call {
++	_c.Call.Return(run)
++	return _c
++}
++
++// Operations provides a mock function for the type GitScope
++func (_mock *GitScope) Operations() []hookpolicy.GitOperation {
++	ret := _mock.Called()
++
++	if len(ret) == 0 {
++		panic("no return value specified for Operations")
++	}
++
++	var r0 []hookpolicy.GitOperation
++	if returnFunc, ok := ret.Get(0).(func() []hookpolicy.GitOperation); ok {
++		r0 = returnFunc()
++	} else {
++		if ret.Get(0) != nil {
++			r0 = ret.Get(0).([]hookpolicy.GitOperation)
++		}
++	}
++	return r0
++}
++
++// GitScope_Operations_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Operations'
++type GitScope_Operations_Call struct {
++	*mock.Call
++}
++
++// Operations is a helper method to define mock.On call
++func (_e *GitScope_Expecter) Operations() *GitScope_Operations_Call {
++	return &GitScope_Operations_Call{Call: _e.mock.On("Operations")}
++}
++
++func (_c *GitScope_Operations_Call) Run(run func()) *GitScope_Operations_Call {
++	_c.Call.Run(func(args mock.Arguments) {
++		run()
++	})
++	return _c
++}
++
++func (_c *GitScope_Operations_Call) Return(gitOperations []hookpolicy.GitOperation) *GitScope_Operations_Call {
++	_c.Call.Return(gitOperations)
++	return _c
++}
++
++func (_c *GitScope_Operations_Call) RunAndReturn(run func() []hookpolicy.GitOperation) *GitScope_Operations_Call {
++	_c.Call.Return(run)
++	return _c
++}
+diff --git a/mockery.yml b/mockery.yml
+index b824cae..e200108 100644
+--- a/mockery.yml
++++ b/mockery.yml
+@@ -33,6 +33,9 @@ packages:
+     interfaces:
+       Loader:
+       Validator:
++  github.com/JailtonJunior94/ai-spec-harness/internal/hookpolicy:
++    interfaces:
++      GitScope:
+   github.com/JailtonJunior94/ai-spec-harness/internal/metrics:
+     interfaces:
+       Tokenizer:
+diff --git a/scripts/test-validators.sh b/scripts/test-validators.sh
+old mode 100644
+new mode 100755
+index bfc9b7d..75da7ee
+--- a/scripts/test-validators.sh
++++ b/scripts/test-validators.sh
+@@ -277,6 +277,8 @@ bash "$VALIDATOR" "$report_c2_gradlew" >/dev/null 2>&1; code_c2_gradlew=$?
+ rm -f "$report_c2_gradlew"
+ assert_exit "./gradlew test no fim da linha passa" 0 $code_c2_gradlew
+ 
++# Controle: "mvn test -q" já passava antes da correção (espaço depois de "test"
++# satisfaz o catch-all antigo); precisa continuar passando depois dela também.
+ report_c2_mvn_q="$TMP_BASE/report-c2-mvn-q.md"
+ {
+   report_header "$task_c2"
+@@ -827,6 +829,121 @@ printf '%s' '{"tool_input":{"command":"echo hi","metadata":{"command":"git push
+ assert_gate_exit "comando direto benigno com metadata homônima passa" 0 "$benign_nested_payload"
+ rm -f "$benign_nested_payload"
+ 
++
++git_gate_command_payload() {
++  python3 -c "
++import json
++import sys
++print(json.dumps({'tool_input': {'command': sys.argv[1]}}))
++" "$1"
++}
++
++assert_git_gate_command() {
++  local desc="$1" expected="$2" command="$3"
++  local payload_file="$TMP_BASE/git-gate-cmd.json"
++  git_gate_command_payload "$command" >"$payload_file"
++  local actual
++  bash "$GIT_GATE" <"$payload_file" >/dev/null 2>&1
++  actual=$?
++  assert_exit "$desc" "$expected" "$actual"
++  rm -f "$payload_file"
++}
++
++echo "Matriz adversarial do gate de operação Git (RF-20, RF-21, RF-24)"
++declare -a adversarial_commands=(
++  "git -C /repo push"
++  "git -c user.name=x commit -m y"
++  '$(echo git) push'
++  'eval "git push"'
++  'sh -c "git push"'
++  "/usr/bin/git push"
++  "git.exe push"
++  "git reset --hard"
++  "git clean -fd"
++  "git checkout -- ."
++  "git restore ."
++)
++for command in "${adversarial_commands[@]}"; do
++  assert_git_gate_command "escapa hoje via regex, deve bloquear/exigir aprovação: $command" 2 "$command"
++done
++
++echo "Guarda de regressão: separadores compostos && e || antes de operação git"
++declare -a chained_separator_commands=(
++  "echo ok && git push"
++  "git status && git push --force"
++  "true || git clean -fdx"
++  "echo ok ; git reset --hard"
++  "echo ok &(git push)"
++  "echo ok ;(git push)"
++  "echo ok )&git push"
++  "echo ok )|git push"
++)
++for command in "${chained_separator_commands[@]}"; do
++  assert_git_gate_command "encadeamento não pode escapar do gate: $command" 2 "$command"
++done
++
++echo "Matriz de falso positivo do gate de operação Git (RF-22)"
++declare -a false_positive_commands=(
++  "echo git commit"
++  "man git commit"
++  'echo "a|git commit -m x"'
++  'echo "a|git push origin main"'
++)
++for command in "${false_positive_commands[@]}"; do
++  assert_git_gate_command "bloqueia hoje por menção textual, deve permitir: $command" 0 "$command"
++done
++
++echo "Guarda de não-regressão do gate de operação Git"
++declare -a non_regression_block_commands=(
++  "env git push"
++  "command git push"
++  "git push --force"
++  "git push --force-with-lease"
++  "git push -f origin main"
++  "git push origin +main"
++  "git push"
++)
++for command in "${non_regression_block_commands[@]}"; do
++  assert_git_gate_command "já bloqueia hoje, deve continuar bloqueando: $command" 2 "$command"
++done
++
++assert_git_gate_command 'menção textual em grep não bloqueia (não-regressão)' 0 'grep -r "git push" docs/'
++assert_git_gate_command 'nome de usuário "git" como valor de flag de wrapper não bloqueia' 0 'sudo -u git whoami'
++
++echo "Falha fechada do classificador em comando com aspa não fechada"
++assert_git_gate_command 'aspa não fechada com git bloqueia (falha fechada)' 2 'git push "unterminated'
++assert_git_gate_command 'aspa não fechada sem git bloqueia (falha fechada)' 2 'echo "unterminated'
++
++echo "Ofuscação por expansão de variável não pode escapar do gate"
++assert_git_gate_command 'expansão de IFS não escapa: git${IFS}push${IFS}--force' 2 'git${IFS}push${IFS}origin${IFS}main${IFS}--force'
++assert_git_gate_command 'expansão de variável arbitrária não escapa: $G $P' 2 'G=git; P=push; $G $P --force'
++
++echo "Wrappers transparentes de execução não podem escapar do gate"
++declare -a wrapper_commands=(
++  "exec git push --force"
++  "time git push --force"
++  "nohup git push --force"
++  "sudo git push --force"
++  "nice git push --force"
++  "timeout 5 git push --force"
++  "sudo nohup git push --force"
++  "timeout -k 5 30 git push --force"
++  "sudo -u git -- git push --force"
++)
++for command in "${wrapper_commands[@]}"; do
++  assert_git_gate_command "wrapper transparente não pode escapar: $command" 2 "$command"
++done
++
++echo "Continuação de linha não pode escapar do gate"
++line_cont_payload="$TMP_BASE/git-gate-line-continuation.json"
++python3 -c "
++import json
++cmd = 'git \\\\\npush --force'
++print(json.dumps({'tool_input': {'command': cmd}}))
++" >"$line_cont_payload"
++assert_gate_exit "continuação de linha antes do subcomando não escapa" 2 "$line_cont_payload"
++rm -f "$line_cont_payload"
++
+ echo
+ echo "Passaram: $passed | Falharam: $failed"
+ [[ "$failed" -eq 0 ]] || exit 1
