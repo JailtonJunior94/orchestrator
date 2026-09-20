@@ -1,0 +1,104 @@
+{
+  "schema_version": 2,
+  "run_id": "task-10.0-2026-09-20",
+  "task_id": "10.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "471e6e008c963f3c6c31211946461b7edda4bb3f",
+  "patch_sha256": "2f7fbad2d9b077c26d97e3b709f024d217568911c8240bc8267ad51ddd45df70",
+  "patch_ref": "evidence/task-10.0-hooks-canonicos-vendor-neutral/patch.diff",
+  "commit_sha": "33e7e4afc47c6db941c222a8dd6afb3dd49e080e",
+  "commit_patch_sha256": "2f7fbad2d9b077c26d97e3b709f024d217568911c8240bc8267ad51ddd45df70",
+  "final_state_sha256": "7b359b4e2680bdbfafc7f52de360131803a6ecbcda97dd331d9973348d52b5a5",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test ./internal/qualitygate/... -v",
+      "exit_code": 0,
+      "output_sha256": "c2fe0dc5447ac4cbdf438812f2f47cac18a4d14e17c003a29a6f9c7dadbb0a23"
+    },
+    {
+      "command": "go test ./internal/runtime ./internal/runtime/hooks/...",
+      "exit_code": 0,
+      "output_sha256": "b3808a4da49e2bb98fcbbbf87743c42414194ace47f2fc454e340ee45786b634"
+    },
+    {
+      "command": "go test -tags=integration -count=1 ./internal/qualitygate/... -v",
+      "exit_code": 0,
+      "output_sha256": "c04eb1d6be706e6680d2d60d479c6b0240cd1cc2c05e41daef734d1d25b6d570"
+    },
+    {
+      "command": "golangci-lint run --config .golangci.yml ./internal/qualitygate/... ./internal/runtime/hooks/... ./internal/runtime",
+      "exit_code": 0,
+      "output_sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "command": "go test -coverprofile=coverage.out ./internal/qualitygate/... \u0026\u0026 go tool cover -func=coverage.out",
+      "exit_code": 0,
+      "output_sha256": "4113871805990fa9bf92ea2b9fa78cef4b1dbde4af8a2b89f218f41434a0c0c5"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "package-exists-no-provider-import",
+      "evidence_ref": "evidence/task-10.0-hooks-canonicos-vendor-neutral/go-test-qualitygate.log"
+    },
+    {
+      "id": "no-registration-on-tool-call-events",
+      "evidence_ref": "evidence/task-10.0-hooks-canonicos-vendor-neutral/go-test-runtime.log"
+    },
+    {
+      "id": "policy-declared-typed-error-no-inference",
+      "evidence_ref": "evidence/task-10.0-hooks-canonicos-vendor-neutral/go-test-qualitygate.log"
+    },
+    {
+      "id": "fingerprint-dedup-skip-and-reexecution",
+      "evidence_ref": "evidence/task-10.0-hooks-canonicos-vendor-neutral/go-test-qualitygate.log"
+    },
+    {
+      "id": "required-check-block-with-policy-and-gate-id",
+      "evidence_ref": "evidence/task-10.0-hooks-canonicos-vendor-neutral/go-test-qualitygate.log"
+    },
+    {
+      "id": "evidence-persisted-recognizable-by-validator",
+      "evidence_ref": "evidence/task-10.0-hooks-canonicos-vendor-neutral/go-test-qualitygate.log"
+    },
+    {
+      "id": "rf29-deterministic-precedence-adversarial",
+      "evidence_ref": "evidence/task-10.0-hooks-canonicos-vendor-neutral/go-test-qualitygate.log"
+    },
+    {
+      "id": "no-regression-make-test-lint-vet",
+      "evidence_ref": "evidence/task-10.0-hooks-canonicos-vendor-neutral/go-test-runtime.log"
+    },
+    {
+      "id": "make-integration-includes-package",
+      "evidence_ref": "evidence/task-10.0-hooks-canonicos-vendor-neutral/go-test-integration.log"
+    },
+    {
+      "id": "coverage-gates",
+      "evidence_ref": "evidence/task-10.0-hooks-canonicos-vendor-neutral/coverage.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-10.0-hooks-canonicos-vendor-neutral/patch.diff",
+    "evidence/task-10.0-hooks-canonicos-vendor-neutral/go-build.log",
+    "evidence/task-10.0-hooks-canonicos-vendor-neutral/go-vet.log",
+    "evidence/task-10.0-hooks-canonicos-vendor-neutral/go-test-qualitygate.log",
+    "evidence/task-10.0-hooks-canonicos-vendor-neutral/go-test-runtime.log",
+    "evidence/task-10.0-hooks-canonicos-vendor-neutral/go-test-integration.log",
+    "evidence/task-10.0-hooks-canonicos-vendor-neutral/lint.log",
+    "evidence/task-10.0-hooks-canonicos-vendor-neutral/coverage.log"
+  ],
+  "review_verdict": "approved"
+}

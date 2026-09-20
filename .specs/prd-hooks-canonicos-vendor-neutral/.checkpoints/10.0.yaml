@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-hooks-canonicos-vendor-neutral/10.0_execution_report.md
+summary: Quality gate stack-agnostic (fmt/test/lint) criado em internal/qualitygate/, com policy declarada por (task_type, risco) em YAML validado, fingerprint com deduplicacao (DecisionNotApplicable), precedencia deterministica (RF-29) e evidencia persistida. Registrado apenas em hooks.PointSessionPostEnd via novo Job.QualityGateEnabled (opt-in, zero-value false), sem regressao nos testes existentes. Makefile e CI atualizados para incluir o pacote no alvo integration. Revisado por subagente reviewer: APPROVED_WITH_REMARKS (2 MEDIUM + 1 LOW, sem HIGH/CRITICAL; 2 corrigidos nesta rodada, 1 registrado como debito). Selado no commit 33e7e4afc47c6db941c222a8dd6afb3dd49e080e (base 471e6e008c963f3c6c31211946461b7edda4bb3f), commit_patch_sha256 identico ao patch_sha256 de fechamento; ai-spec seal-evidence --verify confirmou.
+timestamp: 2026-09-20T23:05:00Z

@@ -1,0 +1,3 @@
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime	4.340s
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks	(cached)
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks/mocks	[no test files]

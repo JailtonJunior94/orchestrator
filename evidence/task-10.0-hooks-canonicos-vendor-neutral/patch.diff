@@ -1,0 +1,2296 @@
+diff --git a/.github/workflows/test.yml b/.github/workflows/test.yml
+index 3614c6f..dea2135 100644
+--- a/.github/workflows/test.yml
++++ b/.github/workflows/test.yml
+@@ -176,7 +176,7 @@ jobs:
+         # passavam a mao e nenhum job os executava — um teste que nao roda nao e evidencia. O -v
+         # garante que o nome de cada teste aparece nominalmente no log do job, nao so o resultado
+         # agregado.
+-        run: go test -v -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/parity/...
++        run: go test -v -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/parity/... ./internal/qualitygate/...
+ 
+       - name: Budget
+         run: make budget
+diff --git a/Makefile b/Makefile
+index 8737833..5a5ddee 100644
+--- a/Makefile
++++ b/Makefile
+@@ -24,7 +24,7 @@ test:
+ 	go test ./...
+ 
+ integration:
+-	go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/runtime/memory/durable/... ./cmd/ai_spec_harness/...
++	go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/runtime/memory/durable/... ./cmd/ai_spec_harness/... ./internal/qualitygate/...
+ 
+ lint:
+ 	@echo "Running linter..."
+diff --git a/internal/qualitygate/cache.go b/internal/qualitygate/cache.go
+new file mode 100644
+index 0000000..5947fc8
+--- /dev/null
++++ b/internal/qualitygate/cache.go
+@@ -0,0 +1,76 @@
++package qualitygate
++
++import (
++	"encoding/json"
++	"errors"
++	"fmt"
++	"os"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++)
++
++type CacheEntry struct {
++	Fingerprint string `json:"fingerprint"`
++	Decision    string `json:"decision"`
++	Reason      string `json:"reason"`
++	PolicyID    string `json:"policy_id"`
++	GateID      string `json:"gate_id"`
++}
++
++type Cache interface {
++	Get(taskID string) (CacheEntry, bool, error)
++	Put(taskID string, entry CacheEntry) error
++}
++
++type fileCache struct {
++	fs   fs.FileSystem
++	path string
++}
++
++var _ Cache = (*fileCache)(nil)
++
++func NewFileCache(filesystem fs.FileSystem, path string) Cache {
++	return &fileCache{fs: filesystem, path: path}
++}
++
++func (c *fileCache) load() (map[string]CacheEntry, error) {
++	data, err := c.fs.ReadFile(c.path)
++	if err != nil {
++		if errors.Is(err, os.ErrNotExist) {
++			return map[string]CacheEntry{}, nil
++		}
++		return nil, fmt.Errorf("qualitygate: read cache %s: %w", c.path, err)
++	}
++
++	entries := map[string]CacheEntry{}
++	if err := json.Unmarshal(data, &entries); err != nil {
++		return nil, fmt.Errorf("qualitygate: decode cache %s: %w", c.path, err)
++	}
++	return entries, nil
++}
++
++func (c *fileCache) Get(taskID string) (CacheEntry, bool, error) {
++	entries, err := c.load()
++	if err != nil {
++		return CacheEntry{}, false, err
++	}
++	entry, ok := entries[taskID]
++	return entry, ok, nil
++}
++
++func (c *fileCache) Put(taskID string, entry CacheEntry) error {
++	entries, err := c.load()
++	if err != nil {
++		return err
++	}
++	entries[taskID] = entry
++
++	encoded, err := json.MarshalIndent(entries, "", "  ")
++	if err != nil {
++		return fmt.Errorf("qualitygate: encode cache: %w", err)
++	}
++	if err := c.fs.WriteFileAtomic(c.path, append(encoded, '\n')); err != nil {
++		return fmt.Errorf("qualitygate: write cache %s: %w", c.path, err)
++	}
++	return nil
++}
+diff --git a/internal/qualitygate/cache_test.go b/internal/qualitygate/cache_test.go
+new file mode 100644
+index 0000000..50ebfc2
+--- /dev/null
++++ b/internal/qualitygate/cache_test.go
+@@ -0,0 +1,58 @@
++package qualitygate
++
++import (
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++)
++
++func TestFileCache_GetMissWhenEmpty(t *testing.T) {
++	cache := NewFileCache(fs.NewFakeFileSystem(), "/project/.agents/generated/quality-gate-cache.json")
++
++	_, hit, err := cache.Get("10.0")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if hit {
++		t.Fatalf("expected no cache hit for empty cache")
++	}
++}
++
++func TestFileCache_PutThenGetRoundTrips(t *testing.T) {
++	cache := NewFileCache(fs.NewFakeFileSystem(), "/project/.agents/generated/quality-gate-cache.json")
++
++	entry := CacheEntry{Fingerprint: "abc123", Decision: "ALLOW", PolicyID: "quality-gate:feature:low", GateID: GateID}
++	if err := cache.Put("10.0", entry); err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	got, hit, err := cache.Get("10.0")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if !hit {
++		t.Fatalf("expected cache hit")
++	}
++	if got != entry {
++		t.Fatalf("got %+v, want %+v", got, entry)
++	}
++}
++
++func TestFileCache_PutPreservesOtherTasks(t *testing.T) {
++	cache := NewFileCache(fs.NewFakeFileSystem(), "/project/.agents/generated/quality-gate-cache.json")
++
++	if err := cache.Put("10.0", CacheEntry{Fingerprint: "a"}); err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if err := cache.Put("11.0", CacheEntry{Fingerprint: "b"}); err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	got, hit, err := cache.Get("10.0")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if !hit || got.Fingerprint != "a" {
++		t.Fatalf("expected task 10.0 entry preserved, got %+v hit=%v", got, hit)
++	}
++}
+diff --git a/internal/qualitygate/checks.go b/internal/qualitygate/checks.go
+new file mode 100644
+index 0000000..20b84dd
+--- /dev/null
++++ b/internal/qualitygate/checks.go
+@@ -0,0 +1,48 @@
++package qualitygate
++
++import (
++	"errors"
++	"fmt"
++)
++
++type CheckKind int
++
++const (
++	CheckFmt CheckKind = iota + 1
++	CheckTest
++	CheckLint
++)
++
++var allCheckKinds = []CheckKind{CheckFmt, CheckTest, CheckLint}
++
++var ErrUnknownCheckKind = errors.New("qualitygate: unknown check kind")
++
++func (k CheckKind) Valid() bool {
++	return k >= CheckFmt && k <= CheckLint
++}
++
++func (k CheckKind) String() string {
++	switch k {
++	case CheckFmt:
++		return "fmt"
++	case CheckTest:
++		return "test"
++	case CheckLint:
++		return "lint"
++	default:
++		return "unknown"
++	}
++}
++
++func ParseCheckKind(s string) (CheckKind, error) {
++	for _, kind := range allCheckKinds {
++		if kind.String() == s {
++			return kind, nil
++		}
++	}
++	return 0, fmt.Errorf("%w: %q", ErrUnknownCheckKind, s)
++}
++
++func CheckKinds() []CheckKind {
++	return append([]CheckKind(nil), allCheckKinds...)
++}
+diff --git a/internal/qualitygate/checks_test.go b/internal/qualitygate/checks_test.go
+new file mode 100644
+index 0000000..cf8e6d5
+--- /dev/null
++++ b/internal/qualitygate/checks_test.go
+@@ -0,0 +1,49 @@
++package qualitygate
++
++import (
++	"errors"
++	"testing"
++)
++
++func TestCheckKind_StringAndParse(t *testing.T) {
++	cases := []struct {
++		kind CheckKind
++		text string
++	}{
++		{CheckFmt, "fmt"},
++		{CheckTest, "test"},
++		{CheckLint, "lint"},
++	}
++	for _, tc := range cases {
++		if got := tc.kind.String(); got != tc.text {
++			t.Fatalf("String() = %q, want %q", got, tc.text)
++		}
++		parsed, err := ParseCheckKind(tc.text)
++		if err != nil {
++			t.Fatalf("ParseCheckKind(%q) unexpected error: %v", tc.text, err)
++		}
++		if parsed != tc.kind {
++			t.Fatalf("ParseCheckKind(%q) = %v, want %v", tc.text, parsed, tc.kind)
++		}
++		if !tc.kind.Valid() {
++			t.Fatalf("%v should be valid", tc.kind)
++		}
++	}
++}
++
++func TestParseCheckKind_Unknown(t *testing.T) {
++	_, err := ParseCheckKind("coverage")
++	if !errors.Is(err, ErrUnknownCheckKind) {
++		t.Fatalf("expected ErrUnknownCheckKind, got %v", err)
++	}
++}
++
++func TestCheckKind_InvalidZeroValue(t *testing.T) {
++	var zero CheckKind
++	if zero.Valid() {
++		t.Fatalf("zero value must not be valid")
++	}
++	if zero.String() != "unknown" {
++		t.Fatalf("zero value String() = %q, want unknown", zero.String())
++	}
++}
+diff --git a/internal/qualitygate/default-policy.yaml b/internal/qualitygate/default-policy.yaml
+new file mode 100644
+index 0000000..817e61a
+--- /dev/null
++++ b/internal/qualitygate/default-policy.yaml
+@@ -0,0 +1,62 @@
++version: 1
++policies:
++  - task_type: default
++    risk: low
++    required: [test]
++    optional: [lint]
++  - task_type: default
++    risk: medium
++    required: [test, lint]
++    optional: []
++  - task_type: default
++    risk: high
++    required: [test, lint, fmt]
++    optional: []
++  - task_type: feature
++    risk: low
++    required: [test]
++    optional: [lint]
++  - task_type: feature
++    risk: medium
++    required: [test, lint]
++    optional: []
++  - task_type: feature
++    risk: high
++    required: [test, lint, fmt]
++    optional: []
++  - task_type: bugfix
++    risk: low
++    required: [test]
++    optional: []
++  - task_type: bugfix
++    risk: medium
++    required: [test, lint]
++    optional: []
++  - task_type: bugfix
++    risk: high
++    required: [test, lint, fmt]
++    optional: []
++  - task_type: refactor
++    risk: low
++    required: [test, lint]
++    optional: []
++  - task_type: refactor
++    risk: medium
++    required: [test, lint]
++    optional: []
++  - task_type: refactor
++    risk: high
++    required: [test, lint, fmt]
++    optional: []
++  - task_type: docs
++    risk: low
++    required: []
++    optional: []
++  - task_type: docs
++    risk: medium
++    required: []
++    optional: []
++  - task_type: docs
++    risk: high
++    required: []
++    optional: []
+diff --git a/internal/qualitygate/evidence.go b/internal/qualitygate/evidence.go
+new file mode 100644
+index 0000000..1b87f2e
+--- /dev/null
++++ b/internal/qualitygate/evidence.go
+@@ -0,0 +1,76 @@
++package qualitygate
++
++import (
++	"encoding/json"
++	"fmt"
++	"path/filepath"
++	"time"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++)
++
++type CheckEvidence struct {
++	Kind     string `json:"kind"`
++	Command  string `json:"command"`
++	Required bool   `json:"required"`
++	ExitCode int    `json:"exit_code"`
++	Output   string `json:"output"`
++}
++
++type GateEvidence struct {
++	GateID      string          `json:"gate_id"`
++	PolicyID    string          `json:"policy_id"`
++	TaskID      string          `json:"task_id"`
++	TaskType    string          `json:"task_type"`
++	Risk        string          `json:"risk"`
++	Fingerprint string          `json:"fingerprint"`
++	Decision    string          `json:"decision"`
++	Reason      string          `json:"reason"`
++	Checks      []CheckEvidence `json:"checks"`
++	Timestamp   string          `json:"timestamp"`
++}
++
++func (e GateEvidence) CommandLines() []string {
++	lines := make([]string, 0, len(e.Checks))
++	for _, check := range e.Checks {
++		lines = append(lines, check.Command)
++	}
++	return lines
++}
++
++type EvidenceWriter interface {
++	Persist(evidence GateEvidence) error
++}
++
++type fileEvidenceWriter struct {
++	fs  fs.FileSystem
++	dir string
++	now func() time.Time
++}
++
++var _ EvidenceWriter = (*fileEvidenceWriter)(nil)
++
++func NewFileEvidenceWriter(filesystem fs.FileSystem, dir string) EvidenceWriter {
++	return &fileEvidenceWriter{fs: filesystem, dir: dir, now: time.Now}
++}
++
++func (w *fileEvidenceWriter) Persist(evidence GateEvidence) error {
++	if evidence.Timestamp == "" {
++		evidence.Timestamp = w.now().UTC().Format(time.RFC3339)
++	}
++
++	encoded, err := json.MarshalIndent(evidence, "", "  ")
++	if err != nil {
++		return fmt.Errorf("qualitygate: encode evidence: %w", err)
++	}
++
++	taskID := evidence.TaskID
++	if taskID == "" {
++		taskID = "adhoc"
++	}
++	path := filepath.Join(w.dir, taskID+".json")
++	if err := w.fs.WriteFileAtomic(path, append(encoded, '\n')); err != nil {
++		return fmt.Errorf("qualitygate: write evidence %s: %w", path, err)
++	}
++	return nil
++}
+diff --git a/internal/qualitygate/evidence_test.go b/internal/qualitygate/evidence_test.go
+new file mode 100644
+index 0000000..80f274a
+--- /dev/null
++++ b/internal/qualitygate/evidence_test.go
+@@ -0,0 +1,72 @@
++package qualitygate
++
++import (
++	"encoding/json"
++	"strings"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++)
++
++func TestFileEvidenceWriter_PersistsRecognizableTestCommand(t *testing.T) {
++	fakeFS := fs.NewFakeFileSystem()
++	writer := NewFileEvidenceWriter(fakeFS, "/project/.agents/generated/quality-gate-evidence")
++
++	evidence := GateEvidence{
++		GateID:      GateID,
++		PolicyID:    "quality-gate:feature:low",
++		TaskID:      "10.0",
++		TaskType:    "feature",
++		Risk:        "low",
++		Fingerprint: "abc123",
++		Decision:    "BLOCK",
++		Reason:      "required checks failed: test (go test ./...)",
++		Checks: []CheckEvidence{
++			{Kind: "test", Command: "go test ./...", Required: true, ExitCode: 1, Output: "FAIL"},
++		},
++	}
++
++	if err := writer.Persist(evidence); err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	written, ok := fakeFS.Files["/project/.agents/generated/quality-gate-evidence/10.0.json"]
++	if !ok {
++		t.Fatalf("expected evidence file to be written")
++	}
++
++	var decoded GateEvidence
++	if err := json.Unmarshal(written, &decoded); err != nil {
++		t.Fatalf("unexpected error decoding evidence: %v", err)
++	}
++	if decoded.Fingerprint != "abc123" {
++		t.Fatalf("Fingerprint = %q, want abc123", decoded.Fingerprint)
++	}
++	if decoded.Timestamp == "" {
++		t.Fatalf("expected timestamp to be filled")
++	}
++
++	lines := decoded.CommandLines()
++	found := false
++	for _, line := range lines {
++		if strings.Contains(line, "go test") {
++			found = true
++		}
++	}
++	if !found {
++		t.Fatalf("expected a recognizable test command among %v", lines)
++	}
++}
++
++func TestGateEvidence_CommandLines(t *testing.T) {
++	evidence := GateEvidence{
++		Checks: []CheckEvidence{
++			{Command: "go test ./..."},
++			{Command: "golangci-lint run"},
++		},
++	}
++	lines := evidence.CommandLines()
++	if len(lines) != 2 {
++		t.Fatalf("CommandLines() = %v, want 2 entries", lines)
++	}
++}
+diff --git a/internal/qualitygate/executor.go b/internal/qualitygate/executor.go
+new file mode 100644
+index 0000000..aee007d
+--- /dev/null
++++ b/internal/qualitygate/executor.go
+@@ -0,0 +1,48 @@
++package qualitygate
++
++import (
++	"bytes"
++	"context"
++	"errors"
++	"fmt"
++	"os/exec"
++)
++
++type ExecutionResult struct {
++	Command  string
++	ExitCode int
++	Output   string
++}
++
++type Executor interface {
++	Execute(ctx context.Context, dir, command string) (ExecutionResult, error)
++}
++
++type shellExecutor struct{}
++
++var _ Executor = shellExecutor{}
++
++func NewShellExecutor() Executor {
++	return shellExecutor{}
++}
++
++func (shellExecutor) Execute(ctx context.Context, dir, command string) (ExecutionResult, error) {
++	cmd := exec.CommandContext(ctx, "sh", "-c", command)
++	cmd.Dir = dir
++
++	var buf bytes.Buffer
++	cmd.Stdout = &buf
++	cmd.Stderr = &buf
++
++	err := cmd.Run()
++	if err == nil {
++		return ExecutionResult{Command: command, ExitCode: 0, Output: buf.String()}, nil
++	}
++
++	var exitErr *exec.ExitError
++	if errors.As(err, &exitErr) {
++		return ExecutionResult{Command: command, ExitCode: exitErr.ExitCode(), Output: buf.String()}, nil
++	}
++
++	return ExecutionResult{Command: command, ExitCode: -1, Output: buf.String()}, fmt.Errorf("qualitygate: execute command %q: %w", command, err)
++}
+diff --git a/internal/qualitygate/executor_test.go b/internal/qualitygate/executor_test.go
+new file mode 100644
+index 0000000..fbf7fa1
+--- /dev/null
++++ b/internal/qualitygate/executor_test.go
+@@ -0,0 +1,26 @@
++package qualitygate
++
++import (
++	"context"
++	"testing"
++)
++
++func TestShellExecutor_CapturesExitCodeAndOutput(t *testing.T) {
++	executor := NewShellExecutor()
++
++	ok, err := executor.Execute(context.Background(), t.TempDir(), "echo hello")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if ok.ExitCode != 0 {
++		t.Fatalf("ExitCode = %d, want 0", ok.ExitCode)
++	}
++
++	failed, err := executor.Execute(context.Background(), t.TempDir(), "exit 3")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if failed.ExitCode != 3 {
++		t.Fatalf("ExitCode = %d, want 3", failed.ExitCode)
++	}
++}
+diff --git a/internal/qualitygate/fingerprint.go b/internal/qualitygate/fingerprint.go
+new file mode 100644
+index 0000000..7cdca83
+--- /dev/null
++++ b/internal/qualitygate/fingerprint.go
+@@ -0,0 +1,47 @@
++package qualitygate
++
++import (
++	"crypto/sha256"
++	"encoding/hex"
++	"encoding/json"
++	"fmt"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
++)
++
++type FingerprintInput struct {
++	TaskID      string
++	TaskType    TaskType
++	Risk        Risk
++	Lang        string
++	Toolchain   detect.ToolchainResult
++	StateDigest string
++}
++
++type fingerprintPayload struct {
++	TaskID      string                           `json:"task_id"`
++	TaskType    string                           `json:"task_type"`
++	Risk        string                           `json:"risk"`
++	Lang        string                           `json:"lang"`
++	Toolchain   map[string]detect.ToolchainEntry `json:"toolchain"`
++	StateDigest string                           `json:"state_digest"`
++}
++
++func ComputeFingerprint(in FingerprintInput) string {
++	payload := fingerprintPayload{
++		TaskID:      in.TaskID,
++		TaskType:    string(in.TaskType),
++		Risk:        in.Risk.String(),
++		Lang:        in.Lang,
++		Toolchain:   in.Toolchain,
++		StateDigest: in.StateDigest,
++	}
++
++	encoded, err := json.Marshal(payload)
++	if err != nil {
++		panic(fmt.Errorf("qualitygate: encode fingerprint payload: %w", err))
++	}
++
++	sum := sha256.Sum256(encoded)
++	return hex.EncodeToString(sum[:])
++}
+diff --git a/internal/qualitygate/fingerprint_test.go b/internal/qualitygate/fingerprint_test.go
+new file mode 100644
+index 0000000..9b32155
+--- /dev/null
++++ b/internal/qualitygate/fingerprint_test.go
+@@ -0,0 +1,48 @@
++package qualitygate
++
++import (
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
++)
++
++func TestComputeFingerprint_StableForSameInput(t *testing.T) {
++	toolchain := detect.ToolchainResult{"go": detect.ToolchainEntry{Test: "go test ./..."}}
++	in := FingerprintInput{TaskID: "10.0", TaskType: "feature", Risk: RiskLow, Lang: "go", Toolchain: toolchain}
++
++	first := ComputeFingerprint(in)
++	second := ComputeFingerprint(in)
++	if first != second {
++		t.Fatalf("fingerprint not stable: %q != %q", first, second)
++	}
++}
++
++func TestComputeFingerprint_ChangesWhenToolchainChanges(t *testing.T) {
++	base := FingerprintInput{
++		TaskID:   "10.0",
++		TaskType: "feature",
++		Risk:     RiskLow,
++		Lang:     "go",
++		Toolchain: detect.ToolchainResult{
++			"go": detect.ToolchainEntry{Test: "go test ./..."},
++		},
++	}
++	changed := base
++	changed.Toolchain = detect.ToolchainResult{
++		"go": detect.ToolchainEntry{Test: "go test ./... -race"},
++	}
++
++	if ComputeFingerprint(base) == ComputeFingerprint(changed) {
++		t.Fatalf("fingerprint must change when relevant state changes")
++	}
++}
++
++func TestComputeFingerprint_ChangesWhenStateDigestChanges(t *testing.T) {
++	base := FingerprintInput{TaskID: "10.0", TaskType: "feature", Risk: RiskLow, Lang: "go", StateDigest: "aaa"}
++	changed := base
++	changed.StateDigest = "bbb"
++
++	if ComputeFingerprint(base) == ComputeFingerprint(changed) {
++		t.Fatalf("fingerprint must change when state digest changes")
++	}
++}
+diff --git a/internal/qualitygate/gate.go b/internal/qualitygate/gate.go
+new file mode 100644
+index 0000000..152e9bb
+--- /dev/null
++++ b/internal/qualitygate/gate.go
+@@ -0,0 +1,208 @@
++package qualitygate
++
++import (
++	"context"
++	"fmt"
++	"strings"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
++)
++
++const GateID = "quality-gate"
++
++type EvaluationInput struct {
++	ProjectDir  string
++	TaskID      string
++	TaskType    TaskType
++	Risk        Risk
++	StateDigest string
++}
++
++type ToolchainProvider interface {
++	Detect(projectDir string) detect.ToolchainResult
++}
++
++type Gate struct {
++	policies  PolicyLoader
++	toolchain ToolchainProvider
++	executor  Executor
++	cache     Cache
++	evidence  EvidenceWriter
++}
++
++func NewGate(policies PolicyLoader, toolchain ToolchainProvider, executor Executor, cache Cache, evidence EvidenceWriter) *Gate {
++	return &Gate{
++		policies:  policies,
++		toolchain: toolchain,
++		executor:  executor,
++		cache:     cache,
++		evidence:  evidence,
++	}
++}
++
++func (g *Gate) Evaluate(ctx context.Context, in EvaluationInput) hookcontract.Result {
++	policySet, err := g.policies.Load(in.ProjectDir)
++	if err != nil {
++		return errorResult(fmt.Sprintf("load policy: %s", err))
++	}
++
++	selection, err := policySet.Lookup(in.TaskType, in.Risk)
++	if err != nil {
++		return errorResult(err.Error())
++	}
++
++	policyID := gatePolicyID(in.TaskType, in.Risk)
++
++	toolchainResult := g.toolchain.Detect(in.ProjectDir)
++	lang, ok := PrimaryLang(toolchainResult)
++	if !ok {
++		return errorResultWithPolicy(policyID, "qualitygate: no stack detected for project")
++	}
++
++	fingerprint := ComputeFingerprint(FingerprintInput{
++		TaskID:      in.TaskID,
++		TaskType:    in.TaskType,
++		Risk:        in.Risk,
++		Lang:        lang,
++		Toolchain:   toolchainResult,
++		StateDigest: in.StateDigest,
++	})
++
++	if g.cache != nil {
++		if entry, hit, cacheErr := g.cache.Get(in.TaskID); cacheErr == nil && hit && entry.Fingerprint == fingerprint {
++			if skip, ok := notApplicableSkip(policyID, entry); ok {
++				return skip
++			}
++		}
++	}
++
++	resolved, err := ResolveChecks(selection, toolchainResult, lang)
++	if err != nil {
++		return errorResultWithPolicy(policyID, err.Error())
++	}
++
++	outcome := g.runChecks(ctx, in.ProjectDir, policyID, resolved)
++	verdict := NewVerdict(outcome.result)
++	final := verdict.Result()
++
++	infraWarnings := make(map[string]string, 2)
++
++	if g.evidence != nil {
++		if persistErr := g.evidence.Persist(buildEvidence(in, policyID, fingerprint, final, outcome.checks)); persistErr != nil {
++			infraWarnings["evidence_persist_error"] = persistErr.Error()
++		}
++	}
++
++	if g.cache != nil {
++		if putErr := g.cache.Put(in.TaskID, CacheEntry{
++			Fingerprint: fingerprint,
++			Decision:    final.Decision().String(),
++			Reason:      final.Reason(),
++			PolicyID:    final.PolicyID(),
++			GateID:      final.GateID(),
++		}); putErr != nil {
++			infraWarnings["cache_put_error"] = putErr.Error()
++		}
++	}
++
++	if len(infraWarnings) > 0 {
++		final = final.WithMetadata(infraWarnings)
++	}
++
++	return final
++}
++
++type checkOutcome struct {
++	result hookcontract.Result
++	checks []CheckEvidence
++}
++
++func (g *Gate) runChecks(ctx context.Context, dir, policyID string, checks []ResolvedCheck) checkOutcome {
++	var failedRequired []string
++	var failedOptional []string
++	evidence := make([]CheckEvidence, 0, len(checks))
++
++	for _, check := range checks {
++		execResult, err := g.executor.Execute(ctx, dir, check.Command)
++		failed := err != nil || execResult.ExitCode != 0
++		evidence = append(evidence, CheckEvidence{
++			Kind:     check.Kind.String(),
++			Command:  check.Command,
++			Required: check.Required,
++			ExitCode: execResult.ExitCode,
++			Output:   execResult.Output,
++		})
++		if failed {
++			label := fmt.Sprintf("%s (%s)", check.Kind, check.Command)
++			if check.Required {
++				failedRequired = append(failedRequired, label)
++			} else {
++				failedOptional = append(failedOptional, label)
++			}
++		}
++	}
++
++	if len(failedRequired) > 0 {
++		reason := fmt.Sprintf("required checks failed: %s", strings.Join(failedRequired, "; "))
++		result, err := hookcontract.NewResult(hookcontract.DecisionBlock, reason, policyID, GateID)
++		if err != nil {
++			return checkOutcome{result: errorResultWithPolicy(policyID, err.Error()), checks: evidence}
++		}
++		return checkOutcome{result: result, checks: evidence}
++	}
++
++	if len(failedOptional) > 0 {
++		reason := fmt.Sprintf("optional checks failed: %s", strings.Join(failedOptional, "; "))
++		result, err := hookcontract.NewResult(hookcontract.DecisionWarn, reason, policyID, GateID)
++		if err != nil {
++			return checkOutcome{result: errorResultWithPolicy(policyID, err.Error()), checks: evidence}
++		}
++		return checkOutcome{result: result, checks: evidence}
++	}
++
++	return checkOutcome{result: hookcontract.NewAllow(), checks: evidence}
++}
++
++func gatePolicyID(taskType TaskType, risk Risk) string {
++	return fmt.Sprintf("quality-gate:%s:%s", taskType, risk)
++}
++
++func errorResult(reason string) hookcontract.Result {
++	return errorResultWithPolicy("", reason)
++}
++
++func errorResultWithPolicy(policyID, reason string) hookcontract.Result {
++	result, err := hookcontract.NewResult(hookcontract.DecisionError, reason, policyID, GateID)
++	if err != nil {
++		return hookcontract.NewNotApplicable(reason)
++	}
++	return result
++}
++
++func notApplicableSkip(policyID string, entry CacheEntry) (hookcontract.Result, bool) {
++	reason := "qualitygate: skip - fingerprint unchanged since last run"
++	result, err := hookcontract.NewResult(hookcontract.DecisionNotApplicable, reason, policyID, GateID)
++	if err != nil {
++		return hookcontract.Result{}, false
++	}
++	result = result.WithMetadata(map[string]string{
++		"previous_decision": entry.Decision,
++		"previous_reason":   entry.Reason,
++	})
++	return result, true
++}
++
++func buildEvidence(in EvaluationInput, policyID, fingerprint string, result hookcontract.Result, checks []CheckEvidence) GateEvidence {
++	return GateEvidence{
++		GateID:      GateID,
++		PolicyID:    policyID,
++		TaskID:      in.TaskID,
++		TaskType:    string(in.TaskType),
++		Risk:        in.Risk.String(),
++		Fingerprint: fingerprint,
++		Decision:    result.Decision().String(),
++		Reason:      result.Reason(),
++		Checks:      checks,
++	}
++}
+diff --git a/internal/qualitygate/gate_integration_test.go b/internal/qualitygate/gate_integration_test.go
+new file mode 100644
+index 0000000..b4620e6
+--- /dev/null
++++ b/internal/qualitygate/gate_integration_test.go
+@@ -0,0 +1,49 @@
++//go:build integration
++
++package qualitygate
++
++import (
++	"context"
++	"os"
++	"path/filepath"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++)
++
++func TestGate_Evaluate_RealShellExecutorAgainstGoFixture(t *testing.T) {
++	dir := t.TempDir()
++
++	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module fixture\n\ngo 1.21\n"), 0o644); err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package fixture\n"), 0o644); err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	osFS := fs.NewOSFileSystem()
++	gate := NewGate(
++		NewDefaultPolicyLoader(osFS),
++		detect.NewToolchainDetector(osFS),
++		NewShellExecutor(),
++		NewFileCache(osFS, filepath.Join(dir, ".agents/generated/quality-gate-cache.json")),
++		NewFileEvidenceWriter(osFS, filepath.Join(dir, ".agents/generated/quality-gate-evidence")),
++	)
++
++	result := gate.Evaluate(context.Background(), EvaluationInput{
++		ProjectDir: dir,
++		TaskID:     "integration-fixture",
++		TaskType:   DefaultTaskType,
++		Risk:       RiskLow,
++	})
++
++	if !result.Valid() {
++		t.Fatalf("expected a valid result, got %+v", result)
++	}
++
++	evidencePath := filepath.Join(dir, ".agents/generated/quality-gate-evidence", "integration-fixture.json")
++	if _, err := os.Stat(evidencePath); err != nil {
++		t.Fatalf("expected evidence file at %s: %v", evidencePath, err)
++	}
++}
+diff --git a/internal/qualitygate/gate_test.go b/internal/qualitygate/gate_test.go
+new file mode 100644
+index 0000000..4fd88e1
+--- /dev/null
++++ b/internal/qualitygate/gate_test.go
+@@ -0,0 +1,188 @@
++package qualitygate
++
++import (
++	"context"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
++)
++
++type fakeToolchainProvider struct {
++	result detect.ToolchainResult
++}
++
++func (p fakeToolchainProvider) Detect(string) detect.ToolchainResult {
++	return p.result
++}
++
++type fakeExecutor struct {
++	byCommand map[string]ExecutionResult
++}
++
++func (e fakeExecutor) Execute(_ context.Context, _ string, command string) (ExecutionResult, error) {
++	if result, ok := e.byCommand[command]; ok {
++		return result, nil
++	}
++	return ExecutionResult{Command: command, ExitCode: 0}, nil
++}
++
++func newGoToolchain() detect.ToolchainResult {
++	return detect.ToolchainResult{
++		"go": detect.ToolchainEntry{Fmt: "gofmt -l .", Test: "go test ./...", Lint: "golangci-lint run"},
++	}
++}
++
++func TestGate_Evaluate_AllowsWhenChecksPass(t *testing.T) {
++	fakeFS := fs.NewFakeFileSystem()
++	gate := NewGate(
++		NewDefaultPolicyLoader(fakeFS),
++		fakeToolchainProvider{result: newGoToolchain()},
++		fakeExecutor{byCommand: map[string]ExecutionResult{}},
++		NewFileCache(fakeFS, "/project/.agents/generated/quality-gate-cache.json"),
++		NewFileEvidenceWriter(fakeFS, "/project/.agents/generated/quality-gate-evidence"),
++	)
++
++	result := gate.Evaluate(context.Background(), EvaluationInput{
++		ProjectDir: "/project",
++		TaskID:     "10.0",
++		TaskType:   DefaultTaskType,
++		Risk:       DefaultRisk,
++	})
++
++	if result.Decision() != hookcontract.DecisionAllow {
++		t.Fatalf("Decision() = %v, want ALLOW; reason=%q", result.Decision(), result.Reason())
++	}
++}
++
++func TestGate_Evaluate_RequiredCheckFailureBlocksWithPolicyAndGateID(t *testing.T) {
++	fakeFS := fs.NewFakeFileSystem()
++	gate := NewGate(
++		NewDefaultPolicyLoader(fakeFS),
++		fakeToolchainProvider{result: newGoToolchain()},
++		fakeExecutor{byCommand: map[string]ExecutionResult{
++			"go test ./...": {Command: "go test ./...", ExitCode: 1, Output: "FAIL"},
++		}},
++		NewFileCache(fakeFS, "/project/.agents/generated/quality-gate-cache.json"),
++		NewFileEvidenceWriter(fakeFS, "/project/.agents/generated/quality-gate-evidence"),
++	)
++
++	result := gate.Evaluate(context.Background(), EvaluationInput{
++		ProjectDir: "/project",
++		TaskID:     "10.0",
++		TaskType:   DefaultTaskType,
++		Risk:       DefaultRisk,
++	})
++
++	if result.Decision() != hookcontract.DecisionBlock {
++		t.Fatalf("Decision() = %v, want BLOCK", result.Decision())
++	}
++	if result.PolicyID() == "" {
++		t.Fatalf("PolicyID must be filled on BLOCK")
++	}
++	if result.GateID() != GateID {
++		t.Fatalf("GateID() = %q, want %q", result.GateID(), GateID)
++	}
++}
++
++func TestQualityGate_SkipsWhenFingerprintUnchanged(t *testing.T) {
++	fakeFS := fs.NewFakeFileSystem()
++	executor := fakeExecutor{byCommand: map[string]ExecutionResult{}}
++	gate := NewGate(
++		NewDefaultPolicyLoader(fakeFS),
++		fakeToolchainProvider{result: newGoToolchain()},
++		executor,
++		NewFileCache(fakeFS, "/project/.agents/generated/quality-gate-cache.json"),
++		NewFileEvidenceWriter(fakeFS, "/project/.agents/generated/quality-gate-evidence"),
++	)
++
++	input := EvaluationInput{ProjectDir: "/project", TaskID: "10.0", TaskType: DefaultTaskType, Risk: DefaultRisk}
++
++	first := gate.Evaluate(context.Background(), input)
++	if first.Decision() != hookcontract.DecisionAllow {
++		t.Fatalf("first Decision() = %v, want ALLOW", first.Decision())
++	}
++
++	second := gate.Evaluate(context.Background(), input)
++	if second.Decision() != hookcontract.DecisionNotApplicable {
++		t.Fatalf("second Decision() = %v, want NOT_APPLICABLE (dedup skip)", second.Decision())
++	}
++}
++
++func TestQualityGate_ReexecutesWhenFingerprintChanges(t *testing.T) {
++	fakeFS := fs.NewFakeFileSystem()
++	gate := NewGate(
++		NewDefaultPolicyLoader(fakeFS),
++		fakeToolchainProvider{result: newGoToolchain()},
++		fakeExecutor{byCommand: map[string]ExecutionResult{}},
++		NewFileCache(fakeFS, "/project/.agents/generated/quality-gate-cache.json"),
++		NewFileEvidenceWriter(fakeFS, "/project/.agents/generated/quality-gate-evidence"),
++	)
++
++	first := gate.Evaluate(context.Background(), EvaluationInput{
++		ProjectDir: "/project", TaskID: "10.0", TaskType: DefaultTaskType, Risk: DefaultRisk, StateDigest: "v1",
++	})
++	if first.Decision() != hookcontract.DecisionAllow {
++		t.Fatalf("first Decision() = %v, want ALLOW", first.Decision())
++	}
++
++	second := gate.Evaluate(context.Background(), EvaluationInput{
++		ProjectDir: "/project", TaskID: "10.0", TaskType: DefaultTaskType, Risk: DefaultRisk, StateDigest: "v2",
++	})
++	if second.Decision() != hookcontract.DecisionAllow {
++		t.Fatalf("second Decision() = %v, want ALLOW (re-executed, not skipped)", second.Decision())
++	}
++	if _, isSkipReason := second.Metadata()["previous_decision"]; isSkipReason {
++		t.Fatalf("re-executed result must not carry dedup metadata")
++	}
++}
++
++func TestGate_Evaluate_UndeclaredPolicyCombinationProducesError(t *testing.T) {
++	fakeFS := fs.NewFakeFileSystem()
++	gate := NewGate(
++		NewDefaultPolicyLoader(fakeFS),
++		fakeToolchainProvider{result: newGoToolchain()},
++		fakeExecutor{byCommand: map[string]ExecutionResult{}},
++		NewFileCache(fakeFS, "/project/.agents/generated/quality-gate-cache.json"),
++		NewFileEvidenceWriter(fakeFS, "/project/.agents/generated/quality-gate-evidence"),
++	)
++
++	undeclaredTaskType, err := NewTaskType("never-declared-task-type")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	result := gate.Evaluate(context.Background(), EvaluationInput{
++		ProjectDir: "/project", TaskID: "10.0", TaskType: undeclaredTaskType, Risk: RiskLow,
++	})
++
++	if result.Decision() != hookcontract.DecisionError {
++		t.Fatalf("Decision() = %v, want ERROR for undeclared policy combination (no runtime inference)", result.Decision())
++	}
++}
++
++func TestGate_Evaluate_OptionalCheckFailureWarnsButDoesNotBlock(t *testing.T) {
++	fakeFS := fs.NewFakeFileSystem()
++	taskType, err := NewTaskType("feature")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	gate := NewGate(
++		NewDefaultPolicyLoader(fakeFS),
++		fakeToolchainProvider{result: newGoToolchain()},
++		fakeExecutor{byCommand: map[string]ExecutionResult{
++			"golangci-lint run": {Command: "golangci-lint run", ExitCode: 1, Output: "warnings"},
++		}},
++		NewFileCache(fakeFS, "/project/.agents/generated/quality-gate-cache.json"),
++		NewFileEvidenceWriter(fakeFS, "/project/.agents/generated/quality-gate-evidence"),
++	)
++
++	result := gate.Evaluate(context.Background(), EvaluationInput{
++		ProjectDir: "/project", TaskID: "10.0", TaskType: taskType, Risk: RiskLow,
++	})
++
++	if result.Decision() != hookcontract.DecisionWarn {
++		t.Fatalf("Decision() = %v, want WARN (optional check failure never blocks)", result.Decision())
++	}
++}
+diff --git a/internal/qualitygate/loader.go b/internal/qualitygate/loader.go
+new file mode 100644
+index 0000000..650e19e
+--- /dev/null
++++ b/internal/qualitygate/loader.go
+@@ -0,0 +1,48 @@
++package qualitygate
++
++import (
++	_ "embed"
++	"errors"
++	"fmt"
++	"os"
++	"path/filepath"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++)
++
++const PolicyArtifactRelativePath = ".agents/quality-gate-policy.yaml"
++
++//go:embed default-policy.yaml
++var defaultPolicyYAML []byte
++
++type PolicyLoader interface {
++	Load(projectDir string) (PolicySet, error)
++}
++
++type DefaultPolicyLoader struct {
++	fs fs.FileSystem
++}
++
++var _ PolicyLoader = (*DefaultPolicyLoader)(nil)
++
++func NewDefaultPolicyLoader(filesystem fs.FileSystem) *DefaultPolicyLoader {
++	return &DefaultPolicyLoader{fs: filesystem}
++}
++
++func (l *DefaultPolicyLoader) Load(projectDir string) (PolicySet, error) {
++	path := filepath.Join(projectDir, filepath.FromSlash(PolicyArtifactRelativePath))
++
++	data, err := l.fs.ReadFile(path)
++	if err != nil {
++		if errors.Is(err, os.ErrNotExist) {
++			return DecodePolicySet(defaultPolicyYAML)
++		}
++		return PolicySet{}, fmt.Errorf("qualitygate: read policy artifact %s: %w", path, err)
++	}
++
++	return DecodePolicySet(data)
++}
++
++func DefaultPolicySet() (PolicySet, error) {
++	return DecodePolicySet(defaultPolicyYAML)
++}
+diff --git a/internal/qualitygate/loader_test.go b/internal/qualitygate/loader_test.go
+new file mode 100644
+index 0000000..fb3d339
+--- /dev/null
++++ b/internal/qualitygate/loader_test.go
+@@ -0,0 +1,65 @@
++package qualitygate
++
++import (
++	"errors"
++	"path/filepath"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++)
++
++func TestDefaultPolicyLoader_FallsBackToEmbeddedDefault(t *testing.T) {
++	fakeFS := fs.NewFakeFileSystem()
++	loader := NewDefaultPolicyLoader(fakeFS)
++
++	policySet, err := loader.Load("/project")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if _, err := policySet.Lookup(DefaultTaskType, DefaultRisk); err != nil {
++		t.Fatalf("expected default policy set to cover default combination: %v", err)
++	}
++}
++
++func TestDefaultPolicyLoader_ReadsProjectArtifact(t *testing.T) {
++	fakeFS := fs.NewFakeFileSystem()
++	path := filepath.Join("/project", filepath.FromSlash(PolicyArtifactRelativePath))
++	fakeFS.Files[path] = []byte(`
++version: 1
++policies:
++  - task_type: custom
++    risk: low
++    required: [test]
++`)
++	loader := NewDefaultPolicyLoader(fakeFS)
++
++	policySet, err := loader.Load("/project")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	taskType, err := NewTaskType("custom")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if _, err := policySet.Lookup(taskType, RiskLow); err != nil {
++		t.Fatalf("expected declared combination to resolve: %v", err)
++	}
++}
++
++func TestDefaultPolicyLoader_RejectsInvalidProjectArtifact(t *testing.T) {
++	fakeFS := fs.NewFakeFileSystem()
++	path := filepath.Join("/project", filepath.FromSlash(PolicyArtifactRelativePath))
++	fakeFS.Files[path] = []byte(`
++version: 1
++policies:
++  - task_type: custom
++    risk: extreme
++    required: [test]
++`)
++	loader := NewDefaultPolicyLoader(fakeFS)
++
++	_, err := loader.Load("/project")
++	if !errors.Is(err, ErrInvalidPolicy) {
++		t.Fatalf("expected ErrInvalidPolicy, got %v", err)
++	}
++}
+diff --git a/internal/qualitygate/no_provider_identifier_test.go b/internal/qualitygate/no_provider_identifier_test.go
+new file mode 100644
+index 0000000..71bfc4d
+--- /dev/null
++++ b/internal/qualitygate/no_provider_identifier_test.go
+@@ -0,0 +1,52 @@
++package qualitygate
++
++import (
++	"go/ast"
++	"go/parser"
++	"go/token"
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++)
++
++var forbiddenProviderIdentifiers = []string{"claude", "codex", "copilot", "opencode"}
++
++func TestQualityGateHasNoProviderIdentifier(t *testing.T) {
++	entries, err := os.ReadDir(".")
++	if err != nil {
++		t.Fatalf("read package directory: %v", err)
++	}
++
++	fileSet := token.NewFileSet()
++	for _, entry := range entries {
++		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
++			continue
++		}
++		file, err := parser.ParseFile(fileSet, filepath.Join(".", entry.Name()), nil, parser.AllErrors)
++		if err != nil {
++			t.Fatalf("parse %s: %v", entry.Name(), err)
++		}
++		ast.Inspect(file, func(node ast.Node) bool {
++			switch n := node.(type) {
++			case *ast.Ident:
++				failIfForbiddenProvider(t, entry.Name(), n.Name)
++			case *ast.BasicLit:
++				if n.Kind == token.STRING {
++					failIfForbiddenProvider(t, entry.Name(), n.Value)
++				}
++			}
++			return true
++		})
++	}
++}
++
++func failIfForbiddenProvider(t *testing.T, filename, text string) {
++	t.Helper()
++	lower := strings.ToLower(text)
++	for _, forbidden := range forbiddenProviderIdentifiers {
++		if strings.Contains(lower, forbidden) {
++			t.Fatalf("%s contains forbidden provider identifier %q in %q", filename, forbidden, text)
++		}
++	}
++}
+diff --git a/internal/qualitygate/policy.go b/internal/qualitygate/policy.go
+new file mode 100644
+index 0000000..326f886
+--- /dev/null
++++ b/internal/qualitygate/policy.go
+@@ -0,0 +1,110 @@
++package qualitygate
++
++import (
++	"bytes"
++	"errors"
++	"fmt"
++
++	"gopkg.in/yaml.v3"
++)
++
++const SupportedPolicyVersion = 1
++
++var ErrInvalidPolicy = errors.New("qualitygate: invalid quality gate policy declaration")
++
++var ErrPolicyNotDeclared = errors.New("qualitygate: no policy declared for task type and risk")
++
++type policyKey struct {
++	taskType TaskType
++	risk     Risk
++}
++
++type PolicySet struct {
++	version int
++	entries map[policyKey]Selection
++}
++
++func (p PolicySet) Lookup(taskType TaskType, risk Risk) (Selection, error) {
++	selection, ok := p.entries[policyKey{taskType: taskType, risk: risk}]
++	if !ok {
++		return Selection{}, fmt.Errorf("%w: task_type=%s risk=%s", ErrPolicyNotDeclared, taskType, risk)
++	}
++	return selection, nil
++}
++
++func (p PolicySet) Version() int {
++	return p.version
++}
++
++type rawPolicyFile struct {
++	Version  int              `yaml:"version"`
++	Policies []rawPolicyEntry `yaml:"policies"`
++}
++
++type rawPolicyEntry struct {
++	TaskType string   `yaml:"task_type"`
++	Risk     string   `yaml:"risk"`
++	Required []string `yaml:"required"`
++	Optional []string `yaml:"optional"`
++}
++
++func DecodePolicySet(data []byte) (PolicySet, error) {
++	decoder := yaml.NewDecoder(bytes.NewReader(data))
++	decoder.KnownFields(true)
++
++	var raw rawPolicyFile
++	if err := decoder.Decode(&raw); err != nil {
++		return PolicySet{}, fmt.Errorf("%w: %s", ErrInvalidPolicy, err)
++	}
++
++	if raw.Version != SupportedPolicyVersion {
++		return PolicySet{}, fmt.Errorf("%w: unsupported version %d, expected %d", ErrInvalidPolicy, raw.Version, SupportedPolicyVersion)
++	}
++	if len(raw.Policies) == 0 {
++		return PolicySet{}, fmt.Errorf("%w: no policies declared", ErrInvalidPolicy)
++	}
++
++	entries := make(map[policyKey]Selection, len(raw.Policies))
++	for index, entry := range raw.Policies {
++		taskType, err := NewTaskType(entry.TaskType)
++		if err != nil {
++			return PolicySet{}, fmt.Errorf("%w: policies[%d]: %s", ErrInvalidPolicy, index, err)
++		}
++		risk, err := ParseRisk(entry.Risk)
++		if err != nil {
++			return PolicySet{}, fmt.Errorf("%w: policies[%d]: %s", ErrInvalidPolicy, index, err)
++		}
++		required, err := parseCheckKindList(entry.Required)
++		if err != nil {
++			return PolicySet{}, fmt.Errorf("%w: policies[%d]: %s", ErrInvalidPolicy, index, err)
++		}
++		optional, err := parseCheckKindList(entry.Optional)
++		if err != nil {
++			return PolicySet{}, fmt.Errorf("%w: policies[%d]: %s", ErrInvalidPolicy, index, err)
++		}
++		selection, err := NewSelection(required, optional)
++		if err != nil {
++			return PolicySet{}, fmt.Errorf("%w: policies[%d]: %s", ErrInvalidPolicy, index, err)
++		}
++
++		key := policyKey{taskType: taskType, risk: risk}
++		if _, exists := entries[key]; exists {
++			return PolicySet{}, fmt.Errorf("%w: duplicate entry for task_type=%s risk=%s", ErrInvalidPolicy, taskType, risk)
++		}
++		entries[key] = selection
++	}
++
++	return PolicySet{version: raw.Version, entries: entries}, nil
++}
++
++func parseCheckKindList(values []string) ([]CheckKind, error) {
++	kinds := make([]CheckKind, 0, len(values))
++	for _, value := range values {
++		kind, err := ParseCheckKind(value)
++		if err != nil {
++			return nil, err
++		}
++		kinds = append(kinds, kind)
++	}
++	return kinds, nil
++}
+diff --git a/internal/qualitygate/policy_test.go b/internal/qualitygate/policy_test.go
+new file mode 100644
+index 0000000..1887673
+--- /dev/null
++++ b/internal/qualitygate/policy_test.go
+@@ -0,0 +1,152 @@
++package qualitygate
++
++import (
++	"errors"
++	"testing"
++)
++
++func TestDecodePolicySet_Valid(t *testing.T) {
++	data := []byte(`
++version: 1
++policies:
++  - task_type: feature
++    risk: low
++    required: [test]
++    optional: [lint]
++`)
++	policySet, err := DecodePolicySet(data)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	taskType, err := NewTaskType("feature")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	selection, err := policySet.Lookup(taskType, RiskLow)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if len(selection.Required()) != 1 || selection.Required()[0] != CheckTest {
++		t.Fatalf("required = %v, want [test]", selection.Required())
++	}
++}
++
++func TestDecodePolicySet_RejectsUnsupportedVersion(t *testing.T) {
++	data := []byte(`
++version: 2
++policies:
++  - task_type: feature
++    risk: low
++    required: [test]
++`)
++	_, err := DecodePolicySet(data)
++	if !errors.Is(err, ErrInvalidPolicy) {
++		t.Fatalf("expected ErrInvalidPolicy, got %v", err)
++	}
++}
++
++func TestDecodePolicySet_RejectsUnknownField(t *testing.T) {
++	data := []byte(`
++version: 1
++policies:
++  - task_type: feature
++    risk: low
++    required: [test]
++    unknown_field: true
++`)
++	_, err := DecodePolicySet(data)
++	if !errors.Is(err, ErrInvalidPolicy) {
++		t.Fatalf("expected ErrInvalidPolicy for unknown field, got %v", err)
++	}
++}
++
++func TestDecodePolicySet_RejectsUnknownRisk(t *testing.T) {
++	data := []byte(`
++version: 1
++policies:
++  - task_type: feature
++    risk: critical
++    required: [test]
++`)
++	_, err := DecodePolicySet(data)
++	if !errors.Is(err, ErrInvalidPolicy) {
++		t.Fatalf("expected ErrInvalidPolicy for unknown risk, got %v", err)
++	}
++}
++
++func TestDecodePolicySet_RejectsUnknownCheck(t *testing.T) {
++	data := []byte(`
++version: 1
++policies:
++  - task_type: feature
++    risk: low
++    required: [coverage]
++`)
++	_, err := DecodePolicySet(data)
++	if !errors.Is(err, ErrInvalidPolicy) {
++		t.Fatalf("expected ErrInvalidPolicy for unknown check, got %v", err)
++	}
++}
++
++func TestDecodePolicySet_RejectsDuplicateEntry(t *testing.T) {
++	data := []byte(`
++version: 1
++policies:
++  - task_type: feature
++    risk: low
++    required: [test]
++  - task_type: feature
++    risk: low
++    required: [lint]
++`)
++	_, err := DecodePolicySet(data)
++	if !errors.Is(err, ErrInvalidPolicy) {
++		t.Fatalf("expected ErrInvalidPolicy for duplicate entry, got %v", err)
++	}
++}
++
++func TestDecodePolicySet_RejectsEmptyPolicies(t *testing.T) {
++	data := []byte(`
++version: 1
++policies: []
++`)
++	_, err := DecodePolicySet(data)
++	if !errors.Is(err, ErrInvalidPolicy) {
++		t.Fatalf("expected ErrInvalidPolicy for empty policies, got %v", err)
++	}
++}
++
++func TestPolicySet_LookupUndeclaredCombinationIsNeverInferred(t *testing.T) {
++	data := []byte(`
++version: 1
++policies:
++  - task_type: feature
++    risk: low
++    required: [test]
++`)
++	policySet, err := DecodePolicySet(data)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	taskType, err := NewTaskType("feature")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	_, err = policySet.Lookup(taskType, RiskHigh)
++	if !errors.Is(err, ErrPolicyNotDeclared) {
++		t.Fatalf("expected ErrPolicyNotDeclared for undeclared combination, got %v", err)
++	}
++}
++
++func TestDefaultPolicySet_IsValid(t *testing.T) {
++	policySet, err := DefaultPolicySet()
++	if err != nil {
++		t.Fatalf("embedded default policy must decode cleanly: %v", err)
++	}
++	if _, err := policySet.Lookup(DefaultTaskType, DefaultRisk); err != nil {
++		t.Fatalf("default policy must cover default task type/risk: %v", err)
++	}
++}
+diff --git a/internal/qualitygate/resolver.go b/internal/qualitygate/resolver.go
+new file mode 100644
+index 0000000..a18d906
+--- /dev/null
++++ b/internal/qualitygate/resolver.go
+@@ -0,0 +1,71 @@
++package qualitygate
++
++import (
++	"errors"
++	"fmt"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
++)
++
++type ResolvedCheck struct {
++	Kind     CheckKind
++	Command  string
++	Required bool
++}
++
++var ErrCheckUnavailableForStack = errors.New("qualitygate: required check has no resolved command for detected stack")
++
++var ErrNoStackDetected = errors.New("qualitygate: no stack detected in toolchain result")
++
++func ResolveChecks(selection Selection, toolchain detect.ToolchainResult, lang string) ([]ResolvedCheck, error) {
++	entry, ok := toolchain[lang]
++	if !ok {
++		return nil, fmt.Errorf("%w: lang=%s", ErrNoStackDetected, lang)
++	}
++
++	resolved := make([]ResolvedCheck, 0, len(selection.required)+len(selection.optional))
++
++	for _, kind := range selection.Required() {
++		command := commandFor(entry, kind)
++		if command == "" {
++			return nil, fmt.Errorf("%w: check=%s lang=%s", ErrCheckUnavailableForStack, kind, lang)
++		}
++		resolved = append(resolved, ResolvedCheck{Kind: kind, Command: command, Required: true})
++	}
++
++	for _, kind := range selection.Optional() {
++		command := commandFor(entry, kind)
++		if command == "" {
++			continue
++		}
++		resolved = append(resolved, ResolvedCheck{Kind: kind, Command: command, Required: false})
++	}
++
++	return resolved, nil
++}
++
++func commandFor(entry detect.ToolchainEntry, kind CheckKind) string {
++	switch kind {
++	case CheckFmt:
++		return entry.Fmt
++	case CheckTest:
++		return entry.Test
++	case CheckLint:
++		return entry.Lint
++	default:
++		panic(fmt.Sprintf("qualitygate: unhandled check kind %v", kind))
++	}
++}
++
++func PrimaryLang(toolchain detect.ToolchainResult) (string, bool) {
++	for _, lang := range skills.AllLangs {
++		if _, ok := toolchain[string(lang)]; ok {
++			return string(lang), true
++		}
++	}
++	for lang := range toolchain {
++		return lang, true
++	}
++	return "", false
++}
+diff --git a/internal/qualitygate/resolver_test.go b/internal/qualitygate/resolver_test.go
+new file mode 100644
+index 0000000..2cdc269
+--- /dev/null
++++ b/internal/qualitygate/resolver_test.go
+@@ -0,0 +1,91 @@
++package qualitygate
++
++import (
++	"errors"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
++)
++
++func TestResolveChecks_ResolvesFromToolchain(t *testing.T) {
++	selection, err := NewSelection([]CheckKind{CheckTest, CheckLint}, []CheckKind{CheckFmt})
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	toolchain := detect.ToolchainResult{
++		"go": detect.ToolchainEntry{Fmt: "gofmt -w .", Test: "go test ./...", Lint: "golangci-lint run"},
++	}
++
++	resolved, err := ResolveChecks(selection, toolchain, "go")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if len(resolved) != 3 {
++		t.Fatalf("resolved = %v, want 3 checks", resolved)
++	}
++}
++
++func TestResolveChecks_RequiredCommandMissingFails(t *testing.T) {
++	selection, err := NewSelection([]CheckKind{CheckLint}, nil)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	toolchain := detect.ToolchainResult{
++		"python": detect.ToolchainEntry{Test: "pytest"},
++	}
++
++	_, err = ResolveChecks(selection, toolchain, "python")
++	if !errors.Is(err, ErrCheckUnavailableForStack) {
++		t.Fatalf("expected ErrCheckUnavailableForStack, got %v", err)
++	}
++}
++
++func TestResolveChecks_OptionalCommandMissingIsSkipped(t *testing.T) {
++	selection, err := NewSelection([]CheckKind{CheckTest}, []CheckKind{CheckLint})
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	toolchain := detect.ToolchainResult{
++		"python": detect.ToolchainEntry{Test: "pytest"},
++	}
++
++	resolved, err := ResolveChecks(selection, toolchain, "python")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if len(resolved) != 1 {
++		t.Fatalf("resolved = %v, want 1 check (optional lint skipped)", resolved)
++	}
++}
++
++func TestResolveChecks_UnknownLang(t *testing.T) {
++	selection, err := NewSelection([]CheckKind{CheckTest}, nil)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	_, err = ResolveChecks(selection, detect.ToolchainResult{}, "java")
++	if !errors.Is(err, ErrNoStackDetected) {
++		t.Fatalf("expected ErrNoStackDetected, got %v", err)
++	}
++}
++
++func TestPrimaryLang_PrefersDeclaredOrder(t *testing.T) {
++	toolchain := detect.ToolchainResult{
++		"java": detect.ToolchainEntry{Test: "mvn test"},
++		"go":   detect.ToolchainEntry{Test: "go test ./..."},
++	}
++	lang, ok := PrimaryLang(toolchain)
++	if !ok {
++		t.Fatalf("expected a primary lang")
++	}
++	if lang != "go" {
++		t.Fatalf("lang = %q, want go (AllLangs order)", lang)
++	}
++}
++
++func TestPrimaryLang_Empty(t *testing.T) {
++	_, ok := PrimaryLang(detect.ToolchainResult{})
++	if ok {
++		t.Fatalf("expected no primary lang for empty toolchain result")
++	}
++}
+diff --git a/internal/qualitygate/risk.go b/internal/qualitygate/risk.go
+new file mode 100644
+index 0000000..7f487d5
+--- /dev/null
++++ b/internal/qualitygate/risk.go
+@@ -0,0 +1,62 @@
++package qualitygate
++
++import (
++	"errors"
++	"fmt"
++	"strings"
++)
++
++type Risk int
++
++const (
++	RiskLow Risk = iota + 1
++	RiskMedium
++	RiskHigh
++)
++
++var allRisks = []Risk{RiskLow, RiskMedium, RiskHigh}
++
++var ErrUnknownRisk = errors.New("qualitygate: unknown risk level")
++
++func (r Risk) Valid() bool {
++	return r >= RiskLow && r <= RiskHigh
++}
++
++func (r Risk) String() string {
++	switch r {
++	case RiskLow:
++		return "low"
++	case RiskMedium:
++		return "medium"
++	case RiskHigh:
++		return "high"
++	default:
++		return "unknown"
++	}
++}
++
++func ParseRisk(s string) (Risk, error) {
++	normalized := strings.ToLower(strings.TrimSpace(s))
++	for _, risk := range allRisks {
++		if risk.String() == normalized {
++			return risk, nil
++		}
++	}
++	return 0, fmt.Errorf("%w: %q", ErrUnknownRisk, s)
++}
++
++type TaskType string
++
++var ErrEmptyTaskType = errors.New("qualitygate: task type must not be empty")
++
++func NewTaskType(s string) (TaskType, error) {
++	trimmed := strings.TrimSpace(s)
++	if trimmed == "" {
++		return "", ErrEmptyTaskType
++	}
++	return TaskType(trimmed), nil
++}
++
++const DefaultTaskType TaskType = "default"
++
++const DefaultRisk = RiskMedium
+diff --git a/internal/qualitygate/risk_test.go b/internal/qualitygate/risk_test.go
+new file mode 100644
+index 0000000..4c64507
+--- /dev/null
++++ b/internal/qualitygate/risk_test.go
+@@ -0,0 +1,53 @@
++package qualitygate
++
++import (
++	"errors"
++	"testing"
++)
++
++func TestRisk_StringAndParse(t *testing.T) {
++	cases := []struct {
++		risk Risk
++		text string
++	}{
++		{RiskLow, "low"},
++		{RiskMedium, "medium"},
++		{RiskHigh, "high"},
++	}
++	for _, tc := range cases {
++		if got := tc.risk.String(); got != tc.text {
++			t.Fatalf("String() = %q, want %q", got, tc.text)
++		}
++		parsed, err := ParseRisk(tc.text)
++		if err != nil {
++			t.Fatalf("ParseRisk(%q) unexpected error: %v", tc.text, err)
++		}
++		if parsed != tc.risk {
++			t.Fatalf("ParseRisk(%q) = %v, want %v", tc.text, parsed, tc.risk)
++		}
++	}
++}
++
++func TestParseRisk_Unknown(t *testing.T) {
++	_, err := ParseRisk("critical")
++	if !errors.Is(err, ErrUnknownRisk) {
++		t.Fatalf("expected ErrUnknownRisk, got %v", err)
++	}
++}
++
++func TestNewTaskType_RejectsEmpty(t *testing.T) {
++	_, err := NewTaskType("   ")
++	if !errors.Is(err, ErrEmptyTaskType) {
++		t.Fatalf("expected ErrEmptyTaskType, got %v", err)
++	}
++}
++
++func TestNewTaskType_Trims(t *testing.T) {
++	taskType, err := NewTaskType("  feature  ")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if taskType != "feature" {
++		t.Fatalf("got %q, want feature", taskType)
++	}
++}
+diff --git a/internal/qualitygate/selection.go b/internal/qualitygate/selection.go
+new file mode 100644
+index 0000000..a18f6c3
+--- /dev/null
++++ b/internal/qualitygate/selection.go
+@@ -0,0 +1,43 @@
++package qualitygate
++
++import "fmt"
++
++type Selection struct {
++	required []CheckKind
++	optional []CheckKind
++}
++
++func NewSelection(required, optional []CheckKind) (Selection, error) {
++	seen := make(map[CheckKind]string, len(required)+len(optional))
++	for _, kind := range required {
++		if !kind.Valid() {
++			return Selection{}, fmt.Errorf("%w: %d", ErrUnknownCheckKind, int(kind))
++		}
++		if origin, exists := seen[kind]; exists {
++			return Selection{}, fmt.Errorf("qualitygate: check %s declared in both %s and required", kind, origin)
++		}
++		seen[kind] = "required"
++	}
++	for _, kind := range optional {
++		if !kind.Valid() {
++			return Selection{}, fmt.Errorf("%w: %d", ErrUnknownCheckKind, int(kind))
++		}
++		if origin, exists := seen[kind]; exists {
++			return Selection{}, fmt.Errorf("qualitygate: check %s declared in both %s and optional", kind, origin)
++		}
++		seen[kind] = "optional"
++	}
++
++	return Selection{
++		required: append([]CheckKind(nil), required...),
++		optional: append([]CheckKind(nil), optional...),
++	}, nil
++}
++
++func (s Selection) Required() []CheckKind {
++	return append([]CheckKind(nil), s.required...)
++}
++
++func (s Selection) Optional() []CheckKind {
++	return append([]CheckKind(nil), s.optional...)
++}
+diff --git a/internal/qualitygate/selection_test.go b/internal/qualitygate/selection_test.go
+new file mode 100644
+index 0000000..82602ab
+--- /dev/null
++++ b/internal/qualitygate/selection_test.go
+@@ -0,0 +1,47 @@
++package qualitygate
++
++import "testing"
++
++func TestNewSelection_Valid(t *testing.T) {
++	selection, err := NewSelection([]CheckKind{CheckTest, CheckLint}, []CheckKind{CheckFmt})
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if len(selection.Required()) != 2 {
++		t.Fatalf("required = %v, want 2 entries", selection.Required())
++	}
++	if len(selection.Optional()) != 1 {
++		t.Fatalf("optional = %v, want 1 entry", selection.Optional())
++	}
++}
++
++func TestNewSelection_RejectsOverlap(t *testing.T) {
++	_, err := NewSelection([]CheckKind{CheckTest}, []CheckKind{CheckTest})
++	if err == nil {
++		t.Fatalf("expected error for overlapping check between required and optional")
++	}
++}
++
++func TestNewSelection_RejectsDuplicateWithinRequired(t *testing.T) {
++	_, err := NewSelection([]CheckKind{CheckTest, CheckTest}, nil)
++	if err == nil {
++		t.Fatalf("expected error for duplicate check within required")
++	}
++}
++
++func TestNewSelection_RejectsInvalidKind(t *testing.T) {
++	_, err := NewSelection([]CheckKind{CheckKind(99)}, nil)
++	if err == nil {
++		t.Fatalf("expected error for invalid check kind")
++	}
++}
++
++func TestSelection_Empty(t *testing.T) {
++	selection, err := NewSelection(nil, nil)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if len(selection.Required()) != 0 || len(selection.Optional()) != 0 {
++		t.Fatalf("expected empty selection, got %+v", selection)
++	}
++}
+diff --git a/internal/qualitygate/verdict.go b/internal/qualitygate/verdict.go
+new file mode 100644
+index 0000000..ccefc4e
+--- /dev/null
++++ b/internal/qualitygate/verdict.go
+@@ -0,0 +1,25 @@
++package qualitygate
++
++import (
++	"errors"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
++)
++
++var ErrVerdictSealed = errors.New("qualitygate: deterministic verdict is sealed and cannot be overridden")
++
++type Verdict struct {
++	result hookcontract.Result
++}
++
++func NewVerdict(result hookcontract.Result) *Verdict {
++	return &Verdict{result: result}
++}
++
++func (v *Verdict) Result() hookcontract.Result {
++	return v.result
++}
++
++func (v *Verdict) Override(hookcontract.Result) error {
++	return ErrVerdictSealed
++}
+diff --git a/internal/qualitygate/verdict_test.go b/internal/qualitygate/verdict_test.go
+new file mode 100644
+index 0000000..78461ff
+--- /dev/null
++++ b/internal/qualitygate/verdict_test.go
+@@ -0,0 +1,34 @@
++package qualitygate
++
++import (
++	"errors"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
++)
++
++func TestVerdict_OverrideOfDeterministicResultAlwaysFails(t *testing.T) {
++	deterministic, err := hookcontract.NewResult(hookcontract.DecisionBlock, "required check failed", "quality-gate:feature:high", GateID)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	verdict := NewVerdict(deterministic)
++
++	llmProposedOverride := hookcontract.NewAllow()
++	if err := verdict.Override(llmProposedOverride); !errors.Is(err, ErrVerdictSealed) {
++		t.Fatalf("expected ErrVerdictSealed, got %v", err)
++	}
++
++	if verdict.Result().Decision() != hookcontract.DecisionBlock {
++		t.Fatalf("deterministic result must remain BLOCK after override attempt, got %v", verdict.Result().Decision())
++	}
++}
++
++func TestVerdict_ResultReturnsOriginal(t *testing.T) {
++	original := hookcontract.NewAllow()
++	verdict := NewVerdict(original)
++
++	if verdict.Result().Decision() != hookcontract.DecisionAllow {
++		t.Fatalf("Result() = %v, want ALLOW", verdict.Result().Decision())
++	}
++}
+diff --git a/internal/runtime/hooks/quality_gate.go b/internal/runtime/hooks/quality_gate.go
+new file mode 100644
+index 0000000..20e1522
+--- /dev/null
++++ b/internal/runtime/hooks/quality_gate.go
+@@ -0,0 +1,43 @@
++package hooks
++
++import (
++	"context"
++	"fmt"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/qualitygate"
++)
++
++type QualityGateHook struct {
++	gate  *qualitygate.Gate
++	input qualitygate.EvaluationInput
++}
++
++var _ Hook = (*QualityGateHook)(nil)
++
++func NewQualityGateHook(gate *qualitygate.Gate, input qualitygate.EvaluationInput) *QualityGateHook {
++	return &QualityGateHook{gate: gate, input: input}
++}
++
++func (h *QualityGateHook) Name() string { return "quality_gate" }
++
++func (h *QualityGateHook) Run(ctx context.Context, evt Event) error {
++	if _, ok := evt.(SessionPostEndEvent); !ok {
++		return nil
++	}
++	if h.gate == nil {
++		return nil
++	}
++
++	result := h.gate.Evaluate(ctx, h.input)
++	switch result.Decision() {
++	case hookcontract.DecisionBlock, hookcontract.DecisionError:
++		return fmt.Errorf("quality_gate: %s (policy=%s gate=%s)", result.Reason(), result.PolicyID(), result.GateID())
++	default:
++		return nil
++	}
++}
++
++func RegisterQualityGate(disp Dispatcher, hook Hook) {
++	disp.Register(PointSessionPostEnd, hook)
++}
+diff --git a/internal/runtime/hooks/quality_gate_test.go b/internal/runtime/hooks/quality_gate_test.go
+new file mode 100644
+index 0000000..0e7d410
+--- /dev/null
++++ b/internal/runtime/hooks/quality_gate_test.go
+@@ -0,0 +1,92 @@
++package hooks
++
++import (
++	"context"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/qualitygate"
++)
++
++type recordingDispatcher struct {
++	registrations map[string][]Hook
++}
++
++func newRecordingDispatcher() *recordingDispatcher {
++	return &recordingDispatcher{registrations: make(map[string][]Hook)}
++}
++
++func (d *recordingDispatcher) Register(point string, hook Hook) {
++	d.registrations[point] = append(d.registrations[point], hook)
++}
++
++func (d *recordingDispatcher) Dispatch(ctx context.Context, point string, evt Event) error {
++	for _, hook := range d.registrations[point] {
++		if err := hook.Run(ctx, evt); err != nil {
++			return err
++		}
++	}
++	return nil
++}
++
++func TestRegisterQualityGate_RegistersOnlyOnSessionPostEnd(t *testing.T) {
++	disp := newRecordingDispatcher()
++	hook := NewQualityGateHook(nil, qualitygate.EvaluationInput{})
++
++	RegisterQualityGate(disp, hook)
++
++	if len(disp.registrations[PointSessionPostEnd]) != 1 {
++		t.Fatalf("expected quality gate registered exactly once on %s, got %d", PointSessionPostEnd, len(disp.registrations[PointSessionPostEnd]))
++	}
++	if len(disp.registrations[PointToolCallPreDispatch]) != 0 {
++		t.Fatalf("quality gate must never register on %s (RF-25)", PointToolCallPreDispatch)
++	}
++	if len(disp.registrations[PointToolCallPostComplete]) != 0 {
++		t.Fatalf("quality gate must never register on %s (RF-25)", PointToolCallPostComplete)
++	}
++	for _, point := range AllPoints() {
++		if point == PointSessionPostEnd {
++			continue
++		}
++		if len(disp.registrations[point]) != 0 {
++			t.Fatalf("quality gate must never register on %s (RF-25 - event adequado apenas)", point)
++		}
++	}
++}
++
++func TestQualityGateHook_IgnoresEventsOtherThanSessionPostEnd(t *testing.T) {
++	hook := NewQualityGateHook(nil, qualitygate.EvaluationInput{})
++
++	if err := hook.Run(context.Background(), ToolCallEvent{Phase: "pre_dispatch"}); err != nil {
++		t.Fatalf("unexpected error for wrong event: %v", err)
++	}
++}
++
++type emptyToolchainProvider struct{}
++
++func (emptyToolchainProvider) Detect(string) detect.ToolchainResult {
++	return detect.ToolchainResult{}
++}
++
++func TestQualityGateHook_BlockDecisionAbortsWithReason(t *testing.T) {
++	fakeFS := fs.NewFakeFileSystem()
++	gate := qualitygate.NewGate(
++		qualitygate.NewDefaultPolicyLoader(fakeFS),
++		emptyToolchainProvider{},
++		qualitygate.NewShellExecutor(),
++		nil,
++		nil,
++	)
++	hook := NewQualityGateHook(gate, qualitygate.EvaluationInput{
++		ProjectDir: "/project",
++		TaskID:     "10.0",
++		TaskType:   qualitygate.DefaultTaskType,
++		Risk:       qualitygate.DefaultRisk,
++	})
++
++	err := hook.Run(context.Background(), SessionPostEndEvent{})
++	if err == nil {
++		t.Fatalf("expected error when quality gate cannot resolve a stack (ERROR decision)")
++	}
++}
+diff --git a/internal/runtime/runner.go b/internal/runtime/runner.go
+index 7523bfc..41b4b51 100644
+--- a/internal/runtime/runner.go
++++ b/internal/runtime/runner.go
+@@ -14,7 +14,9 @@ import (
+ 	"time"
+ 
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/qualitygate"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/handshake"
+@@ -699,6 +701,27 @@ func (c *Catalog) prepareHooksDispatcher(
+ 		disp.Register(hooks.PointSessionPostEnd, hooks.NewMemoryPersistHook(store))
+ 	}
+ 
++	if j.QualityGateEnabled {
++		osFS := fs.NewOSFileSystem()
++		qualityTaskID := j.TaskFileName
++		if qualityTaskID == "" {
++			qualityTaskID = "adhoc"
++		}
++		qualityGate := qualitygate.NewGate(
++			qualitygate.NewDefaultPolicyLoader(osFS),
++			detect.NewToolchainDetector(osFS),
++			qualitygate.NewShellExecutor(),
++			qualitygate.NewFileCache(osFS, filepath.Join(j.WorkDir, ".agents/generated/quality-gate-cache.json")),
++			qualitygate.NewFileEvidenceWriter(osFS, filepath.Join(j.WorkDir, ".agents/generated/quality-gate-evidence")),
++		)
++		disp.Register(hooks.PointSessionPostEnd, hooks.NewQualityGateHook(qualityGate, qualitygate.EvaluationInput{
++			ProjectDir: j.WorkDir,
++			TaskID:     qualityTaskID,
++			TaskType:   qualitygate.DefaultTaskType,
++			Risk:       qualitygate.DefaultRisk,
++		}))
++	}
++
+ 	if memRecorder != nil {
+ 		memoryEvidenceHook := hooks.NewMemoryEvidenceHook(memRecorder)
+ 		disp.Register(hooks.PointMemoryFactRecorded, memoryEvidenceHook)
+diff --git a/internal/runtime/types.go b/internal/runtime/types.go
+index e86cc4a..93c4b57 100644
+--- a/internal/runtime/types.go
++++ b/internal/runtime/types.go
+@@ -74,4 +74,6 @@ type Job struct {
+ 	WindowMaxTokens int
+ 
+ 	AutoReview bool
++
++	QualityGateEnabled bool
+ }

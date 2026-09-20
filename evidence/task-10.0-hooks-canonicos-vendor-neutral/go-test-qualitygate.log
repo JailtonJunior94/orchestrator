@@ -1,0 +1,98 @@
+=== RUN   TestFileCache_GetMissWhenEmpty
+--- PASS: TestFileCache_GetMissWhenEmpty (0.00s)
+=== RUN   TestFileCache_PutThenGetRoundTrips
+--- PASS: TestFileCache_PutThenGetRoundTrips (0.00s)
+=== RUN   TestFileCache_PutPreservesOtherTasks
+--- PASS: TestFileCache_PutPreservesOtherTasks (0.00s)
+=== RUN   TestCheckKind_StringAndParse
+--- PASS: TestCheckKind_StringAndParse (0.00s)
+=== RUN   TestParseCheckKind_Unknown
+--- PASS: TestParseCheckKind_Unknown (0.00s)
+=== RUN   TestCheckKind_InvalidZeroValue
+--- PASS: TestCheckKind_InvalidZeroValue (0.00s)
+=== RUN   TestFileEvidenceWriter_PersistsRecognizableTestCommand
+--- PASS: TestFileEvidenceWriter_PersistsRecognizableTestCommand (0.00s)
+=== RUN   TestGateEvidence_CommandLines
+--- PASS: TestGateEvidence_CommandLines (0.00s)
+=== RUN   TestShellExecutor_CapturesExitCodeAndOutput
+--- PASS: TestShellExecutor_CapturesExitCodeAndOutput (0.03s)
+=== RUN   TestComputeFingerprint_StableForSameInput
+--- PASS: TestComputeFingerprint_StableForSameInput (0.00s)
+=== RUN   TestComputeFingerprint_ChangesWhenToolchainChanges
+--- PASS: TestComputeFingerprint_ChangesWhenToolchainChanges (0.00s)
+=== RUN   TestComputeFingerprint_ChangesWhenStateDigestChanges
+--- PASS: TestComputeFingerprint_ChangesWhenStateDigestChanges (0.00s)
+=== RUN   TestGate_Evaluate_AllowsWhenChecksPass
+--- PASS: TestGate_Evaluate_AllowsWhenChecksPass (0.00s)
+=== RUN   TestGate_Evaluate_RequiredCheckFailureBlocksWithPolicyAndGateID
+--- PASS: TestGate_Evaluate_RequiredCheckFailureBlocksWithPolicyAndGateID (0.00s)
+=== RUN   TestQualityGate_SkipsWhenFingerprintUnchanged
+--- PASS: TestQualityGate_SkipsWhenFingerprintUnchanged (0.00s)
+=== RUN   TestQualityGate_ReexecutesWhenFingerprintChanges
+--- PASS: TestQualityGate_ReexecutesWhenFingerprintChanges (0.00s)
+=== RUN   TestGate_Evaluate_UndeclaredPolicyCombinationProducesError
+--- PASS: TestGate_Evaluate_UndeclaredPolicyCombinationProducesError (0.00s)
+=== RUN   TestGate_Evaluate_OptionalCheckFailureWarnsButDoesNotBlock
+--- PASS: TestGate_Evaluate_OptionalCheckFailureWarnsButDoesNotBlock (0.00s)
+=== RUN   TestDefaultPolicyLoader_FallsBackToEmbeddedDefault
+--- PASS: TestDefaultPolicyLoader_FallsBackToEmbeddedDefault (0.00s)
+=== RUN   TestDefaultPolicyLoader_ReadsProjectArtifact
+--- PASS: TestDefaultPolicyLoader_ReadsProjectArtifact (0.00s)
+=== RUN   TestDefaultPolicyLoader_RejectsInvalidProjectArtifact
+--- PASS: TestDefaultPolicyLoader_RejectsInvalidProjectArtifact (0.00s)
+=== RUN   TestQualityGateHasNoProviderIdentifier
+--- PASS: TestQualityGateHasNoProviderIdentifier (0.00s)
+=== RUN   TestDecodePolicySet_Valid
+--- PASS: TestDecodePolicySet_Valid (0.00s)
+=== RUN   TestDecodePolicySet_RejectsUnsupportedVersion
+--- PASS: TestDecodePolicySet_RejectsUnsupportedVersion (0.00s)
+=== RUN   TestDecodePolicySet_RejectsUnknownField
+--- PASS: TestDecodePolicySet_RejectsUnknownField (0.00s)
+=== RUN   TestDecodePolicySet_RejectsUnknownRisk
+--- PASS: TestDecodePolicySet_RejectsUnknownRisk (0.00s)
+=== RUN   TestDecodePolicySet_RejectsUnknownCheck
+--- PASS: TestDecodePolicySet_RejectsUnknownCheck (0.00s)
+=== RUN   TestDecodePolicySet_RejectsDuplicateEntry
+--- PASS: TestDecodePolicySet_RejectsDuplicateEntry (0.00s)
+=== RUN   TestDecodePolicySet_RejectsEmptyPolicies
+--- PASS: TestDecodePolicySet_RejectsEmptyPolicies (0.00s)
+=== RUN   TestPolicySet_LookupUndeclaredCombinationIsNeverInferred
+--- PASS: TestPolicySet_LookupUndeclaredCombinationIsNeverInferred (0.00s)
+=== RUN   TestDefaultPolicySet_IsValid
+--- PASS: TestDefaultPolicySet_IsValid (0.00s)
+=== RUN   TestResolveChecks_ResolvesFromToolchain
+--- PASS: TestResolveChecks_ResolvesFromToolchain (0.00s)
+=== RUN   TestResolveChecks_RequiredCommandMissingFails
+--- PASS: TestResolveChecks_RequiredCommandMissingFails (0.00s)
+=== RUN   TestResolveChecks_OptionalCommandMissingIsSkipped
+--- PASS: TestResolveChecks_OptionalCommandMissingIsSkipped (0.00s)
+=== RUN   TestResolveChecks_UnknownLang
+--- PASS: TestResolveChecks_UnknownLang (0.00s)
+=== RUN   TestPrimaryLang_PrefersDeclaredOrder
+--- PASS: TestPrimaryLang_PrefersDeclaredOrder (0.00s)
+=== RUN   TestPrimaryLang_Empty
+--- PASS: TestPrimaryLang_Empty (0.00s)
+=== RUN   TestRisk_StringAndParse
+--- PASS: TestRisk_StringAndParse (0.00s)
+=== RUN   TestParseRisk_Unknown
+--- PASS: TestParseRisk_Unknown (0.00s)
+=== RUN   TestNewTaskType_RejectsEmpty
+--- PASS: TestNewTaskType_RejectsEmpty (0.00s)
+=== RUN   TestNewTaskType_Trims
+--- PASS: TestNewTaskType_Trims (0.00s)
+=== RUN   TestNewSelection_Valid
+--- PASS: TestNewSelection_Valid (0.00s)
+=== RUN   TestNewSelection_RejectsOverlap
+--- PASS: TestNewSelection_RejectsOverlap (0.00s)
+=== RUN   TestNewSelection_RejectsDuplicateWithinRequired
+--- PASS: TestNewSelection_RejectsDuplicateWithinRequired (0.00s)
+=== RUN   TestNewSelection_RejectsInvalidKind
+--- PASS: TestNewSelection_RejectsInvalidKind (0.00s)
+=== RUN   TestSelection_Empty
+--- PASS: TestSelection_Empty (0.00s)
+=== RUN   TestVerdict_OverrideOfDeterministicResultAlwaysFails
+--- PASS: TestVerdict_OverrideOfDeterministicResultAlwaysFails (0.00s)
+=== RUN   TestVerdict_ResultReturnsOriginal
+--- PASS: TestVerdict_ResultReturnsOriginal (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/qualitygate	0.168s
