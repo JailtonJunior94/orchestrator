@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-hooks-canonicos-vendor-neutral/2.0_execution_report.md
+summary: "Bypass do gate de operacao git (RF-57/RF-68) fechado; hook-payload.sh sem truncamento/fallback grep, negacao por ausencia validada; selado no commit 55f9f13."
+timestamp: 2026-09-20T20:12:57Z

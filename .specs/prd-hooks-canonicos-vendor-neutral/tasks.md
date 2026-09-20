@@ -24,7 +24,7 @@
 | # | Título | Status | Dependências | Paralelizável | Skills |
 |---|--------|--------|-------------|---------------|--------|
 | 1.0 | Inventario e classificacao de hooks com gate anti-orfao | done | — | Com 2.0, 3.0 | — |
-| 2.0 | Parsing de payload sem truncamento e negacao por ausencia de alvo | pending | — | Com 1.0, 3.0 | — |
+| 2.0 | Parsing de payload sem truncamento e negacao por ausencia de alvo | done | — | Com 1.0, 3.0 | — |
 | 3.0 | Instrumentacao de pre-requisito: tmp em gates, exaustividade de linguagens e prova por celula | done | — | Com 1.0, 2.0 | — |
 | 4.0 | Contrato canonico de hooks em internal/hookcontract | done | 1.0 | Não | — |
 | 5.0 | Projecoes dos dois modelos de ponto, correcao de Kind e erros nao descartados | pending | 4.0 | Com 7.0 | — |

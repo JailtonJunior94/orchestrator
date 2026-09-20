@@ -1,0 +1,78 @@
+=== go build ./... ===
+OK
+=== go vet ./... ===
+OK
+=== golangci-lint ===
+0 issues.
+=== go test ./internal/doctor/... ===
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/doctor	(cached)
+=== make check-hooks-sync ===
+
+Hooks em sync: 28
+Drift / missing: 0
+Gate de encerramento em sync: 7/7 mirrors
+Validadores por ferramenta com drift: 0
+LOCAL-ONLY: .claude/hooks/validate-token-budget.sh fora dos mirrors por decisao explicita (ver allowlist neste script)
+Todos os hooks orquestrador sincronizados.
+=== make check-scripts-sync ===
+
+Validadores em sync: 32
+Drift / missing: 0
+Todos os validadores de evidencia sincronizados.
+=== make check-skills-sync ===
+SKIP: tests (allowlist: dir nao-skill em /Users/jailtonjunior/Git/orchestrator/.agents/skills)
+SKIP: tests (allowlist: dir nao-skill em /Users/jailtonjunior/Git/orchestrator/.agents/skills)
+SKIP: tests (allowlist: dir nao-skill em /Users/jailtonjunior/Git/orchestrator/.agents/skills)
+
+Skills em sync: 87
+Skills com drift: 0
+Libs em sync: 3 libs x 3 mirrors (legacy + embedded)
+Hooks do orquestrador em sync: 4 hooks x 7 mirrors
+Hooks de validacao por-tool em paridade: 2 hooks x 6 tools
+Gate de encerramento em paridade nos 4 agentes oficiais: 7 mirrors
+Plugin do OpenCode presente e em paridade: internal/embedded/assets/.opencode/plugin/governance.js
+Todos os mirrors sincronizados com .agents/skills/, .agents/lib/ e .agents/hooks/
+=== make test-hooks ===
+  ✓ G4-1: comando benigno (exit=0)
+
+  G4-2: git push nao solicitado bloqueia (exit 2)
+  ✓ G4-2: git push bloqueia (exit=2)
+
+  G4-3: git push com GOVERNANCE_GIT_OPERATION_CONFIRMED=1 passa (exit 0)
+  ✓ G4-3: opt-out explicito passa (exit=0)
+
+  G4-4: comando vazio nega (RF-68) — regressao do exit 0 antigo
+  ✓ G4-4: comando ausente bloqueia (exit=2)
+
+  G4-5: payload truncavel (~70KB de padding + git push) bloqueia (ADR-003)
+  ✓ G4-5: payload grande com git push bloqueia (exit=2)
+
+  G4-6: JSON invalido bloqueia (falha fechada, sem fallback grep)
+  ✓ G4-6: JSON invalido bloqueia (exit=2)
+
+===============================================
+Resultado: 63 asserts OK, 0 asserts FAIL
+===============================================
+=== make test-validators (core) ===
+  ✓ fronteira 64 KiB benigna passa (exit=0)
+  ✓ fronteira 64 KiB com git push bloqueia (exit=2)
+  ✓ fronteira 65 KiB benigna passa (exit=0)
+  ✓ fronteira 65 KiB com git push bloqueia (exit=2)
+  ✓ fronteira 1 MiB benigna passa (exit=0)
+  ✓ fronteira 1 MiB com git push bloqueia (exit=2)
+Reprodução da prova de exploração do ADR-003 (payload de ~70 KB)
+  ✓ payload de exploração (~70KB) bloqueia (exit=2)
+  ✓ controle sem padding bloqueia (exit=2)
+Falha fechada: JSON inválido bloqueia
+  ✓ JSON inválido bloqueia (exit=2)
+Negação por ausência de alvo (RF-68)
+  ✓ payload sem comando extraível bloqueia (exit=2)
+  ✓ stdin vazio bloqueia (exit=2)
+Campo command homônimo aninhado não é extraído (regressão do fallback grep)
+  ✓ comando homônimo aninhado não vaza para aprovação (exit=2)
+  ✓ comando direto benigno com metadata homônima passa (exit=0)
+
+Passaram: 53 | Falharam: 0
+Todos os testes de validador passaram.
+=== hook-payload exploit reproduction ===
+exploit_exit=2

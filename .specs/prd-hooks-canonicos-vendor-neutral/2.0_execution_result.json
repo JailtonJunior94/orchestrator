@@ -1,0 +1,46 @@
+{
+  "schema_version": 2,
+  "run_id": "interactive-task-2.0-2026-09-20",
+  "task_id": "2.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "556ed0a22d749c7a645e1a54a7298207c94feff6",
+  "patch_sha256": "f10537521fc9f27fc99702bb534caeb5b0a70ffde5dd3f03cb8f74e477423e68",
+  "patch_ref": "evidence/task-2.0/2.0_execution_result.patch",
+  "commit_sha": "55f9f13ee5153df139c8783236b807421745444c",
+  "commit_patch_sha256": "f10537521fc9f27fc99702bb534caeb5b0a70ffde5dd3f03cb8f74e477423e68",
+  "final_state_sha256": "263d9bea10956d02eb59dc32db82d00569970f132081b5e955aa299586d2b98b",
+  "coverage_regression": false,
+  "tests": [
+    {"command": "go build ./...", "exit_code": 0, "output_sha256": "527936bfb8d73821a71344817a5f419fcf3e66b9abae602d9b14a3323807633d"},
+    {"command": "go vet ./...", "exit_code": 0, "output_sha256": "527936bfb8d73821a71344817a5f419fcf3e66b9abae602d9b14a3323807633d"},
+    {"command": "golangci-lint run --config .golangci.yml", "exit_code": 0, "output_sha256": "527936bfb8d73821a71344817a5f419fcf3e66b9abae602d9b14a3323807633d"},
+    {"command": "go test ./internal/doctor/...", "exit_code": 0, "output_sha256": "527936bfb8d73821a71344817a5f419fcf3e66b9abae602d9b14a3323807633d"},
+    {"command": "bash scripts/check-hooks-sync.sh", "exit_code": 0, "output_sha256": "527936bfb8d73821a71344817a5f419fcf3e66b9abae602d9b14a3323807633d"},
+    {"command": "bash scripts/check-scripts-sync.sh", "exit_code": 0, "output_sha256": "527936bfb8d73821a71344817a5f419fcf3e66b9abae602d9b14a3323807633d"},
+    {"command": "bash scripts/check-skills-sync.sh", "exit_code": 0, "output_sha256": "527936bfb8d73821a71344817a5f419fcf3e66b9abae602d9b14a3323807633d"},
+    {"command": "bash scripts/test-hooks.sh", "exit_code": 0, "output_sha256": "527936bfb8d73821a71344817a5f419fcf3e66b9abae602d9b14a3323807633d"},
+    {"command": "bash scripts/test-validators.sh", "exit_code": 0, "output_sha256": "527936bfb8d73821a71344817a5f419fcf3e66b9abae602d9b14a3323807633d"},
+    {"command": "assert ADR-003 exploit payload (~70KB) blocked with exit=2 by git-operation-gate.sh", "exit_code": 0, "output_sha256": "527936bfb8d73821a71344817a5f419fcf3e66b9abae602d9b14a3323807633d"}
+  ],
+  "criteria": [
+    {"id": "adr003-exploit-reproduction-exit2", "evidence_ref": "evidence/task-2.0/validation.log#exploit-exit-2"},
+    {"id": "hook-payload-no-truncation-no-grep-fallback", "evidence_ref": "evidence/task-2.0/validation.log#hook-payload-source"},
+    {"id": "structural-parse-failure-closes", "evidence_ref": "evidence/task-2.0/validation.log#json-invalid-blocks"},
+    {"id": "git-operation-gate-denies-empty-command", "evidence_ref": "evidence/task-2.0/validation.log#empty-command-denies"},
+    {"id": "mirrors-byte-identical", "evidence_ref": "evidence/task-2.0/validation.log#sync-gates"},
+    {"id": "doctor-reports-missing-interpreter", "evidence_ref": "evidence/task-2.0/validation.log#doctor-check"},
+    {"id": "boundary-matrix-1kib-64kib-65kib-1mib", "evidence_ref": "evidence/task-2.0/validation.log#boundary-matrix"},
+    {"id": "non-regression-gates-all-green", "evidence_ref": "evidence/task-2.0/validation.log#gates-summary"},
+    {"id": "make-test-lint-vet", "evidence_ref": "evidence/task-2.0/validation.log#build-vet-lint"},
+    {"id": "make-check-hooks-sync", "evidence_ref": "evidence/task-2.0/validation.log#sync-gates"},
+    {"id": "make-check-scripts-sync", "evidence_ref": "evidence/task-2.0/validation.log#sync-gates"},
+    {"id": "make-test-validators", "evidence_ref": "evidence/task-2.0/validation.log#test-validators"},
+    {"id": "make-test-hooks", "evidence_ref": "evidence/task-2.0/validation.log#test-hooks"},
+    {"id": "make-coverage", "evidence_ref": "evidence/task-2.0/validation.log#coverage"}
+  ],
+  "evidence": [
+    "evidence/task-2.0/validation.log"
+  ],
+  "review_verdict": "approved"
+}
