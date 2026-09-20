@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-hooks-canonicos-vendor-neutral/7.0_execution_report.md
+summary: Go, Node, Python, .NET e Java tratados com igualdade no harness (toolchain, deteccao de stack, triggers, contextgen), TestAllLangsAreExhaustivelyWired verde para as cinco linguagens, regex de evidencia mvn/gradle corrigida e TEST_NAME_RE condicionada a stack sem afrouxar Go; selado no commit ba321a44e36bbe7261e6704c3631de0f029e7995 apos 3 rodadas de review (2 REJECTED por contaminacao cruzada de scripts/test-validators.sh com a tarefa 6.0 concorrente, corrigida via git commit-tree isolado; 1 APPROVED final).
+timestamp: 2026-09-20T21:21:08Z

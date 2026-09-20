@@ -1,0 +1,5 @@
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/integration	0.164s [no tests to run]
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	0.149s
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	4.452s
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	0.082s [no tests to run]
+exit=0

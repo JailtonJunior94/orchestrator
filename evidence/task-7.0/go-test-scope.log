@@ -1,0 +1,2152 @@
+=== RUN   TestComplexitySuite
+=== RUN   TestComplexitySuite/TestClassify
+=== RUN   TestComplexitySuite/TestClassify/rename_variavel_x_para_y
+=== RUN   TestComplexitySuite/TestClassify/fix_typo_no_comentario
+=== RUN   TestComplexitySuite/TestClassify/adicionar_import_faltante
+=== RUN   TestComplexitySuite/TestClassify/corrigir_formatacao_do_arquivo
+=== RUN   TestComplexitySuite/TestClassify/ajustar_indentacao_do_bloco
+=== RUN   TestComplexitySuite/TestClassify/organizar_imports_por_grupo
+=== RUN   TestComplexitySuite/TestClassify/ajuste_cosmetico_no_arquivo_de_config
+=== RUN   TestComplexitySuite/TestClassify/adicionar_novo_metodo_ao_servico_de_usuarios
+=== RUN   TestComplexitySuite/TestClassify/corrigir_bug_no_parser_de_flags_CLI
+=== RUN   TestComplexitySuite/TestClassify/atualizar_mensagem_de_erro_de_validacao
+=== RUN   TestComplexitySuite/TestClassify/adicionar_campo_opcional_ao_DTO
+=== RUN   TestComplexitySuite/TestClassify/implementar_funcao_auxiliar_de_logging
+=== RUN   TestComplexitySuite/TestClassify/implementar_nova_interface_de_autenticacao
+=== RUN   TestComplexitySuite/TestClassify/breaking_change_na_api_publica_do_modulo
+=== RUN   TestComplexitySuite/TestClassify/migracao_do_banco_de_dados_para_nova_versao
+=== RUN   TestComplexitySuite/TestClassify/adicionar_nova_feature_de_exportacao_de_relatorios
+=== RUN   TestComplexitySuite/TestClassify/refatorar_arquitetura_do_servico_de_pagamento
+=== RUN   TestComplexitySuite/TestClassify/adicionar_middleware_de_seguranca_ao_pipeline
+=== RUN   TestComplexitySuite/TestClassify/criar_novo_modulo_de_dependencia_externa
+=== RUN   TestComplexitySuite/TestClassify/nova_api_rest_para_o_endpoint_de_busca
+=== RUN   TestComplexitySuite/TestClassifyComplexOverridesTrivial
+=== RUN   TestComplexitySuite/TestClassifyEmptyDescription
+=== RUN   TestComplexitySuite/TestParseComplexity
+=== RUN   TestComplexitySuite/TestParseComplexity/deve_aceitar_trivial
+=== RUN   TestComplexitySuite/TestParseComplexity/deve_aceitar_standard
+=== RUN   TestComplexitySuite/TestParseComplexity/deve_aceitar_complex
+=== RUN   TestComplexitySuite/TestParseComplexity/deve_aceitar_trivial_em_maiusculas
+=== RUN   TestComplexitySuite/TestParseComplexity/deve_aceitar_standard_em_maiusculas
+=== RUN   TestComplexitySuite/TestParseComplexity/deve_aceitar_complex_capitalizado
+=== RUN   TestComplexitySuite/TestParseComplexity/deve_ignorar_espacos
+=== RUN   TestComplexitySuite/TestParseComplexity/deve_rejeitar_invalid
+=== RUN   TestComplexitySuite/TestParseComplexity/deve_rejeitar_vazio
+=== RUN   TestComplexitySuite/TestParseComplexity/deve_rejeitar_medium
+=== RUN   TestComplexitySuite/TestParseComplexity/deve_rejeitar_hard
+=== RUN   TestComplexitySuite/TestReferencesForComplexityOrdering
+=== RUN   TestComplexitySuite/TestReferencesForComplexityStandardSubsetOfComplex
+=== RUN   TestComplexitySuite/TestReferencesForComplexityTokenEconomy
+    complexity_test.go:164: economia de tokens: trivial=2857 standard=4000 complex=7429 (economia trivial/complex=61.5%)
+=== RUN   TestComplexitySuite/TestReferencesForComplexityUnknownFallsToComplex
+--- PASS: TestComplexitySuite (0.00s)
+    --- PASS: TestComplexitySuite/TestClassify (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/rename_variavel_x_para_y (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/fix_typo_no_comentario (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/adicionar_import_faltante (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/corrigir_formatacao_do_arquivo (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/ajustar_indentacao_do_bloco (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/organizar_imports_por_grupo (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/ajuste_cosmetico_no_arquivo_de_config (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/adicionar_novo_metodo_ao_servico_de_usuarios (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/corrigir_bug_no_parser_de_flags_CLI (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/atualizar_mensagem_de_erro_de_validacao (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/adicionar_campo_opcional_ao_DTO (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/implementar_funcao_auxiliar_de_logging (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/implementar_nova_interface_de_autenticacao (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/breaking_change_na_api_publica_do_modulo (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/migracao_do_banco_de_dados_para_nova_versao (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/adicionar_nova_feature_de_exportacao_de_relatorios (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/refatorar_arquitetura_do_servico_de_pagamento (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/adicionar_middleware_de_seguranca_ao_pipeline (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/criar_novo_modulo_de_dependencia_externa (0.00s)
+        --- PASS: TestComplexitySuite/TestClassify/nova_api_rest_para_o_endpoint_de_busca (0.00s)
+    --- PASS: TestComplexitySuite/TestClassifyComplexOverridesTrivial (0.00s)
+    --- PASS: TestComplexitySuite/TestClassifyEmptyDescription (0.00s)
+    --- PASS: TestComplexitySuite/TestParseComplexity (0.00s)
+        --- PASS: TestComplexitySuite/TestParseComplexity/deve_aceitar_trivial (0.00s)
+        --- PASS: TestComplexitySuite/TestParseComplexity/deve_aceitar_standard (0.00s)
+        --- PASS: TestComplexitySuite/TestParseComplexity/deve_aceitar_complex (0.00s)
+        --- PASS: TestComplexitySuite/TestParseComplexity/deve_aceitar_trivial_em_maiusculas (0.00s)
+        --- PASS: TestComplexitySuite/TestParseComplexity/deve_aceitar_standard_em_maiusculas (0.00s)
+        --- PASS: TestComplexitySuite/TestParseComplexity/deve_aceitar_complex_capitalizado (0.00s)
+        --- PASS: TestComplexitySuite/TestParseComplexity/deve_ignorar_espacos (0.00s)
+        --- PASS: TestComplexitySuite/TestParseComplexity/deve_rejeitar_invalid (0.00s)
+        --- PASS: TestComplexitySuite/TestParseComplexity/deve_rejeitar_vazio (0.00s)
+        --- PASS: TestComplexitySuite/TestParseComplexity/deve_rejeitar_medium (0.00s)
+        --- PASS: TestComplexitySuite/TestParseComplexity/deve_rejeitar_hard (0.00s)
+    --- PASS: TestComplexitySuite/TestReferencesForComplexityOrdering (0.00s)
+    --- PASS: TestComplexitySuite/TestReferencesForComplexityStandardSubsetOfComplex (0.00s)
+    --- PASS: TestComplexitySuite/TestReferencesForComplexityTokenEconomy (0.00s)
+    --- PASS: TestComplexitySuite/TestReferencesForComplexityUnknownFallsToComplex (0.00s)
+=== RUN   TestFrontmatterMaxDepthSuite
+=== RUN   TestFrontmatterMaxDepthSuite/TestMaxDepth
+=== RUN   TestFrontmatterMaxDepthSuite/TestMaxDepth/deve_ler_max_depth_informado
+=== RUN   TestFrontmatterMaxDepthSuite/TestMaxDepth/deve_usar_zero_quando_max_depth_ausente
+--- PASS: TestFrontmatterMaxDepthSuite (0.00s)
+    --- PASS: TestFrontmatterMaxDepthSuite/TestMaxDepth (0.00s)
+        --- PASS: TestFrontmatterMaxDepthSuite/TestMaxDepth/deve_ler_max_depth_informado (0.00s)
+        --- PASS: TestFrontmatterMaxDepthSuite/TestMaxDepth/deve_usar_zero_quando_max_depth_ausente (0.00s)
+=== RUN   TestFrontmatterSuite
+=== RUN   TestFrontmatterSuite/TestIsValidSemver
+=== RUN   TestFrontmatterSuite/TestIsValidSemver/major_minor_patch
+=== RUN   TestFrontmatterSuite/TestIsValidSemver/prefixed_prerelease
+=== RUN   TestFrontmatterSuite/TestIsValidSemver/major_only
+=== RUN   TestFrontmatterSuite/TestIsValidSemver/major_minor
+=== RUN   TestFrontmatterSuite/TestIsValidSemver/empty_prerelease
+=== RUN   TestFrontmatterSuite/TestIsValidSemver/empty_prerelease_identifier
+=== RUN   TestFrontmatterSuite/TestIsValidSemver/dev
+=== RUN   TestFrontmatterSuite/TestIsValidSemver/missing_segment
+=== RUN   TestFrontmatterSuite/TestIsValidSemver/non_numeric
+=== RUN   TestFrontmatterSuite/TestParseFrontmatter
+=== RUN   TestFrontmatterSuite/TestParseFrontmatterDependsOn
+=== RUN   TestFrontmatterSuite/TestParseFrontmatterEmpty
+=== RUN   TestFrontmatterSuite/TestParseFrontmatterFieldsEmptyInputs
+=== RUN   TestFrontmatterSuite/TestParseFrontmatterFieldsEmptyInputs/conteudo_sem_frontmatter_retorna_mapa_vazio
+=== RUN   TestFrontmatterSuite/TestParseFrontmatterFieldsEmptyInputs/frontmatter_vazio_retorna_mapa_vazio
+=== RUN   TestFrontmatterSuite/TestParseFrontmatterFieldsFlatFields
+=== RUN   TestFrontmatterSuite/TestParseFrontmatterFieldsNestedBlock
+=== RUN   TestFrontmatterSuite/TestParseFrontmatterFieldsSkillsCompatibility
+=== RUN   TestFrontmatterSuite/TestParseFrontmatterFieldsWrapperConsistency
+=== RUN   TestFrontmatterSuite/TestSemverGreater
+=== RUN   TestFrontmatterSuite/TestSemverGreater/1.0.0_maior_que_0.9.0
+=== RUN   TestFrontmatterSuite/TestSemverGreater/1.1.0_maior_que_1.0.0
+=== RUN   TestFrontmatterSuite/TestSemverGreater/1.0.1_maior_que_1.0.0
+=== RUN   TestFrontmatterSuite/TestSemverGreater/1.0.0_igual_a_1.0.0
+=== RUN   TestFrontmatterSuite/TestSemverGreater/0.9.0_menor_que_1.0.0
+=== RUN   TestFrontmatterSuite/TestSemverGreater/2.0.0-beta_maior_que_1.9.9
+=== RUN   TestFrontmatterSuite/TestSemverGreater/v1.1.0_maior_que_1.0.0
+=== RUN   TestFrontmatterSuite/TestValidateFrontmatterInvalid
+=== RUN   TestFrontmatterSuite/TestValidateFrontmatterInvalid/deve_rejeitar_bloco_ausente
+=== RUN   TestFrontmatterSuite/TestValidateFrontmatterInvalid/deve_rejeitar_description_ausente
+=== RUN   TestFrontmatterSuite/TestValidateFrontmatterInvalid/deve_rejeitar_semver_invalido
+=== RUN   TestFrontmatterSuite/TestValidateFrontmatterInvalid/deve_rejeitar_name_divergente
+=== RUN   TestFrontmatterSuite/TestValidateFrontmatterInvalid/deve_rejeitar_depends_on_ausente
+=== RUN   TestFrontmatterSuite/TestValidateFrontmatterValidSkill
+--- PASS: TestFrontmatterSuite (0.00s)
+    --- PASS: TestFrontmatterSuite/TestIsValidSemver (0.00s)
+        --- PASS: TestFrontmatterSuite/TestIsValidSemver/major_minor_patch (0.00s)
+        --- PASS: TestFrontmatterSuite/TestIsValidSemver/prefixed_prerelease (0.00s)
+        --- PASS: TestFrontmatterSuite/TestIsValidSemver/major_only (0.00s)
+        --- PASS: TestFrontmatterSuite/TestIsValidSemver/major_minor (0.00s)
+        --- PASS: TestFrontmatterSuite/TestIsValidSemver/empty_prerelease (0.00s)
+        --- PASS: TestFrontmatterSuite/TestIsValidSemver/empty_prerelease_identifier (0.00s)
+        --- PASS: TestFrontmatterSuite/TestIsValidSemver/dev (0.00s)
+        --- PASS: TestFrontmatterSuite/TestIsValidSemver/missing_segment (0.00s)
+        --- PASS: TestFrontmatterSuite/TestIsValidSemver/non_numeric (0.00s)
+    --- PASS: TestFrontmatterSuite/TestParseFrontmatter (0.00s)
+    --- PASS: TestFrontmatterSuite/TestParseFrontmatterDependsOn (0.00s)
+    --- PASS: TestFrontmatterSuite/TestParseFrontmatterEmpty (0.00s)
+    --- PASS: TestFrontmatterSuite/TestParseFrontmatterFieldsEmptyInputs (0.00s)
+        --- PASS: TestFrontmatterSuite/TestParseFrontmatterFieldsEmptyInputs/conteudo_sem_frontmatter_retorna_mapa_vazio (0.00s)
+        --- PASS: TestFrontmatterSuite/TestParseFrontmatterFieldsEmptyInputs/frontmatter_vazio_retorna_mapa_vazio (0.00s)
+    --- PASS: TestFrontmatterSuite/TestParseFrontmatterFieldsFlatFields (0.00s)
+    --- PASS: TestFrontmatterSuite/TestParseFrontmatterFieldsNestedBlock (0.00s)
+    --- PASS: TestFrontmatterSuite/TestParseFrontmatterFieldsSkillsCompatibility (0.00s)
+    --- PASS: TestFrontmatterSuite/TestParseFrontmatterFieldsWrapperConsistency (0.00s)
+    --- PASS: TestFrontmatterSuite/TestSemverGreater (0.00s)
+        --- PASS: TestFrontmatterSuite/TestSemverGreater/1.0.0_maior_que_0.9.0 (0.00s)
+        --- PASS: TestFrontmatterSuite/TestSemverGreater/1.1.0_maior_que_1.0.0 (0.00s)
+        --- PASS: TestFrontmatterSuite/TestSemverGreater/1.0.1_maior_que_1.0.0 (0.00s)
+        --- PASS: TestFrontmatterSuite/TestSemverGreater/1.0.0_igual_a_1.0.0 (0.00s)
+        --- PASS: TestFrontmatterSuite/TestSemverGreater/0.9.0_menor_que_1.0.0 (0.00s)
+        --- PASS: TestFrontmatterSuite/TestSemverGreater/2.0.0-beta_maior_que_1.9.9 (0.00s)
+        --- PASS: TestFrontmatterSuite/TestSemverGreater/v1.1.0_maior_que_1.0.0 (0.00s)
+    --- PASS: TestFrontmatterSuite/TestValidateFrontmatterInvalid (0.00s)
+        --- PASS: TestFrontmatterSuite/TestValidateFrontmatterInvalid/deve_rejeitar_bloco_ausente (0.00s)
+        --- PASS: TestFrontmatterSuite/TestValidateFrontmatterInvalid/deve_rejeitar_description_ausente (0.00s)
+        --- PASS: TestFrontmatterSuite/TestValidateFrontmatterInvalid/deve_rejeitar_semver_invalido (0.00s)
+        --- PASS: TestFrontmatterSuite/TestValidateFrontmatterInvalid/deve_rejeitar_name_divergente (0.00s)
+        --- PASS: TestFrontmatterSuite/TestValidateFrontmatterInvalid/deve_rejeitar_depends_on_ausente (0.00s)
+    --- PASS: TestFrontmatterSuite/TestValidateFrontmatterValidSkill (0.00s)
+=== RUN   TestUniversalRuleFilesContainsGovernanceAndCodeStyle
+=== PAUSE TestUniversalRuleFilesContainsGovernanceAndCodeStyle
+=== RUN   TestUniversalRuleFilesHasNoDuplicates
+=== PAUSE TestUniversalRuleFilesHasNoDuplicates
+=== RUN   TestFrontmatterSchemaSuite
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/agent-governance
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/analyze-project
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/bugfix
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/confluence-changelog-publisher
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/create-prd
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/create-tasks
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/create-technical-specification
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/design-patterns-mandatory
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/domain-modeling-production
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/dotnet-csharp-implementation
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/execute-all-tasks
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/execute-task
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/finalize-changelog-readme-push
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/github-diff-changelog-publisher
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/github-pr-comment-triage
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/github-release-publication-flow
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/go-implementation
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/jira-tasks
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/node-implementation
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/object-calisthenics-go
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/otel-grafana-dashboards
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/postman-collection-generator
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/prompt-enricher
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/pull-request
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/python-implementation
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/refactor
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/review
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/semantic-commit
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/us-to-prd
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaFixtures
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaFixtures/fixture_valida
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaFixtures/fixture_invalida
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid/sem_name
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid/sem_version
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid/sem_description
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid/version_invalida
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid/lang_invalido
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid/link_mode_invalido
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid/com_skillname_no_erro
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/campos_obrigatorios
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/com_depends_on
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/versao_com_prefixo_v
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/versao_pre_release
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/com_skillname_no_erro
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/com_lang_go
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/com_link_mode_symlink
+=== RUN   TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/com_max_depth
+--- PASS: TestFrontmatterSchemaSuite (0.00s)
+    --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/agent-governance (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/analyze-project (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/bugfix (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/confluence-changelog-publisher (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/create-prd (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/create-tasks (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/create-technical-specification (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/design-patterns-mandatory (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/domain-modeling-production (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/dotnet-csharp-implementation (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/execute-all-tasks (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/execute-task (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/finalize-changelog-readme-push (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/github-diff-changelog-publisher (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/github-pr-comment-triage (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/github-release-publication-flow (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/go-implementation (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/jira-tasks (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/node-implementation (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/object-calisthenics-go (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/otel-grafana-dashboards (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/postman-collection-generator (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/prompt-enricher (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/pull-request (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/python-implementation (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/refactor (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/review (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/semantic-commit (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaEmbeddedSkills/us-to-prd (0.00s)
+    --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaFixtures (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaFixtures/fixture_valida (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaFixtures/fixture_invalida (0.00s)
+    --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid/sem_name (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid/sem_version (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid/sem_description (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid/version_invalida (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid/lang_invalido (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid/link_mode_invalido (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaInvalid/com_skillname_no_erro (0.00s)
+    --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/campos_obrigatorios (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/com_depends_on (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/versao_com_prefixo_v (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/versao_pre_release (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/com_skillname_no_erro (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/com_lang_go (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/com_link_mode_symlink (0.00s)
+        --- PASS: TestFrontmatterSchemaSuite/TestValidateFrontmatterSchemaValid/com_max_depth (0.00s)
+=== RUN   TestSkillsSuite
+=== RUN   TestSkillsSuite/TestAllSkills
+=== RUN   TestSkillsSuite/TestBaseSkillsIncludesExecuteAllTasks
+=== RUN   TestSkillsSuite/TestComplementarySkills
+=== RUN   TestSkillsSuite/TestLangSkills
+=== RUN   TestSkillsSuite/TestLangSkills/deve_mapear_go_para_duas_skills
+=== RUN   TestSkillsSuite/TestLangSkills/deve_mapear_node_e_python_para_duas_skills
+=== RUN   TestSkillsSuite/TestLangSkills/deve_mapear_dotnet_para_uma_skill
+=== RUN   TestSkillsSuite/TestLangSkills/deve_mapear_java_para_nenhuma_skill_de_implementacao
+=== RUN   TestSkillsSuite/TestParseLang
+=== RUN   TestSkillsSuite/TestParseLang/deve_aceitar_go
+=== RUN   TestSkillsSuite/TestParseLang/deve_aceitar_node
+=== RUN   TestSkillsSuite/TestParseLang/deve_aceitar_python
+=== RUN   TestSkillsSuite/TestParseLang/deve_aceitar_dotnet
+=== RUN   TestSkillsSuite/TestParseLang/deve_aceitar_java
+=== RUN   TestSkillsSuite/TestParseLang/deve_rejeitar_rust
+=== RUN   TestSkillsSuite/TestParseTool
+=== RUN   TestSkillsSuite/TestParseTool/deve_aceitar_claude
+=== RUN   TestSkillsSuite/TestParseTool/deve_aceitar_codex
+=== RUN   TestSkillsSuite/TestParseTool/deve_aceitar_copilot
+=== RUN   TestSkillsSuite/TestParseTool/deve_aceitar_opencode
+=== RUN   TestSkillsSuite/TestParseTool/deve_rejeitar_invalido
+=== RUN   TestSkillsSuite/TestResolveToolGenericInvalid
+=== RUN   TestSkillsSuite/TestResolveToolRemovedAgent
+=== RUN   TestSkillsSuite/TestResolveToolValid
+--- PASS: TestSkillsSuite (0.00s)
+    --- PASS: TestSkillsSuite/TestAllSkills (0.00s)
+    --- PASS: TestSkillsSuite/TestBaseSkillsIncludesExecuteAllTasks (0.00s)
+    --- PASS: TestSkillsSuite/TestComplementarySkills (0.00s)
+    --- PASS: TestSkillsSuite/TestLangSkills (0.00s)
+        --- PASS: TestSkillsSuite/TestLangSkills/deve_mapear_go_para_duas_skills (0.00s)
+        --- PASS: TestSkillsSuite/TestLangSkills/deve_mapear_node_e_python_para_duas_skills (0.00s)
+        --- PASS: TestSkillsSuite/TestLangSkills/deve_mapear_dotnet_para_uma_skill (0.00s)
+        --- PASS: TestSkillsSuite/TestLangSkills/deve_mapear_java_para_nenhuma_skill_de_implementacao (0.00s)
+    --- PASS: TestSkillsSuite/TestParseLang (0.00s)
+        --- PASS: TestSkillsSuite/TestParseLang/deve_aceitar_go (0.00s)
+        --- PASS: TestSkillsSuite/TestParseLang/deve_aceitar_node (0.00s)
+        --- PASS: TestSkillsSuite/TestParseLang/deve_aceitar_python (0.00s)
+        --- PASS: TestSkillsSuite/TestParseLang/deve_aceitar_dotnet (0.00s)
+        --- PASS: TestSkillsSuite/TestParseLang/deve_aceitar_java (0.00s)
+        --- PASS: TestSkillsSuite/TestParseLang/deve_rejeitar_rust (0.00s)
+    --- PASS: TestSkillsSuite/TestParseTool (0.00s)
+        --- PASS: TestSkillsSuite/TestParseTool/deve_aceitar_claude (0.00s)
+        --- PASS: TestSkillsSuite/TestParseTool/deve_aceitar_codex (0.00s)
+        --- PASS: TestSkillsSuite/TestParseTool/deve_aceitar_copilot (0.00s)
+        --- PASS: TestSkillsSuite/TestParseTool/deve_aceitar_opencode (0.00s)
+        --- PASS: TestSkillsSuite/TestParseTool/deve_rejeitar_invalido (0.00s)
+    --- PASS: TestSkillsSuite/TestResolveToolGenericInvalid (0.00s)
+    --- PASS: TestSkillsSuite/TestResolveToolRemovedAgent (0.00s)
+    --- PASS: TestSkillsSuite/TestResolveToolValid (0.00s)
+=== RUN   TestAllLangsAreExhaustivelyWired
+=== RUN   TestAllLangsAreExhaustivelyWired/go
+=== RUN   TestAllLangsAreExhaustivelyWired/node
+=== RUN   TestAllLangsAreExhaustivelyWired/python
+=== RUN   TestAllLangsAreExhaustivelyWired/dotnet
+=== RUN   TestAllLangsAreExhaustivelyWired/java
+--- PASS: TestAllLangsAreExhaustivelyWired (0.00s)
+    --- PASS: TestAllLangsAreExhaustivelyWired/go (0.00s)
+    --- PASS: TestAllLangsAreExhaustivelyWired/node (0.00s)
+    --- PASS: TestAllLangsAreExhaustivelyWired/python (0.00s)
+    --- PASS: TestAllLangsAreExhaustivelyWired/dotnet (0.00s)
+    --- PASS: TestAllLangsAreExhaustivelyWired/java (0.00s)
+=== RUN   TestAllToolsDerivesFromRegistry
+=== PAUSE TestAllToolsDerivesFromRegistry
+=== CONT  TestUniversalRuleFilesContainsGovernanceAndCodeStyle
+--- PASS: TestUniversalRuleFilesContainsGovernanceAndCodeStyle (0.00s)
+=== CONT  TestUniversalRuleFilesHasNoDuplicates
+--- PASS: TestUniversalRuleFilesHasNoDuplicates (0.00s)
+=== CONT  TestAllToolsDerivesFromRegistry
+--- PASS: TestAllToolsDerivesFromRegistry (0.00s)
+=== RUN   FuzzParseFrontmatter
+=== RUN   FuzzParseFrontmatter/seed#0
+=== RUN   FuzzParseFrontmatter/seed#1
+=== RUN   FuzzParseFrontmatter/seed#2
+=== RUN   FuzzParseFrontmatter/seed#3
+=== RUN   FuzzParseFrontmatter/seed#4
+=== RUN   FuzzParseFrontmatter/seed#5
+=== RUN   FuzzParseFrontmatter/seed#6
+=== RUN   FuzzParseFrontmatter/seed#7
+=== RUN   FuzzParseFrontmatter/seed#8
+=== RUN   FuzzParseFrontmatter/seed#9
+--- PASS: FuzzParseFrontmatter (0.00s)
+    --- PASS: FuzzParseFrontmatter/seed#0 (0.00s)
+    --- PASS: FuzzParseFrontmatter/seed#1 (0.00s)
+    --- PASS: FuzzParseFrontmatter/seed#2 (0.00s)
+    --- PASS: FuzzParseFrontmatter/seed#3 (0.00s)
+    --- PASS: FuzzParseFrontmatter/seed#4 (0.00s)
+    --- PASS: FuzzParseFrontmatter/seed#5 (0.00s)
+    --- PASS: FuzzParseFrontmatter/seed#6 (0.00s)
+    --- PASS: FuzzParseFrontmatter/seed#7 (0.00s)
+    --- PASS: FuzzParseFrontmatter/seed#8 (0.00s)
+    --- PASS: FuzzParseFrontmatter/seed#9 (0.00s)
+=== RUN   FuzzValidateFrontmatter
+=== RUN   FuzzValidateFrontmatter/seed#0
+=== RUN   FuzzValidateFrontmatter/seed#1
+=== RUN   FuzzValidateFrontmatter/seed#2
+=== RUN   FuzzValidateFrontmatter/seed#3
+=== RUN   FuzzValidateFrontmatter/seed#4
+=== RUN   FuzzValidateFrontmatter/seed#5
+--- PASS: FuzzValidateFrontmatter (0.00s)
+    --- PASS: FuzzValidateFrontmatter/seed#0 (0.00s)
+    --- PASS: FuzzValidateFrontmatter/seed#1 (0.00s)
+    --- PASS: FuzzValidateFrontmatter/seed#2 (0.00s)
+    --- PASS: FuzzValidateFrontmatter/seed#3 (0.00s)
+    --- PASS: FuzzValidateFrontmatter/seed#4 (0.00s)
+    --- PASS: FuzzValidateFrontmatter/seed#5 (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/skills	0.259s
+=== RUN   TestLoad_KnownLanguages
+=== RUN   TestLoad_KnownLanguages/go
+=== RUN   TestLoad_KnownLanguages/node
+=== RUN   TestLoad_KnownLanguages/python
+=== RUN   TestLoad_KnownLanguages/dotnet
+=== RUN   TestLoad_KnownLanguages/java
+--- PASS: TestLoad_KnownLanguages (0.00s)
+    --- PASS: TestLoad_KnownLanguages/go (0.00s)
+    --- PASS: TestLoad_KnownLanguages/node (0.00s)
+    --- PASS: TestLoad_KnownLanguages/python (0.00s)
+    --- PASS: TestLoad_KnownLanguages/dotnet (0.00s)
+    --- PASS: TestLoad_KnownLanguages/java (0.00s)
+=== RUN   TestLoad_NodePatterns
+--- PASS: TestLoad_NodePatterns (0.00s)
+=== RUN   TestLoad_PythonPatterns
+--- PASS: TestLoad_PythonPatterns (0.00s)
+=== RUN   TestLoad_EmptyLangFallsBackToGo
+--- PASS: TestLoad_EmptyLangFallsBackToGo (0.00s)
+=== RUN   TestLoad_UnknownLangFailsExplicitly
+=== RUN   TestLoad_UnknownLangFailsExplicitly/rust
+=== RUN   TestLoad_UnknownLangFailsExplicitly/cpp
+=== RUN   TestLoad_UnknownLangFailsExplicitly/kotlin
+--- PASS: TestLoad_UnknownLangFailsExplicitly (0.00s)
+    --- PASS: TestLoad_UnknownLangFailsExplicitly/rust (0.00s)
+    --- PASS: TestLoad_UnknownLangFailsExplicitly/cpp (0.00s)
+    --- PASS: TestLoad_UnknownLangFailsExplicitly/kotlin (0.00s)
+=== RUN   TestLoad_MalformedYAML
+--- PASS: TestLoad_MalformedYAML (0.00s)
+=== RUN   TestLoad_MissingFile
+--- PASS: TestLoad_MissingFile (0.00s)
+=== RUN   TestDetectLang
+=== RUN   TestDetectLang/go_majority
+=== RUN   TestDetectLang/node_majority
+=== RUN   TestDetectLang/python_majority
+=== RUN   TestDetectLang/mixed_go_dominant
+=== RUN   TestDetectLang/dotnet_majority
+=== RUN   TestDetectLang/java_majority
+=== RUN   TestDetectLang/empty
+=== RUN   TestDetectLang/no_known_ext
+--- PASS: TestDetectLang (0.00s)
+    --- PASS: TestDetectLang/go_majority (0.00s)
+    --- PASS: TestDetectLang/node_majority (0.00s)
+    --- PASS: TestDetectLang/python_majority (0.00s)
+    --- PASS: TestDetectLang/mixed_go_dominant (0.00s)
+    --- PASS: TestDetectLang/dotnet_majority (0.00s)
+    --- PASS: TestDetectLang/java_majority (0.00s)
+    --- PASS: TestDetectLang/empty (0.00s)
+    --- PASS: TestDetectLang/no_known_ext (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/triggers	(cached)
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/triggers/mocks	[no test files]
+=== RUN   TestGeneratePreservesAuthoredClaudeMD
+--- PASS: TestGeneratePreservesAuthoredClaudeMD (0.00s)
+=== RUN   TestGenerateMarksPreexistingClaudeMDAsMerged
+--- PASS: TestGenerateMarksPreexistingClaudeMDAsMerged (0.00s)
+=== RUN   TestGenerateDoesNotMarkFreshClaudeMDAsMerged
+--- PASS: TestGenerateDoesNotMarkFreshClaudeMDAsMerged (0.00s)
+=== RUN   TestGenerateClaudeMDMergeIsIdempotent
+--- PASS: TestGenerateClaudeMDMergeIsIdempotent (0.00s)
+=== RUN   TestGenerateClaudeMDWithoutAuthoredContentStaysClean
+--- PASS: TestGenerateClaudeMDWithoutAuthoredContentStaysClean (0.00s)
+=== RUN   TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical
+=== PAUSE TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical
+=== RUN   TestMergeCodexInstallConfigIsIdempotent
+=== PAUSE TestMergeCodexInstallConfigIsIdempotent
+=== RUN   TestMergeCodexInstallConfigWithoutAuthoredContentStaysPlain
+=== PAUSE TestMergeCodexInstallConfigWithoutAuthoredContentStaysPlain
+=== RUN   TestMergeCodexInstallConfigDropsLegacyGeneratedContent
+=== PAUSE TestMergeCodexInstallConfigDropsLegacyGeneratedContent
+=== RUN   TestMergeCodexInstallConfigUserRootKeyWins
+=== PAUSE TestMergeCodexInstallConfigUserRootKeyWins
+=== RUN   TestCopilotGuidance
+--- PASS: TestCopilotGuidance (0.00s)
+=== RUN   TestCompactProfile
+=== RUN   TestCompactProfile/standard_contains_sections
+=== RUN   TestCompactProfile/compact_strips_sections
+--- PASS: TestCompactProfile (0.00s)
+    --- PASS: TestCompactProfile/standard_contains_sections (0.00s)
+    --- PASS: TestCompactProfile/compact_strips_sections (0.00s)
+=== RUN   TestDryRun
+--- PASS: TestDryRun (0.00s)
+=== RUN   TestCodexOnlyCompact
+--- PASS: TestCodexOnlyCompact (0.00s)
+=== RUN   TestAgentsMdInvocationDepth
+--- PASS: TestAgentsMdInvocationDepth (0.00s)
+=== RUN   TestContextgen_Snapshots
+=== RUN   TestContextgen_Snapshots/go-microservice
+=== RUN   TestContextgen_Snapshots/go-modular
+=== RUN   TestContextgen_Snapshots/go-monolith
+=== RUN   TestContextgen_Snapshots/node-monorepo
+=== RUN   TestContextgen_Snapshots/node-api
+=== RUN   TestContextgen_Snapshots/python-api
+=== RUN   TestContextgen_Snapshots/python-monorepo
+=== RUN   TestContextgen_Snapshots/polyglot-monorepo
+--- PASS: TestContextgen_Snapshots (0.10s)
+    --- PASS: TestContextgen_Snapshots/go-microservice (0.01s)
+    --- PASS: TestContextgen_Snapshots/go-modular (0.02s)
+    --- PASS: TestContextgen_Snapshots/go-monolith (0.01s)
+    --- PASS: TestContextgen_Snapshots/node-monorepo (0.01s)
+    --- PASS: TestContextgen_Snapshots/node-api (0.01s)
+    --- PASS: TestContextgen_Snapshots/python-api (0.01s)
+    --- PASS: TestContextgen_Snapshots/python-monorepo (0.02s)
+    --- PASS: TestContextgen_Snapshots/polyglot-monorepo (0.01s)
+=== RUN   TestBuildCodexConfig
+=== RUN   TestBuildCodexConfig/lean_omits_analyze-project
+=== RUN   TestBuildCodexConfig/full_includes_analyze-project
+--- PASS: TestBuildCodexConfig (0.00s)
+    --- PASS: TestBuildCodexConfig/lean_omits_analyze-project (0.00s)
+    --- PASS: TestBuildCodexConfig/full_includes_analyze-project (0.00s)
+=== RUN   TestGenerateMergesAuthoredCodexConfigAtCallSite
+--- PASS: TestGenerateMergesAuthoredCodexConfigAtCallSite (0.00s)
+=== RUN   TestBuildDirectoryTree_ExcludesHarnessGeneratedArtifacts
+=== PAUSE TestBuildDirectoryTree_ExcludesHarnessGeneratedArtifacts
+=== RUN   TestBuildDirectoryTree_StableAcrossHarnessInstall
+=== PAUSE TestBuildDirectoryTree_StableAcrossHarnessInstall
+=== RUN   TestLoader_LoadReference_Brief_ExtractsTLDR
+--- PASS: TestLoader_LoadReference_Brief_ExtractsTLDR (0.00s)
+=== RUN   TestLoader_LoadReference_Brief_FallbackWhenNoTLDR
+--- PASS: TestLoader_LoadReference_Brief_FallbackWhenNoTLDR (0.00s)
+=== RUN   TestLoader_LoadReference_FullMode_ReturnsComplete
+--- PASS: TestLoader_LoadReference_FullMode_ReturnsComplete (0.00s)
+=== RUN   TestLoader_LoadReference_Brief_SizeSmaller
+--- PASS: TestLoader_LoadReference_Brief_SizeSmaller (0.00s)
+=== RUN   TestLoader_LoadSkillReferences_Trivial_ReturnsEmpty
+--- PASS: TestLoader_LoadSkillReferences_Trivial_ReturnsEmpty (0.00s)
+=== RUN   TestLoader_LoadSkillReferences_Standard_LoadsOnlyStandardRefs
+--- PASS: TestLoader_LoadSkillReferences_Standard_LoadsOnlyStandardRefs (0.00s)
+=== RUN   TestLoader_LoadSkillReferences_Complex_LoadsAll
+--- PASS: TestLoader_LoadSkillReferences_Complex_LoadsAll (0.00s)
+=== RUN   TestLoader_TokenEconomy_TrivialLessThanStandardLessThanComplex
+--- PASS: TestLoader_TokenEconomy_TrivialLessThanStandardLessThanComplex (0.00s)
+=== CONT  TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical
+=== RUN   TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/root_key_and_table
+=== CONT  TestMergeCodexInstallConfigUserRootKeyWins
+=== RUN   TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/only_table
+=== CONT  TestMergeCodexInstallConfigWithoutAuthoredContentStaysPlain
+--- PASS: TestMergeCodexInstallConfigUserRootKeyWins (0.00s)
+=== CONT  TestMergeCodexInstallConfigIsIdempotent
+--- PASS: TestMergeCodexInstallConfigWithoutAuthoredContentStaysPlain (0.00s)
+=== CONT  TestBuildDirectoryTree_StableAcrossHarnessInstall
+=== RUN   TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/only_root_keys
+=== RUN   TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/no_trailing_newline
+=== CONT  TestMergeCodexInstallConfigDropsLegacyGeneratedContent
+--- PASS: TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical (0.00s)
+    --- PASS: TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/root_key_and_table (0.00s)
+    --- PASS: TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/only_table (0.00s)
+    --- PASS: TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/only_root_keys (0.00s)
+    --- PASS: TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/no_trailing_newline (0.00s)
+--- PASS: TestMergeCodexInstallConfigIsIdempotent (0.00s)
+--- PASS: TestBuildDirectoryTree_StableAcrossHarnessInstall (0.00s)
+--- PASS: TestMergeCodexInstallConfigDropsLegacyGeneratedContent (0.00s)
+=== CONT  TestBuildDirectoryTree_ExcludesHarnessGeneratedArtifacts
+--- PASS: TestBuildDirectoryTree_ExcludesHarnessGeneratedArtifacts (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/contextgen	0.311s
+=== RUN   TestAgentSuite
+=== RUN   TestAgentSuite/TestAllEntriesCommandsMatchSpecs
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect/deve_detectar_agentes_por_binarios_no_path
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect/deve_detectar_agente_por_arquivo_do_projeto
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect/deve_retornar_vazio_para_repositorio_sem_sinais
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect/deve_degradar_graciosamente_quando_home_dir_retorna_erro
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect/deve_detectar_todos_os_agentes_do_registro_via_binario_no_PATH,_sem_politica_opt-in_por_agente
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect/deve_detectar_OpenCode_apenas_pelo_binario_no_PATH
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect/deve_detectar_OpenCode_apenas_pelo_sinal_de_projeto
+=== RUN   TestAgentSuite/TestBinaryAgentDetectorDetect/deve_evitar_duplicidade_quando_agente_aparece_em_binario_e_arquivo
+=== RUN   TestAgentSuite/TestDetectOpenCodeByHomeConfigDirOnly
+--- PASS: TestAgentSuite (0.00s)
+    --- PASS: TestAgentSuite/TestAllEntriesCommandsMatchSpecs (0.00s)
+    --- PASS: TestAgentSuite/TestBinaryAgentDetectorDetect (0.00s)
+        --- PASS: TestAgentSuite/TestBinaryAgentDetectorDetect/deve_detectar_agentes_por_binarios_no_path (0.00s)
+        --- PASS: TestAgentSuite/TestBinaryAgentDetectorDetect/deve_detectar_agente_por_arquivo_do_projeto (0.00s)
+        --- PASS: TestAgentSuite/TestBinaryAgentDetectorDetect/deve_retornar_vazio_para_repositorio_sem_sinais (0.00s)
+        --- PASS: TestAgentSuite/TestBinaryAgentDetectorDetect/deve_degradar_graciosamente_quando_home_dir_retorna_erro (0.00s)
+        --- PASS: TestAgentSuite/TestBinaryAgentDetectorDetect/deve_detectar_todos_os_agentes_do_registro_via_binario_no_PATH,_sem_politica_opt-in_por_agente (0.00s)
+        --- PASS: TestAgentSuite/TestBinaryAgentDetectorDetect/deve_detectar_OpenCode_apenas_pelo_binario_no_PATH (0.00s)
+        --- PASS: TestAgentSuite/TestBinaryAgentDetectorDetect/deve_detectar_OpenCode_apenas_pelo_sinal_de_projeto (0.00s)
+        --- PASS: TestAgentSuite/TestBinaryAgentDetectorDetect/deve_evitar_duplicidade_quando_agente_aparece_em_binario_e_arquivo (0.00s)
+    --- PASS: TestAgentSuite/TestDetectOpenCodeByHomeConfigDirOnly (0.00s)
+=== RUN   TestArchitectureSuite
+=== RUN   TestArchitectureSuite/TestDetectArchitecturalPattern
+=== RUN   TestArchitectureSuite/TestDetectArchitecturalPattern/deve_detectar_clean_architecture
+=== RUN   TestArchitectureSuite/TestDetectArchitecturalPattern/deve_detectar_arquitetura_em_camadas
+=== RUN   TestArchitectureSuite/TestDetectArchitecturalPattern/deve_detectar_estrutura_internal
+=== RUN   TestArchitectureSuite/TestDetectArchitectureFixtures
+=== RUN   TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_go_microservice
+=== RUN   TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_go_modular
+=== RUN   TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_node_monorepo
+=== RUN   TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_polyglot_monorepo
+=== RUN   TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_python_api
+=== RUN   TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_go_monolith
+=== RUN   TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_node_api
+=== RUN   TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_python_monorepo
+=== RUN   TestArchitectureSuite/TestDetectArchitectureType
+=== RUN   TestArchitectureSuite/TestDetectArchitectureType/deve_detectar_monorepo_com_go_work
+=== RUN   TestArchitectureSuite/TestDetectArchitectureType/deve_detectar_monorepo_com_pnpm_workspace
+=== RUN   TestArchitectureSuite/TestDetectArchitectureType/deve_detectar_monorepo_com_apps_e_packages
+=== RUN   TestArchitectureSuite/TestDetectArchitectureType/deve_detectar_monolito_modular
+=== RUN   TestArchitectureSuite/TestDetectArchitectureType/deve_detectar_microservico
+=== RUN   TestArchitectureSuite/TestDetectArchitectureType/deve_usar_monolito_como_fallback
+--- PASS: TestArchitectureSuite (0.00s)
+    --- PASS: TestArchitectureSuite/TestDetectArchitecturalPattern (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitecturalPattern/deve_detectar_clean_architecture (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitecturalPattern/deve_detectar_arquitetura_em_camadas (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitecturalPattern/deve_detectar_estrutura_internal (0.00s)
+    --- PASS: TestArchitectureSuite/TestDetectArchitectureFixtures (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_go_microservice (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_go_modular (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_node_monorepo (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_polyglot_monorepo (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_python_api (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_go_monolith (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_node_api (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitectureFixtures/deve_detectar_fixture_python_monorepo (0.00s)
+    --- PASS: TestArchitectureSuite/TestDetectArchitectureType (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitectureType/deve_detectar_monorepo_com_go_work (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitectureType/deve_detectar_monorepo_com_pnpm_workspace (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitectureType/deve_detectar_monorepo_com_apps_e_packages (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitectureType/deve_detectar_monolito_modular (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitectureType/deve_detectar_microservico (0.00s)
+        --- PASS: TestArchitectureSuite/TestDetectArchitectureType/deve_usar_monolito_como_fallback (0.00s)
+=== RUN   TestDetectSuite
+=== RUN   TestDetectSuite/TestDetectLangs
+=== RUN   TestDetectSuite/TestDetectLangs/deve_detectar_go_e_node
+=== RUN   TestDetectSuite/TestDetectLangs/deve_retornar_vazio_quando_nao_ha_manifestos
+=== RUN   TestDetectSuite/TestDetectLangsInFocusPaths
+=== RUN   TestDetectSuite/TestDetectLangsInFocusPaths/deve_detectar_node_em_subdiretorio_focado
+=== RUN   TestDetectSuite/TestDetectLangsInFocusPaths/deve_preservar_comportamento_raiz_quando_sem_foco
+=== RUN   TestDetectSuite/TestDetectTools
+--- PASS: TestDetectSuite (0.00s)
+    --- PASS: TestDetectSuite/TestDetectLangs (0.00s)
+        --- PASS: TestDetectSuite/TestDetectLangs/deve_detectar_go_e_node (0.00s)
+        --- PASS: TestDetectSuite/TestDetectLangs/deve_retornar_vazio_quando_nao_ha_manifestos (0.00s)
+    --- PASS: TestDetectSuite/TestDetectLangsInFocusPaths (0.00s)
+        --- PASS: TestDetectSuite/TestDetectLangsInFocusPaths/deve_detectar_node_em_subdiretorio_focado (0.00s)
+        --- PASS: TestDetectSuite/TestDetectLangsInFocusPaths/deve_preservar_comportamento_raiz_quando_sem_foco (0.00s)
+    --- PASS: TestDetectSuite/TestDetectTools (0.00s)
+=== RUN   TestFrameworkSuite
+=== RUN   TestFrameworkSuite/TestDetectPrimaryStack
+=== RUN   TestFrameworkSuite/TestFrameworkDetect
+=== RUN   TestFrameworkSuite/TestFrameworkDetect/deve_detectar_frameworks_go
+=== RUN   TestFrameworkSuite/TestFrameworkDetect/deve_detectar_frameworks_node
+=== RUN   TestFrameworkSuite/TestFrameworkDetect/deve_detectar_frameworks_python
+=== RUN   TestFrameworkSuite/TestFrameworkDetect/deve_retornar_vazio_sem_manifestos
+=== RUN   TestFrameworkSuite/TestFrameworkDetect/deve_deduplicar_frameworks
+=== RUN   TestFrameworkSuite/TestJoinFrameworks
+=== RUN   TestFrameworkSuite/TestJoinFrameworks/deve_descrever_lista_vazia
+=== RUN   TestFrameworkSuite/TestJoinFrameworks/deve_juntar_dois_frameworks
+--- PASS: TestFrameworkSuite (0.00s)
+    --- PASS: TestFrameworkSuite/TestDetectPrimaryStack (0.00s)
+    --- PASS: TestFrameworkSuite/TestFrameworkDetect (0.00s)
+        --- PASS: TestFrameworkSuite/TestFrameworkDetect/deve_detectar_frameworks_go (0.00s)
+        --- PASS: TestFrameworkSuite/TestFrameworkDetect/deve_detectar_frameworks_node (0.00s)
+        --- PASS: TestFrameworkSuite/TestFrameworkDetect/deve_detectar_frameworks_python (0.00s)
+        --- PASS: TestFrameworkSuite/TestFrameworkDetect/deve_retornar_vazio_sem_manifestos (0.00s)
+        --- PASS: TestFrameworkSuite/TestFrameworkDetect/deve_deduplicar_frameworks (0.00s)
+    --- PASS: TestFrameworkSuite/TestJoinFrameworks (0.00s)
+        --- PASS: TestFrameworkSuite/TestJoinFrameworks/deve_descrever_lista_vazia (0.00s)
+        --- PASS: TestFrameworkSuite/TestJoinFrameworks/deve_juntar_dois_frameworks (0.00s)
+=== RUN   TestDetectionNeverExecutesBinaries
+=== PAUSE TestDetectionNeverExecutesBinaries
+=== RUN   TestStackCoverageSuite
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_monolith
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_monolith/deve_detectar_linguagem
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_monolith/deve_detectar_framework
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_monolith/deve_detectar_toolchain
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_monolith/deve_detectar_arquitetura
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_monolith/deve_detectar_stack_primaria
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_node_api
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_node_api/deve_detectar_linguagem
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_node_api/deve_detectar_framework
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_node_api/deve_detectar_toolchain
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_node_api/deve_detectar_arquitetura
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_node_api/deve_detectar_stack_primaria
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_python_api
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_python_api/deve_detectar_linguagem
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_python_api/deve_detectar_framework
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_python_api/deve_detectar_toolchain
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_python_api/deve_detectar_arquitetura
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_python_api/deve_detectar_stack_primaria
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_microservice
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_microservice/deve_detectar_linguagem
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_microservice/deve_detectar_framework
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_microservice/deve_detectar_toolchain
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_microservice/deve_detectar_arquitetura
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_microservice/deve_detectar_stack_primaria
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_dotnet_api
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_dotnet_api/deve_detectar_linguagem
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_dotnet_api/deve_detectar_framework
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_dotnet_api/deve_detectar_toolchain
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_dotnet_api/deve_detectar_arquitetura
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_dotnet_api/deve_detectar_stack_primaria
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_maven
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_maven/deve_detectar_linguagem
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_maven/deve_detectar_framework
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_maven/deve_detectar_toolchain
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_maven/deve_detectar_arquitetura
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_maven/deve_detectar_stack_primaria
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_gradle
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_gradle/deve_detectar_linguagem
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_gradle/deve_detectar_framework
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_gradle/deve_detectar_toolchain
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_gradle/deve_detectar_arquitetura
+=== RUN   TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_gradle/deve_detectar_stack_primaria
+--- PASS: TestStackCoverageSuite (0.01s)
+    --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures (0.01s)
+        --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_monolith (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_monolith/deve_detectar_linguagem (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_monolith/deve_detectar_framework (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_monolith/deve_detectar_toolchain (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_monolith/deve_detectar_arquitetura (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_monolith/deve_detectar_stack_primaria (0.00s)
+        --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_node_api (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_node_api/deve_detectar_linguagem (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_node_api/deve_detectar_framework (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_node_api/deve_detectar_toolchain (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_node_api/deve_detectar_arquitetura (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_node_api/deve_detectar_stack_primaria (0.00s)
+        --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_python_api (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_python_api/deve_detectar_linguagem (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_python_api/deve_detectar_framework (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_python_api/deve_detectar_toolchain (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_python_api/deve_detectar_arquitetura (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_python_api/deve_detectar_stack_primaria (0.00s)
+        --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_microservice (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_microservice/deve_detectar_linguagem (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_microservice/deve_detectar_framework (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_microservice/deve_detectar_toolchain (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_microservice/deve_detectar_arquitetura (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_go_microservice/deve_detectar_stack_primaria (0.00s)
+        --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_dotnet_api (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_dotnet_api/deve_detectar_linguagem (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_dotnet_api/deve_detectar_framework (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_dotnet_api/deve_detectar_toolchain (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_dotnet_api/deve_detectar_arquitetura (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_dotnet_api/deve_detectar_stack_primaria (0.00s)
+        --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_maven (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_maven/deve_detectar_linguagem (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_maven/deve_detectar_framework (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_maven/deve_detectar_toolchain (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_maven/deve_detectar_arquitetura (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_maven/deve_detectar_stack_primaria (0.00s)
+        --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_gradle (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_gradle/deve_detectar_linguagem (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_gradle/deve_detectar_framework (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_gradle/deve_detectar_toolchain (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_gradle/deve_detectar_arquitetura (0.00s)
+            --- PASS: TestStackCoverageSuite/TestStackCoverageFixtures/deve_cobrir_fixture_java_gradle/deve_detectar_stack_primaria (0.00s)
+=== RUN   TestToolchainSuite
+=== RUN   TestToolchainSuite/TestStrictMode
+=== RUN   TestToolchainSuite/TestStrictMode/deve_preservar_output_quando_binario_esta_presente
+=== RUN   TestToolchainSuite/TestStrictMode/deve_preservar_output_quando_binario_esta_ausente
+=== RUN   TestToolchainSuite/TestStrictMode/deve_omitir_warnings_fora_do_modo_strict
+=== RUN   TestToolchainSuite/TestToolchainDetect
+=== RUN   TestToolchainSuite/TestToolchainDetect/deve_detectar_toolchain_go
+=== RUN   TestToolchainSuite/TestToolchainDetect/deve_detectar_toolchain_node
+=== RUN   TestToolchainSuite/TestToolchainDetect/deve_detectar_toolchain_python_com_ruff
+=== RUN   TestToolchainSuite/TestToolchainDetect/deve_retornar_vazio_sem_manifestos
+=== RUN   TestToolchainSuite/TestToolchainDetect/deve_detectar_projeto_polyglot
+=== RUN   TestToolchainSuite/TestToolchainDetect/deve_usar_makefile_como_fallback
+=== RUN   TestToolchainSuite/TestToolchainDetect/deve_detectar_bun_para_node
+=== RUN   TestToolchainSuite/TestToolchainDetect/deve_detectar_dependencias_opcionais_python
+=== RUN   TestToolchainSuite/TestToolchainDetect/deve_preferir_go_quando_focus_path_aponta_para_subprojeto_go
+=== RUN   TestToolchainSuite/TestToolchainDetect/deve_usar_deteccao_default_sem_focus_paths
+=== RUN   TestToolchainSuite/TestToolchainDetect/deve_escolher_manifesto_com_maior_overlap_de_focus_path
+=== RUN   TestToolchainSuite/TestToolchainDetect/deve_fazer_fallback_quando_focus_path_nao_casa_com_manifesto
+=== RUN   TestToolchainSuite/TestToolchainDetect/deve_detectar_pnpm_workspace
+=== RUN   TestToolchainSuite/TestToolchainDetectFixturePythonMonorepo
+--- PASS: TestToolchainSuite (0.00s)
+    --- PASS: TestToolchainSuite/TestStrictMode (0.00s)
+        --- PASS: TestToolchainSuite/TestStrictMode/deve_preservar_output_quando_binario_esta_presente (0.00s)
+        --- PASS: TestToolchainSuite/TestStrictMode/deve_preservar_output_quando_binario_esta_ausente (0.00s)
+        --- PASS: TestToolchainSuite/TestStrictMode/deve_omitir_warnings_fora_do_modo_strict (0.00s)
+    --- PASS: TestToolchainSuite/TestToolchainDetect (0.00s)
+        --- PASS: TestToolchainSuite/TestToolchainDetect/deve_detectar_toolchain_go (0.00s)
+        --- PASS: TestToolchainSuite/TestToolchainDetect/deve_detectar_toolchain_node (0.00s)
+        --- PASS: TestToolchainSuite/TestToolchainDetect/deve_detectar_toolchain_python_com_ruff (0.00s)
+        --- PASS: TestToolchainSuite/TestToolchainDetect/deve_retornar_vazio_sem_manifestos (0.00s)
+        --- PASS: TestToolchainSuite/TestToolchainDetect/deve_detectar_projeto_polyglot (0.00s)
+        --- PASS: TestToolchainSuite/TestToolchainDetect/deve_usar_makefile_como_fallback (0.00s)
+        --- PASS: TestToolchainSuite/TestToolchainDetect/deve_detectar_bun_para_node (0.00s)
+        --- PASS: TestToolchainSuite/TestToolchainDetect/deve_detectar_dependencias_opcionais_python (0.00s)
+        --- PASS: TestToolchainSuite/TestToolchainDetect/deve_preferir_go_quando_focus_path_aponta_para_subprojeto_go (0.00s)
+        --- PASS: TestToolchainSuite/TestToolchainDetect/deve_usar_deteccao_default_sem_focus_paths (0.00s)
+        --- PASS: TestToolchainSuite/TestToolchainDetect/deve_escolher_manifesto_com_maior_overlap_de_focus_path (0.00s)
+        --- PASS: TestToolchainSuite/TestToolchainDetect/deve_fazer_fallback_quando_focus_path_nao_casa_com_manifesto (0.00s)
+        --- PASS: TestToolchainSuite/TestToolchainDetect/deve_detectar_pnpm_workspace (0.00s)
+    --- PASS: TestToolchainSuite/TestToolchainDetectFixturePythonMonorepo (0.00s)
+=== CONT  TestDetectionNeverExecutesBinaries
+--- PASS: TestDetectionNeverExecutesBinaries (0.00s)
+=== RUN   FuzzDetectLanguages
+=== RUN   FuzzDetectLanguages/seed#0
+=== RUN   FuzzDetectLanguages/seed#1
+=== RUN   FuzzDetectLanguages/seed#2
+=== RUN   FuzzDetectLanguages/seed#3
+=== RUN   FuzzDetectLanguages/seed#4
+=== RUN   FuzzDetectLanguages/seed#5
+=== RUN   FuzzDetectLanguages/seed#6
+=== RUN   FuzzDetectLanguages/seed#7
+--- PASS: FuzzDetectLanguages (0.00s)
+    --- PASS: FuzzDetectLanguages/seed#0 (0.00s)
+    --- PASS: FuzzDetectLanguages/seed#1 (0.00s)
+    --- PASS: FuzzDetectLanguages/seed#2 (0.00s)
+    --- PASS: FuzzDetectLanguages/seed#3 (0.00s)
+    --- PASS: FuzzDetectLanguages/seed#4 (0.00s)
+    --- PASS: FuzzDetectLanguages/seed#5 (0.00s)
+    --- PASS: FuzzDetectLanguages/seed#6 (0.00s)
+    --- PASS: FuzzDetectLanguages/seed#7 (0.00s)
+=== RUN   FuzzDetectToolchain
+=== RUN   FuzzDetectToolchain/seed#0
+=== RUN   FuzzDetectToolchain/seed#1
+=== RUN   FuzzDetectToolchain/seed#2
+=== RUN   FuzzDetectToolchain/seed#3
+=== RUN   FuzzDetectToolchain/seed#4
+=== RUN   FuzzDetectToolchain/seed#5
+--- PASS: FuzzDetectToolchain (0.00s)
+    --- PASS: FuzzDetectToolchain/seed#0 (0.00s)
+    --- PASS: FuzzDetectToolchain/seed#1 (0.00s)
+    --- PASS: FuzzDetectToolchain/seed#2 (0.00s)
+    --- PASS: FuzzDetectToolchain/seed#3 (0.00s)
+    --- PASS: FuzzDetectToolchain/seed#4 (0.00s)
+    --- PASS: FuzzDetectToolchain/seed#5 (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/detect	0.275s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/detect/mocks	[no test files]
+=== RUN   TestVerifyChecksTheCanonicalValidatorsUnderAgents
+=== PAUSE TestVerifyChecksTheCanonicalValidatorsUnderAgents
+=== RUN   TestVerifyReportsTamperedCanonicalValidatorAsDrifted
+=== PAUSE TestVerifyReportsTamperedCanonicalValidatorAsDrifted
+=== RUN   TestInstall_Claude_MergesGovernanceHooksIntoExistingSettings
+=== PAUSE TestInstall_Claude_MergesGovernanceHooksIntoExistingSettings
+=== RUN   TestInstall_Claude_MergeIsIdempotentAndPreservesUserHooks
+=== PAUSE TestInstall_Claude_MergeIsIdempotentAndPreservesUserHooks
+=== RUN   TestInstall_Claude_MalformedSettingsFailsLoudly
+=== PAUSE TestInstall_Claude_MalformedSettingsFailsLoudly
+=== RUN   TestInstallCopilotPreservesAuthoredSettingsFormatting
+=== PAUSE TestInstallCopilotPreservesAuthoredSettingsFormatting
+=== RUN   TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings
+=== PAUSE TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings
+=== RUN   TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing
+=== PAUSE TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing
+=== RUN   TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent
+=== PAUSE TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent
+=== RUN   TestVerify_OpenCode_NeverReportsCurrentWhenPluginRuntimeMissing
+=== PAUSE TestVerify_OpenCode_NeverReportsCurrentWhenPluginRuntimeMissing
+=== RUN   TestInstall_OpenCode_ModelFlagMapsToConfigKey
+=== PAUSE TestInstall_OpenCode_ModelFlagMapsToConfigKey
+=== RUN   TestInstall_OpenCode_WritesOnlyPermissionBlock
+=== PAUSE TestInstall_OpenCode_WritesOnlyPermissionBlock
+=== RUN   TestInstall_OpenCode_FailsWhenDefaultPermissionWildcardDeniesRequiredTool
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+--- PASS: TestInstall_OpenCode_FailsWhenDefaultPermissionWildcardDeniesRequiredTool (0.00s)
+=== RUN   TestInstall_OpenCode_IdempotentReinstall
+=== PAUSE TestInstall_OpenCode_IdempotentReinstall
+=== RUN   TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks
+=== PAUSE TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks
+=== RUN   TestInstall_OpenCode_DepositsPluginDir
+=== PAUSE TestInstall_OpenCode_DepositsPluginDir
+=== RUN   TestInstall_OpenCode_ShipsCanonicalValidators
+=== PAUSE TestInstall_OpenCode_ShipsCanonicalValidators
+=== RUN   TestInstall_Validate_MissingProjectDir
+=== PAUSE TestInstall_Validate_MissingProjectDir
+=== RUN   TestInstall_AutoDetect_EmptyEnv_NoError
+=== PAUSE TestInstall_AutoDetect_EmptyEnv_NoError
+=== RUN   TestInstall_AutoDetect_DetectsTools
+=== PAUSE TestInstall_AutoDetect_DetectsTools
+=== RUN   TestInstall_DetectLangsUsesFocusPaths
+=== PAUSE TestInstall_DetectLangsUsesFocusPaths
+=== RUN   TestInstall_FlagOverride_PrecedesAutoDetect
+=== PAUSE TestInstall_FlagOverride_PrecedesAutoDetect
+=== RUN   TestInstall_Validate_SameDir
+=== PAUSE TestInstall_Validate_SameDir
+=== RUN   TestInstall_CopyMode
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Gerando governanca contextual...
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-preload.sh: chmod /project/.claude/hooks/validate-preload.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-governance.sh: chmod /project/.claude/hooks/validate-governance.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-task-evidence.sh: chmod /project/.agents/scripts/validate-task-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-bugfix-evidence.sh: chmod /project/.agents/scripts/validate-bugfix-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-refactor-evidence.sh: chmod /project/.agents/scripts/validate-refactor-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-review-evidence.sh: chmod /project/.agents/scripts/validate-review-evidence.sh: no such file or directory
+
+Batch summary (install): created=20 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_CopyMode (0.00s)
+=== RUN   TestDefaultHookConfigsUseOfficialSchemas
+=== PAUSE TestDefaultHookConfigsUseOfficialSchemas
+=== RUN   TestInstall_RefusesExternalSkillsSymlinkByDefault
+=== PAUSE TestInstall_RefusesExternalSkillsSymlinkByDefault
+=== RUN   TestInstall_FollowsExternalSkillsSymlinkWhenAllowed
+=== PAUSE TestInstall_FollowsExternalSkillsSymlinkWhenAllowed
+=== RUN   TestInstall_Codex_LeanProfile
+=== PAUSE TestInstall_Codex_LeanProfile
+=== RUN   TestInstall_Codex_FullProfile
+=== PAUSE TestInstall_Codex_FullProfile
+=== RUN   TestInstall_Idempotent
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-preload.sh: chmod /project/.claude/hooks/validate-preload.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-governance.sh: chmod /project/.claude/hooks/validate-governance.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-task-evidence.sh: chmod /project/.agents/scripts/validate-task-evidence.sh: no such file or directory
+
+Batch summary (install): created=8 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-preload.sh: chmod /project/.claude/hooks/validate-preload.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-governance.sh: chmod /project/.claude/hooks/validate-governance.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-task-evidence.sh: chmod /project/.agents/scripts/validate-task-evidence.sh: no such file or directory
+
+Batch summary (install): created=0 updated=0 preserved=7 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Idempotent (0.00s)
+=== RUN   TestInstall_NoCtx_CopiesAGENTSMD
+=== PAUSE TestInstall_NoCtx_CopiesAGENTSMD
+=== RUN   TestInstall_NonClaude_ShipsCanonicalValidators
+=== PAUSE TestInstall_NonClaude_ShipsCanonicalValidators
+=== RUN   TestInstall_CanonicalValidators_FallbackToClaudeScripts
+=== PAUSE TestInstall_CanonicalValidators_FallbackToClaudeScripts
+=== RUN   TestInstall_Copilot_GeneratesAgents
+=== PAUSE TestInstall_Copilot_GeneratesAgents
+=== RUN   TestInstall_DistributesAgentsLib
+=== PAUSE TestInstall_DistributesAgentsLib
+=== RUN   TestInstall_AgentsLib_AbsentSource_NoError
+=== PAUSE TestInstall_AgentsLib_AbsentSource_NoError
+=== RUN   TestInstall_Copilot_CopiesValidationHooks
+=== PAUSE TestInstall_Copilot_CopiesValidationHooks
+=== RUN   TestInstall_Codex_CopiesGovernanceHook
+=== PAUSE TestInstall_Codex_CopiesGovernanceHook
+=== RUN   TestInstall_Copilot_DryRun_NoAgentsCreated
+=== PAUSE TestInstall_Copilot_DryRun_NoAgentsCreated
+=== RUN   TestInstall_DryRun
+=== PAUSE TestInstall_DryRun
+=== RUN   TestInstall_EmbeddedSource_NoSourceFlag
+=== PAUSE TestInstall_EmbeddedSource_NoSourceFlag
+=== RUN   TestInstall_EmbeddedSource_AllToolsAllLangs
+=== PAUSE TestInstall_EmbeddedSource_AllToolsAllLangs
+=== RUN   TestInstall_ManifestUsesResolvedExecutableVersion
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_ManifestUsesResolvedExecutableVersion2127407160/001
+Modo de instalacao: copy
+--- PASS: TestInstall_ManifestUsesResolvedExecutableVersion (0.02s)
+=== RUN   TestInstall_ManifestIncludesSkillVersions
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=7 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_ManifestIncludesSkillVersions (0.00s)
+=== RUN   TestInstall_RefResolved_UsesCopyMode
+=== PAUSE TestInstall_RefResolved_UsesCopyMode
+=== RUN   TestInstall_ExternalSource_Override
+=== PAUSE TestInstall_ExternalSource_Override
+=== RUN   TestVerifyState_Mapping
+=== PAUSE TestVerifyState_Mapping
+=== RUN   TestCompareSkillChecksum_StatusMapping
+=== PAUSE TestCompareSkillChecksum_StatusMapping
+=== RUN   TestVerify_AllCurrent
+=== PAUSE TestVerify_AllCurrent
+=== RUN   TestVerify_MatchesUpgradeCheckMissingSourceSet
+=== PAUSE TestVerify_MatchesUpgradeCheckMissingSourceSet
+=== RUN   TestVerify_IgnoresSourceDirWithoutSkillMD
+=== PAUSE TestVerify_IgnoresSourceDirWithoutSkillMD
+=== RUN   TestVerify_Missing
+=== PAUSE TestVerify_Missing
+=== RUN   TestVerify_UsesManifestLangsWhenLangsOmitted
+=== PAUSE TestVerify_UsesManifestLangsWhenLangsOmitted
+=== RUN   TestVerify_Drifted
+=== PAUSE TestVerify_Drifted
+=== RUN   TestVerify_GlobalScope_NoHome
+=== PAUSE TestVerify_GlobalScope_NoHome
+=== RUN   TestVerify_ScopeProject_UsesProjectDir
+=== PAUSE TestVerify_ScopeProject_UsesProjectDir
+=== RUN   TestGlobalInstallDir_UsesUserHomeDir
+=== PAUSE TestGlobalInstallDir_UsesUserHomeDir
+=== RUN   TestInstall_GlobalScope_CreatesAispecDir
+Escopo: global (/var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir4102603760/001/.aispec)
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir4102603760/001/.aispec/.agents/skills
+-> Instalando claude...
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir4102603760/001/.aispec/.claude/skills
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir4102603760/001/.aispec/.claude/agents
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir4102603760/001/.aispec/.claude/rules
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir4102603760/001/.aispec/.claude/scripts
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir4102603760/001/.aispec/.claude/hooks
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir4102603760/001/.aispec/scripts/lib
+  [dry-run] copiar .claude/rules/governance.md
+  [dry-run] copiar .claude/rules/code-style.md
+  [dry-run] copiar .claude/scripts/validate-task-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-bugfix-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-refactor-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-review-evidence.sh
+  [dry-run] copiar .claude/hooks/validate-governance.sh
+  [dry-run] copiar .claude/hooks/validate-preload.sh
+  [dry-run] copiar .claude/hooks/validate-session-end.sh
+  [dry-run] copiar scripts/lib/parse-hook-input.sh
+  [dry-run] copiar scripts/lib/hook-payload.sh
+  [dry-run] copiar scripts/lib/check-invocation-depth.sh
+  [dry-run] configurar hooks PreToolUse e PostToolUse em .claude/settings.local.json
+  [dry-run] gerar .claude/agents/*.md via adaptadores
+
+[dry-run] Nenhum arquivo foi alterado.
+--- PASS: TestInstall_GlobalScope_CreatesAispecDir (0.00s)
+=== RUN   TestInstall_Idempotent_VerifyAllCurrent
+=== PAUSE TestInstall_Idempotent_VerifyAllCurrent
+=== RUN   TestVerify_AfterMutation_ReturnsDrifted
+=== PAUSE TestVerify_AfterMutation_ReturnsDrifted
+=== RUN   TestVerify_AfterRemoval_ReturnsMissing
+=== PAUSE TestVerify_AfterRemoval_ReturnsMissing
+=== RUN   TestInstall_RI01_LangAutoDetect_Go
+=== PAUSE TestInstall_RI01_LangAutoDetect_Go
+=== RUN   TestInstall_RI01_LangAutoDetect_Node
+=== PAUSE TestInstall_RI01_LangAutoDetect_Node
+=== RUN   TestInstall_RI01_LangAutoDetect_Python
+=== PAUSE TestInstall_RI01_LangAutoDetect_Python
+=== RUN   TestInstall_RI01_ExplicitLangs_SkipsAutoDetect
+=== PAUSE TestInstall_RI01_ExplicitLangs_SkipsAutoDetect
+=== RUN   TestInstall_RI02_ProbeWarn_BinaryAbsent
+=== PAUSE TestInstall_RI02_ProbeWarn_BinaryAbsent
+=== RUN   TestInstall_RI02_ProbeWarn_BinaryPresent
+=== PAUSE TestInstall_RI02_ProbeWarn_BinaryPresent
+=== RUN   TestVerify_RI04_BinaryItems
+=== PAUSE TestVerify_RI04_BinaryItems
+=== RUN   TestVerify_RI04_BinaryPresent_Current
+=== PAUSE TestVerify_RI04_BinaryPresent_Current
+=== RUN   TestVerify_RI04_SkillItemsHaveKindSkill
+=== PAUSE TestVerify_RI04_SkillItemsHaveKindSkill
+=== RUN   TestProbeBinaryAvailable_Missing
+=== PAUSE TestProbeBinaryAvailable_Missing
+=== RUN   TestProbeBinaryAvailable_Current
+=== PAUSE TestProbeBinaryAvailable_Current
+=== RUN   TestProbeBinaryAvailableIsIndependentOfSharedProbeCache
+=== PAUSE TestProbeBinaryAvailableIsIndependentOfSharedProbeCache
+=== RUN   TestSpecForTool_AllTools
+=== PAUSE TestSpecForTool_AllTools
+=== RUN   TestSpecForTool_Unknown
+=== PAUSE TestSpecForTool_Unknown
+=== RUN   TestInstall_Copilot_NativeHooks
+=== PAUSE TestInstall_Copilot_NativeHooks
+=== RUN   TestInstall_Copilot_MergesRepositorySettings
+=== PAUSE TestInstall_Copilot_MergesRepositorySettings
+=== RUN   TestInstall_Codex_NativeHooksAndSandbox
+=== PAUSE TestInstall_Codex_NativeHooksAndSandbox
+=== RUN   TestPreconditionItemsReportsEachCanonicalPointSeparately
+=== PAUSE TestPreconditionItemsReportsEachCanonicalPointSeparately
+=== RUN   TestEnforcementNativeKeysCoversEveryCodexCanonicalPoint
+=== PAUSE TestEnforcementNativeKeysCoversEveryCodexCanonicalPoint
+=== RUN   TestVerify_ReportsMissingOpenCodeGovernancePlugin
+=== PAUSE TestVerify_ReportsMissingOpenCodeGovernancePlugin
+=== RUN   TestVerify_ReportsDriftedOpenCodeGovernancePlugin
+=== PAUSE TestVerify_ReportsDriftedOpenCodeGovernancePlugin
+=== RUN   TestVerify_ReportsMissingToolHookScripts
+=== PAUSE TestVerify_ReportsMissingToolHookScripts
+=== RUN   TestVerify_NoLangsDetected_DoesNotReportLangSkillsAsMissing
+=== PAUSE TestVerify_NoLangsDetected_DoesNotReportLangSkillsAsMissing
+=== RUN   TestVerify_ManifestLangsSelectOnlyMatchingLangSkills
+=== PAUSE TestVerify_ManifestLangsSelectOnlyMatchingLangSkills
+=== RUN   TestManifestTracksExactlyWhatInstallWrote
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=474 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestManifestTracksExactlyWhatInstallWrote1049628027/001
+Modo de instalacao: copy
+--- PASS: TestManifestTracksExactlyWhatInstallWrote (0.41s)
+=== RUN   TestManifestNeverTracksUntouchedUserFiles
+Ferramentas: [codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=317 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestManifestNeverTracksUntouchedUserFiles4020813917/001
+Modo de instalacao: copy
+--- PASS: TestManifestNeverTracksUntouchedUserFiles (0.27s)
+=== RUN   TestManifestFileChecksumsMatchRealDiskContent
+Ferramentas: [claude codex]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=325 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestManifestFileChecksumsMatchRealDiskContent1985823064/001
+Modo de instalacao: copy
+--- PASS: TestManifestFileChecksumsMatchRealDiskContent (0.27s)
+=== RUN   TestManifestLegacyWithoutFileChecksumsNeverDiverges
+--- PASS: TestManifestLegacyWithoutFileChecksumsNeverDiverges (0.00s)
+=== RUN   TestInstalledValidationHooksAreExecutableForEveryAgent
+=== PAUSE TestInstalledValidationHooksAreExecutableForEveryAgent
+=== RUN   TestTextualMentionIsNotProofOfDelegation
+=== PAUSE TestTextualMentionIsNotProofOfDelegation
+=== RUN   TestExecutionPositionIsProofOfDelegation
+=== PAUSE TestExecutionPositionIsProofOfDelegation
+=== RUN   TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator
+=== PAUSE TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator
+=== RUN   TestCodexGovernanceRootKeysSurviveContextGeneration
+=== PAUSE TestCodexGovernanceRootKeysSurviveContextGeneration
+=== RUN   TestCanonicalValidatorScriptsAreInstalledAndExecutable
+=== PAUSE TestCanonicalValidatorScriptsAreInstalledAndExecutable
+=== RUN   TestOpenCodePluginDeclaredScriptsExistAfterInstall
+=== PAUSE TestOpenCodePluginDeclaredScriptsExistAfterInstall
+=== CONT  TestVerifyChecksTheCanonicalValidatorsUnderAgents
+=== CONT  TestVerify_AllCurrent
+=== CONT  TestProbeBinaryAvailable_Current
+--- PASS: TestProbeBinaryAvailable_Current (0.00s)
+=== CONT  TestVerify_ReportsDriftedOpenCodeGovernancePlugin
+=== CONT  TestInstall_Copilot_MergesRepositorySettings
+=== CONT  TestCodexGovernanceRootKeysSurviveContextGeneration
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+=== CONT  TestOpenCodePluginDeclaredScriptsExistAfterInstall
+-> Instalando copilot...
+=== RUN   TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=false
+=== CONT  TestCanonicalValidatorScriptsAreInstalledAndExecutable
+=== RUN   TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=false
+=== PAUSE TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=false
+=== PAUSE TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=false
+=== CONT  TestDefaultHookConfigsUseOfficialSchemas
+=== RUN   TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=true
+=== PAUSE TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=true
+=== CONT  TestCompareSkillChecksum_StatusMapping
+=== CONT  TestVerify_ReportsMissingToolHookScripts
+--- PASS: TestVerifyChecksTheCanonicalValidatorsUnderAgents (0.00s)
+=== RUN   TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=true
+=== PAUSE TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=true
+=== CONT  TestVerifyState_Mapping
+=== RUN   TestDefaultHookConfigsUseOfficialSchemas/copilot
+--- PASS: TestVerify_ReportsDriftedOpenCodeGovernancePlugin (0.00s)
+=== CONT  TestInstall_ExternalSource_Override
+--- PASS: TestDefaultHookConfigsUseOfficialSchemas (0.00s)
+    --- PASS: TestDefaultHookConfigsUseOfficialSchemas/copilot (0.00s)
+=== CONT  TestInstall_RefResolved_UsesCopyMode
+--- PASS: TestCompareSkillChecksum_StatusMapping (0.00s)
+=== CONT  TestInstall_EmbeddedSource_AllToolsAllLangs
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+=== RUN   TestVerifyState_Mapping/current_quando_hashes_identicos
+=== PAUSE TestVerifyState_Mapping/current_quando_hashes_identicos
+=== RUN   TestVerifyState_Mapping/drifted_quando_conteudo_diferente
+=== PAUSE TestVerifyState_Mapping/drifted_quando_conteudo_diferente
+=== RUN   TestVerifyState_Mapping/missing_quando_arquivo_ausente
+=== PAUSE TestVerifyState_Mapping/missing_quando_arquivo_ausente
+=== CONT  TestInstall_EmbeddedSource_NoSourceFlag
+--- PASS: TestVerify_ReportsMissingToolHookScripts (0.00s)
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+=== CONT  TestInstall_DryRun
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+  [dry-run] mkdir -p /project/.agents/skills
+  [dry-run] link_or_copy /source/.agents/skills/review -> /project/.agents/skills/review
+-> Instalando claude...
+  [dry-run] mkdir -p /project/.claude/skills
+  [dry-run] mkdir -p /project/.claude/agents
+  [dry-run] mkdir -p /project/.claude/rules
+  [dry-run] mkdir -p /project/.claude/scripts
+  [dry-run] mkdir -p /project/.claude/hooks
+  [dry-run] mkdir -p /project/scripts/lib
+  [dry-run] link ../../.agents/skills/review -> /project/.claude/skills/review
+  [dry-run] copiar .claude/rules/governance.md
+  [dry-run] copiar .claude/rules/code-style.md
+  [dry-run] copiar .claude/scripts/validate-task-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-bugfix-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-refactor-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-review-evidence.sh
+  [dry-run] copiar .claude/hooks/validate-governance.sh
+  [dry-run] copiar .claude/hooks/validate-preload.sh
+  [dry-run] copiar .claude/hooks/validate-session-end.sh
+  [dry-run] copiar scripts/lib/parse-hook-input.sh
+  [dry-run] copiar scripts/lib/hook-payload.sh
+  [dry-run] copiar scripts/lib/check-invocation-depth.sh
+  [dry-run] configurar hooks PreToolUse e PostToolUse em .claude/settings.local.json
+  [dry-run] gerar .claude/agents/*.md via adaptadores
+-> Gerando governanca contextual...
+  [dry-run] Geraria AGENTS.md (schema 1.0.0, profile standard)
+  [dry-run] Geraria CLAUDE.md
+
+[dry-run] Nenhum arquivo foi alterado.
+--- PASS: TestInstall_DryRun (0.00s)
+=== CONT  TestInstall_Copilot_DryRun_NoAgentsCreated
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+  [dry-run] mkdir -p /project/.agents/skills
+Ferramentas: [claude]
+Linguagens:  []
+  [dry-run] link_or_copy /source/.agents/skills/review -> /project/.agents/skills/review
+-> Instalando copilot...
+  [dry-run] mkdir -p /project/.github/skills
+  [dry-run] mkdir -p /project/.github/agents
+--- PASS: TestVerify_AllCurrent (0.00s)
+  [dry-run] link ../../.agents/skills/review -> /project/.github/skills/review
+  [dry-run] gerar .github/agents/*.agent.md via adaptadores
+  [dry-run] copiar .github/hooks/{validate-preload,validate-governance,post-execute-task,pre-execute-all-tasks,post-wave}.sh
+
+[dry-run] Nenhum arquivo foi alterado.
+--- PASS: TestInstall_Copilot_DryRun_NoAgentsCreated (0.00s)
+=== CONT  TestInstall_Copilot_CopiesValidationHooks
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+
+=== CONT  TestInstall_Codex_CopiesGovernanceHook
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+-> Instalando skills canonicas...
+-> Instalando codex...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Copilot_MergesRepositorySettings (0.00s)
+=== CONT  TestInstall_AgentsLib_AbsentSource_NoError
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: nao foi possivel preservar +x em /project/.github/hooks/validate-preload.sh: chmod /project/.github/hooks/validate-preload.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.github/hooks/validate-governance.sh: chmod /project/.github/hooks/validate-governance.sh: no such file or directory
+
+Batch summary (install): created=6 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Copilot_CopiesValidationHooks (0.00s)
+=== CONT  TestInstall_DistributesAgentsLib
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=0 conflict=0
+AVISO: nao foi possivel preservar +x em /project/.codex/hooks/validate-preload.sh: chmod /project/.codex/hooks/validate-preload.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.codex/hooks/validate-governance.sh: chmod /project/.codex/hooks/validate-governance.sh: no such file or directory
+
+Batch summary (install): created=5 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_AgentsLib_AbsentSource_NoError (0.00s)
+=== CONT  TestInstall_Copilot_GeneratesAgents
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+AVISO: nao foi possivel preservar +x em /project/.agents/lib/check-invocation-depth.sh: chmod /project/.agents/lib/check-invocation-depth.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/lib/parse-hook-input.sh: chmod /project/.agents/lib/parse-hook-input.sh: no such file or directory
+
+Batch summary (install): created=6 updated=0 preserved=0 merged=0 conflict=0
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_DistributesAgentsLib (0.00s)
+=== CONT  TestInstall_Validate_SameDir
+--- PASS: TestInstall_Validate_SameDir (0.00s)
+=== CONT  TestInstall_CanonicalValidators_FallbackToClaudeScripts
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Codex_CopiesGovernanceHook (0.00s)
+=== CONT  TestInstall_FlagOverride_PrecedesAutoDetect
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+-> Instalando codex...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Copilot_GeneratesAgents (0.00s)
+=== CONT  TestInstall_NonClaude_ShipsCanonicalValidators
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+-> Instalando claude...
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-task-evidence.sh: chmod /project/.agents/scripts/validate-task-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-bugfix-evidence.sh: chmod /project/.agents/scripts/validate-bugfix-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-refactor-evidence.sh: chmod /project/.agents/scripts/validate-refactor-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-review-evidence.sh: chmod /project/.agents/scripts/validate-review-evidence.sh: no such file or directory
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_NonClaude_ShipsCanonicalValidators (0.00s)
+=== CONT  TestInstall_DetectLangsUsesFocusPaths
+Linguagens detectadas automaticamente: [node]
+Ferramentas: [claude]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=6 updated=0 preserved=0 merged=0 conflict=0
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-task-evidence.sh: chmod /project/.agents/scripts/validate-task-evidence.sh: no such file or directory
+
+Batch summary (install): created=2 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=0 conflict=0
+--- PASS: TestInstall_CanonicalValidators_FallbackToClaudeScripts (0.00s)
+=== CONT  TestInstall_NoCtx_CopiesAGENTSMD
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_DetectLangsUsesFocusPaths (0.00s)
+=== CONT  TestInstall_AutoDetect_DetectsTools
+Agentes detectados automaticamente: [claude]
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-preload.sh: chmod /project/.claude/hooks/validate-preload.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-governance.sh: chmod /project/.claude/hooks/validate-governance.sh: no such file or directory
+
+-> Instalando claude...
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_FlagOverride_PrecedesAutoDetect (0.00s)
+=== CONT  TestInstall_Codex_FullProfile
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=0 conflict=0
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_AutoDetect_DetectsTools (0.00s)
+=== CONT  TestInstall_AutoDetect_EmptyEnv_NoError
+AVISO: Nenhum agente detectado no ambiente. Use --tools para especificar explicitamente.
+--- PASS: TestInstall_AutoDetect_EmptyEnv_NoError (0.00s)
+=== CONT  TestInstall_Codex_LeanProfile
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Codex_FullProfile (0.00s)
+=== CONT  TestInstall_Validate_MissingProjectDir
+--- PASS: TestInstall_Validate_MissingProjectDir (0.00s)
+=== CONT  TestInstall_FollowsExternalSkillsSymlinkWhenAllowed
+
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+Batch summary (install): created=1 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Codex_LeanProfile (0.00s)
+=== CONT  TestInstall_OpenCode_ShipsCanonicalValidators
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=0 conflict=0
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-task-evidence.sh: chmod /project-opencode/.agents/scripts/validate-task-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-bugfix-evidence.sh: chmod /project-opencode/.agents/scripts/validate-bugfix-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-refactor-evidence.sh: chmod /project-opencode/.agents/scripts/validate-refactor-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-review-evidence.sh: chmod /project-opencode/.agents/scripts/validate-review-evidence.sh: no such file or directory
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_FollowsExternalSkillsSymlinkWhenAllowed (0.00s)
+=== CONT  TestInstall_RefusesExternalSkillsSymlinkByDefault
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+--- PASS: TestInstall_RefusesExternalSkillsSymlinkByDefault (0.00s)
+=== CONT  TestInstall_OpenCode_DepositsPluginDir
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_NoCtx_CopiesAGENTSMD (0.00s)
+=== CONT  TestVerify_AfterRemoval_ReturnsMissing
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project-opencode
+Modo de instalacao: copy
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_DepositsPluginDir (0.00s)
+=== CONT  TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+-> Instalando claude...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-task-evidence.sh: chmod /project-claude/.agents/scripts/validate-task-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-bugfix-evidence.sh: chmod /project-claude/.agents/scripts/validate-bugfix-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-refactor-evidence.sh: chmod /project-claude/.agents/scripts/validate-refactor-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-review-evidence.sh: chmod /project-claude/.agents/scripts/validate-review-evidence.sh: no such file or directory
+
+Batch summary (install): created=5 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project-claude
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_ShipsCanonicalValidators (0.00s)
+=== CONT  TestProbeBinaryAvailable_Missing
+--- PASS: TestProbeBinaryAvailable_Missing (0.00s)
+=== CONT  TestInstall_OpenCode_IdempotentReinstall
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: symlink
+--- PASS: TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks (0.00s)
+=== CONT  TestVerify_RI04_SkillItemsHaveKindSkill
+-> Instalando opencode...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+--- PASS: TestVerify_RI04_SkillItemsHaveKindSkill (0.00s)
+=== CONT  TestInstall_OpenCode_WritesOnlyPermissionBlock
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_WritesOnlyPermissionBlock (0.00s)
+=== CONT  TestVerify_RI04_BinaryPresent_Current
+--- PASS: TestVerify_RI04_BinaryPresent_Current (0.00s)
+=== CONT  TestInstall_OpenCode_ModelFlagMapsToConfigKey
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_IdempotentReinstall (0.00s)
+=== CONT  TestVerify_RI04_BinaryItems
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_ModelFlagMapsToConfigKey (0.00s)
+=== CONT  TestInstall_RI02_ProbeWarn_BinaryPresent
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=0 conflict=0
+--- PASS: TestVerify_RI04_BinaryItems (0.00s)
+=== CONT  TestVerify_OpenCode_NeverReportsCurrentWhenPluginRuntimeMissing
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_RI02_ProbeWarn_BinaryPresent (0.00s)
+=== CONT  TestInstall_RI02_ProbeWarn_BinaryAbsent
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: [claude] binario ACP 'claude-agent-acp' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_RI02_ProbeWarn_BinaryAbsent (0.00s)
+=== CONT  TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+AVISO: [opencode] binario ACP 'opencode' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent (0.00s)
+=== CONT  TestInstall_RI01_ExplicitLangs_SkipsAutoDetect
+Ferramentas: [claude]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: [claude] binario ACP 'claude-agent-acp' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=0 conflict=0
+-> Instalando claude...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_RI01_ExplicitLangs_SkipsAutoDetect (0.00s)
+=== CONT  TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+--- PASS: TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing (0.00s)
+=== CONT  TestInstall_RI01_LangAutoDetect_Python
+Linguagens detectadas automaticamente: [python]
+Ferramentas: [claude]
+Linguagens:  [python]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: [claude] binario ACP 'claude-agent-acp' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+
+Batch summary (install): created=3 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_RI01_LangAutoDetect_Python (0.00s)
+=== CONT  TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings
+=== RUN   TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/stop
+=== PAUSE TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/stop
+=== RUN   TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/Stop
+=== PAUSE TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/Stop
+=== RUN   TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/sessionEnd
+=== PAUSE TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/sessionEnd
+=== RUN   TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/SessionEnd
+=== PAUSE TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/SessionEnd
+=== CONT  TestInstall_RI01_LangAutoDetect_Node
+Linguagens detectadas automaticamente: [node]
+Ferramentas: [claude]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: [claude] binario ACP 'claude-agent-acp' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+
+Batch summary (install): created=3 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_RI01_LangAutoDetect_Node (0.00s)
+=== CONT  TestInstallCopilotPreservesAuthoredSettingsFormatting
+=== RUN   TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_without_trailing_newline
+=== PAUSE TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_without_trailing_newline
+=== RUN   TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_trailing_newline
+=== PAUSE TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_trailing_newline
+=== RUN   TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_authored_hooks_block
+=== PAUSE TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_authored_hooks_block
+=== CONT  TestInstall_RI01_LangAutoDetect_Go
+Linguagens detectadas automaticamente: [go]
+Ferramentas: [claude]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: [claude] binario ACP 'claude-agent-acp' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+
+Batch summary (install): created=3 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_RI01_LangAutoDetect_Go (0.00s)
+=== CONT  TestInstall_Claude_MalformedSettingsFailsLoudly
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+--- PASS: TestInstall_Claude_MalformedSettingsFailsLoudly (0.00s)
+=== CONT  TestInstall_Claude_MergesGovernanceHooksIntoExistingSettings
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=3 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Claude_MergesGovernanceHooksIntoExistingSettings (0.00s)
+=== CONT  TestVerifyReportsTamperedCanonicalValidatorAsDrifted
+--- PASS: TestVerifyReportsTamperedCanonicalValidatorAsDrifted (0.00s)
+=== CONT  TestInstall_Claude_MergeIsIdempotentAndPreservesUserHooks
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=3 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=0 conflict=0
+
+Batch summary (install): created=0 updated=0 preserved=3 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Claude_MergeIsIdempotentAndPreservesUserHooks (0.00s)
+=== CONT  TestSpecForTool_Unknown
+--- PASS: TestSpecForTool_Unknown (0.00s)
+=== CONT  TestVerify_GlobalScope_NoHome
+--- PASS: TestVerify_GlobalScope_NoHome (0.00s)
+=== CONT  TestInstall_Copilot_NativeHooks
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_ExternalSource_Override3058676979/001
+Modo de instalacao: copy
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Copilot_NativeHooks (0.00s)
+=== CONT  TestVerify_AfterMutation_ReturnsDrifted
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_RefResolved_UsesCopyMode956915901/002
+Modo de instalacao: copy
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=3 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestVerify_AfterRemoval_ReturnsMissing3646599027/002
+Modo de instalacao: copy
+--- PASS: TestInstall_ExternalSource_Override (0.04s)
+=== CONT  TestInstall_Idempotent_VerifyAllCurrent
+--- PASS: TestInstall_RefResolved_UsesCopyMode (0.04s)
+=== CONT  TestGlobalInstallDir_UsesUserHomeDir
+--- PASS: TestGlobalInstallDir_UsesUserHomeDir (0.00s)
+=== CONT  TestVerify_Missing
+--- PASS: TestVerify_Missing (0.00s)
+=== CONT  TestVerify_Drifted
+--- PASS: TestVerify_Drifted (0.00s)
+=== CONT  TestVerify_UsesManifestLangsWhenLangsOmitted
+--- PASS: TestVerify_UsesManifestLangsWhenLangsOmitted (0.00s)
+=== CONT  TestVerify_IgnoresSourceDirWithoutSkillMD
+--- PASS: TestVerify_IgnoresSourceDirWithoutSkillMD (0.00s)
+=== CONT  TestInstalledValidationHooksAreExecutableForEveryAgent
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=3 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestVerify_AfterMutation_ReturnsDrifted3547307250/002
+Modo de instalacao: copy
+--- PASS: TestVerify_AfterRemoval_ReturnsMissing (0.05s)
+=== CONT  TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator
+=== RUN   TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=false
+=== PAUSE TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=false
+=== RUN   TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=true
+=== PAUSE TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=true
+=== CONT  TestExecutionPositionIsProofOfDelegation
+=== RUN   TestExecutionPositionIsProofOfDelegation/source
+=== PAUSE TestExecutionPositionIsProofOfDelegation/source
+=== RUN   TestExecutionPositionIsProofOfDelegation/exec-direto
+=== PAUSE TestExecutionPositionIsProofOfDelegation/exec-direto
+=== RUN   TestExecutionPositionIsProofOfDelegation/variavel-executada
+=== PAUSE TestExecutionPositionIsProofOfDelegation/variavel-executada
+=== RUN   TestExecutionPositionIsProofOfDelegation/pipeline
+=== PAUSE TestExecutionPositionIsProofOfDelegation/pipeline
+=== CONT  TestTextualMentionIsNotProofOfDelegation
+=== RUN   TestTextualMentionIsNotProofOfDelegation/mensagem
+=== PAUSE TestTextualMentionIsNotProofOfDelegation/mensagem
+=== RUN   TestTextualMentionIsNotProofOfDelegation/variavel-atribuida-sem-uso
+=== PAUSE TestTextualMentionIsNotProofOfDelegation/variavel-atribuida-sem-uso
+=== RUN   TestTextualMentionIsNotProofOfDelegation/comentario
+=== PAUSE TestTextualMentionIsNotProofOfDelegation/comentario
+=== CONT  TestSpecForTool_AllTools
+--- PASS: TestSpecForTool_AllTools (0.00s)
+=== CONT  TestVerify_MatchesUpgradeCheckMissingSourceSet
+Verificando skills em: /project
+Fonte: /source
+ai-spec dev
+
+  AUSENTE              source-only (fonte: 1.0.0)
+
+Resumo: 0 atualizadas, 0 desatualizadas (0 refs divergentes), 1 ausentes
+
+Execute sem --check para atualizar: ai-spec-harness upgrade /project --source /source
+--- PASS: TestVerify_MatchesUpgradeCheckMissingSourceSet (0.00s)
+=== CONT  TestProbeBinaryAvailableIsIndependentOfSharedProbeCache
+--- PASS: TestProbeBinaryAvailableIsIndependentOfSharedProbeCache (0.00s)
+=== CONT  TestVerify_NoLangsDetected_DoesNotReportLangSkillsAsMissing
+--- PASS: TestVerify_NoLangsDetected_DoesNotReportLangSkillsAsMissing (0.00s)
+=== CONT  TestVerify_ManifestLangsSelectOnlyMatchingLangSkills
+--- PASS: TestVerify_ManifestLangsSelectOnlyMatchingLangSkills (0.00s)
+=== CONT  TestPreconditionItemsReportsEachCanonicalPointSeparately
+--- PASS: TestPreconditionItemsReportsEachCanonicalPointSeparately (0.00s)
+=== CONT  TestEnforcementNativeKeysCoversEveryCodexCanonicalPoint
+--- PASS: TestEnforcementNativeKeysCoversEveryCodexCanonicalPoint (0.00s)
+=== CONT  TestInstall_Codex_NativeHooksAndSandbox
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Codex_NativeHooksAndSandbox (0.00s)
+=== CONT  TestVerify_ReportsMissingOpenCodeGovernancePlugin
+--- PASS: TestVerify_ReportsMissingOpenCodeGovernancePlugin (0.00s)
+=== CONT  TestVerify_ScopeProject_UsesProjectDir
+--- PASS: TestVerify_ScopeProject_UsesProjectDir (0.00s)
+=== CONT  TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=false
+
+Batch summary (install): created=3 updated=0 preserved=0 merged=0 conflict=0
+
+--- PASS: TestVerify_AfterMutation_ReturnsDrifted (0.04s)
+=== CONT  TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=true
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_Idempotent_VerifyAllCurrent4095526631/002
+Modo de instalacao: copy
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=0 updated=0 preserved=2 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_Idempotent_VerifyAllCurrent4095526631/002
+Modo de instalacao: copy
+--- PASS: TestInstall_Idempotent_VerifyAllCurrent (0.05s)
+=== CONT  TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=false
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [go node python dotnet java]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+--- PASS: TestVerify_OpenCode_NeverReportsCurrentWhenPluginRuntimeMissing (0.27s)
+=== CONT  TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=true
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Instalando codex...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando codex...
+-> Gerando governanca contextual...
+-> Instalando copilot...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Instalando opencode...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+-> Instalando opencode...
+-> Instalando opencode...
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=252 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_EmbeddedSource_NoSourceFlag2917312507/001
+Modo de instalacao: copy
+
+Batch summary (install): created=388 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstalledValidationHooksAreExecutableForEveryAgent1994718242/001
+Modo de instalacao: copy
+
+Batch summary (install): created=388 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestCanonicalValidatorScriptsAreInstalledAndExecutableGenerateC3419136210/001
+Modo de instalacao: copy
+--- PASS: TestInstall_EmbeddedSource_NoSourceFlag (1.43s)
+=== CONT  TestVerifyState_Mapping/current_quando_hashes_identicos
+=== CONT  TestVerifyState_Mapping/missing_quando_arquivo_ausente
+=== CONT  TestVerifyState_Mapping/drifted_quando_conteudo_diferente
+--- PASS: TestVerifyState_Mapping (0.00s)
+    --- PASS: TestVerifyState_Mapping/current_quando_hashes_identicos (0.00s)
+    --- PASS: TestVerifyState_Mapping/missing_quando_arquivo_ausente (0.00s)
+    --- PASS: TestVerifyState_Mapping/drifted_quando_conteudo_diferente (0.00s)
+=== CONT  TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/stop
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+=== CONT  TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/sessionEnd
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+=== CONT  TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/SessionEnd
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+=== CONT  TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/Stop
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings (0.00s)
+    --- PASS: TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/stop (0.00s)
+    --- PASS: TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/sessionEnd (0.00s)
+    --- PASS: TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/SessionEnd (0.00s)
+    --- PASS: TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings/Stop (0.00s)
+=== CONT  TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_without_trailing_newline
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+=== CONT  TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_authored_hooks_block
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+=== CONT  TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_trailing_newline
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=390 updated=0 preserved=0 merged=2 conflict=0
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstallCopilotPreservesAuthoredSettingsFormatting (0.01s)
+    --- PASS: TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_without_trailing_newline (0.00s)
+    --- PASS: TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_authored_hooks_block (0.00s)
+    --- PASS: TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_trailing_newline (0.01s)
+=== CONT  TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=false
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestOpenCodePluginDeclaredScriptsExistAfterInstall2503272821/001
+Modo de instalacao: copy
+
+Batch summary (install): created=388 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestCodexGovernanceRootKeysSurviveContextGenerationGenerateCtx=940820608/001
+Modo de instalacao: copy
+
+Batch summary (install): created=390 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestCanonicalValidatorScriptsAreInstalledAndExecutableGenerateC2266470015/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=390 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestCodexGovernanceRootKeysSurviveContextGenerationGenerateCtx=3139020830/001
+Modo de instalacao: copy
+-> Instalando opencode...
+
+Batch summary (install): created=643 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_EmbeddedSource_AllToolsAllLangs3149747935/001
+Modo de instalacao: copy
+--- PASS: TestInstalledValidationHooksAreExecutableForEveryAgent (1.86s)
+=== CONT  TestExecutionPositionIsProofOfDelegation/source
+=== CONT  TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=true
+=== CONT  TestTextualMentionIsNotProofOfDelegation/mensagem
+=== CONT  TestExecutionPositionIsProofOfDelegation/pipeline
+=== CONT  TestExecutionPositionIsProofOfDelegation/variavel-executada
+--- PASS: TestOpenCodePluginDeclaredScriptsExistAfterInstall (1.94s)
+=== CONT  TestExecutionPositionIsProofOfDelegation/exec-direto
+=== CONT  TestTextualMentionIsNotProofOfDelegation/comentario
+=== CONT  TestTextualMentionIsNotProofOfDelegation/variavel-atribuida-sem-uso
+--- PASS: TestExecutionPositionIsProofOfDelegation (0.00s)
+    --- PASS: TestExecutionPositionIsProofOfDelegation/source (0.01s)
+    --- PASS: TestExecutionPositionIsProofOfDelegation/pipeline (0.01s)
+    --- PASS: TestExecutionPositionIsProofOfDelegation/variavel-executada (0.01s)
+    --- PASS: TestExecutionPositionIsProofOfDelegation/exec-direto (0.01s)
+--- PASS: TestTextualMentionIsNotProofOfDelegation (0.00s)
+    --- PASS: TestTextualMentionIsNotProofOfDelegation/mensagem (0.01s)
+    --- PASS: TestTextualMentionIsNotProofOfDelegation/comentario (0.01s)
+    --- PASS: TestTextualMentionIsNotProofOfDelegation/variavel-atribuida-sem-uso (0.01s)
+--- PASS: TestCanonicalValidatorScriptsAreInstalledAndExecutable (0.00s)
+    --- PASS: TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=false (1.86s)
+    --- PASS: TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=true (1.89s)
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+--- PASS: TestCodexGovernanceRootKeysSurviveContextGeneration (0.00s)
+    --- PASS: TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=false (1.86s)
+    --- PASS: TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=true (1.84s)
+-> Instalando opencode...
+-> Gerando governanca contextual...
+--- PASS: TestInstall_EmbeddedSource_AllToolsAllLangs (2.19s)
+
+Batch summary (install): created=388 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidatorGe1286328744/001
+Modo de instalacao: copy
+
+Batch summary (install): created=390 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidatorGe139819307/001
+Modo de instalacao: copy
+--- PASS: TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator (0.00s)
+    --- PASS: TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=false (0.91s)
+    --- PASS: TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=true (0.57s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/install	3.683s
+exit=0

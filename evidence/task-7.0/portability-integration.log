@@ -1,0 +1,20 @@
+=== RUN   TestPortability_GenerateGovernance
+=== RUN   TestPortability_GenerateGovernance/go-monolith
+=== RUN   TestPortability_GenerateGovernance/node-api
+=== RUN   TestPortability_GenerateGovernance/polyglot-monorepo
+=== RUN   TestPortability_GenerateGovernance/dotnet-api
+=== RUN   TestPortability_GenerateGovernance/java-maven
+=== RUN   TestPortability_GenerateGovernance/java-gradle
+--- PASS: TestPortability_GenerateGovernance (4.27s)
+    --- PASS: TestPortability_GenerateGovernance/go-monolith (0.58s)
+    --- PASS: TestPortability_GenerateGovernance/node-api (0.67s)
+    --- PASS: TestPortability_GenerateGovernance/polyglot-monorepo (0.80s)
+    --- PASS: TestPortability_GenerateGovernance/dotnet-api (0.70s)
+    --- PASS: TestPortability_GenerateGovernance/java-maven (0.73s)
+    --- PASS: TestPortability_GenerateGovernance/java-gradle (0.78s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	4.605s
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	(cached) [no tests to run]
+exit=0

@@ -1,0 +1,129 @@
+{
+  "schema_version": 2,
+  "run_id": "task-7.0-2026-09-20",
+  "task_id": "7.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "ed8ebd890777372fbba5796da62cedd408043440",
+  "patch_sha256": "59f608d8fcf9c50c96e61414584d051923e2afa462648bd2cf6cc4bbca95b347",
+  "patch_ref": "evidence/task-7.0/patch.diff",
+  "commit_sha": "ba321a44e36bbe7261e6704c3631de0f029e7995",
+  "commit_patch_sha256": "59f608d8fcf9c50c96e61414584d051923e2afa462648bd2cf6cc4bbca95b347",
+  "final_state_sha256": "06a987945f0f72f0fb9a7ff617d494aed52ee102b7df78ca6af07492dfef4316",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "19eaf43821a7660ec323a87c8457bf74823beb296c39f5e01aa8a683aa50f061"
+    },
+    {
+      "command": "go test ./internal/skills/... ./internal/triggers/... ./internal/contextgen/... ./internal/detect/... ./internal/install/... -v",
+      "exit_code": 0,
+      "output_sha256": "8bbf0c5a38e865112e107721656b7e0b1625424dc01fb1bb4c1dfa24cf8edfc5"
+    },
+    {
+      "command": "go test ./...",
+      "exit_code": 0,
+      "output_sha256": "3bd63266c698cab1062e646189c4cb2a3ddfe934e7b8cf8df8fbf122e4dd0907"
+    },
+    {
+      "command": "bash scripts/test-validators.sh",
+      "exit_code": 0,
+      "output_sha256": "5bc86ac4bd9b8c2ba1c330bcb3f5d6aeb7fe8b8ba25f584b3a123438ff36d2ac"
+    },
+    {
+      "command": "go test -tags integration ./tests/integration/... -run TestPortability_GenerateGovernance -v",
+      "exit_code": 0,
+      "output_sha256": "31809ce0f6cd967f4b947a3298afbb5f5f622109b85fa15661361b3f9b522bc2"
+    },
+    {
+      "command": "make lint",
+      "exit_code": 0,
+      "output_sha256": "d4c3be7adee30d9acd595b5cd9969526c601f7b15f6cc6a6bafe1e6cd8400a0a"
+    },
+    {
+      "command": "make check-skills-sync check-scripts-sync",
+      "exit_code": 0,
+      "output_sha256": "2b7829fbdc51395f9cddc5c786a682b85a23bc8a22146073c53b4a4e02eec725"
+    },
+    {
+      "command": "go test -coverprofile=coverage.out ./...",
+      "exit_code": 0,
+      "output_sha256": "95b3ea2da2230b32f2f408788eb16ac2dea103bce05129f2ac1e7fca80d623cf"
+    },
+    {
+      "command": "bash scripts/check-package-coverage.sh 70",
+      "exit_code": 0,
+      "output_sha256": "9451151a64660a040be8f68f8383394be96c20aa54a2d01dfd41a0699e5bdb62"
+    },
+    {
+      "command": "go test -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... -run TestPortability_GenerateGovernance|TestAllLangsAreExhaustivelyWired",
+      "exit_code": 0,
+      "output_sha256": "f93904bec89f4414dbcb388a04ecbad8a30708042c2b56fc494bfec02c353e42"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "dotnet-toolchain-agents-md",
+      "evidence_ref": "evidence/task-7.0/portability-integration.log"
+    },
+    {
+      "id": "java-maven-gradle-toolchain",
+      "evidence_ref": "evidence/task-7.0/portability-integration.log"
+    },
+    {
+      "id": "exhaustive-wiring-five-langs",
+      "evidence_ref": "evidence/task-7.0/go-test-scope.log"
+    },
+    {
+      "id": "no-switch-without-default",
+      "evidence_ref": "evidence/task-7.0/go-test-scope.log"
+    },
+    {
+      "id": "test-validators-mvn-gradle-regex",
+      "evidence_ref": "evidence/task-7.0/test-validators.log"
+    },
+    {
+      "id": "test-name-re-conditioned-stack",
+      "evidence_ref": "evidence/task-7.0/test-validators.log"
+    },
+    {
+      "id": "portability-polyglot-intact",
+      "evidence_ref": "evidence/task-7.0/portability-integration.log"
+    },
+    {
+      "id": "no-regression-make-test-lint-vet",
+      "evidence_ref": "evidence/task-7.0/go-test-all.log"
+    },
+    {
+      "id": "area-gates-green",
+      "evidence_ref": "evidence/task-7.0/check-sync.log"
+    },
+    {
+      "id": "coverage-gates",
+      "evidence_ref": "evidence/task-7.0/coverage-packages.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-7.0/patch.diff",
+    "evidence/task-7.0/go-build.log",
+    "evidence/task-7.0/go-vet.log",
+    "evidence/task-7.0/go-test-scope.log",
+    "evidence/task-7.0/go-test-all.log",
+    "evidence/task-7.0/test-validators.log",
+    "evidence/task-7.0/portability-integration.log",
+    "evidence/task-7.0/lint.log",
+    "evidence/task-7.0/check-sync.log",
+    "evidence/task-7.0/coverage.log",
+    "evidence/task-7.0/coverage-packages.log",
+    "evidence/task-7.0/make-integration.log",
+    "evidence/task-7.0/make-integration-scope.log"
+  ],
+  "review_verdict": "approved"
+}
