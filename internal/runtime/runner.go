@@ -14,7 +14,9 @@ import (
 	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/approval"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/qualitygate"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/client"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/handshake"
@@ -697,6 +699,27 @@ func (c *Catalog) prepareHooksDispatcher(
 	// memory_persist: escreve MEMORY.md em session.post_end (apenas quando store disponível).
 	if store != nil {
 		disp.Register(hooks.PointSessionPostEnd, hooks.NewMemoryPersistHook(store))
+	}
+
+	if j.QualityGateEnabled {
+		osFS := fs.NewOSFileSystem()
+		qualityTaskID := j.TaskFileName
+		if qualityTaskID == "" {
+			qualityTaskID = "adhoc"
+		}
+		qualityGate := qualitygate.NewGate(
+			qualitygate.NewDefaultPolicyLoader(osFS),
+			detect.NewToolchainDetector(osFS),
+			qualitygate.NewShellExecutor(),
+			qualitygate.NewFileCache(osFS, filepath.Join(j.WorkDir, ".agents/generated/quality-gate-cache.json")),
+			qualitygate.NewFileEvidenceWriter(osFS, filepath.Join(j.WorkDir, ".agents/generated/quality-gate-evidence")),
+		)
+		disp.Register(hooks.PointSessionPostEnd, hooks.NewQualityGateHook(qualityGate, qualitygate.EvaluationInput{
+			ProjectDir: j.WorkDir,
+			TaskID:     qualityTaskID,
+			TaskType:   qualitygate.DefaultTaskType,
+			Risk:       qualitygate.DefaultRisk,
+		}))
 	}
 
 	if memRecorder != nil {

@@ -74,4 +74,6 @@ type Job struct {
 	WindowMaxTokens int
 
 	AutoReview bool
+
+	QualityGateEnabled bool
 }

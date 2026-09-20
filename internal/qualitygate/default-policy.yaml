@@ -1,0 +1,62 @@
+version: 1
+policies:
+  - task_type: default
+    risk: low
+    required: [test]
+    optional: [lint]
+  - task_type: default
+    risk: medium
+    required: [test, lint]
+    optional: []
+  - task_type: default
+    risk: high
+    required: [test, lint, fmt]
+    optional: []
+  - task_type: feature
+    risk: low
+    required: [test]
+    optional: [lint]
+  - task_type: feature
+    risk: medium
+    required: [test, lint]
+    optional: []
+  - task_type: feature
+    risk: high
+    required: [test, lint, fmt]
+    optional: []
+  - task_type: bugfix
+    risk: low
+    required: [test]
+    optional: []
+  - task_type: bugfix
+    risk: medium
+    required: [test, lint]
+    optional: []
+  - task_type: bugfix
+    risk: high
+    required: [test, lint, fmt]
+    optional: []
+  - task_type: refactor
+    risk: low
+    required: [test, lint]
+    optional: []
+  - task_type: refactor
+    risk: medium
+    required: [test, lint]
+    optional: []
+  - task_type: refactor
+    risk: high
+    required: [test, lint, fmt]
+    optional: []
+  - task_type: docs
+    risk: low
+    required: []
+    optional: []
+  - task_type: docs
+    risk: medium
+    required: []
+    optional: []
+  - task_type: docs
+    risk: high
+    required: []
+    optional: []
