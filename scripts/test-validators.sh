@@ -220,11 +220,6 @@ bash "$VALIDATOR" "$report_c" >/dev/null 2>&1; code_c=$?
 rm -f "$report_c"
 assert_exit "Testes pass sem comando falha" 1 $code_c
 
-# --- Caso c2: RF-34 prova de teste reconhece mvn/gradle no fim de linha ---
-# Antes da correção, o catch-all [^a-z]test[^a-z] exigia caractere não-alfabético
-# DEPOIS de "test": "mvn test -q" passava (espaço depois), mas "mvn test" no fim
-# da linha falhava por falta desse caractere posterior. O mesmo valia para
-# "gradle test" e "./gradlew test".
 echo "Caso c2: prova de teste mvn/gradle no fim de linha"
 task_c2="$TMP_BASE/task-c2.md"
 
@@ -416,7 +411,6 @@ $VALID_MAP
 EOF
 bash "$REVIEW_VALIDATOR" "$review_f" >/dev/null 2>&1; assert_exit "REJECTED sem high/critical falha" 1 $?
 
-# Caso f2: TEST_NAME_RE condicionada a stack Java aceita nome de teste JUnit
 echo "Caso f2: TEST_NAME_RE aceita nome de teste Java quando stack detectada e Java"
 review_f2="$TMP_BASE/review-f2.md"
 cat > "$review_f2" <<EOF
@@ -438,7 +432,6 @@ Sem achados.
 EOF
 bash "$REVIEW_VALIDATOR" "$review_f2" >/dev/null 2>&1; assert_exit "review Java com nome de teste JUnit passa" 0 $?
 
-# Caso f3: TEST_NAME_RE Go permanece estrita (prova de não-afrouxamento)
 echo "Caso f3: stack Go rejeita nome de teste não-Go (não-afrouxamento)"
 review_f3="$TMP_BASE/review-f3.md"
 cat > "$review_f3" <<EOF
@@ -935,6 +928,27 @@ for command in "${non_regression_block_commands[@]}"; do
 done
 
 assert_git_gate_command 'menção textual em grep não bloqueia (não-regressão)' 0 'grep -r "git push" docs/'
+
+# --- Falha fechada do classificador estrutural (achado de revisão) ---
+# Um comando com aspa não fechada faz o shlex lançar ValueError; antes da
+# correção o tokenizer engolia a exceção e devolvia lista vazia, fazendo o gate
+# tratar QUALQUER comando malformado (git incluído) como "nenhum match" e sair
+# com exit 0 — um bypass silencioso por erro não tratado. Agora a exceção
+# propaga e o classificador sai com código != 0, que o wrapper bash trata como
+# falha fechada (classe de interpretador, exige aprovação explícita).
+echo "Falha fechada do classificador em comando com aspa não fechada"
+assert_git_gate_command 'aspa não fechada com git bloqueia (falha fechada)' 2 'git push "unterminated'
+assert_git_gate_command 'aspa não fechada sem git bloqueia (falha fechada)' 2 'echo "unterminated'
+
+# --- Ofuscação por expansão de variável (achado de revisão) ---
+# shlex não expande variáveis: "git${IFS}push" e "$G $P" permanecem tokens
+# opacos que nunca casam literalmente com "git". Sem tratar qualquer "$" fora
+# de "$(" / crase como classe de interpretador dinâmico (mesma lógica já usada
+# para substituição de comando), esses dois vetores burlavam o gate por
+# completo (exit 0) sem deixar rastro de auditoria.
+echo "Ofuscação por expansão de variável não pode escapar do gate"
+assert_git_gate_command 'expansão de IFS não escapa: git${IFS}push${IFS}--force' 2 'git${IFS}push${IFS}origin${IFS}main${IFS}--force'
+assert_git_gate_command 'expansão de variável arbitrária não escapa: $G $P' 2 'G=git; P=push; $G $P --force'
 
 echo
 echo "Passaram: $passed | Falharam: $failed"

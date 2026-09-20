@@ -78,9 +78,6 @@ func (d *ToolchainDetector) detectDefault(projectDir string) ToolchainResult {
 	return result
 }
 
-// detectLangEntry despacha a deteccao de toolchain para a linguagem informada.
-// O default que falha garante que uma nova linguagem em skills.AllLangs nao
-// seja silenciosamente ignorada aqui.
 func (d *ToolchainDetector) detectLangEntry(lang skills.Lang, projectDir string) (ToolchainEntry, bool) {
 	switch string(lang) {
 	case "go":

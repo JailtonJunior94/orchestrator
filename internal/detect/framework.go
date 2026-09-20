@@ -169,8 +169,6 @@ func (r1 *Catalog) DetectPrimaryStack(fsys fs.FileSystem, projectDir string) []s
 	return parts
 }
 
-// hasDotNetManifest detecta um projeto .NET/C# por marcadores de solucao/projeto
-// no diretorio raiz, espelhando o criterio de detect.go:hasDotNet.
 func hasDotNetManifest(fsys fs.FileSystem, projectDir string) bool {
 	fixed := []string{"global.json", "Directory.Build.props", "Directory.Packages.props"}
 	for _, f := range fixed {

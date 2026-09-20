@@ -43,7 +43,7 @@ func TestPortability_GenerateGovernance(t *testing.T) {
 		name            string
 		fixturePath     string
 		wantStackSub    string // substring esperado em "Stack detectada:" no AGENTS.md
-		skipSkillsIndex bool   // Java nao tem skill de implementacao (RF-32 nao cobre a skill); sem referencia a INDEX.yaml
+		skipSkillsIndex bool
 	}{
 		{name: "go-monolith", fixturePath: filepath.Join("testdata", "go-monolith"), wantStackSub: "Go"},
 		{name: "node-api", fixturePath: filepath.Join("testdata", "node-api"), wantStackSub: "Node.js"},
@@ -92,7 +92,6 @@ func TestPortability_GenerateGovernance(t *testing.T) {
 			// Stack detectada bate com a esperada.
 			assertContains(t, filepath.Join(workDir, "AGENTS.md"), tc.wantStackSub)
 
-			// Bloco de skills surgical aparece quando ha stack com skill de implementacao.
 			if !tc.skipSkillsIndex {
 				assertContains(t, filepath.Join(workDir, "AGENTS.md"), "references/INDEX.yaml")
 			}
