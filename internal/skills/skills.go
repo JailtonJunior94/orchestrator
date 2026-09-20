@@ -86,13 +86,14 @@ const (
 	LangNode   Lang = "node"
 	LangPython Lang = "python"
 	LangDotNet Lang = "dotnet"
+	LangJava   Lang = "java"
 )
 
-var AllLangs = []Lang{LangGo, LangNode, LangPython, LangDotNet}
+var AllLangs = []Lang{LangGo, LangNode, LangPython, LangDotNet, LangJava}
 
 func (catalog *Catalog) ParseLang(s string) (Lang, bool) {
 	switch Lang(s) {
-	case LangGo, LangNode, LangPython, LangDotNet:
+	case LangGo, LangNode, LangPython, LangDotNet, LangJava:
 		return Lang(s), true
 	default:
 		return "", false
@@ -147,7 +148,6 @@ var ComplementarySkills = []string{
 	"us-to-prd",
 }
 
-// LangSkills retorna as skills de implementacao para as linguagens selecionadas.
 func (catalog *Catalog) LangSkills(langs []Lang) []string {
 	var out []string
 	for _, l := range langs {
@@ -160,8 +160,9 @@ func (catalog *Catalog) LangSkills(langs []Lang) []string {
 			out = append(out, "python-implementation")
 		case LangDotNet:
 			out = append(out, "dotnet-csharp-implementation")
+		case LangJava:
 		default:
-			continue
+			panic(fmt.Sprintf("lang skills: unhandled language %q", l))
 		}
 	}
 	return out

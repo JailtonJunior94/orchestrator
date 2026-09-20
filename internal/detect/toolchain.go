@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
 )
 
 // ToolchainEntry representa os comandos detectados para uma linguagem.
@@ -52,20 +53,11 @@ func (d *ToolchainDetector) Detect(projectDir string) ToolchainResult {
 func (d *ToolchainDetector) detectDefault(projectDir string) ToolchainResult {
 	result := make(ToolchainResult)
 
-	if d.detectGo(projectDir) {
-		result["go"] = ToolchainEntry{
-			Fmt:  "gofmt -w .",
-			Test: "go test ./...",
-			Lint: "golangci-lint run",
+	for _, lang := range skills.AllLangs {
+		entry, ok := d.detectLangEntry(lang, projectDir)
+		if ok {
+			result[string(lang)] = entry
 		}
-	}
-
-	if entry, ok := d.detectNode(projectDir); ok {
-		result["node"] = entry
-	}
-
-	if entry, ok := d.detectPython(projectDir); ok {
-		result["python"] = entry
 	}
 
 	// Makefile fallback: quando nenhuma linguagem e detectada
@@ -84,6 +76,33 @@ func (d *ToolchainDetector) detectDefault(projectDir string) ToolchainResult {
 	}
 
 	return result
+}
+
+// detectLangEntry despacha a deteccao de toolchain para a linguagem informada.
+// O default que falha garante que uma nova linguagem em skills.AllLangs nao
+// seja silenciosamente ignorada aqui.
+func (d *ToolchainDetector) detectLangEntry(lang skills.Lang, projectDir string) (ToolchainEntry, bool) {
+	switch string(lang) {
+	case "go":
+		if d.detectGo(projectDir) {
+			return ToolchainEntry{
+				Fmt:  "gofmt -w .",
+				Test: "go test ./...",
+				Lint: "golangci-lint run",
+			}, true
+		}
+		return ToolchainEntry{}, false
+	case "node":
+		return d.detectNode(projectDir)
+	case "python":
+		return d.detectPython(projectDir)
+	case "dotnet":
+		return d.detectDotNet(projectDir)
+	case "java":
+		return d.detectJava(projectDir)
+	default:
+		panic(fmt.Sprintf("detect toolchain: unhandled language %q in skills.AllLangs", lang))
+	}
 }
 
 // detectWithFocusPaths coleta todos os manifests, pontua por proximidade aos FocusPaths
@@ -105,6 +124,10 @@ func (d *ToolchainDetector) detectWithFocusPaths(projectDir string) ToolchainRes
 		{"package.json", "node"},
 		{"pyproject.toml", "python"},
 		{"requirements.txt", "python"},
+		{"global.json", "dotnet"},
+		{"pom.xml", "java"},
+		{"build.gradle", "java"},
+		{"build.gradle.kts", "java"},
 	}
 
 	var candidates []candidate
@@ -116,6 +139,16 @@ func (d *ToolchainDetector) detectWithFocusPaths(projectDir string) ToolchainRes
 			}
 			score := NewCatalog().scoreManifest(rel, d.FocusPaths)
 			candidates = append(candidates, candidate{path: p, lang: mt.lang, score: score})
+		}
+	}
+	for _, suffix := range []string{".csproj", ".sln"} {
+		for _, p := range d.findManifestsBySuffix(projectDir, suffix) {
+			rel, err := filepath.Rel(projectDir, p)
+			if err != nil {
+				rel = p
+			}
+			score := NewCatalog().scoreManifest(rel, d.FocusPaths)
+			candidates = append(candidates, candidate{path: p, lang: "dotnet", score: score})
 		}
 	}
 
@@ -160,7 +193,16 @@ func (d *ToolchainDetector) detectWithFocusPaths(projectDir string) ToolchainRes
 		if entry, ok := d.detectPython(projectDir); ok {
 			result["python"] = entry
 		}
+	case "dotnet":
+		if entry, ok := d.detectDotNet(projectDir); ok {
+			result["dotnet"] = entry
+		}
+	case "java":
+		if entry, ok := d.detectJava(projectDir); ok {
+			result["java"] = entry
+		}
 	default:
+		panic(fmt.Sprintf("detect toolchain: unhandled manifest language %q", winner.lang))
 	}
 
 	if d.strict {

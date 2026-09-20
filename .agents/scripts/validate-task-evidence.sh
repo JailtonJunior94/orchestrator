@@ -177,7 +177,7 @@ if [[ "$testes_value" == "pass" ]]; then
     /^#+[[:space:]]/ { if (capture) capture=0 }
     capture { print }
   ' "$report_file")"
-  if ! printf '%s\n' "$cmds_block" | grep -Eiq '(go test|gotestsum|pytest|unittest|npm (run )?test|yarn test|pnpm test|jest|vitest|mocha|make test|make integration|cargo test|dotnet test|ctest|rspec|phpunit|[^a-z]test[^a-z])'; then
+  if ! printf '%s\n' "$cmds_block" | grep -Eiq '(go test|gotestsum|pytest|unittest|npm (run )?test|yarn test|pnpm test|jest|vitest|mocha|make test|make integration|cargo test|dotnet test|ctest|rspec|phpunit|mvn test|mvn verify|gradle test|gradlew test|[^a-z]test([^a-z]|$))'; then
     echo "FALTANDO: 'Testes: pass' declarado sem comando de teste correspondente em '## Comandos Executados' (prova fraca)"
     missing=1
   fi

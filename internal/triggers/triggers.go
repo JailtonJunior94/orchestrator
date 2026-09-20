@@ -55,7 +55,7 @@ func (l *embeddedLoader) Load(lang string) ([]Trigger, error) {
 
 func (l *embeddedLoader) normalizeLang(lang string) (string, bool) {
 	switch lang {
-	case "go", "node", "python":
+	case "go", "node", "python", "dotnet", "java":
 		return lang, true
 	case "":
 		return "go", true
@@ -75,7 +75,7 @@ func NewDetector() *Detector {
 // DetectLang retorna a linguagem majoritaria de um conjunto de caminhos de arquivo
 // com base na extensao dominante. Retorna "" quando nenhuma extensao conhecida domina.
 func (d *Detector) DetectLang(files []string) string {
-	counts := make(map[string]int, 3)
+	counts := make(map[string]int, 5)
 	for _, f := range files {
 		switch filepath.Ext(f) {
 		case ".go":
@@ -84,6 +84,10 @@ func (d *Detector) DetectLang(files []string) string {
 			counts["node"]++
 		case ".py":
 			counts["python"]++
+		case ".cs":
+			counts["dotnet"]++
+		case ".java":
+			counts["java"]++
 		}
 	}
 

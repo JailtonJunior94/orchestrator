@@ -332,9 +332,15 @@ func (g *Generator) hasDotNet(projectDir string) bool {
 	return false
 }
 
-var ValidationLangOrder = []string{"go", "node", "python"}
+var ValidationLangOrder = []string{"go", "node", "python", "dotnet", "java"}
 
-var ValidationLangLabels = map[string]string{"go": "Go", "node": "Node", "python": "Python"}
+var ValidationLangLabels = map[string]string{
+	"go":     "Go",
+	"node":   "Node",
+	"python": "Python",
+	"dotnet": ".NET",
+	"java":   "Java",
+}
 
 func (g *Generator) buildValidationCommands(toolchain detect.ToolchainResult) string {
 	var lines []string

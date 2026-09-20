@@ -40,13 +40,17 @@ func TestPortability_GenerateGovernance(t *testing.T) {
 	}
 
 	cases := []struct {
-		name         string
-		fixturePath  string
-		wantStackSub string // substring esperado em "Stack detectada:" no AGENTS.md
+		name            string
+		fixturePath     string
+		wantStackSub    string // substring esperado em "Stack detectada:" no AGENTS.md
+		skipSkillsIndex bool   // Java nao tem skill de implementacao (RF-32 nao cobre a skill); sem referencia a INDEX.yaml
 	}{
 		{name: "go-monolith", fixturePath: filepath.Join("testdata", "go-monolith"), wantStackSub: "Go"},
 		{name: "node-api", fixturePath: filepath.Join("testdata", "node-api"), wantStackSub: "Node.js"},
 		{name: "polyglot-monorepo", fixturePath: filepath.Join("testdata", "polyglot-monorepo"), wantStackSub: "Go, Node.js, Python"},
+		{name: "dotnet-api", fixturePath: filepath.Join("testdata", "dotnet-api"), wantStackSub: "C#/.NET"},
+		{name: "java-maven", fixturePath: filepath.Join("testdata", "java-maven"), wantStackSub: "Java/Kotlin", skipSkillsIndex: true},
+		{name: "java-gradle", fixturePath: filepath.Join("testdata", "java-gradle"), wantStackSub: "Java/Kotlin", skipSkillsIndex: true},
 	}
 
 	for _, tc := range cases {
@@ -88,8 +92,10 @@ func TestPortability_GenerateGovernance(t *testing.T) {
 			// Stack detectada bate com a esperada.
 			assertContains(t, filepath.Join(workDir, "AGENTS.md"), tc.wantStackSub)
 
-			// Bloco de skills surgical aparece quando ha stack.
-			assertContains(t, filepath.Join(workDir, "AGENTS.md"), "references/INDEX.yaml")
+			// Bloco de skills surgical aparece quando ha stack com skill de implementacao.
+			if !tc.skipSkillsIndex {
+				assertContains(t, filepath.Join(workDir, "AGENTS.md"), "references/INDEX.yaml")
+			}
 
 			// Codex tem sandbox + approval (ADR-002 fecha lacuna de route-around).
 			assertContains(t, filepath.Join(workDir, ".codex", "config.toml"), "sandbox_mode = \"workspace-write\"")

@@ -14,7 +14,7 @@ func TestVerify_NoLangsDetected_DoesNotReportLangSkillsAsMissing(t *testing.T) {
 	ffs := fs.NewFakeFileSystem()
 	skillContent := []byte("---\nversion: 1.0.0\n---")
 
-	for _, sk := range skills.NewCatalog().AllSkills([]skills.Lang{skills.LangGo, skills.LangNode, skills.LangPython, skills.LangDotNet}) {
+	for _, sk := range skills.NewCatalog().AllSkills(skills.AllLangs) {
 		ffs.Files["/source/.agents/skills/"+sk+"/SKILL.md"] = skillContent
 		ffs.Dirs["/source/.agents/skills/"+sk] = true
 	}
@@ -53,7 +53,7 @@ func TestVerify_ManifestLangsSelectOnlyMatchingLangSkills(t *testing.T) {
 	ffs := fs.NewFakeFileSystem()
 	skillContent := []byte("---\nversion: 1.0.0\n---")
 
-	for _, sk := range skills.NewCatalog().AllSkills([]skills.Lang{skills.LangGo, skills.LangNode, skills.LangPython, skills.LangDotNet}) {
+	for _, sk := range skills.NewCatalog().AllSkills(skills.AllLangs) {
 		ffs.Files["/source/.agents/skills/"+sk+"/SKILL.md"] = skillContent
 		ffs.Dirs["/source/.agents/skills/"+sk] = true
 	}

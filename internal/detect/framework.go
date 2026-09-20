@@ -149,20 +149,47 @@ func (r1 *Catalog) DetectPrimaryStack(fsys fs.FileSystem, projectDir string) []s
 		}
 	}
 
+	if fsys.Exists(filepath.Join(projectDir, "Cargo.toml")) {
+		parts = append(parts, "Rust")
+	}
+
+	if hasDotNetManifest(fsys, projectDir) {
+		parts = append(parts, "C#/.NET")
+	}
+
 	if fsys.Exists(filepath.Join(projectDir, "pom.xml")) ||
 		fsys.Exists(filepath.Join(projectDir, "build.gradle")) ||
 		fsys.Exists(filepath.Join(projectDir, "build.gradle.kts")) {
 		parts = append(parts, "Java/Kotlin")
 	}
 
-	if fsys.Exists(filepath.Join(projectDir, "Cargo.toml")) {
-		parts = append(parts, "Rust")
-	}
-
 	if len(parts) == 0 {
 		return []string{"stack principal nao detectada automaticamente"}
 	}
 	return parts
+}
+
+// hasDotNetManifest detecta um projeto .NET/C# por marcadores de solucao/projeto
+// no diretorio raiz, espelhando o criterio de detect.go:hasDotNet.
+func hasDotNetManifest(fsys fs.FileSystem, projectDir string) bool {
+	fixed := []string{"global.json", "Directory.Build.props", "Directory.Packages.props"}
+	for _, f := range fixed {
+		if fsys.Exists(filepath.Join(projectDir, f)) {
+			return true
+		}
+	}
+
+	entries, err := fsys.ReadDir(projectDir)
+	if err != nil {
+		return false
+	}
+	for _, e := range entries {
+		name := e.Name()
+		if strings.HasSuffix(name, ".sln") || strings.HasSuffix(name, ".csproj") {
+			return true
+		}
+	}
+	return false
 }
 
 // JoinFrameworks junta frameworks com virgula ou retorna fallback.

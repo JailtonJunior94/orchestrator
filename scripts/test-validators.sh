@@ -23,7 +23,7 @@ git -C "$TMP_BASE" init -q
 git -C "$TMP_BASE" config user.email "validators-test@example.invalid"
 git -C "$TMP_BASE" config user.name "Validators Test"
 git -C "$TMP_BASE" config commit.gpgsign false
-for task in a b c; do
+for task in a b c c2; do
   printf '# Tarefa X\n## Critérios de Sucesso\n- Critério um funciona.\n- Critério dois funciona.\n' >"$TMP_BASE/task-$task.md"
 done
 printf '# Tarefa Legada\n## Visão Geral\nSem critérios formais.\n' >"$TMP_BASE/task-d.md"
@@ -220,6 +220,90 @@ bash "$VALIDATOR" "$report_c" >/dev/null 2>&1; code_c=$?
 rm -f "$report_c"
 assert_exit "Testes pass sem comando falha" 1 $code_c
 
+# --- Caso c2: RF-34 prova de teste reconhece mvn/gradle no fim de linha ---
+# Antes da correção, o catch-all [^a-z]test[^a-z] exigia caractere não-alfabético
+# DEPOIS de "test": "mvn test -q" passava (espaço depois), mas "mvn test" no fim
+# da linha falhava por falta desse caractere posterior. O mesmo valia para
+# "gradle test" e "./gradlew test".
+echo "Caso c2: prova de teste mvn/gradle no fim de linha"
+task_c2="$TMP_BASE/task-c2.md"
+
+mvn_eol_report() {
+  local f="$1"
+  {
+    report_header "$task_c2"
+    cat <<'EOF'
+## Comandos Executados
+- mvn test
+EOF
+    base_sections
+    cat <<'EOF'
+## Resultados de Validação
+- Testes: pass
+## Critérios de Aceite
+- Critério um -> comprovado: mvn test -> BUILD SUCCESS
+- Critério dois -> comprovado: mvn test -> BUILD SUCCESS
+EOF
+  } > "$f"
+}
+
+report_c2_mvn="$TMP_BASE/report-c2-mvn.md"
+mvn_eol_report "$report_c2_mvn"
+out_c2_mvn=$(bash "$VALIDATOR" "$report_c2_mvn" 2>&1); code_c2_mvn=$?
+rm -f "$report_c2_mvn"
+assert_exit "mvn test no fim da linha passa" 0 $code_c2_mvn
+if [[ "$code_c2_mvn" -ne 0 ]]; then printf '    diagnostico: %s\n' "$out_c2_mvn"; fi
+
+gradle_eol_report() {
+  local f="$1" cmd="$2"
+  {
+    report_header "$task_c2"
+    printf '## Comandos Executados\n- %s\n' "$cmd"
+    base_sections
+    cat <<EOF
+## Resultados de Validação
+- Testes: pass
+## Critérios de Aceite
+- Critério um -> comprovado: $cmd -> BUILD SUCCESSFUL
+- Critério dois -> comprovado: $cmd -> BUILD SUCCESSFUL
+EOF
+  } > "$f"
+}
+
+report_c2_gradle="$TMP_BASE/report-c2-gradle.md"
+gradle_eol_report "$report_c2_gradle" "gradle test"
+bash "$VALIDATOR" "$report_c2_gradle" >/dev/null 2>&1; code_c2_gradle=$?
+rm -f "$report_c2_gradle"
+assert_exit "gradle test no fim da linha passa" 0 $code_c2_gradle
+
+report_c2_gradlew="$TMP_BASE/report-c2-gradlew.md"
+gradle_eol_report "$report_c2_gradlew" "./gradlew test"
+bash "$VALIDATOR" "$report_c2_gradlew" >/dev/null 2>&1; code_c2_gradlew=$?
+rm -f "$report_c2_gradlew"
+assert_exit "./gradlew test no fim da linha passa" 0 $code_c2_gradlew
+
+# Controle: "mvn test -q" já passava antes da correção (espaço depois de "test"
+# satisfaz o catch-all antigo); precisa continuar passando depois dela também.
+report_c2_mvn_q="$TMP_BASE/report-c2-mvn-q.md"
+{
+  report_header "$task_c2"
+  cat <<'EOF'
+## Comandos Executados
+- mvn test -q
+EOF
+  base_sections
+  cat <<'EOF'
+## Resultados de Validação
+- Testes: pass
+## Critérios de Aceite
+- Critério um -> comprovado: mvn test -q -> BUILD SUCCESS
+- Critério dois -> comprovado: mvn test -q -> BUILD SUCCESS
+EOF
+} > "$report_c2_mvn_q"
+bash "$VALIDATOR" "$report_c2_mvn_q" >/dev/null 2>&1; code_c2_mvn_q=$?
+rm -f "$report_c2_mvn_q"
+assert_exit "mvn test -q continua passando" 0 $code_c2_mvn_q
+
 # --- Caso d: task legada sem critérios -> exit 1 (fail-closed desde 0.31.0) ---
 echo "Caso d: task legada sem seção de critérios"
 task_d="$TMP_BASE/task-d.md"; task_without_criteria "$task_d"
@@ -331,6 +415,50 @@ $VALID_MAP
 - go test ./... -> ok
 EOF
 bash "$REVIEW_VALIDATOR" "$review_f" >/dev/null 2>&1; assert_exit "REJECTED sem high/critical falha" 1 $?
+
+# Caso f2: TEST_NAME_RE condicionada a stack Java aceita nome de teste JUnit
+echo "Caso f2: TEST_NAME_RE aceita nome de teste Java quando stack detectada e Java"
+review_f2="$TMP_BASE/review-f2.md"
+cat > "$review_f2" <<EOF
+# Relatório de Review
+- Veredito: APPROVED
+- Alvo revisado: diff
+- Task file: $REVIEW_TASK_FILE
+## Mapa de Critérios de Aceite
+- [atendido] Critério um -> ServiceTest.shouldReturnUser -> pass
+- [atendido] Critério dois -> Service.java:10
+## Achados
+Sem achados.
+## Arquivos Revisados
+- Service.java
+## Riscos Residuais
+- nenhum
+## Validações Executadas
+- mvn test -> ok
+EOF
+bash "$REVIEW_VALIDATOR" "$review_f2" >/dev/null 2>&1; assert_exit "review Java com nome de teste JUnit passa" 0 $?
+
+# Caso f3: TEST_NAME_RE Go permanece estrita (prova de não-afrouxamento)
+echo "Caso f3: stack Go rejeita nome de teste não-Go (não-afrouxamento)"
+review_f3="$TMP_BASE/review-f3.md"
+cat > "$review_f3" <<EOF
+# Relatório de Review
+- Veredito: APPROVED
+- Alvo revisado: diff
+- Task file: $REVIEW_TASK_FILE
+## Mapa de Critérios de Aceite
+- [atendido] Critério um -> shouldReturnUser -> pass
+- [atendido] Critério dois -> foo.go:1
+## Achados
+Sem achados.
+## Arquivos Revisados
+- foo.go
+## Riscos Residuais
+- nenhum
+## Validações Executadas
+- go test ./... -> ok
+EOF
+bash "$REVIEW_VALIDATOR" "$review_f3" >/dev/null 2>&1; assert_exit "review Go com nome de teste não-Go falha (não-afrouxamento)" 1 $?
 
 # Caso g: review.md sem seção de validações -> exit 1
 echo "Caso g: review sem seção de validações"
@@ -707,6 +835,106 @@ benign_nested_payload="$TMP_BASE/git-gate-nested-benign.json"
 printf '%s' '{"tool_input":{"command":"echo hi","metadata":{"command":"git push origin main"}}}' >"$benign_nested_payload"
 assert_gate_exit "comando direto benigno com metadata homônima passa" 0 "$benign_nested_payload"
 rm -f "$benign_nested_payload"
+
+
+# --- Matriz adversarial do gate de operacao Git (ADR-003, RF-20, RF-21, RF-24) ---
+# Escrita ANTES da correcao do parser por palavra-de-comando. O "want" abaixo e o
+# resultado CORRETO e final (derivado do escopo declarado), nao o resultado atual
+# do parser por regex — por isso a suite nasce vermelha nestes onze casos: cada um
+# foi verificado por execucao real contra o script vigente e retorna exit 0 hoje.
+git_gate_command_payload() {
+  python3 -c "
+import json
+import sys
+print(json.dumps({'tool_input': {'command': sys.argv[1]}}))
+" "$1"
+}
+
+assert_git_gate_command() {
+  local desc="$1" expected="$2" command="$3"
+  local payload_file="$TMP_BASE/git-gate-cmd.json"
+  git_gate_command_payload "$command" >"$payload_file"
+  local actual
+  bash "$GIT_GATE" <"$payload_file" >/dev/null 2>&1
+  actual=$?
+  assert_exit "$desc" "$expected" "$actual"
+  rm -f "$payload_file"
+}
+
+echo "Matriz adversarial do gate de operação Git (RF-20, RF-21, RF-24)"
+declare -a adversarial_commands=(
+  "git -C /repo push"
+  "git -c user.name=x commit -m y"
+  '$(echo git) push'
+  'eval "git push"'
+  'sh -c "git push"'
+  "/usr/bin/git push"
+  "git.exe push"
+  "git reset --hard"
+  "git clean -fd"
+  "git checkout -- ."
+  "git restore ."
+)
+for command in "${adversarial_commands[@]}"; do
+  assert_git_gate_command "escapa hoje via regex, deve bloquear/exigir aprovação: $command" 2 "$command"
+done
+
+# --- Guarda de regressão: separadores compostos && e || (achado de revisão) ---
+# shlex com punctuation_chars=True agrupa runs de pontuação contígua em um único
+# token: "&&"/"||" não são iguais a "&"/"|" isoladamente, e um separador colado
+# diretamente em "(" ou ")" (ex.: "&(", ";(", ")&", ")|") produz um token que uma
+# checagem ingênua de separadores por regex fixa também não reconhece. Sem tratar
+# QUALQUER token composto inteiramente por caracteres de pontuação do shlex
+# ("();<>|&") como separador de segmento, comandos encadeados escapavam por
+# completo (exit 0) — regressão em relação ao script anterior, que cortava por
+# caractere via "tr ';|&' '\n'".
+echo "Guarda de regressão: separadores compostos && e || antes de operação git"
+declare -a chained_separator_commands=(
+  "echo ok && git push"
+  "git status && git push --force"
+  "true || git clean -fdx"
+  "echo ok ; git reset --hard"
+  "echo ok &(git push)"
+  "echo ok ;(git push)"
+  "echo ok )&git push"
+  "echo ok )|git push"
+)
+for command in "${chained_separator_commands[@]}"; do
+  assert_git_gate_command "encadeamento não pode escapar do gate: $command" 2 "$command"
+done
+
+# --- Matriz de falso positivo do gate de operação Git (ADR-003, RF-22) ---
+# "want" também é o resultado correto e final: os quatro casos abaixo bloqueiam
+# hoje (exit 2, verificado por execução real) e devem passar a permitir (exit 0).
+echo "Matriz de falso positivo do gate de operação Git (RF-22)"
+declare -a false_positive_commands=(
+  "echo git commit"
+  "man git commit"
+  'echo "a|git commit -m x"'
+  'echo "a|git push origin main"'
+)
+for command in "${false_positive_commands[@]}"; do
+  assert_git_gate_command "bloqueia hoje por menção textual, deve permitir: $command" 0 "$command"
+done
+
+# --- Guarda de não-regressão do gate de operação Git (ADR-003) ---
+# Estes casos já se comportam corretamente hoje e devem continuar assim depois
+# da reescrita por palavra-de-comando.
+echo "Guarda de não-regressão do gate de operação Git"
+declare -a non_regression_block_commands=(
+  "env git push"
+  "command git push"
+  "git push --force"
+  "git push --force-with-lease"
+  "git push -f origin main"
+  "git push origin +main"
+  "git push"
+)
+for command in "${non_regression_block_commands[@]}"; do
+  assert_git_gate_command "já bloqueia hoje, deve continuar bloqueando: $command" 2 "$command"
+done
+
+assert_git_gate_command 'menção textual em grep não bloqueia (não-regressão)' 0 'grep -r "git push" docs/'
 
 echo
 echo "Passaram: $passed | Falharam: $failed"

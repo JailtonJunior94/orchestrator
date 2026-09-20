@@ -1,0 +1,19 @@
+triggers:
+  - ref: agent-governance/references/security.md
+    patterns:
+      - "Process.Start"
+      - "SqlCommand"
+      - "[AllowAnonymous]"
+      - "XmlDocument"
+      - "BinaryFormatter"
+  - ref: agent-governance/references/error-handling.md
+    patterns:
+      - "catch (Exception"
+      - "throw;"
+      - "throw new Exception"
+  - ref: agent-governance/references/testing.md
+    patterns:
+      - "[Fact]"
+      - "[Theory]"
+      - "dotnet test"
+      - "xunit"

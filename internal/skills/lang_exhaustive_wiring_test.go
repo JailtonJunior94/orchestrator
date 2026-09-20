@@ -42,6 +42,10 @@ func containsLangWiring(list []string, value string) bool {
 	return false
 }
 
+var langsWithoutImplementationSkill = map[skills.Lang]bool{
+	skills.LangJava: true,
+}
+
 func TestAllLangsAreExhaustivelyWired(t *testing.T) {
 	root := resolveRepoRootForWiring(t)
 	installSource := readSourceForWiring(t, filepath.Join(root, "internal", "install", "install.go"))
@@ -51,7 +55,7 @@ func TestAllLangsAreExhaustivelyWired(t *testing.T) {
 		lang := lang
 		t.Run(string(lang), func(t *testing.T) {
 			langSkills := skills.NewCatalog().LangSkills([]skills.Lang{lang})
-			if len(langSkills) == 0 {
+			if len(langSkills) == 0 && !langsWithoutImplementationSkill[lang] {
 				t.Fatalf("wiring 1/5 (LangSkills): %s sem skill de implementacao mapeada em internal/skills/skills.go:150-166", lang)
 			}
 

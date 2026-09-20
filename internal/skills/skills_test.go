@@ -50,6 +50,8 @@ func (s *SkillsSuite) TestParseLang() {
 		{name: "deve aceitar go", input: "go", want: LangGo, wantOK: true},
 		{name: "deve aceitar node", input: "node", want: LangNode, wantOK: true},
 		{name: "deve aceitar python", input: "python", want: LangPython, wantOK: true},
+		{name: "deve aceitar dotnet", input: "dotnet", want: LangDotNet, wantOK: true},
+		{name: "deve aceitar java", input: "java", want: LangJava, wantOK: true},
 		{name: "deve rejeitar rust", input: "rust", wantOK: false},
 	}
 
@@ -72,6 +74,8 @@ func (s *SkillsSuite) TestLangSkills() {
 	}{
 		{name: "deve mapear go para duas skills", langs: []Lang{LangGo}, want: []string{"go-implementation", "object-calisthenics-go"}},
 		{name: "deve mapear node e python para duas skills", langs: []Lang{LangNode, LangPython}, want: []string{"node-implementation", "python-implementation"}},
+		{name: "deve mapear dotnet para uma skill", langs: []Lang{LangDotNet}, want: []string{"dotnet-csharp-implementation"}},
+		{name: "deve mapear java para nenhuma skill de implementacao", langs: []Lang{LangJava}, want: nil},
 	}
 
 	for _, scenario := range scenarios {
@@ -84,7 +88,7 @@ func (s *SkillsSuite) TestLangSkills() {
 
 func (s *SkillsSuite) TestAllSkills() {
 	all := NewCatalog().AllSkills([]Lang{LangGo})
-	want := len(BaseSkills) + len(ComplementarySkills) + 2
+	want := len(BaseSkills) + len(ComplementarySkills) + len(NewCatalog().LangSkills([]Lang{LangGo}))
 	s.Len(all, want, "NewCatalog().AllSkills(go)")
 }
 

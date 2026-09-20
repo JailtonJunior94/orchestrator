@@ -1,0 +1,19 @@
+triggers:
+  - ref: agent-governance/references/security.md
+    patterns:
+      - "Runtime.exec"
+      - "ObjectInputStream"
+      - "@PreAuthorize"
+      - "XMLDecoder"
+      - "ProcessBuilder"
+  - ref: agent-governance/references/error-handling.md
+    patterns:
+      - "catch (Exception"
+      - "e.printStackTrace()"
+      - "throw new RuntimeException"
+  - ref: agent-governance/references/testing.md
+    patterns:
+      - "@Test"
+      - "mvn test"
+      - "gradle test"
+      - "junit"

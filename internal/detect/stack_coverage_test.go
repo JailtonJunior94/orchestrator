@@ -74,6 +74,33 @@ func (s *StackCoverageSuite) TestStackCoverageFixtures() {
 			architecture: ArchMicroservice,
 			primaryStack: "Go",
 		},
+		{
+			name:         "deve cobrir fixture dotnet api",
+			fixture:      "dotnet-api",
+			lang:         skills.LangDotNet,
+			noFrameworks: true,
+			toolchain:    toolchainExpectation{key: "dotnet", fmt: "dotnet format --verify-no-changes", test: "dotnet test --no-build", lint: "dotnet build --no-restore"},
+			architecture: ArchMonolith,
+			primaryStack: "C#/.NET",
+		},
+		{
+			name:         "deve cobrir fixture java maven",
+			fixture:      "java-maven",
+			lang:         skills.LangJava,
+			noFrameworks: true,
+			toolchain:    toolchainExpectation{key: "java", fmt: "", test: "mvn test", lint: "mvn verify"},
+			architecture: ArchMonolith,
+			primaryStack: "Java/Kotlin",
+		},
+		{
+			name:         "deve cobrir fixture java gradle",
+			fixture:      "java-gradle",
+			lang:         skills.LangJava,
+			noFrameworks: true,
+			toolchain:    toolchainExpectation{key: "java", fmt: "", test: "./gradlew test", lint: "./gradlew check"},
+			architecture: ArchMonolith,
+			primaryStack: "Java/Kotlin",
+		},
 	}
 
 	for _, scenario := range scenarios {

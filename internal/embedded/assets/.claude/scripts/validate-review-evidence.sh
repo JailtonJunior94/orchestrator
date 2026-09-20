@@ -42,12 +42,44 @@ require_heading() {
   fi
 }
 
-COMMAND_RE='^(go[[:space:]]+(test|build|vet|run)[[:space:]]+[^[:space:]]+|gotestsum[[:space:]]+[^[:space:]]+|golangci-lint[[:space:]]+run([^[:alnum:]]|$)|gofmt[[:space:]]+[^[:space:]]+|bash[[:space:]]+[^[:space:]]+|sh[[:space:]]+[^[:space:]]+|make[[:space:]]+[A-Za-z0-9][A-Za-z0-9_.-]*|grep[[:space:]]+[^[:space:]]+|rg[[:space:]]+[^[:space:]]+|python3?[[:space:]]+[^[:space:]]+|pytest[[:space:]]+[^[:space:]]+|npm[[:space:]]+(run[[:space:]]+)?[^[:space:]]+|pnpm[[:space:]]+[^[:space:]]+|yarn[[:space:]]+[^[:space:]]+|cargo[[:space:]]+[^[:space:]]+|dotnet[[:space:]]+[^[:space:]]+|git[[:space:]]+(diff|log|show|status|rev-parse|grep|blame)([^[:alnum:]]|$)|shasum[[:space:]]+[^[:space:]]+|sha256sum[[:space:]]+[^[:space:]]+|\./[^[:space:]]+)'
-TEST_NAME_RE='^(Test|Benchmark|Example)[A-Za-z0-9_/]*$'
+COMMAND_RE='^(go[[:space:]]+(test|build|vet|run)[[:space:]]+[^[:space:]]+|gotestsum[[:space:]]+[^[:space:]]+|golangci-lint[[:space:]]+run([^[:alnum:]]|$)|gofmt[[:space:]]+[^[:space:]]+|bash[[:space:]]+[^[:space:]]+|sh[[:space:]]+[^[:space:]]+|make[[:space:]]+[A-Za-z0-9][A-Za-z0-9_.-]*|grep[[:space:]]+[^[:space:]]+|rg[[:space:]]+[^[:space:]]+|python3?[[:space:]]+[^[:space:]]+|pytest[[:space:]]+[^[:space:]]+|npm[[:space:]]+(run[[:space:]]+)?[^[:space:]]+|pnpm[[:space:]]+[^[:space:]]+|yarn[[:space:]]+[^[:space:]]+|cargo[[:space:]]+[^[:space:]]+|dotnet[[:space:]]+[^[:space:]]+|mvn[[:space:]]+[^[:space:]]+|gradle[[:space:]]+[^[:space:]]+|gradlew[[:space:]]+[^[:space:]]+|git[[:space:]]+(diff|log|show|status|rev-parse|grep|blame)([^[:alnum:]]|$)|shasum[[:space:]]+[^[:space:]]+|sha256sum[[:space:]]+[^[:space:]]+|\./[^[:space:]]+)'
+TEST_NAME_RE_GO='^(Test|Benchmark|Example)[A-Za-z0-9_/]*$'
+TEST_NAME_RE_NODE='^[A-Za-z0-9_$.'"'"' -]+$'
+TEST_NAME_RE_PYTHON='^test_[A-Za-z0-9_]*$'
+TEST_NAME_RE_DOTNET='^[A-Za-z0-9_.]+$'
+TEST_NAME_RE_JAVA='^[A-Za-z0-9_.]+$'
 TEST_RESULT_RE='^(pass|fail)$'
 CANONICAL_RECORD_RE='^(pass(ed)?|fail(ed)?|exit[[:space:]]+[0-9]+)$'
 TRIVIAL_RECORD_RE='^(ok|okay|done|feito|pronto|sim|yes|no|nao|certo|tudo certo|tudo ok|aprovado|abc|talvez|maybe|n/?a|[-._]+)$'
 SIGNAL_RECORD_RE='([0-9]|[A-Za-z0-9_-]+/[A-Za-z0-9_./-]+|[A-Za-z0-9_-]+\.(go|py|ts|tsx|js|jsx|cs|rs|java|rb|sh|sql|md|ya?ml|json|toml)([^A-Za-z0-9]|$)|(Test|Benchmark|Example)[A-Za-z0-9_]+)'
+
+select_test_name_re() {
+  local files="$1"
+  local go_n=0 node_n=0 py_n=0 dotnet_n=0 java_n=0
+  while IFS= read -r f; do
+    case "$f" in
+      *.go) go_n=$((go_n + 1)) ;;
+      *.ts | *.tsx | *.js | *.jsx | *.mjs | *.cjs) node_n=$((node_n + 1)) ;;
+      *.py) py_n=$((py_n + 1)) ;;
+      *.cs) dotnet_n=$((dotnet_n + 1)) ;;
+      *.java) java_n=$((java_n + 1)) ;;
+    esac
+  done <<<"$files"
+
+  local best="go" best_n=$go_n
+  if [[ "$node_n" -gt "$best_n" ]]; then best="node"; best_n=$node_n; fi
+  if [[ "$py_n" -gt "$best_n" ]]; then best="python"; best_n=$py_n; fi
+  if [[ "$dotnet_n" -gt "$best_n" ]]; then best="dotnet"; best_n=$dotnet_n; fi
+  if [[ "$java_n" -gt "$best_n" ]]; then best="java"; best_n=$java_n; fi
+
+  case "$best" in
+    node) printf '%s' "$TEST_NAME_RE_NODE" ;;
+    python) printf '%s' "$TEST_NAME_RE_PYTHON" ;;
+    dotnet) printf '%s' "$TEST_NAME_RE_DOTNET" ;;
+    java) printf '%s' "$TEST_NAME_RE_JAVA" ;;
+    *) printf '%s' "$TEST_NAME_RE_GO" ;;
+  esac
+}
 
 substantive_record() {
   local record="$1"
@@ -142,6 +174,8 @@ else
     echo "FALTANDO: seção 'Arquivos Revisados' sem nenhum arquivo listado (RF-48)"
     missing=1
   fi
+
+  TEST_NAME_RE="$(select_test_name_re "$reviewed_files")"
 
   in_map=0
   criteria_lines=0

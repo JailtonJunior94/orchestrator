@@ -41,11 +41,33 @@ triggers:
     patterns: ["test_", "pytest", "coverage"]
 `)
 
+var dotnetYAML = []byte(`
+triggers:
+  - ref: agent-governance/references/security.md
+    patterns: ["Process.Start", "SqlCommand", "[AllowAnonymous]"]
+  - ref: agent-governance/references/error-handling.md
+    patterns: ["catch (Exception", "throw;"]
+  - ref: agent-governance/references/testing.md
+    patterns: ["[Fact]", "[Theory]", "dotnet test"]
+`)
+
+var javaYAML = []byte(`
+triggers:
+  - ref: agent-governance/references/security.md
+    patterns: ["Runtime.exec", "ObjectInputStream", "@PreAuthorize"]
+  - ref: agent-governance/references/error-handling.md
+    patterns: ["catch (Exception", "e.printStackTrace()"]
+  - ref: agent-governance/references/testing.md
+    patterns: ["@Test", "mvn test", "gradle test"]
+`)
+
 func newFakeLoader() (Loader, *fs.FakeFileSystem) {
 	ffs := fs.NewFakeFileSystem()
 	_ = ffs.WriteFile(filepath.Join(triggersBase, "go.yaml"), goYAML)
 	_ = ffs.WriteFile(filepath.Join(triggersBase, "node.yaml"), nodeYAML)
 	_ = ffs.WriteFile(filepath.Join(triggersBase, "python.yaml"), pythonYAML)
+	_ = ffs.WriteFile(filepath.Join(triggersBase, "dotnet.yaml"), dotnetYAML)
+	_ = ffs.WriteFile(filepath.Join(triggersBase, "java.yaml"), javaYAML)
 	return NewLoader(ffs, triggersBase), ffs
 }
 
@@ -58,6 +80,8 @@ func TestLoad_KnownLanguages(t *testing.T) {
 		{"go", 3},
 		{"node", 3},
 		{"python", 3},
+		{"dotnet", 3},
+		{"java", 3},
 	}
 
 	loader, _ := newFakeLoader()
@@ -145,7 +169,7 @@ func TestLoad_EmptyLangFallsBackToGo(t *testing.T) {
 }
 
 func TestLoad_UnknownLangFailsExplicitly(t *testing.T) {
-	cases := []string{"rust", "java", "cpp", "kotlin"}
+	cases := []string{"rust", "cpp", "kotlin"}
 	loader, _ := newFakeLoader()
 
 	for _, lang := range cases {
@@ -194,6 +218,8 @@ func TestDetectLang(t *testing.T) {
 		{"node_majority", []string{"app.ts", "index.tsx", "utils.js"}, "node"},
 		{"python_majority", []string{"main.py", "service.py", "test_service.py"}, "python"},
 		{"mixed_go_dominant", []string{"main.go", "app.ts", "extra.go"}, "go"},
+		{"dotnet_majority", []string{"Program.cs", "Service.cs", "Repository.cs"}, "dotnet"},
+		{"java_majority", []string{"Main.java", "Service.java", "Repository.java"}, "java"},
 		{"empty", []string{}, ""},
 		{"no_known_ext", []string{"README.md", "config.yaml"}, ""},
 	}

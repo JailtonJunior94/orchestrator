@@ -91,6 +91,14 @@ func (d *FileDetector) detectLangsAt(projectDir string) []skills.Lang {
 		langs = append(langs, skills.LangDotNet)
 	}
 
+	javaIndicators := []string{"pom.xml", "build.gradle", "build.gradle.kts"}
+	for _, f := range javaIndicators {
+		if d.fs.Exists(filepath.Join(projectDir, f)) {
+			langs = append(langs, skills.LangJava)
+			break
+		}
+	}
+
 	return langs
 }
 
