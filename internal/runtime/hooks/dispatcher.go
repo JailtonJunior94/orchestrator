@@ -14,8 +14,6 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
 )
 
-// Pontos canônicos de hook exportados.
-// Ordem de execução dentro de cada ponto = ordem de registro (slice-ordered).
 const (
 	PointRuntimePreOpen       = "runtime.pre_open"
 	PointPromptPreBuild       = "prompt.pre_build"
@@ -67,22 +65,30 @@ type RuntimePreOpenEvent struct {
 
 func (e RuntimePreOpenEvent) Kind() string { return PointRuntimePreOpen }
 
-// PromptBuildEvent é o evento emitido antes e após o build do prompt.
-// Hooks podem alterar *Prompt (mutable pointer).
 type PromptBuildEvent struct {
-	Prompt *string // mutable: hooks podem modificar antes do build final
+	Prompt *string
 	Spec   string
+	Phase  string
 }
 
-func (e PromptBuildEvent) Kind() string { return PointPromptPreBuild }
+func (e PromptBuildEvent) Kind() string {
+	if e.Phase == "post_build" {
+		return PointPromptPostBuild
+	}
+	return PointPromptPreBuild
+}
 
-// ToolCallEvent é o evento emitido antes e após cada tool-call.
 type ToolCallEvent struct {
 	Call  events.NormalizedToolCall
-	Phase string // "pre_dispatch" | "post_complete"
+	Phase string
 }
 
-func (e ToolCallEvent) Kind() string { return PointToolCallPreDispatch }
+func (e ToolCallEvent) Kind() string {
+	if e.Phase == "post_complete" {
+		return PointToolCallPostComplete
+	}
+	return PointToolCallPreDispatch
+}
 
 // SessionPostEndEvent é o evento emitido ao final da sessão ACP.
 // Hooks de memória persistem MEMORY.md neste ponto.

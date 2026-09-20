@@ -169,3 +169,27 @@ func TestDispatcher_ConcurrentSafe(t *testing.T) {
 		}
 	}
 }
+
+func TestPromptBuildEvent_KindReflectsPhase(t *testing.T) {
+	pre := hooks.PromptBuildEvent{Phase: "pre_build"}
+	if got := pre.Kind(); got != hooks.PointPromptPreBuild {
+		t.Errorf("Kind() with Phase=pre_build = %q, want %q", got, hooks.PointPromptPreBuild)
+	}
+
+	post := hooks.PromptBuildEvent{Phase: "post_build"}
+	if got := post.Kind(); got != hooks.PointPromptPostBuild {
+		t.Errorf("Kind() with Phase=post_build = %q, want %q", got, hooks.PointPromptPostBuild)
+	}
+}
+
+func TestToolCallEvent_KindReflectsPhase(t *testing.T) {
+	pre := hooks.ToolCallEvent{Phase: "pre_dispatch"}
+	if got := pre.Kind(); got != hooks.PointToolCallPreDispatch {
+		t.Errorf("Kind() with Phase=pre_dispatch = %q, want %q", got, hooks.PointToolCallPreDispatch)
+	}
+
+	post := hooks.ToolCallEvent{Phase: "post_complete"}
+	if got := post.Kind(); got != hooks.PointToolCallPostComplete {
+		t.Errorf("Kind() with Phase=post_complete = %q, want %q", got, hooks.PointToolCallPostComplete)
+	}
+}

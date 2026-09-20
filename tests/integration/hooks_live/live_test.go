@@ -150,6 +150,8 @@ func assertNativeOutcome(t *testing.T, projectDir string, cell MatrixCell, run n
 		assertPostToolOutcome(t, projectDir, cell, run)
 	case specs.PointSessionEnd:
 		assertSessionEndOutcome(t, cell, run)
+	default:
+		t.Fatalf("assertNativeOutcome: unhandled canonical point %s for agent %s", cell.Point, cell.Agent)
 	}
 }
 

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
 )
 
 type CanonicalPoint int
@@ -15,10 +17,48 @@ const (
 	PointSessionEnd
 )
 
-var canonicalPoints = []CanonicalPoint{
-	PointPreTool,
-	PointPostTool,
-	PointSessionEnd,
+var canonicalPointEvents = []struct {
+	point CanonicalPoint
+	event hookcontract.EventKind
+	name  string
+}{
+	{PointPreTool, hookcontract.EventBeforeTool, "pre-tool"},
+	{PointPostTool, hookcontract.EventAfterTool, "post-tool"},
+	{PointSessionEnd, hookcontract.EventBeforeComplete, "session-end"},
+}
+
+var canonicalPoints = derivedCanonicalPoints()
+
+func derivedCanonicalPoints() []CanonicalPoint {
+	byEvent := make(map[hookcontract.EventKind]CanonicalPoint, len(canonicalPointEvents))
+	for _, projection := range canonicalPointEvents {
+		byEvent[projection.event] = projection.point
+	}
+	points := make([]CanonicalPoint, 0, len(canonicalPointEvents))
+	for _, event := range hookcontract.EventKinds() {
+		if point, ok := byEvent[event]; ok {
+			points = append(points, point)
+		}
+	}
+	return points
+}
+
+func canonicalPointEvent(p CanonicalPoint) (hookcontract.EventKind, bool) {
+	for _, projection := range canonicalPointEvents {
+		if projection.point == p {
+			return projection.event, true
+		}
+	}
+	return 0, false
+}
+
+func canonicalPointName(p CanonicalPoint) (string, bool) {
+	for _, projection := range canonicalPointEvents {
+		if projection.point == p {
+			return projection.name, true
+		}
+	}
+	return "", false
 }
 
 var ErrUnknownCanonicalPoint = errors.New("unknown canonical point")
@@ -52,6 +92,8 @@ type PointCoverage struct {
 	nativeKey    string
 	scriptPath   string
 	artifactPath string
+	state        hookcontract.SupportState
+	reason       string
 }
 
 type EnforcementPrecondition struct {
@@ -71,17 +113,18 @@ func (c *Catalog) CanonicalPoints() []CanonicalPoint {
 	return slices.Clone(canonicalPoints)
 }
 
+func (c *Catalog) CanonicalPointEvent(p CanonicalPoint) (hookcontract.EventKind, bool) {
+	return canonicalPointEvent(p)
+}
+
 func (c *Catalog) ParseCanonicalPoint(s string) (CanonicalPoint, error) {
-	switch strings.TrimSpace(s) {
-	case "pre-tool":
-		return PointPreTool, nil
-	case "post-tool":
-		return PointPostTool, nil
-	case "session-end":
-		return PointSessionEnd, nil
-	default:
-		return 0, fmt.Errorf("%w: %q", ErrUnknownCanonicalPoint, s)
+	trimmed := strings.TrimSpace(s)
+	for _, projection := range canonicalPointEvents {
+		if projection.name == trimmed {
+			return projection.point, nil
+		}
 	}
+	return 0, fmt.Errorf("%w: %q", ErrUnknownCanonicalPoint, s)
 }
 
 func (c *Catalog) NewPointCoverage(agentID string, point CanonicalPoint, nativeKey, scriptPath, artifactPath string) (PointCoverage, error) {
@@ -107,7 +150,20 @@ func (c *Catalog) NewPointCoverage(agentID string, point CanonicalPoint, nativeK
 	if !slices.Contains(recognized, nativeKey) {
 		return PointCoverage{}, fmt.Errorf("%w: agent %q point %s declares %q; %s recognizes only %v", ErrUnrecognizedNativeKey, agentID, point, nativeKey, agentID, recognized)
 	}
-	return PointCoverage{agentID: agentID, point: point, nativeKey: nativeKey, scriptPath: scriptPath, artifactPath: artifactPath}, nil
+	return PointCoverage{agentID: agentID, point: point, nativeKey: nativeKey, scriptPath: scriptPath, artifactPath: artifactPath, state: hookcontract.SupportVerified}, nil
+}
+
+func (c *Catalog) NewUnsupportedPointCoverage(agentID string, point CanonicalPoint, reason string) (PointCoverage, error) {
+	if !point.Valid() {
+		return PointCoverage{}, fmt.Errorf("%w: %d", ErrUnknownCanonicalPoint, int(point))
+	}
+	if strings.TrimSpace(agentID) == "" {
+		return PointCoverage{}, fmt.Errorf("%w: point %s missing agent id", ErrIncompleteCoverage, point)
+	}
+	if strings.TrimSpace(reason) == "" {
+		return PointCoverage{}, fmt.Errorf("%w: point %s declared unsupported without reason", ErrIncompleteCoverage, point)
+	}
+	return PointCoverage{agentID: agentID, point: point, state: hookcontract.SupportUnsupported, reason: reason}, nil
 }
 
 func (c *Catalog) NewEnforcementPrecondition(kind PreconditionKind, remedy string, requiresExec bool) (EnforcementPrecondition, error) {
@@ -126,7 +182,11 @@ func (c *Catalog) NewEnforcement(coverage []PointCoverage, preconditions ...Enfo
 		if !cov.point.Valid() {
 			return Enforcement{}, fmt.Errorf("%w: invalid point", ErrIncompleteCoverage)
 		}
-		if cov.nativeKey == "" || cov.scriptPath == "" || cov.artifactPath == "" {
+		if cov.state == hookcontract.SupportUnsupported {
+			if strings.TrimSpace(cov.reason) == "" {
+				return Enforcement{}, fmt.Errorf("%w: point %s declared unsupported without reason", ErrIncompleteCoverage, cov.point)
+			}
+		} else if cov.nativeKey == "" || cov.scriptPath == "" || cov.artifactPath == "" {
 			return Enforcement{}, fmt.Errorf("%w: point %s missing native key, canonical script or installed artifact", ErrIncompleteCoverage, cov.point)
 		}
 		if seen[cov.point] {
@@ -136,7 +196,7 @@ func (c *Catalog) NewEnforcement(coverage []PointCoverage, preconditions ...Enfo
 	}
 	for _, p := range canonicalPoints {
 		if !seen[p] {
-			return Enforcement{}, fmt.Errorf("%w: missing point %s", ErrIncompleteCoverage, p)
+			return Enforcement{}, fmt.Errorf("%w: missing declaration for point %s", ErrIncompleteCoverage, p)
 		}
 	}
 	for _, pre := range preconditions {
@@ -156,16 +216,10 @@ func (p CanonicalPoint) Valid() bool {
 }
 
 func (p CanonicalPoint) String() string {
-	switch p {
-	case PointPreTool:
-		return "pre-tool"
-	case PointPostTool:
-		return "post-tool"
-	case PointSessionEnd:
-		return "session-end"
-	default:
-		return "unknown"
+	if name, ok := canonicalPointName(p); ok {
+		return name
 	}
+	return "unknown"
 }
 
 func (k PreconditionKind) String() string {
@@ -209,6 +263,10 @@ func (c PointCoverage) ScriptPath() string { return c.scriptPath }
 func (c PointCoverage) ArtifactPath() string { return c.artifactPath }
 
 func (c PointCoverage) AgentID() string { return c.agentID }
+
+func (c PointCoverage) State() hookcontract.SupportState { return c.state }
+
+func (c PointCoverage) Reason() string { return c.reason }
 
 func (p EnforcementPrecondition) Kind() PreconditionKind { return p.kind }
 

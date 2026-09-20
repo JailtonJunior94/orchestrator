@@ -1,0 +1,4 @@
+status: done
+report_path: .specs/prd-hooks-canonicos-vendor-neutral/5.0_execution_report.md
+summary: "Projecoes derivadas de hookcontract.EventKind para specs.CanonicalPoint e hooks.Point*, NewEnforcement com SupportUnsupported, Kind() corrigido e erros de dispatch propagados"
+timestamp: 2026-09-20T20:00:00Z

@@ -139,6 +139,8 @@ type eventLoopResult struct {
 
 	// toolCallsNormalizedCount acumula tool-calls normalizadas para persistência no report.
 	toolCallsNormalizedCount int
+
+	err error
 }
 
 func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
@@ -264,6 +266,9 @@ func (r *ACPRunner) Run(ctx context.Context, j Job) (Summary, error) {
 	// Fase 6: loop de eventos com fan-out.
 	counters := events.NewToolCallCounters()
 	loopResult := r.runEventLoop(ctx, c, wd, j, disp, counters, persist, r.spec.ID)
+	if loopResult.err != nil {
+		return Summary{}, loopResult.err
+	}
 
 	// Fase 7: determinar razão de cancelamento.
 	cause := context.Cause(ctx)
@@ -371,12 +376,14 @@ func (c *Catalog) dispatchPreOpenHooks(ctx context.Context, disp hooks.Dispatche
 	if err := disp.Dispatch(ctx, hooks.PointPromptPreBuild, hooks.PromptBuildEvent{
 		Prompt: promptRef,
 		Spec:   specID,
+		Phase:  "pre_build",
 	}); err != nil {
 		return fmt.Errorf("runner: hook prompt.pre_build: %w", err)
 	}
 	if err := disp.Dispatch(ctx, hooks.PointPromptPostBuild, hooks.PromptBuildEvent{
 		Prompt: promptRef,
 		Spec:   specID,
+		Phase:  "post_build",
 	}); err != nil {
 		return fmt.Errorf("runner: hook prompt.post_build: %w", err)
 	}
@@ -425,7 +432,9 @@ func (r *ACPRunner) runEventLoop(
 		}
 
 		if evt.Kind() == events.KindToolCallStart {
-			_ = disp.Dispatch(ctx, hooks.PointToolCallPreDispatch, hooks.ToolCallEvent{Phase: "pre_dispatch"})
+			if dispatchErr := disp.Dispatch(ctx, hooks.PointToolCallPreDispatch, hooks.ToolCallEvent{Phase: "pre_dispatch"}); dispatchErr != nil {
+				return eventLoopResult{err: fmt.Errorf("runner: hook tool_call.pre_dispatch: %w", dispatchErr)}
+			}
 		}
 
 		counters.Record(evt)
@@ -463,7 +472,9 @@ func (r *ACPRunner) runEventLoop(
 		}
 
 		if evt.Kind() == events.KindToolCallUpdate {
-			_ = disp.Dispatch(ctx, hooks.PointToolCallPostComplete, hooks.ToolCallEvent{Phase: "post_complete"})
+			if dispatchErr := disp.Dispatch(ctx, hooks.PointToolCallPostComplete, hooks.ToolCallEvent{Phase: "post_complete"}); dispatchErr != nil {
+				return eventLoopResult{err: fmt.Errorf("runner: hook tool_call.post_complete: %w", dispatchErr)}
+			}
 		}
 
 		if !j.Quiet {

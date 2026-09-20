@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
@@ -95,6 +96,80 @@ func TestNewEnforcementRejectsIncompleteCoverage(t *testing.T) {
 	}
 	if !enf.Valid() {
 		t.Fatal("complete enforcement reported invalid")
+	}
+}
+
+func TestNewEnforcementAcceptsDeclaredUnsupportedPoint(t *testing.T) {
+	t.Parallel()
+
+	coverage := []specs.PointCoverage{
+		coverageFixture(t, specs.PointPreTool),
+		coverageFixture(t, specs.PointPostTool),
+	}
+	unsupported, err := specs.NewCatalog().NewUnsupportedPointCoverage("opencode", specs.PointSessionEnd, "provider has no native session-end hook")
+	if err != nil {
+		t.Fatalf("NewUnsupportedPointCoverage unexpected error: %v", err)
+	}
+	if unsupported.State() != hookcontract.SupportUnsupported {
+		t.Fatalf("State() = %v, want SupportUnsupported", unsupported.State())
+	}
+	coverage = append(coverage, unsupported)
+
+	enf, err := specs.NewCatalog().NewEnforcement(coverage)
+	if err != nil {
+		t.Fatalf("NewEnforcement rejected coverage with declared SupportUnsupported point: %v", err)
+	}
+	if !enf.Valid() {
+		t.Fatal("enforcement with declared unsupported point reported invalid")
+	}
+	cov, ok := enf.CoverageFor(specs.PointSessionEnd)
+	if !ok {
+		t.Fatal("CoverageFor(PointSessionEnd) not found")
+	}
+	if cov.State() != hookcontract.SupportUnsupported {
+		t.Fatalf("CoverageFor(PointSessionEnd).State() = %v, want SupportUnsupported", cov.State())
+	}
+	if cov.Reason() == "" {
+		t.Fatal("unsupported coverage lost its declared reason")
+	}
+}
+
+func TestNewUnsupportedPointCoverageRequiresReason(t *testing.T) {
+	t.Parallel()
+
+	if _, err := specs.NewCatalog().NewUnsupportedPointCoverage("opencode", specs.PointSessionEnd, "   "); !errors.Is(err, specs.ErrIncompleteCoverage) {
+		t.Fatalf("empty reason err = %v; want ErrIncompleteCoverage", err)
+	}
+	if _, err := specs.NewCatalog().NewUnsupportedPointCoverage("", specs.PointSessionEnd, "x"); !errors.Is(err, specs.ErrIncompleteCoverage) {
+		t.Fatalf("empty agent id err = %v; want ErrIncompleteCoverage", err)
+	}
+	if _, err := specs.NewCatalog().NewUnsupportedPointCoverage("opencode", specs.CanonicalPoint(99), "x"); !errors.Is(err, specs.ErrUnknownCanonicalPoint) {
+		t.Fatalf("invalid point err = %v; want ErrUnknownCanonicalPoint", err)
+	}
+}
+
+func TestCanonicalPointsDeriveFromHookContract(t *testing.T) {
+	t.Parallel()
+
+	catalog := specs.NewCatalog()
+	points := catalog.CanonicalPoints()
+	if len(points) != 3 {
+		t.Fatalf("len(points) = %d, want 3", len(points))
+	}
+
+	want := map[specs.CanonicalPoint]hookcontract.EventKind{
+		specs.PointPreTool:    hookcontract.EventBeforeTool,
+		specs.PointPostTool:   hookcontract.EventAfterTool,
+		specs.PointSessionEnd: hookcontract.EventBeforeComplete,
+	}
+	for _, point := range points {
+		event, ok := catalog.CanonicalPointEvent(point)
+		if !ok {
+			t.Fatalf("CanonicalPointEvent(%s) has no projection", point)
+		}
+		if event != want[point] {
+			t.Errorf("CanonicalPointEvent(%s) = %v, want %v", point, event, want[point])
+		}
 	}
 }
 
