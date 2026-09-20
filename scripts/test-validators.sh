@@ -950,6 +950,39 @@ echo "Ofuscação por expansão de variável não pode escapar do gate"
 assert_git_gate_command 'expansão de IFS não escapa: git${IFS}push${IFS}--force' 2 'git${IFS}push${IFS}origin${IFS}main${IFS}--force'
 assert_git_gate_command 'expansão de variável arbitrária não escapa: $G $P' 2 'G=git; P=push; $G $P --force'
 
+# --- Wrappers transparentes de execução (achado de revisão) ---
+# Só "env"/"command" eram reconhecidos como wrapper que repassa a resolução
+# para o próximo token. Qualquer outro invólucro que o bash real executa
+# normalmente (exec, time, nohup, sudo, nice...) fazia "word" resolver para o
+# próprio wrapper e o "git" subsequente nunca era avaliado — bypass total.
+echo "Wrappers transparentes de execução não podem escapar do gate"
+declare -a wrapper_commands=(
+  "exec git push --force"
+  "time git push --force"
+  "nohup git push --force"
+  "sudo git push --force"
+  "nice git push --force"
+  "timeout 5 git push --force"
+  "sudo nohup git push --force"
+)
+for command in "${wrapper_commands[@]}"; do
+  assert_git_gate_command "wrapper transparente não pode escapar: $command" 2 "$command"
+done
+
+# --- Continuação de linha "\<newline>" (achado de revisão) ---
+# O bash remove "\" seguido de newline antes de tokenizar (linha lógica única).
+# Sem normalizar isso primeiro, "git \<newline>push --force" virava o token
+# "\npush" no shlex, que nunca casava literalmente com "push" — bypass.
+echo "Continuação de linha não pode escapar do gate"
+line_cont_payload="$TMP_BASE/git-gate-line-continuation.json"
+python3 -c "
+import json
+cmd = 'git \\\\\npush --force'
+print(json.dumps({'tool_input': {'command': cmd}}))
+" >"$line_cont_payload"
+assert_gate_exit "continuação de linha antes do subcomando não escapa" 2 "$line_cont_payload"
+rm -f "$line_cont_payload"
+
 echo
 echo "Passaram: $passed | Falharam: $failed"
 [[ "$failed" -eq 0 ]] || exit 1
