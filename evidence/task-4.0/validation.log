@@ -1,0 +1,125 @@
+=== Task 4.0 — internal/hookcontract + internal/hookaudit — validation transcript ===
+
+$ gofmt -l -w internal/hookcontract internal/hookaudit
+(no output; files already formatted or fixed in place)
+
+$ go build ./internal/hookcontract/... ./internal/hookaudit/...
+(no output; build OK)
+
+$ go vet ./internal/hookcontract/... ./internal/hookaudit/...
+(no output; OK)
+
+$ go test ./internal/hookcontract/... ./internal/hookaudit/... -v -run .
+--- PASS: TestCapability_UnsupportedIsNotSuccess (0.00s)
+--- PASS: TestCapability_AdapterRequiresLimitation (0.00s)
+--- PASS: TestCapability_RejectsEmptyProviderAndInvalidEvent (0.00s)
+--- PASS: TestSupportState_ThreeDistinctValues (0.00s)
+--- PASS: TestEventKind_ParseAndString (0.00s)
+--- PASS: TestEventKind_ParseUnknownReturnsSentinel (0.00s)
+--- PASS: TestEventKind_ZeroValueIsInvalid (0.00s)
+--- PASS: TestEventKinds_ReturnsAllFive (0.00s)
+--- PASS: TestExitCodeTranslator_PreservesCurrentSemantics (0.00s)
+--- PASS: TestExitCodeTranslator_CriticalUnmappedIsError (0.00s)
+--- PASS: TestExitCodeTranslator_NonCriticalUnmappedIsWarn (0.00s)
+--- PASS: TestExitCodeTranslator_ToExitCodeRoundTrip (0.00s)
+--- PASS: TestHookContractHasNoProviderIdentifier (0.00s)
+--- PASS: TestEnvelope_RejectsUnknownField (0.00s)
+--- PASS: TestEnvelope_RejectsUnsupportedSchemaVersion (0.00s)
+--- PASS: TestEnvelope_RejectsUnknownEvent (0.00s)
+--- PASS: TestEnvelope_RejectsMalformedJSON (0.00s)
+--- PASS: TestEnvelope_AcceptsWellFormedV1 (0.00s)
+--- PASS: TestSchemaVersionMigration (0.00s)
+--- PASS: TestResult_BlockRequiresReasonAndPolicy (0.00s)
+--- PASS: TestResult_NonBlockDecisionsDoNotRequireReason (0.00s)
+--- PASS: TestResult_RejectsInvalidDecision (0.00s)
+--- PASS: TestNewAllow_IsAlwaysValid (0.00s)
+--- PASS: TestNewNotApplicable_CarriesReason (0.00s)
+--- PASS: TestResult_WithEvidenceAndMetadataAreImmutableCopies (0.00s)
+--- PASS: TestDecision_StringValues (0.00s)
+--- PASS: FuzzDecode (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract	0.065s
+--- PASS: TestAuditLogRoundTrip (0.00s)
+--- PASS: TestAuditLogAppend_DoesNotTruncatePriorEntries (0.00s)
+--- PASS: TestAuditLogReader_MissingFileReturnsEmpty (0.00s)
+--- PASS: TestAuditLogReader_CorruptLineIsReported (0.00s)
+--- PASS: TestNewEntry_RejectsEmptyRequiredFields (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/hookaudit	0.061s
+
+=== RF-07 deliberate red proof ===
+$ (inserted temporarily) const debugClaudeProviderLeak = "claude"  in event.go
+$ go test ./internal/hookcontract/... -run TestHookContractHasNoProviderIdentifier -v
+=== RUN   TestHookContractHasNoProviderIdentifier
+    no_provider_identifier_test.go:33: event.go contains forbidden provider identifier "claude" in "debugClaudeProviderLeak"
+--- FAIL: TestHookContractHasNoProviderIdentifier (0.00s)
+FAIL
+FAIL	github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract	0.073s
+FAIL
+$ (reverted the temporary line)
+$ go test ./internal/hookcontract/... -run TestHookContractHasNoProviderIdentifier -v
+--- PASS: TestHookContractHasNoProviderIdentifier (0.00s)
+PASS
+
+=== make lint ===
+$ make lint
+(1st run) internal/hookcontract/no_provider_identifier_test.go:20:19: SA1019: go/parser.ParseDir has been deprecated ...
+(fixed: rewrote gate to use os.ReadDir + parser.ParseFile per file, no ParseDir)
+(2nd run) 0 issues.
+
+=== make vet ===
+$ make vet
+go vet ./...
+(no output; OK)
+
+=== make check-mocks ===
+$ make check-mocks
+bash scripts/check-mocks.sh
+Mocks: OK (sincronizados com mockery.yml)
+
+=== make coverage (repository total; pre-existing gap, not caused by this task) ===
+$ make coverage
+...
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/hookaudit	0.267s	coverage: 87.5% of statements
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract	0.460s	coverage: 83.1% of statements
+...
+--- FAIL: TestAllLangsAreExhaustivelyWired (0.00s)
+    --- FAIL: TestAllLangsAreExhaustivelyWired/dotnet (0.00s)
+        lang_exhaustive_wiring_test.go:66: wiring 3/5 (contextgen loop): dotnet ausente em contextgen.ValidationLangOrder
+        ... (pre-existing, task 3.0, commit 55f9f13, message: "(vermelho por design para dotnet, sucessor 7.0)")
+FAIL	github.com/JailtonJunior94/ai-spec-harness/internal/skills	0.272s
+total:  (statements)  71.6%
+make: *** [coverage] Error 1
+
+=== baseline comparison (hookcontract/hookaudit moved out of the tree temporarily) ===
+$ go test -coverprofile=/tmp/coverage_baseline.out ./...
+(same internal/skills failure, pre-existing)
+$ go tool cover -func=/tmp/coverage_baseline.out | tail -1
+total: (statements) 71.5%
+=> baseline without the new packages: 71.5%; with the new packages: 71.6% (net positive, +0.1pp; the
+   75% total gate shortfall is pre-existing and unrelated to task 4.0)
+
+=== bash scripts/check-package-coverage.sh 70 (critical packages) ===
+$ bash scripts/check-package-coverage.sh 70
+PASS: ./internal/parity/... — 85.2%
+PASS: ./internal/specdrift/... — 90.3%
+PASS: ./internal/evidence/... — 93.8%
+PASS: ./internal/taskloop/... — 86.2%
+PASS: ./internal/bugschema/... — 74.3%
+PASS: ./internal/skills/... — 91.2%
+PASS: ./internal/metrics/... — 87.3%
+PASS: ./internal/detect/... — 82.4%
+PASS: ./internal/runtime/memory/durable/... — 88.1%
+(all PASS; hookcontract/hookaudit are not yet part of the declared critical-package list)
+
+=== go build ./... (whole repository) ===
+$ go build ./...
+(no output; OK)
+
+=== go test $(go list ./... | grep -v internal/skills$) ===
+(no FAIL outside the excluded, pre-existing-red internal/skills package)
+
+=== additivity proof ===
+$ git status --short
+(only .go diff is the creation of internal/hookcontract/ and internal/hookaudit/; no preexisting .go
+ file appears in "git diff --name-only")

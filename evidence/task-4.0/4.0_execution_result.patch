@@ -1,0 +1,1311 @@
+diff --git a/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md b/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md
+index e1637af..00751d9 100644
+--- a/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md
++++ b/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md
+@@ -26,7 +26,7 @@
+ | 1.0 | Inventario e classificacao de hooks com gate anti-orfao | done | — | Com 2.0, 3.0 | — |
+ | 2.0 | Parsing de payload sem truncamento e negacao por ausencia de alvo | pending | — | Com 1.0, 3.0 | — |
+ | 3.0 | Instrumentacao de pre-requisito: tmp em gates, exaustividade de linguagens e prova por celula | done | — | Com 1.0, 2.0 | — |
+-| 4.0 | Contrato canonico de hooks em internal/hookcontract | pending | 1.0 | Não | — |
++| 4.0 | Contrato canonico de hooks em internal/hookcontract | done | 1.0 | Não | — |
+ | 5.0 | Projecoes dos dois modelos de ponto, correcao de Kind e erros nao descartados | pending | 4.0 | Com 7.0 | — |
+ | 6.0 | Harness contract aplicado e gate de operacao git derivado da policy | pending | 2.0, 4.0 | Com 7.0 | — |
+ | 7.0 | Igualdade entre stacks: dotnet completo e java como cidadao de primeira classe | pending | 3.0 | Com 5.0, 6.0 | — |
+diff --git a/internal/hookaudit/audit_test.go b/internal/hookaudit/audit_test.go
+new file mode 100644
+index 0000000..7d4291a
+--- /dev/null
++++ b/internal/hookaudit/audit_test.go
+@@ -0,0 +1,131 @@
++package hookaudit
++
++import (
++	"errors"
++	"os"
++	"path/filepath"
++	"testing"
++	"time"
++)
++
++func TestAuditLogRoundTrip(t *testing.T) {
++	dir := t.TempDir()
++	path := filepath.Join(dir, "hook-decisions.jsonl")
++
++	writer, err := NewWriter(path)
++	if err != nil {
++		t.Fatalf("NewWriter unexpected error: %v", err)
++	}
++
++	first, err := NewEntry(time.Date(2026, 9, 18, 12, 0, 0, 0, time.UTC), "before_tool", "provider-x", "git-policy", "BLOCK", 12)
++	if err != nil {
++		t.Fatalf("NewEntry unexpected error: %v", err)
++	}
++	first = first.WithReason("git push requires explicit approval", "P-GIT-001", "G-GIT-PUSH").WithEvidence("log-line-1")
++
++	second, err := NewEntry(time.Date(2026, 9, 18, 12, 1, 0, 0, time.UTC), "after_tool", "provider-x", "quality-gate", "ALLOW", 5)
++	if err != nil {
++		t.Fatalf("NewEntry unexpected error: %v", err)
++	}
++
++	if err := writer.Append(first); err != nil {
++		t.Fatalf("Append first unexpected error: %v", err)
++	}
++	if err := writer.Append(second); err != nil {
++		t.Fatalf("Append second unexpected error: %v", err)
++	}
++
++	reader := NewReader(path)
++	entries, err := reader.ReadAll()
++	if err != nil {
++		t.Fatalf("ReadAll unexpected error: %v", err)
++	}
++	if len(entries) != 2 {
++		t.Fatalf("len(entries) = %d, want 2", len(entries))
++	}
++	if entries[0].Decision != "BLOCK" || entries[0].PolicyID != "P-GIT-001" || entries[0].GateID != "G-GIT-PUSH" {
++		t.Fatalf("first entry mismatch: %+v", entries[0])
++	}
++	if len(entries[0].Evidence) != 1 || entries[0].Evidence[0] != "log-line-1" {
++		t.Fatalf("first entry evidence mismatch: %+v", entries[0])
++	}
++	if entries[1].Decision != "ALLOW" || entries[1].Hook != "quality-gate" {
++		t.Fatalf("second entry mismatch: %+v", entries[1])
++	}
++}
++
++func TestAuditLogAppend_DoesNotTruncatePriorEntries(t *testing.T) {
++	dir := t.TempDir()
++	path := filepath.Join(dir, "hook-decisions.jsonl")
++
++	writer, err := NewWriter(path)
++	if err != nil {
++		t.Fatalf("NewWriter unexpected error: %v", err)
++	}
++
++	for i := 0; i < 5; i++ {
++		entry, err := NewEntry(time.Now().UTC(), "before_tool", "provider-x", "hook", "ALLOW", int64(i))
++		if err != nil {
++			t.Fatalf("NewEntry unexpected error: %v", err)
++		}
++		if err := writer.Append(entry); err != nil {
++			t.Fatalf("Append unexpected error: %v", err)
++		}
++	}
++
++	data, err := os.ReadFile(path)
++	if err != nil {
++		t.Fatalf("ReadFile unexpected error: %v", err)
++	}
++	lines := 0
++	for _, b := range data {
++		if b == '\n' {
++			lines++
++		}
++	}
++	if lines != 5 {
++		t.Fatalf("lines = %d, want 5", lines)
++	}
++}
++
++func TestAuditLogReader_MissingFileReturnsEmpty(t *testing.T) {
++	dir := t.TempDir()
++	reader := NewReader(filepath.Join(dir, "does-not-exist.jsonl"))
++
++	entries, err := reader.ReadAll()
++	if err != nil {
++		t.Fatalf("ReadAll unexpected error: %v", err)
++	}
++	if entries != nil {
++		t.Fatalf("entries = %v, want nil", entries)
++	}
++}
++
++func TestAuditLogReader_CorruptLineIsReported(t *testing.T) {
++	dir := t.TempDir()
++	path := filepath.Join(dir, "hook-decisions.jsonl")
++	if err := os.WriteFile(path, []byte("{\"ts\":\"not-json\n"), 0o644); err != nil {
++		t.Fatalf("WriteFile unexpected error: %v", err)
++	}
++
++	reader := NewReader(path)
++	_, err := reader.ReadAll()
++	if !errors.Is(err, ErrCorruptEntry) {
++		t.Fatalf("error = %v, want ErrCorruptEntry", err)
++	}
++}
++
++func TestNewEntry_RejectsEmptyRequiredFields(t *testing.T) {
++	if _, err := NewEntry(time.Now(), "", "p", "hook", "ALLOW", 0); !errors.Is(err, ErrInvalidEntry) {
++		t.Fatalf("empty event error = %v, want ErrInvalidEntry", err)
++	}
++	if _, err := NewEntry(time.Now(), "before_tool", "p", "", "ALLOW", 0); !errors.Is(err, ErrInvalidEntry) {
++		t.Fatalf("empty hook error = %v, want ErrInvalidEntry", err)
++	}
++	if _, err := NewEntry(time.Now(), "before_tool", "p", "hook", "", 0); !errors.Is(err, ErrInvalidEntry) {
++		t.Fatalf("empty decision error = %v, want ErrInvalidEntry", err)
++	}
++	if _, err := NewEntry(time.Now(), "before_tool", "p", "hook", "ALLOW", -1); !errors.Is(err, ErrInvalidEntry) {
++		t.Fatalf("negative duration error = %v, want ErrInvalidEntry", err)
++	}
++}
+diff --git a/internal/hookaudit/entry.go b/internal/hookaudit/entry.go
+new file mode 100644
+index 0000000..095ce05
+--- /dev/null
++++ b/internal/hookaudit/entry.go
+@@ -0,0 +1,60 @@
++package hookaudit
++
++import (
++	"errors"
++	"fmt"
++	"strings"
++	"time"
++)
++
++var ErrInvalidEntry = errors.New("invalid hook audit entry")
++
++type Entry struct {
++	Timestamp  time.Time `json:"ts"`
++	Event      string    `json:"event"`
++	Provider   string    `json:"provider"`
++	Hook       string    `json:"hook"`
++	Decision   string    `json:"decision"`
++	Reason     string    `json:"reason,omitempty"`
++	PolicyID   string    `json:"policy_id,omitempty"`
++	GateID     string    `json:"gate_id,omitempty"`
++	DurationMS int64     `json:"duration_ms"`
++	Evidence   []string  `json:"evidence,omitempty"`
++}
++
++func NewEntry(timestamp time.Time, event, provider, hook, decision string, durationMS int64) (Entry, error) {
++	if strings.TrimSpace(event) == "" {
++		return Entry{}, fmt.Errorf("%w: empty event", ErrInvalidEntry)
++	}
++	if strings.TrimSpace(hook) == "" {
++		return Entry{}, fmt.Errorf("%w: empty hook", ErrInvalidEntry)
++	}
++	if strings.TrimSpace(decision) == "" {
++		return Entry{}, fmt.Errorf("%w: empty decision", ErrInvalidEntry)
++	}
++	if durationMS < 0 {
++		return Entry{}, fmt.Errorf("%w: negative duration", ErrInvalidEntry)
++	}
++	return Entry{
++		Timestamp:  timestamp,
++		Event:      event,
++		Provider:   provider,
++		Hook:       hook,
++		Decision:   decision,
++		DurationMS: durationMS,
++	}, nil
++}
++
++func (e Entry) WithReason(reason, policyID, gateID string) Entry {
++	cloned := e
++	cloned.Reason = reason
++	cloned.PolicyID = policyID
++	cloned.GateID = gateID
++	return cloned
++}
++
++func (e Entry) WithEvidence(evidence ...string) Entry {
++	cloned := e
++	cloned.Evidence = append([]string(nil), evidence...)
++	return cloned
++}
+diff --git a/internal/hookaudit/reader.go b/internal/hookaudit/reader.go
+new file mode 100644
+index 0000000..8dfdfc2
+--- /dev/null
++++ b/internal/hookaudit/reader.go
+@@ -0,0 +1,53 @@
++package hookaudit
++
++import (
++	"bufio"
++	"bytes"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"os"
++	"path/filepath"
++)
++
++var ErrCorruptEntry = errors.New("corrupt hook audit log entry")
++
++type Reader struct {
++	path string
++}
++
++func NewReader(path string) *Reader {
++	return &Reader{path: filepath.Clean(path)}
++}
++
++func (r *Reader) ReadAll() ([]Entry, error) {
++	file, err := os.Open(r.path)
++	if err != nil {
++		if errors.Is(err, os.ErrNotExist) {
++			return nil, nil
++		}
++		return nil, fmt.Errorf("hookaudit: open %s: %w", r.path, err)
++	}
++	defer file.Close()
++
++	var entries []Entry
++	scanner := bufio.NewScanner(file)
++	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
++	lineNumber := 0
++	for scanner.Scan() {
++		lineNumber++
++		line := scanner.Bytes()
++		if len(bytes.TrimSpace(line)) == 0 {
++			continue
++		}
++		var entry Entry
++		if err := json.Unmarshal(line, &entry); err != nil {
++			return nil, fmt.Errorf("%w: line %d in %s: %v", ErrCorruptEntry, lineNumber, r.path, err)
++		}
++		entries = append(entries, entry)
++	}
++	if err := scanner.Err(); err != nil {
++		return nil, fmt.Errorf("hookaudit: scan %s: %w", r.path, err)
++	}
++	return entries, nil
++}
+diff --git a/internal/hookaudit/writer.go b/internal/hookaudit/writer.go
+new file mode 100644
+index 0000000..913787b
+--- /dev/null
++++ b/internal/hookaudit/writer.go
+@@ -0,0 +1,51 @@
++package hookaudit
++
++import (
++	"encoding/json"
++	"fmt"
++	"os"
++	"path/filepath"
++	"sync"
++)
++
++type Writer struct {
++	path string
++	mu   sync.Mutex
++}
++
++func NewWriter(path string) (*Writer, error) {
++	clean := filepath.Clean(path)
++	if clean == "" || clean == "." {
++		return nil, fmt.Errorf("hookaudit: invalid writer path %q", path)
++	}
++	dir := filepath.Dir(clean)
++	if err := os.MkdirAll(dir, 0o755); err != nil {
++		return nil, fmt.Errorf("hookaudit: create directory %s: %w", dir, err)
++	}
++	return &Writer{path: clean}, nil
++}
++
++func (w *Writer) Append(entry Entry) error {
++	line, err := json.Marshal(entry)
++	if err != nil {
++		return fmt.Errorf("hookaudit: marshal entry: %w", err)
++	}
++
++	w.mu.Lock()
++	defer w.mu.Unlock()
++
++	file, err := os.OpenFile(w.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
++	if err != nil {
++		return fmt.Errorf("hookaudit: open %s: %w", w.path, err)
++	}
++	defer file.Close()
++
++	if _, err := file.Write(append(line, '\n')); err != nil {
++		return fmt.Errorf("hookaudit: append entry to %s: %w", w.path, err)
++	}
++	return nil
++}
++
++func (w *Writer) Path() string {
++	return w.path
++}
+diff --git a/internal/hookcontract/capability.go b/internal/hookcontract/capability.go
+new file mode 100644
+index 0000000..ac4592f
+--- /dev/null
++++ b/internal/hookcontract/capability.go
+@@ -0,0 +1,105 @@
++package hookcontract
++
++import (
++	"errors"
++	"fmt"
++	"strings"
++)
++
++type SupportState int
++
++const (
++	SupportVerified SupportState = iota + 1
++	SupportAdapter
++	SupportUnsupported
++)
++
++func (s SupportState) Valid() bool {
++	return s >= SupportVerified && s <= SupportUnsupported
++}
++
++func (s SupportState) String() string {
++	switch s {
++	case SupportVerified:
++		return "verified"
++	case SupportAdapter:
++		return "adapter"
++	case SupportUnsupported:
++		return "unsupported"
++	default:
++		return "unknown"
++	}
++}
++
++var (
++	ErrInvalidCapability  = errors.New("invalid hook capability")
++	ErrCapabilityNotFound = errors.New("capability not found in registry")
++)
++
++type Capability struct {
++	provider   string
++	event      EventKind
++	state      SupportState
++	nativeKey  string
++	blocking   bool
++	limitation string
++	valid      bool
++}
++
++func NewCapability(provider string, event EventKind, state SupportState, nativeKey string, blocking bool, limitation string) (Capability, error) {
++	if strings.TrimSpace(provider) == "" {
++		return Capability{}, fmt.Errorf("%w: empty provider", ErrInvalidCapability)
++	}
++	if !event.Valid() {
++		return Capability{}, fmt.Errorf("%w: invalid event %d", ErrInvalidCapability, int(event))
++	}
++	if !state.Valid() {
++		return Capability{}, fmt.Errorf("%w: invalid support state %d", ErrInvalidCapability, int(state))
++	}
++	if state == SupportAdapter && strings.TrimSpace(limitation) == "" {
++		return Capability{}, fmt.Errorf("%w: provider %q event %s adapter support requires a limitation", ErrInvalidCapability, provider, event)
++	}
++	return Capability{
++		provider:   provider,
++		event:      event,
++		state:      state,
++		nativeKey:  nativeKey,
++		blocking:   blocking,
++		limitation: limitation,
++		valid:      true,
++	}, nil
++}
++
++func (c Capability) Provider() string {
++	return c.provider
++}
++
++func (c Capability) Event() EventKind {
++	return c.event
++}
++
++func (c Capability) State() SupportState {
++	return c.state
++}
++
++func (c Capability) NativeKey() string {
++	return c.nativeKey
++}
++
++func (c Capability) Blocking() bool {
++	return c.blocking
++}
++
++func (c Capability) Limitation() string {
++	return c.limitation
++}
++
++func (c Capability) Valid() bool {
++	return c.valid
++}
++
++type CapabilityRegistry interface {
++	Lookup(provider string, event EventKind) (Capability, error)
++	Providers() []string
++	Events() []EventKind
++}
+diff --git a/internal/hookcontract/capability_test.go b/internal/hookcontract/capability_test.go
+new file mode 100644
+index 0000000..617b9d3
+--- /dev/null
++++ b/internal/hookcontract/capability_test.go
+@@ -0,0 +1,60 @@
++package hookcontract
++
++import (
++	"errors"
++	"testing"
++)
++
++func TestCapability_UnsupportedIsNotSuccess(t *testing.T) {
++	capability, err := NewCapability("provider-x", EventSessionEnd, SupportUnsupported, "", false, "provider has no native session-end hook")
++	if err != nil {
++		t.Fatalf("NewCapability unexpected error: %v", err)
++	}
++	if capability.State() == SupportVerified {
++		t.Fatal("SupportUnsupported must not equal SupportVerified")
++	}
++	if capability.State() != SupportUnsupported {
++		t.Fatalf("State() = %v, want SupportUnsupported", capability.State())
++	}
++}
++
++func TestCapability_AdapterRequiresLimitation(t *testing.T) {
++	tests := []struct {
++		name       string
++		limitation string
++		wantErr    bool
++	}{
++		{"missing limitation", "", true},
++		{"declared limitation", "fires on session.idle, not blocking", false},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			_, err := NewCapability("provider-x", EventBeforeComplete, SupportAdapter, "native-key", true, tt.limitation)
++			if tt.wantErr && !errors.Is(err, ErrInvalidCapability) {
++				t.Fatalf("error = %v, want ErrInvalidCapability", err)
++			}
++			if !tt.wantErr && err != nil {
++				t.Fatalf("unexpected error: %v", err)
++			}
++		})
++	}
++}
++
++func TestCapability_RejectsEmptyProviderAndInvalidEvent(t *testing.T) {
++	if _, err := NewCapability("", EventBeforeTool, SupportVerified, "k", true, ""); !errors.Is(err, ErrInvalidCapability) {
++		t.Fatalf("empty provider error = %v, want ErrInvalidCapability", err)
++	}
++	if _, err := NewCapability("provider-x", EventKind(99), SupportVerified, "k", true, ""); !errors.Is(err, ErrInvalidCapability) {
++		t.Fatalf("invalid event error = %v, want ErrInvalidCapability", err)
++	}
++	if _, err := NewCapability("provider-x", EventBeforeTool, SupportState(99), "k", true, ""); !errors.Is(err, ErrInvalidCapability) {
++		t.Fatalf("invalid state error = %v, want ErrInvalidCapability", err)
++	}
++}
++
++func TestSupportState_ThreeDistinctValues(t *testing.T) {
++	if SupportVerified == SupportUnsupported || SupportAdapter == SupportUnsupported || SupportVerified == SupportAdapter {
++		t.Fatal("SupportVerified, SupportAdapter and SupportUnsupported must be pairwise distinct")
++	}
++}
+diff --git a/internal/hookcontract/event.go b/internal/hookcontract/event.go
+new file mode 100644
+index 0000000..ecd77f6
+--- /dev/null
++++ b/internal/hookcontract/event.go
+@@ -0,0 +1,61 @@
++package hookcontract
++
++import (
++	"errors"
++	"fmt"
++	"slices"
++)
++
++type EventKind int
++
++const (
++	EventSessionStart EventKind = iota + 1
++	EventBeforeTool
++	EventAfterTool
++	EventBeforeComplete
++	EventSessionEnd
++)
++
++var allEventKinds = []EventKind{
++	EventSessionStart,
++	EventBeforeTool,
++	EventAfterTool,
++	EventBeforeComplete,
++	EventSessionEnd,
++}
++
++var ErrUnknownEvent = errors.New("unknown canonical event")
++
++func (e EventKind) Valid() bool {
++	return e >= EventSessionStart && e <= EventSessionEnd
++}
++
++func (e EventKind) String() string {
++	switch e {
++	case EventSessionStart:
++		return "session_start"
++	case EventBeforeTool:
++		return "before_tool"
++	case EventAfterTool:
++		return "after_tool"
++	case EventBeforeComplete:
++		return "before_complete"
++	case EventSessionEnd:
++		return "session_end"
++	default:
++		return "unknown"
++	}
++}
++
++func ParseEventKind(s string) (EventKind, error) {
++	for _, kind := range allEventKinds {
++		if kind.String() == s {
++			return kind, nil
++		}
++	}
++	return 0, fmt.Errorf("%w: %q", ErrUnknownEvent, s)
++}
++
++func EventKinds() []EventKind {
++	return slices.Clone(allEventKinds)
++}
+diff --git a/internal/hookcontract/event_test.go b/internal/hookcontract/event_test.go
+new file mode 100644
+index 0000000..f7dc6eb
+--- /dev/null
++++ b/internal/hookcontract/event_test.go
+@@ -0,0 +1,58 @@
++package hookcontract
++
++import (
++	"errors"
++	"testing"
++)
++
++func TestEventKind_ParseAndString(t *testing.T) {
++	tests := []struct {
++		kind EventKind
++		text string
++	}{
++		{EventSessionStart, "session_start"},
++		{EventBeforeTool, "before_tool"},
++		{EventAfterTool, "after_tool"},
++		{EventBeforeComplete, "before_complete"},
++		{EventSessionEnd, "session_end"},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.text, func(t *testing.T) {
++			if got := tt.kind.String(); got != tt.text {
++				t.Fatalf("String() = %q, want %q", got, tt.text)
++			}
++			parsed, err := ParseEventKind(tt.text)
++			if err != nil {
++				t.Fatalf("ParseEventKind(%q) unexpected error: %v", tt.text, err)
++			}
++			if parsed != tt.kind {
++				t.Fatalf("ParseEventKind(%q) = %v, want %v", tt.text, parsed, tt.kind)
++			}
++			if !tt.kind.Valid() {
++				t.Fatalf("%v should be Valid()", tt.kind)
++			}
++		})
++	}
++}
++
++func TestEventKind_ParseUnknownReturnsSentinel(t *testing.T) {
++	_, err := ParseEventKind("mid_tool_panic")
++	if !errors.Is(err, ErrUnknownEvent) {
++		t.Fatalf("ParseEventKind(unknown) error = %v, want ErrUnknownEvent", err)
++	}
++}
++
++func TestEventKind_ZeroValueIsInvalid(t *testing.T) {
++	var kind EventKind
++	if kind.Valid() {
++		t.Fatal("zero-value EventKind must not be Valid()")
++	}
++}
++
++func TestEventKinds_ReturnsAllFive(t *testing.T) {
++	kinds := EventKinds()
++	if len(kinds) != 5 {
++		t.Fatalf("EventKinds() len = %d, want 5", len(kinds))
++	}
++}
+diff --git a/internal/hookcontract/exitcode.go b/internal/hookcontract/exitcode.go
+new file mode 100644
+index 0000000..b1284eb
+--- /dev/null
++++ b/internal/hookcontract/exitcode.go
+@@ -0,0 +1,79 @@
++package hookcontract
++
++import (
++	"fmt"
++	"strings"
++)
++
++const legacyExitCodeGateID = "legacy-exit-code-translation"
++
++var exitCodeDecisions = map[int]Decision{
++	0: DecisionAllow,
++	1: DecisionBlock,
++	2: DecisionBlock,
++}
++
++type ExitCodeTranslator interface {
++	ToDecision(code int, stderr string, critical bool) Result
++	ToExitCode(result Result) int
++}
++
++type strictExitCodeTranslator struct{}
++
++func NewExitCodeTranslator() ExitCodeTranslator {
++	return strictExitCodeTranslator{}
++}
++
++func (strictExitCodeTranslator) ToDecision(code int, stderr string, critical bool) Result {
++	decision, mapped := exitCodeDecisions[code]
++	if !mapped {
++		return unmappedResult(code, stderr, critical)
++	}
++
++	switch decision {
++	case DecisionAllow:
++		return NewAllow()
++	case DecisionBlock:
++		reason := strings.TrimSpace(stderr)
++		if reason == "" {
++			reason = fmt.Sprintf("hook exited with blocking status %d", code)
++		}
++		result, err := NewResult(DecisionBlock, reason, "", legacyExitCodeGateID)
++		if err != nil {
++			return unmappedResult(code, stderr, critical)
++		}
++		return result
++	default:
++		return unmappedResult(code, stderr, critical)
++	}
++}
++
++func (strictExitCodeTranslator) ToExitCode(result Result) int {
++	switch result.Decision() {
++	case DecisionAllow, DecisionNotApplicable, DecisionWarn:
++		return 0
++	case DecisionBlock, DecisionError:
++		return 2
++	default:
++		return 2
++	}
++}
++
++func unmappedResult(code int, stderr string, critical bool) Result {
++	reason := strings.TrimSpace(stderr)
++	if reason == "" {
++		reason = fmt.Sprintf("hook exited with unmapped status %d", code)
++	}
++	if critical {
++		result, err := NewResult(DecisionError, reason, "", "")
++		if err != nil {
++			return NewNotApplicable(reason)
++		}
++		return result
++	}
++	result, err := NewResult(DecisionWarn, reason, "", "")
++	if err != nil {
++		return NewNotApplicable(reason)
++	}
++	return result
++}
+diff --git a/internal/hookcontract/exitcode_test.go b/internal/hookcontract/exitcode_test.go
+new file mode 100644
+index 0000000..12a907c
+--- /dev/null
++++ b/internal/hookcontract/exitcode_test.go
+@@ -0,0 +1,78 @@
++package hookcontract
++
++import "testing"
++
++func TestExitCodeTranslator_PreservesCurrentSemantics(t *testing.T) {
++	translator := NewExitCodeTranslator()
++
++	tests := []struct {
++		name     string
++		origin   string
++		code     int
++		critical bool
++		want     Decision
++	}{
++		{"git-operation-gate.sh GIT_OPERATION_BLOCK_EXIT", ".agents/scripts/git-operation-gate.sh:5", 2, true, DecisionBlock},
++		{"validate-preload.sh PRELOAD_BLOCK_EXIT", ".agents/hooks/validate-preload.sh:5", 2, true, DecisionBlock},
++		{"validate-session-end.sh SESSION_END_BLOCK_EXIT", ".agents/hooks/validate-session-end.sh:4", 2, true, DecisionBlock},
++		{"validate-governance.sh literal exit 1", ".agents/hooks/validate-governance.sh:45", 1, true, DecisionBlock},
++		{"success exit 0", "n/a", 0, true, DecisionAllow},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			result := translator.ToDecision(tt.code, "", tt.critical)
++			if result.Decision() != tt.want {
++				t.Fatalf("ToDecision(%d) [%s] = %v, want %v", tt.code, tt.origin, result.Decision(), tt.want)
++			}
++		})
++	}
++}
++
++func TestExitCodeTranslator_CriticalUnmappedIsError(t *testing.T) {
++	translator := NewExitCodeTranslator()
++
++	result := translator.ToDecision(127, "command not found", true)
++	if result.Decision() != DecisionError {
++		t.Fatalf("Decision() = %v, want DecisionError", result.Decision())
++	}
++}
++
++func TestExitCodeTranslator_NonCriticalUnmappedIsWarn(t *testing.T) {
++	translator := NewExitCodeTranslator()
++
++	result := translator.ToDecision(127, "command not found", false)
++	if result.Decision() != DecisionWarn {
++		t.Fatalf("Decision() = %v, want DecisionWarn", result.Decision())
++	}
++}
++
++func TestExitCodeTranslator_ToExitCodeRoundTrip(t *testing.T) {
++	translator := NewExitCodeTranslator()
++
++	tests := []struct {
++		result Result
++		want   int
++	}{
++		{NewAllow(), 0},
++		{NewNotApplicable("skip"), 0},
++		{mustResult(t, DecisionWarn, "warn", "", "G-1"), 0},
++		{mustResult(t, DecisionBlock, "blocked", "P-1", ""), 2},
++		{mustResult(t, DecisionError, "error", "", ""), 2},
++	}
++
++	for _, tt := range tests {
++		if got := translator.ToExitCode(tt.result); got != tt.want {
++			t.Fatalf("ToExitCode(%v) = %d, want %d", tt.result.Decision(), got, tt.want)
++		}
++	}
++}
++
++func mustResult(t *testing.T, decision Decision, reason, policyID, gateID string) Result {
++	t.Helper()
++	result, err := NewResult(decision, reason, policyID, gateID)
++	if err != nil {
++		t.Fatalf("NewResult unexpected error: %v", err)
++	}
++	return result
++}
+diff --git a/internal/hookcontract/no_provider_identifier_test.go b/internal/hookcontract/no_provider_identifier_test.go
+new file mode 100644
+index 0000000..1264efb
+--- /dev/null
++++ b/internal/hookcontract/no_provider_identifier_test.go
+@@ -0,0 +1,52 @@
++package hookcontract
++
++import (
++	"go/ast"
++	"go/parser"
++	"go/token"
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++)
++
++var forbiddenProviderIdentifiers = []string{"claude", "codex", "copilot", "opencode"}
++
++func TestHookContractHasNoProviderIdentifier(t *testing.T) {
++	entries, err := os.ReadDir(".")
++	if err != nil {
++		t.Fatalf("read package directory: %v", err)
++	}
++
++	fileSet := token.NewFileSet()
++	for _, entry := range entries {
++		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
++			continue
++		}
++		file, err := parser.ParseFile(fileSet, filepath.Join(".", entry.Name()), nil, parser.AllErrors)
++		if err != nil {
++			t.Fatalf("parse %s: %v", entry.Name(), err)
++		}
++		ast.Inspect(file, func(node ast.Node) bool {
++			switch n := node.(type) {
++			case *ast.Ident:
++				failIfForbidden(t, entry.Name(), n.Name)
++			case *ast.BasicLit:
++				if n.Kind == token.STRING {
++					failIfForbidden(t, entry.Name(), n.Value)
++				}
++			}
++			return true
++		})
++	}
++}
++
++func failIfForbidden(t *testing.T, filename, text string) {
++	t.Helper()
++	lower := strings.ToLower(text)
++	for _, forbidden := range forbiddenProviderIdentifiers {
++		if strings.Contains(lower, forbidden) {
++			t.Fatalf("%s contains forbidden provider identifier %q in %q", filename, forbidden, text)
++		}
++	}
++}
+diff --git a/internal/hookcontract/payload.go b/internal/hookcontract/payload.go
+new file mode 100644
+index 0000000..cabdc54
+--- /dev/null
++++ b/internal/hookcontract/payload.go
+@@ -0,0 +1,88 @@
++package hookcontract
++
++import (
++	"bytes"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"strings"
++)
++
++const SchemaVersionV1 = 1
++
++var schemaVersionDescriptions = map[int]string{
++	SchemaVersionV1: "v1: schema_version, event, provider, session_id, payload (initial canonical envelope)",
++}
++
++var (
++	ErrSchemaVersion    = errors.New("unsupported payload schema version")
++	ErrUnknownField     = errors.New("unknown field in payload envelope")
++	ErrMalformedPayload = errors.New("malformed payload envelope")
++	ErrProviderUnknown  = errors.New("provider not declared in capability registry")
++)
++
++type Envelope struct {
++	SchemaVersion int
++	Event         EventKind
++	Provider      string
++	SessionID     string
++	Payload       json.RawMessage
++}
++
++type Decoder interface {
++	Decode(raw []byte) (Envelope, error)
++}
++
++type envelopeWireFormat struct {
++	SchemaVersion int             `json:"schema_version"`
++	Event         string          `json:"event"`
++	Provider      string          `json:"provider"`
++	SessionID     string          `json:"session_id"`
++	Payload       json.RawMessage `json:"payload"`
++}
++
++type strictDecoder struct{}
++
++func NewDecoder() Decoder {
++	return strictDecoder{}
++}
++
++func (strictDecoder) Decode(raw []byte) (Envelope, error) {
++	jsonDecoder := json.NewDecoder(bytes.NewReader(raw))
++	jsonDecoder.DisallowUnknownFields()
++
++	var wire envelopeWireFormat
++	if err := jsonDecoder.Decode(&wire); err != nil {
++		if strings.Contains(err.Error(), "unknown field") {
++			return Envelope{}, fmt.Errorf("%w: %v", ErrUnknownField, err)
++		}
++		return Envelope{}, fmt.Errorf("%w: %v", ErrMalformedPayload, err)
++	}
++
++	if !SchemaVersionSupported(wire.SchemaVersion) {
++		return Envelope{}, fmt.Errorf("%w: %d", ErrSchemaVersion, wire.SchemaVersion)
++	}
++
++	event, err := ParseEventKind(wire.Event)
++	if err != nil {
++		return Envelope{}, err
++	}
++
++	return Envelope{
++		SchemaVersion: wire.SchemaVersion,
++		Event:         event,
++		Provider:      wire.Provider,
++		SessionID:     wire.SessionID,
++		Payload:       wire.Payload,
++	}, nil
++}
++
++func SchemaVersionSupported(version int) bool {
++	_, ok := schemaVersionDescriptions[version]
++	return ok
++}
++
++func SchemaVersionDescription(version int) (string, bool) {
++	description, ok := schemaVersionDescriptions[version]
++	return description, ok
++}
+diff --git a/internal/hookcontract/payload_test.go b/internal/hookcontract/payload_test.go
+new file mode 100644
+index 0000000..fc09732
+--- /dev/null
++++ b/internal/hookcontract/payload_test.go
+@@ -0,0 +1,101 @@
++package hookcontract
++
++import (
++	"errors"
++	"testing"
++)
++
++func TestEnvelope_RejectsUnknownField(t *testing.T) {
++	raw := []byte(`{"schema_version":1,"event":"before_tool","provider":"provider-x","session_id":"s-1","payload":{},"unexpected_field":true}`)
++
++	_, err := NewDecoder().Decode(raw)
++	if !errors.Is(err, ErrUnknownField) {
++		t.Fatalf("error = %v, want ErrUnknownField", err)
++	}
++}
++
++func TestEnvelope_RejectsUnsupportedSchemaVersion(t *testing.T) {
++	raw := []byte(`{"schema_version":99,"event":"before_tool","provider":"provider-x","session_id":"s-1","payload":{}}`)
++
++	_, err := NewDecoder().Decode(raw)
++	if !errors.Is(err, ErrSchemaVersion) {
++		t.Fatalf("error = %v, want ErrSchemaVersion", err)
++	}
++}
++
++func TestEnvelope_RejectsUnknownEvent(t *testing.T) {
++	raw := []byte(`{"schema_version":1,"event":"mid_tool_panic","provider":"provider-x","session_id":"s-1","payload":{}}`)
++
++	_, err := NewDecoder().Decode(raw)
++	if !errors.Is(err, ErrUnknownEvent) {
++		t.Fatalf("error = %v, want ErrUnknownEvent", err)
++	}
++}
++
++func TestEnvelope_RejectsMalformedJSON(t *testing.T) {
++	raw := []byte(`{"schema_version":1,`)
++
++	_, err := NewDecoder().Decode(raw)
++	if !errors.Is(err, ErrMalformedPayload) {
++		t.Fatalf("error = %v, want ErrMalformedPayload", err)
++	}
++}
++
++func TestEnvelope_AcceptsWellFormedV1(t *testing.T) {
++	raw := []byte(`{"schema_version":1,"event":"before_tool","provider":"provider-x","session_id":"s-1","payload":{"tool_name":"Bash"}}`)
++
++	envelope, err := NewDecoder().Decode(raw)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if envelope.Event != EventBeforeTool {
++		t.Fatalf("Event = %v, want EventBeforeTool", envelope.Event)
++	}
++	if envelope.SchemaVersion != SchemaVersionV1 {
++		t.Fatalf("SchemaVersion = %d, want %d", envelope.SchemaVersion, SchemaVersionV1)
++	}
++	if envelope.Provider != "provider-x" {
++		t.Fatalf("Provider = %q", envelope.Provider)
++	}
++}
++
++func TestSchemaVersionMigration(t *testing.T) {
++	if !SchemaVersionSupported(SchemaVersionV1) {
++		t.Fatal("SchemaVersionV1 must be supported")
++	}
++	description, ok := SchemaVersionDescription(SchemaVersionV1)
++	if !ok || description == "" {
++		t.Fatal("SchemaVersionV1 must carry a non-empty migration description")
++	}
++	if SchemaVersionSupported(2) {
++		t.Fatal("unreleased schema version 2 must not be supported yet")
++	}
++	if _, ok := SchemaVersionDescription(2); ok {
++		t.Fatal("unreleased schema version 2 must not have a migration description")
++	}
++}
++
++func FuzzDecode(f *testing.F) {
++	f.Add([]byte(`{"schema_version":1,"event":"before_tool","provider":"p","session_id":"s","payload":{}}`))
++	f.Add([]byte(`{}`))
++	f.Add([]byte(``))
++	f.Add([]byte(`{"schema_version":1,"event":"unknown","provider":"p","session_id":"s","payload":{}}`))
++	f.Add([]byte(`{"schema_version":2,"event":"before_tool","provider":"p","session_id":"s","payload":{}}`))
++	f.Add([]byte(`{"schema_version":1,"event":"before_tool","provider":"p","session_id":"s","payload":{},"extra":1}`))
++	f.Add([]byte(`not json`))
++	f.Add([]byte(`null`))
++
++	decoder := NewDecoder()
++	f.Fuzz(func(t *testing.T, data []byte) {
++		envelope, err := decoder.Decode(data)
++		if err != nil {
++			return
++		}
++		if !envelope.Event.Valid() {
++			t.Fatalf("Decode succeeded with invalid EventKind %d for input %q", int(envelope.Event), data)
++		}
++		if !SchemaVersionSupported(envelope.SchemaVersion) {
++			t.Fatalf("Decode succeeded with unsupported schema version %d for input %q", envelope.SchemaVersion, data)
++		}
++	})
++}
+diff --git a/internal/hookcontract/result.go b/internal/hookcontract/result.go
+new file mode 100644
+index 0000000..95e16e0
+--- /dev/null
++++ b/internal/hookcontract/result.go
+@@ -0,0 +1,129 @@
++package hookcontract
++
++import (
++	"errors"
++	"fmt"
++	"strings"
++)
++
++type Decision int
++
++const (
++	DecisionAllow Decision = iota + 1
++	DecisionBlock
++	DecisionWarn
++	DecisionNotApplicable
++	DecisionError
++)
++
++func (d Decision) Valid() bool {
++	return d >= DecisionAllow && d <= DecisionError
++}
++
++func (d Decision) String() string {
++	switch d {
++	case DecisionAllow:
++		return "ALLOW"
++	case DecisionBlock:
++		return "BLOCK"
++	case DecisionWarn:
++		return "WARN"
++	case DecisionNotApplicable:
++		return "NOT_APPLICABLE"
++	case DecisionError:
++		return "ERROR"
++	default:
++		return "UNKNOWN"
++	}
++}
++
++type EvidenceRef string
++
++var ErrInvalidResult = errors.New("invalid hook result")
++
++type Result struct {
++	decision Decision
++	reason   string
++	policyID string
++	gateID   string
++	evidence []EvidenceRef
++	metadata map[string]string
++	valid    bool
++}
++
++func NewResult(decision Decision, reason, policyID, gateID string) (Result, error) {
++	if !decision.Valid() {
++		return Result{}, fmt.Errorf("%w: invalid decision %d", ErrInvalidResult, int(decision))
++	}
++	if decision == DecisionBlock {
++		if strings.TrimSpace(reason) == "" {
++			return Result{}, fmt.Errorf("%w: block requires a reason", ErrInvalidResult)
++		}
++		if strings.TrimSpace(policyID) == "" && strings.TrimSpace(gateID) == "" {
++			return Result{}, fmt.Errorf("%w: block requires policyID or gateID", ErrInvalidResult)
++		}
++	}
++	return Result{
++		decision: decision,
++		reason:   reason,
++		policyID: policyID,
++		gateID:   gateID,
++		valid:    true,
++	}, nil
++}
++
++func NewAllow() Result {
++	return Result{decision: DecisionAllow, valid: true}
++}
++
++func NewNotApplicable(reason string) Result {
++	return Result{decision: DecisionNotApplicable, reason: reason, valid: true}
++}
++
++func (r Result) WithEvidence(refs ...EvidenceRef) Result {
++	cloned := r
++	cloned.evidence = append([]EvidenceRef(nil), refs...)
++	return cloned
++}
++
++func (r Result) WithMetadata(metadata map[string]string) Result {
++	cloned := r
++	clonedMap := make(map[string]string, len(metadata))
++	for key, value := range metadata {
++		clonedMap[key] = value
++	}
++	cloned.metadata = clonedMap
++	return cloned
++}
++
++func (r Result) Decision() Decision {
++	return r.decision
++}
++
++func (r Result) Reason() string {
++	return r.reason
++}
++
++func (r Result) PolicyID() string {
++	return r.policyID
++}
++
++func (r Result) GateID() string {
++	return r.gateID
++}
++
++func (r Result) Evidence() []EvidenceRef {
++	return append([]EvidenceRef(nil), r.evidence...)
++}
++
++func (r Result) Metadata() map[string]string {
++	cloned := make(map[string]string, len(r.metadata))
++	for key, value := range r.metadata {
++		cloned[key] = value
++	}
++	return cloned
++}
++
++func (r Result) Valid() bool {
++	return r.valid
++}
+diff --git a/internal/hookcontract/result_test.go b/internal/hookcontract/result_test.go
+new file mode 100644
+index 0000000..393e23f
+--- /dev/null
++++ b/internal/hookcontract/result_test.go
+@@ -0,0 +1,102 @@
++package hookcontract
++
++import (
++	"errors"
++	"testing"
++)
++
++func TestResult_BlockRequiresReasonAndPolicy(t *testing.T) {
++	tests := []struct {
++		name     string
++		reason   string
++		policyID string
++		gateID   string
++		wantErr  bool
++	}{
++		{"missing reason and policy", "", "", "", true},
++		{"missing reason only", "", "P-1", "", true},
++		{"missing policy and gate", "denied", "", "", true},
++		{"reason and policyID", "denied", "P-1", "", false},
++		{"reason and gateID", "denied", "", "G-1", false},
++	}
++
++	for _, tt := range tests {
++		t.Run(tt.name, func(t *testing.T) {
++			_, err := NewResult(DecisionBlock, tt.reason, tt.policyID, tt.gateID)
++			if tt.wantErr && !errors.Is(err, ErrInvalidResult) {
++				t.Fatalf("error = %v, want ErrInvalidResult", err)
++			}
++			if !tt.wantErr && err != nil {
++				t.Fatalf("unexpected error: %v", err)
++			}
++		})
++	}
++}
++
++func TestResult_NonBlockDecisionsDoNotRequireReason(t *testing.T) {
++	for _, decision := range []Decision{DecisionAllow, DecisionWarn, DecisionNotApplicable, DecisionError} {
++		if _, err := NewResult(decision, "", "", ""); err != nil {
++			t.Fatalf("decision %v unexpected error: %v", decision, err)
++		}
++	}
++}
++
++func TestResult_RejectsInvalidDecision(t *testing.T) {
++	if _, err := NewResult(Decision(99), "reason", "P-1", ""); !errors.Is(err, ErrInvalidResult) {
++		t.Fatalf("error = %v, want ErrInvalidResult", err)
++	}
++}
++
++func TestNewAllow_IsAlwaysValid(t *testing.T) {
++	result := NewAllow()
++	if !result.Valid() {
++		t.Fatal("NewAllow() must be Valid()")
++	}
++	if result.Decision() != DecisionAllow {
++		t.Fatalf("Decision() = %v, want DecisionAllow", result.Decision())
++	}
++}
++
++func TestNewNotApplicable_CarriesReason(t *testing.T) {
++	result := NewNotApplicable("no policy configured for this event")
++	if result.Decision() != DecisionNotApplicable {
++		t.Fatalf("Decision() = %v, want DecisionNotApplicable", result.Decision())
++	}
++	if result.Reason() != "no policy configured for this event" {
++		t.Fatalf("Reason() = %q", result.Reason())
++	}
++}
++
++func TestResult_WithEvidenceAndMetadataAreImmutableCopies(t *testing.T) {
++	base := NewAllow()
++	withEvidence := base.WithEvidence("evidence-1", "evidence-2")
++	if len(base.Evidence()) != 0 {
++		t.Fatal("base Result must remain unaffected by WithEvidence")
++	}
++	if len(withEvidence.Evidence()) != 2 {
++		t.Fatalf("Evidence() len = %d, want 2", len(withEvidence.Evidence()))
++	}
++
++	withMetadata := base.WithMetadata(map[string]string{"key": "value"})
++	if len(base.Metadata()) != 0 {
++		t.Fatal("base Result must remain unaffected by WithMetadata")
++	}
++	if withMetadata.Metadata()["key"] != "value" {
++		t.Fatal("WithMetadata did not persist key")
++	}
++}
++
++func TestDecision_StringValues(t *testing.T) {
++	tests := map[Decision]string{
++		DecisionAllow:         "ALLOW",
++		DecisionBlock:         "BLOCK",
++		DecisionWarn:          "WARN",
++		DecisionNotApplicable: "NOT_APPLICABLE",
++		DecisionError:         "ERROR",
++	}
++	for decision, want := range tests {
++		if got := decision.String(); got != want {
++			t.Fatalf("Decision(%d).String() = %q, want %q", int(decision), got, want)
++		}
++	}
++}

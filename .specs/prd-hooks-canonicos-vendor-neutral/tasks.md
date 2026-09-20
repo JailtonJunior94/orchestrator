@@ -26,7 +26,7 @@
 | 1.0 | Inventario e classificacao de hooks com gate anti-orfao | done | — | Com 2.0, 3.0 | — |
 | 2.0 | Parsing de payload sem truncamento e negacao por ausencia de alvo | pending | — | Com 1.0, 3.0 | — |
 | 3.0 | Instrumentacao de pre-requisito: tmp em gates, exaustividade de linguagens e prova por celula | done | — | Com 1.0, 2.0 | — |
-| 4.0 | Contrato canonico de hooks em internal/hookcontract | pending | 1.0 | Não | — |
+| 4.0 | Contrato canonico de hooks em internal/hookcontract | done | 1.0 | Não | — |
 | 5.0 | Projecoes dos dois modelos de ponto, correcao de Kind e erros nao descartados | pending | 4.0 | Com 7.0 | — |
 | 6.0 | Harness contract aplicado e gate de operacao git derivado da policy | pending | 2.0, 4.0 | Com 7.0 | — |
 | 7.0 | Igualdade entre stacks: dotnet completo e java como cidadao de primeira classe | pending | 3.0 | Com 5.0, 6.0 | — |
