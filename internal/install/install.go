@@ -635,6 +635,9 @@ func preconditionVerifyState(state specs.PreconditionState) VerifyState {
 func enforcementNativeKeys(enf specs.Enforcement) []string {
 	keys := make([]string, 0, len(enf.Coverage()))
 	for _, cov := range enf.Coverage() {
+		if cov.ScriptPath() == "" {
+			continue
+		}
 		keys = append(keys, cov.NativeKey())
 	}
 	return keys
@@ -855,6 +858,7 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 		s.printer.DryRun("copiar scripts/lib/parse-hook-input.sh")
 		s.printer.DryRun("copiar scripts/lib/hook-payload.sh")
 		s.printer.DryRun("copiar scripts/lib/check-invocation-depth.sh")
+		s.printer.DryRun("configurar hooks PreToolUse e PostToolUse em .claude/settings.json (versionado)")
 		s.printer.DryRun("configurar hooks PreToolUse e PostToolUse em .claude/settings.local.json")
 		s.printer.DryRun("gerar .claude/agents/*.md via adaptadores")
 		return nil
@@ -940,8 +944,13 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
 }
 
 func (s *Service) writeClaudeSettings(projectDir string) error {
-	settingsFile := filepath.Join(projectDir, ".claude", "settings.local.json")
+	if err := s.writeMergedClaudeSettings(filepath.Join(projectDir, ".claude", "settings.json")); err != nil {
+		return err
+	}
+	return s.writeMergedClaudeSettings(filepath.Join(projectDir, ".claude", "settings.local.json"))
+}
 
+func (s *Service) writeMergedClaudeSettings(settingsFile string) error {
 	var existing []byte
 	if s.fs.Exists(settingsFile) {
 		data, err := s.fs.ReadFile(settingsFile)
@@ -957,7 +966,7 @@ func (s *Service) writeClaudeSettings(projectDir string) error {
 
 	merged, err := NewHelper().mergeClaudeSettings(existing)
 	if err != nil {
-		return fmt.Errorf("merge .claude/settings.local.json: %w", err)
+		return fmt.Errorf("merge %s: %w", settingsFile, err)
 	}
 	if err := s.fs.WriteFile(settingsFile, merged); err != nil {
 		return err
@@ -1226,7 +1235,7 @@ func (s *Service) installCopilot(sourceDir, projectDir string, skillList []strin
 		if err := s.trackInstalled(governanceHooks); err != nil {
 			return err
 		}
-		settings := filepath.Join(projectDir, ".github", "settings.json")
+		settings := filepath.Join(projectDir, ".github", "copilot", "settings.json")
 		var existing []byte
 		if s.fs.Exists(settings) {
 			data, err := s.fs.ReadFile(settings)

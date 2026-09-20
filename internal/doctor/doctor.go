@@ -552,6 +552,9 @@ func (s *Service) checkCodexTrustedHash(projectDir string) Check {
 
 	required := make([]string, 0, len(agent.Enforcement().Coverage()))
 	for _, cov := range agent.Enforcement().Coverage() {
+		if cov.ScriptPath() == "" {
+			continue
+		}
 		required = append(required, cov.NativeKey())
 	}
 

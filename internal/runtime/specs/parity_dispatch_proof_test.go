@@ -39,25 +39,41 @@ func (c dispatchProofCase) key() string {
 
 var dispatchProofRegistry = map[string]map[specs.CanonicalPoint]dispatchProofCase{
 	"claude": {
-		specs.PointPreTool:    {TestName: "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing", Subtest: "claude"},
-		specs.PointPostTool:   {TestName: "TestPostToolHookDispatchBlocksGovernanceFileEdit", Subtest: "claude"},
-		specs.PointSessionEnd: {TestName: "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict", Subtest: "claude"},
+		specs.PointPreTool:        {TestName: "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing", Subtest: "claude"},
+		specs.PointPostTool:       {TestName: "TestPostToolHookDispatchBlocksGovernanceFileEdit", Subtest: "claude"},
+		specs.PointBeforeComplete: {TestName: "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict", Subtest: "claude"},
 	},
 	"codex": {
-		specs.PointPreTool:    {TestName: "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing", Subtest: "codex"},
-		specs.PointPostTool:   {TestName: "TestPostToolHookDispatchBlocksGovernanceFileEdit", Subtest: "codex"},
-		specs.PointSessionEnd: {TestName: "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict", Subtest: "codex"},
+		specs.PointPreTool:        {TestName: "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing", Subtest: "codex"},
+		specs.PointPostTool:       {TestName: "TestPostToolHookDispatchBlocksGovernanceFileEdit", Subtest: "codex"},
+		specs.PointBeforeComplete: {TestName: "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict", Subtest: "codex"},
 	},
 	"copilot": {
-		specs.PointPreTool:    {TestName: "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing", Subtest: "copilot"},
-		specs.PointPostTool:   {TestName: "TestPostToolHookDispatchBlocksGovernanceFileEdit", Subtest: "copilot"},
-		specs.PointSessionEnd: {TestName: "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict", Subtest: "copilot"},
+		specs.PointPreTool:        {TestName: "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing", Subtest: "copilot"},
+		specs.PointPostTool:       {TestName: "TestPostToolHookDispatchBlocksGovernanceFileEdit", Subtest: "copilot"},
+		specs.PointBeforeComplete: {TestName: "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict", Subtest: "copilot"},
 	},
 	"opencode": {
-		specs.PointPreTool:    {TestName: "TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing"},
-		specs.PointPostTool:   {TestName: "TestOpenCodeGovernancePluginToolExecuteAfterObservesValidatorWithoutBlocking"},
-		specs.PointSessionEnd: {TestName: "TestOpenCodeGovernancePluginSessionIdleBlocksActiveTaskWithoutApprovedVerdict"},
+		specs.PointPreTool:        {TestName: "TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing"},
+		specs.PointPostTool:       {TestName: "TestOpenCodeGovernancePluginToolExecuteAfterObservesValidatorWithoutBlocking"},
+		specs.PointBeforeComplete: {TestName: "TestOpenCodeGovernancePluginSessionIdleBlocksActiveTaskWithoutApprovedVerdict"},
 	},
+}
+
+func scriptedCanonicalPoints(t *testing.T, agentID string) []specs.CanonicalPoint {
+	t.Helper()
+	agent, err := specs.NewCatalog().AgentByID(agentID)
+	if err != nil {
+		t.Fatalf("AgentByID(%s): %v", agentID, err)
+	}
+	var points []specs.CanonicalPoint
+	for _, cov := range agent.Enforcement().Coverage() {
+		if cov.ScriptPath() == "" {
+			continue
+		}
+		points = append(points, cov.Point())
+	}
+	return points
 }
 
 func repoRoot(t *testing.T) string {
@@ -270,15 +286,15 @@ func TestDispatchProofRegistryNamesExistingIntegrationTests(t *testing.T) {
 func TestDispatchProofRegistryCoversEveryMandatoryCell(t *testing.T) {
 	t.Parallel()
 
-	points := specs.NewCatalog().CanonicalPoints()
 	for _, agentID := range mandatoryParityAgents {
+		points := scriptedCanonicalPoints(t, agentID)
 		byPoint, ok := dispatchProofRegistry[agentID]
 		if !ok {
 			t.Errorf("agent %q has no dispatch proof entry", agentID)
 			continue
 		}
 		if len(byPoint) != len(points) {
-			t.Errorf("agent %q declares %d dispatch proofs; want %d", agentID, len(byPoint), len(points))
+			t.Errorf("agent %q declares %d dispatch proofs; want %d (scripted canonical points)", agentID, len(byPoint), len(points))
 		}
 		for _, point := range points {
 			if byPoint[point].TestName == "" {
@@ -290,10 +306,9 @@ func TestDispatchProofRegistryCoversEveryMandatoryCell(t *testing.T) {
 
 func TestEveryMandatoryCellHasExecutionEvidence(t *testing.T) {
 	evidence := dispatchExecutionEvidence(t)
-	points := specs.NewCatalog().CanonicalPoints()
 
 	for _, agentID := range mandatoryParityAgents {
-		for _, point := range points {
+		for _, point := range scriptedCanonicalPoints(t, agentID) {
 			proof := dispatchProofRegistry[agentID][point]
 			if proof.TestName == "" {
 				t.Errorf("agent=%s point=%s has no dispatch proof declared", agentID, point)

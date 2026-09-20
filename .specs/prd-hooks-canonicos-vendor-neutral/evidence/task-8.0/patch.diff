@@ -1,0 +1,1539 @@
+diff --git a/.github/workflows/release-dry-run.yml b/.github/workflows/release-dry-run.yml
+index 0f87a0e..57c2c80 100644
+--- a/.github/workflows/release-dry-run.yml
++++ b/.github/workflows/release-dry-run.yml
+@@ -49,6 +49,9 @@ jobs:
+           fi
+           echo "OK: tag v${TARGET} does not exist (expected)"
+ 
++      - name: Check Codex hook trust (RF-51..RF-56 release gate)
++        run: ./ai-spec doctor . --codex-trust
++
+       - name: Validate working tree is clean
+         run: |
+           # Only check tracked files — build artifacts (ai-spec binary) are intentionally untracked
+diff --git a/internal/contextgen/contextgen.go b/internal/contextgen/contextgen.go
+index a0cff72..d336651 100644
+--- a/internal/contextgen/contextgen.go
++++ b/internal/contextgen/contextgen.go
+@@ -190,7 +190,7 @@ var harnessGeneratedPaths = map[string]bool{
+ 	".github/skills":                  true,
+ 	".github/agents":                  true,
+ 	".github/hooks":                   true,
+-	".github/settings.json":           true,
++	".github/copilot/settings.json":   true,
+ 	".github/copilot-instructions.md": true,
+ }
+ 
+diff --git a/internal/contextgen/directory_tree_test.go b/internal/contextgen/directory_tree_test.go
+index de89798..8992f42 100644
+--- a/internal/contextgen/directory_tree_test.go
++++ b/internal/contextgen/directory_tree_test.go
+@@ -18,10 +18,11 @@ func TestBuildDirectoryTree_ExcludesHarnessGeneratedArtifacts(t *testing.T) {
+ 	ffs.Dirs["/project/.github/skills"] = true
+ 	ffs.Dirs["/project/.github/agents"] = true
+ 	ffs.Dirs["/project/.github/hooks"] = true
++	ffs.Dirs["/project/.github/copilot"] = true
+ 	ffs.Files["/project/main.go"] = []byte("package main\n")
+ 	ffs.Files["/project/.github/workflows/ci.yml"] = []byte("name: ci\n")
+ 	ffs.Files["/project/.github/copilot-instructions.md"] = []byte("gerado\n")
+-	ffs.Files["/project/.github/settings.json"] = []byte("{}\n")
++	ffs.Files["/project/.github/copilot/settings.json"] = []byte("{}\n")
+ 	ffs.Files["/project/.ai_spec_harness.json"] = []byte("{}\n")
+ 
+ 	tree := NewGenerator(ffs, output.New(false)).buildDirectoryTree("/project")
+@@ -29,7 +30,7 @@ func TestBuildDirectoryTree_ExcludesHarnessGeneratedArtifacts(t *testing.T) {
+ 	for _, generated := range []string{
+ 		".ai_spec_harness.json",
+ 		".github/copilot-instructions.md",
+-		".github/settings.json",
++		".github/copilot/settings.json",
+ 		".github/skills",
+ 		".github/agents",
+ 		".github/hooks",
+diff --git a/internal/doctor/doctor.go b/internal/doctor/doctor.go
+index ef16cba..8efea05 100644
+--- a/internal/doctor/doctor.go
++++ b/internal/doctor/doctor.go
+@@ -552,6 +552,9 @@ func (s *Service) checkCodexTrustedHash(projectDir string) Check {
+ 
+ 	required := make([]string, 0, len(agent.Enforcement().Coverage()))
+ 	for _, cov := range agent.Enforcement().Coverage() {
++		if cov.ScriptPath() == "" {
++			continue
++		}
+ 		required = append(required, cov.NativeKey())
+ 	}
+ 
+diff --git a/internal/install/copilot_settings_roundtrip_test.go b/internal/install/copilot_settings_roundtrip_test.go
+index 68884d0..ce52aad 100644
+--- a/internal/install/copilot_settings_roundtrip_test.go
++++ b/internal/install/copilot_settings_roundtrip_test.go
+@@ -24,9 +24,9 @@ func installCopilotSettings(t *testing.T, ffs *fs.FakeFileSystem) []byte {
+ 	}); err != nil {
+ 		t.Fatalf("install copilot: %v", err)
+ 	}
+-	data, err := ffs.ReadFile("/project/.github/settings.json")
++	data, err := ffs.ReadFile("/project/.github/copilot/settings.json")
+ 	if err != nil {
+-		t.Fatalf("read .github/settings.json: %v", err)
++		t.Fatalf("read .github/copilot/settings.json: %v", err)
+ 	}
+ 	return data
+ }
+@@ -69,7 +69,7 @@ func TestInstallCopilotPreservesAuthoredSettingsFormatting(t *testing.T) {
+ 			ffs := fs.NewFakeFileSystem()
+ 			ffs.Dirs["/project"] = true
+ 			ffs.Dirs["/source"] = true
+-			ffs.Files["/project/.github/settings.json"] = []byte(tc.authored)
++			ffs.Files["/project/.github/copilot/settings.json"] = []byte(tc.authored)
+ 
+ 			merged := installCopilotSettings(t, ffs)
+ 
+@@ -104,12 +104,12 @@ func TestInstallCopilotPreservesAuthoredSettingsFormatting(t *testing.T) {
+ 	}
+ }
+ 
+-func TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings(t *testing.T) {
++func TestInstallCopilotMigratesObsoleteStopKeysInSettings(t *testing.T) {
+ 	t.Parallel()
+ 
+-	legacyEntry := map[string]any{"type": "command", "bash": "bash .github/hooks/legacy-session-end.sh"}
++	legacyEntry := map[string]any{"type": "command", "bash": "bash .github/hooks/legacy-stop.sh"}
+ 
+-	for _, obsolete := range []string{"stop", "Stop", "sessionEnd", "SessionEnd"} {
++	for _, obsolete := range []string{"stop", "Stop"} {
+ 		t.Run(obsolete, func(t *testing.T) {
+ 			t.Parallel()
+ 
+@@ -123,7 +123,7 @@ func TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings(t *testing.T) {
+ 			ffs := fs.NewFakeFileSystem()
+ 			ffs.Dirs["/project"] = true
+ 			ffs.Dirs["/source"] = true
+-			ffs.Files["/project/.github/settings.json"] = authored
++			ffs.Files["/project/.github/copilot/settings.json"] = authored
+ 
+ 			merged := installCopilotSettings(t, ffs)
+ 
+@@ -145,7 +145,7 @@ func TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings(t *testing.T) {
+ 			found := false
+ 			for _, entry := range agentStop {
+ 				encoded, marshalErr := json.Marshal(entry)
+-				if marshalErr == nil && strings.Contains(string(encoded), "legacy-session-end.sh") {
++				if marshalErr == nil && strings.Contains(string(encoded), "legacy-stop.sh") {
+ 					found = true
+ 				}
+ 			}
+@@ -155,3 +155,59 @@ func TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings(t *testing.T) {
+ 		})
+ 	}
+ }
++
++func TestInstallCopilotPreservesSessionEndAsADistinctEvent(t *testing.T) {
++	t.Parallel()
++
++	realSessionEndEntry := map[string]any{"type": "command", "bash": "bash .github/hooks/my-session-end.sh"}
++
++	for _, key := range []string{"sessionEnd", "SessionEnd"} {
++		t.Run(key, func(t *testing.T) {
++			t.Parallel()
++
++			authored, err := json.MarshalIndent(map[string]any{
++				"hooks": map[string]any{key: []any{realSessionEndEntry}},
++			}, "", "  ")
++			if err != nil {
++				t.Fatalf("marshal authored settings: %v", err)
++			}
++
++			ffs := fs.NewFakeFileSystem()
++			ffs.Dirs["/project"] = true
++			ffs.Dirs["/source"] = true
++			ffs.Files["/project/.github/copilot/settings.json"] = authored
++
++			merged := installCopilotSettings(t, ffs)
++
++			var settings map[string]any
++			if err := json.Unmarshal(merged, &settings); err != nil {
++				t.Fatalf("merged settings is not valid JSON: %v\n%s", err, merged)
++			}
++			hooks, ok := settings["hooks"].(map[string]any)
++			if !ok {
++				t.Fatalf("merged settings has no hooks object: %s", merged)
++			}
++			entries, exists := hooks[key].([]any)
++			if !exists {
++				t.Fatalf("SessionEnd is a real, distinct Copilot event (RF-53) and must survive the merge under %q, not be folded into agentStop: %s", key, merged)
++			}
++			found := false
++			for _, entry := range entries {
++				encoded, marshalErr := json.Marshal(entry)
++				if marshalErr == nil && strings.Contains(string(encoded), "my-session-end.sh") {
++					found = true
++				}
++			}
++			if !found {
++				t.Fatalf("authored SessionEnd entry was dropped: %s", merged)
++			}
++			agentStop, _ := hooks["agentStop"].([]any)
++			for _, entry := range agentStop {
++				encoded, marshalErr := json.Marshal(entry)
++				if marshalErr == nil && strings.Contains(string(encoded), "my-session-end.sh") {
++					t.Fatalf("SessionEnd entry leaked into agentStop, resurrecting the turn-end/session-end confusion this PRD fixes: %s", merged)
++				}
++			}
++		})
++	}
++}
+diff --git a/internal/install/hooks_parity_matrix_test.go b/internal/install/hooks_parity_matrix_test.go
+index e4ff93f..2e0ada6 100644
+--- a/internal/install/hooks_parity_matrix_test.go
++++ b/internal/install/hooks_parity_matrix_test.go
+@@ -92,15 +92,15 @@ func TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator(t *testing.T)
+ 	t.Parallel()
+ 
+ 	points := specs.NewCatalog().CanonicalPoints()
+-	if len(points) != 3 {
+-		t.Fatalf("expected 3 canonical points, got %d", len(points))
++	if len(points) != 5 {
++		t.Fatalf("expected 5 canonical points, got %d", len(points))
+ 	}
+ 	if len(mandatoryMatrixAgents) != 4 {
+ 		t.Fatalf("expected 4 mandatory agents, got %d", len(mandatoryMatrixAgents))
+ 	}
+ 	expectedCells := len(mandatoryMatrixAgents) * len(points)
+-	if expectedCells != 12 {
+-		t.Fatalf("mandatory matrix must cover 4 agents x 3 canonical points = 12 cells; got %d", expectedCells)
++	if expectedCells != 20 {
++		t.Fatalf("mandatory matrix must cover 4 agents x 5 canonical points = 20 cells; got %d", expectedCells)
+ 	}
+ 
+ 	requiredAgents := make([]string, 0, len(mandatoryMatrixAgents))
+diff --git a/internal/install/install.go b/internal/install/install.go
+index ad4dfbe..8f1d828 100644
+--- a/internal/install/install.go
++++ b/internal/install/install.go
+@@ -635,6 +635,9 @@ func preconditionVerifyState(state specs.PreconditionState) VerifyState {
+ func enforcementNativeKeys(enf specs.Enforcement) []string {
+ 	keys := make([]string, 0, len(enf.Coverage()))
+ 	for _, cov := range enf.Coverage() {
++		if cov.ScriptPath() == "" {
++			continue
++		}
+ 		keys = append(keys, cov.NativeKey())
+ 	}
+ 	return keys
+@@ -855,6 +858,7 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
+ 		s.printer.DryRun("copiar scripts/lib/parse-hook-input.sh")
+ 		s.printer.DryRun("copiar scripts/lib/hook-payload.sh")
+ 		s.printer.DryRun("copiar scripts/lib/check-invocation-depth.sh")
++		s.printer.DryRun("configurar hooks PreToolUse e PostToolUse em .claude/settings.json (versionado)")
+ 		s.printer.DryRun("configurar hooks PreToolUse e PostToolUse em .claude/settings.local.json")
+ 		s.printer.DryRun("gerar .claude/agents/*.md via adaptadores")
+ 		return nil
+@@ -940,8 +944,13 @@ func (s *Service) installClaude(sourceDir, projectDir string, skillList []string
+ }
+ 
+ func (s *Service) writeClaudeSettings(projectDir string) error {
+-	settingsFile := filepath.Join(projectDir, ".claude", "settings.local.json")
++	if err := s.writeMergedClaudeSettings(filepath.Join(projectDir, ".claude", "settings.json")); err != nil {
++		return err
++	}
++	return s.writeMergedClaudeSettings(filepath.Join(projectDir, ".claude", "settings.local.json"))
++}
+ 
++func (s *Service) writeMergedClaudeSettings(settingsFile string) error {
+ 	var existing []byte
+ 	if s.fs.Exists(settingsFile) {
+ 		data, err := s.fs.ReadFile(settingsFile)
+@@ -957,7 +966,7 @@ func (s *Service) writeClaudeSettings(projectDir string) error {
+ 
+ 	merged, err := NewHelper().mergeClaudeSettings(existing)
+ 	if err != nil {
+-		return fmt.Errorf("merge .claude/settings.local.json: %w", err)
++		return fmt.Errorf("merge %s: %w", settingsFile, err)
+ 	}
+ 	if err := s.fs.WriteFile(settingsFile, merged); err != nil {
+ 		return err
+@@ -1226,7 +1235,7 @@ func (s *Service) installCopilot(sourceDir, projectDir string, skillList []strin
+ 		if err := s.trackInstalled(governanceHooks); err != nil {
+ 			return err
+ 		}
+-		settings := filepath.Join(projectDir, ".github", "settings.json")
++		settings := filepath.Join(projectDir, ".github", "copilot", "settings.json")
+ 		var existing []byte
+ 		if s.fs.Exists(settings) {
+ 			data, err := s.fs.ReadFile(settings)
+diff --git a/internal/install/install_test.go b/internal/install/install_test.go
+index 46734af..c25d3da 100644
+--- a/internal/install/install_test.go
++++ b/internal/install/install_test.go
+@@ -9,6 +9,7 @@ import (
+ 	"strings"
+ 	"sync"
+ 	"testing"
++	"time"
+ 
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/config"
+@@ -2218,14 +2219,14 @@ func TestInstall_Copilot_NativeHooks(t *testing.T) {
+ 		t.Fatalf("unexpected error: %v", err)
+ 	}
+ 
+-	data, err := ffs.ReadFile("/project/.github/settings.json")
++	data, err := ffs.ReadFile("/project/.github/copilot/settings.json")
+ 	if err != nil {
+-		t.Fatalf(".github/settings.json nao criado: %v", err)
++		t.Fatalf(".github/copilot/settings.json nao criado: %v", err)
+ 	}
+ 	content := string(data)
+ 	for _, want := range []string{`"hooks"`, "preToolUse", "agentStop", "validate-preload.sh"} {
+ 		if !strings.Contains(content, want) {
+-			t.Errorf(".github/settings.json sem %q", want)
++			t.Errorf(".github/copilot/settings.json sem %q", want)
+ 		}
+ 	}
+ 	if !ffs.Exists("/project/.github/hooks/governance.json") {
+@@ -2238,7 +2239,7 @@ func TestInstall_Copilot_MergesRepositorySettings(t *testing.T) {
+ 	ffs := fs.NewFakeFileSystem()
+ 	ffs.Dirs["/project"] = true
+ 	ffs.Dirs["/source"] = true
+-	ffs.Files["/project/.github/settings.json"] = []byte(`{
++	ffs.Files["/project/.github/copilot/settings.json"] = []byte(`{
+   "custom": {"preserved": true},
+   "hooks": {
+     "preToolUse": [{"type": "command", "bash": "bash user-hook.sh"}]
+@@ -2255,7 +2256,7 @@ func TestInstall_Copilot_MergesRepositorySettings(t *testing.T) {
+ 		t.Fatalf("unexpected error: %v", err)
+ 	}
+ 
+-	data, err := ffs.ReadFile("/project/.github/settings.json")
++	data, err := ffs.ReadFile("/project/.github/copilot/settings.json")
+ 	if err != nil {
+ 		t.Fatalf("read settings: %v", err)
+ 	}
+@@ -2286,7 +2287,7 @@ func TestInstall_Copilot_MergesRepositorySettings(t *testing.T) {
+ 	}); err != nil {
+ 		t.Fatalf("second install: %v", err)
+ 	}
+-	data, err = ffs.ReadFile("/project/.github/settings.json")
++	data, err = ffs.ReadFile("/project/.github/copilot/settings.json")
+ 	if err != nil {
+ 		t.Fatalf("read settings after second install: %v", err)
+ 	}
+@@ -2327,3 +2328,69 @@ func TestInstall_Codex_NativeHooksAndSandbox(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestInstall_TouchesOnlyConfiguredProviders(t *testing.T) {
++	t.Parallel()
++	ffs := fs.NewFakeFileSystem()
++	ffs.Dirs["/project"] = true
++	ffs.Dirs["/source"] = true
++	svc := setupTestService(ffs)
++
++	if err := svc.Execute(config.InstallOptions{
++		ProjectDir: "/project",
++		SourceDir:  "/source",
++		Tools:      []skills.Tool{skills.ToolClaude},
++		LinkMode:   skills.LinkCopy,
++	}); err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	unconfiguredProviderPaths := []string{
++		"/project/.codex",
++		"/project/.github",
++		"/project/.opencode",
++		"/project/.config/opencode",
++	}
++	for _, path := range unconfiguredProviderPaths {
++		if ffs.Exists(path) {
++			t.Errorf("RF-71: instalar apenas claude nao deve tocar %q, provedor nao configurado", path)
++			continue
++		}
++		for file := range ffs.Files {
++			if strings.HasPrefix(file, path+"/") {
++				t.Errorf("RF-71: arquivo %q pertence a provedor nao configurado %q", file, path)
++			}
++		}
++	}
++
++	if !ffs.Exists("/project/.claude") {
++		t.Fatal("provedor configurado (claude) deveria ter sido instalado")
++	}
++}
++
++func TestInstall_NeverSpawnsAResidentProcess(t *testing.T) {
++	t.Parallel()
++	ffs := fs.NewFakeFileSystem()
++	ffs.Dirs["/project"] = true
++	ffs.Dirs["/source"] = true
++	svc := setupTestService(ffs)
++
++	done := make(chan error, 1)
++	go func() {
++		done <- svc.Execute(config.InstallOptions{
++			ProjectDir: "/project",
++			SourceDir:  "/source",
++			Tools:      []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolOpenCode},
++			LinkMode:   skills.LinkCopy,
++		})
++	}()
++
++	select {
++	case err := <-done:
++		if err != nil {
++			t.Fatalf("unexpected error: %v", err)
++		}
++	case <-time.After(10 * time.Second):
++		t.Fatal("RF-72: svc.Execute nao retornou dentro do timeout — instalacao nao deve bloquear aguardando um processo residente/daemon")
++	}
++}
+diff --git a/internal/runtime/specs/enforcement.go b/internal/runtime/specs/enforcement.go
+index d97200d..ec9a686 100644
+--- a/internal/runtime/specs/enforcement.go
++++ b/internal/runtime/specs/enforcement.go
+@@ -12,8 +12,10 @@ import (
+ type CanonicalPoint int
+ 
+ const (
+-	PointPreTool CanonicalPoint = iota + 1
++	PointSessionStart CanonicalPoint = iota + 1
++	PointPreTool
+ 	PointPostTool
++	PointBeforeComplete
+ 	PointSessionEnd
+ )
+ 
+@@ -22,9 +24,11 @@ var canonicalPointEvents = []struct {
+ 	event hookcontract.EventKind
+ 	name  string
+ }{
++	{PointSessionStart, hookcontract.EventSessionStart, "session-start"},
+ 	{PointPreTool, hookcontract.EventBeforeTool, "pre-tool"},
+ 	{PointPostTool, hookcontract.EventAfterTool, "post-tool"},
+-	{PointSessionEnd, hookcontract.EventBeforeComplete, "session-end"},
++	{PointBeforeComplete, hookcontract.EventBeforeComplete, "before-complete"},
++	{PointSessionEnd, hookcontract.EventSessionEnd, "session-end"},
+ }
+ 
+ var canonicalPoints = derivedCanonicalPoints()
+@@ -63,7 +67,7 @@ func canonicalPointName(p CanonicalPoint) (string, bool) {
+ 
+ var ErrUnknownCanonicalPoint = errors.New("unknown canonical point")
+ 
+-var ErrIncompleteCoverage = errors.New("enforcement does not cover the three canonical points")
++var ErrIncompleteCoverage = errors.New("enforcement does not cover every canonical point")
+ 
+ var ErrInvalidPrecondition = errors.New("invalid enforcement precondition")
+ 
+@@ -153,6 +157,52 @@ func (c *Catalog) NewPointCoverage(agentID string, point CanonicalPoint, nativeK
+ 	return PointCoverage{agentID: agentID, point: point, nativeKey: nativeKey, scriptPath: scriptPath, artifactPath: artifactPath, state: hookcontract.SupportVerified}, nil
+ }
+ 
++func (c *Catalog) NewObservedPointCoverage(agentID string, point CanonicalPoint, nativeKey string) (PointCoverage, error) {
++	if !point.Valid() {
++		return PointCoverage{}, fmt.Errorf("%w: %d", ErrUnknownCanonicalPoint, int(point))
++	}
++	if strings.TrimSpace(agentID) == "" {
++		return PointCoverage{}, fmt.Errorf("%w: point %s missing agent id", ErrIncompleteCoverage, point)
++	}
++	if strings.TrimSpace(nativeKey) == "" {
++		return PointCoverage{}, fmt.Errorf("%w: point %s missing native key", ErrIncompleteCoverage, point)
++	}
++	recognized, known := RecognizedNativeKeys(agentID, point)
++	if !known {
++		return PointCoverage{}, fmt.Errorf("%w: agent %q has no declared hook vocabulary for point %s", ErrUnrecognizedNativeKey, agentID, point)
++	}
++	if !slices.Contains(recognized, nativeKey) {
++		return PointCoverage{}, fmt.Errorf("%w: agent %q point %s declares %q; %s recognizes only %v", ErrUnrecognizedNativeKey, agentID, point, nativeKey, agentID, recognized)
++	}
++	return PointCoverage{agentID: agentID, point: point, nativeKey: nativeKey, state: hookcontract.SupportVerified}, nil
++}
++
++func (c *Catalog) NewAdapterPointCoverage(agentID string, point CanonicalPoint, nativeKey, scriptPath, artifactPath, limitation string) (PointCoverage, error) {
++	if !point.Valid() {
++		return PointCoverage{}, fmt.Errorf("%w: %d", ErrUnknownCanonicalPoint, int(point))
++	}
++	if strings.TrimSpace(agentID) == "" {
++		return PointCoverage{}, fmt.Errorf("%w: point %s missing agent id", ErrIncompleteCoverage, point)
++	}
++	if strings.TrimSpace(nativeKey) == "" {
++		return PointCoverage{}, fmt.Errorf("%w: point %s missing native key", ErrIncompleteCoverage, point)
++	}
++	if strings.TrimSpace(limitation) == "" {
++		return PointCoverage{}, fmt.Errorf("%w: point %s declared adapter support without limitation", ErrIncompleteCoverage, point)
++	}
++	if (strings.TrimSpace(scriptPath) == "") != (strings.TrimSpace(artifactPath) == "") {
++		return PointCoverage{}, fmt.Errorf("%w: point %s must declare both canonical script and installed artifact, or neither", ErrIncompleteCoverage, point)
++	}
++	recognized, known := RecognizedNativeKeys(agentID, point)
++	if !known {
++		return PointCoverage{}, fmt.Errorf("%w: agent %q has no declared hook vocabulary for point %s", ErrUnrecognizedNativeKey, agentID, point)
++	}
++	if !slices.Contains(recognized, nativeKey) {
++		return PointCoverage{}, fmt.Errorf("%w: agent %q point %s declares %q; %s recognizes only %v", ErrUnrecognizedNativeKey, agentID, point, nativeKey, agentID, recognized)
++	}
++	return PointCoverage{agentID: agentID, point: point, nativeKey: nativeKey, scriptPath: scriptPath, artifactPath: artifactPath, state: hookcontract.SupportAdapter, reason: limitation}, nil
++}
++
+ func (c *Catalog) NewUnsupportedPointCoverage(agentID string, point CanonicalPoint, reason string) (PointCoverage, error) {
+ 	if !point.Valid() {
+ 		return PointCoverage{}, fmt.Errorf("%w: %d", ErrUnknownCanonicalPoint, int(point))
+@@ -182,12 +232,28 @@ func (c *Catalog) NewEnforcement(coverage []PointCoverage, preconditions ...Enfo
+ 		if !cov.point.Valid() {
+ 			return Enforcement{}, fmt.Errorf("%w: invalid point", ErrIncompleteCoverage)
+ 		}
+-		if cov.state == hookcontract.SupportUnsupported {
++		switch cov.state {
++		case hookcontract.SupportUnsupported:
+ 			if strings.TrimSpace(cov.reason) == "" {
+ 				return Enforcement{}, fmt.Errorf("%w: point %s declared unsupported without reason", ErrIncompleteCoverage, cov.point)
+ 			}
+-		} else if cov.nativeKey == "" || cov.scriptPath == "" || cov.artifactPath == "" {
+-			return Enforcement{}, fmt.Errorf("%w: point %s missing native key, canonical script or installed artifact", ErrIncompleteCoverage, cov.point)
++		case hookcontract.SupportAdapter:
++			if cov.nativeKey == "" {
++				return Enforcement{}, fmt.Errorf("%w: point %s missing native key", ErrIncompleteCoverage, cov.point)
++			}
++			if strings.TrimSpace(cov.reason) == "" {
++				return Enforcement{}, fmt.Errorf("%w: point %s declared adapter support without limitation", ErrIncompleteCoverage, cov.point)
++			}
++			if (cov.scriptPath == "") != (cov.artifactPath == "") {
++				return Enforcement{}, fmt.Errorf("%w: point %s must declare both canonical script and installed artifact, or neither", ErrIncompleteCoverage, cov.point)
++			}
++		default:
++			if cov.nativeKey == "" {
++				return Enforcement{}, fmt.Errorf("%w: point %s missing native key", ErrIncompleteCoverage, cov.point)
++			}
++			if (cov.scriptPath == "") != (cov.artifactPath == "") {
++				return Enforcement{}, fmt.Errorf("%w: point %s must declare both canonical script and installed artifact, or neither", ErrIncompleteCoverage, cov.point)
++			}
+ 		}
+ 		if seen[cov.point] {
+ 			return Enforcement{}, fmt.Errorf("%w: duplicate point %s", ErrIncompleteCoverage, cov.point)
+@@ -212,7 +278,7 @@ func (c *Catalog) NewEnforcement(coverage []PointCoverage, preconditions ...Enfo
+ }
+ 
+ func (p CanonicalPoint) Valid() bool {
+-	return p >= PointPreTool && p <= PointSessionEnd
++	return p >= PointSessionStart && p <= PointSessionEnd
+ }
+ 
+ func (p CanonicalPoint) String() string {
+@@ -268,6 +334,8 @@ func (c PointCoverage) State() hookcontract.SupportState { return c.state }
+ 
+ func (c PointCoverage) Reason() string { return c.reason }
+ 
++func (c PointCoverage) Limitation() string { return c.reason }
++
+ func (p EnforcementPrecondition) Kind() PreconditionKind { return p.kind }
+ 
+ func (p EnforcementPrecondition) Remedy() string { return p.remedy }
+diff --git a/internal/runtime/specs/enforcement_test.go b/internal/runtime/specs/enforcement_test.go
+index 7906f28..2d06dae 100644
+--- a/internal/runtime/specs/enforcement_test.go
++++ b/internal/runtime/specs/enforcement_test.go
+@@ -15,16 +15,30 @@ func coverageFixture(t *testing.T, p specs.CanonicalPoint) specs.PointCoverage {
+ 		t.Fatalf("no recognized native key for claude point %s", p)
+ 	}
+ 	artifact, ok := specs.InstalledArtifactPath("claude", p)
+-	if !ok {
+-		t.Fatalf("no installed artifact for claude point %s", p)
++	if ok {
++		cov, err := specs.NewCatalog().NewPointCoverage("claude", p, keys[0], ".agents/hooks/validate-preload.sh", artifact)
++		if err != nil {
++			t.Fatalf("NewPointCoverage(%s): %v", p, err)
++		}
++		return cov
+ 	}
+-	cov, err := specs.NewCatalog().NewPointCoverage("claude", p, keys[0], ".agents/hooks/validate-preload.sh", artifact)
++	cov, err := specs.NewCatalog().NewObservedPointCoverage("claude", p, keys[0])
+ 	if err != nil {
+-		t.Fatalf("NewPointCoverage(%s): %v", p, err)
++		t.Fatalf("NewObservedPointCoverage(%s): %v", p, err)
+ 	}
+ 	return cov
+ }
+ 
++func allCanonicalPoints() []specs.CanonicalPoint {
++	return []specs.CanonicalPoint{
++		specs.PointSessionStart,
++		specs.PointPreTool,
++		specs.PointPostTool,
++		specs.PointBeforeComplete,
++		specs.PointSessionEnd,
++	}
++}
++
+ func TestNewPointCoverageRejectsNativeKeyTheCliDoesNotRecognize(t *testing.T) {
+ 	t.Parallel()
+ 
+@@ -33,11 +47,11 @@ func TestNewPointCoverageRejectsNativeKeyTheCliDoesNotRecognize(t *testing.T) {
+ 		point     specs.CanonicalPoint
+ 		nativeKey string
+ 	}{
+-		{"copilot", specs.PointSessionEnd, "agentStop_TYPO"},
++		{"copilot", specs.PointBeforeComplete, "agentStop_TYPO"},
+ 		{"copilot", specs.PointPreTool, "PreToolUse"},
+ 		{"claude", specs.PointPreTool, "preToolUse"},
+-		{"opencode", specs.PointSessionEnd, "Stop"},
+-		{"codex", specs.PointSessionEnd, "SessionEnd"},
++		{"opencode", specs.PointBeforeComplete, "Stop"},
++		{"codex", specs.PointBeforeComplete, "SessionEnd"},
+ 	}
+ 
+ 	for _, tc := range cases {
+@@ -65,11 +79,7 @@ func TestNewPointCoverageRejectsUnknownAgentVocabulary(t *testing.T) {
+ func TestNewEnforcementRejectsIncompleteCoverage(t *testing.T) {
+ 	t.Parallel()
+ 
+-	all := []specs.CanonicalPoint{
+-		specs.PointPreTool,
+-		specs.PointPostTool,
+-		specs.PointSessionEnd,
+-	}
++	all := allCanonicalPoints()
+ 
+ 	for _, missing := range all {
+ 		var coverage []specs.PointCoverage
+@@ -85,10 +95,9 @@ func TestNewEnforcementRejectsIncompleteCoverage(t *testing.T) {
+ 		}
+ 	}
+ 
+-	complete := []specs.PointCoverage{
+-		coverageFixture(t, specs.PointPreTool),
+-		coverageFixture(t, specs.PointPostTool),
+-		coverageFixture(t, specs.PointSessionEnd),
++	var complete []specs.PointCoverage
++	for _, p := range all {
++		complete = append(complete, coverageFixture(t, p))
+ 	}
+ 	enf, err := specs.NewCatalog().NewEnforcement(complete)
+ 	if err != nil {
+@@ -103,8 +112,10 @@ func TestNewEnforcementAcceptsDeclaredUnsupportedPoint(t *testing.T) {
+ 	t.Parallel()
+ 
+ 	coverage := []specs.PointCoverage{
++		coverageFixture(t, specs.PointSessionStart),
+ 		coverageFixture(t, specs.PointPreTool),
+ 		coverageFixture(t, specs.PointPostTool),
++		coverageFixture(t, specs.PointBeforeComplete),
+ 	}
+ 	unsupported, err := specs.NewCatalog().NewUnsupportedPointCoverage("opencode", specs.PointSessionEnd, "provider has no native session-end hook")
+ 	if err != nil {
+@@ -148,19 +159,42 @@ func TestNewUnsupportedPointCoverageRequiresReason(t *testing.T) {
+ 	}
+ }
+ 
++func TestNewAdapterPointCoverageRequiresLimitation(t *testing.T) {
++	t.Parallel()
++
++	if _, err := specs.NewCatalog().NewAdapterPointCoverage("opencode", specs.PointSessionStart, "event.session.created", "", "", "   "); !errors.Is(err, specs.ErrIncompleteCoverage) {
++		t.Fatalf("empty limitation err = %v; want ErrIncompleteCoverage", err)
++	}
++	cov, err := specs.NewCatalog().NewAdapterPointCoverage("opencode", specs.PointSessionStart, "event.session.created", "", "", "no native session-start hook")
++	if err != nil {
++		t.Fatalf("valid adapter coverage rejected: %v", err)
++	}
++	if cov.State() != hookcontract.SupportAdapter {
++		t.Fatalf("State() = %v, want SupportAdapter", cov.State())
++	}
++	if cov.Limitation() == "" {
++		t.Fatal("adapter coverage lost its declared limitation")
++	}
++	if _, err := specs.NewCatalog().NewAdapterPointCoverage("opencode", specs.PointSessionStart, "event.session.created", ".agents/hooks/validate-preload.sh", "", "x"); !errors.Is(err, specs.ErrIncompleteCoverage) {
++		t.Fatalf("script without artifact err = %v; want ErrIncompleteCoverage", err)
++	}
++}
++
+ func TestCanonicalPointsDeriveFromHookContract(t *testing.T) {
+ 	t.Parallel()
+ 
+ 	catalog := specs.NewCatalog()
+ 	points := catalog.CanonicalPoints()
+-	if len(points) != 3 {
+-		t.Fatalf("len(points) = %d, want 3", len(points))
++	if len(points) != 5 {
++		t.Fatalf("len(points) = %d, want 5", len(points))
+ 	}
+ 
+ 	want := map[specs.CanonicalPoint]hookcontract.EventKind{
+-		specs.PointPreTool:    hookcontract.EventBeforeTool,
+-		specs.PointPostTool:   hookcontract.EventAfterTool,
+-		specs.PointSessionEnd: hookcontract.EventBeforeComplete,
++		specs.PointSessionStart:   hookcontract.EventSessionStart,
++		specs.PointPreTool:        hookcontract.EventBeforeTool,
++		specs.PointPostTool:       hookcontract.EventAfterTool,
++		specs.PointBeforeComplete: hookcontract.EventBeforeComplete,
++		specs.PointSessionEnd:     hookcontract.EventSessionEnd,
+ 	}
+ 	for _, point := range points {
+ 		event, ok := catalog.CanonicalPointEvent(point)
+@@ -185,7 +219,7 @@ func TestCanonicalPointIsClosedSet(t *testing.T) {
+ 	if _, err := specs.NewCatalog().ParseCanonicalPoint("bogus"); !errors.Is(err, specs.ErrUnknownCanonicalPoint) {
+ 		t.Fatalf("ParseCanonicalPoint(bogus) err = %v; want ErrUnknownCanonicalPoint", err)
+ 	}
+-	for _, name := range []string{"pre-tool", "post-tool", "session-end"} {
++	for _, name := range []string{"session-start", "pre-tool", "post-tool", "before-complete", "session-end"} {
+ 		p, err := specs.NewCatalog().ParseCanonicalPoint(name)
+ 		if err != nil || !p.Valid() {
+ 			t.Errorf("ParseCanonicalPoint(%q) = %v, %v", name, p, err)
+diff --git a/internal/runtime/specs/parity_dispatch_proof_test.go b/internal/runtime/specs/parity_dispatch_proof_test.go
+index fd18290..9bed2d5 100644
+--- a/internal/runtime/specs/parity_dispatch_proof_test.go
++++ b/internal/runtime/specs/parity_dispatch_proof_test.go
+@@ -39,27 +39,43 @@ func (c dispatchProofCase) key() string {
+ 
+ var dispatchProofRegistry = map[string]map[specs.CanonicalPoint]dispatchProofCase{
+ 	"claude": {
+-		specs.PointPreTool:    {TestName: "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing", Subtest: "claude"},
+-		specs.PointPostTool:   {TestName: "TestPostToolHookDispatchBlocksGovernanceFileEdit", Subtest: "claude"},
+-		specs.PointSessionEnd: {TestName: "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict", Subtest: "claude"},
++		specs.PointPreTool:        {TestName: "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing", Subtest: "claude"},
++		specs.PointPostTool:       {TestName: "TestPostToolHookDispatchBlocksGovernanceFileEdit", Subtest: "claude"},
++		specs.PointBeforeComplete: {TestName: "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict", Subtest: "claude"},
+ 	},
+ 	"codex": {
+-		specs.PointPreTool:    {TestName: "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing", Subtest: "codex"},
+-		specs.PointPostTool:   {TestName: "TestPostToolHookDispatchBlocksGovernanceFileEdit", Subtest: "codex"},
+-		specs.PointSessionEnd: {TestName: "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict", Subtest: "codex"},
++		specs.PointPreTool:        {TestName: "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing", Subtest: "codex"},
++		specs.PointPostTool:       {TestName: "TestPostToolHookDispatchBlocksGovernanceFileEdit", Subtest: "codex"},
++		specs.PointBeforeComplete: {TestName: "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict", Subtest: "codex"},
+ 	},
+ 	"copilot": {
+-		specs.PointPreTool:    {TestName: "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing", Subtest: "copilot"},
+-		specs.PointPostTool:   {TestName: "TestPostToolHookDispatchBlocksGovernanceFileEdit", Subtest: "copilot"},
+-		specs.PointSessionEnd: {TestName: "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict", Subtest: "copilot"},
++		specs.PointPreTool:        {TestName: "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing", Subtest: "copilot"},
++		specs.PointPostTool:       {TestName: "TestPostToolHookDispatchBlocksGovernanceFileEdit", Subtest: "copilot"},
++		specs.PointBeforeComplete: {TestName: "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict", Subtest: "copilot"},
+ 	},
+ 	"opencode": {
+-		specs.PointPreTool:    {TestName: "TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing"},
+-		specs.PointPostTool:   {TestName: "TestOpenCodeGovernancePluginToolExecuteAfterObservesValidatorWithoutBlocking"},
+-		specs.PointSessionEnd: {TestName: "TestOpenCodeGovernancePluginSessionIdleBlocksActiveTaskWithoutApprovedVerdict"},
++		specs.PointPreTool:        {TestName: "TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing"},
++		specs.PointPostTool:       {TestName: "TestOpenCodeGovernancePluginToolExecuteAfterObservesValidatorWithoutBlocking"},
++		specs.PointBeforeComplete: {TestName: "TestOpenCodeGovernancePluginSessionIdleBlocksActiveTaskWithoutApprovedVerdict"},
+ 	},
+ }
+ 
++func scriptedCanonicalPoints(t *testing.T, agentID string) []specs.CanonicalPoint {
++	t.Helper()
++	agent, err := specs.NewCatalog().AgentByID(agentID)
++	if err != nil {
++		t.Fatalf("AgentByID(%s): %v", agentID, err)
++	}
++	var points []specs.CanonicalPoint
++	for _, cov := range agent.Enforcement().Coverage() {
++		if cov.ScriptPath() == "" {
++			continue
++		}
++		points = append(points, cov.Point())
++	}
++	return points
++}
++
+ func repoRoot(t *testing.T) string {
+ 	t.Helper()
+ 	dir, err := os.Getwd()
+@@ -270,15 +286,15 @@ func TestDispatchProofRegistryNamesExistingIntegrationTests(t *testing.T) {
+ func TestDispatchProofRegistryCoversEveryMandatoryCell(t *testing.T) {
+ 	t.Parallel()
+ 
+-	points := specs.NewCatalog().CanonicalPoints()
+ 	for _, agentID := range mandatoryParityAgents {
++		points := scriptedCanonicalPoints(t, agentID)
+ 		byPoint, ok := dispatchProofRegistry[agentID]
+ 		if !ok {
+ 			t.Errorf("agent %q has no dispatch proof entry", agentID)
+ 			continue
+ 		}
+ 		if len(byPoint) != len(points) {
+-			t.Errorf("agent %q declares %d dispatch proofs; want %d", agentID, len(byPoint), len(points))
++			t.Errorf("agent %q declares %d dispatch proofs; want %d (scripted canonical points)", agentID, len(byPoint), len(points))
+ 		}
+ 		for _, point := range points {
+ 			if byPoint[point].TestName == "" {
+@@ -290,10 +306,9 @@ func TestDispatchProofRegistryCoversEveryMandatoryCell(t *testing.T) {
+ 
+ func TestEveryMandatoryCellHasExecutionEvidence(t *testing.T) {
+ 	evidence := dispatchExecutionEvidence(t)
+-	points := specs.NewCatalog().CanonicalPoints()
+ 
+ 	for _, agentID := range mandatoryParityAgents {
+-		for _, point := range points {
++		for _, point := range scriptedCanonicalPoints(t, agentID) {
+ 			proof := dispatchProofRegistry[agentID][point]
+ 			if proof.TestName == "" {
+ 				t.Errorf("agent=%s point=%s has no dispatch proof declared", agentID, point)
+diff --git a/internal/runtime/specs/parity_gate.go b/internal/runtime/specs/parity_gate.go
+index 9f95234..5309c4c 100644
+--- a/internal/runtime/specs/parity_gate.go
++++ b/internal/runtime/specs/parity_gate.go
+@@ -3,6 +3,8 @@ package specs
+ import (
+ 	"bytes"
+ 	"fmt"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
+ )
+ 
+ type AgentEnforcement struct {
+@@ -54,6 +56,12 @@ func ValidateParityMatrix(cells []AgentEnforcement, requiredAgents []string, dis
+ 				violations = append(violations, ParityViolation{Agent: agentID, Point: point, Reason: "missing canonical point coverage"})
+ 				continue
+ 			}
++			if cov.State() == hookcontract.SupportUnsupported {
++				continue
++			}
++			if cov.ScriptPath() == "" {
++				continue
++			}
+ 			if prev, seen := scriptByPoint[point]; seen {
+ 				if prev != cov.ScriptPath() {
+ 					violations = append(violations, ParityViolation{Agent: agentID, Point: point, Reason: fmt.Sprintf("validator diverges: %q vs %q", cov.ScriptPath(), prev)})
+diff --git a/internal/runtime/specs/parity_gate_test.go b/internal/runtime/specs/parity_gate_test.go
+index b162aba..f52246a 100644
+--- a/internal/runtime/specs/parity_gate_test.go
++++ b/internal/runtime/specs/parity_gate_test.go
+@@ -211,7 +211,7 @@ func TestParityGateFailsWhenCellHasNoDispatchProof(t *testing.T) {
+ 	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, nil, repoScriptResolver(t))
+ 	found := false
+ 	for _, v := range violations {
+-		if v.Agent == "opencode" && v.Point == specs.PointSessionEnd && v.Reason == "no dispatch proof test associated" {
++		if v.Agent == "opencode" && v.Point == specs.PointBeforeComplete && v.Reason == "no dispatch proof test associated" {
+ 			found = true
+ 		}
+ 	}
+diff --git a/internal/runtime/specs/registry.go b/internal/runtime/specs/registry.go
+index af62ec2..ec54a92 100644
+--- a/internal/runtime/specs/registry.go
++++ b/internal/runtime/specs/registry.go
+@@ -16,47 +16,54 @@ const (
+ 
+ var cliHookKeyVocabulary = map[string]map[CanonicalPoint][]string{
+ 	"claude": {
+-		PointPreTool:    {"PreToolUse"},
+-		PointPostTool:   {"PostToolUse"},
+-		PointSessionEnd: {"Stop", "SubagentStop"},
++		PointSessionStart:   {"SessionStart"},
++		PointPreTool:        {"PreToolUse"},
++		PointPostTool:       {"PostToolUse"},
++		PointBeforeComplete: {"Stop", "SubagentStop"},
++		PointSessionEnd:     {"SessionEnd"},
+ 	},
+ 	"codex": {
+-		PointPreTool:    {"PreToolUse"},
+-		PointPostTool:   {"PostToolUse"},
+-		PointSessionEnd: {"Stop", "SubagentStop"},
++		PointSessionStart:   {"SessionStart"},
++		PointPreTool:        {"PreToolUse"},
++		PointPostTool:       {"PostToolUse"},
++		PointBeforeComplete: {"Stop", "SubagentStop"},
++		PointSessionEnd:     {"SessionEnd"},
+ 	},
+ 	"copilot": {
+-		PointPreTool:    {"preToolUse"},
+-		PointPostTool:   {"postToolUse"},
+-		PointSessionEnd: {"agentStop"},
++		PointSessionStart:   {"sessionStart"},
++		PointPreTool:        {"preToolUse"},
++		PointPostTool:       {"postToolUse"},
++		PointBeforeComplete: {"agentStop"},
++		PointSessionEnd:     {"sessionEnd"},
+ 	},
+ 	"opencode": {
+-		PointPreTool:    {"tool.execute.before"},
+-		PointPostTool:   {"tool.execute.after"},
+-		PointSessionEnd: {"session.idle"},
++		PointSessionStart:   {"event.session.created"},
++		PointPreTool:        {"tool.execute.before"},
++		PointPostTool:       {"tool.execute.after"},
++		PointBeforeComplete: {"session.idle"},
+ 	},
+ }
+ 
+ var agentHookArtifacts = map[string]map[CanonicalPoint]string{
+ 	"claude": {
+-		PointPreTool:    ".claude/hooks/validate-preload.sh",
+-		PointPostTool:   ".claude/hooks/validate-governance.sh",
+-		PointSessionEnd: ".claude/hooks/validate-session-end.sh",
++		PointPreTool:        ".claude/hooks/validate-preload.sh",
++		PointPostTool:       ".claude/hooks/validate-governance.sh",
++		PointBeforeComplete: ".claude/hooks/validate-session-end.sh",
+ 	},
+ 	"codex": {
+-		PointPreTool:    ".codex/hooks/validate-preload.sh",
+-		PointPostTool:   ".codex/hooks/validate-governance.sh",
+-		PointSessionEnd: ".codex/hooks/validate-session-end.sh",
++		PointPreTool:        ".codex/hooks/validate-preload.sh",
++		PointPostTool:       ".codex/hooks/validate-governance.sh",
++		PointBeforeComplete: ".codex/hooks/validate-session-end.sh",
+ 	},
+ 	"copilot": {
+-		PointPreTool:    ".github/hooks/validate-preload.sh",
+-		PointPostTool:   ".github/hooks/validate-governance.sh",
+-		PointSessionEnd: ".github/hooks/validate-session-end.sh",
++		PointPreTool:        ".github/hooks/validate-preload.sh",
++		PointPostTool:       ".github/hooks/validate-governance.sh",
++		PointBeforeComplete: ".github/hooks/validate-session-end.sh",
+ 	},
+ 	"opencode": {
+-		PointPreTool:    ".agents/hooks/validate-preload.sh",
+-		PointPostTool:   ".agents/hooks/validate-governance.sh",
+-		PointSessionEnd: ".agents/scripts/validate-session-end.sh",
++		PointPreTool:        ".agents/hooks/validate-preload.sh",
++		PointPostTool:       ".agents/hooks/validate-governance.sh",
++		PointBeforeComplete: ".agents/scripts/validate-session-end.sh",
+ 	},
+ }
+ 
+@@ -76,15 +83,18 @@ type nativeConfigSource struct {
+ 
+ var agentNativeConfigs = map[string][]nativeConfigSource{
+ 	"claude": {
+-		{path: ".claude/settings.json", format: nativeConfigJSON},
++		{path: ".claude/settings.json", format: nativeConfigJSON, required: true},
+ 		{path: ".claude/settings.local.json", format: nativeConfigJSON},
+ 	},
+ 	"codex": {
+ 		{path: ".codex/config.toml", format: nativeConfigTOML, required: true},
++		{path: ".codex/hooks.json", format: nativeConfigJSON},
++		{path: "~/.codex/hooks.json", format: nativeConfigJSON},
++		{path: "~/.codex/config.toml", format: nativeConfigTOML},
+ 	},
+ 	"copilot": {
+ 		{path: ".github/hooks/governance.json", format: nativeConfigJSON, required: true},
+-		{path: ".github/settings.json", format: nativeConfigJSON},
++		{path: ".github/copilot/settings.json", format: nativeConfigJSON},
+ 	},
+ 	"opencode": {
+ 		{path: ".opencode/plugin/governance.js", format: nativeConfigJS, required: true},
+@@ -254,14 +264,14 @@ func (c *Catalog) buildRegistry() []Agent {
+ 			[]string{".claude"},
+ 			".specs/adr/009-acp-protocol-adoption.md",
+ 			70000, largeBudgetAbsent,
+-			c.canonicalEnforcement("claude", "PreToolUse", "PostToolUse", "Stop"),
++			c.fullCliEnforcement("claude", "SessionStart", "PreToolUse", "PostToolUse", "Stop", "SessionEnd"),
+ 		),
+ 		c.newAgent(
+ 			"codex", "Codex (ACP)", "codex", "codex-acp",
+ 			[]string{".codex"},
+ 			".specs/adr/013-codex-cli-acp-native.md",
+ 			13000, largeBudgetAbsent,
+-			c.canonicalEnforcement("codex", "PreToolUse", "PostToolUse", "Stop"),
++			c.fullCliEnforcement("codex", "SessionStart", "PreToolUse", "PostToolUse", "Stop", "SessionEnd"),
+ 			c.mustPrecondition(PreconditionTrustedHash, "register the hook hash via the Codex interactive interface before orchestrating", true),
+ 		),
+ 		c.newAgent(
+@@ -269,7 +279,7 @@ func (c *Catalog) buildRegistry() []Agent {
+ 			[]string{".copilot", ".github/copilot"},
+ 			".specs/adr/012-copilot-cli-acp-native.md",
+ 			2000, largeBudgetAbsent,
+-			c.canonicalEnforcement("copilot", "preToolUse", "postToolUse", "agentStop"),
++			c.fullCliEnforcement("copilot", "sessionStart", "preToolUse", "postToolUse", "agentStop", "sessionEnd"),
+ 			c.mustPrecondition(PreconditionTrustedFolder, "add the project folder to the Copilot CLI trusted folders list", false),
+ 		),
+ 		c.newAgentWithEnvPolicy(
+@@ -278,19 +288,42 @@ func (c *Catalog) buildRegistry() []Agent {
+ 			".specs/adr/020-opencode-acp-subcomando.md",
+ 			4000, 500_000,
+ 			c.NewEnvPolicy(OpenCodeKillSwitchVars...),
+-			c.canonicalEnforcement("opencode", "tool.execute.before", "tool.execute.after", "session.idle"),
++			c.openCodeEnforcement(),
+ 			c.mustPrecondition(PreconditionNoKillSwitch, "unset OPENCODE_PURE, OPENCODE_DISABLE_PROJECT_CONFIG, OPENCODE_DISABLE_EXTERNAL_SKILLS, OPENCODE_DISABLE_DEFAULT_PLUGINS and --pure before orchestrating", false),
+ 			c.mustPrecondition(PreconditionHandshake, "wait for the governance plugin load handshake before the first prompt", true),
+ 		),
+ 	}
+ }
+ 
+-func (c *Catalog) canonicalEnforcement(agentID, preKey, postKey, endKey string) Enforcement {
++func (c *Catalog) fullCliEnforcement(agentID, sessionStartKey, preKey, postKey, beforeCompleteKey, sessionEndKey string) Enforcement {
+ 	coverage := []PointCoverage{
++		c.mustObservedCoverage(agentID, PointSessionStart, sessionStartKey),
+ 		c.mustCoverage(agentID, PointPreTool, preKey, scriptPreTool),
+ 		c.mustCoverage(agentID, PointPostTool, postKey, scriptPostTool),
+-		c.mustCoverage(agentID, PointSessionEnd, endKey, scriptSessionEnd),
++		c.mustCoverage(agentID, PointBeforeComplete, beforeCompleteKey, scriptSessionEnd),
++		c.mustObservedCoverage(agentID, PointSessionEnd, sessionEndKey),
+ 	}
++	return c.mustEnforcement(coverage)
++}
++
++const openCodeSessionStartLimitation = "OpenCode has no native session-start hook; approximated via the event bus with event.type == session.created, which fires without blocking capability"
++
++const openCodeBeforeCompleteLimitation = "OpenCode's session.idle fires at turn end but does not block; it is observational only, unlike Stop/SubagentStop/agentStop in the other three CLIs"
++
++const openCodeSessionEndUnsupportedReason = "OpenCode has no native session-end hook and no documented approximation for it"
++
++func (c *Catalog) openCodeEnforcement() Enforcement {
++	coverage := []PointCoverage{
++		c.mustAdapterCoverage("opencode", PointSessionStart, "event.session.created", "", openCodeSessionStartLimitation),
++		c.mustCoverage("opencode", PointPreTool, "tool.execute.before", scriptPreTool),
++		c.mustCoverage("opencode", PointPostTool, "tool.execute.after", scriptPostTool),
++		c.mustAdapterCoverage("opencode", PointBeforeComplete, "session.idle", scriptSessionEnd, openCodeBeforeCompleteLimitation),
++		c.mustUnsupportedCoverage("opencode", PointSessionEnd, openCodeSessionEndUnsupportedReason),
++	}
++	return c.mustEnforcement(coverage)
++}
++
++func (c *Catalog) mustEnforcement(coverage []PointCoverage) Enforcement {
+ 	enf, err := c.NewEnforcement(coverage)
+ 	if err != nil {
+ 		panic(fmt.Sprintf("agent registry: invalid enforcement: %v", err))
+@@ -310,6 +343,38 @@ func (c *Catalog) mustCoverage(agentID string, point CanonicalPoint, nativeKey,
+ 	return cov
+ }
+ 
++func (c *Catalog) mustObservedCoverage(agentID string, point CanonicalPoint, nativeKey string) PointCoverage {
++	cov, err := c.NewObservedPointCoverage(agentID, point, nativeKey)
++	if err != nil {
++		panic(fmt.Sprintf("agent registry: invalid observed coverage: %v", err))
++	}
++	return cov
++}
++
++func (c *Catalog) mustAdapterCoverage(agentID string, point CanonicalPoint, nativeKey, scriptPath, limitation string) PointCoverage {
++	var artifactPath string
++	if scriptPath != "" {
++		var ok bool
++		artifactPath, ok = InstalledArtifactPath(agentID, point)
++		if !ok {
++			panic(fmt.Sprintf("agent registry: agent %q declares no installed artifact for point %s", agentID, point))
++		}
++	}
++	cov, err := c.NewAdapterPointCoverage(agentID, point, nativeKey, scriptPath, artifactPath, limitation)
++	if err != nil {
++		panic(fmt.Sprintf("agent registry: invalid adapter coverage: %v", err))
++	}
++	return cov
++}
++
++func (c *Catalog) mustUnsupportedCoverage(agentID string, point CanonicalPoint, reason string) PointCoverage {
++	cov, err := c.NewUnsupportedPointCoverage(agentID, point, reason)
++	if err != nil {
++		panic(fmt.Sprintf("agent registry: invalid unsupported coverage: %v", err))
++	}
++	return cov
++}
++
+ func (c *Catalog) mustPrecondition(kind PreconditionKind, remedy string, requiresExec bool) EnforcementPrecondition {
+ 	pre, err := c.NewEnforcementPrecondition(kind, remedy, requiresExec)
+ 	if err != nil {
+diff --git a/internal/runtime/specs/registry_test.go b/internal/runtime/specs/registry_test.go
+index 6bf5185..0ca24a4 100644
+--- a/internal/runtime/specs/registry_test.go
++++ b/internal/runtime/specs/registry_test.go
+@@ -6,6 +6,7 @@ import (
+ 	"slices"
+ 	"testing"
+ 
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
+ )
+ 
+@@ -128,8 +129,8 @@ func TestMandatoryMatrixAgentsByCanonicalPoints(t *testing.T) {
+ 	t.Parallel()
+ 
+ 	points := specs.NewCatalog().CanonicalPoints()
+-	if len(points) != 3 {
+-		t.Fatalf("expected 3 canonical points; got %d", len(points))
++	if len(points) != 5 {
++		t.Fatalf("expected 5 canonical points; got %d", len(points))
+ 	}
+ 
+ 	scriptByPoint := make(map[specs.CanonicalPoint]string)
+@@ -146,14 +147,20 @@ func TestMandatoryMatrixAgentsByCanonicalPoints(t *testing.T) {
+ 			if !ok {
+ 				t.Fatalf("agent %q: point %s not covered", agent.ID(), point)
+ 			}
++			if cov.State() == hookcontract.SupportUnsupported {
++				if cov.Reason() == "" {
++					t.Errorf("agent %q point %s: unsupported without a declared reason", agent.ID(), point)
++				}
++				continue
++			}
+ 			if cov.NativeKey() == "" {
+ 				t.Errorf("agent %q point %s: empty native key", agent.ID(), point)
+ 			}
+-			if cov.ScriptPath() == "" {
+-				t.Errorf("agent %q point %s: empty canonical script", agent.ID(), point)
++			if cov.State() == hookcontract.SupportAdapter && cov.Limitation() == "" {
++				t.Errorf("agent %q point %s: adapter support without a declared limitation", agent.ID(), point)
+ 			}
+-			if cov.ArtifactPath() == "" {
+-				t.Errorf("agent %q point %s: empty installed artifact", agent.ID(), point)
++			if (cov.ScriptPath() == "") != (cov.ArtifactPath() == "") {
++				t.Errorf("agent %q point %s: script and artifact must both be declared or both be empty", agent.ID(), point)
+ 			}
+ 			recognized, known := specs.RecognizedNativeKeys(agent.ID(), point)
+ 			if !known {
+@@ -161,6 +168,9 @@ func TestMandatoryMatrixAgentsByCanonicalPoints(t *testing.T) {
+ 			} else if !slices.Contains(recognized, cov.NativeKey()) {
+ 				t.Errorf("agent %q point %s: native key %q is not recognized by the CLI (%v)", agent.ID(), point, cov.NativeKey(), recognized)
+ 			}
++			if cov.ScriptPath() == "" {
++				continue
++			}
+ 			if prev, seen := scriptByPoint[point]; seen {
+ 				if prev != cov.ScriptPath() {
+ 					t.Errorf("point %s: canonical script diverges between agents (%q vs %q)", point, prev, cov.ScriptPath())
+@@ -187,6 +197,69 @@ func TestRegistryPreconditionsCarryRemedy(t *testing.T) {
+ 	}
+ }
+ 
++func TestTwentyProviderEventPairsHaveExplicitState(t *testing.T) {
++	t.Parallel()
++
++	want := map[string]map[specs.CanonicalPoint]hookcontract.SupportState{
++		"claude": {
++			specs.PointSessionStart:   hookcontract.SupportVerified,
++			specs.PointPreTool:        hookcontract.SupportVerified,
++			specs.PointPostTool:       hookcontract.SupportVerified,
++			specs.PointBeforeComplete: hookcontract.SupportVerified,
++			specs.PointSessionEnd:     hookcontract.SupportVerified,
++		},
++		"codex": {
++			specs.PointSessionStart:   hookcontract.SupportVerified,
++			specs.PointPreTool:        hookcontract.SupportVerified,
++			specs.PointPostTool:       hookcontract.SupportVerified,
++			specs.PointBeforeComplete: hookcontract.SupportVerified,
++			specs.PointSessionEnd:     hookcontract.SupportVerified,
++		},
++		"copilot": {
++			specs.PointSessionStart:   hookcontract.SupportVerified,
++			specs.PointPreTool:        hookcontract.SupportVerified,
++			specs.PointPostTool:       hookcontract.SupportVerified,
++			specs.PointBeforeComplete: hookcontract.SupportVerified,
++			specs.PointSessionEnd:     hookcontract.SupportVerified,
++		},
++		"opencode": {
++			specs.PointSessionStart:   hookcontract.SupportAdapter,
++			specs.PointPreTool:        hookcontract.SupportVerified,
++			specs.PointPostTool:       hookcontract.SupportVerified,
++			specs.PointBeforeComplete: hookcontract.SupportAdapter,
++			specs.PointSessionEnd:     hookcontract.SupportUnsupported,
++		},
++	}
++
++	points := specs.NewCatalog().CanonicalPoints()
++	pairCount := 0
++	for _, agent := range specs.NewCatalog().Registry() {
++		byPoint, ok := want[agent.ID()]
++		if !ok {
++			t.Fatalf("agent %q has no expected state table entry — every provider must be declared", agent.ID())
++		}
++		for _, point := range points {
++			pairCount++
++			cov, ok := agent.Enforcement().CoverageFor(point)
++			if !ok {
++				t.Fatalf("agent %q point %s: not declared — absence of support is never omission (P07)", agent.ID(), point)
++			}
++			if cov.State() != byPoint[point] {
++				t.Errorf("agent %q point %s: state = %s, want %s", agent.ID(), point, cov.State(), byPoint[point])
++			}
++			switch cov.State() {
++			case hookcontract.SupportAdapter, hookcontract.SupportUnsupported:
++				if cov.Reason() == "" {
++					t.Errorf("agent %q point %s: state %s declared without a textual reason/limitation", agent.ID(), point, cov.State())
++				}
++			}
++		}
++	}
++	if pairCount != 20 {
++		t.Fatalf("expected exactly 20 (provider, event) pairs; got %d", pairCount)
++	}
++}
++
+ func TestACPSpecCatalogMatchesRegistry(t *testing.T) {
+ 	t.Parallel()
+ 
+diff --git a/internal/uninstall/uninstall.go b/internal/uninstall/uninstall.go
+index c02cad0..690137c 100644
+--- a/internal/uninstall/uninstall.go
++++ b/internal/uninstall/uninstall.go
+@@ -124,6 +124,8 @@ var governanceRootDirs = []string{
+ 
+ var claudeSettingsRelPath = filepath.Join(".claude", "settings.local.json")
+ 
++var claudeVersionedSettingsRelPath = filepath.Join(".claude", "settings.json")
++
+ var reverseMergeFiles = []string{
+ 	filepath.Join(".github", "settings.json"),
+ 	specs.OpenCodeConfigFileName,
+@@ -213,13 +215,13 @@ func (s *Service) mergedCandidates(mf *manifest.Manifest, tracked bool) []string
+ func (s *Service) reverseMerge(absDir, rel string, rm *remover) {
+ 	path := filepath.Join(absDir, rel)
+ 	switch filepath.ToSlash(rel) {
+-	case ".github/settings.json":
++	case ".github/copilot/settings.json", ".github/settings.json":
+ 		s.reverseMergeCopilotSettings(path, rm)
+ 	case specs.OpenCodeConfigFileName:
+ 		s.reverseMergeOpenCodeConfig(path, rm)
+ 	case codexConfigRelPath:
+ 		s.reverseMergeCodexConfig(path, rm)
+-	case claudeSettingsRelPath:
++	case claudeSettingsRelPath, claudeVersionedSettingsRelPath:
+ 		s.reverseMergeClaudeSettings(path, rm)
+ 	default:
+ 		if s.reverseMergeUserContentMarkdown(path, rm) {
+diff --git a/internal/upgrade/copilot_governance.go b/internal/upgrade/copilot_governance.go
+index 8d7acb0..f381038 100644
+--- a/internal/upgrade/copilot_governance.go
++++ b/internal/upgrade/copilot_governance.go
+@@ -14,7 +14,7 @@ const CopilotGovernanceHooksRelPath = ".github/hooks/governance.json"
+ 
+ const CopilotSessionEndHookKey = "agentStop"
+ 
+-var ObsoleteCopilotHookKeys = []string{"stop", "Stop", "sessionEnd", "SessionEnd"}
++var ObsoleteCopilotHookKeys = []string{"stop", "Stop"}
+ 
+ const DefaultCopilotGovernanceHooks = `{
+   "version": 1,
+diff --git a/tests/integration/hook_contract_projection_test.go b/tests/integration/hook_contract_projection_test.go
+index 8d9f1e1..b221826 100644
+--- a/tests/integration/hook_contract_projection_test.go
++++ b/tests/integration/hook_contract_projection_test.go
+@@ -25,9 +25,11 @@ func TestHookContractProjection_SpecsModelMatchesContract(t *testing.T) {
+ 		point specs.CanonicalPoint
+ 		event hookcontract.EventKind
+ 	}{
++		{specs.PointSessionStart, hookcontract.EventSessionStart},
+ 		{specs.PointPreTool, hookcontract.EventBeforeTool},
+ 		{specs.PointPostTool, hookcontract.EventAfterTool},
+-		{specs.PointSessionEnd, hookcontract.EventBeforeComplete},
++		{specs.PointBeforeComplete, hookcontract.EventBeforeComplete},
++		{specs.PointSessionEnd, hookcontract.EventSessionEnd},
+ 	}
+ 
+ 	if len(points) != len(want) {
+@@ -53,9 +55,11 @@ func TestHookContractProjection_SpecsModelDivergesWhenMappingIsWrong(t *testing.
+ 	points := catalog.CanonicalPoints()
+ 
+ 	brokenWant := map[specs.CanonicalPoint]hookcontract.EventKind{
+-		specs.PointPreTool:    hookcontract.EventSessionStart,
+-		specs.PointPostTool:   hookcontract.EventAfterTool,
+-		specs.PointSessionEnd: hookcontract.EventBeforeComplete,
++		specs.PointSessionStart:   hookcontract.EventSessionStart,
++		specs.PointPreTool:        hookcontract.EventSessionStart,
++		specs.PointPostTool:       hookcontract.EventAfterTool,
++		specs.PointBeforeComplete: hookcontract.EventBeforeComplete,
++		specs.PointSessionEnd:     hookcontract.EventSessionEnd,
+ 	}
+ 
+ 	diverged := false
+diff --git a/tests/integration/hooks_live/live_test.go b/tests/integration/hooks_live/live_test.go
+index 070b4b2..ae96221 100644
+--- a/tests/integration/hooks_live/live_test.go
++++ b/tests/integration/hooks_live/live_test.go
+@@ -92,7 +92,7 @@ type nativeRun struct {
+ func invokeNativeCLI(t *testing.T, projectDir string, cell MatrixCell) nativeRun {
+ 	t.Helper()
+ 	prepareNativeFixture(t, projectDir, cell)
+-	if cell.Point == specs.PointSessionEnd {
++	if cell.Point == specs.PointBeforeComplete {
+ 		writeActiveTask(t, projectDir)
+ 	}
+ 	env, codexProfile, sessionIdleMarker := configureNativeFixtureTrust(t, projectDir, cell)
+@@ -148,7 +148,7 @@ func assertNativeOutcome(t *testing.T, projectDir string, cell MatrixCell, run n
+ 		assertPreToolOutcome(t, projectDir, cell, run)
+ 	case specs.PointPostTool:
+ 		assertPostToolOutcome(t, projectDir, cell, run)
+-	case specs.PointSessionEnd:
++	case specs.PointBeforeComplete:
+ 		assertSessionEndOutcome(t, cell, run)
+ 	default:
+ 		t.Fatalf("assertNativeOutcome: unhandled canonical point %s for agent %s", cell.Point, cell.Agent)
+@@ -244,7 +244,7 @@ func configureNativeFixtureTrust(t *testing.T, projectDir string, cell MatrixCel
+ 	case "copilot":
+ 		env = append(env, CopilotRepoHooksOptInEnvVar+"="+CopilotRepoHooksOptInEnvValue)
+ 	case "opencode":
+-		if cell.Point == specs.PointSessionEnd {
++		if cell.Point == specs.PointBeforeComplete {
+ 			sessionIdleMarker = filepath.Join(t.TempDir(), "opencode-session-idle")
+ 		}
+ 	}
+diff --git a/tests/integration/hooks_live/matrix.go b/tests/integration/hooks_live/matrix.go
+index 0fb9ae2..10cbe4c 100644
+--- a/tests/integration/hooks_live/matrix.go
++++ b/tests/integration/hooks_live/matrix.go
+@@ -17,10 +17,17 @@ type MatrixCell struct {
+ 
+ func LiveMatrix() []MatrixCell {
+ 	catalog := specs.NewCatalog()
+-	cells := make([]MatrixCell, 0, len(LiveAgentIDs)*len(catalog.CanonicalPoints()))
+-	for _, agent := range LiveAgentIDs {
+-		for _, point := range catalog.CanonicalPoints() {
+-			cells = append(cells, MatrixCell{Agent: agent, Point: point})
++	var cells []MatrixCell
++	for _, agentID := range LiveAgentIDs {
++		agent, err := catalog.AgentByID(agentID)
++		if err != nil {
++			continue
++		}
++		for _, cov := range agent.Enforcement().Coverage() {
++			if cov.ScriptPath() == "" {
++				continue
++			}
++			cells = append(cells, MatrixCell{Agent: agentID, Point: cov.Point()})
+ 		}
+ 	}
+ 	return cells
+diff --git a/tests/integration/session_end_cli_contract_test.go b/tests/integration/session_end_cli_contract_test.go
+index d4d7fc9..6fc0215 100644
+--- a/tests/integration/session_end_cli_contract_test.go
++++ b/tests/integration/session_end_cli_contract_test.go
+@@ -72,7 +72,7 @@ func TestSessionEndCliBlockingContractIsMeasuredNotAssumed(t *testing.T) {
+ 			if err != nil {
+ 				t.Fatalf("tool=%s: not in the agent registry: %v", tool, err)
+ 			}
+-			cov, ok := agent.Enforcement().CoverageFor(specs.PointSessionEnd)
++			cov, ok := agent.Enforcement().CoverageFor(specs.PointBeforeComplete)
+ 			if !ok {
+ 				t.Fatalf("tool=%s: the registry declares no session-end coverage", tool)
+ 			}
+diff --git a/.claude/settings.json b/.claude/settings.json
+new file mode 100644
+index 0000000..653ab2e
+--- /dev/null
++++ b/.claude/settings.json
+@@ -0,0 +1,47 @@
++{
++  "hooks": {
++    "PreToolUse": [
++      {
++        "matcher": "Bash|Edit|Write|NotebookEdit|apply_patch",
++        "hooks": [
++          {
++            "type": "command",
++            "command": "env GOVERNANCE_PRELOAD_MODE=warn bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/validate-preload.sh\""
++          }
++        ]
++      }
++    ],
++    "PostToolUse": [
++      {
++        "matcher": "Bash|Edit|Write|NotebookEdit|apply_patch",
++        "hooks": [
++          {
++            "type": "command",
++            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/validate-governance.sh\""
++          }
++        ]
++      }
++    ],
++    "SubagentStop": [
++      {
++        "matcher": "task-executor",
++        "hooks": [
++          {
++            "type": "command",
++            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/subagent-stop-wrapper.sh\""
++          }
++        ]
++      }
++    ],
++    "Stop": [
++      {
++        "hooks": [
++          {
++            "type": "command",
++            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/validate-session-end.sh\""
++          }
++        ]
++      }
++    ]
++  }
++}
+diff --git a/internal/runtime/specs/adapter_policy_gate_test.go b/internal/runtime/specs/adapter_policy_gate_test.go
+new file mode 100644
+index 0000000..7282ceb
+--- /dev/null
++++ b/internal/runtime/specs/adapter_policy_gate_test.go
+@@ -0,0 +1,90 @@
++package specs_test
++
++import (
++	"go/ast"
++	"go/parser"
++	"go/token"
++	"os"
++	"path/filepath"
++	"testing"
++)
++
++var adapterFilesUnderGate = []string{
++	filepath.Join("internal", "runtime", "specs", "registry.go"),
++	filepath.Join("internal", "runtime", "specs", "native_config.go"),
++}
++
++var forbiddenAdapterPolicyIdentifiers = map[string]bool{
++	"Decision":              true,
++	"DecisionAllow":         true,
++	"DecisionBlock":         true,
++	"DecisionWarn":          true,
++	"DecisionNotApplicable": true,
++	"DecisionError":         true,
++	"NewResult":             true,
++}
++
++func scanFileForPolicyDecisionIdentifiers(t *testing.T, path string) []string {
++	t.Helper()
++
++	fset := token.NewFileSet()
++	file, err := parser.ParseFile(fset, path, nil, 0)
++	if err != nil {
++		t.Fatalf("parse %s: %v", path, err)
++	}
++
++	var found []string
++	ast.Inspect(file, func(node ast.Node) bool {
++		switch n := node.(type) {
++		case *ast.Ident:
++			if forbiddenAdapterPolicyIdentifiers[n.Name] {
++				found = append(found, n.Name)
++			}
++		case *ast.SelectorExpr:
++			if forbiddenAdapterPolicyIdentifiers[n.Sel.Name] {
++				found = append(found, n.Sel.Name)
++			}
++		}
++		return true
++	})
++	return found
++}
++
++func TestAdapterContainsNoPolicyDecision(t *testing.T) {
++	t.Parallel()
++
++	root := repoRoot(t)
++	for _, rel := range adapterFilesUnderGate {
++		path := filepath.Join(root, rel)
++		found := scanFileForPolicyDecisionIdentifiers(t, path)
++		if len(found) != 0 {
++			t.Errorf("RF-56: adapter %q must contain only translation to native CLI vocabulary, never policy decision logic; found forbidden identifiers %v", rel, found)
++		}
++	}
++}
++
++func TestAdapterPolicyDecisionGateDetectsAPlantedViolation(t *testing.T) {
++	t.Parallel()
++
++	const fixture = `package specs
++
++import "github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
++
++func evaluatePolicyInsideAdapter(risky bool) hookcontract.Decision {
++	if risky {
++		return hookcontract.DecisionBlock
++	}
++	return hookcontract.DecisionAllow
++}
++`
++	dir := t.TempDir()
++	path := filepath.Join(dir, "planted_adapter.go")
++	if err := os.WriteFile(path, []byte(fixture), 0o644); err != nil {
++		t.Fatalf("write fixture: %v", err)
++	}
++
++	found := scanFileForPolicyDecisionIdentifiers(t, path)
++	if len(found) == 0 {
++		t.Fatal("expected the gate to detect policy decision logic planted inside an adapter-shaped file — a gate that never fires proves nothing")
++	}
++}
+diff --git a/internal/runtime/specs/provider_limitations.go b/internal/runtime/specs/provider_limitations.go
+new file mode 100644
+index 0000000..fe2d06b
+--- /dev/null
++++ b/internal/runtime/specs/provider_limitations.go
+@@ -0,0 +1,41 @@
++package specs
++
++type ProviderLimitation struct {
++	Provider    string
++	Area        string
++	Description string
++	Evidence    string
++}
++
++var DeclaredProviderLimitations = []ProviderLimitation{
++	{
++		Provider:    "copilot",
++		Area:        "preToolUse-timeout",
++		Description: "preToolUse is fail-closed for exit code 2 and for any non-zero exit, but fail-open on hook timeout: a hook that times out does not block the tool call.",
++		Evidence:    "measured GitHub Copilot CLI hook contract, recorded in adr-001-hook-contract-fonte-unica-projecoes.md",
++	},
++	{
++		Provider:    "copilot",
++		Area:        "trustedFolders-precondition",
++		Description: "PreconditionTrustedFolder is declared for Copilot, but the official trustedFolders documentation does not state that it gates hook execution, unlike Codex's trusted hash precondition. The precondition is kept as a conservative declaration with no documentary backing, not a verified gate.",
++		Evidence:    "documentation gap identified while researching RF-51 to RF-56",
++	},
++	{
++		Provider:    "all",
++		Area:        "after-tool-non-blocking",
++		Description: "AfterTool does not block in any of the four CLIs (Claude, Codex, Copilot, OpenCode); the only point with real denial capability is BeforeTool.",
++		Evidence:    "measured hook contract across the four CLIs, recorded in adr-001-hook-contract-fonte-unica-projecoes.md",
++	},
++	{
++		Provider:    "all",
++		Area:        "permission-request-out-of-scope",
++		Description: "PermissionRequest/permissionRequest exists in Claude, Codex and Copilot as a second real denial point and is not used by any adapter in this repository. Registered here as an out-of-scope opportunity for this delivery, not as a gap to fix.",
++		Evidence:    "explicitly out of scope for this delivery",
++	},
++	{
++		Provider:    "codex",
++		Area:        "hook-trust-silent-skip",
++		Description: "Codex silently skips untrusted hooks after a hash change (public bug openai/codex#46210); ai-spec doctor --codex-trust detects this via a read-only hooks/list RPC and is part of the release gate.",
++		Evidence:    "openai/codex#46210",
++	},
++}
+diff --git a/internal/runtime/specs/provider_limitations_test.go b/internal/runtime/specs/provider_limitations_test.go
+new file mode 100644
+index 0000000..d10933d
+--- /dev/null
++++ b/internal/runtime/specs/provider_limitations_test.go
+@@ -0,0 +1,39 @@
++package specs_test
++
++import (
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
++)
++
++func TestDeclaredProviderLimitationsAreWellFormed(t *testing.T) {
++	t.Parallel()
++
++	for _, limitation := range specs.DeclaredProviderLimitations {
++		if limitation.Provider == "" || limitation.Area == "" || limitation.Description == "" || limitation.Evidence == "" {
++			t.Errorf("declared limitation has an empty field: %+v", limitation)
++		}
++	}
++}
++
++func TestDeclaredProviderLimitationsCoverEveryRequiredArea(t *testing.T) {
++	t.Parallel()
++
++	required := []string{
++		"preToolUse-timeout",
++		"trustedFolders-precondition",
++		"after-tool-non-blocking",
++		"permission-request-out-of-scope",
++		"hook-trust-silent-skip",
++	}
++
++	byArea := make(map[string]bool, len(specs.DeclaredProviderLimitations))
++	for _, limitation := range specs.DeclaredProviderLimitations {
++		byArea[limitation.Area] = true
++	}
++	for _, area := range required {
++		if !byArea[area] {
++			t.Errorf("no declared limitation for required area %q", area)
++		}
++	}
++}

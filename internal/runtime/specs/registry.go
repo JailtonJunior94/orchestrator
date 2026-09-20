@@ -16,47 +16,54 @@ const (
 
 var cliHookKeyVocabulary = map[string]map[CanonicalPoint][]string{
 	"claude": {
-		PointPreTool:    {"PreToolUse"},
-		PointPostTool:   {"PostToolUse"},
-		PointSessionEnd: {"Stop", "SubagentStop"},
+		PointSessionStart:   {"SessionStart"},
+		PointPreTool:        {"PreToolUse"},
+		PointPostTool:       {"PostToolUse"},
+		PointBeforeComplete: {"Stop", "SubagentStop"},
+		PointSessionEnd:     {"SessionEnd"},
 	},
 	"codex": {
-		PointPreTool:    {"PreToolUse"},
-		PointPostTool:   {"PostToolUse"},
-		PointSessionEnd: {"Stop", "SubagentStop"},
+		PointSessionStart:   {"SessionStart"},
+		PointPreTool:        {"PreToolUse"},
+		PointPostTool:       {"PostToolUse"},
+		PointBeforeComplete: {"Stop", "SubagentStop"},
+		PointSessionEnd:     {"SessionEnd"},
 	},
 	"copilot": {
-		PointPreTool:    {"preToolUse"},
-		PointPostTool:   {"postToolUse"},
-		PointSessionEnd: {"agentStop"},
+		PointSessionStart:   {"sessionStart"},
+		PointPreTool:        {"preToolUse"},
+		PointPostTool:       {"postToolUse"},
+		PointBeforeComplete: {"agentStop"},
+		PointSessionEnd:     {"sessionEnd"},
 	},
 	"opencode": {
-		PointPreTool:    {"tool.execute.before"},
-		PointPostTool:   {"tool.execute.after"},
-		PointSessionEnd: {"session.idle"},
+		PointSessionStart:   {"event.session.created"},
+		PointPreTool:        {"tool.execute.before"},
+		PointPostTool:       {"tool.execute.after"},
+		PointBeforeComplete: {"session.idle"},
 	},
 }
 
 var agentHookArtifacts = map[string]map[CanonicalPoint]string{
 	"claude": {
-		PointPreTool:    ".claude/hooks/validate-preload.sh",
-		PointPostTool:   ".claude/hooks/validate-governance.sh",
-		PointSessionEnd: ".claude/hooks/validate-session-end.sh",
+		PointPreTool:        ".claude/hooks/validate-preload.sh",
+		PointPostTool:       ".claude/hooks/validate-governance.sh",
+		PointBeforeComplete: ".claude/hooks/validate-session-end.sh",
 	},
 	"codex": {
-		PointPreTool:    ".codex/hooks/validate-preload.sh",
-		PointPostTool:   ".codex/hooks/validate-governance.sh",
-		PointSessionEnd: ".codex/hooks/validate-session-end.sh",
+		PointPreTool:        ".codex/hooks/validate-preload.sh",
+		PointPostTool:       ".codex/hooks/validate-governance.sh",
+		PointBeforeComplete: ".codex/hooks/validate-session-end.sh",
 	},
 	"copilot": {
-		PointPreTool:    ".github/hooks/validate-preload.sh",
-		PointPostTool:   ".github/hooks/validate-governance.sh",
-		PointSessionEnd: ".github/hooks/validate-session-end.sh",
+		PointPreTool:        ".github/hooks/validate-preload.sh",
+		PointPostTool:       ".github/hooks/validate-governance.sh",
+		PointBeforeComplete: ".github/hooks/validate-session-end.sh",
 	},
 	"opencode": {
-		PointPreTool:    ".agents/hooks/validate-preload.sh",
-		PointPostTool:   ".agents/hooks/validate-governance.sh",
-		PointSessionEnd: ".agents/scripts/validate-session-end.sh",
+		PointPreTool:        ".agents/hooks/validate-preload.sh",
+		PointPostTool:       ".agents/hooks/validate-governance.sh",
+		PointBeforeComplete: ".agents/scripts/validate-session-end.sh",
 	},
 }
 
@@ -76,15 +83,18 @@ type nativeConfigSource struct {
 
 var agentNativeConfigs = map[string][]nativeConfigSource{
 	"claude": {
-		{path: ".claude/settings.json", format: nativeConfigJSON},
+		{path: ".claude/settings.json", format: nativeConfigJSON, required: true},
 		{path: ".claude/settings.local.json", format: nativeConfigJSON},
 	},
 	"codex": {
 		{path: ".codex/config.toml", format: nativeConfigTOML, required: true},
+		{path: ".codex/hooks.json", format: nativeConfigJSON},
+		{path: "~/.codex/hooks.json", format: nativeConfigJSON},
+		{path: "~/.codex/config.toml", format: nativeConfigTOML},
 	},
 	"copilot": {
 		{path: ".github/hooks/governance.json", format: nativeConfigJSON, required: true},
-		{path: ".github/settings.json", format: nativeConfigJSON},
+		{path: ".github/copilot/settings.json", format: nativeConfigJSON},
 	},
 	"opencode": {
 		{path: ".opencode/plugin/governance.js", format: nativeConfigJS, required: true},
@@ -254,14 +264,14 @@ func (c *Catalog) buildRegistry() []Agent {
 			[]string{".claude"},
 			".specs/adr/009-acp-protocol-adoption.md",
 			70000, largeBudgetAbsent,
-			c.canonicalEnforcement("claude", "PreToolUse", "PostToolUse", "Stop"),
+			c.fullCliEnforcement("claude", "SessionStart", "PreToolUse", "PostToolUse", "Stop", "SessionEnd"),
 		),
 		c.newAgent(
 			"codex", "Codex (ACP)", "codex", "codex-acp",
 			[]string{".codex"},
 			".specs/adr/013-codex-cli-acp-native.md",
 			13000, largeBudgetAbsent,
-			c.canonicalEnforcement("codex", "PreToolUse", "PostToolUse", "Stop"),
+			c.fullCliEnforcement("codex", "SessionStart", "PreToolUse", "PostToolUse", "Stop", "SessionEnd"),
 			c.mustPrecondition(PreconditionTrustedHash, "register the hook hash via the Codex interactive interface before orchestrating", true),
 		),
 		c.newAgent(
@@ -269,7 +279,7 @@ func (c *Catalog) buildRegistry() []Agent {
 			[]string{".copilot", ".github/copilot"},
 			".specs/adr/012-copilot-cli-acp-native.md",
 			2000, largeBudgetAbsent,
-			c.canonicalEnforcement("copilot", "preToolUse", "postToolUse", "agentStop"),
+			c.fullCliEnforcement("copilot", "sessionStart", "preToolUse", "postToolUse", "agentStop", "sessionEnd"),
 			c.mustPrecondition(PreconditionTrustedFolder, "add the project folder to the Copilot CLI trusted folders list", false),
 		),
 		c.newAgentWithEnvPolicy(
@@ -278,19 +288,42 @@ func (c *Catalog) buildRegistry() []Agent {
 			".specs/adr/020-opencode-acp-subcomando.md",
 			4000, 500_000,
 			c.NewEnvPolicy(OpenCodeKillSwitchVars...),
-			c.canonicalEnforcement("opencode", "tool.execute.before", "tool.execute.after", "session.idle"),
+			c.openCodeEnforcement(),
 			c.mustPrecondition(PreconditionNoKillSwitch, "unset OPENCODE_PURE, OPENCODE_DISABLE_PROJECT_CONFIG, OPENCODE_DISABLE_EXTERNAL_SKILLS, OPENCODE_DISABLE_DEFAULT_PLUGINS and --pure before orchestrating", false),
 			c.mustPrecondition(PreconditionHandshake, "wait for the governance plugin load handshake before the first prompt", true),
 		),
 	}
 }
 
-func (c *Catalog) canonicalEnforcement(agentID, preKey, postKey, endKey string) Enforcement {
+func (c *Catalog) fullCliEnforcement(agentID, sessionStartKey, preKey, postKey, beforeCompleteKey, sessionEndKey string) Enforcement {
 	coverage := []PointCoverage{
+		c.mustObservedCoverage(agentID, PointSessionStart, sessionStartKey),
 		c.mustCoverage(agentID, PointPreTool, preKey, scriptPreTool),
 		c.mustCoverage(agentID, PointPostTool, postKey, scriptPostTool),
-		c.mustCoverage(agentID, PointSessionEnd, endKey, scriptSessionEnd),
+		c.mustCoverage(agentID, PointBeforeComplete, beforeCompleteKey, scriptSessionEnd),
+		c.mustObservedCoverage(agentID, PointSessionEnd, sessionEndKey),
 	}
+	return c.mustEnforcement(coverage)
+}
+
+const openCodeSessionStartLimitation = "OpenCode has no native session-start hook; approximated via the event bus with event.type == session.created, which fires without blocking capability"
+
+const openCodeBeforeCompleteLimitation = "OpenCode's session.idle fires at turn end but does not block; it is observational only, unlike Stop/SubagentStop/agentStop in the other three CLIs"
+
+const openCodeSessionEndUnsupportedReason = "OpenCode has no native session-end hook and no documented approximation for it"
+
+func (c *Catalog) openCodeEnforcement() Enforcement {
+	coverage := []PointCoverage{
+		c.mustAdapterCoverage("opencode", PointSessionStart, "event.session.created", "", openCodeSessionStartLimitation),
+		c.mustCoverage("opencode", PointPreTool, "tool.execute.before", scriptPreTool),
+		c.mustCoverage("opencode", PointPostTool, "tool.execute.after", scriptPostTool),
+		c.mustAdapterCoverage("opencode", PointBeforeComplete, "session.idle", scriptSessionEnd, openCodeBeforeCompleteLimitation),
+		c.mustUnsupportedCoverage("opencode", PointSessionEnd, openCodeSessionEndUnsupportedReason),
+	}
+	return c.mustEnforcement(coverage)
+}
+
+func (c *Catalog) mustEnforcement(coverage []PointCoverage) Enforcement {
 	enf, err := c.NewEnforcement(coverage)
 	if err != nil {
 		panic(fmt.Sprintf("agent registry: invalid enforcement: %v", err))
@@ -306,6 +339,38 @@ func (c *Catalog) mustCoverage(agentID string, point CanonicalPoint, nativeKey, 
 	cov, err := c.NewPointCoverage(agentID, point, nativeKey, scriptPath, artifactPath)
 	if err != nil {
 		panic(fmt.Sprintf("agent registry: invalid coverage: %v", err))
+	}
+	return cov
+}
+
+func (c *Catalog) mustObservedCoverage(agentID string, point CanonicalPoint, nativeKey string) PointCoverage {
+	cov, err := c.NewObservedPointCoverage(agentID, point, nativeKey)
+	if err != nil {
+		panic(fmt.Sprintf("agent registry: invalid observed coverage: %v", err))
+	}
+	return cov
+}
+
+func (c *Catalog) mustAdapterCoverage(agentID string, point CanonicalPoint, nativeKey, scriptPath, limitation string) PointCoverage {
+	var artifactPath string
+	if scriptPath != "" {
+		var ok bool
+		artifactPath, ok = InstalledArtifactPath(agentID, point)
+		if !ok {
+			panic(fmt.Sprintf("agent registry: agent %q declares no installed artifact for point %s", agentID, point))
+		}
+	}
+	cov, err := c.NewAdapterPointCoverage(agentID, point, nativeKey, scriptPath, artifactPath, limitation)
+	if err != nil {
+		panic(fmt.Sprintf("agent registry: invalid adapter coverage: %v", err))
+	}
+	return cov
+}
+
+func (c *Catalog) mustUnsupportedCoverage(agentID string, point CanonicalPoint, reason string) PointCoverage {
+	cov, err := c.NewUnsupportedPointCoverage(agentID, point, reason)
+	if err != nil {
+		panic(fmt.Sprintf("agent registry: invalid unsupported coverage: %v", err))
 	}
 	return cov
 }

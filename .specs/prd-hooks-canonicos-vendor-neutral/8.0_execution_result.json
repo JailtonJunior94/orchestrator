@@ -1,0 +1,126 @@
+{
+  "schema_version": 2,
+  "run_id": "task-8.0-2026-09-20",
+  "task_id": "8.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "471e6e008c963f3c6c31211946461b7edda4bb3f",
+  "patch_sha256": "0b0280aba9835a4ee952babfec26f2affa24259c40d30dbb202e98e683fda51a",
+  "patch_ref": "evidence/task-8.0/patch.diff",
+  "final_state_sha256": "cf5e6186a1d3b5f873fa4c5782040ee30677a2e4506704247581ee27dfeb5680",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go vet ./...",
+      "exit_code": 0,
+      "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "command": "go test ./...",
+      "exit_code": 0,
+      "output_sha256": "390545d90d4f0549a645867cf37ca4893390fe9b21d39223a854728fafdce52c"
+    },
+    {
+      "command": "go test ./internal/runtime/specs/... -v",
+      "exit_code": 0,
+      "output_sha256": "5ef7a922b848da160b79d2255ded19f44c28c20c5642fe386f0e40c92b0c9780"
+    },
+    {
+      "command": "go test ./internal/install/... ./internal/uninstall/... ./internal/contextgen/... ./internal/upgrade/... ./internal/doctor/... -v",
+      "exit_code": 0,
+      "output_sha256": "8bd286e586da5a399b0655153b873ee50d2a1c4d352109563a70d6863c19e91e"
+    },
+    {
+      "command": "go test -tags=integration ./tests/integration/... -run TestHookContractProjection|TestPreToolHookDispatch|TestPostToolHookDispatch|TestSessionEndHookDispatch|TestSessionEndCliBlockingContract|TestSessionEndRefusalSignals|TestToolHooksDispatchNativeApplyPatchPayload|TestPreToolHookDecisionIsIdenticalAcrossAgents|TestPreToolHooksDelegateToCanonicalScript|TestOpenCodeGovernancePlugin -v",
+      "exit_code": 0,
+      "output_sha256": "19be9021107f46d9f1f46103b2a08a3b8f45bcdeb2fe9663b243c9861ac63c78"
+    },
+    {
+      "command": "golangci-lint run --config .golangci.yml --timeout 10m ./...",
+      "exit_code": 0,
+      "output_sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"
+    },
+    {
+      "command": "go test -coverprofile=coverage.out ./...",
+      "exit_code": 0,
+      "output_sha256": "c38f7310f975e7964d075df0105c355acdcd6928ed5d6cd8477583136663240d"
+    },
+    {
+      "command": "go tool cover -func=coverage_filtered.out",
+      "exit_code": 0,
+      "output_sha256": "f465dc5802ddea6afa2679329c478f204e68acc4a3bff378fd2ac8796cc0fbab"
+    },
+    {
+      "command": "bash scripts/check-package-coverage.sh 70",
+      "exit_code": 0,
+      "output_sha256": "13743319d79f5996cbb11b0fab6bebd77cee5f81238c4d8ddd52ade8362132b7"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "twenty-pairs-explicit-state",
+      "evidence_ref": "evidence/task-8.0/specs-package.log"
+    },
+    {
+      "id": "no-simulated-parity-limitation-required",
+      "evidence_ref": "evidence/task-8.0/specs-package.log"
+    },
+    {
+      "id": "claude-settings-json-versioned-required",
+      "evidence_ref": "evidence/task-8.0/install-related-packages.log"
+    },
+    {
+      "id": "copilot-and-codex-native-config-paths",
+      "evidence_ref": "evidence/task-8.0/install-related-packages.log"
+    },
+    {
+      "id": "rf56-policy-decision-gate",
+      "evidence_ref": "evidence/task-8.0/specs-package.log"
+    },
+    {
+      "id": "codex-trust-release-gate",
+      "evidence_ref": "evidence/task-8.0/patch.diff"
+    },
+    {
+      "id": "no-regression-test-lint-vet",
+      "evidence_ref": "evidence/task-8.0/go-test-all.log"
+    },
+    {
+      "id": "check-hooks-sync-green",
+      "evidence_ref": "evidence/task-8.0/patch.diff"
+    },
+    {
+      "id": "make-integration-adapter-suite",
+      "evidence_ref": "evidence/task-8.0/integration-adapter-suite.log"
+    },
+    {
+      "id": "coverage-gates",
+      "evidence_ref": "evidence/task-8.0/coverage-packages.log"
+    },
+    {
+      "id": "no-panic-catalog-init",
+      "evidence_ref": "evidence/task-8.0/go-test-all.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-8.0/patch.diff",
+    "evidence/task-8.0/go-build.log",
+    "evidence/task-8.0/go-vet.log",
+    "evidence/task-8.0/go-test-all.log",
+    "evidence/task-8.0/specs-package.log",
+    "evidence/task-8.0/install-related-packages.log",
+    "evidence/task-8.0/integration-adapter-suite.log",
+    "evidence/task-8.0/lint.log",
+    "evidence/task-8.0/coverage.log",
+    "evidence/task-8.0/coverage-func.log",
+    "evidence/task-8.0/coverage-packages.log",
+    "evidence/task-8.0/reviewer-verdict.md",
+    "evidence/task-8.0/final-state-concat.txt"
+  ],
+  "review_verdict": "approved"
+}

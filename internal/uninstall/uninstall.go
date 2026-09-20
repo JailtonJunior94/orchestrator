@@ -124,6 +124,8 @@ var governanceRootDirs = []string{
 
 var claudeSettingsRelPath = filepath.Join(".claude", "settings.local.json")
 
+var claudeVersionedSettingsRelPath = filepath.Join(".claude", "settings.json")
+
 var reverseMergeFiles = []string{
 	filepath.Join(".github", "settings.json"),
 	specs.OpenCodeConfigFileName,
@@ -213,13 +215,13 @@ func (s *Service) mergedCandidates(mf *manifest.Manifest, tracked bool) []string
 func (s *Service) reverseMerge(absDir, rel string, rm *remover) {
 	path := filepath.Join(absDir, rel)
 	switch filepath.ToSlash(rel) {
-	case ".github/settings.json":
+	case ".github/copilot/settings.json", ".github/settings.json":
 		s.reverseMergeCopilotSettings(path, rm)
 	case specs.OpenCodeConfigFileName:
 		s.reverseMergeOpenCodeConfig(path, rm)
 	case codexConfigRelPath:
 		s.reverseMergeCodexConfig(path, rm)
-	case claudeSettingsRelPath:
+	case claudeSettingsRelPath, claudeVersionedSettingsRelPath:
 		s.reverseMergeClaudeSettings(path, rm)
 	default:
 		if s.reverseMergeUserContentMarkdown(path, rm) {

@@ -211,7 +211,7 @@ func TestParityGateFailsWhenCellHasNoDispatchProof(t *testing.T) {
 	violations := specs.ValidateParityMatrix(cells, mandatoryParityAgents, nil, repoScriptResolver(t))
 	found := false
 	for _, v := range violations {
-		if v.Agent == "opencode" && v.Point == specs.PointSessionEnd && v.Reason == "no dispatch proof test associated" {
+		if v.Agent == "opencode" && v.Point == specs.PointBeforeComplete && v.Reason == "no dispatch proof test associated" {
 			found = true
 		}
 	}

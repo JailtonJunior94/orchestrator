@@ -18,10 +18,11 @@ func TestBuildDirectoryTree_ExcludesHarnessGeneratedArtifacts(t *testing.T) {
 	ffs.Dirs["/project/.github/skills"] = true
 	ffs.Dirs["/project/.github/agents"] = true
 	ffs.Dirs["/project/.github/hooks"] = true
+	ffs.Dirs["/project/.github/copilot"] = true
 	ffs.Files["/project/main.go"] = []byte("package main\n")
 	ffs.Files["/project/.github/workflows/ci.yml"] = []byte("name: ci\n")
 	ffs.Files["/project/.github/copilot-instructions.md"] = []byte("gerado\n")
-	ffs.Files["/project/.github/settings.json"] = []byte("{}\n")
+	ffs.Files["/project/.github/copilot/settings.json"] = []byte("{}\n")
 	ffs.Files["/project/.ai_spec_harness.json"] = []byte("{}\n")
 
 	tree := NewGenerator(ffs, output.New(false)).buildDirectoryTree("/project")
@@ -29,7 +30,7 @@ func TestBuildDirectoryTree_ExcludesHarnessGeneratedArtifacts(t *testing.T) {
 	for _, generated := range []string{
 		".ai_spec_harness.json",
 		".github/copilot-instructions.md",
-		".github/settings.json",
+		".github/copilot/settings.json",
 		".github/skills",
 		".github/agents",
 		".github/hooks",

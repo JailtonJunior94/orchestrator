@@ -25,9 +25,11 @@ func TestHookContractProjection_SpecsModelMatchesContract(t *testing.T) {
 		point specs.CanonicalPoint
 		event hookcontract.EventKind
 	}{
+		{specs.PointSessionStart, hookcontract.EventSessionStart},
 		{specs.PointPreTool, hookcontract.EventBeforeTool},
 		{specs.PointPostTool, hookcontract.EventAfterTool},
-		{specs.PointSessionEnd, hookcontract.EventBeforeComplete},
+		{specs.PointBeforeComplete, hookcontract.EventBeforeComplete},
+		{specs.PointSessionEnd, hookcontract.EventSessionEnd},
 	}
 
 	if len(points) != len(want) {
@@ -53,9 +55,11 @@ func TestHookContractProjection_SpecsModelDivergesWhenMappingIsWrong(t *testing.
 	points := catalog.CanonicalPoints()
 
 	brokenWant := map[specs.CanonicalPoint]hookcontract.EventKind{
-		specs.PointPreTool:    hookcontract.EventSessionStart,
-		specs.PointPostTool:   hookcontract.EventAfterTool,
-		specs.PointSessionEnd: hookcontract.EventBeforeComplete,
+		specs.PointSessionStart:   hookcontract.EventSessionStart,
+		specs.PointPreTool:        hookcontract.EventSessionStart,
+		specs.PointPostTool:       hookcontract.EventAfterTool,
+		specs.PointBeforeComplete: hookcontract.EventBeforeComplete,
+		specs.PointSessionEnd:     hookcontract.EventSessionEnd,
 	}
 
 	diverged := false

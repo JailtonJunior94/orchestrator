@@ -14,7 +14,7 @@ const CopilotGovernanceHooksRelPath = ".github/hooks/governance.json"
 
 const CopilotSessionEndHookKey = "agentStop"
 
-var ObsoleteCopilotHookKeys = []string{"stop", "Stop", "sessionEnd", "SessionEnd"}
+var ObsoleteCopilotHookKeys = []string{"stop", "Stop"}
 
 const DefaultCopilotGovernanceHooks = `{
   "version": 1,

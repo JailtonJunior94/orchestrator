@@ -12,8 +12,10 @@ import (
 type CanonicalPoint int
 
 const (
-	PointPreTool CanonicalPoint = iota + 1
+	PointSessionStart CanonicalPoint = iota + 1
+	PointPreTool
 	PointPostTool
+	PointBeforeComplete
 	PointSessionEnd
 )
 
@@ -22,9 +24,11 @@ var canonicalPointEvents = []struct {
 	event hookcontract.EventKind
 	name  string
 }{
+	{PointSessionStart, hookcontract.EventSessionStart, "session-start"},
 	{PointPreTool, hookcontract.EventBeforeTool, "pre-tool"},
 	{PointPostTool, hookcontract.EventAfterTool, "post-tool"},
-	{PointSessionEnd, hookcontract.EventBeforeComplete, "session-end"},
+	{PointBeforeComplete, hookcontract.EventBeforeComplete, "before-complete"},
+	{PointSessionEnd, hookcontract.EventSessionEnd, "session-end"},
 }
 
 var canonicalPoints = derivedCanonicalPoints()
@@ -63,7 +67,7 @@ func canonicalPointName(p CanonicalPoint) (string, bool) {
 
 var ErrUnknownCanonicalPoint = errors.New("unknown canonical point")
 
-var ErrIncompleteCoverage = errors.New("enforcement does not cover the three canonical points")
+var ErrIncompleteCoverage = errors.New("enforcement does not cover every canonical point")
 
 var ErrInvalidPrecondition = errors.New("invalid enforcement precondition")
 
@@ -153,6 +157,52 @@ func (c *Catalog) NewPointCoverage(agentID string, point CanonicalPoint, nativeK
 	return PointCoverage{agentID: agentID, point: point, nativeKey: nativeKey, scriptPath: scriptPath, artifactPath: artifactPath, state: hookcontract.SupportVerified}, nil
 }
 
+func (c *Catalog) NewObservedPointCoverage(agentID string, point CanonicalPoint, nativeKey string) (PointCoverage, error) {
+	if !point.Valid() {
+		return PointCoverage{}, fmt.Errorf("%w: %d", ErrUnknownCanonicalPoint, int(point))
+	}
+	if strings.TrimSpace(agentID) == "" {
+		return PointCoverage{}, fmt.Errorf("%w: point %s missing agent id", ErrIncompleteCoverage, point)
+	}
+	if strings.TrimSpace(nativeKey) == "" {
+		return PointCoverage{}, fmt.Errorf("%w: point %s missing native key", ErrIncompleteCoverage, point)
+	}
+	recognized, known := RecognizedNativeKeys(agentID, point)
+	if !known {
+		return PointCoverage{}, fmt.Errorf("%w: agent %q has no declared hook vocabulary for point %s", ErrUnrecognizedNativeKey, agentID, point)
+	}
+	if !slices.Contains(recognized, nativeKey) {
+		return PointCoverage{}, fmt.Errorf("%w: agent %q point %s declares %q; %s recognizes only %v", ErrUnrecognizedNativeKey, agentID, point, nativeKey, agentID, recognized)
+	}
+	return PointCoverage{agentID: agentID, point: point, nativeKey: nativeKey, state: hookcontract.SupportVerified}, nil
+}
+
+func (c *Catalog) NewAdapterPointCoverage(agentID string, point CanonicalPoint, nativeKey, scriptPath, artifactPath, limitation string) (PointCoverage, error) {
+	if !point.Valid() {
+		return PointCoverage{}, fmt.Errorf("%w: %d", ErrUnknownCanonicalPoint, int(point))
+	}
+	if strings.TrimSpace(agentID) == "" {
+		return PointCoverage{}, fmt.Errorf("%w: point %s missing agent id", ErrIncompleteCoverage, point)
+	}
+	if strings.TrimSpace(nativeKey) == "" {
+		return PointCoverage{}, fmt.Errorf("%w: point %s missing native key", ErrIncompleteCoverage, point)
+	}
+	if strings.TrimSpace(limitation) == "" {
+		return PointCoverage{}, fmt.Errorf("%w: point %s declared adapter support without limitation", ErrIncompleteCoverage, point)
+	}
+	if (strings.TrimSpace(scriptPath) == "") != (strings.TrimSpace(artifactPath) == "") {
+		return PointCoverage{}, fmt.Errorf("%w: point %s must declare both canonical script and installed artifact, or neither", ErrIncompleteCoverage, point)
+	}
+	recognized, known := RecognizedNativeKeys(agentID, point)
+	if !known {
+		return PointCoverage{}, fmt.Errorf("%w: agent %q has no declared hook vocabulary for point %s", ErrUnrecognizedNativeKey, agentID, point)
+	}
+	if !slices.Contains(recognized, nativeKey) {
+		return PointCoverage{}, fmt.Errorf("%w: agent %q point %s declares %q; %s recognizes only %v", ErrUnrecognizedNativeKey, agentID, point, nativeKey, agentID, recognized)
+	}
+	return PointCoverage{agentID: agentID, point: point, nativeKey: nativeKey, scriptPath: scriptPath, artifactPath: artifactPath, state: hookcontract.SupportAdapter, reason: limitation}, nil
+}
+
 func (c *Catalog) NewUnsupportedPointCoverage(agentID string, point CanonicalPoint, reason string) (PointCoverage, error) {
 	if !point.Valid() {
 		return PointCoverage{}, fmt.Errorf("%w: %d", ErrUnknownCanonicalPoint, int(point))
@@ -182,12 +232,28 @@ func (c *Catalog) NewEnforcement(coverage []PointCoverage, preconditions ...Enfo
 		if !cov.point.Valid() {
 			return Enforcement{}, fmt.Errorf("%w: invalid point", ErrIncompleteCoverage)
 		}
-		if cov.state == hookcontract.SupportUnsupported {
+		switch cov.state {
+		case hookcontract.SupportUnsupported:
 			if strings.TrimSpace(cov.reason) == "" {
 				return Enforcement{}, fmt.Errorf("%w: point %s declared unsupported without reason", ErrIncompleteCoverage, cov.point)
 			}
-		} else if cov.nativeKey == "" || cov.scriptPath == "" || cov.artifactPath == "" {
-			return Enforcement{}, fmt.Errorf("%w: point %s missing native key, canonical script or installed artifact", ErrIncompleteCoverage, cov.point)
+		case hookcontract.SupportAdapter:
+			if cov.nativeKey == "" {
+				return Enforcement{}, fmt.Errorf("%w: point %s missing native key", ErrIncompleteCoverage, cov.point)
+			}
+			if strings.TrimSpace(cov.reason) == "" {
+				return Enforcement{}, fmt.Errorf("%w: point %s declared adapter support without limitation", ErrIncompleteCoverage, cov.point)
+			}
+			if (cov.scriptPath == "") != (cov.artifactPath == "") {
+				return Enforcement{}, fmt.Errorf("%w: point %s must declare both canonical script and installed artifact, or neither", ErrIncompleteCoverage, cov.point)
+			}
+		default:
+			if cov.nativeKey == "" {
+				return Enforcement{}, fmt.Errorf("%w: point %s missing native key", ErrIncompleteCoverage, cov.point)
+			}
+			if (cov.scriptPath == "") != (cov.artifactPath == "") {
+				return Enforcement{}, fmt.Errorf("%w: point %s must declare both canonical script and installed artifact, or neither", ErrIncompleteCoverage, cov.point)
+			}
 		}
 		if seen[cov.point] {
 			return Enforcement{}, fmt.Errorf("%w: duplicate point %s", ErrIncompleteCoverage, cov.point)
@@ -212,7 +278,7 @@ func (c *Catalog) NewEnforcement(coverage []PointCoverage, preconditions ...Enfo
 }
 
 func (p CanonicalPoint) Valid() bool {
-	return p >= PointPreTool && p <= PointSessionEnd
+	return p >= PointSessionStart && p <= PointSessionEnd
 }
 
 func (p CanonicalPoint) String() string {
@@ -267,6 +333,8 @@ func (c PointCoverage) AgentID() string { return c.agentID }
 func (c PointCoverage) State() hookcontract.SupportState { return c.state }
 
 func (c PointCoverage) Reason() string { return c.reason }
+
+func (c PointCoverage) Limitation() string { return c.reason }
 
 func (p EnforcementPrecondition) Kind() PreconditionKind { return p.kind }
 

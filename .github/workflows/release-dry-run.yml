@@ -49,6 +49,9 @@ jobs:
           fi
           echo "OK: tag v${TARGET} does not exist (expected)"
 
+      - name: Check Codex hook trust (RF-51..RF-56 release gate)
+        run: ./ai-spec doctor . --codex-trust
+
       - name: Validate working tree is clean
         run: |
           # Only check tracked files — build artifacts (ai-spec binary) are intentionally untracked

@@ -17,10 +17,17 @@ type MatrixCell struct {
 
 func LiveMatrix() []MatrixCell {
 	catalog := specs.NewCatalog()
-	cells := make([]MatrixCell, 0, len(LiveAgentIDs)*len(catalog.CanonicalPoints()))
-	for _, agent := range LiveAgentIDs {
-		for _, point := range catalog.CanonicalPoints() {
-			cells = append(cells, MatrixCell{Agent: agent, Point: point})
+	var cells []MatrixCell
+	for _, agentID := range LiveAgentIDs {
+		agent, err := catalog.AgentByID(agentID)
+		if err != nil {
+			continue
+		}
+		for _, cov := range agent.Enforcement().Coverage() {
+			if cov.ScriptPath() == "" {
+				continue
+			}
+			cells = append(cells, MatrixCell{Agent: agentID, Point: cov.Point()})
 		}
 	}
 	return cells

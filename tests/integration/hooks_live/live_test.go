@@ -92,7 +92,7 @@ type nativeRun struct {
 func invokeNativeCLI(t *testing.T, projectDir string, cell MatrixCell) nativeRun {
 	t.Helper()
 	prepareNativeFixture(t, projectDir, cell)
-	if cell.Point == specs.PointSessionEnd {
+	if cell.Point == specs.PointBeforeComplete {
 		writeActiveTask(t, projectDir)
 	}
 	env, codexProfile, sessionIdleMarker := configureNativeFixtureTrust(t, projectDir, cell)
@@ -148,7 +148,7 @@ func assertNativeOutcome(t *testing.T, projectDir string, cell MatrixCell, run n
 		assertPreToolOutcome(t, projectDir, cell, run)
 	case specs.PointPostTool:
 		assertPostToolOutcome(t, projectDir, cell, run)
-	case specs.PointSessionEnd:
+	case specs.PointBeforeComplete:
 		assertSessionEndOutcome(t, cell, run)
 	default:
 		t.Fatalf("assertNativeOutcome: unhandled canonical point %s for agent %s", cell.Point, cell.Agent)
@@ -244,7 +244,7 @@ func configureNativeFixtureTrust(t *testing.T, projectDir string, cell MatrixCel
 	case "copilot":
 		env = append(env, CopilotRepoHooksOptInEnvVar+"="+CopilotRepoHooksOptInEnvValue)
 	case "opencode":
-		if cell.Point == specs.PointSessionEnd {
+		if cell.Point == specs.PointBeforeComplete {
 			sessionIdleMarker = filepath.Join(t.TempDir(), "opencode-session-idle")
 		}
 	}

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/config"
@@ -2218,14 +2219,14 @@ func TestInstall_Copilot_NativeHooks(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	data, err := ffs.ReadFile("/project/.github/settings.json")
+	data, err := ffs.ReadFile("/project/.github/copilot/settings.json")
 	if err != nil {
-		t.Fatalf(".github/settings.json nao criado: %v", err)
+		t.Fatalf(".github/copilot/settings.json nao criado: %v", err)
 	}
 	content := string(data)
 	for _, want := range []string{`"hooks"`, "preToolUse", "agentStop", "validate-preload.sh"} {
 		if !strings.Contains(content, want) {
-			t.Errorf(".github/settings.json sem %q", want)
+			t.Errorf(".github/copilot/settings.json sem %q", want)
 		}
 	}
 	if !ffs.Exists("/project/.github/hooks/governance.json") {
@@ -2238,7 +2239,7 @@ func TestInstall_Copilot_MergesRepositorySettings(t *testing.T) {
 	ffs := fs.NewFakeFileSystem()
 	ffs.Dirs["/project"] = true
 	ffs.Dirs["/source"] = true
-	ffs.Files["/project/.github/settings.json"] = []byte(`{
+	ffs.Files["/project/.github/copilot/settings.json"] = []byte(`{
   "custom": {"preserved": true},
   "hooks": {
     "preToolUse": [{"type": "command", "bash": "bash user-hook.sh"}]
@@ -2255,7 +2256,7 @@ func TestInstall_Copilot_MergesRepositorySettings(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	data, err := ffs.ReadFile("/project/.github/settings.json")
+	data, err := ffs.ReadFile("/project/.github/copilot/settings.json")
 	if err != nil {
 		t.Fatalf("read settings: %v", err)
 	}
@@ -2286,7 +2287,7 @@ func TestInstall_Copilot_MergesRepositorySettings(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("second install: %v", err)
 	}
-	data, err = ffs.ReadFile("/project/.github/settings.json")
+	data, err = ffs.ReadFile("/project/.github/copilot/settings.json")
 	if err != nil {
 		t.Fatalf("read settings after second install: %v", err)
 	}
@@ -2325,5 +2326,71 @@ func TestInstall_Codex_NativeHooksAndSandbox(t *testing.T) {
 		if !strings.Contains(cfgStr, want) {
 			t.Errorf(".codex/config.toml sem %q", want)
 		}
+	}
+}
+
+func TestInstall_TouchesOnlyConfiguredProviders(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	svc := setupTestService(ffs)
+
+	if err := svc.Execute(config.InstallOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+		Tools:      []skills.Tool{skills.ToolClaude},
+		LinkMode:   skills.LinkCopy,
+	}); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	unconfiguredProviderPaths := []string{
+		"/project/.codex",
+		"/project/.github",
+		"/project/.opencode",
+		"/project/.config/opencode",
+	}
+	for _, path := range unconfiguredProviderPaths {
+		if ffs.Exists(path) {
+			t.Errorf("RF-71: instalar apenas claude nao deve tocar %q, provedor nao configurado", path)
+			continue
+		}
+		for file := range ffs.Files {
+			if strings.HasPrefix(file, path+"/") {
+				t.Errorf("RF-71: arquivo %q pertence a provedor nao configurado %q", file, path)
+			}
+		}
+	}
+
+	if !ffs.Exists("/project/.claude") {
+		t.Fatal("provedor configurado (claude) deveria ter sido instalado")
+	}
+}
+
+func TestInstall_NeverSpawnsAResidentProcess(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+	ffs.Dirs["/project"] = true
+	ffs.Dirs["/source"] = true
+	svc := setupTestService(ffs)
+
+	done := make(chan error, 1)
+	go func() {
+		done <- svc.Execute(config.InstallOptions{
+			ProjectDir: "/project",
+			SourceDir:  "/source",
+			Tools:      []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot, skills.ToolOpenCode},
+			LinkMode:   skills.LinkCopy,
+		})
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("RF-72: svc.Execute nao retornou dentro do timeout — instalacao nao deve bloquear aguardando um processo residente/daemon")
 	}
 }

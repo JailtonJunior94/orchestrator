@@ -15,14 +15,28 @@ func coverageFixture(t *testing.T, p specs.CanonicalPoint) specs.PointCoverage {
 		t.Fatalf("no recognized native key for claude point %s", p)
 	}
 	artifact, ok := specs.InstalledArtifactPath("claude", p)
-	if !ok {
-		t.Fatalf("no installed artifact for claude point %s", p)
+	if ok {
+		cov, err := specs.NewCatalog().NewPointCoverage("claude", p, keys[0], ".agents/hooks/validate-preload.sh", artifact)
+		if err != nil {
+			t.Fatalf("NewPointCoverage(%s): %v", p, err)
+		}
+		return cov
 	}
-	cov, err := specs.NewCatalog().NewPointCoverage("claude", p, keys[0], ".agents/hooks/validate-preload.sh", artifact)
+	cov, err := specs.NewCatalog().NewObservedPointCoverage("claude", p, keys[0])
 	if err != nil {
-		t.Fatalf("NewPointCoverage(%s): %v", p, err)
+		t.Fatalf("NewObservedPointCoverage(%s): %v", p, err)
 	}
 	return cov
+}
+
+func allCanonicalPoints() []specs.CanonicalPoint {
+	return []specs.CanonicalPoint{
+		specs.PointSessionStart,
+		specs.PointPreTool,
+		specs.PointPostTool,
+		specs.PointBeforeComplete,
+		specs.PointSessionEnd,
+	}
 }
 
 func TestNewPointCoverageRejectsNativeKeyTheCliDoesNotRecognize(t *testing.T) {
@@ -33,11 +47,11 @@ func TestNewPointCoverageRejectsNativeKeyTheCliDoesNotRecognize(t *testing.T) {
 		point     specs.CanonicalPoint
 		nativeKey string
 	}{
-		{"copilot", specs.PointSessionEnd, "agentStop_TYPO"},
+		{"copilot", specs.PointBeforeComplete, "agentStop_TYPO"},
 		{"copilot", specs.PointPreTool, "PreToolUse"},
 		{"claude", specs.PointPreTool, "preToolUse"},
-		{"opencode", specs.PointSessionEnd, "Stop"},
-		{"codex", specs.PointSessionEnd, "SessionEnd"},
+		{"opencode", specs.PointBeforeComplete, "Stop"},
+		{"codex", specs.PointBeforeComplete, "SessionEnd"},
 	}
 
 	for _, tc := range cases {
@@ -65,11 +79,7 @@ func TestNewPointCoverageRejectsUnknownAgentVocabulary(t *testing.T) {
 func TestNewEnforcementRejectsIncompleteCoverage(t *testing.T) {
 	t.Parallel()
 
-	all := []specs.CanonicalPoint{
-		specs.PointPreTool,
-		specs.PointPostTool,
-		specs.PointSessionEnd,
-	}
+	all := allCanonicalPoints()
 
 	for _, missing := range all {
 		var coverage []specs.PointCoverage
@@ -85,10 +95,9 @@ func TestNewEnforcementRejectsIncompleteCoverage(t *testing.T) {
 		}
 	}
 
-	complete := []specs.PointCoverage{
-		coverageFixture(t, specs.PointPreTool),
-		coverageFixture(t, specs.PointPostTool),
-		coverageFixture(t, specs.PointSessionEnd),
+	var complete []specs.PointCoverage
+	for _, p := range all {
+		complete = append(complete, coverageFixture(t, p))
 	}
 	enf, err := specs.NewCatalog().NewEnforcement(complete)
 	if err != nil {
@@ -103,8 +112,10 @@ func TestNewEnforcementAcceptsDeclaredUnsupportedPoint(t *testing.T) {
 	t.Parallel()
 
 	coverage := []specs.PointCoverage{
+		coverageFixture(t, specs.PointSessionStart),
 		coverageFixture(t, specs.PointPreTool),
 		coverageFixture(t, specs.PointPostTool),
+		coverageFixture(t, specs.PointBeforeComplete),
 	}
 	unsupported, err := specs.NewCatalog().NewUnsupportedPointCoverage("opencode", specs.PointSessionEnd, "provider has no native session-end hook")
 	if err != nil {
@@ -148,19 +159,42 @@ func TestNewUnsupportedPointCoverageRequiresReason(t *testing.T) {
 	}
 }
 
+func TestNewAdapterPointCoverageRequiresLimitation(t *testing.T) {
+	t.Parallel()
+
+	if _, err := specs.NewCatalog().NewAdapterPointCoverage("opencode", specs.PointSessionStart, "event.session.created", "", "", "   "); !errors.Is(err, specs.ErrIncompleteCoverage) {
+		t.Fatalf("empty limitation err = %v; want ErrIncompleteCoverage", err)
+	}
+	cov, err := specs.NewCatalog().NewAdapterPointCoverage("opencode", specs.PointSessionStart, "event.session.created", "", "", "no native session-start hook")
+	if err != nil {
+		t.Fatalf("valid adapter coverage rejected: %v", err)
+	}
+	if cov.State() != hookcontract.SupportAdapter {
+		t.Fatalf("State() = %v, want SupportAdapter", cov.State())
+	}
+	if cov.Limitation() == "" {
+		t.Fatal("adapter coverage lost its declared limitation")
+	}
+	if _, err := specs.NewCatalog().NewAdapterPointCoverage("opencode", specs.PointSessionStart, "event.session.created", ".agents/hooks/validate-preload.sh", "", "x"); !errors.Is(err, specs.ErrIncompleteCoverage) {
+		t.Fatalf("script without artifact err = %v; want ErrIncompleteCoverage", err)
+	}
+}
+
 func TestCanonicalPointsDeriveFromHookContract(t *testing.T) {
 	t.Parallel()
 
 	catalog := specs.NewCatalog()
 	points := catalog.CanonicalPoints()
-	if len(points) != 3 {
-		t.Fatalf("len(points) = %d, want 3", len(points))
+	if len(points) != 5 {
+		t.Fatalf("len(points) = %d, want 5", len(points))
 	}
 
 	want := map[specs.CanonicalPoint]hookcontract.EventKind{
-		specs.PointPreTool:    hookcontract.EventBeforeTool,
-		specs.PointPostTool:   hookcontract.EventAfterTool,
-		specs.PointSessionEnd: hookcontract.EventBeforeComplete,
+		specs.PointSessionStart:   hookcontract.EventSessionStart,
+		specs.PointPreTool:        hookcontract.EventBeforeTool,
+		specs.PointPostTool:       hookcontract.EventAfterTool,
+		specs.PointBeforeComplete: hookcontract.EventBeforeComplete,
+		specs.PointSessionEnd:     hookcontract.EventSessionEnd,
 	}
 	for _, point := range points {
 		event, ok := catalog.CanonicalPointEvent(point)
@@ -185,7 +219,7 @@ func TestCanonicalPointIsClosedSet(t *testing.T) {
 	if _, err := specs.NewCatalog().ParseCanonicalPoint("bogus"); !errors.Is(err, specs.ErrUnknownCanonicalPoint) {
 		t.Fatalf("ParseCanonicalPoint(bogus) err = %v; want ErrUnknownCanonicalPoint", err)
 	}
-	for _, name := range []string{"pre-tool", "post-tool", "session-end"} {
+	for _, name := range []string{"session-start", "pre-tool", "post-tool", "before-complete", "session-end"} {
 		p, err := specs.NewCatalog().ParseCanonicalPoint(name)
 		if err != nil || !p.Valid() {
 			t.Errorf("ParseCanonicalPoint(%q) = %v, %v", name, p, err)

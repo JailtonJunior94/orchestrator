@@ -6,6 +6,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
 )
 
@@ -128,8 +129,8 @@ func TestMandatoryMatrixAgentsByCanonicalPoints(t *testing.T) {
 	t.Parallel()
 
 	points := specs.NewCatalog().CanonicalPoints()
-	if len(points) != 3 {
-		t.Fatalf("expected 3 canonical points; got %d", len(points))
+	if len(points) != 5 {
+		t.Fatalf("expected 5 canonical points; got %d", len(points))
 	}
 
 	scriptByPoint := make(map[specs.CanonicalPoint]string)
@@ -146,20 +147,29 @@ func TestMandatoryMatrixAgentsByCanonicalPoints(t *testing.T) {
 			if !ok {
 				t.Fatalf("agent %q: point %s not covered", agent.ID(), point)
 			}
+			if cov.State() == hookcontract.SupportUnsupported {
+				if cov.Reason() == "" {
+					t.Errorf("agent %q point %s: unsupported without a declared reason", agent.ID(), point)
+				}
+				continue
+			}
 			if cov.NativeKey() == "" {
 				t.Errorf("agent %q point %s: empty native key", agent.ID(), point)
 			}
-			if cov.ScriptPath() == "" {
-				t.Errorf("agent %q point %s: empty canonical script", agent.ID(), point)
+			if cov.State() == hookcontract.SupportAdapter && cov.Limitation() == "" {
+				t.Errorf("agent %q point %s: adapter support without a declared limitation", agent.ID(), point)
 			}
-			if cov.ArtifactPath() == "" {
-				t.Errorf("agent %q point %s: empty installed artifact", agent.ID(), point)
+			if (cov.ScriptPath() == "") != (cov.ArtifactPath() == "") {
+				t.Errorf("agent %q point %s: script and artifact must both be declared or both be empty", agent.ID(), point)
 			}
 			recognized, known := specs.RecognizedNativeKeys(agent.ID(), point)
 			if !known {
 				t.Errorf("agent %q point %s: no declared hook vocabulary", agent.ID(), point)
 			} else if !slices.Contains(recognized, cov.NativeKey()) {
 				t.Errorf("agent %q point %s: native key %q is not recognized by the CLI (%v)", agent.ID(), point, cov.NativeKey(), recognized)
+			}
+			if cov.ScriptPath() == "" {
+				continue
 			}
 			if prev, seen := scriptByPoint[point]; seen {
 				if prev != cov.ScriptPath() {
@@ -184,6 +194,69 @@ func TestRegistryPreconditionsCarryRemedy(t *testing.T) {
 				t.Errorf("agent %q: precondition %d has no actionable remedy", agent.ID(), pre.Kind())
 			}
 		}
+	}
+}
+
+func TestTwentyProviderEventPairsHaveExplicitState(t *testing.T) {
+	t.Parallel()
+
+	want := map[string]map[specs.CanonicalPoint]hookcontract.SupportState{
+		"claude": {
+			specs.PointSessionStart:   hookcontract.SupportVerified,
+			specs.PointPreTool:        hookcontract.SupportVerified,
+			specs.PointPostTool:       hookcontract.SupportVerified,
+			specs.PointBeforeComplete: hookcontract.SupportVerified,
+			specs.PointSessionEnd:     hookcontract.SupportVerified,
+		},
+		"codex": {
+			specs.PointSessionStart:   hookcontract.SupportVerified,
+			specs.PointPreTool:        hookcontract.SupportVerified,
+			specs.PointPostTool:       hookcontract.SupportVerified,
+			specs.PointBeforeComplete: hookcontract.SupportVerified,
+			specs.PointSessionEnd:     hookcontract.SupportVerified,
+		},
+		"copilot": {
+			specs.PointSessionStart:   hookcontract.SupportVerified,
+			specs.PointPreTool:        hookcontract.SupportVerified,
+			specs.PointPostTool:       hookcontract.SupportVerified,
+			specs.PointBeforeComplete: hookcontract.SupportVerified,
+			specs.PointSessionEnd:     hookcontract.SupportVerified,
+		},
+		"opencode": {
+			specs.PointSessionStart:   hookcontract.SupportAdapter,
+			specs.PointPreTool:        hookcontract.SupportVerified,
+			specs.PointPostTool:       hookcontract.SupportVerified,
+			specs.PointBeforeComplete: hookcontract.SupportAdapter,
+			specs.PointSessionEnd:     hookcontract.SupportUnsupported,
+		},
+	}
+
+	points := specs.NewCatalog().CanonicalPoints()
+	pairCount := 0
+	for _, agent := range specs.NewCatalog().Registry() {
+		byPoint, ok := want[agent.ID()]
+		if !ok {
+			t.Fatalf("agent %q has no expected state table entry — every provider must be declared", agent.ID())
+		}
+		for _, point := range points {
+			pairCount++
+			cov, ok := agent.Enforcement().CoverageFor(point)
+			if !ok {
+				t.Fatalf("agent %q point %s: not declared — absence of support is never omission (P07)", agent.ID(), point)
+			}
+			if cov.State() != byPoint[point] {
+				t.Errorf("agent %q point %s: state = %s, want %s", agent.ID(), point, cov.State(), byPoint[point])
+			}
+			switch cov.State() {
+			case hookcontract.SupportAdapter, hookcontract.SupportUnsupported:
+				if cov.Reason() == "" {
+					t.Errorf("agent %q point %s: state %s declared without a textual reason/limitation", agent.ID(), point, cov.State())
+				}
+			}
+		}
+	}
+	if pairCount != 20 {
+		t.Fatalf("expected exactly 20 (provider, event) pairs; got %d", pairCount)
 	}
 }
 

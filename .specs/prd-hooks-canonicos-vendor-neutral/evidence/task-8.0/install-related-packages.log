@@ -1,0 +1,2724 @@
+=== RUN   TestVerifyChecksTheCanonicalValidatorsUnderAgents
+=== PAUSE TestVerifyChecksTheCanonicalValidatorsUnderAgents
+=== RUN   TestVerifyReportsTamperedCanonicalValidatorAsDrifted
+=== PAUSE TestVerifyReportsTamperedCanonicalValidatorAsDrifted
+=== RUN   TestInstall_Claude_MergesGovernanceHooksIntoExistingSettings
+=== PAUSE TestInstall_Claude_MergesGovernanceHooksIntoExistingSettings
+=== RUN   TestInstall_Claude_MergeIsIdempotentAndPreservesUserHooks
+=== PAUSE TestInstall_Claude_MergeIsIdempotentAndPreservesUserHooks
+=== RUN   TestInstall_Claude_MalformedSettingsFailsLoudly
+=== PAUSE TestInstall_Claude_MalformedSettingsFailsLoudly
+=== RUN   TestInstallCopilotPreservesAuthoredSettingsFormatting
+=== PAUSE TestInstallCopilotPreservesAuthoredSettingsFormatting
+=== RUN   TestInstallCopilotMigratesObsoleteStopKeysInSettings
+=== PAUSE TestInstallCopilotMigratesObsoleteStopKeysInSettings
+=== RUN   TestInstallCopilotPreservesSessionEndAsADistinctEvent
+=== PAUSE TestInstallCopilotPreservesSessionEndAsADistinctEvent
+=== RUN   TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing
+=== PAUSE TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing
+=== RUN   TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent
+=== PAUSE TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent
+=== RUN   TestVerify_OpenCode_NeverReportsCurrentWhenPluginRuntimeMissing
+=== PAUSE TestVerify_OpenCode_NeverReportsCurrentWhenPluginRuntimeMissing
+=== RUN   TestInstall_OpenCode_ModelFlagMapsToConfigKey
+=== PAUSE TestInstall_OpenCode_ModelFlagMapsToConfigKey
+=== RUN   TestInstall_OpenCode_WritesOnlyPermissionBlock
+=== PAUSE TestInstall_OpenCode_WritesOnlyPermissionBlock
+=== RUN   TestInstall_OpenCode_FailsWhenDefaultPermissionWildcardDeniesRequiredTool
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+--- PASS: TestInstall_OpenCode_FailsWhenDefaultPermissionWildcardDeniesRequiredTool (0.00s)
+=== RUN   TestInstall_OpenCode_IdempotentReinstall
+=== PAUSE TestInstall_OpenCode_IdempotentReinstall
+=== RUN   TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks
+=== PAUSE TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks
+=== RUN   TestInstall_OpenCode_DepositsPluginDir
+=== PAUSE TestInstall_OpenCode_DepositsPluginDir
+=== RUN   TestInstall_OpenCode_ShipsCanonicalValidators
+=== PAUSE TestInstall_OpenCode_ShipsCanonicalValidators
+=== RUN   TestInstall_Validate_MissingProjectDir
+=== PAUSE TestInstall_Validate_MissingProjectDir
+=== RUN   TestInstall_AutoDetect_EmptyEnv_NoError
+=== PAUSE TestInstall_AutoDetect_EmptyEnv_NoError
+=== RUN   TestInstall_AutoDetect_DetectsTools
+=== PAUSE TestInstall_AutoDetect_DetectsTools
+=== RUN   TestInstall_DetectLangsUsesFocusPaths
+=== PAUSE TestInstall_DetectLangsUsesFocusPaths
+=== RUN   TestInstall_FlagOverride_PrecedesAutoDetect
+=== PAUSE TestInstall_FlagOverride_PrecedesAutoDetect
+=== RUN   TestInstall_Validate_SameDir
+=== PAUSE TestInstall_Validate_SameDir
+=== RUN   TestInstall_CopyMode
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Gerando governanca contextual...
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-preload.sh: chmod /project/.claude/hooks/validate-preload.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-governance.sh: chmod /project/.claude/hooks/validate-governance.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-task-evidence.sh: chmod /project/.agents/scripts/validate-task-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-bugfix-evidence.sh: chmod /project/.agents/scripts/validate-bugfix-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-refactor-evidence.sh: chmod /project/.agents/scripts/validate-refactor-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-review-evidence.sh: chmod /project/.agents/scripts/validate-review-evidence.sh: no such file or directory
+
+Batch summary (install): created=21 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_CopyMode (0.00s)
+=== RUN   TestDefaultHookConfigsUseOfficialSchemas
+=== PAUSE TestDefaultHookConfigsUseOfficialSchemas
+=== RUN   TestInstall_RefusesExternalSkillsSymlinkByDefault
+=== PAUSE TestInstall_RefusesExternalSkillsSymlinkByDefault
+=== RUN   TestInstall_FollowsExternalSkillsSymlinkWhenAllowed
+=== PAUSE TestInstall_FollowsExternalSkillsSymlinkWhenAllowed
+=== RUN   TestInstall_Codex_LeanProfile
+=== PAUSE TestInstall_Codex_LeanProfile
+=== RUN   TestInstall_Codex_FullProfile
+=== PAUSE TestInstall_Codex_FullProfile
+=== RUN   TestInstall_Idempotent
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-preload.sh: chmod /project/.claude/hooks/validate-preload.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-governance.sh: chmod /project/.claude/hooks/validate-governance.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-task-evidence.sh: chmod /project/.agents/scripts/validate-task-evidence.sh: no such file or directory
+
+Batch summary (install): created=9 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-preload.sh: chmod /project/.claude/hooks/validate-preload.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-governance.sh: chmod /project/.claude/hooks/validate-governance.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-task-evidence.sh: chmod /project/.agents/scripts/validate-task-evidence.sh: no such file or directory
+
+Batch summary (install): created=0 updated=0 preserved=7 merged=2 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Idempotent (0.00s)
+=== RUN   TestInstall_NoCtx_CopiesAGENTSMD
+=== PAUSE TestInstall_NoCtx_CopiesAGENTSMD
+=== RUN   TestInstall_NonClaude_ShipsCanonicalValidators
+=== PAUSE TestInstall_NonClaude_ShipsCanonicalValidators
+=== RUN   TestInstall_CanonicalValidators_FallbackToClaudeScripts
+=== PAUSE TestInstall_CanonicalValidators_FallbackToClaudeScripts
+=== RUN   TestInstall_Copilot_GeneratesAgents
+=== PAUSE TestInstall_Copilot_GeneratesAgents
+=== RUN   TestInstall_DistributesAgentsLib
+=== PAUSE TestInstall_DistributesAgentsLib
+=== RUN   TestInstall_AgentsLib_AbsentSource_NoError
+=== PAUSE TestInstall_AgentsLib_AbsentSource_NoError
+=== RUN   TestInstall_Copilot_CopiesValidationHooks
+=== PAUSE TestInstall_Copilot_CopiesValidationHooks
+=== RUN   TestInstall_Codex_CopiesGovernanceHook
+=== PAUSE TestInstall_Codex_CopiesGovernanceHook
+=== RUN   TestInstall_Copilot_DryRun_NoAgentsCreated
+=== PAUSE TestInstall_Copilot_DryRun_NoAgentsCreated
+=== RUN   TestInstall_DryRun
+=== PAUSE TestInstall_DryRun
+=== RUN   TestInstall_EmbeddedSource_NoSourceFlag
+=== PAUSE TestInstall_EmbeddedSource_NoSourceFlag
+=== RUN   TestInstall_EmbeddedSource_AllToolsAllLangs
+=== PAUSE TestInstall_EmbeddedSource_AllToolsAllLangs
+=== RUN   TestInstall_ManifestUsesResolvedExecutableVersion
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=5 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_ManifestUsesResolvedExecutableVersion108888424/001
+Modo de instalacao: copy
+--- PASS: TestInstall_ManifestUsesResolvedExecutableVersion (0.04s)
+=== RUN   TestInstall_ManifestIncludesSkillVersions
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=8 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_ManifestIncludesSkillVersions (0.00s)
+=== RUN   TestInstall_RefResolved_UsesCopyMode
+=== PAUSE TestInstall_RefResolved_UsesCopyMode
+=== RUN   TestInstall_ExternalSource_Override
+=== PAUSE TestInstall_ExternalSource_Override
+=== RUN   TestVerifyState_Mapping
+=== PAUSE TestVerifyState_Mapping
+=== RUN   TestCompareSkillChecksum_StatusMapping
+=== PAUSE TestCompareSkillChecksum_StatusMapping
+=== RUN   TestVerify_AllCurrent
+=== PAUSE TestVerify_AllCurrent
+=== RUN   TestVerify_MatchesUpgradeCheckMissingSourceSet
+=== PAUSE TestVerify_MatchesUpgradeCheckMissingSourceSet
+=== RUN   TestVerify_IgnoresSourceDirWithoutSkillMD
+=== PAUSE TestVerify_IgnoresSourceDirWithoutSkillMD
+=== RUN   TestVerify_Missing
+=== PAUSE TestVerify_Missing
+=== RUN   TestVerify_UsesManifestLangsWhenLangsOmitted
+=== PAUSE TestVerify_UsesManifestLangsWhenLangsOmitted
+=== RUN   TestVerify_Drifted
+=== PAUSE TestVerify_Drifted
+=== RUN   TestVerify_GlobalScope_NoHome
+=== PAUSE TestVerify_GlobalScope_NoHome
+=== RUN   TestVerify_ScopeProject_UsesProjectDir
+=== PAUSE TestVerify_ScopeProject_UsesProjectDir
+=== RUN   TestGlobalInstallDir_UsesUserHomeDir
+=== PAUSE TestGlobalInstallDir_UsesUserHomeDir
+=== RUN   TestInstall_GlobalScope_CreatesAispecDir
+Escopo: global (/var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir3610194374/001/.aispec)
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir3610194374/001/.aispec/.agents/skills
+-> Instalando claude...
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir3610194374/001/.aispec/.claude/skills
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir3610194374/001/.aispec/.claude/agents
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir3610194374/001/.aispec/.claude/rules
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir3610194374/001/.aispec/.claude/scripts
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir3610194374/001/.aispec/.claude/hooks
+  [dry-run] mkdir -p /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_GlobalScope_CreatesAispecDir3610194374/001/.aispec/scripts/lib
+  [dry-run] copiar .claude/rules/governance.md
+  [dry-run] copiar .claude/rules/code-style.md
+  [dry-run] copiar .claude/scripts/validate-task-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-bugfix-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-refactor-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-review-evidence.sh
+  [dry-run] copiar .claude/hooks/validate-governance.sh
+  [dry-run] copiar .claude/hooks/validate-preload.sh
+  [dry-run] copiar .claude/hooks/validate-session-end.sh
+  [dry-run] copiar scripts/lib/parse-hook-input.sh
+  [dry-run] copiar scripts/lib/hook-payload.sh
+  [dry-run] copiar scripts/lib/check-invocation-depth.sh
+  [dry-run] configurar hooks PreToolUse e PostToolUse em .claude/settings.json (versionado)
+  [dry-run] configurar hooks PreToolUse e PostToolUse em .claude/settings.local.json
+  [dry-run] gerar .claude/agents/*.md via adaptadores
+
+[dry-run] Nenhum arquivo foi alterado.
+--- PASS: TestInstall_GlobalScope_CreatesAispecDir (0.00s)
+=== RUN   TestInstall_Idempotent_VerifyAllCurrent
+=== PAUSE TestInstall_Idempotent_VerifyAllCurrent
+=== RUN   TestVerify_AfterMutation_ReturnsDrifted
+=== PAUSE TestVerify_AfterMutation_ReturnsDrifted
+=== RUN   TestVerify_AfterRemoval_ReturnsMissing
+=== PAUSE TestVerify_AfterRemoval_ReturnsMissing
+=== RUN   TestInstall_RI01_LangAutoDetect_Go
+=== PAUSE TestInstall_RI01_LangAutoDetect_Go
+=== RUN   TestInstall_RI01_LangAutoDetect_Node
+=== PAUSE TestInstall_RI01_LangAutoDetect_Node
+=== RUN   TestInstall_RI01_LangAutoDetect_Python
+=== PAUSE TestInstall_RI01_LangAutoDetect_Python
+=== RUN   TestInstall_RI01_ExplicitLangs_SkipsAutoDetect
+=== PAUSE TestInstall_RI01_ExplicitLangs_SkipsAutoDetect
+=== RUN   TestInstall_RI02_ProbeWarn_BinaryAbsent
+=== PAUSE TestInstall_RI02_ProbeWarn_BinaryAbsent
+=== RUN   TestInstall_RI02_ProbeWarn_BinaryPresent
+=== PAUSE TestInstall_RI02_ProbeWarn_BinaryPresent
+=== RUN   TestVerify_RI04_BinaryItems
+=== PAUSE TestVerify_RI04_BinaryItems
+=== RUN   TestVerify_RI04_BinaryPresent_Current
+=== PAUSE TestVerify_RI04_BinaryPresent_Current
+=== RUN   TestVerify_RI04_SkillItemsHaveKindSkill
+=== PAUSE TestVerify_RI04_SkillItemsHaveKindSkill
+=== RUN   TestProbeBinaryAvailable_Missing
+=== PAUSE TestProbeBinaryAvailable_Missing
+=== RUN   TestProbeBinaryAvailable_Current
+=== PAUSE TestProbeBinaryAvailable_Current
+=== RUN   TestProbeBinaryAvailableIsIndependentOfSharedProbeCache
+=== PAUSE TestProbeBinaryAvailableIsIndependentOfSharedProbeCache
+=== RUN   TestSpecForTool_AllTools
+=== PAUSE TestSpecForTool_AllTools
+=== RUN   TestSpecForTool_Unknown
+=== PAUSE TestSpecForTool_Unknown
+=== RUN   TestInstall_Copilot_NativeHooks
+=== PAUSE TestInstall_Copilot_NativeHooks
+=== RUN   TestInstall_Copilot_MergesRepositorySettings
+=== PAUSE TestInstall_Copilot_MergesRepositorySettings
+=== RUN   TestInstall_Codex_NativeHooksAndSandbox
+=== PAUSE TestInstall_Codex_NativeHooksAndSandbox
+=== RUN   TestInstall_TouchesOnlyConfiguredProviders
+=== PAUSE TestInstall_TouchesOnlyConfiguredProviders
+=== RUN   TestInstall_NeverSpawnsAResidentProcess
+=== PAUSE TestInstall_NeverSpawnsAResidentProcess
+=== RUN   TestPreconditionItemsReportsEachCanonicalPointSeparately
+=== PAUSE TestPreconditionItemsReportsEachCanonicalPointSeparately
+=== RUN   TestEnforcementNativeKeysCoversEveryCodexCanonicalPoint
+=== PAUSE TestEnforcementNativeKeysCoversEveryCodexCanonicalPoint
+=== RUN   TestVerify_ReportsMissingOpenCodeGovernancePlugin
+=== PAUSE TestVerify_ReportsMissingOpenCodeGovernancePlugin
+=== RUN   TestVerify_ReportsDriftedOpenCodeGovernancePlugin
+=== PAUSE TestVerify_ReportsDriftedOpenCodeGovernancePlugin
+=== RUN   TestVerify_ReportsMissingToolHookScripts
+=== PAUSE TestVerify_ReportsMissingToolHookScripts
+=== RUN   TestVerify_NoLangsDetected_DoesNotReportLangSkillsAsMissing
+=== PAUSE TestVerify_NoLangsDetected_DoesNotReportLangSkillsAsMissing
+=== RUN   TestVerify_ManifestLangsSelectOnlyMatchingLangSkills
+=== PAUSE TestVerify_ManifestLangsSelectOnlyMatchingLangSkills
+=== RUN   TestManifestTracksExactlyWhatInstallWrote
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=475 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestManifestTracksExactlyWhatInstallWrote3813671882/001
+Modo de instalacao: copy
+--- PASS: TestManifestTracksExactlyWhatInstallWrote (0.66s)
+=== RUN   TestManifestNeverTracksUntouchedUserFiles
+Ferramentas: [codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=317 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestManifestNeverTracksUntouchedUserFiles3426210119/001
+Modo de instalacao: copy
+--- PASS: TestManifestNeverTracksUntouchedUserFiles (0.41s)
+=== RUN   TestManifestFileChecksumsMatchRealDiskContent
+Ferramentas: [claude codex]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=326 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestManifestFileChecksumsMatchRealDiskContent3481671077/001
+Modo de instalacao: copy
+--- PASS: TestManifestFileChecksumsMatchRealDiskContent (0.35s)
+=== RUN   TestManifestLegacyWithoutFileChecksumsNeverDiverges
+--- PASS: TestManifestLegacyWithoutFileChecksumsNeverDiverges (0.00s)
+=== RUN   TestInstalledValidationHooksAreExecutableForEveryAgent
+=== PAUSE TestInstalledValidationHooksAreExecutableForEveryAgent
+=== RUN   TestTextualMentionIsNotProofOfDelegation
+=== PAUSE TestTextualMentionIsNotProofOfDelegation
+=== RUN   TestExecutionPositionIsProofOfDelegation
+=== PAUSE TestExecutionPositionIsProofOfDelegation
+=== RUN   TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator
+=== PAUSE TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator
+=== RUN   TestCodexGovernanceRootKeysSurviveContextGeneration
+=== PAUSE TestCodexGovernanceRootKeysSurviveContextGeneration
+=== RUN   TestCanonicalValidatorScriptsAreInstalledAndExecutable
+=== PAUSE TestCanonicalValidatorScriptsAreInstalledAndExecutable
+=== RUN   TestOpenCodePluginDeclaredScriptsExistAfterInstall
+=== PAUSE TestOpenCodePluginDeclaredScriptsExistAfterInstall
+=== CONT  TestVerifyChecksTheCanonicalValidatorsUnderAgents
+=== CONT  TestInstall_NeverSpawnsAResidentProcess
+=== CONT  TestInstall_DryRun
+=== CONT  TestInstall_AutoDetect_DetectsTools
+=== CONT  TestInstalledValidationHooksAreExecutableForEveryAgent
+Ferramentas: [claude]
+Agentes detectados automaticamente: [claude]
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Linguagens:  []
+
+-> Instalando skills canonicas...
+  [dry-run] mkdir -p /project/.agents/skills
+  [dry-run] link_or_copy /source/.agents/skills/review -> /project/.agents/skills/review
+-> Instalando claude...
+-> Instalando claude...
+  [dry-run] mkdir -p /project/.claude/skills
+  [dry-run] mkdir -p /project/.claude/agents
+  [dry-run] mkdir -p /project/.claude/rules
+  [dry-run] mkdir -p /project/.claude/scripts
+  [dry-run] mkdir -p /project/.claude/hooks
+  [dry-run] mkdir -p /project/scripts/lib
+  [dry-run] link ../../.agents/skills/review -> /project/.claude/skills/review
+=== CONT  TestVerify_ManifestLangsSelectOnlyMatchingLangSkills
+  [dry-run] copiar .claude/rules/governance.md
+  [dry-run] copiar .claude/rules/code-style.md
+  [dry-run] copiar .claude/scripts/validate-task-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-bugfix-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-refactor-evidence.sh
+  [dry-run] copiar .claude/scripts/validate-review-evidence.sh
+  [dry-run] copiar .claude/hooks/validate-governance.sh
+  [dry-run] copiar .claude/hooks/validate-preload.sh
+  [dry-run] copiar .claude/hooks/validate-session-end.sh
+  [dry-run] copiar scripts/lib/parse-hook-input.sh
+  [dry-run] copiar scripts/lib/hook-payload.sh
+  [dry-run] copiar scripts/lib/check-invocation-depth.sh
+  [dry-run] configurar hooks PreToolUse e PostToolUse em .claude/settings.json (versionado)
+  [dry-run] configurar hooks PreToolUse e PostToolUse em .claude/settings.local.json
+  [dry-run] gerar .claude/agents/*.md via adaptadores
+-> Gerando governanca contextual...
+  [dry-run] Geraria AGENTS.md (schema 1.0.0, profile standard)
+  [dry-run] Geraria CLAUDE.md
+
+[dry-run] Nenhum arquivo foi alterado.
+=== CONT  TestVerify_ReportsMissingToolHookScripts
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+=== CONT  TestInstall_TouchesOnlyConfiguredProviders
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+=== CONT  TestVerify_NoLangsDetected_DoesNotReportLangSkillsAsMissing
+-> Instalando claude...
+--- PASS: TestVerifyChecksTheCanonicalValidatorsUnderAgents (0.00s)
+=== CONT  TestInstall_Codex_NativeHooksAndSandbox
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+--- PASS: TestInstall_DryRun (0.00s)
+
+Batch summary (install): created=2 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+
+--- PASS: TestInstall_TouchesOnlyConfiguredProviders (0.00s)
+Batch summary (install): created=2 updated=0 preserved=0 merged=0 conflict=0
+=== CONT  TestInstall_Copilot_MergesRepositorySettings
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+--- PASS: TestVerify_ManifestLangsSelectOnlyMatchingLangSkills (0.00s)
+=== CONT  TestVerify_ReportsDriftedOpenCodeGovernancePlugin
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_AutoDetect_DetectsTools (0.00s)
+=== CONT  TestInstall_Copilot_NativeHooks
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+--- PASS: TestVerify_ReportsMissingToolHookScripts (0.00s)
+=== CONT  TestVerify_ReportsMissingOpenCodeGovernancePlugin
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=2 conflict=0
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+--- PASS: TestVerify_ReportsDriftedOpenCodeGovernancePlugin (0.00s)
+=== CONT  TestSpecForTool_Unknown
+--- PASS: TestSpecForTool_Unknown (0.00s)
+=== CONT  TestEnforcementNativeKeysCoversEveryCodexCanonicalPoint
+--- PASS: TestEnforcementNativeKeysCoversEveryCodexCanonicalPoint (0.00s)
+=== CONT  TestSpecForTool_AllTools
+--- PASS: TestSpecForTool_AllTools (0.00s)
+=== CONT  TestPreconditionItemsReportsEachCanonicalPointSeparately
+--- PASS: TestPreconditionItemsReportsEachCanonicalPointSeparately (0.00s)
+=== CONT  TestProbeBinaryAvailableIsIndependentOfSharedProbeCache
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Copilot_NativeHooks (0.00s)
+=== CONT  TestProbeBinaryAvailable_Current
+--- PASS: TestProbeBinaryAvailable_Current (0.00s)
+=== CONT  TestCodexGovernanceRootKeysSurviveContextGeneration
+=== RUN   TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=false
+=== PAUSE TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=false
+=== RUN   TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=true
+=== PAUSE TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=true
+=== CONT  TestProbeBinaryAvailable_Missing
+
+=== CONT  TestVerify_RI04_SkillItemsHaveKindSkill
+=== CONT  TestOpenCodePluginDeclaredScriptsExistAfterInstall
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=0 conflict=0
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+--- PASS: TestVerify_NoLangsDetected_DoesNotReportLangSkillsAsMissing (0.00s)
+--- PASS: TestProbeBinaryAvailable_Missing (0.00s)
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Codex_NativeHooksAndSandbox (0.00s)
+=== CONT  TestCanonicalValidatorScriptsAreInstalledAndExecutable
+=== RUN   TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=false
+=== PAUSE TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=false
+=== RUN   TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=true
+=== PAUSE TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=true
+=== CONT  TestVerify_RI04_BinaryPresent_Current
+--- PASS: TestVerify_ReportsMissingOpenCodeGovernancePlugin (0.00s)
+=== CONT  TestVerify_RI04_BinaryItems
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_NeverSpawnsAResidentProcess (0.00s)
+=== CONT  TestVerify_GlobalScope_NoHome
+--- PASS: TestVerify_GlobalScope_NoHome (0.00s)
+=== CONT  TestInstall_RI02_ProbeWarn_BinaryPresent
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+--- PASS: TestVerify_RI04_BinaryPresent_Current (0.00s)
+=== CONT  TestVerify_Drifted
+
+Batch summary (install): created=2 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_RI02_ProbeWarn_BinaryPresent (0.00s)
+=== CONT  TestInstall_RI02_ProbeWarn_BinaryAbsent
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+--- PASS: TestVerify_RI04_SkillItemsHaveKindSkill (0.00s)
+=== CONT  TestVerify_UsesManifestLangsWhenLangsOmitted
+AVISO: [claude] binario ACP 'claude-agent-acp' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+
+Batch summary (install): created=2 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_RI02_ProbeWarn_BinaryAbsent (0.00s)
+=== CONT  TestInstall_RI01_ExplicitLangs_SkipsAutoDetect
+Ferramentas: [claude]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: [claude] binario ACP 'claude-agent-acp' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+--- PASS: TestVerify_Drifted (0.00s)
+=== CONT  TestInstall_RI01_LangAutoDetect_Python
+Linguagens detectadas automaticamente: [python]
+
+Ferramentas: [claude]
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Copilot_MergesRepositorySettings (0.00s)
+=== CONT  TestVerify_Missing
+Linguagens:  [python]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+Batch summary (install): created=2 updated=0 preserved=0 merged=0 conflict=0
+--- PASS: TestVerify_UsesManifestLangsWhenLangsOmitted (0.00s)
+=== CONT  TestVerify_IgnoresSourceDirWithoutSkillMD
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_RI01_ExplicitLangs_SkipsAutoDetect (0.00s)
+=== CONT  TestInstall_RI01_LangAutoDetect_Node
+Linguagens detectadas automaticamente: [node]
+Ferramentas: [claude]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+--- PASS: TestVerify_RI04_BinaryItems (0.00s)
+=== CONT  TestVerify_MatchesUpgradeCheckMissingSourceSet
+-> Instalando claude...
+AVISO: [claude] binario ACP 'claude-agent-acp' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+Verificando skills em: /project
+Fonte: /source
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=0 conflict=0
+ai-spec dev
+
+  AUSENTE              source-only (fonte: 1.0.0)
+
+Resumo: 0 atualizadas, 0 desatualizadas (0 refs divergentes), 1 ausentes
+
+Execute sem --check para atualizar: ai-spec-harness upgrade /project --source /source
+--- PASS: TestVerify_MatchesUpgradeCheckMissingSourceSet (0.00s)
+=== CONT  TestInstall_RI01_LangAutoDetect_Go
+Linguagens detectadas automaticamente: [go]
+Ferramentas: [claude]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+--- PASS: TestProbeBinaryAvailableIsIndependentOfSharedProbeCache (0.00s)
+=== CONT  TestVerify_AllCurrent
+-> Instalando claude...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_RI01_LangAutoDetect_Node (0.00s)
+=== CONT  TestVerify_AfterRemoval_ReturnsMissing
+--- PASS: TestVerify_IgnoresSourceDirWithoutSkillMD (0.00s)
+=== CONT  TestCompareSkillChecksum_StatusMapping
+--- PASS: TestCompareSkillChecksum_StatusMapping (0.00s)
+=== CONT  TestVerify_AfterMutation_ReturnsDrifted
+AVISO: [claude] binario ACP 'claude-agent-acp' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_RI01_LangAutoDetect_Go (0.00s)
+=== CONT  TestVerifyState_Mapping
+=== RUN   TestVerifyState_Mapping/current_quando_hashes_identicos
+=== PAUSE TestVerifyState_Mapping/current_quando_hashes_identicos
+=== RUN   TestVerifyState_Mapping/drifted_quando_conteudo_diferente
+=== PAUSE TestVerifyState_Mapping/drifted_quando_conteudo_diferente
+=== RUN   TestVerifyState_Mapping/missing_quando_arquivo_ausente
+=== PAUSE TestVerifyState_Mapping/missing_quando_arquivo_ausente
+=== CONT  TestInstall_Idempotent_VerifyAllCurrent
+AVISO: [claude] binario ACP 'claude-agent-acp' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=0 conflict=0
+--- PASS: TestVerify_AllCurrent (0.00s)
+=== CONT  TestInstall_ExternalSource_Override
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_RI01_LangAutoDetect_Python (0.00s)
+=== CONT  TestGlobalInstallDir_UsesUserHomeDir
+--- PASS: TestGlobalInstallDir_UsesUserHomeDir (0.00s)
+=== CONT  TestInstall_RefResolved_UsesCopyMode
+--- PASS: TestVerify_Missing (0.00s)
+=== CONT  TestVerify_ScopeProject_UsesProjectDir
+--- PASS: TestVerify_ScopeProject_UsesProjectDir (0.00s)
+=== CONT  TestInstall_EmbeddedSource_AllToolsAllLangs
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando claude...
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=0 conflict=0
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestVerify_AfterMutation_ReturnsDrifted2088708062/002
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_Idempotent_VerifyAllCurrent3635761095/002
+Modo de instalacao: copy
+
+Batch summary (install): created=5 updated=0 preserved=0 merged=0 conflict=0
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=0 conflict=0
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+
+Batch summary (install): created=5 updated=0 preserved=0 merged=0 conflict=0
+-> Instalando claude...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_ExternalSource_Override484030281/001
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestVerify_AfterRemoval_ReturnsMissing3903020543/002
+Modo de instalacao: copy
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_RefResolved_UsesCopyMode2408259021/002
+Modo de instalacao: copy
+--- PASS: TestInstall_ExternalSource_Override (0.08s)
+=== CONT  TestExecutionPositionIsProofOfDelegation
+=== RUN   TestExecutionPositionIsProofOfDelegation/pipeline
+=== PAUSE TestExecutionPositionIsProofOfDelegation/pipeline
+=== RUN   TestExecutionPositionIsProofOfDelegation/source
+=== PAUSE TestExecutionPositionIsProofOfDelegation/source
+=== RUN   TestExecutionPositionIsProofOfDelegation/exec-direto
+=== PAUSE TestExecutionPositionIsProofOfDelegation/exec-direto
+=== RUN   TestExecutionPositionIsProofOfDelegation/variavel-executada
+=== PAUSE TestExecutionPositionIsProofOfDelegation/variavel-executada
+=== CONT  TestInstall_EmbeddedSource_NoSourceFlag
+--- PASS: TestVerify_AfterMutation_ReturnsDrifted (0.08s)
+=== CONT  TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator
+=== RUN   TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=false
+=== PAUSE TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=false
+=== RUN   TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=true
+=== PAUSE TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=true
+=== CONT  TestInstall_NoCtx_CopiesAGENTSMD
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+--- PASS: TestInstall_RefResolved_UsesCopyMode (0.09s)
+=== CONT  TestTextualMentionIsNotProofOfDelegation
+=== RUN   TestTextualMentionIsNotProofOfDelegation/comentario
+=== PAUSE TestTextualMentionIsNotProofOfDelegation/comentario
+=== RUN   TestTextualMentionIsNotProofOfDelegation/mensagem
+=== PAUSE TestTextualMentionIsNotProofOfDelegation/mensagem
+=== RUN   TestTextualMentionIsNotProofOfDelegation/variavel-atribuida-sem-uso
+=== PAUSE TestTextualMentionIsNotProofOfDelegation/variavel-atribuida-sem-uso
+=== CONT  TestInstall_RefusesExternalSkillsSymlinkByDefault
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+--- PASS: TestInstall_RefusesExternalSkillsSymlinkByDefault (0.00s)
+=== CONT  TestInstall_Copilot_DryRun_NoAgentsCreated
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+  [dry-run] mkdir -p /project/.agents/skills
+  [dry-run] link_or_copy /source/.agents/skills/review -> /project/.agents/skills/review
+-> Instalando copilot...
+  [dry-run] mkdir -p /project/.github/skills
+  [dry-run] mkdir -p /project/.github/agents
+  [dry-run] link ../../.agents/skills/review -> /project/.github/skills/review
+  [dry-run] gerar .github/agents/*.agent.md via adaptadores
+  [dry-run] copiar .github/hooks/{validate-preload,validate-governance,post-execute-task,pre-execute-all-tasks,post-wave}.sh
+
+[dry-run] Nenhum arquivo foi alterado.
+--- PASS: TestInstall_Copilot_DryRun_NoAgentsCreated (0.00s)
+=== CONT  TestInstall_Codex_CopiesGovernanceHook
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+
+Batch summary (install): created=0 updated=0 preserved=2 merged=2 conflict=0
+--- PASS: TestVerify_AfterRemoval_ReturnsMissing (0.09s)
+=== CONT  TestInstall_Codex_FullProfile
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+AVISO: nao foi possivel preservar +x em /project/.codex/hooks/validate-preload.sh: chmod /project/.codex/hooks/validate-preload.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.codex/hooks/validate-governance.sh: chmod /project/.codex/hooks/validate-governance.sh: no such file or directory
+
+Batch summary (install): created=5 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Codex_CopiesGovernanceHook (0.00s)
+=== CONT  TestInstall_Codex_LeanProfile
+Ferramentas: [codex]
+Linguagens:  []
+
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_Idempotent_VerifyAllCurrent3635761095/002
+Modo de instalacao: copy
+-> Instalando skills canonicas...
+-> Instalando codex...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Codex_LeanProfile (0.00s)
+=== CONT  TestInstall_Copilot_CopiesValidationHooks
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+AVISO: nao foi possivel preservar +x em /project/.github/hooks/validate-preload.sh: chmod /project/.github/hooks/validate-preload.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.github/hooks/validate-governance.sh: chmod /project/.github/hooks/validate-governance.sh: no such file or directory
+
+Batch summary (install): created=6 updated=0 preserved=0 merged=1 conflict=0
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=0 conflict=0
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-preload.sh: chmod /project/.claude/hooks/validate-preload.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.claude/hooks/validate-governance.sh: chmod /project/.claude/hooks/validate-governance.sh: no such file or directory
+
+Batch summary (install): created=5 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Codex_FullProfile (0.00s)
+=== CONT  TestInstall_FollowsExternalSkillsSymlinkWhenAllowed
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_NoCtx_CopiesAGENTSMD (0.00s)
+=== CONT  TestInstall_AgentsLib_AbsentSource_NoError
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Copilot_CopiesValidationHooks (0.00s)
+=== CONT  TestInstall_DistributesAgentsLib
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=5 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_AgentsLib_AbsentSource_NoError (0.00s)
+=== CONT  TestVerify_OpenCode_NeverReportsCurrentWhenPluginRuntimeMissing
+
+Batch summary (install): created=5 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_FollowsExternalSkillsSymlinkWhenAllowed (0.00s)
+=== CONT  TestInstall_Copilot_GeneratesAgents
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Copilot_GeneratesAgents (0.00s)
+=== CONT  TestInstall_AutoDetect_EmptyEnv_NoError
+AVISO: Nenhum agente detectado no ambiente. Use --tools para especificar explicitamente.
+--- PASS: TestInstall_AutoDetect_EmptyEnv_NoError (0.00s)
+=== CONT  TestInstall_CanonicalValidators_FallbackToClaudeScripts
+AVISO: nao foi possivel preservar +x em /project/.agents/lib/check-invocation-depth.sh: chmod /project/.agents/lib/check-invocation-depth.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/lib/parse-hook-input.sh: chmod /project/.agents/lib/parse-hook-input.sh: no such file or directory
+
+Batch summary (install): created=7 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_DistributesAgentsLib (0.00s)
+=== CONT  TestInstall_Validate_MissingProjectDir
+--- PASS: TestInstall_Validate_MissingProjectDir (0.00s)
+=== CONT  TestInstall_NonClaude_ShipsCanonicalValidators
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-task-evidence.sh: chmod /project/.agents/scripts/validate-task-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-bugfix-evidence.sh: chmod /project/.agents/scripts/validate-bugfix-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-refactor-evidence.sh: chmod /project/.agents/scripts/validate-refactor-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-review-evidence.sh: chmod /project/.agents/scripts/validate-review-evidence.sh: no such file or directory
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_NonClaude_ShipsCanonicalValidators (0.00s)
+=== CONT  TestInstall_OpenCode_ShipsCanonicalValidators
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-task-evidence.sh: chmod /project-opencode/.agents/scripts/validate-task-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-bugfix-evidence.sh: chmod /project-opencode/.agents/scripts/validate-bugfix-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-refactor-evidence.sh: chmod /project-opencode/.agents/scripts/validate-refactor-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-opencode/.agents/scripts/validate-review-evidence.sh: chmod /project-opencode/.agents/scripts/validate-review-evidence.sh: no such file or directory
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project-opencode
+Modo de instalacao: copy
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-task-evidence.sh: chmod /project-claude/.agents/scripts/validate-task-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-bugfix-evidence.sh: chmod /project-claude/.agents/scripts/validate-bugfix-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-refactor-evidence.sh: chmod /project-claude/.agents/scripts/validate-refactor-evidence.sh: no such file or directory
+AVISO: nao foi possivel preservar +x em /project-claude/.agents/scripts/validate-review-evidence.sh: chmod /project-claude/.agents/scripts/validate-review-evidence.sh: no such file or directory
+
+Batch summary (install): created=6 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project-claude
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_ShipsCanonicalValidators (0.00s)
+=== CONT  TestInstall_OpenCode_DepositsPluginDir
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_DepositsPluginDir (0.00s)
+=== CONT  TestInstall_FlagOverride_PrecedesAutoDetect
+Ferramentas: [codex]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_FlagOverride_PrecedesAutoDetect (0.00s)
+=== CONT  TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: symlink
+--- PASS: TestInstall_OpenCode_DoesNotCopySkillsOrCreateSymlinks (0.00s)
+=== CONT  TestDefaultHookConfigsUseOfficialSchemas
+=== RUN   TestDefaultHookConfigsUseOfficialSchemas/copilot
+--- PASS: TestDefaultHookConfigsUseOfficialSchemas (0.00s)
+    --- PASS: TestDefaultHookConfigsUseOfficialSchemas/copilot (0.00s)
+=== CONT  TestInstall_OpenCode_IdempotentReinstall
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+AVISO: nao foi possivel preservar +x em /project/.agents/scripts/validate-task-evidence.sh: chmod /project/.agents/scripts/validate-task-evidence.sh: no such file or directory
+
+Batch summary (install): created=2 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_IdempotentReinstall (0.00s)
+=== CONT  TestInstall_Validate_SameDir
+--- PASS: TestInstall_Validate_SameDir (0.00s)
+=== CONT  TestInstall_OpenCode_WritesOnlyPermissionBlock
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_CanonicalValidators_FallbackToClaudeScripts (0.00s)
+=== CONT  TestInstallCopilotPreservesAuthoredSettingsFormatting
+=== RUN   TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_without_trailing_newline
+=== PAUSE TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_without_trailing_newline
+=== RUN   TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_trailing_newline
+=== PAUSE TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_trailing_newline
+=== RUN   TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_authored_hooks_block
+=== PAUSE TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_authored_hooks_block
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+=== CONT  TestInstall_OpenCode_ModelFlagMapsToConfigKey
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_WritesOnlyPermissionBlock (0.00s)
+=== CONT  TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+AVISO: [opencode] binario ACP 'opencode' nao encontrado no PATH. Install sera funcional, mas execucao ACP falhara ate o binario estar disponivel.
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_SucceedsWhenPluginRuntimePresent (0.00s)
+=== CONT  TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing
+Ferramentas: [opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+--- PASS: TestInstall_OpenCode_FailsNoisilyWhenPluginRuntimeMissing (0.00s)
+=== CONT  TestInstallCopilotPreservesSessionEndAsADistinctEvent
+=== RUN   TestInstallCopilotPreservesSessionEndAsADistinctEvent/sessionEnd
+=== PAUSE TestInstallCopilotPreservesSessionEndAsADistinctEvent/sessionEnd
+=== RUN   TestInstallCopilotPreservesSessionEndAsADistinctEvent/SessionEnd
+=== PAUSE TestInstallCopilotPreservesSessionEndAsADistinctEvent/SessionEnd
+=== CONT  TestInstallCopilotMigratesObsoleteStopKeysInSettings
+=== RUN   TestInstallCopilotMigratesObsoleteStopKeysInSettings/stop
+=== PAUSE TestInstallCopilotMigratesObsoleteStopKeysInSettings/stop
+=== RUN   TestInstallCopilotMigratesObsoleteStopKeysInSettings/Stop
+=== PAUSE TestInstallCopilotMigratesObsoleteStopKeysInSettings/Stop
+=== CONT  TestInstall_Claude_MergeIsIdempotentAndPreservesUserHooks
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando opencode...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_OpenCode_ModelFlagMapsToConfigKey (0.00s)
+=== CONT  TestInstall_Claude_MalformedSettingsFailsLoudly
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+--- PASS: TestInstall_Claude_MalformedSettingsFailsLoudly (0.00s)
+=== CONT  TestInstall_DetectLangsUsesFocusPaths
+Linguagens detectadas automaticamente: [node]
+Ferramentas: [claude]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=7 updated=0 preserved=0 merged=0 conflict=0
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+
+Batch summary (install): created=0 updated=0 preserved=3 merged=2 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Claude_MergeIsIdempotentAndPreservesUserHooks (0.00s)
+=== CONT  TestInstall_Claude_MergesGovernanceHooksIntoExistingSettings
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+
+Batch summary (install): created=4 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstall_Claude_MergesGovernanceHooksIntoExistingSettings (0.00s)
+=== CONT  TestVerifyReportsTamperedCanonicalValidatorAsDrifted
+--- PASS: TestVerifyReportsTamperedCanonicalValidatorAsDrifted (0.00s)
+=== CONT  TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=false
+--- PASS: TestInstall_DetectLangsUsesFocusPaths (0.00s)
+=== CONT  TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=true
+--- PASS: TestInstall_Idempotent_VerifyAllCurrent (0.10s)
+=== CONT  TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=false
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [go node python dotnet java]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando claude...
+Ferramentas: [claude]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando claude...
+-> Instalando claude...
+-> Instalando copilot...
+-> Instalando claude...
+-> Instalando claude...
+--- PASS: TestVerify_OpenCode_NeverReportsCurrentWhenPluginRuntimeMissing (0.33s)
+=== CONT  TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=true
+-> Instalando opencode...
+-> Instalando opencode...
+-> Instalando codex...
+-> Instalando codex...
+-> Gerando governanca contextual...
+-> Instalando copilot...
+-> Instalando copilot...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+-> Instalando opencode...
+-> Instalando opencode...
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=253 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_EmbeddedSource_NoSourceFlag1293242472/001
+Modo de instalacao: copy
+
+Batch summary (install): created=389 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstalledValidationHooksAreExecutableForEveryAgent1612548724/001
+Modo de instalacao: copy
+
+Batch summary (install): created=391 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestOpenCodePluginDeclaredScriptsExistAfterInstall144619270/001
+Modo de instalacao: copy
+
+Batch summary (install): created=389 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestCanonicalValidatorScriptsAreInstalledAndExecutableGenerateC2471503874/001
+Modo de instalacao: copy
+
+Batch summary (install): created=389 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestCodexGovernanceRootKeysSurviveContextGenerationGenerateCtx=2595605687/001
+Modo de instalacao: copy
+
+Batch summary (install): created=391 updated=0 preserved=0 merged=2 conflict=0
+--- PASS: TestInstall_EmbeddedSource_NoSourceFlag (1.77s)
+=== CONT  TestVerifyState_Mapping/current_quando_hashes_identicos
+=== CONT  TestVerifyState_Mapping/missing_quando_arquivo_ausente
+=== CONT  TestVerifyState_Mapping/drifted_quando_conteudo_diferente
+--- PASS: TestVerifyState_Mapping (0.00s)
+    --- PASS: TestVerifyState_Mapping/current_quando_hashes_identicos (0.00s)
+    --- PASS: TestVerifyState_Mapping/missing_quando_arquivo_ausente (0.00s)
+    --- PASS: TestVerifyState_Mapping/drifted_quando_conteudo_diferente (0.00s)
+=== CONT  TestExecutionPositionIsProofOfDelegation/pipeline
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestCodexGovernanceRootKeysSurviveContextGenerationGenerateCtx=3583881812/001
+Modo de instalacao: copy
+=== CONT  TestExecutionPositionIsProofOfDelegation/variavel-executada
+=== CONT  TestExecutionPositionIsProofOfDelegation/exec-direto
+=== CONT  TestExecutionPositionIsProofOfDelegation/source
+--- PASS: TestExecutionPositionIsProofOfDelegation (0.00s)
+    --- PASS: TestExecutionPositionIsProofOfDelegation/pipeline (0.02s)
+    --- PASS: TestExecutionPositionIsProofOfDelegation/variavel-executada (0.02s)
+    --- PASS: TestExecutionPositionIsProofOfDelegation/exec-direto (0.02s)
+    --- PASS: TestExecutionPositionIsProofOfDelegation/source (0.02s)
+=== CONT  TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=false
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+
+Batch summary (install): created=391 updated=0 preserved=0 merged=2 conflict=0
+
+Batch summary (install): created=644 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestCanonicalValidatorScriptsAreInstalledAndExecutableGenerateC2819650054/001
+Modo de instalacao: copy
+-> Instalando claude...
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestInstall_EmbeddedSource_AllToolsAllLangs256798870/001
+Modo de instalacao: copy
+--- PASS: TestInstalledValidationHooksAreExecutableForEveryAgent (2.26s)
+=== CONT  TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=true
+--- PASS: TestOpenCodePluginDeclaredScriptsExistAfterInstall (2.29s)
+=== CONT  TestTextualMentionIsNotProofOfDelegation/comentario
+-> Instalando codex...
+-> Instalando copilot...
+=== CONT  TestTextualMentionIsNotProofOfDelegation/variavel-atribuida-sem-uso
+=== CONT  TestTextualMentionIsNotProofOfDelegation/mensagem
+--- PASS: TestTextualMentionIsNotProofOfDelegation (0.00s)
+    --- PASS: TestTextualMentionIsNotProofOfDelegation/comentario (0.01s)
+    --- PASS: TestTextualMentionIsNotProofOfDelegation/variavel-atribuida-sem-uso (0.01s)
+    --- PASS: TestTextualMentionIsNotProofOfDelegation/mensagem (0.01s)
+=== CONT  TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_without_trailing_newline
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+=== CONT  TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_authored_hooks_block
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+=== CONT  TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_trailing_newline
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=0 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstallCopilotPreservesAuthoredSettingsFormatting (0.00s)
+    --- PASS: TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_without_trailing_newline (0.00s)
+    --- PASS: TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_authored_hooks_block (0.00s)
+    --- PASS: TestInstallCopilotPreservesAuthoredSettingsFormatting/four_space_indent_with_trailing_newline (0.00s)
+=== CONT  TestInstallCopilotPreservesSessionEndAsADistinctEvent/sessionEnd
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+=== CONT  TestInstallCopilotMigratesObsoleteStopKeysInSettings/stop
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+=== CONT  TestInstallCopilotPreservesSessionEndAsADistinctEvent/SessionEnd
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstallCopilotPreservesSessionEndAsADistinctEvent (0.00s)
+    --- PASS: TestInstallCopilotPreservesSessionEndAsADistinctEvent/sessionEnd (0.00s)
+    --- PASS: TestInstallCopilotPreservesSessionEndAsADistinctEvent/SessionEnd (0.00s)
+=== CONT  TestInstallCopilotMigratesObsoleteStopKeysInSettings/Stop
+Ferramentas: [copilot]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+
+Batch summary (install): created=1 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /project
+Modo de instalacao: copy
+--- PASS: TestInstallCopilotMigratesObsoleteStopKeysInSettings (0.00s)
+    --- PASS: TestInstallCopilotMigratesObsoleteStopKeysInSettings/stop (0.00s)
+    --- PASS: TestInstallCopilotMigratesObsoleteStopKeysInSettings/Stop (0.00s)
+-> Instalando opencode...
+--- PASS: TestCodexGovernanceRootKeysSurviveContextGeneration (0.00s)
+    --- PASS: TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=false (2.24s)
+    --- PASS: TestCodexGovernanceRootKeysSurviveContextGeneration/GenerateCtx=true (2.25s)
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  []
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+--- PASS: TestCanonicalValidatorScriptsAreInstalledAndExecutable (0.00s)
+    --- PASS: TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=false (2.23s)
+    --- PASS: TestCanonicalValidatorScriptsAreInstalledAndExecutable/GenerateCtx=true (2.04s)
+-> Gerando governanca contextual...
+--- PASS: TestInstall_EmbeddedSource_AllToolsAllLangs (2.60s)
+
+Batch summary (install): created=389 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidatorGe951333449/001
+Modo de instalacao: copy
+
+Batch summary (install): created=391 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidatorGe2536731584/001
+Modo de instalacao: copy
+--- PASS: TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator (0.01s)
+    --- PASS: TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=false (1.05s)
+    --- PASS: TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator/GenerateCtx=true (0.79s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/install	4.613s
+=== RUN   TestUninstallKeepsAuthoredHookThatReusesGovernanceCommandUnderForeignMatcher
+=== PAUSE TestUninstallKeepsAuthoredHookThatReusesGovernanceCommandUnderForeignMatcher
+=== RUN   TestUninstallKeepsAuthoredScriptStoredUnderClaudeHooksDirectory
+=== PAUSE TestUninstallKeepsAuthoredScriptStoredUnderClaudeHooksDirectory
+=== RUN   TestUninstallRemovesHarnessInstalledClaudeHooksAcrossEveryCanonicalPoint
+=== PAUSE TestUninstallRemovesHarnessInstalledClaudeHooksAcrossEveryCanonicalPoint
+=== RUN   TestUninstall_ReverseMergesClaudeSettingsRestoringUserFile
+=== PAUSE TestUninstall_ReverseMergesClaudeSettingsRestoringUserFile
+=== RUN   TestUninstall_ReverseMergeClaudeSettingsKeepsUserHooks
+=== PAUSE TestUninstall_ReverseMergeClaudeSettingsKeepsUserHooks
+=== RUN   TestUninstall_TrackedManifest_DoesNotSweepUserFilesInGeneratedDirs
+=== PAUSE TestUninstall_TrackedManifest_DoesNotSweepUserFilesInGeneratedDirs
+=== RUN   TestUninstall_WithoutManifest_PreservesAuthoredContextFilesAndWarns
+=== PAUSE TestUninstall_WithoutManifest_PreservesAuthoredContextFilesAndWarns
+=== RUN   TestUninstall_WithoutManifest_RemovesGeneratedContextFiles
+=== PAUSE TestUninstall_WithoutManifest_RemovesGeneratedContextFiles
+=== RUN   TestUninstall_WithoutGovernanceBlock_IsByteIdenticalNoop
+=== PAUSE TestUninstall_WithoutGovernanceBlock_IsByteIdenticalNoop
+=== RUN   TestRoundtrip_AuthoredContextFiles_SurviveInstallAndTwoUninstalls
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=471 updated=0 preserved=0 merged=6 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_AuthoredContextFiles_SurviveInstallAndTwoUninstall2135272438/001
+Modo de instalacao: copy
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_AuthoredContextFiles_SurviveInstallAndTwoUninstall2135272438/001
+
+AVISO: GEMINI.md nao corresponde ao conteudo gerado pelo harness — preservado; remova manualmente se nao precisar mais dele.
+
+Governanca removida: 478 arquivo(s).
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_AuthoredContextFiles_SurviveInstallAndTwoUninstall2135272438/001
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+AVISO: AGENTS.md nao corresponde ao conteudo gerado pelo harness — preservado; remova manualmente se nao precisar mais dele.
+AVISO: CLAUDE.md nao corresponde ao conteudo gerado pelo harness — preservado; remova manualmente se nao precisar mais dele.
+AVISO: .github/copilot-instructions.md nao corresponde ao conteudo gerado pelo harness — preservado; remova manualmente se nao precisar mais dele.
+AVISO: .codex/config.toml nao corresponde ao conteudo gerado pelo harness — preservado; remova manualmente se nao precisar mais dele.
+AVISO: GEMINI.md nao corresponde ao conteudo gerado pelo harness — preservado; remova manualmente se nao precisar mais dele.
+
+Nada a remover: nenhum artefato de governanca encontrado em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_AuthoredContextFiles_SurviveInstallAndTwoUninstall2135272438/001.
+--- PASS: TestRoundtrip_AuthoredContextFiles_SurviveInstallAndTwoUninstalls (0.74s)
+=== RUN   TestRoundtrip_GeneratedContextFiles_AreRemovedWhenNotAuthored
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=475 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_GeneratedContextFiles_AreRemovedWhenNotAuthored1587067528/001
+Modo de instalacao: copy
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_GeneratedContextFiles_AreRemovedWhenNotAuthored1587067528/001
+
+
+Governanca removida: 478 arquivo(s).
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_GeneratedContextFiles_AreRemovedWhenNotAuthored1587067528/001
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+
+Nada a remover: nenhum artefato de governanca encontrado em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_GeneratedContextFiles_AreRemovedWhenNotAuthored1587067528/001.
+--- PASS: TestRoundtrip_GeneratedContextFiles_AreRemovedWhenNotAuthored (0.58s)
+=== RUN   TestRoundtrip_TwoUninstalls_PreserveUserFilesByteIdentical
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=475 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_TwoUninstalls_PreserveUserFilesByteIdentical2222837366/001
+Modo de instalacao: copy
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_TwoUninstalls_PreserveUserFilesByteIdentical2222837366/001
+
+
+Governanca removida: 478 arquivo(s).
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_TwoUninstalls_PreserveUserFilesByteIdentical2222837366/001
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+
+Nada a remover: nenhum artefato de governanca encontrado em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_TwoUninstalls_PreserveUserFilesByteIdentical2222837366/001.
+--- PASS: TestRoundtrip_TwoUninstalls_PreserveUserFilesByteIdentical (2.14s)
+=== RUN   TestUninstall_NeverInstalledDir_LeavesEveryFileByteIdentical
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUninstall_NeverInstalledDir_LeavesEveryFileByteIdentical2825649521/001
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+AVISO: AGENTS.md nao corresponde ao conteudo gerado pelo harness — preservado; remova manualmente se nao precisar mais dele.
+AVISO: CLAUDE.md nao corresponde ao conteudo gerado pelo harness — preservado; remova manualmente se nao precisar mais dele.
+AVISO: .github/copilot-instructions.md nao corresponde ao conteudo gerado pelo harness — preservado; remova manualmente se nao precisar mais dele.
+AVISO: .codex/config.toml nao corresponde ao conteudo gerado pelo harness — preservado; remova manualmente se nao precisar mais dele.
+
+Nada a remover: nenhum artefato de governanca encontrado em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUninstall_NeverInstalledDir_LeavesEveryFileByteIdentical2825649521/001.
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUninstall_NeverInstalledDir_LeavesEveryFileByteIdentical2825649521/001
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+AVISO: AGENTS.md nao corresponde ao conteudo gerado pelo harness — preservado; remova manualmente se nao precisar mais dele.
+AVISO: CLAUDE.md nao corresponde ao conteudo gerado pelo harness — preservado; remova manualmente se nao precisar mais dele.
+AVISO: .github/copilot-instructions.md nao corresponde ao conteudo gerado pelo harness — preservado; remova manualmente se nao precisar mais dele.
+AVISO: .codex/config.toml nao corresponde ao conteudo gerado pelo harness — preservado; remova manualmente se nao precisar mais dele.
+
+Nada a remover: nenhum artefato de governanca encontrado em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUninstall_NeverInstalledDir_LeavesEveryFileByteIdentical2825649521/001.
+--- PASS: TestUninstall_NeverInstalledDir_LeavesEveryFileByteIdentical (0.02s)
+=== RUN   TestUninstall_RemovesCurrentClaudeSettingsTemplate
+=== PAUSE TestUninstall_RemovesCurrentClaudeSettingsTemplate
+=== RUN   TestUninstall_RemovesLegacyClaudeSettingsTemplate
+=== PAUSE TestUninstall_RemovesLegacyClaudeSettingsTemplate
+=== RUN   TestUninstall_KeepsCustomizedClaudeSettings
+=== PAUSE TestUninstall_KeepsCustomizedClaudeSettings
+=== RUN   TestUninstall_ReverseMergesCopilotSettings
+=== PAUSE TestUninstall_ReverseMergesCopilotSettings
+=== RUN   TestUninstall_PreservesUserKeysInCopilotSettings
+=== PAUSE TestUninstall_PreservesUserKeysInCopilotSettings
+=== RUN   TestUninstall_ReverseMergesOpenCodeConfig
+=== PAUSE TestUninstall_ReverseMergesOpenCodeConfig
+=== RUN   TestUninstall_RemovesOpenCodeConfigWhenOnlyHarnessBlock
+=== PAUSE TestUninstall_RemovesOpenCodeConfigWhenOnlyHarnessBlock
+=== RUN   TestUninstall_ManifestTrackedFilesPreserveUserPlugin
+=== PAUSE TestUninstall_ManifestTrackedFilesPreserveUserPlugin
+=== RUN   TestRoundtrip_InstallUninstall_LeavesOnlyUserFiles
+=== RUN   TestRoundtrip_InstallUninstall_LeavesOnlyUserFiles/copilot
+Ferramentas: [copilot]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=300 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilescopilot760805659/001
+Modo de instalacao: copy
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilescopilot760805659/001
+
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Governanca removida: 302 arquivo(s).
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilescopilot760805659/001
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Nada a remover: nenhum artefato de governanca encontrado em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilescopilot760805659/001.
+=== RUN   TestRoundtrip_InstallUninstall_LeavesOnlyUserFiles/opencode
+Ferramentas: [opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=153 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilesopencode99316348/001
+Modo de instalacao: copy
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilesopencode99316348/001
+
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Governanca removida: 155 arquivo(s).
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilesopencode99316348/001
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Nada a remover: nenhum artefato de governanca encontrado em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilesopencode99316348/001.
+=== RUN   TestRoundtrip_InstallUninstall_LeavesOnlyUserFiles/all
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=475 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilesall4113489542/001
+Modo de instalacao: copy
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilesall4113489542/001
+
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Governanca removida: 478 arquivo(s).
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilesall4113489542/001
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Nada a remover: nenhum artefato de governanca encontrado em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilesall4113489542/001.
+=== RUN   TestRoundtrip_InstallUninstall_LeavesOnlyUserFiles/claude
+Ferramentas: [claude]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=310 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilesclaude565503429/001
+Modo de instalacao: copy
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilesclaude565503429/001
+
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Governanca removida: 311 arquivo(s).
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilesclaude565503429/001
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Nada a remover: nenhum artefato de governanca encontrado em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilesclaude565503429/001.
+=== RUN   TestRoundtrip_InstallUninstall_LeavesOnlyUserFiles/codex
+Ferramentas: [codex]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=168 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilescodex3158839637/001
+Modo de instalacao: copy
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilescodex3158839637/001
+
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Governanca removida: 169 arquivo(s).
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilescodex3158839637/001
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Nada a remover: nenhum artefato de governanca encontrado em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_InstallUninstall_LeavesOnlyUserFilescodex3158839637/001.
+--- PASS: TestRoundtrip_InstallUninstall_LeavesOnlyUserFiles (1.95s)
+    --- PASS: TestRoundtrip_InstallUninstall_LeavesOnlyUserFiles/copilot (0.94s)
+    --- PASS: TestRoundtrip_InstallUninstall_LeavesOnlyUserFiles/opencode (0.17s)
+    --- PASS: TestRoundtrip_InstallUninstall_LeavesOnlyUserFiles/all (0.42s)
+    --- PASS: TestRoundtrip_InstallUninstall_LeavesOnlyUserFiles/claude (0.25s)
+    --- PASS: TestRoundtrip_InstallUninstall_LeavesOnlyUserFiles/codex (0.18s)
+=== RUN   TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFiles
+=== RUN   TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFiles/all
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=475 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFilesall2927915984/001
+Modo de instalacao: copy
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=0 updated=1 preserved=471 merged=4 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFilesall2927915984/001
+Modo de instalacao: copy
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFilesall2927915984/001
+
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Governanca removida: 478 arquivo(s).
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFilesall2927915984/001
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Nada a remover: nenhum artefato de governanca encontrado em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFilesall2927915984/001.
+=== RUN   TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFiles/copilot
+Ferramentas: [copilot]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=300 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFilescopil2220876658/001
+Modo de instalacao: copy
+Ferramentas: [copilot]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando copilot...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=0 updated=1 preserved=298 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFilescopil2220876658/001
+Modo de instalacao: copy
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFilescopil2220876658/001
+
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Governanca removida: 302 arquivo(s).
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFilescopil2220876658/001
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Nada a remover: nenhum artefato de governanca encontrado em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFilescopil2220876658/001.
+=== RUN   TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFiles/codex
+Ferramentas: [codex]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=168 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFilescodex4036642477/001
+Modo de instalacao: copy
+Ferramentas: [codex]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=0 updated=1 preserved=167 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFilescodex4036642477/001
+Modo de instalacao: copy
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFilescodex4036642477/001
+
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Governanca removida: 169 arquivo(s).
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFilescodex4036642477/001
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Nada a remover: nenhum artefato de governanca encontrado em /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFilescodex4036642477/001.
+--- PASS: TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFiles (1.63s)
+    --- PASS: TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFiles/all (0.82s)
+    --- PASS: TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFiles/copilot (0.47s)
+    --- PASS: TestRoundtrip_RepeatedInstallUninstall_LeavesOnlyUserFiles/codex (0.34s)
+=== RUN   TestRoundtrip_PreservesUserOpenCodeConfigAndClaudeMarkdown
+Ferramentas: [codex copilot opencode]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=317 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_PreservesUserOpenCodeConfigAndClaudeMarkdown2931584310/001
+Modo de instalacao: copy
+Removendo governanca de: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_PreservesUserOpenCodeConfigAndClaudeMarkdown2931584310/001
+
+
+Governanca removida: 320 arquivo(s).
+--- PASS: TestRoundtrip_PreservesUserOpenCodeConfigAndClaudeMarkdown (0.28s)
+=== RUN   TestRoundtrip_ClaudeSettingsTemplateMatchesInstaller
+Ferramentas: [claude]
+Linguagens:  [go]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Gerando governanca contextual...
+
+Batch summary (install): created=310 updated=0 preserved=0 merged=0 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestRoundtrip_ClaudeSettingsTemplateMatchesInstaller4245444305/001
+Modo de instalacao: copy
+--- PASS: TestRoundtrip_ClaudeSettingsTemplateMatchesInstaller (0.21s)
+=== RUN   TestUninstall_RemovesSkills
+=== PAUSE TestUninstall_RemovesSkills
+=== RUN   TestUninstall_RemovesLegacyGeminiResidue
+=== PAUSE TestUninstall_RemovesLegacyGeminiResidue
+=== RUN   TestUninstall_DryRunDoesNotRemove
+=== PAUSE TestUninstall_DryRunDoesNotRemove
+=== RUN   TestUninstall_NoSkillsDir
+=== PAUSE TestUninstall_NoSkillsDir
+=== RUN   TestUninstall_PreservesAgentsLocal
+=== PAUSE TestUninstall_PreservesAgentsLocal
+=== RUN   TestUninstall_ManifestDriven_PreservesUserFile_Idempotent
+=== PAUSE TestUninstall_ManifestDriven_PreservesUserFile_Idempotent
+=== RUN   TestUninstall_OldManifestWithoutFileTracking_FallsBackConservative
+=== PAUSE TestUninstall_OldManifestWithoutFileTracking_FallsBackConservative
+=== CONT  TestUninstall_NoSkillsDir
+=== CONT  TestUninstall_RemovesLegacyGeminiResidue
+=== CONT  TestUninstall_ManifestDriven_PreservesUserFile_Idempotent
+Removendo governanca de: /project
+
+Removendo governanca de: /project
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+
+=== CONT  TestUninstall_RemovesCurrentClaudeSettingsTemplate
+=== CONT  TestUninstall_OldManifestWithoutFileTracking_FallsBackConservative
+
+Governanca removida: 3 arquivo(s).
+Removendo governanca de: /project
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+
+Removendo governanca de: /project
+
+--- PASS: TestUninstall_RemovesCurrentClaudeSettingsTemplate (0.00s)
+=== CONT  TestUninstall_PreservesAgentsLocal
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+Removendo governanca de: /project
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+Nada a remover: nenhum artefato de governanca encontrado em /project.
+--- PASS: TestUninstall_ManifestDriven_PreservesUserFile_Idempotent (0.00s)
+=== CONT  TestUninstall_TrackedManifest_DoesNotSweepUserFilesInGeneratedDirs
+
+Removendo governanca de: /project
+
+Governanca removida: 2 arquivo(s).
+
+AGENTS.local.md preservado (extensao local do usuario).
+
+Governanca removida: 1 arquivo(s).
+
+Governanca removida: 1 arquivo(s).
+=== CONT  TestUninstall_DryRunDoesNotRemove
+Removendo governanca de: /project
+
+=== CONT  TestUninstallKeepsAuthoredHookThatReusesGovernanceCommandUnderForeignMatcher
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+
+Governanca removida: 3 arquivo(s).
+  [dry-run] rm /project/AGENTS.md
+Removendo governanca de: /project
+
+=== CONT  TestUninstall_RemovesOpenCodeConfigWhenOnlyHarnessBlock
+Removendo governanca de: /project
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+=== CONT  TestUninstall_RemovesSkills
+  [dry-run] rm /project/.claude/settings.local.json
+
+[dry-run] 2 arquivo(s) seriam removidos. Nenhuma alteracao feita.
+
+Governanca removida: 1 arquivo(s).
+--- PASS: TestUninstall_OldManifestWithoutFileTracking_FallsBackConservative (0.00s)
+Removendo governanca de: /project
+
+AVISO: manifesto sem rastreamento por arquivo (versao anterior a esta funcionalidade) — removendo apenas o conjunto conservador conhecido; reinstale para habilitar remocao completa por arquivo.
+--- PASS: TestUninstall_RemovesOpenCodeConfigWhenOnlyHarnessBlock (0.00s)
+--- PASS: TestUninstall_RemovesLegacyGeminiResidue (0.00s)
+=== CONT  TestUninstall_ManifestTrackedFilesPreserveUserPlugin
+=== CONT  TestUninstall_ReverseMergesCopilotSettings
+Removendo governanca de: /project
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+AVISO: .claude/settings.local.json contem configuracoes alem dos hooks de governanca — mantido.
+=== CONT  TestUninstall_KeepsCustomizedClaudeSettings
+
+Governanca removida: 2 arquivo(s).
+
+Governanca removida: 1 arquivo(s).
+Removendo governanca de: /project
+
+=== CONT  TestUninstall_RemovesLegacyClaudeSettingsTemplate
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+Removendo governanca de: /project
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+AVISO: .claude/settings.local.json contem configuracoes alem dos hooks de governanca — mantido.
+
+Governanca removida: 14 arquivo(s).
+=== CONT  TestUninstallKeepsAuthoredScriptStoredUnderClaudeHooksDirectory
+
+Nada a remover: nenhum artefato de governanca encontrado em /project.
+Removendo governanca de: /project
+
+Removendo governanca de: /project
+
+
+Governanca removida: 1 arquivo(s).
+
+--- PASS: TestUninstall_NoSkillsDir (0.00s)
+
+Governanca removida: 2 arquivo(s).
+--- PASS: TestUninstall_PreservesAgentsLocal (0.00s)
+Governanca removida: 1 arquivo(s).
+--- PASS: TestUninstall_TrackedManifest_DoesNotSweepUserFilesInGeneratedDirs (0.00s)
+=== CONT  TestUninstallRemovesHarnessInstalledClaudeHooksAcrossEveryCanonicalPoint
+Removendo governanca de: /project
+
+=== CONT  TestUninstall_ReverseMergeClaudeSettingsKeepsUserHooks
+Removendo governanca de: /project
+
+=== CONT  TestUninstall_ReverseMergesClaudeSettingsRestoringUserFile
+Removendo governanca de: /project
+
+=== CONT  TestUninstall_WithoutManifest_RemovesGeneratedContextFiles
+Removendo governanca de: /project
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+=== CONT  TestUninstall_WithoutManifest_PreservesAuthoredContextFilesAndWarns
+
+Governanca removida: 2 arquivo(s).
+
+Governanca removida: 4 arquivo(s).
+
+Governanca removida: 2 arquivo(s).
+
+Governanca removida: 2 arquivo(s).
+=== CONT  TestUninstall_WithoutGovernanceBlock_IsByteIdenticalNoop
+=== CONT  TestUninstall_ReverseMergesOpenCodeConfig
+Removendo governanca de: /project
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+=== CONT  TestUninstall_PreservesUserKeysInCopilotSettings
+Removendo governanca de: /project
+
+AVISO: manifesto sem rastreamento por arquivo: .ai_spec_harness.json ausente — removendo apenas arquivos cujo conteudo e reconhecido como gerado pelo harness; arquivos do usuario sao preservados.
+--- PASS: TestUninstall_DryRunDoesNotRemove (0.00s)
+--- PASS: TestUninstall_ReverseMergesCopilotSettings (0.00s)
+--- PASS: TestUninstallKeepsAuthoredHookThatReusesGovernanceCommandUnderForeignMatcher (0.00s)
+--- PASS: TestUninstall_RemovesSkills (0.00s)
+--- PASS: TestUninstall_KeepsCustomizedClaudeSettings (0.00s)
+--- PASS: TestUninstall_RemovesLegacyClaudeSettingsTemplate (0.00s)
+
+Governanca removida: 1 arquivo(s).
+
+Governanca removida: 1 arquivo(s).
+--- PASS: TestUninstall_ManifestTrackedFilesPreserveUserPlugin (0.00s)
+--- PASS: TestUninstallKeepsAuthoredScriptStoredUnderClaudeHooksDirectory (0.00s)
+--- PASS: TestUninstallRemovesHarnessInstalledClaudeHooksAcrossEveryCanonicalPoint (0.00s)
+--- PASS: TestUninstall_WithoutManifest_RemovesGeneratedContextFiles (0.00s)
+--- PASS: TestUninstall_ReverseMergesClaudeSettingsRestoringUserFile (0.00s)
+--- PASS: TestUninstall_ReverseMergeClaudeSettingsKeepsUserHooks (0.00s)
+--- PASS: TestUninstall_WithoutManifest_PreservesAuthoredContextFilesAndWarns (0.00s)
+--- PASS: TestUninstall_WithoutGovernanceBlock_IsByteIdenticalNoop (0.00s)
+--- PASS: TestUninstall_PreservesUserKeysInCopilotSettings (0.00s)
+--- PASS: TestUninstall_ReverseMergesOpenCodeConfig (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/uninstall	7.657s
+=== RUN   TestGeneratePreservesAuthoredClaudeMD
+--- PASS: TestGeneratePreservesAuthoredClaudeMD (0.00s)
+=== RUN   TestGenerateMarksPreexistingClaudeMDAsMerged
+--- PASS: TestGenerateMarksPreexistingClaudeMDAsMerged (0.00s)
+=== RUN   TestGenerateDoesNotMarkFreshClaudeMDAsMerged
+--- PASS: TestGenerateDoesNotMarkFreshClaudeMDAsMerged (0.00s)
+=== RUN   TestGenerateClaudeMDMergeIsIdempotent
+--- PASS: TestGenerateClaudeMDMergeIsIdempotent (0.00s)
+=== RUN   TestGenerateClaudeMDWithoutAuthoredContentStaysClean
+--- PASS: TestGenerateClaudeMDWithoutAuthoredContentStaysClean (0.00s)
+=== RUN   TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical
+=== PAUSE TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical
+=== RUN   TestMergeCodexInstallConfigIsIdempotent
+=== PAUSE TestMergeCodexInstallConfigIsIdempotent
+=== RUN   TestMergeCodexInstallConfigWithoutAuthoredContentStaysPlain
+=== PAUSE TestMergeCodexInstallConfigWithoutAuthoredContentStaysPlain
+=== RUN   TestMergeCodexInstallConfigDropsLegacyGeneratedContent
+=== PAUSE TestMergeCodexInstallConfigDropsLegacyGeneratedContent
+=== RUN   TestMergeCodexInstallConfigUserRootKeyWins
+=== PAUSE TestMergeCodexInstallConfigUserRootKeyWins
+=== RUN   TestCopilotGuidance
+--- PASS: TestCopilotGuidance (0.00s)
+=== RUN   TestCompactProfile
+=== RUN   TestCompactProfile/standard_contains_sections
+=== RUN   TestCompactProfile/compact_strips_sections
+--- PASS: TestCompactProfile (0.00s)
+    --- PASS: TestCompactProfile/standard_contains_sections (0.00s)
+    --- PASS: TestCompactProfile/compact_strips_sections (0.00s)
+=== RUN   TestDryRun
+--- PASS: TestDryRun (0.00s)
+=== RUN   TestCodexOnlyCompact
+--- PASS: TestCodexOnlyCompact (0.00s)
+=== RUN   TestAgentsMdInvocationDepth
+--- PASS: TestAgentsMdInvocationDepth (0.00s)
+=== RUN   TestContextgen_Snapshots
+=== RUN   TestContextgen_Snapshots/go-microservice
+=== RUN   TestContextgen_Snapshots/go-modular
+=== RUN   TestContextgen_Snapshots/go-monolith
+=== RUN   TestContextgen_Snapshots/node-monorepo
+=== RUN   TestContextgen_Snapshots/node-api
+=== RUN   TestContextgen_Snapshots/python-api
+=== RUN   TestContextgen_Snapshots/python-monorepo
+=== RUN   TestContextgen_Snapshots/polyglot-monorepo
+--- PASS: TestContextgen_Snapshots (0.15s)
+    --- PASS: TestContextgen_Snapshots/go-microservice (0.02s)
+    --- PASS: TestContextgen_Snapshots/go-modular (0.03s)
+    --- PASS: TestContextgen_Snapshots/go-monolith (0.01s)
+    --- PASS: TestContextgen_Snapshots/node-monorepo (0.02s)
+    --- PASS: TestContextgen_Snapshots/node-api (0.01s)
+    --- PASS: TestContextgen_Snapshots/python-api (0.01s)
+    --- PASS: TestContextgen_Snapshots/python-monorepo (0.03s)
+    --- PASS: TestContextgen_Snapshots/polyglot-monorepo (0.02s)
+=== RUN   TestBuildCodexConfig
+=== RUN   TestBuildCodexConfig/lean_omits_analyze-project
+=== RUN   TestBuildCodexConfig/full_includes_analyze-project
+--- PASS: TestBuildCodexConfig (0.00s)
+    --- PASS: TestBuildCodexConfig/lean_omits_analyze-project (0.00s)
+    --- PASS: TestBuildCodexConfig/full_includes_analyze-project (0.00s)
+=== RUN   TestGenerateMergesAuthoredCodexConfigAtCallSite
+--- PASS: TestGenerateMergesAuthoredCodexConfigAtCallSite (0.00s)
+=== RUN   TestBuildDirectoryTree_ExcludesHarnessGeneratedArtifacts
+=== PAUSE TestBuildDirectoryTree_ExcludesHarnessGeneratedArtifacts
+=== RUN   TestBuildDirectoryTree_StableAcrossHarnessInstall
+=== PAUSE TestBuildDirectoryTree_StableAcrossHarnessInstall
+=== RUN   TestLoader_LoadReference_Brief_ExtractsTLDR
+--- PASS: TestLoader_LoadReference_Brief_ExtractsTLDR (0.00s)
+=== RUN   TestLoader_LoadReference_Brief_FallbackWhenNoTLDR
+--- PASS: TestLoader_LoadReference_Brief_FallbackWhenNoTLDR (0.00s)
+=== RUN   TestLoader_LoadReference_FullMode_ReturnsComplete
+--- PASS: TestLoader_LoadReference_FullMode_ReturnsComplete (0.00s)
+=== RUN   TestLoader_LoadReference_Brief_SizeSmaller
+--- PASS: TestLoader_LoadReference_Brief_SizeSmaller (0.00s)
+=== RUN   TestLoader_LoadSkillReferences_Trivial_ReturnsEmpty
+--- PASS: TestLoader_LoadSkillReferences_Trivial_ReturnsEmpty (0.00s)
+=== RUN   TestLoader_LoadSkillReferences_Standard_LoadsOnlyStandardRefs
+--- PASS: TestLoader_LoadSkillReferences_Standard_LoadsOnlyStandardRefs (0.00s)
+=== RUN   TestLoader_LoadSkillReferences_Complex_LoadsAll
+--- PASS: TestLoader_LoadSkillReferences_Complex_LoadsAll (0.00s)
+=== RUN   TestLoader_TokenEconomy_TrivialLessThanStandardLessThanComplex
+--- PASS: TestLoader_TokenEconomy_TrivialLessThanStandardLessThanComplex (0.00s)
+=== CONT  TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical
+=== CONT  TestMergeCodexInstallConfigUserRootKeyWins
+--- PASS: TestMergeCodexInstallConfigUserRootKeyWins (0.00s)
+=== RUN   TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/no_trailing_newline
+=== CONT  TestMergeCodexInstallConfigDropsLegacyGeneratedContent
+--- PASS: TestMergeCodexInstallConfigDropsLegacyGeneratedContent (0.00s)
+=== CONT  TestMergeCodexInstallConfigWithoutAuthoredContentStaysPlain
+--- PASS: TestMergeCodexInstallConfigWithoutAuthoredContentStaysPlain (0.00s)
+=== CONT  TestMergeCodexInstallConfigIsIdempotent
+--- PASS: TestMergeCodexInstallConfigIsIdempotent (0.00s)
+=== CONT  TestBuildDirectoryTree_StableAcrossHarnessInstall
+--- PASS: TestBuildDirectoryTree_StableAcrossHarnessInstall (0.00s)
+=== CONT  TestBuildDirectoryTree_ExcludesHarnessGeneratedArtifacts
+--- PASS: TestBuildDirectoryTree_ExcludesHarnessGeneratedArtifacts (0.00s)
+=== RUN   TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/root_key_and_table
+=== RUN   TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/only_table
+=== RUN   TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/only_root_keys
+--- PASS: TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical (0.00s)
+    --- PASS: TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/no_trailing_newline (0.00s)
+    --- PASS: TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/root_key_and_table (0.00s)
+    --- PASS: TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/only_table (0.00s)
+    --- PASS: TestMergeCodexInstallConfigPreservesAuthoredTOMLByteIdentical/only_root_keys (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/contextgen	0.239s
+=== RUN   TestRepairCopilotGovernanceHooksMigratesObsoleteStopKey
+--- PASS: TestRepairCopilotGovernanceHooksMigratesObsoleteStopKey (0.00s)
+=== RUN   TestRepairCopilotGovernanceHooksPreservesUnrelatedContent
+--- PASS: TestRepairCopilotGovernanceHooksPreservesUnrelatedContent (0.00s)
+=== RUN   TestRepairCopilotGovernanceHooksIsIdempotent
+--- PASS: TestRepairCopilotGovernanceHooksIsIdempotent (0.00s)
+=== RUN   TestRepairCopilotGovernanceHooksLeavesCurrentFileUntouched
+--- PASS: TestRepairCopilotGovernanceHooksLeavesCurrentFileUntouched (0.00s)
+=== RUN   TestRepairCopilotGovernanceHooksCreatesMissingFile
+--- PASS: TestRepairCopilotGovernanceHooksCreatesMissingFile (0.00s)
+=== RUN   TestRepairCopilotGovernanceHooksRejectsMalformedDocument
+--- PASS: TestRepairCopilotGovernanceHooksRejectsMalformedDocument (0.00s)
+=== RUN   TestDefaultCopilotGovernanceHooksDeclaresSessionEndGate
+--- PASS: TestDefaultCopilotGovernanceHooksDeclaresSessionEndGate (0.00s)
+=== RUN   TestUpgrade_RefsChangedFilesNeverSilentlyIgnoresHashReadFailure
+=== PAUSE TestUpgrade_RefsChangedFilesNeverSilentlyIgnoresHashReadFailure
+=== RUN   TestUpgrade_RecordsFileChecksumForUpdatedSkillPath
+=== PAUSE TestUpgrade_RecordsFileChecksumForUpdatedSkillPath
+=== RUN   TestUpgrade_MergeFileTrackingPreservesUntouchedPreviousEntries
+=== PAUSE TestUpgrade_MergeFileTrackingPreservesUntouchedPreviousEntries
+=== RUN   TestUpgrade_LegacyManifestWithoutTrackingBackfillsChecksumsViaSkillsWalkOnVersionOnlyBump
+=== PAUSE TestUpgrade_LegacyManifestWithoutTrackingBackfillsChecksumsViaSkillsWalkOnVersionOnlyBump
+=== RUN   TestUpgrade_NoSkillsDir
+=== PAUSE TestUpgrade_NoSkillsDir
+=== RUN   TestUpgrade_CheckOnly_Outdated
+=== PAUSE TestUpgrade_CheckOnly_Outdated
+=== RUN   TestUpgrade_CheckOnly_UpToDate
+=== PAUSE TestUpgrade_CheckOnly_UpToDate
+=== RUN   TestUpgradeCheck_PrintsInformativeVersionLineWhenManifestDiffers
+=== PAUSE TestUpgradeCheck_PrintsInformativeVersionLineWhenManifestDiffers
+=== RUN   TestUpgradeCheck_OmitsInformativeVersionLineWhenVersionsMatch
+=== PAUSE TestUpgradeCheck_OmitsInformativeVersionLineWhenVersionsMatch
+=== RUN   TestUpgradeCheck_OmitsInformativeVersionLineForNonSemverManifest
+=== PAUSE TestUpgradeCheck_OmitsInformativeVersionLineForNonSemverManifest
+=== RUN   TestUpgradeCheck_OmitsInformativeVersionLineForIncompleteSemverManifest
+=== PAUSE TestUpgradeCheck_OmitsInformativeVersionLineForIncompleteSemverManifest
+=== RUN   TestUpgradeCheck_OmitsInformativeVersionLineForMalformedPrereleaseManifest
+=== PAUSE TestUpgradeCheck_OmitsInformativeVersionLineForMalformedPrereleaseManifest
+=== RUN   TestUpgrade_UsesResolvedExecutableVersionInOutput
+=== PAUSE TestUpgrade_UsesResolvedExecutableVersionInOutput
+=== RUN   TestUpgrade_UpdatesManifestVersionAfterSuccessfulUpgrade
+=== PAUSE TestUpgrade_UpdatesManifestVersionAfterSuccessfulUpgrade
+=== RUN   TestUpgrade_RewritesManifestWhenVersionChangesWithoutSkillChanges
+=== PAUSE TestUpgrade_RewritesManifestWhenVersionChangesWithoutSkillChanges
+=== RUN   TestUpgrade_BackfillsFileChecksumsEvenWhenVersionAndSkillsAreUnchanged
+=== PAUSE TestUpgrade_BackfillsFileChecksumsEvenWhenVersionAndSkillsAreUnchanged
+=== RUN   TestUpgrade_BackfilledChecksumDetectsConflictOnNextRun
+=== PAUSE TestUpgrade_BackfilledChecksumDetectsConflictOnNextRun
+=== RUN   TestUpgrade_LegacyManifestWithoutFileTrackingStillDetectsConflictAfterBackfill
+=== PAUSE TestUpgrade_LegacyManifestWithoutFileTrackingStillDetectsConflictAfterBackfill
+=== RUN   TestUpgrade_ReconcilesSkillVersionsAfterSkillUpdate
+=== PAUSE TestUpgrade_ReconcilesSkillVersionsAfterSkillUpdate
+=== RUN   TestUpgrade_PopulatesSkillVersionsForLegacyManifest
+=== PAUSE TestUpgrade_PopulatesSkillVersionsForLegacyManifest
+=== RUN   TestUpgrade_InstallsMissingSkillFromSource
+=== PAUSE TestUpgrade_InstallsMissingSkillFromSource
+=== RUN   TestUpgrade_RefusesExternalSkillsSymlinkByDefault
+=== PAUSE TestUpgrade_RefusesExternalSkillsSymlinkByDefault
+=== RUN   TestUpgrade_FollowsExternalSkillsSymlinkWhenAllowed
+=== PAUSE TestUpgrade_FollowsExternalSkillsSymlinkWhenAllowed
+=== RUN   TestUpgrade_AllowsRealSkillsDir
+=== PAUSE TestUpgrade_AllowsRealSkillsDir
+=== RUN   TestUpgrade_RefsChangedFiles
+=== PAUSE TestUpgrade_RefsChangedFiles
+=== RUN   TestUpgrade_CheckSkills_SourceRefsIOErrorNeverYieldsOK
+=== PAUSE TestUpgrade_CheckSkills_SourceRefsIOErrorNeverYieldsOK
+=== RUN   TestUpgrade_RegeneratesGovernanceOnSchemaDivergence
+=== PAUSE TestUpgrade_RegeneratesGovernanceOnSchemaDivergence
+=== RUN   TestUpgrade_AdaptersRegeneratedAfterSkillChange
+=== PAUSE TestUpgrade_AdaptersRegeneratedAfterSkillChange
+=== RUN   TestUpgrade_CodexRegeneratedAfterSkillChange
+=== PAUSE TestUpgrade_CodexRegeneratedAfterSkillChange
+=== RUN   TestUpgrade_PreservesCustomClaudeSettings
+=== PAUSE TestUpgrade_PreservesCustomClaudeSettings
+=== RUN   TestUpgrade_CrossVersionSchemaChange
+=== PAUSE TestUpgrade_CrossVersionSchemaChange
+=== RUN   TestUpgrade_PreservesAgentsLocal
+=== PAUSE TestUpgrade_PreservesAgentsLocal
+=== RUN   TestUpgrade_RecopiesT02Artifacts
+=== PAUSE TestUpgrade_RecopiesT02Artifacts
+=== RUN   TestUpgrade_RegeneratesAdaptersAndSupportFiles
+=== PAUSE TestUpgrade_RegeneratesAdaptersAndSupportFiles
+=== RUN   TestUpgrade_EmbeddedSource_NoSourceFlag
+=== PAUSE TestUpgrade_EmbeddedSource_NoSourceFlag
+=== RUN   TestUpgrade_EmbeddedSource_UpdatesSkills
+=== PAUSE TestUpgrade_EmbeddedSource_UpdatesSkills
+=== RUN   TestCheckSchemaDivergence_FallsBackToConstantWhenTemplateHoldsPlaceholder
+--- PASS: TestCheckSchemaDivergence_FallsBackToConstantWhenTemplateHoldsPlaceholder (0.00s)
+=== RUN   TestCheckSchemaDivergence_DetectsRealDivergenceAgainstConstant
+--- PASS: TestCheckSchemaDivergence_DetectsRealDivergenceAgainstConstant (0.00s)
+=== RUN   TestUpgrade_LegacyManifestFirstSyncEstablishesBaselineThenProtectsFromSecondSyncOnward
+=== PAUSE TestUpgrade_LegacyManifestFirstSyncEstablishesBaselineThenProtectsFromSecondSyncOnward
+=== RUN   TestUpgrade_LegacyManifestBackfillCoversAdapterFilesTouchedByRegenerateAdapters
+=== PAUSE TestUpgrade_LegacyManifestBackfillCoversAdapterFilesTouchedByRegenerateAdapters
+=== CONT  TestUpgrade_RefsChangedFilesNeverSilentlyIgnoresHashReadFailure
+=== CONT  TestUpgrade_PopulatesSkillVersionsForLegacyManifest
+=== CONT  TestUpgrade_ReconcilesSkillVersionsAfterSkillUpdate
+=== CONT  TestUpgrade_LegacyManifestWithoutFileTrackingStillDetectsConflictAfterBackfill
+=== CONT  TestUpgrade_BackfilledChecksumDetectsConflictOnNextRun
+=== CONT  TestUpgrade_BackfillsFileChecksumsEvenWhenVersionAndSkillsAreUnchanged
+=== CONT  TestUpgrade_RewritesManifestWhenVersionChangesWithoutSkillChanges
+=== CONT  TestUpgrade_UpdatesManifestVersionAfterSuccessfulUpgrade
+=== CONT  TestUpgrade_UsesResolvedExecutableVersionInOutput
+Verificando skills em: /project
+--- PASS: TestUpgrade_RefsChangedFilesNeverSilentlyIgnoresHashReadFailure (0.00s)
+Fonte: /source
+ai-spec 0.12.0
+
+  OK                   review (1.4.0)
+
+Resumo: 1 atualizadas, 0 desatualizadas (0 refs divergentes), 0 ausentes
+
+Batch summary (upgrade): created=0 updated=0 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_PopulatesSkillVersionsForLegacyManifest (0.00s)
+=== CONT  TestUpgradeCheck_OmitsInformativeVersionLineForMalformedPrereleaseManifest
+--- PASS: TestUpgradeCheck_OmitsInformativeVersionLineForMalformedPrereleaseManifest (0.00s)
+=== CONT  TestUpgradeCheck_OmitsInformativeVersionLineForIncompleteSemverManifest
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  DESATUALIZADA        review (fonte: 2.1.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+
+Batch summary (upgrade): created=0 updated=1 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_ReconcilesSkillVersionsAfterSkillUpdate (0.00s)
+=== CONT  TestUpgradeCheck_OmitsInformativeVersionLineForNonSemverManifest
+--- PASS: TestUpgradeCheck_OmitsInformativeVersionLineForNonSemverManifest (0.00s)
+=== CONT  TestUpgradeCheck_OmitsInformativeVersionLineWhenVersionsMatch
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  OK                   review (1.4.0)
+
+Resumo: 1 atualizadas, 0 desatualizadas (0 refs divergentes), 0 ausentes
+
+Batch summary (upgrade): created=0 updated=0 preserved=0 merged=0 conflict=0
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  CONTEUDO DIVERGENTE  review (1.4.0, checksum diferente)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+--- PASS: TestUpgrade_LegacyManifestWithoutFileTrackingStillDetectsConflictAfterBackfill (0.00s)
+=== CONT  TestUpgradeCheck_PrintsInformativeVersionLineWhenManifestDiffers
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  OK                   review (1.4.0)
+
+Resumo: 1 atualizadas, 0 desatualizadas (0 refs divergentes), 0 ausentes
+
+Batch summary (upgrade): created=0 updated=0 preserved=0 merged=0 conflict=0
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  SEM VERSAO           review (fonte: 1.4.0, alvo: sem campo version)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+--- PASS: TestUpgrade_BackfilledChecksumDetectsConflictOnNextRun (0.00s)
+=== CONT  TestUpgrade_CheckOnly_UpToDate
+Verificando skills em: /project
+Fonte: /source
+ai-spec dev
+
+  OK                   review (1.0.0)
+
+Resumo: 1 atualizadas, 0 desatualizadas (0 refs divergentes), 0 ausentes
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  OK                   review (1.4.0)
+
+Resumo: 1 atualizadas, 0 desatualizadas (0 refs divergentes), 0 ausentes
+--- PASS: TestUpgrade_CheckOnly_UpToDate (0.00s)
+=== CONT  TestUpgrade_CheckOnly_Outdated
+
+Batch summary (upgrade): created=0 updated=0 preserved=0 merged=0 conflict=0
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+
+Execute sem --check para atualizar: ai-spec-harness upgrade /project --source /source
+--- PASS: TestUpgrade_CheckOnly_Outdated (0.00s)
+=== CONT  TestUpgrade_NoSkillsDir
+--- PASS: TestUpgrade_NoSkillsDir (0.00s)
+=== CONT  TestUpgrade_LegacyManifestWithoutTrackingBackfillsChecksumsViaSkillsWalkOnVersionOnlyBump
+--- PASS: TestUpgrade_BackfillsFileChecksumsEvenWhenVersionAndSkillsAreUnchanged (0.00s)
+=== CONT  TestUpgrade_MergeFileTrackingPreservesUntouchedPreviousEntries
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  OK                   review (1.4.0)
+
+Resumo: 1 atualizadas, 0 desatualizadas (0 refs divergentes), 0 ausentes
+
+Batch summary (upgrade): created=0 updated=0 preserved=0 merged=0 conflict=0
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+
+Batch summary (upgrade): created=0 updated=1 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_RewritesManifestWhenVersionChangesWithoutSkillChanges (0.00s)
+=== CONT  TestUpgrade_RecordsFileChecksumForUpdatedSkillPath
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+--- PASS: TestUpgrade_MergeFileTrackingPreservesUntouchedPreviousEntries (0.00s)
+=== CONT  TestUpgrade_PreservesCustomClaudeSettings
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+
+    -> review atualizado
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+-> Re-gerando adaptadores...
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+
+
+Batch summary (upgrade): created=0 updated=1 preserved=0 merged=0 conflict=0
+Batch summary (upgrade): created=1 updated=1 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_PreservesCustomClaudeSettings (0.00s)
+=== CONT  TestUpgrade_LegacyManifestBackfillCoversAdapterFilesTouchedByRegenerateAdapters
+--- PASS: TestUpgrade_RecordsFileChecksumForUpdatedSkillPath (0.00s)
+=== CONT  TestUpgrade_LegacyManifestFirstSyncEstablishesBaselineThenProtectsFromSecondSyncOnward
+    -> review atualizado
+-> Re-gerando adaptadores...
+
+Batch summary (upgrade): created=0 updated=1 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_UpdatesManifestVersionAfterSuccessfulUpgrade (0.00s)
+=== CONT  TestUpgrade_EmbeddedSource_UpdatesSkills
+--- PASS: TestUpgrade_UsesResolvedExecutableVersionInOutput (0.00s)
+=== CONT  TestUpgrade_EmbeddedSource_NoSourceFlag
+--- PASS: TestUpgradeCheck_OmitsInformativeVersionLineForIncompleteSemverManifest (0.00s)
+=== CONT  TestUpgrade_RegeneratesAdaptersAndSupportFiles
+Verificando skills em: /project
+Fonte: /source
+ai-spec dev
+
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+
+Batch summary (upgrade): created=1 updated=5 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_RegeneratesAdaptersAndSupportFiles (0.00s)
+=== CONT  TestUpgrade_RecopiesT02Artifacts
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+--- PASS: TestUpgradeCheck_OmitsInformativeVersionLineWhenVersionsMatch (0.00s)
+=== CONT  TestUpgrade_PreservesAgentsLocal
+
+Batch summary (upgrade): created=1 updated=4 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_RecopiesT02Artifacts (0.00s)
+=== CONT  TestUpgrade_CrossVersionSchemaChange
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+--- PASS: TestUpgradeCheck_PrintsInformativeVersionLineWhenManifestDiffers (0.00s)
+Verificando skills em: /project
+Fonte: /source
+=== CONT  TestUpgrade_RefsChangedFiles
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+--- PASS: TestUpgrade_RefsChangedFiles (0.00s)
+  OK                   review (1.4.0)
+=== CONT  TestUpgrade_CodexRegeneratedAfterSkillChange
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+
+Batch summary (upgrade): created=0 updated=2 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_CodexRegeneratedAfterSkillChange (0.00s)
+=== CONT  TestUpgrade_AdaptersRegeneratedAfterSkillChange
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  DESATUALIZADA        review (fonte: 2.0.0, alvo: 1.0.0)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+
+Batch summary (upgrade): created=1 updated=1 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_AdaptersRegeneratedAfterSkillChange (0.00s)
+=== CONT  TestUpgrade_RegeneratesGovernanceOnSchemaDivergence
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  OK                   review (1.0.0)
+  SCHEMA DIVERGENTE    AGENTS.md (projeto: 0.9.0, fonte: 1.0.0)
+
+Resumo: 1 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+-> Re-gerando governanca contextual apos atualizacao de skills...
+  OK                   review (1.0.0)
+  SCHEMA DIVERGENTE    AGENTS.md (projeto: 0.9.0, fonte: 1.0.0)
+
+Resumo: 1 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+-> Re-gerando governanca contextual apos atualizacao de skills...
+
+Batch summary (upgrade): created=0 updated=1 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_PreservesAgentsLocal (0.00s)
+=== CONT  TestUpgrade_CheckSkills_SourceRefsIOErrorNeverYieldsOK
+--- PASS: TestUpgrade_CheckSkills_SourceRefsIOErrorNeverYieldsOK (0.00s)
+=== CONT  TestUpgrade_FollowsExternalSkillsSymlinkWhenAllowed
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  AUSENTE              review (fonte: 1.0.0)
+
+Resumo: 0 atualizadas, 0 desatualizadas (0 refs divergentes), 1 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+
+Batch summary (upgrade): created=1 updated=0 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_FollowsExternalSkillsSymlinkWhenAllowed (0.00s)
+=== CONT  TestUpgrade_AllowsRealSkillsDir
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  OK                   review (1.0.0)
+
+Resumo: 1 atualizadas, 0 desatualizadas (0 refs divergentes), 0 ausentes
+
+Batch summary (upgrade): created=0 updated=0 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_AllowsRealSkillsDir (0.00s)
+=== CONT  TestUpgrade_RefusesExternalSkillsSymlinkByDefault
+--- PASS: TestUpgrade_RefusesExternalSkillsSymlinkByDefault (0.00s)
+=== CONT  TestUpgrade_InstallsMissingSkillFromSource
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  AUSENTE              review (fonte: 1.0.0)
+
+Resumo: 0 atualizadas, 0 desatualizadas (0 refs divergentes), 1 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+
+Batch summary (upgrade): created=1 updated=0 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_InstallsMissingSkillFromSource (0.00s)
+
+Batch summary (upgrade): created=0 updated=1 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_RegeneratesGovernanceOnSchemaDivergence (0.00s)
+ai-spec 0.12.0
+
+  OK                   review (1.0.0)
+  SCHEMA DIVERGENTE    AGENTS.md (projeto: 0.1.0, fonte: 1.0.0)
+
+Resumo: 1 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+-> Re-gerando governanca contextual apos atualizacao de skills...
+
+Resumo: 1 atualizadas, 0 desatualizadas (0 refs divergentes), 0 ausentes
+
+Batch summary (upgrade): created=0 updated=0 preserved=0 merged=0 conflict=0
+
+Batch summary (upgrade): created=0 updated=1 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_CrossVersionSchemaChange (0.00s)
+--- PASS: TestUpgrade_LegacyManifestWithoutTrackingBackfillsChecksumsViaSkillsWalkOnVersionOnlyBump (0.00s)
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  OK                   bugfix (1.0.0)
+  AUSENTE              review (fonte: 1.4.0)
+
+Resumo: 1 atualizadas, 0 desatualizadas (0 refs divergentes), 1 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+-> Re-gerando governanca contextual apos atualizacao de skills...
+
+Batch summary (upgrade): created=3 updated=0 preserved=1 merged=1 conflict=0
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  OK                   bugfix (1.0.0)
+  DESATUALIZADA        review (fonte: 1.5.0, alvo: 1.4.0)
+
+Resumo: 1 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+-> Re-gerando governanca contextual apos atualizacao de skills...
+--- PASS: TestUpgrade_LegacyManifestBackfillCoversAdapterFilesTouchedByRegenerateAdapters (0.00s)
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  OK                   bugfix (1.0.0)
+  AUSENTE              review (fonte: 1.4.0)
+
+Resumo: 1 atualizadas, 0 desatualizadas (0 refs divergentes), 1 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+-> Re-gerando governanca contextual apos atualizacao de skills...
+
+Batch summary (upgrade): created=3 updated=1 preserved=0 merged=1 conflict=0
+Verificando skills em: /project
+Fonte: /source
+ai-spec 0.12.0
+
+  OK                   bugfix (1.0.0)
+  DESATUALIZADA        review (fonte: 1.5.0, alvo: 1.4.0)
+
+Resumo: 1 atualizadas, 1 desatualizadas (0 refs divergentes), 0 ausentes
+    -> review atualizado
+-> Re-gerando adaptadores...
+-> Re-gerando governanca contextual apos atualizacao de skills...
+--- PASS: TestUpgrade_LegacyManifestFirstSyncEstablishesBaselineThenProtectsFromSecondSyncOnward (0.00s)
+Verificando skills em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgrade_EmbeddedSource_NoSourceFlag1202664292/001
+Fonte: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-1639885662
+ai-spec dev
+
+Verificando skills em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgrade_EmbeddedSource_UpdatesSkills145758248/001
+Fonte: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-1468171683
+ai-spec dev
+
+  AUSENTE              agent-governance (fonte: 2.0.0)
+  AUSENTE              analyze-project (fonte: 2.0.0)
+  AUSENTE              bugfix (fonte: 2.0.0)
+  AUSENTE              confluence-changelog-publisher (fonte: 1.0.0)
+  AUSENTE              create-prd (fonte: 2.0.0)
+  AUSENTE              create-tasks (fonte: 2.0.0)
+  AUSENTE              create-technical-specification (fonte: 2.0.0)
+  AUSENTE              design-patterns-mandatory (fonte: 1.1.0)
+  AUSENTE              domain-modeling-production (fonte: 2.0.0)
+  AUSENTE              dotnet-csharp-implementation (fonte: 1.4.0)
+  AUSENTE              execute-all-tasks (fonte: 2.0.0)
+  AUSENTE              execute-task (fonte: 2.0.0)
+  AUSENTE              finalize-changelog-readme-push (fonte: 1.1.0)
+  AUSENTE              github-diff-changelog-publisher (fonte: 1.0.0)
+  AUSENTE              github-pr-comment-triage (fonte: 1.0.0)
+  AUSENTE              github-release-publication-flow (fonte: 1.0.0)
+  AUSENTE              go-implementation (fonte: 1.4.0)
+  AUSENTE              jira-tasks (fonte: 1.0.0)
+  AUSENTE              node-implementation (fonte: 1.4.0)
+  AUSENTE              object-calisthenics-go (fonte: 1.1.0)
+  AUSENTE              otel-grafana-dashboards (fonte: 1.0.0)
+  AUSENTE              postman-collection-generator (fonte: 1.0.0)
+  AUSENTE              prompt-enricher (fonte: 1.0.0)
+  AUSENTE              pull-request (fonte: 1.0.0)
+  AUSENTE              python-implementation (fonte: 1.4.0)
+  AUSENTE              refactor (fonte: 1.2.0)
+  DESATUALIZADA        review (fonte: 1.4.0, alvo: 0.0.1)
+  AUSENTE              semantic-commit (fonte: 1.1.0)
+  AUSENTE              us-to-prd (fonte: 1.0.1)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 28 ausentes
+
+Execute sem --check para atualizar: ai-spec-harness upgrade /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestUpgrade_EmbeddedSource_NoSourceFlag1202664292/001 --source /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/ai-spec-harness-embedded-1639885662
+  AUSENTE              agent-governance (fonte: 2.0.0)
+  AUSENTE              analyze-project (fonte: 2.0.0)
+  AUSENTE              bugfix (fonte: 2.0.0)
+  AUSENTE              confluence-changelog-publisher (fonte: 1.0.0)
+  AUSENTE              create-prd (fonte: 2.0.0)
+  AUSENTE              create-tasks (fonte: 2.0.0)
+  AUSENTE              create-technical-specification (fonte: 2.0.0)
+  AUSENTE              design-patterns-mandatory (fonte: 1.1.0)
+  AUSENTE              domain-modeling-production (fonte: 2.0.0)
+  AUSENTE              dotnet-csharp-implementation (fonte: 1.4.0)
+  AUSENTE              execute-all-tasks (fonte: 2.0.0)
+  AUSENTE              execute-task (fonte: 2.0.0)
+  AUSENTE              finalize-changelog-readme-push (fonte: 1.1.0)
+  AUSENTE              github-diff-changelog-publisher (fonte: 1.0.0)
+  AUSENTE              github-pr-comment-triage (fonte: 1.0.0)
+  AUSENTE              github-release-publication-flow (fonte: 1.0.0)
+  AUSENTE              go-implementation (fonte: 1.4.0)
+  AUSENTE              jira-tasks (fonte: 1.0.0)
+  AUSENTE              node-implementation (fonte: 1.4.0)
+  AUSENTE              object-calisthenics-go (fonte: 1.1.0)
+  AUSENTE              otel-grafana-dashboards (fonte: 1.0.0)
+  AUSENTE              postman-collection-generator (fonte: 1.0.0)
+  AUSENTE              prompt-enricher (fonte: 1.0.0)
+  AUSENTE              pull-request (fonte: 1.0.0)
+  AUSENTE              python-implementation (fonte: 1.4.0)
+  AUSENTE              refactor (fonte: 1.2.0)
+  DESATUALIZADA        review (fonte: 1.4.0, alvo: 0.0.1)
+  AUSENTE              semantic-commit (fonte: 1.1.0)
+  AUSENTE              us-to-prd (fonte: 1.0.1)
+
+Resumo: 0 atualizadas, 1 desatualizadas (0 refs divergentes), 28 ausentes
+    -> agent-governance atualizado
+    -> analyze-project atualizado
+    -> bugfix atualizado
+    -> confluence-changelog-publisher atualizado
+    -> create-prd atualizado
+    -> create-tasks atualizado
+    -> create-technical-specification atualizado
+    -> design-patterns-mandatory atualizado
+    -> domain-modeling-production atualizado
+    -> dotnet-csharp-implementation atualizado
+    -> execute-all-tasks atualizado
+    -> execute-task atualizado
+    -> finalize-changelog-readme-push atualizado
+    -> github-diff-changelog-publisher atualizado
+    -> github-pr-comment-triage atualizado
+    -> github-release-publication-flow atualizado
+    -> go-implementation atualizado
+    -> jira-tasks atualizado
+    -> node-implementation atualizado
+    -> object-calisthenics-go atualizado
+    -> otel-grafana-dashboards atualizado
+    -> postman-collection-generator atualizado
+    -> prompt-enricher atualizado
+    -> pull-request atualizado
+    -> python-implementation atualizado
+    -> refactor atualizado
+    -> review atualizado
+    -> semantic-commit atualizado
+    -> us-to-prd atualizado
+-> Re-gerando adaptadores...
+--- PASS: TestUpgrade_EmbeddedSource_NoSourceFlag (0.15s)
+
+Batch summary (upgrade): created=187 updated=1 preserved=0 merged=0 conflict=0
+--- PASS: TestUpgrade_EmbeddedSource_UpdatesSkills (0.25s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/upgrade	0.347s
+=== RUN   TestCheckGit_ValidRepo
+--- PASS: TestCheckGit_ValidRepo (0.00s)
+=== RUN   TestCheckGit_NotARepo
+--- PASS: TestCheckGit_NotARepo (0.00s)
+=== RUN   TestCheckSkillsDir_Present
+--- PASS: TestCheckSkillsDir_Present (0.00s)
+=== RUN   TestCheckSkillsDir_Absent
+--- PASS: TestCheckSkillsDir_Absent (0.00s)
+=== RUN   TestCheckManifest_Present
+--- PASS: TestCheckManifest_Present (0.00s)
+=== RUN   TestCheckManifest_Absent
+--- PASS: TestCheckManifest_Absent (0.00s)
+=== RUN   TestCheckManifest_Corrupted
+--- PASS: TestCheckManifest_Corrupted (0.00s)
+=== RUN   TestCheckPermissions_Writable
+--- PASS: TestCheckPermissions_Writable (0.00s)
+=== RUN   TestCheckPermissions_NotWritable
+--- PASS: TestCheckPermissions_NotWritable (0.00s)
+=== RUN   TestCheckSymlinks_AllValid
+--- PASS: TestCheckSymlinks_AllValid (0.00s)
+=== RUN   TestCheckSymlinks_NoSkillsDir
+--- PASS: TestCheckSymlinks_NoSkillsDir (0.00s)
+=== RUN   TestRunChecks_FullPass
+--- PASS: TestRunChecks_FullPass (0.00s)
+=== RUN   TestCheckHookInterpreter
+=== RUN   TestCheckHookInterpreter/python3_available
+=== RUN   TestCheckHookInterpreter/jq_available_without_python3
+=== RUN   TestCheckHookInterpreter/both_available
+=== RUN   TestCheckHookInterpreter/neither_available
+--- PASS: TestCheckHookInterpreter (0.00s)
+    --- PASS: TestCheckHookInterpreter/python3_available (0.00s)
+    --- PASS: TestCheckHookInterpreter/jq_available_without_python3 (0.00s)
+    --- PASS: TestCheckHookInterpreter/both_available (0.00s)
+    --- PASS: TestCheckHookInterpreter/neither_available (0.00s)
+=== RUN   TestExecute_DirectoryNotFound
+--- PASS: TestExecute_DirectoryNotFound (0.00s)
+=== RUN   TestBuildProviderBlocks_OnlyInstalledProvidersAppear
+--- PASS: TestBuildProviderBlocks_OnlyInstalledProvidersAppear (0.00s)
+=== RUN   TestBuildProviderBlocks_StableCanonicalOrder
+--- PASS: TestBuildProviderBlocks_StableCanonicalOrder (0.00s)
+=== RUN   TestBuildProviderBlocks_AllFourProvidersWhenInstalled
+--- PASS: TestBuildProviderBlocks_AllFourProvidersWhenInstalled (0.00s)
+=== RUN   TestCheckProviderSkills_MissingFails
+--- PASS: TestCheckProviderSkills_MissingFails (0.00s)
+=== RUN   TestCheckProviderSkills_DriftedWarns
+--- PASS: TestCheckProviderSkills_DriftedWarns (0.00s)
+=== RUN   TestCheckProviderSkills_AllCurrentOK
+--- PASS: TestCheckProviderSkills_AllCurrentOK (0.00s)
+=== RUN   TestCheckProviderPolicies_MissingFails
+--- PASS: TestCheckProviderPolicies_MissingFails (0.00s)
+=== RUN   TestCheckProviderPreconditions_UnmetFails
+--- PASS: TestCheckProviderPreconditions_UnmetFails (0.00s)
+=== RUN   TestCheckProviderPreconditions_UnknownNeverFails
+--- PASS: TestCheckProviderPreconditions_UnknownNeverFails (0.00s)
+=== RUN   TestCheckProviderPreconditions_BinaryMissingWarns
+--- PASS: TestCheckProviderPreconditions_BinaryMissingWarns (0.00s)
+=== RUN   TestCheckCanonicalSync_DriftedFailsWithAdapterLayer
+--- PASS: TestCheckCanonicalSync_DriftedFailsWithAdapterLayer (0.00s)
+=== RUN   TestCheckCanonicalSync_NoItemsIsOK
+--- PASS: TestCheckCanonicalSync_NoItemsIsOK (0.00s)
+=== RUN   TestCheckCanonicalSync_VerifyErrorWarns
+--- PASS: TestCheckCanonicalSync_VerifyErrorWarns (0.00s)
+=== RUN   TestCheckSkillIntegrity_ConsumesRF60LockMismatch
+--- PASS: TestCheckSkillIntegrity_ConsumesRF60LockMismatch (0.00s)
+=== RUN   TestCheckSkillIntegrity_NoLockFileWarns
+--- PASS: TestCheckSkillIntegrity_NoLockFileWarns (0.00s)
+=== RUN   TestPrintChecks_CountsOnlyFailStatus
+--- PASS: TestPrintChecks_CountsOnlyFailStatus (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/doctor	0.099s

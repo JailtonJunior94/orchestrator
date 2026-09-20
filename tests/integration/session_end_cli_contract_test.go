@@ -72,7 +72,7 @@ func TestSessionEndCliBlockingContractIsMeasuredNotAssumed(t *testing.T) {
 			if err != nil {
 				t.Fatalf("tool=%s: not in the agent registry: %v", tool, err)
 			}
-			cov, ok := agent.Enforcement().CoverageFor(specs.PointSessionEnd)
+			cov, ok := agent.Enforcement().CoverageFor(specs.PointBeforeComplete)
 			if !ok {
 				t.Fatalf("tool=%s: the registry declares no session-end coverage", tool)
 			}

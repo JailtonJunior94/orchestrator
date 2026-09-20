@@ -1,0 +1,663 @@
+=== RUN   TestParseDriverID
+=== PAUSE TestParseDriverID
+=== RUN   TestDriverID_String_Idempotent
+=== PAUSE TestDriverID_String_Idempotent
+=== RUN   TestDriverID_ZeroValue_NotValid
+=== PAUSE TestDriverID_ZeroValue_NotValid
+=== RUN   TestNewSpecPanicsOnInvalidFixedArgsFormat
+=== PAUSE TestNewSpecPanicsOnInvalidFixedArgsFormat
+=== RUN   TestNewSpecPanicsOnInvalidFallbackFixedArgsFormat
+=== PAUSE TestNewSpecPanicsOnInvalidFallbackFixedArgsFormat
+=== RUN   TestValidateFallbackFixedArgsFormatAcceptsNpxPrefixConvention
+=== PAUSE TestValidateFallbackFixedArgsFormatAcceptsNpxPrefixConvention
+=== RUN   TestContextWindow_Class
+=== PAUSE TestContextWindow_Class
+=== RUN   TestContextWindow_ZeroValue_IsWindowStandard
+=== PAUSE TestContextWindow_ZeroValue_IsWindowStandard
+=== RUN   TestWindowClass_ClosedSet
+=== PAUSE TestWindowClass_ClosedSet
+=== RUN   TestAdapterContainsNoPolicyDecision
+=== PAUSE TestAdapterContainsNoPolicyDecision
+=== RUN   TestAdapterPolicyDecisionGateDetectsAPlantedViolation
+=== PAUSE TestAdapterPolicyDecisionGateDetectsAPlantedViolation
+=== RUN   TestClaudeSnapshot
+=== PAUSE TestClaudeSnapshot
+=== RUN   TestClaudeStability
+=== PAUSE TestClaudeStability
+=== RUN   TestLauncherKind
+=== PAUSE TestLauncherKind
+=== RUN   TestLauncherCommand
+=== PAUSE TestLauncherCommand
+=== RUN   TestClaudeNpmFallbackFormat
+=== PAUSE TestClaudeNpmFallbackFormat
+=== RUN   TestCodexDefaults
+=== PAUSE TestCodexDefaults
+=== RUN   TestCodexMetadata
+=== PAUSE TestCodexMetadata
+=== RUN   TestCodexFallback
+=== PAUSE TestCodexFallback
+=== RUN   TestCodexVersionPinned
+=== PAUSE TestCodexVersionPinned
+=== RUN   TestCodexBootstrapArgsEmptyModelRestricted
+=== PAUSE TestCodexBootstrapArgsEmptyModelRestricted
+=== RUN   TestCodexBootstrapArgsModelReasoningRestricted
+=== PAUSE TestCodexBootstrapArgsModelReasoningRestricted
+=== RUN   TestCodexBootstrapArgsFullAccess
+=== PAUSE TestCodexBootstrapArgsFullAccess
+=== RUN   TestCodexBootstrapArgsReasoningLow
+=== PAUSE TestCodexBootstrapArgsReasoningLow
+=== RUN   TestCodexBootstrapArgsDelegates
+=== PAUSE TestCodexBootstrapArgsDelegates
+=== RUN   TestCopilotSpecDefaults
+=== PAUSE TestCopilotSpecDefaults
+=== RUN   TestCopilotSpecMetadata
+=== PAUSE TestCopilotSpecMetadata
+=== RUN   TestCopilotSpecFallback
+=== PAUSE TestCopilotSpecFallback
+=== RUN   TestCopilotConstantsPinned
+=== PAUSE TestCopilotConstantsPinned
+=== RUN   TestCopilotAccessModeFlag
+=== PAUSE TestCopilotAccessModeFlag
+=== RUN   TestCopilotDisplayName
+=== PAUSE TestCopilotDisplayName
+=== RUN   TestCopilotStability
+=== PAUSE TestCopilotStability
+=== RUN   TestDispatchProofHasNoFabricableEvidenceEscape
+=== PAUSE TestDispatchProofHasNoFabricableEvidenceEscape
+=== RUN   TestDispatchProofCollectsEvidenceFromIntegrationSubprocess
+=== PAUSE TestDispatchProofCollectsEvidenceFromIntegrationSubprocess
+=== RUN   TestNewPointCoverageRejectsNativeKeyTheCliDoesNotRecognize
+=== PAUSE TestNewPointCoverageRejectsNativeKeyTheCliDoesNotRecognize
+=== RUN   TestNewPointCoverageRejectsUnknownAgentVocabulary
+=== PAUSE TestNewPointCoverageRejectsUnknownAgentVocabulary
+=== RUN   TestNewEnforcementRejectsIncompleteCoverage
+=== PAUSE TestNewEnforcementRejectsIncompleteCoverage
+=== RUN   TestNewEnforcementAcceptsDeclaredUnsupportedPoint
+=== PAUSE TestNewEnforcementAcceptsDeclaredUnsupportedPoint
+=== RUN   TestNewUnsupportedPointCoverageRequiresReason
+=== PAUSE TestNewUnsupportedPointCoverageRequiresReason
+=== RUN   TestNewAdapterPointCoverageRequiresLimitation
+=== PAUSE TestNewAdapterPointCoverageRequiresLimitation
+=== RUN   TestCanonicalPointsDeriveFromHookContract
+=== PAUSE TestCanonicalPointsDeriveFromHookContract
+=== RUN   TestCanonicalPointIsClosedSet
+=== PAUSE TestCanonicalPointIsClosedSet
+=== RUN   TestEnforcementPreconditionRemedyAndStates
+=== PAUSE TestEnforcementPreconditionRemedyAndStates
+=== RUN   TestEnvPolicyZeroValueAppliesNil
+=== PAUSE TestEnvPolicyZeroValueAppliesNil
+=== RUN   TestEnvPolicyStripsKnownKillSwitches
+=== PAUSE TestEnvPolicyStripsKnownKillSwitches
+=== RUN   TestEnvPolicyApplyNeverMutatesInputSlice
+=== PAUSE TestEnvPolicyApplyNeverMutatesInputSlice
+=== RUN   TestEnvPolicyStripVarsReturnsClone
+=== PAUSE TestEnvPolicyStripVarsReturnsClone
+=== RUN   TestOpenCodeAgentEnvPolicyStripsExactlyTheFourKillSwitches
+=== PAUSE TestOpenCodeAgentEnvPolicyStripsExactlyTheFourKillSwitches
+=== RUN   TestOpenCodeAgentRequiresHandshake
+=== PAUSE TestOpenCodeAgentRequiresHandshake
+=== RUN   TestOtherAgentsDoNotRequireHandshakeAndInheritEnvByDefault
+=== PAUSE TestOtherAgentsDoNotRequireHandshakeAndInheritEnvByDefault
+=== RUN   TestEnvPolicyAppliedToRealEnvironProducesSameLengthMinusStripped
+=== PAUSE TestEnvPolicyAppliedToRealEnvironProducesSameLengthMinusStripped
+=== RUN   TestNoAgentListLiteralOutsideRegistry
+=== PAUSE TestNoAgentListLiteralOutsideRegistry
+=== RUN   TestParityGateFlagsCodexConfigThatRenamesTheNativeHookKey
+=== PAUSE TestParityGateFlagsCodexConfigThatRenamesTheNativeHookKey
+=== RUN   TestParityGateFlagsOpenCodePluginThatRenamesTheNativeHookKey
+=== PAUSE TestParityGateFlagsOpenCodePluginThatRenamesTheNativeHookKey
+=== RUN   TestParityGateFlagsCopilotConfigThatRenamesTheNativeHookKey
+=== PAUSE TestParityGateFlagsCopilotConfigThatRenamesTheNativeHookKey
+=== RUN   TestParityGateFlagsNativeKeyWiredToANonCanonicalValidator
+=== PAUSE TestParityGateFlagsNativeKeyWiredToANonCanonicalValidator
+=== RUN   TestParityGateFlagsMissingVersionedNativeConfig
+=== PAUSE TestParityGateFlagsMissingVersionedNativeConfig
+=== RUN   TestParityGateConfrontsEveryMandatoryAgentWithAVersionedNativeConfig
+=== PAUSE TestParityGateConfrontsEveryMandatoryAgentWithAVersionedNativeConfig
+=== RUN   TestMergeOpenCodeConfigPreservesSchemaAndExistingFields
+=== PAUSE TestMergeOpenCodeConfigPreservesSchemaAndExistingFields
+=== RUN   TestMergeOpenCodeConfigMergesExistingPermissionBlock
+=== PAUSE TestMergeOpenCodeConfigMergesExistingPermissionBlock
+=== RUN   TestMergeOpenCodeConfigNeverWritesSkillsOrInstructions
+=== PAUSE TestMergeOpenCodeConfigNeverWritesSkillsOrInstructions
+=== RUN   TestMergeOpenCodeConfigPreservesExistingSkillsAndInstructions
+=== PAUSE TestMergeOpenCodeConfigPreservesExistingSkillsAndInstructions
+=== RUN   TestMergeOpenCodeConfigIsIdempotent
+=== PAUSE TestMergeOpenCodeConfigIsIdempotent
+=== RUN   TestMergeOpenCodeConfigWritesModelKey
+=== PAUSE TestMergeOpenCodeConfigWritesModelKey
+=== RUN   TestDefaultOpenCodePermissionForbidsWildcardDenyAndAsk
+=== PAUSE TestDefaultOpenCodePermissionForbidsWildcardDenyAndAsk
+=== RUN   TestValidatePermissionBlockRejectsAsk
+=== PAUSE TestValidatePermissionBlockRejectsAsk
+=== RUN   TestValidatePermissionBlockRejectsNestedAsk
+=== PAUSE TestValidatePermissionBlockRejectsNestedAsk
+=== RUN   TestValidatePermissionBlockRejectsWildcardDenyOnRequiredTool
+=== PAUSE TestValidatePermissionBlockRejectsWildcardDenyOnRequiredTool
+=== RUN   TestValidatePermissionBlockAllowsWildcardDenyOnToolNotRequired
+=== PAUSE TestValidatePermissionBlockAllowsWildcardDenyOnToolNotRequired
+=== RUN   TestValidatePermissionBlockAcceptsDefaultOpenCodePermission
+=== PAUSE TestValidatePermissionBlockAcceptsDefaultOpenCodePermission
+=== RUN   TestValidatePermissionBlockAcceptsDefaultOpenCodePermissionWithRequiredTools
+=== PAUSE TestValidatePermissionBlockAcceptsDefaultOpenCodePermissionWithRequiredTools
+=== RUN   TestResolveOpenCodeWindowProviderQualifiedModel
+--- PASS: TestResolveOpenCodeWindowProviderQualifiedModel (0.00s)
+=== RUN   TestNormalizeModelID
+--- PASS: TestNormalizeModelID (0.00s)
+=== RUN   TestMergeOpenCodeConfigPreservesAuthoredFormatting
+=== PAUSE TestMergeOpenCodeConfigPreservesAuthoredFormatting
+=== RUN   TestMergeOpenCodeConfigIsAByteIdenticalNoOpWhenAlreadyApplied
+=== PAUSE TestMergeOpenCodeConfigIsAByteIdenticalNoOpWhenAlreadyApplied
+=== RUN   TestJSONTopLevelKeyRoundTripIsByteIdentical
+=== PAUSE TestJSONTopLevelKeyRoundTripIsByteIdentical
+=== RUN   TestSetJSONTopLevelKeyReplacesExistingValueInPlace
+=== PAUSE TestSetJSONTopLevelKeyReplacesExistingValueInPlace
+=== RUN   TestSetJSONTopLevelKeyRejectsNonObject
+=== PAUSE TestSetJSONTopLevelKeyRejectsNonObject
+=== RUN   TestOpenCodeArgvSubcommandBeforeFlags
+=== PAUSE TestOpenCodeArgvSubcommandBeforeFlags
+=== RUN   TestOpenCodeFallbackPinnedVersion
+=== PAUSE TestOpenCodeFallbackPinnedVersion
+=== RUN   TestValidateFixedArgsFormatAcceptsSubcommandPrefix
+=== PAUSE TestValidateFixedArgsFormatAcceptsSubcommandPrefix
+=== RUN   TestValidateFixedArgsFormatRejectsPositionalAfterFlag
+=== PAUSE TestValidateFixedArgsFormatRejectsPositionalAfterFlag
+=== RUN   TestResolveOpenCodeWindowExactMatch
+=== PAUSE TestResolveOpenCodeWindowExactMatch
+=== RUN   TestResolveOpenCodeWindowLongestPrefixMatch
+=== PAUSE TestResolveOpenCodeWindowLongestPrefixMatch
+=== RUN   TestResolveOpenCodeWindowUnknownModelFallsBackConservative
+=== PAUSE TestResolveOpenCodeWindowUnknownModelFallsBackConservative
+=== RUN   TestResolveOpenCodeWindowEmptyModelFallsBackConservative
+=== PAUSE TestResolveOpenCodeWindowEmptyModelFallsBackConservative
+=== RUN   TestResolveOpenCodeWindowNeverExceedsTableEntry
+=== PAUSE TestResolveOpenCodeWindowNeverExceedsTableEntry
+=== RUN   TestResolveWindowNilResolverIsByteIdenticalForExistingAgents
+=== PAUSE TestResolveWindowNilResolverIsByteIdenticalForExistingAgents
+=== RUN   TestLogfInjectionNoLongerForgesDispatchEvidence
+=== PAUSE TestLogfInjectionNoLongerForgesDispatchEvidence
+=== RUN   TestSkipActionRevokesPassEvidence
+=== PAUSE TestSkipActionRevokesPassEvidence
+=== RUN   TestDispatchProofRegistryNamesExistingIntegrationTests
+=== PAUSE TestDispatchProofRegistryNamesExistingIntegrationTests
+=== RUN   TestDispatchProofRegistryCoversEveryMandatoryCell
+=== PAUSE TestDispatchProofRegistryCoversEveryMandatoryCell
+=== RUN   TestEveryMandatoryCellHasExecutionEvidence
+--- PASS: TestEveryMandatoryCellHasExecutionEvidence (2.22s)
+=== RUN   TestParityGateHasZeroViolationsWithDispatchProofs
+--- PASS: TestParityGateHasZeroViolationsWithDispatchProofs (0.00s)
+=== RUN   TestValidateCapabilityMatrixEvidence_EmptyMatrix
+=== PAUSE TestValidateCapabilityMatrixEvidence_EmptyMatrix
+=== RUN   TestValidateCapabilityMatrixEvidence_SupportedWithoutDispatchProof
+=== PAUSE TestValidateCapabilityMatrixEvidence_SupportedWithoutDispatchProof
+=== RUN   TestValidateCapabilityMatrixEvidence_NilDispatchProvenFailsClosed
+=== PAUSE TestValidateCapabilityMatrixEvidence_NilDispatchProvenFailsClosed
+=== RUN   TestValidateCapabilityMatrixEvidence_ResolvedProofPasses
+=== PAUSE TestValidateCapabilityMatrixEvidence_ResolvedProofPasses
+=== RUN   TestParityGateFailsWhenAgentLosesCanonicalPoint
+=== PAUSE TestParityGateFailsWhenAgentLosesCanonicalPoint
+=== RUN   TestParityGateFailsWhenValidatorDiverges
+=== PAUSE TestParityGateFailsWhenValidatorDiverges
+=== RUN   TestParityGateFailsWhenDeclaredValidatorDoesNotExistOnDisk
+=== PAUSE TestParityGateFailsWhenDeclaredValidatorDoesNotExistOnDisk
+=== RUN   TestParityGateFailsWhenArtifactNeitherMirrorsNorExecutesCanonical
+=== PAUSE TestParityGateFailsWhenArtifactNeitherMirrorsNorExecutesCanonical
+=== RUN   TestParityGateFailsWithoutFilesystemConfrontation
+=== PAUSE TestParityGateFailsWithoutFilesystemConfrontation
+=== RUN   TestParityGateFailsWhenCellHasNoDispatchProof
+=== PAUSE TestParityGateFailsWhenCellHasNoDispatchProof
+=== RUN   TestNoLauncherUsesLatestVersion
+=== PAUSE TestNoLauncherUsesLatestVersion
+=== RUN   TestDeclaredProviderLimitationsAreWellFormed
+=== PAUSE TestDeclaredProviderLimitationsAreWellFormed
+=== RUN   TestDeclaredProviderLimitationsCoverEveryRequiredArea
+=== PAUSE TestDeclaredProviderLimitationsCoverEveryRequiredArea
+=== RUN   TestAgentIsImmutableValueObject
+=== PAUSE TestAgentIsImmutableValueObject
+=== RUN   TestCanonicalOrderIsSingleSource
+=== PAUSE TestCanonicalOrderIsSingleSource
+=== RUN   TestRegistryIsImmutable
+=== PAUSE TestRegistryIsImmutable
+=== RUN   TestAgentZeroValueIsInvalid
+=== PAUSE TestAgentZeroValueIsInvalid
+=== RUN   TestMandatoryMatrixAgentsByCanonicalPoints
+=== PAUSE TestMandatoryMatrixAgentsByCanonicalPoints
+=== RUN   TestRegistryPreconditionsCarryRemedy
+=== PAUSE TestRegistryPreconditionsCarryRemedy
+=== RUN   TestTwentyProviderEventPairsHaveExplicitState
+=== PAUSE TestTwentyProviderEventPairsHaveExplicitState
+=== RUN   TestACPSpecCatalogMatchesRegistry
+=== PAUSE TestACPSpecCatalogMatchesRegistry
+=== RUN   TestEveryRegisteredSpecSDKVersionMatchesGoMod
+=== PAUSE TestEveryRegisteredSpecSDKVersionMatchesGoMod
+=== RUN   TestEverySDKVersionConstantMatchesGoMod
+=== PAUSE TestEverySDKVersionConstantMatchesGoMod
+=== RUN   TestSpecAccessors
+=== PAUSE TestSpecAccessors
+=== RUN   TestSpecAccessorsNonEmpty
+=== PAUSE TestSpecAccessorsNonEmpty
+=== RUN   TestBootstrapArgsNoOpClaude
+=== PAUSE TestBootstrapArgsNoOpClaude
+=== RUN   TestBootstrapArgsNoOpCopilot
+=== PAUSE TestBootstrapArgsNoOpCopilot
+=== RUN   TestSpec_ContextWindow_Catalog
+=== PAUSE TestSpec_ContextWindow_Catalog
+=== RUN   TestSpec_ClaudeCodexCopilot_IsWindowStandard
+=== PAUSE TestSpec_ClaudeCodexCopilot_IsWindowStandard
+=== RUN   TestSpec_DriverID_Catalog
+=== PAUSE TestSpec_DriverID_Catalog
+=== RUN   TestWorkflowNpmPinsMatchRegistryConstants
+=== PAUSE TestWorkflowNpmPinsMatchRegistryConstants
+=== CONT  TestParseDriverID
+=== RUN   TestParseDriverID/valid/claude
+=== PAUSE TestParseDriverID/valid/claude
+=== CONT  TestSpec_DriverID_Catalog
+=== RUN   TestSpec_DriverID_Catalog/claude
+=== PAUSE TestSpec_DriverID_Catalog/claude
+=== RUN   TestSpec_DriverID_Catalog/codex
+=== PAUSE TestSpec_DriverID_Catalog/codex
+=== RUN   TestSpec_DriverID_Catalog/copilot
+=== PAUSE TestSpec_DriverID_Catalog/copilot
+=== CONT  TestMergeOpenCodeConfigPreservesExistingSkillsAndInstructions
+=== CONT  TestParityGateFlagsMissingVersionedNativeConfig
+=== CONT  TestWorkflowNpmPinsMatchRegistryConstants
+--- PASS: TestMergeOpenCodeConfigPreservesExistingSkillsAndInstructions (0.00s)
+=== CONT  TestParityGateFlagsNativeKeyWiredToANonCanonicalValidator
+=== RUN   TestParseDriverID/valid/codex
+=== PAUSE TestParseDriverID/valid/codex
+--- PASS: TestWorkflowNpmPinsMatchRegistryConstants (0.00s)
+=== CONT  TestParityGateFlagsCopilotConfigThatRenamesTheNativeHookKey
+=== RUN   TestParseDriverID/valid/copilot
+=== PAUSE TestParseDriverID/valid/copilot
+=== RUN   TestParseDriverID/valid/opencode
+=== PAUSE TestParseDriverID/valid/opencode
+=== RUN   TestParseDriverID/invalid/
+=== PAUSE TestParseDriverID/invalid/
+=== RUN   TestParseDriverID/invalid/CLAUDE
+=== PAUSE TestParseDriverID/invalid/CLAUDE
+=== RUN   TestParseDriverID/invalid/Claude
+=== PAUSE TestParseDriverID/invalid/Claude
+=== RUN   TestParseDriverID/invalid/gpt-4
+=== PAUSE TestParseDriverID/invalid/gpt-4
+=== RUN   TestParseDriverID/invalid/unknown
+=== PAUSE TestParseDriverID/invalid/unknown
+=== RUN   TestParseDriverID/invalid/_claude
+=== PAUSE TestParseDriverID/invalid/_claude
+=== CONT  TestMergeOpenCodeConfigNeverWritesSkillsOrInstructions
+=== CONT  TestMergeOpenCodeConfigMergesExistingPermissionBlock
+--- PASS: TestMergeOpenCodeConfigNeverWritesSkillsOrInstructions (0.00s)
+=== CONT  TestParityGateFlagsOpenCodePluginThatRenamesTheNativeHookKey
+--- PASS: TestMergeOpenCodeConfigMergesExistingPermissionBlock (0.00s)
+=== CONT  TestParityGateFlagsCodexConfigThatRenamesTheNativeHookKey
+=== CONT  TestMergeOpenCodeConfigPreservesSchemaAndExistingFields
+=== CONT  TestParityGateConfrontsEveryMandatoryAgentWithAVersionedNativeConfig
+=== RUN   TestParseDriverID/invalid/claude_
+=== PAUSE TestParseDriverID/invalid/claude_
+=== CONT  TestNoAgentListLiteralOutsideRegistry
+--- PASS: TestMergeOpenCodeConfigPreservesSchemaAndExistingFields (0.00s)
+=== CONT  TestEnvPolicyAppliedToRealEnvironProducesSameLengthMinusStripped
+--- PASS: TestEnvPolicyAppliedToRealEnvironProducesSameLengthMinusStripped (0.00s)
+=== CONT  TestOpenCodeAgentRequiresHandshake
+--- PASS: TestOpenCodeAgentRequiresHandshake (0.00s)
+=== CONT  TestOpenCodeAgentEnvPolicyStripsExactlyTheFourKillSwitches
+--- PASS: TestParityGateConfrontsEveryMandatoryAgentWithAVersionedNativeConfig (0.00s)
+--- PASS: TestOpenCodeAgentEnvPolicyStripsExactlyTheFourKillSwitches (0.00s)
+=== CONT  TestOtherAgentsDoNotRequireHandshakeAndInheritEnvByDefault
+--- PASS: TestOtherAgentsDoNotRequireHandshakeAndInheritEnvByDefault (0.00s)
+=== CONT  TestCodexBootstrapArgsModelReasoningRestricted
+--- PASS: TestCodexBootstrapArgsModelReasoningRestricted (0.00s)
+=== CONT  TestCodexBootstrapArgsEmptyModelRestricted
+--- PASS: TestCodexBootstrapArgsEmptyModelRestricted (0.00s)
+=== CONT  TestCodexBootstrapArgsReasoningLow
+--- PASS: TestCodexBootstrapArgsReasoningLow (0.00s)
+=== CONT  TestEnvPolicyStripVarsReturnsClone
+--- PASS: TestEnvPolicyStripVarsReturnsClone (0.00s)
+=== CONT  TestCodexVersionPinned
+--- PASS: TestCodexVersionPinned (0.00s)
+=== CONT  TestCodexFallback
+--- PASS: TestCodexFallback (0.00s)
+=== CONT  TestCodexMetadata
+--- PASS: TestCodexMetadata (0.00s)
+=== CONT  TestCodexDefaults
+=== CONT  TestCodexBootstrapArgsFullAccess
+=== CONT  TestEnvPolicyApplyNeverMutatesInputSlice
+=== CONT  TestEnvPolicyStripsKnownKillSwitches
+=== CONT  TestClaudeNpmFallbackFormat
+=== CONT  TestLauncherCommand
+=== CONT  TestLauncherKind
+=== RUN   TestLauncherKind/binary_launcher
+=== PAUSE TestLauncherKind/binary_launcher
+=== RUN   TestLauncherKind/npx_launcher
+=== PAUSE TestLauncherKind/npx_launcher
+--- PASS: TestCodexDefaults (0.00s)
+--- PASS: TestEnvPolicyApplyNeverMutatesInputSlice (0.00s)
+--- PASS: TestEnvPolicyStripsKnownKillSwitches (0.00s)
+--- PASS: TestClaudeNpmFallbackFormat (0.00s)
+--- PASS: TestCodexBootstrapArgsFullAccess (0.00s)
+=== RUN   TestLauncherCommand/binary_launcher_sem_args
+=== PAUSE TestLauncherCommand/binary_launcher_sem_args
+=== RUN   TestLauncherCommand/binary_launcher_com_args
+=== PAUSE TestLauncherCommand/binary_launcher_com_args
+=== RUN   TestLauncherCommand/npx_launcher
+=== PAUSE TestLauncherCommand/npx_launcher
+=== CONT  TestClaudeStability
+--- PASS: TestClaudeStability (0.00s)
+=== CONT  TestAdapterPolicyDecisionGateDetectsAPlantedViolation
+=== CONT  TestClaudeSnapshot
+--- PASS: TestClaudeSnapshot (0.00s)
+=== CONT  TestAdapterContainsNoPolicyDecision
+--- PASS: TestAdapterPolicyDecisionGateDetectsAPlantedViolation (0.00s)
+=== CONT  TestWindowClass_ClosedSet
+--- PASS: TestWindowClass_ClosedSet (0.00s)
+=== CONT  TestEnvPolicyZeroValueAppliesNil
+--- PASS: TestEnvPolicyZeroValueAppliesNil (0.00s)
+=== CONT  TestEnforcementPreconditionRemedyAndStates
+--- PASS: TestEnforcementPreconditionRemedyAndStates (0.00s)
+=== CONT  TestCanonicalPointIsClosedSet
+--- PASS: TestCanonicalPointIsClosedSet (0.00s)
+=== CONT  TestCanonicalPointsDeriveFromHookContract
+--- PASS: TestCanonicalPointsDeriveFromHookContract (0.00s)
+=== CONT  TestContextWindow_ZeroValue_IsWindowStandard
+--- PASS: TestContextWindow_ZeroValue_IsWindowStandard (0.00s)
+=== CONT  TestContextWindow_Class
+=== RUN   TestContextWindow_Class/zero_value_F1
+=== PAUSE TestContextWindow_Class/zero_value_F1
+=== RUN   TestContextWindow_Class/below_threshold
+=== PAUSE TestContextWindow_Class/below_threshold
+=== RUN   TestContextWindow_Class/at_threshold_1M
+=== PAUSE TestContextWindow_Class/at_threshold_1M
+=== RUN   TestContextWindow_Class/above_threshold
+=== PAUSE TestContextWindow_Class/above_threshold
+=== RUN   TestContextWindow_Class/small_positive
+=== PAUSE TestContextWindow_Class/small_positive
+=== RUN   TestContextWindow_Class/standard_200k
+=== PAUSE TestContextWindow_Class/standard_200k
+=== CONT  TestValidateFallbackFixedArgsFormatAcceptsNpxPrefixConvention
+--- PASS: TestValidateFallbackFixedArgsFormatAcceptsNpxPrefixConvention (0.00s)
+=== CONT  TestNewSpecPanicsOnInvalidFallbackFixedArgsFormat
+--- PASS: TestNewSpecPanicsOnInvalidFallbackFixedArgsFormat (0.00s)
+=== CONT  TestNewSpecPanicsOnInvalidFixedArgsFormat
+--- PASS: TestNewSpecPanicsOnInvalidFixedArgsFormat (0.00s)
+=== CONT  TestDriverID_ZeroValue_NotValid
+--- PASS: TestDriverID_ZeroValue_NotValid (0.00s)
+=== CONT  TestDriverID_String_Idempotent
+--- PASS: TestDriverID_String_Idempotent (0.00s)
+=== CONT  TestNewAdapterPointCoverageRequiresLimitation
+--- PASS: TestNewAdapterPointCoverageRequiresLimitation (0.00s)
+=== CONT  TestCopilotStability
+--- PASS: TestCopilotStability (0.00s)
+=== CONT  TestNewUnsupportedPointCoverageRequiresReason
+--- PASS: TestNewUnsupportedPointCoverageRequiresReason (0.00s)
+=== CONT  TestCopilotDisplayName
+--- PASS: TestCopilotDisplayName (0.00s)
+=== CONT  TestNewEnforcementAcceptsDeclaredUnsupportedPoint
+--- PASS: TestNewEnforcementAcceptsDeclaredUnsupportedPoint (0.00s)
+=== CONT  TestNewEnforcementRejectsIncompleteCoverage
+--- PASS: TestNewEnforcementRejectsIncompleteCoverage (0.00s)
+=== CONT  TestCopilotAccessModeFlag
+--- PASS: TestCopilotAccessModeFlag (0.00s)
+=== CONT  TestCopilotConstantsPinned
+--- PASS: TestCopilotConstantsPinned (0.00s)
+=== CONT  TestCopilotSpecFallback
+--- PASS: TestCopilotSpecFallback (0.00s)
+=== CONT  TestCopilotSpecMetadata
+--- PASS: TestCopilotSpecMetadata (0.00s)
+=== CONT  TestCopilotSpecDefaults
+--- PASS: TestCopilotSpecDefaults (0.00s)
+=== CONT  TestCodexBootstrapArgsDelegates
+=== RUN   TestCodexBootstrapArgsDelegates/empty-restricted
+=== PAUSE TestCodexBootstrapArgsDelegates/empty-restricted
+=== RUN   TestCodexBootstrapArgsDelegates/model-medium-restricted
+=== PAUSE TestCodexBootstrapArgsDelegates/model-medium-restricted
+=== RUN   TestCodexBootstrapArgsDelegates/model-high-full
+=== PAUSE TestCodexBootstrapArgsDelegates/model-high-full
+=== CONT  TestDispatchProofRegistryCoversEveryMandatoryCell
+--- PASS: TestDispatchProofRegistryCoversEveryMandatoryCell (0.00s)
+=== CONT  TestSpec_ClaudeCodexCopilot_IsWindowStandard
+=== RUN   TestSpec_ClaudeCodexCopilot_IsWindowStandard/claude
+=== PAUSE TestSpec_ClaudeCodexCopilot_IsWindowStandard/claude
+=== RUN   TestSpec_ClaudeCodexCopilot_IsWindowStandard/codex
+=== PAUSE TestSpec_ClaudeCodexCopilot_IsWindowStandard/codex
+=== RUN   TestSpec_ClaudeCodexCopilot_IsWindowStandard/copilot
+=== PAUSE TestSpec_ClaudeCodexCopilot_IsWindowStandard/copilot
+=== CONT  TestSpec_ContextWindow_Catalog
+=== RUN   TestSpec_ContextWindow_Catalog/claude
+=== PAUSE TestSpec_ContextWindow_Catalog/claude
+=== RUN   TestSpec_ContextWindow_Catalog/codex
+=== PAUSE TestSpec_ContextWindow_Catalog/codex
+=== RUN   TestSpec_ContextWindow_Catalog/copilot
+=== PAUSE TestSpec_ContextWindow_Catalog/copilot
+=== CONT  TestBootstrapArgsNoOpCopilot
+--- PASS: TestBootstrapArgsNoOpCopilot (0.00s)
+=== CONT  TestNewPointCoverageRejectsUnknownAgentVocabulary
+--- PASS: TestNewPointCoverageRejectsUnknownAgentVocabulary (0.00s)
+=== CONT  TestBootstrapArgsNoOpClaude
+--- PASS: TestBootstrapArgsNoOpClaude (0.00s)
+=== CONT  TestNewPointCoverageRejectsNativeKeyTheCliDoesNotRecognize
+--- PASS: TestNewPointCoverageRejectsNativeKeyTheCliDoesNotRecognize (0.00s)
+=== CONT  TestSpecAccessorsNonEmpty
+--- PASS: TestSpecAccessorsNonEmpty (0.00s)
+=== CONT  TestDispatchProofCollectsEvidenceFromIntegrationSubprocess
+--- PASS: TestDispatchProofCollectsEvidenceFromIntegrationSubprocess (0.00s)
+=== CONT  TestDispatchProofHasNoFabricableEvidenceEscape
+--- PASS: TestDispatchProofHasNoFabricableEvidenceEscape (0.00s)
+=== CONT  TestSpec_DriverID_Catalog/claude
+=== CONT  TestDispatchProofRegistryNamesExistingIntegrationTests
+--- PASS: TestAdapterContainsNoPolicyDecision (0.00s)
+=== CONT  TestSkipActionRevokesPassEvidence
+--- PASS: TestParityGateFlagsMissingVersionedNativeConfig (0.01s)
+=== CONT  TestLogfInjectionNoLongerForgesDispatchEvidence
+--- PASS: TestSkipActionRevokesPassEvidence (0.00s)
+=== CONT  TestSpecAccessors
+--- PASS: TestSpecAccessors (0.00s)
+=== CONT  TestResolveWindowNilResolverIsByteIdenticalForExistingAgents
+--- PASS: TestResolveWindowNilResolverIsByteIdenticalForExistingAgents (0.00s)
+=== CONT  TestResolveOpenCodeWindowNeverExceedsTableEntry
+--- PASS: TestLogfInjectionNoLongerForgesDispatchEvidence (0.00s)
+--- PASS: TestResolveOpenCodeWindowNeverExceedsTableEntry (0.00s)
+=== CONT  TestResolveOpenCodeWindowEmptyModelFallsBackConservative
+--- PASS: TestResolveOpenCodeWindowEmptyModelFallsBackConservative (0.00s)
+=== CONT  TestResolveOpenCodeWindowLongestPrefixMatch
+--- PASS: TestResolveOpenCodeWindowLongestPrefixMatch (0.00s)
+=== CONT  TestResolveOpenCodeWindowExactMatch
+=== CONT  TestResolveOpenCodeWindowUnknownModelFallsBackConservative
+=== CONT  TestEverySDKVersionConstantMatchesGoMod
+--- PASS: TestResolveOpenCodeWindowExactMatch (0.00s)
+--- PASS: TestResolveOpenCodeWindowUnknownModelFallsBackConservative (0.00s)
+=== CONT  TestDeclaredProviderLimitationsAreWellFormed
+--- PASS: TestDeclaredProviderLimitationsAreWellFormed (0.00s)
+=== CONT  TestEveryRegisteredSpecSDKVersionMatchesGoMod
+--- PASS: TestParityGateFlagsOpenCodePluginThatRenamesTheNativeHookKey (0.01s)
+=== CONT  TestACPSpecCatalogMatchesRegistry
+--- PASS: TestACPSpecCatalogMatchesRegistry (0.00s)
+=== CONT  TestTwentyProviderEventPairsHaveExplicitState
+--- PASS: TestTwentyProviderEventPairsHaveExplicitState (0.00s)
+=== CONT  TestRegistryPreconditionsCarryRemedy
+--- PASS: TestRegistryPreconditionsCarryRemedy (0.00s)
+=== CONT  TestMandatoryMatrixAgentsByCanonicalPoints
+--- PASS: TestMandatoryMatrixAgentsByCanonicalPoints (0.00s)
+=== CONT  TestAgentZeroValueIsInvalid
+--- PASS: TestAgentZeroValueIsInvalid (0.00s)
+=== CONT  TestValidateFixedArgsFormatRejectsPositionalAfterFlag
+--- PASS: TestValidateFixedArgsFormatRejectsPositionalAfterFlag (0.00s)
+=== CONT  TestRegistryIsImmutable
+--- PASS: TestRegistryIsImmutable (0.00s)
+=== CONT  TestValidateFixedArgsFormatAcceptsSubcommandPrefix
+--- PASS: TestValidateFixedArgsFormatAcceptsSubcommandPrefix (0.00s)
+=== CONT  TestCanonicalOrderIsSingleSource
+--- PASS: TestCanonicalOrderIsSingleSource (0.00s)
+=== CONT  TestAgentIsImmutableValueObject
+--- PASS: TestAgentIsImmutableValueObject (0.00s)
+=== CONT  TestOpenCodeFallbackPinnedVersion
+--- PASS: TestOpenCodeFallbackPinnedVersion (0.00s)
+=== CONT  TestDeclaredProviderLimitationsCoverEveryRequiredArea
+--- PASS: TestDeclaredProviderLimitationsCoverEveryRequiredArea (0.00s)
+=== CONT  TestOpenCodeArgvSubcommandBeforeFlags
+--- PASS: TestOpenCodeArgvSubcommandBeforeFlags (0.00s)
+=== CONT  TestParityGateFailsWhenCellHasNoDispatchProof
+--- PASS: TestEveryRegisteredSpecSDKVersionMatchesGoMod (0.00s)
+=== CONT  TestParityGateFailsWhenValidatorDiverges
+--- PASS: TestParityGateFlagsCodexConfigThatRenamesTheNativeHookKey (0.01s)
+=== CONT  TestParityGateFailsWithoutFilesystemConfrontation
+--- PASS: TestParityGateFailsWithoutFilesystemConfrontation (0.00s)
+=== CONT  TestParityGateFailsWhenArtifactNeitherMirrorsNorExecutesCanonical
+--- PASS: TestParityGateFlagsNativeKeyWiredToANonCanonicalValidator (0.01s)
+=== CONT  TestParityGateFailsWhenDeclaredValidatorDoesNotExistOnDisk
+--- PASS: TestParityGateFlagsCopilotConfigThatRenamesTheNativeHookKey (0.01s)
+=== CONT  TestSetJSONTopLevelKeyRejectsNonObject
+--- PASS: TestSetJSONTopLevelKeyRejectsNonObject (0.00s)
+=== CONT  TestValidatePermissionBlockRejectsNestedAsk
+--- PASS: TestValidatePermissionBlockRejectsNestedAsk (0.00s)
+=== CONT  TestSetJSONTopLevelKeyReplacesExistingValueInPlace
+--- PASS: TestSetJSONTopLevelKeyReplacesExistingValueInPlace (0.00s)
+=== CONT  TestJSONTopLevelKeyRoundTripIsByteIdentical
+=== RUN   TestJSONTopLevelKeyRoundTripIsByteIdentical/authored_non_canonical_layout
+=== PAUSE TestJSONTopLevelKeyRoundTripIsByteIdentical/authored_non_canonical_layout
+=== RUN   TestJSONTopLevelKeyRoundTripIsByteIdentical/single_member
+=== PAUSE TestJSONTopLevelKeyRoundTripIsByteIdentical/single_member
+=== RUN   TestJSONTopLevelKeyRoundTripIsByteIdentical/compact_one_line
+=== PAUSE TestJSONTopLevelKeyRoundTripIsByteIdentical/compact_one_line
+=== RUN   TestJSONTopLevelKeyRoundTripIsByteIdentical/tab_indented
+=== PAUSE TestJSONTopLevelKeyRoundTripIsByteIdentical/tab_indented
+=== RUN   TestJSONTopLevelKeyRoundTripIsByteIdentical/trailing_newlines
+=== PAUSE TestJSONTopLevelKeyRoundTripIsByteIdentical/trailing_newlines
+=== CONT  TestMergeOpenCodeConfigIsAByteIdenticalNoOpWhenAlreadyApplied
+--- PASS: TestMergeOpenCodeConfigIsAByteIdenticalNoOpWhenAlreadyApplied (0.00s)
+=== CONT  TestNoLauncherUsesLatestVersion
+--- PASS: TestNoLauncherUsesLatestVersion (0.00s)
+=== CONT  TestParityGateFailsWhenAgentLosesCanonicalPoint
+--- PASS: TestEverySDKVersionConstantMatchesGoMod (0.01s)
+=== CONT  TestValidateCapabilityMatrixEvidence_ResolvedProofPasses
+--- PASS: TestValidateCapabilityMatrixEvidence_ResolvedProofPasses (0.00s)
+=== CONT  TestMergeOpenCodeConfigPreservesAuthoredFormatting
+--- PASS: TestMergeOpenCodeConfigPreservesAuthoredFormatting (0.00s)
+=== CONT  TestValidateCapabilityMatrixEvidence_NilDispatchProvenFailsClosed
+--- PASS: TestValidateCapabilityMatrixEvidence_NilDispatchProvenFailsClosed (0.00s)
+=== CONT  TestValidatePermissionBlockAcceptsDefaultOpenCodePermissionWithRequiredTools
+--- PASS: TestValidatePermissionBlockAcceptsDefaultOpenCodePermissionWithRequiredTools (0.00s)
+=== CONT  TestValidateCapabilityMatrixEvidence_SupportedWithoutDispatchProof
+--- PASS: TestValidateCapabilityMatrixEvidence_SupportedWithoutDispatchProof (0.00s)
+=== CONT  TestValidateCapabilityMatrixEvidence_EmptyMatrix
+--- PASS: TestValidateCapabilityMatrixEvidence_EmptyMatrix (0.00s)
+=== CONT  TestValidatePermissionBlockAcceptsDefaultOpenCodePermission
+--- PASS: TestValidatePermissionBlockAcceptsDefaultOpenCodePermission (0.00s)
+=== CONT  TestValidatePermissionBlockRejectsWildcardDenyOnRequiredTool
+--- PASS: TestValidatePermissionBlockRejectsWildcardDenyOnRequiredTool (0.00s)
+=== CONT  TestDefaultOpenCodePermissionForbidsWildcardDenyAndAsk
+--- PASS: TestDefaultOpenCodePermissionForbidsWildcardDenyAndAsk (0.00s)
+=== CONT  TestValidatePermissionBlockRejectsAsk
+--- PASS: TestValidatePermissionBlockRejectsAsk (0.00s)
+=== CONT  TestSpec_DriverID_Catalog/copilot
+=== CONT  TestValidatePermissionBlockAllowsWildcardDenyOnToolNotRequired
+--- PASS: TestValidatePermissionBlockAllowsWildcardDenyOnToolNotRequired (0.00s)
+=== CONT  TestMergeOpenCodeConfigWritesModelKey
+--- PASS: TestMergeOpenCodeConfigWritesModelKey (0.00s)
+=== CONT  TestMergeOpenCodeConfigIsIdempotent
+--- PASS: TestMergeOpenCodeConfigIsIdempotent (0.00s)
+=== CONT  TestSpec_DriverID_Catalog/codex
+--- PASS: TestSpec_DriverID_Catalog (0.00s)
+    --- PASS: TestSpec_DriverID_Catalog/claude (0.00s)
+    --- PASS: TestSpec_DriverID_Catalog/copilot (0.00s)
+    --- PASS: TestSpec_DriverID_Catalog/codex (0.00s)
+=== CONT  TestParseDriverID/valid/claude
+=== CONT  TestParseDriverID/invalid/Claude
+=== CONT  TestParseDriverID/invalid/claude_
+=== CONT  TestParseDriverID/invalid/_claude
+=== CONT  TestParseDriverID/invalid/unknown
+=== CONT  TestParseDriverID/invalid/gpt-4
+=== CONT  TestParseDriverID/valid/opencode
+=== CONT  TestParseDriverID/invalid/CLAUDE
+=== CONT  TestParseDriverID/invalid/
+=== CONT  TestParseDriverID/valid/copilot
+=== CONT  TestParseDriverID/valid/codex
+--- PASS: TestParseDriverID (0.00s)
+    --- PASS: TestParseDriverID/valid/claude (0.00s)
+    --- PASS: TestParseDriverID/invalid/Claude (0.00s)
+    --- PASS: TestParseDriverID/invalid/claude_ (0.00s)
+    --- PASS: TestParseDriverID/invalid/_claude (0.00s)
+    --- PASS: TestParseDriverID/invalid/unknown (0.00s)
+    --- PASS: TestParseDriverID/invalid/gpt-4 (0.00s)
+    --- PASS: TestParseDriverID/valid/opencode (0.00s)
+    --- PASS: TestParseDriverID/invalid/CLAUDE (0.00s)
+    --- PASS: TestParseDriverID/invalid/ (0.00s)
+    --- PASS: TestParseDriverID/valid/copilot (0.00s)
+    --- PASS: TestParseDriverID/valid/codex (0.00s)
+=== CONT  TestLauncherKind/binary_launcher
+=== CONT  TestLauncherCommand/binary_launcher_sem_args
+=== CONT  TestLauncherKind/npx_launcher
+--- PASS: TestLauncherKind (0.00s)
+    --- PASS: TestLauncherKind/binary_launcher (0.00s)
+    --- PASS: TestLauncherKind/npx_launcher (0.00s)
+=== CONT  TestLauncherCommand/npx_launcher
+=== CONT  TestLauncherCommand/binary_launcher_com_args
+--- PASS: TestLauncherCommand (0.00s)
+    --- PASS: TestLauncherCommand/binary_launcher_sem_args (0.00s)
+    --- PASS: TestLauncherCommand/npx_launcher (0.00s)
+    --- PASS: TestLauncherCommand/binary_launcher_com_args (0.00s)
+=== CONT  TestContextWindow_Class/zero_value_F1
+=== CONT  TestCodexBootstrapArgsDelegates/empty-restricted
+=== CONT  TestContextWindow_Class/standard_200k
+=== CONT  TestContextWindow_Class/small_positive
+=== CONT  TestContextWindow_Class/above_threshold
+=== CONT  TestContextWindow_Class/at_threshold_1M
+=== CONT  TestContextWindow_Class/below_threshold
+--- PASS: TestContextWindow_Class (0.00s)
+    --- PASS: TestContextWindow_Class/zero_value_F1 (0.00s)
+    --- PASS: TestContextWindow_Class/standard_200k (0.00s)
+    --- PASS: TestContextWindow_Class/small_positive (0.00s)
+    --- PASS: TestContextWindow_Class/above_threshold (0.00s)
+    --- PASS: TestContextWindow_Class/at_threshold_1M (0.00s)
+    --- PASS: TestContextWindow_Class/below_threshold (0.00s)
+=== CONT  TestSpec_ClaudeCodexCopilot_IsWindowStandard/claude
+=== CONT  TestCodexBootstrapArgsDelegates/model-high-full
+=== CONT  TestCodexBootstrapArgsDelegates/model-medium-restricted
+--- PASS: TestCodexBootstrapArgsDelegates (0.00s)
+    --- PASS: TestCodexBootstrapArgsDelegates/empty-restricted (0.00s)
+    --- PASS: TestCodexBootstrapArgsDelegates/model-high-full (0.00s)
+    --- PASS: TestCodexBootstrapArgsDelegates/model-medium-restricted (0.00s)
+=== CONT  TestSpec_ContextWindow_Catalog/claude
+=== CONT  TestSpec_ClaudeCodexCopilot_IsWindowStandard/copilot
+=== CONT  TestSpec_ClaudeCodexCopilot_IsWindowStandard/codex
+--- PASS: TestSpec_ClaudeCodexCopilot_IsWindowStandard (0.00s)
+    --- PASS: TestSpec_ClaudeCodexCopilot_IsWindowStandard/claude (0.00s)
+    --- PASS: TestSpec_ClaudeCodexCopilot_IsWindowStandard/copilot (0.00s)
+    --- PASS: TestSpec_ClaudeCodexCopilot_IsWindowStandard/codex (0.00s)
+=== CONT  TestSpec_ContextWindow_Catalog/copilot
+=== CONT  TestSpec_ContextWindow_Catalog/codex
+--- PASS: TestSpec_ContextWindow_Catalog (0.00s)
+    --- PASS: TestSpec_ContextWindow_Catalog/claude (0.00s)
+    --- PASS: TestSpec_ContextWindow_Catalog/copilot (0.00s)
+    --- PASS: TestSpec_ContextWindow_Catalog/codex (0.00s)
+=== CONT  TestJSONTopLevelKeyRoundTripIsByteIdentical/authored_non_canonical_layout
+=== CONT  TestJSONTopLevelKeyRoundTripIsByteIdentical/tab_indented
+=== CONT  TestJSONTopLevelKeyRoundTripIsByteIdentical/trailing_newlines
+=== CONT  TestJSONTopLevelKeyRoundTripIsByteIdentical/single_member
+=== CONT  TestJSONTopLevelKeyRoundTripIsByteIdentical/compact_one_line
+--- PASS: TestJSONTopLevelKeyRoundTripIsByteIdentical (0.00s)
+    --- PASS: TestJSONTopLevelKeyRoundTripIsByteIdentical/authored_non_canonical_layout (0.00s)
+    --- PASS: TestJSONTopLevelKeyRoundTripIsByteIdentical/tab_indented (0.00s)
+    --- PASS: TestJSONTopLevelKeyRoundTripIsByteIdentical/trailing_newlines (0.00s)
+    --- PASS: TestJSONTopLevelKeyRoundTripIsByteIdentical/single_member (0.00s)
+    --- PASS: TestJSONTopLevelKeyRoundTripIsByteIdentical/compact_one_line (0.00s)
+--- PASS: TestParityGateFailsWhenCellHasNoDispatchProof (0.01s)
+--- PASS: TestParityGateFailsWhenValidatorDiverges (0.01s)
+--- PASS: TestParityGateFailsWhenAgentLosesCanonicalPoint (0.00s)
+--- PASS: TestParityGateFailsWhenDeclaredValidatorDoesNotExistOnDisk (0.01s)
+--- PASS: TestParityGateFailsWhenArtifactNeitherMirrorsNorExecutesCanonical (0.01s)
+=== NAME  TestDispatchProofRegistryNamesExistingIntegrationTests
+    parity_dispatch_proof_test.go:281: agent=opencode point=before-complete declared by TestOpenCodeGovernancePluginSessionIdleBlocksActiveTaskWithoutApprovedVerdict (opencode_session_end_dispatch_test.go)
+    parity_dispatch_proof_test.go:281: agent=opencode point=pre-tool declared by TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing (opencode_plugin_dispatch_test.go)
+    parity_dispatch_proof_test.go:281: agent=opencode point=post-tool declared by TestOpenCodeGovernancePluginToolExecuteAfterObservesValidatorWithoutBlocking (opencode_session_end_dispatch_test.go)
+    parity_dispatch_proof_test.go:281: agent=claude point=pre-tool declared by TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/claude (hooks_matrix_dispatch_test.go)
+    parity_dispatch_proof_test.go:281: agent=claude point=post-tool declared by TestPostToolHookDispatchBlocksGovernanceFileEdit/claude (hooks_matrix_dispatch_test.go)
+    parity_dispatch_proof_test.go:281: agent=claude point=before-complete declared by TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/claude (hooks_matrix_dispatch_test.go)
+    parity_dispatch_proof_test.go:281: agent=codex point=pre-tool declared by TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/codex (hooks_matrix_dispatch_test.go)
+    parity_dispatch_proof_test.go:281: agent=codex point=post-tool declared by TestPostToolHookDispatchBlocksGovernanceFileEdit/codex (hooks_matrix_dispatch_test.go)
+    parity_dispatch_proof_test.go:281: agent=codex point=before-complete declared by TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/codex (hooks_matrix_dispatch_test.go)
+    parity_dispatch_proof_test.go:281: agent=copilot point=pre-tool declared by TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/copilot (hooks_matrix_dispatch_test.go)
+    parity_dispatch_proof_test.go:281: agent=copilot point=post-tool declared by TestPostToolHookDispatchBlocksGovernanceFileEdit/copilot (hooks_matrix_dispatch_test.go)
+    parity_dispatch_proof_test.go:281: agent=copilot point=before-complete declared by TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/copilot (hooks_matrix_dispatch_test.go)
+--- PASS: TestDispatchProofRegistryNamesExistingIntegrationTests (0.02s)
+--- PASS: TestNoAgentListLiteralOutsideRegistry (0.07s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs	2.395s

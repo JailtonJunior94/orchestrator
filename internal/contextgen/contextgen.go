@@ -190,7 +190,7 @@ var harnessGeneratedPaths = map[string]bool{
 	".github/skills":                  true,
 	".github/agents":                  true,
 	".github/hooks":                   true,
-	".github/settings.json":           true,
+	".github/copilot/settings.json":   true,
 	".github/copilot-instructions.md": true,
 }
 

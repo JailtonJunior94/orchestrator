@@ -92,15 +92,15 @@ func TestMandatoryMatrixWrittenConfigContainsNativeKeyAndValidator(t *testing.T)
 	t.Parallel()
 
 	points := specs.NewCatalog().CanonicalPoints()
-	if len(points) != 3 {
-		t.Fatalf("expected 3 canonical points, got %d", len(points))
+	if len(points) != 5 {
+		t.Fatalf("expected 5 canonical points, got %d", len(points))
 	}
 	if len(mandatoryMatrixAgents) != 4 {
 		t.Fatalf("expected 4 mandatory agents, got %d", len(mandatoryMatrixAgents))
 	}
 	expectedCells := len(mandatoryMatrixAgents) * len(points)
-	if expectedCells != 12 {
-		t.Fatalf("mandatory matrix must cover 4 agents x 3 canonical points = 12 cells; got %d", expectedCells)
+	if expectedCells != 20 {
+		t.Fatalf("mandatory matrix must cover 4 agents x 5 canonical points = 20 cells; got %d", expectedCells)
 	}
 
 	requiredAgents := make([]string, 0, len(mandatoryMatrixAgents))

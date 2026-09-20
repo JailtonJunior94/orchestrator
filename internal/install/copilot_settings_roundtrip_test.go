@@ -24,9 +24,9 @@ func installCopilotSettings(t *testing.T, ffs *fs.FakeFileSystem) []byte {
 	}); err != nil {
 		t.Fatalf("install copilot: %v", err)
 	}
-	data, err := ffs.ReadFile("/project/.github/settings.json")
+	data, err := ffs.ReadFile("/project/.github/copilot/settings.json")
 	if err != nil {
-		t.Fatalf("read .github/settings.json: %v", err)
+		t.Fatalf("read .github/copilot/settings.json: %v", err)
 	}
 	return data
 }
@@ -69,7 +69,7 @@ func TestInstallCopilotPreservesAuthoredSettingsFormatting(t *testing.T) {
 			ffs := fs.NewFakeFileSystem()
 			ffs.Dirs["/project"] = true
 			ffs.Dirs["/source"] = true
-			ffs.Files["/project/.github/settings.json"] = []byte(tc.authored)
+			ffs.Files["/project/.github/copilot/settings.json"] = []byte(tc.authored)
 
 			merged := installCopilotSettings(t, ffs)
 
@@ -104,12 +104,12 @@ func TestInstallCopilotPreservesAuthoredSettingsFormatting(t *testing.T) {
 	}
 }
 
-func TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings(t *testing.T) {
+func TestInstallCopilotMigratesObsoleteStopKeysInSettings(t *testing.T) {
 	t.Parallel()
 
-	legacyEntry := map[string]any{"type": "command", "bash": "bash .github/hooks/legacy-session-end.sh"}
+	legacyEntry := map[string]any{"type": "command", "bash": "bash .github/hooks/legacy-stop.sh"}
 
-	for _, obsolete := range []string{"stop", "Stop", "sessionEnd", "SessionEnd"} {
+	for _, obsolete := range []string{"stop", "Stop"} {
 		t.Run(obsolete, func(t *testing.T) {
 			t.Parallel()
 
@@ -123,7 +123,7 @@ func TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings(t *testing.T) {
 			ffs := fs.NewFakeFileSystem()
 			ffs.Dirs["/project"] = true
 			ffs.Dirs["/source"] = true
-			ffs.Files["/project/.github/settings.json"] = authored
+			ffs.Files["/project/.github/copilot/settings.json"] = authored
 
 			merged := installCopilotSettings(t, ffs)
 
@@ -145,12 +145,68 @@ func TestInstallCopilotMigratesObsoleteSessionEndKeysInSettings(t *testing.T) {
 			found := false
 			for _, entry := range agentStop {
 				encoded, marshalErr := json.Marshal(entry)
-				if marshalErr == nil && strings.Contains(string(encoded), "legacy-session-end.sh") {
+				if marshalErr == nil && strings.Contains(string(encoded), "legacy-stop.sh") {
 					found = true
 				}
 			}
 			if !found {
 				t.Fatalf("entry migrated from %q was dropped instead of moved to agentStop: %s", obsolete, merged)
+			}
+		})
+	}
+}
+
+func TestInstallCopilotPreservesSessionEndAsADistinctEvent(t *testing.T) {
+	t.Parallel()
+
+	realSessionEndEntry := map[string]any{"type": "command", "bash": "bash .github/hooks/my-session-end.sh"}
+
+	for _, key := range []string{"sessionEnd", "SessionEnd"} {
+		t.Run(key, func(t *testing.T) {
+			t.Parallel()
+
+			authored, err := json.MarshalIndent(map[string]any{
+				"hooks": map[string]any{key: []any{realSessionEndEntry}},
+			}, "", "  ")
+			if err != nil {
+				t.Fatalf("marshal authored settings: %v", err)
+			}
+
+			ffs := fs.NewFakeFileSystem()
+			ffs.Dirs["/project"] = true
+			ffs.Dirs["/source"] = true
+			ffs.Files["/project/.github/copilot/settings.json"] = authored
+
+			merged := installCopilotSettings(t, ffs)
+
+			var settings map[string]any
+			if err := json.Unmarshal(merged, &settings); err != nil {
+				t.Fatalf("merged settings is not valid JSON: %v\n%s", err, merged)
+			}
+			hooks, ok := settings["hooks"].(map[string]any)
+			if !ok {
+				t.Fatalf("merged settings has no hooks object: %s", merged)
+			}
+			entries, exists := hooks[key].([]any)
+			if !exists {
+				t.Fatalf("SessionEnd is a real, distinct Copilot event (RF-53) and must survive the merge under %q, not be folded into agentStop: %s", key, merged)
+			}
+			found := false
+			for _, entry := range entries {
+				encoded, marshalErr := json.Marshal(entry)
+				if marshalErr == nil && strings.Contains(string(encoded), "my-session-end.sh") {
+					found = true
+				}
+			}
+			if !found {
+				t.Fatalf("authored SessionEnd entry was dropped: %s", merged)
+			}
+			agentStop, _ := hooks["agentStop"].([]any)
+			for _, entry := range agentStop {
+				encoded, marshalErr := json.Marshal(entry)
+				if marshalErr == nil && strings.Contains(string(encoded), "my-session-end.sh") {
+					t.Fatalf("SessionEnd entry leaked into agentStop, resurrecting the turn-end/session-end confusion this PRD fixes: %s", merged)
+				}
 			}
 		})
 	}

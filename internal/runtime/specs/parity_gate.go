@@ -3,6 +3,8 @@ package specs
 import (
 	"bytes"
 	"fmt"
+
+	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
 )
 
 type AgentEnforcement struct {
@@ -52,6 +54,12 @@ func ValidateParityMatrix(cells []AgentEnforcement, requiredAgents []string, dis
 			cov, covered := enf.CoverageFor(point)
 			if !covered {
 				violations = append(violations, ParityViolation{Agent: agentID, Point: point, Reason: "missing canonical point coverage"})
+				continue
+			}
+			if cov.State() == hookcontract.SupportUnsupported {
+				continue
+			}
+			if cov.ScriptPath() == "" {
 				continue
 			}
 			if prev, seen := scriptByPoint[point]; seen {
