@@ -6,7 +6,7 @@
   "status": "done",
   "base_sha": "471e6e008c963f3c6c31211946461b7edda4bb3f",
   "patch_sha256": "0b0280aba9835a4ee952babfec26f2affa24259c40d30dbb202e98e683fda51a",
-  "patch_ref": "evidence/task-8.0/patch.diff",
+  "patch_ref": "evidence/task-8.0-hooks-canonicos-vendor-neutral/patch.diff",
   "final_state_sha256": "cf5e6186a1d3b5f873fa4c5782040ee30677a2e4506704247581ee27dfeb5680",
   "coverage_regression": false,
   "tests": [
@@ -64,63 +64,63 @@
   "criteria": [
     {
       "id": "twenty-pairs-explicit-state",
-      "evidence_ref": "evidence/task-8.0/specs-package.log"
+      "evidence_ref": "evidence/task-8.0-hooks-canonicos-vendor-neutral/specs-package.log"
     },
     {
       "id": "no-simulated-parity-limitation-required",
-      "evidence_ref": "evidence/task-8.0/specs-package.log"
+      "evidence_ref": "evidence/task-8.0-hooks-canonicos-vendor-neutral/specs-package.log"
     },
     {
       "id": "claude-settings-json-versioned-required",
-      "evidence_ref": "evidence/task-8.0/install-related-packages.log"
+      "evidence_ref": "evidence/task-8.0-hooks-canonicos-vendor-neutral/install-related-packages.log"
     },
     {
       "id": "copilot-and-codex-native-config-paths",
-      "evidence_ref": "evidence/task-8.0/install-related-packages.log"
+      "evidence_ref": "evidence/task-8.0-hooks-canonicos-vendor-neutral/install-related-packages.log"
     },
     {
       "id": "rf56-policy-decision-gate",
-      "evidence_ref": "evidence/task-8.0/specs-package.log"
+      "evidence_ref": "evidence/task-8.0-hooks-canonicos-vendor-neutral/specs-package.log"
     },
     {
       "id": "codex-trust-release-gate",
-      "evidence_ref": "evidence/task-8.0/patch.diff"
+      "evidence_ref": "evidence/task-8.0-hooks-canonicos-vendor-neutral/patch.diff"
     },
     {
       "id": "no-regression-test-lint-vet",
-      "evidence_ref": "evidence/task-8.0/go-test-all.log"
+      "evidence_ref": "evidence/task-8.0-hooks-canonicos-vendor-neutral/go-test-all.log"
     },
     {
       "id": "check-hooks-sync-green",
-      "evidence_ref": "evidence/task-8.0/patch.diff"
+      "evidence_ref": "evidence/task-8.0-hooks-canonicos-vendor-neutral/patch.diff"
     },
     {
       "id": "make-integration-adapter-suite",
-      "evidence_ref": "evidence/task-8.0/integration-adapter-suite.log"
+      "evidence_ref": "evidence/task-8.0-hooks-canonicos-vendor-neutral/integration-adapter-suite.log"
     },
     {
       "id": "coverage-gates",
-      "evidence_ref": "evidence/task-8.0/coverage-packages.log"
+      "evidence_ref": "evidence/task-8.0-hooks-canonicos-vendor-neutral/coverage-packages.log"
     },
     {
       "id": "no-panic-catalog-init",
-      "evidence_ref": "evidence/task-8.0/go-test-all.log"
+      "evidence_ref": "evidence/task-8.0-hooks-canonicos-vendor-neutral/go-test-all.log"
     }
   ],
   "evidence": [
-    "evidence/task-8.0/patch.diff",
-    "evidence/task-8.0/go-build.log",
-    "evidence/task-8.0/go-vet.log",
-    "evidence/task-8.0/go-test-all.log",
-    "evidence/task-8.0/specs-package.log",
-    "evidence/task-8.0/install-related-packages.log",
-    "evidence/task-8.0/integration-adapter-suite.log",
-    "evidence/task-8.0/lint.log",
-    "evidence/task-8.0/coverage.log",
-    "evidence/task-8.0/coverage-func.log",
-    "evidence/task-8.0/coverage-packages.log",
-    "evidence/task-8.0/reviewer-verdict.md",
-    "evidence/task-8.0/final-state-concat.txt"
+    "evidence/task-8.0-hooks-canonicos-vendor-neutral/patch.diff",
+    "evidence/task-8.0-hooks-canonicos-vendor-neutral/go-build.log",
+    "evidence/task-8.0-hooks-canonicos-vendor-neutral/go-vet.log",
+    "evidence/task-8.0-hooks-canonicos-vendor-neutral/go-test-all.log",
+    "evidence/task-8.0-hooks-canonicos-vendor-neutral/specs-package.log",
+    "evidence/task-8.0-hooks-canonicos-vendor-neutral/install-related-packages.log",
+    "evidence/task-8.0-hooks-canonicos-vendor-neutral/integration-adapter-suite.log",
+    "evidence/task-8.0-hooks-canonicos-vendor-neutral/lint.log",
+    "evidence/task-8.0-hooks-canonicos-vendor-neutral/coverage.log",
+    "evidence/task-8.0-hooks-canonicos-vendor-neutral/coverage-func.log",
+    "evidence/task-8.0-hooks-canonicos-vendor-neutral/coverage-packages.log",
+    "evidence/task-8.0-hooks-canonicos-vendor-neutral/reviewer-verdict.md",
+    "evidence/task-8.0-hooks-canonicos-vendor-neutral/final-state-concat.txt"
   ],
   "review_verdict": "approved"
 }
