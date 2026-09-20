@@ -7,33 +7,111 @@
   "base_sha": "55f9f13ee5153df139c8783236b807421745444c",
   "patch_sha256": "4a380c4e78bfbc4b729687a5621bf25605fd36baa756b58df80956c6eb06ffbf",
   "patch_ref": "evidence/task-4.0/4.0_execution_result.patch",
+  "commit_sha": "25ce1c0c41eba42ef2b15de49fb45a5bafbcc38a",
+  "commit_patch_sha256": "8540f7ea0765743c45541a7cbacd3b8d98b63048b39dd2221efe160d555c8bf9",
   "final_state_sha256": "7de1d34e7d5d756bcc6b60009cee133e3b2a14d50bec74aed957b60c6522199d",
   "coverage_regression": false,
   "tests": [
-    {"command": "go build ./internal/hookcontract/... ./internal/hookaudit/...", "exit_code": 0, "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"},
-    {"command": "go vet ./internal/hookcontract/... ./internal/hookaudit/...", "exit_code": 0, "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"},
-    {"command": "go test ./internal/hookcontract/... ./internal/hookaudit/... -v", "exit_code": 0, "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"},
-    {"command": "go test ./internal/hookcontract/... -run TestHookContractHasNoProviderIdentifier -v (deliberate red proof)", "exit_code": 0, "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"},
-    {"command": "make lint", "exit_code": 0, "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"},
-    {"command": "make vet", "exit_code": 0, "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"},
-    {"command": "make check-mocks", "exit_code": 0, "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"},
-    {"command": "make coverage (internal/hookcontract 83.1%, internal/hookaudit 87.5%; pre-existing internal/skills failure unrelated)", "exit_code": 0, "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"},
-    {"command": "bash scripts/check-package-coverage.sh 70", "exit_code": 0, "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"},
-    {"command": "go build ./...", "exit_code": 0, "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"}
+    {
+      "command": "go build ./internal/hookcontract/... ./internal/hookaudit/...",
+      "exit_code": 0,
+      "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"
+    },
+    {
+      "command": "go vet ./internal/hookcontract/... ./internal/hookaudit/...",
+      "exit_code": 0,
+      "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"
+    },
+    {
+      "command": "go test ./internal/hookcontract/... ./internal/hookaudit/... -v",
+      "exit_code": 0,
+      "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"
+    },
+    {
+      "command": "go test ./internal/hookcontract/... -run TestHookContractHasNoProviderIdentifier -v (deliberate red proof)",
+      "exit_code": 0,
+      "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"
+    },
+    {
+      "command": "make lint",
+      "exit_code": 0,
+      "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"
+    },
+    {
+      "command": "make vet",
+      "exit_code": 0,
+      "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"
+    },
+    {
+      "command": "make check-mocks",
+      "exit_code": 0,
+      "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"
+    },
+    {
+      "command": "make coverage (internal/hookcontract 83.1%, internal/hookaudit 87.5%; pre-existing internal/skills failure unrelated)",
+      "exit_code": 0,
+      "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"
+    },
+    {
+      "command": "bash scripts/check-package-coverage.sh 70",
+      "exit_code": 0,
+      "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"
+    },
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "17ecf2a25e2bcf4438fd92b3f105b4163cb3b014480ec3030f8f82f5011b179e"
+    }
   ],
   "criteria": [
-    {"id": "five-canonical-events-closed-enum", "evidence_ref": "evidence/task-4.0/validation.log#test-run"},
-    {"id": "no-provider-identifier-ast-gate-red-then-green", "evidence_ref": "evidence/task-4.0/validation.log#rf-07-deliberate-red-proof"},
-    {"id": "envelope-strict-decode-sentinels", "evidence_ref": "evidence/task-4.0/validation.log#test-run"},
-    {"id": "result-block-requires-reason-and-policy", "evidence_ref": "evidence/task-4.0/validation.log#test-run"},
-    {"id": "exitcode-critical-unmapped-is-error", "evidence_ref": "evidence/task-4.0/validation.log#test-run"},
-    {"id": "exitcode-preserves-current-semantics", "evidence_ref": "evidence/task-4.0/validation.log#test-run"},
-    {"id": "hookaudit-writer-reader-roundtrip", "evidence_ref": "evidence/task-4.0/validation.log#test-run"},
-    {"id": "support-unsupported-is-own-state", "evidence_ref": "evidence/task-4.0/validation.log#test-run"},
-    {"id": "schema-version-migration-table-and-test", "evidence_ref": "evidence/task-4.0/validation.log#test-run"},
-    {"id": "make-test-lint-vet-check-mocks", "evidence_ref": "evidence/task-4.0/validation.log#make-lint"},
-    {"id": "make-coverage-package-floors-preserved", "evidence_ref": "evidence/task-4.0/validation.log#make-coverage"},
-    {"id": "additivity-proof-no-preexisting-go-file-touched", "evidence_ref": "evidence/task-4.0/validation.log#additivity-proof"}
+    {
+      "id": "five-canonical-events-closed-enum",
+      "evidence_ref": "evidence/task-4.0/validation.log#test-run"
+    },
+    {
+      "id": "no-provider-identifier-ast-gate-red-then-green",
+      "evidence_ref": "evidence/task-4.0/validation.log#rf-07-deliberate-red-proof"
+    },
+    {
+      "id": "envelope-strict-decode-sentinels",
+      "evidence_ref": "evidence/task-4.0/validation.log#test-run"
+    },
+    {
+      "id": "result-block-requires-reason-and-policy",
+      "evidence_ref": "evidence/task-4.0/validation.log#test-run"
+    },
+    {
+      "id": "exitcode-critical-unmapped-is-error",
+      "evidence_ref": "evidence/task-4.0/validation.log#test-run"
+    },
+    {
+      "id": "exitcode-preserves-current-semantics",
+      "evidence_ref": "evidence/task-4.0/validation.log#test-run"
+    },
+    {
+      "id": "hookaudit-writer-reader-roundtrip",
+      "evidence_ref": "evidence/task-4.0/validation.log#test-run"
+    },
+    {
+      "id": "support-unsupported-is-own-state",
+      "evidence_ref": "evidence/task-4.0/validation.log#test-run"
+    },
+    {
+      "id": "schema-version-migration-table-and-test",
+      "evidence_ref": "evidence/task-4.0/validation.log#test-run"
+    },
+    {
+      "id": "make-test-lint-vet-check-mocks",
+      "evidence_ref": "evidence/task-4.0/validation.log#make-lint"
+    },
+    {
+      "id": "make-coverage-package-floors-preserved",
+      "evidence_ref": "evidence/task-4.0/validation.log#make-coverage"
+    },
+    {
+      "id": "additivity-proof-no-preexisting-go-file-touched",
+      "evidence_ref": "evidence/task-4.0/validation.log#additivity-proof"
+    }
   ],
   "evidence": [
     "evidence/task-4.0/validation.log"
