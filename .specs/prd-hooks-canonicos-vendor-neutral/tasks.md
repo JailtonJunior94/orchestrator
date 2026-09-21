@@ -31,10 +31,10 @@
 | 6.0 | Harness contract aplicado e gate de operacao git derivado da policy | done | 2.0, 4.0 | Com 7.0 | — |
 | 7.0 | Igualdade entre stacks: dotnet completo e java como cidadao de primeira classe | done | 3.0 | Com 5.0, 6.0 | — |
 | 8.0 | Adapters dos quatro provedores com SessionStart e SessionEnd reais | done | 5.0 | Com 10.0 | — |
-| 9.0 | Matriz de capabilities por evento e familia com doctor de hooks | pending | 3.0, 8.0 | Com 12.0 | — |
+| 9.0 | Matriz de capabilities por evento e familia com doctor de hooks | done | 3.0, 8.0 | Com 12.0 | — |
 | 10.0 | Quality gate disparado por evento com selecao por risco e deduplicacao | done | 4.0, 7.0 | Com 8.0, 11.0 | — |
 | 11.0 | Evidence gate, checkpoint atomico, deteccao de corrupcao e sanitizacao | done | 3.0, 4.0 | Com 10.0 | — |
-| 12.0 | Telemetria comum, ablation, timeout e guarda de recursao | pending | 4.0, 8.0 | Com 9.0 | — |
+| 12.0 | Telemetria comum, ablation, timeout e guarda de recursao | done | 4.0, 8.0 | Com 9.0 | — |
 | 13.0 | Conformidade cross-provider, nao-regressao e documentacao | pending | 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0 | Não | — |
 
 ## Dependências Críticas

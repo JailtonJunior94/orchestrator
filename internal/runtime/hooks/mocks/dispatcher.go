@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"context"
+	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks"
 	mock "github.com/stretchr/testify/mock"
@@ -153,5 +154,62 @@ func (_c *Dispatcher_Register_Call) Return() *Dispatcher_Register_Call {
 
 func (_c *Dispatcher_Register_Call) RunAndReturn(run func(point string, hook hooks.Hook)) *Dispatcher_Register_Call {
 	_c.Run(run)
+	return _c
+}
+
+// SetHookTimeout provides a mock function for the type Dispatcher
+func (_mock *Dispatcher) SetHookTimeout(hook string, timeout time.Duration) error {
+	ret := _mock.Called(hook, timeout)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetHookTimeout")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(string, time.Duration) error); ok {
+		r0 = returnFunc(hook, timeout)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// Dispatcher_SetHookTimeout_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetHookTimeout'
+type Dispatcher_SetHookTimeout_Call struct {
+	*mock.Call
+}
+
+// SetHookTimeout is a helper method to define mock.On call
+//   - hook string
+//   - timeout time.Duration
+func (_e *Dispatcher_Expecter) SetHookTimeout(hook any, timeout any) *Dispatcher_SetHookTimeout_Call {
+	return &Dispatcher_SetHookTimeout_Call{Call: _e.mock.On("SetHookTimeout", hook, timeout)}
+}
+
+func (_c *Dispatcher_SetHookTimeout_Call) Run(run func(hook string, timeout time.Duration)) *Dispatcher_SetHookTimeout_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 time.Duration
+		if args[1] != nil {
+			arg1 = args[1].(time.Duration)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *Dispatcher_SetHookTimeout_Call) Return(err error) *Dispatcher_SetHookTimeout_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *Dispatcher_SetHookTimeout_Call) RunAndReturn(run func(hook string, timeout time.Duration) error) *Dispatcher_SetHookTimeout_Call {
+	_c.Call.Return(run)
 	return _c
 }

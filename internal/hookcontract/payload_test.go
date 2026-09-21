@@ -59,6 +59,30 @@ func TestEnvelope_AcceptsWellFormedV1(t *testing.T) {
 	}
 }
 
+func TestEnvelope_DefaultsInvocationDepthToZero(t *testing.T) {
+	raw := []byte(`{"schema_version":1,"event":"before_tool","provider":"provider-x","session_id":"s-1","payload":{}}`)
+
+	envelope, err := NewDecoder().Decode(raw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if envelope.InvocationDepth != 0 {
+		t.Fatalf("InvocationDepth = %d, want 0 for a legacy envelope without the field", envelope.InvocationDepth)
+	}
+}
+
+func TestEnvelope_CarriesDeclaredInvocationDepth(t *testing.T) {
+	raw := []byte(`{"schema_version":1,"event":"before_tool","provider":"provider-x","session_id":"s-1","invocation_depth":1,"payload":{}}`)
+
+	envelope, err := NewDecoder().Decode(raw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if envelope.InvocationDepth != 1 {
+		t.Fatalf("InvocationDepth = %d, want 1", envelope.InvocationDepth)
+	}
+}
+
 func TestSchemaVersionMigration(t *testing.T) {
 	if !SchemaVersionSupported(SchemaVersionV1) {
 		t.Fatal("SchemaVersionV1 must be supported")

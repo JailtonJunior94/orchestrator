@@ -1,0 +1,1378 @@
+diff --git a/internal/hookcontract/payload.go b/internal/hookcontract/payload.go
+index cabdc54..37dbc73 100644
+--- a/internal/hookcontract/payload.go
++++ b/internal/hookcontract/payload.go
+@@ -22,11 +22,12 @@ var (
+ )
+ 
+ type Envelope struct {
+-	SchemaVersion int
+-	Event         EventKind
+-	Provider      string
+-	SessionID     string
+-	Payload       json.RawMessage
++	SchemaVersion   int
++	Event           EventKind
++	Provider        string
++	SessionID       string
++	InvocationDepth int
++	Payload         json.RawMessage
+ }
+ 
+ type Decoder interface {
+@@ -34,11 +35,12 @@ type Decoder interface {
+ }
+ 
+ type envelopeWireFormat struct {
+-	SchemaVersion int             `json:"schema_version"`
+-	Event         string          `json:"event"`
+-	Provider      string          `json:"provider"`
+-	SessionID     string          `json:"session_id"`
+-	Payload       json.RawMessage `json:"payload"`
++	SchemaVersion   int             `json:"schema_version"`
++	Event           string          `json:"event"`
++	Provider        string          `json:"provider"`
++	SessionID       string          `json:"session_id"`
++	InvocationDepth int             `json:"invocation_depth,omitempty"`
++	Payload         json.RawMessage `json:"payload"`
+ }
+ 
+ type strictDecoder struct{}
+@@ -69,11 +71,12 @@ func (strictDecoder) Decode(raw []byte) (Envelope, error) {
+ 	}
+ 
+ 	return Envelope{
+-		SchemaVersion: wire.SchemaVersion,
+-		Event:         event,
+-		Provider:      wire.Provider,
+-		SessionID:     wire.SessionID,
+-		Payload:       wire.Payload,
++		SchemaVersion:   wire.SchemaVersion,
++		Event:           event,
++		Provider:        wire.Provider,
++		SessionID:       wire.SessionID,
++		InvocationDepth: wire.InvocationDepth,
++		Payload:         wire.Payload,
+ 	}, nil
+ }
+ 
+diff --git a/internal/hookcontract/payload_test.go b/internal/hookcontract/payload_test.go
+index fc09732..8dad217 100644
+--- a/internal/hookcontract/payload_test.go
++++ b/internal/hookcontract/payload_test.go
+@@ -59,6 +59,30 @@ func TestEnvelope_AcceptsWellFormedV1(t *testing.T) {
+ 	}
+ }
+ 
++func TestEnvelope_DefaultsInvocationDepthToZero(t *testing.T) {
++	raw := []byte(`{"schema_version":1,"event":"before_tool","provider":"provider-x","session_id":"s-1","payload":{}}`)
++
++	envelope, err := NewDecoder().Decode(raw)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if envelope.InvocationDepth != 0 {
++		t.Fatalf("InvocationDepth = %d, want 0 for a legacy envelope without the field", envelope.InvocationDepth)
++	}
++}
++
++func TestEnvelope_CarriesDeclaredInvocationDepth(t *testing.T) {
++	raw := []byte(`{"schema_version":1,"event":"before_tool","provider":"provider-x","session_id":"s-1","invocation_depth":1,"payload":{}}`)
++
++	envelope, err := NewDecoder().Decode(raw)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if envelope.InvocationDepth != 1 {
++		t.Fatalf("InvocationDepth = %d, want 1", envelope.InvocationDepth)
++	}
++}
++
+ func TestSchemaVersionMigration(t *testing.T) {
+ 	if !SchemaVersionSupported(SchemaVersionV1) {
+ 		t.Fatal("SchemaVersionV1 must be supported")
+diff --git a/internal/hookcontract/recursion.go b/internal/hookcontract/recursion.go
+new file mode 100644
+index 0000000..cc9b081
+--- /dev/null
++++ b/internal/hookcontract/recursion.go
+@@ -0,0 +1,31 @@
++package hookcontract
++
++import (
++	"errors"
++	"fmt"
++)
++
++const MaxInvocationDepth = 1
++
++var ErrRecursionGuard = errors.New("hook to tool to hook recursion blocked by construction")
++
++func CheckRecursionGuard(depth int) (Result, error) {
++	if depth < 0 {
++		return Result{}, fmt.Errorf("%w: negative invocation depth %d", ErrRecursionGuard, depth)
++	}
++	if depth >= MaxInvocationDepth {
++		reason := fmt.Sprintf(
++			"invocation depth %d reached the recursion guard limit %d — hook to tool to hook chain blocked",
++			depth, MaxInvocationDepth)
++		result, err := NewResult(DecisionBlock, reason, "", "recursion-guard")
++		if err != nil {
++			return NewNotApplicable(reason), nil
++		}
++		return result, nil
++	}
++	return NewAllow(), nil
++}
++
++func NextInvocationDepth(envelope Envelope) int {
++	return envelope.InvocationDepth + 1
++}
+diff --git a/internal/hookcontract/recursion_test.go b/internal/hookcontract/recursion_test.go
+new file mode 100644
+index 0000000..6c3533b
+--- /dev/null
++++ b/internal/hookcontract/recursion_test.go
+@@ -0,0 +1,58 @@
++package hookcontract
++
++import (
++	"errors"
++	"testing"
++)
++
++func TestRecursionGuard_TopLevelInvocationAllowed(t *testing.T) {
++	result, err := CheckRecursionGuard(0)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if result.Decision() != DecisionAllow {
++		t.Fatalf("Decision() = %v, want DecisionAllow for top-level invocation", result.Decision())
++	}
++}
++
++func TestRecursionGuard_DirectRecursionBlocked(t *testing.T) {
++	envelope := Envelope{InvocationDepth: 0}
++	nested := NextInvocationDepth(envelope)
++
++	result, err := CheckRecursionGuard(nested)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if result.Decision() != DecisionBlock {
++		t.Fatalf("Decision() = %v, want DecisionBlock — hook re-invoking itself via a tool must be blocked", result.Decision())
++	}
++}
++
++func TestRecursionGuard_IndirectRecursionBlocked(t *testing.T) {
++	hookA := Envelope{Provider: "provider-x", InvocationDepth: 0}
++	toolSpawnedDepth := NextInvocationDepth(hookA)
++	hookB := Envelope{Provider: "provider-x", InvocationDepth: toolSpawnedDepth}
++
++	result, err := CheckRecursionGuard(hookB.InvocationDepth)
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if result.Decision() != DecisionBlock {
++		t.Fatalf(
++			"Decision() = %v, want DecisionBlock — a different hook invoked from a tool spawned by the first hook is still recursion",
++			result.Decision())
++	}
++}
++
++func TestRecursionGuard_NegativeDepthRejected(t *testing.T) {
++	if _, err := CheckRecursionGuard(-1); !errors.Is(err, ErrRecursionGuard) {
++		t.Fatalf("error = %v, want ErrRecursionGuard", err)
++	}
++}
++
++func TestNextInvocationDepth_IncrementsFromEnvelope(t *testing.T) {
++	envelope := Envelope{InvocationDepth: 3}
++	if got := NextInvocationDepth(envelope); got != 4 {
++		t.Fatalf("NextInvocationDepth() = %d, want 4", got)
++	}
++}
+diff --git a/internal/hookcontract/timeout.go b/internal/hookcontract/timeout.go
+new file mode 100644
+index 0000000..3c8a77f
+--- /dev/null
++++ b/internal/hookcontract/timeout.go
+@@ -0,0 +1,67 @@
++package hookcontract
++
++import (
++	"context"
++	"errors"
++	"fmt"
++	"time"
++)
++
++const DefaultHookTimeout = 8000 * time.Millisecond
++
++var (
++	ErrInvalidHookTimeout = errors.New("invalid hook timeout declaration")
++	ErrHookTimedOut       = errors.New("hook timed out — timeout is treated as denial, never approval")
++)
++
++type HookTimeoutRegistry struct {
++	timeouts map[string]time.Duration
++}
++
++func NewHookTimeoutRegistry() *HookTimeoutRegistry {
++	return &HookTimeoutRegistry{timeouts: make(map[string]time.Duration)}
++}
++
++func (r *HookTimeoutRegistry) Declare(hook string, timeout time.Duration) error {
++	if hook == "" {
++		return fmt.Errorf("%w: hook name required", ErrInvalidHookTimeout)
++	}
++	if timeout <= 0 {
++		return fmt.Errorf("%w: timeout must be positive for hook %q", ErrInvalidHookTimeout, hook)
++	}
++	r.timeouts[hook] = timeout
++	return nil
++}
++
++func (r *HookTimeoutRegistry) TimeoutFor(hook string) time.Duration {
++	if d, ok := r.timeouts[hook]; ok {
++		return d
++	}
++	return DefaultHookTimeout
++}
++
++func NewHookTimeoutResult(hook string, timeout time.Duration) Result {
++	reason := fmt.Sprintf("hook %q timed out after %s — timeout is treated as denial, never approval", hook, timeout)
++	result, err := NewResult(DecisionBlock, reason, "", "hook-timeout-guard")
++	if err != nil {
++		return NewNotApplicable(reason)
++	}
++	return result
++}
++
++func MeasureHook(ctx context.Context, hook string, timeout time.Duration, fn func(context.Context) Result) (result Result, elapsed time.Duration, timedOut bool) {
++	childCtx, cancel := context.WithTimeout(ctx, timeout)
++	defer cancel()
++
++	start := time.Now()
++	done := make(chan Result, 1)
++	go func() {
++		done <- fn(childCtx)
++	}()
++	select {
++	case r := <-done:
++		return r, time.Since(start), false
++	case <-childCtx.Done():
++		return NewHookTimeoutResult(hook, timeout), time.Since(start), true
++	}
++}
+diff --git a/internal/hookcontract/timeout_test.go b/internal/hookcontract/timeout_test.go
+new file mode 100644
+index 0000000..05b7884
+--- /dev/null
++++ b/internal/hookcontract/timeout_test.go
+@@ -0,0 +1,94 @@
++package hookcontract
++
++import (
++	"context"
++	"errors"
++	"testing"
++	"time"
++)
++
++func TestHookTimeoutRegistry_DefaultMatchesOpenCodeBaseline(t *testing.T) {
++	registry := NewHookTimeoutRegistry()
++	if got := registry.TimeoutFor("unknown-hook"); got != DefaultHookTimeout {
++		t.Fatalf("TimeoutFor(unknown) = %s, want %s", got, DefaultHookTimeout)
++	}
++	if DefaultHookTimeout.Milliseconds() != 8000 {
++		t.Fatalf("DefaultHookTimeout = %dms, want 8000ms to preserve AISPEC_OPENCODE_VALIDATOR_TIMEOUT_MS default", DefaultHookTimeout.Milliseconds())
++	}
++}
++
++func TestHookTimeoutRegistry_DeclareAndOverride(t *testing.T) {
++	registry := NewHookTimeoutRegistry()
++	if err := registry.Declare("validate-preload", 3*time.Second); err != nil {
++		t.Fatalf("Declare unexpected error: %v", err)
++	}
++	if got := registry.TimeoutFor("validate-preload"); got != 3*time.Second {
++		t.Fatalf("TimeoutFor(validate-preload) = %s, want 3s", got)
++	}
++}
++
++func TestHookTimeoutRegistry_RejectsInvalidDeclaration(t *testing.T) {
++	registry := NewHookTimeoutRegistry()
++	if err := registry.Declare("", time.Second); !errors.Is(err, ErrInvalidHookTimeout) {
++		t.Fatalf("Declare(empty hook) error = %v, want ErrInvalidHookTimeout", err)
++	}
++	if err := registry.Declare("hook", 0); !errors.Is(err, ErrInvalidHookTimeout) {
++		t.Fatalf("Declare(zero timeout) error = %v, want ErrInvalidHookTimeout", err)
++	}
++	if err := registry.Declare("hook", -time.Second); !errors.Is(err, ErrInvalidHookTimeout) {
++		t.Fatalf("Declare(negative timeout) error = %v, want ErrInvalidHookTimeout", err)
++	}
++}
++
++func TestMeasureHook_ExceedingTimeoutIsDenial(t *testing.T) {
++	result, elapsed, timedOut := MeasureHook(context.Background(), "slow-hook", 20*time.Millisecond, func(ctx context.Context) Result {
++		select {
++		case <-time.After(200 * time.Millisecond):
++			return NewAllow()
++		case <-ctx.Done():
++			return NewAllow()
++		}
++	})
++	if !timedOut {
++		t.Fatal("timedOut = false, want true when the hook exceeds its declared timeout")
++	}
++	if result.Decision() != DecisionBlock {
++		t.Fatalf("Decision() = %v, want DecisionBlock — timeout must be treated as denial, never approval", result.Decision())
++	}
++	if elapsed <= 0 {
++		t.Fatal("elapsed must be measurable and greater than zero")
++	}
++}
++
++func TestMeasureHook_WithinTimeoutPassesThrough(t *testing.T) {
++	result, elapsed, timedOut := MeasureHook(context.Background(), "fast-hook", 200*time.Millisecond, func(ctx context.Context) Result {
++		return NewAllow()
++	})
++	if timedOut {
++		t.Fatal("timedOut = true, want false when the hook finishes within its declared timeout")
++	}
++	if result.Decision() != DecisionAllow {
++		t.Fatalf("Decision() = %v, want DecisionAllow", result.Decision())
++	}
++	if elapsed < 0 {
++		t.Fatal("elapsed must be measurable")
++	}
++}
++
++func TestMeasureHook_PropagatesCancellationToFn(t *testing.T) {
++	fnSawCancellation := make(chan bool, 1)
++	MeasureHook(context.Background(), "cancel-aware-hook", 20*time.Millisecond, func(ctx context.Context) Result {
++		<-ctx.Done()
++		fnSawCancellation <- errors.Is(ctx.Err(), context.DeadlineExceeded)
++		return NewAllow()
++	})
++
++	select {
++	case sawDeadline := <-fnSawCancellation:
++		if !sawDeadline {
++			t.Fatal("fn context must report DeadlineExceeded once the declared timeout elapses")
++		}
++	case <-time.After(time.Second):
++		t.Fatal("fn never observed context cancellation")
++	}
++}
+diff --git a/internal/runtime/hooks/dispatcher.go b/internal/runtime/hooks/dispatcher.go
+index 20c00de..9954084 100644
+--- a/internal/runtime/hooks/dispatcher.go
++++ b/internal/runtime/hooks/dispatcher.go
+@@ -8,10 +8,14 @@ package hooks
+ 
+ import (
+ 	"context"
++	"errors"
+ 	"fmt"
+ 	"sync"
++	"time"
+ 
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/events"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/telemetry"
+ )
+ 
+ const (
+@@ -48,6 +52,7 @@ type Dispatcher interface {
+ 	// Ponto sem hooks registrados retorna nil sem panic.
+ 	// Erros são envelopados: "hook <name> in <point>: <err>".
+ 	Dispatch(ctx context.Context, point string, evt Event) error
++	SetHookTimeout(hook string, timeout time.Duration) error
+ }
+ 
+ // RuntimePreOpenEvent é o evento emitido antes de abrir a sessão ACP.
+@@ -107,21 +112,48 @@ type SessionPostReviewEvent struct {
+ 
+ func (e SessionPostReviewEvent) Kind() string { return PointSessionPostReview }
+ 
++type invocationDepthKey struct{}
++
++func depthFromContext(ctx context.Context) int {
++	if v, ok := ctx.Value(invocationDepthKey{}).(int); ok {
++		return v
++	}
++	return 0
++}
++
++func withInvocationDepth(ctx context.Context, depth int) context.Context {
++	return context.WithValue(ctx, invocationDepthKey{}, depth)
++}
++
+ // dispatcher é a implementação concreta de Dispatcher.
+ type dispatcher struct {
+-	mu    sync.RWMutex
+-	hooks map[string][]Hook
++	mu        sync.RWMutex
++	hooks     map[string][]Hook
++	timeouts  *hookcontract.HookTimeoutRegistry
++	telemetry telemetry.HookTelemetry
++	rootDir   string
+ }
+ 
+ var _ Dispatcher = (*dispatcher)(nil)
+ 
+ // New retorna um Dispatcher vazio pronto para uso.
+-func New() Dispatcher {
++func New(rootDir ...string) Dispatcher {
++	dir := "."
++	if len(rootDir) > 0 && rootDir[0] != "" {
++		dir = rootDir[0]
++	}
+ 	return &dispatcher{
+-		hooks: make(map[string][]Hook),
++		hooks:     make(map[string][]Hook),
++		timeouts:  hookcontract.NewHookTimeoutRegistry(),
++		telemetry: telemetry.NewHookTelemetry(),
++		rootDir:   dir,
+ 	}
+ }
+ 
++func (d *dispatcher) SetHookTimeout(hook string, timeout time.Duration) error {
++	return d.timeouts.Declare(hook, timeout)
++}
++
+ // Register associa um hook a um ponto. Thread-safe.
+ func (d *dispatcher) Register(point string, hook Hook) {
+ 	d.mu.Lock()
+@@ -133,6 +165,16 @@ func (d *dispatcher) Register(point string, hook Hook) {
+ // Abort-on-first-error: primeiro erro interrompe; hooks subsequentes não rodam.
+ // Ponto sem registro retorna nil sem panic.
+ func (d *dispatcher) Dispatch(ctx context.Context, point string, evt Event) error {
++	depth := depthFromContext(ctx)
++	guard, err := hookcontract.CheckRecursionGuard(depth)
++	if err != nil {
++		return fmt.Errorf("hook dispatch at %s: %w", point, err)
++	}
++	if guard.Decision() == hookcontract.DecisionBlock {
++		return fmt.Errorf("hook dispatch at %s: %s", point, guard.Reason())
++	}
++	hookCtx := withInvocationDepth(ctx, depth+1)
++
+ 	d.mu.RLock()
+ 	hs := d.hooks[point]
+ 	// Copiar slice sob read lock para liberar o lock antes de executar os hooks.
+@@ -141,9 +183,32 @@ func (d *dispatcher) Dispatch(ctx context.Context, point string, evt Event) erro
+ 	d.mu.RUnlock()
+ 
+ 	for _, h := range hsCopy {
+-		if err := h.Run(ctx, evt); err != nil {
+-			return fmt.Errorf("hook %s in %s: %w", h.Name(), point, err)
++		if err := d.runWithTimeout(hookCtx, point, h, evt); err != nil {
++			return err
+ 		}
+ 	}
+ 	return nil
+ }
++
++func (d *dispatcher) runWithTimeout(ctx context.Context, point string, h Hook, evt Event) error {
++	timeout := d.timeouts.TimeoutFor(h.Name())
++	runCtx, cancel := context.WithTimeout(ctx, timeout)
++	defer cancel()
++
++	start := time.Now()
++	runErr := h.Run(runCtx, evt)
++	elapsed := time.Since(start)
++
++	d.telemetry.RecordDuration(d.rootDir, h.Name(), point, "", elapsed.Milliseconds())
++
++	if errors.Is(runCtx.Err(), context.DeadlineExceeded) {
++		d.telemetry.RecordTimeout(d.rootDir, h.Name(), point, "")
++		return fmt.Errorf("hook %s in %s after %s: %w", h.Name(), point, timeout, hookcontract.ErrHookTimedOut)
++	}
++	if runErr != nil {
++		d.telemetry.RecordDecision(d.rootDir, h.Name(), point, "", hookcontract.DecisionError.String())
++		return fmt.Errorf("hook %s in %s: %w", h.Name(), point, runErr)
++	}
++	d.telemetry.RecordDecision(d.rootDir, h.Name(), point, "", hookcontract.DecisionAllow.String())
++	return nil
++}
+diff --git a/internal/runtime/hooks/dispatcher_test.go b/internal/runtime/hooks/dispatcher_test.go
+index 5515383..248b443 100644
+--- a/internal/runtime/hooks/dispatcher_test.go
++++ b/internal/runtime/hooks/dispatcher_test.go
+@@ -4,8 +4,11 @@ import (
+ 	"context"
+ 	"errors"
+ 	"fmt"
++	"strings"
+ 	"testing"
++	"time"
+ 
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks"
+ )
+ 
+@@ -170,6 +173,82 @@ func TestDispatcher_ConcurrentSafe(t *testing.T) {
+ 	}
+ }
+ 
++type reentrantHook struct {
++	name       string
++	dispatcher hooks.Dispatcher
++	point      string
++	nestedErr  *error
++}
++
++func (h *reentrantHook) Name() string { return h.name }
++func (h *reentrantHook) Run(ctx context.Context, evt hooks.Event) error {
++	*h.nestedErr = h.dispatcher.Dispatch(ctx, h.point, evt)
++	return nil
++}
++
++func TestDispatcher_RecursionGuardBlocksReentrantDispatch(t *testing.T) {
++	d := hooks.New()
++	var nestedErr error
++
++	h := &reentrantHook{name: "self-reentrant", dispatcher: d, point: hooks.PointToolCallPreDispatch, nestedErr: &nestedErr}
++	d.Register(hooks.PointToolCallPreDispatch, h)
++
++	evt := hooks.ToolCallEvent{Phase: "pre_dispatch"}
++	if err := d.Dispatch(context.Background(), hooks.PointToolCallPreDispatch, evt); err != nil {
++		t.Fatalf("outer Dispatch unexpected error: %v", err)
++	}
++	if nestedErr == nil {
++		t.Fatal("nested Dispatch call must be blocked by the recursion guard, got nil error")
++	}
++	wantSubstring := "invocation depth"
++	if !strings.Contains(nestedErr.Error(), wantSubstring) {
++		t.Fatalf("nested Dispatch error = %q, want it to mention %q (recursion guard denial)", nestedErr.Error(), wantSubstring)
++	}
++}
++
++type slowHook struct {
++	name  string
++	delay time.Duration
++}
++
++func (h *slowHook) Name() string { return h.name }
++func (h *slowHook) Run(ctx context.Context, _ hooks.Event) error {
++	select {
++	case <-time.After(h.delay):
++		return nil
++	case <-ctx.Done():
++		return ctx.Err()
++	}
++}
++
++func TestDispatcher_TimeoutBlocksSlowHook(t *testing.T) {
++	d := hooks.New()
++	if err := d.SetHookTimeout("slow-validator", 20*time.Millisecond); err != nil {
++		t.Fatalf("SetHookTimeout unexpected error: %v", err)
++	}
++	d.Register(hooks.PointSessionPostEnd, &slowHook{name: "slow-validator", delay: 200 * time.Millisecond})
++
++	err := d.Dispatch(context.Background(), hooks.PointSessionPostEnd, hooks.SessionPostEndEvent{})
++	if err == nil {
++		t.Fatal("expected timeout error, Dispatch returned nil")
++	}
++	if !errors.Is(err, hookcontract.ErrHookTimedOut) {
++		t.Fatalf("error = %v, want ErrHookTimedOut — timeout must be treated as denial", err)
++	}
++}
++
++func TestDispatcher_FastHookWithinTimeoutSucceeds(t *testing.T) {
++	d := hooks.New()
++	if err := d.SetHookTimeout("fast-validator", 500*time.Millisecond); err != nil {
++		t.Fatalf("SetHookTimeout unexpected error: %v", err)
++	}
++	d.Register(hooks.PointSessionPostEnd, &slowHook{name: "fast-validator", delay: time.Millisecond})
++
++	if err := d.Dispatch(context.Background(), hooks.PointSessionPostEnd, hooks.SessionPostEndEvent{}); err != nil {
++		t.Fatalf("unexpected error for a hook within its declared timeout: %v", err)
++	}
++}
++
+ func TestPromptBuildEvent_KindReflectsPhase(t *testing.T) {
+ 	pre := hooks.PromptBuildEvent{Phase: "pre_build"}
+ 	if got := pre.Kind(); got != hooks.PointPromptPreBuild {
+diff --git a/internal/runtime/hooks/mocks/dispatcher.go b/internal/runtime/hooks/mocks/dispatcher.go
+index 494825c..4f5efc6 100644
+--- a/internal/runtime/hooks/mocks/dispatcher.go
++++ b/internal/runtime/hooks/mocks/dispatcher.go
+@@ -6,6 +6,7 @@ package mocks
+ 
+ import (
+ 	"context"
++	"time"
+ 
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks"
+ 	mock "github.com/stretchr/testify/mock"
+@@ -155,3 +156,60 @@ func (_c *Dispatcher_Register_Call) RunAndReturn(run func(point string, hook hoo
+ 	_c.Run(run)
+ 	return _c
+ }
++
++// SetHookTimeout provides a mock function for the type Dispatcher
++func (_mock *Dispatcher) SetHookTimeout(hook string, timeout time.Duration) error {
++	ret := _mock.Called(hook, timeout)
++
++	if len(ret) == 0 {
++		panic("no return value specified for SetHookTimeout")
++	}
++
++	var r0 error
++	if returnFunc, ok := ret.Get(0).(func(string, time.Duration) error); ok {
++		r0 = returnFunc(hook, timeout)
++	} else {
++		r0 = ret.Error(0)
++	}
++	return r0
++}
++
++// Dispatcher_SetHookTimeout_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetHookTimeout'
++type Dispatcher_SetHookTimeout_Call struct {
++	*mock.Call
++}
++
++// SetHookTimeout is a helper method to define mock.On call
++//   - hook string
++//   - timeout time.Duration
++func (_e *Dispatcher_Expecter) SetHookTimeout(hook any, timeout any) *Dispatcher_SetHookTimeout_Call {
++	return &Dispatcher_SetHookTimeout_Call{Call: _e.mock.On("SetHookTimeout", hook, timeout)}
++}
++
++func (_c *Dispatcher_SetHookTimeout_Call) Run(run func(hook string, timeout time.Duration)) *Dispatcher_SetHookTimeout_Call {
++	_c.Call.Run(func(args mock.Arguments) {
++		var arg0 string
++		if args[0] != nil {
++			arg0 = args[0].(string)
++		}
++		var arg1 time.Duration
++		if args[1] != nil {
++			arg1 = args[1].(time.Duration)
++		}
++		run(
++			arg0,
++			arg1,
++		)
++	})
++	return _c
++}
++
++func (_c *Dispatcher_SetHookTimeout_Call) Return(err error) *Dispatcher_SetHookTimeout_Call {
++	_c.Call.Return(err)
++	return _c
++}
++
++func (_c *Dispatcher_SetHookTimeout_Call) RunAndReturn(run func(hook string, timeout time.Duration) error) *Dispatcher_SetHookTimeout_Call {
++	_c.Call.Return(run)
++	return _c
++}
+diff --git a/internal/runtime/hooks/quality_gate_test.go b/internal/runtime/hooks/quality_gate_test.go
+index 0e7d410..c17e112 100644
+--- a/internal/runtime/hooks/quality_gate_test.go
++++ b/internal/runtime/hooks/quality_gate_test.go
+@@ -3,6 +3,7 @@ package hooks
+ import (
+ 	"context"
+ 	"testing"
++	"time"
+ 
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
+ 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+@@ -30,6 +31,10 @@ func (d *recordingDispatcher) Dispatch(ctx context.Context, point string, evt Ev
+ 	return nil
+ }
+ 
++func (d *recordingDispatcher) SetHookTimeout(hook string, timeout time.Duration) error {
++	return nil
++}
++
+ func TestRegisterQualityGate_RegistersOnlyOnSessionPostEnd(t *testing.T) {
+ 	disp := newRecordingDispatcher()
+ 	hook := NewQualityGateHook(nil, qualitygate.EvaluationInput{})
+diff --git a/internal/runtime/runner.go b/internal/runtime/runner.go
+index 41b4b51..8b38be1 100644
+--- a/internal/runtime/runner.go
++++ b/internal/runtime/runner.go
+@@ -671,7 +671,7 @@ func (c *Catalog) prepareHooksDispatcher(
+ 	sessionPostReviewTestHook hooks.Hook,
+ 	memRecorder *hooks.MemoryEvidenceRecorder,
+ ) hooks.Dispatcher {
+-	disp := hooks.New()
++	disp := hooks.New(j.WorkDir)
+ 
+ 	if j.DisableHooks {
+ 		return disp
+diff --git a/internal/telemetry/correlation.go b/internal/telemetry/correlation.go
+new file mode 100644
+index 0000000..7ab815e
+--- /dev/null
++++ b/internal/telemetry/correlation.go
+@@ -0,0 +1,26 @@
++package telemetry
++
++import (
++	"errors"
++	"strings"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
++)
++
++var ErrCorrelationMissingSessionID = errors.New("envelope session_id required for correlation")
++
++type Correlation struct {
++	SessionID string
++	TaskID    string
++}
++
++func CorrelationFromEnvelope(envelope hookcontract.Envelope, taskID string) (Correlation, error) {
++	if strings.TrimSpace(envelope.SessionID) == "" {
++		return Correlation{}, ErrCorrelationMissingSessionID
++	}
++	return Correlation{SessionID: envelope.SessionID, TaskID: taskID}, nil
++}
++
++func (c Correlation) Key() string {
++	return c.SessionID + ":" + c.TaskID
++}
+diff --git a/internal/telemetry/correlation_test.go b/internal/telemetry/correlation_test.go
+new file mode 100644
+index 0000000..ab5af8a
+--- /dev/null
++++ b/internal/telemetry/correlation_test.go
+@@ -0,0 +1,49 @@
++package telemetry
++
++import (
++	"encoding/json"
++	"errors"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
++)
++
++func TestCorrelationFromEnvelope_RequiresSessionID(t *testing.T) {
++	envelope := hookcontract.Envelope{SessionID: ""}
++	if _, err := CorrelationFromEnvelope(envelope, "task-1"); !errors.Is(err, ErrCorrelationMissingSessionID) {
++		t.Fatalf("error = %v, want ErrCorrelationMissingSessionID", err)
++	}
++}
++
++func TestCorrelationFromEnvelope_UsesSessionIDAndTaskID(t *testing.T) {
++	envelope := hookcontract.Envelope{SessionID: "sess-1"}
++	corr, err := CorrelationFromEnvelope(envelope, "task-1")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if corr.SessionID != "sess-1" || corr.TaskID != "task-1" {
++		t.Fatalf("Correlation = %+v, want SessionID=sess-1 TaskID=task-1", corr)
++	}
++	if corr.Key() != "sess-1:task-1" {
++		t.Fatalf("Key() = %q, want %q", corr.Key(), "sess-1:task-1")
++	}
++}
++
++func TestCorrelation_NeverDerivedFromPromptContent(t *testing.T) {
++	envelopeA := hookcontract.Envelope{SessionID: "sess-1", Payload: json.RawMessage(`{"prompt":"do X"}`)}
++	envelopeB := hookcontract.Envelope{SessionID: "sess-1", Payload: json.RawMessage(`{"prompt":"do a completely different unrelated thing"}`)}
++
++	corrA, err := CorrelationFromEnvelope(envelopeA, "task-1")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	corrB, err := CorrelationFromEnvelope(envelopeB, "task-1")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++
++	if corrA.Key() != corrB.Key() {
++		t.Fatalf("Key() differed across different prompt payloads (%q vs %q): correlation must not depend on prompt content",
++			corrA.Key(), corrB.Key())
++	}
++}
+diff --git a/internal/telemetry/hook_ablation.go b/internal/telemetry/hook_ablation.go
+new file mode 100644
+index 0000000..6e7fce4
+--- /dev/null
++++ b/internal/telemetry/hook_ablation.go
+@@ -0,0 +1,25 @@
++package telemetry
++
++var criticalSecurityHooks = map[string]bool{
++	"validate-governance":    true,
++	"validate-preload":       true,
++	"git-operation-gate":     true,
++	"validate-task-evidence": true,
++}
++
++func IsCriticalSecurityHook(hook string) bool {
++	return criticalSecurityHooks[hook]
++}
++
++func (c *Catalog) DecideHookAblation(hook string, baselineEntries, withHookEntries []logEntry) AblationResult {
++	baseline := c.BuildAblationBaseline(baselineEntries)
++	withComponent := c.BuildAblationBaseline(withHookEntries)
++	result := c.CompareAblation(hook, ComponentHook, baseline, withComponent)
++
++	if result.Decision == AblationRemove && IsCriticalSecurityHook(hook) {
++		result.Decision = AblationKeep
++		result.Evidence = append(result.Evidence,
++			"critical security hook: REMOVE decision reverted to KEEP regardless of economic return (RF-65)")
++	}
++	return result
++}
+diff --git a/internal/telemetry/hook_ablation_test.go b/internal/telemetry/hook_ablation_test.go
+new file mode 100644
+index 0000000..0c79fa3
+--- /dev/null
++++ b/internal/telemetry/hook_ablation_test.go
+@@ -0,0 +1,62 @@
++package telemetry
++
++import "testing"
++
++func hookEntry(fields map[string]string) logEntry {
++	return logEntry{Skill: "hook", Ref: "test", Fields: fields}
++}
++
++func TestAblation_BaselineWithoutHook(t *testing.T) {
++	withoutHook := []logEntry{
++		hookEntry(map[string]string{"duration_ms": "100"}),
++		hookEntry(map[string]string{"duration_ms": "120"}),
++	}
++	withHook := []logEntry{
++		hookEntry(map[string]string{"duration_ms": "110"}),
++		hookEntry(map[string]string{"duration_ms": "115"}),
++	}
++
++	catalog := NewCatalog()
++	baseline := catalog.BuildAblationBaseline(withoutHook)
++	if baseline.SampleCount != len(withoutHook) {
++		t.Fatalf("SampleCount = %d, want %d", baseline.SampleCount, len(withoutHook))
++	}
++
++	result := catalog.DecideHookAblation("some-on-demand-hook", withoutHook, withHook)
++	if result.Decision != AblationOnDemand {
++		t.Fatalf("Decision = %v, want ON-DEMAND for a small cost delta within tolerance", result.Decision)
++	}
++}
++
++func TestAblation_NonCriticalHookRemovedWhenCostRises(t *testing.T) {
++	withoutHook := make([]logEntry, 0, 20)
++	withHook := make([]logEntry, 0, 20)
++	for i := 0; i < 20; i++ {
++		withoutHook = append(withoutHook, hookEntry(map[string]string{"duration_ms": "100"}))
++		withHook = append(withHook, hookEntry(map[string]string{"duration_ms": "300"}))
++	}
++
++	catalog := NewCatalog()
++	result := catalog.DecideHookAblation("cosmetic-hook", withoutHook, withHook)
++	if result.Decision != AblationRemove {
++		t.Fatalf("Decision = %v, want REMOVE when a non-critical hook adds cost far beyond tolerance", result.Decision)
++	}
++}
++
++func TestAblation_CriticalSecurityHookSurvivesRemoveDecision(t *testing.T) {
++	withoutHook := make([]logEntry, 0, 20)
++	withHook := make([]logEntry, 0, 20)
++	for i := 0; i < 20; i++ {
++		withoutHook = append(withoutHook, hookEntry(map[string]string{"duration_ms": "100"}))
++		withHook = append(withHook, hookEntry(map[string]string{"duration_ms": "300"}))
++	}
++
++	catalog := NewCatalog()
++	result := catalog.DecideHookAblation("validate-governance", withoutHook, withHook)
++	if result.Decision != AblationKeep {
++		t.Fatalf("Decision = %v, want KEEP — a critical security hook must survive a REMOVE-triggering ablation (RF-65)", result.Decision)
++	}
++	if !IsCriticalSecurityHook("validate-governance") {
++		t.Fatal("validate-governance must be classified as a critical security hook")
++	}
++}
+diff --git a/internal/telemetry/hook_events.go b/internal/telemetry/hook_events.go
+new file mode 100644
+index 0000000..a435a81
+--- /dev/null
++++ b/internal/telemetry/hook_events.go
+@@ -0,0 +1,71 @@
++package telemetry
++
++import (
++	"fmt"
++	"os"
++	"path/filepath"
++	"time"
++)
++
++type HookTelemetryWriter interface {
++	WriteLine(rootDir, line string) error
++}
++
++type fileHookTelemetryWriter struct{}
++
++func (fileHookTelemetryWriter) WriteLine(rootDir, line string) error {
++	logDir := filepath.Join(rootDir, ".agents")
++	if err := os.MkdirAll(logDir, 0755); err != nil {
++		return fmt.Errorf("create telemetry directory: %w", err)
++	}
++
++	logPath := filepath.Join(logDir, "telemetry.log")
++	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
++	if err != nil {
++		return fmt.Errorf("open telemetry log: %w", err)
++	}
++	defer f.Close()
++
++	_, err = f.WriteString(line + "\n")
++	return err
++}
++
++type HookTelemetry struct {
++	writer HookTelemetryWriter
++}
++
++func NewHookTelemetry() HookTelemetry {
++	return HookTelemetry{writer: fileHookTelemetryWriter{}}
++}
++
++func NewHookTelemetryWithWriter(writer HookTelemetryWriter) HookTelemetry {
++	return HookTelemetry{writer: writer}
++}
++
++func (h HookTelemetry) RecordDuration(rootDir, hook, event, provider string, durationMs int64) {
++	h.record(rootDir, fmt.Sprintf("hook.duration_ms hook=%s event=%s provider=%s value=%d", hook, event, provider, durationMs))
++}
++
++func (h HookTelemetry) RecordDecision(rootDir, hook, event, provider, decision string) {
++	h.record(rootDir, fmt.Sprintf("hook.decision hook=%s event=%s provider=%s decision=%s", hook, event, provider, decision))
++}
++
++func (h HookTelemetry) RecordTimeout(rootDir, hook, event, provider string) {
++	h.record(rootDir, fmt.Sprintf("hook.timeout hook=%s event=%s provider=%s", hook, event, provider))
++}
++
++func (h HookTelemetry) RecordAblation(rootDir, hook string, withComponent bool, durationMs int64) {
++	baselineLabel := "sem"
++	if withComponent {
++		baselineLabel = "com"
++	}
++	h.record(rootDir, fmt.Sprintf("hook.ablation baseline=%s hook=%s duration_ms=%d", baselineLabel, hook, durationMs))
++}
++
++func (h HookTelemetry) record(rootDir, body string) {
++	if os.Getenv("GOVERNANCE_TELEMETRY") != "1" {
++		return
++	}
++	ts := time.Now().UTC().Format(time.RFC3339)
++	_ = h.writer.WriteLine(rootDir, fmt.Sprintf("%s %s", ts, body))
++}
+diff --git a/internal/telemetry/hook_events_test.go b/internal/telemetry/hook_events_test.go
+new file mode 100644
+index 0000000..47c9669
+--- /dev/null
++++ b/internal/telemetry/hook_events_test.go
+@@ -0,0 +1,100 @@
++package telemetry
++
++import (
++	"errors"
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++)
++
++type recordingHookTelemetryWriter struct {
++	lines []string
++}
++
++func (w *recordingHookTelemetryWriter) WriteLine(rootDir, line string) error {
++	w.lines = append(w.lines, line)
++	return nil
++}
++
++type failingHookTelemetryWriter struct {
++	calls int
++}
++
++func (w *failingHookTelemetryWriter) WriteLine(rootDir, line string) error {
++	w.calls++
++	return errors.New("simulated telemetry backend failure")
++}
++
++func TestHookTelemetry_NoOpWithoutOptIn(t *testing.T) {
++	t.Setenv("GOVERNANCE_TELEMETRY", "")
++	root := t.TempDir()
++
++	telemetry := NewHookTelemetry()
++	telemetry.RecordDuration(root, "validate-preload", "before_tool", "provider-x", 42)
++	telemetry.RecordDecision(root, "validate-preload", "before_tool", "provider-x", "ALLOW")
++	telemetry.RecordTimeout(root, "validate-preload", "before_tool", "provider-x")
++	telemetry.RecordAblation(root, "validate-preload", false, 10)
++
++	if _, err := os.Stat(filepath.Join(root, ".agents", "telemetry.log")); !os.IsNotExist(err) {
++		t.Fatalf("telemetry.log must not exist without GOVERNANCE_TELEMETRY=1, stat err = %v", err)
++	}
++}
++
++func TestHookTelemetry_EmitsCanonicalFormatWhenOptedIn(t *testing.T) {
++	t.Setenv("GOVERNANCE_TELEMETRY", "1")
++	root := t.TempDir()
++	writer := &recordingHookTelemetryWriter{}
++	telemetry := NewHookTelemetryWithWriter(writer)
++
++	telemetry.RecordDuration(root, "validate-preload", "before_tool", "provider-x", 42)
++	telemetry.RecordDecision(root, "validate-preload", "before_tool", "provider-x", "ALLOW")
++	telemetry.RecordTimeout(root, "validate-preload", "before_tool", "provider-x")
++	telemetry.RecordAblation(root, "validate-preload", true, 10)
++
++	if len(writer.lines) != 4 {
++		t.Fatalf("len(lines) = %d, want 4", len(writer.lines))
++	}
++	wantSuffixes := []string{
++		"hook.duration_ms hook=validate-preload event=before_tool provider=provider-x value=42",
++		"hook.decision hook=validate-preload event=before_tool provider=provider-x decision=ALLOW",
++		"hook.timeout hook=validate-preload event=before_tool provider=provider-x",
++		"hook.ablation baseline=com hook=validate-preload duration_ms=10",
++	}
++	for i, want := range wantSuffixes {
++		if !hasTimestampPrefixAndSuffix(writer.lines[i], want) {
++			t.Fatalf("line[%d] = %q, want format '<ts> %s'", i, writer.lines[i], want)
++		}
++	}
++}
++
++func hasTimestampPrefixAndSuffix(line, suffix string) bool {
++	prefix, rest, found := strings.Cut(line, " ")
++	if !found || prefix == "" {
++		return false
++	}
++	return rest == suffix
++}
++
++func TestHookTelemetry_FailureDoesNotPropagateOrCountAsRetry(t *testing.T) {
++	t.Setenv("GOVERNANCE_TELEMETRY", "1")
++	root := t.TempDir()
++	writer := &failingHookTelemetryWriter{}
++	telemetry := NewHookTelemetryWithWriter(writer)
++
++	retryAttempts := 0
++	taskCompleted := false
++
++	telemetry.RecordDuration(root, "validate-governance", "after_tool", "provider-x", 100)
++	taskCompleted = true
++
++	if writer.calls != 1 {
++		t.Fatalf("writer.calls = %d, want 1 — the failing write must still be attempted", writer.calls)
++	}
++	if !taskCompleted {
++		t.Fatal("task must complete even when the telemetry writer always fails (RF-48)")
++	}
++	if retryAttempts != 0 {
++		t.Fatalf("retryAttempts = %d, want 0 — telemetry failure must never trigger a retry cascade (RF-48)", retryAttempts)
++	}
++}
+diff --git a/internal/telemetry/rf45_metrics.go b/internal/telemetry/rf45_metrics.go
+new file mode 100644
+index 0000000..7d4211d
+--- /dev/null
++++ b/internal/telemetry/rf45_metrics.go
+@@ -0,0 +1,51 @@
++package telemetry
++
++type MetricAvailability struct {
++	Name                 string
++	HasProductionWriter  bool
++	UnknownJustification string
++}
++
++type unknownMetricEntry struct {
++	name          string
++	justification string
++}
++
++var rf44MetricUnknownEntries = []unknownMetricEntry{
++	{"task_type", "no adapter emits a structured task type today; declared unknown until a production source exists"},
++	{"risk", "risk classification is not reported by any adapter today; declared unknown until a production source exists"},
++	{"tokens_in", "RF-46: this metric is only emitted when the provider reports it or a calculation method is identified; no adapter does this today"},
++	{"tokens_out", "same justification as the equivalent input metric"},
++	{"context_loaded", "loaded context volume is not instrumented by any adapter today; declared unknown until a production source exists"},
++	{"skills_loaded", "loaded skill list is not emitted in structured telemetry today; declared unknown until a production source exists"},
++	{"review_rounds", "review round count is not emitted in structured telemetry today; declared unknown until a production source exists"},
++	{"tests_passed", "test outcome is not emitted in structured telemetry today; declared unknown until a production source exists"},
++	{"human_intervention", "human intervention is not emitted in structured telemetry today; declared unknown until a production source exists"},
++}
++
++func rf44MetricUnknownJustifications() map[string]string {
++	out := make(map[string]string, len(rf44MetricUnknownEntries))
++	for _, entry := range rf44MetricUnknownEntries {
++		out[entry.name] = entry.justification
++	}
++	return out
++}
++
++func RF44MetricAvailability() []MetricAvailability {
++	withWriter := make(map[string]bool, len(RF44MetricsWithProductionWriter()))
++	for _, name := range RF44MetricsWithProductionWriter() {
++		withWriter[name] = true
++	}
++
++	justifications := rf44MetricUnknownJustifications()
++	names := RF44MetricNames()
++	out := make([]MetricAvailability, 0, len(names))
++	for _, name := range names {
++		out = append(out, MetricAvailability{
++			Name:                 name,
++			HasProductionWriter:  withWriter[name],
++			UnknownJustification: justifications[name],
++		})
++	}
++	return out
++}
+diff --git a/internal/telemetry/rf45_metrics_test.go b/internal/telemetry/rf45_metrics_test.go
+new file mode 100644
+index 0000000..68012de
+--- /dev/null
++++ b/internal/telemetry/rf45_metrics_test.go
+@@ -0,0 +1,35 @@
++package telemetry
++
++import "testing"
++
++func TestRF44MetricAvailability_EveryMetricIsExplicit(t *testing.T) {
++	for _, availability := range RF44MetricAvailability() {
++		if !availability.HasProductionWriter && availability.UnknownJustification == "" {
++			t.Fatalf("metric %q has neither a production writer nor an unknown justification: implicit gap", availability.Name)
++		}
++		if availability.HasProductionWriter && availability.UnknownJustification != "" {
++			t.Fatalf("metric %q has both a production writer and an unknown justification: ambiguous declaration", availability.Name)
++		}
++	}
++}
++
++func TestRF44MetricAvailability_CoversAllFifteenMetrics(t *testing.T) {
++	got := RF44MetricAvailability()
++	if len(got) != len(RF44MetricNames()) {
++		t.Fatalf("len(RF44MetricAvailability()) = %d, want %d", len(got), len(RF44MetricNames()))
++	}
++}
++
++func TestRF44MetricAvailability_TokensAreDeclaredUnknown(t *testing.T) {
++	for _, availability := range RF44MetricAvailability() {
++		if availability.Name != "tokens_in" && availability.Name != "tokens_out" {
++			continue
++		}
++		if availability.HasProductionWriter {
++			t.Fatalf("%s must not have a production writer until a provider reports it or a calculation method is identified (RF-46)", availability.Name)
++		}
++		if availability.UnknownJustification == "" {
++			t.Fatalf("%s must carry an explicit unknown justification", availability.Name)
++		}
++	}
++}
+diff --git a/internal/telemetry/schema.go b/internal/telemetry/schema.go
+new file mode 100644
+index 0000000..3e32899
+--- /dev/null
++++ b/internal/telemetry/schema.go
+@@ -0,0 +1,53 @@
++package telemetry
++
++import (
++	"errors"
++	"fmt"
++	"strings"
++)
++
++const ProviderMetricNamespacePrefix = "provider."
++
++var ErrProviderMetricLeakage = errors.New("metric key violates common/provider namespace schema")
++
++type Schema struct {
++	CommonMetrics []string
++}
++
++func CommonSchema() Schema {
++	return Schema{CommonMetrics: RF44MetricNames()}
++}
++
++func (s Schema) IsCommonMetric(name string) bool {
++	for _, m := range s.CommonMetrics {
++		if m == name {
++			return true
++		}
++	}
++	return false
++}
++
++func (s Schema) ValidateKey(key string) error {
++	if s.IsCommonMetric(key) {
++		return nil
++	}
++	if strings.HasPrefix(key, ProviderMetricNamespacePrefix) {
++		rest := strings.TrimPrefix(key, ProviderMetricNamespacePrefix)
++		parts := strings.SplitN(rest, ".", 2)
++		if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
++			return fmt.Errorf("%w: %q must follow provider.<name>.<key>", ErrProviderMetricLeakage, key)
++		}
++		return nil
++	}
++	return fmt.Errorf("%w: %q is neither a common metric nor namespaced under %q",
++		ErrProviderMetricLeakage, key, ProviderMetricNamespacePrefix)
++}
++
++func (s Schema) ValidateNoLeakage(keys []string) error {
++	for _, key := range keys {
++		if err := s.ValidateKey(key); err != nil {
++			return err
++		}
++	}
++	return nil
++}
+diff --git a/internal/telemetry/schema_test.go b/internal/telemetry/schema_test.go
+new file mode 100644
+index 0000000..de9ec0a
+--- /dev/null
++++ b/internal/telemetry/schema_test.go
+@@ -0,0 +1,44 @@
++package telemetry
++
++import (
++	"errors"
++	"testing"
++)
++
++func TestSchema_AcceptsEveryCommonMetric(t *testing.T) {
++	schema := CommonSchema()
++	for _, name := range RF44MetricNames() {
++		if err := schema.ValidateKey(name); err != nil {
++			t.Fatalf("ValidateKey(%q) unexpected error: %v", name, err)
++		}
++	}
++}
++
++func TestSchema_AcceptsNamespacedProviderKey(t *testing.T) {
++	schema := CommonSchema()
++	if err := schema.ValidateKey("provider.opencode.plugin_load_ms"); err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++}
++
++func TestSchema_RejectsProviderKeyLeakingIntoCommonSpace(t *testing.T) {
++	schema := CommonSchema()
++	if err := schema.ValidateKey("opencode_plugin_load_ms"); !errors.Is(err, ErrProviderMetricLeakage) {
++		t.Fatalf("error = %v, want ErrProviderMetricLeakage for an un-namespaced provider-specific key", err)
++	}
++}
++
++func TestSchema_RejectsMalformedProviderNamespace(t *testing.T) {
++	schema := CommonSchema()
++	if err := schema.ValidateKey("provider.opencode"); !errors.Is(err, ErrProviderMetricLeakage) {
++		t.Fatalf("error = %v, want ErrProviderMetricLeakage for a namespace missing the metric key", err)
++	}
++}
++
++func TestSchema_ValidateNoLeakageDetectsViolationAmongValidKeys(t *testing.T) {
++	schema := CommonSchema()
++	err := schema.ValidateNoLeakage([]string{"provider", "model", "leaked_key"})
++	if !errors.Is(err, ErrProviderMetricLeakage) {
++		t.Fatalf("error = %v, want ErrProviderMetricLeakage", err)
++	}
++}
+diff --git a/internal/telemetry/unknown.go b/internal/telemetry/unknown.go
+new file mode 100644
+index 0000000..e8ec29a
+--- /dev/null
++++ b/internal/telemetry/unknown.go
+@@ -0,0 +1,27 @@
++package telemetry
++
++import (
++	"errors"
++	"fmt"
++)
++
++const UnknownMetricValue = "unknown"
++
++var ErrUnidentifiedEstimationMethod = errors.New("metric value estimated without an identified calculation method")
++
++func ResolveTokenMetric(value, calculationMethod string) (string, error) {
++	if value == "" {
++		return UnknownMetricValue, nil
++	}
++	if calculationMethod == "" {
++		return "", fmt.Errorf("%w: value %q present without a calculation method", ErrUnidentifiedEstimationMethod, value)
++	}
++	return value, nil
++}
++
++func ResolveMetric(available bool, value string) string {
++	if !available || value == "" {
++		return UnknownMetricValue
++	}
++	return value
++}
+diff --git a/internal/telemetry/unknown_test.go b/internal/telemetry/unknown_test.go
+new file mode 100644
+index 0000000..6c0ff6a
+--- /dev/null
++++ b/internal/telemetry/unknown_test.go
+@@ -0,0 +1,56 @@
++package telemetry
++
++import (
++	"errors"
++	"testing"
++)
++
++func TestTelemetry_UnavailableIsUnknown(t *testing.T) {
++	got, err := ResolveTokenMetric("", "")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if got != UnknownMetricValue {
++		t.Fatalf("ResolveTokenMetric(unavailable) = %q, want %q", got, UnknownMetricValue)
++	}
++
++	if got := ResolveMetric(false, ""); got != UnknownMetricValue {
++		t.Fatalf("ResolveMetric(unavailable) = %q, want %q", got, UnknownMetricValue)
++	}
++	if got := ResolveMetric(true, ""); got != UnknownMetricValue {
++		t.Fatalf("ResolveMetric(available but empty) = %q, want %q", got, UnknownMetricValue)
++	}
++}
++
++func TestTelemetry_EstimationWithoutIdentifiedMethodFails(t *testing.T) {
++	if _, err := ResolveTokenMetric("123", ""); !errors.Is(err, ErrUnidentifiedEstimationMethod) {
++		t.Fatalf("error = %v, want ErrUnidentifiedEstimationMethod when a value is present without a method", err)
++	}
++}
++
++func TestTelemetry_ValueWithIdentifiedMethodSucceeds(t *testing.T) {
++	got, err := ResolveTokenMetric("123", "provider_reported")
++	if err != nil {
++		t.Fatalf("unexpected error: %v", err)
++	}
++	if got != "123" {
++		t.Fatalf("ResolveTokenMetric() = %q, want %q", got, "123")
++	}
++}
++
++func TestTelemetry_AdversarialNoSilentEstimation(t *testing.T) {
++	inputs := []struct {
++		value  string
++		method string
++	}{
++		{"1", ""},
++		{"999999", ""},
++		{"0", ""},
++	}
++	for _, in := range inputs {
++		if _, err := ResolveTokenMetric(in.value, in.method); !errors.Is(err, ErrUnidentifiedEstimationMethod) {
++			t.Fatalf("value=%q method=%q: error = %v, want ErrUnidentifiedEstimationMethod — no path may fabricate a value silently",
++				in.value, in.method, err)
++		}
++	}
++}

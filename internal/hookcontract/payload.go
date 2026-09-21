@@ -22,11 +22,12 @@ var (
 )
 
 type Envelope struct {
-	SchemaVersion int
-	Event         EventKind
-	Provider      string
-	SessionID     string
-	Payload       json.RawMessage
+	SchemaVersion   int
+	Event           EventKind
+	Provider        string
+	SessionID       string
+	InvocationDepth int
+	Payload         json.RawMessage
 }
 
 type Decoder interface {
@@ -34,11 +35,12 @@ type Decoder interface {
 }
 
 type envelopeWireFormat struct {
-	SchemaVersion int             `json:"schema_version"`
-	Event         string          `json:"event"`
-	Provider      string          `json:"provider"`
-	SessionID     string          `json:"session_id"`
-	Payload       json.RawMessage `json:"payload"`
+	SchemaVersion   int             `json:"schema_version"`
+	Event           string          `json:"event"`
+	Provider        string          `json:"provider"`
+	SessionID       string          `json:"session_id"`
+	InvocationDepth int             `json:"invocation_depth,omitempty"`
+	Payload         json.RawMessage `json:"payload"`
 }
 
 type strictDecoder struct{}
@@ -69,11 +71,12 @@ func (strictDecoder) Decode(raw []byte) (Envelope, error) {
 	}
 
 	return Envelope{
-		SchemaVersion: wire.SchemaVersion,
-		Event:         event,
-		Provider:      wire.Provider,
-		SessionID:     wire.SessionID,
-		Payload:       wire.Payload,
+		SchemaVersion:   wire.SchemaVersion,
+		Event:           event,
+		Provider:        wire.Provider,
+		SessionID:       wire.SessionID,
+		InvocationDepth: wire.InvocationDepth,
+		Payload:         wire.Payload,
 	}, nil
 }
 

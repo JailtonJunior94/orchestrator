@@ -1,0 +1,6 @@
+{
+  "status": "done",
+  "report_path": ".specs/prd-hooks-canonicos-vendor-neutral/12.0_execution_report.md",
+  "summary": "Telemetria comum (schema RF-47, unknown explicito RF-46), ablation consumindo BuildAblationBaseline/CompareAblation existentes (RF-64/65, critico sobrevive a REMOVE), guarda de recursao e timeout por hook implementados e conectados ao dispatcher Go de producao (internal/runtime/hooks/dispatcher.go), unico Dispatcher usado por runner.go em todos os pontos canonicos. Tres rodadas de revisao (REJECTED -> APPROVED_WITH_REMARKS -> APPROVED_WITH_REMARKS final, zero HIGH/CRITICAL). make test lint vet coverage check-mocks verdes.",
+  "timestamp": "2026-09-20T23:59:00Z"
+}

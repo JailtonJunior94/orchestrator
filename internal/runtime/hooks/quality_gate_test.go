@@ -3,6 +3,7 @@ package hooks
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
@@ -27,6 +28,10 @@ func (d *recordingDispatcher) Dispatch(ctx context.Context, point string, evt Ev
 			return err
 		}
 	}
+	return nil
+}
+
+func (d *recordingDispatcher) SetHookTimeout(hook string, timeout time.Duration) error {
 	return nil
 }
 

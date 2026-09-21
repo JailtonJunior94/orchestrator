@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
+	"time"
 
+	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks"
 )
 
@@ -167,6 +170,82 @@ func TestDispatcher_ConcurrentSafe(t *testing.T) {
 		if err := d.Dispatch(context.Background(), hooks.PointToolCallPreDispatch, evt); err != nil {
 			t.Fatalf("Dispatch concorrente: %v", err)
 		}
+	}
+}
+
+type reentrantHook struct {
+	name       string
+	dispatcher hooks.Dispatcher
+	point      string
+	nestedErr  *error
+}
+
+func (h *reentrantHook) Name() string { return h.name }
+func (h *reentrantHook) Run(ctx context.Context, evt hooks.Event) error {
+	*h.nestedErr = h.dispatcher.Dispatch(ctx, h.point, evt)
+	return nil
+}
+
+func TestDispatcher_RecursionGuardBlocksReentrantDispatch(t *testing.T) {
+	d := hooks.New()
+	var nestedErr error
+
+	h := &reentrantHook{name: "self-reentrant", dispatcher: d, point: hooks.PointToolCallPreDispatch, nestedErr: &nestedErr}
+	d.Register(hooks.PointToolCallPreDispatch, h)
+
+	evt := hooks.ToolCallEvent{Phase: "pre_dispatch"}
+	if err := d.Dispatch(context.Background(), hooks.PointToolCallPreDispatch, evt); err != nil {
+		t.Fatalf("outer Dispatch unexpected error: %v", err)
+	}
+	if nestedErr == nil {
+		t.Fatal("nested Dispatch call must be blocked by the recursion guard, got nil error")
+	}
+	wantSubstring := "invocation depth"
+	if !strings.Contains(nestedErr.Error(), wantSubstring) {
+		t.Fatalf("nested Dispatch error = %q, want it to mention %q (recursion guard denial)", nestedErr.Error(), wantSubstring)
+	}
+}
+
+type slowHook struct {
+	name  string
+	delay time.Duration
+}
+
+func (h *slowHook) Name() string { return h.name }
+func (h *slowHook) Run(ctx context.Context, _ hooks.Event) error {
+	select {
+	case <-time.After(h.delay):
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func TestDispatcher_TimeoutBlocksSlowHook(t *testing.T) {
+	d := hooks.New()
+	if err := d.SetHookTimeout("slow-validator", 20*time.Millisecond); err != nil {
+		t.Fatalf("SetHookTimeout unexpected error: %v", err)
+	}
+	d.Register(hooks.PointSessionPostEnd, &slowHook{name: "slow-validator", delay: 200 * time.Millisecond})
+
+	err := d.Dispatch(context.Background(), hooks.PointSessionPostEnd, hooks.SessionPostEndEvent{})
+	if err == nil {
+		t.Fatal("expected timeout error, Dispatch returned nil")
+	}
+	if !errors.Is(err, hookcontract.ErrHookTimedOut) {
+		t.Fatalf("error = %v, want ErrHookTimedOut — timeout must be treated as denial", err)
+	}
+}
+
+func TestDispatcher_FastHookWithinTimeoutSucceeds(t *testing.T) {
+	d := hooks.New()
+	if err := d.SetHookTimeout("fast-validator", 500*time.Millisecond); err != nil {
+		t.Fatalf("SetHookTimeout unexpected error: %v", err)
+	}
+	d.Register(hooks.PointSessionPostEnd, &slowHook{name: "fast-validator", delay: time.Millisecond})
+
+	if err := d.Dispatch(context.Background(), hooks.PointSessionPostEnd, hooks.SessionPostEndEvent{}); err != nil {
+		t.Fatalf("unexpected error for a hook within its declared timeout: %v", err)
 	}
 }
 

@@ -1,0 +1,486 @@
+=== RUN   TestCapability_UnsupportedIsNotSuccess
+--- PASS: TestCapability_UnsupportedIsNotSuccess (0.00s)
+=== RUN   TestCapability_AdapterRequiresLimitation
+=== RUN   TestCapability_AdapterRequiresLimitation/missing_limitation
+=== RUN   TestCapability_AdapterRequiresLimitation/declared_limitation
+--- PASS: TestCapability_AdapterRequiresLimitation (0.00s)
+    --- PASS: TestCapability_AdapterRequiresLimitation/missing_limitation (0.00s)
+    --- PASS: TestCapability_AdapterRequiresLimitation/declared_limitation (0.00s)
+=== RUN   TestCapability_RejectsEmptyProviderAndInvalidEvent
+--- PASS: TestCapability_RejectsEmptyProviderAndInvalidEvent (0.00s)
+=== RUN   TestSupportState_ThreeDistinctValues
+--- PASS: TestSupportState_ThreeDistinctValues (0.00s)
+=== RUN   TestEventKind_ParseAndString
+=== RUN   TestEventKind_ParseAndString/session_start
+=== RUN   TestEventKind_ParseAndString/before_tool
+=== RUN   TestEventKind_ParseAndString/after_tool
+=== RUN   TestEventKind_ParseAndString/before_complete
+=== RUN   TestEventKind_ParseAndString/session_end
+--- PASS: TestEventKind_ParseAndString (0.00s)
+    --- PASS: TestEventKind_ParseAndString/session_start (0.00s)
+    --- PASS: TestEventKind_ParseAndString/before_tool (0.00s)
+    --- PASS: TestEventKind_ParseAndString/after_tool (0.00s)
+    --- PASS: TestEventKind_ParseAndString/before_complete (0.00s)
+    --- PASS: TestEventKind_ParseAndString/session_end (0.00s)
+=== RUN   TestEventKind_ParseUnknownReturnsSentinel
+--- PASS: TestEventKind_ParseUnknownReturnsSentinel (0.00s)
+=== RUN   TestEventKind_ZeroValueIsInvalid
+--- PASS: TestEventKind_ZeroValueIsInvalid (0.00s)
+=== RUN   TestEventKinds_ReturnsAllFive
+--- PASS: TestEventKinds_ReturnsAllFive (0.00s)
+=== RUN   TestExitCodeTranslator_PreservesCurrentSemantics
+=== RUN   TestExitCodeTranslator_PreservesCurrentSemantics/git-operation-gate.sh_GIT_OPERATION_BLOCK_EXIT
+=== RUN   TestExitCodeTranslator_PreservesCurrentSemantics/validate-preload.sh_PRELOAD_BLOCK_EXIT
+=== RUN   TestExitCodeTranslator_PreservesCurrentSemantics/validate-session-end.sh_SESSION_END_BLOCK_EXIT
+=== RUN   TestExitCodeTranslator_PreservesCurrentSemantics/validate-governance.sh_literal_exit_1
+=== RUN   TestExitCodeTranslator_PreservesCurrentSemantics/success_exit_0
+--- PASS: TestExitCodeTranslator_PreservesCurrentSemantics (0.00s)
+    --- PASS: TestExitCodeTranslator_PreservesCurrentSemantics/git-operation-gate.sh_GIT_OPERATION_BLOCK_EXIT (0.00s)
+    --- PASS: TestExitCodeTranslator_PreservesCurrentSemantics/validate-preload.sh_PRELOAD_BLOCK_EXIT (0.00s)
+    --- PASS: TestExitCodeTranslator_PreservesCurrentSemantics/validate-session-end.sh_SESSION_END_BLOCK_EXIT (0.00s)
+    --- PASS: TestExitCodeTranslator_PreservesCurrentSemantics/validate-governance.sh_literal_exit_1 (0.00s)
+    --- PASS: TestExitCodeTranslator_PreservesCurrentSemantics/success_exit_0 (0.00s)
+=== RUN   TestExitCodeTranslator_CriticalUnmappedIsError
+--- PASS: TestExitCodeTranslator_CriticalUnmappedIsError (0.00s)
+=== RUN   TestExitCodeTranslator_NonCriticalUnmappedIsWarn
+--- PASS: TestExitCodeTranslator_NonCriticalUnmappedIsWarn (0.00s)
+=== RUN   TestExitCodeTranslator_ToExitCodeRoundTrip
+--- PASS: TestExitCodeTranslator_ToExitCodeRoundTrip (0.00s)
+=== RUN   TestHookContractHasNoProviderIdentifier
+--- PASS: TestHookContractHasNoProviderIdentifier (0.00s)
+=== RUN   TestEnvelope_RejectsUnknownField
+--- PASS: TestEnvelope_RejectsUnknownField (0.00s)
+=== RUN   TestEnvelope_RejectsUnsupportedSchemaVersion
+--- PASS: TestEnvelope_RejectsUnsupportedSchemaVersion (0.00s)
+=== RUN   TestEnvelope_RejectsUnknownEvent
+--- PASS: TestEnvelope_RejectsUnknownEvent (0.00s)
+=== RUN   TestEnvelope_RejectsMalformedJSON
+--- PASS: TestEnvelope_RejectsMalformedJSON (0.00s)
+=== RUN   TestEnvelope_AcceptsWellFormedV1
+--- PASS: TestEnvelope_AcceptsWellFormedV1 (0.00s)
+=== RUN   TestEnvelope_DefaultsInvocationDepthToZero
+--- PASS: TestEnvelope_DefaultsInvocationDepthToZero (0.00s)
+=== RUN   TestEnvelope_CarriesDeclaredInvocationDepth
+--- PASS: TestEnvelope_CarriesDeclaredInvocationDepth (0.00s)
+=== RUN   TestSchemaVersionMigration
+--- PASS: TestSchemaVersionMigration (0.00s)
+=== RUN   TestRecursionGuard_TopLevelInvocationAllowed
+--- PASS: TestRecursionGuard_TopLevelInvocationAllowed (0.00s)
+=== RUN   TestRecursionGuard_DirectRecursionBlocked
+--- PASS: TestRecursionGuard_DirectRecursionBlocked (0.00s)
+=== RUN   TestRecursionGuard_IndirectRecursionBlocked
+--- PASS: TestRecursionGuard_IndirectRecursionBlocked (0.00s)
+=== RUN   TestRecursionGuard_NegativeDepthRejected
+--- PASS: TestRecursionGuard_NegativeDepthRejected (0.00s)
+=== RUN   TestNextInvocationDepth_IncrementsFromEnvelope
+--- PASS: TestNextInvocationDepth_IncrementsFromEnvelope (0.00s)
+=== RUN   TestResult_BlockRequiresReasonAndPolicy
+=== RUN   TestResult_BlockRequiresReasonAndPolicy/missing_reason_and_policy
+=== RUN   TestResult_BlockRequiresReasonAndPolicy/missing_reason_only
+=== RUN   TestResult_BlockRequiresReasonAndPolicy/missing_policy_and_gate
+=== RUN   TestResult_BlockRequiresReasonAndPolicy/reason_and_policyID
+=== RUN   TestResult_BlockRequiresReasonAndPolicy/reason_and_gateID
+--- PASS: TestResult_BlockRequiresReasonAndPolicy (0.00s)
+    --- PASS: TestResult_BlockRequiresReasonAndPolicy/missing_reason_and_policy (0.00s)
+    --- PASS: TestResult_BlockRequiresReasonAndPolicy/missing_reason_only (0.00s)
+    --- PASS: TestResult_BlockRequiresReasonAndPolicy/missing_policy_and_gate (0.00s)
+    --- PASS: TestResult_BlockRequiresReasonAndPolicy/reason_and_policyID (0.00s)
+    --- PASS: TestResult_BlockRequiresReasonAndPolicy/reason_and_gateID (0.00s)
+=== RUN   TestResult_NonBlockDecisionsDoNotRequireReason
+--- PASS: TestResult_NonBlockDecisionsDoNotRequireReason (0.00s)
+=== RUN   TestResult_RejectsInvalidDecision
+--- PASS: TestResult_RejectsInvalidDecision (0.00s)
+=== RUN   TestNewAllow_IsAlwaysValid
+--- PASS: TestNewAllow_IsAlwaysValid (0.00s)
+=== RUN   TestNewNotApplicable_CarriesReason
+--- PASS: TestNewNotApplicable_CarriesReason (0.00s)
+=== RUN   TestResult_WithEvidenceAndMetadataAreImmutableCopies
+--- PASS: TestResult_WithEvidenceAndMetadataAreImmutableCopies (0.00s)
+=== RUN   TestDecision_StringValues
+--- PASS: TestDecision_StringValues (0.00s)
+=== RUN   TestHookTimeoutRegistry_DefaultMatchesOpenCodeBaseline
+--- PASS: TestHookTimeoutRegistry_DefaultMatchesOpenCodeBaseline (0.00s)
+=== RUN   TestHookTimeoutRegistry_DeclareAndOverride
+--- PASS: TestHookTimeoutRegistry_DeclareAndOverride (0.00s)
+=== RUN   TestHookTimeoutRegistry_RejectsInvalidDeclaration
+--- PASS: TestHookTimeoutRegistry_RejectsInvalidDeclaration (0.00s)
+=== RUN   TestMeasureHook_ExceedingTimeoutIsDenial
+--- PASS: TestMeasureHook_ExceedingTimeoutIsDenial (0.02s)
+=== RUN   TestMeasureHook_WithinTimeoutPassesThrough
+--- PASS: TestMeasureHook_WithinTimeoutPassesThrough (0.00s)
+=== RUN   TestMeasureHook_PropagatesCancellationToFn
+--- PASS: TestMeasureHook_PropagatesCancellationToFn (0.02s)
+=== RUN   FuzzDecode
+=== RUN   FuzzDecode/seed#0
+=== RUN   FuzzDecode/seed#1
+=== RUN   FuzzDecode/seed#2
+=== RUN   FuzzDecode/seed#3
+=== RUN   FuzzDecode/seed#4
+=== RUN   FuzzDecode/seed#5
+=== RUN   FuzzDecode/seed#6
+=== RUN   FuzzDecode/seed#7
+--- PASS: FuzzDecode (0.00s)
+    --- PASS: FuzzDecode/seed#0 (0.00s)
+    --- PASS: FuzzDecode/seed#1 (0.00s)
+    --- PASS: FuzzDecode/seed#2 (0.00s)
+    --- PASS: FuzzDecode/seed#3 (0.00s)
+    --- PASS: FuzzDecode/seed#4 (0.00s)
+    --- PASS: FuzzDecode/seed#5 (0.00s)
+    --- PASS: FuzzDecode/seed#6 (0.00s)
+    --- PASS: FuzzDecode/seed#7 (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract	0.229s
+=== RUN   TestCompareAblation_InsufficientSample
+--- PASS: TestCompareAblation_InsufficientSample (0.00s)
+=== RUN   TestCompareAblation_NoComparableMetric
+--- PASS: TestCompareAblation_NoComparableMetric (0.00s)
+=== RUN   TestCompareAblation_CostImproves
+--- PASS: TestCompareAblation_CostImproves (0.00s)
+=== RUN   TestCompareAblation_CostWorsens
+--- PASS: TestCompareAblation_CostWorsens (0.00s)
+=== RUN   TestCompareAblation_WithinTolerance
+--- PASS: TestCompareAblation_WithinTolerance (0.00s)
+=== RUN   TestCompareAblation_BaselineZeroCostAppears
+--- PASS: TestCompareAblation_BaselineZeroCostAppears (0.00s)
+=== RUN   TestBuildAblationBaseline_NeverIncludesMetricWithoutWriter
+--- PASS: TestBuildAblationBaseline_NeverIncludesMetricWithoutWriter (0.00s)
+=== RUN   TestTelemetry_LegacyUnchanged
+--- PASS: TestTelemetry_LegacyUnchanged (0.00s)
+=== RUN   TestTelemetry_ACPFields
+--- PASS: TestTelemetry_ACPFields (0.00s)
+=== RUN   TestLogACPSession_NoWriteWhenDisabled
+--- PASS: TestLogACPSession_NoWriteWhenDisabled (0.00s)
+=== RUN   TestLogACPSession_AllCancelReasons
+=== RUN   TestLogACPSession_AllCancelReasons/none
+=== RUN   TestLogACPSession_AllCancelReasons/activity_timeout
+=== RUN   TestLogACPSession_AllCancelReasons/context_canceled
+=== RUN   TestLogACPSession_AllCancelReasons/tool_error
+=== RUN   TestLogACPSession_AllCancelReasons/permission_denied
+--- PASS: TestLogACPSession_AllCancelReasons (0.00s)
+    --- PASS: TestLogACPSession_AllCancelReasons/none (0.00s)
+    --- PASS: TestLogACPSession_AllCancelReasons/activity_timeout (0.00s)
+    --- PASS: TestLogACPSession_AllCancelReasons/context_canceled (0.00s)
+    --- PASS: TestLogACPSession_AllCancelReasons/tool_error (0.00s)
+    --- PASS: TestLogACPSession_AllCancelReasons/permission_denied (0.00s)
+=== RUN   TestCorrelationFromEnvelope_RequiresSessionID
+--- PASS: TestCorrelationFromEnvelope_RequiresSessionID (0.00s)
+=== RUN   TestCorrelationFromEnvelope_UsesSessionIDAndTaskID
+--- PASS: TestCorrelationFromEnvelope_UsesSessionIDAndTaskID (0.00s)
+=== RUN   TestCorrelation_NeverDerivedFromPromptContent
+--- PASS: TestCorrelation_NeverDerivedFromPromptContent (0.00s)
+=== RUN   TestLogDurableMemorySession_OptInWritesFields
+--- PASS: TestLogDurableMemorySession_OptInWritesFields (0.00s)
+=== RUN   TestLogDurableMemorySession_OptOutWritesNothing
+--- PASS: TestLogDurableMemorySession_OptOutWritesNothing (0.00s)
+=== RUN   TestAblation_BaselineWithoutHook
+--- PASS: TestAblation_BaselineWithoutHook (0.00s)
+=== RUN   TestAblation_NonCriticalHookRemovedWhenCostRises
+--- PASS: TestAblation_NonCriticalHookRemovedWhenCostRises (0.00s)
+=== RUN   TestAblation_CriticalSecurityHookSurvivesRemoveDecision
+--- PASS: TestAblation_CriticalSecurityHookSurvivesRemoveDecision (0.00s)
+=== RUN   TestHookTelemetry_NoOpWithoutOptIn
+--- PASS: TestHookTelemetry_NoOpWithoutOptIn (0.00s)
+=== RUN   TestHookTelemetry_EmitsCanonicalFormatWhenOptedIn
+--- PASS: TestHookTelemetry_EmitsCanonicalFormatWhenOptedIn (0.00s)
+=== RUN   TestHookTelemetry_FailureDoesNotPropagateOrCountAsRetry
+--- PASS: TestHookTelemetry_FailureDoesNotPropagateOrCountAsRetry (0.00s)
+=== RUN   TestParseLogEntries
+=== RUN   TestParseLogEntries/arquivo_ausente
+=== RUN   TestParseLogEntries/linha_valida_com_ref
+=== RUN   TestParseLogEntries/linha_valida_sem_ref
+=== RUN   TestParseLogEntries/linha_malformada_ignorada
+=== RUN   TestParseLogEntries/filtro_since_exclui_antiga
+=== RUN   TestParseLogEntries/filtro_since_inclui_recente
+=== RUN   TestParseLogEntries/multiplas_entradas
+--- PASS: TestParseLogEntries (0.01s)
+    --- PASS: TestParseLogEntries/arquivo_ausente (0.00s)
+    --- PASS: TestParseLogEntries/linha_valida_com_ref (0.00s)
+    --- PASS: TestParseLogEntries/linha_valida_sem_ref (0.00s)
+    --- PASS: TestParseLogEntries/linha_malformada_ignorada (0.00s)
+    --- PASS: TestParseLogEntries/filtro_since_exclui_antiga (0.00s)
+    --- PASS: TestParseLogEntries/filtro_since_inclui_recente (0.00s)
+    --- PASS: TestParseLogEntries/multiplas_entradas (0.00s)
+=== RUN   TestReport
+=== RUN   TestReport/log_ausente
+=== RUN   TestReport/sem_dados_no_periodo
+=== RUN   TestReport/agregacao_correta
+=== RUN   TestReport/alerta_skill_sem_ref
+=== RUN   TestReport/top5_trunca_lista
+=== RUN   TestReport/json_valido
+=== RUN   TestReport/linha_malformada_ignorada
+--- PASS: TestReport (0.01s)
+    --- PASS: TestReport/log_ausente (0.00s)
+    --- PASS: TestReport/sem_dados_no_periodo (0.00s)
+    --- PASS: TestReport/agregacao_correta (0.00s)
+    --- PASS: TestReport/alerta_skill_sem_ref (0.00s)
+    --- PASS: TestReport/top5_trunca_lista (0.00s)
+    --- PASS: TestReport/json_valido (0.00s)
+    --- PASS: TestReport/linha_malformada_ignorada (0.00s)
+=== RUN   TestFormatText_SemDados
+--- PASS: TestFormatText_SemDados (0.00s)
+=== RUN   TestFormatText_ComDados
+--- PASS: TestFormatText_ComDados (0.00s)
+=== RUN   TestRF44_RoundTripViaProductionParser
+--- PASS: TestRF44_RoundTripViaProductionParser (0.00s)
+=== RUN   TestRF44_AbsentMetricIsNeverZero
+--- PASS: TestRF44_AbsentMetricIsNeverZero (0.00s)
+=== RUN   TestRF44_UnknownRawKeyNeverResolvesAsMetric
+--- PASS: TestRF44_UnknownRawKeyNeverResolvesAsMetric (0.00s)
+=== RUN   TestRF44_MetricsWithProductionWriterCoverage
+--- PASS: TestRF44_MetricsWithProductionWriterCoverage (0.00s)
+=== RUN   TestRF44_ReportSummaryTrendSurfaceNewKey
+--- PASS: TestRF44_ReportSummaryTrendSurfaceNewKey (0.00s)
+=== RUN   TestRF44MetricAvailability_EveryMetricIsExplicit
+--- PASS: TestRF44MetricAvailability_EveryMetricIsExplicit (0.00s)
+=== RUN   TestRF44MetricAvailability_CoversAllFifteenMetrics
+--- PASS: TestRF44MetricAvailability_CoversAllFifteenMetrics (0.00s)
+=== RUN   TestRF44MetricAvailability_TokensAreDeclaredUnknown
+--- PASS: TestRF44MetricAvailability_TokensAreDeclaredUnknown (0.00s)
+=== RUN   TestSchema_AcceptsEveryCommonMetric
+--- PASS: TestSchema_AcceptsEveryCommonMetric (0.00s)
+=== RUN   TestSchema_AcceptsNamespacedProviderKey
+--- PASS: TestSchema_AcceptsNamespacedProviderKey (0.00s)
+=== RUN   TestSchema_RejectsProviderKeyLeakingIntoCommonSpace
+--- PASS: TestSchema_RejectsProviderKeyLeakingIntoCommonSpace (0.00s)
+=== RUN   TestSchema_RejectsMalformedProviderNamespace
+--- PASS: TestSchema_RejectsMalformedProviderNamespace (0.00s)
+=== RUN   TestSchema_ValidateNoLeakageDetectsViolationAmongValidKeys
+--- PASS: TestSchema_ValidateNoLeakageDetectsViolationAmongValidKeys (0.00s)
+=== RUN   TestFindSensitiveField_Mutation
+=== RUN   TestFindSensitiveField_Mutation/linha_limpa
+=== RUN   TestFindSensitiveField_Mutation/api_key
+=== RUN   TestFindSensitiveField_Mutation/token_generico
+=== RUN   TestFindSensitiveField_Mutation/secret
+=== RUN   TestFindSensitiveField_Mutation/password
+=== RUN   TestFindSensitiveField_Mutation/cookie
+=== RUN   TestFindSensitiveField_Mutation/case_insensitive
+--- PASS: TestFindSensitiveField_Mutation (0.00s)
+    --- PASS: TestFindSensitiveField_Mutation/linha_limpa (0.00s)
+    --- PASS: TestFindSensitiveField_Mutation/api_key (0.00s)
+    --- PASS: TestFindSensitiveField_Mutation/token_generico (0.00s)
+    --- PASS: TestFindSensitiveField_Mutation/secret (0.00s)
+    --- PASS: TestFindSensitiveField_Mutation/password (0.00s)
+    --- PASS: TestFindSensitiveField_Mutation/cookie (0.00s)
+    --- PASS: TestFindSensitiveField_Mutation/case_insensitive (0.00s)
+=== RUN   TestNoSensitiveFieldsEmittedByProductionWriters
+--- PASS: TestNoSensitiveFieldsEmittedByProductionWriters (0.00s)
+=== RUN   TestLog_NoWriteWhenTelemetryDisabled
+--- PASS: TestLog_NoWriteWhenTelemetryDisabled (0.00s)
+=== RUN   TestLog_WritesLineWhenEnabled
+--- PASS: TestLog_WritesLineWhenEnabled (0.00s)
+=== RUN   TestLogClaudeMetrics_NoWriteWhenDisabled
+--- PASS: TestLogClaudeMetrics_NoWriteWhenDisabled (0.00s)
+=== RUN   TestLogClaudeMetrics_WritesEntriesWhenEnabled
+--- PASS: TestLogClaudeMetrics_WritesEntriesWhenEnabled (0.00s)
+=== RUN   TestLogClaudeMetrics_ZeroValues_WrittenWhenEnabled
+--- PASS: TestLogClaudeMetrics_ZeroValues_WrittenWhenEnabled (0.00s)
+=== RUN   TestSummary_AggregatesCorrectly
+--- PASS: TestSummary_AggregatesCorrectly (0.00s)
+=== RUN   TestTrend_ReturnsFourWeeks
+--- PASS: TestTrend_ReturnsFourWeeks (0.00s)
+=== RUN   TestTrend_EmptyLog_ReturnsFourEmptyWeeks
+--- PASS: TestTrend_EmptyLog_ReturnsFourEmptyWeeks (0.00s)
+=== RUN   TestFormatTrend_ContainsWeekLabels
+--- PASS: TestFormatTrend_ContainsWeekLabels (0.00s)
+=== RUN   TestBudgetCheck_NoAlerts_WhenUnderBudget
+--- PASS: TestBudgetCheck_NoAlerts_WhenUnderBudget (0.00s)
+=== RUN   TestBudgetCheck_Alert_WhenOverBudget
+--- PASS: TestBudgetCheck_Alert_WhenOverBudget (0.00s)
+=== RUN   TestFormatTopSkills_ContainsSkillNames
+--- PASS: TestFormatTopSkills_ContainsSkillNames (0.00s)
+=== RUN   TestFormatTopSkills_Empty_ReturnsNoData
+--- PASS: TestFormatTopSkills_Empty_ReturnsNoData (0.00s)
+=== RUN   TestTelemetry_UnavailableIsUnknown
+--- PASS: TestTelemetry_UnavailableIsUnknown (0.00s)
+=== RUN   TestTelemetry_EstimationWithoutIdentifiedMethodFails
+--- PASS: TestTelemetry_EstimationWithoutIdentifiedMethodFails (0.00s)
+=== RUN   TestTelemetry_ValueWithIdentifiedMethodSucceeds
+--- PASS: TestTelemetry_ValueWithIdentifiedMethodSucceeds (0.00s)
+=== RUN   TestTelemetry_AdversarialNoSilentEstimation
+--- PASS: TestTelemetry_AdversarialNoSilentEstimation (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/telemetry	0.212s
+=== RUN   TestRegisterQualityGate_RegistersOnlyOnSessionPostEnd
+--- PASS: TestRegisterQualityGate_RegistersOnlyOnSessionPostEnd (0.00s)
+=== RUN   TestQualityGateHook_IgnoresEventsOtherThanSessionPostEnd
+--- PASS: TestQualityGateHook_IgnoresEventsOtherThanSessionPostEnd (0.00s)
+=== RUN   TestQualityGateHook_BlockDecisionAbortsWithReason
+--- PASS: TestQualityGateHook_BlockDecisionAbortsWithReason (0.00s)
+=== RUN   TestDispatcher_OrderPreserved
+--- PASS: TestDispatcher_OrderPreserved (0.00s)
+=== RUN   TestDispatcher_AbortOnFirstError
+--- PASS: TestDispatcher_AbortOnFirstError (0.00s)
+=== RUN   TestDispatcher_UnknownPointReturnsNil
+--- PASS: TestDispatcher_UnknownPointReturnsNil (0.00s)
+=== RUN   TestDispatcher_ErrorWrapping
+--- PASS: TestDispatcher_ErrorWrapping (0.00s)
+=== RUN   TestDispatcher_IndependentPoints
+--- PASS: TestDispatcher_IndependentPoints (0.00s)
+=== RUN   TestDispatcher_ConcurrentSafe
+--- PASS: TestDispatcher_ConcurrentSafe (0.00s)
+=== RUN   TestDispatcher_RecursionGuardBlocksReentrantDispatch
+--- PASS: TestDispatcher_RecursionGuardBlocksReentrantDispatch (0.00s)
+=== RUN   TestDispatcher_TimeoutBlocksSlowHook
+--- PASS: TestDispatcher_TimeoutBlocksSlowHook (0.02s)
+=== RUN   TestDispatcher_FastHookWithinTimeoutSucceeds
+--- PASS: TestDispatcher_FastHookWithinTimeoutSucceeds (0.00s)
+=== RUN   TestPromptBuildEvent_KindReflectsPhase
+--- PASS: TestPromptBuildEvent_KindReflectsPhase (0.00s)
+=== RUN   TestToolCallEvent_KindReflectsPhase
+--- PASS: TestToolCallEvent_KindReflectsPhase (0.00s)
+=== RUN   TestGovernanceHook_AgentsMDAbsent
+--- PASS: TestGovernanceHook_AgentsMDAbsent (0.00s)
+=== RUN   TestGovernanceHook_AgentsMDPresent
+--- PASS: TestGovernanceHook_AgentsMDPresent (0.00s)
+=== RUN   TestGovernanceHook_WrongEventType
+--- PASS: TestGovernanceHook_WrongEventType (0.00s)
+=== RUN   TestGovernanceHook_ViaDispatcher_Absent
+--- PASS: TestGovernanceHook_ViaDispatcher_Absent (0.00s)
+=== RUN   TestGovernanceHook_ViaDispatcher_Present
+--- PASS: TestGovernanceHook_ViaDispatcher_Present (0.00s)
+=== RUN   TestMemoryEvents_KindMatchesPoint
+=== PAUSE TestMemoryEvents_KindMatchesPoint
+=== RUN   TestMemoryEvents_PointsAreDistinct
+=== PAUSE TestMemoryEvents_PointsAreDistinct
+=== RUN   TestMemoryEvidenceHook_Name
+=== PAUSE TestMemoryEvidenceHook_Name
+=== RUN   TestMemoryEvidenceHook_RecordsKnownEvents
+=== PAUSE TestMemoryEvidenceHook_RecordsKnownEvents
+=== RUN   TestMemoryEvidenceHook_NeverPropagatesError
+=== PAUSE TestMemoryEvidenceHook_NeverPropagatesError
+=== RUN   TestMemoryEvidenceHook_DoesNotAbortFanOutForSubsequentHooks
+=== PAUSE TestMemoryEvidenceHook_DoesNotAbortFanOutForSubsequentHooks
+=== RUN   TestMemoryPersistHook_Name
+=== PAUSE TestMemoryPersistHook_Name
+=== RUN   TestMemoryPersistHook_WritesMEMORYMD
+=== PAUSE TestMemoryPersistHook_WritesMEMORYMD
+=== RUN   TestMemoryPersistHook_IgnoresWrongEventType
+=== PAUSE TestMemoryPersistHook_IgnoresWrongEventType
+=== RUN   TestMemoryPersistHook_IgnoresNilSummary
+=== PAUSE TestMemoryPersistHook_IgnoresNilSummary
+=== RUN   TestMemoryPersistHook_ViaDispatcher
+=== PAUSE TestMemoryPersistHook_ViaDispatcher
+=== RUN   TestMemoryPersistHook_OverwritesPreviousContent
+=== PAUSE TestMemoryPersistHook_OverwritesPreviousContent
+=== RUN   TestMemoryPersistHook_TypeMismatchIsObservable
+--- PASS: TestMemoryPersistHook_TypeMismatchIsObservable (0.00s)
+=== RUN   TestCanonicalEventFor_MappedPointsReturnValidEvents
+--- PASS: TestCanonicalEventFor_MappedPointsReturnValidEvents (0.00s)
+=== RUN   TestCanonicalEventFor_UnmappedPointReturnsFalse
+--- PASS: TestCanonicalEventFor_UnmappedPointReturnsFalse (0.00s)
+=== RUN   TestPointsWithoutCanonicalEvent_ContainsHarnessOnlyPoints
+--- PASS: TestPointsWithoutCanonicalEvent_ContainsHarnessOnlyPoints (0.00s)
+=== RUN   TestAllPoints_UnionOfMappedAndUnmapped
+--- PASS: TestAllPoints_UnionOfMappedAndUnmapped (0.00s)
+=== RUN   TestSpecDriftHook_WrongEventType
+--- PASS: TestSpecDriftHook_WrongEventType (0.00s)
+=== RUN   TestSpecDriftHook_TasksDirEmpty_NoOp
+--- PASS: TestSpecDriftHook_TasksDirEmpty_NoOp (0.00s)
+=== RUN   TestSpecDriftHook_SkipDriftGuard_NoOp
+--- PASS: TestSpecDriftHook_SkipDriftGuard_NoOp (0.00s)
+=== RUN   TestSpecDriftHook_NoHashFound_ErrPRDUntracked
+--- PASS: TestSpecDriftHook_NoHashFound_ErrPRDUntracked (0.00s)
+=== RUN   TestSpecDriftHook_HashDiverged_ErrSpecDrift
+--- PASS: TestSpecDriftHook_HashDiverged_ErrSpecDrift (0.00s)
+=== RUN   TestSpecDriftHook_HashMatch_Pass
+--- PASS: TestSpecDriftHook_HashMatch_Pass (0.00s)
+=== RUN   TestSpecDriftHook_TasksMissing_NoOp
+--- PASS: TestSpecDriftHook_TasksMissing_NoOp (0.00s)
+=== RUN   TestSpecDriftHook_TasksUnreadable_InfraError
+--- PASS: TestSpecDriftHook_TasksUnreadable_InfraError (0.00s)
+=== RUN   TestSpecDriftHook_NoPRDFile_NoHashCheck
+--- PASS: TestSpecDriftHook_NoPRDFile_NoHashCheck (0.00s)
+=== RUN   TestTokenBudgetHook_WithinBudget
+--- PASS: TestTokenBudgetHook_WithinBudget (0.00s)
+=== RUN   TestTokenBudgetHook_ExceedsBudget
+--- PASS: TestTokenBudgetHook_ExceedsBudget (0.00s)
+=== RUN   TestTokenBudgetHook_NilPrompt
+--- PASS: TestTokenBudgetHook_NilPrompt (0.00s)
+=== RUN   TestTokenBudgetHook_UnknownTool
+--- PASS: TestTokenBudgetHook_UnknownTool (0.00s)
+=== RUN   TestTokenBudgetHook_WrongEventType
+--- PASS: TestTokenBudgetHook_WrongEventType (0.00s)
+=== RUN   TestTokenBudgetHook_DefaultTool
+--- PASS: TestTokenBudgetHook_DefaultTool (0.00s)
+=== RUN   TestTokenBudgetHook_WindowLarge_GenerousBudget
+--- PASS: TestTokenBudgetHook_WindowLarge_GenerousBudget (0.00s)
+=== RUN   TestTokenBudgetHook_WindowStandard_ConservativeBudget
+--- PASS: TestTokenBudgetHook_WindowStandard_ConservativeBudget (0.00s)
+=== RUN   TestTokenBudgetHook_ZeroValue_WindowClass_IsF1
+--- PASS: TestTokenBudgetHook_ZeroValue_WindowClass_IsF1 (0.00s)
+=== RUN   TestTokenBudgetHook_ViaDispatcher
+--- PASS: TestTokenBudgetHook_ViaDispatcher (0.00s)
+=== RUN   TestTokenBudgetScalesWithResolvedWindow
+--- PASS: TestTokenBudgetScalesWithResolvedWindow (0.00s)
+=== RUN   TestTokenBudgetZeroWindowPreservesTabledLimit
+--- PASS: TestTokenBudgetZeroWindowPreservesTabledLimit (0.00s)
+=== RUN   TestTokenBudgetNominalWindowPreservesTabledLimit
+--- PASS: TestTokenBudgetNominalWindowPreservesTabledLimit (0.00s)
+=== CONT  TestMemoryEvents_KindMatchesPoint
+=== RUN   TestMemoryEvents_KindMatchesPoint/FactRecorded
+=== PAUSE TestMemoryEvents_KindMatchesPoint/FactRecorded
+=== CONT  TestMemoryPersistHook_ViaDispatcher
+=== CONT  TestMemoryPersistHook_Name
+=== CONT  TestMemoryPersistHook_OverwritesPreviousContent
+=== RUN   TestMemoryEvents_KindMatchesPoint/FactArchived
+=== PAUSE TestMemoryEvents_KindMatchesPoint/FactArchived
+=== RUN   TestMemoryEvents_KindMatchesPoint/FactPromoted
+=== PAUSE TestMemoryEvents_KindMatchesPoint/FactPromoted
+=== RUN   TestMemoryEvents_KindMatchesPoint/ContradictionDetected
+=== PAUSE TestMemoryEvents_KindMatchesPoint/ContradictionDetected
+=== RUN   TestMemoryEvents_KindMatchesPoint/SecretRedacted
+=== PAUSE TestMemoryEvents_KindMatchesPoint/SecretRedacted
+=== RUN   TestMemoryEvents_KindMatchesPoint/CompactionExecuted
+=== PAUSE TestMemoryEvents_KindMatchesPoint/CompactionExecuted
+=== RUN   TestMemoryEvents_KindMatchesPoint/BatonTransferred
+=== PAUSE TestMemoryEvents_KindMatchesPoint/BatonTransferred
+=== CONT  TestMemoryEvents_PointsAreDistinct
+--- PASS: TestMemoryEvents_PointsAreDistinct (0.00s)
+=== CONT  TestMemoryPersistHook_IgnoresWrongEventType
+=== CONT  TestMemoryEvidenceHook_DoesNotAbortFanOutForSubsequentHooks
+--- PASS: TestMemoryEvidenceHook_DoesNotAbortFanOutForSubsequentHooks (0.00s)
+=== CONT  TestMemoryPersistHook_IgnoresNilSummary
+2026/09/20 21:06:43 [memory_persist] unexpected SessionPostEndEvent.Summary type: string
+2026/09/20 21:06:43 [memory_persist] Memory Compaction Requested: false
+2026/09/20 21:06:43 [memory_persist] Memory Workflow Bytes: 249
+2026/09/20 21:06:43 [memory_persist] Task: task-1.0.md | Events: 5 | Tool Calls: 2
+2026/09/20 21:06:43 [memory_persist] Memory Compaction Requested: false
+2026/09/20 21:06:43 [memory_persist] Memory Workflow Bytes: 250
+2026/09/20 21:06:43 [memory_persist] Task: task-2.0.md | Events: 20 | Tool Calls: 8
+=== CONT  TestMemoryEvidenceHook_NeverPropagatesError
+--- PASS: TestMemoryEvidenceHook_NeverPropagatesError (0.00s)
+=== CONT  TestMemoryPersistHook_WritesMEMORYMD
+2026/09/20 21:06:43 [memory_persist] Memory Compaction Requested: false
+2026/09/20 21:06:43 [memory_persist] Memory Workflow Bytes: 250
+2026/09/20 21:06:43 [memory_persist] Task: task-1.0.md | Events: 10 | Tool Calls: 3
+=== CONT  TestMemoryEvidenceHook_RecordsKnownEvents
+--- PASS: TestMemoryPersistHook_Name (0.00s)
+=== CONT  TestMemoryEvents_KindMatchesPoint/FactRecorded
+=== CONT  TestMemoryEvents_KindMatchesPoint/SecretRedacted
+=== CONT  TestMemoryEvents_KindMatchesPoint/BatonTransferred
+=== CONT  TestMemoryEvents_KindMatchesPoint/CompactionExecuted
+=== CONT  TestMemoryEvents_KindMatchesPoint/FactPromoted
+=== CONT  TestMemoryEvents_KindMatchesPoint/ContradictionDetected
+=== CONT  TestMemoryEvents_KindMatchesPoint/FactArchived
+--- PASS: TestMemoryPersistHook_IgnoresWrongEventType (0.00s)
+--- PASS: TestMemoryEvents_KindMatchesPoint (0.00s)
+    --- PASS: TestMemoryEvents_KindMatchesPoint/FactRecorded (0.00s)
+    --- PASS: TestMemoryEvents_KindMatchesPoint/SecretRedacted (0.00s)
+    --- PASS: TestMemoryEvents_KindMatchesPoint/BatonTransferred (0.00s)
+    --- PASS: TestMemoryEvents_KindMatchesPoint/CompactionExecuted (0.00s)
+    --- PASS: TestMemoryEvents_KindMatchesPoint/FactPromoted (0.00s)
+    --- PASS: TestMemoryEvents_KindMatchesPoint/ContradictionDetected (0.00s)
+    --- PASS: TestMemoryEvents_KindMatchesPoint/FactArchived (0.00s)
+=== CONT  TestMemoryEvidenceHook_Name
+--- PASS: TestMemoryEvidenceHook_Name (0.00s)
+--- PASS: TestMemoryEvidenceHook_RecordsKnownEvents (0.00s)
+--- PASS: TestMemoryPersistHook_IgnoresNilSummary (0.00s)
+2026/09/20 21:06:43 [memory_persist] Memory Compaction Requested: false
+2026/09/20 21:06:43 [memory_persist] Memory Workflow Bytes: 268
+2026/09/20 21:06:43 [memory_persist] Task: task-6.0-runner-integrate-f3.md | Events: 42 | Tool Calls: 7
+--- PASS: TestMemoryPersistHook_OverwritesPreviousContent (0.00s)
+--- PASS: TestMemoryPersistHook_ViaDispatcher (0.00s)
+--- PASS: TestMemoryPersistHook_WritesMEMORYMD (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks	0.125s
+?   	github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks/mocks	[no test files]

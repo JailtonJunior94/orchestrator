@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "run_id": "task-12.0-2026-09-20",
+  "task_id": "12.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "8ab32246c554b59b96d14d38d1dc24b8f676e194",
+  "patch_sha256": "64c6515512921259a0b4afa2f67df0eb18628bcf9f383a1ecffb9311ce810f8c",
+  "patch_ref": "evidence/task-12.0-hooks-canonicos-vendor-neutral/patch.diff",
+  "final_state_sha256": "73c2b1615ad05a9f047342023c21293f11da36a2ee84be7f42a426c10ad273f1",
+  "coverage_regression": false,
+  "tests": [
+    {"command": "go build ./...", "exit_code": 0, "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+    {"command": "go vet ./...", "exit_code": 0, "output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+    {"command": "go test ./...", "exit_code": 0, "output_sha256": "baa03872bd834f7023d8679f9cd715c7c9ba4a50f04e7544d43c99d1f1da9a42"},
+    {"command": "go test ./internal/hookcontract/... ./internal/telemetry/... ./internal/runtime/hooks/... -v", "exit_code": 0, "output_sha256": "857fc597c9ec10acbf1e3647737dc645c72209d4becdd7ae74590a070bed04e9"},
+    {"command": "golangci-lint run --config .golangci.yml --timeout 10m ./...", "exit_code": 0, "output_sha256": "e92606b0bf483111dff0a120c315ea165821348f31365020e2468a0059095c47"},
+    {"command": "go test -coverprofile=coverage.out ./...", "exit_code": 0, "output_sha256": "3142a38a6717bce60cf831b4f9410804237f912f53bc8b8f94162bbc36feb007"},
+    {"command": "go tool cover -func=coverage_filtered.out", "exit_code": 0, "output_sha256": "6d51ccdc2b23399d68449caeced3ca1d5fb5344a70608d2e26ca539e299fe8b6"},
+    {"command": "bash scripts/check-package-coverage.sh 70", "exit_code": 0, "output_sha256": "13743319d79f5996cbb11b0fab6bebd77cee5f81238c4d8ddd52ade8362132b7"},
+    {"command": "bash scripts/check-mocks.sh", "exit_code": 0, "output_sha256": "b1d91938e8acf29e44eedd7309466a57e2051808d29fd98cc76e0d414b83d6e2"}
+  ],
+  "criteria": [
+    {"id": "rf47-common-schema-declared-with-leakage-gate", "evidence_ref": "evidence/task-12.0-hooks-canonicos-vendor-neutral/go-test-scope.log"},
+    {"id": "rf46-unavailable-is-unknown-adversarial-test", "evidence_ref": "evidence/task-12.0-hooks-canonicos-vendor-neutral/go-test-scope.log"},
+    {"id": "opt-in-and-format-unchanged-noop-proof", "evidence_ref": "evidence/task-12.0-hooks-canonicos-vendor-neutral/go-test-scope.log"},
+    {"id": "no-new-dependency-in-go-mod", "evidence_ref": "evidence/task-12.0-hooks-canonicos-vendor-neutral/patch.diff"},
+    {"id": "test-ablation-baseline-without-hook", "evidence_ref": "evidence/task-12.0-hooks-canonicos-vendor-neutral/go-test-scope.log"},
+    {"id": "rf65-critical-hook-survives-remove", "evidence_ref": "evidence/task-12.0-hooks-canonicos-vendor-neutral/go-test-scope.log"},
+    {"id": "rf66-timeout-declared-measurable-denial-opencode-parity", "evidence_ref": "evidence/task-12.0-hooks-canonicos-vendor-neutral/go-test-scope.log"},
+    {"id": "test-recursion-guard-direct-and-indirect", "evidence_ref": "evidence/task-12.0-hooks-canonicos-vendor-neutral/go-test-scope.log"},
+    {"id": "rf48-telemetry-failure-never-blocks-or-retries", "evidence_ref": "evidence/task-12.0-hooks-canonicos-vendor-neutral/go-test-scope.log"},
+    {"id": "non-regression-make-test-lint-vet", "evidence_ref": "evidence/task-12.0-hooks-canonicos-vendor-neutral/go-test-all.log"},
+    {"id": "coverage-gates-75-total-70-critical", "evidence_ref": "evidence/task-12.0-hooks-canonicos-vendor-neutral/coverage-func.log"}
+  ],
+  "evidence": [
+    "evidence/task-12.0-hooks-canonicos-vendor-neutral/patch.diff",
+    "evidence/task-12.0-hooks-canonicos-vendor-neutral/go-build.log",
+    "evidence/task-12.0-hooks-canonicos-vendor-neutral/go-vet.log",
+    "evidence/task-12.0-hooks-canonicos-vendor-neutral/go-test-all.log",
+    "evidence/task-12.0-hooks-canonicos-vendor-neutral/go-test-scope.log",
+    "evidence/task-12.0-hooks-canonicos-vendor-neutral/lint.log",
+    "evidence/task-12.0-hooks-canonicos-vendor-neutral/coverage.log",
+    "evidence/task-12.0-hooks-canonicos-vendor-neutral/coverage-func.log",
+    "evidence/task-12.0-hooks-canonicos-vendor-neutral/coverage-packages.log",
+    "evidence/task-12.0-hooks-canonicos-vendor-neutral/check-mocks.log",
+    "evidence/task-12.0-hooks-canonicos-vendor-neutral/final-state-concat.txt",
+    "evidence/task-12.0-hooks-canonicos-vendor-neutral/reviewer-verdict.md"
+  ],
+  "review_verdict": "approved"
+}

@@ -671,7 +671,7 @@ func (c *Catalog) prepareHooksDispatcher(
 	sessionPostReviewTestHook hooks.Hook,
 	memRecorder *hooks.MemoryEvidenceRecorder,
 ) hooks.Dispatcher {
-	disp := hooks.New()
+	disp := hooks.New(j.WorkDir)
 
 	if j.DisableHooks {
 		return disp
