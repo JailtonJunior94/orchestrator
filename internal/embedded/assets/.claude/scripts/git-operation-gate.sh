@@ -306,6 +306,21 @@ for segment in split_segments(tokens):
             result = classify_git(segment, pos)
             if result and (not scope_names or result["subcommand"] in scope_names):
                 matches.append(result)
+            elif result is None:
+                dynamic_subcommand, dynamic_idx = resolve_git_subcommand(segment, pos)
+                dynamic_found = dynamic_subcommand is None
+                if not dynamic_found:
+                    for token in segment[pos:dynamic_idx + 1]:
+                        if "$" in token and not ASSIGNMENT_RE.match(token):
+                            dynamic_found = True
+                            break
+                if not dynamic_found and dynamic_subcommand in {"reset", "clean", "checkout"}:
+                    for token in segment[dynamic_idx + 1:]:
+                        if "$" in token and not ASSIGNMENT_RE.match(token):
+                            dynamic_found = True
+                            break
+                if dynamic_found:
+                    interpreter_hits.append("variable_expansion")
         if candidate == "eval":
             interpreter_hits.append("eval")
         if candidate in INTERPRETER_SHELLS and "-c" in segment[pos:]:

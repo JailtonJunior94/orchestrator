@@ -29,6 +29,7 @@ type LockEntry struct {
 type LockFile struct {
 	Version int                  `json:"version"`
 	Skills  map[string]LockEntry `json:"skills"`
+	Hooks   map[string]LockEntry `json:"hooks,omitempty"`
 }
 
 // VersionDrift classifica o tipo de mudanca de versao.
@@ -65,17 +66,26 @@ func NewService(fsys fs.FileSystem, printer *output.Printer) *Service {
 	return &Service{fs: fsys, printer: printer}
 }
 
-// Check verifica o estado de versao de todas as skills externas no projectDir.
-func (s *Service) Check(projectDir string) ([]SkillVersionCheck, error) {
+// readLock le e parseia o skills-lock.json do projectDir.
+func (s *Service) readLock(projectDir string) (LockFile, error) {
 	lockPath := filepath.Join(projectDir, "skills-lock.json")
 	lockData, err := s.fs.ReadFile(lockPath)
 	if err != nil {
-		return nil, fmt.Errorf("ler skills-lock.json: %w", err)
+		return LockFile{}, fmt.Errorf("ler skills-lock.json: %w", err)
 	}
 
 	var lock LockFile
 	if err := json.Unmarshal(lockData, &lock); err != nil {
-		return nil, fmt.Errorf("parsear skills-lock.json: %w", err)
+		return LockFile{}, fmt.Errorf("parsear skills-lock.json: %w", err)
+	}
+	return lock, nil
+}
+
+// Check verifica o estado de versao de todas as skills externas no projectDir.
+func (s *Service) Check(projectDir string) ([]SkillVersionCheck, error) {
+	lock, err := s.readLock(projectDir)
+	if err != nil {
+		return nil, err
 	}
 
 	skillsDir := filepath.Join(projectDir, ".agents", "skills")
@@ -150,6 +160,39 @@ func (s *Service) Verify(projectDir string) ([]IntegrityFailure, error) {
 			failures = append(failures, IntegrityFailure{Check: r, Reason: "breaking: major version bump"})
 		case !r.HashMatch:
 			failures = append(failures, IntegrityFailure{Check: r, Reason: "hash diverge do registrado em skills-lock.json"})
+		}
+	}
+
+	hookFailures, err := s.verifyHooks(projectDir)
+	if err != nil {
+		return nil, err
+	}
+	failures = append(failures, hookFailures...)
+	return failures, nil
+}
+
+// verifyHooks confere a integridade dos hooks criticos registrados no campo
+// "hooks" de skills-lock.json (RF-70), namespace separado do mapa "skills"
+// para preservar o invariante de que toda entrada em "skills" corresponde a
+// um diretorio de skill real em .agents/skills/.
+func (s *Service) verifyHooks(projectDir string) ([]IntegrityFailure, error) {
+	lock, err := s.readLock(projectDir)
+	if err != nil {
+		return nil, err
+	}
+
+	var failures []IntegrityFailure
+	for hookPath, entry := range lock.Hooks {
+		targetPath := filepath.Join(projectDir, entry.Path)
+		data, readErr := s.fs.ReadFile(targetPath)
+		check := SkillVersionCheck{Name: hookPath, LockedVer: entry.Version}
+		if readErr != nil {
+			failures = append(failures, IntegrityFailure{Check: check, Reason: "hook nao encontrado"})
+			continue
+		}
+		check.HashMatch = s.hashOf(data) == entry.ComputedHash
+		if !check.HashMatch {
+			failures = append(failures, IntegrityFailure{Check: check, Reason: "hash diverge do registrado em skills-lock.json"})
 		}
 	}
 	return failures, nil

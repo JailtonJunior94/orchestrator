@@ -957,6 +957,31 @@ print(json.dumps({'tool_input': {'command': cmd}}))
 assert_gate_exit "continuação de linha antes do subcomando não escapa" 2 "$line_cont_payload"
 rm -f "$line_cont_payload"
 
+echo "Subcomando git dinâmico via variável de shell não pode escapar do gate (BUG CRITICAL, re-revisão da tarefa 6.0 pós-cec5d9c)"
+declare -a dynamic_subcommand_commands=(
+  'git $SUBCMD --force'
+  'SUBCMD=push; git $SUBCMD --force'
+  'git reset $MODE'
+  'git -C /repo $SUBCMD --force'
+)
+for command in "${dynamic_subcommand_commands[@]}"; do
+  assert_git_gate_command "subcomando git dinâmico deve bloquear (fail-closed): $command" 2 "$command"
+done
+
+echo "Controle: subcomando git literal com apenas flag/argumento dinâmico já bloqueia por outro motivo"
+assert_git_gate_command 'git commit $FLAG -m msg (commit sempre regulado)' 2 'git commit $FLAG -m msg'
+assert_git_gate_command 'git push --$SOMEFLAG (push sempre regulado)' 2 'git push --$SOMEFLAG'
+
+echo "Controle: expansão de variável comum sem relação com git continua passando (não reabrir falso positivo original)"
+assert_git_gate_command 'echo $PATH deve continuar passando' 0 'echo $PATH'
+assert_git_gate_command 'cat $HOME/.bashrc deve continuar passando' 0 'cat $HOME/.bashrc'
+
+echo "Controle: casos já cobertos anteriormente (positivos e negativos) devem permanecer estáveis"
+assert_git_gate_command 'controle positivo: git push origin main bloqueia' 2 'git push origin main'
+assert_git_gate_command 'bypass IFS já fechado continua fechado' 2 'git${IFS}push${IFS}--force'
+assert_git_gate_command 'bypass $G $P já fechado continua fechado' 2 'G=git; P=push; $G $P --force'
+assert_git_gate_command 'sudo git push origin main bloqueia' 2 'sudo git push origin main'
+
 echo
 echo "Passaram: $passed | Falharam: $failed"
 [[ "$failed" -eq 0 ]] || exit 1

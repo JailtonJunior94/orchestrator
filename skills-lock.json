@@ -45,84 +45,6 @@
       "version": "1.0.0",
       "computedHash": "a231e779d50506d4fbcbe58d662e756bc360decf2b63769bf063215a91b15acf"
     },
-    "hook:.agents/hooks/validate-governance.sh": {
-      "source": "internal",
-      "sourceType": "hook",
-      "path": ".agents/hooks/validate-governance.sh",
-      "computedHash": "25f79444f2e143d995bb0101b7649222028374176766e5e00abc4e0207192418"
-    },
-    "hook:.agents/hooks/validate-preload.sh": {
-      "source": "internal",
-      "sourceType": "hook",
-      "path": ".agents/hooks/validate-preload.sh",
-      "computedHash": "004bf7d976469376c6b5fce947a01f704d6775c017e71688b78d34244cfef926"
-    },
-    "hook:.agents/hooks/validate-session-end.sh": {
-      "source": "internal",
-      "sourceType": "hook",
-      "path": ".agents/hooks/validate-session-end.sh",
-      "computedHash": "2ead6a2105c5aa8cbbb8d26acb72ae94e8eaf9ea7d93b263ff4074beacf8ba64"
-    },
-    "hook:.agents/scripts/git-operation-gate.sh": {
-      "source": "internal",
-      "sourceType": "hook",
-      "path": ".agents/scripts/git-operation-gate.sh",
-      "computedHash": "03e4b37e28c32bf66fa0d1f7f984e35fa956bb15be0bcb9a97aef4e851a3d41f"
-    },
-    "hook:.agents/scripts/hook-prereq-gate.sh": {
-      "source": "internal",
-      "sourceType": "hook",
-      "path": ".agents/scripts/hook-prereq-gate.sh",
-      "computedHash": "4cbac9dc702377666d89de10da4631e7db76ba10f46006c0a3a5a3af5f3dc07e"
-    },
-    "hook:.agents/scripts/validate-bugfix-evidence.sh": {
-      "source": "internal",
-      "sourceType": "hook",
-      "path": ".agents/scripts/validate-bugfix-evidence.sh",
-      "computedHash": "7ce4468dbec8e2edcc9686158686e1aa7ace2f24ea0888fc8a0fa78b827217a3"
-    },
-    "hook:.agents/scripts/validate-governance-references.sh": {
-      "source": "internal",
-      "sourceType": "hook",
-      "path": ".agents/scripts/validate-governance-references.sh",
-      "computedHash": "fae7c9e655fc386bd7557347203b69c7a46d800ed20e85845b098a5ab0aa2aba"
-    },
-    "hook:.agents/scripts/validate-refactor-evidence.sh": {
-      "source": "internal",
-      "sourceType": "hook",
-      "path": ".agents/scripts/validate-refactor-evidence.sh",
-      "computedHash": "5afec7f2ff94bed0d2445c84062a3e6e3a322fc801485da73cbc97c90862de65"
-    },
-    "hook:.agents/scripts/validate-review-evidence.sh": {
-      "source": "internal",
-      "sourceType": "hook",
-      "path": ".agents/scripts/validate-review-evidence.sh",
-      "computedHash": "cffe4095d5a6f1cd461ebf2b74c10be87fd21fa44bdded263307955258194de1"
-    },
-    "hook:.agents/scripts/validate-session-end.sh": {
-      "source": "internal",
-      "sourceType": "hook",
-      "path": ".agents/scripts/validate-session-end.sh",
-      "computedHash": "2ead6a2105c5aa8cbbb8d26acb72ae94e8eaf9ea7d93b263ff4074beacf8ba64"
-    },
-    "hook:.agents/scripts/validate-skill-prerequisites.sh": {
-      "source": "internal",
-      "sourceType": "hook",
-      "path": ".agents/scripts/validate-skill-prerequisites.sh",
-      "computedHash": "74db2341d628473572a03248e279bf5d4deb489e5cddb25804760e55f5e6d613"
-    },
-    "hook:.agents/scripts/validate-task-evidence.sh": {
-      "source": "internal",
-      "sourceType": "hook",
-      "path": ".agents/scripts/validate-task-evidence.sh",
-      "computedHash": "4aa752f5165e8954442d521c3939cf744ff2d3b2fadd584c914301f73f029133"
-    },
-    "hook:scripts/git-hooks/pre-commit": {
-      "source": "internal",
-      "sourceType": "hook",
-      "path": "scripts/git-hooks/pre-commit",
-      "computedHash": "959a4bebda410cb585dcc4c34898fb0e6c8a2f2a0b0548cb6922729ca151872b"
-    },
     "jira-tasks": {
       "source": "JailtonJunior94/skills",
       "sourceType": "github",
@@ -164,6 +86,86 @@
       "sourceType": "github",
       "version": "1.0.0",
       "computedHash": "f2a3793f02bd30984b5fe0f19efeb3a8d9280302056f88f41cc7f7fea900697a"
+    }
+  },
+  "hooks": {
+    ".agents/hooks/validate-governance.sh": {
+      "source": "internal",
+      "sourceType": "hook",
+      "path": ".agents/hooks/validate-governance.sh",
+      "computedHash": "25f79444f2e143d995bb0101b7649222028374176766e5e00abc4e0207192418"
+    },
+    ".agents/hooks/validate-preload.sh": {
+      "source": "internal",
+      "sourceType": "hook",
+      "path": ".agents/hooks/validate-preload.sh",
+      "computedHash": "004bf7d976469376c6b5fce947a01f704d6775c017e71688b78d34244cfef926"
+    },
+    ".agents/hooks/validate-session-end.sh": {
+      "source": "internal",
+      "sourceType": "hook",
+      "path": ".agents/hooks/validate-session-end.sh",
+      "computedHash": "2ead6a2105c5aa8cbbb8d26acb72ae94e8eaf9ea7d93b263ff4074beacf8ba64"
+    },
+    ".agents/scripts/git-operation-gate.sh": {
+      "source": "internal",
+      "sourceType": "hook",
+      "path": ".agents/scripts/git-operation-gate.sh",
+      "computedHash": "a5659124c9ff5e62c9362316ecc3abab318c54b1b1bf4e71ee0704f7c799237c"
+    },
+    ".agents/scripts/hook-prereq-gate.sh": {
+      "source": "internal",
+      "sourceType": "hook",
+      "path": ".agents/scripts/hook-prereq-gate.sh",
+      "computedHash": "4cbac9dc702377666d89de10da4631e7db76ba10f46006c0a3a5a3af5f3dc07e"
+    },
+    ".agents/scripts/validate-bugfix-evidence.sh": {
+      "source": "internal",
+      "sourceType": "hook",
+      "path": ".agents/scripts/validate-bugfix-evidence.sh",
+      "computedHash": "7ce4468dbec8e2edcc9686158686e1aa7ace2f24ea0888fc8a0fa78b827217a3"
+    },
+    ".agents/scripts/validate-governance-references.sh": {
+      "source": "internal",
+      "sourceType": "hook",
+      "path": ".agents/scripts/validate-governance-references.sh",
+      "computedHash": "fae7c9e655fc386bd7557347203b69c7a46d800ed20e85845b098a5ab0aa2aba"
+    },
+    ".agents/scripts/validate-refactor-evidence.sh": {
+      "source": "internal",
+      "sourceType": "hook",
+      "path": ".agents/scripts/validate-refactor-evidence.sh",
+      "computedHash": "5afec7f2ff94bed0d2445c84062a3e6e3a322fc801485da73cbc97c90862de65"
+    },
+    ".agents/scripts/validate-review-evidence.sh": {
+      "source": "internal",
+      "sourceType": "hook",
+      "path": ".agents/scripts/validate-review-evidence.sh",
+      "computedHash": "cffe4095d5a6f1cd461ebf2b74c10be87fd21fa44bdded263307955258194de1"
+    },
+    ".agents/scripts/validate-session-end.sh": {
+      "source": "internal",
+      "sourceType": "hook",
+      "path": ".agents/scripts/validate-session-end.sh",
+      "computedHash": "2ead6a2105c5aa8cbbb8d26acb72ae94e8eaf9ea7d93b263ff4074beacf8ba64"
+    },
+    ".agents/scripts/validate-skill-prerequisites.sh": {
+      "source": "internal",
+      "sourceType": "hook",
+      "path": ".agents/scripts/validate-skill-prerequisites.sh",
+      "computedHash": "74db2341d628473572a03248e279bf5d4deb489e5cddb25804760e55f5e6d613"
+    },
+    ".agents/scripts/validate-task-evidence.sh": {
+      "source": "internal",
+      "sourceType": "hook",
+      "path": ".agents/scripts/validate-task-evidence.sh",
+      "computedHash": "4aa752f5165e8954442d521c3939cf744ff2d3b2fadd584c914301f73f029133"
+    },
+    "scripts/git-hooks/pre-commit": {
+      "source": "internal",
+      "sourceType": "hook",
+      "path": "scripts/git-hooks/pre-commit",
+      "computedHash": "959a4bebda410cb585dcc4c34898fb0e6c8a2f2a0b0548cb6922729ca151872b"
     }
   }
 }

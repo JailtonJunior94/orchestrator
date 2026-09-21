@@ -23,7 +23,12 @@ func newService(t *testing.T) (*skillscheck.Service, *fs.FakeFileSystem) {
 
 func writeLock(t *testing.T, fake *fs.FakeFileSystem, projectDir string, entries map[string]skillscheck.LockEntry) {
 	t.Helper()
-	lock := skillscheck.LockFile{Version: 1, Skills: entries}
+	writeLockWithHooks(t, fake, projectDir, entries, nil)
+}
+
+func writeLockWithHooks(t *testing.T, fake *fs.FakeFileSystem, projectDir string, skillEntries, hookEntries map[string]skillscheck.LockEntry) {
+	t.Helper()
+	lock := skillscheck.LockFile{Version: 1, Skills: skillEntries, Hooks: hookEntries}
 	data, err := json.Marshal(lock)
 	if err != nil {
 		t.Fatal(err)
@@ -230,8 +235,8 @@ func TestCheck_PathEntryDetectsHookDrift(t *testing.T) {
 	hookPath := ".agents/hooks/validate-preload.sh"
 	originalContent := []byte("#!/usr/bin/env bash\nexit 2\n")
 	sum := sha256.Sum256(originalContent)
-	writeLock(t, fake, dir, map[string]skillscheck.LockEntry{
-		"hook:" + hookPath: {Source: "internal", SourceType: "hook", Path: hookPath, ComputedHash: fmt.Sprintf("%x", sum)},
+	writeLockWithHooks(t, fake, dir, nil, map[string]skillscheck.LockEntry{
+		hookPath: {Source: "internal", SourceType: "hook", Path: hookPath, ComputedHash: fmt.Sprintf("%x", sum)},
 	})
 	if err := fake.WriteFile(filepath.Join(dir, hookPath), originalContent); err != nil {
 		t.Fatalf("WriteFile hook: %v", err)
