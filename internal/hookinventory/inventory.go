@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
@@ -164,7 +165,7 @@ func (s *Service) newEntry(location string, data []byte) Entry {
 		entry.Classification = "ON-DEMAND"
 		entry.Justification = "ON-DEMAND (LOCAL-ONLY inerte): allowlist CLAUDE_LOCAL_ONLY_HOOKS (scripts/check-hooks-sync.sh:154,158) impede o espelhamento deste hook para outros provedores e ele nunca e registrado em .claude/settings.json — decisao registrada aqui em vez de tratada como divergencia de sync."
 	}
-	if failureMode, ok := s.failOpen(location); ok {
+	if failureMode, ok := s.failOpen(location, data); ok {
 		entry.FailureMode = failureMode
 	}
 	if s.critical(location) {
@@ -463,16 +464,79 @@ func (s *Service) duplication(location string) string {
 	return "Sem espelho equivalente inventariado."
 }
 
-func (s *Service) failOpen(location string) (string, bool) {
-	modes := map[string]string{
-		".agents/hooks/subagent-stop-wrapper.sh": "FAIL-OPEN (.agents/hooks/subagent-stop-wrapper.sh:30,35,40,87,101)",
-		".agents/hooks/validate-governance.sh":   "FAIL-OPEN (.agents/hooks/validate-governance.sh:33,41)",
-		".agents/scripts/hook-prereq-gate.sh":    "FAIL-OPEN (.agents/scripts/hook-prereq-gate.sh:50,60)",
-		".agents/hooks/validate-preload.sh":      "FAIL-OPEN (.agents/hooks/validate-preload.sh:54,65)",
-		".agents/scripts/git-operation-gate.sh":  "FAIL-OPEN (.agents/scripts/git-operation-gate.sh:39-41)",
+var (
+	governancePayloadMissingPattern = regexp.MustCompile(`hook-payload\.sh nao encontrado`)
+	governanceMissingTargetPattern  = regexp.MustCompile(`\[\[\s*-n\s*"\$file_path"\s*\]\]\s*\|\|\s*exit 0`)
+	gitOperationPayloadStartPattern = regexp.MustCompile(`^payload=""$`)
+	gitOperationPayloadEndPattern   = regexp.MustCompile(`^fi$`)
+	preloadUnrecognizedExtPattern   = regexp.MustCompile(`\*\)\s*exit 0\s*;;`)
+)
+
+func lineOfPattern(content string, pattern *regexp.Regexp) (int, bool) {
+	for index, line := range strings.Split(content, "\n") {
+		if pattern.MatchString(line) {
+			return index + 1, true
+		}
 	}
-	mode, ok := modes[location]
-	return mode, ok
+	return 0, false
+}
+
+func lineRangeOfPattern(content string, start, end *regexp.Regexp, window int) (int, int, bool) {
+	lines := strings.Split(content, "\n")
+	for index, line := range lines {
+		if !start.MatchString(line) {
+			continue
+		}
+		limit := index + window
+		if limit > len(lines) {
+			limit = len(lines)
+		}
+		for cursor := index; cursor < limit; cursor++ {
+			if end.MatchString(lines[cursor]) {
+				return index + 1, cursor + 1, true
+			}
+		}
+	}
+	return 0, 0, false
+}
+
+func (s *Service) failOpen(location string, data []byte) (string, bool) {
+	static := map[string]string{
+		".agents/hooks/subagent-stop-wrapper.sh": "FAIL-OPEN (.agents/hooks/subagent-stop-wrapper.sh:30,35,40,87,101)",
+		".agents/scripts/hook-prereq-gate.sh":    "FAIL-OPEN (.agents/scripts/hook-prereq-gate.sh:50,60)",
+	}
+	if mode, ok := static[location]; ok {
+		return mode, true
+	}
+	content := string(data)
+	switch location {
+	case ".agents/hooks/validate-governance.sh":
+		lines := make([]string, 0, 2)
+		if line, ok := lineOfPattern(content, governancePayloadMissingPattern); ok {
+			lines = append(lines, strconv.Itoa(line))
+		}
+		if line, ok := lineOfPattern(content, governanceMissingTargetPattern); ok {
+			lines = append(lines, strconv.Itoa(line))
+		}
+		if len(lines) == 0 {
+			return "", false
+		}
+		return fmt.Sprintf("FAIL-OPEN (%s:%s)", location, strings.Join(lines, ",")), true
+	case ".agents/scripts/git-operation-gate.sh":
+		start, end, ok := lineRangeOfPattern(content, gitOperationPayloadStartPattern, gitOperationPayloadEndPattern, 5)
+		if !ok {
+			return "", false
+		}
+		return fmt.Sprintf("FAIL-OPEN (%s:%d-%d)", location, start, end), true
+	case ".agents/hooks/validate-preload.sh":
+		line, ok := lineOfPattern(content, preloadUnrecognizedExtPattern)
+		if !ok {
+			return "", false
+		}
+		return fmt.Sprintf("FAIL-OPEN (%s:%d)", location, line), true
+	default:
+		return "", false
+	}
 }
 
 func (s *Service) critical(location string) bool {
@@ -509,6 +573,7 @@ func (s *Service) json(entries []Entry) ([]byte, error) {
 type skillsLockFile struct {
 	Version int                        `json:"version"`
 	Skills  map[string]json.RawMessage `json:"skills"`
+	Hooks   map[string]json.RawMessage `json:"hooks,omitempty"`
 }
 
 type hookLockEntry struct {
@@ -532,8 +597,8 @@ func (s *Service) criticalCanonicalEntries(entries []Entry) []Entry {
 	return result
 }
 
-func (s *Service) lockKey(location string) string {
-	return "hook:" + location
+func (s *Service) hookKey(location string) string {
+	return location
 }
 
 func (s *Service) readSkillsLock(root string) (skillsLockFile, error) {
@@ -548,6 +613,9 @@ func (s *Service) readSkillsLock(root string) (skillsLockFile, error) {
 	}
 	if lock.Skills == nil {
 		lock.Skills = make(map[string]json.RawMessage)
+	}
+	if lock.Hooks == nil {
+		lock.Hooks = make(map[string]json.RawMessage)
 	}
 	return lock, nil
 }
@@ -567,7 +635,7 @@ func (s *Service) syncSkillsLock(root string, entries []Entry) error {
 		if err != nil {
 			return fmt.Errorf("marshal hook lock entry %s: %w", entry.Location, err)
 		}
-		lock.Skills[s.lockKey(entry.Location)] = encoded
+		lock.Hooks[s.hookKey(entry.Location)] = encoded
 	}
 	out, err := json.MarshalIndent(lock, "", "  ")
 	if err != nil {
@@ -585,7 +653,7 @@ func (s *Service) checkSkillsLock(root string, entries []Entry) error {
 		return err
 	}
 	for _, entry := range s.criticalCanonicalEntries(entries) {
-		raw, ok := lock.Skills[s.lockKey(entry.Location)]
+		raw, ok := lock.Hooks[s.hookKey(entry.Location)]
 		if !ok {
 			return fmt.Errorf("skills-lock drift: hook critico sem entrada em skills-lock.json: %s", entry.Location)
 		}

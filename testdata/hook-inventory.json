@@ -68,7 +68,7 @@
     "policy_gate": "R-GOV-001 (protecao de AGENTS.md/SKILL.md); modo warn via GOVERNANCE_HOOK_MODE e opt-out explicito.",
     "blocking": "BLOQUEANTE",
     "cost": "baixo",
-    "failure_mode": "FAIL-OPEN (.agents/hooks/validate-governance.sh:33,41)",
+    "failure_mode": "FAIL-OPEN (.agents/hooks/validate-governance.sh:33,45)",
     "test_coverage": "COM TESTE",
     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
     "classification": "KEEP",
@@ -84,7 +84,7 @@
     "policy_gate": "R-GOV-001 (governanca transversal) + hook-prereq-gate.sh + git-operation-gate.sh; nenhuma policy em .agents/policies/ e lida diretamente pelo script.",
     "blocking": "BLOQUEANTE",
     "cost": "baixo",
-    "failure_mode": "FAIL-OPEN (.agents/hooks/validate-preload.sh:54,65)",
+    "failure_mode": "FAIL-OPEN (.agents/hooks/validate-preload.sh:91)",
     "test_coverage": "COM TESTE",
     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
     "classification": "KEEP",
@@ -161,12 +161,12 @@
     "policy_gate": "Protocolo de Seguranca Git do AGENTS.md/CLAUDE.md (nao executar git destrutivo sem pedido explicito).",
     "blocking": "BLOQUEANTE",
     "cost": "baixo",
-    "failure_mode": "FAIL-OPEN (.agents/scripts/git-operation-gate.sh:39-41)",
+    "failure_mode": "FAIL-OPEN (.agents/scripts/git-operation-gate.sh:43-46)",
     "test_coverage": "COM TESTE",
     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
     "classification": "KEEP",
     "justification": "KEEP: unica barreira automatizada contra comandos git destrutivos nao confirmados; alvo dedicado da tarefa 2.0 deste PRD para revisao de profundidade da analise. Fonte canonica em .agents/scripts/git-operation-gate.sh; distribuida para os demais provedores por instalacao/sync, nao registrada diretamente em nenhum settings/config de provedor.",
-    "integrity_hash": "03e4b37e28c32bf66fa0d1f7f984e35fa956bb15be0bcb9a97aef4e851a3d41f"
+    "integrity_hash": "a5659124c9ff5e62c9362316ecc3abab318c54b1b1bf4e71ee0704f7c799237c"
   },
   {
     "name": "hook-prereq-gate.sh",
@@ -449,7 +449,7 @@
     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
     "classification": "KEEP",
     "justification": "KEEP: unica barreira automatizada contra comandos git destrutivos nao confirmados; alvo dedicado da tarefa 2.0 deste PRD para revisao de profundidade da analise.",
-    "integrity_hash": "03e4b37e28c32bf66fa0d1f7f984e35fa956bb15be0bcb9a97aef4e851a3d41f"
+    "integrity_hash": "a5659124c9ff5e62c9362316ecc3abab318c54b1b1bf4e71ee0704f7c799237c"
   },
   {
     "name": "hook-prereq-gate.sh",
