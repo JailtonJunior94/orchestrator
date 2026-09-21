@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.2.1 (2026-09-21)
+
+### Bug Fixes
+- **upgrade:** sincroniza hooks/scripts/lib com paridade real entre os 4 CLIs (9e03df3)
+
+### Documentation
+- **bugfix:** registra validacao end-to-end real do fix de paridade upgrade (e029d09)
+
 ## 2.2.0 (2026-09-21)
 
 ### Features
