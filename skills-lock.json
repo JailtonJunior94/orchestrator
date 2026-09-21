@@ -111,7 +111,7 @@
       "source": "internal",
       "sourceType": "hook",
       "path": ".agents/scripts/git-operation-gate.sh",
-      "computedHash": "a5659124c9ff5e62c9362316ecc3abab318c54b1b1bf4e71ee0704f7c799237c"
+      "computedHash": "57c62da82020623f59ec69b834bee0be6cf263737f710900d43969449fbf50ad"
     },
     ".agents/scripts/hook-prereq-gate.sh": {
       "source": "internal",

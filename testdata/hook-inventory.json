@@ -166,7 +166,7 @@
     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
     "classification": "KEEP",
     "justification": "KEEP: unica barreira automatizada contra comandos git destrutivos nao confirmados; alvo dedicado da tarefa 2.0 deste PRD para revisao de profundidade da analise. Fonte canonica em .agents/scripts/git-operation-gate.sh; distribuida para os demais provedores por instalacao/sync, nao registrada diretamente em nenhum settings/config de provedor.",
-    "integrity_hash": "a5659124c9ff5e62c9362316ecc3abab318c54b1b1bf4e71ee0704f7c799237c"
+    "integrity_hash": "57c62da82020623f59ec69b834bee0be6cf263737f710900d43969449fbf50ad"
   },
   {
     "name": "hook-prereq-gate.sh",
@@ -449,7 +449,7 @@
     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
     "classification": "KEEP",
     "justification": "KEEP: unica barreira automatizada contra comandos git destrutivos nao confirmados; alvo dedicado da tarefa 2.0 deste PRD para revisao de profundidade da analise.",
-    "integrity_hash": "a5659124c9ff5e62c9362316ecc3abab318c54b1b1bf4e71ee0704f7c799237c"
+    "integrity_hash": "57c62da82020623f59ec69b834bee0be6cf263737f710900d43969449fbf50ad"
   },
   {
     "name": "hook-prereq-gate.sh",
