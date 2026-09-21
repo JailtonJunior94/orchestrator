@@ -912,6 +912,42 @@ else
   failed=$((failed+1))
 fi
 
+echo
+echo "  H5-6: post-wave.sh funciona sem flock no PATH (fallback mkdir portavel)"
+NOFLOCK_BIN="$TMP_BASE/noflock-bin"
+mkdir -p "$NOFLOCK_BIN"
+for tool in bash cat mkdir rmdir rm mv mktemp date grep sed printf sleep env git kill basename dirname find wc; do
+  real_tool_path=""
+  IFS=':' read -ra path_dirs <<<"$REAL_BIN_PATH"
+  for dir in "${path_dirs[@]}"; do
+    if [[ -x "$dir/$tool" ]]; then
+      real_tool_path="$dir/$tool"
+      break
+    fi
+  done
+  [[ -n "$real_tool_path" ]] && ln -sf "$real_tool_path" "$NOFLOCK_BIN/$tool"
+done
+POST_WAVE_NOFLOCK_TMP=$(mktemp -d "$TMP_BASE/post-wave-noflock.XXXXXX" 2>/dev/null || mktemp -d /tmp/post-wave-noflock.XXXXXX)
+mkdir -p "$POST_WAVE_NOFLOCK_TMP/.specs/prd-postwave"
+(cd "$POST_WAVE_NOFLOCK_TMP" && PATH="$REAL_BIN_PATH" git init -q .)
+printf 'status: done\n' >"$POST_WAVE_NOFLOCK_TMP/results.yaml"
+PARTIAL_MD_NOFLOCK="$POST_WAVE_NOFLOCK_TMP/.specs/prd-postwave/_orchestration_report.partial.md"
+if PATH="$NOFLOCK_BIN" command -v flock >/dev/null 2>&1; then
+  echo "  ✗ H5-6: setup invalido, flock ainda visivel no PATH restrito"
+  failed=$((failed+1))
+else
+  (cd "$POST_WAVE_NOFLOCK_TMP" && AI_TASKS_ROOT=.specs PATH="$NOFLOCK_BIN" bash "$POST_WAVE_HOOK" postwave 1.0 results.yaml >/dev/null 2>&1)
+  noflock_exit=$?
+  assert_exit "H5-6: post-wave.sh sem flock, exit 0 (fallback mkdir)" 0 "$noflock_exit"
+  if [[ -f "$PARTIAL_MD_NOFLOCK" ]] && grep -qF "### Wave 1.0" "$PARTIAL_MD_NOFLOCK" 2>/dev/null; then
+    echo "  ✓ H5-6: checkpoint escrito corretamente via fallback"
+    passed=$((passed+1))
+  else
+    echo "  ✗ H5-6: checkpoint nao foi escrito via fallback"
+    failed=$((failed+1))
+  fi
+fi
+
 rm -rf "$POST_WAVE_TMP"
 
 # ============================================================================

@@ -42,12 +42,39 @@ if [[ ! -d "$PRD_DIR" ]]; then
   exit 1
 fi
 
+acquire_lock_mkdir() {
+  local lock_dir="$1" timeout="$2" waited=0
+  while true; do
+    if mkdir "$lock_dir" 2>/dev/null; then
+      echo "$$" > "$lock_dir/pid" 2>/dev/null || true
+      return 0
+    fi
+    if [[ -f "$lock_dir/pid" ]]; then
+      local holder_pid
+      holder_pid="$(cat "$lock_dir/pid" 2>/dev/null || echo "")"
+      if [[ -n "$holder_pid" ]] && ! kill -0 "$holder_pid" 2>/dev/null; then
+        rm -rf "$lock_dir" 2>/dev/null || true
+        continue
+      fi
+    fi
+    if [[ $waited -ge $timeout ]]; then
+      echo "FAIL: lock $lock_dir ocupado apos ${timeout}s" >&2
+      return 1
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+}
+
 if [[ "${POST_WAVE_LOCK_HELD:-0}" != "1" ]]; then
-  if ! command -v flock >/dev/null 2>&1; then
-    echo "FAIL: flock ausente no PATH; instale util-linux/flock para post-wave.sh" >&2
+  if command -v flock >/dev/null 2>&1; then
+    exec env POST_WAVE_LOCK_HELD=1 flock -x -w 30 "$LOCK_FILE" "$0" "$@"
+  fi
+  LOCK_DIR="$LOCK_FILE.d"
+  if ! acquire_lock_mkdir "$LOCK_DIR" 30; then
     exit 1
   fi
-  exec env POST_WAVE_LOCK_HELD=1 flock -x -w 30 "$LOCK_FILE" "$0" "$@"
+  trap 'rm -rf "$LOCK_DIR"' EXIT
 fi
 
 sanitize_stream() {
