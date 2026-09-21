@@ -1,11 +1,14 @@
 package hookinventory
 
 import (
+	"encoding/json"
 	"io"
+	"path/filepath"
 	"testing"
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/skillscheck"
 	"github.com/stretchr/testify/require"
 )
 
@@ -60,5 +63,79 @@ func newInventoryFileSystem() *fs.FakeFileSystem {
 	for _, path := range paths {
 		filesystem.Files["repo/"+path] = []byte("content")
 	}
+	filesystem.Files["repo/skills-lock.json"] = []byte(`{"version":1,"skills":{}}`)
 	return filesystem
+}
+
+func TestClassificationRemoveDoesNotAuthorizeDeletion(t *testing.T) {
+	filesystem := newInventoryFileSystem()
+	printer := &output.Printer{Out: io.Discard, Err: io.Discard}
+	service := NewService(filesystem, printer)
+
+	entries, err := service.Generate("repo")
+	require.NoError(t, err)
+
+	removeEntries := make([]Entry, 0)
+	for _, entry := range entries {
+		if entry.Classification == "REMOVE" {
+			removeEntries = append(removeEntries, entry)
+		}
+	}
+	require.NotEmpty(t, removeEntries, "esperado ao menos uma entrada classificada REMOVE para validar RF-04")
+
+	for _, entry := range removeEntries {
+		_, readErr := filesystem.ReadFile(filepath.Join("repo", entry.Location))
+		require.NoErrorf(t, readErr, "RF-04: hook classificado REMOVE nao pode ser removido sem cobertura previa do invariante no core (%s)", entry.Location)
+	}
+
+	require.NoError(t, service.Check("repo"))
+}
+
+func TestGenerateSyncsSkillsLockAndCheckDetectsHookDrift(t *testing.T) {
+	filesystem := newInventoryFileSystem()
+	printer := &output.Printer{Out: io.Discard, Err: io.Discard}
+	service := NewService(filesystem, printer)
+
+	entries, err := service.Generate("repo")
+	require.NoError(t, err)
+
+	criticalEntries := 0
+	for _, entry := range entries {
+		if entry.IntegrityHash != "" {
+			criticalEntries++
+		}
+	}
+	require.Positive(t, criticalEntries, "esperado ao menos um hook critico com IntegrityHash")
+
+	lockData, err := filesystem.ReadFile("repo/skills-lock.json")
+	require.NoError(t, err)
+	var lock skillscheck.LockFile
+	require.NoError(t, json.Unmarshal(lockData, &lock))
+	require.Contains(t, lock.Skills, "hook:.agents/hooks/validate-preload.sh")
+	require.Equal(t, ".agents/hooks/validate-preload.sh", lock.Skills["hook:.agents/hooks/validate-preload.sh"].Path)
+
+	require.NoError(t, service.Check("repo"))
+
+	skillcheckService := skillscheck.NewService(filesystem, printer)
+	failures, err := skillcheckService.Verify("repo")
+	require.NoError(t, err)
+	require.Empty(t, failures)
+
+	filesystem.Files["repo/.agents/hooks/validate-preload.sh"] = []byte("content-alterado")
+
+	failures, err = skillcheckService.Verify("repo")
+	require.NoError(t, err)
+	require.Len(t, failures, 1, "RF-70: alteracao em hook critico deve ser detectavel pelo check de integridade (skills-lock.json)")
+	require.Equal(t, "hash diverge do registrado em skills-lock.json", failures[0].Reason)
+
+	err = service.Check("repo")
+	require.Error(t, err, "Check deve falhar quando o inventario diverge do hook alterado antes de reexecutar Generate")
+
+	_, err = service.Generate("repo")
+	require.NoError(t, err)
+	require.NoError(t, service.Check("repo"))
+
+	failures, err = skillcheckService.Verify("repo")
+	require.NoError(t, err)
+	require.Empty(t, failures, "skills-lock.json deve refletir o novo hash apos regenerar o inventario")
 }

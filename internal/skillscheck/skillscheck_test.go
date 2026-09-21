@@ -223,6 +223,45 @@ func TestVerify_VersaoAusenteHashIntegro(t *testing.T) {
 	}
 }
 
+func TestCheck_PathEntryDetectsHookDrift(t *testing.T) {
+	svc, fake := newService(t)
+	dir := "/proj"
+
+	hookPath := ".agents/hooks/validate-preload.sh"
+	originalContent := []byte("#!/usr/bin/env bash\nexit 2\n")
+	sum := sha256.Sum256(originalContent)
+	writeLock(t, fake, dir, map[string]skillscheck.LockEntry{
+		"hook:" + hookPath: {Source: "internal", SourceType: "hook", Path: hookPath, ComputedHash: fmt.Sprintf("%x", sum)},
+	})
+	if err := fake.WriteFile(filepath.Join(dir, hookPath), originalContent); err != nil {
+		t.Fatalf("WriteFile hook: %v", err)
+	}
+
+	failures, err := svc.Verify(dir)
+	if err != nil {
+		t.Fatalf("Verify erro inesperado: %v", err)
+	}
+	if len(failures) != 0 {
+		t.Fatalf("hook inalterado nao deveria falhar a integridade, obtido: %+v", failures)
+	}
+
+	tampered := []byte("#!/usr/bin/env bash\nexit 0\n")
+	if err := fake.WriteFile(filepath.Join(dir, hookPath), tampered); err != nil {
+		t.Fatalf("WriteFile hook alterado: %v", err)
+	}
+
+	failures, err = svc.Verify(dir)
+	if err != nil {
+		t.Fatalf("Verify erro inesperado: %v", err)
+	}
+	if len(failures) != 1 {
+		t.Fatalf("esperado 1 falha apos alteracao do hook critico, obtido %d: %+v", len(failures), failures)
+	}
+	if failures[0].Reason != "hash diverge do registrado em skills-lock.json" {
+		t.Errorf("reason esperado=%q, obtido=%q", "hash diverge do registrado em skills-lock.json", failures[0].Reason)
+	}
+}
+
 func TestVerify_Falhas(t *testing.T) {
 	tests := []struct {
 		name       string

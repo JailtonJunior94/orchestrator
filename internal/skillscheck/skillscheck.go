@@ -20,6 +20,7 @@ import (
 type LockEntry struct {
 	Source       string `json:"source"`
 	SourceType   string `json:"sourceType"`
+	Path         string `json:"path,omitempty"`
 	Version      string `json:"version,omitempty"`
 	ComputedHash string `json:"computedHash"`
 }
@@ -81,8 +82,11 @@ func (s *Service) Check(projectDir string) ([]SkillVersionCheck, error) {
 	var results []SkillVersionCheck
 
 	for skillName, entry := range lock.Skills {
-		skillMDPath := filepath.Join(skillsDir, skillName, "SKILL.md")
-		skillData, err := s.fs.ReadFile(skillMDPath)
+		targetPath := filepath.Join(skillsDir, skillName, "SKILL.md")
+		if entry.Path != "" {
+			targetPath = filepath.Join(projectDir, entry.Path)
+		}
+		skillData, err := s.fs.ReadFile(targetPath)
 		if err != nil {
 			results = append(results, SkillVersionCheck{
 				Name:      skillName,
@@ -92,8 +96,11 @@ func (s *Service) Check(projectDir string) ([]SkillVersionCheck, error) {
 			continue
 		}
 
-		fm := skills.NewCatalog().ParseFrontmatter(skillData)
-		installedVer := fm.Version
+		installedVer := ""
+		if entry.Path == "" {
+			fm := skills.NewCatalog().ParseFrontmatter(skillData)
+			installedVer = fm.Version
+		}
 
 		drift := s.classifyDrift(entry.Version, installedVer)
 		results = append(results, SkillVersionCheck{
