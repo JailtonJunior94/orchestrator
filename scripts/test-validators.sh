@@ -918,6 +918,19 @@ echo "Ofuscação por expansão de variável não pode escapar do gate"
 assert_git_gate_command 'expansão de IFS não escapa: git${IFS}push${IFS}--force' 2 'git${IFS}push${IFS}origin${IFS}main${IFS}--force'
 assert_git_gate_command 'expansão de variável arbitrária não escapa: $G $P' 2 'G=git; P=push; $G $P --force'
 
+echo "Não-regressão: expansão de variável comum sem relação com git não bloqueia (BUG CRITICAL, review da tarefa 6.0)"
+declare -a plain_variable_expansion_commands=(
+  "echo \$PATH"
+  "cat \$HOME/.bashrc"
+  "grep -rn foo \$REPO_ROOT"
+  "for f in *.go; do echo \$f; done"
+  "go test ./..."
+  "make test"
+)
+for command in "${plain_variable_expansion_commands[@]}"; do
+  assert_git_gate_command "expansão de variável comum sem git deve passar: $command" 0 "$command"
+done
+
 echo "Wrappers transparentes de execução não podem escapar do gate"
 declare -a wrapper_commands=(
   "exec git push --force"

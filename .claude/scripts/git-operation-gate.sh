@@ -296,7 +296,8 @@ for segment in split_segments(tokens):
     if head_word is None:
         continue
     for pos in resolve_candidate_positions(segment, head_word, head_idx):
-        candidate = normalize_base(segment[pos])
+        raw_token = segment[pos]
+        candidate = normalize_base(raw_token)
         if candidate == "git":
             result = classify_git(segment, pos)
             if result and (not scope_names or result["subcommand"] in scope_names):
@@ -305,11 +306,11 @@ for segment in split_segments(tokens):
             interpreter_hits.append("eval")
         if candidate in INTERPRETER_SHELLS and "-c" in segment[pos:]:
             interpreter_hits.append(candidate + "_-c")
+        if "$" in raw_token and not ASSIGNMENT_RE.match(raw_token):
+            interpreter_hits.append("variable_expansion")
 
 if "$(" in command_text or "`" in command_text:
     interpreter_hits.append("command_substitution")
-elif "$" in command_text:
-    interpreter_hits.append("variable_expansion")
 
 for match in matches:
     print("GIT_MATCH policy_id=%s subcommand=%s" % (match["policy_id"], match["subcommand"]))
