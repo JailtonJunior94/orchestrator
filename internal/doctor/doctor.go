@@ -111,6 +111,11 @@ func (s *Service) ExecuteWithOptions(projectDir string, checkCodexTrust bool) er
 		failCount += s.printChecks(block.Checks)
 	}
 
+	hookChecks := s.runHookChecks(absDir, items)
+	s.printer.Info("")
+	s.printer.Info("Hooks e Adapters:")
+	failCount += s.printChecks(hookChecks)
+
 	s.printer.Info("")
 	if failCount > 0 {
 		s.printer.Info("Resultado: %d problema(s) encontrado(s)", failCount)

@@ -178,6 +178,9 @@ jobs:
         # agregado.
         run: go test -v -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/parity/... ./internal/qualitygate/...
 
+      - name: Hook capability matrix sync gate
+        run: make check-hook-capability-matrix-sync
+
       - name: Budget
         run: make budget
 

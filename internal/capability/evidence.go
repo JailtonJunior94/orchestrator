@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -137,16 +138,50 @@ func executionProof(dir, pkgPattern, testName string) bool {
 	return passed
 }
 
-func dispatchProvenFromTests(source []byte, suiteName, testName, dir, pkgPattern string) specs.CapabilityDispatchProofFunc {
+type cellProof struct {
+	Provider   string
+	Capability string
+}
+
+func dispatchProvenFromTests(source []byte, suiteName, testName, dir, pkgPattern string, provenCells ...cellProof) specs.CapabilityDispatchProofFunc {
 	methodName := testName
 	if idx := strings.LastIndex(testName, "/"); idx >= 0 {
 		methodName = testName[idx+1:]
 	}
 	declared := ParityTestMethodExists(source, suiteName, methodName)
 	resolved := declared && executionProof(dir, pkgPattern, testName)
+
+	if len(provenCells) == 0 {
+		return func(provider, capabilityID string) bool {
+			return resolved
+		}
+	}
+
+	allowed := make(map[cellProof]bool, len(provenCells))
+	for _, c := range provenCells {
+		allowed[c] = true
+	}
 	return func(provider, capabilityID string) bool {
+		if !allowed[cellProof{Provider: provider, Capability: capabilityID}] {
+			return false
+		}
 		return resolved
 	}
+}
+
+func affirmativeCellsForProof() ([]cellProof, error) {
+	m, err := Generate()
+	if err != nil {
+		return nil, fmt.Errorf("generate capability matrix for dispatch proof: %w", err)
+	}
+	cells := make([]cellProof, 0, len(m.Cells))
+	for _, c := range m.Cells {
+		if c.State != StateSupported && c.State != StateProviderCapability {
+			continue
+		}
+		cells = append(cells, cellProof{Provider: c.Provider, Capability: c.Capability})
+	}
+	return cells, nil
 }
 
 func repoRootFromWorkingDir() (string, error) {
@@ -166,10 +201,16 @@ func repoRootFromWorkingDir() (string, error) {
 	}
 }
 
-func DispatchProvenFromParityTests(source []byte) specs.CapabilityDispatchProofFunc {
+var ErrDispatchProofEnvironment = errors.New("dispatch proof environment resolution failed")
+
+func DispatchProvenFromParityTests(source []byte) (specs.CapabilityDispatchProofFunc, error) {
 	root, err := repoRootFromWorkingDir()
 	if err != nil {
-		return func(provider, capabilityID string) bool { return false }
+		return nil, fmt.Errorf("%w: %w", ErrDispatchProofEnvironment, err)
 	}
-	return dispatchProvenFromTests(source, evidenceTestSuite, EvidenceTest, root, defaultParityPackagePattern)
+	cells, err := affirmativeCellsForProof()
+	if err != nil {
+		return nil, fmt.Errorf("resolve affirmative cells for capability dispatch proof: %w", err)
+	}
+	return dispatchProvenFromTests(source, evidenceTestSuite, EvidenceTest, root, defaultParityPackagePattern, cells...), nil
 }

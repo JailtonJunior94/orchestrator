@@ -3,6 +3,7 @@
 package capability
 
 import (
+	"errors"
 	"os"
 	"testing"
 )
@@ -11,20 +12,19 @@ func TestDispatchProof_DiscriminatesByCell(t *testing.T) {
 	mustHaveSyntacticMethod(t)
 	dir := writeFixtureModule(t, "")
 
-	proven := dispatchProvenFromTests([]byte(fakeParitySource), evidenceTestSuite, EvidenceTest, dir, "./...")
+	proven := dispatchProvenFromTests([]byte(fakeParitySource), evidenceTestSuite, EvidenceTest, dir, "./...", cellProof{Provider: "claude", Capability: "C01"})
 
 	genuineCell := proven("claude", "C01")
 	if !genuineCell {
-		t.Fatal("fixture setup invalid: a genuinely executed and passing test must prove its own cell")
+		t.Fatal("fixture setup invalid: a genuinely executed and passing test must prove its own declared cell")
 	}
 
 	unrelatedCell := proven("nonexistent-provider", "CAPABILITY-WITHOUT-ANY-ASSOCIATED-TEST")
 	if unrelatedCell == genuineCell {
 		t.Fatalf(
-			"evidence.go:147-149 devolve uma closure que ignora provider e capabilityID: a celula "+
-				"nao relacionada (%q, %q), sem nenhum teste proprio, foi declarada provada (%v) apenas "+
-				"porque um teste diferente e nao relacionado passou; a prova ainda nao discrimina por "+
-				"celula. Sucessor: tarefa 9.0",
+			"dispatchProvenFromTests must discriminate by cell: the unrelated cell (%q, %q), never "+
+				"declared in the proven-cells set, was declared proved (%v) by the same closure that "+
+				"proves the genuinely mapped cell",
 			"nonexistent-provider", "CAPABILITY-WITHOUT-ANY-ASSOCIATED-TEST", unrelatedCell,
 		)
 	}
@@ -40,9 +40,7 @@ func TestDispatchProof_ReportsEnvironmentFailure(t *testing.T) {
 	if chdirErr := os.Chdir(outsideRepo); chdirErr != nil {
 		t.Fatalf("chdir para fora do repositorio: %v", chdirErr)
 	}
-	brokenEnvironmentProof := DispatchProvenFromParityTests([]byte(fakeParitySource))
-	brokenEnvironmentResult := brokenEnvironmentProof("claude", "C01")
-
+	_, envErr := DispatchProvenFromParityTests([]byte(fakeParitySource))
 	if chdirErr := os.Chdir(repoRoot); chdirErr != nil {
 		t.Fatalf("restaurar diretorio de trabalho apos simular falha de ambiente: %v", chdirErr)
 	}
@@ -50,19 +48,19 @@ func TestDispatchProof_ReportsEnvironmentFailure(t *testing.T) {
 		_ = os.Chdir(repoRoot)
 	})
 
+	if envErr == nil {
+		t.Fatal("expected DispatchProvenFromParityTests to report a distinct environment error when repo root cannot be resolved, got nil")
+	}
+	if !errors.Is(envErr, ErrDispatchProofEnvironment) {
+		t.Fatalf("expected error to wrap ErrDispatchProofEnvironment, got: %v", envErr)
+	}
+
 	mustHaveSyntacticMethod(t)
 	fixtureDir := writeFixtureModule(t, "")
-	missingEvidenceProof := dispatchProvenFromTests([]byte(fakeParitySource), evidenceTestSuite, "TestParitySuite/TestParity_DoesNotExist", fixtureDir, "./...")
+	missingEvidenceProof := dispatchProvenFromTests([]byte(fakeParitySource), evidenceTestSuite, "TestParitySuite/TestParity_DoesNotExist", fixtureDir, "./...", cellProof{Provider: "claude", Capability: "C01"})
 	missingEvidenceResult := missingEvidenceProof("claude", "C01")
 
-	if brokenEnvironmentResult != missingEvidenceResult {
-		return
+	if missingEvidenceResult {
+		t.Fatal("a nonexistent test method must never prove a cell")
 	}
-	t.Fatalf(
-		"falha de resolucao da raiz do repositorio (evidence.go:169-173, repoRootFromWorkingDir sem "+
-			"go.mod ancestral) colapsa para o mesmo booleano (%v) que a ausencia legitima de prova de "+
-			"uma celula; DispatchProvenFromParityTests precisa reportar falha de ambiente distintamente "+
-			"de celula nao provada, nao apenas devolver false silenciosamente. Sucessor: tarefa 9.0",
-		brokenEnvironmentResult,
-	)
 }

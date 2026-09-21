@@ -1,0 +1,705 @@
+{
+  "cells": [
+    {
+      "provider": "claude",
+      "event": "session_start",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "codex",
+      "event": "session_start",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "copilot",
+      "event": "session_start",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "opencode",
+      "event": "session_start",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "claude",
+      "event": "session_start",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "codex",
+      "event": "session_start",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "copilot",
+      "event": "session_start",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "opencode",
+      "event": "session_start",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "claude",
+      "event": "session_start",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "codex",
+      "event": "session_start",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "copilot",
+      "event": "session_start",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "opencode",
+      "event": "session_start",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "claude",
+      "event": "session_start",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "codex",
+      "event": "session_start",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "copilot",
+      "event": "session_start",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "opencode",
+      "event": "session_start",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "claude",
+      "event": "session_start",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "codex",
+      "event": "session_start",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "copilot",
+      "event": "session_start",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "opencode",
+      "event": "session_start",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "claude",
+      "event": "before_tool",
+      "family": "git-policy",
+      "state": "verified",
+      "test": "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/claude"
+    },
+    {
+      "provider": "codex",
+      "event": "before_tool",
+      "family": "git-policy",
+      "state": "verified",
+      "test": "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/codex"
+    },
+    {
+      "provider": "copilot",
+      "event": "before_tool",
+      "family": "git-policy",
+      "state": "verified",
+      "test": "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/copilot"
+    },
+    {
+      "provider": "opencode",
+      "event": "before_tool",
+      "family": "git-policy",
+      "state": "verified",
+      "test": "TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing"
+    },
+    {
+      "provider": "claude",
+      "event": "before_tool",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "codex",
+      "event": "before_tool",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "copilot",
+      "event": "before_tool",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "opencode",
+      "event": "before_tool",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "claude",
+      "event": "before_tool",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "codex",
+      "event": "before_tool",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "copilot",
+      "event": "before_tool",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "opencode",
+      "event": "before_tool",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "claude",
+      "event": "before_tool",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "codex",
+      "event": "before_tool",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "copilot",
+      "event": "before_tool",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "opencode",
+      "event": "before_tool",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "claude",
+      "event": "before_tool",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "codex",
+      "event": "before_tool",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "copilot",
+      "event": "before_tool",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "opencode",
+      "event": "before_tool",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "claude",
+      "event": "after_tool",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "codex",
+      "event": "after_tool",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "copilot",
+      "event": "after_tool",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "opencode",
+      "event": "after_tool",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "claude",
+      "event": "after_tool",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "codex",
+      "event": "after_tool",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "copilot",
+      "event": "after_tool",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "opencode",
+      "event": "after_tool",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "claude",
+      "event": "after_tool",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "codex",
+      "event": "after_tool",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "copilot",
+      "event": "after_tool",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "opencode",
+      "event": "after_tool",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "claude",
+      "event": "after_tool",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "codex",
+      "event": "after_tool",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "copilot",
+      "event": "after_tool",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "opencode",
+      "event": "after_tool",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "claude",
+      "event": "after_tool",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "codex",
+      "event": "after_tool",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "copilot",
+      "event": "after_tool",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "opencode",
+      "event": "after_tool",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "claude",
+      "event": "before_complete",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "codex",
+      "event": "before_complete",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "copilot",
+      "event": "before_complete",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "opencode",
+      "event": "before_complete",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "claude",
+      "event": "before_complete",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "codex",
+      "event": "before_complete",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "copilot",
+      "event": "before_complete",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "opencode",
+      "event": "before_complete",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "claude",
+      "event": "before_complete",
+      "family": "evidence-gate",
+      "state": "verified",
+      "test": "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/claude"
+    },
+    {
+      "provider": "codex",
+      "event": "before_complete",
+      "family": "evidence-gate",
+      "state": "verified",
+      "test": "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/codex"
+    },
+    {
+      "provider": "copilot",
+      "event": "before_complete",
+      "family": "evidence-gate",
+      "state": "verified",
+      "test": "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/copilot"
+    },
+    {
+      "provider": "opencode",
+      "event": "before_complete",
+      "family": "evidence-gate",
+      "state": "adapter",
+      "limitation": "OpenCode's session.idle fires at turn end but does not block; evidence-gate is dispatched but purely observational there, unlike Stop/agentStop in the other three CLIs",
+      "test": "TestOpenCodeGovernancePluginSessionIdleBlocksActiveTaskWithoutApprovedVerdict"
+    },
+    {
+      "provider": "claude",
+      "event": "before_complete",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "no wiring found for post-execute-task.sh (checkpoint F25) at before_complete for this provider"
+    },
+    {
+      "provider": "codex",
+      "event": "before_complete",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "no wiring found for post-execute-task.sh (checkpoint F25) at before_complete for this provider"
+    },
+    {
+      "provider": "copilot",
+      "event": "before_complete",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "no wiring found for post-execute-task.sh (checkpoint F25) at before_complete for this provider"
+    },
+    {
+      "provider": "opencode",
+      "event": "before_complete",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "no wiring found for post-execute-task.sh (checkpoint F25) at before_complete for this provider"
+    },
+    {
+      "provider": "claude",
+      "event": "before_complete",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "codex",
+      "event": "before_complete",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "copilot",
+      "event": "before_complete",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "opencode",
+      "event": "before_complete",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "claude",
+      "event": "session_end",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "codex",
+      "event": "session_end",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "copilot",
+      "event": "session_end",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "opencode",
+      "event": "session_end",
+      "family": "git-policy",
+      "state": "unsupported",
+      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "claude",
+      "event": "session_end",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "codex",
+      "event": "session_end",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "copilot",
+      "event": "session_end",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "opencode",
+      "event": "session_end",
+      "family": "quality-gate",
+      "state": "unsupported",
+      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
+    },
+    {
+      "provider": "claude",
+      "event": "session_end",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "codex",
+      "event": "session_end",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "copilot",
+      "event": "session_end",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "opencode",
+      "event": "session_end",
+      "family": "evidence-gate",
+      "state": "unsupported",
+      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
+    },
+    {
+      "provider": "claude",
+      "event": "session_end",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "codex",
+      "event": "session_end",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "copilot",
+      "event": "session_end",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "opencode",
+      "event": "session_end",
+      "family": "checkpoint",
+      "state": "unsupported",
+      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
+    },
+    {
+      "provider": "claude",
+      "event": "session_end",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "codex",
+      "event": "session_end",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "copilot",
+      "event": "session_end",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    },
+    {
+      "provider": "opencode",
+      "event": "session_end",
+      "family": "telemetry",
+      "state": "unsupported",
+      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
+    }
+  ]
+}

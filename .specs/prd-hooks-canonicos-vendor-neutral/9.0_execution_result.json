@@ -1,0 +1,104 @@
+{
+  "schema_version": 2,
+  "run_id": "task-9.0-hooks-canonicos-vendor-neutral-2026-09-21",
+  "task_id": "9.0",
+  "attempt": 1,
+  "status": "done",
+  "base_sha": "9b99b4d75ccac103ac79f9281004b72ebc8dc501",
+  "patch_sha256": "91f627a7120337d77bab66b9782c4ad94df6a1b1fe7b15d37ca86537a43579b0",
+  "patch_ref": "evidence/task-9.0-hooks-canonicos-vendor-neutral/9.0_execution_result.patch",
+  "final_state_sha256": "3fc400faa1ff17b381a1231ae4e983e2a7f534bebf07908b7ec49c9de952f3d7",
+  "coverage_regression": false,
+  "tests": [
+    {
+      "command": "go build ./...",
+      "exit_code": 0,
+      "output_sha256": "7337f0cecec0c30b40127232f1aaa61ee6f38d060fef9a1ab9118c4a291f309c"
+    },
+    {
+      "command": "go vet ./internal/capability/... ./internal/doctor/...",
+      "exit_code": 0,
+      "output_sha256": "7337f0cecec0c30b40127232f1aaa61ee6f38d060fef9a1ab9118c4a291f309c"
+    },
+    {
+      "command": "go test ./internal/capability/... ./internal/doctor/... -v",
+      "exit_code": 0,
+      "output_sha256": "7337f0cecec0c30b40127232f1aaa61ee6f38d060fef9a1ab9118c4a291f309c"
+    },
+    {
+      "command": "go test -tags=capability_instrumentation ./internal/capability/... -run TestDispatchProof_ -v",
+      "exit_code": 0,
+      "output_sha256": "7337f0cecec0c30b40127232f1aaa61ee6f38d060fef9a1ab9118c4a291f309c"
+    },
+    {
+      "command": "golangci-lint run --config .golangci.yml --timeout 10m",
+      "exit_code": 0,
+      "output_sha256": "7337f0cecec0c30b40127232f1aaa61ee6f38d060fef9a1ab9118c4a291f309c"
+    },
+    {
+      "command": "make check-capability-matrix-sync",
+      "exit_code": 0,
+      "output_sha256": "7337f0cecec0c30b40127232f1aaa61ee6f38d060fef9a1ab9118c4a291f309c"
+    },
+    {
+      "command": "make check-hook-capability-matrix-sync",
+      "exit_code": 0,
+      "output_sha256": "7337f0cecec0c30b40127232f1aaa61ee6f38d060fef9a1ab9118c4a291f309c"
+    },
+    {
+      "command": "make integration",
+      "exit_code": 0,
+      "output_sha256": "7337f0cecec0c30b40127232f1aaa61ee6f38d060fef9a1ab9118c4a291f309c"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "hook-matrix-json-and-markdown-generated",
+      "evidence_ref": "evidence/task-9.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "existing-matrix-unchanged-54-cells",
+      "evidence_ref": "evidence/task-9.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "golden-test-unchanged-and-green",
+      "evidence_ref": "evidence/task-9.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "dispatch-proof-discriminates-by-cell",
+      "evidence_ref": "evidence/task-9.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "cost-rule-unsupported-no-proof-affirmative-indexed",
+      "evidence_ref": "evidence/task-9.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "doctor-15-checks-preserved-additive-section",
+      "evidence_ref": "evidence/task-9.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "rf60-five-failure-modes-no-llm",
+      "evidence_ref": "evidence/task-9.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "non-regression-test-lint-vet",
+      "evidence_ref": "evidence/task-9.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "capability-matrix-gates-green-and-wired-to-ci",
+      "evidence_ref": "evidence/task-9.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "integration-green",
+      "evidence_ref": "evidence/task-9.0-hooks-canonicos-vendor-neutral/validation.log"
+    },
+    {
+      "id": "coverage-gates-respected",
+      "evidence_ref": "evidence/task-9.0-hooks-canonicos-vendor-neutral/validation.log"
+    }
+  ],
+  "evidence": [
+    "evidence/task-9.0-hooks-canonicos-vendor-neutral/validation.log"
+  ],
+  "review_verdict": "approved"
+}

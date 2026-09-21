@@ -1,4 +1,4 @@
-.PHONY: check-spec-paths build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-lock check-skills-sync check-hooks-sync check-scripts-sync check-policies-sync check-capability-matrix-sync test-hooks test-validators test-sdd-evals smoke-adapters test-portable-skills sync-acp-sdk-version test-acp-live test-hooks-live mocks check-mocks test-check-mocks
+.PHONY: check-spec-paths build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-lock check-skills-sync check-hooks-sync check-scripts-sync check-policies-sync check-capability-matrix-sync check-hook-capability-matrix-sync test-hooks test-validators test-sdd-evals smoke-adapters test-portable-skills sync-acp-sdk-version test-acp-live test-hooks-live mocks check-mocks test-check-mocks
 
 BINARY := ai-spec
 GOFLAGS := -trimpath
@@ -93,6 +93,9 @@ check-policies-sync:
 
 check-capability-matrix-sync:
 	go test ./internal/capability/...
+
+check-hook-capability-matrix-sync:
+	go test -tags=hook_dispatch_proof,capability_instrumentation ./internal/capability/... -run 'TestHookCapabilityMatrix|TestDispatchProof_'
 
 test-hooks:
 	bash scripts/test-hooks.sh

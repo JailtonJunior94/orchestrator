@@ -1,0 +1,6 @@
+{
+  "status": "done",
+  "report_path": ".specs/prd-hooks-canonicos-vendor-neutral/9.0_execution_report.md",
+  "summary": "Matriz de capabilities provedor x evento x familia (RF-59, 100 celulas, testdata/hook-capability-matrix.json + docs/hook-capability-matrix.md, artefato separado da matriz existente que permanece intocada). Correcao da prova tautologica de evidence.go (Componentes 1/3 da ADR-004): dispatchProvenFromTests agora discrimina por celula (provider,capabilityID); DispatchProvenFromParityTests reporta falha de ambiente distinta de ausencia de prova. TestDispatchProof_DiscriminatesByCell e TestDispatchProof_ReportsEnvironmentFailure (vermelhos por design da 3.0) agora verdes. doctor ganhou secao aditiva de hooks/adapters (RF-60) com os 5 modos de falha (adapter ausente, hook nao executavel, configuracao invalida, versao incompativel, divergencia contrato/adapter), sem tocar os 15 checks existentes. Duas rodadas de revisao (REJECTED por gate wiring ausente -> APPROVED apos ligar capability_instrumentation ao alvo check-hook-capability-matrix-sync, ja conectado ao job integration do CI). make test lint vet check-capability-matrix-sync check-hook-capability-matrix-sync integration coverage verdes.",
+  "timestamp": "2026-09-21T00:21:11Z"
+}

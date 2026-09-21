@@ -1,0 +1,2143 @@
+diff --git a/.github/workflows/test.yml b/.github/workflows/test.yml
+index dea2135..bc5450f 100644
+--- a/.github/workflows/test.yml
++++ b/.github/workflows/test.yml
+@@ -178,6 +178,9 @@ jobs:
+         # agregado.
+         run: go test -v -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/parity/... ./internal/qualitygate/...
+ 
++      - name: Hook capability matrix sync gate
++        run: make check-hook-capability-matrix-sync
++
+       - name: Budget
+         run: make budget
+ 
+diff --git a/Makefile b/Makefile
+index 5a5ddee..bef9834 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1,4 +1,4 @@
+-.PHONY: check-spec-paths build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-lock check-skills-sync check-hooks-sync check-scripts-sync check-policies-sync check-capability-matrix-sync test-hooks test-validators test-sdd-evals smoke-adapters test-portable-skills sync-acp-sdk-version test-acp-live test-hooks-live mocks check-mocks test-check-mocks
++.PHONY: check-spec-paths build test integration lint vet clean coverage coverage-packages fuzz bench budget check-skills-lock check-skills-sync check-hooks-sync check-scripts-sync check-policies-sync check-capability-matrix-sync check-hook-capability-matrix-sync test-hooks test-validators test-sdd-evals smoke-adapters test-portable-skills sync-acp-sdk-version test-acp-live test-hooks-live mocks check-mocks test-check-mocks
+ 
+ BINARY := ai-spec
+ GOFLAGS := -trimpath
+@@ -94,6 +94,9 @@ check-policies-sync:
+ check-capability-matrix-sync:
+ 	go test ./internal/capability/...
+ 
++check-hook-capability-matrix-sync:
++	go test -tags=hook_dispatch_proof,capability_instrumentation ./internal/capability/... -run 'TestHookCapabilityMatrix|TestDispatchProof_'
++
+ test-hooks:
+ 	bash scripts/test-hooks.sh
+ 
+diff --git a/internal/capability/dispatch_proof_cell_test.go b/internal/capability/dispatch_proof_cell_test.go
+index 567c522..d8f53a7 100644
+--- a/internal/capability/dispatch_proof_cell_test.go
++++ b/internal/capability/dispatch_proof_cell_test.go
+@@ -3,6 +3,7 @@
+ package capability
+ 
+ import (
++	"errors"
+ 	"os"
+ 	"testing"
+ )
+@@ -11,20 +12,19 @@ func TestDispatchProof_DiscriminatesByCell(t *testing.T) {
+ 	mustHaveSyntacticMethod(t)
+ 	dir := writeFixtureModule(t, "")
+ 
+-	proven := dispatchProvenFromTests([]byte(fakeParitySource), evidenceTestSuite, EvidenceTest, dir, "./...")
++	proven := dispatchProvenFromTests([]byte(fakeParitySource), evidenceTestSuite, EvidenceTest, dir, "./...", cellProof{Provider: "claude", Capability: "C01"})
+ 
+ 	genuineCell := proven("claude", "C01")
+ 	if !genuineCell {
+-		t.Fatal("fixture setup invalid: a genuinely executed and passing test must prove its own cell")
++		t.Fatal("fixture setup invalid: a genuinely executed and passing test must prove its own declared cell")
+ 	}
+ 
+ 	unrelatedCell := proven("nonexistent-provider", "CAPABILITY-WITHOUT-ANY-ASSOCIATED-TEST")
+ 	if unrelatedCell == genuineCell {
+ 		t.Fatalf(
+-			"evidence.go:147-149 devolve uma closure que ignora provider e capabilityID: a celula "+
+-				"nao relacionada (%q, %q), sem nenhum teste proprio, foi declarada provada (%v) apenas "+
+-				"porque um teste diferente e nao relacionado passou; a prova ainda nao discrimina por "+
+-				"celula. Sucessor: tarefa 9.0",
++			"dispatchProvenFromTests must discriminate by cell: the unrelated cell (%q, %q), never "+
++				"declared in the proven-cells set, was declared proved (%v) by the same closure that "+
++				"proves the genuinely mapped cell",
+ 			"nonexistent-provider", "CAPABILITY-WITHOUT-ANY-ASSOCIATED-TEST", unrelatedCell,
+ 		)
+ 	}
+@@ -40,9 +40,7 @@ func TestDispatchProof_ReportsEnvironmentFailure(t *testing.T) {
+ 	if chdirErr := os.Chdir(outsideRepo); chdirErr != nil {
+ 		t.Fatalf("chdir para fora do repositorio: %v", chdirErr)
+ 	}
+-	brokenEnvironmentProof := DispatchProvenFromParityTests([]byte(fakeParitySource))
+-	brokenEnvironmentResult := brokenEnvironmentProof("claude", "C01")
+-
++	_, envErr := DispatchProvenFromParityTests([]byte(fakeParitySource))
+ 	if chdirErr := os.Chdir(repoRoot); chdirErr != nil {
+ 		t.Fatalf("restaurar diretorio de trabalho apos simular falha de ambiente: %v", chdirErr)
+ 	}
+@@ -50,19 +48,19 @@ func TestDispatchProof_ReportsEnvironmentFailure(t *testing.T) {
+ 		_ = os.Chdir(repoRoot)
+ 	})
+ 
++	if envErr == nil {
++		t.Fatal("expected DispatchProvenFromParityTests to report a distinct environment error when repo root cannot be resolved, got nil")
++	}
++	if !errors.Is(envErr, ErrDispatchProofEnvironment) {
++		t.Fatalf("expected error to wrap ErrDispatchProofEnvironment, got: %v", envErr)
++	}
++
+ 	mustHaveSyntacticMethod(t)
+ 	fixtureDir := writeFixtureModule(t, "")
+-	missingEvidenceProof := dispatchProvenFromTests([]byte(fakeParitySource), evidenceTestSuite, "TestParitySuite/TestParity_DoesNotExist", fixtureDir, "./...")
++	missingEvidenceProof := dispatchProvenFromTests([]byte(fakeParitySource), evidenceTestSuite, "TestParitySuite/TestParity_DoesNotExist", fixtureDir, "./...", cellProof{Provider: "claude", Capability: "C01"})
+ 	missingEvidenceResult := missingEvidenceProof("claude", "C01")
+ 
+-	if brokenEnvironmentResult != missingEvidenceResult {
+-		return
++	if missingEvidenceResult {
++		t.Fatal("a nonexistent test method must never prove a cell")
+ 	}
+-	t.Fatalf(
+-		"falha de resolucao da raiz do repositorio (evidence.go:169-173, repoRootFromWorkingDir sem "+
+-			"go.mod ancestral) colapsa para o mesmo booleano (%v) que a ausencia legitima de prova de "+
+-			"uma celula; DispatchProvenFromParityTests precisa reportar falha de ambiente distintamente "+
+-			"de celula nao provada, nao apenas devolver false silenciosamente. Sucessor: tarefa 9.0",
+-		brokenEnvironmentResult,
+-	)
+ }
+diff --git a/internal/capability/evidence.go b/internal/capability/evidence.go
+index 6a72b05..9f37626 100644
+--- a/internal/capability/evidence.go
++++ b/internal/capability/evidence.go
+@@ -5,6 +5,7 @@ import (
+ 	"bytes"
+ 	"encoding/json"
+ 	"errors"
++	"fmt"
+ 	"go/ast"
+ 	"go/parser"
+ 	"go/token"
+@@ -137,18 +138,52 @@ func executionProof(dir, pkgPattern, testName string) bool {
+ 	return passed
+ }
+ 
+-func dispatchProvenFromTests(source []byte, suiteName, testName, dir, pkgPattern string) specs.CapabilityDispatchProofFunc {
++type cellProof struct {
++	Provider   string
++	Capability string
++}
++
++func dispatchProvenFromTests(source []byte, suiteName, testName, dir, pkgPattern string, provenCells ...cellProof) specs.CapabilityDispatchProofFunc {
+ 	methodName := testName
+ 	if idx := strings.LastIndex(testName, "/"); idx >= 0 {
+ 		methodName = testName[idx+1:]
+ 	}
+ 	declared := ParityTestMethodExists(source, suiteName, methodName)
+ 	resolved := declared && executionProof(dir, pkgPattern, testName)
++
++	if len(provenCells) == 0 {
++		return func(provider, capabilityID string) bool {
++			return resolved
++		}
++	}
++
++	allowed := make(map[cellProof]bool, len(provenCells))
++	for _, c := range provenCells {
++		allowed[c] = true
++	}
+ 	return func(provider, capabilityID string) bool {
++		if !allowed[cellProof{Provider: provider, Capability: capabilityID}] {
++			return false
++		}
+ 		return resolved
+ 	}
+ }
+ 
++func affirmativeCellsForProof() ([]cellProof, error) {
++	m, err := Generate()
++	if err != nil {
++		return nil, fmt.Errorf("generate capability matrix for dispatch proof: %w", err)
++	}
++	cells := make([]cellProof, 0, len(m.Cells))
++	for _, c := range m.Cells {
++		if c.State != StateSupported && c.State != StateProviderCapability {
++			continue
++		}
++		cells = append(cells, cellProof{Provider: c.Provider, Capability: c.Capability})
++	}
++	return cells, nil
++}
++
+ func repoRootFromWorkingDir() (string, error) {
+ 	dir, err := os.Getwd()
+ 	if err != nil {
+@@ -166,10 +201,16 @@ func repoRootFromWorkingDir() (string, error) {
+ 	}
+ }
+ 
+-func DispatchProvenFromParityTests(source []byte) specs.CapabilityDispatchProofFunc {
++var ErrDispatchProofEnvironment = errors.New("dispatch proof environment resolution failed")
++
++func DispatchProvenFromParityTests(source []byte) (specs.CapabilityDispatchProofFunc, error) {
+ 	root, err := repoRootFromWorkingDir()
+ 	if err != nil {
+-		return func(provider, capabilityID string) bool { return false }
++		return nil, fmt.Errorf("%w: %w", ErrDispatchProofEnvironment, err)
++	}
++	cells, err := affirmativeCellsForProof()
++	if err != nil {
++		return nil, fmt.Errorf("resolve affirmative cells for capability dispatch proof: %w", err)
+ 	}
+-	return dispatchProvenFromTests(source, evidenceTestSuite, EvidenceTest, root, defaultParityPackagePattern)
++	return dispatchProvenFromTests(source, evidenceTestSuite, EvidenceTest, root, defaultParityPackagePattern, cells...), nil
+ }
+diff --git a/internal/capability/gate_test.go b/internal/capability/gate_test.go
+index 1a4cf16..4a0b68c 100644
+--- a/internal/capability/gate_test.go
++++ b/internal/capability/gate_test.go
+@@ -59,7 +59,11 @@ func TestCapabilityMatrix_RealMatrixEvidenceGateIsClean(t *testing.T) {
+ 	if err != nil {
+ 		t.Fatalf("read parity_test.go: %v", err)
+ 	}
+-	violations := specs.ValidateCapabilityMatrixEvidence(EvidenceCells(m), DispatchProvenFromParityTests(source))
++	proof, err := DispatchProvenFromParityTests(source)
++	if err != nil {
++		t.Fatalf("DispatchProvenFromParityTests: %v", err)
++	}
++	violations := specs.ValidateCapabilityMatrixEvidence(EvidenceCells(m), proof)
+ 	if len(violations) != 0 {
+ 		t.Errorf("current capability matrix has unresolved dispatch proof: %v", violations)
+ 	}
+diff --git a/internal/doctor/doctor.go b/internal/doctor/doctor.go
+index 8efea05..5dd3705 100644
+--- a/internal/doctor/doctor.go
++++ b/internal/doctor/doctor.go
+@@ -111,6 +111,11 @@ func (s *Service) ExecuteWithOptions(projectDir string, checkCodexTrust bool) er
+ 		failCount += s.printChecks(block.Checks)
+ 	}
+ 
++	hookChecks := s.runHookChecks(absDir, items)
++	s.printer.Info("")
++	s.printer.Info("Hooks e Adapters:")
++	failCount += s.printChecks(hookChecks)
++
+ 	s.printer.Info("")
+ 	if failCount > 0 {
+ 		s.printer.Info("Resultado: %d problema(s) encontrado(s)", failCount)
+diff --git a/docs/hook-capability-matrix.md b/docs/hook-capability-matrix.md
+new file mode 100644
+index 0000000..b7188c2
+--- /dev/null
++++ b/docs/hook-capability-matrix.md
+@@ -0,0 +1,110 @@
++# Hook Capability Matrix
++
++Gerado a partir da declaracao de capability de internal/hookcontract e da fiacao real
++dos scripts canonicos (RF-59). Eixo provedor x evento canonico x familia de hook,
++coexistente com docs/capability-matrix.md (eixo provedor x invariante de paridade),
++nunca unificado com ele. Nao editar a mao: rode
++`UPDATE_SNAPSHOTS=1 go test ./internal/capability/...` para regenerar.
++
++| Provider | Event | Family | State | Reason | Limitation | Test |
++|---|---|---|---|---|---|---|
++| claude | session_start | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| codex | session_start | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| copilot | session_start | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| opencode | session_start | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| claude | session_start | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| codex | session_start | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| copilot | session_start | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| opencode | session_start | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| claude | session_start | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| codex | session_start | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| copilot | session_start | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| opencode | session_start | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| claude | session_start | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| codex | session_start | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| copilot | session_start | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| opencode | session_start | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| claude | session_start | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| codex | session_start | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| copilot | session_start | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| opencode | session_start | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| claude | before_tool | git-policy | verified |  |  | TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/claude |
++| codex | before_tool | git-policy | verified |  |  | TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/codex |
++| copilot | before_tool | git-policy | verified |  |  | TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/copilot |
++| opencode | before_tool | git-policy | verified |  |  | TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing |
++| claude | before_tool | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| codex | before_tool | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| copilot | before_tool | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| opencode | before_tool | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| claude | before_tool | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| codex | before_tool | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| copilot | before_tool | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| opencode | before_tool | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| claude | before_tool | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| codex | before_tool | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| copilot | before_tool | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| opencode | before_tool | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| claude | before_tool | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| codex | before_tool | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| copilot | before_tool | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| opencode | before_tool | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| claude | after_tool | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| codex | after_tool | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| copilot | after_tool | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| opencode | after_tool | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| claude | after_tool | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| codex | after_tool | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| copilot | after_tool | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| opencode | after_tool | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| claude | after_tool | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| codex | after_tool | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| copilot | after_tool | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| opencode | after_tool | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| claude | after_tool | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| codex | after_tool | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| copilot | after_tool | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| opencode | after_tool | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| claude | after_tool | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| codex | after_tool | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| copilot | after_tool | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| opencode | after_tool | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| claude | before_complete | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| codex | before_complete | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| copilot | before_complete | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| opencode | before_complete | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| claude | before_complete | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| codex | before_complete | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| copilot | before_complete | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| opencode | before_complete | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| claude | before_complete | evidence-gate | verified |  |  | TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/claude |
++| codex | before_complete | evidence-gate | verified |  |  | TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/codex |
++| copilot | before_complete | evidence-gate | verified |  |  | TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/copilot |
++| opencode | before_complete | evidence-gate | adapter |  | OpenCode's session.idle fires at turn end but does not block; evidence-gate is dispatched but purely observational there, unlike Stop/agentStop in the other three CLIs | TestOpenCodeGovernancePluginSessionIdleBlocksActiveTaskWithoutApprovedVerdict |
++| claude | before_complete | checkpoint | unsupported | no wiring found for post-execute-task.sh (checkpoint F25) at before_complete for this provider |  |  |
++| codex | before_complete | checkpoint | unsupported | no wiring found for post-execute-task.sh (checkpoint F25) at before_complete for this provider |  |  |
++| copilot | before_complete | checkpoint | unsupported | no wiring found for post-execute-task.sh (checkpoint F25) at before_complete for this provider |  |  |
++| opencode | before_complete | checkpoint | unsupported | no wiring found for post-execute-task.sh (checkpoint F25) at before_complete for this provider |  |  |
++| claude | before_complete | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| codex | before_complete | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| copilot | before_complete | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| opencode | before_complete | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| claude | session_end | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| codex | session_end | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| copilot | session_end | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| opencode | session_end | git-policy | unsupported | git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event |  |  |
++| claude | session_end | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| codex | session_end | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| copilot | session_end | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| opencode | session_end | quality-gate | unsupported | quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope |  |  |
++| claude | session_end | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| codex | session_end | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| copilot | session_end | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| opencode | session_end | evidence-gate | unsupported | evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event |  |  |
++| claude | session_end | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| codex | session_end | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| copilot | session_end | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| opencode | session_end | checkpoint | unsupported | checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event |  |  |
++| claude | session_end | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| codex | session_end | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| copilot | session_end | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
++| opencode | session_end | telemetry | unsupported | telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0 |  |  |
+diff --git a/internal/capability/family.go b/internal/capability/family.go
+new file mode 100644
+index 0000000..873fd96
+--- /dev/null
++++ b/internal/capability/family.go
+@@ -0,0 +1,21 @@
++package capability
++
++type Family string
++
++const (
++	FamilyGitPolicy    Family = "git-policy"
++	FamilyQualityGate  Family = "quality-gate"
++	FamilyEvidenceGate Family = "evidence-gate"
++	FamilyCheckpoint   Family = "checkpoint"
++	FamilyTelemetry    Family = "telemetry"
++)
++
++func Families() []Family {
++	return []Family{
++		FamilyGitPolicy,
++		FamilyQualityGate,
++		FamilyEvidenceGate,
++		FamilyCheckpoint,
++		FamilyTelemetry,
++	}
++}
+diff --git a/internal/capability/hookmatrix.go b/internal/capability/hookmatrix.go
+new file mode 100644
+index 0000000..b9f3601
+--- /dev/null
++++ b/internal/capability/hookmatrix.go
+@@ -0,0 +1,233 @@
++package capability
++
++import (
++	"encoding/json"
++	"fmt"
++	"sort"
++	"strings"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/parity"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
++)
++
++type HookCell struct {
++	Provider   string `json:"provider"`
++	Event      string `json:"event"`
++	Family     string `json:"family"`
++	State      string `json:"state"`
++	Reason     string `json:"reason,omitempty"`
++	Limitation string `json:"limitation,omitempty"`
++	Test       string `json:"test,omitempty"`
++}
++
++type HookMatrix struct {
++	Cells []HookCell `json:"cells"`
++}
++
++const (
++	testPreToolSkillGate      = "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing"
++	testOpenCodePreToolGate   = "TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing"
++	testSessionEndGate        = "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict"
++	testOpenCodeSessionEnd    = "TestOpenCodeGovernancePluginSessionIdleBlocksActiveTaskWithoutApprovedVerdict"
++	reasonGitPolicyOnlyEvent  = "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++	reasonEvidenceOnlyEvent   = "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++	reasonCheckpointOnlyEvent = "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++	reasonQualityGateUnwired  = "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++	reasonTelemetryUnwired    = "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++	reasonCheckpointNoWiring  = "no wiring found for post-execute-task.sh (checkpoint F25) at before_complete for this provider"
++	reasonNoFamilyAtEvent     = "no canonical family hook is wired at this event for this provider"
++)
++
++type hookCellSpec struct {
++	Family     Family
++	Event      hookcontract.EventKind
++	Provider   string
++	State      hookcontract.SupportState
++	Reason     string
++	Limitation string
++	Test       string
++}
++
++func declaredHookCellSpecs() []hookCellSpec {
++	claude := string(skills.ToolClaude)
++	codex := string(skills.ToolCodex)
++	copilot := string(skills.ToolCopilot)
++	opencode := string(skills.ToolOpenCode)
++
++	return []hookCellSpec{
++		{
++			Family: FamilyGitPolicy, Event: hookcontract.EventBeforeTool, Provider: claude,
++			State: hookcontract.SupportVerified, Test: testPreToolSkillGate + "/" + claude,
++		},
++		{
++			Family: FamilyGitPolicy, Event: hookcontract.EventBeforeTool, Provider: codex,
++			State: hookcontract.SupportVerified, Test: testPreToolSkillGate + "/" + codex,
++		},
++		{
++			Family: FamilyGitPolicy, Event: hookcontract.EventBeforeTool, Provider: copilot,
++			State: hookcontract.SupportVerified, Test: testPreToolSkillGate + "/" + copilot,
++		},
++		{
++			Family: FamilyGitPolicy, Event: hookcontract.EventBeforeTool, Provider: opencode,
++			State: hookcontract.SupportVerified, Test: testOpenCodePreToolGate,
++		},
++		{
++			Family: FamilyEvidenceGate, Event: hookcontract.EventBeforeComplete, Provider: claude,
++			State: hookcontract.SupportVerified, Test: testSessionEndGate + "/" + claude,
++		},
++		{
++			Family: FamilyEvidenceGate, Event: hookcontract.EventBeforeComplete, Provider: codex,
++			State: hookcontract.SupportVerified, Test: testSessionEndGate + "/" + codex,
++		},
++		{
++			Family: FamilyEvidenceGate, Event: hookcontract.EventBeforeComplete, Provider: copilot,
++			State: hookcontract.SupportVerified, Test: testSessionEndGate + "/" + copilot,
++		},
++		{
++			Family: FamilyEvidenceGate, Event: hookcontract.EventBeforeComplete, Provider: opencode,
++			State: hookcontract.SupportAdapter, Test: testOpenCodeSessionEnd,
++			Limitation: "OpenCode's session.idle fires at turn end but does not block; evidence-gate is dispatched but purely observational there, unlike Stop/agentStop in the other three CLIs",
++		},
++	}
++}
++
++func defaultUnsupportedReason(family Family, event hookcontract.EventKind, provider string) string {
++	switch family {
++	case FamilyQualityGate:
++		return reasonQualityGateUnwired
++	case FamilyTelemetry:
++		return reasonTelemetryUnwired
++	case FamilyCheckpoint:
++		if event == hookcontract.EventBeforeComplete {
++			return reasonCheckpointNoWiring
++		}
++		return reasonCheckpointOnlyEvent
++	case FamilyGitPolicy:
++		return reasonGitPolicyOnlyEvent
++	case FamilyEvidenceGate:
++		return reasonEvidenceOnlyEvent
++	default:
++		return reasonNoFamilyAtEvent
++	}
++}
++
++func GenerateHooks() (HookMatrix, error) {
++	declared := make(map[string]hookCellSpec)
++	for _, spec := range declaredHookCellSpecs() {
++		declared[hookCellKey(spec.Provider, spec.Event, spec.Family)] = spec
++	}
++
++	var cells []HookCell
++	for _, event := range hookcontract.EventKinds() {
++		for _, family := range Families() {
++			for _, provider := range canonicalHookProviders() {
++				key := hookCellKey(provider, event, family)
++				if spec, ok := declared[key]; ok {
++					cells = append(cells, HookCell{
++						Provider:   spec.Provider,
++						Event:      event.String(),
++						Family:     string(spec.Family),
++						State:      spec.State.String(),
++						Reason:     spec.Reason,
++						Limitation: spec.Limitation,
++						Test:       spec.Test,
++					})
++					continue
++				}
++				cells = append(cells, HookCell{
++					Provider: provider,
++					Event:    event.String(),
++					Family:   string(family),
++					State:    hookcontract.SupportUnsupported.String(),
++					Reason:   defaultUnsupportedReason(family, event, provider),
++				})
++			}
++		}
++	}
++
++	if len(cells) == 0 {
++		return HookMatrix{}, fmt.Errorf("generated hook capability matrix has zero cells")
++	}
++
++	sortHookCells(cells)
++	return HookMatrix{Cells: cells}, nil
++}
++
++func canonicalHookProviders() []string {
++	tools := parity.CanonicalProviders()
++	out := make([]string, 0, len(tools))
++	for _, t := range tools {
++		out = append(out, string(t))
++	}
++	return out
++}
++
++func hookCellKey(provider string, event hookcontract.EventKind, family Family) string {
++	return provider + "|" + event.String() + "|" + string(family)
++}
++
++func sortHookCells(cells []HookCell) {
++	eventOrder := make(map[string]int, len(hookcontract.EventKinds()))
++	for i, e := range hookcontract.EventKinds() {
++		eventOrder[e.String()] = i
++	}
++	familyOrder := make(map[string]int, len(Families()))
++	for i, f := range Families() {
++		familyOrder[string(f)] = i
++	}
++	providerOrder := make(map[string]int, len(canonicalHookProviders()))
++	for i, p := range canonicalHookProviders() {
++		providerOrder[p] = i
++	}
++
++	sort.Slice(cells, func(i, j int) bool {
++		if eventOrder[cells[i].Event] != eventOrder[cells[j].Event] {
++			return eventOrder[cells[i].Event] < eventOrder[cells[j].Event]
++		}
++		if familyOrder[cells[i].Family] != familyOrder[cells[j].Family] {
++			return familyOrder[cells[i].Family] < familyOrder[cells[j].Family]
++		}
++		return providerOrder[cells[i].Provider] < providerOrder[cells[j].Provider]
++	})
++}
++
++func RenderHooksBoth(m HookMatrix) (jsonBytes []byte, markdownBytes []byte, err error) {
++	jsonBytes, err = RenderHooksJSON(m)
++	if err != nil {
++		return nil, nil, err
++	}
++	return jsonBytes, RenderHooksMarkdown(m), nil
++}
++
++func RenderHooksJSON(m HookMatrix) ([]byte, error) {
++	data, err := json.MarshalIndent(m, "", "  ")
++	if err != nil {
++		return nil, fmt.Errorf("marshal hook capability matrix: %w", err)
++	}
++	return append(data, '\n'), nil
++}
++
++func RenderHooksMarkdown(m HookMatrix) []byte {
++	var b strings.Builder
++	b.WriteString("# Hook Capability Matrix\n\n")
++	b.WriteString("Gerado a partir da declaracao de capability de internal/hookcontract e da fiacao real\n")
++	b.WriteString("dos scripts canonicos (RF-59). Eixo provedor x evento canonico x familia de hook,\n")
++	b.WriteString("coexistente com docs/capability-matrix.md (eixo provedor x invariante de paridade),\n")
++	b.WriteString("nunca unificado com ele. Nao editar a mao: rode\n")
++	b.WriteString("`UPDATE_SNAPSHOTS=1 go test ./internal/capability/...` para regenerar.\n\n")
++	b.WriteString("| Provider | Event | Family | State | Reason | Limitation | Test |\n")
++	b.WriteString("|---|---|---|---|---|---|---|\n")
++	for _, c := range m.Cells {
++		fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %s | %s |\n",
++			escapeMarkdownCell(c.Provider),
++			escapeMarkdownCell(c.Event),
++			escapeMarkdownCell(c.Family),
++			escapeMarkdownCell(c.State),
++			escapeMarkdownCell(c.Reason),
++			escapeMarkdownCell(c.Limitation),
++			escapeMarkdownCell(c.Test),
++		)
++	}
++	return []byte(b.String())
++}
+diff --git a/internal/capability/hookmatrix_dispatch_proof_test.go b/internal/capability/hookmatrix_dispatch_proof_test.go
+new file mode 100644
+index 0000000..84f57be
+--- /dev/null
++++ b/internal/capability/hookmatrix_dispatch_proof_test.go
+@@ -0,0 +1,24 @@
++//go:build hook_dispatch_proof
++
++package capability
++
++import (
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
++)
++
++func TestHookCapabilityMatrix_RealMatrixEvidenceGateIsClean(t *testing.T) {
++	m, err := GenerateHooks()
++	if err != nil {
++		t.Fatalf("GenerateHooks: %v", err)
++	}
++	proof, err := HookDispatchProvenFromIntegrationTests(m)
++	if err != nil {
++		t.Fatalf("HookDispatchProvenFromIntegrationTests: %v", err)
++	}
++	violations := specs.ValidateCapabilityMatrixEvidence(EvidenceHookCells(m), proof)
++	if len(violations) != 0 {
++		t.Errorf("current hook capability matrix has unresolved dispatch proof: %v", violations)
++	}
++}
+diff --git a/internal/capability/hookmatrix_evidence.go b/internal/capability/hookmatrix_evidence.go
+new file mode 100644
+index 0000000..4fd59d0
+--- /dev/null
++++ b/internal/capability/hookmatrix_evidence.go
+@@ -0,0 +1,215 @@
++package capability
++
++import (
++	"bytes"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"go/ast"
++	"go/parser"
++	"go/token"
++	"os"
++	"os/exec"
++	"path/filepath"
++	"sort"
++	"strings"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
++)
++
++func hookCapabilityKey(event, family string) string {
++	return event + "/" + family
++}
++
++func EvidenceHookCells(m HookMatrix) []specs.CapabilityCell {
++	cells := make([]specs.CapabilityCell, 0, len(m.Cells))
++	for _, c := range m.Cells {
++		affirmative := c.State == "verified" || c.State == "adapter"
++		cells = append(cells, specs.CapabilityCell{
++			Provider:   c.Provider,
++			Capability: hookCapabilityKey(c.Event, c.Family),
++			Supported:  affirmative,
++		})
++	}
++	return cells
++}
++
++func hookTestFor(m HookMatrix, provider, capability string) string {
++	parts := strings.SplitN(capability, "/", 2)
++	if len(parts) != 2 {
++		return ""
++	}
++	event, family := parts[0], parts[1]
++	for _, c := range m.Cells {
++		if c.Provider == provider && c.Event == event && c.Family == family {
++			return c.Test
++		}
++	}
++	return ""
++}
++
++const integrationTestsRelDir = "tests/integration"
++
++func topLevelIntegrationTestNames(dir string) (map[string]bool, error) {
++	entries, err := os.ReadDir(dir)
++	if err != nil {
++		return nil, fmt.Errorf("read %s: %w", dir, err)
++	}
++
++	fset := token.NewFileSet()
++	found := make(map[string]bool)
++	for _, entry := range entries {
++		if entry.IsDir() || filepath.Ext(entry.Name()) != ".go" {
++			continue
++		}
++		path := filepath.Join(dir, entry.Name())
++		file, parseErr := parser.ParseFile(fset, path, nil, 0)
++		if parseErr != nil {
++			return nil, fmt.Errorf("parse %s: %w", path, parseErr)
++		}
++		for _, decl := range file.Decls {
++			fn, ok := decl.(*ast.FuncDecl)
++			if !ok || fn.Recv != nil {
++				continue
++			}
++			found[fn.Name.Name] = true
++		}
++	}
++	return found, nil
++}
++
++func hookDispatchTestNames(m HookMatrix) []string {
++	seen := make(map[string]bool)
++	var names []string
++	for _, c := range m.Cells {
++		if c.Test == "" {
++			continue
++		}
++		if seen[c.Test] {
++			continue
++		}
++		seen[c.Test] = true
++		names = append(names, c.Test)
++	}
++	sort.Strings(names)
++	return names
++}
++
++func hookDispatchTopLevelName(testName string) string {
++	if idx := strings.Index(testName, "/"); idx >= 0 {
++		return testName[:idx]
++	}
++	return testName
++}
++
++func runHookDispatchProofSuite(root string, testNames []string) (map[string]bool, string, error) {
++	if len(testNames) == 0 {
++		return map[string]bool{}, "", nil
++	}
++	top := make(map[string]bool, len(testNames))
++	for _, name := range testNames {
++		top[hookDispatchTopLevelName(name)] = true
++	}
++	patterns := make([]string, 0, len(top))
++	for name := range top {
++		patterns = append(patterns, "^"+name+"$")
++	}
++	sort.Strings(patterns)
++	pattern := strings.Join(patterns, "|")
++
++	cmd := exec.Command("go", "test", "-tags=integration", "./"+integrationTestsRelDir+"/",
++		"-count=1", "-json", "-timeout", "20m", "-run", pattern)
++	cmd.Dir = root
++	cmd.Env = append(os.Environ(), "GOFLAGS=")
++	var stdout, stderr bytes.Buffer
++	cmd.Stdout = &stdout
++	cmd.Stderr = &stderr
++	runErr := cmd.Run()
++
++	evidence, diag := parseParityTestEvidenceMulti(stdout.Bytes())
++	log := diag + stderr.String()
++	if runErr != nil {
++		return evidence, log, fmt.Errorf("hook dispatch proof suite failed: %w", runErr)
++	}
++	return evidence, log, nil
++}
++
++func parseParityTestEvidenceMulti(output []byte) (map[string]bool, string) {
++	passed := make(map[string]bool)
++	skipped := make(map[string]bool)
++	failed := make(map[string]bool)
++	var diag strings.Builder
++
++	for _, line := range bytes.Split(output, []byte("\n")) {
++		line = bytes.TrimSpace(line)
++		if len(line) == 0 || line[0] != '{' {
++			diag.Write(line)
++			diag.WriteByte('\n')
++			continue
++		}
++		var event goTestEvent
++		if err := json.Unmarshal(line, &event); err != nil {
++			diag.Write(line)
++			diag.WriteByte('\n')
++			continue
++		}
++		if event.Action == "output" {
++			diag.WriteString(event.Output)
++			continue
++		}
++		if event.Test == "" {
++			continue
++		}
++		switch event.Action {
++		case "pass":
++			passed[event.Test] = true
++		case "skip":
++			skipped[event.Test] = true
++		case "fail":
++			failed[event.Test] = true
++		}
++	}
++
++	evidence := make(map[string]bool, len(passed))
++	for name := range passed {
++		if skipped[name] || failed[name] {
++			continue
++		}
++		evidence[name] = true
++	}
++	return evidence, diag.String()
++}
++
++var ErrHookDispatchProofEnvironment = errors.New("hook dispatch proof environment resolution failed")
++
++func HookDispatchProvenFromIntegrationTests(m HookMatrix) (specs.CapabilityDispatchProofFunc, error) {
++	root, err := repoRootFromWorkingDir()
++	if err != nil {
++		return nil, fmt.Errorf("%w: %w", ErrHookDispatchProofEnvironment, err)
++	}
++
++	declared, err := topLevelIntegrationTestNames(filepath.Join(root, filepath.FromSlash(integrationTestsRelDir)))
++	if err != nil {
++		return nil, fmt.Errorf("%w: %w", ErrHookDispatchProofEnvironment, err)
++	}
++
++	testNames := hookDispatchTestNames(m)
++	for _, name := range testNames {
++		if !declared[hookDispatchTopLevelName(name)] {
++			return nil, fmt.Errorf("hook capability matrix declares test %q, which does not exist in %s", name, integrationTestsRelDir)
++		}
++	}
++
++	evidence, log, runErr := runHookDispatchProofSuite(root, testNames)
++	if runErr != nil {
++		return nil, fmt.Errorf("run hook dispatch proof suite: %w\n%s", runErr, log)
++	}
++
++	return func(provider, capabilityID string) bool {
++		testName := hookTestFor(m, provider, capabilityID)
++		if testName == "" {
++			return false
++		}
++		return evidence[testName]
++	}, nil
++}
+diff --git a/internal/capability/hookmatrix_golden_test.go b/internal/capability/hookmatrix_golden_test.go
+new file mode 100644
+index 0000000..d2758a4
+--- /dev/null
++++ b/internal/capability/hookmatrix_golden_test.go
+@@ -0,0 +1,135 @@
++package capability
++
++import (
++	"os"
++	"path/filepath"
++	"testing"
++)
++
++func hookCapabilityMatrixJSONPath() string {
++	return filepath.Join("..", "..", "testdata", "hook-capability-matrix.json")
++}
++
++func hookCapabilityMatrixMarkdownPath() string {
++	return filepath.Join("..", "..", "docs", "hook-capability-matrix.md")
++}
++
++func assertMatchesHookGolden(t *testing.T, path string, actual []byte) {
++	t.Helper()
++
++	if os.Getenv("UPDATE_SNAPSHOTS") == "1" {
++		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
++			t.Fatalf("create golden dir: %v", err)
++		}
++		if err := os.WriteFile(path, actual, 0o644); err != nil {
++			t.Fatalf("write golden file: %v", err)
++		}
++		return
++	}
++
++	matches, diff, err := goldenMatches(path, actual)
++	if err != nil {
++		t.Fatalf("golden file not found: %s (run with UPDATE_SNAPSHOTS=1 go test ./internal/capability/... to create/regenerate)", path)
++	}
++	if !matches {
++		t.Errorf("golden file diverges: %s\n\nRegenerate with: UPDATE_SNAPSHOTS=1 go test ./internal/capability/...\n\n%s", path, diff)
++	}
++}
++
++func TestHookCapabilityMatrix_GoldenJSONAndMarkdownFromSameGeneration(t *testing.T) {
++	m, err := GenerateHooks()
++	if err != nil {
++		t.Fatalf("GenerateHooks: %v", err)
++	}
++	jsonData, markdownData, err := RenderHooksBoth(m)
++	if err != nil {
++		t.Fatalf("RenderHooksBoth: %v", err)
++	}
++	t.Run("json", func(t *testing.T) {
++		assertMatchesHookGolden(t, hookCapabilityMatrixJSONPath(), jsonData)
++	})
++	t.Run("markdown", func(t *testing.T) {
++		assertMatchesHookGolden(t, hookCapabilityMatrixMarkdownPath(), markdownData)
++	})
++}
++
++func TestHookCapabilityMatrix_DeterministicGeneration(t *testing.T) {
++	m1, err := GenerateHooks()
++	if err != nil {
++		t.Fatalf("GenerateHooks (1): %v", err)
++	}
++	m2, err := GenerateHooks()
++	if err != nil {
++		t.Fatalf("GenerateHooks (2): %v", err)
++	}
++
++	json1, err := RenderHooksJSON(m1)
++	if err != nil {
++		t.Fatalf("RenderHooksJSON (1): %v", err)
++	}
++	json2, err := RenderHooksJSON(m2)
++	if err != nil {
++		t.Fatalf("RenderHooksJSON (2): %v", err)
++	}
++	if string(json1) != string(json2) {
++		t.Errorf("GenerateHooks is not deterministic: two runs produced different JSON bytes")
++	}
++
++	md1 := RenderHooksMarkdown(m1)
++	md2 := RenderHooksMarkdown(m2)
++	if string(md1) != string(md2) {
++		t.Errorf("GenerateHooks is not deterministic: two runs produced different Markdown bytes")
++	}
++}
++
++func TestHookCapabilityMatrix_HasExactlyOneHundredCells(t *testing.T) {
++	m, err := GenerateHooks()
++	if err != nil {
++		t.Fatalf("GenerateHooks: %v", err)
++	}
++	const want = 5 * 5 * 4
++	if len(m.Cells) != want {
++		t.Fatalf("expected %d cells (5 events x 5 families x 4 providers), got %d", want, len(m.Cells))
++	}
++}
++
++func TestHookCapabilityMatrix_UnsupportedCellsNeverCarryTest(t *testing.T) {
++	m, err := GenerateHooks()
++	if err != nil {
++		t.Fatalf("GenerateHooks: %v", err)
++	}
++	for _, c := range m.Cells {
++		if c.State != "unsupported" {
++			continue
++		}
++		if c.Test != "" {
++			t.Errorf("cell provider=%s event=%s family=%s is unsupported but declares a test reference; only affirmative cells may reference dispatch evidence", c.Provider, c.Event, c.Family)
++		}
++		if c.Reason == "" {
++			t.Errorf("cell provider=%s event=%s family=%s is unsupported but carries no reason (RF-17: silent weakening must never happen)", c.Provider, c.Event, c.Family)
++		}
++	}
++}
++
++func TestHookCapabilityMatrix_AffirmativeCellsCarryTestAndAdaptersCarryLimitation(t *testing.T) {
++	m, err := GenerateHooks()
++	if err != nil {
++		t.Fatalf("GenerateHooks: %v", err)
++	}
++	found := 0
++	for _, c := range m.Cells {
++		if c.State != "verified" && c.State != "adapter" {
++			continue
++		}
++		found++
++		if c.Test == "" {
++			t.Errorf("cell provider=%s event=%s family=%s is %s but has no resolved test", c.Provider, c.Event, c.Family, c.State)
++		}
++		if c.State == "adapter" && c.Limitation == "" {
++			t.Errorf("cell provider=%s event=%s family=%s is adapter but carries no limitation (RF-59)", c.Provider, c.Event, c.Family)
++		}
++	}
++	if found == 0 {
++		t.Fatal("expected at least one affirmative cell to exercise this gate meaningfully")
++	}
++}
+diff --git a/internal/doctor/doctor_hooks_test.go b/internal/doctor/doctor_hooks_test.go
+new file mode 100644
+index 0000000..4578052
+--- /dev/null
++++ b/internal/doctor/doctor_hooks_test.go
+@@ -0,0 +1,205 @@
++package doctor
++
++import (
++	"os"
++	"path/filepath"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/adapters"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/config"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/contextgen"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/embedded"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/install"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
++)
++
++func installRealProjectForHookTests(t *testing.T, tools []skills.Tool) (projectDir string, items []install.VerifyItem) {
++	t.Helper()
++
++	sourceDir, cleanup, err := embedded.NewExtractor().ExtractToTempDir()
++	if err != nil {
++		t.Fatalf("extract embedded assets: %v", err)
++	}
++	t.Cleanup(cleanup)
++
++	projectDir = t.TempDir()
++	fsys := fs.NewOSFileSystem()
++	printer := output.New(false)
++	mfst := manifest.NewStore(fsys)
++	adpt := adapters.NewGenerator(fsys, printer)
++	ctxg := contextgen.NewGenerator(fsys, printer)
++	svc := install.NewService(fsys, printer, mfst, adpt, ctxg)
++
++	if err := svc.Execute(config.InstallOptions{
++		ProjectDir: projectDir,
++		SourceDir:  sourceDir,
++		Tools:      tools,
++		Langs:      []skills.Lang{skills.LangNode},
++		LinkMode:   skills.LinkCopy,
++	}); err != nil {
++		t.Fatalf("install: %v", err)
++	}
++
++	items, err = svc.Verify(config.InstallOptions{ProjectDir: projectDir})
++	if err != nil {
++		t.Fatalf("verify: %v", err)
++	}
++	return projectDir, items
++}
++
++func TestRunHookChecks_FreshInstallHasNoFailures(t *testing.T) {
++	svc := setupService(fs.NewFakeFileSystem(), true)
++	projectDir, items := installRealProjectForHookTests(t, []skills.Tool{skills.ToolClaude, skills.ToolCodex, skills.ToolCopilot})
++
++	checks := svc.runHookChecks(projectDir, items)
++	for _, c := range checks {
++		if c.Status == "fail" {
++			t.Errorf("check %q unexpectedly failed on a fresh install: %s", c.Name, c.Detail)
++		}
++	}
++}
++
++func TestRunHookChecks_NoInstalledProviderWarnsAndSkips(t *testing.T) {
++	svc := setupService(fs.NewFakeFileSystem(), true)
++	checks := svc.runHookChecks("/project", nil)
++	if len(checks) != 1 {
++		t.Fatalf("expected exactly 1 check when no provider is installed, got %d", len(checks))
++	}
++	if checks[0].Status != "warn" {
++		t.Errorf("Status = %q, want warn", checks[0].Status)
++	}
++}
++
++func TestCheckHookAdapterMissing_DetectsMissingArtifact(t *testing.T) {
++	svc := setupService(fs.NewFakeFileSystem(), true)
++	projectDir, items := installRealProjectForHookTests(t, []skills.Tool{skills.ToolClaude})
++
++	if err := os.Remove(filepath.Join(projectDir, ".claude", "hooks", "validate-preload.sh")); err != nil {
++		t.Fatalf("remove installed artifact: %v", err)
++	}
++
++	checks := svc.runHookChecks(projectDir, items)
++	check := findCheck(t, checks, "Adapter ausente")
++	if check.Status != "fail" {
++		t.Fatalf("Status = %q, want fail after deleting an installed artifact; detail=%s", check.Status, check.Detail)
++	}
++}
++
++func TestCheckHookExecutable_DetectsNonExecutableArtifact(t *testing.T) {
++	svc := setupService(fs.NewFakeFileSystem(), true)
++	projectDir, items := installRealProjectForHookTests(t, []skills.Tool{skills.ToolClaude})
++
++	target := filepath.Join(projectDir, ".claude", "hooks", "validate-preload.sh")
++	if err := os.Chmod(target, 0o644); err != nil {
++		t.Fatalf("chmod: %v", err)
++	}
++
++	checks := svc.runHookChecks(projectDir, items)
++	check := findCheck(t, checks, "Hook executavel")
++	if check.Status != "fail" {
++		t.Fatalf("Status = %q, want fail after removing the execute bit; detail=%s", check.Status, check.Detail)
++	}
++}
++
++func TestCheckHookAdapterDivergence_DetectsCorruptedArtifactContent(t *testing.T) {
++	svc := setupService(fs.NewFakeFileSystem(), true)
++	projectDir, items := installRealProjectForHookTests(t, []skills.Tool{skills.ToolClaude})
++
++	target := filepath.Join(projectDir, ".claude", "hooks", "validate-preload.sh")
++	if err := os.WriteFile(target, []byte("#!/usr/bin/env bash\necho corrupted\n"), 0o755); err != nil {
++		t.Fatalf("corrupt installed artifact: %v", err)
++	}
++
++	checks := svc.runHookChecks(projectDir, items)
++	check := findCheck(t, checks, "Divergencia entre contrato e adapter")
++	if check.Status != "fail" {
++		t.Fatalf("Status = %q, want fail after corrupting the installed artifact's content; detail=%s", check.Status, check.Detail)
++	}
++}
++
++func TestCheckHookNativeConfigInvalid_DetectsMissingKey(t *testing.T) {
++	svc := setupService(fs.NewFakeFileSystem(), true)
++	projectDir, items := installRealProjectForHookTests(t, []skills.Tool{skills.ToolClaude})
++
++	settingsPath := filepath.Join(projectDir, ".claude", "settings.json")
++	if err := os.WriteFile(settingsPath, []byte(`{"hooks":{}}`), 0o644); err != nil {
++		t.Fatalf("corrupt native config: %v", err)
++	}
++
++	checks := svc.runHookChecks(projectDir, items)
++	check := findCheck(t, checks, "Configuracao do hook invalida")
++	if check.Status != "fail" {
++		t.Fatalf("Status = %q, want fail after emptying the native config's hooks map; detail=%s", check.Status, check.Detail)
++	}
++}
++
++func TestCheckHookContractVersion_DetectsUnknownProvider(t *testing.T) {
++	svc := setupService(fs.NewFakeFileSystem(), true)
++	items := []install.VerifyItem{
++		{Tool: skills.Tool("unknown-provider"), Skill: "x", State: install.VerifyStateCurrent, Kind: install.VerifyKindSkill},
++	}
++	check := svc.checkHookContractVersion(installedToolsFrom(items))
++	if check.Status != "fail" {
++		t.Fatalf("Status = %q, want fail for a provider absent from the current hook contract registry", check.Status)
++	}
++}
++
++func TestCheckHookContractVersion_OkForFullyCoveredProvider(t *testing.T) {
++	svc := setupService(fs.NewFakeFileSystem(), true)
++	check := svc.checkHookContractVersion([]skills.Tool{skills.ToolClaude})
++	if check.Status != "ok" {
++		t.Fatalf("Status = %q, want ok; detail=%s", check.Status, check.Detail)
++	}
++}
++
++func TestExecuteWithOptions_ReturnsErrorExitWhenHookCheckFails(t *testing.T) {
++	sourceDir, cleanup, err := embedded.NewExtractor().ExtractToTempDir()
++	if err != nil {
++		t.Fatalf("extract embedded assets: %v", err)
++	}
++	t.Cleanup(cleanup)
++
++	projectDir := t.TempDir()
++	fsys := fs.NewOSFileSystem()
++	printer := output.New(false)
++	mfst := manifest.NewStore(fsys)
++	adpt := adapters.NewGenerator(fsys, printer)
++	ctxg := contextgen.NewGenerator(fsys, printer)
++	installSvc := install.NewService(fsys, printer, mfst, adpt, ctxg)
++	if err := installSvc.Execute(config.InstallOptions{
++		ProjectDir: projectDir,
++		SourceDir:  sourceDir,
++		Tools:      []skills.Tool{skills.ToolClaude},
++		Langs:      []skills.Lang{skills.LangNode},
++		LinkMode:   skills.LinkCopy,
++	}); err != nil {
++		t.Fatalf("install: %v", err)
++	}
++	if err := os.Remove(filepath.Join(projectDir, ".claude", "hooks", "validate-preload.sh")); err != nil {
++		t.Fatalf("remove installed artifact: %v", err)
++	}
++
++	doctorSvc := setupService(fs.NewFakeFileSystem(), true)
++	doctorSvc.fs = fsys
++	doctorSvc.manifest = mfst
++	doctorSvc.install = installSvc
++
++	err = doctorSvc.Execute(projectDir)
++	if err == nil {
++		t.Fatal("expected a non-nil error (non-zero exit code) when a hook adapter is missing")
++	}
++}
++
++func findCheck(t *testing.T, checks []Check, name string) Check {
++	t.Helper()
++	for _, c := range checks {
++		if c.Name == name {
++			return c
++		}
++	}
++	t.Fatalf("check %q not found among %d checks", name, len(checks))
++	return Check{}
++}
+diff --git a/internal/doctor/hooks.go b/internal/doctor/hooks.go
+new file mode 100644
+index 0000000..cf1d863
+--- /dev/null
++++ b/internal/doctor/hooks.go
+@@ -0,0 +1,209 @@
++package doctor
++
++import (
++	"fmt"
++	"os"
++	"path/filepath"
++	"runtime"
++	"sort"
++	"strings"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/install"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/specs"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
++)
++
++func (s *Service) runHookChecks(projectDir string, items []install.VerifyItem) []Check {
++	tools := installedToolsFrom(items)
++	if len(tools) == 0 {
++		return []Check{{
++			Name:   "Adapters instalados",
++			Status: "warn",
++			Detail: "nenhum provedor instalado neste projeto; diagnostico de hooks pulado",
++			Layer:  LayerAdapter,
++		}}
++	}
++
++	violations := s.hookParityViolations(projectDir, tools)
++
++	var checks []Check
++	checks = append(checks, s.checkHookContractVersion(tools))
++	checks = append(checks, checkHookAdapterMissing(violations))
++	checks = append(checks, s.checkHookExecutable(projectDir, tools))
++	checks = append(checks, checkHookNativeConfigInvalid(violations))
++	checks = append(checks, checkHookAdapterDivergence(violations))
++	return checks
++}
++
++func installedToolsFrom(items []install.VerifyItem) []skills.Tool {
++	seen := make(map[skills.Tool]bool)
++	var tools []skills.Tool
++	for _, it := range items {
++		if it.Tool == "" || seen[it.Tool] {
++			continue
++		}
++		seen[it.Tool] = true
++		tools = append(tools, it.Tool)
++	}
++	sort.Slice(tools, func(i, j int) bool { return tools[i] < tools[j] })
++	return tools
++}
++
++func (s *Service) checkHookContractVersion(tools []skills.Tool) Check {
++	wantEvents := len(hookcontract.EventKinds())
++	var incompatible []string
++	for _, tool := range tools {
++		agent, err := specs.NewCatalog().AgentByID(string(tool))
++		if err != nil {
++			incompatible = append(incompatible, fmt.Sprintf("%s (agente ausente do catalogo)", tool))
++			continue
++		}
++		gotPoints := len(agent.Enforcement().Coverage())
++		if gotPoints != wantEvents {
++			incompatible = append(incompatible, fmt.Sprintf("%s (%d/%d pontos canonicos)", tool, gotPoints, wantEvents))
++		}
++	}
++	if len(incompatible) > 0 {
++		sort.Strings(incompatible)
++		return Check{
++			Name:   "Versao do contrato de hooks",
++			Status: "fail",
++			Detail: fmt.Sprintf("contrato declara %d eventos canonicos; adapter(s) divergente(s): %s", wantEvents, strings.Join(incompatible, ", ")),
++			Layer:  LayerAdapter,
++		}
++	}
++	return Check{
++		Name:   "Versao do contrato de hooks",
++		Status: "ok",
++		Detail: fmt.Sprintf("todos os %d adapter(s) instalado(s) cobrem os %d eventos canonicos do contrato", len(tools), wantEvents),
++		Layer:  LayerAdapter,
++	}
++}
++
++func (s *Service) hookParityViolations(projectDir string, tools []skills.Tool) []specs.ParityViolation {
++	catalog := specs.NewCatalog()
++	var cells []specs.AgentEnforcement
++	requiredAgents := make([]string, 0, len(tools))
++	for _, tool := range tools {
++		agent, err := catalog.AgentByID(string(tool))
++		if err != nil {
++			continue
++		}
++		cells = append(cells, specs.AgentEnforcement{Agent: string(tool), Enforcement: agent.Enforcement()})
++		requiredAgents = append(requiredAgents, string(tool))
++	}
++
++	resolve := func(relPath string) ([]byte, error) {
++		if relPath == "" {
++			return nil, fmt.Errorf("empty path")
++		}
++		return os.ReadFile(filepath.Join(projectDir, filepath.FromSlash(relPath)))
++	}
++	alwaysDispatchProven := func(string, specs.CanonicalPoint) bool { return true }
++
++	return specs.ValidateParityMatrix(cells, requiredAgents, alwaysDispatchProven, resolve)
++}
++
++func checkHookAdapterMissing(violations []specs.ParityViolation) Check {
++	var missing []string
++	for _, v := range violations {
++		if strings.Contains(v.Reason, "installed artifact") && strings.Contains(v.Reason, "does not exist on disk") {
++			missing = append(missing, v.String())
++		}
++	}
++	if len(missing) > 0 {
++		sort.Strings(missing)
++		return Check{
++			Name:   "Adapter ausente",
++			Status: "fail",
++			Detail: fmt.Sprintf("%d adapter(s) ausente(s): %s", len(missing), strings.Join(missing, "; ")),
++			Layer:  LayerAdapter,
++		}
++	}
++	return Check{Name: "Adapter ausente", Status: "ok", Detail: "todos os adapters declarados estao instalados", Layer: LayerAdapter}
++}
++
++func checkHookNativeConfigInvalid(violations []specs.ParityViolation) Check {
++	var invalid []string
++	for _, v := range violations {
++		if strings.Contains(v.Reason, "is missing, so native key") || strings.Contains(v.Reason, "does not declare native key") {
++			invalid = append(invalid, v.String())
++		}
++	}
++	if len(invalid) > 0 {
++		sort.Strings(invalid)
++		return Check{
++			Name:   "Configuracao do hook invalida",
++			Status: "fail",
++			Detail: fmt.Sprintf("%d configuracao(oes) nativa(s) invalida(s): %s", len(invalid), strings.Join(invalid, "; ")),
++			Layer:  LayerAdapter,
++		}
++	}
++	return Check{Name: "Configuracao do hook invalida", Status: "ok", Detail: "configuracao nativa declara os pontos canonicos esperados", Layer: LayerAdapter}
++}
++
++func checkHookAdapterDivergence(violations []specs.ParityViolation) Check {
++	var diverged []string
++	for _, v := range violations {
++		switch {
++		case v.Reason == "missing canonical point coverage":
++			diverged = append(diverged, v.String())
++		case strings.Contains(v.Reason, "neither mirrors nor executes the canonical validator"):
++			diverged = append(diverged, v.String())
++		case strings.Contains(v.Reason, "without wiring it to the canonical validator"):
++			diverged = append(diverged, v.String())
++		}
++	}
++	if len(diverged) > 0 {
++		sort.Strings(diverged)
++		return Check{
++			Name:   "Divergencia entre contrato e adapter",
++			Status: "fail",
++			Detail: fmt.Sprintf("%d divergencia(s): %s", len(diverged), strings.Join(diverged, "; ")),
++			Layer:  LayerAdapter,
++		}
++	}
++	return Check{Name: "Divergencia entre contrato e adapter", Status: "ok", Detail: "nenhuma divergencia entre o contrato e os adapters instalados", Layer: LayerAdapter}
++}
++
++func (s *Service) checkHookExecutable(projectDir string, tools []skills.Tool) Check {
++	if runtime.GOOS == "windows" {
++		return Check{Name: "Hook executavel", Status: "ok", Detail: "bit de execucao nao e aplicavel neste sistema operacional", Layer: LayerAdapter}
++	}
++
++	catalog := specs.NewCatalog()
++	var nonExecutable []string
++	seen := make(map[string]bool)
++	for _, tool := range tools {
++		agent, err := catalog.AgentByID(string(tool))
++		if err != nil {
++			continue
++		}
++		for _, cov := range agent.Enforcement().Coverage() {
++			artifact := cov.ArtifactPath()
++			if artifact == "" || seen[artifact] {
++				continue
++			}
++			seen[artifact] = true
++			fullPath := filepath.Join(projectDir, filepath.FromSlash(artifact))
++			info, statErr := os.Stat(fullPath)
++			if statErr != nil {
++				continue
++			}
++			if info.Mode()&0o111 == 0 {
++				nonExecutable = append(nonExecutable, artifact)
++			}
++		}
++	}
++	if len(nonExecutable) > 0 {
++		sort.Strings(nonExecutable)
++		return Check{
++			Name:   "Hook executavel",
++			Status: "fail",
++			Detail: fmt.Sprintf("%d hook(s) instalado(s) sem bit de execucao: %s", len(nonExecutable), strings.Join(nonExecutable, ", ")),
++			Layer:  LayerAdapter,
++		}
++	}
++	return Check{Name: "Hook executavel", Status: "ok", Detail: "todos os hooks instalados sao executaveis", Layer: LayerAdapter}
++}
+diff --git a/testdata/hook-capability-matrix.json b/testdata/hook-capability-matrix.json
+new file mode 100644
+index 0000000..1938395
+--- /dev/null
++++ b/testdata/hook-capability-matrix.json
+@@ -0,0 +1,705 @@
++{
++  "cells": [
++    {
++      "provider": "claude",
++      "event": "session_start",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "codex",
++      "event": "session_start",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "copilot",
++      "event": "session_start",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "opencode",
++      "event": "session_start",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "claude",
++      "event": "session_start",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "codex",
++      "event": "session_start",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "copilot",
++      "event": "session_start",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "opencode",
++      "event": "session_start",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "claude",
++      "event": "session_start",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "codex",
++      "event": "session_start",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "copilot",
++      "event": "session_start",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "opencode",
++      "event": "session_start",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "claude",
++      "event": "session_start",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "codex",
++      "event": "session_start",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "copilot",
++      "event": "session_start",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "opencode",
++      "event": "session_start",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "claude",
++      "event": "session_start",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "codex",
++      "event": "session_start",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "copilot",
++      "event": "session_start",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "opencode",
++      "event": "session_start",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "claude",
++      "event": "before_tool",
++      "family": "git-policy",
++      "state": "verified",
++      "test": "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/claude"
++    },
++    {
++      "provider": "codex",
++      "event": "before_tool",
++      "family": "git-policy",
++      "state": "verified",
++      "test": "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/codex"
++    },
++    {
++      "provider": "copilot",
++      "event": "before_tool",
++      "family": "git-policy",
++      "state": "verified",
++      "test": "TestPreToolHookDispatchBlocksWhenSkillPrerequisiteMissing/copilot"
++    },
++    {
++      "provider": "opencode",
++      "event": "before_tool",
++      "family": "git-policy",
++      "state": "verified",
++      "test": "TestOpenCodeGovernancePluginBlocksWhenSkillPrerequisiteMissing"
++    },
++    {
++      "provider": "claude",
++      "event": "before_tool",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "codex",
++      "event": "before_tool",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "copilot",
++      "event": "before_tool",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "opencode",
++      "event": "before_tool",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "claude",
++      "event": "before_tool",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "codex",
++      "event": "before_tool",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "copilot",
++      "event": "before_tool",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "opencode",
++      "event": "before_tool",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "claude",
++      "event": "before_tool",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "codex",
++      "event": "before_tool",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "copilot",
++      "event": "before_tool",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "opencode",
++      "event": "before_tool",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "claude",
++      "event": "before_tool",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "codex",
++      "event": "before_tool",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "copilot",
++      "event": "before_tool",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "opencode",
++      "event": "before_tool",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "claude",
++      "event": "after_tool",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "codex",
++      "event": "after_tool",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "copilot",
++      "event": "after_tool",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "opencode",
++      "event": "after_tool",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "claude",
++      "event": "after_tool",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "codex",
++      "event": "after_tool",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "copilot",
++      "event": "after_tool",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "opencode",
++      "event": "after_tool",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "claude",
++      "event": "after_tool",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "codex",
++      "event": "after_tool",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "copilot",
++      "event": "after_tool",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "opencode",
++      "event": "after_tool",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "claude",
++      "event": "after_tool",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "codex",
++      "event": "after_tool",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "copilot",
++      "event": "after_tool",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "opencode",
++      "event": "after_tool",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "claude",
++      "event": "after_tool",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "codex",
++      "event": "after_tool",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "copilot",
++      "event": "after_tool",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "opencode",
++      "event": "after_tool",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "claude",
++      "event": "before_complete",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "codex",
++      "event": "before_complete",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "copilot",
++      "event": "before_complete",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "opencode",
++      "event": "before_complete",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "claude",
++      "event": "before_complete",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "codex",
++      "event": "before_complete",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "copilot",
++      "event": "before_complete",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "opencode",
++      "event": "before_complete",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "claude",
++      "event": "before_complete",
++      "family": "evidence-gate",
++      "state": "verified",
++      "test": "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/claude"
++    },
++    {
++      "provider": "codex",
++      "event": "before_complete",
++      "family": "evidence-gate",
++      "state": "verified",
++      "test": "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/codex"
++    },
++    {
++      "provider": "copilot",
++      "event": "before_complete",
++      "family": "evidence-gate",
++      "state": "verified",
++      "test": "TestSessionEndHookDispatchBlocksActiveTaskWithoutApprovedVerdict/copilot"
++    },
++    {
++      "provider": "opencode",
++      "event": "before_complete",
++      "family": "evidence-gate",
++      "state": "adapter",
++      "limitation": "OpenCode's session.idle fires at turn end but does not block; evidence-gate is dispatched but purely observational there, unlike Stop/agentStop in the other three CLIs",
++      "test": "TestOpenCodeGovernancePluginSessionIdleBlocksActiveTaskWithoutApprovedVerdict"
++    },
++    {
++      "provider": "claude",
++      "event": "before_complete",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "no wiring found for post-execute-task.sh (checkpoint F25) at before_complete for this provider"
++    },
++    {
++      "provider": "codex",
++      "event": "before_complete",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "no wiring found for post-execute-task.sh (checkpoint F25) at before_complete for this provider"
++    },
++    {
++      "provider": "copilot",
++      "event": "before_complete",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "no wiring found for post-execute-task.sh (checkpoint F25) at before_complete for this provider"
++    },
++    {
++      "provider": "opencode",
++      "event": "before_complete",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "no wiring found for post-execute-task.sh (checkpoint F25) at before_complete for this provider"
++    },
++    {
++      "provider": "claude",
++      "event": "before_complete",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "codex",
++      "event": "before_complete",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "copilot",
++      "event": "before_complete",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "opencode",
++      "event": "before_complete",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "claude",
++      "event": "session_end",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "codex",
++      "event": "session_end",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "copilot",
++      "event": "session_end",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "opencode",
++      "event": "session_end",
++      "family": "git-policy",
++      "state": "unsupported",
++      "reason": "git-policy is dispatched only at before_tool, via validate-preload.sh delegating to git-operation-gate.sh (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, opencode tool.execute.before); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "claude",
++      "event": "session_end",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "codex",
++      "event": "session_end",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "copilot",
++      "event": "session_end",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "opencode",
++      "event": "session_end",
++      "family": "quality-gate",
++      "state": "unsupported",
++      "reason": "quality-gate (internal/qualitygate + internal/runtime/hooks.QualityGateHook) is registered only on the internal ACP orchestrator dispatcher (PointSessionPostEnd); it is not exposed through any provider-native hook configuration (.claude/settings.json, .codex/config.toml, .github/hooks/governance.json, .opencode plugin) yet, so no cell of this family can be declared verified or adapter without repeating the V-25 tautology; wiring it into native hook configs is future work, not part of this task's scope"
++    },
++    {
++      "provider": "claude",
++      "event": "session_end",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "codex",
++      "event": "session_end",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "copilot",
++      "event": "session_end",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "opencode",
++      "event": "session_end",
++      "family": "evidence-gate",
++      "state": "unsupported",
++      "reason": "evidence-gate is dispatched only at before_complete, via validate-session-end.sh (Stop/agentStop/session.idle); no wiring exists for this family at this event"
++    },
++    {
++      "provider": "claude",
++      "event": "session_end",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "codex",
++      "event": "session_end",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "copilot",
++      "event": "session_end",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "opencode",
++      "event": "session_end",
++      "family": "checkpoint",
++      "state": "unsupported",
++      "reason": "checkpoint (F25) runs only inside post-execute-task.sh, reachable at before_complete for the providers that wire subagent-stop-wrapper.sh; no wiring exists for this family at this event"
++    },
++    {
++      "provider": "claude",
++      "event": "session_end",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "codex",
++      "event": "session_end",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "copilot",
++      "event": "session_end",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    },
++    {
++      "provider": "opencode",
++      "event": "session_end",
++      "family": "telemetry",
++      "state": "unsupported",
++      "reason": "telemetry has no dedicated dispatch-proven wiring yet; ai-spec hookaudit append is invoked as a best-effort side effect inside git-operation-gate.sh (guarded by command -v ai-spec, silently no-op otherwise), which is not a genuine per-cell proof; building real telemetry dispatch and its proof is the scope of task 12.0"
++    }
++  ]
++}

@@ -59,7 +59,11 @@ func TestCapabilityMatrix_RealMatrixEvidenceGateIsClean(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read parity_test.go: %v", err)
 	}
-	violations := specs.ValidateCapabilityMatrixEvidence(EvidenceCells(m), DispatchProvenFromParityTests(source))
+	proof, err := DispatchProvenFromParityTests(source)
+	if err != nil {
+		t.Fatalf("DispatchProvenFromParityTests: %v", err)
+	}
+	violations := specs.ValidateCapabilityMatrixEvidence(EvidenceCells(m), proof)
 	if len(violations) != 0 {
 		t.Errorf("current capability matrix has unresolved dispatch proof: %v", violations)
 	}
