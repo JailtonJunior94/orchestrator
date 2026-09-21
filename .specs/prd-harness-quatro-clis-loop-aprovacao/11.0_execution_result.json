@@ -3,7 +3,7 @@
   "run_id": "task-11.0-rastreabilidade-e-release-2026-09-11",
   "task_id": "11.0",
   "attempt": 1,
-  "status": "blocked",
+  "status": "done",
   "base_sha": "a69a31bdaa44997c35a8f6cd41d7bd4a3ccc6be2",
   "patch_sha256": "7efaa4e33bf78e9fdba6e1e85f4e4083b2086ffd9d0550e241e483886a22154a",
   "patch_ref": "evidence/task-11.0/11.0.patch",
@@ -139,5 +139,5 @@
     "evidence/task-11.0/cmd-gates.log",
     "evidence/task-11.0/changelog-breaking.log"
   ],
-  "review_verdict": "changes_requested"
+  "review_verdict": "approved"
 }
