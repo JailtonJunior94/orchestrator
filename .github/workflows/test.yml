@@ -176,7 +176,7 @@ jobs:
         # passavam a mao e nenhum job os executava — um teste que nao roda nao e evidencia. O -v
         # garante que o nome de cada teste aparece nominalmente no log do job, nao so o resultado
         # agregado.
-        run: go test -v -timeout=20m -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/parity/... ./internal/qualitygate/...
+        run: go test -v -tags=integration ./internal/integration/... ./internal/skills/... ./tests/integration/... ./internal/parity/... ./internal/qualitygate/... -timeout=20m
 
       - name: Hook capability matrix sync gate
         run: make check-hook-capability-matrix-sync
