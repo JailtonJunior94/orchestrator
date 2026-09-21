@@ -40,7 +40,7 @@ Sete fatos verificados neste repositório sustentam o escopo deste documento:
    caminhos — isto é, **falha aberta**.
 
 3. **O adapter do Claude nunca é confrontado.** `internal/runtime/specs/registry.go` declara
-   `.claude/settings.json` e `.claude/settings.local.json` com `required: false`, enquanto Codex
+   `.claude/settings.json` e `.claude/settings.local.json` (planejado) com `required: false`, enquanto Codex
    (`.codex/config.toml`) e OpenCode (`.opencode/plugin/governance.js`) são `required: true`. Como
    o Claude grava seus hooks em `settings.local.json` — arquivo **não versionado** — o gate de
    paridade não tem o que ler e passa sem verificar nada. O provedor mais usado do harness é o
@@ -503,7 +503,7 @@ Acrescentado pelas decisões desta sessão:
   outras ficam fora, ainda que o validador de evidência já tolere alguns de seus comandos de teste;
 - **skill de implementação para Java.** RF-32 torna Java cidadão de primeira classe na detecção,
   na enumeração de linguagens e na resolução de toolchain; escrever
-  `.agents/skills/java-implementation/` é trabalho de outro PRD.
+  `.agents/skills/java-implementation/` (planejado) é trabalho de outro PRD.
 
 ---
 

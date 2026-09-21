@@ -1,4 +1,4 @@
-<!-- spec-hash-prd: d82183d24c937cef552bf9404a0b14a2a8a8d0fd1308f300b1b46dc52d43d076 -->
+<!-- spec-hash-prd: 2672e949229c9a0e9058e91882691b8e2b7362464b162d6d7aa209bdec082acb -->
 <!-- MANDATÓRIO: preenchido por `create-technical-specification` Etapa 7.1 com sha256 do PRD consumido.
      Rastreabilidade: `create-tasks` e `execute-task` comparam este hash com o atual do prd.md
      para detectar drift entre techspec e PRD. NÃO remover este comentário ao editar a techspec. -->
@@ -55,7 +55,7 @@ compilação.
 | `internal/hookaudit/` | Leitor e validador do log de escapes — hoje o log tem escritores e **nenhum leitor**. |
 | `.agents/lib/hook-payload.sh` | Substitui o parsing truncado de `parse-hook-input.sh`, sem limite de 64 KiB e sem fallback por `grep`. |
 | `internal/detect/toolchain_java.go`, `toolchain_dotnet.go` | Resolução de `fmt`/`test`/`lint` para as duas stacks hoje ausentes do resolver. |
-| `internal/skills/exhaustiveness_test.go` | Gate que itera `AllLangs` e exige, por linguagem, skill declarada, entrada em `langImplementationSkills`, label em `contextgen` e arquivo de triggers. |
+| `internal/skills/lang_exhaustive_wiring_test.go` | Gate que itera `AllLangs` e exige, por linguagem, skill declarada, entrada em `langImplementationSkills`, label em `contextgen` e arquivo de triggers. |
 
 #### Componentes modificados
 
@@ -297,8 +297,8 @@ Não aplicável — o produto é uma CLI. As superfícies novas de linha de coma
 | Integração | Natureza | Tratamento de erro |
 |---|---|---|
 | Claude Code | `settings.json` (projeto, versionado) e `settings.local.json` (local). A investigação confirmou a precedência oficial: user < plugin < project < local < managed | RF-52: o instalador passa a escrever a fiação canônica em `.claude/settings.json` (versionado) e o registro marca essa fonte como `required: true`. `settings.local.json` continua aceito como sobreposição local, mas deixa de ser a única fonte |
-| Codex CLI | `.codex/config.toml` **e** `.codex/hooks.json`, ambos por camada; trust por hash | Hook alterado fica *enrolled mas untrusted* e é **pulado silenciosamente** (bug público openai/codex#46210). O adapter declara `PreconditionTrustedHash` como bloqueante e o `doctor` consulta o trust por RPC read-only — mecanismo já existente em `internal/runtime/precondition` |
-| GitHub Copilot CLI | `.github/hooks/*.json` e `.github/copilot/settings.json` — o repositório declara hoje `.github/settings.json`, caminho que a documentação oficial não usa | `preToolUse` é fail-closed para exit 2 e non-zero, mas **fail-open no timeout**. Modelado explicitamente como limitação declarada, não corrigida |
+| Codex CLI | `.codex/config.toml` **e** `.codex/hooks.json` (planejado), ambos por camada; trust por hash | Hook alterado fica *enrolled mas untrusted* e é **pulado silenciosamente** (bug público openai/codex#46210). O adapter declara `PreconditionTrustedHash` como bloqueante e o `doctor` consulta o trust por RPC read-only — mecanismo já existente em `internal/runtime/precondition` |
+| GitHub Copilot CLI | `.github/hooks/*.json` e `.github/copilot/settings.json` (planejado) — caminho de projeto-alvo escrito pelo instalador (RF-52/8.0); o repositório declarava antes `.github/settings.json` (planejado), caminho que a documentação oficial não usa e que deixou de ser gerado após a correção da 8.0 | `preToolUse` é fail-closed para exit 2 e non-zero, mas **fail-open no timeout**. Modelado explicitamente como limitação declarada, não corrigida |
 | OpenCode | Plugin JS in-process; nega por `throw`, não por exit code | Único provedor sem `SessionEnd` e com `BeforeComplete` (`session.idle`) **não bloqueante**. Declarado `SupportAdapter` com `limitation` preenchido e `SupportUnsupported` para `SessionEnd` — nunca paridade simulada (P07) |
 | Binário `ai-spec` | Invocado por `post-execute-task.sh:87` e `validate-task-evidence.sh:416-433` com checagem de versão mínima | Já é fail-closed; preservado |
 | `git` | `rev-parse`, `cat-file`, `merge-base`, `ls-files` em vários gates | Preservado |
@@ -393,8 +393,8 @@ concreta.
   semântico nem dispara violação de isolamento. **Precede** qualquer migração de escrita.
 - `tests/integration/portability_test.go` — fixtures `java-maven`, `java-gradle`, `dotnet-api`
   acrescentadas ao **fim** de `cases` (a asserção `wantStackSub` é substring contígua).
-- `tests/integration/jsonl_crash_recovery_test.go` — trunca `events.jsonl` no meio de uma linha e
-  exige detecção explícita, não consumo silencioso.
+- `internal/runtime/persistence/jsonl_crash_recovery_test.go` — trunca `events.jsonl` no meio de uma
+  linha e exige detecção explícita, não consumo silencioso.
 
 ### Testes E2E
 
@@ -428,7 +428,7 @@ telemetria.
 | RF-25 a RF-30 | Quality gate por evento, com fingerprint | `internal/qualitygate/` | `TestQualityGate_SkipsWhenFingerprintUnchanged` |
 | RF-31 a RF-34 | Toolchain das 5 stacks + prova de teste | `detect/toolchain_*.go`, `validate-task-evidence.sh` | `stack_coverage_test.go`, `test-validators.sh` |
 | RF-35 a RF-38 | Evidence gate preservado, independente de provedor | `validate-task-evidence.sh` | `session_end_gate_test.go` |
-| RF-39 a RF-44 | Checkpoint atômico com detecção de corrupção | `persistence/`, `post-wave.sh` | `jsonl_crash_recovery_test.go` |
+| RF-39 a RF-44 | Checkpoint atômico com detecção de corrupção | `persistence/`, `post-wave.sh` | `internal/runtime/persistence/jsonl_crash_recovery_test.go` |
 | RF-45 a RF-50 | Schema comum com `unknown` explícito | `internal/telemetry/` | `TestTelemetry_UnavailableIsUnknown` |
 | RF-51, RF-52 | `.claude/settings.json` versionado e `required` | `install.go`, `registry.go` | `native_config_gate_test.go` |
 | RF-53 a RF-55 | Adapters Codex, OpenCode, Copilot | `specs/registry.go` | suíte por adapter |

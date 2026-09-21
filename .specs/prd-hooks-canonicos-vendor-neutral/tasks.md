@@ -1,5 +1,5 @@
-<!-- spec-hash-prd: d82183d24c937cef552bf9404a0b14a2a8a8d0fd1308f300b1b46dc52d43d076 -->
-<!-- spec-hash-techspec: 28182779dacbe9ecab5f7575266e291df6caea8b42a21bd34f70199ec162104c -->
+<!-- spec-hash-prd: 2672e949229c9a0e9058e91882691b8e2b7362464b162d6d7aa209bdec082acb -->
+<!-- spec-hash-techspec: 27778d067447f7a10aaa0cb761a223169846abc38d13a11947663946f59718e1 -->
 # Resumo das Tarefas de Implementação para Hooks Canônicos, Determinísticos e Vendor-Neutral
 
 ## Metadados

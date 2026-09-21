@@ -107,7 +107,7 @@ test-hooks:
 # declaracao o script varreria apenas PRDs com sdd-state.json — conjunto vazio
 # neste repositorio — e o gate aprovaria por vacuidade, sem proteger artefato
 # nenhum. PRD concluido sai da lista; PRD novo entra.
-SPEC_PATH_TARGETS ?= .specs/prd-harness-quatro-clis-loop-aprovacao .specs/prd-harness-portatil-vendor-neutral
+SPEC_PATH_TARGETS ?= .specs/prd-harness-quatro-clis-loop-aprovacao .specs/prd-harness-portatil-vendor-neutral .specs/prd-hooks-canonicos-vendor-neutral
 
 check-spec-paths:
 	bash scripts/check-spec-paths.sh $(SPEC_PATH_TARGETS)
