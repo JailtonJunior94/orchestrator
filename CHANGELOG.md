@@ -1,5 +1,63 @@
 # Changelog
 
+## 2.2.0 (2026-09-21)
+
+### Features
+- **hooks:** conformidade cross-provider RF-61 a RF-63 e documentacao final (tarefa 13.0) (82c88bd)
+- **hooks:** matriz de capabilities por evento e familia com doctor de hooks (tarefa 9.0) (90e0309)
+- **hooks:** conecta telemetria, ablation, timeout e guarda de recursao ao dispatcher (tarefa 12.0) (4d1abd4)
+- **hooks:** entrega evidence gate, checkpoint atomico e sanitizacao (tarefa 11.0) (76cf962)
+- **hooks:** declara os 20 pares provedor-evento com SessionStart e SessionEnd reais (aa2d572)
+- **hooks:** entrega quality gate disparado por evento (tarefa 10.0) (1fb24c3)
+- **hooks:** deriva escopo git da policy do harness e reescreve o gate por palavra-de-comando (5c36717)
+- **harness:** trata Go, Node, Python, .NET e Java com igualdade no harness (f9fd129)
+- **hooks:** projeta CanonicalPoint e hooks.Point* a partir de hookcontract.EventKind (7d98ae2)
+- **hooks:** entrega contrato canonico de hooks em internal/hookcontract (6513541)
+- **hooks:** entrega tarefas 1.0, 2.0 e 3.0 do PRD hooks-canonicos-vendor-neutral (69514d3)
+
+### Bug Fixes
+- **ci:** reposiciona -timeout=20m para nao quebrar assercao de string exata (f3573b3)
+- **ci:** aumenta orcamento de timeout do gate git para runners CI mais lentos (e27909b)
+- **hooks:** post-wave.sh nao depende mais de flock estar no PATH (201dc21)
+- **specs:** reconcilia status/review_verdict obsoletos da tarefa 11.0 do PRD harness-quatro-clis-loop-aprovacao (edd07f8)
+- **gitgate:** nao trata subcomando git ausente como dinamico (0b5a44d)
+- **skillscheck:** remove comentarios introduzidos na correcao SKILLSLOCK-HOOKS-1 (f6ca7b1)
+- **hooks:** elimina processo sleep orfao em hook_timeout_watch (cc4693a)
+- **skillscheck:** consome campo hooks separado de skills em skills-lock.json (897764f)
+- **hookinventory:** liga hooks a skills-lock.json via campo proprio e deriva citacoes FAIL-OPEN (3237d59)
+- **hooks:** remove comentarios introduzidos pelo bugfix da tarefa 12.0 (3fa5879)
+- **hooks:** declara timeout e guarda de recursao real nos hooks shell (RF-66/RF-67); prova RF-48 no dispatcher real (c35102e)
+- **hookinventory:** deriva campos reais do inventario e liga RF-70 ao skills-lock.json (a559ab8)
+- **persistence,hooks:** repara jsonl truncado no crash e cobre connection_string_credential no post-wave.sh (675e04c)
+- **hooks:** restringe deteccao de variable_expansion ao token de comando no gate git (dd448c3)
+- **contextgen:** deriva ValidationLangOrder/ValidationLangLabels de skills.AllLangs (2cfb807)
+- **specs:** registra PRD hooks-canonicos-vendor-neutral em check-spec-paths e reconcilia citacoes (8724495)
+- **evidencia:** move evidencia da tarefa 8.0 para o caminho canonico evidence/ (b88e976)
+- **harness:** remove contaminacao cruzada de test-validators.sh do commit 5fe1d18 (b6b3f30)
+- **harness:** remove contaminacao cruzada de test-validators.sh do commit 5fe1d18 (2998259)
+- **harness:** remove comentarios introduzidos no diff da tarefa 7.0 (56bd1d8)
+
+### Documentation
+- **evidencia:** documenta comandos de selagem e fechamento pendente de 2.0 (b7e7a12)
+
+### Chores
+- **hooks:** regenera inventario apos rodada 4 do fix de git-operation-gate.sh (588c343)
+- **hooks:** regenera inventario apos correcoes de RF-66/RF-67 nos hooks shell (1cbe3ad)
+- **evidencia:** sela evidencia SDD v2 da tarefa 13.0 no commit 217534d (0bcf18a)
+- **evidencia:** sela evidencia SDD v2 da tarefa 9.0 no commit 0b67199 (aa9021d)
+- **evidencia:** sela evidencia SDD v2 da tarefa 12.0 no commit 7e2591e (32e621e)
+- **evidencia:** sela evidencia SDD v2 da tarefa 11.0 no commit 2360bd4 (c239762)
+- **evidencia:** sela evidencia SDD v2 da tarefa 8.0 no commit aaee239 (ed631a5)
+- **evidencia:** sela evidencia SDD v2 da tarefa 10.0 no commit 33e7e4a (121a86b)
+- **evidencia:** sela evidencia SDD v2 da tarefa 6.0 no commit 6abf111 (6d476aa)
+- **evidencia:** sela evidencia SDD v2 da tarefa 7.0 no commit ba321a4 (38866da)
+- **evidencia:** sela evidencia SDD v2 da tarefa 5.0 no commit ed8ebd8 (e9a158a)
+- **evidencia:** sela fechamento formal da tarefa 2.0 (5fa549e)
+- **evidencia:** sela evidencia da tarefa 4.0 no commit anterior (5fc2d64)
+
+### Tests
+- **hooks:** cobre CanonicalEventFor, PointsWithoutCanonicalEvent e AllPoints (aa2f7db)
+
 ## 2.1.0 (2026-09-19)
 
 ### Features
