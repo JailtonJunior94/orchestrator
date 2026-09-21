@@ -66,7 +66,6 @@ func NewService(fsys fs.FileSystem, printer *output.Printer) *Service {
 	return &Service{fs: fsys, printer: printer}
 }
 
-// readLock le e parseia o skills-lock.json do projectDir.
 func (s *Service) readLock(projectDir string) (LockFile, error) {
 	lockPath := filepath.Join(projectDir, "skills-lock.json")
 	lockData, err := s.fs.ReadFile(lockPath)
@@ -81,7 +80,6 @@ func (s *Service) readLock(projectDir string) (LockFile, error) {
 	return lock, nil
 }
 
-// Check verifica o estado de versao de todas as skills externas no projectDir.
 func (s *Service) Check(projectDir string) ([]SkillVersionCheck, error) {
 	lock, err := s.readLock(projectDir)
 	if err != nil {
@@ -171,10 +169,6 @@ func (s *Service) Verify(projectDir string) ([]IntegrityFailure, error) {
 	return failures, nil
 }
 
-// verifyHooks confere a integridade dos hooks criticos registrados no campo
-// "hooks" de skills-lock.json (RF-70), namespace separado do mapa "skills"
-// para preservar o invariante de que toda entrada em "skills" corresponde a
-// um diretorio de skill real em .agents/skills/.
 func (s *Service) verifyHooks(projectDir string) ([]IntegrityFailure, error) {
 	lock, err := s.readLock(projectDir)
 	if err != nil {
