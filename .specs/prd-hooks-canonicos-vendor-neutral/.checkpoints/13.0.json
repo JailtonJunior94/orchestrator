@@ -1,0 +1,6 @@
+{
+  "status": "done",
+  "report_path": ".specs/prd-hooks-canonicos-vendor-neutral/13.0_execution_report.md",
+  "summary": "Suite de conformidade RF-61 estendida de 4 para 14 cenarios (10 novos em tests/integration/conformance_suite_rf61_test.go), RF61Scenarios() como catalogo explicito e distinto de Manifest() (internal/conformance/rf61.go), RF-62 sem comparacao textual entre CLIs, gate-of-the-gate presente em todos, docs/hooks-canonicos.md criado e docs/evidence-gates.md, degradation-matrix.md, troubleshooting.md, runtime-claude-capabilities.md atualizados, CLAUDE.md:20 corrigido. Uma rodada de revisao (REJECTED com 2 HIGH, corrigidos: dispatch real por provedor em evidencia ausente/invalida via validate-session-end.sh + plugin OpenCode, e este execution_report.md). Gate final completo (make test lint vet coverage + todos os check-* + test-hooks + test-validators + integration) verde em duas rodadas, coverage total 82.0%, lint 0 issues, zero regressao nos hooks KEEP.",
+  "timestamp": "2026-09-20T23:59:00Z"
+}

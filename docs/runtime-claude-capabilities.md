@@ -107,3 +107,31 @@ ai-spec task-loop --tool claude --runtime acp --auto-review .specs/prd-X
 - Issues com tag `[HARD]` → `Summary.ReviewStatus="blocked"`.
 - Recursao hard-bloqueada: child Job tem `AutoReview=false` forcado.
 - Hook `session.post_review` disparado apos review (extensivel).
+
+## Hooks canonicos e capabilities do provedor Claude (PRD hooks-canonicos-vendor-neutral)
+
+Distinto do dispatcher Go de `internal/runtime/hooks/` (modo orquestrado, secao acima): esta secao
+cobre os **hooks shell canonicos** que `ai-spec install --tools claude` registra em
+`.claude/settings.local.json` para o **modo interativo** da CLI Claude Code — ver
+[`docs/hooks-canonicos.md`](hooks-canonicos.md) para a visao completa dos 5 eventos e 5 familias
+para os 4 provedores.
+
+| Evento canonico | Hook Claude | Script delegado |
+|---|---|---|
+| `before_tool` (`PreToolUse`) | `.claude/hooks/validate-preload.sh` | `.agents/hooks/validate-preload.sh` → `.agents/scripts/git-operation-gate.sh` |
+| `after_tool` (`PostToolUse`) | `.claude/hooks/validate-governance.sh` | `.agents/hooks/validate-governance.sh` |
+| `before_complete` (`Stop`/`SubagentStop`) | `.claude/hooks/validate-session-end.sh`, `.claude/hooks/subagent-stop-wrapper.sh` | `.agents/hooks/validate-session-end.sh`, `.agents/hooks/post-execute-task.sh`, `.agents/hooks/post-wave.sh` |
+| `session_start` / `session_end` | sem hook shell nativo dedicado para Claude Code hoje | — |
+
+Capabilities do provedor Claude na matriz evento x familia (`internal/capability.GenerateHooks()`,
+`testdata/hook-capability-matrix.json`): `git-policy` e `evidence-gate`/`checkpoint` sao
+`SupportVerified` nos eventos em que sao dispatchados (`before_tool` e `before_complete`,
+respectivamente); `quality-gate` e `telemetry` sao `unsupported` em todos os eventos para os quatro
+provedores igualmente (ainda sem wiring nativo — ver `docs/degradation-matrix.md`, secao "Estados
+`unsupported` da matriz de capabilities por evento x familia").
+
+**Limitacao declarada:** `validate-governance.sh` roda como hook de **pos-ferramenta**
+(`internal/runtime/specs/registry.go`, `scriptPostTool`) — o `exit 1` acontece **depois** que a
+edicao ja ocorreu. Ele informa a violacao (visivel na proxima interacao/relatorio), nao impede a
+escrita. Nenhuma das quatro CLIs suportadas bloqueia em `AfterTool`; isso corrigia uma afirmacao
+anterior incorreta em `CLAUDE.md`.

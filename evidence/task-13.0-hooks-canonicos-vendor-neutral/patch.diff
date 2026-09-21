@@ -1,0 +1,937 @@
+diff --git a/.specs/prd-hooks-canonicos-vendor-neutral/_orchestration_report.partial.md b/.specs/prd-hooks-canonicos-vendor-neutral/_orchestration_report.partial.md
+deleted file mode 100644
+index 724b3d3..0000000
+--- a/.specs/prd-hooks-canonicos-vendor-neutral/_orchestration_report.partial.md
++++ /dev/null
+@@ -1,16 +0,0 @@
+-# Relatorio de Orquestracao (parcial)
+-
+-PRD: hooks-canonicos-vendor-neutral
+-Iniciado: 2026-09-19T10:48:48Z
+-
+-## Waves Executadas
+-
+-
+-### Wave 1 — 2026-09-19T10:48:48Z
+-
+-```yaml
+-status: blocked
+-report_path: .specs/prd-hooks-canonicos-vendor-neutral/1.0_execution_report.md
+-summary: Pré-condição bloqueante reportada pela subtask.
+-
+-```
+diff --git a/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md b/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md
+index bcd2951..5f16e28 100644
+--- a/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md
++++ b/.specs/prd-hooks-canonicos-vendor-neutral/tasks.md
+@@ -35,7 +35,7 @@
+ | 10.0 | Quality gate disparado por evento com selecao por risco e deduplicacao | done | 4.0, 7.0 | Com 8.0, 11.0 | — |
+ | 11.0 | Evidence gate, checkpoint atomico, deteccao de corrupcao e sanitizacao | done | 3.0, 4.0 | Com 10.0 | — |
+ | 12.0 | Telemetria comum, ablation, timeout e guarda de recursao | done | 4.0, 8.0 | Com 9.0 | — |
+-| 13.0 | Conformidade cross-provider, nao-regressao e documentacao | pending | 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0 | Não | — |
++| 13.0 | Conformidade cross-provider, nao-regressao e documentacao | done | 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0 | Não | — |
+ 
+ ## Dependências Críticas
+ 
+diff --git a/AGENTS.md b/AGENTS.md
+index 50bc6f6..1c05f0e 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -173,6 +173,7 @@ exemplos ao contexto real.
+ - [Guia de Instalacao Universal](docs/guia-instalacao-universal.md) · [Hierarquia de Configuracao](docs/config-hierarchy.md) · [Troubleshooting](docs/troubleshooting.md)
+ - [Referencia do task-loop](docs/task-loop-reference.md) · [Capacidades do runtime Claude](docs/runtime-claude-capabilities.md) · [Gates de evidencia](docs/evidence-gates.md)
+ - [Ciclo de telemetria](docs/telemetry-feedback-cycle.md) · [Matriz de degradacao](docs/degradation-matrix.md)
++- [Hooks canonicos, eventos e policies](docs/hooks-canonicos.md) — inclui a semantica exata de `AfterTool` (informa apos a edicao, nunca bloqueia previamente) referenciada por `CLAUDE.md`.
+ 
+ ## ADRs
+ 
+diff --git a/CLAUDE.md b/CLAUDE.md
+index 1ee14f2..a493e44 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -17,7 +17,7 @@ vivem la. Este arquivo contem apenas o que e especifico do Claude Code.
+ - `.agents/policies/` e a origem canonica de `R-GOV-001`/`R-STYLE-001`; `.claude/rules/` (e equivalentes) sao espelhos derivados. Editar sempre em `.agents/policies/` e rodar `scripts/sync-policies.sh` (gate `make check-policies-sync`, ver tabela "Area tocada | Gate" em `AGENTS.md`).
+ - `.claude/agents/` define 8 subagentes (`task-executor`, `reviewer`, `bugfixer`, `refactorer`, `prd-writer`, `technical-specification-writer`, `task-planner`, `project-analyzer`). Use-os para execucao isolada; a sessao principal nao deve acumular contexto de implementacao.
+ - Hooks shell em `.claude/hooks/` **nao** estao ativos por default: `ai-spec install .` os registra em `.claude/settings.local.json` (nao versionado). Confirmar com `/hooks`.
+-- Com hooks ativos, `validate-governance.sh` bloqueia edicao de `AGENTS.md` e de `SKILL.md`; exportar `GOVERNANCE_HOOK_MODE=warn` quando a tarefa exigir editar esses arquivos.
++- `validate-governance.sh` roda como hook de **pos-ferramenta** (`internal/runtime/specs/registry.go`, `scriptPostTool`): com hooks ativos ele **informa** edicao de `AGENTS.md` e de `SKILL.md` com `exit 1`, mas o `exit` ocorre depois que a edicao ja aconteceu — `AfterTool` nao bloqueia em nenhuma das quatro CLIs suportadas (Claude, Codex, Copilot, OpenCode). Exportar `GOVERNANCE_HOOK_MODE=warn` quando a tarefa exigir editar esses arquivos suprime o aviso pos-edicao, nao um bloqueio previo. Detalhes: [`docs/hooks-canonicos.md`](docs/hooks-canonicos.md).
+ 
+ ## Runtime orquestrado (`ai-spec task-loop --tool claude --runtime acp`)
+ 
+diff --git a/docs/degradation-matrix.md b/docs/degradation-matrix.md
+index 5ffd7df..746569b 100644
+--- a/docs/degradation-matrix.md
++++ b/docs/degradation-matrix.md
+@@ -46,6 +46,30 @@ Severidades:
+ 
+ ---
+ 
++## Estados `unsupported` da matriz de capabilities por evento x familia
++
++Distinta da tabela acima (que cobre ausência de artefato de instalação), esta seção documenta
++estados **declarados por construção** em `internal/capability.GenerateHooks()` (`testdata/hook-capability-matrix.json`,
++gate `make check-capability-matrix-sync`) — a matriz cruza os 5 eventos canônicos
++(`session_start`, `before_tool`, `after_tool`, `before_complete`, `session_end`) com as 5 famílias
++de hooks (`git-policy`, `quality-gate`, `evidence-gate`, `checkpoint`, `telemetry`) para os 4
++provedores. `unsupported` aqui nunca é ausência silenciosa: toda célula carrega `Reason` explícito.
++
++| Família | Evento(s) sem wiring | Motivo declarado | Provedor(es) |
++|---|---|---|---|
++| `git-policy` | todos exceto `before_tool` | dispatchado só em `before_tool`, via `validate-preload.sh` → `git-operation-gate.sh` | claude, codex, copilot, opencode |
++| `evidence-gate` | todos exceto `before_complete` | dispatchado só em `before_complete`, via `validate-session-end.sh` | claude, codex, copilot, opencode |
++| `checkpoint` (F25) | todos exceto `before_complete` | roda só dentro de `post-execute-task.sh`, alcançável em `before_complete` via `subagent-stop-wrapper.sh` | claude, codex, copilot, opencode |
++| `quality-gate` | todos os eventos, para todos os provedores | registrado só no orquestrador ACP interno (`PointSessionPostEnd`); não exposto em nenhuma config nativa de hook ainda (`.claude/settings.json`, `.codex/config.toml`, `.github/hooks/governance.json`, plugin OpenCode) | claude, codex, copilot, opencode |
++| `telemetry` | todos os eventos, para todos os provedores | `ai-spec hookaudit append` roda como efeito colateral best-effort dentro de `git-operation-gate.sh` (guardado por `command -v ai-spec`), não é uma prova de dispatch por célula; dispatch real de telemetria é escopo futuro | claude, codex, copilot, opencode |
++| `session_end` (evento inteiro) | — | OpenCode não tem hook nativo de encerramento de sessão; usa `session.idle` (`BeforeComplete`) não-bloqueante como aproximação, nunca declarado como paridade simulada (P07) | opencode |
++
++Verificação: `go test ./internal/capability/... -run TestHookCapabilityMatrix_GoldenJSONAndMarkdownFromSameGeneration` compara `GenerateHooks()`
++contra o golden `testdata/hook-capability-matrix.json`; `tests/integration/conformance_suite_rf61_test.go`
++(cenário 12 de RF-61) prova, por provedor, que cada estado `unsupported` carrega `Reason` não-vazio e
++coexiste com pelo menos uma célula em outro estado (discriminação por célula, não booleano único —
++ADR-004).
++
+ ## Política de promoção `BestEffort` → `Common`
+ 
+ Limitações tecnicamente irredutíveis (linhas 14–16) são `BestEffort` em `internal/parity/parity.go`. Quando uma limitação puder ser eliminada (ex.: Copilot ganhar suporte stateful), a entrada correspondente é promovida a `Common` no mesmo PR que adiciona a capacidade — nunca antes.
+diff --git a/docs/evidence-gates.md b/docs/evidence-gates.md
+index 0e0a18b..b7363e6 100644
+--- a/docs/evidence-gates.md
++++ b/docs/evidence-gates.md
+@@ -28,6 +28,36 @@ Tambem em `.agents/scripts/`: `hook-prereq-gate.sh`, `resolve-references.sh`,
+   `GOVERNANCE_DESTRUCTIVE_OPERATION_CONFIRMED=1` para comando destrutivo, sem modo `warn`. Comando
+   Git de leitura (`status`, `diff`, `log`, etc.) nunca e bloqueado por este gate.
+ 
++## Checkpoint atomico (F25) e deteccao de corrupcao
++
++`execute-task` Etapa 5 grava `.checkpoints/<id>.json` (envelope SDD v2, `schema_version: 2`) por
++escrita atomica (`.tmp-*` + rename) antes de mutar `tasks.md` para `done`. `post-execute-task.sh`
++(gate F25) recusa `status=done` sem checkpoint presente e nao-vazio
++(`AI_ALLOW_MISSING_CHECKPOINT=1` reabre o comportamento legado, nao recomendado). A extensao e
++unificada em `.json` nos quatro consumidores (`internal/sdd/state.go`, `execute-task/SKILL.md`,
++`post-execute-task.sh`, `subagent-stop-wrapper.sh`); ate a tarefa 11.0 dois deles ainda esperavam
++`.yaml`.
++
++Validacao de conteudo: `internal/sdd.NewResultValidator().ValidateCheckpointJSON` valida o schema
++completo (task_id, status, hashes, criterios, evidencia, `review_verdict`) contra o JSON Schema do
++envelope. Um checkpoint sintaticamente corrompido (JSON invalido) ou com schema incompleto falha
++aqui com erro explicito — nunca e aceito silenciosamente. `internal/sdd.Store.importTaskCheckpoint`
++propaga esse erro como **fatal** para `populateOperationalModel`/`ai-spec validate-sdd`: um projeto
++cujo checkpoint esteja corrompido para de validar, em vez de reportar estado incorreto. Cobertura:
++`internal/sdd/result_schema_test.go` (unitario) e
++`tests/integration/conformance_suite_rf61_test.go` (cenarios 8 e 9 de RF-61 — checkpoint valido e
++corrompido). A familia `checkpoint` e nucleo puro, sem branch por provedor (`internal/sdd` nao
++importa `internal/skills` nem referencia nome de CLI); os cenarios exercitam o validador real uma
++vez por rotulo de provedor para deixar essa invariante explicita no relatorio de teste, mas a prova
++de que o comportamento e identico em cada CLI vem da ausencia estrutural de ramificacao por
++provedor no codigo validado, nao de quatro dispatches distintos por hook nativo — `checkpoint` ainda
++nao tem wiring nativo provado por provedor em todos os eventos (ver `docs/degradation-matrix.md`).
++
++`.jsonl` (eventos append-only) tem deteccao de corrupcao propria e mais fina:
++`internal/runtime/persistence.VerifyJSONLIntegrity`/`ErrCorruptedJSONL` rejeitam truncamento na
++ultima linha e linhas que nao sao JSON valido, sem nunca carregar o conteudo corrompido para
++reescrever por cima. Ver `internal/runtime/persistence/jsonl_crash_recovery_test.go`.
++
+ ## Gate de referencias de caminho
+ 
+ `make check-spec-paths` falha quando um artefato de contrato (`prd.md`, `techspec.md`, `tasks.md`)
+diff --git a/docs/runtime-claude-capabilities.md b/docs/runtime-claude-capabilities.md
+index ce9ff3a..b57bf8a 100644
+--- a/docs/runtime-claude-capabilities.md
++++ b/docs/runtime-claude-capabilities.md
+@@ -107,3 +107,31 @@ ai-spec task-loop --tool claude --runtime acp --auto-review .specs/prd-X
+ - Issues com tag `[HARD]` → `Summary.ReviewStatus="blocked"`.
+ - Recursao hard-bloqueada: child Job tem `AutoReview=false` forcado.
+ - Hook `session.post_review` disparado apos review (extensivel).
++
++## Hooks canonicos e capabilities do provedor Claude (PRD hooks-canonicos-vendor-neutral)
++
++Distinto do dispatcher Go de `internal/runtime/hooks/` (modo orquestrado, secao acima): esta secao
++cobre os **hooks shell canonicos** que `ai-spec install --tools claude` registra em
++`.claude/settings.local.json` para o **modo interativo** da CLI Claude Code — ver
++[`docs/hooks-canonicos.md`](hooks-canonicos.md) para a visao completa dos 5 eventos e 5 familias
++para os 4 provedores.
++
++| Evento canonico | Hook Claude | Script delegado |
++|---|---|---|
++| `before_tool` (`PreToolUse`) | `.claude/hooks/validate-preload.sh` | `.agents/hooks/validate-preload.sh` → `.agents/scripts/git-operation-gate.sh` |
++| `after_tool` (`PostToolUse`) | `.claude/hooks/validate-governance.sh` | `.agents/hooks/validate-governance.sh` |
++| `before_complete` (`Stop`/`SubagentStop`) | `.claude/hooks/validate-session-end.sh`, `.claude/hooks/subagent-stop-wrapper.sh` | `.agents/hooks/validate-session-end.sh`, `.agents/hooks/post-execute-task.sh`, `.agents/hooks/post-wave.sh` |
++| `session_start` / `session_end` | sem hook shell nativo dedicado para Claude Code hoje | — |
++
++Capabilities do provedor Claude na matriz evento x familia (`internal/capability.GenerateHooks()`,
++`testdata/hook-capability-matrix.json`): `git-policy` e `evidence-gate`/`checkpoint` sao
++`SupportVerified` nos eventos em que sao dispatchados (`before_tool` e `before_complete`,
++respectivamente); `quality-gate` e `telemetry` sao `unsupported` em todos os eventos para os quatro
++provedores igualmente (ainda sem wiring nativo — ver `docs/degradation-matrix.md`, secao "Estados
++`unsupported` da matriz de capabilities por evento x familia").
++
++**Limitacao declarada:** `validate-governance.sh` roda como hook de **pos-ferramenta**
++(`internal/runtime/specs/registry.go`, `scriptPostTool`) — o `exit 1` acontece **depois** que a
++edicao ja ocorreu. Ele informa a violacao (visivel na proxima interacao/relatorio), nao impede a
++escrita. Nenhuma das quatro CLIs suportadas bloqueia em `AfterTool`; isso corrigia uma afirmacao
++anterior incorreta em `CLAUDE.md`.
+diff --git a/docs/troubleshooting.md b/docs/troubleshooting.md
+index 9d1f0ca..7a61308 100644
+--- a/docs/troubleshooting.md
++++ b/docs/troubleshooting.md
+@@ -466,3 +466,67 @@ Este guia cobre os problemas mais comuns encontrados por usuarios e agentes ao t
+ 3. Para provar que o gate de evidencia (`.agents/scripts/validate-task-evidence.sh`) continua capturando a secao `## Comandos Executados` mesmo com a secao nova entre ela e `## Resultados de Validacao`, rode `make test-validators` — o Caso j do fixture (`scripts/test-validators.sh`) cobre exatamente este cenario, inclusive sob `LC_ALL=C`.
+ 
+ **Verificacao:** `grep -n '^## ' evidence/<task>/execution_report.md` deve listar `## Evidencia de Memoria Duravel` antes de `## Metricas Claude-2026`, com a secao de metricas sempre por ultimo.
++
++---
++
++## Problema: Hook aparenta travar ou o dispatch nunca retorna
++
++**Sintoma:** um hook fica preso, ou o dispatch demora muito e a sessao parece travada.
++
++**Causa:** `internal/hookcontract.HookTimeoutRegistry` exige timeout declarado (positivo) por hook (`Declare` recusa timeout `<= 0` com `ErrInvalidHookTimeout`). `MeasureHook` roda o hook sob `context.WithTimeout` e, ao vencer o prazo, produz `NewHookTimeoutResult` — `Decision: BLOCK`, `gate_id: hook-timeout-guard` — nunca `ALLOW`: timeout e tratado como negacao, por desenho (RF-66), exatamente como uma resposta explicita de bloqueio.
++
++**Solucao:**
++
++1. Busque `hook-timeout-guard` na saida do hook ou em `hook-decisions.jsonl` — a razao registrada cita o nome do hook e o timeout configurado.
++2. Se o timeout esta genuinamente curto para o ambiente (disco lento, CI compartilhado), ajuste a declaracao do timeout do hook especifico; nao aumente timeouts globalmente sem medir (RF-64 exige baseline).
++3. Se o hook trava sem nunca respeitar o `context` (bug de implementacao do hook, nao do timeout guard), o sintoma e o processo do hook continuar vivo apos o timeout reportado — investigue o hook, nao o guard.
++
++**Verificacao:** `internal/hookcontract/timeout_test.go` cobre o caminho feliz e o caminho de timeout; `hook.timeout hook=<nome> event=<evento> provider=<provider>` aparece na telemetria (`GOVERNANCE_TELEMETRY=1`) quando o guard dispara.
++
++---
++
++## Problema: Chamada de ferramenta dentro de um hook nunca retorna, ou reaparece em loop
++
++**Sintoma:** um hook que invoca outra ferramenta (que por sua vez dispara outro hook) parece reentrar indefinidamente, ou trava.
++
++**Causa:** `internal/hookcontract.CheckRecursionGuard` bloqueia por construcao qualquer cadeia hook → ferramenta → hook que alcance `MaxInvocationDepth` (RF-67). `NextInvocationDepth` incrementa a profundidade a cada salto declarado no envelope (`Envelope.InvocationDepth`); ao atingir o limite, o resultado e `Decision: BLOCK`, `gate_id: recursion-guard`, nunca uma reentrada silenciosa.
++
++**Solucao:**
++
++1. Busque `recursion-guard` na saida do hook — a razao cita a profundidade atingida e o limite.
++2. Se a cadeia e legitima (uma ferramenta que genuinamente precisa disparar outro hook uma vez), confirme que o envelope propaga `InvocationDepth` corretamente via `NextInvocationDepth`; um envelope que nao propaga a profundidade produz falso-positivo de recursao em depth 0 sempre.
++3. Nao aumente `MaxInvocationDepth` para contornar o guard — ele existe para impedir loops nao intencionais entre hooks e ferramentas; uma cadeia legitima de profundidade 1 ja e o limite hoje.
++
++**Verificacao:** `internal/hookcontract/recursion_test.go` cobre depth negativo (erro), depth abaixo do limite (`ALLOW`) e depth no limite (`BLOCK`).
++
++---
++
++## Problema: `.checkpoints/<id>.json` corrompido — `ai-spec validate-sdd` ou `execute-task` Etapa 5 falha
++
++**Sintoma:** `ai-spec validate-sdd .specs/prd-x` retorna erro citando `importar task <id>`, ou `execute-task` nao consegue confirmar o checkpoint da tarefa anterior.
++
++**Causa:** `internal/sdd.NewResultValidator().ValidateCheckpointJSON` valida o schema completo do envelope (task_id, status, hashes, criterios, evidencia, `review_verdict`) antes de aceitar um checkpoint. JSON sintaticamente invalido ou schema incompleto falha aqui, e `internal/sdd.Store.importTaskCheckpoint` propaga o erro como **fatal** — nunca aceita o checkpoint corrompido nem reescreve por cima dele silenciosamente (ver `docs/evidence-gates.md`, secao "Checkpoint atomico (F25) e deteccao de corrupcao").
++
++**Solucao:**
++
++1. Inspecione `.specs/prd-x/.checkpoints/<id>.json` — um JSON sintaticamente invalido (truncamento, escrita concorrente sem lock) e visivel a olho nu ou via `python3 -m json.tool < .checkpoints/<id>.json`.
++2. Se o checkpoint foi corrompido por uma escrita nao atomica externa a `execute-task` (edicao manual, ferramenta de terceiros), restaure-o a partir do `execution_report.md` da mesma tarefa, que contem os mesmos dados em prosa, e regenere o JSON manualmente seguindo o schema de `internal/sdd/result_schema.go`.
++3. Re-execute a tarefa via `execute-task` para que a Etapa 5 grave um novo checkpoint por escrita atomica (`.tmp-*` + rename) — a causa mais comum de corrupcao e uma escrita que nao passou por essa primitiva.
++
++**Verificacao:** `ai-spec validate-sdd .specs/prd-x` conclui sem erro de importacao de checkpoint; `tests/integration/conformance_suite_rf61_test.go` (cenarios 8 e 9 de RF-61) cobre o par valido/corrompido contra o validador real, uma vez por rotulo de provedor — a familia `checkpoint` e nucleo sem ramificacao por CLI (ver `docs/evidence-gates.md`, secao "Checkpoint atomico (F25) e deteccao de corrupcao").
++
++---
++
++## Problema: `validate-task-evidence.sh` recusa um relatorio que "parece" completo
++
++**Sintoma:** `bash .agents/scripts/validate-task-evidence.sh <report>.md` retorna exit 1 com uma ou mais linhas `FALTANDO:`, mesmo com o relatorio aparentando conteudo suficiente.
++
++**Causa:** o gate e **fail-closed desde a 0.31.0** (ver `docs/evidence-gates.md`, secao "Gate de criterios de aceite fail-closed"): cada `FALTANDO:` aponta exatamente a secao, campo ou mapeamento criterio→evidencia ausente. Um relatorio sem a secao `## Criterios de Aceite`, sem `Estado:` resolvivel, ou com `Testes: pass` sem comando de teste correspondente e rejeitado, nao aprovado com ressalva.
++
++**Solucao:**
++
++1. Leia cada linha `FALTANDO:` da saida — ela nomeia a lacuna especifica, nunca um erro generico.
++2. Preencha a secao ou campo citado no `execution_report.md` (gerado a partir de `assets/task-execution-report-template.md`); mapeie cada criterio de aceite da task file a uma linha `-> comprovado: <evidencia fisica>`.
++3. Nao use `AI_SDD_STRICT_EVIDENCE=0` para contornar — o opt-out e para migracao apenas e e ruidoso de proposito (BUG-127): reabrir o gate legado esconde exatamente a lacuna que este gate existe para pegar.
++
++**Verificacao:** `bash .agents/scripts/validate-task-evidence.sh <report>.md` retorna "Validação do pacote de evidências aprovada" e exit 0. Os cenarios 6 e 7 de RF-61 (`tests/integration/conformance_suite_rf61_test.go`) cobrem o par ausente/invalido da familia `evidence-gate` dispatchado de verdade por `validate-session-end.sh` em cada um dos quatro provedores (`.claude`, `.codex`, `.github` e o plugin `governance.js` do OpenCode) — nao este script (`validate-task-evidence.sh` valida o conteudo do relatorio de DoD, um gate distinto e sem wrapper por provedor).
+diff --git a/.specs/prd-hooks-canonicos-vendor-neutral/_orchestration_report.md b/.specs/prd-hooks-canonicos-vendor-neutral/_orchestration_report.md
+new file mode 100644
+index 0000000..9328d57
+--- /dev/null
++++ b/.specs/prd-hooks-canonicos-vendor-neutral/_orchestration_report.md
+@@ -0,0 +1,111 @@
++# Relatório de Orquestração — PRD hooks-canonicos-vendor-neutral
++
++Status: **concluído — 13/13 tarefas `done`**.
++
++Este relatório substitui `_orchestration_report.partial.md` (removido), que registrava apenas o
++estado bloqueado inicial de 2026-09-19 (pré-condição externa da tarefa 1.0, resolvida antes de
++qualquer trabalho de implementação começar). O PRD foi executado do início ao fim depois disso, em
++tarefas sequenciais/paralelas conforme `tasks.md`, e fechado pela tarefa 13.0 nesta sessão.
++
++## Tabela final
++
++| # | Título | Status | Commit de fechamento |
++|---|---|---|---|
++| 1.0 | Inventário e classificação de hooks com gate anti-órfão | done | (comitado junto com 2.0/3.0 em `55f9f13`) |
++| 2.0 | Parsing de payload sem truncamento e negação por ausência de alvo | done | `55f9f13` |
++| 3.0 | Instrumentação de pré-requisito: tmp em gates, exaustividade de linguagens e prova por célula | done | (comitado junto com 1.0/2.0 em `55f9f13`) |
++| 4.0 | Contrato canônico de hooks em `internal/hookcontract` | done | `25ce1c0` |
++| 5.0 | Projeções dos dois modelos de ponto, correção de `Kind` e erros não descartados | done | `ed8ebd8` |
++| 6.0 | Harness contract aplicado e gate de operação git derivado da policy | done | `6abf111` |
++| 7.0 | Igualdade entre stacks: dotnet completo e java como cidadão de primeira classe | done | `ba321a4` |
++| 8.0 | Adapters dos quatro provedores com SessionStart e SessionEnd reais | done | `aaee239` |
++| 9.0 | Matriz de capabilities por evento e família com doctor de hooks | done | `0b67199` |
++| 10.0 | Quality gate disparado por evento com seleção por risco e deduplicação | done | `33e7e4a` |
++| 11.0 | Evidence gate, checkpoint atômico, detecção de corrupção e sanitização | done | `2360bd4` |
++| 12.0 | Telemetria comum, ablation, timeout e guarda de recursão | done | `7e2591e` |
++| 13.0 | Conformidade cross-provider, não-regressão e documentação | done | pendente de commit (ver "Selo de evidência" abaixo) |
++
++## O que a tarefa 13.0 entregou
++
++- Suíte de conformidade RF-61 completa: de 4 para 14 cenários contra os quatro provedores, com os
++  dez novos em `tests/integration/conformance_suite_rf61_test.go` — seis com dispatch nativo real e
++  distinto por provedor (evidência ausente/inválida via `validate-session-end.sh` + plugin OpenCode,
++  adapter corrompido, bypass de comando), cinco validando núcleo Go provider-invariante por
++  construção (quality-gate, checkpoint, telemetria, evento desconhecido), e capability não suportada
++  discriminando por célula real da matriz gerada.
++- `internal/conformance.RF61Scenarios()` como catálogo explícito e distinto de `Manifest()`, com
++  teste de regressão que impede colisão silenciosa entre os dois.
++- RF-62 (nunca comparação textual entre CLIs) e gate-of-the-gate (mutação/par discriminante que
++  deixa cada cenário vermelho) verificados cenário a cenário.
++- RF-63: a cadeia de release já bloqueia em regressão de policy crítica via `make integration`/
++  `make check-capability-matrix-sync`, ambos gates de CI existentes — os dez cenários novos entram
++  nessa mesma cadeia.
++- RF-74: gate final completo (`make test lint vet coverage` + todos os `check-*` + `test-hooks` +
++  `test-validators` + `integration`) verde, executado três vezes nesta sessão (antes do bugfix,
++  depois do bugfix, e como fechamento final) — sempre coverage total 82.0%, lint "0 issues.", zero
++  falha real. Diff de comportamento observável dos hooks `KEEP` da tarefa 1.0: vazio (nenhum arquivo
++  de hook shell tocado).
++- RF-75: `docs/hooks-canonicos.md` criado; `docs/evidence-gates.md`, `docs/degradation-matrix.md`,
++  `docs/troubleshooting.md` e `docs/runtime-claude-capabilities.md` atualizados; afirmação falsa em
++  `CLAUDE.md:20` corrigida (o hook `validate-governance.sh` informa após a edição, não bloqueia
++  antes dela) com `AGENTS.md` mantido consistente.
++
++## Ciclo de revisão da tarefa 13.0
++
++Rodada 1 do subagent `reviewer`: **REJECTED**, 2 achados `[HIGH]` — (a) seis dos dez cenários novos
++não dispachavam de fato pelos quatro provedores (loop decorativo, documentação overclaimando
++"contra os quatro provedores" para famílias sem wiring nativo), com foco especial nos cenários de
++evidência ausente/inválida, que ignoravam infraestrutura de dispatch real já existente
++(`validate-session-end.sh`); (b) ausência do `13.0_execution_report.md`. Ambos corrigidos na mesma
++sessão: cenários 06/07 reescritos para dispatch real por provedor; os cinco cenários núcleo-apenas
++renomeados e a documentação reescrita para declarar explicitamente essa distinção; relatório de
++execução criado com evidência física completa (`evidence/task-13.0-hooks-canonicos-vendor-neutral/`,
++`13.0_execution_result.json` validado por `ai-spec validate-result execution --verify-physical`).
++
++## Débitos técnicos herdados, avaliados e conscientemente não corrigidos por esta tarefa
++
++Nenhum é regressão introduzida por 13.0 nem requisito de RF-61/62/63/74/75; todos já estavam
++registrados nos relatórios das tarefas de origem:
++
++- **9.0**: `checkHookContractVersion` usa contagem de `Coverage()` como proxy de versão;
++  `checkpoint` genuinamente wired para claude/copilot sem teste de dispatch fim-a-fim (mantido
++  `unsupported` com razão explícita, decisão consciente preservada pelos cenários 8/9 da 13.0).
++- **10.0**: wiring de produção de `qualitygate` sempre usa `TaskType`/`Risk` default, nunca
++  metadado real da tarefa.
++- **11.0**: risco residual de conteúdo em `sdd-state.json`/`validate-sdd` para projetos que fecham
++  tarefas via a skill leve sem o envelope completo — confirmado nesta sessão que este próprio PRD
++  não usa `validate-sdd` no seu gate (`sdd-state.json` ausente, comportamento pré-existente).
++- **12.0**: `TestHookTelemetry_FailureDoesNotPropagateOrCountAsRetry` é tautológico; a garantia real
++  vem da assinatura dos métodos de telemetria, não de um teste contra o dispatcher de produção.
++- **[LOW, achado da rodada 1 de revisão da 13.0]**: cabeçalho de `.claude/hooks/validate-governance.sh`
++  (e seus sete mirrors) mantém comentário desatualizado ("bloqueia a edição"). Não corrigido nesta
++  tarefa por já violar R-STYLE-001.2 de forma pré-existente e generalizada no bloco inteiro; corrigir
++  apenas a linha citada seria inconsistente com a regra hard. Registrado para uma tarefa futura que
++  já esteja tocando esses oito arquivos.
++
++## Selo de evidência (RF-14)
++
++O harness não cria commits. `13.0_execution_result.json` está pronto e validado
++(`ai-spec validate-result execution --verify-physical` = OK), mas o selo (`ai-spec seal-evidence`)
++só é possível depois que o commit desta tarefa existir. **Selo pendente** — a ser aplicado pelo
++coordenador após o commit manual, com:
++
++```
++ai-spec seal-evidence .specs/prd-hooks-canonicos-vendor-neutral/13.0_execution_result.json \
++  --prd-dir .specs/prd-hooks-canonicos-vendor-neutral --commit <sha-do-commit>
++```
++
++## Gate de não-regressão do repositório inteiro (RF-74)
++
++Executado três vezes nesta sessão, sempre verde:
++
++```
++make test lint vet coverage \
++     check-skills-sync check-hooks-sync check-scripts-sync \
++     check-policies-sync check-capability-matrix-sync \
++     check-spec-paths check-mocks test-hooks test-validators integration
++```
++
++Coverage total: 82.0% (gate 75%). Lint: 0 issues. `bash scripts/check-hooks-inventory.sh`: sem
++saída (aprovado). `go test -tags=hook_dispatch_proof,capability_instrumentation ./internal/capability/...`:
++10/10 pass.
+diff --git a/docs/hooks-canonicos.md b/docs/hooks-canonicos.md
+new file mode 100644
+index 0000000..2f42e86
+--- /dev/null
++++ b/docs/hooks-canonicos.md
+@@ -0,0 +1,122 @@
++# Hooks canonicos, deterministicos e vendor-neutral
++
++Documento gerado pela tarefa 13.0 do PRD `hooks-canonicos-vendor-neutral` (RF-75). Descreve os cinco
++eventos canonicos, as cinco familias de hooks, as policies, os gates, a matriz de capabilities por
++provedor, as limitacoes por provedor e por stack, e o procedimento de troubleshooting. Racional
++detalhado de cada gate de evidencia: [`docs/evidence-gates.md`](evidence-gates.md). Estados
++`unsupported` declarados: [`docs/degradation-matrix.md`](degradation-matrix.md). Modos de falha
++operacionais: [`docs/troubleshooting.md`](troubleshooting.md).
++
++## Os cinco eventos canonicos
++
++Fonte unica: `internal/hookcontract.EventKind` (`internal/hookcontract/event.go`). Nenhum outro
++pacote redefine o conjunto de eventos; `ParseEventKind` recusa nome desconhecido com
++`ErrUnknownEvent`, nunca um zero-value silencioso.
++
++| Evento | Constante | Quando dispara |
++|---|---|---|
++| `session_start` | `EventSessionStart` | inicio de sessao do agente |
++| `before_tool` | `EventBeforeTool` | antes de uma chamada de ferramenta (Bash, Edit, Write, apply_patch) |
++| `after_tool` | `EventAfterTool` | depois que uma chamada de ferramenta ja executou |
++| `before_complete` | `EventBeforeComplete` | antes do agente encerrar a sessao/tarefa |
++| `session_end` | `EventSessionEnd` | encerramento de sessao |
++
++## As cinco familias de hooks
++
++Fonte unica: `internal/capability.Family` (`internal/capability/family.go`).
++
++| Familia | Proposito | Script/pacote principal |
++|---|---|---|
++| `git-policy` | nega `git commit`/`git push` nao solicitados e remocao destrutiva (`rm -rf` e variantes) | `.agents/scripts/git-operation-gate.sh`, `internal/hookpolicy/git.go` |
++| `quality-gate` | roda testes/lint/fmt por tarefa, com fingerprint para dedupe | `internal/qualitygate/` |
++| `evidence-gate` | exige `execution_report.md` completo, com criterio de aceite comprovado | `.agents/scripts/validate-task-evidence.sh`, `.agents/hooks/validate-session-end.sh` |
++| `checkpoint` | exige `.checkpoints/<id>.json` valido antes de `status=done` (F25) | `.agents/hooks/post-execute-task.sh`, `internal/sdd.ResultValidator` |
++| `telemetry` | metricas de hook opt-in, sempre com `unknown` explicito quando indisponivel | `internal/telemetry/` |
++
++## Policies e gates
++
++- **`git-operation-gate.sh`** — classificacao estrutural (tokenizer Python embutido, nao regex) do
++  comando; nunca compara texto de saida entre CLIs. Bloqueia com exit `2`. Escapes dedicados e
++  auditados: `GOVERNANCE_GIT_OPERATION_CONFIRMED=1` / `GOVERNANCE_GIT_OPERATION_MODE=warn` para
++  operacao Git; `GOVERNANCE_DESTRUCTIVE_OPERATION_CONFIRMED=1` para comando destrutivo (sem modo
++  `warn`); `GOVERNANCE_INTERPRETER_OPERATION_CONFIRMED=1` para invocacao de interpretador com
++  conteudo dinamico (`$(...)`, crase, `eval`, `sh -c`) que a analise estatica nao consegue resolver.
++  Comando Git de leitura (`status`, `diff`, `log`) nunca e bloqueado.
++- **`validate-preload.sh`** — hook de `before_tool`; delega a `git-operation-gate.sh` antes de
++  qualquer escape de preload, para que a decisao de policy Git seja avaliada independentemente de
++  `GOVERNANCE_PRELOAD_CONFIRMED`. Tambem verifica pre-requisito de skill por tipo de arquivo tocado.
++- **`validate-governance.sh`** — hook de `after_tool`. **Informa** violacao (edicao de `AGENTS.md`/
++  `SKILL.md`), com `exit 1` **depois** que a edicao ja ocorreu — nenhuma das quatro CLIs bloqueia em
++  `AfterTool`. `GOVERNANCE_HOOK_MODE=warn` suprime o aviso pos-edicao para tarefas que precisam
++  editar esses arquivos deliberadamente.
++- **`validate-session-end.sh`** — hook de `before_complete`; recusa encerrar sessao com tarefa
++  `in_progress` sem veredito `APPROVED` no relatorio.
++- **`post-execute-task.sh`** — gates F2 (evidencia), F24 (escalonamento de achado critico), F25
++  (checkpoint), F35 (validacao de `DiffSHA` contra o git log).
++- **`internal/hookcontract.HookTimeoutRegistry`/`MeasureHook`** — todo hook tem timeout declarado;
++  vencer o prazo produz `Decision: BLOCK`, `gate_id: hook-timeout-guard` (timeout e negacao, nunca
++  aprovacao — RF-66).
++- **`internal/hookcontract.CheckRecursionGuard`** — bloqueia por construcao cadeia
++  hook → ferramenta → hook alem de `MaxInvocationDepth` (RF-67).
++
++## Matriz de capabilities por provedor
++
++Duas matrizes distintas, geradas de codigo (nunca escritas a mao):
++
++1. **`internal/capability.Generate()`** (`testdata/capability-matrix.json`) — invariantes de
++   paridade `internal/parity` por provedor (RF-18/ADR-008): `supported`, `unsupported`,
++   `provider capability`, `unknown`.
++2. **`internal/capability.GenerateHooks()`** (`testdata/hook-capability-matrix.json`) — evento x
++   familia x provedor, `hookcontract.SupportState` (`verified`, `adapter`, `unsupported`). Ver
++   `docs/degradation-matrix.md` para a leitura completa dos estados `unsupported` desta matriz.
++
++`ai-spec doctor` consulta ambas e reporta adapter ausente, hook nao executavel, configuracao
++invalida, versao incompativel e divergencia contrato/adapter, sem chamar LLM (RF-60).
++
++## Limitacoes por provedor
++
++| Provedor | Limitacao | Onde esta declarada |
++|---|---|---|
++| Codex CLI | Hook alterado fica *enrolled mas untrusted* e e **pulado silenciosamente** apos mudanca de hash (bug publico openai/codex#46210, R-07). Nao corrigivel pelo harness; `doctor --codex-trust` detecta via RPC read-only | `internal/runtime/precondition`, `internal/doctor/doctor.go:checkCodexTrustedHash` |
++| GitHub Copilot CLI | `preToolUse` e fail-closed para exit 2/non-zero, mas **fail-open no timeout** (R-08). Declarado como `SupportAdapter` com `limitation` preenchido, nunca `verified` | `testdata/hook-capability-matrix.json` |
++| OpenCode | Unico provedor sem `SessionEnd` nativo; usa `session.idle` (`BeforeComplete`) **nao-bloqueante** como aproximacao. Nega por `throw` de plugin JS, nao por exit code — nunca declarado como paridade simulada (P07) | `internal/capability/hookmatrix.go`, plugin `.opencode/plugin/governance.js` |
++| Claude Code | Sem hook shell nativo dedicado a `session_start`/`session_end` hoje; ver `docs/runtime-claude-capabilities.md` | `docs/runtime-claude-capabilities.md` |
++| Todos | `quality-gate` e `telemetry` ainda sem wiring nativo (registrados so no orquestrador ACP interno); nenhum provedor tem essas familias como `verified` em nenhum evento hoje | `testdata/hook-capability-matrix.json` |
++
++## Limitacoes por stack
++
++O quality gate resolve comandos por stack detectada (`internal/detect`), cinco alvo: Go, Node,
++Python, .NET, Java (Maven e Gradle). `internal/skills.AllLangs` e o teste de exaustividade
++`TestAllLangsAreExhaustivelyWired` garantem que nenhuma stack tem `switch` sem `default` silencioso.
++Projeto poliglota: o desempate de deteccao e "primeiro com score maximo vence" — marcador de stack
++nova sempre entra ao **fim** de `manifestTypes`, nunca no meio (`internal/detect/toolchain.go`),
++para nao alterar o vencedor em monorepos existentes.
++
++## Troubleshooting
++
++Ver [`docs/troubleshooting.md`](troubleshooting.md) para os procedimentos completos, com sintoma,
++causa raiz, solucao e verificacao, cobrindo: timeout de hook, guarda de recursao, checkpoint
++corrompido e evidencia invalida — alem dos problemas de instalacao, configuracao e memoria duravel
++ja documentados la.
++
++## Conformidade cross-provider (RF-61 a RF-63)
++
++`tests/integration/conformance_suite_test.go` e `tests/integration/conformance_suite_rf61_test.go`
++cobrem os catorze cenarios de RF-61 (`internal/conformance.RF61Scenarios()`), com fixture
++compartilhada e resultado derivado do contrato (RF-62, nunca igualdade textual entre CLIs). Cada
++cenario tem uma mutacao (par valido/invalido, ou remocao do script canonico) que o deixa vermelho —
++propriedade *gate-of-the-gate* estendida de
++`TestConformanceSuite_SuiteFailsWhenCanonicalGitOperationGateIsRemoved`. Nem todo cenario dispatcha
++de fato pelos quatro wrappers nativos: `git-policy` (1-4) e `evidence-gate` (6-7) e `adapter
++retornando erro`/`bypass de comando` (13-14) disparam o script/plugin real instalado por provedor;
++`quality-gate` (5), `checkpoint` (8-9), `telemetry` (10) e o `evento desconhecido` (11) validam
++nucleo Go sem ramificacao por CLI — essas quatro familias ainda nao tem wiring nativo provado por
++provedor em nenhum evento (`docs/degradation-matrix.md`), entao o cenario roda o mesmo validador uma
++vez por rotulo de provedor, o que prova a invariancia por construcao, nao quatro dispatches
++distintos; `capability nao suportada` (12) discrimina genuinamente por `cell.Provider` na matriz
++gerada. `internal/conformance.RF61Scenarios()`
++e `internal/conformance.Manifest()` sao catalogos **distintos e intencionalmente nao-convergentes**:
++o primeiro enumera cenarios de conformidade em nivel de comando/gate (RF-61); o segundo classifica
++determinismo dos catorze cenarios de produto da User Story, em nivel de sessao. A mistura dos dois
++nomes seria uma colisao silenciosa — `TestRF61Scenarios_AreADistinctCatalogFromTheManifest`
++(`internal/conformance/rf61_test.go`) falha caso isso volte a acontecer.
+diff --git a/internal/conformance/rf61.go b/internal/conformance/rf61.go
+new file mode 100644
+index 0000000..04cf7de
+--- /dev/null
++++ b/internal/conformance/rf61.go
+@@ -0,0 +1,25 @@
++package conformance
++
++type RF61Scenario struct {
++	Index int
++	Name  string
++}
++
++func RF61Scenarios() []RF61Scenario {
++	return []RF61Scenario{
++		{Index: 1, Name: "comando seguro permitido"},
++		{Index: 2, Name: "git commit nao autorizado"},
++		{Index: 3, Name: "git push nao autorizado"},
++		{Index: 4, Name: "comando destrutivo"},
++		{Index: 5, Name: "teste obrigatorio falhando"},
++		{Index: 6, Name: "evidencia ausente"},
++		{Index: 7, Name: "evidencia invalida"},
++		{Index: 8, Name: "checkpoint valido"},
++		{Index: 9, Name: "checkpoint corrompido"},
++		{Index: 10, Name: "telemetria sem contagem de tokens disponivel"},
++		{Index: 11, Name: "evento desconhecido"},
++		{Index: 12, Name: "capability nao suportada"},
++		{Index: 13, Name: "adapter retornando erro"},
++		{Index: 14, Name: "tentativa de bypass por variacao de comando"},
++	}
++}
+diff --git a/internal/conformance/rf61_test.go b/internal/conformance/rf61_test.go
+new file mode 100644
+index 0000000..fdd2f98
+--- /dev/null
++++ b/internal/conformance/rf61_test.go
+@@ -0,0 +1,38 @@
++package conformance_test
++
++import (
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/conformance"
++)
++
++func TestRF61Scenarios_HasFourteenEntriesInPRDOrder(t *testing.T) {
++	scenarios := conformance.RF61Scenarios()
++	if len(scenarios) != 14 {
++		t.Fatalf("RF-61 enumerates fourteen scenarios in prd.md:364-368; got %d", len(scenarios))
++	}
++	for i, s := range scenarios {
++		wantIndex := i + 1
++		if s.Index != wantIndex {
++			t.Fatalf("scenario at position %d has Index=%d, want %d — order must match prd.md:364-368", i, s.Index, wantIndex)
++		}
++		if s.Name == "" {
++			t.Fatalf("scenario #%d has an empty name", s.Index)
++		}
++	}
++}
++
++func TestRF61Scenarios_AreADistinctCatalogFromTheManifest(t *testing.T) {
++	manifestNames := make(map[string]bool)
++	for _, s := range conformance.Manifest() {
++		manifestNames[s.Name] = true
++	}
++	for _, s := range conformance.RF61Scenarios() {
++		if manifestNames[s.Name] {
++			t.Fatalf(
++				"RF-61 scenario %q collides with a Manifest() catalog name; the two enumerations serve different purposes (Manifest is the User Story session-level product catalog used only to classify determinism; RF61Scenarios is the command-level conformance suite enumeration) and must stay explicitly distinct rather than accidentally identical",
++				s.Name,
++			)
++		}
++	}
++}
+diff --git a/tests/integration/conformance_suite_rf61_test.go b/tests/integration/conformance_suite_rf61_test.go
+new file mode 100644
+index 0000000..dce232b
+--- /dev/null
++++ b/tests/integration/conformance_suite_rf61_test.go
+@@ -0,0 +1,367 @@
++//go:build integration
++
++package integration
++
++import (
++	"context"
++	"errors"
++	"os"
++	"path/filepath"
++	"strings"
++	"testing"
++
++	"github.com/JailtonJunior94/ai-spec-harness/internal/capability"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/qualitygate"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/sdd"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
++	"github.com/JailtonJunior94/ai-spec-harness/internal/telemetry"
++)
++
++type rf61FakeExecutor struct {
++	byCommand map[string]qualitygate.ExecutionResult
++}
++
++func (e rf61FakeExecutor) Execute(_ context.Context, _ string, command string) (qualitygate.ExecutionResult, error) {
++	if result, ok := e.byCommand[command]; ok {
++		return result, nil
++	}
++	return qualitygate.ExecutionResult{Command: command, ExitCode: 0}, nil
++}
++
++type rf61FakeToolchain struct {
++	result detect.ToolchainResult
++}
++
++func (p rf61FakeToolchain) Detect(string) detect.ToolchainResult {
++	return p.result
++}
++
++func rf61GoToolchain() detect.ToolchainResult {
++	return detect.ToolchainResult{
++		"go": detect.ToolchainEntry{Fmt: "gofmt -l .", Test: "go test ./...", Lint: "golangci-lint run"},
++	}
++}
++
++func TestConformanceSuite_RF61Scenario05_MandatoryTestFailingBlocksCoreValidatorInvariantPerProvider(t *testing.T) {
++	for _, tool := range conformanceCanonicalTools {
++		t.Run(string(tool), func(t *testing.T) {
++			fakeFS := fs.NewFakeFileSystem()
++			gate := qualitygate.NewGate(
++				qualitygate.NewDefaultPolicyLoader(fakeFS),
++				rf61FakeToolchain{result: rf61GoToolchain()},
++				rf61FakeExecutor{byCommand: map[string]qualitygate.ExecutionResult{
++					"go test ./...": {Command: "go test ./...", ExitCode: 1, Output: "FAIL"},
++				}},
++				qualitygate.NewFileCache(fakeFS, "/project/.agents/generated/quality-gate-cache.json"),
++				qualitygate.NewFileEvidenceWriter(fakeFS, "/project/.agents/generated/quality-gate-evidence"),
++			)
++
++			blocked := gate.Evaluate(context.Background(), qualitygate.EvaluationInput{
++				ProjectDir: "/project", TaskID: "rf61-5", TaskType: qualitygate.DefaultTaskType, Risk: qualitygate.DefaultRisk,
++			})
++			if blocked.Decision() != hookcontract.DecisionBlock {
++				t.Fatalf("provider=%s: a mandatory test failure must BLOCK the quality gate; got decision=%v reason=%q", tool, blocked.Decision(), blocked.Reason())
++			}
++			if blocked.PolicyID() == "" || blocked.GateID() != qualitygate.GateID {
++				t.Fatalf("provider=%s: BLOCK verdict must carry policy_id and gate_id; policy_id=%q gate_id=%q", tool, blocked.PolicyID(), blocked.GateID())
++			}
++
++			passingGate := qualitygate.NewGate(
++				qualitygate.NewDefaultPolicyLoader(fakeFS),
++				rf61FakeToolchain{result: rf61GoToolchain()},
++				rf61FakeExecutor{byCommand: map[string]qualitygate.ExecutionResult{}},
++				qualitygate.NewFileCache(fakeFS, "/project2/.agents/generated/quality-gate-cache.json"),
++				qualitygate.NewFileEvidenceWriter(fakeFS, "/project2/.agents/generated/quality-gate-evidence"),
++			)
++			allowed := passingGate.Evaluate(context.Background(), qualitygate.EvaluationInput{
++				ProjectDir: "/project2", TaskID: "rf61-5", TaskType: qualitygate.DefaultTaskType, Risk: qualitygate.DefaultRisk,
++			})
++			if allowed.Decision() != hookcontract.DecisionAllow {
++				t.Fatalf("provider=%s: gate-of-the-gate — a passing suite must ALLOW, discriminating it from the failing case above; got decision=%v", tool, allowed.Decision())
++			}
++		})
++	}
++}
++
++func TestConformanceSuite_RF61Scenario06_MissingEvidenceBlocksAcrossFourProviders(t *testing.T) {
++	for tool, relPath := range sessionEndHookRelPath {
++		t.Run(string(tool), func(t *testing.T) {
++			projectDir := installMandatoryAgentsForDispatch(t)
++			writeSessionEndTasksFixture(t, projectDir, "in_progress", "")
++
++			out, exitCode := runHookScript(t, projectDir, relPath, sessionEndNativePayload[tool])
++			if exitCode != sessionEndCanonicalScriptExitCode[tool] {
++				t.Fatalf("provider=%s: an active task with no execution_report.md at all must BLOCK session end (evidence-gate dispatched for real through %s); got exit=%d output=%s", tool, relPath, exitCode, out)
++			}
++
++			writeSessionEndTasksFixture(t, projectDir, "in_progress", "APPROVED")
++			allowedOut, allowedExit := runHookScript(t, projectDir, relPath, sessionEndNativePayload[tool])
++			if allowedExit != 0 {
++				t.Fatalf("provider=%s: gate-of-the-gate — writing an APPROVED report for the same task must flip the same dispatched script to ALLOW; got exit=%d output=%s", tool, allowedExit, allowedOut)
++			}
++		})
++	}
++
++	nodePath := detectNode(t)
++	pluginPath := pluginAssetPath(t)
++	t.Run(string(skills.ToolOpenCode), func(t *testing.T) {
++		dir := t.TempDir()
++		writeSessionEndGateFixture(t, dir)
++		writeSessionEndTasksFixture(t, dir, "in_progress", "")
++
++		out, exitCode := runNodeHarness(t, nodePath, opencodeSessionEndHarness, pluginPath, dir)
++		if exitCode == 0 {
++			t.Fatalf("opencode: session.idle must block an active task with no execution_report.md at all, dispatched through the real governance.js plugin; output=%s", out)
++		}
++
++		writeSessionEndTasksFixture(t, dir, "in_progress", "APPROVED")
++		allowedOut, allowedExit := runNodeHarness(t, nodePath, opencodeSessionEndHarness, pluginPath, dir)
++		if allowedExit != 0 {
++			t.Fatalf("opencode: gate-of-the-gate — an APPROVED report for the same task must flip the same plugin dispatch to ALLOW; output=%s", allowedOut)
++		}
++	})
++}
++
++func TestConformanceSuite_RF61Scenario07_InvalidEvidenceBlocksAcrossFourProviders(t *testing.T) {
++	for tool, relPath := range sessionEndHookRelPath {
++		t.Run(string(tool), func(t *testing.T) {
++			projectDir := installMandatoryAgentsForDispatch(t)
++			writeSessionEndTasksFixture(t, projectDir, "in_progress", "needs_input")
++
++			out, exitCode := runHookScript(t, projectDir, relPath, sessionEndNativePayload[tool])
++			if exitCode != sessionEndCanonicalScriptExitCode[tool] {
++				t.Fatalf("provider=%s: an execution_report.md present but without an APPROVED verdict is invalid evidence and must BLOCK, dispatched for real through %s; got exit=%d output=%s", tool, relPath, exitCode, out)
++			}
++
++			writeSessionEndTasksFixture(t, projectDir, "in_progress", "APPROVED")
++			allowedOut, allowedExit := runHookScript(t, projectDir, relPath, sessionEndNativePayload[tool])
++			if allowedExit != 0 {
++				t.Fatalf("provider=%s: gate-of-the-gate — replacing the invalid verdict with APPROVED on the same dispatched script must ALLOW; got exit=%d output=%s", tool, allowedExit, allowedOut)
++			}
++		})
++	}
++
++	nodePath := detectNode(t)
++	pluginPath := pluginAssetPath(t)
++	t.Run(string(skills.ToolOpenCode), func(t *testing.T) {
++		dir := t.TempDir()
++		writeSessionEndGateFixture(t, dir)
++		writeSessionEndTasksFixture(t, dir, "in_progress", "needs_input")
++
++		out, exitCode := runNodeHarness(t, nodePath, opencodeSessionEndHarness, pluginPath, dir)
++		if exitCode == 0 {
++			t.Fatalf("opencode: an execution_report.md present but without an APPROVED verdict must block session.idle, dispatched through the real governance.js plugin; output=%s", out)
++		}
++
++		writeSessionEndTasksFixture(t, dir, "in_progress", "APPROVED")
++		allowedOut, allowedExit := runNodeHarness(t, nodePath, opencodeSessionEndHarness, pluginPath, dir)
++		if allowedExit != 0 {
++			t.Fatalf("opencode: gate-of-the-gate — an APPROVED verdict on the same task must flip the same plugin dispatch to ALLOW; output=%s", allowedOut)
++		}
++	})
++}
++
++const rf61ValidCheckpointJSON = `{"schema_version":2,"run_id":"run-1","task_id":"13.0","attempt":1,"status":"blocked","base_sha":"0123456789012345678901234567890123456789","patch_sha256":"0123456789012345678901234567890123456789012345678901234567890123","final_state_sha256":"0123456789012345678901234567890123456789012345678901234567890123","coverage_regression":false,"tests":[{"command":"go test ./...","exit_code":1,"output_sha256":"0123456789012345678901234567890123456789012345678901234567890123"}],"criteria":[{"id":"AC-01","evidence_ref":"report.md#criterion"}],"evidence":["report.md"],"review_verdict":"needs_input"}`
++
++const rf61CorruptedCheckpointJSON = `{"schema_version":2,"run_id":"run-1","task_id":"13.0","status":"done", this is not valid json`
++
++func TestConformanceSuite_RF61Scenario08_ValidCheckpointPassesCoreValidatorInvariantPerProvider(t *testing.T) {
++	for _, tool := range conformanceCanonicalTools {
++		t.Run(string(tool), func(t *testing.T) {
++			result, err := sdd.NewResultValidator().ValidateCheckpointJSON([]byte(rf61ValidCheckpointJSON))
++			if err != nil {
++				t.Fatalf("provider=%s: a well-formed schema_version 2 checkpoint must validate; got err=%v", tool, err)
++			}
++			if result.TaskID != "13.0" {
++				t.Fatalf("provider=%s: validated checkpoint must preserve task_id; got %q", tool, result.TaskID)
++			}
++		})
++	}
++}
++
++func TestConformanceSuite_RF61Scenario09_CorruptedCheckpointBlocksCoreValidatorInvariantPerProvider(t *testing.T) {
++	for _, tool := range conformanceCanonicalTools {
++		t.Run(string(tool), func(t *testing.T) {
++			_, err := sdd.NewResultValidator().ValidateCheckpointJSON([]byte(rf61CorruptedCheckpointJSON))
++			if err == nil {
++				t.Fatalf("provider=%s: a syntactically corrupted checkpoint must never be silently accepted; gate-of-the-gate against the valid checkpoint of scenario 08", tool)
++			}
++		})
++	}
++}
++
++func TestConformanceSuite_RF61Scenario10_TelemetryUnavailableTokenCountIsExplicitlyUnknownCoreValidatorInvariantPerProvider(t *testing.T) {
++	for _, tool := range conformanceCanonicalTools {
++		t.Run(string(tool), func(t *testing.T) {
++			unavailable, err := telemetry.ResolveTokenMetric("", "")
++			if err != nil {
++				t.Fatalf("provider=%s: an absent token count must resolve to %q, never error; got err=%v", tool, telemetry.UnknownMetricValue, err)
++			}
++			if unavailable != telemetry.UnknownMetricValue {
++				t.Fatalf("provider=%s: absent token count must resolve to explicit %q; got %q", tool, telemetry.UnknownMetricValue, unavailable)
++			}
++
++			available, err := telemetry.ResolveTokenMetric("1234", "acp-usage-reported")
++			if err != nil {
++				t.Fatalf("provider=%s: an available token count with a calculation method must not error; got err=%v", tool, err)
++			}
++			if available == telemetry.UnknownMetricValue {
++				t.Fatalf("provider=%s: gate-of-the-gate — an available value must never collapse to %q", tool, telemetry.UnknownMetricValue)
++			}
++		})
++	}
++}
++
++func TestConformanceSuite_RF61Scenario11_UnknownEventIsRejectedCoreValidatorInvariantPerProvider(t *testing.T) {
++	for _, tool := range conformanceCanonicalTools {
++		t.Run(string(tool), func(t *testing.T) {
++			_, err := hookcontract.ParseEventKind("does_not_exist_event")
++			if !errors.Is(err, hookcontract.ErrUnknownEvent) {
++				t.Fatalf("provider=%s: an unrecognized event name must produce ErrUnknownEvent, never a silent zero-value; got err=%v", tool, err)
++			}
++
++			known, err := hookcontract.ParseEventKind("before_tool")
++			if err != nil {
++				t.Fatalf("provider=%s: gate-of-the-gate — a known event name must parse without error; got err=%v", tool, err)
++			}
++			if !known.Valid() {
++				t.Fatalf("provider=%s: a successfully parsed known event must be Valid()", tool)
++			}
++		})
++	}
++}
++
++func TestConformanceSuite_RF61Scenario12_UnsupportedCapabilityIsDeclaredExplicitlyPerProvider(t *testing.T) {
++	matrix, err := capability.GenerateHooks()
++	if err != nil {
++		t.Fatalf("generate hook capability matrix: %v", err)
++	}
++
++	for _, tool := range conformanceCanonicalTools {
++		t.Run(string(tool), func(t *testing.T) {
++			var sawUnsupported, sawOtherState bool
++			for _, cell := range matrix.Cells {
++				if cell.Provider != string(tool) {
++					continue
++				}
++				if cell.State == hookcontract.SupportUnsupported.String() {
++					sawUnsupported = true
++					if strings.TrimSpace(cell.Reason) == "" {
++						t.Fatalf("provider=%s: cell event=%s family=%s is unsupported but carries no reason — unsupported must be a declared state, never a silent absence", tool, cell.Event, cell.Family)
++					}
++					continue
++				}
++				sawOtherState = true
++			}
++			if !sawUnsupported {
++				t.Fatalf("provider=%s: expected at least one explicitly unsupported event/family cell in the generated hook capability matrix", tool)
++			}
++			if !sawOtherState {
++				t.Fatalf("provider=%s: gate-of-the-gate — expected at least one non-unsupported cell too, discriminating the unsupported cells from the rest of the matrix", tool)
++			}
++		})
++	}
++}
++
++var conformanceGitPreToolHookRelPath = map[skills.Tool]string{
++	skills.ToolClaude:  filepath.Join(".claude", "hooks", "validate-preload.sh"),
++	skills.ToolCodex:   filepath.Join(".codex", "hooks", "validate-preload.sh"),
++	skills.ToolCopilot: filepath.Join(".github", "hooks", "validate-preload.sh"),
++}
++
++func TestConformanceSuite_RF61Scenario13_AdapterReturningErrorSurfacesAcrossFourProviders(t *testing.T) {
++	for _, tool := range conformanceCanonicalTools {
++		t.Run(string(tool), func(t *testing.T) {
++			projectDir := installConformanceFixture(t)
++
++			if tool == skills.ToolOpenCode {
++				pluginPath := filepath.Join(projectDir, ".opencode", "plugin", "governance.js")
++				if err := os.WriteFile(pluginPath, []byte("export default function( this is not valid javascript"), 0o644); err != nil {
++					t.Fatalf("corrupt opencode plugin: %v", err)
++				}
++				out, exitCode := runConformanceOpenCodeHarness(t, pluginPath, projectDir, "git status")
++				if exitCode == 0 {
++					t.Fatalf("a syntactically broken adapter must surface as an error, never as a silent ALLOW; output=%s", out)
++				}
++				return
++			}
++
++			relPath := conformanceGitPreToolHookRelPath[tool]
++			hookPath := filepath.Join(projectDir, relPath)
++			if err := os.WriteFile(hookPath, []byte("#!/usr/bin/env bash\nthis is not a valid script (\n"), 0o644); err != nil {
++				t.Fatalf("corrupt provider adapter hook: %v", err)
++			}
++			stdin := []byte(`{"tool_input":{"command":"git status"}}`)
++			out, exitCode := runHookScript(t, projectDir, relPath, stdin, "GOVERNANCE_PRELOAD_CONFIRMED=1")
++			if exitCode == 0 {
++				t.Fatalf("provider=%s: a syntactically broken adapter hook must surface as an error, never as a silent ALLOW; output=%s", tool, out)
++			}
++			if strings.Contains(out, "operacao git nao solicitada") {
++				t.Fatalf("provider=%s: a broken adapter must never produce a well-formed policy verdict; it must fail as a broken adapter, not impersonate the gate; output=%s", tool, out)
++			}
++		})
++	}
++}
++
++func TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders(t *testing.T) {
++	projectDir := installConformanceFixture(t)
++
++	bypassCommands := []string{
++		`$(echo git) push origin main`,
++		`eval "git push origin main"`,
++		`sh -c "git push origin main"`,
++		`/usr/bin/git push origin main`,
++		`git -c user.name=x commit -m x`,
++		`git push --force`,
++		`git push -f`,
++	}
++
++	for _, command := range bypassCommands {
++		for _, tool := range conformanceCanonicalTools {
++			t.Run(string(tool)+"/"+command, func(t *testing.T) {
++				out, exitCode := dispatchGitOperationCommand(t, projectDir, tool, command, "GOVERNANCE_PRELOAD_CONFIRMED=1")
++				if exitCode != preToolBlockExitCode {
++					t.Fatalf("provider=%s: bypass attempt %q must be blocked with exit=%d; got exit=%d output=%s", tool, command, preToolBlockExitCode, exitCode, out)
++				}
++				if strings.Contains(out, brokenChainMarker) {
++					t.Fatalf("provider=%s: the wrapper refused because the canonical validator is missing, not because the gate ran; output=%s", tool, out)
++				}
++			})
++		}
++	}
++
++	safeCommand := "git status"
++	for _, tool := range conformanceCanonicalTools {
++		t.Run(string(tool)+"/"+safeCommand, func(t *testing.T) {
++			out, exitCode := dispatchGitOperationCommand(t, projectDir, tool, safeCommand, "GOVERNANCE_PRELOAD_CONFIRMED=1")
++			if exitCode != 0 {
++				t.Fatalf("provider=%s: gate-of-the-gate — a genuinely read-only command must stay ALLOWED, discriminating it from the bypass attempts above; got exit=%d output=%s", tool, exitCode, out)
++			}
++		})
++	}
++}
++
++func TestConformanceSuite_RF61Scenario14_SuiteFailsWhenCanonicalGitOperationGateIsRemoved(t *testing.T) {
++	projectDir := installConformanceFixture(t)
++
++	canonicalGate := filepath.Join(projectDir, ".agents", "scripts", "git-operation-gate.sh")
++	if _, err := os.Stat(canonicalGate); err != nil {
++		t.Fatalf("canonical git-operation-gate.sh must be installed before it can be removed: %v", err)
++	}
++	if err := os.Remove(canonicalGate); err != nil {
++		t.Fatalf("remove canonical git-operation-gate.sh: %v", err)
++	}
++
++	for _, tool := range conformanceCanonicalTools {
++		t.Run(string(tool), func(t *testing.T) {
++			out, exitCode := dispatchGitOperationCommand(t, projectDir, tool, `$(echo git) push origin main`, "GOVERNANCE_PRELOAD_CONFIRMED=1")
++			gateStillProvesTheDenial := exitCode == preToolBlockExitCode && !strings.Contains(out, brokenChainMarker)
++			if gateStillProvesTheDenial {
++				t.Fatalf("provider=%s: removing the canonical git-operation-gate.sh must make the bypass-variation suite fail (V-31 gate-of-the-gate) — it stayed green instead; output=%s", tool, out)
++			}
++		})
++	}
++}

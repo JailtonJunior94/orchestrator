@@ -466,3 +466,67 @@ Este guia cobre os problemas mais comuns encontrados por usuarios e agentes ao t
 3. Para provar que o gate de evidencia (`.agents/scripts/validate-task-evidence.sh`) continua capturando a secao `## Comandos Executados` mesmo com a secao nova entre ela e `## Resultados de Validacao`, rode `make test-validators` — o Caso j do fixture (`scripts/test-validators.sh`) cobre exatamente este cenario, inclusive sob `LC_ALL=C`.
 
 **Verificacao:** `grep -n '^## ' evidence/<task>/execution_report.md` deve listar `## Evidencia de Memoria Duravel` antes de `## Metricas Claude-2026`, com a secao de metricas sempre por ultimo.
+
+---
+
+## Problema: Hook aparenta travar ou o dispatch nunca retorna
+
+**Sintoma:** um hook fica preso, ou o dispatch demora muito e a sessao parece travada.
+
+**Causa:** `internal/hookcontract.HookTimeoutRegistry` exige timeout declarado (positivo) por hook (`Declare` recusa timeout `<= 0` com `ErrInvalidHookTimeout`). `MeasureHook` roda o hook sob `context.WithTimeout` e, ao vencer o prazo, produz `NewHookTimeoutResult` — `Decision: BLOCK`, `gate_id: hook-timeout-guard` — nunca `ALLOW`: timeout e tratado como negacao, por desenho (RF-66), exatamente como uma resposta explicita de bloqueio.
+
+**Solucao:**
+
+1. Busque `hook-timeout-guard` na saida do hook ou em `hook-decisions.jsonl` — a razao registrada cita o nome do hook e o timeout configurado.
+2. Se o timeout esta genuinamente curto para o ambiente (disco lento, CI compartilhado), ajuste a declaracao do timeout do hook especifico; nao aumente timeouts globalmente sem medir (RF-64 exige baseline).
+3. Se o hook trava sem nunca respeitar o `context` (bug de implementacao do hook, nao do timeout guard), o sintoma e o processo do hook continuar vivo apos o timeout reportado — investigue o hook, nao o guard.
+
+**Verificacao:** `internal/hookcontract/timeout_test.go` cobre o caminho feliz e o caminho de timeout; `hook.timeout hook=<nome> event=<evento> provider=<provider>` aparece na telemetria (`GOVERNANCE_TELEMETRY=1`) quando o guard dispara.
+
+---
+
+## Problema: Chamada de ferramenta dentro de um hook nunca retorna, ou reaparece em loop
+
+**Sintoma:** um hook que invoca outra ferramenta (que por sua vez dispara outro hook) parece reentrar indefinidamente, ou trava.
+
+**Causa:** `internal/hookcontract.CheckRecursionGuard` bloqueia por construcao qualquer cadeia hook → ferramenta → hook que alcance `MaxInvocationDepth` (RF-67). `NextInvocationDepth` incrementa a profundidade a cada salto declarado no envelope (`Envelope.InvocationDepth`); ao atingir o limite, o resultado e `Decision: BLOCK`, `gate_id: recursion-guard`, nunca uma reentrada silenciosa.
+
+**Solucao:**
+
+1. Busque `recursion-guard` na saida do hook — a razao cita a profundidade atingida e o limite.
+2. Se a cadeia e legitima (uma ferramenta que genuinamente precisa disparar outro hook uma vez), confirme que o envelope propaga `InvocationDepth` corretamente via `NextInvocationDepth`; um envelope que nao propaga a profundidade produz falso-positivo de recursao em depth 0 sempre.
+3. Nao aumente `MaxInvocationDepth` para contornar o guard — ele existe para impedir loops nao intencionais entre hooks e ferramentas; uma cadeia legitima de profundidade 1 ja e o limite hoje.
+
+**Verificacao:** `internal/hookcontract/recursion_test.go` cobre depth negativo (erro), depth abaixo do limite (`ALLOW`) e depth no limite (`BLOCK`).
+
+---
+
+## Problema: `.checkpoints/<id>.json` corrompido — `ai-spec validate-sdd` ou `execute-task` Etapa 5 falha
+
+**Sintoma:** `ai-spec validate-sdd .specs/prd-x` retorna erro citando `importar task <id>`, ou `execute-task` nao consegue confirmar o checkpoint da tarefa anterior.
+
+**Causa:** `internal/sdd.NewResultValidator().ValidateCheckpointJSON` valida o schema completo do envelope (task_id, status, hashes, criterios, evidencia, `review_verdict`) antes de aceitar um checkpoint. JSON sintaticamente invalido ou schema incompleto falha aqui, e `internal/sdd.Store.importTaskCheckpoint` propaga o erro como **fatal** — nunca aceita o checkpoint corrompido nem reescreve por cima dele silenciosamente (ver `docs/evidence-gates.md`, secao "Checkpoint atomico (F25) e deteccao de corrupcao").
+
+**Solucao:**
+
+1. Inspecione `.specs/prd-x/.checkpoints/<id>.json` — um JSON sintaticamente invalido (truncamento, escrita concorrente sem lock) e visivel a olho nu ou via `python3 -m json.tool < .checkpoints/<id>.json`.
+2. Se o checkpoint foi corrompido por uma escrita nao atomica externa a `execute-task` (edicao manual, ferramenta de terceiros), restaure-o a partir do `execution_report.md` da mesma tarefa, que contem os mesmos dados em prosa, e regenere o JSON manualmente seguindo o schema de `internal/sdd/result_schema.go`.
+3. Re-execute a tarefa via `execute-task` para que a Etapa 5 grave um novo checkpoint por escrita atomica (`.tmp-*` + rename) — a causa mais comum de corrupcao e uma escrita que nao passou por essa primitiva.
+
+**Verificacao:** `ai-spec validate-sdd .specs/prd-x` conclui sem erro de importacao de checkpoint; `tests/integration/conformance_suite_rf61_test.go` (cenarios 8 e 9 de RF-61) cobre o par valido/corrompido contra o validador real, uma vez por rotulo de provedor — a familia `checkpoint` e nucleo sem ramificacao por CLI (ver `docs/evidence-gates.md`, secao "Checkpoint atomico (F25) e deteccao de corrupcao").
+
+---
+
+## Problema: `validate-task-evidence.sh` recusa um relatorio que "parece" completo
+
+**Sintoma:** `bash .agents/scripts/validate-task-evidence.sh <report>.md` retorna exit 1 com uma ou mais linhas `FALTANDO:`, mesmo com o relatorio aparentando conteudo suficiente.
+
+**Causa:** o gate e **fail-closed desde a 0.31.0** (ver `docs/evidence-gates.md`, secao "Gate de criterios de aceite fail-closed"): cada `FALTANDO:` aponta exatamente a secao, campo ou mapeamento criterio→evidencia ausente. Um relatorio sem a secao `## Criterios de Aceite`, sem `Estado:` resolvivel, ou com `Testes: pass` sem comando de teste correspondente e rejeitado, nao aprovado com ressalva.
+
+**Solucao:**
+
+1. Leia cada linha `FALTANDO:` da saida — ela nomeia a lacuna especifica, nunca um erro generico.
+2. Preencha a secao ou campo citado no `execution_report.md` (gerado a partir de `assets/task-execution-report-template.md`); mapeie cada criterio de aceite da task file a uma linha `-> comprovado: <evidencia fisica>`.
+3. Nao use `AI_SDD_STRICT_EVIDENCE=0` para contornar — o opt-out e para migracao apenas e e ruidoso de proposito (BUG-127): reabrir o gate legado esconde exatamente a lacuna que este gate existe para pegar.
+
+**Verificacao:** `bash .agents/scripts/validate-task-evidence.sh <report>.md` retorna "Validação do pacote de evidências aprovada" e exit 0. Os cenarios 6 e 7 de RF-61 (`tests/integration/conformance_suite_rf61_test.go`) cobrem o par ausente/invalido da familia `evidence-gate` dispatchado de verdade por `validate-session-end.sh` em cada um dos quatro provedores (`.claude`, `.codex`, `.github` e o plugin `governance.js` do OpenCode) — nao este script (`validate-task-evidence.sh` valida o conteudo do relatorio de DoD, um gate distinto e sem wrapper por provedor).

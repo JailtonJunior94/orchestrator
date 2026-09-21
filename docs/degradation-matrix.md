@@ -46,6 +46,30 @@ Severidades:
 
 ---
 
+## Estados `unsupported` da matriz de capabilities por evento x familia
+
+Distinta da tabela acima (que cobre ausência de artefato de instalação), esta seção documenta
+estados **declarados por construção** em `internal/capability.GenerateHooks()` (`testdata/hook-capability-matrix.json`,
+gate `make check-capability-matrix-sync`) — a matriz cruza os 5 eventos canônicos
+(`session_start`, `before_tool`, `after_tool`, `before_complete`, `session_end`) com as 5 famílias
+de hooks (`git-policy`, `quality-gate`, `evidence-gate`, `checkpoint`, `telemetry`) para os 4
+provedores. `unsupported` aqui nunca é ausência silenciosa: toda célula carrega `Reason` explícito.
+
+| Família | Evento(s) sem wiring | Motivo declarado | Provedor(es) |
+|---|---|---|---|
+| `git-policy` | todos exceto `before_tool` | dispatchado só em `before_tool`, via `validate-preload.sh` → `git-operation-gate.sh` | claude, codex, copilot, opencode |
+| `evidence-gate` | todos exceto `before_complete` | dispatchado só em `before_complete`, via `validate-session-end.sh` | claude, codex, copilot, opencode |
+| `checkpoint` (F25) | todos exceto `before_complete` | roda só dentro de `post-execute-task.sh`, alcançável em `before_complete` via `subagent-stop-wrapper.sh` | claude, codex, copilot, opencode |
+| `quality-gate` | todos os eventos, para todos os provedores | registrado só no orquestrador ACP interno (`PointSessionPostEnd`); não exposto em nenhuma config nativa de hook ainda (`.claude/settings.json`, `.codex/config.toml`, `.github/hooks/governance.json`, plugin OpenCode) | claude, codex, copilot, opencode |
+| `telemetry` | todos os eventos, para todos os provedores | `ai-spec hookaudit append` roda como efeito colateral best-effort dentro de `git-operation-gate.sh` (guardado por `command -v ai-spec`), não é uma prova de dispatch por célula; dispatch real de telemetria é escopo futuro | claude, codex, copilot, opencode |
+| `session_end` (evento inteiro) | — | OpenCode não tem hook nativo de encerramento de sessão; usa `session.idle` (`BeforeComplete`) não-bloqueante como aproximação, nunca declarado como paridade simulada (P07) | opencode |
+
+Verificação: `go test ./internal/capability/... -run TestHookCapabilityMatrix_GoldenJSONAndMarkdownFromSameGeneration` compara `GenerateHooks()`
+contra o golden `testdata/hook-capability-matrix.json`; `tests/integration/conformance_suite_rf61_test.go`
+(cenário 12 de RF-61) prova, por provedor, que cada estado `unsupported` carrega `Reason` não-vazio e
+coexiste com pelo menos uma célula em outro estado (discriminação por célula, não booleano único —
+ADR-004).
+
 ## Política de promoção `BestEffort` → `Common`
 
 Limitações tecnicamente irredutíveis (linhas 14–16) são `BestEffort` em `internal/parity/parity.go`. Quando uma limitação puder ser eliminada (ex.: Copilot ganhar suporte stateful), a entrada correspondente é promovida a `Common` no mesmo PR que adiciona a capacidade — nunca antes.

@@ -1,0 +1,321 @@
+=== RUN   TestConformanceSuite_RF61Scenario05_MandatoryTestFailingBlocksCoreValidatorInvariantPerProvider
+=== RUN   TestConformanceSuite_RF61Scenario05_MandatoryTestFailingBlocksCoreValidatorInvariantPerProvider/claude
+=== RUN   TestConformanceSuite_RF61Scenario05_MandatoryTestFailingBlocksCoreValidatorInvariantPerProvider/codex
+=== RUN   TestConformanceSuite_RF61Scenario05_MandatoryTestFailingBlocksCoreValidatorInvariantPerProvider/copilot
+=== RUN   TestConformanceSuite_RF61Scenario05_MandatoryTestFailingBlocksCoreValidatorInvariantPerProvider/opencode
+--- PASS: TestConformanceSuite_RF61Scenario05_MandatoryTestFailingBlocksCoreValidatorInvariantPerProvider (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario05_MandatoryTestFailingBlocksCoreValidatorInvariantPerProvider/claude (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario05_MandatoryTestFailingBlocksCoreValidatorInvariantPerProvider/codex (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario05_MandatoryTestFailingBlocksCoreValidatorInvariantPerProvider/copilot (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario05_MandatoryTestFailingBlocksCoreValidatorInvariantPerProvider/opencode (0.00s)
+=== RUN   TestConformanceSuite_RF61Scenario06_MissingEvidenceBlocksAcrossFourProviders
+=== RUN   TestConformanceSuite_RF61Scenario06_MissingEvidenceBlocksAcrossFourProviders/claude
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=445 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_RF61Scenario06_MissingEvidenceBlocksAcrossF1598017825/001
+Modo de instalacao: copy
+=== RUN   TestConformanceSuite_RF61Scenario06_MissingEvidenceBlocksAcrossFourProviders/codex
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=445 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_RF61Scenario06_MissingEvidenceBlocksAcrossF4233052310/001
+Modo de instalacao: copy
+=== RUN   TestConformanceSuite_RF61Scenario06_MissingEvidenceBlocksAcrossFourProviders/copilot
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=445 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_RF61Scenario06_MissingEvidenceBlocksAcrossF2002833842/001
+Modo de instalacao: copy
+=== RUN   TestConformanceSuite_RF61Scenario06_MissingEvidenceBlocksAcrossFourProviders/opencode
+--- PASS: TestConformanceSuite_RF61Scenario06_MissingEvidenceBlocksAcrossFourProviders (1.47s)
+    --- PASS: TestConformanceSuite_RF61Scenario06_MissingEvidenceBlocksAcrossFourProviders/claude (0.39s)
+    --- PASS: TestConformanceSuite_RF61Scenario06_MissingEvidenceBlocksAcrossFourProviders/codex (0.34s)
+    --- PASS: TestConformanceSuite_RF61Scenario06_MissingEvidenceBlocksAcrossFourProviders/copilot (0.33s)
+    --- PASS: TestConformanceSuite_RF61Scenario06_MissingEvidenceBlocksAcrossFourProviders/opencode (0.40s)
+=== RUN   TestConformanceSuite_RF61Scenario07_InvalidEvidenceBlocksAcrossFourProviders
+=== RUN   TestConformanceSuite_RF61Scenario07_InvalidEvidenceBlocksAcrossFourProviders/claude
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=445 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_RF61Scenario07_InvalidEvidenceBlocksAcrossF4277477714/001
+Modo de instalacao: copy
+=== RUN   TestConformanceSuite_RF61Scenario07_InvalidEvidenceBlocksAcrossFourProviders/codex
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=445 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_RF61Scenario07_InvalidEvidenceBlocksAcrossF567376403/001
+Modo de instalacao: copy
+=== RUN   TestConformanceSuite_RF61Scenario07_InvalidEvidenceBlocksAcrossFourProviders/copilot
+Ferramentas: [claude codex copilot]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+
+Batch summary (install): created=445 updated=0 preserved=0 merged=1 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_RF61Scenario07_InvalidEvidenceBlocksAcrossF3151396598/001
+Modo de instalacao: copy
+=== RUN   TestConformanceSuite_RF61Scenario07_InvalidEvidenceBlocksAcrossFourProviders/opencode
+--- PASS: TestConformanceSuite_RF61Scenario07_InvalidEvidenceBlocksAcrossFourProviders (1.37s)
+    --- PASS: TestConformanceSuite_RF61Scenario07_InvalidEvidenceBlocksAcrossFourProviders/claude (0.36s)
+    --- PASS: TestConformanceSuite_RF61Scenario07_InvalidEvidenceBlocksAcrossFourProviders/codex (0.35s)
+    --- PASS: TestConformanceSuite_RF61Scenario07_InvalidEvidenceBlocksAcrossFourProviders/copilot (0.35s)
+    --- PASS: TestConformanceSuite_RF61Scenario07_InvalidEvidenceBlocksAcrossFourProviders/opencode (0.30s)
+=== RUN   TestConformanceSuite_RF61Scenario08_ValidCheckpointPassesCoreValidatorInvariantPerProvider
+=== RUN   TestConformanceSuite_RF61Scenario08_ValidCheckpointPassesCoreValidatorInvariantPerProvider/claude
+=== RUN   TestConformanceSuite_RF61Scenario08_ValidCheckpointPassesCoreValidatorInvariantPerProvider/codex
+=== RUN   TestConformanceSuite_RF61Scenario08_ValidCheckpointPassesCoreValidatorInvariantPerProvider/copilot
+=== RUN   TestConformanceSuite_RF61Scenario08_ValidCheckpointPassesCoreValidatorInvariantPerProvider/opencode
+--- PASS: TestConformanceSuite_RF61Scenario08_ValidCheckpointPassesCoreValidatorInvariantPerProvider (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario08_ValidCheckpointPassesCoreValidatorInvariantPerProvider/claude (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario08_ValidCheckpointPassesCoreValidatorInvariantPerProvider/codex (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario08_ValidCheckpointPassesCoreValidatorInvariantPerProvider/copilot (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario08_ValidCheckpointPassesCoreValidatorInvariantPerProvider/opencode (0.00s)
+=== RUN   TestConformanceSuite_RF61Scenario09_CorruptedCheckpointBlocksCoreValidatorInvariantPerProvider
+=== RUN   TestConformanceSuite_RF61Scenario09_CorruptedCheckpointBlocksCoreValidatorInvariantPerProvider/claude
+=== RUN   TestConformanceSuite_RF61Scenario09_CorruptedCheckpointBlocksCoreValidatorInvariantPerProvider/codex
+=== RUN   TestConformanceSuite_RF61Scenario09_CorruptedCheckpointBlocksCoreValidatorInvariantPerProvider/copilot
+=== RUN   TestConformanceSuite_RF61Scenario09_CorruptedCheckpointBlocksCoreValidatorInvariantPerProvider/opencode
+--- PASS: TestConformanceSuite_RF61Scenario09_CorruptedCheckpointBlocksCoreValidatorInvariantPerProvider (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario09_CorruptedCheckpointBlocksCoreValidatorInvariantPerProvider/claude (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario09_CorruptedCheckpointBlocksCoreValidatorInvariantPerProvider/codex (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario09_CorruptedCheckpointBlocksCoreValidatorInvariantPerProvider/copilot (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario09_CorruptedCheckpointBlocksCoreValidatorInvariantPerProvider/opencode (0.00s)
+=== RUN   TestConformanceSuite_RF61Scenario10_TelemetryUnavailableTokenCountIsExplicitlyUnknownCoreValidatorInvariantPerProvider
+=== RUN   TestConformanceSuite_RF61Scenario10_TelemetryUnavailableTokenCountIsExplicitlyUnknownCoreValidatorInvariantPerProvider/claude
+=== RUN   TestConformanceSuite_RF61Scenario10_TelemetryUnavailableTokenCountIsExplicitlyUnknownCoreValidatorInvariantPerProvider/codex
+=== RUN   TestConformanceSuite_RF61Scenario10_TelemetryUnavailableTokenCountIsExplicitlyUnknownCoreValidatorInvariantPerProvider/copilot
+=== RUN   TestConformanceSuite_RF61Scenario10_TelemetryUnavailableTokenCountIsExplicitlyUnknownCoreValidatorInvariantPerProvider/opencode
+--- PASS: TestConformanceSuite_RF61Scenario10_TelemetryUnavailableTokenCountIsExplicitlyUnknownCoreValidatorInvariantPerProvider (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario10_TelemetryUnavailableTokenCountIsExplicitlyUnknownCoreValidatorInvariantPerProvider/claude (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario10_TelemetryUnavailableTokenCountIsExplicitlyUnknownCoreValidatorInvariantPerProvider/codex (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario10_TelemetryUnavailableTokenCountIsExplicitlyUnknownCoreValidatorInvariantPerProvider/copilot (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario10_TelemetryUnavailableTokenCountIsExplicitlyUnknownCoreValidatorInvariantPerProvider/opencode (0.00s)
+=== RUN   TestConformanceSuite_RF61Scenario11_UnknownEventIsRejectedCoreValidatorInvariantPerProvider
+=== RUN   TestConformanceSuite_RF61Scenario11_UnknownEventIsRejectedCoreValidatorInvariantPerProvider/claude
+=== RUN   TestConformanceSuite_RF61Scenario11_UnknownEventIsRejectedCoreValidatorInvariantPerProvider/codex
+=== RUN   TestConformanceSuite_RF61Scenario11_UnknownEventIsRejectedCoreValidatorInvariantPerProvider/copilot
+=== RUN   TestConformanceSuite_RF61Scenario11_UnknownEventIsRejectedCoreValidatorInvariantPerProvider/opencode
+--- PASS: TestConformanceSuite_RF61Scenario11_UnknownEventIsRejectedCoreValidatorInvariantPerProvider (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario11_UnknownEventIsRejectedCoreValidatorInvariantPerProvider/claude (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario11_UnknownEventIsRejectedCoreValidatorInvariantPerProvider/codex (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario11_UnknownEventIsRejectedCoreValidatorInvariantPerProvider/copilot (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario11_UnknownEventIsRejectedCoreValidatorInvariantPerProvider/opencode (0.00s)
+=== RUN   TestConformanceSuite_RF61Scenario12_UnsupportedCapabilityIsDeclaredExplicitlyPerProvider
+=== RUN   TestConformanceSuite_RF61Scenario12_UnsupportedCapabilityIsDeclaredExplicitlyPerProvider/claude
+=== RUN   TestConformanceSuite_RF61Scenario12_UnsupportedCapabilityIsDeclaredExplicitlyPerProvider/codex
+=== RUN   TestConformanceSuite_RF61Scenario12_UnsupportedCapabilityIsDeclaredExplicitlyPerProvider/copilot
+=== RUN   TestConformanceSuite_RF61Scenario12_UnsupportedCapabilityIsDeclaredExplicitlyPerProvider/opencode
+--- PASS: TestConformanceSuite_RF61Scenario12_UnsupportedCapabilityIsDeclaredExplicitlyPerProvider (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario12_UnsupportedCapabilityIsDeclaredExplicitlyPerProvider/claude (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario12_UnsupportedCapabilityIsDeclaredExplicitlyPerProvider/codex (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario12_UnsupportedCapabilityIsDeclaredExplicitlyPerProvider/copilot (0.00s)
+    --- PASS: TestConformanceSuite_RF61Scenario12_UnsupportedCapabilityIsDeclaredExplicitlyPerProvider/opencode (0.00s)
+=== RUN   TestConformanceSuite_RF61Scenario13_AdapterReturningErrorSurfacesAcrossFourProviders
+=== RUN   TestConformanceSuite_RF61Scenario13_AdapterReturningErrorSurfacesAcrossFourProviders/claude
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Batch summary (install): created=446 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_RF61Scenario13_AdapterReturningErrorSurface4068875258/001
+Modo de instalacao: copy
+=== RUN   TestConformanceSuite_RF61Scenario13_AdapterReturningErrorSurfacesAcrossFourProviders/codex
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Batch summary (install): created=446 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_RF61Scenario13_AdapterReturningErrorSurface676946940/001
+Modo de instalacao: copy
+=== RUN   TestConformanceSuite_RF61Scenario13_AdapterReturningErrorSurfacesAcrossFourProviders/copilot
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Batch summary (install): created=446 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_RF61Scenario13_AdapterReturningErrorSurface3420242491/001
+Modo de instalacao: copy
+=== RUN   TestConformanceSuite_RF61Scenario13_AdapterReturningErrorSurfacesAcrossFourProviders/opencode
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Batch summary (install): created=446 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_RF61Scenario13_AdapterReturningErrorSurface3000849367/001
+Modo de instalacao: copy
+--- PASS: TestConformanceSuite_RF61Scenario13_AdapterReturningErrorSurfacesAcrossFourProviders (1.25s)
+    --- PASS: TestConformanceSuite_RF61Scenario13_AdapterReturningErrorSurfacesAcrossFourProviders/claude (0.28s)
+    --- PASS: TestConformanceSuite_RF61Scenario13_AdapterReturningErrorSurfacesAcrossFourProviders/codex (0.29s)
+    --- PASS: TestConformanceSuite_RF61Scenario13_AdapterReturningErrorSurfacesAcrossFourProviders/copilot (0.28s)
+    --- PASS: TestConformanceSuite_RF61Scenario13_AdapterReturningErrorSurfacesAcrossFourProviders/opencode (0.40s)
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Batch summary (install): created=446 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBloc988511695/001
+Modo de instalacao: copy
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude/$(echo_git)_push_origin_main
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex/$(echo_git)_push_origin_main
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot/$(echo_git)_push_origin_main
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode/$(echo_git)_push_origin_main
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude/eval_"git_push_origin_main"
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex/eval_"git_push_origin_main"
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot/eval_"git_push_origin_main"
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode/eval_"git_push_origin_main"
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude/sh_-c_"git_push_origin_main"
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex/sh_-c_"git_push_origin_main"
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot/sh_-c_"git_push_origin_main"
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode/sh_-c_"git_push_origin_main"
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude//usr/bin/git_push_origin_main
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex//usr/bin/git_push_origin_main
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot//usr/bin/git_push_origin_main
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode//usr/bin/git_push_origin_main
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude/git_-c_user.name=x_commit_-m_x
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex/git_-c_user.name=x_commit_-m_x
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot/git_-c_user.name=x_commit_-m_x
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode/git_-c_user.name=x_commit_-m_x
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude/git_push_--force
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex/git_push_--force
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot/git_push_--force
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode/git_push_--force
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude/git_push_-f
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex/git_push_-f
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot/git_push_-f
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode/git_push_-f
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude/git_status
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex/git_status
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot/git_status
+=== RUN   TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode/git_status
+--- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders (5.54s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude/$(echo_git)_push_origin_main (0.15s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex/$(echo_git)_push_origin_main (0.15s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot/$(echo_git)_push_origin_main (0.16s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode/$(echo_git)_push_origin_main (0.26s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude/eval_"git_push_origin_main" (0.04s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex/eval_"git_push_origin_main" (0.04s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot/eval_"git_push_origin_main" (0.04s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode/eval_"git_push_origin_main" (0.26s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude/sh_-c_"git_push_origin_main" (0.05s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex/sh_-c_"git_push_origin_main" (0.04s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot/sh_-c_"git_push_origin_main" (0.04s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode/sh_-c_"git_push_origin_main" (0.26s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude//usr/bin/git_push_origin_main (0.16s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex//usr/bin/git_push_origin_main (0.16s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot//usr/bin/git_push_origin_main (0.15s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode//usr/bin/git_push_origin_main (0.26s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude/git_-c_user.name=x_commit_-m_x (0.17s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex/git_-c_user.name=x_commit_-m_x (0.16s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot/git_-c_user.name=x_commit_-m_x (0.15s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode/git_-c_user.name=x_commit_-m_x (0.32s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude/git_push_--force (0.16s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex/git_push_--force (0.16s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot/git_push_--force (0.16s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode/git_push_--force (0.26s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude/git_push_-f (0.16s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex/git_push_-f (0.15s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot/git_push_-f (0.15s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode/git_push_-f (0.30s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/claude/git_status (0.15s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/codex/git_status (0.15s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/copilot/git_status (0.16s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_CommandVariationBypassIsBlockedAcrossFourProviders/opencode/git_status (0.27s)
+=== RUN   TestConformanceSuite_RF61Scenario14_SuiteFailsWhenCanonicalGitOperationGateIsRemoved
+Ferramentas: [claude codex copilot opencode]
+Linguagens:  [node]
+
+-> Instalando skills canonicas...
+-> Instalando claude...
+-> Instalando codex...
+-> Instalando copilot...
+-> Instalando opencode...
+
+Batch summary (install): created=446 updated=0 preserved=0 merged=2 conflict=0
+
+Governanca para IA instalada em: /var/folders/hg/97c4drd559zgx8mztt_4b6fw0000gn/T/TestConformanceSuite_RF61Scenario14_SuiteFailsWhenCanonicalGitOp2818275944/001
+Modo de instalacao: copy
+=== RUN   TestConformanceSuite_RF61Scenario14_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/claude
+=== RUN   TestConformanceSuite_RF61Scenario14_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/codex
+=== RUN   TestConformanceSuite_RF61Scenario14_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/copilot
+=== RUN   TestConformanceSuite_RF61Scenario14_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/opencode
+--- PASS: TestConformanceSuite_RF61Scenario14_SuiteFailsWhenCanonicalGitOperationGateIsRemoved (0.71s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/claude (0.08s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/codex (0.08s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/copilot (0.08s)
+    --- PASS: TestConformanceSuite_RF61Scenario14_SuiteFailsWhenCanonicalGitOperationGateIsRemoved/opencode (0.19s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration	10.628s
+testing: warning: no tests to run
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/tests/integration/hooks_live	0.215s [no tests to run]

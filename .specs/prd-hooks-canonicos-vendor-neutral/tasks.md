@@ -35,7 +35,7 @@
 | 10.0 | Quality gate disparado por evento com selecao por risco e deduplicacao | done | 4.0, 7.0 | Com 8.0, 11.0 | — |
 | 11.0 | Evidence gate, checkpoint atomico, deteccao de corrupcao e sanitizacao | done | 3.0, 4.0 | Com 10.0 | — |
 | 12.0 | Telemetria comum, ablation, timeout e guarda de recursao | done | 4.0, 8.0 | Com 9.0 | — |
-| 13.0 | Conformidade cross-provider, nao-regressao e documentacao | pending | 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0 | Não | — |
+| 13.0 | Conformidade cross-provider, nao-regressao e documentacao | done | 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0 | Não | — |
 
 ## Dependências Críticas
 

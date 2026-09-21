@@ -1,0 +1,14 @@
+=== RUN   TestManifestReplicatesPRDNormativeClassification
+--- PASS: TestManifestReplicatesPRDNormativeClassification (0.00s)
+=== RUN   TestManifestDivergenceFromPRDIsDetected
+--- PASS: TestManifestDivergenceFromPRDIsDetected (0.00s)
+=== RUN   TestManifestDeterministicScenariosAreAllRunnableByFixture
+--- PASS: TestManifestDeterministicScenariosAreAllRunnableByFixture (0.00s)
+=== RUN   TestScenariosWithDualClassificationMatchPRDDecision
+--- PASS: TestScenariosWithDualClassificationMatchPRDDecision (0.00s)
+=== RUN   TestRF61Scenarios_HasFourteenEntriesInPRDOrder
+--- PASS: TestRF61Scenarios_HasFourteenEntriesInPRDOrder (0.00s)
+=== RUN   TestRF61Scenarios_AreADistinctCatalogFromTheManifest
+--- PASS: TestRF61Scenarios_AreADistinctCatalogFromTheManifest (0.00s)
+PASS
+ok  	github.com/JailtonJunior94/ai-spec-harness/internal/conformance	0.269s

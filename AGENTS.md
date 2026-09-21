@@ -173,6 +173,7 @@ exemplos ao contexto real.
 - [Guia de Instalacao Universal](docs/guia-instalacao-universal.md) · [Hierarquia de Configuracao](docs/config-hierarchy.md) · [Troubleshooting](docs/troubleshooting.md)
 - [Referencia do task-loop](docs/task-loop-reference.md) · [Capacidades do runtime Claude](docs/runtime-claude-capabilities.md) · [Gates de evidencia](docs/evidence-gates.md)
 - [Ciclo de telemetria](docs/telemetry-feedback-cycle.md) · [Matriz de degradacao](docs/degradation-matrix.md)
+- [Hooks canonicos, eventos e policies](docs/hooks-canonicos.md) — inclui a semantica exata de `AfterTool` (informa apos a edicao, nunca bloqueia previamente) referenciada por `CLAUDE.md`.
 
 ## ADRs
 

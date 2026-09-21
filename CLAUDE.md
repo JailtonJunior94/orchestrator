@@ -17,7 +17,7 @@ vivem la. Este arquivo contem apenas o que e especifico do Claude Code.
 - `.agents/policies/` e a origem canonica de `R-GOV-001`/`R-STYLE-001`; `.claude/rules/` (e equivalentes) sao espelhos derivados. Editar sempre em `.agents/policies/` e rodar `scripts/sync-policies.sh` (gate `make check-policies-sync`, ver tabela "Area tocada | Gate" em `AGENTS.md`).
 - `.claude/agents/` define 8 subagentes (`task-executor`, `reviewer`, `bugfixer`, `refactorer`, `prd-writer`, `technical-specification-writer`, `task-planner`, `project-analyzer`). Use-os para execucao isolada; a sessao principal nao deve acumular contexto de implementacao.
 - Hooks shell em `.claude/hooks/` **nao** estao ativos por default: `ai-spec install .` os registra em `.claude/settings.local.json` (nao versionado). Confirmar com `/hooks`.
-- Com hooks ativos, `validate-governance.sh` bloqueia edicao de `AGENTS.md` e de `SKILL.md`; exportar `GOVERNANCE_HOOK_MODE=warn` quando a tarefa exigir editar esses arquivos.
+- `validate-governance.sh` roda como hook de **pos-ferramenta** (`internal/runtime/specs/registry.go`, `scriptPostTool`): com hooks ativos ele **informa** edicao de `AGENTS.md` e de `SKILL.md` com `exit 1`, mas o `exit` ocorre depois que a edicao ja aconteceu — `AfterTool` nao bloqueia em nenhuma das quatro CLIs suportadas (Claude, Codex, Copilot, OpenCode). Exportar `GOVERNANCE_HOOK_MODE=warn` quando a tarefa exigir editar esses arquivos suprime o aviso pos-edicao, nao um bloqueio previo. Detalhes: [`docs/hooks-canonicos.md`](docs/hooks-canonicos.md).
 
 ## Runtime orquestrado (`ai-spec task-loop --tool claude --runtime acp`)
 

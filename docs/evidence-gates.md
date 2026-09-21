@@ -28,6 +28,36 @@ Tambem em `.agents/scripts/`: `hook-prereq-gate.sh`, `resolve-references.sh`,
   `GOVERNANCE_DESTRUCTIVE_OPERATION_CONFIRMED=1` para comando destrutivo, sem modo `warn`. Comando
   Git de leitura (`status`, `diff`, `log`, etc.) nunca e bloqueado por este gate.
 
+## Checkpoint atomico (F25) e deteccao de corrupcao
+
+`execute-task` Etapa 5 grava `.checkpoints/<id>.json` (envelope SDD v2, `schema_version: 2`) por
+escrita atomica (`.tmp-*` + rename) antes de mutar `tasks.md` para `done`. `post-execute-task.sh`
+(gate F25) recusa `status=done` sem checkpoint presente e nao-vazio
+(`AI_ALLOW_MISSING_CHECKPOINT=1` reabre o comportamento legado, nao recomendado). A extensao e
+unificada em `.json` nos quatro consumidores (`internal/sdd/state.go`, `execute-task/SKILL.md`,
+`post-execute-task.sh`, `subagent-stop-wrapper.sh`); ate a tarefa 11.0 dois deles ainda esperavam
+`.yaml`.
+
+Validacao de conteudo: `internal/sdd.NewResultValidator().ValidateCheckpointJSON` valida o schema
+completo (task_id, status, hashes, criterios, evidencia, `review_verdict`) contra o JSON Schema do
+envelope. Um checkpoint sintaticamente corrompido (JSON invalido) ou com schema incompleto falha
+aqui com erro explicito — nunca e aceito silenciosamente. `internal/sdd.Store.importTaskCheckpoint`
+propaga esse erro como **fatal** para `populateOperationalModel`/`ai-spec validate-sdd`: um projeto
+cujo checkpoint esteja corrompido para de validar, em vez de reportar estado incorreto. Cobertura:
+`internal/sdd/result_schema_test.go` (unitario) e
+`tests/integration/conformance_suite_rf61_test.go` (cenarios 8 e 9 de RF-61 — checkpoint valido e
+corrompido). A familia `checkpoint` e nucleo puro, sem branch por provedor (`internal/sdd` nao
+importa `internal/skills` nem referencia nome de CLI); os cenarios exercitam o validador real uma
+vez por rotulo de provedor para deixar essa invariante explicita no relatorio de teste, mas a prova
+de que o comportamento e identico em cada CLI vem da ausencia estrutural de ramificacao por
+provedor no codigo validado, nao de quatro dispatches distintos por hook nativo — `checkpoint` ainda
+nao tem wiring nativo provado por provedor em todos os eventos (ver `docs/degradation-matrix.md`).
+
+`.jsonl` (eventos append-only) tem deteccao de corrupcao propria e mais fina:
+`internal/runtime/persistence.VerifyJSONLIntegrity`/`ErrCorruptedJSONL` rejeitam truncamento na
+ultima linha e linhas que nao sao JSON valido, sem nunca carregar o conteudo corrompido para
+reescrever por cima. Ver `internal/runtime/persistence/jsonl_crash_recovery_test.go`.
+
 ## Gate de referencias de caminho
 
 `make check-spec-paths` falha quando um artefato de contrato (`prd.md`, `techspec.md`, `tasks.md`)
