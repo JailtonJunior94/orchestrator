@@ -259,12 +259,6 @@ func (w *alwaysFailingTelemetryWriter) WriteLine(_, _ string) error {
 	return errors.New("simulated telemetry backend failure")
 }
 
-// RF-48: falha nao critica de telemetria nao bloqueia a tarefa nem conta
-// como retentativa. Ao contrario do teste tautologico legado em
-// internal/telemetry/hook_events_test.go (que usava variaveis locais
-// desconectadas de qualquer dispatcher), este teste injeta um writer que
-// sempre falha no dispatcher REAL de producao e prova que Dispatch continua
-// retornando sucesso, sem qualquer retentativa observavel.
 func TestDispatcher_TelemetryFailureDoesNotBlockDispatch(t *testing.T) {
 	t.Setenv("GOVERNANCE_TELEMETRY", "1")
 

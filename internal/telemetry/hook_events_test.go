@@ -76,12 +76,6 @@ func hasTimestampPrefixAndSuffix(line, suffix string) bool {
 	return rest == suffix
 }
 
-// TestHookTelemetry_WriterFailureIsSwallowed prova o comportamento no nivel
-// do writer: RecordDuration nao propaga o erro do writer para o chamador.
-// A prova de RF-48 contra o caminho real de producao (o dispatcher que
-// decide sucesso/retentativa da tarefa) esta em
-// internal/runtime/hooks/dispatcher_test.go:TestDispatcher_TelemetryFailureDoesNotBlockDispatch,
-// que injeta este mesmo tipo de writer falho no dispatcher real.
 func TestHookTelemetry_WriterFailureIsSwallowed(t *testing.T) {
 	t.Setenv("GOVERNANCE_TELEMETRY", "1")
 	root := t.TempDir()
