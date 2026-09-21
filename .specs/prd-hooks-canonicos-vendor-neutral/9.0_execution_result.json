@@ -7,6 +7,8 @@
   "base_sha": "9b99b4d75ccac103ac79f9281004b72ebc8dc501",
   "patch_sha256": "91f627a7120337d77bab66b9782c4ad94df6a1b1fe7b15d37ca86537a43579b0",
   "patch_ref": "evidence/task-9.0-hooks-canonicos-vendor-neutral/9.0_execution_result.patch",
+  "commit_sha": "0b67199d5e737ca7da7621b8d561668c586aec1f",
+  "commit_patch_sha256": "eaf3a9b125e217537f9470e9985adbfcc0ac78ed1bdcaa1622416ab2a02d1382",
   "final_state_sha256": "3fc400faa1ff17b381a1231ae4e983e2a7f534bebf07908b7ec49c9de952f3d7",
   "coverage_regression": false,
   "tests": [
