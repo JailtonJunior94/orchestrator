@@ -70,7 +70,7 @@ func (g *Gate) Evaluate(ctx context.Context, in EvaluationInput) hookcontract.Re
 	})
 
 	if g.cache != nil {
-		if entry, hit, cacheErr := g.cache.Get(in.TaskID); cacheErr == nil && hit && entry.Fingerprint == fingerprint {
+		if entry, hit, cacheErr := g.cache.Get(in.TaskID); cacheErr == nil && hit && entry.Fingerprint == fingerprint && isSkippableDecision(entry.Decision) {
 			if skip, ok := notApplicableSkip(policyID, entry); ok {
 				return skip
 			}
@@ -178,6 +178,15 @@ func errorResultWithPolicy(policyID, reason string) hookcontract.Result {
 		return hookcontract.NewNotApplicable(reason)
 	}
 	return result
+}
+
+func isSkippableDecision(decision string) bool {
+	switch decision {
+	case hookcontract.DecisionAllow.String(), hookcontract.DecisionWarn.String():
+		return true
+	default:
+		return false
+	}
 }
 
 func notApplicableSkip(policyID string, entry CacheEntry) (hookcontract.Result, bool) {

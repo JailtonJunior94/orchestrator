@@ -138,6 +138,32 @@ func TestQualityGate_ReexecutesWhenFingerprintChanges(t *testing.T) {
 	}
 }
 
+func TestQualityGate_NeverMasksCachedBlockOnUnchangedFingerprint(t *testing.T) {
+	fakeFS := fs.NewFakeFileSystem()
+	executor := fakeExecutor{byCommand: map[string]ExecutionResult{
+		"go test ./...": {Command: "go test ./...", ExitCode: 1, Output: "FAIL"},
+	}}
+	gate := NewGate(
+		NewDefaultPolicyLoader(fakeFS),
+		fakeToolchainProvider{result: newGoToolchain()},
+		executor,
+		NewFileCache(fakeFS, "/project/.agents/generated/quality-gate-cache.json"),
+		NewFileEvidenceWriter(fakeFS, "/project/.agents/generated/quality-gate-evidence"),
+	)
+
+	input := EvaluationInput{ProjectDir: "/project", TaskID: "10.0", TaskType: DefaultTaskType, Risk: DefaultRisk}
+
+	first := gate.Evaluate(context.Background(), input)
+	if first.Decision() != hookcontract.DecisionBlock {
+		t.Fatalf("first Decision() = %v, want BLOCK", first.Decision())
+	}
+
+	second := gate.Evaluate(context.Background(), input)
+	if second.Decision() != hookcontract.DecisionBlock {
+		t.Fatalf("second Decision() = %v, want BLOCK; a cached BLOCK must never be masked as a dedup skip (fingerprint unchanged)", second.Decision())
+	}
+}
+
 func TestGate_Evaluate_UndeclaredPolicyCombinationProducesError(t *testing.T) {
 	fakeFS := fs.NewFakeFileSystem()
 	gate := NewGate(

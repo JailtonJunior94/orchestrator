@@ -715,10 +715,11 @@ func (c *Catalog) prepareHooksDispatcher(
 			qualitygate.NewFileEvidenceWriter(osFS, filepath.Join(j.WorkDir, ".agents/generated/quality-gate-evidence")),
 		)
 		disp.Register(hooks.PointSessionPostEnd, hooks.NewQualityGateHook(qualityGate, qualitygate.EvaluationInput{
-			ProjectDir: j.WorkDir,
-			TaskID:     qualityTaskID,
-			TaskType:   qualitygate.DefaultTaskType,
-			Risk:       qualitygate.DefaultRisk,
+			ProjectDir:  j.WorkDir,
+			TaskID:      qualityTaskID,
+			TaskType:    qualitygate.DefaultTaskType,
+			Risk:        qualitygate.DefaultRisk,
+			StateDigest: qualitygate.ComputeStateDigest(j.WorkDir),
 		}))
 	}
 

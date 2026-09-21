@@ -332,14 +332,41 @@ func (g *Generator) hasDotNet(projectDir string) bool {
 	return false
 }
 
-var ValidationLangOrder = []string{"go", "node", "python", "dotnet", "java"}
+var ValidationLangOrder = deriveValidationLangOrder()
 
-var ValidationLangLabels = map[string]string{
-	"go":     "Go",
-	"node":   "Node",
-	"python": "Python",
-	"dotnet": ".NET",
-	"java":   "Java",
+var ValidationLangLabels = deriveValidationLangLabels()
+
+func deriveValidationLangOrder() []string {
+	out := make([]string, len(skills.AllLangs))
+	for i, lang := range skills.AllLangs {
+		out[i] = string(lang)
+	}
+	return out
+}
+
+func deriveValidationLangLabels() map[string]string {
+	out := make(map[string]string, len(skills.AllLangs))
+	for _, lang := range skills.AllLangs {
+		out[string(lang)] = validationLangLabel(lang)
+	}
+	return out
+}
+
+func validationLangLabel(lang skills.Lang) string {
+	switch lang {
+	case skills.LangGo:
+		return "Go"
+	case skills.LangNode:
+		return "Node"
+	case skills.LangPython:
+		return "Python"
+	case skills.LangDotNet:
+		return ".NET"
+	case skills.LangJava:
+		return "Java"
+	default:
+		panic(fmt.Sprintf("contextgen: missing validation label for lang %q", lang))
+	}
 }
 
 func (g *Generator) buildValidationCommands(toolchain detect.ToolchainResult) string {
