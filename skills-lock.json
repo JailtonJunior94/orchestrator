@@ -55,7 +55,7 @@
       "source": "internal",
       "sourceType": "hook",
       "path": ".agents/hooks/validate-preload.sh",
-      "computedHash": "70e7e047535c894371393069fe86c41e67c6da4d2d28d3dcd43fb9108b8cc86d"
+      "computedHash": "004bf7d976469376c6b5fce947a01f704d6775c017e71688b78d34244cfef926"
     },
     "hook:.agents/hooks/validate-session-end.sh": {
       "source": "internal",
@@ -67,7 +67,7 @@
       "source": "internal",
       "sourceType": "hook",
       "path": ".agents/scripts/git-operation-gate.sh",
-      "computedHash": "9570a4b97aac02341a422d0b5cb6c28633224526d7cc2aa9d607464fa6d76b54"
+      "computedHash": "03e4b37e28c32bf66fa0d1f7f984e35fa956bb15be0bcb9a97aef4e851a3d41f"
     },
     "hook:.agents/scripts/hook-prereq-gate.sh": {
       "source": "internal",
