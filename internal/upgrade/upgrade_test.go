@@ -1272,3 +1272,111 @@ func TestUpgrade_LegacyManifestBackfillCoversAdapterFilesTouchedByRegenerateAdap
 		t.Errorf("edicao manual deveria ter sido preservada apos abort, got: %s", got)
 	}
 }
+
+func TestUpgrade_SyncsManagedHooksScriptsLibAcrossAllToolsWithoutSkillChange(t *testing.T) {
+	t.Parallel()
+	ffs := fs.NewFakeFileSystem()
+
+	skillContent := []byte("---\nname: review\nversion: 1.0.0\ndescription: Review.\n---\n")
+	ffs.Files["/source/.agents/skills/review/SKILL.md"] = skillContent
+	ffs.Files["/project/.agents/skills/review/SKILL.md"] = skillContent
+
+	ffs.Dirs["/project/.claude"] = true
+	ffs.Files["/project/.codex/config.toml"] = []byte("stale codex config")
+	ffs.Dirs["/project/.github"] = true
+
+	sourceHookDirs := []string{
+		"/source/.claude/hooks",
+		"/source/.codex/hooks",
+		"/source/.github/hooks",
+		"/source/.agents/hooks",
+	}
+	projectHookDirs := []string{
+		"/project/.claude/hooks",
+		"/project/.codex/hooks",
+		"/project/.github/hooks",
+		"/project/.agents/hooks",
+	}
+
+	for _, dir := range sourceHookDirs {
+		for _, hook := range append(append([]string{}, orchestratorHooksForTest()...), toolValidationHooksForTest()...) {
+			ffs.Files[dir+"/"+hook] = []byte("#!/usr/bin/env bash\necho source-v2-" + hook + "\n")
+		}
+	}
+
+	for i, dir := range projectHookDirs {
+		ffs.Files[dir+"/post-wave.sh"] = []byte("#!/usr/bin/env bash\necho stale-post-wave\n")
+		if i == 3 {
+			continue
+		}
+		ffs.Files[dir+"/post-execute-task.sh"] = []byte("#!/usr/bin/env bash\necho stale-post-execute-task\n")
+	}
+
+	agentsScripts := []string{
+		"validate-task-evidence.sh",
+		"validate-bugfix-evidence.sh",
+		"validate-refactor-evidence.sh",
+		"validate-review-evidence.sh",
+		"hook-prereq-gate.sh",
+		"resolve-references.sh",
+		"validate-skill-prerequisites.sh",
+		"validate-governance-references.sh",
+		"validate-session-end.sh",
+		"git-operation-gate.sh",
+	}
+	for _, name := range agentsScripts {
+		ffs.Files["/source/.agents/scripts/"+name] = []byte("#!/usr/bin/env bash\necho source-v2-" + name + "\n")
+	}
+	ffs.Files["/project/.agents/scripts/validate-task-evidence.sh"] = []byte("#!/usr/bin/env bash\necho stale-validate-task-evidence\n")
+	ffs.Files["/project/.agents/scripts/validate-review-evidence.sh"] = []byte("#!/usr/bin/env bash\necho stale-validate-review-evidence\n")
+
+	agentsLib := []string{"check-invocation-depth.sh", "parse-hook-input.sh", "hook-payload.sh"}
+	for _, name := range agentsLib {
+		ffs.Files["/source/.agents/lib/"+name] = []byte("#!/usr/bin/env bash\necho source-v2-" + name + "\n")
+	}
+	ffs.Files["/project/.agents/lib/parse-hook-input.sh"] = []byte("#!/usr/bin/env bash\necho stale-parse-hook-input\n")
+
+	svc := setupTestService(ffs)
+	if err := svc.Execute(config.UpgradeOptions{
+		ProjectDir: "/project",
+		SourceDir:  "/source",
+	}); err != nil {
+		t.Fatalf("upgrade falhou: %v", err)
+	}
+
+	assertSynced := func(t *testing.T, srcPath, dstPath string) {
+		t.Helper()
+		want, err := ffs.ReadFile(srcPath)
+		if err != nil {
+			t.Fatalf("fonte %s ausente: %v", srcPath, err)
+		}
+		got, err := ffs.ReadFile(dstPath)
+		if err != nil {
+			t.Fatalf("artefato gerenciado %s ausente apos upgrade (MISSING): %v", dstPath, err)
+		}
+		if string(got) != string(want) {
+			t.Errorf("artefato gerenciado %s divergente da fonte apos upgrade (DRIFTED): got %q want %q", dstPath, got, want)
+		}
+	}
+
+	for i, dir := range projectHookDirs {
+		srcDir := sourceHookDirs[i]
+		assertSynced(t, srcDir+"/post-wave.sh", dir+"/post-wave.sh")
+		assertSynced(t, srcDir+"/post-execute-task.sh", dir+"/post-execute-task.sh")
+	}
+
+	for _, name := range agentsScripts {
+		assertSynced(t, "/source/.agents/scripts/"+name, "/project/.agents/scripts/"+name)
+	}
+	for _, name := range agentsLib {
+		assertSynced(t, "/source/.agents/lib/"+name, "/project/.agents/lib/"+name)
+	}
+}
+
+func orchestratorHooksForTest() []string {
+	return []string{"post-execute-task.sh", "pre-execute-all-tasks.sh", "post-wave.sh", "subagent-stop-wrapper.sh"}
+}
+
+func toolValidationHooksForTest() []string {
+	return []string{"validate-preload.sh", "validate-governance.sh", "validate-session-end.sh"}
+}

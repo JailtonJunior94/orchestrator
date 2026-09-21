@@ -17,6 +17,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/detect"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/embedded"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/hooksync"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/platform"
@@ -977,137 +978,37 @@ func (s *Service) writeMergedClaudeSettings(settingsFile string) error {
 	return nil
 }
 
-var orchestratorHooks = []string{
-	"post-execute-task.sh",
-	"pre-execute-all-tasks.sh",
-	"post-wave.sh",
-	"subagent-stop-wrapper.sh",
-}
-
-var agentsScriptsFiles = []string{
-	"validate-task-evidence.sh",
-	"validate-bugfix-evidence.sh",
-	"validate-refactor-evidence.sh",
-	"validate-review-evidence.sh",
-	"hook-prereq-gate.sh",
-	"resolve-references.sh",
-	"validate-skill-prerequisites.sh",
-	"validate-governance-references.sh",
-	"validate-session-end.sh",
-	"git-operation-gate.sh",
-}
+var orchestratorHooks = hooksync.OrchestratorHooks
 
 // copyAgentsScripts copia os validadores canonicos de evidencia para .agents/scripts/ do
 // projeto destino, de forma tool-neutra. Fonte preferencial: sourceDir/.agents/scripts/;
 // fallback: sourceDir/.claude/scripts/ (bundles que so espelham o mirror Claude).
 func (s *Service) copyAgentsScripts(sourceDir, projectDir string) error {
-	dstDir := filepath.Join(projectDir, ".agents", "scripts")
-	primarySrc := filepath.Join(sourceDir, ".agents", "scripts")
-	fallbackSrc := filepath.Join(sourceDir, ".claude", "scripts")
-
-	for _, name := range agentsScriptsFiles {
-		src := filepath.Join(primarySrc, name)
-		if !s.fs.Exists(src) {
-			src = filepath.Join(fallbackSrc, name)
-		}
-		if !s.fs.Exists(src) {
-			continue
-		}
-		if err := s.fs.MkdirAll(dstDir); err != nil {
-			return err
-		}
-		dst := filepath.Join(dstDir, name)
-		if err := s.fs.CopyFile(src, dst); err != nil {
-			return err
-		}
-		s.markExecutable(dst)
-	}
-	return nil
-}
-
-var agentsLibFiles = []string{
-	"check-invocation-depth.sh",
-	"parse-hook-input.sh",
-	"hook-payload.sh",
+	return hooksync.CopyAgentsScripts(s.fs, sourceDir, projectDir)
 }
 
 // copyAgentsLib copia shell libs canonicas de .agents/lib/ da fonte para o
 // projeto destino. Falha silenciosamente quando o arquivo nao existe na fonte
 // (compatibilidade com installs partindo de bundles antigos sem o vendor).
 func (s *Service) copyAgentsLib(sourceDir, projectDir string) error {
-	dstDir := filepath.Join(projectDir, ".agents", "lib")
-	srcDir := filepath.Join(sourceDir, ".agents", "lib")
-
-	for _, lib := range agentsLibFiles {
-		src := filepath.Join(srcDir, lib)
-		if !s.fs.Exists(src) {
-			continue
-		}
-		if err := s.fs.MkdirAll(dstDir); err != nil {
-			return err
-		}
-		dst := filepath.Join(dstDir, lib)
-		if err := s.fs.CopyFile(src, dst); err != nil {
-			return err
-		}
-		s.markExecutable(dst)
-	}
-	return nil
+	return hooksync.CopyAgentsLib(s.fs, sourceDir, projectDir)
 }
 
-var toolValidationHooks = []string{
-	"validate-preload.sh",
-	"validate-governance.sh",
-	"validate-session-end.sh",
-}
+var toolValidationHooks = hooksync.ToolValidationHooks
 
 // copyToolValidationHooks copia hooks de validacao especificos do tool (preload e
 // governanca) quando existirem na fonte. Mantem paridade entre Claude/Codex/Copilot.
 // Falha silenciosamente para hooks ausentes — cada tool pode adotar apenas o subset
 // que faz sentido para sua mecanica de invocacao.
 func (s *Service) copyToolValidationHooks(sourceDir, projectDir, toolHookDir string) error {
-	dstDir := filepath.Join(projectDir, toolHookDir)
-	srcDir := filepath.Join(sourceDir, toolHookDir)
-
-	for _, hook := range toolValidationHooks {
-		src := filepath.Join(srcDir, hook)
-		if !s.fs.Exists(src) {
-			continue
-		}
-		if err := s.fs.MkdirAll(dstDir); err != nil {
-			return err
-		}
-		dst := filepath.Join(dstDir, hook)
-		if err := s.fs.CopyFile(src, dst); err != nil {
-			return err
-		}
-		s.markExecutable(dst)
-	}
-	return nil
+	return hooksync.CopyToolValidationHooks(s.fs, sourceDir, projectDir, toolHookDir)
 }
 
 // copyOrchestratorHooks copia os hooks do execute-all-tasks/execute-task para o
 // diretorio de hooks do tool especificado e preserva permissao +x.
 // Falha silenciosamente para hooks ausentes na fonte (compatibilidade legada).
 func (s *Service) copyOrchestratorHooks(sourceDir, projectDir, toolHookDir string) error {
-	dstDir := filepath.Join(projectDir, toolHookDir)
-	srcDir := filepath.Join(sourceDir, toolHookDir)
-
-	for _, hook := range orchestratorHooks {
-		src := filepath.Join(srcDir, hook)
-		if !s.fs.Exists(src) {
-			continue
-		}
-		if err := s.fs.MkdirAll(dstDir); err != nil {
-			return err
-		}
-		dst := filepath.Join(dstDir, hook)
-		if err := s.fs.CopyFile(src, dst); err != nil {
-			return err
-		}
-		s.markExecutable(dst)
-	}
-	return nil
+	return hooksync.CopyOrchestratorHooks(s.fs, sourceDir, projectDir, toolHookDir)
 }
 
 var codexPlanningSkills = map[string]bool{
@@ -1335,12 +1236,6 @@ func (s *Service) trackMerged(path string) error {
 		return tracker.MarkMerged(path)
 	}
 	return nil
-}
-
-func (s *Service) markExecutable(path string) {
-	if tracker, ok := s.fs.(*tracking.Tracker); ok {
-		tracker.MarkExecutable(path)
-	}
 }
 
 func decodeWrittenPermission(configBytes []byte) map[string]any {

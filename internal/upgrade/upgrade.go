@@ -16,6 +16,7 @@ import (
 	"github.com/JailtonJunior94/ai-spec-harness/internal/contextgen"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/embedded"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/fs"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/hooksync"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/manifest"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/output"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/skills"
@@ -198,6 +199,10 @@ func (s *Service) Execute(opts config.UpgradeOptions) error {
 		} else if repaired {
 			s.printer.Info("    -> %s reparado (chave obsoleta migrada para %q)", CopilotGovernanceHooksRelPath, CopilotSessionEndHookKey)
 		}
+	}
+
+	if err := s.syncManagedArtifacts(sourceDir, projectDir); err != nil {
+		s.printer.Warn("Falha ao sincronizar hooks/scripts/lib gerenciados: %v", err)
 	}
 
 	// Aplicar atualizacoes
@@ -539,38 +544,23 @@ func (s *Service) regenerateAdapters(sourceDir, projectDir, codexProfile string)
 				filepath.Join(projectDir, ".claude", "rules", ruleFile),
 			)
 		}
-		s.syncFileIfPresent(
-			filepath.Join(sourceDir, ".claude", "scripts", "validate-task-evidence.sh"),
-			filepath.Join(projectDir, ".claude", "scripts", "validate-task-evidence.sh"),
-		)
-		s.syncFileIfPresent(
-			filepath.Join(sourceDir, ".claude", "scripts", "validate-bugfix-evidence.sh"),
-			filepath.Join(projectDir, ".claude", "scripts", "validate-bugfix-evidence.sh"),
-		)
-		s.syncFileIfPresent(
-			filepath.Join(sourceDir, ".claude", "scripts", "validate-refactor-evidence.sh"),
-			filepath.Join(projectDir, ".claude", "scripts", "validate-refactor-evidence.sh"),
-		)
-		s.syncFileIfPresent(
-			filepath.Join(sourceDir, ".claude", "hooks", "validate-preload.sh"),
-			filepath.Join(projectDir, ".claude", "hooks", "validate-preload.sh"),
-		)
-		s.syncFileIfPresent(
-			filepath.Join(sourceDir, ".claude", "hooks", "validate-governance.sh"),
-			filepath.Join(projectDir, ".claude", "hooks", "validate-governance.sh"),
-		)
-		s.syncFileIfPresent(
-			filepath.Join(sourceDir, "scripts", "lib", "check-invocation-depth.sh"),
-			filepath.Join(projectDir, "scripts", "lib", "check-invocation-depth.sh"),
-		)
-		s.syncFileIfPresent(
-			filepath.Join(sourceDir, "scripts", "lib", "parse-hook-input.sh"),
-			filepath.Join(projectDir, "scripts", "lib", "parse-hook-input.sh"),
-		)
-		s.syncFileIfPresent(
-			filepath.Join(sourceDir, "scripts", "lib", "hook-payload.sh"),
-			filepath.Join(projectDir, "scripts", "lib", "hook-payload.sh"),
-		)
+		for _, script := range []string{
+			"validate-task-evidence.sh",
+			"validate-bugfix-evidence.sh",
+			"validate-refactor-evidence.sh",
+			"validate-review-evidence.sh",
+		} {
+			s.syncFileIfPresent(
+				filepath.Join(sourceDir, ".claude", "scripts", script),
+				filepath.Join(projectDir, ".claude", "scripts", script),
+			)
+		}
+		for _, lib := range hooksync.AgentsLibFiles {
+			s.syncFileIfPresent(
+				filepath.Join(sourceDir, "scripts", "lib", lib),
+				filepath.Join(projectDir, "scripts", "lib", lib),
+			)
+		}
 	}
 	if s.fs.IsDir(filepath.Join(projectDir, ".github")) {
 		s.adapters.GenerateGitHub(sourceDir, projectDir)
@@ -578,11 +568,29 @@ func (s *Service) regenerateAdapters(sourceDir, projectDir, codexProfile string)
 	if s.fs.Exists(filepath.Join(projectDir, ".codex", "config.toml")) {
 		content := s.adapters.BuildCodexConfig(s.installedCodexSkills(projectDir, codexProfile))
 		_ = s.fs.WriteFile(filepath.Join(projectDir, ".codex", "config.toml"), []byte(content))
-		s.syncFileIfPresent(
-			filepath.Join(sourceDir, ".codex", "hooks", "validate-preload.sh"),
-			filepath.Join(projectDir, ".codex", "hooks", "validate-preload.sh"),
-		)
 	}
+}
+
+// syncManagedArtifacts sincroniza hooks/scripts/lib gerenciados (orquestrador,
+// validadores de tool e vendor canonico .agents/) com paridade real entre os 4
+// tools, espelhando exatamente o conjunto que `install` escreve na primeira
+// instalacao. Roda sempre — independente de haver skill desatualizada — porque
+// esses artefatos tem ciclo de vida proprio (nao acompanham o campo `version`
+// do frontmatter de skill) e `verify` os compara por hash contra a fonte.
+func (s *Service) syncManagedArtifacts(sourceDir, projectDir string) error {
+	var toolHookDirs []string
+	if s.fs.IsDir(filepath.Join(projectDir, ".claude")) {
+		toolHookDirs = append(toolHookDirs, filepath.Join(".claude", "hooks"))
+	}
+	if s.fs.Exists(filepath.Join(projectDir, ".codex", "config.toml")) {
+		toolHookDirs = append(toolHookDirs, filepath.Join(".codex", "hooks"))
+	}
+	if s.fs.IsDir(filepath.Join(projectDir, ".github")) {
+		toolHookDirs = append(toolHookDirs, filepath.Join(".github", "hooks"))
+	}
+	toolHookDirs = append(toolHookDirs, filepath.Join(".agents", "hooks"))
+
+	return hooksync.SyncAll(s.fs, sourceDir, projectDir, toolHookDirs)
 }
 
 func (s *Service) regenerateGovernance(sourceDir, projectDir, codexProfile string) {
