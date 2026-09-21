@@ -26,7 +26,7 @@ fi
 
 source "$parse_lib"
 
-readonly GIT_OPERATION_GATE_TIMEOUT_SECONDS="${AI_HOOK_TIMEOUT_GIT_OPERATION_GATE:-35}"
+readonly GIT_OPERATION_GATE_TIMEOUT_SECONDS="${AI_HOOK_TIMEOUT_GIT_OPERATION_GATE:-130}"
 hook_recursion_guard "git-operation-gate" "$GIT_OPERATION_BLOCK_EXIT"
 hook_measure_start "git-operation-gate" "$GIT_OPERATION_GATE_TIMEOUT_SECONDS"
 
@@ -339,7 +339,7 @@ for hit in interpreter_hits:
 
 git_matches=()
 interpreter_matches=()
-classifier_timeout_seconds="${AI_HOOK_TIMEOUT_GIT_CLASSIFIER:-30}"
+classifier_timeout_seconds="${AI_HOOK_TIMEOUT_GIT_CLASSIFIER:-120}"
 if command -v python3 >/dev/null 2>&1; then
   classification=""
   classifier_out="$(mktemp "${TMPDIR:-/tmp}/git-operation-gate-classify.XXXXXX")"

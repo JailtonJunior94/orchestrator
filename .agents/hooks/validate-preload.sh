@@ -29,7 +29,7 @@ fi
 
 source "$parse_lib"
 
-readonly VALIDATE_PRELOAD_TIMEOUT_SECONDS="${AI_HOOK_TIMEOUT_VALIDATE_PRELOAD:-40}"
+readonly VALIDATE_PRELOAD_TIMEOUT_SECONDS="${AI_HOOK_TIMEOUT_VALIDATE_PRELOAD:-135}"
 hook_recursion_guard "validate-preload" "$PRELOAD_BLOCK_EXIT"
 hook_measure_start "validate-preload" "$VALIDATE_PRELOAD_TIMEOUT_SECONDS"
 

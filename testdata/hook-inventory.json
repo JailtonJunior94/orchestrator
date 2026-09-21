@@ -89,7 +89,7 @@
     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
     "classification": "KEEP",
     "justification": "KEEP: unico ponto de entrada PreToolUse do harness (validate-preload.sh:5 PRELOAD_BLOCK_EXIT=2); remove-lo elimina o gate anti-edicao-sem-governanca inteiro. Fonte canonica em .agents/hooks/validate-preload.sh; distribuida para os demais provedores por instalacao/sync, nao registrada diretamente em nenhum settings/config de provedor.",
-    "integrity_hash": "004bf7d976469376c6b5fce947a01f704d6775c017e71688b78d34244cfef926"
+    "integrity_hash": "e5339bd4ca75e9157c86c3bbb9a662c907cc19eca51fb24d953bd71fbfb59490"
   },
   {
     "name": "validate-session-end.sh",
@@ -166,7 +166,7 @@
     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
     "classification": "KEEP",
     "justification": "KEEP: unica barreira automatizada contra comandos git destrutivos nao confirmados; alvo dedicado da tarefa 2.0 deste PRD para revisao de profundidade da analise. Fonte canonica em .agents/scripts/git-operation-gate.sh; distribuida para os demais provedores por instalacao/sync, nao registrada diretamente em nenhum settings/config de provedor.",
-    "integrity_hash": "57c62da82020623f59ec69b834bee0be6cf263737f710900d43969449fbf50ad"
+    "integrity_hash": "aa9a820ec62028ef4e481cfd23be06c98bec49d96317ad7ca9502d64dadd68dd"
   },
   {
     "name": "hook-prereq-gate.sh",
@@ -449,7 +449,7 @@
     "duplication": "Possui espelhos por provedor ou distribuicao embarcada.",
     "classification": "KEEP",
     "justification": "KEEP: unica barreira automatizada contra comandos git destrutivos nao confirmados; alvo dedicado da tarefa 2.0 deste PRD para revisao de profundidade da analise.",
-    "integrity_hash": "57c62da82020623f59ec69b834bee0be6cf263737f710900d43969449fbf50ad"
+    "integrity_hash": "aa9a820ec62028ef4e481cfd23be06c98bec49d96317ad7ca9502d64dadd68dd"
   },
   {
     "name": "hook-prereq-gate.sh",
