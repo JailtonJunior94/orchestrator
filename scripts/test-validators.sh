@@ -982,6 +982,30 @@ assert_git_gate_command 'bypass IFS já fechado continua fechado' 2 'git${IFS}pu
 assert_git_gate_command 'bypass $G $P já fechado continua fechado' 2 'G=git; P=push; $G $P --force'
 assert_git_gate_command 'sudo git push origin main bloqueia' 2 'sudo git push origin main'
 
+echo "git sem subcomando é estático e benigno, não pode ser tratado como subcomando dinâmico (BUG CRITICAL, re-revisão rodada 3 da tarefa 6.0 pós-47c96ac)"
+declare -a git_without_subcommand_commands=(
+  "git"
+  "git --version"
+  "git --help"
+  "git -C /repo"
+  "git -C /repo --version"
+)
+for command in "${git_without_subcommand_commands[@]}"; do
+  assert_git_gate_command "git sem subcomando estático deve passar: $command" 0 "$command"
+done
+
+echo "Controle: subcomando git não regulado com argumento dinâmico continua irrelevante para o gate"
+declare -a unregulated_subcommand_dynamic_arg_commands=(
+  'git fetch $VAR'
+  'git log $VAR'
+  'git diff $VAR'
+  'git status $FOO'
+  'git add $VAR'
+)
+for command in "${unregulated_subcommand_dynamic_arg_commands[@]}"; do
+  assert_git_gate_command "subcomando não regulado com argumento dinâmico deve passar: $command" 0 "$command"
+done
+
 echo
 echo "Passaram: $passed | Falharam: $failed"
 [[ "$failed" -eq 0 ]] || exit 1
