@@ -779,6 +779,52 @@ assert_exit "P7-4: profundidade pre-excedida bloqueia mesmo comando benigno" 2 "
 assert_stderr_contains "P7-4: mensagem de recursao no hook real" "recursao hook -> ferramenta -> hook detectada em git-operation-gate" "$stderr_p74"
 rm -f "$stderr_p74"
 
+echo
+echo "  P7-5: hook_timeout_watch nao deixa processo watchdog orfao quando o filho termina antes do orcamento (regressao RF61Scenario14/HOOKTIMEOUT-2)"
+FAST_CHILD="$GUARD_TMP/fast-child.sh"
+cat > "$FAST_CHILD" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+chmod +x "$FAST_CHILD"
+
+FAST_TIMEOUT_SECONDS=137
+FAST_CALLER="$GUARD_TMP/fast-timeout-caller.sh"
+cat > "$FAST_CALLER" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+source "$HOOK_LIB"
+bash "$FAST_CHILD" &
+child_pid=\$!
+hook_timeout_watch "fake-fast-child" $FAST_TIMEOUT_SECONDS "\$child_pid"
+exit \$?
+EOF
+chmod +x "$FAST_CALLER"
+
+p75_start=$(date +%s)
+bash "$FAST_CALLER" >/dev/null 2>/dev/null
+rc_p75=$?
+p75_end=$(date +%s)
+p75_elapsed=$((p75_end - p75_start))
+
+assert_exit "P7-5: filho rapido aprovado sem esperar o orcamento" 0 "$rc_p75"
+if [[ "$p75_elapsed" -le 3 ]]; then
+  echo "  ✓ P7-5: retorno em ${p75_elapsed}s (orcamento declarado de ${FAST_TIMEOUT_SECONDS}s), nao bloqueou ate o fim do orcamento"
+  passed=$((passed+1))
+else
+  echo "  ✗ P7-5: retorno demorou ${p75_elapsed}s (esperado <=3s) — hook_timeout_watch bloqueou alem do necessario"
+  failed=$((failed+1))
+fi
+
+if pgrep -f "sleep $FAST_TIMEOUT_SECONDS" >/dev/null 2>&1; then
+  echo "  ✗ P7-5: processo watchdog orfao (sleep $FAST_TIMEOUT_SECONDS) ainda vivo apos hook_timeout_watch retornar — fd de stdout/stderr fica aberto e trava Cmd.Wait() do chamador (RF61Scenario14)"
+  failed=$((failed+1))
+  pkill -f "sleep $FAST_TIMEOUT_SECONDS" >/dev/null 2>&1 || true
+else
+  echo "  ✓ P7-5: nenhum processo watchdog orfao (sleep $FAST_TIMEOUT_SECONDS) remanescente"
+  passed=$((passed+1))
+fi
+
 rm -rf "$GUARD_TMP"
 
 # ============================================================================

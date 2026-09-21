@@ -126,19 +126,24 @@ hook_timeout_watch() {
   local timeout_seconds="$2"
   local child_pid="$3"
 
-  (
-    sleep "$timeout_seconds"
-    kill -TERM "$child_pid" 2>/dev/null
-  ) &
-  local watchdog_pid=$!
+  local waited_seconds=0
+  local timed_out=0
+  while kill -0 "$child_pid" 2>/dev/null; do
+    if [[ "$waited_seconds" -ge "$timeout_seconds" ]]; then
+      timed_out=1
+      kill -TERM "$child_pid" 2>/dev/null
+      sleep 1
+      kill -KILL "$child_pid" 2>/dev/null
+      break
+    fi
+    sleep 1
+    waited_seconds=$((waited_seconds + 1))
+  done
 
   local rc=0
   wait "$child_pid" 2>/dev/null || rc=$?
 
-  kill "$watchdog_pid" 2>/dev/null
-  wait "$watchdog_pid" 2>/dev/null
-
-  if [[ "$rc" -ge 128 ]]; then
+  if [[ "$timed_out" -eq 1 || "$rc" -ge 128 ]]; then
     echo "GOVERNANCE BLOQUEIO: hook $hook_name excedeu timeout declarado de ${timeout_seconds}s; tratado como negacao (RF-66)." >&2
     return 124
   fi
