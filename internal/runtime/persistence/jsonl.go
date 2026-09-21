@@ -32,10 +32,50 @@ func NewJSONLWriter(path string, fsys fs.FileSystem) (*JSONLWriter, error) {
 	}
 	if existing, err := fsys.ReadFile(clean); err == nil {
 		if verifyErr := VerifyJSONLIntegrity(existing); verifyErr != nil {
-			return nil, fmt.Errorf("persistence: %s: %w", clean, verifyErr)
+			repaired, repairable := repairTrailingCorruption(existing)
+			if !repairable {
+				return nil, fmt.Errorf("persistence: %s: %w", clean, verifyErr)
+			}
+			if err := fsys.WriteFileAtomic(clean, repaired); err != nil {
+				return nil, fmt.Errorf("persistence: repair %s: %w", clean, err)
+			}
 		}
 	}
 	return &JSONLWriter{path: clean, fsys: fsys}, nil
+}
+
+func repairTrailingCorruption(content []byte) ([]byte, bool) {
+	if len(content) == 0 {
+		return content, false
+	}
+	hasTrailingNewline := content[len(content)-1] == '\n'
+	body := content
+	if hasTrailingNewline {
+		body = content[:len(content)-1]
+	}
+	lastNewline := bytes.LastIndexByte(body, '\n')
+	var prefix, lastLine []byte
+	if lastNewline == -1 {
+		lastLine = body
+	} else {
+		prefix = body[:lastNewline+1]
+		lastLine = body[lastNewline+1:]
+	}
+	if verifyErr := VerifyJSONLIntegrity(prefix); verifyErr != nil {
+		return content, false
+	}
+	trimmedLast := bytes.TrimSpace(lastLine)
+	if len(trimmedLast) == 0 {
+		return prefix, true
+	}
+	var probe json.RawMessage
+	if jsonErr := json.Unmarshal(lastLine, &probe); jsonErr != nil {
+		return prefix, true
+	}
+	if !hasTrailingNewline {
+		return append(append([]byte{}, content...), '\n'), true
+	}
+	return content, false
 }
 
 func (w *JSONLWriter) Append(evt events.Event) error {

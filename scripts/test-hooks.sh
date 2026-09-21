@@ -729,6 +729,25 @@ else
 fi
 
 echo
+echo "  H5-5: URL com credencial embutida no YAML e redigida (RF-49, connection_string_credential)"
+printf 'status: done\nconn: postgres://admin:hunter2@db.internal:5432/app\n' >"$POST_WAVE_TMP/results-conn.yaml"
+(cd "$POST_WAVE_TMP" && AI_TASKS_ROOT=.specs PATH="$REAL_BIN_PATH" bash "$POST_WAVE_HOOK" postwave 1.1 results-conn.yaml >/dev/null 2>&1)
+if grep -q "admin:hunter2@" "$PARTIAL_MD_PW" 2>/dev/null; then
+  echo "  ✗ H5-5: credencial da URL vazou para o relatorio parcial"
+  failed=$((failed+1))
+else
+  echo "  ✓ H5-5: credencial da URL nao vazou"
+  passed=$((passed+1))
+fi
+if grep -q "REDACTED:connection_string_credential" "$PARTIAL_MD_PW" 2>/dev/null; then
+  echo "  ✓ H5-5: marcador de redacao presente"
+  passed=$((passed+1))
+else
+  echo "  ✗ H5-5: marcador de redacao ausente"
+  failed=$((failed+1))
+fi
+
+echo
 echo "  H5-4: nao sobra temporario .tmp-post-wave apos as execucoes"
 leftover_tmp=$(find "$POST_WAVE_TMP/.specs/prd-postwave" -maxdepth 1 -name ".tmp-post-wave.*" 2>/dev/null | wc -l | tr -d ' ')
 if [[ "$leftover_tmp" -eq 0 ]]; then

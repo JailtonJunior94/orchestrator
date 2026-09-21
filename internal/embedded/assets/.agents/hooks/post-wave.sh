@@ -56,7 +56,9 @@ sanitize_stream() {
     -e 's/(gh[po]_|sk-|AKIA)[A-Za-z0-9_-]{10,}/[REDACTED:provider_token]/g' \
     -e 's/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/[REDACTED:jwt]/g' \
     -e 's/([Aa]uthorization:[[:space:]]*).+/\1[REDACTED:authorization_header]/g' \
-    -e 's/^([A-Z][A-Z0-9_]*(SECRET|TOKEN|KEY|PASSWORD|PASS|CREDENTIAL)[A-Z0-9_]*=).+/\1[REDACTED:dotenv_secret]/g'
+    -e 's/^([A-Z][A-Z0-9_]*(SECRET|TOKEN|KEY|PASSWORD|PASS|CREDENTIAL|SESSION_ID)[A-Z0-9_]*=).+/\1[REDACTED:dotenv_secret]/g' \
+    -e 's/^(api_key=).+/\1[REDACTED:dotenv_secret]/g' \
+    -e 's#[a-zA-Z][a-zA-Z0-9+.-]*://[^[:space:]:/@]+:[^[:space:]:/@]+@[^[:space:]]+#[REDACTED:connection_string_credential]#g'
 }
 
 atomic_write() {
