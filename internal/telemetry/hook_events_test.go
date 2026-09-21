@@ -76,25 +76,21 @@ func hasTimestampPrefixAndSuffix(line, suffix string) bool {
 	return rest == suffix
 }
 
-func TestHookTelemetry_FailureDoesNotPropagateOrCountAsRetry(t *testing.T) {
+// TestHookTelemetry_WriterFailureIsSwallowed prova o comportamento no nivel
+// do writer: RecordDuration nao propaga o erro do writer para o chamador.
+// A prova de RF-48 contra o caminho real de producao (o dispatcher que
+// decide sucesso/retentativa da tarefa) esta em
+// internal/runtime/hooks/dispatcher_test.go:TestDispatcher_TelemetryFailureDoesNotBlockDispatch,
+// que injeta este mesmo tipo de writer falho no dispatcher real.
+func TestHookTelemetry_WriterFailureIsSwallowed(t *testing.T) {
 	t.Setenv("GOVERNANCE_TELEMETRY", "1")
 	root := t.TempDir()
 	writer := &failingHookTelemetryWriter{}
 	telemetry := NewHookTelemetryWithWriter(writer)
 
-	retryAttempts := 0
-	taskCompleted := false
-
 	telemetry.RecordDuration(root, "validate-governance", "after_tool", "provider-x", 100)
-	taskCompleted = true
 
 	if writer.calls != 1 {
 		t.Fatalf("writer.calls = %d, want 1 — the failing write must still be attempted", writer.calls)
-	}
-	if !taskCompleted {
-		t.Fatal("task must complete even when the telemetry writer always fails (RF-48)")
-	}
-	if retryAttempts != 0 {
-		t.Fatalf("retryAttempts = %d, want 0 — telemetry failure must never trigger a retry cascade (RF-48)", retryAttempts)
 	}
 }

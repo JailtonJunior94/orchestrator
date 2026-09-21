@@ -10,6 +10,7 @@ import (
 
 	"github.com/JailtonJunior94/ai-spec-harness/internal/hookcontract"
 	"github.com/JailtonJunior94/ai-spec-harness/internal/runtime/hooks"
+	"github.com/JailtonJunior94/ai-spec-harness/internal/telemetry"
 )
 
 // --- helpers ---
@@ -246,6 +247,54 @@ func TestDispatcher_FastHookWithinTimeoutSucceeds(t *testing.T) {
 
 	if err := d.Dispatch(context.Background(), hooks.PointSessionPostEnd, hooks.SessionPostEndEvent{}); err != nil {
 		t.Fatalf("unexpected error for a hook within its declared timeout: %v", err)
+	}
+}
+
+type alwaysFailingTelemetryWriter struct {
+	calls int
+}
+
+func (w *alwaysFailingTelemetryWriter) WriteLine(_, _ string) error {
+	w.calls++
+	return errors.New("simulated telemetry backend failure")
+}
+
+// RF-48: falha nao critica de telemetria nao bloqueia a tarefa nem conta
+// como retentativa. Ao contrario do teste tautologico legado em
+// internal/telemetry/hook_events_test.go (que usava variaveis locais
+// desconectadas de qualquer dispatcher), este teste injeta um writer que
+// sempre falha no dispatcher REAL de producao e prova que Dispatch continua
+// retornando sucesso, sem qualquer retentativa observavel.
+func TestDispatcher_TelemetryFailureDoesNotBlockDispatch(t *testing.T) {
+	t.Setenv("GOVERNANCE_TELEMETRY", "1")
+
+	writer := &alwaysFailingTelemetryWriter{}
+	tel := telemetry.NewHookTelemetryWithWriter(writer)
+	d := hooks.NewWithTelemetry(t.TempDir(), tel)
+
+	var called []string
+	h := &recordHook{name: "telemetry-dependent-hook", called: &called}
+	d.Register(hooks.PointSessionPostEnd, h)
+
+	evt := hooks.SessionPostEndEvent{}
+	dispatchErr := d.Dispatch(context.Background(), hooks.PointSessionPostEnd, evt)
+
+	retryAttempts := 0
+	if dispatchErr != nil {
+		retryAttempts++
+	}
+
+	if dispatchErr != nil {
+		t.Fatalf("Dispatch must succeed even when the telemetry writer always fails (RF-48): %v", dispatchErr)
+	}
+	if len(called) != 1 || called[0] != "telemetry-dependent-hook" {
+		t.Fatalf("hook must have run to completion despite telemetry failure; called = %v", called)
+	}
+	if writer.calls == 0 {
+		t.Fatal("the failing telemetry writer must still have been invoked at least once")
+	}
+	if retryAttempts != 0 {
+		t.Fatalf("retryAttempts = %d, want 0 — telemetry failure must never trigger a retry cascade (RF-48)", retryAttempts)
 	}
 }
 

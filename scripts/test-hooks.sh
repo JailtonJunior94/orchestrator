@@ -674,6 +674,114 @@ assert_exit "G4-6: JSON invalido bloqueia" 2 $?
 rm -rf "$GIT_GATE_TMP"
 
 # ============================================================================
+# Bloco 4b: hook-payload.sh — RF-66 (timeout declarado, negacao no estouro) e
+# RF-67 (recursao hook -> ferramenta -> hook impedida por construcao). Cobre
+# as primitivas hook_timeout_watch, hook_recursion_guard e hook_measure_start
+# consumidas por validate-preload.sh, git-operation-gate.sh e
+# validate-governance.sh.
+# ============================================================================
+echo
+echo "Bloco 4b: hook-payload.sh — timeout e guarda de recursao"
+
+HOOK_LIB="$REPO_ROOT/.agents/lib/hook-payload.sh"
+GUARD_TMP=$(mktemp -d "$TMP_BASE/hook-guard.XXXXXX" 2>/dev/null || mktemp -d /tmp/hook-guard.XXXXXX)
+
+echo
+echo "  P7-1: hook_timeout_watch mata filho lento e trata como negacao (RF-66)"
+SLOW_CHILD="$GUARD_TMP/slow-child.sh"
+cat > "$SLOW_CHILD" <<'EOF'
+#!/usr/bin/env bash
+sleep 5
+echo "nao deveria imprimir"
+exit 0
+EOF
+chmod +x "$SLOW_CHILD"
+
+TIMEOUT_CALLER="$GUARD_TMP/timeout-caller.sh"
+cat > "$TIMEOUT_CALLER" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+source "$HOOK_LIB"
+bash "$SLOW_CHILD" &
+child_pid=\$!
+if hook_timeout_watch "fake-slow-child" 1 "\$child_pid"; then
+  exit 0
+else
+  exit 2
+fi
+EOF
+chmod +x "$TIMEOUT_CALLER"
+
+p71_start=$(date +%s)
+stderr_p71=$(mktemp)
+bash "$TIMEOUT_CALLER" >/dev/null 2>"$stderr_p71"
+rc_p71=$?
+p71_end=$(date +%s)
+p71_elapsed=$((p71_end - p71_start))
+
+assert_exit "P7-1: filho lento negado apos timeout" 2 "$rc_p71"
+assert_stderr_contains "P7-1: mensagem de bloqueio por timeout (RF-66)" "excedeu timeout declarado" "$stderr_p71"
+if [[ "$p71_elapsed" -le 3 ]]; then
+  echo "  ✓ P7-1: bloqueio ocorreu em ${p71_elapsed}s (timeout declarado de 1s), nao esperou os 5s do filho"
+  passed=$((passed+1))
+else
+  echo "  ✗ P7-1: bloqueio demorou ${p71_elapsed}s (esperado <=3s) — timeout nao preemptou o filho"
+  failed=$((failed+1))
+fi
+rm -f "$stderr_p71"
+
+echo
+echo "  P7-2: hook_recursion_guard impede cadeia hook -> ferramenta -> hook (RF-67)"
+RECURSIVE_HOOK="$GUARD_TMP/recursive-hook.sh"
+cat > "$RECURSIVE_HOOK" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+source "$HOOK_LIB"
+hook_recursion_guard "fake-recursive-hook" 2
+echo "depth-now=\$AI_HOOK_DEPTH" >&2
+bash "\$0"
+exit 0
+EOF
+chmod +x "$RECURSIVE_HOOK"
+
+stderr_p72=$(mktemp)
+AI_HOOK_MAX_DEPTH=3 bash "$RECURSIVE_HOOK" >/dev/null 2>"$stderr_p72"
+rc_p72=$?
+
+assert_exit "P7-2: recursao bloqueada com exit declarado do hook" 2 "$rc_p72"
+assert_stderr_contains "P7-2: mensagem de bloqueio por recursao (RF-67)" "recursao hook -> ferramenta -> hook detectada" "$stderr_p72"
+depth_entries=$(grep -c "depth-now=" "$stderr_p72" 2>/dev/null || echo 0)
+if [[ "$depth_entries" -eq 3 ]]; then
+  echo "  ✓ P7-2: exatamente 3 entradas permitidas antes do bloqueio (AI_HOOK_MAX_DEPTH=3)"
+  passed=$((passed+1))
+else
+  echo "  ✗ P7-2: $depth_entries entrada(s) permitida(s) antes do bloqueio (esperado 3)"
+  failed=$((failed+1))
+fi
+rm -f "$stderr_p72"
+
+echo
+echo "  P7-3: git-operation-gate.sh real declara timeout e profundidade sem regressao (comando benigno)"
+stderr_p73=$(mktemp)
+printf '%s' '{"tool_input":{"command":"echo hello"}}' | bash "$GIT_GATE_HOOK" >/dev/null 2>"$stderr_p73"
+rc_p73=$?
+assert_exit "P7-3: git-operation-gate.sh comando benigno ainda passa" 0 "$rc_p73"
+assert_stderr_contains "P7-3: duracao mensuravel emitida (RF-66)" "hook\.duration_ms=" "$stderr_p73"
+rm -f "$stderr_p73"
+
+echo
+echo "  P7-4: git-operation-gate.sh real nega quando profundidade ja excede o maximo (RF-67)"
+stderr_p74=$(mktemp)
+printf '%s' '{"tool_input":{"command":"echo hello"}}' \
+  | AI_HOOK_DEPTH=3 AI_HOOK_MAX_DEPTH=3 bash "$GIT_GATE_HOOK" >/dev/null 2>"$stderr_p74"
+rc_p74=$?
+assert_exit "P7-4: profundidade pre-excedida bloqueia mesmo comando benigno" 2 "$rc_p74"
+assert_stderr_contains "P7-4: mensagem de recursao no hook real" "recursao hook -> ferramenta -> hook detectada em git-operation-gate" "$stderr_p74"
+rm -f "$stderr_p74"
+
+rm -rf "$GUARD_TMP"
+
+# ============================================================================
 # Bloco 5: post-wave.sh — RF-40 (atomicidade), RF-41 (idempotencia) e RF-49
 # (sanitizacao do YAML embutido no checkpoint parcial).
 # ============================================================================

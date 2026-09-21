@@ -93,3 +93,54 @@ extract_command_source_targets() {
     | grep -v '^-' \
     | awk 'NF && !seen[$0]++' || true
 }
+
+hook_recursion_guard() {
+  local hook_name="$1"
+  local block_exit="$2"
+  local max_depth="${AI_HOOK_MAX_DEPTH:-3}"
+  local current_depth="${AI_HOOK_DEPTH:-0}"
+
+  if [[ "$current_depth" -ge "$max_depth" ]]; then
+    echo "GOVERNANCE BLOQUEIO: recursao hook -> ferramenta -> hook detectada em $hook_name (RF-67, profundidade atual=$current_depth, maximo=$max_depth)." >&2
+    exit "$block_exit"
+  fi
+  export AI_HOOK_DEPTH=$((current_depth + 1))
+}
+
+hook_measure_start() {
+  HOOK_MEASURE_NAME="$1"
+  HOOK_MEASURE_TIMEOUT="${2:-}"
+  HOOK_MEASURE_START_SECONDS="$SECONDS"
+  trap 'hook_measure_on_exit' EXIT
+}
+
+hook_measure_on_exit() {
+  local exit_code=$?
+  local duration_ms=$(( (SECONDS - HOOK_MEASURE_START_SECONDS) * 1000 ))
+  echo "hook.duration_ms=$duration_ms hook=$HOOK_MEASURE_NAME hook.timeout_s=${HOOK_MEASURE_TIMEOUT:-unknown} hook.decision_exit=$exit_code" >&2
+  exit "$exit_code"
+}
+
+hook_timeout_watch() {
+  local hook_name="$1"
+  local timeout_seconds="$2"
+  local child_pid="$3"
+
+  (
+    sleep "$timeout_seconds"
+    kill -TERM "$child_pid" 2>/dev/null
+  ) &
+  local watchdog_pid=$!
+
+  local rc=0
+  wait "$child_pid" 2>/dev/null || rc=$?
+
+  kill "$watchdog_pid" 2>/dev/null
+  wait "$watchdog_pid" 2>/dev/null
+
+  if [[ "$rc" -ge 128 ]]; then
+    echo "GOVERNANCE BLOQUEIO: hook $hook_name excedeu timeout declarado de ${timeout_seconds}s; tratado como negacao (RF-66)." >&2
+    return 124
+  fi
+  return "$rc"
+}

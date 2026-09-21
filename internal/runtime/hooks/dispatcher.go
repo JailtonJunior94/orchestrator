@@ -150,6 +150,22 @@ func New(rootDir ...string) Dispatcher {
 	}
 }
 
+// NewWithTelemetry retorna um Dispatcher com o writer de telemetria injetado.
+// Uso principal: provar RF-48 (falha de telemetria nao bloqueia nem conta
+// como retry) contra o dispatcher real, sem depender do writer de arquivo.
+func NewWithTelemetry(rootDir string, tel telemetry.HookTelemetry) Dispatcher {
+	dir := rootDir
+	if dir == "" {
+		dir = "."
+	}
+	return &dispatcher{
+		hooks:     make(map[string][]Hook),
+		timeouts:  hookcontract.NewHookTimeoutRegistry(),
+		telemetry: tel,
+		rootDir:   dir,
+	}
+}
+
 func (d *dispatcher) SetHookTimeout(hook string, timeout time.Duration) error {
 	return d.timeouts.Declare(hook, timeout)
 }

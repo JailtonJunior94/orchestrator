@@ -29,6 +29,10 @@ fi
 
 source "$parse_lib"
 
+readonly VALIDATE_PRELOAD_TIMEOUT_SECONDS="${AI_HOOK_TIMEOUT_VALIDATE_PRELOAD:-40}"
+hook_recursion_guard "validate-preload" "$PRELOAD_BLOCK_EXIT"
+hook_measure_start "validate-preload" "$VALIDATE_PRELOAD_TIMEOUT_SECONDS"
+
 payload=""
 if [[ ! -t 0 ]]; then
   payload="$(cat)"
@@ -58,7 +62,9 @@ if [[ ${#gate_targets[@]} -gt 0 ]]; then
     prereq_gate="$hook_dir/../scripts/hook-prereq-gate.sh"
   fi
   if [[ -f "$prereq_gate" ]]; then
-    if ! printf '%s' "$payload" | AGENTS_ROOT="$project_root" bash "$prereq_gate" "${gate_targets[@]}"; then
+    printf '%s' "$payload" | AGENTS_ROOT="$project_root" bash "$prereq_gate" "${gate_targets[@]}" &
+    prereq_gate_pid=$!
+    if ! hook_timeout_watch "hook-prereq-gate" "$VALIDATE_PRELOAD_TIMEOUT_SECONDS" "$prereq_gate_pid"; then
       exit "$PRELOAD_BLOCK_EXIT"
     fi
   fi
@@ -70,7 +76,9 @@ if [[ -n "$command_text" ]]; then
     git_operation_gate="$hook_dir/../scripts/git-operation-gate.sh"
   fi
   if [[ -f "$git_operation_gate" ]]; then
-    if ! printf '%s' "$payload" | AGENTS_ROOT="$project_root" bash "$git_operation_gate"; then
+    printf '%s' "$payload" | AGENTS_ROOT="$project_root" bash "$git_operation_gate" &
+    git_operation_gate_pid=$!
+    if ! hook_timeout_watch "git-operation-gate" "$VALIDATE_PRELOAD_TIMEOUT_SECONDS" "$git_operation_gate_pid"; then
       exit "$PRELOAD_BLOCK_EXIT"
     fi
   fi

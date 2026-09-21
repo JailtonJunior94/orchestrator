@@ -26,6 +26,10 @@ fi
 
 source "$parse_lib"
 
+readonly GIT_OPERATION_GATE_TIMEOUT_SECONDS="${AI_HOOK_TIMEOUT_GIT_OPERATION_GATE:-35}"
+hook_recursion_guard "git-operation-gate" "$GIT_OPERATION_BLOCK_EXIT"
+hook_measure_start "git-operation-gate" "$GIT_OPERATION_GATE_TIMEOUT_SECONDS"
+
 git_scope_path=""
 for candidate in \
   "$project_root/.agents/generated/git-scope.json" \
@@ -321,11 +325,18 @@ for hit in interpreter_hits:
 
 git_matches=()
 interpreter_matches=()
+classifier_timeout_seconds="${AI_HOOK_TIMEOUT_GIT_CLASSIFIER:-30}"
 if command -v python3 >/dev/null 2>&1; then
   classification=""
-  if ! classification="$(printf '%s' "$command_text" | classify_git_command_structurally "${git_scope_path:-}" 2>/dev/null)"; then
+  classifier_out="$(mktemp "${TMPDIR:-/tmp}/git-operation-gate-classify.XXXXXX")"
+  printf '%s' "$command_text" | classify_git_command_structurally "${git_scope_path:-}" >"$classifier_out" 2>/dev/null &
+  classifier_pid=$!
+  if hook_timeout_watch "git-operation-gate-classifier" "$classifier_timeout_seconds" "$classifier_pid"; then
+    classification="$(cat "$classifier_out")"
+  else
     interpreter_matches+=("INTERPRETER_MATCH reason=classifier_error_fail_closed")
   fi
+  rm -f "$classifier_out"
   while IFS= read -r line; do
     [[ -n "$line" ]] || continue
     case "$line" in

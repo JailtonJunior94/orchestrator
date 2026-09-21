@@ -32,6 +32,10 @@ source "$HOOK_DIR/../../.agents/lib/hook-payload.sh" 2>/dev/null \
   || source "$(cd "$HOOK_DIR/../.." && pwd)/scripts/lib/hook-payload.sh" 2>/dev/null \
   || { echo "AVISO: hook-payload.sh nao encontrado" >&2; exit 0; }
 
+readonly VALIDATE_GOVERNANCE_TIMEOUT_SECONDS="${AI_HOOK_TIMEOUT_VALIDATE_GOVERNANCE:-10}"
+hook_recursion_guard "validate-governance" 1
+hook_measure_start "validate-governance" "$VALIDATE_GOVERNANCE_TIMEOUT_SECONDS"
+
 _stdin="$(cat)"
 if ! file_path="$(printf '%s' "$_stdin" | parse_file_path)"; then
   echo "AVISO: payload de hook invalido; validacao de governanca negada." >&2
